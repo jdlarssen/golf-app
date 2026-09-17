@@ -23,11 +23,8 @@ import {
 } from './greensomeOverridePlan';
 import { needsFlightAssignment } from './flightScope';
 import { expectedTeamSize, needsTeamAssignment } from './teamScope';
-import {
-  assignRotationSlots,
-  rotationSlotRange,
-  type RotationMode,
-} from './assignRotationSlots';
+import { assignRotationSlots, rotationSlotRange } from './assignRotationSlots';
+import { startPlayerCountRange, type StartCountMode } from './startPlayerCount';
 
 /**
  * Import-pure core of the scheduled→active start (#1855). Every guard, every
@@ -77,9 +74,10 @@ export type StartScheduledGameFailure = {
     | 'db_players'
     | 'db_game';
   pendingEmails?: string[];
-  // #969: set only for reason 'rotation_player_count' so the caller can
-  // build a format-aware message («Wolf trenger 3–5 spillere — N påmeldt»).
-  rotationMode?: RotationMode;
+  // #969 / #2071: set only for reason 'rotation_player_count' so the caller
+  // can build a format-aware message. The names say «rotation» for history —
+  // they now cover every fixed-count format («Wolf trenger 3–5 spillere — N påmeldt»).
+  rotationMode?: StartCountMode;
   rotationActiveCount?: number;
 };
 
@@ -297,28 +295,29 @@ export async function startScheduledGameCore(
     return { ok: false, reason: 'unassigned_flights' };
   }
 
-  // #969: Wolf / Round Robin draw their rotation slot at start, not at publish,
-  // so an open-signup game can be published before anyone joins. Guard the
-  // active (non-withdrawn) roster size first (fail fast, before the profile
-  // check): Wolf 3–5, Round Robin exactly 4. The signup cap already prevents
-  // "too many", so this really catches "too few". The actual slot draw happens
-  // after all guards pass (below). For non-rotation modes `rotationRange` is
-  // null and both blocks are skipped.
-  const rotationRange = rotationSlotRange(game.game_mode);
-  const activeRotationIds = rotationRange
-    ? roster.filter((r) => r.withdrawn_at == null).map((r) => r.user_id)
-    : [];
-  if (rotationRange) {
-    const n = activeRotationIds.length;
-    if (n < rotationRange.min || n > rotationRange.max) {
+  // #969 / #2071: guard the active (non-withdrawn) roster size for every
+  // fixed-count format first (fail fast, before the profile check): Wolf 3–5,
+  // Round Robin / Acey Deucey 4, Nines 3, Nassau / Skins / BBB 2–16. An open
+  // signup game is saved as a draft and the signup cap only prevents "too
+  // many", so this really catches "too few". Wolf / Round Robin also draw their
+  // rotation slot at start, not at publish — that draw happens after all
+  // guards pass (below), and only when `rotationRange` is non-null.
+  const activeIds = roster
+    .filter((r) => r.withdrawn_at == null)
+    .map((r) => r.user_id);
+  const countRange = startPlayerCountRange(game.game_mode);
+  if (countRange) {
+    const n = activeIds.length;
+    if (n < countRange.min || n > countRange.max) {
       return {
         ok: false,
         reason: 'rotation_player_count',
-        rotationMode: game.game_mode as RotationMode,
+        rotationMode: game.game_mode as StartCountMode,
         rotationActiveCount: n,
       };
     }
   }
+  const rotationRange = rotationSlotRange(game.game_mode);
 
   // Defence-in-depth: refuse to start if any roster player is still pending
   // profile completion. Task 6's publish-gate blocks this normally, but this
@@ -370,7 +369,7 @@ export async function startScheduledGameCore(
   // behaviour change on web too, and the intended one: a path that used to
   // no-op now answers `db_players` / `db_game`.
   if (rotationRange) {
-    for (const slot of assignRotationSlots(activeRotationIds)) {
+    for (const slot of assignRotationSlots(activeIds)) {
       try {
         expectOne(
           await supabase

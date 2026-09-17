@@ -57,6 +57,19 @@ beforeEach(() => {
  */
 const WROTE_ROW = { data: [{ id: 'row' }], error: null };
 
+/** Rotation-slot writes (`game_players.update({team_number})`) the mock saw. */
+function teamNumberWrites(supabase: unknown) {
+  return (
+    supabase as { __fromCalls: Array<{ method: string; args: unknown[] }> }
+  ).__fromCalls.filter(
+    (c) =>
+      c.method === 'update' &&
+      typeof c.args[0] === 'object' &&
+      c.args[0] !== null &&
+      'team_number' in (c.args[0] as Record<string, unknown>),
+  );
+}
+
 /**
  * Status-flippene (`games.update({status})`) mock-en faktisk så. #1871-testene
  * bruker den til å vise at et filtrert skriv gir et typet avslag og IKKE en
@@ -1157,6 +1170,76 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: true });
   });
+
+  // #2071: formater med fast spillertall uten rotasjon får samme vakt.
+  it.each([
+    ['acey_deucey', 3],
+    ['nines', 2],
+    ['skins', 1],
+    ['nassau', 1],
+    ['bingo_bango_bongo', 1],
+  ] as [GameMode, number][])(
+    '%s med %i aktive → rotation_player_count, ingen flip, ingen slots (#2071)',
+    async (mode, n) => {
+      const roster = Array.from({ length: n }, (_, i) => rot(`u${i}`));
+      const supabase = buildSupabaseMock([
+        { data: makeRotationGameRow(mode), error: null },
+        { data: roster, error: null },
+      ]);
+      const result = await startScheduledGame(supabase as never, 'game-id');
+      expect(result).toEqual({
+        ok: false,
+        reason: 'rotation_player_count',
+        rotationMode: mode,
+        rotationActiveCount: n,
+      });
+      expect(statusFlipWrites(supabase)).toHaveLength(0);
+      expect(teamNumberWrites(supabase)).toHaveLength(0);
+    },
+  );
+
+  it('nines: trukket spiller teller ikke — 3 rader, én trukket → blokkert med 2 (#2071)', async () => {
+    const roster = [rot('u1'), rot('u2'), rot('u3', '2026-01-01T00:00:00Z')];
+    const supabase = buildSupabaseMock([
+      { data: makeRotationGameRow('nines'), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({
+      ok: false,
+      reason: 'rotation_player_count',
+      rotationMode: 'nines',
+      rotationActiveCount: 2,
+    });
+  });
+
+  it.each([
+    ['acey_deucey', 4],
+    ['nines', 3],
+  ] as [GameMode, number][])(
+    '%s med %i aktive starter uten rotasjons-slots (#2071)',
+    async (mode, n) => {
+      const roster = Array.from({ length: n }, (_, i) => rot(`u${i}`));
+      const supabase = buildSupabaseMock([
+        { data: makeRotationGameRow(mode), error: null },
+        { data: roster, error: null },
+        {
+          data: roster.map((r) => ({
+            id: r.user_id,
+            email: `${r.user_id}@x.no`,
+            profile_completed_at: '2026-01-01',
+          })),
+          error: null,
+        },
+        // n course_handicap updates — no slot writes
+        ...roster.map(() => WROTE_ROW),
+        { data: [{ id: 'game-id' }], error: null },
+      ]);
+      const result = await startScheduledGame(supabase as never, 'game-id');
+      expect(result).toEqual({ ok: true, started: true });
+      expect(teamNumberWrites(supabase)).toHaveLength(0);
+    },
+  );
 
   // #1871: samme felle på rotasjons-slotene. Null rader tilbake betyr at
   // ingen slot ble skrevet, og en wolf-runde uten rotasjon skal ikke starte.

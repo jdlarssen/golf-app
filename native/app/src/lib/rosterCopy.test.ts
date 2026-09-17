@@ -14,6 +14,7 @@
 //     `no.json` leses fra node-siden; testen bundles aldri.
 import source from '../../../../messages/no.json';
 import type { RosterActionFailure } from '../data/rosterActions';
+import type { StartCountMode } from '../../../../lib/games/startPlayerCount';
 import type { StartRoundFailure, StartRoundRefusal } from '../data/startGame';
 import {
   describeRosterFailure,
@@ -135,7 +136,12 @@ describe('describeStartRefusal', () => {
   it.each([
     ['wolf', 2, 'rotation_player_count_wolf'],
     ['round_robin', 3, 'rotation_player_count_round_robin'],
-  ] as ['wolf' | 'round_robin', number, string][])(
+    ['acey_deucey', 3, 'rotation_player_count_acey_deucey'],
+    ['nines', 2, 'rotation_player_count_nines'],
+    ['nassau', 1, 'rotation_player_count_nassau'],
+    ['skins', 1, 'rotation_player_count_skins'],
+    ['bingo_bango_bongo', 1, 'rotation_player_count_bingo_bango_bongo'],
+  ] as [StartCountMode, number, string][])(
     'velger %s-setningen med det faktiske antallet (#969)',
     (rotationMode, count, webKey) => {
       expect(

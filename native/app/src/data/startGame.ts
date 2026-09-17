@@ -22,7 +22,7 @@
 // arrangøren fra appen, skjer avslaget i basen, men varselet uteblir — samme
 // klasse gap som de manglende `player_added`-varslene i `rosterActions.ts`.
 // Lista leses derfor bevisst ikke her; se {@link startRoundNow}.
-import type { RotationMode } from '../../../../lib/games/assignRotationSlots';
+import type { StartCountMode } from '../../../../lib/games/startPlayerCount';
 import {
   startScheduledGameCore,
   type StartScheduledGameFailure,
@@ -51,8 +51,8 @@ export interface StartRoundRefusal {
    * lesbart og e-post ellers. Se {@link labelPendingPlayers}.
    */
   pendingLabels?: string[];
-  /** Satt kun ved `rotation_player_count` (#969) — velger hvilken setning. */
-  rotationMode?: RotationMode;
+  /** Satt kun ved `rotation_player_count` (#969, #2071) — velger hvilken setning. */
+  rotationMode?: StartCountMode;
   rotationActiveCount?: number;
 }
 
