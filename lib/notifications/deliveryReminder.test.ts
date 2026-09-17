@@ -150,3 +150,31 @@ describe('maybeSendDeliveryReminder — lagkort (#2041)', () => {
     expect(writes()).toEqual([]);
   });
 });
+
+// #2067: kapteinen slettet kontoen etter hull 9 (trukket, 0174). Makkeren eier
+// nå lagets rader, men hull 1–9 ligger på den trukne kapteinen. Purringen må
+// hente og telle dem, ellers når makkeren aldri 18.
+describe('maybeSendDeliveryReminder — trukket kaptein (#2067)', () => {
+  it('texas scramble: makkeren med 9 hull på den trukne kapteinen og 9 egne purres', async () => {
+    scores = [...holes('kaptein', 1, 9), ...holes('makker', 10, 18)];
+
+    await maybeSendDeliveryReminder({
+      gameId: GAME_ID,
+      userId: 'makker',
+      gameName: 'Tirsdagsrunden',
+      players: [
+        { user_id: 'kaptein', team_number: 1, withdrawn_at: '2026-09-17T10:00:00Z' },
+        member('makker', 1),
+      ],
+      mode: 'texas_scramble',
+    });
+
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    const read = fake.ops.find((op) => op.table === 'scores');
+    expect(read?.filters).toEqual(
+      expect.arrayContaining([
+        { op: 'in', column: 'user_id', value: ['makker', 'kaptein'] },
+      ]),
+    );
+  });
+});

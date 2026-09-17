@@ -120,15 +120,17 @@ export function resolveSegmentBridges(args: {
 export function buildHoleStripSibling(args: {
   siblingMatch: SegmentSibling | null;
   teamOwnerId: string | null;
+  formerTeamRowOwnerIds: string[];
   scoredHoles: number[] | null;
 }): HoleStripSibling | null {
-  const { siblingMatch, teamOwnerId, scoredHoles } = args;
+  const { siblingMatch, teamOwnerId, formerTeamRowOwnerIds, scoredHoles } = args;
   if (!siblingMatch) return null;
   return {
     gameId: siblingMatch.gameId,
     holes: holeNumbersForSegment(siblingMatch.holeSegment),
     gameMode: siblingMatch.gameMode,
     teamOwnerId,
+    formerTeamRowOwnerIds,
     scoredHoles,
   };
 }

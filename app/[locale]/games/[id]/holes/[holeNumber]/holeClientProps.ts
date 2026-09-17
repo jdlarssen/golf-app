@@ -71,6 +71,8 @@ export type HoleStripSibling = {
   holes: number[];
   gameMode: GameMode;
   teamOwnerId: string | null;
+  /** #2067: withdrawn teammates over there whose entered holes still count. */
+  formerTeamRowOwnerIds: string[];
   scoredHoles: number[] | null;
 };
 
@@ -132,6 +134,12 @@ export interface HoleClientProps {
    * count the captain's rows instead of its own. #1577.
    */
   myTeamScoreOwnerId?: string | null;
+  /**
+   * #2067: my withdrawn teammates (`formerTeamRowOwnerIds`). A captain who
+   * deleted their account mid-round still holds the holes entered before; the
+   * local completion set reads and folds their rows onto `myTeamScoreOwnerId`.
+   */
+  myFormerTeamRowOwnerIds?: string[];
   /**
    * WHICH of the player's holes already have a score recorded (server-side
    * snapshot at render, #1352 — used to be a bare count). Unioned with the
@@ -252,6 +260,7 @@ export type ResolvedHoleClientProps = HoleClientProps &
       | 'withdrawn'
       | 'myTeamNumber'
       | 'myTeamScoreOwnerId'
+      | 'myFormerTeamRowOwnerIds'
       | 'courseId'
       | 'greenCenter'
       | 'freshPinCount'
@@ -274,6 +283,7 @@ export function resolveHoleClientProps(
     withdrawn = false,
     myTeamNumber = null,
     myTeamScoreOwnerId = null,
+    myFormerTeamRowOwnerIds = [],
     courseId = null,
     greenCenter = null,
     freshPinCount = 0,
@@ -291,6 +301,7 @@ export function resolveHoleClientProps(
     withdrawn,
     myTeamNumber,
     myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
     courseId,
     greenCenter,
     freshPinCount,

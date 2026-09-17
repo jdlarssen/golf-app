@@ -5,7 +5,8 @@ import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { holeNumbersForSegment, lastHoleForSegment } from './holeScope';
 import { pendingApprovalsFor } from './flightScope';
-import { teamScoreOwnerId } from './teamCaptain';
+import { formerTeamRowOwnerIds, teamScoreOwnerId } from './teamCaptain';
+import { scoredHoleNumbers } from './scoreOwner';
 import { resolveActiveCardState, type ActiveCardState } from './activeCardState';
 
 /** The active-game fields the Home card needs to resolve state, route, and count approvals. */
@@ -51,28 +52,77 @@ type MateRow = {
 
 /**
  * Who owns the shared scores row in each of `gameIds`, from the viewer's seat
- * (#1538). A game is absent from the result when the viewer already owns the
+ * (#1538), plus the team's withdrawn members who may still hold entered holes
+ * (#2067). A game is absent from the result when the viewer already owns the
  * card themselves, when they have no team number, or when the roster came back
  * empty — RLS grants the roster per flight, and a team split across flights
  * reads as nothing. Every one of those means the same thing to the caller:
  * count the viewer's own rows, as before.
  */
-function captainsForViewer(
+type RowOwners = { ownerId: string; formerOwnerIds: string[] };
+
+function rowOwnersForViewer(
   roster: MateRow[],
   gameIds: string[],
   userId: string,
-): Map<string, string> {
-  const captainByGame = new Map<string, string>();
+): Map<string, RowOwners> {
+  const ownersByGame = new Map<string, RowOwners>();
   for (const gameId of gameIds) {
     const gameRoster = roster.filter((r) => r.game_id === gameId);
     const meRow = gameRoster.find((r) => r.user_id === userId);
     if (!meRow || meRow.team_number == null) continue;
-    const ownerId = teamScoreOwnerId(
-      gameRoster.filter((r) => r.team_number === meRow.team_number),
-    );
-    if (ownerId && ownerId !== userId) captainByGame.set(gameId, ownerId);
+    const team = gameRoster.filter((r) => r.team_number === meRow.team_number);
+    const ownerId = teamScoreOwnerId(team);
+    // #2067: a captain who deleted their account mid-round is withdrawn but
+    // still holds the holes entered before that.
+    const formerOwnerIds = formerTeamRowOwnerIds(team);
+    if (ownerId && (ownerId !== userId || formerOwnerIds.length > 0)) {
+      ownersByGame.set(gameId, { ownerId, formerOwnerIds });
+    }
   }
-  return captainByGame;
+  return ownersByGame;
+}
+
+/**
+ * The viewer's entered holes per game. Every row is attributed to the game it
+ * came from: the same person can own the shared card in one round and play
+ * their own ball in another, so a flat {viewer, captains} union would count
+ * their rows everywhere and skip holes the viewer still has to play. Per game,
+ * the shared rule decides which rows count (`scoredHoleNumbers`): a captain's
+ * row only where the mode collapses — patsome's 4BBB half (1-6) is per-player
+ * — and a withdrawn captain's entered holes folded in (#2067).
+ */
+function filledHolesByGame(
+  rows: readonly { game_id: string; hole_number: number; user_id: string }[],
+  modeByGame: ReadonlyMap<string, GameMode>,
+  ownersByGame: ReadonlyMap<string, RowOwners>,
+  userId: string,
+): Map<string, Set<number>> {
+  const rowsByGame = new Map<string, { holeNumber: number; userId: string }[]>();
+  for (const r of rows) {
+    const list = rowsByGame.get(r.game_id) ?? [];
+    list.push({ holeNumber: r.hole_number, userId: r.user_id });
+    rowsByGame.set(r.game_id, list);
+  }
+  const filledByGame = new Map<string, Set<number>>();
+  for (const [gameId, gameRows] of rowsByGame) {
+    const mode = modeByGame.get(gameId);
+    if (!mode) continue;
+    const owners = ownersByGame.get(gameId);
+    filledByGame.set(
+      gameId,
+      new Set(
+        scoredHoleNumbers(
+          gameRows,
+          mode,
+          userId,
+          owners?.ownerId ?? null,
+          owners?.formerOwnerIds ?? [],
+        ),
+      ),
+    );
+  }
+  return filledByGame;
 }
 
 /**
@@ -132,15 +182,20 @@ export async function getActiveGameCardData(
           .in('game_id', rosterIds)) as { data: MateRow[] | null })()
     : Promise.resolve({ data: [] });
 
-  const captainByGame = collapsedGames.length
-    ? captainsForViewer(
+  const ownersByGame = collapsedGames.length
+    ? rowOwnersForViewer(
         (await matesPromise).data ?? [],
         collapsedGames.map((g) => g.id),
         userId,
       )
-    : new Map<string, string>();
+    : new Map<string, RowOwners>();
 
-  const scoreUserIds = [...new Set([userId, ...captainByGame.values()])];
+  const scoreUserIds = [
+    ...new Set([
+      userId,
+      ...[...ownersByGame.values()].flatMap((o) => [o.ownerId, ...o.formerOwnerIds]),
+    ]),
+  ];
 
   const [scoresRes, matesRes] = await Promise.all([
     continueIds.length
@@ -156,26 +211,12 @@ export async function getActiveGameCardData(
 
   const modeByGame = new Map(continueGames.map((g) => [g.id, g.game_mode]));
 
-  const filledByGame = new Map<string, Set<number>>();
-  for (const r of scoresRes.data ?? []) {
-    // Attribute every row to the game it came from: the same person can own
-    // the shared card in one round and play their own ball in another, so a
-    // flat {viewer, captains} union would count their rows everywhere and
-    // skip holes the viewer still has to play. A captain's row also only
-    // counts on holes where the mode actually collapses — patsome's 4BBB
-    // half (1-6) is per-player even though its foursomes half is not.
-    if (r.user_id !== userId) {
-      if (captainByGame.get(r.game_id) !== r.user_id) continue;
-      const mode = modeByGame.get(r.game_id);
-      if (!mode || !modeCollapsesToTeamCard(mode, r.hole_number)) continue;
-    }
-    let set = filledByGame.get(r.game_id);
-    if (!set) {
-      set = new Set<number>();
-      filledByGame.set(r.game_id, set);
-    }
-    set.add(r.hole_number);
-  }
+  const filledByGame = filledHolesByGame(
+    scoresRes.data ?? [],
+    modeByGame,
+    ownersByGame,
+    userId,
+  );
 
   const matesByGame = new Map<string, MateRow[]>();
   for (const r of (matesRes.data ?? []) as MateRow[]) {

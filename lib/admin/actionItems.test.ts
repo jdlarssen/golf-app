@@ -289,6 +289,18 @@ describe('holesFilledByGame', () => {
     expect(asObject(holes)).toEqual({ 'g1:a': 18, 'g1:b': 18 });
   });
 
+  // #2067: kapteinen slettet kontoen etter hull 9 (trukket, 0174). Hull 1–9
+  // ligger på den trukne kapteinen, 10–18 på makkeren som nå eier kortet.
+  it('scramble med trukket kaptein: makkeren står på 18/18', () => {
+    const holes = holesFilledByGame({
+      games: [{ id: 'g1', game_mode: 'texas_scramble' }],
+      players: [member('g1', 'a', 1, '2026-09-17T10:00:00Z'), member('g1', 'b', 1)],
+      scores: [...rows('g1', 'a', 1, 9), ...rows('g1', 'b', 10, 18)],
+    });
+
+    expect(holes.get('g1:b')).toBe(18);
+  });
+
   it('flere spill med ulike modi telles hver for seg, uten lekkasje mellom spill', () => {
     const holes = holesFilledByGame({
       games: [

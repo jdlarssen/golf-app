@@ -22,7 +22,7 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
-import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { ownedScoreRows, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
@@ -153,6 +153,14 @@ export default async function SubmitPage({
 
   const submitAction = submitScorecard.bind(null, id);
 
+  // #1577: the shared team row lives under the captain's id, so a non-captain
+  // reviewing their card has to read the OWNER's rows — otherwise a complete
+  // team card reads as 18 missing holes. No team → no owner, own rows.
+  const myTeam =
+    me.team_number == null
+      ? []
+      : players.filter((p) => p.team_number === me.team_number);
+
   // Solo-modus (stableford) har null team/flight, og kopien skifter fra
   // lag-rettet til personlig: «Lever ditt scorekort» i topp-baren og en
   // CH-only-info-linje i stedet for «Lag X · Flight Y».
@@ -200,16 +208,10 @@ export default async function SubmitPage({
             courseId={game.course_id}
             currentUserId={userId}
             gameMode={game.game_mode}
-            // #1577: the shared team row lives under the captain's id, so a
-            // non-captain reviewing their card has to read the OWNER's rows —
-            // otherwise a complete team card reads as 18 missing holes.
-            teamScoreOwner={
-              me.team_number == null
-                ? null
-                : teamScoreOwnerId(
-                    players.filter((p) => p.team_number === me.team_number),
-                  )
-            }
+            teamScoreOwner={teamScoreOwnerId(myTeam)}
+            // #2067: withdrawn teammates may still hold holes entered before
+            // their account was deleted.
+            formerTeamRowOwnerIds={formerTeamRowOwnerIds(myTeam)}
             meTeeGender={me.tee_gender}
             holeSegment={game.hole_segment}
             tournamentId={game.tournament_id}
@@ -227,6 +229,7 @@ async function ReviewBody({
   currentUserId,
   gameMode,
   teamScoreOwner,
+  formerTeamRowOwnerIds,
   meTeeGender,
   holeSegment,
   tournamentId,
@@ -238,6 +241,8 @@ async function ReviewBody({
   gameMode: GameMode;
   /** #1577: who owns the shared team rows, or null when I own my own. */
   teamScoreOwner: string | null;
+  /** #2067: withdrawn teammates whose rows are folded onto `teamScoreOwner`. */
+  formerTeamRowOwnerIds: readonly string[];
   meTeeGender: ScoringGender;
   holeSegment: HoleSegment;
   /** #1466: non-null on cup matches — drives the "whole round" delivery notice
@@ -275,7 +280,10 @@ async function ReviewBody({
       .from('scores')
       .select('hole_number, user_id, strokes, putts, entered_by')
       .eq('game_id', gameId)
-      .in('user_id', scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwner))
+      .in(
+        'user_id',
+        scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwner, formerTeamRowOwnerIds),
+      )
       .returns<ScoreRow[]>(),
   ]);
 
@@ -302,6 +310,7 @@ async function ReviewBody({
     gameMode,
     currentUserId,
     teamScoreOwner,
+    formerTeamRowOwnerIds,
   );
 
   const scoreByHole = new Map<number, ScoreRow>();

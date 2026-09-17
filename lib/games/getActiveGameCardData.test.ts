@@ -273,3 +273,48 @@ describe('getActiveGameCardData — team-collapsed rounds count the captain’s 
     expect(result.get('g1')?.nextHole).toBe(4);
   });
 });
+
+// #2067: deleting an account mid-round withdraws the captain (0174), so the
+// holes entered before that stay on the withdrawn captain while the mate now
+// owns the card. Both have to count.
+describe('getActiveGameCardData — withdrawn captain keeps the team’s holes (#2067)', () => {
+  const greensome = baseGame({
+    id: 'g1',
+    game_mode: 'greensome_matchplay',
+    hole_segment: 'front9',
+  });
+  const WD = '2026-09-17T10:00:00Z';
+
+  it('the mate who now owns the card gets /submit when the holes are split across both', async () => {
+    const result = await getActiveGameCardData(
+      fakeSupabase(
+        [...holes('g1', [1, 2, 3, 4, 5], 'u1'), ...holes('g1', [6, 7, 8, 9], 'u2')],
+        [
+          { game_id: 'g1', user_id: 'u1', team_number: 1, withdrawn_at: WD },
+          { game_id: 'g1', user_id: 'u2', team_number: 1 },
+        ],
+      ),
+      'u2',
+      [greensome],
+    );
+
+    expect(result.get('g1')?.href).toBe('/games/g1/submit');
+  });
+
+  it('a third member counts the withdrawn captain’s holes and the new owner’s', async () => {
+    const result = await getActiveGameCardData(
+      fakeSupabase(
+        [...holes('g1', [1, 2], 'u1'), ...holes('g1', [3], 'u2')],
+        [
+          { game_id: 'g1', user_id: 'u1', team_number: 1, withdrawn_at: WD },
+          { game_id: 'g1', user_id: 'u2', team_number: 1 },
+          { game_id: 'g1', user_id: 'u3', team_number: 1 },
+        ],
+      ),
+      'u3',
+      [greensome],
+    );
+
+    expect(result.get('g1')?.nextHole).toBe(4);
+  });
+});

@@ -15,7 +15,7 @@ import type { SegmentSibling } from '@/lib/games/segmentSibling';
 import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
 import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
-import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { computeGreenCenter } from '@/lib/geo/greenCenter';
 import { PIN_GATE_MAX_PINS, PIN_GATE_WINDOW_DAYS } from '@/lib/geo/pinRules';
 import type { LatLng } from '@/lib/geo/distance';
@@ -59,6 +59,17 @@ export async function fetchHolePageData(args: {
   me: PlayerForHole;
   playerIds: string[];
   myTeamScoreOwnerId: string | null;
+  /**
+   * #2067: withdrawn teammates who may still hold holes entered before their
+   * account was deleted — `formerTeamRowOwnerIds` of my team.
+   */
+  myFormerTeamRowOwnerIds: string[];
+  /**
+   * #2067: the same for every team in the flight. They are out of `playerIds`
+   * (the flight drops withdrawn players), but the current hole's card has to
+   * read their rows too; page.tsx folds them onto each team's owner.
+   */
+  flightFormerRowOwnerIds: string[];
   siblingMatch: SegmentSibling | null;
   modes: HoleFetchModes;
 }) {
@@ -71,6 +82,8 @@ export async function fetchHolePageData(args: {
     me,
     playerIds,
     myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
+    flightFormerRowOwnerIds,
     siblingMatch,
     modes,
   } = args;
@@ -120,7 +133,7 @@ export async function fetchHolePageData(args: {
         .select('user_id, strokes, putts, client_updated_at, updated_at')
         .eq('game_id', gameId)
         .eq('hole_number', holeNumber)
-        .in('user_id', playerIds)
+        .in('user_id', [...new Set([...playerIds, ...flightFormerRowOwnerIds])])
         .returns<ScoreRow[]>(),
       // #1352: radene, ikke bare antallet — hull-stripa trenger å vite HVILKE
       // hull som har score for å skille et hoppet-over hull fra et tastet.
@@ -133,7 +146,15 @@ export async function fetchHolePageData(args: {
         .from('scores')
         .select('hole_number, user_id')
         .eq('game_id', gameId)
-        .in('user_id', scoreOwnerUserIds(game.game_mode, userId, myTeamScoreOwnerId))
+        .in(
+          'user_id',
+          scoreOwnerUserIds(
+            game.game_mode,
+            userId,
+            myTeamScoreOwnerId,
+            myFormerTeamRowOwnerIds,
+          ),
+        )
         .not('strokes', 'is', null)
         .returns<{ hole_number: number; user_id: string }[]>(),
       isStableford
@@ -285,6 +306,8 @@ export function resolveMyScoredHoles(args: {
   gameMode: GameMode;
   userId: string;
   myTeamScoreOwnerId: string | null;
+  /** #2067: folded onto the owner — a withdrawn captain's entered holes count. */
+  myFormerTeamRowOwnerIds: readonly string[];
 }): number[] {
   return scoredHoleNumbers(
     (args.rows ?? []).map((r) => ({
@@ -294,6 +317,7 @@ export function resolveMyScoredHoles(args: {
     args.gameMode,
     args.userId,
     args.myTeamScoreOwnerId,
+    args.myFormerTeamRowOwnerIds,
   );
 }
 
@@ -347,19 +371,29 @@ export async function resolveSiblingScoreData(args: {
   siblingMatch: SegmentSibling | null;
   siblingTeamRes: HolePageData['siblingTeamRes'];
   userId: string;
-}): Promise<{ teamOwnerId: string | null; scoredHoles: number[] | null }> {
+}): Promise<{
+  teamOwnerId: string | null;
+  formerTeamRowOwnerIds: string[];
+  scoredHoles: number[] | null;
+}> {
   const { siblingMatch, siblingTeamRes, userId } = args;
-  if (!siblingMatch) return { teamOwnerId: null, scoredHoles: null };
+  if (!siblingMatch) {
+    return { teamOwnerId: null, formerTeamRowOwnerIds: [], scoredHoles: null };
+  }
   if (siblingTeamRes.error) {
     console.error('[holes] sibling team fetch failed — strip stays positional', {
       gameId: siblingMatch.gameId,
       error: siblingTeamRes.error,
     });
-    return { teamOwnerId: null, scoredHoles: null };
+    return { teamOwnerId: null, formerTeamRowOwnerIds: [], scoredHoles: null };
   }
   const teamOwnerId = siblingTeamRes.data
     ? teamScoreOwnerId(siblingTeamRes.data)
     : null;
+  // #2067: a captain who deleted their account holds the holes entered before.
+  const formerOwnerIds = siblingTeamRes.data
+    ? formerTeamRowOwnerIds(siblingTeamRes.data)
+    : [];
   // Admin client for the same reason as the roster read above: the shared
   // row lives under the captain's id, which RLS does not hand a non-captain
   // on the other host.
@@ -369,7 +403,7 @@ export async function resolveSiblingScoreData(args: {
     .eq('game_id', siblingMatch.gameId)
     .in(
       'user_id',
-      scoreOwnerUserIds(siblingMatch.gameMode, userId, teamOwnerId),
+      scoreOwnerUserIds(siblingMatch.gameMode, userId, teamOwnerId, formerOwnerIds),
     )
     .not('strokes', 'is', null)
     .returns<{ hole_number: number; user_id: string }[]>();
@@ -378,15 +412,17 @@ export async function resolveSiblingScoreData(args: {
       gameId: siblingMatch.gameId,
       error: siblingScoresRes.error,
     });
-    return { teamOwnerId, scoredHoles: null };
+    return { teamOwnerId, formerTeamRowOwnerIds: formerOwnerIds, scoredHoles: null };
   }
   return {
     teamOwnerId,
+    formerTeamRowOwnerIds: formerOwnerIds,
     scoredHoles: resolveMyScoredHoles({
       rows: siblingScoresRes.data,
       gameMode: siblingMatch.gameMode,
       userId,
       myTeamScoreOwnerId: teamOwnerId,
+      myFormerTeamRowOwnerIds: formerOwnerIds,
     }),
   };
 }
