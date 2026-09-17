@@ -8,6 +8,7 @@ import {
 import { TexasScramblePodium } from '../TexasScramblePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
+import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
@@ -99,7 +100,14 @@ export async function renderTexasScramble(opts: {
         .filter((p) => p.withdrawn_at != null)
         .map((p) => p.user_id),
     );
-    const bruttoScores = rawScoresRows
+    // #2067: a captain who deleted their account mid-round is withdrawn but
+    // still holds the team's entered holes. Fold them onto the team's row owner
+    // first, so the withdrawn filter only drops what no longer counts.
+    const bruttoScores = foldTeamScoreRows({
+      roster: gwp.players,
+      rows: rawScoresRows,
+      mode: game.game_mode,
+    })
       .filter((s) => !withdrawnIdsSet.has(s.user_id))
       .map((s) => ({
         userId: s.user_id,
@@ -147,7 +155,16 @@ export async function renderTexasScramble(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
-  const holesPlayed = maxHolesPlayed(rawScoresRows);
+  // #2067: counted from the context's rows, not the raw ones — they are what
+  // the board shows (withdrawn players out, a withdrawn captain's entered holes
+  // folded in), so the label never claims more holes than a team has.
+  const holesPlayed = maxHolesPlayed(
+    ctx.scores.map((s) => ({
+      user_id: s.userId,
+      hole_number: s.holeNumber,
+      strokes: s.gross,
+    })),
+  );
   const playersById = new Map<string, TexasScramblePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
