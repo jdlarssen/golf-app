@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { expireGameCache } from '@/lib/games/expireGameCache';
 
 /**
  * Konto-sletting for #1012, delt mellom selv-slett (`/profile/slett-konto`) og
@@ -206,6 +207,22 @@ export async function deleteOrAnonymizeUser(
     });
   }
 
+  // #2067: the games `anonymize_user` changes — 0174 withdraws the user from
+  // active games and removes the row from draft/scheduled ones. Their cached
+  // roster (`game-${id}`, up to 15 min) must expire right after, or the hole
+  // page keeps a deleted captain as the team's row owner, and the teammate's
+  // new strokes land on a withdrawn row that the write RPC silently ignores.
+  // Read before the RPC: afterwards the draft/scheduled rows are gone.
+  const { data: openGames, error: openGamesError } = await admin
+    .from('games')
+    .select('id, game_players!inner(user_id)')
+    .eq('game_players.user_id', userId)
+    .in('status', ['active', 'draft', 'scheduled']);
+  if (openGamesError) {
+    console.error(`${logPrefix} open games read failed`, { userId, openGamesError });
+    return { ok: false, reason: 'failed' };
+  }
+
   const { error: rpcError } = await admin.rpc('anonymize_user', {
     p_user_id: userId,
   });
@@ -213,6 +230,7 @@ export async function deleteOrAnonymizeUser(
     console.error(`${logPrefix} anonymize_user failed`, { userId, rpcError });
     return { ok: false, reason: 'failed' };
   }
+  for (const game of openGames ?? []) expireGameCache(game.id);
 
   const { error: authError } = await admin.auth.admin.deleteUser(userId, true);
   if (authError) {
