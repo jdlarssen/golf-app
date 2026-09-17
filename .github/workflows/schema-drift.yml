@@ -84,10 +84,13 @@ jobs:
           echo "target_name=$TARGET_NAME" >> "$GITHUB_OUTPUT"
           echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
 
+      # Authenticated lookup of the latest CLI release: the unauthenticated
+      # limit (60/h per shared runner IP) failed this step twice (#2015).
       - uses: supabase/setup-cli@v1
         if: steps.guard.outputs.run == 'true'
         with:
           version: latest
+          github-token: ${{ github.token }}
 
       - name: Regenerate types from ${{ steps.target.outputs.target_name }} and diff against committed file
         if: steps.guard.outputs.run == 'true'
