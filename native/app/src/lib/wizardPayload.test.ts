@@ -494,3 +494,32 @@ describe('best ball-flight for lag 3 og 4', () => {
     ).toEqual([[1, 1], [1, 1], [2, 1], [2, 1], [3, 2], [3, 2], [4, 2], [4, 2]]);
   });
 });
+
+// #2148: best ball tar opptil 20 par, og standard-flighten er to par per flight,
+// samme regel som nettsiden (`defaultFlightForTeam`).
+describe('best ball med flere enn fire par (#2148)', () => {
+  it('12 spillere i seks par gir flight 1, 1, 2, 2, 3, 3 per par, og alle 12 er med', () => {
+    const pairs: [string, number][] = Array.from({ length: 12 }, (_, i) => [
+      `p${i}`,
+      Math.floor(i / 2) + 1,
+    ]);
+    const { payload } = buildDraftPayload(draft({ gameMode: 'best_ball', players: teamed(...pairs) }));
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload.players).toHaveLength(12);
+    expect(payload.players.map((p) => [p.team_number, p.flight_number])).toEqual([
+      [1, 1], [1, 1], [2, 1], [2, 1], [3, 2], [3, 2],
+      [4, 2], [4, 2], [5, 3], [5, 3], [6, 3], [6, 3],
+    ]);
+  });
+
+  it('40 spillere i 20 par bygges uten feil, med flight 10 på par 20', () => {
+    const pairs: [string, number][] = Array.from({ length: 40 }, (_, i) => [
+      `p${i}`,
+      Math.floor(i / 2) + 1,
+    ]);
+    const { payload } = buildDraftPayload(draft({ gameMode: 'best_ball', players: teamed(...pairs) }));
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload.players).toHaveLength(40);
+    expect(payload.players.at(-1)).toMatchObject({ team_number: 20, flight_number: 10 });
+  });
+});

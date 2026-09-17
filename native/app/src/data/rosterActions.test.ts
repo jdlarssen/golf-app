@@ -12,6 +12,7 @@
 // testet i `lib/`. De asserteres ikke om igjen her; det som testes er at DENNE
 // fila spør de delte helperne og handler på svaret.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
+import { maxPlayersForMode } from '../lib/rosterLimits';
 import { useFreshModules } from '../test/harness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -274,13 +275,13 @@ describe('rosterActions', () => {
       });
     });
 
-    it('nekter en niende spiller i stableford — veiviserens tak, ikke et nytt tall', async () => {
+    it('nekter spiller nummer 41 i stableford — veiviserens tak, ikke et nytt tall', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         games: [queryStub(gameRow('scheduled', 'stableford'))],
-        // Åtte rader = `maxPlayersForMode('stableford')`. Den niende ville blitt
-        // stille droppet av den delte byggeren ved start.
-        game_players: [queryStub(rosterOf(8))],
+        // 40 rader = `maxPlayersForMode('stableford')` (#2148). Nummer 41 ville
+        // blitt stille droppet av den delte byggeren ved start.
+        game_players: [queryStub(rosterOf(maxPlayersForMode('stableford')))],
       });
 
       expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({

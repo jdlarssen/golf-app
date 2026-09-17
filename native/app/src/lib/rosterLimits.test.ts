@@ -2,10 +2,10 @@
 // Type A — den ene testen som gjør spillertaket til noe annet enn åtte tall
 // noen skrev ned en gang.
 //
-// Slot-tallene i `gamePayload.ts` er interne (`for (let i = 0; i < 8; i++)`)
-// og eksporteres ikke, så taket her KAN ikke utledes — det må speiles. Prisen
-// for et speil er drift, og drift på nettopp dette tallet er stille: byggeren
-// leser slottene den leser, og en spiller utenfor rekkevidde forsvinner uten
+// Taket for best ball og stableford-familien leses fra `teamFormatLimits`
+// (#2148), men for de andre modiene er slot-tallene i `gamePayload.ts` interne
+// og må speiles. Drift på nettopp dette tallet er stille: byggeren leser
+// slottene den leser, og en spiller utenfor rekkevidde forsvinner uten
 // feilmelding.
 //
 // Testen betaler den prisen ved å kjøre den DELTE byggeren:
@@ -23,6 +23,11 @@ import {
   teamLayoutFor,
 } from './rosterLimits';
 import { buildDraftPayload, type GameDraft, type ModeSetup } from './wizardPayload';
+import {
+  TEAM_FORMAT_PLAYER_CAP,
+  maxTeamsForSize,
+  teamModePlayerCap,
+} from '../../../../lib/games/teamFormatLimits';
 
 /**
  * Et utkast med `count` spillere, lag fordelt som veiviseren ville fordelt
@@ -65,10 +70,6 @@ const CASES: [label: string, mode: AppGameMode, setup: ModeSetup][] = [
   ['bingo_bango_bongo', 'bingo_bango_bongo', {}],
 ];
 
-// #2148: modiene der den delte byggeren alt tar flere spillere enn appen. Tom
-// når appen får samme tak som nettsiden.
-const APP_STRICTER_THAN_BUILDER = new Set(['stableford (solo)', 'modified_stableford']);
-
 describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
   it.each(CASES)(
     '%s: taket bæres helt fram, og én over gjør det ikke',
@@ -83,10 +84,6 @@ describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
       // Én over: enten en feilkode, eller færre rader enn valgt. Begge deler
       // er greie svar fra byggeren — det som ikke er greit, er at alle
       // `cap + 1` skulle kommet gjennom, for da sperrer veiviseren for tidlig.
-      // #2148: byggeren tar nå 40 i solo-stableford, mens appen holder 8 til
-      // appens tak løftes i egen PR. Der er appen strengere enn byggeren, som
-      // er trygt (ingen stille dropp), så bare den første halvdelen gjelder.
-      if (APP_STRICTER_THAN_BUILDER.has(_label)) return;
       const overCap = buildDraftPayload(draftWith(mode, cap + 1, setup)).payload;
       expect(
         overCap.errorCode !== undefined || overCap.players.length !== cap + 1,
@@ -103,18 +100,22 @@ describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
 
 describe('playerCountsForMode / describePlayerCounts', () => {
   it('leser antallene ut av den delte fitsPlayerCount, ikke ut av en egen liste', () => {
-    expect(playerCountsForMode('best_ball')).toEqual([2, 4, 6, 8]);
+    expect(playerCountsForMode('best_ball')).toEqual(
+      Array.from({ length: 20 }, (_, i) => 2 * (i + 1)),
+    );
     expect(playerCountsForMode('wolf')).toEqual([3, 4, 5]);
     expect(playerCountsForMode('singles_matchplay')).toEqual([2]);
     // Stableford er «1 og oppover» i den delte funksjonen — taket er appens.
-    expect(playerCountsForMode('stableford')).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(playerCountsForMode('stableford')).toEqual(
+      Array.from({ length: 40 }, (_, i) => i + 1),
+    );
   });
 
   it('skriver antallene som en frase arrangøren kan lese', () => {
     expect(describePlayerCounts('singles_matchplay')).toBe('2 spillere');
     expect(describePlayerCounts('wolf')).toBe('3–5 spillere');
-    expect(describePlayerCounts('best_ball')).toBe('2, 4, 6 eller 8 spillere');
-    expect(describePlayerCounts('stableford')).toBe('1–8 spillere');
+    expect(describePlayerCounts('best_ball')).toBe('2–40 spillere, partall');
+    expect(describePlayerCounts('stableford')).toBe('1–40 spillere');
   });
 });
 
@@ -126,7 +127,33 @@ describe('rosterFitsMode', () => {
     expect(rosterFitsMode('best_ball', 3)).toBe(false);
     expect(rosterFitsMode('best_ball', 4)).toBe(true);
     // Taket appen legger på et format den delte funksjonen lar stå åpent.
-    expect(rosterFitsMode('stableford', 8)).toBe(true);
-    expect(rosterFitsMode('stableford', 9)).toBe(false);
+    expect(rosterFitsMode('stableford', 40)).toBe(true);
+    expect(rosterFitsMode('stableford', 41)).toBe(false);
+    expect(rosterFitsMode('best_ball', 40)).toBe(true);
+    expect(rosterFitsMode('best_ball', 42)).toBe(false);
+  });
+});
+
+// #2148: appen har samme tak som nettsiden, lest fra `teamFormatLimits`.
+describe('appens tak og lag følger nettsiden (#2148)', () => {
+  it('best ball, stableford og modifisert tar 40, som nettsiden', () => {
+    expect(maxPlayersForMode('best_ball')).toBe(teamModePlayerCap('best_ball', 2));
+    expect(maxPlayersForMode('best_ball')).toBe(TEAM_FORMAT_PLAYER_CAP);
+    expect(maxPlayersForMode('stableford')).toBe(TEAM_FORMAT_PLAYER_CAP);
+    expect(maxPlayersForMode('modified_stableford')).toBe(TEAM_FORMAT_PLAYER_CAP);
+  });
+
+  it('lag-oppsettet tilbyr like mange lag som taket gir par, og sidene står', () => {
+    expect(teamLayoutFor('best_ball', false)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag' });
+    expect(teamLayoutFor('stableford', true)).toEqual({ slots: maxTeamsForSize(2), noun: 'lag' });
+    expect(teamLayoutFor('singles_matchplay', false)).toEqual({ slots: 2, noun: 'side' });
+    expect(teamLayoutFor('greensome_matchplay', false)).toEqual({ slots: 2, noun: 'side' });
+    expect(teamLayoutFor('stableford', false)).toBeNull();
+  });
+
+  it('en gammel app-runde med 8 i best ball bygges som før (N5)', () => {
+    const payload = buildDraftPayload(draftWith('best_ball', 8)).payload;
+    expect(payload.errorCode).toBeUndefined();
+    expect(payload.players).toHaveLength(8);
   });
 });

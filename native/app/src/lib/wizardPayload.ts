@@ -14,6 +14,7 @@ import {
   buildGameInsertPayload,
   type ParsedPayload,
 } from '../../../../lib/games/gamePayload';
+import { defaultFlightForTeam } from '../../../../lib/games/teamFormatLimits';
 import { isStablefordFamily } from '../../../../lib/scoring/modes/types';
 import {
   APP_MODE_LABELS,
@@ -103,19 +104,6 @@ interface PlayerSlot {
 }
 
 /**
- * Webbens default-flight: lag 1 og 2 spiller i flight 1, lag 3 og 4 i flight 2
- * (`useGameFormState.ts:1023`). Gjelder KUN best ball — alle andre lag-formater
- * setter flight = lag.
- *
- * Flight er ikke valgfritt å utelate: DB-CHECK-en
- * `game_players_team_flight_consistency` krever at lag og flight er satt
- * sammen eller null sammen.
- */
-function bestBallDefaultFlight(team: number): number {
-  return team === 1 || team === 2 ? 1 : 2;
-}
-
-/**
  * Trenger denne modusen at hver spiller får et lag/side FØR publisering?
  *
  * Eksportert fordi veiviser-skjermen må stille nøyaktig samme spørsmål: den
@@ -188,7 +176,11 @@ function orderedSlots(draft: GameDraft): PlayerSlot[] {
         userId: player.userId,
         team,
         flight:
-          draft.gameMode === 'best_ball' ? bestBallDefaultFlight(team) : team,
+          // Best ball: webbens standard-flight, to par per flight
+          // (`defaultFlightForTeam`, #2148). Alle andre lag-formater setter
+          // flight = lag. Flight kan ikke utelates: DB-CHECK-en
+          // `game_players_team_flight_consistency` krever lag og flight sammen.
+          draft.gameMode === 'best_ball' ? defaultFlightForTeam(team) : team,
       };
     });
 }
