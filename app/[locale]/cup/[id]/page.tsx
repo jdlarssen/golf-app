@@ -207,7 +207,10 @@ export default async function PublicCupPage({
                       </p>
                       {/* #1814: uten denne linja ser én ball mot to ut som feil. */}
                       {m.soloPlayOn && (
-                        <p className="mt-1 font-sans text-[12px] text-muted">
+                        <p
+                          className="mt-1 font-sans text-[12px] text-muted"
+                          data-testid={`cup-public-match-solo-${m.gameId}`}
+                        >
                           {t('public.matchSoloPlayOn', {
                             partner: m.soloPlayOn.partnerName,
                           })}
