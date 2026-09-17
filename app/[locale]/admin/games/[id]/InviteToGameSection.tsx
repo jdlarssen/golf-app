@@ -4,8 +4,7 @@ import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Banner } from '@/components/ui/Banner';
 import { InviteToGameClient } from './InviteToGameClient';
 import type { GameStatus } from '@/lib/games/status';
-
-const BEST_BALL_MAX_PLAYERS = 8;
+import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 
 type CandidateRow = {
   id: string;
@@ -20,7 +19,11 @@ type Props = {
   gameId: string;
   status: GameStatus;
   gameMode: string;
+  modeConfig: { team_size?: number } | null;
+  /** Every roster row, withdrawn included — they stay out of the picker. */
   currentPlayerIds: string[];
+  /** Players not withdrawn: what counts against the format cap (#2059). */
+  activePlayerCount: number;
 };
 
 /**
@@ -36,7 +39,9 @@ export async function InviteToGameSection({
   gameId,
   status,
   gameMode,
+  modeConfig,
   currentPlayerIds,
+  activePlayerCount,
 }: Props) {
   if (status === 'active' || status === 'finished') return null;
 
@@ -65,8 +70,9 @@ export async function InviteToGameSection({
     return null;
   }
 
-  const isBestBall = gameMode === 'best_ball';
-  const isFull = isBestBall && currentPlayerIds.length >= BEST_BALL_MAX_PLAYERS;
+  // Same cap as the signup link and the add actions (#2059).
+  const cap = organizerPlayerCap(gameMode, modeConfig);
+  const isFull = cap !== null && activePlayerCount >= cap;
 
   return (
     <section className="mt-1.5">
@@ -76,11 +82,11 @@ export async function InviteToGameSection({
         style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
       >
         <div className="space-y-4 px-3.5 pb-3.5 pt-3.5">
-          {isFull && (
+          {isFull && cap !== null && (
             <Banner tone="info">
               {tCta('gameFullBanner', {
-                current: BEST_BALL_MAX_PLAYERS,
-                max: BEST_BALL_MAX_PLAYERS,
+                current: activePlayerCount,
+                max: cap,
               })}
             </Banner>
           )}

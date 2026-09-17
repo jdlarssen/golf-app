@@ -5,6 +5,7 @@ import {
   MAX_TEAM_FORMAT_PLAYERS,
   MIN_TEAMS,
   fitsTeamFormat,
+  organizerPlayerCap,
   randomDrawTeamCount,
   registrationSeatTeamSize,
   teamFormatPlayerCap,
@@ -13,6 +14,9 @@ import {
   teamsShownForSize,
 } from './teamFormatLimits';
 import { TEAM_NUMBERS } from '@/app/[locale]/admin/games/new/useGameFormState';
+import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import no from '@/messages/no.json';
+import en from '@/messages/en.json';
 
 // Lag-format-grensene bor i ÉN fil (#2009), men lag-rutenettet har sin egen
 // TEAM_NUMBERS-tuppel fordi den må være en literal union for typing. Denne
@@ -211,5 +215,57 @@ describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)
       }
     }
     expect(checked).toBeGreaterThan(0);
+  });
+});
+
+// #2059: the organiser adds players and guests on the roster pages, open
+// self-registration adds them through the signup link. Both must stop at the
+// same number, or «fullt» means two things (AGENTS.md trap 4).
+describe('organizerPlayerCap — arrangøren og påmeldingen stopper på samme tall (#2059)', () => {
+  const TEAM_MODES = [
+    ['texas_scramble', [2, 3, 4]],
+    ['ambrose', [2, 3, 4]],
+    ['florida_scramble', [3, 4]],
+    ['shamble', [3, 4]],
+    ['best_ball', [2]],
+    ['patsome', [2]],
+  ] as const;
+
+  it.each(TEAM_MODES.flatMap(([mode, sizes]) => sizes.map((size) => [mode, size] as const)))(
+    '%s à %i',
+    (mode, size) => {
+      const organizer = organizerPlayerCap(mode, { team_size: size });
+      expect(organizer).not.toBeNull();
+      expect(organizer).toBe(registrationPlayerCap(mode, { team_size: size }));
+    },
+  );
+
+  it('uten mode_config faller begge til samme tak', () => {
+    for (const [mode] of TEAM_MODES) {
+      expect(organizerPlayerCap(mode, null), mode).toBe(registrationPlayerCap(mode, null));
+    }
+  });
+
+  it('formater uten lag har ikke noe arrangørtak her', () => {
+    expect(organizerPlayerCap('stableford', null)).toBeNull();
+    expect(organizerPlayerCap('singles_matchplay', { team_size: 1 })).toBeNull();
+  });
+});
+
+// #2075: the wizard's team descriptions must promise the grid it renders.
+describe('teamsDesc-tekstene lover like mange lag som rutenettet (#2075)', () => {
+  const catalogs = [
+    ['no', no.wizard.sections.teams, `Inntil ${MAX_TEAMS} lag`],
+    ['en', en.wizard.sections.teams, `Up to ${MAX_TEAMS} teams`],
+  ] as const;
+
+  it.each(catalogs)('%s', (_locale, teams, promise) => {
+    const keys = Object.keys(teams).filter(
+      (k) => k.startsWith('teamsDesc') && k !== 'teamsDescTeamMatchplay',
+    );
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) {
+      expect(teams[key as keyof typeof teams], key).toContain(promise);
+    }
   });
 });

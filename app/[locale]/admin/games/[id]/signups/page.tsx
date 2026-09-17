@@ -30,6 +30,7 @@ type GameRow = {
   registration_mode: 'invite_only' | 'manual_approval' | 'open';
   registration_type: 'solo' | 'team' | 'both';
   game_mode: GameMode;
+  mode_config: { team_size?: number } | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
   courses: { name: string } | null;
 };
@@ -88,7 +89,7 @@ export default async function PåmeldingerPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, courses(name)',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, courses(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -237,6 +238,7 @@ export default async function PåmeldingerPage({
             tab={activeTab.key}
             locked={gameLocked}
             gameMode={game.game_mode}
+            modeConfig={game.mode_config}
             approvedCount={counts.approved}
           />
         </div>

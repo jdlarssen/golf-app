@@ -28,6 +28,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
 import { ScorecardTable } from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
@@ -35,8 +36,6 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ status?: string; error?: string; email?: string }>;
-
-const BEST_BALL_MAX_PLAYERS = 8;
 
 const STATUS_KEYS = new Set([
   'invite_added',
@@ -140,8 +139,10 @@ export default async function CreatorSpillerePage({
   const canRemove = isPreStart && !isCupRosterLocked;
   const isActive = status === 'active';
   const canWithdraw = supportsWithdrawal(game.game_mode);
-  const isBestBall = game.game_mode === 'best_ball';
-  const isFull = isBestBall && players.length >= BEST_BALL_MAX_PLAYERS;
+  // Same cap as the signup link and the add actions, over active players (#2059).
+  const playerCap = organizerPlayerCap(game.game_mode, game.mode_config);
+  const isFull =
+    playerCap !== null && players.filter((p) => !p.withdrawn_at).length >= playerCap;
 
   // Pre-start the page needs two independent reads: the pending game-scoped
   // invitations and the creator's co-player network for the add-picker. They
@@ -214,7 +215,7 @@ export default async function CreatorSpillerePage({
       }
     >
       {t(`errorMessages.${errorParam}` as Parameters<typeof t>[0], {
-        max: BEST_BALL_MAX_PLAYERS,
+        max: playerCap ?? 0,
         email: emailParam ?? '',
       })}
     </Banner>
@@ -495,7 +496,7 @@ export default async function CreatorSpillerePage({
               {isFull && (
                 <div className="mb-4">
                   <Banner tone="info">
-                    {t('fullBanner', { max: BEST_BALL_MAX_PLAYERS })}
+                    {t('fullBanner', { max: playerCap ?? 0 })}
                   </Banner>
                 </div>
               )}

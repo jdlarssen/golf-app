@@ -838,3 +838,110 @@ describe('inviteEmailToGame', () => {
     expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?error=invite_not_allowed`);
   });
 });
+
+// #2059: the organiser's cap comes from the one home the signup link reads
+// (`lib/games/teamFormatLimits.ts`), for every team format — not a local
+// best-ball constant — and it counts active players only.
+describe('arrangørtaket følger påmeldingstaket i alle lag-format (#2059)', () => {
+  const ADMIN_ROLE_READ = {
+    data: { is_admin: true, email: 'admin@example.test', name: 'Jørgen' },
+    error: null,
+  };
+
+  function gameRow(game_mode: string, team_size: number) {
+    return {
+      data: {
+        id: GAME_ID,
+        name: 'Lagkveld',
+        status: 'scheduled',
+        game_mode,
+        group_id: null,
+        mode_config: { team_size },
+      },
+      error: null,
+    };
+  }
+
+  function activeCountFilters(): unknown[][] {
+    return supabaseMock.__fromCalls
+      .filter((c) => c.table === 'game_players' && c.method === 'is')
+      .map((c) => c.args);
+  }
+
+  describe('addExistingPlayerToGame', () => {
+    it('texas scramble à 2 med 8 aktive → game_full, ingen insert', async () => {
+      supabaseMock = buildSupabaseMock([
+        ADMIN_ROLE_READ,
+        gameRow('texas_scramble', 2),
+        { data: [], error: null, count: 8 } as never,
+      ]);
+      authedAsAdmin();
+
+      const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+      await expect(
+        addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
+      ).rejects.toBeInstanceOf(RedirectError);
+
+      expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=game_full`);
+      expect(
+        supabaseMock.__fromCalls.filter((c) => c.method === 'insert'),
+      ).toHaveLength(0);
+      expect(activeCountFilters()).toContainEqual(['withdrawn_at', null]);
+    });
+
+    it('texas scramble à 3 med 8 aktive har plass (taket er 12)', async () => {
+      supabaseMock = buildSupabaseMock([
+        ADMIN_ROLE_READ,
+        gameRow('texas_scramble', 3),
+        { data: [], error: null, count: 8 } as never,
+        { data: null, error: null },
+      ]);
+      authedAsAdmin();
+
+      const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+      await expect(
+        addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
+      ).rejects.toBeInstanceOf(RedirectError);
+
+      expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=invite_added`);
+    });
+  });
+
+  describe('inviteEmailToGame', () => {
+    it('shamble à 4 med 16 aktive → game_full før e-postoppslaget', async () => {
+      supabaseMock = buildSupabaseMock([
+        ADMIN_ROLE_READ,
+        gameRow('shamble', 4),
+        { data: [], error: null, count: 16 } as never,
+      ]);
+      authedAsAdmin();
+
+      const { inviteEmailToGame } = await import('./inviteToGameActions');
+      await expect(
+        inviteEmailToGame(GAME_ID, formData({ email: 'kompis@example.com' })),
+      ).rejects.toBeInstanceOf(RedirectError);
+
+      expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=game_full`);
+      expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+      expect(activeCountFilters()).toContainEqual(['withdrawn_at', null]);
+    });
+
+    it('shamble à 4 med 12 aktive har plass', async () => {
+      supabaseMock = buildSupabaseMock([
+        ADMIN_ROLE_READ,
+        gameRow('shamble', 4),
+        { data: [], error: null, count: 12 } as never,
+        { data: { id: RECIPIENT_ID }, error: null },
+        { data: null, error: null },
+      ]);
+      authedAsAdmin();
+
+      const { inviteEmailToGame } = await import('./inviteToGameActions');
+      await expect(
+        inviteEmailToGame(GAME_ID, formData({ email: 'kompis@example.com' })),
+      ).rejects.toBeInstanceOf(RedirectError);
+
+      expect(lastRedirect()).toContain('status=invite_added');
+    });
+  });
+});

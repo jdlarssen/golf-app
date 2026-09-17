@@ -14,7 +14,9 @@
 // #2011 added readers outside the wizard, so open self-registration stops at
 // the same cap: `registerForOpenGame` through `registrationPlayerCap`
 // (`lib/wizard/fitsPlayerCount.ts`), and `submitTeamRegistration` through
-// `teamModePlayerCap` and `MAX_TEAMS`.
+// `teamModePlayerCap` and `MAX_TEAMS`. #2059 added the organiser's surfaces:
+// adding a player or a guest on the roster pages reads `organizerPlayerCap`,
+// and the signups page warns through `registrationPlayerCap`.
 //
 // Taket er `MAX_TEAMS × 4` fordi lag-rutenettet har fire lag og største
 // lagstørrelse er fire. Utvides rutenettet, endres `MAX_TEAMS` her og
@@ -165,6 +167,23 @@ export function teamModePlayerCap(
     teamFormatPlayerCap(registrationSeatTeamSize(mode, teamSize)),
     MAX_TEAM_FORMAT_PLAYERS,
   );
+}
+
+/**
+ * The cap the organiser meets when adding players or guests to a team-format
+ * game on the roster pages (#2059): the same number open self-registration
+ * stops at, so «fullt» means one thing everywhere. The organiser's gates count
+ * active `game_players` rows, not the seats a registered team holds — the
+ * organiser curates the roster (#662).
+ *
+ * Takes the raw `game_mode` string the actions read from the row; a mode
+ * outside the team formats has no cap here.
+ */
+export function organizerPlayerCap(
+  mode: GameMode | string,
+  modeConfig: { team_size?: number } | null | undefined,
+): number | null {
+  return teamModePlayerCap(mode as GameMode, modeConfig?.team_size);
 }
 
 /**
