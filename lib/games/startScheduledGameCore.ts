@@ -500,7 +500,11 @@ export async function startScheduledGameCore(
   // the notification kind, not the DB status) so every other reader of
   // game_registration_requests.status keeps working unchanged.
   const expiredSignups = started
-    ? await autoRejectPendingSignups(supabase, gameId)
+    ? await autoRejectPendingSignups(
+        supabase,
+        gameId,
+        new Set(roster.map((r) => r.user_id)),
+      )
     : [];
 
   return { ok: true, started, gameName: game.name, expiredSignups };
@@ -508,7 +512,11 @@ export async function startScheduledGameCore(
 
 /**
  * Best-effort: flip every still-`pending` game_registration_requests row for
- * `gameId` to `rejected` and return the affected applicants so the caller can
+ * `gameId` to `rejected` — plus, since #2061, every teammate who said yes to a
+ * team whose captain is still pending: their row is `approved` but they wait
+ * off the roster for the team, so the team's expiry is theirs too. A teammate
+ * already on the roster (`rosterUserIds`) is left alone. Returns the affected
+ * applicants so the caller can
  * fire one `registration_expired` notification each (#1055). Called once, only
  * by the caller that won the scheduled→active flip (mirrors the `game_started`
  * fan-out contract).
@@ -533,14 +541,22 @@ export async function startScheduledGameCore(
 async function autoRejectPendingSignups(
   supabase: SupabaseClient<Database>,
   gameId: string,
+  rosterUserIds: Set<string>,
 ): Promise<ExpiredSignup[]> {
   try {
-    const { data: pending, error: pendingError } = await supabase
+    const { data: open, error: pendingError } = await supabase
       .from('game_registration_requests')
-      .select('id, user_id')
+      .select('id, user_id, status, team_request_id')
       .eq('game_id', gameId)
-      .eq('status', 'pending')
-      .returns<{ id: string; user_id: string }[]>();
+      .in('status', ['pending', 'approved'])
+      .returns<
+        {
+          id: string;
+          user_id: string;
+          status: 'pending' | 'approved';
+          team_request_id: string | null;
+        }[]
+      >();
     if (pendingError) {
       console.error(
         '[startScheduledGame] pending signup-requests fetch failed',
@@ -548,7 +564,18 @@ async function autoRejectPendingSignups(
       );
       return [];
     }
-    if (!pending || pending.length === 0) return [];
+    const rows = open ?? [];
+    const pendingIds = new Set(
+      rows.filter((r) => r.status === 'pending').map((r) => r.id),
+    );
+    const pending = rows.filter(
+      (r) =>
+        r.status === 'pending' ||
+        (r.team_request_id != null &&
+          pendingIds.has(r.team_request_id) &&
+          !rosterUserIds.has(r.user_id)),
+    );
+    if (pending.length === 0) return [];
 
     const decidedAt = new Date().toISOString();
     // #1867: trap 2 (`docs/bug-prevention.md`) in its plain form — PostgREST
@@ -572,7 +599,7 @@ async function autoRejectPendingSignups(
           'id',
           pending.map((r) => r.id),
         )
-        .eq('status', 'pending')
+        .in('status', ['pending', 'approved'])
         .select('id'),
       'autoRejectPendingSignups',
     );
