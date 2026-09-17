@@ -79,6 +79,33 @@ export interface RawProfileInput {
   level?: string | null;
 }
 
+/**
+ * Formatsjekken for handicap-magnitude — delt av profilen, onboarding,
+ * `PUT /api/profile`, admin-spillerskjemaet og gjesteskjemaet (#2048).
+ *
+ * Tar en ALLEREDE TRIMMET streng uten fortegn og gir tallet hvis det ligger i
+ * [0, {@link HCP_MAX}], ellers `null`. Fortegnet håndterer kalleren, for de
+ * tre inngangene har hver sin konvensjon (flagg, ledende «+», signert tall).
+ *
+ * Formatet sjekkes FØR tallet leses (#2044). `parseFloat` stopper ved første
+ * tegn den ikke forstår, så «12abc» ble lagret som 12 og «1,2,3» som 1,2.
+ * Godtatt: sifre med høyst ett desimalskilletegn (komma eller punktum), også
+ * uten sifre foran («,5» er 0,5). Bakerst kan det i tillegg stå ETT
+ * skilletegn («12,5,» er 12,5), for det er lett å trykke én gang for mye på
+ * desimaltasten. Fortegn avvises, det samme gjør mellomrom inni tallet,
+ * eksponent og heksadesimal.
+ */
+export function parseHcpMagnitude(input: string): number | null {
+  if (!/^(?:\d+(?:[.,]\d+)?|[.,]\d+)[.,]?$/.test(input)) return null;
+  // Komma → punktum: norske tastatur gir «12,4», `parseFloat` vil ha «12.4».
+  // `parseFloat` stopper ved et etterfølgende skilletegn, så «12,5,» blir 12,5.
+  const magnitude = Number.parseFloat(input.replace(',', '.'));
+  if (!Number.isFinite(magnitude) || magnitude < 0 || magnitude > HCP_MAX) {
+    return null;
+  }
+  return magnitude;
+}
+
 export function parseProfileInput(raw: RawProfileInput): ParseProfileResult {
   const name = String(raw.name ?? '').trim();
   if (!name) return { ok: false, error: 'name_required' };
@@ -86,22 +113,8 @@ export function parseProfileInput(raw: RawProfileInput): ParseProfileResult {
   const nicknameRaw = String(raw.nickname ?? '').trim();
   const nickname = nicknameRaw === '' ? null : nicknameRaw;
 
-  // Formatet sjekkes på den trimmede strengen FØR tallet leses (#2044).
-  // `parseFloat` stopper ved første tegn den ikke forstår, så «12abc» ble
-  // lagret som 12 og «1,2,3» som 1,2. Godtatt: sifre med høyst ett
-  // desimalskilletegn (komma eller punktum), også uten sifre foran («,5» er
-  // 0,5). Bakerst kan det i tillegg stå ETT skilletegn («12,5,» er 12,5), for
-  // det er lett å trykke én gang for mye på desimaltasten. Fortegn avvises
-  // (plusshandicap kommer som eget flagg), det samme gjør mellomrom inni
-  // tallet, eksponent og heksadesimal.
-  const hcpTrimmed = String(raw.hcpIndex ?? '').trim();
-  if (!/^(?:\d+(?:[.,]\d+)?|[.,]\d+)[.,]?$/.test(hcpTrimmed)) {
-    return { ok: false, error: 'hcp_invalid' };
-  }
-  // Komma → punktum: norske tastatur gir «12,4», `parseFloat` vil ha «12.4».
-  // `parseFloat` stopper ved et etterfølgende skilletegn, så «12,5,» blir 12,5.
-  const hcpMagnitude = Number.parseFloat(hcpTrimmed.replace(',', '.'));
-  if (!Number.isFinite(hcpMagnitude) || hcpMagnitude < 0 || hcpMagnitude > HCP_MAX) {
+  const hcpMagnitude = parseHcpMagnitude(String(raw.hcpIndex ?? '').trim());
+  if (hcpMagnitude === null) {
     return { ok: false, error: 'hcp_invalid' };
   }
   // To sjekker, ikke én: magnituden må ligge i [0, 54], og den SIGNERTE
