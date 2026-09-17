@@ -25,6 +25,11 @@ Alt arbeid via PR — **aldri direkte push til `main`**. Hooks håndhever dette:
    **PR-presentasjon (fast form, alle aktører — eierbestilling 2026-07-30, #1413).**
    Dette er formens ene hjem; loop-dokumentene (kontrakt-smeden, nattkjøreren)
    peker hit.
+   - **Alle PR-er** har seksjonen `## Funksjonelt` (#2147): 2–3 setninger i
+     produktspråk om hva endringen betyr for eier eller spillere («Du kan nå …»,
+     «Når X skjer, sier appen nå …»), uten filnavn, pluss én linje «Kan merges: ja»
+     eller «Venter på deg: <grunn>». Discord-knappkortet viser seksjonen under tittelen
+     og regner ut venter-linja selv fra merge-portene (`docs/loops/discord-pr-kort.md`).
    - **Alle feat/fix/perf-PR-er** har en kort «Fordeler/ulemper»-blokk i body eller
      første kommentar: 2–3 fordeler og 2–3 ulemper ved valgt løsning, i eierens
      produktspråk — også når det bare finnes ett fornuftig alternativ.
