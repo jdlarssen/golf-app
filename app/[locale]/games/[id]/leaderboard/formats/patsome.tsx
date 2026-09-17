@@ -5,7 +5,6 @@ import { PatsomeView, type PatsomePlayerInfo } from '../PatsomeView';
 import { PatsomePodium } from '../PatsomePodium';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
-import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
@@ -52,7 +51,18 @@ export async function renderPatsome(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
-  const holesPlayed = maxHolesPlayed(rawScoresRows);
+  // #2067: the holes the board's own team lines count as played. Per-player
+  // row counts undercount patsome once a withdrawn captain's own ball (1–6) is
+  // out while the team's shared holes (7–18) are folded onto them.
+  const holesPlayed = Math.max(
+    0,
+    ...result.teams.map(
+      (t) =>
+        t.segments.fourball.holesPlayed +
+        t.segments.greensome.holesPlayed +
+        t.segments.foursomes.holesPlayed,
+    ),
+  );
   const playersById = new Map<string, PatsomePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;

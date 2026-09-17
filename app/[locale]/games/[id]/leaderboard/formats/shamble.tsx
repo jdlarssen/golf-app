@@ -72,7 +72,16 @@ export async function renderShamble(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
-  const holesPlayed = maxHolesPlayed(rawScoresRows);
+  // #2067: counted from the context's rows, not the raw ones — they are what
+  // the board shows (withdrawn players out, a withdrawn captain's entered holes
+  // folded in), so the label never claims more holes than a team has.
+  const holesPlayed = maxHolesPlayed(
+    ctx.scores.map((s) => ({
+      user_id: s.userId,
+      hole_number: s.holeNumber,
+      strokes: s.gross,
+    })),
+  );
   const playersById = new Map<string, ShamblePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;

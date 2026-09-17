@@ -4,6 +4,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
   calculateSideTournament,
@@ -73,8 +74,15 @@ export async function computeSideTournament(opts: {
   // Rå-scores er allerede hentet én gang av LeaderboardBody og sendt hit som
   // `rawScoresRows` — gjenbruk dem i stedet for å fyre en ny identisk `scores`-
   // query i samme render-tre (#416). Samme tabell, samme game_id-filter.
+  // #2067: in the one-ball formats a captain who deleted their account
+  // mid-round is withdrawn but still holds the team's entered holes — fold
+  // them onto the team's row owner, who is still eligible.
   const scoresByPlayer = new Map<string, Map<number, number>>();
-  for (const s of rawScoresRows) {
+  for (const s of foldTeamScoreRows({
+    roster: gwp.players.map((p) => ({ ...p, withdrawn_at: p.withdrawn_at ?? null })),
+    rows: rawScoresRows,
+    mode: game.game_mode,
+  })) {
     if (s.strokes == null) continue;
     let inner = scoresByPlayer.get(s.user_id);
     if (!inner) {
