@@ -22,7 +22,12 @@
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { buildCardPayload, buildReceiptPayload, CARD_LABEL } from '../../lib/loops/prCard';
+import {
+  AUTO_MERGE_FAILED_REASON,
+  buildCardPayload,
+  buildReceiptPayload,
+  CARD_LABEL,
+} from '../../lib/loops/prCard';
 import {
   closeLinkedIssues,
   deleteHeadBranch,
@@ -113,10 +118,15 @@ async function postCard(payload: object, shots: string[]): Promise<boolean> {
 
 // 'card'-utfallet: dagens knapp-kort. Post FØRST, label etterpå — aldri stille
 // tapt kort (dobbelt-kort-race akseptert).
-async function runButtonCard(pr: CardPlanPr, shots: string[]): Promise<void> {
+// `waitReasons` er hvorfor PR-en venter på eieren (#2147) — fra planen, eller
+// AUTO_MERGE_FAILED_REASON når auto-mergen falt tilbake hit.
+async function runButtonCard(pr: CardPlanPr, shots: string[], waitReasons: string[]): Promise<void> {
   const payload = buildCardPayload({
     pr: { number: pr.number, title: pr.title, html_url: pr.htmlUrl, draft: pr.draft },
     summary: pr.summary,
+    // Planer fra før #2147 mangler feltet.
+    functional: pr.functional ?? null,
+    waitReasons,
   });
 
   if (DRY_RUN) {
@@ -177,7 +187,7 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
   }
   if (!GITHUB_TOKEN || !plan.headSha) {
     console.error(`${LOG} PR #${pr.number}: mangler GITHUB_TOKEN/headSha — kan ikke auto-merge, faller tilbake til knapp-kort.`);
-    await runButtonCard(pr, shots);
+    await runButtonCard(pr, shots, [AUTO_MERGE_FAILED_REASON]);
     return;
   }
 
@@ -185,7 +195,7 @@ async function runAutoMerge(plan: CardPlan, pr: CardPlanPr, shots: string[]): Pr
   const result = await mergePullRequest({ gh, repo: REPO, prNumber: pr.number, headSha: plan.headSha });
   if (!result.ok) {
     console.error(`${LOG} PR #${pr.number}: auto-merge falt tilbake til knapp-kort — ${result.reason}`);
-    await runButtonCard(pr, shots);
+    await runButtonCard(pr, shots, [AUTO_MERGE_FAILED_REASON]);
     return;
   }
   console.log(`${LOG} PR #${pr.number}: rebase-merget (headSha ${plan.headSha}).`);
@@ -260,7 +270,8 @@ async function main(): Promise<void> {
     await runAutoMerge(plan, plan.pr, shots);
     return;
   }
-  await runButtonCard(plan.pr, shots);
+  // Planer fra før #2147 mangler waitReasons — tom liste gir kortets fallback-grunn.
+  await runButtonCard(plan.pr, shots, plan.waitReasons ?? []);
 }
 
 main().catch((err) => {

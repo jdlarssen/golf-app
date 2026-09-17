@@ -14,6 +14,7 @@ import {
   CARD_LABEL,
   classifyWithCiGate,
   expectsRealCi,
+  extractFunctionalSection,
   extractPrSummary,
   waitForChecksToSettle,
   type CheckRun,
@@ -25,6 +26,8 @@ import {
   closingIssueNumbers,
   linkedIssueNumbers,
   NEEDS_DECISION_LABEL,
+  ownerWaitReasons,
+  type AutoMergeInput,
 } from '../../lib/loops/autoMerge';
 import { isVisualChange } from '../../lib/loops/prScreenshots';
 import { writePlan, type CardPlan } from './cardPlan';
@@ -49,6 +52,7 @@ const NO_CARD: CardPlan = {
   outcome: 'noop',
   isGui: false,
   headSha: null,
+  waitReasons: [],
   pr: null,
   changedFiles: [],
   closesIssues: [],
@@ -244,7 +248,7 @@ async function main(): Promise<void> {
   const commentBodies = await fetchCommentBodies(gh, n);
   if (commentBodies === null) return noCard(`PR #${n}: fikk ikke lest PR-kommentarene`);
   const needsDecisionIssue = await anyLinkedIssueNeedsDecision(gh, pr.body);
-  const { outcome, demotedReason } = classifyAutoMerge({
+  const gateInput: AutoMergeInput = {
     baseRef: pr.base.ref,
     title: pr.title,
     body: pr.body,
@@ -253,19 +257,24 @@ async function main(): Promise<void> {
     commentBodies,
     prLabels: (pr.labels ?? []).map((l) => l.name),
     needsDecisionIssue,
-  });
+  };
+  const { outcome, demotedReason } = classifyAutoMerge(gateInput);
+  // Kortets «⏳ Venter på deg»-linje (#2147) — alle portene som traff, ikke bare den første.
+  const waitReasons = ownerWaitReasons(gateInput);
 
   const plan: CardPlan = {
     outcome,
     isGui,
     headSha: pr.head.sha,
     demotedReason,
+    waitReasons,
     pr: {
       number: n,
       title: pr.title,
       htmlUrl: pr.html_url,
       draft: pr.draft,
       summary: extractPrSummary(pr.body),
+      functional: extractFunctionalSection(pr.body),
     },
     changedFiles,
     // Kun closing-nøkkelordene (#1634) — post-steget lukker disse etter merge.

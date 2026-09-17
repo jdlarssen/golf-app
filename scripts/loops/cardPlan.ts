@@ -10,6 +10,11 @@ export type CardPlanPr = {
   htmlUrl: string;
   draft: boolean;
   summary: string | null;
+  /**
+   * «## Funksjonelt»-seksjonen fra PR-body-en (#2147), `null` når den mangler.
+   * Planer skrevet før #2147 mangler feltet — post-steget leser det med `?? null`.
+   */
+  functional?: string | null;
 };
 
 // Tre-utfall (#1406): 'noop' (ingen kort — som dagens shouldCard=false), 'card'
@@ -23,6 +28,12 @@ export type CardPlan = {
   headSha: string | null;
   /** Hvilken port som degraderte auto-merge → card (kun logging/observability). */
   demotedReason?: string | null;
+  /**
+   * Alle grunnene til at PR-en venter på eieren, i produktspråk (#2147,
+   * `ownerWaitReasons`). Knapp-kortet viser dem. Planer fra før #2147 mangler
+   * feltet — post-steget leser det med `?? []`.
+   */
+  waitReasons?: string[];
   pr: CardPlanPr | null;
   changedFiles: string[];
   /**
