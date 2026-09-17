@@ -4813,6 +4813,7 @@
       "submitted": "Submitted",
       "notSubmitted": "Not submitted",
       "hidden": "Hidden until both teams have submitted.",
+      "hiddenBothSubmitted": "Both teams have submitted. The matches aren't set up yet.",
       "unlock": "Unlock",
       "deleteSession": "Delete session",
       "retryHeading": "Both teams have submitted, but the matches are missing",
@@ -4847,7 +4848,9 @@
         "insert_failed": "Couldn't create the matches. Please try again.",
         "profile_read_failed": "Couldn't load the players. Please try again.",
         "invalid_source_match": "That lineup looks off. Reload the page and try again.",
-        "unexpected": "Something went wrong ({code})."
+        "unexpected": "Something went wrong ({code}).",
+        "rollback_failed": "Some matches were set up before something went wrong, and they weren't removed again. Contact an administrator to get the session cleaned up.",
+        "reveal_undo_failed": "The matches weren't set up, but the session still shows as revealed. Contact an administrator to get it cleaned up."
       }
     },
     "status": {
@@ -5010,7 +5013,8 @@
         "profile_read_failed": "Couldn't fetch the player data, so no matches were created. Please try again.",
         "too_many_matches": "A personal cup allows at most {max} matches. For more, create a club cup.",
         "too_many_players": "A personal cup allows at most {max} players. For more, create a club cup.",
-        "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on."
+        "tee_off_in_past": "The tee-off time can't be in the past. Pick a time from now on.",
+        "rollback_failed": "Some matches were created before something went wrong, and they weren't removed again. Contact an administrator to get the cup cleaned up."
       },
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",

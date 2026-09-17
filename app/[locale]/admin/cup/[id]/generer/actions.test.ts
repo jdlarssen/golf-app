@@ -585,7 +585,7 @@ describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () 
       { data: null, error: null }, // match 1 game_players insert OK
       { data: { id: 'game-2' }, error: null }, // match 2 game insert
       { data: null, error: { message: 'boom' } }, // match 2 game_players insert FAILS
-      { data: null, error: null }, // rollback: games.delete().in(...)
+      { data: [{ id: 'game-1' }, { id: 'game-2' }], error: null }, // rollback: games.delete().in(...).select('id')
     ]);
     setUser('admin-1');
     const { createCupMatchesFromPlan } = await import('./actions');
@@ -604,6 +604,45 @@ describe('createCupMatchesFromPlan — rollback on mid-loop failure (#675)', () 
       (c) => c.table === 'games' && c.method === 'in',
     );
     expect(inCall!.args).toEqual(['id', ['game-1', 'game-2']]);
+  });
+});
+
+// #2064: the rollback delete is checked. A delete that errors or removes
+// nothing leaves half-built games behind, and "insert_failed" ("try again")
+// would stack a second batch next to them.
+describe('createCupMatchesFromPlan — rollback that did not happen (#2064)', () => {
+  it.each([
+    {
+      what: 'the delete errors',
+      result: { data: null, error: { message: 'boom' } },
+    },
+    { what: 'the delete removes 0 rows', result: { data: [], error: null } },
+  ])('$what: rollback_failed, logged', async ({ result }) => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // requireAdmin
+      { data: draftCup, error: null }, // tournament gate
+      planResult(), // plan lookup
+      teeResult(), // tee re-validate
+      { data: { id: 'game-1' }, error: null }, // match 1 game insert
+      { data: null, error: { message: 'boom' } }, // match 1 game_players FAILS
+      result, // rollback: games.delete().in(...).select('id')
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'rollback_failed',
+    });
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[cup] insertCupMatches rollback failed',
+      expect.objectContaining({ tournamentId: 'cup-1', gameIds: ['game-1'] }),
+    );
+    const selectAfterDelete = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'games' && c.method === 'select',
+    );
+    expect(selectAfterDelete.map((c) => c.args)).toContainEqual(['id']);
+    errorSpy.mockRestore();
   });
 });
 
@@ -1124,7 +1163,8 @@ describe('createCupMatchesFromPlan — rollback dekker pass 2 (#1441, D3/#675)',
       { data: null, error: null }, // host game_players OK
       { data: { id: 'game-derived' }, error: null }, // derived insert OK
       { data: null, error: { message: 'boom' } }, // derived game_players FAILS
-      { data: null, error: null }, // rollback: games.delete().in(...)
+      // rollback: the host's CASCADE takes the derived game, so one row back
+      { data: [{ id: 'game-host' }], error: null },
     ]);
     setUser('admin-1');
     const { createCupMatchesFromPlan } = await import('./actions');

@@ -313,11 +313,31 @@ export async function insertCupMatches(
   // her CASCADE-er allerede sine avledede (0151), men vi samler alle likevel og
   // sletter alle via samme `.in(...)`; det andre delete-forsøket på en
   // allerede-CASCADE-fjernet rad er en harmløs 0-rows-affected no-op.
+  //
+  // #2064: the delete is checked, not trusted (AGENTS.md trap 2). At least one
+  // row, not exactly N: a host's CASCADE already took its derived games, so
+  // the count is lower than the ids we send. A failed rollback returns
+  // `rollback_failed` instead of the original error, because half-built games
+  // are left behind and "try again" would add a second batch next to them.
   const insertedGameIds: string[] = [];
-  const rollbackBatch = async () => {
-    if (insertedGameIds.length > 0) {
-      await client.from('games').delete().in('id', insertedGameIds);
+  const rollbackBatch = async (
+    original: CupBatchError,
+  ): Promise<CupBatchError> => {
+    if (insertedGameIds.length === 0) return original;
+    const { data: deleted, error: deleteError } = await client
+      .from('games')
+      .delete()
+      .in('id', insertedGameIds)
+      .select('id');
+    if (deleteError || !deleted || deleted.length === 0) {
+      console.error('[cup] insertCupMatches rollback failed', {
+        tournamentId,
+        gameIds: insertedGameIds,
+        error: deleteError,
+      });
+      return { error: 'rollback_failed' };
     }
+    return original;
   };
 
   /**
@@ -437,10 +457,7 @@ export async function insertCupMatches(
   const planIdToGameId = new Map<string, string>();
   for (const match of hostMatches) {
     const outcome = await insertMatch(match, undefined);
-    if ('error' in outcome) {
-      await rollbackBatch();
-      return outcome;
-    }
+    if ('error' in outcome) return rollbackBatch(outcome);
     planIdToGameId.set(match.id, outcome.gameId);
   }
 
@@ -451,15 +468,9 @@ export async function insertCupMatches(
   // blindt på det for en batch som skriver til DB).
   for (const match of derivedMatches) {
     const sourceGameId = planIdToGameId.get(match.sourceId as string);
-    if (!sourceGameId) {
-      await rollbackBatch();
-      return { error: 'insert_failed' };
-    }
+    if (!sourceGameId) return rollbackBatch({ error: 'insert_failed' });
     const outcome = await insertMatch(match, sourceGameId);
-    if ('error' in outcome) {
-      await rollbackBatch();
-      return outcome;
-    }
+    if ('error' in outcome) return rollbackBatch(outcome);
   }
 
   return { gameIds: insertedGameIds };
