@@ -5,7 +5,7 @@ import { sendDeliverReminderNotification } from '@/lib/mail/deliverReminderNotif
 import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
 import { filledHolesByPlayer, type FilledRosterRow } from '@/lib/games/filledHoles';
 import { scoreOwnerUserIds } from '@/lib/games/scoreOwner';
-import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { notify } from './notify';
 
@@ -104,18 +104,23 @@ export async function maybeSendDeliveryReminder(opts: {
     // — the same fetch as the Home card (#1624) — and let `filledHolesByPlayer`
     // decide per hole which row counts. Read only this player's entry: the rest
     // of the roster's rows were never fetched.
+    // #2067: a captain who deleted their account mid-round is withdrawn but
+    // still holds the holes entered before that — fetch them too; the count
+    // folds them onto the owner.
     const me = players.find((p) => p.user_id === userId);
-    const owner =
+    const team =
       me?.team_number == null
-        ? null
-        : teamScoreOwnerId(
-            players.filter((p) => p.team_number === me.team_number),
-          );
+        ? []
+        : players.filter((p) => p.team_number === me.team_number);
+    const owner = me?.team_number == null ? null : teamScoreOwnerId(team);
     const { data: rows, error: scoresErr } = await admin
       .from('scores')
       .select('user_id, hole_number')
       .eq('game_id', gameId)
-      .in('user_id', scoreOwnerUserIds(mode, userId, owner))
+      .in(
+        'user_id',
+        scoreOwnerUserIds(mode, userId, owner, formerTeamRowOwnerIds(team)),
+      )
       .not('strokes', 'is', null)
       .returns<{ user_id: string; hole_number: number }[]>();
 

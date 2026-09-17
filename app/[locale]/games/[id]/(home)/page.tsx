@@ -41,7 +41,7 @@ import {
 } from '@/lib/games/formatLabel';
 import { getRatingForGender } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
-import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
@@ -1196,6 +1196,16 @@ export default async function GameHomePage({
                     me.team_number == null
                       ? null
                       : teamScoreOwnerId(
+                          gwp.players.filter(
+                            (p) => p.team_number === me.team_number,
+                          ),
+                        )
+                  }
+                  formerTeamRowOwnerIds={
+                    // #2067: withdrawn teammates may still hold entered holes.
+                    me.team_number == null
+                      ? []
+                      : formerTeamRowOwnerIds(
                           gwp.players.filter(
                             (p) => p.team_number === me.team_number,
                           ),

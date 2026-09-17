@@ -142,6 +142,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     myUserId,
     myTeamNumber,
     myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
     myScoredHoles,
     courseId,
     greenCenter,
@@ -239,6 +240,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     gameMode,
     myUserId,
     myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
     myScoredHoles,
   });
   const siblingScoredHoles = useSiblingScoredHoles({

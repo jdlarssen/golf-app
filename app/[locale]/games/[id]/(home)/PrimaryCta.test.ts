@@ -80,6 +80,7 @@ async function callSection(opts: {
   rows: Row[];
   gameMode: string;
   teamScoreOwnerId: string | null;
+  formerTeamRowOwnerIds?: string[];
 }) {
   const { PrimaryCtaSection } = await import('./PrimaryCta');
   const { client, captured } = makeSupabase(opts.rows);
@@ -95,6 +96,7 @@ async function callSection(opts: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     gameMode: opts.gameMode as any,
     teamScoreOwnerId: opts.teamScoreOwnerId,
+    formerTeamRowOwnerIds: opts.formerTeamRowOwnerIds ?? [],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -152,5 +154,37 @@ describe('PrimaryCtaSection completion counting (#1624)', () => {
     expect(props.nextHole).toBe(18);
     // Solo asks only for the viewer's rows, whichever filter form is used.
     expect(captured.inIds ?? [captured.eqUserId]).toEqual(['b-viewer']);
+  });
+});
+
+// #2067: the captain deleted their account after hole 9 (withdrawn, 0174), so
+// the viewer now owns the team's rows. The first nine holes still sit on the
+// former captain; the section must fetch and count them.
+describe('PrimaryCtaSection with a withdrawn captain (#2067)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('counts the former captain\'s holes and reaches ready_to_submit', async () => {
+    const { props, captured } = await callSection({
+      rows: [...rowsFor(CAPTAIN, range(1, 9)), ...rowsFor(VIEWER, range(10, 18))],
+      gameMode: 'texas_scramble',
+      teamScoreOwnerId: VIEWER,
+      formerTeamRowOwnerIds: [CAPTAIN],
+    });
+    expect(captured.inIds).toEqual(expect.arrayContaining([VIEWER, CAPTAIN]));
+    expect(props.state).toBe('ready_to_submit');
+    expect(props.strokesCount).toBe(18);
+  });
+
+  it('points the next hole past the former captain\'s holes', async () => {
+    const { props } = await callSection({
+      rows: rowsFor(CAPTAIN, range(1, 9)),
+      gameMode: 'foursomes_matchplay',
+      teamScoreOwnerId: VIEWER,
+      formerTeamRowOwnerIds: [CAPTAIN],
+    });
+    expect(props.state).toBe('in_progress');
+    expect(props.nextHole).toBe(10);
   });
 });

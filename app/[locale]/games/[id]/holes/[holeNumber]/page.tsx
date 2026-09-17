@@ -4,12 +4,13 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { isProfileIncomplete } from '@/lib/auth/profileGate';
-import { isStablefordFamily } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
+import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
-import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { HoleClient } from './HoleClient';
 import type { AppLocale } from '@/i18n/routing';
@@ -150,6 +151,26 @@ export default async function HolePage({ params }: { params: Params }) {
       : teamScoreOwnerId(
           allPlayers.filter((p) => p.team_number === me.team_number),
         );
+  // #2067: a captain who deleted their account mid-round is withdrawn (0174) —
+  // out of the flight, but still holding the holes entered before that. Mine
+  // feed the completion set; the flight's feed the current hole's cards.
+  const myFormerTeamRowOwnerIds =
+    me.team_number == null
+      ? []
+      : formerTeamRowOwnerIds(
+          allPlayers.filter((p) => p.team_number === me.team_number),
+        );
+  const flightTeamNumbers = new Set(flight.map((p) => p.team_number));
+  const flightFormerRowOwnerIds = modeCollapsesToTeamCard(game.game_mode, 18)
+    ? allPlayers
+        .filter(
+          (p) =>
+            p.withdrawn_at != null &&
+            p.team_number != null &&
+            flightTeamNumbers.has(p.team_number),
+        )
+        .map((p) => p.user_id)
+    : [];
 
   const isStableford = isStablefordFamily(game.game_mode);
   const isWolf = game.game_mode === 'wolf';
@@ -167,6 +188,8 @@ export default async function HolePage({ params }: { params: Params }) {
     me,
     playerIds,
     myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
+    flightFormerRowOwnerIds,
     siblingMatch,
     modes: { isStableford, isWolf, isSkins, isBBB, isPatsome },
   });
@@ -183,12 +206,22 @@ export default async function HolePage({ params }: { params: Params }) {
     holeNumber,
   });
 
-  const scoresByUser = indexScoresByUser(data.scoresRes.data);
+  // #2067: the withdrawn captain's row for this hole is laid on the team's
+  // owner, so the card shows the stroke entered before the account was deleted
+  // and a correction writes to the owner's row. The owner's own row wins.
+  const scoresByUser = indexScoresByUser(
+    foldTeamScoreRows({
+      roster: allPlayers,
+      rows: (data.scoresRes.data ?? []).map((r) => ({ ...r, hole_number: holeNumber })),
+      mode: game.game_mode,
+    }),
+  );
   const myScoredHoles = resolveMyScoredHoles({
     rows: data.myScoredHolesRes.data,
     gameMode: game.game_mode,
     userId,
     myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
   });
 
   const siblingScores = await resolveSiblingScoreData({
@@ -199,6 +232,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const holeStripSibling = buildHoleStripSibling({
     siblingMatch,
     teamOwnerId: siblingScores.teamOwnerId,
+    formerTeamRowOwnerIds: siblingScores.formerTeamRowOwnerIds,
     scoredHoles: siblingScores.scoredHoles,
   });
 
@@ -304,6 +338,7 @@ export default async function HolePage({ params }: { params: Params }) {
         myUserId={userId}
         myTeamNumber={me.team_number}
         myTeamScoreOwnerId={myTeamScoreOwnerId}
+        myFormerTeamRowOwnerIds={myFormerTeamRowOwnerIds}
         myScoredHoles={myScoredHoles}
         courseId={game.course_id}
         greenCenter={greenCenter}

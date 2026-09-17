@@ -44,6 +44,7 @@ export async function PrimaryCtaSection({
   tournamentId,
   gameMode,
   teamScoreOwnerId,
+  formerTeamRowOwnerIds,
 }: {
   gameId: string;
   currentUserId: string;
@@ -69,6 +70,12 @@ export async function PrimaryCtaSection({
    * caller from the already-loaded gwp.players — no extra fetch here.
    */
   teamScoreOwnerId: string | null;
+  /**
+   * #2067: the team's withdrawn members (`formerTeamRowOwnerIds`). A captain
+   * who deleted their account mid-round still holds the holes entered before
+   * that; they are fetched and folded onto `teamScoreOwnerId`.
+   */
+  formerTeamRowOwnerIds: readonly string[];
 }) {
   const { supabase } = await getGameContext();
 
@@ -83,7 +90,10 @@ export async function PrimaryCtaSection({
     .from('scores')
     .select('hole_number, user_id')
     .eq('game_id', gameId)
-    .in('user_id', scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwnerId))
+    .in(
+      'user_id',
+      scoreOwnerUserIds(gameMode, currentUserId, teamScoreOwnerId, formerTeamRowOwnerIds),
+    )
     .not('strokes', 'is', null);
   const filledHoles = scoredHoleNumbers(
     (filledRows ?? []).map((r) => ({
@@ -93,6 +103,7 @@ export async function PrimaryCtaSection({
     gameMode,
     currentUserId,
     teamScoreOwnerId,
+    formerTeamRowOwnerIds,
   );
   const strokesCount = filledHoles.length;
 

@@ -75,12 +75,28 @@ export function useMyScoredHoles(args: {
   gameMode: GameMode;
   myUserId: string;
   myTeamScoreOwnerId: string | null;
+  /** #2067: withdrawn teammates whose entered rows fold onto the owner. */
+  myFormerTeamRowOwnerIds: readonly string[];
   myScoredHoles: number[];
 }): Set<number> {
-  const { gameId, gameMode, myUserId, myTeamScoreOwnerId, myScoredHoles } = args;
+  const {
+    gameId,
+    gameMode,
+    myUserId,
+    myTeamScoreOwnerId,
+    myFormerTeamRowOwnerIds,
+    myScoredHoles,
+  } = args;
+  const formerOwnerKey = myFormerTeamRowOwnerIds.join('|');
   const scoredHoleOwnerIds = useMemo(
-    () => scoreOwnerUserIds(gameMode, myUserId, myTeamScoreOwnerId),
-    [gameMode, myUserId, myTeamScoreOwnerId],
+    () =>
+      scoreOwnerUserIds(
+        gameMode,
+        myUserId,
+        myTeamScoreOwnerId,
+        formerOwnerKey === '' ? [] : formerOwnerKey.split('|'),
+      ),
+    [gameMode, myUserId, myTeamScoreOwnerId, formerOwnerKey],
   );
   const scoredHoleOwnerKey = scoredHoleOwnerIds.join('|');
   const localScoredRows = useLiveQuery(
@@ -98,7 +114,13 @@ export function useMyScoredHoles(args: {
   // mine even though the same round's foursomes half is the team's.
   return new Set<number>([
     ...myScoredHoles,
-    ...scoredHoleNumbers(localScoredRows, gameMode, myUserId, myTeamScoreOwnerId),
+    ...scoredHoleNumbers(
+      localScoredRows,
+      gameMode,
+      myUserId,
+      myTeamScoreOwnerId,
+      myFormerTeamRowOwnerIds,
+    ),
   ]);
 }
 
@@ -119,12 +141,18 @@ export function useSiblingScoredHoles(args: {
   const siblingGameId = holeStripSibling?.gameId ?? null;
   const siblingGameMode = holeStripSibling?.gameMode ?? null;
   const siblingTeamOwnerId = holeStripSibling?.teamOwnerId ?? null;
+  const siblingFormerKey = (holeStripSibling?.formerTeamRowOwnerIds ?? []).join('|');
   const siblingOwnerIds = useMemo(
     () =>
       siblingGameMode == null
         ? []
-        : scoreOwnerUserIds(siblingGameMode, myUserId, siblingTeamOwnerId),
-    [siblingGameMode, myUserId, siblingTeamOwnerId],
+        : scoreOwnerUserIds(
+            siblingGameMode,
+            myUserId,
+            siblingTeamOwnerId,
+            siblingFormerKey === '' ? [] : siblingFormerKey.split('|'),
+          ),
+    [siblingGameMode, myUserId, siblingTeamOwnerId, siblingFormerKey],
   );
   const siblingOwnerKey = siblingOwnerIds.join('|');
   const siblingLocalScoredRows = useLiveQuery<LocalScore[]>(
@@ -148,6 +176,7 @@ export function useSiblingScoredHoles(args: {
       holeStripSibling.gameMode,
       myUserId,
       holeStripSibling.teamOwnerId,
+      holeStripSibling.formerTeamRowOwnerIds,
     ),
   ]);
 }
