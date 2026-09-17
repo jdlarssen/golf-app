@@ -1412,3 +1412,32 @@ describe('useGameFormState — force-reset av registrationType ved mode uten lag
     expect(result.current.registrationModeSupportsTeams).toBe(false);
   });
 });
+
+// #2148: a saved roster can carry a team number above the grid (the organiser's
+// approval picks slots up to 50). That player must show up as unassigned, not
+// vanish from the payload while the form reads as valid.
+describe('useGameFormState — lagnummer over taket fra et lagret utkast (#2148)', () => {
+  it('spiller på lag 21 blir ulagt og synlig, og skjemaet er ikke gyldig', () => {
+    const roster = Array.from({ length: 4 }, (_, i) => makePlayer(`r${i + 1}`));
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: roster,
+        courses: COURSES,
+        initialValues: {
+          game_mode: 'best_ball',
+          players: [
+            { user_id: 'r1', team_number: 1, flight_number: 1 },
+            { user_id: 'r2', team_number: 1, flight_number: 1 },
+            { user_id: 'r3', team_number: 2, flight_number: 1 },
+            { user_id: 'r4', team_number: 21, flight_number: 11 },
+          ],
+        },
+      }),
+    );
+
+    expect(result.current.selectedPlayerIds).toContain('r4');
+    expect(result.current.teamByPlayer.r4).toBeUndefined();
+    expect(result.current.playersValidForMode).toBe(false);
+    expect(result.current.orderedPayload.map((r) => r.user_id)).not.toContain('r4');
+  });
+});

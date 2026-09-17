@@ -86,4 +86,12 @@ describe('TeamsAssignmentSection — rutenettet vokser med valgte spillere (#214
       '1', '1', '1', '1', '2', '2', '2', '2', '3', '3', '3', '3',
     ]);
   });
+
+  it('13 lag à 3 trukket, så byttet til à 4: alle 13 lagkort står, ingen spillere skjules', () => {
+    setup('shamble', 3, 39);
+    act(() => latest.drawRandomTeams());
+    act(() => latest.handleTeamSizeChange(4));
+    expect(screen.getByTestId('team-card-13')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-card-14')).toBeNull();
+  });
 });
