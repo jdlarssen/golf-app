@@ -29,7 +29,7 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 <details>
 <summary><strong>Scramble for fire lag — også med tre på laget</strong></summary>
 
-[#2009](https://github.com/jdlarssen/golf-app/issues/2009) — Scramble tar nå opptil fire lag og seksten spillere, og du kan velge tre på laget i vanlig scramble og Ambrose — lag-handicapet settes til 15 prosent.
+[#2009](https://github.com/jdlarssen/golf-app/issues/2009) — Scramble tar nå opptil fire lag og seksten spillere, og du kan velge tre på laget i vanlig scramble og Ambrose — appen foreslår lag-handicapet for størrelsen du velger.
 
 ↳ /admin/games/new · «Sett opp scramble»
 </details>
