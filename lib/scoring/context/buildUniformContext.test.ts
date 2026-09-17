@@ -424,6 +424,27 @@ describe('buildUniformContext — trukket medlem i én-ball-format (#2067)', () 
     ]);
   });
 
+  // Foldingen skal aldri legge lagets rader på en id modusene ikke leser: den
+  // ser bare spillerne konteksten beholder (users-join satt).
+  it('legger aldri rader på en trukket kaptein uten users-join, som ikke er med i players', () => {
+    const ctx = build({
+      gameMode: 'texas_scramble',
+      modeConfig: TEXAS_CONFIG,
+      players: [
+        player({ user_id: 'a', withdrawn_at: WD, users: null }),
+        player({ user_id: 'b' }),
+      ],
+      scoresRows: [
+        { user_id: 'a', hole_number: 1, strokes: 4 },
+        { user_id: 'b', hole_number: 2, strokes: 5 },
+      ],
+    });
+
+    const playerIds = new Set(ctx.players.map((p) => p.userId));
+    expect([...playerIds]).toStrictEqual(['b']);
+    expect(ctx.scores.every((s) => playerIds.has(s.userId))).toBe(true);
+  });
+
   it('lar et trukket medlem i et egen-ball-format (best ball) være ute, som før', () => {
     const ctx = build({
       players: [player({ user_id: 'a', withdrawn_at: WD }), player({ user_id: 'b' })],
