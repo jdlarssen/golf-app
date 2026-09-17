@@ -57,6 +57,8 @@ export function PreRoundLeaderboardRealtime({ gameId }: Props) {
           },
           () => router.refresh(),
         ),
+      // #2093: events committed while the channel was down are never replayed.
+      { onResubscribed: () => router.refresh() },
     );
   }, [gameId, router]);
 
