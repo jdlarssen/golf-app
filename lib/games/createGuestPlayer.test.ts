@@ -106,6 +106,7 @@ describe('parseGuestProfile', () => {
     ['pluss og minus', { name: 'A', hcp: '+-3', tee: 'M' }, 'guest_invalid_hcp'],
     ['mellomrom etter pluss', { name: 'A', hcp: '+ 3', tee: 'M' }, 'guest_invalid_hcp'],
     ['doble komma', { name: 'A', hcp: '12,,5', tee: 'M' }, 'guest_invalid_hcp'],
+    ['bare et pluss', { name: 'A', hcp: '+', tee: 'M' }, 'guest_invalid_hcp'],
     ['ugyldig tee', { name: 'A', hcp: '10', tee: 'X' }, 'guest_invalid_tee'],
   ])('avviser %s', (_label, raw, expected) => {
     expect(parseGuestProfile(raw)).toEqual({ ok: false, error: expected });
