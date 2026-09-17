@@ -33,18 +33,18 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'singles_matchplay':
       return n === 2;
 
-    // ── Partall 2–8 (#374: best ball støtter nå 2/4/6/8 spillere) ───────────
+    // ── Partall 2–40 (#374, #2148: taket eies av teamFormatLimits) ──────────
     case 'best_ball':
-      return n >= 2 && n <= 8 && n % 2 === 0;
+      return n >= 2 && n <= teamModePlayerCap(gameMode, 2)! && n % 2 === 0;
 
     // ── Scramble-familien: krever ≥2 lag for å være en turnering (#467) ─────
     // En scramble er et lag-format. Ett lag er ingen konkurranse, så
     // antall-filteret i Kompis skjuler oppsett med bare ett lag.
     //
     // Lagstørrelsene og taket eies av `lib/games/teamFormatLimits.ts` (#2009):
-    // texas/ambrose 2–4 per lag, florida/shamble 3–4, alltid 2–4 lag. Byggbare
-    // størrelser er dermed alt fra 4 (2 lag à 2) til 16 (4 lag à 4) som går opp
-    // i en støttet lagstørrelse.
+    // texas/ambrose 2–4 per lag, florida/shamble 3–4, minst 2 lag og opptil 40
+    // spillere (#2148). Byggbare størrelser er dermed alt fra 4 (2 lag à 2) til
+    // 40 som går opp i en støttet lagstørrelse.
     case 'texas_scramble':
     case 'ambrose':
     case 'florida_scramble':
@@ -83,9 +83,9 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'shamble':
       return fitsTeamFormat(gameMode, n);
 
-    // ── Partall 4+ (lag à 2, minst 2 lag) ───────────────────────────────────
+    // ── Partall 4–40 (lag à 2, minst 2 lag, taket fra teamFormatLimits) ─────
     case 'patsome':
-      return n >= 4 && n % 2 === 0;
+      return n >= 4 && n <= teamModePlayerCap(gameMode, 2)! && n % 2 === 0;
 
     // ── Permissivt fallback for fremtidige GameMode-verdier ─────────────────
     // Bevisst IKKE en exhaustiveness-/never-sjekk: GameMode-unionen vokser

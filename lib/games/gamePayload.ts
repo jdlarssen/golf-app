@@ -12,7 +12,7 @@
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import { MAX_TEAM_FORMAT_PLAYERS } from './teamFormatLimits';
+import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
 import {
   gameModeSupportsTeams,
   isRegistrationMode,
@@ -523,7 +523,9 @@ function validateTeamBalance(
  *  - draft tillater partial state (0..8 spillere), men team/flight rangen
  *    blir likevel validert per ikke-tom rad
  *  - duplikat-sjekk gjelder begge moduser
- *  - UI-gitteret har 4 lag (team_number 1..4); tomme lag er lov ved publish
+ *  - team_number og flight_number i 1..`MAX_TEAM_NUMBER` (20 par, #2148);
+ *    tomme lag er lov ved publish
+ *  - maks `MAX_TEAM_FORMAT_PLAYERS` spillere (too_many_players_for_mode)
  *
  * Mode_config-output: `{kind, team_size: 2, teams_count: <faktisk antall lag>}`.
  */
@@ -533,7 +535,7 @@ function validateBestBall(
 ): ModeValidationResult {
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue; // hopp over tomme slots i begge moduser
     if (seen.has(user_id)) {
@@ -542,13 +544,17 @@ function validateBestBall(
     seen.add(user_id);
     const team_number = Number(formData.get(`player_${i}_team`));
     const flight_number = Number(formData.get(`player_${i}_flight`));
-    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 4) {
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > MAX_TEAM_NUMBER
+    ) {
       return { ok: false, errorCode: 'bad_team' };
     }
     if (
       !Number.isInteger(flight_number) ||
       flight_number < 1 ||
-      flight_number > 4
+      flight_number > MAX_TEAM_NUMBER
     ) {
       return { ok: false, errorCode: 'bad_flight' };
     }
@@ -558,6 +564,11 @@ function validateBestBall(
   if (mode === 'publish') {
     if (players.length === 0) {
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    // Slot-løkken leser én plass over taket (#2009-mønsteret), så en spiller
+    // for mye avvises i stedet for å trunkeres stille.
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     // Hvert ikke-tomt lag må ha EKSAKT 2 spillere
     const balanceError = validateTeamBalance(players, 2);
@@ -587,9 +598,8 @@ function validateBestBall(
  * UI-flyten fra epic #41 inntil TeamSizeSelector wires inn par-valget
  * i Phase 2 av epic #43.
  *
- * Player-slot-loopen leser opp til 8 slots fordi det er øvre grense fra
- * dagens GameForm — kan utvides for stor-turneringer i en senere fase
- * uten skjema-endring.
+ * Player-slot-loopen leser `MAX_TEAM_FORMAT_PLAYERS + 1` slots (#2148): 40
+ * spillere, og spiller nummer 41 avvises ved publish.
  */
 function validateStableford(
   formData: FormData,
@@ -644,7 +654,7 @@ function validateStablefordSolo(
   mode: PayloadMode,
   variant: 'stableford' | 'modified_stableford' = 'stableford',
 ): ModeValidationResult {
-  const playersResult = parseSoloPlayers(formData, 8);
+  const playersResult = parseSoloPlayers(formData, MAX_TEAM_FORMAT_PLAYERS + 1);
   if (!playersResult.ok) {
     return playersResult;
   }
@@ -652,6 +662,11 @@ function validateStablefordSolo(
 
   if (mode === 'publish' && players.length < 1) {
     return { ok: false, errorCode: 'min_players_for_mode' };
+  }
+  // #2148: samme tak på 40 som lag-formatene. Løkken leser én plass over, så
+  // spiller nummer 41 gir en feilkode i stedet for å forsvinne stille.
+  if (mode === 'publish' && players.length > MAX_TEAM_FORMAT_PLAYERS) {
+    return { ok: false, errorCode: 'too_many_players_for_mode' };
   }
 
   return {
@@ -680,9 +695,8 @@ function validateStablefordSolo(
  *
  * Mode_config-output: `{kind, team_size: 2, points_table: 'standard'}`.
  *
- * Player-slot-loopen leser opp til 8 slots fra dagens GameForm — par-
- * stableford kan utvides forbi dette i en senere fase uten skjema-endring
- * (samme begrensning som solo).
+ * Player-slot-loopen leser `MAX_TEAM_FORMAT_PLAYERS + 1` slots (#2148), samme
+ * tak som solo.
  */
 function validateStablefordTeam(
   formData: FormData,
@@ -691,7 +705,7 @@ function validateStablefordTeam(
 ): ModeValidationResult {
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -717,6 +731,9 @@ function validateStablefordTeam(
       // Helt tom spillerliste → ingen lag i det hele tatt. Behandles som
       // "modus uten spillere" snarere enn "lag i ubalanse".
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     // Hvert lag må ha EKSAKT 2 spillere — det er kjernen i 4BBB.
     const balanceError = validateTeamBalance(players, 2);
@@ -831,15 +848,14 @@ function validateSinglesMatchplay(
  *
  * Mode_config-output: `{kind, team_size: 1}`.
  *
- * Player-slot-loopen leser opp til 8 slots fra dagens GameForm — kan utvides
- * forbi dette i en senere fase uten skjema-endring (samme begrensning som
- * solo-stableford).
+ * Player-slot-loopen leser `MAX_TEAM_FORMAT_PLAYERS + 1` slots (#2148), samme
+ * tak som solo-stableford.
  */
 function validateSoloStrokeplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
-  const playersResult = parseSoloPlayers(formData, 8);
+  const playersResult = parseSoloPlayers(formData, MAX_TEAM_FORMAT_PLAYERS + 1);
   if (!playersResult.ok) {
     return playersResult;
   }
@@ -847,6 +863,11 @@ function validateSoloStrokeplay(
 
   if (mode === 'publish' && players.length < 1) {
     return { ok: false, errorCode: 'min_players_for_mode' };
+  }
+  // #2148: samme tak på 40 som lag-formatene. Løkken leser én plass over, så
+  // spiller nummer 41 gir en feilkode i stedet for å forsvinne stille.
+  if (mode === 'publish' && players.length > MAX_TEAM_FORMAT_PLAYERS) {
+    return { ok: false, errorCode: 'too_many_players_for_mode' };
   }
 
   return {
@@ -2093,7 +2114,7 @@ function validatePatsome(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i <= MAX_TEAM_FORMAT_PLAYERS; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -2112,6 +2133,9 @@ function validatePatsome(
   if (mode === 'publish') {
     if (players.length < 4) {
       return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > MAX_TEAM_FORMAT_PLAYERS) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
     // Hvert lag må ha EKSAKT 2 spillere — Patsome er 2-spiller-format.
     const balanceError = validateTeamBalance(players, 2);
