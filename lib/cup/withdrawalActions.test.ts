@@ -692,6 +692,32 @@ describe('setFourballWithdrawalChoice (#1814)', () => {
     ).toEqual({ error: 'match_not_eligible' });
   });
 
+  it('avviser når én på HVER side har trukket seg — kampen er alltid halvert (#2051)', async () => {
+    adminMock = buildSupabaseMock([
+      gateGroupIdNull,
+      cupActive,
+      { data: FOURBALL, error: null },
+      {
+        data: [
+          { user_id: 'a1', team_number: 1, withdrawn_at: '2026-09-09T20:00:00.000Z' },
+          { user_id: 'a2', team_number: 1, withdrawn_at: null },
+          { user_id: 'b1', team_number: 2, withdrawn_at: '2026-09-09T21:00:00.000Z' },
+          { user_id: 'b2', team_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      { data: [{ id: 'g1' }], error: null },
+    ]);
+
+    const { setFourballWithdrawalChoice } = await import('./withdrawalActions');
+    expect(
+      await setFourballWithdrawalChoice(
+        form({ tournament_id: CUP, game_id: 'g1', play_on: '1' }),
+      ),
+    ).toEqual({ error: 'match_not_eligible' });
+    expect(updates('games')).toHaveLength(0);
+  });
+
   // «Etter regelen» skrives som en EKSPLISITT `false`, ikke ved å slette
   // nøkkelen: fravær betyr «ingen har bestemt seg», og det er den tilstanden
   // venter-banneret på cup-styringen maser om (E4).

@@ -5,6 +5,7 @@ import {
   WITHDRAWAL_LATE_WINDOW_MS,
   isDecidedByWithdrawal,
   isNotStartedCupMatch,
+  isPlayOnAvailable,
   isPlayOnChoicePending,
   resolveCupMatchWithdrawal,
   type CupWithdrawalInput,
@@ -302,7 +303,7 @@ describe('resolveCupMatchWithdrawal — fourball «makkeren spiller alene» (E4)
     },
   );
 
-  it('spiller videre på begge sider når hver side har én igjen', () => {
+  it('halverer når hver side har én trukket, selv med alene-valget satt (#2051)', () => {
     expect(
       resolveCupMatchWithdrawal(
         fourball({
@@ -311,6 +312,50 @@ describe('resolveCupMatchWithdrawal — fourball «makkeren spiller alene» (E4)
             { userId: 'a1', side: 1, withdrawnAt: EARLY },
             { userId: 'a2', side: 1, withdrawnAt: null },
             { userId: 'b1', side: 2, withdrawnAt: EARLY },
+            { userId: 'b2', side: 2, withdrawnAt: null },
+          ],
+        }),
+      ),
+    ).toEqual({
+      outcome: 'halved',
+      winnerSide: 'tied',
+      withdrawnSide: 'both',
+      withdrawnUserIds: ['a1', 'b1'],
+      late: false,
+    });
+  });
+
+  it('halverer også når side 2 trakk seg sent etter alene-valget, ingen walkover (#2051)', () => {
+    expect(
+      resolveCupMatchWithdrawal(
+        fourball({
+          playOn: true,
+          players: [
+            { userId: 'a1', side: 1, withdrawnAt: EARLY },
+            { userId: 'a2', side: 1, withdrawnAt: null },
+            { userId: 'b1', side: 2, withdrawnAt: JUST_INSIDE },
+            { userId: 'b2', side: 2, withdrawnAt: null },
+          ],
+        }),
+      ),
+    ).toEqual({
+      outcome: 'halved',
+      winnerSide: 'tied',
+      withdrawnSide: 'both',
+      withdrawnUserIds: ['a1', 'b1'],
+      late: true,
+    });
+  });
+
+  it('spiller fortsatt videre når bare den ene siden har trukket seg (#2051-vakt)', () => {
+    expect(
+      resolveCupMatchWithdrawal(
+        fourball({
+          playOn: true,
+          players: [
+            { userId: 'a1', side: 1, withdrawnAt: EARLY },
+            { userId: 'a2', side: 1, withdrawnAt: null },
+            { userId: 'b1', side: 2, withdrawnAt: null },
             { userId: 'b2', side: 2, withdrawnAt: null },
           ],
         }),
@@ -589,5 +634,48 @@ describe('isDecidedByWithdrawal — avgjort ved trekk (#2033)', () => {
     );
     expect(isDecidedByWithdrawal({ withdrawal })).toBe(true);
     expect(isDecidedByWithdrawal({})).toBe(false);
+  });
+});
+
+describe('isPlayOnAvailable — kan alene-valget tas? (#2051)', () => {
+  const ONE_SIDE = [
+    { userId: 'a1', side: 1, withdrawnAt: EARLY },
+    { userId: 'a2', side: 1, withdrawnAt: null },
+    { userId: 'b1', side: 2, withdrawnAt: null },
+    { userId: 'b2', side: 2, withdrawnAt: null },
+  ] as const;
+
+  it.each<[string, Partial<CupWithdrawalInput>, boolean]>([
+    ['fourball, én side trukket med makker igjen', { players: ONE_SIDE }, true],
+    [
+      'fourball, én trukket på hver side',
+      {
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: null },
+          { userId: 'b1', side: 2, withdrawnAt: EARLY },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      },
+      false,
+    ],
+    [
+      'fourball, hele den ene siden trukket',
+      {
+        players: [
+          { userId: 'a1', side: 1, withdrawnAt: EARLY },
+          { userId: 'a2', side: 1, withdrawnAt: EARLY },
+          { userId: 'b1', side: 2, withdrawnAt: null },
+          { userId: 'b2', side: 2, withdrawnAt: null },
+        ],
+      },
+      false,
+    ],
+    ['fourball, ingen trukket', {}, false],
+    ['foursomes, én side trukket med makker igjen', { gameMode: 'foursomes_matchplay', players: ONE_SIDE }, false],
+    ['fourball i gang (active)', { status: 'active', players: ONE_SIDE }, false],
+    ['fourball i utkast (draft)', { status: 'draft', players: ONE_SIDE }, true],
+  ])('%s → %s', (_name, overrides, expected) => {
+    expect(isPlayOnAvailable(fourball(overrides))).toBe(expected);
   });
 });

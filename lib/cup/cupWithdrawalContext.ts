@@ -3,9 +3,11 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { userOf, type CupUserRel } from './cupRoster';
 import {
   isNotStartedCupMatch,
+  isPlayOnAvailable,
   readWithdrawalPlayOn,
   resolveCupMatchWithdrawal,
   type CupMatchWithdrawal,
+  type CupWithdrawalInput,
 } from './cupWithdrawalOutcome';
 
 /**
@@ -19,9 +21,6 @@ import {
  * `requireAdminOrClubAdminOfCup` (arrangør) eller deltaker-sjekken (spilleren
  * selv) før den kalles.
  */
-
-/** Fourball er den eneste modusen der makkeren kan spille videre alene (E4). */
-const PLAY_ON_CAPABLE_MODE = 'fourball_matchplay';
 
 export type CupWithdrawalMatchView = {
   gameId: string;
@@ -163,13 +162,11 @@ export async function loadCupWithdrawalContext(args: {
     const sameSide = rows.filter((r) => r.team_number === side && r.user_id !== userId);
     const opponents = rows.filter((r) => r.team_number === (side === 1 ? 2 : 1));
     const activePartners = sameSide.filter((r) => r.withdrawn_at == null);
-    const canPlayOn =
-      game.game_mode === PLAY_ON_CAPABLE_MODE && activePartners.length > 0;
     const playOn = readWithdrawalPlayOn(game.mode_config);
 
     // Regn utfallet med spilleren markert trukket. Er hen alt trukket, står
     // tidspunktet som det er — da viser siden hva som ALLEREDE gjelder.
-    const outcome = resolveCupMatchWithdrawal({
+    const ruleInput: CupWithdrawalInput = {
       status: game.status,
       gameMode: game.game_mode,
       scheduledTeeOffAt: game.scheduled_tee_off_at,
@@ -181,7 +178,12 @@ export async function loadCupWithdrawalContext(args: {
           side: r.team_number as 1 | 2,
           withdrawnAt: r.user_id === userId ? (r.withdrawn_at ?? nowIso) : r.withdrawn_at,
         })),
-    });
+    };
+    const outcome = resolveCupMatchWithdrawal(ruleInput);
+    // Alene-valget tilbys bare når det kan få kampen spilt. Har motstandersiden
+    // alt trukket seg, er kampen halvert, og skjemaet skal verken vise
+    // avkrysningen eller skrive over valget fra det første trekket (#2051).
+    const canPlayOn = isPlayOnAvailable(ruleInput);
 
     const view: CupWithdrawalMatchView = {
       gameId: game.id,
