@@ -19,12 +19,41 @@
 # er et eget kall):
 #
 #   source .github/scripts/robot-pr.sh
+#   robot_push "$BRANCH" || fail_closed "push av $BRANCH feilet"
 #   PR_URL=$(robot_pr_create "tittel" "$PR_BODY") || fail_closed "gh pr create feilet"
 #   robot_pr_verify_not_parked "Ukesversjon" "$(git rev-parse HEAD)" "$PR_URL"
 #
 # Kallerens skall MÅ ha satt REPO, BRANCH og RUN_URL, og MÅ ha definert
 # open_or_note_issue (tittel, body) — issue-labelen er rutine-spesifikk, så
 # filingen blir hos kalleren med vilje.
+
+# ── Push med retry ved forbigående GitHub-feil (#2024) ──
+# Hvorfor: dok-skjema 2026-09-13 fikk «remote: fatal error in commit_refs» på
+# pushen — en glipp i GitHubs ref-database, ikke i skriptet. Rerun uten
+# kodeendring ble grønn. En robot-rutine har ingen i løkka til å trykke rerun,
+# så vi prøver selv: opptil 3 forsøk, 10 s og så 30 s mellom.
+#
+# Hvorfor retry er trygt: samme lokale commit, samme branch, ingen --force. Gikk
+# pushen likevel gjennom, svarer neste forsøk «Everything up-to-date» med exit 0.
+#
+# Bare `git push` — ingen retry rundt gh/Supabase (ikke-mål i #2024). Kalleren
+# beholder `|| fail_closed …`. ROBOT_PUSH_SLEEP overstyrer ventetidene
+# (mellomromsseparert, én per nytt forsøk).
+robot_push() { # branch → exit 0 ved første vellykte push, ≠0 etter siste
+  local branch="$1" attempt=1 max=3 delays
+  read -r -a delays <<< "${ROBOT_PUSH_SLEEP:-10 30}"
+
+  while true; do
+    git push origin "$branch" && return 0
+    if [ "$attempt" -ge "$max" ]; then
+      echo "robot_push: forsøk $attempt/$max feilet — gir opp" >&2
+      return 1
+    fi
+    echo "robot_push: forsøk $attempt/$max feilet — prøver igjen om ${delays[$((attempt - 1))]:-30} s" >&2
+    sleep "${delays[$((attempt - 1))]:-30}"
+    attempt=$((attempt + 1))
+  done
+}
 
 # ── PR-opprettelse: PAT når den finnes, github.token som ærlig fallback ──
 # Skriver PR-URL-en til stdout — og BARE den: kalleren fanger stdout i

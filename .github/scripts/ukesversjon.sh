@@ -134,7 +134,7 @@ versjon ($VERSION) og skrevet inn i CHANGELOG.md. Notatfilene er slettet.
 Ingen produktendring — se de enkelte issue-ene for hva som faktisk ble bygget." \
   || fail_closed "commit feilet"
 
-git push origin "$BRANCH" || fail_closed "push av $BRANCH feilet"
+robot_push "$BRANCH" || fail_closed "push av $BRANCH feilet"
 
 # ── 5. PR (ingen produktvalg-heading → Discord-PR-kortet auto-merger på grønt) ──
 

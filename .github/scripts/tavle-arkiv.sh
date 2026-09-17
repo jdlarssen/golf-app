@@ -156,7 +156,7 @@ Kommentarene slettes fra tavlene av neste kjøring, etter at denne er merget.
 
 Refs #1110
 Refs #1996" || fail_closed "commit feilet"
-git push origin "$BRANCH" || fail_closed "push av $BRANCH feilet"
+robot_push "$BRANCH" || fail_closed "push av $BRANCH feilet"
 
 PR_BODY="$TMP/prbody.md"
 cat > "$PR_BODY" <<EOF
