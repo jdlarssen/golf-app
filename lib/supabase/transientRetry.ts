@@ -15,6 +15,13 @@
  * last attempt the last response is returned as is, so the caller still
  * throws its error — nothing is swallowed and no empty data is invented.
  *
+ * Every attempt gets its own `AbortSignal`, and the caller MUST pass it on
+ * with `.abortSignal(signal)`. Next dedupes GET fetches to the same URL within
+ * a render (`next/dist/server/lib/dedupe-fetch.js`) and hands the retry the
+ * memoized 504 without going to the network; a signal is its opt-out.
+ * Measured: without it a build against an always-504 server logged three
+ * attempts but one request.
+ *
  * READS ONLY. A write is not safe to repeat.
  */
 
@@ -35,14 +42,14 @@ function isTransient(response: PostgrestLikeResponse): boolean {
 }
 
 export async function withTransientRetry<R extends PostgrestLikeResponse>(
-  fn: () => PromiseLike<R>,
+  fn: (signal: AbortSignal) => PromiseLike<R>,
   sleep: (ms: number) => Promise<void> = defaultSleep,
 ): Promise<R> {
-  let response = await fn()
+  let response = await fn(new AbortController().signal)
   for (const delay of RETRY_DELAYS_MS) {
     if (!isTransient(response)) return response
     await sleep(delay)
-    response = await fn()
+    response = await fn(new AbortController().signal)
   }
   return response
 }
