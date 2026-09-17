@@ -39,6 +39,14 @@ dager); ikke gjenta mønsteret.
 - Kjør den feilende gaten i klonen: `npm ci` → `npm run typecheck` /
   `npm test` / `npm run lint` / `bash tests/hooks/guard.test.sh` (den som var rød).
 - For PR-checks: sjekk ut PR-branchen først (`gh pr checkout <n>`).
+- **Stafettbytte i Discord PR-kortet er IKKE rødt og IKKE flake (#2095).** En
+  `cancelled` `post-card`-kjøring er et planlagt bytte når (a) en `Discord PR-kort`-
+  kjøring med event `workflow_run` ble opprettet innen ~30 s før kanselleringen,
+  eller (b) PR-en har `discord:merge-kort`-labelen med tidsstempel etter
+  kanselleringen. Da: ingen issue, ingen kommentar, ingen re-dispatch. Relékjøringer
+  listes under main sin SHA, ikke PR-ens. Spor dem med metoden i
+  `docs/loops/discord-pr-kort.md` §«Spore en kort-kjøring». (Etter #2095 gir
+  ready-kjøringen fra seg selv mens ci.yml kjører, så dette skal bli sjeldent.)
 - **Rød som blir grønn ved re-kjøring uten endring = flake-kandidat.** Fil eget
   issue (label `bug`, milestone 9, tittel «Flake-kandidat: <test>») og IKKE
   regn funnet som løst. Dette er dataene som evt. rettferdiggjør en flake-jeger
