@@ -1,35 +1,78 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  MAX_TEAMS,
   MAX_TEAM_FORMAT_PLAYERS,
+  MAX_TEAM_NUMBER,
   MIN_TEAMS,
+  TEAM_FORMAT_PLAYER_CAP,
+  defaultFlightForTeam,
   fitsTeamFormat,
+  maxTeamsForSize,
   organizerPlayerCap,
   randomDrawTeamCount,
   registrationSeatTeamSize,
   teamFormatPlayerCap,
   teamModePlayerCap,
+  teamGridSize,
   teamSizesForMode,
-  teamsShownForSize,
 } from './teamFormatLimits';
-import { TEAM_NUMBERS } from '@/app/[locale]/admin/games/new/useGameFormState';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import no from '@/messages/no.json';
 import en from '@/messages/en.json';
 
-// Lag-format-grensene bor i ÉN fil (#2009), men lag-rutenettet har sin egen
-// TEAM_NUMBERS-tuppel fordi den må være en literal union for typing. Denne
-// testen låser at de to er enige — AGENTS.md trap 4 («en regel har ett hjem»:
-// når grensen bor flere steder, skal en test påstå at lagene stemmer overens).
-describe('teamFormatLimits — lagene er enige', () => {
-  it('MAX_TEAMS matcher lag-rutenettets TEAM_NUMBERS', () => {
-    expect(TEAM_NUMBERS).toHaveLength(MAX_TEAMS);
-    expect(TEAM_NUMBERS[TEAM_NUMBERS.length - 1]).toBe(MAX_TEAMS);
+// #2148: the cap is a player cap. The number of teams follows from the team
+// size, and every reader — grid, validators, open registration — derives its
+// numbers from `TEAM_FORMAT_PLAYER_CAP` (AGENTS.md trap 4).
+describe('teamFormatLimits — ett spillertak (#2148)', () => {
+  it('taket er 40 spillere, og validatorene leser det samme tallet', () => {
+    expect(TEAM_FORMAT_PLAYER_CAP).toBe(40);
+    expect(MAX_TEAM_FORMAT_PLAYERS).toBe(TEAM_FORMAT_PLAYER_CAP);
   });
 
-  it('taket er fire lag à fire spillere', () => {
-    expect(MAX_TEAM_FORMAT_PLAYERS).toBe(16);
+  it.each([
+    [2, 20],
+    [3, 13],
+    [4, 10],
+  ])('lag à %i → %i lag', (size, teams) => {
+    expect(maxTeamsForSize(size)).toBe(teams);
+  });
+
+  it('høyeste lagnummer er antall par', () => {
+    expect(MAX_TEAM_NUMBER).toBe(20);
+    expect(MAX_TEAM_NUMBER).toBe(maxTeamsForSize(2));
+  });
+
+  it('rutenettets største lagnummer er maxTeamsForSize for hver lagstørrelse', () => {
+    for (const size of [2, 3, 4]) {
+      expect(teamGridSize(1000, size)).toBe(maxTeamsForSize(size));
+    }
+  });
+});
+
+describe('teamGridSize — rutenettet vokser med valgte spillere', () => {
+  it.each([
+    [0, 2, 2],
+    [1, 2, 2],
+    [4, 2, 2],
+    [5, 2, 3],
+    [12, 2, 6],
+    [40, 2, 20],
+    [41, 2, 20],
+    [10, 3, 4],
+    [39, 3, 13],
+    [40, 4, 10],
+  ])('%i valgt à %i → %i lagkort', (selected, size, expected) => {
+    expect(teamGridSize(selected, size)).toBe(expected);
+  });
+});
+
+describe('defaultFlightForTeam — to par per startgruppe', () => {
+  it('lag 1–6 → flight 1, 1, 2, 2, 3, 3', () => {
+    expect([1, 2, 3, 4, 5, 6].map(defaultFlightForTeam)).toEqual([1, 1, 2, 2, 3, 3]);
+  });
+
+  it('lag 20 → flight 10', () => {
+    expect(defaultFlightForTeam(20)).toBe(10);
   });
 });
 
@@ -59,11 +102,15 @@ describe('fitsTeamFormat — texas/ambrose (2, 3 eller 4 per lag)', () => {
     [6, true], // 2 lag à 3 / 3 lag à 2
     [8, true], // 2 lag à 4 / 4 lag à 2
     [9, true], // 3 lag à 3
-    [10, false], // ville krevd 5 lag à 2
+    [10, true], // 5 lag à 2 (#2148)
     [12, true], // 4 lag à 3
-    [15, false], // ville krevd 5 lag à 3
+    [15, true], // 5 lag à 3
     [16, true], // 4 lag à 4
-    [17, false], // over taket
+    [17, false], // går ikke opp
+    [39, true], // 13 lag à 3
+    [40, true], // 20 par / 10 lag à 4
+    [41, false], // går ikke opp
+    [42, false], // over taket (21 par / 14 lag à 3)
   ])('n=%i → %s', (n, expected) => {
     expect(fitsTeamFormat('texas_scramble', n)).toBe(expected);
     expect(fitsTeamFormat('ambrose', n)).toBe(expected);
@@ -78,7 +125,12 @@ describe('fitsTeamFormat — florida/shamble (3 eller 4 per lag)', () => {
     [9, true], // 3 lag à 3
     [12, true], // 4 lag à 3 / 3 lag à 4
     [16, true], // 4 lag à 4
-    [17, false], // over taket
+    [17, false], // går ikke opp
+    [20, true], // 5 lag à 4
+    [39, true], // 13 lag à 3
+    [40, true], // 10 lag à 4
+    [42, false], // 14 lag à 3 — over taket
+    [44, false], // 11 lag à 4 — over taket
   ])('n=%i → %s', (n, expected) => {
     expect(fitsTeamFormat('florida_scramble', n)).toBe(expected);
     expect(fitsTeamFormat('shamble', n)).toBe(expected);
@@ -90,25 +142,11 @@ describe('fitsTeamFormat — florida/shamble (3 eller 4 per lag)', () => {
   });
 });
 
-describe('teamsShownForSize', () => {
-  it.each([
-    [2, 4],
-    [3, 4],
-    [4, 4],
-  ])('lagstørrelse %i → %i lag i rutenettet', (size, expected) => {
-    expect(teamsShownForSize(size)).toBe(expected);
-  });
-
-  it('ugyldig lagstørrelse faller tilbake til fullt rutenett', () => {
-    expect(teamsShownForSize(0)).toBe(MAX_TEAMS);
-  });
-});
-
 describe('teamFormatPlayerCap — velgeren stopper der rutenettet er fullt', () => {
   it.each([
-    [2, 8], // best ball, par-stableford, texas à 2
-    [3, 12], // texas/ambrose/florida/shamble à 3 — bestillingen i #2009
-    [4, 16],
+    [2, 40], // best ball, par-stableford, texas à 2 — 20 par
+    [3, 39], // 13 lag à 3
+    [4, 40], // 10 lag à 4
   ])('lagstørrelse %i → %i spillere kan velges', (size, cap) => {
     expect(teamFormatPlayerCap(size)).toBe(cap);
   });
@@ -126,18 +164,20 @@ describe('teamFormatPlayerCap — velgeren stopper der rutenettet er fullt', () 
 // smallest supported size rather than the largest.
 describe('teamModePlayerCap — åpen påmelding stopper der rutenettet er fullt (#2011)', () => {
   it.each([
-    ['best_ball', 2, 8],
-    ['patsome', 2, 8],
-    ['texas_scramble', 2, 8],
-    ['texas_scramble', 3, 12],
-    ['texas_scramble', 4, 16],
-    ['ambrose', 3, 12],
-    ['florida_scramble', 3, 12],
-    ['florida_scramble', 4, 16],
-    ['shamble', 4, 16],
-    ['texas_scramble', null, 8], // team_size missing → smallest supported size
-    ['florida_scramble', null, 12],
-    ['best_ball', 4, 8], // lying team_size — best ball is always pairs
+    ['best_ball', 2, 40],
+    ['patsome', 2, 40],
+    ['texas_scramble', 2, 40],
+    ['texas_scramble', 3, 39],
+    ['texas_scramble', 4, 40],
+    ['ambrose', 3, 39],
+    ['florida_scramble', 3, 39],
+    ['florida_scramble', 4, 40],
+    ['shamble', 3, 39],
+    ['shamble', 4, 40],
+    ['texas_scramble', null, 40], // team_size missing → smallest supported size
+    ['florida_scramble', null, 39],
+    ['best_ball', 4, 40], // lying team_size — best ball is always pairs
+    ['patsome', 3, 40],
     ['wolf', 1, null],
     ['stableford', 2, null],
     ['singles_matchplay', 1, null],
@@ -175,10 +215,9 @@ describe('registrationSeatTeamSize — plassene et lag holder av ved åpen påme
     ['texas_scramble', 3],
     ['florida_scramble', 2],
     ['shamble', 4],
-  ] as const)('%s med team_size %s: taket er MAX_TEAMS × plassene', (mode, teamSize) => {
-    expect(teamModePlayerCap(mode, teamSize)).toBe(
-      Math.min(MAX_TEAMS * registrationSeatTeamSize(mode, teamSize), MAX_TEAM_FORMAT_PLAYERS),
-    );
+  ] as const)('%s med team_size %s: taket er fulle lag à plassene', (mode, teamSize) => {
+    const seats = registrationSeatTeamSize(mode, teamSize);
+    expect(teamModePlayerCap(mode, teamSize)).toBe(maxTeamsForSize(seats) * seats);
   });
 });
 
@@ -186,13 +225,17 @@ describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)
   it.each([
     [2, 2, 1], // one pair — best ball has always allowed a single team
     [2, 8, 4],
-    [2, 10, null], // divides, but five teams do not fit the grid
-    [2, 12, null], // 12 picked at 3 per team, then switched to 2: six teams
+    [2, 10, 5], // five pairs (#2148)
+    [2, 40, 20],
+    [2, 42, null], // 21 pairs — over the cap
     [3, 12, 4],
     [3, 10, null], // leftover player
-    [3, 15, null], // five teams
+    [3, 15, 5],
+    [3, 39, 13],
     [4, 16, 4],
     [4, 12, 3],
+    [4, 40, 10],
+    [4, 44, null], // eleven teams — over the cap
     [1, 4, null], // solo has no teams
     [3, 0, null], // nobody picked
   ])('à %i med %i spillere → %s lag', (teamSize, n, expected) => {
@@ -205,7 +248,7 @@ describe('randomDrawTeamCount — trekningen følger valgt lagstørrelse (#2012)
     let checked = 0;
     for (const mode of ['texas_scramble', 'ambrose', 'florida_scramble', 'shamble'] as const) {
       for (const size of teamSizesForMode(mode)) {
-        for (let n = 1; n <= 17; n++) {
+        for (let n = 1; n <= TEAM_FORMAT_PLAYER_CAP + 4; n++) {
           const teams = randomDrawTeamCount(size, n);
           if (teams !== null && teams >= MIN_TEAMS) {
             checked++;
@@ -253,19 +296,23 @@ describe('organizerPlayerCap — arrangøren og påmeldingen stopper på samme t
 });
 
 // #2075: the wizard's team descriptions must promise the grid it renders.
-describe('teamsDesc-tekstene lover like mange lag som rutenettet (#2075)', () => {
+// #2148: the number of teams depends on the team size, so the texts take it as
+// a parameter — a hard-coded count would drift the next time the cap moves.
+describe('teamsDesc-tekstene lover like mange lag som rutenettet (#2075, #2148)', () => {
   const catalogs = [
-    ['no', no.wizard.sections.teams, `Inntil ${MAX_TEAMS} lag`],
-    ['en', en.wizard.sections.teams, `Up to ${MAX_TEAMS} teams`],
+    ['no', no.wizard.sections.teams],
+    ['en', en.wizard.sections.teams],
   ] as const;
 
-  it.each(catalogs)('%s', (_locale, teams, promise) => {
+  it.each(catalogs)('%s', (_locale, teams) => {
     const keys = Object.keys(teams).filter(
       (k) => k.startsWith('teamsDesc') && k !== 'teamsDescTeamMatchplay',
     );
     expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) {
-      expect(teams[key as keyof typeof teams], key).toContain(promise);
+      const text = teams[key as keyof typeof teams];
+      expect(text, key).toContain('{maxTeams}');
+      expect(text, key).not.toMatch(/\b(4|fire|four)\s+(lag|teams|par|pairs)\b/i);
     }
   });
 });

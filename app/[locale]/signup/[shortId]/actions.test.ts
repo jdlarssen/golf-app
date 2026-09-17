@@ -550,13 +550,15 @@ describe('registerForOpenGame', () => {
   }
 
   it.each([
-    ['wolf', { kind: 'wolf', team_size: 1, teams_count: 5, wolf_scoring: 'net' }, 5, 1],
-    ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 3, 1],
-    ['skins', { kind: 'skins', team_size: 1, skins_scoring: 'net' }, 16, 1],
-    ['best_ball', { kind: 'best_ball', team_size: 2, teams_count: 4 }, 8, 2],
+    ['wolf', { kind: 'wolf', team_size: 1, teams_count: 5, wolf_scoring: 'net' }, 5, 1, 40],
+    ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 3, 1, 40],
+    ['skins', { kind: 'skins', team_size: 1, skins_scoring: 'net' }, 16, 1, 40],
+    ['best_ball', { kind: 'best_ball', team_size: 2, teams_count: 4 }, 40, 2, 20],
+    // #2148: Texas à 2 opens team numbers up to 20, so team 5 can be claimed.
+    ['texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 4, team_handicap_pct: 25 }, 40, 2, 20],
   ] as const)(
     '%s: fullt spill → game_full; kravet fikk taket og lagstørrelsen, ingen direkte INSERT',
-    async (mode, modeConfig, cap, seatTeamSize) => {
+    async (mode, modeConfig, cap, seatTeamSize, maxTeams) => {
       authedAsUser();
       getGameByShortIdMock.mockResolvedValue(
         makeGame({ game_mode: mode, mode_config: modeConfig }),
@@ -572,7 +574,7 @@ describe('registerForOpenGame', () => {
         p_user_id: USER_ID,
         p_cap: cap,
         p_seat_team_size: seatTeamSize,
-        p_max_teams: 4,
+        p_max_teams: maxTeams,
       });
       // A solo claim: one seat, no team number.
       expect(claimParams()).not.toHaveProperty('p_new_team_size');
@@ -603,7 +605,7 @@ describe('registerForOpenGame', () => {
       registerForOpenGame(fd({ shortId: SHORT_ID })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(claimParams()).toMatchObject({ p_cap: 12, p_seat_team_size: 3 });
+    expect(claimParams()).toMatchObject({ p_cap: 39, p_seat_team_size: 3, p_max_teams: 13 });
     expect(redirectMock).toHaveBeenCalledWith(
       expect.objectContaining({ href: `/games/${GAME_ID}` }),
     );
