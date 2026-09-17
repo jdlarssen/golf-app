@@ -187,8 +187,13 @@ export function validateStoredLineups(input: {
   const seats = seatsPerSlot(input.format);
   const expected = input.slotCount * seats;
 
+  // Both lineups were complete when they were submitted, so a wrong row count
+  // here means something changed them afterwards: deleting a player removes
+  // their slot row (0174). The fix is the same as for a moved player, so the
+  // organiser gets the message they can act on (#2085), not the captain's
+  // "fill every slot".
   if (input.team1.length !== expected || input.team2.length !== expected) {
-    return { ok: false, error: 'lineup_incomplete' };
+    return { ok: false, error: 'lineup_squad_changed' };
   }
 
   const in1 = new Set(input.squad1);
