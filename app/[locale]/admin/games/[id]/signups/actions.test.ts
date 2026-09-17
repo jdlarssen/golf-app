@@ -902,7 +902,9 @@ describe('#2061: hele laget på samme lag', () => {
     expect(updates).toHaveLength(2);
     const earlyChain = chainAfter('game_registration_requests', 'update', 1);
     expect(updates[1]!.args[0]).toMatchObject({ status: 'rejected' });
+    // Every teammate, so one who accepts after the children read is caught too.
     expect(earlyChain.find((c) => c.method === 'in' && c.args[0] === 'id')?.args[1]).toEqual([
+      MATE_REQUEST_ID,
       EARLY_MATE_REQUEST_ID,
     ]);
     expect(earlyChain).toContainEqual(
