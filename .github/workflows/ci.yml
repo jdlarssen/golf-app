@@ -74,6 +74,10 @@ jobs:
       - name: Guard hooks (blocking)
         run: bash tests/hooks/guard.test.sh
 
+      # robot_push retry (#2024): plain bash, vitest never runs it.
+      - name: Robot push retry (blocking)
+        run: bash tests/scripts/robot-push.test.sh
+
       # ── Native port (#1861) ────────────────────────────────────────────────
       # The Expo app's jest suite (512 tests, 35 suites) ran in ZERO CI runs
       # until now: no workflow mentioned native/app, so it only ran when
