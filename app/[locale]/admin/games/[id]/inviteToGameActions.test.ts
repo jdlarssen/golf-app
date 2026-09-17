@@ -223,15 +223,15 @@ describe('addExistingPlayerToGame', () => {
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=game_locked`);
   });
 
-  it('avviser når best-ball er fullt (8/8)', async () => {
+  it('avviser når best-ball er fullt (40/40)', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
         data: { id: GAME_ID, name: 'Vinter-cup', status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
-      // capacity: 8 already
-      { data: [], error: null, count: 8 } as never,
+      // capacity: 40 already (#2148)
+      { data: [], error: null, count: 40 } as never,
     ]);
     authedAsAdmin();
 
@@ -869,11 +869,11 @@ describe('arrangørtaket følger påmeldingstaket i alle lag-format (#2059)', ()
   }
 
   describe('addExistingPlayerToGame', () => {
-    it('texas scramble à 2 med 8 aktive → game_full, ingen insert', async () => {
+    it('texas scramble à 2 med 40 aktive → game_full, ingen insert', async () => {
       supabaseMock = buildSupabaseMock([
         ADMIN_ROLE_READ,
         gameRow('texas_scramble', 2),
-        { data: [], error: null, count: 8 } as never,
+        { data: [], error: null, count: 40 } as never,
       ]);
       authedAsAdmin();
 
@@ -889,11 +889,11 @@ describe('arrangørtaket følger påmeldingstaket i alle lag-format (#2059)', ()
       expect(activeCountFilters()).toContainEqual(['withdrawn_at', null]);
     });
 
-    it('texas scramble à 3 med 8 aktive har plass (taket er 12)', async () => {
+    it('texas scramble à 3 med 38 aktive har plass (taket er 39)', async () => {
       supabaseMock = buildSupabaseMock([
         ADMIN_ROLE_READ,
         gameRow('texas_scramble', 3),
-        { data: [], error: null, count: 8 } as never,
+        { data: [], error: null, count: 38 } as never,
         { data: null, error: null },
       ]);
       authedAsAdmin();
@@ -908,11 +908,11 @@ describe('arrangørtaket følger påmeldingstaket i alle lag-format (#2059)', ()
   });
 
   describe('inviteEmailToGame', () => {
-    it('shamble à 4 med 16 aktive → game_full før e-postoppslaget', async () => {
+    it('shamble à 4 med 40 aktive → game_full før e-postoppslaget', async () => {
       supabaseMock = buildSupabaseMock([
         ADMIN_ROLE_READ,
         gameRow('shamble', 4),
-        { data: [], error: null, count: 16 } as never,
+        { data: [], error: null, count: 40 } as never,
       ]);
       authedAsAdmin();
 
@@ -926,11 +926,11 @@ describe('arrangørtaket følger påmeldingstaket i alle lag-format (#2059)', ()
       expect(activeCountFilters()).toContainEqual(['withdrawn_at', null]);
     });
 
-    it('shamble à 4 med 12 aktive har plass', async () => {
+    it('shamble à 4 med 16 aktive har plass (#2148)', async () => {
       supabaseMock = buildSupabaseMock([
         ADMIN_ROLE_READ,
         gameRow('shamble', 4),
-        { data: [], error: null, count: 12 } as never,
+        { data: [], error: null, count: 16 } as never,
         { data: { id: RECIPIENT_ID }, error: null },
         { data: null, error: null },
       ]);

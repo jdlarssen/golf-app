@@ -65,6 +65,10 @@ const CASES: [label: string, mode: AppGameMode, setup: ModeSetup][] = [
   ['bingo_bango_bongo', 'bingo_bango_bongo', {}],
 ];
 
+// #2148: modiene der den delte byggeren alt tar flere spillere enn appen. Tom
+// når appen får samme tak som nettsiden.
+const APP_STRICTER_THAN_BUILDER = new Set(['stableford (solo)', 'modified_stableford']);
+
 describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
   it.each(CASES)(
     '%s: taket bæres helt fram, og én over gjør det ikke',
@@ -79,6 +83,10 @@ describe('maxPlayersForMode er enig med den delte payload-byggeren', () => {
       // Én over: enten en feilkode, eller færre rader enn valgt. Begge deler
       // er greie svar fra byggeren — det som ikke er greit, er at alle
       // `cap + 1` skulle kommet gjennom, for da sperrer veiviseren for tidlig.
+      // #2148: byggeren tar nå 40 i solo-stableford, mens appen holder 8 til
+      // appens tak løftes i egen PR. Der er appen strengere enn byggeren, som
+      // er trygt (ingen stille dropp), så bare den første halvdelen gjelder.
+      if (APP_STRICTER_THAN_BUILDER.has(_label)) return;
       const overCap = buildDraftPayload(draftWith(mode, cap + 1, setup)).payload;
       expect(
         overCap.errorCode !== undefined || overCap.players.length !== cap + 1,
