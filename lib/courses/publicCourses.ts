@@ -2,6 +2,7 @@ import 'server-only';
 import { cacheLife, cacheTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { withTransientRetry } from '@/lib/supabase/transientRetry';
 import { getRatingForGender } from '@/lib/games/teeRating';
 import type { TeeBoxRatings } from '@/lib/games/teeRating';
 import type { Database } from '@/lib/database.types';
@@ -81,11 +82,13 @@ type RawCourseRow = {
 async function fetchAdminUserIds(userIds: (string | null)[]): Promise<Set<string>> {
   const distinct = [...new Set(userIds.filter((id): id is string => id !== null))];
   if (distinct.length === 0) return new Set();
-  const { data, error } = await getAdminClient()
-    .from('users')
-    .select('id')
-    .in('id', distinct)
-    .eq('is_admin', true);
+  const { data, error } = await withTransientRetry(() =>
+    getAdminClient()
+      .from('users')
+      .select('id')
+      .in('id', distinct)
+      .eq('is_admin', true),
+  );
   if (error) throw error;
   return new Set((data ?? []).map((r) => r.id));
 }
@@ -111,11 +114,13 @@ export async function listPublicCourses(): Promise<PublicCourseSummary[]> {
   cacheTag('public-courses');
 
   const anon = getPublicAnonClient();
-  const { data, error } = await anon
-    .from('courses')
-    .select('id, name, slug, created_by, course_holes(hole_number), tee_boxes(*)')
-    .order('name', { ascending: true })
-    .returns<RawCourseRow[]>();
+  const { data, error } = await withTransientRetry(() =>
+    anon
+      .from('courses')
+      .select('id, name, slug, created_by, course_holes(hole_number), tee_boxes(*)')
+      .order('name', { ascending: true })
+      .returns<RawCourseRow[]>(),
+  );
   if (error) throw error;
 
   const adminIds = await fetchAdminUserIds((data ?? []).map((c) => c.created_by));
@@ -182,19 +187,21 @@ export async function getPublicCourseBySlug(
   cacheTag('public-courses');
 
   const anon = getPublicAnonClient();
-  const { data, error } = await anon
-    .from('courses')
-    .select(
-      `id, name, slug, created_by,
-       course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index),
-       tee_boxes(${TEE_COLUMNS})`,
-    )
-    .eq('slug', slug)
-    .maybeSingle<
-      RawCourseRow & {
-        course_holes: PublicCourseHole[];
-      }
-    >();
+  const { data, error } = await withTransientRetry(() =>
+    anon
+      .from('courses')
+      .select(
+        `id, name, slug, created_by,
+         course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index),
+         tee_boxes(${TEE_COLUMNS})`,
+      )
+      .eq('slug', slug)
+      .maybeSingle<
+        RawCourseRow & {
+          course_holes: PublicCourseHole[];
+        }
+      >(),
+  );
   if (error) throw error;
   if (!data) return null;
 
