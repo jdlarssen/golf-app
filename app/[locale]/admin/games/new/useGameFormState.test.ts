@@ -8,6 +8,7 @@ import {
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { TeamSize } from './TeamSizeSelector';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { teamGridShape } from '@/lib/games/teamFormatLimits';
 
 const COURSES: CourseOption[] = [
   {
@@ -1439,5 +1440,148 @@ describe('useGameFormState — lagnummer over taket fra et lagret utkast (#2148)
     expect(result.current.teamByPlayer.r4).toBeUndefined();
     expect(result.current.playersValidForMode).toBe(false);
     expect(result.current.orderedPayload.map((r) => r.user_id)).not.toContain('r4');
+  });
+});
+
+// #2079: changing the grid's shape (team size, format, selected players) never
+// leaves an assigned player without a visible slot. Players who no longer fit
+// are released from their team; the rest of the assignment stands.
+describe('useGameFormState — endret lagstørrelse eller format skjuler ingen spiller (#2079)', () => {
+  const GRID_PLAYERS: PlayerOption[] = Array.from({ length: 16 }, (_, i) =>
+    makePlayer(`g${i + 1}`),
+  );
+
+  type Hook = { current: ReturnType<typeof useGameFormState> };
+
+  function setup(mode: GameMode, teamSize: TeamSize, count: number) {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: GRID_PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange(mode);
+    });
+    act(() => {
+      result.current.handleTeamSizeChange(teamSize);
+    });
+    act(() => {
+      for (let i = 0; i < count; i++) {
+        result.current.togglePlayer(`g${i + 1}`);
+      }
+    });
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    return result;
+  }
+
+  function assigned(result: Hook): string[] {
+    return result.current.selectedPlayerIds.filter(
+      (pid) => result.current.teamByPlayer[pid] !== undefined,
+    );
+  }
+
+  /** The issue's requirement: every assigned player has a slot the grid draws. */
+  function expectEveryAssignedPlayerVisible(result: Hook) {
+    const { gameMode, teamSize, selectedPlayerIds, teamByPlayer, playersByTeam } =
+      result.current;
+    const shape = teamGridShape(
+      gameMode,
+      teamSize,
+      selectedPlayerIds.length,
+      Math.max(0, ...Object.values(teamByPlayer)),
+    );
+    for (const pid of assigned(result)) {
+      const team = teamByPlayer[pid];
+      expect(team).toBeLessThanOrEqual(shape.teamCount);
+      expect(playersByTeam[team].indexOf(pid)).toBeLessThan(shape.slotsPerTeam);
+    }
+  }
+
+  it('Texas à 3 med 12 trukket, så byttet til par → åtte står, fire løses', () => {
+    const result = setup('texas_scramble', 3, 12);
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+
+    for (const team of [1, 2, 3, 4, 5, 6]) {
+      expect(result.current.playersByTeam[team].length).toBeLessThanOrEqual(2);
+    }
+    expect(assigned(result)).toHaveLength(8);
+    expect(result.current.selectedPlayerIds).toHaveLength(12);
+    expectEveryAssignedPlayerVisible(result);
+  });
+
+  it('løste spillere har heller ingen startgruppe', () => {
+    const result = setup('texas_scramble', 3, 12);
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+
+    const released = result.current.selectedPlayerIds.filter(
+      (pid) => result.current.teamByPlayer[pid] === undefined,
+    );
+    expect(released).toHaveLength(4);
+    for (const pid of released) {
+      expect(result.current.flightByPlayer[pid]).toBeUndefined();
+    }
+  });
+
+  it('Texas à 3 med 12 trukket, så byttet til best ball → ingen lag har over to', () => {
+    const result = setup('texas_scramble', 3, 12);
+    act(() => {
+      result.current.handleModeChange('best_ball');
+    });
+
+    expect(result.current.teamSize).toBe(2);
+    for (const team of [1, 2, 3, 4]) {
+      expect(result.current.playersByTeam[team].length).toBeLessThanOrEqual(2);
+    }
+    expect(assigned(result)).toHaveLength(8);
+    expectEveryAssignedPlayerVisible(result);
+  });
+
+  it('Texas à 2 med fire par, så byttet til fourball → bare side 1 og 2 står', () => {
+    const result = setup('texas_scramble', 2, 8);
+    act(() => {
+      result.current.handleModeChange('fourball_matchplay');
+    });
+
+    expect(assigned(result)).toHaveLength(4);
+    for (const pid of assigned(result)) {
+      expect(result.current.teamByPlayer[pid]).toBeLessThanOrEqual(2);
+    }
+    expectEveryAssignedPlayerVisible(result);
+  });
+
+  it('Texas à 2 med seks par, så byttet til à 4 → ingen spiller står på et skjult lag', () => {
+    const result = setup('texas_scramble', 2, 12);
+    act(() => {
+      result.current.handleTeamSizeChange(4);
+    });
+
+    expect(assigned(result)).toHaveLength(12);
+    expectEveryAssignedPlayerVisible(result);
+  });
+
+  it('seks par, to spillere fjernet fra lag 1 → ingen spiller står på et skjult lag', () => {
+    const result = setup('texas_scramble', 2, 12);
+    const teamOne = [...result.current.playersByTeam[1]];
+    act(() => {
+      for (const pid of teamOne) result.current.togglePlayer(pid);
+    });
+
+    expect(result.current.selectedPlayerIds).toHaveLength(10);
+    expect(assigned(result)).toHaveLength(10);
+    expectEveryAssignedPlayerVisible(result);
+  });
+
+  it('bytte som passer (fire par → à 4) lar lagene stå urørt', () => {
+    const result = setup('texas_scramble', 2, 8);
+    const before = result.current.teamByPlayer;
+    act(() => {
+      result.current.handleTeamSizeChange(4);
+    });
+
+    expect(result.current.teamByPlayer).toBe(before);
   });
 });
