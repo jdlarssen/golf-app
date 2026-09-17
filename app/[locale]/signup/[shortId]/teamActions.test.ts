@@ -621,7 +621,7 @@ describe('submitTeamRegistration — happy paths', () => {
  * four-team grid. #2060/#2062 moved the decision into
  * claim_open_registration_seat: it locks the game, counts the seats already held
  * (every team at least its full size, the incoming team too), picks the lowest
- * free team number in 1..MAX_TEAMS and writes the captain's row — so two
+ * free team number in 1..maxTeamsForSize(team size) and writes the captain's row — so two
  * captains can no longer read the same roster. The seat counting these tests
  * used to pin through tallyActiveRoster is tested against a real database in
  * supabase/tests/open_registration_seat_claim_test.sql, row for row.
@@ -661,7 +661,7 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
   }
 
   /**
-   * An open Texas à 4 game (cap 16), a team of four with three e-mail slots,
+   * An open Texas à 4 game (cap 40), a team of four with three e-mail slots,
    * and a seat claim that refuses with `outcome`. Queues the reads up to the
    * compensating delete, whose answer the test passes in.
    */
@@ -672,7 +672,7 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
       error: null,
     },
   ) {
-    getGameByShortIdMock.mockResolvedValue(makeGame()); // open, texas à 4 → cap 16
+    getGameByShortIdMock.mockResolvedValue(makeGame()); // open, texas à 4 → cap 40
     adminMock = buildSupabaseMock(
       [
         { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
@@ -712,10 +712,10 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
     expect(claimParams()).toMatchObject({
       p_game_id: GAME_ID,
       p_user_id: CAPTAIN_ID,
-      p_cap: 16,
+      p_cap: 40,
       p_seat_team_size: 4,
       p_new_team_size: 4,
-      p_max_teams: 4,
+      p_max_teams: 10,
     });
     // #463: the captain registers themself → confirmed at once.
     expect(typeof claimParams()?.p_accepted_at).toBe('string');

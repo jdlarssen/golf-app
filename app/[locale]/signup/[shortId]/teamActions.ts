@@ -14,7 +14,7 @@ import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
-import { MAX_TEAMS, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
+import { maxTeamsForSize, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
@@ -343,7 +343,7 @@ export async function submitTeamRegistration(
   // moment it exists — its e-mail-invited teammates have only an invitations
   // row until they join through attachToCaptainTeam, which checks no cap — and
   // an over-full team holds every row it has. The number is the lowest in
-  // 1..MAX_TEAMS that no active row has; withdrawn rows hold neither seats nor
+  // 1..maxTeamsForSize(teamSize) that no active row has; withdrawn rows hold neither seats nor
   // numbers.
   let assignedTeamNumber: number | null = null;
   if (captainStatus === 'approved') {
@@ -354,7 +354,7 @@ export async function submitTeamRegistration(
         p_game_id: game.id,
         p_user_id: captain.id,
         p_seat_team_size: teamSize,
-        p_max_teams: MAX_TEAMS,
+        p_max_teams: maxTeamsForSize(teamSize),
         // #463: kapteinen melder seg selv på → bekreftet med en gang.
         p_accepted_at: acceptedAtForActor(captain.id, captain.id)!,
         p_new_team_size: teamSize,

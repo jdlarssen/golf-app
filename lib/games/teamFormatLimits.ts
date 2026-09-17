@@ -14,22 +14,21 @@
 // #2011 added readers outside the wizard, so open self-registration stops at
 // the same cap: `registerForOpenGame` through `registrationPlayerCap`
 // (`lib/wizard/fitsPlayerCount.ts`), and `submitTeamRegistration` through
-// `teamModePlayerCap` and `MAX_TEAMS`. #2059 added the organiser's surfaces:
-// adding a player or a guest on the roster pages reads `organizerPlayerCap`,
-// and the signups page warns through `registrationPlayerCap`.
+// `teamModePlayerCap` and `maxTeamsForSize`. #2059 added the organiser's
+// surfaces: adding a player or a guest on the roster pages reads
+// `organizerPlayerCap`, and the signups page warns through
+// `registrationPlayerCap`.
 //
-// Taket er `MAX_TEAMS × 4` fordi lag-rutenettet har fire lag og største
-// lagstørrelse er fire. Utvides rutenettet, endres `MAX_TEAMS` her og
-// `TEAM_NUMBERS` i `useGameFormState.ts` i samme commit — `teamFormatLimits.test.ts`
-// låser at de to er enige.
+// #2148: the cap is a player cap, not a team cap. `TEAM_FORMAT_PLAYER_CAP`
+// players, and the number of teams follows from the team size — 20 pairs,
+// 13 teams of three, 10 teams of four. Raising the cap is a change to that one
+// number; the wizard's grid, the validators, open registration and the native
+// app all read it from here.
 
 import type { GameMode } from '@/lib/scoring/modes/types';
 
-/** Antall lag lag-rutenettet i veiviseren tilbyr (speiles av `TEAM_NUMBERS`). */
-export const MAX_TEAMS = 4;
-
-/** Største lagstørrelse noen lag-format i familien støtter. */
-export const MAX_TEAM_SIZE = 4;
+/** Spillertaket for lag-formatene (#2148). Heves ved å endre dette tallet. */
+export const TEAM_FORMAT_PLAYER_CAP = 40;
 
 /**
  * Et lag-format er en turnering først når det finnes to lag å sammenligne
@@ -38,11 +37,46 @@ export const MAX_TEAM_SIZE = 4;
 export const MIN_TEAMS = 2;
 
 /**
- * Øvre grense for antall `player_${i}_*`-slots payload-validatorene i
- * scramble-familien leser, og dermed for hvor mange spillere veiviseren kan
- * sende inn: fire lag à fire spillere.
+ * Øvre grense for hvor mange spillere payload-validatorene for lag-formatene
+ * godtar (de leser én slot til, så spiller nummer 41 gir en feilkode i stedet
+ * for å forsvinne stille), og dermed for hvor mange veiviseren kan sende inn.
  */
-export const MAX_TEAM_FORMAT_PLAYERS = MAX_TEAMS * MAX_TEAM_SIZE;
+export const MAX_TEAM_FORMAT_PLAYERS = TEAM_FORMAT_PLAYER_CAP;
+
+/**
+ * Hvor mange hele lag taket gir plass til ved en lagstørrelse: 20 par, 13 lag
+ * à tre, 10 lag à fire. Ugyldig lagstørrelse regnes som 1.
+ */
+export function maxTeamsForSize(teamSize: number): number {
+  return Math.floor(TEAM_FORMAT_PLAYER_CAP / Math.max(1, Math.floor(teamSize)));
+}
+
+/**
+ * Høyeste lagnummer noe lag-format kan ha, uavhengig av lagstørrelse: taket
+ * delt på den minste lagstørrelsen (par). Validatorene og veiviserens
+ * datamodell bruker det som øvre grense for `team_number` og `flight_number`.
+ */
+export const MAX_TEAM_NUMBER = maxTeamsForSize(2);
+
+/**
+ * Hvor mange lagkort rutenettet viser når `selectedCount` spillere er valgt:
+ * nok til alle valgte, minst to (en turnering trenger to lag å sammenligne),
+ * og aldri flere enn taket gir plass til. Rutenettet på nettsiden og
+ * lagknappene i appen leser begge herfra, så de viser like mange lag.
+ */
+export function teamGridSize(selectedCount: number, teamSize: number): number {
+  const size = Math.max(1, Math.floor(teamSize));
+  const needed = Math.ceil(Math.max(0, selectedCount) / size);
+  return Math.min(maxTeamsForSize(size), Math.max(MIN_TEAMS, needed));
+}
+
+/**
+ * Standard startgruppe (flight) for et lag i best ball: to par per flight,
+ * så lag 1–2 → 1, lag 3–4 → 2, lag 5–6 → 3. Arrangøren kan overstyre.
+ */
+export function defaultFlightForTeam(team: number): number {
+  return Math.max(1, Math.ceil(team / 2));
+}
 
 /**
  * Lagstørrelsene hvert format i scramble-familien støtter.
@@ -71,43 +105,30 @@ export function teamSizesForMode(mode: GameMode): readonly number[] {
 
 /**
  * Kan `n` spillere fordeles på hele lag i dette formatet? Sant når minst én
- * støttet lagstørrelse går opp i `n` OG gir mellom `MIN_TEAMS` og `MAX_TEAMS`
- * lag.
+ * støttet lagstørrelse går opp i `n` OG gir mellom `MIN_TEAMS` og
+ * `maxTeamsForSize(lagstørrelse)` lag.
  *
- * Eksempler for Texas (2/3/4 per lag): 4 ✓ (2 lag à 2), 6 ✓ (2 lag à 3),
- * 10 ✗ (5 lag à 2 finnes ikke — rutenettet har fire), 12 ✓ (4 lag à 3),
- * 16 ✓ (4 lag à 4), 17 ✗ (over taket).
+ * Eksempler for Texas (2/3/4 per lag): 4 ✓ (2 lag à 2), 10 ✓ (5 lag à 2),
+ * 39 ✓ (13 lag à 3), 40 ✓ (20 par / 10 lag à 4), 41 ✗ (går ikke opp),
+ * 42 ✗ (over taket).
  */
 export function fitsTeamFormat(mode: GameMode, n: number): boolean {
   return teamSizesForMode(mode).some((size) => {
     if (n % size !== 0) return false;
     const teams = n / size;
-    return teams >= MIN_TEAMS && teams <= MAX_TEAMS;
+    return teams >= MIN_TEAMS && teams <= maxTeamsForSize(size);
   });
 }
 
 /**
  * Hvor mange spillere velgeren lar arrangøren huke av for et lag-format: fulle
- * lag i hele rutenettet, altså `MAX_TEAMS × lagstørrelse` — 8 for lag à 2,
- * 12 for lag à 3, 16 for lag à 4. Var hardkodet til 8 i `PlayersSection`
- * (det fjerde hjemmet for samme regel) og stoppet arrangøren ved åtte
- * spillere selv om rutenettet og validatoren tok tolv (#2009, funnet i
- * eierens klikkrunde).
+ * lag opp til taket, altså `maxTeamsForSize(lagstørrelse) × lagstørrelse` —
+ * 40 for par, 39 for lag à tre, 40 for lag à fire (#2148). Var hardkodet til 8
+ * i `PlayersSection` før #2009.
  */
 export function teamFormatPlayerCap(teamSize: number): number {
-  return MAX_TEAMS * Math.max(1, Math.floor(teamSize));
-}
-
-/**
- * Hvor mange lag rutenettet skal vise for en gitt lagstørrelse: alle fire, med
- * mindre lagstørrelsen gjør at det siste laget ikke får plass under taket.
- * Med dagens tall (16 slots, maks lagstørrelse 4) er svaret alltid
- * `MAX_TEAMS` — funksjonen finnes for at rutenettet ikke skal drifte fra
- * taket hvis ett av tallene endres senere.
- */
-export function teamsShownForSize(teamSize: number): number {
-  if (teamSize <= 0) return MAX_TEAMS;
-  return Math.min(MAX_TEAMS, Math.floor(MAX_TEAM_FORMAT_PLAYERS / teamSize));
+  const size = Math.max(1, Math.floor(teamSize));
+  return maxTeamsForSize(size) * size;
 }
 
 /**
@@ -146,8 +167,8 @@ export function registrationSeatTeamSize(
 }
 
 /**
- * Upper player cap for a team-format game: full teams across the whole grid,
- * i.e. `MAX_TEAMS × team size` (#2011). Open self-registration reads it so a
+ * Upper player cap for a team-format game: full teams up to the player cap,
+ * i.e. `maxTeamsForSize(team size) × team size` (#2011, #2148). Open self-registration reads it so a
  * game cannot collect more players or teams than the wizard can show. `null`
  * for formats without a team concept here (solo, stableford, the matchplay
  * family) — other rules own their cap.
@@ -189,19 +210,17 @@ export function organizerPlayerCap(
 /**
  * How many teams «Trekk tilfeldig» deals `n` selected players into at the
  * chosen `teamSize`, or `null` when the draw must refuse (#2012): every team
- * full, no leftover, and no more teams than the grid shows.
+ * full, no leftover, and no more teams than the cap allows at that size.
  *
  * `fitsTeamFormat` cannot answer this. It asks whether ANY supported size
  * fits, so 12 players pass through size 3 even when the organiser has
  * switched to pairs and a draw would deal six teams. It also knows neither
  * best ball nor par-stableford, and it demands two teams, while best ball
- * has always let a single pair be drawn. The grid cap matters beyond looks:
- * the form's `playersByTeam` only has keys 1–`MAX_TEAMS`, so a team 5 would
- * crash the render rather than hide a team.
+ * has always let a single pair be drawn.
  */
 export function randomDrawTeamCount(teamSize: number, n: number): number | null {
   if (!Number.isInteger(teamSize) || teamSize < 2) return null;
   if (!Number.isInteger(n) || n % teamSize !== 0) return null;
   const teams = n / teamSize;
-  return teams >= 1 && teams <= teamsShownForSize(teamSize) ? teams : null;
+  return teams >= 1 && teams <= maxTeamsForSize(teamSize) ? teams : null;
 }

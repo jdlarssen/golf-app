@@ -175,7 +175,7 @@ export async function approveRequest(requestId: string): Promise<void> {
     }
     const taken = new Set((existing ?? []).map((r) => r.team_number));
     // Deliberately wider than the grid (#662): the organiser's approval keeps an
-    // escape hatch past MAX_TEAMS, while open self-registration stops at it
+    // escape hatch past maxTeamsForSize, while open self-registration stops at it
     // (teamActions.ts, #2011). The widened game_players_team_number_check
     // (0101) allows it.
     for (let slot = 1; slot <= 50; slot += 1) {

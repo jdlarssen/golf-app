@@ -13,7 +13,7 @@ import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
-import { MAX_TEAMS, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
+import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -237,8 +237,8 @@ export async function registerForOpenGame(
   );
 
   // Player cap: the exact-count formats (#661 — Wolf 3–5, Nines 3, RoundRobin 4,
-  // AceyDeucey 4, Skins/Nassau/BBB 2–16) and the team formats' grid cap (#2011 —
-  // MAX_TEAMS × team size). The matchplay family has no cap here; side capacity
+  // AceyDeucey 4, Skins/Nassau/BBB 2–16) and the team formats' player cap
+  // (#2011, #2148 — full teams up to 40 players). The matchplay family has no cap here; side capacity
   // has its own check below.
   //
   // For a self-registration game the signup caps (this one and the team cap in
@@ -257,13 +257,14 @@ export async function registerForOpenGame(
   const modeConfig = game.mode_config as { team_size?: number } | null;
   const cap = registrationPlayerCap(game.game_mode, modeConfig);
   if (cap !== null && !isMatchplayMode(game.game_mode)) {
+    const seatTeamSize = registrationSeatTeamSize(game.game_mode, modeConfig?.team_size);
     const { data: claim, error: claimError } = await admin.rpc(
       'claim_open_registration_seat',
       {
         p_game_id: game.id,
         p_user_id: userId,
-        p_seat_team_size: registrationSeatTeamSize(game.game_mode, modeConfig?.team_size),
-        p_max_teams: MAX_TEAMS,
+        p_seat_team_size: seatTeamSize,
+        p_max_teams: maxTeamsForSize(seatTeamSize),
         // #463: selv-påmelding → bekreftet med en gang.
         p_accepted_at: new Date().toISOString(),
         p_cap: cap,
