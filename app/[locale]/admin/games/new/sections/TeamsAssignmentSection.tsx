@@ -10,7 +10,7 @@
  *  - par-stableford → lag-grid (opptil 20 par) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee
  *  - scramble-familien (texas/ambrose/florida/shamble) → lag-grid (2–4 per lag
  *    for texas/ambrose, 3–4 for florida/shamble, jf. TEAM_FORMAT_TEAM_SIZES;
- *    antall lagkort vokser med valgte spillere, jf. `teamGridSize`, #2148)
+ *    antall lagkort vokser med valgte spillere, jf. `teamGridShape`, #2148, #2079)
  *    + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
  *  - patsome / lag-matchplay → lag-grid + «Tøm lag», ingen trekning
  *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
@@ -27,7 +27,7 @@ import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
 import {
   maxTeamsForSize,
-  teamGridSize,
+  teamGridShape,
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
 
@@ -165,6 +165,7 @@ export function TeamsAssignmentSection({
     return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
   }
   const {
+    gameMode,
     selectedPlayerIds,
     teamByPlayer,
     flightByPlayer,
@@ -211,9 +212,6 @@ export function TeamsAssignmentSection({
       ? '5. '
       : '4. ';
 
-  // Plasser per lagkort: lagstørrelsen i scramble-familien, ellers par.
-  const isScrambleFamily = isTexas || isAmbrose || isFlorida || isShamble;
-  const slotCount = isScrambleFamily ? teamSize : 2;
   // Lagnumre med spillere, stigende. Brukes av flight-seksjonen og for å
   // holde et lag med spillere synlig selv om rutenettet ellers ville krympet.
   const teamsWithPlayers = Object.keys(playersByTeam)
@@ -221,14 +219,17 @@ export function TeamsAssignmentSection({
     .filter((team) => playersByTeam[team].length > 0)
     .sort((a, b) => a - b);
   const highestTeamWithPlayers = teamsWithPlayers.at(-1) ?? 0;
-  // #2148: rutenettet vokser med valgte spillere, opptil taket for
-  // lagstørrelsen. Et lag som alt har spillere vises alltid, også over taket:
-  // 13 lag trukket à 3 og så byttet til à 4 skal ikke skjule lag 11–13, for da
-  // kan arrangøren verken se eller flytte de spillerne. Lag-matchplay er 2v2
-  // og har alltid to sider.
-  const gridTeamCount = isTeamMatchplay
-    ? 2
-    : Math.max(teamGridSize(selectedPlayerIds.length, slotCount), highestTeamWithPlayers);
+  // Plasser per lagkort og antall lagkort bor i `teamGridShape` (#2079), samme
+  // regel som hooken løser spillere mot når formen krymper. #2148: rutenettet
+  // vokser med valgte spillere, og et lag som alt har spillere vises alltid —
+  // 13 lag trukket à 3 og så byttet til à 4 skal ikke skjule lag 11–13.
+  // Lag-matchplay er 2v2 og har alltid to sider.
+  const { slotsPerTeam: slotCount, teamCount: gridTeamCount } = teamGridShape(
+    gameMode,
+    teamSize,
+    selectedPlayerIds.length,
+    highestTeamWithPlayers,
+  );
   // Best ball: to par per flight, så flight-valgene går til flighten det
   // høyeste laget hører hjemme i — eller høyere hvis arrangøren alt har
   // flyttet noen dit.

@@ -26,6 +26,7 @@
 // app all read it from here.
 
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { isMatchplayMode } from '@/lib/games/matchplaySides';
 
 /** Spillertaket for lag-formatene (#2148). Heves ved å endre dette tallet. */
 export const TEAM_FORMAT_PLAYER_CAP = 40;
@@ -68,6 +69,63 @@ export function teamGridSize(selectedCount: number, teamSize: number): number {
   const size = Math.max(1, Math.floor(teamSize));
   const needed = Math.ceil(Math.max(0, selectedCount) / size);
   return Math.min(maxTeamsForSize(size), Math.max(MIN_TEAMS, needed));
+}
+
+/** Plasser per lagkort og antall lagkort i veiviserens lag-rutenett (#2079). */
+export interface TeamGridShape {
+  slotsPerTeam: number;
+  teamCount: number;
+}
+
+/**
+ * The shape of the wizard's team grid: the one rule `TeamsAssignmentSection`
+ * draws and `useGameFormState` prunes assignments against (#2079).
+ *
+ *  - Slots per card: the team size in the scramble family, otherwise a pair.
+ *  - Cards: team matchplay always has two sides. Every other format grows with
+ *    the selected players up to the cap (`teamGridSize`), and a team that
+ *    already has players stays on screen even above that (#2148), so
+ *    `highestAssignedTeam` is the highest team number holding a player.
+ */
+export function teamGridShape(
+  mode: GameMode,
+  teamSize: number,
+  selectedCount: number,
+  highestAssignedTeam = 0,
+): TeamGridShape {
+  const slotsPerTeam = teamSizesForMode(mode).length > 0 ? teamSize : 2;
+  const teamCount =
+    isMatchplayMode(mode) && mode !== 'singles_matchplay'
+      ? MIN_TEAMS
+      : Math.max(teamGridSize(selectedCount, slotsPerTeam), highestAssignedTeam);
+  return { slotsPerTeam, teamCount };
+}
+
+/**
+ * Releases every assigned player the grid can no longer show (#2079): a player
+ * keeps their team only while the team is one of `shape.teamCount` cards and
+ * their place in it — the order of `selectedPlayerIds`, the same order the
+ * cards fill their slots in — is below `shape.slotsPerTeam`. Everyone who
+ * fits keeps their team. Returns the same object when nothing changes, so a
+ * switch that fits costs no render.
+ */
+export function fitAssignmentsToGrid(
+  teamByPlayer: Record<string, number>,
+  selectedPlayerIds: readonly string[],
+  shape: TeamGridShape,
+): Record<string, number> {
+  const placesTaken = new Map<number, number>();
+  let next: Record<string, number> | null = null;
+  for (const pid of selectedPlayerIds) {
+    const team = teamByPlayer[pid];
+    if (team === undefined) continue;
+    const place = placesTaken.get(team) ?? 0;
+    placesTaken.set(team, place + 1);
+    if (team <= shape.teamCount && place < shape.slotsPerTeam) continue;
+    next ??= { ...teamByPlayer };
+    delete next[pid];
+  }
+  return next ?? teamByPlayer;
 }
 
 /** Lagnumrene `1..count`, stigende. Tom liste når `count` er under 1. */

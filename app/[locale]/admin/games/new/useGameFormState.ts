@@ -17,7 +17,9 @@ import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import {
   MAX_TEAM_NUMBER,
   defaultFlightForTeam,
+  fitAssignmentsToGrid,
   randomDrawTeamCount,
+  teamGridShape,
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
@@ -46,6 +48,42 @@ export function emptyPlayersByTeam(): Record<number, string[]> {
   const result: Record<number, string[]> = {};
   for (const t of teamNumberRange(MAX_TEAM_NUMBER)) result[t] = [];
   return result;
+}
+
+/**
+ * Løser spillerne rutenettet ikke lenger kan vise etter et bytte av format,
+ * lagstørrelse eller valgte spillere (#2079). Formater uten lag-rutenett
+ * (lagstørrelse 1) røres ikke.
+ */
+function fitTeamsToGrid(
+  teamByPlayer: Record<string, number>,
+  selectedPlayerIds: readonly string[],
+  mode: GameMode,
+  teamSize: number,
+): Record<string, number> {
+  if (teamSize < 2) return teamByPlayer;
+  const highestAssignedTeam = Math.max(
+    0,
+    ...selectedPlayerIds.map((pid) => teamByPlayer[pid] ?? 0),
+  );
+  return fitAssignmentsToGrid(
+    teamByPlayer,
+    selectedPlayerIds,
+    teamGridShape(mode, teamSize, selectedPlayerIds.length, highestAssignedTeam),
+  );
+}
+
+/** Startgruppene uten spillerne som hadde lag i `before`, men ikke i `after`. */
+function withoutReleasedFlights(
+  flightByPlayer: Record<string, number>,
+  before: Record<string, number>,
+  after: Record<string, number>,
+): Record<string, number> {
+  const next = { ...flightByPlayer };
+  for (const pid of Object.keys(before)) {
+    if (after[pid] === undefined) delete next[pid];
+  }
+  return next;
 }
 
 /** Lagnumrene i kartet, stigende. */
@@ -839,6 +877,7 @@ export function useGameFormState({
     // fleksibel default-policy — for v1 holder vi det enkelt.
     const nextSize = defaultTeamSizeForMode(next);
     setTeamSize(nextSize);
+    releasePlayersOutsideGrid(next, nextSize);
     // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
     // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'texas_scramble') {
@@ -870,6 +909,7 @@ export function useGameFormState({
    */
   function handleTeamSizeChange(next: TeamSize) {
     setTeamSize(next);
+    releasePlayersOutsideGrid(gameMode, next);
     if (gameMode === 'texas_scramble') {
       setTexasHandicapPct(defaultTexasHandicapPct(next));
     }
@@ -879,6 +919,17 @@ export function useGameFormState({
     if (gameMode === 'florida_scramble') {
       setFloridaHandicapPct(defaultFloridaHandicapPct(next));
     }
+  }
+
+  // #2079: et bytte som krymper rutenettet løser spillerne som ikke lenger får
+  // en synlig plass. Resten av fordelingen står, og de løste dukker opp i
+  // listene for tomme plasser.
+  function releasePlayersOutsideGrid(mode: GameMode, size: number) {
+    setTeamByPlayer((prev) => {
+      const next = fitTeamsToGrid(prev, selectedPlayerIds, mode, size);
+      if (next !== prev) setFlightByPlayer((fp) => withoutReleasedFlights(fp, prev, next));
+      return next;
+    });
   }
 
   // Lag-grid vises kun for moduser som faktisk har lag (teamSize ≥ 2).
@@ -1065,17 +1116,20 @@ export function useGameFormState({
       if (prev.includes(playerId)) {
         // Removing also clears their team/flight assignment så state ikke
         // henger igjen som «zombie»-data om admin senere re-velger spilleren.
+        // Færre valgte kan krympe rutenettet, så resten tilpasses det (#2079).
+        const remaining = prev.filter((id) => id !== playerId);
         setTeamByPlayer((tp) => {
-          const next = { ...tp };
-          delete next[playerId];
+          const without = { ...tp };
+          delete without[playerId];
+          const next = fitTeamsToGrid(without, remaining, gameMode, teamSize);
+          setFlightByPlayer((fp) => {
+            const flights = withoutReleasedFlights(fp, without, next);
+            delete flights[playerId];
+            return flights;
+          });
           return next;
         });
-        setFlightByPlayer((fp) => {
-          const next = { ...fp };
-          delete next[playerId];
-          return next;
-        });
-        return prev.filter((id) => id !== playerId);
+        return remaining;
       }
       return [...prev, playerId];
     });
@@ -1097,8 +1151,9 @@ export function useGameFormState({
   // «Trekk tilfeldig» (#2012): best ball, par-stableford and the scramble
   // family. The draw deals teams of the chosen size, so the count must divide
   // evenly and stay under the player cap; `randomDrawTeamCount` owns that rule.
-  // It reads the size at click time because `handleTeamSizeChange` keeps
-  // selections and teams: 13 players picked at 3 per team can never be dealt.
+  // It reads the size at click time because `handleTeamSizeChange` keeps the
+  // selection (and every team that still fits the grid, #2079): 13 players
+  // picked at 3 per team can never be dealt.
   const canDrawRandomTeams =
     (isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble) &&
     randomDrawTeamCount(teamSize, selectedPlayerIds.length) !== null;
