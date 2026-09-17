@@ -21,7 +21,7 @@
   "onboarding": {
     "errors": {
       "name_required": "Du må fylle inn navn.",
-      "hcp_invalid": "Handicap-index må være et tall mellom -10 og 54,0.",
+      "hcp_invalid": "Handicap-index må være et tall mellom 0 og 54. Bruk +-knappen for plusshandicap.",
       "unknown": "Noe gikk galt. Prøv igjen."
     },
     "kicker": "Velkommen til Tørny",
