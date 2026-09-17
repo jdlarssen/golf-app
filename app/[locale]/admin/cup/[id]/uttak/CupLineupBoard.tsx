@@ -1,6 +1,12 @@
 'use client';
 
-import { startTransition, useActionState, useState } from 'react';
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -20,7 +26,7 @@ import {
   retryCupLineupReveal,
   type CupLineupActionError,
 } from '@/lib/cup/lineupActions';
-import { canRetryReveal } from '@/lib/cup/lineupReveal';
+import { canRetryReveal, opponentHiddenLabel } from '@/lib/cup/lineupReveal';
 import { seatsPerSlot } from '@/lib/cup/lineupValidation';
 import { derivePointsToWin } from '@/lib/cup/pointsToWin';
 import { formatPoints } from '@/lib/cup/formatPoints';
@@ -71,9 +77,10 @@ const FORMATS = [
 /**
  * Uttaks-rommets interaktive flate (#1884).
  *
- * Én `useActionState` deler feilbanneret på tvers av alle formene — et
+ * Én `useActionState` deler feilen på tvers av alle formene — et
  * `intent`-felt router til riktig action, samme mønster som
- * `CupParticipantsList`. Kapteinens plass-valg er lokal state (ikke
+ * `CupParticipantsList`. Feilen vises der knappen ble trykket (#2087): på
+ * øktkortet for handlinger på en økt, øverst bare for resten. Kapteinens plass-valg er lokal state (ikke
  * ukontrollerte felt), fordi React 19 nullstiller skjemaet etter en
  * form-action og hele uttaket ville forsvunnet ved en valideringsfeil.
  */
@@ -110,7 +117,16 @@ export function CupLineupBoard({
     INITIAL,
   );
 
+  // #2087: which session the last action was about. Set before dispatching,
+  // so the error lands on the card whose button was pressed. The shared
+  // pending state disables every button, so only one action runs at a time.
+  const [actionSessionId, setActionSessionId] = useState<string | null>(null);
+
   function submit(formData: FormData) {
+    const sessionId = formData.get('session_id');
+    setActionSessionId(
+      typeof sessionId === 'string' && sessionId ? sessionId : null,
+    );
     startTransition(() => dispatch(formData));
   }
 
@@ -119,6 +135,13 @@ export function CupLineupBoard({
     const key = `errors.${state.error}` as Parameters<typeof t>[0];
     return t.has(key) ? t(key) : t('errors.unexpected', { code: state.error });
   })();
+
+  // A session error goes on its card. If the card is gone (deleted elsewhere
+  // in the meantime), the top banner is the only place left to show it.
+  const errorOnCard =
+    errorMessage !== null &&
+    actionSessionId !== null &&
+    board.sessions.some((s) => s.id === actionSessionId);
 
   const captains = {
     1: board.access.participants.find((p) => p.isCaptain && p.teamNumber === 1),
@@ -134,7 +157,7 @@ export function CupLineupBoard({
 
   return (
     <div className="space-y-6">
-      {errorMessage && (
+      {errorMessage && !errorOnCard && (
         <Banner tone="error" testId="cup-lineup-error">
           {errorMessage}
         </Banner>
@@ -186,6 +209,11 @@ export function CupLineupBoard({
               myTeam={myTeam}
               onSubmit={submit}
               isPending={isPending}
+              errorMessage={
+                errorOnCard && session.id === actionSessionId
+                  ? errorMessage
+                  : null
+              }
               formatLabel={(f) =>
                 tf(
                   FORMAT_LABEL_KEY[
@@ -423,6 +451,34 @@ function OpenSessionForm({
   );
 }
 
+/**
+ * The error from the last action on this session (#2087), shown on the card.
+ *
+ * Scrolls itself into view only when it is outside the viewport
+ * (`block: 'nearest'`), which it can be when a tall lineup form sits between
+ * the pressed button and the message. Usually it is already in view and
+ * nothing moves.
+ */
+function SessionError({
+  sessionIndex,
+  message,
+}: {
+  sessionIndex: number;
+  message: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, [message]);
+  return (
+    <div ref={ref} role="alert">
+      <Banner tone="error" testId={`cup-lineup-error-${sessionIndex}`}>
+        {message}
+      </Banner>
+    </div>
+  );
+}
+
 /** Ett øktkort: status per lag, kapteinens skjema, arrangørens nødluke. */
 function SessionCard({
   tournamentId,
@@ -432,6 +488,7 @@ function SessionCard({
   myTeam,
   onSubmit,
   isPending,
+  errorMessage,
   formatLabel,
 }: {
   tournamentId: string;
@@ -441,10 +498,20 @@ function SessionCard({
   myTeam: CupTeamNumber | null;
   onSubmit: (fd: FormData) => void;
   isPending: boolean;
+  /** The last action's error, when it was about this session (#2087). */
+  errorMessage: string | null;
   formatLabel: (format: string) => string;
 }) {
   const t = useTranslations('cup.lineup');
   const revealed = session.revealedAt !== null;
+  const stuck = canRetryReveal({
+    revealedAt: session.revealedAt,
+    team1SubmittedAt: session.teams[0].submittedAt,
+    team2SubmittedAt: session.teams[1].submittedAt,
+  });
+  const error = errorMessage && (
+    <SessionError sessionIndex={session.sessionIndex} message={errorMessage} />
+  );
 
   return (
     <Card data-testid={`cup-lineup-session-${session.sessionIndex}`}>
@@ -476,43 +543,43 @@ function SessionCard({
         ))}
       </div>
 
+      {/* #2087: the error sits right above the buttons that caused it. With the
+          retry block showing, that is between its explanation and the button. */}
+      {!(isOrganizer && stuck) && error && <div className="mt-4">{error}</div>}
+
       {/* #1901: both lineups in, nothing revealed. The reveal error went to the
           captain who submitted last, so without this the organiser would see
           an ordinary-looking card and no way forward but unlocking. */}
-      {isOrganizer &&
-        canRetryReveal({
-          revealedAt: session.revealedAt,
-          team1SubmittedAt: session.teams[0].submittedAt,
-          team2SubmittedAt: session.teams[1].submittedAt,
-        }) && (
-          <div className="mt-4 space-y-3">
-            <Banner
-              tone="warning"
-              testId={`cup-lineup-stuck-${session.sessionIndex}`}
+      {isOrganizer && stuck && (
+        <div className="mt-4 space-y-3">
+          <Banner
+            tone="warning"
+            testId={`cup-lineup-stuck-${session.sessionIndex}`}
+          >
+            <p className="font-semibold">{t('retryHeading')}</p>
+            <p className="mt-1 font-normal">{t('retryHelper')}</p>
+          </Banner>
+          {error}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData();
+              fd.set('intent', 'retry');
+              fd.set('id', tournamentId);
+              fd.set('session_id', session.id);
+              onSubmit(fd);
+            }}
+          >
+            <Button
+              type="submit"
+              disabled={isPending}
+              data-testid={`cup-lineup-retry-${session.sessionIndex}`}
             >
-              <p className="font-semibold">{t('retryHeading')}</p>
-              <p className="mt-1 font-normal">{t('retryHelper')}</p>
-            </Banner>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const fd = new FormData();
-                fd.set('intent', 'retry');
-                fd.set('id', tournamentId);
-                fd.set('session_id', session.id);
-                onSubmit(fd);
-              }}
-            >
-              <Button
-                type="submit"
-                disabled={isPending}
-                data-testid={`cup-lineup-retry-${session.sessionIndex}`}
-              >
-                {t('retryButton')}
-              </Button>
-            </form>
-          </div>
-        )}
+              {t('retryButton')}
+            </Button>
+          </form>
+        </div>
+      )}
 
       {isOrganizer && !revealed && (
         <form
@@ -590,7 +657,20 @@ function TeamPanel({
       {/* `slots === null` betyr «ikke synlig for deg» — aldri «tomt». Å vise en
           tom oppstilling her ville lest som at motstanderen ikke hadde levert. */}
       {team.slots === null ? (
-        <p className="mt-2 text-xs text-muted">{t('hidden')}</p>
+        <p
+          className="mt-2 text-xs text-muted"
+          data-testid={`cup-lineup-hidden-${session.sessionIndex}-${team.teamNumber}`}
+        >
+          {/* #2088: once both are in, "hidden until both have submitted" is
+              no longer true. */}
+          {t(
+            opponentHiddenLabel({
+              revealedAt: session.revealedAt,
+              team1SubmittedAt: session.teams[0].submittedAt,
+              team2SubmittedAt: session.teams[1].submittedAt,
+            }),
+          )}
+        </p>
       ) : canEdit ? (
         <LineupEditor
           // Plass-valgene er lokal state seedet fra serveren, og en
