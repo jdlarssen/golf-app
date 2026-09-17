@@ -13,6 +13,7 @@ import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
+import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 
 type GameSnapshot = {
   id: string;
@@ -20,9 +21,8 @@ type GameSnapshot = {
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   game_mode: string;
   group_id: string | null;
+  mode_config: { team_size?: number } | null;
 };
-
-const BEST_BALL_MAX_PLAYERS = 8;
 
 /**
  * Picker-add: legg en eksisterende registrert spiller til et game-roster.
@@ -67,15 +67,7 @@ export async function addExistingPlayerToGame(
     }
   }
 
-  if (game.game_mode === 'best_ball') {
-    const { count } = await supabase
-      .from('game_players')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('game_id', gameId);
-    if ((count ?? 0) >= BEST_BALL_MAX_PLAYERS) {
-      redirect({ href: `${detailPath}?error=game_full`, locale });
-    }
-  }
+  await assertRoomForPlayer(supabase, game, detailPath);
 
   const { error: insertError } = await supabase.from('game_players').insert({
     game_id: gameId,
@@ -156,15 +148,7 @@ export async function inviteEmailToGame(
     redirect({ href: `${detailPath}?error=game_locked`, locale });
   }
 
-  if (game.game_mode === 'best_ball') {
-    const { count } = await supabase
-      .from('game_players')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('game_id', gameId);
-    if ((count ?? 0) >= BEST_BALL_MAX_PLAYERS) {
-      redirect({ href: `${detailPath}?error=game_full`, locale });
-    }
-  }
+  await assertRoomForPlayer(supabase, game, detailPath);
 
   // Eksisterende bruker? Da går vi rett til picker-add-stien.
   const { data: existingUser } = await supabase
@@ -339,7 +323,7 @@ async function loadGameForInvite(
   const locale = await getLocale();
   const { data, error } = await supabase
     .from('games')
-    .select('id, name, status, game_mode, group_id')
+    .select('id, name, status, game_mode, group_id, mode_config')
     .eq('id', gameId)
     .maybeSingle<GameSnapshot>();
 
@@ -354,4 +338,28 @@ async function loadGameForInvite(
     redirect({ href: `${detailPath}?error=not_found`, locale });
   }
   return data!;
+}
+
+/**
+ * Format cap for the organiser's add paths (#2059): the cap the signup link
+ * reads (`organizerPlayerCap`), counted over active players so a withdrawn
+ * player never makes the game look full. Enforced here in the action only —
+ * there is no DB constraint behind it, so two tabs adding at once can pass it.
+ */
+async function assertRoomForPlayer(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  game: GameSnapshot,
+  detailPath: string,
+): Promise<void> {
+  const cap = organizerPlayerCap(game.game_mode, game.mode_config);
+  if (cap === null) return;
+  const { count } = await supabase
+    .from('game_players')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('game_id', game.id)
+    .is('withdrawn_at', null);
+  if ((count ?? 0) >= cap) {
+    const locale = await getLocale();
+    redirect({ href: `${detailPath}?error=game_full`, locale });
+  }
 }

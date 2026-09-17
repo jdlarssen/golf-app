@@ -23,8 +23,7 @@ import {
 } from '@/lib/games/claimGuestResult';
 import { sendGuestClaimNotification } from '@/lib/mail/guestClaimNotification';
 import { firstName } from '@/lib/firstName';
-
-const BEST_BALL_MAX_PLAYERS = 8;
+import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 
 /**
  * «Legg til gjest» på roster-cockpitene (#1009): creator-flaten
@@ -49,9 +48,14 @@ export async function addGuestToGame(
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, status, game_mode')
+    .select('id, status, game_mode, mode_config')
     .eq('id', gameId)
-    .single<{ id: string; status: string; game_mode: string }>();
+    .single<{
+      id: string;
+      status: string;
+      game_mode: string;
+      mode_config: { team_size?: number } | null;
+    }>();
   if (!game) {
     redirect({ href: `${detailPath}?error=not_found`, locale });
   }
@@ -61,13 +65,15 @@ export async function addGuestToGame(
   }
 
   // Gjester teller som vanlige spillere mot format-capene (kontrakt-beslutning
-  // 2) — speiler best-ball-gaten i addExistingPlayerToGame.
-  if (game!.game_mode === 'best_ball') {
+  // 2) — samme tak og samme aktiv-telling som addExistingPlayerToGame (#2059).
+  const cap = organizerPlayerCap(game!.game_mode, game!.mode_config);
+  if (cap !== null) {
     const { count } = await supabase
       .from('game_players')
       .select('user_id', { count: 'exact', head: true })
-      .eq('game_id', gameId);
-    if ((count ?? 0) >= BEST_BALL_MAX_PLAYERS) {
+      .eq('game_id', gameId)
+      .is('withdrawn_at', null);
+    if ((count ?? 0) >= cap) {
       redirect({ href: `${detailPath}?error=game_full`, locale });
     }
   }

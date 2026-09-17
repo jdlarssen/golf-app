@@ -1050,7 +1050,9 @@ async function PlayersSections({
           gameId={gameId}
           status={game.status}
           gameMode={game.game_mode}
+          modeConfig={game.mode_config}
           currentPlayerIds={players.map((p) => p.user_id)}
+          activePlayerCount={players.filter((p) => !p.withdrawn_at).length}
         />
       )}
 

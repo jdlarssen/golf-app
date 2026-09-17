@@ -9,7 +9,7 @@ import { approveRequest, rejectRequest } from './actions';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { RequestRow, TabKey } from './types';
-import { soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Props = {
@@ -19,6 +19,8 @@ type Props = {
   locked: boolean;
   /** Format-modus for kapasitets-advarselen (#805). */
   gameMode: GameMode;
+  /** `games.mode_config` — the team size sets the team formats' cap (#2069). */
+  modeConfig?: { team_size?: number } | null;
   /** Antall allerede godkjente spillere på tvers av alle faner (#805). */
   approvedCount: number;
 };
@@ -75,7 +77,15 @@ function groupByTeam(rows: RequestRow[]): RequestRow[][] {
   return groups;
 }
 
-export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, approvedCount }: Props) {
+export function PåmeldingerClient({
+  gameId,
+  requests,
+  tab,
+  locked,
+  gameMode,
+  modeConfig,
+  approvedCount,
+}: Props) {
   const locale = useLocale();
   const t = useTranslations('admin.game.signups');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
@@ -84,9 +94,10 @@ export function PåmeldingerClient({ gameId, requests, tab, locked, gameMode, ap
   const [, startTransition] = useTransition();
 
   // #805: vis kapasitets-advarsel når approved-antallet er på eller over
-  // format-taket. soloPlayerCap() returnerer null for formater uten streng
-  // øvre grense (f.eks. stableford, lag-formater med team_size-validering).
-  const cap = soloPlayerCap(gameMode);
+  // format-taket. #2069: samme tak som påmeldingslenka håndhever
+  // (`registrationPlayerCap`) — solo-formatenes faste tak og lag-formatenes
+  // rutenett-tak. null for formater uten øvre grense (f.eks. stableford).
+  const cap = registrationPlayerCap(gameMode, modeConfig);
   const atOrOverCap = cap !== null && approvedCount >= cap;
 
   const visibleRequests = useMemo(
