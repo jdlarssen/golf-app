@@ -277,6 +277,7 @@ export function TeamDashboardClient(props: Props) {
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
+              data-testid="team-accept"
               pending={pendingKey === 'accept'}
               disabled={isPending}
               pendingLabel={t('teamDashAcceptPending')}

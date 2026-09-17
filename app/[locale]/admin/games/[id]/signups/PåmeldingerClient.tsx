@@ -242,6 +242,8 @@ export function PåmeldingerClient({
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
+                      data-testid="approve-request"
+                      data-request-id={row.id}
                       onClick={() => handleApprove(row)}
                       pending={pendingIds.has(row.id)}
                       pendingLabel={t('approvingBusy')}
