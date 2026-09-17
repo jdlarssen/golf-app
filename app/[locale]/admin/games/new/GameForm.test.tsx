@@ -399,7 +399,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
       screen.getByRole('heading', { name: /^4\. lag$/i }),
     ).toBeInTheDocument();
     // Helper-tekst om par-à-2 + tomme lag skal være synlig.
-    expect(screen.getByText(/inntil 4 lag à 2 spillere/i)).toBeInTheDocument();
+    expect(screen.getByText(/inntil 20 lag à 2 spillere/i)).toBeInTheDocument();
   });
 
   it('par-stableford: «Trekk tilfeldig»-knappen vises (#2012)', () => {
@@ -458,7 +458,8 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     }
 
     // Lag-grid skal nå være synlig. Selects er ikke labellet, så vi finner
-    // dem direkte. Lag 1 og 2 er først 2 (lag 3/4 = neste 2).
+    // dem direkte. Rutenettet viser lag nok til de valgte spillerne (#2148):
+    // 4 spillere à 2 → lag 1 og 2.
     const teamSelects = Array.from(
       container.querySelectorAll<HTMLSelectElement>(
         'section select',
@@ -466,8 +467,8 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     ).filter((sel) =>
       Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
     );
-    // Forventer 4 lag × 2 slots = 8 dropdowns.
-    expect(teamSelects.length).toBe(8);
+    // Forventer 2 lag × 2 slots = 4 dropdowns.
+    expect(teamSelects.length).toBe(4);
 
     // Tildel spiller 1 og 2 til lag 1 (slot 0 og 1), spiller 3 og 4 til lag 2.
     fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
@@ -643,7 +644,7 @@ describe('GameForm — patsome (#633)', () => {
     expect(
       screen.getByRole('heading', { name: /^4\. lag$/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/inntil 4 lag à 2 spillere/i)).toBeInTheDocument();
+    expect(screen.getByText(/inntil 20 lag à 2 spillere/i)).toBeInTheDocument();
   });
 });
 

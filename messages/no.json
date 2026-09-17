@@ -780,14 +780,14 @@
         "emptySlotOption": "— Tom plass —",
         "teamsHeading": "Lag",
         "teamsDescTeamMatchplay": "To sider à 2 spillere. Hver side må ha eksakt 2 spillere.",
-        "teamsDescParStableford": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
-        "teamsDescTexas2": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
-        "teamsDescTexas3": "Inntil 4 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
-        "teamsDescTexas4": "Inntil 4 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
-        "teamsDescShamble3": "Inntil 4 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
-        "teamsDescShamble4": "Inntil 4 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
-        "teamsDescBestBall": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
-        "teamsDescPatsome": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
+        "teamsDescParStableford": "Inntil {maxTeams} lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
+        "teamsDescTexas2": "Inntil {maxTeams} lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
+        "teamsDescTexas3": "Inntil {maxTeams} lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
+        "teamsDescTexas4": "Inntil {maxTeams} lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
+        "teamsDescShamble3": "Inntil {maxTeams} lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
+        "teamsDescShamble4": "Inntil {maxTeams} lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
+        "teamsDescBestBall": "Inntil {maxTeams} lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
+        "teamsDescPatsome": "Inntil {maxTeams} lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
         "drawRandomButton": "Trekk tilfeldig",
         "clearTeamsButton": "Tøm lag",
         "teamLabel": "Lag {team}",
@@ -1311,7 +1311,7 @@
         "sections": [
           {
             "heading": "Reglene i best ball",
-            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Alle går sin egen runde, og i Tørny er det plass til opptil fire par i samme spill."
+            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Alle går sin egen runde, og i Tørny er det plass til opptil 20 par i samme spill."
           },
           {
             "heading": "Best ball, fourball og fireball",
@@ -6165,7 +6165,7 @@
           {
             "id": "spillform",
             "heading": "Spillform som skalerer: stableford",
-            "body": "Stableford er standardvalget. Hullet stopper når poengene er borte, tempoet holder seg oppe i et stort felt, og resultatlista er lett å lese for alle.\n\nVil dere spille i lag, tar scramble og shamble opptil 16 spillere fordelt på fire lag, og best ball tar opptil fire par. Er feltet større enn det, bør kvelden spilles som stableford.\n\nSpill netto. I et klubbfelt spriker handicapene fra ensifret til godt over tjue, og uten netto er kvelden avgjort før første utslag. Vil du ha to vinnere, kår både brutto og netto, så får både den som spiller best golf og den som spiller best i forhold til seg selv noe å hente."
+            "body": "Stableford er standardvalget. Hullet stopper når poengene er borte, tempoet holder seg oppe i et stort felt, og resultatlista er lett å lese for alle.\n\nVil dere spille i lag, tar scramble og shamble opptil 40 spillere, og best ball tar opptil 20 par. Er feltet større enn det, bør kvelden spilles som stableford.\n\nSpill netto. I et klubbfelt spriker handicapene fra ensifret til godt over tjue, og uten netto er kvelden avgjort før første utslag. Vil du ha to vinnere, kår både brutto og netto, så får både den som spiller best golf og den som spiller best i forhold til seg selv noe å hente."
           },
           {
             "id": "scorekort",

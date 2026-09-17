@@ -14,7 +14,12 @@ import {
   type RegistrationType,
 } from '@/lib/games/registration';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
-import { randomDrawTeamCount } from '@/lib/games/teamFormatLimits';
+import {
+  MAX_TEAM_NUMBER,
+  defaultFlightForTeam,
+  randomDrawTeamCount,
+  teamNumberRange,
+} from '@/lib/games/teamFormatLimits';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
 import {
   prizeDraftFromList,
@@ -22,20 +27,32 @@ import {
   type PrizeSlotKey,
 } from '@/lib/games/prizes';
 
-// Lag-numre er en bevisst smal union — andre tall (5, 6, …) er ikke meningsfulle
-// i Tørny per d.d. og blir narrower'ed via `isTeamNumber`-guarden under.
-export const TEAM_NUMBERS = [1, 2, 3, 4] as const;
-export type TeamNumber = (typeof TEAM_NUMBERS)[number];
-
-export const FLIGHT_NUMBERS = [1, 2, 3, 4] as const;
-
 // #373: standard antall spillere for Kompis-runden. Brukes både som initial
 // state her og som fallback i PlayerCountPicker (GameWizard). 4 er det vanligste
 // kompis-følget og det mest permissive antallet (nesten alle format passer).
 export const PLAYER_COUNT_DEFAULT = 4;
 
-export function isTeamNumber(n: number): n is TeamNumber {
-  return n === 1 || n === 2 || n === 3 || n === 4;
+// Lagnumre går fra 1 til `MAX_TEAM_NUMBER` (20 par, #2148). Antall lag følger
+// av lagstørrelsen og spillertaket i `lib/games/teamFormatLimits.ts`.
+export function isTeamNumber(n: number): boolean {
+  return Number.isInteger(n) && n >= 1 && n <= MAX_TEAM_NUMBER;
+}
+
+/**
+ * Tomt lag-kart med én nøkkel per mulig lagnummer, så `playersByTeam[t]` aldri
+ * er `undefined` for et gyldig lag.
+ */
+export function emptyPlayersByTeam(): Record<number, string[]> {
+  const result: Record<number, string[]> = {};
+  for (const t of teamNumberRange(MAX_TEAM_NUMBER)) result[t] = [];
+  return result;
+}
+
+/** Lagnumrene i kartet, stigende. */
+function teamNumbersOf(playersByTeam: Record<number, string[]>): number[] {
+  return Object.keys(playersByTeam)
+    .map(Number)
+    .sort((a, b) => a - b);
 }
 
 // ─── validateTeamSizeFormat ───────────────────────────────────────────────────
@@ -55,9 +72,9 @@ export function isTeamNumber(n: number): n is TeamNumber {
 // Mirrors the server-side validators in lib/games/gamePayload.ts — if those
 // change, this function must change too ("a rule has one home", AGENTS.md).
 export interface ValidateTeamSizeFormatArgs {
-  playersByTeam: Record<TeamNumber, string[]>;
+  playersByTeam: Record<number, string[]>;
   selectedPlayerIds: string[];
-  teamByPlayer: Record<string, TeamNumber>;
+  teamByPlayer: Record<string, number>;
   teamSize: number;
   handicapPct: number | undefined;
   requireIntegerPct: boolean;
@@ -78,12 +95,13 @@ export function validateTeamSizeFormat({
   handicapPct,
   requireIntegerPct,
 }: ValidateTeamSizeFormatArgs): ValidateTeamSizeFormatResult {
-  const teamsBalanced = TEAM_NUMBERS.every(
+  const teams = teamNumbersOf(playersByTeam);
+  const teamsBalanced = teams.every(
     (t) =>
       playersByTeam[t].length === 0 ||
       playersByTeam[t].length === teamSize,
   );
-  const hasAtLeastOneTeam = TEAM_NUMBERS.some(
+  const hasAtLeastOneTeam = teams.some(
     (t) => playersByTeam[t].length === teamSize,
   );
   const handicapPctValid =
@@ -114,12 +132,12 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
   if (!initial?.players) {
     return {
       selectedPlayerIds: [] as string[],
-      teamByPlayer: {} as Record<string, TeamNumber>,
+      teamByPlayer: {} as Record<string, number>,
       flightByPlayer: {} as Record<string, number>,
     };
   }
   const selectedPlayerIds: string[] = [];
-  const teamByPlayer: Record<string, TeamNumber> = {};
+  const teamByPlayer: Record<string, number> = {};
   const flightByPlayer: Record<string, number> = {};
   for (const row of initial.players) {
     selectedPlayerIds.push(row.user_id);
@@ -380,7 +398,7 @@ export function useGameFormState({
   );
   // Team assignment is keyed by player id so it survives changes to the player
   // selection order. A missing entry means "not assigned to any team yet".
-  const [teamByPlayer, setTeamByPlayer] = useState<Record<string, TeamNumber>>(
+  const [teamByPlayer, setTeamByPlayer] = useState<Record<string, number>>(
     initialAssignments.teamByPlayer,
   );
   const [flightByPlayer, setFlightByPlayer] = useState<Record<string, number>>(
@@ -1002,10 +1020,10 @@ export function useGameFormState({
   // Map team -> [playerId, playerId | undefined] so each lag-card can display
   // its two slots even before they're filled.
   const playersByTeam = useMemo(() => {
-    const result: Record<TeamNumber, string[]> = { 1: [], 2: [], 3: [], 4: [] };
+    const result = emptyPlayersByTeam();
     for (const pid of selectedPlayerIds) {
       const t = teamByPlayer[pid];
-      if (t) result[t].push(pid);
+      if (t && result[t]) result[t].push(pid);
     }
     return result;
   }, [selectedPlayerIds, teamByPlayer]);
@@ -1013,10 +1031,11 @@ export function useGameFormState({
   // Fleksibel best-ball-validitet (#374): speiler parStablefordTeamsBalanced /
   // parStablefordHasAtLeastOneTeam — deles mellom best ball og par-stableford
   // for å unngå duplisering av samme logikk.
-  const flexTeamsBalanced = TEAM_NUMBERS.every(
+  const teamNumbers = teamNumbersOf(playersByTeam);
+  const flexTeamsBalanced = teamNumbers.every(
     (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
   );
-  const flexTeamsHasAtLeastOneTeam = TEAM_NUMBERS.some(
+  const flexTeamsHasAtLeastOneTeam = teamNumbers.some(
     (t) => playersByTeam[t].length === 2,
   );
 
@@ -1027,13 +1046,11 @@ export function useGameFormState({
     flexTeamsBalanced &&
     flexTeamsHasAtLeastOneTeam;
 
-  // Default flights: lag 1 + lag 2 = flight 1, lag 3 + lag 4 = flight 2.
-  // Recomputed any time teams change so admin sees a sensible baseline; the
-  // admin can still override per player.
-  function teamDefaultFlight(team: TeamNumber): number {
-    if (team === 1 || team === 2) return 1;
-    return 2;
-  }
+  // Default flights: two pairs per flight (`defaultFlightForTeam`, #2148) —
+  // lag 1–2 = flight 1, lag 3–4 = flight 2, lag 5–6 = flight 3. Recomputed any
+  // time teams change so admin sees a sensible baseline; the admin can still
+  // override per player.
+  const teamDefaultFlight = defaultFlightForTeam;
 
   // Players-first-flow (epic #41, fase 4): spiller-toggle setter BARE
   // selectedPlayerIds. Lag-tilordning skjer eksplisitt enten via dagens
@@ -1042,9 +1059,8 @@ export function useGameFormState({
   // ikke eksisterer, og for fremtidige lagstørrelser (4-mann) der den
   // gamle 2-2-2-2-auto-fillen er feil.
   //
-  // Øvre grense på 8 håndhetes nå av per-mode-validatoren i
-  // gamePayload.ts heller enn her — det er en mode-spesifikk regel
-  // (best-ball-netto kun) som flyttet seg ut av UI-en.
+  // Øvre grense håndheves av velgeren (`PlayersSection`) og av per-mode-
+  // validatoren i gamePayload.ts, ikke her.
   function togglePlayer(playerId: string) {
     setSelectedPlayerIds((prev) => {
       if (prev.includes(playerId)) {
@@ -1081,10 +1097,9 @@ export function useGameFormState({
 
   // «Trekk tilfeldig» (#2012): best ball, par-stableford and the scramble
   // family. The draw deals teams of the chosen size, so the count must divide
-  // evenly and fit the grid; `randomDrawTeamCount` owns that rule. It reads the
-  // size at click time because `handleTeamSizeChange` keeps selections and
-  // teams: 12 players picked at 3 per team, then switched to pairs, is
-  // reachable and must not deal a team 5 or 6.
+  // evenly and stay under the player cap; `randomDrawTeamCount` owns that rule.
+  // It reads the size at click time because `handleTeamSizeChange` keeps
+  // selections and teams: 13 players picked at 3 per team can never be dealt.
   const canDrawRandomTeams =
     (isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble) &&
     randomDrawTeamCount(teamSize, selectedPlayerIds.length) !== null;
@@ -1092,10 +1107,10 @@ export function useGameFormState({
   function drawRandomTeams() {
     if (!canDrawRandomTeams) return;
     const shuffled = cryptoShuffle(selectedPlayerIds);
-    const nextTeams: Record<string, TeamNumber> = {};
+    const nextTeams: Record<string, number> = {};
     const nextFlights: Record<string, number> = {};
     for (let i = 0; i < shuffled.length; i++) {
-      const team = (Math.floor(i / teamSize) + 1) as TeamNumber;
+      const team = Math.floor(i / teamSize) + 1;
       nextTeams[shuffled[i]] = team;
       // Only best ball reads these flights; the other modes publish flight = team.
       nextFlights[shuffled[i]] = teamDefaultFlight(team);
@@ -1116,12 +1131,12 @@ export function useGameFormState({
    * (2 eller 4 plasser per lag).
    */
   function assignPlayerToSlot(
-    team: TeamNumber,
+    team: number,
     slotIndex: number,
     playerId: string,
   ) {
     setTeamByPlayer((prev) => {
-      const next: Record<string, TeamNumber> = { ...prev };
+      const next: Record<string, number> = { ...prev };
       // Free up the current slot occupant (if any) on this team.
       const currentInSlot = playersByTeam[team][slotIndex];
       if (currentInSlot) {
@@ -1164,7 +1179,7 @@ export function useGameFormState({
    */
   function assignPlayerToSide(side: 1 | 2, playerId: string) {
     setTeamByPlayer((prev) => {
-      const next: Record<string, TeamNumber> = { ...prev };
+      const next: Record<string, number> = { ...prev };
       // Frigjør den siden vi tilordner til (hvis okkupert).
       const currentOnThisSide = selectedPlayerIds.find(
         (pid) => prev[pid] === side,
@@ -1221,7 +1236,7 @@ export function useGameFormState({
   //   inkluderer ALLE selectedPlayerIds, ingen lag/flight-felter. Hidden-
   //   input-skjemaet bærer player_${i}_id alene — gamePayload.ts
   //   validatoren (`validateStableford` / `validateSoloStrokeplay`)
-  //   leser opp til 8 slots og ignorerer manglende team/flight-felt for
+  //   leser opp til 40 spillere og ignorerer manglende team/flight-felt for
   //   begge solo-modusene.
   //
   // Wolf og Round Robin (#969): rotation-slots trekkes ved spillstart, ikke
@@ -1287,12 +1302,12 @@ export function useGameFormState({
       team_number: number | null;
       flight_number: number | null;
     }[] = [];
-    for (const team of TEAM_NUMBERS) {
+    for (const team of teamNumbersOf(playersByTeam)) {
       for (const pid of playersByTeam[team]) {
         const flight =
           isParStableford || isTexas || isAmbrose || isShamble || isPatsome || isTeamMatchplay
             ? team
-            : (flightByPlayer[pid] ?? teamDefaultFlight(team));
+            : (flightByPlayer[pid] ?? defaultFlightForTeam(team));
         rows.push({
           user_id: pid,
           team_number: team,
@@ -1309,7 +1324,7 @@ export function useGameFormState({
       (pid) =>
         Number.isInteger(flightByPlayer[pid]) &&
         flightByPlayer[pid] >= 1 &&
-        flightByPlayer[pid] <= 4,
+        flightByPlayer[pid] <= MAX_TEAM_NUMBER,
     );
 
   const allowanceValid =
@@ -1334,8 +1349,8 @@ export function useGameFormState({
   // Texas-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
   // (2, 3 eller 4), alle valgte spillere må ha team_number satt, og minst ett
   // lag må være fullt. Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
-  // Taket eies av `lib/games/teamFormatLimits.ts` (#2009): fire lag, maks 16
-  // spillere — altså 4 lag à 2/3/4.
+  // Taket eies av `lib/games/teamFormatLimits.ts` (#2009, #2148): opptil 40
+  // spillere — 20 par, 13 lag à 3 eller 10 lag à 4.
   // Prosenten kan være fraksjonell (#2009): feltet tar imot prosent av snittet
   // og lagrer prosent av summen, så 80 på et 3-mannslag blir 26,67 her.
   const {
@@ -1451,12 +1466,8 @@ export function useGameFormState({
   // Patsome-validitet: minst 4 spillere, partall antall, alle har lag-
   // tilordning, hvert ikke-tomt lag har eksakt 2 spillere. Speiler
   // `validatePatsome` i gamePayload.ts.
-  const patsomeTeamsBalanced = TEAM_NUMBERS.every(
-    (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
-  );
-  const patsomeHasAtLeastOneTeam = TEAM_NUMBERS.some(
-    (t) => playersByTeam[t].length === 2,
-  );
+  const patsomeTeamsBalanced = flexTeamsBalanced;
+  const patsomeHasAtLeastOneTeam = flexTeamsHasAtLeastOneTeam;
   const patsomePlayersValid =
     isPatsome &&
     selectedPlayerIds.length >= 4 &&
@@ -1466,8 +1477,8 @@ export function useGameFormState({
     patsomeHasAtLeastOneTeam;
 
   // Lag-matchplay-validitet: eksakt 4 spillere, alle tilordnet, fordelt 2+2
-  // på side 1 og side 2 (team_number 1/2). Side 3/4 må være tomme (grid-en
-  // skjuler dem, men vi sjekker eksplisitt mot zombie-state). Speiler
+  // på side 1 og side 2 (team_number 1/2). Ingen andre lag kan ha spillere
+  // (grid-en viser dem ikke, men vi sjekker eksplisitt mot zombie-state). Speiler
   // `validateFourball/Foursomes/...Matchplay` i gamePayload.ts (eksakt 4,
   // 2 per side). Allowance-pct dekkes av validatoren, ikke her.
   const teamMatchplayPlayersValid =
@@ -1476,17 +1487,16 @@ export function useGameFormState({
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
     playersByTeam[1].length === 2 &&
     playersByTeam[2].length === 2 &&
-    playersByTeam[3].length === 0 &&
-    playersByTeam[4].length === 0;
+    teamNumbers.every((t) => t <= 2 || playersByTeam[t].length === 0);
 
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
   // - solo (stableford team_size=1 ELLER solo_strokeplay): minst 1
   //   spiller, ingen lag/flight
-  // - best-ball-netto: 2/4/6/8 spillere, hvert ikke-tomt lag à 2 +
-  //   flight-fordeling per spiller (#374)
-  // - par-stableford (team_size=2): 2/4/6/8 spillere, hvert ikke-tomt lag
+  // - best-ball-netto: partall 2–40 spillere, hvert ikke-tomt lag à 2 +
+  //   flight-fordeling per spiller (#374, #2148)
+  // - par-stableford (team_size=2): partall 2–40 spillere, hvert ikke-tomt lag
   //   à 2, ingen separat flight-validering (flight = team automatisk)
   // - matchplay (singles_matchplay): nøyaktig 2 spillere, én på hver side
   const playersValidForMode = isMatchplay
@@ -1972,7 +1982,7 @@ export function useGameFormState({
     setFlightForPlayer,
     // Helper for slot dropdowns — knytter playersByTeam/selectedPlayerIds-state
     // sammen med players-prop-lookup for å gi en stabil opsjons-liste per slot.
-    slotOptions(team: TeamNumber, slotIndex: number) {
+    slotOptions(team: number, slotIndex: number) {
       const current = playersByTeam[team][slotIndex];
       const unassigned = selectedPlayerIds.filter(
         (pid) => teamByPlayer[pid] === undefined,
@@ -1985,7 +1995,7 @@ export function useGameFormState({
         .map((pid) => allPlayers.find((p) => p.id === pid))
         .filter((p): p is PlayerOption => p !== undefined);
     },
-    // Default-flight per lag (1+2 → flight 1, 3+4 → flight 2). Eksponeres
+    // Default-flight per lag (to par per flight). Eksponeres
     // slik at FlightsSection (inne i TeamsAssignmentSection) kan vise samme
     // fallback som payload-bygging bruker.
     teamDefaultFlight,

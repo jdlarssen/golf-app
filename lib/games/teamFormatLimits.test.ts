@@ -14,6 +14,7 @@ import {
   teamFormatPlayerCap,
   teamModePlayerCap,
   teamGridSize,
+  teamNumberRange,
   teamSizesForMode,
 } from './teamFormatLimits';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
@@ -63,6 +64,14 @@ describe('teamGridSize — rutenettet vokser med valgte spillere', () => {
     [40, 4, 10],
   ])('%i valgt à %i → %i lagkort', (selected, size, expected) => {
     expect(teamGridSize(selected, size)).toBe(expected);
+  });
+});
+
+describe('teamNumberRange', () => {
+  it('1..count', () => {
+    expect(teamNumberRange(3)).toEqual([1, 2, 3]);
+    expect(teamNumberRange(0)).toEqual([]);
+    expect(teamNumberRange(MAX_TEAM_NUMBER)).toHaveLength(20);
   });
 });
 

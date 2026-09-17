@@ -6,10 +6,11 @@
  *
  * Ansvar: per modus rendrer denne seksjonen relevante under-blokker:
  *  - matchplay → sider-grid (side 1 + side 2)
- *  - best-ball-netto → lag-grid (4 lag à 2) + «Trekk tilfeldig»/«Tøm lag» + flights
- *  - par-stableford → lag-grid (1-4 lag à 2) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee
+ *  - best-ball-netto → lag-grid (opptil 20 par) + «Trekk tilfeldig»/«Tøm lag» + flights
+ *  - par-stableford → lag-grid (opptil 20 par) + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee
  *  - scramble-familien (texas/ambrose/florida/shamble) → lag-grid (2–4 per lag
- *    for texas/ambrose, 3–4 for florida/shamble, jf. TEAM_FORMAT_TEAM_SIZES)
+ *    for texas/ambrose, 3–4 for florida/shamble, jf. TEAM_FORMAT_TEAM_SIZES;
+ *    antall lagkort vokser med valgte spillere, jf. `teamGridSize`, #2148)
  *    + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
  *  - patsome / lag-matchplay → lag-grid + «Tøm lag», ingen trekning
  *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
@@ -24,8 +25,11 @@ import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
-import { FLIGHT_NUMBERS, TEAM_NUMBERS, type TeamNumber } from '../useGameFormState';
-import { teamsShownForSize } from '@/lib/games/teamFormatLimits';
+import {
+  maxTeamsForSize,
+  teamGridSize,
+  teamNumberRange,
+} from '@/lib/games/teamFormatLimits';
 
 type Props = {
   state: GameFormState;
@@ -207,20 +211,52 @@ export function TeamsAssignmentSection({
       ? '5. '
       : '4. ';
 
+  // Plasser per lagkort: lagstørrelsen i scramble-familien, ellers par.
+  const isScrambleFamily = isTexas || isAmbrose || isFlorida || isShamble;
+  const slotCount = isScrambleFamily ? teamSize : 2;
+  // Lagnumre med spillere, stigende. Brukes av flight-seksjonen og for å
+  // holde et lag med spillere synlig selv om rutenettet ellers ville krympet.
+  const teamsWithPlayers = Object.keys(playersByTeam)
+    .map(Number)
+    .filter((team) => playersByTeam[team].length > 0)
+    .sort((a, b) => a - b);
+  const highestTeamWithPlayers = teamsWithPlayers.at(-1) ?? 0;
+  // #2148: rutenettet vokser med valgte spillere, opptil taket for
+  // lagstørrelsen. Lag-matchplay er 2v2 og har alltid to sider.
+  const gridTeamCount = isTeamMatchplay
+    ? 2
+    : Math.min(
+        maxTeamsForSize(slotCount),
+        Math.max(teamGridSize(selectedPlayerIds.length, slotCount), highestTeamWithPlayers),
+      );
+  // Best ball: to par per flight, så flight-valgene går til flighten det
+  // høyeste laget hører hjemme i — eller høyere hvis arrangøren alt har
+  // flyttet noen dit.
+  const highestChosenFlight = Math.max(
+    0,
+    ...teamsWithPlayers.flatMap((team) =>
+      playersByTeam[team].map((pid) => flightByPlayer[pid] ?? 0),
+    ),
+  );
+  const flightOptions = teamNumberRange(
+    Math.max(1, Math.ceil(highestTeamWithPlayers / 2), highestChosenFlight),
+  );
+
   function teamsDescription(): string {
     if (isTeamMatchplay) return t('teamsDescTeamMatchplay');
-    if (isParStableford) return t('teamsDescParStableford');
+    const maxTeams = maxTeamsForSize(slotCount);
+    if (isParStableford) return t('teamsDescParStableford', { maxTeams });
     if (isTexas || isAmbrose || isFlorida) {
-      if (teamSize === 2) return t('teamsDescTexas2');
-      if (teamSize === 3) return t('teamsDescTexas3');
-      return t('teamsDescTexas4');
+      if (teamSize === 2) return t('teamsDescTexas2', { maxTeams });
+      if (teamSize === 3) return t('teamsDescTexas3', { maxTeams });
+      return t('teamsDescTexas4', { maxTeams });
     }
     if (isShamble) {
-      if (teamSize === 3) return t('teamsDescShamble3');
-      return t('teamsDescShamble4');
+      if (teamSize === 3) return t('teamsDescShamble3', { maxTeams });
+      return t('teamsDescShamble4', { maxTeams });
     }
-    if (isPatsome) return t('teamsDescPatsome');
-    return t('teamsDescBestBall');
+    if (isPatsome) return t('teamsDescPatsome', { maxTeams });
+    return t('teamsDescBestBall', { maxTeams });
   }
 
   return (
@@ -292,10 +328,10 @@ export function TeamsAssignmentSection({
           å fordele (matchplay har sin egen side-tilordnings-seksjon over).
           Synlighet:
           - Best-ball: vises så snart admin har valgt minst 2 spillere
-            (fleksibel 2/4/6/8-regel etter #374 — ingen 8-krav).
+            (fleksibel partall-regel etter #374).
           - Par-stableford: vises så snart admin har valgt minst 2 spillere,
             siden lag-fordelingen skjer parallelt med spiller-valg (admin
-            kan ha 2/4/6/8 spillere på 1-4 lag). */}
+            kan ha opptil 40 spillere på 20 lag, #2148). */}
       {requiresTeams &&
         ((isBestBall && selectedPlayerIds.length >= 2) ||
           (isParStableford && selectedPlayerIds.length >= 2) ||
@@ -315,7 +351,7 @@ export function TeamsAssignmentSection({
           {/* «Trekk tilfeldig»/«Tøm lag» for best ball, par-stableford and the
               scramble family (#2012). The draw deals teams of the chosen size;
               the button is disabled while the count leaves a leftover or needs
-              more teams than the grid shows (`canDrawRandomTeams`). */}
+              more teams than the player cap allows (`canDrawRandomTeams`). */}
           {(isBestBall || isParStableford || isTexas || isAmbrose || isFlorida || isShamble) && (
             <div className="flex gap-2">
               <Button
@@ -354,24 +390,9 @@ export function TeamsAssignmentSection({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {TEAM_NUMBERS.map((team) => {
-              // Scramble-familien viser så mange lag som spiller-taket tillater
-              // for valgt lagstørrelse (#2009). Reglene var tidligere hardkodet
-              // per format mot det gamle 8-taket, og shamble à 3 hadde drevet
-              // fra validatoren — den viste fire lag mens payload-laget bare
-              // leste åtte spillere, så 12 tilordnede spillere ga `team_balance`
-              // ved publisering. Nå leser begge fra `teamFormatLimits`.
-              if (
-                (isTexas || isAmbrose || isFlorida || isShamble) &&
-                team > teamsShownForSize(teamSize)
-              ) {
-                return null;
-              }
-              // Lag-matchplay er 2v2: kun to sider. Skjul lag 3/4 så admin
-              // ikke kan tilordne en tredje side.
-              if (isTeamMatchplay && team > 2) return null;
-              const slotCount =
-                isTexas || isAmbrose || isFlorida || isShamble ? teamSize : 2;
+            {teamNumberRange(gridTeamCount).map((team) => {
+              // Antall lagkort og plasser leses fra `teamFormatLimits`
+              // (#2009, #2148), samme kilde som validatoren.
               return (
                 <div
                   key={team}
@@ -383,14 +404,14 @@ export function TeamsAssignmentSection({
                       : t('teamLabel', { team })}
                   </p>
                   {Array.from({ length: slotCount }, (_, slotIndex) => {
-                    const occupant = playersByTeam[team as TeamNumber][slotIndex];
-                    const options = slotOptions(team as TeamNumber, slotIndex);
+                    const occupant = playersByTeam[team][slotIndex];
+                    const options = slotOptions(team, slotIndex);
                     return (
                       <select
                         key={slotIndex}
                         value={occupant ?? ''}
                         onChange={(e) =>
-                          assignPlayerToSlot(team as TeamNumber, slotIndex, e.target.value)
+                          assignPlayerToSlot(team, slotIndex, e.target.value)
                         }
                         className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
                       >
@@ -410,8 +431,8 @@ export function TeamsAssignmentSection({
         </section>
       )}
 
-      {/* Section 5: Flights — kun for best-ball (eksakt 8 spillere → 4 lag
-          fordelt på 1-4 flighter). Par-stableford skipper denne seksjonen
+      {/* Section 5: Flights — kun for best-ball (standard to par per flight,
+          #2148). Par-stableford skipper denne seksjonen
           siden flight-tilordning auto-mapper til team_number i payloaden
           (par-stableford bruker ikke separate flighter). Solo har ingen
           lag/flight-konsept i det hele tatt. */}
@@ -424,7 +445,7 @@ export function TeamsAssignmentSection({
             {t('flightsDescription')}
           </p>
           <div className="space-y-2">
-            {TEAM_NUMBERS.flatMap((team) =>
+            {teamsWithPlayers.flatMap((team) =>
               playersByTeam[team].map((pid) => {
                 const p = players.find((x) => x.id === pid)!;
                 const flight = flightByPlayer[pid] ?? teamDefaultFlight(team);
@@ -454,7 +475,7 @@ export function TeamsAssignmentSection({
                       }
                       className="rounded-xl border px-2 py-1.5 bg-surface text-sm text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
                     >
-                      {FLIGHT_NUMBERS.map((f) => (
+                      {flightOptions.map((f) => (
                         <option key={f} value={f}>
                           {t('flightLabel', { flight: f })}
                         </option>

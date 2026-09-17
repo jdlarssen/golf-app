@@ -780,14 +780,14 @@
         "emptySlotOption": "— Empty slot —",
         "teamsHeading": "Teams",
         "teamsDescTeamMatchplay": "Two sides of 2 players. Each side must have exactly 2 players.",
-        "teamsDescParStableford": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
-        "teamsDescTexas2": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
-        "teamsDescTexas3": "Up to 4 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
-        "teamsDescTexas4": "Up to 4 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
-        "teamsDescShamble3": "Up to 4 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
-        "teamsDescShamble4": "Up to 4 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
-        "teamsDescBestBall": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
-        "teamsDescPatsome": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
+        "teamsDescParStableford": "Up to {maxTeams} teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
+        "teamsDescTexas2": "Up to {maxTeams} teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
+        "teamsDescTexas3": "Up to {maxTeams} teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
+        "teamsDescTexas4": "Up to {maxTeams} teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
+        "teamsDescShamble3": "Up to {maxTeams} teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
+        "teamsDescShamble4": "Up to {maxTeams} teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
+        "teamsDescBestBall": "Up to {maxTeams} teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
+        "teamsDescPatsome": "Up to {maxTeams} teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
         "drawRandomButton": "Draw randomly",
         "clearTeamsButton": "Clear teams",
         "teamLabel": "Team {team}",
@@ -1311,7 +1311,7 @@
         "sections": [
           {
             "heading": "The rules of best ball",
-            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Everyone plays their own round, and Tørny has room for up to four pairs in the same game."
+            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Everyone plays their own round, and Tørny has room for up to 20 pairs in the same game."
           },
           {
             "heading": "Best ball, fourball and fourball better ball",
@@ -6164,7 +6164,7 @@
           {
             "id": "spillform",
             "heading": "A format that scales: stableford",
-            "body": "Stableford is the default choice. The hole closes once the points are gone, the pace holds up in a big field, and the leaderboard is easy for everyone to read.\n\nIf you want teams, scramble and shamble take up to 16 players across four teams, and best ball takes up to four pairs. If the field is bigger than that, play the evening as stableford.\n\nPlay net. In a club field the handicaps run from single figures to well over twenty, and without net the evening is settled before the first tee shot. If you want two winners, award both gross and net, so both the player who plays the best golf and the player who plays best relative to themselves have something to chase."
+            "body": "Stableford is the default choice. The hole closes once the points are gone, the pace holds up in a big field, and the leaderboard is easy for everyone to read.\n\nIf you want teams, scramble and shamble take up to 40 players, and best ball takes up to 20 pairs. If the field is bigger than that, play the evening as stableford.\n\nPlay net. In a club field the handicaps run from single figures to well over twenty, and without net the evening is settled before the first tee shot. If you want two winners, award both gross and net, so both the player who plays the best golf and the player who plays best relative to themselves have something to chase."
           },
           {
             "id": "scorekort",
