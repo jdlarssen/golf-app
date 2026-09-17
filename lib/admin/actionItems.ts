@@ -1,7 +1,13 @@
 import { cache } from 'react';
 import { classifyDeliveryStatus } from '@/lib/games/deliveryStatus';
+import {
+  filledHolesByPlayer,
+  type FilledRosterRow,
+  type FilledScoreRow,
+} from '@/lib/games/filledHoles';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -97,6 +103,53 @@ export function computeActionItemCounts(
   return { unsubmitted, pendingApproval };
 }
 
+/** A roster row (withdrawn members included) tagged with its game. */
+export type HolesRosterRow = FilledRosterRow & { game_id: string };
+
+/** An entered-stroke `scores` row tagged with its game. */
+export type HolesScoreRow = FilledScoreRow & { game_id: string };
+
+/**
+ * Filled holes per `${game_id}:${user_id}` across many games.
+ *
+ * Thin glue only: the rule lives in `filledHolesByPlayer` (#2017), which takes
+ * one mode, so roster and rows are grouped per game and counted with that
+ * game's `game_mode`. Counting a player's OWN rows instead left a patsome
+ * partner stuck at 6/18 and never flagged (#2045).
+ *
+ * Pass withdrawn members in the roster — `teamScoreOwnerId` needs the whole
+ * team to skip them. Scores must already be filtered to entered strokes.
+ */
+export function holesFilledByGame(opts: {
+  games: readonly { id: string; game_mode: GameMode }[];
+  players: readonly HolesRosterRow[];
+  scores: readonly HolesScoreRow[];
+}): Map<string, number> {
+  const playersByGame = new Map<string, HolesRosterRow[]>();
+  for (const p of opts.players) {
+    if (!playersByGame.has(p.game_id)) playersByGame.set(p.game_id, []);
+    playersByGame.get(p.game_id)!.push(p);
+  }
+  const scoresByGame = new Map<string, HolesScoreRow[]>();
+  for (const s of opts.scores) {
+    if (!scoresByGame.has(s.game_id)) scoresByGame.set(s.game_id, []);
+    scoresByGame.get(s.game_id)!.push(s);
+  }
+
+  const holes = new Map<string, number>();
+  for (const game of opts.games) {
+    const filled = filledHolesByPlayer({
+      players: playersByGame.get(game.id) ?? [],
+      scores: scoresByGame.get(game.id) ?? [],
+      mode: game.game_mode,
+    });
+    for (const [userId, count] of filled) {
+      holes.set(`${game.id}:${userId}`, count);
+    }
+  }
+  return holes;
+}
+
 // ─── Cached server helper ─────────────────────────────────────────────────
 
 /**
@@ -118,7 +171,7 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
   // 1. Fetch all active games.
   const { data: gamesData } = await supabase
     .from('games')
-    .select('id, name, require_peer_approval, hole_segment')
+    .select('id, name, require_peer_approval, hole_segment, game_mode')
     .eq('status', 'active');
 
   if (!gamesData || gamesData.length === 0) {
@@ -127,19 +180,20 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
 
   const activeIds = gamesData.map((g) => g.id);
 
-  // 2. Fetch all non-withdrawn game_players for those games.
+  // 2. Fetch all game_players for those games. Withdrawn players stay in:
+  //    `holesFilledByGame` needs the whole team to pick its row owner, and
+  //    `classifyDeliveryStatus` reads them as `withdrawn` so they never count.
   const { data: playersData } = await supabase
     .from('game_players')
-    .select('game_id, user_id, submitted_at, approved_at, withdrawn_at')
-    .in('game_id', activeIds)
-    .is('withdrawn_at', null);
+    .select('game_id, user_id, team_number, submitted_at, approved_at, withdrawn_at')
+    .in('game_id', activeIds);
 
-  // 3. Count filled holes per (game_id, user_id).
+  // 3. Fetch entered strokes for those games.
   const { data: scoresData } = await selectAllRowsResult(
     (from, to) =>
       supabase
         .from('scores')
-        .select('game_id, user_id')
+        .select('game_id, user_id, hole_number')
         .not('strokes', 'is', null)
         .in('game_id', activeIds)
         .order('id')
@@ -147,12 +201,17 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
     'getAdminActionItems scores',
   );
 
-  // Aggregate hole counts in TS (PostgREST has no GROUP BY).
-  const holesMap = new Map<string, number>();
-  for (const s of scoresData ?? []) {
-    const key = `${s.game_id}:${s.user_id}`;
-    holesMap.set(key, (holesMap.get(key) ?? 0) + 1);
-  }
+  // #2017/#2045: count via the team card's row owner, per hole — the same rule
+  // as the reminder. Own rows left a patsome partner at 6/18, never flagged.
+  const holesMap = holesFilledByGame({
+    games: gamesData.map((g) => ({
+      id: g.id,
+      // DB type is `string`; games_game_mode_check (0111) constrains it to GameMode.
+      game_mode: g.game_mode as GameMode,
+    })),
+    players: playersData ?? [],
+    scores: scoresData ?? [],
+  });
 
   const games: ActiveGameInput[] = gamesData.map((g) => ({
     id: g.id,
