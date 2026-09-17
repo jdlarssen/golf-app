@@ -61,13 +61,19 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
      seksjonen fra PR-body-en (maks 600 tegn, se under) · «⏳ Venter på deg: …» ·
      PR-lenke · grønn **✅ Merge**-knapp (`custom_id: merge_pr:<N>`) + lenke-knapp.
      Poster FØRST, legger så dedup-labelen `discord:merge-kort`.
+   - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + ikke draft
+     (fail-closed, #1516) + CI grønn mot
+     `headSha`, `PUT …/merge` rebase + `sha`-guard). Suksess → **lukk issuene**
+     (#1634, se under) → **kvitteringskort**
+     (✅ Merget + funksjonell-setning + lenke, KUN lenke-knapp) → main-verify-dispatch
+     → dedup-label. Enhver merge-feil → fall tilbake til knapp-kortet i samme kjøring.
 
 **Knapp-kortets innhold (#2147).** Eieren skal se hva PR-en gjør og hvorfor den
 venter, uten å åpne GitHub:
 
 ```
 **PR #N** — <tittel>
-<Funksjonelt>          ELLER   _(ingen funksjonell beskrivelse i PR-en)_ + første avsnitt
+<Funksjonelt>          ELLER   _(ingen funksjonell beskrivelse i PR-en)_ + første meningsbærende linje
 ⏳ Venter på deg: <grunn 1>, <grunn 2>
 <lenke>
 ```
@@ -86,12 +92,6 @@ venter, uten å åpne GitHub:
   før #2147).
 - Kvitteringskortet er uendret (eierbeslutning 2026-09-17): morgenbriefen dekker de
   automatisk mergede PR-ene.
-   - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + ikke draft
-     (fail-closed, #1516) + CI grønn mot
-     `headSha`, `PUT …/merge` rebase + `sha`-guard). Suksess → **lukk issuene**
-     (#1634, se under) → **kvitteringskort**
-     (✅ Merget + funksjonell-setning + lenke, KUN lenke-knapp) → main-verify-dispatch
-     → dedup-label. Enhver merge-feil → fall tilbake til knapp-kortet i samme kjøring.
 
 **Eksplisitt issue-lukking etter auto-merge (#1634).** GitHubs egen auto-close fyrer
 IKKE når mergen kommer fra kortets workflow-identitet (`GITHUB_TOKEN`) — mønsteret var
