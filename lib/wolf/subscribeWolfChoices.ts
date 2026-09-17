@@ -24,9 +24,17 @@ export interface WolfChoiceChange {
  * Subscribe to wolf_hole_choices changes for one game.
  *
  * Channel setup, auth handoff og leak-resistant teardown er identisk med
- * `subscribeGameScores`-mønsteret. Brukes av HoleClient (når
- * `gameMode === 'wolf'`) for å oppdatere wolf-badge i sanntid når Wolf-
+ * `subscribeGameScores`-mønsteret. Brukes av hull-skjermen (`useWolfHole`,
+ * når `gameMode === 'wolf'`) for å oppdatere wolf-badge i sanntid når Wolf-
  * spilleren velger partner/lone/blind på sin device.
+ *
+ * The change is a signal that something changed, not state to apply (#2092).
+ * Realtime does not promise delivery order per subscriber: a screen can get a
+ * row's UPDATE before its older INSERT, so applying `change` as the row leaves
+ * the older choice on the badge. Callers re-read the rows instead
+ * (`readWolfChoices`), and read again through `opts.onResubscribed` when the
+ * channel is back after an outage, because the events it missed are never
+ * replayed (#2093).
  *
  * Listens to every event type (`event: '*'`), but in practice only INSERT and
  * UPDATE arrive: every write is an upsert (web and app), and a Wolf choice
@@ -39,6 +47,7 @@ export interface WolfChoiceChange {
 export function subscribeWolfChoices(
   gameId: string,
   onChange: (change: WolfChoiceChange) => void,
+  opts: { onResubscribed?: () => void } = {},
 ): () => void {
   return subscribeRealtimeChannel(`wolf-choices:${gameId}`, (channel) =>
     channel.on(
@@ -60,5 +69,6 @@ export function subscribeWolfChoices(
         });
       }) as never,
     ),
+    opts,
   );
 }

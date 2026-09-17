@@ -62,9 +62,14 @@ vi.mock('@/lib/bbb/subscribeBingoBangoBongo', () => ({
   subscribeBingoBangoBongo: vi.fn(() => () => {}),
 }));
 
-// The BBB hole screen re-reads its rows through the browser client (#1950).
+// The BBB and Wolf hole screens re-read their rows through the browser client
+// (#1950, #2092).
 vi.mock('@/lib/bbb/readBingoBangoBongoHoles', () => ({
   readBingoBangoBongoHoles: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@/lib/wolf/readWolfChoices', () => ({
+  readWolfChoices: vi.fn().mockResolvedValue([]),
 }));
 
 import { useLiveQuery } from 'dexie-react-hooks';

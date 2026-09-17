@@ -1,14 +1,33 @@
 'use client';
 
 // Wolf-modusens hull-tilstand (#1716 — ren flytting ut av `HoleClient`):
-// realtime-merget valg-liste, hvem som er Wolf på hullet, badge-teksten over
-// score-kortene, og prop-bunten til `WolfChoiceModal`.
+// valg-lista holdt i takt med databasen, hvem som er Wolf på hullet,
+// badge-teksten over score-kortene, og prop-bunten til `WolfChoiceModal`.
+//
+// #2092: a realtime payload is not applied as state. Supabase Realtime does not
+// promise delivery order per subscriber, so an older choice could arrive after
+// the newer one and stay on the badge. Every event, save and catch-up instead
+// schedules a debounced re-read, and the sequence guard in
+// `reconcileWolfChoices` drops any answer that is older than what the screen
+// already shows. Same pattern as `useBingoBangoBongoHoles` (#1950).
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { readWolfChoices } from '@/lib/wolf/readWolfChoices';
+import {
+  applyWolfLocalSave,
+  applyWolfRead,
+  type WolfChoicesState,
+} from '@/lib/wolf/reconcileWolfChoices';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import type { WolfChoice, WolfHoleChoice } from '@/lib/scoring/modes/types';
 import { determineWolfForHole } from '@/lib/wolf/wolfRotation';
+
+/**
+ * Collapses a burst of events (an INSERT and its UPDATE, or a quick change of
+ * mind) into one read. Same as the Bingo Bango Bongo hole screen.
+ */
+const READ_DEBOUNCE_MS = 200;
 
 export type WolfPlayer = { userId: string; teamNumber: number; name: string };
 
@@ -58,34 +77,77 @@ export function useWolfHole(args: {
   } = args;
   const t = useTranslations('holes');
 
-  // Wolf-mode state: vi initialiserer fra server-prop og merger inn realtime-
-  // endringer. Når Wolf-spilleren velger på sin device, broadcaster Supabase
-  // postgres_changes til alle 4 — vi merger den nye raden inn slik at alle
-  // sine UI-er oppdaterer badge-en uten å vente på neste server-render.
+  // Wolf-mode state: vi initialiserer fra server-prop og leser på nytt når
+  // Supabase melder en endring. Når Wolf-spilleren velger på sin device, får
+  // alle i spillet en postgres_changes-hendelse og oppdaterer badge-en uten å
+  // vente på neste server-render.
   //
   // Init-fra-prop er trygt her fordi parent-wrapperen har `key={holeNumber}`
   // som remounter hele HoleClient ved hull-bytte; vi trenger ikke useEffect-
   // sync mot wolfChoicesInitial-prop-endringer innen samme hull.
-  const [wolfChoices, setWolfChoices] = useState<WolfHoleChoice[]>(
-    wolfChoicesInitial ?? [],
-  );
+  const [state, setState] = useState<WolfChoicesState>(() => ({
+    holes: wolfChoicesInitial ?? [],
+    appliedSeq: 0,
+  }));
+  const wolfChoices = state.holes;
+  // Issues the sequence numbers for reads and local saves. Shared by both so a
+  // read issued before a save can never be applied after it.
+  const seqRef = useRef(0);
+  // Set while the subscription effect is live; a no-op before mount, after
+  // unmount and when the game is not Wolf.
+  const scheduleReadRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!isWolf) return;
-    const unsubscribe = subscribeWolfChoices(gameId, (change) => {
-      setWolfChoices((prev) => {
-        const next = prev.filter((c) => c.holeNumber !== change.holeNumber);
-        next.push({
-          holeNumber: change.holeNumber,
-          wolfUserId: change.wolfUserId,
-          choice: change.choice,
-          partnerUserId: change.partnerUserId,
-        });
-        next.sort((a, b) => a.holeNumber - b.holeNumber);
-        return next;
-      });
+    let unmounted = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const read = async () => {
+      timer = null;
+      // Taken when the read goes out, not when it answers: the number has to
+      // say which commits the snapshot can contain.
+      const seq = ++seqRef.current;
+      try {
+        const rows = await readWolfChoices(gameId);
+        if (unmounted) return;
+        setState((s) => applyWolfRead(s, seq, rows));
+      } catch (error) {
+        if (unmounted) return;
+        // Keep the last good choices; the next event, save or catch-up reads again.
+        console.error('[wolf] reading choices failed', { gameId, error });
+      }
+    };
+
+    const scheduleRead = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void read(), READ_DEBOUNCE_MS);
+    };
+    scheduleReadRef.current = scheduleRead;
+
+    // The payload is only a change signal (see subscribeWolfChoices). A rejoin
+    // after an outage reads too: missed events are never replayed (#2093).
+    const unsubscribe = subscribeWolfChoices(gameId, scheduleRead, {
+      onResubscribed: scheduleRead,
     });
-    return unsubscribe;
+    // Anything committed between the server render and the subscription.
+    scheduleRead();
+
+    // Events missed while the tab slept or the network was gone.
+    const catchUp = () => {
+      if (document.visibilityState !== 'visible') return;
+      scheduleRead();
+    };
+    document.addEventListener('visibilitychange', catchUp);
+    window.addEventListener('online', catchUp);
+
+    return () => {
+      unmounted = true;
+      if (timer) clearTimeout(timer);
+      scheduleReadRef.current = () => {};
+      document.removeEventListener('visibilitychange', catchUp);
+      window.removeEventListener('online', catchUp);
+      unsubscribe();
+    };
   }, [isWolf, gameId]);
 
   const pointsByUserMap = useMemo(() => {
@@ -175,18 +237,18 @@ export function useWolfHole(args: {
           otherPlayers: otherWolfPlayers,
           onClose: () => setModalDismissed(true),
           onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => {
-            // Optimistic merge — vi venter ikke på realtime-broadcast.
-            setWolfChoices((prev) => {
-              const next = prev.filter((c) => c.holeNumber !== currentHole);
-              next.push({
+            // The modal calls this after the save committed: show it at once,
+            // then read, so the badge ends on what the database holds.
+            const seq = ++seqRef.current;
+            setState((s) =>
+              applyWolfLocalSave(s, seq, {
                 holeNumber: currentHole,
                 wolfUserId: wolfUserIdForHole,
                 choice,
                 partnerUserId,
-              });
-              next.sort((a, b) => a.holeNumber - b.holeNumber);
-              return next;
-            });
+              }),
+            );
+            scheduleReadRef.current();
           },
         }
       : null;
