@@ -942,3 +942,92 @@ describe('computeLayoutBTotals', () => {
     });
   });
 });
+
+// #2067: kapteinen slettet kontoen midt i runden (raden er trukket, 0174).
+// Hull-siden skriver da til neste medlem, så scorekortet må vise den samme
+// eieren og hente den trukne kapteinens rader i tillegg (siden folder dem).
+// Lag-handicapet regnes fortsatt av hele laget.
+describe('resolveScorecardLayout — trukket kaptein (#2067)', () => {
+  const WD = '2026-09-17T10:00:00Z';
+
+  it('texas scramble: viser den nye eieren og henter den trukne kapteinens rader', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'texas_scramble',
+      mode_config: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 2,
+        team_handicap_pct: 25,
+      },
+    };
+    const captain = player('aaa-captain', 1, { withdrawn_at: WD, course_handicap: 10 });
+    const me = player('zzz-partner', 1, { course_handicap: 20 });
+    const layout = resolveScorecardLayout(game, [captain, me], me, false, fmt);
+
+    expect(layout.primaryUserId).toBe('zzz-partner');
+    expect(layout.scoreUserIds).toEqual(['zzz-partner', 'aaa-captain']);
+    expect(layout.primaryHandicap).toBe(8);
+  });
+
+  it('patsome: viser den nye eieren og henter den trukne kapteinens rader', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'patsome',
+      mode_config: {
+        kind: 'patsome',
+        team_size: 2,
+        teams_count: 2,
+        patsome_scoring: 'net',
+      },
+    };
+    const captain = player('aaa-captain', 1, { withdrawn_at: WD });
+    const me = player('zzz-partner', 1);
+    const layout = resolveScorecardLayout(game, [captain, me], me, false, fmt);
+
+    expect(layout.primaryUserId).toBe('zzz-partner');
+    expect(layout.scoreUserIds).toEqual(['zzz-partner', 'aaa-captain']);
+  });
+
+  it('foursomes matchplay: min side peker på den nye eieren, og siden holder 2 spillere', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'foursomes_matchplay',
+      mode_config: {
+        kind: 'foursomes_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 50,
+      },
+    };
+    const captain = player('aaron', 1, { withdrawn_at: WD, course_handicap: 15 });
+    const me = player('zoe', 1, { course_handicap: 15 });
+    const opp1 = player('opp1', 2, { course_handicap: 10 });
+    const opp2 = player('opp2', 2, { course_handicap: 10 });
+    const layout = resolveScorecardLayout(game, [me, captain, opp1, opp2], me, false, fmt);
+
+    expect(layout.variant).toBe('b');
+    expect(layout.primaryUserId).toBe('zoe');
+    expect(layout.columns.map((c) => c.userId)).toEqual(['zoe', 'opp1']);
+    expect(layout.scoreUserIds).toEqual(['zoe', 'opp1', 'aaron']);
+    expect(layout.primaryHandicap).toBe(5);
+  });
+
+  it('henter bare eieren når ingen på laget er trukket', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'texas_scramble',
+      mode_config: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 2,
+        team_handicap_pct: 25,
+      },
+    };
+    const captain = player('aaa-captain', 1);
+    const me = player('zzz-partner', 1);
+    const layout = resolveScorecardLayout(game, [captain, me], me, false, fmt);
+
+    expect(layout.scoreUserIds).toEqual(['aaa-captain']);
+  });
+});

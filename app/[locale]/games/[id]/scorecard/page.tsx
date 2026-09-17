@@ -37,10 +37,14 @@ import {
   type ScorecardColumnPlayer,
   type ScorecardLayout,
 } from '@/lib/games/scorecardLayout';
+import {
+  foldTeamScoreRows,
+  type FoldRosterRow,
+} from '@/lib/scoring/context/foldTeamRows';
 import { nameInitials } from '@/lib/names/initials';
 import { firstName } from '@/lib/firstName';
 import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
-import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import {
   isHoleInSegment,
@@ -201,6 +205,8 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             gameId={id}
             courseId={game.course_id}
             layout={layout}
+            roster={players}
+            gameMode={game.game_mode}
             submittedAt={me.submitted_at}
             gameFinished={game.status === 'finished'}
             withdrawn={withdrawn}
@@ -219,6 +225,8 @@ async function ScorecardTable({
   gameId,
   courseId,
   layout,
+  roster,
+  gameMode,
   submittedAt,
   gameFinished,
   withdrawn,
@@ -230,6 +238,9 @@ async function ScorecardTable({
   gameId: string;
   courseId: string;
   layout: ScorecardLayout;
+  /** #2067: the full roster (withdrawn included) and mode, for the fold below. */
+  roster: readonly FoldRosterRow[];
+  gameMode: GameMode;
   submittedAt: string | null;
   /** #1351: entry is closed once the game is finished — the «tilbake til hull N»
    *  CTA would bounce straight back here via the hole page's finished-redirect. */
@@ -273,8 +284,15 @@ async function ScorecardTable({
   if (holesRes.error) throw holesRes.error;
   if (scoresRes.error) throw scoresRes.error;
 
+  // #2067: a captain who deleted their account mid-round still holds the
+  // holes entered before that. `layout.scoreUserIds` fetched their rows too;
+  // the fold lays them on the row owner the layout points at.
   const scoresByUserHole = new Map<string, number | null>();
-  for (const s of scoresRes.data ?? []) {
+  for (const s of foldTeamScoreRows({
+    roster,
+    rows: scoresRes.data ?? [],
+    mode: gameMode,
+  })) {
     scoresByUserHole.set(`${s.user_id}#${s.hole_number}`, s.strokes);
   }
 

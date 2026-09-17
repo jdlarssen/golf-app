@@ -1,4 +1,8 @@
-import { pickTeamCaptain } from './teamCaptain';
+import {
+  formerTeamRowOwnerIds,
+  pickTeamCaptain,
+  teamScoreOwnerId,
+} from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import type { StablefordPointsFn } from '@/lib/scoring/modes/stableford';
@@ -43,8 +47,10 @@ export interface ScorecardColumnPlayer {
  *
  * `scoreUserIds` styrer hvilke user_ids vi henter scorer for. For Layout A
  * er det én (me eller captain). For Layout B er det me + partner(e) /
- * motstander. Authz-sjekk skjer på call-site (`me ∈ players`), helperen
- * gjør ingen sikkerhetsbeslutninger.
+ * motstander. I lag-radformatene kommer lagets trukne medlemmer i tillegg
+ * (#2067): hullene en kaptein førte før kontoslettingen, ligger på dem, og
+ * siden folder dem inn med `foldTeamScoreRows`. Authz-sjekk skjer på
+ * call-site (`me ∈ players`), helperen gjør ingen sikkerhetsbeslutninger.
  */
 export interface ScorecardLayout {
   variant: 'a' | 'b';
@@ -95,6 +101,24 @@ export interface ScorecardLayout {
   meTeamNumber: number | null;
 }
 
+/**
+ * Hvem eier lagets delte rader (#2067): det lex-minste AKTIVE medlemmet,
+ * `teamScoreOwnerId`, som hull-siden skriver til. Et helt trukket lag faller
+ * tilbake på lex-min av alle, som før. `formerOwnerIds` er de trukne, som kan
+ * holde hull ført før de ble trukket.
+ */
+function teamRowOwners(teamMembers: readonly PlayerForHole[]): {
+  ownerId: string;
+  formerOwnerIds: string[];
+} {
+  return {
+    ownerId:
+      teamScoreOwnerId(teamMembers) ??
+      pickTeamCaptain(teamMembers.map((m) => m.user_id)),
+    formerOwnerIds: formerTeamRowOwnerIds(teamMembers),
+  };
+}
+
 interface ColumnFormatter {
   initials(player: PlayerForHole): string;
   displayName(player: PlayerForHole, fallback: string): string;
@@ -106,8 +130,9 @@ interface ColumnFormatter {
  * scorer basert på `layout.scoreUserIds`.
  *
  * Regler:
- *  - Texas scramble: Layout A med captain-userId (lex-min) som primær.
- *    Lag-handicap = round(sum(member.course_handicap) × team_handicap_pct / 100).
+ *  - Texas scramble: Layout A med lagets rad-eier (lex-min aktive) som primær.
+ *    Lag-handicap = round(sum(member.course_handicap) × team_handicap_pct / 100),
+ *    over hele laget, også et trukket medlem (#2067, som scoring-motoren).
  *  - Reveal-active (visibility=reveal + status=active): Layout A med me,
  *    uansett modus. Beholder reveal-prinsippet om å skjule andres data.
  *  - Solo-modi (stableford team_size=1, solo strokeplay): Layout A med me.
@@ -129,10 +154,10 @@ export function resolveScorecardLayout(
 
   if (isScrambleFamily(mode)) {
     const teamMembers = players.filter((p) => p.team_number === me.team_number);
-    const captainId =
+    const { ownerId: captainId, formerOwnerIds } =
       teamMembers.length > 0
-        ? pickTeamCaptain(teamMembers.map((m) => m.user_id))
-        : me.user_id;
+        ? teamRowOwners(teamMembers)
+        : { ownerId: me.user_id, formerOwnerIds: [] };
     const combinedCH = teamMembers.reduce(
       (sum, p) => sum + (p.course_handicap ?? 0),
       0,
@@ -145,7 +170,7 @@ export function resolveScorecardLayout(
     return {
       variant: 'a',
       columns: [],
-      scoreUserIds: [captainId],
+      scoreUserIds: [...new Set([captainId, ...formerOwnerIds])],
       primaryUserId: captainId,
       primaryHandicap: teamHandicap,
       isStableford: false,
@@ -163,14 +188,14 @@ export function resolveScorecardLayout(
     // (lex-min) uten strokes-dotter. De handicap-justerte poengene og hele
     // segment-fordelingen vises på leaderboard (PatsomeView).
     const teamMembers = players.filter((p) => p.team_number === me.team_number);
-    const captainId =
+    const { ownerId: captainId, formerOwnerIds } =
       teamMembers.length > 0
-        ? pickTeamCaptain(teamMembers.map((m) => m.user_id))
-        : me.user_id;
+        ? teamRowOwners(teamMembers)
+        : { ownerId: me.user_id, formerOwnerIds: [] };
     return {
       variant: 'a',
       columns: [],
-      scoreUserIds: [captainId],
+      scoreUserIds: [...new Set([captainId, ...formerOwnerIds])],
       primaryUserId: captainId,
       primaryHandicap: 0,
       isStableford: false,
@@ -212,12 +237,13 @@ export function resolveScorecardLayout(
       };
     }
 
-    const mySideCaptainId = pickTeamCaptain(
-      mySidePlayers.map((p) => p.user_id),
-    );
-    const oppSideCaptainId = pickTeamCaptain(
-      oppSidePlayers.map((p) => p.user_id),
-    );
+    // Rad-eieren per side (#2067): lex-min aktive, som hull-siden skriver
+    // til. Sidene teller fortsatt et trukket medlem (2-2-sjekken over og
+    // side-handicapet under), som scoring-motoren.
+    const mySideOwners = teamRowOwners(mySidePlayers);
+    const oppSideOwners = teamRowOwners(oppSidePlayers);
+    const mySideCaptainId = mySideOwners.ownerId;
+    const oppSideCaptainId = oppSideOwners.ownerId;
 
     // WHS-diff: high side får (sideDiff × allowance_pct/100) som lag-strokes,
     // low side 0. Allowance leses fra mode_config (default 50 for foursomes,
@@ -296,7 +322,14 @@ export function resolveScorecardLayout(
     return {
       variant: 'b',
       columns: [mySideColumn, oppSideColumn],
-      scoreUserIds: [mySideCaptainId, oppSideCaptainId],
+      scoreUserIds: [
+        ...new Set([
+          mySideCaptainId,
+          oppSideCaptainId,
+          ...mySideOwners.formerOwnerIds,
+          ...oppSideOwners.formerOwnerIds,
+        ]),
+      ],
       primaryUserId: mySideCaptainId,
       primaryHandicap: mySideExtra,
       isStableford: false,
