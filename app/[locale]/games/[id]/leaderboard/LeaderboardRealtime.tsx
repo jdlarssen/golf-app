@@ -57,7 +57,9 @@ function gameIdFromPath(pathname: string): string | null {
  * `visibilitychange` (kun ved retur til synlig) og `online` ruter gjennom den
  * samme debouncede `scheduleRefresh`, så én refresh henter inn alt som skjedde
  * mens skjermen var av — uten den ville tavla stått med gamle tall til neste
- * event kom, og PWA-en har ingen reload-vei.
+ * event kom, og PWA-en har ingen reload-vei. Det samme skjer når kanalen
+ * kobles til igjen etter en feil (`onResubscribed`, #2093): et mobilnett som
+ * faller ut uten at nettleseren merker det, fyrer aldri `online`.
  */
 export function LeaderboardRealtime({ gameId, active = true }: Props): null {
   const router = useRouter();
@@ -98,6 +100,8 @@ export function LeaderboardRealtime({ gameId, active = true }: Props): null {
             },
             scheduleRefresh,
           ),
+      // #2093: events committed while the channel was down are never replayed.
+      { onResubscribed: scheduleRefresh },
     );
 
     // Catch-up: alt som skjedde mens fanen lå i bakgrunnen (eller nettet var

@@ -116,6 +116,8 @@ export function ReactionsProvider({
             { event: 'DELETE', schema: 'public', table: 'reactions', filter: `game_id=eq.${gameId}` },
             scheduleRefetch,
           ),
+      // #2093: events committed while the channel was down are never replayed.
+      { onResubscribed: scheduleRefetch },
     );
 
     return () => {

@@ -32,7 +32,9 @@ export interface BingoBangoBongoChange {
  * Realtime does not promise delivery order per subscriber: a screen can get a
  * row's UPDATE before its older INSERT, so applying `change` as the row leaves
  * the older commit on screen. Callers re-read the rows instead
- * (`readBingoBangoBongoHoles`).
+ * (`readBingoBangoBongoHoles`), and read again through `opts.onResubscribed`
+ * when the channel is back after an outage, because the events it missed are
+ * never replayed (#2093).
  *
  * Listens to every event type (`event: '*'`), but in practice only INSERT and
  * UPDATE arrive: every write is an upsert (web and app), and clearing Bingo,
@@ -46,6 +48,7 @@ export interface BingoBangoBongoChange {
 export function subscribeBingoBangoBongo(
   gameId: string,
   onChange: (change: BingoBangoBongoChange) => void,
+  opts: { onResubscribed?: () => void } = {},
 ): () => void {
   return subscribeRealtimeChannel(`bbb-holes:${gameId}`, (channel) =>
     channel.on(
@@ -70,5 +73,6 @@ export function subscribeBingoBangoBongo(
         });
       }) as never,
     ),
+    opts,
   );
 }

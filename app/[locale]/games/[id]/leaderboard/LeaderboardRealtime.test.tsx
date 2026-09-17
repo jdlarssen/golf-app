@@ -2,13 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 
 type Configure = (ch: { on: (...a: unknown[]) => unknown }) => unknown;
-const subscribeRealtimeChannel =
-  vi.fn<(topic: string, configure: Configure) => () => void>(() => vi.fn());
+type Opts = { onResubscribed?: () => void };
+const subscribeRealtimeChannel = vi.fn<
+  (topic: string, configure: Configure, opts?: Opts) => () => void
+>(() => vi.fn());
 const refresh = vi.fn();
 
 vi.mock('@/lib/sync/realtimeChannel', () => ({
-  subscribeRealtimeChannel: (topic: string, configure: Configure) =>
-    subscribeRealtimeChannel(topic, configure),
+  subscribeRealtimeChannel: (topic: string, configure: Configure, opts?: Opts) =>
+    subscribeRealtimeChannel(topic, configure, opts),
 }));
 
 // Mirror the partial mock the format-view tests use (useRouter only) — the
@@ -38,7 +40,7 @@ describe('LeaderboardRealtime', () => {
     // Default (chrome mount): no gameId prop → reads it from the URL, subscribes.
     const { unmount } = render(<LeaderboardRealtime />);
     expect(subscribeRealtimeChannel).toHaveBeenCalledTimes(1);
-    const [topic, configure] = subscribeRealtimeChannel.mock.calls[0]!;
+    const [topic, configure, opts] = subscribeRealtimeChannel.mock.calls[0]!;
     expect(topic).toBe('leaderboard-live:game-from-route');
 
     // The channel config registers scores-INSERT and scores-UPDATE handlers,
@@ -90,6 +92,13 @@ describe('LeaderboardRealtime', () => {
     // Same catch-up when the network comes back.
     refresh.mockClear();
     window.dispatchEvent(new Event('online'));
+    vi.advanceTimersByTime(300);
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    // #2093: and when the channel rejoins after an outage — events committed
+    // while it was down are never replayed, even if `online` never fired.
+    refresh.mockClear();
+    opts?.onResubscribed?.();
     vi.advanceTimersByTime(300);
     expect(refresh).toHaveBeenCalledTimes(1);
 

@@ -91,8 +91,12 @@ export function useBingoBangoBongoHoles(args: {
     };
     scheduleReadRef.current = scheduleRead;
 
-    // The payload is only a change signal (see subscribeBingoBangoBongo).
-    const unsubscribe = subscribeBingoBangoBongo(gameId, scheduleRead);
+    // The payload is only a change signal (see subscribeBingoBangoBongo). A
+    // rejoin after an outage reads too: missed events are never replayed
+    // (#2093).
+    const unsubscribe = subscribeBingoBangoBongo(gameId, scheduleRead, {
+      onResubscribed: scheduleRead,
+    });
     // Anything committed between the server render and the subscription.
     scheduleRead();
 

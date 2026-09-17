@@ -40,9 +40,14 @@ async function mergeIncoming(row: ScoreRowFromDb): Promise<void> {
 
 /**
  * Subscribe to score changes for one game. Channel setup, auth handoff, and
- * leak-resistant teardown are handled by `subscribeRealtimeChannel`.
+ * leak-resistant teardown are handled by `subscribeRealtimeChannel`, which
+ * also calls `opts.onResubscribed` when the channel is back after an outage
+ * (#2093).
  */
-export function subscribeGameScores(gameId: string): () => void {
+export function subscribeGameScores(
+  gameId: string,
+  opts: { onResubscribed?: () => void } = {},
+): () => void {
   return subscribeRealtimeChannel(`scores:${gameId}`, (channel) =>
     channel.on(
       'postgres_changes',
@@ -59,5 +64,6 @@ export function subscribeGameScores(gameId: string): () => void {
         void mergeIncoming(row as ScoreRowFromDb);
       },
     ),
+    opts,
   );
 }

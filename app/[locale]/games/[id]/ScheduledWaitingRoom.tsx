@@ -86,6 +86,9 @@ export function ScheduledWaitingRoom({
           }
         },
       ),
+      // #2093: a start committed while the channel was down is never
+      // replayed. Refresh and let the server say which status the game has.
+      { onResubscribed: () => router.refresh() },
     );
   }, [gameId, router]);
 
