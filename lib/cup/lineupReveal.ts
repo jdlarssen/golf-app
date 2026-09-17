@@ -91,9 +91,11 @@ export function buildRevealMatches(input: {
  * was never set. Only a
  * failed match insert comes after the claim, and the compensation in
  * `lineupActions` rolls `revealed_at` back. Either way `revealed_at` ends up
- * null with both submission stamps in place (unless that rollback itself
- * fails, which is logged). Nothing retries on its own, so the organiser gets a
- * button.
+ * null with both submission stamps in place. Nothing retries on its own, so the
+ * organiser gets a button. Two outcomes deliberately leave `revealed_at` set
+ * and so never show the button (#2086): the rollback of `revealed_at` failed
+ * twice (`reveal_undo_failed`), or the insert could not delete its own
+ * half-built matches (`rollback_failed`). Both need manual cleanup.
  *
  * ⚠️ This means "both submitted and not revealed YET", not "something failed":
  * a first reveal that is still running matches it too for a few seconds (the

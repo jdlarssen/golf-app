@@ -1120,6 +1120,128 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
       },
     );
 
+    /** The retry queue up to and including the claim on `revealed_at`. */
+    function claimedQueue() {
+      return [
+        ...accessReads(),
+        sessionRow(null, AT, AT),
+        ...revealContextReads(),
+        STORED_SLOTS,
+        PARTICIPANTS,
+        { data: [{ id: 'sess-1' }], error: null }, // claim revealed_at
+      ];
+    }
+
+    // #2086: the compensation after a failed insert is checked, not trusted.
+    describe('the undo after a failed insert (#2086)', () => {
+      it('the undo lands: the insert error comes back and «Prøv igjen» stays open', async () => {
+        adminMock = buildSupabaseMock([
+          ...claimedQueue(),
+          { data: [], error: null }, // games (label number)
+          { data: [{ id: 'sess-1' }], error: null }, // undo revealed_at
+        ]);
+        supabaseMock = buildSupabaseMock([]);
+        setUser('organizer');
+        insertMatchesMock.mockResolvedValue({ error: 'insert_failed' });
+
+        const { retryCupLineupReveal } = await import('./lineupActions');
+        expect(await retryCupLineupReveal(retryForm())).toEqual({
+          error: 'insert_failed',
+        });
+        expect(sessionUpdates()).toEqual([
+          { revealed_at: expect.any(String) },
+          { revealed_at: null },
+        ]);
+      });
+
+      it('the undo hits 0 rows twice: reveal_undo_failed, tried exactly twice, logged', async () => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        adminMock = buildSupabaseMock([
+          ...claimedQueue(),
+          { data: [], error: null }, // games (label number)
+          { data: [], error: null }, // undo #1: 0 rows
+          { data: null, error: { message: 'boom' } }, // undo #2: fails
+        ]);
+        supabaseMock = buildSupabaseMock([]);
+        setUser('organizer');
+        insertMatchesMock.mockResolvedValue({ error: 'insert_failed' });
+
+        const { retryCupLineupReveal } = await import('./lineupActions');
+        expect(await retryCupLineupReveal(retryForm())).toEqual({
+          error: 'reveal_undo_failed',
+        });
+        // The claim, then two undo attempts, and no third.
+        expect(sessionUpdates()).toEqual([
+          { revealed_at: expect.any(String) },
+          { revealed_at: null },
+          { revealed_at: null },
+        ]);
+        expect(errorSpy).toHaveBeenCalledWith(
+          '[cup] revealCupLineupSession undo failed',
+          expect.objectContaining({ tournamentId: 'cup-1', sessionId: 'sess-1' }),
+        );
+        errorSpy.mockRestore();
+      });
+
+      it('the first undo misses and the second lands: the insert error comes back', async () => {
+        adminMock = buildSupabaseMock([
+          ...claimedQueue(),
+          { data: [], error: null }, // games (label number)
+          { data: [], error: null }, // undo #1: 0 rows
+          { data: [{ id: 'sess-1' }], error: null }, // undo #2 lands
+        ]);
+        supabaseMock = buildSupabaseMock([]);
+        setUser('organizer');
+        insertMatchesMock.mockResolvedValue({ error: 'insert_failed' });
+
+        const { retryCupLineupReveal } = await import('./lineupActions');
+        expect(await retryCupLineupReveal(retryForm())).toEqual({
+          error: 'insert_failed',
+        });
+        expect(sessionUpdates()).toHaveLength(3);
+      });
+
+      it('insertCupMatches could not clean up: rollback_failed, revealed_at left set', async () => {
+        adminMock = buildSupabaseMock([
+          ...claimedQueue(),
+          { data: [], error: null }, // games (label number)
+        ]);
+        supabaseMock = buildSupabaseMock([]);
+        setUser('organizer');
+        insertMatchesMock.mockResolvedValue({ error: 'rollback_failed' });
+
+        const { retryCupLineupReveal } = await import('./lineupActions');
+        expect(await retryCupLineupReveal(retryForm())).toEqual({
+          error: 'rollback_failed',
+        });
+        // Only the claim. Releasing it would let «Prøv igjen» build a second
+        // batch next to the games that were left behind.
+        expect(sessionUpdates()).toEqual([{ revealed_at: expect.any(String) }]);
+      });
+
+      it('the games read after the claim fails: save_failed, claim released, nothing inserted', async () => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        adminMock = buildSupabaseMock([
+          ...claimedQueue(),
+          { data: null, error: { message: 'boom' } }, // games (label number)
+          { data: [{ id: 'sess-1' }], error: null }, // undo revealed_at
+        ]);
+        supabaseMock = buildSupabaseMock([]);
+        setUser('organizer');
+
+        const { retryCupLineupReveal } = await import('./lineupActions');
+        expect(await retryCupLineupReveal(retryForm())).toEqual({
+          error: 'save_failed',
+        });
+        expect(insertMatchesMock).not.toHaveBeenCalled();
+        expect(sessionUpdates()).toEqual([
+          { revealed_at: expect.any(String) },
+          { revealed_at: null },
+        ]);
+        errorSpy.mockRestore();
+      });
+    });
+
     it('the teams changed since submission: lineup_squad_changed, revealed_at not claimed', async () => {
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       // opp was moved to team 1 after both lineups were submitted.
