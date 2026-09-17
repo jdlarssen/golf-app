@@ -40,10 +40,12 @@ export type TeamMemberRow = {
  * Delegerer selve sammenligningen til `pickTeamCaptain` — regelen har ett
  * hjem, denne funksjonen er kun adapteren rundt den.
  *
- * NB: withdrawal tilbys ikke i de kollapsede modusene (`supportsWithdrawal`),
- * så «kapteinen har trukket seg» er en teoretisk admin-sti. Skjer den, peker
- * lex-min på et NYTT medlem mens radene ligger igjen på det gamle — samme
- * oppførsel som hull-siden har i dag, ingen kompensasjon her.
+ * NB: frafall tilbys ikke i de kollapsede modusene (`supportsWithdrawal`),
+ * men kontosletting midt i runden trekker spilleren likevel (0174). Trekkes
+ * kapteinen, peker lex-min på et NYTT medlem, mens hullene som alt er ført,
+ * ligger igjen på det gamle. Skrivingen går hit (den trukne raden kan ikke
+ * skrives til), og lesingen folder de gamle radene inn med `foldTeamRows`
+ * (`lib/scoring/context/foldTeamRows.ts`, #2067).
  */
 export function teamScoreOwnerId(
   teamMembers: readonly TeamMemberRow[],
@@ -52,4 +54,23 @@ export function teamScoreOwnerId(
     .filter((m) => m.withdrawn_at == null)
     .map((m) => m.user_id);
   return active.length > 0 ? pickTeamCaptain(active) : null;
+}
+
+/**
+ * Lagmedlemmer som kan ha eid lagets rader før: de trukne (#2067). En
+ * leseflate henter radene deres i tillegg til eierens, og `foldTeamRows`
+ * legger dem på eieren.
+ *
+ * Sortert lex-SYNKENDE, siste eier først. Eierskapet går alltid til det
+ * lex-minste aktive medlemmet, så når en eier trekkes, er neste eier
+ * lex-større. Har to trukne ført samme hull, er det den lex-største som
+ * førte sist, og verdien dens vinner.
+ */
+export function formerTeamRowOwnerIds(
+  teamMembers: readonly TeamMemberRow[],
+): string[] {
+  return teamMembers
+    .filter((m) => m.withdrawn_at != null)
+    .map((m) => m.user_id)
+    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
 }

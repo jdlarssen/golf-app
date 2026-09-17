@@ -9,6 +9,12 @@ import type {
   ScoringPlayer,
   ScoringHoleScore,
 } from './types';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
+import {
+  HOLES_18,
+  scoreRows,
+  twoTeamRoster,
+} from '../__fixtures__/withdrawnCaptain';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -745,5 +751,59 @@ describe('patsome.compute — rangert retur-rekkefølge (#1574)', () => {
     expect(result.teams.map((t) => t.teamNumber)).toEqual([2, 1]);
     expect(result.teams[0].rank).toBe(1);
     expect(result.teams[1].rank).toBe(2);
+  });
+});
+
+// #2067 — kapteinen sletter kontoen etter hull 9. Lagpoengene på hull 7–9
+// (delt lagball) skal stå, mens kapteinens egen ball på hull 1–6 er luket som
+// for alle trukne. Gjennom `buildUniformContext`, slik tavla og resultatet
+// gjør.
+describe('patsome.compute — trukket kaptein (#2067)', () => {
+  function resultFor(
+    captainWithdrawn: boolean,
+    scoresRows: ReturnType<typeof scoreRows>,
+  ) {
+    return compute(
+      buildUniformContext({
+        gameId: 'g1',
+        gameMode: 'patsome',
+        modeConfig: {
+          kind: 'patsome',
+          team_size: 2,
+          teams_count: 2,
+          patsome_scoring: 'net',
+        },
+        players: twoTeamRoster({ captainWithdrawn }),
+        holesRows: HOLES_18,
+        scoresRows,
+      }),
+    );
+  }
+
+  const ROWS = [
+    ...scoreRows('a', 1, 6, 4),
+    ...scoreRows('b', 1, 6, 5),
+    ...scoreRows('a', 7, 9, 4),
+    ...scoreRows('c', 1, 6, 4),
+    ...scoreRows('d', 1, 6, 4),
+    ...scoreRows('c', 7, 9, 4),
+  ];
+
+  it('beholder lagpoengene på hull 7–9 og luker kapteinens egen ball på hull 1–6', () => {
+    const before = resultFor(false, ROWS).teams.find((t) => t.teamNumber === 1)!;
+    const after = resultFor(true, ROWS).teams.find((t) => t.teamNumber === 1)!;
+
+    const oneBall = (line: typeof after) =>
+      line.holes.filter((h) => h.holeNumber >= 7 && h.holeNumber <= 9);
+    expect(oneBall(after).map((h) => h.teamPoints)).toStrictEqual(
+      oneBall(before).map((h) => h.teamPoints),
+    );
+    expect(oneBall(after).every((h) => h.teamPoints > 0)).toBe(true);
+    expect(after.segments.greensome).toStrictEqual(before.segments.greensome);
+
+    for (const hole of after.holes.filter((h) => h.holeNumber <= 6)) {
+      expect(hole.players.find((p) => p.userId === 'a')?.gross ?? null).toBeNull();
+      expect(hole.players.find((p) => p.userId === 'b')?.gross).toBe(5);
+    }
   });
 });

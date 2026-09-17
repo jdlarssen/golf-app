@@ -7,6 +7,12 @@ import type {
   ScoringHoleScore,
   GameModeConfig,
 } from './types';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
+import {
+  HOLES_18,
+  scoreRows,
+  twoTeamRoster,
+} from '../__fixtures__/withdrawnCaptain';
 
 function par4Holes(count: number): ScoringHole[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -697,6 +703,58 @@ describe('texasScramble.compute — rangert retur-rekkefølge (#1591)', () => {
     expect(result.teams.map((t) => t.teamNumber)).toEqual([2, 1]);
     expect(result.teams.map((t) => t.rank)).toEqual([1, 2]);
     expect(result.teams[0].totalNet).toBe(72);
+  });
+});
+
+// #2067 — kapteinen sletter kontoen midt i runden. Raden trekkes (0174), og
+// laget skal beholde hullene som er ført, samme lag-handicap og samme
+// stilling. Gjennom `buildUniformContext`, slik tavla og resultatet gjør.
+describe('texasScramble.compute — trukket kaptein (#2067)', () => {
+  function resultFor(
+    captainWithdrawn: boolean,
+    scoresRows: ReturnType<typeof scoreRows>,
+  ) {
+    return compute(
+      buildUniformContext({
+        gameId: 'g1',
+        gameMode: 'texas_scramble',
+        modeConfig: {
+          kind: 'texas_scramble',
+          team_size: 2,
+          teams_count: 2,
+          team_handicap_pct: 25,
+        },
+        players: twoTeamRoster({ captainWithdrawn }),
+        holesRows: HOLES_18,
+        scoresRows,
+      }),
+    );
+  }
+
+  const FIRST_NINE = [...scoreRows('a', 1, 9, 4), ...scoreRows('c', 1, 9, 5)];
+
+  it('beholder lagets 9 førte hull og samme stilling som før slettingen', () => {
+    const before = resultFor(false, FIRST_NINE);
+    const after = resultFor(true, FIRST_NINE);
+
+    const team1 = after.teams.find((t) => t.teamNumber === 1)!;
+    expect(team1.missingHoles).toStrictEqual([10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(team1.teamHandicap).toBe(8);
+    expect(after).toStrictEqual(before);
+  });
+
+  it('teller hullene makkeren fører videre, og en retting slår den gamle verdien', () => {
+    const after = resultFor(true, [
+      ...FIRST_NINE,
+      ...scoreRows('b', 10, 12, 5),
+      { user_id: 'b', hole_number: 5, strokes: 6 },
+    ]);
+
+    const team1 = after.teams.find((t) => t.teamNumber === 1)!;
+    expect(team1.holes.filter((h) => h.teamGross !== null)).toHaveLength(12);
+    expect(team1.holes.find((h) => h.holeNumber === 5)!.teamGross).toBe(6);
+    expect(team1.holes.find((h) => h.holeNumber === 11)!.teamGross).toBe(5);
+    expect(team1.missingHoles).toStrictEqual([13, 14, 15, 16, 17, 18]);
   });
 });
 
