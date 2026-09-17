@@ -5,6 +5,11 @@
 // (leksikografisk minste aktive `user_id`). Alle på laget kan taste; tappet
 // havner i kapteinens rad uansett hvem som holder telefonen.
 //
+// #2067: sletter kapteinen kontoen midt i runden, trekkes raden, og eierskapet
+// går til neste medlem. Hullene som alt er ført, ligger igjen på den trukne.
+// Skjermene folder dem inn med `foldLocalScores` rett etter lesingen, så alt
+// videre leser ett sett rader på den nye eieren.
+//
 // Tre regler bor et annet sted, og hentes derfor hit i stedet for å skrives om:
 //
 //  1. **Hvem eier raden** — `teamScoreOwnerId` (`lib/games/teamCaptain.ts`) og
@@ -22,6 +27,7 @@
 //     `FoursomesTeeHint`; valget selv gjøres på nettsiden.
 import { scoredHoleNumbers } from '../../../../lib/games/scoreOwner';
 import { teamScoreOwnerId } from '../../../../lib/games/teamCaptain';
+import { foldTeamRows } from '../../../../lib/scoring/context/foldTeamRows';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
@@ -39,7 +45,11 @@ import type { LeaderboardOutcome } from './scoringContext';
  */
 export interface TeamCard {
   teamNumber: number;
-  /** Eier lagets scores-rader. Alltid et AKTIVT medlem. */
+  /**
+   * Eier lagets scores-rader, og det er hit tappene skrives. Alltid et AKTIVT
+   * medlem. Rader ført før en kontosletting kan ligge på et trukket medlem
+   * (#2067); les derfor gjennom `foldLocalScores`, som legger dem hit.
+   */
   captainId: string;
   /** Aktive medlemmer, sortert på `user_id` for stabil rekkefølge. */
   members: RosterEntry[];
@@ -132,6 +142,39 @@ export function myTeamCaptainId(
   return teamScoreOwnerId(
     roster.filter((entry) => entry.player.teamNumber === teamNumber),
   );
+}
+
+/**
+ * «Lagets rader følger laget» (#2067) på enhetens slag.
+ *
+ * Tynn adapter: rosteret oversettes til rad-formen den delte `foldTeamRows`
+ * leser, og regelen svarer. Rader et trukket medlem førte på lagets delte
+ * hull, legges på den nåværende eieren (`TeamCard.captainId`). Eierens egen
+ * rad vinner når den har slag, så en retting etter slettingen står seg.
+ * Formater som aldri deler rad, og patsome hull 1–6, røres ikke.
+ *
+ * Rosteret må være HELT, med de trukne: uten dem vet regelen ikke hvem som
+ * eide radene før.
+ *
+ * En foldet rad er en kopi der bare `userId` er byttet. `id` peker fortsatt på
+ * den trukne raden, så ingen skriving kan ta utgangspunkt i radens `id`. Hull-
+ * siden skriver på eier-id-en (`scoreOwnerForHole`), og `writeScore` slår opp
+ * eierens egen rad.
+ */
+export function foldLocalScores(
+  scores: readonly LocalScore[],
+  roster: readonly RosterEntry[],
+  mode: GameMode,
+): LocalScore[] {
+  return foldTeamRows({
+    roster: roster.map((entry) => ({
+      user_id: entry.user_id,
+      team_number: entry.player.teamNumber,
+      withdrawn_at: entry.withdrawn_at,
+    })),
+    rows: scores,
+    mode,
+  });
 }
 
 /**

@@ -5,14 +5,17 @@
 // scorene kommer alltid fra SQLite — aldri rett fra PostgREST. Det er derfor
 // hull-føring virker i flymodus midt i runden, og det er derfor et tapp vises
 // før RPC-en har landet.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { getDb, listScoresForGame, type LocalScore } from '../data/db';
 import {
   loadGameBundle,
   refreshGameBundle,
   type GameBundle,
 } from '../data/gameBundle';
+import { toRoster } from './roster';
+import { foldLocalScores } from './teamPlay';
 
 function messageOf(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -118,6 +121,32 @@ export function useLocalScores(
   }, [pollMs, reload]);
 
   return { scores, reload };
+}
+
+/**
+ * Slagene slik laget eier dem (#2067). Sletter kapteinen kontoen midt i runden,
+ * ligger hullene som alt er ført, igjen på den trukne kapteinen. Her legges de
+ * på den nåværende eieren (`foldLocalScores`), så alt skjermen leser etterpå,
+ * ser ett sett rader.
+ *
+ * Kall den rett etter `useLocalScores`, før noe annet leser slagene. Før
+ * bundelen har landet vet vi ikke rosteret, og radene står som de er.
+ */
+export function useTeamScores(
+  scores: LocalScore[],
+  bundle: GameBundle | null,
+): LocalScore[] {
+  return useMemo(
+    () =>
+      bundle
+        ? foldLocalScores(
+            scores,
+            toRoster(bundle.players),
+            bundle.game.gameMode as GameMode,
+          )
+        : scores,
+    [scores, bundle],
+  );
 }
 
 /** Hullene spilleren har slag på — grunnlaget for CTA-tilstanden. */

@@ -9,8 +9,10 @@ import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/type
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
+import { toRoster } from './roster';
 import { buildScorecardRows } from './scorecardRows';
 import { computeGameLeaderboard, type LeaderboardOutcome } from './scoringContext';
+import { foldLocalScores, myTeamCaptainId } from './teamPlay';
 
 const SOLO: GameMode = 'solo_strokeplay';
 const GREENSOME: GameMode = 'greensome_matchplay';
@@ -254,5 +256,45 @@ describe('buildScorecardRows — lagkort', () => {
     });
 
     expect(rows[0]!.extra).toBeNull();
+  });
+});
+
+describe('buildScorecardRows — kapteinen har slettet kontoen (#2067)', () => {
+  // Greensome-laget over, men anna (kapteinen) er trukket etter ni hull.
+  // bjorn eier radene nå og har ført tre hull til.
+  const withdrawnBundle: GameBundle = {
+    ...greensomeBundle,
+    players: greensomeBundle.players.map((p) =>
+      p.userId === 'anna' ? { ...p, withdrawnAt: '2026-09-17T10:00:00.000Z' } : p,
+    ),
+  };
+  const roster = toRoster(withdrawnBundle.players);
+  const raw = [
+    ...HOLES.slice(0, 9).map((hole) => score('anna', hole.holeNumber, 5)),
+    ...HOLES.slice(9, 12).map((hole) => score('bjorn', hole.holeNumber, 4)),
+  ];
+
+  it('viser alle tolv hullene: ni på den trukne kapteinen, tre på den nye eieren', () => {
+    // Samme vei som skjermen: fold rett etter lesingen, eieren fra rosteret.
+    const scores = foldLocalScores(raw, roster, GREENSOME);
+    const teamOwnerId = myTeamCaptainId(roster, 'bjorn');
+
+    const { rows, totals } = buildScorecardRows({
+      holes: HOLES,
+      scores,
+      mode: GREENSOME,
+      viewerId: 'bjorn',
+      teamOwnerId,
+      teeGender: MENS,
+      courseHandicap: 20,
+      teamNumber: 1,
+      leaderboard: computeGameLeaderboard(withdrawnBundle, scores),
+    });
+
+    expect(teamOwnerId).toBe('bjorn');
+    expect(totals.playedHoles).toBe(12);
+    expect(rows[4]!.strokes).toBe(5);
+    expect(rows[11]!.strokes).toBe(4);
+    expect(rows[12]!.strokes).toBeNull();
   });
 });
