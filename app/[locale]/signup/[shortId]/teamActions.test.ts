@@ -792,9 +792,10 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
     expect(findCall('game_registration_requests', 'delete')).toBeUndefined();
   });
 
-  it('kapteinen står alt på lista (already_on_roster) → fortsetter uten lagnummer', async () => {
-    // The claim writes nothing and gives the new team no number, so a known
-    // teammate is not put on a team that does not exist.
+  it('kapteinen står alt på lista (already_on_roster) → already_registered, kaptein-forespørselen rulles tilbake (#2072)', async () => {
+    // The claim writes nothing for a captain already on the roster, so the new
+    // team would have no number and its teammates would land on none. The
+    // registration is refused like the other claim refusals instead.
     getGameByShortIdMock.mockResolvedValue(makeGame());
     lookupUserByEmailMock.mockResolvedValueOnce({
       id: KNOWN_USER_ID,
@@ -805,6 +806,8 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
       [
         { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
         captainDisplay,
+        { data: [{ id: CAPTAIN_REQUEST_ID }], error: null }, // rollback delete
+        // What the action would consume if it went on:
         { data: null, error: null }, // child request insert (slot 1, known)
         { data: null, error: null }, // invitations insert (slot 2)
         { data: null, error: null }, // invitations insert (slot 3)
@@ -819,9 +822,20 @@ describe('#2011/#2060: åpen lag-påmelding stopper på spiller-taket', () => {
       slots: threeSlots,
     });
 
-    expect(result.ok).toBe(true);
-    expect(findCall('game_players', 'upsert')).toBeUndefined();
-    expect(findCall('game_registration_requests', 'delete')).toBeUndefined();
+    expect(result).toEqual({ ok: false, error: 'already_registered' });
+    expect(findCall('game_registration_requests', 'delete')).toBeDefined();
+    expect(findCall('game_registration_requests', 'insert')?.args[0]).toMatchObject({
+      is_team_captain: true,
+    });
+    expect(
+      adminMock.__fromCalls.filter(
+        (c) => c.table === 'game_registration_requests' && c.method === 'insert',
+      ),
+    ).toHaveLength(1);
+    expect(findCall('invitations', 'insert')).toBeUndefined();
+    expect(adminMock.__fromCalls.filter((c) => c.table === 'game_players')).toEqual([]);
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+    expect(sendTeamInvitationMailMock).not.toHaveBeenCalled();
   });
 
   it('manual_approval: forespørselen legges i kø uten plass-krav — taket gjelder bare åpen påmelding', async () => {
@@ -1166,5 +1180,189 @@ describe('#1343: attachToCaptainTeam kobler invitéen til kapteinen som invitert
       'invitations-oppslaget må kjede .gt("expires_at", now)',
     ).toBeDefined();
     expect(Number.isNaN(Date.parse(expiryFilter!.args[1] as string))).toBe(false);
+  });
+});
+
+/**
+ * #2061: a teammate who accepted before the organiser approved the captain
+ * used to take the lowest free team number for themself; the captain then got
+ * the next one and the team was split in two. The teammate now waits — no
+ * game_players row — until approveRequest places the whole team together.
+ */
+describe('#2061: medspiller som godtar før kapteinen har lag, venter', () => {
+  const MATE_REQUEST_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  const DB_ERR = { message: 'AbortError: This operation was aborted', code: '' };
+
+  beforeEach(() => {
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: KNOWN_USER_ID, email: 'mate@example.com' } },
+    });
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ registration_mode: 'manual_approval' }),
+    );
+  });
+
+  const mateRequest = {
+    data: {
+      id: MATE_REQUEST_ID,
+      game_id: GAME_ID,
+      user_id: KNOWN_USER_ID,
+      status: 'pending',
+      team_request_id: CAPTAIN_REQUEST_ID,
+      team_name: 'Lag A',
+      is_team_captain: false,
+    },
+    error: null,
+  };
+  const captainRequest = { data: { user_id: CAPTAIN_ID }, error: null };
+
+  function playerWrites() {
+    return adminMock.__fromCalls.filter(
+      (c) =>
+        c.table === 'game_players' &&
+        (c.method === 'upsert' || c.method === 'insert' || c.method === 'update'),
+    );
+  }
+
+  it('kapteinen har ingen spillerrad → godtatt, men ingen game_players-rad', async () => {
+    adminMock = buildSupabaseMock([
+      mateRequest,
+      captainRequest,
+      { data: null, error: null }, // captain's game_players row: none
+      { data: [{ id: MATE_REQUEST_ID }], error: null }, // status update .select('id')
+      { data: null, error: null }, // what a player upsert would consume
+    ]);
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    expect(playerWrites()).toEqual([]);
+    const update = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_registration_requests' && c.method === 'update',
+    );
+    expect(update?.args[0]).toMatchObject({ status: 'approved' });
+    // Trap 2: the status update is the only write here, so it asserts rows.
+    const updateIdx = adminMock.__fromCalls.indexOf(update!);
+    expect(
+      adminMock.__fromCalls
+        .slice(updateIdx)
+        .some((c) => c.table === 'game_registration_requests' && c.method === 'select'),
+    ).toBe(true);
+  });
+
+  it('status-oppdateringen treffer 0 rader → db_error', async () => {
+    adminMock = buildSupabaseMock([
+      mateRequest,
+      captainRequest,
+      { data: null, error: null },
+      { data: [], error: null }, // status update matched nothing
+    ]);
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(playerWrites()).toEqual([]);
+  });
+
+  it('kapteinens rad har team_number null → ingen game_players-rad', async () => {
+    adminMock = buildSupabaseMock([
+      mateRequest,
+      captainRequest,
+      { data: { team_number: null }, error: null },
+      { data: [{ id: MATE_REQUEST_ID }], error: null },
+      { data: null, error: null },
+    ]);
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    expect(playerWrites()).toEqual([]);
+  });
+
+  it('kapteinen har lag 2 → medspilleren settes på lag 2', async () => {
+    adminMock = buildSupabaseMock([
+      mateRequest,
+      captainRequest,
+      { data: { team_number: 2 }, error: null },
+      { data: [{ id: MATE_REQUEST_ID }], error: null },
+      { data: null, error: null }, // player upsert
+    ]);
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    const writes = playerWrites();
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.args[0]).toMatchObject({
+      user_id: KNOWN_USER_ID,
+      team_number: 2,
+      flight_number: 2,
+    });
+  });
+
+  it.each([
+    ['kaptein-forespørselen', [mateRequest, { data: null, error: DB_ERR }]],
+    [
+      'kapteinens spillerrad',
+      [mateRequest, captainRequest, { data: null, error: DB_ERR }],
+    ],
+  ])('oppslaget av %s feiler → db_error, ingen skriv', async (_label, queue) => {
+    adminMock = buildSupabaseMock([
+      ...(queue as { data: unknown; error: unknown }[]),
+      { data: [{ id: MATE_REQUEST_ID }], error: null },
+      { data: null, error: null },
+    ]);
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(playerWrites()).toEqual([]);
+    expect(
+      adminMock.__fromCalls.find(
+        (c) => c.table === 'game_registration_requests' && c.method === 'update',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('attachToCaptainTeam: godkjent kaptein uten lagnummer → ingen game_players-rad', async () => {
+    const INVITEE_EMAIL = 'ny.spiller@example.com';
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: KNOWN_USER_ID, email: INVITEE_EMAIL } },
+    });
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+    adminMock = buildSupabaseMock([
+      {
+        data: { id: 'inv-1', email: INVITEE_EMAIL, game_id: GAME_ID, invited_by: CAPTAIN_ID },
+        error: null,
+      },
+      { data: { email: INVITEE_EMAIL }, error: null },
+      {
+        data: [
+          { id: CAPTAIN_REQUEST_ID, user_id: CAPTAIN_ID, team_name: 'Lag A', status: 'approved' },
+        ],
+        error: null,
+      },
+      { data: { id: 'child-1' }, error: null }, // child insert
+      { data: { team_number: null }, error: null }, // captain's game_players row
+      { data: null, error: null }, // what a player upsert would consume
+      { data: null, error: null }, // invitations update
+    ]);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    const result = await attachToCaptainTeam('inv-1', SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    expect(playerWrites()).toEqual([]);
   });
 });
