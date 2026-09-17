@@ -34,6 +34,8 @@ describe('isStructuralBlockReason', () => {
     'no_players',
     'tee_missing',
     'tee_missing_rating',
+    // #2071: covers every fixed-count format, not just the rotation ones.
+    'rotation_player_count',
   ])('%s er strukturell → varsles', (reason) => {
     expect(isStructuralBlockReason(reason)).toBe(true);
   });
