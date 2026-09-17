@@ -315,11 +315,18 @@ export async function openCupLineupSession(
   if (access.role.kind !== 'organizer') return { error: 'not_allowed' };
 
   const admin = getAdminClient();
-  const { data: cup } = await admin
+  const { data: cup, error: cupError } = await admin
     .from('tournaments')
     .select('status, planned_match_count, win_points, tie_points')
     .eq('id', tournamentId)
     .maybeSingle();
+  if (cupError) {
+    console.error('[cup] openCupLineupSession cup read failed', {
+      tournamentId,
+      error: cupError,
+    });
+    return { error: 'save_failed' };
+  }
   if (!cup) return { error: 'not_found' };
   if (cup.status === 'finished') return { error: 'cup_finished' };
 
@@ -774,7 +781,10 @@ async function loadRevealContext(
 ): Promise<RevealContext | CupLineupActionError> {
   const admin = getAdminClient();
 
-  const [{ data: cup }, { data: plan }] = await Promise.all([
+  const [
+    { data: cup, error: cupError },
+    { data: plan, error: planError },
+  ] = await Promise.all([
     admin
       .from('tournaments')
       .select(
@@ -788,6 +798,16 @@ async function loadRevealContext(
       .eq('tournament_id', tournamentId)
       .maybeSingle(),
   ]);
+  // A failed read is not "no cup", "no plan" or "no tee" (I3, #2082): each of
+  // those tells the organiser to fix something that is not broken.
+  if (cupError || planError) {
+    console.error('[cup] loadRevealContext read failed', {
+      tournamentId,
+      sessionId,
+      error: cupError ?? planError,
+    });
+    return { error: 'save_failed' };
+  }
   if (!cup) return { error: 'not_found' };
   if (cup.status === 'finished') return { error: 'cup_finished' };
   if (!plan?.course_id || !plan?.tee_box_id) return { error: 'missing_plan' };
@@ -795,22 +815,38 @@ async function loadRevealContext(
   const courseId = plan.course_id as string;
   const teeBoxId = plan.tee_box_id as string;
 
-  const { data: teeRow } = await admin
+  const { data: teeRow, error: teeError } = await admin
     .from('tee_boxes')
     .select(
       'course_id, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
     )
     .eq('id', teeBoxId)
     .maybeSingle();
+  if (teeError) {
+    console.error('[cup] loadRevealContext tee read failed', {
+      tournamentId,
+      sessionId,
+      error: teeError,
+    });
+    return { error: 'save_failed' };
+  }
   if (!teeRow || teeRow.course_id !== courseId || teeRow.archived_at !== null) {
     return { error: 'plan_tee' };
   }
 
-  const { data: session } = await admin
+  const { data: session, error: sessionError } = await admin
     .from('cup_lineup_sessions')
     .select('format, slot_count')
     .eq('id', sessionId)
     .maybeSingle();
+  if (sessionError) {
+    console.error('[cup] loadRevealContext session read failed', {
+      tournamentId,
+      sessionId,
+      error: sessionError,
+    });
+    return { error: 'save_failed' };
+  }
   if (!session) return { error: 'not_found' };
 
   const fourball =
@@ -881,10 +917,20 @@ async function revealCupLineupSession(
   // tatt hen av lista i mellomtiden, og ingen av delene rører de lagrede
   // plassene. Uten denne sjekken ville avdekkingen bygget kamper med samme
   // spiller på begge sider, eller med en som ikke er med i cupen lenger.
-  const { data: currentParticipants } = await admin
+  const { data: currentParticipants, error: participantsError } = await admin
     .from('tournament_participants')
     .select('user_id, team_number')
     .eq('tournament_id', tournamentId);
+  // Without this, a failed read looks like two empty squads and every player
+  // "changed team" (#2082).
+  if (participantsError) {
+    console.error('[cup] revealCupLineupSession participants read failed', {
+      tournamentId,
+      sessionId,
+      error: participantsError,
+    });
+    return { error: 'save_failed' };
+  }
   const squadOf = (team: CupTeamNumber): string[] =>
     (currentParticipants ?? [])
       .filter((p) => p.team_number === team)
