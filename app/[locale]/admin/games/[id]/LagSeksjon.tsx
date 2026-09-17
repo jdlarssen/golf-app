@@ -70,6 +70,8 @@ export function LagSeksjon({ gameId, players, teamSize }: Props) {
                 .map(([teamNum, members]) => (
                   <div
                     key={teamNum}
+                    data-testid={`team-card-${teamNum}`}
+                    data-members={members.map((m) => m.user_id).join(',')}
                     className="rounded-xl border border-border px-3 py-2.5"
                   >
                     <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -88,7 +90,10 @@ export function LagSeksjon({ gameId, players, teamSize }: Props) {
 
           {/* Uten lag */}
           {unassigned.length > 0 && (
-            <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5">
+            <div
+              data-testid="team-unassigned"
+              className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5"
+            >
               <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-warning-text">
                 {t('unassignedLabel', { n: unassigned.length })}
               </p>
