@@ -1351,10 +1351,10 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     expect(result.players).toHaveLength(16);
   });
 
-  it('publish med 17 spillere → too_many_players_for_mode, ikke stille kutt (#2009)', () => {
-    const players = Array.from({ length: 17 }, (_, i) => ({
+  it('publish med 41 spillere → too_many_players_for_mode, ikke stille kutt (#2009, #2148)', () => {
+    const players = Array.from({ length: 41 }, (_, i) => ({
       userId: `p${i}`,
-      team: Math.min(Math.floor(i / 4) + 1, 4),
+      team: Math.min(Math.floor(i / 4) + 1, 10),
     }));
     const result = buildGameInsertPayload(
       texasFd({ teamSize: '4', players }),
@@ -4314,5 +4314,150 @@ describe('buildGameInsertPayload — greensome_matchplay (issue #289)', () => {
     } else {
       throw new Error('unexpected mode_config kind');
     }
+  });
+});
+
+// #2148: lag-formatene har et spillertak på 40 i stedet for fire lag. Hver
+// validator leser én plass over taket, så spiller nummer 41 gir en feilkode i
+// stedet for å forsvinne stille.
+describe('buildGameInsertPayload — spillertak på 40 (#2148)', () => {
+  function rosterFd(
+    count: number,
+    base: Record<string, string>,
+    teamOf: (i: number) => number | null,
+    flightOf: (i: number, team: number) => number | null = (_i, team) => team,
+  ): FormData {
+    const entries: Record<string, string> = {
+      name: 'Klubbkveld',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      ...base,
+    };
+    for (let i = 0; i < count; i++) {
+      entries[`player_${i}_id`] = `u${i}`;
+      const team = teamOf(i);
+      if (team !== null) {
+        entries[`player_${i}_team`] = String(team);
+        const flight = flightOf(i, team);
+        if (flight !== null) entries[`player_${i}_flight`] = String(flight);
+      }
+    }
+    return fd(entries);
+  }
+
+  const pairs = (i: number) => Math.floor(i / 2) + 1;
+  const flightByPair = (_i: number, team: number) => Math.ceil(team / 2);
+
+  describe('best ball', () => {
+    const base = { game_mode: 'best_ball' };
+
+    it('20 par med lag og flight opp til 20 → ok, alle 40 med', () => {
+      const result = buildGameInsertPayload(rosterFd(40, base, pairs), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(40);
+      expect(result.players.at(-1)).toMatchObject({ team_number: 20, flight_number: 20 });
+      expect(result.mode_config).toMatchObject({ kind: 'best_ball', teams_count: 20 });
+    });
+
+    it('12 spillere i seks par med flight 1, 1, 2, 2, 3, 3 → alle 12 med', () => {
+      const result = buildGameInsertPayload(rosterFd(12, base, pairs, flightByPair), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(12);
+      expect(result.players.map((p) => p.flight_number)).toEqual([
+        1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
+      ]);
+    });
+
+    it('lag 21 → bad_team', () => {
+      const result = buildGameInsertPayload(rosterFd(2, base, () => 21, () => 1), 'publish');
+      expect(result.errorCode).toBe('bad_team');
+    });
+
+    it('flight 21 → bad_flight', () => {
+      const result = buildGameInsertPayload(rosterFd(2, base, () => 1, () => 21), 'publish');
+      expect(result.errorCode).toBe('bad_flight');
+    });
+
+    it('42 spillere → too_many_players_for_mode', () => {
+      const result = buildGameInsertPayload(
+        rosterFd(42, base, (i) => Math.min(pairs(i), 20)),
+        'publish',
+      );
+      expect(result.errorCode).toBe('too_many_players_for_mode');
+    });
+  });
+
+  describe('patsome', () => {
+    const base = { game_mode: 'patsome' };
+
+    it('40 spillere i 20 par → ok', () => {
+      const result = buildGameInsertPayload(rosterFd(40, base, pairs), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(40);
+    });
+
+    it('42 spillere → too_many_players_for_mode', () => {
+      const result = buildGameInsertPayload(rosterFd(42, base, pairs), 'publish');
+      expect(result.errorCode).toBe('too_many_players_for_mode');
+    });
+  });
+
+  describe('par-stableford', () => {
+    const base = { game_mode: 'stableford', stableford_team_size: '2' };
+
+    it('40 spillere i 20 par → ok', () => {
+      const result = buildGameInsertPayload(rosterFd(40, base, pairs), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(40);
+    });
+
+    it('42 spillere → too_many_players_for_mode', () => {
+      const result = buildGameInsertPayload(rosterFd(42, base, pairs), 'publish');
+      expect(result.errorCode).toBe('too_many_players_for_mode');
+    });
+  });
+
+  describe('texas scramble à 4', () => {
+    const base = {
+      game_mode: 'texas_scramble',
+      texas_team_size: '4',
+      texas_team_handicap_pct: '10',
+    };
+    const fours = (i: number) => Math.floor(i / 4) + 1;
+
+    it('40 spillere i ti lag → ok, flight = lag', () => {
+      const result = buildGameInsertPayload(rosterFd(40, base, fours, () => null), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(40);
+      expect(result.players.at(-1)).toMatchObject({ team_number: 10, flight_number: 10 });
+    });
+
+    it('44 spillere → too_many_players_for_mode', () => {
+      const result = buildGameInsertPayload(rosterFd(44, base, fours, () => null), 'publish');
+      expect(result.errorCode).toBe('too_many_players_for_mode');
+    });
+  });
+
+  describe.each([
+    ['solo-stableford', { game_mode: 'stableford' }],
+    ['modifisert stableford', { game_mode: 'modified_stableford' }],
+    ['slagspill', { game_mode: 'solo_strokeplay' }],
+  ])('%s', (_label, base) => {
+    it('9 spillere → alle 9 i payloaden', () => {
+      const result = buildGameInsertPayload(rosterFd(9, base, () => null), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(9);
+    });
+
+    it('40 spillere → alle 40 i payloaden', () => {
+      const result = buildGameInsertPayload(rosterFd(40, base, () => null), 'publish');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.players).toHaveLength(40);
+    });
+
+    it('41 spillere → too_many_players_for_mode', () => {
+      const result = buildGameInsertPayload(rosterFd(41, base, () => null), 'publish');
+      expect(result.errorCode).toBe('too_many_players_for_mode');
+    });
   });
 });

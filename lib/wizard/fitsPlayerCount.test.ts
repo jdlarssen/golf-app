@@ -71,9 +71,9 @@ describe('fitsPlayerCount — singles_matchplay', () => {
   });
 });
 
-// ── best_ball: even 2–8 (#374) ────────────────────────────────────────────────
+// ── best_ball: even 2–40 (#374, #2148) ───────────────────────────────────────
 
-describe('fitsPlayerCount — best_ball (even 2–8 per #374)', () => {
+describe('fitsPlayerCount — best_ball (even 2–40 per #2148)', () => {
   it.each([
     [1, false],
     [2, true],
@@ -84,17 +84,21 @@ describe('fitsPlayerCount — best_ball (even 2–8 per #374)', () => {
     [7, false],
     [8, true],
     [9, false],
-    [10, false],
+    [10, true], // five pairs (#2148)
+    [12, true],
+    [40, true], // 20 pairs
+    [41, false],
+    [42, false], // over the cap
   ])('best_ball n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('best_ball', n)).toBe(expected);
   });
 });
 
-// ── texas_scramble: even 4–8 — needs ≥2 teams to be a tournament (#467) ──────
-// Teams of 2 or 4; a single team (n=2) is not a competition, so the floor is 4.
-// 8-slot payload cap means {4, 6, 8} are the only buildable competition sizes.
+// ── texas_scramble: 4–40 — needs ≥2 teams to be a tournament (#467, #2148) ───
+// Teams of 2, 3 or 4; a single team is not a competition, so the floor is 4.
+// The 40-player cap from teamFormatLimits is the ceiling.
 
-describe('fitsPlayerCount — texas_scramble (2–4 per lag, 2–4 lag, #467 + #2009)', () => {
+describe('fitsPlayerCount — texas_scramble (2–4 per lag, minst 2 lag, opptil 40 spillere, #467 + #2148)', () => {
   it.each([
     [1, false],
     [2, false],  // bare 1 lag à 2 — ingen turnering
@@ -105,23 +109,25 @@ describe('fitsPlayerCount — texas_scramble (2–4 per lag, 2–4 lag, #467 + #
     [7, false],
     [8, true],   // 4 lag à 2 ELLER 2 lag à 4
     [9, true],   // 3 lag à 3 (#2009)
-    [10, false], // 5 lag à 2 — rutenettet har fire lag
-    [12, true],  // 4 lag à 3 (#2009 — bestillingen som utløste taket)
-    [14, false],
+    [10, true],  // 5 lag à 2 (#2148)
+    [12, true],  // 4 lag à 3 (#2009)
+    [14, true],  // 7 lag à 2
     [16, true],  // 4 lag à 4
-    [17, false], // over taket
-    [20, false],
+    [17, false], // går ikke opp
+    [20, true],  // 10 par / 5 lag à 4
+    [40, true],  // 20 par / 10 lag à 4
+    [42, false], // over taket
   ])('texas_scramble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('texas_scramble', n)).toBe(expected);
   });
 });
 
-// ── ambrose: even 4–8 — needs ≥2 teams (#467) ────────────────────────────────
+// ── ambrose: 4–40 — needs ≥2 teams (#467, #2148) ─────────────────────────────
 // Teams of 2 or 4, mechanically identical to Texas. Was previously permissive
 // (return true) since it was klubb-only; now in the Kompis catalog it needs a
 // real floor.
 
-describe('fitsPlayerCount — ambrose (2–4 per lag, 2–4 lag, #467 + #2009)', () => {
+describe('fitsPlayerCount — ambrose (2–4 per lag, minst 2 lag, opptil 40 spillere, #467 + #2148)', () => {
   it.each([
     [1, false],
     [2, false],
@@ -131,20 +137,22 @@ describe('fitsPlayerCount — ambrose (2–4 per lag, 2–4 lag, #467 + #2009)',
     [6, true],   // 3 lag à 2 ELLER 2 lag à 3
     [8, true],   // 2 lag à 4 ELLER 4 lag à 2
     [9, true],   // 3 lag à 3 (#2009)
-    [10, false], // 5 lag à 2 — rutenettet har fire lag
+    [10, true],  // 5 lag à 2 (#2148)
     [12, true],  // 4 lag à 3 (#2009)
     [16, true],  // 4 lag à 4
-    [17, false], // over taket
+    [17, false], // går ikke opp
+    [39, true],  // 13 lag à 3
+    [42, false], // over taket
   ])('ambrose n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('ambrose', n)).toBe(expected);
   });
 });
 
-// ── florida_scramble: 6 or 8 — teams of 3 or 4, needs ≥2 teams (#467) ─────────
+// ── florida_scramble: 6–40 — teams of 3 or 4, needs ≥2 teams (#467, #2148) ────
 // Florida ("step-aside") uses teams of 3 or 4, so the smallest competition is
 // 2 lag à 3 = 6. Was previously permissive (return true) as a klubb-only format.
 
-describe('fitsPlayerCount — florida_scramble (3–4 per lag, 2–4 lag, #467 + #2009)', () => {
+describe('fitsPlayerCount — florida_scramble (3–4 per lag, minst 2 lag, opptil 40 spillere, #467 + #2148)', () => {
   it.each([
     [1, false],
     [2, false],
@@ -158,7 +166,10 @@ describe('fitsPlayerCount — florida_scramble (3–4 per lag, 2–4 lag, #467 +
     [10, false], // går ikke opp i 3 eller 4
     [12, true],  // 4 lag à 3 ELLER 3 lag à 4
     [16, true],  // 4 lag à 4
-    [17, false], // over taket
+    [17, false], // går ikke opp
+    [20, true],  // 5 lag à 4 (#2148)
+    [40, true],  // 10 lag à 4
+    [44, false], // over taket
   ])('florida_scramble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('florida_scramble', n)).toBe(expected);
   });
@@ -288,7 +299,7 @@ describe('fitsPlayerCount — 2v2 matchplay family (exactly 4)', () => {
   });
 });
 
-// ── patsome: even 4+ ─────────────────────────────────────────────────────────
+// ── patsome: even 4–40 (#2148) ───────────────────────────────────────────────
 
 describe('fitsPlayerCount — patsome', () => {
   it.each([
@@ -298,17 +309,20 @@ describe('fitsPlayerCount — patsome', () => {
     [5, false],
     [6, true],
     [8, true],
+    [10, true],
+    [40, true],
+    [42, false], // over the cap (#2148)
   ])('patsome n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('patsome', n)).toBe(expected);
   });
 });
 
-// ── shamble: 6 or 8 — teams of 3 or 4, needs ≥2 teams (#469) ──────────────────
+// ── shamble: 6–40 — teams of 3 or 4, needs ≥2 teams (#469, #2148) ────────────
 // Same scramble-family principle as #467: a single team is not a tournament.
 // Teams of 3 or 4 → smallest competition is 2 lag à 3 = 6. The cap is now four
 // teams / 16 players (#2009), so 12 (4 lag à 3) is buildable.
 
-describe('fitsPlayerCount — shamble (3–4 per lag, 2–4 lag, #469 + #2009)', () => {
+describe('fitsPlayerCount — shamble (3–4 per lag, minst 2 lag, opptil 40 spillere, #469 + #2148)', () => {
   it.each([
     [1, false],
     [2, false],
@@ -321,7 +335,10 @@ describe('fitsPlayerCount — shamble (3–4 per lag, 2–4 lag, #469 + #2009)',
     [9, true],   // 3 lag à 3 (#2009)
     [12, true],  // 4 lag à 3 ELLER 3 lag à 4
     [16, true],  // 4 lag à 4
-    [17, false], // over taket
+    [17, false], // går ikke opp
+    [20, true],  // 5 lag à 4 (#2148)
+    [40, true],  // 10 lag à 4
+    [44, false], // over taket
   ])('shamble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('shamble', n)).toBe(expected);
   });
@@ -385,8 +402,8 @@ describe('soloPlayerCap (#661)', () => {
 describe('registrationPlayerCap (#2011)', () => {
   it.each([
     ['wolf', { team_size: 1 }, 5], // solo branch still answers
-    ['best_ball', { team_size: 2 }, 8],
-    ['texas_scramble', { team_size: 3 }, 12],
+    ['best_ball', { team_size: 2 }, 40],
+    ['texas_scramble', { team_size: 3 }, 39],
     ['fourball_matchplay', { team_size: 2 }, null], // side capacity rules instead
   ] as [GameMode, { team_size?: number }, number | null][])(
     '%s (%j) → %s',
