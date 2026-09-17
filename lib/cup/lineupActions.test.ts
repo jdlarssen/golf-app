@@ -632,6 +632,29 @@ describe('openCupLineupSession — første økt krever planlagt antall (#1902)',
     expect(writeCalls()).toHaveLength(0);
   });
 
+  it('cup-lesingen feiler → save_failed og logg, ikke «fant ikke cupen» (#2082)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      { data: null, error: { message: 'connection reset' } },
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('organizer');
+
+    const { openCupLineupSession } = await import('./lineupActions');
+    expect(
+      await openCupLineupSession(
+        form({ id: 'cup-1', format: 'singles_matchplay', slot_count: '2' }),
+      ),
+    ).toEqual({ error: 'save_failed' });
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[cup] openCupLineupSession cup read failed',
+      expect.objectContaining({ tournamentId: 'cup-1' }),
+    );
+    expect(writeCalls()).toHaveLength(0);
+    errorSpy.mockRestore();
+  });
+
   it('vektet cup slipper spørsmålet helt (#1441 D8)', async () => {
     // Splittet cup-dag (seier 5, delt 2) har ikke noe «først til X» — et
     // planlagt antall ville ikke endret noe, så det kreves ikke.
@@ -1047,6 +1070,55 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
         writeCalls().filter((c) => c.table === 'cup_lineup_slots'),
       ).toHaveLength(0);
     });
+
+    // #2082 siblings: every read the reveal makes before the claim. A failed
+    // read must not dress up as "no plan", "tee archived" or "the teams
+    // changed", which would send the organiser off to fix the wrong thing.
+    it.each([
+      { what: 'cup', at: 0, code: '[cup] loadRevealContext read failed' },
+      { what: 'plan', at: 1, code: '[cup] loadRevealContext read failed' },
+      { what: 'tee', at: 2, code: '[cup] loadRevealContext tee read failed' },
+      {
+        what: 'session',
+        at: 3,
+        code: '[cup] loadRevealContext session read failed',
+      },
+      {
+        what: 'participants',
+        at: 5,
+        code: '[cup] revealCupLineupSession participants read failed',
+      },
+    ])(
+      'the $what read fails: save_failed, logged, nothing claimed',
+      async ({ at, code }) => {
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const reads: unknown[] = [
+          ...revealContextReads(),
+          STORED_SLOTS,
+          PARTICIPANTS,
+        ];
+        reads[at] = { data: null, error: { message: 'connection reset' } };
+        adminMock = buildSupabaseMock([
+          ...accessReads(),
+          sessionRow(null, AT, AT),
+          ...(reads.slice(0, at + 1) as never[]),
+        ]);
+        supabaseMock = buildSupabaseMock([]);
+        setUser('organizer');
+
+        const { retryCupLineupReveal } = await import('./lineupActions');
+        expect(await retryCupLineupReveal(retryForm())).toEqual({
+          error: 'save_failed',
+        });
+        expect(errorSpy).toHaveBeenCalledWith(
+          code,
+          expect.objectContaining({ tournamentId: 'cup-1' }),
+        );
+        expect(sessionUpdates()).toEqual([]);
+        expect(insertMatchesMock).not.toHaveBeenCalled();
+        errorSpy.mockRestore();
+      },
+    );
 
     it('the teams changed since submission: lineup_squad_changed, revealed_at not claimed', async () => {
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
