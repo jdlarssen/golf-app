@@ -45,9 +45,15 @@ export async function DraftTeamsOverview({
     );
   }
 
-  const teamsWithPlayers = [1, 2, 3, 4].filter((teamNum) =>
-    players.some((p) => p.team_number === teamNum),
-  );
+  // #2148: team formats can have up to 20 teams, so the numbers come from the
+  // rows rather than a fixed list. Rows without a team are left out, as before.
+  const teamsWithPlayers = [
+    ...new Set(
+      players
+        .map((p) => p.team_number)
+        .filter((n): n is number => typeof n === 'number'),
+    ),
+  ].sort((a, b) => a - b);
 
   return (
     <ul className="flex flex-col gap-3">
