@@ -10,6 +10,7 @@ import {
   classifyChecks,
   classifyWithCiGate,
   expectsRealCi,
+  extractFunctionalSection,
   extractPrSummary,
   waitForChecksToSettle,
   type CheckRun,
@@ -292,6 +293,47 @@ describe('waitForChecksToSettle', () => {
   });
 });
 
+describe('extractFunctionalSection', () => {
+  it('henter seksjonsteksten og fjerner arbeiderens «Kan merges»-linje', () => {
+    const body = [
+      'Closes #2147',
+      '',
+      '## Funksjonelt',
+      '',
+      'Du ser nå hva PR-en gjør rett i Discord.',
+      '',
+      'Kan merges: ja',
+    ].join('\n');
+    expect(extractFunctionalSection(body)).toBe('Du ser nå hva PR-en gjør rett i Discord.');
+  });
+
+  it('fjerner også «Venter på deg:»-linja og slår sammen blanke linjer', () => {
+    const body = '### funksjonelt\n\nFørste setning.\n\n\n\nAndre setning.\nVenter på deg: prod-migrasjon\n';
+    expect(extractFunctionalSection(body)).toBe('Første setning.\n\nAndre setning.');
+  });
+
+  it('slutter ved neste heading', () => {
+    const body = '## Funksjonelt\nSpillerne ser X.\n## Teknisk\nFil a.ts endret.';
+    expect(extractFunctionalSection(body)).toBe('Spillerne ser X.');
+  });
+
+  it('kutter til 600 tegn med «…» til slutt', () => {
+    const body = `## Funksjonelt\n${'a'.repeat(900)}`;
+    const out = extractFunctionalSection(body);
+    expect(out).toHaveLength(600);
+    expect(out?.endsWith('…')).toBe(true);
+  });
+
+  it('mangler seksjonen → null', () => {
+    expect(extractFunctionalSection('Closes #1\n\nEn tagline.\n## Teknisk\nx')).toBeNull();
+    expect(extractFunctionalSection(null)).toBeNull();
+  });
+
+  it('tom seksjon (bare «Kan merges»-linja) → null', () => {
+    expect(extractFunctionalSection('## Funksjonelt\n\nKan merges: ja\n## Teknisk')).toBeNull();
+  });
+});
+
 describe('buildCardPayload', () => {
   const basePr = {
     number: 1159,
@@ -299,9 +341,15 @@ describe('buildCardPayload', () => {
     html_url: 'https://github.com/jdlarssen/golf-app/pull/1159',
     draft: false,
   };
+  const base = {
+    pr: basePr,
+    summary: 'En oppsummering.',
+    functional: 'Du kan nå merge fra Discord.',
+    waitReasons: ['rører merge-porten/verktøyene'],
+  };
 
   it('lager grønn merge-knapp med custom_id merge_pr:<N>', () => {
-    const msg = buildCardPayload({ pr: basePr, summary: 'En oppsummering.' });
+    const msg = buildCardPayload(base);
     const row = msg.components[0];
     expect(row.type).toBe(1);
     const mergeBtn = row.components[0];
@@ -314,30 +362,54 @@ describe('buildCardPayload', () => {
   });
 
   it('legger til en lenke-knapp til PR-en', () => {
-    const msg = buildCardPayload({ pr: basePr, summary: null });
+    const msg = buildCardPayload({ ...base, summary: null });
     const linkBtn = msg.components[0].components[1];
     expect(linkBtn).toMatchObject({ type: 2, style: 5, url: basePr.html_url });
   });
 
-  it('inkluderer tittel, oppsummering og lenke i teksten', () => {
-    const msg = buildCardPayload({ pr: basePr, summary: 'En oppsummering.' });
-    expect(msg.content).toContain('PR #1159');
-    expect(msg.content).toContain(basePr.title);
-    expect(msg.content).toContain('En oppsummering.');
-    expect(msg.content).toContain(basePr.html_url);
-  });
-
   it('viser draft-merkelapp kun for draft-PR-er', () => {
-    expect(buildCardPayload({ pr: { ...basePr, draft: true }, summary: null }).content).toContain(
-      '📝 Draft',
-    );
-    expect(buildCardPayload({ pr: basePr, summary: null }).content).not.toContain('📝 Draft');
+    expect(buildCardPayload({ ...base, pr: { ...basePr, draft: true } }).content).toContain('📝 Draft');
+    expect(buildCardPayload(base).content).not.toContain('📝 Draft');
   });
 
-  it('utelater oppsummeringslinja når summary er null', () => {
-    const msg = buildCardPayload({ pr: basePr, summary: null });
-    // Kun tittel-linje + lenke-linje.
-    expect(msg.content.split('\n')).toHaveLength(2);
+  it('tittel → Funksjonelt → venter-linje → lenke (summary vises ikke når seksjonen finnes)', () => {
+    const msg = buildCardPayload({
+      ...base,
+      waitReasons: ['rører innlogging/konto', 'mangler staging-bevis'],
+    });
+    expect(msg.content.split('\n')).toEqual([
+      `**PR #1159** — ${basePr.title}`,
+      'Du kan nå merge fra Discord.',
+      '⏳ Venter på deg: rører innlogging/konto, mangler staging-bevis',
+      basePr.html_url,
+    ]);
+  });
+
+  it('uten Funksjonelt → fallback-tekst pluss summary', () => {
+    const msg = buildCardPayload({ ...base, functional: null });
+    expect(msg.content.split('\n')).toEqual([
+      `**PR #1159** — ${basePr.title}`,
+      '_(ingen funksjonell beskrivelse i PR-en)_',
+      'En oppsummering.',
+      '⏳ Venter på deg: rører merge-porten/verktøyene',
+      basePr.html_url,
+    ]);
+  });
+
+  it('uten Funksjonelt og uten summary → bare fallback-teksten', () => {
+    const msg = buildCardPayload({ ...base, functional: null, summary: null });
+    expect(msg.content.split('\n')).toHaveLength(4);
+    expect(msg.content).toContain('_(ingen funksjonell beskrivelse i PR-en)_');
+  });
+
+  it('tom grunn-liste → «automatisk merge gikk ikke»', () => {
+    const msg = buildCardPayload({ ...base, waitReasons: [] });
+    expect(msg.content).toContain('⏳ Venter på deg: automatisk merge gikk ikke');
+  });
+
+  it('holder seg under Discords 2000-tegnsgrense', () => {
+    const msg = buildCardPayload({ ...base, pr: { ...basePr, title: 'x'.repeat(2500) } });
+    expect(msg.content.length).toBeLessThanOrEqual(2000);
   });
 });
 

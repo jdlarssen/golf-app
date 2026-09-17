@@ -11,6 +11,8 @@ import {
   linkedIssueNumbers,
   mergePullRequest,
   NEVER_AUTO_MERGE_GLOBS,
+  NEVER_AUTO_MERGE_RULES,
+  ownerWaitReasons,
   shouldDispatchMainVerify,
   touchesNeverList,
   type AutoMergeInput,
@@ -422,6 +424,104 @@ describe('classifyAutoMerge', () => {
       changedFiles: ['supabase/x.sql'],
     });
     expect(out.demotedReason).toBe('endrer fil på aldri-lista');
+  });
+});
+
+// ── ownerWaitReasons / NEVER_AUTO_MERGE_RULES (#2147) ───────────────────────
+
+describe('NEVER_AUTO_MERGE_RULES', () => {
+  it('hver glob har en ikke-tom ownerReason', () => {
+    for (const rule of NEVER_AUTO_MERGE_RULES) {
+      expect(rule.ownerReason.trim(), rule.glob).not.toBe('');
+    }
+  });
+
+  it('NEVER_AUTO_MERGE_GLOBS er globene fra reglene, i samme rekkefølge', () => {
+    expect([...NEVER_AUTO_MERGE_GLOBS]).toEqual(NEVER_AUTO_MERGE_RULES.map((r) => r.glob));
+  });
+});
+
+describe('ownerWaitReasons', () => {
+  const base: AutoMergeInput = {
+    baseRef: 'main',
+    title: 'Ryddig endring',
+    body: 'Closes #2147\n\nEn tagline.',
+    changedFiles: ['docs/x.md'],
+    commitMessages: ['chore: ryddig'],
+    commentBodies: [],
+    prLabels: [],
+    needsDecisionIssue: false,
+  };
+
+  it('ren PR → ingen grunner', () => {
+    expect(ownerWaitReasons(base)).toEqual([]);
+  });
+
+  it('gir flate-grunnen for globen som traff', () => {
+    expect(ownerWaitReasons({ ...base, changedFiles: ['supabase/migrations/x.sql'] })).toEqual([
+      'rører databasen (migrasjon eller tilgangsregler)',
+    ]);
+    expect(ownerWaitReasons({ ...base, changedFiles: ['lib/auth/x.ts'] })).toEqual([
+      'rører innlogging/konto',
+    ]);
+    expect(ownerWaitReasons({ ...base, changedFiles: ['lib/loops/x.ts'] })).toEqual([
+      'rører merge-porten/verktøyene',
+    ]);
+  });
+
+  it('auth + loops → begge grunnene, hver én gang', () => {
+    const out = ownerWaitReasons({
+      ...base,
+      changedFiles: ['lib/auth/a.ts', 'proxy.ts', 'lib/loops/a.ts', 'scripts/loops/b.ts'],
+    });
+    expect(out).toEqual(['rører innlogging/konto', 'rører merge-porten/verktøyene']);
+  });
+
+  it('produktvalg-markør + bruker-synlig uten label → begge grunnene', () => {
+    const out = ownerWaitReasons({
+      ...base,
+      body: 'Closes #1\n\n## Alternativer (produktvalg)\nA eller B.',
+      commitMessages: ['feat: ny flate'],
+    });
+    expect(out).toEqual(['produktvalg i PR-en', 'mangler staging-bevis']);
+  });
+
+  it('markør i kommentar og needs-decision-issue gir «produktvalg i PR-en» én gang', () => {
+    const out = ownerWaitReasons({
+      ...base,
+      commentBodies: ['## Produktvalg\nA.'],
+      needsDecisionIssue: true,
+    });
+    expect(out).toEqual(['produktvalg i PR-en']);
+  });
+
+  it('WIP og base ≠ main har egne grunner', () => {
+    expect(ownerWaitReasons({ ...base, title: 'WIP: halvferdig' })).toEqual(['merket som WIP']);
+    expect(ownerWaitReasons({ ...base, baseRef: 'staging' })).toEqual(['går ikke mot main']);
+  });
+
+  it('invariant: outcome card ⇔ minst én grunn', () => {
+    const inputs: AutoMergeInput[] = [
+      base,
+      { ...base, baseRef: 'staging' },
+      { ...base, title: '[wip] noe' },
+      { ...base, changedFiles: ['app/api/x/route.ts'] },
+      { ...base, changedFiles: ['app/[locale]/admin/games/[id]/slett/page.tsx'] },
+      { ...base, changedFiles: ['native/app/src/screens/Login.tsx'] },
+      { ...base, changedFiles: ['native/ios/App/Info.plist'] },
+      { ...base, changedFiles: ['lib/payment/vipps.ts'] },
+      { ...base, changedFiles: ['native/app/src/components/Button.tsx'] },
+      { ...base, body: '## Alternativ A\nA.' },
+      { ...base, commentBodies: ['## Produktvalg'] },
+      { ...base, needsDecisionIssue: true },
+      { ...base, commitMessages: ['feat: ny flate'] },
+      { ...base, commitMessages: ['feat: ny flate'], prLabels: ['staging-verified'] },
+      { ...base, commitMessages: ['fix: noe\n\n[no-changelog]'] },
+    ];
+    for (const input of inputs) {
+      const card = classifyAutoMerge(input).outcome === 'card';
+      expect(ownerWaitReasons(input).length > 0, JSON.stringify(input)).toBe(card);
+    }
   });
 });
 

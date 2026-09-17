@@ -48,6 +48,41 @@ export function extractPrSummary(body: string | null | undefined): string | null
   return null;
 }
 
+// «## Funksjonelt»-seksjonen (#2147): orkestratorens arbeiderprompt krever den i
+// hver PR-body — to–tre setninger i produktspråk pluss «Kan merges: ja» / «Venter på
+// deg: …». Knapp-kortet viser seksjonen, men regner ut venter-linja selv fra portene
+// (autoMerge.ownerWaitReasons), så arbeiderens egen linje fjernes her.
+const FUNCTIONAL_HEADING = /^#{1,6}[ \t]+funksjonelt/i;
+const ANY_HEADING = /^#{1,6}[ \t]/;
+const WORKER_VERDICT_LINE = /^(?:kan merges|venter på deg)\s*:/i;
+const FUNCTIONAL_MAX = 600;
+
+/**
+ * Teksten under første heading som starter med «Funksjonelt», fram til neste
+ * heading. Arbeiderens «Kan merges:»/«Venter på deg:»-linjer fjernes, blanke
+ * linjer slås sammen, og teksten kuttes til 600 tegn med «…». Null når seksjonen
+ * mangler eller er tom.
+ */
+export function extractFunctionalSection(body: string | null | undefined): string | null {
+  if (!body) return null;
+  const lines = body.split(/\r?\n/);
+  const start = lines.findIndex((l) => FUNCTIONAL_HEADING.test(l.trim()));
+  if (start === -1) return null;
+
+  const kept: string[] = [];
+  for (const raw of lines.slice(start + 1)) {
+    const line = raw.trimEnd();
+    if (ANY_HEADING.test(line.trim())) break;
+    if (WORKER_VERDICT_LINE.test(line.trim())) continue;
+    if (line.trim() === '' && (kept.length === 0 || kept[kept.length - 1] === '')) continue;
+    kept.push(line);
+  }
+  while (kept.length > 0 && kept[kept.length - 1] === '') kept.pop();
+  const text = kept.join('\n').trim();
+  if (text === '') return null;
+  return text.length > FUNCTIONAL_MAX ? `${text.slice(0, FUNCTIONAL_MAX - 1)}…` : text;
+}
+
 export type CheckRun = { name?: string; status: string; conclusion: string | null };
 
 export type ChecksState = 'pending' | 'red' | 'green';
@@ -207,21 +242,38 @@ export type DiscordMessage = {
 
 const DISCORD_CONTENT_MAX = 2000;
 
+export const NO_FUNCTIONAL_TEXT = '_(ingen funksjonell beskrivelse i PR-en)_';
+// Fallback-stien i post-steget (merge feilet) har ingen port-grunn — kortet venter
+// likevel på eieren.
+export const AUTO_MERGE_FAILED_REASON = 'automatisk merge gikk ikke';
+
 /**
- * Bygger Discord-meldingen for ett PR-kort: tittel (+ draft-merkelapp) +
- * oppsummering + PR-lenke som tekst, og én action-row med grønn merge-knapp
- * (`custom_id: merge_pr:<N>`) + en lenke-knapp til PR-en.
+ * Bygger Discord-meldingen for ett PR-kort: tittel (+ draft-merkelapp),
+ * «Funksjonelt»-seksjonen (eller fallback-tekst + oppsummering), hvorfor PR-en
+ * venter på eieren (#2147) og PR-lenke som tekst, og én action-row med grønn
+ * merge-knapp (`custom_id: merge_pr:<N>`) + en lenke-knapp til PR-en.
  */
 export function buildCardPayload({
   pr,
   summary,
+  functional,
+  waitReasons,
 }: {
   pr: PrForCard;
   summary: string | null;
+  functional: string | null;
+  waitReasons: string[];
 }): DiscordMessage {
   const draftBadge = pr.draft ? '📝 Draft · ' : '';
   const lines = [`${draftBadge}**PR #${pr.number}** — ${pr.title}`];
-  if (summary) lines.push(summary);
+  if (functional) {
+    lines.push(functional);
+  } else {
+    lines.push(NO_FUNCTIONAL_TEXT);
+    if (summary) lines.push(summary);
+  }
+  const reasons = waitReasons.length > 0 ? waitReasons : [AUTO_MERGE_FAILED_REASON];
+  lines.push(`⏳ Venter på deg: ${reasons.join(', ')}`);
   lines.push(pr.html_url);
   let content = lines.join('\n');
   if (content.length > DISCORD_CONTENT_MAX) {

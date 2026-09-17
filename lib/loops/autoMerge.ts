@@ -15,22 +15,34 @@ import { type GitHubClient } from './discordActions';
 // Flater som ALDRI auto-merges — de beholder menneske-porten (knapp-kort). Bredere
 // enn issue-ets liste (fail-closed): hele supabase/ + app/api/ + enforcement-flatene
 // (#1406, §3). Håndrullet glob-match (à la isVisualChange) — ingen ny dependency.
-export const NEVER_AUTO_MERGE_GLOBS = [
-  'supabase/**', // migrasjoner (prod-brannmur #1074), RLS, DB-config
-  '**/slett/**', // destruktive flyter
-  '**/slett-konto/**',
-  'proxy.ts', // auth-/sikkerhetsflater
-  'lib/auth/**',
-  'lib/supabase/**',
-  'app/api/**',
-  'app/[locale]/(auth)/**',
-  '**/betaling/**', // koster penger
-  'lib/payment/**',
-  '.github/**', // enforcement-/guard-rail-flater
-  '.githooks/**',
-  '.claude/**',
-  'lib/loops/**', // merge-porten selv + kort-logikken (#1655)
-  'scripts/loops/**', // decide-/post-harnessen som kjører porten (#1655)
+//
+// Hver regel bærer `ownerReason` (#2147): grunnen knapp-kortet viser eieren, i
+// produktspråk («⏳ Venter på deg: …»). Dette er ordlistas ene hjem — ny rad her MÅ
+// få en grunn (testen håndhever det).
+const DB = 'rører databasen (migrasjon eller tilgangsregler)';
+const AUTH = 'rører innlogging/konto';
+const DELETE = 'rører sletting';
+const PAYMENT = 'rører betaling';
+const API = 'rører serverens API';
+const GATE = 'rører merge-porten/verktøyene';
+const APP_BUILD = 'rører app-bygg/signering';
+
+export const NEVER_AUTO_MERGE_RULES: ReadonlyArray<{ glob: string; ownerReason: string }> = [
+  { glob: 'supabase/**', ownerReason: DB }, // migrasjoner (prod-brannmur #1074), RLS, DB-config
+  { glob: '**/slett/**', ownerReason: DELETE }, // destruktive flyter
+  { glob: '**/slett-konto/**', ownerReason: DELETE },
+  { glob: 'proxy.ts', ownerReason: AUTH }, // auth-/sikkerhetsflater
+  { glob: 'lib/auth/**', ownerReason: AUTH },
+  { glob: 'lib/supabase/**', ownerReason: AUTH },
+  { glob: 'app/api/**', ownerReason: API },
+  { glob: 'app/[locale]/(auth)/**', ownerReason: AUTH },
+  { glob: '**/betaling/**', ownerReason: PAYMENT }, // koster penger
+  { glob: 'lib/payment/**', ownerReason: PAYMENT },
+  { glob: '.github/**', ownerReason: GATE }, // enforcement-/guard-rail-flater
+  { glob: '.githooks/**', ownerReason: GATE },
+  { glob: '.claude/**', ownerReason: GATE },
+  { glob: 'lib/loops/**', ownerReason: GATE }, // merge-porten selv + kort-logikken (#1655)
+  { glob: 'scripts/loops/**', ownerReason: GATE }, // decide-/post-harnessen som kjører porten (#1655)
   // Appens innloggings-, konto- og butikkflater — ikke hele appen (#2134, eierbeslutning
   // 2026-09-16). Fra #1944 til #2134 sto `native/app/**` her i sin helhet, fordi PR #1943
   // (appens utlogging) ble auto-merget forbi eieren: web-radene over dekker webbens
@@ -42,24 +54,26 @@ export const NEVER_AUTO_MERGE_GLOBS = [
   // Derfor står bare det som faktisk sved i #1943 igjen, pluss butikkbygg og
   // signering. Ny auth-flate i appen? Legg fila til her — det er prisen for at resten
   // auto-merges. `docs/native/**` er fortsatt utenfor.
-  'native/app/src/screens/Login.tsx',
-  'native/app/src/screens/DeleteAccount.tsx',
-  'native/app/src/session.tsx',
-  'native/app/src/data/account.ts',
-  'native/app/src/data/logout.ts',
-  'native/app/src/data/webApi.ts',
-  'native/app/src/supabase.ts',
-  'native/app/src/lib/loginCopy.ts',
-  'native/app/src/lib/accountCopy.ts',
-  'native/app/app.json',
-  'native/app/app.config.ts',
-  'native/app/scripts/**',
+  { glob: 'native/app/src/screens/Login.tsx', ownerReason: AUTH },
+  { glob: 'native/app/src/screens/DeleteAccount.tsx', ownerReason: AUTH },
+  { glob: 'native/app/src/session.tsx', ownerReason: AUTH },
+  { glob: 'native/app/src/data/account.ts', ownerReason: AUTH },
+  { glob: 'native/app/src/data/logout.ts', ownerReason: AUTH },
+  { glob: 'native/app/src/data/webApi.ts', ownerReason: AUTH },
+  { glob: 'native/app/src/supabase.ts', ownerReason: AUTH },
+  { glob: 'native/app/src/lib/loginCopy.ts', ownerReason: AUTH },
+  { glob: 'native/app/src/lib/accountCopy.ts', ownerReason: AUTH },
+  { glob: 'native/app/app.json', ownerReason: APP_BUILD },
+  { glob: 'native/app/app.config.ts', ownerReason: APP_BUILD },
+  { glob: 'native/app/scripts/**', ownerReason: APP_BUILD },
   // Skallenes signerings-, rettighets- og dyplenke-flater (#1956): `App.entitlements`,
   // `Info.plist`, `capacitor.config.json`, `AndroidManifest.xml`, `twa-manifest.json`.
   // `native/ios/` er nød-utgangen etter slipp til N8 er lukket og én app-oppdatering er ute.
-  'native/ios/**',
-  'native/android/**',
-] as const;
+  { glob: 'native/ios/**', ownerReason: APP_BUILD },
+  { glob: 'native/android/**', ownerReason: APP_BUILD },
+];
+
+export const NEVER_AUTO_MERGE_GLOBS: readonly string[] = NEVER_AUTO_MERGE_RULES.map((r) => r.glob);
 
 // Tre glob-former: `**/mid/**` (katalog hvor som helst), `prefix/**` (under prefiks),
 // og eksakt filnavn. `[locale]`/`(auth)` er literale sti-segmenter — ikke regex.
@@ -219,6 +233,31 @@ export function classifyAutoMerge(input: AutoMergeInput): AutoMergeClassificatio
   if (isUserVisibleByCommits(input.commitMessages) && !input.prLabels.includes(STAGING_VERIFIED_LABEL))
     return { outcome: 'card', demotedReason: 'bruker-synlig uten staging-verified' };
   return { outcome: 'auto-merge', demotedReason: null };
+}
+
+/**
+ * ALLE grunnene til at PR-en venter på eieren, i produktspråk (#2147) — til
+ * knapp-kortets «⏳ Venter på deg: …»-linje. Unike, i portrekkefølge. Samme porter
+ * som `classifyAutoMerge`, men uten tidlig retur, så kortet kan si «rører
+ * innlogging/konto, mangler staging-bevis» i stedet for bare den første.
+ * Invariant (testet): `classifyAutoMerge(input).outcome === 'card'` ⇔ lista er ikke tom.
+ */
+export function ownerWaitReasons(input: AutoMergeInput): string[] {
+  const reasons = new Set<string>();
+  if (input.baseRef !== 'main') reasons.add('går ikke mot main');
+  if (WIP_RE.test(input.title)) reasons.add('merket som WIP');
+  for (const rule of NEVER_AUTO_MERGE_RULES) {
+    if (input.changedFiles.some((f) => matchesGlob(f, rule.glob))) reasons.add(rule.ownerReason);
+  }
+  if (
+    hasChoiceMarker(input.body) ||
+    input.commentBodies.some(hasChoiceMarker) ||
+    input.needsDecisionIssue
+  )
+    reasons.add('produktvalg i PR-en');
+  if (isUserVisibleByCommits(input.commitMessages) && !input.prLabels.includes(STAGING_VERIFIED_LABEL))
+    reasons.add('mangler staging-bevis');
+  return [...reasons];
 }
 
 // ── Merge-mekanikk (post-steget) ─────────────────────────────────────────────
