@@ -14,6 +14,7 @@ import {
   type ScoreRow,
 } from '@/lib/supabase/queryFragments';
 import { computeLeaderboard } from '@/lib/scoring';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
 import {
   isStablefordFamily,
   isScrambleFamily,
@@ -739,43 +740,29 @@ async function buildTexasScrambleRecipients(
     return [];
   }
 
-  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
-  const result = computeLeaderboard({
-    game: {
-      id: gameId,
-      // Sender det reelle game_mode-et (texas_scramble, ambrose, eller
-      // florida_scramble) slik at mode-router-en velger riktig compute-funksjon.
-      // Alle returnerer kind: 'texas_scramble', så resultsjekken nedenfor holder.
-      game_mode: game.game_mode,
-      mode_config: game.mode_config,
-    },
-    players: ranked.players.map((row) => ({
-      userId: row.user_id,
-      teamNumber: row.team_number,
-      flightNumber: null,
-      courseHandicap: row.course_handicap ?? 0,
-      // #240 — Texas/Ambrose spiller én ball per lag, par avgjøres av
-      // lag-kapteinens tee_gender (lex-min userId). Sender per-spiller teeGender.
-      teeGender: row.tee_gender,
-    })),
-    holes: (holesRes.data ?? []).map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — per-kjønn-par-tabell. Texas-modulen velger kaptein-varianten
-      // via parFor() ved per-hull-utregning.
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: ranked.scores.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  });
+  // #2067: the same context the result page builds (`buildUniformContext`).
+  // Scramble is one ball per team, so a captain who deleted their account
+  // mid-round stays on the team there and the team's entered holes still
+  // count; an inline withdrawn filter dropped them. The mode router gets the
+  // real game_mode (texas_scramble, ambrose or florida_scramble); all return
+  // kind 'texas_scramble', so the result check below holds.
+  const result = computeLeaderboard(
+    buildUniformContext({
+      gameId,
+      gameMode: game.game_mode,
+      modeConfig: game.mode_config,
+      players: playerRows.map((row) => ({
+        user_id: row.user_id,
+        team_number: row.team_number ?? 0,
+        course_handicap: row.course_handicap,
+        tee_gender: row.tee_gender,
+        withdrawn_at: row.withdrawn_at,
+        users: row.users ? { name: row.users.name, nickname: null } : null,
+      })),
+      holesRows: holesRes.data ?? [],
+      scoresRows: scoresRes.data ?? [],
+    }),
+  );
 
   // Defensive fallback: mode-router gav noe uventet. Fall til best-ball-copy.
   if (result.kind !== 'texas_scramble') {
@@ -800,9 +787,16 @@ async function buildTexasScrambleRecipients(
     teamTotalGross: number;
     memberUserIds: string[];
   };
+  // #2057/#2067: a withdrawn member can still be on a one-ball team line, but
+  // gets the neutral mail and is left out of the partners' lists.
+  const withdrawnIds = new Set(
+    playerRows.filter((row) => row.withdrawn_at != null).map((row) => row.user_id),
+  );
   const teamCtxByUserId = new Map<string, TeamContext>();
   for (const team of result.teams) {
-    const memberUserIds = team.members.map((m) => m.userId);
+    const memberUserIds = team.members
+      .map((m) => m.userId)
+      .filter((id) => !withdrawnIds.has(id));
     const ctx: TeamContext = {
       teamRank: team.rank,
       teamTotalNet: team.totalNet,

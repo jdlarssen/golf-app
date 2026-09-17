@@ -10,6 +10,7 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import type { SideCategoryAward } from '@/lib/scoring/sideTournament';
 import { computeLeaderboard } from '@/lib/leaderboard';
+import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import type { LbPlayer, LbHole, LbScore } from '@/lib/leaderboard';
 import { calculateSideTournament } from '@/lib/scoring/sideTournament';
 import { buildSideTournamentInput } from '@/lib/scoring/sideTournamentInput';
@@ -166,7 +167,15 @@ export async function computeSharerSideAwards(
     strokeIndex: h.stroke_index,
   }));
 
-  const scores: LbScore[] = rawScores
+  // #2067: in the one-ball formats a captain who deleted their account
+  // mid-round is withdrawn but still holds the team's entered holes — fold
+  // them onto the team's row owner before the withdrawn filter, as the
+  // leaderboard's side tournament does.
+  const scores: LbScore[] = foldTeamScoreRows({
+    roster: rawPlayers,
+    rows: rawScores,
+    mode: game.game_mode,
+  })
     .filter((s) => !withdrawnIds.has(s.user_id))
     .map((s) => ({
       userId: s.user_id,

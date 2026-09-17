@@ -1346,6 +1346,65 @@ describe('buildGameFinishedRecipients', () => {
     });
   });
 
+  it('texas (#2067): kapteinen slettet kontoen midt i runden — lagets hull og plassering står', async () => {
+    // 2 lag × 2 spillere, 2 hull par 4, gross. Lag 1: kaptein u1 er TRUKKET
+    // (kontosletting, 0174) og førte hull 1 (4), makker u2 førte hull 2 (4) på
+    // sin rad. Lag 2: kaptein u3 5 + 5. Lagets hull følger laget → lag 1 = 8
+    // og vinner. Den trukne får nøytral mail, og makkerens partnerliste tar ikke med den trukne.
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          { user_id: 'u1', team_number: 1, course_handicap: 0, withdrawn_at: '2026-09-17T10:00:00Z', users: { email: 'slettet@example.com', name: 'Slettet bruker' } },
+          { user_id: 'u2', team_number: 1, course_handicap: 0, withdrawn_at: null, users: { email: 'bjorn@example.com', name: 'Bjørn Hansen' } },
+          { user_id: 'u3', team_number: 2, course_handicap: 0, withdrawn_at: null, users: { email: 'cecilie@example.com', name: 'Cecilie Berg' } },
+          { user_id: 'u4', team_number: 2, course_handicap: 0, withdrawn_at: null, users: { email: 'david@example.com', name: 'David Knutsen' } },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u2', hole_number: 2, strokes: 4 },
+          { user_id: 'u3', hole_number: 1, strokes: 5 },
+          { user_id: 'u3', hole_number: 2, strokes: 5 },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 },
+          { hole_number: 2, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 2 },
+        ],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      {
+        course_id: 'c1',
+        game_mode: 'texas_scramble',
+        mode_config: { ...TEXAS_2_CONFIG, team_handicap_pct: 0 },
+      },
+    );
+
+    expect(recipients.find((r) => r.userId === 'u2')?.mode).toEqual({
+      kind: 'texas_scramble',
+      teamRank: 1,
+      teamTotalNet: 8,
+      teamTotalGross: 8,
+      teamPartnerNames: [],
+      totalTeams: 2,
+    });
+    expect(recipients.find((r) => r.userId === 'u3')?.mode).toMatchObject({
+      teamRank: 2,
+      teamTotalNet: 10,
+    });
+    expect(recipients.find((r) => r.userId === 'u1')?.mode).toBeUndefined();
+  });
+
   // #2057: en spiller som har trukket seg (withdrawn_at satt) skal ikke
   // rangeres i mailen, ikke telle i totalen og ikke dra laget ned — samme
   // regel som resultatsiden (buildUniformContext). Den trukne får fortsatt
