@@ -195,7 +195,7 @@ docs/loops/dok-avstemmeren.md steg 1 (Management-API, read-only SELECT).
 Idempotens- og kjernetabell-assertions grønne; tabell-antall $N_TABLES.
 
 Refs #1078" || fail_closed "commit feilet"
-git push origin "$BRANCH" || fail_closed "push av $BRANCH feilet"
+robot_push "$BRANCH" || fail_closed "push av $BRANCH feilet"
 
 PR_BODY="$TMP/prbody.md"
 cat > "$PR_BODY" <<EOF
