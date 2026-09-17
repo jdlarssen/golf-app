@@ -699,3 +699,43 @@ describe('texasScramble.compute — rangert retur-rekkefølge (#1591)', () => {
     expect(result.teams[0].totalNet).toBe(72);
   });
 });
+
+describe('texasScramble.compute — flere enn fire lag (#2148)', () => {
+  it('ti lag à fire rangeres alle, med lag 5–10 like fullverdige som 1–4', () => {
+    // Lag k har 72 + (10 - k) netto: lag 10 vinner, lag 1 er sist.
+    const players: ScoringPlayer[] = [];
+    const scores: ScoringHoleScore[] = [];
+    for (let team = 1; team <= 10; team++) {
+      for (let m = 0; m < 4; m++) {
+        players.push({
+          userId: `t${String(team).padStart(2, '0')}-${m}`,
+          teamNumber: team,
+          flightNumber: team,
+          courseHandicap: 0,
+        });
+      }
+      const captain = `t${String(team).padStart(2, '0')}-0`;
+      for (let h = 1; h <= 18; h++) {
+        scores.push({ userId: captain, holeNumber: h, gross: h === 1 ? 4 + (10 - team) : 4 });
+      }
+    }
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(18),
+      scores,
+      modeConfig: {
+        kind: 'texas_scramble',
+        team_size: 4,
+        teams_count: 10,
+        team_handicap_pct: 0,
+      },
+    });
+    const result = compute(ctx);
+    expect(result.teams).toHaveLength(10);
+    const ranked = [...result.teams].sort((a, b) => a.rank - b.rank);
+    expect(ranked.map((t) => t.teamNumber)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+    expect(ranked.map((t) => t.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(ranked[0].totalNet).toBe(72);
+    expect(ranked[9].totalNet).toBe(81);
+  });
+});

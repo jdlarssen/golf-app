@@ -447,3 +447,41 @@ describe('compute — lag uten skår rangeres sist (#635)', () => {
     expect(team1.total).toBe(72);
   });
 });
+
+describe('compute — flere enn fire par (#2148)', () => {
+  it('seks par med flight 1, 1, 2, 2, 3, 3 rangeres alle', () => {
+    const holes = Array.from({ length: 18 }, (_, i) => ({
+      number: i + 1,
+      par: 4,
+      strokeIndex: i + 1,
+    }));
+    const players: ScoringContext['players'] = [];
+    const scores: ScoringHoleScore[] = [];
+    for (let team = 1; team <= 6; team++) {
+      const flight = Math.ceil(team / 2);
+      players.push({ userId: `p${team}a`, teamNumber: team, flightNumber: flight, courseHandicap: 0 });
+      players.push({ userId: `p${team}b`, teamNumber: team, flightNumber: flight, courseHandicap: 0 });
+      // Lag k: best net 4 per hull, pluss (6 - k) ekstra på hull 1 → lag 6 vinner.
+      for (let h = 1; h <= 18; h++) {
+        scores.push({ userId: `p${team}a`, holeNumber: h, gross: h === 1 ? 4 + (6 - team) : 4 });
+        scores.push({ userId: `p${team}b`, holeNumber: h, gross: h === 1 ? 4 + (6 - team) : 5 });
+      }
+    }
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 6 },
+      },
+      players,
+      holes,
+      scores,
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
+    expect(result.teams).toHaveLength(6);
+    const ranked = [...result.teams].sort((a, b) => a.rank - b.rank);
+    expect(ranked.map((t) => t.teamNumber)).toEqual([6, 5, 4, 3, 2, 1]);
+    expect(ranked.map((t) => t.total)).toEqual([72, 73, 74, 75, 76, 77]);
+  });
+});

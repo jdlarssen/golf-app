@@ -583,3 +583,23 @@ describe('shamble.compute — lag uten skår rangeres sist (#635)', () => {
     expect(team1.totalScore).toBe(144);
   });
 });
+
+describe('shamble.compute — flere enn fire lag (#2148)', () => {
+  it('ti lag à fire rangeres alle, lag 10 vinner', () => {
+    const players: ScoringPlayer[] = [];
+    const scores: ScoringHoleScore[] = [];
+    for (let team = 1; team <= 10; team++) {
+      const ids = [0, 1, 2, 3].map((m) => `t${String(team).padStart(2, '0')}-${m}`);
+      ids.forEach((id) => players.push(makePlayer(id, team)));
+      for (let h = 1; h <= 18; h++) {
+        const gross = h === 1 ? 4 + (10 - team) : 4;
+        scores.push(...holeScores(h, ids.map((id) => [id, gross] as [string, number])));
+      }
+    }
+    const result = compute(makeCtx({ players, holes: par4Holes(18), scores }));
+    expect(result.teams).toHaveLength(10);
+    const ranked = [...result.teams].sort((a, b) => a.rank - b.rank);
+    expect(ranked.map((t) => t.teamNumber)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
+    expect(ranked.map((t) => t.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+});
