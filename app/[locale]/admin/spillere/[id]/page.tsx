@@ -146,9 +146,9 @@ export default async function PlayerDetailPage({
       {(status === 'updated' || errorMessage) && (
         <div className="mt-4 space-y-2">
           {status === 'updated' && (
-            <Banner tone="success">{tProfile('updatedBanner')}</Banner>
+            <Banner tone="success" testId="admin-player-updated">{tProfile('updatedBanner')}</Banner>
           )}
-          {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+          {errorMessage && <Banner tone="error" testId="admin-player-error">{errorMessage}</Banner>}
         </div>
       )}
 
@@ -184,7 +184,7 @@ export default async function PlayerDetailPage({
           className="rounded-xl border border-border bg-surface p-4"
           style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
         >
-          <form action={updateUser} className="space-y-3">
+          <form action={updateUser} className="space-y-3" data-testid="admin-player-form">
             <input type="hidden" name="id" value={target.id} />
             <Input
               id="name"
