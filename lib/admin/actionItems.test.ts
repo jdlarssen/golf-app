@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeActionItemCounts,
+  holesFilledByGame,
   totalActionableGames,
   type ActiveGameInput,
   type ActivePlayerInput,
+  type HolesRosterRow,
+  type HolesScoreRow,
 } from './actionItems';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -198,5 +201,151 @@ describe('totalActionableGames', () => {
       pendingApproval: [{ gameId: 'g2', name: 'Y' }],
     };
     expect(totalActionableGames(counts)).toBe(2);
+  });
+});
+
+// ─── holesFilledByGame (#2045) ────────────────────────────────────────────
+
+/**
+ * Type A: stripa teller hull med samme hjem som purringen (#2017) —
+ * `filledHolesByPlayer`, gruppert per spill med spillets modus. Eierskaps-
+ * reglene har egne suiter; her bevises at limet grupperer og spør riktig.
+ */
+describe('holesFilledByGame', () => {
+  type Roster = HolesRosterRow;
+  type Score = HolesScoreRow;
+
+  const member = (
+    game_id: string,
+    user_id: string,
+    team_number: number | null,
+    withdrawn_at: string | null = null,
+  ): Roster => ({ game_id, user_id, team_number, withdrawn_at });
+
+  const rows = (game_id: string, user_id: string, from: number, to: number): Score[] =>
+    Array.from({ length: to - from + 1 }, (_, i) => ({
+      game_id,
+      user_id,
+      hole_number: from + i,
+    }));
+
+  const asObject = (m: Map<string, number>) => Object.fromEntries(m);
+
+  it('patsome: makkeren med 1–6 og kapteinens 7–18 er ferdig, og spillet flagges når kapteinen har levert', () => {
+    const holes = holesFilledByGame({
+      games: [{ id: 'g1', game_mode: 'patsome' }],
+      players: [member('g1', 'a', 1), member('g1', 'b', 1)],
+      scores: [...rows('g1', 'a', 1, 18), ...rows('g1', 'b', 1, 6)],
+    });
+
+    expect(asObject(holes)).toEqual({ 'g1:a': 18, 'g1:b': 18 });
+
+    const counts = computeActionItemCounts(
+      [makeGame({ id: 'g1' })],
+      [
+        makePlayer('g1', { holesFilled: holes.get('g1:a')!, submittedAt: '2026-09-17T10:00:00Z' }),
+        makePlayer('g1', { holesFilled: holes.get('g1:b')! }),
+      ],
+    );
+    expect(counts.unsubmitted).toEqual([{ gameId: 'g1', name: 'Tirsdagsrunde' }]);
+  });
+
+  it('patsome: makkerens løse rader på 7–18 og kapteinens rader på 1–6 teller ikke for makkeren', () => {
+    const holes = holesFilledByGame({
+      games: [{ id: 'g1', game_mode: 'patsome' }],
+      players: [member('g1', 'a', 1), member('g1', 'b', 1)],
+      // Kapteinen har bare 4BBB-halvdelen; b har egne 1–5 og data-rester på 7–18.
+      scores: [...rows('g1', 'a', 1, 6), ...rows('g1', 'b', 1, 5), ...rows('g1', 'b', 7, 18)],
+    });
+
+    expect(asObject(holes)).toEqual({ 'g1:a': 6, 'g1:b': 5 });
+  });
+
+  it('patsome: makker med 5 egne rader og ferdig lagkort er fortsatt midt i runden', () => {
+    const holes = holesFilledByGame({
+      games: [{ id: 'g1', game_mode: 'patsome' }],
+      players: [member('g1', 'a', 1), member('g1', 'b', 1)],
+      scores: [...rows('g1', 'a', 1, 18), ...rows('g1', 'b', 1, 5)],
+    });
+
+    expect(holes.get('g1:b')).toBe(17);
+    const counts = computeActionItemCounts(
+      [makeGame({ id: 'g1' })],
+      [
+        makePlayer('g1', { holesFilled: holes.get('g1:a')!, submittedAt: '2026-09-17T10:00:00Z' }),
+        makePlayer('g1', { holesFilled: holes.get('g1:b')! }),
+      ],
+    );
+    expect(counts.unsubmitted).toEqual([]);
+  });
+
+  it('scramble: lagkameraten uten egne rader får kapteinens 18', () => {
+    const holes = holesFilledByGame({
+      games: [{ id: 'g1', game_mode: 'texas_scramble' }],
+      players: [member('g1', 'a', 1), member('g1', 'b', 1)],
+      scores: rows('g1', 'a', 1, 18),
+    });
+
+    expect(asObject(holes)).toEqual({ 'g1:a': 18, 'g1:b': 18 });
+  });
+
+  it('flere spill med ulike modi telles hver for seg, uten lekkasje mellom spill', () => {
+    const holes = holesFilledByGame({
+      games: [
+        { id: 'g1', game_mode: 'solo_strokeplay' },
+        { id: 'g2', game_mode: 'patsome' },
+      ],
+      players: [
+        // Samme brukere i begge spill, og i g1 har de team_number satt.
+        member('g1', 'a', 1),
+        member('g1', 'b', 1),
+        member('g2', 'a', 1),
+        member('g2', 'b', 1),
+      ],
+      scores: [
+        ...rows('g1', 'a', 1, 18),
+        ...rows('g1', 'b', 1, 4),
+        ...rows('g2', 'a', 1, 9),
+        ...rows('g2', 'b', 1, 6),
+      ],
+    });
+
+    expect(asObject(holes)).toEqual({
+      // Slagspill kollapser ikke: egne rader.
+      'g1:a': 18,
+      'g1:b': 4,
+      // Patsome: b har 6 egne + kapteinens 7–9.
+      'g2:a': 9,
+      'g2:b': 9,
+    });
+  });
+
+  it('trukket kaptein: eierskapet går videre, og den trukne havner aldri i unsubmitted', () => {
+    const holes = holesFilledByGame({
+      games: [{ id: 'g1', game_mode: 'texas_scramble' }],
+      players: [
+        member('g1', 'a', 1, '2026-09-17T09:00:00Z'),
+        member('g1', 'b', 1),
+        member('g1', 'c', 1),
+      ],
+      // a (trukket, lex-min) har 18 rader; b er ny eier og har 18.
+      scores: [...rows('g1', 'a', 1, 18), ...rows('g1', 'b', 1, 18)],
+    });
+
+    expect(holes.get('g1:b')).toBe(18);
+    expect(holes.get('g1:c')).toBe(18);
+
+    const counts = computeActionItemCounts(
+      [makeGame({ id: 'g1' })],
+      [
+        makePlayer('g1', {
+          holesFilled: holes.get('g1:a')!,
+          withdrawnAt: '2026-09-17T09:00:00Z',
+        }),
+        makePlayer('g1', { holesFilled: holes.get('g1:b')!, submittedAt: '2026-09-17T10:00:00Z' }),
+        makePlayer('g1', { holesFilled: holes.get('g1:c')!, submittedAt: '2026-09-17T10:00:00Z' }),
+      ],
+    );
+    expect(counts.unsubmitted).toEqual([]);
   });
 });
