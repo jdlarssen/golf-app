@@ -140,12 +140,18 @@ export async function mergeServerScore(
  * gjenoppbygging der ville født en zombie-kanal ved unmount. Retries parkeres
  * mens enheten er offline og tas opp igjen når nettet er tilbake. Den nye
  * kanalen subscribes FØR den gamle fjernes, fordi `removeChannel` på den siste
- * kanalen river hele socketen.
+ * kanalen river hele socketen. Postgres Changes spilles aldri av på nytt, så
+ * første `SUBSCRIBED` etter en `CHANNEL_ERROR`/`TIMED_OUT` eller en
+ * gjenoppbygging kaller `onResubscribed`: skjermen leser selv det bruddet tok
+ * (#2093). Første rene tilkobling kaller den ikke — skjermen leser ved åpning.
  */
 function subscribeRealtimeChannel(
   topic: string,
   configure: (channel: RealtimeChannel) => RealtimeChannel,
-  onStatus?: (status: RealtimeStatus) => void,
+  hooks: {
+    onStatus?: (status: RealtimeStatus) => void;
+    onResubscribed?: () => void;
+  } = {},
 ): () => void {
   let unsubscribed = false;
   let channelRef: RealtimeChannel | null = null;
@@ -157,8 +163,13 @@ function subscribeRealtimeChannel(
   let parkedUntilOnline = false;
   /** True fra `openChannel` starter til kallet har landet. */
   let rebuildInProgress = false;
+  /**
+   * En feil eller en gjenoppbygging siden siste `SUBSCRIBED`: noe kan ha blitt
+   * skrevet mens ingen lyttet.
+   */
+  let outageSinceSubscribed = false;
 
-  const report = (status: RealtimeStatus) => onStatus?.(status);
+  const report = (status: RealtimeStatus) => hooks.onStatus?.(status);
 
   async function openChannel(): Promise<void> {
     if (retryTimer) {
@@ -215,6 +226,8 @@ function subscribeRealtimeChannel(
     retryTimer = setTimeout(() => {
       retryTimer = null;
       if (unsubscribed) return;
+      // Dekker også en første åpning som kastet før noen status kom.
+      outageSinceSubscribed = true;
       openChannel().catch((err: unknown) => {
         console.error('[realtime] gjenoppbygging feilet', err);
         scheduleRebuild();
@@ -232,11 +245,16 @@ function subscribeRealtimeChannel(
       // Phoenix kom seg selv; ingenting venter på nett lenger.
       parkedUntilOnline = false;
       report('tilkoblet');
+      if (outageSinceSubscribed) {
+        outageSinceSubscribed = false;
+        hooks.onResubscribed?.();
+      }
       return;
     }
     // Alt annet som ikke er en feil — særlig CLOSED, som vår egen
     // removeChannel fyrer — lar vi ligge.
     if (status !== 'CHANNEL_ERROR' && status !== 'TIMED_OUT') return;
+    outageSinceSubscribed = true;
     report('feil');
     consecutiveFailures += 1;
     if (consecutiveFailures < REBUILD_AFTER_CONSECUTIVE_FAILURES) return;
@@ -290,12 +308,16 @@ async function mergeIncoming(
   onMerge?.(outcome);
 }
 
-/** Abonner på score-endringer for ett spill. */
+/**
+ * Abonner på score-endringer for ett spill. `onResubscribed` fyrer når kanalen
+ * er tilbake etter et brudd (#2093) — da må skjermen hente slagene selv.
+ */
 export function subscribeGameScores(
   gameId: string,
   handlers: {
     onStatus?: (status: RealtimeStatus) => void;
     onMerge?: (outcome: MergeOutcome) => void;
+    onResubscribed?: () => void;
   } = {},
 ): () => void {
   return subscribeRealtimeChannel(
@@ -316,6 +338,6 @@ export function subscribeGameScores(
           void mergeIncoming(row as ScoreRowFromDb, handlers.onMerge);
         },
       ),
-    handlers.onStatus,
+    handlers,
   );
 }

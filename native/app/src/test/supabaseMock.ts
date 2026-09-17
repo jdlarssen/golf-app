@@ -102,9 +102,29 @@ export function routeFrom(plan: Record<string, QueryStub[]>): void {
  * lokalt etterpå. Tillegget er rent additivt, så suitene som bare bruker `rpc`
  * og `from` merker ingenting.
  */
+/**
+ * En realtime-kanal slik datalaget ser den: `on` kjeder, og `subscribe` lagrer
+ * statuscallbacken så testen kan fyre `SUBSCRIBED`/`CHANNEL_ERROR` selv.
+ */
+export interface FakeRealtimeChannel {
+  topic: string;
+  status: ((status: string) => void) | null;
+  on: (...args: unknown[]) => FakeRealtimeChannel;
+  subscribe: (callback?: (status: string) => void) => FakeRealtimeChannel;
+}
+
+/**
+ * Kanalene som lever nå, eldste først. Kom til med #2093: gjenoppkoblingen er
+ * en regel om statusoverganger, og den kan bare testes når testen eier dem.
+ */
+export const realtimeChannels: FakeRealtimeChannel[] = [];
+
 export const supabase: {
   rpc: jest.Mock;
   from: jest.Mock;
+  realtime: { setAuth: jest.Mock };
+  channel: jest.Mock;
+  removeChannel: jest.Mock;
   auth: {
     getSession: jest.Mock;
     signOut: jest.Mock;
@@ -116,6 +136,25 @@ export const supabase: {
 } = {
   rpc: jest.fn(),
   from: jest.fn(),
+  realtime: { setAuth: jest.fn(async () => undefined) },
+  channel: jest.fn((topic: string) => {
+    const channel: FakeRealtimeChannel = {
+      topic,
+      status: null,
+      on: () => channel,
+      subscribe: (callback) => {
+        channel.status = callback ?? null;
+        return channel;
+      },
+    };
+    realtimeChannels.push(channel);
+    return channel;
+  }),
+  removeChannel: jest.fn(async (channel: FakeRealtimeChannel) => {
+    const index = realtimeChannels.indexOf(channel);
+    if (index >= 0) realtimeChannels.splice(index, 1);
+    return 'ok';
+  }),
   auth: {
     getSession: jest.fn(),
     signOut: jest.fn(),
