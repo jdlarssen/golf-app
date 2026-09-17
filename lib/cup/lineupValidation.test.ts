@@ -306,9 +306,32 @@ describe('validateStoredLineups', () => {
     ).toEqual({ ok: false, error: 'lineup_squad_changed' });
   });
 
-  it('rejects a lineup that lost rows since submission', () => {
+  // #2085: a stored lineup can only shrink after submission when something
+  // removed a slot row (deleting a player cascades it, 0174). "Fill every
+  // slot" is a captain's message the organiser cannot act on; "unlock the
+  // lineup" is.
+  it('rejects a lineup that lost rows since submission as a squad change', () => {
     expect(
       validateStoredLineups({ ...base, team1: [base.team1[0]] }),
-    ).toEqual({ ok: false, error: 'lineup_incomplete' });
+    ).toEqual({ ok: false, error: 'lineup_squad_changed' });
+  });
+
+  it('a lost row wins over every other player still being valid', () => {
+    expect(
+      validateStoredLineups({
+        ...base,
+        slotCount: 2,
+        team1: [
+          ...base.team1,
+          { slotIndex: 1, seat: 1, userId: 'c' },
+        ],
+        team2: [
+          ...base.team2,
+          { slotIndex: 1, seat: 1, userId: 'z' },
+          { slotIndex: 1, seat: 2, userId: 'w' },
+        ],
+        squad2: ['x', 'y', 'z', 'w'],
+      }),
+    ).toEqual({ ok: false, error: 'lineup_squad_changed' });
   });
 });
