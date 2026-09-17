@@ -57,9 +57,35 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
    OTP-mint og tar mobil-skjermbilder. Best-effort — feil her feller ikke kortet.
    Tas for BEGGE kort-typene (auto-merge OG knapp) når `is_gui`.
 4. **`post-pr-card.ts` — merge/post → dispatch → label:**
-   - `outcome: 'card'` → dagens knapp-kort: PR-tittel (+ 📝 Draft) · norsk
-     oppsummering · PR-lenke · grønn **✅ Merge**-knapp (`custom_id: merge_pr:<N>`)
-     + lenke-knapp. Poster FØRST, legger så dedup-labelen `discord:merge-kort`.
+   - `outcome: 'card'` → knapp-kortet: PR-tittel (+ 📝 Draft) · `## Funksjonelt`-
+     seksjonen fra PR-body-en (maks 600 tegn, se under) · «⏳ Venter på deg: …» ·
+     PR-lenke · grønn **✅ Merge**-knapp (`custom_id: merge_pr:<N>`) + lenke-knapp.
+     Poster FØRST, legger så dedup-labelen `discord:merge-kort`.
+
+**Knapp-kortets innhold (#2147).** Eieren skal se hva PR-en gjør og hvorfor den
+venter, uten å åpne GitHub:
+
+```
+**PR #N** — <tittel>
+<Funksjonelt>          ELLER   _(ingen funksjonell beskrivelse i PR-en)_ + første avsnitt
+⏳ Venter på deg: <grunn 1>, <grunn 2>
+<lenke>
+```
+
+- `extractFunctionalSection` (`lib/loops/prCard.ts`) leser teksten under første heading
+  som starter med «Funksjonelt», fram til neste heading. Arbeiderens egen linje
+  «Kan merges: ja» / «Venter på deg: …» fjernes: kortet regner ut den linja selv fra
+  portene, som vet mer enn arbeideren (f.eks. om `staging-verified`-labelen).
+- Grunnene kommer fra `ownerWaitReasons` (`lib/loops/autoMerge.ts`): ALLE portene som
+  traff, unike og i portrekkefølge. Aldri-lista-grunnen står per glob i
+  `NEVER_AUTO_MERGE_RULES` (`ownerReason`), som er ordlistas ene hjem. De andre portene:
+  valg-markør eller `autonomy:needs-decision` → «produktvalg i PR-en», staging-porten →
+  «mangler staging-bevis», WIP → «merket som WIP», base ≠ main → «går ikke mot main».
+- Faller auto-mergen tilbake til knapp-kortet (merge feilet, mangler token), står det
+  «automatisk merge gikk ikke». Det samme vises for en plan uten `waitReasons` (skrevet
+  før #2147).
+- Kvitteringskortet er uendret (eierbeslutning 2026-09-17): morgenbriefen dekker de
+  automatisk mergede PR-ene.
    - `outcome: 'auto-merge'` → `mergePullRequest` (re-verifiser åpen + ikke draft
      (fail-closed, #1516) + CI grønn mot
      `headSha`, `PUT …/merge` rebase + `sha`-guard). Suksess → **lukk issuene**
@@ -118,12 +144,13 @@ vinner:
    → `pending`, aldri `green`. Docs-only-PR-er er uendret (gaten er av).
 2. **`card`** (knapp-kort) når NOEN treffer:
    - base-branch ≠ `main`, eller tittelen inneholder ordet `WIP` (case-insensitivt).
-   - **Aldri-lista** (`NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
+   - **Aldri-lista** (`NEVER_AUTO_MERGE_RULES`, globene avledet som
+     `NEVER_AUTO_MERGE_GLOBS`): minst én endret fil rører
      `supabase/**`, `**/slett/**`, `**/slett-konto/**`, `proxy.ts`, `lib/auth/**`,
      `lib/supabase/**`, `app/api/**`, `app/[locale]/(auth)/**`, `**/betaling/**`,
      `lib/payment/**`, `.github/**`, `.githooks/**`, `.claude/**`, `lib/loops/**`,
      `scripts/loops/**`, appens innloggings-, konto- og butikkflater under `native/app/`
-     (fillista i `NEVER_AUTO_MERGE_GLOBS`, #2134), `native/ios/**` eller `native/android/**`.
+     (fillista i `NEVER_AUTO_MERGE_RULES`, #2134), `native/ios/**` eller `native/android/**`.
      Migrasjoner, destruktive flyter,
      auth/sikkerhet, penger, enforcement-flater, merge-porten selv og appens
      auth-, konto- og butikkflater beholder menneske-porten (fail-closed, bredere enn issue-ets
@@ -160,7 +187,9 @@ vinner:
 3. **`auto-merge`** ellers.
 
 Hver degradering fra auto-merge til knapp-kort logges med `demotedReason` — ingen
-stille tak.
+stille tak. `demotedReason` er loggstrengen for den FØRSTE porten som traff; kortet
+viser i stedet alle grunnene i produktspråk (`ownerWaitReasons`, bæres i planen som
+`waitReasons`). Ny rad på aldri-lista må få en `ownerReason`, ellers feiler testen.
 
 **main-verify-dispatch:** en GITHUB_TOKEN-merge trigger ALDRI `main-verify.yml`
 (#1075-nettet) via push (anti-rekursjon), så post-steget dispatcher det eksplisitt
