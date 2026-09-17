@@ -181,6 +181,30 @@ export async function classifyWithCiGate({
   return 'green';
 }
 
+export type RelayHandOffOpts = {
+  /** `GITHUB_EVENT_NAME` for kjøringen (`undefined` utenfor Actions). */
+  event: string | undefined;
+  /** `expectsRealCi(endrede filer)` — false = docs-only, ingen ci.yml kommer. */
+  expectsCi: boolean;
+  /** Registrerte ci.yml-kjøringer for head-SHA-en. */
+  ciRuns: CiRunsLookup;
+};
+
+/**
+ * Skal en ready-flippet kjøring (`pull_request`) gi fra seg til relékjøringen
+ * (#2095)? Kjører ci.yml fortsatt for head-SHA-en, er en `workflow_run`-fyring
+ * garantert når den lander — og den kansellerer uansett den ventende kjøringen
+ * via concurrency-gruppa, så ventingen ble stående som `cancelled` og så ut som
+ * en flake. Overleveringen gjør byttet planlagt og grønt.
+ *
+ * Fail-closed: feilet oppslag eller ingen registrert kjøring → vent som før.
+ * `workflow_dispatch` (re-post-verktøyet) og tvillingen (`workflow_run`) venter alltid.
+ */
+export function shouldHandOffToRelay({ event, expectsCi, ciRuns }: RelayHandOffOpts): boolean {
+  if (event !== 'pull_request' || !expectsCi || !ciRuns.ok) return false;
+  return ciRuns.runs.some((r) => r.status !== 'completed');
+}
+
 export type ChecksSettleOpts = {
   /** Henter ferske check-runs for PR-head-en (systemgrensen — injiseres). */
   fetchRuns: () => Promise<CheckRun[]>;
