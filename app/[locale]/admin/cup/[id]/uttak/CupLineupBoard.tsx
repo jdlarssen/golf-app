@@ -117,21 +117,30 @@ export function CupLineupBoard({
     INITIAL,
   );
 
-  // #2087: which session the last action was about. Set before dispatching,
-  // so the error lands on the card whose button was pressed. The shared
-  // pending state disables every button, so only one action runs at a time.
-  const [actionSessionId, setActionSessionId] = useState<string | null>(null);
+  // #2087: which session (and team, for «Lever uttaket» and «Lås opp») the
+  // last action was about. Set before dispatching, so the error lands next to
+  // the button that was pressed. The shared pending state disables every
+  // button, so only one action runs at a time.
+  const [actionTarget, setActionTarget] = useState<{
+    sessionId: string | null;
+    team: CupTeamNumber | null;
+  }>({ sessionId: null, team: null });
 
   function submit(formData: FormData) {
     const sessionId = formData.get('session_id');
-    setActionSessionId(
-      typeof sessionId === 'string' && sessionId ? sessionId : null,
-    );
+    const team = Number(formData.get('team'));
+    setActionTarget({
+      sessionId: typeof sessionId === 'string' && sessionId ? sessionId : null,
+      team: team === 1 || team === 2 ? team : null,
+    });
     startTransition(() => dispatch(formData));
   }
 
   const errorMessage = (() => {
-    if (!state.error) return null;
+    // While an action runs, `state` still holds the previous action's error but
+    // the target already points at the new one. Hiding it avoids showing the old
+    // message on the wrong card.
+    if (!state.error || isPending) return null;
     const key = `errors.${state.error}` as Parameters<typeof t>[0];
     return t.has(key) ? t(key) : t('errors.unexpected', { code: state.error });
   })();
@@ -140,8 +149,8 @@ export function CupLineupBoard({
   // in the meantime), the top banner is the only place left to show it.
   const errorOnCard =
     errorMessage !== null &&
-    actionSessionId !== null &&
-    board.sessions.some((s) => s.id === actionSessionId);
+    actionTarget.sessionId !== null &&
+    board.sessions.some((s) => s.id === actionTarget.sessionId);
 
   const captains = {
     1: board.access.participants.find((p) => p.isCaptain && p.teamNumber === 1),
@@ -210,10 +219,11 @@ export function CupLineupBoard({
               onSubmit={submit}
               isPending={isPending}
               errorMessage={
-                errorOnCard && session.id === actionSessionId
+                errorOnCard && session.id === actionTarget.sessionId
                   ? errorMessage
                   : null
               }
+              errorTeam={actionTarget.team}
               formatLabel={(f) =>
                 tf(
                   FORMAT_LABEL_KEY[
@@ -489,6 +499,7 @@ function SessionCard({
   onSubmit,
   isPending,
   errorMessage,
+  errorTeam,
   formatLabel,
 }: {
   tournamentId: string;
@@ -500,6 +511,8 @@ function SessionCard({
   isPending: boolean;
   /** The last action's error, when it was about this session (#2087). */
   errorMessage: string | null;
+  /** The team panel whose button caused `errorMessage`, if any. */
+  errorTeam: CupTeamNumber | null;
   formatLabel: (format: string) => string;
 }) {
   const t = useTranslations('cup.lineup');
@@ -512,6 +525,9 @@ function SessionCard({
   const error = errorMessage && (
     <SessionError sessionIndex={session.sessionIndex} message={errorMessage} />
   );
+  // A team panel's own buttons put the error in that panel; the card-level
+  // buttons («Prøv igjen», «Slett økten») keep it at card level.
+  const cardError = errorTeam === null ? error : null;
 
   return (
     <Card data-testid={`cup-lineup-session-${session.sessionIndex}`}>
@@ -539,13 +555,16 @@ function SessionCard({
             myTeam={myTeam}
             onSubmit={onSubmit}
             isPending={isPending}
+            error={errorTeam === team.teamNumber ? error : null}
           />
         ))}
       </div>
 
       {/* #2087: the error sits right above the buttons that caused it. With the
           retry block showing, that is between its explanation and the button. */}
-      {!(isOrganizer && stuck) && error && <div className="mt-4">{error}</div>}
+      {!(isOrganizer && stuck) && cardError && (
+        <div className="mt-4">{cardError}</div>
+      )}
 
       {/* #1901: both lineups in, nothing revealed. The reveal error went to the
           captain who submitted last, so without this the organiser would see
@@ -559,7 +578,7 @@ function SessionCard({
             <p className="font-semibold">{t('retryHeading')}</p>
             <p className="mt-1 font-normal">{t('retryHelper')}</p>
           </Banner>
-          {error}
+          {cardError}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -617,6 +636,7 @@ function TeamPanel({
   myTeam,
   onSubmit,
   isPending,
+  error,
 }: {
   tournamentId: string;
   board: Board;
@@ -626,6 +646,8 @@ function TeamPanel({
   myTeam: CupTeamNumber | null;
   onSubmit: (fd: FormData) => void;
   isPending: boolean;
+  /** The error from this panel's last «Lever uttaket» or «Lås opp» (#2087). */
+  error: React.ReactNode;
 }) {
   const t = useTranslations('cup.lineup');
   const teamName = board.teamNames[team.teamNumber];
@@ -688,6 +710,7 @@ function TeamPanel({
           initial={team.slots}
           onSubmit={onSubmit}
           isPending={isPending}
+          error={error}
         />
       ) : (
         <SlotList
@@ -695,6 +718,12 @@ function TeamPanel({
           slotCount={session.slotCount}
           nameOf={nameOf}
         />
+      )}
+
+      {/* The editor shows its error above its own button. Without the editor
+          (submitted, or hidden), the error sits above «Lås opp». */}
+      {!(canEdit && team.slots !== null) && error && (
+        <div className="mt-3">{error}</div>
       )}
 
       {isOrganizer && submitted && !revealed && (
@@ -760,6 +789,7 @@ function LineupEditor({
   initial,
   onSubmit,
   isPending,
+  error,
 }: {
   tournamentId: string;
   session: CupLineupSessionView;
@@ -768,6 +798,7 @@ function LineupEditor({
   initial: { slotIndex: number; seat: 1 | 2; userId: string }[];
   onSubmit: (fd: FormData) => void;
   isPending: boolean;
+  error: React.ReactNode;
 }) {
   const t = useTranslations('cup.lineup');
   const seats = seatsPerSlot(session.format);
@@ -856,6 +887,7 @@ function LineupEditor({
         </div>
       ))}
 
+      {error}
       <Button
         type="submit"
         disabled={isPending || !complete}
