@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseProfileInput,
+  parseHcpMagnitude,
   HCP_MIN,
   HCP_MAX,
   type ProfileInputError,
@@ -222,5 +223,33 @@ describe('parseProfileInput — rekkefølgen på sjekkene er kontrakten', () => 
     ],
   ])('%s', (_label, input, expected) => {
     expect(parseProfileInput(input)).toEqual({ ok: false, error: expected });
+  });
+});
+
+describe('parseHcpMagnitude — formatsjekken de andre inngangene deler (#2048)', () => {
+  it.each([
+    ['komma', '12,5', 12.5],
+    ['punktum', '12.5', 12.5],
+    ['ett skilletegn bakerst', '12,5,', 12.5],
+    ['uten sifre foran', ',5', 0.5],
+    ['null', '0', 0],
+    ['taket', '54', HCP_MAX],
+  ])('%s: «%s» → %s', (_label, input, expected) => {
+    expect(parseHcpMagnitude(input)).toBe(expected);
+  });
+
+  it.each([
+    ['bokstaver etter tallet', '12abc'],
+    ['to desimalskilletegn', '1,2,3'],
+    ['mellomrom rundt kommaet', '12 , 5'],
+    ['pluss-fortegn', '+3'],
+    ['minus-fortegn', '-3'],
+    ['eksponent', '1e1'],
+    ['heksadesimal', '0x10'],
+    ['over taket', '54,1'],
+    ['tom streng', ''],
+    ['ikke trimmet', ' 12'],
+  ])('%s: «%s» → null', (_label, input) => {
+    expect(parseHcpMagnitude(input)).toBeNull();
   });
 });
