@@ -97,12 +97,6 @@ export function routeFrom(plan: Record<string, QueryStub[]>): void {
 }
 
 /**
- * `auth` kom til med konto-sletting (#1876): den er den første flyten der
- * datalaget selv rører sesjonen — henter Bearer-tokenet før kallet og logger ut
- * lokalt etterpå. Tillegget er rent additivt, så suitene som bare bruker `rpc`
- * og `from` merker ingenting.
- */
-/**
  * En realtime-kanal slik datalaget ser den: `on` kjeder, og `subscribe` lagrer
  * statuscallbacken så testen kan fyre `SUBSCRIBED`/`CHANNEL_ERROR` selv.
  */
@@ -119,6 +113,12 @@ export interface FakeRealtimeChannel {
  */
 export const realtimeChannels: FakeRealtimeChannel[] = [];
 
+/**
+ * `auth` kom til med konto-sletting (#1876): den er den første flyten der
+ * datalaget selv rører sesjonen — henter Bearer-tokenet før kallet og logger ut
+ * lokalt etterpå. Tillegget er rent additivt, så suitene som bare bruker `rpc`
+ * og `from` merker ingenting.
+ */
 export const supabase: {
   rpc: jest.Mock;
   from: jest.Mock;

@@ -198,6 +198,9 @@ function subscribeRealtimeChannel(
       consecutiveFailures = 0;
       channel.subscribe((status) => handleStatus(status, channel));
       if (previous) {
+        // Erstatteren skylder en lesing selv om phoenix koblet den utgående
+        // kanalen til igjen under await-en over og den SUBSCRIBED alt leste.
+        outageSinceSubscribed = true;
         // Først nå — å fjerne den siste kanalen først ville koblet ned socketen
         // den nye skal joine på.
         void supabase.removeChannel(previous);
