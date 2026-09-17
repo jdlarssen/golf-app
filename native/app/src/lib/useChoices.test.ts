@@ -6,12 +6,34 @@
 // andre spilltyper å hente en tabell de ikke trenger — hvert tiende sekund,
 // på mobildata, midt i en runde.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factoryen heises over importene og må bruke require */
-import type { GameMode } from '../../../../lib/scoring/modes/types';
-import { CHOICES_POLL_MS, choiceSourceFor } from './useChoices';
+import { act, renderHook } from '@testing-library/react-native';
+import type {
+  GameMode,
+  WolfHoleChoice,
+} from '../../../../lib/scoring/modes/types';
+import { CHOICES_POLL_MS, choiceSourceFor, useGameChoices } from './useChoices';
 
 // Modulen drar inn fetch-laget, som drar inn den ekte klienten — den kaster
 // uten `EXPO_PUBLIC_SUPABASE_*` allerede ved import.
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+
+// Fokus er ikke det denne fila tester: kallbacken kjøres én gang ved mount,
+// som er det fokus gjør når skjermen åpnes.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const { useEffect } = require('react') as typeof import('react');
+    useEffect(callback, [callback]);
+  },
+}));
+
+jest.mock('../data/choices', () => ({
+  fetchWolfChoices: jest.fn(),
+  fetchBingoBangoBongoHoles: jest.fn(),
+}));
+
+const { fetchWolfChoices } = require('../data/choices') as {
+  fetchWolfChoices: jest.Mock;
+};
 
 const NO_CHOICES: readonly GameMode[] = [
   'best_ball',
@@ -56,5 +78,55 @@ describe('CHOICES_POLL_MS', () => {
     // Leaderboardets POLL_MS er 1500 ms mot den lokale basen. Et nettkall i
     // den takten ville vært 40 spørringer i minuttet per åpen skjerm.
     expect(CHOICES_POLL_MS).toBeGreaterThanOrEqual(1500);
+  });
+});
+
+describe('useGameChoices: svarrekkefølge (#2094)', () => {
+  const partner: WolfHoleChoice = {
+    holeNumber: 5,
+    wolfUserId: 'wolf',
+    choice: 'partner',
+    partnerUserId: 'mate',
+  };
+  const lone: WolfHoleChoice = { ...partner, choice: 'lone', partnerUserId: null };
+
+  function deferred() {
+    let resolve!: (rows: WolfHoleChoice[]) => void;
+    const promise = new Promise<WolfHoleChoice[]>((r) => {
+      resolve = r;
+    });
+    return { promise, resolve };
+  }
+
+  beforeEach(() => {
+    fetchWolfChoices.mockReset();
+  });
+
+  it('beholder det nyeste svaret når en eldre henting svarer sist', async () => {
+    // Fokus-hentingen går ut før Wolf-spilleren bytter valg; hentingen hull-
+    // skjermen gjør etter lagringen går ut etter. Nettet svarer i omvendt
+    // rekkefølge.
+    const older = deferred();
+    const newer = deferred();
+    fetchWolfChoices
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise);
+    const { result } = await renderHook(() =>
+      useGameChoices('game-1', 'wolf', 60_000),
+    );
+
+    let afterSave!: Promise<void>;
+    await act(async () => {
+      afterSave = result.current.refresh();
+    });
+    await act(async () => {
+      newer.resolve([lone]);
+      await afterSave;
+    });
+    await act(async () => {
+      older.resolve([partner]);
+    });
+
+    expect(result.current.extras).toEqual({ wolfChoices: [lone] });
   });
 });

@@ -23,6 +23,10 @@
 // Hooken gir også `refresh` tilbake: hull-skjermen skriver valg, og da skal
 // badgen stå riktig med en gang — ikke etter opptil ti sekunder. Det er samme
 // henting som pollingen kjører, ikke en ny vei inn i tabellen.
+//
+// Nyeste henting vinner (#2094): en poll kan gå ut før lagringen og svare
+// etter hentingen lagringen utløste. Hver henting får et løpenummer når den
+// går ut, og et svar brukes bare hvis ingen senere henting alt har landet.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBingoBangoBongoHoles, fetchWolfChoices } from '../data/choices';
@@ -84,14 +88,20 @@ export function useGameChoices(
     };
   }, []);
 
+  const seq = useRef(0);
+  const appliedSeq = useRef(0);
+
   const refresh = useCallback(async () => {
     if (source === null) return;
+    const mySeq = ++seq.current;
     try {
       const next: ScoringExtras =
         source === 'wolf'
           ? { wolfChoices: await fetchWolfChoices(gameId) }
           : { bingoBangoBongoHoles: await fetchBingoBangoBongoHoles(gameId) };
-      if (alive.current) setExtras(next);
+      if (!alive.current || mySeq <= appliedSeq.current) return;
+      appliedSeq.current = mySeq;
+      setExtras(next);
     } catch {
       // Fetch-en KASTER ved feil nettopp så den ikke kan forveksles med en tom
       // liste. Vi lar forrige svar stå; har vi ikke noe, sier skjermen fra.

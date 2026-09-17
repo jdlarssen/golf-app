@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -70,6 +71,10 @@ function applyToggle(
  *   via the server action; the viewer's own write echoes back as a realtime
  *   event whose refetch reconciles any drift. On write failure it refetches to
  *   restore the truth.
+ * - **Newest wins (#2094):** refetches can answer out of order. Each refetch and
+ *   each toggle takes a sequence number when it starts, and an answer is applied
+ *   only if nothing started after it has been applied yet — so an older summary
+ *   never replaces a newer one or a toggle made while it was in flight.
  *
  * `RowReactions` is a pure function of the props this provider feeds it, so live
  * updates flow straight through without remount/stale-state issues.
@@ -86,10 +91,16 @@ export function ReactionsProvider({
   children: ReactNode;
 }) {
   const [summary, setSummary] = useState<ReactionSummary>(initial);
+  const seqRef = useRef(0);
+  const appliedSeqRef = useRef(0);
 
   const refetch = useCallback(async () => {
+    const seq = ++seqRef.current;
     try {
-      setSummary(await getReactionsSummary(gameId));
+      const next = await getReactionsSummary(gameId);
+      if (seq <= appliedSeqRef.current) return;
+      appliedSeqRef.current = seq;
+      setSummary(next);
     } catch (err) {
       console.error('[ReactionsProvider] refetch failed', err);
     }
@@ -134,7 +145,8 @@ export function ReactionsProvider({
   const toggle = useCallback(
     (targetUserId: string, emoji: ReactionEmoji) => {
       if (disabled) return;
-      // Optimistic.
+      // Optimistic. Drops any refetch that went out before this toggle.
+      appliedSeqRef.current = ++seqRef.current;
       setSummary((prev) => applyToggle(prev, targetUserId, emoji));
       void toggleReaction({ gameId, targetUserId, emoji }).catch((err: unknown) => {
         console.error('[ReactionsProvider] toggleReaction failed', err);
