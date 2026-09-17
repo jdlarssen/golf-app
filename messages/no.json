@@ -4808,6 +4808,7 @@
       "submitted": "Levert",
       "notSubmitted": "Ikke levert",
       "hidden": "Skjult til begge lag har levert.",
+      "hiddenBothSubmitted": "Begge lag har levert. Kampene er ikke satt opp ennå.",
       "unlock": "Lås opp",
       "deleteSession": "Slett økten",
       "retryHeading": "Begge lag har levert, men kampene mangler",
@@ -4842,7 +4843,9 @@
         "insert_failed": "Klarte ikke å sette opp kampene. Prøv igjen.",
         "profile_read_failed": "Klarte ikke å hente spillerne. Prøv igjen.",
         "invalid_source_match": "Uttaket ser rart ut. Last siden på nytt og prøv igjen.",
-        "unexpected": "Noe gikk galt ({code})."
+        "unexpected": "Noe gikk galt ({code}).",
+        "rollback_failed": "Noen av kampene ble satt opp før det gikk galt, og de ble ikke fjernet igjen. Ta kontakt med administrator for å få ryddet økten.",
+        "reveal_undo_failed": "Kampene ble ikke satt opp, men økten står likevel som avdekket. Ta kontakt med administrator for å få ryddet den."
       }
     },
     "status": {
@@ -5005,7 +5008,8 @@
         "profile_read_failed": "Fikk ikke tak i spillerdataene, så matchene ble ikke laget. Prøv igjen.",
         "too_many_matches": "En personlig cup tar maks {max} matcher. Vil du ha flere, lag en klubb-cup.",
         "too_many_players": "En personlig cup tar maks {max} spillere. Vil du ha flere, lag en klubb-cup.",
-        "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av."
+        "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
+        "rollback_failed": "Noen av matchene ble laget før det gikk galt, og de ble ikke fjernet igjen. Ta kontakt med administrator for å få ryddet cupen."
       },
       "formatGreensome": "Greensome",
       "formatChapman": "Chapman",
