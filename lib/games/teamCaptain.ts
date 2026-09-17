@@ -69,8 +69,16 @@ export function teamScoreOwnerId(
 export function formerTeamRowOwnerIds(
   teamMembers: readonly TeamMemberRow[],
 ): string[] {
-  return teamMembers
-    .filter((m) => m.withdrawn_at != null)
-    .map((m) => m.user_id)
-    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+  return latestOwnerFirst(
+    teamMembers.filter((m) => m.withdrawn_at != null).map((m) => m.user_id),
+  );
+}
+
+/**
+ * Tidligere rad-eiere i den rekkefølgen verdiene deres gjelder: siste eier
+ * først (lex-synkende, se `formerTeamRowOwnerIds`). Egen funksjon, så en
+ * kaller som har fått id-ene gjennom props, ikke må stole på rekkefølgen.
+ */
+export function latestOwnerFirst(userIds: readonly string[]): string[] {
+  return [...userIds].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
 }

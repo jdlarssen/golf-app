@@ -1,5 +1,6 @@
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
+import { foldRowsOntoOwner } from '@/lib/scoring/context/foldTeamRows';
 
 /**
  * Who owns the `scores` row for ONE hole, seen from the viewer's seat (#1577).
@@ -32,7 +33,10 @@ export function scoreOwnerForHole(
 
 /**
  * The distinct `user_id`s a completion query has to ask for — the viewer, plus
- * the captain when this round ever collapses onto their row (#1577).
+ * the captain when this round ever collapses onto their row (#1577), plus the
+ * team's former row owners (#2067: a captain who deleted their account
+ * mid-round still holds the holes entered before that; the readers below fold
+ * them in).
  *
  * Deliberately wider than `scoreOwnerForHole`: a query runs once for the whole
  * round, so it must cover both halves of a patsome round even though each
@@ -46,13 +50,23 @@ export function scoreOwnerUserIds(
   mode: GameMode,
   viewerId: string,
   teamOwnerId: string | null,
+  formerOwnerIds: readonly string[] = [],
 ): string[] {
-  if (teamOwnerId == null || teamOwnerId === viewerId) return [viewerId];
-  return modeCollapsesToTeamCard(mode, 18) ? [viewerId, teamOwnerId] : [viewerId];
+  if (teamOwnerId == null || !modeCollapsesToTeamCard(mode, 18)) return [viewerId];
+  return [...new Set([viewerId, teamOwnerId, ...formerOwnerIds])];
 }
 
-/** The minimum a score row must carry for us to ask who owns it. */
-export type ScoredHoleRow = { holeNumber: number; userId: string };
+/**
+ * The minimum a score row must carry for us to ask who owns it. `strokes` is
+ * optional: rows without it count as entered (the caller filtered on strokes),
+ * rows with `strokes: null` do not — that only matters when a former owner's
+ * row competes with the owner's (#2067).
+ */
+export type ScoredHoleRow = {
+  holeNumber: number;
+  userId: string;
+  strokes?: number | null;
+};
 
 /**
  * Rows fetched with `scoreOwnerUserIds` → the hole numbers the viewer actually
@@ -73,8 +87,9 @@ export function scoredHoleNumbers(
   mode: GameMode,
   viewerId: string,
   teamOwnerId: string | null,
+  formerOwnerIds: readonly string[] = [],
 ): number[] {
-  return ownedScoreRows(rows, mode, viewerId, teamOwnerId).map(
+  return ownedScoreRows(rows, mode, viewerId, teamOwnerId, formerOwnerIds).map(
     (r) => r.holeNumber,
   );
 }
@@ -84,16 +99,22 @@ export function scoredHoleNumbers(
  * for callers that render the surviving rows (the submit review page reads
  * strokes/entered_by off them). Generic so the input rows come back
  * unnarrowed (#1715).
+ *
+ * With `formerOwnerIds` (#2067) the former owners' shared-hole rows are first
+ * folded onto the owner (`foldRowsOntoOwner`): the owner's row wins when it
+ * has strokes. A folded row comes back as a copy with `userId` set to the
+ * owner; every other row is the same object.
  */
 export function ownedScoreRows<T extends ScoredHoleRow>(
   rows: readonly (T | null | undefined)[] | null | undefined,
   mode: GameMode,
   viewerId: string,
   teamOwnerId: string | null,
+  formerOwnerIds: readonly string[] = [],
 ): T[] {
-  return (rows ?? []).filter(
-    (r): r is T =>
-      r != null &&
+  const present = (rows ?? []).filter((r): r is T => r != null);
+  return foldRowsOntoOwner(present, mode, teamOwnerId, formerOwnerIds).filter(
+    (r) =>
       r.userId === scoreOwnerForHole(mode, r.holeNumber, viewerId, teamOwnerId),
   );
 }

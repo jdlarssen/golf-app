@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  foldRowsOntoOwner,
   foldTeamRows,
+  foldTeamScoreRows,
   type FoldRosterRow,
   type FoldScoreRow,
 } from './foldTeamRows';
@@ -279,5 +281,91 @@ describe('foldTeamRows — onto: teamCaptain', () => {
     ]);
     expect(holeNumbersFor(folded, 'b')).toStrictEqual([]);
     expect(folded.find((r) => r.holeNumber === 5)?.strokes).toBe(7);
+  });
+});
+
+describe('foldTeamScoreRows — snake_case-rader fra PostgREST', () => {
+  it('folder og gir radene tilbake med user_id byttet og feltene i behold', () => {
+    const folded = foldTeamScoreRows({
+      roster: ROSTER_CAPTAIN_WD,
+      rows: [
+        { user_id: 'a', hole_number: 1, strokes: 4, entered_by: 'b' },
+        { user_id: 'b', hole_number: 2, strokes: 5, entered_by: 'b' },
+      ],
+      mode: 'texas_scramble',
+    });
+
+    expect(folded).toStrictEqual([
+      { user_id: 'b', hole_number: 1, strokes: 4, entered_by: 'b' },
+      { user_id: 'b', hole_number: 2, strokes: 5, entered_by: 'b' },
+    ]);
+  });
+
+  it('regner rader uten strokes-felt som førte (kalleren har filtrert på slag)', () => {
+    const folded = foldTeamScoreRows({
+      roster: ROSTER_CAPTAIN_WD,
+      rows: [
+        { user_id: 'a', hole_number: 1 },
+        { user_id: 'b', hole_number: 1 },
+      ],
+      mode: 'texas_scramble',
+    });
+
+    expect(folded).toStrictEqual([{ user_id: 'b', hole_number: 1 }]);
+  });
+
+  it('skriver eierens putter tilbake på raden', () => {
+    const folded = foldTeamScoreRows({
+      roster: ROSTER_CAPTAIN_WD,
+      rows: [
+        { user_id: 'a', hole_number: 1, strokes: 4, putts: 1 },
+        { user_id: 'b', hole_number: 1, strokes: null, putts: 2 },
+      ],
+      mode: 'texas_scramble',
+    });
+
+    expect(folded).toStrictEqual([
+      { user_id: 'b', hole_number: 1, strokes: 4, putts: 2 },
+    ]);
+  });
+
+  it('gir de samme radobjektene tilbake når ingenting foldes', () => {
+    const rows = [{ user_id: 'c', hole_number: 1, strokes: 4 }];
+    const folded = foldTeamScoreRows({
+      roster: ROSTER_CAPTAIN_WD,
+      rows,
+      mode: 'texas_scramble',
+    });
+
+    expect(folded[0]).toBe(rows[0]);
+  });
+});
+
+describe('foldRowsOntoOwner — én eier sett fra seeren', () => {
+  it('folder den tidligere eierens hull inn på eieren', () => {
+    const folded = foldRowsOntoOwner(
+      [...holes('a', 1, 2), row('b', 2, 6)],
+      'texas_scramble',
+      'b',
+      ['a'],
+    );
+
+    expect(folded).toStrictEqual([row('b', 1, 4, { enteredBy: 'a' }), row('b', 2, 6)]);
+  });
+
+  it('lar radene stå uten tidligere eiere', () => {
+    const rows = holes('a', 1, 2);
+    expect(foldRowsOntoOwner(rows, 'texas_scramble', 'b', [])).toStrictEqual(rows);
+  });
+
+  it('sorterer de tidligere eierne selv, siste eier først', () => {
+    const folded = foldRowsOntoOwner(
+      [row('a', 5, 4), row('b', 5, 6)],
+      'texas_scramble',
+      'c',
+      ['a', 'b'],
+    );
+
+    expect(folded).toStrictEqual([row('c', 5, 6, { enteredBy: 'b' })]);
   });
 });

@@ -217,3 +217,33 @@ describe('ownedScoresByPlayer — radene bak tallet (#2041)', () => {
     expect(result.get('b')).toEqual([...kaptein.slice(6), ...makker]);
   });
 });
+
+// #2067: kapteinen slettet kontoen midt i runden. Hullene som er ført på
+// den trukne kapteinen, teller for laget sammen med dem makkeren fører videre.
+describe('filledHolesByPlayer — trukket kaptein (#2067)', () => {
+  it('teller kapteinens førte hull og makkerens nye for makkeren', () => {
+    const result = filledHolesByPlayer({
+      mode: 'texas_scramble',
+      players: [member('a', 1, '2026-09-17T10:00:00+00:00'), member('b', 1)],
+      scores: [...rows('a', 1, 9), ...rows('b', 10, 18)],
+    });
+
+    expect(result.get('b')).toBe(18);
+  });
+
+  it('gir makkeren kapteinens rader på 7–18 i patsome, egne på 1–6', () => {
+    const result = ownedScoresByPlayer({
+      mode: 'patsome',
+      players: [member('a', 1, '2026-09-17T10:00:00+00:00'), member('b', 1)],
+      scores: [...rows('a', 1, 9), ...rows('b', 1, 6)],
+    });
+
+    expect(
+      result
+        .get('b')!
+        .map((r) => r.hole_number)
+        .sort((x, y) => x - y),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(result.get('b')!.every((r) => r.user_id === 'b')).toBe(true);
+  });
+});
