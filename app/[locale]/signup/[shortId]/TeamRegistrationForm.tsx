@@ -184,13 +184,11 @@ export function TeamRegistrationForm({
         </Banner>
         {knownAdded.length > 0 && (
           <p className="font-sans text-sm text-text">
-            <strong>{knownAdded.length}</strong>{' '}
             {t('teamSuccessKnown', { count: knownAdded.length })}
           </p>
         )}
         {invited.length > 0 && (
           <p className="font-sans text-sm text-text">
-            <strong>{invited.length}</strong>{' '}
             {t('teamSuccessInvited', { count: invited.length })}
           </p>
         )}

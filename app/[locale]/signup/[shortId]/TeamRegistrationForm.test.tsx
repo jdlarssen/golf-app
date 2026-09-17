@@ -93,6 +93,16 @@ describe('TeamRegistrationForm — submit', () => {
           outcome: 'known_added',
           email: 'kompis@example.com',
         },
+        {
+          ok: true,
+          outcome: 'known_added',
+          email: 'kompis2@example.com',
+        },
+        {
+          ok: true,
+          outcome: 'unknown_invited',
+          email: 'ukjent@example.com',
+        },
       ],
     });
 
@@ -107,6 +117,24 @@ describe('TeamRegistrationForm — submit', () => {
 
     expect(
       await screen.findByText(/Laget er opprettet/i),
+    ).toBeInTheDocument();
+
+    const summaryText = document.body.textContent ?? '';
+    expect(summaryText).not.toMatch(/2\s*2\s*medspillere/);
+    expect(summaryText).not.toMatch(/1\s*1\s*ukjent/);
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === '2 medspillere er lagt til og får varsel.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'P' &&
+          element.textContent === '1 ukjent fikk e-post-invitasjon.',
+      ),
     ).toBeInTheDocument();
   });
 
