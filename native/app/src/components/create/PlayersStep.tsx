@@ -16,6 +16,12 @@
 // står det bare en rolig linje: å låse noe der ville hindret arrangøren i å
 // bygge rosteret ferdig.
 //
+// **Lagknappene vokser med rosteret** (#2148). Taket er 20 par, men en rad med
+// tjue knapper under hver spiller er støy når fire er valgt. Antallet følger
+// derfor `teamGridSize` fra `teamFormatLimits`, samme regel som lag-rutenettet
+// på nettsiden, og et lag som alt har spillere vises alltid. Et fullt lag er
+// grått for de andre, men ikke for de to som står i det.
+//
 // **Tee-settet velges her, ikke i profilen** (#1859, web-paritet). Raden står
 // under hver valgt spiller og kommer FØR lag-chipsene: hvem → hvilken tee →
 // hvilket lag. Settet fryser banehandicapet ved start, så et sett teen ikke
@@ -32,6 +38,7 @@ import {
   rosterFitsMode,
   type TeamLayout,
 } from '../../lib/rosterLimits';
+import { teamGridSize } from '../../../../../lib/games/teamFormatLimits';
 import { CREATE_ON_WEB_PATH } from '../../lib/createGameCopy';
 import type { TeeGenderAvailability } from '../../lib/teeChoice';
 import type { DraftPlayer, TeeGenderUi } from '../../lib/wizardPayload';
@@ -39,13 +46,40 @@ import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { Chips, Field, Note, SelectRow, type ChipOption } from './primitives';
 
-function teamOptions(layout: TeamLayout, userId: string) {
+/** Så mange spillere et lag rommer før det er fullt. Sider har ingen sperre her. */
+const PAIR_SIZE = 2;
+
+function teamOptions(layout: TeamLayout, userId: string, players: DraftPlayer[]) {
   const noun = layout.noun === 'lag' ? 'Lag' : 'Side';
-  return Array.from({ length: layout.slots }, (_, i) => ({
-    value: i + 1,
-    label: `${noun} ${i + 1}`,
-    testID: `create-team-${userId}-${i + 1}`,
-  }));
+  if (layout.noun === 'side') {
+    return Array.from({ length: layout.slots }, (_, i) => ({
+      value: i + 1,
+      label: `${noun} ${i + 1}`,
+      testID: `create-team-${userId}-${i + 1}`,
+    }));
+  }
+
+  const membersByTeam = new Map<number, string[]>();
+  for (const p of players) {
+    if (p.teamNumber === null) continue;
+    membersByTeam.set(p.teamNumber, [...(membersByTeam.get(p.teamNumber) ?? []), p.userId]);
+  }
+  const highestTeam = Math.max(0, ...membersByTeam.keys());
+  const count = Math.min(
+    layout.slots,
+    Math.max(teamGridSize(players.length, PAIR_SIZE), highestTeam),
+  );
+
+  return Array.from({ length: count }, (_, i) => {
+    const team = i + 1;
+    const members = membersByTeam.get(team) ?? [];
+    return {
+      value: team,
+      label: `${noun} ${team}`,
+      testID: `create-team-${userId}-${team}`,
+      disabled: members.length >= PAIR_SIZE && !members.includes(userId),
+    };
+  });
 }
 
 const TEE_GENDERS = ['M', 'D', 'J'] as const;
@@ -189,7 +223,7 @@ export function PlayersStep({
           testID={`create-team-row-${meId}`}
           value={chosen.get(meId)?.teamNumber ?? null}
           onChange={(team) => onTeam(meId, team)}
-          options={teamOptions(teamLayout, meId)}
+          options={teamOptions(teamLayout, meId, players)}
         />
       ) : null}
 
@@ -255,7 +289,7 @@ export function PlayersStep({
                 testID={`create-team-row-${candidate.id}`}
                 value={picked.teamNumber}
                 onChange={(team) => onTeam(candidate.id, team)}
-                options={teamOptions(teamLayout, candidate.id)}
+                options={teamOptions(teamLayout, candidate.id, players)}
               />
             ) : null}
           </View>
