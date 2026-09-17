@@ -12,6 +12,7 @@ import {
   expectsRealCi,
   extractFunctionalSection,
   extractPrSummary,
+  shouldHandOffToRelay,
   waitForChecksToSettle,
   type CheckRun,
 } from './prCard';
@@ -222,6 +223,62 @@ describe('classifyWithCiGate', () => {
     const r = gate(found, { runs: redRuns });
     await expect(r.run()).resolves.toBe('red');
     expect(r.fetchCiRuns).not.toHaveBeenCalled();
+  });
+});
+
+describe('shouldHandOffToRelay', () => {
+  const running: CiRunsLookup = { ok: true, runs: [{ id: 1, status: 'in_progress', conclusion: null }] };
+  const queued: CiRunsLookup = { ok: true, runs: [{ id: 1, status: 'queued', conclusion: null }] };
+  const done: CiRunsLookup = { ok: true, runs: [{ id: 1, status: 'completed', conclusion: 'success' }] };
+  const none: CiRunsLookup = { ok: true, runs: [] };
+
+  it('pull_request + ci.yml in_progress → overlever til relékjøringen', () => {
+    expect(shouldHandOffToRelay({ event: 'pull_request', expectsCi: true, ciRuns: running })).toBe(true);
+  });
+
+  it('pull_request + ci.yml queued → overlever (workflow_run fyrer når den lander)', () => {
+    expect(shouldHandOffToRelay({ event: 'pull_request', expectsCi: true, ciRuns: queued })).toBe(true);
+  });
+
+  it('pull_request + ci.yml completed → vent (ingen ny workflow_run kommer)', () => {
+    expect(shouldHandOffToRelay({ event: 'pull_request', expectsCi: true, ciRuns: done })).toBe(false);
+  });
+
+  it('pull_request + én fullført og én re-kjøring i gang → overlever', () => {
+    const mixed: CiRunsLookup = {
+      ok: true,
+      runs: [
+        { id: 1, status: 'completed', conclusion: 'success' },
+        { id: 2, status: 'in_progress', conclusion: null },
+      ],
+    };
+    expect(shouldHandOffToRelay({ event: 'pull_request', expectsCi: true, ciRuns: mixed })).toBe(true);
+  });
+
+  it('pull_request + ingen registrert ci.yml-kjøring → vent', () => {
+    expect(shouldHandOffToRelay({ event: 'pull_request', expectsCi: true, ciRuns: none })).toBe(false);
+  });
+
+  it('pull_request + feilet oppslag (ok: false) → vent (fail-closed)', () => {
+    expect(
+      shouldHandOffToRelay({ event: 'pull_request', expectsCi: true, ciRuns: { ok: false, status: 502 } }),
+    ).toBe(false);
+  });
+
+  it('workflow_dispatch + ci.yml in_progress → vent (re-post-verktøyet venter alltid)', () => {
+    expect(shouldHandOffToRelay({ event: 'workflow_dispatch', expectsCi: true, ciRuns: running })).toBe(false);
+  });
+
+  it('workflow_run (tvillingen) + ci.yml in_progress → vent', () => {
+    expect(shouldHandOffToRelay({ event: 'workflow_run', expectsCi: true, ciRuns: running })).toBe(false);
+  });
+
+  it('docs-only-diff (expectsCi=false) → vent, også med en kjøring i gang', () => {
+    expect(shouldHandOffToRelay({ event: 'pull_request', expectsCi: false, ciRuns: running })).toBe(false);
+  });
+
+  it('manglende event (lokal kjøring) → vent', () => {
+    expect(shouldHandOffToRelay({ event: undefined, expectsCi: true, ciRuns: running })).toBe(false);
   });
 });
 

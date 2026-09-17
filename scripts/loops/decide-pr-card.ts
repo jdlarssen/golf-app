@@ -4,7 +4,8 @@
 // + rene lib-importer).
 //
 // Env: GITHUB_TOKEN, GH_REPO, PR_NUMBER (eller GITHUB_EVENT_PATH), CARD_PLAN_PATH,
-// WAIT_FOR_CHECKS ('true' ved workflow_dispatch — vent på at checkene lander, #1301).
+// WAIT_FOR_CHECKS ('true' ved workflow_dispatch — vent på at checkene lander, #1301),
+// GITHUB_EVENT_NAME (Actions setter den; `pull_request` kan overlevere til reléet, #2095).
 // Skriver `outcome` ('auto-merge'|'card'|'noop') + `is_gui` til $GITHUB_OUTPUT så
 // workflowen kan gate stegene (#1406).
 
@@ -16,6 +17,7 @@ import {
   expectsRealCi,
   extractFunctionalSection,
   extractPrSummary,
+  shouldHandOffToRelay,
   waitForChecksToSettle,
   type CheckRun,
   type ChecksState,
@@ -218,6 +220,16 @@ async function main(): Promise<void> {
       fetchCiRuns: () => fetchCiRunsForSha(gh, REPO, pr.head.sha),
       log: (msg) => console.log(`${LOG} PR #${n}: ${msg}`),
     });
+
+  // Stafettbytte (#2095): ready-flippet mens ci.yml fortsatt kjører → relékjøringen
+  // (workflow_run) kommer garantert og ville kansellert oss midt i ventingen. Gi
+  // fra oss nå i stedet for å bli stående som `cancelled`.
+  if (WAIT_FOR_CHECKS && process.env.GITHUB_EVENT_NAME === 'pull_request' && needsCiRun) {
+    const ciRuns = await fetchCiRunsForSha(gh, REPO, pr.head.sha);
+    if (shouldHandOffToRelay({ event: process.env.GITHUB_EVENT_NAME, expectsCi: needsCiRun, ciRuns })) {
+      return noCard(`PR #${n}: ci.yml kjører fortsatt — relékjøringen tar over`);
+    }
+  }
 
   let state: ChecksState;
   if (WAIT_FOR_CHECKS) {

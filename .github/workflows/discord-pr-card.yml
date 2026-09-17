@@ -103,6 +103,8 @@ jobs:
           # ready-flipp (#1516): tvillingen fullfører før scan/Vercel, og en økt kan
           # markere ready rett etter siste push mens checkene fortsatt kjører — uten
           # venting ville kortet no-op'e på pending og aldri få en ny fyring.
+          # Unntak (#2095): ready-flipp mens ci.yml fortsatt kjører gir fra seg med en
+          # gang — relékjøringen (workflow_run) kommer garantert og tar over.
           WAIT_FOR_CHECKS: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event.workflow_run.name == 'CI (docs no-op)') && 'true' || 'false' }}
         run: npx --yes tsx scripts/loops/decide-pr-card.ts
 
