@@ -748,7 +748,9 @@ export async function retryCupLineupReveal(
  *  2. Matchene settes inn.
  *  3. Feiler inserten, nullstilles `revealed_at` igjen (kompensasjon), slik at
  *     arrangøren kan prøve på nytt i stedet for å sitte med en økt merket
- *     avdekket og null kamper.
+ *     avdekket og null kamper. Kompensasjonen sjekkes og prøves én gang til
+ *     (`undoRevealClaim`, #2086), og den hoppes over når inserten ikke fikk
+ *     ryddet sine egne kamper (`rollback_failed`).
  *
  * Returnerer `null` ved suksess, ellers feilkoden.
  */
@@ -883,6 +885,41 @@ async function loadRevealContext(
   };
 }
 
+/**
+ * Releases the claim on `revealed_at` after a reveal that wrote no matches, so
+ * the organiser gets «Prøv igjen» instead of a session marked revealed with
+ * nothing in it.
+ *
+ * #2086: the write is checked, not trusted (AGENTS.md trap 2), and tried once
+ * more before giving up. If it still does not land, the session is stuck as
+ * revealed without matches and only manual cleanup helps, so the answer is
+ * `reveal_undo_failed` rather than the original error, whose message would say
+ * "try again".
+ */
+async function undoRevealClaim(
+  tournamentId: string,
+  sessionId: string,
+  original: CupLineupActionError,
+): Promise<CupLineupActionError> {
+  const admin = getAdminClient();
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const { data: undone, error: undoError } = await admin
+      .from('cup_lineup_sessions')
+      .update({ revealed_at: null })
+      .eq('id', sessionId)
+      .select('id');
+    if (!undoError && undone && undone.length > 0) return original;
+    lastError = undoError;
+  }
+  console.error('[cup] revealCupLineupSession undo failed', {
+    tournamentId,
+    sessionId,
+    error: lastError,
+  });
+  return { error: 'reveal_undo_failed' };
+}
+
 async function revealCupLineupSession(
   tournamentId: string,
   sessionId: string,
@@ -975,10 +1012,20 @@ async function revealCupLineupSession(
   // 0 rader = en annen forespørsel avdekket akkurat nå. Ferdig, ikke en feil.
   if (!claimed || claimed.length === 0) return null;
 
-  const { data: existingGames } = await admin
+  const { data: existingGames, error: gamesError } = await admin
     .from('games')
     .select('game_mode')
     .eq('tournament_id', tournamentId);
+  // Without the existing games the label numbers would restart at 1. Nothing
+  // is inserted yet, so undo the claim like a failed insert (#2082).
+  if (gamesError) {
+    console.error('[cup] revealCupLineupSession games read failed', {
+      tournamentId,
+      sessionId,
+      error: gamesError,
+    });
+    return undoRevealClaim(tournamentId, sessionId, { error: 'save_failed' });
+  }
 
   const matches = buildRevealMatches({
     sessionId,
@@ -1013,18 +1060,11 @@ async function revealCupLineupSession(
   // 3. Kompenser: uten dette står økta merket avdekket uten en eneste kamp, og
   //    arrangøren har ingen vei videre.
   if ('error' in outcome) {
-    const { error: undoError } = await admin
-      .from('cup_lineup_sessions')
-      .update({ revealed_at: null })
-      .eq('id', sessionId);
-    if (undoError) {
-      console.error('[cup] revealCupLineupSession undo failed', {
-        tournamentId,
-        sessionId,
-        error: undoError,
-      });
-    }
-    return outcome;
+    // #2086: the insert could not remove the games it had made. `revealed_at`
+    // stays set on purpose, because «Prøv igjen» would add a second batch next
+    // to the leftovers. The session needs cleaning by hand.
+    if (outcome.error === 'rollback_failed') return outcome;
+    return undoRevealClaim(tournamentId, sessionId, outcome);
   }
 
   // #1902 sikkerhetsnettet: kampene som nettopp ble til kan ha passert det
