@@ -14,6 +14,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
+import { HCP_MAX, HCP_MIN } from '@/lib/users/profileInput';
 import { updateUser } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -212,8 +213,8 @@ export default async function PlayerDetailPage({
               name="hcp_index"
               type="number"
               step="0.1"
-              min="-10"
-              max="54"
+              min={HCP_MIN}
+              max={HCP_MAX}
               label={tProfile('formHcp')}
               defaultValue={target.hcp_index.toString()}
               required
