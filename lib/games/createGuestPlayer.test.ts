@@ -97,9 +97,28 @@ describe('parseGuestProfile', () => {
     ['hcp over 54', { name: 'A', hcp: '54,1', tee: 'M' }, 'guest_invalid_hcp'],
     ['plusshandicap under -10', { name: 'A', hcp: '+10,1', tee: 'M' }, 'guest_invalid_hcp'],
     ['negativt fortegn direkte', { name: 'A', hcp: '-5', tee: 'M' }, 'guest_invalid_hcp'],
+    // #2048: samme formatsjekk som profilen (#2044).
+    ['bokstaver etter tallet', { name: 'A', hcp: '12abc', tee: 'M' }, 'guest_invalid_hcp'],
+    ['to desimalskilletegn', { name: 'A', hcp: '1,2,3', tee: 'M' }, 'guest_invalid_hcp'],
+    ['heksadesimal', { name: 'A', hcp: '0x10', tee: 'M' }, 'guest_invalid_hcp'],
+    ['eksponent', { name: 'A', hcp: '1e1', tee: 'M' }, 'guest_invalid_hcp'],
+    ['dobbelt pluss', { name: 'A', hcp: '++3', tee: 'M' }, 'guest_invalid_hcp'],
+    ['pluss og minus', { name: 'A', hcp: '+-3', tee: 'M' }, 'guest_invalid_hcp'],
+    ['mellomrom etter pluss', { name: 'A', hcp: '+ 3', tee: 'M' }, 'guest_invalid_hcp'],
+    ['doble komma', { name: 'A', hcp: '12,,5', tee: 'M' }, 'guest_invalid_hcp'],
     ['ugyldig tee', { name: 'A', hcp: '10', tee: 'X' }, 'guest_invalid_tee'],
   ])('avviser %s', (_label, raw, expected) => {
     expect(parseGuestProfile(raw)).toEqual({ ok: false, error: expected });
+  });
+
+  it.each([
+    ['ett komma bakerst', '12,5,', 12.5],
+    ['plusshandicap med komma bakerst', '+2,5,', -2.5],
+  ])('godtar %s (#2048)', (_label, hcp, expected) => {
+    expect(parseGuestProfile({ name: 'A', hcp, tee: 'M' })).toMatchObject({
+      ok: true,
+      profile: { hcpIndex: expected },
+    });
   });
 
   it('grensene 54,0 og +10 er gyldige', () => {
