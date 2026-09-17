@@ -442,8 +442,8 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
 
   it('vinneren av flippen avslår ventende forespørsler og varsler hver søker', async () => {
     const pendingRequests = [
-      { id: 'req-1', user_id: 'applicant-1' },
-      { id: 'req-2', user_id: 'applicant-2' },
+      { id: 'req-1', user_id: 'applicant-1', status: 'pending', team_request_id: null },
+      { id: 'req-2', user_id: 'applicant-2', status: 'pending', team_request_id: null },
     ];
 
     const supabase = buildSupabaseMock([
@@ -493,8 +493,8 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
   // forespørsler som fortsatt sto `pending` i databasen.
   it('0 rader tilbake fra auto-avslaget → ingen notify, starten står', async () => {
     const pendingRequests = [
-      { id: 'req-1', user_id: 'applicant-1' },
-      { id: 'req-2', user_id: 'applicant-2' },
+      { id: 'req-1', user_id: 'applicant-1', status: 'pending', team_request_id: null },
+      { id: 'req-2', user_id: 'applicant-2', status: 'pending', team_request_id: null },
     ];
 
     const supabase = buildSupabaseMock([
@@ -518,8 +518,8 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
   // få beskjed. Den andre står fortsatt `pending` og skal ikke varsles.
   it('delvis flipp → kun søkeren hvis rad faktisk ble avslått varsles', async () => {
     const pendingRequests = [
-      { id: 'req-1', user_id: 'applicant-1' },
-      { id: 'req-2', user_id: 'applicant-2' },
+      { id: 'req-1', user_id: 'applicant-1', status: 'pending', team_request_id: null },
+      { id: 'req-2', user_id: 'applicant-2', status: 'pending', team_request_id: null },
     ];
 
     const supabase = buildSupabaseMock([
@@ -541,6 +541,59 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       kind: 'registration_expired',
       payload: { game_id: 'game-id', game_name: 'Lørdagsrunden' },
     });
+  });
+
+  // #2061: a teammate who said yes before the organiser approved the captain
+  // waits off the roster with an approved row. When the round starts with the
+  // captain still pending, the team expires — the teammate with it.
+  it('medspiller som har godtatt et lag med ventende kaptein avslås og varsles også', async () => {
+    const openRequests = [
+      { id: 'cap-req', user_id: 'captain-1', status: 'pending', team_request_id: null },
+      { id: 'mate-req', user_id: 'mate-1', status: 'approved', team_request_id: 'cap-req' },
+      // Old data: a teammate who already sits on the roster keeps their place.
+      { id: 'onroster-req', user_id: 'user-1', status: 'approved', team_request_id: 'cap-req' },
+      // A teammate of an approved team without a row (removed by the organiser)
+      // is not expired: the team was decided.
+      { id: 'other-req', user_id: 'other-1', status: 'approved', team_request_id: 'approved-cap' },
+    ];
+
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      WROTE_ROW,
+      { data: [{ id: 'game-id' }], error: null },
+      { data: openRequests, error: null },
+      { data: [{ id: 'cap-req' }, { id: 'mate-req' }], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+
+    const fromCalls = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls;
+    const updateIdx = fromCalls.findIndex(
+      (c) => c.table === 'game_registration_requests' && c.method === 'update',
+    );
+    const chain = fromCalls.slice(updateIdx + 1, updateIdx + 4);
+    expect(chain.find((c) => c.method === 'in' && c.args[0] === 'id')?.args[1]).toEqual([
+      'cap-req',
+      'mate-req',
+    ]);
+    expect(chain).toContainEqual(
+      expect.objectContaining({ method: 'in', args: ['status', ['pending', 'approved']] }),
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'mate-1', kind: 'registration_expired' }),
+    );
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'captain-1', kind: 'registration_expired' }),
+    );
   });
 
   it('ingen ventende forespørsler → ingen UPDATE, ingen notify', async () => {
@@ -600,8 +653,8 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
 
   it('notify-feil for én søker stopper ikke resten, og starten forblir ok', async () => {
     const pendingRequests = [
-      { id: 'req-1', user_id: 'applicant-1' },
-      { id: 'req-2', user_id: 'applicant-2' },
+      { id: 'req-1', user_id: 'applicant-1', status: 'pending', team_request_id: null },
+      { id: 'req-2', user_id: 'applicant-2', status: 'pending', team_request_id: null },
     ];
 
     const supabase = buildSupabaseMock([
