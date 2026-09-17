@@ -8,7 +8,7 @@
 // Alt utenfor skjermen er mocket (nett, SQLite, realtime); adapteren, motoren
 // og reveal-predikatet er ekte delt kode.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { ScreenProps } from '../navigation';
@@ -158,6 +158,16 @@ describe('Leaderboard', () => {
     };
     expect(subscribeGameScores).toHaveBeenCalledTimes(1);
     expect(subscribeGameScores.mock.calls[0]![0]).toBe(GAME_ID);
+
+    // #2093: kanalen tilbake etter et brudd → slagene hentes på nytt.
+    const { seedGameScores } = require('../data/seedScores') as {
+      seedGameScores: jest.Mock;
+    };
+    expect(seedGameScores).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      subscribeGameScores.mock.calls[0]![1].onResubscribed();
+    });
+    expect(seedGameScores).toHaveBeenCalledTimes(2);
   });
 });
 

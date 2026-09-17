@@ -140,16 +140,21 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   const sideWinners = useSideWinners(gameId, sideTournamentVisible(bundle));
 
   // Påheng på det eksisterende abonnementet: samme kanal hull-siden bruker,
-  // og hver merge leser den lokale basen på nytt.
+  // og hver merge leser den lokale basen på nytt. Seeden kjører også når
+  // kanalen er tilbake etter et brudd, som på hull-siden (#2093).
   useEffect(() => {
+    const seed = () => {
+      void seedGameScores(gameId)
+        .catch(() => undefined)
+        .then(() => reload());
+    };
     const unsubscribe = subscribeGameScores(gameId, {
       onMerge: () => {
         void reload();
       },
+      onResubscribed: seed,
     });
-    void seedGameScores(gameId)
-      .catch(() => undefined)
-      .then(() => reload());
+    seed();
     return unsubscribe;
   }, [gameId, reload]);
 

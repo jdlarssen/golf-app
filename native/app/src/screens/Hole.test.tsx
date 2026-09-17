@@ -18,7 +18,7 @@
 // ÉN render-test per skjerm (docs/test-discipline.md, Type C) — tallene og
 // reglene er dekket av Type A-testene, så det som står igjen her er koblingen.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { writeScore } from '../data/writeScore';
 import type { ScreenProps } from '../navigation';
 import { Hole } from './Hole';
@@ -179,6 +179,27 @@ describe('Hole', () => {
     jest.clearAllMocks();
     mockState.bundle = mockSoloBundle;
     mockState.scores = [];
+  });
+
+  it('henter slagene på nytt når kanalen er tilbake etter et brudd (#2093)', async () => {
+    await renderHole();
+    const { subscribeGameScores } = require('../data/realtime') as {
+      subscribeGameScores: jest.Mock;
+    };
+    const { seedGameScores } = require('../data/seedScores') as {
+      seedGameScores: jest.Mock;
+    };
+    await waitFor(() => {
+      expect(seedGameScores).toHaveBeenCalledTimes(1);
+    });
+
+    // Det som ble ført mens kanalen lå nede, kommer aldri som en hendelse.
+    await act(async () => {
+      subscribeGameScores.mock.calls[0]![1].onResubscribed();
+    });
+
+    expect(seedGameScores).toHaveBeenCalledTimes(2);
+    expect(seedGameScores).toHaveBeenLastCalledWith(GAME_ID);
   });
 
   it('tegner hele flighten og sender et tapp på «+» videre til writeScore', async () => {

@@ -93,15 +93,21 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
 
   // Realtime + seed henger på SPILLET, ikke på hullet: å bytte hull skal ikke
   // bygge kanalen på nytt (#1366-disiplinen bor i `subscribeGameScores`).
+  // Seeden kjører ved åpning og når kanalen er tilbake etter et brudd: det som
+  // ble ført mens den lå nede, kommer aldri som en hendelse (#2093).
   useEffect(() => {
+    const seed = () => {
+      void seedGameScores(gameId)
+        .catch(() => undefined)
+        .then(() => reload());
+    };
     const unsubscribe = subscribeGameScores(gameId, {
       onMerge: () => {
         void reload();
       },
+      onResubscribed: seed,
     });
-    void seedGameScores(gameId)
-      .catch(() => undefined)
-      .then(() => reload());
+    seed();
     return unsubscribe;
   }, [gameId, reload]);
 

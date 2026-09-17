@@ -148,3 +148,84 @@ describe('mergeServerScore', () => {
     ]);
   });
 });
+
+describe('subscribeGameScores: gjenoppkobling (#2093)', () => {
+  useFreshModules();
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // Postgres Changes spilles aldri av på nytt: det som ble skrevet mens kanalen
+  // lå nede, må skjermen lese selv når kanalen er tilbake.
+  async function subscribe() {
+    const { subscribeGameScores } = require('./realtime') as typeof import('./realtime');
+    const { realtimeChannels } =
+      require('../test/supabaseMock') as typeof import('../test/supabaseMock');
+    const onResubscribed = jest.fn();
+    const stop = subscribeGameScores(GAME, { onResubscribed });
+    await jest.advanceTimersByTimeAsync(0);
+    const emit = (status: string, times = 1) => {
+      for (let i = 0; i < times; i++) realtimeChannels.at(-1)!.status?.(status);
+    };
+    return { onResubscribed, stop, emit, realtimeChannels };
+  }
+
+  it('leser ikke på nytt ved første tilkobling uten feil', async () => {
+    const { onResubscribed, stop, emit } = await subscribe();
+
+    emit('SUBSCRIBED');
+
+    expect(onResubscribed).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it('leser på nytt én gang når kanalen er tilbake etter en feil', async () => {
+    const { onResubscribed, stop, emit } = await subscribe();
+    emit('SUBSCRIBED');
+
+    emit('CHANNEL_ERROR');
+    emit('SUBSCRIBED');
+    emit('SUBSCRIBED');
+
+    expect(onResubscribed).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('leser på nytt én gang når den gjenoppbygde kanalen kobler til', async () => {
+    const { onResubscribed, stop, emit, realtimeChannels } = await subscribe();
+    const first = realtimeChannels[0]!;
+
+    emit('TIMED_OUT', 3);
+    await jest.advanceTimersByTimeAsync(2_000);
+    expect(realtimeChannels).toHaveLength(1);
+    expect(realtimeChannels[0]).not.toBe(first);
+
+    // Den gamle kanalen henger på callbacken til leave-turen er ferdig.
+    first.status?.('SUBSCRIBED');
+    expect(onResubscribed).not.toHaveBeenCalled();
+
+    emit('SUBSCRIBED');
+    expect(onResubscribed).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('teller ikke CLOSED som brudd, og leser aldri etter stopp', async () => {
+    const { onResubscribed, stop, emit, realtimeChannels } = await subscribe();
+    emit('SUBSCRIBED');
+    const channel = realtimeChannels[0]!;
+
+    emit('CLOSED');
+    emit('SUBSCRIBED');
+    expect(onResubscribed).not.toHaveBeenCalled();
+
+    emit('CHANNEL_ERROR');
+    stop();
+    channel.status?.('SUBSCRIBED');
+    expect(onResubscribed).not.toHaveBeenCalled();
+  });
+});
