@@ -50,6 +50,10 @@ function makeBuilder(table: string) {
 }
 
 vi.mock('server-only', () => ({}));
+const expireGameCache = vi.fn();
+vi.mock('@/lib/games/expireGameCache', () => ({
+  expireGameCache: (...args: unknown[]) => expireGameCache(...args),
+}));
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => makeBuilder(table),
@@ -121,6 +125,42 @@ describe('deleteOrAnonymizeUser', () => {
     });
     // Kun soft delete — aldri et hard-delete-forsøk som ville feilet på FK.
     expect(state.deleteUser).toHaveBeenCalledExactlyOnceWith(USER_ID, true);
+  });
+
+  // #2067: 0174 trekker brukeren ut av aktive spill og fjerner raden fra
+  // planlagte. Spillets cachede spillerliste (`game-${id}`) må utløpe med én
+  // gang, ellers peker hull-siden på den slettede kapteinen i opptil 15 min,
+  // og makkerens nye slag havner på en trukket rad som ikke kan skrives til.
+  it('expires the cache of every open game the anonymization changed, after the RPC', async () => {
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: 2 },
+      games: { data: [{ id: 'game-active' }, { id: 'game-scheduled' }] },
+    };
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: true, mode: 'anonymized' });
+    expect(expireGameCache.mock.calls).toEqual([['game-active'], ['game-scheduled']]);
+    expect(expireGameCache.mock.invocationCallOrder[0]).toBeGreaterThan(
+      state.rpc.mock.invocationCallOrder[0],
+    );
+    expect(filtersFor('games')).toEqual(
+      expect.arrayContaining([
+        { method: 'eq', args: ['game_players.user_id', USER_ID] },
+        { method: 'in', args: ['status', ['active', 'draft', 'scheduled']] },
+      ]),
+    );
+  });
+
+  it('stops before anonymizing when the open-games read fails', async () => {
+    state.tables = {
+      users: { data: { deleted_at: null } },
+      game_players: { count: 2 },
+      games: { data: null, error: { message: 'boom' } },
+    };
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(state.rpc).not.toHaveBeenCalled();
+    expect(expireGameCache).not.toHaveBeenCalled();
   });
 
   it('retries only the auth soft delete when deleted_at is already set', async () => {
