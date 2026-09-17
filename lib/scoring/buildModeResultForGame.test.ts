@@ -6,7 +6,13 @@ import {
 } from './buildModeResultForGame';
 import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
 import type { CourseHoleRow, ScoreRow } from '@/lib/supabase/queryFragments';
-import type { BestBallResult, StablefordSoloResult } from './modes/types';
+import type {
+  BestBallResult,
+  StablefordSoloResult,
+  TexasScrambleResult,
+} from './modes/types';
+import { buildUniformContext } from './context/buildUniformContext';
+import { compute as computeTexasScramble } from './modes/texasScramble';
 
 // #1441: buildModeResultFromData scopes course_holes (and, defensively,
 // scores) down to game.hole_segment before building the ScoringContext —
@@ -137,5 +143,57 @@ describe('buildModeResultForGame — scores past the row cap', () => {
     )) as StablefordSoloResult;
 
     expect(result.players.map((p) => p.holesPlayed)).toEqual(userIds.map(() => 18));
+  });
+});
+
+// #2067: the result summary (and cup, league, stats) must show the same holes
+// as the live board when a one-ball team's captain deleted their account
+// mid-round (0174 marks the row withdrawn).
+describe('buildModeResultFromData — withdrawn captain in a one-ball format (#2067)', () => {
+  it('keeps the holes the team entered on the withdrawn captain, same as the board', () => {
+    const game: GameForScoring = {
+      ...baseGame,
+      game_mode: 'texas_scramble',
+      mode_config: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 2,
+        team_handicap_pct: 25,
+      },
+      hole_segment: 'full',
+      source_game_id: null,
+    };
+    const players = [
+      { ...player('a', 1), withdrawn_at: '2026-09-17T10:00:00Z' },
+      player('b', 1),
+      player('c', 2),
+      player('d', 2),
+    ];
+    const scores: ScoreRow[] = [
+      ...Array.from({ length: 9 }, (_, i) => scoreRow('a', i + 1, 4)),
+      ...Array.from({ length: 3 }, (_, i) => scoreRow('b', i + 10, 5)),
+      ...Array.from({ length: 12 }, (_, i) => scoreRow('c', i + 1, 5)),
+    ];
+
+    const result = buildModeResultFromData(
+      game,
+      players,
+      HOLES_18,
+      scores,
+    ) as TexasScrambleResult;
+    const board = computeTexasScramble(
+      buildUniformContext({
+        gameId: game.id,
+        gameMode: 'texas_scramble',
+        modeConfig: game.mode_config,
+        players,
+        holesRows: HOLES_18,
+        scoresRows: scores,
+      }),
+    );
+
+    const team1 = result.teams.find((t) => t.teamNumber === 1)!;
+    expect(team1.missingHoles).toStrictEqual([13, 14, 15, 16, 17, 18]);
+    expect(result).toStrictEqual(board);
   });
 });

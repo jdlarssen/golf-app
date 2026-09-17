@@ -7,6 +7,12 @@ import type {
   ScoringPlayer,
   ScoringHoleScore,
 } from './types';
+import { buildUniformContext } from '@/lib/scoring/context/buildUniformContext';
+import {
+  HOLES_18,
+  scoreRows,
+  twoTeamRoster,
+} from '../__fixtures__/withdrawnCaptain';
 
 // ---------------------------------------------------------------------------
 // Fixture-builders. Speilet fourballMatchplay.test.ts-mønsteret slik at
@@ -645,5 +651,54 @@ describe('compute — lukk-ute-form fryses når hull tastes etter avgjørelse (#
     expect(r.result!.decidedAtHole).toBe(14);
     expect(r.result!.remainingAtDecision).toBe(4);
     expect(r.result!.marginUp).toBe(5);
+  });
+});
+
+// #2067 — kapteinen på side 1 sletter kontoen midt i runden. Matchen skal stå
+// på de spilte hullene med samme stilling. Gjennom `buildUniformContext`,
+// slik tavla og resultatet gjør.
+describe('compute — trukket kaptein (#2067)', () => {
+  function resultFor(
+    captainWithdrawn: boolean,
+    scoresRows: ReturnType<typeof scoreRows>,
+  ) {
+    return compute(
+      buildUniformContext({
+        gameId: 'g-foursomes',
+        gameMode: 'foursomes_matchplay',
+        modeConfig: {
+          kind: 'foursomes_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: 100,
+        },
+        players: twoTeamRoster({ captainWithdrawn }),
+        holesRows: HOLES_18,
+        scoresRows,
+      }),
+    );
+  }
+
+  const FIRST_NINE = [...scoreRows('a', 1, 9, 4), ...scoreRows('c', 1, 9, 4)];
+
+  it('står på 9 spilte hull med samme stilling som før slettingen', () => {
+    const before = resultFor(false, FIRST_NINE);
+    const after = resultFor(true, FIRST_NINE);
+
+    expect(after.holesPlayed).toBe(9);
+    expect(after.holesUp).toBe(2);
+    expect(after).toStrictEqual(before);
+  });
+
+  it('teller hullene makkeren fører videre, og en retting slår den gamle verdien', () => {
+    const after = resultFor(true, [
+      ...FIRST_NINE,
+      ...scoreRows('b', 10, 12, 4),
+      ...scoreRows('c', 10, 12, 4),
+      { user_id: 'b', hole_number: 5, strokes: 3 },
+    ]);
+
+    expect(after.holesPlayed).toBe(12);
+    expect(after.holesUp).toBe(3);
   });
 });

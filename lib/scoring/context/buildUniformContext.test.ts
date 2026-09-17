@@ -324,3 +324,116 @@ describe('buildUniformContext — WD- og users-null-filtrering', () => {
     expect(ctx.scores).toStrictEqual([]);
   });
 });
+
+// #2067 — i én-ball-formatene er laget én ball. Sletter et medlem kontoen
+// midt i runden (0174), blir medlemmet stående på laget i regnestykket, så
+// lag-handicapet og sidestørrelsen er som før. Lagets delte rader foldes inn
+// på kapteinen modusene leser (lex-min av hele laget), med den nye eierens
+// rader først.
+describe('buildUniformContext — trukket medlem i én-ball-format (#2067)', () => {
+  const TEXAS_CONFIG: GameModeConfig = {
+    kind: 'texas_scramble',
+    team_size: 2,
+    teams_count: 2,
+    team_handicap_pct: 25,
+  };
+  const WD = '2026-09-17T10:00:00Z';
+
+  it('beholder den trukne kapteinen på laget når makkeren fortsatt spiller', () => {
+    const ctx = build({
+      gameMode: 'texas_scramble',
+      modeConfig: TEXAS_CONFIG,
+      players: [player({ user_id: 'a', withdrawn_at: WD }), player({ user_id: 'b' })],
+    });
+
+    expect(ctx.players.map((p) => p.userId)).toStrictEqual(['a', 'b']);
+  });
+
+  it('folder makkerens nye rader inn på kapteinens hull, og makkerens retting vinner', () => {
+    const ctx = build({
+      gameMode: 'texas_scramble',
+      modeConfig: TEXAS_CONFIG,
+      players: [player({ user_id: 'a', withdrawn_at: WD }), player({ user_id: 'b' })],
+      scoresRows: [
+        { user_id: 'a', hole_number: 1, strokes: 4 },
+        { user_id: 'a', hole_number: 2, strokes: 5 },
+        { user_id: 'b', hole_number: 2, strokes: 3 },
+        { user_id: 'b', hole_number: 3, strokes: 6 },
+      ],
+    });
+
+    expect(ctx.scores).toStrictEqual([
+      { userId: 'a', holeNumber: 1, gross: 4 },
+      { userId: 'a', holeNumber: 2, gross: 3 },
+      { userId: 'a', holeNumber: 3, gross: 6 },
+    ]);
+  });
+
+  it('beholder et trukket ikke-kapteins-medlem på laget', () => {
+    const ctx = build({
+      gameMode: 'foursomes_matchplay',
+      modeConfig: {
+        kind: 'foursomes_matchplay',
+        team_size: 2,
+        teams_count: 2,
+        allowance_pct: 50,
+      },
+      players: [player({ user_id: 'a' }), player({ user_id: 'b', withdrawn_at: WD })],
+      scoresRows: [{ user_id: 'a', hole_number: 1, strokes: 4 }],
+    });
+
+    expect(ctx.players.map((p) => p.userId)).toStrictEqual(['a', 'b']);
+    expect(ctx.scores).toStrictEqual([{ userId: 'a', holeNumber: 1, gross: 4 }]);
+  });
+
+  it('tar laget ut når alle medlemmene er trukket, som før', () => {
+    const ctx = build({
+      gameMode: 'texas_scramble',
+      modeConfig: TEXAS_CONFIG,
+      players: [
+        player({ user_id: 'a', withdrawn_at: WD }),
+        player({ user_id: 'b', withdrawn_at: WD }),
+        player({ user_id: 'c', team_number: 2 }),
+      ],
+      scoresRows: [
+        { user_id: 'a', hole_number: 1, strokes: 4 },
+        { user_id: 'c', hole_number: 1, strokes: 5 },
+      ],
+    });
+
+    expect(ctx.players.map((p) => p.userId)).toStrictEqual(['c']);
+    expect(ctx.scores).toStrictEqual([{ userId: 'c', holeNumber: 1, gross: 5 }]);
+  });
+
+  it('luker den trukne kapteinens egen ball i patsome (hull 1–6), men folder hull 7', () => {
+    const ctx = build({
+      gameMode: 'patsome',
+      modeConfig: { kind: 'patsome', team_size: 2, teams_count: 2, patsome_scoring: 'net' },
+      players: [player({ user_id: 'a', withdrawn_at: WD }), player({ user_id: 'b' })],
+      scoresRows: [
+        { user_id: 'a', hole_number: 6, strokes: 4 },
+        { user_id: 'b', hole_number: 6, strokes: 5 },
+        { user_id: 'a', hole_number: 7, strokes: 4 },
+      ],
+    });
+
+    expect(ctx.players.map((p) => p.userId)).toStrictEqual(['a', 'b']);
+    expect(ctx.scores).toStrictEqual([
+      { userId: 'b', holeNumber: 6, gross: 5 },
+      { userId: 'a', holeNumber: 7, gross: 4 },
+    ]);
+  });
+
+  it('lar et trukket medlem i et egen-ball-format (best ball) være ute, som før', () => {
+    const ctx = build({
+      players: [player({ user_id: 'a', withdrawn_at: WD }), player({ user_id: 'b' })],
+      scoresRows: [
+        { user_id: 'a', hole_number: 1, strokes: 4 },
+        { user_id: 'b', hole_number: 1, strokes: 5 },
+      ],
+    });
+
+    expect(ctx.players.map((p) => p.userId)).toStrictEqual(['b']);
+    expect(ctx.scores).toStrictEqual([{ userId: 'b', holeNumber: 1, gross: 5 }]);
+  });
+});

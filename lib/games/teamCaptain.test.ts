@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { pickTeamCaptain, teamScoreOwnerId } from './teamCaptain';
+import {
+  formerTeamRowOwnerIds,
+  pickTeamCaptain,
+  teamScoreOwnerId,
+} from './teamCaptain';
 
 describe('pickTeamCaptain', () => {
   it('returnerer lex-min userId fra liste', () => {
@@ -78,5 +82,43 @@ describe('teamScoreOwnerId (#1538)', () => {
   it('er enig med pickTeamCaptain når ingen har trukket seg', () => {
     const ids = ['uuid-m', 'uuid-z', 'uuid-a'];
     expect(teamScoreOwnerId(ids.map((id) => member(id)))).toBe(pickTeamCaptain(ids));
+  });
+});
+
+// #2067 — radene til et trukket medlem som eide lagets rad, skal fortsatt
+// leses. Eierskapet går til neste lex-min aktive medlem, så den SISTE eieren
+// blant de trukne er den lex-største: den kommer først.
+describe('formerTeamRowOwnerIds (#2067)', () => {
+  it('gir tom liste når ingen har trukket seg', () => {
+    expect(formerTeamRowOwnerIds([member('a'), member('b')])).toStrictEqual([]);
+  });
+
+  it('gir den trukne kapteinen', () => {
+    expect(
+      formerTeamRowOwnerIds([member('b'), member('a', '2026-09-17T10:00:00Z')]),
+    ).toStrictEqual(['a']);
+  });
+
+  it('sorterer de trukne lex-synkende, siste eier først', () => {
+    expect(
+      formerTeamRowOwnerIds([
+        member('a', '2026-09-17T10:00:00Z'),
+        member('c'),
+        member('b', '2026-09-17T11:00:00Z'),
+      ]),
+    ).toStrictEqual(['b', 'a']);
+  });
+
+  it('gir alle medlemmer når hele laget har trukket seg', () => {
+    expect(
+      formerTeamRowOwnerIds([
+        member('a', '2026-09-17T10:00:00Z'),
+        member('b', '2026-09-17T11:00:00Z'),
+      ]),
+    ).toStrictEqual(['b', 'a']);
+  });
+
+  it('gir tom liste for et tomt lag', () => {
+    expect(formerTeamRowOwnerIds([])).toStrictEqual([]);
   });
 });

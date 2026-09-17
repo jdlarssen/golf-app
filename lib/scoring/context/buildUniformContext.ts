@@ -1,9 +1,11 @@
-import type {
-  ScoringContext,
-  GameMode,
-  GameModeConfig,
-  ScoringGender,
+import {
+  modeCollapsesToTeamCard,
+  type ScoringContext,
+  type GameMode,
+  type GameModeConfig,
+  type ScoringGender,
 } from '@/lib/scoring/modes/types';
+import { foldTeamRows } from './foldTeamRows';
 
 /**
  * Rå spiller-rad slik den uniforme byggingen leser den. Strukturell type, som
@@ -57,6 +59,16 @@ export interface UniformContextScoreRow {
  * `users == null`-rad som ikke er trukket mister altså spiller-raden, men
  * beholder scorene sine.
  *
+ * **Unntak: én-ball-formatene** (#2067, `modeCollapsesToTeamCard(mode, 18)`:
+ * scramble-familien, alternate-shot-matchplay, patsome). Laget spiller én
+ * ball, og en kontosletting midt i runden trekker medlemmet (0174). Et trukket
+ * medlem blir da stående på laget så lenge minst ett medlem fortsatt spiller:
+ * lag-handicapet og sidestørrelsen (foursomes krever nøyaktig to) er som før
+ * slettingen. Lagets delte rader foldes med `foldTeamRows` inn på kapteinen
+ * modusene leser (lex-min av hele laget), med den nye eierens rader først.
+ * Det trukne medlemmets egen ball (patsome hull 1–6) lukes som før. Er hele
+ * laget trukket, er laget ute, som før.
+ *
  * Import-ren med vilje (ingen `server-only`): native-appen importerer denne
  * modulen direkte, slik at regelen har ett hjem i stedet for to.
  */
@@ -74,10 +86,38 @@ export function buildUniformContext(opts: {
     players.filter((p) => p.withdrawn_at != null).map((p) => p.user_id),
   );
 
+  // #2067: i én-ball-formatene blir et trukket medlem stående på et lag som
+  // fortsatt har et aktivt medlem.
+  const oneBall = modeCollapsesToTeamCard(gameMode, 18);
+  const teamsInPlay = new Set(
+    players.filter((p) => p.withdrawn_at == null).map((p) => p.team_number),
+  );
+  const keptWithdrawnIds = new Set(
+    oneBall
+      ? players
+          .filter((p) => p.withdrawn_at != null && teamsInPlay.has(p.team_number))
+          .map((p) => p.user_id)
+      : [],
+  );
+  const scores = foldTeamRows({
+    roster: players,
+    rows: scoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      strokes: s.strokes,
+    })),
+    mode: gameMode,
+    onto: 'teamCaptain',
+  });
+
   return {
     game: { id: gameId, game_mode: gameMode, mode_config: modeConfig },
     players: players
-      .filter((p) => p.users != null && p.withdrawn_at == null)
+      .filter(
+        (p) =>
+          p.users != null &&
+          (p.withdrawn_at == null || keptWithdrawnIds.has(p.user_id)),
+      )
       .map((p) => ({
         userId: p.user_id,
         teamNumber: p.team_number,
@@ -95,11 +135,16 @@ export function buildUniformContext(opts: {
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: scoresRows
-      .filter((s) => !withdrawnIds.has(s.user_id))
+    scores: scores
+      .filter(
+        (s) =>
+          !withdrawnIds.has(s.userId) ||
+          (keptWithdrawnIds.has(s.userId) &&
+            modeCollapsesToTeamCard(gameMode, s.holeNumber)),
+      )
       .map((s) => ({
-        userId: s.user_id,
-        holeNumber: s.hole_number,
+        userId: s.userId,
+        holeNumber: s.holeNumber,
         gross: s.strokes,
       })),
   };
