@@ -127,6 +127,8 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
     ]);
     expect(await run(validForm())).toBe(`/admin/spillere/${ID}?error=update_failed`);
     expect(recomputeCourseHandicapForUser).not.toHaveBeenCalled();
+    // Email unchanged → auth was never touched, so there is nothing to roll back.
+    expect(updateUserByIdMock).not.toHaveBeenCalled();
   });
 
   it('DB error → update_failed, and the handicap recompute does not run', async () => {
