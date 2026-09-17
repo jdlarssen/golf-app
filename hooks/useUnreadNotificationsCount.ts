@@ -10,24 +10,29 @@ import {
 type NotificationRowShape = { read_at: string | null };
 
 /**
- * Holder en lokal teller for uleste varsler for current user.
+ * Samles en byge hendelser (flere varsler i samme sekund, eller en dobbel
+ * levering mens kanalen bygges på nytt) til én telling.
+ */
+const COUNT_DEBOUNCE_MS = 300;
+
+/**
+ * Holder antallet uleste varsler for current user.
  *
- * Initial verdi hentes via `count: 'exact', head: true`-Supabase-query (RLS
- * begrenser til egne rader, så kallet er trivielt billig). Tellerne deretter
- * mutéres lokalt fra realtime-events på `notifications`-tabellen — INSERT
- * av ulest rad inkrementerer, UPDATE som flipper `read_at` justerer i begge
- * retninger. Vi unngår dermed å re-fetche hver gang badgen skal oppdateres.
+ * Antallet hentes med en `count: 'exact', head: true`-query (RLS begrenser til
+ * egne rader, og partial-indexen `notifications_user_unread_created` gjør
+ * kallet billig). Realtime-hendelser på `notifications` (INSERT og UPDATE) er
+ * et signal om å telle på nytt, ikke en +1/-1 (#2093): Realtime kan levere
+ * samme hendelse to ganger mens kanalen bygges på nytt, og det som skjedde
+ * mens kanalen lå nede, kommer aldri. Derfor telles det også på nytt når
+ * kanalen er tilbake etter et brudd (`onResubscribed`). Hver telling får et
+ * løpenummer når den går ut, og et svar brukes bare hvis ingen senere telling
+ * alt har landet.
  *
  * Edge-cases håndtert:
  *  - `userId === null` (ikke innlogget) → returnerer count=0, loading=false
  *    uten å starte noen subscription.
- *  - INSERT av allerede-lest rad (sjelden, men kan skje hvis backfill inserter
- *    historiske rader med read_at satt) → inkrementerer ikke.
- *  - UPDATE der read_at endrer seg fra null → ikke-null dekrementerer; motsatt
- *    inkrementerer (defensiv mot framtidig «marker som ulest»-flyt).
- *  - Math.max(0, ...) på dekrement så count aldri går negativ hvis en
- *    UPDATE-event ankommer før initial fetch har fullført.
- *  - Cleanup av realtime-kanalen ved unmount eller userId-bytte.
+ *  - Cleanup av realtime-kanalen og en ventende telling ved unmount eller
+ *    userId-bytte.
  *
  * Token-livssyklus og gjenoppkobling ved kanalfeil eies av
  * `subscribeRealtimeChannel` (#1366) — hooken trenger ikke å bekymre seg.
@@ -38,7 +43,7 @@ export function useUnreadNotificationsCount(userId: string | null): {
 } {
   // Initial state matcher userId — om vi ikke har bruker, går vi rett til
   // «ingen uleste, ferdig lastet». Når userId endres til ny verdi nuller vi
-  // disse via useEffect-bodyen (først setLoading(true), så initial fetch
+  // disse via useEffect-bodyen (først setLoading(true), så tellingen
   // overskriver count). React skygger denne reset-en ved å re-mounte
   // hook-en via dependency-arrayet, men hvis en parent endrer userId
   // in-place trenger vi den eksplisitte reset-en under.
@@ -61,64 +66,66 @@ export function useUnreadNotificationsCount(userId: string | null): {
     setLoading(true);
     const supabase = getBrowserClient();
     let mounted = true;
+    let seq = 0;
+    let appliedSeq = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
-    // Initial fetch — RLS gir oss kun egne rader, så vi trenger ingen
-    // ytterligere user_id-filter strengt tatt, men setter den eksplisitt
-    // for å bruke partial-indexen `notifications_user_unread_created`.
-    void supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .is('read_at', null)
-      .then(({ count: initial }: { count: number | null }) => {
-        if (!mounted) return;
-        setCount(initial ?? 0);
-        setLoading(false);
-      });
+    // RLS gir oss kun egne rader, så vi trenger strengt tatt ikke user_id-
+    // filteret, men det setter vi eksplisitt for å bruke partial-indexen.
+    const fetchCount = () => {
+      timer = null;
+      const mySeq = ++seq;
+      void supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .is('read_at', null)
+        .then(({ count: next }: { count: number | null }) => {
+          if (!mounted || mySeq <= appliedSeq) return;
+          appliedSeq = mySeq;
+          setCount(next ?? 0);
+          setLoading(false);
+        });
+    };
+
+    const scheduleFetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(fetchCount, COUNT_DEBOUNCE_MS);
+    };
+
+    fetchCount();
 
     // Realtime sub for INSERT + UPDATE. DELETE-events ignoreres bevisst —
     // varsler slettes kun via cascade når en user slettes, og brukeren ser
     // uansett ikke sin egen bjelle etter sletting.
     const cleanup = subscribeRealtimeChannel(
       `notifications:${userId}`,
-      (channel) => {
-        const withInsert = onPostgresChange<NotificationRowShape>(
-          channel,
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            if (payload.new.read_at == null) {
-              setCount((c) => c + 1);
-            }
-          },
-        );
-        return onPostgresChange<NotificationRowShape>(
-          withInsert,
+      (channel) =>
+        onPostgresChange<NotificationRowShape>(
+          onPostgresChange<NotificationRowShape>(
+            channel,
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`,
+            },
+            scheduleFetch,
+          ),
           {
             event: 'UPDATE',
             schema: 'public',
             table: 'notifications',
             filter: `user_id=eq.${userId}`,
           },
-          (payload) => {
-            const wasUnread = payload.old.read_at == null;
-            const isUnread = payload.new.read_at == null;
-            if (wasUnread && !isUnread) {
-              setCount((c) => Math.max(0, c - 1));
-            } else if (!wasUnread && isUnread) {
-              setCount((c) => c + 1);
-            }
-          },
-        );
-      },
+          scheduleFetch,
+        ),
+      { onResubscribed: scheduleFetch },
     );
 
     return () => {
       mounted = false;
+      if (timer) clearTimeout(timer);
       cleanup();
     };
   }, [userId]);

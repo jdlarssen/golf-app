@@ -11,6 +11,12 @@ let realtimeHandlers: {
   }) => void;
 } = {};
 
+/** Status callback the channel was subscribed with (#2093). */
+let channelStatus: ((status: string) => void) | null = null;
+/** Count queries issued so far, and answers a test wants to hold back. */
+let countFetches = 0;
+let queuedCounts: Promise<{ count: number; error: null }>[] = [];
+
 // Spies vi inspiserer på tvers av tester.
 const setAuthSpy = vi.fn();
 const removeChannelSpy = vi.fn();
@@ -40,7 +46,8 @@ vi.mock('@/lib/supabase/client', () => ({
           if (opts.event === 'UPDATE') realtimeHandlers.update = handler as never;
           return ch;
         },
-        subscribe() {
+        subscribe(callback?: (status: string) => void) {
+          channelStatus = callback ?? null;
           return ch;
         },
       };
@@ -56,8 +63,13 @@ vi.mock('@/lib/supabase/client', () => ({
         _opts?: { count: 'exact'; head: true },
       ) => ({
         eq: (_col: string, _val: string) => ({
-          is: (_col2: string, _val2: null) =>
-            Promise.resolve({ count: mockInitialCount, error: null }),
+          is: (_col2: string, _val2: null) => {
+            countFetches += 1;
+            return (
+              queuedCounts.shift() ??
+              Promise.resolve({ count: mockInitialCount, error: null })
+            );
+          },
         }),
       }),
     }),
@@ -71,6 +83,9 @@ async function flushPromises() {
 beforeEach(() => {
   mockInitialCount = 0;
   realtimeHandlers = {};
+  channelStatus = null;
+  countFetches = 0;
+  queuedCounts = [];
   setAuthSpy.mockClear();
   removeChannelSpy.mockClear();
 });
@@ -100,101 +115,79 @@ describe('useUnreadNotificationsCount', () => {
     expect(result.current.count).toBe(3);
   });
 
-  it('inkrementer count på INSERT av ulest varsel', async () => {
+  // #2093: an event is a signal to count again, never a +1/-1. Realtime can
+  // deliver the same event twice while the channel is rebuilt, and whatever
+  // happened during an outage never arrives at all.
+  it('teller på nytt når varsler kommer eller endres, også når samme hendelse leveres to ganger', async () => {
     mockInitialCount = 1;
     const { useUnreadNotificationsCount } = await import(
       './useUnreadNotificationsCount'
     );
     const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
-
     await waitFor(() => expect(result.current.count).toBe(1));
-    await flushPromises(); // ensure realtime sub har koblet seg på
+    await flushPromises();
+    const fetchesAfterMount = countFetches;
 
+    mockInitialCount = 2;
     act(() => {
       realtimeHandlers.insert?.({ new: { read_at: null } });
-    });
-
-    expect(result.current.count).toBe(2);
-  });
-
-  it('inkrementer IKKE på INSERT av allerede-lest varsel', async () => {
-    mockInitialCount = 0;
-    const { useUnreadNotificationsCount } = await import(
-      './useUnreadNotificationsCount'
-    );
-    const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    await flushPromises();
-
-    act(() => {
-      realtimeHandlers.insert?.({ new: { read_at: '2026-05-24T10:00:00Z' } });
-    });
-
-    expect(result.current.count).toBe(0);
-  });
-
-  it('dekrementerer count på UPDATE der ulest blir lest', async () => {
-    mockInitialCount = 2;
-    const { useUnreadNotificationsCount } = await import(
-      './useUnreadNotificationsCount'
-    );
-    const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
-
-    await waitFor(() => expect(result.current.count).toBe(2));
-    await flushPromises();
-
-    act(() => {
+      realtimeHandlers.insert?.({ new: { read_at: null } });
       realtimeHandlers.update?.({
         old: { read_at: null },
-        new: { read_at: '2026-05-24T10:00:00Z' },
-      });
-    });
-
-    expect(result.current.count).toBe(1);
-  });
-
-  it('inkrementerer på UPDATE der lest gjenåpnes som ulest', async () => {
-    // Defensiv-test: vi støtter ikke un-read-flyt i UI, men hooken må håndtere
-    // det riktig hvis DB-staten skifter via direkte SQL eller framtidig feature.
-    mockInitialCount = 0;
-    const { useUnreadNotificationsCount } = await import(
-      './useUnreadNotificationsCount'
-    );
-    const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    await flushPromises();
-
-    act(() => {
-      realtimeHandlers.update?.({
-        old: { read_at: '2026-05-24T10:00:00Z' },
         new: { read_at: null },
       });
     });
 
-    expect(result.current.count).toBe(1);
+    await waitFor(() => expect(result.current.count).toBe(2));
+    // The burst collapses into one count query.
+    expect(countFetches - fetchesAfterMount).toBe(1);
   });
 
-  it('floorer count på 0 selv om dekrement-events kommer for tidlig', async () => {
+  it('teller på nytt når kanalen er tilbake etter et brudd', async () => {
     mockInitialCount = 0;
     const { useUnreadNotificationsCount } = await import(
       './useUnreadNotificationsCount'
     );
     const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
-
     await waitFor(() => expect(result.current.loading).toBe(false));
     await flushPromises();
 
+    // Committed while the channel was down: no event will ever say so.
+    mockInitialCount = 4;
     act(() => {
-      realtimeHandlers.update?.({
-        old: { read_at: null },
-        new: { read_at: '2026-05-24T10:00:00Z' },
-      });
+      channelStatus?.('CHANNEL_ERROR');
+      channelStatus?.('SUBSCRIBED');
     });
 
-    // Negative tellere ville bryte badge-visningen (count > 0 ? prikk : ingen).
-    expect(result.current.count).toBe(0);
+    await waitFor(() => expect(result.current.count).toBe(4));
+  });
+
+  it('lar ikke et eldre svar erstatte et nyere', async () => {
+    let answerMount!: (count: number) => void;
+    queuedCounts.push(
+      new Promise((resolve) => {
+        answerMount = (count) => resolve({ count, error: null });
+      }),
+    );
+    const { useUnreadNotificationsCount } = await import(
+      './useUnreadNotificationsCount'
+    );
+    const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
+    await flushPromises();
+
+    // The mount query is still out when an event's query answers.
+    mockInitialCount = 3;
+    act(() => {
+      realtimeHandlers.insert?.({ new: { read_at: null } });
+    });
+    await waitFor(() => expect(result.current.count).toBe(3));
+
+    await act(async () => {
+      answerMount(2);
+      await flushPromises();
+    });
+
+    expect(result.current.count).toBe(3);
   });
 
   it('rydder opp realtime-kanalen ved unmount', async () => {
