@@ -14,7 +14,7 @@ import type { GameFormState } from '../useGameFormState';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { GuestPlayerAdd } from './GuestPlayerAdd';
-import { teamFormatPlayerCap } from '@/lib/games/teamFormatLimits';
+import { TEAM_FORMAT_PLAYER_CAP, teamFormatPlayerCap } from '@/lib/games/teamFormatLimits';
 
 type Props = {
   state: GameFormState;
@@ -78,6 +78,7 @@ export function PlayersSection({
     isAmbrose,
     isFlorida,
     requiresTeams,
+    isSolo,
     teamSize,
   } = state;
 
@@ -89,6 +90,19 @@ export function PlayersSection({
     : filteredPlayers;
 
   const count = selectedPlayerIds.length;
+
+  // Cap-en avhenger av modus:
+  //  - matchplay: 2 spillere (1v1, strengt)
+  //  - lag-modi: fulle lag opp til spillertaket — 40 for lag à 2 og à 4,
+  //    39 for lag à 3. Leses fra `teamFormatLimits` så velgeren aldri stopper
+  //    før rutenettet og validatoren gjør det (#2009, #2148).
+  //  - solo-stableford og slagspill: samme tak på 40 (#2148). Validatoren
+  //    leste før bare åtte plasser, så spiller nummer ni forsvant stille.
+  const atCap = isMatchplay
+    ? count >= 2
+    : requiresTeams
+      ? count >= teamFormatPlayerCap(teamSize)
+      : isSolo && count >= TEAM_FORMAT_PLAYER_CAP;
 
   // Build the counter string for best-ball / generic modes.
   function genericCounter(): string {
@@ -215,16 +229,6 @@ export function PlayersSection({
           ) : (
             <ul className="space-y-2">
               {visiblePlayers.map((p) => {
-                // Cap-en avhenger av modus:
-                //  - matchplay: 2 spillere (1v1, strengt)
-                //  - lag-modi: fulle lag i hele rutenettet — 4 lag × lagstørrelse
-                //    (8 for lag à 2, 12 for lag à 3, 16 for lag à 4). Leses fra
-                //    `teamFormatLimits` så velgeren aldri stopper før rutenettet
-                //    og validatoren gjør det (#2009).
-                //  - solo-stableford: ingen øvre grense
-                const atCap = isMatchplay
-                  ? count >= 2
-                  : requiresTeams && count >= teamFormatPlayerCap(teamSize);
                 return (
                   <li key={p.id}>
                     <label
@@ -256,14 +260,10 @@ export function PlayersSection({
 
       {/* #1009: gjest uten konto — tilgjengelig også når kandidatlista er tom
           (players.length === 0-grenen over gjelder kun registrerte). Cap-en
-          speiler checkbox-radene: matchplay 2, lag-modi 4 lag × lagstørrelse. */}
+          speiler checkbox-radene (`atCap`). */}
       <GuestPlayerAdd
         state={state}
-        disabled={
-          isMatchplay
-            ? count >= 2
-            : requiresTeams && count >= teamFormatPlayerCap(teamSize)
-        }
+        disabled={atCap}
       />
     </section>
   );

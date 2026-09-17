@@ -70,6 +70,11 @@ export function teamGridSize(selectedCount: number, teamSize: number): number {
   return Math.min(maxTeamsForSize(size), Math.max(MIN_TEAMS, needed));
 }
 
+/** Lagnumrene `1..count`, stigende. Tom liste når `count` er under 1. */
+export function teamNumberRange(count: number): number[] {
+  return Array.from({ length: Math.max(0, Math.floor(count)) }, (_, i) => i + 1);
+}
+
 /**
  * Standard startgruppe (flight) for et lag i best ball: to par per flight,
  * så lag 1–2 → 1, lag 3–4 → 2, lag 5–6 → 3. Arrangøren kan overstyre.

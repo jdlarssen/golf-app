@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import {
-  TEAM_NUMBERS,
   useGameFormState,
   deriveDefaultGenders,
   validateTeamSizeFormat,
@@ -296,10 +295,9 @@ describe('useGameFormState — Wolf 3-5 spillere (#465, #969)', () => {
 });
 
 // #2012: the draw deals teams of the chosen size and refuses instead of
-// dealing a team 5 or 6 — `playersByTeam` only has keys 1–4, so that would
-// throw during render rather than hide a team.
-describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#2012)', () => {
-  const DRAW_PLAYERS: PlayerOption[] = Array.from({ length: 16 }, (_, i) =>
+// leaving a leftover. #2148: it deals as many teams as the 40-player cap allows.
+describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#2012, #2148)', () => {
+  const DRAW_PLAYERS: PlayerOption[] = Array.from({ length: 44 }, (_, i) =>
     makePlayer(`d${i + 1}`),
   );
 
@@ -322,11 +320,14 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
   }
 
   it.each([
-    ['texas_scramble', 3, 12],
-    ['ambrose', 3, 12],
-    ['florida_scramble', 4, 16],
-    ['shamble', 3, 12],
-  ] as const)('%s à %i med %i spillere → fire fulle lag, aldri lag 5', (mode, teamSize, count) => {
+    ['texas_scramble', 3, 12, 4],
+    ['ambrose', 3, 12, 4],
+    ['florida_scramble', 4, 16, 4],
+    ['shamble', 3, 12, 4],
+    ['texas_scramble', 4, 40, 10],
+    ['texas_scramble', 2, 10, 5],
+    ['shamble', 3, 39, 13],
+  ] as const)('%s à %i med %i spillere → %i fulle lag', (mode, teamSize, count, teamCount) => {
     const result = setupDraw(mode, teamSize, count);
     expect(result.current.canDrawRandomTeams).toBe(true);
 
@@ -334,13 +335,32 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
       result.current.drawRandomTeams();
     });
 
-    for (const team of TEAM_NUMBERS) {
+    for (let team = 1; team <= teamCount; team++) {
       expect(result.current.playersByTeam[team]).toHaveLength(teamSize);
     }
     const teams = Object.values(result.current.teamByPlayer);
     expect(teams).toHaveLength(count);
-    expect(Math.max(...teams)).toBeLessThanOrEqual(4);
+    expect(Math.max(...teams)).toBe(teamCount);
     expect(result.current.playersValidForMode).toBe(true);
+    expect(result.current.orderedPayload).toHaveLength(count);
+  });
+
+  it('Texas à 4 med 40 spillere → payloaden har lag 1–10 og flight = lag', () => {
+    const result = setupDraw('texas_scramble', 4, 40);
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    const rows = result.current.orderedPayload;
+    expect(rows).toHaveLength(40);
+    expect([...new Set(rows.map((r) => r.team_number))]).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    for (const row of rows) {
+      expect(row.flight_number).toBe(row.team_number);
+    }
+  });
+
+  it('44 spillere à 4 er over taket → knappen er av', () => {
+    const result = setupDraw('texas_scramble', 4, 44);
+    expect(result.current.canDrawRandomTeams).toBe(false);
   });
 
   it('10 spillere à 3 går ikke opp → knappen er av og ingen lag endres', () => {
@@ -355,14 +375,14 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
     expect(result.current.flightByPlayer).toEqual({});
   });
 
-  it('12 trukket à 3, så byttet til à 2 → knappen er av, ingen kast og lagene står', () => {
-    const result = setupDraw('texas_scramble', 3, 12);
+  it('15 trukket à 3, så byttet til à 4 → knappen er av, ingen kast og lagene står', () => {
+    const result = setupDraw('texas_scramble', 3, 15);
     act(() => {
       result.current.drawRandomTeams();
     });
     const drawnAtThree = { ...result.current.teamByPlayer };
     act(() => {
-      result.current.handleTeamSizeChange(2);
+      result.current.handleTeamSizeChange(4);
     });
     expect(result.current.canDrawRandomTeams).toBe(false);
 
@@ -384,7 +404,7 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
       result.current.drawRandomTeams();
     });
 
-    expect(TEAM_NUMBERS.map((t) => result.current.playersByTeam[t].length)).toEqual([2, 2, 2, 0]);
+    expect([1, 2, 3, 4].map((t) => result.current.playersByTeam[t].length)).toEqual([2, 2, 2, 0]);
     expect(result.current.parStablefordPlayersValid).toBe(true);
   });
 
@@ -396,11 +416,38 @@ describe('useGameFormState — drawRandomTeams følger valgt lagstørrelse (#201
       result.current.drawRandomTeams();
     });
 
-    for (const team of TEAM_NUMBERS) {
+    for (const team of [1, 2, 3, 4]) {
       expect(result.current.playersByTeam[team]).toHaveLength(2);
     }
     expect(result.current.teamsComplete).toBe(true);
     expect(result.current.flightsComplete).toBe(true);
+  });
+
+  it('best ball med 12 spillere → seks par, flight 1, 1, 2, 2, 3, 3, alle 12 i payloaden (#2148)', () => {
+    const result = setupDraw('best_ball', 2, 12);
+    expect(result.current.canDrawRandomTeams).toBe(true);
+
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+
+    expect(result.current.teamsComplete).toBe(true);
+    expect(result.current.flightsComplete).toBe(true);
+    expect(result.current.playersValidForMode).toBe(true);
+    const rows = result.current.orderedPayload;
+    expect(rows).toHaveLength(12);
+    expect(rows.map((r) => r.team_number)).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+    expect(rows.map((r) => r.flight_number)).toEqual([1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]);
+  });
+
+  it('best ball med 40 spillere → 20 par, alle 40 i payloaden', () => {
+    const result = setupDraw('best_ball', 2, 40);
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    expect(result.current.playersValidForMode).toBe(true);
+    expect(result.current.orderedPayload).toHaveLength(40);
+    expect(Math.max(...result.current.orderedPayload.map((r) => r.team_number ?? 0))).toBe(20);
   });
 });
 

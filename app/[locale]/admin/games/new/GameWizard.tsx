@@ -103,6 +103,7 @@ import {
   wizardDraftStorageKey,
   type WizardDraft,
 } from './wizardStatePersistence';
+import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -1409,12 +1410,12 @@ function PickerSourceEmptyHint({
 // #373: Antall-spiller-velger for Kompis-intent i steg 2. Vises over
 // FormatGrid slik at admin velger antall FØR format. +/−-knapper med
 // ≥44px tap-target. Forest-and-champagne-palett via CSS-variabler.
-// Min 1, maks 24 (#525: hevet fra 16 — den offentlige kompis-runden er nå
-// også veien for en større ad-hoc-turnering; over 24 hører klubb-skala til).
+// Min 1, maks spillertaket for lag-formatene (#525 hevet fra 16 til 24; #2148
+// gjør taket til 40, så antall-velgeren kan finne lag-formatene med 40).
 // ──────────────────────────────────────────────────────────────────────
 
 const PLAYER_COUNT_MIN = 1;
-const PLAYER_COUNT_MAX = 24;
+const PLAYER_COUNT_MAX = TEAM_FORMAT_PLAYER_CAP;
 // PLAYER_COUNT_DEFAULT importeres fra useGameFormState (state-eieren) så initial
 // state og picker-fallback aldri kommer ut av sync.
 

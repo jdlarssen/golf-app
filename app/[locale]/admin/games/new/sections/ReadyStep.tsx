@@ -28,7 +28,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { RegistrationSection } from './RegistrationSection';
-import { TEAM_NUMBERS } from '../useGameFormState';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import type { TeamSize } from '../TeamSizeSelector';
 import { AllowanceField } from '@/components/admin/AllowanceField';
@@ -157,8 +156,8 @@ export function ReadyStep({
       ).length;
       return side1 === 1 && side2 === 1 ? t('players1v1') : t('playersUnassignedMatchplay');
     }
-    const teamsCount = TEAM_NUMBERS.filter(
-      (team) => playersByTeam[team].length > 0,
+    const teamsCount = Object.values(playersByTeam).filter(
+      (members) => members.length > 0,
     ).length;
     if (teamsCount === 0) {
       const base = count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
