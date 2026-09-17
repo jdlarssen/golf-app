@@ -16,7 +16,7 @@ export async function ActionItemsStripe() {
   const counts = await getActionItemCounts();
   const t = await getTranslations('admin.dashboard');
 
-  const rows: { key: string; label: string; href: string }[] = [];
+  const rows: { key: string; label: string; href: string; count: number }[] = [];
 
   if (counts.unsubmitted.length > 0) {
     rows.push({
@@ -28,6 +28,7 @@ export async function ActionItemsStripe() {
         counts.unsubmitted.length === 1
           ? `/admin/games/${counts.unsubmitted[0].gameId}/status`
           : '/admin/games?status=active',
+      count: counts.unsubmitted.length,
     });
   }
   if (counts.pendingApproval.length > 0) {
@@ -40,6 +41,7 @@ export async function ActionItemsStripe() {
         counts.pendingApproval.length === 1
           ? `/admin/games/${counts.pendingApproval[0].gameId}/status`
           : '/admin/games?status=active',
+      count: counts.pendingApproval.length,
     });
   }
 
@@ -60,6 +62,8 @@ export async function ActionItemsStripe() {
           <SmartLink
             key={row.key}
             href={row.href}
+            data-testid={`action-items-${row.key}`}
+            data-count={row.count}
             className={`flex min-h-[44px] items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent/[0.09] ${
               i > 0 ? 'border-t border-accent/20' : ''
             }`}
