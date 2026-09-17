@@ -12,7 +12,9 @@
  *   E3  Startede (`active`) og ferdige (`finished`) kamper røres aldri.
  *   E4  I fourball kan makkeren spille alene (én ball mot to) — arrangøren
  *       registrerer valget som `mode_config.withdrawal_play_on`. Foursomes,
- *       greensome, chapman og gruesome deler ball og har ikke valget.
+ *       greensome, chapman og gruesome deler ball og har ikke valget. Valget
+ *       gjelder bare når ÉN side har trukket seg; har begge det, er kampen
+ *       halvert uansett lagret valg (#2032 A, #2051).
  *
  * Utfallet LAGRES aldri. Kamp-radenes `status` forblir `scheduled`; alt
  * utledes her fra `game_players.withdrawn_at` mot `games.scheduled_tee_off_at`
@@ -142,13 +144,15 @@ export function resolveCupMatchWithdrawal(
   if (withdrawnSides.length === 0) return null;
 
   // E4: fourball med arrangørens «makkeren spiller alene»-valg. Kampen spilles
-  // så lenge HVER trukket side fortsatt har minst én spiller igjen — trekker
-  // begge på samme side seg, er det ingen ball igjen å slå og kampen avgjøres
-  // uansett flagg.
+  // bare når ÉN side har trukket seg og den siden fortsatt har en spiller
+  // igjen. Trekker begge på samme side seg, er det ingen ball igjen å slå. Har
+  // begge sider trukket seg, er kampen alltid halvert (under), også når valget
+  // ble tatt før den andre siden trakk seg (#2032 A, #2051).
   if (
     input.playOn &&
     input.gameMode === PLAY_ON_CAPABLE_MODE &&
-    withdrawnSides.every((side) => activeBySide[side - 1].length > 0)
+    withdrawnSides.length === 1 &&
+    activeBySide[withdrawnSides[0] - 1].length > 0
   ) {
     return null;
   }
@@ -193,6 +197,25 @@ export function resolveCupMatchWithdrawal(
     withdrawnUserIds,
     late: true,
   };
+}
+
+/**
+ * Can the organiser's «makkeren spiller alene» choice be taken at all? (#2051)
+ *
+ * True for a not-started fourball where someone has withdrawn and the choice
+ * would get the match played. False when one player on each side has withdrawn
+ * (always halved), when a whole side is gone, or for shared-ball modes.
+ *
+ * One home for the question: `setFourballWithdrawalChoice` refuses the choice
+ * and the confirmation page hides the checkbox off the same answer.
+ */
+export function isPlayOnAvailable(input: CupWithdrawalInput): boolean {
+  return (
+    isNotStartedCupMatch(input.status) &&
+    input.gameMode === PLAY_ON_CAPABLE_MODE &&
+    input.players.some((p) => p.withdrawnAt != null) &&
+    resolveCupMatchWithdrawal({ ...input, playOn: true }) === null
+  );
 }
 
 /**

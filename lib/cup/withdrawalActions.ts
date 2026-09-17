@@ -10,7 +10,12 @@ import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/lib/database.types';
 import { cupBasePath } from './cupPaths';
-import { hasWithdrawalPlayOnChoice, isNotStartedCupMatch } from './cupWithdrawalOutcome';
+import {
+  hasWithdrawalPlayOnChoice,
+  isNotStartedCupMatch,
+  isPlayOnAvailable,
+  readWithdrawalPlayOn,
+} from './cupWithdrawalOutcome';
 
 /**
  * Trekk underveis i en cup (#1814) — arrangørens og spillerens vei ut.
@@ -580,16 +585,24 @@ export async function setFourballWithdrawalChoice(
     team_number: number | null;
     withdrawn_at: string | null;
   }[];
-  const withdrawnSides = new Set(
-    players.filter((p) => p.withdrawn_at != null).map((p) => p.team_number),
-  );
-  if (withdrawnSides.size === 0) return { error: 'match_not_eligible' };
-  // Uten en aktiv makker igjen på hver trukket side er valget uten mening —
-  // kampen er avgjort uansett flagg.
-  const everySideHasSomeoneLeft = [...withdrawnSides].every((side) =>
-    players.some((p) => p.team_number === side && p.withdrawn_at == null),
-  );
-  if (!everySideHasSomeoneLeft) return { error: 'match_not_eligible' };
+  // Valget har bare mening når det kan få kampen spilt: noen har trukket seg,
+  // den siden har en makker igjen, og motstandersiden har ikke også trukket seg
+  // (da er kampen alltid halvert, #2051). Regelmodulen eier svaret. Tee-off
+  // påvirker ikke om valget kan tas, bare om et trekk er sent, så det leses ikke.
+  const available = isPlayOnAvailable({
+    status: 'scheduled',
+    gameMode: game.game_mode,
+    scheduledTeeOffAt: null,
+    playOn: readWithdrawalPlayOn(game.mode_config),
+    players: players
+      .filter((p) => p.team_number === 1 || p.team_number === 2)
+      .map((p) => ({
+        userId: p.user_id,
+        side: p.team_number as 1 | 2,
+        withdrawnAt: p.withdrawn_at,
+      })),
+  });
+  if (!available) return { error: 'match_not_eligible' };
 
   try {
     expectAffected(
