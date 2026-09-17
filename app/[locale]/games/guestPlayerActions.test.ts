@@ -82,11 +82,11 @@ beforeEach(() => {
 });
 
 describe('addGuestToGame — format-taket (#2059)', () => {
-  it('patsome med 8 aktive → game_full, ingen gjest opprettes', async () => {
+  it('patsome med 40 aktive → game_full, ingen gjest opprettes', async () => {
     supabaseMock = buildSupabaseMock([
       ADMIN_ROLE_READ,
       gameRow('patsome', { team_size: 2 }),
-      { data: [], error: null, count: 8 } as never,
+      { data: [], error: null, count: 40 } as never,
     ]);
     authedAsAdmin();
 

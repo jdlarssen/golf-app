@@ -135,7 +135,7 @@ select id, email, 'OSC ' || email, id = torny_osc.uid(99) from auth.users
  where email like 'osc-%@example.test'
 on conflict (id) do update set email = excluded.email, name = excluded.name, is_admin = excluded.is_admin;
 
--- Texas à 4: cap 16 (MAX_TEAMS × 4).
+-- Texas à 4: cap 16 (four teams of four; the function takes the cap and p_max_teams as parameters).
 select torny_osc.seed_game(1, 'texas_scramble', 4);  -- full grid
 select torny_osc.add_rows(1, 1, array[1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4]);
 select torny_osc.seed_game(2, 'texas_scramble', 4);  -- room for one team

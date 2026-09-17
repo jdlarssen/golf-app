@@ -285,7 +285,7 @@ describe('PåmeldingerClient — kapasitets-advarsel (#805)', () => {
 // #2069: the warning reads the same cap as the signup link
 // (`registrationPlayerCap`), so team formats warn too.
 describe('PåmeldingerClient — kapasitets-advarsel i lag-format (#2069)', () => {
-  it('best ball med 8 godkjente viser advarselen', () => {
+  it('best ball med 40 godkjente viser advarselen', () => {
     render(
       <PåmeldingerClient
         gameId={GAME_ID}
@@ -294,13 +294,13 @@ describe('PåmeldingerClient — kapasitets-advarsel i lag-format (#2069)', () =
         locked={false}
         gameMode="best_ball"
         modeConfig={{ team_size: 2 }}
-        approvedCount={8}
+        approvedCount={40}
       />,
     );
     expect(screen.getByTestId('cap-warning')).toBeInTheDocument();
   });
 
-  it('texas scramble à 3 med 11 godkjente viser ingen advarsel (taket er 12)', () => {
+  it('texas scramble à 3 med 38 godkjente viser ingen advarsel (taket er 39)', () => {
     render(
       <PåmeldingerClient
         gameId={GAME_ID}
@@ -309,7 +309,7 @@ describe('PåmeldingerClient — kapasitets-advarsel i lag-format (#2069)', () =
         locked={false}
         gameMode="texas_scramble"
         modeConfig={{ team_size: 3 }}
-        approvedCount={11}
+        approvedCount={38}
       />,
     );
     expect(screen.queryByTestId('cap-warning')).toBeNull();
