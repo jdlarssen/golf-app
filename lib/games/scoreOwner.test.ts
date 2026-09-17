@@ -220,3 +220,108 @@ describe('ownedScoreRows', () => {
     expect(kept[0]).toBe(mine);
   });
 });
+
+// #2067: the captain deleted their account mid-round, so their row is
+// withdrawn and ownership moved to the next member. The holes entered before
+// that still sit on the former captain; the helpers fetch and fold them in.
+describe('former row owners (#2067)', () => {
+  const FORMER = 'a-former';
+  const OWNER = 'b-owner';
+  const row = (userId: string, holeNumber: number, strokes: number | null = 4) => ({
+    userId,
+    holeNumber,
+    strokes,
+  });
+
+  it.each(COLLAPSED_MODES)('%s asks for the former owners too', (mode) => {
+    expect(scoreOwnerUserIds(mode, VIEWER, OWNER, [FORMER])).toEqual([
+      VIEWER,
+      OWNER,
+      FORMER,
+    ]);
+  });
+
+  it('asks for the former owners when the viewer is the new owner', () => {
+    expect(scoreOwnerUserIds('texas_scramble', OWNER, OWNER, [FORMER])).toEqual([
+      OWNER,
+      FORMER,
+    ]);
+  });
+
+  it.each(PER_PLAYER_MODES)('%s ignores former owners', (mode) => {
+    expect(scoreOwnerUserIds(mode, VIEWER, OWNER, [FORMER])).toEqual([VIEWER]);
+  });
+
+  it('asks only for the viewer when the team has no owner, former owners or not', () => {
+    expect(scoreOwnerUserIds('texas_scramble', VIEWER, null, [FORMER])).toEqual([
+      VIEWER,
+    ]);
+  });
+
+  it('counts the holes entered on the former owner together with the new ones', () => {
+    const rows = [
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((h) => row(FORMER, h)),
+      ...[10, 11, 12].map((h) => row(OWNER, h)),
+    ];
+
+    expect(
+      scoredHoleNumbers(rows, 'texas_scramble', VIEWER, OWNER, [FORMER]).sort(
+        (a, b) => a - b,
+      ),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+
+  it('keeps counting holes without a strokes field as entered (pre-filtered rows)', () => {
+    expect(
+      scoredHoleNumbers(
+        [{ userId: FORMER, holeNumber: 3 }],
+        'texas_scramble',
+        OWNER,
+        OWNER,
+        [FORMER],
+      ),
+    ).toEqual([3]);
+  });
+
+  it('lets the new owner’s correction win and returns it on the owner', () => {
+    const kept = ownedScoreRows(
+      [row(FORMER, 5, 4), row(OWNER, 5, 7)],
+      'texas_scramble',
+      VIEWER,
+      OWNER,
+      [FORMER],
+    );
+
+    expect(kept).toEqual([row(OWNER, 5, 7)]);
+  });
+
+  it('shows the former value when the new owner’s row is empty', () => {
+    const kept = ownedScoreRows(
+      [row(FORMER, 5, 4), row(OWNER, 5, null)],
+      'texas_scramble',
+      VIEWER,
+      OWNER,
+      [FORMER],
+    );
+
+    expect(kept).toEqual([row(OWNER, 5, 4)]);
+  });
+
+  it('patsome keeps the viewer’s own ball on 1–6 and folds 7–18', () => {
+    expect(
+      scoredHoleNumbers(
+        [row(FORMER, 6), row(OWNER, 6), row(FORMER, 7), row(FORMER, 8)],
+        'patsome',
+        OWNER,
+        OWNER,
+        [FORMER],
+      ),
+    ).toEqual([6, 7, 8]);
+  });
+
+  it('leaves untouched rows as the same objects', () => {
+    const mine = { userId: VIEWER, holeNumber: 4, strokes: 5 };
+    const kept = ownedScoreRows([mine], 'best_ball', VIEWER, null, [FORMER]);
+    expect(kept[0]).toBe(mine);
+  });
+});

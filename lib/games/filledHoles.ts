@@ -1,4 +1,5 @@
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { teamScoreOwnerId } from './teamCaptain';
 import { scoreOwnerForHole } from './scoreOwner';
 
@@ -40,6 +41,11 @@ export type FilledScoreRow = { user_id: string; hole_number: number };
  * No dedupe: `scores` is unique on (game_id, user_id, hole_number) and exactly
  * one id owns each hole, so each hole appears at most once per player.
  *
+ * A captain who deleted their account mid-round is withdrawn but still holds
+ * the holes entered before that (#2067). `foldTeamScoreRows` lays them on the
+ * current owner first, so the teammate who plays on reaches 18. A folded row
+ * comes back as a copy with `user_id` set to the owner.
+ *
  * Generic so the caller's extra columns come back unnarrowed. Rows keep their
  * order from `scores`. Returns one entry per player in `players`, including
  * empty ones. Rows from users outside the roster are ignored.
@@ -49,7 +55,8 @@ export function ownedScoresByPlayer<T extends FilledScoreRow>(opts: {
   scores: readonly T[];
   mode: GameMode;
 }): Map<string, T[]> {
-  const { players, scores, mode } = opts;
+  const { players, mode } = opts;
+  const scores = foldTeamScoreRows({ roster: players, rows: opts.scores, mode });
 
   const ownerByTeam = new Map<number, string | null>();
   const teamOwner = (teamNumber: number | null): string | null => {
