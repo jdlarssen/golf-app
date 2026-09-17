@@ -156,6 +156,10 @@ function TeamRow({
 
   return (
     <li
+      data-testid="texas-team-row"
+      data-team-number={teamNumber}
+      data-missing-holes={missingHoles}
+      data-total-gross={totalGross}
       className="list-none reveal-up"
       style={{ animationDelay: `${60 + staggerIndex * 80}ms` }}
     >
