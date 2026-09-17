@@ -168,6 +168,9 @@ export function subscribeRealtimeChannel(
       consecutiveFailures = 0;
       channel.subscribe((status) => handleStatus(status, channel));
       if (previous) {
+        // The replacement owes a read even if phoenix rejoined the outgoing
+        // channel during the await above and that SUBSCRIBED already read.
+        outageSinceSubscribed = true;
         // Only now — removing the last channel first would disconnect the
         // socket the new one is about to join on.
         void supabase.removeChannel(previous);

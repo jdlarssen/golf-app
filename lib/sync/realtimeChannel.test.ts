@@ -553,6 +553,28 @@ describe('subscribeRealtimeChannel', () => {
       cleanup();
     });
 
+    it('still reads for the replacement when the old channel rejoined during the rebuild', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+      const first = mockSupabase.channels[0]!;
+
+      emit('CHANNEL_ERROR', 3);
+      const releaseSetAuth = mockSupabase.holdNextSetAuth();
+      await vi.advanceTimersByTimeAsync(2_000);
+      // Phoenix rejoins the old channel while the rebuild waits in setAuth.
+      first.status?.('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(1);
+
+      releaseSetAuth();
+      await flushFake();
+      expect(mockSupabase.channels[0]).not.toBe(first);
+      // Events between that rejoin and the replacement's join went nowhere.
+      emit('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(2);
+
+      cleanup();
+    });
+
     it('never counts CLOSED as an outage and is never called after cleanup', async () => {
       vi.useFakeTimers();
       const { onResubscribed, cleanup } = await subscribe();
