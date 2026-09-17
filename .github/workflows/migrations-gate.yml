@@ -52,9 +52,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Authenticated lookup of the latest CLI release: the unauthenticated
+      # limit (60/h per shared runner IP) makes this step flaky (#2015).
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+          github-token: ${{ github.token }}
 
       # The CLI's schema_migrations bookkeeping keys on the number prefix, so
       # duplicates break `supabase db` flows (#533). The psql apply below
