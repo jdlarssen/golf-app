@@ -782,10 +782,10 @@
         "teamsDescTeamMatchplay": "To sider à 2 spillere. Hver side må ha eksakt 2 spillere.",
         "teamsDescParStableford": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
         "teamsDescTexas2": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
-        "teamsDescTexas3": "Inntil 2 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
-        "teamsDescTexas4": "Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
+        "teamsDescTexas3": "Inntil 4 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
+        "teamsDescTexas4": "Inntil 4 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
         "teamsDescShamble3": "Inntil 4 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
-        "teamsDescShamble4": "Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
+        "teamsDescShamble4": "Inntil 4 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
         "teamsDescBestBall": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
         "teamsDescPatsome": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
         "drawRandomButton": "Trekk tilfeldig",
@@ -1311,7 +1311,7 @@
         "sections": [
           {
             "heading": "Reglene i best ball",
-            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Formatet skalerer fint siden alle går sin egen runde — i Tørny setter du opp så mange par du vil i samme runde."
+            "body": "Best ball spilles i par, og begge spiller sin egen ball hele runden. På hvert hull sammenligner dere netto-scorene, og laget noterer den laveste. Den andre scoren blir bare stående. Det gjør at dere kan spille aggressivt etter tur: ligger makkeren trygt på green i to, kan du gå rett på flagget uten å risikere noe for laget. Best ball spilles som slagspill der lagets sum etter 18 hull avgjør, eller som matchplay der laveste netto vinner hullet. Alle går sin egen runde, og i Tørny er det plass til opptil fire par i samme spill."
           },
           {
             "heading": "Best ball, fourball og fireball",
@@ -3378,7 +3378,8 @@
         "guest_invalid_tee": "Velg tee-kategori for gjesten.",
         "guest_auth_create_failed": "Klarte ikke å opprette gjesten. Prøv igjen.",
         "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
-        "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen."
+        "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen.",
+        "game_full": "Spillet er fullt. Fjern noen for å legge til flere."
       },
       "detail": {
         "brassRibbon": "Spill · protokoll",
@@ -6142,7 +6143,7 @@
       },
       "klubbkveld": {
         "metaTitle": "Klubbkveld med golfturnering: opplegg for store felt",
-        "metaDescription": "Slik kjører du klubbkvelden: stableford eller best ball, netto handicap for alle, digitale scorekort med markørgodkjenning og live resultatliste gjennom hele runden.",
+        "metaDescription": "Slik kjører du klubbkvelden: stableford for store felt, netto handicap for alle, digitale scorekort med markørgodkjenning og live resultatliste gjennom hele runden.",
         "pageTitle": "Klubbkveld med golfturnering",
         "pageSubtitle": "Større felt, spillere som kan reglene, og en resultatliste som skal stemme.",
         "intro": "Er du kaptein for en gruppe i klubben, en dameforening eller en seniorgjeng, ligner oppgaven mer på ekte turneringsadministrasjon. Feltet er større, spillerne kan reglene, og resultatlista skal stemme.\n\nHer er opplegget for klubbkvelden: hvilken spillform som skalerer, hvordan scorekortene godkjennes, og hvordan du binder kveldene sammen til en serie.",
@@ -6154,8 +6155,8 @@
           },
           {
             "id": "spillform",
-            "heading": "Spillform som skalerer: stableford eller best ball",
-            "body": "Stableford er standardvalget. Hullet stopper når poengene er borte, tempoet holder seg oppe i et stort felt, og resultatlista er lett å lese for alle.\n\nVil dere spille i lag, er best ball det som skalerer best, fordi hver spiller fortsatt spiller sin egen ball. Da får du lagkonkurranse uten at noen mister sin egen runde, og den individuelle lista kan gå parallelt.\n\nSpill netto. I et klubbfelt spriker handicapene fra ensifret til godt over tjue, og uten netto er kvelden avgjort før første utslag. Vil du ha to vinnere, kår både brutto og netto, så får både den som spiller best golf og den som spiller best i forhold til seg selv noe å hente."
+            "heading": "Spillform som skalerer: stableford",
+            "body": "Stableford er standardvalget. Hullet stopper når poengene er borte, tempoet holder seg oppe i et stort felt, og resultatlista er lett å lese for alle.\n\nVil dere spille i lag, tar scramble og shamble opptil 16 spillere fordelt på fire lag, og best ball tar opptil fire par. Er feltet større enn det, bør kvelden spilles som stableford.\n\nSpill netto. I et klubbfelt spriker handicapene fra ensifret til godt over tjue, og uten netto er kvelden avgjort før første utslag. Vil du ha to vinnere, kår både brutto og netto, så får både den som spiller best golf og den som spiller best i forhold til seg selv noe å hente."
           },
           {
             "id": "scorekort",

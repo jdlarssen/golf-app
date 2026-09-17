@@ -782,10 +782,10 @@
         "teamsDescTeamMatchplay": "Two sides of 2 players. Each side must have exactly 2 players.",
         "teamsDescParStableford": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
         "teamsDescTexas2": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
-        "teamsDescTexas3": "Up to 2 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
-        "teamsDescTexas4": "Up to 2 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
+        "teamsDescTexas3": "Up to 4 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
+        "teamsDescTexas4": "Up to 4 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
         "teamsDescShamble3": "Up to 4 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
-        "teamsDescShamble4": "Up to 2 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
+        "teamsDescShamble4": "Up to 4 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
         "teamsDescBestBall": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
         "teamsDescPatsome": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
         "drawRandomButton": "Draw randomly",
@@ -1311,7 +1311,7 @@
         "sections": [
           {
             "heading": "The rules of best ball",
-            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. The format scales nicely since everyone walks their own round — in Tørny you can set up as many pairs as you like in the same round."
+            "body": "Best ball is played in pairs, and both of you play your own ball for the whole round. On each hole you compare the net scores and the team records the lower one. The other score simply stands. That lets you take turns being aggressive: if your partner is safely on the green in two, you can go straight at the flag without risking anything for the team. Best ball is played as stroke play where the team total after 18 holes decides, or as match play where the lower net wins the hole. Everyone plays their own round, and Tørny has room for up to four pairs in the same game."
           },
           {
             "heading": "Best ball, fourball and fourball better ball",
@@ -3378,7 +3378,8 @@
         "guest_invalid_tee": "Pick a tee category for the guest.",
         "guest_auth_create_failed": "Couldn't create the guest. Try again.",
         "guest_profile_update_failed": "Something went wrong while saving the guest. Try again.",
-        "guest_roster_insert_failed": "The guest wasn't added to the game. Try again."
+        "guest_roster_insert_failed": "The guest wasn't added to the game. Try again.",
+        "game_full": "The game is full. Remove someone to add more."
       },
       "detail": {
         "brassRibbon": "Game · log",
@@ -6141,7 +6142,7 @@
       },
       "klubbkveld": {
         "metaTitle": "A club evening golf tournament: a setup for bigger fields",
-        "metaDescription": "How to run the club evening: stableford or best ball, net handicaps for everyone, digital scorecards with marker approval and a live leaderboard throughout the round.",
+        "metaDescription": "How to run the club evening: stableford for big fields, net handicaps for everyone, digital scorecards with marker approval and a live leaderboard throughout the round.",
         "pageTitle": "A club evening golf tournament",
         "pageSubtitle": "A bigger field, players who know the rules, and a leaderboard that has to be right.",
         "intro": "If you captain a section at the club, a ladies group or a seniors group, the job looks more like real tournament administration. The field is bigger, the players know the rules, and the leaderboard has to be right.\n\nHere is the setup for the club evening: which format scales, how the scorecards are approved, and how to tie the evenings together into a series.",
@@ -6153,8 +6154,8 @@
           },
           {
             "id": "spillform",
-            "heading": "A format that scales: stableford or best ball",
-            "body": "Stableford is the default choice. The hole closes once the points are gone, the pace holds up in a big field, and the leaderboard is easy for everyone to read.\n\nIf you want teams, best ball scales best, because every player still plays their own ball. You get a team contest without anyone losing their own round, and the individual table can run alongside it.\n\nPlay net. In a club field the handicaps run from single figures to well over twenty, and without net the evening is settled before the first tee shot. If you want two winners, award both gross and net, so both the player who plays the best golf and the player who plays best relative to themselves have something to chase."
+            "heading": "A format that scales: stableford",
+            "body": "Stableford is the default choice. The hole closes once the points are gone, the pace holds up in a big field, and the leaderboard is easy for everyone to read.\n\nIf you want teams, scramble and shamble take up to 16 players across four teams, and best ball takes up to four pairs. If the field is bigger than that, play the evening as stableford.\n\nPlay net. In a club field the handicaps run from single figures to well over twenty, and without net the evening is settled before the first tee shot. If you want two winners, award both gross and net, so both the player who plays the best golf and the player who plays best relative to themselves have something to chase."
           },
           {
             "id": "scorekort",
