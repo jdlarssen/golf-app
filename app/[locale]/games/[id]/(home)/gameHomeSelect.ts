@@ -56,7 +56,7 @@ export type GameRow = {
    * fra `GameForHole` slik at scorecardTitle() kan resolve riktig tittel/
    * label per modus (best-ball + 4BBB + texas → «Lagets scorekort»,
    * matchplay → «Match-scorekort», solo → «Mitt scorekort»). Settes fra
-   * `gwp.game` via spread.
+   * `gwp.game` via spread, eller fra re-fetchen etter auto-start (#2164).
    */
   mode_config: GameForHole['mode_config'];
   courses: { name: string } | null;
@@ -76,5 +76,31 @@ export type GameRow = {
   source_game_id: string | null;
 };
 
-export const GAME_HOME_SELECT =
-  'id, name, status, tournament_id, league_round_id, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), hole_segment, source_game_id';
+/**
+ * One entry per `GameRow` key (#2164). game-home refetches the game after a
+ * visit wins the auto-start flip and replaces the cached row with the result,
+ * so a column missing here is `undefined` for the rest of the render — and
+ * `.single<GameRow>()` hides that from the compiler. Keying this map on
+ * `keyof GameRow` moves the check to `tsc`: add a field to `GameRow` without a
+ * column and the build fails.
+ */
+const GAME_ROW_COLUMNS: Record<keyof GameRow, string> = {
+  id: 'id',
+  name: 'name',
+  status: 'status',
+  tournament_id: 'tournament_id',
+  league_round_id: 'league_round_id',
+  course_id: 'course_id',
+  tee_box_id: 'tee_box_id',
+  scheduled_tee_off_at: 'scheduled_tee_off_at',
+  require_peer_approval: 'require_peer_approval',
+  game_mode: 'game_mode',
+  mode_config: 'mode_config',
+  courses: 'courses(name)',
+  tee_boxes:
+    'tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+  hole_segment: 'hole_segment',
+  source_game_id: 'source_game_id',
+};
+
+export const GAME_HOME_SELECT = Object.values(GAME_ROW_COLUMNS).join(', ');
