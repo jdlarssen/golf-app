@@ -342,7 +342,11 @@ export default async function GameDetailPage({
       {(statusBanner || errorMessage) && (
         <div className="mt-4 space-y-2">
           {statusBanner && <Banner tone="success">{statusBanner}</Banner>}
-          {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+          {errorMessage && (
+            <Banner tone="error" testId="admin-game-error-banner">
+              {errorMessage}
+            </Banner>
+          )}
         </div>
       )}
 

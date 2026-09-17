@@ -495,7 +495,7 @@ export default async function CreatorSpillerePage({
             <div className="rounded-xl border border-border bg-surface px-3.5 py-4">
               {isFull && (
                 <div className="mb-4">
-                  <Banner tone="info">
+                  <Banner tone="info" testId="roster-game-full-banner">
                     {t('fullBanner', { max: playerCap ?? 0 })}
                   </Banner>
                 </div>

@@ -83,7 +83,7 @@ export async function InviteToGameSection({
       >
         <div className="space-y-4 px-3.5 pb-3.5 pt-3.5">
           {isFull && cap !== null && (
-            <Banner tone="info">
+            <Banner tone="info" testId="invite-game-full-banner">
               {tCta('gameFullBanner', {
                 current: activePlayerCount,
                 max: cap,
