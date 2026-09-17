@@ -3,6 +3,7 @@ import {
   buildRevealMatches,
   canRetryReveal,
   nextLabelNumber,
+  opponentHiddenLabel,
 } from './lineupReveal';
 
 /**
@@ -138,6 +139,33 @@ describe('canRetryReveal', () => {
       expect(
         canRetryReveal({
           revealedAt: revealed ? AT : null,
+          team1SubmittedAt: team1 ? AT : null,
+          team2SubmittedAt: team2 ? AT : null,
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+/**
+ * #2088: what a captain reads in place of the opponent's hidden lineup. Once
+ * both teams are in and nothing is revealed, "hidden until both teams have
+ * submitted" is no longer true.
+ */
+describe('opponentHiddenLabel', () => {
+  const AT = '2026-09-15T10:00:00.000Z';
+
+  it.each([
+    { team1: true, team2: true, expected: 'hiddenBothSubmitted' },
+    { team1: true, team2: false, expected: 'hidden' },
+    { team1: false, team2: true, expected: 'hidden' },
+    { team1: false, team2: false, expected: 'hidden' },
+  ])(
+    'not revealed, team1=$team1 team2=$team2 → $expected',
+    ({ team1, team2, expected }) => {
+      expect(
+        opponentHiddenLabel({
+          revealedAt: null,
           team1SubmittedAt: team1 ? AT : null,
           team2SubmittedAt: team2 ? AT : null,
         }),

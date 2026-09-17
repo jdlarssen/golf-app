@@ -15,6 +15,9 @@ import type { CupLineupBoard as Board } from '@/lib/cup/lineupData';
  * #1901 adds the "Try again" wiring to the existing wiring test rather than a
  * fifth render test. When the button shows is Type A (`canRetryReveal` in
  * `lib/cup/lineupReveal.test.ts`) and is not re-asserted here.
+ *
+ * #2087 extends the same test: a failed retry puts its error on the session
+ * card, not in the banner at the top of the room.
  */
 
 const setPlannedMock = vi.fn<(fd: FormData) => Promise<{ error: string }>>(
@@ -151,6 +154,8 @@ describe('CupLineupBoard — planlagt antall kamper (#1902)', () => {
         screen.getByTestId('cup-lineup-retry-0').hasAttribute('disabled'),
       ).toBe(false),
     );
+    // The cause is not fixed yet, so the retry fails again (#2087).
+    retryMock.mockResolvedValueOnce({ error: 'plan_tee' });
     fireEvent.click(screen.getByTestId('cup-lineup-retry-0'));
 
     await vi.waitFor(() => expect(retryMock).toHaveBeenCalledTimes(1));
@@ -158,5 +163,11 @@ describe('CupLineupBoard — planlagt antall kamper (#1902)', () => {
     expect(retryFd.get('intent')).toBe('retry');
     expect(retryFd.get('id')).toBe('cup-1');
     expect(retryFd.get('session_id')).toBe('sess-1');
+
+    const cardError = await screen.findByTestId('cup-lineup-error-0');
+    expect(
+      screen.getByTestId('cup-lineup-session-0').contains(cardError),
+    ).toBe(true);
+    expect(screen.queryByTestId('cup-lineup-error')).toBeNull();
   });
 });

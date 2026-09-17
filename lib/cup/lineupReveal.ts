@@ -117,3 +117,19 @@ export function canRetryReveal(input: {
     input.team2SubmittedAt !== null
   );
 }
+
+/**
+ * Which text a captain sees where the opponent's lineup is hidden (#2088).
+ *
+ * "Hidden until both teams have submitted" is wrong once both are in and the
+ * session is still not revealed, whether the reveal failed or is still running
+ * for a few seconds. The text for that state stays neutral for the same
+ * reason. Built on `canRetryReveal` so "stuck" has one home (AGENTS.md trap 4).
+ */
+export function opponentHiddenLabel(input: {
+  revealedAt: string | null;
+  team1SubmittedAt: string | null;
+  team2SubmittedAt: string | null;
+}): 'hidden' | 'hiddenBothSubmitted' {
+  return canRetryReveal(input) ? 'hiddenBothSubmitted' : 'hidden';
+}
