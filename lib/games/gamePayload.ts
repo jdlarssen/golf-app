@@ -2198,7 +2198,7 @@ const modeValidators: Record<
  *   completeness check runs. Duplicate players are still rejected.
  *
  * Modus-spesifikke regler delegeres til `modeValidators[game_mode]`:
- *  - best_ball: 8 spillere fordelt 2-2-2-2 på 4 lag (publish)
+ *  - best_ball: partall 2–40 spillere, lag à 2, opptil 20 par (publish)
  *  - stableford: ≥1 solo spiller, team/flight null (publish)
  *
  * Returns the parsed payload with `errorCode` set on the first failure;

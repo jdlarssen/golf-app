@@ -108,7 +108,7 @@ export type InitialValues = {
     user_id: string;
     // Widened to `number | null` ved prop-grensen siden 0030 gjorde
     // team/flight nullable for solo-modus (stableford). deriveAssignmentsFromInitial
-    // validerer/narrower bare når feltet er satt (1..4) — null-rader hopper
+    // validerer/narrower bare når feltet er satt (1..MAX_TEAM_NUMBER, #2148) — null-rader hopper
     // over team/flight-state og lar lag-tilordnings-grid stå tom.
     team_number: number | null;
     flight_number: number | null;

@@ -222,13 +222,13 @@ export function TeamsAssignmentSection({
     .sort((a, b) => a - b);
   const highestTeamWithPlayers = teamsWithPlayers.at(-1) ?? 0;
   // #2148: rutenettet vokser med valgte spillere, opptil taket for
-  // lagstørrelsen. Lag-matchplay er 2v2 og har alltid to sider.
+  // lagstørrelsen. Et lag som alt har spillere vises alltid, også over taket:
+  // 13 lag trukket à 3 og så byttet til à 4 skal ikke skjule lag 11–13, for da
+  // kan arrangøren verken se eller flytte de spillerne. Lag-matchplay er 2v2
+  // og har alltid to sider.
   const gridTeamCount = isTeamMatchplay
     ? 2
-    : Math.min(
-        maxTeamsForSize(slotCount),
-        Math.max(teamGridSize(selectedPlayerIds.length, slotCount), highestTeamWithPlayers),
-      );
+    : Math.max(teamGridSize(selectedPlayerIds.length, slotCount), highestTeamWithPlayers);
   // Best ball: to par per flight, så flight-valgene går til flighten det
   // høyeste laget hører hjemme i — eller høyere hvis arrangøren alt har
   // flyttet noen dit.

@@ -891,11 +891,10 @@ export function useGameFormState({
   //   (team_size=1) og solo strokeplay (eneste variant, team_size=1).
   //   Begge har samme UI-shape: flat spiller-liste uten lag/flight-grid,
   //   per-spiller-tee-seksjon for HCP-allokering, validering = ≥1 spiller.
-  // - isBestBall: dagens 4-lag-à-2 (best_ball, team_size=2). Krever
-  //   eksakt 8 spillere fordelt 2-2-2-2 på 4 lag.
-  // - isParStableford: 4BBB-stableford. Tillater 1-4 lag á 2 spillere
-  //   (2/4/6/8 spillere totalt), partial fyll mot 4-lag-grid-en. Lag uten
-  //   spillere bare ignoreres ved publish.
+  // - isBestBall: par à 2 (best_ball, team_size=2). Partall 2–40 spillere,
+  //   opptil 20 par (#374, #2148).
+  // - isParStableford: 4BBB-stableford. Tillater opptil 20 lag à 2 spillere
+  //   (partall 2–40 totalt). Lag uten spillere ignoreres ved publish.
   // - isMatchplay: singles_matchplay. Nøyaktig 2 spillere, én på hver side
   //   (team_number 1 og 2). Eget side-tilordnings-UI som erstatter både
   //   lag-grid og flight-seksjonen. TeamSizeSelector skjules siden valget
