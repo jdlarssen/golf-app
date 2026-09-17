@@ -1154,13 +1154,24 @@ describe('revealCupLineupSession — målet følger med når kampene kommer (#19
         ]);
       });
 
-      it('the undo hits 0 rows twice: reveal_undo_failed, tried exactly twice, logged', async () => {
+      it.each([
+        {
+          what: 'hits 0 rows twice',
+          first: { data: [], error: null },
+          second: { data: [], error: null },
+        },
+        {
+          what: 'hits 0 rows, then errors',
+          first: { data: [], error: null },
+          second: { data: null, error: { message: 'boom' } },
+        },
+      ])('the undo $what: reveal_undo_failed, tried exactly twice, logged', async ({ first, second }) => {
         const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         adminMock = buildSupabaseMock([
           ...claimedQueue(),
           { data: [], error: null }, // games (label number)
-          { data: [], error: null }, // undo #1: 0 rows
-          { data: null, error: { message: 'boom' } }, // undo #2: fails
+          first, // undo #1
+          second, // undo #2
         ]);
         supabaseMock = buildSupabaseMock([]);
         setUser('organizer');
