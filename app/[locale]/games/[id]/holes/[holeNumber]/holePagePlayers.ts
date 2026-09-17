@@ -165,20 +165,39 @@ export function buildPlayersForClient(args: {
     return players.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
   }
 
+  // #2067: et medlem som slettet kontoen midt i runden, er trukket og ute av
+  // flighten, men teller fortsatt i lag-handicapet så lenge noen på laget
+  // spiller — samme regel som scoring-motoren (`buildUniformContext`), så
+  // kortets slag stemmer med tavla og appen.
+  const withdrawnOnTeamInPlay = (active: PlayerForHole[]): PlayerForHole[] => {
+    const teams = new Set(active.map((p) => p.team_number));
+    return allPlayers.filter(
+      (p) => p.withdrawn_at != null && p.team_number != null && teams.has(p.team_number),
+    );
+  };
+
   function teamHandicapFor(teamNum: number): number {
-    const teamPlayers = flight.filter((p) => p.team_number === teamNum);
+    const activeTeamPlayers = flight.filter((p) => p.team_number === teamNum);
+    const teamPlayers = [
+      ...activeTeamPlayers,
+      ...withdrawnOnTeamInPlay(activeTeamPlayers),
+    ];
     const combinedCH = teamPlayers.reduce(
       (sum, p) => sum + (p.course_handicap ?? 0),
       0,
     );
     if (isDiffFormat) {
-      // Alle aktive lag-spillere — bruk allPlayers for diff-beregning.
-      const oppPlayers = allPlayers.filter(
+      // Alle lag-spillere på motstandersiden — bruk allPlayers for diff-beregning.
+      const activeOppPlayers = allPlayers.filter(
         (p) =>
           p.team_number !== teamNum &&
           p.team_number !== null &&
           p.withdrawn_at == null,
       );
+      const oppPlayers = [
+        ...activeOppPlayers,
+        ...withdrawnOnTeamInPlay(activeOppPlayers),
+      ];
       const thisSideCH = teamStrokesOverride
         ? teamNum === 1
           ? teamStrokesOverride.side1
