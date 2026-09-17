@@ -12,7 +12,9 @@
       "mcp__github__*",
       "mcp__Supabase__execute_sql",
       "mcp__Supabase__apply_migration",
-      "mcp__Supabase__list_projects"
+      "mcp__Supabase__list_projects",
+      "Bash(gh pr ready *)",
+      "Bash(git reset --hard origin/main *)"
     ]
   },
   "hooks": {
