@@ -209,6 +209,10 @@ export default async function PåmeldingPage({
     .eq('user_id', user!.id)
     .maybeSingle<PendingRequestRow & { id: string }>();
 
+  if (existingPlayer == null && existingRequest) {
+    existingRequest.captain_status = await loadCaptainStatus(admin, existingRequest);
+  }
+
   // #442: er brukeren medlem av spillets klubb? Klubb-medlemmer kan melde seg
   // på klubb-spill direkte uansett registration_mode (medlemskap ER
   // invitasjonen). Den autoritative authz-en gjentas i registerForOpenGame.
@@ -492,6 +496,16 @@ function renderBody({
     );
   }
 
+  // #2061: du har sagt ja til laget, og laget venter på arrangøren. Samme
+  // beskjed som en sendt forespørsel — ikke påmeldingsskjemaet igjen.
+  if (requestView === 'team_awaiting_approval') {
+    return (
+      <Banner tone="info" testId="team-awaiting-approval">
+        {t('pendingRequestBanner')}
+      </Banner>
+    );
+  }
+
   if (gameLocked) {
     return (
       <Banner tone="warning">
@@ -682,6 +696,25 @@ function renderBody({
       />
     </div>
   );
+}
+
+/**
+ * #2061: a teammate who said yes before the organiser approved the captain has
+ * an approved row but no game_players row yet. Only the captain's status tells
+ * that apart from a player the organiser removed. Called only when the viewer
+ * has no game_players row; other rows need no lookup.
+ */
+async function loadCaptainStatus(
+  admin: ReturnType<typeof getAdminClient>,
+  row: PendingRequestRow,
+): Promise<PendingRequestRow['status'] | null> {
+  if (row.status !== 'approved' || !row.team_request_id) return null;
+  const { data: captainRequest } = await admin
+    .from('game_registration_requests')
+    .select('status')
+    .eq('id', row.team_request_id)
+    .maybeSingle<{ status: PendingRequestRow['status'] }>();
+  return captainRequest?.status ?? null;
 }
 
 /**
