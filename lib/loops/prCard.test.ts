@@ -312,6 +312,18 @@ describe('extractFunctionalSection', () => {
     expect(extractFunctionalSection(body)).toBe('Første setning.\n\nAndre setning.');
   });
 
+  it('fjerner også en punktmerket eller fet arbeider-linje', () => {
+    const body = '## Funksjonelt\nSpillerne ser X.\n- Kan merges: ja\n**Venter på deg:** prod-migrasjon';
+    expect(extractFunctionalSection(body)).toBe('Spillerne ser X.');
+  });
+
+  it('deler ikke en emoji ved kuttet', () => {
+    // 598 + 5 emoji = 603 tegn; et kutt i UTF-16-enheter ville delt emoji nr. 1.
+    const out = extractFunctionalSection(`## Funksjonelt\n${'a'.repeat(598)}${'😀'.repeat(5)}`);
+    expect(Array.from(out ?? '')).toHaveLength(600);
+    expect(out).not.toMatch(/[\uD800-\uDBFF]…$/);
+  });
+
   it('slutter ved neste heading', () => {
     const body = '## Funksjonelt\nSpillerne ser X.\n## Teknisk\nFil a.ts endret.';
     expect(extractFunctionalSection(body)).toBe('Spillerne ser X.');
