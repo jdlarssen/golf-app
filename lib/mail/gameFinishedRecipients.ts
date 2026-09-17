@@ -25,6 +25,26 @@ import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
+/**
+ * #2057: en spiller som har trukket seg, skal ikke rangeres, telle i «av N»
+ * eller dra laget ned. Samme regel som resultatsiden (`buildUniformContext`):
+ * spillerne lukes på `withdrawn_at`, og slagene til de trukne lukes bort.
+ * Mottaker-løkkene bruker fortsatt de ufiltrerte radene, så den trukne får
+ * mail med nøytral copy (ingen rad i resultatet → `mode: undefined`).
+ */
+function withoutWithdrawn<
+  P extends { user_id: string; withdrawn_at?: string | null },
+  S extends { user_id: string },
+>(players: P[], scores: S[]): { players: P[]; scores: S[] } {
+  const withdrawnIds = new Set(
+    players.filter((p) => p.withdrawn_at != null).map((p) => p.user_id),
+  );
+  return {
+    players: players.filter((p) => p.withdrawn_at == null),
+    scores: scores.filter((s) => !withdrawnIds.has(s.user_id)),
+  };
+}
+
 export interface FinishedMailRecipient {
   /**
    * Spillerens auth-user-id. Brukes av caller for å filtrere mottakerlisten
@@ -70,11 +90,12 @@ export async function buildGameFinishedRecipients(
   // Felles fetch: hent game_players med email + course_handicap + team_number.
   // Gjelder begge moduser, så vi gjør den én gang. `team_number` brukes kun
   // av team-stableford-grenen (for partner-name-lookup), men har null cost å
-  // ta med — kolonnen står på alle game_players-rader (NOT NULL siden 0030).
+  // ta med. Kolonnen er nullable siden 0030 (solo-modi har ingen lag).
+  // `withdrawn_at` (#2057) brukes til å luke trukne spillere ut av rangeringen.
   const { data: playerRowsRaw, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, tee_gender, course_handicap, users!game_players_user_id_fkey(email, name, locale, is_guest)',
+      'user_id, team_number, tee_gender, course_handicap, withdrawn_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -83,6 +104,7 @@ export async function buildGameFinishedRecipients(
         team_number: number | null;
         tee_gender: ScoringGender;
         course_handicap: number | null;
+        withdrawn_at: string | null;
         users: {
           email: string | null;
           name: string | null;
@@ -203,13 +225,14 @@ export async function buildGameFinishedRecipients(
     return [];
   }
 
+  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
   const result = computeLeaderboard({
     game: {
       id: gameId,
       game_mode: 'stableford',
       mode_config: game.mode_config,
     },
-    players: playerRows.map((row) => ({
+    players: ranked.players.map((row) => ({
       userId: row.user_id,
       // Team-grenen i stableford-scoring grupperer på teamNumber, så vi MÅ
       // sende det videre for par-stableford. Solo-grenen ignorerer feltet,
@@ -234,7 +257,7 @@ export async function buildGameFinishedRecipients(
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: (scoresRes.data ?? []).map((s) => ({
+    scores: ranked.scores.map((s) => ({
       userId: s.user_id,
       holeNumber: s.hole_number,
       gross: s.strokes,
@@ -378,6 +401,7 @@ async function buildMatchplayRecipients(
     team_number: number | null;
     tee_gender: ScoringGender;
     course_handicap: number | null;
+    withdrawn_at: string | null;
     users: { email: string | null; name: string | null; locale: string | null } | null;
   }[],
 ): Promise<FinishedMailRecipient[]> {
@@ -408,13 +432,14 @@ async function buildMatchplayRecipients(
     return [];
   }
 
+  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
   const result = computeLeaderboard({
     game: {
       id: gameId,
       game_mode: 'singles_matchplay',
       mode_config: game.mode_config,
     },
-    players: playerRows.map((row) => ({
+    players: ranked.players.map((row) => ({
       userId: row.user_id,
       teamNumber: row.team_number,
       flightNumber: null,
@@ -434,7 +459,7 @@ async function buildMatchplayRecipients(
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: (scoresRes.data ?? []).map((s) => ({
+    scores: ranked.scores.map((s) => ({
       userId: s.user_id,
       holeNumber: s.hole_number,
       gross: s.strokes,
@@ -552,6 +577,7 @@ async function buildSoloStrokeplayRecipients(
     team_number: number | null;
     tee_gender: ScoringGender;
     course_handicap: number | null;
+    withdrawn_at: string | null;
     users: { email: string | null; name: string | null; locale: string | null } | null;
   }[],
 ): Promise<FinishedMailRecipient[]> {
@@ -582,13 +608,14 @@ async function buildSoloStrokeplayRecipients(
     return [];
   }
 
+  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
   const result = computeLeaderboard({
     game: {
       id: gameId,
       game_mode: 'solo_strokeplay',
       mode_config: game.mode_config,
     },
-    players: playerRows.map((row) => ({
+    players: ranked.players.map((row) => ({
       userId: row.user_id,
       teamNumber: row.team_number,
       flightNumber: null,
@@ -609,7 +636,7 @@ async function buildSoloStrokeplayRecipients(
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: (scoresRes.data ?? []).map((s) => ({
+    scores: ranked.scores.map((s) => ({
       userId: s.user_id,
       holeNumber: s.hole_number,
       gross: s.strokes,
@@ -681,6 +708,7 @@ async function buildTexasScrambleRecipients(
     team_number: number | null;
     tee_gender: ScoringGender;
     course_handicap: number | null;
+    withdrawn_at: string | null;
     users: { email: string | null; name: string | null; locale: string | null } | null;
   }[],
 ): Promise<FinishedMailRecipient[]> {
@@ -711,6 +739,7 @@ async function buildTexasScrambleRecipients(
     return [];
   }
 
+  const ranked = withoutWithdrawn(playerRows, scoresRes.data ?? []);
   const result = computeLeaderboard({
     game: {
       id: gameId,
@@ -720,7 +749,7 @@ async function buildTexasScrambleRecipients(
       game_mode: game.game_mode,
       mode_config: game.mode_config,
     },
-    players: playerRows.map((row) => ({
+    players: ranked.players.map((row) => ({
       userId: row.user_id,
       teamNumber: row.team_number,
       flightNumber: null,
@@ -741,7 +770,7 @@ async function buildTexasScrambleRecipients(
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: (scoresRes.data ?? []).map((s) => ({
+    scores: ranked.scores.map((s) => ({
       userId: s.user_id,
       holeNumber: s.hole_number,
       gross: s.strokes,
