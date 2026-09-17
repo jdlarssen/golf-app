@@ -485,7 +485,7 @@ export async function submitCupLineup(
   if (!canWriteTeamLineup(access, team)) return { error: 'not_allowed' };
 
   const admin = getAdminClient();
-  const { data: session } = await admin
+  const { data: session, error: sessionError } = await admin
     .from('cup_lineup_sessions')
     .select(
       'id, format, slot_count, revealed_at, team_1_submitted_at, team_2_submitted_at',
@@ -493,6 +493,15 @@ export async function submitCupLineup(
     .eq('id', sessionId)
     .eq('tournament_id', tournamentId)
     .maybeSingle();
+  if (sessionError) {
+    // A failed read is not "no such session" (I3, #2082).
+    console.error('[cup] submitCupLineup session read failed', {
+      tournamentId,
+      sessionId,
+      error: sessionError,
+    });
+    return { error: 'save_failed' };
+  }
   if (!session) return { error: 'not_found' };
   if (session.revealed_at !== null) return { error: 'lineup_revealed' };
 

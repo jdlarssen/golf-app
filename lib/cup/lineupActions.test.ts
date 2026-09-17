@@ -197,6 +197,35 @@ describe('submitCupLineup — hemmeligholdet på skrivesiden (SK4)', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  it('sesjonslesingen feiler: save_failed og logg, ikke «fant ikke økta» (#2082)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      ...accessReads(),
+      { data: null, error: { message: 'connection reset' } },
+    ]);
+    supabaseMock = buildSupabaseMock([]);
+    setUser('cap1');
+
+    const { submitCupLineup } = await import('./lineupActions');
+    const res = await submitCupLineup(
+      form({
+        id: 'cup-1',
+        session_id: 'sess-1',
+        team: '1',
+        slots: JSON.stringify([{ slotIndex: 0, userIds: ['pl', 'pl2'] }]),
+      }),
+    );
+
+    expect(res).toEqual({ error: 'save_failed' });
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[cup] submitCupLineup session read failed',
+      expect.objectContaining({ tournamentId: 'cup-1', sessionId: 'sess-1' }),
+    );
+    expect(writeCalls()).toHaveLength(0);
+    errorSpy.mockRestore();
+  });
+
   it('kapteinen kan ikke levere en spiller fra motstanderlaget', async () => {
     adminMock = buildSupabaseMock([
       ...accessReads(),
