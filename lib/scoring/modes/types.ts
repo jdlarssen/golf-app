@@ -325,7 +325,11 @@ export const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
  * slagspill.
  *
  * Out-of-scope (faller tilbake på «ikke levert» — scorene teller, som i dag):
- *  - scramble/shamble/patsome: delt lag-kort → WD har ingen scoring-effekt
+ *  - scramble/shamble/patsome: delt lag-kort → WD har ingen scoring-effekt.
+ *    Frafall tilbys ikke her, men en kontosletting midt i runden trekker
+ *    spilleren likevel (0174). I én-ball-formatene blir den trukne da stående
+ *    på laget i regnestykket, og hullene laget alt har ført, følger laget
+ *    (`foldTeamRows`, #2067).
  *  - matchplay-familien: et frafall er en walkover, egen semantikk
  *  - pott-format (wolf/nassau/skins/nines/bbb/acey-deucey/round-robin):
  *    carryover/hode-mot-hode-oppgjør, egen semantikk
