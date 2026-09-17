@@ -54,7 +54,8 @@ export function extractPrSummary(body: string | null | undefined): string | null
 // (autoMerge.ownerWaitReasons), så arbeiderens egen linje fjernes her.
 const FUNCTIONAL_HEADING = /^#{1,6}[ \t]+funksjonelt/i;
 const ANY_HEADING = /^#{1,6}[ \t]/;
-const WORKER_VERDICT_LINE = /^(?:kan merges|venter på deg)\s*:/i;
+// Tåler punkt-/sitatmerke og fet/kursiv rundt etiketten («- **Kan merges:** ja»).
+const WORKER_VERDICT_LINE = /^(?:[-*+>][ \t]+)?[*_]*(?:kan merges|venter på deg)[*_]*[ \t]*:/i;
 const FUNCTIONAL_MAX = 600;
 
 /**
@@ -80,7 +81,9 @@ export function extractFunctionalSection(body: string | null | undefined): strin
   while (kept.length > 0 && kept[kept.length - 1] === '') kept.pop();
   const text = kept.join('\n').trim();
   if (text === '') return null;
-  return text.length > FUNCTIONAL_MAX ? `${text.slice(0, FUNCTIONAL_MAX - 1)}…` : text;
+  // Kutt i kodepunkter, ikke UTF-16-enheter: en delt emoji blir et erstatningstegn i Discord.
+  const chars = Array.from(text);
+  return chars.length > FUNCTIONAL_MAX ? `${chars.slice(0, FUNCTIONAL_MAX - 1).join('')}…` : text;
 }
 
 export type CheckRun = { name?: string; status: string; conclusion: string | null };
