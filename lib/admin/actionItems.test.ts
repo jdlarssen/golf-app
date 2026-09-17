@@ -328,8 +328,9 @@ describe('holesFilledByGame', () => {
         member('g1', 'b', 1),
         member('g1', 'c', 1),
       ],
-      // a (trukket, lex-min) har 18 rader; b er ny eier og har 18.
-      scores: [...rows('g1', 'a', 1, 18), ...rows('g1', 'b', 1, 18)],
+      // a (trukket, lex-min) har bare 1–9; b er ny eier og har 18. Hadde a
+      // fortsatt eid radene, ville c stått på 9.
+      scores: [...rows('g1', 'a', 1, 9), ...rows('g1', 'b', 1, 18)],
     });
 
     expect(holes.get('g1:b')).toBe(18);

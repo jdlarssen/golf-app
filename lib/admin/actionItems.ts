@@ -27,7 +27,7 @@ export interface ActiveGameInput {
   expectedHoles?: number;
 }
 
-/** One non-withdrawn player row from game_players. */
+/** One player row from game_players, withdrawn players included. */
 export interface ActivePlayerInput {
   gameId: string;
   submittedAt: string | null;
