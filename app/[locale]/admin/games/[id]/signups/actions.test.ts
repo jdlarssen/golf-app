@@ -279,7 +279,7 @@ describe('approveRequest', () => {
       },
       // load team children
       {
-        data: [{ id: MATE_REQUEST_ID, user_id: MATE_USER_ID }],
+        data: [{ id: MATE_REQUEST_ID, user_id: MATE_USER_ID, status: 'pending' }],
         error: null,
       },
       // existing teams (none taken → slot 1)
@@ -600,7 +600,7 @@ describe('rejectRequest', () => {
       },
       // children
       {
-        data: [{ id: MATE_REQUEST_ID, user_id: MATE_USER_ID }],
+        data: [{ id: MATE_REQUEST_ID, user_id: MATE_USER_ID, status: 'pending' }],
         error: null,
       },
       // UPDATE — #712: .select() returns affected rows
@@ -706,5 +706,213 @@ describe('rejectRequest', () => {
     expect(lastRedirect()).toBe(
       `/admin/games/${GAME_ID}/signups?error=reason_too_long`,
     );
+  });
+});
+
+/**
+ * #2061: a teammate who accepted before the organiser approved the captain has
+ * status 'approved' but no game_players row. Approving the captain must place
+ * those teammates on the same team as the rest, give a captain already on the
+ * roster without a team the team's number, and rejecting the captain must not
+ * leave an early-accepted teammate standing as approved.
+ */
+describe('#2061: hele laget på samme lag', () => {
+  const EARLY_MATE_USER_ID = '99999999-9999-9999-9999-999999999999';
+  const EARLY_MATE_REQUEST_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+  const captainRequest = {
+    data: {
+      id: CAPTAIN_REQUEST_ID,
+      game_id: GAME_ID,
+      user_id: CAPTAIN_USER_ID,
+      status: 'pending',
+      is_team_captain: true,
+      team_name: 'Albatross',
+      team_request_id: null,
+    },
+    error: null,
+  };
+  const scheduledGame = {
+    data: { id: GAME_ID, name: 'Scramble-runde', status: 'scheduled', created_by: ADMIN_ID },
+    error: null,
+  };
+
+  beforeEach(() => {
+    serverMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'arrangor@example.test', name: 'Arrangør' }, error: null },
+    ]);
+    authedAsAdmin();
+  });
+
+  function calls(table: string, method: string) {
+    return adminMock.__fromCalls.filter((c) => c.table === table && c.method === method);
+  }
+
+  /** The filter calls chained after the n-th call matching table+method. */
+  function chainAfter(table: string, method: string, n = 0) {
+    const all = adminMock.__fromCalls;
+    const start = all.indexOf(calls(table, method)[n]!);
+    const rest = all.slice(start + 1);
+    const end = rest.findIndex((c) =>
+      ['update', 'insert', 'upsert', 'delete'].includes(c.method) ||
+      (c.method === 'select' && c.table !== table),
+    );
+    return end === -1 ? rest : rest.slice(0, end);
+  }
+
+  it('godkjenn kaptein med én ventende og én tidlig godtatt medspiller → alle tre på samme lag', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      scheduledGame,
+      // team children: pending and early-accepted
+      {
+        data: [
+          { id: MATE_REQUEST_ID, user_id: MATE_USER_ID, status: 'pending' },
+          { id: EARLY_MATE_REQUEST_ID, user_id: EARLY_MATE_USER_ID, status: 'approved' },
+        ],
+        error: null,
+      },
+      { data: [{ team_number: 1 }], error: null }, // taken team numbers → 2
+      { data: [{ id: CAPTAIN_REQUEST_ID }, { id: MATE_REQUEST_ID }], error: null }, // status update
+      {
+        data: [
+          { user_id: CAPTAIN_USER_ID },
+          { user_id: MATE_USER_ID },
+          { user_id: EARLY_MATE_USER_ID },
+        ],
+        error: null,
+      }, // game_players upsert .select
+      { data: [], error: null }, // null-team update .select
+    ]);
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(CAPTAIN_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=approved`);
+
+    // The children lookup includes teammates who already accepted.
+    expect(
+      chainAfter('game_registration_requests', 'select', 1).find(
+        (c) => c.method === 'in' && c.args[0] === 'status',
+      )?.args[1],
+    ).toEqual(['pending', 'approved']);
+
+    // The status update touches only the pending rows.
+    const statusChain = chainAfter('game_registration_requests', 'update');
+    expect(statusChain.find((c) => c.method === 'in' && c.args[0] === 'id')?.args[1]).toEqual([
+      CAPTAIN_REQUEST_ID,
+      MATE_REQUEST_ID,
+    ]);
+
+    const upserts = calls('game_players', 'upsert');
+    expect(upserts).toHaveLength(1);
+    const rows = upserts[0]!.args[0] as Array<{
+      user_id: string;
+      team_number: number;
+      flight_number: number;
+    }>;
+    expect(rows.map((r) => r.user_id).sort()).toEqual(
+      [CAPTAIN_USER_ID, MATE_USER_ID, EARLY_MATE_USER_ID].sort(),
+    );
+    for (const row of rows) {
+      expect(row.team_number).toBe(2);
+      expect(row.flight_number).toBe(2);
+    }
+
+    // Each member hears it once, the early-accepted teammate included.
+    const notified = notifyMock.mock.calls.map((c) => (c[0] as { userId: string }).userId);
+    expect(notified.sort()).toEqual(
+      [CAPTAIN_USER_ID, MATE_USER_ID, EARLY_MATE_USER_ID].sort(),
+    );
+  });
+
+  it('kaptein som alt står på lista uten lag → raden får lagets nummer', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      scheduledGame,
+      { data: [], error: null }, // no children
+      { data: [], error: null }, // no taken numbers → 1
+      { data: [{ id: CAPTAIN_REQUEST_ID }], error: null }, // status update
+      { data: [], error: null }, // upsert ignored the existing row
+      { data: [{ user_id: CAPTAIN_USER_ID }], error: null }, // null-team update
+    ]);
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(CAPTAIN_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=approved`);
+
+    const updates = calls('game_players', 'update');
+    expect(updates).toHaveLength(1);
+    expect(updates[0]!.args[0]).toEqual({ team_number: 1, flight_number: 1 });
+    const chain = chainAfter('game_players', 'update');
+    expect(chain).toContainEqual(
+      expect.objectContaining({ method: 'is', args: ['team_number', null] }),
+    );
+    expect(chain).toContainEqual(
+      expect.objectContaining({ method: 'eq', args: ['game_id', GAME_ID] }),
+    );
+    expect(chain.find((c) => c.method === 'in' && c.args[0] === 'user_id')?.args[1]).toEqual([
+      CAPTAIN_USER_ID,
+    ]);
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('null-lag-oppdateringen feiler → ?error=db_players', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      scheduledGame,
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: [{ id: CAPTAIN_REQUEST_ID }], error: null },
+      { data: [], error: null },
+      { data: null, error: { message: 'boom', code: '' } },
+    ]);
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(CAPTAIN_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?error=db_players`);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('avvis kaptein med en tidlig godtatt medspiller → medspilleren blir rejected', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      scheduledGame,
+      {
+        data: [
+          { id: MATE_REQUEST_ID, user_id: MATE_USER_ID, status: 'pending' },
+          { id: EARLY_MATE_REQUEST_ID, user_id: EARLY_MATE_USER_ID, status: 'approved' },
+        ],
+        error: null,
+      },
+      { data: [{ id: CAPTAIN_REQUEST_ID }, { id: MATE_REQUEST_ID }], error: null }, // pending rows
+      { data: [{ id: EARLY_MATE_REQUEST_ID }], error: null }, // early-accepted rows
+    ]);
+
+    const { rejectRequest } = await import('./actions');
+    await expect(rejectRequest(CAPTAIN_REQUEST_ID, fd({}))).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=rejected`);
+
+    expect(
+      chainAfter('game_registration_requests', 'select', 1).find(
+        (c) => c.method === 'in' && c.args[0] === 'status',
+      )?.args[1],
+    ).toEqual(['pending', 'approved']);
+
+    const updates = calls('game_registration_requests', 'update');
+    expect(updates).toHaveLength(2);
+    const earlyChain = chainAfter('game_registration_requests', 'update', 1);
+    expect(updates[1]!.args[0]).toMatchObject({ status: 'rejected' });
+    expect(earlyChain.find((c) => c.method === 'in' && c.args[0] === 'id')?.args[1]).toEqual([
+      EARLY_MATE_REQUEST_ID,
+    ]);
+    expect(earlyChain).toContainEqual(
+      expect.objectContaining({ method: 'eq', args: ['status', 'approved'] }),
+    );
+    // The pending update never matches an approved row (race with an approval).
+    expect(chainAfter('game_registration_requests', 'update', 0)).toContainEqual(
+      expect.objectContaining({ method: 'eq', args: ['status', 'pending'] }),
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(3);
   });
 });
