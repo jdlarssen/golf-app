@@ -359,6 +359,7 @@ export function TeamsAssignmentSection({
                 variant="secondary"
                 onClick={drawRandomTeams}
                 disabled={!canDrawRandomTeams}
+                data-testid="draw-random-teams"
                 className="flex-1 text-sm"
               >
                 {t('drawRandomButton')}
@@ -396,6 +397,7 @@ export function TeamsAssignmentSection({
               return (
                 <div
                   key={team}
+                  data-testid={`team-card-${team}`}
                   className="border border-border rounded-lg p-3 space-y-2"
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">
