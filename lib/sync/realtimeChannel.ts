@@ -94,7 +94,10 @@ export function onPostgresChange<TRow>(
  * recovers on its own meanwhile, the park is lifted by `SUBSCRIBED` so a later
  * wifi flap doesn't tear down a healthy channel. The new channel is subscribed
  * BEFORE the old one is removed, because `removeChannel` on the last remaining
- * channel tears down the whole socket.
+ * channel tears down the whole socket. Postgres Changes are never replayed, so
+ * the first `SUBSCRIBED` after a `CHANNEL_ERROR`/`TIMED_OUT` or a rebuild calls
+ * `onResubscribed`: the consumer reads again to pick up what the outage lost
+ * (#2093). A clean first join does not call it; the consumer reads on mount.
  *
  * The failure budget is per channel generation: the doomed channel keeps
  * firing `CHANNEL_ERROR` throughout the backoff window and during its leave
@@ -113,6 +116,7 @@ export function onPostgresChange<TRow>(
 export function subscribeRealtimeChannel(
   topic: string,
   configure: (channel: RealtimeChannel) => RealtimeChannel,
+  opts: { onResubscribed?: () => void } = {},
 ): () => void {
   const supabase = getBrowserClient();
   let unsubscribed = false;
@@ -125,6 +129,11 @@ export function subscribeRealtimeChannel(
   let parkedUntilOnline = false;
   /** True from the start of an `openChannel` call until it settles. */
   let rebuildInProgress = false;
+  /**
+   * An error or a rebuild since the last `SUBSCRIBED`: events may have been
+   * committed while nobody was listening.
+   */
+  let outageSinceSubscribed = false;
 
   async function openChannel(): Promise<void> {
     // A rebuild in progress cancels a stale pending rebuild.
@@ -190,6 +199,8 @@ export function subscribeRealtimeChannel(
     retryTimer = setTimeout(() => {
       retryTimer = null;
       if (unsubscribed) return;
+      // Also covers a first open that threw before any status arrived.
+      outageSinceSubscribed = true;
       openChannel().catch((err) => {
         console.error('[realtime] channel rebuild failed', err);
         scheduleRebuild();
@@ -206,11 +217,16 @@ export function subscribeRealtimeChannel(
       rebuildAttempts = 0;
       // Phoenix got there on its own; nothing is waiting for `online` anymore.
       parkedUntilOnline = false;
+      if (outageSinceSubscribed) {
+        outageSinceSubscribed = false;
+        opts.onResubscribed?.();
+      }
       return;
     }
     // Anything else that isn't an error — notably CLOSED, which our own
     // removeChannel fires — is left alone.
     if (status !== 'CHANNEL_ERROR' && status !== 'TIMED_OUT') return;
+    outageSinceSubscribed = true;
     consecutiveFailures += 1;
     if (consecutiveFailures < REBUILD_AFTER_CONSECUTIVE_FAILURES) return;
     scheduleRebuild();

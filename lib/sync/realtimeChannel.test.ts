@@ -456,6 +456,120 @@ describe('subscribeRealtimeChannel', () => {
       expect(mockSupabase.channels).toHaveLength(0);
     });
   });
+
+  // #2093: Postgres Changes are not replayed. Whatever was committed while the
+  // channel was down is gone for good, so the consumer has to read again once
+  // the channel is back.
+  describe('onResubscribed after an outage (#2093)', () => {
+    const bind = configureBind((ch) =>
+      ch.on('postgres_changes', {}, () => {}),
+    ) as never;
+
+    async function subscribe() {
+      const { subscribeRealtimeChannel } = await import('./realtimeChannel');
+      const onResubscribed = vi.fn();
+      const cleanup = subscribeRealtimeChannel('scores:game-A', bind, {
+        onResubscribed,
+      });
+      await flushFake();
+      return { onResubscribed, cleanup };
+    }
+
+    it('is not called for the first SUBSCRIBED when nothing failed before it', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+
+      // The consumer already reads on mount; a clean join is no outage.
+      emit('SUBSCRIBED');
+      expect(onResubscribed).not.toHaveBeenCalled();
+
+      cleanup();
+    });
+
+    it('is called once when phoenix rejoins on its own after an error', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+      emit('SUBSCRIBED');
+
+      emit('CHANNEL_ERROR');
+      expect(onResubscribed).not.toHaveBeenCalled();
+      emit('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(1);
+
+      // A repeated SUBSCRIBED with no new failure in between is no new outage.
+      emit('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    it('is called once when the rebuilt channel joins', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+      emit('SUBSCRIBED');
+      const first = mockSupabase.channels[0]!;
+
+      emit('TIMED_OUT', 3);
+      await vi.advanceTimersByTimeAsync(2_000);
+      const second = mockSupabase.channels[0]!;
+      expect(second).not.toBe(first);
+      expect(onResubscribed).not.toHaveBeenCalled();
+
+      emit('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    it('is called at the first SUBSCRIBED when the channel failed before it', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+
+      // Events committed since the server render may already be lost.
+      emit('CHANNEL_ERROR');
+      emit('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    it('ignores SUBSCRIBED from a channel that has been replaced', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+      const first = mockSupabase.channels[0]!;
+
+      emit('CHANNEL_ERROR', 3);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(mockSupabase.channels[0]).not.toBe(first);
+
+      // The old channel's callback stays wired through its leave round-trip.
+      first.status?.('SUBSCRIBED');
+      expect(onResubscribed).not.toHaveBeenCalled();
+
+      // The replacement still owes its read.
+      emit('SUBSCRIBED');
+      expect(onResubscribed).toHaveBeenCalledTimes(1);
+
+      cleanup();
+    });
+
+    it('never counts CLOSED as an outage and is never called after cleanup', async () => {
+      vi.useFakeTimers();
+      const { onResubscribed, cleanup } = await subscribe();
+      emit('SUBSCRIBED');
+      const channel = mockSupabase.channels[0]!;
+
+      emit('CLOSED');
+      emit('SUBSCRIBED');
+      expect(onResubscribed).not.toHaveBeenCalled();
+
+      emit('CHANNEL_ERROR');
+      cleanup();
+      await flushFake();
+      channel.status?.('SUBSCRIBED');
+      expect(onResubscribed).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('onPostgresChange', () => {
