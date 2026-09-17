@@ -43,6 +43,13 @@ Fil: `.github/workflows/discord-pr-card.yml`. Tre steg (`scripts/loops/`):
    kan komme rett etter siste push, så uten venting fantes
    ingen senere fyring å falle tilbake på. Blandet PR (kode + docs): ci.yml-fyringen
    kansellerer den ventende tvilling-kjøringen (concurrency per head-SHA).
+   **Stafettbytte ved ready-flipp (#2095):** kjører ci.yml fortsatt for head-SHA-en
+   når en `pull_request`-kjøring starter (og diffen forventer ci.yml), venter
+   decide IKKE — den gir `noop` med logglinja `ci.yml kjører fortsatt —
+   relékjøringen tar over` og blir grønn på sekunder. `workflow_run`-fyringen når
+   ci.yml lander poster kortet. Før #2095 ventet den og ble kansellert av reléet,
+   noe som så ut som en flake. Feilet ci.yml-oppslag eller ingen registrert
+   kjøring → vent som før (fail-closed). Dispatch og tvillingen venter alltid.
    Checker ut PR-head-koden så skjermbildene viser koden under review. (Vi bruker
    `workflow_run`, ikke `check_suite`: check_suite fyrer ikke for
    GitHub-Actions-suiter, så CI trigget aldri kortet.)
@@ -236,7 +243,9 @@ appen bootes mot torny-staging, login via service-role OTP-mint).
 
 `discord:merge-kort`-labelen sikrer ett kort per PR: en senere `workflow_run`-fyring
 (f.eks. re-kjørt CI) ser labelen og hopper over. `concurrency`-gruppa (per head-SHA,
-`cancel-in-progress`) serialiserer samtidige fyringer. Restrisiko: to fyringer i
+`cancel-in-progress`) serialiserer samtidige fyringer. En ready-flipp mens ci.yml
+kjører overleverer til relékjøringen i stedet for å vente (#2095, se steg 1), så
+gruppa kansellerer normalt ingenting i den flyten lenger. Restrisiko: to fyringer i
 samme øyeblikk kan i sjeldne tilfeller gi to kort — akseptert for v1 (mildt) fremfor
 å risikere et stille tapt kort.
 
