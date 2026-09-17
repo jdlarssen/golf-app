@@ -167,6 +167,21 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
       if (refusal.rotationMode === 'round_robin') {
         return `Round Robin trenger nøyaktig 4 spillere for å starte. Nå er ${count} påmeldt.`;
       }
+      if (refusal.rotationMode === 'acey_deucey') {
+        return `Acey Deucey trenger nøyaktig 4 spillere for å starte. Nå er ${count} påmeldt.`;
+      }
+      if (refusal.rotationMode === 'nines') {
+        return `Nines trenger nøyaktig 3 spillere for å starte. Nå er ${count} påmeldt.`;
+      }
+      if (refusal.rotationMode === 'nassau') {
+        return `Nassau trenger 2–16 spillere for å starte. Nå er ${count} påmeldt.`;
+      }
+      if (refusal.rotationMode === 'skins') {
+        return `Skins trenger 2–16 spillere for å starte. Nå er ${count} påmeldt.`;
+      }
+      if (refusal.rotationMode === 'bingo_bango_bongo') {
+        return `Bingo Bango Bongo trenger 2–16 spillere for å starte. Nå er ${count} påmeldt.`;
+      }
       return `Formatet krever et annet antall spillere for å starte. Nå er ${count} påmeldt.`;
     }
     case 'db_players':

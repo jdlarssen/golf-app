@@ -62,6 +62,7 @@ import {
   expectedTeamSize,
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { isStartCountMode } from '@/lib/games/startPlayerCount';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 type Params = Promise<{ id: string }>;
@@ -224,11 +225,12 @@ export default async function GameDetailPage({
   const errorMode = first(sp.mode);
   function buildErrorMessage(): string | undefined {
     if (!errorCode) return undefined;
-    // #969: rotation_player_count picks a format-specific message and passes
-    // the live active count.
+    // #969 / #2071: rotation_player_count picks a format-specific message and
+    // passes the live active count.
     if (
       errorCode === 'rotation_player_count' &&
-      (errorMode === 'wolf' || errorMode === 'round_robin')
+      errorMode !== undefined &&
+      isStartCountMode(errorMode)
     ) {
       const count = Number(first(sp.count) ?? '0');
       return tErrors(`rotation_player_count_${errorMode}`, { count });

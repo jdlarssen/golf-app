@@ -15,6 +15,8 @@
  * the order. The default shuffle is an unbiased Fisher–Yates backed by
  * `crypto.getRandomValues`.
  */
+import { startPlayerCountRange } from './startPlayerCount';
+
 export type RotationSlotRow = {
   user_id: string;
   team_number: number;
@@ -25,17 +27,18 @@ export type RotationSlotRow = {
 export type RotationMode = 'wolf' | 'round_robin';
 
 /**
- * Allowed active-roster size for a rotation format at start, or `null` for any
- * other mode. Wolf supports 3–5 players (#465); Round Robin is exactly 4. The
- * start-time guard uses this to block a game whose roster fell outside range
- * (open signup already caps the upper bound, so in practice this catches "too
- * few"). Keep in sync with `fitsPlayerCount` / `soloPlayerCap`.
+ * Allowed active-roster size for a rotation format, or `null` for any other
+ * mode — a non-null result also means "draw rotation slots at start". Wolf
+ * supports 3–5 players (#465); Round Robin is exactly 4. The numbers live in
+ * `startPlayerCountRange` (#2071), which the start guard uses for every
+ * fixed-count format.
  */
 export function rotationSlotRange(
   gameMode: string,
 ): { min: number; max: number } | null {
-  if (gameMode === 'wolf') return { min: 3, max: 5 };
-  if (gameMode === 'round_robin') return { min: 4, max: 4 };
+  if (gameMode === 'wolf' || gameMode === 'round_robin') {
+    return startPlayerCountRange(gameMode);
+  }
   return null;
 }
 
