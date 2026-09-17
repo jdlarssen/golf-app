@@ -1,18 +1,21 @@
 'use server';
 
-const HCP_MIN = -10;
-const HCP_MAX = 54;
-const GENDERS = ['mens', 'ladies'] as const;
-const LEVELS = ['junior', 'normal', 'senior'] as const;
-type Gender = (typeof GENDERS)[number];
-type Level = (typeof LEVELS)[number];
-
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
+import { toSignedHcp } from '@/lib/handicap/sign';
+import {
+  GENDERS,
+  HCP_MAX,
+  HCP_MIN,
+  LEVELS,
+  parseHcpMagnitude,
+  type Gender,
+  type Level,
+} from '@/lib/users/profileInput';
 import type { AppLocale } from '@/i18n/routing';
 import type { TablesUpdate } from '@/lib/database.types';
 
@@ -29,7 +32,12 @@ export async function updateUser(formData: FormData) {
   if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
   if (!name) redirect({ href: `/admin/spillere/${id}?error=name_required`, locale });
 
-  const hcp = Number.parseFloat(hcpRaw.replace(',', '.'));
+  // Samme formatsjekk og grenser som profilen (#2048). Feltet her er SIGNERT
+  // (ingen pluss-knapp): «-2» betyr pluss 2, så fortegnet skrelles av før
+  // magnituden leses.
+  const isPlus = hcpRaw.startsWith('-');
+  const magnitude = parseHcpMagnitude(isPlus ? hcpRaw.slice(1) : hcpRaw);
+  const hcp = magnitude === null ? NaN : toSignedHcp(magnitude, isPlus);
   if (!Number.isFinite(hcp) || hcp < HCP_MIN || hcp > HCP_MAX) {
     redirect({ href: `/admin/spillere/${id}?error=hcp_out_of_range`, locale });
   }
