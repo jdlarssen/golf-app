@@ -293,6 +293,32 @@ describe('getDiscoverableGames', () => {
     expect(result.pendingRequests[0].id).toBe('r1');
   });
 
+  it('#2061: medspiller som har godtatt og venter på at laget godkjennes, står fortsatt i pendingRequests', async () => {
+    playerRows.mockReturnValue({ data: [{ game_id: 'g3' }] });
+    const base = {
+      team_name: 'Skogen',
+      is_team_captain: false,
+      created_at: '2026-05-26T12:00:00Z',
+      games: { name: 'Lagcup', short_id: 'abcd1234' },
+    };
+    requestRows.mockReturnValue({
+      data: [
+        // Waiting: said yes, captain still pending, not on the roster.
+        { ...base, id: 'waiting', game_id: 'g1', status: 'approved', captain: { status: 'pending' } },
+        // Team decided, no roster row: removed by the organiser — not waiting.
+        { ...base, id: 'removed', game_id: 'g2', status: 'approved', captain: { status: 'approved' } },
+        // Already on the roster (old data): not a request any more.
+        { ...base, id: 'onroster', game_id: 'g3', status: 'approved', captain: { status: 'pending' } },
+      ],
+    });
+    openGamesRows.mockReturnValue({ data: [] });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.pendingRequests.map((r) => r.id)).toEqual(['waiting']);
+  });
+
   // ── Klubb-scopet discovery (#442) ───────────────────────────────────────
 
   it('viser klubb-spill (også invite_only) for et medlem, med group_name', async () => {

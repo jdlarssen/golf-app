@@ -95,7 +95,9 @@ export async function getDiscoverableGames(userId: string): Promise<{
         .eq('user_id', userId),
       admin
         .from('game_registration_requests')
-        .select('id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id)')
+        .select(
+          'id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id), captain:game_registration_requests!team_request_id(status)',
+        )
         .eq('user_id', userId)
         .in('status', ['pending', 'approved']),
       admin
@@ -258,8 +260,21 @@ export async function getDiscoverableGames(userId: string): Promise<{
     },
   );
 
+  // #2061: a teammate who said yes before the organiser approved the captain
+  // has an approved row but no game_players row — they are still waiting, so
+  // the request stays in «Mine forespørsler». Only while the captain is
+  // pending: an approved row without a roster row under a decided team is a
+  // player the organiser removed.
   const pendingRequests: PendingRequest[] = (requestRowsRes.data ?? [])
-    .filter((r) => r.status === 'pending')
+    .filter((r) => {
+      if (r.status === 'pending') return true;
+      const captain = firstJoined(
+        r.captain as { status: string } | { status: string }[] | null,
+      );
+      return (
+        captain?.status === 'pending' && !joinedIds.has(r.game_id as string)
+      );
+    })
     .map((r) => {
       const game = firstJoined(
         r.games as { name: string; short_id: string } | { name: string; short_id: string }[] | null,
