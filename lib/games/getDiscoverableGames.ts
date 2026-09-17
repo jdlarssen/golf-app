@@ -96,7 +96,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
       admin
         .from('game_registration_requests')
         .select(
-          'id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id), captain:game_registration_requests!team_request_id(status)',
+          'id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id), captain:team_request_id(status)',
         )
         .eq('user_id', userId)
         .in('status', ['pending', 'approved']),
@@ -264,7 +264,11 @@ export async function getDiscoverableGames(userId: string): Promise<{
   // has an approved row but no game_players row — they are still waiting, so
   // the request stays in «Mine forespørsler». Only while the captain is
   // pending: an approved row without a roster row under a decided team is a
-  // player the organiser removed.
+  // player the organiser removed. The embed names the column, not the table:
+  // on a self-reference `game_registration_requests!team_request_id` resolves
+  // to the one-to-many side (this row's teammates), while
+  // `captain:team_request_id(...)` is the row's own captain (checked on
+  // staging, PostgREST's many-to-one convention).
   const pendingRequests: PendingRequest[] = (requestRowsRes.data ?? [])
     .filter((r) => {
       if (r.status === 'pending') return true;
