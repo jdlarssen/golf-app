@@ -80,8 +80,16 @@ export function useUnreadNotificationsCount(userId: string | null): {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .is('read_at', null)
-        .then(({ count: next }: { count: number | null }) => {
+        .then(({ count: next, error }: { count: number | null; error: unknown }) => {
           if (!mounted || mySeq <= appliedSeq) return;
+          if (error) {
+            // An error is not zero unread: keep the dot as it stands. The next
+            // event or rejoin counts again. With no answer yet for this user
+            // there is nothing to keep, so show none, as before.
+            if (appliedSeq === 0) setCount(0);
+            setLoading(false);
+            return;
+          }
           appliedSeq = mySeq;
           setCount(next ?? 0);
           setLoading(false);

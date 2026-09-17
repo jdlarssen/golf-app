@@ -15,7 +15,10 @@ let realtimeHandlers: {
 let channelStatus: ((status: string) => void) | null = null;
 /** Count queries issued so far, and answers a test wants to hold back. */
 let countFetches = 0;
-let queuedCounts: Promise<{ count: number; error: null }>[] = [];
+type CountAnswer =
+  | { count: number; error: null }
+  | { count: null; error: { message: string } };
+let queuedCounts: Promise<CountAnswer>[] = [];
 
 // Spies vi inspiserer på tvers av tester.
 const setAuthSpy = vi.fn();
@@ -160,6 +163,33 @@ describe('useUnreadNotificationsCount', () => {
     });
 
     await waitFor(() => expect(result.current.count).toBe(4));
+  });
+
+  it('lar prikken stå når en ny telling feiler', async () => {
+    mockInitialCount = 2;
+    const { useUnreadNotificationsCount } = await import(
+      './useUnreadNotificationsCount'
+    );
+    const { result } = renderHook(() => useUnreadNotificationsCount('user-1'));
+    await waitFor(() => expect(result.current.count).toBe(2));
+    await flushPromises();
+
+    // Coverage is still patchy right after the rejoin: the count query fails.
+    const fetchesBefore = countFetches;
+    queuedCounts.push(
+      Promise.resolve({ count: null, error: { message: 'Failed to fetch' } }),
+    );
+    act(() => {
+      channelStatus?.('CHANNEL_ERROR');
+      channelStatus?.('SUBSCRIBED');
+    });
+    await waitFor(() => expect(countFetches).toBe(fetchesBefore + 1));
+    await act(async () => {
+      await flushPromises();
+    });
+
+    // An error is not zero unread.
+    expect(result.current.count).toBe(2);
   });
 
   it('lar ikke et eldre svar erstatte et nyere', async () => {
