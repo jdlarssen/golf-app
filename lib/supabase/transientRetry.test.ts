@@ -8,7 +8,7 @@ const fail = (status: number, message = 'boom'): Res => ({ data: null, error: { 
 
 function scripted(responses: Res[]) {
   let i = 0
-  return vi.fn(async () => responses[Math.min(i++, responses.length - 1)])
+  return vi.fn(async (_signal?: AbortSignal) => responses[Math.min(i++, responses.length - 1)])
 }
 
 function fakeSleep() {
@@ -76,6 +76,18 @@ describe('withTransientRetry', () => {
     expect(result).toBe(response)
     expect(fn).toHaveBeenCalledTimes(1)
     expect(sleep).not.toHaveBeenCalled()
+  })
+
+  it('hands every attempt its own AbortSignal so Next cannot replay a memoized response', async () => {
+    const fn = scripted([fail(504), fail(504), ok])
+    const { sleep } = fakeSleep()
+
+    await withTransientRetry(fn, sleep)
+
+    const signals = fn.mock.calls.map((call) => (call as unknown[])[0])
+    expect(signals).toHaveLength(3)
+    for (const signal of signals) expect(signal).toBeInstanceOf(AbortSignal)
+    expect(new Set(signals).size).toBe(3)
   })
 
   it('calls once and never sleeps when the first call succeeds', async () => {

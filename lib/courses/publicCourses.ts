@@ -82,12 +82,13 @@ type RawCourseRow = {
 async function fetchAdminUserIds(userIds: (string | null)[]): Promise<Set<string>> {
   const distinct = [...new Set(userIds.filter((id): id is string => id !== null))];
   if (distinct.length === 0) return new Set();
-  const { data, error } = await withTransientRetry(() =>
+  const { data, error } = await withTransientRetry((signal) =>
     getAdminClient()
       .from('users')
       .select('id')
       .in('id', distinct)
-      .eq('is_admin', true),
+      .eq('is_admin', true)
+      .abortSignal(signal),
   );
   if (error) throw error;
   return new Set((data ?? []).map((r) => r.id));
@@ -114,11 +115,12 @@ export async function listPublicCourses(): Promise<PublicCourseSummary[]> {
   cacheTag('public-courses');
 
   const anon = getPublicAnonClient();
-  const { data, error } = await withTransientRetry(() =>
+  const { data, error } = await withTransientRetry((signal) =>
     anon
       .from('courses')
       .select('id, name, slug, created_by, course_holes(hole_number), tee_boxes(*)')
       .order('name', { ascending: true })
+      .abortSignal(signal)
       .returns<RawCourseRow[]>(),
   );
   if (error) throw error;
@@ -187,7 +189,7 @@ export async function getPublicCourseBySlug(
   cacheTag('public-courses');
 
   const anon = getPublicAnonClient();
-  const { data, error } = await withTransientRetry(() =>
+  const { data, error } = await withTransientRetry((signal) =>
     anon
       .from('courses')
       .select(
@@ -196,6 +198,7 @@ export async function getPublicCourseBySlug(
          tee_boxes(${TEE_COLUMNS})`,
       )
       .eq('slug', slug)
+      .abortSignal(signal)
       .maybeSingle<
         RawCourseRow & {
           course_holes: PublicCourseHole[];

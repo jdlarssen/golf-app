@@ -50,7 +50,7 @@ const scores = await selectAllRows(
 `scoresReadSites.test.ts` holds every `from('scores')` read to this: a new site
 either pages or joins its allowlist with a one-line reason why it is bounded.
 
-A build-time read that one Supabase 502/503/504 or fetch failure would fail (#2013) wraps in `withTransientRetry` from `./transientRetry.ts` — idempotent reads only, never writes.
+A build-time read that one Supabase 502/503/504 or fetch failure would fail (#2013) wraps in `withTransientRetry` from `./transientRetry.ts` and passes its signal on with `.abortSignal(signal)` (else Next replays the memoized error) — idempotent reads only, never writes.
 
 ## Principle #3 — RLS is the real authz layer; app guards are not enough
 
