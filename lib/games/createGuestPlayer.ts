@@ -47,7 +47,7 @@ const GUEST_NAME_MAX = 80;
 
 /**
  * Parse + valider rå skjemafelter for en gjest. Magnituden leses av
- * `parseHcpMagnitude` — samme formatsjekk og grenser som profilen (#2048) —
+ * `parseHcpMagnitude`, med samme formatsjekk og grenser som profilen (#2048),
  * og den signerte verdien må ligge i [HCP_MIN, HCP_MAX]. Plusshandicap tastes
  * med ledende «+» («+2» → -2, via `toSignedHcp`) siden gjeste-skjemaet ikke
  * har eget plus-checkbox-felt.
