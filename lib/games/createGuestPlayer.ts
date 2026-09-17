@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { toSignedHcp } from '@/lib/handicap/sign';
+import { HCP_MAX, HCP_MIN, parseHcpMagnitude } from '@/lib/users/profileInput';
 
 /**
  * Gjestespiller-lite (#1009): en gjest er en EKTE bruker-rad («skygge-bruker»)
@@ -43,15 +44,13 @@ export type ParseGuestProfileResult =
   | { ok: false; error: GuestValidationError };
 
 const GUEST_NAME_MAX = 80;
-// Samme grenser som profil-/admin-skjemaene (HCP_MIN/HCP_MAX der).
-const HCP_MIN = -10;
-const HCP_MAX = 54.0;
 
 /**
- * Parse + valider rå skjemafelter for en gjest. HCP-reglene speiler
- * profil-skjemaets validering (komma-tolerant, magnitude 0–54, signert verdi
- * innenfor [-10, 54]); plusshandicap tastes med ledende «+» («+2» → -2,
- * via `toSignedHcp`) siden gjeste-skjemaet ikke har eget plus-checkbox-felt.
+ * Parse + valider rå skjemafelter for en gjest. Magnituden leses av
+ * `parseHcpMagnitude` — samme formatsjekk og grenser som profilen (#2048) —
+ * og den signerte verdien må ligge i [HCP_MIN, HCP_MAX]. Plusshandicap tastes
+ * med ledende «+» («+2» → -2, via `toSignedHcp`) siden gjeste-skjemaet ikke
+ * har eget plus-checkbox-felt.
  */
 export function parseGuestProfile(raw: {
   name: unknown;
@@ -71,12 +70,8 @@ export function parseGuestProfile(raw: {
   const hcpRaw = String(raw.hcp ?? '').trim();
   if (hcpRaw === '') return { ok: false, error: 'guest_invalid_hcp' };
   const isPlus = hcpRaw.startsWith('+');
-  const magnitude = Number(
-    (isPlus ? hcpRaw.slice(1) : hcpRaw).replace(',', '.'),
-  );
-  if (!Number.isFinite(magnitude) || magnitude < 0 || magnitude > HCP_MAX) {
-    return { ok: false, error: 'guest_invalid_hcp' };
-  }
+  const magnitude = parseHcpMagnitude(isPlus ? hcpRaw.slice(1) : hcpRaw);
+  if (magnitude === null) return { ok: false, error: 'guest_invalid_hcp' };
   const hcpIndex = toSignedHcp(magnitude, isPlus);
   if (hcpIndex < HCP_MIN || hcpIndex > HCP_MAX) {
     return { ok: false, error: 'guest_invalid_hcp' };
