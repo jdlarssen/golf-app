@@ -7,6 +7,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { toSignedHcp } from '@/lib/handicap/sign';
+import { expectOne } from '@/lib/supabase/affectedRows';
 import {
   GENDERS,
   HCP_MAX,
@@ -18,6 +19,22 @@ import {
 } from '@/lib/users/profileInput';
 import type { AppLocale } from '@/i18n/routing';
 import type { TablesUpdate } from '@/lib/database.types';
+
+/**
+ * auth.users already carries the new email when the public.users write fails —
+ * roll it back so the two tables stay consistent (trap 5; same compensation as
+ * claimGuestResult). Best-effort: logged, never thrown.
+ */
+async function revertAuthEmail(id: string, previousEmail: string) {
+  try {
+    const { error } = await getAdminClient().auth.admin.updateUserById(id, {
+      email: previousEmail,
+    });
+    if (error) console.error('[admin/spillere] auth email revert failed', error);
+  } catch (err) {
+    console.error('[admin/spillere] auth email revert threw', err);
+  }
+}
 
 export async function updateUser(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
@@ -133,13 +150,21 @@ export async function updateUser(formData: FormData) {
     updatePayload.email = emailRaw;
   }
 
-  const { error } = await supabase
-    .from('users')
-    .update(updatePayload)
-    .eq('id', id);
+  // Trap 2 (#2054): a write that matched 0 rows is a failure, not «lagret».
+  // Only the write sits in the try — `redirect` throws and must not be caught.
+  let updateFailed = false;
+  try {
+    expectOne(
+      await supabase.from('users').update(updatePayload).eq('id', id).select('id'),
+      'admin/updateUser',
+    );
+  } catch (err) {
+    console.error('[admin/spillere] updateUser failed', err);
+    updateFailed = true;
+  }
 
-  if (error) {
-    console.error('[admin/spillere] updateUser failed', error);
+  if (updateFailed) {
+    if (emailChanged && current) await revertAuthEmail(id, current.email);
     redirect({ href: `/admin/spillere/${id}?error=update_failed`, locale });
   }
 
