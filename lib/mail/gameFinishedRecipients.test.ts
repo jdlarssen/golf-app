@@ -1345,4 +1345,168 @@ describe('buildGameFinishedRecipients', () => {
       teamPartnerNames: ['Bjørn'],
     });
   });
+
+  // #2057: en spiller som har trukket seg (withdrawn_at satt) skal ikke
+  // rangeres i mailen, ikke telle i totalen og ikke dra laget ned — samme
+  // regel som resultatsiden (buildUniformContext). Den trukne får fortsatt
+  // mail, men med nøytral copy (mode: undefined).
+  const WD_HOLES = [
+    { hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 },
+    { hole_number: 2, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 2 },
+  ];
+
+  it('stableford (#2057): trukket spiller rangeres ikke og teller ikke i totalPlayers', async () => {
+    // u3 har trukket seg men har best poengsum (gross 3, 3 → 6 poeng).
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          { user_id: 'u1', team_number: null, course_handicap: 0, withdrawn_at: null, users: { email: 'a@example.com', name: 'Ada' } },
+          { user_id: 'u2', team_number: null, course_handicap: 0, withdrawn_at: null, users: { email: 'b@example.com', name: 'Bjørn' } },
+          { user_id: 'u3', team_number: null, course_handicap: 0, withdrawn_at: '2026-09-17T10:00:00Z', users: { email: 'c@example.com', name: 'Cecilie' } },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u1', hole_number: 2, strokes: 3 },
+          { user_id: 'u2', hole_number: 1, strokes: 5 },
+          { user_id: 'u2', hole_number: 2, strokes: 4 },
+          { user_id: 'u3', hole_number: 1, strokes: 3 },
+          { user_id: 'u3', hole_number: 2, strokes: 3 },
+        ],
+        error: null,
+      },
+      { data: WD_HOLES, error: null },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      { course_id: 'c1', game_mode: 'stableford', mode_config: STABLEFORD_CONFIG },
+    );
+
+    expect(recipients).toHaveLength(3);
+    expect(recipients.find((r) => r.userId === 'u1')?.mode).toEqual({
+      kind: 'stableford',
+      variant: 'solo',
+      rank: 1,
+      totalPoints: 5,
+      totalPlayers: 2,
+    });
+    expect(recipients.find((r) => r.userId === 'u2')?.mode).toEqual({
+      kind: 'stableford',
+      variant: 'solo',
+      rank: 2,
+      totalPoints: 3,
+      totalPlayers: 2,
+    });
+    const withdrawn = recipients.find((r) => r.userId === 'u3');
+    expect(withdrawn?.email).toBe('c@example.com');
+    expect(withdrawn?.mode).toBeUndefined();
+  });
+
+  it('team-stableford (#2057): trukket spillers slag teller ikke i lagsummen', async () => {
+    // 1 hull par 4, CH=0. Lag 1: u1 gross 5 (1 poeng) + u2 TRUKKET gross 3
+    // (ville gitt 3). Lag 2: u3 og u4 gross 4 (2 poeng). Uten u2 → lag 1 = 1,
+    // lag 2 = 2 → lag 2 vinner.
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          { user_id: 'u1', team_number: 1, course_handicap: 0, withdrawn_at: null, users: { email: 'ada@example.com', name: 'Ada Olsen' } },
+          { user_id: 'u2', team_number: 1, course_handicap: 0, withdrawn_at: '2026-09-17T10:00:00Z', users: { email: 'bjorn@example.com', name: 'Bjørn Hansen' } },
+          { user_id: 'u3', team_number: 2, course_handicap: 0, withdrawn_at: null, users: { email: 'cecilie@example.com', name: 'Cecilie Berg' } },
+          { user_id: 'u4', team_number: 2, course_handicap: 0, withdrawn_at: null, users: { email: 'david@example.com', name: 'David Knutsen' } },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 5 },
+          { user_id: 'u2', hole_number: 1, strokes: 3 },
+          { user_id: 'u3', hole_number: 1, strokes: 4 },
+          { user_id: 'u4', hole_number: 1, strokes: 4 },
+        ],
+        error: null,
+      },
+      { data: [WD_HOLES[0]], error: null },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      { course_id: 'c1', game_mode: 'stableford', mode_config: TEAM_STABLEFORD_CONFIG },
+    );
+
+    expect(recipients).toHaveLength(4);
+    expect(recipients.find((r) => r.userId === 'u1')?.mode).toEqual({
+      kind: 'stableford',
+      variant: 'team',
+      teamRank: 2,
+      teamTotalPoints: 1,
+      teamPartnerName: null,
+      totalTeams: 2,
+    });
+    expect(recipients.find((r) => r.userId === 'u3')?.mode).toEqual({
+      kind: 'stableford',
+      variant: 'team',
+      teamRank: 1,
+      teamTotalPoints: 2,
+      teamPartnerName: 'David',
+      totalTeams: 2,
+    });
+    expect(recipients.find((r) => r.userId === 'u2')?.mode).toBeUndefined();
+  });
+
+  it('solo strokeplay (#2057): trukket spiller rangeres ikke og teller ikke i totalPlayers', async () => {
+    // u3 har trukket seg men har lavest netto (gross 3, 3 → 6).
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          { user_id: 'u1', team_number: null, course_handicap: 0, withdrawn_at: null, users: { email: 'a@example.com', name: 'Ada' } },
+          { user_id: 'u2', team_number: null, course_handicap: 0, withdrawn_at: null, users: { email: 'b@example.com', name: 'Bjørn' } },
+          { user_id: 'u3', team_number: null, course_handicap: 0, withdrawn_at: '2026-09-17T10:00:00Z', users: { email: 'c@example.com', name: 'Cecilie' } },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u1', hole_number: 2, strokes: 3 },
+          { user_id: 'u2', hole_number: 1, strokes: 5 },
+          { user_id: 'u2', hole_number: 2, strokes: 4 },
+          { user_id: 'u3', hole_number: 1, strokes: 3 },
+          { user_id: 'u3', hole_number: 2, strokes: 3 },
+        ],
+        error: null,
+      },
+      { data: WD_HOLES, error: null },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-sp1',
+      { course_id: 'c1', game_mode: 'solo_strokeplay', mode_config: SOLO_STROKEPLAY_CONFIG },
+    );
+
+    expect(recipients).toHaveLength(3);
+    expect(recipients.find((r) => r.userId === 'u1')?.mode).toEqual({
+      kind: 'solo_strokeplay',
+      rank: 1,
+      totalNetStrokes: 7,
+      totalGrossStrokes: 7,
+      totalPlayers: 2,
+    });
+    expect(recipients.find((r) => r.userId === 'u2')?.mode).toEqual({
+      kind: 'solo_strokeplay',
+      rank: 2,
+      totalNetStrokes: 9,
+      totalGrossStrokes: 9,
+      totalPlayers: 2,
+    });
+    expect(recipients.find((r) => r.userId === 'u3')?.mode).toBeUndefined();
+  });
 });
