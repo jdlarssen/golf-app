@@ -45,7 +45,18 @@ type RequestSnapshot = {
   team_request_id: string | null;
 };
 
-type CascadeRow = { id: string; user_id: string };
+type CascadeRow = {
+  id: string;
+  user_id: string;
+  status: 'pending' | 'approved';
+};
+
+/**
+ * #2061: a teammate who accepts the team invitation before the organiser has
+ * approved the captain gets status 'approved' but no game_players row — they
+ * wait for the team. The cascades therefore read both statuses.
+ */
+const CASCADE_STATUSES = ['pending', 'approved'] as const;
 
 /**
  * Load request + verify auth + verify game is in a state where approval
@@ -143,9 +154,9 @@ export async function approveRequest(requestId: string): Promise<void> {
   if (request.is_team_captain) {
     const { data: children, error: childrenError } = await admin
       .from('game_registration_requests')
-      .select('id, user_id')
+      .select('id, user_id, status')
       .eq('team_request_id', request.id)
-      .eq('status', 'pending')
+      .in('status', [...CASCADE_STATUSES])
       .returns<CascadeRow[]>();
     if (childrenError) {
       console.error('[approveRequest] team children fetch failed', childrenError);
@@ -155,9 +166,11 @@ export async function approveRequest(requestId: string): Promise<void> {
   }
 
   const allRows: CascadeRow[] = [
-    { id: request.id, user_id: request.user_id },
+    { id: request.id, user_id: request.user_id, status: 'pending' },
     ...cascadeRows,
   ];
+  // The captain passed the not_pending gate above, so it is always here.
+  const pendingRows = allRows.filter((r) => r.status === 'pending');
 
   // Bestem team_number for lag-påmelding: laveste ledige slot (1..). For solo
   // setter vi null på både team_number og flight_number (matcher CHECK i 0030).
@@ -197,7 +210,8 @@ export async function approveRequest(requestId: string): Promise<void> {
   // were already decided (race between two admin tabs) — redirect to error
   // rather than proceeding to insert game_players + fire notifications for
   // a write that never happened.
-  const idsToUpdate = allRows.map((r) => r.id);
+  // Only pending rows: a teammate who already accepted keeps their decision.
+  const idsToUpdate = pendingRows.map((r) => r.id);
   try {
     expectAffected(
       await admin
@@ -217,8 +231,10 @@ export async function approveRequest(requestId: string): Promise<void> {
     redirect({ href: `${detailPath}?error=db_update`, locale });
   }
 
-  // INSERT game_players-rader. Bruker upsert med ignore-duplicates for å
-  // tåle re-trigger (race mellom to admin-tabs).
+  // INSERT game_players-rader for hele laget — kaptein, ventende og tidlig
+  // godtatte medspillere — med samme lagnummer (#2061). Bruker upsert med
+  // ignore-duplicates for å tåle re-trigger (race mellom to admin-tabs);
+  // `.select()` gir bare radene som faktisk ble satt inn.
   const playerRows = allRows.map((r) => ({
     game_id: game.id,
     user_id: r.user_id,
@@ -229,20 +245,49 @@ export async function approveRequest(requestId: string): Promise<void> {
     flight_number: teamNumber,
     course_handicap: null,
   }));
-  const { error: insertError } = await admin
+  const { data: insertedPlayers, error: insertError } = await admin
     .from('game_players')
-    .upsert(playerRows, { onConflict: 'game_id,user_id', ignoreDuplicates: true });
+    .upsert(playerRows, { onConflict: 'game_id,user_id', ignoreDuplicates: true })
+    .select('user_id')
+    .returns<{ user_id: string }[]>();
   if (insertError) {
     console.error('[approveRequest] game_players insert failed', insertError);
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
+  const placedUserIds = new Set((insertedPlayers ?? []).map((r) => r.user_id));
+
+  // #2072: a team member already on the roster without a team (added by the
+  // organiser) keeps their row through the upsert above, so give that row the
+  // team's number. Rows that already have a number are left alone — the
+  // organiser may have moved them on purpose.
+  if (teamNumber !== null) {
+    const { data: numberedPlayers, error: numberError } = await admin
+      .from('game_players')
+      .update({ team_number: teamNumber, flight_number: teamNumber })
+      .eq('game_id', game.id)
+      .in('user_id', allRows.map((r) => r.user_id))
+      .is('team_number', null)
+      .select('user_id')
+      .returns<{ user_id: string }[]>();
+    if (numberError) {
+      console.error('[approveRequest] team number update failed', numberError);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
+    for (const row of numberedPlayers ?? []) placedUserIds.add(row.user_id);
+  }
+
+  // Varsle dem som ble godkjent nå, og tidlig godtatte medspillere som kom
+  // inn på lista i denne operasjonen. Hver bruker én gang.
+  const notifyRows = allRows.filter(
+    (r) => r.status === 'pending' || placedUserIds.has(r.user_id),
+  );
 
   // Best-effort notifications + mail. Notify-feil swallow-es slik at
   // approval-flyten ikke ruller tilbake — admin har allerede bestemt seg.
   // Vi venter på alle notify()-callene i parallell og bruker
   // shouldAlsoSendMail-flagget per recipient for å gate mail-utsendelse.
   const notifyResults = await Promise.allSettled(
-    allRows.map((r) =>
+    notifyRows.map((r) =>
       notify({
         userId: r.user_id,
         kind: 'registration_approved',
@@ -256,7 +301,7 @@ export async function approveRequest(requestId: string): Promise<void> {
   const userIdsForMail: string[] = [];
   notifyResults.forEach((res, idx) => {
     if (res.status === 'fulfilled' && res.value.shouldAlsoSendMail) {
-      const row = allRows[idx];
+      const row = notifyRows[idx];
       if (row) userIdsForMail.push(row.user_id);
     } else if (res.status === 'rejected') {
       console.error('[approveRequest] notify failed', res.reason);
@@ -323,9 +368,9 @@ export async function rejectRequest(
   if (request.is_team_captain) {
     const { data: children, error: childrenError } = await admin
       .from('game_registration_requests')
-      .select('id, user_id')
+      .select('id, user_id, status')
       .eq('team_request_id', request.id)
-      .eq('status', 'pending')
+      .in('status', [...CASCADE_STATUSES])
       .returns<CascadeRow[]>();
     if (childrenError) {
       console.error('[rejectRequest] team children fetch failed', childrenError);
@@ -335,9 +380,11 @@ export async function rejectRequest(
   }
 
   const allRows: CascadeRow[] = [
-    { id: request.id, user_id: request.user_id },
+    { id: request.id, user_id: request.user_id, status: 'pending' },
     ...cascadeRows,
   ];
+  // The captain passed the not_pending gate above, so it is always here.
+  const pendingRows = allRows.filter((r) => r.status === 'pending');
 
   // #712: same 0-row trap as approveRequest. If all requests were already
   // rejected (race), 0 rows returns error==null — without this guard
@@ -353,7 +400,7 @@ export async function rejectRequest(
           decided_at: decidedAt,
           decided_by_user_id: actorId,
         })
-        .in('id', allRows.map((r) => r.id))
+        .in('id', pendingRows.map((r) => r.id))
         .eq('status', 'pending')
         .select('id'),
       'rejectRequest',
@@ -361,6 +408,30 @@ export async function rejectRequest(
   } catch (updateErr) {
     console.error('[rejectRequest] status update failed', updateErr);
     redirect({ href: `${detailPath}?error=db_update`, locale });
+  }
+
+  // #2061: teammates who accepted before the team was decided go down with it,
+  // so none is left standing as approved in a rejected team. A separate update
+  // filtered on 'approved' — widening the one above would let a reject that
+  // races an approval flip rows the other tab just approved. Their accept
+  // wrote no game_players row, so there is nothing to remove.
+  const acceptedRows = allRows.filter((r) => r.status === 'approved');
+  if (acceptedRows.length > 0) {
+    const { error: acceptedError } = await admin
+      .from('game_registration_requests')
+      .update({
+        status: 'rejected',
+        rejection_reason: reason,
+        decided_at: decidedAt,
+        decided_by_user_id: actorId,
+      })
+      .in('id', acceptedRows.map((r) => r.id))
+      .eq('status', 'approved')
+      .select('id');
+    if (acceptedError) {
+      console.error('[rejectRequest] accepted teammates update failed', acceptedError);
+      redirect({ href: `${detailPath}?error=db_update`, locale });
+    }
   }
 
   const notifyResults = await Promise.allSettled(
