@@ -412,11 +412,13 @@ export async function rejectRequest(
 
   // #2061: teammates who accepted before the team was decided go down with it,
   // so none is left standing as approved in a rejected team. A separate update
-  // filtered on 'approved' — widening the one above would let a reject that
-  // races an approval flip rows the other tab just approved. Their accept
-  // wrote no game_players row, so there is nothing to remove.
-  const acceptedRows = allRows.filter((r) => r.status === 'approved');
-  if (acceptedRows.length > 0) {
+  // filtered on 'approved', run only after the pending update above proved the
+  // captain was still pending — widening that one would let a reject racing an
+  // approval flip rows the other tab just approved. It covers every teammate,
+  // not just those read as approved above, so one who accepts between that
+  // read and now is caught too. Their accept wrote no game_players row, so
+  // there is nothing to remove; 0 rows here is the normal case.
+  if (cascadeRows.length > 0) {
     const { error: acceptedError } = await admin
       .from('game_registration_requests')
       .update({
@@ -425,7 +427,7 @@ export async function rejectRequest(
         decided_at: decidedAt,
         decided_by_user_id: actorId,
       })
-      .in('id', acceptedRows.map((r) => r.id))
+      .in('id', cascadeRows.map((r) => r.id))
       .eq('status', 'approved')
       .select('id');
     if (acceptedError) {
