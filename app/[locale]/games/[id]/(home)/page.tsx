@@ -31,10 +31,7 @@ import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
-import {
-  getGameWithPlayers,
-  type GameForHole,
-} from '@/lib/games/getGameWithPlayers';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import { getRoundStreakGrowth } from '@/lib/stats/getUserStreak';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -42,11 +39,10 @@ import {
   formatDisplayLabelKey,
   resolveFormatContentKey,
 } from '@/lib/games/formatLabel';
-import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import { getRatingForGender } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
-import type { HoleSegment } from '@/lib/scoring';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
@@ -55,6 +51,7 @@ import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
+import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
 import { submitUndoWithdraw } from '../trekk-fra/actions';
 import {
   isMatchplayMode,
@@ -121,82 +118,6 @@ const ERROR_BANNER_CODES = new Set([
   'not_found',
   'unknown',
 ] as const);
-
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  /**
-   * #1007: gates the «Revansje?» CTA on the finished branch — cup matches
-   * and liga-rounds don't get a standalone rematch button (the cup/liga
-   * itself owns the rematch). Immutable after creation.
-   */
-  tournament_id: string | null;
-  /** #1007: same gating rationale as `tournament_id` above. */
-  league_round_id: string | null;
-  course_id: string;
-  tee_box_id: string;
-  scheduled_tee_off_at: string | null;
-  require_peer_approval: boolean;
-  /**
-   * Game-mode discriminator — leses fra cache-rad eller re-fetch ved auto-
-   * start. Bestemmer hvilken view-variant av spill-hjem som rendres (solo
-   * stableford dropper team-strip, best-ball viser Lag/Flight/CH).
-   *
-   * Speilet `GameMode` fra `lib/scoring/modes/types.ts` — utvides når nye
-   * moduser landes. Holdt som lokal alias for å unngå dyptkoblet import i en
-   * server-component som allerede leser status-unionen lokalt.
-   */
-  game_mode:
-    | 'best_ball'
-    | 'stableford'
-    | 'modified_stableford'
-    | 'singles_matchplay'
-    | 'solo_strokeplay'
-    | 'texas_scramble'
-    | 'ambrose'
-    | 'florida_scramble'
-    | 'fourball_matchplay'
-    | 'foursomes_matchplay'
-    | 'greensome_matchplay'
-    | 'chapman_matchplay'
-    | 'gruesome_matchplay'
-    | 'wolf'
-    | 'nassau'
-    | 'skins'
-    | 'bingo_bango_bongo'
-    | 'nines'
-    | 'round_robin'
-    | 'acey_deucey'
-    | 'shamble'
-    | 'patsome';
-  /**
-   * Mode-spesifikk config fra `games.mode_config` (JSONB). Type-en speilet
-   * fra `GameForHole` slik at scorecardTitle() kan resolve riktig tittel/
-   * label per modus (best-ball + 4BBB + texas → «Lagets scorekort»,
-   * matchplay → «Match-scorekort», solo → «Mitt scorekort»). Settes fra
-   * `gwp.game` via spread.
-   */
-  mode_config: GameForHole['mode_config'];
-  courses: { name: string } | null;
-  tee_boxes:
-    | (TeeBoxRatings & { name: string; length_meters: number | null })
-    | null;
-  /** #1441: limits the game to holes 1-9/10-18 — drives the holeCount copy
-   *  + the segment-aware CTA thread further down. */
-  hole_segment: HoleSegment;
-  /**
-   * #1441: non-null when this game is DERIVED from another game in the same
-   * cup bundle (e.g. a back9 singles match derived from the back9 best-ball
-   * host). Gates the active branch to a minimal, read-only «Slagene føres i
-   * …»-notice instead of the normal score-entry CTA — a derived game never
-   * has its own scores.
-   */
-  source_game_id: string | null;
-};
-
-const GAME_SELECT =
-  'id, name, status, tournament_id, league_round_id, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), hole_segment, source_game_id';
 
 /** Locale-aware thousands-separator. 6124 → "6 124" (no) / "6,124" (en). */
 function formatLengthMeters(n: number, locale: AppLocale): string {
@@ -314,8 +235,8 @@ export default async function GameHomePage({
 
   // #427: the game's creator gets an «Avslutt spill»-affordance on game-home
   // (admins finish from Sekretariatet). Read from the immutable created_by on
-  // the cached game row so it survives the auto-start refetch below, which uses
-  // a slimmer GAME_SELECT without created_by.
+  // the cached game row: the auto-start refetch below only selects the
+  // `GameRow` columns (GAME_HOME_SELECT), and created_by isn't one of them.
   const isCreator = gwp.game.created_by === userId;
 
   // #1051: premiebordet (self-hider når tomt). Vises før (venterom) og under
@@ -493,7 +414,7 @@ export default async function GameHomePage({
     // Re-fetch so the rest of this render sees the post-flip state.
     const { data: refreshed, error: refreshError } = await supabase
       .from('games')
-      .select(GAME_SELECT)
+      .select(GAME_HOME_SELECT)
       .eq('id', id)
       .single<GameRow>();
     if (refreshError) {
@@ -694,7 +615,6 @@ export default async function GameHomePage({
       tournamentId: game.tournament_id,
       gameMode: game.game_mode,
       scheduledTeeOffAt: game.scheduled_tee_off_at,
-      // `gwp.game`, never `game`: a refetched `game` has no mode_config.
       modeConfig: gwp.game.mode_config,
       players: gwp.players,
       cup: cupRow,
