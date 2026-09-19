@@ -289,6 +289,14 @@ import { fitsPlayerCount as fitsPlayerCountFn } from '@/lib/wizard/fitsPlayerCou
 
 type UseGameFormStateInput = {
   initialValues?: InitialValues;
+  /**
+   * #1999: overstyrer navne-seeden av `nameTouched`. Et gjenopprettet
+   * sessionStorage-utkast bærer sitt eget flagg — et forslag-navn som aldri
+   * ble rørt skal fortsatt kunne oppdateres av forslaget etter en reload,
+   * og et håndskrevet navn skal fortsatt være fredet. Utelatt = seed fra
+   * `initialValues.name`.
+   */
+  initialNameTouched?: boolean;
   players: PlayerOption[];
   courses: CourseOption[];
   // F2 foundation (#272): wizard step 1 setter intent via URL eller bruker-
@@ -364,6 +372,7 @@ function teamAssignKey(
 
 export function useGameFormState({
   initialValues,
+  initialNameTouched,
   players,
   courses,
   initialIntent,
@@ -380,7 +389,37 @@ export function useGameFormState({
   const [intent, setIntentRaw] = useState<Intent | undefined>(initialIntent);
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
   // it on the edit page (D4). Default to '' when not provided.
-  const [name, setName] = useState<string>(initialValues?.name ?? '');
+  const [name, setNameRaw] = useState<string>(initialValues?.name ?? '');
+  // #1999: «navnet er skrevet av et menneske» bor her, sammen med verdien.
+  // Før lå flagget i GameWizard og ble bare satt av ÉTT kallsted (ReadyStep),
+  // så ethvert nytt navnefelt måtte huske regelen på egen hånd — AGENTS.md
+  // felle 4 (én regel, to hjem). Nå er `setName` menneske-inngangen og setter
+  // flagget selv; `applySuggestedName` under er maskin-inngangen.
+  // Seed: et pre-fylt navn (edit-flyt, revansje) teller som rørt, så
+  // auto-navnet i veiviseren ikke overskriver det. Utkast-gjenopptak sender
+  // sitt eget flagg via `initialNameTouched`.
+  const [nameTouched, setNameTouched] = useState<boolean>(
+    initialNameTouched ?? (initialValues?.name ?? '').trim() !== '',
+  );
+
+  /**
+   * Menneske-inngangen til spillnavnet. Alle navnefelt i alle flater kaller
+   * denne, og alle markerer dermed navnet som rørt uten å vite at regelen
+   * finnes. Speiler setter-wrapper-mønsteret til `setCourseId`/`setIntent`.
+   */
+  const setName = useCallback((next: string) => {
+    setNameRaw(next);
+    setNameTouched(true);
+  }, []);
+
+  /**
+   * Maskin-inngangen: auto-navn-forslaget fra bane + tee-off. Setter verdien
+   * UTEN å markere navnet som rørt, så forslaget fortsetter å følge bane og
+   * tee-off helt til et menneske skriver noe selv.
+   */
+  const applySuggestedName = useCallback((next: string) => {
+    setNameRaw(next);
+  }, []);
   const [courseId, setCourseIdRaw] = useState<string>(
     initialValues?.course_id ?? '',
   );
@@ -1857,6 +1896,9 @@ export function useGameFormState({
     // Raw state
     name,
     setName,
+    // #1999: flagget og maskin-inngangen hører sammen med verdien.
+    nameTouched,
+    applySuggestedName,
     courseId,
     setCourseId,
     teeBoxId,
