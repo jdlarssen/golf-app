@@ -1585,3 +1585,90 @@ describe('useGameFormState — endret lagstørrelse eller format skjuler ingen s
     expect(result.current.teamByPlayer).toBe(before);
   });
 });
+
+// #1999: «navnet er skrevet av et menneske» hadde to hjem — verdien lå i
+// hooken, flagget i GameWizard, og bare ETT kallsted (ReadyStep) husket å
+// melde fra. Flagget bor nå i hooken sammen med verdien: `setName` er
+// menneske-inngangen og setter flagget, `applySuggestedName` er maskin-
+// inngangen og lar det stå. Da kan ikke et nytt navnefelt glemme regelen.
+describe('useGameFormState — nameTouched (#1999)', () => {
+  it('A1: setName markerer navnet som rørt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    expect(result.current.nameTouched).toBe(false);
+
+    act(() => {
+      result.current.setName('Torsdagsgolf');
+    });
+
+    expect(result.current.name).toBe('Torsdagsgolf');
+    expect(result.current.nameTouched).toBe(true);
+  });
+
+  it('A2: applySuggestedName endrer navnet uten å markere det som rørt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    act(() => {
+      result.current.applySuggestedName('Byneset North 6. september');
+    });
+
+    expect(result.current.name).toBe('Byneset North 6. september');
+    expect(result.current.nameTouched).toBe(false);
+  });
+
+  it('A3a: initialValues.name med innhold seeder nameTouched = true', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { name: 'Klubbmesterskapet' },
+      }),
+    );
+
+    expect(result.current.nameTouched).toBe(true);
+  });
+
+  it('A3b: tomt eller whitespace-navn seeder nameTouched = false', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { name: '   ' },
+      }),
+    );
+
+    expect(result.current.nameTouched).toBe(false);
+  });
+
+  it('A3c: initialNameTouched vinner over navne-seeden (utkast-gjenopptak)', () => {
+    // Utkastet bærer sitt eget flagg: et forslag-navn som ALDRI ble rørt skal
+    // fortsatt kunne oppdateres av forslaget etter en reload.
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { name: 'Bane A 6. september' },
+        initialNameTouched: false,
+      }),
+    );
+
+    expect(result.current.nameTouched).toBe(false);
+  });
+
+  it('A3d: initialNameTouched = true vinner over et tomt navn', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { name: '' },
+        initialNameTouched: true,
+      }),
+    );
+
+    expect(result.current.nameTouched).toBe(true);
+  });
+});
