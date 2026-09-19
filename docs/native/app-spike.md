@@ -1534,3 +1534,76 @@ tilbake i `sign.ts`.** Appen formaterer handicap lokalt (`formatHcpNb` i
   sekundet du går tilbake fra skjemaet, kan tallet være gammelt.
 - **Lagring legges aldri i sync-køen.** Skriv krever nett. En profil-endring kan ikke
   ligge lokalt og gå opp senere, for det er serveren som må regne om de aktive rundene.
+
+## URL-cachen er av (#1973)
+
+Eier-tapptesten av #1942 fant 102 oppføringer i `Library/Caches/no.tornygolf.dev/Cache.db`
++ `fsCachedData/`: kroppene til REST-svar (scores, game_players, games, users) fra brukere
+som for lengst hadde logget ut, tilbake til 30. august. De overlevde både utloggingen
+(#1877) og eier-vaktens wipe (#1942), fordi begge bare tømmer sqlite. #1404/#819 sier at én
+brukers data ikke skal nå den neste på samme telefon; dette var et hull i akkurat den regelen.
+
+### `cache: 'no-store'` fra JS virker ikke — ikke prøv igjen
+
+Det åpenbare grepet er å gi supabase-klienten en `global.fetch` som setter
+`cache: 'no-store'`. Det gjør ingenting, og kan i verste fall knekke REST-kallene:
+
+- Expo SDK 57 bytter ut global `fetch` med sin egen (`expo/src/winter/runtime.native.ts`).
+  Hverken TypeScript-laget (`expo/src/winter/fetch/`) eller Swift-siden (`expo/ios/Fetch/`)
+  leser `cache`-feltet. Valget forsvinner stille.
+- Expos Swift-side bruker `URLSessionConfiguration.default` (`ExpoFetchModule.swift`), altså
+  den delte `URLCache.shared` som skriver til disk.
+- Faller appen tilbake på React Natives fetch (`EXPO_PUBLIC_USE_RN_FETCH`), legger
+  `whatwg-fetch` på `_=<tidsstempel>` i URL-en for GET med `no-store`. PostgREST leser det
+  som et filter på en kolonne som ikke finnes. Og `RCTConvert.mm` kjenner uansett bare
+  `default`, `reload`, `force-cache` og `only-if-cached`.
+- Selv `reload` ville bare hoppet over LESINGEN fra cachen. Svaret skrives fortsatt til disk.
+
+### Grepet: en lokal Expo-modul som nuller `URLCache.shared`
+
+`native/app/modules/no-url-cache/` er en lokal Expo-modul uten JS-flate. Swift-fila er en
+`ExpoAppDelegateSubscriber` som i `didFinishLaunchingWithOptions` gjør to ting, i denne
+rekkefølgen:
+
+1. `URLCache.shared.removeAllCachedResponses()` — rydder det appen ARVER fra eldre bygg.
+2. `URLCache.shared = URLCache(memoryCapacity: 0, diskCapacity: 0, directory: nil)`.
+
+Både Expos og React Natives økter henter cachen fra `URLCache.shared` når de lages, og begge
+lages først ved første nettverkskall — altså etter dette. `webApi.ts` sine kall mot `/api/*`
+går gjennom samme globale `fetch` og dekkes av samme grep.
+
+**Hvorfor en lokal modul og ikke en patchet `AppDelegate`.** `native/app/ios/` er
+prebuild-output og gitignorert; en håndredigert `AppDelegate.swift` overlever ikke neste
+`expo prebuild`. Alternativet var et config-plugin som tekstpatcher malen, altså nettopp det
+`native/app/AGENTS.md` advarer mot. Moduler under `modules/` autolenkes i stedet (Expos
+standard `nativeModulesDir` er `./modules`), uten en linje i `app.json`.
+
+Med null kapasitet finnes det ingenting å tømme senere, så `wipeLocalData` trenger ingen ny
+krok.
+
+### Sjekke at den faktisk er av
+
+Modulen er lenket når den står i den genererte provideren:
+
+```bash
+grep -n NoUrlCache "ios/Pods/Target Support Files/Pods-TrnyDev/ExpoModulesProvider.swift"
+# → internal import NoUrlCache
+# → NoUrlCacheAppDelegateSubscriber.self
+```
+
+Disk-beviset tas fra app-containeren etter en runde med innlogging, spill og ledertavle:
+
+```bash
+# Simulator
+APP=$(xcrun simctl get_app_container booted no.tornygolf.dev data)
+find "$APP/Library/Caches/no.tornygolf.dev" -type f          # fsCachedData/ skal være tom
+sqlite3 "$APP/Library/Caches/no.tornygolf.dev/Cache.db" \
+  "select count(*) from cfurl_cache_response where request_key like '%rest/v1%';"   # → 0
+
+# Fysisk iPhone
+xcrun devicectl device info files --device <udid> --domain-type appDataContainer \
+  --domain-identifier no.tornygolf.dev --username mobile Library/Caches
+```
+
+Kravet er at `fsCachedData/` ikke finnes eller er tom, og at `Cache.db` har null rader med
+`rest/v1` i `request_key`.
