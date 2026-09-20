@@ -17,10 +17,21 @@ import 'server-only';
  *
  * Innsettingen er `on conflict do nothing`. Taperen i kappløpet får null rader
  * tilbake, leser raden vinneren skrev, og viser den. Resultatet er én rad,
- * uansett hvor mange faner spilleren har åpne. En 0-rads skriving som IKKE
- * skyldes konflikt, finner ingen rad ved den andre lesingen — og da kaster vi,
- * for en stille 0-rads skriving er en feil, ikke en suksess (felle 2,
+ * uansett hvor mange faner spilleren har åpne.
+ *
+ * Lesingen rett etterpå kan komme for tidlig: `on conflict do nothing` venter
+ * IKKE på den andre transaksjonen, den hopper over raden så lenge den ikke er
+ * commitet. Taperen kan altså få både null rader OG en tom lesing, med raden
+ * på plass et øyeblikk senere. Derfor ser vi etter raden noen få ganger med kort
+ * pause — hvert forsøk med sin egen `AbortSignal`, ellers gir Next tilbake den
+ * memoiserte tomme lesingen uten å gå på nettet (samme felle som
+ * `../supabase/transientRetry.ts` beskriver). Er raden fortsatt ikke der,
+ * kaster vi: en stille 0-rads skriving er en feil, ikke en suksess (felle 2,
  * `docs/bug-prevention.md`).
+ *
+ * Reprodusert på staging (#2129): to samtidige åpninger ga én kavalkade og én
+ * feilskjerm, og probe-loggen viste fem «lesinger» på 0 ms — altså ingen av dem
+ * på nettet.
  *
  * ## Før datoen
  *
@@ -126,9 +137,9 @@ export async function getOrCreateKavalkade(
   const row = inserted.data?.[0];
   if (row) return { status: 'ready', ...toStored(row) };
 
-  // 0 rader: enten tapte vi kappløpet (da finnes raden nå), eller skrivingen
-  // traff ingenting — og det siste er en feil som skal høres.
-  const afterRace = await readKavalkade(viewerUserId, year);
+  // 0 rader: enten tapte vi kappløpet (da finnes raden straks), eller
+  // skrivingen traff ingenting — og det siste er en feil som skal høres.
+  const afterRace = await waitForWinnersRow(viewerUserId, year);
   if (!afterRace) {
     throw new Error(
       `getOrCreateKavalkade: insert affected 0 rows and no row exists (user ${viewerUserId}, year ${year})`,
@@ -138,6 +149,40 @@ export async function getOrCreateKavalkade(
     year,
   });
   return { status: 'ready', ...afterRace };
+}
+
+/**
+ * Pausene mellom forsøkene på å lese raden vinneren skrev, i millisekunder.
+ * Vinneren commiter i løpet av noen få millisekunder; lista gir den et halvt
+ * sekund til sammen før vi kaller det en feil. Første lesing skjer straks, så
+ * et kappløp som allerede er avgjort koster ingen ekstra ventetid.
+ */
+const WINNER_ROW_RETRY_DELAYS_MS = [20, 60, 150, 300];
+
+/**
+ * Leser raden om og om igjen til den er synlig, eller til pausene er brukt opp.
+ *
+ * `null` betyr at ingen annen transaksjon skrev raden — altså at skrivingen vår
+ * traff null rader uten en konflikt, som er en ekte feil.
+ */
+async function waitForWinnersRow(
+  viewerUserId: string,
+  year: number,
+): Promise<StoredKavalkade | null> {
+  for (let attempt = 0; ; attempt += 1) {
+    // Ny signal per forsøk: Next deduper GET-er til samme URL innenfor én
+    // render, og signalet er opt-out-en.
+    const row = await readKavalkade(
+      viewerUserId,
+      year,
+      new AbortController().signal,
+    );
+    if (row) return row;
+    if (attempt >= WINNER_ROW_RETRY_DELAYS_MS.length) return null;
+    await new Promise((resolve) =>
+      setTimeout(resolve, WINNER_ROW_RETRY_DELAYS_MS[attempt]),
+    );
+  }
 }
 
 type KavalkadeRow = {
@@ -150,12 +195,14 @@ type KavalkadeRow = {
 async function readKavalkade(
   viewerUserId: string,
   year: number,
+  signal?: AbortSignal,
 ): Promise<StoredKavalkade | null> {
-  const { data, error } = await getAdminClient()
+  const query = getAdminClient()
     .from('kavalkades')
     .select('facts, narrative, generated_at')
     .eq('user_id', viewerUserId)
-    .eq('year', year)
+    .eq('year', year);
+  const { data, error } = await (signal ? query.abortSignal(signal) : query)
     .maybeSingle<KavalkadeRow>();
 
   // #877: en defaultet feil blir stille til «ingen data» — og her ville det
