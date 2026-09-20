@@ -1148,6 +1148,126 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
   });
 });
 
+// #1999 del B: skrivingen til sessionStorage er debouncet 400 ms og ble aldri
+// flushet. En reload eller en PWA-dvale innenfor det vinduet gjenopprettet
+// utkastet fra FØR siste tastetrykk — og for spillnavnet forsvant både navnet
+// og `nameTouched`-flagget som skulle beskyttet det, så auto-navnet overtok
+// igjen. Dette er den eneste mekanismen i koden som faktisk gir symptomet
+// eieren så 6. september.
+describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () => {
+  const DRAFT_KEY = wizardDraftStorageKey('/');
+
+  function readDraft(): WizardDraft | null {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw).draft as WizardDraft;
+  }
+
+  /** Steg 1 → 5 med bane, tee og tee-off fylt ut. */
+  function walkToReadyStep() {
+    fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /^stableford$/i }));
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    clickNext();
+    expectStep(5);
+  }
+
+  it('B5: navnet overlever en remount rett etter tastetrykket', () => {
+    const first = renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    // Skriv navnet og last siden på nytt UMIDDELBART — uten å la de 400 ms
+    // gå. `pagehide` er det siden faktisk fyrer på vei ut.
+    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+      target: { value: 'Torsdagsgolf' },
+    });
+    fireEvent(window, new Event('pagehide'));
+    first.unmount();
+
+    const draft = readDraft();
+    expect(draft?.values.name).toBe('Torsdagsgolf');
+    expect(draft?.nameTouched).toBe(true);
+
+    // Gjenopptaket bærer navnet, og auto-navnet overtar ikke.
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    clickNext();
+    clickNext();
+    clickNext();
+    clickNext();
+    expectStep(5);
+    expect(screen.getByLabelText(/^spillnavn$/i)).toHaveValue('Torsdagsgolf');
+  });
+
+  it('B6: pagehide innenfor debounce-vinduet skriver gjeldende navn', () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+      target: { value: 'Klubbkvelden' },
+    });
+    fireEvent(window, new Event('pagehide'));
+
+    expect(readDraft()?.values.name).toBe('Klubbkvelden');
+  });
+
+  it('B6b: visibilitychange til hidden flusher på samme måte', () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+      target: { value: 'Onsdagsrunden' },
+    });
+    const spy = vi
+      .spyOn(document, 'visibilityState', 'get')
+      .mockReturnValue('hidden');
+    fireEvent(document, new Event('visibilitychange'));
+    spy.mockRestore();
+
+    expect(readDraft()?.values.name).toBe('Onsdagsrunden');
+  });
+
+  it('B7: pagehide etter en innsending skriver IKKE utkastet tilbake', async () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+      target: { value: 'Torsdagsgolf' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /lagre utkast/i }));
+
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
+    );
+
+    // Redirecten etter en publisering ER en pagehide. Den må ikke kunne
+    // gjenopplive utkastet vi nettopp ryddet bort.
+    fireEvent(window, new Event('pagehide'));
+    expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+
+  it('B7b: et stegbytte flusher, så ingenting ligger igjen i debounce-vinduet', () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+      target: { value: 'Lørdagsrunden' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+
+    expect(readDraft()?.values.name).toBe('Lørdagsrunden');
+  });
+});
+
 // #1999 B4: navnefeltet i BasicsSection er skjult i veiviseren i dag
 // (`showName={false}`), men GameForm rendrer det, og det er ÉN prop-verdi som
 // står mellom oss og at feil-forklaringen i issue-teksten blir helt ekte.

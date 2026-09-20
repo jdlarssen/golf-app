@@ -493,6 +493,10 @@ function WizardBody({
 
   function goToStep(next: Step) {
     if (next === step) return;
+    // #1999: et stegbytte skal aldri kunne ligge i debounce-vinduet. Skriver
+    // arrangøren navnet og går videre med én gang, er de siste 0,4 sekundene
+    // ellers borte hvis siden lastes på nytt før timeren rekker å fyre.
+    flushDraftWrite();
     appInitiatedStepNav.current = true;
     setStep(next);
     router.push(urlForStep(next), { scroll: false });
@@ -609,6 +613,10 @@ function WizardBody({
   // legge igjen et utkast — først når arrangøren faktisk endrer noe.
   const lastWrittenRef = useRef<string | null>(draftJson);
   const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // #1999: satt av `handleSubmitStart`. Uten det ville flushen under kunne
+  // skrive utkastet TILBAKE etter at en publisering nettopp ryddet det bort —
+  // `lastWrittenRef` er da null, så innholdet ser ut som en usendt endring.
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     if (isNewCupFlow) {
@@ -620,6 +628,10 @@ function WizardBody({
       return;
     }
     if (draftJson === lastWrittenRef.current) return;
+    // Arrangøren har endret noe igjen. Etter en MISLYKKET publisering (#1379)
+    // står veiviseren fortsatt montert, og utkastet er relevant på nytt — så
+    // flushen skal få lov til å skrive det igjen.
+    submittedRef.current = false;
     const id = setTimeout(() => {
       lastWrittenRef.current = draftJson;
       saveWizardDraft(storageKey, draftSnapshot, draftContext);
@@ -629,6 +641,48 @@ function WizardBody({
     // `draftSnapshot` er objektet bak `draftJson` — samme render, så
     // closuren er aldri stale. Vi depender på strengen for å slippe å
     // sammenligne objekt-identitet som endres hver render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftJson, storageKey, draftContext, isNewCupFlow]);
+
+  /**
+   * #1999: skriv utkastet NÅ i stedet for å vente ut debouncen.
+   *
+   * Debouncen på 400 ms ble aldri flushet. Skjedde en reload — eller la iOS
+   * PWA-en fra seg siden — innenfor det vinduet etter siste tastetrykk, ble
+   * utkastet gjenopprettet fra FØR endringen. For spillnavnet var det dobbelt
+   * ille: både navnet og `nameTouched`-flagget som skulle beskyttet det var
+   * borte, så auto-navnet overtok igjen ved neste mount.
+   *
+   * Samme dedupe mot `lastWrittenRef` som den debouncede skrivingen, og de
+   * samme to sperrene: cup-grenen skriver ingenting, og en innsendt form skal
+   * ikke få utkastet skrevet tilbake.
+   */
+  function flushDraftWrite() {
+    if (writeTimerRef.current) {
+      clearTimeout(writeTimerRef.current);
+      writeTimerRef.current = null;
+    }
+    if (isNewCupFlow || submittedRef.current) return;
+    if (draftJson === lastWrittenRef.current) return;
+    lastWrittenRef.current = draftJson;
+    saveWizardDraft(storageKey, draftSnapshot, draftContext);
+  }
+
+  // #1999: `pagehide` og `visibilitychange` er de to som faktisk kommer når
+  // iOS Safari/PWA legger fra seg siden. `beforeunload` fyrer ikke pålitelig
+  // der, så den er bevisst ikke med. Lytterne kobles på nytt når snapshot-en
+  // endres — det holder closuren fersk uten en ref-til-siste-funksjon.
+  useEffect(() => {
+    const onPageHide = () => flushDraftWrite();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushDraftWrite();
+    };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftJson, storageKey, draftContext, isNewCupFlow]);
 
@@ -644,6 +698,9 @@ function WizardBody({
    */
   function handleSubmitStart() {
     if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
+    // #1999: sperr flushen. En `pagehide` rett etter publisering (redirecten
+    // ER en pagehide) ville ellers skrevet utkastet tilbake på vei ut.
+    submittedRef.current = true;
     clearWizardDraft(storageKey);
     lastWrittenRef.current = null;
   }
