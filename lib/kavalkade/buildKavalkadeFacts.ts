@@ -261,10 +261,17 @@ function isWithinCavalcade(
   return game.endedAt.getTime() < cutoff.getTime();
 }
 
-/** Eldste runde først. Udaterte runder havner sist, i stabil rekkefølge. */
+/**
+ * Eldste runde først, `gameId` som stabil tiebreaker.
+ *
+ * En udatert runde regnes som eldst — samme konvensjon som recency-avgjørelsene
+ * i rival- og oppgjørs-kortene, så «udatert» ikke betyr «nyest» ett sted og
+ * «eldst» et annet. Lasteren kan ikke produsere en: `playedAt` faller tilbake på
+ * `ended_at`, og en runde uten `ended_at` slipper aldri gjennom frysegrensen.
+ */
 function byPlayedAtAscending(a: KavalkadeGame, b: KavalkadeGame): number {
-  const at = a.playedAt?.getTime() ?? Number.POSITIVE_INFINITY;
-  const bt = b.playedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+  const at = a.playedAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+  const bt = b.playedAt?.getTime() ?? Number.NEGATIVE_INFINITY;
   if (at !== bt) return at - bt;
   return a.gameId < b.gameId ? -1 : a.gameId > b.gameId ? 1 : 0;
 }
@@ -407,7 +414,9 @@ function beatsNemesis(a: NemesisHoleFact, b: NemesisHoleFact): boolean {
  * matchplay-utfall er ikke samme skala. Runder uten sammenliknbart utfall teller
  * som møter, men ikke som avgjorte.
  *
- * Ved likt antall møter vinner den du spilte med sist, så laveste `userId`.
+ * Ved likt antall møter vinner den du faktisk har hatt et oppgjør med — ellers
+ * ville makkeren du alltid spiller på lag med stukket av med rival-kortet og vist
+ * et tomt regnskap. Deretter den du spilte med sist, så laveste `userId`.
  */
 function findRival(mine: MyRound[], viewerUserId: string): RivalFact | null {
   type Tally = {
@@ -450,6 +459,7 @@ function findRival(mine: MyRound[], viewerUserId: string): RivalFact | null {
       const theirRank = comparableRank(other.resultSummary);
       if (myRank == null || theirRank == null) continue;
       if (myRank.kind !== theirRank.kind) continue;
+      if (wereTeammates(myRank, theirRank)) continue;
       tally.decided += 1;
       if (myRank.value < theirRank.value) tally.wins += 1;
       else if (myRank.value > theirRank.value) tally.losses += 1;
@@ -475,36 +485,66 @@ function findRival(mine: MyRound[], viewerUserId: string): RivalFact | null {
 }
 
 function beatsRival(
-  a: { met: number; lastMetAt: number; userId: string },
-  b: { met: number; lastMetAt: number; userId: string },
+  a: { met: number; decided: number; lastMetAt: number; userId: string },
+  b: { met: number; decided: number; lastMetAt: number; userId: string },
 ): boolean {
   if (a.met !== b.met) return a.met > b.met;
+  if (a.decided !== b.decided) return a.decided > b.decided;
   if (a.lastMetAt !== b.lastMetAt) return a.lastMetAt > b.lastMetAt;
   return a.userId < b.userId;
 }
+
+/** Et utfall oversatt til en skala der lavere er bedre. */
+type ComparableRank = {
+  kind: ResultSummary['kind'];
+  value: number;
+  /** Delte utfallet med et lag — da kan en lik verdi bety «samme side». */
+  isTeam: boolean;
+};
 
 /**
  * Oversetter et lagret utfall til en sammenliknbar rangering der lavere er bedre.
  * `kind` følger med så vi aldri måler placement mot matchplay.
  */
-function comparableRank(
-  summary: ResultSummary | null,
-): { kind: ResultSummary['kind']; value: number } | null {
+function comparableRank(summary: ResultSummary | null): ComparableRank | null {
   if (summary == null) return null;
   switch (summary.kind) {
     case 'placement':
-      return { kind: 'placement', value: summary.rank };
+      return { kind: 'placement', value: summary.rank, isTeam: summary.isTeam };
     case 'skins':
-      return { kind: 'skins', value: summary.rank };
+      return { kind: 'skins', value: summary.rank, isTeam: false };
     case 'matchplay':
       return {
         kind: 'matchplay',
         value:
           summary.outcome === 'win' ? 1 : summary.outcome === 'tie' ? 2 : 3,
+        isTeam: true, // fourball/foursomes: en side kan ha to spillere
       };
     default:
       return null;
   }
+}
+
+/**
+ * Sto de to på samme side? Da er runden et møte, men ikke et oppgjør.
+ *
+ * Uten denne ville makkeren din i fourball blitt «rivalen» du aldri har slått:
+ * dere deler utfall, så hver eneste runde hadde havnet i uavgjort-kolonnen. To
+ * spillere kan ikke begge vinne eller begge tape den samme matchen, så et likt
+ * vinner- eller taper-utfall betyr med sikkerhet samme side. Et likt
+ * uavgjort-utfall gjør det ikke — en match som endte all square er et ekte
+ * oppgjør, og den teller.
+ *
+ * For lag-plasseringer er lik plassering nesten alltid samme lag. To lag kan dele
+ * plassering i en ekte deling; da mister vi én uavgjort, og det er den billige
+ * feilen å gjøre: kortet påstår heller for lite enn noe som ikke skjedde.
+ */
+function wereTeammates(mine: ComparableRank, theirs: ComparableRank): boolean {
+  if (!mine.isTeam || !theirs.isTeam) return false;
+  if (mine.value !== theirs.value) return false;
+  // Matchplay: bare avgjorte matcher kan avsløre samme side (win=1, loss=3).
+  if (mine.kind === 'matchplay') return mine.value !== 2;
+  return true;
 }
 
 /**

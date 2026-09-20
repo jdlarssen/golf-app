@@ -106,21 +106,28 @@ export async function loadKavalkadeInput(
   // Runde 1: spillerens egne ferdige, ikke-avledede runder i vinduet rundt året.
   // `ended_at` er både frysegrensen og det eneste feltet som garantert er satt på
   // et ferdig spill, så SQL-filteret går på den; `effectiveYear` finjusterer under.
-  const { data: mineRaw, error: mineError } = await supabase
-    .from('game_players')
-    .select(
-      'game_id, games!inner(id, name, scheduled_tee_off_at, ended_at, course_id, courses(name))',
-    )
-    .eq('user_id', viewerUserId)
-    .is('withdrawn_at', null)
-    .eq('games.status', 'finished')
-    .is('games.source_game_id', null)
-    .gte('games.ended_at', windowStart(year).toISOString())
-    .lt('games.ended_at', cutoff.toISOString());
-  if (mineError) throw mineError;
+  const mineRaw = await selectAllRows(
+    (from, to) =>
+      supabase
+        .from('game_players')
+        .select(
+          'game_id, games!inner(id, name, scheduled_tee_off_at, ended_at, course_id, courses(name))',
+        )
+        .eq('user_id', viewerUserId)
+        .is('withdrawn_at', null)
+        .eq('games.status', 'finished')
+        .is('games.source_game_id', null)
+        .gte('games.ended_at', windowStart(year).toISOString())
+        .lt('games.ended_at', cutoff.toISOString())
+        // Ett user_id er allerede filtrert bort, så game_id er unikt her.
+        .order('game_id')
+        .range(from, to)
+        .returns<{ games: GameRow | null }[]>(),
+    'kavalkade mine spill',
+  );
 
-  const myGames = (mineRaw ?? [])
-    .map((row) => (row as unknown as { games: GameRow | null }).games)
+  const myGames = mineRaw
+    .map((row) => row.games)
     .filter((g): g is GameRow => g != null)
     .filter((g) => effectiveYear(g) === year);
 
