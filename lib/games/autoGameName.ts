@@ -31,9 +31,11 @@ export interface SuggestGameNameInput {
 
 /**
  * Bygger forslag til spillnavn ut fra valgt bane og tee-off-tid. Brukes av
- * GameWizard for å pre-fylle navn-feltet på steg 4 så admin slipper å skrive
- * det i hånd. Returnerer tom streng når bane ikke er valgt — wizard-en sikrer
- * at steg 4 ikke kan publisere før admin har skrevet inn et navn manuelt.
+ * GameWizard for å pre-fylle navnefeltet på steg 5 (Klar) så admin slipper å
+ * skrive det i hånd. Returnerer tom streng når bane ikke er valgt; steg 3
+ * slipper ingen videre uten bane, så navnet er alltid fylt ut når arrangøren
+ * kommer fram til Klar-steget. Skriver arrangøren noe selv, slutter forslaget
+ * å gjelde (`nameTouched` i useGameFormState, #1999).
  *
  * Norske måneder lowercase (`mai`, ikke `Mai`) per norsk skriftspråk.
  *
