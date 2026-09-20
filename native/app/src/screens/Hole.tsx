@@ -35,7 +35,10 @@ import {
   nextStrokes,
 } from '../../../../lib/scorecard/strokeEntry';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
-import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
+import {
+  formatCapturesPutts,
+  modeCollapsesToTeamCard,
+} from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
@@ -60,6 +63,7 @@ import {
 } from '../lib/teamPlay';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { usePuttsTracking } from '../lib/usePuttsTracking';
 import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -95,6 +99,9 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     gameId,
     bundle?.game.gameMode ?? '',
   );
+  // Putt-føring er opt-in per runde (#939), som på web. Kallet står her oppe
+  // med de andre hookene fordi skjermen har tidlige `return`-er lenger nede.
+  const putts = usePuttsTracking(gameId);
 
   // Realtime + seed henger på SPILLET, ikke på hullet: å bytte hull skal ikke
   // bygge kanalen på nytt (#1366-disiplinen bor i `subscribeGameScores`).
@@ -151,6 +158,9 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   }
 
   const mode = bundle.game.gameMode as GameMode;
+  // Hvilke formater som i det hele tatt fanger putter er DELT regel — samme
+  // uttrykk som webbens `HoleScoreList` gater på. Appen kopierer den ikke.
+  const capturesPutts = formatCapturesPutts(mode);
   const flight = resolveFlight(roster, mode, me);
   const par = parForPlayer(
     { mens: hole.parMens, ladies: hole.parLadies, juniors: hole.parJuniors },
@@ -265,9 +275,20 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="hole-screen">
       <Text style={ui.title}>Hull {holeNumber}</Text>
-      <Text style={[ui.muted, ui.num]} testID="hole-facts">
-        Par {par} · SI {hole.strokeIndex}
-      </Text>
+      {/* Fakta-linja hadde all bredden til høyre stående ubrukt. Pillen legger
+          seg der, som webbens bryter gjør i header-høyden ved siden av Par —
+          den koster altså ingen egen rad. */}
+      <View style={styles.factsRow}>
+        <Text style={[ui.muted, ui.num]} testID="hole-facts">
+          Par {par} · SI {hole.strokeIndex}
+        </Text>
+        <PuttsToggle
+          visible={capturesPutts}
+          enabled={putts.enabled}
+          disabled={locked}
+          onToggle={putts.toggle}
+        />
+      </View>
 
       {locked ? (
         <Text style={ui.muted} testID="hole-locked">
@@ -334,12 +355,6 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
                   scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
                 )
               }
-              onPutts={(delta) =>
-                void adjustPutts(
-                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
-                  delta,
-                )
-              }
             />
           ))
         : flight.map((entry) => (
@@ -350,6 +365,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
               score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
               isMe={entry.user_id === userId}
               locked={locked}
+              showPutts={capturesPutts && putts.enabled}
               onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
               onFirstEntry={() => void setFirstEntryStrokes(entry.user_id)}
               onClearStrokes={() => void clearStrokes(entry.user_id)}
@@ -478,9 +494,14 @@ function teeStarterNameFor(opts: {
 /**
  * Ett lag, ett kort, én rad.
  *
- * Kortet ser ut som spiller-kortet med vilje — samme steppere, samme
+ * Kortet ser ut som spiller-kortet med vilje — samme stepper, samme
  * badge-plass — for det er den samme handlingen. Forskjellen er hvem tallet
  * havner hos, og det står i overskriften («Lag 1 · Anna, Bjørn»).
+ *
+ * #2000: ingen putte-stepper her. Snittet mellom `formatCapturesPutts` og
+ * `modeCollapsesToTeamCard` er tomt — ingen modus som tegner lagkort fanger
+ * putter — så feltet kunne aldri tegnes. Endrer et framtidig format på det,
+ * er `formatCapturesPutts` stedet regelen bor.
  */
 function TeamCardView({
   card,
@@ -492,7 +513,6 @@ function TeamCardView({
   onStrokes,
   onFirstEntry,
   onClearStrokes,
-  onPutts,
 }: {
   card: TeamCard;
   score: LocalScore | undefined;
@@ -504,7 +524,6 @@ function TeamCardView({
   onStrokes: (delta: number) => void;
   onFirstEntry: () => void;
   onClearStrokes: () => void;
-  onPutts: (delta: number) => void;
 }) {
   const { ui } = useTheme();
   return (
@@ -550,13 +569,6 @@ function TeamCardView({
         onPress={onClearStrokes}
         testID={`team-${card.teamNumber}-undo`}
       />
-      <Stepper
-        label="Putter"
-        value={score?.putts ?? null}
-        disabled={locked}
-        onChange={onPutts}
-        testIDPrefix={`team-${card.teamNumber}-putts`}
-      />
       {score?.strokes == null ? (
         <Text style={ui.muted} testID={`team-${card.teamNumber}-hint`}>
           {TAP_INSTRUCTION}
@@ -572,6 +584,7 @@ function PlayerCard({
   score,
   isMe,
   locked,
+  showPutts,
   onStrokes,
   onFirstEntry,
   onClearStrokes,
@@ -582,6 +595,8 @@ function PlayerCard({
   score: LocalScore | undefined;
   isMe: boolean;
   locked: boolean;
+  /** `formatCapturesPutts(mode) && bryteren er på` — webbens gate (#2000). */
+  showPutts: boolean;
   onStrokes: (delta: number) => void;
   onFirstEntry: () => void;
   onClearStrokes: () => void;
@@ -628,13 +643,15 @@ function PlayerCard({
         onPress={onClearStrokes}
         testID={`player-${entry.user_id}-undo`}
       />
-      <Stepper
-        label="Putter"
-        value={score?.putts ?? null}
-        disabled={locked}
-        onChange={onPutts}
-        testIDPrefix={`player-${entry.user_id}-putts`}
-      />
+      {showPutts ? (
+        <Stepper
+          label="Putter"
+          value={score?.putts ?? null}
+          disabled={locked}
+          onChange={onPutts}
+          testIDPrefix={`player-${entry.user_id}-putts`}
+        />
+      ) : null}
       {score?.strokes == null ? (
         <Text style={ui.muted} testID={`player-${entry.user_id}-hint`}>
           {TAP_INSTRUCTION}
@@ -674,6 +691,59 @@ function UndoStrokes({
       accessibilityLabel={label}
     >
       <Text style={ui.linkText}>Angre</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Putt-føring av/på for runden — appens pille, webbens `PuttsTogglePill`.
+ *
+ * Vises kun i formater som fanger putter, som på web. Den står i fakta-linjas
+ * ledige bredde og har ingen egen rad; `hitSlop` løfter trykkflaten til
+ * stilguidens 44 px uten å koste layout (webben gjør det samme med padding og
+ * negativ margin).
+ *
+ * Teksten er webbens `holes.putts.toggleLabel` («Registrer putter»), ikke
+ * pille-teksten webben viser («Putter» + flagg-ikon): appen har ikke bygget
+ * ikonspråket ennå, og «Putter» alene leser som en etikett, ikke en bryter.
+ */
+function PuttsToggle({
+  visible,
+  enabled,
+  disabled,
+  onToggle,
+}: {
+  visible: boolean;
+  enabled: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  const { colors, ui } = useTheme();
+  if (!visible) return null;
+  return (
+    <Pressable
+      onPress={onToggle}
+      disabled={disabled}
+      hitSlop={10}
+      style={[
+        ui.badge,
+        {
+          // `ui.badge` er bygget for kort-hodet og topp-stiller seg selv der.
+          // Her skal den stå midt i fakta-linja.
+          alignSelf: 'center',
+          borderColor: enabled ? colors.primary : colors.border,
+          backgroundColor: enabled ? colors.surface : colors.bg,
+        },
+        disabled && styles.puttsToggleDisabled,
+      ]}
+      testID="hole-putts-toggle"
+      accessibilityRole="switch"
+      accessibilityState={{ checked: enabled }}
+      accessibilityLabel="Registrer putter"
+    >
+      <Text style={[ui.badgeText, enabled && { color: colors.primary }]}>
+        Registrer putter
+      </Text>
     </Pressable>
   );
 }
@@ -733,6 +803,15 @@ const styles = StyleSheet.create({
   },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   meName: { fontFamily: FONTS.sansBold },
+  // Fakta til venstre, putt-bryteren til høyre. `gap` holder dem fra hverandre
+  // om par- og SI-tallene blir lange.
+  factsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  puttsToggleDisabled: { opacity: 0.4 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepperLabel: { width: 60 },
   step: {
