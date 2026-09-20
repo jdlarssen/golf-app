@@ -154,6 +154,11 @@ const mockState: { bundle: unknown; scores: unknown[] } = {
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Putt-bryteren (#2000) bor i AsyncStorage. Pakkens egen jest-mock er et lager
+// i minnet — hver test starter med bryteren av, som på en fersk telefon.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest'),
+);
 jest.mock('../data/writeScore', () => ({
   writeScore: jest.fn(async () => undefined),
 }));
@@ -248,6 +253,14 @@ describe('Hole', () => {
       });
     });
 
+    // #2000: putt-føring er opt-in. Solo-slagspill FANGER putter, så bryteren
+    // finnes — men den er av til noen slår den på, og da finnes ikke feltet.
+    expect(screen.queryByTestId('player-me-putts-plus')).toBeNull();
+    await fireEvent.press(screen.getByTestId('hole-putts-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('player-me-putts-plus')).toBeTruthy();
+    });
+
     // Samme render, andre stepper: putt-tastingen skal sende PUTTS ALENE.
     // Sendes `strokes` med her, vasker mergen ut slaget som står der (#939).
     await fireEvent.press(screen.getByTestId('player-me-putts-plus'));
@@ -293,18 +306,11 @@ describe('Hole', () => {
       });
     });
 
-    // Putter går i SAMME lagrad, og fortsatt uten `strokes` (#939).
-    await fireEvent.press(screen.getByTestId('team-1-putts-plus'));
-
-    await waitFor(() => {
-      expect(writeScore).toHaveBeenCalledWith({
-        gameId: GAME_ID,
-        userId: 'makker',
-        holeNumber: 1,
-        putts: 2,
-        enteredBy: 'me',
-      });
-    });
+    // #2000: greensome fanger ikke putter (`formatCapturesPutts`), så hverken
+    // bryteren eller putte-raden skal finnes — lagkortet har aldri kunnet vise
+    // dem, uansett hva som ligger lagret på telefonen.
+    expect(screen.queryByTestId('hole-putts-toggle')).toBeNull();
+    expect(screen.queryByTestId('team-1-putts-plus')).toBeNull();
   });
 
   // #1988: de to føringsveiene webben har hatt hele tiden. Tallene er dekket av
