@@ -36,13 +36,20 @@ vi.mock('@/lib/supabase/admin', () => ({
       return {
         select: (columns: string) => {
           const filters: Record<string, unknown> = {};
+          let signals = 0;
           const builder = {
             eq: (column: string, value: unknown) => {
               filters[column] = value;
               return builder;
             },
+            // Hvert nye forsøk får sin egen signal — det er opt-out-en fra
+            // Next' GET-dedupe. Mocken teller dem så testen kan asserere det.
+            abortSignal: (signal: AbortSignal) => {
+              if (signal) signals += 1;
+              return builder;
+            },
             maybeSingle: async () => {
-              readSpy({ columns, filters: { ...filters } });
+              readSpy({ columns, filters: { ...filters }, signals });
               return kavalkadeRead;
             },
           };
@@ -252,6 +259,26 @@ describe('etter frysegrensen', () => {
 
     expect(view.status).toBe('ready');
     expect(readSpy).toHaveBeenCalledTimes(2);
+  });
+
+  // Reprodusert på staging (#2129): `on conflict do nothing` venter IKKE på den
+  // andre transaksjonen, så taperen i kappløpet får 0 rader OG en tom lesing
+  // rett etterpå. Uten en ny sjanse ble det feilskjermen, mens raden landet et
+  // øyeblikk senere.
+  it('venter på at vinnerens rad blir synlig før den gir opp', async () => {
+    kavalkadeUpsert = { data: [], error: null };
+    readSpy.mockImplementation(() => {
+      // Raden er commitet først ved fjerde lesing (1 før skriving, 3 etter).
+      if (readSpy.mock.calls.length >= 4) kavalkadeRead = { data: storedRow(), error: null };
+    });
+
+    const view = await getOrCreateKavalkade(VIEWER, { now: AFTER, env: ENV });
+
+    expect(view.status).toBe('ready');
+    expect(readSpy).toHaveBeenCalledTimes(4);
+    expect(generateNarrativeMock).toHaveBeenCalledTimes(1);
+    // Førstelesingen går uten signal; hvert forsøk etter skrivingen har sin egen.
+    expect(readSpy.mock.calls.map((call) => call[0].signals)).toEqual([0, 1, 1, 1]);
   });
 
   // Felle 2: 0 rader uten konflikt er en feil, ikke stille suksess.
