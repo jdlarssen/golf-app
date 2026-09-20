@@ -1165,7 +1165,10 @@ export default async function GameHomePage({
               </div>
             ) : me.withdrawn_at ? (
               // WD — viser angre-banner i stedet for scorekort-CTA (#386).
-              <div className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4">
+              <div
+                className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4"
+                data-testid="withdrawn-banner"
+              >
                 <p className="mb-3 font-sans text-[14px] font-medium text-text">
                   {t('withdrawnHeading')}
                 </p>
@@ -1174,7 +1177,11 @@ export default async function GameHomePage({
                 </p>
                 <form action={submitUndoWithdraw}>
                   <input type="hidden" name="gameId" value={id} />
-                  <SubmitButton className="w-full" pendingLabel={t('undoWithdrawPending')}>
+                  <SubmitButton
+                    className="w-full"
+                    data-testid="undo-withdraw-submit"
+                    pendingLabel={t('undoWithdrawPending')}
+                  >
                     {t('undoWithdraw')}
                   </SubmitButton>
                 </form>

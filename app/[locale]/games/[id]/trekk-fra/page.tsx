@@ -175,10 +175,11 @@ export default async function TrekkFraPage({
       </div>
 
       <div className="mt-6 flex flex-col gap-2.5">
-        <form action={submitWithdraw}>
+        <form action={submitWithdraw} data-testid="withdraw-form">
           <input type="hidden" name="gameId" value={game.id} />
           <SubmitButton
             className="w-full"
+            data-testid="withdraw-submit"
             pendingLabel={t('withdrawPending')}
             style={{
               background: 'var(--danger-deep)',
