@@ -22,7 +22,7 @@ type Props = {
 /** Kortene i «Ditt år», uten lag-kortet. */
 type PersonalCard = Extract<
   KavalkadeCard,
-  { id: 'opening' | 'bestRound' | 'nemesisHole' | 'rival' | 'formPeak' | 'belowThreshold' }
+  { id: 'year' | 'best-round' | 'nemesis-hole' | 'rival' | 'form-peak' | 'below-threshold' }
 >;
 /** Kortene i «Gjengen». */
 type GangCard = Extract<KavalkadeCard, { id: `gang${string}` }>;
@@ -55,11 +55,11 @@ function cardBody(card: KavalkadeCard, locale: AppLocale) {
   switch (card.id) {
     case 'team':
       return <TeamCardBody card={card} locale={locale} />;
-    case 'gangSummary':
-    case 'gangTopWinner':
-    case 'gangMostBirdies':
-    case 'gangMostSnowmen':
-    case 'gangTightestFinish':
+    case 'gang-summary':
+    case 'gang-winner':
+    case 'gang-birdies':
+    case 'gang-snowmen':
+    case 'gang-tightest':
       return <GangCardBody card={card} locale={locale} />;
     default:
       return <PersonalCardBody card={card} locale={locale} />;
@@ -76,7 +76,7 @@ function PersonalCardBody({
 }) {
   const { t, day, where } = useCardCopy(locale);
 
-  if (card.id === 'opening') {
+  if (card.id === 'year') {
     return (
       <CardBody
         kicker={t('openingKicker')}
@@ -96,7 +96,7 @@ function PersonalCardBody({
     );
   }
 
-  if (card.id === 'bestRound') {
+  if (card.id === 'best-round') {
     return (
       <CardBody
         kicker={t('bestRoundKicker')}
@@ -107,7 +107,7 @@ function PersonalCardBody({
     );
   }
 
-  if (card.id === 'nemesisHole') {
+  if (card.id === 'nemesis-hole') {
     return (
       <CardBody
         kicker={t('nemesisKicker')}
@@ -144,7 +144,7 @@ function PersonalCardBody({
     );
   }
 
-  if (card.id === 'belowThreshold') {
+  if (card.id === 'below-threshold') {
     return (
       <CardBody
         kicker={t('belowKicker')}
@@ -233,7 +233,7 @@ function TeamCardBody({
 function GangCardBody({ card, locale }: { card: GangCard; locale: AppLocale }) {
   const { t, playerName, where } = useCardCopy(locale);
 
-  if (card.id === 'gangSummary') {
+  if (card.id === 'gang-summary') {
     return (
       <CardBody
         kicker={t('gangSummaryKicker')}
@@ -244,7 +244,7 @@ function GangCardBody({ card, locale }: { card: GangCard; locale: AppLocale }) {
     );
   }
 
-  if (card.id === 'gangTightestFinish') {
+  if (card.id === 'gang-tightest') {
     return (
       <CardBody
         kicker={t('gangTightestKicker')}
@@ -268,18 +268,27 @@ function GangCardBody({ card, locale }: { card: GangCard; locale: AppLocale }) {
   }
 
   // De tre «mest av noe»-kortene har samme form: ett navn, én telling.
-  const leader = {
-    gangTopWinner: { kicker: t('gangTopWinnerKicker'), line: t('gangWins', { count: card.fact.count }) },
-    gangMostBirdies: { kicker: t('gangMostBirdiesKicker'), line: t('gangBirdies', { count: card.fact.count }) },
-    gangMostSnowmen: { kicker: t('gangMostSnowmenKicker'), line: t('gangSnowmen', { count: card.fact.count }) },
-  }[card.id];
+  const leader: Record<'gang-winner' | 'gang-birdies' | 'gang-snowmen', {
+    kicker: string;
+    line: string;
+  }> = {
+    'gang-winner': {
+      kicker: t('gangTopWinnerKicker'),
+      line: t('gangWins', { count: card.fact.count }),
+    },
+    'gang-birdies': {
+      kicker: t('gangMostBirdiesKicker'),
+      line: t('gangBirdies', { count: card.fact.count }),
+    },
+    'gang-snowmen': {
+      kicker: t('gangMostSnowmenKicker'),
+      line: t('gangSnowmen', { count: card.fact.count }),
+    },
+  };
+  const { kicker, line } = leader[card.id];
 
   return (
-    <CardBody
-      kicker={leader.kicker}
-      headline={playerName(card.fact)}
-      lines={[leader.line]}
-    />
+    <CardBody kicker={kicker} headline={playerName(card.fact)} lines={[line]} />
   );
 }
 
