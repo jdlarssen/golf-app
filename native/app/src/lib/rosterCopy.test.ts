@@ -17,10 +17,14 @@ import type { RosterActionFailure } from '../data/rosterActions';
 import type { StartCountMode } from '../../../../lib/games/startPlayerCount';
 import type { StartRoundFailure, StartRoundRefusal } from '../data/startGame';
 import type { SelfWithdrawFailure } from '../data/withdrawSelf';
+import type { InviteFailure } from '../data/inviteToGame';
 import {
+  describeInviteFailure,
+  describeInviteSuccess,
   describeRosterFailure,
   describeSelfWithdrawFailure,
   describeStartRefusal,
+  INVITE_BY_EMAIL,
   WITHDRAW_SELF,
 } from './rosterCopy';
 
@@ -86,6 +90,25 @@ const SELF_WITHDRAW_REASON_MAP = {
 const SELF_WITHDRAW_REASONS = Object.keys(
   SELF_WITHDRAW_REASON_MAP,
 ) as readonly SelfWithdrawFailure[];
+
+// Kartet, ikke lista, er porten: en ny wire-kode uten rad her gir rød `tsc`.
+const INVITE_REASON_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  unauthorized: true,
+  network: true,
+  forbidden: true,
+  not_found: true,
+  invalid_email: true,
+  disposable_email: true,
+  game_locked: true,
+  game_full: true,
+  invite_not_allowed: true,
+  rate_limited: true,
+  invite_failed: true,
+} as const satisfies Record<InviteFailure, true>;
+
+const INVITE_REASONS = Object.keys(INVITE_REASON_MAP) as readonly InviteFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
@@ -244,5 +267,37 @@ describe('WITHDRAW_SELF', () => {
     expect(WITHDRAW_SELF.confirmBody).toContain('teller ikke med');
     expect(WITHDRAW_SELF.confirmBody).toContain('blir liggende');
     expect(WITHDRAW_SELF.undoBody).toContain('teller med');
+  });
+});
+
+describe('invitasjons-copyen (#1919)', () => {
+  it.each(INVITE_REASONS)('gir en ferdig setning for «%s»', (reason) => {
+    expect(isFinishedSentence(describeInviteFailure(reason))).toBe(true);
+  });
+
+  it('sier samme nett-linje som roster-skrivingene', () => {
+    expect(describeInviteFailure('offline')).toBe(describeRosterFailure('offline'));
+  });
+
+  it('skiller de to suksessene fra hverandre', () => {
+    // En registrert spiller står i runden med en gang; en ukjent adresse har
+    // fått en mail hen må svare på. Samme setning for begge ville fått
+    // arrangøren til å vente på et svar som aldri kommer.
+    const added = describeInviteSuccess('added', 'ny@example.com');
+    const sent = describeInviteSuccess('sent', 'ny@example.com');
+    expect(added).not.toBe(sent);
+    expect(added).toContain('ny@example.com');
+    expect(sent).toContain('ny@example.com');
+    expect(isFinishedSentence(added)).toBe(true);
+    expect(isFinishedSentence(sent)).toBe(true);
+  });
+
+  it('peker nedover i kortet, ikke ut på nettsiden', () => {
+    // Fram til #1919 sto det «Nye folk inviterer du fra nettsiden» der feltet
+    // nå står. En henvisning videre ville beskrevet en app som ikke finnes.
+    expect(INVITE_BY_EMAIL.emptyList).not.toContain('nettsiden');
+    for (const value of Object.values(INVITE_BY_EMAIL)) {
+      expect(isFinishedSentence(value)).toBe(true);
+    }
   });
 });

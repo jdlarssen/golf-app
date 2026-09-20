@@ -27,6 +27,7 @@ import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
 import { setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
 import { withdrawSelf } from '../../data/withdrawSelf';
+import { inviteToGame } from '../../data/inviteToGame';
 import { OrganiserSection } from './OrganiserSection';
 
 jest.mock('../../supabase', () => require('../../test/supabaseMock'));
@@ -50,6 +51,10 @@ jest.mock('../../data/startGame', () => ({
 
 jest.mock('../../data/withdrawSelf', () => ({
   withdrawSelf: jest.fn(async () => ({ ok: true })),
+}));
+
+jest.mock('../../data/inviteToGame', () => ({
+  inviteToGame: jest.fn(async () => ({ ok: true, kind: 'sent' })),
 }));
 
 const ME = 'user-me';
@@ -252,13 +257,31 @@ describe('OrganiserSection', () => {
     //    eller RLS har en, og to flater med hver sin regel er verre.
     expect(screen.getByTestId(`organiser-remove-${ME}`)).toBeTruthy();
 
-    // 3b. #1891: er det ingen igjen å velge, sto det «inviterer du fra
-    //     nettsiden» uten adresse. Invitasjon er Resend + rate-limit og dermed
-    //     server-eid til #1919 lander — men veien dit finnes nå.
+    // 3b. #1919: her sto blindveien. Er det ingen igjen å velge, sa kortet
+    //     «Nye folk inviterer du fra nettsiden» — og det var alt. Nå står
+    //     e-postfeltet i kortet, og kvitteringen er beviset på at handlingen
+    //     faktisk skjedde: en invitasjon som gikk ut endrer ingenting i lista,
+    //     så uten setningen ville arrangøren ikke visst om noe skjedde.
     await fireEvent.press(screen.getByTestId('organiser-add-toggle'));
     await waitFor(() => {
-      expect(screen.getByTestId('organiser-invite-link')).toBeTruthy();
+      expect(screen.getByTestId('organiser-invite-email')).toBeTruthy();
     });
+    await fireEvent.changeText(
+      screen.getByTestId('organiser-invite-email'),
+      'ny@example.com',
+    );
+    await fireEvent.press(screen.getByTestId('organiser-invite-submit'));
+    await waitFor(() => {
+      // Kun runden og adressen: hvem som inviterer kommer fra tokenet.
+      expect(inviteToGame).toHaveBeenCalledWith('game-1', 'ny@example.com');
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('organiser-notice')).toHaveTextContent(
+        'Invitasjon sendt til ny@example.com.',
+      );
+    });
+    // Lenka til nettsiden blir stående: pending-oversyn og avlysning bor der.
+    expect(screen.getByTestId('organiser-invite-link')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('organiser-add-toggle'));
 
     // 4. #502: en annen aktør vant status-flippen. Runden er i gang.

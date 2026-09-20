@@ -556,12 +556,15 @@ hvilken sone maskinen står i — som er sonen CI kjører i.
 - **Kandidatlista er medspillere, ikke venner.** `users`-SELECT under RLS gir egen rad ∨
   admin ∨ delt spill. Webbens union (venner ∪ medspillere ∪ klubbmedlemmer) er
   `server-only` + service-role. En venn du aldri har spilt med er ikke navnlesbar.
-  Oppfølger: egen SECURITY DEFINER-RPC.
+  Oppfølger: egen SECURITY DEFINER-RPC. #1919 fjernet blindveien uten å utvide lista:
+  kjenner du adressen, inviterer du med e-post i stedet.
 - **Gjester utelates.** En gjesterad MÅ inn via service-role (0115 blokkerer
   klient-inserten); å tilby en spiller hvis insert er dømt til å feile er uærlig.
 - **Ingen tee-sett-velger** — utledes av `users.gender`, og junior er utilgjengelig
   (#1859).
-- **Ingen utkast, ingen redigering, ingen e-postinvitasjon** — web-eid.
+- **Ingen utkast og ingen redigering** — web-eid. E-postinvitasjon kom med #1919
+  (`POST /api/games/{id}/invite`); pending-oversyn, «Send på nytt» og avlysning bor
+  fortsatt på nettsiden.
 - Format-etikettene er speilet i `src/lib/appFormats.ts` med paritetstest mot
   `messages/no.json`: `formats`-tabellen har INGEN navne-kolonne, bare `slug`,
   `icon_key`, `scoring_module`, `is_active`, `is_cup_eligible`.
@@ -1249,8 +1252,8 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
 Slette-ruta (#1876) var den første. Med purringen ble den et **mønster**, og fra og med
 #1891 har det ett hjem: `lib/api/appAuth.ts` på webben, `src/data/webApi.ts` i appen.
 `#1918` (lever lagkort) er den tredje brukeren og arvet begge uendret. `#1917` (trekk deg
-selv) er den fjerde og gjorde det samme; `#1919` (inviter) står igjen — ingen skal lage en
-femte variant.
+selv) er den fjerde og `#1919` (inviter med e-post) den femte; begge gjorde det samme.
+Ingen skal lage en sjette variant.
 
 ### Når trenger noe en rute i det hele tatt?
 
@@ -1365,6 +1368,41 @@ denne porten ER hele autorisasjonen; det finnes ingen RLS bak den.
 Og motsatt: `guard_game_players_self_update` vakt (c) (0147, uendret i 0168) skal fortsatt
 nekte appen å skrive `withdrawn_at` på sin egen rad direkte. Den vakta er grunnen til at
 ruta finnes — ikke et hinder ruta er ment å omgå.
+
+### Wire-kontrakten for e-postinvitasjon (#1919)
+
+```
+POST /api/games/{id}/invite   { email: string }
+     200 { status: 'added' | 'sent' }
+     400 invalid_email | disposable_email
+     401 unauthorized · 403 forbidden · 404 not_found
+     409 game_locked | game_full | invite_not_allowed
+     429 rate_limited · 500 invite_failed
+```
+
+Frosset, og speilet i `src/data/inviteToGame.ts`. **Endres den ene, endres den andre i
+samme PR.** `added` = adressen hadde alt en konto og spilleren står nå i runden (ingen
+mail); `sent` = `invitations`-rad + Resend-mail.
+
+Dette er den første ruta der **appen MÅ lese `error` fra kroppen**: 400 og 409 bærer hver
+flere koder, i motsetning til purringen og selv-frafallet der én status er én kode. Porten
+mot en ukjent kode er `Record<BodyCode, true>` i klienten, som `readValidationError` i
+`profile.ts` — en sjette kode faller på `tsc` i stedet for å bli «Noe gikk galt».
+
+Regelen selv bor i `lib/games/inviteToGame.ts` — de to grenene, idempotensen på
+`(e-post, spill)`, frist-forlengelsen på en åpen invitasjon, rollbacken når Resend kaster
+og `expireGameCache` — og speiles ALDRI i appen. Webbens `inviteEmailToGame` er en tynn
+skall-action rundt den samme kjernen, og oversetter bare utfallet til sine query-verdier.
+
+⚠️ **Her er `isAdmin` + eligibility-sjekken inne i kjernen HELE venne-/klubb-porten.**
+Webben sender sin RLS-klient, så 0072-policyene står som et andre lag der. Ruta sender
+service-role, og da no-op-er 0115-triggeren (`auth.uid()` er NULL). Rolla leses derfor for
+den EKTE kalleren (`users.is_admin`), aldri fra kroppen — testen «en `isAdmin` i kroppen
+gir ikke admin-unntakene» er beviset.
+
+Ruta har rate-limit (`consumeAdminInviteRateLimit`) selv om webbens egen spill-invitasjon
+ikke har det: et HTTP-endepunkt er eksponert på en annen måte enn en server-action bak et
+skjema, og bøttene deles med admin-døra. Webbens hull er et eget funn, ikke fikset her.
 
 ### Appen ser aldri innboks-varselet
 
