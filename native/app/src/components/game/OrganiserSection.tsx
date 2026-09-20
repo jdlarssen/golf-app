@@ -259,10 +259,12 @@ export function OrganiserSection({
     setPicking(true);
     if (candidates !== null) return;
     setCandidatesFailed(false);
-    void fetchRosterCandidates()
+    // Runden sendes med (#1919 del B): den er det eneste som gir klubb-grenen i
+    // `roster_candidates`, og den slås kun opp når runden er din egen.
+    void fetchRosterCandidates(game.id)
       .then(setCandidates)
       .catch(() => setCandidatesFailed(true));
-  }, [candidates]);
+  }, [candidates, game.id]);
 
   const scheduled = game.status === 'scheduled';
   const active = game.status === 'active';

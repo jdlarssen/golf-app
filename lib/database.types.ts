@@ -2333,6 +2333,18 @@ export type Database = {
         Args: { p_accept: boolean; p_request_id: string }
         Returns: string
       }
+      roster_candidates: {
+        Args: { p_game_id?: string }
+        Returns: {
+          gender: Database["public"]["Enums"]["user_gender"]
+          hcp_index: number
+          id: string
+          level: Database["public"]["Enums"]["player_level"]
+          name: string
+          nickname: string
+          profile_completed_at: string
+        }[]
+      }
       same_flight_or_solo: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
