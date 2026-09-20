@@ -90,7 +90,9 @@ async function readBody(response: Response): Promise<Record<string, unknown>> {
  * Ett kall mot en app→server-rute, med alle guardene foran i fast rekkefølge.
  *
  * @param path stien på web-deployen, f.eks. `/api/account/delete`.
- * @param method verbet ruta forventer.
+ * @param method verbet ruta forventer. `DELETE` kom med #1917, der angre-trekk
+ *   er den motsatte handlingen på samme sti — verbet bærer handlingen, så
+ *   kroppen slipper å gjøre det.
  * @param body feltverdiene ruta skal lagre, eller `undefined` for de kallene
  *   som ikke har noe å sende. Tillegget er additivt med vilje: uten `body`
  *   sendes hverken `Content-Type` eller kropp, så slettingen (#1876) og
@@ -99,7 +101,7 @@ async function readBody(response: Response): Promise<Record<string, unknown>> {
  */
 export async function callWebRoute(
   path: string,
-  method: 'GET' | 'POST' | 'PUT',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   body?: Record<string, unknown>,
 ): Promise<WebApiCall> {
   if (!isDeviceOnline()) return { ok: false, reason: 'offline' };

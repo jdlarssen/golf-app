@@ -20,11 +20,13 @@
 // stund på den statiske lys-paletten mens spill-stacken var lys; den ventingen
 // er over.)
 //
-// ⚠️ **Arrangørens EGEN rad er låst for lag, flight og frafall (#1868).**
-// `guard_game_players_self_update` (0147) slipper bare service-role og
-// `is_admin()` forbi på egen rad, og appen skriver alltid under RLS. Knappene
-// vises derfor ikke der; {@link OWN_ROW_LOCKED_NOTE} står i stedet. En knapp
-// som garantert svarer «du har ikke lov» er verre enn ingen knapp.
+// ⚠️ **Arrangørens EGEN rad kan appen ikke SKRIVE frafall på (#1868/#1917).**
+// `guard_game_players_self_update` vakt (c) (0147, uendret i 0168) slipper bare
+// service-role og `is_admin()` forbi på `withdrawn_at` på egen rad, og appen
+// skriver alltid under RLS. Lag og flight åpnet 0168, og fram til #1917 sto det
+// en note der trekk-knappen skulle vært. Nå står knappen, og den går via
+// `/api/games/[id]/withdraw-self` — én rute, samme kjerne som nettsiden, og
+// vakta står urørt.
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -63,14 +65,14 @@ import {
   type RosterActionResult,
 } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
+import { withdrawSelf } from '../../data/withdrawSelf';
 import { displayName } from '../../lib/display';
 import { CUP_LINK_LABEL, CUP_NOTE, cupWebPath } from '../../lib/endGameCopy';
 import {
   describeRosterFailure,
+  describeSelfWithdrawFailure,
   describeStartRefusal,
-  OWN_ROW_LOCKED_NOTE,
-  WITHDRAW_SELF_LINK_LABEL,
-  withdrawSelfWebPath,
+  WITHDRAW_SELF,
 } from '../../lib/rosterCopy';
 import { TAP, useTheme } from '../../theme';
 
@@ -190,6 +192,33 @@ export function OrganiserSection({
     }
   }, [game.id, onChanged]);
 
+  /**
+   * «Trekk meg» — arrangøren trekker seg selv (#1917).
+   *
+   * Egen `useCallback` og ikke {@link run}: den er typet til
+   * `RosterActionResult`, og dette utfallet er en annen union
+   * (`SelfWithdrawFailure`). Formen er `start` sin — `setBusy`/`setNotice`, og
+   * `onChanged()` i `finally`, fordi bundelen er fasiten for hva skjermen skal
+   * vise etterpå. Derfor leses ikke `kept` fra svaret.
+   *
+   * Handlingen går via en autentisert rute, ikke en skriving:
+   * `guard_game_players_self_update` vakt (c) (0147/0168) nekter appen å røre
+   * `withdrawn_at` på egen rad, og vakta skal stå.
+   */
+  const withdrawMe = useCallback(async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await withdrawSelf(game.id);
+      setNotice(result.ok ? null : describeSelfWithdrawFailure(result.reason));
+    } catch {
+      setNotice(describeSelfWithdrawFailure('withdraw_failed'));
+    } finally {
+      await onChanged();
+      setBusy(false);
+    }
+  }, [game.id, onChanged]);
+
   const openPicker = useCallback(() => {
     setPicking(true);
     if (candidates !== null) return;
@@ -239,12 +268,17 @@ export function OrganiserSection({
   // demper per-spill-varslene. `finishRound` avviser dem uansett — men en knapp
   // som garantert svarer «nei» er verre enn en setning som sier hvor det gjøres.
   const isCupGame = game.tournamentId !== null;
-  // Noten forklarer ÉN ting nå: at trekk-knappen mangler på egen rad. Lag og
-  // flight er ikke lenger sperret der — migrasjon 0168 ga arrangøren samme
-  // unntak på egen rad som de alt hadde på andres (#1855/#1868). Vakt (c)
-  // står, så «trekk deg selv» er fortsatt web-veien, akkurat som på nettsiden.
-  const showOwnRowNote =
-    canWithdraw && bundle.players.some((p) => p.userId === userId);
+  // #1917: her sto en note om at trekk-knappen manglet på egen rad. Nå står
+  // knappen. Vakt (c) i 0147/0168 nekter fortsatt appen å SKRIVE frafallet selv
+  // — den går via `/api/games/[id]/withdraw-self`, som skriver med service-role
+  // bak den delte token-sjekken.
+  //
+  // Er arrangøren alt trukket (av Sekretariatet på nettsiden), finnes det ikke
+  // noe å trekke: samme todeling som for de andre radene over. Veien tilbake er
+  // «Angre trekk» på trukket-banneret i spill-hjem.
+  const showOwnRowWithdraw =
+    canWithdraw &&
+    bundle.players.some((p) => p.userId === userId && p.withdrawnAt == null);
 
   const chosen = new Set(bundle.players.map((p) => p.userId));
   const query = search.trim().toLowerCase();
@@ -385,17 +419,22 @@ export function OrganiserSection({
         })}
       </View>
 
-      {showOwnRowNote ? (
-        <>
-          <Text style={ui.muted} testID="organiser-own-row-note">
-            {OWN_ROW_LOCKED_NOTE}
-          </Text>
-          <WebLinkButton
-            label={WITHDRAW_SELF_LINK_LABEL}
-            path={withdrawSelfWebPath(game.id)}
-            testID="organiser-own-row-link"
-          />
-        </>
+      {showOwnRowWithdraw ? (
+        <Pressable
+          style={[ui.buttonSecondary, styles.rowButton]}
+          disabled={busy}
+          testID="organiser-withdraw-self"
+          onPress={() =>
+            confirmThen(
+              WITHDRAW_SELF.confirmTitle,
+              WITHDRAW_SELF.confirmBody,
+              WITHDRAW_SELF.confirmCta,
+              () => void withdrawMe(),
+            )
+          }
+        >
+          <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.label}</Text>
+        </Pressable>
       ) : null}
 
       {scheduled ? (

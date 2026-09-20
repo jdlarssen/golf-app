@@ -121,6 +121,11 @@ jest.mock('../data/remind', () => ({
 jest.mock('../data/playerActions', () => ({
   approveScorecard: jest.fn(async () => ({ ok: true, alreadyDone: false })),
 }));
+// Samme grunn som purringen: selv-frafallet er en HTTP-rute, testet for seg i
+// `data/withdrawSelf.test.ts`.
+jest.mock('../data/withdrawSelf', () => ({
+  withdrawSelf: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('../session', () => ({ useSession: () => ({ userId: mockMe }) }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) =>
@@ -446,23 +451,24 @@ describe('EndGame', () => {
     expect(screen.getByTestId(`end-game-approve-${MATE}`)).toBeTruthy();
   });
 
-  it('lenker ikke til frafall i et format som ikke har frafall', async () => {
+  it('tilbyr ikke frafall i et format som ikke har frafall', async () => {
     // `singles_matchplay` er utenfor `supportsWithdrawal`. Uten denne gaten
-    // sendte knappen arrangøren til /trekk-fra, som bare redirecter tilbake.
+    // lovet knappen en handling kjernen svarer `game_locked` på.
     setBundle([player({ userId: mockMe }), player({ userId: MATE })], {
       gameMode: 'singles_matchplay',
     });
     await renderScreen();
 
-    expect(screen.queryByTestId('end-game-withdraw-self-link')).toBeNull();
+    expect(screen.queryByTestId('end-game-withdraw-self')).toBeNull();
   });
 
-  it('peker egen rad til frafalls-siden — den kan ikke trekkes herfra', async () => {
-    // `guard_game_players_self_update` (0147) nekter arrangøren å trekke sin
-    // egen rad. Hinten sa «på nettsiden»; #1891 la veien dit.
+  it('lar arrangøren trekke seg selv herfra', async () => {
+    // `guard_game_players_self_update` (0147) nekter arrangøren å SKRIVE
+    // frafallet på egen rad. Hinten sa «på nettsiden»; #1891 la veien dit, og
+    // #1917 flyttet selve handlingen inn — via ruta, ikke via en skriving.
     setBundle([player({ userId: mockMe }), player({ userId: MATE })]);
     await renderScreen();
 
-    expect(screen.getByTestId('end-game-withdraw-self-link')).toBeTruthy();
+    expect(screen.getByTestId('end-game-withdraw-self')).toBeTruthy();
   });
 });

@@ -8,11 +8,13 @@
 //
 // Det som blir igjen er tre koblinger ingen ren funksjon kan bekrefte:
 //
-//  1. **Arrangørens EGEN rad tilbyr ikke det RLS nekter (#1868).**
-//     `guard_game_players_self_update` (0147) blokkerer lag, flight og frafall
-//     på egen rad for en oppretter som ikke er global admin. Vises knappen
-//     likevel, får arrangøren «du har ikke lov» ETTER trykket — den ærlige
-//     feilen skal komme før. Noten må stå i stedet.
+//  1. **Arrangørens EGEN rad tilbyr det basen faktisk tillater (#1868/#1917).**
+//     Lag og flight åpnet 0168, og fram til #1917 sto det en note der
+//     trekk-knappen skulle vært: `guard_game_players_self_update` vakt (c)
+//     nekter appen å skrive `withdrawn_at` på egen rad. Nå står knappen, og
+//     skrivingen går via `/api/games/[id]/withdraw-self` — vakta står urørt.
+//     Det som må låses er at knappen står der basen sier ja, og ikke der den
+//     sier nei: den ærlige feilen skal komme FØR trykket.
 //  2. **`alreadyRunning` tegnes som SUKSESS (#502).** Tapte vi status-flippen
 //     til cron-sweepen eller nettsiden, ER runden i gang. En feilmelding der
 //     ville vært direkte usann.
@@ -24,6 +26,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
 import { setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
+import { withdrawSelf } from '../../data/withdrawSelf';
 import { OrganiserSection } from './OrganiserSection';
 
 jest.mock('../../supabase', () => require('../../test/supabaseMock'));
@@ -43,6 +46,10 @@ jest.mock('../../data/rosterActions', () => ({
 
 jest.mock('../../data/startGame', () => ({
   startRoundNow: jest.fn(),
+}));
+
+jest.mock('../../data/withdrawSelf', () => ({
+  withdrawSelf: jest.fn(async () => ({ ok: true })),
 }));
 
 const ME = 'user-me';
@@ -236,9 +243,10 @@ describe('OrganiserSection', () => {
     expect(screen.getByTestId(`organiser-team-${MATE}-1`)).toBeTruthy();
     expect(screen.getByTestId(`organiser-team-${ME}-1`)).toBeTruthy();
 
-    // 2b. Foer runden er i gang finnes det ingenting aa forklare paa egen rad:
-    //     lag og flight er aapne, og frafall gjelder foerst naar spillet gaar.
-    expect(screen.queryByTestId('organiser-own-row-note')).toBeNull();
+    // 2b. Foer runden er i gang finnes det ingenting aa trekke seg fra: lag og
+    //     flight er aapne, og frafall gjelder foerst naar spillet gaar. Foer
+    //     start fjerner man seg selv med «Fjern» i stedet.
+    expect(screen.queryByTestId('organiser-withdraw-self')).toBeNull();
 
     // 3. Fjern-knappen har derimot INGEN selv-vakt — hverken webbens action
     //    eller RLS har en, og to flater med hver sin regel er verre.
@@ -283,11 +291,10 @@ describe('OrganiserSection', () => {
     expect(screen.getByTestId(`organiser-withdraw-${MATE}`)).toBeTruthy();
     expect(screen.queryByTestId(`organiser-withdraw-${ME}`)).toBeNull();
     expect(screen.queryByTestId(`organiser-remove-${MATE}`)).toBeNull();
-    // Naa — og foerst naa — har noten noe aa forklare: vakt (c) staar, saa
-    // «trekk deg selv» er fortsatt web-veien. Samme grense som nettsiden.
-    expect(screen.getByTestId('organiser-own-row-note')).toBeTruthy();
-    // #1891: og noten har nå en knapp, ikke bare en påstand om nettsiden.
-    expect(screen.getByTestId('organiser-own-row-link')).toBeTruthy();
+    // Naa — og foerst naa — finnes «Trekk meg» (#1917). Vakt (c) staar, saa
+    // skrivingen gaar via `/api/games/[id]/withdraw-self`; det er knappen som
+    // flyttet inn i appen, ikke regelen.
+    expect(screen.getByTestId('organiser-withdraw-self')).toBeTruthy();
 
     // 6. Frafallet går gjennom bekreftelses-dialogen, ikke rett på skrivingen.
     //    Trykker man «Trekk» og raden forsvinner uten et spørsmål, er det en
@@ -296,6 +303,14 @@ describe('OrganiserSection', () => {
     expect(Alert.alert).toHaveBeenCalled();
     await waitFor(() => {
       expect(withdrawPlayer).toHaveBeenCalledWith('game-1', MATE);
+    });
+
+    // 6b. #1917: og egen rad gaar samme vei — gjennom bekreftelsen, og deretter
+    //     til ruta med spill-id-en. Spilleren sendes aldri med: den kommer fra
+    //     tokenet paa serversiden.
+    await fireEvent.press(screen.getByTestId('organiser-withdraw-self'));
+    await waitFor(() => {
+      expect(withdrawSelf).toHaveBeenCalledWith('game-1');
     });
 
     // 7. #1856: avslutt-CTA-en åpner den egne flaten. Den skriver ingenting

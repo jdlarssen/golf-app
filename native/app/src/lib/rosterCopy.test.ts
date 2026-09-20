@@ -16,10 +16,12 @@ import source from '../../../../messages/no.json';
 import type { RosterActionFailure } from '../data/rosterActions';
 import type { StartCountMode } from '../../../../lib/games/startPlayerCount';
 import type { StartRoundFailure, StartRoundRefusal } from '../data/startGame';
+import type { SelfWithdrawFailure } from '../data/withdrawSelf';
 import {
   describeRosterFailure,
+  describeSelfWithdrawFailure,
   describeStartRefusal,
-  OWN_ROW_LOCKED_NOTE,
+  WITHDRAW_SELF,
 } from './rosterCopy';
 
 const web: Record<string, string> = source.admin.game.errors;
@@ -67,6 +69,23 @@ const START_REASON_MAP = {
 } as const satisfies Record<StartRoundFailure, true>;
 
 const START_REASONS = Object.keys(START_REASON_MAP) as readonly StartRoundFailure[];
+
+// Kartet, ikke lista, er porten: fire av kodene kommer fra `webApi.ts` og fem
+// fra ruta, så en ny kode kan legges til uten at noen er i nærheten av copyen.
+const SELF_WITHDRAW_REASON_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  unauthorized: true,
+  network: true,
+  not_registered: true,
+  not_found: true,
+  game_locked: true,
+  withdraw_failed: true,
+} as const satisfies Record<SelfWithdrawFailure, true>;
+
+const SELF_WITHDRAW_REASONS = Object.keys(
+  SELF_WITHDRAW_REASON_MAP,
+) as readonly SelfWithdrawFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
@@ -169,12 +188,61 @@ describe('describeStartRefusal', () => {
   });
 });
 
-describe('OWN_ROW_LOCKED_NOTE', () => {
-  it('sier både hva appen ikke får til og hvor det gjøres (#1868)', () => {
-    // Guardrailen er «ærlig feil»: 0147-vakta nekter arrangøren å endre sin
-    // egen rad, så knappen finnes ikke — og noten må da peke videre, ellers
-    // står arrangøren fast uten å vite hvorfor.
-    expect(OWN_ROW_LOCKED_NOTE).toContain('nettsiden');
-    expect(isFinishedSentence(OWN_ROW_LOCKED_NOTE)).toBe(true);
+describe('describeSelfWithdrawFailure', () => {
+  it.each(SELF_WITHDRAW_REASONS)('gir en ferdig setning for «%s»', (reason) => {
+    expect(isFinishedSentence(describeSelfWithdrawFailure(reason))).toBe(true);
+  });
+
+  it.each(SELF_WITHDRAW_REASONS)(
+    'gir en ferdig setning for «%s» også når det var angre som feilet',
+    (reason) => {
+      expect(isFinishedSentence(describeSelfWithdrawFailure(reason, 'undo'))).toBe(
+        true,
+      );
+    },
+  );
+
+  it('snakker om frafallet når du trakk deg, og om angringen når du angret', () => {
+    // «Fikk ikke trukket deg» etter et trykk på «Angre trekk» forteller
+    // spilleren det motsatte av det som skjedde. Retningen er derfor et
+    // argument, ikke to switcher som kan drive fra hverandre.
+    expect(describeSelfWithdrawFailure('withdraw_failed')).toContain('trukket');
+    expect(describeSelfWithdrawFailure('withdraw_failed', 'undo')).toContain(
+      'angret',
+    );
+    expect(describeSelfWithdrawFailure('not_registered')).not.toBe(
+      describeSelfWithdrawFailure('not_registered', 'undo'),
+    );
+  });
+
+  it('sier samme nett-linje som roster-skrivingene', () => {
+    expect(describeSelfWithdrawFailure('offline')).toBe(
+      describeRosterFailure('offline'),
+    );
+  });
+});
+
+describe('WITHDRAW_SELF', () => {
+  it('har ferdige setninger overalt (#1917)', () => {
+    for (const [key, value] of Object.entries(WITHDRAW_SELF)) {
+      expect([key, isFinishedSentence(value)]).toEqual([key, true]);
+    }
+  });
+
+  it('nevner ikke nettsiden — handlingen bor i appen nå', () => {
+    // Fram til #1917 sto det en note her: «Du kan ikke trekke deg selv herfra.
+    // Det ordner du på nettsiden.» Nå finnes handlingen, og en henvisning
+    // videre ville beskrevet en app som ikke finnes lenger.
+    for (const value of Object.values(WITHDRAW_SELF)) {
+      expect(value).not.toContain('nettsiden');
+    }
+  });
+
+  it('sier at slagene blir liggende — trukket er ute av rangeringen, ikke slettet', () => {
+    // Samme todeling som avslutt-skjermens `withdrawHint`. Uten den siste
+    // setningen leses bekreftelsen som «slagene mine forsvinner».
+    expect(WITHDRAW_SELF.confirmBody).toContain('teller ikke med');
+    expect(WITHDRAW_SELF.confirmBody).toContain('blir liggende');
+    expect(WITHDRAW_SELF.undoBody).toContain('teller med');
   });
 });
