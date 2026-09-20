@@ -5,6 +5,7 @@ import {
   KAVALKADE_CARD_KINDS,
   buildKavalkadeCardModel,
   isKavalkadeCardKind,
+  kavalkadeCardImageUrl,
   type KavalkadeCardKind,
   type KavalkadeCardStrings,
 } from './cardModel';
@@ -289,5 +290,14 @@ describe('navn', () => {
     facts.personal!.rival!.name = '   ';
     expect(model('gang-winner', facts)?.hero.value).toBe('Spiller');
     expect(model('rival', facts)?.title).toBe('Regnskapet mot Spiller');
+  });
+});
+
+describe('adressen til bilde-ruta', () => {
+  it('dropper prefikset for standardspråket og legger det på for de andre', () => {
+    expect(kavalkadeCardImageUrl('no', 'no', 2026, 'team')).toBe('/kavalkade/2026/card/team');
+    expect(kavalkadeCardImageUrl('en', 'no', 2026, 'best-round')).toBe(
+      '/en/kavalkade/2026/card/best-round',
+    );
   });
 });

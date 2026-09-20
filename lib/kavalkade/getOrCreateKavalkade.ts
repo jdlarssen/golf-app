@@ -113,7 +113,7 @@ export async function getOrCreateKavalkade(
     return { status: 'preview', facts: await computeFacts(viewerUserId, year) };
   }
 
-  const existing = await readKavalkade(viewerUserId, year);
+  const existing = await readStoredKavalkade(viewerUserId, year);
   if (existing) return { status: 'ready', ...existing };
 
   const facts = await computeFacts(viewerUserId, year);
@@ -172,7 +172,7 @@ async function waitForWinnersRow(
   for (let attempt = 0; ; attempt += 1) {
     // Ny signal per forsøk: Next deduper GET-er til samme URL innenfor én
     // render, og signalet er opt-out-en.
-    const row = await readKavalkade(
+    const row = await readStoredKavalkade(
       viewerUserId,
       year,
       new AbortController().signal,
@@ -191,8 +191,14 @@ type KavalkadeRow = {
   generated_at: string;
 };
 
-/** Leser raden hvis den finnes. Feil på lesingen kaster — aldri «ingen rad». */
-async function readKavalkade(
+/**
+ * Leser raden hvis den finnes. Feil på lesingen kaster — aldri «ingen rad».
+ *
+ * Eksportert for kort-ruta (#2130), som skal lese den lagrede kavalkaden og
+ * ALDRI bygge en ny: et bilde-kall skal verken koste et modellkall eller
+ * skrive en rad. Finnes ingen rad, svarer ruta 404.
+ */
+export async function readStoredKavalkade(
   viewerUserId: string,
   year: number,
   signal?: AbortSignal,
