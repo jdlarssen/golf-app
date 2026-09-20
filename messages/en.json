@@ -6336,7 +6336,14 @@
     "gangTightestKicker": "Tightest finish",
     "gangTightestMargin": "{margin, plural, one {Separated by # stroke} other {Separated by # strokes}}",
     "gangTightestShared": "Shared lead",
-    "gangTightestLine": "{leader} {leaderBrutto} against {runnerUp} {runnerUpBrutto}"
+    "gangTightestLine": "{leader} {leaderBrutto} against {runnerUp} {runnerUpBrutto}",
+    "homeTeaserTitle": "The cavalcade opens on 24 December",
+    "homeTeaserBody": "Your golfing year, card by card. Everything you play up to Christmas Eve counts.",
+    "homeLinkTitle": "The {year} cavalcade is open",
+    "homeLinkBody": "Page through your year and the crew's. Share the cards you want to show off.",
+    "homeLinkCta": "Open the cavalcade",
+    "historikkLinkTitle": "The {year} cavalcade",
+    "historikkLinkBody": "Your golfing year and the crew's, card by card."
   },
   "kavalkadeShare": {
     "eyebrow": "The {year} cavalcade",

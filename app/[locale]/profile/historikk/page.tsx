@@ -58,6 +58,8 @@ import { effectiveDate, effectiveYear } from '@/lib/stats/effectiveDate';
 import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { SmartLink } from '@/components/ui/SmartLink';
+import { KAVALKADE_YEAR, isKavalkadeOpen } from '@/lib/kavalkade/release';
 import { after } from 'next/server';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import type {
@@ -547,6 +549,13 @@ export default async function HistorikkPage() {
         kicker={t('kicker')}
       />
 
+      {/* #2131 (K5): fra 24. desember er historikken også døra inn i
+          Kavalkaden. Før den datoen nevner vi den ikke her — siden er stengt,
+          og teaseren bor på forsiden. */}
+      {isKavalkadeOpen(new Date()) && (
+        <KavalkadeLinkCard year={KAVALKADE_YEAR} />
+      )}
+
       {finishedCount > 0 && (
         <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
       )}
@@ -561,6 +570,34 @@ export default async function HistorikkPage() {
         <HistorikkTabs statsContent={statsContent} roundsContent={roundsContent} />
       )}
     </AppShell>
+  );
+}
+
+/**
+ * Lenka fra historikken inn i Kavalkaden (#2131, epic #1040). Vises bare etter
+ * 24. desember — vinduet eies av `lib/kavalkade/release.ts`, og kallstedet
+ * over spør den, så datoen står ikke her.
+ */
+async function KavalkadeLinkCard({ year }: { year: number }) {
+  const t = await getTranslations('kavalkade');
+  return (
+    <SmartLink
+      href={`/kavalkade/${year}`}
+      data-testid="historikk-kavalkade-link"
+      className="mb-4 flex min-h-11 items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-bg"
+    >
+      <span aria-hidden className="text-lg leading-none">
+        🎄
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-sans text-[14px] font-medium leading-tight text-text">
+          {t('historikkLinkTitle', { year })}
+        </span>
+        <span className="mt-1 block font-sans text-[13px] leading-snug text-muted">
+          {t('historikkLinkBody')}
+        </span>
+      </span>
+    </SmartLink>
   );
 }
 

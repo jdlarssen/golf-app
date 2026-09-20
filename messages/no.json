@@ -6337,7 +6337,14 @@
     "gangTightestKicker": "Tetteste oppgjør",
     "gangTightestMargin": "Skilt av {margin} slag",
     "gangTightestShared": "Delt ledelse",
-    "gangTightestLine": "{leader} {leaderBrutto} mot {runnerUp} {runnerUpBrutto}"
+    "gangTightestLine": "{leader} {leaderBrutto} mot {runnerUp} {runnerUpBrutto}",
+    "homeTeaserTitle": "Kavalkaden kommer 24. desember",
+    "homeTeaserBody": "Golfåret ditt, kort for kort. Alt du spiller fram til julaften er med.",
+    "homeLinkTitle": "Kavalkaden {year} er åpen",
+    "homeLinkBody": "Bla gjennom året ditt og gjengens. Del kortene du vil vise fram.",
+    "homeLinkCta": "Åpne Kavalkaden",
+    "historikkLinkTitle": "Kavalkaden {year}",
+    "historikkLinkBody": "Golfåret ditt og gjengens, kort for kort."
   },
   "kavalkadeShare": {
     "eyebrow": "Kavalkaden {year}",
