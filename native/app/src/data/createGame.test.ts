@@ -159,7 +159,7 @@ describe('publishGame', () => {
       expect(rows[1]).toMatchObject({ user_id: MATE, tee_gender: 'ladies' });
     });
 
-    it('sender lag-numrene videre for en lag-modus', async () => {
+    it('sender lag-numrene videre for en lag-modus, og holder tee-settet på riktig spiller', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const playerInsert = queryStub({ data: [{ user_id: 'a' }], error: null });
       routeFrom({
@@ -173,8 +173,8 @@ describe('publishGame', () => {
           gameMode: 'best_ball',
           players: [
             { userId: 'a', teeGender: 'M', teamNumber: 1 },
-            { userId: 'b', teeGender: 'M', teamNumber: 2 },
-            { userId: 'c', teeGender: 'M', teamNumber: 1 },
+            { userId: 'b', teeGender: 'D', teamNumber: 2 },
+            { userId: 'c', teeGender: 'J', teamNumber: 1 },
             { userId: 'd', teeGender: 'M', teamNumber: 2 },
           ],
         }),
@@ -189,6 +189,15 @@ describe('publishGame', () => {
         ['c', 1, 1],
         ['b', 2, 1],
         ['d', 2, 1],
+      ]);
+      // Lag-modus stokker om på spillerne: `orderedSlots` sorterer på lag, så
+      // raden på plass 2 er `c`, ikke `b`. Tee-settet må følge SPILLEREN og
+      // ikke plassen — et indeks-basert oppslag ville gitt `c` damens tee.
+      expect(rows.map((r) => [r.user_id, r.tee_gender])).toEqual([
+        ['a', 'mens'],
+        ['c', 'juniors'],
+        ['b', 'ladies'],
+        ['d', 'mens'],
       ]);
     });
 

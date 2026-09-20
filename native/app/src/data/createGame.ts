@@ -280,7 +280,7 @@ const failed = (error: CreateGameFailure): CreateGameResult => ({
 const RLS_DENIED_CODE = '42501';
 
 /** Webbens `uiGenderToDb` (actions.ts:26): UI-bokstav → DB-enum. */
-function teeGenderToDb(ui: TeeGenderUi | string): 'mens' | 'ladies' | 'juniors' {
+function teeGenderToDb(ui: TeeGenderUi): 'mens' | 'ladies' | 'juniors' {
   return ui === 'D' ? 'ladies' : ui === 'J' ? 'juniors' : 'mens';
 }
 
@@ -457,12 +457,23 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
   const gameId = insertedGame.rows[0]!.id;
 
   const rowAcceptedAt = new Date().toISOString();
+  // Tee-settet leses fra UTKASTET, ikke ut av skjemaet vi selv nettopp bygde:
+  // `draft.players[i].teeGender` er `TeeGenderUi`, så en feil her blir en
+  // tsc-feil i stedet for en stille tilbakefall til herretee — og dermed feil
+  // banehandicap for hver dame og hver junior i runden.
+  //
+  // Nøkkelen er bruker-id, ikke indeks: `orderedSlots` både sorterer på lag og
+  // dropper spillere uten lagtildeling, så `payload.players` er verken samme
+  // rekkefølge eller samme mengde som `draft.players`.
+  const teeGenderByUser = new Map(
+    draft.players.map((p) => [p.userId, p.teeGender] as const),
+  );
   const playerRows = payload.players.map((p) => ({
     game_id: gameId,
     user_id: p.user_id,
     team_number: p.team_number,
     flight_number: p.flight_number,
-    tee_gender: teeGenderToDb(form.get(`player_${p.user_id}_gender`) ?? 'M'),
+    tee_gender: teeGenderToDb(teeGenderByUser.get(p.user_id) ?? 'M'),
     // Fryses ved start, ikke ved opprettelse.
     course_handicap: null,
     // #463: din egen rad er bekreftet med én gang; de andre står «Ikke
