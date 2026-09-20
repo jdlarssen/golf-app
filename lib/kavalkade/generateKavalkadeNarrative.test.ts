@@ -89,6 +89,7 @@ describe('generateKavalkadeNarrative', () => {
     expect(call.model).toBe('claude-sonnet-5');
     expect(call.messages[0].content).toContain('Lørdagscup');
     expect(call.messages[0].content).not.toContain('userId');
+    expect(call.messages[0].content).not.toContain('gameId');
   });
 
   // #1008-porten: uten nøkkel bygges ikke engang klienten.

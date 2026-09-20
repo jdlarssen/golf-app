@@ -13,26 +13,41 @@ let adminRead: Result;
 
 const upsertSpy = vi.fn();
 const readSpy = vi.fn();
+const adminLookupSpy = vi.fn();
 
+// Lesingen går med SERVICE-rollen, altså med RLS av. Da er filtrene i koden
+// den eneste tingen som holder én spillers tall unna en annen, så mocken
+// skriver ned hvert `.eq()` og testene assererer på dem.
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
       if (table === 'users') {
         return {
-          select: () => ({ eq: () => ({ maybeSingle: async () => adminRead }) }),
-        };
-      }
-      return {
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
+          select: (columns: string) => ({
+            eq: (column: string, value: unknown) => ({
               maybeSingle: async () => {
-                readSpy();
-                return kavalkadeRead;
+                adminLookupSpy({ columns, filters: { [column]: value } });
+                return adminRead;
               },
             }),
           }),
-        }),
+        };
+      }
+      return {
+        select: (columns: string) => {
+          const filters: Record<string, unknown> = {};
+          const builder = {
+            eq: (column: string, value: unknown) => {
+              filters[column] = value;
+              return builder;
+            },
+            maybeSingle: async () => {
+              readSpy({ columns, filters: { ...filters } });
+              return kavalkadeRead;
+            },
+          };
+          return builder;
+        },
         upsert: (values: unknown, options: unknown) => {
           upsertSpy(values, options);
           return {
@@ -131,6 +146,15 @@ describe('før frysegrensen', () => {
     expect(view.status).toBe('closed');
   });
 
+  it('spør om admin-flagget for den innloggede spilleren, ikke for noen andre', async () => {
+    await getOrCreateKavalkade(VIEWER, { now: BEFORE, env: ENV });
+
+    expect(adminLookupSpy).toHaveBeenCalledWith({
+      columns: 'is_admin',
+      filters: { id: VIEWER },
+    });
+  });
+
   it('regner forhåndsvisningen mot frysegrensen, ikke mot «nå»', async () => {
     adminRead = { data: { is_admin: true }, error: null };
 
@@ -169,13 +193,40 @@ describe('etter frysegrensen', () => {
     expect(upsertSpy).toHaveBeenCalledTimes(1);
 
     const [values, options] = upsertSpy.mock.calls[0];
-    expect(values).toMatchObject({
+    // Fakta som lagres er nøyaktig dem fakta-byggeren lagde av det innlasteren
+    // ga — ikke et utdrag, og ikke noe annet års tall.
+    expect(values).toEqual({
       user_id: VIEWER,
       year: KAVALKADE_YEAR,
       narrative: 'Året ditt ble langt.',
+      facts: {
+        year: KAVALKADE_YEAR,
+        cutoff: KAVALKADE_CUTOFF.toISOString(),
+        rounds: 0,
+        soloRounds: 0,
+        teamRounds: 0,
+        roundsNeeded: 3,
+        personal: null,
+        team: null,
+        gang: null,
+      },
     });
     // «on conflict do nothing» — to faner gir én rad.
     expect(options).toEqual({ onConflict: 'user_id,year', ignoreDuplicates: true });
+  });
+
+  // RLS er av på denne lesingen. Et glemt eller feil filter ville gitt én
+  // spiller en annens kavalkade, og ingen policy ville stoppet det.
+  it('leser raden på BÅDE spiller og år', async () => {
+    kavalkadeRead = { data: storedRow(), error: null };
+
+    await getOrCreateKavalkade(VIEWER, { now: AFTER, env: ENV, year: 2026 });
+
+    expect(readSpy).toHaveBeenCalledTimes(1);
+    expect(readSpy.mock.calls[0][0].filters).toEqual({
+      user_id: VIEWER,
+      year: 2026,
+    });
   });
 
   it('lagrer null som tekst når modellen ikke svarte', async () => {
