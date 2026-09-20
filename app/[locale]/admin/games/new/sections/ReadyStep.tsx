@@ -544,6 +544,7 @@ export function ReadyStep({
               når `pending`. */}
           <Button
             type="submit"
+            data-testid="wizard-publish"
             formAction={publishAction}
             onClick={(e) => dispatchManually(e, publishAction, true)}
             className="w-full"
