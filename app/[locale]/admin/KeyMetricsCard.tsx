@@ -1,4 +1,5 @@
 import { getAdminContext } from './_dashboardContext';
+import { countKavalkadeSharers } from '@/lib/kavalkade/countKavalkadeSharers';
 import { KeyMetricsView, type KeyMetrics } from './KeyMetricsView';
 
 /**
@@ -25,7 +26,20 @@ export async function KeyMetricsCard() {
     );
     return null;
   }
-  return <KeyMetricsView metrics={metrics} />;
+  // #2131: delt-av-tallet ligger ikke i RPC-en — det leses med service-rollen
+  // (RLS gir bare egne rader, migrasjon 0183). Lesingen skjer FØRST etter at
+  // RPC-en svarte, og den kaster `not_authorized` for alle andre enn admin, så
+  // service-rollen brukes aldri uten at gaten har sagt ja. En feil her skal
+  // ikke ta ned resten av kortet: da faller tallet tilbake til null og linja
+  // står med 0.
+  let kavalkadeShares = 0;
+  try {
+    kavalkadeShares = await countKavalkadeSharers();
+  } catch (shareErr) {
+    console.error('[admin/klubbhuset] kavalkade-delinger kunne ikke telles', shareErr);
+  }
+
+  return <KeyMetricsView metrics={metrics} kavalkadeShares={kavalkadeShares} />;
 }
 
 /** Narrows the RPC's jsonb payload; null on any drift (caller renders nothing). */
