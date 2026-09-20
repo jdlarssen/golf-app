@@ -33,12 +33,16 @@ export const KAVALKADE_YEAR = 2026;
  */
 export const KAVALKADE_CUTOFF = new Date('2026-12-23T23:00:00Z');
 
-/** Miljøet åpningstidspunktet leses fra. Bare de to nøklene betyr noe her. */
+/**
+ * Miljøet åpningstidspunktet leses fra. Bare de to nøklene betyr noe her;
+ * indeks-signaturen er der så `process.env` kan sendes inn direkte.
+ */
 export type KavalkadeEnv = {
   /** ISO-tid som flytter åpningen — kun for staging-verifisering. */
   KAVALKADE_OPEN_AT?: string;
   /** Vercels miljønavn. `'production'` slår av overstyringen. */
   VERCEL_ENV?: string;
+  readonly [key: string]: string | undefined;
 };
 
 /**
