@@ -1,5 +1,11 @@
 import { getServerClient } from '@/lib/supabase/server';
 import { getPasskeyEnrollAccess } from '@/lib/auth/passkeyEnrollAccess';
+import { hasFinishedRoundInKavalkadeYear } from '@/lib/kavalkade/hasKavalkadeRound';
+import {
+  KAVALKADE_YEAR,
+  kavalkadeHomeSlot,
+  type KavalkadeHomeSlot,
+} from '@/lib/kavalkade/release';
 import {
   HomeNudgeRail,
   type ProductUpdateNudge,
@@ -7,23 +13,44 @@ import {
 
 /**
  * Server-halvdelen av nudge-køen på Hjem (#1797, kontrakt #1069 K6). Avklarer
- * de to server-avgjorte plassene parallelt — siste uleste produktnytt (RLS via
- * session-client → brukeren ser kun egne rader) og passkey-utrullingsgaten —
- * og gir klient-orkestratoren `HomeNudgeRail` et ferdig verdikt for begge.
- * Suspense-wrappes på mount-stedet så oppslagene aldri blokkerer side-skallet.
+ * de server-avgjorte plassene parallelt — siste uleste produktnytt (RLS via
+ * session-client → brukeren ser kun egne rader), passkey-utrullingsgaten og
+ * Kavalkaden (#2131) — og gir klient-orkestratoren `HomeNudgeRail` et ferdig
+ * verdikt for alle. Suspense-wrappes på mount-stedet så oppslagene aldri
+ * blokkerer side-skallet.
  */
 export async function HomeNudges({ userId }: { userId: string }) {
-  const [passkeyEligible, productUpdate] = await Promise.all([
+  const [passkeyEligible, productUpdate, kavalkade] = await Promise.all([
     getPasskeyEnrollAccess(),
     fetchLatestProductUpdate(userId),
+    resolveKavalkadeSlot(userId),
   ]);
 
   return (
     <HomeNudgeRail
       productUpdate={productUpdate}
       passkeyEligible={passkeyEligible}
+      kavalkade={kavalkade}
+      kavalkadeYear={KAVALKADE_YEAR}
     />
   );
+}
+
+/**
+ * Kavalkade-plassen (#2131): teaser fra 1. desember, lenke fra 24. desember til
+ * 31. januar — og bare for spillere med minst én ferdig runde i året.
+ *
+ * Datoen spørres FØR databasen. Ti av årets tolv måneder er svaret `null`, og
+ * da skal forsiden ikke betale for et oppslag ingen ser resultatet av.
+ */
+async function resolveKavalkadeSlot(
+  userId: string,
+): Promise<KavalkadeHomeSlot | null> {
+  const slot = kavalkadeHomeSlot(new Date());
+  if (slot === null) return null;
+  const supabase = await getServerClient();
+  const hasRound = await hasFinishedRoundInKavalkadeYear(supabase, userId);
+  return hasRound ? slot : null;
 }
 
 async function fetchLatestProductUpdate(

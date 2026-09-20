@@ -10,6 +10,8 @@ import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { PushNudge } from '@/components/pwa/PushNudge';
 import { PasskeyEnrollmentPrompt } from '@/components/passkey/PasskeyEnrollmentPrompt';
 import { ProductUpdateBannerClient } from '@/components/products/ProductUpdateBannerClient';
+import { KavalkadeHomeNudge } from '@/components/kavalkade/KavalkadeHomeNudge';
+import type { KavalkadeHomeSlot } from '@/lib/kavalkade/release';
 
 export type ProductUpdateNudge = {
   notificationId: string;
@@ -21,9 +23,10 @@ export type ProductUpdateNudge = {
 
 /**
  * Klient-orkestratoren for nudge-køen på Hjem (#1797, kontrakt #1069 K6).
- * Server-avgjorte fakta (produktnytt + passkey-utrulling) kommer som props fra
- * `HomeNudges`; Install/Push/Passkey avklarer seg selv i klienten og melder
- * verdikt via `onVerdict`. `resolveVisibleNudge` peker ut plassen som vises.
+ * Server-avgjorte fakta (produktnytt, passkey-utrulling og Kavalkaden, #2131)
+ * kommer som props fra `HomeNudges`; Install/Push/Passkey avklarer seg selv i
+ * klienten og melder verdikt via `onVerdict`. `resolveVisibleNudge` peker ut
+ * plassen som vises.
  *
  * Låsen: første plass som vises beholder plassen ut sidevisningen. En lavere
  * nudge blir aldri byttet ut av en høyere som kvalifiserer sent (det ville
@@ -33,14 +36,20 @@ export type ProductUpdateNudge = {
 export function HomeNudgeRail({
   productUpdate,
   passkeyEligible,
+  kavalkade,
+  kavalkadeYear,
 }: {
   productUpdate: ProductUpdateNudge | null;
   passkeyEligible: boolean;
+  /** #2131: teaser, lenke eller ingenting — hele vinduet avgjøres på serveren. */
+  kavalkade: KavalkadeHomeSlot | null;
+  kavalkadeYear: number;
 }) {
   const [statuses, setStatuses] = useState<NudgeSlotStatuses>({
     install: 'pending',
     push: 'pending',
     // Server-decided slots start resolved — no client probe needed.
+    kavalkade: kavalkade ? 'yes' : 'no',
     productUpdate: productUpdate ? 'yes' : 'no',
     passkey: passkeyEligible ? 'pending' : 'no',
   });
@@ -80,6 +89,9 @@ export function HomeNudgeRail({
         onVerdict={reportInstall}
       />
       <PushNudge visible={visible === 'push'} onVerdict={reportPush} />
+      {kavalkade && visible === 'kavalkade' && (
+        <KavalkadeHomeNudge slot={kavalkade} year={kavalkadeYear} />
+      )}
       {productUpdate && visible === 'productUpdate' && (
         <ProductUpdateBannerClient
           notificationId={productUpdate.notificationId}

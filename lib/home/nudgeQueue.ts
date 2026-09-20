@@ -3,6 +3,12 @@
  * gangen, i eier-fastsatt prioritet Install > Push > Nytt-i-Tørny > Passkey.
  * Suksess-/kvitteringsbannere står utenfor køen.
  *
+ * #2131 la Kavalkaden inn mellom Push og Nytt-i-Tørny. Den innbyrdes
+ * rekkefølgen eieren fastsatte står urørt; plassen er valgt fordi Kavalkaden
+ * er tidsboksa (1. desember–31. januar, `lib/kavalkade/release.ts`) og bærer
+ * desember-målet i #1040, mens Install og Push er engangs-spørsmål som melder
+ * seg 'no' med én gang de er besvart.
+ *
  * Kvalifiseringen er blandet server/klient og asynkron, så hver plass
  * rapporterer 'pending' → 'yes'/'no' etter hvert som den avklares. Regelen som
  * hindrer synlig banner-bytting ved sidelast: en plass vises først når ALLE
@@ -14,6 +20,7 @@
 export const NUDGE_PRIORITY = [
   'install',
   'push',
+  'kavalkade',
   'productUpdate',
   'passkey',
 ] as const;

@@ -247,7 +247,7 @@ export async function loadKavalkadeInput(
 }
 
 /** Én uke før Oslo-nyttår, som absolutt instant. */
-function windowStart(year: number): Date {
+export function windowStart(year: number): Date {
   // 1. januar kl. 00:00 i Oslo er 31. desember kl. 23:00 UTC året før (vintertid).
   const osloNewYear = new Date(Date.UTC(year - 1, 11, 31, 23, 0, 0));
   return new Date(
