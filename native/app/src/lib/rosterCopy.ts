@@ -17,6 +17,7 @@
 // Ingen `default`-gren i noen av switch-ene. Legger noen til en kode i en av
 // unionene, faller `tsc` på den manglende returverdien — som er hele poenget
 // med å ha ett oversettelses-hjem.
+import type { InviteFailure } from '../data/inviteToGame';
 import type { RosterActionFailure } from '../data/rosterActions';
 import type { SelfWithdrawFailure } from '../data/withdrawSelf';
 import type { StartRoundRefusal } from '../data/startGame';
@@ -112,6 +113,77 @@ export function describeSelfWithdrawFailure(
       return action === 'undo'
         ? 'Fikk ikke angret frafallet. Prøv igjen.'
         : 'Fikk ikke trukket deg. Prøv igjen.';
+  }
+}
+
+/**
+ * E-post-invitasjonen (#1919) — etikettene picker-kortet bruker.
+ *
+ * Feltet står alltid framme når lista er åpen, ikke bare når den er tom: en
+ * arrangør med to medspillere skal også kunne invitere en tredje. Tom-lista-
+ * setningen peker derfor nedover i kortet i stedet for ut på nettsiden.
+ */
+export const INVITE_BY_EMAIL = {
+  placeholder: 'E-postadresse',
+  submit: 'Send invitasjon',
+  emptyList: 'Ingen flere å velge her. Inviter med e-post under.',
+} as const;
+
+/**
+ * Kvitteringen etter en invitasjon som gikk gjennom.
+ *
+ * To setninger og ikke én, fordi de to utfallene er to forskjellige ting: en
+ * registrert spiller står i runden med en gang, en ukjent adresse har fått en
+ * mail hen må svare på. «Invitasjon sendt» om noen som allerede er på plass
+ * ville fått arrangøren til å vente på et svar som aldri kommer.
+ */
+export function describeInviteSuccess(
+  kind: 'added' | 'sent',
+  email: string,
+): string {
+  return kind === 'added'
+    ? `${email} er lagt til i runden.`
+    : `Invitasjon sendt til ${email}.`;
+}
+
+/**
+ * Kode → setning for invitasjonen. Ingen `default`-gren: legger noen en kode til
+ * i {@link InviteFailure}, faller `tsc` på den manglende returverdien.
+ *
+ * `offline`, `no-web-base-url` og `unauthorized` sier det samme som purringen og
+ * selv-frafallet sier — det er den samme mangelen i bygget og den samme tapte
+ * sesjonen, og tre ordlyder for én årsak ville bare gitt skjermen et valg den
+ * ikke trenger å ta.
+ */
+export function describeInviteFailure(reason: InviteFailure): string {
+  switch (reason) {
+    case 'offline':
+      return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    case 'forbidden':
+      return 'Bare arrangøren kan invitere til denne runden.';
+    case 'not_found':
+      return 'Fant ikke runden. Den er kanskje slettet.';
+    case 'invalid_email':
+      return 'Sjekk e-postadressen og prøv igjen.';
+    case 'disposable_email':
+      return 'Den adressen kan vi ikke sende til. Prøv en vanlig e-postadresse.';
+    // Runden rakk å bli startet mellom tegningen og trykket. Kortet vises bare
+    // før start, så dette er et kappløp, ikke en vanlig vei.
+    case 'game_locked':
+      return 'Runden er i gang. Nå kan du ikke invitere flere.';
+    case 'game_full':
+      return 'Formatet har ikke plass til flere spillere.';
+    case 'invite_not_allowed':
+      return 'Du kan bare invitere folk du har spilt med eller er venn med.';
+    case 'rate_limited':
+      return 'Mange invitasjoner på kort tid. Vent et minutt og prøv igjen.';
+    case 'network':
+    case 'invite_failed':
+      return 'Fikk ikke sendt invitasjonen. Prøv igjen.';
   }
 }
 

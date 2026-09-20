@@ -54,6 +54,7 @@ import {
 } from '../../../../../lib/scoring/modes/types';
 import { WebLinkButton } from '../WebLinkButton';
 import { fetchRosterCandidates, type RosterCandidate } from '../../data/createGame';
+import { inviteToGame } from '../../data/inviteToGame';
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
 import {
   addPlayerToGame,
@@ -69,9 +70,12 @@ import { withdrawSelf } from '../../data/withdrawSelf';
 import { displayName } from '../../lib/display';
 import { CUP_LINK_LABEL, CUP_NOTE, cupWebPath } from '../../lib/endGameCopy';
 import {
+  describeInviteFailure,
+  describeInviteSuccess,
   describeRosterFailure,
   describeSelfWithdrawFailure,
   describeStartRefusal,
+  INVITE_BY_EMAIL,
   WITHDRAW_SELF,
 } from '../../lib/rosterCopy';
 import { TAP, useTheme } from '../../theme';
@@ -124,6 +128,7 @@ export function OrganiserSection({
   const [candidates, setCandidates] = useState<RosterCandidate[] | null>(null);
   const [candidatesFailed, setCandidatesFailed] = useState(false);
   const [search, setSearch] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
   /**
    * Forsvinn-vaksinen (#1875).
    *
@@ -218,6 +223,37 @@ export function OrganiserSection({
       setBusy(false);
     }
   }, [game.id, onChanged]);
+
+  /**
+   * «Send invitasjon» — inviter en e-postadresse inn i runden (#1919).
+   *
+   * Egen `useCallback` og ikke {@link run}: den er typet til
+   * `RosterActionResult`, oversetter med `describeRosterFailure` og setter
+   * `notice` til `null` ved suksess — altså ingen kvittering. Her ER
+   * kvitteringen poenget: en invitasjon som gikk ut gir ingen synlig endring i
+   * lista, så uten den ville arrangøren ikke visst om noe skjedde.
+   *
+   * Skjelettet er `start` sitt: `setBusy`/`setNotice`, og `onChanged()` i
+   * `finally`, fordi `added`-grenen faktisk endrer rosteret.
+   */
+  const sendInvite = useCallback(async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await inviteToGame(game.id, inviteEmail);
+      if (result.ok) {
+        setNotice(describeInviteSuccess(result.kind, inviteEmail.trim()));
+        setInviteEmail('');
+      } else {
+        setNotice(describeInviteFailure(result.reason));
+      }
+    } catch {
+      setNotice(describeInviteFailure('invite_failed'));
+    } finally {
+      await onChanged();
+      setBusy(false);
+    }
+  }, [game.id, inviteEmail, onChanged]);
 
   const openPicker = useCallback(() => {
     setPicking(true);
@@ -468,20 +504,7 @@ export function OrganiserSection({
           ) : candidates === null ? (
             <ActivityIndicator color={colors.primary} />
           ) : pickable.length === 0 ? (
-            <>
-              <Text style={ui.muted}>
-                Ingen flere å velge her. Nye folk inviterer du fra nettsiden.
-              </Text>
-              {/* Spillersiden for DENNE runden (#1891): invitasjon er Resend +
-                  rate-limit og dermed server-eid til #1919 lander. Siden gater
-                  på `requireAdminOrCreator`, altså nøyaktig den som ser
-                  seksjonen her. */}
-              <WebLinkButton
-                label="Inviter på nettsiden"
-                path={`/games/${encodeURIComponent(game.id)}/spillere`}
-                testID="organiser-invite-link"
-              />
-            </>
+            <Text style={ui.muted}>{INVITE_BY_EMAIL.emptyList}</Text>
           ) : (
             pickable.map((candidate) => (
               <Pressable
@@ -495,6 +518,39 @@ export function OrganiserSection({
               </Pressable>
             ))
           )}
+
+          {/* #1919: feltet står ALLTID når lista er åpen, ikke bare når den er
+              tom — en arrangør med to medspillere må også kunne invitere en
+              tredje. Lå det bak tom-lista, ville appen arvet blindveien i et
+              nytt hjørne. Bygget som søkefeltet over, med tastaturet stilt inn
+              på e-post. */}
+          <TextInput
+            style={ui.input}
+            value={inviteEmail}
+            onChangeText={setInviteEmail}
+            placeholder={INVITE_BY_EMAIL.placeholder}
+            placeholderTextColor={colors.muted}
+            autoCorrect={false}
+            autoCapitalize="none"
+            inputMode="email"
+            testID="organiser-invite-email"
+          />
+          <Pressable
+            style={[ui.buttonSecondary, styles.rowButton]}
+            disabled={busy}
+            testID="organiser-invite-submit"
+            onPress={() => void sendInvite()}
+          >
+            <Text style={ui.buttonSecondaryText}>{INVITE_BY_EMAIL.submit}</Text>
+          </Pressable>
+
+          {/* Blir stående (#1891): pending-oversyn, «Send på nytt» og avlysning
+              av en invitasjon bor på nettsiden. */}
+          <WebLinkButton
+            label="Inviter på nettsiden"
+            path={`/games/${encodeURIComponent(game.id)}/spillere`}
+            testID="organiser-invite-link"
+          />
         </View>
       ) : null}
 
