@@ -175,6 +175,28 @@ describe('frysegrensen', () => {
     expect(facts.rounds).toBe(0);
   });
 
+  it('keeps a post-cutoff round out of the gang cards too', () => {
+    const facts = build([
+      ...threeRounds(),
+      game({
+        playedAt: justAfter,
+        endedAt: justAfter,
+        players: [
+          player(ME, { resultSummary: placement(2) }),
+          player('user-julenisse', {
+            resultSummary: placement(1),
+            holes: holes({ 1: 3, 2: 3, 3: 3, 4: 8 }),
+          }),
+        ],
+      }),
+    ]);
+    expect(facts.gang?.games).toBe(3);
+    expect(facts.gang?.members).toBe(1);
+    expect(facts.gang?.topWinner).toBeNull();
+    expect(facts.gang?.mostBirdies).toBeNull();
+    expect(facts.gang?.mostSnowmen).toBeNull();
+  });
+
   it('excludes rounds from another year', () => {
     const facts = build([
       game({ year: 2025, playedAt: new Date('2025-06-01T08:00:00Z') }),
@@ -471,6 +493,69 @@ describe('rival-regnskapet', () => {
     expect(build(rounds).personal?.rival?.userId).toBe('user-a');
   });
 
+  it('does not book a fourball partner as twelve draws', () => {
+    // Makker i fourball: begge sider deler utfall, så uten lag-regelen ville
+    // hver eneste runde blitt en uavgjort mot den du spiller mest med.
+    const rounds = [1, 2, 3].map(() =>
+      game({
+        players: [
+          player(ME, {
+            resultSummary: { kind: 'matchplay', outcome: 'win', margin: '3&2' },
+          }),
+          player('user-makker', {
+            resultSummary: { kind: 'matchplay', outcome: 'win', margin: '3&2' },
+          }),
+        ],
+      }),
+    );
+    expect(build(rounds).personal?.rival).toMatchObject({
+      userId: 'user-makker',
+      met: 3,
+      decided: 0,
+      ties: 0,
+    });
+  });
+
+  it('still books an all-square match as a real draw', () => {
+    const rounds = [1, 2, 3].map(() =>
+      game({
+        players: [
+          player(ME, { resultSummary: { kind: 'matchplay', outcome: 'tie', margin: null } }),
+          player('user-rival', {
+            resultSummary: { kind: 'matchplay', outcome: 'tie', margin: null },
+          }),
+        ],
+      }),
+    );
+    expect(build(rounds).personal?.rival).toMatchObject({ decided: 3, ties: 3 });
+  });
+
+  it('does not book a team-mate sharing your placement as a draw', () => {
+    const teamPlacement = (rank: number): ResultSummary => ({
+      kind: 'placement',
+      rank,
+      fieldSize: 3,
+      isTeam: true,
+    });
+    const rounds = [1, 2, 3].map(() =>
+      game({
+        players: [
+          player(ME, { resultSummary: teamPlacement(1) }),
+          player('user-lagkamerat', { resultSummary: teamPlacement(1) }),
+          player('user-motstander', { resultSummary: teamPlacement(2) }),
+        ],
+      }),
+    );
+    // Begge er møtt tre ganger, men bare motstanderen gir et regnskap.
+    expect(build(rounds).personal?.rival).toMatchObject({
+      userId: 'user-motstander',
+      met: 3,
+      decided: 3,
+      wins: 3,
+      ties: 0,
+    });
+  });
+
   it('is null when every round was played alone', () => {
     expect(build(threeRounds()).personal?.rival).toBeNull();
   });
@@ -530,6 +615,19 @@ describe('formtoppen', () => {
     expect(build(rounds).personal?.formPeak.season).toEqual({
       brutto: { start: 90, now: 108, best: 72 },
       netto: { start: 80, now: 98, best: 62 },
+    });
+  });
+
+  it('keeps the earliest window when two stretches are equally good', () => {
+    const rounds = ['04', '05', '06', '07'].map((month) =>
+      game({
+        playedAt: new Date(`2026-${month}-01T08:00:00Z`),
+        players: [player(ME, { holes: flatRound(5) })], // alle 90
+      }),
+    );
+    expect(build(rounds).personal?.formPeak.stretch).toMatchObject({
+      fromDate: '2026-04-01T08:00:00.000Z',
+      toDate: '2026-06-01T08:00:00.000Z',
     });
   });
 
@@ -698,6 +796,47 @@ describe('gjengen', () => {
       }),
     ]);
     expect(facts.gang?.members).toBe(1);
+  });
+
+  it('breaks a birdie tie on rounds played, then on the lower id', () => {
+    // user-a og user-b har én birdie hver; user-a spilte begge rundene.
+    const birdie = holes({ 1: 3 });
+    const facts = build([
+      game({
+        players: [player(ME), player('user-a', { holes: birdie })],
+      }),
+      game({
+        players: [
+          player(ME),
+          player('user-a'),
+          player('user-b', { holes: birdie }),
+        ],
+      }),
+    ]);
+    expect(facts.gang?.mostBirdies).toMatchObject({ userId: 'user-a', count: 1 });
+  });
+
+  it('breaks an equal-margin tie with the more recent round', () => {
+    const tightPair = () => [
+      player(ME, { holes: flatRound(4) }), // 72
+      player('user-a', { holes: holes({ 1: 5 }) }), // 73
+    ];
+    const facts = build([
+      game({
+        gameName: 'Mai',
+        playedAt: new Date('2026-05-01T08:00:00Z'),
+        players: tightPair(),
+      }),
+      game({
+        gameName: 'Juli',
+        playedAt: new Date('2026-07-01T08:00:00Z'),
+        players: tightPair(),
+      }),
+    ]);
+    expect(facts.gang?.tightestFinish).toMatchObject({
+      gameName: 'Juli',
+      strokeMargin: 1,
+    });
   });
 
   it('ignores a game the viewer was not part of', () => {
