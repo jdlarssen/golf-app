@@ -24,42 +24,49 @@ import {
 
 const web: Record<string, string> = source.admin.game.errors;
 
-const ROSTER_REASONS: RosterActionFailure[] = [
-  'no-session',
-  'offline',
-  'not-found',
-  'roster-locked',
-  'cup-roster-locked',
-  'roster-full',
-  'not-active',
-  'no-team-mode',
-  'withdrawal-unsupported',
-  'bad-team',
-  'bad-flight',
-  'team-full',
-  'flight-full',
-  'rls-denied',
-  'already-submitted',
-  'no-rows',
-  'db',
-];
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const ROSTER_REASON_MAP = {
+  'no-session': true,
+  offline: true,
+  'not-found': true,
+  'roster-locked': true,
+  'cup-roster-locked': true,
+  'roster-full': true,
+  'not-active': true,
+  'no-team-mode': true,
+  'withdrawal-unsupported': true,
+  'bad-team': true,
+  'bad-flight': true,
+  'team-full': true,
+  'flight-full': true,
+  'rls-denied': true,
+  'already-submitted': true,
+  'no-rows': true,
+  db: true,
+} as const satisfies Record<RosterActionFailure, true>;
 
-const START_REASONS: StartRoundFailure[] = [
-  'offline',
-  'not_found',
-  'not_scheduled',
-  'tee_missing',
-  'tee_missing_rating',
-  'no_players',
-  'pending_players',
-  'incomplete_sides',
-  'decided_by_withdrawal',
-  'unassigned_teams',
-  'unassigned_flights',
-  'rotation_player_count',
-  'db_players',
-  'db_game',
-];
+const ROSTER_REASONS = Object.keys(ROSTER_REASON_MAP) as readonly RosterActionFailure[];
+
+// Kartet, ikke lista, er porten: koden arves fra webbens startScheduledGameCore,
+// så en ny avslags-kode kan legges til uten at noen er i nærheten av app-koden.
+const START_REASON_MAP = {
+  offline: true,
+  not_found: true,
+  not_scheduled: true,
+  tee_missing: true,
+  tee_missing_rating: true,
+  no_players: true,
+  pending_players: true,
+  incomplete_sides: true,
+  decided_by_withdrawal: true,
+  unassigned_teams: true,
+  unassigned_flights: true,
+  rotation_player_count: true,
+  db_players: true,
+  db_game: true,
+} as const satisfies Record<StartRoundFailure, true>;
+
+const START_REASONS = Object.keys(START_REASON_MAP) as readonly StartRoundFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {

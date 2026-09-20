@@ -40,17 +40,20 @@ const web = source.profile;
 const webForm = web.form;
 const webErrors: Record<string, string> = web.errors;
 
-const SAVE_FAILURES: ProfileSaveFailure[] = [
-  'offline',
-  'no-web-base-url',
-  'network',
-  'unauthorized',
-  'name_required',
-  'hcp_invalid',
-  'gender_required',
-  'level_invalid',
-  'update_failed',
-];
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const SAVE_FAILURE_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  network: true,
+  unauthorized: true,
+  name_required: true,
+  hcp_invalid: true,
+  gender_required: true,
+  level_invalid: true,
+  update_failed: true,
+} as const satisfies Record<ProfileSaveFailure, true>;
+
+const SAVE_FAILURES = Object.keys(SAVE_FAILURE_MAP) as readonly ProfileSaveFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {

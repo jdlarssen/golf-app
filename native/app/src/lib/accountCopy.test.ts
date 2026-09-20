@@ -32,23 +32,29 @@ import {
 const web = source.profile.deleteAccount;
 const webErrors: Record<string, string> = web.errors;
 
-const BLOCK_REASONS: DeleteBlockReason[] = [
-  'admin_account',
-  'active_engagements',
-  'sole_club_owner',
-];
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const BLOCK_REASON_MAP = {
+  admin_account: true,
+  active_engagements: true,
+  sole_club_owner: true,
+} as const satisfies Record<DeleteBlockReason, true>;
 
-const FAILURES: AccountDeleteFailure[] = [
-  'offline',
-  'no-web-base-url',
-  'network',
-  'unauthorized',
-  'admin_account',
-  'active_engagements',
-  'sole_club_owner',
-  'status_failed',
-  'delete_failed',
-];
+const BLOCK_REASONS = Object.keys(BLOCK_REASON_MAP) as readonly DeleteBlockReason[];
+
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const FAILURE_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  network: true,
+  unauthorized: true,
+  admin_account: true,
+  active_engagements: true,
+  sole_club_owner: true,
+  status_failed: true,
+  delete_failed: true,
+} as const satisfies Record<AccountDeleteFailure, true>;
+
+const FAILURES = Object.keys(FAILURE_MAP) as readonly AccountDeleteFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
