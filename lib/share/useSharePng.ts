@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *  2. **Selv-gating.** Ruta som lager bildet svarer 404 når kortet ikke finnes
  *     (aktivt spill, ingen lagret kavalkade, ukjent kort). Da blir `ready`
  *     aldri sann, og kallstedet viser ingen knapp. Ingen status-prop trengs.
- *  3. **Nedlasting som reserve.** Uten Web Share for filer — typisk desktop —
+ *  3. **Nedlasting som reserve.** Uten Web Share for filer (typisk desktop)
  *     lastes PNG-en ned i stedet. Begge veier er en fullført deling for
  *     kallstedet, og skilles på utfallet.
  *
