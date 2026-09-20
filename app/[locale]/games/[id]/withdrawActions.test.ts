@@ -6,22 +6,15 @@ import {
 } from '@/tests/serverActionMocks';
 
 /**
- * Unit-tester for self-withdraw (#199 chunk 11, #386 chunk 3).
+ * Unit-tester for webbens port inn til selv-frafall (#199 chunk 11, #386 chunk 3).
  *
- * withdrawFromGame:
- *   - Uautentisert → redirect /login
- *   - Spill ikke funnet → game_not_found
- *   - Spill aktivt + in-scope-modus → UPDATE withdrawn_at (ikke DELETE)
- *   - Spill aktivt + out-of-scope-modus → game_locked
- *   - Spill finished → game_locked
- *   - Bruker ikke påmeldt → not_registered
- *   - Suksess solo (team_number=null) → DELETE + revalidateTag (ingen notify)
- *   - Suksess team-medlem → DELETE + notify kaptein
- *   - DB-feil ved DELETE → db_error
+ * Etter #1917 er dette alt fila gjør: hent sesjonen, send en uten til /login, og
+ * kall kjernen med (gameId, userId). Reglene — grenene, cup-sperren, varselet,
+ * cache-utløpingen — bor i `lib/games/withdrawSelf.ts` og testes der. Casene sto
+ * her til #1917 og er FLYTTET, ikke kopiert.
  *
- * undoWithdraw:
- *   - Aktivt spill + egne WD-rad → nullstiller withdrawn_at
- *   - Bruker ikke trukket → not_registered
+ *   - Uautentisert → redirect /login (begge handlingene)
+ *   - Autentisert → kjernen kalles med (gameId, userId), og svaret gis videre
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -33,34 +26,30 @@ vi.mock('next-intl/server', () => ({
   getLocale: async () => 'nb',
 }));
 
-const revalidateTagMock = vi.fn();
-vi.mock('next/cache', () => ({
-  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
-}));
+type CoreCall = (
+  gameId: string,
+  userId: string,
+) => Promise<{ ok: true; kept: boolean }>;
 
-const notifyMock = vi.fn<
-  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
->(async () => ({ shouldAlsoSendMail: false }));
-vi.mock('@/lib/notifications/notify', () => ({
-  notify: (...args: unknown[]) => notifyMock(...args),
+const withdrawSelfMock = vi.fn<CoreCall>(async () => ({ ok: true, kept: true }));
+const undoSelfWithdrawMock = vi.fn<CoreCall>(async () => ({
+  ok: true,
+  kept: true,
+}));
+vi.mock('@/lib/games/withdrawSelf', () => ({
+  withdrawSelf: (...args: Parameters<CoreCall>) => withdrawSelfMock(...args),
+  undoSelfWithdraw: (...args: Parameters<CoreCall>) =>
+    undoSelfWithdrawMock(...args),
 }));
 
 let serverMock: ReturnType<typeof buildSupabaseMock>;
-let adminMock: ReturnType<typeof buildSupabaseMock>;
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => serverMock,
 }));
 
-vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => adminMock,
-}));
-
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const GAME_ID = '22222222-2222-2222-2222-222222222222';
-const CAPTAIN_ID = '33333333-3333-3333-3333-333333333333';
-const TEAMMATE_ID = '44444444-4444-4444-4444-444444444444';
-const CAPTAIN_REQ_ID = '55555555-5555-5555-5555-555555555555';
 
 function authedAsUser(): void {
   serverMock = buildSupabaseMock([]);
@@ -79,7 +68,6 @@ function unauthed(): void {
 beforeEach(() => {
   vi.clearAllMocks();
   serverMock = buildSupabaseMock([]);
-  adminMock = buildSupabaseMock([]);
 });
 
 describe('withdrawFromGame', () => {
@@ -93,410 +81,36 @@ describe('withdrawFromGame', () => {
     expect(redirectMock).toHaveBeenCalledWith(
       expect.objectContaining({ href: '/login' }),
     );
+    // Porten er hele jobben: en uten sesjon skal ikke nå kjernen.
+    expect(withdrawSelfMock).not.toHaveBeenCalled();
   });
 
-  it('ugyldig gameId-format → game_not_found uten DB-call', async () => {
+  it('kaller kjernen med spillet og den innloggede brukeren', async () => {
     authedAsUser();
     const { withdrawFromGame } = await import('./withdrawActions');
 
-    const result = await withdrawFromGame('not-a-uuid');
-    expect(result).toEqual({ ok: false, error: 'game_not_found' });
-  });
-
-  it('spill ikke funnet → game_not_found', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games lookup
-      { data: null, error: null },
-      // 2) game_players lookup (parallel)
-      { data: null, error: null },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-    expect(result).toEqual({ ok: false, error: 'game_not_found' });
-  });
-
-  it('spill er aktivt + in-scope modus (best_ball) → UPDATE withdrawn_at, ikke DELETE', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — active, best_ball (in-scope)
-      {
-        data: {
-          id: GAME_ID,
-          name: 'X',
-          short_id: 'abc12345',
-          status: 'active',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players — bruker er påmeldt
-      { data: { user_id: USER_ID, team_number: null }, error: null },
-      // 3) UPDATE game_players (set withdrawn_at) — #712: .select() returns affected rows
-      { data: [{ user_id: USER_ID }], error: null },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-    expect(result).toEqual({ ok: true, kept: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
-    // Skal ikke slette raden
-    const deleteCalls = adminMock.__fromCalls.filter(
-      (c) => c.method === 'delete',
-    );
-    expect(deleteCalls).toHaveLength(0);
-    // Skal UPDATE game_players
-    const updateCalls = adminMock.__fromCalls.filter(
-      (c) => c.method === 'update',
-    );
-    expect(updateCalls.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('spill er aktivt + out-of-scope modus (wolf) → game_locked', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — active, wolf (out-of-scope)
-      {
-        data: {
-          id: GAME_ID,
-          name: 'X',
-          short_id: 'abc12345',
-          status: 'active',
-          game_mode: 'wolf',
-        },
-        error: null,
-      },
-      // 2) game_players — bruker er påmeldt
-      { data: { user_id: USER_ID, team_number: null }, error: null },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-    expect(result).toEqual({ ok: false, error: 'game_locked' });
-  });
-
-  it('bruker ikke påmeldt → not_registered', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — scheduled
-      {
-        data: {
-          id: GAME_ID,
-          name: 'X',
-          short_id: 'abc12345',
-          status: 'scheduled',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players — ingen rad for brukeren
-      { data: null, error: null },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-    expect(result).toEqual({ ok: false, error: 'not_registered' });
-  });
-
-  it('suksess solo (team_number=null) → DELETE + revalidate, ingen notify', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — draft
-      {
-        data: {
-          id: GAME_ID,
-          name: 'Sommercup',
-          short_id: 'abc12345',
-          status: 'draft',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players — solo (team_number=null)
-      { data: { user_id: USER_ID, team_number: null }, error: null },
-      // 3) DELETE game_players
-      { data: null, error: null },
-      // 4) DELETE game_registration_requests
-      { data: null, error: null },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-
-    expect(result).toEqual({ ok: true, kept: false });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
-    expect(notifyMock).not.toHaveBeenCalled();
-  });
-
-  it('suksess team-medlem → DELETE + notify kaptein med team_member_withdrew', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games
-      {
-        data: {
-          id: GAME_ID,
-          name: 'Sommercup',
-          short_id: 'abc12345',
-          status: 'scheduled',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players — team_number=1
-      { data: { user_id: USER_ID, team_number: 1 }, error: null },
-      // 3) mates lookup (samme team_number) → finnes en til
-      { data: [{ user_id: TEAMMATE_ID }], error: null },
-      // 4) min request-rad (team_name + team_request_id)
-      {
-        data: {
-          team_name: 'Bjørka',
-          team_request_id: CAPTAIN_REQ_ID,
-          is_team_captain: false,
-        },
-        error: null,
-      },
-      // 5) captain request lookup
-      { data: { user_id: CAPTAIN_ID }, error: null },
-      // 6) DELETE game_players
-      { data: null, error: null },
-      // 7) DELETE game_registration_requests
-      { data: null, error: null },
-      // 8) users lookup for navnet i payload
-      {
-        data: { name: 'Per Spiller', nickname: null, email: 'p@x.no' },
-        error: null,
-      },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-
-    expect(result).toEqual({ ok: true, kept: false });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: CAPTAIN_ID,
-        kind: 'team_member_withdrew',
-        payload: expect.objectContaining({
-          game_id: GAME_ID,
-          game_short_id: 'abc12345',
-          game_name: 'Sommercup',
-          withdrawn_player_name: 'Per Spiller',
-          team_name: 'Bjørka',
-        }),
-      }),
-    );
-  });
-
-  it('DB-feil ved DELETE → db_error', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games
-      {
-        data: {
-          id: GAME_ID,
-          name: 'X',
-          short_id: 'abc12345',
-          status: 'scheduled',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players (solo)
-      { data: { user_id: USER_ID, team_number: null }, error: null },
-      // 3) DELETE feiler
-      { data: null, error: { code: '12345', message: 'sql crashed' } },
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    const result = await withdrawFromGame(GAME_ID);
-    expect(result).toEqual({ ok: false, error: 'db_error' });
-    expect(notifyMock).not.toHaveBeenCalled();
+    expect(await withdrawFromGame(GAME_ID)).toEqual({ ok: true, kept: true });
+    expect(withdrawSelfMock).toHaveBeenCalledWith(GAME_ID, USER_ID);
   });
 });
 
 describe('undoWithdraw', () => {
-  it('aktivt spill + spilleren er trukket → nullstiller withdrawn_at', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — active, in-scope
-      {
-        data: {
-          id: GAME_ID,
-          status: 'active',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players — trukket
-      {
-        data: { user_id: USER_ID, withdrawn_at: '2026-06-01T10:00:00.000Z' },
-        error: null,
-      },
-      // 3) UPDATE game_players (clear withdrawn_at) — #712: .select() returns affected rows
-      { data: [{ user_id: USER_ID }], error: null },
-    ]);
+  it('uautentisert → redirect /login', async () => {
+    unauthed();
     const { undoWithdraw } = await import('./withdrawActions');
 
-    const result = await undoWithdraw(GAME_ID);
-    expect(result).toEqual({ ok: true });
-    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
-    const updateCalls = adminMock.__fromCalls.filter(
-      (c) => c.method === 'update',
+    await expect(undoWithdraw(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/login' }),
     );
-    expect(updateCalls.length).toBeGreaterThanOrEqual(1);
+    expect(undoSelfWithdrawMock).not.toHaveBeenCalled();
   });
 
-  it('spilleren er ikke trukket (withdrawn_at=null) → not_registered', async () => {
+  it('kaller kjernen med spillet og den innloggede brukeren', async () => {
     authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — active
-      {
-        data: {
-          id: GAME_ID,
-          status: 'active',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players — ikke trukket
-      { data: { user_id: USER_ID, withdrawn_at: null }, error: null },
-    ]);
     const { undoWithdraw } = await import('./withdrawActions');
 
-    const result = await undoWithdraw(GAME_ID);
-    expect(result).toEqual({ ok: false, error: 'not_registered' });
-  });
-
-  it('spill er finished → game_locked', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      // 1) games — finished
-      {
-        data: {
-          id: GAME_ID,
-          status: 'finished',
-          game_mode: 'best_ball',
-        },
-        error: null,
-      },
-      // 2) game_players (not needed, gate fires first)
-      { data: { user_id: USER_ID, withdrawn_at: '2026-06-01T10:00:00.000Z' }, error: null },
-    ]);
-    const { undoWithdraw } = await import('./withdrawActions');
-
-    const result = await undoWithdraw(GAME_ID);
-    expect(result).toEqual({ ok: false, error: 'game_locked' });
-  });
-});
-
-/**
- * #1814: en cup-kamp som ennå ikke har startet trekker man seg fra via
- * `/cup/[id]/trekk`, ikke herfra. Pre-start-grenen SLETTER `game_players`-raden
- * — på en cup-kamp etterlot det en ufullstendig side som auto-start aldri kunne
- * starte, stille. Venterommets lenke ruter til cup-siden; dette er vakta bak den.
- *
- * Gaten er SMAL med vilje: en cup-kamp som alt er i gang har ingen rad å slette,
- * og det myke trekket (#386) er fortsatt riktig vei ut der.
- */
-describe('withdrawFromGame — cup-kamper er låst før start (#1814)', () => {
-  const TOURNAMENT_ID = '66666666-6666-6666-6666-666666666666';
-
-  function cupGame(
-    status: 'draft' | 'scheduled' | 'active' | 'finished',
-    gameMode = 'singles_matchplay',
-  ) {
-    return {
-      data: {
-        id: GAME_ID,
-        name: 'Kamp 3',
-        short_id: 'abc12345',
-        status,
-        game_mode: gameMode,
-        tournament_id: TOURNAMENT_ID,
-      },
-      error: null,
-    };
-  }
-
-  it.each(['draft', 'scheduled'] as const)(
-    '%s cup-kamp → game_locked, ingen sletting og ingen flagging',
-    async (status) => {
-      authedAsUser();
-      adminMock = buildSupabaseMock([
-        cupGame(status),
-        { data: { user_id: USER_ID, team_number: 1 }, error: null },
-      ]);
-      const { withdrawFromGame } = await import('./withdrawActions');
-
-      expect(await withdrawFromGame(GAME_ID)).toEqual({
-        ok: false,
-        error: 'game_locked',
-      });
-      const writes = adminMock.__fromCalls.filter(
-        (c) => c.method === 'delete' || c.method === 'update',
-      );
-      expect(writes).toHaveLength(0);
-    },
-  );
-
-  it('aktiv cup-kamp i en WD-støttet modus → mykt trekk som før, ikke låst', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      cupGame('active', 'best_ball'),
-      { data: { user_id: USER_ID, team_number: 1 }, error: null },
-      { data: [{ user_id: USER_ID }], error: null }, // UPDATE withdrawn_at
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    expect(await withdrawFromGame(GAME_ID)).toEqual({ ok: true, kept: true });
-    expect(
-      adminMock.__fromCalls.filter((c) => c.method === 'delete'),
-    ).toHaveLength(0);
-  });
-
-  it.each(['active', 'finished'] as const)(
-    '%s cup-kamp uten WD-støtte (matchplay) → game_locked, ingen skriving',
-    async (status) => {
-      authedAsUser();
-      adminMock = buildSupabaseMock([
-        cupGame(status),
-        { data: { user_id: USER_ID, team_number: 1 }, error: null },
-      ]);
-      const { withdrawFromGame } = await import('./withdrawActions');
-
-      expect(await withdrawFromGame(GAME_ID)).toEqual({
-        ok: false,
-        error: 'game_locked',
-      });
-      const writes = adminMock.__fromCalls.filter(
-        (c) => c.method === 'delete' || c.method === 'update',
-      );
-      expect(writes).toHaveLength(0);
-    },
-  );
-
-  it('rører ikke et frittstående spill (tournament_id null)', async () => {
-    authedAsUser();
-    adminMock = buildSupabaseMock([
-      {
-        data: {
-          id: GAME_ID,
-          name: 'X',
-          short_id: 'abc12345',
-          status: 'scheduled',
-          game_mode: 'stableford',
-          tournament_id: null,
-        },
-        error: null,
-      },
-      { data: { user_id: USER_ID, team_number: null }, error: null },
-      { data: null, error: null }, // DELETE game_players
-      { data: null, error: null }, // DELETE registration requests
-    ]);
-    const { withdrawFromGame } = await import('./withdrawActions');
-
-    expect(await withdrawFromGame(GAME_ID)).toEqual({ ok: true, kept: false });
+    expect(await undoWithdraw(GAME_ID)).toEqual({ ok: true, kept: true });
+    expect(undoSelfWithdrawMock).toHaveBeenCalledWith(GAME_ID, USER_ID);
   });
 });
