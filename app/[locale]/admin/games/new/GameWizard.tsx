@@ -1683,6 +1683,7 @@ function WizardFooter({
         <Button
           type="button"
           variant="secondary"
+          data-testid="wizard-prev"
           onClick={onPrev}
           disabled={step === 1}
           className="flex-1"
