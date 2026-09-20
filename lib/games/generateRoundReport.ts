@@ -1,5 +1,10 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
+import {
+  NARRATIVE_MAX_RETRIES,
+  NARRATIVE_MODEL,
+  NARRATIVE_TIMEOUT_MS,
+} from '@/lib/ai/narrative';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { buildModeResultForGame } from '@/lib/scoring/buildModeResultForGame';
 import { formatRevealName } from '@/lib/names/formatRevealName';
@@ -8,10 +13,10 @@ import { buildRoundReportFacts } from './roundReportFacts';
 import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
 import { holeCountForSegment, isHoleInSegment } from './holeScope';
 
-const MODEL = 'claude-sonnet-5';
+// Modell, timeout og retries deles med Kavalkadens innledning (#2128) —
+// `lib/ai/narrative.ts` er hjemmet, så de to AI-tekstene ikke driver fra
+// hverandre neste gang noen bytter modell.
 const MAX_TOKENS = 800;
-const TIMEOUT_MS = 20_000;
-const MAX_RETRIES = 1;
 const MIN_SCORED_HOLES = 6;
 // nb-only surface by design (#1527) — rundereferatet skrives på norsk.
 const PLAYER_FALLBACK = 'Ukjent spiller';
@@ -152,9 +157,13 @@ export async function generateAndPersistRoundReport(
 
     const { system, user } = buildRoundReportPrompt(facts);
 
-    const client = new Anthropic({ apiKey, timeout: TIMEOUT_MS, maxRetries: MAX_RETRIES });
+    const client = new Anthropic({
+      apiKey,
+      timeout: NARRATIVE_TIMEOUT_MS,
+      maxRetries: NARRATIVE_MAX_RETRIES,
+    });
     const response = await client.messages.create({
-      model: MODEL,
+      model: NARRATIVE_MODEL,
       max_tokens: MAX_TOKENS,
       system,
       messages: [{ role: 'user', content: user }],
