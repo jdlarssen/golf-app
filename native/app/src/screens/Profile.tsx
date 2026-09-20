@@ -181,9 +181,26 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       });
   }, [askAboutUnsent]);
 
-  // Webbens kjede: eget navn, ellers e-posten, ellers literalen.
-  const shownName =
-    profile?.name?.trim() || email?.trim() || PROFILE_TEXT.displayNameFallback;
+  // #1973: overskriften venter på raden i stedet for å bytte tekst foran
+  // øynene på deg.
+  //
+  // Kjeden under er webbens — eget navn, ellers e-posten, ellers literalen — og
+  // den holder fra det øyeblikket raden er lest. Men FØR svaret har landet er
+  // `profile` null, og kjeden falt da til e-posten: hver eneste gang rommet ble
+  // åpnet sto e-postadressen som overskrift i et halvt sekund og ble så byttet
+  // ut med navnet. Det var mest sannsynlig dette eieren så som «forrige brukers
+  // navn» etter et eierbytte — de to testkontoene deler adresse og skilles bare
+  // av en `+`-endelse, så glimtet er lett å lese feil.
+  //
+  // Mens vi venter står linja derfor tom. Den beholder høyden sin (`nameLine`),
+  // så kortet under flytter seg ikke når navnet kommer, og e-postlinja rett
+  // under sier hvem du er hele tiden. Feiler hentingen faller vi tilbake til
+  // kjeden, som før — da er e-posten det ærligste vi har, og feillinja står
+  // under den.
+  const nameKnown = profile != null || loadFailed;
+  const shownName = nameKnown
+    ? profile?.name?.trim() || email?.trim() || PROFILE_TEXT.displayNameFallback
+    : '';
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="profile-screen">
@@ -196,7 +213,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       ) : null}
 
       <View style={ui.card} testID="profile-identity">
-        <Text style={ui.value} testID="profile-name">
+        <Text style={[ui.value, styles.nameLine]} testID="profile-name">
           {shownName}
         </Text>
         {/* Innlogging går via engangskode på e-post, så feltet er i praksis
@@ -340,6 +357,12 @@ function HandicapLine({
 }
 
 const styles = StyleSheet.create({
+  // Både `lineHeight` og `minHeight`, med samme tall: det første gir linja en
+  // høyde som ikke avhenger av fonten som tilfeldigvis rakk å laste, det andre
+  // holder den høyden mens teksten er tom. Uten paret ville kortet hoppet i det
+  // navnet kom — som er nettopp det #1973 handler om. 28 er `ui.value` sine 22
+  // punkter pluss luften Fraunces uansett tar.
+  nameLine: { lineHeight: 28, minHeight: 28 },
   hcpLine: { gap: 2 },
   setHandicap: { minHeight: TAP, justifyContent: 'center', alignSelf: 'flex-start' },
   dangerGap: { marginTop: 24 },
