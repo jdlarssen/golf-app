@@ -8,6 +8,7 @@ import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { KavalkadeDeck } from '@/components/kavalkade/KavalkadeDeck';
+import { kavalkadeShareActions } from '@/components/kavalkade/kavalkadeShareActions';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getOrCreateKavalkade } from '@/lib/kavalkade/getOrCreateKavalkade';
 import {
@@ -99,6 +100,12 @@ export default async function KavalkadePage({ params }: { params: Params }) {
       <KavalkadeDeck
         deck={buildKavalkadeDeck(facts, narrative)}
         locale={locale}
+        // Deleknappene (#2130) bare på den lagrede kavalkaden. I
+        // admin-forhåndsvisningen finnes ingen rad, så kort-ruta ville svart
+        // 404 og hver knapp holdt seg skjult uansett.
+        actions={
+          view.status === 'ready' ? kavalkadeShareActions(facts.year) : undefined
+        }
       />
     </KavalkadeShell>
   );
