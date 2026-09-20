@@ -3,17 +3,16 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
-import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { expectAffected } from '@/lib/supabase/affectedRows';
-import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
-import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
-import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import {
+  inviteEmailToGameCore,
+  normalizeInviteEmail,
+  type InviteRefusal,
+} from '@/lib/games/inviteToGame';
 
 type GameSnapshot = {
   id: string;
@@ -105,18 +104,33 @@ export async function addExistingPlayerToGame(
 }
 
 /**
- * E-post-invite: send invitasjon med spill-kontekst til en e-post som ikke
- * (nødvendigvis) er registrert. To grener:
+ * Webbens dør inn til e-post-invitasjonen.
  *
- *  - Hvis e-posten allerede tilhører en registrert bruker: rute gjennom samme
- *    flyt som picker-add. Ingen mail (de er i appen), men bell-prikk fyrer.
- *  - Hvis e-posten er ukjent: opprett `invitations`-rad med game_id, send
- *    spill-spesifikk Resend-mail. notify fyrer deferred etter OTP-verify
- *    i `app/(auth)/login/actions.ts`.
+ * Regelen bor i `lib/games/inviteToGame.ts` (#1919) — den flyttet ut da appen
+ * skulle få den samme handlingen over `POST /api/games/[id]/invite`, og en
+ * kopi ville gitt regelen to hjem (AGENTS trap 4). Igjen her står bare det
+ * webben eier: gaten, klienten og oversettelsen fra utfall til query-parameter.
  *
- * Idempotent på (email, game_id) — en eksisterende pending invitasjon for
- * samme spill swallow-es uten ny mail eller notify.
+ * Klienten som sendes inn er den RLS-baserte (`getServerClient`), så
+ * 0072-policyene står som et andre lag på webbens skrivinger nøyaktig som før.
+ * Ruta sender service-role-klienten sin.
+ *
+ * Query-verdiene under er bruker-synlige (banneret leser dem) og står
+ * tegn-for-tegn slik de sto før flyttingen. Merk prefikset: kjernens
+ * `invalid_email` er webbens `invite_invalid_email`.
  */
+const REFUSAL_ERROR: Record<InviteRefusal, string> = {
+  invalid_email: 'invite_invalid_email',
+  disposable_email: 'disposable_email',
+  not_found: 'not_found',
+  game_locked: 'game_locked',
+  game_full: 'game_full',
+  invite_not_allowed: 'invite_not_allowed',
+  db_players: 'db_players',
+  invite_failed: 'invite_failed',
+  mail_failed: 'mail_failed',
+};
+
 export async function inviteEmailToGame(
   gameId: string,
   formData: FormData,
@@ -127,192 +141,36 @@ export async function inviteEmailToGame(
   const detailPath = ctx.isAdmin
     ? `/admin/games/${gameId}`
     : `/games/${gameId}/spillere`;
-  const inviterUserId = ctx.userId;
-  const inviterName = ctx.name;
 
-  const rawEmail = String(formData.get('email') ?? '').trim().toLowerCase();
-  if (!rawEmail || !rawEmail.includes('@')) {
-    redirect({ href: `${detailPath}?error=invite_invalid_email`, locale });
+  const rawEmail = String(formData.get('email') ?? '');
+  const result = await inviteEmailToGameCore({
+    client: supabase,
+    gameId,
+    inviterUserId: ctx.userId,
+    inviterName: ctx.name,
+    isAdmin: ctx.isAdmin,
+    rawEmail,
+  });
+
+  if (!result.ok) {
+    // `mail_failed` bærer adressen videre: banneret sier hvem mailen ikke nådde,
+    // så arrangøren kan prøve den samme adressen på nytt. Resten er tilstander
+    // ved runden, ikke ved adressen.
+    const query =
+      result.reason === 'mail_failed'
+        ? `error=mail_failed&email=${encodeURIComponent(normalizeInviteEmail(rawEmail))}`
+        : `error=${REFUSAL_ERROR[result.reason]}`;
+    // `redirect()` kaster (NEXT_REDIRECT), så denne `return`-en nås aldri —
+    // den står fordi `redirect` ikke er typet `never`, og uten den ser tsc
+    // fortsatt begge grenene av unionen under.
+    return redirect({ href: `${detailPath}?${query}`, locale });
   }
 
-  // Disposable-domener blokkeres for arrangører som ikke er admin (#422).
-  // Admin og trusted-creators er bevisst u-guardet (kurator-modellen — de
-  // inviterer folk de allerede har avklart med).
-  if (!ctx.isAdmin && isDisposableEmailDomain(rawEmail)) {
-    redirect({ href: `${detailPath}?error=disposable_email`, locale });
-  }
-
-  const game = await loadGameForInvite(supabase, gameId, detailPath);
-
-  if (game.status === 'active' || game.status === 'finished') {
-    redirect({ href: `${detailPath}?error=game_locked`, locale });
-  }
-
-  await assertRoomForPlayer(supabase, game, detailPath);
-
-  // Eksisterende bruker? Da går vi rett til picker-add-stien.
-  const { data: existingUser } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('email', rawEmail)
-    .maybeSingle<{ id: string }>();
-
-  if (existingUser) {
-    // Eksisterende-bruker-grenen er funksjonelt picker-add → samme venne-/klubb-
-    // scoping (#906). Admin unntatt; self alltid lov. Ukjent-e-post-grenen under
-    // guardes bevisst IKKE — å invitere en ny e-post er venne-anskaffelses-stien.
-    if (!ctx.isAdmin && existingUser.id !== inviterUserId) {
-      const eligible = await getInviteEligibleIds(inviterUserId, game.group_id);
-      if (!eligible.has(existingUser.id)) {
-        redirect({ href: `${detailPath}?error=invite_not_allowed`, locale });
-      }
-    }
-
-    const { error: insertError } = await supabase.from('game_players').insert({
-      game_id: gameId,
-      user_id: existingUser.id,
-      team_number: null,
-      flight_number: null,
-      course_handicap: null,
-      // #463: arrangør legger til en annen bruker → ikke bekreftet ennå.
-      accepted_at: null,
-    });
-    const duplicate =
-      insertError != null &&
-      (insertError.code === '23505' ||
-        String(insertError.message ?? '').toLowerCase().includes('duplicate'));
-
-    if (insertError && !duplicate) {
-      console.error('[inviteToGame/inviteEmail] existing-user insert failed', insertError);
-      redirect({ href: `${detailPath}?error=db_players`, locale });
-    }
-
-    if (!duplicate && existingUser.id !== inviterUserId) {
-      await notifyInvitedToGame({
-        recipientUserId: existingUser.id,
-        gameId,
-        inviterUserId,
-      });
-    }
-
-    expireGameCache(gameId);
-    redirect({ href: `${detailPath}?status=invite_added&email=${encodeURIComponent(rawEmail)}`, locale });
-  }
-
-  // Ukjent e-post: idempotent insert i invitations.
-  const { data: existingInvite } = await supabase
-    .from('invitations')
-    .select('id, token, expires_at')
-    .ilike('email', rawEmail)
-    .eq('game_id', gameId)
-    .is('accepted_at', null)
-    .maybeSingle<{ id: string; token: string; expires_at: string }>();
-
-  if (existingInvite) {
-    // «Send på nytt» means «give this person a fresh chance» (#1381/#1613):
-    // push the deadline out a full TTL BEFORE mailing, so an expired-but-
-    // unaccepted invitation never produces a mail the login gate refuses
-    // (email_is_invited requires expires_at > now(), migration 0100). The
-    // write goes through the admin client: the only invitations UPDATE
-    // policy is «self mark accepted», so a non-admin organiser's user-client
-    // write would silently match 0 rows (AGENTS.md trap 2/3); authz for this
-    // path is the requireAdminOrCreator gate above.
-    const freshExpiresAt = gameInviteExpiresAtFromNow();
-    try {
-      expectAffected(
-        await getAdminClient()
-          .from('invitations')
-          .update({ expires_at: freshExpiresAt })
-          .eq('id', existingInvite.id)
-          .is('accepted_at', null)
-          .select('id'),
-        'inviteEmailToGame.extendExpiry',
-      );
-    } catch (extendError) {
-      // Plain Error on a DB refusal, NoRowsAffectedError when the row was
-      // accepted or deleted between the read and the write. Either way: no
-      // mail without a valid deadline — the organiser gets the error banner.
-      console.error('[inviteToGame/inviteEmail] expiry extend failed', extendError);
-      redirect({ href: `${detailPath}?error=invite_failed`, locale });
-    }
-
-    // Re-send the notification mail best-effort so a retry by the organiser
-    // always delivers — covers the case where the original send silently
-    // dropped (Resend error, spam filter, etc.) without the row being rolled
-    // back. Errors here are swallowed: the invitation row already exists and
-    // we don't want to confuse the organiser with a spurious error state.
-    const invitedByNameForRetry =
-      inviterName?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
-    try {
-      await sendInviteNotification({
-        to: rawEmail,
-        invitedByName: invitedByNameForRetry,
-        gameName: game.name,
-        gameMode: game.game_mode,
-        inviteToken: existingInvite.token,
-        expiresAt: freshExpiresAt,
-      });
-    } catch (retryErr) {
-      console.error('[inviteToGame/inviteEmail] retry mail failed (best-effort)', retryErr);
-    }
-    expireGameCache(gameId);
-    redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
-  }
-
-  const expiresAt = gameInviteExpiresAtFromNow();
-  const inviteToken = randomUUID();
-  const { data: insertedInvitation, error: insertError } = await supabase
-    .from('invitations')
-    .insert({
-      email: rawEmail,
-      token: inviteToken,
-      invited_by: inviterUserId,
-      game_id: gameId,
-      expires_at: expiresAt,
-    })
-    .select('id')
-    .single<{ id: string }>();
-  if (insertError) {
-    console.error('[inviteToGame/inviteEmail] invitations insert failed', insertError);
-    redirect({ href: `${detailPath}?error=invite_failed`, locale });
-  }
-
-  const invitedByName =
-    inviterName?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
-  try {
-    await sendInviteNotification({
-      to: rawEmail,
-      invitedByName,
-      gameName: game.name,
-      gameMode: game.game_mode,
-      inviteToken,
-      expiresAt,
-    });
-  } catch (err) {
-    console.error('[inviteToGame/inviteEmail] mail failed', err);
-    // Roll back the just-inserted invitations row so the organiser can retry
-    // the same email address and get a fresh insert + send. Without this,
-    // the idempotent check at the top of this branch finds the orphaned row
-    // and silently short-circuits without ever sending the mail — stranding
-    // the invitee permanently.
-    //
-    // Scoped by primary key (row id returned from INSERT … RETURNING) to avoid
-    // accidentally deleting a concurrently inserted pending invite for the same
-    // email + game (#705).
-    if (insertedInvitation?.id) {
-      const { error: deleteErr } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', insertedInvitation.id);
-      if (deleteErr) {
-        console.error('[inviteToGame/inviteEmail] rollback delete failed', deleteErr);
-      }
-    }
-    redirect({ href: `${detailPath}?error=mail_failed&email=${encodeURIComponent(rawEmail)}`, locale });
-  }
-
-  expireGameCache(gameId);
-  redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
+  const status = result.kind === 'added' ? 'invite_added' : 'invite_sent';
+  redirect({
+    href: `${detailPath}?status=${status}&email=${encodeURIComponent(result.email)}`,
+    locale,
+  });
 }
 
 async function loadGameForInvite(

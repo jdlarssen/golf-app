@@ -37,3 +37,9 @@
 ^klubb@tornygolf\.no$
 ^personvern@tornygolf\.no$
 ^dmarc-reports@tornygolf\.no$
+
+# Kast-bort-domenet testene bruker for å bevise disposable-guarden (#422).
+# Mailinator er en åpen, offentlig innboks uten eier: en adresse der peker på
+# ingen, og guarden kan ikke testes uten et domene som faktisk står på lista i
+# `lib/auth/disposableDomains.ts`.
+@mailinator\.com$
