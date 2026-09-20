@@ -45,17 +45,21 @@ describe('describeChoiceFailure', () => {
 // Lagkort-levering (#1918)
 // -----------------------------------------------------------------------------
 
-const TEAM_SUBMIT_REASONS: readonly TeamSubmitFailure[] = [
-  'offline',
-  'no-web-base-url',
-  'unauthorized',
-  'network',
-  'forbidden',
-  'not_found',
-  'not_active',
-  'withdrawn',
-  'submit_failed',
-];
+// Samme port som `CODE_MAP` over: mangler en kode i kartet, faller `tsc` på
+// `satisfies` i det `TeamSubmitFailure` får et nytt medlem.
+const TEAM_SUBMIT_REASON_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  unauthorized: true,
+  network: true,
+  forbidden: true,
+  not_found: true,
+  not_active: true,
+  withdrawn: true,
+  submit_failed: true,
+} as const satisfies Record<TeamSubmitFailure, true>;
+
+const TEAM_SUBMIT_REASONS = Object.keys(TEAM_SUBMIT_REASON_MAP) as readonly TeamSubmitFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
