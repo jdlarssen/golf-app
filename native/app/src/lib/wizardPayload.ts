@@ -275,8 +275,12 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
   // Tee-kjønn nøkles på BRUKER-ID, ikke på slot-indeks. To ulike konvensjoner i
   // samme form er lett å bomme på; webbens `actions.ts:295` leser
   // `player_${p.user_id}_gender` mens slottene over er indeksbaserte.
-  // Alle valgte spillere får sitt felt, også de en lag-modus dropper — feltet
-  // leses uansett kun for spillere som ER i payloaden.
+  //
+  // Appen leser IKKE dette feltet selv (#2007): `data/createGame.ts` henter
+  // tee-settet rett fra `draft.players`, som bærer det typet. Feltet settes
+  // likevel, for web-form-pariteten er hele oppgaven til denne fila — webbens
+  // `actions.ts` leser nøyaktig denne nøkkelen fra en ekte `<form>`, og
+  // `wizardPayload.test.ts` låser det.
   for (const player of draft.players) {
     form.set(`player_${player.userId}_gender`, player.teeGender);
   }
@@ -289,7 +293,8 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
  *
  * Returnerer BÅDE form-dataen og payloaden fordi publiseringen trenger begge:
  * payloaden bærer spillerne og `mode_config`, mens tee-off, sideturnering og
- * tee-kjønn leses videre fra form-dataen av de andre delte parserne.
+ * premier leses videre fra form-dataen av de andre delte parserne. Tee-kjønn
+ * hører ikke lenger til den lista (#2007) — det leses fra utkastet.
  */
 export function buildDraftPayload(draft: GameDraft): {
   form: WizardFormData;
