@@ -18,7 +18,9 @@
 // unionene, faller `tsc` på den manglende returverdien — som er hele poenget
 // med å ha ett oversettelses-hjem.
 import type { RosterActionFailure } from '../data/rosterActions';
+import type { SelfWithdrawFailure } from '../data/withdrawSelf';
 import type { StartRoundRefusal } from '../data/startGame';
+import { WEB_LINK_TEXT } from './webLink';
 
 /** Fallbacken når serveren svarte med noe vi ikke har en egen setning for. */
 const GENERIC_DB = 'Noe gikk galt mot serveren.';
@@ -30,46 +32,87 @@ const GENERIC_DB = 'Noe gikk galt mot serveren.';
 export const OFFLINE_NOTE = 'Du er uten nett. Koble til, så går det gjennom.';
 
 /**
- * ⚠️ Arrangørens EGEN rad (#1868).
+ * Selv-frafall (#1917) — etikettene og bekreftelsen begge flatene deler.
  *
- * `guard_game_players_self_update` (0147) blokkerer `team_number`,
- * `flight_number` og `withdrawn_at` på egen rad. Unntakene er service-role og
- * `is_admin()` — det finnes ingen vei ut for en oppretter som ikke også er
- * global admin. Appen skriver alltid under RLS, så knappen ville blitt avvist
- * med 42501 hver eneste gang.
+ * ⚠️ Handlingen går via `POST`/`DELETE /api/games/[id]/withdraw-self`, aldri en
+ * skriving: `guard_game_players_self_update` vakt (c) (0147, uendret i 0168)
+ * nekter en ikke-admin å røre `withdrawn_at` på sin egen rad, og appen skriver
+ * alltid under RLS. Vakta skal stå — ruta er svaret på den, ikke en omvei rundt.
  *
- * Derfor vises den ikke. Dette er setningen som står i stedet: den sier hva
- * appen ikke får til og hvor det gjøres, uten å be arrangøren gjette. En knapp
- * som alltid feiler er verre enn ingen knapp.
+ * Fram til nå sto det en setning i stedet for knappen: «Du kan ikke trekke deg
+ * selv herfra. Det ordner du på nettsiden.» #1891 ga den en lenke; #1917 ga den
+ * handlingen, og da er henvisningen en beskrivelse av en app som ikke finnes
+ * lenger.
  *
- * Gjelder nå KUN frafall. Lag og flight var med her fram til eieren godkjente
- * migrasjon 0168 (#1855/#1868) — men UI-sperren ble stående igjen etter at
- * basen åpnet, så evnen fantes uten å være mulig å nå. Funnet av eieren under
- * tapptest, ikke av en test.
+ * Teksten ligger her og ikke i skjermene fordi arrangør-seksjonen, avslutt-
+ * skjermen og trukket-banneret viser den samme handlingen. Tre flater med hver
+ * sin ordlyd ville lest som tre forskjellige handlinger.
  */
-export const OWN_ROW_LOCKED_NOTE =
-  'Du kan ikke trekke deg selv herfra. Det ordner du på nettsiden.';
+export const WITHDRAW_SELF = {
+  label: 'Trekk meg',
+  confirmTitle: 'Trekk deg fra runden?',
+  // Samme todeling som avslutt-skjermens `withdrawHint`: ute av rangeringen,
+  // men slagene slettes ikke. Radene i `scores` blir liggende, og spilleren kan
+  // fortsatt åpne sitt eget kort.
+  confirmBody: 'Du teller ikke med i resultatene. Slagene blir liggende.',
+  confirmCta: 'Trekk meg',
+  undoLabel: 'Angre trekk',
+  undoTitle: 'Angre frafallet?',
+  undoBody: 'Du teller med i resultatene igjen.',
+  undoCta: 'Angre',
+} as const;
 
 /**
- * Knappen som står under noten (#1891), og under `ownRowHint` på avslutt-flaten
- * (`endGameCopy.ts`) — samme mangel, samme vei ut.
+ * Hvilken av de to handlingene som feilet.
  *
- * Etiketten og stien bor sammen med noten så de to kallstedene ikke kan drive
- * fra hverandre. Webbens `/games/[id]/trekk-fra` slipper en aktiv runde inn
- * (`isActiveWithdrawable`) så lenge formatet støtter frafall; gjør det ikke
- * det, sender siden arrangøren tilbake til runden. Det er en ærlig grense og
- * ikke en feil — appen kan uansett ikke gjøre skrivingen selv (#1917).
+ * To koder leses motsatt avhengig av retningen: `not_registered` betyr «du står
+ * ikke i runden» når du trekker deg og «du står ikke som trukket» når du angrer,
+ * og en catch-all som sier «fikk ikke trukket deg» etter et trykk på «Angre
+ * trekk» forteller spilleren det motsatte av det som skjedde. Derfor ett
+ * oversettelses-hjem med en retning, ikke to switcher som kan drive fra
+ * hverandre.
  */
-export const WITHDRAW_SELF_LINK_LABEL = 'Trekk deg på nettsiden';
+export type SelfWithdrawAction = 'withdraw' | 'undo';
 
 /**
- * Frafalls-siden for én runde.
+ * Kode → setning for selv-frafallet. Ingen `default`-gren: legger noen en kode
+ * til i {@link SelfWithdrawFailure}, faller `tsc` på den manglende returverdien.
  *
- * `encodeURIComponent` selv om id-en er en uuid fra vår egen bundle: en sti
- * bygget av data kodes der den bygges.
+ * `no-web-base-url` og `unauthorized` sier det samme som purringen sier
+ * (`describeReminderFailure`) — det er den samme mangelen i bygget og den samme
+ * tapte sesjonen, og to ordlyder for én årsak ville bare gitt skjermen et valg
+ * den ikke trenger å ta.
  */
-export function withdrawSelfWebPath(gameId: string): string {
-  return `/games/${encodeURIComponent(gameId)}/trekk-fra`;
+export function describeSelfWithdrawFailure(
+  reason: SelfWithdrawFailure,
+  action: SelfWithdrawAction = 'withdraw',
+): string {
+  switch (reason) {
+    case 'offline':
+      return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    case 'not_registered':
+      return action === 'undo'
+        ? 'Du står ikke som trukket i denne runden.'
+        : 'Du står ikke oppført i denne runden.';
+    // Ferdig runde, eller et format uten frafall. Knappen vises ikke i noen av
+    // dem — men rekker runden å bli avsluttet mellom tegningen og trykket, er
+    // dette svaret, og da skal det si hva som gjelder og ikke bare «feil».
+    case 'game_locked':
+      return action === 'undo'
+        ? 'Frafallet kan du ikke angre nå.'
+        : 'Denne runden kan du ikke trekke deg fra nå.';
+    case 'not_found':
+      return 'Fant ikke runden. Den er kanskje slettet.';
+    case 'network':
+    case 'withdraw_failed':
+      return action === 'undo'
+        ? 'Fikk ikke angret frafallet. Prøv igjen.'
+        : 'Fikk ikke trukket deg. Prøv igjen.';
+  }
 }
 
 /**

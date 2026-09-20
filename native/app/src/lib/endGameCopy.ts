@@ -220,15 +220,19 @@ export const END_GAME_TEXT = {
  *
  * En funksjon og ikke to konstanter (#1934): da bor valget i ren tekst som kan
  * testes uten å rendre noe, i stedet for i en gren inne i JSX-en. Knappen under
- * lista var alt gatet på det samme flagget, men teksten var det ikke — i
- * matchplay, scramble-familien og pott-formatene pekte den til en side som bare
- * sender arrangøren tilbake igjen. Setningen uten frafall speiler
+ * lista er gatet på det samme flagget, og fram til #1934 var teksten ikke det —
+ * i matchplay, scramble-familien og pott-formatene pekte den til en side som
+ * bare sender arrangøren tilbake igjen. Setningen uten frafall speiler
  * {@link END_GAME_TEXT.noCardHint}: avkryssingen gjør det samme, og slagene blir
  * med.
+ *
+ * #1917: setningen pekte til nettsiden fordi appen ikke HADDE frafallet. Nå har
+ * den det — «Trekk meg» står rett under kortet (`rosterCopy.WITHDRAW_SELF`) — og
+ * en henvisning videre ville beskrevet en app som ikke finnes lenger.
  */
 export function ownRowHint(withdrawalSupported: boolean): string {
   return withdrawalSupported
-    ? 'Deg selv kan du ikke trekke herfra. Det gjør du på nettsiden. Huker du av, avslutter du runden uten kortet ditt.'
+    ? 'Vil du trekke deg, gjør du det med knappen under. Huker du av, avslutter du runden uten kortet ditt.'
     : 'I dette formatet finnes ikke frafall. Huker du av, avslutter du runden uten kortet ditt. Slagene dine teller fortsatt.';
 }
 

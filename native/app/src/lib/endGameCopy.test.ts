@@ -187,13 +187,17 @@ describe('END_GAME_TEXT', () => {
 });
 
 describe('ownRowHint', () => {
-  it('peker til nettsiden BARE i formatene som har frafall', () => {
-    // Knappen under lista var alt gatet på `plan.withdrawalSupported`
-    // (`EndGame.tsx`), men teksten var det ikke: i matchplay, scramble-familien
-    // og pott-formatene sto «det gjør du på nettsiden» over en side som bare
-    // sender arrangøren tilbake igjen. Ordet «trekke» er med i sperren fordi
-    // hele handlingen mangler i disse formatene — ikke bare veien til den.
-    expect(ownRowHint(true)).toContain('nettsiden');
+  it('peker til knappen BARE i formatene som har frafall', () => {
+    // Knappen under lista er gatet på `plan.withdrawalSupported`
+    // (`EndGame.tsx`), og fram til #1934 var teksten ikke det: i matchplay,
+    // scramble-familien og pott-formatene lovet den en vei ut som ikke fantes.
+    // Ordet «trekke» er med i sperren fordi hele handlingen mangler i disse
+    // formatene — ikke bare veien til den.
+    //
+    // #1917: veien er ikke lenger nettsiden, den er knappen rett under. Sperren
+    // står så teksten ikke kan falle tilbake til henvisningen.
+    expect(ownRowHint(true)).toContain('knappen under');
+    expect(ownRowHint(true)).not.toContain('nettsiden');
     expect(ownRowHint(false)).not.toContain('nettsiden');
     expect(ownRowHint(false)).not.toContain('trekke');
   });

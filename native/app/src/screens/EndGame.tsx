@@ -43,6 +43,7 @@ import { WebLinkButton } from '../components/WebLinkButton';
 import { finishRound } from '../data/endGame';
 import type { BundlePlayer } from '../data/gameBundle';
 import { approveScorecard } from '../data/playerActions';
+import { withdrawSelf } from '../data/withdrawSelf';
 import {
   fetchReminderPreview,
   sendReminder,
@@ -78,8 +79,8 @@ import {
   type FinishSlot,
 } from '../lib/endGamePlan';
 import {
-  WITHDRAW_SELF_LINK_LABEL,
-  withdrawSelfWebPath,
+  describeSelfWithdrawFailure,
+  WITHDRAW_SELF,
 } from '../lib/rosterCopy';
 import { useGameBundle } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
@@ -158,6 +159,32 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     },
     [acknowledged, choices, gameId, navigation, refresh],
   );
+
+  /**
+   * «Trekk meg» — arrangøren trekker seg selv fra avslutt-flaten (#1917).
+   *
+   * Fram til nå sto det en lenke til nettsiden her: `withdrawn_at` på egen rad
+   * er sperret av `guard_game_players_self_update` vakt (c) (0147/0168), så
+   * appen kan ikke skrive frafallet selv. Den spør
+   * `/api/games/[id]/withdraw-self`, som kaller samme kjerne som nettsiden.
+   *
+   * `refresh()` uansett utfall: gikk frafallet gjennom, skal raden forsvinne fra
+   * «mangler kort»-lista, og gikk det ikke, er lista på skjermen utdatert.
+   * Derfor leses ikke `kept` fra svaret — bundelen er fasiten.
+   */
+  const withdrawMe = useCallback(async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await withdrawSelf(gameId);
+      setNotice(result.ok ? null : describeSelfWithdrawFailure(result.reason));
+    } catch {
+      setNotice(describeSelfWithdrawFailure('withdraw_failed'));
+    } finally {
+      setBusy(false);
+      await refresh();
+    }
+  }, [gameId, refresh]);
 
   /**
    * Godkjenn en medspillers kort på vegne av gruppa (#1891).
@@ -348,17 +375,36 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           </View>
           {plan.withdrawalSupported &&
           plan.missing.some((entry) => entry.player.userId === userId) ? (
-            // Egen rad står i lista med `ownRowHint`, som sier at frafallet
-            // gjøres på nettsiden — men BARE i formatene som har frafall
-            // (#1934). Uten den grenen lovet teksten en side som i matchplay
-            // og scramble bare sender arrangøren tilbake igjen. Knappen står
-            // under KORTET og ikke inni raden: raden er selv en `Pressable`
+            // Egen rad står i lista med `ownRowHint`, og knappen finnes BARE i
+            // formatene som har frafall (#1934) — i matchplay, scramble-familien
+            // og pott-formatene finnes ikke handlingen i det hele tatt. Knappen
+            // står under KORTET og ikke inni raden: raden er selv en `Pressable`
             // (avkryssingen), og en knapp inni den ville stjålet tappet.
-            <WebLinkButton
-              label={WITHDRAW_SELF_LINK_LABEL}
-              path={withdrawSelfWebPath(gameId)}
-              testID="end-game-withdraw-self-link"
-            />
+            //
+            // #1917: her sto en lenke til nettsiden. Nå gjøres frafallet her.
+            <Pressable
+              style={ui.buttonSecondary}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: busy }}
+              testID="end-game-withdraw-self"
+              onPress={() =>
+                Alert.alert(
+                  WITHDRAW_SELF.confirmTitle,
+                  WITHDRAW_SELF.confirmBody,
+                  [
+                    { text: 'Avbryt', style: 'cancel' },
+                    {
+                      text: WITHDRAW_SELF.confirmCta,
+                      style: 'destructive',
+                      onPress: () => void withdrawMe(),
+                    },
+                  ],
+                )
+              }
+            >
+              <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.label}</Text>
+            </Pressable>
           ) : null}
           <ReminderPanel gameId={gameId} />
         </>

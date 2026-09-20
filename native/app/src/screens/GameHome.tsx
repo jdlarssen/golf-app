@@ -16,9 +16,10 @@
 // N6c (#1856): arrangøren avslutter runden herfra — men på en egen flate
 // (`EndGame`), ikke med en knapp her. Flippen er praktisk irreversibel, og
 // husregelen er at slikt får sin egen bekreftelses-side.
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,6 +35,11 @@ import { OrganiserSection } from '../components/game/OrganiserSection';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { confirmParticipation } from '../data/rosterActions';
 import { seedGameScores } from '../data/seedScores';
+import { undoSelfWithdraw } from '../data/withdrawSelf';
+import {
+  describeSelfWithdrawFailure,
+  WITHDRAW_SELF,
+} from '../lib/rosterCopy';
 import { displayName, formatTeeOff } from '../lib/display';
 import {
   GATE_LINK_LABEL,
@@ -179,6 +185,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         filled={filled}
         submittedAt={myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null)}
         approvedAt={myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null)}
+        onChanged={refresh}
         onNavigate={navigation.navigate}
       />
 
@@ -259,6 +266,7 @@ function PrimarySection({
   filled,
   submittedAt,
   approvedAt,
+  onChanged,
   onNavigate,
 }: {
   bundle: GameBundle;
@@ -272,10 +280,42 @@ function PrimarySection({
    */
   submittedAt: string | null;
   approvedAt: string | null;
+  /** Hent bundelen på nytt. Kalles etter «Angre trekk», uansett utfall. */
+  onChanged: () => void | Promise<void>;
   onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
 }) {
   const { ui } = useTheme();
   const { game } = bundle;
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  /**
+   * «Angre trekk» på trukket-banneret (#1917).
+   *
+   * Banneret sa bare at du var trukket. Trakk du deg ved et uhell — eller
+   * ombestemte du deg på banen — var eneste vei ut nettsiden, og det er nøyaktig
+   * blindveien #1891 ryddet et annet sted.
+   *
+   * Går via `DELETE /api/games/[id]/withdraw-self`, aldri en skriving:
+   * `guard_game_players_self_update` vakt (c) (0147/0168) nekter appen å røre
+   * `withdrawn_at` på egen rad. `onChanged()` uansett utfall — bundelen er
+   * fasiten for hva skjermen skal vise etterpå, så `kept` leses ikke.
+   */
+  const undoWithdraw = useCallback(async () => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const result = await undoSelfWithdraw(game.id);
+      setNotice(
+        result.ok ? null : describeSelfWithdrawFailure(result.reason, 'undo'),
+      );
+    } catch {
+      setNotice(describeSelfWithdrawFailure('withdraw_failed', 'undo'));
+    } finally {
+      await onChanged();
+      setBusy(false);
+    }
+  }, [game.id, onChanged]);
 
   if (gated !== null) {
     return (
@@ -305,6 +345,32 @@ function PrimarySection({
     return (
       <View style={ui.banner} testID="withdrawn-banner">
         <Text style={ui.body}>Du er trukket fra dette spillet.</Text>
+        {/* #1917: banneret var bare en beskjed. Nå har det en vei ut. Knappen
+            står her for ALLE trukne, også den arrangøren trakk — nøyaktig som
+            nettsidens angre-knapp gjør i dag. */}
+        <Pressable
+          style={ui.buttonSecondary}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy }}
+          testID="withdrawn-undo"
+          onPress={() =>
+            Alert.alert(WITHDRAW_SELF.undoTitle, WITHDRAW_SELF.undoBody, [
+              { text: 'Avbryt', style: 'cancel' },
+              {
+                text: WITHDRAW_SELF.undoCta,
+                onPress: () => void undoWithdraw(),
+              },
+            ])
+          }
+        >
+          <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.undoLabel}</Text>
+        </Pressable>
+        {notice ? (
+          <Text style={ui.error} testID="withdrawn-undo-notice">
+            {notice}
+          </Text>
+        ) : null}
       </View>
     );
   }
