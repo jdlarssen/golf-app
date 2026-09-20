@@ -238,6 +238,60 @@ describe('beste runde', () => {
   });
 });
 
+describe('årets totaler', () => {
+  it('reports the season the same way the history hub does', () => {
+    const facts = build([
+      game({
+        playedAt: new Date('2026-05-01T08:00:00Z'),
+        players: [player(ME, { holes: flatRound(5) })], // 90
+      }),
+      game({
+        playedAt: new Date('2026-06-01T08:00:00Z'),
+        players: [player(ME, { holes: holes({ 1: 3, 2: 8 }) })], // 72 − 1 + 4 = 75
+      }),
+      game({
+        playedAt: new Date('2026-07-01T08:00:00Z'),
+        players: [player(ME, { holes: flatRound(4) })], // 72
+      }),
+    ]);
+    expect(facts.personal?.season).toEqual({
+      year: KAVALKADE_YEAR,
+      rounds: 3,
+      grossAverage: 79, // (90 + 75 + 72) / 3 = 79
+      bestRound: 72,
+      achievements: {
+        holeInOne: 0,
+        eagle: 0,
+        birdie: 1,
+        turkey: 0,
+        snowman: 1,
+      },
+    });
+  });
+
+  it('agrees with the best-round card — one number, two homes', () => {
+    const facts = build([
+      game({ players: [player(ME, { holes: flatRound(5) })] }),
+      game({ players: [player(ME, { holes: flatRound(4) })] }),
+      game({ players: [player(ME, { holes: flatRound(6) })] }),
+    ]);
+    expect(facts.personal?.season?.bestRound).toBe(facts.personal?.bestRound?.brutto);
+  });
+
+  it('counts every finished round but averages only the complete ones', () => {
+    const facts = build([
+      game({ players: [player(ME, { holes: flatRound(4).slice(0, 9) })] }),
+      game({ players: [player(ME, { holes: flatRound(5) })] }), // 90
+      game({ players: [player(ME, { holes: flatRound(5) })] }), // 90
+    ]);
+    expect(facts.personal?.season).toMatchObject({
+      rounds: 3,
+      grossAverage: 90,
+      bestRound: 90,
+    });
+  });
+});
+
 describe('nemesis-hullet', () => {
   it('finds the hole with the worst average against par', () => {
     // Hull 7 går på 8 slag hver gang (+4), hull 3 på 6 slag (+2).
