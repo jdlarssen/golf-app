@@ -147,12 +147,15 @@ select ok(
   'anon kan ikke kjøre funksjonen'
 );
 
-select unlike(
-  (select pg_get_function_result(p.oid)
+-- `unalike`, ikke `unlike`: pgTAP har ingen `unlike()`. De negerte påstandene
+-- heter `unalike` (LIKE) og `doesnt_match` (regex). Argumentene castes eksplisitt
+-- til text, så overload-oppslaget ikke står og gjetter på `unknown`.
+select unalike(
+  (select pg_get_function_result(p.oid)::text
      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname = 'roster_candidates'),
-  '%email%',
-  'returtypen bærer ingen e-postkolonne'
+  '%email%'::text,
+  'returtypen bærer ingen e-postkolonne'::text
 );
 
 select * from finish();
