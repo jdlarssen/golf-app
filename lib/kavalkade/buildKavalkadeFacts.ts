@@ -13,8 +13,15 @@
  *  2. **Frysegrensen:** bare spill avsluttet FØR `KAVALKADE_CUTOFF` teller. En runde
  *     som ble ferdig på selveste julaften kommer ikke med, uansett når kavalkaden
  *     åpnes.
- *  3. **Terskelen:** personlige kort krever 3 ferdige runder i året. Under det får
- *     spilleren bare gjengens kavalkade (eierens beslutning 2026-09-16).
+ *  3. **Terskelen:** personlige kort krever 3 runder med EGEN ball i året. Under det
+ *     får spilleren bare gjengens kavalkade (eierens beslutning 2026-09-16).
+ *  4. **Én-ball-lagrunder** (scramble-familien, alternate shot, patsome) holdes helt
+ *     utenfor de personlige tallene og utenfor gjengens birdie-, snowman- og
+ *     oppgjørskort. I de formatene eier lag-kapteinen hele lagets scores-rader
+ *     (`modeCollapsesToTeamCard`), så et personlig «beste runde» ville vært lagets
+ *     ball, og lagets birdier ville fått kapteinens navn. De runder teller i stedet
+ *     som LAG, i sitt eget fakta-sett (`TeamFacts`) der alle på laget får dem
+ *     (eierens beslutning 2026-09-20).
  *
  * Brutto-disiplinen følger resten av huben: snitt, beste runde og oppgjørsmarginer
  * regnes KUN over komplette 18-hulls-runder, mens antall runder teller alle ferdige.
@@ -26,6 +33,7 @@
  */
 import { computeRoundScore } from '@/lib/games/roundScore';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
+import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
 import { countRoundAchievements, type HoleScore } from '@/lib/stats/achievements';
 import { isWinningSummary } from '@/lib/stats/clubStats';
 import {
@@ -51,6 +59,12 @@ const NEMESIS_MIN_PLAYED = 3;
 /** Antall runder i formtopp-vinduet. */
 const FORM_PEAK_WINDOW = 3;
 
+/**
+ * Felles komplette lagrunder før noen kan kalles «beste lagkamerat». Én runde er
+ * flaks, ikke et makkerskap — to er det minste som kan kalles et mønster.
+ */
+const TEAMMATE_MIN_ROUNDS = 2;
+
 // ---------------------------------------------------------------------------
 // Inn
 // ---------------------------------------------------------------------------
@@ -65,6 +79,8 @@ export type KavalkadePlayerRound = {
   resultSummary: ResultSummary | null;
   /** Slagene spilleren fikk, for netto. `null` ⇒ netto ukjent for runden. */
   courseHandicap: number | null;
+  /** `team_number` — hvem som sto på samme lag. `null` ⇒ ikke lagdelt. */
+  teamNumber: number | null;
   /** Hull-for-hull med kjønns-valgt par. Tomt når scorer mangler. */
   holes: HoleScore[];
 };
@@ -74,6 +90,8 @@ export type KavalkadeGame = {
   gameId: string;
   gameName: string;
   courseName: string | null;
+  /** Spillemodus — avgjør om laget delte én ball (`modeCollapsesToTeamCard`). */
+  gameMode: GameMode;
   /** Oslo-kalenderåret runden hører til (`effectiveYear`). */
   year: number | null;
   /** `ended_at`. `null` ⇒ frysegrensen kan ikke etterprøves, runden utelates. */
@@ -155,7 +173,7 @@ export type FormPeakFact = {
 };
 
 export type PersonalFacts = {
-  /** Ferdige runder i året (alle, ikke bare komplette 18). */
+  /** Runder med egen ball i året (alle, ikke bare komplette 18). */
   rounds: number;
   /**
    * Årets totaler fra `computeSeasonStats` — samme aggregat som sesong-recapen på
@@ -168,6 +186,44 @@ export type PersonalFacts = {
   nemesisHole: NemesisHoleFact | null;
   rival: RivalFact | null;
   formPeak: FormPeakFact;
+};
+
+/** Én lagrunde, tilskrevet HELE laget — aldri kapteinen alene. */
+export type TeamRoundFact = {
+  gameId: string;
+  gameName: string;
+  courseName: string | null;
+  playedAt: string | null;
+  /** Lagets brutto over en komplett 18-hulls-runde. */
+  brutto: number;
+  /** De andre på laget den runden. */
+  teammates: KavalkadePlayerRef[];
+};
+
+/** En lagkamerat, og hvordan laget scoret med hen. */
+export type TeammateFact = KavalkadePlayerRef & {
+  /** Lagrunder dere sto på samme lag. */
+  rounds: number;
+  /** Lagets snitt-brutto over de komplette av dem, avrundet. `null` ⇒ ingen. */
+  averageBrutto: number | null;
+  /** Hvor mange av de felles rundene som hadde komplett lag-brutto. */
+  scoredRounds: number;
+};
+
+/** «Som lag» — året i formatene der dere delte ball. */
+export type TeamFacts = {
+  /** Lagrunder spilleren gikk. */
+  rounds: number;
+  /** Lagets beste runde. `null` når ingen lagrunde var komplett. */
+  bestRound: TeamRoundFact | null;
+  /** Alle lagkamerater i året, best først. */
+  teammates: TeammateFact[];
+  /**
+   * Den eller de du scoret best sammen med — laveste snitt lag-brutto, blant dem
+   * dere delte minst `TEAMMATE_MIN_ROUNDS` komplette lagrunder. Tom når ingen når
+   * terskelen. Flere oppføringer betyr ekte likhet.
+   */
+  bestTeammates: TeammateFact[];
 };
 
 /** Én rad på et «mest av noe»-kort. */
@@ -200,12 +256,18 @@ export type KavalkadeFacts = {
   year: number;
   /** Frysegrensen fakta ble regnet mot, som ISO. */
   cutoff: string;
-  /** Spillerens ferdige runder i året. */
+  /** Alle ferdige runder i året — med egen ball og som lag. */
   rounds: number;
+  /** Runder der spilleren førte sin egen ball. Terskelen måles på denne. */
+  soloRounds: number;
+  /** Én-ball-lagrunder. Disse bor i `team`, aldri i `personal`. */
+  teamRounds: number;
   /** Terskelen for personlige kort. */
   roundsNeeded: number;
-  /** `null` når spilleren har færre enn `roundsNeeded` ferdige runder. */
+  /** `null` når spilleren har færre enn `roundsNeeded` runder med egen ball. */
   personal: PersonalFacts | null;
+  /** `null` når spilleren ikke gikk en eneste lagrunde i året. */
+  team: TeamFacts | null;
   /** `null` når ingen ferdige runder i året ble funnet. */
   gang: GangFacts | null;
 };
@@ -231,23 +293,41 @@ export function buildKavalkadeFacts(input: KavalkadeInput): KavalkadeFacts {
   // Runder der spilleren selv faktisk deltok (og ikke trakk seg).
   const mine = games
     .map((game) => ({ game, me: activePlayer(game, viewerUserId) }))
-    .filter((row): row is { game: KavalkadeGame; me: KavalkadePlayerRound } =>
-      row.me != null,
-    );
+    .filter((row): row is MyRound => row.me != null);
 
-  const rounds = mine.length;
+  // Skillet som styrer alt under: førte jeg min egen ball, eller lagets?
+  const solo = mine.filter((row) => !isTeamBallRound(row.game));
+  const asTeam = mine.filter((row) => isTeamBallRound(row.game));
 
   return {
     year,
     cutoff: cutoff.toISOString(),
-    rounds,
+    rounds: mine.length,
+    soloRounds: solo.length,
+    teamRounds: asTeam.length,
     roundsNeeded: KAVALKADE_ROUNDS_NEEDED,
+    // Rival-regnskapet er det ene personlige kortet som IKKE handler om ball:
+    // det leser lagrede utfall, og en lagrunde er et like ekte møte. Derfor får
+    // `buildPersonalFacts` hele `mine` til det kortet, og bare `solo` til resten.
     personal:
-      rounds >= KAVALKADE_ROUNDS_NEEDED
-        ? buildPersonalFacts(mine, viewerUserId)
+      solo.length >= KAVALKADE_ROUNDS_NEEDED
+        ? buildPersonalFacts(solo, mine, viewerUserId)
         : null,
+    team: asTeam.length > 0 ? buildTeamFacts(asTeam, viewerUserId) : null,
     gang: mine.length > 0 ? buildGangFacts(mine.map((row) => row.game)) : null,
   };
+}
+
+/**
+ * Delte hele laget én ball denne runden?
+ *
+ * Spør repoets egen regel (`modeCollapsesToTeamCard`) i stedet for å føre en
+ * egen liste over formater — den samme regelen hull-siden og `foldTeamRows`
+ * bruker for «hvem eier scores-radene her». Hull 18 er spørsmålet: patsome
+ * bytter form midtveis, og en runde som ender som foursomes er en lagrunde.
+ */
+function isTeamBallRound(game: KavalkadeGame): boolean {
+  return modeCollapsesToTeamCard(game.gameMode, 18);
 }
 
 /** Rett år, avsluttet, og avsluttet strengt før frysegrensen. */
@@ -321,23 +401,27 @@ function round2(n: number): number {
 
 type MyRound = { game: KavalkadeGame; me: KavalkadePlayerRound };
 
-function buildPersonalFacts(mine: MyRound[], viewerUserId: string): PersonalFacts {
+function buildPersonalFacts(
+  solo: MyRound[],
+  all: MyRound[],
+  viewerUserId: string,
+): PersonalFacts {
   // Alle runder her er allerede filtrert til ETT år, så recapen gir én bøtte.
   // Den er sannhetskilden for årets totaler; `bestRound` under legger bare
   // runde-navnet og banen på det samme tallet (testen holder de to i lås).
-  const seasonRounds: SeasonRoundInput[] = mine.map(({ game, me }) => ({
+  const seasonRounds: SeasonRoundInput[] = solo.map(({ game, me }) => ({
     year: game.year,
     completeBrutto: completeBrutto(me),
     achievements: countRoundAchievements(me.holes),
   }));
 
   return {
-    rounds: mine.length,
+    rounds: solo.length,
     season: computeSeasonStats(seasonRounds)[0] ?? null,
-    bestRound: findBestRound(mine),
-    nemesisHole: findNemesisHole(mine),
-    rival: findRival(mine, viewerUserId),
-    formPeak: buildFormPeak(mine),
+    bestRound: findBestRound(solo),
+    nemesisHole: findNemesisHole(solo),
+    rival: findRival(all, viewerUserId),
+    formPeak: buildFormPeak(solo),
   };
 }
 
@@ -601,6 +685,142 @@ function buildFormPeak(mine: MyRound[]): FormPeakFact {
   };
 }
 
+// --- Som lag ----------------------------------------------------------------
+
+/**
+ * «Som lag»: året i formatene der dere delte ball.
+ *
+ * Her er poenget at slagene tilhører LAGET. I scramble, foursomes og patsome er
+ * det kapteinen som eier scores-radene i basen (`teamScoreOwnerId`), men det er
+ * en lagringsdetalj — på kortet får alle på laget runden, og ingen får en
+ * personlig rekord av den.
+ */
+function buildTeamFacts(asTeam: MyRound[], viewerUserId: string): TeamFacts {
+  type Tally = {
+    userId: string;
+    name: string | null;
+    rounds: number;
+    scoredRounds: number;
+    bruttoSum: number;
+  };
+  const tallies = new Map<string, Tally>();
+  let bestRound: TeamRoundFact | null = null;
+
+  for (const { game, me } of asTeam) {
+    const members = teamMembers(game, me);
+    const mates = members
+      .filter((m) => m.userId !== viewerUserId)
+      .map((m) => ({ userId: m.userId, name: m.name }));
+    const brutto = teamBrutto(members);
+
+    for (const mate of mates) {
+      let tally = tallies.get(mate.userId);
+      if (!tally) {
+        tally = {
+          userId: mate.userId,
+          name: mate.name,
+          rounds: 0,
+          scoredRounds: 0,
+          bruttoSum: 0,
+        };
+        tallies.set(mate.userId, tally);
+      }
+      tally.rounds += 1;
+      tally.name = tally.name ?? mate.name;
+      if (brutto != null) {
+        tally.scoredRounds += 1;
+        tally.bruttoSum += brutto;
+      }
+    }
+
+    if (brutto != null && (bestRound == null || brutto < bestRound.brutto)) {
+      bestRound = {
+        gameId: game.gameId,
+        gameName: game.gameName,
+        courseName: game.courseName,
+        playedAt: toIso(game.playedAt),
+        brutto,
+        teammates: mates,
+      };
+    }
+  }
+
+  const teammates: TeammateFact[] = [...tallies.values()]
+    .map((t) => ({
+      userId: t.userId,
+      name: t.name,
+      rounds: t.rounds,
+      scoredRounds: t.scoredRounds,
+      averageBrutto:
+        t.scoredRounds > 0 ? Math.round(t.bruttoSum / t.scoredRounds) : null,
+    }))
+    .sort(byTeammateQuality);
+
+  const eligible = teammates.filter(
+    (t) => t.scoredRounds >= TEAMMATE_MIN_ROUNDS && t.averageBrutto != null,
+  );
+  const bestAverage = eligible.length > 0 ? eligible[0].averageBrutto : null;
+
+  return {
+    rounds: asTeam.length,
+    bestRound,
+    teammates,
+    bestTeammates:
+      bestAverage == null
+        ? []
+        : eligible.filter((t) => t.averageBrutto === bestAverage),
+  };
+}
+
+/**
+ * Laget spilleren sto på. `team_number` er gruppa; uten den kan vi ikke skille
+ * lagkamerat fra motstander, og da rapporterer vi heller ingen lagkamerater enn
+ * å gjette feil (en scramble med to lag ville ellers gjort motstanderne til
+ * makkere).
+ */
+function teamMembers(
+  game: KavalkadeGame,
+  me: KavalkadePlayerRound,
+): KavalkadePlayerRound[] {
+  if (me.teamNumber == null) return [me];
+  return activePlayers(game).filter((p) => p.teamNumber === me.teamNumber);
+}
+
+/**
+ * Lagets brutto: kortet rad-eieren førte. I en én-ball-runde er det bare ett
+ * medlem som har alle 18 hullene; de andre har ingen eller bare sin egen halvdel
+ * (patsome, hull 1–6). Vi tar derfor medlemmet med flest førte hull, med
+ * `userId` som stabil tiebreaker, og krever komplett 18 som ellers.
+ */
+function teamBrutto(members: KavalkadePlayerRound[]): number | null {
+  let owner: KavalkadePlayerRound | null = null;
+  let ownerHoles = -1;
+  for (const member of members) {
+    const count = playedHoles(member).length;
+    if (
+      count > ownerHoles ||
+      (count === ownerHoles && owner != null && member.userId < owner.userId)
+    ) {
+      owner = member;
+      ownerHoles = count;
+    }
+  }
+  return owner ? completeBrutto(owner) : null;
+}
+
+/** Best først: laveste snitt, så flest felles runder, så laveste `userId`.
+ *  Lagkamerater uten komplett runde havner bakerst. */
+function byTeammateQuality(a: TeammateFact, b: TeammateFact): number {
+  if ((a.averageBrutto == null) !== (b.averageBrutto == null)) {
+    return a.averageBrutto == null ? 1 : -1;
+  }
+  if (a.averageBrutto != null && b.averageBrutto != null && a.averageBrutto !== b.averageBrutto) {
+    return a.averageBrutto - b.averageBrutto;
+  }
+  if (a.rounds !== b.rounds) return b.rounds - a.rounds;
+  return a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0;
+}
+
 // --- Gjengen ----------------------------------------------------------------
 
 /**
@@ -619,6 +839,11 @@ function buildGangFacts(games: KavalkadeGame[]): GangFacts {
   const played = new Map<string, number>();
 
   for (const game of games) {
+    // Lagets ball gir ingen et personlig navn på et kort: birdiene og
+    // snømennene i en scramble tilhører laget, men ligger lagret på kapteinen.
+    // Seire teller derimot for alle — et lag-utfall er ekte for hvert medlem.
+    const ownBall = !isTeamBallRound(game);
+
     for (const player of activePlayers(game)) {
       if (!names.has(player.userId) || names.get(player.userId) == null) {
         names.set(player.userId, player.name);
@@ -626,6 +851,7 @@ function buildGangFacts(games: KavalkadeGame[]): GangFacts {
       bump(played, player.userId, 1);
       if (isWinningSummary(player.resultSummary)) bump(wins, player.userId, 1);
 
+      if (!ownBall) continue;
       const achievements = countRoundAchievements(player.holes);
       bump(birdies, player.userId, achievements.birdie);
       bump(snowmen, player.userId, achievements.snowman);
@@ -638,7 +864,7 @@ function buildGangFacts(games: KavalkadeGame[]): GangFacts {
     topWinner: pickLeader(wins, played, names),
     mostBirdies: pickLeader(birdies, played, names),
     mostSnowmen: pickLeader(snowmen, played, names),
-    tightestFinish: findTightestFinish(games),
+    tightestFinish: findTightestFinish(games.filter((g) => !isTeamBallRound(g))),
   };
 }
 
@@ -684,7 +910,9 @@ function pickLeader(
 
 /**
  * Tetteste oppgjør: runden der de to laveste komplette brutto-totalene lå nærmest
- * hverandre.
+ * hverandre. Kallstedet har allerede silt bort én-ball-lagrunder — der ville de
+ * to «spillerne» vært to kapteiner, og kortet hadde satt navnet deres på lagets
+ * ball.
  *
  * Marginen måles i SLAG, ikke i modus-margin. En matchplay-margin («3&2») og en
  * plassering lar seg ikke sammenlikne på tvers av modi, mens et slag-gap betyr det
