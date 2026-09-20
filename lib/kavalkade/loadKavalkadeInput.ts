@@ -133,7 +133,7 @@ export async function loadKavalkadeInput(
 
   // Runde 2–4: medspillerne, alles scorer og banens kjønns-par. Uavhengige.
   const [playerRows, scoreRows, holeRows] = await Promise.all([
-    selectAllRows<GamePlayerRow>(
+    selectAllRows(
       (from, to) =>
         supabase
           .from('game_players')
@@ -148,7 +148,7 @@ export async function loadKavalkadeInput(
           .returns<GamePlayerRow[]>(),
       'kavalkade game_players',
     ),
-    selectAllRows<ScoreRow>(
+    selectAllRows(
       (from, to) =>
         supabase
           .from('scores')
@@ -161,7 +161,7 @@ export async function loadKavalkadeInput(
       'kavalkade scores',
     ),
     courseIds.length > 0
-      ? selectAllRows<CourseHoleWithCourse>(
+      ? selectAllRows(
           (from, to) =>
             supabase
               .from('course_holes')
