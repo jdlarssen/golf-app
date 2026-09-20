@@ -42,6 +42,7 @@ function player(
     withdrawnAt: null,
     resultSummary: null,
     courseHandicap: null,
+    teamNumber: null,
     holes: holes(),
     ...opts,
   };
@@ -59,6 +60,7 @@ function game(opts: Partial<KavalkadeGame> = {}): KavalkadeGame {
     gameId: `game-${String(gameCounter).padStart(3, '0')}`,
     gameName: 'Torsdagsrunden',
     courseName: 'Losby',
+    gameMode: 'solo_strokeplay',
     year: KAVALKADE_YEAR,
     endedAt: opts.endedAt ?? playedAt,
     playedAt,
@@ -650,6 +652,257 @@ describe('formtoppen', () => {
       players: [player(ME, { holes: nine })],
     }));
     expect(build(rounds).personal?.formPeak).toEqual({ stretch: null, season: null });
+  });
+});
+
+describe('lagrunder — som lag, aldri på kapteinen', () => {
+  const CAPTAIN = 'user-a-kaptein'; // lex-min, så denne eier scores-radene
+  const MATE = 'user-b-makker';
+
+  /**
+   * Én scramble-runde: kapteinen eier lagets 18 rader, makkeren har ingen egne.
+   * Det er slik basen faktisk lagrer en én-ball-runde (`teamScoreOwnerId`).
+   */
+  function scramble(
+    opts: { teamStrokes?: number; playedAt?: Date; birdieHoles?: number[] } = {},
+  ): KavalkadeGame {
+    const strokes = opts.teamStrokes ?? 4;
+    const birdies = Object.fromEntries(
+      (opts.birdieHoles ?? []).map((h) => [h, PAR - 1]),
+    );
+    return game({
+      gameMode: 'texas_scramble',
+      gameName: 'Scramble',
+      playedAt: opts.playedAt,
+      players: [
+        player(CAPTAIN, {
+          teamNumber: 1,
+          holes: holes({ ...Object.fromEntries(
+            Array.from({ length: 18 }, (_, i) => [i + 1, strokes]),
+          ), ...birdies }),
+        }),
+        player(MATE, { teamNumber: 1, holes: [] }),
+        player(ME, { teamNumber: 1, holes: [] }),
+      ],
+    });
+  }
+
+  it('never lets a team round reach the personal numbers', () => {
+    const facts = build([
+      ...threeRounds(), // tre solo-runder à 72
+      scramble({ teamStrokes: 3 }), // lagets 54 ville vært årets «beste runde»
+    ]);
+    expect(facts.rounds).toBe(4);
+    expect(facts.soloRounds).toBe(3);
+    expect(facts.teamRounds).toBe(1);
+    expect(facts.personal?.rounds).toBe(3);
+    expect(facts.personal?.bestRound?.brutto).toBe(72);
+    expect(facts.personal?.season?.rounds).toBe(3);
+    expect(facts.personal?.season?.bestRound).toBe(72);
+  });
+
+  it('does not let the captain bank the team ball as a personal record', () => {
+    const facts = build(
+      [
+        game({ playedAt: new Date('2026-05-01T08:00:00Z'), players: [player(CAPTAIN, { holes: flatRound(5) })] }),
+        game({ playedAt: new Date('2026-06-01T08:00:00Z'), players: [player(CAPTAIN, { holes: flatRound(5) })] }),
+        game({ playedAt: new Date('2026-07-01T08:00:00Z'), players: [player(CAPTAIN, { holes: flatRound(5) })] }),
+        scramble({ teamStrokes: 3, playedAt: new Date('2026-08-01T08:00:00Z') }),
+      ],
+      CAPTAIN,
+    );
+    expect(facts.personal?.bestRound?.brutto).toBe(90);
+    expect(facts.personal?.rounds).toBe(3);
+  });
+
+  it('keeps the team ball out of the personal nemesis hole', () => {
+    // Hull 7 går på 10 slag i hver lagrunde, men laget slo den ballen. Mine
+    // egne runder har hull 3 som versting, og det er hullet kortet skal nevne.
+    const teamRound = () =>
+      game({
+        gameMode: 'texas_scramble',
+        players: [
+          player(CAPTAIN, { teamNumber: 1, holes: holes({ 7: 10 }) }),
+          player(ME, { teamNumber: 1, holes: [] }),
+        ],
+      });
+    const soloRound = () =>
+      game({ players: [player(CAPTAIN, { holes: holes({ 3: 6 }) })] });
+
+    const facts = build(
+      [soloRound(), soloRound(), soloRound(), teamRound(), teamRound(), teamRound()],
+      CAPTAIN,
+    );
+    expect(facts.personal?.nemesisHole).toMatchObject({
+      holeNumber: 3,
+      played: 3,
+      averageToPar: 2,
+    });
+  });
+
+  it('gives the round to every team member, not only the row owner', () => {
+    const asMate = build([scramble({ teamStrokes: 3 })], MATE);
+    expect(asMate.team).toMatchObject({ rounds: 1 });
+    expect(asMate.team?.bestRound).toMatchObject({
+      gameName: 'Scramble',
+      brutto: 54,
+    });
+    expect(asMate.team?.bestRound?.teammates.map((t) => t.userId).sort()).toEqual(
+      [CAPTAIN, ME].sort(),
+    );
+  });
+
+  it('reads the same team gross whoever opens the cavalcade', () => {
+    const rounds = [scramble({ teamStrokes: 3 })];
+    expect(build(rounds, CAPTAIN).team?.bestRound?.brutto).toBe(
+      build(rounds, MATE).team?.bestRound?.brutto,
+    );
+  });
+
+  it('has no team section when the year held no team rounds', () => {
+    expect(build(threeRounds()).team).toBeNull();
+  });
+
+  it('counts the team rounds a player actually played', () => {
+    const facts = build([scramble(), scramble(), ...threeRounds()]);
+    expect(facts.team?.rounds).toBe(2);
+    expect(facts.teamRounds).toBe(2);
+  });
+
+  it('names the team-mates you scored best with, over at least two rounds', () => {
+    const withMate = (mate: string, teamStrokes: number, playedAt: string) =>
+      game({
+        gameMode: 'texas_scramble',
+        playedAt: new Date(playedAt),
+        players: [
+          player(mate, {
+            teamNumber: 1,
+            holes: flatRound(teamStrokes),
+          }),
+          player(ME, { teamNumber: 1, holes: [] }),
+        ],
+      });
+    const facts = build([
+      withMate('user-a', 4, '2026-05-01T08:00:00Z'), // 72
+      withMate('user-a', 4, '2026-06-01T08:00:00Z'), // 72
+      withMate('user-b', 3, '2026-07-01T08:00:00Z'), // 54, men bare én runde
+      withMate('user-b', 3, '2026-08-01T08:00:00Z'), // 54 — nå to
+    ]);
+    expect(facts.team?.bestTeammates.map((t) => t.userId)).toEqual(['user-b']);
+    expect(facts.team?.bestTeammates[0]).toMatchObject({
+      rounds: 2,
+      scoredRounds: 2,
+      averageBrutto: 54,
+    });
+  });
+
+  it('leaves the best-team-mate card empty below two shared rounds', () => {
+    const facts = build([scramble({ teamStrokes: 3 })]);
+    expect(facts.team?.rounds).toBe(1);
+    expect(facts.team?.bestTeammates).toEqual([]);
+    expect(facts.team?.teammates).toHaveLength(2);
+  });
+
+  it('lists both team-mates when they are genuinely tied', () => {
+    const withMate = (mate: string, playedAt: string) =>
+      game({
+        gameMode: 'texas_scramble',
+        playedAt: new Date(playedAt),
+        players: [
+          player(mate, { teamNumber: 1, holes: flatRound(4) }),
+          player(ME, { teamNumber: 1, holes: [] }),
+        ],
+      });
+    const facts = build([
+      withMate('user-a', '2026-05-01T08:00:00Z'),
+      withMate('user-a', '2026-06-01T08:00:00Z'),
+      withMate('user-b', '2026-07-01T08:00:00Z'),
+      withMate('user-b', '2026-08-01T08:00:00Z'),
+    ]);
+    expect(facts.team?.bestTeammates.map((t) => t.userId)).toEqual([
+      'user-a',
+      'user-b',
+    ]);
+  });
+
+  it('never calls an opponent a team-mate', () => {
+    const facts = build([
+      game({
+        gameMode: 'texas_scramble',
+        players: [
+          player(ME, { teamNumber: 1, holes: flatRound(4) }),
+          player('user-motstander', { teamNumber: 2, holes: flatRound(5) }),
+        ],
+      }),
+    ]);
+    expect(facts.team?.bestRound?.teammates).toEqual([]);
+    expect(facts.team?.bestRound?.brutto).toBe(72);
+  });
+
+  it('keeps the team ball out of the gang birdie and snowman cards', () => {
+    const facts = build([
+      scramble({ teamStrokes: 4, birdieHoles: [1, 2, 3] }),
+      game({
+        players: [
+          player(ME, { holes: holes({ 5: 3 }) }), // én ekte egen birdie
+          player(CAPTAIN),
+        ],
+      }),
+    ]);
+    expect(facts.gang?.mostBirdies).toMatchObject({ userId: ME, count: 1 });
+    expect(facts.gang?.mostSnowmen).toBeNull();
+  });
+
+  it('keeps the team ball out of the tightest finish', () => {
+    const facts = build([
+      game({
+        gameMode: 'texas_scramble',
+        gameName: 'Scramble',
+        players: [
+          player(CAPTAIN, { teamNumber: 1, holes: flatRound(4) }), // 72
+          player(ME, { teamNumber: 1, holes: [] }),
+          player('user-c', { teamNumber: 2, holes: holes({ 1: 5 }) }), // 73
+        ],
+      }),
+    ]);
+    expect(facts.gang?.tightestFinish).toBeNull();
+  });
+
+  it('still counts a team win for every member of the team', () => {
+    const facts = build([
+      game({
+        gameMode: 'texas_scramble',
+        players: [
+          player(CAPTAIN, {
+            teamNumber: 1,
+            holes: flatRound(4),
+            resultSummary: { kind: 'placement', rank: 1, fieldSize: 2, isTeam: true },
+          }),
+          player(ME, {
+            teamNumber: 1,
+            holes: [],
+            resultSummary: { kind: 'placement', rank: 1, fieldSize: 2, isTeam: true },
+          }),
+        ],
+      }),
+    ]);
+    // Begge vant; kapteinen tar kortet på lex-min tiebreak, men begge er telt.
+    expect(facts.gang?.topWinner?.count).toBe(1);
+  });
+
+  it('treats a patsome round as a team round — it ends as foursomes', () => {
+    const facts = build([
+      game({
+        gameMode: 'patsome',
+        players: [
+          player(CAPTAIN, { teamNumber: 1, holes: flatRound(4) }),
+          player(ME, { teamNumber: 1, holes: holes().slice(0, 6) }),
+        ],
+      }),
+    ]);
+    expect(facts.teamRounds).toBe(1);
+    expect(facts.soloRounds).toBe(0);
+    expect(facts.personal).toBeNull();
   });
 });
 

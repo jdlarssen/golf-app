@@ -33,7 +33,7 @@ import {
 } from '@/lib/supabase/queryFragments';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
-import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
 import { parForGender, type HoleScore } from '@/lib/stats/achievements';
 import { effectiveDate, effectiveYear } from '@/lib/stats/effectiveDate';
 import type {
@@ -55,6 +55,7 @@ const YEAR_START_SLACK_DAYS = 7;
 type GameRow = {
   id: string;
   name: string;
+  game_mode: GameMode;
   scheduled_tee_off_at: string | null;
   ended_at: string | null;
   course_id: string | null;
@@ -65,6 +66,7 @@ type GamePlayerRow = {
   game_id: string;
   user_id: string;
   withdrawn_at: string | null;
+  team_number: number | null;
   course_handicap: number | null;
   result_summary: ResultSummary | null;
   tee_gender: ScoringGender | null;
@@ -111,7 +113,7 @@ export async function loadKavalkadeInput(
       supabase
         .from('game_players')
         .select(
-          'game_id, games!inner(id, name, scheduled_tee_off_at, ended_at, course_id, courses(name))',
+          'game_id, games!inner(id, name, game_mode, scheduled_tee_off_at, ended_at, course_id, courses(name))',
         )
         .eq('user_id', viewerUserId)
         .is('withdrawn_at', null)
@@ -145,7 +147,7 @@ export async function loadKavalkadeInput(
         supabase
           .from('game_players')
           .select(
-            'game_id, user_id, withdrawn_at, course_handicap, result_summary, tee_gender, users!game_players_user_id_fkey(name)',
+            'game_id, user_id, withdrawn_at, team_number, course_handicap, result_summary, tee_gender, users!game_players_user_id_fkey(name)',
           )
           .in('game_id', gameIds)
           // Paging må ordne på noe unikt — nøkkelen her er (game_id, user_id).
@@ -221,6 +223,7 @@ export async function loadKavalkadeInput(
       withdrawnAt: row.withdrawn_at,
       resultSummary: row.result_summary,
       courseHandicap: row.course_handicap,
+      teamNumber: row.team_number,
       holes: toHoleScores(
         scoresByGameAndPlayer.get(`${game.id}:${row.user_id}`) ?? [],
         courseHoles,
@@ -232,6 +235,7 @@ export async function loadKavalkadeInput(
       gameId: game.id,
       gameName: game.name,
       courseName: game.courses?.name ?? null,
+      gameMode: game.game_mode,
       year: effectiveYear(game),
       endedAt: game.ended_at ? new Date(game.ended_at) : null,
       playedAt: effectiveDate(game),
