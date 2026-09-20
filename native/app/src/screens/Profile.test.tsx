@@ -231,4 +231,73 @@ describe('Profile', () => {
     // Ingen dialog: dette er ikke et spørsmål til spilleren, det er en beskjed.
     expect(Alert.alert).not.toHaveBeenCalled();
   });
+
+  // #1973: overskriften skal ikke bytte tekst foran øynene på deg.
+  //
+  // Før denne fiksen falt navne-kjeden til e-posten så lenge `profile` var
+  // null, altså hver gang rommet ble åpnet: e-postadresse i et halvt sekund,
+  // så navnet. Eieren leste det som forrige brukers navn etter et eierbytte
+  // (testkontoene deler adresse og skilles bare av en `+`-endelse). Hentingen
+  // holdes derfor åpen her, slik at ventetilstanden kan asserteres for seg —
+  // `renderScreen` venter til raden har landet og kunne aldri sett den.
+  it('lar overskriften stå tom til profilraden er hentet', async () => {
+    let land: (row: unknown) => void = () => {};
+    fetchOwnProfileMock.mockReturnValue(
+      new Promise((resolve) => {
+        land = resolve;
+      }),
+    );
+
+    await render(
+      <Profile
+        {...({
+          navigation: { navigate, setParams, addListener },
+          route: { params: undefined },
+        } as unknown as ScreenProps<'Profile'>)}
+      />,
+    );
+
+    // Linja finnes (den holder høyden sin), men bærer ingen av de to
+    // kandidatene. Særlig ikke e-posten: den var hele feilen.
+    const name = screen.getByTestId('profile-name');
+    expect(name).not.toHaveTextContent(mockEmail);
+    expect(name).not.toHaveTextContent(MY_NAME);
+    // Hvem du er står likevel på skjermen hele tiden — på linja under.
+    expect(screen.getByTestId('profile-email')).toHaveTextContent(mockEmail);
+
+    await act(async () => {
+      land({
+        name: MY_NAME,
+        nickname: null,
+        hcpIndex: MY_HCP,
+        handicapUpdatedAt: new Date().toISOString(),
+        gender: null,
+        level: null,
+        profileCompletedAt: '2026-08-30T10:00:00.000Z',
+      });
+    });
+
+    expect(screen.getByTestId('profile-name')).toHaveTextContent(MY_NAME);
+  });
+
+  it('faller tilbake til e-posten som overskrift når profiloppslaget feiler', async () => {
+    // Feilgrenen logger med `console.error`; den dempes slik at en forventet
+    // feil ikke ser ut som en ekte i test-utskriften.
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    fetchOwnProfileMock.mockRejectedValue(new Error('nettverk'));
+
+    await render(
+      <Profile
+        {...({
+          navigation: { navigate, setParams, addListener },
+          route: { params: undefined },
+        } as unknown as ScreenProps<'Profile'>)}
+      />,
+    );
+
+    await screen.findByTestId('profile-load-error');
+    // Ingen rad å vise navn fra, men noe MÅ stå der: da er e-posten det
+    // ærligste vi har, og feillinja står under den.
+    expect(screen.getByTestId('profile-name')).toHaveTextContent(mockEmail);
+  });
 });
