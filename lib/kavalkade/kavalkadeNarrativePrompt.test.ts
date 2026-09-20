@@ -67,12 +67,17 @@ function makeFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
 }
 
 describe('factsForModel', () => {
-  it('fjerner alle userId-er, uansett hvor dypt de ligger', () => {
+  it('fjerner alle interne id-er, uansett hvor dypt de ligger', () => {
     const json = JSON.stringify(factsForModel(makeFacts()));
 
     expect(json).not.toContain('userId');
+    expect(json).not.toContain('gameId');
     expect(json).not.toContain('"u2"');
     expect(json).not.toContain('"u3"');
+    // Spill-id-er er like interne som spiller-id-er: modellen trenger navnet
+    // på runden, ikke primærnøkkelen.
+    expect(json).not.toContain('"g1"');
+    expect(json).not.toContain('"g9"');
   });
 
   it('beholder navnene og tallene', () => {
@@ -89,6 +94,7 @@ describe('factsForModel', () => {
     factsForModel(facts);
 
     expect(facts.personal?.rival?.userId).toBe('u2');
+    expect(facts.personal?.bestRound?.gameId).toBe('g1');
   });
 
   it('beholder null og tomme lister', () => {
@@ -108,6 +114,7 @@ describe('buildKavalkadeNarrativePrompt', () => {
     expect(user).toContain('2026');
     expect(user).toContain('Lørdagscup');
     expect(user).not.toContain('userId');
+    expect(user).not.toContain('gameId');
   });
 
   it('ber om 2–4 setninger på norsk uten markdown', () => {

@@ -75,6 +75,12 @@ export type GetOrCreateKavalkadeOptions = {
  *
  * Kaster ved databasefeil. Siden trenger derfor sin egen `error.tsx` (felle 5).
  * Modellen kaster aldri: en kavalkade uten innledning er et gyldig svar.
+ *
+ * ⚠️ K3: første åpning venter på modellen (`NARRATIVE_TIMEOUT_MS`) FØR raden
+ * skrives. Ruta som kaller hit trenger derfor `export const maxDuration = 60`,
+ * samme konvensjon som de andre trege flatene i repoet. Uten den kan
+ * plattformen kutte førsteåpningen, og da står spilleren igjen uten rad og
+ * betaler et nytt modellkall neste gang.
  */
 export async function getOrCreateKavalkade(
   viewerUserId: string,
@@ -89,8 +95,10 @@ export async function getOrCreateKavalkade(
     const opensAt = kavalkadeOpensAt(env).toISOString();
     if (!(await isAdmin(viewerUserId))) return { status: 'closed', opensAt };
 
-    // Admin-forhåndsvisning: regnet her og nå, lagret ingen steder. Tallene er
-    // de samme som ved slippet, siden frysegrensen alltid er KAVALKADE_CUTOFF.
+    // Admin-forhåndsvisning: regnet her og nå, lagret ingen steder. Runder som
+    // spilles mellom forhåndsvisningen og slippet kommer til — men ingen runde
+    // som ikke teller ved slippet er med, for frysegrensen er alltid
+    // KAVALKADE_CUTOFF og aldri «nå».
     return { status: 'preview', facts: await computeFacts(viewerUserId, year) };
   }
 

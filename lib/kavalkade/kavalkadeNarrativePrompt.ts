@@ -25,28 +25,35 @@ export type KavalkadeNarrativePrompt = {
 export const MAX_KAVALKADE_NARRATIVE_LENGTH = 700;
 
 /**
- * Fakta-objektet slik modellen får se det: uten `userId`.
+ * Nøkler som aldri forlater huset: interne id-er.
  *
- * Interne id-er har ingen verdi for en tekst, og de har ingenting å gjøre i et
- * kall ut av huset. Navnene blir igjen — modellen skal kunne nevne rivalen og
- * lagkameraten din ved navn.
+ * De har null verdi for en tekst. Modellen trenger navnet på rivalen og navnet
+ * på runden, ikke primærnøkkelen deres.
+ */
+const INTERNAL_ID_KEYS = new Set(['userId', 'gameId']);
+
+/**
+ * Fakta-objektet slik modellen får se det: uten id-er.
+ *
+ * Navnene blir igjen — modellen skal kunne nevne rivalen, lagkameraten og banen
+ * din ved navn.
  *
  * Stripping skjer rekursivt på nøkkelnavn i stedet for felt for felt: fakta har
- * åtte nøstede typer med `userId` spredt utover, og en håndskrevet kopi av dem
+ * åtte nøstede typer med id-er spredt utover, og en håndskrevet kopi av dem
  * ville vært en ny kopi å vedlikeholde hver gang K1 legger til et kort.
  */
 export function factsForModel(facts: KavalkadeFacts): unknown {
-  return withoutUserIds(facts);
+  return withoutInternalIds(facts);
 }
 
-function withoutUserIds(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(withoutUserIds);
+function withoutInternalIds(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutInternalIds);
   if (value === null || typeof value !== 'object') return value;
 
   const out: Record<string, unknown> = {};
   for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
-    if (key === 'userId') continue;
-    out[key] = withoutUserIds(inner);
+    if (INTERNAL_ID_KEYS.has(key)) continue;
+    out[key] = withoutInternalIds(inner);
   }
   return out;
 }

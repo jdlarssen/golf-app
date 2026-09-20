@@ -17,8 +17,8 @@ import 'server-only';
  * ## Modellen regner aldri
  *
  * Den ser bare `KavalkadeFacts` — ferdig utregnet av `buildKavalkadeFacts` —
- * og aldri en rå score. Id-ene strippes i prompt-byggeren, så bare navn og tall
- * forlater huset.
+ * og aldri en rå score. Spiller- og spill-id-ene strippes i prompt-byggeren, så
+ * bare navn og tall forlater huset.
  *
  * Kalles fra `getOrCreateKavalkade`, nøyaktig én gang per spiller per år:
  * første gang kavalkaden åpnes etter frysegrensen.
