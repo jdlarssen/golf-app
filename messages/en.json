@@ -6337,5 +6337,78 @@
     "gangTightestMargin": "{margin, plural, one {Separated by # stroke} other {Separated by # strokes}}",
     "gangTightestShared": "Shared lead",
     "gangTightestLine": "{leader} {leaderBrutto} against {runnerUp} {runnerUpBrutto}"
+  },
+  "kavalkadeShare": {
+    "eyebrow": "The {year} cavalcade",
+    "shareCard": "Share the card",
+    "shareText": "My golf year, card by card. See yours at tornygolf.no",
+    "playerFallback": "Player",
+    "and": "and",
+    "tagline": "Get your golf tournament going in a couple of minutes",
+    "year": {
+      "title": "Your golf year",
+      "rounds": "{n, plural, one {# round} other {# rounds}}",
+      "soloLabel": "Own ball",
+      "teamLabel": "As a team",
+      "gangLabel": "The gang",
+      "gangValue": "{players} players, {games} rounds"
+    },
+    "bestRound": {
+      "title": "Best round of the year",
+      "strokes": "gross strokes",
+      "strokesValue": "{n} strokes",
+      "gameLabel": "Game",
+      "courseLabel": "Course",
+      "dateLabel": "Date"
+    },
+    "nemesisHole": {
+      "title": "The nemesis hole",
+      "hole": "Hole {n}",
+      "overPar": "{n} over par on average",
+      "playedLabel": "Played",
+      "times": "{n, plural, one {# time} other {# times}}",
+      "worstLabel": "Worst visit",
+      "strokes": "{n} strokes"
+    },
+    "rival": {
+      "title": "The record against {name}",
+      "record": "wins · losses · ties",
+      "metLabel": "Met",
+      "rounds": "{n, plural, one {# round} other {# rounds}}",
+      "decidedLabel": "Decided"
+    },
+    "formPeak": {
+      "title": "Peak form",
+      "average": "on average over {n} rounds",
+      "periodLabel": "Period",
+      "period": "{from} to {to}",
+      "seasonBestLabel": "Best of the year"
+    },
+    "team": {
+      "title": "As a team",
+      "rounds": "{n, plural, one {# team round} other {# team rounds}}",
+      "bestLabel": "Best team round",
+      "courseLabel": "Where",
+      "bestTeammateLabel": "{count, plural, one {Best team-mate} other {Best team-mates}}"
+    },
+    "gangWinner": {
+      "title": "Winner of the year",
+      "count": "{n, plural, one {# win} other {# wins}}"
+    },
+    "gangBirdies": {
+      "title": "Most birdies",
+      "count": "{n, plural, one {# birdie} other {# birdies}}"
+    },
+    "gangSnowmen": {
+      "title": "Snowman of the year",
+      "count": "{n, plural, one {# snowman} other {# snowmen}}"
+    },
+    "gangTightest": {
+      "title": "Tightest finish",
+      "margin": "{n, plural, one {# stroke} other {# strokes}}",
+      "shared": "Shared lead",
+      "caption": "separated the top two",
+      "whereLabel": "Where"
+    }
   }
 }

@@ -6338,5 +6338,78 @@
     "gangTightestMargin": "Skilt av {margin} slag",
     "gangTightestShared": "Delt ledelse",
     "gangTightestLine": "{leader} {leaderBrutto} mot {runnerUp} {runnerUpBrutto}"
+  },
+  "kavalkadeShare": {
+    "eyebrow": "Kavalkaden {year}",
+    "shareCard": "Del kortet",
+    "shareText": "Golfåret mitt, kort for kort. Se ditt eget på tornygolf.no",
+    "playerFallback": "Spiller",
+    "and": "og",
+    "tagline": "Fyr opp golfturneringen på et par minutter",
+    "year": {
+      "title": "Golfåret ditt",
+      "rounds": "{n, plural, one {# runde} other {# runder}}",
+      "soloLabel": "Med egen ball",
+      "teamLabel": "Som lag",
+      "gangLabel": "Gjengen",
+      "gangValue": "{players} spillere, {games} runder"
+    },
+    "bestRound": {
+      "title": "Årets beste runde",
+      "strokes": "slag brutto",
+      "strokesValue": "{n} slag",
+      "gameLabel": "Spill",
+      "courseLabel": "Bane",
+      "dateLabel": "Dato"
+    },
+    "nemesisHole": {
+      "title": "Nemesis-hullet",
+      "hole": "Hull {n}",
+      "overPar": "{n} over par i snitt",
+      "playedLabel": "Spilt",
+      "times": "{n, plural, one {# gang} other {# ganger}}",
+      "worstLabel": "Verste besøk",
+      "strokes": "{n} slag"
+    },
+    "rival": {
+      "title": "Regnskapet mot {name}",
+      "record": "seire · tap · uavgjort",
+      "metLabel": "Møttes",
+      "rounds": "{n, plural, one {# runde} other {# runder}}",
+      "decidedLabel": "Avgjort"
+    },
+    "formPeak": {
+      "title": "Formtoppen",
+      "average": "i snitt over {n} runder",
+      "periodLabel": "Perioden",
+      "period": "{from} til {to}",
+      "seasonBestLabel": "Årets beste"
+    },
+    "team": {
+      "title": "Som lag",
+      "rounds": "{n, plural, one {# lagrunde} other {# lagrunder}}",
+      "bestLabel": "Beste lagrunde",
+      "courseLabel": "Hvor",
+      "bestTeammateLabel": "{count, plural, one {Beste lagkamerat} other {Beste lagkamerater}}"
+    },
+    "gangWinner": {
+      "title": "Årets vinner",
+      "count": "{n, plural, one {# seier} other {# seire}}"
+    },
+    "gangBirdies": {
+      "title": "Flest birdier",
+      "count": "{n, plural, one {# birdie} other {# birdier}}"
+    },
+    "gangSnowmen": {
+      "title": "Årets snowman",
+      "count": "{n, plural, one {# snowman} other {# snowman}}"
+    },
+    "gangTightest": {
+      "title": "Tetteste oppgjør",
+      "margin": "{n} slag",
+      "shared": "Delt ledelse",
+      "caption": "skilte de to beste",
+      "whereLabel": "Hvor"
+    }
   }
 }

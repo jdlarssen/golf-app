@@ -1275,6 +1275,38 @@ export type Database = {
           },
         ]
       }
+      kavalkade_shares: {
+        Row: {
+          card_kind: string
+          created_at: string
+          id: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          card_kind: string
+          created_at?: string
+          id?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          card_kind?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kavalkade_shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kavalkades: {
         Row: {
           facts: Json
