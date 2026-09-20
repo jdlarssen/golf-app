@@ -78,58 +78,49 @@ export interface RosterCandidate {
   pending: boolean;
 }
 
-interface UserRow {
-  id: string;
-  name: string;
-  nickname: string | null;
-  hcp_index: number | string;
-  gender: string | null;
-  level: string | null;
-  profile_completed_at: string | null;
-  is_guest: boolean | null;
-}
-
 /**
  * Spillerne arrangøren kan velge blant.
  *
- * **Under RLS er dette medspillere, ikke venner.** `users`-SELECT-policyen
- * (0092:179-186) gir egen rad ∨ admin ∨ delt spill. Webbens kandidat-univers
- * (venner ∪ medspillere ∪ klubbmedlemmer, `lib/games/inviteEligibility.ts`) er
- * `server-only` + service-role og kan ikke gjenbrukes; en venn du aldri har
- * spilt med er rett og slett ikke navnlesbar herfra. Begrensningen er bokført
- * i kontrakten som en Could-oppfølger (egen SECURITY DEFINER-RPC).
+ * **Lista er webbens union nå (#1919 del B).** Fram til 0181 leste appen `users`
+ * rett under RLS, og SELECT-policyen (0092) gir egen rad ∨ admin ∨ delt spill —
+ * altså MEDSPILLERE. En venn du aldri hadde spilt med var rett og slett ikke
+ * navnlesbar fra telefonen, mens nettsiden viste hele unionen. Nå spør vi
+ * `public.roster_candidates`, som kaller `is_invite_eligible` (0115) — den
+ * SAMME funksjonen BEFORE INSERT-triggeren håndhever med. Derfor er hver
+ * kandidat lista viser per konstruksjon en kandidat innlegget slipper gjennom.
  *
- * Håndhevelsen er uansett i DB: `guard_game_players_invite_eligibility` (0115)
- * speiler webbens union, og appens subsett er en delmengde av den — hvert valg
- * her lykkes.
+ * ⚠️ **Funksjonen tar ingen bruker-id.** Kalleren er `auth.uid()` server-side,
+ * så det finnes ingen id å bytte ut. `gameId` er valgfri og brukes KUN til
+ * klubb-grenen — og slås bare opp når runden er din egen. Veiviseren har ingen
+ * runde ennå og sender derfor ingenting; da er svaret venner ∪ medspillere.
  *
- * To filtre speiles fra webben:
- *  - `deleted_at IS NULL` (#1012) — anonymiserte kontoer er ikke valgbare.
- *  - gjester utelates. En gjesterad MÅ inn via service-role (0115-triggeren
- *    blokkerer en ikke-admin arrangørs klient-insert), så appen kan ikke lage
- *    dem. Å tilby en spiller hvis insert er dømt til å feile er uærlig — vi
- *    skjuler dem heller, og gjeste-flyten forblir web-eid.
+ * Gjester, slettede kontoer (#1012) og deg selv filtreres server-side. Gjeste-
+ * flyten forblir web-eid: en gjesterad MÅ inn via service-role (0115 blokkerer
+ * klient-inserten), og å tilby en spiller hvis insert er dømt til å feile er
+ * uærlig.
  *
+ * @param gameId runden lista skal gjelde for, når det finnes en. Gir klubb-
+ *   grenen; utelates fra veiviseren.
  * @throws {Error} når spørringen feiler. Tom liste er et gyldig svar (en ny
- *   bruker uten medspillere) og betyr «du kan opprette en runde med bare deg
+ *   bruker uten nettverk) og betyr «du kan opprette en runde med bare deg
  *   selv» — ikke det samme som en feilet henting.
  */
-export async function fetchRosterCandidates(): Promise<RosterCandidate[]> {
-  const { data, error } = await supabase
-    .from('users')
-    .select(
-      'id, name, nickname, hcp_index, gender, level, profile_completed_at, is_guest',
-    )
-    .is('deleted_at', null)
-    .order('name', { ascending: true })
-    .returns<UserRow[]>();
+export async function fetchRosterCandidates(
+  gameId?: string,
+): Promise<RosterCandidate[]> {
+  // `p_game_id` er valgfri i signaturen, så `undefined` utelater argumentet og
+  // lar SQL-defaulten (null) stå — veiviseren sender ingenting.
+  //
+  // Ingen `.returns<T>()`: funksjonens returtype står i `lib/database.types.ts`,
+  // så radene er alt typet. Et håndskrevet type-argument her ville vært en andre
+  // sannhet om den samme signaturen.
+  const { data, error } = await supabase.rpc('roster_candidates', {
+    p_game_id: gameId,
+  });
 
   if (error) throw new Error(`fetchRosterCandidates: ${error.message}`);
 
   return (data ?? [])
-    // JS-filter og ikke `.eq('is_guest', false)`: et NULL ville falt ut av et
-    // eq-filter, og en rad uten flagg er ikke en gjest.
-    .filter((row) => row.is_guest !== true)
     .map((row) => ({
       id: row.id,
       name: row.name,

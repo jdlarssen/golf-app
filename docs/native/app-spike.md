@@ -553,11 +553,13 @@ hvilken sone maskinen står i — som er sonen CI kjører i.
 
 ### Hva appen IKKE kan (bevisste grenser)
 
-- **Kandidatlista er medspillere, ikke venner.** `users`-SELECT under RLS gir egen rad ∨
-  admin ∨ delt spill. Webbens union (venner ∪ medspillere ∪ klubbmedlemmer) er
-  `server-only` + service-role. En venn du aldri har spilt med er ikke navnlesbar.
-  Oppfølger: egen SECURITY DEFINER-RPC. #1919 fjernet blindveien uten å utvide lista:
-  kjenner du adressen, inviterer du med e-post i stedet.
+- ~~**Kandidatlista er medspillere, ikke venner.**~~ **Løst i #1919 del B (0181).** Lista
+  leses nå med `public.roster_candidates`, som kaller `is_invite_eligible` (0115) — samme
+  funksjon BEFORE INSERT-triggeren håndhever med, så en kandidat lista viser er per
+  konstruksjon en kandidat innlegget slipper gjennom. Kalleren er `auth.uid()` og aldri en
+  parameter; spill-id-en er valgfri, gir klubb-grenen, og slås kun opp for en runde du selv
+  har opprettet. Ingen e-post i returen. Admin ser alle ikke-slettede ikke-gjester, som
+  `users`-RLS gir dem i dag.
 - **Gjester utelates.** En gjesterad MÅ inn via service-role (0115 blokkerer
   klient-inserten); å tilby en spiller hvis insert er dømt til å feile er uærlig.
 - **Ingen tee-sett-velger** — utledes av `users.gender`, og junior er utilgjengelig

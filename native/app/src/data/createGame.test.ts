@@ -460,6 +460,11 @@ describe('publishGame', () => {
 describe('fetchRosterCandidates', () => {
   useFreshModules();
 
+  // #1919 del B: kilden er `public.roster_candidates` (0181), ikke lenger en rå
+  // `users`-spørring under RLS. Gjeste- og slettet-filtrene flyttet med inn i
+  // funksjonen, så de assertene bor nå i pgTAP-suiten
+  // (`supabase/tests/roster_candidates_rpc_test.sql`) — der de kan bevises mot
+  // ekte RLS-roller i stedet for mot en stubbet spørring.
   const row = (over: Record<string, unknown> = {}) => ({
     id: 'u-1',
     name: 'Kari',
@@ -468,13 +473,11 @@ describe('fetchRosterCandidates', () => {
     gender: 'D',
     level: 'normal',
     profile_completed_at: '2026-01-01T00:00:00Z',
-    is_guest: false,
     ...over,
   });
 
   it('mapper til camelCase og tallfester handicapet', async () => {
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({ users: [queryStub({ data: [row()], error: null })] });
+    mocks().supabase.rpc.mockResolvedValue({ data: [row()], error: null });
 
     expect(await createGame().fetchRosterCandidates()).toEqual([
       {
@@ -489,50 +492,53 @@ describe('fetchRosterCandidates', () => {
     ]);
   });
 
-  it('filtrerer bort anonymiserte kontoer i spørringen', async () => {
-    const { queryStub, routeFrom, stepArgs } = mocks();
-    const read = queryStub({ data: [], error: null });
-    routeFrom({ users: [read] });
+  it('sender ingen spill-id fra veiviseren — der finnes ingen runde ennå', async () => {
+    mocks().supabase.rpc.mockResolvedValue({ data: [], error: null });
 
     await createGame().fetchRosterCandidates();
-    expect(stepArgs(read, 'is')).toEqual([['deleted_at', null]]);
+
+    expect(mocks().supabase.rpc).toHaveBeenCalledWith('roster_candidates', {
+      p_game_id: undefined,
+    });
   });
 
-  // Gjeste-rader MÅ inn via service-role (0115). Å tilby en spiller hvis
-  // insert er dømt til å feile ville vært uærlig.
-  it('utelater gjester, men beholder rader uten flagg', async () => {
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({
-      users: [
-        queryStub({
-          data: [
-            row({ id: 'ekte' }),
-            row({ id: 'gjest', is_guest: true }),
-            row({ id: 'uflagget', is_guest: null }),
-          ],
-          error: null,
-        }),
-      ],
-    });
+  it('sender runden videre når den finnes — det er klubb-grenen', async () => {
+    // Funksjonen slår den kun opp for en runde du selv har opprettet; appen
+    // avgjør ingenting om klubben selv.
+    mocks().supabase.rpc.mockResolvedValue({ data: [], error: null });
 
-    expect((await createGame().fetchRosterCandidates()).map((c) => c.id)).toEqual([
-      'ekte',
-      'uflagget',
-    ]);
+    await createGame().fetchRosterCandidates('game-42');
+
+    expect(mocks().supabase.rpc).toHaveBeenCalledWith('roster_candidates', {
+      p_game_id: 'game-42',
+    });
+  });
+
+  it('sender ALDRI en bruker-id — kalleren er auth.uid() server-side', async () => {
+    // Dette er hele sikkerhetsargumentet for at funksjonen kan være SECURITY
+    // DEFINER: finnes det ingen id å sende, finnes det ingen id å bytte ut.
+    mocks().supabase.rpc.mockResolvedValue({ data: [], error: null });
+
+    await createGame().fetchRosterCandidates('game-42');
+
+    const args = mocks().supabase.rpc.mock.calls[0]![1] as Record<string, unknown>;
+    expect(Object.keys(args)).toEqual(['p_game_id']);
   });
 
   it('markerer en uferdig profil', async () => {
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({
-      users: [queryStub({ data: [row({ profile_completed_at: null })], error: null })],
+    mocks().supabase.rpc.mockResolvedValue({
+      data: [row({ profile_completed_at: null })],
+      error: null,
     });
 
     expect((await createGame().fetchRosterCandidates())[0]!.pending).toBe(true);
   });
 
   it('kaster ved feilet henting — tom liste er et annet svar', async () => {
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({ users: [queryStub({ data: null, error: { message: 'nede' } })] });
+    mocks().supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'nede' },
+    });
 
     await expect(createGame().fetchRosterCandidates()).rejects.toThrow('nede');
   });
