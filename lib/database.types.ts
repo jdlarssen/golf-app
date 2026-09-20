@@ -1275,6 +1275,41 @@ export type Database = {
           },
         ]
       }
+      kavalkades: {
+        Row: {
+          facts: Json
+          generated_at: string
+          id: string
+          narrative: string | null
+          user_id: string
+          year: number
+        }
+        Insert: {
+          facts: Json
+          generated_at?: string
+          id?: string
+          narrative?: string | null
+          user_id: string
+          year: number
+        }
+        Update: {
+          facts?: Json
+          generated_at?: string
+          id?: string
+          narrative?: string | null
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kavalkades_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_players: {
         Row: {
           accepted_at: string | null
