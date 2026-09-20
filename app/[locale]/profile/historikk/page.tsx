@@ -54,6 +54,7 @@ import {
   type CourseHoleRow,
 } from '@/lib/supabase/queryFragments';
 import { osloParts } from '@/lib/format/teeOff';
+import { effectiveDate, effectiveYear } from '@/lib/stats/effectiveDate';
 import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -361,9 +362,8 @@ export default async function HistorikkPage() {
   // per runde fra rå scorer mot kjønns-par (uavhengig av modus/sideturnering);
   // snitt/beste følger samme komplett-18-disiplin som resten av huben.
   const seasonRounds: SeasonRoundInput[] = gamesWithStats.map((game, i) => {
-    const date = effectiveDate(game);
     return {
-      year: date ? osloParts(date).year : null,
+      year: effectiveYear(game),
       completeBrutto:
         game.holeCount === COMPLETE_ROUND_HOLES && game.bruttoSum != null
           ? game.bruttoSum
@@ -627,12 +627,6 @@ function formatPuttsDisplays(
     pphDisplay: stats.pph != null ? fmt(stats.pph) : '',
     avgDisplay: stats.avgPuttsPerRound != null ? fmt(stats.avgPuttsPerRound) : '',
   };
-}
-
-/** Effektiv runde-dato (samme fallback som lista/sorteringen). */
-function effectiveDate(g: GameWithStats): Date | null {
-  const iso = g.scheduled_tee_off_at ?? g.ended_at;
-  return iso ? new Date(iso) : null;
 }
 
 /**
