@@ -836,7 +836,7 @@
       "notSet": "Not set",
       "gameNameLegend": "Game name",
       "gameNameLabel": "Game name",
-      "gameNamePlaceholder": "Tap to set name",
+      "gameNamePlaceholder": "Give the game a name",
       "advancedToggle": "Show advanced settings",
       "publishButton": "Save and publish",
       "publishButtonWithSummary": "Publish — {count, plural, one {# player} other {# players}} · {mode} · {course}",
