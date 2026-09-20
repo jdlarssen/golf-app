@@ -54,7 +54,18 @@ function weekNumber(weekStart: string): number {
   return osloIsoWeek(new Date(`${weekStart}T12:00:00Z`));
 }
 
-export function KeyMetricsView({ metrics }: { metrics: KeyMetrics }) {
+export function KeyMetricsView({
+  metrics,
+  kavalkadeShares,
+}: {
+  metrics: KeyMetrics;
+  /**
+   * #2131 — distinkte spillere som har delt et kavalkade-kort, Jørgen holdt
+   * utenfor. Egen prop og ikke et felt i `metrics`: tallet kommer ikke fra
+   * `admin_key_metrics`, men fra en service-rolle-lesing i kortet.
+   */
+  kavalkadeShares: number;
+}) {
   const t = useTranslations('admin.dashboard');
   const share =
     metrics.usersGe1 > 0
@@ -117,6 +128,17 @@ export function KeyMetricsView({ metrics }: { metrics: KeyMetrics }) {
               data-testid="key-metrics-public-signups"
             >
               {metrics.publicSignups}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="font-sans text-[13px] text-text">
+              {t('keyMetricsKavalkadeShares')}
+            </dt>
+            <dd
+              className="font-serif text-lg font-medium tabular-nums text-text"
+              data-testid="key-metrics-kavalkade-shares"
+            >
+              {kavalkadeShares}
             </dd>
           </div>
         </dl>

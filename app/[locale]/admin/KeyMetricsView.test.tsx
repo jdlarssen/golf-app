@@ -66,13 +66,17 @@ const METRICS: KeyMetrics = {
 
 describe('KeyMetricsView (#1010)', () => {
   it('renders the two activation counts, the share line, the 8-week trend and the funnel', () => {
-    render(<KeyMetricsView metrics={METRICS} />);
+    render(<KeyMetricsView metrics={METRICS} kavalkadeShares={3} />);
 
     expect(screen.getByTestId('key-metrics-users-ge2')).toHaveTextContent('12');
     // 12 of 30 → 40 — share is derived in the view, so it is asserted here.
     expect(screen.getByTestId('key-metrics-users-share')).toHaveTextContent('40');
     expect(screen.getByTestId('key-metrics-gjenger-ge2')).toHaveTextContent('3');
     expect(screen.getByTestId('key-metrics-public-signups')).toHaveTextContent('5');
+    // #2131 — delt-av-tallet kommer inn som egen prop, ikke fra RPC-en.
+    expect(
+      screen.getByTestId('key-metrics-kavalkade-shares'),
+    ).toHaveTextContent('3');
 
     const weeks = screen.getAllByTestId('key-metrics-week');
     expect(weeks).toHaveLength(8);
@@ -99,7 +103,7 @@ describe('KeyMetricsView (#1010)', () => {
 
 describe('KeyMetricsView livstegn (#2119)', () => {
   it('renders twelve month rows newest first with the all-time totals', () => {
-    render(<KeyMetricsView metrics={METRICS} />);
+    render(<KeyMetricsView metrics={METRICS} kavalkadeShares={3} />);
 
     const section = screen.getByTestId('key-metrics-livstegn');
     // Livstegn sits at the top of the card, before the activation counts.

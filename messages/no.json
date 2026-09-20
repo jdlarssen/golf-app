@@ -3337,7 +3337,8 @@
       "playerToolsLabel": "Verktøy",
       "playerForeslaaIde": "Har du en idé?",
       "playerForeslaaIdeMeta": "Foreslå en funksjon til Tørny",
-      "keyMetricsPublicSignups": "Påmeldt via offentlig side"
+      "keyMetricsPublicSignups": "Påmeldt via offentlig side",
+      "keyMetricsKavalkadeShares": "Spillere som har delt Kavalkaden"
     },
     "game": {
       "errors": {

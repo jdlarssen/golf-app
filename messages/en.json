@@ -3337,7 +3337,8 @@
       "playerToolsLabel": "Tools",
       "playerForeslaaIde": "Got an idea?",
       "playerForeslaaIdeMeta": "Suggest a feature for Tørny",
-      "keyMetricsPublicSignups": "Signed up via public page"
+      "keyMetricsPublicSignups": "Signed up via public page",
+      "keyMetricsKavalkadeShares": "Players who shared the cavalcade"
     },
     "game": {
       "errors": {
