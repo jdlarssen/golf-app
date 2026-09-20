@@ -698,11 +698,13 @@ SLOT_WRITE 1f016c6a error: null
 `team_number`/`flight_number`. Ikke ny makt: samme arrangør kan alt omrokere alle andre og
 legge til/fjerne hvem som helst før start.
 
-**Gren (c) står.** En arrangør kan fortsatt ikke trekke seg selv — nøyaktig som på webben,
-der `adminWithdrawPlayer` går på request-klienten og møter samme vakt. `OWN_ROW_LOCKED_NOTE`
-står derfor fortsatt der trekk-knappen ellers ville vært:
+**Gren (c) står.** En arrangør kan fortsatt ikke SKRIVE frafall på sin egen rad — nøyaktig
+som på webben, der `adminWithdrawPlayer` går på request-klienten og møter samme vakt.
 
-> Appen får ikke endre ditt eget lag eller trekke deg selv. Det ordner du på nettsiden.
+Fram til #1917 sto det en note der trekk-knappen ellers ville vært («Du kan ikke trekke deg
+selv herfra. Det ordner du på nettsiden.»). Nå står knappen, og skrivingen går gjennom
+`POST /api/games/{id}/withdraw-self` på service-role — se §«Wire-kontrakten for
+selv-frafall». Vakta er urørt: den er grunnen til at ruta finnes.
 
 Fjern-knappen har derimot **ingen** selv-vakt, med vilje: `spillere/actions.ts` har ingen,
 og både `game_players creator delete` (0071) og self-register-grenen (0043) tillater den.
@@ -1246,8 +1248,9 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
 
 Slette-ruta (#1876) var den første. Med purringen ble den et **mønster**, og fra og med
 #1891 har det ett hjem: `lib/api/appAuth.ts` på webben, `src/data/webApi.ts` i appen.
-`#1918` (lever lagkort) er den tredje brukeren og arvet begge uendret. `#1917` (trekk
-deg selv) og `#1919` (inviter) gjør det samme — ingen skal lage en fjerde variant.
+`#1918` (lever lagkort) er den tredje brukeren og arvet begge uendret. `#1917` (trekk deg
+selv) er den fjerde og gjorde det samme; `#1919` (inviter) står igjen — ingen skal lage en
+femte variant.
 
 ### Når trenger noe en rute i det hele tatt?
 
@@ -1326,6 +1329,42 @@ arrangør-sjekk ville stengt ute nettopp dem ruta er for. Autorisasjonen er at k
 der `team_number` = lagnummeret på innsenderens EGEN rad. Er du ikke deltaker, finnes det
 ingen rad å utlede et lag fra, og svaret er 403. Service-role betyr at denne porten ER
 hele autorisasjonen — det finnes ingen RLS bak den.
+
+### Wire-kontrakten for selv-frafall (#1917)
+
+```
+POST   /api/games/{id}/withdraw-self   200 { ok: true, kept: boolean }
+DELETE /api/games/{id}/withdraw-self   200 { ok: true, kept: true }
+       401 unauthorized · 403 not_registered · 404 not_found
+       409 game_locked  · 500 withdraw_failed
+```
+
+Frosset, og speilet i `src/data/withdrawSelf.ts`. **Endres den ene, endres den andre i
+samme PR.** Ett verb per handling på ÉN sti — verbet bærer handlingen, så kroppen slipper
+å gjøre det (`webApi.ts`-doktrinen: kroppen bærer verdier, aldri identitet eller
+kommandoer). `callWebRoute` fikk `'DELETE'` her, additivt som da `'PUT'` kom med #1906.
+
+`kept` er om `game_players`-raden finnes etter kallet: sant for det myke trekket i en aktiv
+runde, falskt når raden ble slettet før start. **Appen leser den ikke** — kallstedene
+henter bundelen på nytt, og den er fasiten for hva skjermen viser. Webbens
+form-wrapper leser den derimot, for å velge om brukeren lander på spill-hjem eller
+app-hjem. `not_registered` er 403 og ikke en andre 404: 404 betyr «spillet finnes ikke».
+
+Regelen selv bor i `lib/games/withdrawSelf.ts` — grenvalget (mykt trekk vs. sletting),
+cup-sperren før start (#1814/#1937), kaptein-varselet, `expectAffected` og
+`expireGameCache` — og speiles ALDRI i appen. Webbens `withdrawFromGame`/`undoWithdraw` er
+tynne wrappere rundt den samme kjernen.
+
+⚠️ **Ruta kaller IKKE `gameOrganiserAccess`**, av samme grunn som lagkort-leveringen ikke
+gjør det: dette er spillerens egen rad, og en arrangør-sjekk ville stengt ute nettopp dem
+ruta er for. Autorisasjonen er at kjernen er **selv-avgrenset** — den filtrerer hver
+lesing og skriving på `(gameId, userId)`, der bruker-id-en kun kommer fra tokenet og
+spill-id-en kun fra stien. Det finnes altså ingen id å bytte ut. Service-role betyr at
+denne porten ER hele autorisasjonen; det finnes ingen RLS bak den.
+
+Og motsatt: `guard_game_players_self_update` vakt (c) (0147, uendret i 0168) skal fortsatt
+nekte appen å skrive `withdrawn_at` på sin egen rad direkte. Den vakta er grunnen til at
+ruta finnes — ikke et hinder ruta er ment å omgå.
 
 ### Appen ser aldri innboks-varselet
 
