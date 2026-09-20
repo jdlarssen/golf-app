@@ -34,18 +34,18 @@ export type KavalkadeTab = 'personal' | 'gang';
 
 /** Stabil, unik nøkkel per kort — også K4s feste for deleknappen. */
 export type KavalkadeCardId =
-  | 'opening'
-  | 'bestRound'
-  | 'nemesisHole'
+  | 'year'
+  | 'best-round'
+  | 'nemesis-hole'
   | 'rival'
-  | 'formPeak'
-  | 'belowThreshold'
+  | 'form-peak'
+  | 'below-threshold'
   | 'team'
-  | 'gangSummary'
-  | 'gangTopWinner'
-  | 'gangMostBirdies'
-  | 'gangMostSnowmen'
-  | 'gangTightestFinish';
+  | 'gang-summary'
+  | 'gang-winner'
+  | 'gang-birdies'
+  | 'gang-snowmen'
+  | 'gang-tightest';
 
 /**
  * Hvem laget scoret best med, eller — under terskelen for det — hvem spilleren
@@ -60,7 +60,7 @@ export type TeamHighlight =
 export type KavalkadeCard =
   /** Åpningen: året i tre tall, og AI-innledningen når den finnes. */
   | {
-      id: 'opening';
+      id: 'year';
       year: number;
       rounds: number;
       soloRounds: number;
@@ -68,13 +68,13 @@ export type KavalkadeCard =
       /** `null` ⇒ kortet vises uten innledningstekst (ingen API-nøkkel, K2). */
       narrative: string | null;
     }
-  | { id: 'bestRound'; fact: BestRoundFact }
-  | { id: 'nemesisHole'; fact: NemesisHoleFact }
+  | { id: 'best-round'; fact: BestRoundFact }
+  | { id: 'nemesis-hole'; fact: NemesisHoleFact }
   | { id: 'rival'; fact: RivalFact }
-  | { id: 'formPeak'; fact: FormPeakFact }
+  | { id: 'form-peak'; fact: FormPeakFact }
   /** Under terskelen: kort melding i «Ditt år», ingen personlige tall. */
   | {
-      id: 'belowThreshold';
+      id: 'below-threshold';
       soloRounds: number;
       roundsNeeded: number;
       teamRounds: number;
@@ -85,11 +85,11 @@ export type KavalkadeCard =
       bestRound: TeamRoundFact | null;
       highlight: TeamHighlight;
     }
-  | { id: 'gangSummary'; members: number; games: number }
-  | { id: 'gangTopWinner'; fact: GangLeaderFact }
-  | { id: 'gangMostBirdies'; fact: GangLeaderFact }
-  | { id: 'gangMostSnowmen'; fact: GangLeaderFact }
-  | { id: 'gangTightestFinish'; fact: TightestFinishFact };
+  | { id: 'gang-summary'; members: number; games: number }
+  | { id: 'gang-winner'; fact: GangLeaderFact }
+  | { id: 'gang-birdies'; fact: GangLeaderFact }
+  | { id: 'gang-snowmen'; fact: GangLeaderFact }
+  | { id: 'gang-tightest'; fact: TightestFinishFact };
 
 export type KavalkadeDeck = {
   /** «Ditt år» — åpningen, de personlige kortene og «Som lag». */
@@ -131,7 +131,7 @@ export function buildKavalkadeDeck(
 
   if (!isKavalkadeEmpty(facts)) {
     personal.push({
-      id: 'opening',
+      id: 'year',
       year: facts.year,
       rounds: facts.rounds,
       soloRounds: facts.soloRounds,
@@ -142,16 +142,16 @@ export function buildKavalkadeDeck(
 
   if (facts.personal) {
     const { bestRound, nemesisHole, rival, formPeak } = facts.personal;
-    if (bestRound) personal.push({ id: 'bestRound', fact: bestRound });
-    if (nemesisHole) personal.push({ id: 'nemesisHole', fact: nemesisHole });
+    if (bestRound) personal.push({ id: 'best-round', fact: bestRound });
+    if (nemesisHole) personal.push({ id: 'nemesis-hole', fact: nemesisHole });
     if (rival) personal.push({ id: 'rival', fact: rival });
     // Formtoppen har to former (#2127). Kortet vises hvis minst én finnes.
     if (formPeak.stretch || formPeak.season) {
-      personal.push({ id: 'formPeak', fact: formPeak });
+      personal.push({ id: 'form-peak', fact: formPeak });
     }
   } else if (!isKavalkadeEmpty(facts)) {
     personal.push({
-      id: 'belowThreshold',
+      id: 'below-threshold',
       soloRounds: facts.soloRounds,
       roundsNeeded: facts.roundsNeeded,
       teamRounds: facts.teamRounds,
@@ -170,12 +170,12 @@ export function buildKavalkadeDeck(
   const gang: KavalkadeCard[] = [];
   if (facts.gang) {
     const g = facts.gang;
-    gang.push({ id: 'gangSummary', members: g.members, games: g.games });
-    if (g.topWinner) gang.push({ id: 'gangTopWinner', fact: g.topWinner });
-    if (g.mostBirdies) gang.push({ id: 'gangMostBirdies', fact: g.mostBirdies });
-    if (g.mostSnowmen) gang.push({ id: 'gangMostSnowmen', fact: g.mostSnowmen });
+    gang.push({ id: 'gang-summary', members: g.members, games: g.games });
+    if (g.topWinner) gang.push({ id: 'gang-winner', fact: g.topWinner });
+    if (g.mostBirdies) gang.push({ id: 'gang-birdies', fact: g.mostBirdies });
+    if (g.mostSnowmen) gang.push({ id: 'gang-snowmen', fact: g.mostSnowmen });
     if (g.tightestFinish) {
-      gang.push({ id: 'gangTightestFinish', fact: g.tightestFinish });
+      gang.push({ id: 'gang-tightest', fact: g.tightestFinish });
     }
   }
 

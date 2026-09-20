@@ -17,7 +17,7 @@ import type {
 
 const personal: KavalkadeCard[] = [
   {
-    id: 'opening',
+    id: 'year',
     year: 2026,
     rounds: 12,
     soloRounds: 10,
@@ -25,7 +25,7 @@ const personal: KavalkadeCard[] = [
     narrative: 'NARRATIVE_TEXT',
   },
   {
-    id: 'bestRound',
+    id: 'best-round',
     fact: {
       gameId: 'g1',
       gameName: 'Lørdagscup',
@@ -35,7 +35,7 @@ const personal: KavalkadeCard[] = [
     },
   },
   {
-    id: 'nemesisHole',
+    id: 'nemesis-hole',
     fact: { holeNumber: 7, played: 9, averageToPar: 1.44, worstStrokes: 8 },
   },
   {
@@ -51,7 +51,7 @@ const personal: KavalkadeCard[] = [
     },
   },
   {
-    id: 'formPeak',
+    id: 'form-peak',
     fact: {
       stretch: {
         rounds: 3,
@@ -83,16 +83,16 @@ const personal: KavalkadeCard[] = [
       ],
     },
   },
-  { id: 'belowThreshold', soloRounds: 2, roundsNeeded: 3, teamRounds: 2 },
+  { id: 'below-threshold', soloRounds: 2, roundsNeeded: 3, teamRounds: 2 },
 ];
 
 const gang: KavalkadeCard[] = [
-  { id: 'gangSummary', members: 6, games: 12 },
-  { id: 'gangTopWinner', fact: { userId: 'u2', name: 'Ola', count: 5 } },
-  { id: 'gangMostBirdies', fact: { userId: 'u1', name: 'Jørgen', count: 11 } },
-  { id: 'gangMostSnowmen', fact: { userId: 'u4', name: null, count: 4 } },
+  { id: 'gang-summary', members: 6, games: 12 },
+  { id: 'gang-winner', fact: { userId: 'u2', name: 'Ola', count: 5 } },
+  { id: 'gang-birdies', fact: { userId: 'u1', name: 'Jørgen', count: 11 } },
+  { id: 'gang-snowmen', fact: { userId: 'u4', name: null, count: 4 } },
   {
-    id: 'gangTightestFinish',
+    id: 'gang-tightest',
     fact: {
       gameId: 'g4',
       gameName: 'Tirsdagsrunden',
@@ -113,7 +113,7 @@ describe('KavalkadeDeck', () => {
       <KavalkadeDeck
         deck={deck}
         locale="no"
-        actions={{ bestRound: <button type="button">SHARE_BUTTON</button> }}
+        actions={{ 'best-round': <button type="button">SHARE_BUTTON</button> }}
       />,
     );
 
@@ -126,15 +126,15 @@ describe('KavalkadeDeck', () => {
     for (const card of personal) {
       expect(screen.getByTestId(`kavalkade-card-${card.id}`)).toBeInTheDocument();
     }
-    expect(screen.queryByTestId('kavalkade-card-gangSummary')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('kavalkade-card-gang-summary')).not.toBeInTheDocument();
 
     // AI-innledningen står på åpningskortet, ikke i et eget kort.
-    expect(screen.getByTestId('kavalkade-card-opening')).toHaveTextContent(
+    expect(screen.getByTestId('kavalkade-card-year')).toHaveTextContent(
       'NARRATIVE_TEXT',
     );
 
     // K4s handlingsfelt: bare på kortet den ble sendt inn for.
-    expect(screen.getByTestId('kavalkade-card-bestRound')).toHaveTextContent(
+    expect(screen.getByTestId('kavalkade-card-best-round')).toHaveTextContent(
       'SHARE_BUTTON',
     );
     expect(screen.getByTestId('kavalkade-card-rival')).not.toHaveTextContent(
@@ -150,7 +150,7 @@ describe('KavalkadeDeck', () => {
     for (const card of gang) {
       expect(screen.getByTestId(`kavalkade-card-${card.id}`)).toBeInTheDocument();
     }
-    expect(screen.queryByTestId('kavalkade-card-opening')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('kavalkade-card-year')).not.toBeInTheDocument();
   });
 
   it('opens on the tab the deck asks for, and says so when a tab is empty', () => {

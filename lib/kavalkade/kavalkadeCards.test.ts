@@ -104,19 +104,19 @@ describe('buildKavalkadeDeck — order and completeness', () => {
     const deck = buildKavalkadeDeck(makeFacts());
 
     expect(ids(deck.personal)).toEqual([
-      'opening',
-      'bestRound',
-      'nemesisHole',
+      'year',
+      'best-round',
+      'nemesis-hole',
       'rival',
-      'formPeak',
+      'form-peak',
       'team',
     ]);
     expect(ids(deck.gang)).toEqual([
-      'gangSummary',
-      'gangTopWinner',
-      'gangMostBirdies',
-      'gangMostSnowmen',
-      'gangTightestFinish',
+      'gang-summary',
+      'gang-winner',
+      'gang-birdies',
+      'gang-snowmen',
+      'gang-tightest',
     ]);
     expect(deck.defaultTab).toBe('personal');
   });
@@ -125,7 +125,7 @@ describe('buildKavalkadeDeck — order and completeness', () => {
     const deck = buildKavalkadeDeck(makeFacts(), 'Et år å huske.');
 
     expect(deck.personal[0]).toEqual({
-      id: 'opening',
+      id: 'year',
       year: 2026,
       rounds: 12,
       soloRounds: 10,
@@ -137,7 +137,7 @@ describe('buildKavalkadeDeck — order and completeness', () => {
   it('leaves the opening without text when no narrative was stored', () => {
     const deck = buildKavalkadeDeck(makeFacts());
 
-    expect(deck.personal[0]).toMatchObject({ id: 'opening', narrative: null });
+    expect(deck.personal[0]).toMatchObject({ id: 'year', narrative: null });
   });
 
   it('skips every card whose fact is missing instead of showing an empty one', () => {
@@ -156,11 +156,11 @@ describe('buildKavalkadeDeck — order and completeness', () => {
       }),
     );
 
-    expect(ids(deck.personal)).toEqual(['opening']);
+    expect(ids(deck.personal)).toEqual(['year']);
     expect(ids(deck.gang)).toEqual([
-      'gangSummary',
-      'gangMostBirdies',
-      'gangTightestFinish',
+      'gang-summary',
+      'gang-birdies',
+      'gang-tightest',
     ]);
   });
 
@@ -181,7 +181,7 @@ describe('buildKavalkadeDeck — order and completeness', () => {
       }),
     );
 
-    expect(ids(deck.personal)).toContain('formPeak');
+    expect(ids(deck.personal)).toContain('form-peak');
   });
 
   it('gives an empty year no cards at all', () => {
@@ -202,9 +202,9 @@ describe('buildKavalkadeDeck — under the threshold', () => {
   it('replaces the personal cards with one short message', () => {
     const deck = buildKavalkadeDeck(belowFacts());
 
-    expect(ids(deck.personal)).toEqual(['opening', 'belowThreshold']);
+    expect(ids(deck.personal)).toEqual(['year', 'below-threshold']);
     expect(deck.personal[1]).toEqual({
-      id: 'belowThreshold',
+      id: 'below-threshold',
       soloRounds: 2,
       roundsNeeded: 3,
       teamRounds: 0,
@@ -221,7 +221,7 @@ describe('buildKavalkadeDeck — under the threshold', () => {
       makeFacts({ rounds: 4, soloRounds: 2, teamRounds: 2, personal: null }),
     );
 
-    expect(ids(deck.personal)).toEqual(['opening', 'belowThreshold', 'team']);
+    expect(ids(deck.personal)).toEqual(['year', 'below-threshold', 'team']);
     expect(deck.defaultTab).toBe('personal');
     expect(deck.personal[2]).toMatchObject({ id: 'team', rounds: facts.team!.rounds });
   });
