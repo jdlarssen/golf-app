@@ -836,7 +836,7 @@
       "notSet": "Ikke satt",
       "gameNameLegend": "Spillnavn",
       "gameNameLabel": "Spillnavn",
-      "gameNamePlaceholder": "Trykk for å sette navn",
+      "gameNamePlaceholder": "Gi spillet et navn",
       "advancedToggle": "Vis avanserte innstillinger",
       "publishButton": "Lagre og publiser",
       "publishButtonWithSummary": "Publiser — {count, plural, one {# spiller} other {# spillere}} · {mode} · {course}",

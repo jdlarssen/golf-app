@@ -393,18 +393,15 @@ function WizardBody({
   // wizardDraftContext), så et låst cup-format aldri kan overskrives.
   const seedValues = draft ? { ...initialValues, ...draft.values } : initialValues;
 
-  // Auto-name: hvis admin skrev navn manuelt, slutter wizard-en å overstyre
-  // det. Edit-flow med initialValues.name pre-touches. Et gjenopprettet utkast
-  // bærer flagget selv — uten det ville auto-navnet overskrevet et håndskrevet
-  // spillnavn ved neste mount.
-  const [nameTouched, setNameTouched] = useState<boolean>(
-    draft
-      ? draft.nameTouched
-      : !!initialValues?.name && initialValues.name.trim() !== '',
-  );
-
   const state = useGameFormState({
     initialValues: seedValues,
+    // #1999: auto-navnet slutter å overstyre navnet så snart et menneske har
+    // skrevet noe. Flagget bor i hooken sammen med verdien, så hvert navnefelt
+    // slipper å huske regelen. Her seedes bare utkast-tilfellet: et
+    // gjenopprettet utkast bærer sitt eget flagg, og uten det ville auto-navnet
+    // overskrevet et håndskrevet spillnavn ved neste mount. Uten utkast lar vi
+    // hooken seede fra `initialValues.name` (edit-flyt pre-touches).
+    initialNameTouched: draft ? draft.nameTouched : undefined,
     players,
     courses,
     initialIntent: draft?.intent ?? initialIntent,
@@ -542,17 +539,20 @@ function WizardBody({
   // undefined før admin har valgt bane — `suggestGameName` returnerer da
   // tom streng, og vi unngår å overstyre eksisterende navn med tom.
   useEffect(() => {
-    if (nameTouched) return;
+    if (state.nameTouched) return;
     const suggested = suggestGameName({
       courseName: state.selectedCourse?.name ?? null,
       scheduledTeeOffAt: state.scheduledTeeOffAt,
       locale: locale as import('@/i18n/routing').AppLocale,
     });
     if (suggested && suggested !== state.name) {
-      state.setName(suggested);
+      // #1999: maskin-inngangen — setter forslaget UTEN å markere navnet som
+      // rørt, så forslaget fortsetter å følge bane og tee-off. `state.setName`
+      // her ville frosset forslaget ved første bane-valg.
+      state.applySuggestedName(suggested);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selectedCourse?.name, state.scheduledTeeOffAt, nameTouched]);
+  }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.nameTouched]);
 
   // Steg-spesifikk sub-tekst under stepper-headeren. Mode-aware for steg 4
   // siden lag/sider/flighter varierer per modus.
@@ -603,7 +603,7 @@ function WizardBody({
   // et navn som tastes inn ikke gir én skriving per tastetrykk, og deduppet
   // på serialisert innhold så rene re-rendere ikke skriver.
   // ────────────────────────────────────────────────────────────────────
-  const draftSnapshot = wizardDraftFromState({ state, nameTouched });
+  const draftSnapshot = wizardDraftFromState({ state, nameTouched: state.nameTouched });
   const draftJson = JSON.stringify(draftSnapshot);
   // Initialisert til snapshot-en ved mount: å bare ÅPNE veiviseren skal ikke
   // legge igjen et utkast — først når arrangøren faktisk endrer noe.
@@ -1024,7 +1024,6 @@ function WizardBody({
         <ReadyStep
           state={state}
           mode={mode}
-          onNameTouched={() => setNameTouched(true)}
           onGoToPlayersStep={() => goToStep(4)}
           onSubmitStart={handleSubmitStart}
         />

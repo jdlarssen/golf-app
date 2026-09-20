@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
+import { BasicsSection } from './sections/BasicsSection';
+import { useGameFormState } from './useGameFormState';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
@@ -107,6 +109,7 @@ const FORMATS_BY_INTENT = {
 const NO_OP = async (): Promise<CreateGameResult> => ({ error: '' });
 
 function renderWizard({
+  courses = COURSES,
   players = EIGHT_PLAYERS,
   // #464: picker-kilden er venne-filtrert for kompis/cup. Default-test-spillerne
   // er arrangørens venner så de er valgbare i steg 4, slik de ville vært i bruk.
@@ -115,6 +118,7 @@ function renderWizard({
   createAndPublishAction = NO_OP,
   initialValues,
 }: {
+  courses?: CourseOption[];
   players?: PlayerOption[];
   friendPlayerIds?: string[];
   createDraftAction?: (fd: FormData) => Promise<CreateGameResult>;
@@ -123,7 +127,7 @@ function renderWizard({
 } = {}) {
   return render(
     <GameWizard
-      courses={COURSES}
+      courses={courses}
       players={players}
       mode={{
         kind: 'create',
@@ -978,5 +982,197 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     await waitFor(() =>
       expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
     );
+  });
+});
+
+// #1999: eieren opprettet fire runder som alle endte med forslags-navnet
+// «Byneset North 6. september». Regelen «navnet er skrevet av et menneske»
+// hadde to hjem — verdien i hooken, flagget i GameWizard — og bare ETT
+// kallsted meldte fra. Testene under holder regelen på plass fra begge
+// retninger: et skrevet navn overlever bane- og tee-off-bytte (B1/B2/B8),
+// forslaget følger fortsatt bane og tee-off når ingen har rørt navnet (B3),
+// og navnefeltet i BasicsSection markerer navnet som rørt selv om ingen
+// husket å koble opp et flagg (B4).
+describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
+  const OTHER_COURSE: CourseOption = {
+    id: 'course-2',
+    name: 'Byneset GK',
+    tee_boxes: [
+      {
+        id: 'tee-2',
+        name: 'Hvit',
+        has_mens: true,
+        has_ladies: true,
+        has_juniors: false,
+      },
+    ],
+  };
+
+  const LATER_TEE_OFF = (() => {
+    const d = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
+
+  function clickPrev() {
+    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+  }
+
+  /** Steg 1 → 5 med bane, tee og tee-off fylt ut på steg 3. */
+  function walkToReadyStep(courseId = 'course-1', teeId = 'tee-1') {
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: courseId },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: teeId },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    clickNext();
+    expectStep(5);
+  }
+
+  /** Navnefeltet på steg 5. Labelen er sr-only, id-en er `name`. */
+  function nameField() {
+    return screen.getByLabelText(/^spillnavn$/i);
+  }
+
+  it('B1: navnet står når tee-off endres etterpå', () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    fireEvent.change(nameField(), { target: { value: 'Torsdagsgolf' } });
+    expect(nameField()).toHaveValue('Torsdagsgolf');
+
+    clickPrev(); // → steg 4
+    clickPrev(); // → steg 3
+    expectStep(3);
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: LATER_TEE_OFF },
+    });
+
+    clickNext();
+    clickNext();
+    expectStep(5);
+    expect(nameField()).toHaveValue('Torsdagsgolf');
+  });
+
+  it('B2: navnet står når banen byttes etterpå', () => {
+    renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      courses: [...COURSES, OTHER_COURSE],
+    });
+    walkToReadyStep();
+
+    fireEvent.change(nameField(), { target: { value: 'Torsdagsgolf' } });
+
+    clickPrev();
+    clickPrev();
+    expectStep(3);
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-2' },
+    });
+
+    clickNext();
+    clickNext();
+    expectStep(5);
+    expect(nameField()).toHaveValue('Torsdagsgolf');
+  });
+
+  it('B3 (negativ kontroll): forslaget følger bane og tee-off når navnet er urørt', () => {
+    renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      courses: [...COURSES, OTHER_COURSE],
+    });
+    walkToReadyStep();
+
+    // Ingen har rørt navnet: forslaget er bane + dato.
+    const nbMonths = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+    const suggestionFor = (course: string, iso: string) => {
+      const d = new Date(iso);
+      return `${course} ${d.getDate()}. ${nbMonths[d.getMonth()]}`;
+    };
+    expect(nameField()).toHaveValue(
+      suggestionFor('Stiklestad GK', FUTURE_TEE_OFF),
+    );
+
+    // Bytt bane → forslaget skal følge etter (fiksen må ikke fryse det).
+    clickPrev();
+    clickPrev();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-2' },
+    });
+    clickNext();
+    clickNext();
+    expect(nameField()).toHaveValue(
+      suggestionFor('Byneset GK', FUTURE_TEE_OFF),
+    );
+
+    // Bytt tee-off → forslaget skal fortsatt følge etter.
+    clickPrev();
+    clickPrev();
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: LATER_TEE_OFF },
+    });
+    clickNext();
+    clickNext();
+    expect(nameField()).toHaveValue(
+      suggestionFor('Byneset GK', LATER_TEE_OFF),
+    );
+  });
+
+  it('B8: navnet står i et synlig felt på steg 5 uten at noe er trykket på', () => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    walkToReadyStep();
+
+    // Ingen knapp å trykke på først: feltet ER der, med forslaget i seg.
+    const field = nameField();
+    expect(field.tagName).toBe('INPUT');
+    expect(field).toHaveAttribute('type', 'text');
+    expect(field).toHaveValue(`Stiklestad GK ${new Date(FUTURE_TEE_OFF).getDate()}. ${['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'][new Date(FUTURE_TEE_OFF).getMonth()]}`);
+
+    fireEvent.change(field, { target: { value: 'Klubbkvelden' } });
+    clickPrev();
+    clickPrev();
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: LATER_TEE_OFF },
+    });
+    clickNext();
+    clickNext();
+    expect(nameField()).toHaveValue('Klubbkvelden');
+  });
+});
+
+// #1999 B4: navnefeltet i BasicsSection er skjult i veiviseren i dag
+// (`showName={false}`), men GameForm rendrer det, og det er ÉN prop-verdi som
+// står mellom oss og at feil-forklaringen i issue-teksten blir helt ekte.
+// Feltet kaller bare `setName` og vet ingenting om noe flagg. Denne testen
+// låser at det holder: `setName` markerer navnet som rørt av seg selv.
+describe('BasicsSection — #1999 navnefeltet markerer navnet som rørt', () => {
+  function Harness({ onState }: { onState: (touched: boolean) => void }) {
+    const state = useGameFormState({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      courses: COURSES,
+    });
+    onState(state.nameTouched);
+    return <BasicsSection state={state} courses={COURSES} showName />;
+  }
+
+  it('B4: å skrive i navnefeltet setter nameTouched', () => {
+    let touched = false;
+    render(<Harness onState={(t) => { touched = t; }} />);
+
+    expect(touched).toBe(false);
+
+    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+      target: { value: 'Fredagsrunden' },
+    });
+
+    expect(touched).toBe(true);
   });
 });

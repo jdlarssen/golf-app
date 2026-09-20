@@ -49,12 +49,6 @@ type Props = {
   state: GameFormState;
   mode: GameFormMode;
   /**
-   * Kalles første gang admin redigerer navnet manuelt. Wizard-en setter
-   * `nameTouched = true` slik at auto-name fra bane/tee-off ikke
-   * overstyrer det redigerte navnet.
-   */
-  onNameTouched?: () => void;
-  /**
    * #1065: hopper tilbake til steg 4 (Spillere). Brukt av «Gå tilbake»-lenken
    * under publish-knappen når `missingForPublish` har et spiller-relatert
    * mangel-punkt — steg-4-gaten er nå permissiv (tomt roster er alltid
@@ -74,7 +68,6 @@ type Props = {
 export function ReadyStep({
   state,
   mode,
-  onNameTouched,
   onGoToPlayersStep,
   onSubmitStart,
 }: Props) {
@@ -128,7 +121,6 @@ export function ReadyStep({
     setRoundRobinAllowancePct,
   } = state;
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [nameEditing, setNameEditing] = useState(false);
 
   const selectedTeeBox = availableTees.find((tee) => tee.id === teeBoxId) ?? null;
 
@@ -336,40 +328,27 @@ export function ReadyStep({
         <SummaryRow label={t('playersLabel')} value={teamsSummary()} />
       </div>
 
-      {/* Spillnavn — klikk-for-å-redigere over summary. Skjult input
-          serialiserer fortsatt verdien via samme `name`-felt som GameForm
-          bruker. */}
+      {/* #1999: spillnavnet er et helt vanlig felt — synlig uten at noe må
+          trykkes på. Den gamle klikk-for-å-redigere-teksten så ut som en
+          overskrift, og en arrangør som aldri fant fram til at den var et felt
+          satt igjen med forslaget. Samme `name`-felt som GameForm serialiserer,
+          og `setName` markerer navnet som rørt av seg selv (#1999 del A), så
+          verken bane- eller tee-off-bytte kan overskrive det etterpå. */}
       <div className="space-y-1.5">
         <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           {t('gameNameLegend')}
         </span>
-        {nameEditing ? (
-          <Input
-            id="name"
-            name="name"
-            type="text"
-            label={t('gameNameLabel')}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              onNameTouched?.();
-            }}
-            onBlur={() => setNameEditing(false)}
-            autoFocus
-            required
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setNameEditing(true)}
-            className="w-full text-left font-serif text-lg text-text rounded-md px-2 py-1 -mx-2 hover:bg-primary-soft/40"
-          >
-            {name || <span className="italic text-muted">{t('gameNamePlaceholder')}</span>}
-          </button>
-        )}
-        {!nameEditing && (
-          <input type="hidden" name="name" value={name} />
-        )}
+        <Input
+          id="name"
+          name="name"
+          type="text"
+          label={t('gameNameLabel')}
+          labelHidden
+          placeholder={t('gameNamePlaceholder')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
       </div>
 
       {/* #1065: «Hvem kan melde seg på?»-valget i klartekst — IKKE gjemt i

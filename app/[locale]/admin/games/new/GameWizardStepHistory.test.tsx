@@ -344,8 +344,9 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     expect(stepLabel, 'Forventet «Steg 5 av 5» i DOM').toBeTruthy();
     expect(replace).not.toHaveBeenCalled();
 
-    expect(screen.getByText('Serverutkastet')).toBeTruthy();
-    expect(screen.queryByText('Gammelt lokalt utkast')).toBeNull();
+    // #1999: navnet på steg 5 er nå et vanlig tekstfelt, ikke en
+    // klikk-for-å-redigere-tekst — verdien leses av feltet, ikke av DOM-teksten.
+    expect(screen.getByLabelText(/^spillnavn$/i)).toHaveValue('Serverutkastet');
 
     // Tilbake til steg 2: utkastets eget format må stå der, og stå valgt.
     fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
