@@ -24,12 +24,14 @@ function notFound(): Response {
   } as unknown as Response;
 }
 
-type ShareNavigator = Navigator & {
+/** Web Share er valgfritt i nettleseren, men ikke i lib.dom — så vi tar
+ *  navigator via en form der begge kan legges på og fjernes igjen. */
+type ShareNavigator = {
   share?: (data: ShareData) => Promise<void>;
   canShare?: (data?: ShareData) => boolean;
 };
 
-const nav = () => navigator as ShareNavigator;
+const nav = () => navigator as unknown as ShareNavigator;
 
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -105,7 +107,7 @@ describe('useSharePng — deling', () => {
   }
 
   it('deler filen via Web Share og melder fra', async () => {
-    const share = vi.fn(async () => {});
+    const share = vi.fn(async (_data: ShareData) => {});
     nav().canShare = () => true;
     nav().share = share;
     const onShared = vi.fn();
@@ -118,7 +120,7 @@ describe('useSharePng — deling', () => {
 
     expect(outcome).toBe('shared');
     expect(onShared).toHaveBeenCalledWith('shared');
-    const data = share.mock.calls[0][0] as unknown as ShareData & { files: File[] };
+    const data = share.mock.calls[0][0] as ShareData & { files: File[] };
     expect(data.files[0].name).toBe('torny-kort.png');
     expect(data.text).toContain('tornygolf.no');
   });

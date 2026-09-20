@@ -55,6 +55,23 @@ export function isKavalkadeCardKind(value: string): value is KavalkadeCardKind {
   return (KAVALKADE_CARD_KINDS as readonly string[]).includes(value);
 }
 
+/**
+ * Adressen til kortets bilde-rute.
+ *
+ * `localePrefix: 'as-needed'` (`i18n/routing.ts`): bokmål er standardspråket og
+ * har ingen prefiks i URL-en, engelsk har `/en`. Regelen bor her og ikke i
+ * knappen, så den kan testes uten å rendre noe.
+ */
+export function kavalkadeCardImageUrl(
+  locale: string,
+  defaultLocale: string,
+  year: number,
+  kind: KavalkadeCardKind,
+): string {
+  const prefix = locale === defaultLocale ? '' : `/${locale}`;
+  return `${prefix}/kavalkade/${year}/card/${kind}`;
+}
+
 /** En støttelinje under det store tallet. */
 export type KavalkadeCardLine = { label: string; value: string };
 
