@@ -29,6 +29,11 @@ import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { countRoundAchievements, type HoleScore } from '@/lib/stats/achievements';
 import { isWinningSummary } from '@/lib/stats/clubStats';
 import {
+  computeSeasonStats,
+  type SeasonRoundInput,
+  type SeasonSummary,
+} from '@/lib/stats/seasonStats';
+import {
   summarizeTrendRounds,
   type TrendRound,
   type TrendSummary,
@@ -152,6 +157,13 @@ export type FormPeakFact = {
 export type PersonalFacts = {
   /** Ferdige runder i året (alle, ikke bare komplette 18). */
   rounds: number;
+  /**
+   * Årets totaler fra `computeSeasonStats` — samme aggregat som sesong-recapen på
+   * `/profile/historikk`, så kavalkaden og huben ikke kan si ulike tall. `null` er
+   * i praksis umulig her (terskelen garanterer minst tre daterte runder), men
+   * typen holder muligheten åpen.
+   */
+  season: SeasonSummary | null;
   bestRound: BestRoundFact | null;
   nemesisHole: NemesisHoleFact | null;
   rival: RivalFact | null;
@@ -303,8 +315,18 @@ function round2(n: number): number {
 type MyRound = { game: KavalkadeGame; me: KavalkadePlayerRound };
 
 function buildPersonalFacts(mine: MyRound[], viewerUserId: string): PersonalFacts {
+  // Alle runder her er allerede filtrert til ETT år, så recapen gir én bøtte.
+  // Den er sannhetskilden for årets totaler; `bestRound` under legger bare
+  // runde-navnet og banen på det samme tallet (testen holder de to i lås).
+  const seasonRounds: SeasonRoundInput[] = mine.map(({ game, me }) => ({
+    year: game.year,
+    completeBrutto: completeBrutto(me),
+    achievements: countRoundAchievements(me.holes),
+  }));
+
   return {
     rounds: mine.length,
+    season: computeSeasonStats(seasonRounds)[0] ?? null,
     bestRound: findBestRound(mine),
     nemesisHole: findNemesisHole(mine),
     rival: findRival(mine, viewerUserId),
