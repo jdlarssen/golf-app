@@ -35,28 +35,33 @@ const { fetchWolfChoices } = require('../data/choices') as {
   fetchWolfChoices: jest.Mock;
 };
 
-const NO_CHOICES: readonly GameMode[] = [
-  'best_ball',
-  'stableford',
-  'modified_stableford',
-  'singles_matchplay',
-  'solo_strokeplay',
-  'texas_scramble',
-  'ambrose',
-  'florida_scramble',
-  'fourball_matchplay',
-  'foursomes_matchplay',
-  'greensome_matchplay',
-  'chapman_matchplay',
-  'gruesome_matchplay',
-  'nassau',
-  'skins',
-  'nines',
-  'round_robin',
-  'acey_deucey',
-  'shamble',
-  'patsome',
-];
+// Kartet, ikke lista, er porten: et 23. format i `GameMode` gir rød `tsc` her,
+// i stedet for at formatet stille begynner å polle en tabell det ikke trenger.
+// `as const satisfies` sperrer begge veier — `wolf` kan heller ikke smyges inn.
+const NO_CHOICES_MAP = {
+  best_ball: true,
+  stableford: true,
+  modified_stableford: true,
+  singles_matchplay: true,
+  solo_strokeplay: true,
+  texas_scramble: true,
+  ambrose: true,
+  florida_scramble: true,
+  fourball_matchplay: true,
+  foursomes_matchplay: true,
+  greensome_matchplay: true,
+  chapman_matchplay: true,
+  gruesome_matchplay: true,
+  nassau: true,
+  skins: true,
+  nines: true,
+  round_robin: true,
+  acey_deucey: true,
+  shamble: true,
+  patsome: true,
+} as const satisfies Record<Exclude<GameMode, 'wolf' | 'bingo_bango_bongo'>, true>;
+
+const NO_CHOICES = Object.keys(NO_CHOICES_MAP) as readonly GameMode[];
 
 describe('choiceSourceFor', () => {
   it('peker wolf og bingo bango bongo på hver sin tabell', () => {
