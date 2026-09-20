@@ -27,7 +27,7 @@
 
 /** Ett registrert filter-ledd. `not('strokes','is',null)` blir op `'not'`. */
 export type QueryFilter = {
-  op: 'eq' | 'in' | 'is' | 'not';
+  op: 'eq' | 'in' | 'is' | 'not' | 'ilike';
   column: string;
   value: unknown;
 };
@@ -51,6 +51,12 @@ export type QueryOp = {
 export type QueryResponse = {
   data?: unknown;
   error?: { message: string } | null;
+  /**
+   * Rad-antallet PostgREST legger ved en `{ head: true, count: 'exact' }`-select
+   * (#1919: format-taket telles slik). Utelatt betyr «ikke spurt om» — en teller
+   * som leser det må selv bestemme hva `undefined` skal bety.
+   */
+  count?: number | null;
 };
 
 /**
@@ -63,6 +69,8 @@ export type QueryResponse = {
 export interface QueryChain extends PromiseLike<QueryResponse> {
   select(columns?: string): QueryChain;
   eq(column: string, value: unknown): QueryChain;
+  /** Case-insensitiv likhet. Adressene slås opp slik (`users`, `invitations`). */
+  ilike(column: string, value: unknown): QueryChain;
   in(column: string, value: unknown): QueryChain;
   is(column: string, value: unknown): QueryChain;
   not(column: string, operator: string, value: unknown): QueryChain;
@@ -141,6 +149,7 @@ export function createAdminClientMock(opts: {
         return api;
       },
       eq: (column, value) => push('eq', column, value),
+      ilike: (column, value) => push('ilike', column, value),
       in: (column, value) => push('in', column, value),
       is: (column, value) => push('is', column, value),
       not: (column, _operator, value) => push('not', column, value),
