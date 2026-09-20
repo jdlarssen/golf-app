@@ -30,24 +30,27 @@ import {
 import { describeRosterFailure } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
-const REASONS: EndRoundFailure[] = [
-  'no-session',
-  'offline',
-  'not-found',
-  'cup-game',
-  'not-active',
-  'no-players',
-  'not-all-submitted',
-  'not-all-approved',
-  'withdrawal-unsupported',
-  'withdraw-after-submit',
-  'withdraw-after-submit-partial',
-  'db-withdraw',
-  'db-winners',
-  'rls-denied',
-  'no-rows',
-  'db',
-];
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const REASON_MAP = {
+  'no-session': true,
+  offline: true,
+  'not-found': true,
+  'cup-game': true,
+  'not-active': true,
+  'no-players': true,
+  'not-all-submitted': true,
+  'not-all-approved': true,
+  'withdrawal-unsupported': true,
+  'withdraw-after-submit': true,
+  'withdraw-after-submit-partial': true,
+  'db-withdraw': true,
+  'db-winners': true,
+  'rls-denied': true,
+  'no-rows': true,
+  db: true,
+} as const satisfies Record<EndRoundFailure, true>;
+
+const REASONS = Object.keys(REASON_MAP) as readonly EndRoundFailure[];
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
@@ -206,16 +209,19 @@ describe('ownRowHint', () => {
 // Purring (#1889) og lenke-etikettene (#1891)
 // -----------------------------------------------------------------------------
 
-const REMINDER_REASONS: ReminderFailure[] = [
-  'offline',
-  'no-web-base-url',
-  'unauthorized',
-  'network',
-  'forbidden',
-  'not_found',
-  'not_active',
-  'remind_failed',
-];
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const REMINDER_REASON_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  unauthorized: true,
+  network: true,
+  forbidden: true,
+  not_found: true,
+  not_active: true,
+  remind_failed: true,
+} as const satisfies Record<ReminderFailure, true>;
+
+const REMINDER_REASONS = Object.keys(REMINDER_REASON_MAP) as readonly ReminderFailure[];
 
 describe('describeReminderFailure', () => {
   it.each(REMINDER_REASONS)('gir en ferdig setning for «%s»', (reason) => {

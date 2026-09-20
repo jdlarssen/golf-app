@@ -26,15 +26,18 @@ import {
 
 const webErrors: Record<string, string> = source.auth.errors;
 
-const CODES: LoginErrorCode[] = [
-  'rate_limited_minute',
-  'rate_limited_quota',
-  'user_not_found',
-  'code_invalid',
-  'code_expired',
-  'network',
-  'unknown',
-];
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+const CODE_MAP = {
+  rate_limited_minute: true,
+  rate_limited_quota: true,
+  user_not_found: true,
+  code_invalid: true,
+  code_expired: true,
+  network: true,
+  unknown: true,
+} as const satisfies Record<LoginErrorCode, true>;
+
+const CODES = Object.keys(CODE_MAP) as readonly LoginErrorCode[];
 
 /** Kodene appen deler med webben. `network` er app-egen (offline-først). */
 const SHARED_WITH_WEB = CODES.filter((code) => code !== 'network');
