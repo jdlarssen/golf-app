@@ -2,4 +2,4 @@
 type: fix
 issue: 1980
 ---
-Appen spør nå før du trykker «Start runden nå», slik nettsiden gjør, fordi runden ikke kan settes tilbake.
+Når du trykker «Start runden nå», spør appen først om du er sikker, slik nettsiden gjør. En runde som er startet, kan ikke settes tilbake.
