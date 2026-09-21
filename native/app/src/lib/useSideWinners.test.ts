@@ -98,4 +98,30 @@ describe('useSideWinners', () => {
     // Først her er noten sann: vi HAR prøvd, og vi har ingenting.
     expect(result.current).toEqual({ rows: [], neverLoaded: true, settled: true });
   });
+
+  // #1980: spillet åpnes før bundelen har landet (`enabled` false), og så slår
+  // hentingen seg på. Før ble `settled` stående sann fra den første runden, og
+  // skjermen viste den falske noten mens hentingen pågikk.
+  it('går tilbake til vente-tilstand når hentingen slås på', async () => {
+    let release!: (rows: unknown[]) => void;
+    fetchSideWinners.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    const { result, rerender } = await renderHook(
+      ({ enabled }: { enabled: boolean }) => useSideWinners('game-1', enabled),
+      { initialProps: { enabled: false } },
+    );
+    await waitFor(() => expect(result.current.settled).toBe(true));
+
+    await rerender({ enabled: true });
+
+    await waitFor(() => expect(fetchSideWinners).toHaveBeenCalled());
+    expect(result.current.settled).toBe(false);
+
+    release([ROW]);
+    await waitFor(() => expect(result.current.settled).toBe(true));
+    expect(result.current.rows).toEqual([ROW]);
+  });
 });
