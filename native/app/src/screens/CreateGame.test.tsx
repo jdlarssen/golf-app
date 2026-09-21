@@ -162,6 +162,8 @@ describe('CreateGame', () => {
     // Navnet er forhåndsfylt fra formatet, så `name_required` aldri møter
     // arrangøren.
     expect(screen.getByTestId('create-name').props.value).toBe('Stableford');
+    // #1980: HCP-andelen fra webbens AllowanceField.
+    await fireEvent.changeText(screen.getByTestId('create-allowance'), '85');
     await fireEvent(screen.getByTestId('create-side-toggle'), 'valueChange', true);
     await fireEvent.press(screen.getByTestId('create-side-ld-1'));
     await fireEvent.press(screen.getByTestId('create-side-ctp-1'));
@@ -201,8 +203,11 @@ describe('CreateGame', () => {
         sideTournamentEnabled: true,
         sideLdCount: 1,
         sideCtpCount: 1,
+        hcpAllowancePct: 85,
       }),
     );
+    // Andelen går til `hcp_allowance_pct`, ikke til greensome-kolonnen.
+    expect(draft.setup?.greensomeAllowancePct).toBeUndefined();
     expect(draft.teeOffAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     // Tee-kjønnet leses fra profilen: Ada står som `ladies` og skal spille fra
     // dametee uten at veiviseren spør.
@@ -231,6 +236,23 @@ describe('CreateGame', () => {
   // ubeskyttet -- begge linjene kunne slettes med 511/511 groenne tester. Selve
   // lekkasjen fanges av `isParStableford` i payload-laget, men nullstillingen er
   // det som gjoer at SKJERMEN ikke viser et «Par»-valg som ikke lenger gjelder.
+  it('setter brutto som 0 % og viser webbens brutto-tekst (#1980)', async () => {
+    await renderWizard();
+    await fireEvent.press(await screen.findByTestId('create-format-stableford'));
+    await fireEvent.press(screen.getByTestId('create-next'));
+
+    await fireEvent.press(screen.getByTestId('create-allowance-brutto'));
+
+    expect(screen.queryByTestId('create-allowance')).toBeNull();
+    expect(screen.getByTestId('create-allowance-brutto-helper').props.children).toBe(
+      'Stableford-poeng beregnes på bruttoscore mot par. Scratch-format.',
+    );
+
+    // Tilbake til netto: feltet er der igjen, tomt = 100.
+    await fireEvent.press(screen.getByTestId('create-allowance-netto'));
+    expect(screen.getByTestId('create-allowance').props.value).toBe('');
+  });
+
   it('kaster modus-spesifikke valg naar formatet byttes, og lar dobbelttrykk staa', async () => {
     await renderWizard();
 

@@ -13,6 +13,11 @@
 // publisering.
 import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
 import { Text, TextInput, View } from 'react-native';
+import {
+  ALLOWANCE_TEXT,
+  BRUTTO_HELPER,
+  hasHcpAllowanceField,
+} from '../../lib/allowanceCopy';
 import type { AppGameMode } from '../../lib/appFormats';
 import type { ModeSetup } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
@@ -112,6 +117,48 @@ export function SetupStep({
             placeholder="100"
             placeholderTextColor={colors.muted}
           />
+        </Field>
+      ) : null}
+
+      {/* #1980: webbens AllowanceField for de fire formatene. «0» er brutto,
+          som i webbens datamodell; tomt felt er 100 (fullt banehandicap). */}
+      {hasHcpAllowanceField(mode) ? (
+        <Field label={ALLOWANCE_TEXT.legend} hint={ALLOWANCE_TEXT.description}>
+          <Chips
+            value={text.allowance === '0' ? 'brutto' : 'netto'}
+            onChange={(choice) => onText({ allowance: choice === 'brutto' ? '0' : '' })}
+            options={[
+              {
+                value: 'netto' as const,
+                label: ALLOWANCE_TEXT.nettoLabel,
+                testID: 'create-allowance-netto',
+              },
+              {
+                value: 'brutto' as const,
+                label: ALLOWANCE_TEXT.bruttoLabel,
+                testID: 'create-allowance-brutto',
+              },
+            ]}
+          />
+          {text.allowance === '0' ? (
+            <Text style={ui.muted} testID="create-allowance-brutto-helper">
+              {BRUTTO_HELPER[mode]}
+            </Text>
+          ) : (
+            <Field label={ALLOWANCE_TEXT.inputLabel} hint={ALLOWANCE_TEXT.nettoHelper}>
+              <TextInput
+                testID="create-allowance"
+                style={ui.input}
+                value={text.allowance}
+                onChangeText={(allowance) =>
+                  onText({ allowance: allowance.replace(/[^0-9]/g, '') })
+                }
+                keyboardType="number-pad"
+                placeholder="100"
+                placeholderTextColor={colors.muted}
+              />
+            </Field>
+          )}
         </Field>
       ) : null}
 

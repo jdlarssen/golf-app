@@ -38,6 +38,7 @@ import {
 import { fetchFormatCatalog } from '../data/formatCatalog';
 import { fetchOwnProfile } from '../data/profile';
 import { isDeviceOnline } from '../data/syncTriggers';
+import { hasHcpAllowanceField } from '../lib/allowanceCopy';
 import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import {
   createFailureBelongsOnWeb,
@@ -278,15 +279,22 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     );
   }, []);
 
+  // Andel-teksten er ett felt i skjemaet, men to kolonner: greensome har sin
+  // egen (`greensome_allowance_pct`), de fire med webbens AllowanceField
+  // skriver `hcp_allowance_pct` (#1980). Teksten nullstilles ved formatbytte.
+  const allowancePct =
+    setupText.allowance === '' ? undefined : Number(setupText.allowance);
   const resolvedSetup = useMemo<ModeSetup>(
     () => ({
       ...setup,
       greensomeAllowancePct:
-        setupText.allowance === '' ? undefined : Number(setupText.allowance),
+        gameMode === 'greensome_matchplay' && setupText.allowance !== ''
+          ? Number(setupText.allowance)
+          : undefined,
       krPerUnit:
         setupText.krPerUnit === '' ? undefined : Number(setupText.krPerUnit),
     }),
-    [setup, setupText],
+    [gameMode, setup, setupText],
   );
 
   const draft = useMemo<GameDraft | null>(() => {
@@ -297,6 +305,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
       courseId,
       teeBoxId,
       teeOffAt: teeOffInstant(teeOff),
+      hcpAllowancePct: hasHcpAllowanceField(gameMode) ? allowancePct : undefined,
       requirePeerApproval: common.requirePeerApproval,
       scoreVisibility: common.scoreVisibility,
       sideTournamentEnabled: common.sideTournamentEnabled,
@@ -305,7 +314,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
       players,
       setup: resolvedSetup,
     };
-  }, [common, courseId, gameMode, players, resolvedSetup, teeBoxId, teeOff]);
+  }, [allowancePct, common, courseId, gameMode, players, resolvedSetup, teeBoxId, teeOff]);
 
   const teamLayout = gameMode
     ? teamLayoutFor(gameMode, isParStableford(gameMode, resolvedSetup))
