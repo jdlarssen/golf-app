@@ -69,6 +69,26 @@ async function pendingCount(): Promise<number> {
 }
 
 /**
+ * {@link pendingCount}, men et kast blir `null`: basen svarer ikke, og vi vet
+ * ikke hvor mange slag som ligger der.
+ *
+ * #1980: før kastet dette ut av `logOut`, skjermen sa «utlogging feilet», og
+ * spilleren kom aldri ut — på en delt telefon kom heller ingen andre inn.
+ * Webben logger ut uansett (`LogoutForm`). Det gjør vi også, men uten wipe:
+ * radene blir liggende, og eier-vakten (`localOwner.ts`) tar dem ved neste
+ * innlogging. Eieren har godtatt at uleverte slag da kan gå tapt hvis en annen
+ * logger inn først (svar 1, 2026-09-21).
+ */
+async function pendingCountOrNull(): Promise<number | null> {
+  try {
+    return await pendingCount();
+  } catch (err) {
+    console.error('[logOut] lokal base svarte ikke', err);
+    return null;
+  }
+}
+
+/**
  * Tilhører basen noen andre enn den som er innlogget? Bare et lesbart stempel
  * OG en kjent bruker kan svare ja; alt annet går den vanlige veien, samme
  * fail-open-lesning som vakten selv (`localOwner.ts`).
@@ -189,11 +209,19 @@ export async function logOut(opts?: {
     return { ok: true };
   }
 
-  let pending = await pendingCount();
+  let pending = await pendingCountOrNull();
 
-  if (pending > 0) {
+  if (pending != null && pending > 0) {
     await drainWithinTimeout();
-    pending = await pendingCount();
+    pending = await pendingCountOrNull();
+  }
+
+  // Basen svarer ikke: logg ut likevel, og la den ligge. Se `pendingCountOrNull`.
+  if (pending == null) {
+    if (!(await signOutAndConfirm())) {
+      return { ok: false, reason: 'signout-failed' };
+    }
+    return { ok: true };
   }
 
   if (pending > 0 && !opts?.keepUnsent) {
