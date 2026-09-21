@@ -84,6 +84,14 @@ authenticated_security_definer_function_executable_public_incomplete_profiles_fo
 authenticated_security_definer_function_executable_public_join_club_league_p_league_id uuid
 authenticated_security_definer_function_executable_public_leave_club_league_p_league_id uuid
 authenticated_security_definer_function_executable_public_remove_friend_p_other uuid
+#   — #1919/#2189 (0181): roster_candidates. Kandidatlista native-appen tegner
+#     «Legg til spiller» fra. Kalleren er auth.uid() og ALDRI en parameter —
+#     ingen id å sende inn i stedet. p_game_id slås kun opp for en runde
+#     kalleren selv har opprettet (created_by = auth.uid()), så klubb-grenen
+#     kan ikke høste en fremmed klubbs medlemsliste. Settet er
+#     public.is_invite_eligible — samme funksjon 0115-triggeren håndhever
+#     med, ikke en kopi. search_path låst, anon revoked, kun authenticated.
+authenticated_security_definer_function_executable_public_roster_candidates_p_game_id uuid
 authenticated_security_definer_function_executable_public_respond_friend_request_p_request_id uuid, p_accept boolean
 authenticated_security_definer_function_executable_public_send_friend_request_p_addressee uuid
 authenticated_security_definer_function_executable_public_send_friend_request_by_email_p_email text
