@@ -140,8 +140,7 @@ async function renderWizard() {
 describe('CreateGame', () => {
   it('bærer valgene gjennom alle fem stegene, står imot en feilet publisering, og bytter ut seg selv ved suksess', async () => {
     // Går gjennom alle fem veiviser-stegene i én flyt (bevisst — det er nettopp
-    // det testen skal bevise). ~150ms alene, men jests 5000ms-default er for
-    // knapp når CI kjører suitene parallelt under last (#1872, #1916).
+    // det testen skal bevise). Tidsgrensen står i jest.config.js (#1872).
     publishGameMock
       // Første forsøk feiler: knappen skal ikke låse seg, og meldingen skal
       // være den norske setningen for koden — ikke en rå PostgREST-streng.
@@ -226,7 +225,7 @@ describe('CreateGame', () => {
       gameId: 'new-game-1',
     });
     expect(navigation.navigate).not.toHaveBeenCalled();
-  }, 20000);
+  });
 
   // N6a-evaluatorens funn N2: at `selectMode` nullstiller oppsettet var
   // ubeskyttet -- begge linjene kunne slettes med 511/511 groenne tester. Selve
@@ -303,5 +302,5 @@ describe('CreateGame', () => {
     expect(screen.getByTestId('create-summary-tees').props.children).toBe(
       'Ada Aas: junior',
     );
-  }, 20000);
+  });
 });

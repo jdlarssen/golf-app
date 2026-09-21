@@ -24,6 +24,14 @@ module.exports = {
     '^expo-sqlite$': '<rootDir>/src/test/sqliteMock.ts',
     '^@/(.*)$': '<rootDir>/../../$1',
   },
+  // Én felles tidsgrense for hele suiten, lik rot-vitest (`vitest.config.ts`).
+  // Jests standard på 5000 ms er for knapp: første test i en fil betaler for
+  // modul-transform og første render (~150–365 ms alene, 4–7 s under last), og
+  // CI kjører suitene i parallelle workers mens andre økter kan teste på samme
+  // maskin. Hvilken test som ryker avhenger av hvilken fil som starter kaldt
+  // under mest last, så grensen hører hjemme her — ikke som tredje argument
+  // på enkelt-tester (#1872, #1916, #1946). `jest-expo` setter ingen egen.
+  testTimeout: 20000,
   // Hjelperne under src/test/ er rigg, ikke suiter.
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/src/test/'],
 };
