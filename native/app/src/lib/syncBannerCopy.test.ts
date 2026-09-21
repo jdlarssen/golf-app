@@ -12,28 +12,66 @@ import {
 
 const WEB = source.SyncBanner;
 
-describe('SYNC_BANNER_TEXT', () => {
-  it('bruker webbens tekster tegn for tegn', () => {
-    expect(SYNC_BANNER_TEXT.quarantineHoles).toBe(WEB.quarantineHoles);
-    expect(SYNC_BANNER_TEXT.abandonedMessage).toBe(WEB.abandonedMessage);
-    expect(SYNC_BANNER_TEXT.quarantineRecoveryHint).toBe(WEB.quarantineRecoveryHint);
-    expect(SYNC_BANNER_TEXT.quarantineDetailsTitle).toBe(WEB.quarantineDetailsTitle);
-    expect(SYNC_BANNER_TEXT.quarantineDismiss).toBe(WEB.quarantineDismiss);
-    expect(SYNC_BANNER_TEXT.quarantineDismissConfirm).toBe(WEB.quarantineDismissConfirm);
-    expect(SYNC_BANNER_TEXT.retry).toBe(WEB.retry);
-    expect(SYNC_BANNER_TEXT.retrying).toBe(WEB.retrying);
-    expect(SYNC_BANNER_TEXT.conflictNotice).toBe(WEB.conflictNotice);
-    expect(SYNC_BANNER_TEXT.conflictNoticeMarker).toBe(WEB.conflictNoticeMarker);
-    expect(SYNC_BANNER_TEXT.conflictDismiss).toBe(WEB.conflictDismiss);
+type WebKey = keyof typeof WEB;
+
+// Regnskapet (#1904-mønsteret): hver app-tekst peker på webbens nøkkel, eller
+// på en ICU-nøkkel der appen bærer grenene hver for seg.
+const TEXT_MAP = {
+  quarantineHoles: 'quarantineHoles',
+  quarantineOtherGameOne: 'quarantineOtherGame',
+  quarantineOtherGameOther: 'quarantineOtherGame',
+  abandonedMessage: 'abandonedMessage',
+  quarantineRecoveryHint: 'quarantineRecoveryHint',
+  quarantineDetailsTitle: 'quarantineDetailsTitle',
+  quarantineDismiss: 'quarantineDismiss',
+  quarantineDismissConfirm: 'quarantineDismissConfirm',
+  retry: 'retry',
+  retrying: 'retrying',
+  conflictNotice: 'conflictNotice',
+  conflictNoticeMarker: 'conflictNoticeMarker',
+  conflictDismiss: 'conflictDismiss',
+} as const satisfies Record<keyof typeof SYNC_BANNER_TEXT, WebKey>;
+
+/** ICU-flertall: appens tekst er én gren av webbens melding. */
+const PLURAL_BRANCH: Partial<Record<keyof typeof SYNC_BANNER_TEXT, 'one' | 'other'>> = {
+  quarantineOtherGameOne: 'one',
+  quarantineOtherGameOther: 'other',
+};
+
+/** Nøkler under `SyncBanner` appen med vilje IKKE viser, med grunnen. */
+const WEB_ONLY: Partial<Record<WebKey, string>> = {
+  errorNetwork: 'aktiv-kø-varianten (slag som fortsatt prøver) er ikke med i appen (#1980 del 1)',
+  errorAuth: 'aktiv-kø-varianten',
+  errorPermission: 'aktiv-kø-varianten',
+  errorRateLimit: 'aktiv-kø-varianten',
+  errorGeneric: 'aktiv-kø-varianten',
+  errorWithQueue: 'aktiv-kø-varianten',
+  queueWaiting: 'aktiv-kø-varianten',
+  loginAction: 'aktiv-kø-varianten; appen logger inn på sin egen skjerm',
+  quarantineGlobalGame: 'den globale varianten; appens banner er alltid knyttet til ett spill',
+  quarantineOpenHole: 'lenker til hullene; appen navngir hullene uten lenke',
+  quarantineOpenGame: 'lenke til en annen runde; appen navngir den uten lenke',
+  ownerWipeFailed: 'speilet i ownerGateCopy.ts (eier-porten)',
+};
+
+const MIRRORED = Object.entries(TEXT_MAP) as [keyof typeof SYNC_BANNER_TEXT, WebKey][];
+
+describe('paritet med SyncBanner i messages/no.json', () => {
+  it.each(MIRRORED)('%s er webbens «%s» tegn for tegn', (appKey, webKey) => {
+    const branch = PLURAL_BRANCH[appKey];
+    if (branch) {
+      expect(WEB[webKey]).toContain(`${branch} {${SYNC_BANNER_TEXT[appKey]}}`);
+    } else {
+      expect(SYNC_BANNER_TEXT[appKey]).toBe(WEB[webKey]);
+    }
   });
 
-  it('har begge flertallsgrenene fra webbens ICU-tekst', () => {
-    expect(WEB.quarantineOtherGame).toContain(
-      `one {${SYNC_BANNER_TEXT.quarantineOtherGameOne}}`,
-    );
-    expect(WEB.quarantineOtherGame).toContain(
-      `other {${SYNC_BANNER_TEXT.quarantineOtherGameOther}}`,
-    );
+  it('hver nøkkel under SyncBanner er speilet eller står på WEB_ONLY', () => {
+    const accounted = new Set<string>([
+      ...Object.values(TEXT_MAP),
+      ...Object.keys(WEB_ONLY),
+    ]);
+    expect(Object.keys(WEB).sort()).toEqual([...accounted].sort());
   });
 });
 
