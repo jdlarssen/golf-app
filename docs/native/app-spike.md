@@ -646,12 +646,15 @@ E1-fallbacken når noen åpner spillsiden. Runden ER i gang, som er nøyaktig de
 arrangøren trykket for. Appen bærer utfallet som `alreadyRunning: true` under `ok: true`
 nettopp for at ingen skal lese det som en feilmelding.
 
-⚠️ **To installasjoner av `@supabase/supabase-js`.** Appen har sin egen (Metro må resolve
-mot appens avhengighetstre), rota har sin. Kjernen ligger i `lib/` og annoterer derfor
-ROTAS `SupabaseClient`; TypeScript nominal-sammenligner klasser med `protected`-felter og
-avviser de to som ulike. `startGame.ts` har ett dokumentert kast (`CoreSupabaseClient`,
-hentet fra kjernens egen signatur) — et pakke-duplikat-kast, ikke et «typene stemmer
-ikke»-kast.
+⚠️ **To installasjoner av `@supabase/supabase-js` (#1869).** Appen har sin egen (Metro må
+resolve mot appens avhengighetstre), rota har sin. Metro gir delte `lib/`-filer appens kopi
+via `resolver.nodeModulesPaths`. Appens `tsconfig.json` speiler det med en `paths`-rad for
+`@supabase/supabase-js`, så `tsc` typesjekker kjernen mot samme kopi. Uten raden ville
+`lib/` annotere ROTAS `SupabaseClient`, og TypeScript avviser to klasser med
+`protected`-felter som ulike. Derfor trengs ingen cast: `startGame.ts` sender appens klient
+rett inn. Regelen gjelder alle bare imports i den delte grafen som gir typer appen selv
+sender inn. Trenger en ny slik pakke det, får den en `paths`-rad i samme mønster, og
+kommentarene i `tsconfig.json` og `metro.config.js` holder de to i lås.
 
 ### RLS-veien per skriv
 

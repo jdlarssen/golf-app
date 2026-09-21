@@ -7,7 +7,11 @@
     // better-sqlite3-typene kommer inn via vanlige imports og trenger ingen rad.
     "types": ["jest", "node"],
     "paths": {
-      "@/*": ["../../*"]
+      "@/*": ["../../*"],
+      // Speiler resolver.nodeModulesPaths i metro.config.js (#1869): delte
+      // lib/-filer skal typesjekkes mot appens supabase-js, ikke rotas, så en
+      // kjerne som tar en klient godtar appens klient uten cast. Hold dem i lås.
+      "@supabase/supabase-js": ["./node_modules/@supabase/supabase-js"]
     }
   }
 }

@@ -19,6 +19,8 @@ config.watchFolders = [path.resolve(__dirname, '../../lib')];
 // resolver at this app's node_modules makes shared files resolve their deps
 // against the app's own dependency tree instead. Any bare import reachable from
 // the shared graph must therefore be a declared dependency of THIS package.
+// tsconfig.json mirrors this for @supabase/supabase-js via `paths` (#1869), so
+// type-checking resolves the same copy Metro serves; keep the two in lock-step.
 config.resolver.nodeModulesPaths = [path.resolve(__dirname, 'node_modules')];
 
 module.exports = config;
