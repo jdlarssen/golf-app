@@ -12,6 +12,12 @@
 //     setning på web uten at appen følger etter, blir denne rød — ellers ville
 //     spilleren fått to ulike forklaringer på samme regel, avhengig av flate.
 //     `no.json` leses fra node-siden; testen bundles aldri.
+//     Porten er et regnskap, ikke en håndplukket liste (#1904, #1912): hver
+//     nøkkel under `profile.deleteAccount` og `.errors` er enten speilet eller
+//     står på `WEB_ONLY` med en begrunnelse. Får webben en ny nøkkel — et
+//     femte kulepunkt, et nytt banner — blir testen rød til noen har tatt
+//     stilling. Kartene under bærer webbens nøkkel per kode, så en ny kode må
+//     få en nøkkel eller `null` før `tsc` slipper den gjennom.
 //  3. **De to kartene holdes fra hverandre.** Banneret før innsending og feilen
 //     etter innsending er ULIKE nøkler for samme årsak. Testen låser hvilken
 //     nøkkel som hører til hvilken retning, så ingen «rydder opp» ved å slå dem
@@ -32,29 +38,70 @@ import {
 const web = source.profile.deleteAccount;
 const webErrors: Record<string, string> = web.errors;
 
+type WebKey = Exclude<keyof typeof web, 'errors'>;
+type WebErrorKey = keyof typeof web.errors;
+
 // Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+// Verdien er webbens banner for samme årsak.
 const BLOCK_REASON_MAP = {
-  admin_account: true,
-  active_engagements: true,
-  sole_club_owner: true,
-} as const satisfies Record<DeleteBlockReason, true>;
+  admin_account: 'adminBanner',
+  active_engagements: 'blockedBanner',
+  sole_club_owner: 'soleClubOwnerBanner',
+} as const satisfies Record<DeleteBlockReason, WebKey>;
 
 const BLOCK_REASONS = Object.keys(BLOCK_REASON_MAP) as readonly DeleteBlockReason[];
 
 // Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+// Verdien er webbens feilnøkkel for samme utfall, eller `null` der webben ikke
+// har noen (nett, manglende server-adresse og status-oppslaget er app-egne).
 const FAILURE_MAP = {
-  offline: true,
-  'no-web-base-url': true,
-  network: true,
-  unauthorized: true,
-  admin_account: true,
-  active_engagements: true,
-  sole_club_owner: true,
-  status_failed: true,
-  delete_failed: true,
-} as const satisfies Record<AccountDeleteFailure, true>;
+  offline: null,
+  'no-web-base-url': null,
+  network: null,
+  unauthorized: null,
+  admin_account: 'admin_account',
+  active_engagements: 'active_games',
+  sole_club_owner: 'sole_club_owner',
+  status_failed: null,
+  delete_failed: 'delete_failed',
+} as const satisfies Record<AccountDeleteFailure, WebErrorKey | null>;
 
 const FAILURES = Object.keys(FAILURE_MAP) as readonly AccountDeleteFailure[];
+
+const MIRRORED_FAILURES = Object.entries(FAILURE_MAP).filter(
+  (entry): entry is [AccountDeleteFailure, WebErrorKey] => entry[1] !== null,
+);
+
+/** Webbens strenger som står tegn for tegn i `ACCOUNT_TEXT`: [web-nøkkel, appens tekst]. */
+const TEXT_ROWS: [WebKey, string][] = [
+  ['kicker', ACCOUNT_TEXT.heading],
+  // #1906: appen skrev «Tilbake» så lenge det ikke fantes noe profil-rom å
+  // gå tilbake til. Rommet finnes nå, `goBack()` lander i det, og strengen er
+  // webbens igjen — låst her så avviket ikke sniker seg inn på nytt.
+  ['backLabel', ACCOUNT_TEXT.backLabel],
+  ['deletedHeading', ACCOUNT_TEXT.deletedHeading],
+  ['keptHeading', ACCOUNT_TEXT.keptHeading],
+  ['keptBullet', ACCOUNT_TEXT.keptBullet],
+  ['deleteButton', ACCOUNT_TEXT.deleteButton],
+  ['deletePending', ACCOUNT_TEXT.deletePending],
+  ['cancelButton', ACCOUNT_TEXT.cancelButton],
+];
+
+/**
+ * Kulepunktene utledes fra webben, ikke fra en fast liste (#1912): får webben
+ * `bullet5`, får testen en rad for den — og den raden er rød til appen har
+ * fem kulepunkter.
+ */
+const WEB_BULLET_KEYS = Object.keys(web)
+  .filter((key) => /^bullet\d+$/.test(key))
+  .sort((a, b) => Number(a.slice('bullet'.length)) - Number(b.slice('bullet'.length)));
+
+/** Strenger under `profile.deleteAccount` appen med vilje IKKE viser. */
+const WEB_ONLY: Partial<Record<WebKey, string>> = {
+  // Lenka tilbake til `/profile` på webbens sperre-visning. I appen er sperren
+  // et banner på samme skjerm, og veien tilbake er `backLabel`.
+  blockedBackLink: 'webbens egen lenke fra sperre-visningen; appen har tilbake-knappen',
+};
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
@@ -66,11 +113,7 @@ describe('describeDeleteBlock', () => {
     expect(isFinishedSentence(describeDeleteBlock(reason))).toBe(true);
   });
 
-  it.each([
-    ['admin_account', 'adminBanner'],
-    ['active_engagements', 'blockedBanner'],
-    ['sole_club_owner', 'soleClubOwnerBanner'],
-  ] as [DeleteBlockReason, 'adminBanner' | 'blockedBanner' | 'soleClubOwnerBanner'][])(
+  it.each(Object.entries(BLOCK_REASON_MAP) as [DeleteBlockReason, WebKey][])(
     'viser webbens banner for «%s»',
     (reason, webKey) => {
       expect(describeDeleteBlock(reason)).toBe(web[webKey]);
@@ -83,12 +126,7 @@ describe('describeDeleteFailure', () => {
     expect(isFinishedSentence(describeDeleteFailure(reason))).toBe(true);
   });
 
-  it.each([
-    ['admin_account', 'admin_account'],
-    ['active_engagements', 'active_games'],
-    ['sole_club_owner', 'sole_club_owner'],
-    ['delete_failed', 'delete_failed'],
-  ] as [AccountDeleteFailure, string][])(
+  it.each(MIRRORED_FAILURES)(
     'viser webbens feilmelding for «%s»',
     (reason, webKey) => {
       expect(describeDeleteFailure(reason)).toBe(webErrors[webKey]);
@@ -142,25 +180,20 @@ describe('de to kartene', () => {
 });
 
 describe('ACCOUNT_TEXT', () => {
-  it.each([
-    ['heading', ACCOUNT_TEXT.heading, web.kicker],
-    // #1906: appen skrev «Tilbake» så lenge det ikke fantes noe profil-rom å
-    // gå tilbake til. Rommet finnes nå, `goBack()` lander i det, og strengen er
-    // webbens igjen — låst her så avviket ikke sniker seg inn på nytt.
-    ['backLabel', ACCOUNT_TEXT.backLabel, web.backLabel],
-    ['deletedHeading', ACCOUNT_TEXT.deletedHeading, web.deletedHeading],
-    ['deletedBullets[0]', ACCOUNT_TEXT.deletedBullets[0], web.bullet1],
-    ['deletedBullets[1]', ACCOUNT_TEXT.deletedBullets[1], web.bullet2],
-    ['deletedBullets[2]', ACCOUNT_TEXT.deletedBullets[2], web.bullet3],
-    ['deletedBullets[3]', ACCOUNT_TEXT.deletedBullets[3], web.bullet4],
-    ['keptHeading', ACCOUNT_TEXT.keptHeading, web.keptHeading],
-    ['keptBullet', ACCOUNT_TEXT.keptBullet, web.keptBullet],
-    ['deleteButton', ACCOUNT_TEXT.deleteButton, web.deleteButton],
-    ['deletePending', ACCOUNT_TEXT.deletePending, web.deletePending],
-    ['cancelButton', ACCOUNT_TEXT.cancelButton, web.cancelButton],
-  ])('«%s» er webbens streng tegn for tegn', (_key, appText, webText) => {
-    expect(appText).toBe(webText);
+  it.each(TEXT_ROWS)('«%s» er webbens streng tegn for tegn', (webKey, appText) => {
+    expect(appText).toBe(web[webKey]);
   });
+
+  it('har like mange kulepunkter som webben', () => {
+    expect(ACCOUNT_TEXT.deletedBullets).toHaveLength(WEB_BULLET_KEYS.length);
+  });
+
+  it.each(WEB_BULLET_KEYS.map((key, index) => [key, index + 1] as const))(
+    '«%s» er kulepunkt nr. %i i appen, tegn for tegn',
+    (webKey, position) => {
+      expect(ACCOUNT_TEXT.deletedBullets[position - 1]).toBe(web[webKey as WebKey]);
+    },
+  );
 
   it('setter bekreft-setningen sammen til nøyaktig webbens streng', () => {
     // Webben rendrer navnet fett via `t.rich`; appen deler setningen i to og
@@ -180,5 +213,27 @@ describe('ACCOUNT_TEXT', () => {
     expect(
       `${ACCOUNT_TEXT.confirmLead}${DISPLAY_NAME_FALLBACK}${ACCOUNT_TEXT.confirmTrail}`,
     ).toBe('Du er i ferd med å slette kontoen din permanent. Handlingen kan ikke angres.');
+  });
+});
+
+describe('regnskapet mot webben (#1904)', () => {
+  it('hver streng under profile.deleteAccount er speilet eller står på WEB_ONLY', () => {
+    const accounted = new Set<string>([
+      ...TEXT_ROWS.map(([webKey]) => webKey),
+      ...WEB_BULLET_KEYS,
+      // Dekket av sammensettings-testen over.
+      'confirmParagraph',
+      ...Object.values(BLOCK_REASON_MAP),
+      ...Object.keys(WEB_ONLY),
+    ]);
+    const webStrings = Object.keys(web)
+      .filter((key) => typeof web[key as keyof typeof web] === 'string')
+      .sort();
+    expect(webStrings).toEqual([...accounted].sort());
+  });
+
+  it('hver feilnøkkel under profile.deleteAccount.errors har en kode som viser den', () => {
+    const mirrored = [...new Set(MIRRORED_FAILURES.map(([, webKey]) => webKey))];
+    expect(Object.keys(webErrors).sort()).toEqual(mirrored.sort());
   });
 });

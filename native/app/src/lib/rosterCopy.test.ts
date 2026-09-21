@@ -11,7 +11,10 @@
 //     er webbens strenger, hentet fra `messages/no.json`. Rettes en av dem på
 //     web uten at appen følger etter, blir denne rød — ellers ville arrangøren
 //     fått to ulike forklaringer på samme regel, avhengig av flate.
-//     `no.json` leses fra node-siden; testen bundles aldri.
+//     `no.json` leses fra node-siden; testen bundles aldri. Kartene for lag-
+//     og start-kodene bærer webbens nøkkel per kode (#1904), og paritets-
+//     radene utledes derfra: en ny kode må få en nøkkel, `'interpolated'`
+//     eller `null` før `tsc` slipper den gjennom.
 import source from '../../../../messages/no.json';
 import type { RosterActionFailure } from '../data/rosterActions';
 import type { StartCountMode } from '../../../../lib/games/startPlayerCount';
@@ -30,47 +33,67 @@ import {
 
 const web: Record<string, string> = source.admin.game.errors;
 
+type WebKey = keyof typeof source.admin.game.errors;
+
+/** Web-teksten har en plassholder; koden har egne særtester under. */
+type Interpolated = 'interpolated';
+
+/** Radene i et kode→nøkkel-kart der appen viser webbens streng ordrett. */
+function mirroredRows<Code extends string>(
+  map: Record<Code, WebKey | Interpolated | null>,
+): [Code, WebKey][] {
+  return (Object.entries(map) as [Code, WebKey | Interpolated | null][]).filter(
+    (entry): entry is [Code, WebKey] => entry[1] !== null && entry[1] !== 'interpolated',
+  );
+}
+
 // Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+// Verdien er webbens nøkkel i `admin.game.errors`, eller `null` der appen
+// skriver selv.
 const ROSTER_REASON_MAP = {
-  'no-session': true,
-  offline: true,
-  'not-found': true,
-  'roster-locked': true,
-  'cup-roster-locked': true,
-  'roster-full': true,
-  'not-active': true,
-  'no-team-mode': true,
-  'withdrawal-unsupported': true,
-  'bad-team': true,
-  'bad-flight': true,
-  'team-full': true,
-  'flight-full': true,
-  'rls-denied': true,
-  'already-submitted': true,
-  'no-rows': true,
-  db: true,
-} as const satisfies Record<RosterActionFailure, true>;
+  'no-session': null,
+  offline: null,
+  'not-found': null,
+  'roster-locked': null,
+  // Webbens ordlyd bor i `game.players.errorMessages`, ikke i
+  // `admin.game.errors` — egen særtest under (#1937).
+  'cup-roster-locked': null,
+  'roster-full': null,
+  'not-active': null,
+  'no-team-mode': null,
+  'withdrawal-unsupported': null,
+  'bad-team': 'bad_team',
+  'bad-flight': 'bad_flight',
+  'team-full': 'team_full',
+  'flight-full': 'flight_full',
+  'rls-denied': null,
+  'already-submitted': null,
+  'no-rows': null,
+  db: null,
+} as const satisfies Record<RosterActionFailure, WebKey | null>;
 
 const ROSTER_REASONS = Object.keys(ROSTER_REASON_MAP) as readonly RosterActionFailure[];
 
 // Kartet, ikke lista, er porten: koden arves fra webbens startScheduledGameCore,
 // så en ny avslags-kode kan legges til uten at noen er i nærheten av app-koden.
+// Verdien er webbens nøkkel, `'interpolated'` der web-teksten har en
+// plassholder, eller `null` der webben ikke har koden.
 const START_REASON_MAP = {
-  offline: true,
-  not_found: true,
-  not_scheduled: true,
-  tee_missing: true,
-  tee_missing_rating: true,
-  no_players: true,
-  pending_players: true,
-  incomplete_sides: true,
-  decided_by_withdrawal: true,
-  unassigned_teams: true,
-  unassigned_flights: true,
-  rotation_player_count: true,
-  db_players: true,
-  db_game: true,
-} as const satisfies Record<StartRoundFailure, true>;
+  offline: null,
+  not_found: 'not_found',
+  not_scheduled: 'not_scheduled',
+  tee_missing: 'tee_missing',
+  tee_missing_rating: 'tee_missing_rating',
+  no_players: 'no_players',
+  pending_players: 'interpolated',
+  incomplete_sides: 'incomplete_sides',
+  decided_by_withdrawal: 'decided_by_withdrawal',
+  unassigned_teams: 'unassigned_teams',
+  unassigned_flights: 'unassigned_flights',
+  rotation_player_count: 'interpolated',
+  db_players: 'db_players',
+  db_game: 'db_game',
+} as const satisfies Record<StartRoundFailure, WebKey | Interpolated | null>;
 
 const START_REASONS = Object.keys(START_REASON_MAP) as readonly StartRoundFailure[];
 
@@ -120,12 +143,7 @@ describe('describeRosterFailure', () => {
     expect(isFinishedSentence(describeRosterFailure(reason))).toBe(true);
   });
 
-  it.each([
-    ['bad-team', 'bad_team'],
-    ['bad-flight', 'bad_flight'],
-    ['team-full', 'team_full'],
-    ['flight-full', 'flight_full'],
-  ] as [RosterActionFailure, string][])(
+  it.each(mirroredRows(ROSTER_REASON_MAP))(
     'bruker webbens ordlyd for «%s»',
     (reason, webKey) => {
       expect(describeRosterFailure(reason)).toBe(web[webKey]);
@@ -150,20 +168,8 @@ describe('describeStartRefusal', () => {
     expect(isFinishedSentence(describeStartRefusal(refusal))).toBe(true);
   });
 
-  it.each([
-    'not_found',
-    'not_scheduled',
-    'tee_missing',
-    'tee_missing_rating',
-    'no_players',
-    'incomplete_sides',
-    'decided_by_withdrawal',
-    'unassigned_teams',
-    'unassigned_flights',
-    'db_players',
-    'db_game',
-  ] as StartRoundFailure[])('bruker webbens ordlyd for «%s»', (reason) => {
-    expect(describeStartRefusal({ ok: false, reason })).toBe(web[reason]);
+  it.each(mirroredRows(START_REASON_MAP))('bruker webbens ordlyd for «%s»', (reason, webKey) => {
+    expect(describeStartRefusal({ ok: false, reason })).toBe(web[webKey]);
   });
 
   it('setter navnene inn i pending-setningen der webben setter e-postene', () => {

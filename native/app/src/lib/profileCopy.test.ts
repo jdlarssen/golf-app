@@ -18,7 +18,9 @@
 //     skal gi en lesbar norsk linje. `tsc` sikrer at switch-en er uttømmende;
 //     denne sikrer at det som kommer ut faktisk er tekst — og at de fire
 //     valideringskodene sier NØYAKTIG det webbens skjema sier, siden det er
-//     samme regel som avviste deg.
+//     samme regel som avviste deg. Kartet bærer webbens nøkkel per kode, og
+//     hver nøkkel under `profile.errors` må ha en kode som viser den (#1904):
+//     en ny kode eller en ny web-nøkkel gir rødt til noen har tatt stilling.
 //
 // `ProfileSaveFailure` hentes som ren TYPE fra `data/profile.ts`. Det er
 // bevisst: en verdi-import derfra ville dratt inn `../supabase`, som kaster
@@ -40,20 +42,33 @@ const web = source.profile;
 const webForm = web.form;
 const webErrors: Record<string, string> = web.errors;
 
+type WebErrorKey = keyof typeof web.errors;
+
 // Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+// Verdien er webbens feilnøkkel for samme utfall, eller `null` for de app-egne
+// nett- og oppsett-grenene.
 const SAVE_FAILURE_MAP = {
-  offline: true,
-  'no-web-base-url': true,
-  network: true,
-  unauthorized: true,
-  name_required: true,
-  hcp_invalid: true,
-  gender_required: true,
-  level_invalid: true,
-  update_failed: true,
-} as const satisfies Record<ProfileSaveFailure, true>;
+  offline: null,
+  'no-web-base-url': null,
+  network: null,
+  unauthorized: null,
+  name_required: 'name_required',
+  hcp_invalid: 'hcp_invalid',
+  gender_required: 'gender_required',
+  level_invalid: 'level_invalid',
+  // Ruta svarer `update_failed`; webbens copy-nøkkel for samme utfall heter
+  // `unknown`. Kartet står her, ikke i datalaget.
+  update_failed: 'unknown',
+} as const satisfies Record<ProfileSaveFailure, WebErrorKey | null>;
 
 const SAVE_FAILURES = Object.keys(SAVE_FAILURE_MAP) as readonly ProfileSaveFailure[];
+
+const MIRRORED_SAVE_FAILURES = Object.entries(SAVE_FAILURE_MAP).filter(
+  (entry): entry is [ProfileSaveFailure, WebErrorKey] => entry[1] !== null,
+);
+
+/** Nøkler under `profile.errors` appen med vilje IKKE viser. Ingen i dag. */
+const WEB_ONLY_ERRORS: Partial<Record<WebErrorKey, string>> = {};
 
 /** Ingen halvferdig interpolering skal nå fram til skjermen. */
 function isFinishedSentence(text: string): boolean {
@@ -138,15 +153,7 @@ describe('describeProfileSaveFailure', () => {
     expect(isFinishedSentence(text)).toBe(true);
   });
 
-  it.each([
-    ['name_required', 'name_required'],
-    ['hcp_invalid', 'hcp_invalid'],
-    ['gender_required', 'gender_required'],
-    ['level_invalid', 'level_invalid'],
-    // Ruta svarer `update_failed`; webbens copy-nøkkel for samme utfall heter
-    // `unknown`. Kartet står her, ikke i datalaget.
-    ['update_failed', 'unknown'],
-  ] as [ProfileSaveFailure, string][])(
+  it.each(MIRRORED_SAVE_FAILURES)(
     'viser webbens feilmelding for «%s»',
     (reason, webKey) => {
       expect(describeProfileSaveFailure(reason)).toBe(webErrors[webKey]);
@@ -171,6 +178,14 @@ describe('describeProfileSaveFailure', () => {
 
   it('sier hva som mangler når appen ikke vet hvilken server den skal spørre', () => {
     expect(describeProfileSaveFailure('no-web-base-url')).toContain('administrator');
+  });
+
+  it('hver nøkkel under profile.errors har en kode som viser den, eller står på WEB_ONLY_ERRORS (#1904)', () => {
+    const accounted = new Set<string>([
+      ...MIRRORED_SAVE_FAILURES.map(([, webKey]) => webKey),
+      ...Object.keys(WEB_ONLY_ERRORS),
+    ]);
+    expect(Object.keys(webErrors).sort()).toEqual([...accounted].sort());
   });
 
   it('holder valideringskodene fra hverandre', () => {
