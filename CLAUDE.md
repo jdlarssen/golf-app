@@ -94,7 +94,7 @@ Hva eieren gjør i nettleser-UI-er, hva du gjør, og malen for instrukser i en t
 
 ## Arkitektur
 
-- **Datamodell:** 41 tabeller i `public` (målt 2026-09-13 — vedlikeholdes av dok-avstemmeren #1078); kjernen er `users`, `courses`, `games` + `game_players`, `scores`, `invitations`. Oversikt: `docs/schema-ground-truth.md`; migrasjoner i `supabase/migrations/` (live DB er fasit, jf. AGENTS.md trap 1).
+- **Datamodell:** 41 tabeller i `public` (målt 2026-09-20 — vedlikeholdes av dok-avstemmeren #1078); kjernen er `users`, `courses`, `games` + `game_players`, `scores`, `invitations`. Oversikt: `docs/schema-ground-truth.md`; migrasjoner i `supabase/migrations/` (live DB er fasit, jf. AGENTS.md trap 1).
 - **Scoring-logikk:** ren TypeScript i `lib/scoring/`; endring krever ny test først (fasit: `npx vitest run lib/scoring`).
 - **Auth-flyt:** OTP-kode i mail, ingen magic-link, fordi URL-en brøt iOS PWA-innlogging. → `docs/auth-flow.md`
 - **Offline-sync:** lokal-først via Dexie; realtime-fella (`setAuth()` uten argument, #1366). → `lib/sync/AGENTS.md`
