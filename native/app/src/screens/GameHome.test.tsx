@@ -68,6 +68,8 @@ function rotation(n: number): BundlePlayer[] {
   );
 }
 
+const HIDDEN = { includeHiddenElements: true };
+
 describe('RosterRow', () => {
   it('tegner rotasjons-plassen som hull i wolf, ingenting i round robin, og lag som før', async () => {
     // 1. Wolf: hullene plassen gir Wolf-rollen på — og INGEN Flight/Lag.
@@ -111,6 +113,36 @@ describe('RosterRow', () => {
     );
     expect(screen.getByTestId('roster-marks-a')).toHaveTextContent('Flight 2 · Lag 1');
     expect(screen.getByTestId('roster-row-a')).toHaveTextContent(/Anna \(deg\)/);
+  });
+
+  it('statusen står med hake for levert og godkjent, som ord alene for trukket (#1879)', async () => {
+    const submitted = player({
+      userId: 's',
+      flightNumber: 1,
+      submittedAt: '2026-09-01T09:00:00.000Z',
+    });
+    const { rerender } = await render(
+      <RosterRow player={submitted} isMe={false} gameMode="solo_strokeplay" players={[submitted]} />,
+    );
+    expect(screen.getByTestId('roster-marks-s')).toHaveTextContent('Flight 1');
+    expect(screen.getByTestId('roster-status-s')).toHaveTextContent('Levert');
+    // Haken er dekor — ordet bærer meningen — så skjermleseren ser den ikke.
+    expect(screen.queryByTestId('roster-status-check-s')).toBeNull();
+    expect(screen.getByTestId('roster-status-check-s', HIDDEN)).toBeTruthy();
+
+    const approved = { ...submitted, approvedAt: '2026-09-01T10:00:00.000Z' };
+    await rerender(
+      <RosterRow player={approved} isMe={false} gameMode="solo_strokeplay" players={[approved]} />,
+    );
+    expect(screen.getByTestId('roster-status-s')).toHaveTextContent('Godkjent');
+    expect(screen.getByTestId('roster-status-check-s', HIDDEN)).toBeTruthy();
+
+    const withdrawn = { ...approved, withdrawnAt: '2026-09-01T11:00:00.000Z' };
+    await rerender(
+      <RosterRow player={withdrawn} isMe={false} gameMode="solo_strokeplay" players={[withdrawn]} />,
+    );
+    expect(screen.getByTestId('roster-status-s')).toHaveTextContent('Trukket');
+    expect(screen.queryByTestId('roster-status-check-s', HIDDEN)).toBeNull();
   });
 });
 

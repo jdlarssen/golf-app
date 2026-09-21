@@ -10,7 +10,7 @@
 // ikke om runden. De bor i profil-rommet nå, og veien dit er ordet «Profil»
 // oppe til høyre i headeren (satt i `navigation.tsx`). Hjem handler igjen bare
 // om spill.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -28,6 +28,13 @@ import {
   type HomeCard,
 } from '../data/homeList';
 import { startSyncTriggers } from '../data/syncTriggers';
+import {
+  FlaggIcon,
+  KalenderIcon,
+  PinFlagHero,
+  PokalIcon,
+  type IconProps,
+} from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -109,10 +116,19 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="home-screen">
       {empty ? (
-        <Text style={ui.body} testID="home-empty">
-          Ingen spill på deg ennå. Fyr opp et selv, eller vent til noen tar deg
-          med.
-        </Text>
+        // Samme hero-flagg som webbens tomme hjem (#1879).
+        <View style={styles.empty}>
+          <PinFlagHero
+            color={colors.primary}
+            accent={colors.accent}
+            size={72}
+            testID="home-empty-flag"
+          />
+          <Text style={[ui.body, styles.emptyText]} testID="home-empty">
+            Ingen spill på deg ennå. Fyr opp et selv, eller vent til noen tar deg
+            med.
+          </Text>
+        </View>
       ) : null}
 
       <Pressable
@@ -123,15 +139,23 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         <Text style={ui.buttonText}>Opprett spill</Text>
       </Pressable>
 
-      <Section title="Pågår nå" cards={active} navigation={navigation} testID="home-active" />
+      <Section
+        title="Pågår nå"
+        Icon={FlaggIcon}
+        cards={active}
+        navigation={navigation}
+        testID="home-active"
+      />
       <Section
         title="Mine spill"
+        Icon={KalenderIcon}
         cards={scheduled}
         navigation={navigation}
         testID="home-scheduled"
       />
       <Section
         title="Siste avsluttede"
+        Icon={PokalIcon}
         cards={finished}
         navigation={navigation}
         testID="home-finished"
@@ -148,11 +172,14 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
 function Section({
   title,
+  Icon,
   cards,
   navigation,
   testID,
 }: {
   title: string;
+  /** Seksjonsankeret — samme ikon som webben bruker for samme ting. */
+  Icon: ComponentType<IconProps>;
   cards: HomeCard[];
   navigation: ScreenProps<'Home'>['navigation'];
   testID: string;
@@ -161,7 +188,10 @@ function Section({
   if (cards.length === 0) return null;
   return (
     <View testID={testID}>
-      <Text style={ui.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHead}>
+        <Icon color={colors.muted} size={16} testID={`${testID}-icon`} />
+        <Text style={[ui.sectionTitle, styles.sectionTitle]}>{title}</Text>
+      </View>
       {cards.map((card) => (
         <Pressable
           key={card.gameId}
@@ -192,6 +222,12 @@ function Section({
 }
 
 const styles = StyleSheet.create({
+  empty: { alignItems: 'center', gap: 16, marginVertical: 8 },
+  emptyText: { textAlign: 'center' },
+  // Ikon og overskrift på samme linje. `sectionTitle` bærer luften over seg
+  // selv; her flyttes den til raden så ikonet følger med ned.
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
+  sectionTitle: { marginTop: 0 },
   gameCard: {
     borderRadius: 12,
     borderWidth: 1,
