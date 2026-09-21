@@ -783,7 +783,9 @@ staging-URL-en.
 **Passordet** bor to steder, begge gitignorert: `DEV_LOGIN_PASSWORD` i
 `.env.staging.local` og `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` i `native/app/.env.local`.
 Lag et nytt med `openssl rand -base64 30`. Etter en rotasjon: `sync`, og bygg appen på
-nytt (verdien bakes inn i bundelen).
+nytt med tom Metro-cache (verdien bakes inn i bundelen, og Metro gjenbruker ellers den
+cachede transformen med den gamle verdien — målt i #1923: `expo export` uten `--clear`
+ga null treff på et nytt passord, med `--clear` ett).
 
 **Feilsøking:**
 
