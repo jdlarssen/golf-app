@@ -34,6 +34,8 @@ jest.mock('./db', () => {
   const actual = jest.requireActual('./db') as typeof import('./db');
   return {
     ...actual,
+    // #1980: en test lar basen kaste; resten får den ekte.
+    getDb: jest.fn(actual.getDb),
     wipeLocalData: jest.fn(async () => {
       mockCalls.push('wipe');
       await actual.wipeLocalData();
@@ -389,6 +391,21 @@ describe('logOut', () => {
     expect(await logout().logOut()).toEqual({ ok: true });
 
     expect(mockCalls).toEqual(['signOut', 'wipe']);
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  // #1980: basen svarer ikke. Før kastet det ut av `logOut`, og spilleren kom
+  // aldri ut. Nå logger vi ut som webben gjør, men rører ikke basen.
+  it('logger ut uten wipe når den lokale basen ikke svarer', async () => {
+    const { getDb } = require('./db') as { getDb: jest.Mock };
+    getDb.mockRejectedValue(new Error('basen svarte ikke'));
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(await logout().logOut()).toEqual({ ok: true });
+
+    expect(mockCalls).toEqual(['signOut']);
+    expect(wipeMock()).not.toHaveBeenCalled();
     expect(errors).toHaveBeenCalled();
     errors.mockRestore();
   });
