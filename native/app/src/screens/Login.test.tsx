@@ -12,9 +12,15 @@
 //
 // Overskriften leses fra `expo-constants`, som her er rigget til butikk-navnet:
 // det beviser at skjermen ikke har «Tørny Dev» hardkodet.
+//
+// #1923 la til én render til: boksen med testbrukere i et staging-bygg, og at
+// et trykk på en rad logger inn med radens e-post og byggets passord. Gaten
+// selv (prod-vert, manglende passord) er Type A i `devLogin.test.ts`.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { DEV_LOGIN_TEXT } from '../devLogin';
 import { LOGIN_TEXT } from '../lib/loginCopy';
+import { STAGING_SUPABASE_HOST } from '../lib/stagingGate';
 import { supabase } from '../supabase';
 import { Login } from './Login';
 
@@ -66,6 +72,60 @@ describe('Login — skjult passord-inngang', () => {
     expect(signInWithPasswordMock).toHaveBeenCalledWith({
       email: 'review@example.test',
       password: 'hemmelig',
+    });
+  });
+});
+
+describe('Login — testbrukere i staging-bygget (#1923)', () => {
+  const realFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.EXPO_PUBLIC_SUPABASE_URL = `https://${STAGING_SUPABASE_HOST}`;
+    process.env.EXPO_PUBLIC_DEV_LOGIN_PASSWORD = 'staging-testpassord';
+    global.fetch = jest.fn(async () => ({
+      status: 200,
+      json: async () => ({
+        version: 1,
+        users: [
+          { email: 'kari@example.test', label: 'Kari Arrangør', role: 'arrangor' },
+          { email: 'ola@example.test', label: 'Ola Kompis', role: 'spiller' },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = realFetch;
+    delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+    delete process.env.EXPO_PUBLIC_DEV_LOGIN_PASSWORD;
+  });
+
+  it('viser en rad per testbruker, og et trykk logger inn som den', async () => {
+    signInWithPasswordMock.mockResolvedValue({ data: {}, error: null });
+    await render(<Login />);
+
+    const section = await screen.findByTestId('dev-login-section');
+    expect(section).toHaveTextContent(DEV_LOGIN_TEXT.sectionTitle, { exact: false });
+    expect(screen.getByTestId('dev-login-user-0')).toHaveTextContent('Kari Arrangør', {
+      exact: false,
+    });
+    expect(screen.getByTestId('dev-login-user-0')).toHaveTextContent('Arrangør', {
+      exact: false,
+    });
+    expect(screen.getByTestId('dev-login-user-1')).toHaveTextContent('Ola Kompis', {
+      exact: false,
+    });
+    expect(screen.queryByTestId('dev-login-user-2')).toBeNull();
+    // Skjemaet står fortsatt under boksen.
+    expect(screen.getByTestId('email-input')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('dev-login-user-0'));
+
+    expect(signInWithPasswordMock).toHaveBeenCalledTimes(1);
+    expect(signInWithPasswordMock).toHaveBeenCalledWith({
+      email: 'kari@example.test',
+      password: 'staging-testpassord',
     });
   });
 });

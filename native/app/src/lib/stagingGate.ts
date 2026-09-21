@@ -61,7 +61,15 @@ function hostOf(raw: string): string | null {
  * env mellom casene.
  */
 export function isStagingBuild(): boolean {
-  const raw = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  return isStagingUrl(process.env.EXPO_PUBLIC_SUPABASE_URL);
+}
+
+/**
+ * Samme spørsmål for en URL gitt utenfra. Tapp-innloggingen for testbrukere
+ * (#1923) spør med env-verdien den selv har lest, og skal svare nøyaktig som
+ * `isStagingBuild` — derfor én regel her, ikke en kopi der.
+ */
+export function isStagingUrl(raw: string | undefined): boolean {
   if (!raw) return false;
   return hostOf(raw) === STAGING_SUPABASE_HOST;
 }
