@@ -2,4 +2,4 @@
 type: fix
 issue: 1980
 ---
-Appens lyse farger på tekst, kanter og feilmeldinger er nå de samme som på nettsiden.
+Tekst, kanter og feilmeldinger i appens lyse drakt har nå de samme fargene som på nettsiden.
