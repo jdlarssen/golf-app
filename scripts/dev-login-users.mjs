@@ -205,17 +205,22 @@ async function ensureBucket(db) {
 }
 
 /**
- * Eksisterende `users.json`, eller null om den ikke finnes ennå. Bare en
- * fil som beviselig mangler gir null — enhver annen feil kaster, ellers ville
- * en forbigående storage-feil latt `sync`/`add` skrive lista på nytt uten de
- * ekstra brukerne.
+ * Eksisterende `users.json`, eller null om den ikke finnes ennå.
+ *
+ * Leses via den offentlige URL-en med cache-buster, samme vei som appen:
+ * `storage.download()` ga i #1923 en gammel kopi rett etter en opplasting
+ * (5 oppføringer mens den offentlige URL-en viste 6), og da droppet `sync`
+ * den nye brukeren. Bare 400/404 betyr «finnes ikke» — enhver annen feil
+ * kaster, så en forbigående feil aldri skriver lista på nytt uten de ekstra.
  */
-async function readList(db) {
-  const entries = ok(`list ${BUCKET}`, await db.storage.from(BUCKET).list('', { search: OBJECT }));
-  if (!entries.some((e) => e.name === OBJECT)) return null;
-  const { data, error } = await db.storage.from(BUCKET).download(OBJECT);
-  if (error || !data) throw new Error(`last ned ${OBJECT}: ${error?.message ?? 'tomt svar'}`);
-  const json = JSON.parse(await data.text());
+async function readList(url) {
+  const res = await fetch(
+    `${url}/storage/v1/object/public/${BUCKET}/${OBJECT}?t=${Date.now()}`,
+    { cache: 'no-store' },
+  );
+  if (res.status === 400 || res.status === 404) return null;
+  if (!res.ok) throw new Error(`hent ${OBJECT}: HTTP ${res.status}`);
+  const json = JSON.parse(await res.text());
   return Array.isArray(json?.users) ? json.users : [];
 }
 
@@ -316,7 +321,7 @@ async function sync() {
   if (await ensureBucket(db)) console.log(`Bucket «${BUCKET}» opprettet.`);
   console.log('Rollebesetning:');
   for (const member of CAST) await ensureUser(db, member, password);
-  const existing = await readList(db);
+  const existing = await readList(url);
   const extras = extrasOf(existing);
   if (extras.length > 0) console.log('Ekstra brukere:');
   const kept = await refreshExtras(db, extras, password);
@@ -344,7 +349,7 @@ async function add(flags) {
   console.log(`Skriver til: ${url}`);
   await ensureBucket(db);
   await ensureUser(db, { email, label, role, hcp }, password);
-  const extras = extrasOf(await readList(db));
+  const extras = extrasOf(await readList(url));
   const origin = flags.issue ? `#${String(flags.issue).replace(/^#/, '')}` : 'manuell';
   const existing = extras.find((u) => u.email === email);
   const entry = { email, label, role, origin, addedAt: existing?.addedAt ?? nowIso() };
@@ -363,7 +368,7 @@ async function remove(flags) {
   }
   const { db, url } = setup({ needPassword: false });
   console.log(`Skriver til: ${url}`);
-  const extras = extrasOf(await readList(db));
+  const extras = extrasOf(await readList(url));
   if (!extras.some((u) => u.email === email)) {
     throw new Error(`${email} står ikke i lista.`);
   }
@@ -374,8 +379,8 @@ async function remove(flags) {
 }
 
 async function list() {
-  const { db } = setup({ needPassword: false });
-  const users = await readList(db);
+  const { url } = setup({ needPassword: false });
+  const users = await readList(url);
   if (users === null) {
     console.log(`${OBJECT} finnes ikke ennå — kjør sync.`);
     return;
