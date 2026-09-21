@@ -42,6 +42,7 @@ import {
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
+import { SyncBanner } from '../components/sync/SyncBanner';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
@@ -285,6 +286,8 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="hole-screen">
+      {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
+      <SyncBanner gameId={gameId} />
       <Text style={ui.title}>Hull {holeNumber}</Text>
       {/* Fakta-linja hadde all bredden til høyre stående ubrukt. Pillen legger
           seg der, som webbens bryter gjør i header-høyden ved siden av Par —
