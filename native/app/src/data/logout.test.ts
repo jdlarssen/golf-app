@@ -410,6 +410,33 @@ describe('logOut', () => {
     errors.mockRestore();
   });
 
+  it('spør fortsatt om de uleverte slagene når andre telling ikke svarer', async () => {
+    const { supabase } = mocks();
+    supabase.rpc.mockRejectedValue(new TypeError('Network request failed'));
+    await typeStroke(4);
+    const { getDb } = require('./db') as { getDb: jest.Mock };
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const realGetDb = getDb.getMockImplementation()!;
+    // Første telling får basen; tellingen etter drainen gjør det ikke.
+    let drained = false;
+    getDb.mockImplementation(async () => {
+      if (drained) throw new Error('basen svarte ikke');
+      return realGetDb();
+    });
+    const worker = require('./syncWorker') as typeof import('./syncWorker');
+    const drain = jest.spyOn(worker, 'drainQueue').mockImplementation(async () => {
+      drained = true;
+      return undefined as never;
+    });
+
+    expect(await logout().logOut()).toEqual({ ok: false, reason: 'unsent', pending: 1 });
+
+    expect(mockCalls).toEqual([]);
+    expect(wipeMock()).not.toHaveBeenCalled();
+    drain.mockRestore();
+    errors.mockRestore();
+  });
+
   it('gir opp drainen etter tidsavbruddet i stedet for å henge', async () => {
     const { supabase } = mocks();
     const hangingRpc = deferred<unknown>();

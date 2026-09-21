@@ -213,7 +213,9 @@ export async function logOut(opts?: {
 
   if (pending != null && pending > 0) {
     await drainWithinTimeout();
-    pending = await pendingCountOrNull();
+    // Svarer ikke basen på andre telling, gjelder den første: vi vet at det lå
+    // slag der, og spilleren skal fortsatt få spørsmålet.
+    pending = (await pendingCountOrNull()) ?? pending;
   }
 
   // Basen svarer ikke: logg ut likevel, og la den ligge. Se `pendingCountOrNull`.

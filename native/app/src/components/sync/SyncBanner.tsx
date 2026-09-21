@@ -109,8 +109,12 @@ export function SyncBanner({ gameId }: { gameId: string }) {
         style: 'destructive',
         onPress: () => {
           void (async () => {
-            const db = await getDb();
-            for (const id of ids) await deleteQueueItem(db, id);
+            try {
+              const db = await getDb();
+              for (const id of ids) await deleteQueueItem(db, id);
+            } catch {
+              // Varselet blir stående; neste trykk prøver igjen.
+            }
             await reload();
           })();
         },
@@ -119,8 +123,12 @@ export function SyncBanner({ gameId }: { gameId: string }) {
   };
 
   const dismissConflict = async (id: string) => {
-    const db = await getDb();
-    await deleteConflict(db, id);
+    try {
+      const db = await getDb();
+      await deleteConflict(db, id);
+    } catch {
+      // Som over: varselet blir stående.
+    }
     await reload();
   };
 
