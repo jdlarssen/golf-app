@@ -18,7 +18,12 @@
 // Overskriften er app-navnet fra den oppløste configen (`expo-constants`), ikke
 // en streng her: «Tørny Dev» i dev-bygget, «Tørny» når butikk-varianten (P2)
 // setter navnet.
-import { useState } from 'react';
+//
+// #1923: i Tørny Dev mot staging står en boks «Testbrukere (staging)» over
+// skjemaet — ett trykk på et navn logger inn som den testbrukeren. Gaten og
+// lista bor i `devLogin.ts`; i alle andre bygg er `devConfig` null, ingenting
+// hentes og skjermen er som før.
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
@@ -29,11 +34,20 @@ import {
   classifyLoginError,
   describeLoginError,
 } from '../lib/loginCopy';
+import {
+  DEV_LOGIN_ROLE_LABEL,
+  DEV_LOGIN_TEXT,
+  fetchDevLoginUsers,
+  readDevLoginEnv,
+  resolveDevLoginConfig,
+  signInAsDevUser,
+  type DevLoginUser,
+} from '../devLogin';
 import { supabase } from '../supabase';
 import { FONTS, useTheme } from '../theme';
 
-/** Hvilken knapp som venter på Supabase — de tre veiene deler ett felt. */
-type Busy = 'code' | 'password' | null;
+/** Hvilken knapp som venter på Supabase — alle veiene deler ett felt. */
+type Busy = 'code' | 'password' | 'dev' | null;
 
 export function Login() {
   const { colors, ui } = useTheme();
@@ -46,6 +60,18 @@ export function Login() {
   const [passwordMode, setPasswordMode] = useState(false);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
+  // Løses én gang per montering: env er bakt inn i bundelen og endrer seg ikke.
+  const [devConfig] = useState(() => resolveDevLoginConfig(readDevLoginEnv()));
+  const [devUsers, setDevUsers] = useState<DevLoginUser[]>([]);
+
+  useEffect(() => {
+    if (!devConfig) return;
+    const controller = new AbortController();
+    fetchDevLoginUsers(devConfig, controller.signal).then((users) => {
+      if (!controller.signal.aborted) setDevUsers(users);
+    });
+    return () => controller.abort();
+  }, [devConfig]);
 
   // `color` settes EKSPLISITT: `TextInput` tegner ellers svart tekst uansett
   // palett, og i mørk modus blir feltet uleselig (samme regel som `ui.input`).
@@ -111,6 +137,18 @@ export function Login() {
     }
   };
 
+  const signInAsDev = async (user: DevLoginUser) => {
+    if (!devConfig) return;
+    setBusy('dev');
+    setError(null);
+    const { error: err } = await signInAsDevUser(user, devConfig);
+    // Ved suksess bytter `App.tsx` til stacken; skjermen avmonteres.
+    if (err) {
+      setError(err);
+      setBusy(null);
+    }
+  };
+
   return (
     <View
       style={[styles.screen, { backgroundColor: colors.bg }]}
@@ -128,6 +166,28 @@ export function Login() {
           {Constants.expoConfig?.name ?? APP_NAME_FALLBACK}
         </Text>
       </Pressable>
+      {step === 'email' && devConfig && devUsers.length > 0 ? (
+        <View testID="dev-login-section" style={styles.devSection}>
+          <Text style={ui.sectionTitle}>{DEV_LOGIN_TEXT.sectionTitle}</Text>
+          {devUsers.map((user, index) => (
+            <Pressable
+              key={user.email}
+              style={[ui.buttonSecondary, styles.devRow]}
+              onPress={() => signInAsDev(user)}
+              disabled={busy != null}
+              accessibilityRole="button"
+              accessibilityLabel={DEV_LOGIN_TEXT.signInLabel(user.label)}
+              testID={`dev-login-user-${index}`}
+            >
+              <Text style={ui.buttonSecondaryText}>{user.label}</Text>
+              <View style={[ui.badge, styles.devBadge]}>
+                <Text style={ui.badgeText}>{DEV_LOGIN_ROLE_LABEL[user.role]}</Text>
+              </View>
+            </Pressable>
+          ))}
+          <Text style={[ui.muted, styles.devDivider]}>{DEV_LOGIN_TEXT.divider}</Text>
+        </View>
+      ) : null}
       {step === 'email' ? (
         <>
           <Text style={ui.body}>E-postadresse</Text>
@@ -224,4 +284,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   error: { fontSize: 15, textAlign: 'center' },
+  devSection: { gap: 8, marginBottom: 8 },
+  devRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    // `gap` i seksjonen står for luften; knappens egen marginTop ville doblet den.
+    marginTop: 0,
+  },
+  devBadge: { alignSelf: 'center' },
+  devDivider: { textAlign: 'center', marginTop: 4 },
 });
