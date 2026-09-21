@@ -16,6 +16,126 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.238.0 · mandag 21. september 2026
+
+<details>
+<summary><strong>Tilfeldig lagtrekning i scramble og par-stableford</strong></summary>
+
+[#2012](https://github.com/jdlarssen/golf-app/issues/2012) — Du kan nå trekke lag tilfeldig i Texas scramble, Ambrose, Florida scramble, shamble og par-stableford, og hvert lag får størrelsen du valgte: tolv spillere blir fire lag à tre med ett trykk.
+
+↳ /opprett-spill · «Sett opp et lagspill»
+</details>
+
+<details>
+<summary><strong>Spill uten Jørgen i nøkkeltallene</strong></summary>
+
+[#2119](https://github.com/jdlarssen/golf-app/issues/2119) — Nøkkeltall i Sekretariatet viser nå fullførte spill per måned det siste året, hvor mange andre arrangerte, og hvor mange som ble spilt helt uten Jørgen.
+
+↳ /admin · «Se nøkkeltallene»
+</details>
+
+<details>
+<summary><strong>Del kortene fra Kavalkaden</strong></summary>
+
+[#2130](https://github.com/jdlarssen/golf-app/issues/2130) — Hvert kort i Kavalkaden kan nå deles som bilde rett i gruppechatten, med tallene dine og navnene på dem du gikk med.
+
+↳ /kavalkade/2026 · «Åpne Kavalkaden»
+</details>
+
+<details>
+<summary><strong>Delt-av-tallet for Kavalkaden</strong></summary>
+
+[#2131](https://github.com/jdlarssen/golf-app/issues/2131) — Nøkkeltall i Sekretariatet viser nå hvor mange spillere som har delt et kort fra Kavalkaden, Jørgen holdt utenfor.
+
+↳ /admin · «Se nøkkeltallene»
+</details>
+
+<details>
+<summary><strong>Kavalkaden finner du fra forsiden</strong></summary>
+
+[#2131](https://github.com/jdlarssen/golf-app/issues/2131) — Fra 1. desember sier forsiden fra at Kavalkaden er på vei, og fra julaften ligger lenken inn i kortstokken både der og i historikken din.
+
+↳ /kavalkade/2026 · «Åpne Kavalkaden»
+</details>
+
+<details>
+<summary><strong>Appen tar like mange spillere som nettsiden</strong></summary>
+
+[#2148](https://github.com/jdlarssen/golf-app/issues/2148) — Best ball og stableford i appen tar nå opptil 40 spillere, som på nettsiden. Lagknappene under hver spiller blir flere etter hvert som du velger folk, og et lag med to spillere kan ikke velges av en tredje.
+</details>
+
+<details>
+<summary><strong>Lagspill med opptil 40 spillere</strong></summary>
+
+[#2148](https://github.com/jdlarssen/golf-app/issues/2148) — Scramble, shamble, best ball og patsome er ikke lenger begrenset til fire lag. Opptil 40 spillere kan være med, og lagstørrelsen avgjør hvor mange lag det blir: 20 par, 13 lag à tre eller 10 lag à fire.
+
+↳ /admin/games/new · «Sett opp et lagspill»
+</details>
+
+<details>
+<summary>59 rettinger</summary>
+
+- [#1880](https://github.com/jdlarssen/golf-app/issues/1880) — I matchplay står du nå på «Side 1» eller «Side 2» i spillet, ikke på et lag. Den faste «Flight 1»-raden er også borte.
+- [#1882](https://github.com/jdlarssen/golf-app/issues/1882) — Feilmeldingene om flight og for få spillere i opprett-veiviseren nevner ikke lenger tall som bare gjelder noen formater — samme ordlyd som i appen.
+- [#1885](https://github.com/jdlarssen/golf-app/issues/1885) — Blir vinnerne i sideturneringen ikke lagret når du avslutter, står runden åpen og du blir bedt om å prøve igjen i stedet for at den låses uten kåring.
+- [#1886](https://github.com/jdlarssen/golf-app/issues/1886), [#1986](https://github.com/jdlarssen/golf-app/issues/1986) — Leverer noen kortet sitt mens du har «Avslutt likevel» åpen, stopper appen og viser deg den oppdaterte lista i stedet for å trekke dem.
+- [#1892](https://github.com/jdlarssen/golf-app/issues/1892) — Sluttresultatet slutter å si «18 hull» på hver rad — hull-tallet står bare der noen spilte et annet antall.
+- [#1893](https://github.com/jdlarssen/golf-app/issues/1893) — Gir cup-oppsettet flere matcher enn en personlig cup tar, peker varselet nå først på «Matcher per økt» lenger ned, før det foreslår færre økter eller klubb-cup.
+- [#1894](https://github.com/jdlarssen/golf-app/issues/1894), [#2050](https://github.com/jdlarssen/golf-app/issues/2050) — Store spill og cuper viser nå alle slagene. Når et spill eller en cup hadde mer enn 1 000 tastede slag, kunne tavla, spillerstatusen, resultatmailen og purringen miste hull uten å si fra. Slettet du en slik cup, kunne en kamp som faktisk var spilt, bli slettet sammen med den.
+- [#1901](https://github.com/jdlarssen/golf-app/issues/1901) — Blir en uttaksøkt stående med to leverte uttak og ingen kamper, ser du det nå selv og kan trykke «Prøv igjen», i stedet for å be kapteinen sette opp laget på nytt.
+- [#1903](https://github.com/jdlarssen/golf-app/issues/1903) — Får vi ikke sjekket kontoen din når du vil slette den, stopper vi slettingen, så du kan prøve igjen om litt.
+- [#1910](https://github.com/jdlarssen/golf-app/issues/1910) — Er du eneste eier av en klubb med andre medlemmer, må du gjøre et annet medlem til eier før du kan slette kontoen, så klubben aldri blir stående uten eier.
+- [#1932](https://github.com/jdlarssen/golf-app/issues/1932) — «Marker som trukket» på avslutt-siden virker nå: spillerne du huker av, blir faktisk trukket når du avslutter.
+- [#1933](https://github.com/jdlarssen/golf-app/issues/1933) — Setningen under purreknappen sier nå hvorfor hver enkelt ikke kan purres, og kaller ikke lenger en ferdig gjest for en som mangler hull.
+- [#1937](https://github.com/jdlarssen/golf-app/issues/1937) — Arrangøren kan ikke lenger fjerne en spiller fra spillerlista i en cupkamp før start. Bytt spilleren på cupsiden i stedet.
+- [#1950](https://github.com/jdlarssen/golf-app/issues/1950) — Registrerer du Bingo mens en annen i flighten registrerer Bango på samme hull, blir begge stående i stedet for at den ene forsvinner.
+- [#1958](https://github.com/jdlarssen/golf-app/issues/1958) — Er en spiller ute av runden i matchplay, scramble, shamble eller patsome, viser live-tavla nå samme stilling som sluttresultatet.
+- [#1959](https://github.com/jdlarssen/golf-app/issues/1959) — Logger noen andre inn på telefonen din, og appen ikke får fjernet slagene som ligger igjen etter deg, sender den ingenting før det er ryddet. Den nye brukeren kan prøve igjen eller logge ut, og slagene dine havner aldri i karantene under feil konto.
+- [#1963](https://github.com/jdlarssen/golf-app/issues/1963) — Går «spiller alene»-valget i cup-styringen ikke gjennom fordi cupen ikke er i gang, står det nå nettopp det, ikke en setning om å starte cupen.
+- [#1964](https://github.com/jdlarssen/golf-app/issues/1964) — En cupkamp som fortsatt er utkast, viser ikke lenger «Trekk deg fra spillet» før cupen er i gang, eller når du alt har trukket deg.
+- [#1965](https://github.com/jdlarssen/golf-app/issues/1965) — Prøver du å bytte spiller i en cupkamp der noen har trukket seg, sier appen nå hvorfor det ikke går, i stedet for «Uventet feil».
+- [#1967](https://github.com/jdlarssen/golf-app/issues/1967) — Trekker noen seg fra en fourball i cupen, står det nå «Valg venter» på cup-siden og i venterommet til arrangøren har bestemt om makkeren spiller alene, ikke «Halvert».
+- [#1969](https://github.com/jdlarssen/golf-app/issues/1969) — Lenkene for å trekke seg fra cupen, angre et trekk og «Velg for kampen» er nå store nok til å treffe med tommelen på mobilen.
+- [#1973](https://github.com/jdlarssen/golf-app/issues/1973) — Appen lagrer ikke lenger serversvar på telefonen, så ingenting fra forrige innlogging blir liggende igjen. I Profil står navnet ditt stille med én gang, i stedet for å bytte fra e-post til navn mens rommet laster.
+- [#1987](https://github.com/jdlarssen/golf-app/issues/1987) — Sletter du kontoen din på nettsiden, rydder vi også bort slagene som lå lagret i nettleseren. Den som logger inn etter deg på samme telefon eller maskin, ser dem ikke.
+- [#1999](https://github.com/jdlarssen/golf-app/issues/1999) — Spillnavnet du skriver selv står nå der, uansett om du bytter bane eller tee-off etterpå. Navnet er et vanlig felt på siste steg, ikke en tekst du må trykke på, og det du har fylt ut overlever at siden lastes på nytt.
+- [#2011](https://github.com/jdlarssen/golf-app/issues/2011), [#1428](https://github.com/jdlarssen/golf-app/issues/1428) — Melder du deg på en lagturnering med åpen påmelding som allerede er full, sier appen fra med en gang i stedet for å slippe deg inn på en plass som ikke finnes.
+- [#2017](https://github.com/jdlarssen/golf-app/issues/2017) — Spiller dere scramble, foursomes, greensome, chapman, gruesome eller patsome, ser purringen nå hele laget som ferdig når lagkortet er ført, så du purrer de riktige spillerne.
+- [#2018](https://github.com/jdlarssen/golf-app/issues/2018) — Har du venner eller klubbmedlemmer å velge blant, får du ikke lenger «Du har bare 1 registrert spiller» når du setter opp en runde.
+- [#2030](https://github.com/jdlarssen/golf-app/issues/2030) — Trekker du en spiller som allerede er trukket, eller angrer et trekk som ikke lenger gjelder, sier appen fra i stedet for å late som det gikk bra.
+- [#2031](https://github.com/jdlarssen/golf-app/issues/2031) — Trykker du «Avslutt likevel» i en gammel fane etter at spillet alt er avsluttet, trekker appen ingen spillere og sier fra at spillet ikke er aktivt.
+- [#2033](https://github.com/jdlarssen/golf-app/issues/2033) — Trekker makkeren din seg fra en fourball i cupen, finner du nå «Trekk meg fra cupen» på cup-siden mens arrangøren ennå ikke har bestemt om du spiller alene.
+- [#2036](https://github.com/jdlarssen/golf-app/issues/2036) — Blir profilen din ikke lagret når du fullfører den, sier appen fra og beholder det du har skrevet, i stedet for å sende deg videre som om alt gikk bra.
+- [#2039](https://github.com/jdlarssen/golf-app/issues/2039) — Du treffer nå «Tilbake til hjem» og de små lenkene på cup-sidene lett med tommelen på mobilen.
+- [#2041](https://github.com/jdlarssen/golf-app/issues/2041) — Når laget spiller på ett felles kort, ser du nå lagkameraten med lagets hull på «Spillerstatus», og en patsome-makker som har spilt ferdig, får påminnelse om å levere.
+- [#2044](https://github.com/jdlarssen/golf-app/issues/2044) — Taster du feil i handicapet, som «12abc» eller «1,2,3», sier appen nå fra i stedet for å lagre et annet handicap enn du mente.
+- [#2045](https://github.com/jdlarssen/golf-app/issues/2045) — Når en makker på et felles lagkort har spilt ferdig uten å levere, dukker spillet nå opp under «Krever handling» i Sekretariatet, også etter at kapteinen har levert.
+- [#2048](https://github.com/jdlarssen/golf-app/issues/2048), [#2047](https://github.com/jdlarssen/golf-app/issues/2047) — Taster du handicap for en gjest eller retter det i admin, sjekker vi det nå på samme måte som i profilen. En tastefeil som «12abc» gir feilmelding i stedet for å bli lagret som et annet tall. Feilteksten i fullfør-profil stemmer også med feltet.
+- [#2051](https://github.com/jdlarssen/golf-app/issues/2051) — En fourball der én spiller på hver side har trukket seg, står nå som halvert, også når arrangøren alt hadde valgt at makkeren skulle spille alene.
+- [#2051](https://github.com/jdlarssen/golf-app/issues/2051), [#2052](https://github.com/jdlarssen/golf-app/issues/2052) — Den som har trukket seg fra en cup, ser ikke lenger «Trekk meg fra cupen» når makkeren spiller alene.
+- [#2054](https://github.com/jdlarssen/golf-app/issues/2054) — Avmeldingslenken i månedsbrevet sier nå fra når kontoen er slettet, og spillerskjemaet i admin sier ikke lenger «lagret» når ingenting ble lagret.
+- [#2057](https://github.com/jdlarssen/golf-app/issues/2057) — Mailen om at spillet er ferdig viser nå samme stilling som resultatsiden. Har noen trukket seg, er de ikke med i rangeringen, og slagene deres teller ikke for laget.
+- [#2059](https://github.com/jdlarssen/golf-app/issues/2059), [#2069](https://github.com/jdlarssen/golf-app/issues/2069) — Legger du til spillere eller gjester i scramble, shamble eller patsome, stopper appen nå på samme tak som påmeldingslenka, og en spiller som har trukket seg teller ikke lenger mot «fullt».
+- [#2059](https://github.com/jdlarssen/golf-app/issues/2059), [#2063](https://github.com/jdlarssen/golf-app/issues/2063), [#2075](https://github.com/jdlarssen/golf-app/issues/2075) — Veiviseren sier nå «Inntil 4 lag» for alle lagstørrelser, og guidene lover ikke lenger at best ball tar så mange par du vil.
+- [#2061](https://github.com/jdlarssen/golf-app/issues/2061), [#2072](https://github.com/jdlarssen/golf-app/issues/2072) — Står du alt på spillerlista og prøver å melde på et eget lag, får du nå beskjed om at du allerede er påmeldt. Tidligere endte laget uten lagnummer.
+- [#2061](https://github.com/jdlarssen/golf-app/issues/2061) — Godtar en medspiller laginvitasjonen før arrangøren har godkjent laget, står dere nå på samme lag når laget blir godkjent.
+- [#2062](https://github.com/jdlarssen/golf-app/issues/2062), [#2060](https://github.com/jdlarssen/golf-app/issues/2060) — Trykker du og en annen på siste ledige plass samtidig, kommer bare én av dere inn. Melder to lag seg på i samme øyeblikk, får de hvert sitt lagnummer.
+- [#2067](https://github.com/jdlarssen/golf-app/issues/2067) — Sletter kapteinen på laget ditt kontoen midt i runden, står hullene dere har ført, fortsatt på tavla og i resultatet, og du kan spille ferdig og levere.
+- [#2068](https://github.com/jdlarssen/golf-app/issues/2068) — «Del resultat»-knappen dukker opp med en gang når runden er avsluttet. Spillsiden, resultattavla og cup-sidene viser nå endringer allerede første gang du åpner dem.
+- [#2071](https://github.com/jdlarssen/golf-app/issues/2071) — Acey Deucey, Nines, Nassau, Skins og Bingo Bango Bongo starter ikke lenger med for få spillere. Arrangøren får vite hvor mange formatet trenger.
+- [#2074](https://github.com/jdlarssen/golf-app/issues/2074) — Etter lag-påmelding står antallet medspillere nå bare én gang.
+- [#2079](https://github.com/jdlarssen/golf-app/issues/2079) — Bytter du til mindre lag eller et annet format etter at lagene er fordelt, forsvinner ikke lenger spillere fra lagkortene. De som ikke får plass, kan du velge inn i de tomme plassene.
+- [#2086](https://github.com/jdlarssen/golf-app/issues/2086) — Står en uttaksøkt fast som avdekket uten kamper, får du nå vite at den må ryddes, i stedet for å bli bedt om å prøve igjen.
+- [#2064](https://github.com/jdlarssen/golf-app/issues/2064) — Klarer ikke Tørny å rydde bort halvferdige cupmatcher, sier appen nå fra om det i stedet for å be deg prøve igjen.
+- [#2085](https://github.com/jdlarssen/golf-app/issues/2085) — Er en spiller slettet etter at uttaket ble levert, ber appen deg nå låse opp uttaket i stedet for å fylle alle plassene.
+- [#2087](https://github.com/jdlarssen/golf-app/issues/2087), [#2088](https://github.com/jdlarssen/golf-app/issues/2088) — Feiler noe på en uttaksøkt, står meldingen nå på økten du trykket på, og kapteinen ser at begge lag har levert når kampene lar vente på seg.
+- [#2082](https://github.com/jdlarssen/golf-app/issues/2082) — Hikker databasen når kapteinen leverer uttaket, får hen nå beskjed om å prøve igjen i stedet for at økten ikke finnes.
+- [#2090](https://github.com/jdlarssen/golf-app/issues/2090), [#2091](https://github.com/jdlarssen/golf-app/issues/2091) — Trykker du «Ingen» i Bingo Bango Bongo, sletter du ikke lenger noe en i flighten har registrert uten at du så det. Laster du siden på nytt, ser du det du nettopp registrerte.
+- [#2093](https://github.com/jdlarssen/golf-app/issues/2093), [#2092](https://github.com/jdlarssen/golf-app/issues/2092) — Mister du dekningen midt i runden, viser skjermen det de andre har ført så snart forbindelsen er tilbake. Wolf-hullet viser nå alltid det siste valget.
+- [#2148](https://github.com/jdlarssen/golf-app/issues/2148) — Stableford og slagspill med flere enn åtte spillere tar nå med alle du velger, opptil 40. Før falt spiller nummer ni og oppover bort uten at noen sa fra.
+- [#2164](https://github.com/jdlarssen/golf-app/issues/2164) — Er du den første som åpner spillet etter starttiden, kommer du nå rett inn i runden i stedet for å havne på en feilside.
+</details>
+
 ### 1.237.0 · mandag 14. september 2026
 
 <details>
