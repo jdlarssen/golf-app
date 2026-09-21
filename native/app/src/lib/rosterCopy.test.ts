@@ -28,6 +28,7 @@ import {
   describeSelfWithdrawFailure,
   describeStartRefusal,
   INVITE_BY_EMAIL,
+  START_ROUND_CONFIRM,
   WITHDRAW_SELF,
 } from './rosterCopy';
 
@@ -305,5 +306,12 @@ describe('invitasjons-copyen (#1919)', () => {
     for (const value of Object.values(INVITE_BY_EMAIL)) {
       expect(isFinishedSentence(value)).toBe(true);
     }
+  });
+});
+
+describe('START_ROUND_CONFIRM', () => {
+  // #1980: bekreftelsen før «Start runden nå» er webbens ord for ord.
+  it('spør med webbens startRoundConfirm', () => {
+    expect(START_ROUND_CONFIRM.message).toBe(source.admin.game.buttons.startRoundConfirm);
   });
 });
