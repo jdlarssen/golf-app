@@ -26,8 +26,11 @@
 --     7. friendships deleted (both directions)
 --     8. invitations addressed to the old email deleted
 --     9. game_players rows PRESERVED (history is the point)
---    10. idempotent — a second call succeeds without error
---    11. admin target → REJECTED (42501 — admin accounts can't be anonymized)
+--    10. the preserved row in an ACTIVE game is marked withdrawn (#1909)
+--    11–14. device and Kavalkade rows deleted (#1899, 0184): push_subscriptions,
+--        apns_tokens, kavalkades, kavalkade_shares
+--    15. idempotent — a second call succeeds without error
+--    16. admin target → REJECTED (42501 — admin accounts can't be anonymized)
 --
 -- Runs as the `authenticated` role with a forged JWT `sub` claim — the same
 -- runtime path the app uses. See supabase/tests/README.md for how to run.
