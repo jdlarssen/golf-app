@@ -19,10 +19,12 @@
 //
 // **Manglende godkjenning har ingen vei rundt** — men den har nå en vei
 // GJENNOM (#1891). `guard_game_players_self_update` (0147) slipper oppretteren
-// til på andres rad, og webbens egen overstyring (`adminApproveScorecard`) er
-// ren DB uten varsel. Appen kan derfor gjøre nøyaktig det samme med den
-// `approveScorecard` den alt har. Det som fortsatt IKKE finnes er en vei rundt:
-// kortet må godkjennes, av en medspiller eller av arrangøren.
+// til på andres rad, så appen kan skrive de samme kolonnene som webbens
+// overstyring (`adminApproveScorecard`) med den `approveScorecard` den alt har.
+// Én forskjell står igjen: webben sender i tillegg `scorecard_approved`-varselet
+// til spilleren (`notify()`, Node), det gjør ikke appen. Det som fortsatt IKKE
+// finnes er en vei rundt: kortet må godkjennes, av en medspiller eller av
+// arrangøren.
 //
 // **Purringen er den ikke-destruktive utveien (#1889).** Manglet noen kort, var
 // eneste knapp «marker som trukket» — en destruktiv handling presentert som

@@ -1326,10 +1326,11 @@ Bare når handlingen krever Node. Tre ting driver det: `notify()`, Resend-mail o
 service-role. Alt annet skal appen gjøre selv, direkte mot PostgREST, med RLS som port.
 
 «Godkjenn på vegne av gruppa» er eksempelet på hvor billig svaret kan bli når man
-sjekker: det ser ut som en admin-overstyring, men er ren DB. `guard_game_players_self_update`
-(0147) slipper oppretteren gjennom på andres rad, og webbens egen override
-(`adminApproveScorecard`) sender ikke varsel. Appen skriver derfor de samme kolonnene
-selv — ingen rute, ingen migrasjon. **Sjekk alltid dette først.** Smedens gjetning om at
+sjekker: det ser ut som en admin-overstyring, men selve godkjenningen er ren DB.
+`guard_game_players_self_update` (0147) slipper oppretteren gjennom på andres rad, så
+appen skriver de samme kolonnene selv — ingen rute, ingen migrasjon. Webbens override
+(`adminApproveScorecard`) sender i tillegg `scorecard_approved`-varselet (`notify()`);
+det gjør ikke appen, og å gjøre det ville krevd en rute (#1980). **Sjekk alltid dette først.** Smedens gjetning om at
 «trekk deg selv» var like billig var derimot feil: vakt (c) i 0147 nekter egen rad.
 
 ### Adgangssjekken
