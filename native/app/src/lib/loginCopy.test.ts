@@ -11,7 +11,10 @@
 //  2. **Paritetsport mot webben.** Hver kode som også finnes på nettsidens
 //     `/login` hentes fra `messages/no.json` og sammenlignes tegn for tegn.
 //     Rettes en setning på web uten at appen følger etter, blir denne rød.
-//     `no.json` leses fra node-siden; testen bundles aldri.
+//     `no.json` leses fra node-siden; testen bundles aldri. Hver nøkkel under
+//     `auth.errors` er enten delt med appen eller står på `WEB_ONLY` med en
+//     begrunnelse (#1904) — får webben en ny feilkode, blir testen rød til
+//     noen har tatt stilling til om appen skal vise den.
 //  3. **Ingen kode uten setning.** `tsc` sikrer at switch-en er uttømmende;
 //     denne sikrer at det som kommer ut faktisk er lesbar tekst.
 import source from '../../../../messages/no.json';
@@ -41,6 +44,17 @@ const CODES = Object.keys(CODE_MAP) as readonly LoginErrorCode[];
 
 /** Kodene appen deler med webben. `network` er app-egen (offline-først). */
 const SHARED_WITH_WEB = CODES.filter((code) => code !== 'network');
+
+/**
+ * Webbens feilkoder appen med vilje IKKE har (se `LoginErrorCode` i
+ * `loginCopy.ts`). De tre første krever noe bare webbens server har.
+ */
+const WEB_ONLY: Partial<Record<keyof typeof source.auth.errors, string>> = {
+  rate_limited: 'webbens egen 15-minutters bøtte i login-actionen',
+  invite_expired: 'krever et service-role-oppslag på utløpte invitasjoner',
+  disposable_email: 'webbens sperre mot engangsadresser ved åpen selvregistrering',
+  link_expired: 'fra magic-link-tiden; appen har ingen lenke',
+};
 
 describe('classifyLoginError', () => {
   it.each<[LoginStep, string, string, LoginErrorCode]>([
@@ -100,6 +114,11 @@ describe('describeLoginError', () => {
 
   it.each(SHARED_WITH_WEB)('sier nøyaktig det samme som webben for %s', (code) => {
     expect(describeLoginError(code)).toBe(webErrors[code]);
+  });
+
+  it('hver nøkkel under auth.errors er delt med appen eller står på WEB_ONLY (#1904)', () => {
+    const accounted = new Set<string>([...SHARED_WITH_WEB, ...Object.keys(WEB_ONLY)]);
+    expect(Object.keys(webErrors).sort()).toEqual([...accounted].sort());
   });
 
   it('bruker appens egen offline-setning for network — webben har ingen', () => {

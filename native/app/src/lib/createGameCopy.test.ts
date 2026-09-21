@@ -6,56 +6,83 @@
 // (testen bundles aldri) og likheten kreves tegn for tegn. Rettes en melding på
 // web uten at appen følger etter, blir CI rød i stedet for at to flater sier
 // hver sin ting om samme feil.
+//
+// Porten er to regnskap (#1904). `FAILURE_MAP` klassifiserer hver kode i
+// `CreateGameFailure` — webbens nøkkel eller `null` for app-egne — så en ny
+// kode (unionen arver `GameValidationErrorCode` fra webben) gir rød `tsc` til
+// noen har valgt. Og hver nøkkel under `wizard.errors` er enten vist av en kode
+// eller står på `WEB_ONLY` med en begrunnelse, så en ny web-melding gir rødt
+// til noen har tatt stilling til om appen skal vise den.
 import source from '../../../../messages/no.json';
 import type { CreateGameFailure } from '../data/createGame';
 import { describeCreateGameFailure, describePendingPlayers } from './createGameCopy';
 
 const wizardErrors = source.wizard.errors as Record<string, string>;
 
-/** Kodene appen speiler ordrett fra webben. */
-const MIRRORED: CreateGameFailure[] = [
-  'name_required',
-  'course_required',
-  'tee_required',
-  'bad_allowance',
-  'duplicate_player',
-  'mode_required',
-  'unsupported_mode_size_combo',
-  'mode_locked_after_publish',
-  'invalid_game_mode',
-  'bad_registration_mode',
-  'bad_registration_type',
-  'team_registration_unsupported_mode',
-  'tee_off_required',
-  'tee_off_in_past',
-  'bad_side_ld_count',
-  'bad_side_ctp_count',
-  'db_roster',
-  'db_game',
-  'db_players',
+type WizardErrorKey = keyof typeof source.wizard.errors;
+
+// Kartet, ikke lista, er porten: en ny kode i unionen uten rad her gir rød `tsc`.
+// Verdien er webbens nøkkel appen viser ordrett, eller `null` der appen skriver
+// selv fordi webben ikke har koden.
+const FAILURE_MAP = {
+  name_required: 'name_required',
+  course_required: 'course_required',
+  tee_required: 'tee_required',
+  bad_allowance: 'bad_allowance',
+  duplicate_player: 'duplicate_player',
+  mode_required: 'mode_required',
+  unsupported_mode_size_combo: 'unsupported_mode_size_combo',
+  mode_locked_after_publish: 'mode_locked_after_publish',
+  invalid_game_mode: 'invalid_game_mode',
+  bad_registration_mode: 'bad_registration_mode',
+  bad_registration_type: 'bad_registration_type',
+  team_registration_unsupported_mode: 'team_registration_unsupported_mode',
+  tee_off_required: 'tee_off_required',
+  tee_off_in_past: 'tee_off_in_past',
+  bad_side_ld_count: 'bad_side_ld_count',
+  bad_side_ctp_count: 'bad_side_ctp_count',
+  db_roster: 'db_roster',
+  db_game: 'db_game',
+  db_players: 'db_players',
   // #1858 og #1882: webbens tekster for disse fem navnga ett format under en
   // kode som fyrer for mange — nå er de format-agnostiske, og appen speiler
   // dem igjen.
-  'bad_team',
-  'team_balance',
-  'too_many_players_for_mode',
-  'bad_flight',
-  'min_players_for_mode',
-];
+  bad_team: 'bad_team',
+  team_balance: 'team_balance',
+  too_many_players_for_mode: 'too_many_players_for_mode',
+  bad_flight: 'bad_flight',
+  min_players_for_mode: 'min_players_for_mode',
+  // Webben interpolerer en e-postliste i `pending_players`; appen bruker den
+  // generiske varianten (#435). Egen test under.
+  pending_players: 'pending_players_generic',
+  not_authenticated: null,
+  unsupported_mode: null,
+  db_format: null,
+  rls_denied: null,
+  no_rows: null,
+  orphan_game: null,
+} as const satisfies Record<CreateGameFailure, WizardErrorKey | null>;
 
-/** Kodene appen skriver selv fordi webben ikke har dem. */
-const APP_ONLY: CreateGameFailure[] = [
-  'not_authenticated',
-  'unsupported_mode',
-  'db_format',
-  'rls_denied',
-  'no_rows',
-  'orphan_game',
-];
+const ALL = Object.keys(FAILURE_MAP) as CreateGameFailure[];
+
+/** Kodene appen speiler ordrett fra webben: [kode, web-nøkkel]. */
+const MIRRORED = (
+  Object.entries(FAILURE_MAP) as [CreateGameFailure, WizardErrorKey | null][]
+).filter((entry): entry is [CreateGameFailure, WizardErrorKey] => entry[1] !== null);
+
+/** Nøkler under `wizard.errors` appen med vilje IKKE viser. */
+const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
+  pending_players: 'webbens variant med e-postliste; appen viser `pending_players_generic` (#435)',
+  tee_missing_rating: 'ingen opprett-kode sender den; start-avslaget med samme navn speiles i rosterCopy',
+  db_users: 'ingen kode på web sender den i dag',
+  db_tee: 'ingen kode på web sender den i dag',
+  not_editable: 'redigerings-flyten på web; appen oppretter bare',
+  unexpected: 'webbens fallback med rå kode for ukjente koder; appen har en setning per kode',
+};
 
 describe('paritet med wizard.errors i messages/no.json', () => {
-  it.each(MIRRORED)('%s er identisk med kilden', (code) => {
-    expect(describeCreateGameFailure(code)).toBe(wizardErrors[code]);
+  it.each(MIRRORED)('%s er identisk med kilden («%s»)', (code, webKey) => {
+    expect(describeCreateGameFailure(code)).toBe(wizardErrors[webKey]);
   });
 
   // Webben interpolerer en e-postliste i `pending_players`; appen bruker den
@@ -66,15 +93,17 @@ describe('paritet med wizard.errors i messages/no.json', () => {
       wizardErrors.pending_players_generic,
     );
   });
+
+  it('hver nøkkel under wizard.errors vises av en kode eller står på WEB_ONLY (#1904)', () => {
+    const accounted = new Set<string>([
+      ...MIRRORED.map(([, webKey]) => webKey),
+      ...Object.keys(WEB_ONLY),
+    ]);
+    expect(Object.keys(wizardErrors).sort()).toEqual([...accounted].sort());
+  });
 });
 
 describe('describeCreateGameFailure', () => {
-  const ALL: CreateGameFailure[] = [
-    ...MIRRORED,
-    ...APP_ONLY,
-    'pending_players',
-  ];
-
   it('gir en ikke-tom norsk setning for hver kode', () => {
     for (const code of ALL) {
       const message = describeCreateGameFailure(code);
