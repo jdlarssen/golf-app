@@ -37,6 +37,21 @@ export function addOnlineListener(listener: () => void): () => void {
   };
 }
 
+/**
+ * Fyr når appen kommer i forgrunnen — motstykket til webbens
+ * `window.addEventListener('focus', ...)`, som `RealtimeMount` bruker til å
+ * hente alle slag på nytt (#1980). Lytter direkte på AppState, så den virker
+ * uavhengig av om drain-triggerne er startet.
+ */
+export function addForegroundListener(listener: () => void): () => void {
+  const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
+    if (state === 'active') listener();
+  });
+  return () => {
+    sub.remove();
+  };
+}
+
 function applyNetworkState(state: NetworkState): void {
   // iOS-forbeholdet fra expo-network: `isInternetReachable` er der bare et ekko
   // av `isConnected`, så `isConnected` ER signalet. Ukjent (undefined) leses som
