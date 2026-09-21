@@ -28,6 +28,7 @@ import { setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
 import { withdrawSelf } from '../../data/withdrawSelf';
 import { inviteToGame } from '../../data/inviteToGame';
+import source from '../../../../../messages/no.json';
 import { OrganiserSection } from './OrganiserSection';
 
 jest.mock('../../supabase', () => require('../../test/supabaseMock'));
@@ -370,5 +371,45 @@ describe('OrganiserSection', () => {
     );
     expect(screen.queryByTestId(`organiser-remove-${MATE}`)).toBeNull();
     expect(screen.queryByTestId(`organiser-remove-${ME}`)).toBeNull();
+  });
+
+  // #1980: «Start runden nå» er en enveis-flipp. Webben spør med
+  // `confirm(startRoundConfirm)`; appen skal spørre med de samme ordene, og
+  // ingenting skal skje før svaret.
+  it('spør med webbens tekst før runden startes, og starter ikke ved avbryt', async () => {
+    let buttons: { text?: string; style?: string; onPress?: () => void }[] = [];
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, b) => {
+      buttons = (b ?? []) as typeof buttons;
+    });
+    (startRoundNow as jest.Mock).mockClear();
+    (startRoundNow as jest.Mock).mockResolvedValue({ ok: true, alreadyRunning: false });
+    await render(
+      <OrganiserSection
+        bundle={bundle('scheduled')}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+      />,
+    );
+
+    await fireEvent.press(screen.getByTestId('organiser-start'));
+
+    expect(alert).toHaveBeenCalledWith(
+      'Start runden nå',
+      source.admin.game.buttons.startRoundConfirm,
+      expect.any(Array),
+    );
+    expect(startRoundNow).not.toHaveBeenCalled();
+
+    // Avbryt: fortsatt ingenting.
+    buttons.find((b) => b.style === 'cancel')?.onPress?.();
+    expect(startRoundNow).not.toHaveBeenCalled();
+
+    buttons.find((b) => b.style === 'destructive')!.onPress!();
+    await waitFor(() => {
+      expect(screen.getByTestId('organiser-notice')).toHaveTextContent('Runden er i gang.');
+    });
+    expect(startRoundNow).toHaveBeenCalledTimes(1);
+    alert.mockRestore();
   });
 });
