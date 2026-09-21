@@ -33,6 +33,17 @@ const GENERIC_DB = 'Noe gikk galt mot serveren.';
 export const OFFLINE_NOTE = 'Du er uten nett. Koble til, så går det gjennom.';
 
 /**
+ * Bekreftelsen før «Start runden nå» (#1980). Flippen er enveis, så appen spør
+ * som webben gjør. `message` er webbens `admin.game.buttons.startRoundConfirm`
+ * tegn for tegn (låst i `OrganiserSection.test.tsx`).
+ */
+export const START_ROUND_CONFIRM = {
+  title: 'Start runden nå',
+  message: 'Starter du runden nå? Spillere kan begynne å taste slag. Redigering låses.',
+  confirm: 'Start runden',
+} as const;
+
+/**
  * Selv-frafall (#1917) — etikettene og bekreftelsen begge flatene deler.
  *
  * ⚠️ Handlingen går via `POST`/`DELETE /api/games/[id]/withdraw-self`, aldri en

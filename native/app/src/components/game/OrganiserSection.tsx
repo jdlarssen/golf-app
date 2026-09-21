@@ -77,6 +77,7 @@ import {
   describeSelfWithdrawFailure,
   describeStartRefusal,
   INVITE_BY_EMAIL,
+  START_ROUND_CONFIRM,
   WITHDRAW_SELF,
 } from '../../lib/rosterCopy';
 import { TAP, useTheme } from '../../theme';
@@ -570,7 +571,15 @@ export function OrganiserSection({
           style={ui.button}
           disabled={busy}
           testID="organiser-start"
-          onPress={() => void start()}
+          onPress={() =>
+            // #1980: enveis-flipp — spør først, som webben.
+            confirmThen(
+              START_ROUND_CONFIRM.title,
+              START_ROUND_CONFIRM.message,
+              START_ROUND_CONFIRM.confirm,
+              () => void start(),
+            )
+          }
         >
           <Text style={ui.buttonText}>Start runden nå</Text>
         </Pressable>
