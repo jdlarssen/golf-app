@@ -73,6 +73,13 @@ export function useSideWinners(
       if (alive.current) setState((prev) => ({ ...prev, settled: true }));
       return;
     }
+    // #1980: en ekte henting starter. Ble `settled` satt mens `enabled` var
+    // false (bundelen hadde ikke landet ennå), ville den stått sann under
+    // hentingen, og skjermen viste «fikk ikke tak i vinnerne» mens vi lastet.
+    // Har vi alt vinnerne, blir tavla stående mens vi henter på nytt.
+    if (alive.current) {
+      setState((prev) => (prev.neverLoaded ? { ...prev, settled: false } : prev));
+    }
     try {
       const rows = await fetchSideWinners(gameId);
       if (alive.current) setState({ rows, neverLoaded: false, settled: true });
