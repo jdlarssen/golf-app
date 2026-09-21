@@ -36,23 +36,24 @@ export type ThemeColors = {
 };
 
 /**
- * Lys = N3-paletten uendret (forest `#1B4332`, gold `#C9A961`, linen
- * `#F8F6F0`). Mørk = webbens «klubbhus-natt» (`app/globals.css`
- * `[data-theme='dark']`-blokka), inkl. knappe-regelen `dark:text-bg` fra
- * `components/ui/Button.tsx`.
+ * Begge palettene er webbens (`app/globals.css`): lys = `:root`-blokka, mørk =
+ * «klubbhus-natt» (`[data-theme='dark']`-blokka), inkl. knappe-regelen
+ * `dark:text-bg` fra `components/ui/Button.tsx`. `theme.test.ts` leser
+ * globals.css og feiler hvis en delt rolle driver fra webben (#1980).
+ * `onPrimary`/`onAccent` finnes bare i appen og låses i testen for seg.
  */
 export const PALETTES: Record<Scheme, ThemeColors> = {
   light: {
     bg: '#F8F6F0',
     surface: '#FFFFFF',
-    border: '#E3DFD3',
-    text: '#1B4332',
-    muted: '#5C6B60',
+    border: '#E5E0D3',
+    text: '#1A2E1F',
+    muted: '#4A3F30',
     primary: '#1B4332',
     onPrimary: '#FFFFFF',
     accent: '#C9A961',
     onAccent: '#1B4332',
-    danger: '#B00020',
+    danger: '#B8463E',
   },
   dark: {
     bg: '#14201A',

@@ -1,7 +1,10 @@
 // #1830 la den additive tema-kontrakten; #1833 fjernet den lys-bare halvdelen
-// av den. Testen låser derfor tre ting: at lys-paletten fortsatt HAR N3-verdiene
-// (ingen skjerm skiftet farge da `COLORS` forsvant), at mørk er komplett, og at
-// `useTheme()` er den ene veien inn — én `ui` per scheme, med samme nøkler.
+// av den. Testen låser derfor tre ting: at begge palettene er webbens verdier
+// (lest fra `app/globals.css`, så de ikke kan drive fra hverandre igjen —
+// #1980), at mørk er komplett, og at `useTheme()` er den ene veien inn — én
+// `ui` per scheme, med samme nøkler.
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { renderHook } from '@testing-library/react-native';
 import * as theme from './theme';
 import {
@@ -12,20 +15,51 @@ import {
   useTheme,
 } from './theme';
 
+/** Appens roller som har et motstykke i webbens CSS-variabler. */
+const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
+  bg: '--bg',
+  surface: '--surface',
+  border: '--border',
+  text: '--text',
+  muted: '--text-muted',
+  primary: '--primary',
+  accent: '--accent',
+  danger: '--danger',
+};
+
+const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');
+
+/** Variablene i den første blokka som åpner med `opener`, med små bokstaver. */
+function cssVars(opener: string): Record<string, string> {
+  const start = GLOBALS_CSS.indexOf(opener);
+  if (start < 0) throw new Error(`fant ikke ${opener} i globals.css`);
+  const body = GLOBALS_CSS.slice(start, GLOBALS_CSS.indexOf('\n}', start));
+  const vars: Record<string, string> = {};
+  for (const m of body.matchAll(/^\s*(--[\w-]+):\s*([^;]+);/gm)) {
+    vars[m[1]!] = m[2]!.trim().toLowerCase();
+  }
+  return vars;
+}
+
 describe('PALETTES', () => {
-  it('keeps the light palette on the N3 forest-and-champagne values', () => {
-    expect(PALETTES.light).toEqual({
-      bg: '#F8F6F0',
-      surface: '#FFFFFF',
-      border: '#E3DFD3',
-      text: '#1B4332',
-      muted: '#5C6B60',
-      primary: '#1B4332',
-      onPrimary: '#FFFFFF',
-      accent: '#C9A961',
-      onAccent: '#1B4332',
-      danger: '#B00020',
-    });
+  it.each([
+    ['light', ':root {'],
+    ['dark', "[data-theme='klubbhus-natt'] {"],
+  ] as const)('matches the web %s palette in app/globals.css', (scheme, opener) => {
+    const web = cssVars(opener);
+    for (const [role, cssVar] of Object.entries(WEB_VAR)) {
+      expect({ role, value: PALETTES[scheme][role as keyof typeof WEB_VAR].toLowerCase() }).toEqual({
+        role,
+        value: web[cssVar!],
+      });
+    }
+  });
+
+  it('keeps the app-only ink roles', () => {
+    expect(PALETTES.light.onPrimary).toBe('#FFFFFF');
+    expect(PALETTES.light.onAccent).toBe('#1B4332');
+    expect(PALETTES.dark.onPrimary).toBe('#14201A');
+    expect(PALETTES.dark.onAccent).toBe('#14201A');
   });
 
   it('gives every role a distinct klubbhus-natt value in dark mode', () => {
