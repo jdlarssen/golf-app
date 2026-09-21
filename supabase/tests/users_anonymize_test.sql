@@ -37,7 +37,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(16);
 
 \ir fixtures/rls_helpers.psql
 
@@ -55,6 +55,17 @@ insert into public.invitations (email, token, invited_by, expires_at)
     torny_rls.admin_id(),
     now() + interval '7 days'
   );
+-- #1899 (0184): one row per device/Kavalkade table. Their CASCADE never fires
+-- on the anonymization path (the users row survives), so anonymize_user must
+-- delete them explicitly.
+insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
+  values (torny_rls.active_id(), 'https://push.example/anonymize-test', 'p256dh-test', 'auth-test');
+insert into public.apns_tokens (user_id, token)
+  values (torny_rls.active_id(), 'anonymize-test-apns-token');
+insert into public.kavalkades (user_id, year, facts, narrative)
+  values (torny_rls.active_id(), 2026, '{"rounds": 1}'::jsonb, 'Et golfår.');
+insert into public.kavalkade_shares (user_id, year, card_kind)
+  values (torny_rls.active_id(), 2026, 'year');
 
 -- ═════════════════════════════════════════════════════════════════════════════
 -- GUARD — a non-admin cannot touch their own deleted_at
@@ -141,6 +152,32 @@ select isnt(
     where user_id = torny_rls.active_id()),
   null,
   '#1909: the preserved row in an ACTIVE game is now marked withdrawn'
+);
+
+-- #1899 (0184): the device and Kavalkade rows are gone. Each count is its own
+-- statement, after the anonymize_user call above (pgTAP snapshot trap, #1910).
+select is(
+  (select count(*) from public.push_subscriptions where user_id = torny_rls.active_id()),
+  0::bigint,
+  'push_subscriptions are deleted'
+);
+
+select is(
+  (select count(*) from public.apns_tokens where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#1899: apns_tokens are deleted'
+);
+
+select is(
+  (select count(*) from public.kavalkades where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#1899: kavalkades are deleted'
+);
+
+select is(
+  (select count(*) from public.kavalkade_shares where user_id = torny_rls.active_id()),
+  0::bigint,
+  '#1899: kavalkade_shares are deleted'
 );
 
 select lives_ok(
