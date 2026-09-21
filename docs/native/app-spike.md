@@ -36,6 +36,9 @@ Env (gitignorert — repoet er offentlig, aldri commit nøkler):
 # native/app/.env.local — verdier fra repo-rotas .env.staging.local
 EXPO_PUBLIC_SUPABASE_URL=<staging-URL>
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<staging anon-key>
+# Valgfri, kun eierens dev-bygg: tapp-innlogging som testbruker (#1923).
+# Samme verdi som DEV_LOGIN_PASSWORD i repo-rotas .env.staging.local.
+EXPO_PUBLIC_DEV_LOGIN_PASSWORD=<testpassordet>
 ```
 
 ## Kjøring
@@ -737,7 +740,62 @@ fanger det aldri (Node har globalene), og `expo export` heller ikke — bare en 
 enhet eller simulator gjør det. Samme klasse felle som metro-bare-importene over, men på
 runtime-siden.
 
+### Testbrukere i appen — tapp for å logge inn (#1923)
+
+Innloggingsskjermen i Tørny Dev viser en boks «Testbrukere (staging)» over
+e-post-skjemaet. Ett trykk på et navn logger inn som den brukeren, uten e-post og
+uten kode. Bytte bruker = «Logg ut» + nytt trykk. Eier-vakten (#1942) tømmer den
+lokale basen når en annen bruker enn sist logger inn, så tallene blandes ikke.
+
+**Rollebesetningen** (alle syntetiske `@example.test`-kontoer på staging, komplett
+profil): Anne Admin (admin, hcp 12) · Kari Arrangør · Ola Kompis · Per Putter ·
+Testspiller Tapp (hcp 18). Rigg testspill til eieren med disse.
+
+**Slik virker det.** Lista er fila `users.json` i den offentlige bucketen `dev-login`
+på staging. Appen henter den hver gang skjermen åpnes (med `?t=` som cache-buster;
+fila er lastet opp med `cacheControl: '0'` fordi Free-tier ikke har Smart CDN), og
+logger inn med `signInWithPassword` og ett felles testpassord.
+
+**Gaten** (`native/app/src/devLogin.ts`) — hver del alene holder prod ute:
+
+1. `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` er satt i bygget. Butikk-bygget setter den aldri.
+2. `EXPO_PUBLIC_SUPABASE_URL` er staging-verten (samme regel som `lib/stagingGate.ts`).
+3. Prod har ingen `dev-login`-bucket, så lista blir tom der uansett.
+
+`__DEV__` brukes ikke: eierens telefonbygg er Release. Bucketen lages av skriptet,
+ikke av en migrasjon (migrasjoner kjører i prod også — et bevisst avvik fra 0143).
+
+**Skriptet** (fra repo-rota, Node 22, leser kun `.env.staging.local` og nekter alt
+annet enn staging):
+
+```bash
+node scripts/dev-login-users.mjs sync      # rollebesetning + passord + bucket + fil (idempotent)
+node scripts/dev-login-users.mjs add --email torny+dev-<slug>@example.test --name "<Navn>" --role spiller --issue <N>
+node scripts/dev-login-users.mjs remove --email torny+dev-<slug>@example.test   # kontoen røres ikke
+node scripts/dev-login-users.mjs list
+```
+
+En bruker lagt til med `add` står i appen neste gang innloggingsskjermen åpnes, uten
+nytt bygg. Rollebesetningen styres av `sync` og kan ikke legges til eller fjernes med
+`add`/`remove`. Bare `@example.test`-adresser: fila er lesbar for alle som kjenner
+staging-URL-en.
+
+**Passordet** bor to steder, begge gitignorert: `DEV_LOGIN_PASSWORD` i
+`.env.staging.local` og `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` i `native/app/.env.local`.
+Lag et nytt med `openssl rand -base64 30`. Etter en rotasjon: `sync`, og bygg appen på
+nytt (verdien bakes inn i bundelen).
+
+**Feilsøking:**
+
+- «Fikk ikke logget inn som …»: passordet i appen og på staging er ulike. Kjør `sync`
+  med passordet appen ble bygget med, eller bygg appen på nytt.
+- Ingen boks: bygget mangler passordet, peker ikke på staging, eller staging er
+  pauset / uten nett. Skjemaet virker som før.
+
 ### Logg inn på test-enhet uten e-post
+
+Siden #1923 er dette fallbacken: for automatisert simulator-kjøring (økter uten
+eierens telefon) og for brukere som ikke står i testbruker-lista over.
 
 OTP-veien er ubrukelig for testkontoer: GoTrue nekter å SENDE kode til
 `@torny-e2e.invalid` (domenet er ikke leverbart), og en ekte adresse går på
