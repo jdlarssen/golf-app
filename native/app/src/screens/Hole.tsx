@@ -46,6 +46,7 @@ import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
 import { seedGameScores } from '../data/seedScores';
+import { addForegroundListener, addOnlineListener } from '../data/syncTriggers';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { displayName } from '../lib/display';
@@ -106,7 +107,11 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   // Realtime + seed henger på SPILLET, ikke på hullet: å bytte hull skal ikke
   // bygge kanalen på nytt (#1366-disiplinen bor i `subscribeGameScores`).
   // Seeden kjører ved åpning og når kanalen er tilbake etter et brudd: det som
-  // ble ført mens den lå nede, kommer aldri som en hendelse (#2093).
+  // ble ført mens den lå nede, kommer aldri som en hendelse (#2093). Den kjører
+  // også når appen kommer i forgrunnen og når nettet er tilbake, som webbens
+  // `catchUp` på focus og online (#1980): overlever sokkelen bakgrunnen, blir
+  // det ingen resubscribe, og makkerens hull ble stående tomme. Kanalen bygges
+  // ikke på nytt av det.
   useEffect(() => {
     const seed = () => {
       void seedGameScores(gameId)
@@ -119,8 +124,14 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
       },
       onResubscribed: seed,
     });
+    const removeForeground = addForegroundListener(seed);
+    const removeOnline = addOnlineListener(seed);
     seed();
-    return unsubscribe;
+    return () => {
+      removeForeground();
+      removeOnline();
+      unsubscribe();
+    };
   }, [gameId, reload]);
 
   const goToHole = useCallback(

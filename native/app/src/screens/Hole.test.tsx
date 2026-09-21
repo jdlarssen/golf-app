@@ -173,6 +173,10 @@ jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
 }));
 jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
+jest.mock('../data/syncTriggers', () => ({
+  addForegroundListener: jest.fn(() => () => undefined),
+  addOnlineListener: jest.fn(() => () => undefined),
+}));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),
@@ -229,6 +233,38 @@ describe('Hole', () => {
 
     expect(seedGameScores).toHaveBeenCalledTimes(2);
     expect(seedGameScores).toHaveBeenLastCalledWith(GAME_ID);
+  });
+
+  it('henter slagene på nytt når appen kommer i forgrunnen og når nettet er tilbake (#1980)', async () => {
+    await renderHole();
+    const { subscribeGameScores } = require('../data/realtime') as {
+      subscribeGameScores: jest.Mock;
+    };
+    const { seedGameScores } = require('../data/seedScores') as {
+      seedGameScores: jest.Mock;
+    };
+    const { addForegroundListener, addOnlineListener } = require('../data/syncTriggers') as {
+      addForegroundListener: jest.Mock;
+      addOnlineListener: jest.Mock;
+    };
+    await waitFor(() => {
+      expect(seedGameScores).toHaveBeenCalledTimes(1);
+    });
+
+    // Sokkelen overlevde bakgrunnen: ingen resubscribe, men forgrunnen skal
+    // likevel hente det makkeren førte i mellomtiden.
+    await act(async () => {
+      addForegroundListener.mock.calls[0]![0]();
+    });
+    expect(seedGameScores).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      addOnlineListener.mock.calls[0]![0]();
+    });
+    expect(seedGameScores).toHaveBeenCalledTimes(3);
+    expect(seedGameScores).toHaveBeenLastCalledWith(GAME_ID);
+    // Ingen ny kanal (#1366).
+    expect(subscribeGameScores).toHaveBeenCalledTimes(1);
   });
 
   it('tegner hele flighten og sender et tapp på «+» videre til writeScore', async () => {
