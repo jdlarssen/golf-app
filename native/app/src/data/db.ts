@@ -483,3 +483,11 @@ export async function listConflictsForGame(
   );
   return rows.map(toConflictRecord);
 }
+
+/** Konfliktvarselet er lest og avvist (#1980, webbens `conflicts.delete`). */
+export async function deleteConflict(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+): Promise<void> {
+  await db.runAsync('DELETE FROM conflicts WHERE id = $id;', { $id: id });
+}

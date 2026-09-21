@@ -33,6 +33,7 @@ import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { OrganiserSection } from '../components/game/OrganiserSection';
 import { HakeIcon } from '../components/icons/Icons';
+import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { confirmParticipation } from '../data/rosterActions';
 import { seedGameScores } from '../data/seedScores';
@@ -151,6 +152,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="game-home-screen">
+      {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
+      <SyncBanner gameId={gameId} />
       <Text style={ui.title} testID="game-name">
         {game.name}
       </Text>

@@ -251,3 +251,26 @@ describe('wipeLocalData', () => {
     });
   });
 });
+
+describe('deleteConflict', () => {
+  useFreshModules();
+
+  it('fjerner bare det avviste varselet', async () => {
+    const { getDb, putConflict, deleteConflict, listConflictsForGame } = require('./db') as Db;
+    const db = await getDb();
+    const base = {
+      gameId: GAME,
+      userId: ME,
+      localStrokes: 4,
+      serverStrokes: 5,
+      resolvedAt: '2026-09-01T09:00:02.000Z',
+      forOwnScore: true,
+    };
+    await putConflict(db, { ...base, id: 'konflikt-1', holeNumber: 1 });
+    await putConflict(db, { ...base, id: 'konflikt-2', holeNumber: 2 });
+
+    await deleteConflict(db, 'konflikt-1');
+
+    expect((await listConflictsForGame(db, GAME)).map((c) => c.id)).toEqual(['konflikt-2']);
+  });
+});
