@@ -204,10 +204,17 @@ async function ensureBucket(db) {
   return true;
 }
 
-/** Eksisterende `users.json`, eller null om den ikke finnes ennå. */
+/**
+ * Eksisterende `users.json`, eller null om den ikke finnes ennå. Bare en
+ * fil som beviselig mangler gir null — enhver annen feil kaster, ellers ville
+ * en forbigående storage-feil latt `sync`/`add` skrive lista på nytt uten de
+ * ekstra brukerne.
+ */
 async function readList(db) {
+  const entries = ok(`list ${BUCKET}`, await db.storage.from(BUCKET).list('', { search: OBJECT }));
+  if (!entries.some((e) => e.name === OBJECT)) return null;
   const { data, error } = await db.storage.from(BUCKET).download(OBJECT);
-  if (error || !data) return null;
+  if (error || !data) throw new Error(`last ned ${OBJECT}: ${error?.message ?? 'tomt svar'}`);
   const json = JSON.parse(await data.text());
   return Array.isArray(json?.users) ? json.users : [];
 }

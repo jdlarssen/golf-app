@@ -759,7 +759,7 @@ logger inn med `signInWithPassword` og ett felles testpassord.
 **Gaten** (`native/app/src/devLogin.ts`) — hver del alene holder prod ute:
 
 1. `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` er satt i bygget. Butikk-bygget setter den aldri.
-2. `EXPO_PUBLIC_SUPABASE_URL` er staging-verten (samme regel som `lib/stagingGate.ts`).
+2. `EXPO_PUBLIC_SUPABASE_URL` er staging-verten (samme regel som `native/app/src/lib/stagingGate.ts`).
 3. Prod har ingen `dev-login`-bucket, så lista blir tom der uansett.
 
 `__DEV__` brukes ikke: eierens telefonbygg er Release. Bucketen lages av skriptet,
