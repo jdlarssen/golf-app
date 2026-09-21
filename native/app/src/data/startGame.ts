@@ -56,23 +56,6 @@ export interface StartRoundRefusal {
   rotationActiveCount?: number;
 }
 
-/**
- * Klient-typen kjernen forlanger.
- *
- * ⚠️ **To installasjoner av `@supabase/supabase-js`.** Appen har sin egen
- * (`native/app/node_modules`, 2.112.x) fordi Metro må resolve alt mot appens
- * eget avhengighetstre; repo-rota har sin (2.105.x). `startScheduledGameCore`
- * ligger i `lib/` og annoterer derfor ROTAS `SupabaseClient`, mens
- * `src/supabase.ts` gir appens. TypeScript nominal-sammenligner klasser med
- * `protected`-felter (`supabaseUrl`) og avviser de to som ulike — selv om
- * flatene er identiske og begge tilfredsstiller rotas `^2.105.4`.
- *
- * Kastet under er derfor et pakke-duplikat-kast, ikke et «typene stemmer
- * ikke»-kast. Det står ETT sted, og typen hentes fra kjernens egen signatur, så
- * en ekte endring av parameteren fortsatt slår ut her.
- */
-type CoreSupabaseClient = Parameters<typeof startScheduledGameCore>[0];
-
 export type StartRoundResult =
   | {
       ok: true;
@@ -93,10 +76,7 @@ export type StartRoundResult =
 export async function startRoundNow(gameId: string): Promise<StartRoundResult> {
   if (!isDeviceOnline()) return { ok: false, reason: 'offline' };
 
-  const result = await startScheduledGameCore(
-    supabase as unknown as CoreSupabaseClient,
-    gameId,
-  );
+  const result = await startScheduledGameCore(supabase, gameId);
 
   if (result.ok) {
     // `result.expiredSignups` slippes med vilje: varslene til de avviste
