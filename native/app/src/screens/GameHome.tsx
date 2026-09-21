@@ -32,6 +32,7 @@ import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { OrganiserSection } from '../components/game/OrganiserSection';
+import { HakeIcon } from '../components/icons/Icons';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import { confirmParticipation } from '../data/rosterActions';
 import { seedGameScores } from '../data/seedScores';
@@ -57,7 +58,8 @@ import {
 import {
   findInRoster,
   pendingApprovals,
-  rosterMarks,
+  rosterPlacementMarks,
+  rosterStatus,
   shouldConfirmParticipation,
   toRoster,
 } from '../lib/roster';
@@ -460,6 +462,11 @@ function PrimarySection({
  * `LeaderboardBody`) — hva raden SIER er delt logikk i `rosterMarks`, men at
  * den lange wolf-merkelappen faktisk får plass er det bare en render som
  * svarer på.
+ *
+ * Statusen står for seg (#1879): «Levert» og «Godkjent» får en hake foran
+ * ordet — glyfen leses raskere i en tett liste. Aldri haken alene: den er lik
+ * for begge, så det er ordet som skiller dem. «Trukket» har ingen glyf som
+ * leses riktig uten ord, og står derfor som tekst.
  */
 export function RosterRow({
   player,
@@ -473,8 +480,10 @@ export function RosterRow({
   /** Hele rosteret — `rosterMarks` teller selv n-en wolf-rotasjonen går over. */
   players: readonly BundlePlayer[];
 }) {
-  const { ui } = useTheme();
-  const marks = rosterMarks(player, gameMode, players);
+  const { colors, ui } = useTheme();
+  const marks = rosterPlacementMarks(player, gameMode, players);
+  const status = rosterStatus(player);
+  const checked = status === 'Levert' || status === 'Godkjent';
 
   return (
     <View style={styles.rosterRow} testID={`roster-row-${player.userId}`}>
@@ -482,14 +491,33 @@ export function RosterRow({
         {displayName(player)}
         {isMe ? ' (deg)' : ''}
       </Text>
-      {marks.length > 0 ? (
-        // `flexShrink` på begge sider: «Wolf på hull 3, 6, 9, 12, 15 og 18» er
-        // den lengste merkelappen som finnes, og uten dette renner den ut av
-        // raden på en smal telefon i stedet for å brekke (#1842-lærdommen —
-        // tekst som klippes er tekst som lyver).
-        <Text style={[ui.muted, styles.rosterMarks]} testID={`roster-marks-${player.userId}`}>
-          {marks.join(' · ')}
-        </Text>
+      {marks.length > 0 || status ? (
+        <View style={styles.rosterRight}>
+          {marks.length > 0 ? (
+            // `flexShrink` på begge sider: «Wolf på hull 3, 6, 9, 12, 15 og 18» er
+            // den lengste merkelappen som finnes, og uten dette renner den ut av
+            // raden på en smal telefon i stedet for å brekke (#1842-lærdommen —
+            // tekst som klippes er tekst som lyver).
+            <Text
+              style={[ui.muted, styles.rosterMarks]}
+              testID={`roster-marks-${player.userId}`}
+            >
+              {marks.join(' · ')}
+            </Text>
+          ) : null}
+          {status ? (
+            <View style={styles.rosterStatus} testID={`roster-status-${player.userId}`}>
+              {checked ? (
+                <HakeIcon
+                  color={status === 'Godkjent' ? colors.primary : colors.muted}
+                  size={16}
+                  testID={`roster-status-check-${player.userId}`}
+                />
+              ) : null}
+              <Text style={ui.muted}>{status}</Text>
+            </View>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
@@ -504,7 +532,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rosterName: { flexShrink: 1 },
+  rosterRight: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    columnGap: 8,
+  },
   rosterMarks: { flexShrink: 1, textAlign: 'right' },
+  rosterStatus: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   meName: { fontFamily: FONTS.sansBold },
 });

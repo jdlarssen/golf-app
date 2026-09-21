@@ -52,6 +52,7 @@ import {
   supportsWithdrawal,
   type GameMode,
 } from '../../../../../lib/scoring/modes/types';
+import { ChevronIcon, PlussIcon } from '../icons/Icons';
 import { WebLinkButton } from '../WebLinkButton';
 import { fetchRosterCandidates, type RosterCandidate } from '../../data/createGame';
 import { inviteToGame } from '../../data/inviteToGame';
@@ -328,9 +329,8 @@ export function OrganiserSection({
     <View testID="organiser-section">
       <Text style={ui.sectionTitle}>Arrangør</Text>
 
-      {/* Tekst, ikke ikon: appen har ikke noe ikonspråk å låne fra (ingen
-          vector-icons-dep, ingen glyfknapper), og en kompakt tekstknapp er
-          mønsteret som allerede finnes. Står over lista, så lista vokser
+      {/* Tekst, ikke ikon: «Juster» er en domenehandling, og de får aldri
+          ikon alene (#1879-føringen). Står over lista, så lista vokser
           nedover når den åpnes og knappen blir stående. */}
       {canAdjust ? (
         <Pressable
@@ -482,9 +482,18 @@ export function OrganiserSection({
           testID="organiser-add-toggle"
           onPress={() => (picking ? setPicking(false) : openPicker())}
         >
-          <Text style={ui.buttonSecondaryText}>
-            {picking ? 'Lukk listen' : 'Legg til spiller'}
-          </Text>
+          {/* Ikon + den samme teksten (#1879): pluss for å åpne, chevron
+              opp for å lukke. */}
+          <View style={styles.iconLabel}>
+            {picking ? (
+              <ChevronIcon up color={colors.primary} size={18} />
+            ) : (
+              <PlussIcon color={colors.primary} size={18} />
+            )}
+            <Text style={ui.buttonSecondaryText}>
+              {picking ? 'Lukk listen' : 'Legg til spiller'}
+            </Text>
+          </View>
         </Pressable>
       ) : null}
 
@@ -657,6 +666,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rowButton: { alignSelf: 'flex-start', paddingHorizontal: 20 },
+  iconLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chipRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   chip: {
     minWidth: TAP,

@@ -151,6 +151,19 @@ export function rosterMarks(
   gameMode: GameMode,
   players: readonly BundlePlayer[],
 ): string[] {
+  const status = rosterStatus(player);
+  return [...rosterPlacementMarks(player, gameMode, players), ...(status ? [status] : [])];
+}
+
+/**
+ * Plassen i spillet — alt i `rosterMarks` unntatt statusen. Egen funksjon fordi
+ * raden tegner statusen for seg, med hake (#1879).
+ */
+export function rosterPlacementMarks(
+  player: BundlePlayer,
+  gameMode: GameMode,
+  players: readonly BundlePlayer[],
+): string[] {
   const marks: string[] = [];
 
   if (isMatchplayMode(gameMode)) {
@@ -173,9 +186,15 @@ export function rosterMarks(
     }
   }
 
-  if (player.withdrawnAt) marks.push('Trukket');
-  else if (player.approvedAt) marks.push('Godkjent');
-  else if (player.submittedAt) marks.push('Levert');
-
   return marks;
+}
+
+export type RosterStatus = 'Trukket' | 'Godkjent' | 'Levert';
+
+/** Kortets tilstand, eller `null` før noe er levert. Trukket vinner. */
+export function rosterStatus(player: BundlePlayer): RosterStatus | null {
+  if (player.withdrawnAt) return 'Trukket';
+  if (player.approvedAt) return 'Godkjent';
+  if (player.submittedAt) return 'Levert';
+  return null;
 }
