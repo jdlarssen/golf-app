@@ -116,10 +116,12 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="home-screen">
       {empty ? (
-        // Samme hero-flagg som webbens tomme hjem (#1879).
+        // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
+        // webben skriver `text-primary dark:text-text`, og i lys drakt er de
+        // to samme farge.
         <View style={styles.empty}>
           <PinFlagHero
-            color={colors.primary}
+            color={colors.text}
             accent={colors.accent}
             size={72}
             testID="home-empty-flag"
