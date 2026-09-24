@@ -55,7 +55,6 @@ PLUTIL=/usr/bin/plutil
 CODESIGN=/usr/bin/codesign
 SHASUM=/usr/bin/shasum
 ASSETUTIL=/usr/bin/assetutil
-ICONV=/usr/bin/iconv
 PYTHON3=/usr/bin/python3
 HERMES_STRINGS="$(dirname "${BASH_SOURCE[0]}")/hermes-strings.py"
 
@@ -110,7 +109,7 @@ usage() {
 
 [ $# -ge 1 ] || usage
 TARGET=$1
-for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$PYTHON3" "$ICONV"; do
+for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$PYTHON3"; do
   [ -x "$tool" ] || { printf '✗ Mangler verktøy: %s\n' "$tool" >&2; exit 2; }
 done
 [ -f "$HERMES_STRINGS" ] || { printf '✗ Mangler %s (leser UTF-16-tabellen)\n' "$HERMES_STRINGS" >&2; exit 2; }
@@ -148,11 +147,7 @@ if [ "$PROOF_FINISHED" != 1 ]; then
 fi' EXIT
 : > "$OUT"
 
-# Contexts are cut by byte count and can split an «ø» in half. `iconv -c`
-# drops the broken tail, so the proof file stays valid UTF-8 and a plain
-# `grep FAIL` on it still works in a UTF-8 terminal.
-clean_utf8() { "$ICONV" -c -f UTF-8 -t UTF-8; }
-say()  { printf '%s\n' "$*" | clean_utf8 | tee -a "$OUT"; }
+say()  { printf '%s\n' "$*" | tee -a "$OUT"; }
 pass() { PASS=$((PASS + 1)); say "PASS  $*"; }
 fail() { FAIL=$((FAIL + 1)); say "FAIL  $*"; }
 
@@ -202,12 +197,26 @@ else
   count_regex() { ("$GREP" -aoE -- "$1" "$STR" || true) | wc -l | tr -d ' '; }
   offsets_of()  { ("$GREP" -aobF -- "$1" "$STR" || true) | cut -d: -f1; }
 
+  # Every context below is cut by byte count, and the UTF-16 strings hold
+  # multibyte characters, so a cut can split an «ø» in half. Invalid bytes can
+  # only sit at a cut edge (the `strings` dump is ASCII, the UTF-16 dump valid
+  # UTF-8), so trimming each edge keeps the proof file valid UTF-8 and a plain
+  # `grep FAIL` on it working in a UTF-8 terminal. sed in the C locale, not
+  # `iconv -c` (on macOS it exits 1 on a cut 3-byte character, and even on
+  # valid input across byte 1024) and not Python (a broken reader must still
+  # print a readable FAIL). Per line: orphan continuation bytes at the start,
+  # an unfinished sequence at the end.
+  UTF8_CONT=$(printf '\200-\277')
+  UTF8_TAIL="[$(printf '\300-\377')]|[$(printf '\340-\377')][$UTF8_CONT]|[$(printf '\360-\377')][$UTF8_CONT][$UTF8_CONT]"
+  utf8_trim() { sed -E "s/^[$UTF8_CONT]+//; s/($UTF8_TAIL)\$//"; }
+  head_bytes() { printf '%s' "${1:0:$2}" | utf8_trim; }
+
   # Tekst fra byte-offset: `head` leser fila og `tail` spiser alt head gir, så
   # ingen SIGPIPE (det motsatte, `tail | head`, dør med 141 under pipefail).
   slice() {
     local start=$1 length=$2
     [ "$start" -lt 0 ] && { length=$((length + start)); start=0; }
-    head -c "$((start + length))" "$STR" | tail -c "+$((start + 1))" | tr '\n' ' '
+    head -c "$((start + length))" "$STR" | tail -c "+$((start + 1))" | tr '\n' ' ' | utf8_trim
   }
 
   # Kontekst rundt hvert treff, ett per linje — via byte-offset, så to treff tett
@@ -235,10 +244,10 @@ else
         if printf '%s' "$tail_text" | "$GREP" -qE -- "$re"; then ok=1; break; fi
       done
       if [ "$ok" = "1" ]; then
-        say "      kjent  «${tail_text:0:70}»"
+        say "      kjent  «$(head_bytes "$tail_text" 70)»"
       else
         unknown=$((unknown + 1))
-        say "      UKJENT «${tail_text:0:90}»"
+        say "      UKJENT «$(head_bytes "$tail_text" 90)»"
       fi
     done < <(offsets_of "$token")
     if [ "$unknown" = "0" ]; then
@@ -258,7 +267,7 @@ else
   # `://<staging>` er miljøverdien, og den skal ikke finnes.
   n=$(count_fixed "$STAGING_REF")
   m=$(count_fixed "://$STAGING_REF")
-  contexts "$STAGING_REF" 12 40 | clean_utf8 | tee -a "$OUT"
+  contexts "$STAGING_REF" 12 40 | tee -a "$OUT"
   if [ "$m" != "0" ]; then
     fail "staging-adressen ://$STAGING_REF finnes ($m) — bygget peker på staging"
   elif [ "$n" -le 1 ]; then
@@ -294,7 +303,7 @@ else
       pass "LAN/loopback «${pattern}»: 0 treff"
     else
       fail "LAN/loopback «${pattern}»: $n treff"
-      ("$GREP" -aoE -- ".{0,30}${pattern}.{0,50}" "$STR" || true) | sed 's/^/      /' | clean_utf8 | tee -a "$OUT"
+      ("$GREP" -aoE -- ".{0,30}${pattern}.{0,50}" "$STR" || true) | utf8_trim | sed 's/^/      /' | tee -a "$OUT"
     fi
   done
 

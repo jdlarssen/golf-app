@@ -117,8 +117,9 @@ native/app/scripts/store-build-proof.sh ~/.torny-native/dist/TornyNative-1.1.0-2
 
 Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. Skriver
 `…bevis.txt` — **lim den inn i issue-kommentaren** (P3 i kontrakten), sammen med merket.
-Exit 0 = alt PASS. Exit 1 = minst én FAIL. Exit 3 = skriptet stoppet før slutten, og
-bevis-fila er ufullstendig. Både 1 og 3 stopper opplastingen.
+Exit 0 = alt PASS. Exit 1 = minst én FAIL. Exit 2 = feil bruk eller et verktøy mangler.
+Exit 3 = skriptet stoppet før slutten, og bevis-fila er ufullstendig. Alt annet enn 0
+stopper opplastingen.
 
 | Kilde | Regel |
 |---|---|
