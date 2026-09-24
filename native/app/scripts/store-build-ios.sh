@@ -5,7 +5,7 @@
 #
 # Hvorfor et skript og ikke en oppskrift: de tre `EXPO_PUBLIC_*`-verdiene bakes
 # inn ved bundling, og ingenting stopper et butikkbygg med feil adresse — appen
-# kjører helt normalt til noen trykker «Slett konto». Skriptet gjør derfor fire
+# kjører helt normalt til noen trykker «Slett konto». Skriptet gjør derfor fem
 # ting en oppskrift ikke kan garantere:
 #
 #  1. **Prod-verdiene kommer fra skall-miljøet, aldri fra en `.env`-fil.**
@@ -23,6 +23,9 @@
 #     `store-build-tag.sh` taggen `native-ios/v<versjon>-<build>` på commiten
 #     arkivet ble bygget fra (fanget i `<arkiv>.commit` ved arkivering). Derfor
 #     må sporede filer være uendret før arkivering — ellers ville merket lyve.
+#  5. **Symbolfiler (#1974).** Mellom arkiv og bevis legger `store-build-dsyms.sh`
+#     dSYM-ene for Hermes, React og ReactNativeDependencies inn i arkivet, så krasj
+#     i motoren kan leses. Mangler de, blir det en advarsel; opplastingen går som før.
 #
 # Bruk:  native/app/scripts/store-build-ios.sh [--no-upload]
 #        native/app/scripts/store-build-ios.sh --upload-only <sti.xcarchive>
@@ -31,7 +34,8 @@
 #                          veien videre etter --no-upload, uten ny kompilering
 #
 # Miljø (valgfritt): TORNY_ENV_FILE (sti til .env.local), TORNY_DIST_DIR
-# (standard ~/.torny-native/dist). Runbook: docs/native/app-store-release.md.
+# (standard ~/.torny-native/dist), TORNY_DSYM_CACHE (standard
+# ~/.torny-native/cache/dsyms). Runbook: docs/native/app-store-release.md.
 set -euo pipefail
 
 APP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -41,6 +45,7 @@ ENV_FILE=${TORNY_ENV_FILE:-"$REPO_ROOT/.env.local"}
 EXPORT_OPTIONS="$DIST/ExportOptions.plist"
 PROOF="$APP_DIR/scripts/store-build-proof.sh"
 TAG_SCRIPT="$APP_DIR/scripts/store-build-tag.sh"
+DSYMS="$APP_DIR/scripts/store-build-dsyms.sh"
 
 TEAM_ID='8C8WCW67J9'
 PROD_SUPABASE_HOST='glofubopddkjhymcbaph.supabase.co'
@@ -83,6 +88,7 @@ require_export_tools() {
   [ -f "$EXPORT_OPTIONS" ] || die "Fant ikke $EXPORT_OPTIONS (method app-store-connect, destination upload — se docs/native/ios-shell.md §TestFlight)."
   [ -x "$PROOF" ] || die "Fant ikke bevis-skriptet $PROOF"
   [ -x "$TAG_SCRIPT" ] || die "Fant ikke merke-skriptet $TAG_SCRIPT"
+  [ -x "$DSYMS" ] || die "Fant ikke symbol-skriptet $DSYMS"
 }
 
 # Siste linje i .env-fila som setter nøkkelen; `export KEY=` og innrykk godtas.
@@ -109,6 +115,19 @@ run_proof() {
   local archive=$1 proof_file=$2
   step "Bevis-steg: $PROOF"
   "$PROOF" "$archive" "$proof_file" || die "Beviset feilet — ingenting lastes opp. Les $proof_file. Arkivet ligger igjen som $archive: slett det (rm -rf) før du kompilerer på nytt, ellers stopper duplikat-vakten deg."
+}
+
+# Symbolfilene (#1974) er observerbarhet: ingen feil her stopper opplastingen.
+# Skriptet skriver meldingene på stderr og tellingen på stdout, til «Ferdig»-boksen.
+DSYM_LINE=''
+add_dsyms() {
+  local archive=$1 rc=0
+  step "Symbolfiler: $DSYMS"
+  DSYM_LINE=$("$DSYMS" "$archive") || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    printf '⚠ Symbolsteget feilet (exit %s). Opplastingen fortsetter uten symbolfilene.\n' "$rc"
+    DSYM_LINE="Symbolfiler: ukjent — symbolsteget feilet (exit $rc), se meldingen over"
+  fi
 }
 
 # Merket (#2019) skal peke på koden som faktisk ble bygget. Endrede sporede filer
@@ -178,10 +197,11 @@ if [ -n "$UPLOAD_ONLY" ]; then
   VERSION=$("$PLUTIL" -extract ApplicationProperties.CFBundleShortVersionString raw -o - "$ARCHIVE/Info.plist" 2>/dev/null || true)
   BUILD=$("$PLUTIL" -extract ApplicationProperties.CFBundleVersion raw -o - "$ARCHIVE/Info.plist" 2>/dev/null || true)
   { [ -n "$VERSION" ] && [ -n "$BUILD" ]; } || die "Fant ikke versjon og build i $ARCHIVE/Info.plist — er dette et xcodebuild-arkiv?"
+  add_dsyms "$ARCHIVE"
   run_proof "$ARCHIVE" "$STEM.bevis.txt"
   run_export "$ARCHIVE" "$STEM" "$VERSION" "$BUILD"
   step "Ferdig"
-  printf 'Arkiv:   %s\nBevis:   %s.bevis.txt   ← lim inn i issue-/PR-kommentaren\nMerke:   %s\n' "$ARCHIVE" "$STEM" "${TAG_LINE:-ikke satt — se meldingen over}"
+  printf 'Arkiv:   %s\nBevis:   %s.bevis.txt   ← lim inn i issue-/PR-kommentaren\nMerke:   %s\n%s\n' "$ARCHIVE" "$STEM" "${TAG_LINE:-ikke satt — se meldingen over}" "${DSYM_LINE:-Symbolfiler: ukjent — se meldingene over}"
   exit 0
 fi
 
@@ -287,10 +307,13 @@ printf 'ARCHIVE SUCCEEDED\n'
 # senere med en annen HEAD (#2019).
 git -C "$REPO_ROOT" rev-parse HEAD > "$STEM.commit"
 
-# ── 5. Bevis (stopper før opplasting) ────────────────────────────────────────
+# ── 5. Symbolfiler (advarer, stopper aldri) ──────────────────────────────────
+add_dsyms "$ARCHIVE"
+
+# ── 6. Bevis (stopper før opplasting) ────────────────────────────────────────
 run_proof "$ARCHIVE" "$STEM.bevis.txt"
 
-# ── 6. Opplasting ────────────────────────────────────────────────────────────
+# ── 7. Opplasting ────────────────────────────────────────────────────────────
 if [ "$UPLOAD" = "0" ]; then
   step "--no-upload: hopper over eksport/opplasting"
   printf 'Last opp dette arkivet senere med: %s --upload-only %s\n' "$0" "$ARCHIVE"
@@ -309,6 +332,7 @@ cat <<EOF
 Arkiv:   $ARCHIVE
 Bevis:   $STEM.bevis.txt   ← lim inn i issue-/PR-kommentaren
 Merke:   $MERKE
+${DSYM_LINE:-Symbolfiler: ukjent — se meldingene over}
 Neste:
   • Neste kompilering: bump STORE_IOS_BUILD_NUMBER i native/app/app.config.ts først.
   • ios/ er nå butikk-varianten. Før neste dev-bygg: (cd native/app && npx expo prebuild --platform ios --no-install)
