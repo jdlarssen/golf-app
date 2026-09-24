@@ -55,6 +55,7 @@ PLUTIL=/usr/bin/plutil
 CODESIGN=/usr/bin/codesign
 SHASUM=/usr/bin/shasum
 ASSETUTIL=/usr/bin/assetutil
+ICONV=/usr/bin/iconv
 PYTHON3=/usr/bin/python3
 HERMES_STRINGS="$(dirname "${BASH_SOURCE[0]}")/hermes-strings.py"
 
@@ -109,7 +110,7 @@ usage() {
 
 [ $# -ge 1 ] || usage
 TARGET=$1
-for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$PYTHON3"; do
+for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$PYTHON3" "$ICONV"; do
   [ -x "$tool" ] || { printf '✗ Mangler verktøy: %s\n' "$tool" >&2; exit 2; }
 done
 [ -f "$HERMES_STRINGS" ] || { printf '✗ Mangler %s (leser UTF-16-tabellen)\n' "$HERMES_STRINGS" >&2; exit 2; }
@@ -147,7 +148,11 @@ if [ "$PROOF_FINISHED" != 1 ]; then
 fi' EXIT
 : > "$OUT"
 
-say()  { printf '%s\n' "$*" | tee -a "$OUT"; }
+# Contexts are cut by byte count and can split an «ø» in half. `iconv -c`
+# drops the broken tail, so the proof file stays valid UTF-8 and a plain
+# `grep FAIL` on it still works in a UTF-8 terminal.
+clean_utf8() { "$ICONV" -c -f UTF-8 -t UTF-8; }
+say()  { printf '%s\n' "$*" | clean_utf8 | tee -a "$OUT"; }
 pass() { PASS=$((PASS + 1)); say "PASS  $*"; }
 fail() { FAIL=$((FAIL + 1)); say "FAIL  $*"; }
 
@@ -253,7 +258,7 @@ else
   # `://<staging>` er miljøverdien, og den skal ikke finnes.
   n=$(count_fixed "$STAGING_REF")
   m=$(count_fixed "://$STAGING_REF")
-  contexts "$STAGING_REF" 12 40 | tee -a "$OUT"
+  contexts "$STAGING_REF" 12 40 | clean_utf8 | tee -a "$OUT"
   if [ "$m" != "0" ]; then
     fail "staging-adressen ://$STAGING_REF finnes ($m) — bygget peker på staging"
   elif [ "$n" -le 1 ]; then
@@ -289,7 +294,7 @@ else
       pass "LAN/loopback «${pattern}»: 0 treff"
     else
       fail "LAN/loopback «${pattern}»: $n treff"
-      ("$GREP" -aoE -- ".{0,30}${pattern}.{0,50}" "$STR" || true) | sed 's/^/      /' | tee -a "$OUT"
+      ("$GREP" -aoE -- ".{0,30}${pattern}.{0,50}" "$STR" || true) | sed 's/^/      /' | clean_utf8 | tee -a "$OUT"
     fi
   done
 
