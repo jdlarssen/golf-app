@@ -74,6 +74,13 @@ export async function generateMetadata({
     formatDetection: {
       telephone: false,
     },
+    // #1985: statiske PNG-er fra native/assets/generate-icons.mjs, servert på
+    // de gamle URL-ene via rewrites i next.config.ts. app/favicon.ico legges
+    // fortsatt først av Next selv.
+    icons: {
+      icon: [{ url: "/icon", type: "image/png", sizes: "192x192" }],
+      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+    },
     openGraph: {
       siteName: "Tørny",
       type: "website",

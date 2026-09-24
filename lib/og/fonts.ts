@@ -2,17 +2,17 @@ import 'server-only';
 
 /**
  * Google-font loading for Satori-rendered images — lifted from the
- * share-image route (#942) for reuse by #1022's opengraph-image. The three
- * icon files (app/icon.tsx, icon0.tsx, apple-icon.tsx) keep their private
- * copies for now; migrating them is deliberately out of scope for #1022.
+ * share-image route (#942) for reuse by #1022's opengraph-image. The app
+ * icons are no longer Satori routes: they are static PNGs from
+ * native/assets/generate-icons.mjs (#1985).
  */
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
 
 /**
- * Fetch one Google-font weight as a ttf ArrayBuffer (or null on any failure),
- * mirroring `app/icon.tsx`. Spoofs a desktop UA so the css2 endpoint returns a
+ * Fetch one Google-font weight as a ttf ArrayBuffer (or null on any failure).
+ * Spoofs a desktop UA so the css2 endpoint returns a
  * ttf URL we can parse. Graceful: a null just means Satori uses its default.
  */
 export async function fetchGoogleFont(

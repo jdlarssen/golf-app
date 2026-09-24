@@ -66,8 +66,8 @@ function renderMatchHeadline(
 
 /**
  * Shareable result-card PNG for a finished game (#942). Rendered server-side
- * with next/og's `ImageResponse` (Satori → PNG, flexbox-only CSS), mirroring
- * the existing `app/icon.tsx` font-fetch pattern. The card is the artifact a
+ * with next/og's `ImageResponse` (Satori → PNG, flexbox-only CSS), with fonts
+ * from `lib/og/fonts.ts`. The card is the artifact a
  * player fires into a group chat via the Web Share API — self-contained so
  * recipients never hit the auth wall a shared *link* would.
  *
