@@ -213,9 +213,10 @@ describe('LeaderboardBody', () => {
       _holesScored: holesScored,
     }) as never;
 
-  const bestBallScores = (holesScored: number) =>
+  // `holesByTeam` overstyrer antallet for enkeltlag (#1982: lag 2 henger etter).
+  const bestBallScores = (holesScored: number, holesByTeam: Record<number, number> = {}) =>
     BEST_BALL_TEAMS.flatMap((p) =>
-      Array.from({ length: holesScored }, (_, i) => ({
+      Array.from({ length: holesByTeam[p.teamNumber] ?? holesScored }, (_, i) => ({
         id: `${GAME_ID}:${p.userId}:${i + 1}`,
         gameId: GAME_ID,
         userId: p.userId,
@@ -239,6 +240,24 @@ describe('LeaderboardBody', () => {
     // 36/45 er ni-hulls-summen. 72/90 ville vært lekkasjen.
     expect(cell('1', 'net')).toBe('36');
     expect(cell('2', 'net')).toBe('45');
+    // Runden går, så Hull-kolonnen står (#1982) — og teller bare front 9.
+    expect(cell('1', 'holes')).toBe('9');
+    expect(cell('2', 'holes')).toBe('9');
+  });
+
+  it('viser hvor mange hull hvert lag har spilt når lagene er ulikt langt (#1982)', async () => {
+    // Lag 1 er gjennom hull 9 og åpner porten; lag 2 har ført 7. Motoren
+    // teller hullene som mangler som 0, så lag 2 leder på 35 mot 36. Uten
+    // Hull-kolonnen sa ingenting på skjermen at summene gjelder ulikt antall hull.
+    await render(
+      <LeaderboardBody bundle={bestBallBundle(9)} scores={bestBallScores(9, { 2: 7 })} />,
+    );
+
+    expect(screen.getByTestId('leaderboard-first-half-locked')).toBeTruthy();
+    expect(cell('1', 'holes')).toBe('9');
+    expect(cell('2', 'holes')).toBe('7');
+    expect(cell('2', 'net')).toBe('35');
+    expect(cell('2', 'rank')).toBe('1');
   });
 
   it('sier fra før noe lag er gjennom hull 9', async () => {
@@ -513,6 +532,76 @@ describe('ResultView', () => {
     // Tabellen bytter ikke form per rad: begge radene får kolonnen.
     expect(cell('mate', 'holes')).toBe('18');
     expect(cell('me', 'holes')).toBe('12');
+  });
+
+  // #1982: samme regel på lag-tabellene. Texas-grenen tegner også ambrose og
+  // florida scramble — motoren sender `texas_scramble` for alle tre.
+  it('viser Hull-kolonnen i Texas scramble når et ferdig lag mangler hull', async () => {
+    const holes = Array.from({ length: 18 }, (_, i) => ({ holeNumber: i + 1 }));
+    const team = (teamNumber: number, userId: string, totalNet: number, missingHoles: number[]) => ({
+      teamNumber,
+      members: [{ userId, courseHandicap: 12, isCaptain: true }],
+      teamHandicap: 3,
+      holes,
+      totalNet,
+      missingHoles,
+      rank: teamNumber,
+      tiedWith: [],
+    });
+    const result = {
+      kind: 'texas_scramble',
+      teams: [team(1, 'me', 58, [17, 18]), team(2, 'mate', 66, [])],
+    } as unknown as ModeResult;
+
+    await render(
+      <ResultView
+        result={result}
+        status="finished"
+        gameId={GAME_ID}
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    expect(cell('1', 'holes')).toBe('16');
+    expect(cell('2', 'holes')).toBe('18');
+  });
+
+  it('viser Hull-kolonnen i slagspill og beholder streken for den som ikke har ført noe', async () => {
+    const result = {
+      kind: 'solo_strokeplay',
+      players: [
+        {
+          userId: 'mate',
+          totalGrossStrokes: 80,
+          totalNetStrokes: 72,
+          holesPlayed: 18,
+          rank: 1,
+          tiedWith: [],
+        },
+        {
+          userId: 'me',
+          totalGrossStrokes: 0,
+          totalNetStrokes: 0,
+          holesPlayed: 0,
+          rank: 2,
+          tiedWith: [],
+        },
+      ],
+    } as unknown as ModeResult;
+
+    await render(
+      <ResultView
+        result={result}
+        status="finished"
+        gameId={GAME_ID}
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    expect(cell('mate', 'holes')).toBe('18');
+    expect(cell('me', 'holes')).toBe('0');
+    expect(cell('me', 'gross')).toBe('—');
+    expect(cell('me', 'net')).toBe('—');
   });
 
   it('sier rolig fra i stedet for å krasje på en ukjent resultatform', async () => {
