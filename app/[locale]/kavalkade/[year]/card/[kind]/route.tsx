@@ -10,9 +10,9 @@ import {
 } from '@/lib/kavalkade/cardModel';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { loadFonts } from '@/lib/og/fonts';
+import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
-  CHAMP,
   CHAMP_DARK,
   LINEN,
   MUTED,
@@ -153,21 +153,7 @@ export async function GET(
         <div
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-            <span style={{ fontFamily: serif, fontSize: 56, fontWeight: 500, color: FOREST }}>
-              Tørny
-            </span>
-            <span
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                background: CHAMP,
-                marginLeft: 6,
-                marginTop: 12,
-              }}
-            />
-          </div>
+          <OgWordmark fontFamily={serif} fontSize={56} fontWeight={500} />
           <div
             style={{
               display: 'flex',

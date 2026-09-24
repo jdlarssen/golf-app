@@ -6,7 +6,8 @@ import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { isPubliclyViewable } from '@/lib/games/publicSignupVisibility';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { loadFonts } from '@/lib/og/fonts';
-import { FOREST, CHAMP, LINEN, MUTED, CHAMP_TINT, HAIRLINE } from '@/lib/og/palette';
+import { OgWordmark } from '@/lib/og/wordmark';
+import { FOREST, LINEN, MUTED, CHAMP_TINT, HAIRLINE } from '@/lib/og/palette';
 
 /**
  * OG-delebilde for den offentlige påmeldingssiden (#1022) — det WhatsApp/
@@ -93,24 +94,7 @@ export default async function OpengraphImage({
         }}
       >
         {/* Brand lockup */}
-        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-          <span
-            style={{ fontFamily: serif, fontSize: 44, fontWeight: 600, color: FOREST }}
-          >
-            Tørny
-          </span>
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 8,
-              background: CHAMP,
-              marginTop: 14,
-              marginLeft: 6,
-              display: 'flex',
-            }}
-          />
-        </div>
+        <OgWordmark fontFamily={serif} fontSize={44} fontWeight={600} />
 
         {isPublic ? (
           <div style={{ display: 'flex', flexDirection: 'column', marginTop: 56 }}>
