@@ -11,6 +11,7 @@ import { renderLeaderboardContent } from '../../games/[id]/leaderboard/leaderboa
 import { SpectateLiveStatus } from './SpectateLiveStatus';
 import { SpectateCta } from './SpectateCta';
 import { SponsorStrip } from '@/components/SponsorStrip';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { safeParsePrizes } from '@/lib/games/prizes';
 
 type Params = Promise<{ token: string }>;
@@ -162,17 +163,10 @@ export default async function SpectatePage({
         ].join(' ')}
       >
         {/* Diskret Tørny-branding (#1268): en delt spectate-lenke er en
-            produktdemo — merk den. Inline-ordmerket arver banner-fargen
-            (currentColor) så det leses i begge banner-toner; BrandMark-
-            komponenten er hardkodet mørk og ville ikke kontrastere på den
-            mørkegrønne resultat-toner. */}
-        <span className="flex items-center gap-1 font-serif text-sm font-medium tracking-tight">
-          Tørny
-          <span
-            aria-hidden
-            className="inline-block size-1 rounded-full bg-current"
-          />
-        </span>
+            produktdemo — merk den. tone="current" lar ordmerket og ballen
+            arve banner-fargen, så det leses i begge banner-toner (champagne
+            live, forest ferdig). */}
+        <BrandMark size="xs" tone="current" />
         {/* Client island: owns both the 20 s refresh loop and the status it
             reports, so dot + label + «Oppdatert HH:MM» always describe the
             same state (#1376). */}
