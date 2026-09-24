@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="40" viewBox="0 0 275 125">
+  <title>Tørny wordmark</title>
+  <!-- The wordmark with the ball resting on the T (#1985), for surfaces that
+       cannot set Fraunces themselves — today the mail header. width/height are
+       its display size in the mail (CSS px); the generator renders it at 2x onto
+       the mail card's white. Units: font-size 100, so the ball's diameter (26),
+       centre (34 from the text origin) and cap height (72) read directly as em
+       ratios — the same ones lib/brand/wordmarkBall.ts gives BrandMark and the
+       Satori lockup. Optical size pinned to 32, the mail header's font size. -->
+  <text x="0" y="100" font-family="Fraunces, Georgia, serif" font-size="100" font-weight="500" letter-spacing="-2.5" style="font-variation-settings:'opsz' 32" fill="#1B4332">Tørny</text>
+  <circle cx="34" cy="15" r="13" fill="#C9A961"/>
+</svg>

@@ -53,6 +53,19 @@ const nextConfig: NextConfig = {
       { source: "/en/embed/:path*", headers: frameAncestors("*") },
     ];
   },
+  // #1985: app-ikonet er statiske filer fra native/assets/generate-icons.mjs
+  // (samme kjøring som App Store-ikonet). URL-ene fra de gamle
+  // ImageResponse-rutene står, fordi installerte PWA-er har dem lagret, og
+  // public/sw.js (push-ikon) og Play-skallet (iconUrl) peker dit. afterFiles
+  // (array-formen) slår inn før den dynamiske [locale]-ruta, så /icon blir
+  // aldri tolket som et språk. proxy.ts-matcheren slipper dem forbi.
+  async rewrites() {
+    return [
+      { source: "/icon", destination: "/icons/icon-192.png" },
+      { source: "/icon0", destination: "/icons/icon-512.png" },
+      { source: "/apple-icon", destination: "/icons/apple-icon-180.png" },
+    ];
+  },
   // #498: «Spillformer» ble omdøpt til «Spillformater» (riktig ord). Permanent
   // redirect så gamle bokmerker + allerede utsendte mail-lenker ikke brytes.
   async redirects() {
