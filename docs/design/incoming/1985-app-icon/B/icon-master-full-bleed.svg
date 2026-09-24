@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <title>Tørny icon — full-bleed (#1985 B: flagg)</title>
+  <!-- Stammen fortsetter som en tynn flaggstang med champagne-vimpel over tverrstreken. Full-bleed: flisen går helt ut i kanten, uten avrunding. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B4332"/>
+      <stop offset="1" stop-color="#14201A"/>
+    </linearGradient>
+
+  </defs>
+  <rect data-layer="tile" width="80" height="80" fill="url(#tile)"/>
+  <text x="40" y="65.46" text-anchor="middle" font-size="50" font-family="Fraunces, Georgia, serif" font-weight="500" style="font-variation-settings:'opsz' 48" fill="#F8F6F0">T</text>
+  <rect x="39.2" y="16.54" width="1.6" height="14" fill="#F8F6F0"/>
+  <path d="M 40.8 16.54 L 51.8 20.34 L 40.8 24.14 Z" fill="#C9A961"/>
+</svg>
