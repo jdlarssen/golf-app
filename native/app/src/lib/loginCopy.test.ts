@@ -18,6 +18,7 @@
 //  3. **Ingen kode uten setning.** `tsc` sikrer at switch-en er uttømmende;
 //     denne sikrer at det som kommer ut faktisk er lesbar tekst.
 import source from '../../../../messages/no.json';
+import { isFinishedSentence } from '../test/copy';
 import { OFFLINE_NOTE } from './rosterCopy';
 import {
   LOGIN_TEXT,
@@ -107,9 +108,7 @@ describe('classifyLoginError', () => {
 describe('describeLoginError', () => {
   it.each(CODES)('gir en ferdig norsk setning for %s', (code) => {
     const text = describeLoginError(code);
-    expect(text.trim().length).toBeGreaterThan(0);
-    // Ingen halvferdig interpolering skal nå fram til skjermen.
-    expect(text).not.toMatch(/[{}]/);
+    expect(isFinishedSentence(text)).toBe(true);
   });
 
   it.each(SHARED_WITH_WEB)('sier nøyaktig det samme som webben for %s', (code) => {

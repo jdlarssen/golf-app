@@ -29,6 +29,7 @@ import source from '../../../../messages/no.json';
 import { formatHcpDisplay } from '../../../../lib/handicap/signFormat';
 import { HANDICAP_STALENESS_MS } from '../../../../lib/handicap/staleness';
 import type { ProfileSaveFailure } from '../data/profile';
+import { isFinishedSentence } from '../test/copy';
 import {
   PROFILE_TEXT,
   describeHandicapAge,
@@ -69,11 +70,6 @@ const MIRRORED_SAVE_FAILURES = Object.entries(SAVE_FAILURE_MAP).filter(
 
 /** Nøkler under `profile.errors` appen med vilje IKKE viser. Ingen i dag. */
 const WEB_ONLY_ERRORS: Partial<Record<WebErrorKey, string>> = {};
-
-/** Ingen halvferdig interpolering skal nå fram til skjermen. */
-function isFinishedSentence(text: string): boolean {
-  return text.trim().length > 0 && !/[{}]/.test(text);
-}
 
 describe('PROFILE_TEXT', () => {
   it.each(Object.entries(PROFILE_TEXT))('«%s» er en ferdig tekst', (_key, text) => {
