@@ -6,6 +6,7 @@ import { formatDate, formatTime } from '@/lib/i18n/format';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { isPubliclyViewable } from '@/lib/games/publicSignupVisibility';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { PrintButton } from './PrintButton';
 
 type Params = Promise<{ shortId: string; locale: string }>;
@@ -83,15 +84,7 @@ export default async function PlakatPage({ params }: { params: Params }) {
         className="mx-auto flex max-w-[520px] flex-col items-center rounded-2xl border border-border bg-surface px-8 py-10 text-center print:max-w-none print:rounded-none print:border-0"
         data-testid="poster"
       >
-        <div className="flex items-start gap-1">
-          <span className="font-serif text-3xl font-medium tracking-tight text-text">
-            Tørny
-          </span>
-          <span
-            aria-hidden="true"
-            className="mt-2.5 h-[4px] w-[4px] shrink-0 rounded-full bg-accent"
-          />
-        </div>
+        <BrandMark size="md" />
 
         <p className="mt-8 font-sans text-xs uppercase tracking-[0.18em] text-muted">
           {tModes(game.game_mode as Parameters<typeof tModes>[0])}
