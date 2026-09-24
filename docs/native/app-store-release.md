@@ -85,14 +85,25 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
    det finnes ingen gammel bundle å arve. Full logg i `…archive.log`; ved feil vises de
    siste 60 linjene. Rett før arkiveringen sjekkes sporede filer på nytt, og etter
    `ARCHIVE SUCCEEDED` skrives byggecommiten til `…commit`.
-7. **Bevis-steget** (under) — én FAIL, og ingenting lastes opp.
-8. **`xcodebuild -exportArchive`** med `ExportOptions.plist` → laster opp. Skriptet leter
+7. **Symbolfiler** (#1974): `store-build-dsyms.sh` legger dSYM-ene for `hermesvm`, `React` og
+   `ReactNativeDependencies` inn i `<arkiv>/dSYMs/`. De tre kommer ferdigbygget fra Maven uten
+   symbolfil. Da melder eksporten «Upload Symbols Failed», og krasj inne i motoren blir stående
+   som rå adresser i Xcode Organizer og App Store Connect. Skriptet leser versjonene fra
+   `native/app/node_modules/react-native`, henter Mavens dSYM-tarballer og velger den dSYM-en
+   som har samme UUID som binæren i arkivet. Første kjøring henter ~570 MB til
+   `~/.torny-native/cache/dsyms` (eller `TORNY_DSYM_CACHE`). Mappa kan slettes når som helst;
+   da hentes filene på nytt ved neste bygg. Steget stopper aldri et bygg: mangler en symbolfil,
+   blir det en `⚠`, og opplastingen går som før. «Ferdig»-boksen viser `Symbolfiler: 9/9`
+   (appen og de åtte rammeverkene) eller hva som mangler. Skriptet kan også kjøres alene mot
+   et arkiv, f.eks. et eldre et: `native/app/scripts/store-build-dsyms.sh <sti.xcarchive>`.
+8. **Bevis-steget** (under) — én FAIL, og ingenting lastes opp.
+9. **`xcodebuild -exportArchive`** med `ExportOptions.plist` → laster opp. Skriptet leter
    etter «Upload succeeded» i loggen; mangler frasen etter en grønn eksport, sjekk App Store
    Connect → TestFlight. Ligger bygget ikke der, last opp samme arkiv igjen med
    `--upload-only` — ikke bump.
-9. **Merke** (#2019): etter «Upload succeeded» setter `store-build-tag.sh` git-taggen
-   `native-ios/v<versjon>-<build>` på commiten i `…commit`. «Ferdig»-boksen viser den som
-   `Merke:   native-ios/v1.1.0-3 → <sha>`. Se «Merke per bygg».
+10. **Merke** (#2019): etter «Upload succeeded» setter `store-build-tag.sh` git-taggen
+    `native-ios/v<versjon>-<build>` på commiten i `…commit`. «Ferdig»-boksen viser den som
+    `Merke:   native-ios/v1.1.0-3 → <sha>`. Se «Merke per bygg».
 
 Alt havner i `~/.torny-native/dist/TornyNative-<versjon>-<build>.*`: `.xcarchive`,
 `.archive.log`, `.commit` (byggecommiten), `.bevis.txt`, `.export.log`, `.export/`.
@@ -105,8 +116,9 @@ bevis-fila beskriver:
 native/app/scripts/store-build-ios.sh --upload-only ~/.torny-native/dist/TornyNative-1.1.0-2.xcarchive
 ```
 
-Kommandoen kjører beviset på nytt (nøkkel-sjekken inkludert når repo-rotas `.env.local`
-finnes), eksporterer og laster opp. Den trenger ikke Node eller CocoaPods. Merket settes
+Kommandoen legger inn symbolfilene som mangler, kjører beviset på nytt (nøkkel-sjekken
+inkludert når repo-rotas `.env.local` finnes), eksporterer og laster opp. Den trenger ikke Node
+eller CocoaPods, men symbolsteget leser versjonene fra `native/app/node_modules`. Merket settes
 her, fra `…commit`-fila arkivet fikk da det ble laget — ikke fra HEAD nå.
 
 ## Bevis-steget
@@ -238,6 +250,13 @@ Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app
   `native/app/`, og kjør skriptet igjen fra et rent skall. Samme buildnummer kan brukes — det
   ble aldri lastet opp.
 - Beviset feiler på **UKJENT `http://…`** → se «Bevis-steget».
+- **«⚠ … fant ingen dSYM med UUID …»** i symbolsteget → `node_modules` er ikke det arkivet ble
+  bygget fra, typisk `--upload-only` på et eldre arkiv etter en React Native-oppgradering.
+  Bygget kan likevel lastes opp, men krasj i motoren blir ikke oversatt.
+- **«⚠ … ingen symbolfil lagt til (forventet UUID …)»** → nedlastingen fra Maven feilet, eller
+  fila kom skadet fram (grunnen står sist i meldingen). Ingenting ødelagt blir liggende i
+  mellomlagringen. Bygget kan likevel lastes opp, men da uten den symbolfila. Vil du ha den
+  med, kjør `store-build-dsyms.sh` mot arkivet igjen før opplasting.
 - **Duplikat-vakten stopper deg** → var det `--no-upload`-arkivet du ville laste opp? Da er
   det `--upload-only <arkiv>`, ikke en bump.
 - **«Sporede filer har lokale endringer»** → commit eller forkast endringene (`git status`) og
