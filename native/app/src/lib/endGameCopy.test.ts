@@ -12,6 +12,7 @@
 import source from '../../../../messages/no.json';
 import type { EndRoundFailure } from '../data/endGame';
 import type { ReminderFailure } from '../data/remind';
+import { isFinishedSentence } from '../test/copy';
 import {
   approveConfirmBody,
   CUP_LINK_LABEL,
@@ -51,11 +52,6 @@ const REASON_MAP = {
 } as const satisfies Record<EndRoundFailure, true>;
 
 const REASONS = Object.keys(REASON_MAP) as readonly EndRoundFailure[];
-
-/** Ingen halvferdig interpolering skal nå fram til skjermen. */
-function isFinishedSentence(text: string): boolean {
-  return text.trim().length > 0 && !/[{}]/.test(text);
-}
 
 describe('describeEndRoundFailure', () => {
   it.each(REASONS)('gir en ferdig setning for «%s»', (reason) => {

@@ -25,6 +25,7 @@
 //     «avslutt det», og en sammenslåing ville gitt appen en annen ordlyd enn
 //     webben.
 import source from '../../../../messages/no.json';
+import { isFinishedSentence } from '../test/copy';
 import { OFFLINE_NOTE } from './rosterCopy';
 import {
   ACCOUNT_TEXT,
@@ -102,11 +103,6 @@ const WEB_ONLY: Partial<Record<WebKey, string>> = {
   // et banner på samme skjerm, og veien tilbake er `backLabel`.
   blockedBackLink: 'webbens egen lenke fra sperre-visningen; appen har tilbake-knappen',
 };
-
-/** Ingen halvferdig interpolering skal nå fram til skjermen. */
-function isFinishedSentence(text: string): boolean {
-  return text.trim().length > 0 && !/[{}]/.test(text);
-}
 
 describe('describeDeleteBlock', () => {
   it.each(BLOCK_REASONS)('gir en ferdig setning for «%s»', (reason) => {

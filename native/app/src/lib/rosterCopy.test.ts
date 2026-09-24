@@ -21,6 +21,7 @@ import type { StartCountMode } from '../../../../lib/games/startPlayerCount';
 import type { StartRoundFailure, StartRoundRefusal } from '../data/startGame';
 import type { SelfWithdrawFailure } from '../data/withdrawSelf';
 import type { InviteFailure } from '../data/inviteToGame';
+import { isFinishedSentence } from '../test/copy';
 import {
   describeInviteFailure,
   describeInviteSuccess,
@@ -133,11 +134,6 @@ const INVITE_REASON_MAP = {
 } as const satisfies Record<InviteFailure, true>;
 
 const INVITE_REASONS = Object.keys(INVITE_REASON_MAP) as readonly InviteFailure[];
-
-/** Ingen halvferdig interpolering skal nå fram til skjermen. */
-function isFinishedSentence(text: string): boolean {
-  return text.trim().length > 0 && !/[{}]/.test(text);
-}
 
 describe('describeRosterFailure', () => {
   it.each(ROSTER_REASONS)('gir en ferdig setning for «%s»', (reason) => {

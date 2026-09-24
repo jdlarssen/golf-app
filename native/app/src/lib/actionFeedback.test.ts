@@ -6,6 +6,7 @@
 // «prøv igjen når nettet er tilbake», og det er hele forskjellen på om det er
 // noe vits i å trykke en gang til.
 import type { TeamSubmitFailure } from '../data/submitTeam';
+import { isFinishedSentence } from '../test/copy';
 import { describeChoiceFailure, describeTeamSubmitFailure } from './actionFeedback';
 import { WEB_LINK_TEXT } from './webLink';
 
@@ -60,11 +61,6 @@ const TEAM_SUBMIT_REASON_MAP = {
 } as const satisfies Record<TeamSubmitFailure, true>;
 
 const TEAM_SUBMIT_REASONS = Object.keys(TEAM_SUBMIT_REASON_MAP) as readonly TeamSubmitFailure[];
-
-/** Ingen halvferdig interpolering skal nå fram til skjermen. */
-function isFinishedSentence(text: string): boolean {
-  return text.trim().length > 0 && !/[{}]/.test(text);
-}
 
 describe('describeTeamSubmitFailure', () => {
   it.each(TEAM_SUBMIT_REASONS)('gir en ferdig setning for «%s»', (reason) => {
