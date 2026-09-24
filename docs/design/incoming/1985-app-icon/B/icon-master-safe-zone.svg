@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <title>Tørny icon — safe-zone motif (#1985 B: flagg)</title>
+  <!-- Stammen fortsetter som en tynn flaggstang med champagne-vimpel over tverrstreken. Kun motivet, transparent, skalert 0.7x om senter (Android adaptive ~66 % og maskable 80 %). -->
+  <defs>
+
+  </defs>
+  <g transform="translate(40 40) scale(0.7) translate(-40 -40)">
+    <text x="40" y="65.46" text-anchor="middle" font-size="50" font-family="Fraunces, Georgia, serif" font-weight="500" style="font-variation-settings:'opsz' 48" fill="#F8F6F0">T</text>
+    <rect x="39.2" y="16.54" width="1.6" height="14" fill="#F8F6F0"/>
+    <path d="M 40.8 16.54 L 51.8 20.34 L 40.8 24.14 Z" fill="#C9A961"/>
+  </g>
+</svg>
