@@ -14,6 +14,7 @@ import {
   type LbPlayer,
   type LbScore,
 } from '@/lib/leaderboard';
+import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 type CourseHoleRow = {
@@ -230,7 +231,7 @@ export async function GET(
     const bruttoTotal = brutto?.total ?? '';
     const vsPar = line.total - coursePar;
     const vsParLabel = vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar);
-    const holesPlayed = totalHoles - line.missingHoles.length;
+    const holesPlayed = teamHolesPlayed(line);
     const tiedSuffix = line.tiedWith.length > 0 ? ` ${t('tiedSuffix')}` : '';
 
     rows.push(
