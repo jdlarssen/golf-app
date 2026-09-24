@@ -117,11 +117,14 @@ native/app/scripts/store-build-proof.sh ~/.torny-native/dist/TornyNative-1.1.0-2
 
 Kan kjøres på nytt på et eksisterende arkiv (eller en `.app`) uten å bygge. Skriver
 `…bevis.txt` — **lim den inn i issue-kommentaren** (P3 i kontrakten), sammen med merket.
-Exit 0 = alt PASS.
+Exit 0 = alt PASS. Exit 1 = minst én FAIL. Exit 3 = skriptet stoppet før slutten, og
+bevis-fila er ufullstendig. Både 1 og 3 stopper opplastingen.
 
 | Kilde | Regel |
 |---|---|
-| `main.jsbundle` (Hermes → `strings`) | **KREV** `https://glofubopddkjhymcbaph.supabase.co` og `https://tornygolf.no`. |
+| `main.jsbundle` (Hermes, begge strengtabellene) | Hermes lagrer strenger i to tabeller: ren ASCII, og UTF-16LE for alle strenger med minst ett tegn utenfor ASCII (`ø`, `·`, emoji). `strings` på macOS leser bare den første, så `native/app/scripts/hermes-strings.py` leser UTF-16LE-tabellen fra råbytene (begge byte-justeringer, uten å tolke Hermes-headeren). Begge dumpene havner i én fil, én streng per linje, og **alle reglene under gjelder begge tabellene** (#1983). Bevis-fila viser hvor mye som ble lest: `strengtabeller lest: ASCII <n> linjer · UTF-16LE <m> strenger`. |
+| | **KREV** at UTF-16LE-dumpen har minst én streng der `æ`, `ø` eller `å` står inntil en liten ASCII-bokstav (et ord som «før» eller «på»). Null treff betyr at leseren er ødelagt eller at Hermes har byttet format, og da feiler beviset i stedet for å gi grønt på en tom tabell. Et `ø` alene holder ikke, fordi det også dukker opp i binærstøy. |
+| | **KREV** `https://glofubopddkjhymcbaph.supabase.co` og `https://tornygolf.no`. |
 | | **FORBY** `://snwmueecmfqqdurxedxv` (staging-adressen fra miljøet) og `localhost:3111`. Ett *bart* treff på staging-ref-en er forventet — `src/lib/stagingGate.ts` har verten som literal (gaten for utvikler-raden); to eller flere bare treff feiler også. |
 | | **FORBY** hele adresser `127.0.0.1`, `192.168.x.x`, `10.0.x.x` (fire oktetter med ikke-siffer på begge sider), IPv6-literaler (`://[…]`) og `.local:` som ren tekst. Hermes pakker strengtabellen uten skilletegn («draft-2020-1» + «27.0.0.15…» inneholder 127.0.0.1 uten å være en IP), derfor kreves adresseformen. |
 | | Anon-nøkkelen: står `EXPO_PUBLIC_SUPABASE_ANON_KEY` i miljøet (byggeskriptet setter den; `--upload-only` leser den fra `.env.local`), må nøyaktig den verdien finnes i bundelen. Bare lengden skrives ut, aldri nøkkelen. |

@@ -7,7 +7,12 @@
 # blir strenger i bundelen ved bundling; denne fila leser dem tilbake derfra.
 #
 # Tre kilder, hver med egne regler:
-#  1. `main.jsbundle` (Hermes-bytekode → `strings`, aldri `grep` rett på fila).
+#  1. `main.jsbundle` (Hermes-bytekode, aldri `grep` rett på fila). Hermes har
+#     TO strengtabeller (#1983): ren ASCII, og UTF-16LE for alle strenger med
+#     minst ett tegn utenfor ASCII (`ø`, `·`, emoji). `strings` på macOS leser
+#     bare 1-byte-tegn og har ingen `-e`, så UTF-16-tabellen leses av
+#     `hermes-strings.py` ved siden av denne fila. Begge dumpene havner i samme
+#     fil, én streng per linje, og alle reglene under leser begge tabellene.
 #     KREV prod-adressen og `https://tornygolf.no`. FORBY staging-adressen,
 #     Mac-ens adresse og alt som lukter LAN/dev. To Hermes-egenskaper former
 #     reglene:
@@ -35,8 +40,9 @@
 #     kilde — i den vanlige kjeden (prebuild → archive → bevis) henger de sammen.
 #
 # Exit 0 = alle regler PASS. Exit 1 = minst én FAIL (byggeskriptet stopper før
-# opplasting). Exit 2 = feil bruk / mangler verktøy. Bevis-fila skrives uansett,
-# så en FAIL kan limes inn og diskuteres.
+# opplasting). Exit 2 = feil bruk / mangler verktøy. Exit 3 = skriptet stoppet
+# før slutten, så bevis-fila er ufullstendig og ingenting er bevist. Bevis-fila
+# skrives uansett, så en FAIL kan limes inn og diskuteres.
 #
 # Bruk: store-build-proof.sh <sti.xcarchive | sti.app> [bevis-fil]
 set -euo pipefail
@@ -49,6 +55,16 @@ PLUTIL=/usr/bin/plutil
 CODESIGN=/usr/bin/codesign
 SHASUM=/usr/bin/shasum
 ASSETUTIL=/usr/bin/assetutil
+PYTHON3=/usr/bin/python3
+HERMES_STRINGS="$(dirname "${BASH_SOURCE[0]}")/hermes-strings.py"
+
+# The locale is pinned the same way (#1983). macOS /bin/bash 3.2 in any UTF-8
+# locale reads the first byte of `»` as part of a variable name, so an
+# unbraced `$pattern` right before `»` died on `set -u` halfway through the
+# bundle rules (the messages also brace their variables, `${name}`). Every rule
+# here compares bytes (`grep -b` offsets, `head -c`), so C is also the honest
+# locale for the checks themselves.
+export LC_ALL=C
 
 PROD_SUPABASE_HOST='glofubopddkjhymcbaph.supabase.co'
 STORE_WEB_BASE_URL='https://tornygolf.no'
@@ -93,9 +109,10 @@ usage() {
 
 [ $# -ge 1 ] || usage
 TARGET=$1
-for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL"; do
+for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$PYTHON3"; do
   [ -x "$tool" ] || { printf '✗ Mangler verktøy: %s\n' "$tool" >&2; exit 2; }
 done
+[ -f "$HERMES_STRINGS" ] || { printf '✗ Mangler %s (leser UTF-16-tabellen)\n' "$HERMES_STRINGS" >&2; exit 2; }
 
 case "$TARGET" in
   *.xcarchive)
@@ -116,8 +133,18 @@ FAIL=0
 # Temp-filene ryddes av ÉN trap: en `trap ... EXIT` satt lenger nede ville
 # erstattet den forrige, ikke lagt seg ved siden av.
 STR=''
+U16=''
 CAR=''
-trap 'rm -f "$STR" "$CAR" 2>/dev/null || true' EXIT
+# Fail closed if the script stops early (#1983). After a `set -u` death, bash
+# 3.2 hands the EXIT trap `$?` = 0 and exits with the trap's status, so a crash
+# halfway through the rules exited 0 and the build script would have uploaded.
+# Only the last lines of the script set PROOF_FINISHED.
+PROOF_FINISHED=0
+trap 'rm -f "$STR" "$U16" "$CAR" 2>/dev/null || true
+if [ "$PROOF_FINISHED" != 1 ]; then
+  printf "FAIL  beviset stoppet før slutten — bevis-fila er ufullstendig, ingenting er bevist\n" | tee -a "$OUT" >&2
+  exit 3
+fi' EXIT
 : > "$OUT"
 
 say()  { printf '%s\n' "$*" | tee -a "$OUT"; }
@@ -134,13 +161,41 @@ if [ ! -f "$BUNDLE" ]; then
   fail "main.jsbundle mangler i $APP — er dette et React Native-bygg?"
 else
   STR=$(mktemp -t torny-bevis)
+  U16=$(mktemp -t torny-bevis-u16)
   "$STRINGS" "$BUNDLE" > "$STR"
   say "størrelse: $(wc -c < "$BUNDLE" | tr -d ' ') byte · sha256: $(shasum -a 256 "$BUNDLE" | cut -c1-16)…"
 
+  # Both string tables in one file (#1983): the `strings` dump, then the
+  # UTF-16LE strings. One string per line in both, so the two tables can never
+  # be glued into one false hit. A scanner failure leaves U16 empty, and the
+  # æ/ø/å check below then fails too.
+  if ! "$PYTHON3" "$HERMES_STRINGS" "$BUNDLE" > "$U16"; then
+    fail "hermes-strings.py feilet — UTF-16-tabellen er ikke lest"
+    : > "$U16"
+  fi
+  ascii_lines=$(wc -l < "$STR" | tr -d ' ')
+  u16_lines=$(wc -l < "$U16" | tr -d ' ')
+  cat "$U16" >> "$STR"
+  say "strengtabeller lest: ASCII $ascii_lines linjer · UTF-16LE $u16_lines strenger"
+
+  # The guard on the reader itself: the app's Norwegian copy always puts
+  # words like «før» and «på» in the UTF-16 table. Æ/ø/å must sit next to a
+  # lowercase ASCII letter, because a lone ø turns up in binary noise too.
+  # Alternation, not a bracket expression: under LC_ALL=C, `[æøå]` would be a
+  # set of single bytes.
+  n=$( ("$GREP" -caE -- '[a-z](æ|ø|å)|(æ|ø|å)[a-z]' "$U16") || true)
+  if [ "${n:-0}" -ge 1 ]; then
+    pass "UTF-16-tabellen er lest: $n strenger med æ/ø/å i et ord"
+  else
+    fail "fant ingen UTF-16-strenger med æ/ø/å — leseren er ødelagt eller Hermes har byttet format"
+  fi
+
   # `grep` svarer 1 på null treff; det er et tall her, ikke en feil.
-  count_fixed() { ("$GREP" -oF -- "$1" "$STR" || true) | wc -l | tr -d ' '; }
-  count_regex() { ("$GREP" -oE -- "$1" "$STR" || true) | wc -l | tr -d ' '; }
-  offsets_of()  { ("$GREP" -obF -- "$1" "$STR" || true) | cut -d: -f1; }
+  # `-a`: the file is text, and BSD grep must never answer «Binary file
+  # matches» in place of the `-o` hits.
+  count_fixed() { ("$GREP" -aoF -- "$1" "$STR" || true) | wc -l | tr -d ' '; }
+  count_regex() { ("$GREP" -aoE -- "$1" "$STR" || true) | wc -l | tr -d ' '; }
+  offsets_of()  { ("$GREP" -aobF -- "$1" "$STR" || true) | cut -d: -f1; }
 
   # Tekst fra byte-offset: `head` leser fila og `tail` spiser alt head gir, så
   # ingen SIGPIPE (det motsatte, `tail | head`, dør med 141 under pipefail).
@@ -166,7 +221,7 @@ else
     local allow=("$@")
     local hits unknown=0 off tail_text ok re
     hits=$(count_fixed "$token")
-    if [ "$hits" = "0" ]; then pass "«$token»: 0 treff"; return; fi
+    if [ "$hits" = "0" ]; then pass "«${token}»: 0 treff"; return; fi
     while read -r off; do
       [ -n "$off" ] || continue
       tail_text=$(slice "$off" 120)
@@ -182,9 +237,9 @@ else
       fi
     done < <(offsets_of "$token")
     if [ "$unknown" = "0" ]; then
-      pass "«$token»: $hits treff, alle på lista over kjente bibliotek-strenger"
+      pass "«${token}»: $hits treff, alle på lista over kjente bibliotek-strenger"
     else
-      fail "«$token»: $unknown av $hits treff står IKKE på lista (se UKJENT over)"
+      fail "«${token}»: $unknown av $hits treff står IKKE på lista (se UKJENT over)"
     fi
   }
 
@@ -231,10 +286,10 @@ else
   for pattern in "(^|[^0-9.])127\.0\.0\.1([^0-9]|$)" "(^|[^0-9.])192\.168\.$OCTET\.$OCTET([^0-9]|$)" "(^|[^0-9.])10\.0\.$OCTET\.$OCTET([^0-9]|$)" '://\[[0-9a-fA-F:.]{2,}\]' '\.local:'; do
     n=$(count_regex "$pattern")
     if [ "$n" = "0" ]; then
-      pass "LAN/loopback «$pattern»: 0 treff"
+      pass "LAN/loopback «${pattern}»: 0 treff"
     else
-      fail "LAN/loopback «$pattern»: $n treff"
-      ("$GREP" -oE -- ".{0,30}${pattern}.{0,50}" "$STR" || true) | sed 's/^/      /' | tee -a "$OUT"
+      fail "LAN/loopback «${pattern}»: $n treff"
+      ("$GREP" -aoE -- ".{0,30}${pattern}.{0,50}" "$STR" || true) | sed 's/^/      /' | tee -a "$OUT"
     fi
   done
 
@@ -258,10 +313,10 @@ else
   say "CFBundleShortVersionString    = $short_version"
   say "CFBundleVersion               = $build"
   say "ITSAppUsesNonExemptEncryption = $non_exempt"
-  if [ "$bundle_id" = "$STORE_BUNDLE_ID" ]; then pass "bundle-id er $STORE_BUNDLE_ID"; else fail "bundle-id er «$bundle_id», ikke $STORE_BUNDLE_ID"; fi
+  if [ "$bundle_id" = "$STORE_BUNDLE_ID" ]; then pass "bundle-id er $STORE_BUNDLE_ID"; else fail "bundle-id er «${bundle_id}», ikke $STORE_BUNDLE_ID"; fi
   if [ "$short_version" != '<mangler>' ] && [ -n "$short_version" ]; then pass "versjon satt ($short_version)"; else fail "CFBundleShortVersionString mangler"; fi
   if [ "$build" != '<mangler>' ] && [ -n "$build" ]; then pass "build satt ($build)"; else fail "CFBundleVersion mangler"; fi
-  if [ "$non_exempt" = "false" ]; then pass "ITSAppUsesNonExemptEncryption = false"; else fail "ITSAppUsesNonExemptEncryption er «$non_exempt», skal være false"; fi
+  if [ "$non_exempt" = "false" ]; then pass "ITSAppUsesNonExemptEncryption = false"; else fail "ITSAppUsesNonExemptEncryption er «${non_exempt}», skal være false"; fi
 fi
 say ""
 
@@ -332,4 +387,5 @@ say ""
 
 say "## Sum: $PASS PASS, $FAIL FAIL"
 say "bevis-fil: $OUT"
+PROOF_FINISHED=1
 [ "$FAIL" = "0" ]
