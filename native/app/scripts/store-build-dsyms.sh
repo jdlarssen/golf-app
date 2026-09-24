@@ -63,12 +63,13 @@ esac
 APP=$( (ls -d "$ARCHIVE"/Products/Applications/*.app 2>/dev/null || true) | head -1)
 [ -n "$APP" ] || die "Fant ingen .app under ${ARCHIVE}/Products/Applications — er dette et xcodebuild-arkiv?"
 DSYM_DIR="$ARCHIVE/dSYMs"
-mkdir -p "$DSYM_DIR"
+mkdir -p "$DSYM_DIR" 2>/dev/null || die "Kan ikke skrive til ${DSYM_DIR}"
 
 # bash 3.2 gir en EXIT-trap $?=0 når `set -u` dreper skriptet (#1983). Uten
 # vakten ville et halvkjørt symbolsteg sett ut som et ferdig et.
 FINISHED=0
 WORK=''
+# shellcheck disable=SC2154  # rc settes i selve trap-strengen
 trap 'rc=$?; [ -z "$WORK" ] || rm -rf "$WORK"; if [ "$FINISHED" != 1 ] && [ "$rc" = 0 ]; then exit 3; fi' EXIT
 
 # UUID-ene i en binær eller dSYM, én per linje (én per arkitektur). Tom utdata
@@ -108,7 +109,7 @@ executable() {
 FETCH_ERROR=''
 fetch() {
   local url=$1 dest=$2 want got
-  if ! want=$("$CURL" -fsSL "$url.sha1"); then
+  if ! want=$("$CURL" -fsSL --connect-timeout 30 --max-time 60 "$url.sha1"); then
     FETCH_ERROR="fikk ikke hentet ${url}.sha1"
     return 1
   fi
@@ -119,9 +120,12 @@ fetch() {
     return 1
   fi
   say "  henter ${url}"
-  if ! "$CURL" -fL --progress-bar -o "$dest.part" "$url"; then
+  # Stopper en nedlasting som står stille (under 10 kB/s i ett minutt), så et
+  # hengende Maven aldri holder igjen bygget; da blir det en advarsel.
+  if ! "$CURL" -fL --progress-bar --connect-timeout 30 --speed-limit 10240 --speed-time 60 \
+      -o "$dest.part" "$url"; then
     rm -f "$dest.part"
-    FETCH_ERROR="nedlastingen feilet"
+    FETCH_ERROR="nedlastingen feilet eller sto stille"
     return 1
   fi
   got=$("$SHASUM" -a 1 "$dest.part" | cut -d' ' -f1)
@@ -151,7 +155,10 @@ add_one() {
     return 0
   fi
 
-  mkdir -p "$CACHE"
+  if ! mkdir -p "$CACHE" 2>/dev/null; then
+    say "⚠ ${name}: ingen symbolfil lagt til (forventet UUID ${shown}): kan ikke lage mellomlagringen ${CACHE}."
+    return 0
+  fi
   tarball="$CACHE/$(basename "$url")"
   if [ -f "$tarball" ]; then
     say "  ${name}: bruker ${tarball} fra mellomlagringen"
@@ -160,9 +167,12 @@ add_one() {
     return 0
   fi
 
-  [ -n "$WORK" ] || WORK=$(mktemp -d)
+  [ -n "$WORK" ] || WORK=$(mktemp -d 2>/dev/null) || true
   unpack="$WORK/$name"
-  mkdir -p "$unpack"
+  if [ -z "$WORK" ] || ! mkdir -p "$unpack" 2>/dev/null; then
+    say "⚠ ${name}: fikk ikke laget en midlertidig mappe å pakke ut i."
+    return 0
+  fi
   if ! "$TAR" -xzf "$tarball" -C "$unpack"; then
     say "⚠ ${name}: klarte ikke pakke ut ${tarball}. Slett fila og kjør igjen."
     return 0
@@ -180,7 +190,11 @@ add_one() {
 
   # ditto fletter inn i en mappe som finnes, så en gammel dSYM med feil UUID må bort først.
   rm -rf "$DSYM_DIR/$name.framework.dSYM"
-  "$DITTO" "$match" "$DSYM_DIR/$name.framework.dSYM"
+  if ! "$DITTO" "$match" "$DSYM_DIR/$name.framework.dSYM"; then
+    rm -rf "$DSYM_DIR/$name.framework.dSYM"
+    say "⚠ ${name}: klarte ikke kopiere symbolfila inn i ${DSYM_DIR} (se ditto-meldingen over)."
+    return 0
+  fi
   ADDED=$((ADDED + 1))
   say "+ ${name}: la til symbolfil med UUID ${shown} (fra ${match#"$unpack"/})"
 }
