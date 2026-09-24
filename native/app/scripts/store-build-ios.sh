@@ -159,7 +159,7 @@ if [ -n "$UPLOAD_ONLY" ]; then
   step "Opplasting av eksisterende arkiv"
   case "$UPLOAD_ONLY" in
     *.xcarchive) ;;
-    *) die "--upload-only vil ha et .xcarchive, fikk «$UPLOAD_ONLY»." ;;
+    *) die "--upload-only vil ha et .xcarchive, fikk «${UPLOAD_ONLY}»." ;;
   esac
   [ -d "$UPLOAD_ONLY" ] || die "Fant ikke arkivet $UPLOAD_ONLY"
   ARCHIVE=$(cd "$(dirname "$UPLOAD_ONLY")" && pwd)/$(basename "$UPLOAD_ONLY")
@@ -215,11 +215,11 @@ ANON_KEY=$(env_value NEXT_PUBLIC_SUPABASE_ANON_KEY)
 scheme=$(printf '%s' "$SUPABASE_URL" | cut -c1-8 | tr '[:upper:]' '[:lower:]')
 case "$scheme" in
   https://*|http://*) ;;
-  *) die "NEXT_PUBLIC_SUPABASE_URL i $ENV_FILE må starte med https:// (fikk «$SUPABASE_URL»)." ;;
+  *) die "NEXT_PUBLIC_SUPABASE_URL i $ENV_FILE må starte med https:// (fikk «${SUPABASE_URL}»)." ;;
 esac
 # Hel vert, ikke delstreng — samme regel som app.config.ts og stagingGate.ts.
 host=$(printf '%s' "$SUPABASE_URL" | sed -E 's#^[Hh][Tt][Tt][Pp][Ss]?://([^/?#]+).*#\1#; s/^.*@//; s/:[0-9]+$//' | tr '[:upper:]' '[:lower:]')
-[ "$host" = "$PROD_SUPABASE_HOST" ] || die "NEXT_PUBLIC_SUPABASE_URL i $ENV_FILE peker på «$host», ikke prod-verten $PROD_SUPABASE_HOST. Er dette staging-fila?"
+[ "$host" = "$PROD_SUPABASE_HOST" ] || die "NEXT_PUBLIC_SUPABASE_URL i $ENV_FILE peker på «${host}», ikke prod-verten $PROD_SUPABASE_HOST. Er dette staging-fila?"
 
 # Aldri en .env.production* i appen: den ville lekket inn i eierens Release-dev-bygg.
 shopt -s nullglob
@@ -249,7 +249,7 @@ VERSION=$(printf '%s\n' "$CONFIG_FIELDS" | sed -n '2p')
 BUILD=$(printf '%s\n' "$CONFIG_FIELDS" | sed -n '3p')
 BUNDLE_ID=$(printf '%s\n' "$CONFIG_FIELDS" | sed -n '4p')
 printf 'navn «%s» · versjon %s · build %s · bundle-id %s\n' "$APP_NAME" "$VERSION" "$BUILD" "$BUNDLE_ID"
-[ "$BUNDLE_ID" = "$STORE_BUNDLE_ID" ] || die "Oppløst bundle-id er «$BUNDLE_ID», ikke $STORE_BUNDLE_ID — er APP_VARIANT=store i miljøet?"
+[ "$BUNDLE_ID" = "$STORE_BUNDLE_ID" ] || die "Oppløst bundle-id er «${BUNDLE_ID}», ikke $STORE_BUNDLE_ID — er APP_VARIANT=store i miljøet?"
 [ -n "$VERSION" ] || die "version mangler i oppløst config."
 [ -n "$BUILD" ] || die "ios.buildNumber mangler i oppløst config."
 

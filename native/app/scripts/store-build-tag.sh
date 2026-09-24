@@ -44,15 +44,15 @@ case "${1:-}" in -h|--help) print_help; exit 0 ;; esac
 VERSION=$1
 BUILD=$2
 COMMIT=$3
-[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Versjonen «$VERSION» er ikke på formen X.Y.Z."
-[[ "$BUILD" =~ ^[0-9A-Za-z]+$ ]] || die "Buildnummeret «$BUILD» kan bare inneholde bokstaver og sifre."
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Versjonen «${VERSION}» er ikke på formen X.Y.Z."
+[[ "$BUILD" =~ ^[0-9A-Za-z]+$ ]] || die "Buildnummeret «${BUILD}» kan bare inneholde bokstaver og sifre."
 TAG="$PREFIX/v$VERSION-$BUILD"
 
 command -v gh >/dev/null || die "GitHub CLI (gh) mangler. Installer den (brew install gh), logg inn (gh auth login) og kjør: $0 $VERSION $BUILD $COMMIT"
 gh auth status >/dev/null 2>&1 || die "gh er ikke innlogget. Kjør: gh auth login — og deretter: $0 $VERSION $BUILD $COMMIT"
 
 git -C "$REPO_ROOT" fetch -q origin main || die "git fetch origin main feilet — sjekk nettet og kjør igjen."
-SHA=$(git -C "$REPO_ROOT" rev-parse --verify --quiet "$COMMIT^{commit}") || die "Fant ingen commit «$COMMIT» i repoet."
+SHA=$(git -C "$REPO_ROOT" rev-parse --verify --quiet "$COMMIT^{commit}") || die "Fant ingen commit «${COMMIT}» i repoet."
 git -C "$REPO_ROOT" merge-base --is-ancestor "$SHA" origin/main \
   || die "Commiten $SHA er ikke på main. Et merke skal peke på kode alle kan finne — bygg fra main."
 
@@ -76,7 +76,7 @@ if [ -n "$EXISTING" ]; then
     printf '%s → %s\n' "$TAG" "$SHA"
     exit 0
   fi
-  die "Merket $TAG finnes alt, men peker på «$EXISTING» — ikke $SHA. Et merke flyttes aldri. Er dette et nytt bygg: bump STORE_IOS_BUILD_NUMBER i native/app/app.config.ts og bygg på nytt."
+  die "Merket $TAG finnes alt, men peker på «${EXISTING}» — ikke $SHA. Et merke flyttes aldri. Er dette et nytt bygg: bump STORE_IOS_BUILD_NUMBER i native/app/app.config.ts og bygg på nytt."
 fi
 
 say "Lager $TAG → $SHA (GitHub-API, ingen git push) …"
