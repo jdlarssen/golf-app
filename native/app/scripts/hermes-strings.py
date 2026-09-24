@@ -13,9 +13,10 @@ No Hermes header parsing: the scan does not depend on the bytecode version,
 which is the point. Stdlib only, so `--upload-only` still needs no Node.
 
 Accepted characters are deliberately narrower than "anything from U+00A0 up".
-That rule reads binary as text: nearly every 16-bit value qualifies, and on
-1.1.0 (3) it produced 71 182 runs (2.7 MB) of noise with ø/å scattered through
-it, which would let a broken reader pass the æ/ø/å check. Every token the proof
+That rule reads binary as text: nearly every 16-bit value qualifies. On
+1.1.0 (3) it gave 71 182 runs (2.7 MB) at even offsets alone, nearly all
+noise, and 641 odd-offset noise runs holding æ/ø/å, enough to let a broken
+reader pass the æ/ø/å check. This set gives 761 + 74. Every token the proof
 looks for is ASCII (or æ/ø/å), and ASCII is always accepted, so a narrower set
 can split a run at a symbol but never splits a token.
 """
