@@ -34,7 +34,10 @@ export function RevealHiddenView({ gameName, backHref }: Props) {
     <AppShell>
       <TopBar backHref={backHref} backLabel={tc('back')} kicker={gameName} />
 
-      <section className="flex flex-col items-center text-center px-6 pt-12 pb-8">
+      <section
+        data-testid="reveal-hidden-view"
+        className="flex flex-col items-center text-center px-6 pt-12 pb-8"
+      >
         <Kicker tone="accent">{t('kicker')}</Kicker>
         <h1 className="mt-4 font-serif text-[22px] font-medium tracking-[-0.015em] leading-tight text-text">
           {t('heading')}
