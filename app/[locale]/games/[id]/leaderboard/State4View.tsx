@@ -14,6 +14,7 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import { showHolesColumn, teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import {
   drilldownHref,
   modeToggleHref,
@@ -131,6 +132,11 @@ export function State4View({
 
   const leader = teams[0]!;
   const rest = teams.slice(1);
+  // #1982: `total` summerer bare hullene laget har en sum for, og manglende hull
+  // teller 0 i rangeringen. Hulltallet står derfor på hvert lag når lagene er
+  // uenige. Samme regel som podiene og appens Hull-kolonne (#1892); tavla vises
+  // bare på ferdige spill.
+  const showHoles = showHolesColumn('finished', teams.map(teamHolesPlayed));
   const modeLabel = mode === 'netto' ? tc('netto') : tc('brutto');
   const subtitleParts = [
     ts('subtitle', { holes: holesPlayed, mode: modeLabel }),
@@ -178,6 +184,7 @@ export function State4View({
           publicView={publicView}
           line={leader}
           coursePar={coursePar}
+          showHoles={showHoles}
           t={tc}
           ts={ts}
         />
@@ -194,6 +201,7 @@ export function State4View({
             line={line}
             leaderTotal={leader.total}
             coursePar={coursePar}
+            showHoles={showHoles}
             staggerIndex={i}
             t={tc}
             ts={ts}
@@ -366,6 +374,7 @@ function LeaderCard({
   publicView,
   line,
   coursePar,
+  showHoles,
   t,
   ts,
 }: {
@@ -375,6 +384,8 @@ function LeaderCard({
   publicView: boolean;
   line: TeamLine;
   coursePar: number;
+  /** Lagene har spilt ulikt antall hull (#1982) — regnet ut én gang i State4View. */
+  showHoles: boolean;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
   ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
@@ -444,6 +455,11 @@ function LeaderCard({
           <p className="mt-2.5 max-w-[260px] text-center font-serif text-[17px] font-medium italic tracking-[-0.005em] text-text">
             {playersLine}
           </p>
+          {showHoles && (
+            <p data-testid="row-holes" className="mt-1 text-[12px] tabular-nums text-muted">
+              {t('holesPlayedCount', { count: teamHolesPlayed(line) })}
+            </p>
+          )}
         </div>
 
         <div
@@ -492,6 +508,7 @@ function TeamRow({
   line,
   leaderTotal,
   coursePar,
+  showHoles,
   staggerIndex,
   t,
   ts,
@@ -503,6 +520,8 @@ function TeamRow({
   line: TeamLine;
   leaderTotal: number;
   coursePar: number;
+  /** Lagene har spilt ulikt antall hull (#1982) — regnet ut én gang i State4View. */
+  showHoles: boolean;
   staggerIndex: number;
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
   ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
@@ -573,6 +592,11 @@ function TeamRow({
               <span className="text-muted"> · {ts('tiedLabel')}</span>
             ))}
         </p>
+        {showHoles && (
+          <p data-testid="row-holes" className="mt-0.5 text-[12px] tabular-nums text-muted">
+            {t('holesPlayedCount', { count: teamHolesPlayed(line) })}
+          </p>
+        )}
       </div>
       <div className="shrink-0 text-right">
         <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
