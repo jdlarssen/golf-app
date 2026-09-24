@@ -14,7 +14,9 @@ function makeTeam(opts: {
   total: number;
   rank: number;
   tiedWith?: number[];
+  missingHoles?: number[];
 }): TeamLine {
+  const missingHoles = opts.missingHoles ?? [];
   return {
     teamNumber: opts.teamNumber,
     players: [
@@ -26,10 +28,17 @@ function makeTeam(opts: {
         courseHandicap: 10,
       },
     ],
-    // Per-hull-data brukes ikke av reveal-viewet (hero + rader).
-    holes: [],
+    // Reveal-viewet leser bare hvor mange hull laget har en sum for (#1982).
+    holes: Array.from({ length: 18 }, (_, i) => ({
+      holeNumber: i + 1,
+      par: 4,
+      strokeIndex: i + 1,
+      teamNet: missingHoles.includes(i + 1) ? null : 4,
+      contributorIds: [],
+      players: [],
+    })),
     total: opts.total,
-    missingHoles: [],
+    missingHoles,
     rank: opts.rank,
     tiedWith: opts.tiedWith ?? [],
   };
@@ -37,14 +46,23 @@ function makeTeam(opts: {
 
 describe('State4View', () => {
   // Type C: nøyaktig ÉN render-test — delt-leder-casen (#1372). Ikke-delt
-  // presentasjon dekkes av at fiksen er betinget på tiedWith.
-  it('delt ledelse: hero viser «Delt 1. plass» og det like-rangerte laget får gull-medaljong', () => {
+  // presentasjon dekkes av at fiksen er betinget på tiedWith. Lederlaget mangler
+  // i tillegg to hull (#1982); regelen for når hulltallet vises eies av
+  // `lib/leaderboard/holesColumn.test.ts`.
+  it('delt ledelse: hero viser «Delt 1. plass», det like-rangerte laget får gull-medaljong og hulltallet står når ett lag mangler hull', () => {
     render(
       <State4View
         gameId="g1"
         gameName="Sommerturnering"
         teams={[
-          makeTeam({ teamNumber: 1, playerName: 'Alice Andersen', total: 68, rank: 1, tiedWith: [2] }),
+          makeTeam({
+            teamNumber: 1,
+            playerName: 'Alice Andersen',
+            total: 68,
+            rank: 1,
+            tiedWith: [2],
+            missingHoles: [17, 18],
+          }),
           makeTeam({ teamNumber: 2, playerName: 'Bjørn Berg', total: 68, rank: 1, tiedWith: [1] }),
           makeTeam({ teamNumber: 3, playerName: 'Camilla Carlsen', total: 74, rank: 3 }),
         ]}
@@ -75,5 +93,13 @@ describe('State4View', () => {
     // Rank 3-raden beholder dagens presentasjon (bronse-medaljong).
     const thirdRow = rows[1]!;
     expect(within(thirdRow).getByTitle('3. plass')).toBeInTheDocument();
+
+    // #1982: manglende hull teller 0 i rangeringen, så laget med færre hull
+    // havner oftest på hero-kortet. Hulltallet står der OG på hver rad: tre i
+    // alt, to av dem i radene, altså det tredje på hero-kortet. Tallene selv
+    // er Type A (`teamHolesPlayed` i `holesColumn.test.ts`).
+    expect(screen.getAllByTestId('row-holes')).toHaveLength(3);
+    expect(within(tiedRow).getByTestId('row-holes')).toBeInTheDocument();
+    expect(within(thirdRow).getByTestId('row-holes')).toBeInTheDocument();
   });
 });
