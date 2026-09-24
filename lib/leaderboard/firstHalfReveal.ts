@@ -12,6 +12,11 @@
 //
 // Her er den en funksjon begge flatene kaller, så formatlista ikke kan drive
 // fra hverandre.
+//
+// #1981: det samme gjelder blinde runder (reveal). Hvilke formater som får en
+// brutto-forhåndsvisning og hvilke som ikke får noe, sto bare i hver sin gren
+// på webben. Appen gjettet på formatfamilien og viste bruttosummer der
+// nettsiden viser ingenting. Nå er det `REVEAL_ACTIVE_TABLE` under.
 import type { GameStatus } from '@/lib/games/status';
 import { revealState, type ScoreVisibility } from '@/lib/games/visibility';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -59,8 +64,9 @@ export type FirstHalfTableView = 'full' | 'waiting' | 'first-half';
  *
  * Reveal-runder returnerer `full` her. Det er ikke «vis alt» — det er «denne
  * regelen eier ikke saken»: `revealState`/`shouldHideNetto` skjuler allerede
- * mer enn dette på begge flater, og to lag med hver sin skjuleregel over samme
- * tabell er hvordan de to flatene kom i utakt til å begynne med.
+ * mer enn dette på begge flater (hvor mye: `revealActiveTable`), og to lag med
+ * hver sin skjuleregel over samme tabell er hvordan de to flatene kom i utakt
+ * til å begynne med.
  */
 export function firstHalfTableView(opts: {
   gameMode: GameMode;
@@ -73,4 +79,67 @@ export function firstHalfTableView(opts: {
   if (revealState(scoreVisibility, status) !== 'live-always') return 'full';
   if (status === 'finished') return 'full';
   return gateOpen ? 'first-half' : 'waiting';
+}
+
+/**
+ * Hva resultattabellen får vise mens en blind runde pågår (reveal, ikke
+ * avsluttet).
+ *
+ *  - `gross`  — brutto-forhåndsvisning: slag, ingen netto, poeng eller
+ *               plassering.
+ *  - `hidden` — ingenting. Resultatet kommer når arrangøren avslutter.
+ */
+export type RevealActiveTable = 'gross' | 'hidden';
+
+/**
+ * #1981: én linje per format, speilet av det nettsiden viser i dag. Webben har
+ * ingen liste; hvert format bestemmer i sin egen gren:
+ *
+ *  - `gross`: `formats/stableford.tsx`, `formats/soloStrokeplay.tsx` og
+ *    `formats/texasScramble.tsx` → `RevealBruttoView` (#801).
+ *  - `hidden`: best ball (`leaderboardContent.tsx`, siste gren) og
+ *    matchplay-familien (`formats/matchplay.tsx`, `fourballMatchplay.tsx`,
+ *    `foursomesMatchplay.tsx`) → `RevealHiddenView` (#1441 D12); wolf, nassau,
+ *    skins, BBB, nines, round robin, acey-deucey, shamble og patsome →
+ *    venterommet bak `isRevealHidden` i hver sin `*View.tsx`.
+ *
+ * (Stiene over er relative til `app/[locale]/games/[id]/leaderboard/`.)
+ *
+ * Det er en liste og ikke en familie-sjekk fordi webben ikke følger familiene:
+ * scramble er et lagformat og viser lagets brutto, best ball er et lagformat og
+ * viser ingenting. `Record` gjør at et nytt format ikke kompilerer før noen har
+ * bestemt hva det skal vise. `firstHalfReveal.test.ts` leser web-grenene og
+ * blir rød hvis de to flatene sier noe ulikt om brutto.
+ */
+export const REVEAL_ACTIVE_TABLE: Record<GameMode, RevealActiveTable> = {
+  best_ball: 'hidden',
+  stableford: 'gross',
+  modified_stableford: 'gross',
+  singles_matchplay: 'hidden',
+  solo_strokeplay: 'gross',
+  texas_scramble: 'gross',
+  ambrose: 'gross',
+  florida_scramble: 'gross',
+  fourball_matchplay: 'hidden',
+  foursomes_matchplay: 'hidden',
+  greensome_matchplay: 'hidden',
+  chapman_matchplay: 'hidden',
+  wolf: 'hidden',
+  nassau: 'hidden',
+  skins: 'hidden',
+  bingo_bango_bongo: 'hidden',
+  nines: 'hidden',
+  round_robin: 'hidden',
+  acey_deucey: 'hidden',
+  shamble: 'hidden',
+  patsome: 'hidden',
+  gruesome_matchplay: 'hidden',
+};
+
+/**
+ * Oppslaget i `REVEAL_ACTIVE_TABLE`. Et format lista ikke kjenner (en rad fra
+ * en nyere server enn appen) gir `hidden`: heller ingenting enn en lekkasje.
+ */
+export function revealActiveTable(mode: GameMode): RevealActiveTable {
+  return REVEAL_ACTIVE_TABLE[mode] === 'gross' ? 'gross' : 'hidden';
 }

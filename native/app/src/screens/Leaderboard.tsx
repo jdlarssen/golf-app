@@ -238,8 +238,9 @@ export function LeaderboardBody({
     game.gameMode as GameMode,
   );
 
-  // Matchplay i reveal: ingenting. Ikke engang brutto — i en duell ER
-  // brutto-forskjellen stillingen, og webben viser derfor `RevealHiddenView`.
+  // Blind runde i et format der nettsiden ikke viser noe: ingenting her
+  // heller, ikke engang brutto. Lista per format er `revealActiveTable`
+  // (`lib/leaderboard/firstHalfReveal.ts`, #1981).
   if (visibility === 'hidden') {
     return (
       <CalmNote
