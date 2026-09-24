@@ -7,13 +7,12 @@ import 'server-only';
  * native/assets/generate-icons.mjs (#1985).
  */
 
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
-
 /**
  * Fetch one Google-font weight as a ttf ArrayBuffer (or null on any failure).
- * Spoofs a desktop UA so the css2 endpoint returns a
- * ttf URL we can parse. Graceful: a null just means Satori uses its default.
+ * No User-Agent spoofing: the css2 endpoint picks the format from the UA, and
+ * a browser UA now gets woff2, which Satori cannot read — the ttf match then
+ * found nothing and every image fell back to Satori's default sans (#1985).
+ * Node's own UA gets one ttf. Graceful: a null means Satori uses its default.
  */
 export async function fetchGoogleFont(
   family: string,
@@ -23,9 +22,7 @@ export async function fetchGoogleFont(
     family,
   )}:wght@${weight}&display=swap`;
   try {
-    const css = await fetch(cssUrl, { headers: { 'User-Agent': UA } }).then(
-      (r) => (r.ok ? r.text() : ''),
-    );
+    const css = await fetch(cssUrl).then((r) => (r.ok ? r.text() : ''));
     const m = css.match(/url\((https:\/\/[^)]+\.ttf)\)/);
     if (!m) return null;
     return await fetch(m[1]).then((r) => (r.ok ? r.arrayBuffer() : null));
