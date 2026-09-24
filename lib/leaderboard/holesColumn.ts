@@ -38,3 +38,23 @@ export function showHolesColumn(status: string, counts: readonly number[]): bool
   // column for everyone.
   return new Set(counts).size > 1;
 }
+
+/**
+ * How many holes a team has a score for, as the count to feed
+ * {@link showHolesColumn}.
+ *
+ * Best ball (`BestBallTeamLine`, web `TeamLine`) and Texas scramble
+ * (`TexasScrambleTeamLine`) don't carry the number. Their `holes` has one row
+ * per hole in scope, missing ones included, and `missingHoles` lists the holes
+ * without a score. The engine warns that the team total is then a partial sum
+ * (`bestBall.ts` `teamTotal`), so every table that ranks these teams shows this
+ * count next to it (#1982).
+ *
+ * Typed structurally so the file stays import-free (see above).
+ */
+export function teamHolesPlayed(team: {
+  holes: readonly unknown[];
+  missingHoles: readonly number[];
+}): number {
+  return team.holes.length - team.missingHoles.length;
+}

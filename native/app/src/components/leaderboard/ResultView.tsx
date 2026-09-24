@@ -8,7 +8,7 @@
 //
 // Ingen sortering her. Motoren har rangert radene; en `sort` til i render-laget
 // ville vært en andre og konkurrerende regel for hvem som leder.
-import { showHolesColumn } from '../../../../../lib/leaderboard/holesColumn';
+import { showHolesColumn, teamHolesPlayed } from '../../../../../lib/leaderboard/holesColumn';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
@@ -55,18 +55,6 @@ const TEAM: LeaderColumn = { key: 'team', label: 'Lag', flex: 3 };
  * `lib/leaderboard/holesColumn.ts` og deles med nettsidens podier (#1892).
  */
 const HOLES: LeaderColumn = { key: 'holes', label: 'Hull', numeric: true };
-
-/**
- * Hull laget har en sum for. Best ball og Texas gir ikke tallet direkte: `holes`
- * har én rad per hull i scope, også de som mangler, og `missingHoles` lister
- * dem uten sum. Totalen er en delsum når lista ikke er tom (#1982).
- */
-function teamHolesPlayed(team: {
-  holes: readonly unknown[];
-  missingHoles: readonly number[];
-}): number {
-  return team.holes.length - team.missingHoles.length;
-}
 
 export function ResultView({
   result,

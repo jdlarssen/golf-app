@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { showHolesColumn } from './holesColumn';
+import { showHolesColumn, teamHolesPlayed } from './holesColumn';
 
 describe('showHolesColumn', () => {
   it.each([
@@ -19,5 +19,22 @@ describe('showHolesColumn', () => {
     ['finished, no rows at all', 'finished', [], false],
   ] as const)('%s', (_label, status, counts, expected) => {
     expect(showHolesColumn(status, counts)).toBe(expected);
+  });
+});
+
+describe('teamHolesPlayed', () => {
+  // Best ball and Texas scramble keep one `holes` row per hole in scope,
+  // missing ones included, and list the missing ones in `missingHoles` (#1982).
+  const holes = (count: number) => Array.from({ length: count }, (_, i) => ({ holeNumber: i + 1 }));
+
+  it.each([
+    // [label, holes in scope, missingHoles, expected]
+    ['full round, nothing missing', 18, [], 18],
+    ['two holes missing', 18, [17, 18], 16],
+    ['clipped to the front nine, two missing', 9, [8, 9], 7],
+    ['nothing scored yet', 18, Array.from({ length: 18 }, (_, i) => i + 1), 0],
+    ['no holes in scope', 0, [], 0],
+  ] as const)('%s', (_label, inScope, missingHoles, expected) => {
+    expect(teamHolesPlayed({ holes: holes(inScope), missingHoles })).toBe(expected);
   });
 });
