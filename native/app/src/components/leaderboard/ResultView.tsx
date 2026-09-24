@@ -56,6 +56,18 @@ const TEAM: LeaderColumn = { key: 'team', label: 'Lag', flex: 3 };
  */
 const HOLES: LeaderColumn = { key: 'holes', label: 'Hull', numeric: true };
 
+/**
+ * Hull laget har en sum for. Best ball og Texas gir ikke tallet direkte: `holes`
+ * har én rad per hull i scope, også de som mangler, og `missingHoles` lister
+ * dem uten sum. Totalen er en delsum når lista ikke er tom (#1982).
+ */
+function teamHolesPlayed(team: {
+  holes: readonly unknown[];
+  missingHoles: readonly number[];
+}): number {
+  return team.holes.length - team.missingHoles.length;
+}
+
 export function ResultView({
   result,
   status,
@@ -69,7 +81,13 @@ export function ResultView({
   nameOf: ReturnType<typeof nameLookup>;
 }) {
   switch (result.kind) {
-    case 'solo_strokeplay':
+    case 'solo_strokeplay': {
+      // Slagsummen gjelder bare hullene spilleren har ført (#1982): 12 hull
+      // rangeres mot 18 uten at noe annet på skjermen sier det.
+      const showHoles = showHolesColumn(
+        status,
+        result.players.map((player) => player.holesPlayed),
+      );
       return (
         <LeaderTable
           testID="leaderboard-table"
@@ -78,6 +96,7 @@ export function ResultView({
             PLAYER,
             { key: 'gross', label: 'Brutto', numeric: true },
             { key: 'net', label: 'Netto', numeric: true },
+            ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.players.map((player) => ({
             key: player.userId,
@@ -89,10 +108,12 @@ export function ResultView({
               // som ikke har begynt som runderekord.
               player.holesPlayed === 0 ? '—' : player.totalGrossStrokes,
               player.holesPlayed === 0 ? '—' : player.totalNetStrokes,
+              ...(showHoles ? [player.holesPlayed] : []),
             ],
           }))}
         />
       );
+    }
 
     case 'stableford': {
       if (result.variant === 'solo') {
@@ -139,7 +160,9 @@ export function ResultView({
       );
     }
 
-    case 'texas_scramble':
+    // Ambrose og florida scramble kommer også ut som `texas_scramble`.
+    case 'texas_scramble': {
+      const showHoles = showHolesColumn(status, result.teams.map(teamHolesPlayed));
       return (
         <LeaderTable
           testID="leaderboard-table"
@@ -150,6 +173,7 @@ export function ResultView({
             // ingen egen kopi av 60/40- eller prosent-formlene.
             { key: 'hcp', label: 'Lag-hcp', numeric: true },
             { key: 'net', label: 'Netto', numeric: true },
+            ...(showHoles ? [HOLES] : []),
           ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
@@ -163,16 +187,24 @@ export function ResultView({
               ),
               team.teamHandicap,
               team.totalNet,
+              ...(showHoles ? [teamHolesPlayed(team)] : []),
             ],
           }))}
         />
       );
+    }
 
-    case 'best_ball':
+    case 'best_ball': {
+      const showHoles = showHolesColumn(status, result.teams.map(teamHolesPlayed));
       return (
         <LeaderTable
           testID="leaderboard-table"
-          columns={[RANK, TEAM, { key: 'net', label: 'Netto', numeric: true }]}
+          columns={[
+            RANK,
+            TEAM,
+            { key: 'net', label: 'Netto', numeric: true },
+            ...(showHoles ? [HOLES] : []),
+          ]}
           rows={result.teams.map((team) => ({
             key: String(team.teamNumber),
             highlight: team.rank === 1,
@@ -180,10 +212,12 @@ export function ResultView({
               team.rank,
               teamLabel(team.teamNumber, team.playerIds, nameOf),
               team.total,
+              ...(showHoles ? [teamHolesPlayed(team)] : []),
             ],
           }))}
         />
       );
+    }
 
     case 'shamble': {
       const showHoles = showHolesColumn(
