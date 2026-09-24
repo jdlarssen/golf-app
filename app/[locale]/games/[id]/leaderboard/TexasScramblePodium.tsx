@@ -7,6 +7,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { showHolesColumn, teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import type {
   TexasScrambleResult,
   TexasScrambleTeamLine,
@@ -117,6 +118,10 @@ export function TexasScramblePodium({
     team.tiedWith.length > 0
       ? t('common.tiedRank', { rank: team.rank })
       : null;
+  // #1982: `totalNet` summerer bare hullene laget har en sum for. Hulltallet
+  // står derfor på hvert lag når lagene er uenige. Samme regel som de andre
+  // podiene og appens Hull-kolonne (#1892); podiet vises bare på ferdige spill.
+  const showHoles = showHolesColumn('finished', result.teams.map(teamHolesPlayed));
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>
@@ -148,6 +153,7 @@ export function TexasScramblePodium({
                 playersById={playersById}
                 staggerIndex={1}
                 tiedBadge={tiedBadge(second)}
+                showHoles={showHoles}
               />
             )}
           </div>
@@ -160,6 +166,7 @@ export function TexasScramblePodium({
               playersById={playersById}
               staggerIndex={0}
               tiedBadge={tiedBadge(first)}
+              showHoles={showHoles}
             />
           </div>
 
@@ -172,6 +179,7 @@ export function TexasScramblePodium({
                 playersById={playersById}
                 staggerIndex={2}
                 tiedBadge={tiedBadge(third)}
+                showHoles={showHoles}
               />
             )}
           </div>
@@ -215,6 +223,11 @@ export function TexasScramblePodium({
                       <p className="mt-0.5 text-[12px] text-muted tabular-nums">
                         {t('common.grossBrutto', { count: team.totalGross })}
                       </p>
+                      {showHoles && (
+                        <p data-testid="row-holes" className="mt-0.5 text-[12px] text-muted tabular-nums">
+                          {t('common.holesPlayedCount', { count: teamHolesPlayed(team) })}
+                        </p>
+                      )}
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
@@ -244,6 +257,7 @@ function PodiumStep({
   playersById,
   staggerIndex,
   tiedBadge,
+  showHoles,
 }: {
   /** Grid-posisjon: 1 = midten (høyest trinn), 2 = venstre, 3 = høyre. */
   slot: PodiumSlot;
@@ -252,6 +266,8 @@ function PodiumStep({
   staggerIndex: number;
   /** «Delt N. plass»-merke, eller null når laget ikke er delt-rangert. */
   tiedBadge: string | null;
+  /** Lagene har spilt ulikt antall hull (#1982) — regnet ut én gang i podiet. */
+  showHoles: boolean;
 }) {
   const t = useTranslations('leaderboard');
   const memberNames = team.members
@@ -310,6 +326,12 @@ function PodiumStep({
           {t('common.slagLabel')}
         </span>
       </div>
+
+      {showHoles && (
+        <p data-testid="row-holes" className="text-[11px] tabular-nums text-muted">
+          {t('common.holesPlayedCount', { count: teamHolesPlayed(team) })}
+        </p>
+      )}
     </div>
   );
 }

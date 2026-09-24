@@ -18,6 +18,7 @@ function makeTeamLine(
   rank: number,
   totalNet: number,
   tiedWith: number[] = [],
+  missingHoles: number[] = [],
 ): TexasScrambleTeamLine {
   return {
     teamNumber,
@@ -28,10 +29,21 @@ function makeTeamLine(
     })),
     combinedCourseHandicap: 12 * memberIds.length,
     teamHandicap: 3,
-    holes: [],
+    // Podiet leser bare hvor mange hull laget har en sum for (#1982).
+    holes: Array.from({ length: 18 }, (_, i) => {
+      const played = !missingHoles.includes(i + 1);
+      return {
+        holeNumber: i + 1,
+        par: 4,
+        strokeIndex: i + 1,
+        teamGross: played ? 4 : null,
+        teamExtraStrokes: 0,
+        teamNet: played ? 4 : null,
+      };
+    }),
     totalNet,
     totalGross: totalNet + 3,
-    missingHoles: [],
+    missingHoles,
     rank,
     tiedWith,
   };
@@ -48,17 +60,20 @@ function makePlayers(
 }
 
 describe('TexasScramblePodium', () => {
-  // Type C: nøyaktig ÉN render-test — delt-førsteplass-casen (#1573).
-  it('delt førsteplass: begge medvinner-lag får champagne, medaljong «1» og «Delt 1. plass»-merke', () => {
+  // Type C: nøyaktig ÉN render-test — delt-førsteplass-casen (#1573). Lag 1
+  // mangler i tillegg to hull (#1982); regelen for når hulltallet vises eies av
+  // `lib/leaderboard/holesColumn.test.ts`.
+  it('delt førsteplass: begge medvinner-lag får champagne, medaljong «1» og «Delt 1. plass»-merke, og hulltallet står når ett lag mangler hull', () => {
     window.sessionStorage.clear();
     render(
       <TexasScramblePodium
         gameId="g1"
         gameName="Sommerturnering"
         result={makeResult([
-          makeTeamLine(1, ['u1', 'u2'], 1, 66, [2]),
+          makeTeamLine(1, ['u1', 'u2'], 1, 66, [2], [17, 18]),
           makeTeamLine(2, ['u3', 'u4'], 1, 66, [1]),
           makeTeamLine(3, ['u5', 'u6'], 3, 74),
+          makeTeamLine(4, ['u7', 'u8'], 4, 78),
         ])}
         playersById={makePlayers([
           ['u1', 'Alice Andersen', null],
@@ -67,6 +82,8 @@ describe('TexasScramblePodium', () => {
           ['u4', 'David Dahl', null],
           ['u5', 'Erik Eriksen', null],
           ['u6', 'Frida Frost', null],
+          ['u7', 'Geir Grønn', null],
+          ['u8', 'Hanne Holm', null],
         ])}
         holesPlayed={18}
         backHref="/games/g1"
@@ -91,5 +108,15 @@ describe('TexasScramblePodium', () => {
     expect(slot3.dataset.rank).toBe('3');
     expect(within(slot3).getByTitle('3. plass')).toBeInTheDocument();
     expect(slot3.textContent).not.toContain('Delt');
+
+    // #1982: lag 1 mangler to hull, så hulltallet står på hvert trinn og på
+    // raden i restlista. Tallene selv er Type A (`teamHolesPlayed` i
+    // `holesColumn.test.ts`).
+    for (const slot of [slot1, slot2, slot3]) {
+      expect(within(slot).getByTestId('row-holes')).toBeInTheDocument();
+    }
+    expect(
+      within(screen.getByTestId('texas-rest')).getByTestId('row-holes'),
+    ).toBeInTheDocument();
   });
 });
