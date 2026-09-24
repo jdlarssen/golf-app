@@ -47,7 +47,7 @@ export function RevealBruttoView({
         kicker={gameName}
       />
 
-      <section className="px-6 pt-2 pb-3 text-center">
+      <section data-testid="reveal-brutto-view" className="px-6 pt-2 pb-3 text-center">
         <Kicker tone="accent">{t('revealBrutto.kicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[24px] font-medium tracking-[-0.015em] leading-tight text-text">
           {t('revealBrutto.heading', { count: holesPlayed })}
