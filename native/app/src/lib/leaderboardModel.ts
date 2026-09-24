@@ -5,6 +5,7 @@
 // motoren (`holesUp`, `result.formatted`), og dette laget setter norske ord på
 // den. En egen «hvem leder»-formel i appen ville vært et tredje hjem for en
 // regel som alt har to.
+import { revealActiveTable } from '../../../../lib/leaderboard/firstHalfReveal';
 import { revealState, shouldHideNetto } from '../../../../lib/games/visibility';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -16,7 +17,6 @@ import type {
   WolfChoice,
   WolfHoleOutcome,
 } from '../../../../lib/scoring/modes/types';
-import { isMatchplayFamily } from '../../../../lib/scoring/modes/types';
 import {
   wolfChoiceKey,
   wolfOutcomeKey,
@@ -30,16 +30,19 @@ import { displayName } from './display';
  * Hvor mye leaderboardet får lov å vise.
  *
  *  - `full`       — alt: netto, poeng, plassering.
- *  - `gross-only` — kun bruttoslag. Reveal-runde som fortsatt går.
- *  - `hidden`     — ingenting. Matchplay-familien i reveal: en duell har
- *                   ingen brutto-halvdel å vise uten å røpe stillingen.
+ *  - `gross-only` — kun bruttoslag. Reveal-runde som fortsatt går, i et
+ *                   format der nettsiden viser brutto.
+ *  - `hidden`     — ingenting. Reveal-runde som fortsatt går, i et format der
+ *                   nettsiden ikke viser noe (best ball, matchplay-familien,
+ *                   wolf, skins og de andre spillformatene).
  */
 export type LeaderboardVisibility = 'full' | 'gross-only' | 'hidden';
 
 /**
  * Delt `revealState`/`shouldHideNetto` (`lib/games/visibility.ts`) avgjør OM
- * noe skal skjules; hvor strengt avgjøres av formatfamilien, samme skille som
- * webben gjør mellom `RevealHiddenView` og brutto-visningen.
+ * noe skal skjules; hvor mye avgjøres av den delte formatlista
+ * `revealActiveTable` (`lib/leaderboard/firstHalfReveal.ts`), samme skille som
+ * webben gjør mellom `RevealHiddenView` og brutto-visningen (#1981).
  */
 export function leaderboardVisibility(
   scoreVisibility: string,
@@ -51,7 +54,7 @@ export function leaderboardVisibility(
     status as GameStatus,
   );
   if (!shouldHideNetto(state)) return 'full';
-  return isMatchplayFamily(mode) ? 'hidden' : 'gross-only';
+  return revealActiveTable(mode) === 'gross' ? 'gross-only' : 'hidden';
 }
 
 // ---------------------------------------------------------------------------

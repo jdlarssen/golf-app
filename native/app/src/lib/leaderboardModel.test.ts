@@ -71,6 +71,22 @@ describe('leaderboardVisibility', () => {
     // ... men bare i reveal. Et vanlig matchplay viser alt.
     expect(leaderboardVisibility('live', 'active', 'singles_matchplay')).toBe('full');
   });
+
+  // #1981: appen viste bruttosummer for disse der nettsiden viser ingenting.
+  // Hele lista per format bor i lib/leaderboard/firstHalfReveal.test.ts; her
+  // holder det å vise at appen leser den.
+  it.each(['best_ball', 'wolf', 'skins'] as const)(
+    'skjuler ALT for %s i en reveal-runde som går, som nettsiden',
+    (mode) => {
+      expect(leaderboardVisibility('reveal', 'active', mode)).toBe('hidden');
+      expect(leaderboardVisibility('live', 'active', mode)).toBe('full');
+      expect(leaderboardVisibility('reveal', 'finished', mode)).toBe('full');
+    },
+  );
+
+  it('viser fortsatt brutto for scramble i en reveal-runde som går, som nettsiden', () => {
+    expect(leaderboardVisibility('reveal', 'active', 'texas_scramble')).toBe('gross-only');
+  });
 });
 
 describe('navn', () => {
