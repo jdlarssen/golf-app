@@ -14,69 +14,35 @@
 // og `account.test.ts` låser den for den andre ruta) og hvilke setninger kodene
 // betyr (skjermens copy). Denne fila kjenner bare koder.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  GAME_ID,
+  TOKEN,
+  auth,
+  mockFetch,
+  mockNetwork,
+  requestInit,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-// Nett-status styres per test. `mock`-prefikset er jests egen regel for
-// variabler en `jest.mock`-fabrikk får lov å lukke over.
-const mockNetwork = { online: true };
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
 
-const BASE_URL = 'https://staging.example';
-const GAME_ID = 'game-1';
 const REMIND_URL = `${BASE_URL}/api/games/${GAME_ID}/remind`;
-const TOKEN = 'access-token-abc';
 
-type Mocks = typeof import('../test/supabaseMock');
 type Remind = typeof import('./remind');
-
-const mockFetch = jest.fn();
 
 function remind(): Remind {
   return require('./remind') as Remind;
 }
 
-function auth(): Mocks['supabase']['auth'] {
-  return (require('../test/supabaseMock') as Mocks).supabase.auth;
-}
-
-/** Neste svar fra ruta. `json()` speiler ekte `Response` — den kan kaste. */
-function respondWith(status: number, body: unknown): void {
-  mockFetch.mockResolvedValue({
-    status,
-    json: async () => body,
-  } as unknown as Response);
-}
-
-/** Argumentene ruta faktisk ble kalt med. */
-function requestInit(): RequestInit {
-  return mockFetch.mock.calls[0][1] as RequestInit;
-}
-
 describe('purring', () => {
-  useFreshModules();
-
-  const originalFetch = global.fetch;
-
-  beforeEach(() => {
-    mockNetwork.online = true;
-    mockFetch.mockReset();
-    global.fetch = mockFetch as unknown as typeof fetch;
-    process.env.EXPO_PUBLIC_WEB_BASE_URL = BASE_URL;
-
-    auth().getSession.mockResolvedValue({
-      data: { session: { access_token: TOKEN } },
-    });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-    global.fetch = originalFetch;
-    delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
-  });
+  useWebRoute();
 
   describe('fetchReminderPreview', () => {
     it('leser antallet, grunn-tallene og «sist purret» fra ruta', async () => {

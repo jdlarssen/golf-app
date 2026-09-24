@@ -17,13 +17,20 @@
 // (`accountCopy.test.ts`, med copy-paritet mot webbens `messages/no.json`).
 // Denne fila kjenner bare koder.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  TOKEN,
+  auth,
+  mockFetch,
+  mockNetwork,
+  requestInit,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-// Nett-status styres per test. `mock`-prefikset er jests egen regel for
-// variabler en `jest.mock`-fabrikk får lov å lukke over.
-const mockNetwork = { online: true };
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
@@ -37,38 +44,16 @@ jest.mock('./db', () => ({
   }),
 }));
 
-const BASE_URL = 'https://staging.example';
 const DELETE_URL = `${BASE_URL}/api/account/delete`;
-const TOKEN = 'access-token-abc';
 
-type Mocks = typeof import('../test/supabaseMock');
 type Account = typeof import('./account');
-
-const mockFetch = jest.fn();
 
 function account(): Account {
   return require('./account') as Account;
 }
 
-function auth(): Mocks['supabase']['auth'] {
-  return (require('../test/supabaseMock') as Mocks).supabase.auth;
-}
-
 function wipeLocalData(): jest.Mock {
   return (require('./db') as { wipeLocalData: jest.Mock }).wipeLocalData;
-}
-
-/** Neste svar fra ruta. `json()` speiler ekte `Response` — den kan kaste. */
-function respondWith(status: number, body: unknown): void {
-  mockFetch.mockResolvedValue({
-    status,
-    json: async () => body,
-  } as unknown as Response);
-}
-
-/** Argumentene ruta faktisk ble kalt med. */
-function requestInit(): RequestInit {
-  return mockFetch.mock.calls[0][1] as RequestInit;
 }
 
 /** Verken lokal base eller sesjon er rørt. */
@@ -79,30 +64,16 @@ function expectNothingWiped(): void {
 }
 
 describe('konto-sletting', () => {
-  useFreshModules();
+  useWebRoute();
 
-  const originalFetch = global.fetch;
-
+  // Registrert etter riggen, så den kjører etter nullstillingen: signOut-stubben
+  // må sitte på den samme instansen koden under test bruker.
   beforeEach(() => {
-    mockNetwork.online = true;
     mockCalls.length = 0;
-    mockFetch.mockReset();
-    global.fetch = mockFetch as unknown as typeof fetch;
-    process.env.EXPO_PUBLIC_WEB_BASE_URL = BASE_URL;
-
-    auth().getSession.mockResolvedValue({
-      data: { session: { access_token: TOKEN } },
-    });
     auth().signOut.mockImplementation(async () => {
       mockCalls.push('signOut');
       return { error: null };
     });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-    global.fetch = originalFetch;
-    delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
   });
 
   describe('deleteAccount', () => {

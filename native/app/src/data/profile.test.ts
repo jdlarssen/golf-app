@@ -18,20 +18,24 @@
 // (`profileCopy.test.ts`). Denne fila kjenner bare koder.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
 import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  mockFetch,
+  mockNetwork,
+  requestInit,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-// Nett-status styres per test. `mock`-prefikset er jests egen regel for
-// variabler en `jest.mock`-fabrikk får lov å lukke over.
-const mockNetwork = { online: true };
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
 
 const ME = 'user-me';
-const BASE_URL = 'https://staging.example';
 const PROFILE_URL = `${BASE_URL}/api/profile`;
-const TOKEN = 'access-token-abc';
 
 type Mocks = typeof import('../test/supabaseMock');
 type Profile = typeof import('./profile');
@@ -42,10 +46,6 @@ function mocks(): Mocks {
 
 function profile(): Profile {
   return require('./profile') as Profile;
-}
-
-function auth(): Mocks['supabase']['auth'] {
-  return (require('../test/supabaseMock') as Mocks).supabase.auth;
 }
 
 const ROW = {
@@ -141,10 +141,7 @@ describe('fetchOwnProfile', () => {
 });
 
 describe('saveProfile', () => {
-  useFreshModules();
-
-  const originalFetch = global.fetch;
-  const mockFetch = jest.fn();
+  useWebRoute();
 
   /** Et gyldig skjema-utfylt sett. Testene endrer bare det de handler om. */
   const INPUT = {
@@ -156,34 +153,9 @@ describe('saveProfile', () => {
     level: 'normal',
   };
 
-  function respondWith(status: number, body: unknown): void {
-    mockFetch.mockResolvedValue({
-      status,
-      json: async () => body,
-    } as unknown as Response);
-  }
-
   function sentBody(): Record<string, unknown> {
-    const init = mockFetch.mock.calls[0][1] as RequestInit;
-    return JSON.parse(String(init.body)) as Record<string, unknown>;
+    return JSON.parse(String(requestInit().body)) as Record<string, unknown>;
   }
-
-  beforeEach(() => {
-    mockNetwork.online = true;
-    mockFetch.mockReset();
-    global.fetch = mockFetch as unknown as typeof fetch;
-    process.env.EXPO_PUBLIC_WEB_BASE_URL = BASE_URL;
-
-    auth().getSession.mockResolvedValue({
-      data: { session: { access_token: TOKEN } },
-    });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-    global.fetch = originalFetch;
-    delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
-  });
 
   it('sender feltene med PUT til profil-ruta', async () => {
     respondWith(200, { ok: true });
