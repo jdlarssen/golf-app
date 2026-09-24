@@ -32,10 +32,11 @@ export const BALL_CLEARANCE_EM = 0.18;
 export const BALL_SHADING_MIN_PX = 8;
 
 /**
- * The icon's ball shading as CSS gradients, layered over the champagne fill:
- * a soft linen highlight up-left and a dark rim. Same stops as the radial
- * gradients in `native/assets/icon-master-full-bleed.svg`.
+ * The ball's highlight as a CSS gradient over the champagne fill: the soft
+ * linen light up-left from the icon (`ball-light` in
+ * `native/assets/icon-master-full-bleed.svg`). The icon's dark rim is left
+ * out on purpose — Satori paints a second radial layer across the whole ball
+ * and turns it olive.
  */
 export const BALL_SHADING_CSS =
-  'radial-gradient(circle at 36% 30%, rgba(248,246,240,0.55), rgba(248,246,240,0) 60%), ' +
-  'radial-gradient(circle at 42% 38%, rgba(20,32,26,0) 55%, rgba(20,32,26,0.3))';
+  'radial-gradient(circle at 36% 30%, rgba(248,246,240,0.55), rgba(248,246,240,0) 60%)';

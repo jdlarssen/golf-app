@@ -16,6 +16,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { loadFonts } from '@/lib/og/fonts';
+import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
   CHAMP,
@@ -243,23 +244,7 @@ export async function GET(
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-            <span
-              style={{ fontFamily: serif, fontSize: 56, fontWeight: 500, color: FOREST }}
-            >
-              Tørny
-            </span>
-            <span
-              style={{
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                background: CHAMP,
-                marginLeft: 6,
-                marginTop: 12,
-              }}
-            />
-          </div>
+          <OgWordmark fontFamily={serif} fontSize={56} fontWeight={500} />
           <div
             style={{
               display: 'flex',
