@@ -29,8 +29,8 @@ import sys
 # astral code points before matching, lone ones break the run.
 TEXT = (
     "\x20-\x7e\xa0-\xff"
-    " -⁯₠-⃏℀-➿⬀-⯿"
-    "︎️"
+    "\u2000-\u206f\u20a0-\u20cf\u2100-\u27bf\u2b00-\u2bff"
+    "\ufe0e\ufe0f"
     "\U0001f000-\U0001faff"
 )
 # Four characters minimum, the same threshold as `strings`. A run must also
