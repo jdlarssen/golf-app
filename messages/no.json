@@ -1151,6 +1151,7 @@
       "db_tee": "Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.",
       "db_roster": "Klarte ikke å lese spillerlisten fra databasen.",
       "db_players": "Klarte ikke å lagre spillerne. Prøv igjen om litt.",
+      "cup_roster_locked": "Dette er en cupkamp. Bytt spilleren på cupsiden i stedet.",
       "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
       "mode_required": "Du må velge en spillmodus før du kan publisere spillet.",
       "unsupported_mode_size_combo": "Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.",

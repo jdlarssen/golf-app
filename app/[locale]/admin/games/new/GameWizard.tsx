@@ -1095,6 +1095,11 @@ function WizardBody({
         state={state}
         tournamentId={initialValues?.tournament_id}
         tournamentMatchLabel={initialValues?.tournament_match_label}
+        rosterLoadedIds={
+          mode.kind === 'create'
+            ? undefined
+            : (initialValues?.players ?? []).map((p) => p.user_id).join(',')
+        }
       />
 
       {/* Wizard-footer: «Forrige»/«Neste» på steg 1-4, kun «Forrige» på
@@ -1131,10 +1136,16 @@ function FormDataInputs({
   state,
   tournamentId,
   tournamentMatchLabel,
+  rosterLoadedIds,
 }: {
   state: ReturnType<typeof useGameFormState>;
   tournamentId?: string;
   tournamentMatchLabel?: string;
+  /**
+   * #2210: the roster the edit form was opened with (the server's, never a
+   * restored local draft's). Undefined when creating.
+   */
+  rosterLoadedIds?: string;
 }) {
   const {
     name,
@@ -1424,6 +1435,11 @@ function FormDataInputs({
           />
         </div>
       ))}
+      {/* #2210: lets the save tell a player the organiser removed from one
+          who signed up while the form was open (see lib/games/rosterEdit.ts). */}
+      {rosterLoadedIds !== undefined && (
+        <input type="hidden" name="roster_loaded_ids" value={rosterLoadedIds} />
+      )}
     </>
   );
 }
