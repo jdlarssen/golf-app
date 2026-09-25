@@ -6,22 +6,27 @@
   .mark{display:inline-flex;flex-direction:column;align-items:flex-start;gap:8px;line-height:1;}
   .word-row{display:inline-flex;align-items:baseline;font-family:Fraunces,serif;line-height:1;color:#1A2E1F;}
   .word{font-weight:500;font-size:40px;letter-spacing:-0.005em;}
-  .dot{display:inline-block;width:5.6px;height:5.6px;border-radius:50%;background:#C9A961;margin-left:4px;transform:translateY(calc(-1ex - 5.6px));}
+  /* #1985: the ball rests on the T — same em ratios as lib/brand/wordmarkBall.ts
+     (diameter 0.26, centre 0.34 from the origin, bottom on the 0.72 cap height),
+     hung off a zero-size inline-block on the baseline like BrandMark does. */
+  .word{padding-top:0.18em;}
+  .anchor{position:relative;display:inline-block;width:0;height:0;vertical-align:baseline;}
+  .ball{position:absolute;left:0.21em;bottom:0.72em;width:0.26em;height:0.26em;border-radius:50%;background:#C9A961;}
   .tagline{font-family:Inter,sans-serif;font-size:11px;font-weight:400;color:#5C5347;letter-spacing:0.005em;line-height:1.2;}
   .tagline .par{font-weight:600;color:#C9A961;}
   .dark{background:#0F1612;padding:18px;border-radius:14px;display:flex;align-items:center;justify-content:center;}
   .dark .word-row{color:#F0EDE5;}
-  .dark .dot{background:#D4B870;}
+  .dark .ball{background:#D4B870;}
   .dark .tagline{color:#A89F8E;}
   .dark .tagline .par{color:#D4B870;}
 </style></head><body>
 <div class="wrap">
   <div class="mark">
-    <span class="word-row"><span class="word">Tørny</span><span class="dot"></span></span>
+    <span class="word-row"><span class="word"><span class="anchor" aria-hidden="true"><span class="ball"></span></span>Tørny</span></span>
     <span class="tagline">Fyr opp golfturneringen på et <span class="par">par</span> minutter</span>
   </div>
   <div class="dark"><div class="mark">
-    <span class="word-row"><span class="word">Tørny</span><span class="dot"></span></span>
+    <span class="word-row"><span class="word"><span class="anchor" aria-hidden="true"><span class="ball"></span></span>Tørny</span></span>
     <span class="tagline">Fyr opp golfturneringen på et <span class="par">par</span> minutter</span>
   </div></div>
 </div>
