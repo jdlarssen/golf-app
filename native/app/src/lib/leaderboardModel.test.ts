@@ -111,7 +111,7 @@ describe('navn', () => {
 });
 
 describe('matchStrip', () => {
-  it('tar bare med hull som faktisk er avgjort, sett fra side 1', () => {
+  it('gir én celle per hull i hull-rekkefølge, sett fra side 1, med «—» for uspilte', () => {
     expect(
       matchStrip([
         { holeNumber: 1, result: 'side1_wins' },
@@ -124,12 +124,19 @@ describe('matchStrip', () => {
       { holeNumber: 1, outcome: 'W' },
       { holeNumber: 2, outcome: 'L' },
       { holeNumber: 3, outcome: 'T' },
+      { holeNumber: 4, outcome: '—' },
       { holeNumber: 5, outcome: 'W' },
     ]);
   });
 
-  it('er tom før noe er avgjort', () => {
-    expect(matchStrip([{ holeNumber: 1, result: 'unplayed' }])).toEqual([]);
+  it('holder på et uspilt hull før noe er avgjort, i stedet for å gi en tom stripe', () => {
+    expect(matchStrip([{ holeNumber: 1, result: 'unplayed' }])).toEqual([
+      { holeNumber: 1, outcome: '—' },
+    ]);
+  });
+
+  it('er tom bare når motoren ikke gir noen hull', () => {
+    expect(matchStrip([])).toEqual([]);
   });
 });
 
@@ -228,11 +235,14 @@ describe('matchStanding + matchStandingLine', () => {
     }
     const result = outcome.result;
 
+    // Én celle per hull på banen: de fire spilte først, så de fjorten som
+    // gjenstår som tomme ruter — samme lengde som webbens stripe.
     expect(matchStrip(result.holes)).toEqual([
       { holeNumber: 1, outcome: 'W' },
       { holeNumber: 2, outcome: 'L' },
       { holeNumber: 3, outcome: 'T' },
       { holeNumber: 4, outcome: 'W' },
+      ...Array.from({ length: 14 }, (_, i) => ({ holeNumber: i + 5, outcome: '—' })),
     ]);
 
     const standing = matchStanding(result);

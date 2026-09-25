@@ -7,12 +7,13 @@
 // Ingen plassering og ingen pall — matchplay-familien har det ikke på web
 // heller (`isMatchplayFamily`, types.ts:113). En duell har en vinner, ikke en
 // rangering.
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { MatchplayHoleResult, MatchplayMatchResult } from '../../../../../lib/scoring/modes/types';
 import {
   matchStanding,
   matchStandingLine,
   matchStrip,
+  type StripCell,
   type StripOutcome,
 } from '../../lib/leaderboardModel';
 import { FONTS, useTheme, type ThemeColors } from '../../theme';
@@ -84,35 +85,39 @@ export function MatchView({
           Stripen fylles etter hvert som hullene blir avgjort.
         </Text>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="match-strip">
-          <View style={styles.strip}>
-            {strip.map((cell) => (
-              <View
-                key={cell.holeNumber}
-                style={[
-                  styles.cell,
-                  { borderColor: colors.border, backgroundColor: cellFill(cell.outcome, colors) },
-                ]}
-                testID={`match-strip-${cell.holeNumber}`}
-              >
-                <Text style={[ui.num, styles.cellHole, { color: colors.muted }]}>
-                  {cell.holeNumber}
-                </Text>
-                <Text
+        // Et rutenett, ikke en sidelengs ScrollView (#1990): på en vanlig
+        // iPhone fikk nøyaktig åtte ruter plass i bredden, og resten lå utenfor
+        // skjermen uten noe hint om at det fantes mer. Ni per rad får plass
+        // helt ned til den smaleste iPhonen.
+        <View style={styles.strip} testID="match-strip">
+          {stripRows(strip).map((row, index) => (
+            <View key={index} style={styles.stripRow} testID={`match-strip-row-${index + 1}`}>
+              {row.map((cell) => (
+                <View
+                  key={cell.holeNumber}
                   style={[
-                    ui.num,
-                    styles.cellOutcome,
-                    // Vunne hull er gull-fylte, og blekket på gull er mørkt i
-                    // begge palettene.
-                    { color: cell.outcome === 'W' ? colors.onAccent : colors.text },
+                    styles.cell,
+                    { borderColor: colors.border, backgroundColor: cellFill(cell.outcome, colors) },
                   ]}
+                  testID={`match-strip-${cell.holeNumber}`}
                 >
-                  {cell.outcome}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+                  <Text style={[ui.num, styles.cellHole, { color: colors.muted }]}>
+                    {cell.holeNumber}
+                  </Text>
+                  <Text
+                    style={[
+                      ui.num,
+                      styles.cellOutcome,
+                      { color: cellInk(cell.outcome, colors) },
+                    ]}
+                  >
+                    {cell.outcome}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
       )}
       <Text style={ui.muted}>
         W = {side1Name} tok hullet · L = {side2Name} tok hullet · T = delt
@@ -121,10 +126,29 @@ export function MatchView({
   );
 }
 
+/** Ni ruter per rad, i hull-rekkefølge. Et 9-hullsspill blir én rad. */
+const CELLS_PER_ROW = 9;
+
+function stripRows(strip: readonly StripCell[]): StripCell[][] {
+  const rows: StripCell[][] = [];
+  for (let start = 0; start < strip.length; start += CELLS_PER_ROW) {
+    rows.push(strip.slice(start, start + CELLS_PER_ROW));
+  }
+  return rows;
+}
+
+/** Et uspilt hull er bare en ramme på bakgrunnen, som webbens tomme ruter. */
 function cellFill(outcome: StripOutcome, colors: ThemeColors): string {
   if (outcome === 'W') return colors.accent;
   if (outcome === 'L') return colors.surface;
   return colors.bg;
+}
+
+function cellInk(outcome: StripOutcome, colors: ThemeColors): string {
+  // Vunne hull er gull-fylte, og blekket på gull er mørkt i begge palettene.
+  if (outcome === 'W') return colors.onAccent;
+  if (outcome === '—') return colors.muted;
+  return colors.text;
 }
 
 const styles = StyleSheet.create({
@@ -147,9 +171,13 @@ const styles = StyleSheet.create({
   sideRight: { textAlign: 'right' },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   leading: { fontFamily: FONTS.sansBold },
-  strip: { flexDirection: 'row', gap: 6, paddingVertical: 8 },
+  strip: { gap: 4, paddingVertical: 8 },
+  stripRow: { flexDirection: 'row', gap: 4 },
+  // `flex: 1`, ikke en fast bredde: ni ruter deler radens bredde likt på alle
+  // skjermer. På iPhone SE (320 pt) blir hver rute ca. 27 pt, nok til «18» og
+  // én fet bokstav. Rutene kan ikke trykkes på, så 44 pt-kravet gjelder ikke.
   cell: {
-    minWidth: 40,
+    flex: 1,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
