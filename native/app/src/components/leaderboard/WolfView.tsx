@@ -1,7 +1,10 @@
 // Native (#1832): Wolf-visningen.
 //
 // To seksjoner, samme rekkefølge som på web: hvem som leder pakken, og
-// deretter hvordan poengene ble delt ut hull for hull.
+// deretter hvordan poengene ble delt ut hull for hull. Alle hullene på banen
+// står i lista, som på nettsiden (#1990) — men et hull der ingenting har
+// skjedd ennå er en smal linje, ikke et fullt kort, så lista ikke blir en
+// vegg av atten kort.
 //
 // Ingen egen poengformel her. `totalPoints`, `stake` og `outcome` kommer
 // ferdig fra motoren; dette laget setter norske ord på dem via
@@ -11,8 +14,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { WolfResult } from '../../../../../lib/scoring/modes/types';
 import {
   wolfChoiceLabel,
+  wolfHoleHasStory,
   wolfHolePointsLine,
-  wolfHolesWithStory,
   wolfOutcomeLabel,
 } from '../../lib/leaderboardModel';
 import { useTheme } from '../../theme';
@@ -25,8 +28,7 @@ export function WolfView({
   result: WolfResult;
   nameOf: (userId: string) => string;
 }) {
-  const { ui } = useTheme();
-  const holes = wolfHolesWithStory(result.holes);
+  const { colors, ui } = useTheme();
   const blindWolves = result.players.filter((player) => player.blindWolfWins > 0);
 
   return (
@@ -62,12 +64,30 @@ export function WolfView({
       ) : null}
 
       <Text style={ui.sectionTitle}>Hull for hull</Text>
-      {holes.length === 0 ? (
+      {result.holes.length === 0 ? (
         <Text style={ui.muted} testID="wolf-holes-empty">
           Listen fylles etter hvert som wolfen velger.
         </Text>
       ) : (
-        holes.map((hole) => {
+        result.holes.map((hole) => {
+          if (!wolfHoleHasStory(hole)) {
+            // Wolfen er kjent fra rotasjonen før valget er tatt, så linja sier
+            // hvem som skal velge. «Venter» på utfallet droppes: to venter-ord
+            // etter hverandre sier ikke mer enn ett.
+            return (
+              <View
+                key={hole.holeNumber}
+                style={[styles.pendingRow, { borderBottomColor: colors.border }]}
+                testID={`wolf-hole-${hole.holeNumber}`}
+              >
+                <Text style={[ui.muted, ui.num]} testID={`wolf-hole-${hole.holeNumber}-pending`}>
+                  {`Hull ${hole.holeNumber} · par ${hole.par} · Wolf: ${nameOf(
+                    hole.wolfUserId,
+                  )} · ${wolfChoiceLabel(hole.choice, hole.partnerUserId, nameOf)}`}
+                </Text>
+              </View>
+            );
+          }
           const pointsLine = wolfHolePointsLine(hole.pointsByPlayer, nameOf);
           return (
             <View
@@ -120,5 +140,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  // Flukter med teksten inni kortene (16 pt inn), med en hårstrek under i
+  // stedet for en ramme: ca. 28 pt per linje, så ti uspilte hull tar omtrent
+  // like mye plass som to kort.
+  pendingRow: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });

@@ -357,7 +357,7 @@ describe('ResultView', () => {
   // Én render-test per ny visning (#1832). De svarer på ÉN ting: at motorens
   // rader faktisk blir til rader på skjermen, og at `ResultView` ruter de to
   // kindsene dit. Tallene selv er motorens og er dekket i `lib/scoring`.
-  it('tegner wolf-totalene og hullene wolfen har valgt på', async () => {
+  it('tegner wolf-totalene og alle hullene: avgjorte som kort, uspilte som en smal linje', async () => {
     const result = {
       kind: 'wolf',
       scoring: 'net',
@@ -395,7 +395,8 @@ describe('ResultView', () => {
           players: [],
           pointsByPlayer: { me: 4, mate: 4, other: 0 },
         },
-        // Ingen har valgt her ennå — raden skal ikke tegnes i det hele tatt.
+        // Ingen har valgt her ennå — hullet står likevel, som en smal linje
+        // med hvem som er wolf, slik nettsiden viser alle hullene (#1990).
         {
           holeNumber: 2,
           par: 4,
@@ -430,7 +431,13 @@ describe('ResultView', () => {
     expect(screen.getByTestId('wolf-hole-1-points').props.children).toBe(
       'Meg Selv +4 · Makker Makkersen +4',
     );
-    expect(screen.queryByTestId('wolf-hole-2')).toBeNull();
+    // Det uspilte hullet er med, men som linja, ikke som kortet.
+    expect(screen.getByTestId('wolf-hole-2')).toBeTruthy();
+    expect(screen.getByTestId('wolf-hole-2-pending').props.children).toBe(
+      'Hull 2 · par 4 · Wolf: Makker Makkersen · Ikke valgt ennå',
+    );
+    expect(screen.queryByTestId('wolf-hole-2-line')).toBeNull();
+    expect(screen.queryByTestId('wolf-hole-1-pending')).toBeNull();
   });
 
   it('tegner BBB-poengene med fordelingen bak dem', async () => {

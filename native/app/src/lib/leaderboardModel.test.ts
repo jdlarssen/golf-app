@@ -18,8 +18,8 @@ import {
   nassauSectionLine,
   teamLabel,
   wolfChoiceLabel,
+  wolfHoleHasStory,
   wolfHolePointsLine,
-  wolfHolesWithStory,
   wolfOutcomeLabel,
 } from './leaderboardModel';
 import { computeGameLeaderboard } from './scoringContext';
@@ -339,13 +339,12 @@ describe('wolf-etikettene', () => {
     expect(wolfHolePointsLine({}, nameOf)).toBeNull();
   });
 
-  it('viser hull som er valgt eller avgjort, og hopper over de tomme', () => {
-    const holes = [
-      { holeNumber: 1, choice: 'lone' as const, outcome: 'wolf_side_wins' as const },
-      // Valgt, men ikke ferdigspilt — hullet har fortsatt noe å fortelle.
-      { holeNumber: 2, choice: 'partner' as const, outcome: 'pending' as const },
-      { holeNumber: 3, choice: null, outcome: 'pending' as const },
-    ];
-    expect(wolfHolesWithStory(holes).map((hole) => hole.holeNumber)).toEqual([1, 2]);
+  it('skiller hull med noe å fortelle fra hull der ingenting har skjedd ennå', () => {
+    // Avgjort: wolfen valgte, og hullet er spilt ferdig.
+    expect(wolfHoleHasStory({ choice: 'lone', outcome: 'wolf_side_wins' })).toBe(true);
+    // Valgt, men ikke ferdigspilt — hullet har fortsatt noe å fortelle.
+    expect(wolfHoleHasStory({ choice: 'partner', outcome: 'pending' })).toBe(true);
+    // Ingen valg og ikke avgjort: bare et hull som venter.
+    expect(wolfHoleHasStory({ choice: null, outcome: 'pending' })).toBe(false);
   });
 });
