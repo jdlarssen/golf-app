@@ -139,12 +139,12 @@ describe('distinctInviterIds', () => {
     expect(distinctInviterIds(invites, ME)).toEqual([A]);
   });
 
-  it('skips game-less invites', () => {
+  it('includes game-less invites (#2212)', () => {
     const invites = [
       { game_id: null, invited_by: A },
       { game_id: 'g2', invited_by: B },
     ];
-    expect(distinctInviterIds(invites, ME)).toEqual([B]);
+    expect(distinctInviterIds(invites, ME).sort()).toEqual([A, B]);
   });
 
   it('returns empty for no invites', () => {
