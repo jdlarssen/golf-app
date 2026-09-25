@@ -33,6 +33,7 @@ import {
   unsentStrokesWarning,
 } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
+import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { TAP, useTheme } from '../theme';
@@ -48,6 +49,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   // «du er fortsatt logget inn» (sesjonen overlevde, `signout-failed`) eller
   // den generelle når kallet kastet. To ulike årsaker, to ulike setninger.
   const [logoutNote, setLogoutNote] = useState<string | null>(null);
+  // Samme mønster for personvern-raden: null til et trykk ikke fikk åpnet
+  // nettsiden, og da står grunnen under raden til neste trykk.
+  const [privacyNote, setPrivacyNote] = useState<string | null>(null);
 
   // Kvitteringen `EditProfile` kommer tilbake med. Banneret er RENT avledet av
   // ruteparameteren — ingen egen state, ingen setState i en effekt — og
@@ -181,6 +185,15 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       });
   }, [askAboutUnsent]);
 
+  // #2229: personvernerklæringen åpnes på nettsiden. `openWeb` kaster aldri —
+  // den svarer typet — så det finnes ingen catch-gren å skrive her.
+  const onOpenPrivacy = useCallback(() => {
+    setPrivacyNote(null);
+    void openWeb('/legal/privacy').then((result) => {
+      if (!result.ok) setPrivacyNote(describeWebLinkFailure(result.reason));
+    });
+  }, []);
+
   // #1973: overskriften venter på raden i stedet for å bytte tekst foran
   // øynene på deg.
   //
@@ -282,8 +295,28 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         </Text>
       ) : null}
 
+      {/* #2229: Apple krever at personvernerklæringen kan nås inne i appen.
+          Ingen chevron: raden fører ikke til et rom i appen, den åpner
+          nettsiden — underteksten sier hvor. Den står over sletting, så
+          «Slett konto» fortsatt er den siste raden på skjermen. */}
+      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionAbout}</Text>
+      <SettingList testID="profile-about">
+        <SettingRow
+          label={PROFILE_TEXT.privacyRow}
+          sublabel={PROFILE_TEXT.privacySublabel}
+          onPress={onOpenPrivacy}
+          testID="profile-privacy"
+        />
+      </SettingList>
+
+      {privacyNote ? (
+        <Text style={ui.error} testID="profile-privacy-error">
+          {privacyNote}
+        </Text>
+      ) : null}
+
       {/* Luften over sletting er en tap-buffer, ikke en marg: `SettingList` har
-          alt 8 på toppen, og disse 24 gjør avstanden ned fra «Logg ut» til 32.
+          alt 8 på toppen, og disse 24 gjør avstanden ned fra raden over til 32.
           Webben klarer seg med 16 fordi en musepeker ikke bommer. */}
       <View style={styles.dangerGap}>
         <SettingList testID="profile-danger">

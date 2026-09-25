@@ -20,6 +20,9 @@
 //  4. **Raden låser seg ikke når sesjonen overlevde.** `signout-failed` betyr at
 //     spilleren fortsatt er innlogget; da må «Logger ut …» gå tilbake til «Logg
 //     ut», for skjermen unmountes aldri — `SIGNED_OUT` kom jo ikke.
+//  5. **Personvernerklæringen er ett trykk unna (#2229).** Apple krever lenken
+//     inne i appen. Raden åpner `/legal/privacy` i nettleseren, og når det
+//     ikke går, står grunnen under raden i stedet for at trykket gjør ingenting.
 //
 // Fire renders og ikke én: staging-på og staging-av er to bygg, og en dialog som
 // står åpen (eller en feilet utlogging) er tilstander skjermen ikke kan være i
@@ -32,6 +35,7 @@ import { logOut } from '../data/logout';
 import { fetchOwnProfile } from '../data/profile';
 import { PROFILE_TEXT, formatHcpNb, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
+import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { Profile } from './Profile';
 
@@ -47,10 +51,17 @@ jest.mock('../session', () => ({
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
+// Bare `openWeb` byttes ut: feilteksten skal komme fra den ekte
+// `describeWebLinkFailure`, slik skjermen henter den.
+jest.mock('../lib/webLink', () => ({
+  ...jest.requireActual('../lib/webLink'),
+  openWeb: jest.fn(),
+}));
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const logOutMock = logOut as jest.Mock;
 const isStagingBuildMock = isStagingBuild as jest.Mock;
+const openWebMock = openWeb as jest.Mock;
 
 const MY_NAME = 'Jørgen Larssen';
 const MY_HCP = 12.4;
@@ -94,6 +105,7 @@ describe('Profile', () => {
     });
     logOutMock.mockResolvedValue({ ok: true });
     isStagingBuildMock.mockReturnValue(false);
+    openWebMock.mockResolvedValue({ ok: true });
     // Spionen settes for HVER test, ikke bare den som venter dialogen: uten den
     // er `Alert.alert` den ekte funksjonen, og «ble ikke spurt» kunne ikke
     // uttrykkes som en assert i det hele tatt.
@@ -150,6 +162,23 @@ describe('Profile', () => {
     await fireEvent.press(screen.getByTestId('profile-delete-entry'));
     expect(navigate).toHaveBeenCalledWith('DeleteAccount');
     expect(logOutMock).not.toHaveBeenCalled();
+
+    // #2229: personvernerklæringen åpnes på nettsiden. Går det bra, står det
+    // ingenting under raden.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('profile-privacy'));
+    });
+    expect(openWebMock).toHaveBeenCalledWith('/legal/privacy');
+    expect(screen.queryByTestId('profile-privacy-error')).toBeNull();
+
+    // Mangler bygget adressen, sier raden det i stedet for å gjøre ingenting.
+    openWebMock.mockResolvedValueOnce({ ok: false, reason: 'no-web-base-url' });
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('profile-privacy'));
+    });
+    expect(screen.getByTestId('profile-privacy-error')).toHaveTextContent(
+      describeWebLinkFailure('no-web-base-url'),
+    );
 
     // Første forsøk går alltid uten `keepUnsent`: det er `logOut` som avgjør om
     // køen er tom, ikke skjermen.
