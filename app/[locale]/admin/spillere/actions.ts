@@ -7,7 +7,11 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
-import { inviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
+import {
+  gameInviteExpiresAtFromNow,
+  inviteExpiresAtFromNow,
+} from '@/lib/auth/inviteExpiry';
+import { isRosterLocked } from '@/lib/games/status';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   consumeAdminInviteRateLimit,
@@ -122,7 +126,7 @@ export async function resendInvitation(formData: FormData) {
 
   const { data: inv, error } = await supabase
     .from('invitations')
-    .select('email, accepted_at, token')
+    .select('email, accepted_at, token, game_id, invited_by')
     .eq('id', id)
     .single();
   // Best-effort by design (#1445): begge ben lander ærlig på resend_failed —
@@ -137,11 +141,50 @@ export async function resendInvitation(formData: FormData) {
   }
   if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
 
+  // #2212: a game invitation keeps the game's terms: the game deadline
+  // (GAME_INVITE_TTL_DAYS), the game mail, and the organiser who sent it as
+  // the sender. A round that has started is refused before anything is
+  // written, since logging in no longer gives a roster spot there — the same
+  // rule as the game invite door (`game_locked`). That includes a guest-claim
+  // invitation to a finished round (#1009); the organiser resends those from
+  // the claim form on /games/<id>/spillere. Captain (team) invitations get
+  // the game mail as well: the login routes them to the team page anyway.
+  let senderName = invitedByName;
+  let gameMail: { gameName: string; gameMode: string } | null = null;
+  if (inv!.game_id) {
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('name, game_mode, status')
+      .eq('id', inv!.game_id)
+      .maybeSingle();
+    if (gameError) {
+      console.error('[resendInvitation] game lookup failed', gameError);
+      redirect({ href: '/admin/spillere?error=resend_failed', locale });
+    }
+    if (!game || isRosterLocked(game.status)) {
+      redirect({ href: '/admin/spillere?error=resend_game_locked', locale });
+    }
+
+    const { data: inviter, error: inviterError } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', inv!.invited_by)
+      .maybeSingle();
+    if (inviterError) {
+      // Best-effort: the fallback sender name is honest enough for a mail.
+      console.error('[resendInvitation] inviter lookup failed', inviterError);
+    }
+    senderName = inviter?.name?.trim() || 'En arrangør';
+    gameMail = { gameName: game!.name, gameMode: game!.game_mode };
+  }
+
   // «Send på nytt» means «give this person a fresh chance» (#1381), so the
   // deadline is pushed out a full TTL instead of staying at the old one. An
   // expired-but-unaccepted row otherwise got a mail the login gate would still
   // refuse — email_is_invited requires expires_at > now() (migration 0100).
-  const expiresAt = inviteExpiresAtFromNow();
+  const expiresAt = gameMail
+    ? gameInviteExpiresAtFromNow()
+    : inviteExpiresAtFromNow();
   try {
     expectAffected(
       await supabase
@@ -164,9 +207,10 @@ export async function resendInvitation(formData: FormData) {
   try {
     await sendInviteNotification({
       to: inv!.email,
-      invitedByName,
+      invitedByName: senderName,
       inviteToken: inv!.token,
       expiresAt,
+      ...gameMail,
     });
   } catch (err) {
     console.error('[admin/spillere] resend mail failed', err);

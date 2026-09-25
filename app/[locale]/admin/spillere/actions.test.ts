@@ -4,7 +4,7 @@ import {
   makeRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
-import { INVITE_TTL_DAYS } from '@/lib/auth/inviteExpiry';
+import { GAME_INVITE_TTL_DAYS, INVITE_TTL_DAYS } from '@/lib/auth/inviteExpiry';
 
 /**
  * Unit tests for the admin invitation server-actions: the honeypot
@@ -18,6 +18,7 @@ import { INVITE_TTL_DAYS } from '@/lib/auth/inviteExpiry';
  */
 
 const TTL_MS = INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
+const GAME_TTL_MS = GAME_INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 const redirectMock = makeRedirectMock();
 vi.mock('@/i18n/navigation', () => ({
@@ -129,7 +130,13 @@ describe('sendInvitation — shared dedup (#348)', () => {
 
 describe('resendInvitation — the deadline follows the mail (#1381)', () => {
   const pendingRow = {
-    data: { email: 'sen@example.com', accepted_at: null, token: 'tok-1' },
+    data: {
+      email: 'sen@example.com',
+      accepted_at: null,
+      token: 'tok-1',
+      game_id: null,
+      invited_by: 'admin-1',
+    },
     error: null,
   };
 
@@ -210,6 +217,86 @@ describe('resendInvitation — the deadline follows the mail (#1381)', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe('/admin/spillere?error=resend_failed');
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.method === 'update'),
+    ).toHaveLength(0);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('resendInvitation — a game invitation keeps the game terms (#2212)', () => {
+  const gameInviteRow = {
+    data: {
+      email: 'spiller@example.com',
+      accepted_at: null,
+      token: 'tok-g',
+      game_id: 'game-9',
+      invited_by: 'organiser-1',
+    },
+    error: null,
+  };
+
+  it('scheduled round: 14-day deadline, the game mail and the original inviter', async () => {
+    supabaseMock = buildSupabaseMock([
+      gameInviteRow,
+      {
+        data: {
+          name: 'E2E Fredagsrunden',
+          game_mode: 'stableford',
+          status: 'scheduled',
+        },
+        error: null,
+      },
+      { data: { name: 'Kari' }, error: null },
+      { data: [{ id: 'inv-g' }], error: null }, // UPDATE ... .select('id')
+    ]);
+    const { resendInvitation } = await import('./actions');
+
+    const before = Date.now();
+    await expect(
+      resendInvitation(fd({ id: 'inv-g' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    const after = Date.now();
+
+    const update = supabaseMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.table).toBe('invitations');
+    const patch = (update?.args[0] ?? {}) as { expires_at?: string };
+    const stamped = Date.parse(patch.expires_at ?? '');
+    expect(stamped).toBeGreaterThanOrEqual(before + GAME_TTL_MS);
+    expect(stamped).toBeLessThanOrEqual(after + GAME_TTL_MS);
+
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith({
+      to: 'spiller@example.com',
+      invitedByName: 'Kari',
+      inviteToken: 'tok-g',
+      expiresAt: patch.expires_at,
+      gameName: 'E2E Fredagsrunden',
+      gameMode: 'stableford',
+    });
+    expect(lastRedirect()).toBe(
+      '/admin/spillere?status=resent&email=spiller%40example.com',
+    );
+  });
+
+  it('started round: refused with resend_game_locked before any write or mail', async () => {
+    supabaseMock = buildSupabaseMock([
+      gameInviteRow,
+      {
+        data: {
+          name: 'E2E Fredagsrunden',
+          game_mode: 'stableford',
+          status: 'active',
+        },
+        error: null,
+      },
+    ]);
+    const { resendInvitation } = await import('./actions');
+
+    await expect(
+      resendInvitation(fd({ id: 'inv-g' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/spillere?error=resend_game_locked');
     expect(
       supabaseMock.__fromCalls.filter((c) => c.method === 'update'),
     ).toHaveLength(0);
