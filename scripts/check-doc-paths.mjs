@@ -29,7 +29,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /** Enkeltdokumenter som skannes. */
@@ -183,21 +183,34 @@ function markdownUnder(root, dir) {
 
 /**
  * Hvilke av `refs` `.gitignore` holder utenfor repoet — ett `git check-ignore`
- * for hele kjøringen. Svaret skal ikke avhenge av arbeidskopien som kjører:
+ * for hele kjøringen. To tiltak holder lokal tilstand utenfor svaret:
  *  - En ref uten skråstrek til slutt sendes også MED skråstrek. Et
  *    katalog-mønster (`.claude/orchestrator/`, `.expo/`) treffer ellers bare
  *    når katalogen tilfeldigvis finnes lokalt.
  *  - `core.excludesFile=` slår av maskinens globale ignore-fil, som ikke
  *    følger med repoet.
+ * Hullet som står igjen: `.git/info/exclude` kan ikke slås av. Den deles av
+ * alle worktrees i samme klone, men kan avvike mellom kloner.
  * `-z` fordi git ellers setter en sti med ø/æ/å i anførselstegn, og da bommer
  * oppslaget i settet stille.
  */
 function gitIgnoredRefs(root, refs) {
-  // To ref-former får git til å avbryte hele batchen med exit 128: en som
-  // peker ut av repoet (`../…`) og en som starter med `:` (pathspec-magi,
-  // `:!docs/plans/`). De holdes utenfor og regnes som ikke ignorert.
+  // Tre ref-former får git til å avbryte hele batchen med exit 128: en som
+  // peker ut av repoet (`../…`), en som starter med `:` (pathspec-magi,
+  // `:!docs/plans/`), og en som går gjennom en lokal symlenke (git avviser
+  // «beyond a symbolic link»). De holdes utenfor og regnes som ikke ignorert.
+  const throughSymlink = (ref) => {
+    const segments = ref.replace(/\/+$/, '').split('/');
+    return segments.some((_segment, i) => {
+      try {
+        return lstatSync(path.join(root, ...segments.slice(0, i + 1))).isSymbolicLink();
+      } catch {
+        return false;
+      }
+    });
+  };
   const batch = [...new Set(refs)].filter(
-    (ref) => !ref.startsWith(':') && !ref.split('/').includes('..'),
+    (ref) => !ref.startsWith(':') && !ref.split('/').includes('..') && !throughSymlink(ref),
   );
   const paths = batch.flatMap((ref) => (ref.endsWith('/') ? [ref] : [ref, `${ref}/`]));
   const result = spawnSync(
