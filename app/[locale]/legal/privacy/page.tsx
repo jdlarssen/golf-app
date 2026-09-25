@@ -7,6 +7,10 @@ import { canonicalPath } from '@/lib/seo/canonical';
 
 type Params = Promise<{ locale: string }>;
 
+// The owner runs Tørny as a private individual, so they are the data
+// controller (#2234). One home for the name — both locales read it via {name}.
+const DATA_CONTROLLER_NAME = 'Jørgen Larssen';
+
 export async function generateMetadata({
   params,
 }: {
@@ -26,6 +30,18 @@ export async function generateMetadata({
 export default async function PrivacyPage() {
   const t = await getTranslations('legal.privacy');
 
+  const mailto = (chunks: React.ReactNode) => (
+    <a
+      href="mailto:personvern@tornygolf.no"
+      className="font-medium text-primary underline underline-offset-2"
+    >
+      {chunks}
+    </a>
+  );
+  const term = (chunks: React.ReactNode) => (
+    <span className="font-medium text-text">{chunks}</span>
+  );
+
   return (
     <AppShell>
       <TopBar
@@ -36,6 +52,16 @@ export default async function PrivacyPage() {
       />
 
       <div className="space-y-8 text-sm leading-relaxed text-text">
+
+        {/* Behandlingsansvarlig (#2234) */}
+        <section>
+          <h2 className="font-serif text-xl font-medium text-text mb-3">
+            {t('controllerHeading')}
+          </h2>
+          <p className="text-text-muted">
+            {t.rich('controllerBody', { name: DATA_CONTROLLER_NAME, mailto })}
+          </p>
+        </section>
 
         {/* Section 1 */}
         <section>
@@ -57,12 +83,23 @@ export default async function PrivacyPage() {
             {t('s2Heading')}
           </h2>
           <p className="text-text-muted">
-            {t.rich('s2Body', {
-              supabase: (chunks) => (
-                <span className="font-medium text-text">{chunks}</span>
-              ),
-            })}
+            {t.rich('s2Body', { supabase: term })}
           </p>
+        </section>
+
+        {/* Underleverandører (#2234) */}
+        <section>
+          <h2 className="font-serif text-xl font-medium text-text mb-3">
+            {t('processorsHeading')}
+          </h2>
+          <p className="text-text-muted mb-2">{t('processorsIntro')}</p>
+          <ul className="list-disc list-outside pl-5 space-y-1 text-text-muted mb-2">
+            <li>{t.rich('processorSupabase', { term })}</li>
+            <li>{t.rich('processorVercel', { term })}</li>
+            <li>{t.rich('processorResend', { term })}</li>
+            <li>{t.rich('processorAnthropic', { term })}</li>
+          </ul>
+          <p className="text-text-muted">{t('processorsOutsideEea')}</p>
         </section>
 
         {/* Besøksstatistikk (#1036) — cookieless Vercel Web Analytics */}
@@ -97,34 +134,10 @@ export default async function PrivacyPage() {
           </h2>
           <p className="text-text-muted mb-2">{t('s5Intro')}</p>
           <ul className="list-disc list-outside pl-5 space-y-1 text-text-muted">
-            <li>
-              {t.rich('s5Right1', {
-                term: (chunks) => (
-                  <span className="font-medium text-text">{chunks}</span>
-                ),
-              })}
-            </li>
-            <li>
-              {t.rich('s5Right2', {
-                term: (chunks) => (
-                  <span className="font-medium text-text">{chunks}</span>
-                ),
-              })}
-            </li>
-            <li>
-              {t.rich('s5Right3', {
-                term: (chunks) => (
-                  <span className="font-medium text-text">{chunks}</span>
-                ),
-              })}
-            </li>
-            <li>
-              {t.rich('s5Right4', {
-                term: (chunks) => (
-                  <span className="font-medium text-text">{chunks}</span>
-                ),
-              })}
-            </li>
+            <li>{t.rich('s5Right1', { term })}</li>
+            <li>{t.rich('s5Right2', { term })}</li>
+            <li>{t.rich('s5Right3', { term })}</li>
+            <li>{t.rich('s5Right4', { term })}</li>
           </ul>
         </section>
 
@@ -134,16 +147,7 @@ export default async function PrivacyPage() {
             {t('s6Heading')}
           </h2>
           <p className="text-text-muted">
-            {t.rich('s6Body', {
-              mailto: (chunks) => (
-                <a
-                  href="mailto:personvern@tornygolf.no"
-                  className="font-medium text-primary underline underline-offset-2"
-                >
-                  {chunks}
-                </a>
-              ),
-            })}
+            {t.rich('s6Body', { mailto })}
           </p>
         </section>
 
