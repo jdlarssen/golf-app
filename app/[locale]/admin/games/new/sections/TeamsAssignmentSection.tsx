@@ -450,7 +450,11 @@ export function TeamsAssignmentSection({
           <div className="space-y-2">
             {teamsWithPlayers.flatMap((team) =>
               playersByTeam[team].map((pid) => {
-                const p = players.find((x) => x.id === pid)!;
+                // #2210: a rostered player the options list does not carry is
+                // skipped instead of crashing the section (same guard as the
+                // per-player tee list below).
+                const p = players.find((x) => x.id === pid);
+                if (!p) return null;
                 const flight = flightByPlayer[pid] ?? teamDefaultFlight(team);
                 return (
                   <div

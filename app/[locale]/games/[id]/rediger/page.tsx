@@ -17,6 +17,7 @@ import {
   updateScheduledAction,
 } from '@/app/[locale]/admin/games/[id]/edit/actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { getRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import {
@@ -35,9 +36,11 @@ import {
  * / `updateScheduledAction` server actions the admin uses — those branch their
  * redirects to `/games/*` for a non-admin caller (#428). Options load through
  * `getNewGameFormData(false)` — the e-post-fri roster variant (#435). RLS on
- * `users` already scopes the picker to the creator + their shared-game
- * co-players (which covers this game's roster); `includeEmail=false` drops the
- * `email` column so those co-players' e-postadresser never reach the payload.
+ * `users` scopes that picker to the creator + the co-players they share a game
+ * with AS A PLAYER, so an organiser who does not play in this game sees none
+ * of its roster. #2210: the roster's own users are therefore added via
+ * `getRosterPlayerOptions` (service-role, exactly these ids, no e-mail).
+ * `includeEmail=false` keeps co-players' e-postadresser out of the payload.
  */
 
 type Params = Promise<{ id: string }>;
@@ -156,11 +159,24 @@ async function EditGameFormBody({
   const playerRows = playersResult.data ?? [];
   const initialValues = buildEditInitialValues(game, playerRows);
 
+  // #2210: every rostered player must be in the options, or the form hides
+  // them (and best ball with finished teams crashed). Co-players the creator
+  // can already see come first; the rest of the roster is added after them.
+  const knownIds = new Set(players.map((p) => p.id));
+  const missingIds = playerRows
+    .map((r) => r.user_id)
+    .filter((id) => !knownIds.has(id));
+  const rosterOptions = await getRosterPlayerOptions(missingIds);
+  const allPlayers = [
+    ...players,
+    ...rosterOptions.filter((p) => !knownIds.has(p.id)),
+  ];
+
   if (game.status === 'draft') {
     return (
       <GameForm
         courses={courses}
-        players={players}
+        players={allPlayers}
         initialValues={initialValues}
         mode={{
           kind: 'edit-draft',
@@ -175,7 +191,7 @@ async function EditGameFormBody({
   return (
     <GameForm
       courses={courses}
-      players={players}
+      players={allPlayers}
       initialValues={initialValues}
       mode={{
         kind: 'edit-scheduled',
