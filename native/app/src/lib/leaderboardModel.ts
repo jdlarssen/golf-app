@@ -278,16 +278,18 @@ const WOLF_OUTCOME_LABELS: Record<WolfOutcomeKey, string> = {
 };
 
 /**
- * Wolf-hullene som har noe å fortelle: wolfen har valgt, eller hullet er
- * avgjort.
+ * Har wolf-hullet noe å fortelle: har wolfen valgt, eller er hullet avgjort?
  *
- * Motoren gir en rad per hull på banen, og atten kort der de fleste sier
- * «Ikke valgt ennå · Venter» drukner de hullene som faktisk har skjedd noe på.
+ * Alle hullene vises, som på nettsiden (#1990). Predikatet avgjør bare
+ * FORMEN: et hull med historie får hele kortet, et hull der ingenting har
+ * skjedd ennå får en smal linje. Atten fulle kort der de fleste sier «Ikke
+ * valgt ennå · Venter» ville druknet de hullene som faktisk har skjedd noe på.
  */
-export function wolfHolesWithStory<
-  T extends { choice: WolfChoice | null; outcome: WolfHoleOutcome },
->(holes: readonly T[]): T[] {
-  return holes.filter((hole) => hole.choice !== null || hole.outcome !== 'pending');
+export function wolfHoleHasStory(hole: {
+  choice: WolfChoice | null;
+  outcome: WolfHoleOutcome;
+}): boolean {
+  return hole.choice !== null || hole.outcome !== 'pending';
 }
 
 /** «Partner: Anna», «Lone Wolf», «Ikke valgt ennå». */
