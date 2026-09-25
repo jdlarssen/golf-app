@@ -206,16 +206,19 @@ describe('payload-paritet for alle åtte modi', () => {
 
 describe('shimmen mater den delte byggeren', () => {
   // Den ene antakelsen castet i `asSharedFormData` hviler på: byggeren leser
-  // kun `get()`. Kalles den med en shim som IKKE har de andre metodene, og den
-  // likevel gir samme payload, er antakelsen bevist og ikke bare påstått.
-  it('gir samme payload som et rått get()-only-objekt', () => {
+  // kun `get()` og `getAll()` (#2210 la til `getAll('unassigned_player_id')`).
+  // Kalles den med en shim som IKKE har de andre metodene, og den likevel gir
+  // samme payload, er antakelsen bevist og ikke bare påstått.
+  it('gir samme payload som et rått get()/getAll()-objekt', () => {
     const input = draft({ gameMode: 'stableford', players: solo('a', 'b') });
     const fields = draftToFormData(input).toObject();
-    const getOnly = {
+    const readOnly = {
       get: (name: string): string | null => fields[name] ?? null,
+      getAll: (name: string): string[] =>
+        name in fields ? [fields[name]!] : [],
     } as unknown as FormData;
 
-    expect(buildGameInsertPayload(getOnly, 'publish')).toEqual(
+    expect(buildGameInsertPayload(readOnly, 'publish')).toEqual(
       buildDraftPayload(input).payload,
     );
   });
