@@ -106,6 +106,16 @@ function assertDims(label, buf, wantWidth, wantHeight) {
   console.log(`OK    ${label}: IHDR ${width}x${height}`);
 }
 
+function assertAlphaChannel(label, buf) {
+  const colorType = ihdrColorType(buf);
+  if (colorType !== 6) {
+    console.error(`FEIL  ${label}: IHDR color type ${colorType}, forventet 6 (32-bit med alfakanal)`);
+    failed = true;
+    return;
+  }
+  console.log(`OK    ${label}: IHDR color type ${colorType} (32-bit med alfakanal)`);
+}
+
 function assertNoAlphaChannel(label, buf) {
   const colorType = ihdrColorType(buf);
   if (colorType !== 2) {
@@ -255,7 +265,9 @@ async function render(browser) {
   out.appleIcon180 = await fullBleedAt(180);
 
   // 7. Google Play TWA shell icons (#1985) — same sizes Bubblewrap baked in.
-  out.twa = { store_icon: await fullBleedAt(512) };
+  //    The store listing icon keeps an (opaque) alpha channel: Play Console
+  //    asks for a 32-bit PNG there, and Bubblewrap's original was one.
+  out.twa = { store_icon: await sharp(await fullBleedAt(512)).ensureAlpha().png().toBuffer() };
   for (const [name, sizes] of Object.entries(TWA_SIZES)) {
     out.twa[name] = [];
     for (const size of sizes) {
@@ -427,6 +439,7 @@ async function main() {
     // 7. Google Play TWA shell (#1985) — twa-manifest.json is left alone.
     write(path.join(TWA_DIR, 'store_icon.png'), out.twa.store_icon);
     assertDims('native/android/store_icon.png', out.twa.store_icon, 512, 512);
+    assertAlphaChannel('native/android/store_icon.png', out.twa.store_icon);
     for (const [name, sizes] of Object.entries(TWA_SIZES)) {
       const kind = name.startsWith('ic_launcher') || name === 'ic_maskable' ? 'mipmap' : 'drawable';
       sizes.forEach((size, i) => {

@@ -50,7 +50,7 @@ ellers gitt et ikon i feil skrift uten at noe merket det.
 | `public/icons/maskable-192.png`, `public/icons/maskable-512.png` | 192×192 / 512×512 | Flisen + motiv i safe-zone — konsumert av `app/manifest.ts` (`purpose: maskable`) og av Play-skallets `maskableIconUrl`. |
 | `public/icons/icon-192.png`, `icon-512.png`, `apple-icon-180.png` | 192 / 512 / 180 | Full-bleed, ingen alfakanal. Serveres på `/icon`, `/icon0` og `/apple-icon` via `rewrites()` i `next.config.ts`, så installerte PWA-er, `public/sw.js` og Play-skallet beholder URL-ene sine. |
 | `ios-splash-logo.png` | 512×512 | Transparent motiv, mørk splash. |
-| `native/android/store_icon.png` | 512×512 | Play-skallets butikkikon. |
+| `native/android/store_icon.png` | 512×512 | Play-skallets butikkikon. 32-bit PNG med (heldekkende) alfakanal, som Play Console ber om. |
 | `native/android/app/src/main/res/mipmap-*/ic_launcher.png` | 48–192 | Full-bleed. |
 | `native/android/app/src/main/res/mipmap-*/ic_maskable.png` | 82–328 | Flisen + motiv, som `maskable-512.png`. |
 | `native/android/app/src/main/res/drawable-*/splash.png` | 300–1200 | Full-bleed. |
