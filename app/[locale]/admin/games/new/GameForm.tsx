@@ -608,6 +608,16 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           />
         </div>
       ))}
+      {/* #2210: who the edit form was opened with, so the save can tell a
+          player the organiser removed from one who signed up meanwhile
+          (lib/games/rosterEdit.ts). The create flow has no roster to diff. */}
+      {mode.kind !== 'create' && (
+        <input
+          type="hidden"
+          name="roster_loaded_ids"
+          value={(initialValues?.players ?? []).map((p) => p.user_id).join(',')}
+        />
+      )}
 
       {/* Section 1: Basics. #909: synlighet + sideturnering bor i
           «Innstillinger»-panelet via AdvancedSettingsSection includeVisibility

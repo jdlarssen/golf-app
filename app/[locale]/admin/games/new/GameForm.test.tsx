@@ -1116,6 +1116,10 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     expect(player1Id?.value).toBe('u1');
     expect(player1Team?.value).toBe('2');
     expect(player1Flight?.value).toBe('2');
+    // #2210: the create flow has no roster to diff against.
+    expect(
+      container.querySelector('input[name="roster_loaded_ids"]'),
+    ).toBeNull();
   });
 
   it('matchplay: per-spiller-tee-seksjonen vises slik at admin kan sette M/D/J', () => {
@@ -1659,7 +1663,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
       pending: true,
     };
 
-    render(
+    const { container } = render(
       <GameForm
         courses={COURSES}
         players={[pendingPlayer]}
@@ -1686,5 +1690,13 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
     expect(saveBtn).toBeDisabled();
     expect(saveBtn).toHaveAttribute('aria-describedby', 'publish-missing');
     expect(document.getElementById('publish-missing')).toBeInTheDocument();
+    // #2210: the save learns who the form was opened with.
+    expect(
+      (
+        container.querySelector(
+          'input[name="roster_loaded_ids"]',
+        ) as HTMLInputElement | null
+      )?.value,
+    ).toBe('u-pending');
   });
 });
