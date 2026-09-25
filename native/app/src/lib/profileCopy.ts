@@ -103,6 +103,16 @@ export const PROFILE_TEXT = {
   syncLabRow: 'Sync-lab',
   syncLabSublabel: 'Kø, konflikter og testverktøy. Vises bare i staging.',
 
+  // --- App-egent: personvernerklæringen (#2229) ---------------------------
+  // Apple krever en lenke til personvernerklæringen inne i appen (5.1.1(i)).
+  // Webben har den i bunnteksten på forsiden; appen har ingen bunntekst, så
+  // den står her. Underteksten sier hvor du havner, fordi raden forlater appen,
+  // i samme aktive form som `WEB_LINK_TEXT.hint`. Butikkbyggets adresse er
+  // låst til tornygolf.no (`app.config.ts`).
+  sectionAbout: 'Om Tørny',
+  privacyRow: 'Personvernerklæring',
+  privacySublabel: 'Åpner tornygolf.no i nettleseren.',
+
   // --- App-egent: advarselen ved utlogging --------------------------------
   // Utlogging tømmer den lokale basen (#1877), og det er nettopp derfor denne
   // finnes: webben logger deg stille ut fordi den ikke har noe lokalt lager å
