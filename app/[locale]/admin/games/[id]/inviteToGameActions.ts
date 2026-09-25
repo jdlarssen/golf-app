@@ -8,6 +8,7 @@ import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { isRosterLocked } from '@/lib/games/status';
 import {
   inviteEmailToGameCore,
   normalizeInviteEmail,
@@ -53,7 +54,7 @@ export async function addExistingPlayerToGame(
 
   const game = await loadGameForInvite(supabase, gameId, detailPath);
 
-  if (game.status === 'active' || game.status === 'finished') {
+  if (isRosterLocked(game.status)) {
     redirect({ href: `${detailPath}?error=game_locked`, locale });
   }
 
