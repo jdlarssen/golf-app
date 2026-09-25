@@ -9,7 +9,7 @@ describe('mailWordmarkHtml', () => {
   // unsubscribe page call this helper, so their chrome locks only carry it along.
   it('points at the generated PNG on the prod origin, with alt text and fixed size', () => {
     expect(mailWordmarkHtml()).toMatchInlineSnapshot(
-      `"<img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display:block;width:88px;height:40px;border:0;outline:none;text-decoration:none;">"`,
+      `"<img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display:block;width:88px;height:40px;border:0;outline:none;text-decoration:none;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;color:#1B4332;">"`,
     );
   });
 
