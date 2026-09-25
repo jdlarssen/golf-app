@@ -142,8 +142,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   // Flukter med teksten inni kortene (16 pt inn), med en hårstrek under i
-  // stedet for en ramme: ca. 28 pt per linje, så ti uspilte hull tar omtrent
-  // like mye plass som to kort.
+  // stedet for en ramme. Én tekstlinje er ca. 28 pt; et langt navn bryter
+  // over to linjer i stedet for å kuttes, og selv da tar et uspilt hull under
+  // halvparten av plassen til et kort.
   pendingRow: {
     paddingVertical: 6,
     paddingHorizontal: 16,
