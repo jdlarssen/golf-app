@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { verifyUnsubToken } from '@/lib/productUpdates/unsubscribeToken';
 import { expectOne, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
+import { mailWordmarkHtml } from '@/lib/mail/wordmark';
 
 // Unauthenticated unsubscribe-endpoint (issue #202).
 //
@@ -111,7 +112,7 @@ function buildHtml(result: UnsubscribeResult): string {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
           <tr><td>
             <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
-              Tørny<span style="color:#C9A961;">.</span>
+              ${mailWordmarkHtml()}
             </h1>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:24px 0 16px;color:#1A1813;">
               ${title}
