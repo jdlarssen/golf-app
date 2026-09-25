@@ -3759,6 +3759,7 @@
         "log_failed": "Invitasjonen ble sendt, men loggføring feilet.",
         "mail_failed": "Invitasjonen ble lagret, men e-posten kom ikke fram. Prøv å sende på nytt.",
         "resend_failed": "Klarte ikke sende invitasjonen på nytt. Prøv igjen.",
+        "resend_game_locked": "Runden har allerede startet, så du kan ikke sende invitasjonen på nytt.",
         "rate_limited": "For mange invitasjoner på kort tid. Vent et minutt og prøv igjen.",
         "withdraw_failed": "Klarte ikke trekke tilbake invitasjonen. Prøv igjen.",
         "self_delete_forbidden": "Du kan ikke slette din egen konto.",

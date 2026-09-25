@@ -3759,6 +3759,7 @@
         "log_failed": "Invitation sent, but logging failed.",
         "mail_failed": "The invitation was saved, but the email didn't go through. Try resending it.",
         "resend_failed": "Could not resend the invitation. Please try again.",
+        "resend_game_locked": "The round has already started, so you can't resend the invitation.",
         "rate_limited": "Too many invitations in a short time. Wait a minute and try again.",
         "withdraw_failed": "Could not withdraw the invitation. Please try again.",
         "self_delete_forbidden": "You cannot delete your own account.",
