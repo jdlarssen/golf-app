@@ -13,7 +13,7 @@
 // handlingen sto tyngst, og den som ikke kan angres så ut som en fotnote. Her
 // er «Logg ut» en helt vanlig rad, og «Slett konto» står alene nederst i rødt
 // med luft over. Luften er ikke pynt — den er avstanden en tommel på vei mot
-// «Logg ut» trenger for ikke å treffe sletting.
+// raden over trenger for ikke å treffe sletting.
 //
 // **Rommet leser; skrivingen bor i sitt eget rom.** «Rediger profil» fører til
 // `EditProfile`, og lagringen derfra går gjennom `PUT /api/profile` — appen kan

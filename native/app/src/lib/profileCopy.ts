@@ -13,8 +13,9 @@
 // seksjonen (webben har ingen Sync-lab), advarselen om uleverte slag ved
 // utlogging (webben har ingen lokal base å rydde), raden og headeren for
 // redigering (webben har ett skjema på samme side, appen har et rom og en
-// skjerm) og nett-kodene i {@link describeProfileSaveFailure} (webbens skjema
-// kan ikke være offline).
+// skjerm), raden til personvernerklæringen (webben har lenken i bunnteksten,
+// appen har ingen bunntekst) og nett-kodene i
+// {@link describeProfileSaveFailure} (webbens skjema kan ikke være offline).
 //
 // **PROFILE_TEXT er FLAT med vilje.** Skjema-tekstene ligger under sitt eget
 // avsnitt i stedet for i et `form`-objekt: testen går gjennom
