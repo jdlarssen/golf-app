@@ -97,7 +97,7 @@ describe('consumeRegistrationRateLimit', () => {
     expect(result).toEqual({ ok: false, error: 'rate_limited' });
   });
 
-  it('passerer korrekte bucket-navn og default-limits til RPC', async () => {
+  it('passerer korrekte bucket-navn og klubbskala-standardene 20/150/300 til RPC (#2212)', async () => {
     rpcMock.mockResolvedValue({ data: true, error: null });
     const { consumeRegistrationRateLimit } = await import(
       './registrationRateLimit'
@@ -122,15 +122,15 @@ describe('consumeRegistrationRateLimit', () => {
     );
 
     expect(userCall?.[1]).toMatchObject({
-      p_max: 5,
+      p_max: 20,
       p_window_seconds: 24 * 60 * 60,
     });
     expect(ipCall?.[1]).toMatchObject({
-      p_max: 10,
+      p_max: 150,
       p_window_seconds: 24 * 60 * 60,
     });
     expect(gameCall?.[1]).toMatchObject({
-      p_max: 50,
+      p_max: 300,
       p_window_seconds: 24 * 60 * 60,
     });
   });

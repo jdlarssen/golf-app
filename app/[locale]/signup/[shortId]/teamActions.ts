@@ -262,8 +262,8 @@ export async function submitTeamRegistration(
 
   // Rate-limit FØR vi gjør tunge DB-inserts. Ett lag-submit teller som én
   // påmelding — vi rate-limiter ikke per slot (en kaptein som inviterer 3
-  // medspillere skal ikke bli straffet for å fylle laget). Per-spill-bucket
-  // (50/24t) er den naturlige grensen for et helt arrangement.
+  // medspillere skal ikke bli straffet for å fylle laget). Per-spill-bøtta i
+  // `registrationRateLimit.ts` er den naturlige grensen for et helt arrangement.
   const ip = await getClientIp();
   const rateLimit = await consumeRegistrationRateLimit({
     userId: captain.id,

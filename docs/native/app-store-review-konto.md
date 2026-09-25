@@ -49,7 +49,7 @@ som alt gjelder for den som kaller det endepunktet direkte:
 **På nettsida** står de fire opprinnelige sperrene: server-action-en
 sammenligner adressen mot `REVIEW_ACCOUNT_EMAIL` før den spør Supabase, samme
 feilmelding uansett årsak, samme rate-limit-buckets som vanlig innlogging (5
-forsøk per adresse og 10 per IP per kvarter), og sida finnes ikke uten
+forsøk per adresse og 30 per IP per kvarter), og sida finnes ikke uten
 env-varen.
 
 Passordet skal være **minst 24 tegn**, tilfeldig generert, og bo nøyaktig to
