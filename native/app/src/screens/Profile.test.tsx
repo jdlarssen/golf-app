@@ -141,7 +141,7 @@ describe('Profile', () => {
     expect(screen.getByTestId('profile-set-handicap')).toBeTruthy();
   });
 
-  it('viser hvem du er, logger ut, og har ingen utviklerflate i et butikk-bygg', async () => {
+  it('viser hvem du er, åpner personvernerklæringen, logger ut, og har ingen utviklerflate i et butikk-bygg', async () => {
     await renderScreen();
 
     expect(screen.getByTestId('profile-name')).toHaveTextContent(MY_NAME);
