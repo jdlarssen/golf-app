@@ -415,7 +415,9 @@ export async function verifyCode(formData: FormData) {
         .in('id', inviteIdsToConsume);
     }
 
-    if (gameScoped.length > 0) {
+    // The user lookup runs for ANY pending invitation, game-less ones
+    // included: they give friendship too (#2212).
+    if ((pendingInvites ?? []).length > 0) {
       const { data: userRow } = await admin
         .from('users')
         .select('id')
@@ -497,13 +499,17 @@ export async function verifyCode(formData: FormData) {
             }),
         );
 
-        // #481: e-postinvitert som blir med → auto-vennskap med inviteren, så
-        // vennegrafen vokser organisk gjennom invitasjoner (ikke bare manuelle
-        // forespørsler). Gjelder også team-scoped spill — vennskapet henger på
-        // invitasjonen, ikke på en game_players-rad. RPC-en er idempotent og
-        // gated på en akseptert invitasjon, så den er trygg å fyre per inviter.
-        // Best-effort: feiler stille, blokkerer aldri innloggingen.
-        const inviterIds = distinctInviterIds(gameScoped, userRow.id);
+        // #481, #2212: an invitee who joins becomes friends with whoever
+        // invited them, so the friend graph grows through invitations and not
+        // only through manual requests. This covers every invitation: game
+        // invitations (started rounds and team games included, since the
+        // friendship hangs on the invitation, not on a game_players row) and
+        // the game-less ones from «Legg til venn på e-post» and the admin
+        // door. The RPC is idempotent and gated on an accepted invitation, so
+        // it is safe to fire per inviter; for a team invitation that is still
+        // pending it answers no_invitation until the attach flow accepts it.
+        // Best-effort: fails quietly, never blocks the login.
+        const inviterIds = distinctInviterIds(pendingInvites ?? [], userRow.id);
         await Promise.allSettled(
           inviterIds.map(async (inviterId) => {
             const { error } = await supabase.rpc('befriend_inviter', {

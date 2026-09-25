@@ -811,7 +811,7 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
     expect(lastRedirect()).toBe('/signup/abc12345');
   });
 
-  it('kun game-løse invitasjoner: ingen insert / notify, login lykkes uansett', async () => {
+  it('kun game-løse invitasjoner: ingen insert / notify, men vennskap med inviteren (#2212), login lykkes uansett', async () => {
     verifyOtpMock.mockResolvedValue({ error: null });
     pendingInvitations = [
       {
@@ -832,6 +832,11 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
 
     expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    // #2212: «Legg til venn på e-post» lager en spill-løs invitasjon — den skal
+    // gi vennskap akkurat som en spill-invitasjon (#481).
+    expect(rpcMock).toHaveBeenCalledWith('befriend_inviter', {
+      p_inviter: 'admin-x',
+    });
     expect(lastRedirect()).toBe('/');
   });
 

@@ -86,21 +86,23 @@ export function suggestionIds(
 }
 
 /**
- * #481: Distinkte inviter-ider å auto-vennskap mot fra et sett aksepterte
- * invitasjoner. Beholder kun spill-scopede invitasjoner, dropper invitéen selv,
- * og deduper — flere invitasjoner fra samme person gir ett vennskap. Ren
- * funksjon så `verifyCode`-wiringen kan testes uten DB.
+ * #481, #2212: Distinct inviter ids to auto-befriend from a set of accepted
+ * invitations. Every invitation counts, game-less ones included: «Legg til
+ * venn på e-post» and the admin door create invitations without a game, and
+ * they give friendship just like a game invitation. Drops the invitee
+ * themselves and dedupes, so several invitations from one person give one
+ * friendship. Pure function so the `verifyCode` wiring can be tested without
+ * a DB.
  *
- * `invitations.invited_by` er NOT NULL (0001), så det finnes ingen «ukjent
- * inviter»-tilfelle å filtrere bort — kun `game_id` er nullbar (#1767).
+ * `invitations.invited_by` is NOT NULL (0001), so there is no «unknown
+ * inviter» case to filter out (#1767).
  */
 export function distinctInviterIds(
-  invites: ReadonlyArray<{ game_id: string | null; invited_by: string }>,
+  invites: ReadonlyArray<{ invited_by: string }>,
   selfUserId: string,
 ): string[] {
   const ids = new Set<string>();
   for (const inv of invites) {
-    if (inv.game_id == null) continue;
     if (inv.invited_by === selfUserId) continue;
     ids.add(inv.invited_by);
   }
