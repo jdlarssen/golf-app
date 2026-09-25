@@ -36,7 +36,11 @@ røres ikke. Uten variant er resultatet bit-identisk med `app.json` — det er l
 **Prod-verdiene ligger aldri i en `.env`-fil under `native/app/`.** `@expo/env` laster
 `.env.production.local` for ethvert Release-bygg — også eierens dev-bygg mot staging.
 Skriptet eksporterer verdiene i skall-miljøet for akkurat den kjøringen (skall-miljøet
-vinner over `.env`-filene), og nekter å kjøre hvis en `.env.production*` finnes.
+vinner over `.env`-filene), og nekter å kjøre hvis en `.env.production*` finnes. Det setter
+også `EXPO_NO_DOTENV=1`, så ingen `.env`-fil i `native/app/` leses under butikkbygget, heller
+ikke dev-verdiene i `.env.local` (#2208). Og configen stopper et butikkbygg der en dev-nøkkel
+(`DEV_ONLY_PUBLIC_ENV_KEYS` i `app.config.ts`) er satt; meldingen navngir nøkkelen, aldri
+verdien.
 
 ## Forutsetninger (én gang per Mac)
 
@@ -70,9 +74,10 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
    endringer i sporede filer (se «Merke per bygg»).
 2. **Prod-verdiene** fra `.env.local`: verten må være prod-verten (hel vert, ikke delstreng);
    anon-nøkkelen må finnes. Skriver vert og nøkkel-lengde til skjermen — aldri nøkkelen.
-3. **Eksporterer** `APP_VARIANT=store` + de tre `EXPO_PUBLIC_*` i skall-miljøet, og løser
-   opp configen med `npx expo config --type prebuild` — der kaster `app.config.ts` hvis noe
-   er galt. Navn, versjon, build og bundle-id skrives ut.
+3. **Eksporterer** `APP_VARIANT=store` + de tre `EXPO_PUBLIC_*` i skall-miljøet, setter
+   `EXPO_NO_DOTENV=1` (ingen `.env`-fil i `native/app/` leses) og fjerner `CI` (`unset CI`),
+   og løser opp configen med `npx expo config --type prebuild` — der kaster `app.config.ts`
+   hvis noe er galt. Navn, versjon, build og bundle-id skrives ut.
 4. **Duplikat-vakt:** finnes `~/.torny-native/dist/TornyNative-<versjon>-<build>.xcarchive`
    alt, stopper skriptet før kompilering og spør hva du vil: laste opp det arkivet
    (`--upload-only`) eller kompilere på nytt (bump først — App Store Connect avviser samme
@@ -82,7 +87,8 @@ Skriptet stopper ved første feil, og gjør i rekkefølge:
    dev-`ios/` gjenbrukes aldri. Så `pod install` med `LANG=en_US.UTF-8`.
 6. **`xcodebuild archive`** (Release, `generic/platform=iOS`, `DEVELOPMENT_TEAM=8C8WCW67J9`).
    Xcodes «Bundle React Native code and images»-steg kjører Metro med `--reset-cache`, så
-   det finnes ingen gammel bundle å arve. Full logg i `…archive.log`; ved feil vises de
+   det finnes ingen gammel bundle å arve. Expo slår av den tømmingen når `CI` er satt, og
+   derfor fjerner skriptet `CI` i steg 3. Full logg i `…archive.log`; ved feil vises de
    siste 60 linjene. Rett før arkiveringen sjekkes sporede filer på nytt, og etter
    `ARCHIVE SUCCEEDED` skrives byggecommiten til `…commit`.
 7. **Symbolfiler** (#1974): `store-build-dsyms.sh` legger dSYM-ene for `hermesvm`, `React` og
@@ -117,7 +123,8 @@ native/app/scripts/store-build-ios.sh --upload-only ~/.torny-native/dist/TornyNa
 ```
 
 Kommandoen legger inn symbolfilene som mangler, kjører beviset på nytt (nøkkel-sjekken
-inkludert når repo-rotas `.env.local` finnes), eksporterer og laster opp. Den trenger ikke Node
+inkludert når repo-rotas `.env.local` finnes, og sjekken av verdiene i `native/app/.env*`),
+eksporterer og laster opp. Den trenger ikke Node
 eller CocoaPods, men symbolsteget leser versjonene fra `native/app/node_modules`. Merket settes
 her, fra `…commit`-fila arkivet fikk da det ble laget — ikke fra HEAD nå.
 
@@ -141,6 +148,7 @@ stopper opplastingen.
 | | **FORBY** `://snwmueecmfqqdurxedxv` (staging-adressen fra miljøet) og `localhost:3111`. Ett *bart* treff på staging-ref-en er forventet — `src/lib/stagingGate.ts` har verten som literal (gaten for utvikler-raden); to eller flere bare treff feiler også. |
 | | **FORBY** hele adresser `127.0.0.1`, `192.168.x.x`, `10.0.x.x` (fire oktetter med ikke-siffer på begge sider), IPv6-literaler (`://[…]`) og `.local:` som ren tekst. Hermes pakker strengtabellen uten skilletegn («draft-2020-1» + «27.0.0.15…» inneholder 127.0.0.1 uten å være en IP), derfor kreves adresseformen. |
 | | Anon-nøkkelen: står `EXPO_PUBLIC_SUPABASE_ANON_KEY` i miljøet (byggeskriptet setter den; `--upload-only` leser den fra `.env.local`), må nøyaktig den verdien finnes i bundelen. Bare lengden skrives ut, aldri nøkkelen. |
+| | **FORBY** verdier fra appens egne `.env`-filer (#2208): hver `EXPO_PUBLIC_*`-verdi i `native/app/.env*` (eller i mappa `TORNY_APP_ENV_DIR` peker på) må ha 0 treff i bundelen. Verdier beviset krever (prod-adressen, web-adressen, anon-nøkkelen fra miljøet) og verdier under 12 tegn hoppes over med en linje om det. Bare fil, nøkkel, lengde og antall treff skrives ut, aldri verdien. Uten `.env`-filer blir det én linje om det, ingen FAIL. |
 | | `http://` og `localhost`: hvert treff må stå på lista over kjente bibliotek-strenger i skriptet (zod sin JSON-Schema-URL, Metros `localhost:8081/assets/`, auth-js sin `localhost:9999`, phoenix sin bare `http://`). Alt annet → FAIL med kontekst. Phoenix-literalen har ingen vert selv, så det som følger i den pakkede tabellen er nabo-strengen; den godtas når halen ikke er en vert (et ord uten punktum, kolon eller skråstrek, eller en annen URL-literal). |
 | `Info.plist` | `CFBundleIdentifier = no.tornygolf.app`, versjon og build satt, `ITSAppUsesNonExemptEncryption = false`. |
 | Entitlements (`codesign -d --entitlements`) | INGEN `com.apple.developer.associated-domains`, INGEN `aps-environment`. |
@@ -206,7 +214,8 @@ cd native/app && npx expo prebuild --platform ios --no-install
 ```
 
 (uten `APP_VARIANT` i miljøet). `native/app/.env.local` med staging-verdiene er urørt av
-butikkbygget — skriptet skriver aldri til den.
+butikkbygget: skriptet skriver aldri til den, og butikkbygget leser den heller ikke. Bare
+beviset leser den, for å sjekke at ingen verdi derfra er med i bundelen.
 
 ## TestFlight → App Review → slipp
 
@@ -249,6 +258,11 @@ Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app
   ellers stopper duplikat-vakten deg), sjekk at ingen `.env.production*` finnes i
   `native/app/`, og kjør skriptet igjen fra et rent skall. Samme buildnummer kan brukes — det
   ble aldri lastet opp.
+- Beviset feiler på **en lokal `.env`-verdi er bakt inn** → en verdi fra `native/app/.env*`
+  kom med i bundelen. Arkivet skal aldri lastes opp. Slett det
+  (`rm -rf ~/.torny-native/dist/TornyNative-<versjon>-<build>.xcarchive`) og kjør skriptet
+  igjen fra et rent skall uten eksportert `EXPO_PUBLIC_*` eller `CI`. Samme buildnummer kan
+  brukes, for det ble aldri lastet opp.
 - Beviset feiler på **UKJENT `http://…`** → se «Bevis-steget».
 - **«⚠ … fant ingen dSYM med UUID …»** i symbolsteget → `node_modules` er ikke det arkivet ble
   bygget fra, typisk `--upload-only` på et eldre arkiv etter en React Native-oppgradering.
