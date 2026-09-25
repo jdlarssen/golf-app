@@ -11,6 +11,7 @@ import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { isRosterLocked } from '@/lib/games/status';
 
 // E-post-invitasjons-kjernen (#1919): ett hjem for «arrangøren inviterer en
 // e-post inn i en runde».
@@ -131,7 +132,7 @@ export async function inviteEmailToGameCore(params: {
   const game = await loadGameForInvite(client, gameId);
   if (!game) return { ok: false, reason: 'not_found' };
 
-  if (game.status === 'active' || game.status === 'finished') {
+  if (isRosterLocked(game.status)) {
     return { ok: false, reason: 'game_locked' };
   }
 

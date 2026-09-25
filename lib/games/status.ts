@@ -22,3 +22,14 @@ export const STATUS_LABELS: Record<GameStatus, string> = {
   active: 'Pågående',
   finished: 'Avsluttet',
 };
+
+/**
+ * Is the roster closed to invitations? True once the round has started
+ * (`active`) or ended (`finished`). Invitations — and resending one — only
+ * apply before start (#182, #2212): the invite doors refuse with
+ * `game_locked`, and a pending invitation redeemed at login after the start
+ * gives no roster spot.
+ */
+export function isRosterLocked(status: string): boolean {
+  return status === 'active' || status === 'finished';
+}
