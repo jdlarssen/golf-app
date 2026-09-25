@@ -89,8 +89,11 @@ export function teamLabel(
 // Matchplay
 // ---------------------------------------------------------------------------
 
-/** Utfallet av ett spilt hull, sett fra side 1. */
-export type StripOutcome = 'W' | 'L' | 'T';
+/**
+ * Utfallet av ett hull, sett fra side 1. `'—'` er et hull som ikke er spilt
+ * ennå — samme tegn som webbens hull-tabell bruker for uspilte hull.
+ */
+export type StripOutcome = 'W' | 'L' | 'T' | '—';
 
 export interface StripCell {
   holeNumber: number;
@@ -98,23 +101,27 @@ export interface StripCell {
 }
 
 /**
- * Hull-stripen: kun SPILTE hull. Et uspilt hull har ingen W/L/T å vise, og en
- * stripe full av tomme ruter forteller ingenting om matchen.
+ * Hull-stripen: én celle per hull motoren gir, i hull-rekkefølge — også de
+ * som ikke er spilt ennå (#1990). Webbens stripe viser hele banen med tomme
+ * ruter for det som gjenstår, og det er det som gjør at man ser hvor langt
+ * matchen har kommet. En stripe med bare de spilte hullene så ut som en hel
+ * runde på ni eller åtte hull.
  */
 export function matchStrip(
   holes: readonly { holeNumber: number; result: MatchplayHoleResult }[],
 ): StripCell[] {
-  const cells: StripCell[] = [];
-  for (const hole of holes) {
-    if (hole.result === 'unplayed') continue;
-    cells.push({
-      holeNumber: hole.holeNumber,
-      outcome:
-        hole.result === 'side1_wins' ? 'W' : hole.result === 'side2_wins' ? 'L' : 'T',
-    });
-  }
-  return cells;
+  return holes.map((hole) => ({
+    holeNumber: hole.holeNumber,
+    outcome: STRIP_OUTCOME[hole.result],
+  }));
 }
+
+const STRIP_OUTCOME: Record<MatchplayHoleResult, StripOutcome> = {
+  side1_wins: 'W',
+  side2_wins: 'L',
+  tied: 'T',
+  unplayed: '—',
+};
 
 export interface MatchStanding {
   /** Kompakt stilling: «2up» eller «AS» — golf-konvensjonen fra motoren. */
@@ -274,9 +281,8 @@ const WOLF_OUTCOME_LABELS: Record<WolfOutcomeKey, string> = {
  * Wolf-hullene som har noe å fortelle: wolfen har valgt, eller hullet er
  * avgjort.
  *
- * Samme regel som `matchStrip` følger for duell-stripen. Motoren gir en rad
- * per hull på banen, og atten kort der de fleste sier «Ikke valgt ennå ·
- * Venter» drukner de hullene som faktisk har skjedd noe på.
+ * Motoren gir en rad per hull på banen, og atten kort der de fleste sier
+ * «Ikke valgt ennå · Venter» drukner de hullene som faktisk har skjedd noe på.
  */
 export function wolfHolesWithStory<
   T extends { choice: WolfChoice | null; outcome: WolfHoleOutcome },
