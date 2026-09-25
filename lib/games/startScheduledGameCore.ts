@@ -25,6 +25,7 @@ import { needsFlightAssignment } from './flightScope';
 import { expectedTeamSize, needsTeamAssignment } from './teamScope';
 import { assignRotationSlots, rotationSlotRange } from './assignRotationSlots';
 import { startPlayerCountRange, type StartCountMode } from './startPlayerCount';
+import { effectiveHcpAllowancePct } from './hcpAllowance';
 
 /**
  * Import-pure core of the scheduled→active start (#1855). Every guard, every
@@ -413,7 +414,12 @@ export async function startScheduledGameCore(
       withdrawnAt: row.withdrawn_at,
       rawCourseHandicap: raw,
     });
-    const allowed = applyAllowance(raw, game.hcp_allowance_pct);
+    // #2210: formats with their own percentage in mode_config freeze the full
+    // course handicap, also when the row was stored with a stale value.
+    const allowed = applyAllowance(
+      raw,
+      effectiveHcpAllowancePct(game.game_mode, game.hcp_allowance_pct),
+    );
     try {
       expectOne(
         await supabase

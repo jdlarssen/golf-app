@@ -1607,3 +1607,53 @@ describe('startScheduledGame — decided_by_withdrawal (#1814)', () => {
     expect(result).toEqual({ ok: false, reason: 'incomplete_sides' });
   });
 });
+
+// ─── #2210: formats with their own percentage freeze the full CH ─────────────
+
+describe('startScheduledGame — handicapprosenten følger formatet (#2210)', () => {
+  it('fourball lagret med 85 fryser fullt banehandicap', async () => {
+    // REAL_TEE, HI 10, mens → raw CH 14. 85 % would freeze 12, and fourball's
+    // own mode_config percentage would then be deducted on top of that.
+    const roster = [
+      teamPlayer('u1', 1),
+      teamPlayer('u2', 1),
+      teamPlayer('u3', 2),
+      teamPlayer('u4', 2),
+    ];
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          ...makeTeamGameRow('fourball_matchplay', 2),
+          hcp_allowance_pct: 85,
+          mode_config: {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+            allowance_pct: 90,
+          },
+          tee_boxes: REAL_TEE,
+        },
+        error: null,
+      },
+      { data: roster, error: null },
+      ...passThroughQueue(roster),
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+
+    expect(result).toEqual({ ok: true, started: false });
+    const frozen = (
+      supabase as unknown as {
+        __fromCalls: Array<{ table: string; method: string; args: unknown[] }>;
+      }
+    ).__fromCalls
+      .filter(
+        (c) =>
+          c.table === 'game_players' &&
+          c.method === 'update' &&
+          'course_handicap' in (c.args[0] as Record<string, unknown>),
+      )
+      .map((c) => (c.args[0] as { course_handicap: number }).course_handicap);
+    expect(frozen).toEqual([14, 14, 14, 14]);
+  });
+});

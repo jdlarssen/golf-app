@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
@@ -1683,7 +1684,7 @@ export function useGameFormState({
     (playersStepOptional || playersValidForMode) &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || isTeamMatchplay || allowanceValid) &&
+      : !usesGameHcpAllowance(gameMode) || allowanceValid) &&
     hasTeeOff &&
     !teeOffInPast &&
     playersWithUnratedCategory.length === 0 &&
@@ -1897,11 +1898,11 @@ export function useGameFormState({
     // isSolo
     pushMissing('players', tMissing('soloMin'));
   }
-  // hcp_allowance_pct gjelder ikke for Texas, Ambrose, Shamble, Wolf, Nassau,
-  // Skins, Bingo Bango Bongo, Nines, Round Robin eller Acey Deucey — disse
-  // modusene har sin egen scoring-konfig i mode_config. Hopper over allowance-
-  // sjekken så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isBingoBangoBongo && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !isTeamMatchplay && !allowanceValid)
+  // hcp_allowance_pct gjelder bare formatene som bruker den generelle
+  // prosenten (#2210, `usesGameHcpAllowance`). De andre har sin egen
+  // scoring-konfig i mode_config, og feltet er skjult for dem — så admin ikke
+  // får mismatch mellom UI-skjult-felt og publish-feilmelding.
+  if (usesGameHcpAllowance(gameMode) && !allowanceValid)
     pushMissing('allowance', tMissing('invalidAllowance'));
 
   return {

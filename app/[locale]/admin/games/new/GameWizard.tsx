@@ -63,6 +63,7 @@ import type { Intent } from '@/lib/wizard/intent';
 import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
@@ -1394,7 +1395,14 @@ function FormDataInputs({
       />
 
       <input type="hidden" name="name" value={name} />
-      <input type="hidden" name="hcp_allowance_pct" value={String(hcpAllowance)} />
+      {/* #2210: formats with their own percentage in mode_config get 100 —
+          a value left over from an earlier format must never be applied on
+          top of theirs. The server normalises too (gamePayload.ts). */}
+      <input
+        type="hidden"
+        name="hcp_allowance_pct"
+        value={usesGameHcpAllowance(gameMode) ? String(hcpAllowance) : '100'}
+      />
       {requirePeerApproval && (
         <input type="hidden" name="require_peer_approval" value="on" />
       )}

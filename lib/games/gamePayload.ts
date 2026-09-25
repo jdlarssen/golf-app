@@ -12,6 +12,7 @@
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
 import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
 import {
   gameModeSupportsTeams,
@@ -2231,17 +2232,23 @@ export function buildGameInsertPayload(
   if (mode === 'publish') {
     if (!base.course_id) return errorPayload('course_required');
     if (!base.tee_box_id) return errorPayload('tee_required');
-    if (
-      !Number.isInteger(base.hcp_allowance_pct) ||
-      base.hcp_allowance_pct < 0 ||
-      base.hcp_allowance_pct > 100
-    ) {
-      return errorPayload('bad_allowance');
-    }
   }
 
   const gameMode = parseGameMode(formData);
   if (gameMode === null) return errorPayload('mode_required');
+
+  // #2210: the 0–100 check applies only to formats that use the general
+  // percentage. For the others the field is hidden, and a stale value must
+  // never block a publish — it is replaced by 100 below.
+  if (
+    mode === 'publish' &&
+    usesGameHcpAllowance(gameMode) &&
+    (!Number.isInteger(base.hcp_allowance_pct) ||
+      base.hcp_allowance_pct < 0 ||
+      base.hcp_allowance_pct > 100)
+  ) {
+    return errorPayload('bad_allowance');
+  }
 
   // Self-påmelding (#199): registration_mode + registration_type. Defaultes
   // i parser-en til ('invite_only', 'solo') når feltene mangler så dagens
@@ -2312,6 +2319,9 @@ export function buildGameInsertPayload(
 
   return {
     ...base,
+    // #2210: formats with their own percentage in mode_config store 100, the
+    // same as the cup generator does.
+    hcp_allowance_pct: effectiveHcpAllowancePct(gameMode, base.hcp_allowance_pct),
     players,
     game_mode: gameMode,
     mode_config: modeResult.mode_config,
