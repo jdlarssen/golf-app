@@ -437,7 +437,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const settingsSummary = t(state.sideEnabled ? 'panelSideOn' : 'panelSideOff');
 
   return (
-    <form className="space-y-6">
+    <form className="space-y-6" data-testid="game-form">
       {/* Modus + lagstørrelse — hidden inputs slik at server-action mottar
           eksakt det admin valgte i tile-en. `team_size` er teknisk redundant
           (modus + ENABLED_COMBOS gir det back-end), men sender den med
@@ -966,6 +966,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             <Button
               type="submit"
               formAction={mode.updateAction.bind(null, mode.gameId)}
+              data-testid="save-changes"
               className="w-full"
               disabled={!canPublish}
               aria-describedby={missingHint ? 'publish-missing' : undefined}
