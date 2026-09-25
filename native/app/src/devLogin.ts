@@ -7,8 +7,11 @@
 //
 // **Gaten er tredobbel, og hver del alene stopper prod:**
 //   (a) `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` mangler eller er tom → ingen config.
-//       Passordet finnes bare i eierens gitignorerte `native/app/.env.local`;
-//       butikk-bygget (`store-build-ios.sh`) setter det aldri.
+//       Passordet finnes bare i eierens gitignorerte `native/app/.env.local`.
+//       Tre sperrer holder det ute av butikkbygget (#2208): skriptet
+//       (`store-build-ios.sh`) leser ingen `.env`-fil (`EXPO_NO_DOTENV=1`),
+//       `app.config.ts` stopper et butikkbygg der det er satt, og beviset
+//       (`store-build-proof.sh`) feiler hvis verdien likevel er i bunten.
 //   (b) Supabase-verten er ikke staging → ingen config. Samme regel som
 //       utviklerraden i profil-rommet (`lib/stagingGate.ts`), ikke en kopi.
 //   (c) Prod har ingen `dev-login`-bucket → lista blir tom selv om (a) og (b)
@@ -16,7 +19,7 @@
 // `__DEV__` duger ikke: eierens telefonbygg er Release.
 //
 // **Env leses BOKSTAVELIG.** Expo inliner `EXPO_PUBLIC_*` bare ved
-// `process.env.EXPO_PUBLIC_NAVN`-tilgang — aldri `process.env[navn]` eller
+// `process.env.EXPO_PUBLIC_<NAVN>`-tilgang — aldri `process.env[navn]` eller
 // destrukturering. Derfor står begge navnene skrevet ut i `readDevLoginEnv`.
 //
 // **Ingen egen tømming av den lokale basen.** Kontrakten ba om `wipeLocalData`

@@ -22,7 +22,11 @@
 // **Prod-verdiene kommer fra skall-miljøet, aldri fra en `.env`-fil.**
 // `@expo/env` laster `.env.production.local` for ETHVERT Release-bygg — også
 // eierens dev-bygg mot staging. Byggeskriptet (`scripts/store-build-ios.sh`)
-// eksporterer verdiene i skallet, som vinner over `.env`-filene.
+// eksporterer verdiene i skallet og slår av Expos `.env`-lesing
+// (`EXPO_NO_DOTENV=1`).
+// Dev-nøklene i `DEV_ONLY_PUBLIC_ENV_KEYS` stopper et butikkbygg når de har
+// innhold (#2208). Lista er eksplisitt og ikke «alt utenom butikkverdiene»,
+// fordi Expo CLI selv setter `EXPO_PUBLIC_PROJECT_ROOT` under bundlingen.
 //
 // **Fila er med vilje selvstendig.** `@expo/config` laster den gjennom Nodes
 // egen TypeScript-stripping (eller `typescript.transpileModule` som reserve),
@@ -54,6 +58,20 @@ export const STORE_IOS_BUILD_NUMBER = '3';
 
 /** Android-motstykket. Settes nå, brukes først av Android-oppfølgeren. */
 export const STORE_ANDROID_VERSION_CODE = 3;
+
+/**
+ * De tre `EXPO_PUBLIC_*`-verdiene butikkbygget skal bake inn (#2208). Hver
+ * nøkkel appen leser, står her eller i `DEV_ONLY_PUBLIC_ENV_KEYS`; testen
+ * skanner `src/` og holder listene i takt med koden.
+ */
+export const STORE_PUBLIC_ENV_KEYS = [
+  'EXPO_PUBLIC_SUPABASE_URL',
+  'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+  'EXPO_PUBLIC_WEB_BASE_URL',
+] as const;
+
+/** Nøkler som bare hører hjemme i dev-bygget. Et butikkbygg med innhold i en av dem stopper. */
+export const DEV_ONLY_PUBLIC_ENV_KEYS = ['EXPO_PUBLIC_DEV_LOGIN_PASSWORD'] as const;
 
 export type AppVariant = 'dev' | 'store';
 
@@ -117,6 +135,14 @@ function storeProblems(env: VariantEnv): string[] {
     problems.push(
       `EXPO_PUBLIC_WEB_BASE_URL må være nøyaktig ${STORE_WEB_BASE_URL} (fikk «${webBaseUrl ?? 'ingenting'}»).`
     );
+  }
+
+  // Dev-nøklene (#2208). Bare navnet i meldingen, aldri verdien. Tom verdi
+  // godtas: da finnes det ingenting å bake inn.
+  for (const key of DEV_ONLY_PUBLIC_ENV_KEYS) {
+    if (env[key]?.trim()) {
+      problems.push(`${key} er satt, men den hører bare hjemme i dev-bygget.`);
+    }
   }
 
   return problems;

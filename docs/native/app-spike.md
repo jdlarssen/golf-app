@@ -761,7 +761,10 @@ logger inn med `signInWithPassword` og ett felles testpassord.
 
 **Gaten** (`native/app/src/devLogin.ts`) — hver del alene holder prod ute:
 
-1. `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` er satt i bygget. Butikk-bygget setter den aldri.
+1. `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` er satt i bygget. Tre sperrer holder den ute av
+   butikkbygget (#2208): `store-build-ios.sh` leser ingen `.env`-fil (`EXPO_NO_DOTENV=1`),
+   `app.config.ts` stopper et butikkbygg der den er satt, og beviset
+   (`store-build-proof.sh`) feiler hvis verdien likevel er i bunten.
 2. `EXPO_PUBLIC_SUPABASE_URL` er staging-verten (samme regel som `native/app/src/lib/stagingGate.ts`).
 3. Prod har ingen `dev-login`-bucket, så lista blir tom der uansett.
 
@@ -785,7 +788,7 @@ staging-URL-en.
 
 **Passordet** bor to steder, begge gitignorert: `DEV_LOGIN_PASSWORD` i
 `.env.staging.local` og `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` i `native/app/.env.local`.
-Lag et nytt med `openssl rand -base64 30`. Etter en rotasjon: `sync`, og bygg appen på
+Butikkbygget leser aldri `native/app/.env.local` (`EXPO_NO_DOTENV=1`, #2208). Lag et nytt med `openssl rand -base64 30`. Etter en rotasjon: `sync`, og bygg appen på
 nytt med tom Metro-cache (verdien bakes inn i bundelen, og Metro gjenbruker ellers den
 cachede transformen med den gamle verdien — målt i #1923: `expo export` uten `--clear`
 ga null treff på et nytt passord, med `--clear` ett).
