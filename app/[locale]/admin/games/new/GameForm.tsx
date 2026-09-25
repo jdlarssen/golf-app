@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type {
   RegistrationMode,
@@ -761,10 +762,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             har ingen sentral hidden input for hcp_allowance_pct — toggle-en
             emitter sin egen (ingen hideHiddenInput). State persisterer i
             useGameFormState via controlled-modus. */}
-        {(gameMode === 'best_ball' ||
-          isStablefordFamily(gameMode) ||
-          gameMode === 'singles_matchplay' ||
-          gameMode === 'solo_strokeplay') && (
+        {usesGameHcpAllowance(gameMode) && (
           <AllowanceField
             fieldName="hcp_allowance_pct"
             defaultPct={100}

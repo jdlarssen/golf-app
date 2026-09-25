@@ -28,7 +28,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { RegistrationSection } from './RegistrationSection';
-import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import type { GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import type { TeamSize } from '../TeamSizeSelector';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { TeamHandicapField } from './TeamHandicapField';
@@ -463,10 +464,7 @@ export function ReadyStep({
                 hideHiddenInput
               />
             )}
-            {(gameMode === 'best_ball' ||
-              isStablefordFamily(gameMode) ||
-              gameMode === 'singles_matchplay' ||
-              gameMode === 'solo_strokeplay') && (
+            {usesGameHcpAllowance(gameMode) && (
               <AllowanceField
                 fieldName="hcp_allowance_pct"
                 defaultPct={100}

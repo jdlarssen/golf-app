@@ -4541,3 +4541,68 @@ describe('buildGameInsertPayload — spillere uten lag (#2210)', () => {
     });
   });
 });
+
+// #2210: the general handicap percentage is hidden for formats that carry
+// their own in mode_config, but the wizard still sent the last value (85 from
+// best ball, 0 from «Brutto»). It was stored and deducted on top at start.
+describe('buildGameInsertPayload — handicapprosenten følger formatet (#2210)', () => {
+  function withPct(
+    game_mode: string,
+    pct: string,
+    extra: Record<string, string> = {},
+  ): FormData {
+    return fd({
+      name: 'Prosent',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      game_mode,
+      hcp_allowance_pct: pct,
+      ...extra,
+    });
+  }
+
+  it.each([
+    ['fourball_matchplay', '85'],
+    ['fourball_matchplay', '0'],
+    ['skins', '85'],
+    ['skins', '0'],
+    ['texas_scramble', '85'],
+    ['texas_scramble', '0'],
+  ])('%s med %s lagres som 100', (mode, pct) => {
+    const result = buildGameInsertPayload(
+      withPct(mode, pct, {
+        texas_team_size: '4',
+        texas_team_handicap_pct: '10',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.hcp_allowance_pct).toBe(100);
+  });
+
+  it.each(['stableford', 'best_ball', 'singles_matchplay', 'solo_strokeplay'])(
+    '%s beholder 85',
+    (mode) => {
+      const result = buildGameInsertPayload(withPct(mode, '85'), 'draft');
+      expect(result.errorCode).toBeUndefined();
+      expect(result.hcp_allowance_pct).toBe(85);
+    },
+  );
+
+  it('skins med 150 ved publisering gir 100, ikke bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      withPct('skins', '150', { registration_mode: 'open' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.hcp_allowance_pct).toBe(100);
+  });
+
+  it('stableford med 150 ved publisering gir fortsatt bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      withPct('stableford', '150', { registration_mode: 'open' }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+});

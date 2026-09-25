@@ -64,6 +64,7 @@ import {
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isStartCountMode } from '@/lib/games/startPlayerCount';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -738,7 +739,14 @@ async function PlayersSections({
         <Row label={tRows('gameMode')} value={modeLabel} />
         <Row
           label={tRows('hcpAllowance')}
-          value={`${game.hcp_allowance_pct} %`}
+          value={`${
+            // #2210: before start, show the percentage the start will freeze
+            // with. Active and finished games were frozen with the stored
+            // value (games started before #2210 too), so they show that.
+            game.status === 'draft' || game.status === 'scheduled'
+              ? effectiveHcpAllowancePct(game.game_mode, game.hcp_allowance_pct)
+              : game.hcp_allowance_pct
+          } %`}
         />
         <Row
           label={tRows('peerApproval')}
