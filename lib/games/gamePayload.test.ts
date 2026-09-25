@@ -4461,3 +4461,83 @@ describe('buildGameInsertPayload — spillertak på 40 (#2148)', () => {
     });
   });
 });
+
+// #2210: players who signed up to a team game (or were picked in the wizard)
+// without a team yet ride along as `unassigned_player_id`. The server keeps
+// them on the roster with null team/flight instead of dropping them silently.
+describe('buildGameInsertPayload — spillere uten lag (#2210)', () => {
+  function bestBallWithTeamOne(overrides: Record<string, string> = {}): FormData {
+    return fd({
+      name: 'Åpen best ball',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      game_mode: 'best_ball',
+      player_0_id: 'p1',
+      player_0_team: '1',
+      player_0_flight: '1',
+      player_1_id: 'p2',
+      player_1_team: '1',
+      player_1_flight: '1',
+      ...overrides,
+    });
+  }
+
+  function withUnassigned(data: FormData, ids: string[]): FormData {
+    for (const id of ids) data.append('unassigned_player_id', id);
+    return data;
+  }
+
+  it('åpen påmelding: uten lag havner i players med null/null og teller ikke i teams_count', () => {
+    const result = buildGameInsertPayload(
+      withUnassigned(bestBallWithTeamOne({ registration_mode: 'open' }), [
+        'p3',
+        '',
+        'p4',
+        'p3',
+      ]),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([
+      { user_id: 'p1', team_number: 1, flight_number: 1 },
+      { user_id: 'p2', team_number: 1, flight_number: 1 },
+      { user_id: 'p3', team_number: null, flight_number: null },
+      { user_id: 'p4', team_number: null, flight_number: null },
+    ]);
+    expect(result.mode_config).toEqual({
+      kind: 'best_ball',
+      team_size: 2,
+      teams_count: 1,
+    });
+  });
+
+  it('samme id i en lag-slot og som uten lag gir duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      withUnassigned(bestBallWithTeamOne({ registration_mode: 'open' }), ['p2']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('publisering med bare invitasjon og minst én uten lag gir bad_team', () => {
+    const result = buildGameInsertPayload(
+      withUnassigned(bestBallWithTeamOne(), ['p3']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('utkast med bare invitasjon tar dem med', () => {
+    const result = buildGameInsertPayload(
+      withUnassigned(bestBallWithTeamOne(), ['p3']),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players.map((p) => p.user_id)).toEqual(['p1', 'p2', 'p3']);
+    expect(result.players[2]).toEqual({
+      user_id: 'p3',
+      team_number: null,
+      flight_number: null,
+    });
+  });
+});

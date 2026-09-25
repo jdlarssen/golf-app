@@ -1087,7 +1087,17 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
       '#matchplay_side_2',
     ) as HTMLSelectElement;
     fireEvent.change(side1, { target: { value: 'u0' } });
+    // #2210: with only side 1 set, u1 rides along as a player without a side
+    // instead of being dropped from the payload.
+    const unassigned = () =>
+      [
+        ...container.querySelectorAll<HTMLInputElement>(
+          'input[name="unassigned_player_id"]',
+        ),
+      ].map((el) => el.value);
+    expect(unassigned()).toEqual(['u1']);
     fireEvent.change(side2, { target: { value: 'u1' } });
+    expect(unassigned()).toEqual([]);
 
     // Payloaden skal ha player_0 (side 1) + player_1 (side 2) i den
     // rekkefølgen — orderedPayload itererer side 1 → side 2.

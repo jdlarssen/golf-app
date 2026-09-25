@@ -1672,3 +1672,76 @@ describe('useGameFormState — nameTouched (#1999)', () => {
     expect(result.current.nameTouched).toBe(true);
   });
 });
+
+// #2210: selected players the payload leaves out (no team / no side) are
+// exposed so the form can send them as `unassigned_player_id` — otherwise a
+// save silently dropped everyone who had signed up without a team.
+describe('useGameFormState — unassignedPlayerIds (#2210)', () => {
+  const ROSTER = Array.from({ length: 3 }, (_, i) => makePlayer(`r${i + 1}`));
+
+  it('best ball med én spiller uten lag gir [id]', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: ROSTER,
+        courses: COURSES,
+        initialValues: {
+          game_mode: 'best_ball',
+          players: [
+            { user_id: 'r1', team_number: 1, flight_number: 1 },
+            { user_id: 'r2', team_number: 1, flight_number: 1 },
+            { user_id: 'r3', team_number: null, flight_number: null },
+          ],
+        },
+      }),
+    );
+    expect(result.current.unassignedPlayerIds).toEqual(['r3']);
+  });
+
+  it('matchplay med én spiller uten side gir [id]', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: ROSTER,
+        courses: COURSES,
+        initialValues: {
+          game_mode: 'singles_matchplay',
+          players: [
+            { user_id: 'r1', team_number: 1, flight_number: 1 },
+            { user_id: 'r2', team_number: null, flight_number: null },
+          ],
+        },
+      }),
+    );
+    expect(result.current.unassignedPlayerIds).toEqual(['r2']);
+  });
+
+  it('solo (stableford) gir []', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: ROSTER,
+        courses: COURSES,
+        initialValues: {
+          game_mode: 'stableford',
+          team_size: 1,
+          players: [
+            { user_id: 'r1', team_number: null, flight_number: null },
+            { user_id: 'r2', team_number: null, flight_number: null },
+          ],
+        },
+      }),
+    );
+    expect(result.current.unassignedPlayerIds).toEqual([]);
+  });
+
+  it('wolf gir []', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: WOLF_PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('wolf');
+    });
+    act(() => {
+      for (const id of ['w1', 'w2', 'w3']) result.current.togglePlayer(id);
+    });
+    expect(result.current.unassignedPlayerIds).toEqual([]);
+  });
+});

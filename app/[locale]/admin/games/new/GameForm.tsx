@@ -365,6 +365,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     handleTeamSizeChange,
     lockGameMode,
     orderedPayload,
+    unassignedPlayerIds,
     canPublish,
     missingForPublish,
   } = state;
@@ -607,6 +608,17 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             value={row.flight_number ?? ''}
           />
         </div>
+      ))}
+      {/* #2210: selected players without a team (or matchplay side) ride
+          along so the server keeps them on the roster instead of dropping
+          them. */}
+      {unassignedPlayerIds.map((pid) => (
+        <input
+          key={pid}
+          type="hidden"
+          name="unassigned_player_id"
+          value={pid}
+        />
       ))}
       {/* #2210: who the edit form was opened with, so the save can tell a
           player the organiser removed from one who signed up meanwhile
