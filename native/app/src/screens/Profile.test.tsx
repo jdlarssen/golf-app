@@ -180,6 +180,12 @@ describe('Profile', () => {
       describeWebLinkFailure('no-web-base-url'),
     );
 
+    // Linja står til neste trykk, og et trykk som går bra tar den bort.
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('profile-privacy'));
+    });
+    expect(screen.queryByTestId('profile-privacy-error')).toBeNull();
+
     // Første forsøk går alltid uten `keepUnsent`: det er `logOut` som avgjør om
     // køen er tom, ikke skjermen.
     await fireEvent.press(screen.getByTestId('profile-log-out'));
