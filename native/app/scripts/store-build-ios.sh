@@ -46,6 +46,7 @@ EXPORT_OPTIONS="$DIST/ExportOptions.plist"
 PROOF="$APP_DIR/scripts/store-build-proof.sh"
 TAG_SCRIPT="$APP_DIR/scripts/store-build-tag.sh"
 DSYMS="$APP_DIR/scripts/store-build-dsyms.sh"
+ENV_LIB="$APP_DIR/scripts/env-file.sh"
 
 TEAM_ID='8C8WCW67J9'
 PROD_SUPABASE_HOST='glofubopddkjhymcbaph.supabase.co'
@@ -61,6 +62,10 @@ die()  { printf '\n✗ %s\n' "$*" >&2; exit 1; }
 # Hjelpeteksten er header-kommentaren over: alt fra linje 2 til første linje
 # som ikke er en kommentar. Ingen linjetall å holde i takt med fila.
 print_help() { awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; }
+
+[ -f "$ENV_LIB" ] || die "Fant ikke $ENV_LIB (dotenv-leseren skriptet deler med beviset)."
+# shellcheck source=env-file.sh
+. "$ENV_LIB"
 
 UPLOAD=1
 UPLOAD_ONLY=''
@@ -91,25 +96,8 @@ require_export_tools() {
   [ -x "$DSYMS" ] || die "Fant ikke symbol-skriptet $DSYMS"
 }
 
-# Siste linje i .env-fila som setter nøkkelen; `export KEY=` og innrykk godtas.
-# Samme regler som dotenv for verdien: « # kommentar» på slutten og etterfølgende
-# mellomrom strippes FØR anførselstegnene, CR fra en Windows-redigert fil fjernes.
-env_value() {
-  local line
-  line=$("$GREP" -E "^[[:space:]]*(export[[:space:]]+)?$1=" "$ENV_FILE" | tail -1 || true)
-  [ -n "$line" ] || return 0
-  local value=${line#*=}
-  value=${value%$'\r'}
-  # Anførselstegn først: innholdet mellom dem er verdien, også når det har « #».
-  # Ellers gjelder dotenv-regelen for uanførte verdier: « # kommentar» og
-  # etterfølgende mellomrom strippes.
-  case "$value" in
-    \"*) value=$(printf '%s' "$value" | sed -E 's/^"([^"]*)".*$/\1/') ;;
-    \'*) value=$(printf '%s' "$value" | sed -E "s/^'([^']*)'.*$/\\1/") ;;
-    *)   value=$(printf '%s' "$value" | sed -E 's/[[:space:]]+#.*$//; s/[[:space:]]+$//') ;;
-  esac
-  printf '%s' "$value"
-}
+# Verdien til en nøkkel i $ENV_FILE. Reglene står i env-file.sh.
+env_value() { env_file_value "$ENV_FILE" "$1"; }
 
 run_proof() {
   local archive=$1 proof_file=$2
