@@ -58,7 +58,7 @@ Begge login-malene (**Magic Link** for eksisterende brukere og **Confirm Signup*
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="400" style="max-width: 400px; background-color: #FFFFFF; border: 1px solid #E5E0D3; border-radius: 16px;">
           <tr>
             <td align="center" style="padding: 36px 32px 0 32px;">
-              <div style="font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 500; color: #1B4332; letter-spacing: -0.01em; line-height: 1;">Tørny<span style="color: #C9A961;">.</span></div>
+              <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display: block; margin: 0 auto; width: 88px; height: 40px; border: 0; outline: none; text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 500; color: #1B4332;">
             </td>
           </tr>
           <tr>
@@ -79,6 +79,8 @@ Begge login-malene (**Magic Link** for eksisterende brukere og **Confirm Signup*
 </body>
 </html>
 ```
+
+> **Ordmerket er et bilde (#1985).** Ballen hviler på T-en, og det lar seg ikke tegne med tekst i en e-post. Bildet er det samme som Resend-mailene bruker (`lib/mail/wordmark.ts`), laget av `native/assets/generate-icons.mjs` med mailkortets hvite bakgrunn bakt inn, så det tåler mørk modus. Blokkerer e-postprogrammet bilder, står alt-teksten «Tørny» i stedet. Adressen går til prod, også på staging: lim inn malen først når prod-deployen som la til bildet er ute, ellers viser mailen et brutt bilde.
 
 > **Hvorfor ingen «ikke deg?»-fotnote:** kode-malen har ingen lenke å klikke og koden er verdiløs uten appen + tilgang til denne innboksen, så phishing-flaten er minimal. En sikkerhets-setning ville måtte stå på ett språk og bryte språknøytraliteten. `&#9203;` er timeglass-symbolet (gyldighet) — dekorativt, degraderer pent hvis en klient ikke viser det.
 

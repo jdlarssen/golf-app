@@ -9,6 +9,7 @@
 
 import { Resend } from 'resend';
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { mailWordmarkHtml } from './wordmark';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -70,7 +71,7 @@ export async function sendCupFinishedNotification(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
           <tr><td>
             <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
-              Tørny<span style="color:#C9A961;">.</span>
+              ${mailWordmarkHtml()}
             </h1>
             <p style="font-size:13px;color:#5C5347;margin:0 0 32px;">
               ${t('common.tagline')}

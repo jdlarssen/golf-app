@@ -91,7 +91,8 @@ export async function getMailTranslator(locale: string | null | undefined) {
 
 export type MailTranslator = Awaited<ReturnType<typeof getMailTranslator>>;
 
-const APP_BASE_URL = 'https://tornygolf.no';
+/** The app's public origin — the root of every absolute URL a mail carries. */
+export const APP_BASE_URL = 'https://tornygolf.no';
 
 /**
  * A locale-correct absolute app URL for mail links. Route segments stay
