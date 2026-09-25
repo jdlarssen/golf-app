@@ -183,27 +183,36 @@ function markdownUnder(root, dir) {
 
 /**
  * Hvilke av `refs` `.gitignore` holder utenfor repoet — ett `git check-ignore`
- * for hele kjøringen. Refene sendes urørte: mønsteret `.claude/orchestrator/`
- * gjelder bare kataloger, og git treffer det for en sti som ikke finnes kun
- * når refen selv har skråstreken til slutt. `-z` fordi git ellers setter en
- * sti med ø/æ/å i anførselstegn, og da bommer oppslaget i settet stille.
+ * for hele kjøringen. Svaret skal ikke avhenge av arbeidskopien som kjører:
+ *  - En ref uten skråstrek til slutt sendes også MED skråstrek. Et
+ *    katalog-mønster (`.claude/orchestrator/`, `.expo/`) treffer ellers bare
+ *    når katalogen tilfeldigvis finnes lokalt.
+ *  - `core.excludesFile=` slår av maskinens globale ignore-fil, som ikke
+ *    følger med repoet.
+ * `-z` fordi git ellers setter en sti med ø/æ/å i anførselstegn, og da bommer
+ * oppslaget i settet stille.
  */
 function gitIgnoredRefs(root, refs) {
-  // En ref som peker ut av repoet (`../…`) får git til å avbryte hele batchen
-  // med exit 128. Den holdes utenfor og regnes som ikke ignorert.
-  const batch = [...new Set(refs)].filter((ref) => !ref.split('/').includes('..'));
-  const result = spawnSync('git', ['check-ignore', '--no-index', '-z', '--stdin'], {
-    cwd: root,
-    input: batch.map((ref) => `${ref}\0`).join(''),
-    encoding: 'utf8',
-  });
+  // To ref-former får git til å avbryte hele batchen med exit 128: en som
+  // peker ut av repoet (`../…`) og en som starter med `:` (pathspec-magi,
+  // `:!docs/plans/`). De holdes utenfor og regnes som ikke ignorert.
+  const batch = [...new Set(refs)].filter(
+    (ref) => !ref.startsWith(':') && !ref.split('/').includes('..'),
+  );
+  const paths = batch.flatMap((ref) => (ref.endsWith('/') ? [ref] : [ref, `${ref}/`]));
+  const result = spawnSync(
+    'git',
+    ['-c', 'core.excludesFile=', 'check-ignore', '--no-index', '-z', '--stdin'],
+    { cwd: root, input: paths.map((p) => `${p}\0`).join(''), encoding: 'utf8' },
+  );
   // 0 = noen treff, 1 = ingen treff. Alt annet (128: ikke en git-repo) er en
   // feil og skal gi exit ≠ 0 — aldri tolkes som «ingenting ignorert».
   if (result.error) throw result.error;
   if (result.status !== 0 && result.status !== 1) {
     throw new Error(`git check-ignore feilet (exit ${result.status}): ${result.stderr.trim()}`);
   }
-  return new Set(result.stdout.split('\0').filter(Boolean));
+  const hits = new Set(result.stdout.split('\0').filter(Boolean));
+  return new Set(batch.filter((ref) => hits.has(ref) || hits.has(`${ref}/`)));
 }
 
 function main() {
