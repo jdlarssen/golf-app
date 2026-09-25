@@ -15,13 +15,16 @@ export const MAIL_WORDMARK_URL = `${APP_BASE_URL}/brand/wordmark-mail@2x.png`;
  * which plain text in a mail client cannot draw, so it is an image of the
  * generated PNG. The mail card's white is baked into the PNG, so the forest
  * letters survive Gmail/Outlook's dark mode. With images blocked the client
- * shows the alt text «Tørny» in the surrounding <h1>'s serif — accepted by the
- * owner (2026-09-25). Every mail header and the unsubscribe page call this;
- * nothing else writes the wordmark in mail HTML.
+ * shows the alt text «Tørny» instead — accepted by the owner (2026-09-25). The
+ * font styles on the <img> are for that alt text: 22 px Georgia is what fits
+ * beside a broken-image icon inside the 88x40 box without clipping. Every mail
+ * header and the unsubscribe page call this; nothing else writes the wordmark
+ * in mail HTML.
  */
 export function mailWordmarkHtml(): string {
   return (
     `<img src="${MAIL_WORDMARK_URL}" width="${MAIL_WORDMARK_WIDTH}" height="${MAIL_WORDMARK_HEIGHT}" alt="Tørny" ` +
-    `style="display:block;width:${MAIL_WORDMARK_WIDTH}px;height:${MAIL_WORDMARK_HEIGHT}px;border:0;outline:none;text-decoration:none;">`
+    `style="display:block;width:${MAIL_WORDMARK_WIDTH}px;height:${MAIL_WORDMARK_HEIGHT}px;border:0;outline:none;text-decoration:none;` +
+    `font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:${MAIL_WORDMARK_HEIGHT}px;color:#1B4332;">`
   );
 }

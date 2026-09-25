@@ -58,7 +58,7 @@ Begge login-malene (**Magic Link** for eksisterende brukere og **Confirm Signup*
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="400" style="max-width: 400px; background-color: #FFFFFF; border: 1px solid #E5E0D3; border-radius: 16px;">
           <tr>
             <td align="center" style="padding: 36px 32px 0 32px;">
-              <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display: block; margin: 0 auto; width: 88px; height: 40px; border: 0; outline: none; text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 500; color: #1B4332;">
+              <img src="https://tornygolf.no/brand/wordmark-mail@2x.png" width="88" height="40" alt="Tørny" style="display: block; margin: 0 auto; width: 88px; height: 40px; border: 0; outline: none; text-decoration: none; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; line-height: 40px; color: #1B4332;">
             </td>
           </tr>
           <tr>
