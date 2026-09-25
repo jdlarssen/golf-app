@@ -17,8 +17,9 @@ import { getAdminClient } from '@/lib/supabase/admin';
  *
  * Defaults reflect self-registration abuse threat model rather than admin
  * invite spam (which is more permissive). Per-email cap dominates for
- * typo + retry; per-IP cap covers shared NAT (households) without
- * punishing legit traffic, but stops single-source spray attacks.
+ * typo + retry; per-IP cap covers shared NAT (households, a clubhouse
+ * network) without punishing legit traffic, but stops single-source spray
+ * attacks.
  *
  * Returns `{ ok: true }` when both buckets allow, otherwise `{ ok: false,
  * reason }` indicating which bucket tripped. Callers map both reasons to
@@ -34,7 +35,10 @@ export async function consumeLoginRateLimit(opts: {
   ip: string;
   /** Max sendCode attempts per email per window. Default 5. */
   emailMax?: number;
-  /** Max sendCode attempts per IP per window. Default 10. */
+  /**
+   * Max sendCode attempts per IP per window. Default 30: new invitees on a
+   * clubhouse network on a tournament morning share one IP (#2212).
+   */
   ipMax?: number;
   /** Window length in seconds. Default 15 minutes. */
   windowSeconds?: number;
@@ -43,7 +47,7 @@ export async function consumeLoginRateLimit(opts: {
     email,
     ip,
     emailMax = 5,
-    ipMax = 10,
+    ipMax = 30,
     windowSeconds = 15 * 60,
   } = opts;
 
