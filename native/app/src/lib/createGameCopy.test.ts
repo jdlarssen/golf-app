@@ -77,6 +77,7 @@ const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
   db_users: 'ingen kode på web sender den i dag',
   db_tee: 'ingen kode på web sender den i dag',
   not_editable: 'redigerings-flyten på web; appen oppretter bare',
+  cup_roster_locked: 'cup-låsen i redigerings-flyten på web (#2210); appen oppretter bare',
   unexpected: 'webbens fallback med rå kode for ukjente koder; appen har en setning per kode',
 };
 

@@ -11,12 +11,12 @@
 // nettverks-upload: den har `append`, men hverken `get`, `getAll` eller `has`.
 // Å sende den inn ville kastet på første `formData.get('name')`.
 //
-// **Hvorfor en Map og ikke et polyfill.** Byggeren leser `formData.get()` og
-// ingenting annet — 53 kall, null `getAll`/`has`/`entries` (verifisert mot
-// HEAD). En Map med `get` dekker altså hele kontaktflaten. `getAll` og `has` er
-// likevel implementert: de koster to linjer, og de gjør castet under ærlig i
-// stedet for et løfte som holder helt til noen legger til et `has`-kall på
-// web-siden.
+// **Hvorfor en Map og ikke et polyfill.** Byggeren leser `formData.get()`, pluss
+// ett `getAll('unassigned_player_id')` (#2210: valgte spillere uten lag). Ingen
+// `has`/`entries`. En Map med `get` og `getAll` dekker altså hele kontaktflaten.
+// `has` er likevel implementert: den koster to linjer, og den gjør castet under
+// ærlig i stedet for et løfte som holder helt til noen legger til et `has`-kall
+// på web-siden.
 //
 // Verdier lagres som STRENGER, akkurat som en ekte `<form>` sender dem —
 // `set('side_ld_count', 1)` blir `'1'`, og `get()` gir `'1'` tilbake. Det er
@@ -70,7 +70,7 @@ export class WizardFormData {
  * Gir shimmen til en funksjon som er typet for `FormData`.
  *
  * Castet er trygt fordi kontaktflaten er verifisert: den delte byggeren rører
- * bare `get()`. Det står som ÉN navngitt funksjon og ikke som spredte
+ * bare `get()` og `getAll()` (testen «shimmen mater den delte byggeren»). Det står som ÉN navngitt funksjon og ikke som spredte
  * `as unknown as FormData` på hvert kallsted, slik at antakelsen har én adresse
  * — og slik at et framtidig `getAll`/`entries`-kall på web-siden har ett sted å
  * bli fanget opp i stedet for fem.
