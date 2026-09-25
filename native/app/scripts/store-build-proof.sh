@@ -30,6 +30,13 @@
 #     alt annet feiler med kontekst, så en ny hit må vurderes med øynene før den
 #     eventuelt legges til. Står `EXPO_PUBLIC_SUPABASE_ANON_KEY` i miljøet, må
 #     nøyaktig den verdien finnes i bundelen (bare lengden skrives ut).
+#     Ingen `EXPO_PUBLIC_*`-verdi fra appens egne `.env`-filer
+#     (`native/app/.env*`) skal finnes i bundelen (#2208). Butikkbygget leser
+#     dem ikke, og regelen beviser det. Verdier beviset krever (prod-adressen,
+#     web-adressen, anon-nøkkelen fra miljøet) og verdier under 12 tegn hoppes
+#     over. Bare fil, nøkkel, lengde og antall treff skrives ut, aldri verdien.
+#     `TORNY_APP_ENV_DIR` peker regelen på en annen mappe (test og manuelle
+#     kjøringer); standard er appmappa skriptet ligger i.
 #  2. `Info.plist`: bundle-id, versjon, build, ITSAppUsesNonExemptEncryption.
 #  3. Entitlements (`codesign`): INGEN associated domains, INGEN push.
 #  4. App-ikonet (#1975). To regler, fordi `Assets.car` er KOMPILERT: kildens
@@ -57,6 +64,7 @@ SHASUM=/usr/bin/shasum
 ASSETUTIL=/usr/bin/assetutil
 PYTHON3=/usr/bin/python3
 HERMES_STRINGS="$(dirname "${BASH_SOURCE[0]}")/hermes-strings.py"
+ENV_FILE_LIB="$(dirname "${BASH_SOURCE[0]}")/env-file.sh"
 
 # The locale is pinned the same way (#1983). macOS /bin/bash 3.2 in any UTF-8
 # locale reads the first byte of `»` as part of a variable name, so an
@@ -73,6 +81,8 @@ STORE_BUNDLE_ID='no.tornygolf.app'
 
 # Ikonet (#1975). Kilden ligger i repoet, ikke i arkivet — se punkt 4 øverst.
 PROOF_APP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# Mappa med appens .env-filer (#2208) — se punkt 1 øverst.
+ENV_DIR=${TORNY_APP_ENV_DIR:-$PROOF_APP_DIR}
 ICON_SRC="$PROOF_APP_DIR/assets/icon.png"
 ICON_MASTER="$PROOF_APP_DIR/../assets/appstore-1024.png"
 # Expo SDK 57-malens ikon (den blå vinkelen). Sto i `native/app/assets/icon.png`
@@ -113,6 +123,9 @@ for tool in "$GREP" "$STRINGS" "$PLUTIL" "$CODESIGN" "$SHASUM" "$ASSETUTIL" "$PY
   [ -x "$tool" ] || { printf '✗ Mangler verktøy: %s\n' "$tool" >&2; exit 2; }
 done
 [ -f "$HERMES_STRINGS" ] || { printf '✗ Mangler %s (leser UTF-16-tabellen)\n' "$HERMES_STRINGS" >&2; exit 2; }
+[ -f "$ENV_FILE_LIB" ] || { printf '✗ Mangler %s (leser appens .env-filer)\n' "$ENV_FILE_LIB" >&2; exit 2; }
+# shellcheck source=env-file.sh
+. "$ENV_FILE_LIB"
 
 case "$TARGET" in
   *.xcarchive)
@@ -290,6 +303,38 @@ else
     fi
   else
     say "      (EXPO_PUBLIC_SUPABASE_ANON_KEY står ikke i miljøet — nøkkel-sjekken hoppes over; byggeskriptet setter den)"
+  fi
+
+  # Appens lokale .env-verdier (#2208): ingen skal finnes i bundelen. Verdien
+  # skrives aldri ut og står aldri i argv. grep får den som mønsterfil via
+  # prosess-substitusjon, og tomme verdier er sortert ut før det, for en tom
+  # mønsterlinje treffer alt.
+  env_checked=0
+  for env_file in "$ENV_DIR"/.env*; do
+    [ -f "$env_file" ] || continue
+    env_name=$(basename "$env_file")
+    while read -r env_key; do
+      [ -n "$env_key" ] || continue
+      env_val=$(env_file_value "$env_file" "$env_key")
+      [ -n "$env_val" ] || continue
+      env_checked=$((env_checked + 1))
+      if [ "${#env_val}" -lt 12 ]; then
+        say "      ${env_name} ${env_key}: ${#env_val} tegn, for kort til å sjekkes (korte verdier gir falske treff)"
+      elif [ "$env_val" = "https://$PROD_SUPABASE_HOST" ] || [ "$env_val" = "$STORE_WEB_BASE_URL" ] \
+          || { [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] && [ "$env_val" = "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; }; then
+        say "      ${env_name} ${env_key}: samme verdi som beviset krever i bundelen, hoppes over"
+      else
+        n=$( ("$GREP" -aoF -f <(printf '%s\n' "$env_val") "$STR" || true) | wc -l | tr -d ' ')
+        if [ "$n" = "0" ]; then
+          pass "${env_name} ${env_key} (${#env_val} tegn): 0 treff i bundelen"
+        else
+          fail "${env_name} ${env_key} (${#env_val} tegn): ${n} treff i bundelen — en lokal .env-verdi er bakt inn"
+        fi
+      fi
+    done < <(env_file_keys "$env_file" EXPO_PUBLIC_)
+  done
+  if [ "$env_checked" = "0" ]; then
+    say "      (ingen EXPO_PUBLIC_-verdier i ${ENV_DIR}/.env* å sjekke)"
   fi
 
   # Forbudt som HEL adresse: fire oktetter, ikke-siffer på begge sider. Hermes
