@@ -406,23 +406,21 @@ async function completeOpenRegistration(
   // Notify game-creator. Best-effort — feil her skal aldri rulle tilbake
   // selve påmeldingen. Admin uten created_by-rad (sjelden — manuell DB-fix)
   // får ingen varsel; det er bedre enn å feile påmeldingen.
+  // Open registration notifies the organiser in-app and by push, with no
+  // mail fallback (#199 §5.3). requestApproval adds one (#199 §5.4).
   if (game.created_by) {
     const requesterName = await getRequesterName(userId);
-    await Promise.allSettled([
-      notify({
-        userId: game.created_by,
-        kind: 'registration_request',
-        payload: {
-          game_id: game.id,
-          game_name: game.name,
-          requester_name: requesterName,
-        },
-      }).catch((err) =>
-        console.error('[registerForOpenGame] notify failed', err),
-      ),
-      // TODO(chunk 12): sendOpenRegistrationMail({to: adminEmail, gameName, requesterName})
-      // — gated på shouldAlsoSendMail. Mail-template lib/mail/openRegistration.ts.
-    ]);
+    await notify({
+      userId: game.created_by,
+      kind: 'registration_request',
+      payload: {
+        game_id: game.id,
+        game_name: game.name,
+        requester_name: requesterName,
+      },
+    }).catch((err) =>
+      console.error('[registerForOpenGame] notify failed', err),
+    );
   }
 
   const locale = (await getLocale()) as AppLocale;

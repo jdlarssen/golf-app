@@ -38,7 +38,8 @@ import {
  *        peker til kaptein. Notify dem med `team_invite`.
  *      - "email"-mode: ukjent e-post. Sjekk om brukeren tross alt finnes
  *        (degrader til lookup hvis ja). Hvis ikke → insert `invitations`-
- *        rad med `game_id` satt + 7-dagers expiry. Mail sendes i chunk 12.
+ *        rad med `game_id` satt + 14 dagers frist (`GAME_INVITE_TTL_DAYS`).
+ *        Mailen sendes med `sendTeamInvitationMail`.
  *   3. For `open`-modus: insert game_players-rad for kaptein + alle
  *      kjente medspillere (status='approved' → de er med i spillet).
  *      Team-slot tildeles deterministisk (laveste ledige 1..N).
@@ -511,7 +512,8 @@ export async function submitTeamRegistration(
         // Best-effort notify. #463: medspilleren får ALLEREDE et team_invite-
         // varsel (under) som nudger dem; vi dobbelt-varsler ikke med
         // player_added. «Ikke bekreftet»-badgen + auto-bekreft-ved-åpning
-        // dekker bekreftelses-løkka for lag-medspillere. Mail-backup i chunk 12.
+        // dekker bekreftelses-løkka for lag-medspillere. Ingen mail-reserve:
+        // push fra `notify()` dekker spillere som er borte fra appen.
         await notifyInvitedToTeam({
           recipientUserId: existingUser.id,
           gameId: game.id,
