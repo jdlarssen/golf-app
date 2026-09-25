@@ -155,7 +155,7 @@ shifts on three axes:
 | **Champagne banner** | Linen-tinted gradient → forest gradient (`#1F2C24 → #1A2E1F`) with 3px champagne left border. Icon-tile background bumps to `rgba(212,184,112,.12)`. |
 | **Inputs** | White fill, beige hairline → `#0F1F15` fill, `#3E5247` hairline. Focus ring `rgba(212,184,112,.20)` stays champagne in both modes. |
 | **Toggles** | Off track `#E5E0D3` → `#3E5247`. On track `#1B4332` → sage `#6B9F6F`. Thumb stays linen `#F0EDE5` for warmth (never pure white). |
-| **Brand mark** | Forest T-tile on linen → linen T-tile on forest. The mark inverts; the champagne dot to the right of the wordmark stays put. |
+| **Brand mark** | Forest T-tile on linen → linen T-tile on forest. The mark inverts; the champagne ball resting on the wordmark's T (#1985) stays champagne. |
 
 **Critical: text is never pure white.** `#F0EDE5` (warm linen) at 100 % is the
 ceiling. Pure white on forest is harsh and reads as a system error — Tørny
