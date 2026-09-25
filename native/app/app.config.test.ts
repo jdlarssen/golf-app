@@ -14,16 +14,23 @@
 //  3. **Dev mot prod stopper.** Motsatt vei: et bygg uten `store`-variant som
 //     peker på prod-basen er et uhell, og skal aldri kunne bli en app på en
 //     telefon.
+//  4. **Hver `EXPO_PUBLIC_*` appen leser er merket** som butikk eller dev
+//     (#2208). Butikkbygget nekter dev-nøklene, så en ny nøkkel som ikke står
+//     på noen av listene, ville sluppet forbi den sperren.
 //
 // Verten sammenlignes hel, som i `src/lib/stagingGate.ts` — prod-verten som
 // delstreng i et annet domene er ikke prod.
+import { readdirSync, readFileSync } from 'fs';
+import { join, sep } from 'path';
 import type { ExpoConfig } from 'expo/config';
 import appJson from './app.json';
 import {
+  DEV_ONLY_PUBLIC_ENV_KEYS,
   PROD_SUPABASE_HOST,
   STORE_ANDROID_VERSION_CODE,
   STORE_BUNDLE_ID,
   STORE_IOS_BUILD_NUMBER,
+  STORE_PUBLIC_ENV_KEYS,
   STORE_WEB_BASE_URL,
   parseVariant,
   resolveConfig,
@@ -35,6 +42,7 @@ import { STAGING_SUPABASE_HOST } from './src/lib/stagingGate';
 const base = appJson.expo as ExpoConfig;
 const PROD_URL = `https://${PROD_SUPABASE_HOST}`;
 const STAGING_URL = `https://${STAGING_SUPABASE_HOST}`;
+const DEV_LOGIN_PASSWORD = 'testpassord-i-test-2208';
 
 const STORE_ENV = {
   APP_VARIANT: 'store',
@@ -43,10 +51,13 @@ const STORE_ENV = {
   EXPO_PUBLIC_WEB_BASE_URL: STORE_WEB_BASE_URL,
 };
 
+// Passordet hører hjemme i dev-bygget (#1923). Står det her, viser de to
+// bit-identisk-testene og snapshotet at dev-bygget ikke merker sperren.
 const DEV_ENV = {
   EXPO_PUBLIC_SUPABASE_URL: STAGING_URL,
   EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-nokkel-i-test',
   EXPO_PUBLIC_WEB_BASE_URL: 'http://localhost:3111',
+  EXPO_PUBLIC_DEV_LOGIN_PASSWORD: DEV_LOGIN_PASSWORD,
 };
 
 describe('resolveConfig — dev-varianten (ingen APP_VARIANT)', () => {
@@ -127,8 +138,22 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     ['web-adressen mangler', { EXPO_PUBLIC_WEB_BASE_URL: undefined }, 'EXPO_PUBLIC_WEB_BASE_URL'],
     ['web-adressen er Mac-en', { EXPO_PUBLIC_WEB_BASE_URL: 'http://localhost:3111' }, 'localhost:3111'],
     ['web-adressen har skråstrek på slutten', { EXPO_PUBLIC_WEB_BASE_URL: `${STORE_WEB_BASE_URL}/` }, 'EXPO_PUBLIC_WEB_BASE_URL'],
+    [
+      'testpassordet fra native/app/.env.local er satt',
+      { EXPO_PUBLIC_DEV_LOGIN_PASSWORD: DEV_LOGIN_PASSWORD },
+      'EXPO_PUBLIC_DEV_LOGIN_PASSWORD',
+    ],
   ])('stopper når %s, og sier det', (_label, override, expectedFragment) => {
     expect(() => resolveConfig(base, { ...STORE_ENV, ...override })).toThrow(expectedFragment);
+  });
+
+  it.each([
+    ['tomt', ''],
+    ['bare mellomrom', '   '],
+  ])('godtar testpassordet når det er %s — da finnes ingenting å bake inn', (_label, value) => {
+    expect(resolveConfig(base, { ...STORE_ENV, EXPO_PUBLIC_DEV_LOGIN_PASSWORD: value })).toStrictEqual(
+      resolveConfig(base, STORE_ENV)
+    );
   });
 
   it('nevner alle feilene i én melding, ikke bare den første', () => {
@@ -152,6 +177,42 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     }
     expect(message).not.toBe('');
     expect(message).not.toContain(STORE_ENV.EXPO_PUBLIC_SUPABASE_ANON_KEY);
+  });
+
+  it('nevner testpassordet ved navn, aldri verdien', () => {
+    let message = '';
+    try {
+      resolveConfig(base, { ...STORE_ENV, EXPO_PUBLIC_DEV_LOGIN_PASSWORD: DEV_LOGIN_PASSWORD });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toContain('EXPO_PUBLIC_DEV_LOGIN_PASSWORD');
+    expect(message).not.toContain(DEV_LOGIN_PASSWORD);
+  });
+});
+
+describe('EXPO_PUBLIC_-nøklene appen leser', () => {
+  // Babel-pluginen inliner både `process.env.X` og `process.env['X']`.
+  const ENV_READ = /process\.env(?:\.|\[['"])(EXPO_PUBLIC_[A-Z0-9_]+)/g;
+
+  function appSourceFiles(): string[] {
+    const src = join(__dirname, 'src');
+    const nested = readdirSync(src, { recursive: true, encoding: 'utf8' })
+      .filter((rel) => /\.tsx?$/.test(rel) && !/\.test\./.test(rel) && !rel.startsWith(`test${sep}`))
+      .map((rel) => join(src, rel));
+    return [...nested, join(__dirname, 'App.tsx'), join(__dirname, 'index.ts')];
+  }
+
+  it('er alle merket som butikk eller dev', () => {
+    const found = new Set<string>();
+    for (const file of appSourceFiles()) {
+      for (const match of readFileSync(file, 'utf8').matchAll(ENV_READ)) found.add(match[1]);
+    }
+    const known: string[] = [...STORE_PUBLIC_ENV_KEYS, ...DEV_ONLY_PUBLIC_ENV_KEYS];
+    // Skanneren finner noe, og ingen av listene er foreldet.
+    expect([...found]).toEqual(expect.arrayContaining(known));
+    // En ny nøkkel må merkes før testen går grønt.
+    expect([...found].filter((key) => !known.includes(key)).sort()).toEqual([]);
   });
 });
 
