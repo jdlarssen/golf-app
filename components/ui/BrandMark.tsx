@@ -46,6 +46,7 @@ export function BrandMark({
   const shaded = tone === 'default' && px * BALL_DIAMETER_EM >= BALL_SHADING_MIN_PX;
   return (
     <span
+      data-testid="brand-mark"
       className={`block font-serif font-medium tracking-tight leading-none ${sizeClass} ${
         tone === 'default' ? 'text-text' : ''
       } ${className}`}
@@ -53,6 +54,7 @@ export function BrandMark({
     >
       <span aria-hidden="true" className="relative inline-block h-0 w-0 align-baseline">
         <span
+          data-testid="brand-mark-ball"
           className={`absolute rounded-full ${tone === 'default' ? 'bg-accent' : 'bg-current'}`}
           style={{
             left: `${BALL_CENTER_X_EM - BALL_DIAMETER_EM / 2}em`,
