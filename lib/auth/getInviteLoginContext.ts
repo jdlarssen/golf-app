@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { isRosterLocked } from '@/lib/games/status';
 
 /**
  * Kontekst-oppslag for `/login?invite=<token>` (#1169): gitt en invitasjons-
@@ -12,8 +13,10 @@ import { getAdminClient } from '@/lib/supabase/admin';
  * Innholdet er begrenset til det mottakeren allerede vet fra mailen pluss
  * plakat-nivå (bane/tee-off) — aldri roster, premier, e-poster eller hcp.
  *
- * Fail-closed: ugyldig/utløpt/akseptert token, token uten game_id, eller
- * DB-feil → null. Siden rendres da nøyaktig som uten `?invite=` — aldri 500.
+ * Fail-closed: ugyldig/utløpt/akseptert token, token uten game_id, en runde
+ * som har startet eller er ferdig (#2212 — innloggingen gir ikke lenger plass,
+ * så kortet ville lovet noe som ikke stemmer), eller DB-feil → null. Siden
+ * rendres da nøyaktig som uten `?invite=` — aldri 500.
  */
 
 export type InviteLoginContext = {
@@ -36,6 +39,7 @@ type InviteContextRow = {
     name: string;
     game_mode: string;
     scheduled_tee_off_at: string | null;
+    status: string;
     courses: { name: string } | null;
   } | null;
 };
@@ -62,7 +66,7 @@ export async function getInviteLoginContext(
     const { data, error } = await admin
       .from('invitations')
       .select(
-        'expires_at, inviter:users!invitations_invited_by_fkey(name, nickname), games:game_id(id, name, game_mode, scheduled_tee_off_at, courses(name))',
+        'expires_at, inviter:users!invitations_invited_by_fkey(name, nickname), games:game_id(id, name, game_mode, scheduled_tee_off_at, status, courses(name))',
       )
       .eq('token', token)
       .is('accepted_at', null)
@@ -75,6 +79,7 @@ export async function getInviteLoginContext(
       return null;
     }
     if (!data?.games) return null;
+    if (isRosterLocked(data.games.status)) return null;
 
     const inviterName =
       data.inviter?.name?.trim() || data.inviter?.nickname?.trim() || null;

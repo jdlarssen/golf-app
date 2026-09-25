@@ -19,6 +19,7 @@ type SearchParams = Promise<{
   name?: string | string[];
   hcp_index?: string | string[];
   hcp_plus?: string | string[];
+  invite_notice?: string | string[];
 }>;
 
 /** Only accept same-origin relative paths as a post-onboarding destination. */
@@ -75,6 +76,11 @@ export default async function CompleteProfile({
   const errorCode = resolveErrorCode(first(params.error), KNOWN_ERROR_CODES, 'unknown');
   const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 
+  // #2212: verifyCode lands an invitee here when the round they were invited
+  // to had already started. Only the flag travels in the URL — never a game
+  // name — so nobody can craft a link that renders arbitrary text.
+  const showGameStartedNotice = first(params.invite_notice) === 'game_started';
+
   return (
     <AppShell>
       <header className="mb-8">
@@ -92,6 +98,14 @@ export default async function CompleteProfile({
       <OnboardingProgress />
 
       <Card>
+        {showGameStartedNotice && (
+          <div className="mb-4">
+            <Banner tone="info" testId="invite-notice-game-started">
+              {t('inviteNoticeGameStarted')}
+            </Banner>
+          </div>
+        )}
+
         {errorMessage && (
           <div className="mb-4">
             <Banner tone="error">{errorMessage}</Banner>
