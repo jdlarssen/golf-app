@@ -14,12 +14,21 @@
  * månedskopier av tavle-kommentarer) skannes IKKE: en gammel kontrakt SKAL
  * kunne nevne en fil som siden er slettet.
  *
- * Klassifiseringen er ren og eksportert (`isSkippableRef`, `classifyRef`) så
- * regelen har ett hjem og en egen test-suite; bare `main` rører filsystemet.
+ * Gitignorerte stier (#2185) hoppes over før disken spørres: `.gitignore` er
+ * sannhetskilden for «finnes ikke i en klone». Uten regelen slapp
+ * `.forge/contracts/` stille gjennom (ingen `.forge/` i rota), mens
+ * `.claude/orchestrator/` ble meldt brutt (`.claude/` finnes) — og svaret
+ * hang på om kladdeboka tilfeldigvis fantes i arbeidskopien som kjørte.
  *
- * Kjør: node scripts/check-doc-paths.mjs   (exit 1 hvis noe er brutt)
+ * Klassifiseringen er ren og eksportert (`isSkippableRef`, `classifyRef`) så
+ * regelen har ett hjem og en egen test-suite; bare `main` rører filsystemet
+ * og git.
+ *
+ * Kjør: node scripts/check-doc-paths.mjs   (exit 1 hvis noe er brutt, eller
+ * hvis git-kallet feiler)
  */
 
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
@@ -104,21 +113,26 @@ export function isSkippableRef(ref) {
 /**
  * Klassifiserer én referanse. `docDir` er dokumentets katalog (repo-rot-
  * relativ, '' for rot-dokumenter); `exists` svarer på om en repo-rot-relativ
- * sti finnes.
+ * sti finnes; `isIgnored` svarer på om `.gitignore` holder refen utenfor
+ * repoet.
  *
  * Rekkefølgen:
  *  1. `isSkippableRef` → 'skip'.
- *  2. Kandidat? Første segment må finnes i repo-rota, ELLER stien må løse
+ *  2. `isIgnored` → 'ignored', FØR `exists` spørres. En gitignorert sti finnes
+ *     ikke i en klone, og om den tilfeldigvis finnes lokalt skal ikke styre
+ *     svaret (#2185).
+ *  3. Kandidat? Første segment må finnes i repo-rota, ELLER stien må løse
  *     doc-relativt. Uten dette leses hvert kommando-fragment med skråstrek
  *     som en sti.
- *  3. Løs: som gitt, doc-relativt, og med `.ts`/`.tsx` påhengt
+ *  4. Løs: som gitt, doc-relativt, og med `.ts`/`.tsx` påhengt
  *     (ekstensjonløse modul-refs som `lib/notifications/types`).
- *  4. Fortsatt borte → 'broken' KUN hvis siste segment har en `.` eller refen
+ *  5. Fortsatt borte → 'broken' KUN hvis siste segment har en `.` eller refen
  *     slutter på `/`. Ellers er det prosa: `docs/refactor/test/chore/style/
  *     ci/build` er en oppramsing av commit-prefikser, ikke en katalog.
  */
-export function classifyRef(ref, docDir, exists) {
+export function classifyRef(ref, docDir, exists, isIgnored = () => false) {
   if (isSkippableRef(ref)) return { verdict: 'skip' };
+  if (isIgnored(ref)) return { verdict: 'ignored' };
 
   const docRelative = (p) => (docDir ? path.posix.join(docDir, p) : p);
   const trimmed = ref.replace(/\/+$/, '');
@@ -167,25 +181,65 @@ function markdownUnder(root, dir) {
   return found;
 }
 
+/**
+ * Hvilke av `refs` `.gitignore` holder utenfor repoet — ett `git check-ignore`
+ * for hele kjøringen. Refene sendes urørte: mønsteret `.claude/orchestrator/`
+ * gjelder bare kataloger, og git treffer det for en sti som ikke finnes kun
+ * når refen selv har skråstreken til slutt. `-z` fordi git ellers setter en
+ * sti med ø/æ/å i anførselstegn, og da bommer oppslaget i settet stille.
+ */
+function gitIgnoredRefs(root, refs) {
+  // En ref som peker ut av repoet (`../…`) får git til å avbryte hele batchen
+  // med exit 128. Den holdes utenfor og regnes som ikke ignorert.
+  const batch = [...new Set(refs)].filter((ref) => !ref.split('/').includes('..'));
+  const result = spawnSync('git', ['check-ignore', '--no-index', '-z', '--stdin'], {
+    cwd: root,
+    input: batch.map((ref) => `${ref}\0`).join(''),
+    encoding: 'utf8',
+  });
+  // 0 = noen treff, 1 = ingen treff. Alt annet (128: ikke en git-repo) er en
+  // feil og skal gi exit ≠ 0 — aldri tolkes som «ingenting ignorert».
+  if (result.error) throw result.error;
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(`git check-ignore feilet (exit ${result.status}): ${result.stderr.trim()}`);
+  }
+  return new Set(result.stdout.split('\0').filter(Boolean));
+}
+
 function main() {
   const root = process.cwd();
   const exists = (relative) => existsSync(path.join(root, relative));
 
+  const refsByDoc = livingDocs(root).map((doc) => ({
+    doc,
+    docDir: path.posix.dirname(doc) === '.' ? '' : path.posix.dirname(doc),
+    refs: extractRefs(readFileSync(path.join(root, doc), 'utf8')),
+  }));
+  const ignoredRefs = gitIgnoredRefs(
+    root,
+    refsByDoc.flatMap(({ refs }) => refs).filter((ref) => !isSkippableRef(ref)),
+  );
+  const isIgnored = (ref) => ignoredRefs.has(ref);
+
   let checked = 0;
+  let ignored = 0;
   const broken = new Set();
 
-  for (const doc of livingDocs(root)) {
-    const docDir = path.posix.dirname(doc) === '.' ? '' : path.posix.dirname(doc);
-    for (const ref of extractRefs(readFileSync(path.join(root, doc), 'utf8'))) {
-      const { verdict } = classifyRef(ref, docDir, exists);
+  for (const { doc, docDir, refs } of refsByDoc) {
+    for (const ref of refs) {
+      const { verdict } = classifyRef(ref, docDir, exists, isIgnored);
       if (verdict === 'skip') continue;
+      if (verdict === 'ignored') {
+        ignored += 1;
+        continue;
+      }
       checked += 1;
       if (verdict === 'broken') broken.add(`${doc}: ${ref}`);
     }
   }
 
   for (const entry of [...broken].sort()) console.log(`BRUTT  ${entry}`);
-  console.log(`sjekket ${checked}, brutt ${broken.size}`);
+  console.log(`sjekket ${checked}, brutt ${broken.size}, gitignorert ${ignored}`);
   process.exitCode = broken.size > 0 ? 1 : 0;
 }
 

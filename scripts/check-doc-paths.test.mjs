@@ -121,6 +121,54 @@ describe('classifyRef', () => {
   });
 });
 
+describe('classifyRef with gitignored paths (#2185)', () => {
+  // `.gitignore` is the source of truth for "does not exist in a clone". Both
+  // refs are the rows of the issue's table: before the fix `.forge/contracts/`
+  // slipped through the candidate gate because the scanned checkout had no
+  // `.forge/`, while `.claude/orchestrator/` was reported broken because
+  // `.claude/` exists. Here both root segments exist, so only the ignore rule
+  // keeps them out of the broken list.
+  const IGNORED_REFS = ['.claude/orchestrator/', '.forge/contracts/'];
+  const isIgnored = (ref) => IGNORED_REFS.includes(ref);
+  const existsWithRoots = (relative) =>
+    REPO.has(relative) || relative === '.claude' || relative === '.forge';
+
+  it.each(IGNORED_REFS)('reports %s as ignored', (ref) => {
+    expect(classifyRef(ref, 'docs/agent-discipline', existsWithRoots, isIgnored)).toEqual({
+      verdict: 'ignored',
+    });
+  });
+
+  it.each(IGNORED_REFS)('does not consult the filesystem for %s', (ref) => {
+    expect(
+      classifyRef(
+        ref,
+        'docs/agent-discipline',
+        () => {
+          throw new Error('exists() must not be consulted for a gitignored ref');
+        },
+        isIgnored,
+      ),
+    ).toEqual({ verdict: 'ignored' });
+  });
+
+  it('reports a gitignored path as ignored even when it exists locally', () => {
+    // The owner's main checkout has `.claude/orchestrator/` because the
+    // orchestrator writes its ledger there; a fresh worktree does not. The
+    // verdict must not depend on which checkout runs the scan.
+    const existsLocally = (relative) =>
+      existsWithRoots(relative) || relative === '.claude/orchestrator';
+
+    expect(
+      classifyRef('.claude/orchestrator/', 'docs/agent-discipline', existsLocally, isIgnored),
+    ).toEqual({ verdict: 'ignored' });
+  });
+
+  it('still reports a missing path as broken when it is not gitignored', () => {
+    expect(classifyRef('docs/gone/', '', exists, () => false)).toEqual({ verdict: 'broken' });
+  });
+});
+
 describe('extractRefs', () => {
   it('picks up inline code spans', () => {
     expect(extractRefs('Se `docs/user-flows.md` og `lib/scoring/`.')).toEqual([
