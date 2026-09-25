@@ -8,11 +8,14 @@
 # kjører helt normalt til noen trykker «Slett konto». Skriptet gjør derfor fem
 # ting en oppskrift ikke kan garantere:
 #
-#  1. **Prod-verdiene kommer fra skall-miljøet, aldri fra en `.env`-fil.**
-#     `@expo/env` laster `.env.production.local` for ETHVERT Release-bygg — også
-#     eierens dev-bygg mot staging. Skriptet leser prod-URL + anon-nøkkel fra
-#     repo-rotas `.env.local` (gitignorert) og eksporterer dem for akkurat denne
-#     kjøringen. `app.config.ts` kaster hvis noe mangler (fail-closed, før prebuild).
+#  1. **Prod-verdiene kommer fra skall-miljøet, og ingen `.env`-fil i
+#     `native/app/` leses.** `@expo/env` laster `.env.production.local` for
+#     ETHVERT Release-bygg — også eierens dev-bygg mot staging — og
+#     `.env.local` med dev-verdiene i alle moduser. Skriptet leser prod-URL +
+#     anon-nøkkel fra repo-rotas `.env.local` (gitignorert), eksporterer dem for
+#     akkurat denne kjøringen og setter `EXPO_NO_DOTENV=1`, så Expo ikke laster
+#     noen `.env`-fil i appmappa (#2208). `app.config.ts` kaster hvis noe mangler
+#     eller en dev-nøkkel er satt (fail-closed, før prebuild).
 #  2. **Bevis før opplasting.** `store-build-proof.sh` leser bundelen, Info.plist
 #     og entitlements i arkivet og stopper alt ved én FAIL.
 #  3. **Ingen duplikat-kompilering.** Finnes arkivet for (versjon, build) alt,
@@ -236,12 +239,17 @@ for f in "$APP_DIR"/.env.production*; do
 done
 shopt -u nullglob
 
+# Ingen .env-fil under butikkbygget (#2208): prod-verdiene kommer fra skallet,
+# og dev-verdiene i native/app/.env* skal aldri med. CI fjernes så Xcodes
+# bunt-steg alltid tømmer Metro-cachen; Expo slår tømmingen av når CI er satt.
+export EXPO_NO_DOTENV=1
+unset CI
 export APP_VARIANT=store
 export EXPO_PUBLIC_SUPABASE_URL="$SUPABASE_URL"
 export EXPO_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY"
 export EXPO_PUBLIC_WEB_BASE_URL="$STORE_WEB_BASE_URL"
-printf 'APP_VARIANT=%s\nEXPO_PUBLIC_SUPABASE_URL → vert %s\nEXPO_PUBLIC_SUPABASE_ANON_KEY → satt (%d tegn, skrives ikke ut)\nEXPO_PUBLIC_WEB_BASE_URL=%s\n' \
-  "$APP_VARIANT" "$host" "${#ANON_KEY}" "$EXPO_PUBLIC_WEB_BASE_URL"
+printf 'APP_VARIANT=%s\nEXPO_NO_DOTENV=%s (native/app/.env*-filene leses ikke)\nEXPO_PUBLIC_SUPABASE_URL → vert %s\nEXPO_PUBLIC_SUPABASE_ANON_KEY → satt (%d tegn, skrives ikke ut)\nEXPO_PUBLIC_WEB_BASE_URL=%s\n' \
+  "$APP_VARIANT" "$EXPO_NO_DOTENV" "$host" "${#ANON_KEY}" "$EXPO_PUBLIC_WEB_BASE_URL"
 
 # ── 2. Oppløst config (kjører fail-closed-sjekkene i app.config.ts) ─────────
 step "Løser opp app.config.ts for butikk-varianten"

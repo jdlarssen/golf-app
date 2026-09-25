@@ -22,7 +22,8 @@
 // **Prod-verdiene kommer fra skall-miljøet, aldri fra en `.env`-fil.**
 // `@expo/env` laster `.env.production.local` for ETHVERT Release-bygg — også
 // eierens dev-bygg mot staging. Byggeskriptet (`scripts/store-build-ios.sh`)
-// eksporterer verdiene i skallet, som vinner over `.env`-filene.
+// eksporterer verdiene i skallet og slår av Expos `.env`-lesing
+// (`EXPO_NO_DOTENV=1`).
 // Dev-nøklene i `DEV_ONLY_PUBLIC_ENV_KEYS` stopper et butikkbygg når de har
 // innhold (#2208). Lista er eksplisitt og ikke «alt utenom butikkverdiene»,
 // fordi Expo CLI selv setter `EXPO_PUBLIC_PROJECT_ROOT` under bundlingen.
