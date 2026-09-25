@@ -476,6 +476,7 @@ export function TeamsAssignmentSection({
                       unavailableTitle={t('categoryNotRated')}
                     />
                     <select
+                      data-testid={`flight-select-${pid}`}
                       value={flight}
                       onChange={(e) =>
                         setFlightForPlayer(pid, Number(e.target.value))
