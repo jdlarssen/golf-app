@@ -27,6 +27,7 @@
     "kicker": "Velkommen til Tørny",
     "heading": "Fullfør profilen din",
     "subheading": "Fortell oss litt om deg, så er du klar til å spille.",
+    "inviteNoticeGameStarted": "Runden du ble invitert til, hadde allerede startet da du logget inn, så du står ikke på lista. Si fra til den som inviterte deg.",
     "nameLabel": "Navn",
     "submitButton": "Sett i gang",
     "submitPending": "Lagrer …",

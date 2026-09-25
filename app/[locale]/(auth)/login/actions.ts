@@ -9,6 +9,7 @@ import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
+import { isRosterLocked } from '@/lib/games/status';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { routing, type AppLocale } from '@/i18n/routing';
 
@@ -318,20 +319,26 @@ export async function verifyCode(formData: FormData) {
     console.error('[login/verifyCode] guest-clear threw', err);
   }
 
-  // Mark any pending invitation rows for this email as accepted, and pick
-  // opp game-scoped invitations som ble opprettet via /admin/games/[id]
-  // -invite-card-en. For hver game-scoped invitasjon: insert i game_players
-  // og fyr in-app `invite`-varselet deferred. Best-effort hele veien —
-  // login-flyten redirecter til `next` uansett om side-effektene feiler.
+  // Pick up the pending invitations for this email: consume them (accepted_at),
+  // give game invitations a roster spot, fire the deferred in-app `invite`
+  // notification, and befriend the inviter. Best-effort throughout — the login
+  // redirects whether or not the side effects succeed.
   //
-  // Henter pending invitasjoner FØR vi flipper accepted_at slik at vi
-  // også fanger game_id + invited_by. Bruker admin-client her fordi
-  // public.users.id-en til den nyverifiserte brukeren ennå ikke er
-  // tilgjengelig via cookie-klienten i denne action-en (auth-state
-  // propagerer asynkront); admin-client har uansett tilgang.
+  // A game invitation only gives a roster spot while the round has not started
+  // (#182, #2212) — the same rule as the invite doors (`isRosterLocked`). An
+  // invitation to an active or finished round is still consumed, but gives no
+  // spot and no notification; the invitee lands on /complete-profile with a
+  // notice instead. The exception is a guest whose result was sent to them
+  // after the round (#1009): they are already on the roster and land on the
+  // game as before.
   //
-  // #356: gameDest settes inne i blokken, men brukes til redirect ETTER den
-  // (se note ved redirect-en under).
+  // The pending rows are read BEFORE accepted_at flips so game_id + invited_by
+  // are still available. The admin client is used because the freshly verified
+  // user's public.users id is not yet reachable through the cookie client in
+  // this action (auth state propagates asynchronously).
+  //
+  // #356: gameDest is set inside the block but used for the redirect AFTER it
+  // (see the note at the redirect below).
   let gameDest: string | null = null;
 
   try {
@@ -357,7 +364,8 @@ export async function verifyCode(formData: FormData) {
 
     // #676: resolve registration_type + short_id for every game-scoped
     // invitation so we know which are team-scoped BEFORE deciding which
-    // invitations to consume and where to redirect.
+    // invitations to consume and where to redirect. #2212: status too, so a
+    // started or finished round gives no roster spot.
     //
     // 'both' games must be treated identically to 'team' games here — a
     // co-player invited by a captain on a 'both' game should route to
@@ -368,9 +376,13 @@ export async function verifyCode(formData: FormData) {
       gameScoped.map(async (inv) => {
         const { data: gameRow } = await admin
           .from('games')
-          .select('registration_type, short_id')
+          .select('registration_type, short_id, status')
           .eq('id', inv.game_id!)
-          .maybeSingle<{ registration_type: string; short_id: string }>();
+          .maybeSingle<{
+            registration_type: string;
+            short_id: string;
+            status: string;
+          }>();
         const isTeamScoped =
           gameRow?.registration_type === 'team' ||
           gameRow?.registration_type === 'both';
@@ -378,6 +390,7 @@ export async function verifyCode(formData: FormData) {
           inv,
           isTeamScoped,
           shortId: gameRow?.short_id ?? null,
+          isLocked: gameRow != null && isRosterLocked(gameRow.status),
         };
       }),
     );
@@ -386,7 +399,8 @@ export async function verifyCode(formData: FormData) {
     // Team-scoped invitations must remain pending so the attach flow on
     // /signup/[shortId]/team can detect them. Game-less invitations (no
     // game_id) are always consumed — they are friend/club rows with no
-    // downstream attach dependency.
+    // downstream attach dependency. #2212: invitations to a locked round are
+    // consumed too, so they leave the admin waiting list.
     const teamScopedInvIds = new Set(
       resolvedGameScoped.filter((r) => r.isTeamScoped).map((r) => r.inv.id),
     );
@@ -409,49 +423,78 @@ export async function verifyCode(formData: FormData) {
         .maybeSingle<{ id: string }>();
 
       if (userRow?.id) {
+        // #2212: for a locked solo invitation, check whether the invitee is
+        // already on the roster (the guest-claim case, #1009). A failed read
+        // counts as "not on the roster": the invitee then gets the notice
+        // instead of the game, which is the safe side.
+        const onRosterGameIds = new Set<string>();
         await Promise.allSettled(
-          resolvedGameScoped.map(async ({ inv, isTeamScoped }) => {
-            if (!isTeamScoped) {
-              const { error: insertError } = await admin
+          resolvedGameScoped
+            .filter((r) => r.isLocked && !r.isTeamScoped)
+            .map(async ({ inv }) => {
+              const { data: membership, error: membershipError } = await admin
                 .from('game_players')
-                .insert({
-                  game_id: inv.game_id!,
-                  user_id: userRow.id,
-                  team_number: null,
-                  flight_number: null,
-                  course_handicap: null,
-                  // #463: brukeren godtar invitasjonen nå (handlingen ER aksept).
-                  accepted_at: new Date().toISOString(),
-                });
-
-              const duplicate =
-                insertError != null &&
-                (insertError.code === '23505' ||
-                  String(insertError.message ?? '')
-                    .toLowerCase()
-                    .includes('duplicate'));
-
-              if (insertError && !duplicate) {
+                .select('user_id')
+                .eq('game_id', inv.game_id!)
+                .eq('user_id', userRow.id)
+                .maybeSingle<{ user_id: string }>();
+              if (membershipError) {
                 console.error(
-                  '[login/verifyCode] game_players insert failed',
-                  insertError,
+                  '[login/verifyCode] roster membership check failed',
+                  membershipError,
                 );
                 return;
               }
-            }
+              if (membership) onRosterGameIds.add(inv.game_id!);
+            }),
+        );
 
-            // notifyInvitedToGame skipper finished-spill internt og swallow-er
-            // egne feil, så vi trenger ingen guard her ut over Promise.allSettled.
-            // For team-scoped spill: invitéen får et team_invite-varsel når de
-            // klikker "Bli med på lag"-knappen på /signup/[shortId]/team
-            // — verifyCode trigger her bare standard game-scoped invite-varsel
-            // som en hilsen "du er logget inn, nå kan du melde deg på laget".
-            await notifyInvitedToGame({
-              recipientUserId: userRow.id,
-              gameId: inv.game_id!,
-              inviterUserId: inv.invited_by,
-            });
-          }),
+        await Promise.allSettled(
+          resolvedGameScoped
+            .filter((r) => !r.isLocked)
+            .map(async ({ inv, isTeamScoped }) => {
+              if (!isTeamScoped) {
+                const { error: insertError } = await admin
+                  .from('game_players')
+                  .insert({
+                    game_id: inv.game_id!,
+                    user_id: userRow.id,
+                    team_number: null,
+                    flight_number: null,
+                    course_handicap: null,
+                    // #463: brukeren godtar invitasjonen nå (handlingen ER aksept).
+                    accepted_at: new Date().toISOString(),
+                  });
+
+                const duplicate =
+                  insertError != null &&
+                  (insertError.code === '23505' ||
+                    String(insertError.message ?? '')
+                      .toLowerCase()
+                      .includes('duplicate'));
+
+                if (insertError && !duplicate) {
+                  console.error(
+                    '[login/verifyCode] game_players insert failed',
+                    insertError,
+                  );
+                  return;
+                }
+              }
+
+              // Only rounds that have not started get here, so the
+              // notification always points at something the invitee can act
+              // on (#2212). Team-scoped invitees get their team_invite
+              // notification when they tap «Bli med på lag» on
+              // /signup/[shortId]/team; this one is the greeting that tells
+              // them they are logged in and can join the team.
+              // notifyInvitedToGame swallows its own errors.
+              await notifyInvitedToGame({
+                recipientUserId: userRow.id,
+                gameId: inv.game_id!,
+                inviterUserId: inv.invited_by,
+              });
+            }),
         );
 
         // #481: e-postinvitert som blir med → auto-vennskap med inviteren, så
@@ -472,25 +515,42 @@ export async function verifyCode(formData: FormData) {
           }),
         );
 
-        // #356 / #676: route an invitee directly to their game.
-        // - Exactly one solo game (no team-scoped): → /games/[id]
-        // - Exactly one team-scoped game ('team' or 'both'), no solo: →
+        // #356 / #676 / #2212: route an invitee directly to their game.
+        // - joinable = solo invitations to a round that has not started, or to
+        //   a locked round the invitee is already on (guest claim, #1009).
+        // - Exactly one joinable, no team-scoped: → /games/[id]
+        // - Exactly one team-scoped game ('team' or 'both'), no joinable: →
         //   /signup/[shortId]/team so the attach flow finds the still-pending
         //   invitation and shows "Bli med på lag".
-        // - Mixed or multiple invitations: fall back to home (ambiguous).
-        // All destination-overrides are skipped when an explicit `next` is set.
+        // - No joinable, no team-scoped, and at least one solo invitation to a
+        //   started or finished round: → /complete-profile with a notice that
+        //   the round had already started.
+        // - Anything else (mixed or multiple): fall back to `next` (ambiguous).
+        // All destination overrides are skipped when an explicit `next` is set.
         const soloInvites = resolvedGameScoped.filter((r) => !r.isTeamScoped);
+        const joinable = soloInvites.filter(
+          (r) => !r.isLocked || onRosterGameIds.has(r.inv.game_id!),
+        );
+        const lockedOut = soloInvites.filter(
+          (r) => r.isLocked && !onRosterGameIds.has(r.inv.game_id!),
+        );
         const teamScopedInvites = resolvedGameScoped.filter(
           (r) => r.isTeamScoped && r.shortId != null,
         );
         if (!hasExplicitNext) {
-          if (soloInvites.length === 1 && teamScopedInvites.length === 0) {
-            gameDest = `/games/${soloInvites[0].inv.game_id}`;
+          if (joinable.length === 1 && teamScopedInvites.length === 0) {
+            gameDest = `/games/${joinable[0].inv.game_id}`;
           } else if (
             teamScopedInvites.length === 1 &&
-            soloInvites.length === 0
+            joinable.length === 0
           ) {
             gameDest = `/signup/${teamScopedInvites[0].shortId}/team`;
+          } else if (
+            joinable.length === 0 &&
+            teamScopedInvites.length === 0 &&
+            lockedOut.length > 0
+          ) {
+            gameDest = '/complete-profile?invite_notice=game_started';
           }
         }
       }
@@ -520,6 +580,8 @@ export async function verifyCode(formData: FormData) {
   // #1176: invitéen sendes RETT til spillet (ikke lenger en /complete-profile-
   // detour). Profilporten er nå en myk stripe på spill-hjem + en hard gate ved
   // scoring, så spilleren ser hva de er invitert til før de fyller ut navn/HCP.
+  // #2212: unntaket er en runde som allerede har startet — da går invitéen til
+  // /complete-profile med en beskjed, siden spillet ikke har plass til dem.
   if (gameDest) {
     redirect(gameDest);
   }

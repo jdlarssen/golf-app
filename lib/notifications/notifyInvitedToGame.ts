@@ -39,9 +39,10 @@ export async function notifyInvitedToGame(opts: {
   }
 
   // Et finished-spill skal ikke varsle — varselet ville lande i en innboks
-  // hvor spilleren ikke har noen actionable next-step. Picker-actionen
-  // skjuler card-en for active/finished, men deferred-flyten kan ramme
-  // dette hjørnet hvis en invitasjon aksepteres etter at admin har avsluttet.
+  // hvor spilleren ikke har noen actionable next-step.
+  // Defensive: every caller only notifies before the round starts. verifyCode
+  // skips active and finished rounds since #2212. The guard stays so a new
+  // caller cannot send a notification the player cannot act on.
   if (game.status === 'finished') {
     return;
   }

@@ -27,6 +27,7 @@
     "kicker": "Welcome to Tørny",
     "heading": "Complete your profile",
     "subheading": "Tell us a bit about yourself and you're ready to play.",
+    "inviteNoticeGameStarted": "The round you were invited to had already started when you logged in, so you're not on the list. Let the person who invited you know.",
     "nameLabel": "Name",
     "submitButton": "Let's go",
     "submitPending": "Saving …",

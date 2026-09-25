@@ -84,9 +84,27 @@ let gamePlayersInsertResult: { error: unknown } = { error: null };
 let adminGameLookup: {
   registration_type: string;
   short_id?: string;
+  /** #2212: a started or finished round locks the roster. */
+  status?: string;
 } | null = {
   registration_type: 'solo',
+  status: 'scheduled',
 };
+/**
+ * #2212: per-game overrides for the games lookup, keyed by the id verifyCode
+ * passes to `.eq('id', …)`. Ids missing here fall back to `adminGameLookup`,
+ * so tests that only need one game keep using the single fixture.
+ */
+let adminGamesById: Record<
+  string,
+  { registration_type: string; short_id?: string; status?: string }
+> = {};
+/**
+ * #2212: game ids where the logging-in user already has a game_players row
+ * (the guest-claim case, #1009). Answers the membership check verifyCode runs
+ * for a locked round.
+ */
+let rosterGameIds = new Set<string>();
 const adminUpdateMock = vi.fn();
 const adminGamePlayersInsertMock = vi.fn();
 
@@ -163,15 +181,37 @@ vi.mock('@/lib/supabase/admin', () => ({
             adminGamePlayersInsertMock(...args);
             return gamePlayersInsertResult;
           },
+          // #2212: membership check for a locked round:
+          //   .select('user_id').eq('game_id', …).eq('user_id', …).maybeSingle()
+          select: () => {
+            let gameId: string | null = null;
+            const builder = {
+              eq: (column: string, value: string) => {
+                if (column === 'game_id') gameId = value;
+                return builder;
+              },
+              maybeSingle: async () => ({
+                data:
+                  gameId != null && rosterGameIds.has(gameId)
+                    ? { user_id: 'on-roster' }
+                    : null,
+                error: null,
+              }),
+            };
+            return builder;
+          },
         };
       }
       if (table === 'games') {
         // verifyCode (#199 chunk 9) sjekker registration_type for å skippe
-        // game_players-insert på team-only spill.
+        // game_players-insert på team-only spill, og status (#2212) for å
+        // holde startede og ferdige runder utenfor.
         return {
           select: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({ data: adminGameLookup }),
+            eq: (_column: string, id: string) => ({
+              maybeSingle: async () => ({
+                data: id in adminGamesById ? adminGamesById[id] : adminGameLookup,
+              }),
             }),
           }),
         };
@@ -223,7 +263,9 @@ beforeEach(() => {
   adminUserLookup = null;
   expiredInviteLookup = null;
   gamePlayersInsertResult = { error: null };
-  adminGameLookup = { registration_type: 'solo' };
+  adminGameLookup = { registration_type: 'solo', status: 'scheduled' };
+  adminGamesById = {};
+  rosterGameIds = new Set();
 });
 
 describe('sendCode — honeypot', () => {
@@ -1048,5 +1090,160 @@ describe('verifyCode — #1348 utløpt invitasjon', () => {
     });
     // Én gyldig solo-invitasjon igjen → entydig spill-landing.
     expect(lastRedirect()).toBe('/games/00000000-0000-0000-0000-0000000000aa');
+  });
+});
+
+describe('verifyCode — #2212 startet eller ferdig runde', () => {
+  const G_ACTIVE = '00000000-0000-0000-0000-00000000a001';
+  const G_FINISHED = '00000000-0000-0000-0000-00000000f001';
+  const G_SCHEDULED = '00000000-0000-0000-0000-00000000c001';
+  const INVITER = '00000000-0000-0000-0000-0000000000bb';
+
+  /** Invitations-update-kall på cookie-klienten = accepted_at-flippen. */
+  function invitationUpdateCalls() {
+    return supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'invitations' && c.method === 'update',
+    );
+  }
+
+  function consumedInviteIds(): unknown {
+    return supabaseMock.__fromCalls.find(
+      (c) => c.table === 'invitations' && c.method === 'in',
+    )?.args;
+  }
+
+  beforeEach(() => {
+    rpcMock.mockResolvedValue({ data: null, error: null });
+  });
+
+  it('aktiv runde, ikke på lista: ingen plass, ingen varsel, invitasjonen forbrukes, vennskap, beskjed på /complete-profile', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-late',
+        game_id: G_ACTIVE,
+        invited_by: INVITER,
+        expires_at: FUTURE_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'late-user' };
+    adminGamesById = {
+      [G_ACTIVE]: { registration_type: 'solo', status: 'active' },
+    };
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'sen@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(invitationUpdateCalls()).toHaveLength(1);
+    expect(consumedInviteIds()).toEqual(['id', ['inv-late']]);
+    expect(rpcMock).toHaveBeenCalledWith('befriend_inviter', {
+      p_inviter: INVITER,
+    });
+    expect(lastRedirect()).toBe('/complete-profile?invite_notice=game_started');
+  });
+
+  it('ferdig runde, allerede på lista (gjest får resultatet, #1009): ingen insert, ingen varsel, lander på runden', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-claim',
+        game_id: G_FINISHED,
+        invited_by: INVITER,
+        expires_at: FUTURE_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'guest-user' };
+    adminGamesById = {
+      [G_FINISHED]: { registration_type: 'solo', status: 'finished' },
+    };
+    rosterGameIds = new Set([G_FINISHED]);
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'gjest@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(`/games/${G_FINISHED}`);
+  });
+
+  it('ferdig runde uten plass + planlagt runde: bare den planlagte gir plass og styrer landingen', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-finished',
+        game_id: G_FINISHED,
+        invited_by: INVITER,
+        expires_at: FUTURE_EXPIRY,
+      },
+      {
+        id: 'inv-scheduled',
+        game_id: G_SCHEDULED,
+        invited_by: INVITER,
+        expires_at: FUTURE_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'mixed-user' };
+    adminGamesById = {
+      [G_FINISHED]: { registration_type: 'solo', status: 'finished' },
+      [G_SCHEDULED]: { registration_type: 'solo', status: 'scheduled' },
+    };
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'blanding@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledTimes(1);
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ game_id: G_SCHEDULED, user_id: 'mixed-user' }),
+    );
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
+    expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+      recipientUserId: 'mixed-user',
+      gameId: G_SCHEDULED,
+      inviterUserId: INVITER,
+    });
+    expect(lastRedirect()).toBe(`/games/${G_SCHEDULED}`);
+  });
+
+  it('lag-invitasjon til en aktiv runde: intet varsel, ingen insert, blir stående ventende, lag-siden som før', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-team-active',
+        game_id: G_ACTIVE,
+        invited_by: INVITER,
+        expires_at: FUTURE_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'team-user' };
+    adminGamesById = {
+      [G_ACTIVE]: {
+        registration_type: 'team',
+        short_id: 'abc12345',
+        status: 'active',
+      },
+    };
+    // Ingen kø-elementer: lag-invitasjoner forbrukes ikke.
+    supabaseMock = buildSupabaseMock([]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'lag@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(invitationUpdateCalls()).toHaveLength(0);
+    expect(lastRedirect()).toBe('/signup/abc12345/team');
   });
 });
