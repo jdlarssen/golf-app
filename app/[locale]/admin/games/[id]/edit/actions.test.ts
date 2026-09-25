@@ -20,12 +20,17 @@ import {
  *   2. users.select(is_admin,email,name)   // loadRole
  *   3. games.select(created_by)            // requireAdminOrCreator — ONLY when not admin
  *   4. rpc(incomplete_profiles_for_ids)    // pending gate (keyed, not in FIFO queue)
- *   5. games.select(status, game_mode)     // mode-lock fetch
- *   6. games.update                        // optimistic-lock på status
- *   7. game_players.select                 // priorRoster snapshot
- *   8. game_players.delete
- *   9. game_players.insert
- *  10. revalidateTag + redirect
+ *   5. games.select(status, game_mode, mode_config, tournament_id) // mode-lock + cup lock
+ *   6. game_players.select('*')            // prior roster, read BEFORE games.update (#2210)
+ *   7. games.update                        // optimistic-lock på status
+ *   8. game_players.update × n             // plan.updates, each .select('user_id')
+ *   9. game_players.insert                 // plan.inserts, .select('user_id')
+ *  10. game_players.delete                 // plan.deletes, .select('user_id')
+ *  11. revalidateTag + redirect
+ *
+ * On a failed roster write the compensation runs via the (mocked) admin
+ * client: game_players.delete of the attempted ids, then a re-insert of their
+ * prior rows.
  */
 
 const redirectMock = makeRedirectMock();
@@ -144,6 +149,31 @@ function fullGreensomeFormData(
   return fd(base);
 }
 
+/**
+ * #2210: a full stored game_players row matching slot i of
+ * fullBestBallFormData (same team and flight), so the roster plan sees no
+ * change for it.
+ */
+function storedBestBallRow(i: number, extra: Record<string, unknown> = {}) {
+  return {
+    game_id: 'game-1',
+    user_id: `u${i}`,
+    team_number: Math.floor(i / 2) + 1,
+    flight_number: Math.floor(i / 2) < 2 ? 1 : 2,
+    tee_gender: 'mens',
+    course_handicap: null,
+    accepted_at: '2026-09-01T10:00:00Z',
+    paid_at: i < 3 ? '2026-09-02T10:00:00Z' : null,
+    withdrawn_at: null,
+    withdrawn_by_user_id: null,
+    signup_source: i === 5 ? 'public_page' : null,
+    approved_at: null,
+    approved_by_user_id: null,
+    submitted_at: null,
+    ...extra,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -207,6 +237,7 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
       [
         { data: { is_admin: true }, error: null },
         { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null },
+        { data: [], error: null }, // prior roster
         { data: null, error: DB_ERR }, // games.update
       ],
       { incomplete_profiles_for_ids: [] },
@@ -234,6 +265,7 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
       [
         { data: { is_admin: true }, error: null },
         { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null },
+        { data: [], error: null }, // prior roster
         // games.update traff ingen rad: status flippet i en annen fane.
         { data: null, error: null },
       ],
@@ -340,10 +372,9 @@ describe('updateScheduledAction — mode-lock', () => {
           data: { status: 'scheduled', game_mode: 'best_ball' },
           error: null,
         }, // games.select
+        { data: [], error: null }, // game_players.select (prior roster)
         { data: { id: 'game-1' }, error: null }, // games.update
-        { data: [], error: null }, // game_players.select (priorRoster snapshot)
-        { data: null, error: null }, // game_players.delete
-        { data: null, error: null }, // game_players.insert
+        { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // game_players.insert (all 8 new)
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -382,10 +413,12 @@ describe('updateScheduledAction — mode_config-nøkler skjemaet ikke eier (#167
           },
           error: null,
         }, // mode-lock-fetch (leser nå også mode_config)
+        { data: [], error: null }, // prior roster
         { data: { id: 'game-cup' }, error: null }, // games.update
-        { data: [], error: null }, // priorRoster
-        { data: null, error: null }, // delete
-        { data: null, error: null }, // insert
+        {
+          data: Array.from({ length: 4 }, (_, i) => ({ user_id: `u${i}` })),
+          error: null,
+        }, // insert (all 4 new)
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -425,19 +458,13 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
           data: { status: 'scheduled', game_mode: 'best_ball' },
           error: null,
         },
+        // game_players.select (prior roster) — u0..u3 var med fra før
+        { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null },
         { data: { id: 'game-diff' }, error: null }, // games.update
-        // game_players.select (priorRoster) — u0..u3 var med fra før
         {
-          data: [
-            { user_id: 'u0' },
-            { user_id: 'u1' },
-            { user_id: 'u2' },
-            { user_id: 'u3' },
-          ],
+          data: [4, 5, 6, 7].map((i) => ({ user_id: `u${i}` })),
           error: null,
-        },
-        { data: null, error: null }, // delete
-        { data: null, error: null }, // insert
+        }, // insert (u4..u7)
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -463,14 +490,12 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
           data: { status: 'scheduled', game_mode: 'best_ball' },
           error: null,
         },
-        { data: { id: 'game-same' }, error: null },
-        // priorRoster identisk med payload
+        // prior roster identisk med payload → ingen skriving på game_players
         {
-          data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
+          data: Array.from({ length: 8 }, (_, i) => storedBestBallRow(i)),
           error: null,
         },
-        { data: null, error: null },
-        { data: null, error: null },
+        { data: { id: 'game-same' }, error: null }, // games.update
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -492,16 +517,13 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
           data: { status: 'scheduled', game_mode: 'best_ball' },
           error: null,
         },
-        { data: { id: 'game-self' }, error: null },
-        // priorRoster: u1..u7, admin-1 er ny i diff-en
+        // prior roster: u1..u7, admin-1 er ny i diff-en
         {
-          data: Array.from({ length: 7 }, (_, i) => ({
-            user_id: `u${i + 1}`,
-          })),
+          data: Array.from({ length: 7 }, (_, i) => storedBestBallRow(i + 1)),
           error: null,
         },
-        { data: null, error: null },
-        { data: null, error: null },
+        { data: { id: 'game-self' }, error: null }, // games.update
+        { data: [{ user_id: 'admin-1' }], error: null }, // insert (admin-1)
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -527,10 +549,9 @@ describe('saveDraftAction — mode-lock', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // loadRole
       { data: { status: 'draft', game_mode: 'best_ball' }, error: null }, // games.select
+      { data: [], error: null }, // game_players.select (prior roster)
       { data: { id: 'draft-1' }, error: null }, // games.update
-      { data: [], error: null }, // game_players.select (priorRoster snapshot)
-      { data: null, error: null }, // game_players.delete
-      // Ingen game_players.insert siden vi sender 0 spillere
+      // Ingen skriving på game_players: tomt roster før og etter.
     ]);
     signIn('admin-1');
 
@@ -564,10 +585,12 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
           data: { status: 'scheduled', game_mode: 'best_ball' },
           error: null,
         }, // mode-lock
+        { data: [], error: null }, // prior roster
         { data: { id: 'game-1' }, error: null }, // games.update
-        { data: [], error: null }, // priorRoster
-        { data: null, error: null }, // delete
-        { data: null, error: null }, // insert
+        {
+          data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
+          error: null,
+        }, // insert (all 8 new)
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -635,50 +658,34 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
   });
 });
 
-describe('updateScheduledAction — roster rollback (#907)', () => {
-  it('insert-feil ruller tilbake til snapshot-rosteret (rosteret ender ikke tomt)', async () => {
-    // games.update har committet og delete har tømt rosteret. Insert feiler →
-    // uten rollback ville spillet stå publisert uten spillere (felle #5). Vi
-    // forventer at snapshotet (alle kolonner) re-insertes og at redirecten
-    // fortsatt er db_players.
-    const priorRows = [
-      {
-        game_id: 'game-1',
-        user_id: 'u0',
-        team_number: 1,
-        flight_number: 1,
-        tee_gender: 'mens',
-        course_handicap: null,
-        accepted_at: '2026-06-01T00:00:00Z',
-        approved_at: null,
-        submitted_at: null,
-        withdrawn_at: null,
-      },
-      {
-        game_id: 'game-1',
-        user_id: 'u1',
-        team_number: 1,
-        flight_number: 1,
-        tee_gender: 'ladies',
-        course_handicap: null,
-        accepted_at: null,
-        approved_at: null,
-        submitted_at: null,
-        withdrawn_at: null,
-      },
-    ];
+describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () => {
+  // games.update has committed. A roster write then fails: the rows this save
+  // tried to write must be put back to their snapshot (trap 5), so the roster
+  // is never left half-written.
+  //
+  // Prior: u0 (lag 1) and u1 on lag 2 with a ladies tee. The form moves u1 to
+  // lag 1 (one update) and adds u2..u7 (inserts). The insert fails.
+  const priorRows = [
+    storedBestBallRow(0),
+    storedBestBallRow(1, {
+      team_number: 2,
+      flight_number: 1,
+      tee_gender: 'ladies',
+      paid_at: '2026-09-02T10:00:00Z',
+    }),
+  ];
+
+  it('en feilet spillerskriving gir før-tilstanden tilbake og redirect db_players', async () => {
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null }, // loadRole
-        {
-          data: { status: 'scheduled', game_mode: 'best_ball' },
-          error: null,
-        }, // mode-lock
+        { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // existing
+        { data: priorRows, error: null }, // prior roster
         { data: { id: 'game-1' }, error: null }, // games.update
-        { data: priorRows, error: null }, // priorRoster select('*')
-        { data: null, error: null }, // delete (ok)
-        { data: null, error: { message: 'insert boom' } }, // insert FAILS
-        { data: null, error: null }, // rollback re-insert (ok)
+        { data: [{ user_id: 'u1' }], error: null }, // update u1 (ok)
+        { data: null, error: { message: 'insert boom' } }, // insert u2..u7 FAILS
+        { data: null, error: null }, // compensation delete (ok)
+        { data: null, error: null }, // compensation re-insert (ok)
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -689,45 +696,41 @@ describe('updateScheduledAction — roster rollback (#907)', () => {
       updateScheduledAction('game-1', fullBestBallFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    // To game_players-inserts: den feilede nye rosteren + rollback-re-inserten.
+    const deletes = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'game_players' && c.method === 'delete',
+    );
+    expect(deletes).toHaveLength(1);
+    // The compensation deletes exactly the rows this save tried to write…
+    const deleteIn = supabaseMock.__fromCalls.find(
+      (c) => c.method === 'in' && c.table === 'game_players',
+    );
+    expect(deleteIn?.args).toEqual([
+      'user_id',
+      ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7'],
+    ]);
+    // …and puts back the snapshot of the one that existed (every column).
     const inserts = supabaseMock.__fromCalls.filter(
       (c) => c.table === 'game_players' && c.method === 'insert',
     );
     expect(inserts).toHaveLength(2);
-    // Rollback-inserten må bruke det fulle snapshotet (gjenoppretter rosteret).
-    expect(inserts[1]!.args[0]).toEqual(priorRows);
+    expect(inserts[1]!.args[0]).toEqual([priorRows[1]]);
     expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
-    // Notify fyrer aldri — vi redirecter på feil-stien før notify-blokken.
+    // Notify never fires — the failure path redirects before it.
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
   });
 
-  it('rollback-re-insert som også feiler logges, men redirecten er fortsatt db_players', async () => {
-    const priorRows = [
-      {
-        game_id: 'game-1',
-        user_id: 'u0',
-        team_number: 1,
-        flight_number: 1,
-        tee_gender: 'mens',
-        course_handicap: null,
-        accepted_at: null,
-        approved_at: null,
-        submitted_at: null,
-        withdrawn_at: null,
-      },
-    ];
+  it('kompensasjon som også feiler logges, og redirecten er fortsatt db_players', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null }, // loadRole
-        {
-          data: { status: 'scheduled', game_mode: 'best_ball' },
-          error: null,
-        }, // mode-lock
+        { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // existing
+        { data: priorRows, error: null }, // prior roster
         { data: { id: 'game-1' }, error: null }, // games.update
-        { data: priorRows, error: null }, // priorRoster select('*')
-        { data: null, error: null }, // delete (ok)
+        { data: [{ user_id: 'u1' }], error: null }, // update u1 (ok)
         { data: null, error: { message: 'insert boom' } }, // insert FAILS
-        { data: null, error: { message: 'rollback boom' } }, // rollback FAILS too
+        { data: null, error: null }, // compensation delete (ok)
+        { data: null, error: { message: 'rollback boom' } }, // re-insert FAILS too
       ],
       { incomplete_profiles_for_ids: [] },
     );
@@ -738,11 +741,154 @@ describe('updateScheduledAction — roster rollback (#907)', () => {
       updateScheduledAction('game-1', fullBestBallFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    // Vi forsøkte fortsatt rollbacken (to inserts) og redirecter likt.
-    const inserts = supabaseMock.__fromCalls.filter(
-      (c) => c.table === 'game_players' && c.method === 'insert',
+    expect(consoleError).toHaveBeenCalledWith(
+      '[updateGameInternal] roster rollback failed',
+      { message: 'rollback boom' },
     );
-    expect(inserts).toHaveLength(2);
     expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players');
+    consoleError.mockRestore();
+  });
+});
+
+/**
+ * #2210: the roster is saved as a diff. A save that only moves the tee-off
+ * writes nothing on game_players, so paid/accepted/withdrawn/signup survive —
+ * and a non-admin organiser cannot change who plays in a cup match here.
+ */
+describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () => {
+  const BEST_BALL_IDS = Array.from({ length: 8 }, (_, i) => `u${i}`);
+
+  function rosterWrites() {
+    return supabaseMock.__fromCalls.filter(
+      (c) =>
+        c.table === 'game_players' &&
+        ['update', 'insert', 'delete', 'upsert'].includes(c.method),
+    );
+  }
+
+  it('ny tee-off på et planlagt spill gjør ingen delete eller insert på game_players', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball', tournament_id: null },
+          error: null,
+        }, // existing
+        { data: BEST_BALL_IDS.map((_, i) => storedBestBallRow(i)), error: null }, // prior roster
+        { data: { id: 'game-1' }, error: null }, // games.update
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
+
+    const form = fullBestBallFormData();
+    form.set('roster_loaded_ids', BEST_BALL_IDS.join(','));
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'update',
+      ),
+    ).toBe(true);
+    expect(rosterWrites()).toEqual([]);
+  });
+
+  it('arrangør (ikke admin) som fjerner en spiller i en cupkamp får cup_roster_locked før games.update', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball', tournament_id: 'cup-1' },
+          error: null,
+        }, // existing
+        { data: BEST_BALL_IDS.map((_, i) => storedBestBallRow(i)), error: null }, // prior roster
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('creator-1');
+
+    // The organiser dropped team 4 (u6 + u7) from the form.
+    const form = fullBestBallFormData();
+    for (const i of [6, 7]) {
+      form.delete(`player_${i}_id`);
+      form.delete(`player_${i}_team`);
+      form.delete(`player_${i}_flight`);
+    }
+    form.set('roster_loaded_ids', BEST_BALL_IDS.join(','));
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1/rediger?error=cup_roster_locked');
+    expect(
+      supabaseMock.__fromCalls.filter((c) =>
+        ['update', 'insert', 'delete'].includes(c.method),
+      ),
+    ).toEqual([]);
+  });
+
+  it('arrangør (ikke admin) som bare flytter tee-off på en planlagt cupsingles lagrer uten å røre rosteret', async () => {
+    // The cup draw put both sides in flight 1; the singles validator sends
+    // flight = side (1 and 2). The stored flight must stand.
+    const priorRows = [
+      { ...storedBestBallRow(0), team_number: 1, flight_number: 1 },
+      { ...storedBestBallRow(1), team_number: 2, flight_number: 1 },
+    ];
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check
+        {
+          data: {
+            status: 'scheduled',
+            game_mode: 'singles_matchplay',
+            tournament_id: 'cup-1',
+          },
+          error: null,
+        }, // existing
+        { data: priorRows, error: null }, // prior roster
+        { data: { id: 'game-1' }, error: null }, // games.update
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('creator-1');
+
+    const form = fd({
+      name: 'Cup: runde 1',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      hcp_allowance_pct: '100',
+      scheduled_tee_off_at: FUTURE_TEE_OFF,
+      side_tournament_enabled: 'false',
+      game_mode: 'singles_matchplay',
+      player_0_id: 'u0',
+      player_0_team: '1',
+      player_0_flight: '1',
+      player_1_id: 'u1',
+      player_1_team: '2',
+      player_1_flight: '2',
+      roster_loaded_ids: 'u0,u1',
+    });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1?status=updated');
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'update',
+      ),
+    ).toBe(true);
+    expect(rosterWrites()).toEqual([]);
   });
 });

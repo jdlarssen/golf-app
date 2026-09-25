@@ -77,6 +77,7 @@ import { ProfileGateStripe } from './ProfileGateStripe';
 import { CreatorControls } from './CreatorControls';
 import { LiveFollowControl } from './LiveFollowControl';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
+import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -509,7 +510,11 @@ export default async function GameHomePage({
         slope: playerRating.slope,
         courseRating: playerRating.courseRating,
         par: playerRating.par,
-        allowancePct: allowanceRes.data.hcp_allowance_pct,
+        // #2210: the same percentage the freeze at start applies.
+        allowancePct: effectiveHcpAllowancePct(
+          game.game_mode,
+          allowanceRes.data.hcp_allowance_pct,
+        ),
       });
     }
   }

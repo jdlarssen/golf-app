@@ -85,6 +85,21 @@ describe('TeamsAssignmentSection — rutenettet vokser med valgte spillere (#214
     expect(flightSelects.map((el) => (el as HTMLSelectElement).value).sort()).toEqual([
       '1', '1', '1', '1', '2', '2', '2', '2', '3', '3', '3', '3',
     ]);
+
+    // #2210: the creator edit page may not see every rostered player (users
+    // RLS). A selected id missing from `players` must not crash the flight
+    // picker; its row is skipped.
+    const { container } = render(
+      <TeamsAssignmentSection
+        state={latest}
+        players={PLAYERS.filter((p) => p.id !== 'p1')}
+        hideNumbering
+      />,
+    );
+    const partialFlightSelects = within(container)
+      .getAllByRole('combobox')
+      .filter((el) => within(el).queryByText('Flight 1') !== null);
+    expect(partialFlightSelects).toHaveLength(11);
   });
 
   it('13 lag à 3 trukket, så byttet til à 4: alle 13 lagkort står, ingen spillere skjules', () => {

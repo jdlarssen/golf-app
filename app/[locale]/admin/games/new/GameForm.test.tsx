@@ -1087,7 +1087,17 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
       '#matchplay_side_2',
     ) as HTMLSelectElement;
     fireEvent.change(side1, { target: { value: 'u0' } });
+    // #2210: with only side 1 set, u1 rides along as a player without a side
+    // instead of being dropped from the payload.
+    const unassigned = () =>
+      [
+        ...container.querySelectorAll<HTMLInputElement>(
+          'input[name="unassigned_player_id"]',
+        ),
+      ].map((el) => el.value);
+    expect(unassigned()).toEqual(['u1']);
     fireEvent.change(side2, { target: { value: 'u1' } });
+    expect(unassigned()).toEqual([]);
 
     // Payloaden skal ha player_0 (side 1) + player_1 (side 2) i den
     // rekkefølgen — orderedPayload itererer side 1 → side 2.
@@ -1116,6 +1126,10 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     expect(player1Id?.value).toBe('u1');
     expect(player1Team?.value).toBe('2');
     expect(player1Flight?.value).toBe('2');
+    // #2210: the create flow has no roster to diff against.
+    expect(
+      container.querySelector('input[name="roster_loaded_ids"]'),
+    ).toBeNull();
   });
 
   it('matchplay: per-spiller-tee-seksjonen vises slik at admin kan sette M/D/J', () => {
@@ -1659,7 +1673,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
       pending: true,
     };
 
-    render(
+    const { container } = render(
       <GameForm
         courses={COURSES}
         players={[pendingPlayer]}
@@ -1686,5 +1700,13 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
     expect(saveBtn).toBeDisabled();
     expect(saveBtn).toHaveAttribute('aria-describedby', 'publish-missing');
     expect(document.getElementById('publish-missing')).toBeInTheDocument();
+    // #2210: the save learns who the form was opened with.
+    expect(
+      (
+        container.querySelector(
+          'input[name="roster_loaded_ids"]',
+        ) as HTMLInputElement | null
+      )?.value,
+    ).toBe('u-pending');
   });
 });

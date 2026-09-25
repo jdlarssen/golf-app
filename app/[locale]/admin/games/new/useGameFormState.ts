@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
@@ -1368,8 +1369,9 @@ export function useGameFormState({
       }[] = [];
       // Iterer side 1 først, så side 2 — gir deterministisk
       // player_0/player_1-rekkefølge uavhengig av selectedPlayerIds-order.
-      // Spillere uten side-tilordning droppes (draft tolererer det;
-      // publish-validering melder mangel via missingForPublish).
+      // Spillere uten side-tilordning er ikke med her. De sendes som
+      // `unassigned_player_id` (se `unassignedPlayerIds` under, #2210), og
+      // publish-validering melder mangelen via missingForPublish.
       for (const side of [1, 2] as const) {
         for (const pid of selectedPlayerIds) {
           if (teamByPlayer[pid] === side) {
@@ -1410,6 +1412,17 @@ export function useGameFormState({
     }
     return rows;
   }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble, isPatsome, isTeamMatchplay]);
+
+  // #2210: selected players the payload leaves out — no team in a team
+  // format, no side in matchplay (in practice; wolf, round robin and the solo
+  // formats emit everyone). The form sends them as `unassigned_player_id` so
+  // the server keeps them on the roster with null team/flight. Before this, a
+  // save of an open team game deleted everyone who had signed up without a
+  // team yet.
+  const unassignedPlayerIds = useMemo(() => {
+    const inPayload = new Set(orderedPayload.map((row) => row.user_id));
+    return selectedPlayerIds.filter((pid) => !inPayload.has(pid));
+  }, [orderedPayload, selectedPlayerIds]);
 
   const flightsComplete =
     teamsComplete &&
@@ -1671,7 +1684,7 @@ export function useGameFormState({
     (playersStepOptional || playersValidForMode) &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || isTeamMatchplay || allowanceValid) &&
+      : !usesGameHcpAllowance(gameMode) || allowanceValid) &&
     hasTeeOff &&
     !teeOffInPast &&
     playersWithUnratedCategory.length === 0 &&
@@ -1885,11 +1898,11 @@ export function useGameFormState({
     // isSolo
     pushMissing('players', tMissing('soloMin'));
   }
-  // hcp_allowance_pct gjelder ikke for Texas, Ambrose, Shamble, Wolf, Nassau,
-  // Skins, Bingo Bango Bongo, Nines, Round Robin eller Acey Deucey — disse
-  // modusene har sin egen scoring-konfig i mode_config. Hopper over allowance-
-  // sjekken så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isBingoBangoBongo && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !isTeamMatchplay && !allowanceValid)
+  // hcp_allowance_pct gjelder bare formatene som bruker den generelle
+  // prosenten (#2210, `usesGameHcpAllowance`). De andre har sin egen
+  // scoring-konfig i mode_config, og feltet er skjult for dem — så admin ikke
+  // får mismatch mellom UI-skjult-felt og publish-feilmelding.
+  if (usesGameHcpAllowance(gameMode) && !allowanceValid)
     pushMissing('allowance', tMissing('invalidAllowance'));
 
   return {
@@ -2047,6 +2060,7 @@ export function useGameFormState({
     teamsComplete,
     flightsComplete,
     orderedPayload,
+    unassignedPlayerIds,
     // Validitets-flags
     allowanceValid,
     texasHandicapPctValid,

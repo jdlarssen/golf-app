@@ -11,6 +11,7 @@ import {
 } from './greensomeOverridePlan';
 import { getRatingForGender, type TeeBoxRatings, type TeeGender } from './teeRating';
 import type { GameStatus } from './status';
+import { effectiveHcpAllowancePct } from './hcpAllowance';
 import type { Json } from '@/lib/database.types';
 
 /**
@@ -285,7 +286,10 @@ export async function recomputeCourseHandicapForUser(
       courseHandicap: m.course_handicap,
       teeGender: m.tee_gender,
       teeRatings: game?.tee_boxes ?? null,
-      allowancePct: game?.hcp_allowance_pct ?? 100,
+      // #2210: same percentage as the freeze at start (startScheduledGameCore).
+      allowancePct: game
+        ? effectiveHcpAllowancePct(game.game_mode, game.hcp_allowance_pct)
+        : 100,
     };
   });
 

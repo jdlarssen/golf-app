@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName, type GamePrize } from '@/lib/games/prizes';
 import type {
   RegistrationMode,
@@ -365,6 +366,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     handleTeamSizeChange,
     lockGameMode,
     orderedPayload,
+    unassignedPlayerIds,
     canPublish,
     missingForPublish,
   } = state;
@@ -435,7 +437,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const settingsSummary = t(state.sideEnabled ? 'panelSideOn' : 'panelSideOff');
 
   return (
-    <form className="space-y-6">
+    <form className="space-y-6" data-testid="game-form">
       {/* Modus + lagstørrelse — hidden inputs slik at server-action mottar
           eksakt det admin valgte i tile-en. `team_size` er teknisk redundant
           (modus + ENABLED_COMBOS gir det back-end), men sender den med
@@ -608,6 +610,27 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           />
         </div>
       ))}
+      {/* #2210: selected players without a team (or matchplay side) ride
+          along so the server keeps them on the roster instead of dropping
+          them. */}
+      {unassignedPlayerIds.map((pid) => (
+        <input
+          key={pid}
+          type="hidden"
+          name="unassigned_player_id"
+          value={pid}
+        />
+      ))}
+      {/* #2210: who the edit form was opened with, so the save can tell a
+          player the organiser removed from one who signed up meanwhile
+          (lib/games/rosterEdit.ts). The create flow has no roster to diff. */}
+      {mode.kind !== 'create' && (
+        <input
+          type="hidden"
+          name="roster_loaded_ids"
+          value={(initialValues?.players ?? []).map((p) => p.user_id).join(',')}
+        />
+      )}
 
       {/* Section 1: Basics. #909: synlighet + sideturnering bor i
           «Innstillinger»-panelet via AdvancedSettingsSection includeVisibility
@@ -739,10 +762,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             har ingen sentral hidden input for hcp_allowance_pct — toggle-en
             emitter sin egen (ingen hideHiddenInput). State persisterer i
             useGameFormState via controlled-modus. */}
-        {(gameMode === 'best_ball' ||
-          isStablefordFamily(gameMode) ||
-          gameMode === 'singles_matchplay' ||
-          gameMode === 'solo_strokeplay') && (
+        {usesGameHcpAllowance(gameMode) && (
           <AllowanceField
             fieldName="hcp_allowance_pct"
             defaultPct={100}
@@ -946,6 +966,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             <Button
               type="submit"
               formAction={mode.updateAction.bind(null, mode.gameId)}
+              data-testid="save-changes"
               className="w-full"
               disabled={!canPublish}
               aria-describedby={missingHint ? 'publish-missing' : undefined}

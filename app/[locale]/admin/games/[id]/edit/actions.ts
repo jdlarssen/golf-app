@@ -14,6 +14,16 @@ import {
   parsePrizesFromFormData,
 } from '@/lib/games/gamePayload';
 import { carryPreservedModeConfigKeys } from '@/lib/games/modeConfigEdit';
+import {
+  formOwnsFlight,
+  parseLoadedRoster,
+  planRosterEdit,
+  plannedInsertIds,
+  touchesCupRoster,
+  type DesiredRosterRow,
+  type RosterEditPlan,
+} from '@/lib/games/rosterEdit';
+import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
@@ -23,6 +33,19 @@ type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
 function uiGenderToDb(ui: string): 'mens' | 'ladies' | 'juniors' {
   return ui === 'D' ? 'ladies' : ui === 'J' ? 'juniors' : 'mens';
+}
+
+/**
+ * #2210: the tee category the form sent for a player, or `null` when it sent
+ * none. Several formats render no category toggle (#2209) — `null` keeps the
+ * stored category instead of overwriting it with 'mens'.
+ */
+function formTeeGender(
+  formData: FormData,
+  userId: string,
+): 'mens' | 'ladies' | 'juniors' | null {
+  const raw = String(formData.get(`player_${userId}_gender`) ?? '').trim();
+  return raw ? uiGenderToDb(raw) : null;
 }
 
 export async function saveDraftAction(gameId: string, formData: FormData) {
@@ -174,7 +197,7 @@ async function updateGameInternal(
   // lagringen — se carryPreservedModeConfigKeys under (#1677).
   const { data: existing, error: existingError } = await supabase
     .from('games')
-    .select('status, game_mode, mode_config')
+    .select('status, game_mode, mode_config, tournament_id')
     .eq('id', gameId)
     .maybeSingle();
   // Error ≠ absence (#1445): a transient query failure throws to the route's
@@ -195,6 +218,61 @@ async function updateGameInternal(
     existing!.game_mode !== payload.game_mode
   ) {
     redirect({ href: editHref({ error: 'mode_locked_after_publish' }), locale });
+  }
+
+  // #2210: the roster is saved as a diff, not «delete everything, insert the
+  // form». Other surfaces own state on these rows — paid (Betaling),
+  // accepted, withdrawn, signup source, flights from the Flights section or
+  // the cup draw — and players sign up or leave while the form is open. The
+  // snapshot is read before games.update so the cup lock below can stop the
+  // save before anything is written. `select('*')` because the compensation
+  // puts every column back. Error ≠ absence (#1445): a failed read throws.
+  const { data: priorRoster, error: priorRosterError } = await supabase
+    .from('game_players')
+    .select('*')
+    .eq('game_id', gameId)
+    .returns<Tables<'game_players'>[]>();
+  if (priorRosterError) {
+    console.error('[updateGameInternal] roster read failed', {
+      gameId,
+      error: priorRosterError,
+    });
+    throw priorRosterError;
+  }
+  const priorRosterRows = priorRoster ?? [];
+
+  const desiredRoster: DesiredRosterRow[] = payload.players.map((p) => ({
+    user_id: p.user_id,
+    team_number: p.team_number,
+    flight_number: p.flight_number,
+    tee_gender: formTeeGender(formData, p.user_id),
+  }));
+  const loadedRoster = parseLoadedRoster(formData);
+  // #1009: guest rows go in via service-role — the invite-eligibility guard
+  // (0115) blocks a non-admin organiser's client insert of a guest. Only
+  // rows the plan inserts need the lookup.
+  const guestIds = await findGuestIds(
+    plannedInsertIds(priorRosterRows, desiredRoster, loadedRoster),
+  );
+  const plan = planRosterEdit({
+    prior: priorRosterRows,
+    desired: desiredRoster,
+    loaded: loadedRoster,
+    modeChanged: existing!.game_mode !== payload.game_mode,
+    formOwnsFlight: formOwnsFlight(payload.game_mode),
+    actorUserId: userId,
+    guestIds,
+    nowIso: new Date().toISOString(),
+  });
+
+  // Cup lock (#2210 D5): in a cup match only an admin may change who plays
+  // whom here — the same rule as «Styr spillere» (#1937/#1814). Without it
+  // the diff would be a new way to add players to a cup match. Tee-off, name,
+  // tee category and flight stay editable; a save that only moves the tee-off
+  // plans no roster change at all. Loose `!= null`: a row without the column
+  // means «not a cup».
+  if (existing!.tournament_id != null && !ctx.isAdmin && touchesCupRoster(plan)) {
+    redirect({ href: editHref({ error: 'cup_roster_locked' }), locale });
   }
 
   // Optimistic lock: only update if the row's current status matches the
@@ -286,107 +364,24 @@ async function updateGameInternal(
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
 
-  // Snapshot eksisterende roster FØR delete + insert. To formål fra samme
-  // round-trip: (1) notify-diff — hvilke spillere er faktisk nye i diff-en, så
-  // notify kun fyres for dem; (2) rollback-kilde — hvis re-insertet under
-  // feiler, re-inserter vi disse radene så rosteret aldri ender tomt på et
-  // publisert/scheduled spill (#907, AGENTS.md felle #5). `select('*')` fordi
-  // rollbacken må gjenopprette ALLE kolonner (team/flight/tee_gender/
-  // accepted_at …), ikke bare user_id. game_players har ingen auto-generert
-  // PK/created_at (komposit-PK game_id+user_id), så radene re-inserter ordrett.
-  const { data: priorRoster } = await supabase
-    .from('game_players')
-    .select('*')
-    .eq('game_id', gameId)
-    .returns<Tables<'game_players'>[]>();
-  const priorRosterRows = priorRoster ?? [];
-  const priorRosterIds = new Set(priorRosterRows.map((r) => r.user_id));
-
-  // Replace the roster wholesale. For both 'draft' and 'scheduled' starting
-  // states no `scores` rows exist yet (handicaps haven't been frozen — that
-  // happens at "Start runden nå"), making delete+insert safe. A diff-based
-  // approach would shave a few writes but adds material complexity for an
-  // 8-row table; not worth it.
-  const { error: deleteError } = await supabase
-    .from('game_players')
-    .delete()
-    .eq('game_id', gameId);
-  if (deleteError) {
-    console.error('[updateGameInternal] roster delete failed', deleteError);
+  const rosterWrite = await writeRosterPlan(
+    supabase,
+    gameId,
+    plan,
+    guestIds,
+    priorRosterRows,
+  );
+  if (!rosterWrite.ok) {
     redirect({ href: editHref({ error: 'db_players' }), locale });
   }
 
-  // #1009: gjeste-rader (skygge-brukere) må re-inserters via service-role —
-  // invite-eligibility-guarden (0115) blokkerer en ikke-admin-arrangørs
-  // klient-insert av en gjest. Vanlige rader beholder request-klienten så
-  // RLS-dekningen er uendret.
-  const guestIds = await findGuestIds(payload.players.map((p) => p.user_id));
-
-  if (payload.players.length > 0) {
-    const rows = payload.players.map((p) => {
-      const playerGenderUi = String(formData.get(`player_${p.user_id}_gender`) ?? 'M');
-      return {
-        game_id: gameId,
-        user_id: p.user_id,
-        team_number: p.team_number,
-        flight_number: p.flight_number,
-        tee_gender: uiGenderToDb(playerGenderUi),
-        // Same rule as the publish path: handicaps are frozen at D5
-        // (Start runden nå), not at edit-time.
-        course_handicap: null,
-        // #1009: en gjest kan aldri selv bekrefte — bekreftes ved insert så
-        // roster-swappen ikke etterlater en evig «Ikke bekreftet»-gjest.
-        ...(guestIds.has(p.user_id)
-          ? { accepted_at: new Date().toISOString() }
-          : {}),
-      };
-    });
-    const regularRows = rows.filter((r) => !guestIds.has(r.user_id));
-    const guestRows = rows.filter((r) => guestIds.has(r.user_id));
-    // Tom regularRows-insert beholdes (PostgREST no-op) så flyten er identisk
-    // med før-#1009 når hele rosteret er gjester.
-    let { error: insertError } = await supabase
-      .from('game_players')
-      .insert(regularRows);
-    if (!insertError && guestRows.length > 0) {
-      const res = await getAdminClient().from('game_players').insert(guestRows);
-      insertError = res.error;
-    }
-    if (insertError) {
-      console.error('[updateGameInternal] roster insert failed', insertError);
-      // #907: delete-en over har allerede tømt rosteret, og games.update har
-      // committet. Uten dette sitter spillet igjen publisert/scheduled UTEN
-      // spillere (AGENTS.md felle #5). Re-insert snapshotet så rosteret
-      // gjenopprettes til før-edit-tilstanden. Dobbel-feil (også rollbacken
-      // feiler) logges — vi har gjort det vi kan; arrangøren ser db_players og
-      // kan prøve på nytt. Speiler den kompenserende rollbacken i #737.
-      // #1009: rollbacken går via service-role — snapshotet kan inneholde
-      // gjeste-rader som 0115-guarden ville avvist på request-klienten, og en
-      // gjenoppretting av FØR-tilstanden skal aldri strande halvveis på den.
-      if (priorRosterRows.length > 0) {
-        const { error: rollbackError } = await getAdminClient()
-          .from('game_players')
-          .insert(priorRosterRows);
-        if (rollbackError) {
-          console.error(
-            '[updateGameInternal] roster rollback re-insert failed',
-            rollbackError,
-          );
-        }
-      }
-      redirect({ href: editHref({ error: 'db_players' }), locale });
-    }
-  }
-
-  // Best-effort notify for spillere som ER NYE i diff-en (var ikke på
-  // rosteren før denne edit-en). Skipper inviter selv. Eksisterende
-  // spillere som beholdes får ingen ny varsel — den fyrte allerede da de
-  // ble lagt til første gang. Promise.allSettled gjør at én feilet notify
-  // ikke påvirker action-redirecten.
-  // #1009: gjester varsles ikke (ingen innboks å lese i, aldri mail).
-  const newPlayerIds = payload.players
-    .map((p) => p.user_id)
-    .filter((id) => !priorRosterIds.has(id) && id !== userId && !guestIds.has(id));
+  // Best-effort notify for players who are NEW on the roster (inserted by this
+  // save). The organiser is skipped; players who stayed got their notice when
+  // they were first added. Promise.allSettled keeps one failed notify from
+  // affecting the redirect. #1009: guests are not notified (no inbox).
+  const newPlayerIds = plan.inserts
+    .map((r) => r.user_id)
+    .filter((id) => id !== userId && !guestIds.has(id));
   if (newPlayerIds.length > 0) {
     await Promise.allSettled(
       newPlayerIds.map((recipientUserId) =>
@@ -401,4 +396,116 @@ async function updateGameInternal(
 
   expireGameCache(gameId);
   redirect({ href: `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`, locale });
+}
+
+type RequestClient = Awaited<ReturnType<typeof getServerClient>>;
+
+/**
+ * #2210: writes a roster plan — updates, then inserts, then deletes — and
+ * asserts every write hit the rows it meant to (trap 2, `affectedRows.ts`).
+ *
+ * Compensation (trap 5, replaces the #907 rollback): games.update has already
+ * committed, so on any failure the rows this call tried to write are put back
+ * to their snapshot. Via service-role: delete those rows in the game, then
+ * re-insert their prior rows verbatim (game_players has a composite PK and no
+ * generated columns). A double failure is logged — the organiser sees
+ * db_players and can try again.
+ */
+async function writeRosterPlan(
+  supabase: RequestClient,
+  gameId: string,
+  plan: RosterEditPlan,
+  guestIds: ReadonlySet<string>,
+  priorRows: Tables<'game_players'>[],
+): Promise<{ ok: boolean }> {
+  const attempted = new Set<string>();
+  try {
+    // Existing rows keep every column the form does not own. Creator and
+    // admin both hold UPDATE on the roster (0071 «creator update», 0092);
+    // guard_game_players_self_update lets the creator through on other rows
+    // and on their own team/flight (0168). Rows never pass the 0115 insert
+    // guard again, so a stranger who signed up via the link is no blocker.
+    for (const u of plan.updates) attempted.add(u.user_id);
+    const updateResults = await Promise.all(
+      plan.updates.map(({ user_id, patch }) =>
+        supabase
+          .from('game_players')
+          .update(patch)
+          .eq('game_id', gameId)
+          .eq('user_id', user_id)
+          .select('user_id'),
+      ),
+    );
+    updateResults.forEach((res, i) =>
+      expectOne(res, `[updateGameInternal] roster update ${plan.updates[i]!.user_id}`),
+    );
+
+    const rows = plan.inserts.map((r) => ({ ...r, game_id: gameId }));
+    const regularRows = rows.filter((r) => !guestIds.has(r.user_id));
+    const guestRows = rows.filter((r) => guestIds.has(r.user_id));
+    for (const r of rows) attempted.add(r.user_id);
+    if (regularRows.length > 0) {
+      const inserted = expectAffected(
+        await supabase.from('game_players').insert(regularRows).select('user_id'),
+        '[updateGameInternal] roster insert',
+      );
+      if (inserted.length !== regularRows.length) {
+        throw new Error(
+          `[updateGameInternal] roster insert: expected ${regularRows.length} rows, got ${inserted.length}`,
+        );
+      }
+    }
+    if (guestRows.length > 0) {
+      const inserted = expectAffected(
+        await getAdminClient()
+          .from('game_players')
+          .insert(guestRows)
+          .select('user_id'),
+        '[updateGameInternal] guest roster insert',
+      );
+      if (inserted.length !== guestRows.length) {
+        throw new Error(
+          `[updateGameInternal] guest roster insert: expected ${guestRows.length} rows, got ${inserted.length}`,
+        );
+      }
+    }
+
+    for (const id of plan.deletes) attempted.add(id);
+    if (plan.deletes.length > 0) {
+      const deleted = expectAffected(
+        await supabase
+          .from('game_players')
+          .delete()
+          .eq('game_id', gameId)
+          .in('user_id', plan.deletes)
+          .select('user_id'),
+        '[updateGameInternal] roster delete',
+      );
+      if (deleted.length !== plan.deletes.length) {
+        throw new Error(
+          `[updateGameInternal] roster delete: expected ${plan.deletes.length} rows, got ${deleted.length}`,
+        );
+      }
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error('[updateGameInternal] roster write failed', err);
+    const ids = [...attempted];
+    const restoreRows = priorRows.filter((r) => attempted.has(r.user_id));
+    const admin = getAdminClient();
+    let { error: rollbackError } = await admin
+      .from('game_players')
+      .delete()
+      .eq('game_id', gameId)
+      .in('user_id', ids);
+    if (!rollbackError && restoreRows.length > 0) {
+      ({ error: rollbackError } = await admin
+        .from('game_players')
+        .insert(restoreRows));
+    }
+    if (rollbackError) {
+      console.error('[updateGameInternal] roster rollback failed', rollbackError);
+    }
+    return { ok: false };
+  }
 }

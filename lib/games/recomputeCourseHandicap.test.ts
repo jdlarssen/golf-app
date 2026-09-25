@@ -553,3 +553,58 @@ describe('recomputeCourseHandicapForUser — cache-revalidering (#1629)', () => 
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
+
+// ─── #2210: formats with their own percentage recompute at 100 ───────────
+
+describe('recomputeCourseHandicapForUser — handicapprosenten følger formatet (#2210)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('fourball lagret med 85 regnes om med 100', async () => {
+    // TEE is trivial: CH == round(hcpIndex). New index 12 → 12 at 100 %,
+    // 10 if the stale 85 % were applied.
+    const client = buildSupabaseMock([
+      {
+        data: [
+          {
+            game_id: 'g-1',
+            tee_gender: 'mens',
+            course_handicap: 18,
+            team_number: 1,
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          {
+            id: 'g-1',
+            status: 'active',
+            hcp_allowance_pct: 85,
+            tee_boxes: TEE,
+            game_mode: 'fourball_matchplay',
+            mode_config: {
+              kind: 'fourball_matchplay',
+              team_size: 2,
+              teams_count: 2,
+              allowance_pct: 90,
+            },
+          },
+        ],
+        error: null,
+      },
+      { data: [{ game_id: 'g-1' }], error: null },
+    ]);
+    mockAdminClient.mockReturnValue(client as never);
+
+    expect(await recomputeCourseHandicapForUser('sander', 12)).toEqual({
+      updated: 1,
+      overridesUpdated: 0,
+    });
+    const write = client.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'update',
+    );
+    expect(write?.args[0]).toEqual({ course_handicap: 12 });
+  });
+});

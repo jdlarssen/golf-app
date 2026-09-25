@@ -63,6 +63,7 @@ import type { Intent } from '@/lib/wizard/intent';
 import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { PRIZE_SLOTS, prizeFieldName } from '@/lib/games/prizes';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
@@ -1095,6 +1096,11 @@ function WizardBody({
         state={state}
         tournamentId={initialValues?.tournament_id}
         tournamentMatchLabel={initialValues?.tournament_match_label}
+        rosterLoadedIds={
+          mode.kind === 'create'
+            ? undefined
+            : (initialValues?.players ?? []).map((p) => p.user_id).join(',')
+        }
       />
 
       {/* Wizard-footer: «Forrige»/«Neste» på steg 1-4, kun «Forrige» på
@@ -1131,10 +1137,16 @@ function FormDataInputs({
   state,
   tournamentId,
   tournamentMatchLabel,
+  rosterLoadedIds,
 }: {
   state: ReturnType<typeof useGameFormState>;
   tournamentId?: string;
   tournamentMatchLabel?: string;
+  /**
+   * #2210: the roster the edit form was opened with (the server's, never a
+   * restored local draft's). Undefined when creating.
+   */
+  rosterLoadedIds?: string;
 }) {
   const {
     name,
@@ -1176,6 +1188,7 @@ function FormDataInputs({
     shambleScoring,
     patsomeScoring,
     orderedPayload,
+    unassignedPlayerIds,
     courseId,
     teeBoxId,
     scheduledTeeOffAt,
@@ -1382,7 +1395,14 @@ function FormDataInputs({
       />
 
       <input type="hidden" name="name" value={name} />
-      <input type="hidden" name="hcp_allowance_pct" value={String(hcpAllowance)} />
+      {/* #2210: formats with their own percentage in mode_config get 100 —
+          a value left over from an earlier format must never be applied on
+          top of theirs. The server normalises too (gamePayload.ts). */}
+      <input
+        type="hidden"
+        name="hcp_allowance_pct"
+        value={usesGameHcpAllowance(gameMode) ? String(hcpAllowance) : '100'}
+      />
       {requirePeerApproval && (
         <input type="hidden" name="require_peer_approval" value="on" />
       )}
@@ -1424,6 +1444,22 @@ function FormDataInputs({
           />
         </div>
       ))}
+      {/* #2210: selected players without a team (or matchplay side) ride
+          along so the server keeps them on the roster instead of dropping
+          them. */}
+      {unassignedPlayerIds.map((pid) => (
+        <input
+          key={pid}
+          type="hidden"
+          name="unassigned_player_id"
+          value={pid}
+        />
+      ))}
+      {/* #2210: lets the save tell a player the organiser removed from one
+          who signed up while the form was open (see lib/games/rosterEdit.ts). */}
+      {rosterLoadedIds !== undefined && (
+        <input type="hidden" name="roster_loaded_ids" value={rosterLoadedIds} />
+      )}
     </>
   );
 }
