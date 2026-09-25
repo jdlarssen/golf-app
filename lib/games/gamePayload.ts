@@ -2275,6 +2275,35 @@ export function buildGameInsertPayload(
     return errorPayload(modeResult.errorCode);
   }
 
+  // #2210: selected players without a team (or matchplay side) arrive as
+  // `unassigned_player_id`. They stay on the roster with null team/flight —
+  // before this they were dropped silently, and a save of an open team game
+  // deleted everyone who had signed up without a team. The mode validators
+  // stay untouched, so `mode_config.teams_count` never counts these rows. The
+  // start guard (`unassigned_teams` / `incomplete_sides`) holds the start
+  // until the organiser has placed them (#1669).
+  const slottedIds = new Set(modeResult.players.map((p) => p.user_id));
+  const unassignedIds = new Set<string>();
+  for (const raw of formData.getAll('unassigned_player_id')) {
+    const id = String(raw).trim();
+    if (!id) continue;
+    if (slottedIds.has(id)) return errorPayload('duplicate_player');
+    unassignedIds.add(id);
+  }
+  // Backstop: an invite-only publish needs every player on a team. The client
+  // already blocks it (`playersValidForMode`).
+  if (effectiveMode === 'publish' && unassignedIds.size > 0) {
+    return errorPayload('bad_team');
+  }
+  const players: GamePlayerInput[] = [
+    ...modeResult.players,
+    ...[...unassignedIds].map((user_id) => ({
+      user_id,
+      team_number: null,
+      flight_number: null,
+    })),
+  ];
+
   // #369: «Slipp venner direkte inn». Kun gyldig for manual_approval —
   // force-false for alle andre modi så stale form-verdi ikke lekker.
   const letFriendsSkipGate =
@@ -2283,7 +2312,7 @@ export function buildGameInsertPayload(
 
   return {
     ...base,
-    players: modeResult.players,
+    players,
     game_mode: gameMode,
     mode_config: modeResult.mode_config,
     registration_mode: registrationMode,
