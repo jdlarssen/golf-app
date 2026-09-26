@@ -98,7 +98,7 @@ flowchart LR
   D --> E["/login?step=verify<br/>skriv 6–8-sifret kode"]
   E -- feil adresse --> B
   E --> F[verifyOtp]
-  F --> G[Marker invitations.accepted_at<br/>+ auto-insert game_players<br/>hvis spill-scoped invitasjon]
+  F --> G[Marker invitations.accepted_at<br/>+ auto-insert game_players hvis<br/>runden ikke har startet<br/>+ vennskap med den som inviterte]
   G --> H{profil fullført?}
   H -- nei --> CP["/complete-profile<br/>navn, hcp, kjønn, klasse"]
   H -- ja --> Home["/"]
@@ -108,7 +108,7 @@ flowchart LR
 | Steg | Rute / fil | Teknisk |
 |---|---|---|
 | Be om kode | `app/[locale]/(auth)/login/page.tsx`, `actions.ts` → `sendCode` | `email_is_invited` RPC gater `shouldCreateUser`; `signInWithOtp`. Kode-mail via **Supabase Auth**. Honeypot-felt `website`. |
-| Verifiser | `verifyCode` | `verifyOtp({type:'email'})`. Marker `invitations.accepted_at` (RLS 0012). Spill-scoped invitasjon → auto-insert i `game_players` + `notifyInvitedToGame`. |
+| Verifiser | `verifyCode` | `verifyOtp({type:'email'})`. Marker `invitations.accepted_at` (RLS 0012). Spill-invitasjon gir plass bare før start (`isRosterLocked`, #2212): planlagt runde → auto-insert i `game_players` + `notifyInvitedToGame`; startet eller ferdig runde → ingen plass, invitéen lander på `/complete-profile?invite_notice=game_started` med en beskjed (gjest som allerede står på lista, #1009, lander på runden). Alle invitasjoner, også de uten spill, gir vennskap med den som inviterte (`befriend_inviter`, #481/#2212). |
 | Endre adresse | `_components/VerifyCodeForm.tsx` → `changeEmailHref` | Retur-kant til steg 1 (#1346): GET til `/login` med `email`, `next` og `invite` beholdt, så feltet prefylles og kontekstkortet (#1169) overlever. Utveien når adressen er feiltastet — «Send ny kode» treffer bare samme feil adresse. |
 | Fullfør profil | `app/[locale]/complete-profile/page.tsx`, `actions.ts` | Setter `users.profile_completed_at` + navn/nickname/`hcp_index`/gender/level. |
 
