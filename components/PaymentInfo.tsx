@@ -104,13 +104,19 @@ export function PaymentInfo({
             {t('payVia')}
           </a>
         ) : link ? (
-          <button
-            type="button"
-            onClick={copy}
-            className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-surface-2"
-          >
-            {copied ? t('copied') : t('copy')}
-          </button>
+          <>
+            {/* The label swap alone is silent to screen readers; this announces it. */}
+            <span role="status" className="sr-only">
+              {copied ? t('copied') : ''}
+            </span>
+            <button
+              type="button"
+              onClick={copy}
+              className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-surface-2"
+            >
+              {copied ? t('copied') : t('copy')}
+            </button>
+          </>
         ) : null}
       </div>
     );
@@ -154,6 +160,10 @@ export function PaymentInfo({
         <div className="mt-2 flex items-center gap-2">
           <span className="flex-1 font-sans text-sm text-text">
             {t('vippsTo', { number: link })}
+          </span>
+          {/* The label swap alone is silent to screen readers; this announces it. */}
+          <span role="status" className="sr-only">
+            {copied ? t('copied') : ''}
           </span>
           <button
             type="button"

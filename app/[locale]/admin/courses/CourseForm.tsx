@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
 import { MAX_TEE_BOXES } from './constants';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 export { MAX_TEE_BOXES };
 
@@ -738,6 +739,12 @@ function ParTapButtons({
 }) {
   const t = useTranslations('courseForm.form');
   const current = Number(value);
+  // Radiogroup keyboard pattern: one tab stop per hole, arrow keys move the par.
+  const rovingProps = useRovingFocus(
+    PAR_OPTIONS,
+    isParOption(current) ? current : null,
+    onChange,
+  );
   return (
     <div>
       <div className="block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-1.5">
@@ -748,11 +755,12 @@ function ParTapButtons({
         aria-label={ariaLabel ?? t('parGroupAriaLabel', { number: holeNumber })}
         className="flex gap-1.5"
       >
-        {PAR_OPTIONS.map((p) => {
+        {PAR_OPTIONS.map((p, idx) => {
           const selected = isParOption(current) && current === p;
           return (
             <button
               key={p}
+              {...rovingProps(idx)}
               type="button"
               role="radio"
               aria-checked={selected}

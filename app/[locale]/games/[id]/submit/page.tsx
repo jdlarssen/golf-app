@@ -170,6 +170,8 @@ export default async function SubmitPage({
   return (
     <AppShell showVersion={false}>
       <TopBar backHref={`/games/${id}`} kicker={kicker} />
+      {/* The kicker above is the page title; screen readers get it as the h1. */}
+      <h1 className="sr-only">{kicker}</h1>
 
       {errorMessage && (
         <div className="mb-4">

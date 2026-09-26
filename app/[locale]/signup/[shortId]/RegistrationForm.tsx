@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 import {
   registerForOpenGame,
   requestApproval,
@@ -58,6 +59,25 @@ export function RegistrationForm({
   // Bruk autoSelected som initial verdi hvis ingenting er eksplisitt valgt
   const activeSide = selectedSide ?? autoSelected;
 
+  // The side picker follows the radiogroup keyboard pattern; a full side is skipped.
+  const sideRovingProps = useRovingFocus<1 | 2>(
+    [1, 2],
+    activeSide,
+    setSelectedSide,
+    (side) =>
+      sideData != null &&
+      (side === 1 ? sideData.side1 : sideData.side2).count >= sideData.teamSize,
+  );
+
+  // The receipt replaces the form (and the button that had focus): move focus
+  // to it so a screen reader reads it instead of losing its place. The Banner
+  // inside is already a status region, so the wrapper gets no role of its own.
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const showReceipt = result?.ok === true && mode === 'manual_approval';
+  useEffect(() => {
+    if (showReceipt) receiptRef.current?.focus();
+  }, [showReceipt]);
+
   const handleSubmit = (form: HTMLFormElement) => {
     const data = new FormData(form);
     data.set('shortId', shortId);
@@ -77,9 +97,9 @@ export function RegistrationForm({
 
   // Manual-approval suksess viser kvittering i stedet for form. Open-mode
   // suksess redirecter via server-action, så vi når aldri hit i den grenen.
-  if (result?.ok && mode === 'manual_approval') {
+  if (showReceipt) {
     return (
-      <div className="space-y-3">
+      <div ref={receiptRef} tabIndex={-1} className="space-y-3">
         <Banner tone="success" testId="request-sent-banner">
           {t('requestSentBanner')}
         </Banner>
@@ -139,7 +159,7 @@ export function RegistrationForm({
 
         {/* Side-kort: to kort side ved side */}
         <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={t('sidePickerAriaLabel')}>
-          {([1, 2] as const).map((sideNum) => {
+          {([1, 2] as const).map((sideNum, idx) => {
             const sideInfo = sideNum === 1 ? sideData.side1 : sideData.side2;
             const isFull = sideInfo.count >= sideData.teamSize;
             const isActive = activeSide === sideNum;
@@ -147,6 +167,7 @@ export function RegistrationForm({
             return (
               <button
                 key={sideNum}
+                {...sideRovingProps(idx)}
                 type="button"
                 role="radio"
                 aria-checked={isActive}

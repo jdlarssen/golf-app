@@ -350,7 +350,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       >
         <button
           type="button"
-          aria-label="+1"
+          aria-label={t('increaseAriaLabel', { name })}
           onClick={onStepperPlus}
           disabled={disabled}
           style={{ ...stepperBtnStyle, fontSize: 16 }}
@@ -359,7 +359,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
         </button>
         <button
           type="button"
-          aria-label="-1"
+          aria-label={t('decreaseAriaLabel', { name })}
           onClick={onStepperMinus}
           disabled={disabled}
           style={{ ...stepperBtnStyle, fontSize: 18 }}
@@ -368,7 +368,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
         </button>
         <button
           type="button"
-          aria-label={t('moreAriaLabel')}
+          aria-label={t('moreAriaLabel', { name })}
           onClick={onStepperMore}
           disabled={disabled}
           style={moreBtnStyle}

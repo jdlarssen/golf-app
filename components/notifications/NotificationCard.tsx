@@ -121,6 +121,12 @@ export function NotificationCard({
     isUnread ? 'font-medium' : 'font-normal'
   }`;
 
+  // The stripe is visual only; screen readers get the unread state as text
+  // inside the tap button.
+  const unreadMarker = isUnread ? (
+    <span className="sr-only">{t('unreadLabel')}</span>
+  ) : null;
+
   const stripe = isUnread ? (
     <span
       data-testid="unread-stripe"
@@ -173,6 +179,7 @@ export function NotificationCard({
               onClick={onTap}
               className="block w-full text-left"
             >
+              {unreadMarker}
               <div className="flex items-start justify-between gap-2">
                 <p className={`min-w-0 ${titleClassName}`}>{title}</p>
                 {timestamp}
@@ -197,7 +204,7 @@ export function NotificationCard({
         {onArchive && (
           <ArchiveButton
             onArchive={onArchive}
-            label={t('archiveAria')}
+            label={t('archiveAria', { title })}
             className="h-11 w-11 self-start"
           />
         )}
@@ -222,6 +229,7 @@ export function NotificationCard({
         {emoji}
 
         <div className="min-w-0 flex-1">
+          {unreadMarker}
           <p className={titleClassName}>{title}</p>
           <p className="mt-1 line-clamp-2 font-sans text-[12px] text-muted">
             {detail}
@@ -234,7 +242,7 @@ export function NotificationCard({
       {onArchive && (
         <ArchiveButton
           onArchive={onArchive}
-          label={t('archiveAria')}
+          label={t('archiveAria', { title })}
           className="w-11"
         />
       )}

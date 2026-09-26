@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 type Props = {
   value: GameMode;
@@ -227,26 +228,35 @@ const TILES: TileDef[] = [
  * 3-kolonner = 3+2-rytme. På lg (≥1024px) 5-i-rad symmetrisk. Bevisst
  * unngår 4-kolonne på sm (5 tiles ville gitt 4+1-asymmetri).
  *
- * ARIA: bruker `role="radiogroup"` + `role="radio"` med tabbable button-er.
+ * ARIA: bruker `role="radiogroup"` + `role="radio"`-button-er med roving
+ * tabindex (ett tab-stopp, piltaster flytter valget — `useRovingFocus`).
  * Vi bruker ikke `<input type="radio">` fordi tile-presentasjonen krever
  * full kontroll over layout (ikon over tekst, padding, border). `name` på
  * et hidden input bærer verdien i FormData — settes av GameForm, ikke her.
  */
 export function ModeSelector({ value, onChange, disabled = false }: Props) {
   const t = useTranslations('wizard.modeSelector');
+  const rovingProps = useRovingFocus(
+    TILES.map((tile) => tile.mode),
+    value,
+    (mode) => {
+      if (!disabled) onChange(mode);
+    },
+  );
   return (
     <fieldset disabled={disabled}>
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {t('legend')}
       </legend>
       <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {TILES.map((tile) => {
+        {TILES.map((tile, idx) => {
           const selected = value === tile.mode;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const tileTitle = t(`tiles.${tile.mode}.title` as any);
           return (
             <button
               key={tile.mode}
+              {...rovingProps(idx)}
               type="button"
               role="radio"
               aria-checked={selected}

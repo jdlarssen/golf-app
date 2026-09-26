@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 type Tab = 'stats' | 'rounds';
+
+const TABS: readonly Tab[] = ['stats', 'rounds'];
 
 type Props = {
   statsContent: ReactNode;
@@ -22,6 +25,12 @@ type Props = {
 export function HistorikkTabs({ statsContent, roundsContent }: Props) {
   const [active, setActive] = useState<Tab>('stats');
   const t = useTranslations('profile.historikk');
+  // Tablist keyboard pattern: one tab stop, arrow keys switch tab; each tab
+  // points at the panel and the panel is named by the active tab.
+  const baseId = useId();
+  const tabId = (tab: Tab) => `${baseId}-tab-${tab}`;
+  const panelId = `${baseId}-panel`;
+  const rovingProps = useRovingFocus(TABS, active, setActive);
 
   return (
     <div className="space-y-4">
@@ -31,8 +40,11 @@ export function HistorikkTabs({ statsContent, roundsContent }: Props) {
         aria-label={t('tabsAriaLabel')}
       >
         <button
+          {...rovingProps(0)}
           type="button"
           role="tab"
+          id={tabId('stats')}
+          aria-controls={panelId}
           aria-selected={active === 'stats'}
           onClick={() => setActive('stats')}
           className={`flex-1 py-3 min-h-[44px] font-serif text-base transition-colors ${
@@ -44,8 +56,11 @@ export function HistorikkTabs({ statsContent, roundsContent }: Props) {
           {t('tabStats')}
         </button>
         <button
+          {...rovingProps(1)}
           type="button"
           role="tab"
+          id={tabId('rounds')}
+          aria-controls={panelId}
           aria-selected={active === 'rounds'}
           onClick={() => setActive('rounds')}
           className={`flex-1 py-3 min-h-[44px] font-serif text-base transition-colors ${
@@ -58,7 +73,9 @@ export function HistorikkTabs({ statsContent, roundsContent }: Props) {
         </button>
       </div>
 
-      <div role="tabpanel">{active === 'stats' ? statsContent : roundsContent}</div>
+      <div role="tabpanel" id={panelId} aria-labelledby={tabId(active)}>
+        {active === 'stats' ? statsContent : roundsContent}
+      </div>
     </div>
   );
 }

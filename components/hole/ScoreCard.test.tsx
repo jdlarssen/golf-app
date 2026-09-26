@@ -221,37 +221,37 @@ describe('ScoreCard — interaction', () => {
 
   it('+ button on unset score calls onSetScore with par+1', () => {
     const { onSetScore } = setup({ score: null, par: 4 });
-    fireEvent.click(screen.getByLabelText('+1'));
+    fireEvent.click(screen.getByLabelText('+1 for Alice Andersen'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 5);
   });
 
   it('− button on unset score calls onSetScore with par-1', () => {
     const { onSetScore } = setup({ score: null, par: 4 });
-    fireEvent.click(screen.getByLabelText('-1'));
+    fireEvent.click(screen.getByLabelText('-1 for Alice Andersen'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 3);
   });
 
   it('+ button from existing score calls onSetScore with score+1', () => {
     const { onSetScore } = setup({ score: 5, par: 4 });
-    fireEvent.click(screen.getByLabelText('+1'));
+    fireEvent.click(screen.getByLabelText('+1 for Alice Andersen'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 6);
   });
 
   it('+ button clamps at 15', () => {
     const { onSetScore } = setup({ score: 15, par: 4 });
-    fireEvent.click(screen.getByLabelText('+1'));
+    fireEvent.click(screen.getByLabelText('+1 for Alice Andersen'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 15);
   });
 
   it('− button clamps at 1', () => {
     const { onSetScore } = setup({ score: 1, par: 4 });
-    fireEvent.click(screen.getByLabelText('-1'));
+    fireEvent.click(screen.getByLabelText('-1 for Alice Andersen'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 1);
   });
 
   it('⋯ button calls onLongPress and does not also fire card tap', () => {
     const { onSetScore, onLongPress } = setup({ score: null, par: 4 });
-    fireEvent.click(screen.getByLabelText('Velg spesifikk score'));
+    fireEvent.click(screen.getByLabelText('Velg spesifikk score for Alice Andersen'));
     expect(onLongPress).toHaveBeenCalledWith('p1');
     expect(onSetScore).not.toHaveBeenCalled();
   });
@@ -277,7 +277,7 @@ describe('ScoreCard — interaction', () => {
 describe('ScoreCard — tap targets', () => {
   it('+ and − steppers render at ≥44×44px (glove-friendly, #944)', () => {
     setup({ score: 5, par: 4 });
-    for (const label of ['+1', '-1']) {
+    for (const label of ['+1 for Alice Andersen', '-1 for Alice Andersen']) {
       const btn = screen.getByLabelText(label);
       expect(parseInt(btn.style.width, 10)).toBeGreaterThanOrEqual(44);
       expect(parseInt(btn.style.height, 10)).toBeGreaterThanOrEqual(44);
@@ -286,7 +286,7 @@ describe('ScoreCard — tap targets', () => {
 
   it('⋯ button has a ≥44px touch target', () => {
     setup({ score: 5, par: 4 });
-    const more = screen.getByLabelText('Velg spesifikk score');
+    const more = screen.getByLabelText('Velg spesifikk score for Alice Andersen');
     expect(parseInt(more.style.width, 10)).toBeGreaterThanOrEqual(44);
     expect(parseInt(more.style.height, 10)).toBeGreaterThanOrEqual(44);
   });
@@ -309,9 +309,9 @@ describe('ScoreCard — disabled', () => {
       par: 4,
       disabled: true,
     });
-    fireEvent.click(screen.getByLabelText('+1'));
-    fireEvent.click(screen.getByLabelText('-1'));
-    fireEvent.click(screen.getByLabelText('Velg spesifikk score'));
+    fireEvent.click(screen.getByLabelText('+1 for Alice Andersen'));
+    fireEvent.click(screen.getByLabelText('-1 for Alice Andersen'));
+    fireEvent.click(screen.getByLabelText('Velg spesifikk score for Alice Andersen'));
     expect(onSetScore).not.toHaveBeenCalled();
     expect(onLongPress).not.toHaveBeenCalled();
   });

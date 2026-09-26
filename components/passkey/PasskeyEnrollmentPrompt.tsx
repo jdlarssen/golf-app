@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBrowserClient } from '@/lib/supabase/client';
 import { useWebAuthnSupported } from '@/lib/auth/useWebAuthnSupported';
@@ -88,11 +88,23 @@ export function PasskeyEnrollmentPrompt({
     }
   }
 
+  // The done message replaces the button that had focus: move focus to it so
+  // a screen reader reads it instead of losing its place.
+  const doneRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (done) doneRef.current?.focus();
+  }, [done]);
+
   if (!visible) return null; // #1797: en annen nudge holder plassen
 
   if (done) {
     return (
-      <div className="mb-4 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3">
+      <div
+        ref={doneRef}
+        role="status"
+        tabIndex={-1}
+        className="mb-4 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3"
+      >
         <p className="font-medium text-sm text-text">{t('nudgeDoneTitle')}</p>
         <p className="text-xs text-text-muted mt-0.5">{t('nudgeDoneBody')}</p>
       </div>

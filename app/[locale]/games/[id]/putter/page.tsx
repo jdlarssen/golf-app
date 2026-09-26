@@ -107,9 +107,9 @@ export default async function PutterPage({ params }: { params: Params }) {
       <TopBar backHref={leaderboardHref({ gameId: id })} kicker={t('kicker')} />
       <div className="space-y-4">
         <Card>
-          <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
+          <h1 className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
             {t('title')}
-          </p>
+          </h1>
           <p className="mt-1.5 text-sm text-muted">
             {missingCount > 0 ? t('intro', { count: missingCount }) : t('introComplete')}
           </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
@@ -90,6 +90,21 @@ export function TeamRegistrationForm({
   const teamNameRef = useRef<HTMLInputElement>(null);
   const slotRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Inline errors get ids so each field can point at its message
+  // (aria-describedby) and a screen reader reads it with the field.
+  const errorIdBase = useId();
+  const teamNameErrorId = `${errorIdBase}-team-name-error`;
+  const slotErrorId = (idx: number) => `${errorIdBase}-slot-${idx}-error`;
+
+  // The receipt replaces the form (and the button that had focus): move focus
+  // to it so a screen reader reads it instead of losing its place. The success
+  // Banner inside is already a status region, so the wrapper gets no role.
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const showReceipt = result?.ok === true;
+  useEffect(() => {
+    if (showReceipt) receiptRef.current?.focus();
+  }, [showReceipt]);
+
   const slotCount = teamSize - 1;
 
   // Cross-felt-konflikter (duplikat / kaptein-egen-e-post) regnes live fra
@@ -178,7 +193,7 @@ export function TeamRegistrationForm({
     );
     const failed = result.slotResults.filter((r) => !r.ok);
     return (
-      <div className="space-y-4">
+      <div ref={receiptRef} tabIndex={-1} className="space-y-4">
         <Banner tone="success" testId="team-registration-success">
           {t('teamSuccessBanner', { teamName: teamName.trim() })}
         </Banner>
@@ -263,6 +278,7 @@ export function TeamRegistrationForm({
           required
           placeholder={t('teamNamePlaceholder')}
           aria-invalid={teamNameError ? true : undefined}
+          aria-describedby={teamNameError ? teamNameErrorId : undefined}
           className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
             teamNameError
               ? 'border-danger focus:border-danger focus:ring-danger/20'
@@ -270,7 +286,7 @@ export function TeamRegistrationForm({
           }`}
         />
         {teamNameError && (
-          <span className="mt-1 block font-sans text-xs text-danger">
+          <span id={teamNameErrorId} className="mt-1 block font-sans text-xs text-danger">
             {translateTeamNameError(teamNameError)}
           </span>
         )}
@@ -376,6 +392,7 @@ export function TeamRegistrationForm({
                     autoComplete="off"
                     aria-label={t('slotAriaLabel', { n: idx + 1 })}
                     aria-invalid={slotError ? true : undefined}
+                    aria-describedby={slotError ? slotErrorId(idx) : undefined}
                     className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
                       slotError
                         ? 'border-danger focus:border-danger focus:ring-danger/20'
@@ -432,7 +449,7 @@ export function TeamRegistrationForm({
               )}
 
               {slotError && (
-                <span className="block font-sans text-xs text-danger">
+                <span id={slotErrorId(idx)} className="block font-sans text-xs text-danger">
                   {translateSlotError(slotError)}
                 </span>
               )}

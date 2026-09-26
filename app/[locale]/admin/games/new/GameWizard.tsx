@@ -1547,14 +1547,16 @@ function PlayerCountPicker({
         </button>
         <span
           aria-live="polite"
-          aria-label={
-            value !== undefined
-              ? t('playerCount.countAriaLabel', { count })
-              : t('playerCount.showAllAriaLabel')
-          }
           className="min-w-[3ch] text-center font-serif text-2xl tabular-nums text-text"
         >
-          {value !== undefined ? count : '?'}
+          {/* aria-label on a plain span is ignored (and never announced by the
+              live region); the spoken text goes in as sr-only text instead. */}
+          <span aria-hidden="true">{value !== undefined ? count : '?'}</span>
+          <span className="sr-only">
+            {value !== undefined
+              ? t('playerCount.countAriaLabel', { count })
+              : t('playerCount.showAllAriaLabel')}
+          </span>
         </span>
         <button
           type="button"

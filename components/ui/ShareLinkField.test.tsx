@@ -39,8 +39,10 @@ describe('ShareLinkField', () => {
 
     fireEvent.click(screen.getByTestId('share-link-copy'));
 
+    // The confirmation is announced through the status region (and the
+    // button label swaps too, so the text appears twice).
     await waitFor(() => {
-      expect(screen.getByText('Kopiert!')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Kopiert!');
     });
     expect(writeTextMock).toHaveBeenCalledWith(
       'https://tornygolf.no/signup/abc12345',

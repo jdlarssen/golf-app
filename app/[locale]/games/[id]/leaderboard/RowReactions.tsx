@@ -66,7 +66,11 @@ export function RowReactions({ counts, mine, onToggle, disabled = false }: RowRe
         type="button"
         onClick={onClick}
         disabled={disabled}
-        aria-label={isActive ? t('toggleActive', { emoji: emojiName }) : t('toggle', { emoji: emojiName })}
+        aria-label={
+          isActive
+            ? t('toggleActive', { emoji: emojiName, count })
+            : t('toggle', { emoji: emojiName, count })
+        }
         aria-pressed={isActive}
         className={[
           BUTTON_BASE,
@@ -86,7 +90,7 @@ export function RowReactions({ counts, mine, onToggle, disabled = false }: RowRe
   const chips = REACTION_EMOJIS.filter((emoji) => (counts[emoji] ?? 0) > 0);
 
   return (
-    <div className="flex flex-wrap items-center gap-1 pt-1" aria-label={t('groupLabel')}>
+    <div role="group" className="flex flex-wrap items-center gap-1 pt-1" aria-label={t('groupLabel')}>
       {showPalette
         ? // Expanded: the full palette. Picking one toggles it and collapses back.
           REACTION_EMOJIS.map((emoji) =>

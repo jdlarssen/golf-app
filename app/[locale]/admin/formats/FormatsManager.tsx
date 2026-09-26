@@ -1,6 +1,6 @@
 'use client';
 
-import { useOptimistic, useState, useTransition } from 'react';
+import { useId, useOptimistic, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   MAPPING_INTENTS,
@@ -8,6 +8,7 @@ import {
   type MappingIntent,
 } from '@/lib/formats/types';
 import { formatIconFor } from '@/lib/formats/icons';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { RowStatusChip, type RowStatus } from './RowStatusChip';
 import {
   toggleVisibility,
@@ -89,6 +90,12 @@ export function FormatsManager({ initialFormats }: Props) {
     applyAction,
   );
   const [activeTab, setActiveTab] = useState<MappingIntent>('kompis');
+  // Mobile intent tabs follow the tablist keyboard pattern: one tab stop,
+  // arrow keys switch tab; each tab points at the format list below.
+  const tabsBaseId = useId();
+  const tabId = (intent: MappingIntent) => `${tabsBaseId}-tab-${intent}`;
+  const panelId = `${tabsBaseId}-panel`;
+  const rovingProps = useRovingFocus(MAPPING_INTENTS, activeTab, setActiveTab);
   const [showInactive, setShowInactive] = useState<boolean>(false);
 
   function submit(action: Action, serverFn: typeof toggleVisibility) {
@@ -165,11 +172,14 @@ export function FormatsManager({ initialFormats }: Props) {
       {/* Mobile tabs */}
       <div className="md:hidden space-y-4">
         <div role="tablist" className="grid grid-cols-3 gap-2">
-          {MAPPING_INTENTS.map((intent) => (
+          {MAPPING_INTENTS.map((intent, idx) => (
             <button
               key={intent}
+              {...rovingProps(idx)}
               role="tab"
               type="button"
+              id={tabId(intent)}
+              aria-controls={panelId}
               aria-selected={activeTab === intent}
               onClick={() => setActiveTab(intent)}
               className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
@@ -183,60 +193,62 @@ export function FormatsManager({ initialFormats }: Props) {
           ))}
         </div>
 
-        <ul className="space-y-2">
-          {visibleFormats.map((f) => {
-            const mapping = f.mappings[activeTab];
-            const visible = mapping?.is_visible ?? false;
-            const primary = mapping?.is_primary ?? false;
-            return (
-              <li
-                key={f.slug}
-                className={`rounded-lg border p-3 ${
-                  f.is_active ? 'border-border bg-surface' : 'border-border bg-surface-2 opacity-60'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted">{formatIconFor(f.icon_key, 22)}</span>
-                    <span className="font-serif text-sm text-text">
-                      {tModes(f.slug as Parameters<typeof tModes>[0])}
-                    </span>
+        <div role="tabpanel" id={panelId} aria-labelledby={tabId(activeTab)}>
+          <ul className="space-y-2">
+            {visibleFormats.map((f) => {
+              const mapping = f.mappings[activeTab];
+              const visible = mapping?.is_visible ?? false;
+              const primary = mapping?.is_primary ?? false;
+              return (
+                <li
+                  key={f.slug}
+                  className={`rounded-lg border p-3 ${
+                    f.is_active ? 'border-border bg-surface' : 'border-border bg-surface-2 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted">{formatIconFor(f.icon_key, 22)}</span>
+                      <span className="font-serif text-sm text-text">
+                        {tModes(f.slug as Parameters<typeof tModes>[0])}
+                      </span>
+                    </div>
+                    <RowStatusChip
+                      status={deriveStatus(f)}
+                      onClick={() => handleActiveToggle(f.slug, !f.is_active)}
+                    />
                   </div>
-                  <RowStatusChip
-                    status={deriveStatus(f)}
-                    onClick={() => handleActiveToggle(f.slug, !f.is_active)}
-                  />
-                </div>
-                <div className="mt-3 flex gap-4 text-sm">
-                  <label className="inline-flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={visible}
-                      disabled={!f.is_active}
-                      onChange={(e) =>
-                        handleVisibilityToggle(f.slug, activeTab, e.target.checked)
-                      }
-                      className="h-4 w-4 accent-primary"
-                    />
-                    {t('visibleLabel')}
-                  </label>
-                  <label className="inline-flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={primary}
-                      disabled={!f.is_active}
-                      onChange={(e) =>
-                        handlePrimaryToggle(f.slug, activeTab, e.target.checked)
-                      }
-                      className="h-4 w-4 accent-primary"
-                    />
-                    {t('primaryLabel')}
-                  </label>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="mt-3 flex gap-4 text-sm">
+                    <label className="inline-flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={visible}
+                        disabled={!f.is_active}
+                        onChange={(e) =>
+                          handleVisibilityToggle(f.slug, activeTab, e.target.checked)
+                        }
+                        className="h-4 w-4 accent-primary"
+                      />
+                      {t('visibleLabel')}
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={primary}
+                        disabled={!f.is_active}
+                        onChange={(e) =>
+                          handlePrimaryToggle(f.slug, activeTab, e.target.checked)
+                        }
+                        className="h-4 w-4 accent-primary"
+                      />
+                      {t('primaryLabel')}
+                    </label>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
 
         <details className="rounded-lg border border-border bg-surface" open>
           <summary className="cursor-pointer px-3 py-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">

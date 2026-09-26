@@ -9,6 +9,7 @@ import {
   readStoredThemePreference,
   storeThemePreference,
 } from '@/lib/theme/themePreference';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 // Egen event så endringer i denne komponenten oppdaterer snapshot-en
 // umiddelbart (samme mønster som InstallBanner). `storage`-eventen dekker
@@ -58,6 +59,9 @@ export function ThemeSwitcher() {
     }
   }
 
+  // Radiogroup keyboard pattern: one tab stop, arrow keys move the choice.
+  const rovingProps = useRovingFocus(THEME_PREFERENCES, preference, select);
+
   return (
     <div
       role="radiogroup"
@@ -68,11 +72,12 @@ export function ThemeSwitcher() {
       data-focus-inset
       className="inline-flex overflow-hidden rounded-full border border-border bg-surface shadow-sm"
     >
-      {THEME_PREFERENCES.map((option) => {
+      {THEME_PREFERENCES.map((option, idx) => {
         const isActive = option === preference;
         return (
           <button
             key={option}
+            {...rovingProps(idx)}
             type="button"
             role="radio"
             aria-checked={isActive}

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 /**
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi
@@ -183,6 +184,14 @@ export function TeamSizeSelector({
 }: Props) {
   const t = useTranslations('wizard.teamSize');
   const tiles = tilesForMode(mode);
+  // Radiogroup keyboard pattern: one tab stop, arrow keys move the choice.
+  const rovingProps = useRovingFocus(
+    tiles.map((tile) => tile.size),
+    value,
+    (size) => {
+      if (!disabled) onChange(size);
+    },
+  );
 
   return (
     <fieldset disabled={disabled}>
@@ -190,12 +199,13 @@ export function TeamSizeSelector({
         {t('legend')}
       </legend>
       <div role="radiogroup" className={`mt-2 grid gap-3 ${GRID_COLS[tiles.length] ?? 'grid-cols-3'}`}>
-        {tiles.map((tile) => {
+        {tiles.map((tile, idx) => {
           const selected = value === tile.size;
           const tileTitle = t(`${tile.key}.title` as Parameters<typeof t>[0]);
           return (
             <button
               key={tile.size}
+              {...rovingProps(idx)}
               type="button"
               role="radio"
               aria-checked={selected}

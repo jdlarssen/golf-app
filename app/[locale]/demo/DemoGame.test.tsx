@@ -24,7 +24,7 @@ describe('DemoGame', () => {
 
     // Interaksjon: å taste et slag endrer tavla («se tavla flytte seg»)
     const before = board.textContent;
-    fireEvent.click(screen.getByRole('button', { name: '+1' }));
+    fireEvent.click(screen.getByRole('button', { name: /^\+1 for / }));
     expect(board.textContent).not.toBe(before);
 
     // Eierskaps-effekt (#1173): å sette et navn bytter «Deg» på tavla til navnet.

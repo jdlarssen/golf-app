@@ -2,7 +2,8 @@
   "common": {
     "appName": "Tørny",
     "metaDescription": "Free golf tournament app. Set up scramble, stableford or match play in minutes, with a live leaderboard and WHS handicaps. 20+ game formats.",
-    "guestBadge": "Guest"
+    "guestBadge": "Guest",
+    "appVersionLabel": "App version"
   },
   "notFound": {
     "heading": "This page doesn't exist",
@@ -66,7 +67,8 @@
     "clearRead": "Clear read",
     "clearingPending": "Clearing …",
     "actionFailed": "Couldn't save — try again.",
-    "archiveAria": "Archive notification",
+    "archiveAria": "Archive notification “{title}”",
+    "unreadLabel": "Unread",
     "today": "Today",
     "yesterday": "Yesterday",
     "monthlyDigestTitle": "Monthly digest",
@@ -1938,7 +1940,6 @@
       "countdownBody": "We'll notify you when the scorecard opens.",
       "joinFlightLabel": "Choose your flight",
       "flightLabel": "Flight {number}",
-      "flightJoinAriaLabel": "Join flight {number}",
       "flightYours": "Yours",
       "flightFull": "Full",
       "notInFlight": "You haven't been placed in a flight yet. Tap a flight to join.",
@@ -2275,6 +2276,7 @@
       "submitScorecardTeam": "Submit team scorecard",
       "backAriaLabel": "Back to tournament",
       "leaderboardAriaLabel": "View leaderboard",
+      "pageHeading": "Hole {n} · {game}",
       "playerFallback": "Player",
       "missingFlightScores": "{count, plural, one {1 score missing on this hole} other {# scores missing on this hole}}"
     },
@@ -2283,7 +2285,9 @@
       "nettoLabel": "Net {netto}",
       "nettoWithPoints": "Net {netto} · {points} pts",
       "strokesBadge": "+{n} STROKES",
-      "moreAriaLabel": "Pick specific score",
+      "increaseAriaLabel": "+1 for {name}",
+      "decreaseAriaLabel": "-1 for {name}",
+      "moreAriaLabel": "Pick specific score for {name}",
       "specificScoreTitle": "SPECIFIC SCORE",
       "specificScoreAriaLabel": "Specific score",
       "setScoreToAriaLabel": "Set score to {value}",
@@ -3003,8 +3007,8 @@
       "golf": "Golf",
       "birdie": "Birdie",
       "groupLabel": "Reactions",
-      "toggle": "React with {emoji}",
-      "toggleActive": "Remove {emoji} reaction",
+      "toggle": "{count, plural, =0 {React with {emoji}} one {React with {emoji} (# reaction)} other {React with {emoji} (# reactions)}}",
+      "toggleActive": "{count, plural, =0 {Remove {emoji} reaction} other {Remove {emoji} reaction (# in total)}}",
       "open": "Add reaction",
       "close": "Close reactions"
     },
@@ -5769,7 +5773,6 @@
     "liveFollowOff": "Live-follow is off",
     "liveFollowHint": "Anyone with the link can follow the tournament without logging in.",
     "shareLinkLabel": "Share live link",
-    "shareLinkAriaLabel": "Share live link for this game",
     "copiedLabel": "Copied!",
     "shareText": "Follow the tournament live in Tørny",
     "copyEmbedLabel": "Copy code for your website",

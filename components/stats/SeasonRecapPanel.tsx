@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import type { SeasonSummary } from '@/lib/stats/seasonStats';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 type Props = {
   /** Sesonger nyeste år først (fra `computeSeasonStats`). */
@@ -25,6 +26,16 @@ export function SeasonRecapPanel({ seasons }: Props) {
   const t = useTranslations('profile.historikk');
   const [selectedYear, setSelectedYear] = useState<number | null>(
     seasons[0]?.year ?? null,
+  );
+  // Year tabs follow the tablist keyboard pattern: one tab stop, arrow keys
+  // switch year; each tab points at the stats panel below.
+  const baseId = useId();
+  const tabId = (year: number) => `${baseId}-tab-${year}`;
+  const panelId = `${baseId}-panel`;
+  const rovingProps = useRovingFocus(
+    seasons.map((s) => s.year),
+    selectedYear,
+    setSelectedYear,
   );
 
   if (seasons.length === 0) {
@@ -48,6 +59,7 @@ export function SeasonRecapPanel({ seasons }: Props) {
     count: selected.achievements[key],
     label: t(`seasonBrag_${key}` as Parameters<typeof t>[0]),
   })).filter((b) => b.count > 0);
+  const hasYearTabs = seasons.length > 1;
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -60,19 +72,22 @@ export function SeasonRecapPanel({ seasons }: Props) {
         </p>
       </div>
 
-      {seasons.length > 1 && (
+      {hasYearTabs && (
         <div
           className="flex gap-2 overflow-x-auto px-5 pb-3"
           role="tablist"
           aria-label={t('seasonYearAriaLabel')}
         >
-          {seasons.map((s) => {
+          {seasons.map((s, idx) => {
             const active = s.year === selected.year;
             return (
               <button
                 key={s.year}
+                {...rovingProps(idx)}
                 type="button"
                 role="tab"
+                id={tabId(s.year)}
+                aria-controls={panelId}
                 aria-selected={active}
                 onClick={() => setSelectedYear(s.year)}
                 className={`shrink-0 rounded-full px-4 min-h-[36px] font-sans text-sm tabular-nums transition-colors ${
@@ -88,7 +103,12 @@ export function SeasonRecapPanel({ seasons }: Props) {
         </div>
       )}
 
-      <div className="border-t border-border px-5 py-4">
+      <div
+        className="border-t border-border px-5 py-4"
+        role={hasYearTabs ? 'tabpanel' : undefined}
+        id={hasYearTabs ? panelId : undefined}
+        aria-labelledby={hasYearTabs ? tabId(selected.year) : undefined}
+      >
         <div className="grid grid-cols-3 gap-3">
           <SeasonStatTile
             label={t('seasonColRounds')}

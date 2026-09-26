@@ -55,6 +55,10 @@ export function ShareLinkField({
           className="flex-1 min-w-0 rounded-xl border border-border bg-bg px-3 py-2.5 font-mono text-[12px] tabular-nums text-text"
           aria-label={ariaLabel}
         />
+        {/* The label swap alone is silent to screen readers; this announces it. */}
+        <span role="status" className="sr-only">
+          {state === 'copied' ? copiedLabel : ''}
+        </span>
         <button
           type="button"
           onClick={copy}
@@ -64,7 +68,11 @@ export function ShareLinkField({
           {state === 'copied' ? copiedLabel : copyLabel}
         </button>
       </div>
-      {state === 'error' && <p className="text-xs text-danger">{errorText}</p>}
+      {state === 'error' && (
+        <p role="status" className="text-xs text-danger">
+          {errorText}
+        </p>
+      )}
     </div>
   );
 }
