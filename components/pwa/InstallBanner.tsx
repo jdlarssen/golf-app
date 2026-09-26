@@ -149,7 +149,7 @@ export function InstallBanner({
           <button
             type="button"
             onClick={onInstall}
-            className="rounded-full bg-primary text-bg-tint px-3 py-1.5 text-xs font-medium min-h-11"
+            className="rounded-full bg-primary text-bg-tint dark:text-bg px-3 py-1.5 text-xs font-medium min-h-11"
           >
             {t('install')}
           </button>

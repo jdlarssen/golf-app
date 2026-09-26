@@ -183,7 +183,7 @@ export function PasskeySettings() {
           className={
             keys.length > 0
               ? 'mt-3 w-full min-h-11 rounded-full border border-primary/40 bg-surface px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/5 disabled:opacity-50'
-              : 'mt-3 w-full min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-medium text-bg-tint disabled:opacity-50'
+              : 'mt-3 w-full min-h-11 rounded-full bg-primary px-4 py-2 text-sm font-medium text-bg-tint dark:text-bg disabled:opacity-50'
           }
         >
           {keys.length > 0 ? t('addDevice') : t('enrollButton')}
