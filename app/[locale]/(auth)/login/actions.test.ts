@@ -183,17 +183,24 @@ vi.mock('@/lib/supabase/admin', () => ({
           },
           // #2212: membership check for a locked round:
           //   .select('user_id').eq('game_id', …).eq('user_id', …).maybeSingle()
+          // A row comes back only for the logging-in user (adminUserLookup),
+          // so a lookup on the wrong user id reads as "not on the roster".
           select: () => {
             let gameId: string | null = null;
+            let userId: string | null = null;
             const builder = {
               eq: (column: string, value: string) => {
                 if (column === 'game_id') gameId = value;
+                if (column === 'user_id') userId = value;
                 return builder;
               },
               maybeSingle: async () => ({
                 data:
-                  gameId != null && rosterGameIds.has(gameId)
-                    ? { user_id: 'on-roster' }
+                  gameId != null &&
+                  rosterGameIds.has(gameId) &&
+                  userId != null &&
+                  userId === adminUserLookup?.id
+                    ? { user_id: userId }
                     : null,
                 error: null,
               }),

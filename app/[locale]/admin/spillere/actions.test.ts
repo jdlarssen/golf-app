@@ -265,6 +265,18 @@ describe('resendInvitation — a game invitation keeps the game terms (#2212)', 
     expect(stamped).toBeGreaterThanOrEqual(before + GAME_TTL_MS);
     expect(stamped).toBeLessThanOrEqual(after + GAME_TTL_MS);
 
+    // The game and the sender come from THIS invitation's game_id/invited_by.
+    expect(supabaseMock.__fromCalls).toContainEqual({
+      table: 'games',
+      method: 'eq',
+      args: ['id', 'game-9'],
+    });
+    expect(supabaseMock.__fromCalls).toContainEqual({
+      table: 'users',
+      method: 'eq',
+      args: ['id', 'organiser-1'],
+    });
+
     expect(sendInviteNotificationMock).toHaveBeenCalledWith({
       to: 'spiller@example.com',
       invitedByName: 'Kari',
