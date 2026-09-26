@@ -406,6 +406,7 @@ async function completeOpenRegistration(
   // Notify game-creator. Best-effort — feil her skal aldri rulle tilbake
   // selve påmeldingen. Admin uten created_by-rad (sjelden — manuell DB-fix)
   // får ingen varsel; det er bedre enn å feile påmeldingen.
+  //
   // Open registration notifies the organiser in-app and by push, with no
   // mail fallback (#199 §5.3). requestApproval adds one (#199 §5.4).
   if (game.created_by) {
