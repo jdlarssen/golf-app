@@ -1673,7 +1673,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
       pending: true,
     };
 
-    const { container } = render(
+    const { container, rerender } = render(
       <GameForm
         courses={COURSES}
         players={[pendingPlayer]}
@@ -1701,6 +1701,42 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
     expect(saveBtn).toHaveAttribute('aria-describedby', 'publish-missing');
     expect(document.getElementById('publish-missing')).toBeInTheDocument();
     // #2210: the save learns who the form was opened with.
+    expect(
+      (
+        container.querySelector(
+          'input[name="roster_loaded_ids"]',
+        ) as HTMLInputElement | null
+      )?.value,
+    ).toBe('u-pending');
+
+    // A save that bounces back (?error=…) re-renders the same form with the
+    // server's newer roster while the form keeps the selection it mounted
+    // with. The ids stay the ones the form was opened with, or the next save
+    // would delete the late sign-up.
+    const latePlayer = makePlayer('u-late', 'Sen Påmelding');
+    rerender(
+      <GameForm
+        courses={COURSES}
+        players={[pendingPlayer, latePlayer]}
+        initialValues={{
+          name: 'Torsdagsrunden',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          game_mode: 'stableford',
+          team_size: 1,
+          players: [
+            { user_id: 'u-pending', team_number: null, flight_number: null },
+            { user_id: 'u-late', team_number: null, flight_number: null },
+          ],
+        }}
+        mode={{
+          kind: 'edit-scheduled',
+          gameId: 'game-1',
+          updateAction: NO_OP_UPDATE,
+        }}
+      />,
+    );
     expect(
       (
         container.querySelector(

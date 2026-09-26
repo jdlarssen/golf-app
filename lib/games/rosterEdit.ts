@@ -147,6 +147,20 @@ export function planRosterEdit(input: RosterEditInput): RosterEditPlan {
 }
 
 /**
+ * The `roster_loaded_ids` value for the roster an edit form was opened with.
+ * Forms capture it ONCE, at mount (`useState` initialiser): the form keeps its
+ * player selection across a save that bounces back to the same page
+ * (`?error=…`), while the page re-renders with the server's newer roster. A
+ * value rebuilt from those newer props would list a late sign-up the form
+ * never showed, and the next save would delete them.
+ */
+export function rosterLoadedIdsValue(
+  players: readonly { user_id: string }[] | undefined,
+): string {
+  return (players ?? []).map((p) => p.user_id).join(',');
+}
+
+/**
  * Reads `roster_loaded_ids` (comma-separated). Missing → `null`: a tab opened
  * before #2210, or the create flow. Empty string → an empty roster.
  */
