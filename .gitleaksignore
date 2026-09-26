@@ -3,3 +3,9 @@
 # Verified false positive 2026-07-21: prose about i18n keys in a contract doc
 # ("keys, section/empty/banner extraction") — not a credential.
 252f0812631d89f711a0780383433a3f479ac763:.forge/contracts/581-i18n-fase-2f-offentlig-referanse.md:generic-api-key:323
+# Verified false positive 2026-09-26 (#2241, CI-vakt): a one-off fake token
+# fixture, not the repo's canonical dummy UUID, so the .gitleaks.toml
+# allowlist regex didn't match it. Fixed forward to the canonical value in
+# the next commit; this fingerprint just unblocks the PR's own CI on the
+# commit that already exists in its history.
+ede4f6ae9f820c6a7b6ad4019b71e92fd2484a3a:lib/auth/getInviteLoginContext.test.ts:generic-api-key:16
