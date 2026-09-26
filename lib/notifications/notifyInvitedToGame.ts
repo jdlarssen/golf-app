@@ -38,11 +38,11 @@ export async function notifyInvitedToGame(opts: {
     return;
   }
 
-  // Et finished-spill skal ikke varsle — varselet ville lande i en innboks
-  // hvor spilleren ikke har noen actionable next-step.
-  // Defensive: every caller only notifies before the round starts. verifyCode
-  // skips active and finished rounds since #2212. The guard stays so a new
-  // caller cannot send a notification the player cannot act on.
+  // A finished round never notifies: the notification would land in an inbox
+  // with no next step for the player. Defensive: every caller only notifies
+  // before the round starts. verifyCode skips active and finished rounds since
+  // #2212. The guard stays so a new caller cannot send a notification the
+  // player cannot act on.
   if (game.status === 'finished') {
     return;
   }

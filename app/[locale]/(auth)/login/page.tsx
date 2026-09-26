@@ -90,7 +90,8 @@ export default async function LoginPage({
 
   // #1169: game-scoped invitasjonsmail lenker hit med ?invite=<token>.
   // Gyldig token → kontekstkort over kodeskjemaet. Alt annet (ugyldig,
-  // utløpt, akseptert, game-løs) → null, og siden er nøyaktig som uten param.
+  // utløpt, akseptert, game-løs, runde som har startet eller er ferdig — #2212)
+  // → null, og siden er nøyaktig som uten param.
   const inviteRaw = first(params.invite) ?? '';
   const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
   const inviteCtx = invite ? await getInviteLoginContext(invite) : null;
