@@ -112,7 +112,7 @@
   <rect x="110" y="956" width="980" height="64" rx="14" fill="#FFF7F4" stroke="#E0B4A6" stroke-width="1.4"/>
   <rect x="1036" y="966" width="40" height="20" rx="10" fill="#C9A961"/><text x="1056" y="980" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#361</text>
   <text x="134" y="986" font-size="14.5" font-weight="700" fill="#9A4A2F">Hvis noe er galt — vennlige norske meldinger</text>
-  <text x="134" y="1008" font-size="13" fill="#9A6B5A">utløpt invitasjon, ugyldig lenke → klar beskjed med vei videre, ikke en kryptisk feil</text>
+  <text x="134" y="1008" font-size="13" fill="#9A6B5A">utløpt invitasjon, ugyldig lenke, runden har startet → klar beskjed med vei videre</text>
 
   <text x="120" y="1064" font-size="12.5" fill="#9A937F">Rekkefølge: #365 (vern) → #364 (skru på) → #356 + #361 + #357 polerer flyten. #1265 åpner den offentlige forsiden som anonym inngang.</text>
 </svg>
