@@ -193,7 +193,7 @@ export function CupParticipantsList({
             <p className="text-sm text-muted mb-2">{t('emptyCandidates')}</p>
             <SmartLink
               href={emptyCandidatesHref}
-              className="text-sm text-text underline hover:no-underline"
+              className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-12px_-8px]"
             >
               {t(emptyCandidatesLinkKey)}
             </SmartLink>
@@ -333,7 +333,7 @@ function RoleControls({
         </select>
       </label>
 
-      <label className="flex items-center gap-2">
+      <label className="tap-extend flex items-center gap-2 [--tap-extend:-12px_-6px]">
         <input
           type="checkbox"
           data-testid={`cup-participants-captain-${participant.userId}`}

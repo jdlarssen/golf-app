@@ -22,7 +22,7 @@ export async function InviteForm() {
     <details className="group" open={pendingCount === 0 || undefined}>
       <summary
         data-testid="invite-toggle"
-        className="cursor-pointer list-none text-center font-sans text-[13px] font-medium text-primary hover:underline"
+        className="tap-extend cursor-pointer list-none text-center font-sans text-[13px] font-medium text-primary hover:underline [--tap-extend:-13px_0]"
       >
         {t('inviteToggle')}
       </summary>

@@ -864,7 +864,7 @@ function WizardBody({
               type="button"
               onClick={() => openGuide()}
               aria-label={t('formatGuideAriaLabel')}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft"
+              className="tap-extend flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft [--tap-extend:-7px]"
             >
               ?
             </button>
@@ -1572,7 +1572,7 @@ function PlayerCountPicker({
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className="ml-1 font-sans text-xs text-muted underline underline-offset-2 hover:text-text"
+            className="tap-extend ml-1 font-sans text-xs text-muted underline underline-offset-2 hover:text-text [--tap-extend:-14px_-8px]"
           >
             {t('playerCount.showAll')}
           </button>

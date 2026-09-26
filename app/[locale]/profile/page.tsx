@@ -274,7 +274,7 @@ async function ProfileFormCard({
               <p className="text-sm text-muted tabular-nums">hcp –</p>
               <SmartLink
                 href="#hcp_index"
-                className="rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
+                className="tap-extend rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors [--tap-extend:-12px_0]"
               >
                 {t('setHandicap')}
               </SmartLink>
@@ -318,7 +318,7 @@ async function GenderSoftPrompt() {
         </p>
         <SmartLink
           href="#kjonn"
-          className="inline-flex items-center rounded-full bg-primary px-4 py-2 font-sans text-[13px] font-medium text-bg hover:bg-primary/90 transition-colors"
+          className="tap-extend inline-flex items-center rounded-full bg-primary px-4 py-2 font-sans text-[13px] font-medium text-bg hover:bg-primary/90 transition-colors [--tap-extend:-5px_0]"
         >
           {t('genderPrompt.cta')}
         </SmartLink>

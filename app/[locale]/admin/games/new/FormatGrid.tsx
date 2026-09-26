@@ -132,7 +132,7 @@ export function FormatGrid({
               <button
                 type="button"
                 onClick={() => onShowGuide(f.slug)}
-                className="font-sans text-xs font-medium text-primary hover:underline"
+                className="tap-extend font-sans text-xs font-medium text-primary hover:underline [--tap-extend:-14px_0]"
               >
                 {t('howItWorks')}
               </button>

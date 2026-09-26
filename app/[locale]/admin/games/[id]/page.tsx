@@ -380,7 +380,7 @@ export default async function GameDetailPage({
           <div className="text-center">
             <SmartLink
               href={`/admin/games/${id}/slett`}
-              className="font-sans text-[13px] font-medium"
+              className="tap-extend font-sans text-[13px] font-medium [--tap-extend:-12px_-8px]"
               style={{ color: 'var(--danger-deep)' }}
             >
               {tDetail('deleteGame')}
@@ -707,7 +707,7 @@ async function PlayersSections({
         <div className="mt-1.5 px-1 text-center">
           <SmartLink
             href={`/admin/games/${gameId}/signups`}
-            className="font-sans text-[13px] font-medium text-muted underline underline-offset-2 decoration-muted/30 hover:decoration-muted"
+            className="tap-extend font-sans text-[13px] font-medium text-muted underline underline-offset-2 decoration-muted/30 hover:decoration-muted [--tap-extend:-12px_-8px]"
           >
             {tRegistration('viewSignupsLink')}
           </SmartLink>
@@ -1134,7 +1134,7 @@ async function PlayersSections({
                           data-testid="submitted-scorecard-details"
                           className="sm:basis-full"
                         >
-                          <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
+                          <summary className="tap-extend text-sm text-muted cursor-pointer hover:text-text transition-colors [--tap-extend:-10px_0_-14px]">
                             {tApprove('showCard')}
                           </summary>
                           <ScorecardTable
@@ -1294,7 +1294,7 @@ async function PlayersSections({
               >
                 <SmartLink
                   href={`/admin/games/${gameId}/status`}
-                  className="font-sans text-[13px] font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary"
+                  className="tap-extend font-sans text-[13px] font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary [--tap-extend:-12px_-8px]"
                 >
                   {notSubmittedCount > 0
                     ? tCta('viewStatusWithReminderLink')

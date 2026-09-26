@@ -7,6 +7,7 @@ import { buildEmbedSnippet } from '@/lib/embed/snippet';
 import { routing } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
+import { Switch } from '@/components/ui/Switch';
 
 /**
  * Arrangør-only kontroll for live-følg (#938).
@@ -107,29 +108,12 @@ export function LiveFollowControl({
               {t('liveFollowHint')}
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={enabled}
-            aria-label={t('liveFollowLabel')}
-            onClick={handleToggle}
+          <Switch
+            checked={enabled}
+            onToggle={handleToggle}
+            label={t('liveFollowLabel')}
             disabled={isPending}
-            className={[
-              'relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer',
-              'rounded-full border-2 border-transparent transition-colors duration-200',
-              'disabled:opacity-60',
-              enabled ? 'bg-primary' : 'bg-border',
-            ].join(' ')}
-          >
-            <span
-              aria-hidden
-              className={[
-                'inline-block size-[22px] rounded-full bg-white shadow',
-                'transform transition-transform duration-200',
-                enabled ? 'translate-x-5' : 'translate-x-0',
-              ].join(' ')}
-            />
-          </button>
+          />
         </div>
       </Card>
 

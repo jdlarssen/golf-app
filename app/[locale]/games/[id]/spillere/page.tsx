@@ -445,7 +445,7 @@ export default async function CreatorSpillerePage({
                       data-testid="submitted-scorecard-details"
                       className="mt-2"
                     >
-                      <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
+                      <summary className="tap-extend text-sm text-muted cursor-pointer hover:text-text transition-colors [--tap-extend:-8px_0_-16px]">
                         {tApprove('showCard')}
                       </summary>
                       <ScorecardTable

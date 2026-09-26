@@ -7,9 +7,15 @@
  * `:focus-visible`-regelen i globals.css (#1386). Ren presentasjon — konsumenten eier
  * state og gir en `label` (aria-label) siden bryteren ikke har synlig tekst.
  *
- * Merk: de større brytere i LiveFollowControl (#938) og putt-pilla i HoleClient
- * (#939) har bevisst egne mål/stiler og konsumerer *ikke* denne.
+ * The putts pill in HoleClient (#939) deliberately keeps its own look and does
+ * not use this. LiveFollowControl's larger hand-rolled switch was replaced by
+ * this one (#2240).
+ *
+ * The track draws 44×24 and hits 44×44: `.tap-extend` hangs an invisible
+ * 10px strip above and below it (#2240), so rows keep their height.
  */
+const SWITCH_TAP_STYLE = { ['--tap-extend' as string]: '-10px 0' };
+
 export function Switch({
   checked,
   onToggle,
@@ -29,7 +35,8 @@ export function Switch({
       aria-label={label}
       onClick={onToggle}
       disabled={disabled}
-      className={`flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 disabled:opacity-50 ${
+      style={SWITCH_TAP_STYLE}
+      className={`tap-extend flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 disabled:opacity-50 ${
         checked ? 'bg-primary' : 'bg-text/20'
       }`}
     >

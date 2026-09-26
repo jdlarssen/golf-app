@@ -43,7 +43,7 @@ export function HistoryBackLink({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
+      className="tap-extend -ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
     >
       ‹
     </button>

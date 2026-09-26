@@ -187,7 +187,7 @@ export async function LigaManagement({
         <div className="mt-4 pt-4 border-t border-border">
           <SmartLink
             href={`/liga/${leagueId}`}
-            className="text-sm text-primary underline-offset-2 hover:underline"
+            className="tap-extend text-sm text-primary underline-offset-2 hover:underline [--tap-extend:-12px_-8px]"
           >
             {t('manage.standingsLink')}
           </SmartLink>
@@ -299,7 +299,7 @@ export async function LigaManagement({
       <section className="mt-6 text-center">
         <SmartLink
           href={deleteHref}
-          className="text-xs text-danger underline-offset-2 hover:underline"
+          className="tap-extend text-xs text-danger underline-offset-2 hover:underline [--tap-extend:-14px_-8px]"
         >
           {t('manage.deleteLink')}
         </SmartLink>

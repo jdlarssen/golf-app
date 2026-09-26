@@ -353,7 +353,7 @@ async function ScorecardTable({
           <div className="pt-2">
             <SmartLink
               href={`/games/${gameId}`}
-              className="block text-center text-sm text-muted hover:text-text transition-colors"
+              className="tap-extend block text-center text-sm text-muted hover:text-text transition-colors [--tap-extend:-8px_0_-16px]"
             >
               {t('toGameOverview')}
             </SmartLink>

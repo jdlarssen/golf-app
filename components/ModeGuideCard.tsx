@@ -111,7 +111,7 @@ export function ModeGuideCard({
         <div className="border-t border-border px-4 pb-3 pt-2">
           <SmartLink
             href={detailHref}
-            className="text-xs font-medium text-primary hover:underline"
+            className="tap-extend text-xs font-medium text-primary hover:underline [--tap-extend:-14px_-8px]"
           >
             {readMoreLabel}
           </SmartLink>

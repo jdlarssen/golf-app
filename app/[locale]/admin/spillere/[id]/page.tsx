@@ -224,7 +224,7 @@ export default async function PlayerDetailPage({
                 {tProfile('formGenderLegend')}
               </legend>
               <div className="mt-2 flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="tap-extend flex items-center gap-2 cursor-pointer [--tap-extend:-10px_-8px]">
                   <input
                     type="radio"
                     name="gender"
@@ -235,7 +235,7 @@ export default async function PlayerDetailPage({
                   />
                   <span className="font-serif text-base text-text">{tProfile('genderMens')}</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="tap-extend flex items-center gap-2 cursor-pointer [--tap-extend:-10px_-8px]">
                   <input
                     type="radio"
                     name="gender"
@@ -256,7 +256,7 @@ export default async function PlayerDetailPage({
                 {tProfile('formLevelLegend')}
               </legend>
               <div className="mt-2 flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="tap-extend flex items-center gap-2 cursor-pointer [--tap-extend:-10px_-8px]">
                   <input
                     type="radio"
                     name="level"
@@ -266,7 +266,7 @@ export default async function PlayerDetailPage({
                   />
                   <span className="font-serif text-base text-text">{tProfile('levelJunior')}</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="tap-extend flex items-center gap-2 cursor-pointer [--tap-extend:-10px_-8px]">
                   <input
                     type="radio"
                     name="level"
@@ -276,7 +276,7 @@ export default async function PlayerDetailPage({
                   />
                   <span className="font-serif text-base text-text">{tProfile('levelNormal')}</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="tap-extend flex items-center gap-2 cursor-pointer [--tap-extend:-10px_-8px]">
                   <input
                     type="radio"
                     name="level"
@@ -313,7 +313,7 @@ export default async function PlayerDetailPage({
             <div className="text-center">
               <SmartLink
                 href={`/admin/spillere/${target.id}/slett`}
-                className="font-sans text-[13px] font-medium"
+                className="tap-extend font-sans text-[13px] font-medium [--tap-extend:-12px_-8px]"
                 style={{ color: 'var(--danger-deep)' }}
               >
                 {tProfile('deleteLink')}

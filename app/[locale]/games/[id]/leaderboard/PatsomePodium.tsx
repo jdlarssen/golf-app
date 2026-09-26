@@ -165,15 +165,15 @@ export function PatsomePodium({
       {rest.length > 0 && (
         <details
           data-testid="patsome-rest"
-          className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
+          className="mx-4 mt-4 rounded-2xl border border-border bg-surface"
         >
-          <summary className="cursor-pointer list-none font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
+          <summary className="cursor-pointer list-none rounded-2xl px-4 py-3 font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
             {t('common.showFullRankingTeams', { count: result.teams.length })}
             <span aria-hidden className="ml-1 text-muted">
               ›
             </span>
           </summary>
-          <ul className="mt-3 flex flex-col gap-2 list-none">
+          <ul className="flex flex-col gap-2 list-none px-4 pb-3">
             {rest.map((team) => (
               <li key={team.teamNumber} className="list-none">
                 <Card className="flex items-center gap-3.5 px-4 py-3">

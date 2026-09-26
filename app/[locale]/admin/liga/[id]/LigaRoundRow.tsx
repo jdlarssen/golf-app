@@ -83,9 +83,12 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
         )}
       </div>
 
-      {/* Tee / course update form */}
+      {/* Tee / course update form. The two summaries draw 18px and sit 12px
+          apart, so each hit area takes half the gap between them (#2240): this
+          one reaches up over the header text instead, the next one down into
+          the card padding while closed (open, a field label sits there). */}
       <details className="group">
-        <summary className="cursor-pointer font-sans text-[12px] font-medium text-primary list-none">
+        <summary className="tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none [--tap-extend:-20px_0_-6px]">
           {t('changeCourseLabel')}
         </summary>
         <form action={updateAction} className="mt-3 space-y-2">
@@ -145,7 +148,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
 
       {/* Override window form */}
       <details className="group">
-        <summary className="cursor-pointer font-sans text-[12px] font-medium text-primary list-none">
+        <summary className="tap-extend cursor-pointer font-sans text-[12px] font-medium text-primary list-none [--tap-extend:-6px_0_-20px] group-open:[--tap-extend:-6px_0]">
           {t('extendWindowLabel')}
         </summary>
         <form action={overrideAction} className="mt-3 space-y-2">

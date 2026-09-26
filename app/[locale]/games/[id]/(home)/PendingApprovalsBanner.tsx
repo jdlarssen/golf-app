@@ -56,7 +56,7 @@ export async function PendingApprovalsBanner({
           </span>
           <SmartLink
             href={`/games/${gameId}/approve`}
-            className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
+            className="tap-extend text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap [--tap-extend:-12px_-8px]"
           >
             {tHome('reviewLink')}
           </SmartLink>

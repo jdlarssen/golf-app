@@ -527,13 +527,16 @@ export function CourseForm({
                 <span className="text-sm font-medium text-text">
                   {t('teeBoxLabel', { number: index + 1 })}
                 </span>
+                {/* Both text buttons draw 16px and hit 44px (#2240); sideways
+                    each takes half of the 12px gap, «Fjern» also takes the
+                    card padding on its right. */}
                 <div className="flex items-center gap-3">
                   {teeBoxes.length < MAX_TEE_BOXES && (
                     <button
                       type="button"
                       onClick={() => duplicateTee(index)}
                       aria-label={t('duplicateTeeAria', { number: index + 1 })}
-                      className="text-xs font-medium text-muted hover:text-text transition-colors"
+                      className="tap-extend text-xs font-medium text-muted hover:text-text transition-colors [--tap-extend:-14px_-6px]"
                     >
                       {t('duplicateButton')}
                     </button>
@@ -543,7 +546,7 @@ export function CourseForm({
                       type="button"
                       onClick={() => removeTee(index)}
                       aria-label={t('removeTeeAria', { number: index + 1 })}
-                      className="text-xs font-medium text-danger hover:opacity-80 transition-opacity"
+                      className="tap-extend text-xs font-medium text-danger hover:opacity-80 transition-opacity [--tap-extend:-14px_-14px_-14px_-6px]"
                     >
                       {t('removeTeeButton')}
                     </button>
@@ -617,7 +620,7 @@ export function CourseForm({
                     <button
                       type="button"
                       onClick={() => copyMensToAllGenders(index)}
-                      className="block w-full text-center text-[11px] font-medium text-muted hover:text-text transition-colors py-1.5"
+                      className="tap-extend block w-full text-center text-[11px] font-medium text-muted hover:text-text transition-colors py-1.5 [--tap-extend:-8px_0]"
                     >
                       {t('copyToAllGendersButton')}
                     </button>
@@ -823,7 +826,7 @@ function GenderParOverrideSection({
       <button
         type="button"
         onClick={onRemove}
-        className="float-right text-[11px] font-medium text-muted hover:text-danger transition-colors"
+        className="tap-extend float-right text-[11px] font-medium text-muted hover:text-danger transition-colors [--tap-extend:-16px_0_-12px]"
       >
         {removeLabel}
       </button>
@@ -905,7 +908,7 @@ function GenderRatingBlock({
         <button
           type="button"
           onClick={onClear}
-          className="float-right text-[11px] font-medium text-muted hover:text-danger transition-colors"
+          className="tap-extend float-right text-[11px] font-medium text-muted hover:text-danger transition-colors [--tap-extend:-16px_0_-12px]"
         >
           {clearLabel}
         </button>

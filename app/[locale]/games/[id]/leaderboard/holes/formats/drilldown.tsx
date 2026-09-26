@@ -616,7 +616,7 @@ function TeamNavLink({
         mode,
         context: navContext,
       })}
-      className={`inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-text ${
+      className={`tap-extend inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-text [--tap-extend:-13px_0] ${
         isPrev ? '' : 'ml-auto'
       }`}
     >

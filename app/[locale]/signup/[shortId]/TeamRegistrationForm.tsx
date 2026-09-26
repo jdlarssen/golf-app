@@ -310,8 +310,11 @@ export function TeamRegistrationForm({
               key={idx}
               className="space-y-2 rounded-xl border border-border bg-surface/40 p-3"
             >
+              {/* Each mode label draws 16px and hits 44px (#2240): up into the
+                  card padding, down only through the 8px gap above the field,
+                  sideways to the middle of the 12px gap between the two. */}
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 font-sans text-xs text-text">
+                <label className="tap-extend flex items-center gap-1.5 font-sans text-xs text-text [--tap-extend:-20px_-6px_-8px]">
                   <input
                     type="radio"
                     name={`slot-${idx}-mode`}
@@ -323,7 +326,7 @@ export function TeamRegistrationForm({
                   />
                   {t('slotModeExisting')}
                 </label>
-                <label className="flex items-center gap-1.5 font-sans text-xs text-text">
+                <label className="tap-extend flex items-center gap-1.5 font-sans text-xs text-text [--tap-extend:-20px_-6px_-8px]">
                   <input
                     type="radio"
                     name={`slot-${idx}-mode`}
@@ -353,7 +356,7 @@ export function TeamRegistrationForm({
                       updateSlot(idx, { selected: null, value: '' })
                     }
                     aria-label={t('slotRemoveAriaLabel', { name: slot.selected.name })}
-                    className="shrink-0 text-base leading-none text-muted hover:text-text"
+                    className="tap-extend shrink-0 text-base leading-none text-muted hover:text-text [--tap-extend:-14px_-18px]"
                   >
                     ×
                   </button>

@@ -302,7 +302,7 @@ function Step1Roster({
                       type="button"
                       data-testid={`cup-wizard-assign-${p.id}-${opt}`}
                       onClick={() => onChange(p.id, opt)}
-                      className={`min-h-[36px] px-2.5 py-1 transition-colors ${
+                      className={`min-h-[44px] px-2.5 py-1 transition-colors ${
                         val === opt
                           ? 'bg-primary text-white dark:text-bg'
                           : 'bg-surface text-text hover:bg-primary-soft'
@@ -466,7 +466,7 @@ function Step2Preview({
         <button
           type="button"
           onClick={onRegenerate}
-          className="font-sans text-xs text-primary underline-offset-2 hover:underline min-h-[36px] px-1"
+          className="tap-extend font-sans text-xs text-primary underline-offset-2 hover:underline min-h-[36px] px-1 [--tap-extend:-4px_0]"
         >
           {t('generate.regenerateButton')}
         </button>
@@ -847,7 +847,7 @@ function Step2BundlePreview({
         <button
           type="button"
           onClick={onRegenerate}
-          className="font-sans text-xs text-primary underline-offset-2 hover:underline min-h-[36px] px-1"
+          className="tap-extend font-sans text-xs text-primary underline-offset-2 hover:underline min-h-[36px] px-1 [--tap-extend:-4px_0]"
         >
           {t('generate.regenerateButton')}
         </button>

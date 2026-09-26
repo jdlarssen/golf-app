@@ -369,7 +369,7 @@ function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-3 py-1.5 font-sans text-[12px] font-medium transition-colors ${
+      className={`tap-extend rounded-full border px-3 py-1.5 font-sans text-[12px] font-medium transition-colors [--tap-extend:-4px] ${
         active
           ? 'border-primary bg-primary text-bg'
           : 'border-border bg-surface text-muted hover:text-text hover:border-text/40'

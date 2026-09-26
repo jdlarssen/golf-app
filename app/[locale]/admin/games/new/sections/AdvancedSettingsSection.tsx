@@ -205,7 +205,7 @@ export function AdvancedSettingsSection({
                     </legend>
                     <div className="mt-2 flex gap-2">
                       {[0, 1, 2].map((n) => (
-                        <label key={n} className="flex items-center gap-1 cursor-pointer">
+                        <label key={n} className="tap-extend flex items-center gap-1 cursor-pointer [--tap-extend:-10px_-4px]">
                           <input
                             type="radio"
                             {...(serializedExternally
@@ -228,7 +228,7 @@ export function AdvancedSettingsSection({
                     </legend>
                     <div className="mt-2 flex gap-2">
                       {[0, 1, 2].map((n) => (
-                        <label key={n} className="flex items-center gap-1 cursor-pointer">
+                        <label key={n} className="tap-extend flex items-center gap-1 cursor-pointer [--tap-extend:-10px_-4px]">
                           <input
                             type="radio"
                             {...(serializedExternally

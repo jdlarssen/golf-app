@@ -121,7 +121,7 @@ export function PublicLandingView({
         <p className="mt-4 text-center">
           <SmartLink
             href={posterHref}
-            className="font-sans text-xs text-muted underline underline-offset-2"
+            className="tap-extend font-sans text-xs text-muted underline underline-offset-2 [--tap-extend:-14px_-8px]"
             data-testid="public-landing-poster-link"
           >
             {t('posterLink')}

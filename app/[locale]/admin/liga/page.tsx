@@ -78,7 +78,7 @@ export default async function LigaListPage({
         action={
           <Link
             href="/admin/liga/new"
-            className="rounded-full border border-border bg-surface px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text hover:border-primary/40"
+            className="tap-extend rounded-full border border-border bg-surface px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text hover:border-primary/40 [--tap-extend:-11px_0]"
           >
             {t('ledger.createButton')}
           </Link>

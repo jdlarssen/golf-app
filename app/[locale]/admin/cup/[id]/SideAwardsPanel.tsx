@@ -216,7 +216,7 @@ export function SideAwardsPanel({
                   type="button"
                   onClick={() => removeRow(i)}
                   aria-label={t('removeRow', { n: i + 1 })}
-                  className="min-h-[36px] min-w-[36px] rounded-lg border border-border text-danger text-sm hover:bg-danger/10"
+                  className="tap-extend min-h-[36px] min-w-[36px] rounded-lg border border-border text-danger text-sm hover:bg-danger/10 [--tap-extend:-5px]"
                 >
                   ✕
                 </button>
@@ -380,7 +380,7 @@ function SideAwardWinnerRow({
             data-testid="side-award-register"
             onClick={handleRegister}
             disabled={!winnerId || isSaving}
-            className="min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="tap-extend min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 [--tap-extend:-4px_0]"
           >
             {isSaving ? t('registeringPending') : t('registerButton')}
           </button>
@@ -498,7 +498,7 @@ function GirCountsRow({
           data-testid="gir-register"
           onClick={handleRegister}
           disabled={!bothFilled || isSaving}
-          className="min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="tap-extend min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 [--tap-extend:-4px_0]"
         >
           {isSaving ? t('registeringPending') : t('registerButton')}
         </button>
