@@ -56,6 +56,11 @@ const SURFACES = [
  * Vakten er scopet til disse tre, ikke til enhver `:focus-visible` i fila: en
  * framtidig `@media (forced-colors: active)`-gjennomgang skal kunne neste sine
  * egne regler uten å gjøre testen rød.
+ *
+ * Hver forekomst sjekkes, ikke bare den første: ringen for skjulte radioer i
+ * en stylet label (#2240) gjentar `outline: 2px solid var(--focus-ring);` i
+ * sin egen regel (en `:has()` i hovedregelens selektorliste ville ugyldiggjort
+ * hele lista i nettlesere uten `:has()`), og den må stå like ulaget.
  */
 const RING_DECLARATIONS = [
   'outline: 2px solid var(--focus-ring);',
@@ -77,12 +82,14 @@ describe('fokus-ring (#1386)', () => {
   });
 
   it.each(RING_DECLARATIONS)('«%s» står ulaget på toppnivå', (decl) => {
-    const at = CSS.indexOf(decl);
-    expect(at, `fant ikke «${decl}» i globals.css`).toBeGreaterThan(-1);
-    expect(CSS.indexOf(decl, at + 1), 'deklarasjonen står flere steder').toBe(
-      -1,
-    );
-    expect(depthAt(at)).toBe(1);
+    const hits: number[] = [];
+    for (let at = CSS.indexOf(decl); at !== -1; at = CSS.indexOf(decl, at + 1)) {
+      hits.push(at);
+    }
+    expect(hits.length, `fant ikke «${decl}» i globals.css`).toBeGreaterThan(0);
+    for (const at of hits) {
+      expect(depthAt(at), `forekomst ved tegn ${at}`).toBe(1);
+    }
   });
 
   describe.each([
