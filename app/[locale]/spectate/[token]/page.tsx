@@ -159,7 +159,7 @@ export default async function SpectatePage({
           'px-4 py-2 text-xs font-medium tracking-wide',
           live
             ? 'bg-accent/90 text-bg backdrop-blur-sm'
-            : 'bg-primary/90 text-white backdrop-blur-sm',
+            : 'bg-primary/90 text-white backdrop-blur-sm dark:text-bg',
         ].join(' ')}
       >
         {/* Diskret Tørny-branding (#1268): en delt spectate-lenke er en

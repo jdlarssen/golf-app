@@ -14,7 +14,7 @@ const INDICATOR_BASE =
 const INDICATOR_BY_STATE: Record<StepState, string> = {
   // Champagne accent only on the completed check (forest glyph on gold).
   done: 'bg-accent text-primary',
-  active: 'bg-primary text-white',
+  active: 'bg-primary text-white dark:text-bg',
   upcoming: 'border border-border bg-surface text-muted',
 };
 

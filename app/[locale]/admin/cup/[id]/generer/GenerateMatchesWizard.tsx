@@ -304,7 +304,7 @@ function Step1Roster({
                       onClick={() => onChange(p.id, opt)}
                       className={`min-h-[36px] px-2.5 py-1 transition-colors ${
                         val === opt
-                          ? 'bg-primary text-white'
+                          ? 'bg-primary text-white dark:text-bg'
                           : 'bg-surface text-text hover:bg-primary-soft'
                       }`}
                     >

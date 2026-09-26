@@ -77,7 +77,7 @@ export function SeasonRecapPanel({ seasons }: Props) {
                 onClick={() => setSelectedYear(s.year)}
                 className={`shrink-0 rounded-full px-4 min-h-[36px] font-sans text-sm tabular-nums transition-colors ${
                   active
-                    ? 'bg-primary text-white'
+                    ? 'bg-primary text-white dark:text-bg'
                     : 'border border-border text-muted hover:text-text'
                 }`}
               >

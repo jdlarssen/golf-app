@@ -89,7 +89,7 @@ export default async function BliMedPage({
           </p>
           <SmartLink
             href={`/klubber/${group.id}`}
-            className="block rounded-full bg-primary px-4 py-3 text-center font-sans text-[15px] font-semibold text-white min-h-[44px] flex items-center justify-center"
+            className="block rounded-full bg-primary px-4 py-3 text-center font-sans text-[15px] font-semibold text-white min-h-[44px] flex items-center justify-center dark:text-bg"
           >
             {t('goToClubButton')}
           </SmartLink>

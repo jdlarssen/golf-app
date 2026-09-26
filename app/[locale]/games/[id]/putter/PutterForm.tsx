@@ -117,7 +117,7 @@ export function PutterForm({
         type="button"
         onClick={onSave}
         disabled={dirty.length === 0 || pending}
-        className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 dark:text-bg"
       >
         {pending ? t('saving') : t('saveButton', { count: dirty.length })}
       </button>

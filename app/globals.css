@@ -1,12 +1,26 @@
 @import "tailwindcss";
 
-/* Tailwind v4 — make the `dark:` variant respond to manual theme toggle.
- * Default in v4 is OS-only (`prefers-color-scheme: dark`). With this custom
- * variant, `dark:*` utilities also fire under `[data-theme='dark']` or
- * `[data-theme='klubbhus-natt']` anywhere up the ancestor chain. The selector
- * uses `:where()` so it stays at specificity 0 and doesn't outweigh the base
- * utility. */
-@custom-variant dark (&:where([data-theme='dark'] *), [data-theme='klubbhus-natt'] &);
+/* Tailwind v4 — `dark:*` fires under exactly the two conditions the dark
+ * token blocks below use (klubbhus-natt), so utilities and tokens never
+ * disagree (#2240):
+ *   1. The OS is dark (`prefers-color-scheme: dark`) and <html> is not forced
+ *      light (`data-theme='light'`). The «auto» theme removes `data-theme`, so
+ *      this is the default path on a phone in dark mode.
+ *   2. `[data-theme='dark']` or `[data-theme='klubbhus-natt']` on the element
+ *      or an ancestor, whatever the OS says.
+ * Every selector is wrapped in `:where()` so it stays at specificity 0 and
+ * doesn't outweigh the base utility. `app/__tests__/dark-variant.test.ts`
+ * locks the variant to the token blocks. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']) *, :root:not([data-theme='light'])) {
+      @slot;
+    }
+  }
+  &:where([data-theme='dark'] *, [data-theme='dark'], [data-theme='klubbhus-natt'] *, [data-theme='klubbhus-natt']) {
+    @slot;
+  }
+}
 
 /* -----------------------------------------------------------------------------
  * Tørny design system — "Forest & Champagne"

@@ -380,7 +380,7 @@ function SideAwardWinnerRow({
             data-testid="side-award-register"
             onClick={handleRegister}
             disabled={!winnerId || isSaving}
-            className="min-h-[36px] rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isSaving ? t('registeringPending') : t('registerButton')}
           </button>
@@ -494,7 +494,7 @@ function GirCountsRow({
           data-testid="gir-register"
           onClick={handleRegister}
           disabled={!bothFilled || isSaving}
-          className="min-h-[36px] rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="min-h-[36px] rounded-lg bg-primary text-white dark:text-bg px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {isSaving ? t('registeringPending') : t('registerButton')}
         </button>

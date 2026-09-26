@@ -98,7 +98,7 @@ export function PushNudge({
           type="button"
           onClick={turnOn}
           disabled={busy}
-          className="rounded-full bg-primary text-bg-tint px-4 py-2 text-sm font-medium min-h-11 disabled:opacity-50"
+          className="rounded-full bg-primary text-bg-tint dark:text-bg px-4 py-2 text-sm font-medium min-h-11 disabled:opacity-50"
         >
           {t('enable')}
         </button>

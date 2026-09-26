@@ -46,7 +46,7 @@ export function SpectateCta({
       <SmartLink
         href={href}
         data-testid="spectate-cta"
-        className="inline-flex min-h-[44px] items-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary/90"
+        className="inline-flex min-h-[44px] items-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary/90 dark:text-bg"
       >
         {label}
       </SmartLink>

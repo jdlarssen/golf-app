@@ -53,7 +53,7 @@ export function PuttsChips({
       'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full',
       'px-3.5 font-sans text-sm font-medium tabular-nums transition-colors',
       active
-        ? 'bg-primary text-white'
+        ? 'bg-primary text-white dark:text-bg'
         : 'border border-border bg-surface text-text hover:bg-primary-soft',
       disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
     ].join(' ');
