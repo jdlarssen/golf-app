@@ -261,36 +261,40 @@ export function TeamRegistrationForm({
         className="absolute left-[-9999px] h-0 w-0 opacity-0"
       />
 
-      <label className="block">
-        <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
-          {t('teamNameLabel')}
-        </span>
-        <input
-          ref={teamNameRef}
-          type="text"
-          value={teamName}
-          onChange={(e) => {
-            setTeamName(e.target.value);
-            if (teamNameError) setTeamNameError(validateTeamName(e.target.value));
-          }}
-          onBlur={() => setTeamNameError(validateTeamName(teamName))}
-          maxLength={40}
-          required
-          placeholder={t('teamNamePlaceholder')}
-          aria-invalid={teamNameError ? true : undefined}
-          aria-describedby={teamNameError ? teamNameErrorId : undefined}
-          className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
-            teamNameError
-              ? 'border-danger focus:border-danger focus:ring-danger/20'
-              : 'border-border focus:border-primary focus:ring-primary/20'
-          }`}
-        />
+      {/* The error sits outside the <label>: inside it, it became part of the
+          field's name and was read twice with aria-describedby. */}
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
+            {t('teamNameLabel')}
+          </span>
+          <input
+            ref={teamNameRef}
+            type="text"
+            value={teamName}
+            onChange={(e) => {
+              setTeamName(e.target.value);
+              if (teamNameError) setTeamNameError(validateTeamName(e.target.value));
+            }}
+            onBlur={() => setTeamNameError(validateTeamName(teamName))}
+            maxLength={40}
+            required
+            placeholder={t('teamNamePlaceholder')}
+            aria-invalid={teamNameError ? true : undefined}
+            aria-describedby={teamNameError ? teamNameErrorId : undefined}
+            className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:ring-2 ${
+              teamNameError
+                ? 'border-danger focus:border-danger focus:ring-danger/20'
+                : 'border-border focus:border-primary focus:ring-primary/20'
+            }`}
+          />
+        </label>
         {teamNameError && (
           <span id={teamNameErrorId} className="mt-1 block font-sans text-xs text-danger">
             {translateTeamNameError(teamNameError)}
           </span>
         )}
-      </label>
+      </div>
 
       <div className="space-y-3">
         <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
