@@ -7,7 +7,7 @@ describe('Button pending-tilstand', () => {
     render(<Button>Lagre</Button>);
     const btn = screen.getByRole('button', { name: 'Lagre' });
     expect(btn).not.toBeDisabled();
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(btn).not.toHaveAttribute('aria-busy');
   });
 
   it('er disabled, viser pendingLabel og en spinner når pending', () => {
@@ -16,6 +16,7 @@ describe('Button pending-tilstand', () => {
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute('aria-busy', 'true');
     expect(btn).toHaveTextContent('Lagrer …');
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    // The spinner is decorative and must not leak into the button's name.
+    expect(btn).toHaveAccessibleName('Lagrer …');
   });
 });
