@@ -20,7 +20,7 @@ describe('SubmitButton', () => {
     expect(btn).toHaveAttribute('type', 'submit');
   });
 
-  it('er disabled og viser pendingLabel + spinner når form er pending', () => {
+  it('er disabled når form er pending, og navnet er kun pendingLabel', () => {
     useFormStatus.mockReturnValue({ pending: true });
     render(<SubmitButton pendingLabel="Sender …">Send</SubmitButton>);
     const btn = screen.getByRole('button');

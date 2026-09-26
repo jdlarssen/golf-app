@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { PerfReady } from '@/components/PerfReady';
 import { AppVersionFooter } from '@/components/ui/AppVersionFooter';
-import { MAIN_CONTENT_ID, SkipLink } from '@/components/ui/SkipLink';
 
 export function AppShell({
   children,
@@ -15,12 +14,7 @@ export function AppShell({
   // (offentlige/pre-profil) er ekstra bunn-luft harmløst.
   return (
     <div className="min-h-screen bg-bg text-text">
-      <SkipLink />
-      <main
-        id={MAIN_CONTENT_ID}
-        tabIndex={-1}
-        className="max-w-md mx-auto px-5 py-8 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]"
-      >
+      <main className="max-w-md mx-auto px-5 py-8 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         {children}
         {showVersion && <AppVersionFooter />}
       </main>

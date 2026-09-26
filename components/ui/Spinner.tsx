@@ -5,9 +5,9 @@
  * under «Reduser bevegelse».
  *
  * Decorative only (aria-hidden): the surrounding control carries the meaning
- * (Button sets aria-busy and shows its pending label). A spoken name here
- * leaked into the button's name as "Laster Lagrer …" (#2240). A standalone
- * loading state needs its own translated text next to the spinner.
+ * (Button sets aria-busy and shows its pending label). Its hardcoded label
+ * leaked into the button's accessible name (#2240). A standalone loading
+ * state needs its own translated text next to the spinner.
  */
 export function Spinner({ className = '' }: { className?: string }) {
   return (

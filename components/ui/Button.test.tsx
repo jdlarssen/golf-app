@@ -10,7 +10,7 @@ describe('Button pending-tilstand', () => {
     expect(btn).not.toHaveAttribute('aria-busy');
   });
 
-  it('er disabled, viser pendingLabel og en spinner når pending', () => {
+  it('er disabled og aria-busy når pending, og navnet er kun pendingLabel', () => {
     render(<Button pending pendingLabel="Lagrer …">Lagre</Button>);
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
