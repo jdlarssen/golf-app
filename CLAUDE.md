@@ -84,7 +84,7 @@ Hva eieren gjør i nettleser-UI-er, hva du gjør, og malen for instrukser i en t
 - **Testing — staging, aldri prod:** Tørny er i ekte bruk; test aldri ved å skrive til prod. Test mot `torny-staging` (Supabase-ref `snwmueecmfqqdurxedxv`); bruker-synlige fikser verifiseres der før merge. → `docs/staging-testing.md`
 - **Test-disiplin:** fire test-typer, én per spørsmål (A logikk, B rendret output, C data-UI, D e2e); les beslutningstreet før du rører tester. → `docs/test-discipline.md`
 - **Arbeidsflyt:** planer kjøres via `superpowers:subagent-driven-development`; byggeøkter startes via orkestratoren. → `docs/agent-discipline/bindings.md` §Utførelse
-- **Stil og Brand:** forest-and-champagne (`app/globals.css`), `tabular-nums`, tap-targets ≥44px. → `docs/style-and-brand.md`
+- **Stil og Brand:** forest-and-champagne (`app/globals.css`, oppsummert i `DESIGN.md`), `tabular-nums`, tap-targets ≥44px; design-skillene og når hver brukes. → `docs/style-and-brand.md`
 
 ### Feilhåndtering / bugs
 
