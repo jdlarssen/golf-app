@@ -8,11 +8,14 @@ import { removeLeaguePlayer, type LeagueActionError } from '@/lib/league/actions
 type Props = {
   leagueId: string;
   userId: string;
+  /** The player's display name — every row's button says «Fjern», so the
+   *  accessible name carries whom it removes. */
+  playerName: string;
 };
 
 const INITIAL: LeagueActionError = { error: '' };
 
-export function LigaRemovePlayer({ leagueId, userId }: Props) {
+export function LigaRemovePlayer({ leagueId, userId, playerName }: Props) {
   const t = useTranslations('liga.removePlayer');
 
   const [state, formAction] = useActionState(
@@ -26,10 +29,13 @@ export function LigaRemovePlayer({ leagueId, userId }: Props) {
       <input type="hidden" name="league_id" value={leagueId} />
       <input type="hidden" name="user_id" value={userId} />
       {state.error && state.error !== '' && (
-        <span className="font-sans text-[11px] text-danger mr-1">{state.error}</span>
+        <span role="alert" className="font-sans text-[11px] text-danger mr-1">
+          {state.error}
+        </span>
       )}
       <SubmitButton
         variant="ghost"
+        aria-label={t('removeAria', { name: playerName })}
         className="text-danger text-[12px] px-2 py-1 min-h-[44px] rounded-lg"
         pendingLabel={t('removePending')}
       >

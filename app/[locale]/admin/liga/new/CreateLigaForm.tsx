@@ -410,9 +410,16 @@ export function CreateLigaForm({
         />
         <input type="hidden" name="penalty_kind" value={penaltyKind} />
 
-        {/* Sesong-modell */}
-        <div className="space-y-2 mb-4">
-          <p className="font-sans text-[12px] font-medium text-text mb-1.5">
+        {/* Sesong-modell. The label names the radio group (#2240). */}
+        <div
+          role="radiogroup"
+          aria-labelledby="liga-standings-model-label"
+          className="space-y-2 mb-4"
+        >
+          <p
+            id="liga-standings-model-label"
+            className="font-sans text-[12px] font-medium text-text mb-1.5"
+          >
             {t('standingsModelLabel')}
           </p>
           {(
@@ -497,8 +504,15 @@ export function CreateLigaForm({
 
         {/* Manglende runde — kun for total */}
         {standingsModel === 'total' && (
-          <div className="space-y-2 mb-4">
-            <p className="font-sans text-[12px] font-medium text-text mb-1.5">
+          <div
+            role="radiogroup"
+            aria-labelledby="liga-missed-round-label"
+            className="space-y-2 mb-4"
+          >
+            <p
+              id="liga-missed-round-label"
+              className="font-sans text-[12px] font-medium text-text mb-1.5"
+            >
               {t('missedRoundLabel')}
             </p>
             {(
@@ -551,8 +565,15 @@ export function CreateLigaForm({
         {!pointsBased &&
           ((standingsModel === 'total' && missedPolicy === 'penalty') ||
             standingsModel === 'best_n') && (
-          <div className="space-y-2">
-            <p className="font-sans text-[12px] font-medium text-text mb-1.5">
+          <div
+            role="radiogroup"
+            aria-labelledby="liga-penalty-type-label"
+            className="space-y-2"
+          >
+            <p
+              id="liga-penalty-type-label"
+              className="font-sans text-[12px] font-medium text-text mb-1.5"
+            >
               {t('penaltyTypeLabel')}
             </p>
             {(

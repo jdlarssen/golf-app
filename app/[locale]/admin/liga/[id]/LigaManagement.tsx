@@ -247,17 +247,22 @@ export async function LigaManagement({
             <p className="text-sm text-muted mb-4">{t('manage.noParticipantsYet')}</p>
           ) : (
             <ul className="space-y-1 mb-4">
-              {participants.map((p) => (
-                <li
-                  key={p.userId}
-                  className="flex items-center justify-between gap-2 py-1.5"
-                >
-                  <span className="font-sans text-[14px] text-text">
-                    {preferredName(p, t('manage.unknownPlayer'))}
-                  </span>
-                  <LigaRemovePlayer leagueId={leagueId} userId={p.userId} />
-                </li>
-              ))}
+              {participants.map((p) => {
+                const name = preferredName(p, t('manage.unknownPlayer'));
+                return (
+                  <li
+                    key={p.userId}
+                    className="flex items-center justify-between gap-2 py-1.5"
+                  >
+                    <span className="font-sans text-[14px] text-text">{name}</span>
+                    <LigaRemovePlayer
+                      leagueId={leagueId}
+                      userId={p.userId}
+                      playerName={name}
+                    />
+                  </li>
+                );
+              })}
             </ul>
           )}
 

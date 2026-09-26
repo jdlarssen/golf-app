@@ -21,10 +21,12 @@
  * stepper-tittel.
  */
 
+import type { CSSProperties } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 import {
   maxTeamsForSize,
   teamGridShape,
@@ -42,12 +44,26 @@ type Props = {
   hideNumbering?: boolean;
 };
 
+const GENDER_CATEGORIES = ['M', 'D', 'J'] as const;
+
+// The M/D/J buttons draw 24px tall (py-1 + 16px line). -10px vertically makes
+// the hit area 44px; sideways only -2px, half the 4px gap (#2240).
+const GENDER_TAP_STYLE: CSSProperties = {
+  ['--tap-extend' as string]: '-10px -2px',
+};
+
 /**
  * M/D/J-kategorivelger for én spiller. Brukt to steder (flight-grid og
  * tee-per-spiller), så logikken for å disable en kategori tee-en mangler
  * rating for (#721) bor ett sted. En utilgjengelig kategori er `disabled`
  * med en forklarende `title`; klem-ved-tee-bytte i hooken sørger for at
  * ingen spiller står igjen på en utilgjengelig kategori.
+ *
+ * #2240: a radiogroup named after the player (roving tabindex + arrow keys),
+ * and every selected category uses the primary pair — the old «J» fill
+ * (bg-muted + text-text) read at 1.4:1, and «D» (accent + text) at 1.5:1 in
+ * the dark theme. tap-extend (GENDER_TAP_STYLE) grows the hit area without
+ * moving the layout.
  */
 function PlayerGenderToggle({
   pid,
@@ -64,29 +80,36 @@ function PlayerGenderToggle({
   ariaLabel: string;
   unavailableTitle: string;
 }) {
+  const current = playerGenders[pid] ?? 'M';
+  const select = (g: (typeof GENDER_CATEGORIES)[number]) =>
+    setPlayerGenders((prev) => ({ ...prev, [pid]: g }));
+  const rovingProps = useRovingFocus(
+    GENDER_CATEGORIES,
+    current,
+    select,
+    (g) => !teeGenderAvailability[g],
+  );
   return (
-    <div className="flex gap-1" role="group" aria-label={ariaLabel}>
-      {(['M', 'D', 'J'] as const).map((g) => {
+    <div className="flex gap-1" role="radiogroup" aria-label={ariaLabel}>
+      {GENDER_CATEGORIES.map((g, idx) => {
         const unavailable = !teeGenderAvailability[g];
-        const selected = (playerGenders[pid] ?? 'M') === g;
+        const selected = current === g;
         return (
           <button
             key={g}
+            {...rovingProps(idx)}
             type="button"
+            role="radio"
+            aria-checked={selected}
             disabled={unavailable}
             title={unavailable ? unavailableTitle : undefined}
-            onClick={() =>
-              setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
-            }
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+            onClick={() => select(g)}
+            style={GENDER_TAP_STYLE}
+            className={`tap-extend px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
               unavailable
                 ? 'bg-surface border border-border text-muted/40 cursor-not-allowed'
                 : selected
-                  ? g === 'M'
-                    ? 'bg-primary text-white dark:text-bg'
-                    : g === 'D'
-                      ? 'bg-accent text-text'
-                      : 'bg-muted text-text'
+                  ? 'bg-primary text-white dark:text-bg'
                   : 'bg-surface border border-border text-muted hover:text-text'
             }`}
           >
@@ -97,7 +120,7 @@ function PlayerGenderToggle({
       <input
         type="hidden"
         name={`player_${pid}_gender`}
-        value={playerGenders[pid] ?? 'M'}
+        value={current}
       />
     </div>
   );
@@ -413,6 +436,11 @@ export function TeamsAssignmentSection({
                       <select
                         key={slotIndex}
                         value={occupant ?? ''}
+                        aria-label={
+                          isTeamMatchplay
+                            ? t('sideTeamSlotAria', { team, slot: slotIndex + 1 })
+                            : t('teamSlotAria', { team, slot: slotIndex + 1 })
+                        }
                         onChange={(e) =>
                           assignPlayerToSlot(team, slotIndex, e.target.value)
                         }
@@ -472,11 +500,12 @@ export function TeamsAssignmentSection({
                       playerGenders={playerGenders}
                       setPlayerGenders={setPlayerGenders}
                       teeGenderAvailability={teeGenderAvailability}
-                      ariaLabel={t('teeGroupAriaLabel')}
+                      ariaLabel={t('teeGroupAriaLabel', { name: shortName(p) })}
                       unavailableTitle={t('categoryNotRated')}
                     />
                     <select
                       data-testid={`flight-select-${pid}`}
+                      aria-label={t('flightSelectAria', { name: shortName(p) })}
                       value={flight}
                       onChange={(e) =>
                         setFlightForPlayer(pid, Number(e.target.value))
@@ -539,7 +568,7 @@ export function TeamsAssignmentSection({
                     playerGenders={playerGenders}
                     setPlayerGenders={setPlayerGenders}
                     teeGenderAvailability={teeGenderAvailability}
-                    ariaLabel={t('teeGroupAriaLabel')}
+                    ariaLabel={t('teeGroupAriaLabel', { name: shortName(p) })}
                     unavailableTitle={t('categoryNotRated')}
                   />
                 </div>

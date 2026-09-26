@@ -595,7 +595,7 @@ describe('CourseForm — dupliser-tee', () => {
     fireEvent.change(tee0Name!, { target: { value: 'Gul' } });
     expect(tee0Name?.value).toBe('Gul');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dupliser' }));
+    fireEvent.click(screen.getByRole('button', { name: /^dupliser tee-boks 1$/i }));
 
     expect(screen.getByText('Tee-boks 2')).toBeTruthy();
     const tee1Name = container.querySelector<HTMLInputElement>('input[name="tee_1_name"]');
@@ -634,7 +634,7 @@ describe('CourseForm — dupliser-tee', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Dupliser' })).toBeNull();
+    expect(screen.queryAllByRole('button', { name: /^dupliser tee-boks/i })).toHaveLength(0);
   });
 
   it('dupliserer også dame-rating-data uavhengig av om blokken er kollapset', () => {
@@ -662,7 +662,7 @@ describe('CourseForm — dupliser-tee', () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Dupliser' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^dupliser tee-boks/i })[0]);
 
     const tee1LadiesSlope = container.querySelector<HTMLInputElement>(
       'input[name="tee_1_slope_ladies"]',

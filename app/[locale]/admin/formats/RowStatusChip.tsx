@@ -27,10 +27,13 @@ const STYLES: Record<RowStatus, { bg: string; fg: string }> = {
  */
 export function RowStatusChip({
   status,
+  formatName,
   onClick,
   disabled,
 }: {
   status: RowStatus;
+  /** Every row has a chip, so its name says which format it toggles. */
+  formatName: string;
   onClick?: () => void;
   disabled?: boolean;
 }) {
@@ -42,7 +45,7 @@ export function RowStatusChip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={t('rowStatus.ariaLabel', { label })}
+      aria-label={t('rowStatus.ariaLabel', { format: formatName, label })}
       className="inline-block rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
       style={{
         background: style.bg,

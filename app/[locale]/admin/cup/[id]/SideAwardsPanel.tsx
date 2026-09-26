@@ -215,7 +215,7 @@ export function SideAwardsPanel({
                 <button
                   type="button"
                   onClick={() => removeRow(i)}
-                  aria-label={t('removeRow')}
+                  aria-label={t('removeRow', { n: i + 1 })}
                   className="min-h-[36px] min-w-[36px] rounded-lg border border-border text-danger text-sm hover:bg-danger/10"
                 >
                   ✕
@@ -386,7 +386,11 @@ function SideAwardWinnerRow({
           </button>
         </div>
       </div>
-      {error && <p className="text-xs text-danger mt-2">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs text-danger mt-2">
+          {error}
+        </p>
+      )}
       {saved && !error && (
         <p className="text-xs text-primary mt-2">
           {t(winnerId === NONE_VALUE ? 'registeredNone' : 'registered')}
@@ -499,7 +503,11 @@ function GirCountsRow({
           {isSaving ? t('registeringPending') : t('registerButton')}
         </button>
       </div>
-      {error && <p className="text-xs text-danger mt-2">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs text-danger mt-2">
+          {error}
+        </p>
+      )}
       {saved && !error && <p className="text-xs text-primary mt-2">{t('girRegistered')}</p>}
     </Card>
   );

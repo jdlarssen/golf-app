@@ -84,7 +84,11 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
             />
           </div>
         </div>
-        {error && <p className="font-sans text-[12px] text-danger">{error}</p>}
+        {error && (
+          <p role="alert" className="font-sans text-[12px] text-danger">
+            {error}
+          </p>
+        )}
         <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('addPending')}>
           {t('addButton')}
         </SubmitButton>

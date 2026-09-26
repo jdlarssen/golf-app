@@ -242,6 +242,7 @@ function SponsorLogoField({
       )}
       {error && (
         <p
+          role="alert"
           className="text-xs text-danger"
           data-testid={`prize-${slotKey}-logo-error`}
         >

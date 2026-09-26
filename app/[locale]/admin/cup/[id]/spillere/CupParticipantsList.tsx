@@ -159,6 +159,7 @@ export function CupParticipantsList({
                       variant="secondary"
                       disabled={isPending}
                       data-testid={`cup-participants-remove-${p.userId}`}
+                      aria-label={t('removeAria', { name: p.displayName })}
                       className="!px-3.5 text-sm"
                     >
                       {t('removeButton')}
@@ -247,6 +248,7 @@ export function CupParticipantsList({
                         type="submit"
                         disabled={isPending || atCap}
                         data-testid={`cup-participants-add-${c.userId}`}
+                        aria-label={t('addAria', { name: c.displayName })}
                         className="!px-3.5 text-sm"
                       >
                         {t('addButton')}
@@ -315,6 +317,7 @@ function RoleControls({
         <span className="font-sans text-xs text-muted">{t('teamLabel')}</span>
         <select
           data-testid={`cup-participants-team-${participant.userId}`}
+          aria-label={t('teamSelectAria', { name: participant.displayName })}
           className="min-h-[44px] rounded-xl border border-line bg-bg px-3 text-sm text-text"
           value={team}
           onChange={(e) => {
@@ -334,6 +337,7 @@ function RoleControls({
         <input
           type="checkbox"
           data-testid={`cup-participants-captain-${participant.userId}`}
+          aria-label={t('captainAria', { name: participant.displayName })}
           className="h-5 w-5 rounded border-line"
           checked={captain}
           disabled={team === ''}
@@ -347,6 +351,7 @@ function RoleControls({
         variant="secondary"
         disabled={isPending || !dirty}
         data-testid={`cup-participants-save-role-${participant.userId}`}
+        aria-label={t('saveRoleAria', { name: participant.displayName })}
         className="!px-3.5 text-sm"
       >
         {t('saveRole')}

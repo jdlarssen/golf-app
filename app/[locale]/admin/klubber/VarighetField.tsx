@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -27,11 +27,15 @@ export function VarighetField({
   const t = useTranslations('klubb.varighet');
   const [mode, setMode] = useState<'uendelig' | 'dato'>(defaultMode);
   const [date, setDate] = useState<string>(defaultDate);
+  const dateId = useId();
+  const hintId = `${dateId}-hint`;
 
+  // fieldset + legend name the radio pair (#2240). The spacing moved from the
+  // legend's margin to the list's margin-top, which every engine honours.
   return (
-    <div>
-      <p className="mb-2 block text-sm font-medium text-text">{t('fieldLabel')}</p>
-      <div className="space-y-2">
+    <fieldset className="min-w-0">
+      <legend className="block text-sm font-medium text-text">{t('fieldLabel')}</legend>
+      <div className="mt-2 space-y-2">
         <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3">
           <input
             type="radio"
@@ -58,7 +62,12 @@ export function VarighetField({
 
       {mode === 'dato' && (
         <div className="mt-3">
+          <label htmlFor={dateId} className="sr-only">
+            {t('endDateLabel')}
+          </label>
           <input
+            id={dateId}
+            aria-describedby={hintId}
             type="date"
             name="sluttdato"
             value={date}
@@ -67,11 +76,11 @@ export function VarighetField({
               date ? 'text-text' : 'text-muted'
             } focus:border-accent transition-[border-color,box-shadow] duration-150`}
           />
-          <p className="mt-1.5 text-xs text-muted">
+          <p id={hintId} className="mt-1.5 text-xs text-muted">
             {t('endDateHint')}
           </p>
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }

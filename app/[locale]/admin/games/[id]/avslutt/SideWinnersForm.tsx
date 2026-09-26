@@ -42,6 +42,7 @@ export function SideWinnersForm({
     <form action={action} className="space-y-6">
       {error && (
         <div
+          role="alert"
           data-testid={
             isValidationError
               ? 'side-winners-error-validation'
