@@ -64,3 +64,5 @@ __pycache__/
 
 # forge (#1931): lokal arbeidsflate for forge-skillene — den kanoniske kopien av kontrakter og evalueringer lever i issues og PR-er
 .forge/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
