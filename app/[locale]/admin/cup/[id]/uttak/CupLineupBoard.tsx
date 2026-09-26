@@ -302,7 +302,9 @@ function PlannedMatchCountForm({
             min={floor}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="mt-1 w-full min-h-[44px] rounded-xl border border-line bg-bg px-3 font-serif text-lg tabular-nums text-text"
+            // text-lg! (important): the iOS 16 px floor in globals.css
+            // would otherwise shrink this deliberately large field.
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-line bg-bg px-3 font-serif text-lg! tabular-nums text-text"
           />
         </label>
 

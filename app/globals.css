@@ -502,6 +502,40 @@ body {
   --focus-ring: var(--focus-ring-strong);
 }
 
+/* Visually hidden radios/checkboxes inside a styled label (#2240): the wizard's
+ * net/gross and variant pickers, AllowanceField's netto/brutto pair and the
+ * league round's player checklist. The focused element is the `sr-only` input,
+ * so the ring above lands on a 1×1 px clipped box and the keyboard user sees
+ * nothing. The label is the visible control; it draws the ring instead.
+ *
+ * Deliberately UNLAYERED, for the same reason as the main rule, and a SEPARATE
+ * rule: `:has()` inside the main selector list would invalidate the whole list
+ * in browsers without `:has()` support and take every focus ring with it.
+ * As narrow as the markup: every such input today is a direct child of its
+ * label. */
+:where(label):has(> input.sr-only:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* iOS Safari zooms the page in on any focused field whose text is under 16 px,
+ * and does not zoom back out (#2240). Most admin/wizard fields and some signup
+ * fields are 12–14 px, so the floor lives here once instead of on ~50 fields.
+ * `-webkit-touch-callout` is supported only by iOS/iPadOS WebKit, so desktop
+ * and Android keep the designed sizes. `1em` is the parent's size: a field
+ * inside larger text keeps up with it.
+ *
+ * Deliberately UNLAYERED so it beats `text-xs`/`text-sm` in @layer utilities.
+ * A field meant to be LARGER than 16 px must mark its size important
+ * (`text-lg!`), or it drops to the floor on iOS. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
 /* iOS Safari: a long-press on any button/link surfaces the system "Open in
  * New Tab / Copy Link" callout and a text-selection highlight, instead of
  * firing the click handler. Suppress both on interactive elements globally.
