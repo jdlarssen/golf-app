@@ -103,6 +103,7 @@ Migrations live in [`supabase/migrations/`](supabase/migrations/) (120+ files, c
 
 - [CLAUDE.md](CLAUDE.md) is the map: the rules every session needs, the files worth knowing, and where the rest lives — PR and issue workflow, staging testing, style and brand each have their own file under `docs/`, read when that event comes up.
 - [AGENTS.md](AGENTS.md) is short but it matters. Next.js 16 has breaking changes against what you think you know.
+- [DESIGN.md](DESIGN.md) is the design system written for agents and design tools: tokens, components, do's and don'ts. The values themselves live in `app/globals.css`, and a test fails if the two drift apart. The design skills in [`.claude/skills/`](.claude/skills/) and when to use each are in `docs/style-and-brand.md`.
 - [CHANGELOG.md](CHANGELOG.md) is the version history: one block per weekly release, the features as collapsible plain-language rows and that week's fixes gathered in a drawer beneath them. The same blocks appear on the [releases page](https://github.com/jdlarssen/golf-app/releases), one per version tag.
 - [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) is the whole work queue, tagged by type, area, and scope.
 - [`docs/`](docs/) holds the launch checklist, mail templates, and the original design notes.
