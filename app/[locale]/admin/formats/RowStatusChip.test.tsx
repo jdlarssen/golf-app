@@ -7,14 +7,14 @@ describe('RowStatusChip', () => {
     const onClick = vi.fn();
 
     const { rerender } = render(
-      <RowStatusChip status="aktiv" onClick={onClick} />,
+      <RowStatusChip status="aktiv" formatName="Stableford" onClick={onClick} />,
     );
     expect(screen.getByRole('button')).toHaveTextContent(/aktiv/i);
 
-    rerender(<RowStatusChip status="inaktiv" onClick={onClick} />);
+    rerender(<RowStatusChip status="inaktiv" formatName="Stableford" onClick={onClick} />);
     expect(screen.getByRole('button')).toHaveTextContent(/inaktiv/i);
 
-    rerender(<RowStatusChip status="ny" onClick={onClick} />);
+    rerender(<RowStatusChip status="ny" formatName="Stableford" onClick={onClick} />);
     const nyChip = screen.getByRole('button');
     expect(nyChip).toHaveTextContent(/ny/i);
 

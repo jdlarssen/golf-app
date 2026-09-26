@@ -532,6 +532,7 @@ export function CourseForm({
                     <button
                       type="button"
                       onClick={() => duplicateTee(index)}
+                      aria-label={t('duplicateTeeAria', { number: index + 1 })}
                       className="text-xs font-medium text-muted hover:text-text transition-colors"
                     >
                       {t('duplicateButton')}
@@ -541,6 +542,7 @@ export function CourseForm({
                     <button
                       type="button"
                       onClick={() => removeTee(index)}
+                      aria-label={t('removeTeeAria', { number: index + 1 })}
                       className="text-xs font-medium text-danger hover:opacity-80 transition-opacity"
                     >
                       {t('removeTeeButton')}
@@ -812,19 +814,20 @@ function GenderParOverrideSection({
   const key = `par_${gender}` as 'par_ladies' | 'par_juniors';
   return (
     <fieldset className="border border-border/60 rounded-lg p-3 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <legend className="px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {label}
-        </legend>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-[11px] font-medium text-muted hover:text-danger transition-colors"
-        >
-          {removeLabel}
-        </button>
-      </div>
-      <p className="text-xs text-muted">{genderParHint}</p>
+      {/* The legend must be the fieldset's first child to name the group
+          (#2240). Floated, it sits in the flow instead of on the border, so
+          the header row looks as before; the next block clears it. */}
+      <legend className="float-left px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        {label}
+      </legend>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="float-right text-[11px] font-medium text-muted hover:text-danger transition-colors"
+      >
+        {removeLabel}
+      </button>
+      <p className="clear-both text-xs text-muted">{genderParHint}</p>
       <div className="space-y-3">
         {holes.map((hole, index) => (
           <div
@@ -894,21 +897,20 @@ function GenderRatingBlock({
   const crPlaceholder = gender === 'mens' ? '70.0' : '';
   return (
     <fieldset className="border border-border/60 rounded-lg p-3 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <legend className="px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {label}
-        </legend>
-        {showClear && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="text-[11px] font-medium text-muted hover:text-danger transition-colors"
-          >
-            {clearLabel}
-          </button>
-        )}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
+      {/* Legend first, floated — see GenderParBlock (#2240). */}
+      <legend className="float-left px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        {label}
+      </legend>
+      {showClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="float-right text-[11px] font-medium text-muted hover:text-danger transition-colors"
+        >
+          {clearLabel}
+        </button>
+      )}
+      <div className="clear-both grid grid-cols-2 gap-2">
         <Input
           id={`tee_${teeIndex}_slope_${gender}`}
           name={`tee_${teeIndex}_slope_${gender}`}

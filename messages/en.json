@@ -799,7 +799,10 @@
         "teamBadge": "Team {team}",
         "teePerPlayerHeading": "Tee per player",
         "teePerPlayerDescription": "Select tee per player. M = men's, D = ladies', J = juniors'.",
-        "teeGroupAriaLabel": "Tee for player",
+        "teeGroupAriaLabel": "Tee for {name}",
+        "teamSlotAria": "Team {team}, slot {slot}",
+        "sideTeamSlotAria": "Side {team}, slot {slot}",
+        "flightSelectAria": "Flight for {name}",
         "categoryNotRated": "This tee does not have a rating for this category"
       },
       "advanced": {
@@ -3169,6 +3172,8 @@
       "teeBoxLabel": "Tee box {number}",
       "duplicateButton": "Duplicate",
       "removeTeeButton": "Remove",
+      "removeTeeAria": "Remove tee box {number}",
+      "duplicateTeeAria": "Duplicate tee box {number}",
       "teeNameLabel": "Name",
       "teeNamePlaceholder": "e.g. Yellow or 57",
       "teeLengthLabel": "Course length (m)",
@@ -3533,6 +3538,7 @@
         "noResults": "No results for «{query}».",
         "addButton": "+ Add",
         "addingBusy": "Inviting…",
+        "addAria": "Add {name}",
         "orSeparator": "or",
         "emailHeading": "Invite a new player by email",
         "emailPlaceholder": "example@gmail.com",
@@ -3992,12 +3998,17 @@
       "visibleLabel": "Visible",
       "primaryLabel": "Primary",
       "cupEligibleHeading": "Cup-eligible formats",
+      "visibleAria": "{format} visible for {intent}",
+      "primaryAria": "{format} primary for {intent}",
+      "cupEligibleAria": "{format} cup-eligible",
+      "cupEligibleEmpty": "No cup-eligible formats.",
+      "matrixEmpty": "No formats to show.",
       "togglesHint": "Toggles update immediately. Visible changes take effect the next time the wizard is loaded.",
       "rowStatus": {
         "aktiv": "Active",
         "inaktiv": "Inactive",
         "ny": "New",
-        "ariaLabel": "Status: {label}. Click to toggle active/inactive."
+        "ariaLabel": "{format}, status: {label}. Click to toggle active/inactive."
       },
       "auditLog": {
         "emptyState": "No changes logged yet.",
@@ -4109,6 +4120,7 @@
       "fieldLabel": "Duration",
       "infinite": "Unlimited",
       "setEndDate": "Set end date",
+      "endDateLabel": "End date",
       "endDateHint": "Valid until the end of this day."
     },
     "list": {
@@ -4459,7 +4471,8 @@
     },
     "removePlayer": {
       "removeButton": "Remove",
-      "removePending": "…"
+      "removePending": "…",
+      "removeAria": "Remove {name}"
     },
     "roundRow": {
       "roundLabel": "Round",
@@ -4704,6 +4717,8 @@
       "customPresetName": "Custom",
       "customPresetDescription": "Build your own session list.",
       "addSessionButton": "+ Add session",
+      "sessionSelectAria": "Session {n}",
+      "removeSessionAria": "Remove session {n}",
       "formats": {
         "singles_matchplay": "Singles",
         "fourball_matchplay": "Four-ball",
@@ -4776,6 +4791,11 @@
       "captainLabel": "Captain",
       "captainBadge": "Captain",
       "saveRole": "Save",
+      "removeAria": "Remove {name}",
+      "addAria": "Add {name}",
+      "teamSelectAria": "Team for {name}",
+      "captainAria": "{name} is captain",
+      "saveRoleAria": "Save team and captain for {name}",
       "errors": {
         "not_candidate": "This player can't be enrolled in the cup.",
         "too_many_players": "A personal cup holds up to {cap} players. For more, create a club cup.",
@@ -5048,7 +5068,9 @@
       "sessionCountsHint": "Not everyone has to play every session. Lower the count and the rest sit out.",
       "sessionCountValue": "{count} of {max}",
       "sessionCountMinusAria": "Fewer matches in session {n} ({format})",
-      "sessionCountPlusAria": "More matches in session {n} ({format})"
+      "sessionCountPlusAria": "More matches in session {n} ({format})",
+      "matchPlayerAria": "{match}, {team}, player {n}",
+      "lineupPlayerAria": "Flight {flight}, {team}, slot {n}"
     },
     "delete": {
       "brassRibbon": "Confirm deletion",
@@ -5156,7 +5178,7 @@
       "slotOfCount": "({slot} of {count})",
       "girTeamCountLabel": "How many GIRs did {team} make?",
       "girRegistered": "GIR counts registered.",
-      "removeRow": "Remove row",
+      "removeRow": "Remove row {n}",
       "addRow": "+ Add side award",
       "saveButton": "Save side awards",
       "savingPending": "Saving …",

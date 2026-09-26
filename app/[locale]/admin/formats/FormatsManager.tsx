@@ -199,6 +199,8 @@ export function FormatsManager({ initialFormats }: Props) {
               const mapping = f.mappings[activeTab];
               const visible = mapping?.is_visible ?? false;
               const primary = mapping?.is_primary ?? false;
+              const name = tModes(f.slug as Parameters<typeof tModes>[0]);
+              const intentLabel = t(`intentLabels.${activeTab}` as Parameters<typeof t>[0]);
               return (
                 <li
                   key={f.slug}
@@ -209,12 +211,11 @@ export function FormatsManager({ initialFormats }: Props) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-muted">{formatIconFor(f.icon_key, 22)}</span>
-                      <span className="font-serif text-sm text-text">
-                        {tModes(f.slug as Parameters<typeof tModes>[0])}
-                      </span>
+                      <span className="font-serif text-sm text-text">{name}</span>
                     </div>
                     <RowStatusChip
                       status={deriveStatus(f)}
+                      formatName={name}
                       onClick={() => handleActiveToggle(f.slug, !f.is_active)}
                     />
                   </div>
@@ -222,6 +223,7 @@ export function FormatsManager({ initialFormats }: Props) {
                     <label className="inline-flex cursor-pointer items-center gap-2">
                       <input
                         type="checkbox"
+                        aria-label={t('visibleAria', { format: name, intent: intentLabel })}
                         checked={visible}
                         disabled={!f.is_active}
                         onChange={(e) =>
@@ -234,6 +236,7 @@ export function FormatsManager({ initialFormats }: Props) {
                     <label className="inline-flex cursor-pointer items-center gap-2">
                       <input
                         type="checkbox"
+                        aria-label={t('primaryAria', { format: name, intent: intentLabel })}
                         checked={primary}
                         disabled={!f.is_active}
                         onChange={(e) =>
@@ -255,35 +258,37 @@ export function FormatsManager({ initialFormats }: Props) {
             {t('cupEligibleHeading')}
           </summary>
           <ul className="border-t border-border">
-            {cupFormats.map((f) => (
-              <li
-                key={f.slug}
-                className={`flex items-center justify-between gap-3 px-3 py-2 ${
-                  f.is_active ? '' : 'opacity-60'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-muted">{formatIconFor(f.icon_key, 20)}</span>
-                  <span className="font-serif text-sm text-text">
-                    {tModes(f.slug as Parameters<typeof tModes>[0])}
-                  </span>
-                </div>
-                <label className="inline-flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={f.is_cup_eligible}
-                    disabled={!f.is_active}
-                    onChange={(e) =>
-                      handleCupEligibleToggle(f.slug, e.target.checked)
-                    }
-                    className="h-4 w-4 accent-primary"
-                  />
-                </label>
-              </li>
-            ))}
+            {cupFormats.map((f) => {
+              const name = tModes(f.slug as Parameters<typeof tModes>[0]);
+              return (
+                <li
+                  key={f.slug}
+                  className={`flex items-center justify-between gap-3 px-3 py-2 ${
+                    f.is_active ? '' : 'opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted">{formatIconFor(f.icon_key, 20)}</span>
+                    <span className="font-serif text-sm text-text">{name}</span>
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      aria-label={t('cupEligibleAria', { format: name })}
+                      checked={f.is_cup_eligible}
+                      disabled={!f.is_active}
+                      onChange={(e) =>
+                        handleCupEligibleToggle(f.slug, e.target.checked)
+                      }
+                      className="h-4 w-4 accent-primary"
+                    />
+                  </label>
+                </li>
+              );
+            })}
             {cupFormats.length === 0 && (
               <li className="px-3 py-3 text-xs text-muted">
-                Ingen cup-eligible formats.
+                {t('cupEligibleEmpty')}
               </li>
             )}
           </ul>
@@ -358,6 +363,7 @@ function DesktopMatrix({
                 <td className="px-3 py-2">
                   <RowStatusChip
                     status={deriveStatus(f)}
+                    formatName={name}
                     onClick={() => onActive(f.slug, !f.is_active)}
                   />
                 </td>
@@ -371,7 +377,7 @@ function DesktopMatrix({
                       <div className="inline-flex items-center gap-2">
                         <input
                           type="checkbox"
-                          aria-label={`${name} ${intentLabel} synlig`}
+                          aria-label={t('visibleAria', { format: name, intent: intentLabel })}
                           checked={visible}
                           disabled={inactive}
                           onChange={(e) =>
@@ -381,7 +387,7 @@ function DesktopMatrix({
                         />
                         <button
                           type="button"
-                          aria-label={`${name} ${intentLabel} primary`}
+                          aria-label={t('primaryAria', { format: name, intent: intentLabel })}
                           aria-pressed={primary}
                           disabled={inactive}
                           onClick={() => onPrimary(f.slug, intent, !primary)}
@@ -401,7 +407,7 @@ function DesktopMatrix({
                 <td className="px-3 py-2 text-center">
                   <input
                     type="checkbox"
-                    aria-label={`${name} cup-eligible`}
+                    aria-label={t('cupEligibleAria', { format: name })}
                     checked={f.is_cup_eligible}
                     disabled={inactive}
                     onChange={(e) => onCupEligible(f.slug, e.target.checked)}
@@ -414,7 +420,7 @@ function DesktopMatrix({
           {formats.length === 0 && (
             <tr>
               <td colSpan={6} className="px-3 py-4 text-center text-xs text-muted">
-                Ingen formats å vise.
+                {t('matrixEmpty')}
               </td>
             </tr>
           )}

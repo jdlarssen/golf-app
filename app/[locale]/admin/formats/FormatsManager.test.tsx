@@ -81,7 +81,7 @@ describe('FormatsManager', () => {
     // Klikk på «Cup-eligible»-checkbox for stableford (matrix-versjon).
     // Bruker eksplisitt aria-label for å unngå at /matchplay/-regex matcher
     // singles_matchplay sin Cup-checkbox.
-    const cupCheckboxes = screen.getAllByLabelText(/Stableford cup-eligible/i);
+    const cupCheckboxes = screen.getAllByLabelText(/Stableford cup-kvalifisert/i);
     expect(cupCheckboxes[0]).not.toBeChecked();
     fireEvent.click(cupCheckboxes[0]);
     expect(toggleCupEligibleMock).toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('FormatsManager', () => {
     // Klikk på primary-stjernen for best_ball/solo (i matrix). best_ball
     // har mapping=null for solo → primary er false. Klikk skal sende
     // intent=solo, next=on.
-    const primaryButtons = screen.getAllByLabelText(/Best ball Solo primary/i);
+    const primaryButtons = screen.getAllByLabelText(/Best ball primær for Solo/i);
     fireEvent.click(primaryButtons[0]);
     expect(togglePrimaryMock).toHaveBeenCalled();
     const primaryFd = togglePrimaryMock.mock.calls[0]![0] as FormData;

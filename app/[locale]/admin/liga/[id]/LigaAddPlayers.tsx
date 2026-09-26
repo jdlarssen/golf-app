@@ -113,7 +113,7 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
             : t('errors.fallback')
           : null;
         return error ? (
-          <p className="font-sans text-[12px] text-danger">{error}</p>
+          <p role="alert" className="font-sans text-[12px] text-danger">{error}</p>
         ) : null;
       })()}
 

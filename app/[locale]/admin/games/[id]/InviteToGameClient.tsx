@@ -88,6 +88,7 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
                   <input type="hidden" name="recipient_user_id" value={c.id} />
                   <SubmitButton
                     disabled={disabled}
+                    aria-label={t('addAria', { name: rosterDisplayName(c) })}
                     className="whitespace-nowrap px-4 py-2 text-sm"
                     pendingLabel={t('addingBusy')}
                   >

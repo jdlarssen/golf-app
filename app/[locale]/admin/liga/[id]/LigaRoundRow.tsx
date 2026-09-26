@@ -135,7 +135,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
           )}
 
           {updateState.error !== '' && (
-            <p className="font-sans text-[12px] text-danger">{updateState.error}</p>
+            <p role="alert" className="font-sans text-[12px] text-danger">{updateState.error}</p>
           )}
           <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
             {t('saveButton')}
@@ -169,7 +169,7 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
           </div>
 
           {overrideState.error && overrideState.error !== '' && (
-            <p className="font-sans text-[12px] text-danger">{overrideState.error}</p>
+            <p role="alert" className="font-sans text-[12px] text-danger">{overrideState.error}</p>
           )}
           <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('savePending')}>
             {t('saveDeadlineButton')}

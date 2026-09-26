@@ -799,7 +799,10 @@
         "teamBadge": "Lag {team}",
         "teePerPlayerHeading": "Tee per spiller",
         "teePerPlayerDescription": "Velg tee per spiller. M = herre, D = dame, J = junior.",
-        "teeGroupAriaLabel": "Tee for spiller",
+        "teeGroupAriaLabel": "Tee for {name}",
+        "teamSlotAria": "Lag {team}, plass {slot}",
+        "sideTeamSlotAria": "Side {team}, plass {slot}",
+        "flightSelectAria": "Flight for {name}",
         "categoryNotRated": "Tee-en mangler rating for denne kategorien"
       },
       "advanced": {
@@ -3169,6 +3172,8 @@
       "teeBoxLabel": "Tee-boks {number}",
       "duplicateButton": "Dupliser",
       "removeTeeButton": "Fjern",
+      "removeTeeAria": "Fjern tee-boks {number}",
+      "duplicateTeeAria": "Dupliser tee-boks {number}",
       "teeNameLabel": "Navn",
       "teeNamePlaceholder": "f.eks. Gul eller 57",
       "teeLengthLabel": "Banelengde (m)",
@@ -3533,6 +3538,7 @@
         "noResults": "Ingen treff på «{query}».",
         "addButton": "+ Legg til",
         "addingBusy": "Inviterer …",
+        "addAria": "Legg til {name}",
         "orSeparator": "eller",
         "emailHeading": "Inviter ny spiller på e-post",
         "emailPlaceholder": "eksempel@gmail.no",
@@ -3992,12 +3998,17 @@
       "visibleLabel": "Synlig",
       "primaryLabel": "Primær",
       "cupEligibleHeading": "Cup-kvalifiserte formater",
+      "visibleAria": "{format} synlig for {intent}",
+      "primaryAria": "{format} primær for {intent}",
+      "cupEligibleAria": "{format} cup-kvalifisert",
+      "cupEligibleEmpty": "Ingen cup-eligible formats.",
+      "matrixEmpty": "Ingen formats å vise.",
       "togglesHint": "Bryterne oppdateres umiddelbart. Synlige endringer treffer veiviseren neste gang den lastes inn.",
       "rowStatus": {
         "aktiv": "Aktiv",
         "inaktiv": "Inaktiv",
         "ny": "Ny",
-        "ariaLabel": "Status: {label}. Klikk for å bytte aktiv/inaktiv."
+        "ariaLabel": "{format}, status: {label}. Klikk for å bytte aktiv/inaktiv."
       },
       "auditLog": {
         "emptyState": "Ingen endringer logget ennå.",
@@ -4109,6 +4120,7 @@
       "fieldLabel": "Varighet",
       "infinite": "Uendelig",
       "setEndDate": "Sett sluttdato",
+      "endDateLabel": "Sluttdato",
       "endDateHint": "Gjelder til og med midnatt denne dagen."
     },
     "list": {
@@ -4459,7 +4471,8 @@
     },
     "removePlayer": {
       "removeButton": "Fjern",
-      "removePending": "…"
+      "removePending": "…",
+      "removeAria": "Fjern {name}"
     },
     "roundRow": {
       "roundLabel": "Runde",
@@ -4704,6 +4717,8 @@
       "customPresetName": "Tilpasset",
       "customPresetDescription": "Bygg din egen sesjonsliste.",
       "addSessionButton": "+ Legg til sesjon",
+      "sessionSelectAria": "Økt {n}",
+      "removeSessionAria": "Fjern økt {n}",
       "formats": {
         "singles_matchplay": "Singel",
         "fourball_matchplay": "Four-ball",
@@ -4776,6 +4791,11 @@
       "captainLabel": "Kaptein",
       "captainBadge": "Kaptein",
       "saveRole": "Lagre",
+      "removeAria": "Fjern {name}",
+      "addAria": "Legg til {name}",
+      "teamSelectAria": "Lag for {name}",
+      "captainAria": "{name} er kaptein",
+      "saveRoleAria": "Lagre lag og kaptein for {name}",
       "errors": {
         "not_candidate": "Denne spilleren kan ikke meldes på cupen.",
         "too_many_players": "En personlig cup tar maks {cap} spillere. Vil du ha flere, lag en klubb-cup.",
@@ -5048,7 +5068,9 @@
       "sessionCountsHint": "Ikke alle trenger å spille hver økt. Skru ned antallet, så står resten over.",
       "sessionCountValue": "{count} av {max}",
       "sessionCountMinusAria": "Færre matcher i økt {n} ({format})",
-      "sessionCountPlusAria": "Flere matcher i økt {n} ({format})"
+      "sessionCountPlusAria": "Flere matcher i økt {n} ({format})",
+      "matchPlayerAria": "{match}, {team}, spiller {n}",
+      "lineupPlayerAria": "Flight {flight}, {team}, plass {n}"
     },
     "delete": {
       "brassRibbon": "Bekreft sletting",
@@ -5156,7 +5178,7 @@
       "slotOfCount": "({slot} av {count})",
       "girTeamCountLabel": "Hvor mange GIR klarte {team}?",
       "girRegistered": "GIR-tellingen er registrert.",
-      "removeRow": "Fjern raden",
+      "removeRow": "Fjern rad {n}",
       "addRow": "+ Legg til sidepoeng",
       "saveButton": "Lagre sidepoeng",
       "savingPending": "Lagrer …",

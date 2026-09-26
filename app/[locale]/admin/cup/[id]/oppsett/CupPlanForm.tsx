@@ -60,9 +60,9 @@ type Props = {
 
 const INITIAL_STATE: CupPlanActionError = { error: '' };
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
+    <h2 id={id} className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
       {children}
     </h2>
   );
@@ -230,8 +230,13 @@ export function CupPlanForm({
 
       {/* Format */}
       <div>
-        <SectionHeading>{t('formatHeading')}</SectionHeading>
-        <div className="space-y-2">
+        <SectionHeading id="cup-plan-format-heading">{t('formatHeading')}</SectionHeading>
+        {/* The heading names the radio group (a fieldset would cost the h2). */}
+        <div
+          role="radiogroup"
+          aria-labelledby="cup-plan-format-heading"
+          className="space-y-2"
+        >
           {CUP_PRESETS.map((preset: CupPreset) => (
             <label
               key={preset.id}
@@ -323,6 +328,7 @@ export function CupPlanForm({
               <div key={i} className="flex items-center gap-2">
                 <select
                   value={format}
+                  aria-label={t('sessionSelectAria', { n: i + 1 })}
                   onChange={(e) =>
                     updateCustomSession(i, e.target.value as CupSessionFormat)
                   }
@@ -337,6 +343,7 @@ export function CupPlanForm({
                 <button
                   type="button"
                   onClick={() => removeCustomSession(i)}
+                  aria-label={t('removeSessionAria', { n: i + 1 })}
                   className="min-h-[44px] px-3 py-1 rounded-lg border border-border text-danger text-sm hover:bg-danger/10"
                 >
                   ✕
@@ -356,8 +363,12 @@ export function CupPlanForm({
 
       {/* Strategi */}
       <div>
-        <SectionHeading>{t('strategyHeading')}</SectionHeading>
-        <div className="space-y-2">
+        <SectionHeading id="cup-plan-strategy-heading">{t('strategyHeading')}</SectionHeading>
+        <div
+          role="radiogroup"
+          aria-labelledby="cup-plan-strategy-heading"
+          className="space-y-2"
+        >
           {(
             [
               [

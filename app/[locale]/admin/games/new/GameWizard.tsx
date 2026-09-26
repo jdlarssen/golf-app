@@ -49,6 +49,7 @@
 import {
   Fragment,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -1673,12 +1674,18 @@ function ClubPicker({
   onChange: (id: string) => void;
 }) {
   const t = useTranslations('wizard');
+  // The select is the group's only control: name it after the legend.
+  const legendId = useId();
   return (
     <fieldset className="space-y-2">
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <legend
+        id={legendId}
+        className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted"
+      >
         {t('club.legend')}
       </legend>
       <select
+        aria-labelledby={legendId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 font-sans text-sm text-text focus:ring-2 focus:ring-primary"

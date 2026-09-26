@@ -499,6 +499,11 @@ function Step2Preview({
                           <select
                             key={idx}
                             value={uid}
+                            aria-label={t('generate.matchPlayerAria', {
+                              match: match.label,
+                              team: team1Name,
+                              n: idx + 1,
+                            })}
                             onChange={(e) =>
                               onMatchChange(match.id, 'side1', idx, e.target.value)
                             }
@@ -531,6 +536,11 @@ function Step2Preview({
                           <select
                             key={idx}
                             value={uid}
+                            aria-label={t('generate.matchPlayerAria', {
+                              match: match.label,
+                              team: team2Name,
+                              n: idx + 1,
+                            })}
                             onChange={(e) =>
                               onMatchChange(match.id, 'side2', idx, e.target.value)
                             }
@@ -889,6 +899,11 @@ function Step2BundlePreview({
                       >
                         <select
                           data-testid={`cup-wizard-lineup-${flight.flightIndex}-side1-${row.slotIndex}`}
+                          aria-label={t('generate.lineupPlayerAria', {
+                            flight: flight.flightIndex,
+                            team: team1Name,
+                            n: row.slotIndex + 1,
+                          })}
                           value={row.side1PlayerId ?? ''}
                           onChange={(e) =>
                             onSwapPlayer(flight.flightIndex, 'side1', row.slotIndex, e.target.value)
@@ -906,6 +921,11 @@ function Step2BundlePreview({
                         </span>
                         <select
                           data-testid={`cup-wizard-lineup-${flight.flightIndex}-side2-${row.slotIndex}`}
+                          aria-label={t('generate.lineupPlayerAria', {
+                            flight: flight.flightIndex,
+                            team: team2Name,
+                            n: row.slotIndex + 1,
+                          })}
                           value={row.side2PlayerId ?? ''}
                           onChange={(e) =>
                             onSwapPlayer(flight.flightIndex, 'side2', row.slotIndex, e.target.value)
