@@ -56,6 +56,7 @@ import {
   type RefObject,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
@@ -393,6 +394,11 @@ function WizardBody({
   // valg, så det vinner — men bare når mount-konteksten er den samme (se
   // wizardDraftContext), så et låst cup-format aldri kan overskrives.
   const seedValues = draft ? { ...initialValues, ...draft.values } : initialValues;
+  // #2210: the SERVER roster (never a restored local draft's selection),
+  // captured at mount like the selection itself (see rosterEdit.ts).
+  const [rosterLoadedIds] = useState(() =>
+    rosterLoadedIdsValue(initialValues?.players),
+  );
 
   const state = useGameFormState({
     initialValues: seedValues,
@@ -1096,11 +1102,7 @@ function WizardBody({
         state={state}
         tournamentId={initialValues?.tournament_id}
         tournamentMatchLabel={initialValues?.tournament_match_label}
-        rosterLoadedIds={
-          mode.kind === 'create'
-            ? undefined
-            : (initialValues?.players ?? []).map((p) => p.user_id).join(',')
-        }
+        rosterLoadedIds={mode.kind === 'create' ? undefined : rosterLoadedIds}
       />
 
       {/* Wizard-footer: «Forrige»/«Neste» på steg 1-4, kun «Forrige» på
@@ -1142,10 +1144,7 @@ function FormDataInputs({
   state: ReturnType<typeof useGameFormState>;
   tournamentId?: string;
   tournamentMatchLabel?: string;
-  /**
-   * #2210: the roster the edit form was opened with (the server's, never a
-   * restored local draft's). Undefined when creating.
-   */
+  /** #2210: `roster_loaded_ids`, captured at mount. Undefined when creating. */
   rosterLoadedIds?: string;
 }) {
   const {

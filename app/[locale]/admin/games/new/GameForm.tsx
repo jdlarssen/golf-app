@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
+import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
@@ -336,6 +337,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const tModes = useTranslations('modes');
   const tReg = useTranslations('wizard.sections.registration');
   const state = useGameFormState({ initialValues, players, courses });
+  // #2210: captured at mount, like the selection itself (see rosterEdit.ts).
+  const [rosterLoadedIds] = useState(() =>
+    rosterLoadedIdsValue(initialValues?.players),
+  );
   const {
     name,
     gameMode,
@@ -625,11 +630,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           player the organiser removed from one who signed up meanwhile
           (lib/games/rosterEdit.ts). The create flow has no roster to diff. */}
       {mode.kind !== 'create' && (
-        <input
-          type="hidden"
-          name="roster_loaded_ids"
-          value={(initialValues?.players ?? []).map((p) => p.user_id).join(',')}
-        />
+        <input type="hidden" name="roster_loaded_ids" value={rosterLoadedIds} />
       )}
 
       {/* Section 1: Basics. #909: synlighet + sideturnering bor i
