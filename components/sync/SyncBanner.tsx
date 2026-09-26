@@ -374,7 +374,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
           <button
             type="button"
             onClick={() => void handleDismissConflict(conflict.id)}
-            className="shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide"
+            className="tap-extend shrink-0 rounded-md border border-current px-2.5 py-1 text-xs font-semibold uppercase tracking-wide [--tap-extend:-10px_0]"
           >
             {t('conflictDismiss')}
           </button>

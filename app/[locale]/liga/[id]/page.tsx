@@ -344,7 +344,7 @@ export default async function LigaPublicPage({
         <div className="mb-6 text-center">
           <SmartLink
             href={`/liga/${id}/meld-av`}
-            className="font-sans text-[13px] text-muted underline underline-offset-2 hover:text-text"
+            className="tap-extend font-sans text-[13px] text-muted underline underline-offset-2 hover:text-text [--tap-extend:-12px_-8px]"
           >
             {t('leaveLink')}
           </SmartLink>

@@ -90,7 +90,7 @@ export function SeasonRecapPanel({ seasons }: Props) {
                 aria-controls={panelId}
                 aria-selected={active}
                 onClick={() => setSelectedYear(s.year)}
-                className={`shrink-0 rounded-full px-4 min-h-[36px] font-sans text-sm tabular-nums transition-colors ${
+                className={`shrink-0 rounded-full px-4 min-h-[44px] font-sans text-sm tabular-nums transition-colors ${
                   active
                     ? 'bg-primary text-white dark:text-bg'
                     : 'border border-border text-muted hover:text-text'

@@ -65,7 +65,7 @@ export function InstallInstructionsModal({
             type="button"
             onClick={onClose}
             aria-label={t('closeAria')}
-            className="-mt-1 -mr-1 px-2 text-text-muted hover:text-text"
+            className="tap-extend -mt-1 -mr-1 px-2 text-text-muted hover:text-text [--tap-extend:-10px_-8px]"
           >
             ✕
           </button>

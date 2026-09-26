@@ -192,10 +192,11 @@ export function DemoGame(): JSX.Element {
         <LinkButton href="/login?next=%2F" full className="mt-4">
           {t('ctaButton')}
         </LinkButton>
+        {/* Hits 44px (#2240): up only to the 12px gap below the CTA button. */}
         <button
           type="button"
           onClick={reset}
-          className="mt-3 text-[13px] font-medium text-muted underline underline-offset-2"
+          className="tap-extend mt-3 text-[13px] font-medium text-muted underline underline-offset-2 [--tap-extend:-12px_-8px_-13px]"
         >
           {t('reset')}
         </button>

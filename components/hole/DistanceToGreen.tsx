@@ -35,6 +35,11 @@ const buttonStyle: CSSProperties = {
   textUnderlineOffset: 2,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
+  // Draws ~15px tall (11px text, no padding) but hits ~45px via `.tap-extend`
+  // (#2240). Upward it covers the par/index text; downward it stops at the
+  // hero's bottom border (12px padding + 1px), so it never reaches a banner
+  // or score card below.
+  ['--tap-extend' as string]: '-17px 0 -13px',
 };
 
 const hintStyle: CSSProperties = {
@@ -157,6 +162,7 @@ export function DistanceToGreen({ center }: { center: LatLng | null }): JSX.Elem
         type="button"
         data-testid="show-distance-button"
         onClick={startWatch}
+        className="tap-extend"
         style={buttonStyle}
       >
         {t('showButton')}

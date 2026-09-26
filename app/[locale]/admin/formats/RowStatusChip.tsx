@@ -24,6 +24,10 @@ const STYLES: Record<RowStatus, { bg: string; fg: string }> = {
  * `formats.is_active` mellom aktiv/inaktiv. «Ny»-statusen er informativ
  * (ingen mapping-rader for noen intent) — klikk på den fungerer som
  * aktiver/deaktiver-toggle akkurat som «Aktiv».
+ *
+ * The chip draws ~20px tall and hits 44px in the mobile cards via
+ * `.tap-extend` (#2240). In the md+ table the rows are ~40px, so the hit area
+ * stops at the row edge there instead of overlapping the next row's chip.
  */
 export function RowStatusChip({
   status,
@@ -46,7 +50,7 @@ export function RowStatusChip({
       onClick={onClick}
       disabled={disabled}
       aria-label={t('rowStatus.ariaLabel', { format: formatName, label })}
-      className="inline-block rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+      className="tap-extend inline-block rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 [--tap-extend:-12px_-8px] md:[--tap-extend:-10px_-8px]"
       style={{
         background: style.bg,
         color: style.fg,

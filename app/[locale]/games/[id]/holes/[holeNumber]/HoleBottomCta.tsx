@@ -23,6 +23,10 @@ const segmentBridgeLinkStyle: CSSProperties = {
   fontWeight: 600,
   color: 'var(--primary)',
   textDecoration: 'none',
+  // Draws ~19px tall, hits ~45px (#2240). Up it stops at the 10px gap to the
+  // primary CTA (16px margin minus this link's -6px); the rest goes below,
+  // into this link's own bottom margin.
+  ['--tap-extend' as string]: '-10px 0 -16px',
 };
 
 export function HoleBottomCta({
@@ -121,6 +125,7 @@ export function HoleBottomCta({
       {segmentSibling && !broBridge && (
         <SmartLink
           href={`/games/${segmentSibling.gameId}/holes/${segmentSibling.holeNumber}`}
+          className="tap-extend"
           style={segmentBridgeLinkStyle}
         >
           {holeSegment === 'front9'

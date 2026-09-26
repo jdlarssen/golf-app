@@ -95,6 +95,7 @@ export function WithdrawnBanner({
       <span>{t('banners.withdrawn')}</span>
       <SmartLink
         href={`/games/${gameId}`}
+        className="tap-extend"
         style={{
           fontSize: 12,
           fontWeight: 600,
@@ -102,6 +103,10 @@ export function WithdrawnBanner({
           textDecoration: 'underline',
           textUnderlineOffset: 2,
           whiteSpace: 'nowrap',
+          // Draws 18px tall, hits 44px (#2240). Up it stops at the banner's
+          // top edge (the hole hero sits right above); down it uses the
+          // banner padding and the 8px margin before the score cards.
+          ['--tap-extend' as string]: '-11px -8px -15px',
         }}
       >
         {t('banners.withdrawnUndo')}

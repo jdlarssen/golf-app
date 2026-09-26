@@ -147,7 +147,7 @@ export function FormatsManager({ initialFormats }: Props) {
         <p className="font-sans text-xs text-muted">
           {t('togglesHint')}
         </p>
-        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted">
+        <label className="tap-extend inline-flex cursor-pointer items-center gap-2 text-xs text-muted [--tap-extend:-14px_-6px]">
           <input
             type="checkbox"
             checked={showInactive}
@@ -182,7 +182,7 @@ export function FormatsManager({ initialFormats }: Props) {
               aria-controls={panelId}
               aria-selected={activeTab === intent}
               onClick={() => setActiveTab(intent)}
-              className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+              className={`tap-extend rounded-md border px-3 py-2 text-sm font-medium transition-colors [--tap-extend:-4px_0] ${
                 activeTab === intent
                   ? 'border-primary bg-primary-soft text-text'
                   : 'border-border bg-surface text-text'
@@ -220,7 +220,7 @@ export function FormatsManager({ initialFormats }: Props) {
                     />
                   </div>
                   <div className="mt-3 flex gap-4 text-sm">
-                    <label className="inline-flex cursor-pointer items-center gap-2">
+                    <label className="tap-extend inline-flex cursor-pointer items-center gap-2 [--tap-extend:-12px_-8px]">
                       <input
                         type="checkbox"
                         aria-label={t('visibleAria', { format: name, intent: intentLabel })}
@@ -233,7 +233,7 @@ export function FormatsManager({ initialFormats }: Props) {
                       />
                       {t('visibleLabel')}
                     </label>
-                    <label className="inline-flex cursor-pointer items-center gap-2">
+                    <label className="tap-extend inline-flex cursor-pointer items-center gap-2 [--tap-extend:-12px_-8px]">
                       <input
                         type="checkbox"
                         aria-label={t('primaryAria', { format: name, intent: intentLabel })}
@@ -254,7 +254,7 @@ export function FormatsManager({ initialFormats }: Props) {
         </div>
 
         <details className="rounded-lg border border-border bg-surface" open>
-          <summary className="cursor-pointer px-3 py-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          <summary className="tap-extend cursor-pointer px-3 py-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted [--tap-extend:-6px_0]">
             {t('cupEligibleHeading')}
           </summary>
           <ul className="border-t border-border">
@@ -271,7 +271,7 @@ export function FormatsManager({ initialFormats }: Props) {
                     <span className="text-muted">{formatIconFor(f.icon_key, 20)}</span>
                     <span className="font-serif text-sm text-text">{name}</span>
                   </div>
-                  <label className="inline-flex cursor-pointer items-center gap-2">
+                  <label className="tap-extend inline-flex cursor-pointer items-center gap-2 [--tap-extend:-10px_-12px]">
                     <input
                       type="checkbox"
                       aria-label={t('cupEligibleAria', { format: name })}

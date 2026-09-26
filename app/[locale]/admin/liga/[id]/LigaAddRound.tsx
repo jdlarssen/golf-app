@@ -37,7 +37,7 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
 
   return (
     <details className="rounded-xl border border-dashed border-border bg-surface/50 p-4">
-      <summary className="cursor-pointer font-sans text-[13px] font-medium text-primary list-none">
+      <summary className="tap-extend cursor-pointer font-sans text-[13px] font-medium text-primary list-none [--tap-extend:-14px_0_-12px]">
         {t('summaryLabel')}
       </summary>
       <form action={action} className="mt-3 space-y-3">

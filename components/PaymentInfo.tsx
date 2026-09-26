@@ -99,7 +99,7 @@ export function PaymentInfo({
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[36px] shrink-0 items-center justify-center rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg"
+            className="tap-extend inline-flex min-h-[36px] shrink-0 items-center justify-center rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-hover dark:text-bg [--tap-extend:-4px_0]"
           >
             {t('payVia')}
           </a>
@@ -112,7 +112,7 @@ export function PaymentInfo({
             <button
               type="button"
               onClick={copy}
-              className="inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-surface-2"
+              className="tap-extend inline-flex min-h-[36px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-surface-2 [--tap-extend:-5px_0]"
             >
               {copied ? t('copied') : t('copy')}
             </button>

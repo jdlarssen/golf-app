@@ -262,7 +262,7 @@ async function PendingApprovals({
               data-testid="approve-scorecard-details"
               className="px-4 py-3 border-b border-border"
             >
-              <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
+              <summary className="tap-extend text-sm text-muted cursor-pointer hover:text-text transition-colors [--tap-extend:-12px_0]">
                 {t('showCard')}
               </summary>
               <ScorecardTable

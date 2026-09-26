@@ -122,7 +122,7 @@ export function SideWinnersForm({
         </SubmitButton>
         <Link
           href={cancelHref ?? `/admin/games/${gameId}`}
-          className="self-center text-sm text-muted underline"
+          className="tap-extend self-center text-sm text-muted underline [--tap-extend:-12px_-6px]"
         >
           {t('cancel')}
         </Link>

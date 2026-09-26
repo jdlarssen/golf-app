@@ -23,6 +23,9 @@ const chipStyle: CSSProperties = {
   fontWeight: 600,
   cursor: 'pointer',
   whiteSpace: 'nowrap',
+  // Draws ~37px tall, hits ~45px via `.tap-extend` (#2240). The 1px border
+  // counts: the inset is measured from the padding box.
+  ['--tap-extend' as string]: '-5px 0',
 };
 
 const statusStyle: CSSProperties = {
@@ -133,6 +136,7 @@ export function GreenPinChip({
         data-testid="green-pin-chip"
         onClick={onPin}
         disabled={state === 'busy'}
+        className="tap-extend"
         style={{ ...chipStyle, opacity: state === 'busy' ? 0.6 : 1 }}
       >
         <PinFlagSm size={13} />

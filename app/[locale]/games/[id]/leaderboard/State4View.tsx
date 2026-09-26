@@ -352,7 +352,7 @@ function ModeChip({
                 publicView,
                 publicHref: backHref,
               })}
-              className={`min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+              className={`tap-extend min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors [--tap-extend:-8px_0] ${
                 active
                   ? 'bg-primary-soft text-text'
                   : 'text-muted hover:text-text'

@@ -67,7 +67,7 @@ export function PuttsSubmitPrompt({
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="shrink-0 font-sans text-xs text-muted underline underline-offset-2 hover:text-text"
+          className="tap-extend shrink-0 font-sans text-xs text-muted underline underline-offset-2 hover:text-text [--tap-extend:-14px_-8px]"
         >
           {t('dismiss')}
         </button>

@@ -124,7 +124,7 @@ export function BetalingClient({
                   <span className="text-xs text-muted">({t('withdrawn')})</span>
                 )}
               </span>
-              <label className="flex cursor-pointer items-center gap-2">
+              <label className="tap-extend flex cursor-pointer items-center gap-2 [--tap-extend:-12px_-8px]">
                 <span
                   className={`font-sans text-xs tabular-nums ${
                     paid ? 'text-success-text' : 'text-muted'

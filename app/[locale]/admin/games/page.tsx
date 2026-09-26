@@ -109,7 +109,7 @@ export default async function GamesPage({
             // på «Pågående og kommende»-visningen.
             <SmartLink
               href="/admin/games/new"
-              className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
+              className="tap-extend rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text [--tap-extend:-11px_0]"
             >
               {t('createLabel')}
             </SmartLink>

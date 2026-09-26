@@ -60,7 +60,7 @@ export function FooterLink({
   return (
     <SmartLink
       href={href}
-      className="inline-flex min-h-[44px] items-center hover:text-primary"
+      className="tap-extend inline-flex min-h-[44px] items-center hover:text-primary [--tap-extend:0_-5px]"
     >
       {children}
     </SmartLink>
