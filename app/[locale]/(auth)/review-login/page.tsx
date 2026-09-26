@@ -87,7 +87,6 @@ export default async function ReviewLoginPage({
         <Card>
           {errorMessage && (
             <div
-              role="alert"
               data-testid={`review-login-error-${errorCode}`}
               className="mb-4"
             >
