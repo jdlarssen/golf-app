@@ -69,7 +69,7 @@ export function GreenPinChip({
 
   if (state === 'thanks') {
     return (
-      <div data-testid="green-pin-thanks" style={statusStyle}>
+      <div role="status" data-testid="green-pin-thanks" style={statusStyle}>
         {t('thanks')}
       </div>
     );
@@ -139,7 +139,7 @@ export function GreenPinChip({
         <span>{state === 'busy' ? t('saving') : t('prompt')}</span>
       </button>
       {errorKey && (
-        <span data-testid="green-pin-error" style={statusStyle}>
+        <span role="status" data-testid="green-pin-error" style={statusStyle}>
           {t(errorKey)}
         </span>
       )}

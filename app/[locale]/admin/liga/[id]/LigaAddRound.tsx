@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { addLeagueRound, type LeagueActionError } from '@/lib/league/actions';
@@ -14,6 +14,8 @@ const INITIAL: LeagueActionError = { error: '' };
  */
 export function LigaAddRound({ leagueId }: { leagueId: string }) {
   const t = useTranslations('liga.addRound');
+  // Labels point at their fields (htmlFor) so each field has a name.
+  const fieldId = useId();
 
   const [state, action] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
@@ -41,11 +43,12 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
       <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="league_id" value={leagueId} />
         <div>
-          <label className="block font-sans text-[12px] font-medium text-text mb-1">
+          <label htmlFor={`${fieldId}-label`} className="block font-sans text-[12px] font-medium text-text mb-1">
             {t('nameLabel')}
           </label>
           <input
             type="text"
+            id={`${fieldId}-label`}
             name="label"
             maxLength={80}
             placeholder={t('namePlaceholder')}
@@ -57,22 +60,24 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
             krymper kontrollen til containeren (samme fiks som #453). */}
         <div className="grid grid-cols-2 gap-3">
           <div className="min-w-0">
-            <label className="block font-sans text-[12px] font-medium text-text mb-1">
+            <label htmlFor={`${fieldId}-opens-at`} className="block font-sans text-[12px] font-medium text-text mb-1">
               {t('opensLabel')}
             </label>
             <input
               type="datetime-local"
+              id={`${fieldId}-opens-at`}
               name="opens_at"
               required
               className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
           <div className="min-w-0">
-            <label className="block font-sans text-[12px] font-medium text-text mb-1">
+            <label htmlFor={`${fieldId}-closes-at`} className="block font-sans text-[12px] font-medium text-text mb-1">
               {t('closesLabel')}
             </label>
             <input
               type="datetime-local"
+              id={`${fieldId}-closes-at`}
               name="closes_at"
               required
               className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"

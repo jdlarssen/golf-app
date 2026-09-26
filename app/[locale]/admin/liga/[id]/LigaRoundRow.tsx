@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useId } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { updateLeagueRound, overrideRoundWindow, type LeagueActionError } from '@/lib/league/actions';
@@ -37,6 +37,8 @@ function formatWindowDate(iso: string, locale: AppLocale): string {
 
 export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
   const t = useTranslations('liga.roundRow');
+  // Labels point at their fields (htmlFor) so each field has a name.
+  const fieldId = useId();
   const locale = useLocale() as AppLocale;
 
   const [updateState, updateAction] = useActionState(
@@ -92,10 +94,11 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
 
           {courseScope === 'multi_course' && (
             <div>
-              <label className="block font-sans text-[12px] font-medium text-text mb-1">
+              <label htmlFor={`${fieldId}-course-id`} className="block font-sans text-[12px] font-medium text-text mb-1">
                 {t('courseLabel')}
               </label>
               <select
+                id={`${fieldId}-course-id`}
                 name="course_id"
                 defaultValue={round.courseId ?? ''}
                 className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
@@ -112,10 +115,11 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
 
           {(courseScope === 'multi_course' || courseScope === 'single_course') && (
             <div>
-              <label className="block font-sans text-[12px] font-medium text-text mb-1">
+              <label htmlFor={`${fieldId}-tee-box-id`} className="block font-sans text-[12px] font-medium text-text mb-1">
                 {t('teeLabel')}
               </label>
               <select
+                id={`${fieldId}-tee-box-id`}
                 name="tee_box_id"
                 defaultValue={round.teeBoxId ?? ''}
                 className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:ring-2 focus:ring-primary/30 min-h-[44px]"
@@ -149,13 +153,14 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
           <input type="hidden" name="league_id" value={leagueId} />
 
           <div className="min-w-0">
-            <label className="block font-sans text-[12px] font-medium text-text mb-1">
+            <label htmlFor={`${fieldId}-closes-at`} className="block font-sans text-[12px] font-medium text-text mb-1">
               {t('newDeadlineLabel')}
             </label>
             {/* iOS: native datetime-local strekker seg utenfor kortet uten
                 appearance-none + min-w-0 (samme fiks som #453). */}
             <input
               type="datetime-local"
+              id={`${fieldId}-closes-at`}
               name="closes_at"
               required
               defaultValue={toDatetimeLocal(round.closesAt)}

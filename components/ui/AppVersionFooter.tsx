@@ -4,12 +4,15 @@ import { useTranslations } from 'next-intl';
 
 export function AppVersionFooter() {
   const t = useTranslations('legal.privacy');
+  const tCommon = useTranslations('common');
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
   const sha = process.env.NEXT_PUBLIC_APP_SHA;
   if (!version) return null;
   return (
     <p className="mt-10 text-center text-xs text-muted">
-      <span className="tabular-nums" aria-label="App-versjon">
+      {/* aria-label on a plain span is ignored; the label goes in as text. */}
+      <span className="tabular-nums">
+        <span className="sr-only">{tCommon('appVersionLabel')} </span>
         v{version}
         {sha ? ` · ${sha}` : ''}
       </span>

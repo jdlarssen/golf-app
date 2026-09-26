@@ -103,6 +103,10 @@ export function LigaEmbedControl({
         </button>
       </div>
 
+      {/* The label swap alone is silent to screen readers; this announces it. */}
+      <span role="status" className="sr-only">
+        {copied ? t('copied') : ''}
+      </span>
       {enabled && embedUrl && (
         <button
           type="button"

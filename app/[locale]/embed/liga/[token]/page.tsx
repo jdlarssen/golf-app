@@ -52,7 +52,7 @@ export default async function EmbedLigaPage({
   const t = await getTranslations('embed');
 
   return (
-    <div className="px-3 pt-4">
+    <main className="px-3 pt-4">
       <EmbedThemeScript theme={theme} />
       <h1 className="mb-3 px-1 font-serif text-xl font-medium leading-snug tracking-[-0.015em] text-text">
         {league.name}
@@ -74,6 +74,6 @@ export default async function EmbedLigaPage({
       />
       {/* 60 s poll — a season table changes per delivered round, not per stroke. */}
       <SpectatePoller live={live} intervalMs={60_000} />
-    </div>
+    </main>
   );
 }

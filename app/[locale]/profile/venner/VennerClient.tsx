@@ -37,9 +37,15 @@ export function CopyLinkButton({
   }
 
   return (
-    <Button type="button" variant="secondary" onClick={copy} className="shrink-0">
-      {copied ? copiedLabel : copyLabel}
-    </Button>
+    <>
+      {/* The label swap alone is silent to screen readers; this announces it. */}
+      <span role="status" className="sr-only">
+        {copied ? copiedLabel : ''}
+      </span>
+      <Button type="button" variant="secondary" onClick={copy} className="shrink-0">
+        {copied ? copiedLabel : copyLabel}
+      </Button>
+    </>
   );
 }
 

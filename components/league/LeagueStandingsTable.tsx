@@ -78,6 +78,7 @@ function RoundCell({
       <span>{label}</span>
       {isFlagged && (
         <span
+          role="img"
           className="ml-0.5 inline-block h-1 w-1 rounded-full align-middle"
           style={{ background: 'var(--accent)' }}
           aria-label={t('flaggedAriaLabel')}

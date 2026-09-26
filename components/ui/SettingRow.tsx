@@ -130,6 +130,8 @@ export function SettingList({
   // outline med positiv offset helt bort (#1402).
   return (
     <div
+      // aria-label only counts on an element with a role.
+      role={ariaLabel ? 'group' : undefined}
       aria-label={ariaLabel}
       data-focus-inset
       className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_8px_rgba(26,46,31,0.04)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3)]"

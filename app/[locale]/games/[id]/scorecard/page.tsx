@@ -177,6 +177,8 @@ export default async function ScorecardPage({ params }: { params: Params }) {
         backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale as AppLocale) })}
         kicker={kickerText}
       />
+      {/* The kicker above is the page title; screen readers get it as the h1. */}
+      <h1 className="sr-only">{kickerText}</h1>
 
       <div className="space-y-4">
         <Card className="px-4 py-3">

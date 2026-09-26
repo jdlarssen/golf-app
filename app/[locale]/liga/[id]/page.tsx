@@ -306,11 +306,11 @@ export default async function LigaPublicPage({
                       {/* Action area */}
                       <div className="shrink-0 self-center">
                         {alreadyDelivered ? (
-                          <span
-                            className="text-xs text-muted"
-                            aria-label={t('deliveredAria')}
-                          >
-                            {t('delivered')}
+                          <span className="text-xs text-muted">
+                            {/* aria-label on a plain span is ignored; the
+                                fuller text goes in as sr-only text. */}
+                            <span aria-hidden="true">{t('delivered')}</span>
+                            <span className="sr-only">{t('deliveredAria')}</span>
                           </span>
                         ) : canPlay ? (
                           <LinkButton

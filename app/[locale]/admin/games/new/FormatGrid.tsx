@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { FormatStyleBadge } from '@/components/ui/FormatStyleBadge';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { useRovingFocus, type RovingProps } from '@/hooks/useRovingFocus';
 
 type Props = {
   formats: FormatForIntent[];
@@ -42,6 +43,22 @@ export function FormatGrid({
   const secondary = formats.filter((f) => !f.is_primary);
   // Vis gruppe-headere kun når begge gruppene finnes — ellers holder legenden.
   const showGroupHeaders = primary.length > 0 && secondary.length > 0;
+  // Each radiogroup follows the radiogroup keyboard pattern on its own: one
+  // tab stop (the selected card, or the group's first when the selection is in
+  // the other group), arrow keys move the selection within the group.
+  const select = (slug: string) => {
+    if (!disabled) onChange(slug);
+  };
+  const primaryRoving = useRovingFocus(
+    primary.map((f) => f.slug),
+    value,
+    select,
+  );
+  const secondaryRoving = useRovingFocus(
+    secondary.map((f) => f.slug),
+    value,
+    select,
+  );
 
   if (formats.length === 0) {
     return (
@@ -54,7 +71,7 @@ export function FormatGrid({
     );
   }
 
-  function renderCard(f: FormatForIntent) {
+  function renderCard(f: FormatForIntent, rovingProps: RovingProps) {
     const selected = value === f.slug;
     const name = tModes(f.slug as Parameters<typeof tModes>[0]);
 
@@ -87,6 +104,7 @@ export function FormatGrid({
               inert når ingen outline tegnes, så den koster ingenting utenfor
               tastaturfokus. */}
           <button
+            {...rovingProps}
             type="button"
             role="radio"
             aria-checked={true}
@@ -127,6 +145,7 @@ export function FormatGrid({
     return (
       <button
         key={f.slug}
+        {...rovingProps}
         type="button"
         role="radio"
         aria-checked={false}
@@ -167,7 +186,7 @@ export function FormatGrid({
             aria-label={t('groupAriaMain')}
             className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           >
-            {primary.map(renderCard)}
+            {primary.map((f, idx) => renderCard(f, primaryRoving(idx)))}
           </div>
         </div>
       )}
@@ -182,7 +201,7 @@ export function FormatGrid({
             aria-label={t('groupAriaSecondary')}
             className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           >
-            {secondary.map(renderCard)}
+            {secondary.map((f, idx) => renderCard(f, secondaryRoving(idx)))}
           </div>
         </div>
       )}

@@ -56,8 +56,10 @@ export function SyncStatusLine(props: SyncStatusLineProps): JSX.Element {
     background: dotColor,
   };
 
+  // A persistent status region: the text swaps in place, so screen readers
+  // announce each change (sending → saved) without the player having to look.
   return (
-    <div style={containerStyle}>
+    <div role="status" style={containerStyle}>
       <span data-testid="sync-dot" style={dotStyle} />
       <span>{text}</span>
     </div>

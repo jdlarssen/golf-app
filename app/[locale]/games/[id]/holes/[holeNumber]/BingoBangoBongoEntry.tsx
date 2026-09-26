@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type CSSProperties, type JSX } from 'react';
+import { useId, useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   isBingoBangoBongoNoOp,
@@ -134,6 +134,7 @@ export function BingoBangoBongoEntry(
   props: BingoBangoBongoEntryProps,
 ): JSX.Element {
   const t = useTranslations('holes.bingoBangoBongo');
+  const idBase = useId();
   const {
     gameId,
     holeNumber,
@@ -237,9 +238,18 @@ export function BingoBangoBongoEntry(
 
       {CATEGORY_KEYS.map(({ key, labelKey, descKey }) => {
         const selectedUserId = localHole[key];
+        // Every row repeats the same player names; the group label tells a
+        // screen reader which category (bingo/bango/bongo) a chip belongs to.
+        const labelId = `${idBase}-${key}`;
         return (
-          <div key={key} style={rowStyle} data-testid={`bbb-row-${key}`}>
-            <span style={rowLabelStyle}>
+          <div
+            key={key}
+            role="group"
+            aria-labelledby={labelId}
+            style={rowStyle}
+            data-testid={`bbb-row-${key}`}
+          >
+            <span id={labelId} style={rowLabelStyle}>
               {t(labelKey)}
               <span style={rowDescStyle}>({t(descKey)})</span>
             </span>

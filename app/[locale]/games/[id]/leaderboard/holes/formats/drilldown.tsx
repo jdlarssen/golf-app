@@ -518,6 +518,9 @@ function HoleRow({
           return (
             <div
               key={pc.userId}
+              // role="img": the label replaces the row's visual numbers for
+              // screen readers (aria-label alone is ignored on a plain div).
+              role="img"
               className="flex items-center gap-2 font-serif tabular-nums"
               aria-label={
                 isBestNet

@@ -79,7 +79,7 @@ export default async function PlakatPage({ params }: { params: Params }) {
   }
 
   return (
-    <div className="min-h-screen bg-bg px-4 py-8 print:bg-white print:p-0">
+    <main className="min-h-screen bg-bg px-4 py-8 print:bg-white print:p-0">
       <div
         className="mx-auto flex max-w-[520px] flex-col items-center rounded-2xl border border-border bg-surface px-8 py-10 text-center print:max-w-none print:rounded-none print:border-0"
         data-testid="poster"
@@ -121,6 +121,6 @@ export default async function PlakatPage({ params }: { params: Params }) {
       <div className="mx-auto mt-6 max-w-[520px]">
         <PrintButton />
       </div>
-    </div>
+    </main>
   );
 }

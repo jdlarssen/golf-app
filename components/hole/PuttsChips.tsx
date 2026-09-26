@@ -100,11 +100,10 @@ export function PuttsChips({
           >
             −
           </button>
-          <span
-            className="min-w-[1.25rem] text-center font-sans text-sm font-semibold tabular-nums text-text"
-            aria-label={t('valueAriaLabel', { count: stepperValue })}
-          >
-            {stepperValue}
+          <span className="min-w-[1.25rem] text-center font-sans text-sm font-semibold tabular-nums text-text">
+            {/* aria-label on a plain span is ignored; the unit goes in as text. */}
+            <span aria-hidden="true">{stepperValue}</span>
+            <span className="sr-only">{t('valueAriaLabel', { count: stepperValue })}</span>
           </span>
           <button
             type="button"

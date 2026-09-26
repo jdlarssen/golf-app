@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { KavalkadeCardView } from './KavalkadeCardView';
 import type {
@@ -9,6 +9,9 @@ import type {
   KavalkadeTab,
 } from '@/lib/kavalkade/kavalkadeCards';
 import type { AppLocale } from '@/i18n/routing';
+import { useRovingFocus, type RovingProps } from '@/hooks/useRovingFocus';
+
+const TABS: readonly KavalkadeTab[] = ['personal', 'gang'];
 
 type Props = {
   deck: Deck;
@@ -37,6 +40,12 @@ export function KavalkadeDeck({ deck, locale, actions }: Props) {
   const t = useTranslations('kavalkade');
   const [active, setActive] = useState<KavalkadeTab>(deck.defaultTab);
   const cards = active === 'personal' ? deck.personal : deck.gang;
+  // Tablist keyboard pattern: one tab stop, arrow keys switch tab; each tab
+  // points at the panel and the panel is named by the active tab.
+  const baseId = useId();
+  const tabId = (tab: KavalkadeTab) => `${baseId}-tab-${tab}`;
+  const panelId = `${baseId}-panel`;
+  const rovingProps = useRovingFocus(TABS, active, setActive);
 
   return (
     <div>
@@ -48,51 +57,57 @@ export function KavalkadeDeck({ deck, locale, actions }: Props) {
         <TabButton
           label={t('tabPersonal')}
           testId="kavalkade-tab-personal"
+          id={tabId('personal')}
+          panelId={panelId}
           active={active === 'personal'}
           onSelect={() => setActive('personal')}
+          rovingProps={rovingProps(0)}
         />
         <TabButton
           label={t('tabGang')}
           testId="kavalkade-tab-gang"
+          id={tabId('gang')}
+          panelId={panelId}
           active={active === 'gang'}
           onSelect={() => setActive('gang')}
+          rovingProps={rovingProps(1)}
         />
       </div>
 
-      {cards.length === 0 ? (
-        <p
-          className="font-sans text-sm leading-relaxed text-muted"
-          data-testid="kavalkade-tab-empty"
-        >
-          {t('tabEmpty')}
-        </p>
-      ) : (
-        <ol
-          role="tabpanel"
-          aria-label={active === 'personal' ? t('tabPersonal') : t('tabGang')}
-          data-testid="kavalkade-rail"
-          // `overscroll-x-contain` stopper sveipen fra å dra hele siden (og
-          // dermed iOS-tilbake-gesten) når man blar forbi siste kort.
-          className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {cards.map((card, index) => (
-            <li
-              key={card.id}
-              className="w-[88%] shrink-0 snap-center"
-              aria-label={t('cardPosition', {
-                index: index + 1,
-                total: cards.length,
-              })}
-            >
-              <KavalkadeCardView
-                card={card}
-                locale={locale}
-                action={actions?.[card.id]}
-              />
-            </li>
-          ))}
-        </ol>
-      )}
+      <div role="tabpanel" id={panelId} aria-labelledby={tabId(active)}>
+        {cards.length === 0 ? (
+          <p
+            className="font-sans text-sm leading-relaxed text-muted"
+            data-testid="kavalkade-tab-empty"
+          >
+            {t('tabEmpty')}
+          </p>
+        ) : (
+          <ol
+            data-testid="kavalkade-rail"
+            // `overscroll-x-contain` stopper sveipen fra å dra hele siden (og
+            // dermed iOS-tilbake-gesten) når man blar forbi siste kort.
+            className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {cards.map((card, index) => (
+              <li
+                key={card.id}
+                className="w-[88%] shrink-0 snap-center"
+                aria-label={t('cardPosition', {
+                  index: index + 1,
+                  total: cards.length,
+                })}
+              >
+                <KavalkadeCardView
+                  card={card}
+                  locale={locale}
+                  action={actions?.[card.id]}
+                />
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
     </div>
   );
 }
@@ -101,18 +116,28 @@ export function KavalkadeDeck({ deck, locale, actions }: Props) {
 function TabButton({
   label,
   testId,
+  id,
+  panelId,
   active,
   onSelect,
+  rovingProps,
 }: {
   label: string;
   testId: string;
+  id: string;
+  panelId: string;
   active: boolean;
   onSelect: () => void;
+  /** Roving tabindex + arrow-key handling from `useRovingFocus`. */
+  rovingProps: RovingProps;
 }) {
   return (
     <button
+      {...rovingProps}
       type="button"
       role="tab"
+      id={id}
+      aria-controls={panelId}
       aria-selected={active}
       data-testid={testId}
       onClick={onSelect}

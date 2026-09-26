@@ -138,7 +138,6 @@ export function LiveFollowControl({
         <button
           type="button"
           onClick={handleShare}
-          aria-label={t('shareLinkAriaLabel')}
           className={[
             'mt-2 flex w-full min-h-[44px] items-center justify-center gap-2',
             'rounded-2xl border border-border bg-transparent px-4',
@@ -190,6 +189,13 @@ export function LiveFollowControl({
           {embedCopied ? t('copiedLabel') : t('copyEmbedLabel')}
         </button>
       )}
+
+      {/* The label swaps alone are silent to screen readers; this announces
+          them. The share button has no aria-label, so its name follows the
+          visible label too. */}
+      <span role="status" className="sr-only">
+        {copied || embedCopied ? t('copiedLabel') : ''}
+      </span>
     </div>
   );
 }

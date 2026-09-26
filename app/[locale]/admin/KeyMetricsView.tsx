@@ -84,28 +84,28 @@ export function KeyMetricsView({
         />
 
         <dl className="mt-4 space-y-3 border-t border-border pt-3">
-          <div>
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="font-sans text-[13px] text-text">
-                {t('keyMetricsPlayersTwoPlus')}
-              </dt>
-              <dd
-                className="font-serif text-lg font-medium tabular-nums text-text"
-                data-testid="key-metrics-users-ge2"
-              >
-                {metrics.usersGe2}
-              </dd>
-            </div>
+          {/* A dl group holds only dt/dd (axe definition-list): the share line
+              is a second dd, spanning both columns under the value. */}
+          <div className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
+            <dt className="font-sans text-[13px] text-text">
+              {t('keyMetricsPlayersTwoPlus')}
+            </dt>
+            <dd
+              className="font-serif text-lg font-medium tabular-nums text-text"
+              data-testid="key-metrics-users-ge2"
+            >
+              {metrics.usersGe2}
+            </dd>
             {share !== null && (
-              <p
-                className="mt-0.5 font-sans text-xs tabular-nums text-muted"
+              <dd
+                className="col-span-2 mt-0.5 font-sans text-xs tabular-nums text-muted"
                 data-testid="key-metrics-users-share"
               >
                 {t('keyMetricsPlayersShare', {
                   share,
                   total: metrics.usersGe1,
                 })}
-              </p>
+              </dd>
             )}
           </div>
           <div className="flex items-baseline justify-between gap-3">

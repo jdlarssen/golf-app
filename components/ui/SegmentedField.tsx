@@ -1,6 +1,7 @@
 'use client';
 
-import { type KeyboardEvent, type ReactNode, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { useRovingFocus } from '@/hooks/useRovingFocus';
 
 type Option = { value: string; label: string };
 
@@ -40,33 +41,13 @@ export function SegmentedField({
   hint,
   id,
 }: Props) {
-  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  // Roving tabindex: only the selected option (or the first if none selected)
-  // gets tabindex=0; all others get tabindex=-1.
-  const selectedIndex =
-    value !== null ? options.findIndex((o) => o.value === value) : -1;
-  const rovingIndex = selectedIndex === -1 ? 0 : selectedIndex;
-
-  function handleKeyDown(e: KeyboardEvent<HTMLButtonElement>, idx: number) {
-    let next: number | null = null;
-
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      next = (idx + 1) % options.length;
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      next = (idx - 1 + options.length) % options.length;
-    } else if (e.key === 'Home') {
-      next = 0;
-    } else if (e.key === 'End') {
-      next = options.length - 1;
-    }
-
-    if (next !== null) {
-      e.preventDefault();
-      onChange(options[next].value);
-      buttonRefs.current[next]?.focus();
-    }
-  }
+  // Roving tabindex + arrow keys (the shared hook): only the selected option
+  // (or the first if none selected) is in the tab order.
+  const rovingProps = useRovingFocus(
+    options.map((o) => o.value),
+    value,
+    onChange,
+  );
 
   return (
     <fieldset id={id}>
@@ -83,15 +64,11 @@ export function SegmentedField({
           return (
             <button
               key={opt.value}
-              ref={(el) => {
-                buttonRefs.current[idx] = el;
-              }}
+              {...rovingProps(idx)}
               type="button"
               role="radio"
               aria-checked={selected}
-              tabIndex={idx === rovingIndex ? 0 : -1}
               onClick={() => onChange(opt.value)}
-              onKeyDown={(e) => handleKeyDown(e, idx)}
               className={`flex min-h-[44px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 ${
                 selected
                   ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'

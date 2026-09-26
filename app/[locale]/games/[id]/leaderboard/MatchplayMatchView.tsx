@@ -465,6 +465,7 @@ function ScoreCell({
             «(4N)», som ikke sa hvor slagene kom fra. */}
         {extra > 0 && (
           <span
+            role="img"
             aria-label={t('matchplay.strokeDotAria', { count: extra })}
             title={t('matchplay.strokeDotAria', { count: extra })}
             className="ml-0.5 align-super text-[11px] font-semibold leading-none text-text"

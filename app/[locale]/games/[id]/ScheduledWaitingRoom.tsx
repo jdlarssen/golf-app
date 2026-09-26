@@ -166,7 +166,6 @@ export function ScheduledWaitingRoom({
                     ]
                       .filter(Boolean)
                       .join(' ')}
-                    aria-label={t('flightJoinAriaLabel', { number: opt.flightNumber })}
                   >
                     <div className="flex items-center justify-between">
                       <div>

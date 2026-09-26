@@ -118,12 +118,16 @@ export function PuttsField(props: PuttsFieldProps): JSX.Element {
         >
           −
         </button>
-        <span
-          data-testid="putts-value"
-          aria-label={putts == null ? undefined : t('valueAriaLabel', { count: putts })}
-          style={valueStyle}
-        >
-          {putts == null ? '—' : putts}
+        <span data-testid="putts-value" style={valueStyle}>
+          {/* aria-label on a plain span is ignored; the unit goes in as text. */}
+          {putts == null ? (
+            '—'
+          ) : (
+            <>
+              <span aria-hidden="true">{putts}</span>
+              <span className="sr-only">{t('valueAriaLabel', { count: putts })}</span>
+            </>
+          )}
         </span>
         <button
           type="button"

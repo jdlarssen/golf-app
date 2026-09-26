@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -24,6 +24,8 @@ export function ReviewActions({
 }: Props) {
   const t = useTranslations('game.approve');
   const [showReject, setShowReject] = useState(false);
+  // One ReviewActions per player on the page, so the id must be unique.
+  const reasonId = useId();
 
   return (
     <div className="space-y-3">
@@ -66,10 +68,11 @@ export function ReviewActions({
           className="space-y-2"
         >
           <input type="hidden" name="player_user_id" value={playerUserId} />
-          <label className="block text-xs text-muted">
+          <label htmlFor={reasonId} className="block text-xs text-muted">
             {t('rejectReasonLabel')}
           </label>
           <textarea
+            id={reasonId}
             name="reason"
             rows={2}
             maxLength={500}

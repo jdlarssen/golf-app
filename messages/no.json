@@ -2,7 +2,8 @@
   "common": {
     "appName": "Tørny",
     "metaDescription": "Gratis turneringsapp for golf. Sett opp scramble, stableford eller matchplay på et par minutter, med live leaderboard og WHS-handicap. Over 20 spillformer.",
-    "guestBadge": "Gjest"
+    "guestBadge": "Gjest",
+    "appVersionLabel": "App-versjon"
   },
   "notFound": {
     "heading": "Denne siden finnes ikke",
@@ -67,7 +68,8 @@
     "clearRead": "Tøm leste",
     "clearingPending": "Tømmer …",
     "actionFailed": "Fikk ikke lagret — prøv igjen.",
-    "archiveAria": "Arkiver varsel",
+    "archiveAria": "Arkiver varselet «{title}»",
+    "unreadLabel": "Ulest",
     "today": "I dag",
     "yesterday": "I går",
     "monthlyDigestTitle": "Månedsbrev",
@@ -1939,7 +1941,6 @@
       "countdownBody": "Vi gir deg beskjed når kortet åpner.",
       "joinFlightLabel": "Velg din flight",
       "flightLabel": "Flight {number}",
-      "flightJoinAriaLabel": "Bli med i flight {number}",
       "flightYours": "Din",
       "flightFull": "Full",
       "notInFlight": "Du er ikke plassert i en flight ennå. Trykk «Bli med» for å velge.",
@@ -2276,6 +2277,7 @@
       "submitScorecardTeam": "Lever lagets scorekort",
       "backAriaLabel": "Tilbake til turneringen",
       "leaderboardAriaLabel": "Vis leaderboard",
+      "pageHeading": "Hull {n} · {game}",
       "playerFallback": "Spiller",
       "missingFlightScores": "{count, plural, one {1 score mangler på hullet} other {# scorer mangler på hullet}}"
     },
@@ -2284,7 +2286,9 @@
       "nettoLabel": "Netto {netto}",
       "nettoWithPoints": "Netto {netto} · {points} poeng",
       "strokesBadge": "+{n} SLAG",
-      "moreAriaLabel": "Velg spesifikk score",
+      "increaseAriaLabel": "+1 for {name}",
+      "decreaseAriaLabel": "-1 for {name}",
+      "moreAriaLabel": "Velg spesifikk score for {name}",
       "specificScoreTitle": "SPESIFIKK SCORE",
       "specificScoreAriaLabel": "Spesifikk score",
       "setScoreToAriaLabel": "Sett score til {value}",
@@ -3004,8 +3008,8 @@
       "golf": "Golf",
       "birdie": "Birdie",
       "groupLabel": "Reaksjoner",
-      "toggle": "Reager med {emoji}",
-      "toggleActive": "Fjern {emoji}-reaksjon",
+      "toggle": "{count, plural, =0 {Reager med {emoji}} one {Reager med {emoji} (# reaksjon)} other {Reager med {emoji} (# reaksjoner)}}",
+      "toggleActive": "{count, plural, =0 {Fjern {emoji}-reaksjon} other {Fjern {emoji}-reaksjon (# i alt)}}",
       "open": "Legg til reaksjon",
       "close": "Lukk reaksjoner"
     },
@@ -5771,7 +5775,6 @@
     "liveFollowOff": "Live-følg er av",
     "liveFollowHint": "Alle med lenken kan følge turneringen uten å logge inn.",
     "shareLinkLabel": "Del live-lenke",
-    "shareLinkAriaLabel": "Del live-lenke for dette spillet",
     "copiedLabel": "Kopiert!",
     "shareText": "Følg turneringen live i Tørny",
     "copyEmbedLabel": "Kopier koden til nettsiden",

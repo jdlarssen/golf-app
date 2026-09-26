@@ -408,7 +408,14 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
         >
           ‹
         </SmartLink>
-        <div style={titleStyle}>{gameName}</div>
+        {/* The page heading for screen readers carries the hole number too;
+            the visible game name next to it would only repeat it. */}
+        <h1 className="sr-only">
+          {t('entry.pageHeading', { n: currentHole, game: gameName })}
+        </h1>
+        <div style={titleStyle} aria-hidden="true">
+          {gameName}
+        </div>
         <SmartLink
           href={`/games/${gameId}/leaderboard?return=hole&n=${currentHole}`}
           aria-label={t('entry.leaderboardAriaLabel')}
