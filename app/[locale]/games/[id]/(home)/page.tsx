@@ -151,7 +151,7 @@ export default async function GameHomePage({
   // Rendered in BOTH returns below: the scheduled early return has no other
   // banner slot, and ?error=not_active is reachable on a scheduled game.
   const errorBanner = errorCode ? (
-    <div role="alert" data-testid={`game-error-${errorCode}`} className="mb-4">
+    <div data-testid={`game-error-${errorCode}`} className="mb-4">
       <Banner tone="error">
         {tGameErrors(errorCode as Parameters<typeof tGameErrors>[0])}
       </Banner>

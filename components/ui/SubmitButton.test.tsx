@@ -26,6 +26,7 @@ describe('SubmitButton', () => {
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
     expect(btn).toHaveTextContent('Sender …');
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    // The spinner is decorative and must not leak into the button's name.
+    expect(btn).toHaveAccessibleName('Sender …');
   });
 });

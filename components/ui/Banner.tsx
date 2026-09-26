@@ -19,8 +19,10 @@ export function Banner({
   /** Optional stable hook for E2E locators, so specs don't lock Norwegian copy. */
   testId?: string;
 }) {
+  // Errors interrupt (alert); the other tones are announced politely (status).
   return (
     <div
+      role={tone === 'error' ? 'alert' : 'status'}
       data-testid={testId}
       className={`border rounded-xl px-4 py-3 text-sm font-medium tracking-tight ${tones[tone]}`}
     >

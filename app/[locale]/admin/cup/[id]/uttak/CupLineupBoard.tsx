@@ -481,7 +481,7 @@ function SessionError({
     ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   }, [message]);
   return (
-    <div ref={ref} role="alert">
+    <div ref={ref}>
       <Banner tone="error" testId={`cup-lineup-error-${sessionIndex}`}>
         {message}
       </Banner>

@@ -21,6 +21,10 @@ export function Input({
   /** Forwarded to the underlying `<input>` (React 19 ref-as-prop). */
   ref?: Ref<HTMLInputElement>;
 }) {
+  // Only one message shows at a time (error > warning > hint); the input points
+  // at it so screen readers read it along with the label.
+  const message = error || warning || hint;
+  const descId = id && message ? `${id}-desc` : undefined;
   return (
     <div>
       <label
@@ -34,17 +38,27 @@ export function Input({
       <input
         id={id}
         ref={ref}
+        aria-describedby={descId}
+        aria-invalid={!!error || undefined}
         {...props}
         // Fokusringen kommer fra den globale `:focus-visible`-regelen (#1386);
         // `focus:border-accent` blir stående som supplerende fargeskift.
         className={`w-full rounded-xl border px-3.5 py-3 bg-surface text-text placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150 ${error ? 'border-danger' : 'border-border'} ${inputClassName ?? ''}`}
       />
-      {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
+      {error && (
+        <p id={descId} className="text-xs text-danger mt-1.5">
+          {error}
+        </p>
+      )}
       {!error && warning && (
-        <p className="text-xs text-warning-text mt-1.5">{warning}</p>
+        <p id={descId} className="text-xs text-warning-text mt-1.5">
+          {warning}
+        </p>
       )}
       {!error && !warning && hint && (
-        <p className="text-xs text-muted mt-1.5">{hint}</p>
+        <p id={descId} className="text-xs text-muted mt-1.5">
+          {hint}
+        </p>
       )}
     </div>
   );
