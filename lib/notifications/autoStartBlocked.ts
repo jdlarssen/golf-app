@@ -93,7 +93,11 @@ export async function maybeNotifyAutoStartBlocked(opts: {
       .select('id')
       .maybeSingle<{ id: string }>();
 
-    if (updErr || !won) return;
+    if (updErr) {
+      console.error(`[${logPrefix}] auto_start_blocked claim failed`, { gameId, error: updErr });
+      return;
+    }
+    if (!won) return;
 
     await notify({
       userId: createdBy,

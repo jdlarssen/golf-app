@@ -140,7 +140,11 @@ export async function maybeSendDeliveryReminder(opts: {
       .select('user_id')
       .maybeSingle<{ user_id: string }>();
 
-    if (updErr || !won) return;
+    if (updErr) {
+      console.error('[autoDeliverReminder] reminder claim failed', { gameId, userId, error: updErr });
+      return;
+    }
+    if (!won) return;
 
     const { data: u } = await admin
       .from('users')

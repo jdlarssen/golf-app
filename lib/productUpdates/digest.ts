@@ -164,14 +164,22 @@ export async function sendDigestForPeriod(
   }
 
   // Audit row — even when 0 successes, we record the attempt so we don't
-  // retry the same period on next cron-fire.
-  await admin.from('product_update_digests').insert({
+  // retry the same period on next cron-fire. A failed insert means the period
+  // is sent again next time (#2223), so its error is logged.
+  const { error: auditError } = await admin.from('product_update_digests').insert({
     period_start: periodStart,
     period_end: periodEnd,
     sent_by: opts.sentByUserId,
     recipient_count: successCount,
     update_ids: updates.map((u) => u.id),
   });
+  if (auditError) {
+    console.error('[sendDigestForPeriod] audit row insert failed', {
+      periodStart,
+      periodEnd,
+      error: auditError,
+    });
+  }
 
   return {
     kind: 'sent',
