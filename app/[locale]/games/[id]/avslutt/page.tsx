@@ -3,6 +3,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Link, redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -93,7 +94,11 @@ export default async function CreatorAvsluttPage({
     redirect({ href: `${detailPath}?error=not_active` as string, locale });
   }
 
-  const { data: gamePlayers } = await supabase
+  // #2213: roster via service-role. The `users` SELECT policy has no organiser
+  // branch, so a non-playing organiser got empty names in every list below.
+  // The page is gated by requireAdminOrCreator above, and that gate is the
+  // enforcement (same pattern as /spillere, #1542/#1586).
+  const { data: gamePlayers } = await getAdminClient()
     .from('game_players')
     .select(
       'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',

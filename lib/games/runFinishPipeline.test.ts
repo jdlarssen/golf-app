@@ -15,9 +15,11 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  *     (migration 0169) raises 42501 for any non-admin authenticated writer, and
  *     the web finish admits a non-admin creator — so the claim must never ride
  *     on the caller's client.
- *  3. THE CLIENT SPLIT SURVIVES. `finishDerivedGames` and
- *     `buildGameFinishedRecipients` take the CALLER's client (creator RLS on
- *     web, service-role from cup); the other four open their own admin client.
+ *  3. THE CLIENT SPLIT SURVIVES. Only `finishDerivedGames` takes the CALLER's
+ *     client (creator RLS on web, service-role from cup and sweep).
+ *     `buildGameFinishedRecipients` always gets the service role, because the
+ *     «Resultatet er klart» list must cover the whole roster no matter who
+ *     finishes (#2213); the other four open their own admin client.
  *
  * Everything is mocked at the import boundary, so a step that moves or changes
  * client shows up as a failing assertion rather than a real write.
@@ -325,13 +327,17 @@ describe('runFinishPipeline — the tail', () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  it('hands the INJECTED client to the two client-taking steps and ids/objects to the rest', async () => {
+  it('hands the INJECTED client to finishDerivedGames, the ADMIN client to the recipient list, and ids/objects to the rest', async () => {
+    // #2213: a non-playing organiser's request client sees no co-player
+    // `users` rows (no e-mail) and no `scores` once the game is finished, so
+    // the «Resultatet er klart» list was empty. Every entry into this tail is
+    // gated upstream, which is what makes the service role safe here.
     const client = buildSupabaseMock([]);
 
     await runFinishPipeline(client as never, input());
 
     expect(finishDerivedGamesMock).toHaveBeenCalledWith(client, GAME_ID, ENDED_AT);
-    expect(buildGameFinishedRecipientsMock).toHaveBeenCalledWith(client, GAME_ID, {
+    expect(buildGameFinishedRecipientsMock).toHaveBeenCalledWith(adminClientMock, GAME_ID, {
       course_id: 'course-1',
       game_mode: 'best_ball',
       mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
