@@ -68,8 +68,11 @@ const scorecardSubmittedSchema = z.object({
   player_name: z.string().min(1).nullable().optional(),
 });
 
-// scorecard_approved: både medspiller-attestering (approve/actions.ts) og
-// arrangør-/admin-overstyring (admin/games/[id]/actions.ts) produserer denne.
+// scorecard_approved: både medspiller-attestering og arrangør-/admin-overstyring
+// produserer denne. Medspiller-sporet og appens rute går via
+// `lib/games/reviewScorecardCore.ts`, der porten i ruta kan gi begge roller
+// (#2215); webbens overstyring er `adminApproveScorecard` i
+// admin/games/[id]/actions.ts.
 // `approver_role` sier hvilken av de to det var, slik at kortet kan velge
 // RIKTIG fallback når godkjenneren mangler profilnavn: «Arrangøren» for
 // organizer, «En spiller» for peer (#1598). Historiske payloads uten feltet

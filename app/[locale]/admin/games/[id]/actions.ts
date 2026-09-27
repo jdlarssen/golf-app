@@ -19,10 +19,7 @@ import {
   modeCollapsesToTeamCard,
   type GameMode,
 } from '@/lib/scoring/modes/types';
-import {
-  sharedCardUserIds,
-  type SharedCardRosterRow,
-} from '@/lib/games/scoreOwner';
+import { reopenScorecardCore } from '@/lib/games/reviewScorecardCore';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import {
@@ -370,8 +367,13 @@ export async function endGame(gameId: string, allowMissing = false) {
  *
  * No-op safety: only runs when the row currently has submitted_at set.
  *
- * #2213: in the one-ball team formats the whole active team reopens
- * (`reopenSharedCard`), since every card there reads the captain's rows.
+ * #2213: in the one-ball team formats the whole active team reopens, since
+ * every card there reads the captain's rows.
+ *
+ * #2215: the write, the shared-card cascade, the `scorecard_reopened` varsel
+ * and the cache expiry live in `reopenScorecardCore`, which the app route
+ * `app/api/games/[id]/scorecards/[userId]` calls too. This wrapper keeps the
+ * gate, the game read, the redirects and the audit log.
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
   const locale = await getLocale();
@@ -388,139 +390,35 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
-  // #1363: expectAffected turns the silent 0-row UPDATE into an explicit
-  // signal. 0 rows here means the scorecard was never submitted (already
-  // reopened, idempotent no-op) or the player row doesn't exist. Same
-  // precedent as adminApproveScorecard: redirect to ?status=scorecard_reopened
-  // rather than an error, but WITHOUT firing the audit log and the varsel for
-  // a write that never happened.
-  const reopenPatch = {
-    submitted_at: null,
-    approved_at: null,
-    approved_by_user_id: null,
-    rejection_reason: null,
-  };
-  const sharedCard = modeCollapsesToTeamCard(game!.game_mode, 18);
-  let reopened: { user_id: string }[] = [];
-  try {
-    reopened = expectAffected(
-      sharedCard
-        ? await reopenSharedCard(
-            supabase,
-            gameId,
-            game!.game_mode,
-            playerUserId,
-            reopenPatch,
-          )
-        : await supabase
-            .from('game_players')
-            .update(reopenPatch)
-            .eq('game_id', gameId)
-            .eq('user_id', playerUserId)
-            .not('submitted_at', 'is', null)
-            .select('user_id'),
-      'reopenScorecard',
-    );
-  } catch (err) {
-    // NoRowsAffectedError → nothing to reopen (idempotent). Plain Error → DB failure.
-    // instanceof (not constructor.name) survives prod server minification — the
-    // helper restores the prototype chain for exactly this check.
-    if (!(err instanceof NoRowsAffectedError)) {
-      console.error('[reopenScorecard] reopen update failed', err);
-      redirect({ href: `${detailPath}?error=db_players`, locale });
-    }
-    expireGameCache(gameId);
-    redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
-  }
-
-  await logAdminEvent({
-    actorId: user.id,
-    actorName,
-    eventType: 'scorecard.reopened',
-    targetType: 'scorecard',
-    targetId: gameId,
-    payload: sharedCard
-      ? { gameId, playerUserId, reopenedUserIds: reopened.map((r) => r.user_id) }
-      : { gameId, playerUserId },
+  // #1598: `name` is the raw profile name for the varsel payload; `actorName`
+  // (with its hardcoded 'Admin' fallback) stays in the audit log below.
+  const result = await reopenScorecardCore({
+    client: supabase,
+    gameId,
+    gameMode: game!.game_mode,
+    gameName: game!.name,
+    actorName: name,
+    playerUserId,
   });
-
-  // #1363: best-effort varsel til spilleren som eier kortet. Uten det tror hen
-  // fortsatt at kortet er levert og godkjent, mens avslutningen blokkerer på
-  // not_all_submitted. Feil her endrer ikke utfallet av gjenåpningen — try/catch
-  // slutter FØR redirecten under, som kaster by design.
-  // #1598: payloaden bærer det RÅ navnet, ikke audit-strengen `actorName` (som
-  // har en hardkodet 'Admin'-fallback). Mangler navnet, fyller kortet
-  // `organizerFallback` i MOTTAKERENS locale — samme regel som #1364 satte for
-  // de andre varsel-payloadene. Audit-loggen over bruker fortsatt `actorName`.
-  // #2213: on a shared team card every reopened row is told, so nobody sees
-  // their card drop back to «not submitted» without a reason.
-  const recipients = sharedCard
-    ? reopened.map((r) => r.user_id)
-    : [playerUserId];
-  try {
-    await Promise.all(
-      recipients.map((userId) =>
-        notify({
-          userId,
-          kind: 'scorecard_reopened',
-          payload: {
-            game_id: gameId,
-            game_name: game!.name,
-            actor_name: name,
-          },
-        }),
-      ),
-    );
-  } catch (err) {
-    console.error('[reopenScorecard] scorecard_reopened notify failed', err);
+  if (!result.ok) {
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  } else if (!result.alreadyDone) {
+    // #1363: 0 rows (never submitted, or already reopened) is an idempotent
+    // success too — but WITHOUT the audit log for a write that never happened,
+    // which is why the log only runs on this branch.
+    await logAdminEvent({
+      actorId: user.id,
+      actorName,
+      eventType: 'scorecard.reopened',
+      targetType: 'scorecard',
+      targetId: gameId,
+      payload: modeCollapsesToTeamCard(game!.game_mode, 18)
+        ? { gameId, playerUserId, reopenedUserIds: result.reopenedUserIds }
+        : { gameId, playerUserId },
+    });
+    revalidatePath(`/admin/games/${gameId}`);
   }
-
-  expireGameCache(gameId);
-  revalidatePath(`/admin/games/${gameId}`);
-  revalidatePath(`/games/${gameId}`);
   redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
-}
-
-/**
- * #2213: reopening a shared team card. In the one-ball formats
- * (`modeCollapsesToTeamCard`) every card on the team reads the captain's rows,
- * and the organizer cannot see who the captain is. Reopening only the tapped
- * card left the captain's row submitted, so the hole page kept the team card
- * locked (`anyTeamMemberSubmitted`) and RLS refused the correction. The whole
- * active team (`sharedCardUserIds`) reopens instead, in ONE UPDATE (trap 5).
- *
- * Same request-scoped client as the one-row path, no service role: the action
- * is gated to admin or creator, and the base allows the write — «game_players
- * creator update» (0071), «game_players creator select» (0160), and the 0168
- * guard lets the creator clear their own approval. Admin passes on is_admin().
- */
-async function reopenSharedCard(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-  gameId: string,
-  mode: GameMode,
-  playerUserId: string,
-  patch: {
-    submitted_at: null;
-    approved_at: null;
-    approved_by_user_id: null;
-    rejection_reason: null;
-  },
-) {
-  const { data: roster, error: rosterError } = await supabase
-    .from('game_players')
-    .select('user_id, team_number, withdrawn_at')
-    .eq('game_id', gameId)
-    .returns<SharedCardRosterRow[]>();
-  // A failed roster read is an error (?error=db_players), not a cue to reopen
-  // just one card — that would silently shrink the cascade back into the bug.
-  if (rosterError) return { data: null, error: rosterError };
-  return supabase
-    .from('game_players')
-    .update(patch)
-    .eq('game_id', gameId)
-    .in('user_id', sharedCardUserIds(mode, roster ?? [], playerUserId))
-    .not('submitted_at', 'is', null)
-    .select('user_id');
 }
 
 /**
