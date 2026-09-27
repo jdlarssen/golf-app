@@ -1746,3 +1746,42 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
     ).toBe('u-pending');
   });
 });
+
+describe('GameForm — #2209 tee-kategorien sendes for alle valgte spillere', () => {
+  // Skins (like Wolf, Nassau, BBB, Nines, Round Robin and Acey Deucey) renders
+  // no M/D/J toggle, so the only field carrying the category — the hidden input
+  // inside the toggle — was never mounted and the edit sent none. Every
+  // selected player now gets exactly one field from an always-mounted block.
+  const NO_OP_UPDATE = async () => {};
+
+  it('#2209: Skins i redigering sender lagret kategori for hver spiller', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        initialValues={{
+          name: 'Skins-runden',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          game_mode: 'skins',
+          team_size: 1,
+          players: [
+            { user_id: 'u0', team_number: null, flight_number: null },
+            { user_id: 'u1', team_number: null, flight_number: null },
+          ],
+          player_genders: { u1: 'D' },
+        }}
+        mode={{
+          kind: 'edit-scheduled',
+          gameId: 'game-1',
+          updateAction: NO_OP_UPDATE,
+        }}
+      />,
+    );
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('player_u1_gender')).toEqual(['D']);
+    expect(fd.getAll('player_u0_gender')).toEqual(['M']);
+  });
+});

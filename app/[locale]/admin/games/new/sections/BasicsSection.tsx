@@ -69,7 +69,6 @@ export function BasicsSection({
     setCourseId,
     teeBoxId,
     setTeeBoxId,
-    setPlayerGenders,
     scheduledTeeOffAt,
     setScheduledTeeOffAt,
     selectedCourse,
@@ -149,10 +148,7 @@ export function BasicsSection({
           id="tee_box_id"
           name="tee_box_id"
           value={teeBoxId}
-          onChange={(e) => {
-            setTeeBoxId(e.target.value);
-            setPlayerGenders({});
-          }}
+          onChange={(e) => setTeeBoxId(e.target.value)}
           disabled={!selectedCourse}
           required
           className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"

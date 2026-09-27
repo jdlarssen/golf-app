@@ -248,6 +248,46 @@ describe('useGameFormState — initialValues.player_genders vinner ved mount', (
   });
 });
 
+// #2209: in edit mode (and a resumed draft) the stored categories REPLACE the
+// profile defaults, so a player the organiser adds had no entry and was sent
+// as 'M'. `teeChoiceFor` falls back to the profile, clamped to the tee.
+describe('#2209 teeChoiceFor', () => {
+  function renderEdit(courseId: string, teeBoxId: string, genders: Record<string, 'M' | 'D' | 'J'>) {
+    return renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: {
+          course_id: courseId,
+          tee_box_id: teeBoxId,
+          player_genders: genders,
+        },
+      }),
+    );
+  }
+
+  it('en dame lagt til i redigeringen på en tee med damerating får D', () => {
+    const { result } = renderEdit('course-d', 'tee-d1', { 'p-mann': 'M' });
+    act(() => {
+      result.current.togglePlayer('p-dame');
+    });
+    expect(result.current.teeChoiceFor('p-dame')).toBe('D');
+  });
+
+  it('samme dame på en tee med bare herrerating får M', () => {
+    const { result } = renderEdit('course-c', 'tee-c1', { 'p-mann': 'M' });
+    act(() => {
+      result.current.togglePlayer('p-dame');
+    });
+    expect(result.current.teeChoiceFor('p-dame')).toBe('M');
+  });
+
+  it('lagret M for en dame slår profilen', () => {
+    const { result } = renderEdit('course-d', 'tee-d1', { 'p-mann': 'M', 'p-dame': 'M' });
+    expect(result.current.teeChoiceFor('p-dame')).toBe('M');
+  });
+});
+
 describe('useGameFormState — Wolf 3-5 spillere (#465, #969)', () => {
   function setupWolf(count: number) {
     const { result } = renderHook(() =>
