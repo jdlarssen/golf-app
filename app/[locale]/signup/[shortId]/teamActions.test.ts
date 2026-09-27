@@ -498,7 +498,8 @@ describe('submitTeamRegistration — happy paths', () => {
         mode_config: { kind: 'texas_scramble', team_size: 2, teams_count: 4, team_handicap_pct: 25 },
       }),
     );
-    getTeamCandidateEmailsMock.mockResolvedValue(new Map([[KNOWN_USER_ID, 'kjent.bruker@example.test']]));
+    // Stored with mixed case (older rows can be): normalised like a typed address.
+    getTeamCandidateEmailsMock.mockResolvedValue(new Map([[KNOWN_USER_ID, 'Kjent.Bruker@Example.test']]));
     lookupUserByEmailMock.mockResolvedValue({
       id: KNOWN_USER_ID,
       name: null,
@@ -507,7 +508,7 @@ describe('submitTeamRegistration — happy paths', () => {
     adminMock = buildSupabaseMock(
       [
         { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
-        { data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' }, error: null }, // captain display
+        { data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.test' }, error: null }, // captain display
         { data: null, error: null }, // child request insert
         { data: null, error: null }, // child player upsert
       ],
@@ -544,7 +545,7 @@ describe('submitTeamRegistration — happy paths', () => {
     adminMock = buildSupabaseMock(
       [
         { data: { id: CAPTAIN_REQUEST_ID }, error: null },
-        { data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' }, error: null },
+        { data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.test' }, error: null },
       ],
       { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
     );
