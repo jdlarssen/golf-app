@@ -507,3 +507,19 @@ denne seksjonen overskrevet. Legg den tilbake (kilde: `.claude/skills/README.md`
   forbindelsen åpen): vent på et konkret element i stedet.
 - **Skjermbilder til PR** med `gh pr comment --attach`, men aldri et bilde som viser en
   e-postadresse eller nøkkel. Repoet er offentlig.
+- **axe-sjekk:** `run-code` har verken `require` eller `process`. Last inn axe-core med
+  `page.addScriptTag({ path: '<checkout>/node_modules/axe-core/axe.min.js' })` (absolutt
+  sti; axe-core følger med eslint-plugin-jsx-a11y, og Tørnys CSP setter bare
+  `frame-ancestors`, så taggen lastes). Kjør så `page.evaluate(() => axe.run(document,
+  { runOnly: { type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa','wcag22aa'] } }))`.
+- **`file:`-URL-er blokkeres.** Server lokale filer over `http://localhost` i stedet.
+- **OTP-feltet:** `fill "input[name=token]" <kode>` holder; skjemaet sender seg selv.
+- **`goto` skriver ut hele URL-en,** også `?email=`. Filtrer bort den linja før du deler
+  utdata, for repoet er offentlig.
+- **Kjent konsollstøy:** `/_vercel/insights/script.js` gir 404 i lokal `next start`. På
+  sider for utloggede blir den sendt videre til /login og dukker opp som
+  «Unexpected token '<'».
+- **Vennesida er `/profile/venner`,** ikke `/venner`.
+- **Ukjente URL-er under offentlige prefikser** (`/legal/…`, `/hvorfor-torny/…`,
+  `/spillformater/…`) skal gi HTTP 404. Statusen synes ikke i et snapshot, så sjekk med
+  `curl -o /dev/null -w '%{http_code}' <url>` (#2240: en catch-all-rute gjorde dem til 200).
