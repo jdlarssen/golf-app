@@ -494,7 +494,10 @@ export async function startScheduledGameCore(
     .eq('id', gameId)
     .eq('status', 'scheduled')
     .select('id');
-  if (flipError) return { ok: false, reason: 'db_game' };
+  if (flipError) {
+    console.error('[startScheduledGame] status flip failed', { gameId, error: flipError });
+    return { ok: false, reason: 'db_game' };
+  }
 
   const started = (flipped?.length ?? 0) > 0;
 

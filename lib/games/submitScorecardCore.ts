@@ -252,11 +252,22 @@ export async function submitScorecardCore(
         err,
       );
       if (updatedUserIds.length > 0) {
-        await getAdminClient()
+        // #2223: the revert is the compensation, so check it. An error or 0
+        // rows leaves the half-delivered pair in place; log it with the rows
+        // so it can be put right by hand. The answer stays 'db'.
+        const { data: reverted, error: revertError } = await getAdminClient()
           .from('game_players')
           .update({ submitted_at: null })
           .eq('game_id', gameId)
-          .in('user_id', updatedUserIds);
+          .in('user_id', updatedUserIds)
+          .select('user_id');
+        if (revertError || (reverted ?? []).length === 0) {
+          console.error(`[${LOG_PREFIX}] back9 revert failed`, {
+            gameId,
+            updatedUserIds,
+            error: revertError,
+          });
+        }
       }
       return { ok: false, reason: 'db' };
     }

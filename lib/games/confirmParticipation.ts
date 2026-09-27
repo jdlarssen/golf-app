@@ -1,4 +1,5 @@
 import { getAdminClient } from '@/lib/supabase/admin';
+import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 
 /**
  * #463 — auto-bekreft deltakelse når spilleren viser aktivitet (åpner spillet).
@@ -19,13 +20,22 @@ export async function maybeAutoConfirmParticipation(opts: {
   const { gameId, userId } = opts;
   const admin = getAdminClient();
   try {
-    await admin
-      .from('game_players')
-      .update({ accepted_at: new Date().toISOString() })
-      .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .is('accepted_at', null);
+    // #2223: same shape as the league twin (#727). A bare await threw nothing,
+    // so a PostgREST error vanished; expectAffected surfaces it. 0 rows is the
+    // steady state (the player is already confirmed) and stays silent.
+    expectAffected(
+      await admin
+        .from('game_players')
+        .update({ accepted_at: new Date().toISOString() })
+        .eq('game_id', gameId)
+        .eq('user_id', userId)
+        .is('accepted_at', null)
+        .select('user_id'),
+      'autoConfirmParticipation',
+    );
   } catch (e) {
-    console.error('[autoConfirmParticipation] failed', e);
+    if (!(e instanceof NoRowsAffectedError)) {
+      console.error('[autoConfirmParticipation] failed', e);
+    }
   }
 }

@@ -113,11 +113,17 @@ export async function claimGuestEmail(opts: {
       '[claimGuestEmail] public.users email update failed — reverting auth flip',
       usersError,
     );
+    // auth-js returns its error instead of throwing it (#2223): a failed revert
+    // leaves the auth e-post and public.users pointing different ways, so log
+    // it. The catch is for throws.
     try {
-      await admin.auth.admin.updateUserById(guestUserId, {
+      const { error: revertError } = await admin.auth.admin.updateUserById(guestUserId, {
         email: previousEmail,
         email_confirm: true,
       });
+      if (revertError) {
+        console.error('[claimGuestEmail] auth revert failed', { guestUserId, error: revertError });
+      }
     } catch (revertErr) {
       console.error('[claimGuestEmail] auth revert failed', revertErr);
     }

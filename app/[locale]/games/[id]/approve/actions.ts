@@ -120,6 +120,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     .select('user_id');
 
   if (error) {
+    console.error('[approveScorecard] update failed', { gameId, playerUserId, error });
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 
@@ -250,6 +251,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
         .select('user_id');
 
   if (error) {
+    console.error('[rejectScorecard] update failed', { gameId, playerUserId, error });
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 
