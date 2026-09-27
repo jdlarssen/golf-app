@@ -352,12 +352,22 @@ export async function registerForOpenGame(
       (sideRows ?? []).slice(0, teamSize2).map((r: { user_id: string }) => r.user_id),
     );
     if (!winnerIds.has(userId)) {
-      // Vi tapte racen — fjern vår egen rad.
-      await admin
+      // Vi tapte racen — fjern vår egen rad. We just wrote it, so 0 rows or
+      // an error means it stays behind on a full side (#2223): log it. The
+      // answer stays side_full either way.
+      const { data: removed, error: removeError } = await admin
         .from('game_players')
         .delete()
         .eq('game_id', game.id)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select('user_id');
+      if (removeError || (removed ?? []).length === 0) {
+        console.error('[registerForOpenGame] race-loser rollback failed', {
+          gameId: game.id,
+          userId,
+          error: removeError,
+        });
+      }
       return { ok: false, error: 'side_full' };
     }
   }
