@@ -50,7 +50,12 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
   - A peer may only touch approval columns on another player's row. Since 0191 the peer allowlist
     is `approved_at`, `approved_by_user_id`, `rejection_reason`, `submitted_at`, `submitted_by_user_id`.
   - A peer may not approve a card they delivered themselves (0191, #2200): someone else in the
-    flight, or the organiser, approves it. Clearing an approval stays allowed.
+    flight, or the organiser, approves it. Clearing an approval stays allowed. The rule reads the
+    end state, so approving first and delivering after, or writing the deliverer in as approver,
+    is refused too.
+  - A peer may not leave an approval standing on an undelivered card (approve it open, or
+    un-deliver it while approved; 0191). The service role skips the guard, so this is what stops
+    a peer from approving an open card and letting the app route deliver it.
   - The game **creator** is explicitly exempted so roster editing still works.
   - A `BEFORE UPDATE` trigger enforcing column-level rules that RLS `USING`/`WITH CHECK` clauses can't express on their own (it inspects which columns changed).
 

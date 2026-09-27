@@ -42,6 +42,10 @@
 --        organiser, approves it. The rule reads the END state, so approving
 --        first and delivering after is refused too, as is another peer
 --        writing the deliverer in as approver.
+--      - a true peer may not leave an approval standing on an undelivered
+--        card (approve it open, or un-deliver it while approved). The service
+--        role skips the guard, so otherwise a peer could approve an open card
+--        and let the app route deliver it.
 --    Every other line is 0168's. The function comment is refreshed to match.
 --
 -- Order against prod: migration FIRST, then merge/deploy. The code on main
@@ -210,6 +214,22 @@ as $$
                         - 'submitted_by_user_id') then
         raise exception
           'A peer may only change approval columns (approved_at, approved_by_user_id, rejection_reason, submitted_at, submitted_by_user_id) on another player''s row'
+          using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+      end if;
+
+      -- #2200: a true peer never leaves an approval standing on an undelivered
+      -- card. The service role skips this guard, so without this a peer could
+      -- approve a flightmate's open card and then have the app route (or the
+      -- one-ball team cascade) deliver it, ending up as both deliverer and
+      -- approver. Every legitimate approve filters on a delivered card, and
+      -- every reopen/reject clears approved_at together with submitted_at.
+      if new.approved_at is not null
+         and new.submitted_at is null
+         and (new.approved_at is distinct from old.approved_at
+              or new.approved_by_user_id is distinct from old.approved_by_user_id
+              or new.submitted_at is distinct from old.submitted_at) then
+        raise exception
+          'A player cannot approve a scorecard that is not delivered (game_players.approved_at)'
           using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
       end if;
 
