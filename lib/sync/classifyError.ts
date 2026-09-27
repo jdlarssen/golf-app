@@ -68,9 +68,10 @@ const LOCKED_CARD_PATTERNS = ['row-level security', 'only putts may be changed']
 
 /**
  * True when the server refused the write because the card is locked
- * (submitted, withdrawn or the round is over). The drain settles such an item
- * — local row back to the server's number, item quarantined — and the banner
- * explains it instead of offering a retry that can never succeed.
+ * (submitted, withdrawn or the round is over). The drain settles such an item:
+ * the local row goes back to the server's number and the item is quarantined.
+ * The banner then explains it instead of offering a retry that can never
+ * succeed.
  */
 export function isLockedCardError(
   rawError: string | null | undefined,
