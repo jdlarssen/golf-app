@@ -64,4 +64,30 @@ describe('computeLeaderboard', () => {
     expect(netto[0].total).toBe(72); // 5 - 1 per hole
     expect(brutto[0].holes[0].players[0].extraStrokes).toBe(0);
   });
+
+  // #2217 (D5): a back9 game has holes 10–18 only. Filled by POSITION, they
+  // landed on slots 0–8 and the back9/back6/back3/hole-18 tiers read 0 for
+  // every team, so the board showed a shared 1st place while the stored
+  // result (bestBall.ts, indexed on hole number) had broken the tie.
+  it('breaks a back9 tie on the last holes, like the stored result', () => {
+    const back9Holes = holes.filter((h) => h.holeNumber >= 10);
+    const players = [player('a', 1), player('b', 2)];
+    const scores: LbScore[] = back9Holes.flatMap((h) => [
+      // Team 1: 6-6-6 on 10–12, then 3s → 36. Better on 13–18.
+      { userId: 'a', holeNumber: h.holeNumber, strokes: h.holeNumber <= 12 ? 6 : 3 },
+      // Team 2: 4 on every hole → 36.
+      { userId: 'b', holeNumber: h.holeNumber, strokes: 4 },
+    ]);
+
+    const lines = computeLeaderboard({ mode: 'netto', players, holes: back9Holes, scores });
+    const t1 = lines.find((l) => l.teamNumber === 1)!;
+    const t2 = lines.find((l) => l.teamNumber === 2)!;
+
+    expect(t1.total).toBe(36);
+    expect(t2.total).toBe(36);
+    expect(t1.rank).toBe(1);
+    expect(t2.rank).toBe(2);
+    expect(t1.tiedWith).toEqual([]);
+    expect(t2.tiedWith).toEqual([]);
+  });
 });
