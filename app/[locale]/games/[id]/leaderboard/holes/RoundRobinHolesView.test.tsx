@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   RoundRobinHolesView,
@@ -11,11 +11,6 @@ import type {
   RoundRobinPlayerCell,
   MatchplayHoleResult,
 } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function cell(
   userId: string,
