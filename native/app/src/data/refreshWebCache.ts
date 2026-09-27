@@ -22,6 +22,14 @@
 import { callWebRoute } from './webApi';
 
 /**
+ * Hvor lenge skjermen venter på svaret. Kallet awaites, så en nettside som
+ * henger ville ellers holdt wolf-valget eller roster-knappen fast lenge etter at
+ * skrivingen er lagret. Kallet får gå ferdig i bakgrunnen; vi slutter bare å
+ * vente, og cachen går uansett ut av seg selv innen 15 minutter.
+ */
+export const REFRESH_TIMEOUT_MS = 5_000;
+
+/**
  * Stien for ett spill. `encodeURIComponent` selv om id-en er en uuid fra vår
  * egen bundle: en sti bygget av data skal kodes der den bygges.
  */
@@ -41,8 +49,19 @@ function refreshPath(gameId: string): string {
  * blitt vist som en feil på en handling som lyktes.
  */
 export async function refreshWebCache(gameId: string): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<'timeout'>((resolve) => {
+    timer = setTimeout(() => resolve('timeout'), REFRESH_TIMEOUT_MS);
+  });
   try {
-    const call = await callWebRoute(refreshPath(gameId), 'POST');
+    const call = await Promise.race([
+      callWebRoute(refreshPath(gameId), 'POST'),
+      timedOut,
+    ]);
+    if (call === 'timeout') {
+      console.error('[refreshWebCache] ga opp etter', REFRESH_TIMEOUT_MS, 'ms', gameId);
+      return;
+    }
     if (call.ok && call.status === 200) return;
     console.error(
       '[refreshWebCache] fikk ikke tømt web-cachen',
@@ -51,5 +70,7 @@ export async function refreshWebCache(gameId: string): Promise<void> {
     );
   } catch (err: unknown) {
     console.error('[refreshWebCache] kastet', gameId, err);
+  } finally {
+    clearTimeout(timer);
   }
 }
