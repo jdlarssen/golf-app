@@ -39,7 +39,6 @@ import {
   formatCapturesPutts,
   modeCollapsesToTeamCard,
 } from '../../../../lib/scoring/modes/types';
-import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import { SyncBanner } from '../components/sync/SyncBanner';
@@ -53,7 +52,7 @@ import { writeScore } from '../data/writeScore';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
-import { computeGameLeaderboard } from '../lib/scoringContext';
+import { computeGameLeaderboard, playerExtraForHole } from '../lib/scoringContext';
 import {
   buildTeamCards,
   filledHolesForOwner,
@@ -384,6 +383,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
             <PlayerCard
               key={entry.user_id}
               entry={entry}
+              game={bundle.game}
               hole={hole}
               score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
               isMe={entry.user_id === userId}
@@ -617,6 +617,7 @@ function TeamCardView({
 
 function PlayerCard({
   entry,
+  game,
   hole,
   score,
   isMe,
@@ -629,6 +630,8 @@ function PlayerCard({
   onPutts,
 }: {
   entry: RosterEntry;
+  /** Formatet og configen — badgen viser slagene motoren regner med (#2218). */
+  game: Pick<BundleGame, 'gameMode' | 'modeConfig'>;
   hole: BundleHole;
   score: LocalScore | undefined;
   isMe: boolean;
@@ -644,7 +647,8 @@ function PlayerCard({
 }) {
   const { ui } = useTheme();
   const player: BundlePlayer = entry.player;
-  const extra = strokesForHole(player.courseHandicap ?? 0, hole.strokeIndex);
+  // `null` = configen peker på et annet format: da vises ingen badge.
+  const extra = playerExtraForHole(game, player.courseHandicap, hole.strokeIndex);
 
   // Kortflaten er selve snarveien til par. Stepperne og «Angre» inni er egne
   // Pressables, og i React Native vinner den innerste berøringen — derfor
@@ -670,7 +674,7 @@ function PlayerCard({
             </View>
           ) : null}
         </View>
-        {extra !== 0 ? (
+        {extra != null && extra !== 0 ? (
           <View style={ui.badge}>
             <Text style={[ui.badgeText, ui.num]} testID={`player-${entry.user_id}-extra`}>
               {extra > 0 ? `+${extra}` : String(extra)}

@@ -8,7 +8,11 @@
 import { determineWolfForHole } from '../../../../lib/wolf/wolfRotation';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
-import { buildScoringContext, computeGameLeaderboard } from './scoringContext';
+import {
+  buildScoringContext,
+  computeGameLeaderboard,
+  playerExtraForHole,
+} from './scoringContext';
 import { wolfRotationPlayers } from './wolfHole';
 
 const GAME = 'game-1';
@@ -492,5 +496,36 @@ describe('wolf og bingo bango bongo', () => {
     if (!outcome.ok || outcome.result.kind !== 'bingo_bango_bongo') return;
     const anna = outcome.result.players.find((p) => p.userId === 'a')!;
     expect(anna.bingos).toBe(1);
+  });
+});
+
+// #2218: hullkortet og scorekortet viser de slagene motoren regner med. Regelen
+// bor i den delte `lib/scoring/allocatedStrokes.ts`; her låses bare at appen
+// sender inn samme config som motoren får, og at ukjent er `null`, aldri 0.
+describe('playerExtraForHole', () => {
+  const fourball = (modeConfig: unknown) => ({ gameMode: 'fourball_matchplay', modeConfig });
+
+  it('fourball 85 %: banehandicap 20 blir 17 — ingen slag på SI 18', () => {
+    const game = fourball({ kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct: 85 });
+    expect(playerExtraForHole(game, 20, 18)).toBe(0);
+    expect(playerExtraForHole(game, 20, 1)).toBe(1);
+  });
+
+  it('skins brutto gir 0 slag', () => {
+    const game = { gameMode: 'skins', modeConfig: { kind: 'skins', team_size: 1, skins_scoring: 'gross' } };
+    expect(playerExtraForHole(game, 18, 1)).toBe(0);
+  });
+
+  it('en config for et annet format er ukjent — null, ikke 0', () => {
+    const game = fourball({ kind: 'skins', team_size: 1, skins_scoring: 'gross' });
+    expect(playerExtraForHole(game, 20, 1)).toBeNull();
+  });
+
+  it('modeConfig null (DB-default) følger motorens fallback: fourball 100 %', () => {
+    expect(playerExtraForHole(fourball(null), 20, 18)).toBe(1);
+  });
+
+  it('manglende banehandicap regnes som 0, som webben', () => {
+    expect(playerExtraForHole(fourball(null), null, 1)).toBe(0);
   });
 });
