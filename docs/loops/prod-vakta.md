@@ -21,8 +21,18 @@ interaktive økter deretter diagnostiserer og fikser.
 
 - **Security-advisors** (`GET /v1/projects/{ref}/advisors/security`) — diffes
   mot baseline-fila (under). Kun NYE nøkler er signal.
-- **Postgres-feil siste 24 t** (`GET .../analytics/endpoints/logs.all` med
-  count-spørring på ERROR/FATAL/PANIC) — kun TELLINGEN rapporteres.
+- **Postgres-feil siste 24 t** (`GET .../analytics/endpoints/logs`):
+  ERROR/FATAL/PANIC talt per SQLSTATE-kode. Spørringen er ClickHouse-SQL mot
+  `logs`-tabellen med `source = 'postgres_logs'`, og den henter bare kode og
+  antall. Vinduet sendes eksplisitt med `iso_timestamp_start` og
+  `iso_timestamp_end`, nøyaktig 24 t og kuttet til helt minutt. Uten dem
+  leser API-et bare siste minutt.
+
+Før 2026-09 var tellingen trolig blind (#2238). Det gamle kallet (BigQuery-SQL
+mot det forrige logg-endepunktet) sendte ikke noe vindu og leste derfor bare
+siste minutt, og ingen av signal-issuene fram til da hadde en postgres-telling.
+Fra 2026-09-25 virket ikke kallet i det hele tatt, fordi Supabase hadde flyttet
+loggene til ClickHouse.
 
 **Personvern-regel (ufravikelig):** issues inneholder kun tellinger og
 advisory-nøkler — aldri rå logglinjer (de kan inneholde brukerdata).
@@ -30,20 +40,25 @@ Detalj-graving skjer read-only i interaktive økter via Supabase MCP.
 
 ## Baseline (`docs/loops/prod-vakta-baseline.txt`)
 
-Én advisory-`cache_key` per linje (#-linjer er kommentarer). Nøkler her er
-BEVISSTE valg (f.eks. RLS-på-uten-policies på admin-/agent-tabellene =
-tilsiktet service-role-lockdown). Nye advisories som viser seg å være bevisste
-→ legg nøkkelen hit via PR med begrunnelse i commit-body — aldri stille
-aksept. Fjernes et objekt, rydd nøkkelen.
+Én nøkkel per linje (#-linjer er kommentarer), av to slag:
+
+- Advisory-`cache_key`: bevisste valg, f.eks. RLS på uten policies på admin-
+  og agent-tabellene (tilsiktet service-role-lockdown).
+- `pg:<SQLSTATE>` (f.eks. `pg:23505`): en type postgres-feil som er
+  diagnostisert og godtatt. Den telles og vises i rapporten, men gir ikke
+  varsel alene. Feil uten kode får nøkkelen `pg:-`.
+
+Begge slag legges inn via PR med begrunnelse i commit-body, aldri ved stille
+aksept. Forsvinner objektet eller feilkilden, fjerner du linja.
 
 ## Utfall per kjøring
 
 | Situasjon | Utfall |
 |---|---|
-| Alt stille | Grønn exit med én logglinje — ingen issue |
-| Nye advisories og/eller feiltellinger > 0 | Dedupet issue «Prod-vakt: signaler i prod-telemetrien» (label `prod-vakt` + `bug`, milestone 9) |
-| Telemetri kunne ikke leses | Dedupet issue «Prod-vakt: fikk ikke lest telemetri» + rød kjøring — uovervåket prod er et funn, ikke støy |
-| Workflowen selv krasjer | failure-steget filer «CI-vakt: prod-vakt-workflowen rød» |
+| Alt stille | Grønn exit med én logglinje, som også viser antall feil av kjente typer. Ingen issue |
+| Nye advisories og/eller nye typer postgres-feil | Dedupet issue «Prod-vakt: signaler i prod-telemetrien» (label `prod-vakt` + `bug`, milestone 9). Nye koder står med antall, kjente koder på en egen linje. Kjente koder alene gir ikke issue |
+| Telemetrien kunne ikke leses, eller svaret har feil form | Dedupet issue «Prod-vakt: fikk ikke lest telemetri» og rød kjøring. Varselet og jobbloggen viser HTTP-koden og et utdrag av API-svaret. Uovervåket prod er et funn, ikke støy |
+| Workflowen selv krasjer | failure-steget filer «CI-vakt: prod-vakt-workflowen rød», men bare når skriptet ikke alt har filet eller funnet sitt eget issue. Én lesefeil gir ett issue |
 
 ## v2-kandidater (bygges når v1 har vist seg / behovet er bevist)
 
