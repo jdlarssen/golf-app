@@ -1457,3 +1457,195 @@ describe('#2061: medspiller som godtar før kapteinen har lag, venter', () => {
     expect(playerWrites()).toEqual([]);
   });
 });
+
+/**
+ * #2223: every team path that writes the roster answers from that write. Before,
+ * attachToCaptainTeam and submitTeamRegistration logged a failed game_players
+ * write and still answered ok (the invitation consumed, the captain told the
+ * teammate was in), while declineTeamInvite and removeTeamMember threw the
+ * delete's result away after the request row was already decided. acceptTeamInvite
+ * already answered db_error; now all of them agree.
+ */
+describe('#2223: roster-skrivingen feiler → ingen falsk suksess', () => {
+  const DB_ERR = { message: 'connection reset', code: '' };
+  const INVITEE_EMAIL = 'ny.spiller@example.com';
+  const CHILD_REQUEST_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+  function authedAs(userId: string, email: string): void {
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: userId, email } },
+    });
+  }
+
+  /** The `eq` filters chained right after the first `method` call on `table`. */
+  function filtersAfter(table: string, method: string): unknown[][] {
+    const calls = adminMock.__fromCalls;
+    const start = calls.findIndex((c) => c.table === table && c.method === method);
+    if (start === -1) return [];
+    const filters: unknown[][] = [];
+    for (const call of calls.slice(start + 1)) {
+      if (call.method !== 'eq') break;
+      filters.push(call.args);
+    }
+    return filters;
+  }
+
+  function writes(table: string, method: string) {
+    return adminMock.__fromCalls.filter((c) => c.table === table && c.method === method);
+  }
+
+  it.each([
+    [
+      'kapteinens spillerrad kan ikke leses',
+      [{ data: null, error: DB_ERR }],
+    ],
+    [
+      'spillerraden kan ikke skrives',
+      [
+        { data: { team_number: 1 }, error: null },
+        { data: null, error: DB_ERR },
+      ],
+    ],
+  ])('attachToCaptainTeam: %s → db_error, forespørselen rulles tilbake', async (_label, rosterSteps) => {
+    authedAs(KNOWN_USER_ID, INVITEE_EMAIL);
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+    adminMock = buildSupabaseMock([
+      {
+        data: { id: 'inv-1', email: INVITEE_EMAIL, game_id: GAME_ID, invited_by: CAPTAIN_ID },
+        error: null,
+      },
+      { data: { email: INVITEE_EMAIL }, error: null },
+      {
+        data: [
+          { id: CAPTAIN_REQUEST_ID, user_id: CAPTAIN_ID, team_name: 'Lag A', status: 'approved' },
+        ],
+        error: null,
+      },
+      { data: { id: CHILD_REQUEST_ID }, error: null }, // child insert
+      ...(rosterSteps as { data: unknown; error: unknown }[]),
+      { data: [{ id: CHILD_REQUEST_ID }], error: null }, // rollback delete .select('id')
+    ]);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    const result = await attachToCaptainTeam('inv-1', SHORT_ID);
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(filtersAfter('game_registration_requests', 'delete')).toEqual([
+      ['id', CHILD_REQUEST_ID],
+    ]);
+    expect(writes('invitations', 'update')).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(serverMock.rpc).not.toHaveBeenCalled();
+  });
+
+  it('submitTeamRegistration: kjent medspiller, spillerraden kan ikke skrives → dbError, barnet rulles tilbake', async () => {
+    authedAsCaptain();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'open',
+        mode_config: {
+          kind: 'texas_scramble',
+          team_size: 2,
+          teams_count: 4,
+          team_handicap_pct: 25,
+        },
+      }),
+    );
+    lookupUserByEmailMock.mockResolvedValue({
+      id: KNOWN_USER_ID,
+      name: 'Kjent Bruker',
+      email: 'kjent@example.com',
+    });
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        {
+          data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' },
+          error: null,
+        }, // captain display
+        { data: null, error: null }, // child request insert
+        { data: null, error: DB_ERR }, // child player upsert
+        { data: [{ id: CHILD_REQUEST_ID }], error: null }, // child rollback .select('id')
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Birdie-jegerne',
+      slots: [{ mode: 'lookup', value: 'kjent@example.com' }],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.slotResults).toEqual([
+      expect.objectContaining({ ok: false, reason: 'dbError' }),
+    ]);
+    expect(filtersAfter('game_registration_requests', 'delete')).toEqual([
+      ['team_request_id', CAPTAIN_REQUEST_ID],
+      ['user_id', KNOWN_USER_ID],
+    ]);
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'declineTeamInvite',
+      KNOWN_USER_ID,
+      [
+        {
+          data: {
+            id: CHILD_REQUEST_ID,
+            game_id: GAME_ID,
+            user_id: KNOWN_USER_ID,
+            status: 'approved',
+            team_request_id: CAPTAIN_REQUEST_ID,
+            team_name: 'Lag A',
+          },
+          error: null,
+        },
+      ],
+    ],
+    [
+      'removeTeamMember',
+      CAPTAIN_ID,
+      [
+        {
+          data: {
+            id: CHILD_REQUEST_ID,
+            game_id: GAME_ID,
+            user_id: KNOWN_USER_ID,
+            team_request_id: CAPTAIN_REQUEST_ID,
+            status: 'approved',
+          },
+          error: null,
+        },
+        { data: { user_id: CAPTAIN_ID, team_name: 'Lag A' }, error: null },
+      ],
+    ],
+  ] as const)(
+    '%s: spillerraden kan ikke slettes → db_error, forespørselen står urørt',
+    async (action, actorId, lookups) => {
+      authedAs(actorId, 'spiller@example.com');
+      getGameByShortIdMock.mockResolvedValue(makeGame());
+      adminMock = buildSupabaseMock([
+        ...lookups,
+        { data: null, error: DB_ERR }, // game_players delete
+        { data: [{ id: CHILD_REQUEST_ID }], error: null }, // what a request write would consume
+      ]);
+
+      const teamActions = await import('./teamActions');
+      const result = await teamActions[action](CHILD_REQUEST_ID, SHORT_ID);
+
+      expect(result).toEqual({ ok: false, error: 'db_error' });
+      expect(writes('game_players', 'delete')).toHaveLength(1);
+      expect(writes('game_registration_requests', 'update')).toEqual([]);
+      expect(writes('game_registration_requests', 'delete')).toEqual([]);
+      expect(notifyMock).not.toHaveBeenCalled();
+    },
+  );
+});
