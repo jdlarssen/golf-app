@@ -481,7 +481,12 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
     expect(result).toEqual({ ok: false, reason: 'db' });
     const revert = updateCalls(adminMock);
     expect(revert).toHaveLength(1);
-    expect(revert[0].args[0]).toEqual({ submitted_at: null });
+    // #2200: the approval goes with the delivery (the service role skips the guard).
+    expect(revert[0].args[0]).toEqual({
+      submitted_at: null,
+      approved_at: null,
+      approved_by_user_id: null,
+    });
     expect(
       adminMock.__fromCalls.find((c) => c.method === 'in' && c.args[1] !== undefined && (c.args[1] as string[]).includes(USER_ID))?.args,
     ).toEqual(['user_id', [USER_ID]]);

@@ -53,9 +53,11 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
     flight, or the organiser, approves it. Clearing an approval stays allowed. The rule reads the
     end state, so approving first and delivering after, or writing the deliverer in as approver,
     is refused too.
-  - A peer may not leave an approval standing on an undelivered card (approve it open, or
-    un-deliver it while approved; 0191). The service role skips the guard, so this is what stops
-    a peer from approving an open card and letting the app route deliver it.
+  - No signed-in player (a peer, or the card's owner on their own row) may leave an approval
+    standing on an undelivered card: approve it open, or un-deliver it while approved (0191). The
+    service role skips the guard, so this is what stops the app route from completing such a card
+    with the deliverer as approver. The delivery core's compensating reverts clear the approval
+    with the delivery for the same reason.
   - The game **creator** is explicitly exempted so roster editing still works.
   - A `BEFORE UPDATE` trigger enforcing column-level rules that RLS `USING`/`WITH CHECK` clauses can't express on their own (it inspects which columns changed).
 

@@ -31,6 +31,7 @@
 --    14. a forged value on insert             → auth.uid() wins
 --   Approval on an open card:
 --    15. a peer un-delivers an approved card  → REJECTED
+--    16. the owner un-delivers their own approved card → REJECTED (clause f)
 --
 -- Run via:  supabase test db
 -- See supabase/tests/README.md (same rig as #440).
@@ -40,7 +41,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(16);
 
 \ir fixtures/rls_helpers.psql
 
@@ -310,6 +311,17 @@ select torny_rls.as_user(torny_rls.active_id());
 select ok(
   NOT torny_rls.try_undeliver(torny_rls.submitted_id()),
   'a peer may not un-deliver a card and leave its approval standing (0191)'
+);
+
+-- ── 16. …and neither may the card's owner (own-row clause (f)) ──────────────
+-- Evaluator round 3: the owner un-delivering their own approved card left it
+-- «approved, not delivered», and the app route could then complete it with
+-- the deliverer as approver. submitted_id's card is still delivered and
+-- approved by admin_id from 15.
+select torny_rls.as_user(torny_rls.submitted_id());
+select ok(
+  NOT torny_rls.try_undeliver(torny_rls.submitted_id()),
+  'the owner may not un-deliver their own card and leave its approval standing (0191, clause f)'
 );
 
 select * from finish();

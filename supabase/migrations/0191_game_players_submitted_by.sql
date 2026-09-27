@@ -32,8 +32,8 @@
 --    in name order, so the guard below sees the final value.
 --
 -- 3. `guard_game_players_self_update`, rebuilt from 0168 (the latest
---    create-or-replace; 0159 and 0147 are older) with two changes in the
---    other-row branch only:
+--    create-or-replace; 0159 and 0147 are older). Own-row branch: clause (f)
+--    below. Other-row branch:
 --      - `submitted_by_user_id` joins the peer allowlist. The server sets it in
 --        the same patch as `submitted_at` when a flightmate delivers.
 --      - a true peer (not admin, not the game's creator — both return
@@ -42,10 +42,11 @@
 --        organiser, approves it. The rule reads the END state, so approving
 --        first and delivering after is refused too, as is another peer
 --        writing the deliverer in as approver.
---      - a true peer may not leave an approval standing on an undelivered
---        card (approve it open, or un-deliver it while approved). The service
---        role skips the guard, so otherwise a peer could approve an open card
---        and let the app route deliver it.
+--      - no signed-in player (a peer, or the card's owner — new own-row
+--        clause (f)) may leave an approval standing on an undelivered card:
+--        approve it open, or un-deliver it while approved. The service role
+--        skips the guard, so otherwise the app route could complete such a
+--        card with the deliverer as approver.
 --    Every other line is 0168's. The function comment is refreshed to match.
 --
 -- Order against prod: migration FIRST, then merge/deploy. The code on main
@@ -189,6 +190,21 @@ as $$
       if new.paid_at is distinct from old.paid_at then
         raise exception
           'A player cannot mark their own payment status (game_players.paid_at)'
+          using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+      end if;
+
+      -- (f) #2200: never an approval standing on an undelivered card, own row
+      -- included. Un-delivering your own approved card would leave it approved
+      -- but open, and a service-role delivery (the app route, the team
+      -- cascade) would then complete it with the deliverer as approver.
+      -- Reopening clears both columns (0159), which still passes.
+      if new.approved_at is not null
+         and new.submitted_at is null
+         and (new.submitted_at is distinct from old.submitted_at
+              or new.approved_at is distinct from old.approved_at
+              or new.approved_by_user_id is distinct from old.approved_by_user_id) then
+        raise exception
+          'A player cannot leave an approval on a scorecard that is not delivered (game_players.approved_at)'
           using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
       end if;
     else
