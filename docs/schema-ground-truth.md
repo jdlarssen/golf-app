@@ -59,8 +59,8 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
     with the deliverer as approver. The delivery core's compensating reverts clear the approval
     with the delivery for the same reason.
   - A signed-in non-admin may not move a row to another game or to another player; the guard's
-    lookups read `old.game_id` (0191). Flows that write a row for someone else (sign-up, the
-    guest claim) run as the service role.
+    lookups read `old.game_id` (0191). Flows that put a row under another player (sign-up, the
+    guest claim, the cup swap) run as the service role or delete and insert.
 - `approved_by_user_id` is owned by trigger `game_players_set_approved_by` (BEFORE INSERT OR
   UPDATE, 0191): the signed-in caller who approves is recorded as the approver, the value stays
   while the approval does, and it clears with `approved_at`. The service role keeps what it wrote.

@@ -38,6 +38,7 @@
 --    19. inserting an already approved row    → REJECTED
 --    20. inserting a plain row                → PASS (the path «add player» uses)
 --    21. a row moved to another player        → REJECTED, creator included
+--    22. the creator moves another player's row to someone else → REJECTED
 --
 -- Run via:  supabase test db
 -- See supabase/tests/README.md (same rig as #440).
@@ -47,7 +48,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(21);
+select plan(22);
 
 \ir fixtures/rls_helpers.psql
 
@@ -423,6 +424,17 @@ select ok(
 select ok(
   NOT torny_rls.try_set_user(torny_rls.other_game_id(), torny_rls.active_id(), torny_rls.flightmate_id()),
   'a signed-in non-admin, creator included, may not move a row to another player (0191)'
+);
+
+-- 22. …and neither may the creator put another player's row under someone
+-- else. The service role seeds flightmate_id's row in the other game.
+select torny_rls.as_service();
+insert into public.game_players (game_id, user_id, flight_number)
+  values (torny_rls.other_game_id(), torny_rls.flightmate_id(), 1);
+select torny_rls.as_user(torny_rls.active_id());
+select ok(
+  NOT torny_rls.try_set_user(torny_rls.other_game_id(), torny_rls.flightmate_id(), torny_rls.outsider_id()),
+  'the creator may not move another player''s row to someone else (0191)'
 );
 
 select * from finish();

@@ -38,8 +38,8 @@
 --
 -- 4. `guard_game_players_self_update`, rebuilt from 0168 (the latest
 --    create-or-replace; 0159 and 0147 are older). A signed-in non-admin may
---    not move a row to another game or another player, and every lookup reads
---    the game the row is in (old.game_id). Own-row branch: clause (f) below. Other-row branch:
+--    not move a row to another game or another player, and every lookup
+--    reads the game the row is in (old.game_id). Own-row branch: clause (f) below. Other-row branch:
 --      - `submitted_by_user_id` joins the peer allowlist. The server sets it in
 --        the same patch as `submitted_at` when a flightmate delivers.
 --      - a true peer (not admin, not the game's creator — both return
@@ -198,8 +198,9 @@ as $$
 
     -- #2200: a row never moves to another game or to another player for a
     -- signed-in non-admin, and every lookup below reads the game the row is
-    -- IN (old.game_id). Every flow that writes a player's row for someone
-    -- else (sign-up, the guest claim) runs as the service role.
+    -- IN (old.game_id). Flows that put a row under another player (sign-up,
+    -- the guest claim, the cup swap) run as the service role or delete and
+    -- insert; none rewrites user_id through a signed-in client.
     if new.game_id is distinct from old.game_id then
       raise exception
         'A player cannot move a game_players row to another game (game_players.game_id)'
@@ -342,7 +343,7 @@ as $$
               or new.approved_by_user_id is distinct from old.approved_by_user_id
               or new.submitted_at is distinct from old.submitted_at) then
         raise exception
-          'A player cannot approve a scorecard that is not delivered (game_players.approved_at)'
+          'A player cannot leave an approval on a scorecard that is not delivered (game_players.approved_at)'
           using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
       end if;
 
