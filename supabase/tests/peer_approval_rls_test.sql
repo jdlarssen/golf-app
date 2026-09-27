@@ -156,6 +156,15 @@ select torny_rls.seed_active_game();
 -- flightmate_id approves active_id's card. flightmate_id is NOT the game creator
 -- (admin_id is) and is NOT an admin → before 0106 this matched no UPDATE policy
 -- and silently affected 0 rows. The new can_score_for policy must now allow it.
+-- #2200 (0191): a peer may not leave an approval on an undelivered card, and
+-- every real approve filters on a delivered one — so the card is delivered
+-- first, as in the app. The service role delivers it, so no one is recorded as
+-- the deliverer and the «deliverer may not approve» rule stays out of this.
+select torny_rls.as_service();
+update public.game_players
+   set submitted_at = now()
+ where game_id = torny_rls.game_id() and user_id = torny_rls.active_id();
+
 select torny_rls.as_user(torny_rls.flightmate_id());
 select ok(
   torny_rls.try_self_approve(torny_rls.active_id()),
