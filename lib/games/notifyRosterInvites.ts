@@ -15,10 +15,9 @@ import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 //
 // **Idempotent på varselet, ikke på kallet.** En spiller som alt har et
 // `invite`-varsel for runden, hoppes over. Et nytt forsøk etter et nettbrudd gir
-// derfor ingen doble varsler, og et andre kall svarer `invited: 0`. Merk at
-// dedupen ser på varsel-radene: har spilleren skrudd av in-app-varsler for
-// `invite`, finnes ingen rad, og et nytt kall prøver igjen (og skriver fortsatt
-// ingenting).
+// derfor ingen doble varsler, og et andre kall svarer `invited: 0`. Dedupen ser
+// på varsel-radene, og `notify()` skriver alltid en rad, så et vellykket varsel
+// er alltid synlig for neste kall.
 //
 // **Authz ligger hos kalleren.** Modulen leser og varsler med admin-klienten og
 // spør aldri hvem som ringer. Ruta gater med `authenticatedUserId` +

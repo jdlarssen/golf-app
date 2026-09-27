@@ -15,7 +15,8 @@
 // `needsTeamAssignment`; flight-tvillingene er `isSingleFlightGame` og
 // `needsFlightAssignment`; om formatet kjenner frafall svarer
 // `supportsWithdrawal`. Ingen av spørsmålene besvares på nytt her, og selve
-// skrivingene ligger i `data/rosterActions.ts` med RLS som ekte port.
+// skrivingene ligger i `data/rosterActions.ts`: RLS er porten for de direkte
+// skrivingene, og ruta på serveren for «legg til» og «åpne kortet igjen» (#2215).
 //
 // #1875: at «har» og «mangler» er to spørsmål er hele poenget med Juster-
 // modusen — se gatingen nede i komponenten.
