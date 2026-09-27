@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 
 /**
  * Next focus target for the WAI-ARIA radiogroup/tablist keyboard pattern:
@@ -64,12 +64,28 @@ export function useRovingFocus<T>(
   isDisabled?: (value: T) => boolean,
 ) {
   const refs = useRef<Array<HTMLElement | null>>([]);
+  const pendingFocus = useRef<number | null>(null);
   const isSkipped = (i: number) => isDisabled?.(values[i]) ?? false;
   const selectedIndex = selected == null ? -1 : values.indexOf(selected);
   const tabStop =
     selectedIndex !== -1 && !isSkipped(selectedIndex)
       ? selectedIndex
       : values.findIndex((_, i) => !isSkipped(i));
+
+  // A call site may render the selected option as a different element than
+  // the others (FormatGrid wraps the selected card in a <div>), so moving the
+  // selection re-mounts the option that just got focus and the browser drops
+  // focus to <body>. After the re-render, put focus on the option now at that
+  // index, but only when focus was dropped, so a later render never steals it
+  // from somewhere else. Call sites whose nodes survive are left untouched.
+  useLayoutEffect(() => {
+    const index = pendingFocus.current;
+    if (index === null) return;
+    pendingFocus.current = null;
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return;
+    refs.current[index]?.focus();
+  });
 
   return function rovingProps(index: number) {
     return {
@@ -81,8 +97,13 @@ export function useRovingFocus<T>(
         const next = nextRovingIndex(e.key, index, values.length, isSkipped);
         if (next === null) return;
         e.preventDefault();
-        if (next === index) return;
-        onSelect(values[next]);
+        // Compare with the selection, not the focused index: Home on an
+        // unselected first option (or an arrow key in a one-option group)
+        // lands on the same index but must still select it.
+        if (values[next] !== selected) {
+          pendingFocus.current = next;
+          onSelect(values[next]);
+        }
         refs.current[next]?.focus();
       },
     };
