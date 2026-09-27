@@ -322,9 +322,9 @@ export async function verifyCode(formData: FormData) {
     console.error('[login/verifyCode] guest-clear threw', err);
   }
 
-  // Pick up the pending invitations for this email: consume them (accepted_at),
-  // give game invitations a roster spot, fire the deferred in-app `invite`
-  // notification, and befriend the inviter. Best-effort throughout — the login
+  // Pick up the pending invitations for this email: give game invitations a
+  // roster spot, fire the deferred in-app `invite` notification, consume them
+  // (accepted_at) and befriend the inviter. Best-effort throughout — the login
   // redirects whether or not the side effects succeed.
   //
   // A game invitation only gives a roster spot while the round has not started
@@ -334,6 +334,14 @@ export async function verifyCode(formData: FormData) {
   // notice instead. The exception is a guest whose result was sent to them
   // after the round (#1009): they are already on the roster and land on the
   // game as before.
+  //
+  // #2223: the consume comes AFTER the roster insert. A solo invitation to a
+  // round that has not started is consumed only once its game_players row
+  // landed (or was already there); when the insert fails, or the users row is
+  // missing, the invitation stays open and the next login tries again.
+  // Invitations without a game and solo invitations to a locked round are
+  // always consumed, team-scoped ones never. Anything that throws before the
+  // consume leaves every invitation open.
   //
   // The pending rows are read BEFORE accepted_at flips so game_id + invited_by
   // are still available. The admin client is used because the freshly verified
@@ -353,17 +361,21 @@ export async function verifyCode(formData: FormData) {
     // selv om sendCode-laget regnet den som død. Samme figur som
     // `lib/auth/getInviteLoginContext.ts`. Kolonnen er NOT NULL, så ingen
     // null-case å bevare.
-    const { data: pendingInvites } = await admin
+    const { data: pendingInvites, error: pendingError } = await admin
       .from('invitations')
       .select('id, game_id, invited_by')
       .filter('email', 'imatch', emailMatchPattern(email))
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
       .returns<{ id: string; game_id: string | null; invited_by: string }[]>();
+    if (pendingError) {
+      console.error('[login/verifyCode] pending invitations lookup failed', pendingError);
+    }
+    const pending = pendingInvites ?? [];
 
     // Kun `game_id` skiller her: `invited_by` er NOT NULL (0001), så en
     // null-sjekk på den ville aldri kunne treffe.
-    const gameScoped = (pendingInvites ?? []).filter((inv) => inv.game_id != null);
+    const gameScoped = pending.filter((inv) => inv.game_id != null);
 
     // #676: resolve registration_type + short_id for every game-scoped
     // invitation so we know which are team-scoped BEFORE deciding which
@@ -375,64 +387,69 @@ export async function verifyCode(formData: FormData) {
     // /signup/[shortId]/team (attach flow), not be auto-inserted as a solo
     // game_players row. Consuming accepted_at before the attach flow runs
     // destroys the signal team/page.tsx relies on to show "Bli med på lag".
-    const resolvedGameScoped = await Promise.all(
-      gameScoped.map(async (inv) => {
-        const { data: gameRow } = await admin
-          .from('games')
-          .select('registration_type, short_id, status')
-          .eq('id', inv.game_id!)
-          .maybeSingle<{
-            registration_type: string;
-            short_id: string;
-            status: string;
-          }>();
-        const isTeamScoped =
-          gameRow?.registration_type === 'team' ||
-          gameRow?.registration_type === 'both';
-        return {
-          inv,
-          isTeamScoped,
-          shortId: gameRow?.short_id ?? null,
-          isLocked: gameRow != null && isRosterLocked(gameRow.status),
-        };
-      }),
-    );
+    //
+    // #2223: an invitation whose game lookup fails drops out here: no insert,
+    // no notification, no consume and no routing. Read as "no row" it would
+    // pass as a solo invitation to an open round, and a team invitation would
+    // get exactly the solo roster row this block must not write.
+    const resolvedGameScoped = (
+      await Promise.all(
+        gameScoped.map(async (inv) => {
+          const { data: gameRow, error: gameError } = await admin
+            .from('games')
+            .select('registration_type, short_id, status')
+            .eq('id', inv.game_id!)
+            .maybeSingle<{
+              registration_type: string;
+              short_id: string;
+              status: string;
+            }>();
+          if (gameError) {
+            console.error('[login/verifyCode] game lookup failed', {
+              invitationId: inv.id,
+              gameId: inv.game_id,
+              error: gameError,
+            });
+            return null;
+          }
+          const isTeamScoped =
+            gameRow?.registration_type === 'team' ||
+            gameRow?.registration_type === 'both';
+          return {
+            inv,
+            isTeamScoped,
+            shortId: gameRow?.short_id ?? null,
+            isLocked: gameRow != null && isRosterLocked(gameRow.status),
+          };
+        }),
+      )
+    ).filter((r) => r !== null);
 
-    // Only consume (flip accepted_at) invitations that are NOT team-scoped.
-    // Team-scoped invitations must remain pending so the attach flow on
-    // /signup/[shortId]/team can detect them. Game-less invitations (no
-    // game_id) are always consumed — they are friend/club rows with no
-    // downstream attach dependency. #2212: invitations to a locked round are
-    // consumed too, so they leave the admin waiting list.
-    const teamScopedInvIds = new Set(
-      resolvedGameScoped.filter((r) => r.isTeamScoped).map((r) => r.inv.id),
-    );
-    const inviteIdsToConsume = (pendingInvites ?? [])
-      .filter((inv) => !teamScopedInvIds.has(inv.id))
-      .map((inv) => inv.id);
-
-    if (inviteIdsToConsume.length > 0) {
-      await supabase
-        .from('invitations')
-        .update({ accepted_at: new Date().toISOString() })
-        .in('id', inviteIdsToConsume);
-    }
+    // Filled below: the invitee's users row, the locked rounds they are
+    // already on (#1009), and the unlocked solo invitations whose roster row
+    // landed. The consume and the routing both read them.
+    let userId: string | null = null;
+    const onRosterGameIds = new Set<string>();
+    const landedInvIds = new Set<string>();
 
     // The user lookup runs for ANY pending invitation, game-less ones
     // included: they give friendship too (#2212).
-    if ((pendingInvites ?? []).length > 0) {
-      const { data: userRow } = await admin
+    if (pending.length > 0) {
+      const { data: userRow, error: userError } = await admin
         .from('users')
         .select('id')
         .filter('email', 'imatch', emailMatchPattern(email))
         .maybeSingle<{ id: string }>();
+      if (userError) {
+        console.error('[login/verifyCode] users lookup failed', userError);
+      }
 
       if (userRow?.id) {
+        userId = userRow.id;
         // #2212: for a locked solo invitation, check whether the invitee is
         // already on the roster (the guest-claim case, #1009). A failed read
         // counts as "not on the roster": the invitee then gets the notice
         // instead of the game, which is the safe side.
-        const onRosterGameIds = new Set<string>();
         await Promise.allSettled(
           resolvedGameScoped
             .filter((r) => r.isLocked && !r.isTeamScoped)
@@ -489,6 +506,7 @@ export async function verifyCode(formData: FormData) {
                   );
                   return;
                 }
+                landedInvIds.add(inv.id);
               }
 
               // Only rounds that have not started get here, so the
@@ -505,66 +523,105 @@ export async function verifyCode(formData: FormData) {
               });
             }),
         );
+      }
+    }
 
-        // #481, #2212: an invitee who joins becomes friends with whoever
-        // invited them, so the friend graph grows through invitations and not
-        // only through manual requests. This covers every invitation: game
-        // invitations (started rounds and team games included, since the
-        // friendship hangs on the invitation, not on a game_players row) and
-        // the game-less ones from «Legg til venn på e-post» and the admin
-        // door. The RPC is idempotent and gated on an accepted invitation, so
-        // it is safe to fire per inviter; for a team invitation that is still
-        // pending it answers no_invitation until the attach flow accepts it.
-        // Best-effort: fails quietly, never blocks the login.
-        const inviterIds = distinctInviterIds(pendingInvites ?? [], userRow.id);
-        await Promise.allSettled(
-          inviterIds.map(async (inviterId) => {
-            const { error } = await supabase.rpc('befriend_inviter', {
-              p_inviter: inviterId,
-            });
-            if (error) {
-              console.error('[login/verifyCode] befriend_inviter failed', error);
-            }
-          }),
-        );
+    // Consume (flip accepted_at). Team-scoped invitations stay pending so the
+    // attach flow on /signup/[shortId]/team can detect them. Game-less
+    // invitations (no game_id) are always consumed — they are friend/club rows
+    // with no downstream attach dependency. #2212: invitations to a locked
+    // round are consumed too, so they leave the admin waiting list. #2223: a
+    // solo invitation to an open round only once its roster row landed.
+    const resolvedByInvId = new Map(resolvedGameScoped.map((r) => [r.inv.id, r]));
+    const inviteIdsToConsume = pending
+      .filter((inv) => {
+        if (inv.game_id == null) return true;
+        const resolved = resolvedByInvId.get(inv.id);
+        if (!resolved || resolved.isTeamScoped) return false;
+        return resolved.isLocked || landedInvIds.has(inv.id);
+      })
+      .map((inv) => inv.id);
 
-        // #356 / #676 / #2212: route an invitee directly to their game.
-        // - joinable = solo invitations to a round that has not started, or to
-        //   a locked round the invitee is already on (guest claim, #1009).
-        // - Exactly one joinable, no team-scoped: → /games/[id]
-        // - Exactly one team-scoped game ('team' or 'both'), no joinable: →
-        //   /signup/[shortId]/team so the attach flow finds the still-pending
-        //   invitation and shows "Bli med på lag".
-        // - No joinable, no team-scoped, and at least one solo invitation to a
-        //   started or finished round: → /complete-profile with a notice that
-        //   the round had already started.
-        // - Anything else (mixed or multiple): fall back to `next` (ambiguous).
-        // All destination overrides are skipped when an explicit `next` is set.
-        const soloInvites = resolvedGameScoped.filter((r) => !r.isTeamScoped);
-        const joinable = soloInvites.filter(
-          (r) => !r.isLocked || onRosterGameIds.has(r.inv.game_id!),
-        );
-        const lockedOut = soloInvites.filter(
-          (r) => r.isLocked && !onRosterGameIds.has(r.inv.game_id!),
-        );
-        const teamScopedInvites = resolvedGameScoped.filter(
-          (r) => r.isTeamScoped && r.shortId != null,
-        );
-        if (!hasExplicitNext) {
-          if (joinable.length === 1 && teamScopedInvites.length === 0) {
-            gameDest = `/games/${joinable[0].inv.game_id}`;
-          } else if (
-            teamScopedInvites.length === 1 &&
-            joinable.length === 0
-          ) {
-            gameDest = `/signup/${teamScopedInvites[0].shortId}/team`;
-          } else if (
-            joinable.length === 0 &&
-            teamScopedInvites.length === 0 &&
-            lockedOut.length > 0
-          ) {
-            gameDest = '/complete-profile?invite_notice=game_started';
+    if (inviteIdsToConsume.length > 0) {
+      const { data: consumed, error: consumeError } = await supabase
+        .from('invitations')
+        .update({ accepted_at: new Date().toISOString() })
+        .in('id', inviteIdsToConsume)
+        .select('id');
+      if (consumeError) {
+        console.error('[login/verifyCode] invitation consume failed', {
+          invitationIds: inviteIdsToConsume,
+          error: consumeError,
+        });
+      } else if ((consumed ?? []).length !== inviteIdsToConsume.length) {
+        console.error('[login/verifyCode] invitation consume matched fewer rows', {
+          invitationIds: inviteIdsToConsume,
+          consumed: (consumed ?? []).length,
+        });
+      }
+    }
+
+    if (userId) {
+      // #481, #2212: an invitee who joins becomes friends with whoever
+      // invited them, so the friend graph grows through invitations and not
+      // only through manual requests. This covers every invitation: game
+      // invitations (started rounds and team games included, since the
+      // friendship hangs on the invitation, not on a game_players row) and
+      // the game-less ones from «Legg til venn på e-post» and the admin
+      // door. The RPC is idempotent and gated on an accepted invitation, so
+      // it runs after the consume and is safe to fire per inviter; for an
+      // invitation still pending (a team invitation, or #2223 a solo one
+      // whose insert failed) it answers no_invitation until that invitation
+      // is accepted. Best-effort: fails quietly, never blocks the login.
+      const inviterIds = distinctInviterIds(pending, userId);
+      await Promise.allSettled(
+        inviterIds.map(async (inviterId) => {
+          const { error } = await supabase.rpc('befriend_inviter', {
+            p_inviter: inviterId,
+          });
+          if (error) {
+            console.error('[login/verifyCode] befriend_inviter failed', error);
           }
+        }),
+      );
+
+      // #356 / #676 / #2212: route an invitee directly to their game.
+      // - joinable = solo invitations to a round that has not started whose
+      //   roster row landed (#2223), or to a locked round the invitee is
+      //   already on (guest claim, #1009).
+      // - Exactly one joinable, no team-scoped: → /games/[id]
+      // - Exactly one team-scoped game ('team' or 'both'), no joinable: →
+      //   /signup/[shortId]/team so the attach flow finds the still-pending
+      //   invitation and shows "Bli med på lag".
+      // - No joinable, no team-scoped, and at least one solo invitation to a
+      //   started or finished round: → /complete-profile with a notice that
+      //   the round had already started.
+      // - Anything else (mixed or multiple): fall back to `next` (ambiguous).
+      // All destination overrides are skipped when an explicit `next` is set.
+      const soloInvites = resolvedGameScoped.filter((r) => !r.isTeamScoped);
+      const joinable = soloInvites.filter((r) =>
+        r.isLocked ? onRosterGameIds.has(r.inv.game_id!) : landedInvIds.has(r.inv.id),
+      );
+      const lockedOut = soloInvites.filter(
+        (r) => r.isLocked && !onRosterGameIds.has(r.inv.game_id!),
+      );
+      const teamScopedInvites = resolvedGameScoped.filter(
+        (r) => r.isTeamScoped && r.shortId != null,
+      );
+      if (!hasExplicitNext) {
+        if (joinable.length === 1 && teamScopedInvites.length === 0) {
+          gameDest = `/games/${joinable[0].inv.game_id}`;
+        } else if (
+          teamScopedInvites.length === 1 &&
+          joinable.length === 0
+        ) {
+          gameDest = `/signup/${teamScopedInvites[0].shortId}/team`;
+        } else if (
+          joinable.length === 0 &&
+          teamScopedInvites.length === 0 &&
+          lockedOut.length > 0
+        ) {
+          gameDest = '/complete-profile?invite_notice=game_started';
         }
       }
     }

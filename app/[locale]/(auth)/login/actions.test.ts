@@ -103,6 +103,11 @@ let adminGamesById: Record<
   { registration_type: string; short_id?: string; status?: string }
 > = {};
 /**
+ * #2223: the games lookup fails outright (network blip, timeout). Every id
+ * answers `{ data: null, error }` while this is set.
+ */
+let adminGameLookupError: { message: string; code: string } | null = null;
+/**
  * #2212: game ids where the logging-in user already has a game_players row
  * (the guest-claim case, #1009). Answers the membership check verifyCode runs
  * for a locked round.
@@ -220,7 +225,12 @@ vi.mock('@/lib/supabase/admin', () => ({
           select: () => ({
             eq: (_column: string, id: string) => ({
               maybeSingle: async () => ({
-                data: id in adminGamesById ? adminGamesById[id] : adminGameLookup,
+                data: adminGameLookupError
+                  ? null
+                  : id in adminGamesById
+                    ? adminGamesById[id]
+                    : adminGameLookup,
+                error: adminGameLookupError,
               }),
             }),
           }),
@@ -275,6 +285,7 @@ beforeEach(() => {
   gamePlayersInsertResult = { error: null };
   adminGameLookup = { registration_type: 'solo', status: 'scheduled' };
   adminGamesById = {};
+  adminGameLookupError = null;
   rosterGameIds = new Set();
 });
 
@@ -942,6 +953,77 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
     expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
     // #676: team-scoped → invitation NOT consumed; redirect to attach flow.
     expect(lastRedirect()).toBe('/signup/abc12345/team');
+  });
+
+  // #2223: a solo invitation to a round that has not started is consumed only
+  // once its game_players row landed. Before, the invitation flipped to accepted
+  // first, so a failed insert (or a missing users row) left the invitee off the
+  // roster with nothing for the next login to retry, and still sent them to the
+  // game. The game-less invitation next to it is consumed as always.
+  describe('#2223: the roster write decides the consume', () => {
+    const G_SOLO = '00000000-0000-0000-0000-0000000000aa';
+    const INVITER = '00000000-0000-0000-0000-0000000000bb';
+
+    function consumedInviteIds(): unknown {
+      return supabaseMock.__fromCalls.find(
+        (c) => c.table === 'invitations' && c.method === 'in',
+      )?.args;
+    }
+
+    beforeEach(() => {
+      verifyOtpMock.mockResolvedValue({ error: null });
+      pendingInvitations = [
+        { id: 'inv-solo', game_id: G_SOLO, invited_by: INVITER, expires_at: FUTURE_EXPIRY },
+        { id: 'inv-friend', game_id: null, invited_by: 'admin-x', expires_at: FUTURE_EXPIRY },
+      ];
+      adminUserLookup = { id: 'new-user-1' };
+      supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+    });
+
+    it.each([
+      [
+        'the game_players insert fails',
+        () => {
+          gamePlayersInsertResult = {
+            error: { code: '57014', message: 'canceling statement due to statement timeout' },
+          };
+        },
+      ],
+      [
+        'the users row is missing',
+        () => {
+          adminUserLookup = null;
+        },
+      ],
+    ])(
+      '%s: only the game-less invitation is consumed, no notification, no game landing',
+      async (_label, arrange) => {
+        arrange();
+
+        const { verifyCode } = await import('./actions');
+        await expect(
+          verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+        ).rejects.toBeInstanceOf(RedirectError);
+
+        expect(consumedInviteIds()).toEqual(['id', ['inv-friend']]);
+        expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+        expect(lastRedirect()).toBe('/');
+      },
+    );
+
+    it('the games lookup fails: no insert, the invitation stays open, no game landing', async () => {
+      adminGameLookupError = { message: 'fetch failed', code: '' };
+
+      const { verifyCode } = await import('./actions');
+      await expect(
+        verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+      ).rejects.toBeInstanceOf(RedirectError);
+
+      expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+      expect(consumedInviteIds()).toEqual(['id', ['inv-friend']]);
+      expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+      expect(lastRedirect()).toBe('/');
+    });
   });
 });
 
