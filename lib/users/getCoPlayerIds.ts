@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Bruker-ider du har delt minst ett spill med (co-players via felles
@@ -24,12 +25,19 @@ export async function getCoPlayerIds(userId: string): Promise<string[]> {
   }
   const gameIds = [...new Set(myGames.map((g) => g.game_id))];
 
-  const { data: coRows, error: coError } = await admin
-    .from('game_players')
-    .select('user_id')
-    .in('game_id', gameIds)
-    .neq('user_id', userId)
-    .returns<{ user_id: string }[]>();
+  const { data: coRows, error: coError } = await selectAllRowsResult(
+    (from, to) =>
+      admin
+        .from('game_players')
+        .select('user_id')
+        .in('game_id', gameIds)
+        .neq('user_id', userId)
+        .order('game_id')
+        .order('user_id')
+        .range(from, to)
+        .returns<{ user_id: string }[]>(),
+    'getCoPlayerIds co-players',
+  );
   if (coError || !coRows) {
     if (coError) {
       console.error('[getCoPlayerIds] co-player lookup failed', coError);

@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { userOf, type CupUserRel } from './cupRoster';
 import {
   isNotStartedCupMatch,
@@ -129,17 +130,23 @@ export async function loadCupWithdrawalContext(args: {
     };
   }
 
-  const { data: playerRows, error: pErr } = await admin
-    .from('game_players')
-    .select(
-      'game_id, user_id, team_number, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
-    )
-    .in(
-      'game_id',
-      games.map((g) => g.id),
-    );
-  if (pErr) throw pErr;
-  const players = (playerRows ?? []) as unknown as PlayerRow[];
+  const playerRows = await selectAllRows(
+    (from, to) =>
+      admin
+        .from('game_players')
+        .select(
+          'game_id, user_id, team_number, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+        )
+        .in(
+          'game_id',
+          games.map((g) => g.id),
+        )
+        .order('game_id')
+        .order('user_id')
+        .range(from, to),
+    'cupWithdrawalContext game_players',
+  );
+  const players = playerRows as unknown as PlayerRow[];
 
   const byGame = new Map<string, PlayerRow[]>();
   for (const row of players) {

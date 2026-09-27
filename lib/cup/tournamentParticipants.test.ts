@@ -126,7 +126,8 @@ describe('loadTournamentParticipantEmails (#1540)', () => {
     expect(recipients).toEqual([]);
     expect(spy).toHaveBeenCalledWith(
       '[cup] participant lookup: game_players failed',
-      { tournamentId: 'T1', error: playersError },
+      // Sidevis lesing (#2227) pakker PostgREST-feilen inn; originalen er `cause`.
+      { tournamentId: 'T1', error: expect.objectContaining({ cause: playersError }) },
     );
     spy.mockRestore();
   });

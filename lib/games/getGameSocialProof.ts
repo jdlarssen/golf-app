@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { formatPublicName } from '@/lib/names/formatPublicName';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { buildSocialProof, type GameSocialProof } from './socialProof';
@@ -44,11 +45,18 @@ export async function getGamesSocialProof(
   if (uniqueIds.length === 0) return {};
 
   const admin = getAdminClient();
-  const { data, error } = await admin
-    .from('game_players')
-    .select('game_id, user_id, users!game_players_user_id_fkey(name, nickname)')
-    .in('game_id', uniqueIds)
-    .is('withdrawn_at', null);
+  const { data, error } = await selectAllRowsResult(
+    (from, to) =>
+      admin
+        .from('game_players')
+        .select('game_id, user_id, users!game_players_user_id_fkey(name, nickname)')
+        .in('game_id', uniqueIds)
+        .is('withdrawn_at', null)
+        .order('game_id')
+        .order('user_id')
+        .range(from, to),
+    'getGamesSocialProof roster',
+  );
 
   if (error || !data) {
     if (error) console.error('[getGamesSocialProof] roster lookup failed', error);

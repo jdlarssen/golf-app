@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -110,13 +111,19 @@ const getClubStatsAggregate = unstable_cache(
 
     // Round-trip 1: all finished games + mode + course (mode/config feed the
     // rare fallback path that re-derives the result for null-summary games).
-    const { data: gamesRaw, error: gamesError } = await supabase
-      .from('games')
-      .select('id, course_id, game_mode, mode_config')
-      .eq('status', 'finished')
-      .returns<GameRow[]>();
-    if (gamesError) throw gamesError;
-    const games = gamesRaw ?? [];
+    // Both reads grow with every finished game in the app, so they are paged
+    // past PostgREST's 1 000-row cap (#2227).
+    const games = await selectAllRows(
+      (from, to) =>
+        supabase
+          .from('games')
+          .select('id, course_id, game_mode, mode_config')
+          .eq('status', 'finished')
+          .order('id')
+          .range(from, to)
+          .returns<GameRow[]>(),
+      'club stats games',
+    );
 
     if (games.length === 0) {
       return {
@@ -132,20 +139,26 @@ const getClubStatsAggregate = unstable_cache(
     // Round-trip 2: all players for those games, with their stored per-mode
     // outcome (`result_summary`, #572) and `withdrawn_at`. No holes/scores
     // fetch — the stored summary is the source of truth for who won.
-    const { data: playersRaw, error: playersError } = await supabase
-      .from('game_players')
-      .select(
-        'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, is_guest)',
-      )
-      .in('game_id', gameIds)
-      .returns<GamePlayerRow[]>();
-    if (playersError) throw playersError;
+    const playersRaw = await selectAllRows(
+      (from, to) =>
+        supabase
+          .from('game_players')
+          .select(
+            'game_id, user_id, withdrawn_at, result_summary, users!game_players_user_id_fkey(name, is_guest)',
+          )
+          .in('game_id', gameIds)
+          .order('game_id')
+          .order('user_id')
+          .range(from, to)
+          .returns<GamePlayerRow[]>(),
+      'club stats game_players',
+    );
     // #1009: gjester (skygge-brukere) teller ikke på klubbtavla — verken i
     // seiers- eller deltakelseslistene. Trygt å kutte dem fra tally-inputen
     // her: fallback-motoren under henter sine egne data fra DB, så andres
     // resultater påvirkes ikke. Gjeste-uids trengs likevel for å rense
     // fallback-VINNERNE (en gjest kan ha vunnet spillet).
-    const allPlayersRaw = playersRaw ?? [];
+    const allPlayersRaw = playersRaw;
     const guestUserIds = new Set(
       allPlayersRaw.filter((p) => p.users?.is_guest).map((p) => p.user_id),
     );

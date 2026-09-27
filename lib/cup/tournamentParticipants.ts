@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /** En cup-deltaker slik varsel-fan-outen trenger den (in-app + mail). */
 export type TournamentParticipant = {
@@ -54,10 +55,17 @@ export async function loadTournamentParticipantEmails(
   const gameIds = (gameRows ?? []).map((g) => g.id);
   if (gameIds.length === 0) return [];
 
-  const { data: playerRows, error: playersError } = await admin
-    .from('game_players')
-    .select('user_id, users!game_players_user_id_fkey(email, name, locale)')
-    .in('game_id', gameIds);
+  const { data: playerRows, error: playersError } = await selectAllRowsResult(
+    (from, to) =>
+      admin
+        .from('game_players')
+        .select('user_id, users!game_players_user_id_fkey(email, name, locale)')
+        .in('game_id', gameIds)
+        .order('game_id')
+        .order('user_id')
+        .range(from, to),
+    'loadTournamentParticipantEmails game_players',
+  );
   if (playersError) {
     // Samme bevisste best-effort som over — ikke «fiks» til et kast.
     console.error('[cup] participant lookup: game_players failed', {
