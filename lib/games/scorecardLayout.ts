@@ -4,6 +4,10 @@ import {
   teamScoreOwnerId,
 } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import {
+  alternateShotSideExtras,
+  playerStrokeHandicap,
+} from '@/lib/scoring/allocatedStrokes';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import type { StablefordPointsFn } from '@/lib/scoring/modes/stableford';
 import {
@@ -20,8 +24,9 @@ import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 /**
  * Player som vises i en kolonne på Layout B. `displayName` brukes til
  * footer-totaler («Du: ... · Partner: ...»). `initial` til kolonne-headeren.
- * `courseHandicap` til netto-utregning. `isCurrentUser` styrer hvilken
- * kolonne som er leftmost.
+ * `courseHandicap` til netto-utregning: handicapet motoren fordeler over SI
+ * (etter allowance og brutto-valg, #2218), ikke nødvendigvis det frosne
+ * banehandicapet. `isCurrentUser` styrer hvilken kolonne som er leftmost.
  */
 export interface ScorecardColumnPlayer {
   userId: string;
@@ -61,7 +66,8 @@ export interface ScorecardLayout {
   /** Layout A: hvilken userId vi viser scorer for (én kolonne). */
   primaryUserId: string;
   /**
-   * Layout A: course-handicap brukt til netto-utregning. For Texas brukes
+   * Layout A: handicapet brukt til netto-utregning, slik motoren fordeler
+   * det over SI (allowance og brutto-valg, #2218). For Texas brukes
    * lag-handicap (sum av medlemmer × pct), ikke individuell.
    */
   primaryHandicap: number;
@@ -246,36 +252,21 @@ export function resolveScorecardLayout(
     const oppSideCaptainId = oppSideOwners.ownerId;
 
     // WHS-diff: high side får (sideDiff × allowance_pct/100) som lag-strokes,
-    // low side 0. Allowance leses fra mode_config (default 50 for foursomes,
-    // 100 for greensome/chapman). Side-HCP: foursomes = sum; greensome + chapman
-    // = 0,6×laveste + 0,4×høyeste. Holdt i sync med scoring-engine så scorekort
-    // og leaderboard viser samme strokes.
-    const allowancePct =
-      cfg.kind === 'foursomes_matchplay' ||
-      cfg.kind === 'greensome_matchplay' ||
-      cfg.kind === 'chapman_matchplay' ||
-      cfg.kind === 'gruesome_matchplay'
-        ? cfg.allowance_pct
-        : 50;
-
-    const isSixtyForty =
-      mode === 'greensome_matchplay' || mode === 'chapman_matchplay';
-    // Gruesome: same as foursomes (sum handicap, isSixtyForty = false)
-    function sideHandicap(sidePlayers: typeof mySidePlayers): number {
-      if (isSixtyForty) {
-        const chs = sidePlayers.map((p) => p.course_handicap ?? 0);
-        const low = Math.min(...chs);
-        const high = Math.max(...chs);
-        return Math.round(0.6 * low + 0.4 * high);
-      }
-      return sidePlayers.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
-    }
-    const mySideCombined = sideHandicap(mySidePlayers);
-    const oppSideCombined = sideHandicap(oppSidePlayers);
-    const diff = Math.abs(mySideCombined - oppSideCombined);
-    const highSideExtra = Math.round((diff * allowancePct) / 100);
-    const mySideExtra = mySideCombined > oppSideCombined ? highSideExtra : 0;
-    const oppSideExtra = oppSideCombined > mySideCombined ? highSideExtra : 0;
+    // low side 0. #2218: side-HCP, arrangørens egne lag-slag (greensome
+    // `team_strokes_override`, #1441) og allowance kommer fra samme hjem som
+    // hull-siden, bundet til motoren med test. Sidene mappes til side 1/2
+    // etter team_number, som i motoren.
+    const chs = (sidePlayers: PlayerForHole[]) =>
+      sidePlayers.map((p) => p.course_handicap ?? 0);
+    const meIsSide2 = me.team_number === 2;
+    const { side1Extra, side2Extra } = alternateShotSideExtras(
+      mode,
+      cfg,
+      meIsSide2 ? chs(oppSidePlayers) : chs(mySidePlayers),
+      meIsSide2 ? chs(mySidePlayers) : chs(oppSidePlayers),
+    );
+    const mySideExtra = meIsSide2 ? side2Extra : side1Extra;
+    const oppSideExtra = meIsSide2 ? side1Extra : side2Extra;
 
     // Sort each side deterministisk på userId for stabil rendering. Kaptein
     // ender opp først hvis dens userId er lex-min — som er konvensjonen.
@@ -350,13 +341,18 @@ export function resolveScorecardLayout(
   const isMatchplay = isMatchplaySingles || isFourball;
   const isTeamMode = isBestBall || isStablefordTeam || isMatchplay;
 
+  // #2218: the handicap the engine spreads over SI for one player —
+  // fourball/round robin allowance, 0 for the gross options, raw elsewhere.
+  const strokeHandicap = (p: PlayerForHole): number =>
+    playerStrokeHandicap(mode, cfg, p.course_handicap ?? 0);
+
   if (!isTeamMode || revealActive) {
     return {
       variant: 'a',
       columns: [],
       scoreUserIds: [me.user_id],
       primaryUserId: me.user_id,
-      primaryHandicap: me.course_handicap ?? 0,
+      primaryHandicap: strokeHandicap(me),
       isStableford: false,
       isMatchplay: false,
       isFourball: false,
@@ -395,7 +391,7 @@ export function resolveScorecardLayout(
       columns: [],
       scoreUserIds: [me.user_id],
       primaryUserId: me.user_id,
-      primaryHandicap: me.course_handicap ?? 0,
+      primaryHandicap: strokeHandicap(me),
       isStableford: false,
       isMatchplay: false,
       isFourball: false,
@@ -408,7 +404,7 @@ export function resolveScorecardLayout(
     userId: me.user_id,
     initial: fmt.initials(me),
     displayName: fmt.displayName(me, 'Du'),
-    courseHandicap: me.course_handicap ?? 0,
+    courseHandicap: strokeHandicap(me),
     isCurrentUser: true,
     teamNumber: me.team_number ?? null,
   };
@@ -424,7 +420,7 @@ export function resolveScorecardLayout(
       userId: p.user_id,
       initial: fmt.initials(p),
       displayName: fmt.displayName(p, fallback),
-      courseHandicap: p.course_handicap ?? 0,
+      courseHandicap: strokeHandicap(p),
       isCurrentUser: false,
       teamNumber: p.team_number ?? null,
     };
@@ -435,7 +431,7 @@ export function resolveScorecardLayout(
     columns: [meColumn, ...partnerColumns],
     scoreUserIds: [meColumn.userId, ...partnerColumns.map((p) => p.userId)],
     primaryUserId: me.user_id,
-    primaryHandicap: me.course_handicap ?? 0,
+    primaryHandicap: strokeHandicap(me),
     isStableford: isStablefordTeam,
     isMatchplay,
     isFourball,

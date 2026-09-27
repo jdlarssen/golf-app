@@ -6,6 +6,8 @@ import {
   type ScorecardColumnPlayer,
 } from './scorecardLayout';
 import * as singlesMatchplay from '@/lib/scoring/modes/singlesMatchplay';
+import * as fourballMatchplay from '@/lib/scoring/modes/fourballMatchplay';
+import * as greensomeMatchplay from '@/lib/scoring/modes/greensomeMatchplay';
 import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
 import type {
   ScoringContext,
@@ -1029,5 +1031,187 @@ describe('resolveScorecardLayout — trukket kaptein (#2067)', () => {
     const layout = resolveScorecardLayout(game, [captain, me], me, false, fmt);
 
     expect(layout.scoreUserIds).toEqual(['aaa-captain']);
+  });
+});
+
+// #2218 — Type A: scorekortet skal regne netto og matchstatus med de samme
+// slagene som motoren. Fourball-kolonnene tar allowance fra `mode_config`,
+// greensome bruker arrangørens egne lag-slag (`team_strokes_override`), og
+// Layout A gir 0 slag i brutto og allowance i round robin.
+describe('resolveScorecardLayout — slag som motoren (#2218)', () => {
+  const FOURBALL_85: GameForHole = {
+    ...baseGame,
+    game_mode: 'fourball_matchplay',
+    mode_config: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct: 85 },
+  };
+  const GREENSOME_OVERRIDE: GameForHole = {
+    ...baseGame,
+    game_mode: 'greensome_matchplay',
+    mode_config: {
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+      team_strokes_override: { team1: 8, team2: 3 },
+    },
+  };
+  const fourballPlayers = () => [
+    player('a', 1, { course_handicap: 20 }),
+    player('a2', 1, { course_handicap: 10 }),
+    player('b', 2, { course_handicap: 4 }),
+    player('b2', 2, { course_handicap: 8 }),
+  ];
+  const greensomePlayers = () => [
+    player('a', 1, { course_handicap: 12 }),
+    player('a2', 1, { course_handicap: 20 }),
+    player('b', 2, { course_handicap: 5 }),
+    player('b2', 2, { course_handicap: 8 }),
+  ];
+
+  it('greensome med egne lag-slag {8, 3}: kolonnene får 5 og 0 slag, ikke 9 fra 60/40', () => {
+    const players = greensomePlayers();
+    const layout = resolveScorecardLayout(GREENSOME_OVERRIDE, players, players[0], false, fmt);
+    expect(layout.columns.map((c) => c.courseHandicap)).toEqual([5, 0]);
+    expect(layout.primaryHandicap).toBe(5);
+  });
+
+  it('greensome sett fra lag 2: min kolonne får 0, motstanderen 5', () => {
+    const players = greensomePlayers();
+    const layout = resolveScorecardLayout(GREENSOME_OVERRIDE, players, players[2], false, fmt);
+    expect(layout.columns.map((c) => c.courseHandicap)).toEqual([0, 5]);
+  });
+
+  it('fourball 85 %: kolonnene gir 17/9/3/7 for banehandicap 20/10/4/8', () => {
+    const players = fourballPlayers();
+    const layout = resolveScorecardLayout(FOURBALL_85, players, players[0], false, fmt);
+    expect(layout.columns.map((c) => [c.userId, c.courseHandicap])).toEqual([
+      ['a', 17],
+      ['a2', 9],
+      ['b', 3],
+      ['b2', 7],
+    ]);
+    expect(layout.primaryHandicap).toBe(17);
+  });
+
+  it('Layout A: skins brutto gir primaryHandicap 0', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'skins',
+      mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'gross' },
+    };
+    const me = player('me', 1, { course_handicap: 18 });
+    const layout = resolveScorecardLayout(game, [me, player('x', 1)], me, false, fmt);
+    expect(layout.variant).toBe('a');
+    expect(layout.primaryHandicap).toBe(0);
+  });
+
+  it('Layout A: round robin 85 % gir primaryHandicap 17 for banehandicap 20', () => {
+    const game: GameForHole = {
+      ...baseGame,
+      game_mode: 'round_robin',
+      mode_config: { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 85 },
+    };
+    const me = player('me', 1, { course_handicap: 20 });
+    const layout = resolveScorecardLayout(game, [me, player('x', 2)], me, false, fmt);
+    expect(layout.variant).toBe('a');
+    expect(layout.primaryHandicap).toBe(17);
+  });
+
+  describe('rundtur: scorekort vs motoren (mønster fra #205)', () => {
+    function scoringContextFor(
+      game: GameForHole,
+      players: PlayerForHole[],
+      holes: LayoutBHoleInput[],
+      scores: Map<string, number | null>,
+    ): ScoringContext {
+      return {
+        game: { id: game.id, game_mode: game.game_mode, mode_config: game.mode_config },
+        players: players.map((p) => ({
+          userId: p.user_id,
+          teamNumber: p.team_number,
+          flightNumber: p.flight_number,
+          courseHandicap: p.course_handicap ?? 0,
+        })),
+        holes: holes.map((h) => ({ number: h.hole_number, par: h.par, strokeIndex: h.stroke_index })),
+        scores: [...scores].map(([key, gross]) => {
+          const [userId, holeStr] = key.split('#');
+          return { userId, holeNumber: Number(holeStr), gross };
+        }),
+      };
+    }
+
+    function statusFor(prefix: string, holesUp: number, holesPlayed: number): string {
+      if (holesPlayed === 0) return 'Ingen hull spilt ennå';
+      if (holesUp === 0) return `AS (${holesPlayed} hull spilt)`;
+      return holesUp > 0
+        ? `${prefix} ${holesUp} up etter ${holesPlayed} hull`
+        : `${prefix} ${-holesUp} down etter ${holesPlayed} hull`;
+    }
+
+    it('fourball 85 %: SI-18-hullet fra issuet er tapt, ikke delt, på både kort og tavle', () => {
+      // Hull 1 (SI 18, par 4): A 5, A2 6, B 4, B2 5. Med 85 % får ingen slag
+      // her, så lag 2 vinner 4 mot 5. Med rått banehandicap fikk A (20) ett
+      // slag, netto 4, og kortet sa delt.
+      // Hull 2 (SI 1): A 4, A2 5, B 5, B2 5. Alle får ett slag; lag 1 vinner 3 mot 4.
+      const holes: LayoutBHoleInput[] = [
+        { hole_number: 1, par: 4, stroke_index: 18 },
+        { hole_number: 2, par: 4, stroke_index: 1 },
+      ];
+      const scores = new Map<string, number | null>([
+        ['a#1', 5],
+        ['a2#1', 6],
+        ['b#1', 4],
+        ['b2#1', 5],
+        ['a#2', 4],
+        ['a2#2', 5],
+        ['b#2', 5],
+        ['b2#2', 5],
+      ]);
+      const players = fourballPlayers();
+      const layout = resolveScorecardLayout(FOURBALL_85, players, players[0], false, fmt);
+      const totals = computeLayoutBTotals(holes, scores, layout.columns, {
+        isStableford: layout.isStableford,
+        isMatchplay: layout.isMatchplay,
+        isFourball: layout.isFourball,
+        meTeamNumber: layout.meTeamNumber,
+      });
+
+      const engine = fourballMatchplay.compute(scoringContextFor(FOURBALL_85, players, holes, scores));
+      expect(engine.holes[0].result).toBe('side2_wins');
+      expect([engine.holesUp, engine.holesPlayed]).toEqual([0, 2]);
+      expect(totals.matchStatus).toBe(statusFor('Laget ditt er', engine.holesUp, engine.holesPlayed));
+    });
+
+    it('greensome med egne lag-slag: SI 6–7 er delt på både kort og tavle', () => {
+      // Kapteinene (a og b) har brutto 4. Lag 1 får 5 slag (SI 1–5): SI 5
+      // vinnes, SI 6 og 7 er delt. Med 60/40 (9 slag) vant kortet alle tre.
+      const holes: LayoutBHoleInput[] = [
+        { hole_number: 1, par: 4, stroke_index: 5 },
+        { hole_number: 2, par: 4, stroke_index: 6 },
+        { hole_number: 3, par: 4, stroke_index: 7 },
+      ];
+      const scores = new Map<string, number | null>([
+        ['a#1', 4],
+        ['b#1', 4],
+        ['a#2', 4],
+        ['b#2', 4],
+        ['a#3', 4],
+        ['b#3', 4],
+      ]);
+      const players = greensomePlayers();
+      const layout = resolveScorecardLayout(GREENSOME_OVERRIDE, players, players[0], false, fmt);
+      const totals = computeLayoutBTotals(holes, scores, layout.columns, {
+        isStableford: layout.isStableford,
+        isMatchplay: layout.isMatchplay,
+        isFourball: layout.isFourball,
+        meTeamNumber: layout.meTeamNumber,
+      });
+
+      const engine = greensomeMatchplay.compute(
+        scoringContextFor(GREENSOME_OVERRIDE, players, holes, scores),
+      );
+      expect([engine.holesUp, engine.holesPlayed]).toEqual([1, 3]);
+      expect(totals.matchStatus).toBe(statusFor('Du er', engine.holesUp, engine.holesPlayed));
+    });
   });
 });
