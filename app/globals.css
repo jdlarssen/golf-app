@@ -894,14 +894,16 @@ h1, h2, h3, h4, h5, h6 {
    * 180ms keeps rapid hull-switching snappy. */
   @keyframes hole-fade-in {
     from { opacity: 0; transform: translateY(4px); }
-    /* `none`, not translateY(0): with fill-mode `both` the last frame stays
-     * on <main>, and any transform makes it the containing block for
-     * position: fixed — the «Annet» sheet would sit at the page bottom
-     * instead of the screen bottom (#2251). */
-    to   { opacity: 1; transform: none; }
+    to   { opacity: 1; transform: translateY(0); }
   }
+  /* `backwards`, not `both` (#2251): a forwards fill keeps the last frame's
+   * transform on <main> after the animation, and any transform — even
+   * translateY(0), which is also what `to { transform: none }` interpolates
+   * to — makes <main> the containing block for position: fixed. The «Annet»
+   * sheet would then sit at the page bottom instead of the screen bottom.
+   * `backwards` still holds the first frame before the start. */
   .animate-hole-enter {
-    animation: hole-fade-in 180ms ease-out both;
+    animation: hole-fade-in 180ms ease-out backwards;
   }
 
   @media (prefers-reduced-motion: reduce) {

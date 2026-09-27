@@ -32,8 +32,8 @@ const VALUES: number[] = Array.from(
 // <main>, the sheet ended half below the screen edge whenever the hole page
 // was taller than the screen — «Stryk» and the caption out of reach. This
 // only works because the hole page's enter animation leaves no transform
-// behind (`hole-fade-in` in app/globals.css): a transformed ancestor would
-// become the containing block again.
+// behind (`.animate-hole-enter` fills backwards, app/globals.css): a
+// transformed ancestor would become the containing block again.
 const backdropStyle: CSSProperties = {
   position: 'fixed',
   inset: 0,
