@@ -759,7 +759,7 @@ function LayoutBTable({
                           className="score-num text-[10.5px] text-muted mt-0.5"
                           data-testid={
                             isStableford
-                              ? undefined
+                              ? `scorecard-b-points-${r.hole_number}-${columns[idx].userId}`
                               : `scorecard-b-netto-${r.hole_number}-${columns[idx].userId}`
                           }
                         >
@@ -796,7 +796,7 @@ function LayoutBTable({
                             <span
                               data-testid={
                                 isStableford
-                                  ? undefined
+                                  ? `scorecard-b-total-points-${c.userId}`
                                   : `scorecard-b-total-netto-${c.userId}`
                               }
                             >
@@ -814,7 +814,7 @@ function LayoutBTable({
                 {showNetto && !isMatchplay && (
                   <div className="text-text">
                     {isStableford ? t('footerTeamPoints') : t('footerTeamBestNetto')}:{' '}
-                    <span className="score-num">
+                    <span className="score-num" data-testid="scorecard-b-team-total">
                       {isStableford ? teamTotalPoints : teamTotalNetto}
                     </span>
                     <span className="text-muted ml-2">
