@@ -114,14 +114,18 @@ export function suggestFlightSplit(
  *     delvis-inndelte spill): ingen attestanter.
  *   • Trukkede spillere ekskluderes alltid (de er ikke på banen).
  *   • `userId` selv ekskluderes alltid.
+ *   • #2200: den som leverte kortet (`submittedBy`), ekskluderes også.
  */
 export function peersForApproval(
   players: FlightPlayer[],
   gameMode: GameMode,
   userId: string,
+  submittedBy: string | null = null,
 ): string[] {
   return activePlayers(players)
-    .filter((p) => canApproveScorecardFor(players, gameMode, p.user_id, userId))
+    .filter((p) =>
+      canApproveScorecardFor(players, gameMode, p.user_id, userId, submittedBy),
+    )
     .map((p) => p.user_id);
 }
 
@@ -134,6 +138,11 @@ export function peersForApproval(
  * begge sider). Én-flight-spill (≤4 aktive eller wolf) → på tvers av
  * sider/lag; ellers samme tildelte flight.
  *
+ * `submittedBy` er `game_players.submitted_by_user_id` på kortet (#2200). Den
+ * som leverte kortet for en annen, kan ikke også godkjenne det (eierens valg
+ * 2026-09-27; speiler vakta i 0191). `null` betyr ukjent leverandør, og da
+ * gjelder regelen som før.
+ *
  * Dette er det ene hjemmet for attestant-regelen: `peersForApproval`
  * (varsling + authz) og `pendingApprovalsFor` (alle tellere og lister) er
  * derivert herfra, så flatene ikke kan divergere (AGENTS.md trap 4).
@@ -143,9 +152,11 @@ export function canApproveScorecardFor(
   gameMode: GameMode,
   approverUserId: string,
   ownerUserId: string,
+  submittedBy: string | null = null,
 ): boolean {
   // Ingen selv-godkjenning (speiler trigger-vakta i 0103).
   if (approverUserId === ownerUserId) return false;
+  if (submittedBy != null && submittedBy === approverUserId) return false;
   const approver = players.find((p) => p.user_id === approverUserId);
   const owner = players.find((p) => p.user_id === ownerUserId);
   if (!approver || !owner) return false;
@@ -172,13 +183,15 @@ export type OrganizerApprovalRow = 'can_approve' | 'own_card_needs_peer' | 'own_
  * kortet igjen og avslutte likevel.
  */
 export function organizerApprovalRow(
-  players: FlightPlayer[],
+  players: (FlightPlayer & { submitted_by_user_id?: string | null })[],
   gameMode: GameMode,
   viewer: { userId: string; isAdmin: boolean },
   cardUserId: string,
 ): OrganizerApprovalRow {
   if (viewer.isAdmin || cardUserId !== viewer.userId) return 'can_approve';
-  return peersForApproval(players, gameMode, cardUserId).length > 0
+  const submittedBy =
+    players.find((p) => p.user_id === cardUserId)?.submitted_by_user_id ?? null;
+  return peersForApproval(players, gameMode, cardUserId, submittedBy).length > 0
     ? 'own_card_needs_peer'
     : 'own_card_no_peer';
 }
@@ -188,18 +201,29 @@ export function organizerApprovalRow(
  * godkjent ennå, og innenfor attestant-regelen. Delt av /approve-siden,
  * spill-hjem-banneret og hjem-kortene så teller og liste aldri kan si ulike
  * ting.
+ *
+ * #2200: et kort `approverUserId` leverte for en annen, er ikke med. Feltet
+ * `submitted_by_user_id` er påkrevd på radene, så et kallsted som glemmer å
+ * lese kolonnen, feller tsc i stedet for å vise kortet likevel.
  */
 export function pendingApprovalsFor<
   T extends FlightPlayer & {
     submitted_at: string | null;
     approved_at: string | null;
+    submitted_by_user_id: string | null;
   },
 >(players: T[], gameMode: GameMode, approverUserId: string): T[] {
   return players.filter(
     (p) =>
       p.submitted_at != null &&
       p.approved_at == null &&
-      canApproveScorecardFor(players, gameMode, approverUserId, p.user_id),
+      canApproveScorecardFor(
+        players,
+        gameMode,
+        approverUserId,
+        p.user_id,
+        p.submitted_by_user_id,
+      ),
   );
 }
 

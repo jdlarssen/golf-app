@@ -64,12 +64,18 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
 
   // #543: attestant-regelen — tillat når spillet er én-flight (≤4 aktive
   // spillere eller wolf) ELLER spillerne er i samme tildelte flight.
+  // #2200: den som leverte kortet for eieren, kan ikke godkjenne det.
   const { data: allPlayers } = await supabase
     .from('game_players')
-    .select('user_id, flight_number, withdrawn_at')
+    .select('user_id, flight_number, withdrawn_at, submitted_by_user_id')
     .eq('game_id', gameId)
     .returns<
-      { user_id: string; flight_number: number | null; withdrawn_at: string | null }[]
+      {
+        user_id: string;
+        flight_number: number | null;
+        withdrawn_at: string | null;
+        submitted_by_user_id: string | null;
+      }[]
     >();
 
   const canApprove = canApproveScorecardFor(
@@ -77,6 +83,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     gameMode,
     user.id,
     playerUserId,
+    allPlayers?.find((p) => p.user_id === playerUserId)?.submitted_by_user_id ?? null,
   );
   return {
     supabase,

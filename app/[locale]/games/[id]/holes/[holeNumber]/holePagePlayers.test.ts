@@ -22,6 +22,7 @@ function player(
     flight_number: 1,
     course_handicap,
     submitted_at: null,
+    submitted_by_user_id: null,
     approved_at: null,
     rejection_reason: null,
     withdrawn_at,

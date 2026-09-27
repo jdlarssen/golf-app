@@ -326,11 +326,33 @@ describe('peersForApproval', () => {
     const peers = peersForApproval(players, singles, 'me');
     expect(peers).not.toContain('me');
   });
+
+  it('#2200: den som leverte kortet for eieren, er ikke attestant', () => {
+    const players = [p('a', 1), p('b', 1), p('c', 1)];
+    expect(peersForApproval(players, stableford, 'a', 'b')).toEqual(['c']);
+  });
+
+  it('#2200: eget levert kort (submittedBy = eieren) endrer ingenting', () => {
+    const players = [p('a', 1), p('b', 1), p('c', 1)];
+    expect(peersForApproval(players, stableford, 'a', 'a').sort()).toEqual(['b', 'c']);
+  });
 });
 
 // ─── canApproveScorecardFor ──────────────────────────────────────────────────
 
 describe('canApproveScorecardFor', () => {
+  it('#2200: den som leverte kortet, kan ikke godkjenne det (eierens valg 2026-09-27)', () => {
+    const players = [p('ola', 1), p('kari', 1), p('per', 1)];
+    expect(canApproveScorecardFor(players, 'stableford', 'kari', 'ola', 'kari')).toBe(false);
+    expect(canApproveScorecardFor(players, 'stableford', 'per', 'ola', 'kari')).toBe(true);
+  });
+
+  it('#2200: uten kjent leverandør gjelder regelen som før', () => {
+    const players = [p('ola', 1), p('kari', 1)];
+    expect(canApproveScorecardFor(players, 'stableford', 'kari', 'ola', null)).toBe(true);
+    expect(canApproveScorecardFor(players, 'stableford', 'kari', 'ola')).toBe(true);
+  });
+
   const singles: GameMode = 'singles_matchplay';
   const foursomes: GameMode = 'foursomes_matchplay';
   const stableford: GameMode = 'stableford';
@@ -507,6 +529,16 @@ describe('organizerApprovalRow (#2213)', () => {
   ])('%s', (_, players, viewer, card, expected) => {
     expect(organizerApprovalRow(players, stableford, viewer, card)).toBe(expected);
   });
+
+  it('#2200: eget kort levert av eneste medspiller: ingen kan godkjenne', () => {
+    const players = [
+      { ...p('kari'), submitted_by_user_id: 'ola' },
+      { ...p('ola'), submitted_by_user_id: null },
+    ];
+    expect(organizerApprovalRow(players, stableford, organizer, 'kari')).toBe(
+      'own_card_no_peer',
+    );
+  });
 });
 
 // ─── pendingApprovalsFor ─────────────────────────────────────────────────────
@@ -523,7 +555,14 @@ describe('pendingApprovalsFor', () => {
     approved_at: string | null = null,
     withdrawn_at: string | null = null,
   ) {
-    return { user_id, flight_number, withdrawn_at, submitted_at, approved_at };
+    return {
+      user_id,
+      flight_number,
+      withdrawn_at,
+      submitted_at,
+      approved_at,
+      submitted_by_user_id: null as string | null,
+    };
   }
 
   const SUBMITTED = '2026-07-28T10:00:00Z';
@@ -570,6 +609,20 @@ describe('pendingApprovalsFor', () => {
       card('bob', 2, null),
     ];
     expect(pendingApprovalsFor(players, singles, 'bob')).toEqual([]);
+  });
+
+  it('#2200: et kort jeg leverte for en annen, venter ikke på meg', () => {
+    const players = [
+      { ...card('ola', 1, SUBMITTED), submitted_by_user_id: 'kari' },
+      { ...card('per', 1, SUBMITTED), submitted_by_user_id: 'per' },
+      { ...card('kari', 1, SUBMITTED), submitted_by_user_id: 'kari' },
+    ];
+    expect(pendingApprovalsFor(players, skins, 'kari').map((x) => x.user_id)).toEqual([
+      'per',
+    ]);
+    expect(
+      pendingApprovalsFor(players, skins, 'per').map((x) => x.user_id).sort(),
+    ).toEqual(['kari', 'ola']);
   });
 });
 

@@ -11,6 +11,7 @@ type FlightMatePlayerRow = {
   submitted_at: string | null;
   approved_at: string | null;
   withdrawn_at: string | null;
+  submitted_by_user_id: string | null;
 };
 
 export async function PendingApprovalsBanner({
@@ -32,7 +33,7 @@ export async function PendingApprovalsBanner({
   // Hele rosteret — attestant-regelen trenger både flight og withdrawn_at.
   const { data: allMates } = await supabase
     .from('game_players')
-    .select('user_id, flight_number, submitted_at, approved_at, withdrawn_at')
+    .select('user_id, flight_number, submitted_at, approved_at, withdrawn_at, submitted_by_user_id')
     .eq('game_id', gameId)
     .returns<FlightMatePlayerRow[]>();
 

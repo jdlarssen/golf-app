@@ -178,6 +178,12 @@ export type PlayerForHole = {
   flight_number: number;
   course_handicap: number | null;
   submitted_at: string | null;
+  /**
+   * #2200: who marked the card delivered (trigger-filled, 0191). Differs from
+   * `user_id` when the one keeping score delivered it; null on cards
+   * delivered before 0191 and whenever `submitted_at` is null.
+   */
+  submitted_by_user_id: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
   /** WD / «trekk spiller» (#386): non-null = player has been withdrawn. */
@@ -225,7 +231,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),
@@ -286,7 +292,12 @@ export async function getGameWithPlayers(
   // front9/back9 game would silently be treated as a full 18-hole round (wrong
   // "all holes scored" math) and a derived game's score-entry guard would
   // silently fail to fire (source_game_id read as falsy).
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp7', id], {
+  //
+  // #2200: bumped to 'gwp8' when `submitted_by_user_id` (players) joined the
+  // select — a stale 'gwp7' entry would resolve it as `undefined`, so «Levert
+  // av …» would silently not render and the approval rule would not see who
+  // delivered the card.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp8', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();
