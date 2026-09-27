@@ -147,8 +147,9 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       : null;
   const filled = filledHolesForOwner(scores, mode, userId, myCaptainId);
   // Godkjenn-lista er per SPILLER også i lag-formater: hvert medlem har sin
-  // egen `game_players`-rad, og den delte regelen er alt mode-bevisst.
-  const approvals = me ? pendingApprovals(roster, mode, userId) : [];
+  // egen `game_players`-rad, og den delte regelen er alt mode-bevisst. Spillet
+  // sendes med for gaten (#2220): bare når runden krever godkjenning og pågår.
+  const approvals = me ? pendingApprovals(roster, bundle.game, userId) : [];
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="game-home-screen">
