@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { readVerifiedUserId } from './proxyIdentity';
 
 /**
  * Read the verified user id forwarded by proxy.ts after `auth.getUser()`.
@@ -6,10 +7,9 @@ import { headers } from 'next/headers';
  * fall back to `supabase.auth.getUser()` in that rare case (e.g. routes
  * excluded from the matcher).
  *
- * The header is set on the request that the proxy hands to the route
- * handler — the browser never sees or sets it.
+ * The proxy signs the id it forwards (lib/auth/proxyIdentity.ts); an
+ * unsigned or wrongly signed header reads as null.
  */
 export async function getProxyVerifiedUserId(): Promise<string | null> {
-  const h = await headers();
-  return h.get('x-torny-user-id');
+  return readVerifiedUserId(await headers());
 }
