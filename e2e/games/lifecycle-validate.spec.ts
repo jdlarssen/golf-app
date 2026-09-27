@@ -106,12 +106,12 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     await expect(duel).toBeVisible();
     // Oracle: A gross 54 (18 × 3, independent), net 36 (54 − 18); B net 72. The
     // verdict names A as the winner with the net duel score "36–72" — asserted
-    // as ONE string (winner first, en-dash U+2013 as in HeadToHeadResult), so a
-    // wrong aggregate or swapped scores can't match digit by digit.
+    // as ONE token (winner first, en-dash U+2013 as in HeadToHeadResult, word
+    // boundaries on both ends), so swapped scores, 136–72 or 36–720 fail.
     await expect(duel).toContainText('54');
     const verdict = duel.getByTestId('h2h-verdict');
     await expect(verdict).toContainText(adminName);
-    await expect(verdict).toContainText('36–72');
+    await expect(verdict).toContainText(/\b36–72\b/);
   });
 
   test('singles_matchplay: A wins all 10 played holes → decided 10&8 @gate', async () => {
@@ -168,12 +168,12 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
 
     // 2-player skins → head-to-head duel. Oracle: A 6 skins, B 0 → verdict "6–0",
-    // asserted whole so 16–0 or 6–10 can't pass.
+    // asserted as one token with word boundaries so 16–0 or 6–10 can't pass.
     const duel = page.getByTestId('head-to-head');
     await expect(duel).toBeVisible();
     const verdict = duel.getByTestId('h2h-verdict');
     await expect(verdict).toContainText(adminName);
-    await expect(verdict).toContainText('6–0');
+    await expect(verdict).toContainText(/\b6–0\b/);
   });
 
   test('nassau: A wins front + back + total → sweeps @gate', async () => {
@@ -198,12 +198,12 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     // 2-player nassau → head-to-head duel. Oracle: A wins all 3 segments
     // (front + back + total), so units = 3 (a sweep) and B = 0 → verdict "3–0".
     // The duel score is the nassau unit count (formats/nassau.tsx: score = units),
-    // so asserting the whole "3–0" catches a units-aggregation regression that
-    // still names A.
+    // so asserting "3–0" as one token (word boundaries: not 13–0 or 3–10)
+    // catches a units-aggregation regression that still names A.
     const duel = page.getByTestId('head-to-head');
     await expect(duel).toBeVisible();
     const verdict = duel.getByTestId('h2h-verdict');
     await expect(verdict).toContainText(adminName);
-    await expect(verdict).toContainText('3–0');
+    await expect(verdict).toContainText(/\b3–0\b/);
   });
 });
