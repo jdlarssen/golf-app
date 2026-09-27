@@ -6,6 +6,11 @@ import { useTranslations } from 'next-intl';
 export interface OnboardingBannerProps {
   visible: boolean;
   onDismiss: () => void;
+  /**
+   * #2251: which entry surface the hint explains. 'cards' (default) is the
+   * per-player card that Bingo Bango Bongo keeps; 'rail' is the score rail.
+   */
+  variant?: 'cards' | 'rail';
 }
 
 const bannerStyle: CSSProperties = {
@@ -72,7 +77,7 @@ const closeBtnStyle: CSSProperties = {
 export function OnboardingBanner(
   props: OnboardingBannerProps,
 ): JSX.Element | null {
-  const { visible, onDismiss } = props;
+  const { visible, onDismiss, variant = 'cards' } = props;
   const t = useTranslations('holes.onboarding');
   if (!visible) return null;
   return (
@@ -89,7 +94,7 @@ export function OnboardingBanner(
       </div>
       <div>
         <b style={prefixStyle}>{t('prefix')}</b>{' '}
-        {t('text')}
+        {variant === 'rail' ? t('railText') : t('text')}
       </div>
       <div style={closeHitStyle}>
         <button

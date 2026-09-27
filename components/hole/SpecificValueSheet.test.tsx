@@ -101,6 +101,35 @@ describe('SpecificValueSheet', () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 
+  it('«Stryk» picks the strike value, and is absent without a strike prop (#2251)', () => {
+    const onPick = vi.fn();
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <SpecificValueSheet
+        open={true}
+        par={4}
+        onPick={onPick}
+        onClear={() => {}}
+        onClose={onClose}
+      />,
+    );
+    expect(screen.queryByTestId('specific-value-strike')).not.toBeInTheDocument();
+
+    rerender(
+      <SpecificValueSheet
+        open={true}
+        par={4}
+        onPick={onPick}
+        onClear={() => {}}
+        onClose={onClose}
+        strike={{ value: 7, label: 'Stryk · 0 p' }}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('specific-value-strike'));
+    expect(onPick).toHaveBeenCalledWith(7);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('backdrop click calls onClose', () => {
     const onClose = vi.fn();
     render(

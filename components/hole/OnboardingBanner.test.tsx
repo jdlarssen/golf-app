@@ -18,6 +18,14 @@ describe('OnboardingBanner', () => {
     ).toBeInTheDocument();
   });
 
+  it('the rail variant explains the score rail instead of the cards (#2251)', () => {
+    render(<OnboardingBanner visible={true} onDismiss={() => {}} variant="rail" />);
+    expect(
+      screen.queryByText(/Trykk på det øverste kortet/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/den markerte spilleren/)).toBeInTheDocument();
+  });
+
   it('close button has aria-label="Lukk"', () => {
     render(<OnboardingBanner visible={true} onDismiss={() => {}} />);
     expect(screen.getByLabelText('Lukk')).toBeInTheDocument();

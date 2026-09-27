@@ -2310,6 +2310,35 @@
       "undoScoreAriaLabel": "Reset the score for {name}",
       "specificScoreCaption": "Tap to set. X clears."
     },
+    "scoreRail": {
+      "headingWithStrokes": "{name} · gets {n, plural, one {# stroke} other {# strokes}}",
+      "detailPoints": "{term} · {points} pt",
+      "detailNetto": "{term} · net {netto}",
+      "buttonAriaLabel": "Set {strokes} for {name}: {term}",
+      "buttonAriaLabelPoints": "Set {strokes} for {name}: {term}, {points, plural, one {# point} other {# points}}",
+      "buttonAriaLabelNetto": "Set {strokes} for {name}: {term}, net {netto}",
+      "other": "Other",
+      "otherAriaLabel": "Pick another score for {name}",
+      "skip": "Next: {name} →",
+      "skipAriaLabel": "Skip, go to {name}",
+      "nextAnnouncement": "Next: {name}",
+      "allScored": "Everyone has a score on this hole. Tap a name to correct it.",
+      "strike": "Pick up",
+      "strikeWithPoints": "Pick up · {points} pt",
+      "rowAriaLabelScored": "{name}: {score, plural, one {# stroke} other {# strokes}}",
+      "rowAriaLabelEmpty": "{name}: no score yet",
+      "rowPoints": "{points} pt",
+      "term": {
+        "albatross": "Albatross",
+        "eagle": "Eagle",
+        "birdie": "Birdie",
+        "par": "Par",
+        "bogey": "Bogey",
+        "doubleBogey": "Double bogey",
+        "tripleBogey": "Triple bogey",
+        "over": "+{n}"
+      }
+    },
     "putts": {
       "toggleLabel": "Track putts",
       "fieldLabel": "Putts",
@@ -2347,6 +2376,7 @@
     "onboarding": {
       "prefix": "Try this:",
       "text": "Tap the top card to set par. Use + and − to adjust.",
+      "railText": "Tap the score for the highlighted player. The next player is highlighted right away.",
       "closeAriaLabel": "Close"
     },
     "banners": {

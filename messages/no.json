@@ -2310,6 +2310,35 @@
       "undoScoreAriaLabel": "Nullstill scoren for {name}",
       "specificScoreCaption": "Trykk for å sette. X fjerner."
     },
+    "scoreRail": {
+      "headingWithStrokes": "{name} · får {n} slag",
+      "detailPoints": "{term} · {points} p",
+      "detailNetto": "{term} · netto {netto}",
+      "buttonAriaLabel": "Sett {strokes} slag for {name}: {term}",
+      "buttonAriaLabelPoints": "Sett {strokes} slag for {name}: {term}, {points} poeng",
+      "buttonAriaLabelNetto": "Sett {strokes} slag for {name}: {term}, netto {netto}",
+      "other": "Annet",
+      "otherAriaLabel": "Velg en annen score for {name}",
+      "skip": "Neste: {name} →",
+      "skipAriaLabel": "Hopp over, gå til {name}",
+      "nextAnnouncement": "Neste: {name}",
+      "allScored": "Alle har score på hullet. Trykk på et navn for å rette.",
+      "strike": "Stryk",
+      "strikeWithPoints": "Stryk · {points} p",
+      "rowAriaLabelScored": "{name}: {score} slag",
+      "rowAriaLabelEmpty": "{name}: ingen score ennå",
+      "rowPoints": "{points} p",
+      "term": {
+        "albatross": "Albatross",
+        "eagle": "Eagle",
+        "birdie": "Birdie",
+        "par": "Par",
+        "bogey": "Bogey",
+        "doubleBogey": "Dobbeltbogey",
+        "tripleBogey": "Trippelbogey",
+        "over": "+{n}"
+      }
+    },
     "putts": {
       "toggleLabel": "Registrer putter",
       "fieldLabel": "Putter",
@@ -2347,6 +2376,7 @@
     "onboarding": {
       "prefix": "Prøv dette:",
       "text": "Trykk på det øverste kortet for å sette par. Bruk + og − for å justere.",
+      "railText": "Trykk på scoren til den markerte spilleren. Neste spiller blir markert med en gang.",
       "closeAriaLabel": "Lukk"
     },
     "banners": {
