@@ -39,8 +39,10 @@
 --      - a true peer (not admin, not the game's creator — both return
 --        earlier) may not approve a card they delivered themselves. The owner
 --        decided this 2026-09-27: someone else in the flight, or the
---        organiser, approves it.
---    Every other line is 0168's.
+--        organiser, approves it. The rule reads the END state, so approving
+--        first and delivering after is refused too, as is another peer
+--        writing the deliverer in as approver.
+--    Every other line is 0168's. The function comment is refreshed to match.
 --
 -- Order against prod: migration FIRST, then merge/deploy. The code on main
 -- never writes the column, and the trigger fills it on its own, so the
@@ -214,11 +216,22 @@ as $$
       -- #2200 (owner's decision 2026-09-27): the peer who delivered this card
       -- may not also approve it. Someone else in the flight, or the organiser
       -- (returned above), approves it. Clearing an approval stays allowed.
+      --
+      -- Checked on the END state, whenever an approval or delivery column
+      -- moves: approving an undelivered card first and delivering it after
+      -- lands in the same place, and so does another peer writing the
+      -- deliverer in as approver. Every reopen/reject path clears approved_at
+      -- together with submitted_at, so a legitimate re-delivery never meets
+      -- an approval still standing.
       if new.approved_at is not null
+         and new.submitted_by_user_id is not null
          and (new.approved_at is distinct from old.approved_at
-              or new.approved_by_user_id is distinct from old.approved_by_user_id)
-         and (old.submitted_by_user_id = v_uid
-              or new.submitted_by_user_id = v_uid) then
+              or new.approved_by_user_id is distinct from old.approved_by_user_id
+              or new.submitted_at is distinct from old.submitted_at
+              or new.submitted_by_user_id is distinct from old.submitted_by_user_id)
+         and (new.submitted_by_user_id = v_uid
+              or old.submitted_by_user_id = v_uid
+              or new.approved_by_user_id = new.submitted_by_user_id) then
         raise exception
           'A player cannot approve a scorecard they delivered (game_players.submitted_by_user_id)'
           using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
@@ -228,3 +241,15 @@ as $$
     return new;
   end;
 $$;
+
+comment on function public.guard_game_players_self_update() is
+  '#670 + #704 + #802 + #1049 + #1321 + #1362 + #1855 + #2200: blocks a non-admin '
+  'player from self-approving, self-(un)withdrawing, editing own '
+  'course_handicap post-start, or marking own paid_at (own row), and from '
+  'self-regrouping UNLESS they created the game; the creator may CLEAR their '
+  'own approval (#1362 reopen) but never set it; restricts a non-admin peer to '
+  'ONLY the approval and delivery columns on another player''s row, and never '
+  'lets that peer approve a card they delivered (#2200). No-ops for admin, the '
+  'game creator (another''s row), and the service role. When changing this '
+  'body: copy from the LATEST create-or-replace — find it with grep, not from '
+  'a file''s own claim (trap 4, #1855).';

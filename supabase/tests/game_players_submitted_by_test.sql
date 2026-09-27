@@ -24,8 +24,11 @@
 --     9. a peer changes another column        → REJECTED
 --    10. someone outside the game delivers    → 0 rows
 --    11. someone in another flight delivers   → 0 rows
+--   Approval, end state:
+--    12. approve an open card, then deliver it → REJECTED
+--    13. another peer writes the deliverer in as approver → REJECTED
 --   Insert:
---    12. a forged value on insert             → auth.uid() wins
+--    14. a forged value on insert             → auth.uid() wins
 --
 -- Run via:  supabase test db
 -- See supabase/tests/README.md (same rig as #440).
@@ -35,7 +38,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(14);
 
 \ir fixtures/rls_helpers.psql
 
@@ -95,6 +98,21 @@ create or replace function torny_rls.try_set_paid(p_target uuid)
   begin
     update public.game_players
        set paid_at = now()
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+  $$;
+
+-- Approve with any approver id and no «is it delivered» filter: the hostile
+-- shapes the end-state rule has to catch.
+create or replace function torny_rls.try_set_approval(p_target uuid, p_by uuid)
+  returns boolean language plpgsql as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set approved_at = now(), approved_by_user_id = p_by
      where game_id = torny_rls.game_id() and user_id = p_target;
     get diagnostics v_rows = row_count;
     return v_rows > 0;
@@ -228,7 +246,31 @@ select ok(
   'a player in another flight cannot deliver the card (can_score_for, 0 rows)'
 );
 
--- ── 12. Insert: a forged value is overwritten too ────────────────────────────
+-- ── 12. Approve first, deliver after: the end state is the same, so refused ──
+-- submitted_id is in flight 1 with active_id. The approval on an open card
+-- is allowed as before; the delivery that would make active_id both the one
+-- who delivered and the one who approved is not.
+select torny_rls.as_service();
+select torny_rls.reopen(torny_rls.submitted_id());
+select torny_rls.as_user(torny_rls.active_id());
+select torny_rls.try_set_approval(torny_rls.submitted_id(), torny_rls.active_id());
+select ok(
+  NOT torny_rls.try_deliver(torny_rls.submitted_id()),
+  'approving an open card and delivering it after is refused (0191, end state)'
+);
+
+-- ── 13. Another peer may not write the deliverer in as approver ─────────────
+select torny_rls.as_service();
+select torny_rls.reopen(torny_rls.submitted_id());
+select torny_rls.as_user(torny_rls.active_id());
+select torny_rls.try_deliver(torny_rls.submitted_id());
+select torny_rls.as_user(torny_rls.withdrawn_id());
+select ok(
+  NOT torny_rls.try_set_approval(torny_rls.submitted_id(), torny_rls.active_id()),
+  'another peer may not set approved_by_user_id to the one who delivered (0191)'
+);
+
+-- ── 14. Insert: a forged value is overwritten too ────────────────────────────
 select torny_rls.as_user(torny_rls.admin_id());
 insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at, submitted_by_user_id)
   values (torny_rls.game_id(), torny_rls.outsider_id(), 1, 1, now(), torny_rls.flightmate_id());
