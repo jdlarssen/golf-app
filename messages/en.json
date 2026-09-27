@@ -1596,7 +1596,7 @@
             "body": "If you are two holes down in a section you can call a press, a new side bet on the holes that remain. If your opponent accepts it runs alongside the original, and a round can end up with the front, the back, the overall and two presses on top. Automatic presses at two down are common too. Tørny settles the three main contests, and you keep track of the presses yourselves. Round robin is a relative where the partners swap every sixth hole, so everyone plays with everyone."
           }
         ],
-        "example": "After hole 9: you are 2 holes down on the front nine and lose that one. Holes 10–18: you play strongly back and win 3 more holes than your opponent, taking the back nine. The total score: you have 88 net against your opponent's 89 net over 18 holes — you win the overall. Final result: 1–2 in the Nassau, you won two of the three contests.",
+        "example": "After hole 9: you are 2 strokes behind on the front nine and lose that one. Holes 10–18: you come back strongly, take 3 fewer strokes than your opponent and win the back nine. The total: over 18 holes you have 88 net against your opponent's 89, so you win that too. Final result: 2–1 in the Nassau, you won two of the three contests.",
         "faq": [
           {
             "q": "What does 2-2-2 mean in Nassau?",
@@ -3798,7 +3798,7 @@
       "resendButton": "Resend",
       "resendingBusy": "Sending …",
       "withdrawButton": "Withdraw",
-      "searchPlaceholder": "Search by name, nickname or email...",
+      "searchPlaceholder": "Search by name, nickname or email…",
       "searchAriaLabel": "Search the player list",
       "emptyNoPlayers": "No registered players yet.",
       "emptyNoMatch": "No results for «{query}».",
@@ -5968,7 +5968,7 @@
       "headingPre": "Fire up your golf tournament in a ",
       "headingGold": "couple",
       "headingPost": " of minutes",
-      "body": "Enter your email. If you are new here, we will make you an account.",
+      "body": "You log in with a one-time code sent by email. If you are new here, we create an account for you.",
       "primaryCta": "Create a tournament",
       "secondaryCta": "… or try the demo first"
     },

@@ -687,9 +687,9 @@
         "segment1Heading": "Hull 1–6: 4BBB.",
         "segment1Body": "Begge spiller sin egen ball, og lagets beste stableford-poeng per hull teller.",
         "segment2Heading": "Hull 7–12: Greensome.",
-        "segment2Body": "Begge slår ut, dere velger det beste utslaget, og så slår dere annenhvert slag.",
+        "segment2Body": "Begge slår ut, dere velger det beste utslaget, og så slår dere annethvert slag.",
         "segment3Heading": "Hull 13–18: Foursomes.",
-        "segment3Body": "Dere deler én ball og slår annenhvert slag, også fra tee.",
+        "segment3Body": "Dere deler én ball og slår annethvert slag, også fra tee.",
         "handicapNote": "Netto bruker riktige handicap per segment: full handicap i 4BBB, 60/40 i greensome og 50 % av summen i foursomes.",
         "scoringFromLabel": "Poeng fra",
         "scoringAriaLabel": "Patsome-scoring",
@@ -1421,7 +1421,7 @@
           "Laget får et felles handikap som trekkes fra. Lavest lagtotal vinner."
         ],
         "long": "Florida Scramble er en Texas-scramble-variant med én viktig regel: den spilleren som slo det valgte slaget, hopper over neste slag. Resten av laget slår, og dere velger igjen det beste blant de gjenværende. Slik rullerer dere gjennom hullet, og alle bidrar. Laget spiller lag à 3 eller 4, og lag-handicapet (10–15 % av sum-CH) trekkes fra totalen.",
-        "example": "Hull 8, par 4, lag på 4 (A, B, C, D): A slår det beste utslaget. A hopper over neste slag — B, C og D slår fra det stedet. C slår best. C hopper over — A, B og D putter fra 3 m. B er best og går i hull. Lagets score: 1 (A sitt utslagslag) + 1 (C sitt andre) + 1 (B putter inn) = 3."
+        "example": "Hull 8, par 4, lag på 4 (A, B, C, D): A slår det beste utslaget. A hopper over neste slag, så B, C og D slår fra det stedet. C slår best. C hopper over, og A, B og D putter fra 3 m. B er best og går i hull. Lagets score: 1 (A sitt utslag) + 1 (C sitt andre) + 1 (B putter inn) = 3."
       },
       "singles_matchplay": {
         "shortDescription": "1v1, vinn flest hull.",
@@ -1479,14 +1479,14 @@
           },
           {
             "heading": "Greensome, foursomes og chapman",
-            "body": "I foursomes slår bare én av dere ut, dere bytter på annenhvert hull, og lag-handicapet er 50 prosent av summen. Chapman, også kalt pinehurst, går et steg lenger: begge slår ut, begge slår andreslaget med den andres ball, og så velger dere én ball å spille alternate med inn til hull. Gruesome er versjonen der motstanderen bestemmer hvilket av utslagene deres dere må spille videre med, og den er like ubarmhjertig som navnet lover. Alle fire er i familie, men handicap-regnestykket er ulikt, så sjekk hvilket dere faktisk spiller før dere går ut."
+            "body": "I foursomes slår bare én av dere ut, dere bytter på annethvert hull, og lag-handicapet er 50 prosent av summen. Chapman, også kalt pinehurst, går et steg lenger: begge slår ut, begge slår andreslaget med den andres ball, og så velger dere én ball å spille alternate med inn til hull. Gruesome er versjonen der motstanderen bestemmer hvilket av utslagene deres dere må spille videre med, og den er like ubarmhjertig som navnet lover. Alle fire er i familie, men handicap-regnestykket er ulikt, så sjekk hvilket dere faktisk spiller før dere går ut."
           }
         ],
         "example": "Hull 6, par 4: A slår 210 m til fairway, B slår 195 m i ruff. Dere velger A sitt utslag. B (partneren) slår neste, 160 m til green. A putter til 1 m, B putter inn. Lagets score: 4. Motstanderlaget velger sitt beste utslag, spiller seg inn og fullfører på 5. Dere vinner hullet.",
         "faq": [
           {
             "q": "Hva er forskjellen på greensome og foursomes?",
-            "a": "I greensome slår begge ut, og dere velger det beste utslaget. I foursomes slår bare én ut, og dere bytter på hvem det er annenhvert hull."
+            "a": "I greensome slår begge ut, og dere velger det beste utslaget. I foursomes slår bare én ut, og dere bytter på hvem det er annethvert hull."
           },
           {
             "q": "Hvordan regnes handicap i greensome?",
@@ -1510,7 +1510,7 @@
           "Velg den beste ballen etter andreslagene, og spill annenhver til hullet er i mål.",
           "Laget med best score vinner hullet — det er hull som teller, ikke total."
         ],
-        "long": "To mot to, og Chapman — også kjent som Pinehurst — legger inn et ekstra element. Begge slår fra tee, men så bytter dere: du slår partnerens ball som andreslag, og partneren din slår din ball. Etter andreslagene velger dere hvilken ball dere vil gå videre med, og derfra spiller dere annenhver slag til hullet er i mål. Lag-handicap beregnes som greensome-formelen (60/40-blanding).",
+        "long": "To mot to, og Chapman (også kjent som Pinehurst) har en ekstra vri. Begge slår fra tee, men så bytter dere: du slår partnerens ball som andreslag, og partneren din slår din ball. Etter andreslagene velger dere hvilken ball dere vil gå videre med, og derfra spiller dere annethvert slag til hullet er i mål. Lag-handicap beregnes som greensome-formelen (60/40-blanding).",
         "example": "Hull 11, par 4: A slår ut til 200 m, B til 215 m. A slår B sin ball som andreslag (185 m), B slår A sin ball (195 m). Dere har nå to baller: A sin på 195 m og B sin på 185 m. Dere velger A sin ball (195 m). B slår tredjeslaget, A putter — lagets score 5."
       },
       "gruesome_matchplay": {
@@ -1596,7 +1596,7 @@
             "body": "Ligger du to hull nede i en seksjon, kan du be om en press, altså et nytt sideveddemål på hullene som er igjen. Godtar motstanderen, spilles det parallelt med det opprinnelige, og en runde kan ende med front, back, total og to presses på toppen. Automatisk press ved to nede er også vanlig. Tørny regner de tre hovedoppgjørene, og presses holder dere styr på selv. Round robin er en slektning der partnerne bytter hver sjette hull, så alle spiller med alle."
           }
         ],
-        "example": "Etter hull 9: du er nede 2 hull på front nine og taper den delen. Hull 10–18: du spiller sterk tilbake og vinner 3 hull mer enn motstanderen, du vinner back nine. Totalscoren: du har 88 netto mot motstanderens 89 netto over 18 hull — du vinner helhetsdelen. Sluttresultat: 1–2 i nassau, du vant to av tre oppgjør.",
+        "example": "Etter hull 9: du ligger 2 slag bak på front nine og taper den delen. Hull 10–18: du kommer sterkt tilbake, bruker 3 slag færre enn motstanderen og vinner back nine. Totalen: over 18 hull har du 88 netto mot motstanderens 89, så den vinner du også. Sluttresultat: 2–1 i nassau, du vant to av tre oppgjør.",
         "faq": [
           {
             "q": "Hva betyr 2-2-2 i nassau?",
@@ -1688,7 +1688,7 @@
             "body": "To til fire spillere fungerer, og fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
           }
         ],
-        "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff og D er i bunkeren — ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte — bongo til C.",
+        "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff og D er i bunkeren, så ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte: bongo til C.",
         "faq": [
           {
             "q": "Hva betyr bingo, bango og bongo?",
@@ -1759,11 +1759,11 @@
         "summary": "Dere er på lag à to og spiller 18 hull i tre lagformer, seks hull av hver.",
         "points": [
           "Hull 1–6 er 4BBB: begge spiller sin egen ball, og lagets beste stableford-poeng teller.",
-          "Hull 7–12 er greensome: begge slår ut, dere velger det beste utslaget, og så slår dere annenhvert slag.",
-          "Hull 13–18 er foursomes: dere deler én ball og slår annenhvert slag, også fra tee.",
+          "Hull 7–12 er greensome: begge slår ut, dere velger det beste utslaget, og så slår dere annethvert slag.",
+          "Hull 13–18 er foursomes: dere deler én ball og slår annethvert slag, også fra tee.",
           "Lagets samlede poeng fra alle tre delene teller. Flest poeng vinner."
         ],
-        "long": "Patsome kombinerer tre spilleformer i én runde. Hull 1–6 spilles som 4BBB-stableford: begge spiller sin ball, lagets beste stableford-poeng per hull teller. Hull 7–12 er greensome: begge slår ut, dere velger beste utslag og spiller annenhver slag derfra. Hull 13–18 er foursomes: dere deler én ball og slår annenhver slag, også fra tee. Lagets totale stableford-poeng fra alle tre segmentene summeres, og flest poeng vinner.",
+        "long": "Patsome kombinerer tre spillformer i én runde. Hull 1–6 spilles som 4BBB-stableford: begge spiller sin ball, lagets beste stableford-poeng per hull teller. Hull 7–12 er greensome: begge slår ut, dere velger beste utslag og spiller annethvert slag derfra. Hull 13–18 er foursomes: dere deler én ball og slår annethvert slag, også fra tee. Lagets totale stableford-poeng fra alle tre segmentene summeres, og flest poeng vinner.",
         "example": "Hull 4 (4BBB): A tar 3 stableford-poeng (birdie), B tar 2 (par). Laget tar 3. Hull 8 (greensome): A slår best ut, B slår andreslaget, A tredjeslaget, B putter. Lagets score: 4 → 2 stableford-poeng (par). Hull 15 (foursomes): A slår ut, B slår andreslaget, A chipper, B putter inn. Score 4 → 2 poeng. Laget legger alle poengene fra 18 hull sammen."
       }
     }
@@ -1948,7 +1948,7 @@
       "flightLabel": "Flight {number}",
       "flightYours": "Din",
       "flightFull": "Full",
-      "notInFlight": "Du er ikke plassert i en flight ennå. Trykk «Bli med» for å velge.",
+      "notInFlight": "Du er ikke plassert i en flight ennå. Trykk på en flight for å bli med.",
       "errors": {
         "not_authed": "Du må logge inn for å velge flight.",
         "not_member": "Du er ikke deltaker i dette spillet.",
@@ -2398,9 +2398,9 @@
       "fourballLabel": "4BBB · Hull 1–6",
       "fourballRule": "Spill din egen ball. Lagets beste resultat per hull teller.",
       "greensomeLabel": "Greensome · Hull 7–12",
-      "greensomeRule": "Begge slår ut, velg det beste utslaget, så annenhvert slag.",
+      "greensomeRule": "Begge slår ut, velg det beste utslaget, så annethvert slag.",
       "foursomesLabel": "Foursomes · Hull 13–18",
-      "foursomesRule": "Én ball, annenhvert slag fra tee.",
+      "foursomesRule": "Én ball, annethvert slag fra tee.",
       "teeStarterQuestion": "Hvem slår ut i foursomes for dere?",
       "teeStarterSelectPending": "Velger …",
       "teeStarterErrors": {
@@ -3798,7 +3798,7 @@
       "resendButton": "Send på nytt",
       "resendingBusy": "Sender …",
       "withdrawButton": "Trekk tilbake",
-      "searchPlaceholder": "Søk på navn, kallenavn eller e-post...",
+      "searchPlaceholder": "Søk på navn, kallenavn eller e-post…",
       "searchAriaLabel": "Søk i spillerlisten",
       "emptyNoPlayers": "Ingen registrerte spillere ennå.",
       "emptyNoMatch": "Ingen treff på «{query}».",
@@ -4718,8 +4718,8 @@
       "teeOffHint": "Første flight starter på valgt tidspunkt, de neste forskyves ti minutter hver. La stå tom for å starte rundene manuelt selv.",
       "formatHeading": "Format",
       "customPresetName": "Tilpasset",
-      "customPresetDescription": "Bygg din egen sesjonsliste.",
-      "addSessionButton": "+ Legg til sesjon",
+      "customPresetDescription": "Sett sammen øktene selv.",
+      "addSessionButton": "+ Legg til økt",
       "sessionSelectAria": "Økt {n}",
       "removeSessionAria": "Fjern økt {n}",
       "formats": {
@@ -4746,7 +4746,7 @@
         "plan_tee": "Velg en tee som hører til banen.",
         "plan_preset": "Velg et format.",
         "plan_strategy": "Velg en paring-strategi.",
-        "plan_sessions": "Legg til minst én sesjon i det tilpassede formatet.",
+        "plan_sessions": "Legg til minst én økt i det tilpassede formatet.",
         "plan_best_ball": "Handicap-andelen må være et helt tall mellom 0 og 100.",
         "plan_tee_off_invalid": "Tee-off-tidspunktet er ugyldig.",
         "plan_tee_off_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
@@ -5019,7 +5019,7 @@
       "unevenTeamsWarning": "Lagene er ujevne ({count1} vs {count2}). Kun det minste lagets antall matcher genereres.",
       "step1ValidationMin": "{team} trenger minst {minPerTeam} {minPerTeam, plural, one {spiller} other {spillere}}.",
       "overCapWarning": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Skru ned antall matcher per økt lenger ned, velg færre økter eller lag en klubb-cup for flere.",
-      "overCapWarningSplitDay": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Velg færre sesjoner, eller lag en klubb-cup for flere.",
+      "overCapWarningSplitDay": "Oppsettet gir {totalMatches} matcher. En personlig cup tar maks {matchCap}. Velg færre økter, eller lag en klubb-cup for flere.",
       "capInfoBanner": "Personlig cup: maks {matchCap} matcher. Trenger dere flere, er det en klubb-cup som gjelder.",
       "formatSingles": "Singel",
       "formatFourball": "Four-ball",
@@ -5916,7 +5916,7 @@
     },
     "formats": {
       "heading": "Over 20 spillformer: scramble, stableford, matchplay og flere til",
-      "linkLabel": "Se alle spillformatene"
+      "linkLabel": "Se alle spillformene"
     },
     "audience": {
       "heading": "Golfturnering med venner, i firmaet eller for hele klubben",
@@ -5968,7 +5968,7 @@
       "headingPre": "Fyr opp golfturneringen på et ",
       "headingGold": "par",
       "headingPost": " minutter",
-      "body": "Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.",
+      "body": "Du logger inn med en engangskode på e-post. Er du ny her, lager vi en konto til deg.",
       "primaryCta": "Lag turnering",
       "secondaryCta": "… eller prøv demoen først"
     },
