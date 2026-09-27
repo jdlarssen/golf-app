@@ -7,6 +7,7 @@ import {
   type LocalIdentity,
   type ServerIdentity,
 } from '@/lib/serverIdentity/assess';
+import { e2eEnvGateFailure, missingE2eEnvReason } from './_helpers/envGate';
 
 /**
  * Stops a run that would otherwise be tested against the wrong server (#1299,
@@ -22,8 +23,20 @@ import {
  *
  * Fail-closed on anything that answers but does not match; fail-open only when
  * nothing is listening at all.
+ *
+ * Before that, the env gate (#2226) refuses a run whose authenticated specs
+ * would all skip themselves — see `./_helpers/envGate`.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  const envFailure = e2eEnvGateFailure(process.env);
+  if (envFailure !== null) throw new Error(envFailure);
+  const envGap = missingE2eEnvReason(process.env);
+  if (envGap !== '') {
+    console.warn(
+      `E2E_ALLOW_ENV_SKIP=1: the authenticated specs will skip (${envGap}). This run is not staging evidence.`,
+    );
+  }
+
   const baseURL = config.projects[0]?.use?.baseURL;
   if (!baseURL) return;
 
