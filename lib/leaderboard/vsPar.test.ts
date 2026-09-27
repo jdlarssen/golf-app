@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TeamLine } from '@/lib/leaderboard';
-import { teamLineVsPar, vsParOverPlayed } from './vsPar';
+import { formatVsPar, teamLineVsPar, vsParOverPlayed } from './vsPar';
 
 // Type A (#2217 D6): «mot par» = total − balls × (par for the holes the
 // competitor has a score on). A complete game gives the same number as
@@ -69,5 +69,18 @@ describe('teamLineVsPar', () => {
       0,
     );
     expect(teamLineVsPar(l, 8)).toBeNull();
+  });
+});
+
+describe('formatVsPar (#2253)', () => {
+  it.each([
+    [null, '—'],
+    [0, 'E'],
+    [3, '+3'],
+    [1, '+1'],
+    [-2, '\u22122'],
+    [-11, '\u221211'],
+  ] as const)('%s → %s', (n, label) => {
+    expect(formatVsPar(n)).toBe(label);
   });
 });

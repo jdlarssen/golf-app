@@ -53,3 +53,15 @@ export function teamLineVsPar(
     holesInScope: line.holes.length,
   });
 }
+
+/**
+ * #2253: a vs-par number as the label every net-to-par surface shows — the
+ * live board, the podium and the duel. `null` (no hole played) → «—», 0 → «E»,
+ * over par → «+3», under par → «−2» with U+2212, the minus sign the share card
+ * already uses.
+ */
+export function formatVsPar(n: number | null): string {
+  if (n === null) return '—';
+  if (n === 0) return 'E';
+  return n > 0 ? `+${n}` : `−${Math.abs(n)}`;
+}
