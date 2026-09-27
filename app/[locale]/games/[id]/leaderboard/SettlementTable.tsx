@@ -24,9 +24,10 @@ interface SettlementTableProps {
  */
 export function SettlementTable({ settlement, playersById }: SettlementTableProps) {
   const t = useTranslations('leaderboard.common.settlement');
+  const tCommon = useTranslations('leaderboard.common');
   const name = (userId: string) => {
     const info = playersById.get(userId);
-    return info?.nickname || info?.name || userId;
+    return info?.nickname || info?.name || tCommon('unknownPlayerFull');
   };
 
   return (
