@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFakeDb } from './testing/fakeDb';
+import { REFUSED_REPLY_FIXTURE } from './testing/refusedReplyFixture';
+import { REFUSED_WRITE_ERROR } from './classifyError';
 import type { LocalScore } from './db';
 
 // ── Dexie mock ────────────────────────────────────────────────────────────────
@@ -18,9 +20,26 @@ const rpcMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 // #1368: drainQueue slår opp innlogget bruker én gang per drain for å avgjøre
 // om raden ble tastet på DENNE enheten.
 const getSessionMock = vi.fn<() => Promise<unknown>>();
+// #2211: a locked refusal reads the server's row before it settles —
+// `from('scores').select(…).eq(…).eq(…).eq(…).maybeSingle()`.
+const maybeSingleMock = vi.fn<() => Promise<unknown>>();
+const eqMock = vi.fn();
+const fromMock = vi.fn((table: string) => {
+  void table;
+  const chain = {
+    select: () => chain,
+    eq: (column: string, value: unknown) => {
+      eqMock(column, value);
+      return chain;
+    },
+    maybeSingle: maybeSingleMock,
+  };
+  return chain;
+});
 vi.mock('@/lib/supabase/client', () => ({
   getBrowserClient: () => ({
     rpc: rpcMock,
+    from: fromMock,
     auth: { getSession: getSessionMock },
   }),
 }));
@@ -297,5 +316,203 @@ describe('drainQueue — sperret etter feilet eierbytte-wipe (#1959)', () => {
 
     const { drainQueue } = await import('./syncWorker');
     expect((await drainQueue()).pushed).toBe(1);
+  });
+});
+
+// #2211: a write the server refuses because the card is locked (submitted,
+// withdrawn, round over) used to vanish: the all-NULL reply read as 'equal',
+// the item was dequeued as kept-local, and the phone kept its number for good.
+const FINISHED_GAME_GUARD =
+  'On a finished game only putts may be changed (scores back-fill guard, #1290)';
+const RLS_INSERT_ERROR =
+  'new row violates row-level security policy for table "scores"';
+
+/** The row the server actually has — what the settle reads back. */
+const SERVER_ROW = {
+  strokes: 5,
+  putts: 2,
+  entered_by: 'mate',
+  client_updated_at: '2026-09-25T09:59:00+00:00',
+  updated_at: '2026-09-25T09:59:00.5+00:00',
+};
+
+function setAttempts(attemptCount: number) {
+  fake.syncQueue.set(ID, { ...fake.syncQueue.get(ID)!, attemptCount });
+}
+
+describe('drainQueue — låst kort-avslag (#2211)', () => {
+  it('NULL-svaret setter telefonen tilbake til serverens tall og karantenerer', async () => {
+    getSessionMock.mockResolvedValue({
+      data: { session: { user: { id: 'me' } } },
+      error: null,
+    });
+    seedScore(4, '2026-09-25T10:00:00.000Z', { userId: 'mate', enteredBy: 'me' });
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({ data: SERVER_ROW, error: null });
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(fromMock).toHaveBeenCalledWith('scores');
+    expect(eqMock.mock.calls).toEqual([
+      ['game_id', 'g1'],
+      ['user_id', 'mate'],
+      ['hole_number', 5],
+    ]);
+    expect(fake.scores.get(ID)).toMatchObject({
+      strokes: 5,
+      putts: 2,
+      enteredBy: 'mate',
+      clientUpdatedAt: SERVER_ROW.client_updated_at,
+      serverUpdatedAt: SERVER_ROW.updated_at,
+    });
+    expect(fake.syncQueue.get(ID)).toMatchObject({
+      attemptCount: 1,
+      lastError: REFUSED_WRITE_ERROR,
+      abandonedAt: expect.any(String),
+    });
+    expect(fake.conflicts.size).toBe(0);
+    expect(res.abandoned).toBe(1);
+  });
+
+  it('0148-feilen på femte forsøk gir samme oppgjør og karantene', async () => {
+    seedScore(4, '2026-09-25T10:00:00.000Z');
+    setAttempts(4);
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: FINISHED_GAME_GUARD },
+    });
+    maybeSingleMock.mockResolvedValueOnce({ data: SERVER_ROW, error: null });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.scores.get(ID)!.strokes).toBe(5);
+    expect(fake.syncQueue.get(ID)).toMatchObject({
+      attemptCount: 5,
+      lastError: FINISHED_GAME_GUARD,
+      abandonedAt: expect.any(String),
+    });
+  });
+
+  it('feiler serverlesingen, står elementet til neste drain og raden er urørt', async () => {
+    seedScore(4, '2026-09-25T10:00:00.000Z');
+    rpcMock.mockResolvedValueOnce({ data: REFUSED_REPLY_FIXTURE, error: null });
+    maybeSingleMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'TypeError: Failed to fetch' },
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(fake.scores.get(ID)!.strokes).toBe(4);
+    const item = fake.syncQueue.get(ID)!;
+    expect(item).toMatchObject({ attemptCount: 1, lastError: REFUSED_WRITE_ERROR });
+    expect(item.abandonedAt).toBeUndefined();
+    expect(res.errored).toBe(1);
+  });
+
+  it('avslått førstegangsslag: den lokale raden slettes og elementet karanteneres', async () => {
+    seedScore(4, '2026-09-25T10:00:00.000Z');
+    setAttempts(4);
+    rpcMock.mockResolvedValueOnce({ data: null, error: { message: RLS_INSERT_ERROR } });
+    maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.scores.has(ID)).toBe(false);
+    expect(fake.syncQueue.get(ID)).toMatchObject({
+      lastError: RLS_INSERT_ERROR,
+      abandonedAt: expect.any(String),
+    });
+  });
+
+  it('uten sesjon karanteneres ingenting: en tapt sesjon ser ut som et låst kort', async () => {
+    getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+    seedScore(4, '2026-09-25T10:00:00.000Z');
+    setAttempts(4);
+    rpcMock.mockResolvedValueOnce({ data: null, error: { message: RLS_INSERT_ERROR } });
+
+    const { drainQueue } = await import('./syncWorker');
+    const res = await drainQueue();
+
+    expect(fake.scores.get(ID)!.strokes).toBe(4);
+    const item = fake.syncQueue.get(ID)!;
+    expect(item).toMatchObject({ attemptCount: 5, lastError: RLS_INSERT_ERROR });
+    expect(item.abandonedAt).toBeUndefined();
+    expect(maybeSingleMock).not.toHaveBeenCalled();
+    expect(res.errored).toBe(1);
+  });
+
+  it('tapt svar sendt på nytt (samme øyeblikk i serverformat) er ikke et avslag', async () => {
+    seedScore(4, '2026-09-25T10:00:00.123Z');
+    rpcMock.mockResolvedValueOnce({
+      data: [
+        {
+          was_applied: false,
+          strokes: 4,
+          putts: null,
+          entered_by: 'u1',
+          client_updated_at: '2026-09-25T10:00:00.123+00:00',
+          updated_at: '2026-09-25T10:00:01+00:00',
+        },
+      ],
+      error: null,
+    });
+
+    const { drainQueue } = await import('./syncWorker');
+    await drainQueue();
+
+    expect(fake.syncQueue.has(ID)).toBe(false);
+    expect(fake.scores.get(ID)).toMatchObject({
+      strokes: 4,
+      clientUpdatedAt: '2026-09-25T10:00:00.123Z',
+    });
+    expect(maybeSingleMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('drainQueue — kall under en pågående drain (#2211)', () => {
+  it('gir én ny kjøring som sender elementet som kom i køen imens', async () => {
+    seedScore(4, '2026-09-25T10:00:00.000Z');
+    const LATER = 'g1:u1:6';
+    const { drainQueue } = await import('./syncWorker');
+
+    rpcMock.mockImplementationOnce(async () => {
+      // Hole 6 is typed while hole 5 is in the air; HoleClient then calls
+      // drainQueue, which finds the first drain still running.
+      fake.scores.set(LATER, {
+        ...fake.scores.get(ID)!,
+        id: LATER,
+        holeNumber: 6,
+        strokes: 3,
+        clientUpdatedAt: '2026-09-25T10:00:01.000Z',
+      });
+      fake.syncQueue.set(LATER, {
+        id: LATER,
+        scoreId: LATER,
+        attemptCount: 0,
+        lastError: null,
+        createdAt: '2026-09-25T10:00:01.000Z',
+      });
+      await drainQueue();
+      return {
+        data: [{ was_applied: true, updated_at: '2026-09-25T10:00:02.000Z' }],
+        error: null,
+      };
+    });
+    rpcMock.mockResolvedValueOnce({
+      data: [{ was_applied: true, updated_at: '2026-09-25T10:00:03.000Z' }],
+      error: null,
+    });
+
+    await drainQueue();
+
+    await vi.waitFor(() => expect(fake.syncQueue.size).toBe(0));
+    expect(rpcMock).toHaveBeenCalledTimes(2);
+    const second = rpcMock.mock.calls[1]?.[1] as { p_hole_number: number };
+    expect(second.p_hole_number).toBe(6);
   });
 });

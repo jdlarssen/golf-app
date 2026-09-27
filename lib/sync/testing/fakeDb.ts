@@ -49,6 +49,9 @@ function buildLocalDb(
         const row = scores.get(id);
         if (row) scores.set(id, { ...row, ...patch });
       }),
+      delete: vi.fn(async (id: string) => {
+        scores.delete(id);
+      }),
     },
     syncQueue: {
       get: vi.fn(async (id: string) => syncQueue.get(id)),

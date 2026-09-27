@@ -184,9 +184,16 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
       const { currentGame, otherGames } = summary;
 
       // Deleting only the ids that were quarantined at render time guarantees
-      // active (still-retrying) items are never swept up.
+      // active (still-retrying) items are never swept up. The confirm guards
+      // strokes that could still be sent; a locked-card refusal (#2211) never
+      // can, and the phone already shows the server's number, so it is skipped.
       const handleDismissQuarantine = async () => {
-        if (!window.confirm(t('quarantineDismissConfirm'))) return;
+        if (
+          !summary.lockedOnly &&
+          !window.confirm(t('quarantineDismissConfirm'))
+        ) {
+          return;
+        }
         await localDb.syncQueue.bulkDelete(abandoned.map((i) => i.id));
       };
 
@@ -232,9 +239,18 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
               </p>
             )}
           </div>
-          <p className="mt-1 text-xs font-normal opacity-80">
-            {t('quarantineRecoveryHint')}
-          </p>
+          {summary.lockedOnly ? (
+            <p
+              data-testid="quarantine-locked-hint"
+              className="mt-1 text-xs font-normal opacity-80"
+            >
+              {t('quarantineLockedHint')}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs font-normal opacity-80">
+              {t('quarantineRecoveryHint')}
+            </p>
+          )}
           {currentGame && (
             <div className="mt-1 flex flex-wrap gap-x-3">
               {currentGame.holes.map((hole) => (

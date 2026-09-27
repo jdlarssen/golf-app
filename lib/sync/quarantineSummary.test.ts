@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SyncQueueItem } from './db';
 import { summarizeQuarantine, formatHoleList } from './quarantineSummary';
+import { REFUSED_WRITE_ERROR } from './classifyError';
 
 function qItem(
   overrides: Partial<SyncQueueItem> & { scoreId: string },
@@ -117,6 +118,22 @@ describe('summarizeQuarantine', () => {
       'g1',
     );
     expect(s.errors).toEqual(['boom', 'other failure', 'from unparsed']);
+  });
+
+  // #2211: a locked-card refusal can never be sent — the banner explains it
+  // and drops the «are you sure?» only when every quarantined item is one.
+  it.each([
+    [[REFUSED_WRITE_ERROR, 'new row violates row-level security policy'], true],
+    [[], false],
+    [[REFUSED_WRITE_ERROR, 'duplicate key value violates unique constraint'], false],
+  ])('lockedOnly for %j → %s', (lastErrors, expected) => {
+    const s = summarizeQuarantine(
+      lastErrors.map((lastError, i) =>
+        qItem({ scoreId: `g1:u1:${i + 1}`, lastError }),
+      ),
+      'g1',
+    );
+    expect(s.lockedOnly).toBe(expected);
   });
 });
 

@@ -47,11 +47,12 @@ export function isActiveForGame(item: SyncQueueItem, gameId: string): boolean {
  *
  * `blockingGameIds` is every game this delivery can freeze — this round, plus a
  * split-cup front9 sibling round on a back9 host (#1466: `submitScorecard`
- * marks the sibling delivered too). A frozen card makes the sync RPC return
- * `was_applied=false`, which the sync worker treats as success and DELETES the
- * queued item — so a stroke queued for either game would vanish. Scoping the
- * block naively to the current gameId alone would reintroduce exactly the data
- * loss the #668 block exists to prevent.
+ * marks the sibling delivered too). A frozen card makes RLS refuse the sync
+ * RPC's write, and the sync worker quarantines the item (#2211,
+ * `interpretUpsertReply`) — the stroke never reaches the server either way. So
+ * a stroke queued for either game would be lost. Scoping the block naively to
+ * the current gameId alone would reintroduce exactly the data loss the #668
+ * block exists to prevent.
  *
  * Quarantined items never drain, so blocking on them would trap the player
  * forever — they are excluded.
