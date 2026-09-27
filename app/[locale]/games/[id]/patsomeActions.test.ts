@@ -51,7 +51,7 @@ describe('setPatsomeTeeStarter', () => {
 
   it('kaller ikke i spillet → not_in_game', async () => {
     getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
-    serverMock = buildSupabaseMock([{ data: null, error: null }]);
+    serverMock = buildSupabaseMock([{ data: null, error: null }], {}, { strictSingle: true });
     const { setPatsomeTeeStarter } = await import('./patsomeActions');
 
     const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, CALLER_ID);
@@ -77,7 +77,7 @@ describe('setPatsomeTeeStarter', () => {
     serverMock = buildSupabaseMock([
       { data: { team_number: TEAM_NUMBER }, error: null },
       { data: null, error: null },
-    ]);
+    ], {}, { strictSingle: true });
     const { setPatsomeTeeStarter } = await import('./patsomeActions');
 
     const result = await setPatsomeTeeStarter(
@@ -235,7 +235,7 @@ describe('setPatsomeTeeStarter — feil vs. fravær (#1445)', () => {
       { data: { team_number: TEAM_NUMBER }, error: null },
       { data: { team_number: TEAM_NUMBER }, error: null },
       { data: null, error: null },
-    ]);
+    ], {}, { strictSingle: true });
     const { setPatsomeTeeStarter } = await import('./patsomeActions');
 
     const result = await setPatsomeTeeStarter(GAME_ID, TEAM_NUMBER, PARTNER_ID);
