@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rankTeams } from './tiebreaker';
+import { rankTeams, rankingHolesByNumber, UNPLAYED_PADDING } from './tiebreaker';
 
 describe('rankTeams', () => {
   it('orders by total ascending', () => {
@@ -103,5 +103,73 @@ describe('rankTeams', () => {
     const result = rankTeams(teams);
     expect(result[0].rank).toBe(1);
     expect(result[1].rank).toBe(2);
+  });
+});
+
+// #2217 (D5): the ranking array is indexed on HOLE NUMBER, not position, so the
+// back9/back6/back3/hole-18 tiers read real data for a segment game. One home
+// for the rule bestBall.ts (#1441 D11) and lib/leaderboard.ts both feed rankTeams.
+describe('rankingHolesByNumber', () => {
+  const rows = (numbers: number[], net: (n: number) => number | null) =>
+    numbers.map((holeNumber) => ({ holeNumber, teamNet: net(holeNumber) }));
+  const range = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+  it('maps a full round slot i to hole i+1', () => {
+    expect(rankingHolesByNumber(rows(range(1, 18), (n) => n))).toEqual(range(1, 18));
+  });
+
+  it('puts a back9 game on slots 9–17 and fills slots 0–8 with 0', () => {
+    const arr = rankingHolesByNumber(rows(range(10, 18), (n) => n + 100));
+    expect(arr).toHaveLength(18);
+    expect(arr.slice(0, 9)).toEqual(Array(9).fill(0));
+    expect(arr.slice(9, 18)).toEqual(range(110, 118));
+  });
+
+  it('puts a front9 game on slots 0–8 and fills slots 9–17 with 0', () => {
+    const arr = rankingHolesByNumber(rows(range(1, 9), () => 4));
+    expect(arr.slice(0, 9)).toEqual(Array(9).fill(4));
+    expect(arr.slice(9, 18)).toEqual(Array(9).fill(0));
+  });
+
+  it('pads only the in-scope holes of a team with no score in scope', () => {
+    const arr = rankingHolesByNumber(rows(range(10, 18), () => null));
+    expect(arr.slice(0, 9)).toEqual(Array(9).fill(0));
+    expect(arr.slice(9, 18)).toEqual(Array(9).fill(UNPLAYED_PADDING));
+  });
+
+  it('counts a missing in-scope hole as 0 once the team has played any hole', () => {
+    const arr = rankingHolesByNumber(rows(range(10, 18), (n) => (n === 12 ? null : 4)));
+    expect(arr[11]).toBe(0);
+    expect(arr.filter((v) => v === 4)).toHaveLength(8);
+    expect(arr).not.toContain(UNPLAYED_PADDING);
+  });
+
+  it('reads the hole number, not the input order', () => {
+    const shuffled = [
+      { holeNumber: 18, teamNet: 5 },
+      { holeNumber: 10, teamNet: 3 },
+    ];
+    const arr = rankingHolesByNumber(shuffled);
+    expect(arr[9]).toBe(3);
+    expect(arr[17]).toBe(5);
+  });
+
+  it('lets rankTeams break a back9 tie on the last holes', () => {
+    // Equal total 36; team 1 is better on 13–18.
+    const team1 = rankingHolesByNumber(
+      rows(range(10, 18), (n) => (n <= 12 ? 6 : 3)),
+    );
+    const team2 = rankingHolesByNumber(
+      rows(range(10, 18), () => 4),
+    );
+    const ranked = rankTeams([
+      { id: 1, holes: team1 },
+      { id: 2, holes: team2 },
+    ]);
+    expect(ranked.map((r) => [r.id, r.rank])).toEqual([
+      [1, 1],
+      [2, 2],
+    ]);
   });
 });
