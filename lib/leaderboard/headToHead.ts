@@ -4,9 +4,15 @@
  * verdict. The component maps `verdict.kind` to copy and picks the separator.
  */
 
+/**
+ * `scoreLabel` is an optional display text for the score («+2», «E» for net to
+ * par, #2253); the verdict uses it instead of the bare number.
+ */
+type HeadToHeadInputSide = { userId: string; score: number; scoreLabel?: string };
+
 export type HeadToHeadInput = {
-  sideA: { userId: string; score: number };
-  sideB: { userId: string; score: number };
+  sideA: HeadToHeadInputSide;
+  sideB: HeadToHeadInputSide;
   /**
    * The winner's userId, or null for a tie. Passed in because a tiebreak the
    * score alone can't see may decide it (Skins: equal skins, more holes won).
@@ -33,6 +39,10 @@ export type HeadToHeadSummary = {
 // (U+2212), so «4 mot −3» never reads as «4--3».
 function formatScore(n: number): string {
   return n < 0 ? `−${Math.abs(n)}` : String(n);
+}
+
+function scoreText(side: HeadToHeadInputSide): string {
+  return side.scoreLabel ?? formatScore(side.score);
 }
 
 export function headToHeadSummary({
@@ -64,8 +74,8 @@ export function headToHeadSummary({
   if (winner === 'tie') {
     verdict = {
       kind: 'tie',
-      scoreA: formatScore(sideA.score),
-      scoreB: formatScore(sideB.score),
+      scoreA: scoreText(sideA),
+      scoreB: scoreText(sideB),
     };
   } else if (sideA.score === sideB.score) {
     // Equal score, decided on a tiebreak (e.g. most holes won).
@@ -75,8 +85,8 @@ export function headToHeadSummary({
     verdict = {
       kind: 'win',
       winner,
-      winnerScore: formatScore(winnerSide.score),
-      loserScore: formatScore(loserSide.score),
+      winnerScore: scoreText(winnerSide),
+      loserScore: scoreText(loserSide),
     };
   }
 

@@ -86,4 +86,22 @@ describe('headToHeadSummary', () => {
       ).toEqual(expected);
     },
   );
+
+  it('uses the sides’ display labels in the verdict (#2253: net to par «−1»/«+2»/«E»)', () => {
+    const summary = (b: { score: number; scoreLabel: string }) =>
+      headToHeadSummary({
+        sideA: { userId: 'u1', score: -1, scoreLabel: '−1' },
+        sideB: { userId: 'u2', ...b },
+        winnerUserId: 'u1',
+        lowerWins: true,
+      }).verdict;
+
+    expect(summary({ score: 2, scoreLabel: '+2' })).toEqual({
+      kind: 'win',
+      winner: 'a',
+      winnerScore: '−1',
+      loserScore: '+2',
+    });
+    expect(summary({ score: 0, scoreLabel: 'E' })).toMatchObject({ loserScore: 'E' });
+  });
 });

@@ -2510,6 +2510,7 @@
       "unknownPlayerFull": "(unknown player)",
       "noPlayersToShow": "No players to show.",
       "slagLabel": "strokes",
+      "vsParLabel": "to par",
       "poengLabel": "points",
       "holesPlayedCount": "{count} holes played",
       "hullChip": "{count} holes",

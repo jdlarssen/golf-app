@@ -17,6 +17,7 @@ import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
+import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import { renderLiveBoard } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -209,13 +210,17 @@ export async function renderSoloStrokeplay(opts: {
       const [a, b] = [...result.players].sort(
         (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
       );
+      // #2253: a game ranked on net to par shows that number («−1», «E»);
+      // the bar still reads the plain number, lowest wins either way.
+      const toPar = result.ranking === 'net_to_par';
       const sideFor = (pl: typeof a) => {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
           name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
-          score: pl.totalNetStrokes,
+          score: toPar ? (pl.netToPar ?? 0) : pl.totalNetStrokes,
+          ...(toPar ? { scoreLabel: formatVsPar(pl.netToPar) } : {}),
           subLabel: th2h('subLabelGross', { gross: pl.totalGrossStrokes }),
         };
       };
@@ -237,7 +242,7 @@ export async function renderSoloStrokeplay(opts: {
           gameId={gameId}
           gameName={game.name}
           formatLabel={`Slagspill · ${tc('netto')}`}
-          unitLabel="slag"
+          unitLabel={toPar ? tc('vsParLabel') : 'slag'}
           lowerWins
           sideA={sideFor(a)}
           sideB={sideFor(b)}
