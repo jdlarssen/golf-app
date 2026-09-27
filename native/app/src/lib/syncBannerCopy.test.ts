@@ -22,6 +22,7 @@ const TEXT_MAP = {
   quarantineOtherGameOther: 'quarantineOtherGame',
   abandonedMessage: 'abandonedMessage',
   quarantineRecoveryHint: 'quarantineRecoveryHint',
+  quarantineLockedHint: 'quarantineLockedHint',
   quarantineDetailsTitle: 'quarantineDetailsTitle',
   quarantineDismiss: 'quarantineDismiss',
   quarantineDismissConfirm: 'quarantineDismissConfirm',

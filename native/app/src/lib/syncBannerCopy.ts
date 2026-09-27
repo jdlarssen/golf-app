@@ -16,6 +16,9 @@ export const SYNC_BANNER_TEXT = {
   abandonedMessage: 'Kunne ikke lagre {count} slag. Kontakt arrangøren.',
   quarantineRecoveryHint:
     'Tast slaget på nytt mens runden er i gang, så prøver appen å sende det igjen.',
+  /** #2211: all karantene er låste avslag (levert kort / runden er over). */
+  quarantineLockedHint:
+    'Kortet er levert eller runden er over, så endringen kom ikke med. Arrangøren kan åpne kortet igjen hvis tallet må rettes.',
   quarantineDetailsTitle: 'Tekniske detaljer',
   quarantineDismiss: 'Fjern varselet',
   quarantineDismissConfirm:

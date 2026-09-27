@@ -10,6 +10,7 @@
 import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ConflictRecord, SyncQueueItem } from '../../data/db';
+import { REFUSED_WRITE_ERROR } from '../../../../../lib/sync/classifyError';
 import { SyncBanner } from './SyncBanner';
 
 const GAME = 'game-1';
@@ -40,12 +41,20 @@ const { deleteQueueItem, deleteConflict } = require('../../data/db') as {
 };
 const { drainQueue } = require('../../data/syncWorker') as { drainQueue: jest.Mock };
 
-function item(id: string, gameId: string, hole: number, abandoned: boolean): SyncQueueItem {
+function item(
+  id: string,
+  gameId: string,
+  hole: number,
+  abandoned: boolean,
+  // En permanent feil som IKKE er et låst kort: den har webbens vanlige tekst og
+  // bekreftelse. Et låst avslag (#2211) får sin egen gren, se testen under.
+  abandonedError = 'permission denied for table scores',
+): SyncQueueItem {
   return {
     id,
     scoreId: `${gameId}:${ME}:${hole}`,
     attemptCount: abandoned ? 5 : 1,
-    lastError: abandoned ? 'new row violates row-level security policy' : 'Network request failed',
+    lastError: abandoned ? abandonedError : 'Network request failed',
     createdAt: '2026-09-21T10:00:00.000Z',
     abandonedAt: abandoned ? '2026-09-21T10:05:00.000Z' : null,
   };
@@ -84,7 +93,8 @@ describe('SyncBanner', () => {
       ),
     );
     expect(screen.getByText('Ett slag fra en annen runde ble ikke lagret.')).toBeTruthy();
-    expect(screen.getByText('new row violates row-level security policy')).toBeTruthy();
+    expect(screen.getByText('permission denied for table scores')).toBeTruthy();
+    expect(screen.queryByTestId('quarantine-locked-hint')).toBeNull();
 
     // «Prøv igjen» finnes fordi hull 5 fortsatt prøver.
     await fireEvent.press(screen.getByTestId('quarantine-retry'));
@@ -104,6 +114,20 @@ describe('SyncBanner', () => {
     // Bare karantene-radene — hull 5 prøver fortsatt og blir liggende.
     expect(deleteQueueItem.mock.calls.map((c) => c[1]).sort()).toEqual(['q3', 'q7', 'q9']);
     expect(mockState.queue.map((i) => i.id)).toEqual(['q5']);
+
+    // #2211: bare låste avslag → varselet sier hvorfor, og fjernes uten å
+    // spørre (et slikt slag kan aldri sendes). Samme skjerm: neste lesing av
+    // køen tar med seg det nye avslaget.
+    alert.mockClear();
+    deleteQueueItem.mockClear();
+    mockState.queue = [item('q4', GAME, 4, true, REFUSED_WRITE_ERROR)];
+    await waitFor(() => expect(screen.getByTestId('quarantine-locked-hint')).toBeTruthy(), {
+      timeout: 3000,
+    });
+    await fireEvent.press(screen.getByTestId('quarantine-dismiss'));
+    await waitFor(() => expect(screen.queryByTestId('quarantine-banner')).toBeNull());
+    expect(alert).not.toHaveBeenCalled();
+    expect(deleteQueueItem.mock.calls.map((c) => c[1])).toEqual(['q4']);
     alert.mockRestore();
   });
 

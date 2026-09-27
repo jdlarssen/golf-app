@@ -78,6 +78,14 @@ const HOLE_COUNT = 18;
  * appen, og uten linja finner ingen den.
  */
 const TAP_INSTRUCTION = 'Trykk kort = par. Bruk − / +.';
+/**
+ * #2211: merket ved navnet på et levert kort. Ordrett webbens
+ * `holes.scoreCard.submittedBadge` (samme ord som `game.players.stateSubmitted`).
+ * Kortet er låst: serveren fryser et levert kort, så et tall tastet her ville
+ * aldri blitt lagret. Ingen admin-unntak (eierens svar 2A) — et levert kort
+ * åpnes igjen med «Åpne for redigering» på spillersiden.
+ */
+const SUBMITTED_BADGE = 'Levert';
 /** `scores.putts` har CHECK (0..10) fra migrasjon 0123 — samme tak her. */
 const MAX_PUTTS = 10;
 /** Hvor ofte skjermen leser SQLite på nytt. Samme takt som Sync-laben. */
@@ -353,6 +361,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
                 nameOf,
               })}
               locked={locked || card.submittedAt != null}
+              submitted={card.submittedAt != null}
               onStrokes={(delta) =>
                 void adjustStrokes(
                   scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
@@ -378,7 +387,8 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
               hole={hole}
               score={byUserHole.get(`${entry.user_id}#${holeNumber}`)}
               isMe={entry.user_id === userId}
-              locked={locked}
+              locked={locked || entry.submitted_at != null}
+              submitted={entry.submitted_at != null}
               showPutts={capturesPutts && putts.enabled}
               onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
               onFirstEntry={() => void setFirstEntryStrokes(entry.user_id)}
@@ -524,6 +534,7 @@ function TeamCardView({
   extra,
   teeStarterName,
   locked,
+  submitted,
   onStrokes,
   onFirstEntry,
   onClearStrokes,
@@ -535,6 +546,8 @@ function TeamCardView({
   extra: number | null;
   teeStarterName: string | null;
   locked: boolean;
+  /** #2211: laget har levert — «Levert»-merket ved navnet. */
+  submitted: boolean;
   onStrokes: (delta: number) => void;
   onFirstEntry: () => void;
   onClearStrokes: () => void;
@@ -542,16 +555,25 @@ function TeamCardView({
   const { ui } = useTheme();
   return (
     <Pressable
-      style={ui.card}
+      style={[ui.card, locked && styles.cardLocked]}
       testID={`team-card-${card.teamNumber}`}
       onPress={onFirstEntry}
       disabled={locked}
     >
       <View style={styles.cardHead}>
-        <Text style={[ui.body, isMine && styles.meName]}>
-          {card.label}
-          {isMine ? ' (ditt lag)' : ''}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={[ui.body, isMine && styles.meName]}>
+            {card.label}
+            {isMine ? ' (ditt lag)' : ''}
+          </Text>
+          {submitted ? (
+            <View style={ui.badge}>
+              <Text style={ui.badgeText} testID={`team-${card.teamNumber}-submitted`}>
+                {SUBMITTED_BADGE}
+              </Text>
+            </View>
+          ) : null}
+        </View>
         {extra != null && extra !== 0 ? (
           <View style={ui.badge}>
             <Text
@@ -583,7 +605,8 @@ function TeamCardView({
         onPress={onClearStrokes}
         testID={`team-${card.teamNumber}-undo`}
       />
-      {score?.strokes == null ? (
+      {/* «Trykk kort = par» er et løfte et låst kort ikke kan holde (#2211). */}
+      {score?.strokes == null && !locked ? (
         <Text style={ui.muted} testID={`team-${card.teamNumber}-hint`}>
           {TAP_INSTRUCTION}
         </Text>
@@ -598,6 +621,7 @@ function PlayerCard({
   score,
   isMe,
   locked,
+  submitted,
   showPutts,
   onStrokes,
   onFirstEntry,
@@ -609,6 +633,8 @@ function PlayerCard({
   score: LocalScore | undefined;
   isMe: boolean;
   locked: boolean;
+  /** #2211: spilleren har levert — «Levert»-merket ved navnet. */
+  submitted: boolean;
   /** `formatCapturesPutts(mode) && bryteren er på` — webbens gate (#2000). */
   showPutts: boolean;
   onStrokes: (delta: number) => void;
@@ -625,16 +651,25 @@ function PlayerCard({
   // trengs ingen stopPropagation slik webben må ha.
   return (
     <Pressable
-      style={ui.card}
+      style={[ui.card, locked && styles.cardLocked]}
       testID={`player-card-${entry.user_id}`}
       onPress={onFirstEntry}
       disabled={locked}
     >
       <View style={styles.cardHead}>
-        <Text style={[ui.body, isMe && styles.meName]}>
-          {displayName(player)}
-          {isMe ? ' (deg)' : ''}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={[ui.body, isMe && styles.meName]}>
+            {displayName(player)}
+            {isMe ? ' (deg)' : ''}
+          </Text>
+          {submitted ? (
+            <View style={ui.badge}>
+              <Text style={ui.badgeText} testID={`player-${entry.user_id}-submitted`}>
+                {SUBMITTED_BADGE}
+              </Text>
+            </View>
+          ) : null}
+        </View>
         {extra !== 0 ? (
           <View style={ui.badge}>
             <Text style={[ui.badgeText, ui.num]} testID={`player-${entry.user_id}-extra`}>
@@ -666,7 +701,7 @@ function PlayerCard({
           testIDPrefix={`player-${entry.user_id}-putts`}
         />
       ) : null}
-      {score?.strokes == null ? (
+      {score?.strokes == null && !locked ? (
         <Text style={ui.muted} testID={`player-${entry.user_id}-hint`}>
           {TAP_INSTRUCTION}
         </Text>
@@ -815,6 +850,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  // Navnet og «Levert»-merket (#2211) side om side; bryter heller enn å
+  // skyve slag-badgen ut av kortet.
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flexShrink: 1,
+    gap: 8,
+  },
+  // Et låst kort (levert, eller runden er over) er grått, samme verdi som
+  // webbens `ScoreCard` (#2211). Før ble bare stepperne dempet.
+  cardLocked: { opacity: 0.6 },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   meName: { fontFamily: FONTS.sansBold },
   // Fakta til venstre, putt-bryteren til høyre. `gap` holder dem fra hverandre
