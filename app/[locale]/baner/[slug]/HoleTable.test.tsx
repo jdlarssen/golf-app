@@ -31,11 +31,12 @@ describe('HoleTable (#1023)', () => {
 
     const rows = table.querySelectorAll('tbody tr');
     expect(rows).toHaveLength(3);
-    // All gender pars identical → single Par column: hole, par, index.
-    expect(rows[0].querySelectorAll('td')).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent('1');
-    expect(rows[0]).toHaveTextContent('5');
-    expect(rows[0]).toHaveTextContent('7');
-    expect(rows[1]).toHaveTextContent('13');
+    // All gender pars identical → single Par column: hole, par, index. Cell by
+    // cell, so par and index swapping places fails (the row text «157» holds
+    // every digit either way).
+    const cells = (row: Element) =>
+      Array.from(row.querySelectorAll('td'), (td) => td.textContent);
+    expect(cells(rows[0])).toEqual(['1', '5', '7']);
+    expect(cells(rows[1])).toEqual(['2', '3', '13']);
   });
 });
