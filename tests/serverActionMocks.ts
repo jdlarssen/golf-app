@@ -78,11 +78,21 @@ export type QueryResult = {
  * as-is from `.maybeSingle()` but becomes a PGRST116 error from `.single()` —
  * PostgREST never resolves 0 rows as success there. Turn it on in tests that
  * lock a `.maybeSingle()` call site, so a rollback to `.single()` goes red.
+ *
+ * `opts.byTable` gives a table its own FIFO list: a builder whose table has a
+ * list there resolves from that list, every other builder from `queue`. Use it
+ * when the order in which queries claim their result is not stable — a paged
+ * read (`selectAllRows`) asks for page 2 only after page 1 came back full, so
+ * its second request lands behind every other query in a `Promise.all` (#2227).
  */
 export function buildSupabaseMock(
   queue: QueryResult[],
   rpcResults: Record<string, unknown> = {},
-  opts: { strictSingle?: boolean; rpcErrors?: Record<string, unknown> } = {},
+  opts: {
+    strictSingle?: boolean;
+    rpcErrors?: Record<string, unknown>;
+    byTable?: Record<string, QueryResult[]>;
+  } = {},
 ) {
   const fromCalls: Array<{
     table: string;
@@ -93,7 +103,7 @@ export function buildSupabaseMock(
 
   let currentTable = '';
 
-  const next = (): QueryResult => queue.shift() ?? { data: null, error: null };
+  const nextFromQueue = (): QueryResult => queue.shift() ?? { data: null, error: null };
 
   function rec(method: string, args: unknown[]) {
     fromCalls.push({ table: currentTable, method, args });
@@ -111,14 +121,19 @@ export function buildSupabaseMock(
    * Resolution is lazy: the next queue entry is only popped when `.then`
    * is invoked or a terminal (`single`/`maybeSingle`/`returns`) is called.
    */
-  function makeBuilder() {
+  function makeBuilder(table: string) {
     let resolved: QueryResult | null = null;
     const proxy: Record<string, unknown> = {};
+    // The table is captured here, at from() time: resolution is lazy, and by
+    // the time the result is claimed `currentTable` may belong to another chain.
+    const tableList = opts.byTable?.[table];
+    const next = (): QueryResult =>
+      tableList ? (tableList.shift() ?? { data: null, error: null }) : nextFromQueue();
 
     // Chainable + lazily-resolvable filters. `order` + `limit` brukes av
     // helpers som henter sortert/begrenset data — de er rene pass-through-er
     // i mock-en (vi sjekker ikke sortering i unit-tests, kun resultatet).
-    for (const m of ['select', 'eq', 'neq', 'gt', 'is', 'not', 'in', 'order', 'limit', 'range', 'ilike', 'filter']) {
+    for (const m of ['select', 'eq', 'neq', 'gt', 'gte', 'lte', 'is', 'not', 'in', 'order', 'limit', 'range', 'ilike', 'filter']) {
       proxy[m] = (...args: unknown[]) => {
         rec(m, args);
         return proxy;
@@ -190,7 +205,7 @@ export function buildSupabaseMock(
       currentTable = table;
       // Fresh builder per `from()` so each chain has its own thenable cache
       // (avoids one query's resolution accidentally satisfying the next).
-      return makeBuilder();
+      return makeBuilder(table);
     }),
     rpc: vi.fn((name: string, params?: unknown) => {
       rpcCalls.push({ name, params });
