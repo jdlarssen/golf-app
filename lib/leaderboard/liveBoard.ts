@@ -16,7 +16,6 @@ import {
 } from '@/lib/scoring/context/buildStablefordContext';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
-import { ranksByNetToPar } from '@/lib/scoring/modes/soloStrokeplay';
 import { isStablefordFamily } from '@/lib/scoring/modes/types';
 import type {
   GameMode,
@@ -141,8 +140,9 @@ export function computeLiveBoard(opts: {
   const previous = resultFor(withoutLatestHolePerPlayer(scoresRows));
   const previousRank = new Map(previous?.players.map((p) => [p.userId, p.rank]) ?? []);
 
+  // The engine says which rule it ranked on; the board shows that number.
   const unit: LiveBoardUnit =
-    result.kind === 'stableford' ? 'points' : ranksByNetToPar(game.mode_config) ? 'toPar' : 'net';
+    result.kind === 'stableford' ? 'points' : result.ranking === 'net_to_par' ? 'toPar' : 'net';
 
   const lines: { userId: string; rank: number; holesPlayed: number; total: number | null }[] =
     result.kind === 'stableford'

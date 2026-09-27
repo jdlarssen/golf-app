@@ -1238,6 +1238,13 @@ export interface SoloStrokeplayHoleRow {
  */
 export interface SoloStrokeplayResult {
   kind: 'solo_strokeplay';
+  /**
+   * #2253: the rule the players are ranked on — `'net_to_par'` for a game
+   * with `mode_config.ranking === 'net_to_par'`, else `'net_total'`. The
+   * result surfaces (podium, duel, share card, round report) only get the
+   * result, and show net to par exactly when this says so.
+   */
+  ranking: 'net_to_par' | 'net_total';
   players: SoloStrokeplayPlayerLine[];
   /** Per-hull per-spiller-detalj (alle hull, sortert). Epic #496, PR 8. */
   holes: SoloStrokeplayHoleRow[];

@@ -20,6 +20,7 @@ function makeResult(
 ): SoloStrokeplayResult {
   return {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     players: players.map(({ tiedWith = [], netToPar = null, ...p }) => ({
       ...p,
       netToPar,

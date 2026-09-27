@@ -42,6 +42,7 @@ const PAR_72: ReadonlyMap<number, number> = new Map(
 describe('solo_strokeplay — sharer in top 3', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: [
       { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
@@ -107,6 +108,7 @@ describe('solo_strokeplay — sharer in top 3', () => {
 describe('solo_strokeplay — sharer outside top 3', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: [
       { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
@@ -143,6 +145,7 @@ describe('solo_strokeplay — sharer outside top 3', () => {
 describe('solo_strokeplay — neutral card (sharerId null)', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: [
       { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
@@ -200,6 +203,7 @@ describe('best_ball — sharer is team member', () => {
 describe('solo_strokeplay — fewer than 3 players', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: [
       { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
@@ -225,6 +229,7 @@ describe('solo_strokeplay — fewer than 3 players', () => {
 describe('solo_strokeplay — tied rank-1', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: [
       { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: ['u2'] },
@@ -416,6 +421,7 @@ describe('singles_matchplay — tie', () => {
 describe('sideTournaments', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: [
       { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
@@ -747,6 +753,7 @@ describe('vs par over played holes (#2217)', () => {
   it('manglende hull: solo strokeplay with 17–18 unplayed, 66 → +2', () => {
     const result: SoloStrokeplayResult = {
       kind: 'solo_strokeplay',
+      ranking: 'net_total',
       holes: holeNumbers.map((n) => ({
         holeNumber: n,
         par: 4,
