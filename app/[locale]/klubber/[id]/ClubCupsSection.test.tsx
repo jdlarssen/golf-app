@@ -1,12 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ClubCupsSection, type ClubCupRow } from './ClubCupsSection';
-
-// SmartLink/LinkButton lener seg på next/link → useRouter for prefetch.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: () => {} }),
-  usePathname: () => '/',
-}));
 
 const CUPS: ClubCupRow[] = [
   { id: 'c1', name: 'Klubbmesterskap', status: 'active', short_id: 'AAA111', joined: false },
