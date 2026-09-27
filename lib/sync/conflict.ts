@@ -7,11 +7,18 @@ export interface ConflictInput {
 
 export type ConflictResolution = 'local-wins' | 'server-wins' | 'equal';
 
+/**
+ * Compares INSTANTS, not strings (#2211). The local stamp comes from
+ * `toISOString()` (`…:00.123Z`); PostgREST echoes timestamptz as
+ * `…:00.123+00:00` (or `…:00+00:00` on whole seconds). As strings 'Z' and '.'
+ * sort after '+', so the same instant read as 'local-wins'. An unparseable
+ * stamp compares false both ways and lands on 'equal', like null always did.
+ */
 export function resolveConflict(input: ConflictInput): ConflictResolution {
-  if (input.localClientUpdatedAt > input.serverClientUpdatedAt)
-    return 'local-wins';
-  if (input.localClientUpdatedAt < input.serverClientUpdatedAt)
-    return 'server-wins';
+  const local = Date.parse(input.localClientUpdatedAt);
+  const server = Date.parse(input.serverClientUpdatedAt);
+  if (local > server) return 'local-wins';
+  if (local < server) return 'server-wins';
   return 'equal';
 }
 

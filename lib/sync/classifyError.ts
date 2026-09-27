@@ -52,6 +52,34 @@ const PERMANENT_TEXT_PATTERNS = [
   'not-null',
 ];
 
+// #2211: the lastError a drain stores when `upsert_score_if_newer` answers
+// with the all-NULL row — RLS filtered the UPDATE to 0 rows because the card
+// is submitted/withdrawn or the round is no longer active. Technical text,
+// shown only under «Tekniske detaljer». It must contain no TRANSIENT_PATTERNS
+// marker, or it would read as «retry forever».
+export const REFUSED_WRITE_ERROR =
+  'Write refused: row-level security filtered the update (card submitted/withdrawn or round not active)';
+
+// Markers of a write refused because the card is locked. 'row-level security'
+// covers the INSERT's RLS violation and REFUSED_WRITE_ERROR; the second is the
+// 0148 finished-game trigger (supabase/migrations/0148_putts_backfill.sql),
+// which used to match nothing and so retried forever.
+const LOCKED_CARD_PATTERNS = ['row-level security', 'only putts may be changed'];
+
+/**
+ * True when the server refused the write because the card is locked
+ * (submitted, withdrawn or the round is over). The drain settles such an item
+ * — local row back to the server's number, item quarantined — and the banner
+ * explains it instead of offering a retry that can never succeed.
+ */
+export function isLockedCardError(
+  rawError: string | null | undefined,
+): boolean {
+  if (!rawError) return false;
+  const lower = rawError.toLowerCase();
+  return LOCKED_CARD_PATTERNS.some((pattern) => lower.includes(pattern));
+}
+
 // HTTP-statuskoder som betyr en permanent klient-feil. Matchet med ord-grenser
 // (\b) så en tilfeldig sifferrekke (f.eks. «timed out after 1400ms») ikke
 // forveksles med en 400 og abandoner et egentlig-transient slag (#668).
@@ -72,6 +100,7 @@ export function isPermanentSyncError(
     return false;
   }
   return (
+    isLockedCardError(rawError) ||
     PERMANENT_TEXT_PATTERNS.some((pattern) => lower.includes(pattern)) ||
     PERMANENT_STATUS_RE.test(lower)
   );

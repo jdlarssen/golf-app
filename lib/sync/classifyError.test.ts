@@ -1,9 +1,53 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
+  isLockedCardError,
   isPermanentSyncError,
   syncRetryDecision,
   MAX_PERMANENT_ATTEMPTS,
+  REFUSED_WRITE_ERROR,
 } from './classifyError';
+
+/** The exception text a migration raises, read from the file itself (trap 4). */
+function migrationMessage(file: string, marker: RegExp): string {
+  const sql = readFileSync(
+    join(process.cwd(), 'supabase/migrations', file),
+    'utf8',
+  );
+  const match = sql.match(marker);
+  if (!match) throw new Error(`no message matching ${marker} in ${file}`);
+  return match[1];
+}
+
+// 0148: the finished-game trigger. 0109 has two messages; the regex pins the
+// future-clock one, not the backwards one.
+const FINISHED_GAME_GUARD = migrationMessage(
+  '0148_putts_backfill.sql',
+  /'(On a finished game only putts may be changed[^']*)'/,
+);
+const FUTURE_CLOCK_GUARD = migrationMessage(
+  '0109_guard_scores_client_updated_at.sql',
+  /'(client_updated_at too far in the future[^']*)'/,
+);
+
+// #2211: a write refused because the card is locked (submitted / withdrawn /
+// round over) is permanent and settles as a locked refusal.
+describe('locked-card refusals', () => {
+  it.each([
+    [FINISHED_GAME_GUARD, true, true],
+    ['new row violates row-level security policy for table "scores"', true, true],
+    [REFUSED_WRITE_ERROR, true, true],
+    // Deliberately NOT permanent: it heals once real time catches up with the
+    // stamp; quarantine would turn a delay into a lost stroke.
+    [FUTURE_CLOCK_GUARD, false, false],
+    ['duplicate key value violates unique constraint "scores_pkey"', true, false],
+  ])('%j → permanent=%s, locked=%s', (message, permanent, locked) => {
+    // permanent=true also proves no transient marker matched: those win first.
+    expect(isPermanentSyncError(message)).toBe(permanent);
+    expect(isLockedCardError(message)).toBe(locked);
+  });
+});
 
 describe('isPermanentSyncError', () => {
   it.each([
