@@ -189,21 +189,26 @@ async function createGameInternal(
     }
   }
 
-  // Cup-link (#47): hvis admin lander via cup-detalj-side, kobles spillet
-  // til parent tournament-en. Validerer at tournament-en faktisk eksisterer
-  // før vi setter FK — defensiv mot manipulerte URL-er.
+  // Cup-link (#47): hvis arrangøren lander via cup-detalj-side, kobles spillet
+  // til parent tournament-en. #2207: bare den som styrer cupen kan koble et
+  // spill til den — samme regel som databasen håndhever
+  // (guard_games_competition_links, 0185). En manipulert verdi, en cup
+  // kalleren ikke styrer eller en feil i sjekken gir et vanlig spill uten
+  // kobling (samme «ugyldig verdi → null»-mønster som group_id under).
   let tournamentId: string | null = null;
   const tournamentMatchLabelRaw = String(
     formData.get('tournament_match_label') ?? '',
   ).trim();
   const rawTournamentId = String(formData.get('tournament_id') ?? '').trim();
   if (rawTournamentId) {
-    const { data: cup } = await supabase
-      .from('tournaments')
-      .select('id')
-      .eq('id', rawTournamentId)
-      .maybeSingle();
-    if (cup) tournamentId = cup.id;
+    const { data: canManage, error: cupErr } = await supabase.rpc(
+      'can_manage_tournament',
+      { p_tournament_id: rawTournamentId },
+    );
+    if (cupErr) {
+      console.error('[createGameInternal] cup check failed', cupErr);
+    }
+    if (canManage === true) tournamentId = rawTournamentId;
   }
   const tournamentMatchLabel =
     tournamentId && tournamentMatchLabelRaw
