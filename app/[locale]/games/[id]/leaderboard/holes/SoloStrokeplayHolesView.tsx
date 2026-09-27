@@ -13,7 +13,7 @@ import type {
   SoloStrokeplayResult,
   SoloStrokeplayHoleRow,
 } from '@/lib/scoring/modes/types';
-import type { SoloStrokeplayPlayerInfo } from '../SoloStrokeplayView';
+import type { SoloStrokeplayPlayerInfo } from '../leaderboardTypes';
 
 export interface SoloStrokeplayHolesViewProps {
   /** Spill-id — brukes til back-lenke. */

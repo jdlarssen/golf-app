@@ -21,7 +21,7 @@ import {
   type PodiumSlot,
 } from './podiumPresentation';
 import { ConfettiBurst } from './ConfettiBurst';
-import type { SoloStrokeplayPlayerInfo } from './SoloStrokeplayView';
+import type { SoloStrokeplayPlayerInfo } from './leaderboardTypes';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
 // Distinkt sessionStorage-prefix fra solo-stableford-podiet — verifisert via

@@ -4,7 +4,7 @@ import {
   SoloStrokeplayHolesView,
   type SoloStrokeplayHolesViewProps,
 } from './SoloStrokeplayHolesView';
-import type { SoloStrokeplayPlayerInfo } from '../SoloStrokeplayView';
+import type { SoloStrokeplayPlayerInfo } from '../leaderboardTypes';
 import type {
   SoloStrokeplayResult,
   SoloStrokeplayHoleRow,

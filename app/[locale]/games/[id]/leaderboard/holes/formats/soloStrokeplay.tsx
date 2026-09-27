@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { SoloStrokeplayHolesView } from '../SoloStrokeplayHolesView';
-import type { SoloStrokeplayPlayerInfo } from '../../SoloStrokeplayView';
+import type { SoloStrokeplayPlayerInfo } from '../../leaderboardTypes';
 import {
   getDrilldownContext,
   localizeHolesGameName,

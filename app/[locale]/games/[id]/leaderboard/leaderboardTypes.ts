@@ -35,3 +35,16 @@ export type ScoreRow = {
   hole_number: number;
   strokes: number | null;
 };
+
+/**
+ * Spillerinfo for slagspill-pallen og «Hull for hull» (userId → navn +
+ * kallenavn). `teeGender` gir riktig par-chip (parByGender[teeGender]) for
+ * dame-/junior-tee (#734). Flyttet hit fra `SoloStrokeplayView.tsx` da den
+ * visningen ble erstattet av tavla (#2253).
+ */
+export interface SoloStrokeplayPlayerInfo {
+  name: string;
+  nickname: string | null;
+  /** Spillerens tee-gender — brukes til å hente riktig par-verdi. #734. */
+  teeGender?: 'mens' | 'ladies' | 'juniors';
+}

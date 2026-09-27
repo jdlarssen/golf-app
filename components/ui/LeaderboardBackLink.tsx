@@ -19,7 +19,13 @@ import { SmartLink } from './SmartLink';
 // and without it a long game name compresses the box below 44px (#1765) —
 // `w-11` is only a basis in flex layout, not a floor.
 const BACK_LINK_BOX =
-  '-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center text-lg text-text';
+  '-ml-2 inline-flex h-11 w-11 shrink-0 items-center justify-center text-lg';
+
+/** Glyph colour per surface: `onStrong` is linen on the deep-forest header (#2253). */
+const TONE = {
+  default: 'text-text',
+  onStrong: 'text-bg-tint',
+} as const;
 
 /**
  * Back arrow for the leaderboard headers. `label` is the already-translated
@@ -29,12 +35,14 @@ const BACK_LINK_BOX =
 export function LeaderboardBackLink({
   href,
   label,
+  tone = 'default',
 }: {
   href: string;
   label: string;
+  tone?: keyof typeof TONE;
 }) {
   return (
-    <SmartLink href={href} aria-label={label} className={BACK_LINK_BOX}>
+    <SmartLink href={href} aria-label={label} className={`${BACK_LINK_BOX} ${TONE[tone]}`}>
       ‹
     </SmartLink>
   );
@@ -55,5 +63,5 @@ export function LeaderboardBackLinkSpacer() {
  * header pixel-identical so nothing jumps when the content arrives.
  */
 export function LeaderboardBackLinkPlaceholder() {
-  return <span className={BACK_LINK_BOX}>‹</span>;
+  return <span className={`${BACK_LINK_BOX} ${TONE.default}`}>‹</span>;
 }
