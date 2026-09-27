@@ -5,9 +5,15 @@
 // under en gammel), kan ikke spilleren lenger skille «du har ikke lov» fra
 // «prøv igjen når nettet er tilbake», og det er hele forskjellen på om det er
 // noe vits i å trykke en gang til.
-import type { TeamSubmitFailure } from '../data/submitTeam';
+import type { ActionFailure } from '../data/playerActions';
+import type { SubmitCardFailure } from '../data/submitCard';
 import { isFinishedSentence } from '../test/copy';
-import { describeChoiceFailure, describeTeamSubmitFailure } from './actionFeedback';
+import {
+  describeChoiceFailure,
+  describeFailure,
+  describeSubmitFailure,
+} from './actionFeedback';
+import { OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
 type ChoiceFailure = Parameters<typeof describeChoiceFailure>[0];
@@ -43,12 +49,12 @@ describe('describeChoiceFailure', () => {
 });
 
 // -----------------------------------------------------------------------------
-// Lagkort-levering (#1918)
+// Levering, solo og lag (#1918, #2215)
 // -----------------------------------------------------------------------------
 
 // Samme port som `CODE_MAP` over: mangler en kode i kartet, faller `tsc` på
-// `satisfies` i det `TeamSubmitFailure` får et nytt medlem.
-const TEAM_SUBMIT_REASON_MAP = {
+// `satisfies` i det `SubmitCardFailure` får et nytt medlem.
+const SUBMIT_REASON_MAP = {
   offline: true,
   'no-web-base-url': true,
   unauthorized: true,
@@ -58,13 +64,13 @@ const TEAM_SUBMIT_REASON_MAP = {
   not_active: true,
   withdrawn: true,
   submit_failed: true,
-} as const satisfies Record<TeamSubmitFailure, true>;
+} as const satisfies Record<SubmitCardFailure, true>;
 
-const TEAM_SUBMIT_REASONS = Object.keys(TEAM_SUBMIT_REASON_MAP) as readonly TeamSubmitFailure[];
+const SUBMIT_REASONS = Object.keys(SUBMIT_REASON_MAP) as readonly SubmitCardFailure[];
 
-describe('describeTeamSubmitFailure', () => {
-  it.each(TEAM_SUBMIT_REASONS)('gir en ferdig setning for «%s»', (reason) => {
-    expect(isFinishedSentence(describeTeamSubmitFailure(reason))).toBe(true);
+describe('describeSubmitFailure', () => {
+  it.each(SUBMIT_REASONS)('gir en ferdig setning for «%s»', (reason) => {
+    expect(isFinishedSentence(describeSubmitFailure(reason))).toBe(true);
   });
 
   it('skiller de fire årsakene spilleren kan gjøre noe med', () => {
@@ -72,14 +78,56 @@ describe('describeTeamSubmitFailure', () => {
     // innse at du ikke står i den. Faller to av dem sammen, mister spilleren
     // rådet — og med et lagkort er det hele laget som blir stående.
     const actionable = (['offline', 'unauthorized', 'not_active', 'withdrawn'] as const).map(
-      describeTeamSubmitFailure,
+      describeSubmitFailure,
     );
 
     expect(new Set(actionable).size).toBe(actionable.length);
     // Delt med lenke-knappene: samme mangel i bygget stopper begge, og
     // meldingen skal derfor ikke nevne én av dem.
-    expect(describeTeamSubmitFailure('no-web-base-url')).toBe(
+    expect(describeSubmitFailure('no-web-base-url')).toBe(
       WEB_LINK_TEXT.missingBaseUrl,
     );
+  });
+
+  it('sier den felles nett-linja, ikke en lagkort-setning — solo går samme vei (#2215)', () => {
+    expect(describeSubmitFailure('offline')).toBe(OFFLINE_NOTE);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Godkjenning og avvisning (#2215: via ruta)
+// -----------------------------------------------------------------------------
+
+// Samme port: en ny kode i `ActionFailure` uten rad her gir rød `tsc`.
+const ACTION_REASON_MAP = {
+  offline: true,
+  'no-web-base-url': true,
+  'no-session': true,
+  'not-active': true,
+  'no-rows': true,
+  db: true,
+} as const satisfies Record<ActionFailure, true>;
+
+const ACTION_REASONS = Object.keys(ACTION_REASON_MAP) as readonly ActionFailure[];
+
+describe('describeFailure', () => {
+  it.each(ACTION_REASONS)('gir en ferdig setning for «%s»', (reason) => {
+    const text = describeFailure({ ok: false, reason });
+    expect(text).not.toBeNull();
+    expect(isFinishedSentence(text!)).toBe(true);
+  });
+
+  it('bruker de eksisterende setningene for de to nye kodene', () => {
+    // Én årsak, én ordlyd: nett-linja og bygg-mangelen sier det samme her som
+    // i de andre rute-kallene.
+    expect(describeFailure({ ok: false, reason: 'offline' })).toBe(OFFLINE_NOTE);
+    expect(describeFailure({ ok: false, reason: 'no-web-base-url' })).toBe(
+      WEB_LINK_TEXT.missingBaseUrl,
+    );
+  });
+
+  it('viser aldri noe for et vellykket utfall', () => {
+    expect(describeFailure({ ok: true, alreadyDone: false })).toBeNull();
+    expect(describeFailure({ ok: true, alreadyDone: true })).toBeNull();
   });
 });

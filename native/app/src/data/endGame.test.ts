@@ -15,19 +15,29 @@
 // Reglene selv — hvilke formater som støtter frafall, hva et frafall gjør med
 // tavla — er testet i `lib/` og i `rosterActions.test.ts`. De asserteres ikke om
 // igjen her.
+//
+// #2215: en vellykket flipp tømmer web-cachen. Riggen er `useWebRoute()` med et
+// 200-svar som standard, så refresh-kallet går stille igjennom i testene som
+// ikke handler om det.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  GAME_ID,
+  mockFetch,
+  mockNetwork,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-// Nett-status styres per test. `mock`-prefikset er jests egen regel for
-// variabler en `jest.mock`-fabrikk får lov å lukke over.
-const mockNetwork = { online: true };
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
 
-const GAME = 'game-1';
+const GAME = GAME_ID;
+const REFRESH_URL = `${BASE_URL}/api/games/${GAME}/refresh`;
 const ME = 'user-me';
 const MATE = 'user-mate';
 const OTHER = 'user-other';
@@ -105,11 +115,11 @@ function tablesTouched(): string[] {
 }
 
 describe('finishRound', () => {
-  useFreshModules();
+  useWebRoute();
 
   beforeEach(() => {
-    mockNetwork.online = true;
     mocks().currentDeviceUserId.mockResolvedValue(ME);
+    respondWith(200, {});
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -543,6 +553,86 @@ describe('finishRound', () => {
         ok: false,
         reason: 'no-rows',
       });
+    });
+  });
+
+  describe('web-cachen (#2215)', () => {
+    it('tømmer web-cachen etter en vellykket flipp', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow()), queryStub(ONE_ROW)],
+        game_players: [queryStub(roster(playerRow(ME)))],
+      });
+
+      expect(await endGame().finishRound(GAME)).toEqual({
+        ok: true,
+        alreadyFinished: false,
+      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        REFRESH_URL,
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('tømmer også når noen andre rakk flippen — nettsiden kan fortsatt vise runden som aktiv', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [
+          queryStub(gameRow()),
+          queryStub(ZERO_ROWS),
+          queryStub({ data: { status: 'finished' }, error: null }),
+        ],
+        game_players: [queryStub(roster(playerRow(ME)))],
+      });
+
+      expect(await endGame().finishRound(GAME)).toEqual({
+        ok: true,
+        alreadyFinished: true,
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('tømmer aldri når flippen ble nektet', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [
+          queryStub(gameRow()),
+          queryStub(ZERO_ROWS),
+          queryStub({ data: { status: 'active' }, error: null }),
+        ],
+        game_players: [queryStub(roster(playerRow(ME)))],
+      });
+
+      expect(await endGame().finishRound(GAME)).toMatchObject({ ok: false });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('tømmer aldri når en gate stoppet avslutningen', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({ games: [queryStub(gameRow({ status: 'finished' }))] });
+
+      expect(await endGame().finishRound(GAME)).toEqual({
+        ok: false,
+        reason: 'not-active',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('en feilende refresh endrer ikke resultatet — runden ER avsluttet', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow()), queryStub(ONE_ROW)],
+        game_players: [queryStub(roster(playerRow(ME)))],
+      });
+      respondWith(500, { error: 'refresh_failed' });
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await endGame().finishRound(GAME)).toEqual({
+        ok: true,
+        alreadyFinished: false,
+      });
+      expect(logged).toHaveBeenCalled();
     });
   });
 

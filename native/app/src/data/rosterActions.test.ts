@@ -11,29 +11,42 @@
 // Reglene selv — lagstørrelse, flight-tak, hvilke format som støtter WD — er
 // testet i `lib/`. De asserteres ikke om igjen her; det som testes er at DENNE
 // fila spør de delte helperne og handler på svaret.
+//
+// #2215: «legg til» og «åpne kortet igjen» går via ruter, og de fem andre
+// arrangør-skrivingene tømmer web-cachen etter et vellykket utfall. Riggen er
+// derfor `useWebRoute()` for hele fila, med et 200-svar som standard: da går
+// refresh-kallet stille igjennom i testene som ikke handler om det.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
 import { maxPlayersForMode } from '../lib/rosterLimits';
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  GAME_ID,
+  auth,
+  mockFetch,
+  mockNetwork,
+  requestInit,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-// Nett-status styres per test. `mock`-prefikset er jests egen regel for
-// variabler en `jest.mock`-fabrikk får lov å lukke over.
-const mockNetwork = { online: true };
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
 
-const GAME = 'game-1';
+const GAME = GAME_ID;
+const REFRESH_URL = `${BASE_URL}/api/games/${GAME}/refresh`;
 const ME = 'user-me';
 const MATE = 'user-mate';
 const OTHER = 'user-other';
 
-/** Kandidatraden `addPlayerToGame` tar (#2209): id + profilens kjønn og nivå. */
+/** Kandidatraden `addPlayerToGame` tar (#2209); bare id-en brukes siden #2215. */
 const MATE_PLAYER = { id: MATE, gender: 'mens', level: 'normal' };
-const LADY_PLAYER = { id: MATE, gender: 'ladies', level: 'normal' };
 
 type Mocks = typeof import('../test/supabaseMock');
+type StubResult = import('../test/supabaseMock').StubResult;
 type Actions = typeof import('./rosterActions');
 
 function mocks(): Mocks {
@@ -62,37 +75,13 @@ function gameRow(
   };
 }
 
-/** Tee-ratingene `addPlayerToGame` slår opp før innsettingen (#2209). */
-const FULL_TEE = {
-  slope_mens: 130,
-  course_rating_mens: 71.2,
-  par_total_mens: 72,
-  slope_ladies: 128,
-  course_rating_ladies: 73.1,
-  par_total_ladies: 73,
-  slope_juniors: 120,
-  course_rating_juniors: 68.5,
-  par_total_juniors: 72,
-};
-const MENS_ONLY_TEE = {
-  ...FULL_TEE,
-  slope_ladies: null,
-  course_rating_ladies: null,
-  par_total_ladies: null,
-  slope_juniors: null,
-  course_rating_juniors: null,
-  par_total_juniors: null,
-};
-
-function teeRow(tee: typeof FULL_TEE | typeof MENS_ONLY_TEE | null = FULL_TEE) {
-  return { data: { tee_boxes: tee }, error: null };
-}
-
 /** Et lag-format: best ball med to per lag. */
 const TEAM_GAME = gameRow('scheduled', 'best_ball', { team_size: 2 });
 
 const ONE_ROW = { data: [{ user_id: MATE }], error: null };
 const ZERO_ROWS = { data: [], error: null };
+/** PostgREST når RLS eller en vakt avviser skrivingen. */
+const RLS_ERROR = { data: null, error: { message: 'permission denied', code: '42501' } };
 
 /** Et roster med `count` rader — nok til å svare på plass-spørsmålet. */
 function rosterOf(count: number) {
@@ -132,18 +121,23 @@ function filtersOf(stub: ReturnType<Mocks['queryStub']>): string[] {
     .map((s) => `${s.method}(${s.args.map((a) => String(a)).join(',')})`);
 }
 
-/** Patchen en `update`/`insert` ble kalt med. */
-function patchOf(stub: ReturnType<Mocks['queryStub']>, method: 'update' | 'insert') {
+/** Patchen en `update` ble kalt med. */
+function patchOf(stub: ReturnType<Mocks['queryStub']>, method: 'update') {
   const { stepArgs } = mocks();
   return stepArgs(stub, method)[0]![0] as Record<string, unknown>;
 }
 
+/** Refresh-kallene, altså de som gikk til `…/refresh`. */
+function refreshCalls(): unknown[][] {
+  return mockFetch.mock.calls.filter((call) => call[0] === REFRESH_URL);
+}
+
 describe('rosterActions', () => {
-  useFreshModules();
+  useWebRoute();
 
   beforeEach(() => {
-    mockNetwork.online = true;
     mocks().currentDeviceUserId.mockResolvedValue(ME);
+    respondWith(200, {});
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -179,6 +173,7 @@ describe('rosterActions', () => {
       ) => Promise<unknown>;
       expect(await fn(GAME, player)).toEqual({ ok: false, reason: 'offline' });
       expect(supabase.from).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('svarer not-found når spillet ikke er synlig', async () => {
@@ -246,46 +241,38 @@ describe('rosterActions', () => {
   // ───────────────────────────────────────────────────────────────────────────
 
   describe('addPlayerToGame', () => {
-    it('inserter med webbens eksakte kolonnesett', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const insert = queryStub(ONE_ROW);
+    const ADD_URL = `${BASE_URL}/api/games/${GAME}/players/${MATE}`;
+
+    it('legger til via POST …/players/<uid>, uten kropp og uten egen skriving (#2215)', async () => {
+      const { queryStub, routeFrom, supabase } = mocks();
+      // Bare de to lesingene portene trenger. En insert ville kastet i ruteren.
       routeFrom({
-        games: [queryStub(gameRow('scheduled')), queryStub(teeRow())],
-        game_players: [queryStub(rosterOf(3)), insert],
+        games: [queryStub(gameRow('scheduled'))],
+        game_players: [queryStub(rosterOf(3))],
       });
+      respondWith(200, { alreadyOnRoster: false });
 
       expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: true,
         alreadyDone: false,
       });
 
-      expect(patchOf(insert, 'insert')).toEqual({
-        game_id: GAME,
-        user_id: MATE,
-        team_number: null,
-        flight_number: null,
-        course_handicap: null,
-        // Arrangøren legger til en ANNEN — hen bekrefter selv (#463).
-        accepted_at: null,
-        // #2209: profilens tee-sett, klemt til spillets tee.
-        tee_gender: 'mens',
-      });
-      // Uten `.select()` finnes det ikke noe radantall å asserte på (trap 2).
-      expect(stepArgs(insert, 'select')).toEqual([['user_id']]);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls[0][0]).toBe(ADD_URL);
+      const init = requestInit();
+      expect(init.method).toBe('POST');
+      // Spilleren står i STIEN, aldri i en kropp. Tee-settet leser kjernen selv.
+      expect(init.body).toBeUndefined();
+      expect(supabase.from).toHaveBeenCalledTimes(2);
     });
 
-    it('svelger en UNIQUE-violation — spilleren er alt på rosteret', async () => {
+    it('leser alreadyOnRoster som suksess — spilleren er alt på rosteret', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
-        games: [queryStub(gameRow('draft')), queryStub(teeRow())],
-        game_players: [
-          queryStub(rosterOf(2)),
-          queryStub({
-            data: null,
-            error: { message: 'duplicate key value', code: '23505' },
-          }),
-        ],
+        games: [queryStub(gameRow('draft'))],
+        game_players: [queryStub(rosterOf(2))],
       });
+      respondWith(200, { alreadyOnRoster: true });
 
       expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: true,
@@ -293,22 +280,72 @@ describe('rosterActions', () => {
       });
     });
 
-    it('melder rls-denied når 0115-vakta avviser raden', async () => {
+    it.each<[number, Record<string, unknown>, string]>([
+      [409, { error: 'game_locked' }, 'roster-locked'],
+      [409, { error: 'game_full' }, 'roster-full'],
+      [409, { error: 'invite_not_allowed' }, 'rls-denied'],
+      [403, { error: 'forbidden' }, 'rls-denied'],
+      [401, { error: 'unauthorized' }, 'no-session'],
+      [404, { error: 'not_found' }, 'not-found'],
+      [500, { error: 'add_failed' }, 'db'],
+      // En kode vi ikke kjenner på en 409: fail-closed, ikke en gjettet grunn.
+      [409, { error: 'noe_nytt' }, 'db'],
+    ])('oversetter %i %j til %s', async (status, body, reason) => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
-        games: [queryStub(gameRow('scheduled')), queryStub(teeRow())],
-        game_players: [
-          queryStub(rosterOf(2)),
-          queryStub({
-            data: null,
-            error: { message: 'insufficient_privilege', code: '42501' },
-          }),
-        ],
+        games: [queryStub(gameRow('scheduled'))],
+        game_players: [queryStub(rosterOf(2))],
       });
+      respondWith(status, body);
 
-      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toMatchObject({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: false,
-        reason: 'rls-denied',
+        reason,
+      });
+    });
+
+    it('sier ifra når server-adressen mangler i bygget', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('scheduled'))],
+        game_players: [queryStub(rosterOf(2))],
+      });
+      delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
+
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
+        ok: false,
+        reason: 'no-web-base-url',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('leser et manglende token som no-session, uten å sende noe', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('scheduled'))],
+        game_players: [queryStub(rosterOf(2))],
+      });
+      auth().getSession.mockResolvedValue({ data: { session: null } });
+
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
+        ok: false,
+        reason: 'no-session',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('leser et kall som aldri kom fram som db', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('scheduled'))],
+        game_players: [queryStub(rosterOf(2))],
+      });
+      mockFetch.mockRejectedValue(new Error('Network request failed'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
+        ok: false,
+        reason: 'db',
       });
     });
 
@@ -325,6 +362,7 @@ describe('rosterActions', () => {
         ok: false,
         reason: 'roster-full',
       });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('har intet tak for et format appen ikke kjenner', async () => {
@@ -332,9 +370,9 @@ describe('rosterActions', () => {
       // `foursomes_matchplay` finnes ikke i APP_SUPPORTED_MODES — da hoppes
       // rosterlesningen over helt, og bare status-gaten står igjen.
       routeFrom({
-        games: [queryStub(gameRow('scheduled', 'foursomes_matchplay')), queryStub(teeRow())],
-        game_players: [queryStub(ONE_ROW)],
+        games: [queryStub(gameRow('scheduled', 'foursomes_matchplay'))],
       });
+      respondWith(200, { alreadyOnRoster: false });
 
       expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: true,
@@ -342,63 +380,10 @@ describe('rosterActions', () => {
       });
     });
 
-    // #2209: uten tee_gender fikk raden kolonnens default 'mens', og en dame
-    // spilte fra herrenes slope, CR og par.
-    it('gir en dame damesettet på en tee med damerating', async () => {
-      const { queryStub, routeFrom } = mocks();
-      const insert = queryStub(ONE_ROW);
-      routeFrom({
-        games: [queryStub(gameRow('scheduled')), queryStub(teeRow(FULL_TEE))],
-        game_players: [queryStub(rosterOf(2)), insert],
-      });
-
-      expect(await actions().addPlayerToGame(GAME, LADY_PLAYER)).toEqual({
-        ok: true,
-        alreadyDone: false,
-      });
-      expect(patchOf(insert, 'insert')).toMatchObject({ tee_gender: 'ladies' });
-    });
-
-    it('gir en dame herresettet på en tee med bare herrerating', async () => {
-      const { queryStub, routeFrom } = mocks();
-      const insert = queryStub(ONE_ROW);
-      routeFrom({
-        games: [queryStub(gameRow('scheduled')), queryStub(teeRow(MENS_ONLY_TEE))],
-        game_players: [queryStub(rosterOf(2)), insert],
-      });
-
-      expect(await actions().addPlayerToGame(GAME, LADY_PLAYER)).toEqual({
-        ok: true,
-        alreadyDone: false,
-      });
-      expect(patchOf(insert, 'insert')).toMatchObject({ tee_gender: 'mens' });
-    });
-
-    it('skriver ingenting når tee-oppslaget feiler', async () => {
-      const { queryStub, routeFrom } = mocks();
-      // Ingen innsettings-stub: prøver handlingen å skrive likevel, kaster
-      // ruteren og testen faller.
-      routeFrom({
-        games: [
-          queryStub(gameRow('scheduled')),
-          queryStub({ data: null, error: { message: 'boom' } }),
-        ],
-        game_players: [queryStub(rosterOf(2))],
-      });
-
-      expect(await actions().addPlayerToGame(GAME, LADY_PLAYER)).toEqual({
-        ok: false,
-        reason: 'db',
-        message: 'boom',
-      });
-    });
-
     it.each([['active'], ['finished']])(
-      'nekter å legge til i et %s spill, og skriver ingenting',
+      'nekter å legge til i et %s spill, og spør ikke ruta',
       async (status: string) => {
         const { queryStub, routeFrom, supabase } = mocks();
-        // Ingen `game_players`-plan: prøver handlingen å skrive likevel, kaster
-        // ruteren og testen faller.
         routeFrom({ games: [queryStub(gameRow(status))] });
 
         expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
@@ -406,6 +391,7 @@ describe('rosterActions', () => {
           reason: 'roster-locked',
         });
         expect(supabase.from).toHaveBeenCalledTimes(1);
+        expect(mockFetch).not.toHaveBeenCalled();
       },
     );
   });
@@ -963,63 +949,37 @@ describe('rosterActions', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 8. reopenScorecard (#2220)
+  // 8. reopenScorecard (#2220, via ruta siden #2215)
   // ───────────────────────────────────────────────────────────────────────────
 
   describe('reopenScorecard', () => {
-    const SUBMITTED = '2026-09-01T10:00:00.000Z';
+    const REVIEW_URL = `${BASE_URL}/api/games/${GAME}/scorecards/${MATE}`;
 
-    it('nuller alle fire feltene i én skriving, kun på et levert kort', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const update = queryStub(ONE_ROW);
-      routeFrom({
-        games: [queryStub(gameRow('active', 'stableford'))],
-        game_players: [update],
-      });
+    beforeEach(() => {
+      // En tom plan kaster på enhver spørring: status, arrangør-porten og
+      // lagkort-kaskaden (#2213) er rutas nå, og appen skal ikke lese eller
+      // skrive noe selv.
+      mocks().routeFrom({});
+    });
+
+    it('åpner via POST …/scorecards/<uid> med { decision: reopen }, og tømmer ikke cachen selv', async () => {
+      respondWith(200, { alreadyDone: false });
 
       expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
         ok: true,
         alreadyDone: false,
       });
-      // Nøyaktig webbens patch. `submitted_at` og `approved_at` nulles i samme
-      // UPDATE: avslutningen leser begge (`needsPeerApproval`).
-      expect(patchOf(update, 'update')).toEqual({
-        submitted_at: null,
-        approved_at: null,
-        approved_by_user_id: null,
-        rejection_reason: null,
-      });
-      expect(filtersOf(update)).toEqual([
-        `eq(game_id,${GAME})`,
-        `eq(user_id,${MATE})`,
-        'not(submitted_at,is,null)',
-      ]);
-      expect(stepArgs(update, 'select')).toEqual([['user_id']]);
+
+      // Ett kall: ruta varsler og tømmer web-cachen selv, så et refresh-kall
+      // etterpå ville bare vært en ekstra rundtur.
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch.mock.calls[0][0]).toBe(REVIEW_URL);
+      expect(requestInit().method).toBe('POST');
+      expect(JSON.parse(String(requestInit().body))).toEqual({ decision: 'reopen' });
     });
 
-    it.each([['scheduled'], ['finished']])(
-      'nekter gjenåpning i et %s spill, og leser bare spillet',
-      async (status: string) => {
-        const { queryStub, routeFrom, supabase } = mocks();
-        routeFrom({ games: [queryStub(gameRow(status, 'stableford'))] });
-
-        expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
-          ok: false,
-          reason: 'not-active',
-        });
-        expect(supabase.from).toHaveBeenCalledTimes(1);
-      },
-    );
-
-    it('leser 0 rader som suksess når kortet alt er åpent', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(gameRow('active', 'stableford'))],
-        game_players: [
-          queryStub(ZERO_ROWS),
-          queryStub({ data: { submitted_at: null }, error: null }),
-        ],
-      });
+    it('leser alreadyDone som suksess — kortet var alt åpent', async () => {
+      respondWith(200, { alreadyDone: true });
 
       expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
         ok: true,
@@ -1027,109 +987,204 @@ describe('rosterActions', () => {
       });
     });
 
-    it('leser 0 rader som FEIL når kortet fortsatt står som levert', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(gameRow('active', 'stableford'))],
-        game_players: [
-          queryStub(ZERO_ROWS),
-          queryStub({ data: { submitted_at: SUBMITTED }, error: null }),
-        ],
-      });
+    it.each<[number, string]>([
+      [401, 'no-session'],
+      [403, 'rls-denied'],
+      [404, 'not-found'],
+      [409, 'not-active'],
+      [400, 'db'],
+      [422, 'db'],
+      [500, 'db'],
+    ])('oversetter %i til %s', async (status, reason) => {
+      respondWith(status, { error: 'whatever' });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({ ok: false, reason });
+    });
+
+    it('sier ifra når server-adressen mangler i bygget', async () => {
+      delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
 
       expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
         ok: false,
-        reason: 'no-rows',
+        reason: 'no-web-base-url',
       });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('leser 0 rader som FEIL når raden ikke finnes', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(gameRow('active', 'stableford'))],
-        game_players: [queryStub(ZERO_ROWS), queryStub({ data: null, error: null })],
-      });
+    it('leser et manglende token som no-session, uten å sende noe', async () => {
+      auth().getSession.mockResolvedValue({ data: { session: null } });
 
       expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
         ok: false,
-        reason: 'no-rows',
+        reason: 'no-session',
       });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('melder rls-denied når Postgres avviser skrivingen', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(gameRow('active', 'stableford'))],
-        game_players: [
-          queryStub({
-            data: null,
-            error: { message: 'permission denied', code: '42501' },
-          }),
-        ],
-      });
-
-      expect(await actions().reopenScorecard(GAME, MATE)).toMatchObject({
-        ok: false,
-        reason: 'rls-denied',
-      });
-    });
-
-    // #2213: på et felles lagkort leser alle kortene kapteinens rader, og
-    // hullene er låst så lenge ÉN på laget står som levert. Nettsiden åpner
-    // derfor hele laget; appen gjør det samme.
-    it('åpner hele laget i et format med felles kort — aktive lagkamerater, ikke trukne', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const roster = queryStub({
-        data: [
-          groupingRow(ME, 2, 1),
-          groupingRow(MATE, 1, 1),
-          groupingRow(OTHER, 1, 1),
-          groupingRow('user-gone', 1, 1, '2026-09-01T09:00:00.000Z'),
-        ],
-        error: null,
-      });
-      const update = queryStub({
-        data: [{ user_id: MATE }, { user_id: OTHER }],
-        error: null,
-      });
-      routeFrom({
-        games: [queryStub(gameRow('active', 'texas_scramble', { team_size: 2 }))],
-        game_players: [roster, update],
-      });
-
-      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
-        ok: true,
-        alreadyDone: false,
-      });
-      expect(filtersOf(roster)).toEqual([`eq(game_id,${GAME})`]);
-      expect(patchOf(update, 'update')).toEqual({
-        submitted_at: null,
-        approved_at: null,
-        approved_by_user_id: null,
-        rejection_reason: null,
-      });
-      expect(stepArgs(update, 'in')).toEqual([['user_id', [MATE, OTHER]]]);
-      expect(filtersOf(update)).toEqual([
-        `eq(game_id,${GAME})`,
-        `in(user_id,${MATE},${OTHER})`,
-        'not(submitted_at,is,null)',
-      ]);
-    });
-
-    it('åpner ingenting når rosteret ikke kan leses — ett kort alene er #2213-feilen', async () => {
-      const { queryStub, routeFrom, supabase } = mocks();
-      routeFrom({
-        games: [queryStub(gameRow('active', 'texas_scramble', { team_size: 2 }))],
-        game_players: [queryStub({ data: null, error: { message: 'boom' } })],
-      });
+    it('leser et kall som aldri kom fram som db', async () => {
+      mockFetch.mockRejectedValue(new Error('Network request failed'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
 
       expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
         ok: false,
         reason: 'db',
-        message: 'boom',
       });
-      // Spillet og rosteret — ingen skriving.
-      expect(supabase.from).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Web-cachen etter de fem direkte skrivingene (#2215)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  describe('web-cachen (#2215)', () => {
+    const WITHDRAWN_AT = '2026-09-01T10:00:00.000Z';
+    const GROUPING = { data: [groupingRow(MATE, null, 1)], error: null };
+
+    /**
+     * Én rad per skriving: handlingen, og tre riggede utfall av selve
+     * skrivingen — én rad truffet, 0 rader løst som «alt i mål», og nektet.
+     * Begge ok-grenene er med fordi hver funksjon har to steder den kan
+     * lykkes, og en glemt tømming på det ene ville gått under radaren.
+     */
+    interface WriteCase {
+      act: () => Promise<unknown>;
+      hit: () => void;
+      alreadyThere: () => void;
+      denied: () => void;
+    }
+
+    function rig(games: StubResult, gamePlayers: StubResult[]): void {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(games)],
+        game_players: gamePlayers.map((result) => queryStub(result)),
+      });
+    }
+
+    const CASES: [string, WriteCase][] = [
+      [
+        'removePlayerFromGame',
+        {
+          act: () => actions().removePlayerFromGame(GAME, MATE),
+          hit: () => rig(gameRow('scheduled'), [ONE_ROW]),
+          alreadyThere: () =>
+            rig(gameRow('draft'), [ZERO_ROWS, { data: null, error: null }]),
+          denied: () => rig(gameRow('scheduled'), [RLS_ERROR]),
+        },
+      ],
+      [
+        'setPlayerTeam',
+        {
+          act: () => actions().setPlayerTeam(GAME, MATE, 2),
+          hit: () => rig(TEAM_GAME, [GROUPING, ONE_ROW]),
+          alreadyThere: () =>
+            rig(TEAM_GAME, [GROUPING, ZERO_ROWS, { data: { team_number: 2 }, error: null }]),
+          denied: () => rig(TEAM_GAME, [GROUPING, RLS_ERROR]),
+        },
+      ],
+      [
+        'setPlayerFlight',
+        {
+          act: () => actions().setPlayerFlight(GAME, MATE, 2),
+          hit: () => rig(gameRow('active'), [GROUPING, ONE_ROW]),
+          alreadyThere: () =>
+            rig(gameRow('active'), [
+              GROUPING,
+              ZERO_ROWS,
+              { data: { flight_number: 2 }, error: null },
+            ]),
+          denied: () => rig(gameRow('active'), [GROUPING, RLS_ERROR]),
+        },
+      ],
+      [
+        'withdrawPlayer',
+        {
+          act: () => actions().withdrawPlayer(GAME, MATE),
+          hit: () => rig(gameRow('active', 'stableford'), [ONE_ROW]),
+          alreadyThere: () =>
+            rig(gameRow('active', 'stableford'), [
+              ZERO_ROWS,
+              { data: { withdrawn_at: WITHDRAWN_AT }, error: null },
+            ]),
+          denied: () => rig(gameRow('active', 'stableford'), [RLS_ERROR]),
+        },
+      ],
+      [
+        'undoWithdrawPlayer',
+        {
+          act: () => actions().undoWithdrawPlayer(GAME, MATE),
+          hit: () => rig(gameRow('active', 'stableford'), [ONE_ROW]),
+          alreadyThere: () =>
+            rig(gameRow('active', 'stableford'), [
+              ZERO_ROWS,
+              { data: { withdrawn_at: null }, error: null },
+            ]),
+          denied: () => rig(gameRow('active', 'stableford'), [RLS_ERROR]),
+        },
+      ],
+    ];
+
+    it.each(CASES)('%s kaller POST …/refresh én gang etter ok', async (_name, write) => {
+      write.hit();
+
+      expect(await write.act()).toEqual({ ok: true, alreadyDone: false });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        REFRESH_URL,
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(CASES)(
+      '%s tømmer også når 0 rader ble løst som «alt i mål»',
+      async (_name, write) => {
+        write.alreadyThere();
+
+        expect(await write.act()).toEqual({ ok: true, alreadyDone: true });
+        expect(refreshCalls()).toHaveLength(1);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each(CASES)('%s tømmer aldri etter en nektet skriving', async (_name, write) => {
+      write.denied();
+
+      expect(await write.act()).toMatchObject({ ok: false, reason: 'rls-denied' });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it.each(CASES)(
+      '%s: en feilende refresh endrer ikke resultatet',
+      async (_name, write) => {
+        write.hit();
+        respondWith(500, { error: 'refresh_failed' });
+        const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        expect(await write.act()).toEqual({ ok: true, alreadyDone: false });
+        // Skrivingen har skjedd; feilen logges og ingenting annet.
+        expect(logged).toHaveBeenCalled();
+      },
+    );
+
+    it('et refresh-kall som aldri kom fram endrer heller ikke resultatet', async () => {
+      rig(gameRow('active'), [GROUPING, ONE_ROW]);
+      mockFetch.mockRejectedValue(new Error('Network request failed'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await actions().setPlayerFlight(GAME, MATE, 2)).toEqual({
+        ok: true,
+        alreadyDone: false,
+      });
+    });
+
+    it('confirmParticipation tømmer ikke — «Ikke bekreftet» leser game_players direkte', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({ game_players: [queryStub({ data: null, error: null })] });
+
+      await actions().confirmParticipation(GAME);
+
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 });

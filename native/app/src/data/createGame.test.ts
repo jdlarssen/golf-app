@@ -15,8 +15,21 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
 import { teeOffInstant, type GameDraft } from '../lib/wizardPayload';
 import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  mockFetch,
+  mockNetwork,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+
+// #2215: publiseringen ber ruta sende invitasjonsvarslene. Nett-bryteren bor i
+// riggen og MÅ importeres statisk (se webRouteHarness.ts).
+jest.mock('./syncTriggers', () => ({
+  isDeviceOnline: () => mockNetwork.online,
+}));
 
 type Mocks = typeof import('../test/supabaseMock');
 type CreateGame = typeof import('./createGame');
@@ -60,12 +73,82 @@ const RLS_ERROR = { data: null, error: { message: 'nektet', code: '42501' } };
 const ZERO_ROWS = { data: [], error: null };
 
 describe('publishGame', () => {
-  useFreshModules();
+  useWebRoute();
 
   beforeEach(() => {
     mocks().currentDeviceUserId.mockResolvedValue(ME);
     // Ingen på lista mangler profil.
     mocks().supabase.rpc.mockResolvedValue({ data: [], error: null });
+    // Invitasjonsvarslene etter en vellykket publisering (#2215).
+    respondWith(200, { invited: 1 });
+  });
+
+  describe('invitasjonsvarslene (#2215)', () => {
+    const INVITE_URL = `${BASE_URL}/api/games/${GAME_ID}/invite-roster`;
+
+    function rigSuccess(): void {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(GAME_ROW)],
+        game_players: [queryStub(PLAYER_ROWS)],
+      });
+    }
+
+    it('kaller POST …/invite-roster én gang etter vellykket publisering', async () => {
+      rigSuccess();
+
+      expect(await createGame().publishGame(draft())).toEqual({ ok: true, gameId: GAME_ID });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        INVITE_URL,
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['en 500', () => respondWith(500, { error: 'invite_failed' })],
+      ['en 409', () => respondWith(409, { error: 'game_locked' })],
+      ['et kall som aldri kom fram', () => mockFetch.mockRejectedValue(new Error('Network request failed'))],
+    ])('svarer fortsatt ok ved %s — runden ER opprettet', async (_label, rigFailure) => {
+      rigSuccess();
+      rigFailure();
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Et «prøv igjen» her ville laget runde nummer to.
+      expect(await createGame().publishGame(draft())).toEqual({ ok: true, gameId: GAME_ID });
+      expect(logged).toHaveBeenCalled();
+    });
+
+    it('kaller den ikke når games-inserten feilet', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(RLS_ERROR)],
+      });
+
+      expect(await createGame().publishGame(draft())).toEqual({
+        ok: false,
+        error: 'rls_denied',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('kaller den ikke når spiller-inserten feilet og runden ble rullet tilbake', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [queryStub(GAME_ROW), queryStub({ data: [{ id: GAME_ID }], error: null })],
+        game_players: [queryStub({ data: null, error: { message: 'nei' } })],
+      });
+
+      expect(await createGame().publishGame(draft())).toEqual({
+        ok: false,
+        error: 'db_players',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 
   describe('gullstien', () => {
@@ -636,3 +719,4 @@ describe('fetchCourses', () => {
     await expect(createGame().fetchCourses()).rejects.toThrow('nede');
   });
 });
+

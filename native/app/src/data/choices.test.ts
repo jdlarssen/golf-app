@@ -13,12 +13,30 @@
 //
 // Resten er trap 2: en upsert som traff 0 rader svarer `error == null`, og skal
 // aldri leses som suksess.
+//
+// #2215: en lagret skriving tømmer web-cachen, som hull-siden og kamp-tavla på
+// nettsiden leser valgene fra. Riggen er `useWebRoute()` med et 200-svar som
+// standard, så refresh-kallet går stille igjennom i testene som ikke handler om
+// det.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  GAME_ID,
+  mockFetch,
+  mockNetwork,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-const GAME = 'game-1';
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
+jest.mock('./syncTriggers', () => ({
+  isDeviceOnline: () => mockNetwork.online,
+}));
+
+const GAME = GAME_ID;
+const REFRESH_URL = `${BASE_URL}/api/games/${GAME}/refresh`;
 const ME = 'user-me';
 const MATE = 'user-mate';
 
@@ -64,10 +82,11 @@ function bbbWrite(over: BbbOver = {}) {
 }
 
 describe('choices', () => {
-  useFreshModules();
+  useWebRoute();
 
   beforeEach(() => {
     mocks().currentDeviceUserId.mockResolvedValue(ME);
+    respondWith(200, {});
   });
 
   describe('fetchWolfChoices', () => {
@@ -456,6 +475,134 @@ describe('choices', () => {
       expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
         ok: false,
         error: 'rls_denied',
+      });
+    });
+  });
+
+  describe('web-cachen (#2215)', () => {
+    const RLS_ERROR = { data: null, error: { message: 'nei', code: '42501' } };
+
+    function expectOneRefresh(): void {
+      expect(mockFetch).toHaveBeenCalledWith(
+        REFRESH_URL,
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    }
+
+    describe('setWolfChoice', () => {
+      it('tømmer web-cachen én gang etter en lagret skriving', async () => {
+        const { queryStub, routeFrom } = mocks();
+        routeFrom({ wolf_hole_choices: [queryStub(ONE_ROW)] });
+
+        expect(await choices().setWolfChoice(wolfWrite())).toEqual({ ok: true });
+        expectOneRefresh();
+      });
+
+      it.each<[string, () => void, () => ReturnType<Choices['setWolfChoice']>]>([
+        ['et ugyldig valg', () => {}, () => choices().setWolfChoice(wolfWrite({ partnerUserId: ME }))],
+        [
+          'manglende økt',
+          () => mocks().currentDeviceUserId.mockResolvedValue(null),
+          () => choices().setWolfChoice(wolfWrite()),
+        ],
+        [
+          'en upsert som traff 0 rader',
+          () => mocks().routeFrom({ wolf_hole_choices: [mocks().queryStub(ZERO_ROWS)] }),
+          () => choices().setWolfChoice(wolfWrite()),
+        ],
+        [
+          'en upsert RLS nektet',
+          () => mocks().routeFrom({ wolf_hole_choices: [mocks().queryStub(RLS_ERROR)] }),
+          () => choices().setWolfChoice(wolfWrite()),
+        ],
+      ])('tømmer aldri etter %s', async (_label, rig, act) => {
+        rig();
+
+        expect(await act()).toMatchObject({ ok: false });
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+
+      it('en feilende refresh endrer ikke resultatet — valget ER lagret', async () => {
+        const { queryStub, routeFrom } = mocks();
+        routeFrom({ wolf_hole_choices: [queryStub(ONE_ROW)] });
+        respondWith(500, { error: 'refresh_failed' });
+        const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        expect(await choices().setWolfChoice(wolfWrite())).toEqual({ ok: true });
+        expect(logged).toHaveBeenCalled();
+      });
+    });
+
+    describe('setBingoBangoBongoHole', () => {
+      it('tømmer web-cachen én gang etter en lagret skriving', async () => {
+        const { queryStub, routeFrom } = mocks();
+        routeFrom({
+          games: [queryStub(ACTIVE_GAME)],
+          bingo_bango_bongo_holes: [queryStub(ONE_ROW)],
+        });
+
+        expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
+          ok: true,
+        });
+        expectOneRefresh();
+      });
+
+      it.each<[string, () => void, string]>([
+        ['bundelen sier ferdig', () => {}, 'finished'],
+        [
+          'manglende økt',
+          () => mocks().currentDeviceUserId.mockResolvedValue(null),
+          'active',
+        ],
+        [
+          'runden ble avsluttet mens spilleren sto på hullet',
+          () =>
+            mocks().routeFrom({
+              games: [mocks().queryStub({ data: { status: 'finished' }, error: null })],
+            }),
+          'active',
+        ],
+        [
+          'en upsert som traff 0 rader',
+          () =>
+            mocks().routeFrom({
+              games: [mocks().queryStub(ACTIVE_GAME)],
+              bingo_bango_bongo_holes: [mocks().queryStub(ZERO_ROWS)],
+            }),
+          'active',
+        ],
+        [
+          'en upsert RLS nektet',
+          () =>
+            mocks().routeFrom({
+              games: [mocks().queryStub(ACTIVE_GAME)],
+              bingo_bango_bongo_holes: [mocks().queryStub(RLS_ERROR)],
+            }),
+          'active',
+        ],
+      ])('tømmer aldri når %s', async (_label, rig, bundleStatus) => {
+        rig();
+
+        expect(
+          await choices().setBingoBangoBongoHole(bbbWrite(), bundleStatus),
+        ).toMatchObject({ ok: false });
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+
+      it('en feilende refresh endrer ikke resultatet — raden ER lagret', async () => {
+        const { queryStub, routeFrom } = mocks();
+        routeFrom({
+          games: [queryStub(ACTIVE_GAME)],
+          bingo_bango_bongo_holes: [queryStub(ONE_ROW)],
+        });
+        mockFetch.mockRejectedValue(new Error('Network request failed'));
+        const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        expect(await choices().setBingoBangoBongoHole(bbbWrite(), 'active')).toEqual({
+          ok: true,
+        });
+        expect(logged).toHaveBeenCalled();
       });
     });
   });

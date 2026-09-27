@@ -11,7 +11,10 @@
 //     tynne valideringsskall rundt nøyaktig samme upsert; porten ER Postgres:
 //     `wolf_choices_insert/update` krever `wolf_user_id = auth.uid()` (eller
 //     admin), og `bbb_holes_write` slipper enhver deltaker til. Appen legger de
-//     samme reglene foran for UX-ens skyld — men gaten er RLS.
+//     samme reglene foran for UX-ens skyld — men gaten er RLS. Én ting gjør
+//     webbens actions i tillegg: de tømmer spillets web-cache (`game-${id}`),
+//     som hull-siden og kamp-tavla leser valgene fra. Appen ber ruta om det
+//     samme etter en vellykket skriving (`refreshWebCache`, #2215).
 //  2. **Mappingen bor her.** Webbens `getWolfChoices`/`getBingoBangoBongoHoles`
 //     åpner med `import 'server-only'` og kan ikke gjenbrukes; select-listene
 //     deres er fasit for de to under, og de delte `build*Context`-hjelperne vil
@@ -44,6 +47,7 @@ import type {
   WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
 import { currentDeviceUserId, supabase } from '../supabase';
+import { refreshWebCache } from './refreshWebCache';
 
 // -----------------------------------------------------------------------------
 // Henting
@@ -329,8 +333,11 @@ export async function setWolfChoice(
       .select('hole_number'),
     'setWolfChoice',
   );
+  if (failure) return { ok: false, error: failure };
 
-  return failure ? { ok: false, error: failure } : { ok: true };
+  // Valget er lagret; svaret herfra endrer ikke det.
+  await refreshWebCache(input.gameId);
+  return { ok: true };
 }
 
 /**
@@ -410,6 +417,9 @@ export async function setBingoBangoBongoHole(
       .select('hole_number'),
     'setBingoBangoBongoHole',
   );
+  if (failure) return { ok: false, error: failure };
 
-  return failure ? { ok: false, error: failure } : { ok: true };
+  // Raden er lagret; svaret herfra endrer ikke det.
+  await refreshWebCache(input.gameId);
+  return { ok: true };
 }

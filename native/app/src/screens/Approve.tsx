@@ -8,10 +8,10 @@
 // (`pendingApprovals`): runden krever godkjenning og pågår. Ellers står den
 // tomme tilstanden, så knappen og lista aldri sier noe forskjellig.
 //
-// Selve autorisasjonen ligger i Postgres: `can_score_for` (0106) med
-// kolonne-allowlist-triggeren. Skjermen er UX foran den porten, ikke porten
-// selv — derfor MÅ et `{ ok: false }` vises, også når PostgREST svarte uten
-// feil og bare traff 0 rader.
+// Selve autorisasjonen ligger i scorekort-ruta (#2215): porten der avgjør hvem
+// som får godkjenne og avvise, og kjernen bak den skriver, varsler og tømmer
+// web-cachen. Skjermen er UX foran den porten, ikke porten selv — derfor MÅ et
+// `{ ok: false }` vises, også når kortet bare ikke var til vurdering lenger.
 import { useCallback, useState } from 'react';
 import {
   Alert,

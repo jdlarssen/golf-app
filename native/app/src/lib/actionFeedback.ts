@@ -9,26 +9,37 @@ import type {
   ChoiceWriteFailure,
   WolfChoiceValidationError,
 } from '../data/choices';
+// Kun typene: `data/playerActions.ts` og `data/submitCard.ts` drar med seg
+// supabase-klienten gjennom `webApi`, og en oversetter-modul skal ikke koble på
+// noe av det. `import type` forsvinner i kompileringen, så koden her er
+// fortsatt ren tekst.
 import type { ActionResult } from '../data/playerActions';
-// Kun typen: `data/submitTeam.ts` drar med seg supabase-klienten gjennom
-// `webApi`, og en oversetter-modul skal ikke koble på noe av det.
-// `import type` forsvinner i kompileringen, så koden her er fortsatt ren tekst.
-import type { TeamSubmitFailure } from '../data/submitTeam';
+import type { SubmitCardFailure } from '../data/submitCard';
+import { OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
+/**
+ * Godkjenning og avvisning (#2215: via ruta). Ingen `default`-gren: legger
+ * noen en kode til i `ActionFailure`, faller `tsc` på den manglende
+ * returverdien.
+ */
 export function describeFailure(result: ActionResult): string | null {
   if (result.ok) return null;
   switch (result.reason) {
+    // Samme nett-linje og samme bygg-mangel som de andre rute-kallene: én
+    // årsak, én ordlyd.
+    case 'offline':
+      return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
     case 'no-session':
       return 'Du er ikke logget inn lenger. Logg inn på nytt.';
     case 'not-active':
       return 'Spillet er ikke aktivt lenger.';
-    case 'withdrawn':
-      return 'Du er trukket fra dette spillet.';
     case 'no-rows':
       return 'Ingenting ble endret. Du har kanskje ikke tilgang, eller noen andre rakk det først.';
     case 'db':
-      return result.message ?? 'Noe gikk galt mot serveren.';
+      return 'Noe gikk galt mot serveren.';
   }
 }
 
@@ -78,7 +89,7 @@ export function describeChoiceFailure(
 }
 
 /**
- * Hvorfor lagkortet ikke ble levert (#1918).
+ * Hvorfor kortet ikke ble levert (#1918; solo og lag siden #2215).
  *
  * Fire av kodene har hver sin setning fordi de krever fire helt ulike ting av
  * spilleren: koble til nett, logge inn på nytt, innse at runden er lukket,
@@ -87,13 +98,15 @@ export function describeChoiceFailure(
  * alle utenfor spillerens kontroll her og nå, og fire varianter av samme råd
  * hjelper ingen. Samme arbeidsdeling som `describeReminderFailure`.
  *
- * Ingen `default`-gren: legger ruta til en kode i `TeamSubmitFailure`, faller
+ * Ingen `default`-gren: legger ruta til en kode i `SubmitCardFailure`, faller
  * `tsc` på den manglende returverdien.
  */
-export function describeTeamSubmitFailure(reason: TeamSubmitFailure): string {
+export function describeSubmitFailure(reason: SubmitCardFailure): string {
   switch (reason) {
+    // Den felles nett-linja. «Levering av lagkort krever nett.» ble feil da
+    // solo-kortet også gikk hit.
     case 'offline':
-      return 'Levering av lagkort krever nett.';
+      return OFFLINE_NOTE;
     // Delt med lenke-knappene: den samme mangelen i bygget stopper begge, og
     // meldingen skal ikke nevne én av dem.
     case 'no-web-base-url':

@@ -17,14 +17,13 @@
 // å importeres derfra: de primitivene kjenner ikke «huket av»-firkanten, og
 // formen her er ikke helt den samme. Fargene er de samme tokenene.
 //
-// **Manglende godkjenning har ingen vei rundt** — men den har nå en vei
-// GJENNOM (#1891). `guard_game_players_self_update` (0147) slipper oppretteren
-// til på andres rad, så appen kan skrive de samme kolonnene som webbens
-// overstyring (`adminApproveScorecard`) med den `approveScorecard` den alt har.
-// Én forskjell står igjen: webben sender i tillegg `scorecard_approved`-varselet
-// til spilleren (`notify()`, Node), det gjør ikke appen. Det som fortsatt IKKE
-// finnes er en vei rundt: kortet må godkjennes, av en medspiller eller av
-// arrangøren.
+// **Manglende godkjenning har ingen vei rundt** — men den har en vei
+// GJENNOM (#1891). Arrangøren godkjenner med den samme `approveScorecard` som
+// spillerne bruker. Siden #2215 går den via scorekort-ruta, som gir arrangøren
+// `organizer`-rollen når hen ikke står i flighten og sender
+// `scorecard_approved`-varselet til spilleren, slik webbens overstyring
+// (`adminApproveScorecard`) gjør. Det som fortsatt IKKE finnes er en vei rundt:
+// kortet må godkjennes, av en medspiller eller av arrangøren.
 //
 // **Purringen er den ikke-destruktive utveien (#1889).** Manglet noen kort, var
 // eneste knapp «marker som trukket» — en destruktiv handling presentert som
@@ -191,14 +190,12 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   /**
    * Godkjenn en medspillers kort på vegne av gruppa (#1891).
    *
-   * Ingen ny rute og ingen ny regel: dette er `approveScorecard` slik spilleren
-   * selv bruker den, og RLS er porten. 0147-vakta slipper oppretteren gjennom
-   * på andres rad, og UPDATE-filteret (`submitted_at not null`, `approved_at
-   * is null`) sørger for at et ULEVERT kort aldri kan godkjennes herfra.
-   *
-   * **Ingen varsel sendes.** Webbens egen overstyring gjør heller ikke det
-   * («success without re-notifying»): spilleren blir ikke bedt om noe, hen får
-   * beskjed om at arrangøren tok jobben — og det skjer i resultatet.
+   * Ingen egen regel: dette er `approveScorecard` slik spilleren selv bruker
+   * den. Siden #2215 går den via scorekort-ruta, og rutas port er fasiten: den
+   * slipper arrangøren gjennom på andres rad, og kjernens UPDATE-filter
+   * (`submitted_at not null`, `approved_at is null`) sørger for at et ULEVERT
+   * kort aldri kan godkjennes herfra. Ruta sender `scorecard_approved` til
+   * spilleren, som webbens overstyring gjør.
    *
    * `refresh()` kjøres uansett utfall. Ble kortet godkjent, skal banneret
    * forsvinne; ble det avvist, er lista på skjermen utdatert og en ny henting

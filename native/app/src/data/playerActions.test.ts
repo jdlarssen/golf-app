@@ -1,18 +1,37 @@
-// Native N3 (#1825): lever/godkjenn/avvis.
+// Native N3 (#1825), #2215: godkjenn og avvis, sett fra appen.
 //
-// Tyngdepunktet er 0-rads-fella (#667/#704): PostgREST svarer `error == null`
-// på en UPDATE som traff ingenting, og webben har alt blødd på nettopp det.
-// Hver handling må skille «alt gjort» fra «nektet» — aldri melde suksess for en
-// skriving som ikke skjedde.
+// Siden #2215 går begge via scorekort-ruta. Reglene (hvem som får vurdere
+// kortet, 0-rads-oppløsningen, kuttet av grunnen, sentinelen for «ingen grunn»)
+// bor i `lib/games/reviewScorecardCore.ts` og rutas port, og testes der. Det som
+// testes her er OVERSETTELSEN: at hvert svar ruta kan gi blir den koden skjermen
+// skal vise, og aldri noe annet. En 422 som leses som «godkjent» sender
+// spilleren videre i troen på at kortet er i orden.
+//
+// `routeFrom({})` i hver test er en påstand i seg selv: en tom plan kaster på
+// enhver spørring, så en test som går grønt beviser at appen ikke skrev noe
+// selv ved siden av ruta.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  GAME_ID,
+  TOKEN,
+  auth,
+  mockFetch,
+  mockNetwork,
+  requestInit,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-const GAME = 'game-1';
-const ME = 'user-me';
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
+jest.mock('./syncTriggers', () => ({
+  isDeviceOnline: () => mockNetwork.online,
+}));
+
 const MATE = 'user-mate';
+const REVIEW_URL = `${BASE_URL}/api/games/${GAME_ID}/scorecards/${MATE}`;
 
 type Mocks = typeof import('../test/supabaseMock');
 type Actions = typeof import('./playerActions');
@@ -25,354 +44,144 @@ function actions(): Actions {
   return require('./playerActions') as Actions;
 }
 
-const ACTIVE_GAME = { data: { status: 'active' }, error: null };
-const ONE_ROW = { data: [{ user_id: ME }], error: null };
-const ZERO_ROWS = { data: [], error: null };
-
-/** Filtrene som ble kjedet på, som «metode(arg, arg)»-strenger. */
-function filtersOf(stub: ReturnType<Mocks['queryStub']>): string[] {
-  return stub.steps
-    .filter((s) => s.method !== 'update' && s.method !== 'select')
-    // `String(null)` og ikke `join` direkte: join gjør null til tom streng, og
-    // da ville et manglende null-filter sett identisk ut med et som står der.
-    .map((s) => `${s.method}(${s.args.map((a) => String(a)).join(',')})`);
+/** Kroppen kallet ble sendt med, lest tilbake fra JSON. */
+function sentBody(): unknown {
+  return JSON.parse(String(requestInit().body));
 }
 
-describe('playerActions', () => {
-  useFreshModules();
+describe('playerActions via scorekort-ruta (#2215)', () => {
+  useWebRoute();
 
   beforeEach(() => {
-    mocks().currentDeviceUserId.mockResolvedValue(ME);
-  });
-
-  describe('submitScorecard', () => {
-    it('setter submitted_at og nuller en tidligere avvisningsgrunn', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const update = queryStub(ONE_ROW);
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub({ data: { withdrawn_at: null, submitted_at: null }, error: null }),
-          update,
-        ],
-      });
-
-      expect(await actions().submitScorecard(GAME)).toEqual({
-        ok: true,
-        alreadyDone: false,
-      });
-
-      const patch = stepArgs(update, 'update')[0]![0] as Record<string, unknown>;
-      expect(typeof patch.submitted_at).toBe('string');
-      expect(patch.rejection_reason).toBeNull();
-      expect(filtersOf(update)).toEqual([
-        `eq(game_id,${GAME})`,
-        `eq(user_id,${ME})`,
-        'is(submitted_at,null)',
-      ]);
-      // Uten `.select()` finnes det ikke noe radantall å asserte på (trap 2).
-      expect(stepArgs(update, 'select')).toEqual([['user_id']]);
-    });
-
-    it('er et no-op når kortet alt er levert', async () => {
-      const { queryStub, routeFrom, supabase } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub({
-            data: { withdrawn_at: null, submitted_at: '2026-08-30T09:00:00.000Z' },
-            error: null,
-          }),
-        ],
-      });
-
-      expect(await actions().submitScorecard(GAME)).toEqual({
-        ok: true,
-        alreadyDone: true,
-      });
-      // Ingen tredje spørring: skrivingen hoppes over helt.
-      expect(supabase.from).toHaveBeenCalledTimes(2);
-    });
-
-    it.each([
-      ['draft', 'not-active'],
-      ['finished', 'not-active'],
-      ['scheduled', 'not-active'],
-    ])('nekter å levere i et %s spill', async (status: string, reason: string) => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({ games: [queryStub({ data: { status }, error: null })] });
-
-      expect(await actions().submitScorecard(GAME)).toEqual({ ok: false, reason });
-    });
-
-    it('nekter en trukket spiller å levere', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub({
-            data: { withdrawn_at: '2026-08-30T08:00:00.000Z', submitted_at: null },
-            error: null,
-          }),
-        ],
-      });
-
-      expect(await actions().submitScorecard(GAME)).toEqual({
-        ok: false,
-        reason: 'withdrawn',
-      });
-    });
-
-    it('gjør ingenting uten sesjon', async () => {
-      const { supabase, currentDeviceUserId } = mocks();
-      currentDeviceUserId.mockResolvedValue(null);
-
-      expect(await actions().submitScorecard(GAME)).toEqual({
-        ok: false,
-        reason: 'no-session',
-      });
-      expect(supabase.from).not.toHaveBeenCalled();
-    });
-
-    it('leser 0 rader som suksess når raden faktisk ER levert', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub({ data: { withdrawn_at: null, submitted_at: null }, error: null }),
-          queryStub(ZERO_ROWS),
-          // Oppfølgings-SELECT: et parallelt trykk vant kappløpet.
-          queryStub({
-            data: { submitted_at: '2026-08-30T09:00:00.000Z' },
-            error: null,
-          }),
-        ],
-      });
-
-      expect(await actions().submitScorecard(GAME)).toEqual({
-        ok: true,
-        alreadyDone: true,
-      });
-    });
-
-    it('leser 0 rader som FEIL når raden fortsatt ikke er levert', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub({ data: { withdrawn_at: null, submitted_at: null }, error: null }),
-          queryStub(ZERO_ROWS),
-          queryStub({ data: { submitted_at: null }, error: null }),
-        ],
-      });
-
-      expect(await actions().submitScorecard(GAME)).toEqual({
-        ok: false,
-        reason: 'no-rows',
-      });
-    });
-
-    it('rapporterer en DB-feil som feil', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub({ data: { withdrawn_at: null, submitted_at: null }, error: null }),
-          queryStub({ data: null, error: { message: 'permission denied' } }),
-        ],
-      });
-
-      expect(await actions().submitScorecard(GAME)).toMatchObject({
-        ok: false,
-        reason: 'db',
-      });
-    });
+    mocks().routeFrom({});
   });
 
   describe('approveScorecard', () => {
-    it('setter approved_at + approved_by_user_id og filtrerer bort alt annet enn et levert, ikke-godkjent kort', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const update = queryStub(ONE_ROW);
-      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
+    it('godkjenner med POST …/scorecards/<uid>, Bearer og { decision: approve }', async () => {
+      respondWith(200, { alreadyDone: false });
 
-      expect(await actions().approveScorecard(GAME, MATE)).toEqual({
+      expect(await actions().approveScorecard(GAME_ID, MATE)).toEqual({
         ok: true,
         alreadyDone: false,
       });
 
-      const patch = stepArgs(update, 'update')[0]![0] as Record<string, unknown>;
-      expect(typeof patch.approved_at).toBe('string');
-      expect(patch.approved_by_user_id).toBe(ME);
-      expect(patch.rejection_reason).toBeNull();
-      expect(filtersOf(update)).toEqual([
-        `eq(game_id,${GAME})`,
-        `eq(user_id,${MATE})`,
-        'not(submitted_at,is,null)',
-        'is(approved_at,null)',
-      ]);
-      expect(stepArgs(update, 'select')).toEqual([['user_id']]);
+      expect(mockFetch).toHaveBeenCalledWith(
+        REVIEW_URL,
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ Authorization: `Bearer ${TOKEN}` }),
+          body: JSON.stringify({ decision: 'approve' }),
+        }),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it('leser 0 rader som suksess når kortet alt er godkjent', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub(ZERO_ROWS),
-          queryStub({ data: { approved_at: '2026-08-30T09:30:00.000Z' }, error: null }),
-        ],
-      });
+    it('bærer alreadyDone videre når kortet alt var godkjent', async () => {
+      respondWith(200, { alreadyDone: true });
 
-      expect(await actions().approveScorecard(GAME, MATE)).toEqual({
+      expect(await actions().approveScorecard(GAME_ID, MATE)).toEqual({
         ok: true,
         alreadyDone: true,
       });
     });
 
-    it('leser 0 rader som FEIL når kortet ikke er godkjent (RLS nektet)', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub(ZERO_ROWS),
-          queryStub({ data: { approved_at: null }, error: null }),
-        ],
-      });
+    it('er godkjent selv om svaret ikke sa hvilken vei det gikk', async () => {
+      // 200 er kvitteringen; `alreadyDone` er informasjon.
+      respondWith(200, {});
 
-      expect(await actions().approveScorecard(GAME, MATE)).toEqual({
-        ok: false,
-        reason: 'no-rows',
+      expect(await actions().approveScorecard(GAME_ID, MATE)).toEqual({
+        ok: true,
+        alreadyDone: false,
       });
     });
 
-    it('leser 0 rader som FEIL når raden ikke er synlig i det hele tatt', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [queryStub(ZERO_ROWS), queryStub({ data: null, error: null })],
-      });
+    it('koder spill- og spiller-id-en i stien', async () => {
+      respondWith(200, { alreadyDone: false });
 
-      expect(await actions().approveScorecard(GAME, MATE)).toEqual({
-        ok: false,
-        reason: 'no-rows',
-      });
+      await actions().approveScorecard('game/1', 'user?2');
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        `${BASE_URL}/api/games/game%2F1/scorecards/user%3F2`,
+      );
     });
-
-    it.each([['draft'], ['scheduled'], ['finished']])(
-      'nekter å godkjenne i et %s spill, og skriver ingenting',
-      async (status: string) => {
-        const { queryStub, routeFrom, supabase } = mocks();
-        // Ingen `game_players`-plan: prøver handlingen å skrive likevel, kaster
-        // ruteren og testen faller. Porten skal svare før noen UPDATE finnes.
-        routeFrom({ games: [queryStub({ data: { status }, error: null })] });
-
-        expect(await actions().approveScorecard(GAME, MATE)).toEqual({
-          ok: false,
-          reason: 'not-active',
-        });
-        expect(supabase.from).toHaveBeenCalledTimes(1);
-      },
-    );
   });
 
   describe('rejectScorecard', () => {
-    it('nuller leverings- og godkjenningssporet og lagrer grunnen', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const update = queryStub(ONE_ROW);
-      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
+    it('sender { decision: reject, reason } med grunnen som den ble skrevet', async () => {
+      respondWith(200, { alreadyDone: false });
 
-      expect(await actions().rejectScorecard(GAME, MATE, '  Hull 7 mangler  ')).toEqual(
+      expect(await actions().rejectScorecard(GAME_ID, MATE, '  Hull 7 mangler  ')).toEqual(
         { ok: true, alreadyDone: false },
       );
 
-      expect(stepArgs(update, 'update')[0]![0]).toEqual({
-        submitted_at: null,
-        approved_at: null,
-        approved_by_user_id: null,
-        rejection_reason: 'Hull 7 mangler',
-      });
-      expect(filtersOf(update)).toEqual([
-        `eq(game_id,${GAME})`,
-        `eq(user_id,${MATE})`,
-        'not(submitted_at,is,null)',
-      ]);
+      expect(mockFetch.mock.calls[0][0]).toBe(REVIEW_URL);
+      expect(requestInit().method).toBe('POST');
+      // Trimming, kutt og sentinel er kjernens (én regel, ett hjem) — appen
+      // sender råteksten.
+      expect(sentBody()).toEqual({ decision: 'reject', reason: '  Hull 7 mangler  ' });
     });
 
-    it.each([
-      ['ingen grunn oppgitt', undefined],
-      ['bare mellomrom', '   '],
-      ['tom streng', ''],
-    ])('lagrer maskinsentinelen ved %s', async (_label: string, reason?: string) => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const update = queryStub(ONE_ROW);
-      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
+    it('sender ingen reason når ingen grunn er oppgitt', async () => {
+      respondWith(200, { alreadyDone: false });
 
-      await actions().rejectScorecard(GAME, MATE, reason);
+      await actions().rejectScorecard(GAME_ID, MATE);
 
-      const patch = stepArgs(update, 'update')[0]![0] as Record<string, unknown>;
-      // Sentinelen kommer fra den DELTE kilden — banneret på spill-hjem er gated
-      // på at feltet er truthy, så `null` ville vært usynlig for spilleren.
-      expect(patch.rejection_reason).toBe(NO_REJECTION_REASON);
+      expect(sentBody()).toEqual({ decision: 'reject' });
+    });
+  });
+
+  // Hver rad i svar-tabellen (kontrakten D2) låst til sin kode, for begge
+  // handlingene: de deler oversettelsen, og en regresjon i én av dem skal ikke
+  // gjemme seg bak at den andre er testet.
+  describe.each([
+    ['approveScorecard', () => actions().approveScorecard(GAME_ID, MATE)],
+    ['rejectScorecard', () => actions().rejectScorecard(GAME_ID, MATE, 'E2E')],
+  ] as const)('%s — svar-tabellen', (_name, act) => {
+    it.each<[number, Record<string, unknown>, string]>([
+      [401, { error: 'unauthorized' }, 'no-session'],
+      [404, { error: 'not_found' }, 'not-active'],
+      [409, { error: 'not_active' }, 'not-active'],
+      [403, { error: 'forbidden' }, 'no-rows'],
+      [422, { error: 'not_pending' }, 'no-rows'],
+      [400, { error: 'bad_request' }, 'db'],
+      [500, { error: 'review_failed' }, 'db'],
+      // En kode vi ikke kjenner på en status som bærer koder: fail-closed.
+      [409, { error: 'noe_nytt' }, 'db'],
+      [422, { error: 'noe_nytt' }, 'db'],
+      [418, {}, 'db'],
+    ])('oversetter %i %j til %s, uten melding', async (status, body, reason) => {
+      respondWith(status, body);
+
+      // `toEqual` og ikke `toMatchObject`: `db` skal aldri bære serverens tekst.
+      expect(await act()).toEqual({ ok: false, reason });
     });
 
-    it('kutter en overlang grunn på 500 tegn', async () => {
-      const { queryStub, routeFrom, stepArgs } = mocks();
-      const update = queryStub(ONE_ROW);
-      routeFrom({ games: [queryStub(ACTIVE_GAME)], game_players: [update] });
+    it('stopper uten nett før fetch', async () => {
+      mockNetwork.online = false;
 
-      await actions().rejectScorecard(GAME, MATE, 'x'.repeat(900));
-
-      const patch = stepArgs(update, 'update')[0]![0] as Record<string, unknown>;
-      expect(patch.rejection_reason).toHaveLength(500);
+      expect(await act()).toEqual({ ok: false, reason: 'offline' });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('leser 0 rader som suksess når kortet alt er avvist', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub(ZERO_ROWS),
-          queryStub({ data: { submitted_at: null }, error: null }),
-        ],
-      });
+    it('sier ifra når server-adressen mangler i bygget', async () => {
+      delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
 
-      expect(await actions().rejectScorecard(GAME, MATE)).toEqual({
-        ok: true,
-        alreadyDone: true,
-      });
+      expect(await act()).toEqual({ ok: false, reason: 'no-web-base-url' });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('leser 0 rader som FEIL når kortet fortsatt står som levert', async () => {
-      const { queryStub, routeFrom } = mocks();
-      routeFrom({
-        games: [queryStub(ACTIVE_GAME)],
-        game_players: [
-          queryStub(ZERO_ROWS),
-          queryStub({
-            data: { submitted_at: '2026-08-30T09:00:00.000Z' },
-            error: null,
-          }),
-        ],
-      });
+    it('leser en manglende sesjon som no-session, uten å sende noe', async () => {
+      auth().getSession.mockResolvedValue({ data: { session: null } });
 
-      expect(await actions().rejectScorecard(GAME, MATE)).toEqual({
-        ok: false,
-        reason: 'no-rows',
-      });
+      expect(await act()).toEqual({ ok: false, reason: 'no-session' });
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it.each([['draft'], ['scheduled'], ['finished']])(
-      'nekter å avvise i et %s spill, og skriver ingenting',
-      async (status: string) => {
-        const { queryStub, routeFrom, supabase } = mocks();
-        routeFrom({ games: [queryStub({ data: { status }, error: null })] });
+    it('leser et kall som aldri kom fram som db', async () => {
+      mockFetch.mockRejectedValue(new Error('Network request failed'));
+      jest.spyOn(console, 'error').mockImplementation(() => {});
 
-        expect(await actions().rejectScorecard(GAME, MATE, 'for sent')).toEqual({
-          ok: false,
-          reason: 'not-active',
-        });
-        expect(supabase.from).toHaveBeenCalledTimes(1);
-      },
-    );
+      expect(await act()).toEqual({ ok: false, reason: 'db' });
+    });
   });
 });
