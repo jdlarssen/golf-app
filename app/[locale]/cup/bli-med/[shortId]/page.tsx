@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { formatTeeOffLineLocale } from '@/lib/i18n/format';
+import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { getCupJoinContext } from '@/lib/cup/getCupJoinContext';
 import { evaluateCupJoin } from '@/lib/cup/joinValidation';
@@ -116,9 +116,12 @@ export default async function CupBliMedPage({
     if (plan) {
       const rel = plan.courses;
       const courseName = (Array.isArray(rel) ? rel[0] : rel)?.name ?? null;
-      const teeOff = plan.scheduled_tee_off_at
-        ? formatTeeOffLineLocale(plan.scheduled_tee_off_at, locale)
+      // #2270: a timestamptz, so Oslo-pinned. The datetime-local helper reads
+      // the UTC server's local getters and showed 09:20 as 07:20.
+      const teeOffParts = plan.scheduled_tee_off_at
+        ? formatTeeOffLongParts(plan.scheduled_tee_off_at, locale)
         : null;
+      const teeOff = teeOffParts ? t('teeOffLine', teeOffParts) : null;
       planLine = [courseName, teeOff].filter(Boolean).join(' · ') || null;
     }
   }
