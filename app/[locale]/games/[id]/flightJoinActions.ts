@@ -102,7 +102,15 @@ export async function joinFlight(
     .eq('game_id', gameId)
     .eq('user_id', userId);
 
-  if (updateError) return { ok: false, error: 'db_error' };
+  if (updateError) {
+    console.error('[joinFlight] update failed', {
+      gameId,
+      userId,
+      targetFlight,
+      error: updateError,
+    });
+    return { ok: false, error: 'db_error' };
+  }
 
   // Race-guard: re-tell etter skriv. Hvis flighten nå har > MAX_FLIGHT_SIZE
   // aktive spillere, er vi taperen — angre vår egen rad.
@@ -114,12 +122,24 @@ export async function joinFlight(
     .is('withdrawn_at', null);
 
   if ((afterCount ?? 0) > MAX_FLIGHT_SIZE) {
-    // Revert til forrige flight (eller null hvis vi ikke hadde flight).
-    await admin
+    // Revert til forrige flight (eller null hvis vi ikke hadde flight). We
+    // just wrote the row, so an error or 0 rows leaves the flight overfull:
+    // log it (#2223). The answer stays flight_full.
+    const { data: reverted, error: revertError } = await admin
       .from('game_players')
       .update({ flight_number: previousFlight })
       .eq('game_id', gameId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select('user_id');
+    if (revertError || (reverted ?? []).length === 0) {
+      console.error('[joinFlight] revert failed', {
+        gameId,
+        userId,
+        targetFlight,
+        previousFlight,
+        error: revertError,
+      });
+    }
     return { ok: false, error: 'flight_full' };
   }
 

@@ -244,12 +244,20 @@ export async function withdrawSelf(
     return { ok: false, error: 'db_error' };
   }
 
-  // Slett også eventuelle registration-request-rader (cleanup). Best-effort.
-  await admin
+  // Slett også eventuelle registration-request-rader (cleanup). Best-effort:
+  // 0 rows is normal, an error is logged.
+  const { error: requestDeleteError } = await admin
     .from('game_registration_requests')
     .delete()
     .eq('game_id', gameId)
     .eq('user_id', userId);
+  if (requestDeleteError) {
+    console.error('[withdrawSelf] request cleanup failed', {
+      gameId,
+      userId,
+      error: requestDeleteError,
+    });
+  }
 
   expireGameCache(game.id);
 

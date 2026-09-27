@@ -217,17 +217,23 @@ export async function sendGuestResult(
 
   // Invitations-rad (best-effort): gir claim-en et spor i invitasjonslista og
   // lar verifyCode-reconciliation koble venne-forholdet ved første innlogging.
-  // Duplikater/feil svelges — raden er ikke nødvendig for selve innloggingen
-  // (auth-brukeren finnes, signInWithOtp sender kode uansett).
+  // Duplikater svelges og andre feil logges — raden er ikke nødvendig for selve
+  // innloggingen (auth-brukeren finnes, signInWithOtp sender kode uansett).
   try {
     const admin = getAdminClient();
-    await admin.from('invitations').insert({
+    const { error: inviteError } = await admin.from('invitations').insert({
       email: email!,
       token: randomUUID(),
       invited_by: ctx.userId,
       game_id: gameId,
       expires_at: gameInviteExpiresAtFromNow(),
     });
+    if (inviteError && inviteError.code !== '23505') {
+      console.error('[sendGuestResult] invitations insert failed (best-effort)', {
+        gameId,
+        error: inviteError,
+      });
+    }
   } catch (err) {
     console.error('[sendGuestResult] invitations insert failed (best-effort)', err);
   }

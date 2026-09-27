@@ -172,8 +172,10 @@ export async function createGuestUser(
   const retryDelayMs = opts?.retryDelayMs ?? 200;
   const nowIso = new Date().toISOString();
   let updated = false;
+  // The last attempt's error, so the log below tells a DB error from 0 rows.
+  let lastUpdateError: unknown = null;
   for (let attempt = 0; attempt < PROFILE_UPDATE_ATTEMPTS && !updated; attempt++) {
-    const { data: rows } = await admin
+    const { data: rows, error: updateError } = await admin
       .from('users')
       .update({
         name: profile.name,
@@ -186,6 +188,7 @@ export async function createGuestUser(
       })
       .eq('id', userId)
       .select('id');
+    lastUpdateError = updateError;
     updated = (rows ?? []).length > 0;
     if (!updated && retryDelayMs > 0) {
       await new Promise((r) => setTimeout(r, retryDelayMs));
@@ -193,9 +196,16 @@ export async function createGuestUser(
   }
 
   if (!updated) {
-    console.error('[createGuestUser] profile update affected 0 rows — compensating deleteUser');
+    console.error('[createGuestUser] profile update failed — compensating deleteUser', {
+      userId,
+      error: lastUpdateError,
+    });
+    // auth-js returns its error instead of throwing it; the catch is for throws.
     try {
-      await admin.auth.admin.deleteUser(userId);
+      const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+      if (deleteError) {
+        console.error('[createGuestUser] compensating deleteUser failed', { userId, error: deleteError });
+      }
     } catch (err) {
       console.error('[createGuestUser] compensating deleteUser failed', err);
     }
@@ -241,7 +251,14 @@ export async function createGuestPlayer(
   if (insertError) {
     console.error('[createGuestPlayer] roster insert failed — compensating deleteUser', insertError);
     try {
-      await admin.auth.admin.deleteUser(created.userId);
+      const { error: deleteError } = await admin.auth.admin.deleteUser(created.userId);
+      if (deleteError) {
+        console.error('[createGuestPlayer] compensating deleteUser failed', {
+          gameId,
+          userId: created.userId,
+          error: deleteError,
+        });
+      }
     } catch (err) {
       console.error('[createGuestPlayer] compensating deleteUser failed', err);
     }
