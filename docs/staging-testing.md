@@ -15,4 +15,6 @@
 - **Eier-tapptest i native-appen (#1923):** innloggingsskjermen i Tørny Dev har trykk-innlogging for rollebesetningen (Anne Admin, Kari Arrangør, Ola Kompis, Per Putter, Testspiller Tapp — alle `@example.test`). Rigg testspill til eieren med disse. Trenger du en annen bruker: `node scripts/dev-login-users.mjs add --email torny+dev-<slug>@example.test --name "<Navn>" --role spiller --issue <N>` — den står i appen neste gang innloggingsskjermen åpnes, uten nytt bygg. Passord: `DEV_LOGIN_PASSWORD` i `.env.staging.local` = `EXPO_PUBLIC_DEV_LOGIN_PASSWORD` i `native/app/.env.local` (begge gitignorert). Skriptet nekter alt annet enn staging. Detaljer: `docs/native/app-spike.md` «Testbrukere i appen».
 - **Prod-vakt:** en staging-mintet kode validerer kun mot staging — bekreft det (og at data er staging-formet) før du skriver noe.
 
+**Staging har ingen pg_cron-jobber** (#2246): planlagte testspill starter når noen åpner dem, eller når du kaller start-ruta selv. Slik leser du cron-helsa og tester sweepene: `lib/cron/AGENTS.md`.
+
 **DB-/skjema-endringer:** påfør staging først via Supabase MCP, verifiser, DERETTER prod (0107-mønsteret). Aldri uverifiserte migrasjoner rett på prod. (`gen:types` leser prod-skjemaet read-only — greit; prod er fasiten for det som er deployet.)
