@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { findGuestIds } from '@/lib/games/createGuestPlayer';
+import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
@@ -22,10 +23,6 @@ import { isClubExpired } from '@/lib/clubs/clubStatus';
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
 // course_handicap=null.
-
-function uiGenderToDb(ui: string): 'mens' | 'ladies' | 'juniors' {
-  return ui === 'D' ? 'ladies' : ui === 'J' ? 'juniors' : 'mens';
-}
 
 /**
  * Feilkoder opprett-actionene kan returnere. Alle har en nøkkel under
@@ -297,13 +294,15 @@ async function createGameInternal(
 
   const rowAcceptedAt = new Date().toISOString();
   const rows = payload.players.map((p) => {
-    const playerGenderUi = String(formData.get(`player_${p.user_id}_gender`) ?? 'M');
+    const playerGenderUi = asTeeChoice(
+      String(formData.get(`player_${p.user_id}_gender`) ?? 'M'),
+    );
     return {
       game_id: game.id,
       user_id: p.user_id,
       team_number: p.team_number,
       flight_number: p.flight_number,
-      tee_gender: uiGenderToDb(playerGenderUi),
+      tee_gender: teeChoiceToDb(playerGenderUi),
       // Course handicap is no longer frozen at create-time. Both 'scheduled'
       // and 'draft' rows defer this until the round actually starts (D5).
       course_handicap: null,

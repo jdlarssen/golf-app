@@ -37,13 +37,14 @@ import {
 } from '../../../../lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '../../../../lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '../../../../lib/scoring/modes/types';
+import { teeChoiceToDb } from '../../../../lib/games/teeChoice';
 import {
   expectAffected,
   NoRowsAffectedError,
 } from '../../../../lib/supabase/affectedRows';
 import { isAppSupportedMode } from '../lib/appFormats';
 import { asSharedFormData } from '../lib/wizardFormData';
-import { buildDraftPayload, type GameDraft, type TeeGenderUi } from '../lib/wizardPayload';
+import { buildDraftPayload, type GameDraft } from '../lib/wizardPayload';
 import { currentDeviceUserId, supabase } from '../supabase';
 
 // -----------------------------------------------------------------------------
@@ -270,11 +271,6 @@ const failed = (error: CreateGameFailure): CreateGameResult => ({
 /** PostgRESTs kode for «insufficient_privilege» — RLS avviste raden. */
 const RLS_DENIED_CODE = '42501';
 
-/** Webbens `uiGenderToDb` (actions.ts:26): UI-bokstav → DB-enum. */
-function teeGenderToDb(ui: TeeGenderUi): 'mens' | 'ladies' | 'juniors' {
-  return ui === 'D' ? 'ladies' : ui === 'J' ? 'juniors' : 'mens';
-}
-
 /**
  * Les svaret på en skriving og gi den ene sannheten tilbake: traff den rader?
  *
@@ -464,7 +460,7 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
     user_id: p.user_id,
     team_number: p.team_number,
     flight_number: p.flight_number,
-    tee_gender: teeGenderToDb(teeGenderByUser.get(p.user_id) ?? 'M'),
+    tee_gender: teeChoiceToDb(teeGenderByUser.get(p.user_id) ?? 'M'),
     // Fryses ved start, ikke ved opprettelse.
     course_handicap: null,
     // #463: din egen rad er bekreftet med én gang; de andre står «Ikke

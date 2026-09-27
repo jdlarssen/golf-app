@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { toSignedHcp } from '@/lib/handicap/sign';
 import { HCP_MAX, HCP_MIN, parseHcpMagnitude } from '@/lib/users/profileInput';
+import { teeChoiceToDb } from '@/lib/games/teeChoice';
 
 /**
  * Gjestespiller-lite (#1009): en gjest er en EKTE bruker-rad («skygge-bruker»)
@@ -82,7 +83,7 @@ export function parseGuestProfile(raw: {
 
 /** M/D/J → game_players.tee_gender (styrer per-kjønn par/rating på tee-en). */
 export function guestTeeToTeeGender(tee: GuestTee): 'mens' | 'ladies' | 'juniors' {
-  return tee === 'D' ? 'ladies' : tee === 'J' ? 'juniors' : 'mens';
+  return teeChoiceToDb(tee);
 }
 
 /** M/D/J → users.gender. user_gender-enumet har ingen junior-verdi → null. */
