@@ -249,11 +249,13 @@ stubs for `from`/`rpc`. TypeScript 6 auto-inkluderer ikke `@types/` lenger —
 
 ### Godkjenn-testen mot staging
 
-Godkjenn krever et levert kort fra en flight-makker. Rigg med service-role:
-sett makkerens `game_players.submitted_at` (`is.null`-filter så det er
-idempotent), åpne spillet i appen → «Godkjenn (1)» → godkjenn/avvis, og
-verifiser kolonnene med en service-role-lesing etterpå. Selv-godkjenning
-stoppes av 0106-triggeren.
+Godkjenn krever et levert kort fra en flight-makker, i en runde som krever
+godkjenning og pågår. Rigg med service-role: spillet må ha
+`require_peer_approval = true` og `status = 'active'` (#2220: ellers viser
+appen ingen «Godkjenn»-knapp, som nettsiden). Sett så makkerens
+`game_players.submitted_at` (`is.null`-filter så det er idempotent), åpne
+spillet i appen → «Godkjenn (1)» → godkjenn/avvis, og verifiser kolonnene med
+en service-role-lesing etterpå. Selv-godkjenning stoppes av 0106-triggeren.
 
 ## Leaderboards + lag-føring (N4, #1828)
 
