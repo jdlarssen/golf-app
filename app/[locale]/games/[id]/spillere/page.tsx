@@ -293,6 +293,12 @@ export default async function CreatorSpillerePage({
             <ul className="space-y-2">
               {players.map((p) => {
                 const wd = !!p.withdrawn_at;
+                // #2213: no Trekk/Angre on a non-admin organiser's own row.
+                // 0168's guard, clause (c), refuses a player changing their own
+                // withdrawn_at, so the button always ended in ?error=db_players.
+                // Same rule as /avslutt (#1932) and the app (endGamePlan.ts).
+                const canWithdrawRow =
+                  canWithdraw && (role.isAdmin || p.user_id !== role.userId);
                 const submitted = !!p.submitted_at;
                 const approved = !!p.approved_at;
                 const stateLabel = wd
@@ -339,10 +345,11 @@ export default async function CreatorSpillerePage({
                         </form>
                       )}
 
-                      {isActive && canWithdraw && !wd && (
+                      {isActive && canWithdrawRow && !wd && (
                         <form action={adminWithdrawPlayer.bind(null, gameId, p.user_id)}>
                           <button
                             type="submit"
+                            data-testid="withdraw-player"
                             className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
                           >
                             {t('withdrawButton')}
@@ -350,10 +357,11 @@ export default async function CreatorSpillerePage({
                         </form>
                       )}
 
-                      {isActive && canWithdraw && wd && (
+                      {isActive && canWithdrawRow && wd && (
                         <form action={adminUndoWithdraw.bind(null, gameId, p.user_id)}>
                           <button
                             type="submit"
+                            data-testid="undo-withdraw-player"
                             className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-accent/50 hover:text-text"
                           >
                             {t('undoWithdrawButton')}
