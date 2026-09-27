@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/LeaderboardBackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { headToHeadSummary } from '@/lib/leaderboard/headToHead';
 import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 
@@ -40,11 +41,11 @@ export interface HeadToHeadResultProps {
   sideA: HeadToHeadSide;
   sideB: HeadToHeadSide;
   /**
-   * Vinnerens userId, eller `null` ved uavgjort. Sendes inn fra caller fordi
-   * vinneren kan avgjøres på en tiebreak scoren alene ikke fanger (Skins:
-   * lik `totalSkins`, men flere `holesWon`). Når utelatt: avled fra scoren.
+   * Vinnerens userId, eller `null` ved uavgjort. Påkrevd: vinneren kan
+   * avgjøres på en tiebreak scoren alene ikke fanger (Skins: lik
+   * `totalSkins`, men flere `holesWon`), så kortet avleder den aldri selv.
    */
-  winnerUserId?: string | null;
+  winnerUserId: string | null;
   /** Ett element per hull i rekkefølge (momentum-strip). */
   strip: StripCell[];
   /** Valgfri linje om uvunne/hengende poeng (Skins: carriedPot). */
@@ -107,59 +108,31 @@ export function HeadToHeadResult({
     setReplayKey(1);
   }, [gameId]);
 
-  // Vinner: bruk eksplisitt winnerUserId når den er gitt (fanger tiebreaks),
-  // ellers avled fra scoren.
-  const winner: 'a' | 'b' | 'tie' =
-    winnerUserId === undefined
-      ? sideA.score > sideB.score
-        ? 'a'
-        : sideB.score > sideA.score
-          ? 'b'
-          : 'tie'
-      : winnerUserId === sideA.userId
-        ? 'a'
-        : winnerUserId === sideB.userId
-          ? 'b'
-          : 'tie';
-
-  // Tug-of-war: andelen tegnes fra en 0-basislinje (eller den mest negative
-  // scoren). For ikke-negative scorer (Skins/BBB/Nassau/slagspill) er lo = 0,
-  // så formelen reduseres til ren score/sum-andel — ingen visuell endring for
-  // de formatene. Skiftet gjør baren robust mot negative totaler: modified
-  // stableford bruker netto-poeng der par = 0, så totalen kan bli negativ.
-  const lo = Math.min(sideA.score, sideB.score, 0);
-  const aShift = sideA.score - lo;
-  const bShift = sideB.score - lo;
-  const totalShift = aShift + bShift;
-  const rawPctA =
-    totalShift === 0 ? 50 : Math.round((aShift / totalShift) * 100);
-  // Ved lowerWins (slagspill-netto) inverteres andelene så vinner-siden
-  // (lavest score) fortsatt får den største champagne-flaten.
-  const pctA = lowerWins ? 100 - rawPctA : rawPctA;
-  const pctB = 100 - pctA;
+  // Matten (vinner, bar-andeler, dommens deler) bor i headToHeadSummary og
+  // testes der (lib/leaderboard/headToHead.test.ts). Her velges bare tekst.
+  const summary = headToHeadSummary({ sideA, sideB, winnerUserId, lowerWins });
+  const { winner, pctA, pctB } = summary;
 
   const nameA = formatRevealName(sideA.name, sideA.nickname);
   const nameB = formatRevealName(sideB.name, sideB.nickname);
 
-  // Dommen viser vinnerens score først, så den leser riktig uansett om høyest
-  // eller lavest vinner: Skins «5–3», slagspill-netto «78–85». winnerUserId
-  // styrer crown/bar; her trenger vi bare vinnerens og taperens score.
-  const winnerName = winner === 'a' ? nameA : nameB;
-  const winnerScore = winner === 'a' ? sideA.score : sideB.score;
-  const loserScore = winner === 'a' ? sideB.score : sideA.score;
-  // Negative scorer (modifisert stableford bruker netto-poeng der par = 0)
-  // formatteres med ekte minus, og separatoren bytter fra en-dash til « mot »
-  // så «4–−3» ikke kolliderer visuelt til «4--3». Positive format (Skins/
-  // Nassau/BBB/slagspill) beholder den kompakte «5–3».
-  const fmtScore = (n: number) => (n < 0 ? `−${Math.abs(n)}` : String(n));
-  const sep = sideA.score < 0 || sideB.score < 0 ? ' mot ' : '–';
+  // Negative scorer bytter separatoren fra en-dash til « mot », så «4–−3»
+  // ikke kolliderer visuelt til «4--3». Positive format (Skins/Nassau/BBB/
+  // slagspill) beholder den kompakte «5–3».
+  const sep = summary.hasNegativeScore ? ' mot ' : '–';
+  const v = summary.verdict;
   const verdict =
-    winner === 'tie'
-      ? t('verdictTie', { scoreA: fmtScore(sideA.score), sep, scoreB: fmtScore(sideB.score) })
-      : sideA.score === sideB.score
+    v.kind === 'tie'
+      ? t('verdictTie', { scoreA: v.scoreA, sep, scoreB: v.scoreB })
+      : v.kind === 'winTiebreak'
         ? // Lik score, men avgjort på tiebreak (f.eks. flest vunne hull).
-          t('verdictWinTiebreak', { winner: winnerName })
-        : t('verdictWin', { winner: winnerName, winnerScore: fmtScore(winnerScore), sep, loserScore: fmtScore(loserScore) });
+          t('verdictWinTiebreak', { winner: v.winner === 'a' ? nameA : nameB })
+        : t('verdictWin', {
+            winner: v.winner === 'a' ? nameA : nameB,
+            winnerScore: v.winnerScore,
+            sep,
+            loserScore: v.loserScore,
+          });
 
   return (
     <LeaderboardShell chromeless={chromeless} footerSlot={footerSlot}>

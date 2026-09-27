@@ -1,19 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { headToHeadSummary } from '@/lib/leaderboard/headToHead';
 import {
   HeadToHeadResult,
   type HeadToHeadResultProps,
   type StripCell,
 } from './HeadToHeadResult';
 
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
+// ONE structural render test (Type C, #2226). The duel math — winner, bar
+// shares, verdict order, minus sign, tie and tiebreak — is Type A in
+// lib/leaderboard/headToHead.test.ts. No Norwegian copy and no score digits
+// here.
 
-function defaultProps(
-  overrides: Partial<HeadToHeadResultProps> = {},
-): HeadToHeadResultProps {
+function defaultProps(): HeadToHeadResultProps {
   const strip: StripCell[] = ['a', 'halved', 'b', 'a', 'unplayed'];
   return {
     gameId: 'g1',
@@ -38,110 +37,34 @@ function defaultProps(
     strip,
     hangingNote: '1 skin hang igjen. Siste spilte hull ble delt.',
     backHref: '/games/g1',
-    ...overrides,
   };
 }
 
 describe('HeadToHeadResult', () => {
-  it('rendrer versus-kort, tug-of-war-bar, momentum-strip og dom', () => {
-    render(<HeadToHeadResult {...defaultProps()} />);
+  it('renders both sides, the bar from the summary, one strip cell per hole and a verdict naming the winner', () => {
+    const props = defaultProps();
+    render(<HeadToHeadResult {...props} />);
 
     const card = screen.getByTestId('head-to-head');
-    // Begge spillere + scorene.
     expect(card.textContent).toContain('Alice Andersen');
     expect(card.textContent).toContain('Bjørnen');
-    expect(card.textContent).toContain('5');
-    expect(card.textContent).toContain('3');
 
-    // Tug-of-war-bar finnes.
-    expect(screen.getByTestId('h2h-bar')).toBeTruthy();
+    const { pctA, pctB } = headToHeadSummary({
+      sideA: props.sideA,
+      sideB: props.sideB,
+      winnerUserId: props.winnerUserId,
+      lowerWins: false,
+    });
+    const spans = screen.getByTestId('h2h-bar').querySelectorAll('span');
+    expect(Array.from(spans, (span) => span.style.width)).toEqual([
+      `${pctA}%`,
+      `${pctB}%`,
+    ]);
 
-    // Momentum-strip: ett felt per hull (5 i fixturen).
-    const stripEl = screen.getByTestId('h2h-strip');
-    expect(stripEl.children).toHaveLength(5);
+    expect(screen.getByTestId('h2h-strip').children).toHaveLength(props.strip.length);
 
-    // Dom: vinner kåret med score-differansen.
     const verdict = within(card).getByTestId('h2h-verdict');
+    expect(verdict.textContent).not.toBe('');
     expect(verdict.textContent).toContain('Alice Andersen');
-    expect(verdict.textContent).toContain('vant duellen 5–3');
-  });
-
-  it('viser uavgjort når winnerUserId er null og scorene er like', () => {
-    render(
-      <HeadToHeadResult
-        {...defaultProps({
-          winnerUserId: null,
-          sideA: {
-            userId: 'u1',
-            name: 'Alice Andersen',
-            nickname: null,
-            score: 3,
-          },
-          sideB: {
-            userId: 'u2',
-            name: 'Bjørn Berg',
-            nickname: null,
-            score: 3,
-          },
-          hangingNote: null,
-        })}
-      />,
-    );
-    const verdict = screen.getByTestId('h2h-verdict');
-    expect(verdict.textContent).toContain('Uavgjort 3–3');
-  });
-
-  it('lowerWins: vinneren er lavest score, og dommen viser vinnerens score først', () => {
-    // Slagspill-netto: u1 = 78 (lavest, vinner), u2 = 85. winnerUserId styrer
-    // crown; dommen skal lese «78–85» (vinnerens lave score først), ikke «85–78».
-    render(
-      <HeadToHeadResult
-        {...defaultProps({
-          formatLabel: 'Slagspill · Netto',
-          unitLabel: 'slag',
-          lowerWins: true,
-          winnerUserId: 'u1',
-          sideA: { userId: 'u1', name: 'Jørgen Larsen', nickname: null, score: 78 },
-          sideB: { userId: 'u2', name: 'Ola Olsen', nickname: null, score: 85 },
-          hangingNote: null,
-        })}
-      />,
-    );
-    const verdict = screen.getByTestId('h2h-verdict');
-    expect(verdict.textContent).toContain('Jørgen Larsen');
-    expect(verdict.textContent).toContain('vant duellen 78–85');
-  });
-
-  it('tug-of-war-baren er robust mot negative scorer (modified stableford)', () => {
-    // Modified stableford bruker netto-poeng der par = 0, så totaler kan bli
-    // negative. u1 = +2 (vinner), u2 = −3 (taper). Baren skal ikke få negative
-    // bredder, og vinneren skal få den største andelen.
-    render(
-      <HeadToHeadResult
-        {...defaultProps({
-          formatLabel: 'Modifisert Stableford',
-          unitLabel: 'poeng',
-          winnerUserId: 'u1',
-          sideA: { userId: 'u1', name: 'Jørgen Larsen', nickname: null, score: 2 },
-          sideB: { userId: 'u2', name: 'Ola Olsen', nickname: null, score: -3 },
-          hangingNote: null,
-        })}
-      />,
-    );
-    const bar = screen.getByTestId('h2h-bar');
-    const spans = bar.querySelectorAll('span');
-    const widthA = (spans[0] as HTMLElement).style.width;
-    const widthB = (spans[1] as HTMLElement).style.width;
-    // Ingen negative bredder.
-    expect(widthA.startsWith('-')).toBe(false);
-    expect(widthB.startsWith('-')).toBe(false);
-    // Vinner-siden (A, +2) får den største andelen.
-    expect(parseInt(widthA, 10)).toBeGreaterThanOrEqual(parseInt(widthB, 10));
-    // Dommen formatterer den negative scoren med ekte minus og « mot »-
-    // separator, så den ikke kolliderer til «2--3».
-    const verdict = screen.getByTestId('h2h-verdict').textContent ?? '';
-    expect(verdict).toContain('Jørgen Larsen');
-    expect(verdict).toContain('2 mot −3');
-    expect(verdict).not.toContain('2--3');
   });
 });
