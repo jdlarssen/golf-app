@@ -38,8 +38,8 @@
 --
 -- 4. `guard_game_players_self_update`, rebuilt from 0168 (the latest
 --    create-or-replace; 0159 and 0147 are older). A signed-in non-admin may
---    not move a row to another game, and every lookup reads the game the row
---    is in (old.game_id). Own-row branch: clause (f) below. Other-row branch:
+--    not move a row to another game or another player, and every lookup reads
+--    the game the row is in (old.game_id). Own-row branch: clause (f) below. Other-row branch:
 --      - `submitted_by_user_id` joins the peer allowlist. The server sets it in
 --        the same patch as `submitted_at` when a flightmate delivers.
 --      - a true peer (not admin, not the game's creator — both return
@@ -196,11 +196,18 @@ as $$
       return new;
     end if;
 
-    -- #2200: a row never moves to another game for a signed-in non-admin, and
-    -- every lookup below reads the game the row is IN (old.game_id).
+    -- #2200: a row never moves to another game or to another player for a
+    -- signed-in non-admin, and every lookup below reads the game the row is
+    -- IN (old.game_id). Every flow that writes a player's row for someone
+    -- else (sign-up, the guest claim) runs as the service role.
     if new.game_id is distinct from old.game_id then
       raise exception
         'A player cannot move a game_players row to another game (game_players.game_id)'
+        using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+    end if;
+    if new.user_id is distinct from old.user_id then
+      raise exception
+        'A player cannot move a game_players row to another player (game_players.user_id)'
         using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
     end if;
 
@@ -377,7 +384,7 @@ comment on function public.guard_game_players_self_update() is
   'ONLY the approval and delivery columns on another player''s row, and never '
   'lets that peer approve a card they delivered (#2200); no signed-in player '
   'leaves an approval on an undelivered card or moves a row to another game '
-  '(#2200). No-ops for admin, the '
+  'or player (#2200). No-ops for admin, the '
   'game creator (another''s row), and the service role. When changing this '
   'body: copy from the LATEST create-or-replace — find it with grep, not from '
   'a file''s own claim (trap 4, #1855).';
