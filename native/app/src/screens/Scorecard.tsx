@@ -13,10 +13,12 @@
 //
 // N4 (#1828): i lag-formatene som deler én ball viser kortet LAGETS rader
 // (kapteinens). #1918: «Lever lagets kort» går gjennom app→server-ruta
-// (`data/submitTeam.ts`), ikke rett i basen. Grunnen er RLS: appen kan bare
+// (`data/submitCard.ts`), ikke rett i basen. Grunnen er RLS: appen kan bare
 // skrive sin egen rad, mens rutas kjerne markerer hele lagets aktive, uleverte
 // rader med service-role. Et halvlevert lag ville blokkert avslutningen av
-// runden — så vi leverer ikke halvt.
+// runden — så vi leverer ikke halvt. #2215: solo-kortet går samme vei, fordi
+// varslene til makkerne og admin er serverens. Kjernen avgjør selv om kortet er
+// et lagkort.
 //
 // #2220: et kort som kan leveres, kan også rettes. «Rediger hullene» tar
 // spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
@@ -36,11 +38,10 @@ import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/type
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
 import { getDb, listQueue } from '../data/db';
-import { submitScorecard } from '../data/playerActions';
 import { seedGameScores } from '../data/seedScores';
-import { submitTeam } from '../data/submitTeam';
+import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
-import { describeFailure, describeTeamSubmitFailure } from '../lib/actionFeedback';
+import { describeSubmitFailure } from '../lib/actionFeedback';
 import { isScoringSupported } from '../lib/formatGate';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, toRoster } from '../lib/roster';
@@ -152,25 +153,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const doSubmit = async () => {
     setBusy(true);
     setErrorText(null);
-    // Laget kan bare leveres av ruta: RLS lar appen skrive sin egen rad, og
-    // halve laget levert er verre enn ingen. Solo-greina skriver som før.
-    if (teamMode) {
-      const teamResult = await submitTeam(gameId);
-      setBusy(false);
-      if (teamResult.ok) {
-        navigation.navigate('GameHome', { gameId });
-        return;
-      }
-      setErrorText(describeTeamSubmitFailure(teamResult.reason));
-      return;
-    }
-    const result = await submitScorecard(gameId);
+    // Solo og lag går samme vei (#2215): ruta leverer, varsler og tømmer
+    // web-cachen. Laget kan bare leveres der uansett — RLS lar appen skrive sin
+    // egen rad, og halve laget levert er verre enn ingen.
+    const result = await submitCard(gameId);
     setBusy(false);
     if (result.ok) {
       navigation.navigate('GameHome', { gameId });
       return;
     }
-    setErrorText(describeFailure(result));
+    setErrorText(describeSubmitFailure(result.reason));
   };
 
   const onSubmitPress = () => {

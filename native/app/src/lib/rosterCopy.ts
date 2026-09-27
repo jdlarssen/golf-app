@@ -246,6 +246,10 @@ export function describeRosterFailure(
       return 'Du er ikke logget inn lenger. Logg inn på nytt.';
     case 'offline':
       return OFFLINE_NOTE;
+    // #2215: «legg til» og «åpne kortet igjen» går via ruter. Samme mangel i
+    // bygget som stopper lenke-knappene, og samme setning.
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
     case 'not-found':
       return 'Fant ikke spilleren i denne runden.';
     case 'roster-locked':
@@ -282,6 +286,11 @@ export function describeRosterFailure(
 /**
  * Starten. Kodene er kjernens, og setningene er webbens `game.errors.*`.
  *
+ * Starten går via ruta siden #2215, og kodene fra selve kallet (adresse,
+ * sesjon, tilgang, nettverk og serverfeil) får setninger som finnes fra før:
+ * de samme som de andre rute-kallene og roster-skrivingene bruker, og
+ * db_game-setningen for alt som betyr «prøv igjen».
+ *
  * To av dem avviker fra webbens `admin.game.errors.*`:
  *  - `pending_players` navngir ingen (#2207). Webbens admin-banner lister
  *    adressene; appens arrangør er ikke nødvendigvis admin, og de som mangler
@@ -295,6 +304,12 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
   switch (refusal.reason) {
     case 'offline':
       return OFFLINE_NOTE;
+    case 'no-web-base-url':
+      return WEB_LINK_TEXT.missingBaseUrl;
+    case 'unauthorized':
+      return 'Logg inn på nytt og prøv igjen.';
+    case 'forbidden':
+      return 'Du har ikke lov til å endre dette.';
     case 'not_found':
       return 'Spillet ble ikke funnet.';
     case 'not_scheduled':
@@ -345,6 +360,8 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
     case 'db_players':
       return 'Klarte ikke å oppdatere spillerne. Prøv igjen.';
     case 'db_game':
+    case 'network':
+    case 'start_failed':
       return 'Klarte ikke å oppdatere spillet. Prøv igjen.';
   }
 }

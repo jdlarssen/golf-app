@@ -1,257 +1,157 @@
-// Native N3 (#1825): lever, godkjenn og avvis scorekort fra appen.
+// Native N3 (#1825), #2215: godkjenn og avvis et scorekort fra appen.
 //
-// Ingen server actions speiles. På DB-nivå ER disse tre rene
-// `game_players`-oppdateringer, og autorisasjonen ligger i Postgres:
-// self-submit-policyen (0002), peer-porten `can_score_for` (0106) med
-// kolonne-allowlist-triggeren og forbudet mot å godkjenne seg selv. Appen legger
-// de samme delte gatene foran for UX-ens skyld, men gaten er RLS.
+// **Hvorfor en rute og ikke en skriving.** Fram til #2215 var dette to rene
+// `game_players`-oppdateringer under RLS. Radene ble riktige, men varslene
+// webben sender (`scorecard_approved` og `scorecard_rejected`) er `server-only`
+// (`notify()`, push, e-post), og webbens cache (`game-${id}`) ble aldri tømt.
+// En spiller fikk derfor aldri vite at kortet var avvist, og en makker på
+// nettsiden så fortsatt kortet som levert. Nå spør appen
+// `POST /api/games/{id}/scorecards/{userId}`, og ruta kaller den samme kjernen
+// som webben (`lib/games/reviewScorecardCore.ts`): den vaktede UPDATE-en,
+// 0-rads-oppløsningen, varselet og cache-tømmingen.
 //
-// **Trap 2 er ufravikelig.** PostgREST svarer `error == null` på en UPDATE som
-// traff NULL rader — det er #667/#704 i ren form. Hver skriving kjeder derfor
-// `.select('user_id')` og går gjennom den delte `expectAffected`, og 0 rader
-// splittes i to med et oppfølgings-SELECT:
-//   • raden er alt i måltilstanden → idempotent, `{ ok: true, alreadyDone: true }`
-//   • raden er det ikke → RLS/rad-tilgang nektet → `{ ok: false }`
-// Stille suksess finnes ikke her.
+// **Porten er rutas.** Hvem som får godkjenne eller avvise (samme flight,
+// arrangøren, admin) og at spillet må være aktivt, avgjør ruta med sin egen
+// port før kjernen skriver. Appen speiler ingen av reglene. Knappene vises bare
+// der de gjelder, men et svar fra ruta er fasiten.
 //
-// Notifikasjonene webbens server actions sender (peer-varsel, admin-mail) er
-// server-eide og sendes IKKE fra appen. Bokført gap i kontrakten — N7 eier det.
-import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
-import {
-  expectAffected,
-  NoRowsAffectedError,
-} from '../../../../lib/supabase/affectedRows';
-import { currentDeviceUserId, supabase } from '../supabase';
+// Leveringen bor i `submitCard.ts` (samme mønster, egen frosset rute).
+// Gjenåpningen (#2220) er arrangørens handling og bor i `rosterActions.ts`, men
+// går til samme rute med `decision: 'reopen'` via {@link callScorecardRoute}.
+//
+// **Wire-kontrakten** (ruta og denne fila endres i samme PR):
+//   POST /api/games/{id}/scorecards/{userId}
+//     kropp { decision: 'approve' | 'reject' | 'reopen', reason?: string }
+//     200 { alreadyDone: boolean }
+//     400 bad_request · 401 · 403 forbidden · 404 not_found
+//     409 not_active · 422 not_pending · 500 review_failed
+import { callWebRoute, type WebApiCall } from './webApi';
 
 /** Hvorfor en handling ikke gikk gjennom. Skjermene oversetter til norsk copy. */
 export type ActionFailure =
+  /** Uten nett stopper kallet før det sendes; ingenting går i sync-køen. */
+  | 'offline'
+  /** Bygget mangler web-adressen — samme mangel som stopper lenke-knappene. */
+  | 'no-web-base-url'
   | 'no-session'
   | 'not-active'
-  | 'withdrawn'
+  /** Kortet var ikke til vurdering, eller vi fikk ikke lov. Se {@link failureFor}. */
   | 'no-rows'
   | 'db';
 
 export type ActionResult =
   | { ok: true; alreadyDone: boolean }
-  | { ok: false; reason: ActionFailure; message?: string };
+  | { ok: false; reason: ActionFailure };
 
-/** Maks lengde på en avvisningsgrunn — samme kutt som webben gjør. */
-const MAX_REASON_LENGTH = 500;
-
-const done = (alreadyDone: boolean): ActionResult => ({ ok: true, alreadyDone });
+/** Hva ruta skal gjøre med kortet. `reopen` er arrangørens, se `rosterActions.ts`. */
+export type ScorecardDecision =
+  | { decision: 'approve' }
+  | { decision: 'reject'; reason?: string }
+  | { decision: 'reopen' };
 
 /**
- * Webbens `loadAndAuthorize` nekter alle tre handlingene utenfor et aktivt
- * spill, og det gjør denne porten her.
- *
- * Uten den ville et ferdig spill sett ut som en stille suksess i appen:
- * `game_players`-radene finnes fortsatt, så en approve-UPDATE ville truffet
- * 0 rader (RLS stopper skrivingen) og `resolveZeroRows` ville lest raden som
- * «alt godkjent» → `alreadyDone: true`. Feil svar på feil spørsmål. Porten
- * svarer i stedet det som faktisk er sant: spillet er ikke aktivt.
- *
- * Returnerer `null` når spillet ER aktivt — kalleren fortsetter da som før.
+ * Stien for ett kort. Begge id-ene står i STIEN, aldri i kroppen: spillet og
+ * spilleren kortet gjelder er det ruta gater på, og hvem som spør er tokenets
+ * sak (`webApi.ts`). `encodeURIComponent` der stien bygges.
  */
-async function refuseUnlessActive(gameId: string): Promise<ActionResult | null> {
-  const { data, error } = await supabase
-    .from('games')
-    .select('status')
-    .eq('id', gameId)
-    .maybeSingle<{ status: string }>();
-  if (error) return failed('db', error.message);
-  if (!data || data.status !== 'active') return failed('not-active');
-  return null;
-}
-
-const failed = (reason: ActionFailure, message?: string): ActionResult => ({
-  ok: false,
-  reason,
-  ...(message === undefined ? {} : { message }),
-});
-
-function asFailure(err: unknown): ActionResult {
-  return failed('db', err instanceof Error ? err.message : String(err));
+function scorecardPath(gameId: string, playerUserId: string): string {
+  return `/api/games/${encodeURIComponent(gameId)}/scorecards/${encodeURIComponent(playerUserId)}`;
 }
 
 /**
- * Lever spillerens eget scorekort.
- *
- * Speiler webbens `submitScorecard`-skriving: sett `submitted_at`, nullstill en
- * eventuell tidligere avvisningsgrunn, og filtrer på `submitted_at IS NULL` så
- * et dobbelttrykk ikke skriver et nytt tidspunkt.
- *
- * Lag-formater der ETT kort dekker hele laget (scramble-familien, alternate
- * shot) leverer webben lagvis med admin-klient. Appen har ingen service-role og
- * gater de formatene bort i GameHome — derfor kun egen rad her.
+ * Ett kall mot scorekort-ruta. Delt med `reopenScorecard` i `rosterActions.ts`,
+ * så stien og kroppens form har ett hjem. Oversettelsen av svaret gjør hver
+ * kaller selv: de to filene har hvert sitt feil-vokabular.
  */
-export async function submitScorecard(gameId: string): Promise<ActionResult> {
-  const userId = await currentDeviceUserId();
-  if (!userId) return failed('no-session');
+export function callScorecardRoute(
+  gameId: string,
+  playerUserId: string,
+  body: ScorecardDecision,
+): Promise<WebApiCall> {
+  return callWebRoute(scorecardPath(gameId, playerUserId), 'POST', body);
+}
 
-  try {
-    // Et ferdig spill er lesevisning, et draft har ingen kort å levere.
-    const inactive = await refuseUnlessActive(gameId);
-    if (inactive) return inactive;
+/**
+ * Svar → kode, oversatt ÉN gang, slik at skjermen aldri leser et statusnummer.
+ *
+ * `not-active` og `no-rows` leser kroppens `error` der én status kan bære mer
+ * enn én ting (som `inviteToGame.ts`). En 409 eller 422 med en kode vi ikke
+ * kjenner, blir `db`: en gjettet forklaring er verre enn «noe gikk galt».
+ *
+ *  - 404 (spillet finnes ikke for oss) og 409 `not_active` sier det samme til
+ *    spilleren: her er det ingenting å godkjenne lenger.
+ *  - 403 (ikke din flight) og 422 `not_pending` (kortet er ikke levert, eller
+ *    alt vurdert på en annen måte) er begge «noen andre rakk det, eller du har
+ *    ikke tilgang» — den setningen `no-rows` alltid har hatt.
+ *  - `db` får aldri serverens tekst med seg: ruta sender faste koder.
+ */
+function failureFor(status: number, body: Record<string, unknown>): ActionFailure {
+  if (status === 401) return 'no-session';
+  if (status === 404) return 'not-active';
+  if (status === 409 && body.error === 'not_active') return 'not-active';
+  if (status === 403) return 'no-rows';
+  if (status === 422 && body.error === 'not_pending') return 'no-rows';
+  return 'db';
+}
 
-    const { data: me, error: meError } = await supabase
-      .from('game_players')
-      .select('withdrawn_at, submitted_at')
-      .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .maybeSingle<{ withdrawn_at: string | null; submitted_at: string | null }>();
-    if (meError) return failed('db', meError.message);
-    // #387: en trukket spiller leverer ikke.
-    if (me?.withdrawn_at) return failed('withdrawn');
-    // Alt levert: hopp over skrivingen helt, som webben (#1453).
-    if (me?.submitted_at) return done(true);
-
-    expectAffected(
-      await supabase
-        .from('game_players')
-        .update({
-          submitted_at: new Date().toISOString(),
-          rejection_reason: null,
-        })
-        .eq('game_id', gameId)
-        .eq('user_id', userId)
-        .is('submitted_at', null)
-        .select('user_id'),
-      'submitScorecard',
-    );
-    return done(false);
-  } catch (err: unknown) {
-    if (err instanceof NoRowsAffectedError) {
-      // Enten vant et parallelt trykk kappløpet (idempotent), eller RLS nektet.
-      // Ett SELECT skiller dem — og bare det første er en suksess.
-      return resolveZeroRows(gameId, userId, 'submitted_at', (row) =>
-        row.submitted_at !== null,
-      );
+/**
+ * Hele svaret som `ActionResult`.
+ *
+ * **200 ER kvitteringen.** `alreadyDone` er informasjon om hvilken vei det gikk
+ * (en makker rakk det først, eller et dobbelttrykk). Mangler feltet, faller det
+ * til `false` og svaret er fortsatt suksess, samme resonnement som
+ * `alreadySubmitted` i `submitCard.ts`.
+ */
+async function review(
+  gameId: string,
+  playerUserId: string,
+  body: ScorecardDecision,
+): Promise<ActionResult> {
+  const call = await callScorecardRoute(gameId, playerUserId, body);
+  if (!call.ok) {
+    switch (call.reason) {
+      case 'offline':
+      case 'no-web-base-url':
+        return { ok: false, reason: call.reason };
+      case 'unauthorized':
+        return { ok: false, reason: 'no-session' };
+      case 'network':
+        return { ok: false, reason: 'db' };
     }
-    return asFailure(err);
   }
+  if (call.status === 200) {
+    return { ok: true, alreadyDone: call.body.alreadyDone === true };
+  }
+  return { ok: false, reason: failureFor(call.status, call.body) };
 }
 
 /**
- * Godkjenn en flight-makkers kort.
- *
- * Filtrene i selve UPDATE-en ER porten mot dobbel-godkjenning:
- * `submitted_at IS NOT NULL AND approved_at IS NULL`. Attestant-regelen
- * (`canApproveScorecardFor`) gates i skjermen; her stoler vi på 0106.
+ * Godkjenn et levert kort: en flight-makkers, eller et kort arrangøren
+ * godkjenner på vegne av gruppa fra avslutt-skjermen (#1891). Ruta avgjør
+ * rollen (`peer` eller `organizer`) og tar den med i varselet til spilleren.
  */
-export async function approveScorecard(
+export function approveScorecard(
   gameId: string,
   playerUserId: string,
 ): Promise<ActionResult> {
-  const userId = await currentDeviceUserId();
-  if (!userId) return failed('no-session');
-
-  try {
-    // Samme port som ved levering: godkjenning finnes bare i et aktivt spill.
-    const inactive = await refuseUnlessActive(gameId);
-    if (inactive) return inactive;
-
-    expectAffected(
-      await supabase
-        .from('game_players')
-        .update({
-          approved_at: new Date().toISOString(),
-          approved_by_user_id: userId,
-          // En tidligere avvisning skal ikke bli hengende på et godkjent kort.
-          rejection_reason: null,
-        })
-        .eq('game_id', gameId)
-        .eq('user_id', playerUserId)
-        .not('submitted_at', 'is', null)
-        .is('approved_at', null)
-        .select('user_id'),
-      'approveScorecard',
-    );
-    return done(false);
-  } catch (err: unknown) {
-    if (err instanceof NoRowsAffectedError) {
-      // #704: alt godkjent → idempotent. Ikke godkjent og likevel 0 rader →
-      // tilgang nektet (eller kortet er ikke levert), altså en ekte feil.
-      return resolveZeroRows(gameId, playerUserId, 'approved_at', (row) =>
-        row.approved_at !== null,
-      );
-    }
-    return asFailure(err);
-  }
+  return review(gameId, playerUserId, { decision: 'approve' });
 }
 
 /**
- * Avvis et levert kort: nullstill leverings- og godkjenningssporet og lagre en
- * grunn.
+ * Avvis et levert kort, med en grunn spilleren får se.
  *
- * Uten grunn lagres maskinsentinelen fra `lib/games/rejectionReason.ts`, ikke
- * norsk prosa — raden leses i begge locales, og avvist-banneret er gated på at
- * feltet er truthy (`null` ville vært umulig å skille fra «aldri levert»).
+ * Grunnen sendes som den ble skrevet. Trimmingen, kuttet ved 500 tegn og
+ * maskinsentinelen for «ingen grunn» (`lib/games/rejectionReason.ts`) er
+ * kjernens: én regel, ett hjem (AGENTS trap 4).
  */
-export async function rejectScorecard(
+export function rejectScorecard(
   gameId: string,
   playerUserId: string,
   reason?: string,
 ): Promise<ActionResult> {
-  const userId = await currentDeviceUserId();
-  if (!userId) return failed('no-session');
-
-  const trimmed = (reason ?? '').trim();
-  const storedReason =
-    trimmed.length > 0 ? trimmed.slice(0, MAX_REASON_LENGTH) : NO_REJECTION_REASON;
-
-  try {
-    const inactive = await refuseUnlessActive(gameId);
-    if (inactive) return inactive;
-
-    expectAffected(
-      await supabase
-        .from('game_players')
-        .update({
-          submitted_at: null,
-          approved_at: null,
-          approved_by_user_id: null,
-          rejection_reason: storedReason,
-        })
-        .eq('game_id', gameId)
-        .eq('user_id', playerUserId)
-        // #1395: bare et levert kort kan avvises — uten filteret ville et
-        // dobbelttrykk truffet raden på nytt.
-        .not('submitted_at', 'is', null)
-        .select('user_id'),
-      'rejectScorecard',
-    );
-    return done(false);
-  } catch (err: unknown) {
-    if (err instanceof NoRowsAffectedError) {
-      return resolveZeroRows(gameId, playerUserId, 'submitted_at', (row) =>
-        row.submitted_at === null,
-      );
-    }
-    return asFailure(err);
-  }
-}
-
-/**
- * Oppfølgings-SELECT-et som skiller de to lovlige grunnene til 0 rader.
- *
- * Er raden allerede i måltilstanden, var skrivingen et idempotent no-op og
- * handlingen har lykkes. Er den det ikke — eller er raden usynlig for oss — ble
- * skrivingen nektet, og det MÅ vises som en feil.
- */
-async function resolveZeroRows(
-  gameId: string,
-  playerUserId: string,
-  column: 'submitted_at' | 'approved_at',
-  isDone: (row: Record<string, string | null>) => boolean,
-): Promise<ActionResult> {
-  const { data, error } = await supabase
-    .from('game_players')
-    .select(column)
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId)
-    .maybeSingle<Record<string, string | null>>();
-
-  if (error) return failed('db', error.message);
-  if (data && isDone(data)) return done(true);
-  return failed('no-rows');
+  return review(
+    gameId,
+    playerUserId,
+    reason === undefined ? { decision: 'reject' } : { decision: 'reject', reason },
+  );
 }

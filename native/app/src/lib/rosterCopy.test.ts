@@ -22,6 +22,7 @@ import type { StartRoundFailure, StartRoundRefusal } from '../data/startGame';
 import type { SelfWithdrawFailure } from '../data/withdrawSelf';
 import type { InviteFailure } from '../data/inviteToGame';
 import { isFinishedSentence } from '../test/copy';
+import { WEB_LINK_TEXT } from './webLink';
 import {
   describeInviteFailure,
   describeInviteSuccess,
@@ -58,6 +59,8 @@ function mirroredRows<Code extends string>(
 const ROSTER_REASON_MAP = {
   'no-session': null,
   offline: null,
+  // #2215: legg til og gjenåpning går via ruter — egen særtest under.
+  'no-web-base-url': null,
   'not-found': null,
   'roster-locked': null,
   // Webbens ordlyd bor i `game.players.errorMessages`, ikke i
@@ -85,6 +88,13 @@ const ROSTER_REASONS = Object.keys(ROSTER_REASON_MAP) as readonly RosterActionFa
 // plassholder, eller `null` der webben ikke har koden.
 const START_REASON_MAP = {
   offline: null,
+  // #2215: kodene fra selve rute-kallet. Setningene finnes fra før — egen
+  // særtest under.
+  'no-web-base-url': null,
+  unauthorized: null,
+  forbidden: null,
+  network: null,
+  start_failed: null,
   not_found: 'not_found',
   not_scheduled: 'not_scheduled',
   tee_missing: 'tee_missing',
@@ -161,6 +171,10 @@ describe('describeRosterFailure', () => {
     expect(describeRosterFailure('db', 'connection reset')).toBe('connection reset');
     expect(describeRosterFailure('db')).toBe('Noe gikk galt mot serveren.');
   });
+
+  it('sier bygg-mangelen med lenke-knappenes setning (#2215)', () => {
+    expect(describeRosterFailure('no-web-base-url')).toBe(WEB_LINK_TEXT.missingBaseUrl);
+  });
 });
 
 describe('describeStartRefusal', () => {
@@ -205,6 +219,18 @@ describe('describeStartRefusal', () => {
     expect(describeStartRefusal({ ok: false, reason: 'offline' })).toBe(
       describeRosterFailure('offline'),
     );
+  });
+
+  // #2215: starten går via ruta. Kodene fra kallet får setninger som finnes fra
+  // før — ingen ny tekst for en ny transport.
+  it.each<[StartRoundFailure, string]>([
+    ['no-web-base-url', WEB_LINK_TEXT.missingBaseUrl],
+    ['unauthorized', describeSelfWithdrawFailure('unauthorized')],
+    ['forbidden', describeRosterFailure('rls-denied')],
+    ['network', web.db_game],
+    ['start_failed', web.db_game],
+  ])('gir «%s» en setning som finnes fra før', (reason, expected) => {
+    expect(describeStartRefusal({ ok: false, reason })).toBe(expected);
   });
 });
 

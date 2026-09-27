@@ -2,22 +2,26 @@
 // Native N6b (#1855): arrangørens roster-drift, pluss spillerens stille
 // bekreftelse.
 //
-// Ingen server actions speiles. På DB-nivå ER alle åtte rene
-// `game_players`-mutasjoner, og autorisasjonen ligger i Postgres:
+// Seks av de åtte handlingene er rene `game_players`-mutasjoner under RLS, og
+// autorisasjonen ligger i Postgres:
 //
 //   • `game_players self mark accepted` (0082) — spillerens egen bekreftelse.
-//   • `game_players creator insert` (0071) + BEFORE-triggeren
-//     `guard_game_players_invite_eligibility` (0115) — hvem som kan legges til.
 //   • `game_players creator delete` (0071, uten cupkamper fra 0178) — fjerning
 //     før start.
 //   • `game_players creator update` (0071) + `guard_game_players_self_update`
 //     (0147), som slipper spillets oppretter forbi på ANDRES rader.
-//   • Gjenåpning av et levert kort (#2220) går gjennom samme policy og vakta
-//     slik 0168 definerer den: andres rad fritt, egen rad bare å nulle
-//     godkjenningen på (0159).
 //
 // Appen har ingen service-role og skal ikke få en. Gatene under står foran for
 // UX-ens skyld — gaten er RLS.
+//
+// **To går via ruter (#2215),** fordi webben gjør mer enn å skrive raden:
+//   • «Legg til» (`POST /api/games/{id}/players/{userId}`) sender `invite` til
+//     spilleren, og kjernen eier venne-/klubbporten, tee-settet (#2209) og
+//     duplikat-regelen.
+//   • «Åpne kortet igjen» (#2220, `POST /api/games/{id}/scorecards/{userId}`
+//     med `reopen`) sender `scorecard_reopened` og åpner et felles lagkort
+//     (#2213) for hele laget, med service-role.
+// Begge rutene tømmer web-cachen selv.
 //
 // **Trap 2 er ufravikelig.** PostgREST svarer `error == null` på en UPDATE eller
 // DELETE som traff NULL rader; det er #667/#704 i ren form. Hver skriving kjeder
@@ -32,19 +36,21 @@
 // `supportsWithdrawal` (`lib/scoring/modes/types`) importeres — aldri kopieres.
 // Et tall som står to steder driver fra hverandre (AGENTS.md felle 4).
 //
-// Notifikasjonene webbens server actions sender (`player_added`, admin-mail,
-// `scorecard_reopened`) og admin-hendelsesloggen (også `scorecard.reopened`) er
-// server-eide og fyrer IKKE herfra. Bokført gap.
+// **Web-cachen (#2215).** Webben leser status og roster fra spillets cache
+// (`game-${id}`). Fem av de direkte skrivingene (fjern, lag, flight, trekk og
+// angre) varsler ingen, som på webben, men tømmer cachen via
+// `refreshWebCache` etter et vellykket utfall, så nettsiden viser det med én
+// gang. `confirmParticipation` gjør det ikke: «Ikke bekreftet»-merkene på
+// webben leser `game_players` direkte, ikke cachen.
+//
+// Admin-hendelsesloggen (`logAdminEvent`, også `scorecard.reopened`) er
+// server-eid og skrives IKKE for arrangørhandlinger herfra. Bokført gap.
 import { MAX_FLIGHT_SIZE } from '../../../../lib/games/flightScope';
-import { sharedCardUserIds } from '../../../../lib/games/scoreOwner';
-import { profileTeeGender, type TeeProfile } from '../../../../lib/games/teeChoice';
-import type { TeeBoxRatings } from '../../../../lib/games/teeRating';
 import {
   expectedTeamSize,
   modeRequiresTeamNumber,
 } from '../../../../lib/games/teamScope';
 import {
-  modeCollapsesToTeamCard,
   supportsWithdrawal,
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
@@ -55,7 +61,10 @@ import {
 import { isAppSupportedMode } from '../lib/appFormats';
 import { maxPlayersForMode } from '../lib/rosterLimits';
 import { currentDeviceUserId, supabase } from '../supabase';
+import { callScorecardRoute } from './playerActions';
+import { refreshWebCache } from './refreshWebCache';
 import { isDeviceOnline } from './syncTriggers';
+import { callWebRoute, type WebApiCall } from './webApi';
 
 /**
  * Hvorfor en handling ikke gikk gjennom. Skjermen oversetter til norsk copy —
@@ -65,13 +74,15 @@ export type RosterActionFailure =
   | 'no-session'
   /** Skrivingene går aldri i sync-køen; uten nett finnes det ingenting å gjøre. */
   | 'offline'
+  /** Bygget mangler web-adressen rutene (legg til, gjenåpning) trenger. */
+  | 'no-web-base-url'
   /** Spillet finnes ikke, eller er ikke synlig for oss. */
   | 'not-found'
   /** Legge til / fjerne krever `draft` eller `scheduled`. */
   | 'roster-locked'
   /** Cupkamper byttes på cupsiden, aldri ved å fjerne en rad (#1937). */
   | 'cup-roster-locked'
-  /** Formatet tar ikke flere spillere (`maxPlayersForMode`). */
+  /** Formatet tar ikke flere spillere (`maxPlayersForMode`, eller rutas `game_full`). */
   | 'roster-full'
   /** Lag/flight krever `scheduled`/`active`; WD krever `active`. */
   | 'not-active'
@@ -83,7 +94,10 @@ export type RosterActionFailure =
   | 'bad-flight'
   | 'team-full'
   | 'flight-full'
-  /** SQLSTATE 42501 — Postgres nektet skrivingen (policy eller vakt-trigger). */
+  /**
+   * Nektet: SQLSTATE 42501 fra Postgres (policy eller vakt-trigger), eller
+   * rutas port (403, og `invite_not_allowed` når du legger til).
+   */
   | 'rls-denied'
   /** Kun med `onlyIfUnsubmitted`: kortet kom inn før skrivet — ingenting er endret. */
   | 'already-submitted'
@@ -97,22 +111,6 @@ export type RosterActionResult =
 
 /** PostgRESTs kode for «insufficient_privilege» — RLS eller en vakt avviste raden. */
 const RLS_DENIED_CODE = '42501';
-
-/** Postgres' UNIQUE-violation. Her: `(game_id, user_id)` finnes fra før. */
-const UNIQUE_VIOLATION_CODE = '23505';
-
-/** Traff insertet en rad som alt fantes? Speiler webbens to-veis test. */
-function isDuplicateRow(
-  error: { message?: string; code?: string } | null,
-): boolean {
-  if (!error) return false;
-  return (
-    error.code === UNIQUE_VIOLATION_CODE ||
-    String(error.message ?? '')
-      .toLowerCase()
-      .includes('duplicate')
-  );
-}
 
 const done = (alreadyDone: boolean): RosterActionResult => ({
   ok: true,
@@ -153,10 +151,6 @@ function refuseUnlessReady(userId: string | null): RosterActionResult | null {
   if (!isDeviceOnline()) return failed('offline');
   return null;
 }
-
-/** Tee-ratingene startkoden fryser fra (`startScheduledGameCore`). */
-const TEE_EMBED =
-  'tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 /** Leser spillets gate-felter. Returnerer en feil, eller raden. */
 async function loadGame(
@@ -238,6 +232,43 @@ async function resolveZeroRows(
 
   if (error) return failed('db', error.message);
   return classify(data ?? null);
+}
+
+/**
+ * Tøm web-cachen etter en vellykket skriving, og gi utfallet uendret tilbake
+ * (#2215).
+ *
+ * Står på hver retur ETTER skrivingen i de fem direkte arrangør-skrivingene,
+ * også når 0 rader ble løst som «alt i mål» (`alreadyDone`): raden er i
+ * måltilstanden, men cachen kan fortsatt vise den gamle. Et avslag får aldri
+ * kallet, for da er ingenting endret. Svaret fra ruta endrer aldri utfallet;
+ * skrivingen har alt skjedd.
+ */
+async function afterWrite(
+  gameId: string,
+  result: RosterActionResult,
+): Promise<RosterActionResult> {
+  if (result.ok) await refreshWebCache(gameId);
+  return result;
+}
+
+/**
+ * Det som stoppet et rute-kall før ruta svarte, som roster-kode. `network` er
+ * `db`: et kall som aldri kom fram er «prøv igjen», ikke en egen forklaring.
+ */
+function webApiFailure(
+  call: Extract<WebApiCall, { ok: false }>,
+): RosterActionResult {
+  switch (call.reason) {
+    case 'offline':
+      return failed('offline');
+    case 'no-web-base-url':
+      return failed('no-web-base-url');
+    case 'unauthorized':
+      return failed('no-session');
+    case 'network':
+      return failed('db');
+  }
 }
 
 /**
@@ -323,30 +354,28 @@ export async function confirmParticipation(gameId: string): Promise<void> {
 // -----------------------------------------------------------------------------
 
 /**
- * Legg en registrert spiller til rosteret.
+ * Legg en registrert spiller til rosteret (#2215: via ruta).
  *
- * Kolonnesettet er nøyaktig webbens `addExistingPlayerToGame`
- * (`inviteToGameActions.ts:80-88`): `team_number`, `flight_number` og
- * `course_handicap` står null (banehandicapet fryses ved start), og
- * `accepted_at` er null fordi arrangøren legger til en ANNEN — hen bekrefter
- * selv, via {@link confirmParticipation}.
+ * Skrivingen er rutas: `POST /api/games/{id}/players/{userId}` kaller samme
+ * kjerne som webbens «Legg til» (`addExistingPlayerToGameCore` i
+ * `lib/games/inviteToGame.ts`). Kjernen eier venne-/klubbporten
+ * (`invite_not_allowed`), plass-sjekken, tee-settet fra profilen (#2209),
+ * duplikat-regelen, `invite`-varselet til spilleren og cache-tømmingen. Ingen
+ * av dem speiles her.
  *
- * **Idempotent:** en UNIQUE-violation på `(game_id, user_id)` betyr at
- * intensjonen alt er oppfylt. Da svelges den (`alreadyDone: true`), slik at to
- * trykk eller to enheter ikke gir en feilmelding.
+ * Portene under står foran for UX-ens skyld: uten nett eller økt, i en runde som
+ * er i gang, eller forbi veiviserens tak skal svaret komme uten en rundtur.
  *
- * Eligibility håndheves i DB av `is_invite_eligible` (0115): venner ∪
- * medspillere ∪ klubbmedlemmer. Appens picker er medspiller-scopet — et ekte
- * subset — så hvert valg herfra passerer triggeren.
+ * **Idempotent:** står spilleren alt på rosteret, svarer ruta
+ * `alreadyOnRoster: true` uten nytt varsel, og det er suksess (`alreadyDone`),
+ * slik at to trykk eller to enheter ikke gir en feilmelding.
  *
- * **Tee-settet (#2209)** er profilens, klemt til spillets tee
- * (`profileTeeGender`, samme regel som webbens påmeldingsveier). Uten det får
- * raden kolonnens default `'mens'`, og en dame spiller fra herrenes slope, CR
- * og par. Derfor tar funksjonen kandidatraden, ikke bare id-en.
+ * Kandidatraden tas imot som før (#2209), men bare id-en brukes: tee-settet
+ * leser kjernen selv fra profilen.
  */
 export async function addPlayerToGame(
   gameId: string,
-  player: TeeProfile & { id: string },
+  player: { id: string },
 ): Promise<RosterActionResult> {
   const userId = await currentDeviceUserId();
   const notReady = refuseUnlessReady(userId);
@@ -362,9 +391,9 @@ export async function addPlayerToGame(
   // Taket er det samme som veiviserens (`maxPlayersForMode`, N6a) — ikke et
   // nytt tall. Uten det kunne rosteret vokse forbi slot-budsjettet den delte
   // byggeren leser, og en niende spiller ville forsvunnet stille ved start.
-  // Webbens motstykke er best-ball-sjekken i `inviteToGameActions.ts:73-77`,
-  // som teller ALLE rader — trukne inkludert. Formater appen ikke kjenner (en
-  // web-opprettet runde) har intet kjent tak, og slipper forbi.
+  // Kjernens egen plass-sjekk (`game_full`) er webbens best-ball-tak, som
+  // teller ALLE rader — trukne inkludert. Formater appen ikke kjenner (en
+  // web-opprettet runde) har intet kjent tak her, og slipper forbi til ruta.
   if (isAppSupportedMode(game.row.game_mode)) {
     const roster = await loadGrouping(gameId);
     if ('error' in roster) return roster.error;
@@ -373,37 +402,34 @@ export async function addPlayerToGame(
     }
   }
 
-  // Eget lite oppslag: `loadGame` leser gate-feltene de andre handlingene
-  // deler, og holdes uendret. Feiler det, skrives ingenting — en rad med
-  // gjettet tee-sett er verre enn en feilmelding.
-  const teeRead = await supabase
-    .from('games')
-    .select(TEE_EMBED)
-    .eq('id', gameId)
-    .maybeSingle<{ tee_boxes: TeeBoxRatings | null }>();
-  if (teeRead.error) return failed('db', teeRead.error.message);
+  const call = await callWebRoute(
+    `/api/games/${encodeURIComponent(gameId)}/players/${encodeURIComponent(player.id)}`,
+    'POST',
+  );
+  if (!call.ok) return webApiFailure(call);
+  if (call.status === 200) return done(call.body.alreadyOnRoster === true);
+  return failed(addFailureFor(call.status, call.body));
+}
 
-  const response = await supabase
-    .from('game_players')
-    .insert({
-      game_id: gameId,
-      user_id: player.id,
-      team_number: null,
-      flight_number: null,
-      course_handicap: null,
-      accepted_at: null,
-      tee_gender: profileTeeGender(player, teeRead.data?.tee_boxes ?? null),
-    })
-    // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
-    .select('user_id');
-
-  // Duplikatet leses FØR feilen oversettes: en rad som alt er der er ikke en
-  // feil, den ER tilstanden vi ba om. Samme to-veis test som webben gjør, i
-  // tilfelle grensen leverer meldingen uten koden.
-  if (isDuplicateRow(response.error)) return done(true);
-
-  const inserted = readWriteResult(response, 'addPlayerToGame');
-  return inserted.ok ? done(false) : failed(inserted.error, inserted.message);
+/**
+ * Svaret fra «legg til»-ruta som roster-kode. Der én status bærer flere koder,
+ * leses kroppens `error` (som `inviteToGame.ts`). En 409 med en kode vi ikke
+ * kjenner blir `db`: en gjettet forklaring er verre enn «noe gikk galt».
+ */
+function addFailureFor(
+  status: number,
+  body: Record<string, unknown>,
+): RosterActionFailure {
+  if (status === 401) return 'no-session';
+  if (status === 403) return 'rls-denied';
+  if (status === 404) return 'not-found';
+  if (status === 409) {
+    if (body.error === 'game_locked') return 'roster-locked';
+    if (body.error === 'game_full') return 'roster-full';
+    // Venne-/klubbporten. Samme setning som når RLS nekter: du har ikke lov.
+    if (body.error === 'invite_not_allowed') return 'rls-denied';
+  }
+  return 'db';
 }
 
 /**
@@ -450,12 +476,15 @@ export async function removePlayerFromGame(
       .select('user_id'),
     'removePlayerFromGame',
   );
-  if (deleted.ok) return done(false);
+  if (deleted.ok) return afterWrite(gameId, done(false));
   if (deleted.error !== 'no-rows') return failed(deleted.error, deleted.message);
 
   // Borte = i mål. Fortsatt der = RLS nektet slettingen.
-  return resolveZeroRows(gameId, playerUserId, 'user_id', (row) =>
-    row === null ? done(true) : failed('no-rows'),
+  return afterWrite(
+    gameId,
+    await resolveZeroRows(gameId, playerUserId, 'user_id', (row) =>
+      row === null ? done(true) : failed('no-rows'),
+    ),
   );
 }
 
@@ -525,11 +554,14 @@ export async function setPlayerTeam(
       .select('user_id'),
     'setPlayerTeam',
   );
-  if (updated.ok) return done(false);
+  if (updated.ok) return afterWrite(gameId, done(false));
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
-  return resolveZeroRows(gameId, playerUserId, 'team_number', (row) =>
-    row?.team_number === teamNumber ? done(true) : failed('no-rows'),
+  return afterWrite(
+    gameId,
+    await resolveZeroRows(gameId, playerUserId, 'team_number', (row) =>
+      row?.team_number === teamNumber ? done(true) : failed('no-rows'),
+    ),
   );
 }
 
@@ -586,11 +618,14 @@ export async function setPlayerFlight(
       .select('user_id'),
     'setPlayerFlight',
   );
-  if (updated.ok) return done(false);
+  if (updated.ok) return afterWrite(gameId, done(false));
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
-  return resolveZeroRows(gameId, playerUserId, 'flight_number', (row) =>
-    row?.flight_number === flightNumber ? done(true) : failed('no-rows'),
+  return afterWrite(
+    gameId,
+    await resolveZeroRows(gameId, playerUserId, 'flight_number', (row) =>
+      row?.flight_number === flightNumber ? done(true) : failed('no-rows'),
+    ),
   );
 }
 
@@ -665,23 +700,26 @@ export async function withdrawPlayer(
     ),
     'withdrawPlayer',
   );
-  if (updated.ok) return done(false);
+  if (updated.ok) return afterWrite(gameId, done(false));
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
   // Uten opt-in leses bare `withdrawn_at`, som før: der er «rakk å levere»
   // ingen egen grunn, og et treff på leverte rader er selve poenget.
-  return resolveZeroRows(
+  return afterWrite(
     gameId,
-    playerUserId,
-    onlyIfUnsubmitted ? 'withdrawn_at, submitted_at' : 'withdrawn_at',
-    (row) => {
-      if (row === null) return failed('no-rows');
-      if (row.withdrawn_at != null) return done(true);
-      if (onlyIfUnsubmitted && row.submitted_at != null) {
-        return failed('already-submitted');
-      }
-      return failed('no-rows');
-    },
+    await resolveZeroRows(
+      gameId,
+      playerUserId,
+      onlyIfUnsubmitted ? 'withdrawn_at, submitted_at' : 'withdrawn_at',
+      (row) => {
+        if (row === null) return failed('no-rows');
+        if (row.withdrawn_at != null) return done(true);
+        if (onlyIfUnsubmitted && row.submitted_at != null) {
+          return failed('already-submitted');
+        }
+        return failed('no-rows');
+      },
+    ),
   );
 }
 
@@ -713,11 +751,14 @@ export async function undoWithdrawPlayer(
       .select('user_id'),
     'undoWithdrawPlayer',
   );
-  if (updated.ok) return done(false);
+  if (updated.ok) return afterWrite(gameId, done(false));
   if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
 
-  return resolveZeroRows(gameId, playerUserId, 'withdrawn_at', (row) =>
-    row !== null && row.withdrawn_at == null ? done(true) : failed('no-rows'),
+  return afterWrite(
+    gameId,
+    await resolveZeroRows(gameId, playerUserId, 'withdrawn_at', (row) =>
+      row !== null && row.withdrawn_at == null ? done(true) : failed('no-rows'),
+    ),
   );
 }
 
@@ -726,24 +767,21 @@ export async function undoWithdrawPlayer(
 // -----------------------------------------------------------------------------
 
 /**
- * Åpne et levert scorekort igjen (#2220). Speiler webbens reopenScorecard
- * (`admin/games/[id]/actions.ts`), arrangørens angrevei etter levering: kun i
- * en AKTIV runde, og kun på et kort som faktisk står som levert.
+ * Åpne et levert scorekort igjen (#2220), arrangørens angrevei etter levering.
  *
- * Én UPDATE nuller alle fire kolonnene, nøyaktig som nettsiden. At
- * `submitted_at` og `approved_at` går i samme skriving er lastbærende:
- * avslutningen leser begge (`needsPeerApproval`), og et kort som står godkjent
- * uten å være levert ville sluppet forbi den.
+ * **Via ruta (#2215).** `POST /api/games/{id}/scorecards/{userId}` med
+ * `decision: 'reopen'` kaller samme kjerne som webbens «Åpne for redigering».
+ * Fram til #2215 var dette en direkte UPDATE under RLS: kortet ble åpnet, men
+ * spilleren fikk aldri `scorecard_reopened`, og nettsiden viste kortet som
+ * levert til cachen gikk ut. Nå eier ruta alt: at spillet er aktivt, at kalleren
+ * er arrangør, at kortet faktisk er levert, og at alle fire kolonnene nulles i
+ * samme skriving (avslutningen leser både `submitted_at` og `approved_at`,
+ * `needsPeerApproval`).
  *
- * **Felles lagkort (#2213).** I formatene der laget fører på kapteinens rader,
- * er hullene låst så lenge ÉN på laget står som levert. Åpnes bare kortet det
- * ble trykket på, kan laget fortsatt ikke rette noe. Derfor åpnes alle aktive
- * lagkamerater i samme skriving, som på nettsiden, og hvem det er svarer den
- * delte `sharedCardUserIds`. Kan ikke rosteret leses, åpnes ingenting: ett kort
- * alene er nettopp den feilen.
+ * **Felles lagkort (#2213)** åpnes for hele laget av kjernen, med service-role.
+ * Appen trenger ikke lenger å lese rosteret for å finne lagkameratene.
  *
- * Ingen arrangør-sjekk her. Knappen står bare i arrangør-seksjonen, og porten er
- * RLS: `game_players creator update` (0071) og 0168-vakta.
+ * Ruta tømmer web-cachen selv, så her kalles ikke `refreshWebCache`.
  */
 export async function reopenScorecard(
   gameId: string,
@@ -753,44 +791,21 @@ export async function reopenScorecard(
   const notReady = refuseUnlessReady(userId);
   if (notReady) return notReady;
 
-  const game = await loadGame(gameId);
-  if ('error' in game) return game.error;
-  if (game.row.status !== 'active') return failed('not-active');
+  const call = await callScorecardRoute(gameId, playerUserId, { decision: 'reopen' });
+  if (!call.ok) return webApiFailure(call);
+  if (call.status === 200) return done(call.body.alreadyDone === true);
+  return failed(reopenFailureFor(call.status));
+}
 
-  const mode = game.row.game_mode as GameMode;
-  // Hull 18 svarer på «deler runden noen gang ett kort?», som på nettsiden:
-  // patsome kollapser først fra hull 7.
-  const sharedCard = modeCollapsesToTeamCard(mode, 18);
-  let teamUserIds: string[] = [];
-  if (sharedCard) {
-    const grouping = await loadGrouping(gameId);
-    if ('error' in grouping) return grouping.error;
-    teamUserIds = sharedCardUserIds(mode, grouping.rows, playerUserId);
-  }
-
-  const write = supabase
-    .from('game_players')
-    .update({
-      submitted_at: null,
-      approved_at: null,
-      approved_by_user_id: null,
-      rejection_reason: null,
-    })
-    .eq('game_id', gameId);
-  const updated = readWriteResult(
-    await (sharedCard
-      ? write.in('user_id', teamUserIds)
-      : write.eq('user_id', playerUserId)
-    )
-      .not('submitted_at', 'is', null)
-      .select('user_id'),
-    'reopenScorecard',
-  );
-  if (updated.ok) return done(false);
-  if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
-
-  // Åpent = i mål. Fortsatt levert, eller usynlig = nektet.
-  return resolveZeroRows(gameId, playerUserId, 'submitted_at', (row) =>
-    row !== null && row.submitted_at == null ? done(true) : failed('no-rows'),
-  );
+/**
+ * Svaret fra scorekort-ruta som roster-kode. 400, 422 og 500 er alle «prøv
+ * igjen» (`db`): med knappen der den står, er ingen av dem noe arrangøren kan
+ * rette på selv.
+ */
+function reopenFailureFor(status: number): RosterActionFailure {
+  if (status === 401) return 'no-session';
+  if (status === 403) return 'rls-denied';
+  if (status === 404) return 'not-found';
+  if (status === 409) return 'not-active';
+  return 'db';
 }

@@ -2,8 +2,8 @@
 // Native #1918: den ene render-testen (Type C) for scorekortet.
 //
 // Kortets tall er dekket av `lib/scorecardRows.test.ts`, lag-oppslaget av
-// `lib/teamPlay.test.ts`, lever-skrivingen av `data/playerActions.test.ts` og
-// rute-kallet av `data/submitTeam.test.ts`. Ingen av dem gjentas her.
+// `lib/teamPlay.test.ts` og rute-kallet (solo og lag, #2215) av
+// `data/submitCard.test.ts`. Ingen av dem gjentas her.
 //
 // Det som blir igjen er to koblinger:
 //
@@ -101,11 +101,8 @@ jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockBundle),
   refreshGameBundle: jest.fn(async () => mockBundle),
 }));
-jest.mock('../data/playerActions', () => ({
-  submitScorecard: jest.fn(async () => ({ ok: true, alreadyDone: false })),
-}));
-jest.mock('../data/submitTeam', () => ({
-  submitTeam: jest.fn(async () => ({ ok: true, alreadySubmitted: false })),
+jest.mock('../data/submitCard', () => ({
+  submitCard: jest.fn(async () => ({ ok: true, alreadySubmitted: false })),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
 jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));

@@ -467,8 +467,9 @@ export function OrganiserSection({
               ) : null}
 
               {/* #2220: alle leverte kort i en aktiv runde, også mitt eget og
-                  trukne spilleres, som på nettsiden. RLS er porten (0071 og
-                  0168-vakta). I lagformatene med felles kort åpnes hele laget. */}
+                  trukne spilleres, som på nettsiden. Porten er scorekort-rutas
+                  (#2215), som også varsler spilleren. I lagformatene med felles
+                  kort åpnes hele laget. */}
               {active && player.submittedAt != null ? (
                 <Pressable
                   style={[ui.buttonSecondary, styles.rowButton]}

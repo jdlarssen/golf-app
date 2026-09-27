@@ -1,21 +1,21 @@
-// native/app/src/data/submitTeam.ts
-// Native #1918: «Lever lagets kort» fra scorekortet, i formatene som kollapser
-// til ett lagkort.
+// native/app/src/data/submitCard.ts
+// Native #1918, #2215: «Lever» fra scorekortet — levering, solo og lag.
 //
-// **Hvorfor en rute og ikke en skriving.** Leveringen markerer HELE lagets
-// aktive, uleverte rader, og det krever service-role: RLS lar appen bare skrive
-// sin egen `game_players`-rad. Varselet som følger med (`notify()` + Resend) er
-// `server-only` av samme grunn. Og regelen om hva en levering ER — WD-porten,
-// idempotensen, lag-deteksjonen, søsken-kaskaden — bor i
-// `lib/games/submitScorecardCore.ts` og speiles ALDRI her (AGENTS trap 4).
-// Appen spør ruta og viser svaret.
-//
-// Uten dette kunne laget føres hele runden, men ikke leveres: kortet endte i en
-// setning og en lenke ut av appen.
+// **Hvorfor en rute og ikke en skriving.** I formatene som kollapser til ett
+// lagkort markerer leveringen HELE lagets aktive, uleverte rader, og det krever
+// service-role: RLS lar appen bare skrive sin egen `game_players`-rad. Varslene
+// som følger med (`peer_approval_request`, `scorecard_submitted`, admin-mailen)
+// er `server-only` (`notify()` + Resend) i begge formene. Fram til #2215 skrev
+// solo-greina rett i basen og hoppet dermed over varslene. Nå går begge hit.
+// Regelen om hva en levering ER (WD-porten, idempotensen, lag-deteksjonen,
+// søsken-kaskaden) bor i `lib/games/submitScorecardCore.ts` og speiles ALDRI her
+// (AGENTS trap 4). Appen spør ruta og viser svaret.
 //
 // **Wire-kontrakten er frosset** og står i ruta
-// (`app/api/games/[id]/submit-team/route.ts`). Denne fila er den andre
-// halvdelen av den; endres den ene, endres den andre i samme PR:
+// (`app/api/games/[id]/submit-team/route.ts`). Stien heter fortsatt
+// `submit-team`, fordi installerte bygg kaller den. Kjernen avgjør selv om
+// kortet er et lagkort eller et solo-kort. Denne fila er den andre halvdelen av
+// kontrakten; endres den ene, endres den andre i samme PR:
 //   POST /api/games/{id}/submit-team
 //     200 { submitted: number, alreadySubmitted: boolean }
 //     401 unauthorized · 403 forbidden · 404 not_found · 409 not_active
@@ -29,7 +29,7 @@
 import { callWebRoute, type WebApiFailure } from './webApi';
 
 /**
- * Hvorfor lagkortet ikke ble levert.
+ * Hvorfor kortet ikke ble levert.
  *
  * De fire første er appens egen tilstand ({@link WebApiFailure}); resten er
  * `error`-verdiene ruta svarer med, og beholder derfor wire-stavemåten med
@@ -40,7 +40,7 @@ import { callWebRoute, type WebApiFailure } from './webApi';
  * betyr helt ulike ting for spilleren — den ene er endelig for hen, den andre
  * for runden. Appen leser KUN statusen, så skillet må stå i wiren.
  */
-export type TeamSubmitFailure =
+export type SubmitCardFailure =
   | WebApiFailure
   | 'forbidden'
   | 'not_found'
@@ -51,20 +51,21 @@ export type TeamSubmitFailure =
 /**
  * Utfallet av ett trykk.
  *
- * `alreadySubmitted` er sant når laget alt sto som levert — UPDATE-en traff 0
- * rader, og det ER det lovlige utfallet av at makkeren rakk det først. Feltet
- * styrer ordlyd, ikke suksess: kortet er levert uansett hvilken vei det gikk.
+ * `alreadySubmitted` er sant når kortet alt sto som levert — UPDATE-en traff 0
+ * rader, og det ER det lovlige utfallet av et dobbelttrykk, eller av at
+ * makkeren rakk det først. Feltet styrer ordlyd, ikke suksess: kortet er levert
+ * uansett hvilken vei det gikk.
  */
-export type TeamSubmitResult =
+export type SubmitCardResult =
   | { ok: true; alreadySubmitted: boolean }
-  | { ok: false; reason: TeamSubmitFailure };
+  | { ok: false; reason: SubmitCardFailure };
 
 /**
  * Stien for ett spill. `encodeURIComponent` selv om id-en er en uuid fra vår
  * egen bundle: en sti bygget av data skal kodes der den bygges, ikke der noen
  * senere antar at den var trygg.
  */
-function submitTeamPath(gameId: string): string {
+function submitCardPath(gameId: string): string {
   return `/api/games/${encodeURIComponent(gameId)}/submit-team`;
 }
 
@@ -75,7 +76,7 @@ function submitTeamPath(gameId: string): string {
  * Kroppens `error`-felt leses bevisst ikke: ruta sender de samme kodene som
  * statusene betyr, og å stole på begge ville gitt to sannheter om samme svar.
  */
-function failureForStatus(status: number): TeamSubmitFailure {
+function failureForStatus(status: number): SubmitCardFailure {
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'not_found';
@@ -85,7 +86,7 @@ function failureForStatus(status: number): TeamSubmitFailure {
 }
 
 /**
- * Lever kortet for hele laget.
+ * Lever kortet: spillerens eget, eller hele lagets i et lagformat.
  *
  * **200 ER kvitteringen.** Varslene på serversiden er best-effort
  * (`Promise.allSettled`), så ruta svarer 200 selv om en mail ikke gikk — og
@@ -95,11 +96,11 @@ function failureForStatus(status: number): TeamSubmitFailure {
  * mislykket fordi et informasjonsfelt manglet, forteller spilleren det motsatte
  * av det som skjedde.
  *
- * Kortet låses for alle på laget, ikke bare for den som trykket. Advarselen om
- * det bor på skjermen, foran trykket; her er det for sent å spørre.
+ * Et lagkort låses for alle på laget, ikke bare for den som trykket. Advarselen
+ * om det bor på skjermen, foran trykket; her er det for sent å spørre.
  */
-export async function submitTeam(gameId: string): Promise<TeamSubmitResult> {
-  const call = await callWebRoute(submitTeamPath(gameId), 'POST');
+export async function submitCard(gameId: string): Promise<SubmitCardResult> {
+  const call = await callWebRoute(submitCardPath(gameId), 'POST');
   if (!call.ok) return call;
 
   if (call.status === 200) {

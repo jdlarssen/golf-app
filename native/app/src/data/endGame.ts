@@ -6,7 +6,8 @@
 // så modulen kaster ved import under Metro/Hermes. Den drar dessuten inn
 // `next/cache`, Resend-mail og fire service-role-hjelpere. Motsatt konklusjon av
 // N6b, altså: starten kunne kalle en delt, import-ren kjerne
-// (`startScheduledGameCore`), avslutningen kan ikke. Gatene under er derfor en
+// (`startScheduledGameCore`; siden #2215 går den via en rute i stedet),
+// avslutningen kan ikke. Gatene under er derfor en
 // SPEILING av `endGameCore.ts:153-196`, og jest-paritet per gren er det som
 // holder de to i lås. Endres kjernen, endres denne fila i samme PR.
 //
@@ -16,6 +17,9 @@
 // er server-eid. Seks av stegene kaller `getAdminClient()` selv, og en telefon
 // kan aldri holde service-role-nøkkelen. Halen tas av finish-fullføreren på
 // serversiden; appen flipper status og stopper der. Bokført gap, ikke en glipp.
+// Det eneste appen ber serveren om etter flippen, er å tømme web-cachen
+// (`refreshWebCache`, #2215), så nettsiden viser runden som avsluttet med én
+// gang i stedet for når fullføreren kommer innom.
 //
 // **Skriverekkefølgen er en regel, ikke en preferanse.** (a) frafall, (b)
 // LD/CTP-vinnerne, (c) status-flippen — nøyaktig som `endGameCore:199-229`.
@@ -51,6 +55,7 @@ import {
 import { needsPeerApproval } from '../lib/endGamePlan';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { withdrawPlayer } from './rosterActions';
+import { refreshWebCache } from './refreshWebCache';
 import type { SideWinnerRow } from './sideWinners';
 import { isDeviceOnline } from './syncTriggers';
 
@@ -567,5 +572,9 @@ export async function finishRound(
   const winners = await upsertSideWinners(gameId, sideWinners);
   if (winners) return winners;
 
-  return flipToFinished(gameId);
+  // Cachen tømmes etter en vellykket flipp, også når noen andre rakk den først:
+  // nettsiden kan fortsatt vise runden som aktiv. Svaret endrer ikke utfallet.
+  const finished = await flipToFinished(gameId);
+  if (finished.ok) await refreshWebCache(gameId);
+  return finished;
 }

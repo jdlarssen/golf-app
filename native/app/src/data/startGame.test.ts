@@ -1,44 +1,42 @@
 // native/app/src/data/startGame.test.ts
-// Native N6b (#1855): «Start runden nå», sett fra appen.
+// Native N6b (#1855), #2215: «Start runden nå», sett fra appen.
 //
-// Kjernen er mocket med vilje. Alle reglene den håndhever — tee-rating,
-// ufullstendige lag, frysingen av banehandicap, rotasjons-slotene — er testet i
-// `lib/games/startScheduledGame.test.ts`, og å kjøre dem om igjen her ville
-// bare låst en kopi av webbens suite. Det som testes er OVERSETTELSEN: hva
-// appen gjør med hvert svar kjernen kan gi.
+// Siden #2215 går starten via `POST /api/games/{id}/start`. Reglene kjernen
+// håndhever — tee-rating, ufullstendige lag, frysingen av banehandicap,
+// rotasjons-slotene — er testet i `lib/games/startScheduledGame.test.ts`, og
+// varslene og de avledede spillene i ruta sin test. Det som testes her er
+// OVERSETTELSEN: hva appen gjør med hvert svar ruta kan gi.
 //
-// Tyngdepunktet er vinner-semantikken (#502). `{ ok: true, started: false }`
-// betyr at cron-sweepen, nettsiden eller E1-fallbacken rakk status-flippen
-// først — runden ER i gang, og det er suksess. Leses den som en feil, får
-// arrangøren en feilmelding om en runde som nettopp startet.
+// Tyngdepunktet er vinner-semantikken (#502). `alreadyRunning: true` betyr at
+// cron-sweepen, nettsiden eller E1-fallbacken rakk status-flippen først —
+// runden ER i gang, og det er suksess. Leses den som en feil, får arrangøren en
+// feilmelding om en runde som nettopp startet.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
-import { useFreshModules } from '../test/harness';
+import {
+  BASE_URL,
+  GAME_ID,
+  TOKEN,
+  auth,
+  mockFetch,
+  mockNetwork,
+  requestInit,
+  respondWith,
+  useWebRoute,
+} from '../test/webRouteHarness';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 
-const mockNetwork = { online: true };
+// Nett-bryteren bor i riggen og MÅ importeres statisk (se webRouteHarness.ts).
 jest.mock('./syncTriggers', () => ({
   isDeviceOnline: () => mockNetwork.online,
 }));
 
-jest.mock('../../../../lib/games/startScheduledGameCore', () => ({
-  startScheduledGameCore: jest.fn(),
-}));
-
-const GAME = 'game-1';
+const START_URL = `${BASE_URL}/api/games/${GAME_ID}/start`;
 
 type Mocks = typeof import('../test/supabaseMock');
 
 function mocks(): Mocks {
   return require('../test/supabaseMock') as Mocks;
-}
-
-function core(): jest.Mock {
-  return (
-    require('../../../../lib/games/startScheduledGameCore') as {
-      startScheduledGameCore: jest.Mock;
-    }
-  ).startScheduledGameCore;
 }
 
 function startRoundNow(gameId: string) {
@@ -48,89 +46,99 @@ function startRoundNow(gameId: string) {
 }
 
 describe('startRoundNow', () => {
-  useFreshModules();
+  useWebRoute();
 
   beforeEach(() => {
-    mockNetwork.online = true;
+    // En tom plan kaster på enhver spørring: appen skal ikke skrive selv.
+    mocks().routeFrom({});
   });
 
-  it('nekter uten nett, og spør aldri kjernen', async () => {
-    mockNetwork.online = false;
+  it('starter med POST …/start, Bearer og uten kropp', async () => {
+    respondWith(200, { alreadyRunning: false });
 
-    expect(await startRoundNow(GAME)).toEqual({ ok: false, reason: 'offline' });
-    expect(core()).not.toHaveBeenCalled();
-  });
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: true, alreadyRunning: false });
 
-  it('melder suksess når VI vant status-flippen', async () => {
-    core().mockResolvedValue({
-      ok: true,
-      started: true,
-      gameName: 'Torsdagsrunden',
-      expiredSignups: [],
-    });
-
-    expect(await startRoundNow(GAME)).toEqual({
-      ok: true,
-      alreadyRunning: false,
-    });
+    expect(mockFetch).toHaveBeenCalledWith(START_URL, expect.objectContaining({ method: 'POST' }));
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const init = requestInit();
+    expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(init.body).toBeUndefined();
   });
 
   it('melder suksess også når en ANNEN aktør vant flippen (#502)', async () => {
     // Cron-sweepen på tee-off, nettsidens knapp eller E1-fallbacken kom først.
     // Runden er i gang — nøyaktig det arrangøren ba om. Ingen feil.
-    core().mockResolvedValue({
-      ok: true,
-      started: false,
-      gameName: 'Torsdagsrunden',
-      expiredSignups: [],
-    });
+    respondWith(200, { alreadyRunning: true });
 
-    expect(await startRoundNow(GAME)).toEqual({
-      ok: true,
-      alreadyRunning: true,
-    });
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: true, alreadyRunning: true });
   });
 
-  it('slipper de auto-avviste søkerne — appen varsler ikke (bokført gap)', async () => {
-    core().mockResolvedValue({
-      ok: true,
-      started: true,
-      gameName: 'Torsdagsrunden',
-      expiredSignups: [{ requestId: 'req-1', userId: 'user-9' }],
-    });
+  it('er startet selv om svaret ikke sa hvilken vei det gikk', async () => {
+    respondWith(200, {});
 
-    // Ingen `expiredSignups` i svaret: `notify` er server-eid, og et felt
-    // skjermen ikke kan gjøre noe med inviterer bare til å vise det.
-    expect(await startRoundNow(GAME)).toEqual({
-      ok: true,
-      alreadyRunning: false,
-    });
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: true, alreadyRunning: false });
   });
 
-  it('ventende spillere: avslaget bærer ingen liste, og ingen users-lesing (#2207)', async () => {
-    core().mockResolvedValue({
-      ok: false,
-      reason: 'pending_players',
-      pendingUserIds: ['u1', 'u2'],
-    });
-    // An empty plan: any query at all would throw «uventet spørring».
-    mocks().routeFrom({});
+  it('nekter uten nett, og sender ingenting', async () => {
+    mockNetwork.online = false;
 
-    expect(await startRoundNow(GAME)).toEqual({
-      ok: false,
-      reason: 'pending_players',
-    });
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('sier ifra når server-adressen mangler i bygget', async () => {
+    delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'no-web-base-url' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('sender ikke et kall uten sesjon', async () => {
+    auth().getSession.mockResolvedValue({ data: { session: null } });
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'unauthorized' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('svarer network når kallet aldri kom fram', async () => {
+    mockFetch.mockRejectedValue(new Error('Network request failed'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'network' });
+  });
+
+  it.each([
+    [401, 'unauthorized'],
+    [403, 'forbidden'],
+    [404, 'not_found'],
+    [500, 'start_failed'],
+    [502, 'start_failed'],
+  ])('oversetter %i til %s', async (status, reason) => {
+    respondWith(status, { error: 'whatever' });
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason });
+  });
+
+  it('sender kjernens avslagskode videre fra en 409', async () => {
+    respondWith(409, { error: 'unassigned_teams' });
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'unassigned_teams' });
+  });
+
+  it('ventende spillere: avslaget bærer ingen liste (#2207)', async () => {
+    respondWith(409, { error: 'pending_players' });
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'pending_players' });
   });
 
   it('bærer rotasjons-formatet og antallet videre til meldingen (#969)', async () => {
-    core().mockResolvedValue({
-      ok: false,
-      reason: 'rotation_player_count',
+    respondWith(409, {
+      error: 'rotation_player_count',
       rotationMode: 'wolf',
       rotationActiveCount: 2,
     });
 
-    expect(await startRoundNow(GAME)).toEqual({
+    expect(await startRoundNow(GAME_ID)).toEqual({
       ok: false,
       reason: 'rotation_player_count',
       rotationMode: 'wolf',
@@ -138,12 +146,27 @@ describe('startRoundNow', () => {
     });
   });
 
-  it('sender en vanlig avslagskode videre uten pynt', async () => {
-    core().mockResolvedValue({ ok: false, reason: 'unassigned_teams' });
-
-    expect(await startRoundNow(GAME)).toEqual({
-      ok: false,
-      reason: 'unassigned_teams',
+  it('slipper rotasjons-felter som ikke er lesbare, i stedet for å gjette', async () => {
+    // Et format vi ikke kjenner og et antall som ikke er et tall: da står den
+    // generelle setningen igjen, ikke en gjettet wolf-setning.
+    respondWith(409, {
+      error: 'rotation_player_count',
+      rotationMode: 'ukjent_format',
+      rotationActiveCount: '2',
     });
+
+    expect(await startRoundNow(GAME_ID)).toEqual({
+      ok: false,
+      reason: 'rotation_player_count',
+    });
+  });
+
+  it.each([
+    [{ error: 'noe_nytt' }],
+    [{}],
+  ])('gjør en 409 med ukjent error (%j) til start_failed', async (body) => {
+    respondWith(409, body);
+
+    expect(await startRoundNow(GAME_ID)).toEqual({ ok: false, reason: 'start_failed' });
   });
 });

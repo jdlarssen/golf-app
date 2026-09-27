@@ -1,7 +1,8 @@
 // Native #1960: felles rigg for app→server-rute-klientene.
 //
-// Hver klient som går gjennom `webApi.ts` (sletting, purring, lagkort,
-// frafall, invitasjon, profil og `webApi` selv) testes med det samme oppsettet:
+// Hver klient som går gjennom `webApi.ts` (sletting, purring, levering,
+// frafall, invitasjon, profil, og fra #2215 godkjenning, start, roster,
+// opprettelse, avslutning, valgene og `webApi` selv) testes med det samme oppsettet:
 // en fetch-mock, en nett-bryter, en base-URL og en sesjon med token. Det sto
 // kopiert i sju filer til #1960. En ny rute-klient henter det herfra.
 //

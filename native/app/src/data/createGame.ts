@@ -29,6 +29,14 @@
 //
 // Skriving krever nett — opprettelsen går aldri i sync-køen (samme v1-valg som
 // valg-skrivene i #1832). Skjermen gater på nett før den kaller hit.
+//
+// **Varslene etter opprettelsen er serverens (#2215).** Opprettelsen blir her,
+// under RLS og med kompensering. Men `invite`-varselet til hver spiller er
+// `server-only` (`notify()`, push, e-post), så etter en vellykket publisering
+// ber appen `POST /api/games/{id}/invite-roster` sende dem. Ruta hopper over
+// arrangøren, gjester, trukne og alle som alt har fått `invite` for runden, så
+// et nytt forsøk dobler ingenting. Varslene er best-effort, som på webben: en
+// feil logges, og publiseringen står.
 import { acceptedAtForActor } from '../../../../lib/games/participantAcceptance';
 import {
   isTeeOffInPast,
@@ -46,6 +54,7 @@ import { isAppSupportedMode } from '../lib/appFormats';
 import { asSharedFormData } from '../lib/wizardFormData';
 import { buildDraftPayload, type GameDraft } from '../lib/wizardPayload';
 import { currentDeviceUserId, supabase } from '../supabase';
+import { callWebRoute } from './webApi';
 
 // -----------------------------------------------------------------------------
 // Lesninger — kandidater, baner og teer
@@ -335,6 +344,7 @@ async function refuseUnlessModeIsActive(
  *  7. INSERT `games` (status `'scheduled'`, `created_by` = deg)
  *  8. INSERT `game_players`
  *  9. feiler 8 → slett games-raden igjen
+ * 10. lyktes 8 → be ruta sende `invite`-varslene (best-effort, #2215)
  *
  * Knappen låses av skjermen mens dette står på; funksjonen er ikke idempotent
  * og et dobbelttrykk ville laget to runder.
@@ -488,5 +498,31 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
     );
   }
 
+  await inviteRoster(gameId);
   return { ok: true, gameId };
+}
+
+/**
+ * Be serveren sende `invite` til spillerne i en nyopprettet runde (#2215).
+ *
+ * Best-effort: runden ER opprettet når denne kalles, og et feilet varsel skal
+ * aldri bli til en feil på skjermen. Da ville arrangøren trykket igjen og laget
+ * runde nummer to. En feil logges bare. `try` står selv om `callWebRoute`
+ * fanger alt, fordi løftet over er at publiseringen svarer `ok` uansett.
+ */
+async function inviteRoster(gameId: string): Promise<void> {
+  try {
+    const call = await callWebRoute(
+      `/api/games/${encodeURIComponent(gameId)}/invite-roster`,
+      'POST',
+    );
+    if (call.ok && call.status === 200) return;
+    console.error(
+      '[publishGame] fikk ikke sendt invitasjonsvarslene',
+      gameId,
+      call.ok ? call.status : call.reason,
+    );
+  } catch (err: unknown) {
+    console.error('[publishGame] invite-roster kastet', gameId, err);
+  }
 }

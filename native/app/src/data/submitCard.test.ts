@@ -1,11 +1,11 @@
-// native/app/src/data/submitTeam.test.ts
-// Native #1918: lagkort-leveringen sett fra appen.
+// native/app/src/data/submitCard.test.ts
+// Native #1918, #2215: leveringen sett fra appen, solo og lag.
 //
 // Suiten har ett tyngdepunkt: **at et svar aldri blir til noe annet enn det det
-// var.** Leveringen låser kortet for HELE laget og sender varsel til arrangøren,
-// og spilleren handler på det appen sier — så en 422 som leses som «det gikk
-// fint» sender hen videre i troen på at runden er levert, mens laget fortsatt
-// står uten kort. Derfor er hver status-gren låst, hver for seg.
+// var.** Leveringen låser kortet (for HELE laget i et lagformat) og sender varsel
+// videre, og spilleren handler på det appen sier — så en 422 som leses som «det
+// gikk fint» sender hen videre i troen på at runden er levert, mens kortet
+// fortsatt står ulevert. Derfor er hver status-gren låst, hver for seg.
 //
 // Det som IKKE testes her: vakt-rekkefølgen som sådan (den er `webApi.ts` sin,
 // og `account.test.ts` låser den for den andre ruta), regelen om hva en levering
@@ -34,19 +34,19 @@ jest.mock('./syncTriggers', () => ({
 
 const SUBMIT_URL = `${BASE_URL}/api/games/${GAME_ID}/submit-team`;
 
-type SubmitTeam = typeof import('./submitTeam');
+type SubmitCard = typeof import('./submitCard');
 
-function submitTeam(): SubmitTeam {
-  return require('./submitTeam') as SubmitTeam;
+function submitCard(): SubmitCard {
+  return require('./submitCard') as SubmitCard;
 }
 
-describe('lagkort-levering', () => {
+describe('levering', () => {
   useWebRoute();
 
   it('leverer med POST og Bearer-token, uten kropp og uten query', async () => {
     respondWith(200, { submitted: 2, alreadySubmitted: false });
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: false,
     });
@@ -64,24 +64,39 @@ describe('lagkort-levering', () => {
     expect(init.body).toBeUndefined();
   });
 
+  it('leverer et solo-kort på samme sti — kjernen avgjør formen, ikke appen (#2215)', async () => {
+    // Fram til #2215 skrev solo-greina rett i basen og hoppet over varslene.
+    // Nå går den samme veien som laget: samme sti, samme tomme kropp. Om kortet
+    // er et lagkort, avgjør `submitScorecardCore` ut fra formatet.
+    respondWith(200, { submitted: 1, alreadySubmitted: false });
+
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
+      ok: true,
+      alreadySubmitted: false,
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toBe(SUBMIT_URL);
+    expect(requestInit().body).toBeUndefined();
+  });
+
   it('er levert selv om svaret ikke sa hvilken vei det gikk', async () => {
     // 200 er kvitteringen; `alreadySubmitted` er informasjon. Mangler feltet,
     // faller det til `false` — å kalle en fullført levering mislykket fordi et
     // ordlyds-felt manglet, forteller spilleren det motsatte av det som skjedde.
     respondWith(200, {});
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: false,
     });
   });
 
-  it('sier ifra når laget alt sto som levert', async () => {
-    // Makkeren rakk det først: UPDATE-en traff 0 rader, og det ER det lovlige
-    // utfallet. Fortsatt suksess, bare en annen setning på skjermen.
+  it('sier ifra når kortet alt sto som levert', async () => {
+    // Et dobbelttrykk, eller makkeren rakk det først: UPDATE-en traff 0 rader,
+    // og det ER det lovlige utfallet. Fortsatt suksess.
     respondWith(200, { submitted: 0, alreadySubmitted: true });
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: true,
     });
@@ -97,7 +112,7 @@ describe('lagkort-levering', () => {
   ])('oversetter %i til %s', async (status, reason) => {
     respondWith(status, { error: reason });
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({ ok: false, reason });
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({ ok: false, reason });
   });
 
   it('holder på statusen selv når kroppen er uleselig', async () => {
@@ -110,7 +125,7 @@ describe('lagkort-levering', () => {
       },
     } as unknown as Response);
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: false,
       reason: 'not_active',
     });
@@ -119,7 +134,7 @@ describe('lagkort-levering', () => {
   it('leverer ikke uten nett', async () => {
     mockNetwork.online = false;
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: false,
       reason: 'offline',
     });
@@ -129,7 +144,7 @@ describe('lagkort-levering', () => {
   it('sier ifra når server-adressen mangler i bygget', async () => {
     delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: false,
       reason: 'no-web-base-url',
     });
@@ -139,7 +154,7 @@ describe('lagkort-levering', () => {
   it('sender ikke et kall uten sesjon', async () => {
     auth().getSession.mockResolvedValue({ data: { session: null } });
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: false,
       reason: 'unauthorized',
     });
@@ -150,7 +165,7 @@ describe('lagkort-levering', () => {
     mockFetch.mockRejectedValue(new Error('Network request failed'));
     jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(await submitTeam().submitTeam(GAME_ID)).toEqual({
+    expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: false,
       reason: 'network',
     });
