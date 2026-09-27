@@ -5,10 +5,17 @@
  * Tilsvarer en lik delt pott der hver enhet (skin/poeng/seksjon) er verdt `kr`,
  * alle betaler likt inn, og du får `kr` per enhet du vinner. Summen er alltid 0.
  *
- * Format-agnostisk: tar kun en liste av { userId, units } fra motor-resultatet,
- * så den samme helperen dekker skins, wolf, nassau, bingo-bango-bongo,
- * acey-deucey og nines.
+ * `computeSettlement` er format-agnostisk: den tar kun en liste av
+ * { userId, units }. Hvilke formater som gjør opp i penger, i hvilken enhet og
+ * fra hvilket felt på motorens spillerrad, har ETT hjem her (#2221):
+ * `SETTLEMENT_FORMATS` under. Nettsidens seks adaptere, begge opprett-veiviserne
+ * og appens resultatskjerm leser den via `settlementUnitKeyFor` og
+ * `settlementForResult`.
+ *
+ * Fila bundles også av appen (Metro): kun type-importer og relative stier.
  */
+import type { ModeResult } from './modes/types';
+
 
 export interface SettlementPlayerLine {
   userId: string;
@@ -122,4 +129,99 @@ function buildPayments(perPlayer: SettlementPlayerLine[]): SettlementPayment[] {
     if (deb.amount === 0) di++;
   }
   return payments;
+}
+
+/** Enheten et veddemålsformat gjør opp i. Oversettes av kalleren (`unitLabel`). */
+export type SettlementUnitKey = 'skin' | 'poeng' | 'seksjon';
+
+type SettlementKind =
+  | 'skins'
+  | 'wolf'
+  | 'bingo_bango_bongo'
+  | 'nines'
+  | 'acey_deucey'
+  | 'nassau';
+
+type UnitLine = { userId: string; units: number };
+
+/**
+ * De seks formatene som spiller om penger: enheten, og feltet på motorens
+ * spillerrad som teller enhetene. `result.kind` er lik modus-sluggen for alle
+ * seks, så samme nøkkel slår opp både fra veiviseren (slug) og fra resultatet.
+ */
+const SETTLEMENT_FORMATS: {
+  [K in SettlementKind]: {
+    unit: SettlementUnitKey;
+    units: (result: Extract<ModeResult, { kind: K }>) => UnitLine[];
+  };
+} = {
+  skins: {
+    unit: 'skin',
+    units: (r) => r.players.map((p) => ({ userId: p.userId, units: p.totalSkins })),
+  },
+  wolf: {
+    unit: 'poeng',
+    units: (r) => r.players.map((p) => ({ userId: p.userId, units: p.totalPoints })),
+  },
+  bingo_bango_bongo: {
+    unit: 'poeng',
+    units: (r) => r.players.map((p) => ({ userId: p.userId, units: p.totalPoints })),
+  },
+  nines: {
+    unit: 'poeng',
+    units: (r) => r.players.map((p) => ({ userId: p.userId, units: p.totalPoints })),
+  },
+  // `total` = ace−deuce-summen, kan være negativ.
+  acey_deucey: {
+    unit: 'poeng',
+    units: (r) => r.players.map((p) => ({ userId: p.userId, units: p.total })),
+  },
+  // `units` = antall seksjoner spilleren vant alene (0–3).
+  nassau: {
+    unit: 'seksjon',
+    units: (r) => r.players.map((p) => ({ userId: p.userId, units: p.units })),
+  },
+};
+
+function settlementFormat(mode: string) {
+  // `hasOwnProperty`, ikke `in`: «toString» og venner er ikke formater.
+  return Object.prototype.hasOwnProperty.call(SETTLEMENT_FORMATS, mode)
+    ? SETTLEMENT_FORMATS[mode as SettlementKind]
+    : null;
+}
+
+/** Enheten et format gjør opp i, eller null når formatet ikke spiller om penger. */
+export function settlementUnitKeyFor(mode: string): SettlementUnitKey | null {
+  return settlementFormat(mode)?.unit ?? null;
+}
+
+/**
+ * `mode_config.kr_per_unit` lest defensivt: kolonnen er jsonb, og appen har
+ * konfigurasjonen som `unknown`. Alt annet enn et endelig tall gir 0 (= av).
+ */
+function readKrPerUnit(modeConfig: unknown): number {
+  if (typeof modeConfig !== 'object' || modeConfig === null) return 0;
+  const kr = (modeConfig as { kr_per_unit?: unknown }).kr_per_unit;
+  return typeof kr === 'number' && Number.isFinite(kr) ? kr : 0;
+}
+
+/**
+ * Oppgjøret for et motorresultat: null når formatet ikke har oppgjør,
+ * `kr_per_unit` mangler/≤ 0, eller det er færre enn 2 spillere.
+ */
+export function settlementForResult(
+  result: ModeResult,
+  modeConfig: unknown,
+  unitLabel: (unit: SettlementUnitKey) => string,
+): Settlement | null {
+  const format = settlementFormat(result.kind);
+  if (!format) return null;
+  // TS kan ikke koble tabell-nøkkelen til resultat-varianten; oppslaget over
+  // gikk på `result.kind`, så varianten stemmer.
+  const units = (format.units as (r: ModeResult) => UnitLine[])(result);
+  return computeSettlement({
+    units,
+    krPerUnit: readKrPerUnit(modeConfig),
+    unitLabel: unitLabel(format.unit),
+  });
 }
