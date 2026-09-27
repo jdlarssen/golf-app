@@ -1,9 +1,11 @@
+import { first } from '@/lib/url/searchParams';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { LigaManagement } from '@/app/[locale]/admin/liga/[id]/LigaManagement';
 
 
 type Params = Promise<{ id: string; ligaId: string }>;
+type SearchParams = Promise<{ status?: string | string[] }>;
 
 /**
  * /klubber/[id]/liga/[ligaId] — the club owner/admin's door into managing their
@@ -15,9 +17,23 @@ type Params = Promise<{ id: string; ligaId: string }>;
  * leagues/league_rounds/league_players is the security backstop on every write.
  * `id` is the club; `ligaId` is the league — we gate on the league.
  */
-export default async function KlubbLigaManagePage({ params }: { params: Params }) {
+export default async function KlubbLigaManagePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { ligaId } = await params;
+  const sp = await searchParams;
   const supabase = await getServerClient();
   const { userId } = await requireAdminOrClubAdminOfLeague(supabase, ligaId);
-  return <LigaManagement leagueId={ligaId} userId={userId} variant="club" />;
+  return (
+    <LigaManagement
+      leagueId={ligaId}
+      userId={userId}
+      variant="club"
+      statusCode={first(sp.status)}
+    />
+  );
 }

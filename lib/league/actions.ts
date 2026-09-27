@@ -14,6 +14,7 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { isTeeOffInPast, parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import { teeGenderOf } from '@/lib/games/teeGender';
 import { generateRounds } from './generateRounds';
+import { ligaBasePath } from './ligaPaths';
 import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
 import type { TablesUpdate } from '@/lib/database.types';
 import type {
@@ -437,20 +438,42 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
   return { error: '' };
 }
 
-export async function removeLeaguePlayer(formData: FormData): Promise<LeagueActionError> {
+/**
+ * Removes one participant from a league. Posted by the confirm page
+ * (`…/liga/[id]/fjern/[userId]`, #2244) — never straight from a list row.
+ *
+ * Redirect-based like `removeCupParticipant`: success → the league's own door
+ * with `?status=player_removed`; a failed delete → back to the confirm page on
+ * the same door with `?error=remove_failed`. The door comes from the gate's
+ * `groupId` (admin-client read of the league), never from the form.
+ *
+ * Deliberately NO expectAffected: the gate and the RLS delete policy agree
+ * (0092: global admin, or owner/admin of the league's club), so a 0-row delete
+ * means the row is already gone. The organiser wanted the player out, and they
+ * are: an honest no-op, the same reasoning as `removeCupParticipant`.
+ */
+export async function removeLeaguePlayer(formData: FormData): Promise<void> {
   const supabase = await getServerClient();
   const leagueId = str(formData, 'league_id');
   const userId = str(formData, 'user_id');
-  if (!leagueId || !userId) return { error: 'missing' };
-  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+  // Only a hand-built post lacks these; there is no door to go back to.
+  if (!leagueId || !userId) redirect('/');
+  const { groupId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+  const base = ligaBasePath(leagueId, groupId);
   const { error } = await supabase
     .from('league_players')
     .delete()
     .eq('league_id', leagueId)
     .eq('user_id', userId);
-  if (error) return { error: 'remove_failed' };
+  if (error) {
+    console.error('[league] removeLeaguePlayer failed', { leagueId, userId, error });
+    redirect(`${base}/fjern/${encodeURIComponent(userId)}?error=remove_failed`);
+  }
   revalidatePath(`/admin/liga/${leagueId}`);
-  return { error: '' };
+  if (groupId) revalidatePath(`/klubber/${groupId}/liga/${leagueId}`);
+  // The standings table is built from league_players.
+  revalidatePath(`/liga/${leagueId}`);
+  redirect(`${base}?status=player_removed`);
 }
 
 // ── member self-service (#452 Fase 3) ────────────────────────────────────────

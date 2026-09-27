@@ -138,20 +138,25 @@ export async function requireAdminOrClubAdmin(
  * on leagues/league_rounds/league_players (migration 0083), which evaluate each
  * row's actual parent-league club — so a manipulated `league_id`/`round_id`
  * mismatch is still rejected at the data layer.
+ *
+ * Returns the resolved `groupId` on the context (#2244, mirror of the cup gate's
+ * #1749) so a redirecting action derives the league's door from this admin-client
+ * read instead of repeating it.
  */
 export async function requireAdminOrClubAdminOfLeague(
   supabase: ServerSupabase,
   leagueId: string,
-): Promise<AdminRoleContext> {
+): Promise<AdminRoleContext & { groupId: string | null }> {
   const { data } = await getAdminClient()
     .from('leagues')
     .select('group_id')
     .eq('id', leagueId)
     .maybeSingle();
   const groupId = (data?.group_id as string | null | undefined) ?? null;
-  return groupId
+  const ctx = await (groupId
     ? requireAdminOrClubAdmin(supabase, groupId)
-    : requireAdmin(supabase);
+    : requireAdmin(supabase));
+  return { ...ctx, groupId };
 }
 
 /**

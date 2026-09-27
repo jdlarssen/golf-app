@@ -430,3 +430,111 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
     expect(eqAfter!.args).toEqual(['id', 'g1']);
   });
 });
+
+/**
+ * #2244: removing a league player now goes through a dedicated confirm page,
+ * so the action is redirect-based like `removeCupParticipant`. Success lands on
+ * the league's own door with a receipt; a failed delete lands back on the
+ * confirm page with `?error=`. The door comes from the league's `group_id`
+ * (read by the gate), never from the form.
+ */
+describe('removeLeaguePlayer — redirect contract (#2244)', () => {
+  function removeForm(leagueId = 'l1', userId = 'u2'): FormData {
+    const fd = new FormData();
+    fd.set('league_id', leagueId);
+    fd.set('user_id', userId);
+    return fd;
+  }
+
+  async function run(fd: FormData): Promise<RedirectError> {
+    const { removeLeaguePlayer } = await import('./actions');
+    const err = await removeLeaguePlayer(fd).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RedirectError);
+    return err as RedirectError;
+  }
+
+  function deleteCall() {
+    return supabaseMock.__fromCalls.find(
+      (c) => c.table === 'league_players' && c.method === 'delete',
+    );
+  }
+
+  it('standalone league: deletes the row and lands on /admin/liga with a receipt', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }]); // gate
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { error: null }, // league_players.delete
+    ]);
+    setUser('admin-1');
+
+    const err = await run(removeForm());
+
+    expect(err.url).toBe('/admin/liga/l1?status=player_removed');
+    expect(deleteCall(), 'league_players delete issued').toBeDefined();
+    const eqArgs = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'league_players' && c.method === 'eq')
+      .map((c) => c.args);
+    expect(eqArgs).toEqual([
+      ['league_id', 'l1'],
+      ['user_id', 'u2'],
+    ]);
+  });
+
+  it('club league: lands on the club door, derived from the league (not the form)', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }]); // gate
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { error: null }, // league_players.delete
+    ]);
+    setUser('admin-1');
+
+    const fd = removeForm();
+    // A forged door field must not steer the redirect.
+    fd.set('group_id', 'evil');
+    fd.set('return_to', 'https://example.com');
+    const err = await run(fd);
+
+    expect(err.url).toBe('/klubber/g1/liga/l1?status=player_removed');
+  });
+
+  it('failed delete: back to the confirm page on the same door with ?error=', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }]); // gate
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { error: { message: 'boom' } }, // league_players.delete FAILS
+    ]);
+    setUser('admin-1');
+
+    const err = await run(removeForm());
+
+    expect(err.url).toBe('/klubber/g1/liga/l1/fjern/u2?error=remove_failed');
+  });
+
+  it.each([
+    ['league_id', removeForm('', 'u2')],
+    ['user_id', removeForm('l1', '')],
+  ])('missing %s: redirects away before gating or deleting', async (_field, fd) => {
+    adminMock = buildSupabaseMock([]);
+    supabaseMock = buildSupabaseMock([]);
+
+    const err = await run(fd);
+
+    expect(err.url).toBe('/');
+    expect(adminMock.__fromCalls, 'gate never ran').toHaveLength(0);
+    expect(deleteCall(), 'no delete').toBeUndefined();
+  });
+
+  it('auth gate: a non-manager of a club league is bounced, nothing deleted', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }]); // gate
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // loadRole
+      { data: { role: 'member' } }, // group_members.maybeSingle → not owner/admin
+    ]);
+    setUser('member-1');
+
+    const err = await run(removeForm());
+
+    expect(err.url).toBe('/klubber/g1');
+    expect(deleteCall(), 'no delete for a non-manager').toBeUndefined();
+  });
+});

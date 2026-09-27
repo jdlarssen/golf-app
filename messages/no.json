@@ -4436,7 +4436,10 @@
       "addParticipantsHeading": "Legg til deltakere",
       "deleteLink": "Slett ligaen",
       "startHint": "Du trenger minst 1 runde og 2 deltakere for å starte ligaen.",
-      "unknownPlayer": "Ukjent spiller"
+      "unknownPlayer": "Ukjent spiller",
+      "statusMessages": {
+        "player_removed": "Spilleren er fjernet fra ligaen."
+      }
     },
     "addPlayers": {
       "noClubMembersYet": "Ingen andre medlemmer i klubben ennå.",
@@ -4476,8 +4479,19 @@
     },
     "removePlayer": {
       "removeButton": "Fjern",
-      "removePending": "…",
-      "removeAria": "Fjern {name}"
+      "removeAria": "Fjern {name}",
+      "brassRibbon": "Bekreft fjerning",
+      "heading": "Fjerne {name} fra {league}?",
+      "body": "{firstName} går ut av ligaen og forsvinner fra tabellen. Runder som alt er spilt, blir liggende i spillhistorikken.",
+      "canReAdd": "Du kan legge til {firstName} igjen senere.",
+      "cannotReAdd": "Ligaen er avsluttet, så dette kan ikke angres.",
+      "confirmButton": "Ja, fjern {firstName}",
+      "pending": "Fjerner …",
+      "cancel": "Avbryt",
+      "fallbackFirstName": "Spilleren",
+      "errors": {
+        "remove_failed": "Klarte ikke å fjerne spilleren. Prøv igjen om litt."
+      }
     },
     "roundRow": {
       "roundLabel": "Runde",
