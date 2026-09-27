@@ -3,15 +3,11 @@
 import { startTransition, useActionState, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
-import {
-  addCupParticipant,
-  removeCupParticipant,
-  type CupPlanActionError,
-} from '@/lib/cup/planActions';
+import { addCupParticipant, type CupPlanActionError } from '@/lib/cup/planActions';
 import { setCupParticipantRole } from '@/lib/cup/lineupActions';
 import type { CupTeamNumber } from '@/lib/cup/captainRoles';
 import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
@@ -42,12 +38,15 @@ type Props = {
   /** Hvor «ingen kandidater»-lenken peker (spillerliste / klubb). */
   emptyCandidatesHref: string;
   emptyCandidatesLinkKey: 'emptyCandidatesLink' | 'emptyCandidatesLinkClub';
+  /** Base of the remove-confirm route on this door (#2244); the row appends its userId. */
+  removeHrefBase: string;
 };
 
 const INITIAL_STATE: CupPlanActionError = { error: '' };
 
 /**
- * Spillere-rommets interaktive liste (#1472, Rom 2). Legg til / fjern deltakere.
+ * Spillere-rommets interaktive liste (#1472, Rom 2). Adds participants here;
+ * «Fjern» links to a dedicated confirm page (#2244), never an inline delete.
  *
  * Ett `useActionState` deler feilbanneret på tvers av alle rad-formene — en
  * `intent`-felt i FormData router til riktig server-action. Knappe-formene har
@@ -67,6 +66,7 @@ export function CupParticipantsList({
   teamNames,
   emptyCandidatesHref,
   emptyCandidatesLinkKey,
+  removeHrefBase,
 }: Props) {
   const t = useTranslations('cup.participants');
   const locale = useLocale();
@@ -74,8 +74,6 @@ export function CupParticipantsList({
   const [state, dispatch, isPending] = useActionState(
     async (_prev: CupPlanActionError, formData: FormData) => {
       switch (formData.get('intent')) {
-        case 'remove':
-          return removeCupParticipant(formData);
         // #1884: lag + kaptein bor i lineupActions (deny-by-default-tabellene
         // har sitt eget gate-mønster), men deler feilbanner med resten her.
         case 'role':
@@ -152,21 +150,15 @@ export function CupParticipantsList({
                       HCP {formatHcpDisplay(p.hcpIndex, locale)}
                     </p>
                   </div>
-                  <form onSubmit={submit} className="shrink-0">
-                    <input type="hidden" name="id" value={tournamentId} />
-                    <input type="hidden" name="user_id" value={p.userId} />
-                    <input type="hidden" name="intent" value="remove" />
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      disabled={isPending}
-                      data-testid={`cup-participants-remove-${p.userId}`}
-                      aria-label={t('removeAria', { name: p.displayName })}
-                      className="!px-3.5 text-sm"
-                    >
-                      {t('removeButton')}
-                    </Button>
-                  </form>
+                  <LinkButton
+                    href={`${removeHrefBase}/${p.userId}`}
+                    variant="secondary"
+                    data-testid={`cup-participants-remove-${p.userId}`}
+                    aria-label={t('removeAria', { name: p.displayName })}
+                    className="shrink-0 !px-3.5 text-sm"
+                  >
+                    {t('removeButton')}
+                  </LinkButton>
                 </div>
                 <RoleControls
                   tournamentId={tournamentId}

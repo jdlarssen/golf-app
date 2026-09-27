@@ -4815,6 +4815,18 @@
       "teamSelectAria": "Team for {name}",
       "captainAria": "{name} is captain",
       "saveRoleAria": "Save team and captain for {name}",
+      "remove": {
+        "brassRibbon": "Confirm removal",
+        "heading": "Remove {name} from {cup}?",
+        "body": "{firstName} comes off the cup's participant list.",
+        "captain": "The team is left without a captain.",
+        "canReAdd": "You can add {firstName} again as long as the cup hasn't started.",
+        "confirmButton": "Yes, remove {firstName}",
+        "pending": "Removing …",
+        "cancel": "Cancel",
+        "back": "Back",
+        "fallbackFirstName": "The player"
+      },
       "errors": {
         "not_candidate": "This player can't be enrolled in the cup.",
         "too_many_players": "A personal cup holds up to {cap} players. For more, create a club cup.",
