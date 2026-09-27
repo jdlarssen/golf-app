@@ -1,4 +1,4 @@
-import { localDb, scoreKey } from './db';
+import { localDb, scoreKey, type ConflictRecord, type LocalScore } from './db';
 import { conflictRecordFor } from './conflict';
 
 /** A scores row as it comes back from the server, in local field names. */
@@ -42,7 +42,26 @@ export async function mergeServerScore(
   incoming: ServerScoreRow,
   currentUserId: string | null,
 ): Promise<MergeOutcome> {
-  const id = scoreKey(incoming.gameId, incoming.userId, incoming.holeNumber);
+  const [outcome] = await mergeServerScores([incoming], currentUserId);
+  return outcome!;
+}
+
+/**
+ * `mergeServerScore` for a batch, in ONE rw transaction (#2227). The catch-up
+ * merges a whole game at once: ≈2 700 rows at 150 players, which as one
+ * transaction per row meant ≈2 700 IndexedDB transactions on every focus.
+ *
+ * Same rule per row as the single merge (which is just a batch of one, so the
+ * rule lives here only). A row id that appears twice is judged against the
+ * earlier row's result, not the stale read, exactly as two sequential merges
+ * would have been.
+ */
+export async function mergeServerScores(
+  rows: readonly ServerScoreRow[],
+  currentUserId: string | null,
+): Promise<MergeOutcome[]> {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => scoreKey(r.gameId, r.userId, r.holeNumber));
 
   return localDb.transaction(
     'rw',
@@ -50,45 +69,65 @@ export async function mergeServerScore(
     localDb.syncQueue,
     localDb.conflicts,
     async () => {
-      const existing = await localDb.scores.get(id);
-
-      // Last-write-wins by clientUpdatedAt. Older events are stale; an EQUAL
-      // one is the echo of this device's own write coming back through
-      // realtime, and dropping it here is what keeps the echo from ever
-      // looking like a conflict.
-      if (existing && existing.clientUpdatedAt >= incoming.clientUpdatedAt) {
-        return 'kept-local' as const;
-      }
-
-      const conflict = existing
-        ? conflictRecordFor({
-            existing,
-            incomingStrokes: incoming.strokes,
-            currentUserId,
-          })
-        : null;
-      if (conflict) await localDb.conflicts.put(conflict);
-
-      await localDb.scores.put({
-        id,
-        gameId: incoming.gameId,
-        userId: incoming.userId,
-        holeNumber: incoming.holeNumber,
-        strokes: incoming.strokes,
-        putts: incoming.putts ?? null, // #939: pre-migration rows lack the field
-        enteredBy: incoming.enteredBy,
-        clientUpdatedAt: incoming.clientUpdatedAt,
-        serverUpdatedAt: incoming.serverUpdatedAt,
+      const stored = await localDb.scores.bulkGet(ids);
+      const current = new Map<string, LocalScore | undefined>();
+      ids.forEach((id, i) => {
+        if (!current.has(id)) current.set(id, stored[i]);
       });
 
-      // Any pending upload for this row (quarantined ones included) was for a
-      // value that has now lost LWW. Leaving it queued either burns an RPC that
-      // comes straight back as a no-op, or leaves a "could not be saved" notice
-      // standing for a row that is in fact in sync. The drain dequeues on
-      // server-wins for the same reason.
-      await localDb.syncQueue.delete(id);
+      const puts = new Map<string, LocalScore>();
+      const conflicts = new Map<string, ConflictRecord>();
 
-      return conflict ? ('applied-with-conflict' as const) : ('applied' as const);
+      const outcomes = rows.map((incoming, i): MergeOutcome => {
+        const id = ids[i]!;
+        const existing = current.get(id);
+
+        // Last-write-wins by clientUpdatedAt. Older events are stale; an EQUAL
+        // one is the echo of this device's own write coming back through
+        // realtime, and dropping it here is what keeps the echo from ever
+        // looking like a conflict.
+        if (existing && existing.clientUpdatedAt >= incoming.clientUpdatedAt) {
+          return 'kept-local';
+        }
+
+        const conflict = existing
+          ? conflictRecordFor({
+              existing,
+              incomingStrokes: incoming.strokes,
+              currentUserId,
+            })
+          : null;
+        if (conflict) conflicts.set(conflict.id, conflict);
+
+        const row: LocalScore = {
+          id,
+          gameId: incoming.gameId,
+          userId: incoming.userId,
+          holeNumber: incoming.holeNumber,
+          strokes: incoming.strokes,
+          putts: incoming.putts ?? null, // #939: pre-migration rows lack the field
+          enteredBy: incoming.enteredBy,
+          clientUpdatedAt: incoming.clientUpdatedAt,
+          serverUpdatedAt: incoming.serverUpdatedAt,
+        };
+        current.set(id, row);
+        puts.set(id, row);
+
+        return conflict ? 'applied-with-conflict' : 'applied';
+      });
+
+      if (puts.size > 0) {
+        await localDb.scores.bulkPut([...puts.values()]);
+        // Any pending upload for an applied row (quarantined ones included)
+        // was for a value that has now lost LWW. Leaving it queued either burns
+        // an RPC that comes straight back as a no-op, or leaves a "could not be
+        // saved" notice standing for a row that is in fact in sync. The drain
+        // dequeues on server-wins for the same reason.
+        await localDb.syncQueue.bulkDelete([...puts.keys()]);
+      }
+      if (conflicts.size > 0) await localDb.conflicts.bulkPut([...conflicts.values()]);
+
+      return outcomes;
     },
   );
 }
