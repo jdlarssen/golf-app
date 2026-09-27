@@ -129,7 +129,9 @@ with the service role: capped formats go through the `SECURITY DEFINER` RPC
 **`claim_open_registration_seat`** (service_role only), which locks the `games` row, counts held seats
 (1 per player outside a team, `max(rows, team size)` per team, withdrawn rows excluded), refuses past
 the cap passed in from TypeScript, picks the lowest free team number in `1..MAX_TEAMS` and inserts the
-row — so concurrent registrations cannot overfill a game or share a team number (#2060).
+row — so concurrent registrations cannot overfill a game or share a team number (#2060). Since 0187
+(#2209) it also takes `p_tee_gender` (default `mens`) and writes it to the row; the caller passes
+`profileTeeGender` (`lib/games/teeChoice.ts`), the same rule every other insert path uses.
 
 **`scores`:** INSERT / UPDATE / SELECT by flight (public).
 

@@ -1,6 +1,6 @@
 -- supabase/tests/open_registration_seat_claim_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
--- Runtime test for migration 0177 (#2062, #2060).
+-- Runtime test for migrations 0177 (#2062, #2060) and 0187 (#2209).
 --
 --   1. claim_open_registration_seat counts seats the way tallyActiveRoster did
 --      in submitTeamRegistration (#2011) — the table below mirrors those unit
@@ -9,6 +9,8 @@
 --   2. Only service_role may call it.
 --   3. The "self register open" policy branch is gone: a player JWT can no
 --      longer insert its own row into an open draft game; admin still can.
+--   4. (0187) The claim writes the tee category it is given; without one the
+--      row gets the column default 'mens'. Only the 9-argument signature exists.
 --
 -- Every claim is called in its own statement and its effect is read in the
 -- NEXT statement: a statement does not see its own writes (#1910).
@@ -24,7 +26,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(24);
+select plan(29);
 
 -- ── Fixture ids ──────────────────────────────────────────────────────────────
 create schema if not exists torny_osc;
@@ -120,8 +122,35 @@ create or replace function torny_osc.try_insert_as(p_actor int, p_game int, p_ta
   end;
 $$;
 
+-- claim_tee: a solo, uncapped claim with p_tee_gender. Before 0187 the
+-- parameter does not exist (undefined_function); answering instead of raising
+-- keeps the red run a list of failing asserts, as torny_osc.claim does.
+create or replace function torny_osc.claim_tee(
+  p_game int, p_user int, p_tee_gender text
+) returns jsonb language plpgsql as $$
+  begin
+    return public.claim_open_registration_seat(
+      p_game_id => torny_osc.gid(p_game),
+      p_user_id => torny_osc.uid(p_user),
+      p_seat_team_size => 1,
+      p_max_teams => 4,
+      p_accepted_at => now(),
+      p_tee_gender => p_tee_gender::public.player_tee_gender);
+  exception
+    when undefined_function then
+      return jsonb_build_object('outcome', 'function_missing');
+  end;
+$$;
+
+-- tee(game, user): the row's tee category, null when there is no row.
+create or replace function torny_osc.tee(p_game int, p_user int) returns text language sql stable as $$
+  select tee_gender::text from public.game_players
+   where game_id = torny_osc.gid(p_game) and user_id = torny_osc.uid(p_user)
+$$;
+
+-- 0187: the signature with p_tee_gender (9 arguments) is the only one.
 create or replace function torny_osc.sig() returns text language sql immutable as $$
-  select 'public.claim_open_registration_seat(uuid, uuid, integer, integer, timestamptz, integer, integer, text)'
+  select 'public.claim_open_registration_seat(uuid, uuid, integer, integer, timestamptz, integer, integer, text, public.player_tee_gender)'
 $$;
 
 -- ── Seed ─────────────────────────────────────────────────────────────────────
@@ -160,6 +189,8 @@ select torny_osc.seed_game(9, 'texas_scramble', 4, 'active');
 select torny_osc.seed_game(10, 'texas_scramble', 4, 'scheduled', true);
 -- RLS: open draft game owned by uid(0), no rows.
 select torny_osc.seed_game(11, 'stableford', 1);
+-- 0187: open stableford game for the tee-category claims.
+select torny_osc.seed_game(13, 'stableford', 1);
 
 -- ── 1. Seat count and team number ────────────────────────────────────────────
 select is(torny_osc.claim(1, 50, 16, 4, 4), '{"outcome":"game_full","team_number":null}'::jsonb,
@@ -207,6 +238,14 @@ select is(torny_osc.claim(9, 50, 16, 4, 4)->>'outcome', 'game_locked', 'active g
 select is(torny_osc.claim(10, 50, 16, 4, 4)->>'outcome', 'signup_closed', 'signups closed → signup_closed');
 select is(torny_osc.claim(12, 50, 16, 4, 4)->>'outcome', 'game_not_found', 'missing game → game_not_found');
 
+-- ── Tee category (0187, #2209) ───────────────────────────────────────────────
+select is(torny_osc.claim_tee(13, 52, 'ladies')->>'outcome', 'ok',
+  'a claim with p_tee_gender => ladies → ok');
+select is(torny_osc.tee(13, 52), 'ladies', 'the claimed row has tee_gender = ladies');
+select is(torny_osc.claim(13, 53, null, 1, null)->>'outcome', 'ok',
+  'a claim without p_tee_gender → ok');
+select is(torny_osc.tee(13, 53), 'mens', 'without p_tee_gender the row gets the default mens');
+
 -- ── 2. Who may call it ───────────────────────────────────────────────────────
 select ok(case when to_regprocedure(torny_osc.sig()) is null then false
                else has_function_privilege('service_role', torny_osc.sig(), 'execute') end,
@@ -217,6 +256,10 @@ select ok(case when to_regprocedure(torny_osc.sig()) is null then false
 select ok(case when to_regprocedure(torny_osc.sig()) is null then false
                else not has_function_privilege('anon', torny_osc.sig(), 'execute') end,
   'anon cannot execute claim_open_registration_seat');
+-- Both signatures side by side would make a call with 8 named arguments
+-- ambiguous for PostgREST.
+select ok(to_regprocedure('public.claim_open_registration_seat(uuid, uuid, integer, integer, timestamptz, integer, integer, text)') is null,
+  'the 8-argument signature is gone');
 
 -- ── 3. The policy ────────────────────────────────────────────────────────────
 -- The first assert is the one that was red before 0177. The player-JWT insert
