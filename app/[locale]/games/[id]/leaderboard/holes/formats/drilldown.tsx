@@ -269,6 +269,7 @@ function DrilldownView({
         {/* Team hero */}
         <div className="flex items-center gap-3.5 px-4 pt-1.5 pb-3.5">
           <div
+            data-testid="drilldown-team-rank"
             className={`min-w-[50px] text-center font-serif text-[48px] font-semibold leading-none tracking-[-0.04em] tabular-nums ${
               isLeader ? 'text-accent-text' : 'text-muted'
             }`}
@@ -290,7 +291,10 @@ function DrilldownView({
             >
               {selected.total}
             </span>
-            <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+            <span
+              className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
+              data-testid="drilldown-team-vs-par"
+            >
               {formatVsPar(totalVsPar)} PAR
             </span>
           </div>
@@ -369,7 +373,10 @@ function DrilldownView({
               <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
                 {selected.total}
               </span>
-              <span className="font-sans text-[14px] font-semibold tabular-nums text-muted">
+              <span
+                className="font-sans text-[14px] font-semibold tabular-nums text-muted"
+                data-testid="drilldown-total-vs-par"
+              >
                 {formatVsPar(totalVsPar)}
               </span>
             </div>
