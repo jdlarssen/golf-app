@@ -260,9 +260,6 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     };
   }, [gameId, currentHole, players]);
 
-  // ⚠️ De fire Dexie-live-queryene MÅ kalles i denne rekkefølgen — se
-  // rekkefølge-kontrakten i `holeLiveQueries.ts` (HoleClient.test.tsx mocker
-  // `useLiveQuery` med en teller keyet på den).
   const cards = useHoleCards(gameId, currentHole, players);
   const scoredHoles = useMyScoredHoles({
     gameId,
