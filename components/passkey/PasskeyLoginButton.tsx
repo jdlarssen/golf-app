@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { getBrowserClient } from '@/lib/supabase/client';
 import { useWebAuthnSupported } from '@/lib/auth/useWebAuthnSupported';
-
-/** Only same-origin absolute paths are safe post-login redirect targets. */
-function safeNext(next: string): string {
-  return next.startsWith('/') && !next.startsWith('//') ? next : '/';
-}
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 /**
  * "Logg inn med Face ID" on the login page's email step (#63). Uses discoverable
@@ -48,7 +44,7 @@ export function PasskeyLoginButton({ next }: { next: string }) {
         setBusy(false);
         return;
       }
-      window.location.assign(safeNext(next));
+      window.location.assign(safeInternalPath(next) ?? '/');
     } catch {
       setError(t('loginError'));
       setBusy(false);
