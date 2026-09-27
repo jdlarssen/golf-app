@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { PuttsChips } from '@/components/hole/PuttsChips';
 import { writeScore } from '@/lib/sync/writeScore';
+import { drainQueue } from '@/lib/sync/syncWorker';
 
 interface MissingHole {
   holeNumber: number;
@@ -16,10 +17,15 @@ interface MissingHole {
  * «Putter ført på X av Y hull — fyll inn det siste?» prompt on the submit review
  * (#1290 del B). Shown only when the player already recorded ≥1 putt this round
  * (the behavioural opt-in) but left some played holes blank. The game is still
- * active, so each chip writes through the offline-first `writeScore` path — the
- * strokes are passed alongside the putts so a cold local DB can never clobber
- * them (writeScore's merge preserves the pair). Dismissible and never blocks the
- * delivery below it — putt-keeping is voluntary.
+ * active, so each chip writes through the offline-first `writeScore` path.
+ *
+ * A chip changes putts only (#2211). The page's strokes are a server snapshot:
+ * passing them as `strokes` wrote a stale number back over a mate's later
+ * correction (or the player's own queued edit). They ride as `fallbackStrokes`,
+ * used only when the local DB has no row, so a cold DB still keeps the strokes.
+ * Each chip drains at once, like the hole page, so «Lever ✓» does not wait for
+ * the next sync tick. Dismissible and never blocks the delivery below it —
+ * putt-keeping is voluntary.
  */
 export function PuttsSubmitPrompt({
   gameId,
@@ -43,17 +49,18 @@ export function PuttsSubmitPrompt({
   const remaining = holes.filter((h) => !recorded.has(h.holeNumber));
   const done = puttedCount + recorded.size;
 
-  function onSelect(hole: MissingHole, putts: number) {
+  async function onSelect(hole: MissingHole, putts: number) {
     // Optimistic: mark recorded immediately; writeScore queues the sync.
     setRecorded((prev) => new Map(prev).set(hole.holeNumber, putts));
-    void writeScore({
+    await writeScore({
       gameId,
       userId,
       holeNumber: hole.holeNumber,
-      strokes: hole.strokes,
       putts,
+      fallbackStrokes: hole.strokes,
       enteredBy: userId,
     });
+    void drainQueue();
   }
 
   return (
@@ -89,7 +96,7 @@ export function PuttsSubmitPrompt({
                 <PuttsChips
                   value={recorded.get(h.holeNumber) ?? null}
                   ariaName={holeName}
-                  onSelect={(putts) => onSelect(h, putts)}
+                  onSelect={(putts) => void onSelect(h, putts)}
                 />
               </li>
             );
