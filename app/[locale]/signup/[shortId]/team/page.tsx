@@ -17,6 +17,7 @@ import {
   pickCaptainRequest,
   pickPendingInvitation,
 } from './captainLookup';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -120,7 +121,7 @@ export default async function TeamDashboardPage({
       const { data: invitations } = await admin
         .from('invitations')
         .select('id, email, invited_by')
-        .ilike('email', userRow.email)
+        .filter('email', 'imatch', emailMatchPattern(userRow.email))
         .eq('game_id', game.id)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())

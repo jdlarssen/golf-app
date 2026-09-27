@@ -453,11 +453,12 @@ describe('inviteEmailToGame', () => {
         error: null,
       },
       { data: [], error: null, count: 4 } as never,
-      // users.select.ilike.maybeSingle — finner eksisterende
+      // users-synlighetssjekken — adressen er funnet med admin-klienten (#2207)
       { data: { id: RECIPIENT_ID }, error: null },
       // game_players insert
       { data: null, error: null },
     ]);
+    adminSupabaseMock = buildSupabaseMock([{ data: { id: RECIPIENT_ID }, error: null }]);
     authedAsAdmin();
 
     const { inviteEmailToGame } = await import('./inviteToGameActions');
@@ -481,9 +482,7 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
-      // invitations.select.ilike.eq.is.maybeSingle — ingen pending
+      // invitations.select.filter.eq.is.maybeSingle — ingen pending
       { data: null, error: null },
       // invitations insert
       { data: null, error: null },
@@ -524,9 +523,7 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
-      // invitations.select.ilike.eq.is.maybeSingle — pending finnes
+      // invitations.select.filter.eq.is.maybeSingle — pending finnes
       {
         data: { id: 'invitation-1', token: 'eeeeeeee-1111-2222-3333-444444444444' },
         error: null,
@@ -534,6 +531,7 @@ describe('inviteEmailToGame', () => {
     ]);
     // #1613: forlengelsen skriver via admin-klienten før mailen.
     adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null }, // adresse-oppslaget (#2207): ingen konto
       { data: [{ id: 'invitation-1' }], error: null },
     ]);
     authedAsAdmin();
@@ -566,9 +564,7 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
-      // invitations.select.ilike.eq.is.maybeSingle — pending, men utløpt
+      // invitations.select.filter.eq.is.maybeSingle — pending, men utløpt
       {
         data: {
           id: 'invitation-1',
@@ -579,6 +575,7 @@ describe('inviteEmailToGame', () => {
       },
     ]);
     adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null }, // adresse-oppslaget (#2207): ingen konto
       // invitations.update.eq.is.select — forlengelsen treffer raden
       { data: [{ id: 'invitation-1' }], error: null },
     ]);
@@ -628,9 +625,7 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
-      // invitations.select.ilike.eq.is.maybeSingle — pending finnes
+      // invitations.select.filter.eq.is.maybeSingle — pending finnes
       {
         data: {
           id: 'invitation-1',
@@ -641,6 +636,7 @@ describe('inviteEmailToGame', () => {
       },
     ]);
     adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null }, // adresse-oppslaget (#2207): ingen konto
       // invitations.update.eq.is.select — raden ble akseptert/slettet i mellomtiden
       { data: [], error: null },
     ]);
@@ -664,9 +660,7 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
-      // invitations.select.ilike.eq.is.maybeSingle — ingen pending
+      // invitations.select.filter.eq.is.maybeSingle — ingen pending
       { data: null, error: null },
       // invitations insert + .select('id').single() — returnerer den nye rad-id-en
       { data: { id: INSERTED_ROW_ID }, error: null },
@@ -723,8 +717,6 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
       // invitations.select…maybeSingle — ingen pending
       { data: null, error: null },
       // invitations insert
@@ -775,8 +767,6 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
         error: null,
       },
-      // users.select.ilike.maybeSingle — ingen treff
-      { data: null, error: null },
       // invitations pending — ingen
       { data: null, error: null },
       // invitations insert
@@ -820,10 +810,11 @@ describe('inviteEmailToGame', () => {
         data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford', group_id: null },
         error: null,
       },
-      // users.select.ilike.maybeSingle — finner eksisterende, men ikke-venn
+      // users-synlighetssjekken — adressen er funnet med admin-klienten (#2207)
       { data: { id: RECIPIENT_ID }, error: null },
       // INGEN insert: guarden avviser før dit.
     ]);
+    adminSupabaseMock = buildSupabaseMock([{ data: { id: RECIPIENT_ID }, error: null }]);
     authedAsCreator();
     inviteEligibleIdsMock.mockResolvedValueOnce(new Set<string>());
 
@@ -931,9 +922,10 @@ describe('arrangørtaket følger påmeldingstaket i alle lag-format (#2059)', ()
         ADMIN_ROLE_READ,
         gameRow('shamble', 4),
         { data: [], error: null, count: 16 } as never,
-        { data: { id: RECIPIENT_ID }, error: null },
+        { data: { id: RECIPIENT_ID }, error: null }, // synlighetssjekken (#2207)
         { data: null, error: null },
       ]);
+      adminSupabaseMock = buildSupabaseMock([{ data: { id: RECIPIENT_ID }, error: null }]);
       authedAsAdmin();
 
       const { inviteEmailToGame } = await import('./inviteToGameActions');

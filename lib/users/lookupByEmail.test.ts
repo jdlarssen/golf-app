@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const ilikeMock = vi.fn();
+const filterMock = vi.fn();
 const maybeSingleMock = vi.fn();
 
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: () => ({
       select: () => ({
-        ilike: (...args: unknown[]) => {
-          ilikeMock(...args);
+        filter: (...args: unknown[]) => {
+          filterMock(...args);
           return {
             maybeSingle: maybeSingleMock,
           };
@@ -19,16 +19,16 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 
 beforeEach(() => {
-  ilikeMock.mockReset();
+  filterMock.mockReset();
   maybeSingleMock.mockReset();
 });
 
 describe('lookupUserByEmail', () => {
-  it('normaliserer e-post (lowercase + trim) før lookup', async () => {
+  it('normaliserer e-post (lowercase + trim) og matcher eksakt (#2207)', async () => {
     maybeSingleMock.mockResolvedValueOnce({ data: null, error: null });
     const { lookupUserByEmail } = await import('./lookupByEmail');
     await lookupUserByEmail('  Per@Example.COM  ');
-    expect(ilikeMock).toHaveBeenCalledWith('email', 'per@example.com');
+    expect(filterMock).toHaveBeenCalledWith('email', 'imatch', '^per@example\\.com$');
   });
 
   it('returnerer null for åpenbart ugyldig input (mangler @)', async () => {

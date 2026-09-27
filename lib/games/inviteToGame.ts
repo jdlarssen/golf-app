@@ -12,6 +12,7 @@ import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked } from '@/lib/games/status';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 // E-post-invitasjons-kjernen (#1919): ett hjem for «arrangøren inviterer en
 // e-post inn i en runde».
@@ -141,11 +142,7 @@ export async function inviteEmailToGameCore(params: {
   }
 
   // Eksisterende bruker? Da går vi rett til picker-add-stien.
-  const { data: existingUser } = await client
-    .from('users')
-    .select('id')
-    .ilike('email', email)
-    .maybeSingle<{ id: string }>();
+  const existingUser = await findVisibleUserByEmail(client, email);
 
   if (existingUser) {
     return addExistingUser({
@@ -168,6 +165,34 @@ export async function inviteEmailToGameCore(params: {
     email,
     game,
   });
+}
+
+/**
+ * Kontoen bak adressen, men bare hvis kalleren alt ser den (#2207).
+ *
+ * `users.email` er ikke lesbar for innloggede, så oppslaget på adressen går
+ * via admin-klienten. Synligheten sjekkes så med kallerens egen klient: en
+ * konto kalleren ikke ser, behandles som ukjent adresse (e-post-grenen),
+ * akkurat som da oppslaget gikk under RLS. Web (brukerklient) og API-ruta
+ * (admin-klient) får dermed samme utfall som før.
+ */
+async function findVisibleUserByEmail(
+  client: SupabaseClient<Database>,
+  email: string,
+): Promise<{ id: string } | null> {
+  const { data: found } = await getAdminClient()
+    .from('users')
+    .select('id')
+    .filter('email', 'imatch', emailMatchPattern(email))
+    .maybeSingle<{ id: string }>();
+  if (!found) return null;
+
+  const { data: visible } = await client
+    .from('users')
+    .select('id')
+    .eq('id', found.id)
+    .maybeSingle<{ id: string }>();
+  return visible ?? null;
 }
 
 /**
@@ -244,7 +269,7 @@ async function inviteUnknownEmail(args: {
   const { data: existingInvite } = await client
     .from('invitations')
     .select('id, token, expires_at')
-    .ilike('email', email)
+    .filter('email', 'imatch', emailMatchPattern(email))
     .eq('game_id', gameId)
     .is('accepted_at', null)
     .maybeSingle<{ id: string; token: string; expires_at: string }>();

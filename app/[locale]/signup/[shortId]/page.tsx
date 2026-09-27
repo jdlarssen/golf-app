@@ -38,6 +38,7 @@ import { PremiebordCard } from '@/components/PremiebordCard';
 import { safeParsePrizes } from '@/lib/games/prizes';
 import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 type SearchParams = Promise<{ src?: string | string[] }>;
@@ -248,7 +249,7 @@ export default async function PåmeldingPage({
     const { data: invitationRows } = await admin
       .from('invitations')
       .select('id, invited_by')
-      .ilike('email', profile!.email)
+      .filter('email', 'imatch', emailMatchPattern(profile!.email))
       .eq('game_id', game.id)
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())

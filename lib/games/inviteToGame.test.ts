@@ -164,7 +164,6 @@ describe('avvisninger før noe skrives', () => {
   it('et format uten tak spør ikke om antallet i det hele tatt', async () => {
     const { client } = await invite([
       gameRow(),
-      { data: null, error: null }, // users-oppslaget
       { data: null, error: null }, // invitations-oppslaget
       { data: { id: 'inv-1' }, error: null },
     ]);
@@ -174,6 +173,39 @@ describe('avvisninger før noe skrives', () => {
 });
 
 describe('adressen tilhører en registrert bruker', () => {
+  // #2207: adressen slås opp med admin-klienten (users.email er ikke lesbar
+  // for innloggede); kallerens klient sjekker så at kontoen er synlig. Kø-
+  // plassen etter spill-raden er derfor synlighetssjekken.
+  beforeEach(() => {
+    adminSupabaseMock = buildSupabaseMock([{ data: { id: RECIPIENT_ID }, error: null }]);
+  });
+
+  it('slår opp adressen eksakt med admin-klienten, ikke med kallerens klient', async () => {
+    const { client } = await invite([
+      gameRow(),
+      { data: { id: RECIPIENT_ID }, error: null },
+      { data: null, error: null },
+    ]);
+
+    const lookup = adminSupabaseMock.__fromCalls.find((c) => c.method === 'filter');
+    expect(lookup).toMatchObject({ table: 'users', args: ['email', 'imatch', '^ny@example\\.com$'] });
+    expect(client.__fromCalls.some((c) => c.method === 'filter' || c.method === 'ilike')).toBe(false);
+    expect(client.__fromCalls).toContainEqual({ table: 'users', method: 'eq', args: ['id', RECIPIENT_ID] });
+  });
+
+  it('en konto kalleren ikke ser, behandles som ukjent adresse (e-post-grenen)', async () => {
+    const { result, client } = await invite([
+      gameRow(),
+      { data: null, error: null }, // synlighetssjekken: ikke synlig
+      { data: null, error: null }, // ingen åpen invitasjon
+      { data: { id: 'invitation-1' }, error: null },
+    ]);
+
+    expect(result).toEqual({ ok: true, kind: 'sent', email: 'ny@example.com' });
+    expect(client.__fromCalls.find((c) => c.method === 'insert')?.table).toBe('invitations');
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
   it('legges på rosteret → added, uten mail', async () => {
     const { result, client } = await invite([
       gameRow(),
@@ -255,7 +287,6 @@ describe('ukjent adresse', () => {
   it('ny invitasjon → rad + mail, og utfallet er sent', async () => {
     const { result, client } = await invite([
       gameRow(),
-      { data: null, error: null }, // ingen bruker
       { data: null, error: null }, // ingen åpen invitasjon
       { data: { id: 'invitation-1' }, error: null },
     ]);
@@ -279,7 +310,6 @@ describe('ukjent adresse', () => {
       [
         gameRow(),
         { data: null, error: null },
-        { data: null, error: null },
         { data: { id: 'invitation-1' }, error: null },
       ],
       { inviterName: '  ' },
@@ -293,7 +323,6 @@ describe('ukjent adresse', () => {
   it('insert-feil → invite_failed, og ingen mail går ut', async () => {
     const { result } = await invite([
       gameRow(),
-      { data: null, error: null },
       { data: null, error: null },
       { data: null, error: { message: 'insert failed' } },
     ]);
@@ -309,7 +338,6 @@ describe('ukjent adresse', () => {
 
     const { result, client } = await invite([
       gameRow(),
-      { data: null, error: null },
       { data: null, error: null },
       { data: { id: 'invitation-1' }, error: null },
       { data: null, error: null }, // slettingen
@@ -335,13 +363,12 @@ describe('åpen invitasjon for samme adresse og runde', () => {
   it('forlenger fristen FØR mailen, og lager ingen ny rad', async () => {
     // #1381/#1613: en utløpt-men-uakseptert invitasjon skal aldri produsere en
     // mail innloggings-gaten nekter.
-    adminSupabaseMock = buildSupabaseMock([{ data: [{ id: 'invitation-1' }], error: null }]);
-
-    const { result, client } = await invite([
-      gameRow(),
-      { data: null, error: null },
-      openInvite,
+    adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null }, // adresse-oppslaget: ingen konto
+      { data: [{ id: 'invitation-1' }], error: null },
     ]);
+
+    const { result, client } = await invite([gameRow(), openInvite]);
 
     expect(result).toEqual({ ok: true, kind: 'sent', email: 'ny@example.com' });
     // Ingen ny rad: bruker-klienten skrev ingenting.
@@ -353,34 +380,32 @@ describe('åpen invitasjon for samme adresse og runde', () => {
     expect(sendInviteNotificationMock).toHaveBeenCalledWith(
       expect.objectContaining({ inviteToken: 'token-1', expiresAt: freshExpiry }),
     );
-    expect(adminSupabaseMock.from.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(adminSupabaseMock.from.mock.invocationCallOrder.at(-1)).toBeLessThan(
       sendInviteNotificationMock.mock.invocationCallOrder[0]!,
     );
   });
 
   it('0 rader på frist-forlengelsen → invite_failed, ingen mail', async () => {
     // AGENTS trap 2: `error == null` med 0 rader er en feil, ikke en suksess.
-    adminSupabaseMock = buildSupabaseMock([{ data: [], error: null }]);
-
-    const { result } = await invite([
-      gameRow(),
+    adminSupabaseMock = buildSupabaseMock([
       { data: null, error: null },
-      openInvite,
+      { data: [], error: null },
     ]);
+
+    const { result } = await invite([gameRow(), openInvite]);
 
     expect(result).toEqual({ ok: false, reason: 'invite_failed' });
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
 
   it('en mail som kaster på re-sendingen er best-effort — raden står', async () => {
-    adminSupabaseMock = buildSupabaseMock([{ data: [{ id: 'invitation-1' }], error: null }]);
+    adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null },
+      { data: [{ id: 'invitation-1' }], error: null },
+    ]);
     sendInviteNotificationMock.mockRejectedValueOnce(new Error('Resend 500'));
 
-    const { result, client } = await invite([
-      gameRow(),
-      { data: null, error: null },
-      openInvite,
-    ]);
+    const { result, client } = await invite([gameRow(), openInvite]);
 
     expect(result).toEqual({ ok: true, kind: 'sent', email: 'ny@example.com' });
     expect(client.__fromCalls.some((c) => c.method === 'delete')).toBe(false);

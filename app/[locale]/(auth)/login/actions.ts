@@ -13,6 +13,7 @@ import { isRosterLocked } from '@/lib/games/status';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 /**
  * #1345: ett hjem for alle feil-redirects i login-flyten. Hver feilsti tar med
@@ -178,7 +179,7 @@ export async function sendCode(formData: FormData) {
         const { data: expiredInvite } = await admin
           .from('invitations')
           .select('id')
-          .ilike('email', email)
+          .filter('email', 'imatch', emailMatchPattern(email))
           .is('accepted_at', null)
           .not('expires_at', 'is', null)
           .lte('expires_at', new Date().toISOString())
@@ -217,7 +218,7 @@ export async function sendCode(formData: FormData) {
     await adminClient
       .from('invitations')
       .update({ opened_at: new Date().toISOString() })
-      .ilike('email', email)
+      .filter('email', 'imatch', emailMatchPattern(email))
       .is('accepted_at', null)
       .is('opened_at', null);
   } catch (err) {
@@ -354,7 +355,7 @@ export async function verifyCode(formData: FormData) {
     const { data: pendingInvites } = await admin
       .from('invitations')
       .select('id, game_id, invited_by')
-      .ilike('email', email)
+      .filter('email', 'imatch', emailMatchPattern(email))
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
       .returns<{ id: string; game_id: string | null; invited_by: string }[]>();
@@ -422,7 +423,7 @@ export async function verifyCode(formData: FormData) {
       const { data: userRow } = await admin
         .from('users')
         .select('id')
-        .ilike('email', email)
+        .filter('email', 'imatch', emailMatchPattern(email))
         .maybeSingle<{ id: string }>();
 
       if (userRow?.id) {
