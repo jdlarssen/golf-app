@@ -33,7 +33,11 @@ export type SendArgs = [
   },
 ];
 
+// `name`, `statusCode` and `headers` mirror what the SDK returns on a failed
+// call (resend 6.x `fetchRequest`). `lib/mail/send.ts` reads `error.name` and
+// the `retry-after` header to decide whether a 429 is worth a second try.
 export type SendResult = {
   data: { id: string } | null;
-  error: { message: string } | null;
+  error: { message: string; name?: string; statusCode?: number | null } | null;
+  headers?: Record<string, string> | null;
 };
