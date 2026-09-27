@@ -1,13 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SkinsHolesView, type SkinsHolesViewProps } from './SkinsHolesView';
 import type { SkinsPlayerInfo } from '../SkinsView';
 import type { SkinsResult, SkinsHoleRow } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeHole(overrides: Partial<SkinsHoleRow>): SkinsHoleRow {
   return {
