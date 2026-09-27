@@ -127,6 +127,7 @@ export async function sendFriendInvite(formData: FormData) {
   });
 
   if (insertError) {
+    console.error('[sendFriendInvite] invitation insert failed', insertError);
     redirect({ href: '/profile?invite_error=unknown', locale });
   }
 
