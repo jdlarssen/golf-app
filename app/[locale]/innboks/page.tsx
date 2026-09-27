@@ -103,9 +103,8 @@ export default async function InboxPage() {
         backHref="/"
         backLabel={t('backLabel')}
         kicker={t('kicker')}
+        kickerIsPageTitle
       />
-      {/* The kicker above is the page title; screen readers get it as the h1. */}
-      <h1 className="sr-only">{t('kicker')}</h1>
       <InboxClient initialNotifications={visibleNotifications} />
       {/* #1799: bryteren er en innstilling, ikke et varsel — den bor nederst
           så varslene (grunnen til at du er her) kommer først. */}

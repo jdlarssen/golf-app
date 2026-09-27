@@ -28,20 +28,28 @@ import { HistoryBackLink } from './HistoryBackLink';
  * an invisible spacer (so the layout matches sibling pages that DO have
  * an action — useful on filtered list views like the «Resultatprotokoll»
  * where a create-button would be out of place).
+ *
+ * `kickerIsPageTitle` renders the kicker as the page's `<h1>` (same look) on
+ * pages that have no other visible title, so screen readers get a heading
+ * without reading the title twice. Off by default: most pages carry their
+ * own h1 (PageHeader) and the kicker is just a label there.
  */
 export function TopBar({
   backHref,
   backLabel = 'Tilbake',
   kicker,
+  kickerIsPageTitle = false,
   back = 'link',
   action,
 }: {
   backHref: string;
   backLabel?: string;
   kicker?: string;
+  kickerIsPageTitle?: boolean;
   back?: 'link' | 'history';
   action?: ReactNode;
 }) {
+  const Kicker = kickerIsPageTitle ? 'h1' : 'p';
   return (
     <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 backdrop-blur-sm -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
       {back === 'history' ? (
@@ -50,9 +58,9 @@ export function TopBar({
         <BackLink href={backHref}>{backLabel}</BackLink>
       )}
       {kicker && (
-        <p className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <Kicker className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           {kicker}
-        </p>
+        </Kicker>
       )}
       {action !== undefined && (
         <div className="ml-auto">

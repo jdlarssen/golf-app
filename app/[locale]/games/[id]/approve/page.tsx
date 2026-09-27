@@ -111,9 +111,8 @@ export default async function ApprovePage({
         backHref={`/games/${id}`}
         backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale as AppLocale) })}
         kicker={tApprove('kicker')}
+        kickerIsPageTitle
       />
-      {/* The kicker above is the page title; screen readers get it as the h1. */}
-      <h1 className="sr-only">{tApprove('kicker')}</h1>
 
       {statusBanner && (
         <div className="mb-4">

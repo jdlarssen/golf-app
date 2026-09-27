@@ -66,9 +66,8 @@ export default async function SlettKontoPage({
         backHref="/profile"
         backLabel={t('backLabel')}
         kicker={t('kicker')}
+        kickerIsPageTitle
       />
-      {/* The kicker above is the page title; screen readers get it as the h1. */}
-      <h1 className="sr-only">{t('kicker')}</h1>
 
       {errorMessage && (
         <div className="mb-4">
