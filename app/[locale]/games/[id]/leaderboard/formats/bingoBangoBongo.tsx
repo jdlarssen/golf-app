@@ -10,6 +10,7 @@ import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
+import { SettlementTable } from '../SettlementTable';
 import { settlementForResult } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
@@ -159,7 +160,19 @@ export async function renderBingoBangoBongo(opts: {
           strip={strip}
           backHref={backHref}
           chromeless={chromeless}
-          footerSlot={footerSlot}
+          footerSlot={
+            <>
+              {/* Pengeoppgjør (#937): duellkortet erstatter visningen der
+                  oppgjøret ellers står, så det legges under kortet — ellers
+                  viste en ferdig duell aldri kroner (#2221). */}
+              {settlement && (
+                <div className="px-3.5 pb-3.5">
+                  <SettlementTable settlement={settlement} playersById={playersById} />
+                </div>
+              )}
+              {footerSlot}
+            </>
+          }
         />
       );
     } else {
