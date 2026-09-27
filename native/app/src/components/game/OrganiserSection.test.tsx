@@ -20,14 +20,19 @@
 //     ville vært direkte usann.
 //  3. **Bundelen hentes på nytt etterpå.** Uten det står lista og lyver om en
 //     virkelighet som nettopp flyttet seg.
+//  4. **Et levert kort kan åpnes igjen (#2220).** «Åpne for redigering» står
+//     bare på leverte kort i en aktiv runde, går gjennom bekreftelsen og gir en
+//     kvittering. Knappen forsvinner når bundelen er hentet på nytt, så uten
+//     kvitteringen ville arrangøren ikke visst at noe skjedde.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
-import { setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
+import { reopenScorecard, setPlayerTeam, withdrawPlayer } from '../../data/rosterActions';
 import { startRoundNow } from '../../data/startGame';
 import { withdrawSelf } from '../../data/withdrawSelf';
 import { inviteToGame } from '../../data/inviteToGame';
+import { REOPEN_SCORECARD } from '../../lib/rosterCopy';
 import source from '../../../../../messages/no.json';
 import { OrganiserSection } from './OrganiserSection';
 
@@ -40,6 +45,7 @@ jest.mock('../../data/createGame', () => ({
 jest.mock('../../data/rosterActions', () => ({
   addPlayerToGame: jest.fn(async () => ({ ok: true, alreadyDone: false })),
   removePlayerFromGame: jest.fn(async () => ({ ok: true, alreadyDone: false })),
+  reopenScorecard: jest.fn(async () => ({ ok: true, alreadyDone: false })),
   setPlayerFlight: jest.fn(async () => ({ ok: true, alreadyDone: false })),
   setPlayerTeam: jest.fn(async () => ({ ok: true, alreadyDone: false })),
   undoWithdrawPlayer: jest.fn(async () => ({ ok: true, alreadyDone: false })),
@@ -303,10 +309,18 @@ describe('OrganiserSection', () => {
     //     planlagt runde finnes det ingenting å avslutte.
     expect(screen.queryByTestId('organiser-finish')).toBeNull();
 
-    // 5. Aktiv runde: frafall for makkeren, ingenting for meg selv.
+    // 5. Aktiv runde: frafall for makkeren, ingenting for meg selv. Makkeren
+    //    har levert kortet sitt (5b).
+    const base = bundle('active');
+    const mateSubmitted: GameBundle = {
+      ...base,
+      players: base.players.map((p) =>
+        p.userId === MATE ? { ...p, submittedAt: '2026-08-30T12:00:00.000Z' } : p,
+      ),
+    };
     await rerender(
       <OrganiserSection
-        bundle={bundle('active')}
+        bundle={mateSubmitted}
         userId={ME}
         onChanged={onChanged}
         onFinish={onFinish}
@@ -319,6 +333,20 @@ describe('OrganiserSection', () => {
     // skrivingen gaar via `/api/games/[id]/withdraw-self`; det er knappen som
     // flyttet inn i appen, ikke regelen.
     expect(screen.getByTestId('organiser-withdraw-self')).toBeTruthy();
+
+    // 5b. #2220: «Åpne for redigering» står på det leverte kortet og ikke på
+    //     mitt, som ikke er levert. Trykket går gjennom bekreftelsen, og
+    //     kvitteringen står etterpå.
+    expect(screen.queryByTestId(`organiser-reopen-${ME}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId(`organiser-reopen-${MATE}`));
+    await waitFor(() => {
+      expect(reopenScorecard).toHaveBeenCalledWith('game-1', MATE);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('organiser-notice')).toHaveTextContent(
+        REOPEN_SCORECARD.done,
+      );
+    });
 
     // 6. Frafallet går gjennom bekreftelses-dialogen, ikke rett på skrivingen.
     //    Trykker man «Trekk» og raden forsvinner uten et spørsmål, er det en
