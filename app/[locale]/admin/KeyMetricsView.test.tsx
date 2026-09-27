@@ -80,8 +80,11 @@ describe('KeyMetricsView (#1010)', () => {
 
     const weeks = screen.getAllByTestId('key-metrics-week');
     expect(weeks).toHaveLength(8);
-    expect(weeks[0]).toHaveTextContent('0');
-    expect(weeks[7]).toHaveTextContent('7');
+    // The count alone, not the whole cell: the cell also holds «u{week}», and
+    // weeks 20 and 27 contain every digit a substring check would look for.
+    expect(
+      screen.getAllByTestId('key-metrics-week-finished').map((el) => el.textContent),
+    ).toEqual(['0', '1', '2', '3', '4', '5', '6', '7']);
 
     // Funnel (#1192): counts render per step; the invited row has no share,
     // later steps derive share-of-invited in the view (6 of 20 → 30).

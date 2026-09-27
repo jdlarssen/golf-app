@@ -153,7 +153,10 @@ export function KeyMetricsView({
                 <p className="font-sans text-[10px] text-muted">
                   {t('keyMetricsWeekAbbr', { week: weekNumber(w.weekStart) })}
                 </p>
-                <p className="font-serif text-sm font-medium tabular-nums text-text">
+                <p
+                  data-testid="key-metrics-week-finished"
+                  className="font-serif text-sm font-medium tabular-nums text-text"
+                >
                   {w.finished}
                 </p>
               </div>
