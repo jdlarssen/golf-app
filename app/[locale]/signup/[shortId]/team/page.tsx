@@ -18,7 +18,7 @@ import {
   pickPendingInvitation,
 } from './captainLookup';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
-import { maskEmail } from '@/lib/users/maskEmail';
+import { displayNameForOthers } from '@/lib/users/displayName';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -280,7 +280,7 @@ export default async function TeamDashboardPage({
     (userRows ?? []).map((u) => [
       u.id,
       {
-        name: u.name?.trim() || maskEmail(u.email),
+        name: displayNameForOthers({ name: u.name, email: u.email }) ?? '',
         nickname: u.nickname,
       },
     ]),
