@@ -312,6 +312,7 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
             <div style={correctRowStyle}>
               <button
                 type="button"
+                data-testid="rail-step-down"
                 aria-label={t('scoreCard.decreaseAriaLabel', { name: active.name })}
                 onClick={() => onStep(-1)}
                 style={stepButtonStyle}
@@ -320,6 +321,7 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
               </button>
               <button
                 type="button"
+                data-testid="rail-step-up"
                 aria-label={t('scoreCard.increaseAriaLabel', { name: active.name })}
                 onClick={() => onStep(1)}
                 style={stepButtonStyle}
@@ -328,6 +330,7 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
               </button>
               <button
                 type="button"
+                data-testid="rail-undo"
                 aria-label={t('scoreCard.undoScoreAriaLabel', { name: active.name })}
                 onClick={onUndo}
                 style={undoButtonStyle}
@@ -338,7 +341,7 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
           )}
 
           {puttsTracking && (
-            <div style={puttsRowStyle}>
+            <div style={puttsRowStyle} data-testid="rail-putts">
               <span style={puttsLabelStyle} aria-hidden="true">
                 {t('putts.fieldLabel')}
               </span>
