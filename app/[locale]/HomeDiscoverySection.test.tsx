@@ -1,13 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import type { DiscoverableOpenGame } from '@/lib/games/getDiscoverableGames';
-
-// SmartLink/LinkButton lener seg på next/link → useRouter for prefetch.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: () => {} }),
-  usePathname: () => '/',
-}));
 
 function openGame(over: Partial<DiscoverableOpenGame>): DiscoverableOpenGame {
   return {
