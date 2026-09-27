@@ -19,6 +19,7 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
+import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -248,7 +249,9 @@ async function createGameInternal(
       // builderen defaultes til best_ball før fase 4-UI lander, så
       // dagens admin-flyt produserer samme rad som før migrering 0030.
       game_mode: payload.game_mode,
-      mode_config: payload.mode_config,
+      // #2253: a new game is stamped with the rules it is created under
+      // (solo strokeplay ranks on net to par). Only here, never on edit.
+      mode_config: stampNewGameModeConfig(payload.mode_config),
       registration_mode: payload.registration_mode,
       registration_type: payload.registration_type,
       // #369: kun satt til true når registration_mode = 'manual_approval' +

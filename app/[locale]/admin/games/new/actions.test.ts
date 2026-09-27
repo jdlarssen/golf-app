@@ -546,6 +546,46 @@ describe('createAndPublishGame', () => {
     expect(rows.every((r) => r.team_number === null)).toBe(true);
     expect(rows.every((r) => r.flight_number === null)).toBe(true);
   });
+  it('happy path (strokeplay publish): stamps net-to-par ranking on the new game (#2253)', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // gate
+        { data: { id: 'new-game-sp' }, error: null }, // games.insert.select.single
+        { data: null, error: null }, // game_players.insert
+      ],
+      { incomplete_profile_ids: [] },
+    );
+    signIn('admin-1');
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(
+        fd({
+          name: 'Slagspill',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          hcp_allowance_pct: '100',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+          side_tournament_enabled: 'false',
+          game_mode: 'solo_strokeplay',
+          player_0_id: 'u1',
+          player_1_id: 'u2',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    const insertRow = insertCall!.args[0] as { game_mode: string; mode_config: unknown };
+    expect(insertRow.game_mode).toBe('solo_strokeplay');
+    expect(insertRow.mode_config).toEqual({
+      kind: 'solo_strokeplay',
+      team_size: 1,
+      ranking: 'net_to_par',
+    });
+  });
 });
 
 describe('backfill invite-notify (#182)', () => {

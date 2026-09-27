@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { carryPreservedModeConfigKeys } from './modeConfigEdit';
+import {
+  carryPreservedModeConfigKeys,
+  stampNewGameModeConfig,
+} from './modeConfigEdit';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
@@ -90,5 +93,44 @@ describe('carryPreservedModeConfigKeys', () => {
     expect(result.kr_per_unit).toBeUndefined();
     expect(result.allowance_pct).toBe(100);
     expect(result.team_strokes_override).toEqual({ team1: 8, team2: 3 });
+  });
+});
+
+describe('stampNewGameModeConfig (#2253)', () => {
+  const strokeplay = { kind: 'solo_strokeplay', team_size: 1 } as GameModeConfig;
+  const flagged = {
+    kind: 'solo_strokeplay',
+    team_size: 1,
+    ranking: 'net_to_par',
+  } as GameModeConfig;
+
+  it('stamps net-to-par ranking on a new solo strokeplay game', () => {
+    expect(stampNewGameModeConfig(strokeplay)).toEqual(flagged);
+  });
+
+  it.each<GameModeConfig>([
+    { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    { kind: 'best_ball', team_size: 2, teams_count: 2 },
+    greensome({ team_strokes_override: { team1: 8, team2: 3 } }),
+  ])('leaves every other format unchanged ($kind)', (config) => {
+    expect(stampNewGameModeConfig(config)).toBe(config);
+  });
+
+  it('an edit of a game without the flag does not add it', () => {
+    expect(carryPreservedModeConfigKeys(strokeplay, strokeplay)).toEqual(strokeplay);
+  });
+
+  it('an edit of a game with the flag keeps it', () => {
+    expect(carryPreservedModeConfigKeys(flagged, strokeplay)).toEqual(flagged);
+  });
+
+  it('an edit that switches a flagged game to another format drops it', () => {
+    const stableford = {
+      kind: 'stableford',
+      team_size: 1,
+      points_table: 'standard',
+    } as GameModeConfig;
+
+    expect(carryPreservedModeConfigKeys(flagged, stableford)).toEqual(stableford);
   });
 });
