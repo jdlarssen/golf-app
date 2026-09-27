@@ -46,11 +46,6 @@ export type StartRoundFailure = StartScheduledGameFailure['reason'] | 'offline';
 export interface StartRoundRefusal {
   ok: false;
   reason: StartRoundFailure;
-  /**
-   * Satt kun ved `pending_players`: hvem det gjelder, med NAVN der navnet er
-   * lesbart og e-post ellers. Se {@link labelPendingPlayers}.
-   */
-  pendingLabels?: string[];
   /** Satt kun ved `rotation_player_count` (#969, #2071) — velger hvilken setning. */
   rotationMode?: StartCountMode;
   rotationActiveCount?: number;
@@ -86,14 +81,9 @@ export async function startRoundNow(gameId: string): Promise<StartRoundResult> {
     return { ok: true, alreadyRunning: !result.started };
   }
 
-  if (result.reason === 'pending_players') {
-    return {
-      ok: false,
-      reason: 'pending_players',
-      pendingLabels: await labelPendingPlayers(result.pendingEmails ?? []),
-    };
-  }
-
+  // `pending_players` bærer ingen liste (#2207): kjernen svarer med id-er, og
+  // de som mangler profil har uansett ikke navn ennå. Teksten er den generelle,
+  // som ved publisering.
   return {
     ok: false,
     reason: result.reason,
@@ -104,51 +94,4 @@ export async function startRoundNow(gameId: string): Promise<StartRoundResult> {
       ? {}
       : { rotationActiveCount: result.rotationActiveCount }),
   };
-}
-
-/** Én `users`-rad, akkurat de tre feltene navne-oppslaget trenger. */
-interface PendingUserRow {
-  email: string;
-  name: string | null;
-  nickname: string | null;
-}
-
-/**
- * E-post → navn, for `pending_players`-meldingen.
- *
- * Kjernen svarer med e-post (`findPendingPlayers` leser `users.email`), og
- * webbens banner viser den e-posten rått. Det duger på en admin-side; på
- * telefonen er det arrangørens medspillere, og de har navn.
- *
- * Oppslaget går mot `users` under RLS — de ventende spillerne står på samme
- * roster som arrangøren, så SELECT-policyen (0092: egen rad ∨ admin ∨ delt
- * spill) slipper radene gjennom.
- *
- * **Fallbacken er e-posten, aldri en tom liste eller «Ukjent spiller».** En
- * spiller som ikke har fullført registreringen har som regel hverken navn eller
- * kallenavn ennå — nettopp derfor blokkerer hen starten. Da er e-posten det
- * eneste som faktisk identifiserer personen, og den er bedre enn en plassholder
- * arrangøren ikke kan gjøre noe med. Feiler hele oppslaget, står vi igjen med
- * webbens oppførsel, som er greit nok.
- */
-async function labelPendingPlayers(emails: string[]): Promise<string[]> {
-  if (emails.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from('users')
-    .select('email, name, nickname')
-    .in('email', emails)
-    .returns<PendingUserRow[]>();
-
-  if (error) {
-    console.error('[startRoundNow] pending name lookup failed', error);
-    return emails;
-  }
-
-  const byEmail = new Map((data ?? []).map((row) => [row.email, row]));
-  return emails.map((email) => {
-    const row = byEmail.get(email);
-    const label = row?.nickname?.trim() || row?.name?.trim();
-    return label || email;
-  });
 }

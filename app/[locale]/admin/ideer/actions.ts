@@ -6,6 +6,7 @@ import { expectOne } from '@/lib/supabase/affectedRows';
 import { notify } from '@/lib/notifications/notify';
 import { sendIdeaBuiltNotification } from '@/lib/mail/ideaBuiltNotification';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 /**
  * Admin action: marks an idea_submissions row as built, fires the in-app
@@ -50,7 +51,7 @@ export async function markIdeaBuilt(formData: FormData) {
   // Mail fallback if the user is off-app.
   if (shouldAlsoSendMail) {
     try {
-      const userRes = await supabase
+      const userRes = await getAdminClient()
         .from('users')
         .select('email, name, locale')
         .eq('id', userId)

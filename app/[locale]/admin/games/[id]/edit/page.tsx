@@ -6,6 +6,7 @@ import { getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
+import { pendingPlayerList } from '@/lib/admin/pendingPlayerEmails';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -37,11 +38,12 @@ import {
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   error?: string | string[];
-  emails?: string | string[];
+  pending?: string | string[];
 }>;
 
 
@@ -94,14 +96,16 @@ export default async function EditGamePage({
   const t = await getTranslations('admin.game.edit');
   const tNav = await getTranslations('admin.nav');
   const errorCode = first(sp.error);
-  const emails = first(sp.emails);
-  function buildErrorMessage(): string | undefined {
+  // #2207: the gate sends ids (`pending=`), never addresses; they are turned
+  // back into addresses only after requireAdmin below.
+  async function buildErrorMessage(): Promise<string | undefined> {
     if (!errorCode) return undefined;
     const key = `${errorCode}` as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
-    return tErrors(key, { list: emails ? `: ${emails}` : '' });
+    const list =
+      errorCode === 'pending_players' ? await pendingPlayerList(first(sp.pending)) : '';
+    return tErrors(key, { list });
   }
-  const errorMessage = buildErrorMessage();
 
   const locale = await getLocale();
   const { supabase, userId } = await getEditContext();
@@ -112,6 +116,7 @@ export default async function EditGamePage({
   // runs sequentially after the gate so trusted-non-admin callers don't
   // even trigger the games-select.
   await requireAdmin(supabase);
+  const errorMessage = await buildErrorMessage();
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -195,7 +200,7 @@ const getOptions = cache(async () => {
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
-    supabase
+    getAdminClient()
       .from('users')
       .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
       .order('profile_completed_at', { ascending: true, nullsFirst: false })

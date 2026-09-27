@@ -79,7 +79,7 @@ export async function updateUser(formData: FormData) {
   await requireAdmin(supabase);
 
   // Fetch current email to detect whether it has changed.
-  const { data: current } = await supabase
+  const { data: current } = await getAdminClient()
     .from('users')
     .select('email')
     .eq('id', id)

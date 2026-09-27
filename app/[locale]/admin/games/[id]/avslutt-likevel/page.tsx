@@ -23,6 +23,7 @@ import { endGameMarkingWithdrawals } from './actions';
 // Purringen deles med søsterflaten «/avslutt» — én action, én gate
 // (`requireAdmin`), og `surface` sier bare hvor brukeren skal tilbake (#1889).
 import { remindMissingPlayers } from '../avslutt/actions';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med —
@@ -96,7 +97,7 @@ export default async function AvsluttLikevelPage({
     redirect({ href: `${detailPath}/avslutt`, locale });
   }
 
-  const { data: gamePlayers } = await supabase
+  const { data: gamePlayers } = await getAdminClient()
     .from('game_players')
     .select(
       'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',

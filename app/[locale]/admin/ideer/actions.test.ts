@@ -15,6 +15,10 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 vi.mock('@/lib/admin/auth', () => ({ requireAdmin: vi.fn(async () => {}) }));
+// #2207: the submitter's e-post is read with the admin client (behind the
+// requireAdmin gate) — users.email is not readable through a user session.
+let adminMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => adminMock }));
 
 const notifyMock = vi.fn(
   async (..._args: unknown[]): Promise<{ shouldAlsoSendMail: boolean }> => ({
@@ -43,6 +47,7 @@ async function run(id: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminMock = buildSupabaseMock([]);
   notifyMock.mockResolvedValue({ shouldAlsoSendMail: false });
 });
 
@@ -70,13 +75,16 @@ describe('markIdeaBuilt', () => {
     notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true });
     supabaseMock = buildSupabaseMock([
       { data: [{ user_id: submitterId }], error: null }, // update
-      { data: { email: 'spiller@torny.no', name: 'Per', locale: 'no' }, error: null }, // user lookup
+    ]);
+    adminMock = buildSupabaseMock([
+      { data: { email: 'spiller@example.test', name: 'Per', locale: 'no' }, error: null }, // user lookup
     ]);
 
     await run('idea-9');
 
     expect(builtMailMock).toHaveBeenCalledTimes(1);
-    expect((builtMailMock.mock.calls[0][0] as { to: string }).to).toBe('spiller@torny.no');
+    expect((builtMailMock.mock.calls[0][0] as { to: string }).to).toBe('spiller@example.test');
+    expect(supabaseMock.__fromCalls.some((c) => c.table === 'users')).toBe(false);
   });
 
   it('does nothing without an id', async () => {

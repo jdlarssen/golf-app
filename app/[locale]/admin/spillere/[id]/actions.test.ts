@@ -33,8 +33,14 @@ vi.mock('@/lib/supabase/server', () => ({
   },
 }));
 const updateUserByIdMock = vi.fn();
+// #2207: the current e-post is read with the admin client (users.email is not
+// readable through a user session); its queue answers that read.
+let adminQueryMock = buildSupabaseMock([]);
 vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => ({ auth: { admin: { updateUserById: updateUserByIdMock } } }),
+  getAdminClient: () => ({
+    auth: { admin: { updateUserById: updateUserByIdMock } },
+    from: (table: string) => adminQueryMock.from(table),
+  }),
 }));
 vi.mock('@/lib/admin/auth', () => ({ requireAdmin: vi.fn() }));
 vi.mock('@/lib/games/recomputeCourseHandicap', () => ({
@@ -71,6 +77,7 @@ async function redirectFor(hcp: string): Promise<string> {
 beforeEach(() => {
   vi.clearAllMocks();
   supabaseMock = null;
+  adminQueryMock = buildSupabaseMock([{ data: { email: 'ola@example.test' }, error: null }]);
   updateUserByIdMock.mockResolvedValue({ data: {}, error: null });
 });
 
@@ -122,7 +129,6 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
 
   it('0 rows → update_failed, and the handicap recompute does not run', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { email: OLD_EMAIL }, error: null }, // current email
       { data: [], error: null }, // update … select('id') matched nothing
     ]);
     expect(await run(validForm())).toBe(`/admin/spillere/${ID}?error=update_failed`);
@@ -133,7 +139,6 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
 
   it('DB error → update_failed, and the handicap recompute does not run', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { email: OLD_EMAIL }, error: null },
       { data: null, error: { message: 'boom' } },
     ]);
     expect(await run(validForm())).toBe(`/admin/spillere/${ID}?error=update_failed`);
@@ -142,7 +147,6 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
 
   it('0 rows after an email change → the auth email is rolled back to the old one', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { email: OLD_EMAIL }, error: null }, // current email
       { data: [], error: null }, // active games
       { count: 0, data: null, error: null }, // game_players in active games
       { data: [], error: null }, // update matched nothing
@@ -155,7 +159,6 @@ describe('updateUser — the users write must hit the row (#2054)', () => {
 
   it('a normal save → status=updated, and the recompute runs', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { email: OLD_EMAIL }, error: null },
       { data: [{ id: ID }], error: null },
     ]);
     expect(await run(validForm())).toBe(`/admin/spillere/${ID}?status=updated`);

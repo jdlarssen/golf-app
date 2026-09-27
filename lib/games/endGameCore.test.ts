@@ -164,14 +164,13 @@ function gameRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** One `game_players` row with its joined user, defaulting to submitted. */
+/** One `game_players` row, defaulting to submitted. */
 function player(overrides: Record<string, unknown> = {}) {
   return {
     user_id: 'user-a',
     submitted_at: '2026-05-18T10:00:00Z',
     approved_at: null,
     withdrawn_at: null,
-    users: { email: 'a@example.com', name: 'Ada Lovelace' },
     ...overrides,
   };
 }
@@ -180,7 +179,6 @@ const PLAYER_A = player();
 const PLAYER_B = player({
   user_id: 'user-b',
   submitted_at: '2026-05-18T10:05:00Z',
-  users: { email: 'b@example.com', name: 'Bjørn' },
 });
 
 function playersRows(rows: unknown[]) {
@@ -893,7 +891,6 @@ describe('endGameCore — post-flip tail', () => {
       user_id: 'user-c',
       submitted_at: null,
       withdrawn_at: '2026-05-18T09:30:00Z',
-      users: { email: 'c@example.com', name: 'Cato' },
     });
     const client = buildSupabaseMock([
       gameRow(),

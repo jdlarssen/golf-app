@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
@@ -11,8 +12,11 @@ export async function GET() {
 
   const supabase = await getServerClient();
 
-  // 1. public.users — the user's own row
-  const { data: user } = await supabase
+  // 1. public.users — the user's own row. Admin client (#2207): users.email
+  //    and friend_code are not readable through the user's own session, and
+  //    the export carries every column, future ones included. The id is the
+  //    proxy-verified one above.
+  const { data: user } = await getAdminClient()
     .from('users')
     .select('*')
     .eq('id', userId)

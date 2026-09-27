@@ -4,6 +4,10 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { expectOne } from '@/lib/supabase/affectedRows';
+import {
+  getPrivateUserFields,
+  type PrivateUserFields,
+} from '@/lib/users/privateUserFields';
 import { sendIdeaSubmittedNotification } from '@/lib/mail/ideaSubmittedNotification';
 import { firstName } from '@/lib/firstName';
 import type { AppLocale } from '@/i18n/routing';
@@ -54,14 +58,25 @@ export async function submitIdea(formData: FormData) {
       .maybeSingle<{ name: string | null }>(),
     supabase
       .from('users')
-      .select('id, email, name, locale')
+      .select('id, name, locale')
       .eq('is_admin', true)
-      .not('email', 'is', null)
-      .returns<{ id: string; email: string; name: string | null; locale: string | null }[]>(),
+      .returns<{ id: string; name: string | null; locale: string | null }[]>(),
   ]);
 
   const submitterName = submitterRes.data?.name?.trim() || '(ukjent spiller)';
-  const admins = (adminsRes.data ?? []).filter((a) => a.id !== user.id);
+  const adminRows = (adminsRes.data ?? []).filter((a) => a.id !== user.id);
+  // #2207: users.email is not readable through the user's own session. The
+  // row set above stays the one RLS gives the submitter; the addresses for
+  // those ids come from the server-side helper and never leave the server.
+  // Best-effort like the mail itself: a failed lookup sends no mail.
+  const emails = await getPrivateUserFields(adminRows.map((a) => a.id)).catch((err) => {
+    console.error('[submitIdea] admin e-post lookup failed', err);
+    return new Map<string, PrivateUserFields>();
+  });
+  const admins = adminRows.flatMap((a) => {
+    const email = emails.get(a.id)?.email;
+    return email ? [{ ...a, email }] : [];
+  });
 
   // Best-effort: notify all admins via Resend. Failure must NOT block the user.
   if (admins.length > 0) {

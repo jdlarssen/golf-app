@@ -22,14 +22,15 @@ async function loadRole(supabase: ServerSupabase): Promise<AdminRoleContext> {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  // #2207: users.email is not readable through the user's own session; the
+  // verified auth user carries the same address.
   const { data: profile } = await supabase
     .from('users')
-    .select('is_admin, email, name')
+    .select('is_admin, name')
     .eq('id', user.id)
     .single();
 
-  const email =
-    (profile?.email as string | null | undefined) ?? user.email ?? null;
+  const email = user.email ?? null;
 
   return {
     userId: user.id,

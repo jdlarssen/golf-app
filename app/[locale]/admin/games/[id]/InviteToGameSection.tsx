@@ -1,10 +1,10 @@
 import { getTranslations } from 'next-intl/server';
-import { getServerClient } from '@/lib/supabase/server';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Banner } from '@/components/ui/Banner';
 import { InviteToGameClient } from './InviteToGameClient';
 import type { GameStatus } from '@/lib/games/status';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type CandidateRow = {
   id: string;
@@ -45,7 +45,6 @@ export async function InviteToGameSection({
 }: Props) {
   if (status === 'active' || status === 'finished') return null;
 
-  const supabase = await getServerClient();
   const t = await getTranslations('admin.game.invite');
   const tCta = await getTranslations('admin.game.cta');
 
@@ -53,7 +52,8 @@ export async function InviteToGameSection({
   // roster i-app (enklere typer enn å bygge en ekskluderings-where i SQL).
   // Limit 200 — kompis-skala skal aldri treffe taket, klubb-skala
   // (#199 self-registrering) kan trenge bedre paginering senere.
-  const { data: rawCandidates, error } = await supabase
+  // #2207: rendered only from the admin game page, after its requireAdmin gate.
+  const { data: rawCandidates, error } = await getAdminClient()
     .from('users')
     .select('id, name, nickname, email, hcp_index, is_guest')
     .not('profile_completed_at', 'is', null)

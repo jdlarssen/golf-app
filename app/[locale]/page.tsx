@@ -195,7 +195,7 @@ async function HomeBody() {
       supabase
         .from('users')
         .select(
-          'name, email, profile_completed_at, hcp_index, handicap_updated_at',
+          'name, profile_completed_at, hcp_index, handicap_updated_at',
         )
         .eq('id', userId!)
         .single(),

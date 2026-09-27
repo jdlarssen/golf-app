@@ -159,14 +159,14 @@ async function updateGameInternal(
   });
 
   if (mode === 'publish' || mode === 'update_scheduled') {
-    // Pending-profile gate via SECURITY DEFINER RPC (migration 0071), not a
-    // direct users-read: under request-scoped RLS a non-admin creator can't see
-    // OTHER users' rows, so a direct read would silently drop them and the gate
-    // would no-op (#366 pending-read trap). The RPC returns only the incomplete
-    // rows for the exact ids we pass, so it bites for creator and admin alike —
-    // and returns the same set an admin's direct read would have.
+    // Pending-profile gate via SECURITY DEFINER RPC (0071, ids only since
+    // 0185), not a direct users-read: under request-scoped RLS a non-admin
+    // creator can't see OTHER users' rows, so a direct read would silently drop
+    // them and the gate would no-op (#366 pending-read trap). The RPC returns
+    // only the incomplete ids among those we pass, so it bites for creator and
+    // admin alike.
     const { data: pending, error: rosterErr } = await supabase.rpc(
-      'incomplete_profiles_for_ids',
+      'incomplete_profile_ids',
       { p_user_ids: payload.players.map((p) => p.user_id) },
     );
 
@@ -175,13 +175,17 @@ async function updateGameInternal(
       redirect({ href: editHref({ error: 'db_roster' }), locale });
     }
 
-    const pendingRows = (pending ?? []) as { id: string; email: string }[];
-    if (pendingRows.length > 0) {
+    const pendingIds = (pending ?? []).map((p) => p.id);
+    if (pendingIds.length > 0) {
+      // #2207: no addresses in the URL. An admin gets the ids, and the admin
+      // edit page looks the addresses up behind its own gate; an organiser
+      // who is not admin gets the general text.
       redirect({
-        href: editHref({
-          error: 'pending_players',
-          emails: pendingRows.map((p) => p.email).join(', '),
-        }),
+        href: editHref(
+          ctx.isAdmin
+            ? { error: 'pending_players', pending: pendingIds.join(',') }
+            : { error: 'pending_players' },
+        ),
         locale,
       });
     }

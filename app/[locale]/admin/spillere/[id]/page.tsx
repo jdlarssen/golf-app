@@ -16,6 +16,7 @@ import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { HCP_MAX, HCP_MIN } from '@/lib/users/profileInput';
 import { updateUser } from './actions';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -88,7 +89,7 @@ export default async function PlayerDetailPage({
     ? tProfile(`errors.${errorCode}` as Parameters<typeof tProfile>[0])
     : undefined;
 
-  const { data: target, error } = await supabase
+  const { data: target, error } = await getAdminClient()
     .from('users')
     .select('id, name, nickname, email, hcp_index, is_admin, created_at, last_seen_at, gender, level')
     .eq('id', id)

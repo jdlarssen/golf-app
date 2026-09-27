@@ -4,6 +4,10 @@ import type { Database } from '@/lib/database.types';
 import { expireGameCache } from './expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getAdminClient } from '@/lib/supabase/admin';
+import {
+  getPrivateUserFields,
+  type PrivateUserFields,
+} from '@/lib/users/privateUserFields';
 import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
 import { firstName } from '@/lib/firstName';
 import { notify } from '@/lib/notifications/notify';
@@ -283,10 +287,9 @@ export async function submitScorecardCore(
     }>(),
     supabase
       .from('users')
-      .select('id, email, name, locale')
+      .select('id, name, locale')
       .eq('is_admin', true)
-      .not('email', 'is', null)
-      .returns<{ id: string; email: string; name: string | null; locale: string | null }[]>(),
+      .returns<{ id: string; name: string | null; locale: string | null }[]>(),
     peersQuery,
   ]);
 
@@ -294,7 +297,22 @@ export async function submitScorecardCore(
   // admin-mailen — alle tre oversetter fallbacken hos mottakeren (kortet via
   // buildNotificationText, mailen via mail.common.somePlayerFallback).
   const playerName = playerRes.data?.name?.trim() || null;
-  const admins = (adminsRes.data ?? []).filter((a) => a.id !== userId);
+  const adminRows = (adminsRes.data ?? []).filter((a) => a.id !== userId);
+  // #2207: users.email is not readable through the caller's session. The
+  // admin set stays the one the passed-in client returned; the addresses come
+  // from the server-side helper and never leave the server. An admin without
+  // an address is dropped, as the old `email is not null` filter did. A failed
+  // lookup notifies no admin, like a failed admin read always has.
+  const adminEmails = await getPrivateUserFields(adminRows.map((a) => a.id)).catch(
+    (err) => {
+      console.error(`[${LOG_PREFIX}] admin e-post lookup failed`, err);
+      return new Map<string, PrivateUserFields>();
+    },
+  );
+  const admins = adminRows.flatMap((a) => {
+    const email = adminEmails.get(a.id)?.email;
+    return email ? [{ ...a, email }] : [];
+  });
 
   // Peer-varsler hvis peer-godkjenning er på.
   // #543: peersForApproval() håndterer én-flight-regelen: alle andre aktive

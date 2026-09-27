@@ -4,6 +4,7 @@ import {
   makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
+import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
 
 /**
  * Co-located test for submitIdea — #984 (Foreslå en idé).
@@ -25,6 +26,14 @@ let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
+
+// #2207: the admins' addresses come from the admin client (getPrivateUserFields)
+// for the ids the submitter's own read returned.
+let adminEmailRows: Array<{ id: string; email: string; friend_code: string }> = [];
+const adminFake = createAdminClientMock({
+  respond: (op) => (op.table === 'users' ? { data: adminEmailRows } : { data: null }),
+});
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => adminFake.client }));
 
 const mailMock = vi.fn(async (..._args: unknown[]) => {});
 vi.mock('@/lib/mail/ideaSubmittedNotification', () => ({
@@ -61,6 +70,8 @@ function form(text: string): FormData {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminFake.reset();
+  adminEmailRows = [{ id: 'admin-1', email: 'admin@example.test', friend_code: 'k0de' }];
 });
 
 describe('submitIdea', () => {
@@ -98,9 +109,9 @@ describe('submitIdea', () => {
       { data: [{ id: 'idea-1' }], error: null }, // insert .select('id')
       { data: { name: 'Per Spiller' }, error: null }, // submitter name
       {
-        data: [{ id: 'admin-1', email: 'admin@torny.no', name: 'Jørgen', locale: 'no' }],
+        data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }],
         error: null,
-      }, // admins
+      }, // admins the submitter's own client sees
     ]);
     setAuth({ id: userId });
 
@@ -111,14 +122,37 @@ describe('submitIdea', () => {
     );
     expect(insert?.args[0]).toEqual({ user_id: userId, text: 'Putt-statistikk per hull' });
     expect(mailMock).toHaveBeenCalledTimes(1);
+    expect(mailMock).toHaveBeenCalledWith(expect.objectContaining({ to: 'admin@example.test' }));
     expect(lastRedirect()).toBe('/foreslaa-ide?sent=1');
+  });
+
+  it('never selects users.email on the submitter\'s client; addresses only for the rows it returned (#2207)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: [{ id: 'idea-1' }], error: null },
+      { data: { name: 'Per' }, error: null },
+      { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
+    ]);
+    setAuth({ id: userId });
+
+    await run(form('En idé'));
+
+    const userSelects = supabaseMock.__fromCalls
+      .filter((c) => c.table === 'users' && c.method === 'select')
+      .map((c) => String(c.args[0]));
+    expect(userSelects.some((cols) => /email/.test(cols))).toBe(false);
+    expect(adminFake.ops).toEqual([
+      expect.objectContaining({
+        table: 'users',
+        filters: [{ op: 'in', column: 'id', value: ['admin-1'] }],
+      }),
+    ]);
   });
 
   it('still reaches the sent state when the admin mail fails (best-effort)', async () => {
     supabaseMock = buildSupabaseMock([
       { data: [{ id: 'idea-1' }], error: null },
       { data: { name: 'Per' }, error: null },
-      { data: [{ id: 'admin-1', email: 'admin@torny.no', name: 'Jørgen', locale: 'no' }], error: null },
+      { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
     ]);
     setAuth({ id: userId });
     mailMock.mockRejectedValueOnce(new Error('resend down'));

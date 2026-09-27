@@ -1668,7 +1668,7 @@ export function useGameFormState({
   );
 
   // #1379: profil-gaten som til nå bare fantes server-side (opprett:
-  // incomplete_profiles_for_ids-RPC i actions.ts; edit: samme RPC i
+  // incomplete_profile_ids-RPC i actions.ts; edit: samme RPC i
   // updateGameInternal). Server-gaten avviste først ETTER innsending, og
   // arrangøren måtte gjette hvem som manglet. Nå ligger regelen der den kan
   // handles på. Gjester teller ALDRI: createGuestForWizard setter

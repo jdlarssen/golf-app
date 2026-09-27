@@ -14,6 +14,7 @@ import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import { adminWithdrawPlayer } from '../../actions';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string; userId: string }>;
 
@@ -62,7 +63,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
   }
 
   // Load the target player — must exist, must not already be withdrawn.
-  const { data: player } = await supabase
+  const { data: player } = await getAdminClient()
     .from('game_players')
     .select(
       'withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',

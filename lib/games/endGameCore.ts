@@ -169,15 +169,14 @@ export async function endGameCore(
   }
 
   // Verify every player has submitted; if require_peer_approval, every
-  // submission must also be approved. Also collect user_id + email + name
-  // her so we can fire både in-app `game_finished`-varsler (user_id) og
-  // «Resultatet er klart»-mail (email/name) etter status-flippen uten
-  // ekstra DB-runde.
+  // submission must also be approved. The user_ids also feed the in-app
+  // `game_finished` varsler after the flip. The «Resultatet er klart»-mail
+  // builds its own recipient list (buildGameFinishedRecipients), so no
+  // e-post is read here (#2207: users.email is not readable through the
+  // caller's session anyway).
   const { data: players } = await supabase
     .from('game_players')
-    .select(
-      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
-    )
+    .select('user_id, submitted_at, approved_at, withdrawn_at')
     .eq('game_id', gameId)
     .returns<
       {
@@ -185,7 +184,6 @@ export async function endGameCore(
         submitted_at: string | null;
         approved_at: string | null;
         withdrawn_at: string | null;
-        users: { email: string | null; name: string | null } | null;
       }[]
     >();
 

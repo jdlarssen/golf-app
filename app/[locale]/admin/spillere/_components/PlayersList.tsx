@@ -3,8 +3,8 @@
 // catalog pattern in CoursesLedgerClient.tsx).
 import { getTranslations, getLocale } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { getServerClient } from '@/lib/supabase/server';
 import { PlayersListClient } from './PlayersListClient';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type User = {
   id: string;
@@ -18,14 +18,14 @@ type User = {
 };
 
 export async function PlayersList({ searchQuery }: { searchQuery: string }) {
-  const supabase = await getServerClient();
   const t = await getTranslations('admin.players');
   const locale = (await getLocale()) as AppLocale;
 
   // Only show fully-onboarded players. Pending invitees have NULL name and
   // profile_completed_at and would otherwise duplicate the entry shown in
   // the pending-invitations list. Picker handles the in-between state.
-  const { data, error } = await supabase
+  // #2207: rendered only from admin/spillere, after its requireAdmin gate.
+  const { data, error } = await getAdminClient()
     .from('users')
     .select('id, name, nickname, email, hcp_index, is_admin, is_guest, created_at')
     .not('profile_completed_at', 'is', null)

@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import { sendPaymentReminder } from '@/lib/notifications/paymentReminder';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type UnpaidPlayerRow = {
   user_id: string;
@@ -90,7 +91,7 @@ export async function remindUnpaidPlayers(
   // Ingen kontingent → ingenting å purre for.
   if (!game || game.entry_fee_kr <= 0) return { count: 0 };
 
-  const { data: players } = await supabase
+  const { data: players } = await getAdminClient()
     .from('game_players')
     .select(
       'user_id, paid_at, withdrawn_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',

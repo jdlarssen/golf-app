@@ -12,6 +12,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getDeleteBlockReason } from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
 import { deleteUser } from './actions';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 
@@ -28,7 +29,7 @@ export default async function DeletePlayerPage({
 
   const locale = (await getLocale()) as AppLocale;
 
-  const { data: target } = await supabase
+  const { data: target } = await getAdminClient()
     .from('users')
     .select('id, name, email')
     .eq('id', id)

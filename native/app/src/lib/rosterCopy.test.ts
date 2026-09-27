@@ -87,7 +87,8 @@ const START_REASON_MAP = {
   tee_missing: 'tee_missing',
   tee_missing_rating: 'tee_missing_rating',
   no_players: 'no_players',
-  pending_players: 'interpolated',
+  // #2207: a fixed sentence without a list — its own test below.
+  pending_players: null,
   incomplete_sides: 'incomplete_sides',
   decided_by_withdrawal: 'decided_by_withdrawal',
   unassigned_teams: 'unassigned_teams',
@@ -169,19 +170,9 @@ describe('describeStartRefusal', () => {
     expect(describeStartRefusal({ ok: false, reason })).toBe(web[webKey]);
   });
 
-  it('setter navnene inn i pending-setningen der webben setter e-postene', () => {
-    expect(
-      describeStartRefusal({
-        ok: false,
-        reason: 'pending_players',
-        pendingLabels: ['Kari', 'ola@example.no'],
-      }),
-    ).toBe(web.pending_players.replace('{list}', ': Kari, ola@example.no'));
-  });
-
-  it('lar lista falle bort helt når ingen navn kom med — som webben', () => {
+  it('navngir ingen i pending-setningen: publiserings-teksten med «startes» (#2207)', () => {
     expect(describeStartRefusal({ ok: false, reason: 'pending_players' })).toBe(
-      web.pending_players.replace('{list}', ''),
+      source.wizard.errors.pending_players_generic.replace('publiseres', 'startes'),
     );
   });
 

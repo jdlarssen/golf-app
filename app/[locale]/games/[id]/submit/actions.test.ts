@@ -170,11 +170,15 @@ describe('submitScorecard', () => {
       {
         // admins list
         data: [
-          { id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' },
-          { id: 'user-1', email: 'ola@example.com', name: 'Ola Nordmann' },
+          { id: 'admin-1', name: 'Jørgen' },
+          { id: 'user-1', name: 'Ola Nordmann' },
         ],
         error: null,
       },
+    ]);
+    // #2207: the admins' addresses come from the admin client.
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'admin-1', email: 'jorgen@example.test', friend_code: 'k0de' }], error: null },
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -193,7 +197,7 @@ describe('submitScorecard', () => {
     expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(1);
     expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        to: 'jorgen@tornygolf.no',
+        to: 'jorgen@example.test',
         playerName: 'Ola Nordmann',
         gameName: 'Vinter-cup',
         gameId: 'game-1',
@@ -216,11 +220,15 @@ describe('submitScorecard', () => {
       { data: { name: 'Ola Nordmann' }, error: null },
       {
         data: [
-          { id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' },
-          { id: 'user-1', email: 'ola@example.com', name: 'Ola Nordmann' },
+          { id: 'admin-1', name: 'Jørgen' },
+          { id: 'user-1', name: 'Ola Nordmann' },
         ],
         error: null,
       },
+    ]);
+    // #2207: the admins' addresses come from the admin client.
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'admin-1', email: 'jorgen@example.test', friend_code: 'k0de' }], error: null },
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -249,9 +257,12 @@ describe('submitScorecard', () => {
       { data: [{ user_id: 'user-1' }], error: null }, // UPDATE (fresh)
       { data: { name: 'Ola Nordmann' }, error: null },
       {
-        data: [{ id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' }],
+        data: [{ id: 'admin-1', name: 'Jørgen' }],
         error: null,
       },
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      { data: [{ id: 'admin-1', email: 'jorgen@example.test', friend_code: 'k0de' }], error: null },
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },

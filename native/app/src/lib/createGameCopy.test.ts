@@ -131,7 +131,7 @@ describe('describeCreateGameFailure', () => {
   });
 });
 
-// #1979: RPC-en `incomplete_profiles_for_ids` ekskluderer ikke kalleren, så en
+// #1979: RPC-en `incomplete_profile_ids` ekskluderer ikke kalleren, så en
 // arrangør med ufullført profil kom tilbake i sin egen liste — og leste en
 // melding om «noen på spillerlista … De må logge inn». Om seg selv.
 describe('describePendingPlayers', () => {

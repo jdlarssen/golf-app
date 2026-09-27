@@ -24,6 +24,7 @@ import { remindUnsubmittedPlayers, remindUnconfirmedPlayers } from './actions';
 import { RemindButton } from './RemindButton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -103,7 +104,7 @@ export default async function GameStatusPage({
   const expectedHoles = holeCountForSegment(game.hole_segment);
 
   const [playersRes, scoresRes] = await Promise.all([
-    supabase
+    getAdminClient()
       .from('game_players')
       .select(
         'user_id, team_number, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email)',

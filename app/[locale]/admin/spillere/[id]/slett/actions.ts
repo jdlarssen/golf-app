@@ -9,6 +9,7 @@ import {
   getDeleteBlockReason,
 } from '@/lib/users/deleteAccount';
 import type { AppLocale } from '@/i18n/routing';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 export async function deleteUser(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
@@ -27,7 +28,7 @@ export async function deleteUser(formData: FormData) {
 
   // Fetch target for banner copy. name can be NULL for pending invitees
   // (auto-created by 0014_pending_users trigger), so fall back to email.
-  const { data: target } = await supabase
+  const { data: target } = await getAdminClient()
     .from('users')
     .select('id, name, email')
     .eq('id', id)

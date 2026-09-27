@@ -107,49 +107,18 @@ describe('startRoundNow', () => {
     });
   });
 
-  it('bytter ventende spilleres e-post mot navn, og beholder e-posten når navnet mangler', async () => {
+  it('ventende spillere: avslaget bærer ingen liste, og ingen users-lesing (#2207)', async () => {
     core().mockResolvedValue({
       ok: false,
       reason: 'pending_players',
-      pendingEmails: ['kari@example.no', 'ola@example.no', 'ukjent@example.no'],
+      pendingUserIds: ['u1', 'u2'],
     });
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({
-      users: [
-        queryStub({
-          data: [
-            { email: 'kari@example.no', name: 'Kari Nordmann', nickname: null },
-            { email: 'ola@example.no', name: 'Ola Nordmann', nickname: 'Olsen' },
-          ],
-          error: null,
-        }),
-      ],
-    });
+    // An empty plan: any query at all would throw «uventet spørring».
+    mocks().routeFrom({});
 
     expect(await startRoundNow(GAME)).toEqual({
       ok: false,
       reason: 'pending_players',
-      // Kallenavn slår navn; raden som ikke kom tilbake beholder e-posten sin,
-      // som er det eneste som faktisk identifiserer personen.
-      pendingLabels: ['Kari Nordmann', 'Olsen', 'ukjent@example.no'],
-    });
-  });
-
-  it('faller tilbake til e-post når hele navne-oppslaget feiler', async () => {
-    core().mockResolvedValue({
-      ok: false,
-      reason: 'pending_players',
-      pendingEmails: ['kari@example.no'],
-    });
-    const { queryStub, routeFrom } = mocks();
-    routeFrom({
-      users: [queryStub({ data: null, error: { message: 'nett nede' } })],
-    });
-
-    expect(await startRoundNow(GAME)).toEqual({
-      ok: false,
-      reason: 'pending_players',
-      pendingLabels: ['kari@example.no'],
     });
   });
 
