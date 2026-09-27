@@ -19,7 +19,8 @@ import { describe, expect, it } from 'vitest';
  * `const { error } = await …`, `return await …` or `? await …`.
  *
  * What it cannot see: a bare `await x.from(…).delete()` right under an `if (…)` line
- * without braces. That line ends on `)`, so the await is not a statement start.
+ * without braces, or under a line that ends in a trailing `// comment`. Neither
+ * line ends on `;`, `{` or `}`, so the await is not a statement start.
  *
  * The fix: destructure `{ error }` and log it, and chain `.select()` plus
  * `expectAffected` where 0 rows means something went wrong.
