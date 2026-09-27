@@ -41,6 +41,37 @@ export type DeliveryGame = {
 };
 
 /**
+ * Hvem som kan komme på tale, før slagene er lest: steg 1 og 2 under. Egen
+ * funksjon så serveren bare leser slagene til disse (et klubbspill har
+ * tusenvis av slag-rader), mens regelen fortsatt har ett hjem.
+ */
+export function flightDeliveryPool(
+  actorId: string,
+  input: { players: readonly DeliveryPlayer[]; game: DeliveryGame },
+): string[] {
+  const { players, game } = input;
+  const mode = game.game_mode;
+
+  if (modeCollapsesToTeamCard(mode, 18)) return [];
+  if (game.hole_segment !== 'full') return [];
+  if (game.source_game_id != null) return [];
+
+  const actor = players.find((p) => p.user_id === actorId);
+  if (!actor || actor.withdrawn_at != null) return [];
+
+  const flight = [...players];
+  return players
+    .filter(
+      (p) =>
+        p.user_id !== actorId &&
+        p.withdrawn_at == null &&
+        p.submitted_at == null &&
+        canApproveScorecardFor(flight, mode, actorId, p.user_id),
+    )
+    .map((p) => p.user_id);
+}
+
+/**
  * Bruker-id-ene til kortene `actorId` kan levere i tillegg til sitt eget, i
  * roster-rekkefølge. Tom liste når det ikke er noen.
  *
@@ -64,29 +95,19 @@ export function flightDeliveryCandidates(
   },
 ): string[] {
   const { players, game } = input;
-  const mode = game.game_mode;
-
-  if (modeCollapsesToTeamCard(mode, 18)) return [];
-  if (game.hole_segment !== 'full') return [];
-  if (game.source_game_id != null) return [];
-
-  const actor = players.find((p) => p.user_id === actorId);
-  if (!actor || actor.withdrawn_at != null) return [];
+  const pool = new Set(flightDeliveryPool(actorId, input));
+  if (pool.size === 0) return [];
 
   const holeCount = holeCountForSegment(game.hole_segment);
   const owned = ownedScoresByPlayer({
     players,
     scores: input.scores.filter((s) => s.strokes != null),
-    mode,
+    mode: game.game_mode,
   });
-  const flight = [...players];
 
   return players
     .filter((p) => {
-      if (p.user_id === actorId) return false;
-      if (p.withdrawn_at != null || p.submitted_at != null) return false;
-      if (!canApproveScorecardFor(flight, mode, actorId, p.user_id)) return false;
-
+      if (!pool.has(p.user_id)) return false;
       const rows = owned.get(p.user_id) ?? [];
       if (rows.length < holeCount) return false;
       if (p.is_guest) return true;

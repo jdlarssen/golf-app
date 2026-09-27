@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   flightDeliveryCandidates,
+  flightDeliveryPool,
   type DeliveryGame,
   type DeliveryPlayer,
   type DeliveryScore,
@@ -282,5 +283,26 @@ describe('flightDeliveryCandidates', () => {
         }),
       ).toEqual(['ola', 'per']);
     });
+  });
+});
+
+describe('flightDeliveryPool', () => {
+  it('the flightmates who could be candidates, before any scores are read', () => {
+    const players = [
+      player('kari'),
+      player('ola'),
+      player('per', { submitted_at: SUBMITTED }),
+      player('lise', { withdrawn_at: WITHDRAWN }),
+    ];
+    expect(flightDeliveryPool('kari', { players, game: stableford })).toEqual(['ola']);
+  });
+
+  it('the format gate empties the pool too', () => {
+    expect(
+      flightDeliveryPool('kari', {
+        players: [player('kari', { team_number: 1 }), player('ola', { team_number: 1 })],
+        game: { game_mode: 'ambrose', hole_segment: 'full', source_game_id: null },
+      }),
+    ).toEqual([]);
   });
 });
