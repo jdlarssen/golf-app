@@ -157,6 +157,8 @@ contains "(a) SQL bruker ClickHouse count()" "$SQL" "count()"
 contains "(a) SQL grupperer per SQLSTATE" "$SQL" "log_attributes['parsed.sql_state_code']"
 lacks "(a) SQL henter ikke event_message" "$SQL" "event_message"
 contains "(a) token sendes som Bearer" "$CALL" "Authorization: Bearer fake-token"
+GETS=$(printf '%s\n' "$CALL" | grep -cx -- '-G')
+check "(a) GET med parametrene i URL-en (-G), ikke POST" 1 "$GETS"
 contains "(d) loggen sier alt stille med 0 feil" "$OUT" "alt stille — 0 postgres-feil"
 check "(d) ingen issue opprettet" "" "$TITLE"
 
@@ -201,6 +203,14 @@ run_case c4
 check "(c4) manglende result gir exit 1" 1 "$EXIT"
 check "(c4) issue om lesefeil" "$READ_FAIL" "$TITLE"
 
+# (c5) error i body ved siden av en gyldig result-liste er fortsatt en feil
+reset_env
+PG_BODY='{"result":[],"error":"Query timed out"}'
+run_case c5
+check "(c5) error ved siden av result gir exit 1" 1 "$EXIT"
+check "(c5) issue om lesefeil" "$READ_FAIL" "$TITLE"
+lacks "(c5) ikke «alt stille»" "$OUT" "alt stille"
+
 # (e) én kjent kode og én ny: den nye varsles med antall, den kjente vises
 reset_env
 BASELINE_LINES="$BASELINE_LINES
@@ -235,6 +245,14 @@ check "(g) issue om lesefeil" "$READ_FAIL" "$TITLE"
 contains "(g) varselet sier HTTP 401" "$ISSUE" "HTTP 401"
 contains "(g) varselet har feilutdraget" "$ISSUE" "JWT could not be decoded"
 contains "(g) GITHUB_OUTPUT har handled=true" "$GHOUT" "handled=true"
+
+# (g2) advisors svarer 200, men uten lints-liste
+reset_env
+ADV_BODY='{"message":"ok"}'
+run_case g2
+check "(g2) exit 1" 1 "$EXIT"
+check "(g2) issue om lesefeil" "$READ_FAIL" "$TITLE"
+contains "(g2) varselet peker på advisors-svaret" "$ISSUE" "advisors-endepunktet"
 
 # (h) tom og manglende kode slås sammen til pg:-
 reset_env
