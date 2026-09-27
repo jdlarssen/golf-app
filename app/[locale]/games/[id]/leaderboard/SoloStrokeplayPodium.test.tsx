@@ -17,10 +17,11 @@ function makeResult(
     netToPar?: number | null;
     tiedWith?: string[];
   }>,
+  ranking: SoloStrokeplayResult['ranking'] = 'net_total',
 ): SoloStrokeplayResult {
   return {
     kind: 'solo_strokeplay',
-    ranking: 'net_total',
+    ranking,
     players: players.map(({ tiedWith = [], netToPar = null, ...p }) => ({
       ...p,
       netToPar,
@@ -95,6 +96,26 @@ describe('SoloStrokeplayPodium', () => {
     const winner = within(podium).getByTestId('podium-rank-1');
     expect(winner.textContent).toMatch(/slag/i);
     expect(winner.textContent).not.toMatch(/poeng/i);
+  });
+
+  it('et spill rangert etter netto mot par viser «mot par»-tallet (#2253)', () => {
+    window.sessionStorage.clear();
+    render(
+      <SoloStrokeplayPodium
+        {...defaultProps({
+          result: makeResult(
+            [
+              { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 78, rank: 1, holesPlayed: 18, netToPar: -2 },
+              { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 82, rank: 2, holesPlayed: 18, netToPar: 0 },
+            ],
+            'net_to_par',
+          ),
+        })}
+      />,
+    );
+    const podium = screen.getByTestId('strokeplay-podium');
+    expect(within(podium).getByTestId('podium-rank-1').textContent).toContain('−2mot par');
+    expect(within(podium).getByTestId('podium-rank-2').textContent).toContain('Emot par');
   });
 
   it('viser «X hull»-chip per trinn på podiet', () => {

@@ -180,10 +180,16 @@ export function buildShareCardData(opts: {
     // Solo strokeplay → 'placement' band, vs-par label
     // -----------------------------------------------------------------------
     case 'solo_strokeplay': {
+      // #2253: a game ranked on net to par shows the engine's own number,
+      // against each player's own par. The par_mens map would put a lady on
+      // par 72 one stroke off per stroke of par difference.
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        score: vsParScore(p.totalNetStrokes, soloUnplayedHoles(result.holes, p.userId), result.holes.length),
+        score:
+          result.ranking === 'net_to_par'
+            ? { kind: 'vsPar', label: vsParLabel(p.netToPar) }
+            : vsParScore(p.totalNetStrokes, soloUnplayedHoles(result.holes, p.userId), result.holes.length),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }

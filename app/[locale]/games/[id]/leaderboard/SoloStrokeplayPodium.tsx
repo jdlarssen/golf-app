@@ -8,6 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { showHolesColumn } from '@/lib/leaderboard/holesColumn';
+import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import type {
   SoloStrokeplayPlayerLine,
   SoloStrokeplayResult,
@@ -62,8 +63,10 @@ export interface SoloStrokeplayPodiumProps {
  *   - Rangering er allerede lavest-først i `result.players`-arrayet
  *     (compute() returnerer rank-sortert), så podium-trinnene blir naturlig
  *     riktige uten ekstra sortering.
- *   - Hoved-tallet er `totalNetStrokes` (slag, ikke poeng).
- *   - Label «slag» under tallet.
+ *   - Hoved-tallet er `totalNetStrokes` (slag, ikke poeng) med «slag» under.
+ *     Et spill rangert etter netto mot par (#2253, `result.ranking`) viser
+ *     `netToPar` («−2», «E», «+3») med «mot par» under, så pallen viser
+ *     tallet rekkefølgen faktisk bygger på.
  *   - Sub-tittel: «Slagspill · Etter 18 hull».
  *   - Distinkt sessionStorage-key: `torny-solo-strokeplay-podium-confetti-seen-${gameId}`.
  *
@@ -124,6 +127,12 @@ export function SoloStrokeplayPodium({
   const second = result.players[1] ?? null;
   const third = result.players[2] ?? null;
   const rest = result.players.slice(3);
+  // #2253: the number the order is built on — net to par on a game ranked
+  // on it, else net strokes.
+  const toPar = result.ranking === 'net_to_par';
+  const scoreText = (player: SoloStrokeplayPlayerLine): string =>
+    toPar ? formatVsPar(player.netToPar) : String(player.totalNetStrokes);
+  const scoreUnit = toPar ? t('common.vsParLabel') : t('common.slagLabel');
   const tiedBadge = (player: SoloStrokeplayPlayerLine): string | null =>
     player.tiedWith.length > 0
       ? t('common.tiedRank', { rank: player.rank })
@@ -176,7 +185,8 @@ export function SoloStrokeplayPodium({
                   player={second}
                   playerInfo={playersById.get(second.userId)}
                   staggerIndex={1}
-                  slagLabel={t('common.slagLabel')}
+                  score={scoreText(second)}
+                  slagLabel={scoreUnit}
                   hullChip={hullChipFor(second)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(second)}
@@ -193,7 +203,8 @@ export function SoloStrokeplayPodium({
               player={first}
               playerInfo={playersById.get(first.userId)}
               staggerIndex={0}
-              slagLabel={t('common.slagLabel')}
+              score={scoreText(first)}
+              slagLabel={scoreUnit}
               hullChip={hullChipFor(first)}
               unknownPlayerLabel={t('common.unknownPlayerFull')}
               tiedBadge={tiedBadge(first)}
@@ -210,7 +221,8 @@ export function SoloStrokeplayPodium({
                   player={third}
                   playerInfo={playersById.get(third.userId)}
                   staggerIndex={2}
-                  slagLabel={t('common.slagLabel')}
+                  score={scoreText(third)}
+                  slagLabel={scoreUnit}
                   hullChip={hullChipFor(third)}
                   unknownPlayerLabel={t('common.unknownPlayerFull')}
                   tiedBadge={tiedBadge(third)}
@@ -263,10 +275,10 @@ export function SoloStrokeplayPodium({
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
-                        {player.totalNetStrokes}
+                        {scoreText(player)}
                       </span>
                       <span className="mt-0.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {t('common.slagLabel')}
+                        {scoreUnit}
                       </span>
                     </div>
                   </Card>
@@ -289,6 +301,7 @@ function PodiumStep({
   player,
   playerInfo,
   staggerIndex,
+  score,
   slagLabel,
   hullChip,
   unknownPlayerLabel,
@@ -299,6 +312,9 @@ function PodiumStep({
   player: SoloStrokeplayPlayerLine;
   playerInfo: SoloStrokeplayPlayerInfo | undefined;
   staggerIndex: number;
+  /** The main number, already formatted (net strokes, or net to par). */
+  score: string;
+  /** The unit under it: «slag» or «mot par». */
   slagLabel: string;
   /** «X hull»-chip, eller null når hull-tallet er likt for alle (#1892). */
   hullChip: string | null;
@@ -344,7 +360,7 @@ function PodiumStep({
         {displayName}
       </p>
 
-      {/* Netto-slag-total — hoved-tallet. */}
+      {/* Hoved-tallet: netto-slag, eller netto mot par (#2253). */}
       <div className="text-center">
         <span
           className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
@@ -355,7 +371,7 @@ function PodiumStep({
                 : 'text-[22px] text-text'
           }`}
         >
-          {player.totalNetStrokes}
+          {score}
         </span>
         <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
           {slagLabel}

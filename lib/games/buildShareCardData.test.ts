@@ -794,3 +794,37 @@ describe('vs par over played holes (#2217)', () => {
     expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '—' });
   });
 });
+
+// #2253: a game ranked on net to par shows each player's own net to par. A
+// lady on par 72 who went 73 net is +1, not +2 against the men's par 71.
+describe('solo_strokeplay — ranked on net to par', () => {
+  const PAR_71: ReadonlyMap<number, number> = new Map(
+    Array.from({ length: 18 }, (_, i) => [i + 1, i === 0 ? 3 : 4] as const),
+  );
+  const result = (ranking: SoloStrokeplayResult['ranking']): SoloStrokeplayResult => ({
+    kind: 'solo_strokeplay',
+    ranking,
+    holes: [],
+    players: [
+      { userId: 'kari', totalNetStrokes: 73, totalGrossStrokes: 80, holesPlayed: 18, netToPar: 1, rank: 1, tiedWith: ['ola'] },
+      { userId: 'ola', totalNetStrokes: 72, totalGrossStrokes: 79, holesPlayed: 18, netToPar: 1, rank: 1, tiedWith: ['kari'] },
+    ],
+  });
+  const nameMap = names(['kari', 'Kari'], ['ola', 'Ola']);
+
+  it('the lady gets her own net to par with the flag', () => {
+    const card = buildShareCardData({ result: result('net_to_par'), nameByUserId: nameMap, sharerId: null, parByHole: PAR_71, sideWinners: [] });
+    expect(card.podium.map((r) => r.score)).toEqual([
+      { kind: 'vsPar', label: '+1' },
+      { kind: 'vsPar', label: '+1' },
+    ]);
+  });
+
+  it('a game without the flag keeps the numbers it had', () => {
+    const card = buildShareCardData({ result: result('net_total'), nameByUserId: nameMap, sharerId: null, parByHole: PAR_71, sideWinners: [] });
+    expect(card.podium.map((r) => r.score)).toEqual([
+      { kind: 'vsPar', label: '+2' },
+      { kind: 'vsPar', label: '+1' },
+    ]);
+  });
+});

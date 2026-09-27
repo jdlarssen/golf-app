@@ -25,6 +25,11 @@ export interface HeadToHeadSide {
   nickname: string | null;
   /** Format-metrikken (skins/poeng/units) — vinner = høyest. */
   score: number;
+  /**
+   * Valgfri visningstekst for scoren, f.eks. «−1»/«E» for netto mot par
+   * (#2253). Tallet over styrer fortsatt baren; teksten vises i stedet for det.
+   */
+  scoreLabel?: string;
   /** Valgfri sekundær-stat under tallet, f.eks. «5 hull vunnet». */
   subLabel?: string;
 }
@@ -119,7 +124,12 @@ export function HeadToHeadResult({
   // Negative scorer bytter separatoren fra en-dash til « mot », så «4–−3»
   // ikke kolliderer visuelt til «4--3». Positive format (Skins/Nassau/BBB/
   // slagspill) beholder den kompakte «5–3».
-  const sep = summary.hasNegativeScore ? ' mot ' : '–';
+  // Visningstekster (netto mot par: «E», «+2») får også « mot », så «E–+2»
+  // aldri står på kortet.
+  const sep =
+    summary.hasNegativeScore || sideA.scoreLabel != null || sideB.scoreLabel != null
+      ? ' mot '
+      : '–';
   const v = summary.verdict;
   const verdict =
     v.kind === 'tie'
@@ -164,7 +174,7 @@ export function HeadToHeadResult({
         <div className="grid grid-cols-2 gap-3">
           <SidePanel
             name={nameA}
-            score={sideA.score}
+            score={sideA.scoreLabel ?? sideA.score}
             subLabel={sideA.subLabel}
             unitLabel={unitLabel}
             colorVar="--player-a"
@@ -173,7 +183,7 @@ export function HeadToHeadResult({
           />
           <SidePanel
             name={nameB}
-            score={sideB.score}
+            score={sideB.scoreLabel ?? sideB.score}
             subLabel={sideB.subLabel}
             unitLabel={unitLabel}
             colorVar="--player-b"
@@ -187,7 +197,12 @@ export function HeadToHeadResult({
           data-testid="h2h-bar"
           className="mt-4 flex h-3 w-full overflow-hidden rounded-full border border-border"
           role="img"
-          aria-label={t('barAriaLabel', { nameA, scoreA: sideA.score, nameB, scoreB: sideB.score })}
+          aria-label={t('barAriaLabel', {
+            nameA,
+            scoreA: sideA.scoreLabel ?? sideA.score,
+            nameB,
+            scoreB: sideB.scoreLabel ?? sideB.score,
+          })}
         >
           <span
             className="h-full"
@@ -260,7 +275,7 @@ function SidePanel({
   align,
 }: {
   name: string;
-  score: number;
+  score: number | string;
   subLabel?: string;
   unitLabel: string;
   colorVar: string;

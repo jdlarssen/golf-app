@@ -2510,6 +2510,7 @@
       "unknownPlayerFull": "(ukjent spiller)",
       "noPlayersToShow": "Ingen spillere å vise.",
       "slagLabel": "slag",
+      "vsParLabel": "mot par",
       "poengLabel": "poeng",
       "holesPlayedCount": "{count} hull spilt",
       "hullChip": "{count} hull",
