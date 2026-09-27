@@ -1,14 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { expect, type Page } from '@playwright/test';
+import { missingE2eEnvReason } from './envGate';
 
 /**
  * Felles helpers for selv-påmelding-E2E (`#199 chunk 14`).
  *
- * Vi følger samme env-guard-mønster som `e2e/auth/invitation-flow.spec.ts`:
- * fullflyts-tester krever Supabase service-role nøkler og minst én pre-seeded
- * admin-bruker. Hvis env mangler hopper testen over med `test.skip()`. Det er
- * bevisst — `npm run e2e` skal aldri feile bare fordi en utvikler ikke har
- * service-role nøkkelen lokalt.
+ * Fullflyts-testene krever Supabase service-role-nøkkelen og to pre-seeded
+ * brukere (admin + spiller). Specene hopper fortsatt over seg selv med
+ * `test.skip(!envReady, …)` når env mangler, men `e2e/global-setup.ts` nekter
+ * hele kjøringen før første spec (#2226) — ellers blir porten grønn med alle
+ * kjerneflytene hoppet over. Lokalt slipper `E2E_ALLOW_ENV_SKIP=1` en bevisst
+ * delvis kjøring gjennom (aldri i CI, aldri staging-bevis).
  *
  * **VIKTIG:** Tørny tester mot `torny-staging`, ALDRI prod (production-only-
  * konvensjonen ble opphevet 2026-06-20 — appen er i ekte prod-bruk). Alle
@@ -30,21 +32,12 @@ export const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 /**
  * Env-readiness for selv-påmeldings-spec-ene. Krever URL + service-role +
  * admin-mail + spiller-mail (sistnevnte må være en separat pre-seeded bruker
- * med fullført profil — vi oppretter ikke konto i åre-testene).
+ * med fullført profil — vi oppretter ikke konto i åre-testene). Regelen og
+ * rekkefølgen bor i `./envGate` (#2226), som global-setup også leser.
  */
-export const envReady = Boolean(
-  SUPABASE_URL && SERVICE_ROLE_KEY && ADMIN_EMAIL && PLAYER_EMAIL,
-);
+export const skipReason = missingE2eEnvReason(process.env);
 
-export const skipReason = !SUPABASE_URL
-  ? 'NEXT_PUBLIC_SUPABASE_URL ikke satt'
-  : !SERVICE_ROLE_KEY
-    ? 'SUPABASE_SERVICE_ROLE_KEY ikke satt — påkrevet for å hente OTP via admin.generateLink'
-    : !ADMIN_EMAIL
-      ? 'E2E_ADMIN_EMAIL ikke satt — påkrevet for å logge inn admin som oppretter test-spillet'
-      : !PLAYER_EMAIL
-        ? 'E2E_PLAYER_EMAIL ikke satt — påkrevet for å logge inn test-spiller som melder seg på'
-        : '';
+export const envReady = skipReason === '';
 
 export function adminClient(): SupabaseClient {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {

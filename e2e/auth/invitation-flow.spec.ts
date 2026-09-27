@@ -40,9 +40,11 @@ import { tapParOnRail } from '../_helpers/scoreRail';
  *    status='active' og invitee i flight. Kun da kjører "play first round"-
  *    fasen; ellers logges blokkeren.
  *
- * Hvis kritiske env-vars mangler, hoppes hele testen over med en
- * beskrivende `test.skip()` — å markere lokal-utvikler-blokkere som hard-feil
- * ville bryte `npm run e2e` for alle som ikke har service-role-key.
+ * Hvis kritiske env-vars mangler, hoppes testen over med en beskrivende
+ * `test.skip()`. I praksis nås den sjelden: env-vakten i `e2e/global-setup.ts`
+ * (#2226) nekter hele kjøringen når en av de fire felles variablene mangler,
+ * med mindre `E2E_ALLOW_ENV_SKIP=1` er satt lokalt. Vakten her krever bare tre
+ * av dem, fordi specen ikke trenger spiller-mailen.
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
