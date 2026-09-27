@@ -58,7 +58,7 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
 - **`strokes`**: `NULLABLE int`. `CHECK (strokes >= 1 AND strokes <= 20)` applies when not null (null = hole not yet entered).
 - `hole_number` `CHECK 1..18`.
 - **`client_updated_at`** + **`updated_at`**: `NOT NULL`. Last-write-wins key = `client_updated_at`.
-- Real write path: `SECURITY DEFINER` RPC **`upsert_score_if_newer`**, which has a graceful no-op guard when `withdrawn_at`/`submitted_at` is set (migration 0102, #668).
+- Real write path: `SECURITY INVOKER` RPC **`upsert_score_if_newer`**. The 0102 frozen-card guard is gone since 0123: RLS (`scores update by flight`) filters an UPDATE on a submitted/withdrawn card or an inactive round to 0 rows, and the RPC then answers an all-NULL row with no error. The client reads that as a refusal (`interpretUpsertReply` in `lib/sync/upsertReply.ts`, #2211); an INSERT on a locked card raises the RLS violation instead, and on a finished game the 0148 trigger raises «only putts may be changed».
 
 ---
 
