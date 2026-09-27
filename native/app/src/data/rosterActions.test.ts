@@ -29,6 +29,10 @@ const ME = 'user-me';
 const MATE = 'user-mate';
 const OTHER = 'user-other';
 
+/** Kandidatraden `addPlayerToGame` tar (#2209): id + profilens kjønn og nivå. */
+const MATE_PLAYER = { id: MATE, gender: 'mens', level: 'normal' };
+const LADY_PLAYER = { id: MATE, gender: 'ladies', level: 'normal' };
+
 type Mocks = typeof import('../test/supabaseMock');
 type Actions = typeof import('./rosterActions');
 
@@ -56,6 +60,32 @@ function gameRow(
     },
     error: null,
   };
+}
+
+/** Tee-ratingene `addPlayerToGame` slår opp før innsettingen (#2209). */
+const FULL_TEE = {
+  slope_mens: 130,
+  course_rating_mens: 71.2,
+  par_total_mens: 72,
+  slope_ladies: 128,
+  course_rating_ladies: 73.1,
+  par_total_ladies: 73,
+  slope_juniors: 120,
+  course_rating_juniors: 68.5,
+  par_total_juniors: 72,
+};
+const MENS_ONLY_TEE = {
+  ...FULL_TEE,
+  slope_ladies: null,
+  course_rating_ladies: null,
+  par_total_ladies: null,
+  slope_juniors: null,
+  course_rating_juniors: null,
+  par_total_juniors: null,
+};
+
+function teeRow(tee: typeof FULL_TEE | typeof MENS_ONLY_TEE | null = FULL_TEE) {
+  return { data: { tee_boxes: tee }, error: null };
 }
 
 /** Et lag-format: best ball med to per lag. */
@@ -125,25 +155,29 @@ describe('rosterActions', () => {
       const { supabase, currentDeviceUserId } = mocks();
       currentDeviceUserId.mockResolvedValue(null);
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: false,
         reason: 'no-session',
       });
       expect(supabase.from).not.toHaveBeenCalled();
     });
 
-    it.each([
-      ['addPlayerToGame'],
-      ['removePlayerFromGame'],
-      ['withdrawPlayer'],
-      ['undoWithdrawPlayer'],
-      ['reopenScorecard'],
-    ])('nekter %s uten nett — skrivingene går aldri i sync-køen', async (name) => {
+    it.each<[string, unknown]>([
+      // #2209: addPlayerToGame tar kandidatraden, de andre en bruker-id.
+      ['addPlayerToGame', MATE_PLAYER],
+      ['removePlayerFromGame', MATE],
+      ['withdrawPlayer', MATE],
+      ['undoWithdrawPlayer', MATE],
+      ['reopenScorecard', MATE],
+    ])('nekter %s uten nett — skrivingene går aldri i sync-køen', async (name, player) => {
       mockNetwork.online = false;
       const { supabase } = mocks();
 
-      const fn = actions()[name as 'addPlayerToGame'];
-      expect(await fn(GAME, MATE)).toEqual({ ok: false, reason: 'offline' });
+      const fn = actions()[name as keyof Actions] as (
+        gameId: string,
+        player: unknown,
+      ) => Promise<unknown>;
+      expect(await fn(GAME, player)).toEqual({ ok: false, reason: 'offline' });
       expect(supabase.from).not.toHaveBeenCalled();
     });
 
@@ -151,7 +185,7 @@ describe('rosterActions', () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ games: [queryStub({ data: null, error: null })] });
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: false,
         reason: 'not-found',
       });
@@ -216,11 +250,11 @@ describe('rosterActions', () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const insert = queryStub(ONE_ROW);
       routeFrom({
-        games: [queryStub(gameRow('scheduled'))],
+        games: [queryStub(gameRow('scheduled')), queryStub(teeRow())],
         game_players: [queryStub(rosterOf(3)), insert],
       });
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: true,
         alreadyDone: false,
       });
@@ -233,6 +267,8 @@ describe('rosterActions', () => {
         course_handicap: null,
         // Arrangøren legger til en ANNEN — hen bekrefter selv (#463).
         accepted_at: null,
+        // #2209: profilens tee-sett, klemt til spillets tee.
+        tee_gender: 'mens',
       });
       // Uten `.select()` finnes det ikke noe radantall å asserte på (trap 2).
       expect(stepArgs(insert, 'select')).toEqual([['user_id']]);
@@ -241,7 +277,7 @@ describe('rosterActions', () => {
     it('svelger en UNIQUE-violation — spilleren er alt på rosteret', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
-        games: [queryStub(gameRow('draft'))],
+        games: [queryStub(gameRow('draft')), queryStub(teeRow())],
         game_players: [
           queryStub(rosterOf(2)),
           queryStub({
@@ -251,7 +287,7 @@ describe('rosterActions', () => {
         ],
       });
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: true,
         alreadyDone: true,
       });
@@ -260,7 +296,7 @@ describe('rosterActions', () => {
     it('melder rls-denied når 0115-vakta avviser raden', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
-        games: [queryStub(gameRow('scheduled'))],
+        games: [queryStub(gameRow('scheduled')), queryStub(teeRow())],
         game_players: [
           queryStub(rosterOf(2)),
           queryStub({
@@ -270,7 +306,7 @@ describe('rosterActions', () => {
         ],
       });
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toMatchObject({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toMatchObject({
         ok: false,
         reason: 'rls-denied',
       });
@@ -285,7 +321,7 @@ describe('rosterActions', () => {
         game_players: [queryStub(rosterOf(maxPlayersForMode('stableford')))],
       });
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: false,
         reason: 'roster-full',
       });
@@ -296,13 +332,64 @@ describe('rosterActions', () => {
       // `foursomes_matchplay` finnes ikke i APP_SUPPORTED_MODES — da hoppes
       // rosterlesningen over helt, og bare status-gaten står igjen.
       routeFrom({
-        games: [queryStub(gameRow('scheduled', 'foursomes_matchplay'))],
+        games: [queryStub(gameRow('scheduled', 'foursomes_matchplay')), queryStub(teeRow())],
         game_players: [queryStub(ONE_ROW)],
       });
 
-      expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+      expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
         ok: true,
         alreadyDone: false,
+      });
+    });
+
+    // #2209: uten tee_gender fikk raden kolonnens default 'mens', og en dame
+    // spilte fra herrenes slope, CR og par.
+    it('gir en dame damesettet på en tee med damerating', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const insert = queryStub(ONE_ROW);
+      routeFrom({
+        games: [queryStub(gameRow('scheduled')), queryStub(teeRow(FULL_TEE))],
+        game_players: [queryStub(rosterOf(2)), insert],
+      });
+
+      expect(await actions().addPlayerToGame(GAME, LADY_PLAYER)).toEqual({
+        ok: true,
+        alreadyDone: false,
+      });
+      expect(patchOf(insert, 'insert')).toMatchObject({ tee_gender: 'ladies' });
+    });
+
+    it('gir en dame herresettet på en tee med bare herrerating', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const insert = queryStub(ONE_ROW);
+      routeFrom({
+        games: [queryStub(gameRow('scheduled')), queryStub(teeRow(MENS_ONLY_TEE))],
+        game_players: [queryStub(rosterOf(2)), insert],
+      });
+
+      expect(await actions().addPlayerToGame(GAME, LADY_PLAYER)).toEqual({
+        ok: true,
+        alreadyDone: false,
+      });
+      expect(patchOf(insert, 'insert')).toMatchObject({ tee_gender: 'mens' });
+    });
+
+    it('skriver ingenting når tee-oppslaget feiler', async () => {
+      const { queryStub, routeFrom } = mocks();
+      // Ingen innsettings-stub: prøver handlingen å skrive likevel, kaster
+      // ruteren og testen faller.
+      routeFrom({
+        games: [
+          queryStub(gameRow('scheduled')),
+          queryStub({ data: null, error: { message: 'boom' } }),
+        ],
+        game_players: [queryStub(rosterOf(2))],
+      });
+
+      expect(await actions().addPlayerToGame(GAME, LADY_PLAYER)).toEqual({
+        ok: false,
+        reason: 'db',
+        message: 'boom',
       });
     });
 
@@ -314,7 +401,7 @@ describe('rosterActions', () => {
         // ruteren og testen faller.
         routeFrom({ games: [queryStub(gameRow(status))] });
 
-        expect(await actions().addPlayerToGame(GAME, MATE)).toEqual({
+        expect(await actions().addPlayerToGame(GAME, MATE_PLAYER)).toEqual({
           ok: false,
           reason: 'roster-locked',
         });

@@ -561,7 +561,7 @@ export function OrganiserSection({
                 style={[ui.buttonSecondary, styles.rowButton]}
                 disabled={busy}
                 testID={`organiser-candidate-${candidate.id}`}
-                onPress={() => void run(() => addPlayerToGame(game.id, candidate.id))}
+                onPress={() => void run(() => addPlayerToGame(game.id, candidate))}
               >
                 <Text style={ui.buttonSecondaryText}>{displayName(candidate)}</Text>
               </Pressable>

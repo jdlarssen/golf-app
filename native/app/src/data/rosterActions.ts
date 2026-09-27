@@ -37,6 +37,8 @@
 // server-eide og fyrer IKKE herfra. Bokført gap.
 import { MAX_FLIGHT_SIZE } from '../../../../lib/games/flightScope';
 import { sharedCardUserIds } from '../../../../lib/games/scoreOwner';
+import { profileTeeGender, type TeeProfile } from '../../../../lib/games/teeChoice';
+import type { TeeBoxRatings } from '../../../../lib/games/teeRating';
 import {
   expectedTeamSize,
   modeRequiresTeamNumber,
@@ -151,6 +153,10 @@ function refuseUnlessReady(userId: string | null): RosterActionResult | null {
   if (!isDeviceOnline()) return failed('offline');
   return null;
 }
+
+/** Tee-ratingene startkoden fryser fra (`startScheduledGameCore`). */
+const TEE_EMBED =
+  'tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 /** Leser spillets gate-felter. Returnerer en feil, eller raden. */
 async function loadGame(
@@ -332,10 +338,15 @@ export async function confirmParticipation(gameId: string): Promise<void> {
  * Eligibility håndheves i DB av `is_invite_eligible` (0115): venner ∪
  * medspillere ∪ klubbmedlemmer. Appens picker er medspiller-scopet — et ekte
  * subset — så hvert valg herfra passerer triggeren.
+ *
+ * **Tee-settet (#2209)** er profilens, klemt til spillets tee
+ * (`profileTeeGender`, samme regel som webbens påmeldingsveier). Uten det får
+ * raden kolonnens default `'mens'`, og en dame spiller fra herrenes slope, CR
+ * og par. Derfor tar funksjonen kandidatraden, ikke bare id-en.
  */
 export async function addPlayerToGame(
   gameId: string,
-  playerUserId: string,
+  player: TeeProfile & { id: string },
 ): Promise<RosterActionResult> {
   const userId = await currentDeviceUserId();
   const notReady = refuseUnlessReady(userId);
@@ -362,15 +373,26 @@ export async function addPlayerToGame(
     }
   }
 
+  // Eget lite oppslag: `loadGame` leser gate-feltene de andre handlingene
+  // deler, og holdes uendret. Feiler det, skrives ingenting — en rad med
+  // gjettet tee-sett er verre enn en feilmelding.
+  const teeRead = await supabase
+    .from('games')
+    .select(TEE_EMBED)
+    .eq('id', gameId)
+    .maybeSingle<{ tee_boxes: TeeBoxRatings | null }>();
+  if (teeRead.error) return failed('db', teeRead.error.message);
+
   const response = await supabase
     .from('game_players')
     .insert({
       game_id: gameId,
-      user_id: playerUserId,
+      user_id: player.id,
       team_number: null,
       flight_number: null,
       course_handicap: null,
       accepted_at: null,
+      tee_gender: profileTeeGender(player, teeRead.data?.tee_boxes ?? null),
     })
     // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
     .select('user_id');
