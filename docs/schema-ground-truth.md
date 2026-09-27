@@ -29,6 +29,12 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
   `accepted_at`, `submitted_at`, `approved_at`, `withdrawn_at`
   (plus `approved_by_user_id`, `withdrawn_by_user_id`, `rejection_reason`, `deliver_reminder_sent_at`).
 
+- **`submitted_by_user_id`** (migration 0191, #2200): who delivered the card: the player, or the
+  flightmate who kept score and delivered it for them. FK `users(id)`, no cascade. Owned by the
+  trigger `game_players_set_submitted_by`: a client-sent value is overwritten with `auth.uid()`
+  (the service role keeps what the server wrote). `null` for rows delivered before 0191 and
+  whenever `submitted_at` is null (reopen/rejection clears it).
+
 - **`team_number`**: nullable `int`. `CHECK = (team_number IS NULL OR team_number >= 1)`.
   **No upper bound.** The audit-era `1..4` was widened to `>=1` by migration 0101 (#669).
   Any doc that says `1..4` is **stale**.
@@ -41,9 +47,16 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
 
 - **Guard trigger `guard_game_players_self_update`** (migrations 0103/0106, #670/#704):
   - A player cannot self-approve their own scorecard or change their own `course_handicap` post-start.
-  - A peer may only touch approval columns on another player's row.
+  - A peer may only touch approval columns on another player's row. Since 0191 the peer allowlist
+    is `approved_at`, `approved_by_user_id`, `rejection_reason`, `submitted_at`, `submitted_by_user_id`.
+  - A peer may not approve a card they delivered themselves (0191, #2200): someone else in the
+    flight, or the organiser, approves it. Clearing an approval stays allowed.
   - The game **creator** is explicitly exempted so roster editing still works.
   - A `BEFORE UPDATE` trigger enforcing column-level rules that RLS `USING`/`WITH CHECK` clauses can't express on their own (it inspects which columns changed).
+
+- **Trigger `game_players_set_submitted_by`** (0191, #2200): `BEFORE INSERT OR UPDATE`, sets
+  `submitted_by_user_id` (see above). Its name sorts before `guard_*`, and Postgres fires
+  same-event triggers in name order, so the guard sees the final value.
 
 ---
 
