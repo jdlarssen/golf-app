@@ -2,7 +2,7 @@
 // Native N6b (#1855): arrangørens roster-drift, pluss spillerens stille
 // bekreftelse.
 //
-// Ingen server actions speiles. På DB-nivå ER alle sju rene
+// Ingen server actions speiles. På DB-nivå ER alle åtte rene
 // `game_players`-mutasjoner, og autorisasjonen ligger i Postgres:
 //
 //   • `game_players self mark accepted` (0082) — spillerens egen bekreftelse.
@@ -12,6 +12,9 @@
 //     før start.
 //   • `game_players creator update` (0071) + `guard_game_players_self_update`
 //     (0147), som slipper spillets oppretter forbi på ANDRES rader.
+//   • Gjenåpning av et levert kort (#2220) går gjennom samme policy og vakta
+//     slik 0168 definerer den: andres rad fritt, egen rad bare å nulle
+//     godkjenningen på (0159).
 //
 // Appen har ingen service-role og skal ikke få en. Gatene under står foran for
 // UX-ens skyld — gaten er RLS.
@@ -29,14 +32,17 @@
 // `supportsWithdrawal` (`lib/scoring/modes/types`) importeres — aldri kopieres.
 // Et tall som står to steder driver fra hverandre (AGENTS.md felle 4).
 //
-// Notifikasjonene webbens server actions sender (`player_added`, admin-mail) og
-// admin-hendelsesloggen er server-eide og fyrer IKKE herfra. Bokført gap.
+// Notifikasjonene webbens server actions sender (`player_added`, admin-mail,
+// `scorecard_reopened`) og admin-hendelsesloggen (også `scorecard.reopened`) er
+// server-eide og fyrer IKKE herfra. Bokført gap.
 import { MAX_FLIGHT_SIZE } from '../../../../lib/games/flightScope';
+import { sharedCardUserIds } from '../../../../lib/games/scoreOwner';
 import {
   expectedTeamSize,
   modeRequiresTeamNumber,
 } from '../../../../lib/games/teamScope';
 import {
+  modeCollapsesToTeamCard,
   supportsWithdrawal,
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
@@ -690,5 +696,79 @@ export async function undoWithdrawPlayer(
 
   return resolveZeroRows(gameId, playerUserId, 'withdrawn_at', (row) =>
     row !== null && row.withdrawn_at == null ? done(true) : failed('no-rows'),
+  );
+}
+
+// -----------------------------------------------------------------------------
+// 8. Åpne et levert kort igjen
+// -----------------------------------------------------------------------------
+
+/**
+ * Åpne et levert scorekort igjen (#2220). Speiler webbens reopenScorecard
+ * (`admin/games/[id]/actions.ts`), arrangørens angrevei etter levering: kun i
+ * en AKTIV runde, og kun på et kort som faktisk står som levert.
+ *
+ * Én UPDATE nuller alle fire kolonnene, nøyaktig som nettsiden. At
+ * `submitted_at` og `approved_at` går i samme skriving er lastbærende:
+ * avslutningen leser begge (`needsPeerApproval`), og et kort som står godkjent
+ * uten å være levert ville sluppet forbi den.
+ *
+ * **Felles lagkort (#2213).** I formatene der laget fører på kapteinens rader,
+ * er hullene låst så lenge ÉN på laget står som levert. Åpnes bare kortet det
+ * ble trykket på, kan laget fortsatt ikke rette noe. Derfor åpnes alle aktive
+ * lagkamerater i samme skriving, som på nettsiden, og hvem det er svarer den
+ * delte `sharedCardUserIds`. Kan ikke rosteret leses, åpnes ingenting: ett kort
+ * alene er nettopp den feilen.
+ *
+ * Ingen arrangør-sjekk her. Knappen står bare i arrangør-seksjonen, og porten er
+ * RLS: `game_players creator update` (0071) og 0168-vakta.
+ */
+export async function reopenScorecard(
+  gameId: string,
+  playerUserId: string,
+): Promise<RosterActionResult> {
+  const userId = await currentDeviceUserId();
+  const notReady = refuseUnlessReady(userId);
+  if (notReady) return notReady;
+
+  const game = await loadGame(gameId);
+  if ('error' in game) return game.error;
+  if (game.row.status !== 'active') return failed('not-active');
+
+  const mode = game.row.game_mode as GameMode;
+  // Hull 18 svarer på «deler runden noen gang ett kort?», som på nettsiden:
+  // patsome kollapser først fra hull 7.
+  const sharedCard = modeCollapsesToTeamCard(mode, 18);
+  let teamUserIds: string[] = [];
+  if (sharedCard) {
+    const grouping = await loadGrouping(gameId);
+    if ('error' in grouping) return grouping.error;
+    teamUserIds = sharedCardUserIds(mode, grouping.rows, playerUserId);
+  }
+
+  const write = supabase
+    .from('game_players')
+    .update({
+      submitted_at: null,
+      approved_at: null,
+      approved_by_user_id: null,
+      rejection_reason: null,
+    })
+    .eq('game_id', gameId);
+  const updated = readWriteResult(
+    await (sharedCard
+      ? write.in('user_id', teamUserIds)
+      : write.eq('user_id', playerUserId)
+    )
+      .not('submitted_at', 'is', null)
+      .select('user_id'),
+    'reopenScorecard',
+  );
+  if (updated.ok) return done(false);
+  if (updated.error !== 'no-rows') return failed(updated.error, updated.message);
+
+  // Åpent = i mål. Fortsatt levert, eller usynlig = nektet.
+  return resolveZeroRows(gameId, playerUserId, 'submitted_at', (row) =>
+    row !== null && row.submitted_at == null ? done(true) : failed('no-rows'),
   );
 }

@@ -52,6 +52,7 @@ import { writeScore } from '../data/writeScore';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
+import { reopenHint } from '../lib/rosterCopy';
 import { computeGameLeaderboard, playerExtraForHole } from '../lib/scoringContext';
 import {
   buildTeamCards,
@@ -311,13 +312,15 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
         />
       </View>
 
+      {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
+          det. Et avsluttet spill kan bare admin åpne, på nettsiden. */}
       {locked ? (
         <Text style={ui.muted} testID="hole-locked">
           {bundle.game.status !== 'active'
             ? 'Spillet er ikke aktivt. Føringen er låst.'
             : collapsed
-              ? 'Lagkortet er levert. Føringen er låst.'
-              : 'Kortet ditt er levert. Føringen er låst.'}
+              ? `Lagkortet er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`
+              : `Kortet ditt er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`}
         </Text>
       ) : null}
 

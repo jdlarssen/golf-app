@@ -29,6 +29,9 @@ import {
   describeSelfWithdrawFailure,
   describeStartRefusal,
   INVITE_BY_EMAIL,
+  REOPEN_SCORECARD,
+  reopenConfirmBody,
+  reopenHint,
   START_ROUND_CONFIRM,
   WITHDRAW_SELF,
 } from './rosterCopy';
@@ -300,5 +303,30 @@ describe('START_ROUND_CONFIRM', () => {
   // #1980: bekreftelsen før «Start runden nå» er webbens ord for ord.
   it('spør med webbens startRoundConfirm', () => {
     expect(START_ROUND_CONFIRM.message).toBe(source.admin.game.buttons.startRoundConfirm);
+  });
+});
+
+describe('REOPEN_SCORECARD', () => {
+  // #2220: gjenåpningen bruker webbens ord på knappen, i bekreftelsen og i
+  // kvitteringen. Resten er appens egne setninger.
+  it('bruker webbens ord for knappen, bekreftelsen og kvitteringen', () => {
+    expect(REOPEN_SCORECARD.label).toBe(source.admin.game.buttons.reopenScorecard);
+    expect(reopenConfirmBody('Ola')).toBe(
+      source.admin.game.buttons.reopenScorecardConfirm.replace('{name}', 'Ola'),
+    );
+    expect(REOPEN_SCORECARD.done).toBe(
+      source.game.players.statusMessages.scorecard_reopened,
+    );
+  });
+
+  it('har ferdige setninger i appens egne tekster', () => {
+    for (const text of [
+      REOPEN_SCORECARD.confirmTitle,
+      reopenHint(true),
+      reopenHint(false),
+    ]) {
+      expect(isFinishedSentence(text)).toBe(true);
+    }
+    expect(reopenHint(true)).not.toBe(reopenHint(false));
   });
 });

@@ -2,6 +2,11 @@
 // Native N6b (#1855): arrangørens del av spill-hjem — rosteret før start, og
 // frafall etter.
 //
+// #2220: og gjenåpning av leverte kort. «Åpne for redigering» står på hvert
+// levert kort i en aktiv runde, også arrangørens eget, som på nettsidens
+// `/spillere`. Det er eneste angrevei etter levering når runden ikke krever
+// godkjenning.
+//
 // **Arrangør = `games.created_by`.** Ingen admin-flagg noe sted i appen.
 // Sekretariatets overstyringer bor på nettsiden; appen er arrangør-flaten.
 //
@@ -60,6 +65,7 @@ import type { BundlePlayer, GameBundle } from '../../data/gameBundle';
 import {
   addPlayerToGame,
   removePlayerFromGame,
+  reopenScorecard,
   setPlayerFlight,
   setPlayerTeam,
   undoWithdrawPlayer,
@@ -77,6 +83,8 @@ import {
   describeSelfWithdrawFailure,
   describeStartRefusal,
   INVITE_BY_EMAIL,
+  REOPEN_SCORECARD,
+  reopenConfirmBody,
   START_ROUND_CONFIRM,
   WITHDRAW_SELF,
 } from '../../lib/rosterCopy';
@@ -155,16 +163,20 @@ export function OrganiserSection({
    * virkeligheten har flyttet seg siden forrige henting (noen andre startet
    * runden, la til en spiller, fylte laget). Å bare vise feilen og la den
    * gamle lista stå ville latt arrangøren trykke videre på noe som ikke finnes.
+   *
+   * `successNotice` er kvitteringen for skrivinger som ellers ikke synes
+   * (#2220): gjenåpningsknappen forsvinner når bundelen er hentet på nytt, og
+   * uten en setning ville arrangøren ikke visst at noe skjedde.
    */
   const run = useCallback(
-    async (write: () => Promise<RosterActionResult>) => {
+    async (write: () => Promise<RosterActionResult>, successNotice?: string) => {
       setBusy(true);
       setNotice(null);
       try {
         const result = await write();
         setNotice(
           result.ok
-            ? null
+            ? (successNotice ?? null)
             : describeRosterFailure(result.reason, result.message),
         );
       } catch {
@@ -451,6 +463,31 @@ export function OrganiserSection({
                   }
                 >
                   <Text style={ui.buttonSecondaryText}>Angre trekk</Text>
+                </Pressable>
+              ) : null}
+
+              {/* #2220: alle leverte kort i en aktiv runde, også mitt eget og
+                  trukne spilleres, som på nettsiden. RLS er porten (0071 og
+                  0168-vakta). I lagformatene med felles kort åpnes hele laget. */}
+              {active && player.submittedAt != null ? (
+                <Pressable
+                  style={[ui.buttonSecondary, styles.rowButton]}
+                  disabled={busy}
+                  testID={`organiser-reopen-${player.userId}`}
+                  onPress={() =>
+                    confirmThen(
+                      REOPEN_SCORECARD.confirmTitle,
+                      reopenConfirmBody(displayName(player)),
+                      REOPEN_SCORECARD.confirmCta,
+                      () =>
+                        void run(
+                          () => reopenScorecard(game.id, player.userId),
+                          REOPEN_SCORECARD.done,
+                        ),
+                    )
+                  }
+                >
+                  <Text style={ui.buttonSecondaryText}>{REOPEN_SCORECARD.label}</Text>
                 </Pressable>
               ) : null}
             </View>

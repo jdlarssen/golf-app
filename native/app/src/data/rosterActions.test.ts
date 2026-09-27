@@ -137,6 +137,7 @@ describe('rosterActions', () => {
       ['removePlayerFromGame'],
       ['withdrawPlayer'],
       ['undoWithdrawPlayer'],
+      ['reopenScorecard'],
     ])('nekter %s uten nett — skrivingene går aldri i sync-køen', async (name) => {
       mockNetwork.online = false;
       const { supabase } = mocks();
@@ -871,6 +872,177 @@ describe('rosterActions', () => {
         ok: false,
         reason: 'no-rows',
       });
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 8. reopenScorecard (#2220)
+  // ───────────────────────────────────────────────────────────────────────────
+
+  describe('reopenScorecard', () => {
+    const SUBMITTED = '2026-09-01T10:00:00.000Z';
+
+    it('nuller alle fire feltene i én skriving, kun på et levert kort', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const update = queryStub(ONE_ROW);
+      routeFrom({
+        games: [queryStub(gameRow('active', 'stableford'))],
+        game_players: [update],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+        ok: true,
+        alreadyDone: false,
+      });
+      // Nøyaktig webbens patch. `submitted_at` og `approved_at` nulles i samme
+      // UPDATE: avslutningen leser begge (`needsPeerApproval`).
+      expect(patchOf(update, 'update')).toEqual({
+        submitted_at: null,
+        approved_at: null,
+        approved_by_user_id: null,
+        rejection_reason: null,
+      });
+      expect(filtersOf(update)).toEqual([
+        `eq(game_id,${GAME})`,
+        `eq(user_id,${MATE})`,
+        'not(submitted_at,is,null)',
+      ]);
+      expect(stepArgs(update, 'select')).toEqual([['user_id']]);
+    });
+
+    it.each([['scheduled'], ['finished']])(
+      'nekter gjenåpning i et %s spill, og leser bare spillet',
+      async (status: string) => {
+        const { queryStub, routeFrom, supabase } = mocks();
+        routeFrom({ games: [queryStub(gameRow(status, 'stableford'))] });
+
+        expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+          ok: false,
+          reason: 'not-active',
+        });
+        expect(supabase.from).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('leser 0 rader som suksess når kortet alt er åpent', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'stableford'))],
+        game_players: [
+          queryStub(ZERO_ROWS),
+          queryStub({ data: { submitted_at: null }, error: null }),
+        ],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+        ok: true,
+        alreadyDone: true,
+      });
+    });
+
+    it('leser 0 rader som FEIL når kortet fortsatt står som levert', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'stableford'))],
+        game_players: [
+          queryStub(ZERO_ROWS),
+          queryStub({ data: { submitted_at: SUBMITTED }, error: null }),
+        ],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+        ok: false,
+        reason: 'no-rows',
+      });
+    });
+
+    it('leser 0 rader som FEIL når raden ikke finnes', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'stableford'))],
+        game_players: [queryStub(ZERO_ROWS), queryStub({ data: null, error: null })],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+        ok: false,
+        reason: 'no-rows',
+      });
+    });
+
+    it('melder rls-denied når Postgres avviser skrivingen', async () => {
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'stableford'))],
+        game_players: [
+          queryStub({
+            data: null,
+            error: { message: 'permission denied', code: '42501' },
+          }),
+        ],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toMatchObject({
+        ok: false,
+        reason: 'rls-denied',
+      });
+    });
+
+    // #2213: på et felles lagkort leser alle kortene kapteinens rader, og
+    // hullene er låst så lenge ÉN på laget står som levert. Nettsiden åpner
+    // derfor hele laget; appen gjør det samme.
+    it('åpner hele laget i et format med felles kort — aktive lagkamerater, ikke trukne', async () => {
+      const { queryStub, routeFrom, stepArgs } = mocks();
+      const roster = queryStub({
+        data: [
+          groupingRow(ME, 2, 1),
+          groupingRow(MATE, 1, 1),
+          groupingRow(OTHER, 1, 1),
+          groupingRow('user-gone', 1, 1, '2026-09-01T09:00:00.000Z'),
+        ],
+        error: null,
+      });
+      const update = queryStub({
+        data: [{ user_id: MATE }, { user_id: OTHER }],
+        error: null,
+      });
+      routeFrom({
+        games: [queryStub(gameRow('active', 'texas_scramble', { team_size: 2 }))],
+        game_players: [roster, update],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+        ok: true,
+        alreadyDone: false,
+      });
+      expect(filtersOf(roster)).toEqual([`eq(game_id,${GAME})`]);
+      expect(patchOf(update, 'update')).toEqual({
+        submitted_at: null,
+        approved_at: null,
+        approved_by_user_id: null,
+        rejection_reason: null,
+      });
+      expect(stepArgs(update, 'in')).toEqual([['user_id', [MATE, OTHER]]]);
+      expect(filtersOf(update)).toEqual([
+        `eq(game_id,${GAME})`,
+        `in(user_id,${MATE},${OTHER})`,
+        'not(submitted_at,is,null)',
+      ]);
+    });
+
+    it('åpner ingenting når rosteret ikke kan leses — ett kort alene er #2213-feilen', async () => {
+      const { queryStub, routeFrom, supabase } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow('active', 'texas_scramble', { team_size: 2 }))],
+        game_players: [queryStub({ data: null, error: { message: 'boom' } })],
+      });
+
+      expect(await actions().reopenScorecard(GAME, MATE)).toEqual({
+        ok: false,
+        reason: 'db',
+        message: 'boom',
+      });
+      // Spillet og rosteret — ingen skriving.
+      expect(supabase.from).toHaveBeenCalledTimes(2);
     });
   });
 });

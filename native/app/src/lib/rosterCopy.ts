@@ -75,6 +75,39 @@ export const WITHDRAW_SELF = {
 } as const;
 
 /**
+ * Gjenåpning av et levert kort (#2220).
+ *
+ * `label`, `done` og bekreftelsen ({@link reopenConfirmBody}) er webbens ord
+ * tegn for tegn: `admin.game.buttons.reopenScorecard`,
+ * `game.players.statusMessages.scorecard_reopened` og
+ * `admin.game.buttons.reopenScorecardConfirm` (låst i `rosterCopy.test.ts`).
+ * Tittelen, bekreft-knappen og hintene er appens egne.
+ *
+ * Hintene står der et levert kort møter eieren sin, på scorekortet og på
+ * hullet, så en feiltasting etter levering ikke leses som en blindvei. Bare
+ * arrangøren kan åpne kortet, som på nettsiden («Dette kan bare angres av
+ * arrangøren.»). Arrangøren som selv har levert, får vite hvor knappen står.
+ */
+export const REOPEN_SCORECARD = {
+  label: 'Åpne for redigering',
+  confirmTitle: 'Åpne kortet igjen?',
+  confirmCta: 'Åpne',
+  done: 'Scorekortet er åpnet igjen. Spilleren kan rette og levere på nytt.',
+  playerHint: 'Er noe feil, kan arrangøren åpne kortet igjen.',
+  organiserHint: 'Er noe feil, åpner du kortet igjen under Arrangør på spillets side.',
+} as const;
+
+/** Webbens `admin.game.buttons.reopenScorecardConfirm` med navnet satt inn. */
+export function reopenConfirmBody(name: string): string {
+  return `Åpne scorekortet til ${name} for redigering? Eventuell godkjenning fjernes, og spilleren må levere på nytt.`;
+}
+
+/** Hintet ved et levert kort. Ett hjem, så scorekortet og hullet sier det samme. */
+export function reopenHint(isOrganiser: boolean): string {
+  return isOrganiser ? REOPEN_SCORECARD.organiserHint : REOPEN_SCORECARD.playerHint;
+}
+
+/**
  * Hvilken av de to handlingene som feilet.
  *
  * To koder leses motsatt avhengig av retningen: `not_registered` betyr «du står

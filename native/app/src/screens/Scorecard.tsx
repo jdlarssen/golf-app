@@ -44,6 +44,7 @@ import { describeFailure, describeTeamSubmitFailure } from '../lib/actionFeedbac
 import { isScoringSupported } from '../lib/formatGate';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, toRoster } from '../lib/roster';
+import { reopenHint } from '../lib/rosterCopy';
 import { buildScorecardRows } from '../lib/scorecardRows';
 import { computeGameLeaderboard } from '../lib/scoringContext';
 import { buildTeamCards, findMyTeamCard, myTeamCaptainId } from '../lib/teamPlay';
@@ -178,11 +179,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       void doSubmit();
       return;
     }
+    // Siste setning er webbens `game.submit.confirmBase` (#2220): bare
+    // arrangøren kan åpne et levert kort igjen.
     Alert.alert(
       teamMode ? 'Lever lagets kort?' : 'Lever scorekortet?',
       teamMode
-        ? `${missing} hull står uten slag. De blir stående som ikke spilt for hele laget.`
-        : `${missing} hull står uten slag. De blir stående som ikke spilt.`,
+        ? `${missing} hull står uten slag. De blir stående som ikke spilt for hele laget. Dette kan bare angres av arrangøren.`
+        : `${missing} hull står uten slag. De blir stående som ikke spilt. Dette kan bare angres av arrangøren.`,
       [
         { text: 'Avbryt', style: 'cancel' },
         { text: 'Lever likevel', onPress: () => void doSubmit() },
@@ -292,9 +295,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         </>
       ) : (
         <Text style={ui.muted} testID="scorecard-readonly">
-          {me.submitted_at != null
-            ? 'Kortet er levert. Dette er lesevisning.'
-            : 'Kortet kan ikke leveres herfra nå.'}
+          {me.submitted_at == null
+            ? 'Kortet kan ikke leveres herfra nå.'
+            : bundle.game.status === 'active'
+              ? // #2220: veien videre for et levert kort i en runde som pågår.
+                `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
+              : 'Kortet er levert. Dette er lesevisning.'}
         </Text>
       )}
 
