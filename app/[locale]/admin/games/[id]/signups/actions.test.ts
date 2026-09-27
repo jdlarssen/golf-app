@@ -117,7 +117,7 @@ describe('loadDecisionContext — feil vs. fravær (#1445)', () => {
 
   it('ekte 0-rad på request beholder ?error=request_not_found', async () => {
     adminOk();
-    adminMock = buildSupabaseMock([{ data: null, error: null }]);
+    adminMock = buildSupabaseMock([{ data: null, error: null }], {}, { strictSingle: true });
     authedAsAdmin();
 
     const { approveRequest } = await import('./actions');
@@ -169,7 +169,7 @@ describe('loadDecisionContext — feil vs. fravær (#1445)', () => {
         error: null,
       },
       { data: null, error: null },
-    ]);
+    ], {}, { strictSingle: true });
     authedAsAdmin();
 
     const { approveRequest } = await import('./actions');
