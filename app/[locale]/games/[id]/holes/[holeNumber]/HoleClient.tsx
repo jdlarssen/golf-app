@@ -12,6 +12,17 @@ import { HoleHero } from '@/components/hole/HoleHero';
 import { DistanceToGreen } from '@/components/hole/DistanceToGreen';
 import { OnboardingBanner } from '@/components/hole/OnboardingBanner';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
+import {
+  ScoreRail,
+  type RailDisplay,
+  type RailOption,
+} from '@/components/hole/ScoreRail';
+import {
+  formatUsesScoreRail,
+  railStrokes,
+  strikeStrokes,
+  strokeTerm,
+} from '@/lib/scorecard/scoreRail';
 import { PokalIcon } from '@/components/icons';
 import {
   isStablefordFamily,
@@ -41,8 +52,10 @@ import {
   isMySeatSubmitted,
   summarizeMyCard,
   isCardLocked,
+  stablefordPointsForCard,
   type MySeatLookup,
 } from './holeCards';
+import { useScoreRail } from './useScoreRail';
 import { useWolfHole } from './useWolfHole';
 import { useBingoBangoBongoHoles } from './useBingoBangoBongoHoles';
 import {
@@ -52,7 +65,11 @@ import {
 } from './holeScreenState';
 import { useHoleModeContextLine } from './useHoleModeContextLine';
 import { PuttsTogglePill } from './PuttsTogglePill';
-import { HoleScoreCardList, HoleSyncFooter } from './HoleScoreList';
+import {
+  HoleFlightList,
+  HoleScoreCardList,
+  HoleSyncFooter,
+} from './HoleScoreList';
 import { HoleBottomCta } from './HoleBottomCta';
 import {
   MissingFlightScoresHint,
@@ -125,6 +142,15 @@ const listStyle: CSSProperties = {
   overflowY: 'auto',
 };
 
+// #2251: the rail and the CTA stay docked in the thumb zone while the flight
+// scrolls under them. Below the sheets (SpecificValueSheet is z-index 10).
+const railDockStyle: CSSProperties = {
+  position: 'sticky',
+  bottom: 0,
+  zIndex: 5,
+  background: 'var(--bg)',
+};
+
 export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   const locale = useLocale();
   const t = useTranslations('holes');
@@ -186,8 +212,10 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   // nødvendigvis lag-kapteinen) — se `myCard`/`findMySeat` i holeCards.ts.
   const isTeamCollapsedMode = modeCollapsesToTeamCard(gameMode, currentHole);
   // Putt-registrering (#939): kun individuelle slag-/stableford-format viser
-  // opt-in-bryteren + putts-feltet.
+  // opt-in-bryteren + putte-chipene i skinna.
   const capturesPutts = formatCapturesPutts(gameMode);
+  // #2251: every format but Bingo Bango Bongo enters strokes on the rail.
+  const usesRail = formatUsesScoreRail(gameMode);
   const seatLookup: MySeatLookup = {
     isTeamCollapsedMode,
     myTeamNumber,
@@ -353,7 +381,9 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
 
   function onPickValue(value: number) {
     if (valueSheetFor != null) {
-      void onSetScore(valueSheetFor, value);
+      // On the rail a pick from «Annet» moves on like a button tap.
+      if (usesRail) rail.pickFor(valueSheetFor, value);
+      else void onSetScore(valueSheetFor, value);
     }
     setValueSheetFor(null);
   }
@@ -383,6 +413,60 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     void clearScoreFor(playerId);
   }
 
+  const rail = useScoreRail({
+    cards,
+    lookup: seatLookup,
+    par,
+    isLocked,
+    puttsTracking: capturesPutts && putts.enabled,
+    onSetScore,
+    onSetPutts,
+    clearScoreFor,
+  });
+  const railCard = cards.find((c) => c.userId === rail.activeSeatId);
+  // What each button gives before the tap: points in the stableford family,
+  // net strokes elsewhere, only the term in a reveal game (#1447).
+  const railDisplay: RailDisplay = hideNetto
+    ? 'plain'
+    : isStableford
+      ? 'points'
+      : 'netto';
+  const railOptions: RailOption[] = railCard
+    ? railStrokes(par).map((strokes) => ({
+        strokes,
+        term: strokeTerm(strokes, par),
+        points: stablefordPointsForCard({
+          card: { ...railCard, score: strokes },
+          par,
+          gameMode,
+          isStableford,
+        }),
+        netto: strokes - railCard.extraStrokes,
+      }))
+    : [];
+  const railSkipCard = cards.find((c) => c.userId === rail.skipToSeatId);
+
+  // «Stryk» in the «Annet» sheet: stableford family only, net double bogey
+  // for the player the sheet is open for.
+  const sheetCard = cards.find((c) => c.userId === valueSheetFor);
+  let sheetStrike: { value: number; label: string } | undefined;
+  if (isStableford && sheetCard) {
+    const value = strikeStrokes(par, sheetCard.extraStrokes);
+    const points = stablefordPointsForCard({
+      card: { ...sheetCard, score: value },
+      par,
+      gameMode,
+      isStableford,
+    });
+    sheetStrike = {
+      value,
+      label:
+        hideNetto || points == null
+          ? t('scoreRail.strike')
+          : t('scoreRail.strikeWithPoints', { points }),
+    };
+  }
+
   const { myScoreEntered, missingFlightScoreCount } = summarizeMyCard(
     cards,
     seatLookup,
@@ -407,6 +491,22 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   // this game_id, so a front9/back9 segment (#1441) compares against its own
   // totalHoles correctly.
   const roundComplete = scoredHoles.size >= totalHoles;
+
+  const bottomCta = (
+    <HoleBottomCta
+      gameId={gameId}
+      holeSegment={holeSegment}
+      isStableford={isStableford}
+      isTexas={isTexas}
+      roundComplete={roundComplete}
+      myScoreEntered={myScoreEntered}
+      isLastHole={currentHole === lastHoleForSegment(holeSegment)}
+      nextHole={currentHole + 1}
+      disabled={disabled}
+      broBridge={broBridge}
+      segmentSibling={segmentSibling}
+    />
+  );
 
   return (
     <>
@@ -475,27 +575,43 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
         distanceLine={<DistanceToGreen center={greenCenter} />}
       />
 
-      <OnboardingBanner visible={hint.visible} onDismiss={hint.dismiss} />
+      <OnboardingBanner
+        visible={hint.visible}
+        onDismiss={hint.dismiss}
+        variant={usesRail ? 'rail' : 'cards'}
+      />
 
       <WithdrawnBanner withdrawn={withdrawn} gameId={gameId} />
 
       <div style={listStyle}>
-        <HoleScoreCardList
-          cards={cards}
-          par={par}
-          gameMode={gameMode}
-          isStableford={isStableford}
-          disabled={disabled}
-          withdrawn={withdrawn}
-          myUserId={myUserId}
-          hideNetto={hideNetto}
-          capturesPutts={capturesPutts}
-          puttsTracking={putts.enabled}
-          onSetScore={onSetScore}
-          onLongPress={onLongPress}
-          onClear={onClearFromCard}
-          onSetPutts={onSetPutts}
-        />
+        {usesRail ? (
+          <HoleFlightList
+            cards={cards}
+            par={par}
+            gameMode={gameMode}
+            isStableford={isStableford}
+            disabled={disabled}
+            withdrawn={withdrawn}
+            myUserId={myUserId}
+            hideNetto={hideNetto}
+            activeSeatId={rail.activeSeatId}
+            onSelect={rail.selectRow}
+          />
+        ) : (
+          <HoleScoreCardList
+            cards={cards}
+            par={par}
+            gameMode={gameMode}
+            isStableford={isStableford}
+            disabled={disabled}
+            withdrawn={withdrawn}
+            myUserId={myUserId}
+            hideNetto={hideNetto}
+            onSetScore={onSetScore}
+            onLongPress={onLongPress}
+            onClear={onClearFromCard}
+          />
+        )}
         <HoleSyncFooter
           syncing={syncPulse.syncing}
           savedAt={syncPulse.savedAt}
@@ -525,21 +641,45 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
         />
       )}
 
-      <MissingFlightScoresHint count={missingFlightScoreCount} />
+      {/* On the rail the rows show «—» for a missing score, so the hint
+          would only repeat them (#2251). */}
+      {!usesRail && <MissingFlightScoresHint count={missingFlightScoreCount} />}
 
-      <HoleBottomCta
-        gameId={gameId}
-        holeSegment={holeSegment}
-        isStableford={isStableford}
-        isTexas={isTexas}
-        roundComplete={roundComplete}
-        myScoreEntered={myScoreEntered}
-        isLastHole={currentHole === lastHoleForSegment(holeSegment)}
-        nextHole={currentHole + 1}
-        disabled={disabled}
-        broBridge={broBridge}
-        segmentSibling={segmentSibling}
-      />
+      {usesRail ? (
+        <div style={railDockStyle} data-testid="rail-dock">
+          {!disabled && (
+            <ScoreRail
+              active={
+                railCard
+                  ? {
+                      playerId: railCard.userId,
+                      name: railCard.nickname ?? railCard.name,
+                      extraStrokes: railCard.extraStrokes,
+                      score: rail.activeScore,
+                      putts: railCard.putts,
+                    }
+                  : null
+              }
+              par={par}
+              options={railOptions}
+              display={railDisplay}
+              puttsTracking={capturesPutts && putts.enabled}
+              skipTo={railSkipCard ? (railSkipCard.nickname ?? railSkipCard.name) : null}
+              onPick={rail.pick}
+              onOther={() => {
+                if (rail.activeSeatId != null) onLongPress(rail.activeSeatId);
+              }}
+              onStep={rail.step}
+              onUndo={rail.undo}
+              onSkip={rail.skip}
+              onPutts={rail.pickPutts}
+            />
+          )}
+          {bottomCta}
+        </div>
+      ) : (
+        bottomCta
+      )}
 
       <SpecificValueSheet
         open={valueSheetFor !== null}
@@ -547,6 +687,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
         onPick={onPickValue}
         onClear={onClearScore}
         onClose={() => setValueSheetFor(null)}
+        strike={sheetStrike}
       />
 
       {wolf.modal && (

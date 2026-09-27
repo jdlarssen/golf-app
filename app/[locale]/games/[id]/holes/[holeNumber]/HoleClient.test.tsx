@@ -152,6 +152,42 @@ function useLiveQueryImplWithLocalRows(
   };
 }
 
+// #2251: the rail re-renders on every tap, so its tests need the 4-call
+// contract to survive re-renders (modulo, like the #1370 test below). The
+// holder lets a test swap what localRows returns between two renders — a
+// score arriving over realtime.
+type LocalRow = { strokes?: number | null; putts?: number | null } | undefined;
+function stableLiveQuery(holder: { rows: LocalRow[] }) {
+  let call = 0;
+  return () => {
+    const n = call++ % 4;
+    if (n === 0) return holder.rows;
+    if (n === 3) return [];
+    return undefined;
+  };
+}
+
+function activeRowId(): string | null {
+  const row = screen
+    .getAllByTestId('flight-row')
+    .find((r) => r.getAttribute('data-active') === 'true');
+  return row?.getAttribute('data-player-id') ?? null;
+}
+
+function railButton(strokes: number): HTMLElement {
+  const button = screen
+    .getAllByTestId('rail-option')
+    .find((b) => b.getAttribute('data-strokes') === String(strokes));
+  if (!button) throw new Error(`no rail button for ${strokes}`);
+  return button;
+}
+
+async function tap(element: HTMLElement) {
+  await act(async () => {
+    fireEvent.click(element);
+  });
+}
+
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
@@ -163,12 +199,15 @@ afterEach(() => {
 });
 
 describe('HoleClient — rendering', () => {
-  it('renders one ScoreCard per player', () => {
+  it('renders one flight row per player (#2251)', () => {
     render(<HoleClient {...baseProps()} />);
-    expect(screen.getByText('Player 1')).toBeInTheDocument();
-    expect(screen.getByText('Player 2')).toBeInTheDocument();
-    expect(screen.getByText('Player 3')).toBeInTheDocument();
-    expect(screen.getByText('Player 4')).toBeInTheDocument();
+    const rows = screen.getAllByTestId('flight-row');
+    expect(rows.map((r) => r.getAttribute('data-player-id'))).toEqual([
+      'u1',
+      'u2',
+      'u3',
+      'u4',
+    ]);
   });
 
   it('renders the tournament name in the header', () => {
@@ -184,13 +223,14 @@ describe('HoleClient — rendering', () => {
     expect(back.getAttribute('href')).toBe('/games/abc');
   });
 
-  it('prefers nickname over name on the card', () => {
+  it('prefers nickname over name on the row', () => {
     const players = makePlayers(1);
     players[0].name = 'Anders Andersen';
     players[0].nickname = 'AA';
     render(<HoleClient {...baseProps({ players })} />);
-    expect(screen.getByText('AA')).toBeInTheDocument();
-    expect(screen.queryByText('Anders Andersen')).not.toBeInTheDocument();
+    const row = screen.getByTestId('flight-row');
+    expect(row.textContent).toContain('AA');
+    expect(row.textContent).not.toContain('Anders Andersen');
   });
 });
 
@@ -247,22 +287,22 @@ describe('HoleClient — bottom CTA', () => {
 });
 
 describe('HoleClient — missing flight-mate scores hint (#1058)', () => {
-  it('shows no hint when nobody else is missing a score', () => {
-    useLiveQueryMock.mockImplementation(
-      useLiveQueryImplWithLocalRows([
-        { strokes: 4 },
-        { strokes: 5 },
-        { strokes: 3 },
-        { strokes: 4 },
-      ]),
-    );
-    render(<HoleClient {...baseProps()} />);
-    expect(
-      screen.queryByTestId('missing-flight-scores-hint'),
-    ).not.toBeInTheDocument();
-  });
+  // #2251: on the rail the rows show «—» for a missing score, so the hint
+  // only lives on in Bingo Bango Bongo, which keeps its cards.
+  it.each(['best_ball', 'singles_matchplay', 'skins', 'wolf'] as const)(
+    'shows no hint in %s — the rows already show who is missing',
+    (gameMode) => {
+      useLiveQueryMock.mockImplementation(
+        useLiveQueryImplWithLocalRows([{ strokes: 4 }, undefined, undefined, undefined]),
+      );
+      render(<HoleClient {...baseProps({ gameMode })} />);
+      expect(
+        screen.queryByTestId('missing-flight-scores-hint'),
+      ).not.toBeInTheDocument();
+    },
+  );
 
-  it('shows a passive hint naming how many flight scores are missing on this hole', () => {
+  it('BBB: shows a passive hint counting the other missing scores', () => {
     useLiveQueryMock.mockImplementation(
       useLiveQueryImplWithLocalRows([
         { strokes: 4 }, // mine — entered
@@ -271,17 +311,31 @@ describe('HoleClient — missing flight-mate scores hint (#1058)', () => {
         { strokes: 5 },
       ]),
     );
-    render(<HoleClient {...baseProps()} />);
+    render(<HoleClient {...baseProps({ gameMode: 'bingo_bango_bongo' })} />);
     const hint = screen.getByTestId('missing-flight-scores-hint');
     expect(hint.textContent).toContain('2');
   });
 
-  it('does not count my own missing score in the hint (that is the CTA disabled-state job)', () => {
-    // Nobody has entered anything, including me — hint should count only
-    // the OTHER 3 cards, not all 4.
-    render(<HoleClient {...baseProps()} />);
-    const hint = screen.getByTestId('missing-flight-scores-hint');
-    expect(hint.textContent).toContain('3');
+  it('BBB: my own missing score is not counted, and no hint when the rest are in', () => {
+    // Nobody has entered anything: the hint counts the OTHER 3 cards only.
+    const { unmount } = render(
+      <HoleClient {...baseProps({ gameMode: 'bingo_bango_bongo' })} />,
+    );
+    expect(screen.getByTestId('missing-flight-scores-hint').textContent).toContain('3');
+    unmount();
+
+    useLiveQueryMock.mockImplementation(
+      useLiveQueryImplWithLocalRows([
+        { strokes: 4 },
+        { strokes: 5 },
+        { strokes: 3 },
+        { strokes: 4 },
+      ]),
+    );
+    render(<HoleClient {...baseProps({ gameMode: 'bingo_bango_bongo' })} />);
+    expect(
+      screen.queryByTestId('missing-flight-scores-hint'),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -357,21 +411,21 @@ describe('HoleClient — onboarding banner', () => {
 });
 
 describe('HoleClient — score writes', () => {
-  it('tapping a ScoreCard fires writeScore and drainQueue', async () => {
-    // #2211: u2 has submitted — their card is locked, so a tap writes nothing.
+  it('a rail tap writes par for the active seat, drains, and moves the rail on (#2251)', async () => {
+    // #2211: u2 has submitted — their row is locked, so the rail skips it and
+    // a tap on the row selects nothing.
     const players = makePlayers();
     players[1] = { ...players[1], submitted: true };
+    useLiveQueryMock.mockImplementation(
+      stableLiveQuery({ rows: [undefined, undefined, undefined, undefined] }),
+    );
     render(<HoleClient {...baseProps({ players })} />);
-    const cards = screen.getAllByTestId('score-card');
-    await act(async () => {
-      fireEvent.click(cards[1]);
-    });
-    expect(writeScoreMock).not.toHaveBeenCalled();
+    expect(activeRowId()).toBe('u1');
 
-    // The first ScoreCard belongs to u1 (myUserId in our base props).
-    await act(async () => {
-      fireEvent.click(cards[0]);
-    });
+    await tap(screen.getAllByTestId('flight-row')[1]);
+    expect(activeRowId()).toBe('u1');
+
+    await tap(railButton(4));
     expect(writeScoreMock).toHaveBeenCalledTimes(1);
     expect(writeScoreMock).toHaveBeenCalledWith({
       gameId: 'g1',
@@ -381,6 +435,7 @@ describe('HoleClient — score writes', () => {
       enteredBy: 'u1',
     });
     expect(drainQueueMock).toHaveBeenCalled();
+    expect(activeRowId()).toBe('u3');
   });
 });
 
@@ -442,49 +497,6 @@ describe('HoleClient — stableford-modus', () => {
     );
     const link = screen.getByRole('link', { name: 'Lever scorekort' });
     expect(link.getAttribute('href')).toBe('/games/g1/submit');
-  });
-
-  it('passer stableford-poeng for current hull til ScoreCard når gameMode=stableford', () => {
-    useLiveQueryMock.mockImplementation(
-      useLiveQueryImplWithLocalRows([
-        { strokes: 4 }, // u1 par på par 4 = 2 poeng
-        undefined,
-        undefined,
-        undefined,
-      ]),
-    );
-    render(
-      <HoleClient
-        {...baseProps({
-          gameMode: 'stableford',
-          par: 4,
-          myStablefordTotal: 0,
-          myStablefordForCurrentHole: 0,
-        })}
-      />,
-    );
-    // Helper-text på første kort skal vise «Netto 4 · 2 poeng»
-    const helpers = screen.getAllByTestId('helper-text');
-    expect(helpers[0].textContent).toBe('Netto 4 · 2 poeng');
-  });
-
-  it('passer ikke stableford-poeng til ScoreCard for best-ball-modus', () => {
-    useLiveQueryMock.mockImplementation(
-      useLiveQueryImplWithLocalRows([
-        { strokes: 4 },
-        undefined,
-        undefined,
-        undefined,
-      ]),
-    );
-    render(
-      <HoleClient
-        {...baseProps({ gameMode: 'best_ball', par: 4 })}
-      />,
-    );
-    const helpers = screen.getAllByTestId('helper-text');
-    // Best-ball-modus: kun «Netto 4», ingen «poeng»-suffix
-    expect(helpers[0].textContent).toBe('Netto 4');
   });
 });
 
@@ -781,26 +793,6 @@ describe('HoleClient — deliver CTA for a non-captain (#1577)', () => {
   });
 });
 
-describe('HoleClient — missing-score hint renders in team/pot formats (#1058)', () => {
-  it.each(['singles_matchplay', 'skins', 'wolf'] as const)(
-    'shows the hint for %s when a flight-mate score is missing',
-    (gameMode) => {
-      useLiveQueryMock.mockImplementation(
-        useLiveQueryImplWithLocalRows([
-          { strokes: 4 }, // mine
-          undefined,
-          undefined,
-          undefined,
-        ]),
-      );
-      render(<HoleClient {...baseProps({ gameMode })} />);
-      expect(
-        screen.getByTestId('missing-flight-scores-hint'),
-      ).toBeInTheDocument();
-    },
-  );
-});
-
 describe('HoleClient — hole-segment scope (#1441)', () => {
   it('front9 game: hole 9 is the last hole, so the CTA offers "Lever scorekort" once my score is entered', () => {
     useLiveQueryMock.mockImplementation(
@@ -945,5 +937,232 @@ describe('HoleClient — broModus (#1466)', () => {
     );
     const submitLink = screen.getByRole('link', { name: 'Lever scorekort' });
     expect(submitLink.getAttribute('href')).toBe('/games/g1/submit');
+  });
+});
+
+// #2251: the score rail. One test per row of the contract's edge-case table
+// that isn't pure logic (those live in lib/scorecard/scoreRail.test.ts).
+describe('HoleClient — score rail (#2251)', () => {
+  const empty = (): LocalRow[] => [undefined, undefined, undefined, undefined];
+
+  it('starts on my seat, walks 2 → 3 → 4 → 1, then shrinks to one line', async () => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ myUserId: 'u2' })} />);
+    const seen: Array<string | null> = [activeRowId()];
+    for (let i = 0; i < 4; i++) {
+      await tap(railButton(4));
+      seen.push(screen.queryByTestId('score-rail-all-scored') ? null : activeRowId());
+    }
+    expect(seen).toEqual(['u2', 'u3', 'u4', 'u1', null]);
+    expect(screen.queryAllByTestId('rail-option')).toHaveLength(0);
+  });
+
+  it('«Neste: X →» skips a player without writing', async () => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps()} />);
+    await tap(screen.getByTestId('score-rail-skip'));
+    expect(activeRowId()).toBe('u2');
+    expect(writeScoreMock).not.toHaveBeenCalled();
+  });
+
+  it('when I have withdrawn, the rail starts on the first empty seat that is not mine', () => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ withdrawn: true })} />);
+    expect(activeRowId()).toBe('u2');
+    expect((screen.getAllByTestId('flight-row')[0] as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('when everyone has a score on load: one line, and «Neste hull» is live', () => {
+    useLiveQueryMock.mockImplementation(
+      stableLiveQuery({
+        rows: [{ strokes: 4 }, { strokes: 5 }, { strokes: 3 }, { strokes: 4 }],
+      }),
+    );
+    render(<HoleClient {...baseProps({ currentHole: 7 })} />);
+    expect(screen.getByTestId('score-rail-all-scored')).toBeInTheDocument();
+    expect(activeRowId()).toBeNull();
+    expect(screen.getByRole('link', { name: 'Neste hull · 8' })).toBeInTheDocument();
+  });
+
+  it('with putts on, the rail waits on the player until a putt chip is picked', async () => {
+    localStorage.setItem('torny:putts:g1', '1');
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ gameMode: 'stableford' })} />);
+    await tap(railButton(4));
+    expect(activeRowId()).toBe('u1');
+
+    await tap(screen.getByRole('button', { name: '2 putter på Player 1' }));
+    expect(writeScoreMock).toHaveBeenLastCalledWith({
+      gameId: 'g1',
+      userId: 'u1',
+      holeNumber: 1,
+      putts: 2,
+      enteredBy: 'u1',
+    });
+    expect(activeRowId()).toBe('u2');
+  });
+
+  it('with putts on and putts already entered, the rail moves on at once', async () => {
+    localStorage.setItem('torny:putts:g1', '1');
+    useLiveQueryMock.mockImplementation(
+      stableLiveQuery({ rows: [{ putts: 2 }, undefined, undefined, undefined] }),
+    );
+    render(<HoleClient {...baseProps({ gameMode: 'stableford' })} />);
+    await tap(railButton(4));
+    expect(activeRowId()).toBe('u2');
+  });
+
+  it('a realtime score moves the rail on from a seat it chose, but not from a row the user picked', async () => {
+    const holder = { rows: empty() };
+    useLiveQueryMock.mockImplementation(stableLiveQuery(holder));
+    const props = baseProps();
+    const { rerender } = render(<HoleClient {...props} />);
+    expect(activeRowId()).toBe('u1');
+
+    // A flight-mate's phone enters u1 — the rail chose u1 itself, so it moves.
+    holder.rows = [{ strokes: 5 }, undefined, undefined, undefined];
+    rerender(<HoleClient {...props} />);
+    expect(activeRowId()).toBe('u2');
+
+    // I pick u3's row; a score for u3 arrives — the rail stays on my choice.
+    await tap(screen.getAllByTestId('flight-row')[2]);
+    holder.rows = [{ strokes: 5 }, undefined, { strokes: 6 }, undefined];
+    rerender(<HoleClient {...props} />);
+    expect(activeRowId()).toBe('u3');
+  });
+
+  it('correcting a row: −/+ and «Angre» write, and the rail stays on it', async () => {
+    useLiveQueryMock.mockImplementation(
+      stableLiveQuery({ rows: [{ strokes: 5 }, undefined, undefined, undefined] }),
+    );
+    render(<HoleClient {...baseProps()} />);
+    expect(activeRowId()).toBe('u2');
+
+    await tap(screen.getAllByTestId('flight-row')[0]);
+    expect(activeRowId()).toBe('u1');
+    await tap(screen.getByRole('button', { name: '-1 for Player 1' }));
+    expect(writeScoreMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userId: 'u1', strokes: 4 }),
+    );
+    await tap(screen.getByRole('button', { name: 'Nullstill scoren for Player 1' }));
+    expect(writeScoreMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userId: 'u1', strokes: null }),
+    );
+    expect(activeRowId()).toBe('u1');
+  });
+
+  it('«Annet» opens the sheet for the active player, and a pick moves the rail on', async () => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps()} />);
+    await tap(screen.getByTestId('rail-other'));
+    await tap(screen.getByRole('button', { name: 'Sett score til 9' }));
+    expect(writeScoreMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userId: 'u1', strokes: 9 }),
+    );
+    expect(activeRowId()).toBe('u2');
+  });
+
+  it('a plus handicap gets no «får slag», and the buttons show net strokes plus one', () => {
+    const players = makePlayers();
+    players[0] = { ...players[0], extraStrokes: -1 };
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ players })} />);
+    expect(screen.getByTestId('score-rail-heading').textContent).toBe('Player 1');
+    expect(railButton(4).getAttribute('aria-label')).toContain('netto 5');
+  });
+
+  it.each([
+    { extra: 0, points: 2 },
+    { extra: 1, points: 3 },
+    { extra: 2, points: 4 },
+  ])('stableford: par with $extra strokes on the hole shows $points points', ({ extra, points }) => {
+    const players = makePlayers();
+    players[0] = { ...players[0], extraStrokes: extra };
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ gameMode: 'stableford', players })} />);
+    expect(railButton(4).getAttribute('aria-label')).toContain(`${points} poeng`);
+  });
+
+  it('modified stableford: bogey shows −1 and «Stryk» −3', async () => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ gameMode: 'modified_stableford' })} />);
+    expect(railButton(5).getAttribute('aria-label')).toMatch(/[−-]1 poeng/);
+    await tap(screen.getByTestId('rail-other'));
+    expect(screen.getByTestId('specific-value-strike').textContent).toMatch(/[−-]3 p/);
+  });
+
+  it('reveal: the stroke badge stays, but no points and no net anywhere', async () => {
+    const players = makePlayers();
+    players[0] = { ...players[0], extraStrokes: 1 };
+    useLiveQueryMock.mockImplementation(
+      stableLiveQuery({ rows: [undefined, { strokes: 4 }, undefined, undefined] }),
+    );
+    render(
+      <HoleClient {...baseProps({ gameMode: 'stableford', hideNetto: true, players })} />,
+    );
+    expect(screen.getByTestId('score-rail-heading').textContent).toContain('1 slag');
+    for (const option of screen.getAllByTestId('rail-option')) {
+      expect(option.getAttribute('aria-label')).not.toMatch(/poeng|netto/);
+    }
+    expect(screen.queryByTestId('flight-row-points')).not.toBeInTheDocument();
+    await tap(screen.getByTestId('rail-other'));
+    expect(screen.getByTestId('specific-value-strike').textContent).toBe('Stryk');
+  });
+
+  const teamPlayers = (): HoleClientProps['players'] =>
+    [1, 2].map((team) => ({
+      userId: `captain-team-${team}`,
+      name: `Lag ${team}`,
+      nickname: null,
+      initial: String(team),
+      extraStrokes: 0,
+      initialStrokes: null,
+      initialPutts: null,
+      initialClientUpdatedAt: null,
+      initialServerUpdatedAt: null,
+      submitted: false,
+      teamNumber: team,
+    }));
+
+  it.each([
+    { gameMode: 'texas_scramble' as const, currentHole: 1 },
+    { gameMode: 'foursomes_matchplay' as const, currentHole: 1 },
+    { gameMode: 'patsome' as const, currentHole: 7 },
+  ])('$gameMode on hole $currentHole: one row per team, starting on my team', ({ gameMode, currentHole }) => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: [undefined, undefined] }));
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode,
+          currentHole,
+          players: teamPlayers(),
+          myUserId: 'im-not-the-captain',
+          myTeamNumber: 2,
+        })}
+      />,
+    );
+    expect(screen.getAllByTestId('flight-row')).toHaveLength(2);
+    expect(activeRowId()).toBe('captain-team-2');
+  });
+
+  it('patsome on holes 1–6 keeps one row per player', () => {
+    useLiveQueryMock.mockImplementation(stableLiveQuery({ rows: empty() }));
+    render(<HoleClient {...baseProps({ gameMode: 'patsome', currentHole: 3 })} />);
+    expect(screen.getAllByTestId('flight-row')).toHaveLength(4);
+  });
+
+  it('Bingo Bango Bongo keeps its cards and has no rail', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'bingo_bango_bongo' })} />);
+    expect(screen.getAllByTestId('score-card')).toHaveLength(4);
+    expect(screen.queryByTestId('score-rail')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('flight-row')).toHaveLength(0);
+  });
+
+  it('a locked page hides the rail and leaves the rows read-only', () => {
+    render(<HoleClient {...baseProps({ gameStatus: 'finished' })} />);
+    expect(screen.queryByTestId('score-rail')).not.toBeInTheDocument();
+    for (const row of screen.getAllByTestId('flight-row')) {
+      expect((row as HTMLButtonElement).disabled).toBe(true);
+    }
   });
 });

@@ -2341,10 +2341,7 @@
     },
     "putts": {
       "toggleLabel": "Registrer putter",
-      "fieldLabel": "Putter",
-      "increaseAriaLabel": "Flere putter for {name}",
-      "decreaseAriaLabel": "Færre putter for {name}",
-      "valueAriaLabel": "{count} putter"
+      "fieldLabel": "Putter"
     },
     "puttsChips": {
       "chipAriaLabel": "{count} putter på {name}",

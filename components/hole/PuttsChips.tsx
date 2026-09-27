@@ -29,12 +29,12 @@ export interface PuttsChipsProps {
 }
 
 /**
- * One-tap putt entry (#1290 del B) — the back-fill counterpart to the per-hole
- * `PuttsField` stepper. A row of chips 0/1/2/3/4/«5+»; picking «5+» expands a
- * compact stepper (5..10) so the rare high count is still one or two taps and
- * never needs a keyboard. Purely presentational: the caller owns the value and
- * decides where the write goes (writeScore while active, backfillPutts once
- * finished).
+ * One-tap putt entry (#1290 del B). A row of chips 0/1/2/3/4/«5+»; picking
+ * «5+» expands a compact stepper (5..10) so the rare high count is still one or
+ * two taps and never needs a keyboard. Used on the hole page's score rail
+ * (#2251) and when back-filling putts. Purely presentational: the caller owns
+ * the value and decides where the write goes (writeScore while active,
+ * backfillPutts once finished).
  */
 export function PuttsChips({
   value,

@@ -1,12 +1,13 @@
 'use client';
 
 // Innholdet i score-lista på hull-flaten (#1716 — ren flytting ut av
-// `HoleClient`): ett kort per spiller/lag, og fot-linja under dem
-// (synk-status + green-pin-chip).
+// `HoleClient`): ett kort per spiller/lag i Bingo Bango Bongo, én rad per
+// spiller/lag i alle andre formater (#2251, skinna taster), og fot-linja
+// under dem (synk-status + green-pin-chip).
 
 import type { JSX } from 'react';
 import { ScoreCard } from '@/components/hole/ScoreCard';
-import { PuttsField } from '@/components/hole/PuttsField';
+import { FlightRow } from '@/components/hole/FlightRow';
 import { SyncStatusLine } from '@/components/hole/SyncStatusLine';
 import { GreenPinChip } from '@/components/hole/GreenPinChip';
 import { PIN_GATE_MAX_PINS } from '@/lib/geo/pinRules';
@@ -23,12 +24,9 @@ export function HoleScoreCardList({
   withdrawn,
   myUserId,
   hideNetto,
-  capturesPutts,
-  puttsTracking,
   onSetScore,
   onLongPress,
   onClear,
-  onSetPutts,
 }: {
   cards: HoleCard[];
   par: number;
@@ -38,12 +36,9 @@ export function HoleScoreCardList({
   withdrawn: boolean;
   myUserId: string;
   hideNetto: boolean;
-  capturesPutts: boolean;
-  puttsTracking: boolean;
   onSetScore: (playerId: string, value: number) => void;
   onLongPress: (playerId: string) => void;
   onClear: (playerId: string) => void;
-  onSetPutts: (playerId: string, next: number | null) => void;
 }): JSX.Element {
   return (
     <>
@@ -77,21 +72,64 @@ export function HoleScoreCardList({
             onSetScore={onSetScore}
             onLongPress={onLongPress}
             onClear={onClear}
-            belowScore={
-              capturesPutts && puttsTracking ? (
-                <PuttsField
-                  playerId={c.userId}
-                  name={c.nickname ?? c.name}
-                  putts={c.putts}
-                  disabled={cardDisabled}
-                  onSetPutts={onSetPutts}
-                />
-              ) : undefined
-            }
           />
         );
       })}
     </>
+  );
+}
+
+/**
+ * #2251: the flight as compact rows above the score rail. A row is read-only
+ * here — tapping it hands the rail to that player (`onSelect`); the rail does
+ * the writing. Points show in the stableford family, never in reveal (#1447).
+ */
+export function HoleFlightList({
+  cards,
+  par,
+  gameMode,
+  isStableford,
+  disabled,
+  withdrawn,
+  myUserId,
+  hideNetto,
+  activeSeatId,
+  onSelect,
+}: {
+  cards: HoleCard[];
+  par: number;
+  gameMode: GameMode;
+  isStableford: boolean;
+  disabled: boolean;
+  withdrawn: boolean;
+  myUserId: string;
+  hideNetto: boolean;
+  activeSeatId: string | null;
+  onSelect: (playerId: string) => void;
+}): JSX.Element {
+  return (
+    <div data-testid="flight-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {cards.map((c) => (
+        <FlightRow
+          key={c.userId}
+          playerId={c.userId}
+          name={c.nickname ?? c.name}
+          initial={c.initial}
+          extraStrokes={c.extraStrokes}
+          score={c.score}
+          par={par}
+          active={!disabled && c.userId === activeSeatId}
+          locked={isCardLocked(c, { pageDisabled: disabled, withdrawn, myUserId })}
+          submitted={c.submitted}
+          points={
+            hideNetto
+              ? null
+              : stablefordPointsForCard({ card: c, par, gameMode, isStableford })
+          }
+          onSelect={onSelect}
+        />
+      ))}
+    </div>
   );
 }
 
