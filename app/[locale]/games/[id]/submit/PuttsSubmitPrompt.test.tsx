@@ -40,6 +40,9 @@ describe('PuttsSubmitPrompt', () => {
       enteredBy: 'u1',
     });
     expect(vi.mocked(writeScore).mock.calls[0]?.[0]).not.toHaveProperty('strokes');
-    expect(drainQueue).toHaveBeenCalled();
+    // The drain runs after the write has queued the item, not before it.
+    expect(vi.mocked(drainQueue).mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(writeScore).mock.invocationCallOrder[0]!,
+    );
   });
 });
