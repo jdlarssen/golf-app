@@ -16,12 +16,34 @@ import type { GameModeConfig } from '@/lib/scoring/modes/types';
  * arrangørens «makkeren spiller alene»-valg på en cup-fourball skrives av
  * trekk-flyten, ikke av edit-skjemaet. Uten den i lista nullet en lagring av
  * kampen valget, og en avgjort kamp våknet stille til live igjen.
+ *
+ * `ranking` (#2253) is stamped when a game is created
+ * (`stampNewGameModeConfig`) and has no form field. Carrying it keeps a
+ * net-to-par game on its rule through an edit; an older game has no key to
+ * carry, so an edit never moves it to the new rule.
  */
 export const PRESERVED_MODE_CONFIG_KEYS = [
   'team_strokes_override',
   'team_strokes_override_auto',
   'withdrawal_play_on',
+  'ranking',
 ] as const;
+
+/**
+ * #2253: stamps the rules a NEW game is created with onto its `mode_config`.
+ * Today that is one: a solo strokeplay game ranks on net to par
+ * (`ranking: 'net_to_par'`, read by `ranksByNetToPar` in the scoring engine).
+ * Every other config is returned unchanged.
+ *
+ * Called at every insert site that can create a solo strokeplay game — the
+ * list, and why the others are exempt, lives in `gamesInsertSites.test.ts`.
+ * Only at creation: an edit carries the key via `PRESERVED_MODE_CONFIG_KEYS`
+ * and never adds it, so a game played under the old rule keeps it.
+ */
+export function stampNewGameModeConfig(config: GameModeConfig): GameModeConfig {
+  if (config.kind !== 'solo_strokeplay') return config;
+  return { ...config, ranking: 'net_to_par' };
+}
 
 /**
  * Bærer de ikke-skjemaeide nøklene fra den lagrede `mode_config` over i den
