@@ -81,18 +81,6 @@ function friendlySyncError(
 }
 
 /**
- * Sync status for the player. Mounted twice with different jobs:
- *
- *  - **Scoped** (`gameId` given) from the round layout — speaks for the round
- *    on screen, conflict notices included.
- *  - **Global** (no `gameId`) from the root layout via `GlobalSyncBannerGate`
- *    (#1391) — counts every still-retrying and quarantined stroke so stranded
- *    strokes are visible on Hjem, Innboks, Klubbhuset and Profil too. Conflict
- *    notices stay out of this mode: they are scoped to a round on purpose
- *    (#1370) and their copy («Hull 7 ble endret …») names no round, so it reads
- *    as nonsense away from one.
- */
-/**
  * The quarantine's «what now?» line. A locked-card refusal (#2211) can never
  * be sent, so re-entering the stroke would only be refused again — say why
  * instead, and point to reopening the card.
@@ -113,6 +101,18 @@ function QuarantineHint({ lockedOnly }: { lockedOnly: boolean }) {
   );
 }
 
+/**
+ * Sync status for the player. Mounted twice with different jobs:
+ *
+ *  - **Scoped** (`gameId` given) from the round layout — speaks for the round
+ *    on screen, conflict notices included.
+ *  - **Global** (no `gameId`) from the root layout via `GlobalSyncBannerGate`
+ *    (#1391) — counts every still-retrying and quarantined stroke so stranded
+ *    strokes are visible on Hjem, Innboks, Klubbhuset and Profil too. Conflict
+ *    notices stay out of this mode: they are scoped to a round on purpose
+ *    (#1370) and their copy («Hull 7 ble endret …») names no round, so it reads
+ *    as nonsense away from one.
+ */
 export function SyncBanner({ gameId }: { gameId?: string }) {
   const t = useTranslations('SyncBanner');
   const locale = useLocale();
