@@ -3,7 +3,7 @@ import { toSignedHcp, fromSignedHcp } from './sign';
 // #1906: visningen bor i `./signFormat` — `./sign` er en ren blad-modul uten
 // Intl, slik at native-appen kan importere fortegns-helperne uten å dra hele
 // Intl-grafen inn i bundelen. Testen dekker fortsatt begge halvdelene.
-import { formatGolfboxHcp, formatHcpDisplay } from './signFormat';
+import { formatGolfboxHcp, formatHcpDisplay, formatWholeHcpDisplay } from './signFormat';
 
 describe('toSignedHcp', () => {
   it.each([
@@ -89,5 +89,28 @@ describe('formatHcpDisplay', () => {
     [0, '0.0'],
   ])('engelsk: signert %s → «%s»', (signed, expected) => {
     expect(formatHcpDisplay(signed, 'en')).toBe(expected);
+  });
+});
+
+describe('formatWholeHcpDisplay', () => {
+  // Whole-number course/playing handicaps (#2240): same sign rule as the
+  // index — stored negative = plus → «+2» — but no decimals. Scratch never
+  // gets a sign, not even from a −0.
+  it.each([
+    [-2, '+2'], // plus course handicap
+    [0, '0'], // scratch
+    [-0, '0'], // −0 must not become «-0» or «+0»
+    [14, '14'],
+    [36, '36'],
+  ])('norsk: signert %s → «%s»', (signed, expected) => {
+    expect(formatWholeHcpDisplay(signed, 'no')).toBe(expected);
+  });
+
+  it.each([
+    [-2, '+2'],
+    [0, '0'],
+    [14, '14'],
+  ])('engelsk: signert %s → «%s»', (signed, expected) => {
+    expect(formatWholeHcpDisplay(signed, 'en')).toBe(expected);
   });
 });

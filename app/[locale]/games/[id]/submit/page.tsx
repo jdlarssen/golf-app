@@ -30,6 +30,7 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import { isHoleInSegment, firstHoleForSegment } from '@/lib/games/holeScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import type { AppLocale } from '@/i18n/routing';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import {
   isStablefordFamily,
   type GameMode,
@@ -120,6 +121,9 @@ export default async function SubmitPage({
 
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
+  // Plus course handicap is stored negative → «+2» (#2240).
+  const courseHandicapText =
+    me.course_handicap != null ? formatWholeHcpDisplay(me.course_handicap, locale) : '—';
 
   // #1176: hard profil-gate — en profil-løs spiller kan se spillet, men å
   // levere scorekortet krever navn + handicap.
@@ -193,13 +197,13 @@ export default async function SubmitPage({
           {isStableford ? (
             <p className="text-xs text-muted mt-1">
               {t('soloInfo')}
-              <span className="score-num">{me.course_handicap ?? '—'}</span>
+              <span className="score-num">{courseHandicapText}</span>
             </p>
           ) : (
             <p className="text-xs text-muted mt-1">
               {t('teamInfo')}<span className="score-num">{me.team_number}</span>{t('flightInfo')}
               <span className="score-num">{me.flight_number}</span>{t('chInfo')}
-              <span className="score-num">{me.course_handicap ?? '—'}</span>
+              <span className="score-num">{courseHandicapText}</span>
             </p>
           )}
         </Card>

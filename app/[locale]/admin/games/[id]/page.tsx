@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { formatDateTime, formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { osloYearWindow } from '@/lib/format/osloCalendar';
 import type { AppLocale } from '@/i18n/routing';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
@@ -1019,7 +1020,9 @@ async function PlayersSections({
                       )}
                       {isPlayPhase && (
                         <td className="px-2 py-2 text-right text-text">
-                          {p.course_handicap ?? '—'}
+                          {p.course_handicap != null
+                            ? formatWholeHcpDisplay(p.course_handicap, locale as AppLocale)
+                            : '—'}
                         </td>
                       )}
                       {game.status !== 'draft' && (
