@@ -214,11 +214,11 @@ describe('HoleClient — bottom CTA', () => {
 
   it('shows "Neste hull · {N+1}" as soon as MY OWN score is entered, even if flight-mates are missing (#1058)', () => {
     withLocalRows([
-        { strokes: 4 }, // u1 = myUserId — only mine is entered
-        undefined,
-        undefined,
-        undefined,
-      ]);
+      { strokes: 4 }, // u1 = myUserId — only mine is entered
+      undefined,
+      undefined,
+      undefined,
+    ]);
     render(<HoleClient {...baseProps({ currentHole: 7 })} />);
     const link = screen.getByRole('link', { name: 'Neste hull · 8' });
     expect(link.getAttribute('href')).toBe('/games/g1/holes/8');
@@ -226,11 +226,11 @@ describe('HoleClient — bottom CTA', () => {
 
   it('shows "Lever scorekort" on hole 18 as soon as MY OWN score is entered (#1058)', () => {
     withLocalRows([
-        { strokes: 4 }, // u1 = myUserId
-        undefined,
-        undefined,
-        undefined,
-      ]);
+      { strokes: 4 }, // u1 = myUserId
+      undefined,
+      undefined,
+      undefined,
+    ]);
     render(<HoleClient {...baseProps({ currentHole: 18 })} />);
     const link = screen.getByRole('link', { name: 'Lever scorekort' });
     expect(link.getAttribute('href')).toBe('/games/g1/submit');
@@ -238,11 +238,11 @@ describe('HoleClient — bottom CTA', () => {
 
   it('still activates the CTA when literally everyone has entered a score', () => {
     withLocalRows([
-        { strokes: 4 },
-        { strokes: 5 },
-        { strokes: 3 },
-        { strokes: 4 },
-      ]);
+      { strokes: 4 },
+      { strokes: 5 },
+      { strokes: 3 },
+      { strokes: 4 },
+    ]);
     render(<HoleClient {...baseProps({ currentHole: 7 })} />);
     const link = screen.getByRole('link', { name: 'Neste hull · 8' });
     expect(link.getAttribute('href')).toBe('/games/g1/holes/8');
@@ -265,11 +265,11 @@ describe('HoleClient — missing flight-mate scores hint (#1058)', () => {
 
   it('BBB: shows a passive hint counting the other missing scores', () => {
     withLocalRows([
-        { strokes: 4 }, // mine — entered
-        undefined,
-        undefined,
-        { strokes: 5 },
-      ]);
+      { strokes: 4 }, // mine — entered
+      undefined,
+      undefined,
+      { strokes: 5 },
+    ]);
     render(<HoleClient {...baseProps({ gameMode: 'bingo_bango_bongo' })} />);
     const hint = screen.getByTestId('missing-flight-scores-hint');
     expect(hint.textContent).toContain('2');
@@ -284,11 +284,11 @@ describe('HoleClient — missing flight-mate scores hint (#1058)', () => {
     unmount();
 
     withLocalRows([
-        { strokes: 4 },
-        { strokes: 5 },
-        { strokes: 3 },
-        { strokes: 4 },
-      ]);
+      { strokes: 4 },
+      { strokes: 5 },
+      { strokes: 3 },
+      { strokes: 4 },
+    ]);
     render(<HoleClient {...baseProps({ gameMode: 'bingo_bango_bongo' })} />);
     expect(
       screen.queryByTestId('missing-flight-scores-hint'),
@@ -420,11 +420,11 @@ describe('HoleClient — stableford-modus', () => {
 
   it('viser «Lever ditt scorekort» på siste hull for stableford', () => {
     withLocalRows([
-        { strokes: 4 },
-        { strokes: 5 },
-        { strokes: 3 },
-        { strokes: 4 },
-      ]);
+      { strokes: 4 },
+      { strokes: 5 },
+      { strokes: 3 },
+      { strokes: 4 },
+    ]);
     render(
       <HoleClient
         {...baseProps({ currentHole: 18, gameMode: 'stableford' })}
@@ -436,11 +436,11 @@ describe('HoleClient — stableford-modus', () => {
 
   it('viser «Lever scorekort» (uten «ditt») for best-ball', () => {
     withLocalRows([
-        { strokes: 4 },
-        { strokes: 5 },
-        { strokes: 3 },
-        { strokes: 4 },
-      ]);
+      { strokes: 4 },
+      { strokes: 5 },
+      { strokes: 3 },
+      { strokes: 4 },
+    ]);
     render(
       <HoleClient
         {...baseProps({ currentHole: 18, gameMode: 'best_ball' })}
@@ -519,9 +519,9 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
     // I am a non-captain member of team 2 — my userId never appears as a
     // card userId, only teamNumber ties me to "Lag 2 · Per, Anne".
     withLocalRows([
-        undefined, // team 1 card — not entered
-        { strokes: 5 }, // team 2 card (mine) — entered
-      ]);
+      undefined, // team 1 card — not entered
+      { strokes: 5 }, // team 2 card (mine) — entered
+    ]);
     render(
       <HoleClient
         {...baseProps({
@@ -538,9 +538,9 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
 
   it('gates on MY team card for foursomes_matchplay (alternate-shot family)', () => {
     withLocalRows([
-        undefined, // team 1 — not entered
-        { strokes: 5 }, // team 2 (mine) — entered
-      ]);
+      undefined, // team 1 — not entered
+      { strokes: 5 }, // team 2 (mine) — entered
+    ]);
     render(
       <HoleClient
         {...baseProps({
@@ -557,9 +557,9 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
 
   it('stays disabled when MY team card has no score yet, even if the other team is done', () => {
     withLocalRows([
-        { strokes: 4 }, // team 1 — entered
-        undefined, // team 2 (mine) — not entered
-      ]);
+      { strokes: 4 }, // team 1 — entered
+      undefined, // team 2 (mine) — not entered
+    ]);
     render(
       <HoleClient
         {...baseProps({
@@ -580,11 +580,11 @@ describe('HoleClient — own-card gate in team-collapsed modes (#1058)', () => {
     // falls through the teamNumber match to cards[0] — Player 1's empty card —
     // and the CTA would still read «Tast inn scoren din».
     withLocalRows([
-        undefined, // u1 — not entered
-        undefined, // u2 — not entered
-        { strokes: 5 }, // u3 = myUserId — entered
-        undefined, // u4 — not entered
-      ]);
+      undefined, // u1 — not entered
+      undefined, // u2 — not entered
+      { strokes: 5 }, // u3 = myUserId — entered
+      undefined, // u4 — not entered
+    ]);
     render(
       <HoleClient
         {...baseProps({ gameMode: 'solo_strokeplay', myUserId: 'u3' })}
