@@ -38,6 +38,11 @@ import type { HoleSegment } from '@/lib/scoring';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
 
+/**
+ * Den generiske «Hull for hull»-drilldownen: lagets best ball per hull. Bare
+ * best ball når den — `holes/page.tsx` sender formatene uten egen hullvisning
+ * til tavla (#2217, `hasHoleByHoleView`).
+ */
 export async function DrilldownBody({
   gameId,
   courseId,

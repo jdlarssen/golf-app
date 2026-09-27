@@ -8,7 +8,8 @@ import {
   LeaderboardBackLinkSpacer,
 } from '@/components/ui/LeaderboardBackLink';
 import { parseMode, type LeaderboardMode } from '@/lib/leaderboard';
-import { parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
+import { leaderboardHref, parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
+import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { LeaderboardRealtime } from '../LeaderboardRealtime';
@@ -105,11 +106,22 @@ export default async function LeaderboardHolesPage({
     </>
   );
 
-  // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
-  // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
-  // som aldri forgrenet på game_mode. Alle solo-format tatt: Skins + Wolf +
-  // Nines + Round Robin + Acey-Deucey + Bingo Bango Bongo + Nassau + solo
-  // strokeplay + solo/modified stableford.
+  // #2217: formatene uten egen hullvisning (matchplay-familien, scramble,
+  // shamble, patsome og lag-stableford) nådde før den generiske best ball-
+  // drilldownen og fikk tall og plasser som stred mot tavla. Gamle lenker og
+  // bokmerker havner nå på tavla, der hullene står (eller i scorekortet).
+  if (!hasHoleByHoleView(game.game_mode, game.mode_config)) {
+    redirect({
+      href: leaderboardHref({ gameId: id, mode, context: navContext }),
+      locale,
+    });
+  }
+
+  // Format-bevisst «Hull for hull» (epic #496): solo-formatene får sin egen
+  // per-hull-visning — Skins + Wolf + Nines + Round Robin + Acey-Deucey +
+  // Bingo Bango Bongo + Nassau + solo strokeplay + solo/modified stableford.
+  // Best ball bruker den generiske drilldownen nederst. Alle andre format
+  // sendes til tavla (#2217, `hasHoleByHoleView`).
   if (game.game_mode === 'skins') {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
@@ -206,13 +218,12 @@ export default async function LeaderboardHolesPage({
     );
   }
 
-  // Solo stableford + modified stableford (team_size === 1). Par-/team-
-  // stableford (team_size === 2) er et lag-format og faller gjennom til den
-  // generiske DrilldownBody — utenfor epic-scope.
+  // Solo stableford + modified stableford. Par-/team-stableford
+  // (team_size === 2) er et lag-format uten egen side og er alt sendt til
+  // tavla av `hasHoleByHoleView` over.
   if (
-    (game.mode_config.kind === 'stableford' ||
-      game.mode_config.kind === 'modified_stableford') &&
-    game.mode_config.team_size === 1
+    game.mode_config.kind === 'stableford' ||
+    game.mode_config.kind === 'modified_stableford'
   ) {
     return withRealtime(
       <Suspense fallback={<DrilldownSkeleton />}>
@@ -225,7 +236,7 @@ export default async function LeaderboardHolesPage({
     );
   }
 
-  // #1448 (D12): reveal-active lag-/duellformat må ikke lekke stilling her —
+  // #1448 (D12): reveal-active best ball må ikke lekke stilling her —
   // samme RevealHiddenView-gate som leaderboardContent. Solo-formatene over
   // beholder sin brutto-tvungne drilldown (paritet med RevealBruttoView).
   if (shouldHideNetto(state)) {
