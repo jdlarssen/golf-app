@@ -27,6 +27,17 @@ describe('resolveConflict', () => {
       }),
     ).toBe('equal');
   });
+  // #2211: the local stamp comes from toISOString() (`…Z`), the server echoes
+  // timestamptz as `…+00:00`. As strings 'Z' > '+', so the same instant read
+  // as local-wins — compare instants, not strings.
+  it('returns equal for the same instant in local and server format', () => {
+    expect(
+      resolveConflict({
+        localClientUpdatedAt: '2026-09-25T10:00:00.123Z',
+        serverClientUpdatedAt: '2026-09-25T10:00:00.123+00:00',
+      }),
+    ).toBe('equal');
+  });
 });
 
 const ME = 'me-user-id';
