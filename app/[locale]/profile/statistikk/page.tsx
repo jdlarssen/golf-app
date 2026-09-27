@@ -13,6 +13,7 @@ import {
   type ResultSummary,
 } from '@/lib/scoring/resultSummary';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 import {
   aggregateFinishedGame,
   isWinningSummary,
@@ -27,6 +28,10 @@ type GameRow = {
   course_id: string;
   game_mode: GameMode;
   mode_config: GameModeConfig;
+  /** #2217: a cup match on 9 holes is scored over its own holes only. */
+  hole_segment: HoleSegment;
+  /** #2217: a derived single owns no scores — they live on the host game. */
+  source_game_id: string | null;
 };
 
 type GamePlayerRow = {
@@ -117,7 +122,7 @@ const getClubStatsAggregate = unstable_cache(
       (from, to) =>
         supabase
           .from('games')
-          .select('id, course_id, game_mode, mode_config')
+          .select('id, course_id, game_mode, mode_config, hole_segment, source_game_id')
           .eq('status', 'finished')
           .order('id')
           .range(from, to)
@@ -205,6 +210,8 @@ const getClubStatsAggregate = unstable_cache(
             game_mode: game.game_mode,
             mode_config: game.mode_config,
             course_id: game.course_id,
+            hole_segment: game.hole_segment,
+            source_game_id: game.source_game_id,
           });
           if (result === null) return;
           const summaries = computeResultSummaries(result);

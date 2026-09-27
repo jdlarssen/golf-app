@@ -12,6 +12,7 @@ import {
 } from '@/lib/games/buildShareCardData';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { isHoleInSegment } from '@/lib/games/holeScope';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
 import { routing, type AppLocale } from '@/i18n/routing';
@@ -164,13 +165,23 @@ export async function GET(
 
   const [result, holesRes, courseRes, gameMetaRes, sideWinners] =
     await Promise.all([
+      // #2217: a cup match on 9 holes is scored over its own holes, and a
+      // derived single reads the host's strokes — like the stored result
+      // (runFinishPipeline). Without them a front9 match came out halved and
+      // a derived single had no winner on the card.
       buildModeResultForGame(admin, {
         id: game.id,
         game_mode: game.game_mode,
         mode_config: game.mode_config,
         course_id: game.course_id,
+        hole_segment: game.hole_segment,
+        source_game_id: game.source_game_id,
       }),
-      admin.from('course_holes').select('par_mens').eq('course_id', game.course_id),
+      admin
+        .from('course_holes')
+        .select('hole_number, par_mens')
+        .eq('course_id', game.course_id)
+        .returns<{ hole_number: number; par_mens: number }[]>(),
       admin.from('courses').select('name').eq('id', game.course_id).single<{ name: string }>(),
       admin.from('games').select('ended_at').eq('id', game.id).single<{ ended_at: string | null }>(),
       // The sharer's actual notable side-tournament wins this round (Turkey,
@@ -179,7 +190,11 @@ export async function GET(
     ]);
 
   const courseName = courseRes.data?.name ?? null;
-  const holeRows = holesRes.data ?? [];
+  // Par and the «N hull» meta line cover the game's own holes (#2217), same
+  // filter as the round report (generateRoundReport.ts).
+  const holeRows = (holesRes.data ?? []).filter((h) =>
+    isHoleInSegment(h.hole_number, game.hole_segment),
+  );
   const coursePar = holeRows.reduce((sum, h) => sum + h.par_mens, 0);
   const holeCount = holeRows.length;
   const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null, resolvedLocale);
