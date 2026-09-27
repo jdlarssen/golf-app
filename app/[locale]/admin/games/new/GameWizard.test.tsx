@@ -722,6 +722,51 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     }
     expect(fd.get('player_8_id')).toBeNull();
   });
+
+  // #2209: on a course with two tees the organiser must pick one in the
+  // dropdown, and that pick used to wipe the profile defaults — every lady and
+  // junior was sent as 'M'. Read on step 5, where TeamsAssignmentSection is
+  // unmounted, so exactly one field per player reaches the server.
+  it('#2209: tee-valget i nedtrekkslista beholder dame og junior fra profilen', () => {
+    const twoTeeCourses: CourseOption[] = [
+      {
+        id: 'course-1',
+        name: 'Stiklestad GK',
+        tee_boxes: [
+          { id: 'tee-1', name: 'Gul', has_mens: true, has_ladies: true, has_juniors: true },
+          { id: 'tee-2', name: 'Hvit', has_mens: true, has_ladies: false, has_juniors: false },
+        ],
+      },
+    ];
+    const lady: PlayerOption = { ...makePlayer('p-dame', 'Dame Spiller'), gender: 'ladies' };
+    const junior: PlayerOption = { ...makePlayer('p-junior', 'Junior Spiller'), level: 'junior' };
+    const { container } = renderWizard({
+      courses: twoTeeCourses,
+      players: [lady, junior],
+    });
+
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /dame spiller/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /junior spiller/i }));
+    clickNext();
+    expectStep(5);
+
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('player_p-dame_gender')).toEqual(['D']);
+    expect(fd.getAll('player_p-junior_gender')).toEqual(['J']);
+  });
 });
 
 describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () => {

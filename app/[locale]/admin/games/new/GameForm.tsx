@@ -17,6 +17,7 @@ import { TeamSizeSelector, type TeamSize } from './TeamSizeSelector';
 import { useGameFormState } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
+import { PlayerTeeChoiceInputs } from './sections/PlayerTeeChoiceInputs';
 import {
   TeamsAssignmentSection,
   teamsAssignmentHasContent,
@@ -615,6 +616,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           />
         </div>
       ))}
+      {/* #2209: every selected player's tee category, whatever the format —
+          the M/D/J toggle lives in the «Inndeling» panel, which only renders
+          for some formats. */}
+      <PlayerTeeChoiceInputs state={state} />
       {/* #2210: selected players without a team (or matchplay side) ride
           along so the server keeps them on the roster instead of dropping
           them. */}

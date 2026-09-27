@@ -67,20 +67,22 @@ const GENDER_TAP_STYLE: CSSProperties = {
  */
 function PlayerGenderToggle({
   pid,
-  playerGenders,
+  teeChoiceFor,
   setPlayerGenders,
   teeGenderAvailability,
   ariaLabel,
   unavailableTitle,
 }: {
   pid: string;
-  playerGenders: GameFormState['playerGenders'];
+  teeChoiceFor: GameFormState['teeChoiceFor'];
   setPlayerGenders: GameFormState['setPlayerGenders'];
   teeGenderAvailability: GameFormState['teeGenderAvailability'];
   ariaLabel: string;
   unavailableTitle: string;
 }) {
-  const current = playerGenders[pid] ?? 'M';
+  // #2209: the same value `PlayerTeeChoiceInputs` sends — what is shown is
+  // what the server gets.
+  const current = teeChoiceFor(pid);
   const select = (g: (typeof GENDER_CATEGORIES)[number]) =>
     setPlayerGenders((prev) => ({ ...prev, [pid]: g }));
   const rovingProps = useRovingFocus(
@@ -117,11 +119,6 @@ function PlayerGenderToggle({
           </button>
         );
       })}
-      <input
-        type="hidden"
-        name={`player_${pid}_gender`}
-        value={current}
-      />
     </div>
   );
 }
@@ -192,7 +189,7 @@ export function TeamsAssignmentSection({
     selectedPlayerIds,
     teamByPlayer,
     flightByPlayer,
-    playerGenders,
+    teeChoiceFor,
     setPlayerGenders,
     teeGenderAvailability,
     playersByTeam,
@@ -497,7 +494,7 @@ export function TeamsAssignmentSection({
                     </span>
                     <PlayerGenderToggle
                       pid={pid}
-                      playerGenders={playerGenders}
+                      teeChoiceFor={teeChoiceFor}
                       setPlayerGenders={setPlayerGenders}
                       teeGenderAvailability={teeGenderAvailability}
                       ariaLabel={t('teeGroupAriaLabel', { name: shortName(p) })}
@@ -565,7 +562,7 @@ export function TeamsAssignmentSection({
                   </span>
                   <PlayerGenderToggle
                     pid={pid}
-                    playerGenders={playerGenders}
+                    teeChoiceFor={teeChoiceFor}
                     setPlayerGenders={setPlayerGenders}
                     teeGenderAvailability={teeGenderAvailability}
                     ariaLabel={t('teeGroupAriaLabel', { name: shortName(p) })}

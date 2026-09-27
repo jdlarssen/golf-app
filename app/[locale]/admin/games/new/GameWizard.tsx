@@ -77,6 +77,7 @@ import { useGameFormState, PLAYER_COUNT_DEFAULT } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
+import { PlayerTeeChoiceInputs } from './sections/PlayerTeeChoiceInputs';
 import { ReadyStep } from './sections/ReadyStep';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
@@ -1194,8 +1195,6 @@ function FormDataInputs({
     scheduledTeeOffAt,
     hcpAllowance,
     requirePeerApproval,
-    playerGenders,
-    selectedPlayerIds,
     registrationMode,
     registrationType,
     letFriendsSkipGate,
@@ -1407,14 +1406,7 @@ function FormDataInputs({
         <input type="hidden" name="require_peer_approval" value="on" />
       )}
 
-      {selectedPlayerIds.map((pid) => (
-        <input
-          key={pid}
-          type="hidden"
-          name={`player_${pid}_gender`}
-          value={playerGenders[pid] ?? 'M'}
-        />
-      ))}
+      <PlayerTeeChoiceInputs state={state} />
 
       {tournamentId && (
         <>

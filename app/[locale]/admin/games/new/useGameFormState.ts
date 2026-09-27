@@ -9,6 +9,7 @@ import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
 import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
+import { resolveTeeGender } from '@/lib/games/teeChoice';
 import {
   gameModeSupportsTeams,
   type RegistrationMode,
@@ -1107,6 +1108,23 @@ export function useGameFormState({
     [selectedTeeBox],
   );
 
+  // #2209: the category a selected player is sent with. A stored value wins
+  // (the profile default from mount, the saved value when editing, the
+  // organiser's toggle, a guest's pick); a player with no entry — one added
+  // while editing, or after a resumed draft — gets the profile, clamped to the
+  // chosen tee. Both the hidden form field and the toggle read this, so what
+  // is shown is what is sent.
+  const teeChoiceFor = useCallback(
+    (pid: string): 'M' | 'D' | 'J' =>
+      playerGenders[pid] ??
+      resolveTeeGender(
+        null,
+        allPlayers.find((p) => p.id === pid),
+        teeGenderAvailability,
+      ),
+    [playerGenders, allPlayers, teeGenderAvailability],
+  );
+
   // Map team -> [playerId, playerId | undefined] so each lag-card can display
   // its two slots even before they're filled.
   const playersByTeam = useMemo(() => {
@@ -1664,7 +1682,7 @@ export function useGameFormState({
   // bør aldri nå publisering takket være klem-ved-tee-bytte, men om pre-
   // eksisterende data eller en edge-case omgår UI-klemmet, stopper vi her.
   const playersWithUnratedCategory = selectedPlayerIds.filter(
-    (pid) => !teeGenderAvailability[playerGenders[pid] ?? 'M'],
+    (pid) => !teeGenderAvailability[teeChoiceFor(pid)],
   );
 
   // #1379: profil-gaten som til nå bare fantes server-side (opprett:
@@ -2056,6 +2074,7 @@ export function useGameFormState({
     filteredPlayers,
     availableTees,
     teeGenderAvailability,
+    teeChoiceFor,
     playersByTeam,
     teamsComplete,
     flightsComplete,
