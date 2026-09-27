@@ -5,6 +5,7 @@ import type {
   ScoringHole,
   ScoringPlayer,
   ScoringHoleScore,
+  ScoringGender,
 } from './types';
 
 function par4Holes(count: number): ScoringHole[] {
@@ -559,5 +560,228 @@ describe('soloStrokeplay.compute — per-hull holes-eksponering (#496)', () => {
     expect(u2.gross).toBeNull();
     expect(u2.net).toBeNull();
     expect(result.holes[0].bestUserIds).toEqual(['u1']);
+  });
+});
+
+describe('soloStrokeplay.compute — ranking: net_to_par (#2253)', () => {
+  // #2253: new solo strokeplay games carry `ranking: 'net_to_par'` in
+  // mode_config. They rank on net strokes against each player's OWN par over
+  // the holes that player has played («thru»), so a lady on par 72 and a man
+  // on par 71 compare fairly, and a player three holes behind is not ranked
+  // below everyone who is ahead on the course. Games without the flag keep
+  // today's rule (net sum, unplayed holes padded).
+  const NET_TO_PAR = {
+    kind: 'solo_strokeplay',
+    team_size: 1,
+    ranking: 'net_to_par',
+  } as unknown as ScoringContext['game']['mode_config'];
+
+  function flagged(opts: Parameters<typeof makeCtx>[0]): ScoringContext {
+    const ctx = makeCtx(opts);
+    return { ...ctx, game: { ...ctx.game, mode_config: NET_TO_PAR } };
+  }
+
+  function player(
+    userId: string,
+    opts: { courseHandicap?: number; teeGender?: ScoringGender } = {},
+  ): ScoringPlayer {
+    return {
+      userId,
+      teamNumber: null,
+      flightNumber: null,
+      courseHandicap: opts.courseHandicap ?? 0,
+      ...(opts.teeGender ? { teeGender: opts.teeGender } : {}),
+    };
+  }
+
+  /** Gross per hole number → score rows. */
+  function card(userId: string, grossByHole: Record<number, number>): ScoringHoleScore[] {
+    return Object.entries(grossByHole).map(([hole, gross]) => ({
+      userId,
+      holeNumber: Number(hole),
+      gross,
+    }));
+  }
+
+  /** `holes` × par 4, with `overrides` (hole number → gross). */
+  function evenCard(
+    userId: string,
+    holes: number[],
+    overrides: Record<number, number> = {},
+  ): ScoringHoleScore[] {
+    return card(
+      userId,
+      Object.fromEntries(holes.map((h) => [h, overrides[h] ?? 4])),
+    );
+  }
+
+  const range = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+  // Hole 1 is par 3 from the men's tee and par 4 from the ladies' tee; every
+  // other hole is par 4 for all. Men's par 71, ladies' par 72.
+  const MIXED_PAR_HOLES: ScoringHole[] = range(1, 18).map((n) => ({
+    number: n,
+    par: n === 1 ? 3 : 4,
+    parByGender: n === 1 ? { mens: 3, ladies: 4, juniors: 4 } : { mens: 4, ladies: 4, juniors: 4 },
+    strokeIndex: n,
+  }));
+
+  // Kari (ladies' tee) goes 73 net, Ola (men's tee) goes 72 net. Both are +1
+  // against their own par, with the bogey on the same hole.
+  const kariOla = {
+    players: [player('kari', { teeGender: 'ladies' }), player('ola', { teeGender: 'mens' })],
+    holes: MIXED_PAR_HOLES,
+    scores: [
+      ...evenCard('kari', range(1, 18), { 5: 5 }),
+      ...evenCard('ola', range(1, 18), { 1: 3, 5: 5 }),
+    ],
+  };
+
+  // early: holes 1–9, one birdie → −1. late: holes 1–14, two bogeys and a
+  // birdie → +1.
+  const thru = {
+    players: [player('late'), player('early')],
+    holes: par4Holes(18),
+    scores: [
+      ...evenCard('early', range(1, 9), { 3: 3 }),
+      ...evenCard('late', range(1, 14), { 2: 5, 7: 5, 11: 3 }),
+    ],
+  };
+
+  it('mixed par: Kari and Ola share first place with the flag, Ola leads without it', () => {
+    const withFlag = compute(flagged(kariOla));
+    expect(withFlag.players.map((p) => [p.userId, p.rank, p.netToPar])).toEqual([
+      ['kari', 1, 1],
+      ['ola', 1, 1],
+    ]);
+    expect(withFlag.players.find((p) => p.userId === 'kari')!.tiedWith).toEqual(['ola']);
+
+    const without = compute(makeCtx(kariOla));
+    expect(without.players.map((p) => [p.userId, p.rank])).toEqual([
+      ['ola', 1],
+      ['kari', 2],
+    ]);
+  });
+
+  it('thru: −1 after 9 holes beats +1 after 14 holes with the flag; without it the 14-hole player leads', () => {
+    const withFlag = compute(flagged(thru));
+    expect(withFlag.players.map((p) => [p.userId, p.rank, p.netToPar, p.holesPlayed])).toEqual([
+      ['early', 1, -1, 9],
+      ['late', 2, 1, 14],
+    ]);
+
+    const without = compute(makeCtx(thru));
+    expect(without.players.map((p) => [p.userId, p.rank])).toEqual([
+      ['late', 1],
+      ['early', 2],
+    ]);
+  });
+
+  it('a player without a single score ranks last with the flag', () => {
+    const result = compute(
+      flagged({
+        players: [player('none'), player('full'), player('one')],
+        holes: par4Holes(18),
+        scores: [
+          ...evenCard('full', range(1, 18), Object.fromEntries(range(1, 10).map((h) => [h, 5]))),
+          ...card('one', { 1: 6 }),
+        ],
+      }),
+    );
+    expect(result.players.map((p) => [p.userId, p.rank, p.netToPar])).toEqual([
+      ['one', 1, 2],
+      ['full', 2, 10],
+      ['none', 3, null],
+    ]);
+  });
+
+  // Same par for everyone and the same holes played: Σ(net − par) is the net
+  // sum minus one common par, and so is every tie-break tier. Both rules must
+  // then give the same order, the same ranks and the same ties.
+  const grossFor = (seed: number, hole: number) => 3 + ((seed * 7 + hole * 5) % 4);
+  const fieldPlayers = [
+    { userId: 'p1', seed: 1, courseHandicap: 0 },
+    { userId: 'p2', seed: 2, courseHandicap: 4 },
+    { userId: 'p2b', seed: 2, courseHandicap: 4 },
+    { userId: 'p3', seed: 3, courseHandicap: 9 },
+    { userId: 'p4', seed: 4, courseHandicap: 14 },
+    { userId: 'p5', seed: 5, courseHandicap: 20 },
+  ];
+  it.each([
+    ['all 18 holes', range(1, 18)],
+    ['the same 9 holes', range(1, 9)],
+  ])('same par, %s: both rules give identical ranks', (_label, played) => {
+    const opts = {
+      players: fieldPlayers.map((p) => player(p.userId, { courseHandicap: p.courseHandicap })),
+      holes: par4Holes(18),
+      scores: fieldPlayers.flatMap((p) =>
+        card(p.userId, Object.fromEntries(played.map((h) => [h, grossFor(p.seed, h)]))),
+      ),
+    };
+    const shape = (r: ReturnType<typeof compute>) =>
+      r.players.map((p) => ({ userId: p.userId, rank: p.rank, tiedWith: p.tiedWith }));
+
+    const withFlag = shape(compute(flagged(opts)));
+    expect(withFlag).toEqual(shape(compute(makeCtx(opts))));
+    // The fixture has a real tie, so the property covers shared ranks too.
+    expect(withFlag.find((p) => p.userId === 'p2')!.tiedWith).toEqual(['p2b']);
+  });
+
+  it('without the flag the output is what it was before #2253', () => {
+    const lines = (ctx: ScoringContext) =>
+      compute(ctx).players.map(({ netToPar: _netToPar, ...rest }) => rest);
+
+    expect(lines(makeCtx(kariOla))).toEqual([
+      { userId: 'ola', totalNetStrokes: 72, totalGrossStrokes: 72, holesPlayed: 18, rank: 1, tiedWith: [] },
+      { userId: 'kari', totalNetStrokes: 73, totalGrossStrokes: 73, holesPlayed: 18, rank: 2, tiedWith: [] },
+    ]);
+    expect(lines(makeCtx(thru))).toEqual([
+      { userId: 'late', totalNetStrokes: 57, totalGrossStrokes: 57, holesPlayed: 14, rank: 1, tiedWith: [] },
+      { userId: 'early', totalNetStrokes: 35, totalGrossStrokes: 35, holesPlayed: 9, rank: 2, tiedWith: [] },
+    ]);
+  });
+
+  it('netToPar is null without holes, and skips an unplayed hole (with and without the flag)', () => {
+    // CH 18 → one stroke on every hole. Holes 1, 2 and 4 played, 3 skipped:
+    // net 4, 5, 5 against par 4 → 0, +1, +1 = +2.
+    const opts = {
+      players: [player('x', { courseHandicap: 18 }), player('y')],
+      holes: par4Holes(18),
+      scores: card('x', { 1: 5, 2: 6, 4: 6 }),
+    };
+    for (const ctx of [makeCtx(opts), flagged(opts)]) {
+      const result = compute(ctx);
+      expect(result.players.find((p) => p.userId === 'x')!.netToPar).toBe(2);
+      expect(result.players.find((p) => p.userId === 'y')!.netToPar).toBeNull();
+    }
+  });
+
+  it('back-9 game with the flag: the tie-break reads holes 10–18', () => {
+    // Both +3 over holes 10–18. a took the bogeys on 10–12, b on 13–15, so a
+    // wins on the back-6 tier (holes 13–18). Without the flag the holes land
+    // on slots 0–8 and every tie-break tier is padding: a full tie.
+    const back9Holes: ScoringHole[] = range(10, 18).map((n) => ({
+      number: n,
+      par: 4,
+      strokeIndex: n - 9,
+    }));
+    const opts = {
+      players: [player('b'), player('a')],
+      holes: back9Holes,
+      scores: [
+        ...evenCard('a', range(10, 18), { 10: 5, 11: 5, 12: 5 }),
+        ...evenCard('b', range(10, 18), { 13: 5, 14: 5, 15: 5 }),
+      ],
+    };
+
+    const withFlag = compute(flagged(opts));
+    expect(withFlag.players.map((p) => [p.userId, p.rank, p.netToPar])).toEqual([
+      ['a', 1, 3],
+      ['b', 2, 3],
+    ]);
+
+    const without = compute(makeCtx(opts));
+    expect(without.players.map((p) => p.rank)).toEqual([1, 1]);
   });
 });
