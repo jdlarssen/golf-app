@@ -7,16 +7,11 @@ import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragment
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
-import { playerStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
-import {
-  computeLeaderboard,
-  teamMembersLabel,
-  type LbHole,
-  type LbPlayer,
-  type LbScore,
-} from '@/lib/leaderboard';
+import { computeLeaderboard, teamMembersLabel } from '@/lib/leaderboard';
+import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
 import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { getResultReadClient } from '../leaderboardContext';
 
 type CourseHoleRow = {
   hole_number: number;
@@ -40,9 +35,16 @@ type ScoreRow = {
  * UTF-8 og rendrer æøå korrekt uten manuell encoding-velger.
  *
  * Auth-gated samme synlighet som leaderboard-siden (#1468/#1500): innlogget
- * bruker (proxy-verifisert). Ferdige spill er åpne for hele publikummet —
- * og siden ruta KUN serverer finished-spill (sjekken under), trengs ingen
- * deltaker/admin-gate i tillegg.
+ * bruker (proxy-verifisert). Ruta KUN serverer finished-spill (sjekken under),
+ * så den trenger ingen deltaker/admin-gate i tillegg. RLS åpner IKKE ferdige
+ * spill for andre enn deltakerne (#1542): slagene leses derfor med
+ * `getResultReadClient`, samme klient som tavla, og gaten her er håndhevelsen
+ * (#2217). Uten den fikk cup-publikum og klubbmedlemmer 0 rader og en CSV der
+ * alle lag sto delt først med 0 slag.
+ *
+ * Bare best ball: lenken står bare på best ball-tavla (`State4View`), og
+ * summene under er best ball-tall. Andre format svarer 404, så en skrevet eller
+ * gammel URL aldri gir feil tall (#2217).
  *
  * Skjer kun for `status='finished'`-spill. Andre statuser returnerer 404 —
  * en mid-runde-eksport ville være misvisende, og knappen på UI-siden
@@ -100,10 +102,17 @@ export async function GET(
     );
   }
 
+  if (game.game_mode !== 'best_ball') {
+    return NextResponse.json({ error: t('errors.gameNotFound') }, { status: 404 });
+  }
+
   // #1441 (D3): a derived game (source_game_id set) owns no scores of its
   // own — read from the host game instead. Same `?? id` no-op as the
   // leaderboard-page fetch for host games (source_game_id null).
   const scoresGameId = game.source_game_id ?? id;
+  // Service-role for a finished game, like the board (#1542/#1632): the
+  // viewer's own client gets 0 rows unless they played this match.
+  const scoresClient = await getResultReadClient(game.status, supabase);
 
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase
@@ -114,7 +123,7 @@ export async function GET(
       .returns<CourseHoleRow[]>(),
     selectAllRowsResult(
       (from, to) =>
-        supabase
+        scoresClient
           .from('scores')
           .select(SCORES_SELECT)
           .eq('game_id', scoresGameId)
@@ -138,24 +147,6 @@ export async function GET(
     );
   }
 
-  const players: LbPlayer[] = gwp.players
-    .filter((p) => p.users != null)
-    .map((p) => ({
-      userId: p.user_id,
-      name: p.users!.name ?? t('unknownPlayer'),
-      nickname: p.users!.nickname,
-      teamNumber: p.team_number,
-      // #2218: parity with the «Hull for hull» drilldown, which builds
-      // LbPlayer the same way. Best ball (the only board linking here) gets
-      // the raw number as before.
-      courseHandicap: playerStrokeHandicap(
-        game.game_mode,
-        game.mode_config,
-        p.course_handicap ?? 0,
-      ),
-      teeGender: p.tee_gender,
-    }));
-
   // #1441 (D1/D2): scope both rows down to the game's hole_segment before
   // computing anything — 'full' is a no-op (every hole 1-18, byte-identical
   // to pre-#1441 exports), front9/back9 narrow to their 9 hole numbers so
@@ -168,22 +159,16 @@ export async function GET(
     scopedHoleNumbers.has(s.hole_number),
   );
 
-  const holes: LbHole[] = scopedHolesRows.map((h) => ({
-    holeNumber: h.hole_number,
-    par: h.par_mens,
-    parByGender: {
-      mens: h.par_mens,
-      ladies: h.par_ladies,
-      juniors: h.par_juniors,
-    },
-    strokeIndex: h.stroke_index,
-  }));
-
-  const scores: LbScore[] = scopedScoresRows.map((s) => ({
-    userId: s.user_id,
-    holeNumber: s.hole_number,
-    strokes: s.strokes,
-  }));
+  // WD (#386, #2217): same input as the board — a withdrawn player is out of
+  // the member list and their strokes out of the team's best ball.
+  const { players, holes, scores } = bestBallBoardInput({
+    gameMode: game.game_mode,
+    modeConfig: game.mode_config,
+    roster: gwp.players,
+    holeRows: scopedHolesRows,
+    scoreRows: scopedScoresRows,
+    unknownPlayer: t('unknownPlayer'),
+  });
 
   // Beregn både brutto og netto. Begge totaler er nyttige på klubbhus-veggen
   // — brutto for «hvor mange slag», netto for «hvem vant».

@@ -13,9 +13,7 @@ import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import {
   computeLeaderboard,
-  type LbHole,
   type LbPlayer,
-  type LbScore,
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
@@ -37,7 +35,7 @@ import {
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
-import { playerStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
+import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
 
 export async function DrilldownBody({
@@ -69,55 +67,35 @@ export async function DrilldownBody({
     courseId,
   );
 
-  const players: LbPlayer[] = gwp.players
-    .filter((p) => p.users != null)
-    .map((p) => ({
-      userId: p.user_id,
-      // Defensive: see comment on LbPlayer in the leaderboard page.
-      name: p.users!.name ?? tCommon('unknownPlayer'),
-      nickname: p.users!.nickname,
-      teamNumber: p.team_number,
-      // #2218: netto with the strokes the engine counts (fourball allowance,
-      // 0 for the gross options). The one-ball team formats still get the
-      // raw number here — this best-ball model is not theirs.
-      courseHandicap: playerStrokeHandicap(
-        gwp.game.game_mode,
-        gwp.game.mode_config,
-        p.course_handicap ?? 0,
-      ),
-      teeGender: p.tee_gender,
-    }));
+  // #1448: front9-/back9-spill drilldowner kun over segmentets hull — 'full'
+  // er et rent pass-through, bit-identisk med før. Filtrert på råradene, før
+  // den delte best ball-inputen (#2217).
+  const scopedHoleRows = rawHoles.filter((h) =>
+    isHoleInSegment(h.hole_number, holeSegment),
+  );
+  const scopedScoreRows = rawScores.filter((s) =>
+    isHoleInSegment(s.hole_number, holeSegment),
+  );
+
+  // WD (#386, #2217): samme input som tavla — en trukket spiller og slagene
+  // hans holdes utenfor lagets best ball her også.
+  const {
+    players,
+    holes: scopedHoles,
+    scores: scopedScores,
+  } = bestBallBoardInput({
+    gameMode: gwp.game.game_mode,
+    modeConfig: gwp.game.mode_config,
+    roster: gwp.players,
+    holeRows: scopedHoleRows,
+    scoreRows: scopedScoreRows,
+    unknownPlayer: tCommon('unknownPlayer'),
+  });
 
   // The «HCP» label keeps showing the frozen course handicap, like the game
   // page does — only the netto maths above follows the engine.
   const frozenHandicapByUser = new Map(
     gwp.players.map((p) => [p.user_id, p.course_handicap ?? 0]),
-  );
-
-  const allHoles: LbHole[] = rawHoles.map((h) => ({
-    holeNumber: h.hole_number,
-    par: h.par_mens,
-    parByGender: {
-      mens: h.par_mens,
-      ladies: h.par_ladies,
-      juniors: h.par_juniors,
-    },
-    strokeIndex: h.stroke_index,
-  }));
-
-  const allScores: LbScore[] = rawScores.map((s) => ({
-    userId: s.user_id,
-    holeNumber: s.hole_number,
-    strokes: s.strokes,
-  }));
-
-  // #1448: front9-/back9-spill drilldowner kun over segmentets hull — 'full'
-  // er et rent pass-through, bit-identisk med før.
-  const scopedHoles = allHoles.filter((h) =>
-    isHoleInSegment(h.holeNumber, holeSegment),
-  );
-  const scopedScores = allScores.filter((s) =>
-    isHoleInSegment(s.holeNumber, holeSegment),
   );
 
   // Active rounds: clip to the segment's first half so second-half suspense
