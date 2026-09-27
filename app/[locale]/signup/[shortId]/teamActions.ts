@@ -9,6 +9,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { getTeamCandidateEmails } from '@/lib/users/getTeamCandidates';
@@ -369,6 +370,8 @@ export async function submitTeamRegistration(
   let assignedTeamNumber: number | null = null;
   if (captainStatus === 'approved') {
     const cap = teamModePlayerCap(game.game_mode, teamSize);
+    // #2209: the captain's tee category from the profile, clamped to the tee.
+    const captainTee = (await joinTeeGenders(game.id, [captain.id]))[captain.id];
     const { data: claim, error: claimError } = await admin.rpc(
       'claim_open_registration_seat',
       {
@@ -380,6 +383,7 @@ export async function submitTeamRegistration(
         p_accepted_at: acceptedAtForActor(captain.id, captain.id)!,
         p_new_team_size: teamSize,
         ...(cap !== null ? { p_cap: cap } : {}),
+        p_tee_gender: captainTee,
       },
     );
     if (claimError) {
@@ -511,6 +515,8 @@ export async function submitTeamRegistration(
 
         // Open-modus: legg kjent medspiller i game_players umiddelbart.
         if (captainStatus === 'approved' && assignedTeamNumber !== null) {
+          // #2209: the teammate's own tee category, not the column default.
+          const teeGenders = await joinTeeGenders(game.id, [existingUser.id]);
           const { error: playerError } = await admin
             .from('game_players')
             .upsert(
@@ -522,6 +528,7 @@ export async function submitTeamRegistration(
                 course_handicap: null,
                 // #463: kapteinen legger til en medspiller → ikke bekreftet ennå.
                 accepted_at: acceptedAtForActor(captain.id, existingUser.id),
+                tee_gender: teeGenders[existingUser.id],
               },
               { onConflict: 'game_id,user_id', ignoreDuplicates: true },
             );
@@ -787,6 +794,8 @@ export async function acceptTeamInvite(
   }
 
   if (teamNumber !== null) {
+    // #2209: the player's tee category from the profile, clamped to the tee.
+    const teeGenders = await joinTeeGenders(game.id, [user.id]);
     const { error: playerError } = await admin.from('game_players').upsert(
       {
         game_id: game.id,
@@ -796,6 +805,7 @@ export async function acceptTeamInvite(
         course_handicap: null,
         // #463: spilleren godtar invitasjonen selv → bekreftet med en gang.
         accepted_at: acceptedAtForActor(user.id, user.id),
+        tee_gender: teeGenders[user.id],
       },
       { onConflict: 'game_id,user_id', ignoreDuplicates: true },
     );
@@ -1151,6 +1161,8 @@ export async function attachToCaptainTeam(
         error: captainPlayerError,
       });
     } else {
+      // #2209: the player's tee category from the profile, clamped to the tee.
+      const teeGenders = await joinTeeGenders(game.id, [user.id]);
       const { error: playerError } = await admin.from('game_players').upsert(
         {
           game_id: game.id,
@@ -1160,6 +1172,7 @@ export async function attachToCaptainTeam(
           course_handicap: null,
           // #463: brukeren kobler seg selv på et lag → bekreftet med en gang.
           accepted_at: acceptedAtForActor(user.id, user.id),
+          tee_gender: teeGenders[user.id],
         },
         { onConflict: 'game_id,user_id', ignoreDuplicates: true },
       );

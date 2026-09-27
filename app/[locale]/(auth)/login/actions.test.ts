@@ -17,6 +17,9 @@ import {
  */
 
 const redirectMock = makeRedirectMock();
+// #2209: the shared double (lib/games/__mocks__) — the real helper would eat
+// this file's queued Supabase answers with its two reads.
+vi.mock('@/lib/games/joinTeeGenders');
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
 }));
@@ -753,6 +756,8 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
       course_handicap: null,
       // #463: OTP-aksept bekrefter deltakelse med en gang.
       accepted_at: expect.any(String),
+      // #2209: joinTeeGenders' answer (the shared double gives 'mens').
+      tee_gender: 'mens',
     });
     expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
     expect(notifyInvitedToGameMock).toHaveBeenCalledWith({

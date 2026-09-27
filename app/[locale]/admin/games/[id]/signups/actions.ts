@@ -7,6 +7,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notify } from '@/lib/notifications/notify';
 import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
 import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
@@ -235,6 +236,11 @@ export async function approveRequest(requestId: string): Promise<void> {
   // godtatte medspillere — med samme lagnummer (#2061). Bruker upsert med
   // ignore-duplicates for å tåle re-trigger (race mellom to admin-tabs);
   // `.select()` gir bare radene som faktisk ble satt inn.
+  // #2209: each member's tee category from the profile, clamped to the tee.
+  const teeGenders = await joinTeeGenders(
+    game.id,
+    allRows.map((r) => r.user_id),
+  );
   const playerRows = allRows.map((r) => ({
     game_id: game.id,
     user_id: r.user_id,
@@ -244,6 +250,7 @@ export async function approveRequest(requestId: string): Promise<void> {
     // at de er begge null eller begge satt.
     flight_number: teamNumber,
     course_handicap: null,
+    tee_gender: teeGenders[r.user_id],
   }));
   const { data: insertedPlayers, error: insertError } = await admin
     .from('game_players')
