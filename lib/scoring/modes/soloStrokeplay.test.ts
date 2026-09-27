@@ -757,6 +757,14 @@ describe('soloStrokeplay.compute — ranking: net_to_par (#2253)', () => {
     }
   });
 
+  it('the result says which rule ranked it, so the result surfaces can follow', () => {
+    // The podium, the duel, the share card and the round report only get the
+    // result; they show net to par exactly when the engine ranked on it.
+    const opts = { players: [player('p')], holes: par4Holes(18), scores: card('p', { 1: 5 }) };
+    expect(compute(flagged(opts)).ranking).toBe('net_to_par');
+    expect(compute(makeCtx(opts)).ranking).toBe('net_total');
+  });
+
   it('back-9 game with the flag: the tie-break reads holes 10–18', () => {
     // Both +3 over holes 10–18. a took the bogeys on 10–12, b on 13–15, so a
     // wins on the back-6 tier (holes 13–18). Without the flag the holes land
