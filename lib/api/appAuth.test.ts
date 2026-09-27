@@ -62,6 +62,8 @@ const ROSTERS: Record<string, RosterRow[]> = {
     { user_id: CREATOR, flight_number: null, withdrawn_at: null },
     { user_id: MATE, flight_number: null, withdrawn_at: null },
     { user_id: OWNER, flight_number: null, withdrawn_at: null },
+    // En klubb-admin som selv spiller i den ene flighten.
+    { user_id: ADMIN, flight_number: null, withdrawn_at: null },
   ],
 };
 
@@ -185,6 +187,9 @@ describe('scorecardReviewAccess (#2215)', () => {
     { navn: 'samme flight avviser', caller: MATE, game: GAME, player: OWNER, decision: 'reject', svar: 'peer' },
     // Én flight: oppretteren som selv spiller er attestant FØR hun er arrangør.
     { navn: 'én-flight-spill der oppretteren spiller', caller: CREATOR, game: SMALL_GAME, player: OWNER, decision: 'approve', svar: 'peer' },
+    // Samme rekkefølge for admin: attestant FØR admin-grenen, ellers leser
+    // varselet «Arrangøren» når en medspiller som tilfeldigvis er admin godkjenner.
+    { navn: 'admin som spiller i samme flight godkjenner', caller: ADMIN, game: SMALL_GAME, player: OWNER, decision: 'approve', svar: 'peer' },
     { navn: 'oppretter utenfor flighten godkjenner', caller: CREATOR, game: GAME, player: FAR, decision: 'approve', svar: 'organizer' },
     { navn: 'oppretter utenfor flighten avviser', caller: CREATOR, game: GAME, player: FAR, decision: 'reject', svar: 'forbidden' },
     { navn: 'admin utenfor rosteret godkjenner', caller: ADMIN, game: GAME, player: FAR, decision: 'approve', svar: 'organizer' },
