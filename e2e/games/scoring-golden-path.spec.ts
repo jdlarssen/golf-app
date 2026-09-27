@@ -11,6 +11,7 @@ import {
   cleanupTestGame,
   type ActiveGame,
 } from '../_helpers/games';
+import { tapParOnRail } from '../_helpers/scoreRail';
 
 /**
  * Autentisert golden-path for nordstjerne-flyten «Spille en runde» (#674):
@@ -64,30 +65,18 @@ test.describe('Scoring golden path (solo stableford)', () => {
       await playerPage.goto(`/login?next=/games/${gameId}/holes/1`);
       await signInViaOtp(playerPage, PLAYER_EMAIL!);
 
-      // Les visningen før +1 og assert at den ENDRES — score-number viser par som
-      // spøkelse i utgangspunktet, så «≠ —» ville vært tomt. Endring beviser at
-      // +1 faktisk registrerte et slag.
-      // #1272: vent på at score-visningen er montert (toBeVisible) og at +1-
-      // knappen er interaktiv (toBeEnabled) FØR vi leser tekst / klikker. På en
-      // kald-kompilert rute er hull-siden ikke øyeblikkelig klar, og et rått klikk
-      // på en enda-disabled knapp var en av @gate-flakene.
+      // #2251: slagene tastes på skinna. Den starter på spillerens eget sete,
+      // og raden viser «—» til en score er ført, så «≠ —» på den raden beviser
+      // at trykket registrerte et slag.
+      // #1272: hjelperen venter på at raden er montert og at knappen er
+      // interaktiv FØR den klikker. På en kald-kompilert rute er hull-siden ikke
+      // øyeblikkelig klar, og et rått klikk på en enda-disabled knapp var en av
+      // @gate-flakene.
       await playerPage.goto(`/games/${gameId}/holes/1`);
-      const score1 = playerPage.locator('[data-testid="score-number"]').first();
-      await expect(score1).toBeVisible();
-      const plus1Hole1 = playerPage.getByRole('button', { name: '+1' }).first();
-      await expect(plus1Hole1).toBeEnabled();
-      const before1 = (await score1.textContent()) ?? '';
-      await plus1Hole1.click();
-      await expect(score1).not.toHaveText(before1);
+      expect(await tapParOnRail(playerPage)).toBe(game!.playerUserId);
 
       await playerPage.goto(`/games/${gameId}/holes/2`);
-      const score2 = playerPage.locator('[data-testid="score-number"]').first();
-      await expect(score2).toBeVisible();
-      const plus1Hole2 = playerPage.getByRole('button', { name: '+1' }).first();
-      await expect(plus1Hole2).toBeEnabled();
-      const before2 = (await score2.textContent()) ?? '';
-      await plus1Hole2.click();
-      await expect(score2).not.toHaveText(before2);
+      expect(await tapParOnRail(playerPage)).toBe(game!.playerUserId);
     });
 
     await test.step('Player submits the scorecard (submitted_at set)', async () => {

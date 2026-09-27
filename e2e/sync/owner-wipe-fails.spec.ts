@@ -11,6 +11,7 @@ import {
   cleanupTestGame,
   type ActiveGame,
 } from '../_helpers/games';
+import { tapParOnRail } from '../_helpers/scoreRail';
 
 /**
  * #1959 — the owner guard is fail-CLOSED when the owner-switch wipe throws.
@@ -75,21 +76,15 @@ async function queueCount(page: Page): Promise<number> {
   );
 }
 
-async function tapPlusOne(page: Page, gameId: string, hole: number): Promise<void> {
+async function tapParOnHole(page: Page, gameId: string, hole: number): Promise<void> {
   await page.goto(`/games/${gameId}/holes/${hole}`);
-  const score = page.locator('[data-testid="score-number"]').first();
-  await expect(score).toBeVisible();
-  const plus = page.getByRole('button', { name: '+1' }).first();
-  await expect(plus).toBeEnabled();
-  const before = (await score.textContent()) ?? '';
-  await plus.click();
-  await expect(score).not.toHaveText(before);
+  await tapParOnRail(page);
 }
 
 /**
  * Server rows for one hole, optionally only those entered by `enteredBy`.
- * Counted per hole, not per `user_id`: the first «+1» on the hole page is the
- * flight's first row, which is not necessarily the tapping player's own score.
+ * Counted per hole, not per `user_id`: the rail's first tap goes to the seat
+ * it starts on, which does not have to be the tapping player's own score.
  */
 async function serverScoreCount(gameId: string, hole: number, enteredBy?: string) {
   let query = adminClient()
@@ -139,7 +134,7 @@ test.describe('Owner guard fail-closed on a throwing switch wipe (#1959)', () =>
       await context.route(`**${RPC_PATH}`, (route) => route.abort('internetdisconnected'));
       await page.goto(`/login?next=/games/${gameId}/holes/1`);
       await signInViaOtp(page, ADMIN_EMAIL!);
-      await tapPlusOne(page, gameId, 1);
+      await tapParOnHole(page, gameId, 1);
 
       await expect.poll(() => queueCount(page)).toBe(1);
       expect(await page.evaluate((k) => localStorage.getItem(k), OWNER_KEY)).toBe(
@@ -199,7 +194,7 @@ test.describe('Owner guard fail-closed on a throwing switch wipe (#1959)', () =>
       );
       expect(rpcCallsUnderB, 'A’s wiped stroke never went out').toEqual([]);
 
-      await tapPlusOne(page, gameId, 2);
+      await tapParOnHole(page, gameId, 2);
       await expect
         .poll(() => serverScoreCount(gameId, 2, game!.playerUserId), { timeout: 30_000 })
         .toBe(1);
