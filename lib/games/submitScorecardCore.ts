@@ -59,6 +59,19 @@ import {
 const LOG_PREFIX = 'submitScorecard';
 
 /**
+ * What a revert writes. #2200: the approval goes with the delivery — the
+ * service role skips the guard, and an approval left on an undelivered card
+ * could later be completed by a delivery with the deliverer as approver
+ * (0191, clause (f) is the same rule for signed-in callers). The trigger in
+ * 0191 clears `submitted_by_user_id` when `submitted_at` goes to null.
+ */
+const UNDELIVER_PATCH = {
+  submitted_at: null,
+  approved_at: null,
+  approved_by_user_id: null,
+} as const;
+
+/**
  * Utfallet av en levering.
  *
  * `submitted` = antall rader UPDATE-en traff (1 solo, N for laget).
@@ -325,7 +338,7 @@ export async function submitScorecardCore(
         // so it can be put right by hand. The answer stays 'db'.
         const { data: reverted, error: revertError } = await getAdminClient()
           .from('game_players')
-          .update({ submitted_at: null })
+          .update(UNDELIVER_PATCH)
           .eq('game_id', gameId)
           .in('user_id', updatedUserIds)
           .select('user_id');
@@ -563,7 +576,7 @@ async function flightWriteDrifted(
     // right by hand, rather than let the drift line read as if it was undone.
     const { data: reverted, error: revertError } = await getAdminClient()
       .from('game_players')
-      .update({ submitted_at: null })
+      .update(UNDELIVER_PATCH)
       .eq('game_id', gameId)
       .in('user_id', [...writtenIds])
       .select('user_id');
