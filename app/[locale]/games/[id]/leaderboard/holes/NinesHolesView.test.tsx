@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { NinesHolesView, type NinesHolesViewProps } from './NinesHolesView';
 import type { NinesPlayerInfo } from '../NinesView';
@@ -7,11 +7,6 @@ import type {
   NinesHoleRow,
   NinesPlayerLine,
 } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeHole(overrides: Partial<NinesHoleRow>): NinesHoleRow {
   return {
