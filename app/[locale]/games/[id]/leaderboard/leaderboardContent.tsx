@@ -9,18 +9,13 @@ import { firstName } from '@/lib/firstName';
 import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragments';
 import { firstHalfTableView } from '@/lib/leaderboard/firstHalfReveal';
 import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
+import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
 import {
   EMPTY_NAV_CONTEXT,
   type LeaderboardNavContext,
 } from '@/lib/leaderboard/navContext';
 import { holeNumbersForSegment, firstHalfHoleNumbersForSegment } from '@/lib/games/holeScope';
-import {
-  computeLeaderboard,
-  type LbHole,
-  type LbPlayer,
-  type LbScore,
-  type LeaderboardMode,
-} from '@/lib/leaderboard';
+import { computeLeaderboard, type LeaderboardMode } from '@/lib/leaderboard';
 import { State4View } from './State4View';
 import { RevealHiddenView } from './RevealHiddenView';
 import { LeaderboardTabs } from './LeaderboardTabs';
@@ -28,10 +23,7 @@ import {
   SideTournamentView,
   type SideTournamentTeam,
 } from './SideTournamentView';
-import {
-  WithdrawnPlayersSection,
-  type WithdrawnPlayer,
-} from './WithdrawnPlayersSection';
+import { WithdrawnPlayersSection } from './WithdrawnPlayersSection';
 import { RoundReportCard } from './RoundReportCard';
 import {
   calculateSideTournament,
@@ -452,47 +444,23 @@ export async function renderLeaderboardContent({
     });
   }
 
-  // WD (#386): build the withdrawn list BEFORE the active-players map.
-  // Only for best_ball (this default branch).
-  const unknownPlayer = tc('unknownPlayer');
-
-  const bestBallWithdrawn: WithdrawnPlayer[] = gwp.players
-    .filter((p) => p.users != null && p.withdrawn_at != null)
-    .map((p) => ({
-      user_id: p.user_id,
-      display_name: p.users!.name ?? unknownPlayer,
-    }));
-  const bestBallWithdrawnIds = new Set(bestBallWithdrawn.map((p) => p.user_id));
-
-  const players: LbPlayer[] = gwp.players
-    .filter((p) => p.users != null && p.withdrawn_at == null)
-    .map((p) => ({
-      userId: p.user_id,
-      name: p.users!.name ?? unknownPlayer,
-      nickname: p.users!.nickname,
-      teamNumber: p.team_number,
-      courseHandicap: p.course_handicap ?? 0,
-      teeGender: p.tee_gender,
-    }));
-
-  const holes: LbHole[] = (scopedHolesRows).map((h) => ({
-    holeNumber: h.hole_number,
-    par: h.par_mens,
-    parByGender: {
-      mens: h.par_mens,
-      ladies: h.par_ladies,
-      juniors: h.par_juniors,
-    },
-    strokeIndex: h.stroke_index,
-  }));
-
-  const scores: LbScore[] = (scopedScoresRows)
-    .filter((s) => !bestBallWithdrawnIds.has(s.user_id))
-    .map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      strokes: s.strokes,
-    }));
+  // WD (#386): withdrawn players and their strokes stay out of the board and
+  // are listed in their own section. The rule has one home, shared with
+  // «Hull for hull» and the CSV export (#2217). Only for best_ball (this
+  // default branch).
+  const {
+    players,
+    withdrawn: bestBallWithdrawn,
+    holes,
+    scores,
+  } = bestBallBoardInput({
+    gameMode: game.game_mode,
+    modeConfig: game.mode_config,
+    roster: gwp.players,
+    holeRows: scopedHolesRows,
+    scoreRows: scopedScoresRows,
+    unknownPlayer: tc('unknownPlayer'),
+  });
 
   // F1: view branching. State #3 (timeglass) when game hasn't progressed far
   // enough to show anything meaningful — either still scheduled, or active
