@@ -132,3 +132,74 @@ describe('buildPlayersForClient — lag-handicap med trukket medlem (#2067)', ()
     expect(strokes).toEqual({ 1: 0, 2: 1 });
   });
 });
+
+// #2218 — Type A: per-spiller-kortene på hullsiden skal vise de slagene
+// motoren regner med. Fourball og round robin tar allowance fra
+// `mode_config`, og brutto-valget gir 0 slag. Før fiksen fikk kortet slag
+// etter rått banehandicap, så flighten trodde et hull var delt som tavla ga
+// bort.
+function perPlayerStrokes(opts: {
+  game: GameForHole;
+  allPlayers: PlayerForHole[];
+  strokeIndex: number;
+  holeNumber?: number;
+}): Record<string, number> {
+  const me = opts.allPlayers[0];
+  const flight = resolveFlight({ game: opts.game, allPlayers: opts.allPlayers, me });
+  const cards = buildPlayersForClient({
+    game: opts.game,
+    holeNumber: opts.holeNumber ?? 1,
+    flight,
+    allPlayers: opts.allPlayers,
+    strokeIndex: opts.strokeIndex,
+    scoresByUser: {},
+    unknownPlayer: 'Ukjent',
+  });
+  return Object.fromEntries(cards.map((c) => [c.userId, c.extraStrokes]));
+}
+
+describe('buildPlayersForClient — per-spiller-slag som motoren (#2218)', () => {
+  const FOURBALL_PLAYERS = [player('a', 1, 20), player('a2', 1, 10), player('b', 2, 4), player('b2', 2, 8)];
+  const fourball = (allowance_pct: number) =>
+    game('fourball_matchplay', { kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct });
+
+  it('fourball 85 %: banehandicap 20 blir 17 — ingen slag på SI 18, ett på SI 1', () => {
+    expect(perPlayerStrokes({ game: fourball(85), allPlayers: FOURBALL_PLAYERS, strokeIndex: 18 }).a).toBe(0);
+    expect(perPlayerStrokes({ game: fourball(85), allPlayers: FOURBALL_PLAYERS, strokeIndex: 1 }).a).toBe(1);
+  });
+
+  it('fourball med allowance 0 (brutto) gir 0 slag', () => {
+    expect(perPlayerStrokes({ game: fourball(0), allPlayers: FOURBALL_PLAYERS, strokeIndex: 1 }).a).toBe(0);
+  });
+
+  it('round robin uten allowance-felt faller tilbake til 85 % som motoren', () => {
+    const RR = game('round_robin', { kind: 'round_robin', team_size: 1, teams_count: 4 } as unknown as GameForHole['mode_config']);
+    const players = [player('a', 1, 20), player('b', 2, 10), player('c', 3, 4), player('d', 4, 8)];
+    expect(perPlayerStrokes({ game: RR, allPlayers: players, strokeIndex: 18 }).a).toBe(0);
+  });
+
+  it('skins brutto gir 0 slag, også med banehandicap 18', () => {
+    const SKINS = game('skins', { kind: 'skins', team_size: 1, skins_scoring: 'gross' });
+    const players = [player('a', 1, 18), player('b', 1, 4), player('c', 1, 8)];
+    expect(perPlayerStrokes({ game: SKINS, allPlayers: players, strokeIndex: 1 }).a).toBe(0);
+  });
+
+  it('best ball beholder fullt banehandicap: 20 gir ett slag på SI 18 (uendret)', () => {
+    const BEST_BALL = game('best_ball', { kind: 'best_ball', team_size: 2, teams_count: 2 });
+    expect(perPlayerStrokes({ game: BEST_BALL, allPlayers: FOURBALL_PLAYERS, strokeIndex: 18 }).a).toBe(1);
+  });
+
+  it('greensome med egne lag-slag {8, 3}: lag 1 får slag på SI 5, ikke på SI 6 (#1447 holder)', () => {
+    const GREENSOME = game('greensome_matchplay', {
+      kind: 'greensome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+      team_strokes_override: { team1: 8, team2: 3 },
+    });
+    const me = player('a', 1, 12);
+    const allPlayers = [me, player('a2', 1, 20), player('b', 2, 5), player('b2', 2, 8)];
+    expect(teamCardStrokes({ game: GREENSOME, allPlayers, me, strokeIndex: 5 })).toEqual({ 1: 1, 2: 0 });
+    expect(teamCardStrokes({ game: GREENSOME, allPlayers, me, strokeIndex: 6 })).toEqual({ 1: 0, 2: 0 });
+  });
+});
