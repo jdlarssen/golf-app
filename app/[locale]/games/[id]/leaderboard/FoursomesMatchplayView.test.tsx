@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import {
   FoursomesMatchplayView,
@@ -10,11 +10,6 @@ import type {
   FoursomesHoleRow,
   FoursomesSide,
 } from '@/lib/scoring/modes/types';
-
-// SmartLink calls useRouter — stub the navigation context for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
