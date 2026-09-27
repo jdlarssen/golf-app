@@ -12,6 +12,12 @@ export interface SpecificValueSheetProps {
   onPick: (value: number) => void;
   onClear: () => void;
   onClose: () => void;
+  /**
+   * #2251: «Stryk» in the stableford family — a full-width button under the
+   * grid that picks `value` (net double bogey). The caller writes the label,
+   * points included, so the sheet never does scoring.
+   */
+  strike?: { value: number; label: string };
 }
 
 // The whole legal range in one grid: a blow-up score is one tap, not seven on
@@ -85,6 +91,14 @@ const parButtonStyle: CSSProperties = {
   background: 'var(--surface-2)',
 };
 
+const strikeButtonStyle: CSSProperties = {
+  ...buttonStyle,
+  width: '100%',
+  marginTop: 8,
+  fontFamily: 'var(--font-sans)',
+  fontSize: 16,
+};
+
 const captionStyle: CSSProperties = {
   fontSize: 11,
   color: 'var(--text-muted)',
@@ -95,7 +109,7 @@ const captionStyle: CSSProperties = {
 export function SpecificValueSheet(
   props: SpecificValueSheetProps,
 ): JSX.Element | null {
-  const { open, par, onPick, onClear, onClose } = props;
+  const { open, par, onPick, onClear, onClose, strike } = props;
   const t = useTranslations('holes.scoreCard');
 
   // Fokus inn i arket ved åpning, Tab holdes innenfor, og fokus tilbake på
@@ -167,6 +181,19 @@ export function SpecificValueSheet(
             X
           </button>
         </div>
+        {strike && (
+          <button
+            type="button"
+            data-testid="specific-value-strike"
+            onClick={() => {
+              onPick(strike.value);
+              onClose();
+            }}
+            style={strikeButtonStyle}
+          >
+            {strike.label}
+          </button>
+        )}
         <div style={captionStyle}>{t('specificScoreCaption')}</div>
       </div>
     </div>
