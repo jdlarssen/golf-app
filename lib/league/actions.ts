@@ -176,7 +176,10 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     })
     .select('id')
     .single();
-  if (insErr || !league) return { error: 'insert_failed' };
+  if (insErr || !league) {
+    console.error('[league] createLeagueDraft insert failed', { error: insErr });
+    return { error: 'insert_failed' };
+  }
   const leagueId = (league as { id: string }).id;
 
   if (windows.length > 0) {
@@ -193,11 +196,20 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     }));
     const { error: rErr } = await supabase.from('league_rounds').insert(roundRows);
     if (rErr) {
+      console.error('[league] createLeagueDraft rounds insert failed', { leagueId, error: rErr });
       // Rull tilbake den allerede committede leagues-raden så en feil her ikke
       // etterlater en foreldreløs draft-liga i /admin/liga (#675). league_rounds
       // + league_players ryddes av FK `on delete cascade` (0080). Speiler
-      // rollback-mønsteret i startLeagueRoundFlight.
-      await supabase.from('leagues').delete().eq('id', leagueId);
+      // rollback-mønsteret i startLeagueRoundFlight. #2223: an error or 0 rows
+      // leaves the orphan behind, so the rollback logs both.
+      const { data: rolledBack, error: rollbackErr } = await supabase
+        .from('leagues')
+        .delete()
+        .eq('id', leagueId)
+        .select('id');
+      if (rollbackErr || (rolledBack ?? []).length === 0) {
+        console.error('[league] createLeagueDraft rollback failed', { leagueId, error: rollbackErr });
+      }
       return { error: 'rounds_failed' };
     }
   }
@@ -227,10 +239,18 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       })),
     );
     if (pErr) {
+      console.error('[league] createLeagueDraft players insert failed', { leagueId, error: pErr });
       // Samme rollback som over: ikke la en feilet spiller-insert etterlate en
       // foreldreløs leagues-rad (+ ev. allerede innsatte league_rounds, som
       // cascade rydder) (#675).
-      await supabase.from('leagues').delete().eq('id', leagueId);
+      const { data: rolledBack, error: rollbackErr } = await supabase
+        .from('leagues')
+        .delete()
+        .eq('id', leagueId)
+        .select('id');
+      if (rollbackErr || (rolledBack ?? []).length === 0) {
+        console.error('[league] createLeagueDraft rollback failed', { leagueId, error: rollbackErr });
+      }
       return { error: 'players_failed' };
     }
   }
@@ -433,7 +453,10 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
           ignoreDuplicates: true,
         },
       );
-    if (error) return { error: 'players_failed' };
+    if (error) {
+      console.error('[league] addLeaguePlayers upsert failed', { leagueId, error });
+      return { error: 'players_failed' };
+    }
   }
   revalidatePath(`/admin/liga/${leagueId}`);
   return { error: '' };
@@ -647,7 +670,10 @@ export async function deleteLeague(formData: FormData): Promise<LeagueActionErro
   // Flight games keep their history (league_round_id → SET NULL via cascade of
   // league_rounds delete). Cascade removes rounds + players.
   const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
-  if (error) return { error: 'delete_failed' };
+  if (error) {
+    console.error('[league] deleteLeague failed', { leagueId, error });
+    return { error: 'delete_failed' };
+  }
   redirect(groupId ? `/klubber/${groupId}` : '/admin/liga?status=deleted');
 }
 
@@ -769,7 +795,10 @@ export async function startLeagueRoundFlight(
     })
     .select('id')
     .single();
-  if (gErr || !game) return { error: 'insert_failed' };
+  if (gErr || !game) {
+    console.error('[league] startLeagueRoundFlight game insert failed', { roundId, error: gErr });
+    return { error: 'insert_failed' };
+  }
   const gameId = (game as { id: string }).id;
 
   const flightNow = new Date().toISOString();
@@ -789,7 +818,20 @@ export async function startLeagueRoundFlight(
     })),
   );
   if (gpErr) {
-    await supabase.from('games').delete().eq('id', gameId);
+    console.error('[league] startLeagueRoundFlight game_players insert failed', {
+      roundId,
+      gameId,
+      error: gpErr,
+    });
+    // #2223: an error or 0 rows leaves an empty flight game behind; log both.
+    const { data: rolledBack, error: rollbackErr } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', gameId)
+      .select('id');
+    if (rollbackErr || (rolledBack ?? []).length === 0) {
+      console.error('[league] startLeagueRoundFlight rollback failed', { gameId, error: rollbackErr });
+    }
     return { error: 'insert_failed' };
   }
 
@@ -800,8 +842,27 @@ export async function startLeagueRoundFlight(
   // grants that once the caller shares a game with them. Keep insert-before-start.
   const started = await startScheduledGame(supabase, gameId);
   if (!started.ok) {
-    await supabase.from('game_players').delete().eq('game_id', gameId);
-    await supabase.from('games').delete().eq('id', gameId);
+    // #2223: check the compensation. The game_players delete only logs an error
+    // (the games delete cascades them anyway); the games delete logs an error
+    // or 0 rows, which would leave a half-made flight behind.
+    const { error: playersRollbackErr } = await supabase
+      .from('game_players')
+      .delete()
+      .eq('game_id', gameId);
+    if (playersRollbackErr) {
+      console.error('[league] startLeagueRoundFlight players rollback failed', {
+        gameId,
+        error: playersRollbackErr,
+      });
+    }
+    const { data: rolledBack, error: rollbackErr } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', gameId)
+      .select('id');
+    if (rollbackErr || (rolledBack ?? []).length === 0) {
+      console.error('[league] startLeagueRoundFlight rollback failed', { gameId, error: rollbackErr });
+    }
     return { error: `start_${started.reason}` };
   }
 
