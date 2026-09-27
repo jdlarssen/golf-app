@@ -533,10 +533,36 @@ export async function submitTeamRegistration(
               { onConflict: 'game_id,user_id', ignoreDuplicates: true },
             );
           if (playerError) {
-            console.error(
-              '[submitTeamRegistration] player upsert failed',
-              playerError,
-            );
+            // #2223: the teammate never reached the roster, so the slot is not
+            // known_added. Roll the child request back so a retry starts clean
+            // (same shape as the captain rollback above) and skip the invite.
+            console.error('[submitTeamRegistration] player upsert failed', {
+              gameId: game.id,
+              userId: existingUser.id,
+              error: playerError,
+            });
+            try {
+              expectAffected(
+                await admin
+                  .from('game_registration_requests')
+                  .delete()
+                  .eq('team_request_id', captainRequestId)
+                  .eq('user_id', existingUser.id)
+                  .select('id'),
+                'submitTeamRegistration',
+              );
+            } catch (rollbackErr) {
+              console.error(
+                '[submitTeamRegistration] child rollback failed',
+                rollbackErr,
+              );
+            }
+            slotResults.push({
+              ok: false,
+              email: slot.shown,
+              reason: 'dbError',
+            });
+            continue;
           }
         }
 
@@ -858,10 +884,29 @@ export async function declineTeamInvite(
     return { ok: false, error: 'game_locked' };
   }
 
+  // Hvis brukeren allerede var i game_players (open-modus), fjern dem. #2223:
+  // the roster row goes first, so a failed delete leaves the request untouched
+  // and the player can try again. 0 rows is normal: in manual_approval mode
+  // there is no row yet.
+  const { error: playerDeleteError } = await admin
+    .from('game_players')
+    .delete()
+    .eq('game_id', game.id)
+    .eq('user_id', user.id);
+  if (playerDeleteError) {
+    console.error('[declineTeamInvite] player delete failed', {
+      gameId: game.id,
+      userId: user.id,
+      error: playerDeleteError,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+
   // #712: expectAffected catches both DB errors and 0-row no-ops. 0 rows here
   // means the request was already decided (race: captain removed the member
   // at the same time) → return db_error rather than notifying the captain of
-  // a withdrawal that was never recorded.
+  // a withdrawal that was never recorded. The roster row is already gone by
+  // then, which is harmless: it was on its way out either way.
   try {
     expectAffected(
       await admin
@@ -879,13 +924,6 @@ export async function declineTeamInvite(
     console.error('[declineTeamInvite] update failed', updateErr);
     return { ok: false, error: 'db_error' };
   }
-
-  // Hvis brukeren allerede var i game_players (open-modus), fjern dem.
-  await admin
-    .from('game_players')
-    .delete()
-    .eq('game_id', game.id)
-    .eq('user_id', user.id);
 
   // Notify kaptein. Best-effort. Kapteinens user_id finner vi via
   // team_request_id-pekeren.
@@ -969,7 +1007,22 @@ export async function removeTeamMember(
     return { ok: false, error: 'game_locked' };
   }
 
-  // Slett child request-rad og game_players-rad.
+  // Slett game_players-rad og child request-rad. #2223: the roster row goes
+  // first. A failed delete answers db_error with the request still in place,
+  // so the captain can try again; deleting a roster row is idempotent.
+  const { error: deletePlayerError } = await admin
+    .from('game_players')
+    .delete()
+    .eq('game_id', game.id)
+    .eq('user_id', child.user_id);
+  if (deletePlayerError) {
+    console.error('[removeTeamMember] player delete failed', {
+      gameId: game.id,
+      userId: child.user_id,
+      error: deletePlayerError,
+    });
+    return { ok: false, error: 'db_error' };
+  }
   const { error: deleteReqError } = await admin
     .from('game_registration_requests')
     .delete()
@@ -978,11 +1031,6 @@ export async function removeTeamMember(
     console.error('[removeTeamMember] request delete failed', deleteReqError);
     return { ok: false, error: 'db_error' };
   }
-  await admin
-    .from('game_players')
-    .delete()
-    .eq('game_id', game.id)
-    .eq('user_id', child.user_id);
 
   // Notify den fjernede spilleren — bruker registration_rejected-kind
   // som dekker semantikken "du er ikke med lenger".
@@ -1143,6 +1191,11 @@ export async function attachToCaptainTeam(
   // For open-modus: legg brukeren i game_players umiddelbart — på kapteinens
   // lag. Har kapteinen intet lagnummer, skrives ingen rad: en lag-medspiller
   // uten lag er det #2061/#2072 fjernet fra alle andre stier.
+  //
+  // #2223: a failed read or write here rolls the child request back and answers
+  // db_error before the invitation is consumed, so «Bli med på lag» is still
+  // there for the next try and the captain is not told about a teammate who
+  // never reached the roster.
   if (childStatus === 'approved') {
     const { data: captainPlayer, error: captainPlayerError } = await admin
       .from('game_players')
@@ -1150,15 +1203,23 @@ export async function attachToCaptainTeam(
       .eq('game_id', game.id)
       .eq('user_id', captain.user_id)
       .maybeSingle<{ team_number: number | null }>();
+    if (captainPlayerError) {
+      console.error('[attachToCaptainTeam] captain player lookup failed', {
+        gameId: game.id,
+        userId: user.id,
+        captainUserId: captain.user_id,
+        error: captainPlayerError,
+      });
+      await rollbackAttachRequest(admin, inserted.id);
+      return { ok: false, error: 'db_error' };
+    }
     const teamNumber = captainPlayer?.team_number ?? null;
 
-    // A failed lookup resolves data null, so it lands here too.
     if (teamNumber === null) {
       console.error('[attachToCaptainTeam] captain has no team number', {
         gameId: game.id,
         userId: user.id,
         captainUserId: captain.user_id,
-        error: captainPlayerError,
       });
     } else {
       // #2209: the player's tee category from the profile, clamped to the tee.
@@ -1177,16 +1238,29 @@ export async function attachToCaptainTeam(
         { onConflict: 'game_id,user_id', ignoreDuplicates: true },
       );
       if (playerError) {
-        console.error('[attachToCaptainTeam] player upsert failed', playerError);
+        console.error('[attachToCaptainTeam] player upsert failed', {
+          gameId: game.id,
+          userId: user.id,
+          error: playerError,
+        });
+        await rollbackAttachRequest(admin, inserted.id);
+        return { ok: false, error: 'db_error' };
       }
     }
   }
 
-  // Marker invitations-raden som akseptert.
-  await admin
+  // Marker invitations-raden som akseptert. The player is on the team by now,
+  // so a failed flip is only logged.
+  const { error: acceptError } = await admin
     .from('invitations')
     .update({ accepted_at: new Date().toISOString() })
     .eq('id', invitation.id);
+  if (acceptError) {
+    console.error('[attachToCaptainTeam] invitation accept failed', {
+      invitationId: invitation.id,
+      error: acceptError,
+    });
+  }
 
   // #481/#676: auto-vennskap med inviteren. For lag-scopede spill ('team'/'both')
   // står invitasjonen pending ved innlogging, så befriend_inviter no-op-er i
@@ -1219,10 +1293,32 @@ export async function attachToCaptainTeam(
     console.error('[attachToCaptainTeam] notify failed', err),
   );
 
-  // Vi bruker requestId for å returnere noe meningsfullt — caller ignorerer.
-  void inserted;
   expireGameCache(game.id);
   return { ok: true };
+}
+
+/**
+ * Compensation for attachToCaptainTeam (#2223): drops the child request it just
+ * inserted when the roster step failed, so a retry starts clean. Same shape as
+ * the captain rollback in submitTeamRegistration; a failed rollback is logged
+ * and never thrown out of the action.
+ */
+async function rollbackAttachRequest(
+  admin: ReturnType<typeof getAdminClient>,
+  requestId: string,
+): Promise<void> {
+  try {
+    expectAffected(
+      await admin
+        .from('game_registration_requests')
+        .delete()
+        .eq('id', requestId)
+        .select('id'),
+      'attachToCaptainTeam',
+    );
+  } catch (rollbackErr) {
+    console.error('[attachToCaptainTeam] request rollback failed', rollbackErr);
+  }
 }
 
 /**
