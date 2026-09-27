@@ -50,7 +50,10 @@ export function FoursomesTeeStarterBanner({
   }
 
   return (
-    <div className="mb-3 rounded-md border border-accent/40 bg-accent/5 px-3 py-3">
+    <div
+      data-testid="foursomes-tee-starter-banner"
+      className="mb-3 rounded-md border border-accent/40 bg-accent/5 px-3 py-3"
+    >
       <p className="mb-2 font-serif text-sm text-text">
         {t('teeStarterQuestion')}
       </p>
@@ -103,7 +106,7 @@ export function FoursomesTeeHint({
   if (!target) return null;
 
   return (
-    <p className="mb-2 text-center text-xs text-muted">
+    <p data-testid="foursomes-tee-hint" className="mb-2 text-center text-xs text-muted">
       {t('teeHint', { name: target.displayName })}
     </p>
   );
