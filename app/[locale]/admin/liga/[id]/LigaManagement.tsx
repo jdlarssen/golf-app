@@ -8,11 +8,14 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { LinkButton } from '@/components/ui/Button';
+import { Banner } from '@/components/ui/Banner';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
+import { ligaBasePath } from '@/lib/league/ligaPaths';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
@@ -20,7 +23,6 @@ import { LigaRoundRow } from './LigaRoundRow';
 import { LigaEmbedControl } from './LigaEmbedControl';
 import { LigaAddRound } from './LigaAddRound';
 import { LigaAddPlayers } from './LigaAddPlayers';
-import { LigaRemovePlayer } from './LigaRemovePlayer';
 import { LigaStatusActions } from './LigaStatusActions';
 
 /**
@@ -30,9 +32,9 @@ import { LigaStatusActions } from './LigaStatusActions';
  *    owner/admin, inside AppShell with no admin chrome.
  *
  * Both routes gate first with `requireAdminOrClubAdminOfLeague` and pass the
- * caller's `userId` in. The variant only switches the shell and the delete-link
- * base path; every control (status actions, rounds, participants, picker) is
- * identical — there is no duplicated management UI.
+ * caller's `userId` in. The variant only switches the shell and the delete- and
+ * remove-link base path; every control (status actions, rounds, participants,
+ * picker) is identical — there is no duplicated management UI.
  *
  * Co-located in the admin route tree next to its Liga* client sub-components;
  * the club routes import it cross-route, mirroring how `/klubber/[id]/liga/ny`
@@ -54,14 +56,32 @@ function preferredName(
 
 export type LigaManagementVariant = 'admin' | 'club';
 
+/** Success receipt for a `?status=` the league page knows (#2244). */
+function receiptBanner(
+  statusCode: string | undefined,
+  t: Awaited<ReturnType<typeof getTranslations<'liga'>>>,
+) {
+  if (statusCode !== 'player_removed') return null;
+  return (
+    <div className="mb-4">
+      <Banner tone="success" testId="liga-status-banner">
+        {t('manage.statusMessages.player_removed')}
+      </Banner>
+    </div>
+  );
+}
+
 export async function LigaManagement({
   leagueId,
   userId,
   variant,
+  statusCode,
 }: {
   leagueId: string;
   userId: string;
   variant: LigaManagementVariant;
+  /** `?status=` from the route — the receipt after a confirmed removal (#2244). */
+  statusCode?: string;
 }) {
   const [snapshot, { courses }, t, locale] = await Promise.all([
     getLigaSnapshot(leagueId),
@@ -115,10 +135,10 @@ export async function LigaManagement({
   // varianten så klubb-admin holder seg i klubb-chrome hele veien.
   const Shell = variant === 'admin' ? AdminShell : AppShell;
   const backHref = groupId ? `/klubber/${groupId}` : '/admin/liga';
-  const deleteHref =
-    variant === 'club'
-      ? `/klubber/${groupId}/liga/${leagueId}/slett`
-      : `/admin/liga/${leagueId}/slett`;
+  const doorBase = ligaBasePath(leagueId, variant === 'club' ? groupId : null);
+  const deleteHref = `${doorBase}/slett`;
+  // #2244: «Fjern» opens a confirm page on the same door, never an inline delete.
+  const removeHrefBase = `${doorBase}/fjern`;
 
   const brassRibbon = groupId
     ? t('manage.brassRibbonClub', { status: statusLabel })
@@ -147,6 +167,8 @@ export async function LigaManagement({
         subtitle={`${formatShortDateLocale(league.season_start, locale as AppLocale)} – ${formatShortDateLocale(league.season_end, locale as AppLocale)}`}
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
+
+      {receiptBanner(statusCode, t)}
 
       {/* Info-kort */}
       <Card className="mb-5">
@@ -255,11 +277,15 @@ export async function LigaManagement({
                     className="flex items-center justify-between gap-2 py-1.5"
                   >
                     <span className="font-sans text-[14px] text-text">{name}</span>
-                    <LigaRemovePlayer
-                      leagueId={leagueId}
-                      userId={p.userId}
-                      playerName={name}
-                    />
+                    <LinkButton
+                      href={`${removeHrefBase}/${p.userId}`}
+                      variant="ghost"
+                      data-testid={`liga-remove-${p.userId}`}
+                      aria-label={t('removePlayer.removeAria', { name })}
+                      className="text-danger text-[12px] px-2 py-1 min-h-[44px] rounded-lg"
+                    >
+                      {t('removePlayer.removeButton')}
+                    </LinkButton>
                   </li>
                 );
               })}
