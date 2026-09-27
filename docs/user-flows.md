@@ -155,7 +155,9 @@ flowchart LR
 
 ### P4 — Leaderboard
 
-`app/[locale]/games/[id]/leaderboard/page.tsx` — mode-router (Stableford/Best ball/Wolf/Skins/Nassau/Matchplay/…). Live under `active` (med reveal-/front-nine-gating), full + podium etter `finished`. **Ikke realtime** — krever refresh. Eksport: `app/[locale]/games/[id]/leaderboard/export/route.ts`.
+`app/[locale]/games/[id]/leaderboard/page.tsx` — mode-router (Stableford/Best ball/Wolf/Skins/Nassau/Matchplay/…). Live under `active` (med reveal-/front-nine-gating), full + podium etter `finished`. Oppdaterer seg selv via realtime (`LeaderboardRealtime` i `LeaderboardShell`, #679). Eksport: `app/[locale]/games/[id]/leaderboard/export/route.ts`.
+
+**Tavla (#2253):** live solo stableford (også modifisert) og solo slagspill vises som en tavle: skoggrønt hode, mørk tavle med skilt i fire kolonner (plass, spiller, hull, poeng/netto), pil for plassendring siden forrige hull, fem prikker for de siste hullene og din egen rad merket «DU». Tavla viser topp 5 til du trykker «Vis alle», og du trykker på et skilt for å gi reaksjoner. Stripen «Din runde» nederst viser plassen din og knappen videre («Hull N →» eller «Lever scorekort →»); den vises ikke for arrangør som ikke spiller, trukket spiller eller på spectate/embed. Utregningen bor i `lib/leaderboard/liveBoard.ts`. Nye solo slagspill rangeres etter netto mot par over hullene hver spiller har spilt (`mode_config.ranking = 'net_to_par'`, stemplet ved opprettelse); eldre spill og ligarunder beholder netto slag. Lagstableford, reveal-spill og ferdige spill (pall eller duell) har egen visning.
 
 ### P5 — Profil, historikk & konto
 
