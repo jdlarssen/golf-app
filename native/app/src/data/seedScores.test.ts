@@ -54,8 +54,17 @@ describe('seedGameScores', () => {
     });
     routeFrom({ scores: [scores] });
 
+    // #2227: hele seeden i ÉN transaksjon, ikke én per rad. Basen åpnes først,
+    // så spionen bare teller seedens egne transaksjoner.
+    const { getDb } = require('./db') as Db;
+    await getDb();
+    const { MockSQLiteDatabase } = require('../test/sqliteMock') as typeof import('../test/sqliteMock');
+    const txnSpy = jest.spyOn(MockSQLiteDatabase.prototype, 'withExclusiveTransactionAsync');
+
     const { seedGameScores } = require('./seedScores') as typeof import('./seedScores');
     expect(await seedGameScores(GAME)).toBe(3);
+    expect(txnSpy).toHaveBeenCalledTimes(1);
+    txnSpy.mockRestore();
 
     // Bare spillet filtreres på — ingen `.lte('hole_number', …)`, ingen
     // `.eq('user_id', …)`. Flight-synligheten er RLS sin jobb.
@@ -66,7 +75,7 @@ describe('seedGameScores', () => {
       { method: 'range', args: [0, 999] },
     ]);
 
-    const { getDb, listScoresForGame } = require('./db') as Db;
+    const { listScoresForGame } = require('./db') as Db;
     const stored = await listScoresForGame(await getDb(), GAME);
     expect(stored).toHaveLength(3);
     expect(stored.map((row) => [row.userId, row.holeNumber, row.strokes])).toEqual(

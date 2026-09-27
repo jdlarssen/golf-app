@@ -7,6 +7,7 @@
 // realtime og drainen svarer likt på «fortjener denne overskrivingen et
 // varsel?» — én definisjon, aldri to (#1611).
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import type { SQLiteDatabase } from 'expo-sqlite';
 import { conflictRecordFor } from '../../../../lib/sync/conflict';
 import type {
   MergeOutcome,
@@ -70,49 +71,74 @@ export async function mergeServerScore(
   incoming: ServerScoreRow,
   currentUserId: string | null,
 ): Promise<MergeOutcome> {
-  const id = scoreKey(incoming.gameId, incoming.userId, incoming.holeNumber);
+  const [outcome] = await mergeServerScores([incoming], currentUserId);
+  return outcome!;
+}
 
+/**
+ * Samme merge for mange rader i ÉN transaksjon (#2227). Seeden henter hele
+ * spillet (≈2 700 rader ved 150 spillere); én `withTxn` per rad betydde like
+ * mange BEGIN/COMMIT på hver åpning, forgrunn og ny tilkobling. Radene går i
+ * rekkefølge gjennom samme regel, så en rad som dukker opp to ganger vurderes
+ * mot den forrige, slik to merger etter hverandre ville gjort.
+ */
+export async function mergeServerScores(
+  rows: readonly ServerScoreRow[],
+  currentUserId: string | null,
+): Promise<MergeOutcome[]> {
+  if (rows.length === 0) return [];
   return withTxn(async (txn) => {
-    const existing = await getScore(txn, id);
-
-    // Last-write-wins på clientUpdatedAt. Eldre eventer er foreldet, og en LIK
-    // er ekkoet av denne enhetens egen skriving på vei tilbake — at den droppes
-    // her er hele grunnen til at ekkoet aldri ser ut som en konflikt.
-    if (existing && existing.clientUpdatedAt >= incoming.clientUpdatedAt) {
-      return 'kept-local' as const;
+    const outcomes: MergeOutcome[] = [];
+    for (const incoming of rows) {
+      outcomes.push(await applyServerScore(txn, incoming, currentUserId));
     }
-
-    const conflict = existing
-      ? conflictRecordFor({
-          existing,
-          incomingStrokes: incoming.strokes,
-          currentUserId,
-        })
-      : null;
-    if (conflict) await putConflict(txn, conflict);
-
-    await putScore(txn, {
-      id,
-      gameId: incoming.gameId,
-      userId: incoming.userId,
-      holeNumber: incoming.holeNumber,
-      strokes: incoming.strokes,
-      putts: incoming.putts ?? null,
-      enteredBy: incoming.enteredBy,
-      clientUpdatedAt: incoming.clientUpdatedAt,
-      serverUpdatedAt: incoming.serverUpdatedAt,
-    });
-
-    // En ventende opplasting for denne raden (karantene inkludert) gjaldt en
-    // verdi som nettopp tapte LWW. Å la den stå ville enten brent en RPC som
-    // kommer rett tilbake som no-op, eller latt et «kunne ikke lagres»-varsel
-    // stå for en rad som faktisk er i synk.
-    await deleteQueueItem(txn, id);
-
-    return conflict
-      ? ('applied-with-conflict' as const)
-      : ('applied' as const);
+    return outcomes;
   });
+}
+
+async function applyServerScore(
+  txn: SQLiteDatabase,
+  incoming: ServerScoreRow,
+  currentUserId: string | null,
+): Promise<MergeOutcome> {
+  const id = scoreKey(incoming.gameId, incoming.userId, incoming.holeNumber);
+  const existing = await getScore(txn, id);
+
+  // Last-write-wins på clientUpdatedAt. Eldre eventer er foreldet, og en LIK
+  // er ekkoet av denne enhetens egen skriving på vei tilbake — at den droppes
+  // her er hele grunnen til at ekkoet aldri ser ut som en konflikt.
+  if (existing && existing.clientUpdatedAt >= incoming.clientUpdatedAt) {
+    return 'kept-local';
+  }
+
+  const conflict = existing
+    ? conflictRecordFor({
+        existing,
+        incomingStrokes: incoming.strokes,
+        currentUserId,
+      })
+    : null;
+  if (conflict) await putConflict(txn, conflict);
+
+  await putScore(txn, {
+    id,
+    gameId: incoming.gameId,
+    userId: incoming.userId,
+    holeNumber: incoming.holeNumber,
+    strokes: incoming.strokes,
+    putts: incoming.putts ?? null,
+    enteredBy: incoming.enteredBy,
+    clientUpdatedAt: incoming.clientUpdatedAt,
+    serverUpdatedAt: incoming.serverUpdatedAt,
+  });
+
+  // En ventende opplasting for denne raden (karantene inkludert) gjaldt en
+  // verdi som nettopp tapte LWW. Å la den stå ville enten brent en RPC som
+  // kommer rett tilbake som no-op, eller latt et «kunne ikke lagres»-varsel
+  // stå for en rad som faktisk er i synk.
+  await deleteQueueItem(txn, id);
+
+  return conflict ? 'applied-with-conflict' : 'applied';
 }
 
 /**
