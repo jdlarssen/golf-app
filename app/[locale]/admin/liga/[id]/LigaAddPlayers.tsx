@@ -2,9 +2,10 @@
 
 import { useActionState, useState } from 'react';
 import { Link } from '@/i18n/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { addLeaguePlayers, type LeagueActionError } from '@/lib/league/actions';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 type Props = {
@@ -23,6 +24,7 @@ function preferredName(p: PlayerOption, unknownLabel: string): string {
 
 export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague }: Props) {
   const t = useTranslations('liga.addPlayers');
+  const locale = useLocale();
 
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
@@ -96,7 +98,7 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
                   )}
                 </span>
                 <span className="block font-sans text-[11px] tabular-nums text-muted">
-                  hcp {Number(p.hcp_index).toFixed(1)}
+                  hcp {formatHcpDisplay(Number(p.hcp_index), locale)}
                 </span>
               </span>
             </label>

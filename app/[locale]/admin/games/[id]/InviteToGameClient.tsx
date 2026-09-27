@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   addExistingPlayerToGame,
   inviteEmailToGame,
@@ -10,6 +10,7 @@ import { addGuestToGame } from '@/app/[locale]/games/guestPlayerActions';
 import { AddGuestForm } from '@/components/games/AddGuestForm';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import {
   filterRosterCandidates,
   rosterDisplayName,
@@ -32,6 +33,7 @@ type Props = {
  */
 export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
   const t = useTranslations('admin.game.invite');
+  const locale = useLocale();
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(
@@ -81,7 +83,7 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
                     {c.isGuest && <GuestBadge className="shrink-0" />}
                   </div>
                   <p className="mt-0.5 text-xs tabular-nums text-muted">
-                    HCP {c.hcpIndex.toFixed(1)}
+                    HCP {formatHcpDisplay(c.hcpIndex, locale)}
                   </p>
                 </div>
                 <form action={addAction} className="shrink-0">

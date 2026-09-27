@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -34,9 +34,10 @@ const GOLD_CARD_STYLE = {
  */
 export default async function CupResultsPage({ params }: { params: Params }) {
   const { id } = await params;
-  const [userId, t] = await Promise.all([
+  const [userId, t, locale] = await Promise.all([
     getProxyVerifiedUserId(),
     getTranslations('cup'),
+    getLocale(),
   ]);
   // Navne-fallbacken (#1527) mates inn i alt som bygger visnings-navn her:
   // snapshot-en, poengregnskapet og «dro ned mest»-kåringen.
@@ -147,7 +148,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
               {tournament.team_1_name}
             </p>
             <p className="font-serif text-5xl tabular-nums text-primary mt-2">
-              {formatPoints(leaderboard.team1Points)}
+              {formatPoints(leaderboard.team1Points, locale)}
             </p>
           </div>
           <div
@@ -160,7 +161,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
               {tournament.team_2_name}
             </p>
             <p className="font-serif text-5xl tabular-nums text-primary mt-2">
-              {formatPoints(leaderboard.team2Points)}
+              {formatPoints(leaderboard.team2Points, locale)}
             </p>
           </div>
         </div>
@@ -171,7 +172,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
             data-testid="cup-side-award-points"
           >
             {t('public.sideAwardPoints', {
-              points: `${formatPoints(leaderboard.sideAwardPoints.team1)}–${formatPoints(leaderboard.sideAwardPoints.team2)}`,
+              points: `${formatPoints(leaderboard.sideAwardPoints.team1, locale)}–${formatPoints(leaderboard.sideAwardPoints.team2, locale)}`,
             })}
           </p>
         )}
@@ -209,7 +210,7 @@ export default async function CupResultsPage({ params }: { params: Params }) {
               const isFinishedMatch = m.status === 'finished';
               const isActive = m.status === 'active';
               const scoreLabel = isFinishedMatch
-                ? `${formatPoints(m.pointsTeam1)}–${formatPoints(m.pointsTeam2)}`
+                ? `${formatPoints(m.pointsTeam1, locale)}–${formatPoints(m.pointsTeam2, locale)}`
                 : isActive
                   ? t('public.matchInProgress')
                   : t('public.matchDraft');

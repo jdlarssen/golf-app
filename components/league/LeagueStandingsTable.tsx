@@ -1,4 +1,6 @@
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatNumber } from '@/lib/i18n/format';
 import type { LeagueStandingRow, LeagueStandingCell } from '@/lib/league/types';
 import type { LeagueRoundView, LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -8,31 +10,44 @@ function playerName(p: LeagueParticipant, unknownLabel: string): string {
 }
 
 /** Format a net-to-par number: "E", "+3", "−5". Uses minus sign (−), not hyphen. */
-function formatNetToPar(n: number | null, decimals = 0): string {
+function formatNetToPar(n: number | null, locale: AppLocale, decimals = 0): string {
   if (n === null) return '';
   if (n === 0) return 'E';
   const abs = Math.abs(n);
-  const str = decimals > 0 ? abs.toFixed(decimals).replace('.', ',') : String(abs);
+  const str =
+    decimals > 0
+      ? formatNumber(abs, locale, {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
+      : String(abs);
   return n > 0 ? `+${str}` : `−${str}`;
 }
 
 /** Format points: plain number, 1 decimal only when fractional (tie-split). */
-function formatPoints(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
+function formatPoints(value: number, locale: AppLocale): string {
+  return Number.isInteger(value)
+    ? String(value)
+    : formatNumber(value, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 /**
  * Format the season value column per model. Poeng-baserte formater (stableford)
  * og 'points'-modellen viser rene poeng; slagspill-modellene viser mot-par.
  */
-function formatValue(value: number, model: string, pointsBased: boolean): string {
+function formatValue(
+  value: number,
+  model: string,
+  pointsBased: boolean,
+  locale: AppLocale,
+): string {
   if (model === 'points' || pointsBased) {
-    return formatPoints(value);
+    return formatPoints(value, locale);
   }
   if (model === 'average') {
-    return formatNetToPar(value, 1);
+    return formatNetToPar(value, locale, 1);
   }
-  return formatNetToPar(Math.round(value));
+  return formatNetToPar(Math.round(value), locale);
 }
 
 function RoundCell({
@@ -40,11 +55,13 @@ function RoundCell({
   model,
   pointsBased,
   t,
+  locale,
 }: {
   cell: LeagueStandingCell | undefined;
   model: string;
   pointsBased: boolean;
   t: ReturnType<typeof useTranslations<'liga.standings'>>;
+  locale: AppLocale;
 }) {
   const isPoints = model === 'points';
   const raw = cell ? (isPoints ? cell.points : cell.value) : null;
@@ -57,7 +74,7 @@ function RoundCell({
   }
 
   // Stableford-runde-verdier (og plasserings-poeng) er rene poeng, ikke mot-par.
-  const label = isPoints || pointsBased ? formatPoints(raw) : formatNetToPar(raw);
+  const label = isPoints || pointsBased ? formatPoints(raw, locale) : formatNetToPar(raw, locale);
   const isPenalty = cell.penalised;
   const isFlagged = cell.deliveredOutsideWindow;
 
@@ -105,6 +122,7 @@ export function LeagueStandingsTable({
   pointsBased?: boolean;
 }) {
   const t = useTranslations('liga.standings');
+  const locale = useLocale();
 
   if (rows.length === 0) {
     return (
@@ -217,7 +235,14 @@ export function LeagueStandingsTable({
                 {rounds.map((r) => {
                   const cell = row.perRound.find((c) => c.roundId === r.id);
                   return (
-                    <RoundCell key={r.id} cell={cell} model={standingsModel} pointsBased={pointsBased} t={t} />
+                    <RoundCell
+                      key={r.id}
+                      cell={cell}
+                      model={standingsModel}
+                      pointsBased={pointsBased}
+                      t={t}
+                      locale={locale}
+                    />
                   );
                 })}
 
@@ -226,7 +251,7 @@ export function LeagueStandingsTable({
                   className="px-2 py-2.5 text-right font-serif tabular-nums text-sm font-semibold"
                   style={isFirst ? { color: 'var(--accent-text)' } : undefined}
                 >
-                  {formatValue(row.value, standingsModel, pointsBased)}
+                  {formatValue(row.value, standingsModel, pointsBased, locale)}
                 </td>
               </tr>
             );

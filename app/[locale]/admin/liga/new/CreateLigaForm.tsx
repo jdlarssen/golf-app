@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
 import { generateRounds } from '@/lib/league/generateRounds';
 import { shortMonthLocale } from '@/lib/i18n/format';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { osloParts } from '@/lib/format/teeOff';
 import type { AppLocale } from '@/i18n/routing';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
@@ -751,7 +752,7 @@ export function CreateLigaForm({
                       )}
                     </span>
                     <span className="block font-sans text-[11px] tabular-nums text-muted">
-                      hcp {Number(p.hcp_index).toFixed(1)}
+                      hcp {formatHcpDisplay(Number(p.hcp_index), locale)}
                     </span>
                   </span>
                 </label>

@@ -52,6 +52,7 @@ import {
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { AppLocale } from '@/i18n/routing';
+import { formatNumber } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
@@ -191,7 +192,11 @@ export default async function ScorecardPage({ params }: { params: Params }) {
           </div>
           {rating && (
             <div className="text-xs text-muted tabular-nums">
-              Slope {rating.slope} / CR {rating.courseRating.toFixed(1)}
+              Slope {rating.slope} / CR{' '}
+              {formatNumber(rating.courseRating, locale, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              })}
             </div>
           )}
         </Card>

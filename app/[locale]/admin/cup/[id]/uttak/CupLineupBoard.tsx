@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
@@ -261,6 +261,7 @@ function PlannedMatchCountForm({
   isPending: boolean;
 }) {
   const t = useTranslations('cup.lineup');
+  const locale = useLocale();
 
   // Gulvet serveren håndhever: kampene som alt finnes + plassene i åpnede,
   // ikke-avdekkede økter, aldri under 2.
@@ -313,11 +314,11 @@ function PlannedMatchCountForm({
             data-testid="cup-lineup-planned-target"
             className="text-xs text-muted tabular-nums"
           >
-            {/* formatPoints: norsk desimalkomma (2,5 — ikke 2.5), samme
+            {/* formatPoints: locale-riktig desimalskille (norsk 2,5), samme
                 helper som cup-siden og resultat-flatene bruker. */}
             {t('plannedTarget', {
               count: preview,
-              points: formatPoints(derivePointsToWin(preview)),
+              points: formatPoints(derivePointsToWin(preview), locale),
             })}
           </p>
         )}
@@ -326,7 +327,7 @@ function PlannedMatchCountForm({
             lagrede tallet faktisk slo gjennom. */}
         {board.pointsToWin !== null && (
           <p className="text-xs text-muted tabular-nums">
-            {t('plannedCurrent', { points: formatPoints(board.pointsToWin) })}
+            {t('plannedCurrent', { points: formatPoints(board.pointsToWin, locale) })}
           </p>
         )}
 

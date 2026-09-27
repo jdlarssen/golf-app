@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { first } from '@/lib/url/searchParams';
 import { AppShell } from '@/components/ui/AppShell';
 import { Banner } from '@/components/ui/Banner';
@@ -30,9 +31,10 @@ type SearchParams = Promise<{ status?: string | string[] }>;
 function pointsHeaderCopy(
   tournament: { points_to_win: number | null; status: 'draft' | 'active' | 'finished' },
   t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+  locale: AppLocale,
 ): string {
   if (tournament.points_to_win !== null) {
-    return t('public.firstTo', { points: formatPoints(tournament.points_to_win) });
+    return t('public.firstTo', { points: formatPoints(tournament.points_to_win, locale) });
   }
   return tournament.status === 'active' ? t('public.pointsPendingActive') : t('public.pointsPendingDraft');
 }
@@ -46,9 +48,10 @@ export default async function PublicCupPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [userId, t] = await Promise.all([
+  const [userId, t, locale] = await Promise.all([
     getProxyVerifiedUserId(),
     getTranslations('cup'),
+    getLocale(),
   ]);
   const snapshot = await getCupSnapshot(id, t('manage.unknownPlayer'));
   if (!snapshot) notFound();
@@ -91,10 +94,10 @@ export default async function PublicCupPage({
           {tournament.name}
         </h1>
         {!isFinished ? (
-          <p className="mt-2 text-sm text-muted">{pointsHeaderCopy(tournament, t)}</p>
+          <p className="mt-2 text-sm text-muted">{pointsHeaderCopy(tournament, t, locale)}</p>
         ) : tournament.points_to_win !== null ? (
           <p className="mt-2 text-sm text-muted">
-            {t('public.firstTo', { points: formatPoints(tournament.points_to_win) })}
+            {t('public.firstTo', { points: formatPoints(tournament.points_to_win, locale) })}
           </p>
         ) : null}
         <p className="mt-2 text-xs text-muted tabular-nums">

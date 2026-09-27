@@ -1,5 +1,5 @@
 import { first } from '@/lib/url/searchParams';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getRoleContext } from '@/lib/admin/auth';
@@ -75,7 +75,11 @@ export default async function CupListPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const [sp, t] = await Promise.all([searchParams, getTranslations('cup')]);
+  const [sp, t, locale] = await Promise.all([
+    searchParams,
+    getTranslations('cup'),
+    getLocale(),
+  ]);
   const errorCode = first(sp.error);
   const statusCode = first(sp.status);
   const name = first(sp.name);
@@ -159,7 +163,7 @@ export default async function CupListPage({
                           : t('ledger.rowSubtitle', {
                               team1: cup.team_1_name,
                               team2: cup.team_2_name,
-                              points: formatPoints(cup.points_to_win),
+                              points: formatPoints(cup.points_to_win, locale),
                             })}
                       </p>
                       {result && (

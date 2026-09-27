@@ -55,7 +55,7 @@ export function CupAwards({
           </p>
           <p className="font-serif text-2xl text-text mt-1.5 leading-tight">{join(mvp.names)}</p>
           <p className="text-xs text-muted mt-1 tabular-nums">
-            {t('results.mvpValue', { points: formatPoints(mvp.points) })}
+            {t('results.mvpValue', { points: formatPoints(mvp.points, locale) })}
           </p>
         </div>
       )}

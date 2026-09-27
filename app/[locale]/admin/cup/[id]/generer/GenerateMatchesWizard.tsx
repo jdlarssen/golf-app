@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
@@ -48,6 +49,7 @@ import { teeGenderOf } from '@/lib/games/teeGender';
 import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { WizardPlayer, WizardTeeBox } from './GenerateMatches';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 
 // #1441 (F3c): matchen wizarden holder i steg 2 er enten en av de tre eldre
 // presetenes `PlannedMatch` eller splittet-cup-dagens `PlannedBundleMatch` —
@@ -229,6 +231,7 @@ function Step1Roster({
   onChange: (id: string, val: TeamAssignment) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
+  const locale = useLocale();
   const team1Count = Object.values(assignments).filter((v) => v === 'team1').length;
   const team2Count = Object.values(assignments).filter((v) => v === 'team2').length;
   const diff = Math.abs(team1Count - team2Count);
@@ -283,7 +286,7 @@ function Step1Roster({
                     {p.displayName}
                   </p>
                   <p className="font-sans text-xs text-muted tabular-nums">
-                    HCP {p.hcpIndex.toFixed(1)}
+                    HCP {formatHcpDisplay(p.hcpIndex, locale)}
                   </p>
                 </div>
                 {/* data-focus-inset: segmentert pill-gruppe — `overflow-hidden`
@@ -711,11 +714,12 @@ function regnehjelpText(
   player: WizardPlayer,
   tee: WizardTeeBox | undefined,
   t: ReturnType<typeof useTranslations<'cup'>>,
+  locale: AppLocale,
 ): string {
   const sh = computeSpillehandicap(player, tee);
   return sh !== null
     ? t('generate.spillehandicapShort', { n: sh })
-    : t('generate.hcpIndexShort', { n: player.hcpIndex.toFixed(1) });
+    : t('generate.hcpIndexShort', { n: formatHcpDisplay(player.hcpIndex, locale) });
 }
 
 function GreensomeCard({
@@ -737,6 +741,7 @@ function GreensomeCard({
   onTeamStrokesChange: (matchId: string, side: 'team1' | 'team2', value: string) => void;
   t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
+  const locale = useLocale();
   const raw = teamStrokesInputs[match.id];
   const side1Players = match.side1.map(players).filter((p): p is WizardPlayer => Boolean(p));
   const side2Players = match.side2.map(players).filter((p): p is WizardPlayer => Boolean(p));
@@ -775,7 +780,7 @@ function GreensomeCard({
             className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
           />
           <p className="text-[11px] text-muted mt-1 tabular-nums">
-            {side1Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t)}`).join(' · ')}
+            {side1Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t, locale)}`).join(' · ')}
           </p>
         </div>
         <div>
@@ -794,7 +799,7 @@ function GreensomeCard({
             className="w-full rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm tabular-nums"
           />
           <p className="text-[11px] text-muted mt-1 tabular-nums">
-            {side2Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t)}`).join(' · ')}
+            {side2Players.map((p) => `${p.displayName}: ${regnehjelpText(p, selectedTee, t, locale)}`).join(' · ')}
           </p>
         </div>
       </div>

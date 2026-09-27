@@ -125,6 +125,11 @@ function formatLengthMeters(n: number, locale: AppLocale): string {
   return formatNumber(n, locale);
 }
 
+/** Course rating, always one decimal. 71.5 → "71,5" (no) / "71.5" (en). */
+function formatCourseRating(n: number, locale: AppLocale): string {
+  return formatNumber(n, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 export default async function GameHomePage({
   params,
   searchParams,
@@ -1264,7 +1269,7 @@ export default async function GameHomePage({
                   <p className="text-xs text-muted mt-1.5 tabular-nums">
                     {t('teeInfo', { teeName: game.tee_boxes.name })}
                     {playerRating
-                      ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
+                      ? ` · Slope ${playerRating.slope} · CR ${formatCourseRating(playerRating.courseRating, locale)} · Par ${playerRating.par}`
                       : ''}
                     {` · ${t('courseHandicap')} ${displayedCourseHandicap ?? '—'}`}
                   </p>
@@ -1309,7 +1314,7 @@ export default async function GameHomePage({
                   <p className="text-xs text-muted mt-1.5 tabular-nums">
                     {t('teeInfo', { teeName: game.tee_boxes.name })}
                     {playerRating
-                      ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
+                      ? ` · Slope ${playerRating.slope} · CR ${formatCourseRating(playerRating.courseRating, locale)} · Par ${playerRating.par}`
                       : ''}
                   </p>
                 )}
