@@ -419,7 +419,13 @@ function LeaderCard({
     // dropped one of the two animations and left the card at the reveal-up
     // baseline (opacity: 0). Splitting them onto separate elements lets each
     // animation own its own property.
-    <div className="reveal-up mb-3" style={{ animationDelay: '60ms' }}>
+    <div
+      className="reveal-up mb-3"
+      style={{ animationDelay: '60ms' }}
+      data-testid="bb-team"
+      data-team={line.teamNumber}
+      data-rank={line.rank}
+    >
       <div className="leader-card leader-shimmer relative rounded-[18px] px-[22px] pt-[22px] pb-5">
         {/* Decorative laurels flanking the rank. opacity-55 per spec. */}
         <div className="pointer-events-none absolute left-3.5 top-[18px] text-accent opacity-55">
@@ -473,7 +479,10 @@ function LeaderCard({
             <span className="block text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {ts('totalLabel', { mode: modeLabel })}
             </span>
-            <span className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text">
+            <span
+              className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text"
+              data-testid="bb-team-total"
+            >
               {line.total}
             </span>
           </div>
@@ -482,6 +491,7 @@ function LeaderCard({
               {ts('vsParLabel')}
             </span>
             <span
+              data-testid="bb-team-vs-par"
               className={`score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] ${
                 vsPar !== null && vsPar < 0 ? 'text-score-under-fg' : 'text-text'
               }`}
@@ -602,10 +612,16 @@ function TeamRow({
         )}
       </div>
       <div className="shrink-0 text-right">
-        <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
+        <span
+          className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text"
+          data-testid="bb-team-total"
+        >
           {line.total}
         </span>
-        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+        <span
+          className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
+          data-testid="bb-team-vs-par"
+        >
           {formatVsPar(vsPar)} {ts('parLabel')}
         </span>
       </div>
@@ -613,7 +629,12 @@ function TeamRow({
   );
 
   return (
-    <li className="list-none">
+    <li
+      className="list-none"
+      data-testid="bb-team"
+      data-team={line.teamNumber}
+      data-rank={line.rank}
+    >
       {href ? (
         <SmartLink href={href} className={rowClassName} style={rowStyle}>
           {rowContent}
