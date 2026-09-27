@@ -58,6 +58,7 @@ const BASE = {
 describe('solo_strokeplay — placement band + checkpoints', () => {
   const result: SoloStrokeplayResult = {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [
       {
         holeNumber: 1,

@@ -31,6 +31,7 @@ function hole(
 function makeResult(): SoloStrokeplayResult {
   return {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     players: [
       {
         userId: 'u1',

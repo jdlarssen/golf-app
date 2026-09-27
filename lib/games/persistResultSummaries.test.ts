@@ -29,6 +29,7 @@ const GAME: GameForScoring = {
 function soloStrokeplayResult(userIds: string[]): ModeResult {
   return {
     kind: 'solo_strokeplay',
+    ranking: 'net_total',
     holes: [],
     players: userIds.map((userId, i) => ({
       userId,

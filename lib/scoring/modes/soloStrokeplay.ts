@@ -209,5 +209,10 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
 
   const holes = computeHoleRows(holesSorted, ctx.players, grossByKey);
 
-  return { kind: 'solo_strokeplay', players, holes };
+  return {
+    kind: 'solo_strokeplay',
+    ranking: netToParRanking ? 'net_to_par' : 'net_total',
+    players,
+    holes,
+  };
 }
