@@ -6,11 +6,17 @@ import {
   type SubmitScorecardResult,
 } from '@/lib/games/submitScorecardCore';
 
-// Levering av lagkort fra native-appen (#1918). I formatene som kollapser til
-// ett lagkort (scramble-familien + alternate-shot-matchplay) markerer én
-// levering HELE lagets aktive, uleverte rader — og RLS lar en spiller bare
-// skrive sin egen rad. Appen har ingen service-role, så uten denne ruta kunne
-// laget føres i appen, men bare leveres på nettsiden.
+// Levering av scorekort fra native-appen, solo og lag (#1918, #2215).
+//
+// Stien sier `submit-team` fordi ruta kom til for lagkortet: i formatene som
+// kollapser til ett lagkort (scramble-familien + alternate-shot-matchplay)
+// markerer én levering HELE lagets aktive, uleverte rader, og RLS lar en
+// spiller bare skrive sin egen rad. Siden #2215 leverer appen ALLE kort her. En
+// solo-spiller (eller en spiller uten lag) markerer bare sin egen rad. Før det
+// skrev appen solo-leveringen rett i databasen og hoppet over varslene
+// (`peer_approval_request`, `scorecard_submitted`, admin-mailen) og
+// cache-tømmingen. Stien og wire-kontrakten er frosset: installerte bygg
+// kaller den, så navnet blir stående.
 //
 // Ruta er kun transport foran `lib/games/submitScorecardCore.ts`. Leverings-
 // regelen, søsken-kaskaden og varslene bor der og speiles ALDRI her (AGENTS
