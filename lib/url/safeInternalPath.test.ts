@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { safeInternalPath } from './safeInternalPath';
 
@@ -44,3 +46,34 @@ describe('safeInternalPath', () => {
   });
 });
 
+/**
+ * #2206: the "may we send the user to this path?" rule has one home. A new
+ * hand-written `startsWith('/')` / `startsWith('//')` check anywhere in the
+ * app turns this red; call `safeInternalPath` instead.
+ */
+describe('one home', () => {
+  const ROOT = join(__dirname, '..', '..');
+  const DIRS = ['app', 'lib', 'components'];
+  const HOME = 'lib/url/safeInternalPath.ts';
+  const HAND_ROLLED = /\.startsWith\(\s*['"]\/{1,2}['"]\s*\)/;
+
+  function sourceFiles(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        return entry.name === 'node_modules' ? [] : sourceFiles(path);
+      }
+      return /\.(ts|tsx)$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)
+        ? [path]
+        : [];
+    });
+  }
+
+  it('no source file outside the helper hand-rolls the internal-path check', () => {
+    const offenders = DIRS.flatMap((dir) => sourceFiles(join(ROOT, dir)))
+      .map((path) => relative(ROOT, path))
+      .filter((path) => path !== HOME)
+      .filter((path) => HAND_ROLLED.test(readFileSync(join(ROOT, path), 'utf8')));
+    expect(offenders).toEqual([]);
+  });
+});

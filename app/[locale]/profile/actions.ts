@@ -3,7 +3,7 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { safeNextPath } from './safeNext';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { expectOne } from '@/lib/supabase/affectedRows';
@@ -11,10 +11,9 @@ import type { AppLocale } from '@/i18n/routing';
 
 export async function updateProfile(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
-  // Optional ?next=-redirect target. Validation in safeNextPath rejects
+  // Optional ?next=-redirect target. Validation in safeInternalPath rejects
   // anything that isn't a same-origin path (open-redirect vern).
-  const nextRaw = formData.get('next');
-  const nextSafe = safeNextPath(typeof nextRaw === 'string' ? nextRaw : null);
+  const nextSafe = safeInternalPath(formData.get('next'));
   const errorBackTo = nextSafe
     ? `/profile?next=${encodeURIComponent(nextSafe)}`
     : '/profile';

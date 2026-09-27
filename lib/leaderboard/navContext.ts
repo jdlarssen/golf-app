@@ -1,4 +1,5 @@
 import type { LeaderboardMode } from '@/lib/leaderboard';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 /**
  * Back-navigation context for the leaderboard universe (#1517).
@@ -52,10 +53,9 @@ export function validateFromParam(raw: RawSearchParam): string | null {
   const value = firstValue(raw);
   if (!value || typeof value !== 'string') return null;
   if (value.length > 200) return null;
-  if (!value.startsWith('/')) return null;
-  // Reject protocol-relative URLs ("//evil.com") — they bypass the
-  // startsWith('/') check but resolve to a different origin.
-  if (value.startsWith('//')) return null;
+  // Must be a same-origin path by the shared rule (#2206); the prefix
+  // allowlist below narrows it further.
+  if (safeInternalPath(value) === null) return null;
   // Reject anything that smells like an absolute URL.
   if (value.includes('://')) return null;
   // Allowlist of known Tørny route prefixes. Root ('/') is allowed as a

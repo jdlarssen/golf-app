@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 /**
  * In-app notification-kindene som støttes. Polymorf `notifications`-tabell
@@ -125,13 +126,13 @@ const gameReopenedSchema = z.object({
 
 // Product-update payload (issue #202). Source-id refererer til
 // product_updates-raden så banner + innboks kan deeplinke til samme
-// authoritative content. Link er valgfri intern rute (startsWith '/'),
+// authoritative content. Link er valgfri intern rute (`safeInternalPath`),
 // håndhevet her som defense-in-depth mot phishing-misbruk via banner/mail.
 const productUpdateSchema = z.object({
   source_id: uuid,
   title: z.string().min(1),
   body: z.string().min(1),
-  link: z.string().startsWith('/').optional(),
+  link: z.string().refine((v) => safeInternalPath(v) !== null).optional(),
   cta_label: z.string().min(1).optional(),
 });
 

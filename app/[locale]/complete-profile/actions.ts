@@ -5,6 +5,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { expectOne } from '@/lib/supabase/affectedRows';
 import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 export async function completeProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
@@ -16,8 +17,7 @@ export async function completeProfile(formData: FormData) {
   // #356: post-onboarding destination carried from the login flow (e.g. a
   // game-scoped invitee's `/games/[id]`). Default home for everyone else.
   const nextRaw = String(formData.get('next') ?? '').trim();
-  const next =
-    nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/';
+  const next = safeInternalPath(nextRaw) ?? '/';
 
   // Bounce back to the form on a validation error, keeping `next` and the
   // already-entered field values so the user doesn't lose their input.
