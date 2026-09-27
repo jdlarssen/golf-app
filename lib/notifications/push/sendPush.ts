@@ -79,14 +79,25 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             body,
           );
-          await admin
+          // postgrest-js returns a DB error instead of throwing it, so the
+          // catch below never sees one: read and log it (#2223).
+          const { error: touchError } = await admin
             .from('push_subscriptions')
             .update({ last_used_at: new Date().toISOString() })
             .eq('endpoint', sub.endpoint);
+          if (touchError) {
+            console.error('[push] last_used_at update failed', touchError);
+          }
         } catch (err) {
           const status = (err as { statusCode?: number }).statusCode;
           if (status === 404 || status === 410) {
-            await admin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+            const { error: pruneError } = await admin
+              .from('push_subscriptions')
+              .delete()
+              .eq('endpoint', sub.endpoint);
+            if (pruneError) {
+              console.error('[push] subscription prune failed', pruneError);
+            }
           } else {
             console.error('[push] send failed', sub.endpoint, err);
           }
@@ -112,10 +123,13 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
             if (res.status >= 200 && res.status < 300) {
               // Persist the environment that answered, so the next send skips
               // straight to the right host (self-healing, #1282 design 3).
-              await admin
+              const { error: touchError } = await admin
                 .from('apns_tokens')
                 .update({ last_used_at: new Date().toISOString(), environment })
                 .eq('token', row.token);
+              if (touchError) {
+                console.error('[push] apns last_used_at update failed', touchError);
+              }
               return;
             }
 
@@ -126,7 +140,13 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
             );
             if (action === 'retry-sandbox') continue;
             if (action === 'prune') {
-              await admin.from('apns_tokens').delete().eq('token', row.token);
+              const { error: pruneError } = await admin
+                .from('apns_tokens')
+                .delete()
+                .eq('token', row.token);
+              if (pruneError) {
+                console.error('[push] apns token prune failed', pruneError);
+              }
               return;
             }
             console.error('[push] apns send failed', row.token, res.status, res.reason);
