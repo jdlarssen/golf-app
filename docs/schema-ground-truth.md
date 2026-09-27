@@ -58,6 +58,13 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
     service role skips the guard, so this is what stops the app route from completing such a card
     with the deliverer as approver. The delivery core's compensating reverts clear the approval
     with the delivery for the same reason.
+  - A signed-in non-admin may not move a row to another game; the guard's lookups read
+    `old.game_id` (0191).
+- `approved_by_user_id` is owned by trigger `game_players_set_approved_by` (BEFORE INSERT OR
+  UPDATE, 0191): the signed-in caller who approves is recorded as the approver, the value stays
+  while the approval does, and it clears with `approved_at`. The service role keeps what it wrote.
+- `guard_game_players_insert` (BEFORE INSERT, 0191): a signed-in non-admin cannot insert a row
+  that is already approved.
   - The game **creator** is explicitly exempted so roster editing still works.
   - A `BEFORE UPDATE` trigger enforcing column-level rules that RLS `USING`/`WITH CHECK` clauses can't express on their own (it inspects which columns changed).
 
