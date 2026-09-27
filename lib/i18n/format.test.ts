@@ -16,6 +16,7 @@ import {
   formatRelativeLocale,
   countdownParts,
   formatTeeOffLineLocale,
+  formatTeeOffLongParts,
   shortMonthLocale,
   formatShortUTCDayMonthLocale,
   formatShortOsloDayMonthLocale,
@@ -427,6 +428,65 @@ describe('formatTeeOffLineLocale', () => {
   it('unparseable non-empty string returns the value unchanged', () => {
     expect(formatTeeOffLineLocale('ikke-en-dato', 'no')).toBe('ikke-en-dato');
     expect(formatTeeOffLineLocale('not-a-date', 'en')).toBe('not-a-date');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatTeeOffLongParts (#2270)
+// ---------------------------------------------------------------------------
+// Server pages (invite login, signup, poster, cup join) format a timestamptz
+// from the DB. process.env.TZ = 'UTC' mirrors Vercel: without an Oslo pin a
+// 09:20 tee-off renders as 07:20 in summer and 08:20 in winter.
+// ---------------------------------------------------------------------------
+
+describe('formatTeeOffLongParts (#2270)', () => {
+  const SUMMER = '2026-10-04T07:20:00Z'; // Sunday, CEST (+02) → 09:20
+  const WINTER = '2026-11-15T08:20:00Z'; // Sunday, CET (+01) → 09:20
+  const AFTER_MIDNIGHT = '2026-10-10T22:30:00Z'; // 11 Oct 00:30 in Oslo
+
+  it('renders the Oslo wall-clock in summer time (no + en)', () => {
+    expect(formatTeeOffLongParts(SUMMER, 'no')).toEqual({
+      date: '4. oktober 2026',
+      time: '09:20',
+    });
+    expect(formatTeeOffLongParts(SUMMER, 'en')).toEqual({
+      date: '4 October 2026',
+      time: '09:20',
+    });
+  });
+
+  it('renders the Oslo wall-clock in winter time', () => {
+    expect(formatTeeOffLongParts(WINTER, 'no')?.time).toBe('09:20');
+  });
+
+  it('rolls the date over at Oslo midnight, not UTC midnight', () => {
+    expect(formatTeeOffLongParts(AFTER_MIDNIGHT, 'no')).toEqual({
+      date: '11. oktober 2026',
+      time: '00:30',
+    });
+  });
+
+  it('accepts a Date instance as well as an ISO string', () => {
+    expect(formatTeeOffLongParts(new Date(SUMMER), 'no')?.time).toBe('09:20');
+  });
+
+  it('weekday: true gives the poster form (weekday, no year)', () => {
+    expect(formatTeeOffLongParts(SUMMER, 'no', { weekday: true })?.date).toBe(
+      'søndag 4. oktober',
+    );
+  });
+
+  it('returns null for an unparseable input', () => {
+    expect(formatTeeOffLongParts('ikke-en-dato', 'no')).toBeNull();
+  });
+
+  it('cup.join.teeOffLine keeps the cup join line as it was (no + en)', () => {
+    const parts = formatTeeOffLongParts(SUMMER, 'no')!;
+    const noT = createTranslator({ locale: 'no', messages: noMessages, namespace: 'cup.join' });
+    expect(noT('teeOffLine', parts)).toBe('4. oktober 2026 kl. 09:20');
+    const enParts = formatTeeOffLongParts(SUMMER, 'en')!;
+    const enT = createTranslator({ locale: 'en', messages: enMessages, namespace: 'cup.join' });
+    expect(enT('teeOffLine', enParts)).toBe('4 October 2026, 09:20');
   });
 });
 

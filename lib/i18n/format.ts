@@ -168,6 +168,35 @@ export function formatTeeOffParts(
 }
 
 /**
+ * Long tee-off date + time parts for a DB timestamptz, Oslo-pinned (#2270):
+ * `{ date: '4. oktober 2026', time: '09:20' }` (nb) / `'4 October 2026'` (en).
+ * `weekday: true` gives the poster form without year: «søndag 4. oktober».
+ *
+ * The long-form sibling of `formatTeeOffParts`, for server pages (invite login,
+ * signup, poster, cup join) that render on the UTC Vercel server — plain
+ * `formatDate`/`formatTime` there show 07:20 for a 09:20 summer tee-off.
+ * Callers own the separator. Returns `null` for an unparseable input (Intl
+ * throws a RangeError on an Invalid Date).
+ */
+export function formatTeeOffLongParts(
+  input: string | Date,
+  locale: AppLocale,
+  opts: { weekday?: boolean } = {},
+): { date: string; time: string } | null {
+  const d = toDate(input);
+  if (Number.isNaN(d.getTime())) return null;
+  const date = opts.weekday
+    ? formatDate(d, locale, {
+        timeZone: OSLO,
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      })
+    : formatLongDateOsloLocale(d, locale);
+  return { date, time: formatTeeOffTimeLocale(d, locale) };
+}
+
+/**
  * Locale-aware short date with year.
  *
  * Norwegian ('no'): delegates to legacy helper → "14. mai 2026" (byte-identical).
@@ -213,6 +242,10 @@ const NORWEGIAN_MONTHS_TEE_OFF = [
  * Input: a `datetime-local` string (`YYYY-MM-DDTHH:mm`, no timezone).
  * `new Date(value)` parses it as local time — all field reads use local-time
  * getters so both 'no' and 'en' paths are consistent.
+ *
+ * Only for `datetime-local` strings from the form, never a timestamptz from
+ * the DB: on the UTC server the local getters show UTC (#2270). For DB values
+ * use `formatTeeOffLongParts`.
  *
  * Returns `null` for empty/whitespace input.
  * Returns `value` unchanged for a non-empty but unparseable input (mirrors

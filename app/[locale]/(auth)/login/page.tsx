@@ -21,7 +21,7 @@ import {
 import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
 import { inviteExpiryTier } from '@/lib/auth/inviteExpiry';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { formatDate, formatTime } from '@/lib/i18n/format';
+import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
@@ -118,6 +118,10 @@ export default async function LoginPage({
     // #1193: aggregert sosialt bevis på kortet. Den besøkende er anonym
     // (viewerUserId = null) → helperen gir kun et ekte antall, aldri venne-navn.
     const { joinedCount } = await getGameSocialProof(inviteCtx.gameId, null);
+    // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as 07:20.
+    const teeOffParts = inviteCtx.teeOffAt
+      ? formatTeeOffLongParts(inviteCtx.teeOffAt, locale)
+      : null;
     inviteCard = (
       <InviteContextCard
         inviterName={inviteCtx.inviterName}
@@ -128,9 +132,7 @@ export default async function LoginPage({
         )}
         modeLabel={tModes.has(modeKey) ? tModes(modeKey) : null}
         courseName={inviteCtx.courseName}
-        teeOff={
-          inviteCtx.teeOffAt ? formatTeeOff(inviteCtx.teeOffAt, locale) : null
-        }
+        teeOff={teeOffParts ? `${teeOffParts.date}, ${teeOffParts.time}` : null}
         expiresLine={expiresLine}
         joinedCount={joinedCount}
       />
@@ -203,26 +205,4 @@ export default async function LoginPage({
       </div>
     </AppShell>
   );
-}
-
-/**
- * Format ISO-timestamp som «8. mai 2026, 14:30» i aktiv locale, med europeisk
- * 24-timers klokke — samme mønster som `/signup/[shortId]`. Faller tilbake til
- * rå-strengen hvis Intl kaster (skal aldri skje for gyldige ISO-strenger).
- */
-function formatTeeOff(iso: string, locale: AppLocale): string {
-  try {
-    const datePart = formatDate(iso, locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    const timePart = formatTime(iso, locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return `${datePart}, ${timePart}`;
-  } catch {
-    return iso;
-  }
 }

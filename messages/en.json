@@ -4696,6 +4696,7 @@
     "join": {
       "kicker": "Join a cup",
       "teams": "{team1} vs {team2}",
+      "teeOffLine": "{date}, {time}",
       "invite": "Sign up and the organiser will put you on a team before the start.",
       "alreadyJoined": "You're signed up. The organiser sets the teams before the start.",
       "goToCupButton": "Go to the cup",

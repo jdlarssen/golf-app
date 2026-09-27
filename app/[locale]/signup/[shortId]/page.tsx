@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { formatDate, formatTime } from '@/lib/i18n/format';
+import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
@@ -121,6 +121,14 @@ export default async function PåmeldingPage({
   // #559-regelen står: uinnloggede med ugyldig ELLER ikke-synlig lenke sendes
   // til /login med next-param, aldri 404.
   const game = await getGameByShortId(shortId);
+  // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as
+  // 07:20. One line for both the public landing and the logged-in header.
+  const teeOffParts = game?.scheduled_tee_off_at
+    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale as AppLocale)
+    : null;
+  const teeOffLine = teeOffParts
+    ? `${teeOffParts.date}, ${teeOffParts.time}`
+    : null;
 
   const supabase = await getServerClient();
   const {
@@ -149,11 +157,7 @@ export default async function PåmeldingPage({
           )}
           modeLabel={tModes(game.game_mode as Parameters<typeof tModes>[0])}
           courseName={game.courses?.name ?? null}
-          teeOff={
-            game.scheduled_tee_off_at
-              ? formatTeeOff(game.scheduled_tee_off_at, locale as AppLocale)
-              : null
-          }
+          teeOff={teeOffLine}
           roster={roster}
           joinHref={`/login?next=${encodeURIComponent(`/signup/${shortId}${srcSuffix}`)}`}
           posterHref={`/signup/${shortId}/plakat`}
@@ -387,7 +391,7 @@ export default async function PåmeldingPage({
             <p className="mt-1 font-sans text-sm text-muted">
               {t('teeOffLabel')}{' '}
               <time dateTime={game.scheduled_tee_off_at}>
-                {formatTeeOff(game.scheduled_tee_off_at, locale as AppLocale)}
+                {teeOffLine}
               </time>
             </p>
           )}
@@ -716,26 +720,4 @@ async function loadCaptainStatus(
     .eq('id', row.team_request_id)
     .maybeSingle<{ status: PendingRequestRow['status'] }>();
   return captainRequest?.status ?? null;
-}
-
-/**
- * Format ISO-timestamp as «8. mai 2026, 14:30» in the active locale, with
- * European 24-hour time. Falls back to the raw string if Intl throws
- * (should never happen for valid ISO strings).
- */
-function formatTeeOff(iso: string, locale: AppLocale): string {
-  try {
-    const datePart = formatDate(iso, locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    const timePart = formatTime(iso, locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-    return `${datePart}, ${timePart}`;
-  } catch {
-    return iso;
-  }
 }

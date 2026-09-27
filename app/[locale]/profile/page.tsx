@@ -238,6 +238,7 @@ async function ProfileFormCard({
   const oppdatertDato =
     hasHcp && p.handicap_updated_at && !stale
       ? formatDate(p.handicap_updated_at, locale, {
+          timeZone: 'Europe/Oslo',
           day: 'numeric',
           month: 'long',
         })

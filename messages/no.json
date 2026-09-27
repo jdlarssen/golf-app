@@ -4696,6 +4696,7 @@
     "join": {
       "kicker": "Bli med i cup",
       "teams": "{team1} mot {team2}",
+      "teeOffLine": "{date} kl. {time}",
       "invite": "Meld deg på, så setter arrangøren deg på et lag før start.",
       "alreadyJoined": "Du er påmeldt. Arrangøren fordeler lagene før start.",
       "goToCupButton": "Gå til cupen",

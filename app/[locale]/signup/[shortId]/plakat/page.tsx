@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { formatDate, formatTime } from '@/lib/i18n/format';
+import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { isPubliclyViewable } from '@/lib/games/publicSignupVisibility';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -60,23 +60,13 @@ export default async function PlakatPage({ params }: { params: Params }) {
     locale as AppLocale,
   );
 
-  let teeOff: string | null = null;
-  if (game.scheduled_tee_off_at) {
-    try {
-      const datePart = formatDate(game.scheduled_tee_off_at, locale as AppLocale, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      });
-      const timePart = formatTime(game.scheduled_tee_off_at, locale as AppLocale, {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      teeOff = `${datePart} · ${timePart}`;
-    } catch {
-      teeOff = null;
-    }
-  }
+  // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as 07:20.
+  const teeOffParts = game.scheduled_tee_off_at
+    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale as AppLocale, {
+        weekday: true,
+      })
+    : null;
+  const teeOff = teeOffParts ? `${teeOffParts.date} · ${teeOffParts.time}` : null;
 
   return (
     <main className="min-h-screen bg-bg px-4 py-8 print:bg-white print:p-0">

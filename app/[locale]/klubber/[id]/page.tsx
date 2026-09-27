@@ -241,6 +241,7 @@ export default async function KlubbDetailPage({
                     </span>
                     <span className="font-sans text-xs text-muted">
                       {formatDate(req.requestedAt, locale, {
+                        timeZone: 'Europe/Oslo',
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
