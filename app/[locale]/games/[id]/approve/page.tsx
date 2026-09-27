@@ -20,6 +20,10 @@ import {
   type PlayerForHole,
 } from '@/lib/games/getGameWithPlayers';
 import { pendingApprovalsFor } from '@/lib/games/flightScope';
+import {
+  reviewScoreUserIds,
+  reviewScoresByHolder,
+} from '@/lib/games/scorecardReviewData';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { isHoleInSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
@@ -179,15 +183,23 @@ async function PendingApprovals({
     currentUserId,
   );
 
-  // For each pending card, fetch their 18 scores so we can show the table
-  // inline. With at most 3 approvable cards and 18 rows each this is tiny.
+  // For each pending card, fetch its scores so we can show the table inline.
+  // #2213: in the one-ball formats the captain owns the team's rows, so the
+  // fetch covers the pending players' teams too (`reviewScoreUserIds`) and the
+  // card is built from the row owner's rows per hole (`reviewScoresByHolder`).
+  // At most 3 approvable cards plus their teams, 18 rows each: tiny.
   const pendingIds = pending.map((p) => p.user_id);
+  const scoreUserIds = reviewScoreUserIds(
+    gwp.game.game_mode,
+    gwp.players,
+    pendingIds,
+  );
   const { data: scoresData, error: scoresError } = pendingIds.length
     ? await supabase
         .from('scores')
         .select(SCORES_SELECT)
         .eq('game_id', gameId)
-        .in('user_id', pendingIds)
+        .in('user_id', scoreUserIds)
         .returns<ScoreRow[]>()
     : { data: [] as ScoreRow[], error: null };
   if (scoresError) throw scoresError;
@@ -198,15 +210,12 @@ async function PendingApprovals({
   const holes = (holesRes.data ?? []).filter((h) =>
     isHoleInSegment(h.hole_number, holeSegment),
   );
-  const scoresByUserHole = new Map<string, Map<number, number | null>>();
-  for (const s of scoresData ?? []) {
-    let inner = scoresByUserHole.get(s.user_id);
-    if (!inner) {
-      inner = new Map();
-      scoresByUserHole.set(s.user_id, inner);
-    }
-    inner.set(s.hole_number, s.strokes);
-  }
+  const scoresByHolder = reviewScoresByHolder({
+    rows: scoresData ?? [],
+    mode: gwp.game.game_mode,
+    roster: gwp.players,
+    holderIds: pendingIds,
+  });
 
   function displayName(p: PlayerForHole): string {
     if (!p.users) return t('unknownPlayer');
@@ -229,7 +238,7 @@ async function PendingApprovals({
   return (
     <>
       {pending.map((p) => {
-        const inner = scoresByUserHole.get(p.user_id);
+        const inner = scoresByHolder.get(p.user_id);
         const played = holes
           .map((h) => inner?.get(h.hole_number) ?? null)
           .filter((v): v is number => v != null);
@@ -248,7 +257,12 @@ async function PendingApprovals({
                 <p className="text-xs text-muted mt-0.5">
                   {t('brutto')} <span className="score-num">{total}</span> ·{' '}
                   {t('playedHoles')}{' '}
-                  <span className="score-num">{played.length}</span>
+                  <span
+                    className="score-num"
+                    data-testid="approve-played-count"
+                  >
+                    {played.length}
+                  </span>
                   <span className="inline-num">/{holes.length}</span>
                 </p>
               </div>

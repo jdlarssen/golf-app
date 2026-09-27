@@ -496,14 +496,14 @@ async function PlayersSections({
           .filter((p) => p.submitted_at != null)
           .map((p) => p.user_id)
       : [];
-  const { holes: reviewHoles, scoresByUser: reviewScores } =
-    await fetchScorecardReviewData(
-      supabase,
-      supabase,
-      gameId,
-      game.course_id,
-      submittedIds,
-    );
+  // #2213: the card follows the row owner, so a teammate in the one-ball
+  // formats shows the team's strokes (whole roster, withdrawn included).
+  const { holes: reviewHoles, scoresByHolder: reviewScores } =
+    await fetchScorecardReviewData(supabase, supabase, gameId, game.course_id, {
+      mode: game.game_mode,
+      roster: players,
+      holderIds: submittedIds,
+    });
 
   // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
   // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
