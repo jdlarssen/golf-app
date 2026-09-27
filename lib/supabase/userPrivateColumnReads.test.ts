@@ -137,7 +137,7 @@ const ALLOWED: Record<string, Allowed> = {
   },
   'app/[locale]/venner/legg-til/[code]/page.tsx': {
     receivers: ['admin'],
-    reason: 'oppslag på vennekoden eieren selv delte; navne-fallback, jf. «Observert» i #2207',
+    reason: 'oppslag på vennekoden eieren selv delte; (D6) maskeres på serveren som navne-fallback (#2271)',
   },
   'app/api/profile/route.ts': {
     receivers: ['getAdminClient()'],

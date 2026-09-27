@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
+import { displayNameForOthers } from '@/lib/users/displayName';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,8 +26,9 @@ type Owner = {
 };
 
 function ownerName(o: Owner): string {
-  const base = o.name?.trim() || o.email;
-  return o.nickname ? `${base} «${o.nickname}»` : base;
+  // #2271: everyone with the link sees this, so a nameless owner shows as the
+  // masked address.
+  return displayNameForOthers(o) ?? '';
 }
 
 /**

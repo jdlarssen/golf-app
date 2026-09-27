@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
@@ -266,9 +267,7 @@ export async function withdrawSelf(
       }>();
     // null when the user row is missing — NotificationCard fills the locale
     // fallback at render time so the payload stays locale-agnostic (#583).
-    const base = userRow?.name?.trim() || userRow?.email || null;
-    const withdrawnName =
-      base && userRow?.nickname ? `${base} «${userRow.nickname}»` : base;
+    const withdrawnName = userRow ? displayNameForOthers(userRow) : null;
 
     await notify({
       userId: captainUserId,

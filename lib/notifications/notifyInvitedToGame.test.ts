@@ -78,7 +78,7 @@ describe('notifyInvitedToGame', () => {
     });
   });
 
-  it('inviter mangler navn: bruker email-fallback i invited_by_name', async () => {
+  it('inviter mangler navn: bruker maskert e-post i invited_by_name (#2271)', async () => {
     gameMock.mockResolvedValueOnce({
       data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft' },
       error: null,
@@ -98,7 +98,7 @@ describe('notifyInvitedToGame', () => {
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({
-          invited_by_name: 'admin@tornygolf.no',
+          invited_by_name: 'ad•••@tornygolf.no',
         }),
       }),
     );
