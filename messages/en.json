@@ -112,7 +112,7 @@
       },
       "gameReopened": {
         "title": "The round is open again",
-        "detail": "{actorName} reopened {gameName}, so scores can be edited again"
+        "detail": "{actorName} reopened {gameName}. The result isn't final until the round is finished again."
       },
       "productUpdate": {
         "title": "{title}",
@@ -3454,7 +3454,7 @@
         "admin_approved": "✓ Scorecard approved on behalf of the flight.",
         "finished": "✓ Game ended. Leaderboard is open to all.",
         "scorecard_reopened": "✓ Scorecard reopened for editing.",
-        "game_reopened": "✓ Game is active again.",
+        "game_reopened": "✓ Game is active again. Open the cards that need fixing under «Submitted scorecards».",
         "invite_added": "✓ Player added to the roster.",
         "invite_sent": "✓ Invitation sent.",
         "player_withdrawn": "✓ Player withdrawn from the ranking.",
@@ -3533,7 +3533,7 @@
         "endGameConfirm": "End the game? All participants will see the leaderboard afterwards.",
         "reopenGame": "Reopen game",
         "reopeningGame": "Reopening…",
-        "reopenGameConfirm": "Reopen the game? The leaderboard will be hidden again and players can edit their scorecards.",
+        "reopenGameConfirm": "Reopen the game? The results will be hidden again. Players stay submitted, so open the cards that need fixing under «Submitted scorecards».",
         "reopenScorecard": "Open for editing",
         "reopeningScorecardBusy": "Reopening…",
         "reopenScorecardConfirm": "Open {name}''s scorecard for editing? Any approval will be removed and the player must resubmit.",

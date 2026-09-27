@@ -112,7 +112,7 @@
       },
       "gameReopened": {
         "title": "Runden er åpnet igjen",
-        "detail": "{actorName} åpnet {gameName} igjen, så dere kan rette slagene"
+        "detail": "{actorName} åpnet {gameName} igjen. Resultatet er ikke endelig før runden avsluttes på nytt."
       },
       "productUpdate": {
         "title": "{title}",
@@ -3454,7 +3454,7 @@
         "admin_approved": "✓ Scorekort godkjent på vegne av flighten.",
         "finished": "✓ Spillet er avsluttet. Leaderboard er åpen for alle.",
         "scorecard_reopened": "✓ Scorekortet er åpnet for redigering.",
-        "game_reopened": "✓ Spillet er aktivt igjen.",
+        "game_reopened": "✓ Spillet er aktivt igjen. Åpne kortene som skal rettes under «Leverte scorekort».",
         "invite_added": "✓ Spilleren er lagt til i spillerlisten.",
         "invite_sent": "✓ Invitasjon sendt.",
         "player_withdrawn": "✓ Spilleren er trukket fra rangeringen.",
@@ -3533,7 +3533,7 @@
         "endGameConfirm": "Avslutte spillet? Alle deltakere ser leaderboard etterpå.",
         "reopenGame": "Gjenåpne spillet",
         "reopeningGame": "Gjenåpner …",
-        "reopenGameConfirm": "Gjenåpne spillet? Leaderboard skjules igjen og spillerne kan redigere scorekortene sine.",
+        "reopenGameConfirm": "Gjenåpne spillet? Resultatlista skjules igjen. Spillerne står fortsatt som levert, så kort som skal rettes, åpner du under «Leverte scorekort».",
         "reopenScorecard": "Åpne for redigering",
         "reopeningScorecardBusy": "Gjenåpner …",
         "reopenScorecardConfirm": "Åpne scorekortet til {name} for redigering? Eventuell godkjenning fjernes, og spilleren må levere på nytt.",

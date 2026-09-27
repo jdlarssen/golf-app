@@ -153,10 +153,12 @@ export async function notifyPlayersGameStarted(
 /**
  * Best-effort `game_reopened`-varsel når et ferdig spill flippes tilbake til
  * aktivt (#1363). Motstykket til `notifyPlayersGameStarted`, men uten
- * off-app-partisjonen: en gjenåpning fjerner resultatlista og gjør runden
- * redigerbar igjen, og den beskjeden skal nå ALLE aktive deltakere — også den
- * som står i appen og nettopp så resultatet sitt forsvinne. Kun in-app, ingen
- * mail (issue-kravet).
+ * off-app-partisjonen: en gjenåpning fjerner resultatlista, og den beskjeden
+ * skal nå ALLE aktive deltakere — også den som står i appen og nettopp så
+ * resultatet sitt forsvinne. Gjenåpningen låser ikke opp kortene: leverte
+ * spillere står fortsatt som levert, og admin åpner kortene som skal rettes
+ * ett og ett (`reopenScorecard`, #2213). Kun in-app, ingen mail
+ * (issue-kravet).
  *
  * Caller-kontrakt:
  *  - kall kun etter en vellykket status-flipp

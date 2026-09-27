@@ -650,8 +650,14 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
 
 /**
  * Admin: flip a finished game back to active. Clears ended_at so the
- * leaderboard hides again and players can edit scores. Useful when the
- * round was ended prematurely or a result needs correction.
+ * leaderboard hides again. Useful when the round was ended prematurely or a
+ * result needs correction.
+ *
+ * The scorecards stay submitted (#2213): reopening every card would make ~150
+ * players deliver and get approved again for one correction. The admin opens
+ * the cards that need fixing one by one with `reopenScorecard` (a whole team
+ * at a time in the one-ball formats), and the notification and banner texts
+ * say exactly that.
  */
 export async function reopenGame(gameId: string) {
   const locale = await getLocale();
