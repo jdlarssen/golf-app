@@ -27,10 +27,9 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   // the pending-invitations list. Picker handles the in-between state.
   // #2207: rendered only from admin/spillere, after its requireAdmin gate.
   // Paged (#2227): the whole roster outgrows PostgREST's 1 000-row cap.
-  const admin = getAdminClient();
   const users = await selectAllRows(
     (from, to) =>
-      admin
+      getAdminClient()
         .from('users')
         .select('id, name, nickname, email, hcp_index, is_admin, is_guest, created_at')
         .not('profile_completed_at', 'is', null)
