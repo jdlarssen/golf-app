@@ -86,7 +86,7 @@ export async function notifyPlayersGameFinished(
  *
  * #1450: et AVLEDET spill (`sourceGameId` satt, #1441 D3) varsler aldri —
  * verten eier cup-start-varselet, og en avledet singles har alltid et delsett
- * av vertens tropp. Gaten ligger her, i den ene fan-out-helperen alle tre
+ * av vertens tropp. Gaten ligger her, i den ene fan-out-helperen alle
  * start-veiene deler, så regelen har ett hjem. `sourceGameId` er påkrevd (ikke
  * valgfritt) med vilje: da tvinger typesjekken hvert kall-sted til å svare på
  * spørsmålet, i stedet for at vakten forsvinner i stillhet.
@@ -95,8 +95,9 @@ export async function notifyPlayersGameFinished(
  * in-app-rad — venterommet refresher via realtime og spilleren ser starten
  * uansett. Kun off-app-spillere (målt på `last_seen_at`, samme terskel som
  * push) beholder raden, så de får varselet ved retur. Gaten ligger her, i den
- * ene fan-out-helperen alle tre start-veier kaller, ikke i den hot-path-delte
- * `notify()`-primitiven.
+ * ene fan-out-helperen alle start-veier kaller, ikke i den hot-path-delte
+ * `notify()`-primitiven. Start-veiene er trykket (webbens knapp og appens
+ * start-rute, begge via `announceStartedGame`), E1-fallbacken og cron-sweepen.
  */
 export async function notifyPlayersGameStarted(
   players: Array<{ user_id: string }>,

@@ -393,7 +393,8 @@ export default async function GameHomePage({
       // cup with a start time gives every generated match a
       // `scheduled_tee_off_at`, so a player who opens the greensome at tee-off
       // can win the flip here before the cron sweep does — same fan-out as the
-      // other two start paths (admin button, cron sweep). Inside after()
+      // other start paths (the admin button and the app's start route, both via
+      // `announceStartedGame`, and the cron sweep). Inside after()
       // because it expires each derived game's cache, which throws during
       // render (#2068).
       if (result.started) {

@@ -6,11 +6,13 @@ import { displayNameForOthers } from '@/lib/users/displayName';
 /**
  * Best-effort `invite`-varsel til en spiller som er lagt til i et game.
  *
- * Brukes fra tre call-sites:
- *  1. Picker-add fra `/admin/games/[id]` (umiddelbar add).
+ * Brukes blant annet fra:
+ *  1. Picker-add (`addExistingPlayerToGameCore`): webbens «Inviter spillere»
+ *     og appens «Legg til spiller» (umiddelbar add).
  *  2. Backfill i `/admin/games/new` og edit-flyten (for hver ny spiller).
  *  3. Deferred etter OTP-verify når en ukjent e-post aksepterer en
  *     game-scoped invitasjon.
+ *  4. `notifyRosterInvites`, etter at appen har publisert en runde (#2215).
  *
  * Henter game-navn + inviter-navn via admin-client (server-only context,
  * post-auth verifisert hos caller). Hopper over varselet hvis spillet er

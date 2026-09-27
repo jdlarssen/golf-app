@@ -29,24 +29,29 @@ import { effectiveHcpAllowancePct } from './hcpAllowance';
 /**
  * Import-pure core of the scheduled→active start (#1855). Every guard, every
  * write and the optimistic-lock flip live here; the file deliberately imports
- * nothing that only exists on a Next.js server, so the React Native app can run
- * the exact same orchestration against its own RLS-scoped Supabase client
- * instead of forking a second, drifting copy of the rules (the #1832 precedent:
- * `lib/wolf/` moved out, web imports the same file).
+ * nothing that only exists on a Next.js server. #1855 made it shared code so the
+ * React Native app could run the exact same orchestration against its own
+ * RLS-scoped Supabase client instead of forking a second, drifting copy of the
+ * rules (the #1832 precedent: `lib/wolf/` moved out, web imports the same file).
+ * Since #2215 the app calls `POST /api/games/[id]/start` instead, which runs
+ * this core through `startScheduledGame` with the service role. Only app builds
+ * from before #2215 still run a bundled copy with their RLS client, and the RLS
+ * hardening below (#1871) stays for them.
  *
  * The one thing that does NOT fit in here is the notification fan-out: `notify`
  * opens with `import 'server-only'` and writes via the service-role client. So
  * the auto-reject step (#1055) does its DB write here and RETURNS the affected
  * applicants; the caller owns the varsling. `lib/games/startScheduledGame.ts` is
- * that caller on web — a thin wrapper that fires `registration_expired` per
- * returned applicant and hands back the narrow result the web callsites already
- * consume.
+ * that caller on the server — a thin wrapper that fires `registration_expired`
+ * per returned applicant and hands back the narrow result its callsites
+ * already consume.
  */
 
 /**
  * One signup request that the start auto-rejected (#1055). Returned instead of
- * notified, so a caller without server-side notification access (the RN app)
- * still gets a correct start, and a caller that has it can fan out.
+ * notified, so a caller without server-side notification access (an app build
+ * from before #2215) still gets a correct start, and a caller that has it can
+ * fan out.
  */
 export type ExpiredSignup = { requestId: string; userId: string };
 
@@ -116,13 +121,15 @@ export type StartScheduledGameCoreResult =
  * `planGreensomeStartOverride`. Runs before the status flip so a retry after a
  * crash redoes it from identical inputs.
  *
- * Used by:
+ * Used by, all through `startScheduledGame`, which adds the notification
+ * fan-out on top:
  * - D5: admin "Start runden nå" server action (interactive)
+ * - the app's «Start runden nå»: `POST /api/games/[id]/start` (#2215)
  * - E1: server-side fallback on /games/[id] when tee-off has passed
- * - the React Native app, with its own RLS-scoped client (#1855)
+ * - the cron sweep + the league/derived-games sync
  *
- * — all of them through `startScheduledGame` on web, which adds the
- * notification fan-out on top.
+ * App builds from before #2215 still call this core directly, with their own
+ * RLS-scoped client (#1855).
  *
  * The caller decides redirects / revalidation based on the structured result.
  */
@@ -357,8 +364,8 @@ export async function startScheduledGameCore(
   // contiguous 1..n (idempotent on retry after a mid-loop crash).
   //
   // ⚠️ #1855: the caller set is no longer "service-role or admin". This file
-  // became shared code so the native app could run it, and the app calls it as
-  // a plain authenticated CREATOR. That is exactly what surfaced the missing
+  // became shared code so the native app could run it, and the app called it as
+  // a plain authenticated CREATOR (builds from before #2215 still do). That is exactly what surfaced the missing
   // own-row escape in `guard_game_players_self_update` (migration 0168): the
   // organiser's own slot write raised 42501 while everyone else's went through.
   //
@@ -545,8 +552,8 @@ export async function startScheduledGameCore(
  *
  * RLS: the write is legal for the organiser too, not just service-role — the
  * `game_reg_requests admin update` policy (0092) allows
- * `is_game_creator_or_admin(game_id)` — so the RN app's user-scoped client can
- * run this same step (#1855).
+ * `is_game_creator_or_admin(game_id)` — so an app build from before #2215 can
+ * run this same step with its user-scoped client (#1855).
  */
 async function autoRejectPendingSignups(
   supabase: SupabaseClient<Database>,

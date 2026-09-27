@@ -2,28 +2,14 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
-import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
-import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
-import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
-import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
-import { isRosterLocked } from '@/lib/games/status';
 import {
+  addExistingPlayerToGameCore,
   inviteEmailToGameCore,
   normalizeInviteEmail,
   type InviteRefusal,
 } from '@/lib/games/inviteToGame';
-
-type GameSnapshot = {
-  id: string;
-  name: string;
-  status: 'draft' | 'scheduled' | 'active' | 'finished';
-  game_mode: string;
-  group_id: string | null;
-  mode_config: { team_size?: number } | null;
-};
 
 /**
  * Picker-add: legg en eksisterende registrert spiller til et game-roster.
@@ -32,9 +18,12 @@ type GameSnapshot = {
  * UNIQUE-violation på (game_id, user_id) swallow-es slik at race-condition
  * mellom to faner ikke produserer en feilmelding.
  *
- * Notify fyrer best-effort etter at game_players-insertet er commitet.
- * Spilleren får bell-prikk uten å måtte aksepte noe — curator-modellen
- * forutsetter at arrangøren har avklart deltakelse på forhånd.
+ * Regelen bor i `addExistingPlayerToGameCore` (`lib/games/inviteToGame.ts`,
+ * #2215): status-låsen, venne-/klubb-porten, format-taket, skrivingen,
+ * `invite`-varselet og cache-tømmingen. Appen når den samme kjernen over
+ * `POST /api/games/[id]/players/[userId]`. Igjen her står gaten, klienten og
+ * oversettelsen fra utfall til query-parameter. Klienten er den RLS-baserte, så
+ * 0072-policyene og 0115-triggeren står som et andre lag på webbens skriving.
  */
 export async function addExistingPlayerToGame(
   gameId: string,
@@ -46,65 +35,29 @@ export async function addExistingPlayerToGame(
   const detailPath = ctx.isAdmin
     ? `/admin/games/${gameId}`
     : `/games/${gameId}/spillere`;
-  const inviterUserId = ctx.userId;
 
   const recipientUserId = String(formData.get('recipient_user_id') ?? '').trim();
   if (!recipientUserId) {
     redirect({ href: `${detailPath}?error=invite_missing_user`, locale });
   }
 
-  const game = await loadGameForInvite(supabase, gameId, detailPath);
-
-  if (isRosterLocked(game.status)) {
-    redirect({ href: `${detailPath}?error=game_locked`, locale });
-  }
-
-  // Venne-/klubb-scoping (#906, felle #3 — server er den egentlige authz). Admin
-  // er unntatt (kurator-modellen, jf. disposable-guarden #422); self alltid lov.
-  if (!ctx.isAdmin && recipientUserId !== inviterUserId) {
-    const eligible = await getInviteEligibleIds(inviterUserId, game.group_id);
-    if (!eligible.has(recipientUserId)) {
-      redirect({ href: `${detailPath}?error=invite_not_allowed`, locale });
-    }
-  }
-
-  await assertRoomForPlayer(supabase, game, detailPath);
-
-  // #2209: the invitee's tee category from the profile, clamped to the tee.
-  const teeGenders = await joinTeeGenders(gameId, [recipientUserId]);
-  const { error: insertError } = await supabase.from('game_players').insert({
-    game_id: gameId,
-    user_id: recipientUserId,
-    team_number: null,
-    flight_number: null,
-    course_handicap: null,
-    // #463: arrangør legger til en annen bruker → ikke bekreftet ennå.
-    accepted_at: null,
-    tee_gender: teeGenders[recipientUserId],
+  const result = await addExistingPlayerToGameCore({
+    client: supabase,
+    gameId,
+    inviterUserId: ctx.userId,
+    isAdmin: ctx.isAdmin,
+    recipientUserId,
   });
 
-  // Idempotent: hvis spilleren allerede er på rosteren (UNIQUE-violation
-  // på (game_id, user_id)) returnerer Postgres '23505'. Da swallow vi —
-  // intensjonen var allerede oppfylt, men vi skal ikke fyre en ny notify.
-  const duplicate =
-    insertError != null &&
-    (insertError.code === '23505' ||
-      String(insertError.message ?? '').toLowerCase().includes('duplicate'));
-
-  if (insertError && !duplicate) {
-    console.error('[inviteToGame/addExistingPlayer] insert failed', insertError);
-    redirect({ href: `${detailPath}?error=db_players`, locale });
-  }
-
-  if (!duplicate && recipientUserId !== inviterUserId) {
-    await notifyInvitedToGame({
-      recipientUserId,
-      gameId,
-      inviterUserId,
+  if (!result.ok) {
+    // Samme query-kart som e-post-døra under: kjernens koder er et delsett av
+    // dens, og verdiene står tegn-for-tegn som før flyttingen.
+    return redirect({
+      href: `${detailPath}?error=${REFUSAL_ERROR[result.reason]}`,
+      locale,
     });
   }
 
-  expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=invite_added`, locale });
 }
 
@@ -176,53 +129,4 @@ export async function inviteEmailToGame(
     href: `${detailPath}?status=${status}&email=${encodeURIComponent(result.email)}`,
     locale,
   });
-}
-
-async function loadGameForInvite(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-  gameId: string,
-  detailPath: string,
-): Promise<GameSnapshot> {
-  const locale = await getLocale();
-  const { data, error } = await supabase
-    .from('games')
-    .select('id, name, status, game_mode, group_id, mode_config')
-    .eq('id', gameId)
-    .maybeSingle<GameSnapshot>();
-
-  // Error ≠ absence (#1445): a transient query failure throws to the route's
-  // error boundary (retryable) instead of claiming the game does not exist.
-  // Only a genuine 0-row result keeps the not_found redirect.
-  if (error) {
-    console.error('[loadGameForInvite] game fetch failed', { gameId, error });
-    throw error;
-  }
-  if (!data) {
-    redirect({ href: `${detailPath}?error=not_found`, locale });
-  }
-  return data!;
-}
-
-/**
- * Format cap for the organiser's add paths (#2059): the cap the signup link
- * reads (`organizerPlayerCap`), counted over active players so a withdrawn
- * player never makes the game look full. Enforced here in the action only —
- * there is no DB constraint behind it, so two tabs adding at once can pass it.
- */
-async function assertRoomForPlayer(
-  supabase: Awaited<ReturnType<typeof getServerClient>>,
-  game: GameSnapshot,
-  detailPath: string,
-): Promise<void> {
-  const cap = organizerPlayerCap(game.game_mode, game.mode_config);
-  if (cap === null) return;
-  const { count } = await supabase
-    .from('game_players')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('game_id', game.id)
-    .is('withdrawn_at', null);
-  if ((count ?? 0) >= cap) {
-    const locale = await getLocale();
-    redirect({ href: `${detailPath}?error=game_full`, locale });
-  }
 }
