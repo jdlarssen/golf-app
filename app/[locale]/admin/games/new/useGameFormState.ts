@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { settlementUnitKeyFor } from '@/lib/scoring/settlement';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
@@ -1976,12 +1977,10 @@ export function useGameFormState({
     // #1051: premiebord-utkast + per-slott-setter.
     prizeDraft,
     setPrizeField,
-    isWagerFormat:
-      isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey,
-    wagerUnitKey: (isSkins ? 'skin' : isNassau ? 'seksjon' : 'poeng') as
-      | 'skin'
-      | 'poeng'
-      | 'seksjon',
+    // Hvilke formater som spiller om penger, og i hvilken enhet, har ett hjem
+    // i lib/scoring/settlement.ts (#2221) — samme regel som resultattavla.
+    isWagerFormat: settlementUnitKeyFor(gameMode) !== null,
+    wagerUnitKey: settlementUnitKeyFor(gameMode) ?? 'poeng',
     nassauScoring,
     setNassauScoring,
     skinsScoring,
