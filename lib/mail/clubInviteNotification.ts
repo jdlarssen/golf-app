@@ -18,9 +18,6 @@ import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 
-// RESEND_FROM_EMAIL in our env is the bare address (`noreply@tornygolf.no`).
-// We always want the display name "Tørny" in the From header, so wrap the
-// env value unless it already looks like a `Display Name <addr>` lockup.
 export type ClubInviteNotificationParams = {
   to: string;
   /** Display name of the club owner/admin who added the email. */
