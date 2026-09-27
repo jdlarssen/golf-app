@@ -12,6 +12,7 @@
 // `lib/wolf/holeLabels`, samme kilde webben bruker.
 import { StyleSheet, Text, View } from 'react-native';
 import type { WolfResult } from '../../../../../lib/scoring/modes/types';
+import type { Settlement } from '../../../../../lib/scoring/settlement';
 import {
   wolfChoiceLabel,
   wolfHoleHasStory,
@@ -19,13 +20,17 @@ import {
   wolfOutcomeLabel,
 } from '../../lib/leaderboardModel';
 import { useTheme } from '../../theme';
+import { SettlementCard } from './SettlementCard';
 import { LeaderTable } from './Table';
 
 export function WolfView({
   result,
+  settlement,
   nameOf,
 }: {
   result: WolfResult;
+  /** Pengeoppgjøret (#2221), eller null når spillet ikke har kroner per poeng. */
+  settlement: Settlement | null;
   nameOf: (userId: string) => string;
 }) {
   const { colors, ui } = useTheme();
@@ -62,6 +67,9 @@ export function WolfView({
             .join(' · ')}
         </Text>
       ) : null}
+
+      {/* Rett under stillingen, over hull-for-hull-lista — som på nettsiden. */}
+      {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
 
       <Text style={ui.sectionTitle}>Hull for hull</Text>
       {result.holes.length === 0 ? (

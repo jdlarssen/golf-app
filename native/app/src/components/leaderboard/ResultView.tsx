@@ -10,12 +10,14 @@
 // ville vært en andre og konkurrerende regel for hvem som leder.
 import { showHolesColumn, teamHolesPlayed } from '../../../../../lib/leaderboard/holesColumn';
 import type { ModeResult } from '../../../../../lib/scoring/modes/types';
+import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
 import { WebLinkButton } from '../WebLinkButton';
 import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
 import { NassauView, SkinsView } from './PotViews';
+import { SettlementCard } from './SettlementCard';
 import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
 import { WolfView } from './WolfView';
 
@@ -60,12 +62,19 @@ export function ResultView({
   result,
   status,
   gameId,
+  settlement,
   nameOf,
 }: {
   result: ModeResult;
   status: string;
   /** Kun til lenke-knappen i patsome-grenen (#1891) — ingen visning leser den. */
   gameId: string;
+  /**
+   * Pengeoppgjøret (#2221) fra den delte `settlementForResult`, eller null når
+   * spillet ikke spiller om penger. Påkrevd, så en visning som glemmer det
+   * stopper i `tsc`. Bare de seks veddemålsformatene leser det.
+   */
+  settlement: Settlement | null;
   nameOf: ReturnType<typeof nameLookup>;
 }) {
   switch (result.kind) {
@@ -241,25 +250,28 @@ export function ResultView({
         result.players.map((player) => player.holesScored),
       );
       return (
-        <LeaderTable
-          testID="leaderboard-table"
-          columns={[
-            RANK,
-            PLAYER,
-            { key: 'points', label: 'Poeng', numeric: true },
-            ...(showHoles ? [HOLES] : []),
-          ]}
-          rows={result.players.map((player) => ({
-            key: player.userId,
-            highlight: player.rank === 1,
-            cells: [
-              player.rank,
-              nameOf(player.userId),
-              player.totalPoints,
-              ...(showHoles ? [player.holesScored] : []),
-            ],
-          }))}
-        />
+        <>
+          <LeaderTable
+            testID="leaderboard-table"
+            columns={[
+              RANK,
+              PLAYER,
+              { key: 'points', label: 'Poeng', numeric: true },
+              ...(showHoles ? [HOLES] : []),
+            ]}
+            rows={result.players.map((player) => ({
+              key: player.userId,
+              highlight: player.rank === 1,
+              cells: [
+                player.rank,
+                nameOf(player.userId),
+                player.totalPoints,
+                ...(showHoles ? [player.holesScored] : []),
+              ],
+            }))}
+          />
+          {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
+        </>
       );
     }
 
@@ -288,27 +300,32 @@ export function ResultView({
 
     case 'acey_deucey':
       return (
-        <LeaderTable
-          testID="leaderboard-table"
-          columns={[
-            RANK,
-            PLAYER,
-            { key: 'total', label: 'Poeng', numeric: true },
-            { key: 'aces', label: 'Ess', numeric: true },
-          ]}
-          rows={result.players.map((player) => ({
-            key: player.userId,
-            highlight: player.rank === 1,
-            cells: [player.rank, nameOf(player.userId), player.total, player.aces],
-          }))}
-        />
+        <>
+          <LeaderTable
+            testID="leaderboard-table"
+            columns={[
+              RANK,
+              PLAYER,
+              { key: 'total', label: 'Poeng', numeric: true },
+              { key: 'aces', label: 'Ess', numeric: true },
+            ]}
+            rows={result.players.map((player) => ({
+              key: player.userId,
+              highlight: player.rank === 1,
+              cells: [player.rank, nameOf(player.userId), player.total, player.aces],
+            }))}
+          />
+          {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
+        </>
       );
 
     case 'skins':
-      return <SkinsView result={result} status={status} nameOf={nameOf} />;
+      return (
+        <SkinsView result={result} status={status} settlement={settlement} nameOf={nameOf} />
+      );
 
     case 'nassau':
-      return <NassauView result={result} nameOf={nameOf} />;
+      return <NassauView result={result} settlement={settlement} nameOf={nameOf} />;
 
     case 'singles_matchplay':
       return (
@@ -364,10 +381,12 @@ export function ResultView({
       );
 
     case 'wolf':
-      return <WolfView result={result} nameOf={nameOf} />;
+      return <WolfView result={result} settlement={settlement} nameOf={nameOf} />;
 
     case 'bingo_bango_bongo':
-      return <BingoBangoBongoView result={result} nameOf={nameOf} />;
+      return (
+        <BingoBangoBongoView result={result} settlement={settlement} nameOf={nameOf} />
+      );
 
     // Gatet i `formatGate` — kan ikke nås fra appen, men har en gren så en
     // fremtidig åpning ikke møter en tom skjerm.

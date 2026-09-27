@@ -11,6 +11,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
+import type { Settlement } from '../../../../lib/scoring/settlement';
 import type { ScreenProps } from '../navigation';
 import { Leaderboard, LeaderboardBody } from './Leaderboard';
 
@@ -351,9 +352,55 @@ describe('LeaderboardBody', () => {
     await render(<LeaderboardBody bundle={withGame({})} scores={[]} />);
     expect(screen.getByTestId('leaderboard-empty')).toBeTruthy();
   });
+
+  // #2221: veiviseren spør etter kroner per enhet, så resultatskjermen må vise
+  // oppgjøret. Makker vinner hull 1, hull 2 er likt: 1 skin mot 0. Beløpene er
+  // Type A-dekket i `lib/scoring/settlement.test.ts`; her gjelder det bare at
+  // `kr_per_unit` i den cachede konfigurasjonen faktisk blir til et kort.
+  it('viser pengeoppgjøret bare når spillet har kroner per enhet', async () => {
+    const skinsConfig = { kind: 'skins', team_size: 1, skins_scoring: 'gross' };
+    const { rerender } = await render(
+      <LeaderboardBody
+        bundle={withGame({ gameMode: 'skins', modeConfig: skinsConfig })}
+        scores={mockLocalScores}
+      />,
+    );
+    expect(screen.getByTestId('skins-view')).toBeTruthy();
+    expect(screen.queryByTestId('settlement')).toBeNull();
+
+    await rerender(
+      <LeaderboardBody
+        bundle={withGame({
+          gameMode: 'skins',
+          modeConfig: { ...skinsConfig, kr_per_unit: 50 },
+        })}
+        scores={mockLocalScores}
+      />,
+    );
+    expect(screen.getByTestId('settlement')).toBeTruthy();
+    expect(screen.getByTestId('settlement-stake').props.children).toBe('50 kr per skin');
+    expect(screen.getAllByTestId(/^settlement-player-[a-z]+$/)).toHaveLength(2);
+    expect(screen.getByTestId('settlement-player-mate-net').props.children).toMatch(/^\+/);
+    expect(screen.getByTestId('settlement-player-me-net').props.children).toMatch(/^−/);
+    expect(screen.getByTestId('settlement-payment-0-line').props.children).toBe(
+      'Meg Selv → Makker Makkersen',
+    );
+  });
 });
 
 describe('ResultView', () => {
+  // #2221: et ferdig oppgjør som prop. Tallene er motorens og Type A-dekket;
+  // her gjelder det bare at visningen tegner kortet når det finnes.
+  const SETTLEMENT: Settlement = {
+    krPerUnit: 20,
+    unitLabel: 'poeng',
+    perPlayer: [
+      { userId: 'me', units: 4, netKr: 30 },
+      { userId: 'mate', units: 1, netKr: -30 },
+    ],
+    payments: [{ fromUserId: 'mate', toUserId: 'me', kr: 30 }],
+  };
+
   // Én render-test per ny visning (#1832). De svarer på ÉN ting: at motorens
   // rader faktisk blir til rader på skjermen, og at `ResultView` ruter de to
   // kindsene dit. Tallene selv er motorens og er dekket i `lib/scoring`.
@@ -417,11 +464,13 @@ describe('ResultView', () => {
         result={result}
         status="active"
         gameId={GAME_ID}
+        settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
 
     expect(screen.getByTestId('wolf-view')).toBeTruthy();
+    expect(screen.getByTestId('settlement')).toBeTruthy();
     expect(cell('me', 'points')).toBe('4');
     expect(cell('mate', 'rank')).toBe('2');
 
@@ -471,17 +520,80 @@ describe('ResultView', () => {
         result={result}
         status="active"
         gameId={GAME_ID}
+        settlement={SETTLEMENT}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
 
     expect(screen.getByTestId('bbb-view')).toBeTruthy();
+    expect(screen.getByTestId('settlement')).toBeTruthy();
     expect(screen.getByTestId('bbb-player-me-points').props.children).toBe(3);
     expect(
       screen.getByTestId('bbb-player-mate-breakdown').props.children.join(''),
     ).toBe('0 bingo · 1 bango · 1 bongo');
     // Noen har poeng, så «ingenting registrert ennå» skal ikke stå der.
     expect(screen.queryByTestId('bbb-no-points')).toBeNull();
+  });
+
+  // #2221: de tre pengeformatene appen ikke kan lage, men viser når de er
+  // laget på nettsiden. Den eneste testen av at disse grenene tegner kortet.
+  const twoPlayers = <T extends object>(line: (userId: string, i: number) => T) =>
+    ['me', 'mate'].map((userId, i) => ({ userId, rank: i + 1, tiedWith: [], ...line(userId, i) }));
+  const nassauSection = (name: string) => ({
+    name,
+    holeNumbers: [],
+    players: [],
+    winnerUserIds: [],
+    isPending: true,
+  });
+
+  it.each([
+    [
+      'nassau',
+      {
+        kind: 'nassau',
+        scoring: 'net',
+        sections: {
+          front9: nassauSection('front9'),
+          back9: nassauSection('back9'),
+          total18: nassauSection('total18'),
+        },
+        players: twoPlayers((_id, i) => ({ units: 1 - i })),
+        holes: [],
+      },
+    ],
+    [
+      'nines',
+      {
+        kind: 'nines',
+        variant: 'nines',
+        scoring: 'net',
+        holes: [],
+        players: twoPlayers((_id, i) => ({ totalPoints: 9 - i, holesScored: 2 })),
+      },
+    ],
+    [
+      'acey_deucey',
+      {
+        kind: 'acey_deucey',
+        scoring: 'net',
+        holes: [],
+        players: twoPlayers((_id, i) => ({ total: 3 - 3 * i, aces: 1 - i, deuces: i })),
+      },
+    ],
+  ])('tegner pengeoppgjøret i %s når spillet har kroner per enhet', async (_kind, result) => {
+    await render(
+      <ResultView
+        result={result as unknown as ModeResult}
+        status="active"
+        gameId={GAME_ID}
+        settlement={SETTLEMENT}
+        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      />,
+    );
+
+    expect(screen.getByTestId('leaderboard-table')).toBeTruthy();
+    expect(screen.getByTestId('settlement')).toBeTruthy();
   });
 
   // #1892: Hull-kolonnen er «thru»-informasjon under runden og støy på
@@ -517,6 +629,7 @@ describe('ResultView', () => {
         result={stablefordResult([18, 18])}
         status="finished"
         gameId={GAME_ID}
+        settlement={null}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
@@ -532,6 +645,7 @@ describe('ResultView', () => {
         result={stablefordResult([18, 12])}
         status="finished"
         gameId={GAME_ID}
+        settlement={null}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
@@ -565,6 +679,7 @@ describe('ResultView', () => {
         result={result}
         status="finished"
         gameId={GAME_ID}
+        settlement={null}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
@@ -601,6 +716,7 @@ describe('ResultView', () => {
         result={result}
         status="finished"
         gameId={GAME_ID}
+        settlement={null}
         nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
       />,
     );
@@ -621,6 +737,7 @@ describe('ResultView', () => {
         result={fromTheFuture}
         status="active"
         gameId={GAME_ID}
+        settlement={null}
         nameOf={() => 'Ukjent'}
       />,
     );

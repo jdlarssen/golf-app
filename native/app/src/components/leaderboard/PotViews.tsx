@@ -2,21 +2,26 @@
 // total nederst — de er en pott og tre delkonkurranser, og vises som det.
 import { Text, View } from 'react-native';
 import type { NassauResult, SkinsResult } from '../../../../../lib/scoring/modes/types';
+import type { Settlement } from '../../../../../lib/scoring/settlement';
 import {
   carriedPotLine,
   NASSAU_SECTION_LABELS,
   nassauSectionLine,
 } from '../../lib/leaderboardModel';
 import { useTheme } from '../../theme';
+import { SettlementCard } from './SettlementCard';
 import { LeaderTable } from './Table';
 
 export function SkinsView({
   result,
   status,
+  settlement,
   nameOf,
 }: {
   result: SkinsResult;
   status: string;
+  /** Pengeoppgjøret (#2221), eller null når spillet ikke har kroner per skin. */
+  settlement: Settlement | null;
   nameOf: (userId: string) => string;
 }) {
   const { ui } = useTheme();
@@ -42,6 +47,7 @@ export function SkinsView({
           {potLine}
         </Text>
       ) : null}
+      {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
       <Text style={ui.muted}>
         {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
       </Text>
@@ -51,9 +57,12 @@ export function SkinsView({
 
 export function NassauView({
   result,
+  settlement,
   nameOf,
 }: {
   result: NassauResult;
+  /** Pengeoppgjøret (#2221), eller null når spillet ikke har kroner per seksjon. */
+  settlement: Settlement | null;
   nameOf: (userId: string) => string;
 }) {
   const { ui } = useTheme();
@@ -85,6 +94,8 @@ export function NassauView({
           <Text style={ui.muted}>{nassauSectionLine(section, nameOf)}</Text>
         </View>
       ))}
+      {/* Etter de tre konkurransene, som på nettsiden. */}
+      {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
       <Text style={ui.muted}>
         {result.scoring === 'net' ? 'Spilles på netto.' : 'Spilles på brutto.'}
       </Text>

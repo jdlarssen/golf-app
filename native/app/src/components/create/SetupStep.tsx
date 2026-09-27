@@ -12,6 +12,7 @@
 // validatoren — så teksten eier feltet, og tallet utledes først ved
 // publisering.
 import { isStablefordFamily } from '../../../../../lib/scoring/modes/types';
+import { settlementUnitKeyFor } from '../../../../../lib/scoring/settlement';
 import { Text, TextInput, View } from 'react-native';
 import {
   ALLOWANCE_TEXT,
@@ -19,6 +20,7 @@ import {
   hasHcpAllowanceField,
 } from '../../lib/allowanceCopy';
 import type { AppGameMode } from '../../lib/appFormats';
+import { SETTLEMENT_TEXT } from '../../lib/settlementCopy';
 import type { ModeSetup } from '../../lib/wizardPayload';
 import { useTheme } from '../../theme';
 import { Chips, Field, ToggleRow } from './primitives';
@@ -66,8 +68,9 @@ export function SetupStep({
   const { colors, ui } = useTheme();
   const stablefordFamily = isStablefordFamily(mode);
   const hasScoringToggle = mode === 'wolf' || mode === 'skins';
-  const hasKrPerUnit =
-    mode === 'wolf' || mode === 'skins' || mode === 'bingo_bango_bongo';
+  // Om formatet spiller om penger, og i hvilken enhet, er den delte regelen
+  // resultattavla også leser (#2221): skins sier «per skin», ikke «per poeng».
+  const wagerUnit = settlementUnitKeyFor(mode);
 
   return (
     <View testID="create-step-setup">
@@ -185,9 +188,9 @@ export function SetupStep({
         </Field>
       ) : null}
 
-      {hasKrPerUnit ? (
+      {wagerUnit !== null ? (
         <Field
-          label="Kroner per poeng"
+          label={`Kroner per ${SETTLEMENT_TEXT.units[wagerUnit]}`}
           hint="La stå tomt hvis dere ikke spiller om penger."
         >
           <TextInput
