@@ -486,8 +486,11 @@ describe('resolveScorecardLayout', () => {
 
 // ─── computeLayoutBTotals ─────────────────────────────────────────────
 
+/** Par 4 for every tee category — the holes where #2209 changes nothing. */
+const PAR4 = { mens: 4, ladies: 4, juniors: 4 };
+
 function par4Hole(n: number, si: number): LayoutBHoleInput {
-  return { hole_number: n, par: 4, stroke_index: si };
+  return { hole_number: n, parByGender: PAR4, stroke_index: si };
 }
 
 function col(
@@ -502,10 +505,35 @@ function col(
     courseHandicap: ch,
     isCurrentUser: userId === 'me',
     teamNumber,
+    teeGender: 'mens',
   };
 }
 
 describe('computeLayoutBTotals', () => {
+  // #2209: the footer's «P» total used the men's par for every column, and the
+  // cells used the viewer's par for the partner. The engine uses each
+  // player's own par (parFor(hole, p.teeGender)), and so must the card.
+  describe('#2209 par-stableford regner mot hver spillers egen par', () => {
+    it('dame netto 5 på damepar 5 gir 2, herre netto 4 på herrepar 4 gir 2, laget 2', () => {
+      const holes: LayoutBHoleInput[] = [
+        { hole_number: 1, parByGender: { mens: 4, ladies: 5, juniors: 4 }, stroke_index: 18 },
+      ];
+      const lady = { ...col('me', 0), teeGender: 'ladies' as const };
+      const man = { ...col('p', 0), teeGender: 'mens' as const };
+      const scores = new Map<string, number | null>([
+        ['me#1', 5],
+        ['p#1', 4],
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [lady, man], {
+        isStableford: true,
+        isMatchplay: false,
+      });
+      expect(t.perPlayer[0].points).toBe(2);
+      expect(t.perPlayer[1].points).toBe(2);
+      expect(t.teamTotalPoints).toBe(2);
+    });
+  });
+
   describe('best-ball (2-mannslag)', () => {
     it('per-spiller + lag-best per hull, lag-total = sum av MIN(netto)', () => {
       const holes = [par4Hole(1, 1), par4Hole(2, 18)];
@@ -829,11 +857,11 @@ describe('computeLayoutBTotals', () => {
       //  - hull 5 (SI 2):  me 5/4, opp 4/3 → opp vinner
       // Forventet: holesUp = 1 - 2 = -1, holesPlayed = 4 (hull 4 er unplayed).
       const layoutHoles: LayoutBHoleInput[] = [
-        { hole_number: 1, par: 4, stroke_index: 1 },
-        { hole_number: 2, par: 4, stroke_index: 18 },
-        { hole_number: 3, par: 4, stroke_index: 5 },
-        { hole_number: 4, par: 4, stroke_index: 9 },
-        { hole_number: 5, par: 4, stroke_index: 2 },
+        { hole_number: 1, parByGender: PAR4, stroke_index: 1 },
+        { hole_number: 2, parByGender: PAR4, stroke_index: 18 },
+        { hole_number: 3, parByGender: PAR4, stroke_index: 5 },
+        { hole_number: 4, parByGender: PAR4, stroke_index: 9 },
+        { hole_number: 5, parByGender: PAR4, stroke_index: 2 },
       ];
       const meCol = col('me', 10);
       const oppCol = col('opp', 10);
@@ -858,7 +886,7 @@ describe('computeLayoutBTotals', () => {
       // Bygg ekvivalent ScoringContext og kjør compute().
       const scoringHoles: ScoringHole[] = layoutHoles.map((h) => ({
         number: h.hole_number,
-        par: h.par,
+        par: h.parByGender.mens,
         strokeIndex: h.stroke_index,
       }));
       const scoringPlayers: ScoringPlayer[] = [
@@ -892,9 +920,9 @@ describe('computeLayoutBTotals', () => {
     it('returnerer samme tall når matchen står AS midt i runden', () => {
       // 3 hull, hver side vinner ett, ett tied → holesPlayed=3, holesUp=0.
       const layoutHoles: LayoutBHoleInput[] = [
-        { hole_number: 1, par: 4, stroke_index: 18 },
-        { hole_number: 2, par: 4, stroke_index: 18 },
-        { hole_number: 3, par: 4, stroke_index: 18 },
+        { hole_number: 1, parByGender: PAR4, stroke_index: 18 },
+        { hole_number: 2, parByGender: PAR4, stroke_index: 18 },
+        { hole_number: 3, parByGender: PAR4, stroke_index: 18 },
       ];
       const meCol = col('me', 0);
       const oppCol = col('opp', 0);
@@ -924,7 +952,7 @@ describe('computeLayoutBTotals', () => {
         ],
         holes: layoutHoles.map((h) => ({
           number: h.hole_number,
-          par: h.par,
+          par: h.parByGender.mens,
           strokeIndex: h.stroke_index,
         })),
         scores: [
@@ -1132,7 +1160,7 @@ describe('resolveScorecardLayout — slag som motoren (#2218)', () => {
           flightNumber: p.flight_number,
           courseHandicap: p.course_handicap ?? 0,
         })),
-        holes: holes.map((h) => ({ number: h.hole_number, par: h.par, strokeIndex: h.stroke_index })),
+        holes: holes.map((h) => ({ number: h.hole_number, par: h.parByGender.mens, strokeIndex: h.stroke_index })),
         scores: [...scores].map(([key, gross]) => {
           const [userId, holeStr] = key.split('#');
           return { userId, holeNumber: Number(holeStr), gross };
@@ -1154,8 +1182,8 @@ describe('resolveScorecardLayout — slag som motoren (#2218)', () => {
       // slag, netto 4, og kortet sa delt.
       // Hull 2 (SI 1): A 4, A2 5, B 5, B2 5. Alle får ett slag; lag 1 vinner 3 mot 4.
       const holes: LayoutBHoleInput[] = [
-        { hole_number: 1, par: 4, stroke_index: 18 },
-        { hole_number: 2, par: 4, stroke_index: 1 },
+        { hole_number: 1, parByGender: PAR4, stroke_index: 18 },
+        { hole_number: 2, parByGender: PAR4, stroke_index: 1 },
       ];
       const scores = new Map<string, number | null>([
         ['a#1', 5],
@@ -1186,9 +1214,9 @@ describe('resolveScorecardLayout — slag som motoren (#2218)', () => {
       // Kapteinene (a og b) har brutto 4. Lag 1 får 5 slag (SI 1–5): SI 5
       // vinnes, SI 6 og 7 er delt. Med 60/40 (9 slag) vant kortet alle tre.
       const holes: LayoutBHoleInput[] = [
-        { hole_number: 1, par: 4, stroke_index: 5 },
-        { hole_number: 2, par: 4, stroke_index: 6 },
-        { hole_number: 3, par: 4, stroke_index: 7 },
+        { hole_number: 1, parByGender: PAR4, stroke_index: 5 },
+        { hole_number: 2, parByGender: PAR4, stroke_index: 6 },
+        { hole_number: 3, parByGender: PAR4, stroke_index: 7 },
       ];
       const scores = new Map<string, number | null>([
         ['a#1', 4],

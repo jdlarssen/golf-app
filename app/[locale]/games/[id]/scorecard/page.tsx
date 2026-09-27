@@ -613,18 +613,15 @@ function LayoutBTable({
         scoresByUserHole.get(`${c.userId}#${h.hole_number}`) ?? null;
       const extra = strokesForHole(c.courseHandicap, h.stroke_index);
       const netto = strokes !== null ? strokes - extra : null;
-      // Stableford-poeng for cellen baseres på spillerens-egen par. Per
-      // d.d. mangler LayoutB per-spiller-tee_gender (columns har bare
-      // courseHandicap), så vi bruker seerens (me's) par her. Konsekvens:
-      // for blandet-kjønn-lag på et hull med per-kjønn-overstyring vil
-      // partners stableford-poeng-cell være regnet med me's par. Akseptabel
-      // begrensning for v1 — kjernen i #240 er at me's egen scoring blir
-      // korrekt (det er det de fleste blir påvirket av), og at avvikene blir
-      // synliggjort via asterisk-en. Full per-spiller-par-cell krever utvidet
-      // ScorecardColumnPlayer + ny scorecardLayout-test-flytting.
+      // #2209: each column's points against that player's own par, as the
+      // engine and the leaderboard count them (parFor(hole, p.teeGender)).
+      // The par column still shows the viewer's par (`myPar`).
       const stablefordPoints =
         isStableford && netto !== null
-          ? pointsFn({ par: myPar, netStrokes: netto })
+          ? pointsFn({
+              par: parForPlayer(parByGender, c.teeGender),
+              netStrokes: netto,
+            })
           : null;
       return { strokes, extra, netto, stablefordPoints };
     });
@@ -678,7 +675,7 @@ function LayoutBTable({
   const totals = computeLayoutBTotals(
     holes.map((h) => ({
       hole_number: h.hole_number,
-      par: h.par_mens,
+      parByGender: { mens: h.par_mens, ladies: h.par_ladies, juniors: h.par_juniors },
       stroke_index: h.stroke_index,
     })),
     scoresByUserHole,
