@@ -11,6 +11,9 @@ describe('rosterDisplayName', () => {
     [{ name: 'Ola', nickname: 'Bomber', email: 'ola@x.no' }, 'Ola «Bomber»'],
     [{ name: null, nickname: null, email: 'ola@x.no' }, 'ola@x.no'],
     [{ name: null, nickname: 'Bomber', email: 'ola@x.no' }, 'ola@x.no «Bomber»'],
+    // #2207: the creator picker has only the masked address.
+    [{ name: null, nickname: null, maskedEmail: 'ol•••@x.no' }, 'ol•••@x.no'],
+    [{ name: 'Ola', nickname: null, maskedEmail: 'ol•••@x.no' }, 'Ola'],
   ])('%o → %s', (over, expected) => {
     expect(rosterDisplayName({ id: '1', ...over })).toBe(expected);
   });
@@ -31,6 +34,15 @@ describe('filterRosterCandidates', () => {
     expect(filterRosterCandidates(list, 'NORDMANN').map((c) => c.id)).toEqual(['1']);
     expect(filterRosterCandidates(list, 'birdie').map((c) => c.id)).toEqual(['2']);
     expect(filterRosterCandidates(list, 'per@z').map((c) => c.id)).toEqual(['3']);
+  });
+
+  it('searches the masked address when that is all a candidate has (#2207)', () => {
+    const masked: RosterCandidate[] = [
+      { id: '4', name: null, nickname: null, maskedEmail: 'pe•••@z.no' },
+      { id: '5', name: 'Kari', nickname: null, maskedEmail: 'ka•••@y.no' },
+    ];
+    expect(filterRosterCandidates(masked, '@z.no').map((c) => c.id)).toEqual(['4']);
+    expect(filterRosterCandidates(masked, 'per@z').map((c) => c.id)).toEqual([]);
   });
 
   it('caps results to the limit', () => {

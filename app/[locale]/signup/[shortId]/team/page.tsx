@@ -18,6 +18,7 @@ import {
   pickPendingInvitation,
 } from './captainLookup';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
+import { maskEmail } from '@/lib/users/maskEmail';
 
 type Params = Promise<{ shortId: string; locale: string }>;
 
@@ -272,12 +273,14 @@ export default async function TeamDashboardPage({
     .returns<
       { id: string; name: string | null; email: string; nickname: string | null }[]
     >();
+  // #2207: a teammate without a name (unfinished profile) shows as the masked
+  // address — the full one never reaches TeamDashboardClient, for the captain
+  // or anyone else on the team.
   const usersById = new Map(
     (userRows ?? []).map((u) => [
       u.id,
       {
-        name: u.name?.trim() || u.email,
-        email: u.email,
+        name: u.name?.trim() || maskEmail(u.email),
         nickname: u.nickname,
       },
     ]),

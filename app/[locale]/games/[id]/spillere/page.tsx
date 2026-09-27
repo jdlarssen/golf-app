@@ -3,7 +3,7 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
-import { getTeamCandidates } from '@/lib/users/getTeamCandidates';
+import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -177,7 +177,9 @@ export default async function CreatorSpillerePage({
   }
 
   let pendingInvites: { id: string; email: string }[] = [];
-  let candidates: { id: string; name: string | null; nickname: string | null; email: string }[] = [];
+  // #2207: the creator's network with masked addresses only (getTeamCandidates);
+  // adding someone goes by id (recipient_user_id).
+  let candidates: TeamCandidate[] = [];
   if (isPreStart) {
     const rosterIds = new Set(players.map((p) => p.user_id));
     const [invitesRes, network] = await Promise.all([

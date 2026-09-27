@@ -6,6 +6,7 @@ import {
   type PrivateUserFields,
 } from '@/lib/users/privateUserFields';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { maskEmail } from '@/lib/users/maskEmail';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -33,7 +34,10 @@ type SearchParams = Promise<{
 }>;
 
 function personName(u: FriendUser): string {
-  const base = u.name?.trim() || u.email;
+  // #2207: someone without a name (unfinished profile) shows as the masked
+  // address — suggestions are co-players, and their full address stays on
+  // the server.
+  const base = u.name?.trim() || maskEmail(u.email);
   return u.nickname ? `${base} «${u.nickname}»` : base;
 }
 

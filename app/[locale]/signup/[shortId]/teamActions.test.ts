@@ -47,6 +47,17 @@ vi.mock('@/lib/users/lookupByEmail', () => ({
   lookupUserByEmail: (...args: unknown[]) => lookupUserByEmailMock(...args),
 }));
 
+// #2207: a picked candidate arrives as an id; the address comes from the
+// captain's own candidate set (friends ∪ co-players), stubbed here like
+// lookupUserByEmail above.
+const getTeamCandidateEmailsMock = vi.fn<
+  (userId: string, ids: readonly string[]) => Promise<Map<string, string>>
+>(async () => new Map());
+vi.mock('@/lib/users/getTeamCandidates', () => ({
+  getTeamCandidateEmails: (userId: string, ids: readonly string[]) =>
+    getTeamCandidateEmailsMock(userId, ids),
+}));
+
 let serverMock: ReturnType<typeof buildSupabaseMock>;
 let adminMock: ReturnType<typeof buildSupabaseMock>;
 
@@ -478,6 +489,82 @@ describe('submitTeamRegistration — happy paths', () => {
       email: 'ukjent@example.com',
       reason: 'userNotFound',
     });
+  });
+
+  it('valgt kandidat (id) legges til, og resultatet viser adressen maskert (#2207)', async () => {
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'open',
+        mode_config: { kind: 'texas_scramble', team_size: 2, teams_count: 4, team_handicap_pct: 25 },
+      }),
+    );
+    getTeamCandidateEmailsMock.mockResolvedValue(new Map([[KNOWN_USER_ID, 'kjent.bruker@example.test']]));
+    lookupUserByEmailMock.mockResolvedValue({
+      id: KNOWN_USER_ID,
+      name: null,
+      email: 'kjent.bruker@example.test',
+    });
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null }, // captain insert
+        { data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' }, error: null }, // captain display
+        { data: null, error: null }, // child request insert
+        { data: null, error: null }, // child player upsert
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Birdie-jegerne',
+      slots: [{ mode: 'lookup', userId: KNOWN_USER_ID }],
+    });
+
+    expect(getTeamCandidateEmailsMock).toHaveBeenCalledWith(CAPTAIN_ID, [KNOWN_USER_ID]);
+    expect(lookupUserByEmailMock).toHaveBeenCalledWith('kjent.bruker@example.test');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.slotResults).toEqual([
+      { ok: true, outcome: 'known_added', email: 'kj•••@example.test' },
+    ]);
+    expect(notifyInvitedToTeamMock).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientUserId: KNOWN_USER_ID }),
+    );
+  });
+
+  it('en id utenfor kapteinens kandidatsett gir userNotFound, uten child-rad (#2207)', async () => {
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'open',
+        mode_config: { kind: 'texas_scramble', team_size: 2, teams_count: 4, team_handicap_pct: 25 },
+      }),
+    );
+    getTeamCandidateEmailsMock.mockResolvedValue(new Map());
+    adminMock = buildSupabaseMock(
+      [
+        { data: { id: CAPTAIN_REQUEST_ID }, error: null },
+        { data: { name: 'Kaptein', nickname: null, email: 'kaptein@example.com' }, error: null },
+      ],
+      { claim_open_registration_seat: { outcome: 'ok', team_number: 1 } },
+    );
+
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag A',
+      slots: [{ mode: 'lookup', userId: 'not-a-candidate' }],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.slotResults).toEqual([{ ok: false, email: '', reason: 'userNotFound' }]);
+    expect(lookupUserByEmailMock).not.toHaveBeenCalled();
+    expect(
+      adminMock.__fromCalls.filter(
+        (c) => c.table === 'game_registration_requests' && c.method === 'insert',
+      ),
+    ).toHaveLength(1); // the captain's own row only
   });
 
   it('manual_approval: kaptein-rad opprettes med status=pending + admin-notify', async () => {
