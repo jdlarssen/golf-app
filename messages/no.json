@@ -1511,7 +1511,7 @@
           "Laget med best score vinner hullet — det er hull som teller, ikke total."
         ],
         "long": "To mot to, og Chapman (også kjent som Pinehurst) har en ekstra vri. Begge slår fra tee, men så bytter dere: du slår partnerens ball som andreslag, og partneren din slår din ball. Etter andreslagene velger dere hvilken ball dere vil gå videre med, og derfra spiller dere annethvert slag til hullet er i mål. Lag-handicap beregnes som greensome-formelen (60/40-blanding).",
-        "example": "Hull 11, par 4: A slår ut til 200 m, B til 215 m. A slår B sin ball som andreslag (185 m), B slår A sin ball (195 m). Dere har nå to baller: A sin på 195 m og B sin på 185 m. Dere velger A sin ball (195 m). B slår tredjeslaget, A putter — lagets score 5."
+        "example": "Hull 11, par 4: A og B slår begge ut. Så bytter dere: A slår andreslaget med B sin ball, og B slår andreslaget med A sin ball. A sin ball ligger best, så dere spiller videre med den. B slo andreslaget med den ballen, så A slår tredjeslaget inn på green, og B putter i hull. Lagets score: 4 (utslag A, andreslag B, tredjeslag A, putt B)."
       },
       "gruesome_matchplay": {
         "shortDescription": "Vekselslag: begge slår ut, men motstanderlaget velger ballen dere må spille videre med (som regel den verste).",
@@ -1522,7 +1522,7 @@
           "Laget med lavest score vinner hullet. I matchplay teller vunne hull, ikke sammenlagt score."
         ],
         "long": "Gruesome er foursomes med en ekstra utfordring: motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med. De velger typisk den verste. Etter at valget er gjort, slår partneren til den som eier den valgte ballen det neste slaget, og dere spiller annenhver derfra som vanlig foursomes. Lag-handicap beregnes som i foursomes (50 % av sum-CH-differansen).",
-        "example": "Hull 2, par 5: A slår til 230 m på fairway, B slår til 200 m i bunker. Motstanderlaget sier «B sin» (den i bunkeren). A (partneren til B) slår ut av bunkeren, B slår andreslag mot green, A putter. Lagets score: 5. Motstanderlaget, som er i ordinær foursomes-turnus selv, fullfører på 4 og vinner hullet."
+        "example": "Hull 2, par 5: A slår til 230 m på fairway, B slår til 200 m i bunker. Motstanderlaget sier «B sin» (den i bunkeren). A (partneren til B) slår ballen ut av bunkeren, B slår tredjeslaget inn på green, A putter til 1 m, og B putter inn. Lagets score: 5. Motstanderlaget, som er i ordinær foursomes-turnus selv, fullfører på 4 og vinner hullet."
       },
       "wolf": {
         "shortDescription": "4 spillere, roterende Wolf. Velg partner eller gå alene.",

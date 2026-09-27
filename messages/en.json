@@ -1511,7 +1511,7 @@
           "The team with the best score wins the hole — it is holes that count, not total."
         ],
         "long": "Two against two, and Chapman — also known as Pinehurst — adds an extra element. Both tee off, but then you swap: you play your partner's ball as the second shot, and your partner plays yours. After the second shots you choose which ball to carry on with, and from there you alternate shots until the hole is done. The team handicap is worked out with the greensome formula (a 60/40 blend).",
-        "example": "Hole 11, par 4: A tees off to 200 m, B to 215 m. A plays B's ball as the second shot (185 m), B plays A's ball (195 m). You now have two balls: A's at 195 m and B's at 185 m. You choose A's ball (195 m). B plays the third shot, A putts — team score 5."
+        "example": "Hole 11, par 4: A and B both tee off. Then you swap: A plays the second shot with B's ball, and B plays the second shot with A's ball. A's ball lies best, so you carry on with that one. B hit the second shot with that ball, so A plays the third onto the green and B holes the putt. Team score: 4 (drive A, second B, third A, putt B)."
       },
       "gruesome_matchplay": {
         "shortDescription": "Alternate shot. Both tee off, but the opposing team picks the ball you must play on with (usually the worst one).",
@@ -1522,7 +1522,7 @@
           "The team with the lowest score wins the hole. In match play, holes won count, not total score."
         ],
         "long": "Gruesome is foursomes with an extra challenge: the opposing team chooses which of the two tee balls you must play on with. They typically pick the worst one. Once the choice is made, the partner of whoever owns the chosen ball plays the next shot, and you alternate from there as in ordinary foursomes. The team handicap is worked out as in foursomes (50% of the combined-CH difference).",
-        "example": "Hole 2, par 5: A hits to 230 m on the fairway, B hits to 200 m in a bunker. The opposing team says \"B's\" (the one in the bunker). A (B's partner) plays out of the bunker, B plays the second towards the green, A putts. Team score: 5. The opposing team, on their own ordinary foursomes rotation, finishes on 4 and wins the hole."
+        "example": "Hole 2, par 5: A hits to 230 m on the fairway, B hits to 200 m in a bunker. The opposing team says \"B's\" (the one in the bunker). A (B's partner) plays out of the bunker, B plays the third onto the green, A putts to 1 m and B holes it. Team score: 5. The opposing team, on their own ordinary foursomes rotation, finishes on 4 and wins the hole."
       },
       "wolf": {
         "shortDescription": "4 players, the Wolf rotates. Pick a partner or go it alone.",
