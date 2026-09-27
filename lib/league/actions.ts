@@ -35,6 +35,27 @@ const GAME_NAME_MAX = 120;
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
 
+type ServerClient = Awaited<ReturnType<typeof getServerClient>>;
+
+/**
+ * #2223: compensating deletes for a row the flow just wrote. An error or 0 rows
+ * leaves the orphan behind (a draft league, or a flight game without players),
+ * so both are logged with the id. The caller's answer is unchanged.
+ */
+async function rollbackDraftLeague(supabase: ServerClient, leagueId: string): Promise<void> {
+  const { data, error } = await supabase.from('leagues').delete().eq('id', leagueId).select('id');
+  if (error || (data ?? []).length === 0) {
+    console.error('[league] createLeagueDraft rollback failed', { leagueId, error });
+  }
+}
+
+async function rollbackFlightGame(supabase: ServerClient, gameId: string): Promise<void> {
+  const { data, error } = await supabase.from('games').delete().eq('id', gameId).select('id');
+  if (error || (data ?? []).length === 0) {
+    console.error('[league] startLeagueRoundFlight rollback failed', { gameId, error });
+  }
+}
+
 // ── create ─────────────────────────────────────────────────────────────────
 
 export type LeagueActionError = { error: string };
@@ -200,16 +221,8 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       // Rull tilbake den allerede committede leagues-raden så en feil her ikke
       // etterlater en foreldreløs draft-liga i /admin/liga (#675). league_rounds
       // + league_players ryddes av FK `on delete cascade` (0080). Speiler
-      // rollback-mønsteret i startLeagueRoundFlight. #2223: an error or 0 rows
-      // leaves the orphan behind, so the rollback logs both.
-      const { data: rolledBack, error: rollbackErr } = await supabase
-        .from('leagues')
-        .delete()
-        .eq('id', leagueId)
-        .select('id');
-      if (rollbackErr || (rolledBack ?? []).length === 0) {
-        console.error('[league] createLeagueDraft rollback failed', { leagueId, error: rollbackErr });
-      }
+      // rollback-mønsteret i startLeagueRoundFlight.
+      await rollbackDraftLeague(supabase, leagueId);
       return { error: 'rounds_failed' };
     }
   }
@@ -243,14 +256,7 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       // Samme rollback som over: ikke la en feilet spiller-insert etterlate en
       // foreldreløs leagues-rad (+ ev. allerede innsatte league_rounds, som
       // cascade rydder) (#675).
-      const { data: rolledBack, error: rollbackErr } = await supabase
-        .from('leagues')
-        .delete()
-        .eq('id', leagueId)
-        .select('id');
-      if (rollbackErr || (rolledBack ?? []).length === 0) {
-        console.error('[league] createLeagueDraft rollback failed', { leagueId, error: rollbackErr });
-      }
+      await rollbackDraftLeague(supabase, leagueId);
       return { error: 'players_failed' };
     }
   }
@@ -823,15 +829,7 @@ export async function startLeagueRoundFlight(
       gameId,
       error: gpErr,
     });
-    // #2223: an error or 0 rows leaves an empty flight game behind; log both.
-    const { data: rolledBack, error: rollbackErr } = await supabase
-      .from('games')
-      .delete()
-      .eq('id', gameId)
-      .select('id');
-    if (rollbackErr || (rolledBack ?? []).length === 0) {
-      console.error('[league] startLeagueRoundFlight rollback failed', { gameId, error: rollbackErr });
-    }
+    await rollbackFlightGame(supabase, gameId);
     return { error: 'insert_failed' };
   }
 
@@ -843,8 +841,7 @@ export async function startLeagueRoundFlight(
   const started = await startScheduledGame(supabase, gameId);
   if (!started.ok) {
     // #2223: check the compensation. The game_players delete only logs an error
-    // (the games delete cascades them anyway); the games delete logs an error
-    // or 0 rows, which would leave a half-made flight behind.
+    // (the games delete cascades them anyway).
     const { error: playersRollbackErr } = await supabase
       .from('game_players')
       .delete()
@@ -855,14 +852,7 @@ export async function startLeagueRoundFlight(
         error: playersRollbackErr,
       });
     }
-    const { data: rolledBack, error: rollbackErr } = await supabase
-      .from('games')
-      .delete()
-      .eq('id', gameId)
-      .select('id');
-    if (rollbackErr || (rolledBack ?? []).length === 0) {
-      console.error('[league] startLeagueRoundFlight rollback failed', { gameId, error: rollbackErr });
-    }
+    await rollbackFlightGame(supabase, gameId);
     return { error: `start_${started.reason}` };
   }
 
