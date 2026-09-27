@@ -76,6 +76,7 @@ insert into fk_coverage (tbl, col, handling) values
   ('bingo_bango_bongo_holes',    'bongo_user_id',                       'kept_history'),
   ('bingo_bango_bongo_holes',    'entered_by',                          'kept_history'),
   ('game_players',               'approved_by_user_id',                 'kept_history'),
+  ('game_players',               'submitted_by_user_id',                'kept_history'),
   ('game_side_winners',          'winner_user_id',                      'kept_history'),
   ('games',                      'foursomes_side1_tee_starter_user_id', 'kept_history'),
   ('games',                      'foursomes_side2_tee_starter_user_id', 'kept_history'),

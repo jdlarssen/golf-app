@@ -629,6 +629,7 @@ export type Database = {
           score_differential: number | null
           signup_source: string | null
           submitted_at: string | null
+          submitted_by_user_id: string | null
           team_number: number | null
           tee_gender: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
@@ -649,6 +650,7 @@ export type Database = {
           score_differential?: number | null
           signup_source?: string | null
           submitted_at?: string | null
+          submitted_by_user_id?: string | null
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
@@ -669,6 +671,7 @@ export type Database = {
           score_differential?: number | null
           signup_source?: string | null
           submitted_at?: string | null
+          submitted_by_user_id?: string | null
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id?: string
@@ -688,6 +691,13 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_submitted_by_user_id_fkey"
+            columns: ["submitted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {

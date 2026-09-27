@@ -34,7 +34,7 @@
  * ambiguous unless it carries an explicit FK hint.
  */
 export const MULTI_FK_TO_USERS: readonly string[] = [
-  'game_players', // user_id, approved_by_user_id, withdrawn_by_user_id
+  'game_players', // user_id, approved_by_user_id, withdrawn_by_user_id, submitted_by_user_id
   'games', // created_by, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id
   'scores', // user_id, entered_by
   'friendships', // requester_id, addressee_id
