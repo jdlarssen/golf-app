@@ -525,11 +525,15 @@ body {
  * and Android keep the designed sizes. `1em` is the parent's size: a field
  * inside larger text keeps up with it.
  *
+ * Checkboxes and radios are left out: they hold no text, so iOS does not zoom
+ * on them, but iOS WebKit sizes one without an explicit width/height from its
+ * font size, so the floor made those larger on iPhone than designed.
+ *
  * Deliberately UNLAYERED so it beats `text-xs`/`text-sm` in @layer utilities.
  * A field meant to be LARGER than 16 px must mark its size important
  * (`text-lg!`), or it drops to the floor on iOS. */
 @supports (-webkit-touch-callout: none) {
-  input,
+  input:not([type='checkbox'], [type='radio']),
   select,
   textarea {
     font-size: max(16px, 1em);
