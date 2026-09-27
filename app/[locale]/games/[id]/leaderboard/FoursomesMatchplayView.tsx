@@ -1,5 +1,7 @@
 import type { JSX, ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
@@ -111,6 +113,7 @@ export function FoursomesMatchplayView({
 }: FoursomesMatchplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
+  const locale = useLocale();
 
   if (result.holes.length === 0) {
     return (
@@ -171,6 +174,7 @@ export function FoursomesMatchplayView({
               side1Strokes,
               playerInfo,
               t,
+              locale,
               tc('unknownPlayerFull'),
             ),
           }}
@@ -181,6 +185,7 @@ export function FoursomesMatchplayView({
               side2Strokes,
               playerInfo,
               t,
+              locale,
               tc('unknownPlayerFull'),
             ),
           }}
@@ -236,16 +241,19 @@ function sideSublines(
   strokes: StrokesReceived,
   playerInfo: Record<string, FoursomesPlayerInfo>,
   t: ReturnType<typeof useTranslations<'leaderboard'>>,
+  locale: AppLocale,
   fallback: string,
 ): string[] {
+  // Plus team handicap (sum of course handicaps) is negative → «+2» (#2240).
+  const hcp = formatWholeHcpDisplay(side.combinedCourseHandicap, locale);
   const hcpLine =
     strokes.count > 0
       ? t('matchplay.lagHCPStrokes', {
-          hcp: side.combinedCourseHandicap,
+          hcp,
           count: strokes.count,
           holes: strokes.holes.join(', '),
         })
-      : t('matchplay.lagHCP', { hcp: side.combinedCourseHandicap });
+      : t('matchplay.lagHCP', { hcp });
   return [
     ...side.players.map((p) => displayNameFor(playerInfo[p.userId], fallback)),
     hcpLine,

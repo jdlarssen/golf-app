@@ -48,6 +48,7 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { isHandicapStale } from '@/lib/handicap/staleness';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
@@ -523,6 +524,11 @@ export default async function GameHomePage({
       });
     }
   }
+  // Plus course handicap is stored negative → «+2» (#2240).
+  const courseHandicapText =
+    displayedCourseHandicap != null
+      ? formatWholeHcpDisplay(displayedCourseHandicap, locale)
+      : '—';
 
   // Mode content from the message catalog (i18n Fase D, #592). One read shared
   // by both ModeGuideCard call sites below (scheduled branch + draft/finished
@@ -1271,7 +1277,7 @@ export default async function GameHomePage({
                     {playerRating
                       ? ` · Slope ${playerRating.slope} · CR ${formatCourseRating(playerRating.courseRating, locale)} · Par ${playerRating.par}`
                       : ''}
-                    {` · ${t('courseHandicap')} ${displayedCourseHandicap ?? '—'}`}
+                    {` · ${t('courseHandicap')} ${courseHandicapText}`}
                   </p>
                 )}
                 {isMatchplay ? (
@@ -1397,7 +1403,7 @@ export default async function GameHomePage({
                     <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
                       <dt className="text-muted">{t('courseHandicap')}</dt>
                       <dd className="score-num text-text text-right">
-                        {displayedCourseHandicap ?? '—'}
+                        {courseHandicapText}
                       </dd>
                     </dl>
                   </>
@@ -1426,7 +1432,7 @@ export default async function GameHomePage({
                     )}
                     <dt className="text-muted">{t('courseHandicap')}</dt>
                     <dd className="score-num text-text text-right">
-                      {displayedCourseHandicap ?? '—'}
+                      {courseHandicapText}
                     </dd>
                   </dl>
                 )}

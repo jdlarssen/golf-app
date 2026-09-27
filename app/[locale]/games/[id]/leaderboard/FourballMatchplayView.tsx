@@ -1,5 +1,7 @@
 import type { JSX, ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
@@ -97,6 +99,7 @@ export function FourballMatchplayView({
 }: FourballMatchplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
+  const locale = useLocale();
   const side1Label = side1LabelProp ?? tc('teamLabel', { number: 1 });
   const side2Label = side2LabelProp ?? tc('teamLabel', { number: 2 });
 
@@ -145,13 +148,13 @@ export function FourballMatchplayView({
           sideA={{
             label: side1Label,
             sublines: side1.players.map((p) =>
-              playerSubline(playerInfo[p.userId], p.effectiveHandicap, tc('unknownPlayerFull')),
+              playerSubline(playerInfo[p.userId], p.effectiveHandicap, locale, tc('unknownPlayerFull')),
             ),
           }}
           sideB={{
             label: side2Label,
             sublines: side2.players.map((p) =>
-              playerSubline(playerInfo[p.userId], p.effectiveHandicap, tc('unknownPlayerFull')),
+              playerSubline(playerInfo[p.userId], p.effectiveHandicap, locale, tc('unknownPlayerFull')),
             ),
           }}
           holeResults={result.holes.map((h) => h.result)}
@@ -206,9 +209,10 @@ function shortNameFor(info: FourballPlayerInfo | undefined): string {
 function playerSubline(
   info: FourballPlayerInfo | undefined,
   effectiveHandicap: number,
+  locale: AppLocale,
   fallback: string,
 ): string {
-  return `${displayNameFor(info, fallback)} · HCP ${effectiveHandicap}`;
+  return `${displayNameFor(info, fallback)} · HCP ${formatWholeHcpDisplay(effectiveHandicap, locale)}`;
 }
 
 function HoleGrid({

@@ -49,7 +49,7 @@ import { teeGenderOf } from '@/lib/games/teeGender';
 import { calculateCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { greensomeTeamHandicap } from '@/lib/scoring/modes/greensomeMatchplay';
 import type { WizardPlayer, WizardTeeBox } from './GenerateMatches';
-import { formatHcpDisplay } from '@/lib/handicap/signFormat';
+import { formatHcpDisplay, formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 
 // #1441 (F3c): matchen wizarden holder i steg 2 er enten en av de tre eldre
 // presetenes `PlannedMatch` eller splittet-cup-dagens `PlannedBundleMatch` —
@@ -718,7 +718,7 @@ function regnehjelpText(
 ): string {
   const sh = computeSpillehandicap(player, tee);
   return sh !== null
-    ? t('generate.spillehandicapShort', { n: sh })
+    ? t('generate.spillehandicapShort', { n: formatWholeHcpDisplay(sh, locale) })
     : t('generate.hcpIndexShort', { n: formatHcpDisplay(player.hcpIndex, locale) });
 }
 

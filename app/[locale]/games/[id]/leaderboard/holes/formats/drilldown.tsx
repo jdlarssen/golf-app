@@ -1,4 +1,5 @@
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
@@ -194,6 +195,7 @@ function DrilldownView({
 }) {
   const t = useTranslations('leaderboard.holes');
   const tc = useTranslations('leaderboard.common');
+  const locale = useLocale();
   const frontRows = selected.holes.filter((h) => h.holeNumber <= 9);
   const backRows = selected.holes.filter((h) => h.holeNumber >= 10);
 
@@ -227,7 +229,7 @@ function DrilldownView({
         .map((p) => formatRevealName(p.name, p.nickname))
         .join(' · ')
     : selected.players
-        .map((p) => `${firstNameOf(p.name)} (HCP ${p.courseHandicap})`)
+        .map((p) => `${firstNameOf(p.name)} (HCP ${formatWholeHcpDisplay(p.courseHandicap, locale)})`)
         .join(' · ');
 
   // Find sibling teams for prev/next within the ordered list — lets the user

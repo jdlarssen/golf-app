@@ -54,3 +54,17 @@ export function formatHcpDisplay(signed: number, locale: AppLocale): string {
   });
   return isPlus && magnitude !== 0 ? `+${nb}` : nb;
 }
+
+/**
+ * Heltalls-sidestykket til `formatHcpDisplay` for bane-/spillehandicap (#2240).
+ *
+ * Banehandicap og spillehandicap er hele tall med samme fortegns-konvensjon
+ * som indexen: lagret negativt = pluss, så −2 vises «+2», scratch «0» (aldri
+ * «+0»/«-0»), ellers «14». Kun for HANDICAP — ikke for slag-antall (slag gitt
+ * på et hull eller i en match), der et negativt tall betyr noe annet.
+ */
+export function formatWholeHcpDisplay(signed: number, locale: AppLocale): string {
+  const { magnitude, isPlus } = fromSignedHcp(signed);
+  const nb = formatNumber(magnitude, locale, { maximumFractionDigits: 0 });
+  return isPlus && magnitude !== 0 ? `+${nb}` : nb;
+}

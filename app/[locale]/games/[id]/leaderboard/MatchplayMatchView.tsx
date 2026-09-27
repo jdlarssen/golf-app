@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
@@ -108,6 +109,7 @@ export function MatchplayMatchView({
 }: MatchplayMatchViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
+  const locale = useLocale();
 
   // Defensiv fallback: scoring-laget returnerer `holes.length === 0` når
   // matchen mangler nøyaktig to gyldige sider (validatoren i gamePayload.ts
@@ -151,11 +153,11 @@ export function MatchplayMatchView({
     return [
       strokes.count > 0
         ? t('matchplay.spillerHCPStrokes', {
-            hcp: info.courseHandicap,
+            hcp: formatWholeHcpDisplay(info.courseHandicap, locale),
             count: strokes.count,
             holes: strokes.holes.join(', '),
           })
-        : t('matchplay.spillerHCP', { hcp: info.courseHandicap }),
+        : t('matchplay.spillerHCP', { hcp: formatWholeHcpDisplay(info.courseHandicap, locale) }),
     ];
   };
 
