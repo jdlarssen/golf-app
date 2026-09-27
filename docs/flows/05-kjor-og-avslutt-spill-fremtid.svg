@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1010" viewBox="0 0 1180 1010" font-family="-apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1050" viewBox="0 0 1180 1050" font-family="-apple-system, Helvetica, Arial, sans-serif">
   <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
-  <rect width="1180" height="1010" fill="#F8F6F0"/>
+  <rect width="1180" height="1050" fill="#F8F6F0"/>
   <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">5 · Kjør og avslutt — slik blir det</text>
   <text x="121" y="88" font-size="15" fill="#6B7770">Samme flyt, men den kan aldri låse seg. Varsler går alltid i appen først — ingen unødvendig mail.</text>
   <g font-size="13">
@@ -33,38 +33,41 @@
   <text x="190" y="452" font-size="11.5" fill="#6B5526">«husk å levere» — automatisk · admin kan også purre i tillegg</text>
   <line x1="400" y1="468" x2="400" y2="492" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
-  <!-- 3 end gate (NY #375) -->
-  <rect x="120" y="494" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <!-- 3 end gate (NY #375, NY #2200) -->
+  <rect x="120" y="494" width="560" height="120" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
   <rect x="610" y="502" width="44" height="20" rx="10" fill="#C9A961"/><text x="632" y="516" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#375</text>
   <text x="156" y="538" font-size="20">🏁</text>
   <text x="190" y="524" font-size="16" font-weight="600" fill="#7A5E13">«Avslutt spillet» — kan aldri låse seg</text>
   <text x="190" y="546" font-size="12.5" fill="#6B5526">mangler noen? «Avslutt likevel» viser hvem,</text>
   <text x="190" y="564" font-size="12.5" fill="#6B5526">de markeres «ikke fullført» — ingen no-show stopper deg</text>
-  <line x1="400" y1="574" x2="400" y2="598" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <rect x="610" y="572" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="586" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2200</text>
+  <text x="190" y="586" font-size="12.5" fill="#6B5526">NY: den som fører, leverer for flighten, også for gjester</text>
+  <text x="190" y="604" font-size="12.5" fill="#6B5526">ingen «Avslutt likevel» for dem · statussiden viser «Levert av Kari»</text>
+  <line x1="400" y1="614" x2="400" y2="638" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- 4 terminal (NY #377) -->
-  <rect x="120" y="600" width="560" height="86" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
-  <rect x="610" y="608" width="44" height="20" rx="10" fill="#C9A961"/><text x="632" y="622" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#377</text>
-  <text x="400" y="636" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">✓  «Avsluttet» — resultatet er klart</text>
-  <text x="400" y="659" text-anchor="middle" font-size="12.5" fill="#9C8552">leaderboard for alle · varsel i appen først til alle</text>
-  <text x="400" y="677" text-anchor="middle" font-size="11.5" fill="#9C8552">mail kun til off-app · ingen egen avslutningsmail til alle</text>
-  <line x1="400" y1="686" x2="400" y2="710" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <rect x="120" y="640" width="560" height="86" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="610" y="648" width="44" height="20" rx="10" fill="#C9A961"/><text x="632" y="662" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#377</text>
+  <text x="400" y="676" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">✓  «Avsluttet» — resultatet er klart</text>
+  <text x="400" y="699" text-anchor="middle" font-size="12.5" fill="#9C8552">leaderboard for alle · varsel i appen først til alle</text>
+  <text x="400" y="717" text-anchor="middle" font-size="11.5" fill="#9C8552">mail kun til off-app · ingen egen avslutningsmail til alle</text>
+  <line x1="400" y1="726" x2="400" y2="750" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- 5 revansje (NY #1007) -->
-  <rect x="120" y="712" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
-  <rect x="610" y="720" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="734" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1007</text>
-  <text x="156" y="748" font-size="19">🔁</text>
-  <text x="190" y="738" font-size="15" font-weight="600" fill="#7A5E13">NY: «Revansje?» — alle deltakere, ikke bare arrangøren</text>
-  <text x="190" y="758" font-size="12.5" fill="#6B5526">samme bane/format/sideturnering/spillerliste ferdig utfylt —</text>
-  <text x="190" y="776" font-size="12.5" fill="#6B5526">skjult for cup-matches og liga-runder</text>
-  <line x1="400" y1="792" x2="400" y2="816" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <rect x="120" y="752" width="560" height="80" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="610" y="760" width="60" height="20" rx="10" fill="#C9A961"/><text x="640" y="774" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1007</text>
+  <text x="156" y="788" font-size="19">🔁</text>
+  <text x="190" y="778" font-size="15" font-weight="600" fill="#7A5E13">NY: «Revansje?» — alle deltakere, ikke bare arrangøren</text>
+  <text x="190" y="798" font-size="12.5" fill="#6B5526">samme bane/format/sideturnering/spillerliste ferdig utfylt —</text>
+  <text x="190" y="816" font-size="12.5" fill="#6B5526">skjult for cup-matches og liga-runder</text>
+  <line x1="400" y1="832" x2="400" y2="856" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- 6 back to flow 04 -->
-  <rect x="120" y="818" width="560" height="52" rx="16" fill="#1B4332"/>
-  <text x="400" y="850" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">→ Opprett spill (flyt 4), ferdig utfylt</text>
+  <rect x="120" y="858" width="560" height="52" rx="16" fill="#1B4332"/>
+  <text x="400" y="890" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">→ Opprett spill (flyt 4), ferdig utfylt</text>
 
   <!-- right rail -->
-  <rect x="760" y="222" width="320" height="326" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
+  <rect x="760" y="222" width="320" height="387" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
   <text x="920" y="252" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Hva endret seg</text>
   <text x="782" y="284" font-size="13" fill="#46604F">✓ Avslutning kan aldri</text>
   <text x="782" y="303" font-size="13" fill="#46604F">  låses av en no-show (#375)</text>
@@ -75,24 +78,26 @@
   <text x="782" y="419" font-size="13" fill="#46604F">✓ «Revansje?» dupliserer</text>
   <text x="782" y="438" font-size="13" fill="#46604F">  spillet inn i opprett-</text>
   <text x="782" y="457" font-size="13" fill="#46604F">  veiviseren (#1007)</text>
-  <text x="782" y="490" font-size="12" fill="#6B7770">Resten av flyten (start,</text>
-  <text x="782" y="507" font-size="12" fill="#6B7770">godkjenn, gjenåpne) uendret.</text>
-  <text x="782" y="530" font-size="12" fill="#6B7770">Epic: «Runden sår den neste»</text>
-  <text x="782" y="547" font-size="12" fill="#6B7770">(#1006).</text>
+  <text x="782" y="483" font-size="13" fill="#46604F">✓ Den som fører, leverer for</text>
+  <text x="782" y="502" font-size="13" fill="#46604F">  flighten og gjestene (#2200)</text>
+  <text x="782" y="535" font-size="12" fill="#6B7770">Resten av flyten (start,</text>
+  <text x="782" y="552" font-size="12" fill="#6B7770">godkjenn, gjenåpne) uendret.</text>
+  <text x="782" y="575" font-size="12" fill="#6B7770">Epic: «Runden sår den neste»</text>
+  <text x="782" y="592" font-size="12" fill="#6B7770">(#1006).</text>
 
   <!-- split cup-day: blind reveal at organizer-finish (NY #1441) -->
-  <rect x="760" y="566" width="320" height="150" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
-  <rect x="782" y="580" width="60" height="20" rx="10" fill="#C9A961"/><text x="812" y="594" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1441</text>
-  <text x="920" y="596" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Splittet cup-dag</text>
-  <text x="782" y="622" font-size="13" fill="#46604F">✓ Bunten (greensome ute +</text>
-  <text x="782" y="641" font-size="13" fill="#46604F">  best ball inne + 2 avledede</text>
-  <text x="782" y="660" font-size="13" fill="#46604F">  singler) er blind — steg 3</text>
-  <text x="782" y="679" font-size="13" fill="#46604F">  «Avslutt spillet» avslører</text>
-  <text x="782" y="698" font-size="13" fill="#46604F">  vektede poeng + sidepoeng</text>
+  <rect x="760" y="627" width="320" height="150" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
+  <rect x="782" y="641" width="60" height="20" rx="10" fill="#C9A961"/><text x="812" y="655" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#1441</text>
+  <text x="920" y="657" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Splittet cup-dag</text>
+  <text x="782" y="683" font-size="13" fill="#46604F">✓ Bunten (greensome ute +</text>
+  <text x="782" y="702" font-size="13" fill="#46604F">  best ball inne + 2 avledede</text>
+  <text x="782" y="721" font-size="13" fill="#46604F">  singler) er blind — steg 3</text>
+  <text x="782" y="740" font-size="13" fill="#46604F">  «Avslutt spillet» avslører</text>
+  <text x="782" y="759" font-size="13" fill="#46604F">  vektede poeng + sidepoeng</text>
 
   <!-- player parallel -->
-  <text x="120" y="912" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
-  <text x="120" y="938" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
+  <text x="120" y="952" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
+  <text x="120" y="978" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
 
-  <text x="120" y="985" font-size="12.5" fill="#9A937F">Kjernen: arrangøren mister aldri kontrollen over å få avsluttet — og runden sår den neste selv.</text>
+  <text x="120" y="1025" font-size="12.5" fill="#9A937F">Kjernen: arrangøren mister aldri kontrollen over å få avsluttet — og runden sår den neste selv.</text>
 </svg>

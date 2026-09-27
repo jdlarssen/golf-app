@@ -147,11 +147,11 @@ flowchart LR
 
 | Steg | Rute / fil | Teknisk |
 |---|---|---|
-| Spill-hjem | `app/[locale]/games/[id]/(home)/page.tsx` | Auto-start: `scheduled→active` når tee-off passert (`startScheduledGame` + `after(revalidateTag)`). CTA: «Start runden» → «Fortsett» → «Gjennomgå og lever». Cachet `getGameWithPlayers` (tag `game-${id}`). |
+| Spill-hjem | `app/[locale]/games/[id]/(home)/page.tsx` | Auto-start: `scheduled→active` når tee-off passert (`startScheduledGame` + `after(revalidateTag)`). CTA: «Start runden» → «Fortsett» → «Gjennomgå og lever». Er ditt eget kort levert og du har ført kort i flighten som ikke er levert, viser siden «Lever kortene du har ført (N)» til lever-siden (#2200). Cachet `getGameWithPlayers` (tag `game-${id}`). |
 | Taste slag | `app/[locale]/games/[id]/holes/[holeNumber]/page.tsx` + `HoleClient.tsx` | Alle formater unntatt Bingo Bango Bongo taster på scoreskinna nederst (`ScoreRail` + `useScoreRail`, #2251): ett trykk setter scoren og går videre til neste spiller uten score. `writeScore()` → Dexie → sync-kø → `upsert_score_if_newer` RPC. Sync-worker drainer på online/focus/30s + service worker bakgrunns-sync. Realtime-merge per flight. RLS: eget + samme-flight under `active`. |
 | Gjennomgå | `app/[locale]/games/[id]/scorecard/page.tsx` | `resolveScorecardLayout` (solo 1 kolonne / lag fler-kolonne). Netto skjult under `reveal`-aktiv. |
-| Lever | `app/[locale]/games/[id]/submit/page.tsx` + `actions.ts` → `submitScorecard` | Setter `game_players.submitted_at`. Idempotent (`.is('submitted_at', null)`). Varsler peers + admin (`scorecardSubmittedNotification` Resend kun til off-app-admin). |
-| Godkjenn (peer) | `app/[locale]/games/[id]/approve/page.tsx` + `actions.ts` | `approveScorecard` / `rejectScorecard(reason)` (avvis nullstiller `submitted_at` for re-levering; i formatene med felles ball åpner avvisningen hele laget, #2213). Kortet leser eierens rader per hull, samme regel som lever-siden (#1577). |
+| Lever | `app/[locale]/games/[id]/submit/page.tsx` + `actions.ts` → `submitScorecard` | Setter `game_players.submitted_at`. Idempotent (`.is('submitted_at', null)`). Lever-siden tilbyr også kortene til dem i flighten du har ført alle hullene for, og gjestekort som er fullt ført, siden en gjest aldri kan logge inn: «Lever 3 kort ✓» leverer dem sammen med ditt eget (skjemafeltet `alsoFor` → `submitScorecardCore`, #2200). Regelen bor i `lib/games/flightDelivery.ts`, lesingen i `lib/games/loadFlightDelivery.ts`, appen går via `POST /api/games/[id]/submit-flight`, og hvem som leverte, står i `submitted_by_user_id` (0191). Varsler peers + admin (`scorecardSubmittedNotification` Resend kun til off-app-admin). |
+| Godkjenn (peer) | `app/[locale]/games/[id]/approve/page.tsx` + `actions.ts` | `approveScorecard` / `rejectScorecard(reason)` (avvis nullstiller `submitted_at` for re-levering; i formatene med felles ball åpner avvisningen hele laget, #2213). Kortet leser eierens rader per hull, samme regel som lever-siden (#1577). Den som leverte et kort for en annen, kan ikke godkjenne det; en annen i flighten eller arrangøren gjør det (`guard_game_players_self_update`, 0191, #2200). |
 
 ### P4 — Leaderboard
 
@@ -203,8 +203,8 @@ flowchart LR
 - **Start** (`startGame` / `startScheduledGameAction`): fryser course-handicap, `→ active`.
 - **Inviter** (`InviteToGameSection`): legg til eksisterende spiller eller inviter på e-post (Resend, spill-scoped).
 - **Påmeldinger** (`/admin/games/[id]/signups`): godkjenn/avvis manuelle forespørsler.
-- **Godkjenn/Åpne scorekort**: `adminApproveScorecard`, `reopenScorecard` (åpner hele laget i formatene med felles ball, #2213).
-- **Avslutt** (`endGame`): krever alle levert (+ godkjent hvis peer). Side-turnering → `/admin/games/[id]/avslutt` (velg LD/CTP-vinnere). `→ finished` + `gameFinishedNotification` (Resend, off-app). `reopenGame` reverserer; kortene står fortsatt som levert, admin åpner dem som skal rettes (#2213).
+- **Godkjenn/Åpne scorekort**: `adminApproveScorecard`, `reopenScorecard` (åpner hele laget i formatene med felles ball, #2213). Statussiden (`/admin/games/[id]/status`) og spillersiden (`/games/[id]/spillere`) viser «Levert av {navn}» på et kort en annen leverte (#2200); gjenåpning virker som før.
+- **Avslutt** (`endGame`): krever alle levert (+ godkjent hvis peer). En gjest kan ikke levere selv, men den som fører kortet, leverer det (#2200), så gjester trenger ikke lenger «Avslutt likevel». Side-turnering → `/admin/games/[id]/avslutt` (velg LD/CTP-vinnere). `→ finished` + `gameFinishedNotification` (Resend, off-app). `reopenGame` reverserer; kortene står fortsatt som levert, admin åpner dem som skal rettes (#2213).
 - **Rediger** (`/admin/games/[id]/edit`), **Slett** (`/admin/games/[id]/slett`, **dedikert side**, status-bevisst advarsel).
 
 ### A3 — Baner, spillere, cup, formater
