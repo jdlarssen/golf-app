@@ -334,7 +334,13 @@ export default async function CreatorSpillerePage({
                         {p.users?.is_guest && <GuestBadge className="shrink-0" />}
                       </div>
                       {stateLabel && (
-                        <p className="mt-0.5 text-xs text-muted">{stateLabel}</p>
+                        <p
+                          className="mt-0.5 text-xs text-muted"
+                          data-testid="player-state"
+                          data-delivered-by={deliverer?.user_id}
+                        >
+                          {stateLabel}
+                        </p>
                       )}
                     </div>
 

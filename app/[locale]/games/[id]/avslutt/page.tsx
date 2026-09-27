@@ -328,7 +328,11 @@ export default async function CreatorAvsluttPage({
           {t('allSubmittedNote')}
         </p>
         <form action={finishAction}>
-          <SubmitButton className="w-full" pendingLabel={t('finishPending')}>
+          <SubmitButton
+            className="w-full"
+            pendingLabel={t('finishPending')}
+            data-testid="end-game-finish"
+          >
             {t('finishButton')}
           </SubmitButton>
         </form>
