@@ -231,13 +231,19 @@ export default async function CreatorSpillerePage({
   // siden er gated bak requireAdminOrCreator (samme mønster som gjeste-
   // e-postene, #1009); RLS-klienten ville returnert tomt for andre flighter
   // eller skjult visning (#1542: gaten på call-site ER håndhevelsen).
-  const { holes: approvalHoles, scoresByUser: approvalScores } =
+  // #2213: the card follows the row owner, so a teammate in the one-ball
+  // formats shows the team's strokes (whole roster, withdrawn included).
+  const { holes: approvalHoles, scoresByHolder: approvalScores } =
     await fetchScorecardReviewData(
       supabase,
       getAdminClient(),
       gameId,
       game.course_id,
-      awaitingApproval.map((p) => p.user_id),
+      {
+        mode: game.game_mode,
+        roster: players,
+        holderIds: awaitingApproval.map((p) => p.user_id),
+      },
     );
 
   return (
