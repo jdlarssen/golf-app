@@ -1,13 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { RoundRobinPodium, type RoundRobinPodiumProps } from './RoundRobinPodium';
 import type { RoundRobinPlayerInfo } from './RoundRobinView';
 import type { RoundRobinResult, RoundRobinPlayerLine } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makePlayerLine(
   userId: string,
