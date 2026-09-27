@@ -270,6 +270,8 @@ export function ScoreRail(props: ScoreRailProps): JSX.Element {
                   type="button"
                   data-testid="rail-option"
                   data-strokes={option.strokes}
+                  data-points={display === 'points' ? (option.points ?? undefined) : undefined}
+                  data-netto={display === 'netto' ? option.netto : undefined}
                   aria-pressed={selected}
                   aria-label={ariaText(option, active.name)}
                   onClick={() => onPick(option.strokes)}
