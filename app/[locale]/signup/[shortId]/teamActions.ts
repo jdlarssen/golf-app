@@ -291,7 +291,8 @@ export async function submitTeamRegistration(
   // Normaliser e-poster og fang duplikater / kaptein-egen-e-post.
   const normalizedSlots = slots.map((s) => {
     if (s && 'userId' in s) {
-      const email = pickedEmails.get(String(s.userId)) ?? '';
+      // Normalised like a typed address, so the duplicate check below compares like with like.
+      const email = (pickedEmails.get(String(s.userId)) ?? '').trim().toLowerCase();
       return { mode: 'lookup' as const, value: email, shown: email ? maskEmail(email) : '', picked: true };
     }
     const value = String(s?.value ?? '').trim().toLowerCase();
@@ -557,7 +558,7 @@ export async function submitTeamRegistration(
         // duplicates på (email, game_id) hvis policy tillater; her bruker
         // vi vanlig insert og swallow-er duplicate som "ok".
         const { error: invError } = await admin.from('invitations').insert({
-          email: slot.shown,
+          email: slot.value,
           token: crypto.randomUUID(),
           expires_at: expiresAt,
           invited_by: captain.id,

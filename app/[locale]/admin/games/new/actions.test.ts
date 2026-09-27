@@ -277,7 +277,7 @@ describe('cup link (#2207)', () => {
       ],
       { can_manage_tournament: false },
     );
-    signIn('reg-1', 'random@example.com');
+    signIn('reg-1', 'random@example.test');
 
     const { createGameDraft } = await import('./actions');
     await expect(
@@ -307,7 +307,7 @@ describe('cup link (#2207)', () => {
       ],
       { can_manage_tournament: true },
     );
-    signIn('org-1', 'organiser@example.com');
+    signIn('org-1', 'organiser@example.test');
 
     const { createGameDraft } = await import('./actions');
     await expect(
