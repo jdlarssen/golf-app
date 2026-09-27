@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WolfHolesView, type WolfHolesViewProps } from './WolfHolesView';
 import type { WolfPlayerInfo } from '../WolfView';
@@ -7,11 +7,6 @@ import type {
   WolfHoleRow,
   WolfPlayerLine,
 } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeHole(overrides: Partial<WolfHoleRow>): WolfHoleRow {
   return {
