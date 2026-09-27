@@ -156,6 +156,9 @@ export async function CupParticipants({
       ? t('participants.brassRibbonClub', { name: tournament.name })
       : t('participants.brassRibbonAdmin', { name: tournament.name });
 
+  // #2244: «Fjern» opens the confirm page on the same door as this room.
+  const removeHrefBase = `${backHref}/spillere/fjern`;
+
   const emptyCandidatesHref = groupId
     ? `/klubber/${groupId}`
     : '/admin/spillere';
@@ -211,6 +214,7 @@ export async function CupParticipants({
         cap={cap}
         emptyCandidatesHref={emptyCandidatesHref}
         emptyCandidatesLinkKey={emptyCandidatesLinkKey}
+        removeHrefBase={removeHrefBase}
       />
     </Shell>
   );

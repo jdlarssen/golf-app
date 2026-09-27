@@ -406,3 +406,35 @@ describe('removeCupParticipant', () => {
     expect(del, 'delete issued').toBeDefined();
   });
 });
+
+/**
+ * #2244: the remove-confirm page posts to a void form handler around
+ * removeCupParticipant. Success still redirects inside the action (locked
+ * above); a returned code must land back on the SAME confirm page with
+ * `?error=`, on the door the gate derives from the cup — never a silent no-op,
+ * never a door the form picked.
+ */
+describe('submitRemoveCupParticipant (#2244)', () => {
+  it('failed delete: back to the confirm page on the cup\'s club door with ?error=', async () => {
+    const clubGate = { data: { group_id: 'g1' }, error: null };
+    adminMock = buildSupabaseMock([
+      clubGate, // action's gate
+      { data: { status: 'draft' }, error: null }, // cup lookup
+      { data: null, error: { message: 'boom' } }, // delete FAILS
+      clubGate, // handler re-reads the door through the gate
+    ]);
+    supabaseMock = buildSupabaseMock([adminUser, adminUser]); // loadRole ×2
+    setUser('admin-1');
+
+    const { submitRemoveCupParticipant } = await import('./planActions');
+    // A forged door field must not steer the redirect.
+    const err = await submitRemoveCupParticipant(
+      participantForm({ group_id: 'evil' }),
+    ).catch((e) => e);
+
+    expect(err).toBeInstanceOf(RedirectError);
+    expect((err as RedirectError).url).toBe(
+      '/klubber/g1/cup/cup-1/spillere/fjern/p1?error=plan_save_failed',
+    );
+  });
+});

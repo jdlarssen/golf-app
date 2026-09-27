@@ -400,3 +400,31 @@ export async function removeCupParticipant(
   redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_removed`);
   return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
+
+/**
+ * Form handler for the remove-confirm page (#2244). `<form action>` needs a
+ * `Promise<void>`, while `removeCupParticipant` keeps this file's `{ error }`
+ * contract (same precedent as `withdrawalFormActions.ts`). Success redirects
+ * inside the action; a returned code sends the organiser back to the same
+ * confirm page with `?error=`, so the banner shows where they stand instead of
+ * a silent no-op. The door comes from the gate's `groupId`, never from the form.
+ */
+export async function submitRemoveCupParticipant(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') ?? '').trim();
+  const targetUserId = String(formData.get('user_id') ?? '').trim();
+  // Only a hand-built post lacks these; there is no door to go back to.
+  if (!id || !targetUserId) redirect('/');
+
+  const result = await removeCupParticipant(formData);
+
+  // Reached only with a returned code, after the action's gate let the caller
+  // through; re-reading the door through the same gate keeps it server-side.
+  const supabase = await getServerClient();
+  const { groupId } = await requireAdminOrClubAdminOfCup(supabase, id);
+  const confirmPath = cupPath(
+    id,
+    groupId,
+    `/spillere/fjern/${encodeURIComponent(targetUserId)}`,
+  );
+  redirect(`${confirmPath}?error=${encodeURIComponent(result.error || 'plan_save_failed')}`);
+}

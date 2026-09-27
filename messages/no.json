@@ -4815,6 +4815,18 @@
       "teamSelectAria": "Lag for {name}",
       "captainAria": "{name} er kaptein",
       "saveRoleAria": "Lagre lag og kaptein for {name}",
+      "remove": {
+        "brassRibbon": "Bekreft fjerning",
+        "heading": "Fjerne {name} fra {cup}?",
+        "body": "{firstName} forsvinner fra deltakerlista i cupen.",
+        "captain": "Laget står da uten kaptein.",
+        "canReAdd": "Du kan legge til {firstName} igjen så lenge cupen ikke har startet.",
+        "confirmButton": "Ja, fjern {firstName}",
+        "pending": "Fjerner …",
+        "cancel": "Avbryt",
+        "back": "Tilbake",
+        "fallbackFirstName": "Spilleren"
+      },
       "errors": {
         "not_candidate": "Denne spilleren kan ikke meldes på cupen.",
         "too_many_players": "En personlig cup tar maks {cap} spillere. Vil du ha flere, lag en klubb-cup.",
