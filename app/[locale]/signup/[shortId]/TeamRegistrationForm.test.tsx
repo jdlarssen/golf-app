@@ -176,9 +176,10 @@ describe('TeamRegistrationForm — submit', () => {
       ok: true,
       captainRequestId: 'cap-1',
       slotResults: [
-        { ok: true, outcome: 'known_added', email: 'kari@example.com' },
+        { ok: true, outcome: 'known_added', email: 'ka•••@example.com' },
       ],
     });
+    // #2207: the candidate carries only the masked address.
     render(
       <TeamRegistrationForm
         shortId={SHORT_ID}
@@ -188,7 +189,7 @@ describe('TeamRegistrationForm — submit', () => {
             id: 'u1',
             name: 'Kari Nordmann',
             nickname: 'Birdie',
-            email: 'kari@example.com',
+            maskedEmail: 'ka•••@example.com',
           },
         ]}
       />,
@@ -208,18 +209,32 @@ describe('TeamRegistrationForm — submit', () => {
       target: { value: 'Birdie-jegerne' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
+    // #2207: the pick goes to the server as the candidate's id, not an address.
     await waitFor(() => {
       expect(submitTeamRegistrationMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          slots: [
-            expect.objectContaining({
-              mode: 'lookup',
-              value: 'kari@example.com',
-            }),
-          ],
+          slots: [{ mode: 'lookup', userId: 'u1' }],
         }),
       );
     });
+  });
+
+  it('et valgt forslag etterlater ingen id som tekst når kapteinen bytter til e-post (#2207)', async () => {
+    render(
+      <TeamRegistrationForm
+        shortId={SHORT_ID}
+        teamSize={2}
+        candidates={[{ id: 'u1', name: 'Kari Nordmann', nickname: null, maskedEmail: 'ka•••@example.com' }]}
+      />,
+    );
+    const slot = screen.getByLabelText('Medspiller 1');
+    fireEvent.focus(slot);
+    fireEvent.change(slot, { target: { value: 'kari' } });
+    fireEvent.mouseDown(await screen.findByText(/Kari Nordmann/));
+
+    fireEvent.click(screen.getByLabelText('Inviter via e-post'));
+
+    expect(screen.getByLabelText('Medspiller 1')).toHaveValue('');
   });
 
   it('viser warning for feilede slots i blandet resultat', async () => {

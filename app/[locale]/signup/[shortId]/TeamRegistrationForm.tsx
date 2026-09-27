@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { GuestBadge } from '@/components/ui/GuestBadge';
-import { maskEmail } from '@/lib/users/maskEmail';
 import type { TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
   validateTeamName,
@@ -27,14 +26,21 @@ const MAX_SUGGESTIONS = 6;
 type SlotState = {
   /** Toggle som styrer om feltet er en kjent bruker eller fri-tekst-e-post. */
   mode: 'lookup' | 'email';
-  /** E-posten som submittes — typet fri-tekst eller valgt fra autocomplete. */
+  /**
+   * Fri-tekst-e-posten, eller `lookup:<id>` for en valgt kandidat, så
+   * duplikat-sjekken sammenligner valgte plasser på id (#2207).
+   */
   value: string;
-  /** Satt når kapteinen har valgt en co-player fra autocomplete-lista. */
-  selected: { name: string; email: string } | null;
+  /**
+   * Satt når kapteinen har valgt en co-player fra autocomplete-lista. Bærer
+   * bare id og maskert adresse (#2207): den fulle adressen når aldri
+   * nettleseren, og serveren slår den opp fra id-en.
+   */
+  selected: { id: string; name: string; maskedEmail: string } | null;
 };
 
 function candidateLabel(c: TeamCandidate): string {
-  const base = c.name?.trim() || c.email;
+  const base = c.name?.trim() || c.maskedEmail;
   return c.nickname ? `${base} «${c.nickname}»` : base;
 }
 
@@ -126,7 +132,7 @@ export function TeamRegistrationForm({
     if (q.length === 0 || slot.selected) return [];
     return candidates
       .filter((c) => {
-        const hay = `${c.name ?? ''} ${c.nickname ?? ''} ${c.email}`.toLowerCase();
+        const hay = `${c.name ?? ''} ${c.nickname ?? ''} ${c.maskedEmail}`.toLowerCase();
         return hay.includes(q);
       })
       .slice(0, MAX_SUGGESTIONS);
@@ -165,10 +171,12 @@ export function TeamRegistrationForm({
       return;
     }
 
-    const payloadSlots: TeamSlotInput[] = slots.map((s) => ({
-      mode: s.mode,
-      value: s.value.trim().toLowerCase(),
-    }));
+    // #2207: a picked candidate goes as its id; a typed address as text.
+    const payloadSlots: TeamSlotInput[] = slots.map((s) =>
+      s.mode === 'lookup' && s.selected
+        ? { mode: 'lookup', userId: s.selected.id }
+        : { mode: s.mode, value: s.value.trim().toLowerCase() },
+    );
     startTransition(async () => {
       const res = await submitTeamRegistration({
         shortId,
@@ -211,8 +219,8 @@ export function TeamRegistrationForm({
           <Banner tone="warning">
             {t('teamSuccessFailedBanner')}
             <ul className="mt-1 list-inside list-disc">
-              {failed.map((f) => (
-                <li key={f.email}>
+              {failed.map((f, i) => (
+                <li key={`${i}-${f.email}`}>
                   {f.email} —{' '}
                   {!f.ok
                     ? t(`slotFailReason.${f.reason}` as Parameters<typeof t>[0])
@@ -320,7 +328,13 @@ export function TeamRegistrationForm({
                     name={`slot-${idx}-mode`}
                     checked={slot.mode === 'lookup'}
                     onChange={() =>
-                      updateSlot(idx, { mode: 'lookup', selected: null })
+                      // A picked candidate's value is `lookup:<id>` — never
+                      // leave it behind as text in the field (#2207).
+                      updateSlot(idx, {
+                        mode: 'lookup',
+                        selected: null,
+                        ...(slot.selected ? { value: '' } : {}),
+                      })
                     }
                     className="h-4 w-4 accent-primary"
                   />
@@ -332,7 +346,13 @@ export function TeamRegistrationForm({
                     name={`slot-${idx}-mode`}
                     checked={slot.mode === 'email'}
                     onChange={() =>
-                      updateSlot(idx, { mode: 'email', selected: null })
+                      // A picked candidate's value is `lookup:<id>` — never
+                      // leave it behind as text in the field (#2207).
+                      updateSlot(idx, {
+                        mode: 'email',
+                        selected: null,
+                        ...(slot.selected ? { value: '' } : {}),
+                      })
                     }
                     className="h-4 w-4 accent-primary"
                   />
@@ -347,7 +367,7 @@ export function TeamRegistrationForm({
                   <span className="min-w-0 font-sans text-sm text-text">
                     <span className="font-medium">{slot.selected.name}</span>{' '}
                     <span className="text-muted">
-                      {maskEmail(slot.selected.email)}
+                      {slot.selected.maskedEmail}
                     </span>
                   </span>
                   <button
@@ -423,10 +443,11 @@ export function TeamRegistrationForm({
                             onMouseDown={(e) => {
                               e.preventDefault();
                               updateSlot(idx, {
-                                value: c.email,
+                                value: `lookup:${c.id}`,
                                 selected: {
+                                  id: c.id,
                                   name: candidateLabel(c),
-                                  email: c.email,
+                                  maskedEmail: c.maskedEmail,
                                 },
                               });
                               setOpenSlot(null);
@@ -445,7 +466,7 @@ export function TeamRegistrationForm({
                               {c.isGuest && <GuestBadge className="shrink-0" />}
                             </span>
                             <span className="shrink-0 font-sans text-xs text-muted">
-                              {maskEmail(c.email)}
+                              {c.maskedEmail}
                             </span>
                           </button>
                         </li>

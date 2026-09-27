@@ -11,6 +11,8 @@ import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
+import { getTeamCandidateEmails } from '@/lib/users/getTeamCandidates';
+import { maskEmail } from '@/lib/users/maskEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
@@ -58,12 +60,15 @@ import {
  * brukeren se UI-en og bekrefte selv.
  */
 
-export type TeamSlotInput = {
-  /** Hvordan kaptein har spesifisert denne slot-en. */
-  mode: 'lookup' | 'email';
-  /** Email-adressen brukeren oppgav (samme felt brukes for begge modi). */
-  value: string;
-};
+export type TeamSlotInput =
+  /**
+   * #2207: en kandidat kapteinen valgte fra forslagslista — id-en, aldri
+   * adressen. Serveren slår opp adressen, og bare for id-er i kapteinens eget
+   * kandidatsett (`getTeamCandidateEmails`).
+   */
+  | { mode: 'lookup'; userId: string }
+  /** En adresse kapteinen skrev selv (i begge modi). */
+  | { mode: 'lookup' | 'email'; value: string };
 
 export type TeamRegistrationInput = {
   shortId: string;
@@ -275,14 +280,28 @@ export async function submitTeamRegistration(
     return { ok: false, error: 'rate_limited' };
   }
 
+  // #2207: a picked slot carries the candidate's id. Resolve it to the address
+  // here, and only for ids that really are in the captain's own candidate set
+  // (friends ∪ co-players); any other id is a miss, like a lookup that finds
+  // nobody. The slot result for a picked slot shows the masked address, so
+  // the full one never goes back to the browser.
+  const pickedIds = slots.flatMap((s) => (s && 'userId' in s ? [String(s.userId)] : []));
+  const pickedEmails = await getTeamCandidateEmails(captain.id, pickedIds);
+
   // Normaliser e-poster og fang duplikater / kaptein-egen-e-post.
-  const normalizedSlots = slots.map((s) => ({
-    mode: s.mode,
-    value: String(s.value ?? '').trim().toLowerCase(),
-  }));
+  const normalizedSlots = slots.map((s) => {
+    if (s && 'userId' in s) {
+      const email = pickedEmails.get(String(s.userId)) ?? '';
+      return { mode: 'lookup' as const, value: email, shown: email ? maskEmail(email) : '', picked: true };
+    }
+    const value = String(s?.value ?? '').trim().toLowerCase();
+    return { mode: s?.mode ?? ('email' as const), value, shown: value, picked: false };
+  });
 
   const seen = new Set<string>();
   for (const slot of normalizedSlots) {
+    // A pick outside the candidate set is answered per slot below.
+    if (slot.picked && !slot.value) continue;
     if (!slot.value || !slot.value.includes('@')) {
       return { ok: false, error: 'team_name_invalid' };
     }
@@ -432,6 +451,10 @@ export async function submitTeamRegistration(
 
   for (const slot of normalizedSlots) {
     try {
+      if (slot.picked && !slot.value) {
+        slotResults.push({ ok: false, email: slot.shown, reason: 'userNotFound' });
+        continue;
+      }
       // Lookup-mode betyr kaptein har valgt en kjent bruker via UI-en;
       // email-mode betyr fri-tekst-input. Vi gjør samme lookup i begge
       // tilfeller — i email-mode degraderer vi til "kjent" hvis brukeren
@@ -441,7 +464,7 @@ export async function submitTeamRegistration(
       if (slot.mode === 'lookup' && !existingUser) {
         slotResults.push({
           ok: false,
-          email: slot.value,
+          email: slot.shown,
           reason: 'userNotFound',
         });
         continue;
@@ -468,7 +491,7 @@ export async function submitTeamRegistration(
           if (isDuplicateError(childError)) {
             slotResults.push({
               ok: false,
-              email: slot.value,
+              email: slot.shown,
               reason: 'alreadyRegistered',
             });
             continue;
@@ -479,7 +502,7 @@ export async function submitTeamRegistration(
           );
           slotResults.push({
             ok: false,
-            email: slot.value,
+            email: slot.shown,
             reason: 'dbError',
           });
           continue;
@@ -527,14 +550,14 @@ export async function submitTeamRegistration(
         slotResults.push({
           ok: true,
           outcome: 'known_added',
-          email: slot.value,
+          email: slot.shown,
         });
       } else {
         // Ukjent e-post → invitations-rad. Upsert via insert + ignore-
         // duplicates på (email, game_id) hvis policy tillater; her bruker
         // vi vanlig insert og swallow-er duplicate som "ok".
         const { error: invError } = await admin.from('invitations').insert({
-          email: slot.value,
+          email: slot.shown,
           token: crypto.randomUUID(),
           expires_at: expiresAt,
           invited_by: captain.id,
@@ -547,7 +570,7 @@ export async function submitTeamRegistration(
           );
           slotResults.push({
             ok: false,
-            email: slot.value,
+            email: slot.shown,
             reason: 'inviteFailed',
           });
           continue;
@@ -571,14 +594,14 @@ export async function submitTeamRegistration(
         slotResults.push({
           ok: true,
           outcome: 'unknown_invited',
-          email: slot.value,
+          email: slot.shown,
         });
       }
     } catch (err) {
       console.error('[submitTeamRegistration] slot threw', err);
       slotResults.push({
         ok: false,
-        email: slot.value,
+        email: slot.shown,
         reason: 'unexpected',
       });
     }

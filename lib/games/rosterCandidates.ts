@@ -12,7 +12,13 @@ export type RosterCandidate = {
   id: string;
   name: string | null;
   nickname: string | null;
-  email: string;
+  /** The full address — only the admin card (`InviteToGameClient`) has it. */
+  email?: string;
+  /**
+   * #2207: the masked address (`ol•••@…`) the creator picker gets instead.
+   * Enough to tell two nameless people apart, never the full address.
+   */
+  maskedEmail?: string;
   /**
    * #1017: true = skygge-bruker (`users.is_guest`). Driver «Gjest»-chipen på
    * kandidat-listene. Valgfri (matcher wizard-ens `PlayerOption.isGuest?`) —
@@ -21,16 +27,20 @@ export type RosterCandidate = {
   isGuest?: boolean;
 };
 
-/** «Navn «kallenavn»», eller e-post som fallback når navnet mangler. */
+/**
+ * «Navn «kallenavn»», eller e-posten (full for admin, maskert ellers) som
+ * fallback når navnet mangler.
+ */
 export function rosterDisplayName(c: RosterCandidate): string {
-  const base = c.name ?? c.email;
+  const base = c.name ?? c.email ?? c.maskedEmail ?? '';
   return c.nickname ? `${base} «${c.nickname}»` : base;
 }
 
 /**
- * Case-insensitivt delstreng-søk mot navn + kallenavn + e-post, kappet til
- * `limit`. Tom søkestreng gir de første `limit` kandidatene. Generisk så
- * ekstrafelter (f.eks. admin-kortets `hcpIndex`) bevares på treffene.
+ * Case-insensitivt delstreng-søk mot navn + kallenavn + den e-posten kandidaten
+ * har (full eller maskert), kappet til `limit`. Tom søkestreng gir de første
+ * `limit` kandidatene. Generisk så ekstrafelter (f.eks. admin-kortets
+ * `hcpIndex`) bevares på treffene.
  */
 export function filterRosterCandidates<T extends RosterCandidate>(
   candidates: T[],
@@ -41,7 +51,9 @@ export function filterRosterCandidates<T extends RosterCandidate>(
   if (!q) return candidates.slice(0, limit);
   return candidates
     .filter((c) =>
-      `${c.name ?? ''} ${c.nickname ?? ''} ${c.email}`.toLowerCase().includes(q),
+      `${c.name ?? ''} ${c.nickname ?? ''} ${c.email ?? c.maskedEmail ?? ''}`
+        .toLowerCase()
+        .includes(q),
     )
     .slice(0, limit);
 }

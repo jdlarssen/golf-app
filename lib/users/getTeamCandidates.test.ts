@@ -27,7 +27,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }));
 
-import { getTeamCandidates } from './getTeamCandidates';
+import { getTeamCandidateEmails, getTeamCandidates } from './getTeamCandidates';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -89,5 +89,39 @@ describe('getTeamCandidates (venner ∪ co-players, #408)', () => {
 
     const res = await getTeamCandidates('me');
     expect(res.map((u) => u.name)).toEqual(['Anne', 'Øyvind']);
+  });
+});
+
+describe('addresses stay on the server (#2207)', () => {
+  it('candidates carry the masked address and no email key', async () => {
+    friendIds.mockReturnValue(['a']);
+    coPlayerIds.mockReturnValue([]);
+    usersRows.mockReturnValue({
+      data: [{ id: 'a', name: null, nickname: null, email: 'ola.nordmann@example.test', is_guest: false }],
+      error: null,
+    });
+
+    const [candidate] = await getTeamCandidates('me');
+
+    expect(candidate).toMatchObject({ id: 'a', maskedEmail: 'ol•••@example.test' });
+    expect('email' in candidate!).toBe(false);
+  });
+
+  it('getTeamCandidateEmails answers only for ids in the candidate set', async () => {
+    friendIds.mockReturnValue(['a']);
+    coPlayerIds.mockReturnValue([]);
+    usersRows.mockReturnValue({
+      data: [{ id: 'a', name: 'Anne', nickname: null, email: 'anne@example.test', is_guest: false }],
+      error: null,
+    });
+
+    const emails = await getTeamCandidateEmails('me', ['a', 'stranger']);
+
+    expect([...emails]).toEqual([['a', 'anne@example.test']]);
+  });
+
+  it('getTeamCandidateEmails with no ids makes no query', async () => {
+    expect(await getTeamCandidateEmails('me', [])).toEqual(new Map());
+    expect(inArg).not.toHaveBeenCalled();
   });
 });
