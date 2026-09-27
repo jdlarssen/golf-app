@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { PatsomeView, type PatsomeViewProps } from './PatsomeView';
 import type { PatsomePlayerInfo } from './PatsomeView';
@@ -8,11 +8,6 @@ import type {
   PatsomeHoleRow,
   PatsomeSegmentSubtotal,
 } from '@/lib/scoring/modes/types';
-
-// SmartLink calls useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeSegmentSubtotal(
   segment: 'fourball' | 'greensome' | 'foursomes',
