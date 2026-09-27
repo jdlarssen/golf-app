@@ -121,6 +121,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     holes: bundle.holes,
     scores,
     mode,
+    game: bundle.game,
     viewerId: userId,
     teamOwnerId: myCaptainId,
     teeGender: me.player.teeGender as ScoringGender,

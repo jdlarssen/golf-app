@@ -35,6 +35,8 @@
 //     leaderboard-skjerm som krasjer midt i runden er verre enn en som sier at
 //     tabellen kommer på nettsiden.
 import { computeLeaderboard } from '../../../../lib/scoring';
+import { playerStrokeHandicap } from '../../../../lib/scoring/allocatedStrokes';
+import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { buildAceyDeuceyContext } from '../../../../lib/scoring/context/buildAceyDeuceyContext';
 import { buildBingoBangoBongoContext } from '../../../../lib/scoring/context/buildBingoBangoBongoContext';
 import { buildNassauContext } from '../../../../lib/scoring/context/buildNassauContext';
@@ -55,7 +57,7 @@ import type {
   WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
-import type { GameBundle } from '../data/gameBundle';
+import type { BundleGame, GameBundle } from '../data/gameBundle';
 
 /**
  * Hvorfor appen ikke kan regne ut et resultat.
@@ -247,6 +249,27 @@ function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | null {
   const kind = (raw as { kind?: unknown }).kind;
   if (kind === undefined || kind === null) return derived;
   return kind === mode ? (raw as GameModeConfig) : null;
+}
+
+/**
+ * Slagene én spiller får på ett hull, slik motoren regner dem (#2218):
+ * allowance i fourball og round robin, 0 i brutto-valgene. Regelen bor i den
+ * delte `allocatedStrokes.ts` — appen skriver den ikke på nytt, den sender bare
+ * inn samme config som motoren får (`asModeConfig`).
+ *
+ * `null` = ukjent: configen peker på et annet format, og motoren ville ikke
+ * regnet. Samme «ukjent er null, aldri 0» som lagkortene. Et manglende
+ * banehandicap regnes derimot som 0, som webben gjør.
+ */
+export function playerExtraForHole(
+  game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
+  courseHandicap: number | null,
+  strokeIndex: number,
+): number | null {
+  const mode = game.gameMode as GameMode;
+  const cfg = asModeConfig(mode, game.modeConfig);
+  if (cfg === null) return null;
+  return strokesForHole(playerStrokeHandicap(mode, cfg, courseHandicap ?? 0), strokeIndex);
 }
 
 /** HELE rosteret, trukne spillere inkludert — se punkt 2 i topptekstet. */

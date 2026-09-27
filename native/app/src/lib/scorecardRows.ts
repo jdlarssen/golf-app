@@ -13,10 +13,9 @@ import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
-import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
-import type { BundleHole } from '../data/gameBundle';
-import type { LeaderboardOutcome } from './scoringContext';
+import type { BundleGame, BundleHole } from '../data/gameBundle';
+import { playerExtraForHole, type LeaderboardOutcome } from './scoringContext';
 import { teamExtraForHole } from './teamPlay';
 
 export interface ScorecardRow {
@@ -24,7 +23,7 @@ export interface ScorecardRow {
   par: number;
   strokeIndex: number;
   strokes: number | null;
-  /** Tildelte slag. `null` = ukjent (lagkort uten svar fra motoren). */
+  /** Tildelte slag. `null` = ukjent (lagkort uten svar fra motoren, eller en config motoren ikke kan regne på). */
   extra: number | null;
   /** `strokes − extra`, eller `null` når ett av dem mangler. */
   netto: number | null;
@@ -50,6 +49,8 @@ export function buildScorecardRows(opts: {
   holes: readonly BundleHole[];
   scores: readonly LocalScore[];
   mode: GameMode;
+  /** Formatet og configen — tildelingen på et vanlig kort følger motoren (#2218). */
+  game: Pick<BundleGame, 'gameMode' | 'modeConfig'>;
   viewerId: string;
   teamOwnerId: string | null;
   teeGender: ScoringGender;
@@ -82,7 +83,7 @@ export function buildScorecardRows(opts: {
             hole.strokeIndex,
           )
         : null
-      : strokesForHole(opts.courseHandicap, hole.strokeIndex);
+      : playerExtraForHole(opts.game, opts.courseHandicap, hole.strokeIndex);
 
     return {
       holeNumber: hole.holeNumber,

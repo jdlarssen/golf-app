@@ -113,6 +113,7 @@ describe('buildScorecardRows — vanlig kort', () => {
       holes: HOLES,
       scores: [score('me', 1, 5), score('me', 2, 4), score('mate', 3, 9)],
       mode: SOLO,
+      game: { gameMode: SOLO, modeConfig: null },
       viewerId: 'me',
       teamOwnerId: null,
       teeGender: MENS,
@@ -138,6 +139,7 @@ describe('buildScorecardRows — vanlig kort', () => {
       holes: HOLES,
       scores: [],
       mode: SOLO,
+      game: { gameMode: SOLO, modeConfig: null },
       viewerId: 'me',
       teamOwnerId: null,
       teeGender: 'ladies',
@@ -147,6 +149,42 @@ describe('buildScorecardRows — vanlig kort', () => {
     });
 
     expect(rows[0]!.par).toBe(5);
+  });
+
+  // #2218: kortet regner med slagene motoren bruker, ikke rått banehandicap.
+  it('fourball 85 % regner netto med 17, ikke 20 — og ukjent config gir netto null', () => {
+    const base = {
+      holes: HOLES,
+      scores: [score('me', 1, 5), score('me', 18, 5)],
+      mode: 'fourball_matchplay' as GameMode,
+      viewerId: 'me',
+      teamOwnerId: null,
+      teeGender: MENS,
+      courseHandicap: 20,
+      teamNumber: 1,
+      leaderboard: null,
+    };
+    const { rows, totals } = buildScorecardRows({
+      ...base,
+      game: {
+        gameMode: 'fourball_matchplay',
+        modeConfig: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2, allowance_pct: 85 },
+      },
+    });
+
+    expect(rows[17]!.extra).toBe(0);
+    expect(rows[17]!.netto).toBe(5);
+    expect(rows[0]!.extra).toBe(1);
+    expect(totals.totalExtra).toBe(1);
+    expect(totals.totalNet).toBe(9);
+
+    const unknown = buildScorecardRows({
+      ...base,
+      game: { gameMode: 'fourball_matchplay', modeConfig: { kind: 'skins', team_size: 1 } },
+    });
+    expect(unknown.rows[17]!.netto).toBeNull();
+    expect(unknown.totals.totalExtra).toBeNull();
+    expect(unknown.totals.totalNet).toBeNull();
   });
 });
 
@@ -161,6 +199,7 @@ describe('buildScorecardRows — lagkort', () => {
       holes: HOLES,
       scores: [score('anna', 1, 5), score('anna', 2, 4), score('bjorn', 3, 9)],
       mode: GREENSOME,
+      game: greensomeBundle.game,
       viewerId: 'bjorn',
       teamOwnerId: 'anna',
       teeGender: MENS,
@@ -182,6 +221,7 @@ describe('buildScorecardRows — lagkort', () => {
       holes: HOLES,
       scores: [score('anna', 1, 5), score('anna', 2, 4)],
       mode: GREENSOME,
+      game: greensomeBundle.game,
       viewerId: 'bjorn',
       teamOwnerId: 'anna',
       teeGender: MENS,
@@ -207,6 +247,7 @@ describe('buildScorecardRows — lagkort', () => {
       holes: HOLES,
       scores: [score('cato', 1, 4)],
       mode: GREENSOME,
+      game: greensomeBundle.game,
       viewerId: 'dina',
       teamOwnerId: 'cato',
       teeGender: MENS,
@@ -225,6 +266,7 @@ describe('buildScorecardRows — lagkort', () => {
       holes: HOLES,
       scores: [score('anna', 1, 5)],
       mode: GREENSOME,
+      game: greensomeBundle.game,
       viewerId: 'bjorn',
       teamOwnerId: 'anna',
       teeGender: MENS,
@@ -247,6 +289,7 @@ describe('buildScorecardRows — lagkort', () => {
       holes: HOLES,
       scores: [score('anna', 1, 5)],
       mode: GREENSOME,
+      game: greensomeBundle.game,
       viewerId: 'bjorn',
       teamOwnerId: 'anna',
       teeGender: MENS,
@@ -283,6 +326,7 @@ describe('buildScorecardRows — kapteinen har slettet kontoen (#2067)', () => {
       holes: HOLES,
       scores,
       mode: GREENSOME,
+      game: greensomeBundle.game,
       viewerId: 'bjorn',
       teamOwnerId,
       teeGender: MENS,
