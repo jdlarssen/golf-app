@@ -9,7 +9,7 @@ import { buildNassauContext } from '@/lib/scoring/context/buildNassauContext';
 import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 import { renderSideTournamentTabs } from '../sideTournament';
 import { RoundReportCard } from '../RoundReportCard';
-import { computeSettlement } from '@/lib/scoring/settlement';
+import { settlementForResult } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -65,18 +65,11 @@ export async function renderNassau(opts: {
     notFound();
   }
 
-  // Pengeoppgjør (#937) — null når kr_per_unit ikke er satt eller ≤ 0.
-  // Nassau bruker `units` (antall vunnede seksjoner, 0–3) fra NassauUnitLine.
-  // mode_config er innsnevret til nassau-varianten etter notFound()-vakten over.
-  const krPerUnit =
-    'kr_per_unit' in game.mode_config && typeof game.mode_config.kr_per_unit === 'number'
-      ? game.mode_config.kr_per_unit
-      : 0;
-  const settlement = computeSettlement({
-    units: result.players.map((p) => ({ userId: p.userId, units: p.units })),
-    krPerUnit,
-    unitLabel: tSettle('units.seksjon'),
-  });
+  // Pengeoppgjør (#937) — null når kr_per_unit ikke er satt eller ≤ 0. Enhet og
+  // enhetsfelt har ett hjem i settlementForResult (#2221).
+  const settlement = settlementForResult(result, game.mode_config, (unit) =>
+    tSettle(`units.${unit}`),
+  );
 
   const unknownPlayer = tc('unknownPlayer');
   const holesPlayed = maxHolesPlayed(rawScoresRows);

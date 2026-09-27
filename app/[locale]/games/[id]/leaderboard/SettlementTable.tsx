@@ -31,7 +31,10 @@ export function SettlementTable({ settlement, playersById }: SettlementTableProp
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
+    <section
+      className="space-y-3 rounded-md border border-border bg-surface px-4 py-4"
+      data-testid="settlement"
+    >
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold text-text">{t('title')}</h3>
         <span className="text-xs text-muted tabular-nums">
@@ -44,9 +47,11 @@ export function SettlementTable({ settlement, playersById }: SettlementTableProp
           <li
             key={p.userId}
             className="flex items-center justify-between gap-3 text-sm"
+            data-testid={`settlement-player-${p.userId}`}
           >
             <span className="text-text">{name(p.userId)}</span>
             <span
+              data-testid={`settlement-player-${p.userId}-net`}
               className={`font-semibold tabular-nums ${
                 p.netKr > 0
                   ? 'text-emerald-600 dark:text-emerald-400'
@@ -70,6 +75,7 @@ export function SettlementTable({ settlement, playersById }: SettlementTableProp
             <li
               key={`${pay.fromUserId}-${pay.toUserId}-${i}`}
               className="flex items-center justify-between gap-3 text-sm"
+              data-testid={`settlement-payment-${i}`}
             >
               <span className="text-muted">
                 {t('owes', {
