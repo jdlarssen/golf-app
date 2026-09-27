@@ -3,25 +3,42 @@
 # filer dedupede varsel-issues når noe krever oppmerksomhet. Se
 # docs/loops/prod-vakta.md for protokollen.
 #
-# Personvern: issues inneholder KUN tellinger og advisory-nøkler — aldri rå
-# logglinjer (de kan inneholde brukerdata). Detalj-graving skjer read-only i
-# interaktive økter via Supabase MCP.
+# Personvern: issues inneholder KUN tellinger, SQLSTATE-koder og
+# advisory-nøkler — aldri rå logglinjer (de kan inneholde brukerdata).
+# Spørringen henter bare kode og antall, så regelen holder alt i SQL-en.
+# Detalj-graving skjer read-only i interaktive økter via Supabase MCP.
 #
 # Fail-closed: klarer ikke skriptet å lese telemetrien, filer det et eget
-# varsel-issue om NETTOPP det — aldri stille grønn exit.
+# varsel-issue om NETTOPP det — aldri stille grønn exit. Varselet og jobbloggen
+# sier hvorfor (HTTP-kode + utdrag av API-svaret). Filet eller funnet issue
+# gir handled=true i GITHUB_OUTPUT, så workflowens failure-steg ikke dobler.
+#
+# Miljø:  REF, SUPABASE_ACCESS_TOKEN, GITHUB_REPOSITORY (+ GH_TOKEN for gh).
+#         BASELINE_FILE=<sti> — testkrok (tests/scripts/prod-vakt.test.sh).
+#
+# Portabel bash 3.2 (macOS, der testen også kjører): ingen `declare -A` eller
+# `mapfile`, og en variabel inntil et ikke-ASCII-tegn skrives «${var}» — ellers
+# dør skriptet på «unbound variable» i UTF-8-locale.
 
 set -u
 
 REF="${REF:?REF (prosjekt-ref) må være satt}"
-API="https://api.supabase.com/v1/projects/$REF"
-BASELINE="docs/loops/prod-vakta-baseline.txt"
+API="https://api.supabase.com/v1/projects/${REF}"
+BASELINE="${BASELINE_FILE:-docs/loops/prod-vakta-baseline.txt}"
 REPO="${GITHUB_REPOSITORY:?}"
+
+TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+
+mark_handled() { # forteller workflowen at issuet alt er filet/finnes — unngår dobbelt varsel
+  [ -n "${GITHUB_OUTPUT:-}" ] && echo "handled=true" >> "$GITHUB_OUTPUT"
+  return 0
+}
 
 open_or_note_issue() { # title body — dedupet: hopper over hvis åpent issue med samme tittel finnes
   local title="$1" body="$2" existing issue_url
   existing=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq 'length')
   if [ "$existing" -gt 0 ]; then
-    echo "Åpent issue «$title» finnes allerede — hopper over."
+    echo "Åpent issue «${title}» finnes allerede — hopper over."
     return 0
   fi
   issue_url=$(gh api "repos/$REPO/issues" \
@@ -29,40 +46,103 @@ open_or_note_issue() { # title body — dedupet: hopper over hvis åpent issue m
     -f body="$body" \
     -f "labels[]=bug" \
     -f "labels[]=prod-vakt" \
-    -F milestone=9 --jq '.html_url')
+    -F milestone=9 --jq '.html_url') || issue_url=""
+  # Ikke filet = ikke håndtert: returner feil, så ingen setter handled=true
+  # og workflowens failure-steg tar varselet.
+  if [ -z "$issue_url" ]; then
+    echo "::warning::gh api klarte ikke opprette issuet «${title}»"
+    return 1
+  fi
   echo "Opprettet: $issue_url"
   bash .github/scripts/discord-notify.sh "🚨 **$title** — $issue_url"
 }
 
 fail_closed() { # reason
+  # Til jobbloggen også: dedup hopper over et åpent issue, og da er dette
+  # eneste sted årsaken fra DENNE kjøringen synes.
+  echo "::error::$1"
   open_or_note_issue "Prod-vakt: fikk ikke lest telemetri" \
 "Prod-vakta klarte ikke å lese prod-telemetrien: $1
 
 Kjøring: ${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-?}
 
-Uten lesing er prod i praksis uovervåket — dette issuet skal behandles som et funn, ikke som støy. Protokoll: docs/loops/prod-vakta.md."
+Uten lesing er prod i praksis uovervåket — dette issuet skal behandles som et funn, ikke som støy. Protokoll: docs/loops/prod-vakta.md." \
+    && mark_handled
   exit 1
 }
 
+api_get() { # navn url [curl-argumenter …] → svaret i $TMP/<navn>.json; fail_closed ved curl-feil eller ikke-2xx
+  local name="$1" url="$2" http
+  shift 2
+  # HTTP-koden skilles ut så varselet kan si 401 (token) vs 429 (rate limit) vs 5xx (API nede).
+  http=$(curl -s -o "$TMP/$name.json" -w '%{http_code}' \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$@" "$url") \
+    || fail_closed "${name}-endepunktet svarte ikke (curl-feil mot ${url})"
+  case "$http" in
+    (2[0-9][0-9]) ;;
+    (*) fail_closed "${name}-endepunktet svarte HTTP ${http} (401/403 = token; 429 = rate limit; 5xx = API) — $(head -c 200 "$TMP/$name.json" | tr '\n' ' ')" ;;
+  esac
+}
+
+grep -v '^#' "$BASELINE" | grep -v '^$' > "$TMP/baseline"
+
 # ── 1. Security-advisors mot baseline ──
-ADV=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$API/advisors/security") \
-  || fail_closed "advisors-endepunktet svarte ikke (curl-feil mot $API/advisors/security)"
+api_get advisors "$API/advisors/security"
+ADV=$(cat "$TMP/advisors.json")
 # Formvalidering (fail-closed, symmetrisk med tellings-stien): en omformet
 # API-respons skal aldri stille degradere til «ingen nye advisories».
 printf '%s' "$ADV" | jq -e '.lints | type == "array"' >/dev/null 2>&1 \
   || fail_closed "uventet svarform fra advisors-endepunktet (.lints er ikke en liste)"
-NEW_ADV=$(printf '%s' "$ADV" | jq -r '.lints[].cache_key' | grep -vxF -f <(grep -v '^#' "$BASELINE" | grep -v '^$') || true)
+NEW_ADV=$(printf '%s' "$ADV" | jq -r '.lints[].cache_key' | grep -vxF -f "$TMP/baseline" || true)
 
-# ── 2. Postgres-feil (ERROR/FATAL/PANIC) siste 24 t — kun telling ──
-SQL="select count(*) as n from postgres_logs cross join unnest(metadata) m cross join unnest(m.parsed) p where p.error_severity in ('ERROR','FATAL','PANIC') and postgres_logs.timestamp > timestamp_sub(current_timestamp(), interval 24 hour)"
-PG=$(curl -sf -G -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$API/analytics/endpoints/logs.all" --data-urlencode "sql=$SQL") \
-  || fail_closed "logs-endepunktet svarte ikke (analytics/endpoints/logs.all)"
-PG_ERRORS=$(printf '%s' "$PG" | jq -r '.result[0].n // 0' 2>/dev/null)
-case "$PG_ERRORS" in (*[!0-9]*|'') fail_closed "uventet svarform fra logs-endepunktet (klarte ikke lese telling)";; esac
+# ── 2. Postgres-feil (ERROR/FATAL/PANIC) siste 24 t — kun tellinger per SQLSTATE ──
+# ClickHouse-motoren (Supabase-standard siden juni 2026): alle kilder i én
+# `logs`-tabell med `source`-kolonne og feltene i log_attributes; count(), for
+# count(*) avvises. Endepunktet leser bare SISTE MINUTT uten
+# iso_timestamp_start/end, så vinduet sendes eksplisitt: nøyaktig 24 t (API-ets
+# maks), kuttet til helt minutt og regnet ut fra ÉN now-verdi. jq, ikke
+# `date -d` (finnes ikke på macOS).
+SQL="select log_attributes['parsed.sql_state_code'] as code, count() as n from logs where source = 'postgres_logs' and log_attributes['parsed.error_severity'] in ('ERROR','FATAL','PANIC') group by code order by n desc limit 50"
+WINDOW=$(jq -rn 'now | floor | . - (. % 60) | "\(. - 86400 | todate) \(todate)"')
+START="${WINDOW% *}"
+END="${WINDOW#* }"
+api_get logs "$API/analytics/endpoints/logs" -G --data-urlencode "sql=$SQL" --data-urlencode "iso_timestamp_start=$START" --data-urlencode "iso_timestamp_end=$END"
+PG=$(cat "$TMP/logs.json")
+# Formvalidering: et svar som ikke er en gyldig telling, blir aldri «0 feil».
+# Tom liste = lovlig 0. Antallet kan komme som tall eller siffer-streng
+# (ClickHouse UInt64).
+printf '%s' "$PG" | jq -e '
+  type == "object"
+  and (.error == null)
+  and (.result | type == "array")
+  and all(.result[];
+        type == "object"
+        and ((.n | type == "number" and . >= 0 and . == floor)
+             or (.n | type == "string" and test("^[0-9]+$"))))
+' >/dev/null 2>&1 \
+  || fail_closed "uventet svarform fra logs-endepunktet (ikke en liste med tellinger) — $(head -c 200 "$TMP/logs.json" | tr '\n' ' ')"
+
+# «pg:<kode><TAB><antall>», summert per nøkkel (tom kode → pg:-), størst først.
+printf '%s' "$PG" \
+  | jq -r '.result[] | "pg:\(if (.code // "") == "" then "-" else .code end)\t\(.n | tonumber)"' \
+  | awk -F'\t' '{ n[$1] += $2 } END { for (k in n) print n[k] "\t" k }' \
+  | sort -k1,1nr -k2,2 \
+  | awk -F'\t' '{ print $2 "\t" $1 }' > "$TMP/pg_codes"
+# Kjente koder (pg:<kode> i baseline) telles og vises, men varsler ikke alene.
+: > "$TMP/pg_known"; : > "$TMP/pg_new"
+awk -F'\t' -v kf="$TMP/pg_known" -v nf="$TMP/pg_new" \
+  'FILENAME == ARGV[1] { known[$0] = 1; next } { print > (($1 in known) ? kf : nf) }' \
+  "$TMP/baseline" "$TMP/pg_codes"
+PG_TOTAL=$(awk -F'\t' '{ s += $2 } END { print s + 0 }' "$TMP/pg_codes")
+KNOWN_LINE=$(awk -F'\t' '{ printf "%s%s: %s", (NR > 1 ? " · " : ""), $1, $2 }' "$TMP/pg_known")
 
 # ── Vurdér signal ──
-if [ -z "$NEW_ADV" ] && [ "$PG_ERRORS" -eq 0 ]; then
-  echo "Prod-vakt: alt stille — 0 postgres-feil siste døgn, ingen advisories utenfor baseline."
+if [ -z "$NEW_ADV" ] && [ ! -s "$TMP/pg_new" ]; then
+  if [ "$PG_TOTAL" -eq 0 ]; then
+    echo "Prod-vakt: alt stille — 0 postgres-feil siste døgn, ingen advisories utenfor baseline."
+  else
+    echo "Prod-vakt: alt stille — ${PG_TOTAL} postgres-feil siste døgn, alle av kjente typer (${KNOWN_LINE}), ingen advisories utenfor baseline."
+  fi
   exit 0
 fi
 
@@ -76,9 +156,19 @@ Bevisste valg → legg nøkkelen i \`docs/loops/prod-vakta-baseline.txt\` via PR
 "
 fi
 PG_SECTION=""
-if [ "$PG_ERRORS" -gt 0 ]; then
-  PG_SECTION="**Postgres-feil siste 24 t:** $PG_ERRORS stk (ERROR/FATAL/PANIC).
-Detaljer hentes read-only i interaktiv økt (Supabase MCP, logs explorer) — rå logglinjer skal ikke inn i issues.
+if [ -s "$TMP/pg_new" ]; then
+  PG_SECTION="**Nye typer postgres-feil siste 24 t** (ERROR/FATAL/PANIC, SQLSTATE-kode: antall):
+\`\`\`
+$(awk -F'\t' '{ print $1 ": " $2 }' "$TMP/pg_new")
+\`\`\`
+"
+fi
+if [ -s "$TMP/pg_known" ]; then
+  PG_SECTION="${PG_SECTION}Kjente typer (i baseline, varsler ikke alene): ${KNOWN_LINE}
+"
+fi
+if [ "$PG_TOTAL" -gt 0 ]; then
+  PG_SECTION="${PG_SECTION}Totalt ${PG_TOTAL} postgres-feil siste 24 t. Detaljer hentes read-only i interaktiv økt (Supabase MCP, logs explorer). Rå logglinjer skal ikke inn i issues. Diagnostisert og bevisst → legg \`pg:<kode>\` i \`docs/loops/prod-vakta-baseline.txt\` via PR. Reelle feil → fiks.
 "
 fi
 
