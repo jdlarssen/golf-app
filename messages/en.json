@@ -2058,7 +2058,7 @@
       "unapprovedNote": "A co-player must approve each scorecard before you can finish. Ask them to open the game and approve, then you can finish here.",
       "approveOverrideNote": "If you can't reach them, you can approve on behalf of the group as the organiser under «Manage players».",
       "approveOverrideCta": "Approve on behalf of the group",
-      "ownCardNoPeer": "No co-player can approve your card. Go to «Manage players», open your card with «Open for editing» and come back here. Then you can finish with «Finish anyway». Your strokes count, but the card shows as not submitted.",
+      "ownCardNoPeer": "No co-player can approve your card. Go to «Manage players», open your card with «Open for editing» and come back here. Then you can finish the game even though your card isn't submitted. Your strokes count.",
       "ownCardCta": "Manage players",
       "backToGame": "Back to game",
       "withdrawLabel": "Mark as withdrawn",
@@ -2146,7 +2146,7 @@
       "approvalHint": "If a co-player can't approve a scorecard, you can approve on behalf of the flight here. Then you can finish the game.",
       "ownCard": {
         "needsPeer": "A co-player has to approve your own card. You can't do that yourself.",
-        "noPeer": "No co-player can approve your card right now. Reopen it with «Open for editing» in the player list, then finish with «Finish anyway». Your strokes count, but the card shows as not submitted."
+        "noPeer": "No co-player can approve your card right now. Reopen it with «Open for editing» in the player list. Then you can finish the game even though your card isn't submitted. Your strokes count."
       },
       "pendingInvitesSection": "Invited (awaiting sign-in)",
       "cancelInviteButton": "Cancel",
