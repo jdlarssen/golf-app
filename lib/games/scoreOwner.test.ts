@@ -5,6 +5,8 @@ import {
   scoreOwnerForHole,
   scoreOwnerUserIds,
   scoredHoleNumbers,
+  sharedCardUserIds,
+  type SharedCardRosterRow,
 } from './scoreOwner';
 import { teamScoreOwnerId } from './teamCaptain';
 
@@ -323,5 +325,35 @@ describe('former row owners (#2067)', () => {
     const mine = { userId: VIEWER, holeNumber: 4, strokes: 5 };
     const kept = ownedScoreRows([mine], 'best_ball', VIEWER, null, [FORMER]);
     expect(kept[0]).toBe(mine);
+  });
+});
+
+describe('sharedCardUserIds (#2213)', () => {
+  // Team 1 is the card being reopened: the captain (lex-min) owns the shared
+  // rows, the viewer holds a card that reads them. Team 2 must never be touched.
+  const TEAMS: SharedCardRosterRow[] = [
+    { user_id: CAPTAIN, team_number: 1, withdrawn_at: null },
+    { user_id: VIEWER, team_number: 1, withdrawn_at: null },
+    { user_id: 'c-other', team_number: 2, withdrawn_at: null },
+    { user_id: 'd-other', team_number: 2, withdrawn_at: null },
+  ];
+  const WITH_WITHDRAWN: SharedCardRosterRow[] = [
+    ...TEAMS,
+    { user_id: 'b-gone', team_number: 1, withdrawn_at: '2026-09-20T10:00:00Z' },
+  ];
+  const NO_TEAM: SharedCardRosterRow[] = [
+    { user_id: VIEWER, team_number: null, withdrawn_at: null },
+    { user_id: CAPTAIN, team_number: 1, withdrawn_at: null },
+  ];
+
+  it.each<[string, GameMode, SharedCardRosterRow[], string, string[]]>([
+    ['best_ball: own ball, only the card itself', 'best_ball', TEAMS, VIEWER, [VIEWER]],
+    ['texas_scramble: the whole active team', 'texas_scramble', TEAMS, VIEWER, [CAPTAIN, VIEWER]],
+    ['foursomes_matchplay: the whole active team', 'foursomes_matchplay', TEAMS, VIEWER, [CAPTAIN, VIEWER]],
+    ['a withdrawn teammate is left out', 'texas_scramble', WITH_WITHDRAWN, CAPTAIN, [CAPTAIN, VIEWER]],
+    ['patsome: the team, since 7–18 sit on the captain’s row', 'patsome', TEAMS, VIEWER, [CAPTAIN, VIEWER]],
+    ['team_number null: only the card itself', 'texas_scramble', NO_TEAM, VIEWER, [VIEWER]],
+  ])('%s', (_label, mode, roster, userId, expected) => {
+    expect(sharedCardUserIds(mode, roster, userId)).toEqual(expected);
   });
 });

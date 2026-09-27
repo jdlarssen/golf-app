@@ -118,3 +118,46 @@ export function ownedScoreRows<T extends ScoredHoleRow>(
       r.userId === scoreOwnerForHole(mode, r.holeNumber, viewerId, teamOwnerId),
   );
 }
+
+/** The roster fields `sharedCardUserIds` needs — a plain `game_players` read. */
+export type SharedCardRosterRow = {
+  user_id: string;
+  team_number: number | null;
+  withdrawn_at: string | null;
+};
+
+/**
+ * The players whose cards read the same shared rows as `userId`'s card (#2213).
+ * Reopening a card — a peer's rejection or the organizer's «Åpne for
+ * redigering» — has to reopen all of them: the hole page locks the team card
+ * while ANY member still stands as submitted (`anyTeamMemberSubmitted`), and
+ * the scores write policies refuse a row whose owner is submitted. Reopening
+ * only the one card would leave the team unable to correct anything.
+ *
+ * `[userId]` unless the round ever collapses onto the captain's row (hole 18,
+ * as in `scoreOwnerUserIds`) and the player has a team; then every ACTIVE
+ * member of that team, plus `userId` itself (the card asked for is always
+ * reopened, as before #2213). Withdrawn teammates stay out: their rows are
+ * frozen and nobody writes to them again.
+ *
+ * Deliberately wider than the delivery set. `submitScorecardCore` cascades a
+ * delivery only for `isScrambleFamily || isAlternateShotMatchplay`, because a
+ * patsome player delivers their own card. But patsome holes 7–18 live on the
+ * captain's row, so correcting one of them needs the captain's card open too.
+ */
+export function sharedCardUserIds(
+  mode: GameMode,
+  roster: readonly SharedCardRosterRow[],
+  userId: string,
+): string[] {
+  if (!modeCollapsesToTeamCard(mode, 18)) return [userId];
+  const team = roster.find((p) => p.user_id === userId)?.team_number;
+  if (team == null) return [userId];
+  return roster
+    .filter(
+      (p) =>
+        p.team_number === team &&
+        (p.withdrawn_at == null || p.user_id === userId),
+    )
+    .map((p) => p.user_id);
+}
