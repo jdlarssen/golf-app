@@ -139,6 +139,7 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
       type="button"
       data-testid="flight-row"
       data-player-id={playerId}
+      data-extra-strokes={extraStrokes}
       data-active={active ? 'true' : 'false'}
       aria-pressed={active}
       aria-label={
@@ -172,7 +173,7 @@ export function FlightRow(props: FlightRowProps): JSX.Element {
         {/* #1447: the stroke badge is the handicap allocation, not standing —
             it stays on in a reveal game too. */}
         {extraStrokes > 0 && (
-          <span style={badgeStyle}>
+          <span data-testid="flight-row-strokes" style={badgeStyle}>
             {t('scoreCard.strokesBadge', { n: extraStrokes })}
           </span>
         )}
