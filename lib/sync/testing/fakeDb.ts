@@ -45,12 +45,18 @@ function buildLocalDb(
       put: vi.fn(async (row: LocalScore) => {
         scores.set(row.id, row);
       }),
+      bulkPut: vi.fn(async (rows: LocalScore[]) => {
+        for (const row of rows) scores.set(row.id, row);
+      }),
       update: vi.fn(async (id: string, patch: Partial<LocalScore>) => {
         const row = scores.get(id);
         if (row) scores.set(id, { ...row, ...patch });
       }),
       delete: vi.fn(async (id: string) => {
         scores.delete(id);
+      }),
+      bulkDelete: vi.fn(async (ids: string[]) => {
+        for (const id of ids) scores.delete(id);
       }),
     },
     syncQueue: {
@@ -59,6 +65,9 @@ function buildLocalDb(
       put: vi.fn(async (item: SyncQueueItem) => {
         syncQueue.set(item.id, item);
       }),
+      bulkPut: vi.fn(async (items: SyncQueueItem[]) => {
+        for (const item of items) syncQueue.set(item.id, item);
+      }),
       update: vi.fn(async (id: string, patch: Partial<SyncQueueItem>) => {
         const item = syncQueue.get(id);
         if (item) syncQueue.set(id, { ...item, ...patch });
@@ -66,11 +75,20 @@ function buildLocalDb(
       delete: vi.fn(async (id: string) => {
         syncQueue.delete(id);
       }),
+      bulkDelete: vi.fn(async (ids: string[]) => {
+        for (const id of ids) syncQueue.delete(id);
+      }),
     },
     conflicts: {
       get: vi.fn(async (id: string) => conflicts.get(id)),
       put: vi.fn(async (row: ConflictRecord) => {
         conflicts.set(row.id, row);
+      }),
+      bulkPut: vi.fn(async (rows: ConflictRecord[]) => {
+        for (const row of rows) conflicts.set(row.id, row);
+      }),
+      bulkDelete: vi.fn(async (ids: string[]) => {
+        for (const id of ids) conflicts.delete(id);
       }),
     },
     // Dexie's signature is variadic — (mode, ...tables, fn). The fake has no

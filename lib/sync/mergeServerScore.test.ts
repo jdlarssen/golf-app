@@ -195,3 +195,50 @@ describe('mergeServerScore — cases that must stay silent', () => {
     expect(fake.localDb.transaction).toHaveBeenCalledTimes(1);
   });
 });
+
+// #2227: catch-up merges a whole game (≈2 700 rows at 150 players) at once. One
+// transaction for the batch, the same rule per row as mergeServerScore.
+describe('mergeServerScores', () => {
+  const at = (hole: number) => `g1:${ME}:${hole}`;
+
+  it('judges each row by the same rule, all inside one transaction', async () => {
+    seedLocal({ id: at(7), holeNumber: 7, clientUpdatedAt: T1 }); // newer than incoming
+    seedLocal({ id: at(8), holeNumber: 8, strokes: 5 }); // typed here at T0
+
+    const { mergeServerScores } = await import('./mergeServerScore');
+    const outcomes = await mergeServerScores(
+      [
+        incoming({ holeNumber: 7, clientUpdatedAt: T0 }),
+        incoming({ holeNumber: 8, strokes: 4 }),
+        incoming({ holeNumber: 9 }),
+      ],
+      ME,
+    );
+
+    expect(outcomes).toEqual(['kept-local', 'applied-with-conflict', 'applied']);
+    expect(fake.localDb.transaction).toHaveBeenCalledTimes(1);
+    expect([...fake.conflicts.keys()]).toEqual([at(8)]);
+    expect(fake.scores.get(at(9))?.strokes).toBe(4);
+  });
+
+  it('drops queue items only for the rows it applied', async () => {
+    seedLocal({ id: at(7), holeNumber: 7, clientUpdatedAt: T1 });
+    seedLocal({ id: at(8), holeNumber: 8 });
+    seedQueueItem(at(7));
+    seedQueueItem(at(8));
+
+    const { mergeServerScores } = await import('./mergeServerScore');
+    await mergeServerScores(
+      [incoming({ holeNumber: 7, clientUpdatedAt: T0 }), incoming({ holeNumber: 8 })],
+      ME,
+    );
+
+    expect([...fake.syncQueue.keys()]).toEqual([at(7)]);
+  });
+
+  it('opens no transaction for an empty batch', async () => {
+    const { mergeServerScores } = await import('./mergeServerScore');
+    expect(await mergeServerScores([], ME)).toEqual([]);
+    expect(fake.localDb.transaction).not.toHaveBeenCalled();
+  });
+});
