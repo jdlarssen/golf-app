@@ -1,8 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import type { SettlementUnitKey } from '@/lib/scoring/settlement';
 
-export type WagerUnitKey = 'skin' | 'poeng' | 'seksjon';
+/** Enheten kr-feltet gjelder per — samme nøkler som oppgjøret (#2221). */
+export type WagerUnitKey = SettlementUnitKey;
 
 interface WagerStakeSetupProps {
   /** Rå tekstverdi fra input-feltet; tom streng = av. */
