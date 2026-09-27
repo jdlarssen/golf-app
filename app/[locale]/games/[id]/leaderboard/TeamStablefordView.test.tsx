@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import {
   TeamStablefordView,
@@ -9,11 +9,6 @@ import type {
   StablefordTeamResult,
   StablefordTeamLine,
 } from '@/lib/scoring/modes/types';
-
-// SmartLink calls useRouter — stub the navigation context for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeTeamLine(args: {
   teamNumber: number;
