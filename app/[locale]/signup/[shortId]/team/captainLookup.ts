@@ -1,4 +1,5 @@
 import { getAdminClient } from '@/lib/supabase/admin';
+import { displayNameForOthers } from '@/lib/users/displayName';
 
 /**
  * Delte kaptein-oppslag for lag-flyten (#1343).
@@ -102,8 +103,8 @@ export function resolveCertainTeamInvitation<
 }
 
 /**
- * Visningsnavn for en kaptein: navn (eller e-post hvis navnet mangler), med
- * kallenavn i «» når det finnes.
+ * Visningsnavn for en kaptein: navn (eller maskert e-post hvis navnet mangler,
+ * #2271), med kallenavn i «» når det finnes.
  *
  * Returnerer null når bruker-raden mangler — NotificationCard fyller inn den
  * locale-korrekte fallbacken ved render, så payloads holdes locale-agnostiske
@@ -123,6 +124,5 @@ export async function getCaptainDisplayName(
       email: string;
     }>();
   if (!data) return null;
-  const base = data.name?.trim() || data.email;
-  return data.nickname ? `${base} «${data.nickname}»` : base;
+  return displayNameForOthers(data);
 }

@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 import type { AppLocale } from '@/i18n/routing';
 
 /**
@@ -51,8 +52,7 @@ export async function connectFriend(formData: FormData) {
         .maybeSingle<{ name: string | null; nickname: string | null; email: string }>();
       // actor_name may be null — NotificationCard renders the catalog fallback
       // at render time in the correct locale (§4 payload-fallback contract).
-      const base = me?.name?.trim() || me?.email || null;
-      const actorName = base && me?.nickname ? `${base} «${me.nickname}»` : base;
+      const actorName = me ? displayNameForOthers(me) : null;
       await notify({
         userId: result.owner_id,
         kind: 'friend_accepted',

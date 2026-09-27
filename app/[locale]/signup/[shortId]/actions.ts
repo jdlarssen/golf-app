@@ -7,6 +7,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
@@ -99,8 +100,8 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
 }
 
 /**
- * Slå opp displayName for notify-payload. Bruker name → nickname → email
- * i prioritet. Best-effort: hvis users-raden mangler, returnerer vi null —
+ * Slå opp displayName for notify-payload: navn, ellers maskert e-post (#2271),
+ * med kallenavn i «». Best-effort: hvis users-raden mangler, returnerer vi null —
  * NotificationCard fyller locale-riktig fallback ved render-tid, så payloaden
  * holdes språk-nøytral (#583). Vi blokkerer aldri selv-påmelding på display-feil.
  */
@@ -116,8 +117,7 @@ async function getRequesterName(userId: string): Promise<string | null> {
       email: string;
     }>();
   if (!data) return null;
-  const base = data.name?.trim() || data.email;
-  return data.nickname ? `${base} «${data.nickname}»` : base;
+  return displayNameForOthers(data);
 }
 
 /**

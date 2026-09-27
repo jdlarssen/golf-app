@@ -8,6 +8,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { sendReminders } from '@/lib/games/remindUnsubmitted';
 import { notify } from '@/lib/notifications/notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 
 /**
  * Admin-purring (#376): send «husk å levere»-påminnelse til alle spillere som
@@ -92,7 +93,8 @@ export async function remindUnconfirmedPlayers(gameId: string) {
       .eq('id', game!.created_by)
       .maybeSingle<{ name: string | null; email: string | null }>();
     if (creator) {
-      adderName = creator.name ?? creator.email ?? 'Tørny';
+      // The players see this, so a nameless creator shows masked (#2271).
+      adderName = displayNameForOthers(creator) ?? 'Tørny';
     }
   }
 

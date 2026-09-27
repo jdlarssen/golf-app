@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from './notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 
 /**
  * Best-effort `invite`-varsel til en spiller som er lagt til i et game.
@@ -58,7 +59,7 @@ export async function notifyInvitedToGame(opts: {
     return;
   }
 
-  const invitedByName = inviter.name ?? inviter.email ?? 'Tørny';
+  const invitedByName = displayNameForOthers(inviter) ?? 'Tørny';
 
   try {
     await notify({

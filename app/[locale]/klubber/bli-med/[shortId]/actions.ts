@@ -5,6 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505) eller inneholder "duplicate"
@@ -19,8 +20,9 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
 }
 
 /**
- * Slå opp displayName for notify-payload. Bruker nickname → name → email
- * i prioritet. Best-effort: returnerer fallback "En bruker" hvis raden mangler.
+ * Slå opp displayName for notify-payload: navn, ellers maskert e-post (#2271),
+ * med kallenavn i «». Best-effort: returnerer fallback "En bruker" hvis raden
+ * mangler.
  */
 async function getRequesterName(userId: string): Promise<string> {
   const admin = getAdminClient();
@@ -34,8 +36,7 @@ async function getRequesterName(userId: string): Promise<string> {
       email: string;
     }>();
   if (!data) return 'En bruker';
-  const base = data.name?.trim() || data.email;
-  return data.nickname ? `${base} «${data.nickname}»` : base;
+  return displayNameForOthers(data) ?? 'En bruker';
 }
 
 /**

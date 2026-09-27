@@ -5,12 +5,14 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { displayNameForOthers } from '@/lib/users/displayName';
 import type { AppLocale } from '@/i18n/routing';
 
 const VENNER = '/profile/venner';
 
 /**
- * Visningsnavn for varsel-payload: nickname-dekorert navn → e-post.
+ * Visningsnavn for varsel-payload: nickname-dekorert navn → maskert e-post
+ * (#2271 — mottakeren ser aldri hele adressen).
  * Returnerer null (ikke norsk fallback) når vi ikke finner brukeren — render-
  * tid fallback i NotificationCard bruker katalog-strengen i riktig locale.
  */
@@ -22,8 +24,7 @@ async function getDisplayName(userId: string): Promise<string | null> {
     .eq('id', userId)
     .maybeSingle<{ name: string | null; nickname: string | null; email: string }>();
   if (!data) return null;
-  const base = data.name?.trim() || data.email;
-  return data.nickname ? `${base} «${data.nickname}»` : base;
+  return displayNameForOthers(data);
 }
 
 /** Best-effort venne-varsel. Aldri blokker bruker-flyten. */
