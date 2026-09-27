@@ -465,7 +465,18 @@ export type GameModeConfig =
   | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified' }
   | { kind: 'modified_stableford'; team_size: 2; points_table: 'modified' }
   | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 }
-  | { kind: 'solo_strokeplay'; team_size: 1 }
+  | {
+      kind: 'solo_strokeplay';
+      team_size: 1;
+      /**
+       * #2253: `'net_to_par'` ranks on net strokes against each player's own
+       * par over the holes they have played («thru»). Stamped on NEW games at
+       * creation (`stampNewGameModeConfig`), never added to an existing game,
+       * so a game keeps the rule it was created with. Absent = the original
+       * rule: net sum, unplayed holes padded (`soloStrokeplay.ts`).
+       */
+      ranking?: 'net_to_par';
+    }
   | {
       kind: 'texas_scramble';
       team_size: 2 | 3 | 4;
@@ -1170,6 +1181,13 @@ export interface SoloStrokeplayPlayerLine {
   totalGrossStrokes: number;
   /** Antall hull spilt (gross !== null). */
   holesPlayed: number;
+  /**
+   * #2253: Σ (net − the player's own par) over played holes; `null` when no
+   * hole is played. Always computed. It is what the game ranks on when
+   * `mode_config.ranking === 'net_to_par'`; other games rank on
+   * `totalNetStrokes` and only carry it along.
+   */
+  netToPar: number | null;
   rank: number;
   /**
    * Tied-with: andre spilleres userIds som har EKSAKT samme tie-break-cascade

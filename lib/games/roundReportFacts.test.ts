@@ -83,8 +83,8 @@ describe('solo_strokeplay — placement band + checkpoints', () => {
       },
     ],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, rank: 2, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, netToPar: 3, rank: 2, tiedWith: [] },
     ],
   };
   const nameByUserId = names(['u1', 'Alice'], ['u2', 'Bob']);

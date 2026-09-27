@@ -16,12 +16,17 @@ function makeResult(
     totalGrossStrokes: number;
     rank: number;
     holesPlayed: number;
+    netToPar?: number | null;
     tiedWith?: string[];
   }>,
 ): SoloStrokeplayResult {
   return {
     kind: 'solo_strokeplay',
-    players: players.map(({ tiedWith = [], ...p }) => ({ ...p, tiedWith })),
+    players: players.map(({ tiedWith = [], netToPar = null, ...p }) => ({
+      ...p,
+      netToPar,
+      tiedWith,
+    })),
     // Per-hull-data brukes ikke av SoloStrokeplayPodium (topp-3-podium) — den
     // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
     holes: [],

@@ -35,6 +35,7 @@ function soloStrokeplayResult(userIds: string[]): ModeResult {
       totalNetStrokes: 70 + i,
       totalGrossStrokes: 74 + i,
       holesPlayed: 18,
+      netToPar: -2 + i,
       rank: i + 1,
       tiedWith: [],
     })),
