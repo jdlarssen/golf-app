@@ -1689,7 +1689,7 @@
             "body": "To til fire spillere fungerer, og fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
           }
         ],
-        "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff og D er i bunkeren, så ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte: bongo til C.",
+        "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff, og D er i bunkeren, så ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte: bongo til C.",
         "faq": [
           {
             "q": "Hva betyr bingo, bango og bongo?",
@@ -4006,8 +4006,8 @@
       "visibleAria": "{format} synlig for {intent}",
       "primaryAria": "{format} primær for {intent}",
       "cupEligibleAria": "{format} cup-kvalifisert",
-      "cupEligibleEmpty": "Ingen cup-eligible formats.",
-      "matrixEmpty": "Ingen formats å vise.",
+      "cupEligibleEmpty": "Ingen cup-kvalifiserte formater.",
+      "matrixEmpty": "Ingen formater å vise.",
       "togglesHint": "Bryterne oppdateres umiddelbart. Synlige endringer treffer veiviseren neste gang den lastes inn.",
       "rowStatus": {
         "aktiv": "Aktiv",
