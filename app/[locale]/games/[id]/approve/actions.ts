@@ -2,21 +2,13 @@
 
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
-import { expireGameCache } from '@/lib/games/expireGameCache';
-import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { notify } from '@/lib/notifications/notify';
 import { canApproveScorecardFor } from '@/lib/games/flightScope';
-import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 import {
-  sharedCardUserIds,
-  type SharedCardRosterRow,
-} from '@/lib/games/scoreOwner';
-import {
-  modeCollapsesToTeamCard,
-  type GameMode,
-} from '@/lib/scoring/modes/types';
+  approveScorecardCore,
+  rejectScorecardCore,
+} from '@/lib/games/reviewScorecardCore';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 type AuthorizationResult = {
   ok: boolean;
@@ -98,6 +90,11 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
 /**
  * Approve a flight-mate's scorecard. Idempotent — if already approved this
  * is a no-op. Clears any prior rejection_reason so it can't linger.
+ *
+ * #2215: the write, the 0-row guard (#704), the `scorecard_approved` varsel
+ * and the cache expiry live in `approveScorecardCore`, which the app route
+ * `app/api/games/[id]/scorecards/[userId]` calls too. This wrapper keeps the
+ * gate and the redirects.
  */
 export async function approveScorecard(gameId: string, playerUserId: string) {
   const { supabase, user, locale, authz } = await loadAndAuthorize(
@@ -106,91 +103,23 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
   );
   if (!authz.ok) redirect({ href: '/', locale });
 
-  const { data: updated, error } = await supabase
-    .from('game_players')
-    .update({
-      approved_at: new Date().toISOString(),
-      approved_by_user_id: user.id,
-      rejection_reason: null,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId)
-    .not('submitted_at', 'is', null)
-    .is('approved_at', null)
-    .select('user_id');
+  // #1598: this path is always a flight-mate — admin/organizer approve through
+  // adminApproveScorecard — so the role is 'peer' even when an admin lands here
+  // (loadAndAuthorize lets admins through). Deriving it from `authz.isAdmin`
+  // would change what a nameless approver's card says.
+  const result = await approveScorecardCore({
+    client: supabase,
+    gameId,
+    approverUserId: user.id,
+    playerUserId,
+    approverRole: 'peer',
+  });
 
-  if (error) {
-    console.error('[approveScorecard] update failed', { gameId, playerUserId, error });
+  // `not_pending` and `db` share the existing `db` code («Klarte ikke å lagre
+  // endringen») rather than a new i18n key.
+  if (!result.ok) {
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
-
-  // #704: en 0-rads-UPDATE returnerer error == null (Supabase-quirk), så uten
-  // denne vakta ville en RLS-blokkert peer-godkjenning rapportere falsk suksess
-  // og sende varsel mens approved_at aldri ble skrevet. Skiller to 0-rads-grunner:
-  //   • allerede godkjent → idempotent no-op (rediger til suksess, IKKE nytt varsel)
-  //   • RLS/rad-tilgang nektet → ekte feil (?error=db, ingen varsel)
-  if (!updated || updated.length === 0) {
-    const { data: existing } = await supabase
-      .from('game_players')
-      .select('approved_at')
-      .eq('game_id', gameId)
-      .eq('user_id', playerUserId)
-      .maybeSingle<{ approved_at: string | null }>();
-
-    if (existing?.approved_at) {
-      // Allerede godkjent — idempotent. Ikke send varsel på nytt.
-      expireGameCache(gameId);
-      revalidatePath(`/games/${gameId}`);
-      revalidatePath(`/games/${gameId}/approve`);
-      redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
-    }
-    // Skrivingen traff ingen rad og kortet er fortsatt ikke godkjent →
-    // tilgang nektet (eller ikke-levert kort). Ikke rapporter suksess. Bruker
-    // den eksisterende `db`-feilkoden («Klarte ikke å lagre endringen») i stedet
-    // for å introdusere en ny i18n-nøkkel.
-    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
-  }
-
-  // Best-effort in-app varsel til submitter om at scorekortet er godkjent.
-  // Vi henter game.name + approver.name parallelt og catch-er feil — notify()
-  // skal aldri blokkere parent-action (per Phase 1-implementasjonen feiler den
-  // stille på DB-error, men nettverks-feil under fetch kan kaste).
-  try {
-    const [gameRes, approverRes] = await Promise.all([
-      supabase
-        .from('games')
-        .select('name')
-        .eq('id', gameId)
-        .single<{ name: string }>(),
-      supabase
-        .from('users')
-        .select('name')
-        .eq('id', user.id)
-        .maybeSingle<{ name: string | null }>(),
-    ]);
-    // #1364: null i stedet for norsk plassholdertekst. Payloaden skrives i
-    // godkjennerens kontekst men leses i mottakerens locale, så kortet fyller
-    // fallbacken ved render (buildNotificationText).
-    // #1598: `approver_role` forteller kortet HVILKEN fallback som gjelder når
-    // navnet mangler. Denne stien er alltid en medspiller — admin/arrangør
-    // godkjenner via adminApproveScorecard.
-    await notify({
-      userId: playerUserId,
-      kind: 'scorecard_approved',
-      payload: {
-        game_id: gameId,
-        game_name: gameRes.data?.name ?? null,
-        approver_name: approverRes.data?.name?.trim() || null,
-        approver_role: 'peer',
-      },
-    });
-  } catch (err) {
-    console.error('[approveScorecard] scorecard_approved notify failed', err);
-  }
-
-  expireGameCache(gameId);
-  revalidatePath(`/games/${gameId}`);
-  revalidatePath(`/games/${gameId}/approve`);
   redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
 }
 
@@ -208,21 +137,19 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
  * straight through), so peer and admin rejection are covered by one call site.
  *
  * #2213: in the one-ball team formats the rejection reopens the whole active
- * team through the service role (`rejectSharedCard`), since every card there
- * reads the captain's rows. Every other mode keeps the one-row RLS write.
+ * team through the service role, since every card there reads the captain's
+ * rows. Every other mode keeps the one-row RLS write.
+ *
+ * #2215: all of that lives in `rejectScorecardCore`, shared with the app route
+ * `app/api/games/[id]/scorecards/[userId]`. This wrapper keeps the gate and the
+ * redirects.
  */
 export async function rejectScorecard(gameId: string, formData: FormData) {
   const locale = await getLocale();
   const playerUserId = String(formData.get('player_user_id') ?? '');
-  const reasonRaw = String(formData.get('reason') ?? '').trim();
   if (!playerUserId) {
     redirect({ href: `/games/${gameId}/approve?error=bad_request` as string, locale });
   }
-  // #1364: uten begrunnelse lagres en maskinsentinel, ikke norsk prosa — raden
-  // leses av spillere i begge locales, og banneret på spill-hjem er gated på at
-  // feltet er truthy (se NO_REJECTION_REASON for hvorfor null ikke går).
-  const reason =
-    reasonRaw.length > 0 ? reasonRaw.slice(0, 500) : NO_REJECTION_REASON;
 
   const { supabase, user, authz, gameMode } = await loadAndAuthorize(
     gameId,
@@ -230,164 +157,18 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   );
   if (!authz.ok) redirect({ href: '/', locale });
 
-  const rejectPatch = {
-    submitted_at: null,
-    approved_at: null,
-    approved_by_user_id: null,
-    rejection_reason: reason,
-  };
-  const sharedCard = modeCollapsesToTeamCard(gameMode, 18);
-  const { data: updated, error } = sharedCard
-    ? await rejectSharedCard(gameId, gameMode, playerUserId, rejectPatch)
-    : await supabase
-        .from('game_players')
-        .update(rejectPatch)
-        .eq('game_id', gameId)
-        .eq('user_id', playerUserId)
-        // #1395: kun et innlevert kort kan avvises. Uten filteret traff et
-        // dobbelttrykk (eller en re-post av skjemaet) fortsatt 1 rad og fyrte et
-        // nytt scorecard_rejected-varsel + push til spilleren.
-        .not('submitted_at', 'is', null)
-        .select('user_id');
+  const result = await rejectScorecardCore({
+    client: supabase,
+    gameId,
+    gameMode,
+    rejecterUserId: user.id,
+    playerUserId,
+    rawReason: String(formData.get('reason') ?? ''),
+  });
 
-  if (error) {
-    console.error('[rejectScorecard] update failed', { gameId, playerUserId, error });
+  // Same mapping as approveScorecard: both refusals share the `db` code.
+  if (!result.ok) {
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
-
-  // #704: samme 0-rads-felle som approveScorecard. Uten denne vakta ville en
-  // RLS-blokkert peer-avvisning rapportere falsk suksess (redirect ?status=
-  // rejected) mens raden aldri ble rørt. Bruker den eksisterende `db`-feilkoden
-  // i stedet for en ny i18n-nøkkel.
-  //
-  // #1395: med submitted_at-filteret har 0 rader to lovlige grunner, akkurat som
-  // i approveScorecard. Ett oppfølgings-SELECT skiller dem — attestanten kan
-  // lese raden («game_players select shared game»: is_admin() OR
-  // is_in_game(game_id), pluss «game_players creator select» for arrangøren som
-  // ikke spiller selv):
-  //   • raden synlig med submitted_at = null → kortet er allerede avvist (eller
-  //     aldri levert) → idempotent suksess, og INGEN nytt varsel.
-  //   • raden usynlig/borte → tilgang nektet → ?error=db som før.
-  if (!updated || updated.length === 0) {
-    const { data: existing } = await supabase
-      .from('game_players')
-      .select('submitted_at')
-      .eq('game_id', gameId)
-      .eq('user_id', playerUserId)
-      .maybeSingle<{ submitted_at: string | null }>();
-
-    if (existing && existing.submitted_at === null) {
-      // Allerede avvist — idempotent. Revalider så et stakkars «venter på
-      // godkjenning»-UI ikke blir hengende, men ikke varsle på nytt.
-      expireGameCache(gameId);
-      revalidatePath(`/games/${gameId}`);
-      revalidatePath(`/games/${gameId}/approve`);
-      redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
-    }
-    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
-  }
-
-  // #1358: best-effort in-app varsel til spilleren om at kortet ble avvist.
-  // Speiler approveScorecard: notify() skal ALDRI blokkere selve avvisningen —
-  // raden er allerede skrevet her, og /approve-banneret lover at spilleren
-  // varsles. Plasseringen etter 0-rads-guarden er kritisk (I3): en RLS-blokkert
-  // avvisning (0 rader, error == null — #704-fella) må ikke varsle om en
-  // skriving som aldri skjedde. redirect() står UTENFOR try-en — den kaster
-  // NEXT_REDIRECT og må ikke svelges av catch-en.
-  //
-  // DEPLOY-REKKEFØLGE: migrasjon 0149 må være påført før dette kjører i prod.
-  // Uten den avviser notifications_kind_check inserten og notify() svelger
-  // feilen (console.error '[notifications] insert failed') — grønt UI, ingen
-  // varsel. Verifiser med en SELECT mot notifications etter staging-runden.
-  //
-  // #2213: on a shared team card, every row the cascade reopened is notified
-  // except the rejecter — they know already, though their own card reopens
-  // too (see rejectSharedCard).
-  const recipients = sharedCard
-    ? (updated ?? []).map((r) => r.user_id).filter((id) => id !== user.id)
-    : [playerUserId];
-  try {
-    const [gameRes, rejecterRes] = await Promise.all([
-      supabase
-        .from('games')
-        .select('name')
-        .eq('id', gameId)
-        .single<{ name: string }>(),
-      supabase
-        .from('users')
-        .select('name')
-        .eq('id', user.id)
-        .maybeSingle<{ name: string | null }>(),
-    ]);
-    const payload = {
-      game_id: gameId,
-      game_name: gameRes.data?.name ?? null,
-      rejecter_name: rejecterRes.data?.name?.trim() || null,
-      // Utelat feltet helt når attestanten ikke skrev noe, så kortet kan vise
-      // en lokalisert defaultReason. DB-raden bærer sentinelen i stedet —
-      // den styrer spill-hjem-banneret, som oversetter på samme måte.
-      ...(reasonRaw.length > 0 ? { reason } : {}),
-    };
-    await Promise.all(
-      recipients.map((userId) =>
-        notify({ userId, kind: 'scorecard_rejected', payload }),
-      ),
-    );
-  } catch (err) {
-    console.error('[rejectScorecard] scorecard_rejected notify failed', err);
-  }
-
-  expireGameCache(gameId);
-  revalidatePath(`/games/${gameId}`);
-  revalidatePath(`/games/${gameId}/approve`);
   redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
-}
-
-/**
- * #2213: rejecting a shared team card. In the one-ball formats
- * (`modeCollapsesToTeamCard`) every card on the team reads the captain's rows.
- * Clearing only the rejected card left the captain's row submitted, so the hole
- * page kept the team card locked (`anyTeamMemberSubmitted`) and RLS refused the
- * correction. The whole active team (`sharedCardUserIds`) reopens instead, in
- * ONE UPDATE, so the cascade is atomic (trap 5).
- *
- * The rejecter often plays on the team (in scramble with more than four players
- * flight = team), and their own card reopens too. That is deliberate: otherwise
- * one row on the team stays submitted and the lock stays. If their card was
- * approved, that approval is cleared as well, which a player cannot do on their
- * own row with the RLS client (the 0168 guard). Hence the service role. It
- * mirrors the delivery cascade (#1453) and sits behind the same gate:
- * `loadAndAuthorize` (admin, or `canApproveScorecardFor` on the rejected card)
- * has already let the caller through.
- *
- * Returns the same shape as the one-row UPDATE, so the 0-row guard
- * (#704/#1395) and the notifications read both paths alike.
- */
-async function rejectSharedCard(
-  gameId: string,
-  mode: GameMode,
-  playerUserId: string,
-  patch: {
-    submitted_at: null;
-    approved_at: null;
-    approved_by_user_id: null;
-    rejection_reason: string;
-  },
-) {
-  const admin = getAdminClient();
-  const { data: roster, error: rosterError } = await admin
-    .from('game_players')
-    .select('user_id, team_number, withdrawn_at')
-    .eq('game_id', gameId)
-    .returns<SharedCardRosterRow[]>();
-  // A failed roster read is an error (?error=db), not a cue to reopen just
-  // one card — that would silently shrink the cascade back into the bug.
-  if (rosterError) return { data: null, error: rosterError };
-  return admin
-    .from('game_players')
-    .update(patch)
-    .eq('game_id', gameId)
-    .in('user_id', sharedCardUserIds(mode, roster ?? [], playerUserId))
-    .not('submitted_at', 'is', null)
-    .select('user_id');
 }
