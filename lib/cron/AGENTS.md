@@ -26,7 +26,8 @@ from cron.job_run_details d join cron.job j using (jobid)
 where d.return_message <> '0 rows'
 order by d.start_time desc limit 20;
 
--- 2. What did the route answer? (last 6 hours only)
+-- 2. What did the route answer? (recent calls only: rows older than
+--    pg_net.ttl go the next time pg_net sends something)
 select id, created, status_code, left(content, 80) as body
 from net._http_response order by id desc limit 20;
 
@@ -36,7 +37,9 @@ from public.games
 where scheduled_tee_off_at is not null and started_at is not null
 order by scheduled_tee_off_at desc limit 20;
 
--- 3b. Finish-tail delay (the sweep catches what the finish action left behind)
+-- 3b. Finish-tail delay (the sweep catches what the finish action left behind).
+--     Games finished before 0169 got a backfilled marker, so their
+--     tail_delay means nothing - read only games finished after it.
 select id, ended_at, finish_pipeline_at, finish_pipeline_at - ended_at as tail_delay
 from public.games
 where status = 'finished' and tournament_id is null and source_game_id is null

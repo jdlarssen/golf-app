@@ -27,10 +27,12 @@
 --   * cron.unschedule(name) raises when the job does not exist, and staging
 --     never got finish-pipeline-sweep (0170 was not applied there), so each job
 --     is removed separately and only if present.
---   * cron.job has RLS: postgres sees the jobs it owns, and unschedule(name)
---     only finds those. Every job here was scheduled by a postgres-run
---     migration (verified on staging 2026-09-27: username = postgres), so the
---     exists check and the unschedule look at the same rows.
+--   * cron.job has RLS, but postgres has BYPASSRLS on Supabase, so the exists
+--     check sees every job, while cron.unschedule(name) only matches jobs the
+--     caller owns. Every job here was scheduled by a postgres-run migration
+--     (verified on staging 2026-09-27: username = postgres). A same-named job
+--     owned by another role would make this block raise - loud on purpose,
+--     rather than skipping a job that keeps firing.
 --   * A database without the vault schema counts as "no secret".
 --   * Re-runnable: a second run finds no jobs and does nothing.
 -- =============================================================================

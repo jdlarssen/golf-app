@@ -17,8 +17,9 @@
 -- future migration that schedules a job without the guard turns this red,
 -- whatever the job is called.
 --
--- cron.job has RLS (rows visible to their owner). The gate applies migrations
--- as postgres, so any job a migration creates is visible here.
+-- cron.job has RLS (rows visible to their owner), but the gate applies
+-- migrations as postgres, which owns every job they create and has BYPASSRLS
+-- on Supabase, so any job a migration creates is visible here.
 --
 -- Catalog state only — no fixtures, no role impersonation, no seed.
 -- Run via:  supabase test db
