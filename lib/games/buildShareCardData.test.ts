@@ -44,10 +44,10 @@ describe('solo_strokeplay — sharer in top 3', () => {
     kind: 'solo_strokeplay',
     holes: [],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, rank: 2, tiedWith: [] },
-      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, rank: 3, tiedWith: [] },
-      { userId: 'u4', totalNetStrokes: 80, totalGrossStrokes: 84, holesPlayed: 18, rank: 4, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
+      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, netToPar: 3, rank: 3, tiedWith: [] },
+      { userId: 'u4', totalNetStrokes: 80, totalGrossStrokes: 84, holesPlayed: 18, netToPar: 8, rank: 4, tiedWith: [] },
     ],
   };
 
@@ -109,10 +109,10 @@ describe('solo_strokeplay — sharer outside top 3', () => {
     kind: 'solo_strokeplay',
     holes: [],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, rank: 2, tiedWith: [] },
-      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, rank: 3, tiedWith: [] },
-      { userId: 'u4', totalNetStrokes: 80, totalGrossStrokes: 84, holesPlayed: 18, rank: 4, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
+      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, netToPar: 3, rank: 3, tiedWith: [] },
+      { userId: 'u4', totalNetStrokes: 80, totalGrossStrokes: 84, holesPlayed: 18, netToPar: 8, rank: 4, tiedWith: [] },
     ],
   };
 
@@ -145,8 +145,8 @@ describe('solo_strokeplay — neutral card (sharerId null)', () => {
     kind: 'solo_strokeplay',
     holes: [],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, rank: 2, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
     ],
   };
 
@@ -202,8 +202,8 @@ describe('solo_strokeplay — fewer than 3 players', () => {
     kind: 'solo_strokeplay',
     holes: [],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, rank: 2, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
     ],
   };
 
@@ -227,9 +227,9 @@ describe('solo_strokeplay — tied rank-1', () => {
     kind: 'solo_strokeplay',
     holes: [],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: ['u2'] },
-      { userId: 'u2', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: ['u1'] },
-      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, rank: 3, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: ['u2'] },
+      { userId: 'u2', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: ['u1'] },
+      { userId: 'u3', totalNetStrokes: 75, totalGrossStrokes: 79, holesPlayed: 18, netToPar: 3, rank: 3, tiedWith: [] },
     ],
   };
 
@@ -418,8 +418,8 @@ describe('sideTournaments', () => {
     kind: 'solo_strokeplay',
     holes: [],
     players: [
-      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, rank: 2, tiedWith: [] },
+      { userId: 'u1', totalNetStrokes: 70, totalGrossStrokes: 74, holesPlayed: 18, netToPar: -2, rank: 1, tiedWith: [] },
+      { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 76, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
     ],
   };
 
@@ -759,8 +759,8 @@ describe('vs par over played holes (#2217)', () => {
         bestUserIds: [],
       })),
       players: [
-        { userId: 'u1', totalNetStrokes: 66, totalGrossStrokes: 66, holesPlayed: 16, rank: 1, tiedWith: [] },
-        { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 72, holesPlayed: 18, rank: 2, tiedWith: [] },
+        { userId: 'u1', totalNetStrokes: 66, totalGrossStrokes: 66, holesPlayed: 16, netToPar: 2, rank: 1, tiedWith: [] },
+        { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 72, holesPlayed: 18, netToPar: 0, rank: 2, tiedWith: [] },
       ],
     };
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });

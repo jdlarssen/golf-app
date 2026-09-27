@@ -102,6 +102,7 @@ export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay, isMatch
 export { ambroseDefaultPct } from './modes/ambrose';
 export { defaultFloridaHandicapPct } from './modes/floridaScramble';
 export { computeMatchResult } from './modes/singlesMatchplay';
+export { ranksByNetToPar } from './modes/soloStrokeplay';
 export type {
   GameMode,
   GameModeConfig,

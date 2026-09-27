@@ -9,11 +9,16 @@
 // Hull uten gross (pick-up / ikke spilt ennå) bidrar IKKE til totalen — vi
 // teller dem som ikke spilte. Dette er bevisst: en spiller som har "pick-up"
 // på et hull skal ikke få "0 slag" i totalen (det ville premiert dem urettmessig).
+//
+// #2253: games with `mode_config.ranking === 'net_to_par'` rank on net strokes
+// against each player's OWN par over the holes they have played («thru»)
+// instead. Games without the flag keep the rule above, byte for byte.
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
+import { rankingHolesByNumber, rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
+  GameModeConfig,
   ScoringContext,
   ScoringHole,
   ScoringPlayer,
@@ -27,10 +32,23 @@ import type {
 // som har spilt 18 hull rangerer foran en som har spilt færre ved ellers lik
 // total — og en spiller uten skår havner sist. Se tiebreaker.ts for detaljer.
 
+/**
+ * #2253: true when the game ranks on net-to-par (`mode_config.ranking`). The
+ * one home for the question — the engine, the live board and the result
+ * surfaces all ask it here, so they cannot disagree on a game's rule.
+ */
+export function ranksByNetToPar(modeConfig: GameModeConfig): boolean {
+  return modeConfig.kind === 'solo_strokeplay' && modeConfig.ranking === 'net_to_par';
+}
+
 interface PlayerHoleStrokes {
   userId: string;
-  /** Netto-slag per hull, indeksert på `holeNumber - 1`. UNPLAYED_PADDING for unplayed. */
+  /** Netto-slag per hull, i `holesSorted`-rekkefølge. UNPLAYED_PADDING for unplayed. */
   perHoleNetForRanking: number[];
+  /** #2253: net − own par per hole in scope; `null` for an unplayed hole. */
+  netToParByHole: { holeNumber: number; teamNet: number | null }[];
+  /** #2253: Σ net − own par over played holes; `null` when none is played. */
+  netToPar: number | null;
   /** Faktisk netto-slag for spilte hull (sum). */
   totalNetStrokes: number;
   /** Faktisk gross-slag for spilte hull (sum). */
@@ -39,13 +57,15 @@ interface PlayerHoleStrokes {
 }
 
 function computePlayerHoleStrokes(
-  player: { userId: string; courseHandicap: number },
+  player: ScoringPlayer,
   holesSorted: ScoringHole[],
   grossByKey: Map<string, number | null>,
 ): PlayerHoleStrokes {
   const perHoleNetForRanking: number[] = [];
+  const netToParByHole: PlayerHoleStrokes['netToParByHole'] = [];
   let totalNetStrokes = 0;
   let totalGrossStrokes = 0;
+  let netToPar = 0;
   let holesPlayed = 0;
 
   for (const hole of holesSorted) {
@@ -53,19 +73,25 @@ function computePlayerHoleStrokes(
     if (gross === null) {
       // Ikke spilt — padding for ranking, ingen bidrag til total.
       perHoleNetForRanking.push(UNPLAYED_PADDING);
+      netToParByHole.push({ holeNumber: hole.number, teamNet: null });
       continue;
     }
     const extra = strokesForHole(player.courseHandicap, hole.strokeIndex);
     const net = gross - extra;
+    const toPar = net - parFor(hole, player.teeGender);
     perHoleNetForRanking.push(net);
+    netToParByHole.push({ holeNumber: hole.number, teamNet: toPar });
     totalNetStrokes += net;
     totalGrossStrokes += gross;
+    netToPar += toPar;
     holesPlayed += 1;
   }
 
   return {
     userId: player.userId,
     perHoleNetForRanking,
+    netToParByHole,
+    netToPar: holesPlayed > 0 ? netToPar : null,
     totalNetStrokes,
     totalGrossStrokes,
     holesPlayed,
@@ -153,9 +179,16 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
   );
 
   // index-basert id slik at vi kan mappe tilbake til userId etter ranking.
+  // #2253: a net-to-par game ranks on net − own par, slotted by hole number
+  // (`rankingHolesByNumber`): an unplayed hole counts 0 («thru»), a hole
+  // outside the segment counts 0, and a player without a single hole gets
+  // UNPLAYED_PADDING and ranks last. Without the flag: today's rule.
+  const netToParRanking = ranksByNetToPar(ctx.game.mode_config);
   const teamsForRanking = playerStrokes.map((p, i) => ({
     id: i,
-    holes: padTo18(p.perHoleNetForRanking),
+    holes: netToParRanking
+      ? rankingHolesByNumber(p.netToParByHole)
+      : padTo18(p.perHoleNetForRanking),
   }));
 
   const ranked = rankTeams(teamsForRanking);
@@ -168,6 +201,7 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
       totalNetStrokes: source.totalNetStrokes,
       totalGrossStrokes: source.totalGrossStrokes,
       holesPlayed: source.holesPlayed,
+      netToPar: source.netToPar,
       rank: r.rank,
       tiedWith: tiedWithUserIds,
     };
