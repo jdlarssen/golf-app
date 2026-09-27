@@ -44,11 +44,12 @@ import { NoRowsAffectedError } from '@/lib/supabase/affectedRows';
  *   persistScoreDifferentials(gameId) · notifyAchievementUnlocks(gameId) ·
  *   generateAndPersistRoundReport(gameId) · logAdminEvent(…) ·
  *   [unless suppressed] notifyPlayersGameFinished(…) →
- *   buildGameFinishedRecipients(client, …) → sendGameFinishedNotification(…) ·
+ *   buildGameFinishedRecipients(adminClient, …) → sendGameFinishedNotification(…) ·
  *   revalidateTag + revalidatePath ×2
- * Of those, only `finishDerivedGames` and `buildGameFinishedRecipients` take
- * the injected client; the rest reach for `getAdminClient()` themselves (which
- * is exactly why the app can never run this tail — #1856).
+ * Of those, only `finishDerivedGames` takes the injected client. The recipient
+ * list always runs on the service role, because it must cover the whole roster
+ * no matter who finishes (#2213); the rest reach for `getAdminClient()`
+ * themselves (which is exactly why the app can never run this tail — #1856).
  */
 
 // ─── Post-flip helpers (the tail that N6c extracts) ─────────────────────────
@@ -745,10 +746,13 @@ describe('endGameCore — post-flip tail', () => {
     expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
-  it('passes the INJECTED client to the two client-taking steps and ids/objects to the admin-client ones', async () => {
-    // This is the plumbing #1856 must preserve: `finishDerivedGames` and
-    // `buildGameFinishedRecipients` run under the caller's RLS (creator client
-    // for web endGame, service-role for the cup path); the other four reach for
+  it('passes the INJECTED client to finishDerivedGames, the ADMIN client to the recipient list, and ids/objects to the rest', async () => {
+    // This is the plumbing #1856 must preserve: `finishDerivedGames` runs under
+    // the caller's RLS (creator client for web endGame, service-role for the
+    // cup path). `buildGameFinishedRecipients` always gets the service role
+    // (#2213): a non-playing organiser's client sees no co-player e-mails and
+    // no scores once the game is finished, so the mail went to nobody. The web
+    // entry is gated by `requireAdminOrCreator`. The other four reach for
     // `getAdminClient()` themselves — which is precisely why the phone cannot
     // run this tail.
     const client = happyClient();
@@ -761,7 +765,7 @@ describe('endGameCore — post-flip tail', () => {
       expect.any(String),
     );
     expect(buildGameFinishedRecipientsMock).toHaveBeenCalledWith(
-      client,
+      adminClientMock,
       GAME_ID,
       {
         course_id: 'course-1',

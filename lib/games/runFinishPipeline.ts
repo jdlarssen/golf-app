@@ -33,14 +33,21 @@ import type { HoleSegment } from '@/lib/scoring';
  * TWO INVARIANTS THIS FILE EXISTS TO PROTECT — both are load-bearing, both are
  * easy to lose in a move, and both have tests:
  *
- *  1. THE CLIENT SPLIT IS NOT AN ACCIDENT. `finishDerivedGames` and
- *     `buildGameFinishedRecipients` run on the CALLER's client; the other four
- *     steps take ids/objects and open their own admin client. The web finish
- *     passes the request-scoped creator client (0071 RLS), the cup finish passes
- *     the admin client because a klubb-styrer is not the games' creator
- *     (AGENTS.md trap #3 — the authz difference is deliberate, gated upstream by
+ *  1. THE CLIENT SPLIT IS NOT AN ACCIDENT. Only `finishDerivedGames` runs on
+ *     the CALLER's client; the other four persistence steps take ids/objects
+ *     and open their own admin client. The web finish passes the request-scoped
+ *     creator client (0071 RLS), the cup finish passes the admin client because
+ *     a klubb-styrer is not the games' creator (AGENTS.md trap #3 — the authz
+ *     difference is deliberate, gated upstream by
  *     `requireAdminOrClubAdminOfCup`). Collapsing these into "one client" would
  *     silently widen or break one of the two paths.
+ *     `buildGameFinishedRecipients` ALWAYS runs on the service role, whoever
+ *     calls: the «Resultatet er klart» list must cover the whole roster no
+ *     matter who finishes (#2213). A non-playing organiser's request client
+ *     sees no co-player e-mails and, once the game is finished, no scores, so
+ *     the mail went to nobody. That is safe because all three entries are gated
+ *     before they get here: the web by `requireAdminOrCreator`, the cup by
+ *     `requireAdminOrClubAdminOfCup`, the sweep by running as the service role.
  *
  *  2. `Promise.allSettled` AROUND THE MAIL BLAST LIVES HERE, NOT IN THE MAILER.
  *     `sendGameFinishedNotification` throws on failure. The best-effort promise
@@ -256,7 +263,9 @@ export async function runFinishPipeline(
     // Mode-aware payload: for stableford regner helperen ut leaderboard og
     // legger per-spiller rank/poeng på hver mottaker; for best-ball returnerer
     // den kun userId/email/name (mailen bruker da default nøytral copy).
-    const recipients = await buildGameFinishedRecipients(supabase, game.id, {
+    //
+    // #2213: service-role, ikke kallerens klient — se punkt 1 i filhodet.
+    const recipients = await buildGameFinishedRecipients(getAdminClient(), game.id, {
       course_id: game.course_id,
       game_mode: game.game_mode,
       mode_config: game.mode_config,
@@ -303,9 +312,9 @@ export async function runFinishPipeline(
  * creator (that is the only RLS path the phone has), so attributing the tail to
  * them matches what the web writes for the same action.
  *
- * Pass the SERVICE-ROLE client. The two client-taking steps inside read across
- * the whole roster and every derived game, which no request-scoped client is
- * guaranteed to see.
+ * Pass the SERVICE-ROLE client. This function reads the game and the whole
+ * roster with it, and `finishDerivedGames` inside reads every derived game,
+ * which no request-scoped client is guaranteed to see.
  */
 export async function runFinishPipelineForGame(
   supabase: SupabaseClient<Database>,
