@@ -214,14 +214,20 @@ export async function sendCode(formData: FormData) {
   // point — RLS cannot grant write access to a pre-auth visitor.
   // We only set it once (is null guard), so repeated OTP requests don't
   // overwrite the first-open timestamp.
+  // postgrest-js returns a DB error instead of throwing it, so the error is
+  // read here; the catch only sees synchronous throws (missing env). 0 rows is
+  // normal: no invitation, or opened_at is already set.
   try {
     const adminClient = getAdminClient();
-    await adminClient
+    const { error: stampError } = await adminClient
       .from('invitations')
       .update({ opened_at: new Date().toISOString() })
       .filter('email', 'imatch', emailMatchPattern(email))
       .is('accepted_at', null)
       .is('opened_at', null);
+    if (stampError) {
+      console.error('[login/sendCode] opened_at stamp failed', stampError);
+    }
   } catch (err) {
     console.error('[login/sendCode] opened_at stamp failed', err);
   }
@@ -289,12 +295,16 @@ export async function verifyCode(formData: FormData) {
       } = await supabase.auth.getUser();
       if (authedUser) {
         // Use .is('locale', null) guard so we never overwrite an existing value
-        // even in the presence of a race condition.
-        await supabase
+        // even in the presence of a race condition. 0 rows is normal (already
+        // set); only an error is logged.
+        const { error: localeError } = await supabase
           .from('users')
           .update({ locale: cookieLocale })
           .eq('id', authedUser.id)
           .is('locale', null);
+        if (localeError) {
+          console.error('[login/verifyCode] locale-persist failed', localeError);
+        }
       }
     }
   } catch (err) {
@@ -312,11 +322,14 @@ export async function verifyCode(formData: FormData) {
       data: { user: guestCheckUser },
     } = await supabase.auth.getUser();
     if (guestCheckUser) {
-      await getAdminClient()
+      const { error: guestClearError } = await getAdminClient()
         .from('users')
         .update({ is_guest: false })
         .eq('id', guestCheckUser.id)
         .eq('is_guest', true);
+      if (guestClearError) {
+        console.error('[login/verifyCode] guest-clear failed', guestClearError);
+      }
     }
   } catch (err) {
     console.error('[login/verifyCode] guest-clear threw', err);
