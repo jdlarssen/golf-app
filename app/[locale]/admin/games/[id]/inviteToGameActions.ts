@@ -6,6 +6,7 @@ import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
+import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { isRosterLocked } from '@/lib/games/status';
@@ -69,6 +70,8 @@ export async function addExistingPlayerToGame(
 
   await assertRoomForPlayer(supabase, game, detailPath);
 
+  // #2209: the invitee's tee category from the profile, clamped to the tee.
+  const teeGenders = await joinTeeGenders(gameId, [recipientUserId]);
   const { error: insertError } = await supabase.from('game_players').insert({
     game_id: gameId,
     user_id: recipientUserId,
@@ -77,6 +80,7 @@ export async function addExistingPlayerToGame(
     course_handicap: null,
     // #463: arrangør legger til en annen bruker → ikke bekreftet ennå.
     accepted_at: null,
+    tee_gender: teeGenders[recipientUserId],
   });
 
   // Idempotent: hvis spilleren allerede er på rosteren (UNIQUE-violation

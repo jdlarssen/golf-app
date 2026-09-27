@@ -19,6 +19,9 @@ import {
  */
 
 const redirectMock = makeLocaleRedirectMock();
+// #2209: the shared double (lib/games/__mocks__) — the real helper would eat
+// this file's queued Supabase answers with its two reads.
+vi.mock('@/lib/games/joinTeeGenders');
 vi.mock('@/i18n/navigation', () => ({
   redirect: (arg: { href: string; locale?: string } | string) => redirectMock(arg),
 }));

@@ -9,6 +9,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
@@ -254,6 +255,9 @@ export async function registerForOpenGame(
   // the row, so two players on the last seat cannot both get in. The cap number
   // is still computed here; the database never guesses it.
   const admin = getAdminClient();
+  // #2209: the profile's tee category, clamped to the game's tee. Without it
+  // the row gets the column default 'mens'.
+  const teeGender = (await joinTeeGenders(game.id, [userId]))[userId];
   const modeConfig = game.mode_config as { team_size?: number } | null;
   const cap = registrationPlayerCap(game.game_mode, modeConfig);
   if (cap !== null && !isMatchplayMode(game.game_mode)) {
@@ -270,6 +274,7 @@ export async function registerForOpenGame(
         p_cap: cap,
         // No p_new_team_size: a solo claim takes one seat and no team number.
         ...(signupSource !== null ? { p_signup_source: signupSource } : {}),
+        p_tee_gender: teeGender,
       },
     );
     if (claimError) {
@@ -325,6 +330,7 @@ export async function registerForOpenGame(
     // #463: selv-påmelding → bekreftet med en gang.
     accepted_at: new Date().toISOString(),
     signup_source: signupSource,
+    tee_gender: teeGender,
   });
 
   // Deterministisk race guard: etter insert, hent alle aktive spillere på

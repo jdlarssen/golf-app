@@ -10,6 +10,7 @@ import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
 import { isRosterLocked } from '@/lib/games/status';
+import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
@@ -458,6 +459,9 @@ export async function verifyCode(formData: FormData) {
             .filter((r) => !r.isLocked)
             .map(async ({ inv, isTeamScoped }) => {
               if (!isTeamScoped) {
+                // #2209: the invitee's tee category from the profile, clamped
+                // to this game's tee. joinTeeGenders never throws.
+                const teeGenders = await joinTeeGenders(inv.game_id!, [userRow.id]);
                 const { error: insertError } = await admin
                   .from('game_players')
                   .insert({
@@ -468,6 +472,7 @@ export async function verifyCode(formData: FormData) {
                     course_handicap: null,
                     // #463: brukeren godtar invitasjonen nå (handlingen ER aksept).
                     accepted_at: new Date().toISOString(),
+                    tee_gender: teeGenders[userRow.id],
                   });
 
                 const duplicate =
