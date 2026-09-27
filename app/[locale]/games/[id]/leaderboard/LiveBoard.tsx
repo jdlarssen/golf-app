@@ -251,7 +251,9 @@ function BoardRow({
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
   const leader = row.rank === 1 && row.holesPlayed > 0;
-  const fill = isYou ? 'bg-primary-soft' : 'bg-surface';
+  // Klubbhus-natt: primary-soft sits one step from the surface, so the
+  // viewer's row also gets a sage hairline there.
+  const fill = isYou ? 'bg-primary-soft dark:ring-1 dark:ring-inset dark:ring-primary/60' : 'bg-surface';
   const plate = `${fill} rounded-md text-text`;
   const rankLabel = !showRank ? '–' : row.tied ? t('tiedRank', { rank: row.rank }) : String(row.rank);
   const panelId = `board-reactions-${row.userId}`;
