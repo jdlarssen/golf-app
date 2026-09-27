@@ -270,7 +270,10 @@ async function ProfileFormCard({
                   {t('hcpStaleShort')}
                 </span>
               ) : oppdatertDato ? (
-                <span className="font-sans text-[11px] text-muted">
+                <span
+                  className="font-sans text-[11px] text-muted"
+                  data-testid="profile-hcp-updated"
+                >
                   {t('hcpUpdatedShort', { dato: oppdatertDato })}
                 </span>
               ) : null}
