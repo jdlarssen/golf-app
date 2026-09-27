@@ -185,6 +185,7 @@ export default async function GameStatusPage({
         lastActionAt,
         status,
         acceptedAt: p.accepted_at,
+        delivererId: deliverer?.user_id ?? null,
         delivererName,
       };
     })
@@ -345,6 +346,7 @@ export default async function GameStatusPage({
                   data-testid="status-player-row"
                   data-userid={r.userId}
                   data-holes-filled={r.holesFilled}
+                  data-delivered-by={r.delivererId ?? undefined}
                   className="flex items-center justify-between gap-3 border-t px-3.5 py-3 first:border-t-0"
                   style={{ borderColor: 'var(--row-divider-warm)' }}
                 >
