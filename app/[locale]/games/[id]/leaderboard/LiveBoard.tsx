@@ -129,7 +129,10 @@ export function LiveBoard({
       >
         <div className="flex items-center justify-between gap-3">
           <LeaderboardBackLink href={backHref} label={tc('backAriaLabel')} tone="onStrong" />
-          <span className="mr-2 inline-flex items-center gap-1.5 rounded-full border border-bg-tint/35 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums">
+          <span
+            data-testid="board-pill"
+            className="mr-2 inline-flex items-center gap-1.5 rounded-full border border-bg-tint/35 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums"
+          >
             {status === 'active' && (
               <span aria-hidden className="h-2 w-2 rounded-full bg-success" />
             )}
@@ -171,6 +174,7 @@ export function LiveBoard({
                 item === 'gap' ? (
                   <li
                     key="gap"
+                    data-testid="board-gap"
                     aria-hidden
                     className="list-none text-center text-[15px] leading-none text-bg-tint"
                   >
@@ -209,6 +213,7 @@ export function LiveBoard({
           {canCollapse && (
             <button
               type="button"
+              data-testid="board-toggle"
               aria-expanded={showAll}
               onClick={() => setShowAll((v) => !v)}
               className="mt-2.5 h-11 w-full rounded-xl border border-border bg-surface text-[13px] font-semibold text-primary"
@@ -269,9 +274,20 @@ function BoardRow({
   ].filter(Boolean);
 
   return (
-    <li className="list-none">
+    <li
+      className="list-none"
+      data-testid="board-row"
+      data-user-id={row.userId}
+      data-rank={row.rank}
+      data-you={isYou || undefined}
+    >
       <div className={COLUMNS}>
-        <span aria-hidden className={`${plate} ${PLATE_SHADOW} flex items-center justify-center`}>
+        <span
+          aria-hidden
+          data-testid="board-place"
+          data-leader={(leader && showRank) || undefined}
+          className={`${plate} ${PLATE_SHADOW} flex items-center justify-center`}
+        >
           {leader && showRank ? (
             <span className="score-num grid h-7 w-7 place-items-center rounded-full bg-accent text-[15px] font-semibold text-surface-strong">
               {rankLabel}
@@ -303,15 +319,28 @@ function BoardRow({
           bottom={
             <span aria-hidden className="flex gap-1">
               {row.recent.map((tone, i) => (
-                <span key={i} className={`h-2 w-2 rounded-full ${DOT[tone]}`} />
+                <span
+                  key={i}
+                  data-testid="board-dot"
+                  data-tone={tone}
+                  className={`h-2 w-2 rounded-full ${DOT[tone]}`}
+                />
               ))}
             </span>
           }
         />
-        <span aria-hidden className={`${plate} ${PLATE_SHADOW} score-num flex items-center justify-center text-[18px]`}>
+        <span
+          aria-hidden
+          data-testid="board-holes"
+          className={`${plate} ${PLATE_SHADOW} score-num flex items-center justify-center text-[18px]`}
+        >
           {row.holesPlayed}
         </span>
-        <span aria-hidden className={`${plate} ${PLATE_SHADOW} score-num flex items-center justify-center text-[24px] font-semibold text-primary`}>
+        <span
+          aria-hidden
+          data-testid="board-total"
+          className={`${plate} ${PLATE_SHADOW} score-num flex items-center justify-center text-[24px] font-semibold text-primary`}
+        >
           {totalLabel(unit, row.total)}
         </span>
       </div>
@@ -329,20 +358,35 @@ function Movement({ movement }: { movement: number | null }) {
   if (movement === null) return null;
   if (movement > 0) {
     return (
-      <span aria-hidden className="shrink-0 text-[11px] font-semibold tabular-nums text-success-text">
+      <span
+        aria-hidden
+        data-testid="board-movement"
+        data-movement={movement}
+        className="shrink-0 text-[11px] font-semibold tabular-nums text-success-text"
+      >
         ▲{movement}
       </span>
     );
   }
   if (movement < 0) {
     return (
-      <span aria-hidden className="shrink-0 text-[11px] font-semibold tabular-nums text-score-over2-fg">
+      <span
+        aria-hidden
+        data-testid="board-movement"
+        data-movement={movement}
+        className="shrink-0 text-[11px] font-semibold tabular-nums text-score-over2-fg"
+      >
         ▼{-movement}
       </span>
     );
   }
   return (
-    <span aria-hidden className="shrink-0 text-[11px] text-muted">
+    <span
+      aria-hidden
+      data-testid="board-movement"
+      data-movement={0}
+      className="shrink-0 text-[11px] text-muted"
+    >
       –
     </span>
   );
@@ -383,7 +427,12 @@ function Strip({
   }
 
   return (
-    <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom,0px))] z-20 mt-4">
+    <div
+      data-testid="board-strip"
+      data-rank={standing.rank}
+      data-gap={standing.gap ?? undefined}
+      className="sticky bottom-[calc(65px+env(safe-area-inset-bottom,0px))] z-20 mt-4"
+    >
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface px-3.5 py-3 shadow-[0_6px_20px_rgba(26,46,31,0.10)]">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -395,6 +444,8 @@ function Strip({
         </div>
         {strip.kind !== 'none' && (
           <SmartLink
+            data-testid="board-strip-action"
+            data-kind={strip.kind}
             href={strip.href}
             className="inline-flex h-11 shrink-0 items-center rounded-full bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-hover dark:text-bg"
           >
