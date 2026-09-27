@@ -3,7 +3,8 @@ import type { Database } from '@/lib/database.types';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
-import { holeNumbersForSegment, lastHoleForSegment } from './holeScope';
+import { lastHoleForSegment } from './holeScope';
+import { nextUnfilledHole } from './nextHole';
 import { pendingApprovalsFor } from './flightScope';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from './teamCaptain';
 import { scoredHoleNumbers } from './scoreOwner';
@@ -233,17 +234,10 @@ export async function getActiveGameCardData(
     let nextHole: number | null = null;
     if (state === 'continue') {
       const filled = filledByGame.get(g.id) ?? new Set<number>();
-      const holeNumbers = holeNumbersForSegment(g.hole_segment);
-      if (filled.size >= holeNumbers.length) {
+      const next = nextUnfilledHole(g.hole_segment, filled);
+      if (next === null) {
         href = `/games/${g.id}/submit`;
       } else {
-        let next = holeNumbers[0];
-        for (const h of holeNumbers) {
-          if (!filled.has(h)) {
-            next = h;
-            break;
-          }
-        }
         nextHole = next;
         href = `/games/${g.id}/holes/${next}`;
       }
