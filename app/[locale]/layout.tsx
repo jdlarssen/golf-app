@@ -4,8 +4,9 @@ import { Analytics } from "@vercel/analytics/next";
 import { Fraunces, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
-import { getTranslations } from "next-intl/server";
+import { getMessages, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
+import { ROOT_CLIENT_NAMESPACES, pickMessages } from "@/i18n/clientNamespaces";
 import "../globals.css";
 import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
@@ -125,7 +126,12 @@ export default async function RootLayout({ children, params }: Props) {
             fortsatt viser det lagrede valget. Må stå først i <body> og være
             render-blokkerende (ingen async/defer). */}
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript() }} />
-        <NextIntlClientProvider>
+        {/* #2227: bare navnerommene klientkomponenter bruker på ruter uten
+            scope (≈100 kB av ≈316 kB). De tunge legges på per rute med
+            <IntlScope>; i18n/clientNamespaces.test.ts vokter at ingen mangler. */}
+        <NextIntlClientProvider
+          messages={pickMessages(await getMessages(), ROOT_CLIENT_NAMESPACES)}
+        >
           {/* Synkstatus på alle innloggede flater (#1391): køen drenerer
               globalt, men banneret sto kun i runde-layouten — «Kunne ikke lagre
               N slag» var stumt på Hjem, Innboks, Klubbhuset og Profil. Må stå

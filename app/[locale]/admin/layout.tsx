@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
+import { IntlScope } from '@/components/i18n/IntlScope';
 
 // Klubbhuset (#392): `/admin` is the universal «Klubbhuset» room. The layout
 // gate is now AUTH-ONLY — every logged-in user may enter, and the page renders
@@ -17,5 +18,10 @@ import { getRoleContext } from '@/lib/admin/auth';
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await getServerClient();
   await getRoleContext(supabase);
-  return <>{children}</>;
+  // #2227: Klubbhuset and its sub-routes use all five heavy namespaces.
+  return (
+    <IntlScope namespaces={['admin', 'wizard', 'formatGuide', 'cup', 'liga']}>
+      {children}
+    </IntlScope>
+  );
 }
