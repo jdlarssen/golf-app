@@ -1325,7 +1325,7 @@ describe('#2061: medspiller som godtar før kapteinen har lag, venter', () => {
       { data: null, error: null }, // captain's game_players row: none
       { data: [{ id: MATE_REQUEST_ID }], error: null }, // status update .select('id')
       { data: null, error: null }, // what a player upsert would consume
-    ]);
+    ], {}, { strictSingle: true });
 
     const { acceptTeamInvite } = await import('./teamActions');
     const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
