@@ -33,6 +33,7 @@ jobs:
           fi
 
       - name: Les telemetri og fil varsel ved signal
+        id: vakt
         if: steps.guard.outputs.run == 'true'
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -43,8 +44,10 @@ jobs:
 
       # Rød kjøring skal aldri dø stille (samme mønster som schema-drift/main-verify).
       # fail_closed-issuet dekker lese-feil; dette steget dekker alt annet uventet.
+      # Skriptet setter handled=true når det selv har filet (eller funnet) sitt
+      # issue, så én lesefeil gir ett issue, ikke to (#2238/#2239).
       - name: Open alert issue on failure
-        if: failure()
+        if: failure() && steps.vakt.outputs.handled != 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
