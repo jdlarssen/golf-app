@@ -296,7 +296,9 @@ export default async function CreatorSpillerePage({
                 // #2213: no Trekk/Angre on a non-admin organiser's own row.
                 // 0168's guard, clause (c), refuses a player changing their own
                 // withdrawn_at, so the button always ended in ?error=db_players.
-                // Same rule as /avslutt (#1932) and the app (endGamePlan.ts).
+                // The same guard is why /avslutt (#1932) and the app
+                // (endGamePlan.ts) hide the self checkbox. Admins pass the
+                // guard on is_admin(), so they keep the buttons here.
                 const canWithdrawRow =
                   canWithdraw && (role.isAdmin || p.user_id !== role.userId);
                 const submitted = !!p.submitted_at;
