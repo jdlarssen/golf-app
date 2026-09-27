@@ -194,6 +194,7 @@ export async function deleteCourse(courseId: string) {
     .delete()
     .eq('id', courseId);
   if (deleteError) {
+    console.error('[deleteCourse] delete failed', { courseId, error: deleteError });
     redirect({ href: '/admin/courses?error=delete_failed', locale });
   }
 

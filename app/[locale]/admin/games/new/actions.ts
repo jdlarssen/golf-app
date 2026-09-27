@@ -333,8 +333,20 @@ async function createGameInternal(
     // tom, ødelagt runde i listene sine, og ingen kan rydde den. Skaperen har
     // DELETE-RLS på egne games (0071), så request-klienten kan slette her;
     // game_players cascade-ryddes av FK (0001). Speiler #675-rollbacken i cup/liga.
-    await supabase.from('games').delete().eq('id', game.id);
     console.error('[createGameInternal] game_players insert failed', gpError);
+    // #2223: check the rollback too. An error or 0 rows leaves the orphan
+    // behind, so log it with the game id; the answer stays db_players.
+    const { data: rolledBack, error: rollbackError } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', game.id)
+      .select('id');
+    if (rollbackError || (rolledBack ?? []).length === 0) {
+      console.error('[createGameInternal] game rollback failed', {
+        gameId: game.id,
+        error: rollbackError,
+      });
+    }
     return { error: 'db_players' };
   }
 

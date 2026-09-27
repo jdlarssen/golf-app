@@ -93,7 +93,10 @@ export async function sendInvitation(formData: FormData) {
     invited_by: profile.id,
     expires_at: expiresAt,
   });
-  if (insertError) redirect({ href: '/admin/spillere?error=log_failed', locale });
+  if (insertError) {
+    console.error('[admin/spillere] sendInvitation insert failed', insertError);
+    redirect({ href: '/admin/spillere?error=log_failed', locale });
+  }
 
   try {
     await sendInviteNotification({ to: email, invitedByName, inviteToken, expiresAt });
@@ -275,7 +278,15 @@ export async function withdrawInvitation(formData: FormData) {
       const profileIncomplete =
         !publicRow || publicRow.profile_completed_at == null;
       if (profileIncomplete) {
-        await admin.auth.admin.deleteUser(orphan.id);
+        // auth-js returns its error instead of throwing it; the catch below
+        // only sees throws (#2223).
+        const { error: deleteError } = await admin.auth.admin.deleteUser(orphan.id);
+        if (deleteError) {
+          console.error('[admin/spillere] auth orphan cleanup failed', {
+            userId: orphan.id,
+            error: deleteError,
+          });
+        }
       }
     }
   } catch (err) {
