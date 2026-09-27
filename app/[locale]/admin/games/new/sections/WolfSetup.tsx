@@ -27,13 +27,13 @@ export function WolfSetup({
 
   return (
     <fieldset className="space-y-5 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-foreground">
+      <legend className="px-1 text-sm font-semibold text-text">
         {t('legend')}
       </legend>
 
       <div>
         <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
-        <p className="mt-1 text-xs text-muted/80">
+        <p className="mt-1 text-xs text-muted">
           {t('scoringDescription')}
         </p>
         <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
@@ -78,7 +78,7 @@ export function WolfSetup({
 
       <p
         data-testid="wolf-start-note"
-        className="text-xs text-muted/80"
+        className="text-xs text-muted"
       >
         {t('startNote')}
       </p>

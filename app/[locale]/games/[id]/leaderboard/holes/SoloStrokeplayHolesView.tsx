@@ -178,7 +178,7 @@ function TotalsHeader({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
-                  <span className="text-[10.5px] text-muted/70">
+                  <span className="text-[10.5px] text-muted">
                     {t('common.grossBrutto', { count: line.totalGrossStrokes })}
                   </span>
                   <span
@@ -349,7 +349,7 @@ function HoleCard({
               {tc('parSiChip', { par: chipPar, si: hole.strokeIndex })}
             </span>
           </div>
-          {!scored && <span className="text-[10.5px] text-muted/70">{t('common.venter')}</span>}
+          {!scored && <span className="text-[10.5px] text-muted">{t('common.venter')}</span>}
         </div>
 
         <ul className="mt-1.5 flex flex-col gap-1 list-none">

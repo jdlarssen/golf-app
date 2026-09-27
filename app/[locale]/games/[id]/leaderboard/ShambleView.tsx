@@ -368,7 +368,7 @@ function HoleRow({
           })}
           {/* Defensiv: vis melding hvis ingen team-celler */}
           {hole.teams.length === 0 && (
-            <span className="text-[11px] text-muted/60">{t('shamble.noTeamsScored')}</span>
+            <span className="text-[11px] text-muted">{t('shamble.noTeamsScored')}</span>
           )}
         </div>
       </Card>

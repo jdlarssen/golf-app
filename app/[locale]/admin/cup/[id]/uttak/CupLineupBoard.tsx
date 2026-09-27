@@ -43,7 +43,7 @@ function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
       className={`shrink-0 rounded-full px-2 py-0.5 font-sans text-[11px] font-medium ${
         on
           ? 'bg-[var(--score-under-bg)] text-[var(--score-under-fg)]'
-          : 'bg-surface-muted text-muted'
+          : 'bg-surface-2 text-muted'
       }`}
     >
       {children}
@@ -305,7 +305,7 @@ function PlannedMatchCountForm({
             onChange={(e) => setValue(e.target.value)}
             // text-lg! (important): the iOS 16 px floor in globals.css
             // would otherwise shrink this deliberately large field.
-            className="mt-1 w-full min-h-[44px] rounded-xl border border-line bg-bg px-3 font-serif text-lg! tabular-nums text-text"
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-border bg-bg px-3 font-serif text-lg! tabular-nums text-text"
           />
         </label>
 
@@ -394,7 +394,7 @@ function OpenSessionForm({
           <span className="font-sans text-xs text-muted">{t('formatLabel')}</span>
           <select
             data-testid="cup-lineup-format"
-            className="mt-1 w-full min-h-[44px] rounded-xl border border-line bg-bg px-3 text-sm text-text"
+            className="mt-1 w-full min-h-[44px] rounded-xl border border-border bg-bg px-3 text-sm text-text"
             value={format}
             onChange={(e) => {
               const next = e.target.value as (typeof FORMATS)[number];
@@ -605,7 +605,7 @@ function SessionCard({
 
       {isOrganizer && !revealed && (
         <form
-          className="mt-4 border-t border-line pt-3"
+          className="mt-4 border-t border-border pt-3"
           onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData();
@@ -663,11 +663,11 @@ function TeamPanel({
   const nameOf = (userId: string) =>
     [...board.squads[1], ...board.squads[2], ...board.squads.unassigned].find(
       (p) => p.userId === userId,
-    )?.displayName ?? userId;
+    )?.displayName ?? t('unknownPlayer');
 
   return (
     <div
-      className="rounded-xl border border-line p-3"
+      className="rounded-xl border border-border p-3"
       data-testid={`cup-lineup-team-${session.sessionIndex}-${team.teamNumber}`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -867,7 +867,7 @@ function LineupEditor({
                   seat: seat + 1,
                 })}
                 data-testid={`cup-lineup-pick-${session.sessionIndex}-${teamNumber}-${slotIndex}-${seat}`}
-                className="min-h-[44px] w-full rounded-xl border border-line bg-bg px-3 text-sm text-text"
+                className="min-h-[44px] w-full rounded-xl border border-border bg-bg px-3 text-sm text-text"
                 value={value}
                 onChange={(e) => setPick(slotIndex, seat, e.target.value)}
               >

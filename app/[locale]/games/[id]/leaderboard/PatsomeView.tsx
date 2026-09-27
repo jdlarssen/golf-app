@@ -344,7 +344,7 @@ function HoleRow({
               {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
-          <span className="text-[10.5px] tabular-nums text-muted/60">
+          <span className="text-[10.5px] tabular-nums text-muted">
             {SEGMENT_LABELS[hole.segment]}
           </span>
         </div>

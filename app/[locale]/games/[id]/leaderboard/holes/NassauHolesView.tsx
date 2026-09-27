@@ -378,7 +378,7 @@ function HoleCard({
               {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
-          {!scored && <span className="text-[10.5px] text-muted/70">{t('nassau.hullVenter')}</span>}
+          {!scored && <span className="text-[10.5px] text-muted">{t('nassau.hullVenter')}</span>}
         </div>
 
         <ul className="mt-1.5 flex flex-col gap-1 list-none">

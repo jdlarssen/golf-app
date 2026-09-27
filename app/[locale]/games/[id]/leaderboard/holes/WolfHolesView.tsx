@@ -178,7 +178,7 @@ function HoleCard({
         {/* Wolf-linje: hvem var Wolf, valg, utfall */}
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-muted">
           <span>
-            <span className="text-muted/80">{t('wolf.wolfLabel')}</span>{' '}
+            <span className="text-muted">{t('wolf.wolfLabel')}</span>{' '}
             <span className="text-text">{wolfName}</span>
           </span>
           <span aria-hidden className="text-muted/40">
@@ -249,7 +249,7 @@ function HoleCard({
                     </span>
                   )}
                   {showGross && (
-                    <span className="text-[10.5px] text-muted/70">
+                    <span className="text-[10.5px] text-muted">
                       {t('wolf.bruttoLabel', { count: cell.gross ?? 0 })}
                     </span>
                   )}

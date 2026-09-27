@@ -316,7 +316,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
         className={`pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm ${toneClasses}`}
       >
         <div className="min-w-0 text-sm font-medium leading-tight">
-          <div className="truncate">{message}</div>
+          <div className="break-words">{message}</div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {showLogin && (
@@ -360,7 +360,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
           className="pointer-events-auto flex items-center justify-between gap-2 rounded-xl border px-3 py-2 shadow-sm bg-warning/[0.10] border-warning/40 text-warning-text"
         >
           <div className="min-w-0 text-sm font-medium leading-tight">
-            <div className="truncate">
+            <div className="break-words">
               {/* #1368: records written before the field shipped have no
                   forOwnScore — those were always own-score conflicts. */}
               {t(

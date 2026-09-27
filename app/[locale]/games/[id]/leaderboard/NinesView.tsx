@@ -318,7 +318,7 @@ function HoleRow({
             </span>
           </div>
           {hole.pending && (
-            <span className="text-[10.5px] text-muted/70">{t('nines.ventePaaScore')}</span>
+            <span className="text-[10.5px] text-muted">{t('nines.ventePaaScore')}</span>
           )}
         </div>
 

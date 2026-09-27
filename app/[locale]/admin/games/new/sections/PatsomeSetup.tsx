@@ -35,22 +35,22 @@ export function PatsomeSetup({
   const t = useTranslations('wizard.sections.patsome');
   return (
     <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-foreground">
+      <legend className="px-1 text-sm font-semibold text-text">
         {t('legend')}
       </legend>
 
       {/* Forklaring av de tre segmentene */}
       <div className="rounded-md bg-surface-2 px-3 py-2.5 text-xs text-muted space-y-1">
         <p>
-          <span className="font-medium text-foreground">{t('segment1Heading')}</span>{' '}
+          <span className="font-medium text-text">{t('segment1Heading')}</span>{' '}
           {t('segment1Body')}
         </p>
         <p>
-          <span className="font-medium text-foreground">{t('segment2Heading')}</span>{' '}
+          <span className="font-medium text-text">{t('segment2Heading')}</span>{' '}
           {t('segment2Body')}
         </p>
         <p>
-          <span className="font-medium text-foreground">{t('segment3Heading')}</span>{' '}
+          <span className="font-medium text-text">{t('segment3Heading')}</span>{' '}
           {t('segment3Body')}
         </p>
         <p className="pt-0.5">
@@ -79,7 +79,7 @@ export function PatsomeSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('scoringNetDesc')}</span>
+            <span className="text-[11px] text-muted">{t('scoringNetDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -98,7 +98,7 @@ export function PatsomeSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('scoringGrossDesc')}</span>
+            <span className="text-[11px] text-muted">{t('scoringGrossDesc')}</span>
           </label>
         </div>
       </div>

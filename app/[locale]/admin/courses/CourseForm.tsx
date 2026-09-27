@@ -853,7 +853,7 @@ function GenderParOverrideSection({
       <p className="font-sans text-[11.5px] tabular-nums text-muted">
         {parTotalGenderLabel}{' '}
         <span className="text-text font-medium">{parTotal}</span>{' '}
-        <span className="text-muted/80">{parTotalSuffix}</span>
+        <span className="text-muted">{parTotalSuffix}</span>
       </p>
     </fieldset>
   );
@@ -952,7 +952,7 @@ function GenderRatingBlock({
         <span className="text-text font-medium">
           {showParTotal ? parTotal : '—'}
         </span>{' '}
-        <span className="text-muted/80">{parTotalSuffix}</span>
+        <span className="text-muted">{parTotalSuffix}</span>
       </p>
     </fieldset>
   );

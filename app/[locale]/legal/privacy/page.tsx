@@ -50,6 +50,8 @@ export default async function PrivacyPage() {
         kicker={t('kicker')}
         back="history"
       />
+      {/* The kicker above is the page title; screen readers get it as the h1. */}
+      <h1 className="sr-only">{t('kicker')}</h1>
 
       <div className="space-y-8 text-sm leading-relaxed text-text">
 
@@ -58,7 +60,7 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('controllerHeading')}
           </h2>
-          <p className="text-text-muted">
+          <p className="text-text">
             {t.rich('controllerBody', { name: DATA_CONTROLLER_NAME, mailto })}
           </p>
         </section>
@@ -82,7 +84,7 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s2Heading')}
           </h2>
-          <p className="text-text-muted">
+          <p className="text-text">
             {t.rich('s2Body', { supabase: term })}
           </p>
         </section>
@@ -92,14 +94,14 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('processorsHeading')}
           </h2>
-          <p className="text-text-muted mb-2">{t('processorsIntro')}</p>
-          <ul className="list-disc list-outside pl-5 space-y-1 text-text-muted mb-2">
+          <p className="text-text mb-2">{t('processorsIntro')}</p>
+          <ul className="list-disc list-outside pl-5 space-y-1 text-text mb-2">
             <li>{t.rich('processorSupabase', { term })}</li>
             <li>{t.rich('processorVercel', { term })}</li>
             <li>{t.rich('processorResend', { term })}</li>
             <li>{t.rich('processorAnthropic', { term })}</li>
           </ul>
-          <p className="text-text-muted">{t('processorsOutsideEea')}</p>
+          <p className="text-text">{t('processorsOutsideEea')}</p>
         </section>
 
         {/* Besøksstatistikk (#1036) — cookieless Vercel Web Analytics */}
@@ -107,7 +109,7 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('analyticsHeading')}
           </h2>
-          <p className="text-text-muted">{t('analyticsBody')}</p>
+          <p className="text-text">{t('analyticsBody')}</p>
         </section>
 
         {/* Section 3 */}
@@ -115,8 +117,8 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s3Heading')}
           </h2>
-          <p className="text-text-muted mb-2">{t('s3Para1')}</p>
-          <p className="text-text-muted">{t('s3Para2')}</p>
+          <p className="text-text mb-2">{t('s3Para1')}</p>
+          <p className="text-text">{t('s3Para2')}</p>
         </section>
 
         {/* Section 4 */}
@@ -124,7 +126,7 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s4Heading')}
           </h2>
-          <p className="text-text-muted">{t('s4Body')}</p>
+          <p className="text-text">{t('s4Body')}</p>
         </section>
 
         {/* Section 5 */}
@@ -132,8 +134,8 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s5Heading')}
           </h2>
-          <p className="text-text-muted mb-2">{t('s5Intro')}</p>
-          <ul className="list-disc list-outside pl-5 space-y-1 text-text-muted">
+          <p className="text-text mb-2">{t('s5Intro')}</p>
+          <ul className="list-disc list-outside pl-5 space-y-1 text-text">
             <li>{t.rich('s5Right1', { term })}</li>
             <li>{t.rich('s5Right2', { term })}</li>
             <li>{t.rich('s5Right3', { term })}</li>
@@ -146,7 +148,7 @@ export default async function PrivacyPage() {
           <h2 className="font-serif text-xl font-medium text-text mb-3">
             {t('s6Heading')}
           </h2>
-          <p className="text-text-muted">
+          <p className="text-text">
             {t.rich('s6Body', { mailto })}
           </p>
         </section>

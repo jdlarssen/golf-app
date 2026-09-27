@@ -195,12 +195,12 @@ export function TeamDashboardClient(props: Props) {
 
       {/* Kaptein-rad */}
       {props.captain && (
-        <div className="flex items-center justify-between rounded-xl border border-border bg-surface/40 px-4 py-3">
-          <div>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3">
+          <div className="min-w-0">
             <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
               {t('teamDashCaptainLabel')}
             </p>
-            <p className="font-sans text-sm font-medium text-text">
+            <p className="break-words font-sans text-sm font-medium text-text">
               {props.captain.displayName}
             </p>
           </div>
@@ -222,7 +222,7 @@ export function TeamDashboardClient(props: Props) {
               className="space-y-2 rounded-xl border border-border bg-surface/40 px-4 py-3"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="font-sans text-sm text-text">{m.displayName}</p>
+                <p className="min-w-0 break-words font-sans text-sm text-text">{m.displayName}</p>
                 <StatusChipMini status={m.status} />
               </div>
               {isCaptain && m.status === 'pending' && (
@@ -326,7 +326,7 @@ function StatusChipMini({ status }: { status: Status }) {
   };
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-sans text-[11px] font-medium tracking-tight ${palette[tone]}`}
+      className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-sans text-[11px] font-medium tracking-tight ${palette[tone]}`}
     >
       {t(`memberStatus.${status}` as Parameters<typeof t>[0])}
     </span>

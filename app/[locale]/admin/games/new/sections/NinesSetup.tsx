@@ -34,7 +34,7 @@ export function NinesSetup({
   const t = useTranslations('wizard.sections.nines');
   return (
     <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-foreground">
+      <legend className="px-1 text-sm font-semibold text-text">
         {t('legend')}
       </legend>
 
@@ -59,7 +59,7 @@ export function NinesSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('variantNinesTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('variantNinesDesc')}</span>
+            <span className="text-[11px] text-muted">{t('variantNinesDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -78,7 +78,7 @@ export function NinesSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('variantSplitSixesTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('variantSplitSixesDesc')}</span>
+            <span className="text-[11px] text-muted">{t('variantSplitSixesDesc')}</span>
           </label>
         </div>
       </div>
@@ -104,7 +104,7 @@ export function NinesSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('scoringNetDesc')}</span>
+            <span className="text-[11px] text-muted">{t('scoringNetDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -123,7 +123,7 @@ export function NinesSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('scoringGrossDesc')}</span>
+            <span className="text-[11px] text-muted">{t('scoringGrossDesc')}</span>
           </label>
         </div>
       </div>

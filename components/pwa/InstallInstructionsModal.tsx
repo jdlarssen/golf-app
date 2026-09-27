@@ -49,7 +49,7 @@ export function InstallInstructionsModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-bg p-6 shadow-xl"
+        className="max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-bg p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">
@@ -65,7 +65,7 @@ export function InstallInstructionsModal({
             type="button"
             onClick={onClose}
             aria-label={t('closeAria')}
-            className="tap-extend -mt-1 -mr-1 px-2 text-text-muted hover:text-text [--tap-extend:-10px_-8px]"
+            className="tap-extend -mt-1 -mr-1 px-2 text-text [--tap-extend:-10px_-8px]"
           >
             ✕
           </button>

@@ -125,7 +125,7 @@ export function PlayersSection({
           >
             {genericCounter()}
             {count >= 2 && count % 2 !== 0 && (
-              <span className="ml-1 text-muted/80">{t('teamHintPair')}</span>
+              <span className="ml-1 text-muted">{t('teamHintPair')}</span>
             )}
           </span>
         ) : isMatchplay ? (
@@ -140,12 +140,12 @@ export function PlayersSection({
           >
             {genericCounter()}
             {isParStableford && count >= 2 && count % 2 !== 0 && (
-              <span className="ml-1 text-muted/80">{t('teamHintPair')}</span>
+              <span className="ml-1 text-muted">{t('teamHintPair')}</span>
             )}
             {(isTexas || isAmbrose || isFlorida) &&
               count >= teamSize &&
               count % teamSize !== 0 && (
-              <span className="ml-1 text-muted/80">
+              <span className="ml-1 text-muted">
                 {t('teamHintSize', { size: teamSize })}
               </span>
             )}

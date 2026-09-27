@@ -206,6 +206,7 @@ export default async function PlayerDetailPage({
               type="email"
               label={tProfile('formEmail')}
               defaultValue={target.email}
+              autoComplete="off"
               required
             />
             <Input

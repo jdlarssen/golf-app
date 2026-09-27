@@ -327,7 +327,7 @@ function RejectModal({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-lg"
+        className="max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border border-border bg-surface p-5 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <h2

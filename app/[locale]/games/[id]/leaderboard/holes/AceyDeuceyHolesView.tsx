@@ -157,7 +157,7 @@ function HoleCard({
             </span>
           </div>
           {!hole.scored && (
-            <span className="text-[10.5px] text-muted/70">{t('common.venter')}</span>
+            <span className="text-[10.5px] text-muted">{t('common.venter')}</span>
           )}
         </div>
 
@@ -216,7 +216,7 @@ function HoleCard({
                     </span>
                   )}
                   {showGross && cell.gross != null && (
-                    <span className="text-[10.5px] text-muted/70">
+                    <span className="text-[10.5px] text-muted">
                       {t('aceyDeucey.bruttoLabel', { gross: cell.gross })}
                     </span>
                   )}

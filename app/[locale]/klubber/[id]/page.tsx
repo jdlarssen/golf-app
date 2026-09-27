@@ -415,7 +415,7 @@ export default async function KlubbDetailPage({
                   label={t('emailLabel')}
                   placeholder={t('emailPlaceholder')}
                   defaultValue={errorEmail ?? ''}
-                  autoComplete="email"
+                  autoComplete="off"
                   hint={t('emailHint')}
                 />
                 <SubmitButton className="w-full" pendingLabel={t('addMemberPending')}>

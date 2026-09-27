@@ -142,7 +142,7 @@ function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
     case 'carryover':
       return 'text-muted';
     default:
-      return 'text-muted/70';
+      return 'text-muted';
   }
 }
 
@@ -226,7 +226,7 @@ function HoleCard({
                 </span>
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                   {showGross && (
-                    <span className="text-[10.5px] text-muted/70">
+                    <span className="text-[10.5px] text-muted">
                       {t('skins.bruttoLabel', { count: cell.gross ?? 0 })}
                     </span>
                   )}
@@ -257,7 +257,7 @@ function HoleCard({
               <span aria-hidden className="text-muted/40">
                 ·
               </span>
-              <span className="tabular-nums text-muted/70">
+              <span className="tabular-nums text-muted">
                 {t('skins.carriedInLabel', { count: hole.carriedIn })}
               </span>
             </>

@@ -111,6 +111,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
             name="email"
             required
             placeholder={t('inviteEmailPlaceholder')}
+            autoComplete="off"
             disabled={disabled}
             className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent disabled:opacity-50"
             aria-label={t('inviteEmailAriaLabel')}

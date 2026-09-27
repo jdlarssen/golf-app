@@ -973,7 +973,7 @@ function WizardBody({
                 />
               )}
               {state.isRoundRobin && (
-                <p className="text-xs text-muted/80">
+                <p className="text-xs text-muted">
                   {t('sections.roundRobin.startNote')}
                 </p>
               )}

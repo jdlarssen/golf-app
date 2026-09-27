@@ -317,7 +317,7 @@ function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
     case 'carryover':
       return 'text-muted';
     default:
-      return 'text-muted/70';
+      return 'text-muted';
   }
 }
 
@@ -403,7 +403,7 @@ function HoleRow({
         {/* Carryover-kjede: vis carriedIn når det er en bygget pott (atStake > 1)
             slik at det er åpenbart hvor potten samlet seg opp til dette hullet. */}
         {hole.carriedIn > 0 && (
-          <p className="mt-1 text-[11px] tabular-nums text-muted/70">
+          <p className="mt-1 text-[11px] tabular-nums text-muted">
             {t('skins.carriedInLabel', { count: hole.carriedIn })}
           </p>
         )}

@@ -120,7 +120,7 @@ export function PasskeySettings() {
       <>
         {heading}
         <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs text-text-muted">{t('loading')}</p>
+          <p className="text-xs text-text">{t('loading')}</p>
         </div>
       </>
     );
@@ -132,7 +132,7 @@ export function PasskeySettings() {
       <div className="rounded-xl border border-border bg-surface p-4">
         <p className="font-serif text-base font-medium text-text">{t('settingsTitle')}</p>
         {keys.length === 0 ? (
-          <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('settingsEmpty')}</p>
+          <p className="mt-1 text-xs text-text leading-relaxed">{t('settingsEmpty')}</p>
         ) : (
           <ul className="mt-3 divide-y divide-border">
             {keys.map((k) => (
@@ -141,7 +141,7 @@ export function PasskeySettings() {
                   <p className="truncate text-sm text-text">
                     {k.friendly_name || t('unnamed')}
                   </p>
-                  <p className="text-xs text-text-muted tabular-nums">
+                  <p className="text-xs text-text tabular-nums">
                     {k.last_used_at
                       ? t('lastUsed', {
                           date: new Date(k.last_used_at).toLocaleDateString(locale, DATE_OPTS),

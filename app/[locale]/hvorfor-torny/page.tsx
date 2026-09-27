@@ -178,7 +178,7 @@ export default async function HvorforTornyPage({
                   </th>
                   <th
                     scope="col"
-                    className="w-[92px] px-1 py-3 text-muted opacity-70"
+                    className="w-[92px] px-1 py-3 text-muted"
                   >
                     {t('matrix.colOther')}
                   </th>
@@ -199,7 +199,7 @@ export default async function HvorforTornyPage({
                         <span className="sr-only">{t('matrix.yesLabel')}</span>
                       </span>
                     </td>
-                    <td className="px-1 py-3 text-center font-sans text-[11.5px] leading-tight text-muted opacity-75">
+                    <td className="px-1 py-3 text-center font-sans text-[11.5px] leading-tight text-muted">
                       {row.other}
                     </td>
                   </tr>

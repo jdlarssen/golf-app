@@ -243,7 +243,7 @@ function PlayerRow({
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
             {t('roundRobin.slotLabel', { slot: slotLabel })}
             {player.tiedWith.length > 0 && (
-              <span className="ml-1 text-muted/80">{t('roundRobin.tiedInline', { rank: player.rank })}</span>
+              <span className="ml-1 text-muted">{t('roundRobin.tiedInline', { rank: player.rank })}</span>
             )}
           </p>
         </div>
@@ -343,7 +343,7 @@ function SegmentRow({
         >
           {seg.holesWon}–{seg.holesLost}
           {seg.holesHalved > 0 && (
-            <span className="text-muted/70"> ({seg.holesHalved})</span>
+            <span className="text-muted"> ({seg.holesHalved})</span>
           )}
         </div>
       </div>
