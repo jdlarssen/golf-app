@@ -8,11 +8,12 @@
 // rader appen har lov til å vise.
 //
 // LWW er fortsatt den eneste veien server-data kommer inn lokalt: hver rad går
-// gjennom `mergeServerScore`, som dropper alt som ikke er strengt nyere. En seed
-// kan derfor aldri kaste et slag spilleren nettopp tastet offline.
+// gjennom `mergeServerScores` (samme regel som `mergeServerScore`, alle radene i
+// én transaksjon, #2227), som dropper alt som ikke er strengt nyere. En seed kan
+// derfor aldri kaste et slag spilleren nettopp tastet offline.
 import { selectAllRows } from '../../../../lib/supabase/selectAllRows';
 import { currentDeviceUserId, supabase } from '../supabase';
-import { mergeServerScore } from './realtime';
+import { mergeServerScores } from './realtime';
 
 const SCORE_SELECT =
   'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at';
@@ -39,21 +40,19 @@ export async function seedGameScores(gameId: string): Promise<number> {
   // den, og en auth-tur per hull ville vært 18 turer for ingenting.
   const currentUserId = await currentDeviceUserId();
 
-  for (const row of data) {
-    await mergeServerScore(
-      {
-        gameId: row.game_id,
-        userId: row.user_id,
-        holeNumber: row.hole_number,
-        strokes: row.strokes,
-        putts: row.putts ?? null,
-        enteredBy: row.entered_by,
-        clientUpdatedAt: row.client_updated_at,
-        serverUpdatedAt: row.updated_at,
-      },
-      currentUserId,
-    );
-  }
+  await mergeServerScores(
+    data.map((row) => ({
+      gameId: row.game_id,
+      userId: row.user_id,
+      holeNumber: row.hole_number,
+      strokes: row.strokes,
+      putts: row.putts ?? null,
+      enteredBy: row.entered_by,
+      clientUpdatedAt: row.client_updated_at,
+      serverUpdatedAt: row.updated_at,
+    })),
+    currentUserId,
+  );
 
   return data.length;
 }
