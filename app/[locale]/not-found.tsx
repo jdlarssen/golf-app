@@ -8,7 +8,8 @@ import { LinkButton } from '@/components/ui/Button';
 /**
  * #612: app-wide, merket 404. Routing er `localePrefix: 'as-needed'` og
  * `proxy.ts` rewriter ALLE stier til `app/[locale]/…`, så denne ene not-found-en
- * fanger både ukjente topp-nivå-stier (skrivefeil/gamle lenker) OG `notFound()`
+ * fanger både ukjente stier (skrivefeil/gamle lenker, via catch-all-en
+ * `[...rest]/page.tsx` — uten den fikk de Nexts engelske 404) OG `notFound()`
  * fra nestede sider — f.eks. et påmeldings-varsel som peker til et slettet spill
  * (#613). Den rendres inne i `[locale]`-layouten, så den arver `<html lang>`,
  * NextIntl-provideren og den globale bunn-nav-en uten ekstra plumbing.
