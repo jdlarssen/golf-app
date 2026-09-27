@@ -14,34 +14,20 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: mocks.getAdminClient,
 }));
 
+import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
 import { getGameWithPlayers } from './getGameWithPlayers';
-
-type QueryRes = { data: unknown; error: unknown };
 
 const GAME_ROW = { id: 'g1', name: 'Testspill', status: 'active' };
 const PLAYER_ROWS = [{ user_id: 'u1' }];
 
 /**
- * Minimal chainable mock for the two queries the helper issues:
- * `games.select(...).eq('id', id).maybeSingle()/.single()` and
- * `game_players.select(...).eq('game_id', id).returns()`. Both terminal
- * shapes are provided so the mock stays valid across the `.single()` →
- * `.maybeSingle()` migration.
+ * The helper runs `games…maybeSingle()` and `game_players…returns()` in that
+ * order inside Promise.all, so the shared FIFO mock serves them in order.
+ * strictSingle (#1693) makes a `.single()` answer a 0-row entry with PGRST116,
+ * as PostgREST does — a rollback from `.maybeSingle()` goes red here (#2226).
  */
-function makeAdmin(gameRes: QueryRes, playersRes: QueryRes) {
-  return {
-    from: (table: string) => ({
-      select: () => ({
-        eq: () =>
-          table === 'games'
-            ? {
-                single: () => Promise.resolve(gameRes),
-                maybeSingle: () => Promise.resolve(gameRes),
-              }
-            : { returns: () => Promise.resolve(playersRes) },
-      }),
-    }),
-  };
+function makeAdmin(gameRes: QueryResult, playersRes: QueryResult) {
+  return buildSupabaseMock([gameRes, playersRes], {}, { strictSingle: true });
 }
 
 describe('getGameWithPlayers — error vs. absence', () => {
