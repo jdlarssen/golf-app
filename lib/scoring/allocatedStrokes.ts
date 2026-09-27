@@ -110,8 +110,8 @@ function strokeRuleFor(mode: GameMode): StrokeRule {
  * slagene i alternate shot regnes i `alternateShotSideExtras`, scramble-slagene
  * i scramble-grenene på hullsiden og scorekortet, og patsome-raden gjelder bare
  * hull 1–6 — lag-slagene på hull 7–18 regnes i patsome-grenene. Den generiske
- * «Hull for hull»-drilldownen og CSV-eksporten kaller likevel hjelperen for alle
- * format, og for lagformatene får de da rått banehandicap (akseptert i #2218).
+ * «Hull for hull»-drilldownen og CSV-eksporten kaller hjelperen via
+ * `bestBallBoardInput`, og siden #2217 når bare best ball dem (rått tall).
  */
 export function playerStrokeHandicap(
   mode: GameMode,

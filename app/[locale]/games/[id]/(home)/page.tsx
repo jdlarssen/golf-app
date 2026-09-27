@@ -27,6 +27,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus } from '@/lib/games/status';
 import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
+import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
@@ -1469,8 +1470,15 @@ export default async function GameHomePage({
           </LinkButton>
         )}
 
-        {game.status === 'finished' && (
-          <SmartLink href={`/games/${id}/leaderboard/holes`} className="block">
+        {/* #2217: bare formatene med sin egen hullvisning — resten viste
+            best ball-tall. Hullene deres står på tavla eller i scorekortet
+            under. */}
+        {game.status === 'finished' && hasHoleByHoleView(game.game_mode, game.mode_config) && (
+          <SmartLink
+            href={`/games/${id}/leaderboard/holes`}
+            className="block"
+            data-testid="hull-for-hull-link"
+          >
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
                 {t('hullForHull')}
