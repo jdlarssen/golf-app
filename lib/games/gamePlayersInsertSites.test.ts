@@ -29,10 +29,6 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: 'the approved team, joinTeeGenders per member',
   },
-  'app/[locale]/admin/games/[id]/inviteToGameActions.ts': {
-    count: 1,
-    reason: '«Inviter» on the game page, joinTeeGenders for the invitee',
-  },
   'app/[locale]/signup/[shortId]/actions.ts': {
     count: 2,
     reason: 'direct insert and the seat-claim RPC (p_tee_gender), joinTeeGenders',
@@ -48,7 +44,8 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
   },
   'lib/games/inviteToGame.ts': {
     count: 1,
-    reason: 'addExistingUser (web and the app API route), joinTeeGenders',
+    reason:
+      'writeExistingUser: «Inviter» on the game page, the e-mail invite and the app routes (invite, players), joinTeeGenders',
   },
   'lib/games/createGuestPlayer.ts': {
     count: 1,
@@ -69,10 +66,6 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
   'native/app/src/data/createGame.ts': {
     count: 1,
     reason: "the app wizard's per-player teeGender (teeChoiceToDb)",
-  },
-  'native/app/src/data/rosterActions.ts': {
-    count: 1,
-    reason: "«Legg til spiller» in the app, profileTeeGender against the game's tee",
   },
 };
 

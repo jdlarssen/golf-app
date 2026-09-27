@@ -25,6 +25,11 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 // hjem (AGENTS trap 4). Presedensen er `lib/games/remindUnsubmitted.ts` (#1891)
 // og `lib/games/withdrawSelf.ts` (#1917), som gjorde den samme reisen.
 //
+// Picker-add («legg til en registrert spiller») fulgte etter i #2215
+// (`addExistingPlayerToGameCore`), da appen fikk sin rute for den. Den og
+// e-post-grenen for en eksisterende konto deler port og skriving, så reglene for
+// å legge til en konto har ett hjem.
+//
 // **Authz ligger hos kalleren.** Modulen spør ALDRI hvem som ringer: den har
 // ingen sesjon å spørre om. Hver kaller må ha gatet FØR den kaller hit —
 //   - server-action: `requireAdminOrCreator` (redirect til / uten tilgang)
@@ -76,6 +81,21 @@ export type InviteRefusal =
 export type InviteOutcome =
   | { ok: true; kind: 'added' | 'sent'; email: string }
   | { ok: false; reason: InviteRefusal };
+
+/**
+ * Hvorfor «legg til en eksisterende spiller» ble avvist. Et delsett av
+ * `InviteRefusal`, så webbens query-kart og rutas statuskart dekker begge
+ * dørene uten et andre vokabular.
+ */
+export type AddExistingPlayerRefusal = Extract<
+  InviteRefusal,
+  'not_found' | 'game_locked' | 'invite_not_allowed' | 'game_full' | 'db_players'
+>;
+
+/** `alreadyOnRoster` = raden fantes fra før (23505), og ingen ny notify gikk ut. */
+export type AddExistingPlayerOutcome =
+  | { ok: true; alreadyOnRoster: boolean }
+  | { ok: false; reason: AddExistingPlayerRefusal };
 
 type GameSnapshot = {
   id: string;
@@ -169,6 +189,60 @@ export async function inviteEmailToGameCore(params: {
 }
 
 /**
+ * Legg en registrert bruker rett på rosteret — picker-add (#2215).
+ *
+ * Webbens «Inviter spillere»-liste og appens «Legg til spiller» (via
+ * `POST /api/games/[id]/players/[userId]`) kaller begge hit. Før dette bodde
+ * reglene i en kopi i webbens server-action, og appen skrev raden selv under
+ * RLS uten `invite`-varsel og uten cache-tømming.
+ *
+ * Rekkefølgen er webbens slik den sto i server-action-en, og den er ikke
+ * e-post-kjernens: der sjekkes plassen FØR venne-porten (porten ligger inne i
+ * eksisterende-bruker-grenen), her kommer porten først. Avvisningskoden en
+ * arrangør ser når begge slår til, følger derfor døra hen brukte, som før.
+ *
+ * Authz ligger hos kalleren (se filhodet). `isAdmin` og `inviterUserId` må være
+ * den EKTE kallerens: på rute-stien er venne-porten under den eneste sjekken.
+ */
+export async function addExistingPlayerToGameCore(params: {
+  client: SupabaseClient<Database>;
+  gameId: string;
+  inviterUserId: string;
+  isAdmin: boolean;
+  recipientUserId: string;
+}): Promise<AddExistingPlayerOutcome> {
+  const { client, gameId, inviterUserId, isAdmin, recipientUserId } = params;
+
+  const game = await loadGameForInvite(client, gameId);
+  if (!game) return { ok: false, reason: 'not_found' };
+
+  if (isRosterLocked(game.status)) {
+    return { ok: false, reason: 'game_locked' };
+  }
+
+  const allowed = await mayAddExistingUser({
+    inviterUserId,
+    isAdmin,
+    recipientUserId,
+    groupId: game.group_id,
+  });
+  if (!allowed) return { ok: false, reason: 'invite_not_allowed' };
+
+  if (await isFull(client, game)) {
+    return { ok: false, reason: 'game_full' };
+  }
+
+  const written = await writeExistingUser({
+    client,
+    gameId,
+    inviterUserId,
+    recipientUserId,
+  });
+  if (!written.ok) return { ok: false, reason: 'db_players' };
+  return { ok: true, alreadyOnRoster: written.duplicate };
+}
+
+/**
  * Kontoen bak adressen, men bare hvis kalleren alt ser den (#2207).
  *
  * `users.email` er ikke lesbar for innloggede, så oppslaget på adressen går
@@ -197,13 +271,14 @@ async function findVisibleUserByEmail(
 }
 
 /**
- * Grenen der adressen alt har en konto: samme skriving som picker-add.
+ * Grenen der adressen alt har en konto: samme port og samme skriving som
+ * picker-add (`addExistingPlayerToGameCore`), bare med e-post-kjernens
+ * resultat-form.
  *
  * Venne-/klubb-scopingen (#906, felle #3 — server er den egentlige authz) står
  * her og ikke i ukjent-adresse-grenen under, med vilje: å invitere en ny e-post
  * ER venne-anskaffelses-stien, mens å legge til en eksisterende konto er det
- * samme som å plukke den fra lista. Admin er unntatt (kurator-modellen); seg
- * selv er alltid lov.
+ * samme som å plukke den fra lista.
  */
 async function addExistingUser(args: {
   client: SupabaseClient<Database>;
@@ -216,12 +291,54 @@ async function addExistingUser(args: {
 }): Promise<InviteOutcome> {
   const { client, gameId, inviterUserId, isAdmin, email, recipientUserId } = args;
 
-  if (!isAdmin && recipientUserId !== inviterUserId) {
-    const eligible = await getInviteEligibleIds(inviterUserId, args.groupId);
-    if (!eligible.has(recipientUserId)) {
-      return { ok: false, reason: 'invite_not_allowed' };
-    }
-  }
+  const allowed = await mayAddExistingUser({
+    inviterUserId,
+    isAdmin,
+    recipientUserId,
+    groupId: args.groupId,
+  });
+  if (!allowed) return { ok: false, reason: 'invite_not_allowed' };
+
+  const written = await writeExistingUser({
+    client,
+    gameId,
+    inviterUserId,
+    recipientUserId,
+  });
+  if (!written.ok) return { ok: false, reason: 'db_players' };
+  return { ok: true, kind: 'added', email };
+}
+
+/**
+ * Venne-/klubb-porten for en eksisterende konto (#906). Admin er unntatt
+ * (kurator-modellen); seg selv er alltid lov. Én funksjon for begge dørene, så
+ * regelen ikke kan drifte mellom e-post-grenen og picker-add.
+ */
+async function mayAddExistingUser(args: {
+  inviterUserId: string;
+  isAdmin: boolean;
+  recipientUserId: string;
+  groupId: string | null;
+}): Promise<boolean> {
+  const { inviterUserId, isAdmin, recipientUserId, groupId } = args;
+  if (isAdmin || recipientUserId === inviterUserId) return true;
+  const eligible = await getInviteEligibleIds(inviterUserId, groupId);
+  return eligible.has(recipientUserId);
+}
+
+/**
+ * Rosterraden for en eksisterende konto, varselet og cache-tømmingen.
+ *
+ * `duplicate` = raden fantes fra før. Det er suksess (intensjonen er oppfylt),
+ * men uten nytt varsel.
+ */
+async function writeExistingUser(args: {
+  client: SupabaseClient<Database>;
+  gameId: string;
+  inviterUserId: string;
+  recipientUserId: string;
+}): Promise<{ ok: true; duplicate: boolean } | { ok: false }> {
+  const { client, gameId, inviterUserId, recipientUserId } = args;
 
   // #2209: the invitee's tee category from the profile, clamped to the tee.
   const teeGenders = await joinTeeGenders(gameId, [recipientUserId]);
@@ -246,7 +363,7 @@ async function addExistingUser(args: {
 
   if (insertError && !duplicate) {
     console.error('[inviteToGameCore] existing-user insert failed', insertError);
-    return { ok: false, reason: 'db_players' };
+    return { ok: false };
   }
 
   if (!duplicate && recipientUserId !== inviterUserId) {
@@ -254,7 +371,7 @@ async function addExistingUser(args: {
   }
 
   expireGameCache(gameId);
-  return { ok: true, kind: 'added', email };
+  return { ok: true, duplicate };
 }
 
 /** Grenen der adressen ikke har en konto: `invitations`-rad + mail. */

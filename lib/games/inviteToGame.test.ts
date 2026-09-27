@@ -51,7 +51,12 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { inviteEmailToGameCore, normalizeInviteEmail } from './inviteToGame';
+import { revalidateTag } from 'next/cache';
+import {
+  addExistingPlayerToGameCore,
+  inviteEmailToGameCore,
+  normalizeInviteEmail,
+} from './inviteToGame';
 
 const INVITER_ID = '11111111-1111-1111-1111-111111111111';
 const RECIPIENT_ID = '22222222-2222-2222-2222-222222222222';
@@ -418,5 +423,155 @@ describe('åpen invitasjon for samme adresse og runde', () => {
 
     expect(result).toEqual({ ok: true, kind: 'sent', email: 'ny@example.com' });
     expect(client.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
+  });
+});
+
+/**
+ * #2215: picker-add som kjerne. Webbens `addExistingPlayerToGame` og appens
+ * `POST /api/games/[id]/players/[userId]` kaller begge hit, så grenene bevises
+ * her én gang. `inviteToGameActions.test.ts` beviser webbens query-koder, og
+ * rute-testen beviser porten.
+ */
+describe('addExistingPlayerToGameCore', () => {
+  // `vi.clearAllMocks()` tømmer ikke `mockResolvedValueOnce`-køen, og en
+  // admin-test lenger opp legger et tomt sett resolveren aldri spør om. Uten
+  // denne nullstillingen arver første ikke-admin-kall her det settet.
+  beforeEach(() => {
+    inviteEligibleIdsMock.mockReset();
+    inviteEligibleIdsMock.mockImplementation(async () => new Set([RECIPIENT_ID]));
+  });
+
+  async function add(
+    queue: QueryResult[],
+    overrides: Partial<Parameters<typeof addExistingPlayerToGameCore>[0]> = {},
+    mockOpts: Parameters<typeof buildSupabaseMock>[2] = {},
+  ) {
+    const client = buildSupabaseMock(queue, {}, mockOpts);
+    const result = await addExistingPlayerToGameCore({
+      client: client as unknown as SupabaseClient<Database>,
+      gameId: GAME_ID,
+      inviterUserId: INVITER_ID,
+      isAdmin: false,
+      recipientUserId: RECIPIENT_ID,
+      ...overrides,
+    });
+    return { result, client };
+  }
+
+  const inserts = (client: ReturnType<typeof buildSupabaseMock>) =>
+    client.__fromCalls.filter((c) => c.method === 'insert');
+
+  it('ukjent spill-id → not_found, ingen skriving', async () => {
+    const { result, client } = await add([{ data: null, error: null }], {}, {
+      strictSingle: true,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'not_found' });
+    expect(inserts(client)).toEqual([]);
+  });
+
+  it.each(['active', 'finished'])(
+    'status %s → game_locked, ingen skriving og ingen notify',
+    async (status) => {
+      const { result, client } = await add([gameRow({ status })]);
+
+      expect(result).toEqual({ ok: false, reason: 'game_locked' });
+      expect(inserts(client)).toEqual([]);
+      expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('utenfor venne-/klubb-scopet → invite_not_allowed, FØR plassen telles', async () => {
+    // ⚠️ På rute-stien er denne sjekken den ENESTE håndhevelsen (0115-triggeren
+    // no-op-er under service-role). Rekkefølgen er webbens: porten før taket,
+    // så en full runde og en fremmed mottaker gir invite_not_allowed.
+    inviteEligibleIdsMock.mockResolvedValueOnce(new Set<string>());
+
+    const { result, client } = await add([
+      gameRow({ game_mode: 'best_ball', group_id: 'klubb-1' }),
+      { data: null, error: null, count: 40 },
+    ]);
+
+    expect(result).toEqual({ ok: false, reason: 'invite_not_allowed' });
+    expect(inviteEligibleIdsMock).toHaveBeenCalledWith(INVITER_ID, 'klubb-1');
+    expect(client.__fromCalls.filter((c) => c.table === 'game_players')).toEqual([]);
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
+  it('format-taket er nådd → game_full, ingen skriving', async () => {
+    const { result, client } = await add([
+      gameRow({ game_mode: 'best_ball' }),
+      // `organizerPlayerCap('best_ball')` er 40 (#2148).
+      { data: null, error: null, count: 40 },
+    ]);
+
+    expect(result).toEqual({ ok: false, reason: 'game_full' });
+    expect(inserts(client)).toEqual([]);
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
+  it('ny rad → alreadyOnRoster false, invite-varsel og tømt cache', async () => {
+    const { result, client } = await add([
+      gameRow(),
+      { data: null, error: null }, // insert i game_players
+    ]);
+
+    expect(result).toEqual({ ok: true, alreadyOnRoster: false });
+    expect(inserts(client)).toHaveLength(1);
+    expect(inserts(client)[0]).toMatchObject({
+      table: 'game_players',
+      args: [{ game_id: GAME_ID, user_id: RECIPIENT_ID, accepted_at: null }],
+    });
+    expect(notifyInvitedToGameMock).toHaveBeenCalledExactlyOnceWith({
+      recipientUserId: RECIPIENT_ID,
+      gameId: GAME_ID,
+      inviterUserId: INVITER_ID,
+    });
+    expect(revalidateTag).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('allerede på rosteret (23505) → alreadyOnRoster true, INGEN ny notify', async () => {
+    const { result } = await add([
+      gameRow(),
+      { data: null, error: { code: '23505', message: 'duplicate key value' } },
+    ]);
+
+    expect(result).toEqual({ ok: true, alreadyOnRoster: true });
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    // Cachen tømmes likevel: en kappløps-duplikat betyr at noen nettopp skrev.
+    expect(revalidateTag).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('en ekte insert-feil → db_players, ingen notify', async () => {
+    const { result } = await add([
+      gameRow(),
+      { data: null, error: { code: '42501', message: 'permission denied' } },
+    ]);
+
+    expect(result).toEqual({ ok: false, reason: 'db_players' });
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it('seg selv: raden skrives, men ingen notify og ingen venne-sjekk', async () => {
+    const { result } = await add(
+      [gameRow(), { data: null, error: null }],
+      { recipientUserId: INVITER_ID },
+    );
+
+    expect(result).toEqual({ ok: true, alreadyOnRoster: false });
+    expect(inviteEligibleIdsMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
+  it('admin er unntatt venne-porten og spør aldri resolveren', async () => {
+    inviteEligibleIdsMock.mockResolvedValueOnce(new Set<string>());
+
+    const { result } = await add([gameRow(), { data: null, error: null }], {
+      isAdmin: true,
+    });
+
+    expect(result).toEqual({ ok: true, alreadyOnRoster: false });
+    expect(inviteEligibleIdsMock).not.toHaveBeenCalled();
   });
 });

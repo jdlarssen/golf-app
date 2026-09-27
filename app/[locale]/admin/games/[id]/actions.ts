@@ -9,10 +9,8 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { endGameCore } from '@/lib/games/endGameCore';
-import {
-  syncDerivedGamesStatus,
-  startDerivedGames,
-} from '@/lib/games/syncDerivedGamesStatus';
+import { syncDerivedGamesStatus } from '@/lib/games/syncDerivedGamesStatus';
+import { announceStartedGame } from '@/lib/games/announceStartedGame';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import {
@@ -22,10 +20,7 @@ import {
 import { reopenScorecardCore } from '@/lib/games/reviewScorecardCore';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
-import {
-  notifyPlayersGameStarted,
-  notifyPlayersGameReopened,
-} from '@/lib/notifications/events';
+import { notifyPlayersGameReopened } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
 
 /**
@@ -121,47 +116,14 @@ export async function startScheduledGameAction(gameId: string) {
     redirect({ href: `${detailPath}?error=${result.reason}`, locale });
   }
 
-  // #1441 (D3): the button won the flip → start every derived game (back9
-  // singles etc.) too. Best-effort — see startDerivedGames for why this
-  // runs the real per-game start flow rather than a raw status patch.
+  // #1441 (D3) + #502: the button won the flip → start the derived games and
+  // send game_started to every active player except the admin who clicked.
+  // started=false means a concurrent cron sweep or page visit won and owns the
+  // fan-out. Shared with the app's start route (#2215); best-effort, never
+  // throws. (result.ok re-checked because next-intl redirect isn't typed
+  // `never`, so TS doesn't narrow the union past the !result.ok guard above.)
   if (result.ok && result.started) {
-    await startDerivedGames(supabase, gameId);
-  }
-
-  // #502: the button won the flip → game_started to every active player
-  // except the admin who clicked. started=false means a concurrent cron
-  // sweep or page visit beat us and already owns the fan-out. Best-effort:
-  // the helper swallows notify failures, and a roster/name fetch error just
-  // skips the varsel — the start itself already succeeded.
-  // (result.ok re-checked because next-intl redirect isn't typed `never`,
-  // so TS doesn't narrow the union past the !result.ok guard above.)
-  if (result.ok && result.started) {
-    const [gameRes, rosterRes] = await Promise.all([
-      supabase
-        .from('games')
-        .select('name, source_game_id')
-        .eq('id', gameId)
-        .single<{ name: string; source_game_id: string | null }>(),
-      supabase
-        .from('game_players')
-        .select('user_id')
-        .eq('game_id', gameId)
-        .is('withdrawn_at', null)
-        .returns<{ user_id: string }[]>(),
-    ]);
-    if (gameRes.data && rosterRes.data) {
-      await notifyPlayersGameStarted(
-        rosterRes.data.filter((p) => p.user_id !== user.id),
-        // #1450: a derived match never announces itself — its host owns the
-        // cup-start varsel.
-        {
-          id: gameId,
-          name: gameRes.data.name,
-          sourceGameId: gameRes.data.source_game_id,
-        },
-        'startScheduledGameAction',
-      );
-    }
+    await announceStartedGame(supabase, gameId, user.id, 'startScheduledGameAction');
   }
 
   expireGameCache(gameId);
@@ -466,7 +428,7 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
       console.error('[adminWithdrawPlayer] withdraw update failed', err);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
-    // The native app writes withdrawn_at without revalidating the web cache;
+    // Older app builds write withdrawn_at without revalidating the web cache;
     // refresh it so the roster stops offering the same button.
     expireGameCache(gameId);
     redirect({ href: `${detailPath}?error=withdraw_stale`, locale });

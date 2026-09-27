@@ -18,19 +18,23 @@ export type StartScheduledGameResult =
   | StartScheduledGameFailure;
 
 /**
- * Web-innpakningen rundt `startScheduledGameCore` (#1855).
+ * Server-innpakningen rundt `startScheduledGameCore` (#1855).
  *
  * All orkestrering — vakter, frysing av course_handicap, greensome-re-derivering
- * og den optimistisk-låste status-flippen — ligger i kjernen, som er import-ren
- * så React Native-appen kan kjøre nøyaktig samme sekvens med sin egen
- * RLS-klient. Det ene kjernen ikke kan gjøre er å varsle: `notify` åpner med
+ * og den optimistisk-låste status-flippen — ligger i kjernen. Den ble import-ren
+ * så React Native-appen kunne kjøre samme sekvens med sin egen RLS-klient
+ * (#1855). Siden #2215 kaller appen `POST /api/games/[id]/start`, som går via
+ * denne fila.
+ *
+ * Det ene kjernen ikke kan gjøre er å varsle: `notify` åpner med
  * `import 'server-only'` og skriver via service-role-klienten. Kjernen avslår
  * derfor ventende påmeldinger selv og RETURNERER søkerne; denne fila fyrer
  * `registration_expired` for dem og snevrer resultatet ned til formen alle
- * eksisterende web-callsites allerede leser.
+ * kallstedene leser.
  *
  * Used by:
  * - D5: admin "Start runden nå" server action (interactive)
+ * - the app's «Start runden nå»: `POST /api/games/[id]/start` (#2215)
  * - E1: server-side fallback on /games/[id] when tee-off has passed
  * - the cron sweep + the league/derived-games sync
  *
