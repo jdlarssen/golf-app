@@ -36,6 +36,7 @@ import {
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
+import { teamLineVsPar, vsParOverPlayed } from '@/lib/leaderboard/vsPar';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
 
 /**
@@ -116,6 +117,9 @@ export async function DrilldownBody({
 
   const lines = computeLeaderboard({ mode, players, holes, scores });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
+  // Same par as the board (#2217): `par_mens` over exactly the holes sent to
+  // computeLeaderboard — clipped to the first half in an active round.
+  const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
 
   if (orderedLines.length === 0) {
     // Nothing to drill into — bounce back to the parent leaderboard, which
@@ -164,6 +168,7 @@ export async function DrilldownBody({
       holeSegment={holeSegment}
       navContext={navContext}
       frozenHandicapByUser={frozenHandicapByUser}
+      coursePar={coursePar}
     />
   );
 }
@@ -182,6 +187,7 @@ function DrilldownView({
   holeSegment,
   navContext,
   frozenHandicapByUser,
+  coursePar,
 }: {
   gameId: string;
   mode: LeaderboardMode;
@@ -192,6 +198,8 @@ function DrilldownView({
   holeSegment: HoleSegment;
   navContext?: LeaderboardNavContext;
   frozenHandicapByUser: ReadonlyMap<string, number>;
+  /** Board par (`par_mens`) over the computed holes, for «mot par» (#2217). */
+  coursePar: number;
 }) {
   const t = useTranslations('leaderboard.holes');
   const tc = useTranslations('leaderboard.common');
@@ -215,8 +223,9 @@ function DrilldownView({
   const hiddenFrom = hiddenHoles[0]!;
   const hiddenTo = hiddenHoles[hiddenHoles.length - 1]!;
 
-  const totalPar = frontPar + backPar;
-  const totalVsPar = selected.total - totalPar;
+  // #2217: over the holes the team played, on the board's par — the hero and
+  // the total bar say the same as the board.
+  const totalVsPar = teamLineVsPar(selected, coursePar);
   const holesWon = holeWinners.filter((w) => w === selected.teamNumber).length;
 
   const isLeader = selected.rank === 1;
@@ -282,7 +291,7 @@ function DrilldownView({
               {selected.total}
             </span>
             <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-              {formatVsPar(selected.total - totalPar)} PAR
+              {formatVsPar(totalVsPar)} PAR
             </span>
           </div>
         </div>
@@ -411,7 +420,15 @@ function HoleTable({
   summaryPar: number;
   summaryNet: number;
 }) {
-  const summaryTone = vsParTone(summaryNet - summaryPar);
+  // #2217: the nine's own rows — a missing hole's par is left out, like the
+  // total. «P36» still shows the par for all nine holes.
+  const summaryVsPar = vsParOverPlayed({
+    total: summaryNet,
+    scopePar: summaryPar,
+    unplayedPars: rows.filter((r) => r.teamNet == null).map((r) => r.par),
+    holesInScope: rows.length,
+  });
+  const summaryTone = vsParTone(summaryVsPar ?? 0);
   return (
     <div className="mx-4 mt-1.5 overflow-hidden rounded-[14px] border border-border bg-surface shadow-[0_1px_2px_rgba(26,46,31,0.03)]">
       {rows.map((row, ii) => (
@@ -446,7 +463,7 @@ function HoleTable({
             color: `var(${summaryTone.fg})`,
           }}
         >
-          {formatVsPar(summaryNet - summaryPar)}
+          {formatVsPar(summaryVsPar)}
         </span>
       </div>
     </div>
@@ -656,7 +673,9 @@ function vsParTone(vs: number): ScoreTone {
   return { fg: '--score-over2-fg', bg: '--score-over2-bg' };
 }
 
-function formatVsPar(v: number): string {
+/** `null` = no played hole, so no vs-par value (#2217). */
+function formatVsPar(v: number | null): string {
+  if (v === null) return '—';
   if (v === 0) return 'E';
   if (v > 0) return `+${v}`;
   return String(v);

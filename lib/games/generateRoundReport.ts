@@ -125,15 +125,13 @@ export async function generateAndPersistRoundReport(
         .returns<{ hole_number: number; par_mens: number }[]>(),
     ]);
     const courseName = courseRes.data?.name ?? null;
-    // #1441: sum only the holes in the game's segment — a segment host's
-    // coursePar should read as ~36 (its own 9 holes), not the full 72.
+    // #1441: only the holes in the game's segment — a segment host's par
+    // should read as ~36 (its own 9 holes), not the full 72. Per hole, so the
+    // vs-par labels count only the holes a competitor played (#2217).
     const scopedHoles = (holesRes.data ?? []).filter((h) =>
       isHoleInSegment(h.hole_number, game.hole_segment),
     );
-    const coursePar =
-      scopedHoles.length > 0
-        ? scopedHoles.reduce((sum, h) => sum + h.par_mens, 0)
-        : null;
+    const parByHole = new Map(scopedHoles.map((h) => [h.hole_number, h.par_mens]));
 
     const gameMetaRes = await admin
       .from('games')
@@ -149,7 +147,7 @@ export async function generateAndPersistRoundReport(
       courseName,
       endedAt,
       gameMode: game.game_mode,
-      coursePar,
+      parByHole,
       totalHoles: holeCountForSegment(game.hole_segment),
     });
 

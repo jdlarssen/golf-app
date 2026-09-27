@@ -15,6 +15,7 @@ import {
   type TeamLine,
 } from '@/lib/leaderboard';
 import { showHolesColumn, teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
+import { teamLineVsPar } from '@/lib/leaderboard/vsPar';
 import {
   drilldownHref,
   modeToggleHref,
@@ -390,7 +391,8 @@ function LeaderCard({
   t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
   ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
-  const vsPar = line.total - coursePar;
+  // #2217: over the holes the team played — a team missing 17–18 is not −6.
+  const vsPar = teamLineVsPar(line, coursePar);
   const playersLine = line.players
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
@@ -481,7 +483,7 @@ function LeaderCard({
             </span>
             <span
               className={`score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] ${
-                vsPar < 0 ? 'text-score-under-fg' : 'text-text'
+                vsPar !== null && vsPar < 0 ? 'text-score-under-fg' : 'text-text'
               }`}
             >
               {formatVsPar(vsPar)}
@@ -528,7 +530,7 @@ function TeamRow({
   ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
   const gap = line.total - leaderTotal;
-  const vsPar = line.total - coursePar;
+  const vsPar = teamLineVsPar(line, coursePar);
   // Player rendering uses formatRevealName so the leaderboard reveal also
   // surfaces nicknames in their dramatic "First «Nick» Last" form — both
   // for live-mode finished games and reveal-mode finished games.
@@ -630,7 +632,9 @@ function TeamRow({
   );
 }
 
-function formatVsPar(v: number): string {
+/** `null` = no played hole, so no vs-par value (#2217). */
+function formatVsPar(v: number | null): string {
+  if (v === null) return '—';
   if (v === 0) return 'E';
   if (v > 0) return `+${v}`;
   return String(v);

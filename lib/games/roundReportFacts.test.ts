@@ -45,7 +45,11 @@ const BASE = {
   gameName: 'Lørdagscup',
   courseName: 'Oslo GK',
   endedAt: '2026-07-01T18:00:00.000Z',
-  coursePar: 72,
+  // Par 4 on holes 1–18 (par 72).
+  parByHole: new Map(Array.from({ length: 18 }, (_, i) => [i + 1, 4] as const)) as ReadonlyMap<
+    number,
+    number
+  >,
 };
 
 // ---------------------------------------------------------------------------
@@ -71,7 +75,9 @@ describe('solo_strokeplay — placement band + checkpoints', () => {
         strokeIndex: 2,
         perPlayer: [
           { userId: 'u1', gross: 4, net: 4, par: 4 },
-          { userId: 'u2', gross: null, net: null, par: 4 },
+          // #2217: Bob has played every hole (holesPlayed 18), so hole 2 has
+          // a score — a null here would count it unplayed in his vs par.
+          { userId: 'u2', gross: 5, net: 5, par: 4 },
         ],
         bestUserIds: ['u1'],
       },
@@ -789,6 +795,34 @@ describe('band coverage — remaining placement kinds produce a placement band',
     });
     expect(facts.band).toBe('placement');
     expect(facts.winnerName).toContain('Alice');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2217 (D6): the report reuses the share card's score label. Shamble counts
+// par once per ball that counts — 148 on a par-72 course with best 2 is +4,
+// not the «+76» the report inherited.
+// ---------------------------------------------------------------------------
+describe('shamble — score label counts par per ball (#2217)', () => {
+  it('4-man team, best 2, 148 → +4', () => {
+    const result: ShambleResult = {
+      kind: 'shamble',
+      variant: 'shamble',
+      count: 2,
+      scoring: 'net',
+      teamSize: 4,
+      holes: [],
+      teams: [
+        { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore: 148, holesCounted: 18, rank: 1, tiedWith: [] },
+      ],
+    };
+    const facts = buildRoundReportFacts({
+      result,
+      nameByUserId: names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Carl'], ['u4', 'Dana']),
+      gameMode: 'shamble',
+      ...BASE,
+    });
+    expect(facts.standings[0].scoreLabel).toBe('+4');
   });
 });
 

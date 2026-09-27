@@ -12,6 +12,7 @@ import type {
   NassauResult,
   NinesResult,
   RoundRobinResult,
+  ShambleResult,
   SinglesMatchplayResult,
   SkinsResult,
   SoloStrokeplayResult,
@@ -29,6 +30,11 @@ import { buildShareCardData } from './buildShareCardData';
 function names(...pairs: [string, string][]): Map<string, string> {
   return new Map(pairs);
 }
+
+/** Par 4 on holes 1–18 (par 72): the course every fixture below plays. */
+const PAR_72: ReadonlyMap<number, number> = new Map(
+  Array.from({ length: 18 }, (_, i) => [i + 1, 4] as const),
+);
 
 // ---------------------------------------------------------------------------
 // Test 1: solo_strokeplay, sharer in top 3
@@ -48,12 +54,12 @@ describe('solo_strokeplay — sharer in top 3', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie'], ['u4', 'Dave']);
 
   it('band is placement', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.band).toBe('placement');
   });
 
   it('podium contains top 3 rows', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.podium).toHaveLength(3);
     expect(card.podium[0].rank).toBe(1);
     expect(card.podium[1].rank).toBe(2);
@@ -61,26 +67,26 @@ describe('solo_strokeplay — sharer in top 3', () => {
   });
 
   it('winner is rank-1 row', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.winner).not.toBeNull();
     expect(card.winner!.rank).toBe(1);
     expect(card.winner!.name).toBe('Alice');
   });
 
   it('sharer row has isSharer=true', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     const sharerRow = card.podium.find((r) => r.isSharer);
     expect(sharerRow).toBeDefined();
     expect(sharerRow!.name).toBe('Bob');
   });
 
   it('sharerStrip is null (sharer in top 3)', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.sharerStrip).toBeNull();
   });
 
   it('scores are vs-par (−2, E, +3)', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     // u1: 70 net vs 72 par = −2
     expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '−2' });
     // u2: 72 net vs 72 par = E
@@ -90,7 +96,7 @@ describe('solo_strokeplay — sharer in top 3', () => {
   });
 
   it('match is null for placement band', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.match).toBeNull();
   });
 });
@@ -111,7 +117,7 @@ describe('solo_strokeplay — sharer outside top 3', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie'], ['u4', 'Dave']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u4', coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u4', parByHole: PAR_72, sideWinners: [] });
 
   it('podium has top 3 rows', () => {
     expect(card.podium).toHaveLength(3);
@@ -145,7 +151,7 @@ describe('solo_strokeplay — neutral card (sharerId null)', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('no row has isSharer', () => {
     expect(card.podium.some((r) => r.isSharer)).toBe(false);
@@ -171,18 +177,18 @@ describe('best_ball — sharer is team member', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie'], ['u4', 'Dave']);
 
   it('sharer u2 (rank-1 team) → isSharer on podium row', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.podium[0].isSharer).toBe(true);
     expect(card.sharerStrip).toBeNull();
   });
 
   it('sharer u3 (rank-2 team) → isSharer on rank-2 row', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u3', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u3', parByHole: PAR_72, sideWinners: [] });
     expect(card.podium[1].isSharer).toBe(true);
   });
 
   it('team name is joined member names', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
     expect(card.podium[0].name).toContain('Alice');
     expect(card.podium[0].name).toContain('Bob');
   });
@@ -202,7 +208,7 @@ describe('solo_strokeplay — fewer than 3 players', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('podium has only 2 rows', () => {
     expect(card.podium).toHaveLength(2);
@@ -228,7 +234,7 @@ describe('solo_strokeplay — tied rank-1', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('podium has 3 rows (both rank-1 + rank-3)', () => {
     expect(card.podium).toHaveLength(3);
@@ -261,7 +267,7 @@ describe('stableford solo — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('band is placement', () => {
     expect(card.band).toBe('placement');
@@ -293,19 +299,19 @@ describe('skins — band and score labels', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie'], ['u4', 'Dave']);
 
   it('band is skins', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
     expect(card.band).toBe('skins');
   });
 
   it('scores carry the skins count', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
     expect(card.podium[0].score).toEqual({ kind: 'skins', value: 4 });
     expect(card.podium[1].score).toEqual({ kind: 'skins', value: 2 });
     expect(card.podium[2].score).toEqual({ kind: 'skins', value: 1 });
   });
 
   it('sharerStrip logic same as placement — outside top 3', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u4', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u4', parByHole: PAR_72, sideWinners: [] });
     expect(card.sharerStrip).not.toBeNull();
     expect(card.sharerStrip!.name).toBe('Dave');
     expect(card.sharerStrip!.score).toEqual({ kind: 'skins', value: 0 });
@@ -336,7 +342,7 @@ describe('singles_matchplay — sharer wins', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', parByHole: PAR_72, sideWinners: [] });
 
   it('band is matchplay', () => {
     expect(card.band).toBe('matchplay');
@@ -394,12 +400,12 @@ describe('singles_matchplay — tie', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
 
   it('sharer outcome is tied', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', parByHole: PAR_72, sideWinners: [] });
     expect(card.match!.sharerOutcome).toEqual({ kind: 'tied' });
   });
 
   it('non-participant sharer → sharerOutcome is null', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
     expect(card.match!.sharerOutcome).toBeNull();
   });
 });
@@ -428,7 +434,7 @@ describe('sideTournaments', () => {
     result,
     nameByUserId: nameMap,
     sharerId: 'u2',
-    coursePar: 72,
+    parByHole: PAR_72,
     sideWinners,
   });
 
@@ -462,7 +468,7 @@ describe('wolf — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('scores carry the points count', () => {
     expect(card.podium[0].score).toEqual({ kind: 'points', value: 14 });
@@ -496,7 +502,7 @@ describe('texas_scramble — team score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('score is vs-par (−4)', () => {
     expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '−4' });
@@ -518,7 +524,7 @@ describe('acey_deucey — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('scores use the total field (can be negative)', () => {
     expect(card.podium[0].score).toEqual({ kind: 'points', value: 12 });
@@ -546,7 +552,7 @@ describe('nassau — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('scores use the units field', () => {
     expect(card.podium[0].score).toEqual({ kind: 'points', value: 2 });
@@ -569,7 +575,7 @@ describe('round_robin — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('scores use totalHoleWins', () => {
     expect(card.podium[0].score).toEqual({ kind: 'points', value: 10 });
@@ -591,7 +597,7 @@ describe('bingo_bango_bongo — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('scores use totalPoints', () => {
     expect(card.podium[0].score).toEqual({ kind: 'points', value: 12 });
@@ -615,7 +621,7 @@ describe('nines — score labels', () => {
   };
 
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
-  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, coursePar: 72, sideWinners: [] });
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
 
   it('scores use totalPoints', () => {
     expect(card.podium[0].score).toEqual({ kind: 'points', value: 90 });
@@ -649,12 +655,135 @@ describe('singles_matchplay — sharer loses', () => {
   const nameMap = names(['u1', 'Alice'], ['u2', 'Bob']);
 
   it('loser sharer gets lost 2up', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u1', parByHole: PAR_72, sideWinners: [] });
     expect(card.match!.sharerOutcome).toEqual({ kind: 'lost', margin: '2up' });
   });
 
   it('winner sharer gets won 2up', () => {
-    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', coursePar: 72, sideWinners: [] });
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
     expect(card.match!.sharerOutcome).toEqual({ kind: 'won', margin: '2up' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2217 (D6): «mot par» over the holes that count. Par is counted once per
+// ball that counts (shamble/champagne), and only over the holes the competitor
+// has a score on — a team with 17–18 missing is not «−6» on a par-4 course.
+// ---------------------------------------------------------------------------
+describe('vs par over played holes (#2217)', () => {
+  const holeNumbers = Array.from({ length: 18 }, (_, i) => i + 1);
+  // 14 × 4 + 2 × 5 = 66 over holes 1–16; 17–18 unplayed. Par 64 over 1–16.
+  const netFor = (n: number): number | null => (n <= 14 ? 4 : n <= 16 ? 5 : null);
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Cleo'], ['u4', 'Dag']);
+
+  function shamble(variant: 'shamble' | 'champagne', count: 2 | 3, totalScore: number): ShambleResult {
+    return {
+      kind: 'shamble',
+      variant,
+      count,
+      scoring: 'net',
+      teamSize: 4,
+      holes: [],
+      teams: [
+        { teamNumber: 1, members: ['u1', 'u2', 'u3', 'u4'], totalScore, holesCounted: 18, rank: 1, tiedWith: [] },
+      ],
+    };
+  }
+
+  it('shamble: count 2, 148 → +4 (par for the two balls that count)', () => {
+    const card = buildShareCardData({ result: shamble('shamble', 2, 148), nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '+4' });
+  });
+
+  it('champagne: count 3, 222 → +6', () => {
+    const card = buildShareCardData({ result: shamble('champagne', 3, 222), nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '+6' });
+  });
+
+  it('manglende hull: best ball with 17–18 unplayed, 66 → +2', () => {
+    const result: BestBallResult = {
+      kind: 'best_ball',
+      teams: [
+        {
+          teamNumber: 1,
+          playerIds: ['u1', 'u2'],
+          holes: holeNumbers.map((n) => ({ holeNumber: n, par: 4, strokeIndex: n, teamNet: netFor(n), contributorIds: [], players: [] })),
+          total: 66,
+          missingHoles: [17, 18],
+          rank: 1,
+          tiedWith: [],
+        },
+      ],
+    };
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '+2' });
+  });
+
+  it('manglende hull: texas_scramble with 17–18 unplayed, 66 → +2', () => {
+    const result: TexasScrambleResult = {
+      kind: 'texas_scramble',
+      teams: [
+        {
+          teamNumber: 1,
+          members: [
+            { userId: 'u1', courseHandicap: 0, isCaptain: true },
+            { userId: 'u2', courseHandicap: 0, isCaptain: false },
+          ],
+          combinedCourseHandicap: 0,
+          teamHandicap: 0,
+          holes: holeNumbers.map((n) => ({ holeNumber: n, par: 4, strokeIndex: n, teamGross: netFor(n), teamExtraStrokes: 0, teamNet: netFor(n) })),
+          totalNet: 66,
+          totalGross: 66,
+          missingHoles: [17, 18],
+          rank: 1,
+          tiedWith: [],
+        },
+      ],
+    };
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '+2' });
+  });
+
+  it('manglende hull: solo strokeplay with 17–18 unplayed, 66 → +2', () => {
+    const result: SoloStrokeplayResult = {
+      kind: 'solo_strokeplay',
+      holes: holeNumbers.map((n) => ({
+        holeNumber: n,
+        par: 4,
+        strokeIndex: n,
+        // u1 has a cell with net null on 17; on 18 u1 has no cell at all.
+        perPlayer: [
+          { userId: 'u2', gross: 4, net: 4, par: 4 },
+          ...(n === 18 ? [] : [{ userId: 'u1', gross: netFor(n), net: netFor(n), par: 4 }]),
+        ],
+        bestUserIds: [],
+      })),
+      players: [
+        { userId: 'u1', totalNetStrokes: 66, totalGrossStrokes: 66, holesPlayed: 16, rank: 1, tiedWith: [] },
+        { userId: 'u2', totalNetStrokes: 72, totalGrossStrokes: 72, holesPlayed: 18, rank: 2, tiedWith: [] },
+      ],
+    };
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '+2' });
+    expect(card.podium[1].score).toEqual({ kind: 'vsPar', label: 'E' });
+  });
+
+  it('a competitor with hole rows but no played hole → —', () => {
+    const result: BestBallResult = {
+      kind: 'best_ball',
+      teams: [
+        {
+          teamNumber: 1,
+          playerIds: ['u1', 'u2'],
+          holes: holeNumbers.map((n) => ({ holeNumber: n, par: 4, strokeIndex: n, teamNet: null, contributorIds: [], players: [] })),
+          total: 0,
+          missingHoles: holeNumbers,
+          rank: 1,
+          tiedWith: [],
+        },
+      ],
+    };
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.podium[0].score).toEqual({ kind: 'vsPar', label: '—' });
   });
 });
