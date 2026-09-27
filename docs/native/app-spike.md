@@ -206,8 +206,8 @@ i profil-rommet, og bare i staging-bygg.
 - **Scorecard** — webbens Layout A (Hull/Par/SI/Slag/Netto + totaler).
   «Lever»-knappen speiler webbens to porter: drain + kø-vakt (delt
   `isActiveForGame`), og bekreftelses-Alert ved manglende hull.
-- **Approve** — lista fra delt `pendingApprovalsFor`; godkjenn/avvis er rene
-  `game_players`-oppdateringer under 0106-policyen.
+- **Approve** — lista fra delt `pendingApprovalsFor`; godkjenn/avvis går via
+  `POST /api/games/{id}/scorecards/{userId}` (#2215), som varsler spilleren.
 
 ### Format-gaten
 
@@ -223,12 +223,10 @@ er NOT NULL med default `'full'` — gaten tester `!== 'full'`, aldri «er satt�
 hjem-lista (`home`). Migrasjonen er additiv; N2-data overlever.
 `src/data/seedScores.ts` (`seedGameScores`) erstatter SyncLab-ens gamle
 hull 1–3-seed: ALLE spillets scores går gjennom `mergeServerScore`, så LWW
-forblir eneste vei server-data kommer inn lokalt. `src/data/playerActions.ts`
-(lever/godkjenn/avvis) speiler webbens server-action-guards og asserter
-radantall med delt `expectAffected` (`lib/supabase/affectedRows.ts`) — en
-0-raders UPDATE er en synlig feil, aldri stille suksess. Merk: skriv fra appen
-sender INGEN notifikasjoner (webbens server actions eier dem) — bokført gap
-mot N7.
+forblir eneste vei server-data kommer inn lokalt. Lever, godkjenn og avvis
+skrev først rett i `game_players` fra appen, uten varsler. Lukket i #2215: de går
+nå via ruter på webben (`src/data/submitCard.ts` og `src/data/playerActions.ts`),
+som varsler og tømmer webbens cache som nettsiden gjør. Se «App→server-ruter».
 
 ### Test-harnessen (jest-expo)
 
@@ -642,8 +640,10 @@ på toppen.
 Hvorfor splitten: `notify` åpner med `import 'server-only'` og skriver via service-role.
 Den ene tingen kjernen ikke kan gjøre er altså å varsle. Kjernen avslår derfor ventende
 påmeldinger selv (DB-skrivet) og RETURNERER søkerne; wrapperen fyrer
-`registration_expired` for dem. Appen (`src/data/startGame.ts`) kaller kjernen med sin
-egen RLS-klient og slipper lista.
+`registration_expired` for dem. Appen (`src/data/startGame.ts`) kalte først kjernen med
+sin egen RLS-klient og slapp lista. Siden #2215 går starten via
+`POST /api/games/{id}/start`, som kjører wrapperen og `announceStartedGame`
+(avledede spill + `game_started`), akkurat som knappen på nettsiden.
 
 ⚠️ **`{ ok: true, started: false }` er SUKSESS, ikke feil (#502).** Det betyr at en annen
 aktør vant status-flippen: cron-sweepen på tee-off, nettsidens knapp, eller
@@ -656,15 +656,18 @@ resolve mot appens avhengighetstre), rota har sin. Metro gir delte `lib/`-filer 
 via `resolver.nodeModulesPaths`. Appens `tsconfig.json` speiler det med en `paths`-rad for
 `@supabase/supabase-js`, så `tsc` typesjekker kjernen mot samme kopi. Uten raden ville
 `lib/` annotere ROTAS `SupabaseClient`, og TypeScript avviser to klasser med
-`protected`-felter som ulike. Derfor trengs ingen cast: `startGame.ts` sender appens klient
-rett inn. Regelen gjelder alle bare imports i den delte grafen som gir typer appen selv
+`protected`-felter som ulike. Derfor trengte `startGame.ts` ingen cast da den sendte
+appens klient rett inn (fram til #2215, da starten flyttet til en rute). Regelen gjelder alle bare imports i den delte grafen som gir typer appen selv
 sender inn. Trenger en ny slik pakke det, får den en `paths`-rad i samme mønster, og
 kommentarene i `tsconfig.json` og `metro.config.js` holder de to i lås.
 
 ### RLS-veien per skriv
 
-Appen har ingen service-role og skal ikke få en. Alle sju skrivene i
-`src/data/rosterActions.ts` går rett på `game_players` under RLS:
+Appen har ingen service-role og skal ikke få en. Skrivene i `src/data/rosterActions.ts`
+går rett på `game_players` under RLS. Unntakene siden #2215: «legg til spiller» og
+«åpne kortet igjen» går via ruter (tabellen under viser policyen de brukte før), og
+starten likeså. De andre skrivene kaller `POST /api/games/{id}/refresh` etterpå, så
+nettsiden viser samme status med én gang.
 
 | Handling | Policy / vakt |
 |---|---|
@@ -834,10 +837,9 @@ bruk `xcrun simctl pbcopy` og lim inn med langtrykk.
 
 ### Bokførte gap
 
-- **Ingen varsler fra appen.** `player_added` ved roster-endring og `registration_expired`
-  for søkere starten avviste er server-eide (`notify` = `server-only` + service-role).
-  Starter arrangøren fra appen, skjer avslaget i basen, men varselet uteblir. Cron-sweepen
-  varsler fortsatt for spill som starter på tee-off.
+- ~~**Ingen varsler fra appen.**~~ Lukket i #2215: start, legg til spiller og gjenåpning
+  går via ruter som varsler, og de andre roster-skrivingene tømmer webbens cache via
+  `POST /api/games/{id}/refresh`.
 - **Ingen admin-hendelseslogg.** `logAdminEvent` er server-eid; appens skriv legger ingen
   rad i loggen.
 - **Åpen påmelding / forespørsels-godkjenning** (`game_registration_requests`-UI),
@@ -1333,9 +1335,9 @@ service-role. Alt annet skal appen gjøre selv, direkte mot PostgREST, med RLS s
 «Godkjenn på vegne av gruppa» er eksempelet på hvor billig svaret kan bli når man
 sjekker: det ser ut som en admin-overstyring, men selve godkjenningen er ren DB.
 `guard_game_players_self_update` (0147) slipper oppretteren gjennom på andres rad, så
-appen skriver de samme kolonnene selv — ingen rute, ingen migrasjon. Webbens override
-(`adminApproveScorecard`) sender i tillegg `scorecard_approved`-varselet (`notify()`);
-det gjør ikke appen, og å gjøre det ville krevd en rute (#1980). **Sjekk alltid dette først.** Smedens gjetning om at
+appen kunne skrive de samme kolonnene selv. Men webben sender i tillegg
+`scorecard_approved`-varselet (`notify()`), og det krever en rute. Siden #2215 går
+godkjenningen derfor via `POST /api/games/{id}/scorecards/{userId}`. **Sjekk alltid dette først.** Smedens gjetning om at
 «trekk deg selv» var like billig var derimot feil: vakt (c) i 0147 nekter egen rad.
 
 ### Adgangssjekken
@@ -1385,8 +1387,9 @@ POST /api/games/{id}/submit-team   200 { submitted: number, alreadySubmitted: bo
      422 withdrawn · 500 submit_failed
 ```
 
-Frosset, og speilet i `src/data/submitTeam.ts`. **Endres den ene, endres den andre i
-samme PR.** `submitted` er rader UPDATE-en traff — 1 for en solo-levering, N for et lag.
+Frosset, og speilet i `src/data/submitCard.ts`. Fila het `submitTeam.ts` til #2215, da
+solo-leveringen flyttet hit også, siden kjernen håndterer begge. **Endres den ene, endres
+den andre i samme PR.** `submitted` er rader UPDATE-en traff — 1 for en solo-levering, N for et lag.
 `alreadySubmitted` er sant når den traff 0 rader fordi kortet alt var levert; det er et
 lovlig utfall (makkeren rakk det først), og styrer ordlyd, ikke suksess. **422 og ikke en
 andre 409** for en trukket spiller: appen leser KUN statusen, så to ulike situasjoner må
@@ -1474,6 +1477,53 @@ gir ikke admin-unntakene» er beviset.
 Ruta har rate-limit (`consumeAdminInviteRateLimit`) selv om webbens egen spill-invitasjon
 ikke har det: et HTTP-endepunkt er eksponert på en annen måte enn en server-action bak et
 skjema, og bøttene deles med admin-døra. Webbens hull er et eget funn, ikke fikset her.
+
+### Wire-kontraktene for varsler og cache (#2215)
+
+Før #2215 skrev appen godkjenning, avvisning, start, «legg til spiller», gjenåpning og
+opprettelsen rett i basen. Radene ble riktige, men ingen fikk varsel, og nettsiden viste
+gammel status i opptil 15 minutter (`game-${id}`-cachen i `getGameWithPlayers`). Nå går
+hver av dem via en rute som gjør det samme som webbens server action:
+
+```
+POST /api/games/{id}/scorecards/{userId}   { decision: 'approve'|'reject'|'reopen', reason?: string }
+     200 { alreadyDone: boolean }
+     400 bad_request · 401 unauthorized · 403 forbidden · 404 not_found
+     409 not_active · 422 not_pending · 500 review_failed
+POST /api/games/{id}/start                 200 { alreadyRunning: boolean }
+     401 · 403 · 404 · 409 { error: <kjernens grunn>, rotationMode?, rotationActiveCount? }
+     500 start_failed
+POST /api/games/{id}/players/{userId}      200 { alreadyOnRoster: boolean }
+     401 · 403 · 404 · 409 game_locked | game_full | invite_not_allowed · 500 add_failed
+POST /api/games/{id}/invite-roster         200 { invited: number }
+     401 · 403 · 404 · 409 game_locked · 500 invite_failed
+POST /api/games/{id}/refresh               200 {}
+     401 · 403 · 404 · 500 refresh_failed
+```
+
+Speilet i `src/data/playerActions.ts`, `startGame.ts`, `rosterActions.ts`, `createGame.ts`
+og `refreshWebCache.ts`. **Endres den ene, endres den andre i samme PR.**
+
+Kjernene bor på webben og deles med server actions: `lib/games/reviewScorecardCore.ts`
+(godkjenn, avvis, gjenåpne), `lib/games/announceStartedGame.ts` (avledede spill og
+`game_started` etter en vunnet start), `addExistingPlayerToGameCore` i
+`lib/games/inviteToGame.ts` og `lib/games/notifyRosterInvites.ts`.
+
+⚠️ **Rutene skriver med service-role, så porten i ruta er hele tilgangssjekken.**
+Vakt-triggerne no-op-er når `auth.uid()` er NULL. Portene står i `lib/api/appAuth.ts`:
+`scorecardReviewAccess` svarer `peer` før `organizer` (samme flight vinner, så en oppretter
+som spiller i en runde med én flight godkjenner som medspiller), og `gameRefreshAccess`
+slipper inn arrangøren og aktive spillere i runden. Tester med fiendtlige tilfeller står
+ved siden av hver port og rute.
+
+`refresh` sender aldri varsler. Den tømmer bare cachen etter skrivinger webben heller ikke
+varsler på: fjern spiller, lag, flight, trekk og angre, avslutning, og wolf- og BBB-valg.
+`confirmParticipation` kaller den ikke, fordi «ikke bekreftet»-merkene på nettsiden leser
+`game_players` direkte. `invite-roster` hopper over dem som alt har et `invite`-varsel for
+runden, så et nytt forsøk etter et nettbrudd gir ikke doble varsler.
+
+Eldre app-bygg fortsetter med direkteskrivingene og brekker ikke. De får bare ikke
+varslene.
 
 ### Appen ser aldri innboks-varselet
 
