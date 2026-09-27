@@ -17,6 +17,11 @@
 // skrive sin egen rad, mens rutas kjerne markerer hele lagets aktive, uleverte
 // rader med service-role. Et halvlevert lag ville blokkert avslutningen av
 // runden — så vi leverer ikke halvt.
+//
+// #2220: et kort som kan leveres, kan også rettes. «Rediger hullene» tar
+// spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
+// fullt kort en blindvei: spill-hjem sender et fullt kort hit, og radene under
+// er ren visning.
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -26,6 +31,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
@@ -69,14 +75,19 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   }, [gameId]);
 
   // Drain først (port 1), les så både køen og serververdiene. Rekkefølgen er
-  // hele poenget: slagene skal ut FØR kortet kan fryses.
-  useEffect(() => {
-    void drainQueue('lever')
-      .catch(() => undefined)
-      .then(() => refreshQueue())
-      .then(() => seedGameScores(gameId).catch(() => undefined))
-      .then(() => reload());
-  }, [gameId, refreshQueue, reload]);
+  // hele poenget: slagene skal ut FØR kortet kan fryses. Kjeden kjører hver
+  // gang skjermen får fokus (#2220): «Rediger hullene» legger hullene oppå et
+  // scorekort som står montert, og kommer spilleren tilbake etter å ha rettet
+  // et hull, skal kortet vise det nye tallet før det leveres.
+  useFocusEffect(
+    useCallback(() => {
+      void drainQueue('lever')
+        .catch(() => undefined)
+        .then(() => refreshQueue())
+        .then(() => seedGameScores(gameId).catch(() => undefined))
+        .then(() => reload());
+    }, [gameId, refreshQueue, reload]),
+  );
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -247,6 +258,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 
       {canSubmit ? (
         <>
+          {/* Står også mens kø-vakta holder lever-knappen igjen: det er lov å
+              rette mens slagene synker. Avstanden ned til lever-knappen er
+              minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
+          <Pressable
+            style={[ui.buttonSecondary, styles.editButton]}
+            onPress={() => navigation.navigate('Hole', { gameId, holeNumber: 1 })}
+            testID="scorecard-edit"
+          >
+            <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
+          </Pressable>
           {queued > 0 ? (
             <Text style={ui.muted} testID="queue-guard">
               {queued} slag venter på å bli sendt. Knappen åpner når de er framme.
@@ -318,4 +339,7 @@ const styles = StyleSheet.create({
   holeCell: { textAlign: 'left' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   buttonDisabled: { opacity: 0.5 },
+  // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
+  // ned til lever-knappen, over kravet på 24.
+  editButton: { marginBottom: 16 },
 });

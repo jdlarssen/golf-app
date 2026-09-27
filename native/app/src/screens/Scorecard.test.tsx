@@ -5,17 +5,25 @@
 // `lib/teamPlay.test.ts`, lever-skrivingen av `data/playerActions.test.ts` og
 // rute-kallet av `data/submitTeam.test.ts`. Ingen av dem gjentas her.
 //
-// Det som blir igjen er den ene koblingen: **i et format som kollapser til ett
-// lagkort leverer appen nå selv.** Fram til #1918 sto det en setning og en
-// lenke ut («Levering av lagkort gjøres på nettsiden ennå»), fordi lag-
-// leveringen markerer alle medlemmenes rader med service-role — en evne appen
-// ikke har. Nå gjør ruta det på appens vegne, og testen låser at det er lagets
-// knapp som står der: ikke setningen, ikke lenka, og ikke solo-knappen.
+// Det som blir igjen er to koblinger:
+//
+//  1. **I et format som kollapser til ett lagkort leverer appen selv.** Fram
+//     til #1918 sto det en setning og en lenke ut («Levering av lagkort gjøres
+//     på nettsiden ennå»), fordi lag-leveringen markerer alle medlemmenes rader
+//     med service-role — en evne appen ikke har. Nå gjør ruta det på appens
+//     vegne, og testen låser at det er lagets knapp som står der: ikke
+//     setningen, ikke lenka, og ikke solo-knappen.
+//  2. **Et kort som kan leveres, kan også rettes (#2220).** «Rediger hullene»
+//     tar spilleren til hull 1, som nettsidens «← Rediger». Uten den var et
+//     avvist, fullt kort en blindvei: scorekortet var eneste stopp, og radene
+//     er ren visning.
 //
 // Kø-vakta testes ikke her. `listQueue` er mocket tom, så en disabled-assertion
-// ville krevd en andre render, og fila har ÉN (Type C).
+// ville krevd en andre render, og fila har ÉN (Type C). Innlesingen ved fokus
+// heller ikke: mocken under gjør `useFocusEffect` om til `useEffect`, så testen
+// kan ikke skille fokus fra mount. Staging-beviset (S2) dekker den.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ScreenProps } from '../navigation';
 import { Scorecard } from './Scorecard';
 
@@ -116,12 +124,13 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 describe('Scorecard', () => {
-  it('viser lever-knappen for laget i stedet for en vei til nettsiden', async () => {
+  it('viser lever-knappen for laget, og en vei til hullene for å rette', async () => {
+    const navigate = jest.fn();
     await render(
       <Scorecard
         {...({
           route: { params: { gameId: GAME_ID } },
-          navigation: { navigate: jest.fn() },
+          navigation: { navigate },
         } as unknown as ScreenProps<'Scorecard'>)}
       />,
     );
@@ -136,5 +145,10 @@ describe('Scorecard', () => {
     // Og det er LAGETS knapp som står der, ikke solo-knappen: leveringen går
     // gjennom ruta, ikke gjennom spillerens egen rad.
     expect(screen.queryByTestId('submit-scorecard')).toBeNull();
+
+    // #2220: kortet kan rettes før det leveres. Knappen går til hull 1, og
+    // hull-stripen tar spilleren videre derfra.
+    await fireEvent.press(screen.getByTestId('scorecard-edit'));
+    expect(navigate).toHaveBeenCalledWith('Hole', { gameId: GAME_ID, holeNumber: 1 });
   });
 });

@@ -181,6 +181,9 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           {me.player.rejectionReason !== NO_REJECTION_REASON ? (
             <Text style={ui.muted}>{me.player.rejectionReason}</Text>
           ) : null}
+          {/* #2220: webbens ordlyd (`game.home.rejectionBannerSuffix`). Veien
+              dit er «Rediger hullene» på scorekortet. */}
+          <Text style={ui.body}>Rediger hullene og lever på nytt.</Text>
         </View>
       ) : null}
 
