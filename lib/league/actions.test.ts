@@ -434,9 +434,13 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
 /**
  * #2244: removing a league player now goes through a dedicated confirm page,
  * so the action is redirect-based like `removeCupParticipant`. Success lands on
- * the league's own door with a receipt; a failed delete lands back on the
- * confirm page with `?error=`. The door comes from the league's `group_id`
- * (read by the gate), never from the form.
+ * the league's own door with a receipt; a refusal or failed delete lands back
+ * on the confirm page with `?error=`. The door comes from the league's
+ * `group_id` (read by the gate), never from the form.
+ *
+ * Admin-client sequence: 1. gate group_id · 2. league status · 3. (only on a
+ * 0-row delete) does the row still exist?
+ * Request-client sequence: 1. loadRole · 2. league_players delete…select.
  */
 describe('removeLeaguePlayer — redirect contract (#2244)', () => {
   function removeForm(leagueId = 'l1', userId = 'u2'): FormData {
@@ -459,12 +463,13 @@ describe('removeLeaguePlayer — redirect contract (#2244)', () => {
     );
   }
 
+  const adminRole = { data: { is_admin: true }, error: null };
+  const activeLeague = { data: { status: 'active' }, error: null };
+  const deletedOne = { data: [{ user_id: 'u2' }], error: null };
+
   it('standalone league: deletes the row and lands on /admin/liga with a receipt', async () => {
-    adminMock = buildSupabaseMock([{ data: { group_id: null } }]); // gate
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // loadRole
-      { error: null }, // league_players.delete
-    ]);
+    adminMock = buildSupabaseMock([{ data: { group_id: null } }, activeLeague]);
+    supabaseMock = buildSupabaseMock([adminRole, deletedOne]);
     setUser('admin-1');
 
     const err = await run(removeForm());
@@ -481,11 +486,8 @@ describe('removeLeaguePlayer — redirect contract (#2244)', () => {
   });
 
   it('club league: lands on the club door, derived from the league (not the form)', async () => {
-    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }]); // gate
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // loadRole
-      { error: null }, // league_players.delete
-    ]);
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }, activeLeague]);
+    supabaseMock = buildSupabaseMock([adminRole, deletedOne]);
     setUser('admin-1');
 
     const fd = removeForm();
@@ -497,17 +499,52 @@ describe('removeLeaguePlayer — redirect contract (#2244)', () => {
     expect(err.url).toBe('/klubber/g1/liga/l1?status=player_removed');
   });
 
+  it('finished league: refused server-side, nothing deleted (the table is the season record)', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: 'g1' } },
+      { data: { status: 'finished' }, error: null },
+    ]);
+    supabaseMock = buildSupabaseMock([adminRole]);
+    setUser('admin-1');
+
+    const err = await run(removeForm());
+
+    expect(err.url).toBe('/klubber/g1/liga/l1/fjern/u2?error=league_finished');
+    expect(deleteCall(), 'no delete from a finished league').toBeUndefined();
+  });
+
   it('failed delete: back to the confirm page on the same door with ?error=', async () => {
-    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }]); // gate
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }, activeLeague]);
     supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // loadRole
-      { error: { message: 'boom' } }, // league_players.delete FAILS
+      adminRole,
+      { data: null, error: { message: 'boom' } }, // league_players.delete FAILS
     ]);
     setUser('admin-1');
 
     const err = await run(removeForm());
 
     expect(err.url).toBe('/klubber/g1/liga/l1/fjern/u2?error=remove_failed');
+  });
+
+  // Trap 2: the delete runs on the RLS client, so 0 rows is ambiguous. Ask the
+  // admin client: row still there → the delete did not happen; row gone →
+  // someone got there first, an honest no-op.
+  it.each([
+    ['still there → remove_failed', { data: { user_id: 'u2' }, error: null }, '/klubber/g1/liga/l1/fjern/u2?error=remove_failed'],
+    ['already gone → honest no-op', { data: null, error: null }, '/klubber/g1/liga/l1?status=player_removed'],
+  ])('0-row delete, row %s', async (_label, existence, url) => {
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }, activeLeague, existence]);
+    supabaseMock = buildSupabaseMock([adminRole, { data: [], error: null }]);
+    setUser('admin-1');
+
+    const err = await run(removeForm());
+
+    expect(err.url).toBe(url);
+    // The delete chained .select() so PostgREST returns the affected rows.
+    const sel = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'league_players' && c.method === 'select',
+    );
+    expect(sel, 'delete chained .select() for the row count').toBeDefined();
   });
 
   it.each([

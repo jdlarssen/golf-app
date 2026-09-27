@@ -56,6 +56,38 @@ function preferredName(
 
 export type LigaManagementVariant = 'admin' | 'club';
 
+/**
+ * A participant row's «Fjern»: a link to the remove-confirm page (#2244). A
+ * finished league's table is the season record, so its roster is locked and the
+ * link is hidden (the action refuses it too).
+ */
+function removeLink({
+  locked,
+  href,
+  userId,
+  name,
+  t,
+}: {
+  locked: boolean;
+  href: string;
+  userId: string;
+  name: string;
+  t: Awaited<ReturnType<typeof getTranslations<'liga'>>>;
+}) {
+  if (locked) return null;
+  return (
+    <LinkButton
+      href={href}
+      variant="ghost"
+      data-testid={`liga-remove-${userId}`}
+      aria-label={t('removePlayer.removeAria', { name })}
+      className="text-danger text-[12px] px-2 py-1 min-h-[44px] rounded-lg"
+    >
+      {t('removePlayer.removeButton')}
+    </LinkButton>
+  );
+}
+
 /** Success receipt for a `?status=` the league page knows (#2244). */
 function receiptBanner(
   statusCode: string | undefined,
@@ -277,15 +309,13 @@ export async function LigaManagement({
                     className="flex items-center justify-between gap-2 py-1.5"
                   >
                     <span className="font-sans text-[14px] text-text">{name}</span>
-                    <LinkButton
-                      href={`${removeHrefBase}/${p.userId}`}
-                      variant="ghost"
-                      data-testid={`liga-remove-${p.userId}`}
-                      aria-label={t('removePlayer.removeAria', { name })}
-                      className="text-danger text-[12px] px-2 py-1 min-h-[44px] rounded-lg"
-                    >
-                      {t('removePlayer.removeButton')}
-                    </LinkButton>
+                    {removeLink({
+                      locked: status === 'finished',
+                      href: `${removeHrefBase}/${p.userId}`,
+                      userId: p.userId,
+                      name,
+                      t,
+                    })}
                   </li>
                 );
               })}

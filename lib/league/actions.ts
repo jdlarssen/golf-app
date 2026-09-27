@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   requireAdmin,
@@ -440,17 +441,21 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
 
 /**
  * Removes one participant from a league. Posted by the confirm page
- * (`…/liga/[id]/fjern/[userId]`, #2244) — never straight from a list row.
+ * (`…/liga/[id]/fjern/[userId]`, #2244), never straight from a list row.
  *
  * Redirect-based like `removeCupParticipant`: success → the league's own door
- * with `?status=player_removed`; a failed delete → back to the confirm page on
- * the same door with `?error=remove_failed`. The door comes from the gate's
- * `groupId` (admin-client read of the league), never from the form.
+ * with `?status=player_removed`; a refusal or failed delete → back to the
+ * confirm page on the same door with `?error=<code>`. The door comes from the
+ * gate's `groupId` (admin-client read of the league), never from the form.
  *
- * Deliberately NO expectAffected: the gate and the RLS delete policy agree
- * (0092: global admin, or owner/admin of the league's club), so a 0-row delete
- * means the row is already gone. The organiser wanted the player out, and they
- * are: an honest no-op, the same reasoning as `removeCupParticipant`.
+ * A FINISHED league is refused (`league_finished`): its table is the season
+ * record, so the roster is locked (product ruling on #2244). The page hides the
+ * button too; this is the server-side half.
+ *
+ * The delete runs on the RLS client, so a 0-row result is ambiguous (trap 2):
+ * the admin client checks whether the row is still there. Still there → the
+ * delete did not happen (`remove_failed`). Gone → someone removed the player
+ * first, an honest no-op, the same reasoning as `removeCupParticipant`.
  */
 export async function removeLeaguePlayer(formData: FormData): Promise<void> {
   const supabase = await getServerClient();
@@ -460,15 +465,44 @@ export async function removeLeaguePlayer(formData: FormData): Promise<void> {
   if (!leagueId || !userId) redirect('/');
   const { groupId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
   const base = ligaBasePath(leagueId, groupId);
-  const { error } = await supabase
+  const backToConfirm = (code: 'remove_failed' | 'league_finished'): never =>
+    redirect(`${base}/fjern/${encodeURIComponent(userId)}?error=${code}`);
+
+  const admin = getAdminClient();
+  const { data: league, error: leagueErr } = await admin
+    .from('leagues')
+    .select('status')
+    .eq('id', leagueId)
+    .maybeSingle();
+  if (leagueErr || !league) {
+    console.error('[league] removeLeaguePlayer league read failed', { leagueId, leagueErr });
+    backToConfirm('remove_failed');
+  }
+  if (league!.status === 'finished') backToConfirm('league_finished');
+
+  const { data: deleted, error } = await supabase
     .from('league_players')
     .delete()
     .eq('league_id', leagueId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .select('user_id');
   if (error) {
     console.error('[league] removeLeaguePlayer failed', { leagueId, userId, error });
-    redirect(`${base}/fjern/${encodeURIComponent(userId)}?error=remove_failed`);
+    backToConfirm('remove_failed');
   }
+  if ((deleted ?? []).length === 0) {
+    const { data: stillThere, error: checkErr } = await admin
+      .from('league_players')
+      .select('user_id')
+      .eq('league_id', leagueId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (checkErr || stillThere) {
+      console.error('[league] removeLeaguePlayer deleted 0 rows', { leagueId, userId, checkErr });
+      backToConfirm('remove_failed');
+    }
+  }
+
   revalidatePath(`/admin/liga/${leagueId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/liga/${leagueId}`);
   // The standings table is built from league_players.

@@ -4484,10 +4484,12 @@
       "heading": "Remove {name} from {league}?",
       "body": "{firstName} leaves the league and drops off the table. Rounds already played stay in the game history.",
       "canReAdd": "You can add {firstName} again later.",
-      "cannotReAdd": "The league has finished, so this can't be undone.",
       "confirmButton": "Yes, remove {firstName}",
       "pending": "Removing …",
       "cancel": "Cancel",
+      "back": "Back",
+      "lockedHeading": "The table is locked",
+      "lockedBody": "The league has finished, so you can no longer remove players.",
       "fallbackFirstName": "The player",
       "errors": {
         "remove_failed": "Couldn't remove the player. Please try again in a moment."

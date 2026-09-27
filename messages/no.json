@@ -4484,10 +4484,12 @@
       "heading": "Fjerne {name} fra {league}?",
       "body": "{firstName} går ut av ligaen og forsvinner fra tabellen. Runder som alt er spilt, blir liggende i spillhistorikken.",
       "canReAdd": "Du kan legge til {firstName} igjen senere.",
-      "cannotReAdd": "Ligaen er avsluttet, så dette kan ikke angres.",
       "confirmButton": "Ja, fjern {firstName}",
       "pending": "Fjerner …",
       "cancel": "Avbryt",
+      "back": "Tilbake",
+      "lockedHeading": "Tabellen er låst",
+      "lockedBody": "Ligaen er avsluttet, så du kan ikke fjerne spillere lenger.",
       "fallbackFirstName": "Spilleren",
       "errors": {
         "remove_failed": "Klarte ikke å fjerne spilleren. Prøv igjen om litt."
