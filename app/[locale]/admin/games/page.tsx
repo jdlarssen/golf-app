@@ -3,6 +3,7 @@ import { Suspense, cache } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { Banner } from '@/components/ui/Banner';
@@ -187,26 +188,40 @@ function SubtitleSkeleton() {
   return <Skeleton className="h-3 w-40" />;
 }
 
-async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
+/**
+ * Player count per game. The PostgREST builder has no group-by, so this reads
+ * one row per player and counts in TS. 40 games with up to 150 players each
+ * can pass PostgREST's 1 000-row cap, so the read is paged (#2227).
+ */
+async function countPlayersByGame(gameIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (gameIds.length === 0) return counts;
+
   const { supabase } = await getAdminGamesContext();
+  const { data: gpRows } = await selectAllRowsResult(
+    (from, to) =>
+      supabase
+        .from('game_players')
+        .select('game_id')
+        .in('game_id', gameIds)
+        .order('game_id')
+        .order('user_id')
+        .range(from, to)
+        .returns<{ game_id: string }[]>(),
+    'admin games player counts',
+  );
+  for (const r of gpRows ?? []) {
+    counts.set(r.game_id, (counts.get(r.game_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
   const games = await fetchGames(filterFinished);
   const gameIds = games.map((g) => g.id);
   const t = await getTranslations('admin.games');
   const locale = await getLocale();
-
-  // Player counts per game in one round-trip. group-by not supported in the
-  // PostgREST builder; fetch raw game_id rows and count in TS — bounded
-  // since we cap at 40 games.
-  type GP = { game_id: string };
-  const { data: gpRows } = await supabase
-    .from('game_players')
-    .select('game_id')
-    .in('game_id', gameIds.length > 0 ? gameIds : ['00000000-0000-0000-0000-000000000000'])
-    .returns<GP[]>();
-  const playerCounts = new Map<string, number>();
-  for (const r of gpRows ?? []) {
-    playerCounts.set(r.game_id, (playerCounts.get(r.game_id) ?? 0) + 1);
-  }
+  const playerCounts = await countPlayersByGame(gameIds);
 
   if (games.length === 0) {
     return (

@@ -183,10 +183,17 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
   // 2. Fetch all game_players for those games. Withdrawn players stay in:
   //    `holesFilledByGame` needs the whole team to pick its row owner, and
   //    `classifyDeliveryStatus` reads them as `withdrawn` so they never count.
-  const { data: playersData } = await supabase
-    .from('game_players')
-    .select('game_id, user_id, team_number, submitted_at, approved_at, withdrawn_at')
-    .in('game_id', activeIds);
+  const { data: playersData } = await selectAllRowsResult(
+    (from, to) =>
+      supabase
+        .from('game_players')
+        .select('game_id, user_id, team_number, submitted_at, approved_at, withdrawn_at')
+        .in('game_id', activeIds)
+        .order('game_id')
+        .order('user_id')
+        .range(from, to),
+    'getAdminActionItems game_players',
+  );
 
   // 3. Fetch entered strokes for those games.
   const { data: scoresData } = await selectAllRowsResult(

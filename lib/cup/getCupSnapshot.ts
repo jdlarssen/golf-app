@@ -200,12 +200,19 @@ export async function getCupSnapshot(
   const [playersRes, scoresRes, holesByCourseRes] = await Promise.all([
     gameIds.length === 0
       ? Promise.resolve({ data: [] as PlayerRow[], error: null })
-      : supabase
-          .from('game_players')
-          .select(
-            'game_id, user_id, team_number, course_handicap, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
-          )
-          .in('game_id', gameIds),
+      : selectAllRowsResult(
+          (from, to) =>
+            supabase
+              .from('game_players')
+              .select(
+                'game_id, user_id, team_number, course_handicap, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+              )
+              .in('game_id', gameIds)
+              .order('game_id')
+              .order('user_id')
+              .range(from, to),
+          'getCupSnapshot game_players',
+        ),
     gameIds.length === 0
       ? Promise.resolve({ data: [] as ScoreRow[], error: null })
       : selectAllRowsResult(

@@ -176,10 +176,17 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
 
   const [playersRes, scoresRes, holesRes, teesRes] = await Promise.all([
     gameIds.length
-      ? supabase
-          .from('game_players')
-          .select('game_id, user_id, course_handicap, tee_gender, submitted_at, withdrawn_at')
-          .in('game_id', gameIds)
+      ? selectAllRowsResult(
+          (from, to) =>
+            supabase
+              .from('game_players')
+              .select('game_id, user_id, course_handicap, tee_gender, submitted_at, withdrawn_at')
+              .in('game_id', gameIds)
+              .order('game_id')
+              .order('user_id')
+              .range(from, to),
+          'getLigaSnapshot game_players',
+        )
       : Promise.resolve({ data: [], error: null }),
     gameIds.length
       ? selectAllRowsResult(
