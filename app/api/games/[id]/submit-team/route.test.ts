@@ -251,6 +251,31 @@ describe('POST — leveringen', () => {
     ]);
   });
 
+  it('solo (#2215): en spiller uten lag markerer bare sin egen rad', async () => {
+    // Appen leverer alle kort her siden #2215, ikke bare lagkortet.
+    db.gameMode = 'solo_strokeplay';
+    db.me = { withdrawn_at: null, submitted_at: null, team_number: null };
+    db.updated = [{ user_id: PLAYER }];
+
+    const res = await POST(request({ token: `Bearer ${PLAYER_TOKEN}` }), ctx());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      submitted: 1,
+      alreadySubmitted: false,
+    });
+
+    const [mark, ...extra] = updates();
+    expect(extra).toEqual([]);
+    expect(mark.table).toBe('game_players');
+    // Ingen lag-kaskade: filteret er innsenderens egen rad, ikke et lagnummer.
+    expect(mark.filters).toEqual([
+      { op: 'eq', column: 'game_id', value: GAME_ID },
+      { op: 'eq', column: 'user_id', value: PLAYER },
+      { op: 'is', column: 'submitted_at', value: null },
+    ]);
+  });
+
   it('kortet står alt som levert: 200 med alreadySubmitted, ingen skriving', async () => {
     db.me = {
       withdrawn_at: null,
