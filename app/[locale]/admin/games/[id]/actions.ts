@@ -15,7 +15,14 @@ import {
 } from '@/lib/games/syncDerivedGamesStatus';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import {
+  modeCollapsesToTeamCard,
+  type GameMode,
+} from '@/lib/scoring/modes/types';
+import {
+  sharedCardUserIds,
+  type SharedCardRosterRow,
+} from '@/lib/games/scoreOwner';
 import { notify } from '@/lib/notifications/notify';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import {
@@ -360,6 +367,9 @@ export async function endGame(gameId: string, allowMissing = false) {
  * the guard otherwise blocks every approval-column write on one's own row.
  *
  * No-op safety: only runs when the row currently has submitted_at set.
+ *
+ * #2213: in the one-ball team formats the whole active team reopens
+ * (`reopenSharedCard`), since every card there reads the captain's rows.
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
   const locale = await getLocale();
@@ -368,9 +378,9 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('name, status')
+    .select('name, status, game_mode')
     .eq('id', gameId)
-    .single<{ name: string; status: GameStatus }>();
+    .single<{ name: string; status: GameStatus; game_mode: GameMode }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
@@ -382,20 +392,31 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   // precedent as adminApproveScorecard: redirect to ?status=scorecard_reopened
   // rather than an error, but WITHOUT firing the audit log and the varsel for
   // a write that never happened.
+  const reopenPatch = {
+    submitted_at: null,
+    approved_at: null,
+    approved_by_user_id: null,
+    rejection_reason: null,
+  };
+  const sharedCard = modeCollapsesToTeamCard(game!.game_mode, 18);
+  let reopened: { user_id: string }[] = [];
   try {
-    expectAffected(
-      await supabase
-        .from('game_players')
-        .update({
-          submitted_at: null,
-          approved_at: null,
-          approved_by_user_id: null,
-          rejection_reason: null,
-        })
-        .eq('game_id', gameId)
-        .eq('user_id', playerUserId)
-        .not('submitted_at', 'is', null)
-        .select('user_id'),
+    reopened = expectAffected(
+      sharedCard
+        ? await reopenSharedCard(
+            supabase,
+            gameId,
+            game!.game_mode,
+            playerUserId,
+            reopenPatch,
+          )
+        : await supabase
+            .from('game_players')
+            .update(reopenPatch)
+            .eq('game_id', gameId)
+            .eq('user_id', playerUserId)
+            .not('submitted_at', 'is', null)
+            .select('user_id'),
       'reopenScorecard',
     );
   } catch (err) {
@@ -416,7 +437,9 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     eventType: 'scorecard.reopened',
     targetType: 'scorecard',
     targetId: gameId,
-    payload: { gameId, playerUserId },
+    payload: sharedCard
+      ? { gameId, playerUserId, reopenedUserIds: reopened.map((r) => r.user_id) }
+      : { gameId, playerUserId },
   });
 
   // #1363: best-effort varsel til spilleren som eier kortet. Uten det tror hen
@@ -427,16 +450,25 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   // har en hardkodet 'Admin'-fallback). Mangler navnet, fyller kortet
   // `organizerFallback` i MOTTAKERENS locale — samme regel som #1364 satte for
   // de andre varsel-payloadene. Audit-loggen over bruker fortsatt `actorName`.
+  // #2213: on a shared team card every reopened row is told, so nobody sees
+  // their card drop back to «not submitted» without a reason.
+  const recipients = sharedCard
+    ? reopened.map((r) => r.user_id)
+    : [playerUserId];
   try {
-    await notify({
-      userId: playerUserId,
-      kind: 'scorecard_reopened',
-      payload: {
-        game_id: gameId,
-        game_name: game!.name,
-        actor_name: name,
-      },
-    });
+    await Promise.all(
+      recipients.map((userId) =>
+        notify({
+          userId,
+          kind: 'scorecard_reopened',
+          payload: {
+            game_id: gameId,
+            game_name: game!.name,
+            actor_name: name,
+          },
+        }),
+      ),
+    );
   } catch (err) {
     console.error('[reopenScorecard] scorecard_reopened notify failed', err);
   }
@@ -445,6 +477,48 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
+}
+
+/**
+ * #2213: reopening a shared team card. In the one-ball formats
+ * (`modeCollapsesToTeamCard`) every card on the team reads the captain's rows,
+ * and the organizer cannot see who the captain is. Reopening only the tapped
+ * card left the captain's row submitted, so the hole page kept the team card
+ * locked (`anyTeamMemberSubmitted`) and RLS refused the correction. The whole
+ * active team (`sharedCardUserIds`) reopens instead, in ONE UPDATE (trap 5).
+ *
+ * Same request-scoped client as the one-row path, no service role: the action
+ * is gated to admin or creator, and the base allows the write — «game_players
+ * creator update» (0071), «game_players creator select» (0160), and the 0168
+ * guard lets the creator clear their own approval. Admin passes on is_admin().
+ */
+async function reopenSharedCard(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  gameId: string,
+  mode: GameMode,
+  playerUserId: string,
+  patch: {
+    submitted_at: null;
+    approved_at: null;
+    approved_by_user_id: null;
+    rejection_reason: null;
+  },
+) {
+  const { data: roster, error: rosterError } = await supabase
+    .from('game_players')
+    .select('user_id, team_number, withdrawn_at')
+    .eq('game_id', gameId)
+    .returns<SharedCardRosterRow[]>();
+  // A failed roster read is an error (?error=db_players), not a cue to reopen
+  // just one card — that would silently shrink the cascade back into the bug.
+  if (rosterError) return { data: null, error: rosterError };
+  return supabase
+    .from('game_players')
+    .update(patch)
+    .eq('game_id', gameId)
+    .in('user_id', sharedCardUserIds(mode, roster ?? [], playerUserId))
+    .not('submitted_at', 'is', null)
+    .select('user_id');
 }
 
 /**
