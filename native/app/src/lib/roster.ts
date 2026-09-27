@@ -88,7 +88,10 @@ export function pendingApprovals(
   return pendingApprovalsFor([...roster], game.gameMode as GameMode, approverUserId);
 }
 
-/** Kan jeg attestere dette kortet? Delt regel — RLS (0106) er den ekte porten. */
+/**
+ * Kan jeg attestere dette kortet? Delt regel for knappen. Porten er
+ * `scorecardReviewAccess` bak `POST /api/games/{id}/scorecards/{userId}` (#2215).
+ */
 export function canApprove(
   roster: readonly RosterEntry[],
   gameMode: GameMode,
