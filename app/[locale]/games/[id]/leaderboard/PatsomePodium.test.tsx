@@ -1,13 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { PatsomePodium } from './PatsomePodium';
 import type { PatsomePlayerInfo } from './PatsomeView';
 import type { PatsomeResult, PatsomeTeamLine } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeTeamLine(
   teamNumber: number,
