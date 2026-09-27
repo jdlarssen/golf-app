@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import {
   SoloStrokeplayPodium,
@@ -8,11 +8,6 @@ import type {
   SoloStrokeplayPlayerInfo,
 } from './SoloStrokeplayView';
 import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makeResult(
   players: Array<{
