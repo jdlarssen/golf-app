@@ -106,20 +106,34 @@ describe('resolveFlight', () => {
 });
 
 describe('pendingApprovals', () => {
-  it('lister leverte, ikke godkjente kort fra flight-makkere — aldri mitt eget', () => {
-    const roster = toRoster([
-      player({ userId: 'me', submittedAt: '2026-08-30T10:00:00.000Z' }),
-      player({ userId: 'mate', submittedAt: '2026-08-30T10:05:00.000Z' }),
-      player({ userId: 'nothanded' }),
-      player({
-        userId: 'done',
-        submittedAt: '2026-08-30T10:01:00.000Z',
-        approvedAt: '2026-08-30T10:02:00.000Z',
-      }),
-    ]);
+  // #2220: lista finnes bare der webben viser godkjenn-beskjeden sin
+  // (`PendingApprovalsBanner.tsx:29`): runden krever godkjenning OG pågår.
+  // Uten gaten ba appen makkerne godkjenne i vanlige runder, og i avsluttede.
+  // Første rad er den gamle testen: leverte, ikke godkjente kort fra
+  // flight-makkere — aldri mitt eget.
+  it.each([
+    [true, 'active', ['mate']],
+    [false, 'active', []],
+    [true, 'finished', []],
+    [true, 'scheduled', []],
+  ])(
+    'requirePeerApproval=%p og status=%p gir %p',
+    (requirePeerApproval: boolean, status: string, expected: string[]) => {
+      const roster = toRoster([
+        player({ userId: 'me', submittedAt: '2026-08-30T10:00:00.000Z' }),
+        player({ userId: 'mate', submittedAt: '2026-08-30T10:05:00.000Z' }),
+        player({ userId: 'nothanded' }),
+        player({
+          userId: 'done',
+          submittedAt: '2026-08-30T10:01:00.000Z',
+          approvedAt: '2026-08-30T10:02:00.000Z',
+        }),
+      ]);
+      const game = { gameMode: SOLO, status, requirePeerApproval };
 
-    expect(idsOf(pendingApprovals(roster, SOLO, 'me'))).toEqual(['mate']);
-  });
+      expect(idsOf(pendingApprovals(roster, game, 'me'))).toEqual(expected);
+    },
+  );
 });
 
 describe('shouldConfirmParticipation', () => {

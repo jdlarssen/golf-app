@@ -4,6 +4,10 @@
 // godkjenn-side, spill-hjem-banneret og hjem-kortene. Den lister aldri deg selv
 // (0103-triggeren forbyr selv-godkjenning uansett).
 //
+// #2220: lista har samme gate som «Godkjenn (N)» på spill-hjem
+// (`pendingApprovals`): runden krever godkjenning og pågår. Ellers står den
+// tomme tilstanden, så knappen og lista aldri sier noe forskjellig.
+//
 // Selve autorisasjonen ligger i Postgres: `can_score_for` (0106) med
 // kolonne-allowlist-triggeren. Skjermen er UX foran den porten, ikke porten
 // selv — derfor MÅ et `{ ok: false }` vises, også når PostgREST svarte uten
@@ -19,7 +23,6 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import { approveScorecard, rejectScorecard } from '../data/playerActions';
 import { seedGameScores } from '../data/seedScores';
@@ -103,9 +106,7 @@ export function Approve({ route }: ScreenProps<'Approve'>) {
 
   const roster = toRoster(bundle.players);
   const me = findInRoster(roster, userId);
-  const pending = me
-    ? pendingApprovals(roster, bundle.game.gameMode as GameMode, userId)
-    : [];
+  const pending = me ? pendingApprovals(roster, bundle.game, userId) : [];
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="approve-screen">

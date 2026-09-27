@@ -18,7 +18,7 @@ import {
 import { isMatchplayMode } from '../../../../lib/games/matchplaySides';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { wolfLinearHolesForSlot } from '../../../../lib/wolf/wolfLinearHolesForSlot';
-import type { BundlePlayer } from '../data/gameBundle';
+import type { BundleGame, BundlePlayer } from '../data/gameBundle';
 import { wolfRotationPlayers } from './wolfHole';
 
 /** En roster-rad i den formen de delte reglene leser, med spilleren vedlagt. */
@@ -68,13 +68,24 @@ export function resolveFlight(
   return active.filter((entry) => entry.flight_number === me.flight_number);
 }
 
-/** Kortene jeg kan godkjenne nå. Ren gjenbruk av den delte regelen. */
+/**
+ * Kortene jeg kan godkjenne nå.
+ *
+ * Gaten er webbens `PendingApprovalsBanner.tsx:29` (#2220): lista finnes bare
+ * når runden krever godkjenning (`requirePeerApproval`) OG pågår. Uten den ba
+ * appen makkerne godkjenne i vanlige runder, der RLS (0106) lar dem sende
+ * kortet tilbake, og i avsluttede, der skrivingen svarer «ikke aktivt».
+ *
+ * Hvem som kan attestere hvem er den delte `pendingApprovalsFor`, uendret.
+ * Gaten er et spørsmål om spillet, ikke om attestanten, og står derfor her.
+ */
 export function pendingApprovals(
   roster: readonly RosterEntry[],
-  gameMode: GameMode,
+  game: Pick<BundleGame, 'gameMode' | 'status' | 'requirePeerApproval'>,
   approverUserId: string,
 ): RosterEntry[] {
-  return pendingApprovalsFor([...roster], gameMode, approverUserId);
+  if (!game.requirePeerApproval || game.status !== 'active') return [];
+  return pendingApprovalsFor([...roster], game.gameMode as GameMode, approverUserId);
 }
 
 /** Kan jeg attestere dette kortet? Delt regel — RLS (0106) er den ekte porten. */
