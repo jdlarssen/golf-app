@@ -894,7 +894,11 @@ h1, h2, h3, h4, h5, h6 {
    * 180ms keeps rapid hull-switching snappy. */
   @keyframes hole-fade-in {
     from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
+    /* `none`, not translateY(0): with fill-mode `both` the last frame stays
+     * on <main>, and any transform makes it the containing block for
+     * position: fixed — the «Annet» sheet would sit at the page bottom
+     * instead of the screen bottom (#2251). */
+    to   { opacity: 1; transform: none; }
   }
   .animate-hole-enter {
     animation: hole-fade-in 180ms ease-out both;
