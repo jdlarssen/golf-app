@@ -6,7 +6,8 @@
 // staging-bygget. Et slag som aldri kom fram var dermed usynlig for spilleren.
 // Dette er speilet av webbens `components/sync/SyncBanner.tsx` i den scopede
 // formen (ett spill): hullene navngis, feilteksten vises, «Prøv igjen» drainer,
-// og «Fjern varselet» spør først. Konfliktvarslene avvises ett og ett.
+// og «Fjern varselet» spør først. Er all karantene låste avslag (#2211), sier
+// varselet hvorfor og fjernes uten å spørre. Konfliktvarslene avvises ett og ett.
 //
 // Oppsummeringen er webbens egen (`lib/sync/quarantineSummary.ts`) — én regel
 // for hvilke hull som står fast, ett hjem. Aldri gatet på `isStagingBuild()`.
@@ -98,26 +99,35 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     await reload();
   };
 
+  const summary = abandoned.length > 0 ? summarizeQuarantine(queue, gameId) : null;
+
   // Bare id-ene som sto i karantene da varselet ble tegnet: et slag som
   // fortsatt prøver, blir aldri feid med.
   const dismissQuarantine = () => {
     const ids = abandoned.map((i) => i.id);
+    const remove = () => {
+      void (async () => {
+        try {
+          const db = await getDb();
+          for (const id of ids) await deleteQueueItem(db, id);
+        } catch {
+          // Varselet blir stående; neste trykk prøver igjen.
+        }
+        await reload();
+      })();
+    };
+    // #2211: bekreftelsen verner slag som ennå kan sendes. Et låst avslag kan
+    // aldri sendes, og telefonen viser alt serverens tall — spør ikke.
+    if (summary?.lockedOnly) {
+      remove();
+      return;
+    }
     Alert.alert(SYNC_BANNER_TEXT.quarantineDismiss, SYNC_BANNER_TEXT.quarantineDismissConfirm, [
       { text: 'Avbryt', style: 'cancel' },
       {
         text: SYNC_BANNER_TEXT.quarantineDismiss,
         style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            try {
-              const db = await getDb();
-              for (const id of ids) await deleteQueueItem(db, id);
-            } catch {
-              // Varselet blir stående; neste trykk prøver igjen.
-            }
-            await reload();
-          })();
-        },
+        onPress: remove,
       },
     ]);
   };
@@ -132,7 +142,6 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     await reload();
   };
 
-  const summary = abandoned.length > 0 ? summarizeQuarantine(queue, gameId) : null;
   const tone = { borderColor: colors.danger, backgroundColor: colors.surface };
   const actionStyle = [styles.action, { borderColor: colors.danger }];
   const actionText = [styles.actionText, { color: colors.danger }];
@@ -156,9 +165,15 @@ export function SyncBanner({ gameId }: { gameId: string }) {
               {abandonedText(summary.totalCount)}
             </Text>
           )}
-          <Text style={[styles.hint, { color: colors.muted }]}>
-            {SYNC_BANNER_TEXT.quarantineRecoveryHint}
-          </Text>
+          {summary.lockedOnly ? (
+            <Text style={[styles.hint, { color: colors.muted }]} testID="quarantine-locked-hint">
+              {SYNC_BANNER_TEXT.quarantineLockedHint}
+            </Text>
+          ) : (
+            <Text style={[styles.hint, { color: colors.muted }]}>
+              {SYNC_BANNER_TEXT.quarantineRecoveryHint}
+            </Text>
+          )}
           {summary.errors.length > 0 && (
             <View testID="quarantine-errors">
               <Text style={[styles.hint, { color: colors.muted, fontFamily: FONTS.sansSemiBold }]}>

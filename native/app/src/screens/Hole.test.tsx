@@ -268,13 +268,37 @@ describe('Hole', () => {
   });
 
   it('tegner hele flighten og sender et tapp på «+» videre til writeScore', async () => {
+    // #2211: en tredje spiller har levert og har ingen score på hullet.
+    mockState.bundle = {
+      ...mockSoloBundle,
+      players: [
+        ...mockSoloBundle.players,
+        {
+          ...PLAYER_BASE,
+          userId: 'done',
+          name: 'Levert Larsen',
+          courseHandicap: 5,
+          submittedAt: '2026-08-30T09:30:00.000Z',
+        },
+      ],
+    };
     await renderHole();
 
-    // Begge spillerne er i samme flight (≤4 aktive → én gruppe, delt regel).
+    // Alle er i samme flight (≤4 aktive → én gruppe, delt regel).
     await waitFor(() => {
       expect(screen.getByText('Makker Makkersen')).toBeTruthy();
     });
     expect(screen.getByText('Meg Selv (deg)')).toBeTruthy();
+
+    // Det leverte kortet er låst: grått, merket «Levert», uten «Trykk kort =
+    // par», og «+» skriver ingenting.
+    const doneCard = screen.getByTestId('player-card-done');
+    expect(doneCard).toBeDisabled();
+    expect(doneCard).toHaveStyle({ opacity: 0.6 });
+    expect(screen.getByTestId('player-done-submitted')).toBeTruthy();
+    expect(screen.queryByTestId('player-done-hint')).toBeNull();
+    await fireEvent.press(screen.getByTestId('player-done-plus'));
+    expect(writeScore).not.toHaveBeenCalled();
 
     // #1988: første «+» på et tomt kort fører PAR + 1 (par 4 → 5), ikke 1.
     await fireEvent.press(screen.getByTestId('player-mate-plus'));
