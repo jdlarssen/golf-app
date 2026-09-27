@@ -54,6 +54,15 @@ describe('computeStablefordPoints', () => {
   it('returns 0 for null netStrokes (no score)', () => {
     expect(computeStablefordPoints({ par: 4, netStrokes: null })).toBe(0);
   });
+
+  // #2218: regel 21.1b har ikke tak — 2 + par − netto, aldri under 0.
+  it.each([
+    { par: 4, netStrokes: 0, expected: 6, label: 'netto −4' },
+    { par: 5, netStrokes: 0, expected: 7, label: 'netto −5' },
+    { par: 4, netStrokes: 9, expected: 0, label: 'netto +5 (aldri negativ)' },
+  ])('returns $expected for $label (no cap)', ({ par, netStrokes, expected }) => {
+    expect(computeStablefordPoints({ par, netStrokes })).toBe(expected);
+  });
 });
 
 describe('compute (full stableford leaderboard, solo)', () => {
@@ -96,6 +105,18 @@ describe('compute (full stableford leaderboard, solo)', () => {
     if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players[0].totalPoints).toBe(36);
     expect(result.players[0].holesPlayed).toBe(18);
+  });
+
+  it('#2218: banehandicap 62 med par på et par 4 med SI 3 gir 6 poeng (netto −4, ingen tak)', () => {
+    // CH 62 = 3×18 + 8 → 4 slag på SI 1–8. Brutto 4 − 4 = netto 0 = 4 under par.
+    const ctx = makeCtx({
+      players: [{ userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 62 }],
+      holes: [{ number: 3, par: 4, strokeIndex: 3 }],
+      scores: [{ userId: 'u1', holeNumber: 3, gross: 4 }],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    expect(result.players[0].totalPoints).toBe(6);
   });
 
   it('hopper over hull med null gross (pick up / ikke spilt)', () => {

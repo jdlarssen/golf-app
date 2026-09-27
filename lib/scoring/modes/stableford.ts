@@ -47,9 +47,12 @@ export type ContributorPredicate = (
 ) => boolean;
 
 /**
- * Konverterer ett hull-resultat til stableford-poeng etter standard-tabellen:
+ * Konverterer ett hull-resultat til stableford-poeng etter standard-tabellen
+ * i regel 21.1b: poeng = 2 + par − netto, aldri under 0. Tabellen har ikke
+ * tak (#2218) — netto −4 gir 6 poeng, −5 gir 7:
  *   diff (netto − par)    poeng
- *   ≤ −3 (double eagle+)    5
+ *   −4                      6
+ *   −3 (albatross)          5
  *   −2 (eagle)              4
  *   −1 (birdie)             3
  *    0 (par)                2
@@ -62,12 +65,7 @@ export type ContributorPredicate = (
 export function computeStablefordPoints(input: StablefordPointsInput): number {
   if (input.netStrokes === null) return 0;
   const diff = input.netStrokes - input.par;
-  if (diff <= -3) return 5;
-  if (diff === -2) return 4;
-  if (diff === -1) return 3;
-  if (diff === 0) return 2;
-  if (diff === 1) return 1;
-  return 0;
+  return Math.max(0, 2 - diff);
 }
 
 interface PlayerHolePoints {
