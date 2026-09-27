@@ -47,6 +47,8 @@ vi.mock('@/i18n/navigation', () => ({
 vi.mock('next-intl/server', () => ({
   getLocale: async () => 'no',
 }));
+// A match added to a cup expires the cup caches before the redirect.
+vi.mock('next/cache', () => ({ revalidateTag: vi.fn(), revalidatePath: vi.fn() }));
 
 const notifyInvitedToGameMock = vi.fn<
   (...args: unknown[]) => Promise<void>
@@ -255,6 +257,72 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
     const res = await createAndPublishGame(fullPublishFormData());
     expect(res).toEqual({ error: 'pending_players' });
     expect(redirectMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('cup link (#2207)', () => {
+  function gamesInsertPayload() {
+    const insert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    return insert?.args[0] as { tournament_id: string | null; tournament_match_label: string | null };
+  }
+
+  it('a cup the caller does not manage: the game is created without the link', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // gate
+        { data: { id: 'reg-game-cup' }, error: null }, // games.insert
+        { data: null, error: null }, // game_players.insert
+      ],
+      { can_manage_tournament: false },
+    );
+    signIn('reg-1', 'random@example.com');
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(
+        fd({
+          name: 'Kompis-cup',
+          side_tournament_enabled: 'false',
+          tournament_id: 'someone-elses-cup',
+          tournament_match_label: 'Kamp 1',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(supabaseMock.__rpcCalls).toContainEqual({
+      name: 'can_manage_tournament',
+      params: { p_tournament_id: 'someone-elses-cup' },
+    });
+    expect(gamesInsertPayload()).toMatchObject({ tournament_id: null, tournament_match_label: null });
+  });
+
+  it('the cup organiser: the game is linked to the cup', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null },
+        { data: { id: 'org-game-cup' }, error: null },
+        { data: null, error: null },
+      ],
+      { can_manage_tournament: true },
+    );
+    signIn('org-1', 'organiser@example.com');
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(
+        fd({
+          name: 'Kamp',
+          side_tournament_enabled: 'false',
+          tournament_id: 'my-cup',
+          tournament_match_label: 'Kamp 1',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(gamesInsertPayload()).toMatchObject({ tournament_id: 'my-cup', tournament_match_label: 'Kamp 1' });
+    expect(lastRedirect()).toBe('/admin/cup/my-cup?status=match_added');
   });
 });
 
