@@ -37,6 +37,7 @@
 --    18. a row moved to another game          → REJECTED
 --    19. inserting an already approved row    → REJECTED
 --    20. inserting a plain row                → PASS (the path «add player» uses)
+--    21. a row moved to another player        → REJECTED, creator included
 --
 -- Run via:  supabase test db
 -- See supabase/tests/README.md (same rig as #440).
@@ -46,7 +47,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(21);
 
 \ir fixtures/rls_helpers.psql
 
@@ -174,6 +175,19 @@ create or replace function torny_rls.try_insert_row(p_game uuid, p_user uuid, p_
               case when p_approved then now() end,
               case when p_approved then torny_rls.admin_id() end);
     return true;
+  exception when insufficient_privilege or unique_violation then return false;
+  end;
+  $$;
+
+create or replace function torny_rls.try_set_user(p_game uuid, p_from uuid, p_to uuid)
+  returns boolean language plpgsql as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set user_id = p_to
+     where game_id = p_game and user_id = p_from;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
   exception when insufficient_privilege or unique_violation then return false;
   end;
   $$;
@@ -403,6 +417,12 @@ select ok(
 select ok(
   torny_rls.try_insert_row(torny_rls.other_game_id(), torny_rls.active_id(), false),
   'a signed-in creator may still insert a plain row (0191)'
+);
+
+-- 21. A row stays with its player, even for the game's creator.
+select ok(
+  NOT torny_rls.try_set_user(torny_rls.other_game_id(), torny_rls.active_id(), torny_rls.flightmate_id()),
+  'a signed-in non-admin, creator included, may not move a row to another player (0191)'
 );
 
 select * from finish();
