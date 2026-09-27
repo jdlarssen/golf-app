@@ -56,7 +56,7 @@ Per fil: **én** full-HTML-chrome-lås for default-case. Ikke per case.
 
 ## Sending går gjennom `sendMail`
 
-Alle sendere bygger payloaden og kaller `sendMail({ to, subject, html, text[, headers] })` fra `lib/mail/send.ts`. Aldri `new Resend` eller `emails.send` direkte i en sender. `sendMail` eier klienten og from-adressen, holder tempoet under Resends grense på 10 kall i sekundet per team (8 fra hver instans) og prøver på nytt ved `rate_limit_exceeded` (#2227). Uten det mistet nyhetsbrevet 17 av 27 mottakere 1. september 2026. Tempo og nytt forsøk testes i `__tests__/resend-contract.test.ts`, ikke per modul.
+Alle sendere bygger payloaden og kaller `sendMail({ to, subject, html, text[, headers] })` fra `lib/mail/send.ts`. Aldri lag en egen Resend-klient eller kall `emails.send` direkte i en sender. `sendMail` eier klienten og from-adressen, holder tempoet under Resends grense på 10 kall i sekundet per team (8 fra hver instans) og prøver på nytt ved `rate_limit_exceeded` (#2227). Uten det mistet nyhetsbrevet 17 av 27 mottakere 1. september 2026. Tempo og nytt forsøk testes i `__tests__/resend-contract.test.ts`, ikke per modul.
 
 ## Når du legger til ny mail-sender
 
