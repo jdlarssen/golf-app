@@ -7,6 +7,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { findGuestIds } from '@/lib/games/createGuestPlayer';
+import { asTeeChoice, teeChoiceToDb } from '@/lib/games/teeChoice';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
@@ -31,10 +32,6 @@ import type { Tables } from '@/lib/database.types';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
-function uiGenderToDb(ui: string): 'mens' | 'ladies' | 'juniors' {
-  return ui === 'D' ? 'ladies' : ui === 'J' ? 'juniors' : 'mens';
-}
-
 /**
  * #2210: the tee category the form sent for a player, or `null` when it sent
  * none. Several formats render no category toggle (#2209) — `null` keeps the
@@ -45,7 +42,7 @@ function formTeeGender(
   userId: string,
 ): 'mens' | 'ladies' | 'juniors' | null {
   const raw = String(formData.get(`player_${userId}_gender`) ?? '').trim();
-  return raw ? uiGenderToDb(raw) : null;
+  return raw ? teeChoiceToDb(asTeeChoice(raw)) : null;
 }
 
 export async function saveDraftAction(gameId: string, formData: FormData) {
