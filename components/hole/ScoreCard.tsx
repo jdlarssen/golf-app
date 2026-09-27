@@ -86,7 +86,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     score,
     par,
     disabled = false,
-    submitted = false,
+    submitted,
     hideNetto = false,
     stablefordPoints = null,
     onSetScore,

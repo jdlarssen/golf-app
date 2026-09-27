@@ -92,6 +92,27 @@ function friendlySyncError(
  *    (#1370) and their copy («Hull 7 ble endret …») names no round, so it reads
  *    as nonsense away from one.
  */
+/**
+ * The quarantine's «what now?» line. A locked-card refusal (#2211) can never
+ * be sent, so re-entering the stroke would only be refused again — say why
+ * instead, and point to reopening the card.
+ */
+function QuarantineHint({ lockedOnly }: { lockedOnly: boolean }) {
+  const t = useTranslations('SyncBanner');
+  return lockedOnly ? (
+    <p
+      data-testid="quarantine-locked-hint"
+      className="mt-1 text-xs font-normal opacity-80"
+    >
+      {t('quarantineLockedHint')}
+    </p>
+  ) : (
+    <p className="mt-1 text-xs font-normal opacity-80">
+      {t('quarantineRecoveryHint')}
+    </p>
+  );
+}
+
 export function SyncBanner({ gameId }: { gameId?: string }) {
   const t = useTranslations('SyncBanner');
   const locale = useLocale();
@@ -239,18 +260,7 @@ export function SyncBanner({ gameId }: { gameId?: string }) {
               </p>
             )}
           </div>
-          {summary.lockedOnly ? (
-            <p
-              data-testid="quarantine-locked-hint"
-              className="mt-1 text-xs font-normal opacity-80"
-            >
-              {t('quarantineLockedHint')}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs font-normal opacity-80">
-              {t('quarantineRecoveryHint')}
-            </p>
-          )}
+          <QuarantineHint lockedOnly={summary.lockedOnly} />
           {currentGame && (
             <div className="mt-1 flex flex-wrap gap-x-3">
               {currentGame.holes.map((hole) => (
