@@ -496,7 +496,9 @@ function LayoutATable({
                       tone={scoreTone(r.strokes - r.extra, r.par)}
                       size="sm"
                     >
-                      {r.strokes - r.extra}
+                      <span data-testid={`scorecard-a-netto-${r.hole_number}`}>
+                        {r.strokes - r.extra}
+                      </span>
                     </ScoreShape>
                   ) : (
                     '—'
@@ -526,7 +528,10 @@ function LayoutATable({
                 {showHandicapTotal && (
                   <span>
                     {t('footerStrokesGiven')}{' '}
-                    <span className="score-num text-text">
+                    <span
+                      className="score-num text-text"
+                      data-testid="scorecard-a-total-strokes-given"
+                    >
                       {totalExtraSlag}
                     </span>
                   </span>
@@ -534,7 +539,12 @@ function LayoutATable({
                 {showNetto && (
                   <span>
                     {t('footerNetto')}{' '}
-                    <span className="score-num text-text">{totalNetto}</span>
+                    <span
+                      className="score-num text-text"
+                      data-testid="scorecard-a-total-netto"
+                    >
+                      {totalNetto}
+                    </span>
                   </span>
                 )}
               </div>
@@ -748,7 +758,14 @@ function LayoutBTable({
                         {cell.strokes}
                       </ScoreShape>
                       {showNetto && (
-                        <span className="score-num text-[10.5px] text-muted mt-0.5">
+                        <span
+                          className="score-num text-[10.5px] text-muted mt-0.5"
+                          data-testid={
+                            isStableford
+                              ? undefined
+                              : `scorecard-b-netto-${r.hole_number}-${columns[idx].userId}`
+                          }
+                        >
                           {isStableford
                             ? (cell.stablefordPoints ?? 0)
                             : (cell.netto ?? '—')}
@@ -779,7 +796,15 @@ function LayoutBTable({
                         <>
                           {' / '}
                           <span className="score-num text-text">
-                            {isStableford ? pt.points : pt.netto}
+                            <span
+                              data-testid={
+                                isStableford
+                                  ? undefined
+                                  : `scorecard-b-total-netto-${c.userId}`
+                              }
+                            >
+                              {isStableford ? pt.points : pt.netto}
+                            </span>
                             <span className="text-muted ml-0.5 text-[10.5px]">
                               {secondaryLabel}
                             </span>

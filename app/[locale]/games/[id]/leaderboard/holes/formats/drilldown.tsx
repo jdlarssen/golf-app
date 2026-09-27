@@ -37,6 +37,7 @@ import {
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
+import { playerStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
 
 export async function DrilldownBody({
@@ -76,9 +77,22 @@ export async function DrilldownBody({
       name: p.users!.name ?? tCommon('unknownPlayer'),
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
-      courseHandicap: p.course_handicap ?? 0,
+      // #2218: netto with the strokes the engine counts (fourball allowance,
+      // 0 for the gross options). The one-ball team formats still get the
+      // raw number here — this best-ball model is not theirs.
+      courseHandicap: playerStrokeHandicap(
+        gwp.game.game_mode,
+        gwp.game.mode_config,
+        p.course_handicap ?? 0,
+      ),
       teeGender: p.tee_gender,
     }));
+
+  // The «HCP» label keeps showing the frozen course handicap, like the game
+  // page does — only the netto maths above follows the engine.
+  const frozenHandicapByUser = new Map(
+    gwp.players.map((p) => [p.user_id, p.course_handicap ?? 0]),
+  );
 
   const allHoles: LbHole[] = rawHoles.map((h) => ({
     holeNumber: h.hole_number,
@@ -166,6 +180,7 @@ export async function DrilldownBody({
       holeWinners={holeWinners}
       holeSegment={holeSegment}
       navContext={navContext}
+      frozenHandicapByUser={frozenHandicapByUser}
     />
   );
 }
@@ -183,6 +198,7 @@ function DrilldownView({
   holeWinners,
   holeSegment,
   navContext,
+  frozenHandicapByUser,
 }: {
   gameId: string;
   mode: LeaderboardMode;
@@ -192,6 +208,7 @@ function DrilldownView({
   holeWinners: Array<number | null>;
   holeSegment: HoleSegment;
   navContext?: LeaderboardNavContext;
+  frozenHandicapByUser: ReadonlyMap<string, number>;
 }) {
   const t = useTranslations('leaderboard.holes');
   const tc = useTranslations('leaderboard.common');
@@ -229,7 +246,10 @@ function DrilldownView({
         .map((p) => formatRevealName(p.name, p.nickname))
         .join(' · ')
     : selected.players
-        .map((p) => `${firstNameOf(p.name)} (HCP ${formatWholeHcpDisplay(p.courseHandicap, locale)})`)
+        .map(
+          (p) =>
+            `${firstNameOf(p.name)} (HCP ${formatWholeHcpDisplay(frozenHandicapByUser.get(p.userId) ?? p.courseHandicap, locale)})`,
+        )
         .join(' · ');
 
   // Find sibling teams for prev/next within the ordered list — lets the user
@@ -272,7 +292,10 @@ function DrilldownView({
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <span className="block font-serif text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text">
+            <span
+              className="block font-serif text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text"
+              data-testid="drilldown-team-total"
+            >
               {selected.total}
             </span>
             <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
@@ -548,6 +571,7 @@ function HoleRow({
                 className={`min-w-[18px] text-right text-[14px] ${
                   isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
                 }`}
+                data-testid={`drilldown-netto-${row.holeNumber}-${pc.userId}`}
               >
                 {nettoText}
               </span>

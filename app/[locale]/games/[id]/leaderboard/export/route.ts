@@ -7,6 +7,7 @@ import { COURSE_HOLES_SELECT, SCORES_SELECT } from '@/lib/supabase/queryFragment
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
+import { playerStrokeHandicap } from '@/lib/scoring/allocatedStrokes';
 import {
   computeLeaderboard,
   teamMembersLabel,
@@ -144,7 +145,14 @@ export async function GET(
       name: p.users!.name ?? t('unknownPlayer'),
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
-      courseHandicap: p.course_handicap ?? 0,
+      // #2218: parity with the «Hull for hull» drilldown, which builds
+      // LbPlayer the same way. Best ball (the only board linking here) gets
+      // the raw number as before.
+      courseHandicap: playerStrokeHandicap(
+        game.game_mode,
+        game.mode_config,
+        p.course_handicap ?? 0,
+      ),
       teeGender: p.tee_gender,
     }));
 
