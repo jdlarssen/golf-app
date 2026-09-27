@@ -10,7 +10,9 @@ import {
   canApproveScorecardFor,
   pendingApprovalsFor,
   eligibleForFlightAssignment,
+  organizerApprovalRow,
   type FlightPlayer,
+  type OrganizerApprovalRow,
 } from './flightScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
@@ -457,6 +459,53 @@ describe('canApproveScorecardFor', () => {
         }
       }
     }
+  });
+});
+
+// ─── organizerApprovalRow ────────────────────────────────────────────────────
+
+describe('organizerApprovalRow (#2213)', () => {
+  const stableford: GameMode = 'stableford';
+  const organizer = { userId: 'kari', isAdmin: false };
+  const admin = { userId: 'kari', isAdmin: true };
+  // >4 aktive: flight-regelen gjelder, ikke én-flight.
+  const bigGame = [
+    p('kari', 1),
+    withdrawn('ola', 1),
+    p('c', 2),
+    p('d', 2),
+    p('e', 2),
+    p('f', 2),
+  ];
+
+  it.each<
+    [string, FlightPlayer[], { userId: string; isAdmin: boolean }, string, OrganizerApprovalRow]
+  >([
+    ['admin ser godkjenn også på eget kort', [p('kari'), p('ola')], admin, 'kari', 'can_approve'],
+    ['arrangør på en annens kort', [p('kari'), p('ola')], organizer, 'ola', 'can_approve'],
+    [
+      'eget kort med aktiv medspiller trenger medspilleren',
+      [p('kari'), p('ola')],
+      organizer,
+      'kari',
+      'own_card_needs_peer',
+    ],
+    [
+      'eget kort der eneste medspiller er trukket: ingen kan godkjenne',
+      [p('kari'), withdrawn('ola')],
+      organizer,
+      'kari',
+      'own_card_no_peer',
+    ],
+    [
+      '>4 med flight: egen flight er trukket mens andre er aktive',
+      bigGame,
+      organizer,
+      'kari',
+      'own_card_no_peer',
+    ],
+  ])('%s', (_, players, viewer, card, expected) => {
+    expect(organizerApprovalRow(players, stableford, viewer, card)).toBe(expected);
   });
 });
 

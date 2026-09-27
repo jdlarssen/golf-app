@@ -17,6 +17,11 @@ import {
 } from '@/components/games/MissingPlayersWithdrawList';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
+import {
+  organizerApprovalRow,
+  type FlightPlayer,
+  type OrganizerApprovalRow,
+} from '@/lib/games/flightScope';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
@@ -34,6 +39,35 @@ type Params = Promise<{ id: string }>;
 // `status=reminded` er kvitteringen purre-action-en redirecter tilbake med
 // (#1889) — samme search-param-mønster som admin-status-siden bruker.
 type SearchParams = Promise<{ error?: string; status?: string }>;
+
+/**
+ * What the wait-for-approval state can offer the organiser (#2213). A
+ * non-admin organiser can't approve their own card (0168's guard), so the
+ * approval override only helps for the other cards. When nobody can approve
+ * the organiser's card, the way out is to reopen it on /spillere and finish
+ * anyway.
+ */
+function unapprovedApprovalState(
+  players: FlightPlayer[],
+  gameMode: GameMode,
+  viewer: { userId: string; isAdmin: boolean },
+  unapprovedUserIds: string[],
+): {
+  anyCanApprove: boolean;
+  ownCardRow: OrganizerApprovalRow | undefined;
+  allOwnCardNoPeer: boolean;
+} {
+  const rows = unapprovedUserIds.map((userId) => ({
+    userId,
+    row: organizerApprovalRow(players, gameMode, viewer, userId),
+  }));
+  return {
+    anyCanApprove: rows.some((r) => r.row === 'can_approve'),
+    ownCardRow: rows.find((r) => r.userId === viewer.userId)?.row,
+    allOwnCardNoPeer:
+      rows.length > 0 && rows.every((r) => r.row === 'own_card_no_peer'),
+  };
+}
 
 /**
  * Creator-facing «Avslutt spill»-flate (#427) — the non-admin mirror of the
@@ -63,6 +97,7 @@ export default async function CreatorAvsluttPage({
   const { id: gameId } = await params;
   const { error, status: notice } = await searchParams;
   const t = await getTranslations('game.finish');
+  const tPlayers = await getTranslations('game.players');
   const locale = await getLocale();
   const detailPath = `/games/${gameId}`;
 
@@ -101,12 +136,13 @@ export default async function CreatorAvsluttPage({
   const { data: gamePlayers } = await getAdminClient()
     .from('game_players')
     .select(
-      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+      'user_id, flight_number, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
+        flight_number: number | null;
         submitted_at: string | null;
         approved_at: string | null;
         withdrawn_at: string | null;
@@ -126,6 +162,12 @@ export default async function CreatorAvsluttPage({
   const unapproved = game.require_peer_approval
     ? active.filter((gp) => gp.submitted_at && !gp.approved_at)
     : [];
+  const { anyCanApprove, ownCardRow, allOwnCardNoPeer } = unapprovedApprovalState(
+    gamePlayers ?? [],
+    game.game_mode,
+    role,
+    unapproved.map((gp) => gp.user_id),
+  );
 
   const sideOn =
     game.side_tournament_enabled &&
@@ -178,19 +220,42 @@ export default async function CreatorAvsluttPage({
               <li key={gp.user_id}>{displayName(gp)}</li>
             ))}
           </ul>
-          <p className="mt-2 text-text">
-            {t('unapprovedNote')}
-          </p>
-          <p className="mt-2 text-text">
-            {t('approveOverrideNote')}
-          </p>
+          {!allOwnCardNoPeer && (
+            <p className="mt-2 text-text">
+              {t('unapprovedNote')}
+            </p>
+          )}
+          {anyCanApprove && (
+            <p className="mt-2 text-text">
+              {t('approveOverrideNote')}
+            </p>
+          )}
+          {ownCardRow === 'own_card_needs_peer' && (
+            <p data-testid="own-card-needs-peer" className="mt-2 text-text">
+              {tPlayers('ownCard.needsPeer')}
+            </p>
+          )}
+          {ownCardRow === 'own_card_no_peer' && (
+            <p data-testid="own-card-no-peer" className="mt-2 text-text">
+              {t('ownCardNoPeer')}
+            </p>
+          )}
         </div>
-        <Link
-          href={`${detailPath}/spillere#leverte-scorekort`}
-          className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
-        >
-          {t('approveOverrideCta')}
-        </Link>
+        {anyCanApprove ? (
+          <Link
+            href={`${detailPath}/spillere#leverte-scorekort`}
+            className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+          >
+            {t('approveOverrideCta')}
+          </Link>
+        ) : (
+          <Link
+            href={`${detailPath}/spillere`}
+            className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+          >
+            {t('ownCardCta')}
+          </Link>
+        )}
         <Link
           href={detailPath}
           className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"

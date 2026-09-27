@@ -14,6 +14,7 @@ import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { ApprovePlayerButton } from '@/app/[locale]/admin/games/[id]/ApprovePlayerButton';
+import { organizerApprovalRow } from '@/lib/games/flightScope';
 import { ReopenScorecardButton } from '@/app/[locale]/admin/games/[id]/ReopenScorecardButton';
 import {
   adminWithdrawPlayer,
@@ -228,6 +229,19 @@ export default async function CreatorSpillerePage({
     isActive && game.require_peer_approval
       ? players.filter((p) => !p.withdrawn_at && p.submitted_at && !p.approved_at)
       : [];
+  // #2213: a non-admin organiser can never approve their own card (0168's
+  // guard only lets them clear it), so that row gets an explanation instead
+  // of a button that always fails.
+  const approvalRowFor = (cardUserId: string) =>
+    organizerApprovalRow(
+      players,
+      game.game_mode,
+      { userId: role.userId, isAdmin: role.isAdmin },
+      cardUserId,
+    );
+  const anyCanApprove = awaitingApproval.some(
+    (p) => approvalRowFor(p.user_id) === 'can_approve',
+  );
 
   // #1586: den som godkjenner må kunne se kortet. Scores via service-role —
   // siden er gated bak requireAdminOrCreator (samme mønster som gjeste-
@@ -432,41 +446,65 @@ export default async function CreatorSpillerePage({
         {awaitingApproval.length > 0 && (
           <section id="leverte-scorekort">
             <MiniRibbon>{t('approvalSection')}</MiniRibbon>
-            <p className="mb-2 px-1 text-sm text-muted">
-              {t('approvalHint')}
-            </p>
+            {anyCanApprove && (
+              <p className="mb-2 px-1 text-sm text-muted">
+                {t('approvalHint')}
+              </p>
+            )}
             <ul className="space-y-2">
-              {awaitingApproval.map((p) => (
-                <li
-                  key={p.user_id}
-                  className="rounded-xl border border-border bg-surface px-3.5 py-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm font-medium text-text">
-                      {playerName(p)}
-                    </p>
-                    <ApprovePlayerButton
-                      approveAction={adminApproveScorecard.bind(null, gameId, p.user_id)}
-                    />
-                  </div>
-                  {approvalHoles.length > 0 && (
-                    <details
-                      data-testid="submitted-scorecard-details"
-                      className="mt-2"
-                    >
-                      <summary className="tap-extend text-sm text-muted cursor-pointer hover:text-text transition-colors [--tap-extend:-8px_0_-16px]">
-                        {tApprove('showCard')}
-                      </summary>
-                      <ScorecardTable
-                        holes={approvalHoles}
-                        scores={approvalScores.get(p.user_id) ?? new Map()}
-                        teeGender={p.tee_gender}
-                        holeSegment={game.hole_segment}
-                      />
-                    </details>
-                  )}
-                </li>
-              ))}
+              {awaitingApproval.map((p) => {
+                const approvalRow = approvalRowFor(p.user_id);
+                return (
+                  <li
+                    key={p.user_id}
+                    data-testid={`awaiting-approval-${p.user_id}`}
+                    className="rounded-xl border border-border bg-surface px-3.5 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-sm font-medium text-text">
+                        {playerName(p)}
+                      </p>
+                      {approvalRow === 'can_approve' && (
+                        <ApprovePlayerButton
+                          approveAction={adminApproveScorecard.bind(null, gameId, p.user_id)}
+                        />
+                      )}
+                    </div>
+                    {approvalRow === 'own_card_needs_peer' && (
+                      <p
+                        data-testid="own-card-needs-peer"
+                        className="mt-1 text-sm text-muted"
+                      >
+                        {t('ownCard.needsPeer')}
+                      </p>
+                    )}
+                    {approvalRow === 'own_card_no_peer' && (
+                      <p
+                        data-testid="own-card-no-peer"
+                        className="mt-1 text-sm text-muted"
+                      >
+                        {t('ownCard.noPeer')}
+                      </p>
+                    )}
+                    {approvalHoles.length > 0 && (
+                      <details
+                        data-testid="submitted-scorecard-details"
+                        className="mt-2"
+                      >
+                        <summary className="tap-extend text-sm text-muted cursor-pointer hover:text-text transition-colors [--tap-extend:-8px_0_-16px]">
+                          {tApprove('showCard')}
+                        </summary>
+                        <ScorecardTable
+                          holes={approvalHoles}
+                          scores={approvalScores.get(p.user_id) ?? new Map()}
+                          teeGender={p.tee_gender}
+                          holeSegment={game.hole_segment}
+                        />
+                      </details>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
