@@ -2341,10 +2341,7 @@
     },
     "putts": {
       "toggleLabel": "Track putts",
-      "fieldLabel": "Putts",
-      "increaseAriaLabel": "More putts for {name}",
-      "decreaseAriaLabel": "Fewer putts for {name}",
-      "valueAriaLabel": "{count} putts"
+      "fieldLabel": "Putts"
     },
     "puttsChips": {
       "chipAriaLabel": "{count} putts on {name}",
