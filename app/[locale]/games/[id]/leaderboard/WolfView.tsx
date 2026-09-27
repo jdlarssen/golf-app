@@ -261,7 +261,7 @@ function PlayerRow({
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
             {tWolf('wolf.wolfHullPlayed', { count: wolfHolesPlayed })}
             {blindWolfWins > 0 && (
-              <span className="ml-1 text-muted/80">
+              <span className="ml-1 text-muted">
                 · {tWolf('wolf.blindWolfPott', { count: blindWolfWins })}
               </span>
             )}
@@ -343,7 +343,7 @@ function HoleRow({
 
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-muted">
           <span>
-            <span className="text-muted/80">{t('wolf.wolfLabel')}</span>{' '}
+            <span className="text-muted">{t('wolf.wolfLabel')}</span>{' '}
             <span className="text-text">{wolfName}</span>
           </span>
           <span aria-hidden className="text-muted/40">

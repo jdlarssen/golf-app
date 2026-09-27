@@ -30,10 +30,10 @@ export function WagerStakeSetup({
   const unit = t(`units.${unitKey}`);
   return (
     <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-foreground">
+      <legend className="px-1 text-sm font-semibold text-text">
         {t('legend')}
       </legend>
-      <p className="text-xs text-muted/80">{t('description', { unit })}</p>
+      <p className="text-xs text-muted">{t('description', { unit })}</p>
       <label className="block">
         <span className="text-xs font-medium text-muted">
           {t('krLabel', { unit })}
@@ -48,7 +48,7 @@ export function WagerStakeSetup({
           disabled={disabled}
           placeholder={t('placeholder')}
           aria-label={t('ariaLabel')}
-          className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-foreground focus:border-primary"
+          className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-text focus:border-primary"
         />
       </label>
     </fieldset>

@@ -53,7 +53,7 @@ export function ErrorScreen({
           {t('body')}
         </p>
         {error.digest && (
-          <p className="mt-2 font-mono text-[11px] tracking-tight text-muted/70">
+          <p className="mt-2 font-mono text-[11px] tracking-tight text-muted">
             {t('reference', { digest: error.digest })}
           </p>
         )}

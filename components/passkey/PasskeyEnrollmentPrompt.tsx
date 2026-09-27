@@ -106,7 +106,7 @@ export function PasskeyEnrollmentPrompt({
         className="mb-4 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3"
       >
         <p className="font-medium text-sm text-text">{t('nudgeDoneTitle')}</p>
-        <p className="text-xs text-text-muted mt-0.5">{t('nudgeDoneBody')}</p>
+        <p className="text-xs text-text mt-0.5">{t('nudgeDoneBody')}</p>
       </div>
     );
   }
@@ -115,7 +115,7 @@ export function PasskeyEnrollmentPrompt({
   return (
     <div className="mb-4 rounded-xl border border-accent/40 bg-accent/10 p-4">
       <p className="font-medium text-sm text-text">{t('nudgeTitle')}</p>
-      <p className="text-xs text-text-muted mt-0.5 leading-relaxed">{t('nudgeBody')}</p>
+      <p className="text-xs text-text mt-0.5 leading-relaxed">{t('nudgeBody')}</p>
       <div className="mt-3 flex gap-2">
         <button
           type="button"
@@ -125,7 +125,7 @@ export function PasskeyEnrollmentPrompt({
         >
           {t('nudgeEnable')}
         </button>
-        <button type="button" onClick={dismiss} className="text-text-muted text-sm px-3 min-h-11">
+        <button type="button" onClick={dismiss} className="text-text text-sm px-3 min-h-11">
           {t('nudgeLater')}
         </button>
       </div>

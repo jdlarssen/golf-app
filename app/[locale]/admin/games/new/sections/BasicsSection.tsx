@@ -38,15 +38,20 @@ function getLocalDatetimeMin(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-function formatRatingBadge(tee: {
-  has_mens: boolean;
-  has_ladies: boolean;
-  has_juniors: boolean;
-}): string {
+type BasicsT = ReturnType<typeof useTranslations<'wizard.sections.basics'>>;
+
+function formatRatingBadge(
+  tee: {
+    has_mens: boolean;
+    has_ladies: boolean;
+    has_juniors: boolean;
+  },
+  t: BasicsT,
+): string {
   const parts: string[] = [];
-  if (tee.has_mens) parts.push('herre');
-  if (tee.has_ladies) parts.push('dame');
-  if (tee.has_juniors) parts.push('junior');
+  if (tee.has_mens) parts.push(t('teeRatingMens'));
+  if (tee.has_ladies) parts.push(t('teeRatingLadies'));
+  if (tee.has_juniors) parts.push(t('teeRatingJuniors'));
   return parts.join(' · ');
 }
 
@@ -155,7 +160,7 @@ export function BasicsSection({
           <option value="">{selectedCourse ? t('teePlaceholderWithCourse') : t('teePlaceholderNoCourse')}</option>
           {availableTees.map((tee) => (
             <option key={tee.id} value={tee.id}>
-              {tee.name} ({formatRatingBadge(tee)})
+              {tee.name} ({formatRatingBadge(tee, t)})
             </option>
           ))}
         </select>

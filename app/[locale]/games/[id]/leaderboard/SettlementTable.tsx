@@ -32,7 +32,7 @@ export function SettlementTable({ settlement, playersById }: SettlementTableProp
   return (
     <section className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">{t('title')}</h3>
+        <h3 className="text-sm font-semibold text-text">{t('title')}</h3>
         <span className="text-xs text-muted tabular-nums">
           {t('stake', { kr: settlement.krPerUnit, unit: settlement.unitLabel })}
         </span>
@@ -44,7 +44,7 @@ export function SettlementTable({ settlement, playersById }: SettlementTableProp
             key={p.userId}
             className="flex items-center justify-between gap-3 text-sm"
           >
-            <span className="text-foreground">{name(p.userId)}</span>
+            <span className="text-text">{name(p.userId)}</span>
             <span
               className={`font-semibold tabular-nums ${
                 p.netKr > 0
@@ -76,7 +76,7 @@ export function SettlementTable({ settlement, playersById }: SettlementTableProp
                   to: name(pay.toUserId),
                 })}
               </span>
-              <span className="font-medium tabular-nums text-foreground">
+              <span className="font-medium tabular-nums text-text">
                 {formatKr(pay.kr)}
               </span>
             </li>

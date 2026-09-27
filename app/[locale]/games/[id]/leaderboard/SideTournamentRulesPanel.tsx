@@ -161,7 +161,7 @@ export function ScoringRulesPanel({
             <h3 className="mb-1 font-sans text-xs uppercase tracking-wide font-semibold text-muted">
               {t(group.titleKey as Parameters<typeof t>[0])}
               {group.hintKey && (
-                <span className="ml-2 normal-case tracking-normal font-normal text-muted/80">
+                <span className="ml-2 normal-case tracking-normal font-normal text-muted">
                   ({t(group.hintKey as Parameters<typeof t>[0])})
                 </span>
               )}

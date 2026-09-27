@@ -331,7 +331,7 @@ export default async function TeamDashboardPage({
             members={memberRows.map((r) => ({
               requestId: r.id,
               userId: r.user_id,
-              displayName: usersById.get(r.user_id)?.name ?? r.user_id,
+              displayName: usersById.get(r.user_id)?.name ?? t('teamDashMemberLabel'),
               status: r.status,
             }))}
           />

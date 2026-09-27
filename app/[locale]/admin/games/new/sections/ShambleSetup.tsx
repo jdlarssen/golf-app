@@ -47,7 +47,7 @@ export function ShambleSetup({
   const t = useTranslations('wizard.sections.shamble');
   return (
     <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-foreground">
+      <legend className="px-1 text-sm font-semibold text-text">
         {t('legend')}
       </legend>
 
@@ -72,7 +72,7 @@ export function ShambleSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('teamSize3Title')}</span>
-            <span className="text-[11px] text-muted/80">{t('teamSize3Desc')}</span>
+            <span className="text-[11px] text-muted">{t('teamSize3Desc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -91,7 +91,7 @@ export function ShambleSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('teamSize4Title')}</span>
-            <span className="text-[11px] text-muted/80">{t('teamSize4Desc')}</span>
+            <span className="text-[11px] text-muted">{t('teamSize4Desc')}</span>
           </label>
         </div>
       </div>
@@ -117,7 +117,7 @@ export function ShambleSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('variantShambleTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('variantShambleDesc')}</span>
+            <span className="text-[11px] text-muted">{t('variantShambleDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -136,7 +136,7 @@ export function ShambleSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('variantChampagneTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('variantChampagneDesc')}</span>
+            <span className="text-[11px] text-muted">{t('variantChampagneDesc')}</span>
           </label>
         </div>
       </div>
@@ -165,7 +165,7 @@ export function ShambleSetup({
                   className="sr-only"
                 />
                 <span className="text-xs font-medium">{n}</span>
-                <span className="text-[11px] text-muted/80">
+                <span className="text-[11px] text-muted">
                   {n === 1 ? t('countSingle') : t('countPlural')}
                 </span>
               </label>
@@ -195,7 +195,7 @@ export function ShambleSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('scoringNetDesc')}</span>
+            <span className="text-[11px] text-muted">{t('scoringNetDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -214,7 +214,7 @@ export function ShambleSetup({
               className="sr-only"
             />
             <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
-            <span className="text-[11px] text-muted/80">{t('scoringGrossDesc')}</span>
+            <span className="text-[11px] text-muted">{t('scoringGrossDesc')}</span>
           </label>
         </div>
       </div>

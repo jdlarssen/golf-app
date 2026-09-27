@@ -152,16 +152,17 @@ export function ModeToggle({
 }) {
   const tc = useTranslations('leaderboard.common');
   return (
+    // Links, not tabs: each one navigates to a URL, so the current one is
+    // marked with aria-current instead of a tab role.
     <div
-      role="tablist"
+      role="group"
       aria-label={tc('modeToggleAriaLabel')}
       className="inline-flex rounded-full bg-primary-soft p-1"
     >
       {(['netto', 'brutto'] as const).map((m) => (
         <SmartLink
           key={m}
-          role="tab"
-          aria-selected={mode === m}
+          aria-current={mode === m ? 'page' : undefined}
           // `replace` so flipping between netto and brutto swaps the URL
           // instead of stacking history entries (#1517) — same rule as the
           // state #4 ModeChip.
@@ -173,7 +174,7 @@ export function ModeToggle({
             publicView,
             publicHref: backHref,
           })}
-          className={`tap-extend min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all [--tap-extend:-4px_0] ${
+          className={`tap-extend min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-colors [--tap-extend:-4px_0] ${
             mode === m
               ? 'bg-surface text-text shadow-sm'
               : 'text-muted hover:text-text'

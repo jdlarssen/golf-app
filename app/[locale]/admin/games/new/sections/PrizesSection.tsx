@@ -74,10 +74,10 @@ export function PrizesSection({ state }: Props) {
       data-testid="prizes-section"
       className="space-y-3 rounded-md border border-border bg-surface px-4 py-4"
     >
-      <legend className="px-1 text-sm font-semibold text-foreground">
+      <legend className="px-1 text-sm font-semibold text-text">
         {t('legend')}
       </legend>
-      <p className="text-xs text-muted/80">{t('hint')}</p>
+      <p className="text-xs text-muted">{t('hint')}</p>
 
       <div className="space-y-4">
         {slots.map((slot) => {
@@ -106,7 +106,7 @@ export function PrizesSection({ state }: Props) {
                 placeholder={t('prizePlaceholder')}
                 aria-label={t('prizeAriaLabel', { slot: slot.label })}
                 maxLength={PRIZE_DESCRIPTION_MAX}
-                className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-foreground focus:border-primary"
+                className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-text focus:border-primary"
               />
               {hasDescription && (
                 <>

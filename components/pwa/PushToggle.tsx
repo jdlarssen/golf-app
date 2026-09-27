@@ -60,7 +60,7 @@ export function PushToggle() {
         {heading}
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="font-serif text-base font-medium text-text">{t('iosInstallTitle')}</p>
-          <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('iosInstallBody')}</p>
+          <p className="mt-1 text-xs text-text leading-relaxed">{t('iosInstallBody')}</p>
         </div>
       </>
     );
@@ -72,14 +72,14 @@ export function PushToggle() {
         {heading}
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="font-serif text-base font-medium text-text">{t('blockedTitle')}</p>
-          <p className="mt-1 text-xs text-text-muted leading-relaxed">{t('blockedIntro')}</p>
+          <p className="mt-1 text-xs text-text leading-relaxed">{t('blockedIntro')}</p>
           <ol className="mt-2 space-y-1 text-xs text-text list-decimal list-inside">
             <li>{t('blockedStep1')}</li>
             <li>{t('blockedStep2')}</li>
             <li>{t('blockedStep3')}</li>
           </ol>
-          <p className="mt-2 text-xs text-text-muted">{t('blockedFootnote')}</p>
-          <p className="mt-2 text-xs text-text-muted">{t('emailBackstop')}</p>
+          <p className="mt-2 text-xs text-text">{t('blockedFootnote')}</p>
+          <p className="mt-2 text-xs text-text">{t('emailBackstop')}</p>
         </div>
       </>
     );
@@ -93,7 +93,7 @@ export function PushToggle() {
       <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
         <div className="min-w-0">
           <p className="font-serif text-base font-medium text-text">{t('title')}</p>
-          <p className="text-xs text-text-muted">{on ? t('on') : t('permissionNote')}</p>
+          <p className="text-xs text-text">{on ? t('on') : t('permissionNote')}</p>
         </div>
         <Switch
           checked={on}

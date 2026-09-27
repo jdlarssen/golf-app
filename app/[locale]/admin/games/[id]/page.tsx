@@ -801,7 +801,7 @@ async function PlayersSections({
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
                         <div
-                          className="h-full bg-primary transition-all duration-300"
+                          className="h-full bg-primary transition-[width] duration-300"
                           style={{ width: `${pct}%` }}
                         />
                       </div>

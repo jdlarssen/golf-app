@@ -326,7 +326,7 @@ function HoleRow({
         </div>
 
         {!hole.scored ? (
-          <p className="mt-1.5 text-[12px] text-muted/70">{t('common.venter')}</p>
+          <p className="mt-1.5 text-[12px] text-muted">{t('common.venter')}</p>
         ) : (
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px]">
             {/* Ace-siden */}

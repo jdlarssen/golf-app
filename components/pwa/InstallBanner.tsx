@@ -141,7 +141,7 @@ export function InstallBanner({
           <p className="font-medium text-sm text-text">
             {t('title')}
           </p>
-          <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+          <p className="text-xs text-text mt-0.5 leading-relaxed">
             {t('body')}
           </p>
         </div>
@@ -157,7 +157,7 @@ export function InstallBanner({
             type="button"
             onClick={dismiss}
             aria-label={t('closeAria')}
-            className="text-text-muted hover:text-text px-1.5 py-1 min-h-11 min-w-11 flex items-center justify-center"
+            className="text-text px-1.5 py-1 min-h-11 min-w-11 flex items-center justify-center"
           >
             ✕
           </button>

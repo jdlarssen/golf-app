@@ -303,7 +303,7 @@ function RoleControls({
 
   return (
     <form
-      className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3"
+      className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData();
@@ -320,7 +320,7 @@ function RoleControls({
         <select
           data-testid={`cup-participants-team-${participant.userId}`}
           aria-label={t('teamSelectAria', { name: participant.displayName })}
-          className="min-h-[44px] rounded-xl border border-line bg-bg px-3 text-sm text-text"
+          className="min-h-[44px] rounded-xl border border-border bg-bg px-3 text-sm text-text"
           value={team}
           onChange={(e) => {
             setTeam(e.target.value);
@@ -340,7 +340,7 @@ function RoleControls({
           type="checkbox"
           data-testid={`cup-participants-captain-${participant.userId}`}
           aria-label={t('captainAria', { name: participant.displayName })}
-          className="h-5 w-5 rounded border-line"
+          className="h-5 w-5 rounded border-border"
           checked={captain}
           disabled={team === ''}
           onChange={(e) => setCaptain(e.target.checked)}

@@ -184,7 +184,7 @@ function TeamRow({
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
             {t('common.grossBrutto', { count: totalGross })}
             {missingHoles > 0 && (
-              <span className="ml-1 text-muted/80">
+              <span className="ml-1 text-muted">
                 · {t('common.missingHoles', { count: missingHoles })}
               </span>
             )}

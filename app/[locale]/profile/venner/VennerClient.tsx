@@ -141,7 +141,7 @@ export function AddByEmailForm({
           label={label}
           labelHidden
           placeholder={placeholder}
-          autoComplete="email"
+          autoComplete="off"
           required
         />
       </div>

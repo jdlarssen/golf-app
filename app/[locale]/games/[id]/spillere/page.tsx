@@ -395,6 +395,7 @@ export default async function CreatorSpillerePage({
                         type="email"
                         name="guest_email"
                         required
+                        autoComplete="off"
                         defaultValue={claimedTo ?? undefined}
                         placeholder={t('guestClaim.emailPlaceholder')}
                         aria-label={t('guestClaim.emailAriaLabel')}

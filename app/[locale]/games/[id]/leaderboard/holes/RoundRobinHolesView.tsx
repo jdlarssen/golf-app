@@ -200,7 +200,7 @@ function outcomeChip(
     case 'tied':
       return { label: t('roundRobin.outcomeChipTied'), className: 'text-muted' };
     case 'unplayed':
-      return { label: t('roundRobin.outcomeChipVenter'), className: 'text-muted/70' };
+      return { label: t('roundRobin.outcomeChipVenter'), className: 'text-muted' };
     default:
       // side1_wins / side2_wins markeres på selve siden, ingen topp-chip.
       return null;
@@ -316,7 +316,7 @@ function SideBlock({
               </span>
               <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                 {showGross && cell.gross != null && (
-                  <span className="text-[10.5px] text-muted/70">
+                  <span className="text-[10.5px] text-muted">
                     {t('roundRobin.bruttoLabel', { gross: cell.gross })}
                   </span>
                 )}

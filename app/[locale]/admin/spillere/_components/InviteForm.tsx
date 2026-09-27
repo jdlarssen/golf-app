@@ -55,7 +55,7 @@ export async function InviteForm() {
             type="email"
             label={t('emailLabel')}
             placeholder="spiller@example.com"
-            autoComplete="email"
+            autoComplete="off"
             required
           />
           <SubmitButton className="w-full" pendingLabel={t('invitingBusy')}>

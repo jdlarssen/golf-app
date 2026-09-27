@@ -101,7 +101,7 @@ export function FormatGuideSheet({
           </button>
         </div>
 
-        <div className="overflow-y-auto px-4 py-4">
+        <div className="overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
           <FormatGuideList
             entries={entries}
             withDetailLinks={false}

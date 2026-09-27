@@ -328,8 +328,10 @@ function ModeChip({
   // subtitle without competing with the leader-card hero.
   return (
     <div className="flex justify-center pb-2">
+      {/* Links, not tabs: each one navigates to a URL, so the current one is
+          marked with aria-current instead of a tab role. */}
       <div
-        role="tablist"
+        role="group"
         aria-label={t('modeToggleAriaLabel')}
         className="inline-flex rounded-full border border-border bg-surface p-0.5"
       >
@@ -338,8 +340,7 @@ function ModeChip({
           return (
             <SmartLink
               key={m}
-              role="tab"
-              aria-selected={active}
+              aria-current={active ? 'page' : undefined}
               // `replace` so flipping between netto and brutto swaps the URL
               // instead of stacking history entries — otherwise a gesture-back
               // has to walk through every toggle state before it leaves the

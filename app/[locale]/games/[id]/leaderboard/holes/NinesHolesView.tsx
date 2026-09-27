@@ -206,7 +206,7 @@ function HoleCard({
             </span>
           </div>
           {hole.pending ? (
-            <span className="text-[10.5px] text-muted/70">{t('nines.ventePaaScore')}</span>
+            <span className="text-[10.5px] text-muted">{t('nines.ventePaaScore')}</span>
           ) : (
             <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
               {t('nines.potLabel', { pot: potTotal(variant) })}
@@ -266,7 +266,7 @@ function HoleCard({
                     </span>
                   )}
                   {showGross && cell.gross != null && (
-                    <span className="text-[10.5px] text-muted/70">
+                    <span className="text-[10.5px] text-muted">
                       {t('nines.bruttoLabel', { gross: cell.gross })}
                     </span>
                   )}

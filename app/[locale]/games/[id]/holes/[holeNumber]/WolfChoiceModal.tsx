@@ -60,6 +60,7 @@ const cardStyle: CSSProperties = {
   gap: 10,
   maxHeight: 'calc(100dvh - 32px)',
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
 };
 
 const headerStyle: CSSProperties = {

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { FormatAuditEntry } from '@/lib/formats/audit';
+import { osloParts } from '@/lib/format/teeOff';
 
 type Props = {
   entries: FormatAuditEntry[];
@@ -39,13 +40,15 @@ function buildChangeLabel(t: FormatsT, entry: FormatAuditEntry): string {
   }
 }
 
+/**
+ * «dd.mm HH:MM» in Europe/Oslo wall-clock. This client component also renders
+ * on the UTC Vercel server, so local-TZ getters would show UTC there (and a
+ * different time after hydration); `osloParts` is TZ-stable on both sides.
+ */
 function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const hh = d.getHours().toString().padStart(2, '0');
-  const mm = d.getMinutes().toString().padStart(2, '0');
-  const dd = d.getDate().toString().padStart(2, '0');
-  const mo = (d.getMonth() + 1).toString().padStart(2, '0');
-  return `${dd}.${mo} ${hh}:${mm}`;
+  const { day, month, hour, minute } = osloParts(new Date(iso));
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${pad(day)}.${pad(month + 1)} ${pad(hour)}:${pad(minute)}`;
 }
 
 /**
