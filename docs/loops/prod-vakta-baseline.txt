@@ -80,7 +80,6 @@ authenticated_security_definer_function_executable_public_claim_push_subscriptio
 authenticated_security_definer_function_executable_public_connect_via_friend_code_p_code text
 authenticated_security_definer_function_executable_public_create_course_with_layout_p_name text, p_holes jsonb, p_tees jsonb
 authenticated_security_definer_function_executable_public_decide_join_request_p_request_id uuid, p_approve boolean
-authenticated_security_definer_function_executable_public_incomplete_profiles_for_ids_p_user_ids uuid[]
 authenticated_security_definer_function_executable_public_join_club_league_p_league_id uuid
 authenticated_security_definer_function_executable_public_leave_club_league_p_league_id uuid
 authenticated_security_definer_function_executable_public_remove_friend_p_other uuid
@@ -96,3 +95,16 @@ authenticated_security_definer_function_executable_public_respond_friend_request
 authenticated_security_definer_function_executable_public_send_friend_request_p_addressee uuid
 authenticated_security_definer_function_executable_public_send_friend_request_by_email_p_email text
 authenticated_security_definer_function_executable_public_set_club_member_role_p_group_id uuid, p_user_id uuid, p_role public.group_role
+#
+# #2207 (0185) — profil-porten og cup-kontrollen:
+#   — incomplete_profile_ids: svarer bare med id-er, og bare for de uferdige
+#     blant id-ene kalleren selv sender inn. Publiserings- og start-porten, web
+#     og app. anon revoked; service_role eksplisitt for cron-starten.
+authenticated_security_definer_function_executable_public_incomplete_profile_ids_p_user_ids uuid[]
+#   — can_manage_tournament: speiler UPDATE-policyen på tournaments og svarer
+#     bare true/false om kalleren selv styrer cupen. anon revoked.
+authenticated_security_definer_function_executable_public_can_manage_tournament_p_tournament_id uuid
+#   — incomplete_profiles_for_ids: har ingen intern authz, men svarer bare med
+#     id-er siden 0185 (e-post alltid null). Beholdt for app-bygg til og med
+#     1.1.0 (3), som kaller den ved publisering og leser bare antallet.
+authenticated_security_definer_function_executable_public_incomplete_profiles_for_ids_p_user_ids uuid[]

@@ -61,6 +61,21 @@ A client can call PostgREST directly and bypass every TypeScript guard.
 - Column-level rules (e.g. a player cannot self-approve or lower their own handicap post-start) require a **trigger** — see `guard_game_players_self_update` (migrations `0103`/`0106`).
 - Test each write path against a hostile direct PATCH with the `#440` RLS test rig, not just through the server action.
 
+## Private columns on `users` — e-post and friend code (#2207)
+
+`users.email` and `users.friend_code` are not SELECT-able for `authenticated` or `anon` (column grants, migration 0186), not even on the caller's own row. RLS decides *which rows* a caller sees; the service role fills in the two private fields, and only for:
+
+- **(a) the caller's own row**: `getPrivateUserFields([userId])` (`../users/privateUserFields.ts`), or the verified auth user's `email`;
+- **(b) admin surfaces behind `requireAdmin`**: switch that one query to `getAdminClient()` (an admin sees every row anyway, so the gate in the route is the enforcement);
+- **(c) server-side mail/notification sends**: `getPrivateUserFields` for the ids your own client's read returned; the value never reaches the browser.
+
+Where a non-admin surface needs to tell people apart, send `maskEmail(...)` (`../users/maskEmail.ts`), never the address.
+
+- A bare `.select()` after `.update()` asks for `select=*` and fails: ask back `id`.
+- **A new column on `users` needs its own `grant select (column) on public.users to anon, authenticated`**, or the app cannot see it. `supabase/tests/users_private_columns_test.sql` goes red for a column that is neither granted nor private.
+- `userPrivateColumnReads.test.ts` lists every read of the two columns with the client that runs it; a new site joins its allowlist with its class as the reason.
+- Match addresses exactly with `.filter('email', 'imatch', emailMatchPattern(x))` (`./emailMatch.ts`), never `.ilike`: there `_` and `%` are wildcards.
+
 ## Principle #5 — multi-step creation is atomic or compensated
 
 `#675` cup/liga inserted a parent then children with no rollback, leaving orphan rows on any network blip.
