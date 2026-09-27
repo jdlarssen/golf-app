@@ -13,7 +13,6 @@
 // have no `users.locale` to pass — the default is Norwegian, and the language
 // switcher is available once they log in.
 
-import { Resend } from 'resend';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { formatLongDateOsloLocale } from '@/lib/i18n/format';
 import {
@@ -22,26 +21,12 @@ import {
   resolveMailLocale,
   mailUrl,
 } from './i18n';
+import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 
 // RESEND_FROM_EMAIL in our env is the bare address (`noreply@tornygolf.no`).
 // We always want the display name "Tørny" in the From header, so wrap the
 // env value unless it already looks like a `Display Name <addr>` lockup.
-function resolveFromEmail(): string {
-  const raw = process.env.RESEND_FROM_EMAIL?.trim();
-  if (!raw) return 'Tørny <noreply@tornygolf.no>';
-  if (raw.includes('<') && raw.includes('>')) return raw;
-  return `Tørny <${raw}>`;
-}
-
-function getClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    throw new Error('RESEND_API_KEY is not set');
-  }
-  return new Resend(key);
-}
-
 export type InviteNotificationParams = {
   to: string;
   invitedByName: string;
@@ -256,20 +241,12 @@ export async function sendInviteNotification(
     expiresLineText +
     `${t('common.footerTagline')}\n`;
 
-  const resend = getClient();
-  const result = await resend.emails.send({
-    from: resolveFromEmail(),
+  await sendMail({
     to,
     subject,
     html,
     text,
   });
-
-  if (result.error) {
-    throw new Error(
-      `Resend send failed: ${result.error.message ?? JSON.stringify(result.error)}`,
-    );
-  }
 }
 
 function escapeHtml(s: string): string {

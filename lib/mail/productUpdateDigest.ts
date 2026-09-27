@@ -13,26 +13,11 @@
 // footer) come from the `mail` catalog. The digest ENTRIES (title/body)
 // are authored content — they are NOT translated and stay as-is.
 
-import { Resend } from 'resend';
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 
 const APP_BASE_URL = 'https://tornygolf.no';
-
-function resolveFromEmail(): string {
-  const raw = process.env.RESEND_FROM_EMAIL?.trim();
-  if (!raw) return 'Tørny <noreply@tornygolf.no>';
-  if (raw.includes('<') && raw.includes('>')) return raw;
-  return `Tørny <${raw}>`;
-}
-
-function getClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    throw new Error('RESEND_API_KEY is not set');
-  }
-  return new Resend(key);
-}
 
 export type ProductUpdateDigestEntry = {
   title: string;
@@ -165,9 +150,7 @@ export async function sendProductUpdateDigest(
     `${t('productUpdate.footerText2', { url: unsubUrl })}\n` +
     `${t('productUpdate.footerText3', { profileUrl })}\n`;
 
-  const resend = getClient();
-  const result = await resend.emails.send({
-    from: resolveFromEmail(),
+  await sendMail({
     to,
     subject,
     html,
@@ -179,12 +162,6 @@ export async function sendProductUpdateDigest(
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
   });
-
-  if (result.error) {
-    throw new Error(
-      `Resend send failed: ${result.error.message ?? JSON.stringify(result.error)}`,
-    );
-  }
 }
 
 function escapeHtml(s: string): string {

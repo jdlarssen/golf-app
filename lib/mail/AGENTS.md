@@ -54,9 +54,13 @@ Per fil: **én** full-HTML-chrome-lås for default-case. Ikke per case.
 
 `lib/mail/gameFinishedNotification.test.ts` (etter [PR #260](https://github.com/jdlarssen/golf-app/pull/260)). 24 tester, 48 snapshots, ÉN chrome-lås, 2 strukturelle assertions. Bruk denne som mønster — ikke kopier hele strukturen, men match disiplinen.
 
+## Sending går gjennom `sendMail`
+
+Alle sendere bygger payloaden og kaller `sendMail({ to, subject, html, text[, headers] })` fra `lib/mail/send.ts`. Aldri `new Resend` eller `emails.send` direkte i en sender. `sendMail` eier klienten og from-adressen, holder tempoet under Resends grense på 10 kall i sekundet per team (8 fra hver instans) og prøver på nytt ved `rate_limit_exceeded` (#2227). Uten det mistet nyhetsbrevet 17 av 27 mottakere 1. september 2026. Tempo og nytt forsøk testes i `__tests__/resend-contract.test.ts`, ikke per modul.
+
 ## Når du legger til ny mail-sender
 
-1. Skriv source-modulen først (`lib/mail/xxx.ts`) — pure function som returnerer Resend-payload
+1. Skriv source-modulen først (`lib/mail/xxx.ts`): bygg payloaden og send den med `sendMail` fra `./send`
 2. Lag testfilen `lib/mail/xxx.test.ts` med minimal-formen over, **tomme** inline-snapshots
 3. Kjør `npx vitest run lib/mail/xxx.test.ts -u` for å populere
 4. Re-run uten `-u` for å verifisere

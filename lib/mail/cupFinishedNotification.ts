@@ -7,24 +7,9 @@
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale.
 
-import { Resend } from 'resend';
 import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
+import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
-
-function resolveFromEmail(): string {
-  const raw = process.env.RESEND_FROM_EMAIL?.trim();
-  if (!raw) return 'Tørny <noreply@tornygolf.no>';
-  if (raw.includes('<') && raw.includes('>')) return raw;
-  return `Tørny <${raw}>`;
-}
-
-function getClient(): Resend {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    throw new Error('RESEND_API_KEY is not set');
-  }
-  return new Resend(key);
-}
 
 export type CupFinishedNotificationParams = {
   to: string;
@@ -104,20 +89,12 @@ export async function sendCupFinishedNotification(
     `${t('cupFinished.teaser')}\n\n` +
     `${t('cupFinished.viewResultText', { url: resultUrl })}\n`;
 
-  const resend = getClient();
-  const result = await resend.emails.send({
-    from: resolveFromEmail(),
+  await sendMail({
     to,
     subject,
     html,
     text,
   });
-
-  if (result.error) {
-    throw new Error(
-      `Resend send failed: ${result.error.message ?? JSON.stringify(result.error)}`,
-    );
-  }
 }
 
 function escapeHtml(s: string): string {
