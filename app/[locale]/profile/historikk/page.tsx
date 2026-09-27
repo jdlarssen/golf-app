@@ -547,9 +547,8 @@ export default async function HistorikkPage() {
         backHref="/profile"
         backLabel={t('backLabel')}
         kicker={t('kicker')}
+        kickerIsPageTitle
       />
-      {/* The kicker above is the page title; screen readers get it as the h1. */}
-      <h1 className="sr-only">{t('kicker')}</h1>
 
       {/* #2131 (K5): fra 24. desember er historikken også døra inn i
           Kavalkaden. Før den datoen nevner vi den ikke her — siden er stengt,

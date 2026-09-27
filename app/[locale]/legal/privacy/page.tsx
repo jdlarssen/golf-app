@@ -48,10 +48,9 @@ export default async function PrivacyPage() {
         backHref="/"
         backLabel={t('backLabel')}
         kicker={t('kicker')}
+        kickerIsPageTitle
         back="history"
       />
-      {/* The kicker above is the page title; screen readers get it as the h1. */}
-      <h1 className="sr-only">{t('kicker')}</h1>
 
       <div className="space-y-8 text-sm leading-relaxed text-text">
 
