@@ -23,6 +23,7 @@ import { inviteExpiryTier } from '@/lib/auth/inviteExpiry';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { formatDate, formatTime } from '@/lib/i18n/format';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 type SearchParams = Promise<{
   step?: string | string[];
@@ -84,7 +85,7 @@ export default async function LoginPage({
   const params = await searchParams;
   const step = first(params.step) === 'verify' ? 'verify' : 'email';
   const email = first(params.email) ?? '';
-  const next = first(params.next) ?? '';
+  const next = safeInternalPath(first(params.next)) ?? '';
   const errorCode = resolveErrorCode(first(params.error), KNOWN_ERROR_CODES, 'unknown');
   const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 

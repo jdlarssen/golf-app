@@ -12,6 +12,7 @@ import { distinctInviterIds } from '@/lib/friends/friendGraph';
 import { isRosterLocked } from '@/lib/games/status';
 import { isInviteToken } from '@/lib/auth/getInviteLoginContext';
 import { routing, type AppLocale } from '@/i18n/routing';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 /**
  * #1345: ett hjem for alle feil-redirects i login-flyten. Hver feilsti tar med
@@ -47,8 +48,7 @@ function loginErrorRedirect(
 export async function sendCode(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const nextRaw = String(formData.get('next') ?? '').trim();
-  const next =
-    nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '';
+  const next = safeInternalPath(nextRaw) ?? '';
 
   // #1169: invitasjons-token fra kontekstkort-flyten — videreføres til
   // verify-steget så kortet blir stående. Kun visning; alt annet enn en
@@ -238,9 +238,10 @@ export async function verifyCode(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const token = String(formData.get('token') ?? '').trim();
   const nextRaw = String(formData.get('next') ?? '').trim();
-  const hasExplicitNext =
-    nextRaw.startsWith('/') && !nextRaw.startsWith('//');
-  const next = hasExplicitNext ? nextRaw : '/';
+  // A rejected next behaves as no next, so the invite routing below applies.
+  const explicitNext = safeInternalPath(nextRaw);
+  const hasExplicitNext = explicitNext !== null;
+  const next = explicitNext ?? '/';
 
   // #1345: konteksten som skal overleve en feiltastet kode. `next` tas bare med
   // når den var eksplisitt satt (default-en '/' hører ikke hjemme i en URL), og
@@ -250,7 +251,7 @@ export async function verifyCode(formData: FormData) {
   const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
   const errorCtx = {
     email,
-    next: hasExplicitNext ? nextRaw : '',
+    next: explicitNext ?? '',
     invite,
     step: 'verify' as const,
   };

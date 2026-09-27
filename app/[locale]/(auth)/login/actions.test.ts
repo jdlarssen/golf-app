@@ -656,7 +656,11 @@ describe('error redirects keep the login context (#1345)', () => {
     );
   });
 
-  it('sendCode: an open-redirect next and a non-UUID invite are dropped', async () => {
+  it.each([
+    '//evil.example.com',
+    '/\\evil.example.com',
+    '/\t/evil.example.com',
+  ])('sendCode: an open-redirect next (%j) and a non-UUID invite are dropped', async (next) => {
     consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'ip' });
 
     const { sendCode } = await import('./actions');
@@ -665,7 +669,7 @@ describe('error redirects keep the login context (#1345)', () => {
       sendCode(
         fd({
           email: 'kompis@example.com',
-          next: '//evil.example.com',
+          next,
           invite: 'not-a-uuid',
         }),
       ),
@@ -817,6 +821,22 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
 
     expect(lastRedirect()).toBe('/signup/abc12345');
   });
+
+  it.each(['/\\evil.example', '/\t/evil.example', '/\n/evil.example'])(
+    'a next the browser would read as another site (%j) falls back to home after a successful code',
+    async (next) => {
+      verifyOtpMock.mockResolvedValue({ error: null });
+      adminUserLookup = { id: 'user-x' };
+      supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+      const { verifyCode } = await import('./actions');
+      await expect(
+        verifyCode(fd({ email: 'kompis@example.com', token: '123456', next })),
+      ).rejects.toBeInstanceOf(RedirectError);
+
+      expect(lastRedirect()).toBe('/');
+    },
+  );
 
   it('kun game-løse invitasjoner: ingen insert / notify, men vennskap med inviteren (#2212), login lykkes uansett', async () => {
     verifyOtpMock.mockResolvedValue({ error: null });
