@@ -2,10 +2,7 @@ import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
-import {
-  SoloStrokeplayView,
-  type SoloStrokeplayPlayerInfo,
-} from '../SoloStrokeplayView';
+import type { SoloStrokeplayPlayerInfo } from '../leaderboardTypes';
 import { SoloStrokeplayPodium } from '../SoloStrokeplayPodium';
 import {
   WithdrawnPlayersSection,
@@ -19,6 +16,8 @@ import { renderSideTournamentTabs } from '../sideTournament';
 import { RevealBruttoView } from '../RevealBruttoView';
 import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
+import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
+import { renderLiveBoard } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -32,8 +31,8 @@ import type { TeeGender } from '@/lib/games/teeRating';
  *     avslutter spillet (issue #801).
  *   - `finished` → SoloStrokeplayPodium: topp 3 podium med konfetti på 1.-plass
  *     og resten av rangeringen collapsed under.
- *   - alt annet (active/scheduled, live-visibility) → SoloStrokeplayView: flat
- *     liste sortert på laveste netto-total.
+ *   - alt annet (active/scheduled, live-visibility) → Tavla (#2253): den
+ *     live tavla med plassendring, siste fem hull og «Din runde»-stripen.
  *
  * Speilet `renderStableford`-pattern for konsistens. Solo strokeplay har
  * `team_size = 1` i `mode_config` (validatoren håndhever), så `teamNumber`
@@ -53,6 +52,10 @@ export async function renderSoloStrokeplay(opts: {
       course_handicap: number | null;
       tee_gender: TeeGender;
       withdrawn_at: string | null;
+      /** #2253: the live board's format line and strip read these. */
+      flight_number?: number | null;
+      submitted_at?: string | null;
+      approved_at?: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -60,10 +63,24 @@ export async function renderSoloStrokeplay(opts: {
   backHref: string;
   /** #1051: Premieutdeling-kortet, rendret under podiet i finished-footeren. */
   prizeAwardsNode?: ReactNode;
+  /** #2253: whose row is «DU» and whose strip the live board shows. */
+  viewerUserId?: string;
+  /** #2253: spectate/embed — no strip, no «DU». */
+  publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const th2h = await getTranslations('leaderboard.h2h');
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
+  const {
+    gameId,
+    game,
+    gwp,
+    rawHolesRows,
+    rawScoresRows,
+    backHref,
+    prizeAwardsNode,
+    viewerUserId,
+    publicView,
+  } = opts;
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
   // does its own WD-filtering of players + scores, so we only need the list
@@ -274,15 +291,26 @@ export async function renderSoloStrokeplay(opts: {
     );
   }
 
-  return (
-    <SoloStrokeplayView
-      gameId={gameId}
-      gameName={game.name}
-      result={result}
-      playersById={playersById}
-      holesPlayed={holesPlayed}
-      backHref={backHref}
-      footerSlot={wdSection}
-    />
-  );
+  // #2253: live solo strokeplay → Tavla. The finished and reveal branches
+  // have returned above, so null here is a bug.
+  const board = computeLiveBoard({
+    gameId,
+    game,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
+  if (!board) notFound();
+  return renderLiveBoard({
+    gameId,
+    game,
+    players: gwp.players,
+    board,
+    scoresRows: rawScoresRows,
+    backHref,
+    footerSlot: wdSection,
+    viewerUserId,
+    publicView,
+    testId: 'strokeplay-leaderboard',
+  });
 }

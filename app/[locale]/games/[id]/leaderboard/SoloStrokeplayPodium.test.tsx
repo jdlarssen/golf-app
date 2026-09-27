@@ -4,9 +4,7 @@ import {
   SoloStrokeplayPodium,
   type SoloStrokeplayPodiumProps,
 } from './SoloStrokeplayPodium';
-import type {
-  SoloStrokeplayPlayerInfo,
-} from './SoloStrokeplayView';
+import type { SoloStrokeplayPlayerInfo } from './leaderboardTypes';
 import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
 
 function makeResult(

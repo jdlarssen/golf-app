@@ -120,7 +120,8 @@ export type LeaderboardContentOpts = {
  *   - When `includeReactions` is true: fetches reactions and wraps the
  *     individual-format views in `ReactionsProvider`. When false, the wrapper
  *     is an identity function — `ReactionsProvider` is never mounted.
- *   - The `viewerUserId` is only used when `includeReactions` is true.
+ *   - The `viewerUserId` is used for reactions and, on the live board of solo
+ *     stableford/strokeplay, for the viewer's own row and strip (#2253).
  *
  * Refs #938
  */
@@ -261,6 +262,8 @@ export async function renderLeaderboardContent({
       rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
+      viewerUserId,
+      publicView,
     }));
   }
 
@@ -310,6 +313,8 @@ export async function renderLeaderboardContent({
       rawScoresRows: scopedScoresRows,
       backHref,
       prizeAwardsNode,
+      viewerUserId,
+      publicView,
     }));
   }
 

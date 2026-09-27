@@ -4,6 +4,7 @@ import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordCon
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import {
   computeLiveBoard,
+  liveBoardStripAction,
   viewerStanding,
   withoutLatestHolePerPlayer,
   type LiveBoard,
@@ -315,5 +316,48 @@ describe('withoutLatestHolePerPlayer', () => {
       { user_id: 'a', hole_number: 1, strokes: 4 },
       { user_id: 'a', hole_number: 4, strokes: null },
     ]);
+  });
+});
+
+describe('liveBoardStripAction — the strip’s button', () => {
+  const playing = { submitted_at: null, approved_at: null, withdrawn_at: null };
+  const base = {
+    gameId: 'g1',
+    status: 'active' as const,
+    holeSegment: 'full' as const,
+    requirePeerApproval: false,
+    viewer: playing,
+    viewerScores: card('me', { 1: 4, 2: 5, 3: null as unknown as number, 4: 4 }),
+  };
+
+  it('points to the first hole without strokes', () => {
+    expect(liveBoardStripAction(base)).toEqual({
+      kind: 'hole',
+      holeNumber: 3,
+      href: '/games/g1/holes/3',
+    });
+  });
+
+  it('points to «Lever scorekort» when every hole in the segment is filled', () => {
+    const allFront = card('me', Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, 4])));
+    expect(
+      liveBoardStripAction({ ...base, holeSegment: 'front9', viewerScores: allFront }),
+    ).toEqual({ kind: 'submit', href: '/games/g1/submit' });
+  });
+
+  it('has no button after delivery, also while waiting for approval', () => {
+    const submitted = { ...playing, submitted_at: '2026-06-01T12:00:00Z' };
+    expect(liveBoardStripAction({ ...base, viewer: submitted })).toEqual({ kind: 'none' });
+    expect(
+      liveBoardStripAction({ ...base, viewer: submitted, requirePeerApproval: true }),
+    ).toEqual({ kind: 'none' });
+  });
+
+  it.each([
+    ['an organizer who does not play', { viewer: undefined }],
+    ['a withdrawn player', { viewer: { ...playing, withdrawn_at: '2026-06-01T12:00:00Z' } }],
+    ['a scheduled game', { status: 'scheduled' as const }],
+  ])('no strip for %s', (_label, overrides) => {
+    expect(liveBoardStripAction({ ...base, ...overrides })).toBeNull();
   });
 });

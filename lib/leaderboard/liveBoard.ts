@@ -25,6 +25,9 @@ import type {
   StablefordSoloResult,
 } from '@/lib/scoring/modes/types';
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
+import type { HoleSegment } from '@/lib/scoring/holeSegment';
+import { resolveActiveCardState } from '@/lib/games/activeCardState';
+import { nextUnfilledHole } from '@/lib/games/nextHole';
 import type { GameStatus } from '@/lib/games/status';
 import { revealState, shouldHideNetto, type ScoreVisibility } from '@/lib/games/visibility';
 
@@ -228,4 +231,47 @@ function gapToLead(unit: LiveBoardUnit, me: LiveBoardRow, leaders: LiveBoardRow[
   if (lead === null) return null;
   if (unit !== 'toPar' && leaders.some((l) => l.holesPlayed !== me.holesPlayed)) return null;
   return Math.abs(me.total - lead);
+}
+
+/** What the strip's button does: the next hole, «Lever scorekort», or nothing after delivery. */
+export type LiveBoardStripAction =
+  | { kind: 'hole'; holeNumber: number; href: string }
+  | { kind: 'submit'; href: string }
+  | { kind: 'none' };
+
+/**
+ * The strip's button for the viewer, or `null` when the viewer gets no strip:
+ * the game is not being played (a scheduled game's holes are closed), the
+ * viewer has no player row (an organizer who does not play) or has withdrawn.
+ *
+ * Same state machine as the Home card (`resolveActiveCardState`) and the same
+ * next-hole rule (`nextUnfilledHole`), so the two cannot send a player to
+ * different places. `viewerScores` are the viewer's own rows in the game's
+ * segment; only rows with strokes count as filled.
+ */
+export function liveBoardStripAction(opts: {
+  gameId: string;
+  status: GameStatus;
+  holeSegment: HoleSegment;
+  requirePeerApproval: boolean;
+  viewer:
+    | { submitted_at: string | null; approved_at: string | null; withdrawn_at: string | null }
+    | undefined;
+  viewerScores: ReadonlyArray<{ hole_number: number; strokes: number | null }>;
+}): LiveBoardStripAction | null {
+  const { gameId, status, holeSegment, requirePeerApproval, viewer, viewerScores } = opts;
+  if (status !== 'active' || !viewer) return null;
+  const state = resolveActiveCardState({
+    ...viewer,
+    require_peer_approval: requirePeerApproval,
+  });
+  if (state === 'withdrawn') return null;
+  if (state !== 'continue') return { kind: 'none' };
+  const filled = new Set(
+    viewerScores.filter((s) => s.strokes != null).map((s) => s.hole_number),
+  );
+  const next = nextUnfilledHole(holeSegment, filled);
+  return next === null
+    ? { kind: 'submit', href: `/games/${gameId}/submit` }
+    : { kind: 'hole', holeNumber: next, href: `/games/${gameId}/holes/${next}` };
 }
