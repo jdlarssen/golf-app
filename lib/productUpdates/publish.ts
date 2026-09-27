@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { notify } from '@/lib/notifications/notify';
 
 /**
@@ -59,10 +60,17 @@ export async function publishProductUpdate(
 
   const productUpdateId = inserted.id;
 
-  const { data: users } = await admin
-    .from('users')
-    .select('id')
-    .returns<{ id: string }[]>();
+  // Paged (#2227): every user gets the in-app notice, and the table outgrows
+  // PostgREST's 1 000-row cap. A failed read keeps the soft behaviour — the
+  // update is already saved, nobody is notified — but is logged, not swallowed.
+  const { data: users, error: usersError } = await selectAllRowsResult(
+    (from, to) =>
+      admin.from('users').select('id').order('id').range(from, to).returns<{ id: string }[]>(),
+    'publishProductUpdate users',
+  );
+  if (usersError) {
+    console.error('[publishProductUpdate] user lookup failed', usersError);
+  }
 
   const userIds = (users ?? []).map((u) => u.id);
 

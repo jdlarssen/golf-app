@@ -5,6 +5,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { requireAdmin } from '@/lib/admin/auth';
 import { pendingPlayerList } from '@/lib/admin/pendingPlayerEmails';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -200,12 +201,19 @@ const getOptions = cache(async () => {
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
-    getAdminClient()
-      .from('users')
-      .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
-      .order('profile_completed_at', { ascending: true, nullsFirst: false })
-      .order('name', { ascending: true, nullsFirst: true })
-      .returns<UserRow[]>(),
+    // Paged (#2227): the picker lists every user, past PostgREST's 1 000-row cap.
+    selectAllRowsResult(
+      (from, to) =>
+        getAdminClient()
+          .from('users')
+          .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
+          .order('profile_completed_at', { ascending: true, nullsFirst: false })
+          .order('name', { ascending: true, nullsFirst: true })
+          .order('id')
+          .range(from, to)
+          .returns<UserRow[]>(),
+      'edit game users',
+    ),
   ]);
   if (coursesResult.error) throw coursesResult.error;
   if (usersResult.error) throw usersResult.error;

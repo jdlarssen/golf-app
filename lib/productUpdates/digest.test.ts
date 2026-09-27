@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { previousMonthPeriod } from './digest';
+import { describe, it, expect, vi } from 'vitest';
+import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { previousMonthPeriod, sendDigestForPeriod } from './digest';
+
+let adminMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminMock,
+}));
 
 describe('previousMonthPeriod', () => {
   it('mai-1 → forrige måned er april', () => {
@@ -41,5 +47,24 @@ describe('previousMonthPeriod', () => {
     const result = previousMonthPeriod(mid_may);
     expect(result.periodStart).toBe('2026-04-01');
     expect(result.periodEnd).toBe('2026-04-30');
+  });
+});
+
+describe('sendDigestForPeriod — feilet brukerlesing (#2227)', () => {
+  it('avviser og skriver ingen revisjonsrad når mottakerlista ikke kan leses', async () => {
+    adminMock = buildSupabaseMock([
+      { data: null }, // ingen tidligere utsendelse for perioden
+      { data: [{ id: 'pu1', title: 'Nytt', body: 'Tekst', link: null, cta_label: null }] },
+      { data: null, error: { message: 'boom' } }, // users
+    ]);
+
+    await expect(
+      sendDigestForPeriod({ sentByUserId: null, nowMs: Date.UTC(2026, 9, 1, 8) }),
+    ).rejects.toThrow(/boom/);
+
+    const auditInsert = adminMock.__fromCalls.find(
+      (c) => c.table === 'product_update_digests' && c.method === 'insert',
+    );
+    expect(auditInsert).toBeUndefined();
   });
 });
