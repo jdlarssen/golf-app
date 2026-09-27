@@ -19,7 +19,7 @@ import { ROOT_CLIENT_NAMESPACES, pickMessages } from './clientNamespaces';
  */
 
 const ROOT = join(__dirname, '..');
-const DIRS = ['app', 'components', 'lib', 'i18n'];
+const DIRS = ['app', 'components', 'hooks', 'lib', 'i18n'];
 const LOCALE_ROOT = 'app/[locale]';
 const ENTRY = /^(page|layout|error|loading|not-found|template|default)\.tsx?$/;
 /** The one client module allowed to read the parent provider's messages. */
