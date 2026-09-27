@@ -62,6 +62,10 @@ describe('full game scoring integration', () => {
         ch[p.id] = applyAllowance(raw, 100);
       }
     }
+    // Oracle (computed independently, #2226): round(HI × 130/113 − 1).
+    expect(ch).toEqual({
+      p1a: 11, p1b: 20, p2a: 24, p2b: 6, p3a: 15, p3b: 15, p4a: 31, p4b: 1,
+    });
 
     // 2. Stroke allocations per player
     const alloc: Record<string, Record<number, number>> = {};
@@ -93,6 +97,7 @@ describe('full game scoring integration', () => {
       expect(missingHoles).toEqual([]);
       totals[team.id] = total;
     }
+    expect(totals).toEqual({ 1: 68, 2: 66, 3: 66, 4: 70 });
 
     // 5. Ranking
     const ranking = rankTeams(
@@ -102,13 +107,15 @@ describe('full game scoring integration', () => {
       })),
     );
 
-    // Sanity checks: 4 teams ranked, each has a rank 1..4 with totals ascending
-    expect(ranking.length).toBe(4);
-    expect(ranking[0].rank).toBe(1);
-    expect(ranking[3].rank).toBe(4);
-    expect(ranking[0].total).toBeLessThanOrEqual(ranking[3].total);
-
-    // Snapshot the totals so a regression is loud
-    expect(ranking.map((t) => ({ id: t.id, total: t.total }))).toMatchSnapshot();
+    // Teams 2 and 3 tie on 66; the back nine settles it — team 2 has 33 there
+    // against team 3's 34, so team 2 ranks first and nobody shares a rank.
+    expect(
+      ranking.map(({ id, total, rank, tiedWith }) => ({ id, total, rank, tiedWith })),
+    ).toEqual([
+      { id: 2, total: 66, rank: 1, tiedWith: [] },
+      { id: 3, total: 66, rank: 2, tiedWith: [] },
+      { id: 1, total: 68, rank: 3, tiedWith: [] },
+      { id: 4, total: 70, rank: 4, tiedWith: [] },
+    ]);
   });
 });
