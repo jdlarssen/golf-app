@@ -16,6 +16,11 @@ export interface ScoreCardProps {
   par: number;
   disabled?: boolean;
   /**
+   * #2211: the player has submitted their scorecard. Shows a «Levert» badge by
+   * the name; the card itself is locked through `disabled`.
+   */
+  submitted?: boolean;
+  /**
    * When true, hides all netto/handicap information on the card: both the
    * `+N SLAG` badge and the «Netto X» helper-text under the name. Used by
    * reveal-modus games (status `active`, `score_visibility = 'reveal'`) so
@@ -81,6 +86,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     score,
     par,
     disabled = false,
+    submitted = false,
     hideNetto = false,
     stablefordPoints = null,
     onSetScore,
@@ -207,7 +213,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
 
   let helperText: string;
   if (score == null) {
-    helperText = t('tapInstruction');
+    // «Tap = par» is a promise a locked card cannot keep (#2211).
+    helperText = disabled ? '' : t('tapInstruction');
   } else if (hideNetto) {
     helperText = '';
   } else {
@@ -284,7 +291,9 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       <div style={avatarStyle}>{initialChars}</div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline' }}>
+        {/* Wraps so a long name plus two badges never pushes the stepper
+            off the card (#2211 added the «Levert» badge). */}
+        <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap' }}>
           <span style={nameStyle}>{name}</span>
           {/* #1447-etterprøving (eier-krav fra generalprøven): badgen er
               statisk slag-tildeling (handicap), ikke stilling — den vises
@@ -293,6 +302,11 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
               gatet på hideNetto. */}
           {extraStrokes > 0 && (
             <span style={badgeStyle}>{t('strokesBadge', { n: extraStrokes })}</span>
+          )}
+          {submitted && (
+            <span data-testid="score-card-submitted" style={badgeStyle}>
+              {t('submittedBadge')}
+            </span>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

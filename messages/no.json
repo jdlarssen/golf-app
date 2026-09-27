@@ -2289,6 +2289,7 @@
     },
     "scoreCard": {
       "tapInstruction": "Trykk kort = par. Bruk − / +.",
+      "submittedBadge": "Levert",
       "nettoLabel": "Netto {netto}",
       "nettoWithPoints": "Netto {netto} · {points} poeng",
       "strokesBadge": "+{n} SLAG",

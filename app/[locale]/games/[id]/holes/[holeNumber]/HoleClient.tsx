@@ -40,6 +40,7 @@ import {
   computeDisplayedStablefordTotal,
   isMySeatSubmitted,
   summarizeMyCard,
+  isCardLocked,
   type MySeatLookup,
 } from './holeCards';
 import { useWolfHole } from './useWolfHole';
@@ -306,8 +307,17 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   // onSetPutts holdes utenfor (putter tastes gjerne i etterkant).
   const [scoredThisSession, setScoredThisSession] = useState(false);
 
+  // #2211: the same lock the cards render with, checked again at the write so
+  // a locked card is refused outside the UI too (a stale sheet, a late tap).
+  function isLocked(playerId: string): boolean {
+    const card = cards.find((c) => c.userId === playerId);
+    return card
+      ? isCardLocked(card, { pageDisabled: disabled, withdrawn, myUserId })
+      : disabled;
+  }
+
   async function onSetScore(playerId: string, value: number) {
-    if (disabled) return;
+    if (isLocked(playerId)) return;
     await writeScore({
       gameId,
       userId: playerId,
@@ -322,14 +332,14 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   }
 
   function onLongPress(playerId: string) {
-    if (disabled) return;
+    if (isLocked(playerId)) return;
     setValueSheetFor(playerId);
   }
 
   // #939: writes only the putts field — writeScore merges, so the stroke score
   // is preserved. `next === null` clears the recorded putt count.
   async function onSetPutts(playerId: string, next: number | null) {
-    if (disabled) return;
+    if (isLocked(playerId)) return;
     await writeScore({
       gameId,
       userId: playerId,
@@ -349,7 +359,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
   }
 
   async function clearScoreFor(playerId: string) {
-    if (disabled) return;
+    if (isLocked(playerId)) return;
     await writeScore({
       gameId,
       userId: playerId,
