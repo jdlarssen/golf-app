@@ -1,11 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SpectateCta } from './SpectateCta';
-
-// SmartLink → next/link → useRouter for prefetch.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: () => {} }),
-}));
 
 function clearCookies() {
   for (const c of document.cookie.split(';')) {
