@@ -568,7 +568,7 @@ describe('removeLeaguePlayer — redirect contract (#2244)', () => {
     ['still there → remove_failed', { data: { user_id: 'u2' }, error: null }, '/klubber/g1/liga/l1/fjern/u2?error=remove_failed'],
     ['already gone → honest no-op', { data: null, error: null }, '/klubber/g1/liga/l1?status=player_removed'],
   ])('0-row delete, row %s', async (_label, existence, url) => {
-    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }, activeLeague, existence]);
+    adminMock = buildSupabaseMock([{ data: { group_id: 'g1' } }, activeLeague, existence], {}, { strictSingle: true });
     supabaseMock = buildSupabaseMock([adminRole, { data: [], error: null }]);
     setUser('admin-1');
 
