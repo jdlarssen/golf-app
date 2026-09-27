@@ -27,7 +27,7 @@
 
 /** Ett registrert filter-ledd. `not('strokes','is',null)` blir op `'not'`. */
 export type QueryFilter = {
-  op: 'eq' | 'in' | 'is' | 'not' | 'ilike';
+  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch';
   column: string;
   value: unknown;
 };
@@ -69,8 +69,12 @@ export type QueryResponse = {
 export interface QueryChain extends PromiseLike<QueryResponse> {
   select(columns?: string): QueryChain;
   eq(column: string, value: unknown): QueryChain;
-  /** Case-insensitiv likhet. Adressene slås opp slik (`users`, `invitations`). */
   ilike(column: string, value: unknown): QueryChain;
+  /**
+   * `.filter(kolonne, operator, verdi)`. Adressene slås opp slik
+   * (`imatch` + `emailMatchPattern`, #2207); operatoren blir `op`.
+   */
+  filter(column: string, operator: 'imatch', value: unknown): QueryChain;
   in(column: string, value: unknown): QueryChain;
   is(column: string, value: unknown): QueryChain;
   not(column: string, operator: string, value: unknown): QueryChain;
@@ -150,6 +154,7 @@ export function createAdminClientMock(opts: {
       },
       eq: (column, value) => push('eq', column, value),
       ilike: (column, value) => push('ilike', column, value),
+      filter: (column, operator, value) => push(operator, column, value),
       in: (column, value) => push('in', column, value),
       is: (column, value) => push('is', column, value),
       not: (column, _operator, value) => push('not', column, value),

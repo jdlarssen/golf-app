@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isGuestPlaceholderEmail } from './createGuestPlayer';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 /**
  * Claim-flyten (#1009, kontrakt-beslutning 7): arrangøren «sender resultatet»
@@ -84,7 +85,7 @@ export async function claimGuestEmail(opts: {
   const { data: existing } = await admin
     .from('users')
     .select('id')
-    .ilike('email', email)
+    .filter('email', 'imatch', emailMatchPattern(email))
     .maybeSingle<{ id: string }>();
   if (existing && existing.id !== guestUserId) {
     return { ok: false, error: 'guest_email_taken' };

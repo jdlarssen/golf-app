@@ -56,9 +56,9 @@ function fakeAdmin(opts: FakeOpts = {}) {
             eq: () => ({ maybeSingle: async () => ({ data: guestRow, error: null }) }),
           };
         }
-        // Duplikat-sjekken (ilike email → maybeSingle)
+        // Duplikat-sjekken (eksakt e-post-match → maybeSingle)
         return {
-          ilike: () => ({
+          filter: () => ({
             maybeSingle: async () => ({
               data: opts.existingEmailOwner ?? null,
               error: null,

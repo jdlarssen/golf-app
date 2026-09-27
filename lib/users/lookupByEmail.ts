@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 /**
  * Slå opp en eksisterende Tørny-bruker via e-post. Brukes av team-
@@ -8,8 +9,9 @@ import { getAdminClient } from '@/lib/supabase/admin';
  * invitasjon med `invitations`-rad + game_id).
  *
  * Sanitering matcher login-flyten: lowercase + trim. E-post i `users`-
- * tabellen er lagret i lowercase ved insert, men vi bruker ilike for
- * defensiv match siden eldre rader kan ha case-variasjon (pre-cleanup).
+ * tabellen er lagret i lowercase ved insert, men vi matcher uten hensyn til
+ * store/små bokstaver siden eldre rader kan ha case-variasjon (pre-cleanup).
+ * Eksakt treff via `emailMatchPattern` (#2207): `_` og `%` er vanlige tegn.
  *
  * Returnerer null hvis bruker ikke finnes, eller hvis input er åpenbart
  * ugyldig (tom/manglende @). Caller skal aldri blokkere selv-påmelding
@@ -27,7 +29,7 @@ export async function lookupUserByEmail(
   const { data, error } = await admin
     .from('users')
     .select('id, name, email')
-    .ilike('email', normalized)
+    .filter('email', 'imatch', emailMatchPattern(normalized))
     .maybeSingle<{ id: string; name: string | null; email: string }>();
 
   if (error) {

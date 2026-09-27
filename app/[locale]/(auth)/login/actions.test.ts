@@ -41,14 +41,14 @@ vi.mock('@/lib/supabase/server', () => ({
 // Admin client mock. Three call-sites i actions.ts treffer denne:
 //
 // 1. sendCode `opened_at`-stamping (main's #166-flyt):
-//      .from('invitations').update({...}).ilike(...).is(...).is(...)
+//      .from('invitations').update({...}).filter('email','imatch',…).is(...).is(...)
 //    awaitable terminal — supabase-js løser builderen som thenable.
 //
 // 2. verifyCode pending-pickup (#182 deferred-notify):
-//      .from('invitations').select(...).ilike().is().returns()
+//      .from('invitations').select(...).filter().is().returns()
 //
 // 3. verifyCode user-lookup + game_players-insert for game-scoped invites:
-//      .from('users').select().ilike().maybeSingle()
+//      .from('users').select().filter().maybeSingle()
 //      .from('game_players').insert(...)
 //
 // State variables under styres per-test slik at notify-grenen kan
@@ -110,7 +110,7 @@ const adminGamePlayersInsertMock = vi.fn();
 
 function makeAdminBuilder() {
   const builder: Record<string, unknown> = {};
-  for (const m of ['ilike', 'is', 'eq', 'select']) {
+  for (const m of ['filter', 'is', 'eq', 'select']) {
     builder[m] = () => builder;
   }
   // Awaitable terminal — supabase-js gjør samme triks på update-chains.
@@ -125,21 +125,21 @@ vi.mock('@/lib/supabase/admin', () => ({
     from: (table: string) => {
       if (table === 'invitations') {
         return {
-          // sendCode opened_at-stamp: .update().ilike().is().is() awaited
+          // sendCode opened_at-stamp: .update().filter().is().is() awaited
           update: (...args: unknown[]) => {
             adminUpdateMock(...args);
             return makeAdminBuilder();
           },
           // Chainable select brukt av to call-sites:
-          //  - verifyCode pending-pickup: .ilike().is().gt().returns()
+          //  - verifyCode pending-pickup: .filter().is().gt().returns()
           //      → pendingInvitations
           //  - sendCode #361 expired-invite:
-          //      .ilike().is().not().lte().limit().maybeSingle()
+          //      .filter().is().not().lte().limit().maybeSingle()
           //      → expiredInviteLookup
           select: () => {
             const builder: Record<string, unknown> = {};
             let expiryCutoff: string | null = null;
-            for (const m of ['ilike', 'is', 'not', 'lte', 'limit']) {
+            for (const m of ['filter', 'is', 'not', 'lte', 'limit']) {
               builder[m] = () => builder;
             }
             // #1348: emulerer PostgREST-filteret verifyCode legger på
@@ -169,7 +169,7 @@ vi.mock('@/lib/supabase/admin', () => ({
       if (table === 'users') {
         return {
           select: () => ({
-            ilike: () => ({
+            filter: () => ({
               maybeSingle: async () => ({ data: adminUserLookup }),
             }),
           }),
