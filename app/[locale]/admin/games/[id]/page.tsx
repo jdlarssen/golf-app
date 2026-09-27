@@ -37,6 +37,7 @@ import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
 import { ScorecardTable } from '@/app/[locale]/games/[id]/_components/ScorecardTable';
 import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
+import { ownedScoresByPlayer } from '@/lib/games/filledHoles';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { ReopenGameButton } from './ReopenGameButton';
@@ -592,12 +593,22 @@ async function PlayersSections({
     { maxHole: number; filledCells: number; totalCells: number }
   >();
   if (game.status === 'active') {
-    const rows = progressRes.data ?? [];
+    // #2213: each player's filled cells are the rows they OWN per hole
+    // (`ownedScoresByPlayer`, #2017), not their own `user_id`'s rows — in the
+    // one-ball formats the captain owns the team's rows, and a finished
+    // scramble four read 18/72. The progress rows are already filtered on
+    // strokes (no strokes fetched: spoiler guard), as `FilledScoreRow` asks.
+    const owned = ownedScoresByPlayer({
+      players,
+      scores: progressRes.data ?? [],
+      mode: game.game_mode,
+    });
     for (const f of flightNumbers) {
       const flightPlayers = byFlight.get(f) ?? [];
       if (flightPlayers.length === 0) continue;
-      const userIds = new Set(flightPlayers.map((p) => p.user_id));
-      const flightRows = rows.filter((r) => userIds.has(r.user_id));
+      const flightRows = flightPlayers.flatMap(
+        (p) => owned.get(p.user_id) ?? [],
+      );
       const maxHole = flightRows.reduce(
         (m, r) => Math.max(m, r.hole_number),
         0,
