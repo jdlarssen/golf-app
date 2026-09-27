@@ -29,8 +29,69 @@ function readAllowancePct(
 }
 
 /** True when the format's brutto option is on. Read like the engines: cast, no kind check. */
-function isGross(config: GameModeConfig, field: string): boolean {
+function isGross(config: GameModeConfig, field: GrossField): boolean {
   return (config as unknown as Record<string, unknown>)[field] === 'gross';
+}
+
+type GrossField =
+  | 'skins_scoring'
+  | 'nassau_scoring'
+  | 'nines_scoring'
+  | 'acey_deucey_scoring'
+  | 'shamble_scoring'
+  | 'patsome_scoring';
+
+type StrokeRule =
+  | { kind: 'allowance'; configKind: 'fourball_matchplay' | 'round_robin'; fallbackPct: number }
+  | { kind: 'gross_option'; field: GrossField }
+  | { kind: 'wolf' }
+  | { kind: 'raw' };
+
+/**
+ * Which rule the engine uses for a mode. Exhaustive switch with a `never`
+ * check, after `isSoloFormat`: a new GameMode is a compile error here.
+ */
+function strokeRuleFor(mode: GameMode): StrokeRule {
+  switch (mode) {
+    case 'fourball_matchplay':
+      return { kind: 'allowance', configKind: 'fourball_matchplay', fallbackPct: 100 };
+    case 'round_robin':
+      return { kind: 'allowance', configKind: 'round_robin', fallbackPct: 85 };
+    case 'skins':
+      return { kind: 'gross_option', field: 'skins_scoring' };
+    case 'nassau':
+      return { kind: 'gross_option', field: 'nassau_scoring' };
+    case 'nines':
+      return { kind: 'gross_option', field: 'nines_scoring' };
+    case 'acey_deucey':
+      return { kind: 'gross_option', field: 'acey_deucey_scoring' };
+    case 'shamble':
+      return { kind: 'gross_option', field: 'shamble_scoring' };
+    case 'patsome':
+      return { kind: 'gross_option', field: 'patsome_scoring' };
+    case 'wolf':
+      return { kind: 'wolf' };
+    case 'best_ball':
+    case 'stableford':
+    case 'modified_stableford':
+    case 'singles_matchplay':
+    case 'solo_strokeplay':
+    case 'bingo_bango_bongo':
+    case 'texas_scramble':
+    case 'ambrose':
+    case 'florida_scramble':
+    case 'foursomes_matchplay':
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+    case 'gruesome_matchplay':
+      return { kind: 'raw' };
+    default: {
+      // At runtime an unknown mode (older app binary, seed before deploy)
+      // keeps the raw number.
+      const _exhaustive: never = mode;
+      return { kind: 'raw' };
+    }
+  }
 }
 
 /**
@@ -57,48 +118,19 @@ export function playerStrokeHandicap(
   config: GameModeConfig,
   courseHandicap: number,
 ): number {
-  switch (mode) {
-    case 'fourball_matchplay':
+  const rule = strokeRuleFor(mode);
+  switch (rule.kind) {
+    case 'allowance':
       return applyAllowance(
         courseHandicap,
-        readAllowancePct(config, 'fourball_matchplay', 100),
+        readAllowancePct(config, rule.configKind, rule.fallbackPct),
       );
-    case 'round_robin':
-      return applyAllowance(courseHandicap, readAllowancePct(config, 'round_robin', 85));
-    case 'skins':
-      return isGross(config, 'skins_scoring') ? 0 : courseHandicap;
-    case 'nassau':
-      return isGross(config, 'nassau_scoring') ? 0 : courseHandicap;
-    case 'nines':
-      return isGross(config, 'nines_scoring') ? 0 : courseHandicap;
-    case 'acey_deucey':
-      return isGross(config, 'acey_deucey_scoring') ? 0 : courseHandicap;
-    case 'shamble':
-      return isGross(config, 'shamble_scoring') ? 0 : courseHandicap;
-    case 'patsome':
-      return isGross(config, 'patsome_scoring') ? 0 : courseHandicap;
+    case 'gross_option':
+      return isGross(config, rule.field) ? 0 : courseHandicap;
     case 'wolf':
       return config.kind === 'wolf' && config.wolf_scoring === 'gross' ? 0 : courseHandicap;
-    case 'best_ball':
-    case 'stableford':
-    case 'modified_stableford':
-    case 'singles_matchplay':
-    case 'solo_strokeplay':
-    case 'bingo_bango_bongo':
-    case 'texas_scramble':
-    case 'ambrose':
-    case 'florida_scramble':
-    case 'foursomes_matchplay':
-    case 'greensome_matchplay':
-    case 'chapman_matchplay':
-    case 'gruesome_matchplay':
+    case 'raw':
       return courseHandicap;
-    default: {
-      // `never` keeps a new GameMode a compile error. At runtime an unknown
-      // mode (older app binary, seed before deploy) keeps the raw number.
-      const _exhaustive: never = mode;
-      return courseHandicap;
-    }
   }
 }
 
