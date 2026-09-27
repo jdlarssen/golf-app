@@ -4827,6 +4827,8 @@
         "pending": "Removing …",
         "cancel": "Cancel",
         "back": "Back",
+        "lockedHeading": "Enrollment is locked",
+        "lockedBody": "The cup has started, so you can no longer remove players from the participant list.",
         "fallbackFirstName": "The player"
       },
       "errors": {
