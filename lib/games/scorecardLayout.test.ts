@@ -73,6 +73,7 @@ function player(
     flight_number: team_number,
     course_handicap: 10,
     submitted_at: null,
+    submitted_by_user_id: null,
     approved_at: null,
     rejection_reason: null,
     withdrawn_at: null,
