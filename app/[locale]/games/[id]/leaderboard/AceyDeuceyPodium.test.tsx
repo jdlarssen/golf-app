@@ -1,13 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { AceyDeuceyPodium } from './AceyDeuceyPodium';
 import type { AceyDeuceyPlayerInfo } from './AceyDeuceyView';
 import type { AceyDeuceyResult, AceyDeuceyPlayerLine } from '@/lib/scoring/modes/types';
-
-// SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ prefetch: vi.fn() }),
-}));
 
 function makePlayerLine(
   userId: string,
