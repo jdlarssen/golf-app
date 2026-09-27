@@ -71,14 +71,15 @@ describe('refreshWebCache (#2215)', () => {
     jest.useFakeTimers();
     try {
       mockFetch.mockReturnValue(new Promise(() => {}));
-      const { refreshWebCache, REFRESH_TIMEOUT_MS } = load();
+      const { refreshWebCache } = load();
+      const { BEST_EFFORT_WAIT_MS } = require('./bestEffortCall') as typeof import('./bestEffortCall');
 
       let settled = false;
       const pending = refreshWebCache(GAME_ID).then(() => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(REFRESH_TIMEOUT_MS - 1);
+      await jest.advanceTimersByTimeAsync(BEST_EFFORT_WAIT_MS - 1);
       expect(settled).toBe(false);
 
       await jest.advanceTimersByTimeAsync(1);

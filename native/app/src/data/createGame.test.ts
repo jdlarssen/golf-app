@@ -121,6 +121,30 @@ describe('publishGame', () => {
       expect(logged).toHaveBeenCalled();
     });
 
+    it('venter ikke på en nettside som henger — publiseringen svarer ok etter tidsgrensen', async () => {
+      jest.useFakeTimers();
+      try {
+        rigSuccess();
+        mockFetch.mockReturnValue(new Promise(() => {}));
+        const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const { BEST_EFFORT_WAIT_MS } = require('./bestEffortCall') as typeof import('./bestEffortCall');
+
+        let result: unknown;
+        const pending = createGame()
+          .publishGame(draft())
+          .then((r) => {
+            result = r;
+          });
+
+        await jest.advanceTimersByTimeAsync(BEST_EFFORT_WAIT_MS);
+        await pending;
+        expect(result).toEqual({ ok: true, gameId: GAME_ID });
+        expect(logged).toHaveBeenCalled();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
     it('kaller den ikke når games-inserten feilet', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({

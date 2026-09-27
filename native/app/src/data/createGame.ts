@@ -54,7 +54,7 @@ import { isAppSupportedMode } from '../lib/appFormats';
 import { asSharedFormData } from '../lib/wizardFormData';
 import { buildDraftPayload, type GameDraft } from '../lib/wizardPayload';
 import { currentDeviceUserId, supabase } from '../supabase';
-import { callWebRoute } from './webApi';
+import { bestEffortCall } from './bestEffortCall';
 
 // -----------------------------------------------------------------------------
 // Lesninger — kandidater, baner og teer
@@ -507,22 +507,13 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
  *
  * Best-effort: runden ER opprettet når denne kalles, og et feilet varsel skal
  * aldri bli til en feil på skjermen. Da ville arrangøren trykket igjen og laget
- * runde nummer to. En feil logges bare. `try` står selv om `callWebRoute`
- * fanger alt, fordi løftet over er at publiseringen svarer `ok` uansett.
+ * runde nummer to. En feil logges bare, og skjermen venter aldri mer enn
+ * `BEST_EFFORT_WAIT_MS` (`bestEffortCall`).
  */
 async function inviteRoster(gameId: string): Promise<void> {
-  try {
-    const call = await callWebRoute(
-      `/api/games/${encodeURIComponent(gameId)}/invite-roster`,
-      'POST',
-    );
-    if (call.ok && call.status === 200) return;
-    console.error(
-      '[publishGame] fikk ikke sendt invitasjonsvarslene',
-      gameId,
-      call.ok ? call.status : call.reason,
-    );
-  } catch (err: unknown) {
-    console.error('[publishGame] invite-roster kastet', gameId, err);
-  }
+  await bestEffortCall(
+    `/api/games/${encodeURIComponent(gameId)}/invite-roster`,
+    '[publishGame] invite-roster',
+    gameId,
+  );
 }
