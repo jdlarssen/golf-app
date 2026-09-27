@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
@@ -91,22 +92,35 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
   // every row under RLS anyway). Every other caller gets the e-post-free
   // roster on their own client, whatever they asked for.
   const withEmail = includeEmail && user ? await callerIsAdmin(supabase, user.id) : false;
+  // Paged (#2227): the picker lists every user, past PostgREST's 1 000-row cap.
   const usersQuery = withEmail
-    ? getAdminClient()
-        .from('users')
-        .select(ADMIN_ROSTER_COLUMNS)
-        // #1012: anonymiserte kontoer skal ikke være valgbare i spiller-velgeren.
-        .is('deleted_at', null)
-        .order('profile_completed_at', { ascending: true, nullsFirst: false })
-        .order('name', { ascending: true, nullsFirst: true })
-        .returns<UserRow[]>()
-    : supabase
-        .from('users')
-        .select(ROSTER_COLUMNS)
-        .is('deleted_at', null)
-        .order('profile_completed_at', { ascending: true, nullsFirst: false })
-        .order('name', { ascending: true, nullsFirst: true })
-        .returns<UserRow[]>();
+    ? selectAllRowsResult(
+        (from, to) =>
+          getAdminClient()
+            .from('users')
+            .select(ADMIN_ROSTER_COLUMNS)
+            // #1012: anonymiserte kontoer skal ikke være valgbare i spiller-velgeren.
+            .is('deleted_at', null)
+            .order('profile_completed_at', { ascending: true, nullsFirst: false })
+            .order('name', { ascending: true, nullsFirst: true })
+            .order('id')
+            .range(from, to)
+            .returns<UserRow[]>(),
+        'getNewGameFormData admin roster',
+      )
+    : selectAllRowsResult(
+        (from, to) =>
+          supabase
+            .from('users')
+            .select(ROSTER_COLUMNS)
+            .is('deleted_at', null)
+            .order('profile_completed_at', { ascending: true, nullsFirst: false })
+            .order('name', { ascending: true, nullsFirst: true })
+            .order('id')
+            .range(from, to)
+            .returns<UserRow[]>(),
+        'getNewGameFormData roster',
+      );
   const [coursesResult, usersResult, clubsResult] = await Promise.all([
     supabase
       .from('courses')

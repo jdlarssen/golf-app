@@ -51,6 +51,8 @@ function builderFor(table: string, onSelect: (cols: string) => void) {
     // #1012: .is('deleted_at', null)-leddet i users-kjeden
     is: () => builder,
     returns: () => builder,
+    // #2227: the users read is paged (selectAllRowsResult → .range()).
+    range: () => builder,
     // The query builder is awaited inside Promise.all, so it must be a
     // thenable resolving to a PostgREST-shaped { data, error }.
     then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>

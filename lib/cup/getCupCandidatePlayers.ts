@@ -1,5 +1,6 @@
 import 'server-only';
 import type { getServerClient } from '@/lib/supabase/server';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 
@@ -76,14 +77,20 @@ export async function getCupCandidatePlayers(
   }
 
   if (isAdmin) {
-    // Personlig cup, global admin → alle profil-fullførte brukere.
-    const usersResult = await supabase
-      .from('users')
-      .select('id, name, nickname, hcp_index, profile_completed_at, gender')
-      .order('name', { ascending: true, nullsFirst: true })
-      .returns<UserRow[]>();
-    if (usersResult.error) throw usersResult.error;
-    return (usersResult.data ?? [])
+    // Personlig cup, global admin → alle profil-fullførte brukere. Paged
+    // (#2227): the users table outgrows PostgREST's 1 000-row cap.
+    const users = await selectAllRows(
+      (from, to) =>
+        supabase
+          .from('users')
+          .select('id, name, nickname, hcp_index, profile_completed_at, gender')
+          .order('name', { ascending: true, nullsFirst: true })
+          .order('id')
+          .range(from, to)
+          .returns<UserRow[]>(),
+      'getCupCandidatePlayers users',
+    );
+    return users
       .filter((u) => u.profile_completed_at !== null)
       .map((u) => ({
         id: u.id,

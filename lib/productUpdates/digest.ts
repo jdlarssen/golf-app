@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import {
   sendProductUpdateDigest,
   type ProductUpdateDigestEntry,
@@ -11,15 +12,16 @@ import { firstName } from '@/lib/firstName';
 /**
  * Monthly product-update digest sender (issue #202).
  *
- * Used by both:
- *   - /api/cron/product-update-digest (cron-triggered, sent_by = null)
- *   - /admin/lanseringer "Send månedsbrev nå"-action (sent_by = admin userId)
+ * Called by /api/cron/product-update-digest (cron-triggered, sent_by = null),
+ * its only caller. `sentByUserId` stays in the options for an admin-triggered
+ * send, but no button in the app calls this today.
  *
  * Workflow:
  *  1. Compute period = previous calendar month (Europe/Oslo).
  *  2. Idempotency check via product_update_digests UNIQUE (period_start, period_end).
  *  3. Query product_updates published in the period — skip send if empty.
- *  4. Query opted-in users (product_updates_unsubscribed_at IS NULL + email NOT NULL).
+ *  4. Query opted-in users (product_updates_unsubscribed_at IS NULL + email NOT NULL),
+ *     paged. A failed read throws before step 6, so the month is not closed.
  *  5. Send via Promise.allSettled best-effort per recipient.
  *  6. Insert product_update_digests audit row with recipient_count + update_ids.
  */
@@ -118,19 +120,29 @@ export async function sendDigestForPeriod(
   // Opted-in recipients with email. #1009: gjester (skygge-brukere) utelates —
   // dette er den ene blanket-alle-brukere-utsendelsen, og plassholder-
   // adressene deres ville bouncet på hver eneste digest.
-  const { data: recipients } = await admin
-    .from('users')
-    .select('id, name, email, locale')
-    .is('product_updates_unsubscribed_at', null)
-    .not('email', 'is', null)
-    .eq('is_guest', false)
-    // #1012: anonymiserte kontoer utelates (belte-og-seler — anonymize_user
-    // setter også product_updates_unsubscribed_at).
-    .is('deleted_at', null)
-    .returns<{ id: string; name: string | null; email: string; locale: string | null }[]>();
+  //
+  // #2227: paged, since the users table outgrows PostgREST's 1 000-row cap. A
+  // failed read throws before the audit row below, so a failure never closes
+  // the month with a false 0-recipient row.
+  const recipients = await selectAllRows(
+    (from, to) =>
+      admin
+        .from('users')
+        .select('id, name, email, locale')
+        .is('product_updates_unsubscribed_at', null)
+        .not('email', 'is', null)
+        .eq('is_guest', false)
+        // #1012: anonymiserte kontoer utelates (belte-og-seler — anonymize_user
+        // setter også product_updates_unsubscribed_at).
+        .is('deleted_at', null)
+        .order('id')
+        .range(from, to)
+        .returns<{ id: string; name: string | null; email: string; locale: string | null }[]>(),
+    'sendDigestForPeriod recipients',
+  );
 
   const settled = await Promise.allSettled(
-    (recipients ?? []).map((r) =>
+    recipients.map((r) =>
       sendProductUpdateDigest({
         to: r.email,
         recipientFirstName: firstName(r.name),
