@@ -25,6 +25,10 @@ import {
 import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import {
+  getPrivateUserFields,
+  type PrivateUserFields,
+} from '@/lib/users/privateUserFields';
 
 /**
  * #2057: en spiller som har trukket seg, skal ikke rangeres, telle i «av N»
@@ -93,10 +97,10 @@ export async function buildGameFinishedRecipients(
   // av team-stableford-grenen (for partner-name-lookup), men har null cost å
   // ta med. Kolonnen er nullable siden 0030 (solo-modi har ingen lag).
   // `withdrawn_at` (#2057) brukes til å luke trukne spillere ut av rangeringen.
-  const { data: playerRowsRaw, error: playerErr } = await supabase
+  const { data: rosterRows, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, tee_gender, course_handicap, withdrawn_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
+      'user_id, team_number, tee_gender, course_handicap, withdrawn_at, users!game_players_user_id_fkey(name, locale, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -107,14 +111,13 @@ export async function buildGameFinishedRecipients(
         course_handicap: number | null;
         withdrawn_at: string | null;
         users: {
-          email: string | null;
           name: string | null;
           locale: string | null;
           is_guest: boolean;
         } | null;
       }[]
     >();
-  if (playerErr || !playerRowsRaw) {
+  if (playerErr || !rosterRows) {
     // Defensiv: returner tom liste i stedet for å kaste. Mail-blasten er
     // best-effort, og en feil her skal ikke blokkere selve avslutt-flyten.
     console.error(
@@ -123,6 +126,25 @@ export async function buildGameFinishedRecipients(
     );
     return [];
   }
+  // #2207: users.email is not readable through the caller's session. The row
+  // set stays the one the caller's client returned (only rows whose user
+  // embed came back get an address); the addresses come from the server-side
+  // helper and only feed this send. Same best-effort rule as above.
+  let emails: Map<string, PrivateUserFields>;
+  try {
+    emails = await getPrivateUserFields(
+      rosterRows.filter((r) => r.users).map((r) => r.user_id),
+    );
+  } catch (err) {
+    console.error('[buildGameFinishedRecipients] failed to fetch e-post', err);
+    return [];
+  }
+  const playerRowsRaw = rosterRows.map((r) => ({
+    ...r,
+    users: r.users
+      ? { ...r.users, email: emails.get(r.user_id)?.email ?? null }
+      : null,
+  }));
   // #1009: gjester får aldri resultat-mail — plassholder-adressen deres kan
   // ikke motta noe. VIKTIG: `playerRows` beholdes UFILTRERT — grenene under
   // mater den inn i computeLeaderboard og makker-navn-oppslag, så et tidlig

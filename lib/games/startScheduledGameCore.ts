@@ -5,7 +5,6 @@ import {
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
 import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
-import { findPendingPlayers } from './pendingPlayers';
 import type { GameStatus } from './status';
 import {
   getRatingForGender,
@@ -74,7 +73,8 @@ export type StartScheduledGameFailure = {
     | 'rotation_player_count'
     | 'db_players'
     | 'db_game';
-  pendingEmails?: string[];
+  /** #2207: the unfinished profiles as ids — never e-post. */
+  pendingUserIds?: string[];
   // #969 / #2071: set only for reason 'rotation_player_count' so the caller
   // can build a format-aware message. The names say «rotation» for history —
   // they now cover every fixed-count format («Wolf trenger 3–5 spillere — N påmeldt»).
@@ -323,30 +323,32 @@ export async function startScheduledGameCore(
   // Defence-in-depth: refuse to start if any roster player is still pending
   // profile completion. Task 6's publish-gate blocks this normally, but this
   // catches direct DB edits or future code paths that bypass that gate.
+  // #2207: the same SECURITY DEFINER RPC as the publish gate — one home for
+  // the rule. It sees the whole roster whatever RLS lets the caller read (an
+  // organiser who does not play used to see none of it: the #366 trap), and it
+  // answers with ids only.
   const rosterIds = roster.map((r) => r.user_id);
-  const { data: rosterUsers, error: rosterUsersError } = await supabase
-    .from('users')
-    .select('id, email, profile_completed_at')
-    .in('id', rosterIds);
+  const { data: pendingRows, error: pendingError } = await supabase.rpc(
+    'incomplete_profile_ids',
+    { p_user_ids: rosterIds },
+  );
   // Best-effort by design (#1445): 'db_players' er riktig for begge ben her.
-  // Dette er en listequery — `!rosterUsers` uten feil forekommer ikke i praksis
-  // (PostgREST gir [] ved 0 treff), og rosterIds er ikke-tom på dette punktet,
-  // så et tomt svar ville uansett vært en DB-anomali, ikke ekte fravær.
-  if (rosterUsersError || !rosterUsers) {
-    if (rosterUsersError) {
-      console.error('[startScheduledGame] roster users lookup failed', {
+  // `!pendingRows` uten feil forekommer ikke i praksis (PostgREST gir [] ved
+  // 0 treff), så et tomt svar ville uansett vært en DB-anomali.
+  if (pendingError || !pendingRows) {
+    if (pendingError) {
+      console.error('[startScheduledGame] profile gate failed', {
         gameId,
-        error: rosterUsersError,
+        error: pendingError,
       });
     }
     return { ok: false, reason: 'db_players' };
   }
-  const pending = findPendingPlayers(rosterUsers);
-  if (pending.length > 0) {
+  if (pendingRows.length > 0) {
     return {
       ok: false,
       reason: 'pending_players',
-      pendingEmails: pending.map((p) => p.email),
+      pendingUserIds: pendingRows.map((p) => p.id),
     };
   }
 

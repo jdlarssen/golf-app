@@ -4,6 +4,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { getPrivateUserFields } from '@/lib/users/privateUserFields';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -50,11 +51,15 @@ const getProfileRow = cache(async () => {
   const { data, error } = await supabase
     .from('users')
     .select(
-      'name, nickname, hcp_index, handicap_updated_at, email, profile_completed_at, gender, level',
+      'name, nickname, hcp_index, handicap_updated_at, profile_completed_at, gender, level',
     )
     .eq('id', userId)
     .single();
-  return { data, error };
+  if (error || !data) return { data, error };
+  // #2207: users.email is not readable through the user's own session; the
+  // own row's address comes from the server-side helper.
+  const privateFields = await getPrivateUserFields([userId]);
+  return { data: { ...data, email: privateFields.get(userId)?.email ?? '' }, error };
 });
 
 export default async function ProfilePage({

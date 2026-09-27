@@ -2,6 +2,7 @@ import { first } from '@/lib/url/searchParams';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getPrivateUserFields } from '@/lib/users/privateUserFields';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -54,11 +55,19 @@ export default async function SlettKontoPage({
   // Get the user's name for display
   const { data: userProfile } = await supabase
     .from('users')
-    .select('name, email')
+    .select('name')
     .eq('id', userId)
     .maybeSingle();
 
-  const displayName = userProfile?.name?.trim() || userProfile?.email || 'kontoen din';
+  // #2207: users.email is not readable through the user's own session; the
+  // own address comes from the server-side helper, and only when there is no
+  // name to show. A failed lookup falls through to the generic label.
+  const ownEmail = userProfile?.name?.trim()
+    ? undefined
+    : await getPrivateUserFields([userId])
+        .then((fields) => fields.get(userId)?.email)
+        .catch(() => undefined);
+  const displayName = userProfile?.name?.trim() || ownEmail || 'kontoen din';
 
   return (
     <AppShell>

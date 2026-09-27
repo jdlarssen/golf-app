@@ -1,7 +1,10 @@
 import { first } from '@/lib/url/searchParams';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { getServerClient } from '@/lib/supabase/server';
+import {
+  getPrivateUserFields,
+  type PrivateUserFields,
+} from '@/lib/users/privateUserFields';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -104,14 +107,14 @@ export default async function VennerPage({
         }
       : undefined;
 
-  const supabase = await getServerClient();
-  const [{ friends, incoming, outgoing, suggestions }, codeRes] = await Promise.all([
+  const [{ friends, incoming, outgoing, suggestions }, privateFields] = await Promise.all([
     getFriendData(userId),
-    supabase.from('users').select('friend_code').eq('id', userId).maybeSingle<{
-      friend_code: string | null;
-    }>(),
+    // #2207: users.friend_code is not readable through the user's own session;
+    // the own row's code comes from the server-side helper. A failed lookup
+    // hides the share card, as a missing code did before.
+    getPrivateUserFields([userId]).catch(() => new Map<string, PrivateUserFields>()),
   ]);
-  const friendCode = codeRes.data?.friend_code ?? null;
+  const friendCode = privateFields.get(userId)?.friendCode ?? null;
 
   return (
     <AppShell>

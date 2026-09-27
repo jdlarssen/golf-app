@@ -39,7 +39,9 @@ export default async function NewKlubbLigaPage({ params }: { params: Params }) {
   const t = await getTranslations('liga.create');
 
   const [{ courses }, members] = await Promise.all([
-    getNewGameFormData(),
+    // Only `courses` is used here, and a club admin is no global admin: the
+    // e-post-free roster (#2207).
+    getNewGameFormData(false),
     getClubMemberOptionsForClub(id),
   ]);
 

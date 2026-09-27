@@ -132,7 +132,7 @@ export const EDIT_PROFILE_LABEL = PROFILE_TEXT.editRow;
 /**
  * Hvem det er som mangler en fullført profil (#1979).
  *
- * RPC-en `incomplete_profiles_for_ids` ekskluderer ikke kalleren, så arrangøren
+ * RPC-en `incomplete_profile_ids` ekskluderer ikke kalleren, så arrangøren
  * kommer tilbake i sin egen liste. Meldingen sa likevel alltid «Noen på
  * spillerlista … De må logge inn» — tredjeperson, om deg selv, uten noe å
  * gjøre med det. Tre tilfeller, tre setninger:

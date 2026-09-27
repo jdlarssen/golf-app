@@ -324,7 +324,7 @@ describe('publishGame', () => {
         ok: false,
         error: 'pending_players',
       });
-      expect(supabase.rpc).toHaveBeenCalledWith('incomplete_profiles_for_ids', {
+      expect(supabase.rpc).toHaveBeenCalledWith('incomplete_profile_ids', {
         p_user_ids: [ME, MATE],
       });
     });

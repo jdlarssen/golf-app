@@ -95,10 +95,12 @@ export async function startScheduledGameAction(gameId: string) {
 
   const result = await startScheduledGame(supabase, gameId);
   if (!result.ok) {
-    if (result.reason === 'pending_players' && result.pendingEmails) {
+    if (result.reason === 'pending_players' && result.pendingUserIds) {
+      // #2207: ids, never addresses, in the URL — the detail page looks the
+      // addresses up after its requireAdmin gate.
       const qs = new URLSearchParams({
         error: 'pending_players',
-        emails: result.pendingEmails.join(', '),
+        pending: result.pendingUserIds.join(','),
       });
       redirect({ href: `${detailPath}?${qs.toString()}`, locale });
     }

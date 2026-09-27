@@ -12,7 +12,7 @@ import {
  *   1. auth.getUser
  *   2. users.select(is_admin, name).eq.single  (admin gate)
  *   3. games.select(id, name, status, require_peer_approval, course_id, game_mode, mode_config).eq.single
- *   4. game_players.select(submitted_at, approved_at, users(...)).eq.returns
+ *   4. game_players.select(user_id, submitted_at, approved_at, withdrawn_at).eq.returns
  *   5. games.update(status='finished', ended_at=...).eq  (resolves)
  *   6. logAdminEvent (mocked)
  *   7. buildGameFinishedRecipients (mocked) — bygger mottakerliste m/ mode-info
@@ -80,6 +80,13 @@ const notifyMock = vi.fn<
 >(async () => ({ shouldAlsoSendMail: true }));
 vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
+}));
+
+// #2207: startScheduledGameAction only translates the core's answer into a
+// redirect; the core itself is covered in lib/games/startScheduledGame.test.ts.
+const startScheduledGameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+vi.mock('@/lib/games/startScheduledGame', () => ({
+  startScheduledGame: (...args: unknown[]) => startScheduledGameMock(...args),
 }));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
@@ -1073,5 +1080,30 @@ describe('reopenGame', () => {
         finish_pipeline_at: null,
       },
     ]);
+  });
+});
+
+describe('startScheduledGameAction (#2207)', () => {
+  it('pending_players → the ids in the URL, never an address', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    startScheduledGameMock.mockResolvedValueOnce({
+      ok: false,
+      reason: 'pending_players',
+      pendingUserIds: ['u1', 'u2'],
+    });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    const url = new URL(lastRedirect()!, 'http://x');
+    expect(url.pathname).toBe('/admin/games/game-1');
+    expect(url.searchParams.get('error')).toBe('pending_players');
+    expect(url.searchParams.get('pending')).toBe('u1,u2');
+    expect(lastRedirect()).not.toMatch(/@|emails=/);
   });
 });

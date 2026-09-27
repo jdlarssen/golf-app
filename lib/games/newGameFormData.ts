@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
@@ -45,6 +46,24 @@ type UserRow = {
   is_guest: boolean;
 };
 
+const ROSTER_COLUMNS =
+  'id, name, nickname, hcp_index, profile_completed_at, gender, level, is_guest';
+/** Admin client only (#2207). */
+const ADMIN_ROSTER_COLUMNS =
+  'id, name, nickname, hcp_index, email, profile_completed_at, gender, level, is_guest';
+
+async function callerIsAdmin(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('users')
+    .select('is_admin')
+    .eq('id', userId)
+    .maybeSingle<{ is_admin: boolean }>();
+  return data?.is_admin === true;
+}
+
 /**
  * Loads the data the create/edit-game flows need: course/tee options and the
  * player roster. Wrapped in React's `cache` so two Suspense boundaries on the
@@ -55,7 +74,9 @@ type UserRow = {
  * e-postadresser into the page payload of any non-admin who opens the wizard.
  * The admin flow (`/admin/games/new`) keeps `true` (full roster); the non-admin
  * flows (`/opprett-spill`, `/games/[id]/rediger`) pass `false`, which drops the
- * `email` column from the query entirely. Keep this a primitive boolean (not an
+ * `email` column from the query entirely. Since #2207 `true` is honoured only
+ * for a caller whose own row has is_admin (the e-post roster is then read with
+ * the admin client). Keep this a primitive boolean (not an
  * options object) so `cache` dedupes by value — `/opprett-spill` calls this
  * twice in one request, and an object literal would miss the cache each time.
  */
@@ -64,9 +85,28 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const userColumns = includeEmail
-    ? 'id, name, nickname, hcp_index, email, profile_completed_at, gender, level, is_guest'
-    : 'id, name, nickname, hcp_index, profile_completed_at, gender, level, is_guest';
+  // #2207: users.email is not readable through the user's own session. The
+  // e-post roster is an admin surface: only when the caller's own row says
+  // is_admin does the roster read go through the admin client (an admin sees
+  // every row under RLS anyway). Every other caller gets the e-post-free
+  // roster on their own client, whatever they asked for.
+  const withEmail = includeEmail && user ? await callerIsAdmin(supabase, user.id) : false;
+  const usersQuery = withEmail
+    ? getAdminClient()
+        .from('users')
+        .select(ADMIN_ROSTER_COLUMNS)
+        // #1012: anonymiserte kontoer skal ikke være valgbare i spiller-velgeren.
+        .is('deleted_at', null)
+        .order('profile_completed_at', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true, nullsFirst: true })
+        .returns<UserRow[]>()
+    : supabase
+        .from('users')
+        .select(ROSTER_COLUMNS)
+        .is('deleted_at', null)
+        .order('profile_completed_at', { ascending: true, nullsFirst: false })
+        .order('name', { ascending: true, nullsFirst: true })
+        .returns<UserRow[]>();
   const [coursesResult, usersResult, clubsResult] = await Promise.all([
     supabase
       .from('courses')
@@ -75,14 +115,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
-    supabase
-      .from('users')
-      .select(userColumns)
-      // #1012: anonymiserte kontoer skal ikke være valgbare i spiller-velgeren.
-      .is('deleted_at', null)
-      .order('profile_completed_at', { ascending: true, nullsFirst: false })
-      .order('name', { ascending: true, nullsFirst: true })
-      .returns<UserRow[]>(),
+    usersQuery,
     // #442: klubbene innloggede er medlem av, så veiviseren kan tilby et
     // valgfritt «Hvem er dette for?»-valg. RLS lar et medlem lese egne
     // group_members-rader + sine gruppers navn. Tom liste hvis ikke medlem.
@@ -137,7 +170,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     // Spread the e-post in only when requested, so the e-post-fri variant
     // omits the key entirely (not `email: undefined`) — nothing for a
     // non-admin's RSC payload to carry (#435).
-    return includeEmail && u.email !== undefined
+    return withEmail && u.email !== undefined
       ? { ...base, email: u.email }
       : base;
   });

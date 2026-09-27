@@ -168,10 +168,10 @@ async function createGameInternal(
     // (profile_completed_at IS NULL). Under request-scoped RLS a non-admin
     // creator can't read OTHER users' rows, so a direct read would silently
     // return nothing and skip the gate (#366 pending-read trap). The
-    // SECURITY DEFINER RPC (migration 0071) returns only the incomplete rows
-    // for the exact ids we pass, so the gate bites for admin and creator alike.
+    // SECURITY DEFINER RPC (0185, #2207) returns only the incomplete ids among
+    // those we pass, so the gate bites for admin and creator alike.
     const { data: incomplete, error: rosterErr } = await supabase.rpc(
-      'incomplete_profiles_for_ids',
+      'incomplete_profile_ids',
       { p_user_ids: payload.players.map((p) => p.user_id) },
     );
 

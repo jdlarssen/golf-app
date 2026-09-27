@@ -335,7 +335,7 @@ async function refuseUnlessModeIsActive(
  *  3. formatet er støttet i appen, og aktivt i DB
  *  4. tee-off finnes, er lesbar og ikke i fortiden
  *  5. sideturneringens tellere er 0–2
- *  6. ingen på lista mangler profil (`incomplete_profiles_for_ids`)
+ *  6. ingen på lista mangler profil (`incomplete_profile_ids`)
  *  7. INSERT `games` (status `'scheduled'`, `created_by` = deg)
  *  8. INSERT `game_players`
  *  9. feiler 8 → slett games-raden igjen
@@ -392,10 +392,10 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
 
   // Uferdige profiler blokkerer publisering. Et direkte SELECT ville stille
   // returnert ingenting for en ikke-admin arrangør (#366 pending-read-fella);
-  // SECURITY DEFINER-RPC-en (0071) svarer for de eksakte id-ene vi sender.
-  // Personvern (#435): vi leser bare ANTALLET, aldri e-postene den returnerer.
+  // SECURITY DEFINER-RPC-en (0185, #2207) svarer med id-er — aldri e-post —
+  // for de eksakte id-ene vi sender. Vi leser bare antallet.
   const { data: incomplete, error: rosterError } = await supabase.rpc(
-    'incomplete_profiles_for_ids',
+    'incomplete_profile_ids',
     { p_user_ids: payload.players.map((p) => p.user_id) },
   );
   if (rosterError) return failed('db_roster');

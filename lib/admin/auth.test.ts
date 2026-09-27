@@ -10,8 +10,10 @@ import {
  * `lib/admin/auth.ts`. There are two roles: admin (`users.is_admin`) or
  * player (everyone else). `loadRole`:
  *   1. `auth.getUser()` — redirects to /login when no session.
- *   2. `users.select('is_admin, email, name').eq.single` — feeds the role
- *      flag + display name to the AdminRoleContext.
+ *   2. `users.select('is_admin, name').eq.single` — feeds the role flag +
+ *      display name to the AdminRoleContext. The e-post comes from the
+ *      verified auth user: users.email is not readable through the user's
+ *      own session (#2207).
  * Tests focus on the redirect paths and the returned context shape.
  */
 
@@ -47,7 +49,7 @@ describe('requireAdmin', () => {
   it('returns the context unchanged for an admin caller', async () => {
     supabaseMock = buildSupabaseMock([
       {
-        data: { is_admin: true, email: randomEmail, name: 'Jørgen' },
+        data: { is_admin: true, name: 'Jørgen' },
         error: null,
       },
     ]);
@@ -68,7 +70,7 @@ describe('requireAdmin', () => {
   it('redirects a non-admin caller to /', async () => {
     supabaseMock = buildSupabaseMock([
       {
-        data: { is_admin: false, email: randomEmail, name: 'Per' },
+        data: { is_admin: false, name: 'Per' },
         error: null,
       },
     ]);
@@ -93,19 +95,22 @@ describe('requireAdmin', () => {
     expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 
-  it('falls back to user.email when the profile-row has no email column', async () => {
-    // loadRole derives email from profile.email ?? user.email. A non-admin
-    // still redirects to /, but this exercises the null-profile-email path
-    // without crashing.
+  it('never selects users.email; the address comes from the auth user (#2207)', async () => {
+    // Without this an admin would lose access the moment users.email stops
+    // being readable for `authenticated`: the whole select errors, profile is
+    // null and isAdmin false.
     supabaseMock = buildSupabaseMock([
-      { data: { is_admin: false, email: null, name: null }, error: null },
+      { data: { is_admin: true, name: 'Jørgen' }, error: null },
     ]);
-    setUser('user-uuid-2', randomEmail);
+    setUser(adminUserId, randomEmail);
 
     const { requireAdmin } = await import('./auth');
-    await expect(requireAdmin(supabaseMock as never)).rejects.toBeInstanceOf(
-      RedirectError,
+    const ctx = await requireAdmin(supabaseMock as never);
+
+    expect(ctx.email).toBe(randomEmail);
+    const selects = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'users' && c.method === 'select',
     );
-    expect(lastRedirect()).toBe('/');
+    expect(selects.map((c) => c.args[0])).toEqual(['is_admin, name']);
   });
 });

@@ -14,6 +14,7 @@ import type { RequestStatus, RequestRow, TabKey } from './types';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -115,7 +116,7 @@ export default async function PåmeldingerPage({
   // FK-hint blir embedden tvetydig (PostgREST PGRST201) og hele fetchen feiler,
   // så fanen viser null forespørsler. Vi pinner `user_id`-FK-en — det er
   // forespørrerens navn vi rendrer i `toRequestRow`.
-  const { data: rawRequests, error: requestsError } = await supabase
+  const { data: rawRequests, error: requestsError } = await getAdminClient()
     .from('game_registration_requests')
     .select(
       'id, user_id, status, team_name, is_team_captain, team_request_id, message, rejection_reason, created_at, decided_at, users!game_registration_requests_user_id_fkey(name, nickname, email)',

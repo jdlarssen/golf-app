@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
+import { pendingPlayerList } from '@/lib/admin/pendingPlayerEmails';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -66,12 +67,13 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import { isStartCountMode } from '@/lib/games/startPlayerCount';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
-  emails?: string | string[];
+  pending?: string | string[];
   // #969: format + active count for the rotation_player_count error banner.
   mode?: string | string[];
   count?: string | string[];
@@ -223,9 +225,10 @@ export default async function GameDetailPage({
       ? tBanners(statusCode as Parameters<typeof tBanners>[0])
       : undefined;
   const errorCode = first(sp.error);
-  const emails = first(sp.emails);
   const errorMode = first(sp.mode);
-  function buildErrorMessage(): string | undefined {
+  // #2207: the start gate sends ids (`pending=`), never addresses; they are
+  // turned back into addresses only after requireAdmin below.
+  async function buildErrorMessage(): Promise<string | undefined> {
     if (!errorCode) return undefined;
     // #969 / #2071: rotation_player_count picks a format-specific message and
     // passes the live active count.
@@ -239,15 +242,17 @@ export default async function GameDetailPage({
     }
     const key = `${errorCode}` as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
-    return tErrors(key, { list: emails ? `: ${emails}` : '' });
+    const list =
+      errorCode === 'pending_players' ? await pendingPlayerList(first(sp.pending)) : '';
+    return tErrors(key, { list });
   }
-  const errorMessage = buildErrorMessage();
 
   const { supabase } = await getAdminGameContext();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Runs before the
   // game-row fetch so trusted-non-admin (and unauthenticated) callers never
   // see the row even if RLS would have allowed the select.
   await requireAdmin(supabase);
+  const errorMessage = await buildErrorMessage();
 
   // Gating: fetch the game row first so we can render the title bar
   // synchronously. The rest of the page (players, progress, sak-number,
@@ -443,7 +448,7 @@ async function PlayersSections({
 
   // game_players has two FKs to users (user_id and approved_by_user_id), so
   // we must disambiguate via the named constraint.
-  const playersPromise = supabase
+  const playersPromise = getAdminClient()
     .from('game_players')
     .select(
       'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',

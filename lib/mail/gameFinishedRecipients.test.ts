@@ -1,12 +1,43 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { createAdminClientMock } from '@/lib/supabase/testing/adminClientMock';
 import { buildGameFinishedRecipients } from './gameFinishedRecipients';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 
+// #2207: users.email is read with the admin client (getPrivateUserFields), for
+// the rows the caller's client returned. The fixtures below keep the address
+// on the joined user — where the database holds it — and the admin double
+// answers the id lookup from those same fixtures (`rosterClient`).
+const fixtureEmails = new Map<string, string | null>();
+const adminFake = createAdminClientMock({
+  respond: (op) => {
+    const ids = (op.filters.find((f) => f.op === 'in')?.value ?? []) as string[];
+    return {
+      data: ids
+        .filter((id) => fixtureEmails.has(id))
+        .map((id) => ({ id, email: fixtureEmails.get(id), friend_code: 'k0de' })),
+    };
+  },
+});
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => adminFake.client }));
+
+/** `buildSupabaseMock`, plus: every fixture row's address is known to the admin double. */
+function rosterClient(...args: Parameters<typeof buildSupabaseMock>) {
+  for (const entry of args[0]) {
+    if (!Array.isArray(entry.data)) continue;
+    for (const row of entry.data as Array<Record<string, unknown>>) {
+      const users = row.users as { email?: string | null } | null | undefined;
+      if (typeof row.user_id === 'string' && users && 'email' in users) {
+        fixtureEmails.set(row.user_id, users.email ?? null);
+      }
+    }
+  }
+  return buildSupabaseMock(...args);
+}
+
 beforeEach(() => {
-  // intentional: vitest resets mocks via vi.clearAllMocks() in any other
-  // setupFile if needed — these tests use buildSupabaseMock per-case so
-  // nothing leaks between tests.
+  fixtureEmails.clear();
+  adminFake.reset();
 });
 
 const BEST_BALL_CONFIG: GameModeConfig = {
@@ -22,8 +53,32 @@ const STABLEFORD_CONFIG: GameModeConfig = {
 };
 
 describe('buildGameFinishedRecipients', () => {
+  it('reads no e-post on the caller\'s client, and looks up only the rows it returned (#2207)', async () => {
+    const supabase = rosterClient([
+      {
+        data: [
+          { user_id: 'u1', team_number: null, course_handicap: 18, users: { email: 'a@example.test', name: 'Ada' } },
+          { user_id: 'u3', team_number: null, course_handicap: 10, users: null },
+        ],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      { course_id: 'c1', game_mode: 'best_ball', mode_config: BEST_BALL_CONFIG },
+    );
+
+    const select = supabase.__fromCalls.find((c) => c.table === 'game_players' && c.method === 'select');
+    expect(String(select?.args[0])).not.toMatch(/email/);
+    expect(adminFake.ops.map((op) => op.filters)).toEqual([[{ op: 'in', column: 'id', value: ['u1'] }]]);
+    expect(recipients.map((r) => r.email)).toEqual(['a@example.test']);
+  });
+
   it('best_ball: returnerer email/name uten mode-info', async () => {
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         // game_players-fetchen (eneste queryen for best-ball)
         data: [
@@ -72,7 +127,7 @@ describe('buildGameFinishedRecipients', () => {
   });
 
   it('best_ball: dropper spillere uten email', async () => {
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -117,7 +172,7 @@ describe('buildGameFinishedRecipients', () => {
     // To spillere, 2 hull, alle par 4, ingen ekstra-slag (CH=0):
     //   u1: gross 4, 3 → netto par + birdie → 2 + 3 = 5 poeng
     //   u2: gross 5, 4 → netto bogey + par → 1 + 2 = 3 poeng
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         // game_players-fetchen
         data: [
@@ -187,7 +242,7 @@ describe('buildGameFinishedRecipients', () => {
   });
 
   it('stableford: dropper spillere uten email (mode-info gjelder kun rendret resultat)', async () => {
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -255,7 +310,7 @@ describe('buildGameFinishedRecipients', () => {
     //   u1 gross 3 → birdie → 3 poeng; u2 gross 4 → par → 2 poeng → lag 1 teamPoints = 3
     //   u3 gross 5 → bogey → 1 poeng; u4 gross 4 → par → 2 poeng → lag 2 teamPoints = 2
     // → Lag 1 vinner (rank 1), Lag 2 (rank 2).
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -371,7 +426,7 @@ describe('buildGameFinishedRecipients', () => {
       strokes: 4, // alle får par = 2 poeng → alle lag teamPoints=2
     }));
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       { data: players, error: null },
       { data: scores, error: null },
       {
@@ -403,7 +458,7 @@ describe('buildGameFinishedRecipients', () => {
 
   it('team-stableford: dropper spillere uten email, men beholder team-totaler', async () => {
     // Lag 1 (u1+u2 hvor u2 mangler email), lag 2 (u3+u4). 1 hull par 4.
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -509,7 +564,7 @@ describe('buildGameFinishedRecipients', () => {
       scores.push({ user_id: 'u2', hole_number: h, strokes: 4 });
     }
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -589,7 +644,7 @@ describe('buildGameFinishedRecipients', () => {
     // Hull 17-18: kun side 1 har spilt (uplayed for side 2) → uplayed totalt.
     // Scoring-laget skal allikevel se mat-em 3&2 etter hull 16.
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -658,7 +713,7 @@ describe('buildGameFinishedRecipients', () => {
       scores.push({ user_id: 'u2', hole_number: h, strokes: 4 });
     }
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -725,7 +780,7 @@ describe('buildGameFinishedRecipients', () => {
       scores.push({ user_id: 'u2', hole_number: h, strokes: 4 });
     }
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -784,7 +839,7 @@ describe('buildGameFinishedRecipients', () => {
       scores.push({ user_id: 'u2', hole_number: h, strokes: 4 });
     }
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -841,7 +896,7 @@ describe('buildGameFinishedRecipients', () => {
       scores.push({ user_id: 'u2', hole_number: h, strokes: 4 });
     }
 
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -897,7 +952,7 @@ describe('buildGameFinishedRecipients', () => {
     //   u1 gross 4, 3 → totalNet 7, totalGross 7
     //   u2 gross 5, 4 → totalNet 9, totalGross 9
     // → u1 rank 1, u2 rank 2 (lavest vinner).
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -964,7 +1019,7 @@ describe('buildGameFinishedRecipients', () => {
   });
 
   it('solo strokeplay: dropper spillere uten email (mode-info gjelder kun rendret resultat)', async () => {
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -1027,7 +1082,7 @@ describe('buildGameFinishedRecipients', () => {
     // Spiller med CH=18 og 1 hull par 4 stroke_index=1:
     //   strokesForHole(18, 1) = 1 ekstra → netto = gross − 1
     //   gross 5 → netto 4
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -1074,7 +1129,7 @@ describe('buildGameFinishedRecipients', () => {
     // Edge-case: en spiller på laget har null `name` (pre-completion-profile).
     // Da returnerer firstName(null) = null, og mailen skal droppe partner-
     // setningen heller enn å si «Du og null satt sammen».
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -1142,7 +1197,7 @@ describe('buildGameFinishedRecipients', () => {
     //   Lag 1 (u1=kaptein lex-min, u2): kapteinens gross 4 → netto 4
     //   Lag 2 (u3=kaptein, u4): kapteinens gross 5 → netto 5
     //   → Lag 1 vinner (rank 1, 4 slag), Lag 2 (rank 2, 5 slag)
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -1227,7 +1282,7 @@ describe('buildGameFinishedRecipients', () => {
   });
 
   it('texas 4-mannslag: hver spiller får 3 partnernavn', async () => {
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -1298,7 +1353,7 @@ describe('buildGameFinishedRecipients', () => {
   });
 
   it('texas: spiller uten email droppes; resten beholder mode-payload', async () => {
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           {
@@ -1351,7 +1406,7 @@ describe('buildGameFinishedRecipients', () => {
     // (kontosletting, 0174) og førte hull 1 (4), makker u2 førte hull 2 (4) på
     // sin rad. Lag 2: kaptein u3 5 + 5. Lagets hull følger laget → lag 1 = 8
     // og vinner. Den trukne får nøytral mail, og makkerens partnerliste tar ikke med den trukne.
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           { user_id: 'u1', team_number: 1, course_handicap: 0, withdrawn_at: '2026-09-17T10:00:00Z', users: { email: 'slettet@example.com', name: 'Slettet bruker' } },
@@ -1416,7 +1471,7 @@ describe('buildGameFinishedRecipients', () => {
 
   it('stableford (#2057): trukket spiller rangeres ikke og teller ikke i totalPlayers', async () => {
     // u3 har trukket seg men har best poengsum (gross 3, 3 → 6 poeng).
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           { user_id: 'u1', team_number: null, course_handicap: 0, withdrawn_at: null, users: { email: 'a@example.com', name: 'Ada' } },
@@ -1470,7 +1525,7 @@ describe('buildGameFinishedRecipients', () => {
     // 1 hull par 4, CH=0. Lag 1: u1 gross 5 (1 poeng) + u2 TRUKKET gross 3
     // (ville gitt 3). Lag 2: u3 og u4 gross 4 (2 poeng). Uten u2 → lag 1 = 1,
     // lag 2 = 2 → lag 2 vinner.
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           { user_id: 'u1', team_number: 1, course_handicap: 0, withdrawn_at: null, users: { email: 'ada@example.com', name: 'Ada Olsen' } },
@@ -1521,7 +1576,7 @@ describe('buildGameFinishedRecipients', () => {
 
   it('solo strokeplay (#2057): trukket spiller rangeres ikke og teller ikke i totalPlayers', async () => {
     // u3 har trukket seg men har lavest netto (gross 3, 3 → 6).
-    const supabase = buildSupabaseMock([
+    const supabase = rosterClient([
       {
         data: [
           { user_id: 'u1', team_number: null, course_handicap: 0, withdrawn_at: null, users: { email: 'a@example.com', name: 'Ada' } },

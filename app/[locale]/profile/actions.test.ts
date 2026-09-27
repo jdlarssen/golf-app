@@ -79,6 +79,24 @@ describe('updateProfile — trap #2: 0-row UPDATE treated as failure', () => {
   });
 });
 
+describe('updateProfile — asks back only the id (#2207)', () => {
+  it('never asks for every column back: users.email/friend_code are not readable to the player', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'user-1' }], error: null }]);
+    supabaseMock.auth.getUser = vi.fn(async () => ({
+      data: { user: { id: 'user-1' } },
+      error: null,
+    }));
+
+    const { updateProfile } = await import('./actions');
+    await expect(updateProfile(validForm)).rejects.toBeInstanceOf(RedirectError);
+
+    const selects = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'users' && c.method === 'select',
+    );
+    expect(selects.map((c) => c.args)).toEqual([['id']]);
+  });
+});
+
 describe('updateProfile — recomputes frozen course handicaps after a hcp edit', () => {
   // Ryder Cup 2026-regresjonen: en spiller retter et glemt plusshandicap-fortegn
   // her mens runden er i gang. Uten dette kallet blir de frosne banehandicapene

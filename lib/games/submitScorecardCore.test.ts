@@ -168,12 +168,18 @@ describe('submitScorecardCore — levering', () => {
       { data: [{ user_id: USER_ID }], error: null },
       { data: { name: 'Ola Nordmann' }, error: null }, // innsenderens navn
       {
+        // #2207: the admin set the caller's client sees — no e-post column.
         data: [
-          { id: 'admin-1', email: 'arrangoren@example.test', name: 'Jørgen', locale: 'no' },
-          { id: USER_ID, email: 'spilleren@example.test', name: 'Ola Nordmann', locale: 'no' },
+          { id: 'admin-1', name: 'Jørgen', locale: 'no' },
+          { id: USER_ID, name: 'Ola Nordmann', locale: 'no' },
         ],
         error: null,
       },
+    ]);
+    // The addresses for that set come from the admin client
+    // (getPrivateUserFields); the submitter is already filtered out.
+    adminMock = buildSupabaseMock([
+      { data: [{ id: 'admin-1', email: 'arrangoren@example.test', friend_code: 'k0de' }], error: null },
     ]);
 
     const result = await submitScorecardCore(
@@ -184,9 +190,15 @@ describe('submitScorecardCore — levering', () => {
 
     expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1 });
 
-    // Egen-rads-formen: kallerens klient skriver, admin-klienten er urørt.
+    // Egen-rads-formen: kallerens klient skriver; admin-klienten leser bare
+    // admin-enes adresser (#2207) og skriver ingenting.
     expect(updateCalls(supabase)).toHaveLength(1);
-    expect(adminMock.__fromCalls).toEqual([]);
+    expect(adminMock.__fromCalls.map((c) => `${c.table}.${c.method}`)).toEqual([
+      'users.select',
+      'users.in',
+      'users.returns',
+    ]);
+    expect(adminMock.__fromCalls.find((c) => c.method === 'in')?.args).toEqual(['id', ['admin-1']]);
     expect(
       supabase.__fromCalls.some(
         (c) => c.method === 'is' && c.args[0] === 'submitted_at' && c.args[1] === null,

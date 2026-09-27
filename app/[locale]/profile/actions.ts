@@ -88,7 +88,11 @@ export async function updateProfile(formData: FormData) {
           level,
         })
         .eq('id', user.id)
-        .select(),
+        // #2207: `id` only. A bare `.select()` asks for every column back
+        // (select=*), and users.email/friend_code are not readable through
+        // the user's own session — every save would fail. expectOne only
+        // needs the row count.
+        .select('id'),
       'updateProfile',
     );
   } catch (err) {

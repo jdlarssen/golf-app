@@ -1,7 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { buildSupabaseMock as buildQueueMock, type QueryResult } from '@/tests/serverActionMocks';
 import { startScheduledGame } from './startScheduledGame';
 import type { GameMode } from '@/lib/scoring/modes/types';
+
+/**
+ * #2207: the profile gate is the `incomplete_profile_ids` RPC, not a users
+ * read in the FIFO queue. Every roster in this file has finished profiles
+ * (the RPC answers []) unless a test passes its own answer.
+ */
+function buildSupabaseMock(
+  queue: QueryResult[],
+  rpcResults: Record<string, unknown> = {},
+  opts?: Parameters<typeof buildQueueMock>[2],
+) {
+  return buildQueueMock(queue, { incomplete_profile_ids: [], ...rpcResults }, opts);
+}
 
 /**
  * `notify()` mocket ut for hele filen (#1055 — auto-reject av ventende
@@ -266,28 +279,20 @@ describe('startScheduledGame — incomplete_sides guard', () => {
     // Roster: 1 aktiv per side, begge med fullstendig profil
     const rosterRows = [PLAYER('user-1', 1), PLAYER('user-2', 2)];
 
-    // Supabase-kall etter incomplete_sides-sjekken:
-    //   3) users (profile_completed_at) → begge fullstendige
-    //   4+5) course_handicap updates
-    //   6) status flip
+    // Supabase-kall etter incomplete_sides-sjekken (profil-porten er en RPC,
+    // #2207 — begge fullstendige):
+    //   3+4) course_handicap updates
+    //   5) status flip
     const supabase = buildSupabaseMock([
       // 1) game row
       { data: makeGameRow('singles_matchplay', 1), error: null },
       // 2) game_players
       { data: rosterRows, error: null },
-      // 3) users — begge fullstendige
-      {
-        data: [
-          { id: 'user-1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
-          { id: 'user-2', email: 'b@x.no', profile_completed_at: '2026-01-01' },
-        ],
-        error: null,
-      },
-      // 4) course_handicap update user-1
+      // 3) course_handicap update user-1
       WROTE_ROW,
-      // 5) course_handicap update user-2
+      // 4) course_handicap update user-2
       WROTE_ROW,
-      // 6) status flip — vant raden (1 rad tilbake fra .select('id'))
+      // 5) status flip — vant raden (1 rad tilbake fra .select('id'))
       { data: [{ id: 'game-id' }], error: null },
     ]);
 
@@ -324,13 +329,6 @@ describe('startScheduledGame — incomplete_sides guard', () => {
       },
       // 2) game_players
       { data: rosterRows, error: null },
-      // 3) users
-      {
-        data: [
-          { id: 'user-1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
-        ],
-        error: null,
-      },
       // 4) course_handicap update
       WROTE_ROW,
       // 5) status flip — vant raden
@@ -362,6 +360,47 @@ describe('startScheduledGame — incomplete_sides guard', () => {
 
 // ─── started-flagg (#502) ─────────────────────────────────────────────────────
 
+describe('startScheduledGame — profil-porten (#2207)', () => {
+  it('uferdig profil → pending_players med id-ene, uten users-lesing og uten skriving', async () => {
+    const rosterRows = [PLAYER('user-1', 1), PLAYER('user-2', 2)];
+    const supabase = buildSupabaseMock(
+      [
+        { data: makeGameRow('singles_matchplay', 1), error: null },
+        { data: rosterRows, error: null },
+      ],
+      { incomplete_profile_ids: [{ id: 'user-2' }] },
+    );
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+
+    expect(result).toEqual({ ok: false, reason: 'pending_players', pendingUserIds: ['user-2'] });
+    expect(supabase.__rpcCalls).toContainEqual({
+      name: 'incomplete_profile_ids',
+      params: { p_user_ids: ['user-1', 'user-2'] },
+    });
+    expect(supabase.__fromCalls.some((c) => c.table === 'users')).toBe(false);
+    expect(statusFlipWrites(supabase)).toEqual([]);
+  });
+
+  it('feil fra profil-porten → db_players, ingen start', async () => {
+    const rosterRows = [PLAYER('user-1', 1), PLAYER('user-2', 2)];
+    const supabase = buildSupabaseMock(
+      [
+        { data: makeGameRow('singles_matchplay', 1), error: null },
+        { data: rosterRows, error: null },
+      ],
+      {},
+      { rpcErrors: { incomplete_profile_ids: { message: 'boom' } } },
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+
+    expect(result).toEqual({ ok: false, reason: 'db_players' });
+    expect(statusFlipWrites(supabase)).toEqual([]);
+  });
+});
+
 describe('startScheduledGame — started-flagg', () => {
   const SOLO_GAME = {
     id: 'game-id',
@@ -381,15 +420,11 @@ describe('startScheduledGame — started-flagg', () => {
       users: { hcp_index: 10 },
     },
   ];
-  const SOLO_USERS = [
-    { id: 'user-1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
-  ];
 
   it('konkurrent tapte flippen (0 rader fra optimistisk lås) → started: false', async () => {
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       // course_handicap update
       WROTE_ROW,
       // status flip — en annen caller vant; .eq('status','scheduled') matchet 0 rader
@@ -416,7 +451,6 @@ describe('startScheduledGame — started-flagg', () => {
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       // course_handicap-skrivet traff null rader — ingen feil, ingenting skjedd
       { data: [], error: null },
     ]);
@@ -449,9 +483,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
       users: { hcp_index: 10 },
     },
   ];
-  const SOLO_USERS = [
-    { id: 'user-1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
-  ];
 
   it('vinneren av flippen avslår ventende forespørsler og varsler hver søker', async () => {
     const pendingRequests = [
@@ -462,7 +493,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       // course_handicap update
       WROTE_ROW,
       // status flip — denne calleren vant
@@ -513,7 +543,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       // #1055: SELECT pending game_registration_requests
@@ -538,7 +567,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       { data: pendingRequests, error: null },
@@ -573,7 +601,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       { data: openRequests, error: null },
@@ -613,7 +640,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       // #1055: SELECT pending → tom liste
@@ -644,7 +670,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       WROTE_ROW,
       // status flip — en annen caller vant (0 rader)
       { data: [], error: null },
@@ -673,7 +698,6 @@ describe('startScheduledGame — auto-reject pending signup requests (#1055)', (
     const supabase = buildSupabaseMock([
       { data: SOLO_GAME, error: null },
       { data: SOLO_ROSTER, error: null },
-      { data: SOLO_USERS, error: null },
       WROTE_ROW,
       { data: [{ id: 'game-id' }], error: null },
       { data: pendingRequests, error: null },
@@ -735,18 +759,10 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
       soloPlayer('u4', 1),
       soloPlayer('u5', 2),
     ];
-    // After both guards pass → pending_players check → users → hcp updates → flip.
+    // After both guards pass → pending_players check (RPC) → hcp updates → flip.
     const supabase = buildSupabaseMock([
       { data: makeGameRow2('skins'), error: null },
       { data: roster, error: null },
-      {
-        data: roster.map((r) => ({
-          id: r.user_id,
-          email: `${r.user_id}@x.no`,
-          profile_completed_at: '2026-01-01',
-        })),
-        error: null,
-      },
       // 5 hcp updates
       WROTE_ROW,
       WROTE_ROW,
@@ -767,14 +783,6 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
     const supabase = buildSupabaseMock([
       { data: makeGameRow2('stableford'), error: null },
       { data: roster, error: null },
-      {
-        data: roster.map((r) => ({
-          id: r.user_id,
-          email: `${r.user_id}@x.no`,
-          profile_completed_at: '2026-01-01',
-        })),
-        error: null,
-      },
       WROTE_ROW,
       WROTE_ROW,
       WROTE_ROW,
@@ -792,14 +800,6 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
     const supabase = buildSupabaseMock([
       { data: makeGameRow2('wolf'), error: null },
       { data: roster, error: null },
-      {
-        data: roster.map((r) => ({
-          id: r.user_id,
-          email: `${r.user_id}@x.no`,
-          profile_completed_at: '2026-01-01',
-        })),
-        error: null,
-      },
       // #969: 5 rotation-slot updates (one per active player), then 5
       // course_handicap updates, then the status flip.
       WROTE_ROW,
@@ -828,13 +828,6 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
     const supabase = buildSupabaseMock([
       { data: makeGameRow2('singles_matchplay'), error: null },
       { data: roster, error: null },
-      {
-        data: [
-          { id: 'u1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
-          { id: 'u2', email: 'b@x.no', profile_completed_at: '2026-01-01' },
-        ],
-        error: null,
-      },
       // 2 × course_handicap, så status-flippen: 0 rader, altså en annen
       // caller vant kappløpet (derfor `started: false` under).
       WROTE_ROW,
@@ -876,17 +869,9 @@ function teamPlayer(
   };
 }
 
-/** Kø-halen for et spill som passerer alle vakter: users → CH-updates → flip. */
+/** Kø-halen for et spill som passerer alle vakter: CH-updates → flip (profil-porten er en RPC, #2207). */
 function passThroughQueue(roster: { user_id: string }[]) {
   return [
-    {
-      data: roster.map((r) => ({
-        id: r.user_id,
-        email: `${r.user_id}@x.no`,
-        profile_completed_at: '2026-01-01',
-      })),
-      error: null,
-    },
     ...roster.map(() => WROTE_ROW),
     { data: null, error: null }, // status flip
   ];
@@ -1094,14 +1079,6 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
     const supabase = buildSupabaseMock([
       { data: makeRotationGameRow('wolf'), error: null },
       { data: roster, error: null },
-      {
-        data: roster.map((r) => ({
-          id: r.user_id,
-          email: `${r.user_id}@x.no`,
-          profile_completed_at: '2026-01-01',
-        })),
-        error: null,
-      },
       // 3 slot updates + 3 course_handicap updates
       WROTE_ROW,
       WROTE_ROW,
@@ -1147,14 +1124,6 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
     const supabase = buildSupabaseMock([
       { data: makeRotationGameRow('round_robin'), error: null },
       { data: roster, error: null },
-      {
-        data: roster.map((r) => ({
-          id: r.user_id,
-          email: `${r.user_id}@x.no`,
-          profile_completed_at: '2026-01-01',
-        })),
-        error: null,
-      },
       // 4 slot updates + 4 course_handicap updates
       WROTE_ROW,
       WROTE_ROW,
@@ -1223,14 +1192,6 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
       const supabase = buildSupabaseMock([
         { data: makeRotationGameRow(mode), error: null },
         { data: roster, error: null },
-        {
-          data: roster.map((r) => ({
-            id: r.user_id,
-            email: `${r.user_id}@x.no`,
-            profile_completed_at: '2026-01-01',
-          })),
-          error: null,
-        },
         // n course_handicap updates — no slot writes
         ...roster.map(() => WROTE_ROW),
         { data: [{ id: 'game-id' }], error: null },
@@ -1248,14 +1209,6 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
     const supabase = buildSupabaseMock([
       { data: makeRotationGameRow('wolf'), error: null },
       { data: roster, error: null },
-      {
-        data: roster.map((r) => ({
-          id: r.user_id,
-          email: `${r.user_id}@x.no`,
-          profile_completed_at: '2026-01-01',
-        })),
-        error: null,
-      },
       // første slot-skriv traff null rader
       { data: [], error: null },
     ]);
@@ -1302,14 +1255,6 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
     ];
   }
 
-  function profiles(roster: ReturnType<typeof greensomeRoster>) {
-    return roster.map((r) => ({
-      id: r.user_id,
-      email: `${r.user_id}@x.no`,
-      profile_completed_at: '2026-01-01',
-    }));
-  }
-
   /** Alle games-UPDATE-er som skriver mode_config (ikke status-flippen). */
   function configWrites(supabase: unknown) {
     return (
@@ -1337,7 +1282,6 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
         error: null,
       },
       { data: roster, error: null },
-      { data: profiles(roster), error: null },
       WROTE_ROW, // 4 × course_handicap
       WROTE_ROW,
       WROTE_ROW,
@@ -1372,7 +1316,6 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
         error: null,
       },
       { data: roster, error: null },
-      { data: profiles(roster), error: null },
       WROTE_ROW,
       WROTE_ROW,
       WROTE_ROW,
@@ -1390,7 +1333,6 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
     const supabase = buildSupabaseMock([
       { data: greensomeGameRow({ team_strokes_override: STORED }), error: null },
       { data: roster, error: null },
-      { data: profiles(roster), error: null },
       WROTE_ROW,
       WROTE_ROW,
       WROTE_ROW,
@@ -1414,7 +1356,6 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
         error: null,
       },
       { data: roster, error: null },
-      { data: profiles(roster), error: null },
       WROTE_ROW,
       WROTE_ROW,
       WROTE_ROW,
@@ -1440,7 +1381,6 @@ describe('startScheduledGame — greensome team_strokes_override (#1628)', () =>
         error: null,
       },
       { data: roster, error: null },
-      { data: profiles(roster), error: null },
       WROTE_ROW,
       WROTE_ROW,
       WROTE_ROW,
@@ -1539,15 +1479,6 @@ describe('startScheduledGame — decided_by_withdrawal (#1814)', () => {
         error: null,
       },
       // profil-sjekken: alle tre aktive er fullførte
-      {
-        data: [
-          { id: 'a1', email: 'a1@x.no', profile_completed_at: '2026-01-01' },
-          { id: 'a2', email: 'a2@x.no', profile_completed_at: '2026-01-01' },
-          { id: 'b1', email: 'b1@x.no', profile_completed_at: '2026-01-01' },
-          { id: 'b2', email: 'b2@x.no', profile_completed_at: '2026-01-01' },
-        ],
-        error: null,
-      },
       WROTE_ROW, // course_handicap a1
       WROTE_ROW, // course_handicap a2
       WROTE_ROW, // course_handicap b1

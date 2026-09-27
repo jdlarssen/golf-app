@@ -8,10 +8,9 @@ type DraftRosterRow = {
   team_number: number;
   users: {
     // name is null until the invitee completes their profile — see
-    // migration 0014. Draft games can carry pending placeholders, so
-    // fall back to email when rendering.
+    // migration 0014. Draft games can carry pending placeholders; they are
+    // shown as «Invitert spiller», never by e-post (#435, #2207).
     name: string | null;
-    email: string;
   } | null;
 };
 
@@ -29,7 +28,7 @@ export async function DraftTeamsOverview({
   const { data: rows } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, users!game_players_user_id_fkey(name, email)',
+      'user_id, team_number, users!game_players_user_id_fkey(name)',
     )
     .eq('game_id', gameId)
     .order('team_number')
@@ -39,6 +38,7 @@ export async function DraftTeamsOverview({
   const players = rows ?? [];
 
   const tHome = await getTranslations('game.home');
+  const tPlayers = await getTranslations('wizard.sections.players');
   if (players.length === 0) {
     return (
       <p className="text-sm text-muted text-center py-4">{tHome('playersComingSoon')}</p>
@@ -79,13 +79,14 @@ export async function DraftTeamsOverview({
             <ul className="flex flex-col gap-1">
               {teamPlayers.map((p) => {
                 const isCurrent = p.user_id === currentUserId;
-                // Pending invitees (no profile yet) have null name — show
-                // their email instead so the team layout reads usefully.
-                const fullName = p.users?.name ?? p.users?.email ?? null;
-                const displayName =
-                  (fullName && firstName(fullName)) ??
-                  fullName ??
-                  tHome('unknownPlayer');
+                // Pending invitees (no profile yet) have a null name: the
+                // neutral label, whole — firstName would cut it to «Invitert».
+                const fullName = p.users?.name?.trim() || null;
+                const displayName = fullName
+                  ? (firstName(fullName) ?? fullName)
+                  : p.users
+                    ? tPlayers('pendingLabel')
+                    : tHome('unknownPlayer');
                 return (
                   <li
                     key={p.user_id}

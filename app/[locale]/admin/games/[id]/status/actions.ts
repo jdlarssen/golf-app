@@ -71,7 +71,7 @@ export async function remindUnconfirmedPlayers(gameId: string) {
     redirect({ href: `${statusPath}?error=not_found`, locale });
   }
 
-  const { data: players } = await supabase
+  const { data: players } = await getAdminClient()
     .from('game_players')
     .select(
       'user_id, withdrawn_at, accepted_at, users!game_players_user_id_fkey(email, name)',

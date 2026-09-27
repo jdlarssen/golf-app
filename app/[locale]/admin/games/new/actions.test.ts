@@ -18,7 +18,7 @@ import {
  * validates. There is no service-role bypass anymore — creator-owned RLS
  * (migration 0071) covers a non-admin's writes on the request-scoped client,
  * and the publish pending-gate uses a SECURITY DEFINER RPC
- * (`incomplete_profiles_for_ids`) instead of a service-role roster read.
+ * (`incomplete_profile_ids`) instead of a service-role roster read.
  *
  * #1379: validation and DB failures are RETURNED as `{ error: <code> }`, never
  * redirected. The wizard keeps its whole state client-side, so a redirect back
@@ -33,7 +33,7 @@ import {
  *   4. isValidActiveGameMode
  *   5. parseOsloDateTimeLocal — required for publish
  *   6. parseSideTournamentFromFormData (pure)
- *   7. (publish only) rpc('incomplete_profiles_for_ids', {ids}) — pending gate
+ *   7. (publish only) rpc('incomplete_profile_ids', {ids}) — pending gate
  *   8. games.insert(...).select('id').single
  *   9. game_players.insert(rows)
  *  10. redirect (admin → /admin/games/[id], else → /games/[id])
@@ -248,7 +248,7 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
   it('regular non-admin publish: pending player returns { error: pending_players }', async () => {
     supabaseMock = buildSupabaseMock(
       [{ data: { is_admin: false }, error: null }], // gate only — RPC blocks before insert
-      { incomplete_profiles_for_ids: [{ id: 'u1', email: 'u1@example.com' }] },
+      { incomplete_profile_ids: [{ id: 'u1' }] },
     );
     signIn('reg-1', 'random@example.com');
 
@@ -341,14 +341,14 @@ describe('createAndPublishGame', () => {
   });
 
   it('edge case (publish guard): returns { error: pending_players } when a roster player has no completed profile', async () => {
-    // The publish path calls the incomplete_profiles_for_ids RPC, which returns
+    // The publish path calls the incomplete_profile_ids RPC, which returns
     // ONLY the rows that still lack a completed profile. A non-empty result
     // blocks the publish — the action returns before the games.insert call.
     supabaseMock = buildSupabaseMock(
       [{ data: { is_admin: true }, error: null }], // gate
       {
-        incomplete_profiles_for_ids: [
-          { id: 'u1', email: 'u1@example.com' }, // one pending is enough
+        incomplete_profile_ids: [
+          { id: 'u1' }, // one pending is enough
         ],
       },
     );
@@ -368,7 +368,7 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-2' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profiles_for_ids: [] }, // no pending players → gate clears
+      { incomplete_profile_ids: [] }, // no pending players → gate clears
     );
     signIn('admin-1');
 
@@ -387,7 +387,7 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-4ball' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profiles_for_ids: [] },
+      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -502,7 +502,7 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-stbl' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profiles_for_ids: [] },
+      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -557,7 +557,7 @@ describe('backfill invite-notify (#182)', () => {
         { data: { id: 'game-with-notify' }, error: null },
         { data: null, error: null },
       ],
-      { incomplete_profiles_for_ids: [] },
+      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -584,7 +584,7 @@ describe('backfill invite-notify (#182)', () => {
         { data: { id: 'game-admin-plays' }, error: null },
         { data: null, error: null },
       ],
-      { incomplete_profiles_for_ids: [] },
+      { incomplete_profile_ids: [] },
     );
     signIn('admin-1', 'admin@tornygolf.no');
 
@@ -613,7 +613,7 @@ describe('backfill invite-notify (#182)', () => {
         { data: { id: 'game-notify-rejected' }, error: null },
         { data: null, error: null },
       ],
-      { incomplete_profiles_for_ids: [] },
+      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
