@@ -76,12 +76,15 @@ function gameRow(overrides: Record<string, unknown> = {}): QueryResult {
 /**
  * Kjør kjernen med en kø av forhåndssvar. Klienten er `buildSupabaseMock`, som
  * ikke forstår filtre — testen asserterer på `__fromCalls` der det er poenget.
+ * `mockOpts` går rett til mocken: en 0-rad-test som låser `.maybeSingle()`
+ * sender `{ strictSingle: true }` (#1693, #2226).
  */
 async function invite(
   queue: QueryResult[],
   overrides: Partial<Parameters<typeof inviteEmailToGameCore>[0]> = {},
+  mockOpts: Parameters<typeof buildSupabaseMock>[2] = {},
 ) {
-  const client = buildSupabaseMock(queue);
+  const client = buildSupabaseMock(queue, {}, mockOpts);
   const result = await inviteEmailToGameCore({
     client: client as unknown as SupabaseClient<Database>,
     gameId: GAME_ID,
@@ -128,16 +131,19 @@ describe('avvisninger før noe skrives', () => {
 
   it('admin slipper forbi disposable-guarden (#422, kurator-modellen)', async () => {
     // Går videre til spill-lesingen, altså stoppet den ikke på domenet.
-    const { result } = await invite([{ data: null, error: null }], {
-      isAdmin: true,
-      rawEmail: 'bruk-og-kast@mailinator.com',
-    });
+    const { result } = await invite(
+      [{ data: null, error: null }],
+      { isAdmin: true, rawEmail: 'bruk-og-kast@mailinator.com' },
+      { strictSingle: true },
+    );
 
     expect(result).toEqual({ ok: false, reason: 'not_found' });
   });
 
   it('ukjent spill-id → not_found', async () => {
-    const { result } = await invite([{ data: null, error: null }]);
+    const { result } = await invite([{ data: null, error: null }], {}, {
+      strictSingle: true,
+    });
 
     expect(result).toEqual({ ok: false, reason: 'not_found' });
   });
