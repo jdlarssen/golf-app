@@ -329,6 +329,17 @@ export async function putScore(
   );
 }
 
+/**
+ * #2211: et avslått førstegangsslag. Serveren har ingen rad, så den lokale
+ * slettes når drainen gjør opp et låst avslag (webbens `scores.delete`).
+ */
+export async function deleteScore(
+  db: SQLite.SQLiteDatabase,
+  id: string,
+): Promise<void> {
+  await db.runAsync('DELETE FROM scores WHERE id = $id;', { $id: id });
+}
+
 export async function listScoresForGame(
   db: SQLite.SQLiteDatabase,
   gameId: string,

@@ -6,8 +6,8 @@
 // Lever-knappen har webbens to porter, og de er ikke pynt:
 //  1. **Kø-vakta (#668/#1370):** vi drainer først, og blokkerer så lenge køen
 //     har elementer for DETTE spillet. Leverer man med usynkede slag, fryser
-//     RLS kortet, RPC-en svarer `was_applied=false`, drainen leser det som
-//     suksess og sletter kø-elementet — slaget er borte.
+//     RLS kortet og avviser skrivingen; drainen setter elementet i karantene
+//     (#2211, `interpretUpsertReply`), men slaget kommer uansett ikke fram.
 //  2. **Manglende hull (#1793):** et komplett kort leveres uten spørsmål; er
 //     det hull uten slag, spør vi først, for de låses som ikke spilt.
 //

@@ -40,11 +40,15 @@ function strictlyIncreasingTimestamp(
   nowIso: string,
 ): string {
   if (!existing) return nowIso;
-  if (nowIso > existing.clientUpdatedAt) return nowIso;
-  // nowIso er <= lagret → bump lagret med 1 ms for å garantere strict >.
-  return new Date(
-    new Date(existing.clientUpdatedAt).getTime() + 1,
-  ).toISOString();
+  // Sammenlign ØYEBLIKK, ikke strenger (#2211): det lagrede stempelet kan ha
+  // serverens format (`…+00:00`, lagret av server-wins og av oppgjøret av et
+  // låst avslag), og som strenger er `…:00.000Z` større enn `…:00+00:00` for
+  // samme øyeblikk.
+  const stored = Date.parse(existing.clientUpdatedAt);
+  // Et stempel som ikke kan tolkes, kan ikke bumpes; da er nå det eneste fornuftige.
+  if (Number.isNaN(stored) || Date.parse(nowIso) > stored) return nowIso;
+  // nå er <= lagret → bump lagret med 1 ms for å garantere strict >.
+  return new Date(stored + 1).toISOString();
 }
 
 export async function writeScore(args: WriteScoreArgs): Promise<LocalScore> {

@@ -100,6 +100,36 @@ describe('writeScore', () => {
     expect(third.clientUpdatedAt > second.clientUpdatedAt).toBe(true);
   });
 
+  // #2211: server-wins og oppgjøret av et låst avslag lagrer stempelet i
+  // serverens format (`…+00:00`). Som strenger er `…:00.000Z` større enn
+  // `…:00+00:00` for samme øyeblikk, så stempelet ble ikke bumpet og RPC-en
+  // hoppet over skrivingen.
+  it('bumper et lagret stempel i serverformat på samme øyeblikk som klokka', async () => {
+    const { writeScore } = require('./writeScore') as typeof import('./writeScore');
+    const { getDb, putScore, scoreKey } = require('./db') as typeof import('./db');
+    await putScore(await getDb(), {
+      id: scoreKey(GAME, ME, 4),
+      gameId: GAME,
+      userId: ME,
+      holeNumber: 4,
+      strokes: 5,
+      putts: null,
+      enteredBy: ME,
+      clientUpdatedAt: '2026-08-30T10:00:00+00:00',
+      serverUpdatedAt: '2026-08-30T10:00:00+00:00',
+    });
+
+    const next = await writeScore({
+      gameId: GAME,
+      userId: ME,
+      holeNumber: 4,
+      strokes: 4,
+      enteredBy: ME,
+    });
+
+    expect(next.clientUpdatedAt).toBe('2026-08-30T10:00:00.001Z');
+  });
+
   it('bruker veggklokka når tiden faktisk har gått', async () => {
     const { writeScore } = require('./writeScore') as typeof import('./writeScore');
 
