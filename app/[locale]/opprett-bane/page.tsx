@@ -1,4 +1,5 @@
 import { first } from '@/lib/url/searchParams';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
@@ -27,20 +28,6 @@ type SearchParams = Promise<{
   next?: string | string[];
 }>;
 
-// Bare interne stier slipper gjennom — speiler open-redirect-guarden i
-// createCourse-action.
-function safeNext(value: string | undefined): string | undefined {
-  if (
-    value &&
-    value.startsWith('/') &&
-    !value.startsWith('//') &&
-    !value.includes('\\')
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
 export default async function OpprettBanePage({
   searchParams,
 }: {
@@ -59,7 +46,8 @@ export default async function OpprettBanePage({
   const t = await getTranslations({ locale, namespace: 'courseForm' });
 
   const sp = await searchParams;
-  const next = safeNext(first(sp.next));
+  // Bare interne stier slipper gjennom (samme regel som createCourse).
+  const next = safeInternalPath(first(sp.next)) ?? undefined;
   const status = first(sp.status);
   const errorCode = first(sp.error);
 

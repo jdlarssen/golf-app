@@ -31,7 +31,7 @@ type Props = {
   action: (formData: FormData) => void;
   /**
    * Optional same-origin path the action should redirect to on success.
-   * Already validated by `safeNextPath` upstream — rendered as a hidden input.
+   * Already validated by `safeInternalPath` upstream — rendered as a hidden input.
    */
   next?: string | null;
 };

@@ -10,7 +10,7 @@ import { isHandicapStale } from '@/lib/handicap/staleness';
  * verdien er gammel.
  *
  * Tap → /profile?next={nextPath} så spilleren havner tilbake der de var
- * etter lagring. `nextPath` valideres med `safeNextPath` på mottaker-siden
+ * etter lagring. `nextPath` valideres med `safeInternalPath` på mottaker-siden
  * (server-action i app/profile/actions.ts) — vi sender bare path-en
  * inn her.
  */

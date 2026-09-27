@@ -1,6 +1,7 @@
 'use client';
 
 import { isStandalone, isIosSafari } from './detect';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 export type PushState =
   | 'loading'      // before useEffect resolves
@@ -136,8 +137,8 @@ export function initNativePush(opts: {
   if (!actionListenerBound) {
     actionListenerBound = true;
     void plugin.addListener('pushNotificationActionPerformed', (payload) => {
-      const url = payload.notification?.data?.url;
-      if (typeof url === 'string' && url.startsWith('/')) opts.navigate(url);
+      const target = safeInternalPath(payload.notification?.data?.url);
+      if (target) opts.navigate(target);
     });
   }
 

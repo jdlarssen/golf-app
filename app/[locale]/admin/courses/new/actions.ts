@@ -6,21 +6,17 @@ import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
 import { parseCourseHolesAndTees } from '@/lib/courses/parseCourseForm';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
-// Open-redirect-guard: kun interne absolutte stier (start med ett '/', ikke
-// protokoll-relativ '//'). redirect_base/success_redirect er klient-kontrollert
-// FormData (CourseForm sender dem som skjulte inputs), så de saniteres her.
-function safeInternalPath(
+// Open-redirect-guard: redirect_base/success_redirect er klient-kontrollert
+// FormData (CourseForm sender dem som skjulte inputs), så de går gjennom den
+// felles regelen for interne stier. Defense-in-depth — verdien er
+// server-konstruert, men behandles som upålitelig.
+function internalPathOr(
   value: FormDataEntryValue | null,
   fallback: string,
 ): string {
-  const s = typeof value === 'string' ? value.trim() : '';
-  // Må være en intern, enkelt-slash-rotet sti. Avvis protokoll-relativ
-  // (`//host`), backslash-triks (`/\host` — nettlesere normaliserer `\` til
-  // `/`), og alt med scheme. Defense-in-depth — verdien er server-konstruert,
-  // men behandles som upålitelig.
-  if (s.startsWith('/') && !s.startsWith('//') && !s.includes('\\')) return s;
-  return fallback;
+  return safeInternalPath(typeof value === 'string' ? value.trim() : null) ?? fallback;
 }
 
 function appendQuery(base: string, key: string, value: string): string {
@@ -45,11 +41,11 @@ export async function createCourse(formData: FormData) {
   // Hvor valideringsfeil bouncer / hvor suksess lander. Admin-flyten sender
   // ingen verdier → admin-defaults. /opprett-bane sender egne stier så
   // ikke-admin-brukere ikke kastes til /admin/courses (dit har de ikke tilgang).
-  const errorBase = safeInternalPath(
+  const errorBase = internalPathOr(
     formData.get('redirect_base'),
     '/admin/courses/new',
   );
-  const successRedirect = safeInternalPath(
+  const successRedirect = internalPathOr(
     formData.get('success_redirect'),
     '/admin/courses?status=created',
   );

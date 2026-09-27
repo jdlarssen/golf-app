@@ -12,6 +12,7 @@ import { OnboardingHcpField } from './OnboardingHcpField';
 import { OnboardingNameField } from './OnboardingNameField';
 import { OnboardingProgress } from './OnboardingProgress';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -21,13 +22,6 @@ type SearchParams = Promise<{
   hcp_plus?: string | string[];
   invite_notice?: string | string[];
 }>;
-
-/** Only accept same-origin relative paths as a post-onboarding destination. */
-function safeNext(value: string | undefined): string {
-  return value && value.startsWith('/') && !value.startsWith('//')
-    ? value
-    : '/';
-}
 
 // The set of valid error codes that map to a catalog key.
 const KNOWN_ERROR_CODES = new Set([
@@ -52,7 +46,7 @@ export default async function CompleteProfile({
   const params = await searchParams;
   // #356: carry the post-onboarding destination (e.g. a game-scoped invitee's
   // `/games/[id]`) through the profile step so the user lands there afterwards.
-  const next = safeNext(first(params.next));
+  const next = safeInternalPath(first(params.next)) ?? '/';
 
   // #748: echo submitted values back into the form after a validation bounce
   // so the user doesn't have to retype everything.

@@ -1,8 +1,10 @@
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
+
 /**
  * Felles inndata-validering for lanseringer (#993). Både publiser- og rediger-
  * server-actionen kjører nøyaktig samme regler, så de bor ett sted (AGENTS.md
  * trap #4 — én regel, ett hjem). Reglene speiler `productUpdateSchema` i
- * `lib/notifications/types.ts`: lenke må være intern (starter med «/»), og
+ * `lib/notifications/types.ts`: lenke må være intern (`safeInternalPath`), og
  * knappe-tekst er meningsløs uten lenke.
  *
  * Returnerer en diskriminert union så call-site kan redirecte med feilkoden
@@ -38,8 +40,8 @@ export function validateProductUpdateInput(raw: {
 
   if (!title) return { ok: false, error: 'title_required' };
   if (!body) return { ok: false, error: 'body_required' };
-  // Link, if present, must be internal (starts with '/').
-  if (link && !link.startsWith('/')) {
+  // Link, if present, must be a same-origin path.
+  if (link && safeInternalPath(link) === null) {
     return { ok: false, error: 'link_must_be_internal' };
   }
   // cta_label only meaningful with a link.

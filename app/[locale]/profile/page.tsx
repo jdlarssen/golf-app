@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { updateProfile } from './actions';
-import { safeNextPath } from './safeNext';
+import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { ProfileFormBody } from './ProfileFormBody';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getIncomingFriendRequestCount } from '@/lib/friends/getIncomingFriendRequestCount';
@@ -77,7 +77,7 @@ export default async function ProfilePage({
     ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
     : errorCode ? t('errors.unknown') : undefined;
   const profileUpdated = first(params.profile) === 'updated';
-  const nextSafe = safeNextPath(first(params.next));
+  const nextSafe = safeInternalPath(first(params.next));
 
   return (
     <AppShell>
