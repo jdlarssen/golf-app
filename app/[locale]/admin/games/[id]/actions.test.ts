@@ -617,6 +617,79 @@ describe('reopenScorecard (#1363)', () => {
     );
     consoleErr.mockRestore();
   });
+
+  it('#2213: reopening a team card reopens every active team member', async () => {
+    // Texas scramble: the captain (lex-min) owns the team's shared rows.
+    // Reopening only the teammate's card left the captain's row submitted, so
+    // the hole page kept the team card locked and RLS refused the correction.
+    // The whole active team reopens in one UPDATE on the same RLS client.
+    const CAPTAIN = 'a-captain';
+    const MATE = 'u-mate';
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (requireAdmin)
+      {
+        data: { name: 'Vinter-cup', status: 'active', game_mode: 'texas_scramble' },
+        error: null,
+      }, // games.select(name, status, game_mode)
+      {
+        data: [
+          { user_id: CAPTAIN, team_number: 1, withdrawn_at: null },
+          { user_id: MATE, team_number: 1, withdrawn_at: null },
+          { user_id: 'c-other', team_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // game_players roster
+      { data: [{ user_id: CAPTAIN }, { user_id: MATE }], error: null }, // game_players.update → the whole team
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenScorecard } = await import('./actions');
+
+    await expect(reopenScorecard('game-1', MATE)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scorecard_reopened');
+
+    expect(supabaseMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'in',
+      args: ['user_id', [CAPTAIN, MATE]],
+    });
+    expect(supabaseMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'not',
+      args: ['submitted_at', 'is', null],
+    });
+    // No new service-role site: the organizer gate + RLS carry the write.
+    expect(
+      adminSupabaseMock.__fromCalls.some((c) => c.method === 'update'),
+    ).toBe(false);
+
+    for (const userId of [CAPTAIN, MATE]) {
+      expect(notifyMock).toHaveBeenCalledWith({
+        userId,
+        kind: 'scorecard_reopened',
+        payload: {
+          game_id: 'game-1',
+          game_name: 'Vinter-cup',
+          actor_name: 'Jørgen',
+        },
+      });
+    }
+    expect(logAdminEventMock).toHaveBeenCalledTimes(1);
+    expect(logAdminEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          gameId: 'game-1',
+          playerUserId: MATE,
+          reopenedUserIds: [CAPTAIN, MATE],
+        },
+      }),
+    );
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
+  });
 });
 
 describe('endGame', () => {
