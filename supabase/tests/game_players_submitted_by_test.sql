@@ -25,10 +25,12 @@
 --    10. someone outside the game delivers    → 0 rows
 --    11. someone in another flight delivers   → 0 rows
 --   Approval, end state:
---    12. approve an open card, then deliver it → REJECTED
+--    12. a peer approves an open card         → REJECTED
 --    13. another peer writes the deliverer in as approver → REJECTED
 --   Insert:
 --    14. a forged value on insert             → auth.uid() wins
+--   Approval on an open card:
+--    15. a peer un-delivers an approved card  → REJECTED
 --
 -- Run via:  supabase test db
 -- See supabase/tests/README.md (same rig as #440).
@@ -38,14 +40,15 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(15);
 
 \ir fixtures/rls_helpers.psql
 
 -- ── Probe helpers ────────────────────────────────────────────────────────────
 -- Each returns TRUE when the write landed, FALSE when the guard (42501) or RLS
--- refused it. `get diagnostics` is what separates "refused" from "0 rows" —
--- felle 2 in test form.
+-- refused it (RLS refusing = 0 rows, read with `get diagnostics` — felle 2 in
+-- test form). Both count as refused here; the fixture keeps every actor that
+-- is meant to pass RLS in the same flight, so a FALSE on those is the guard.
 
 -- Deliver like the server does: submitted_at and submitted_by_user_id in one
 -- patch. `p_by` defaults to the caller; pass another id to forge it.
@@ -113,6 +116,19 @@ create or replace function torny_rls.try_set_approval(p_target uuid, p_by uuid)
   begin
     update public.game_players
        set approved_at = now(), approved_by_user_id = p_by
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+  $$;
+
+create or replace function torny_rls.try_undeliver(p_target uuid)
+  returns boolean language plpgsql as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set submitted_at = null
      where game_id = torny_rls.game_id() and user_id = p_target;
     get diagnostics v_rows = row_count;
     return v_rows > 0;
@@ -246,17 +262,17 @@ select ok(
   'a player in another flight cannot deliver the card (can_score_for, 0 rows)'
 );
 
--- ── 12. Approve first, deliver after: the end state is the same, so refused ──
--- submitted_id is in flight 1 with active_id. The approval on an open card
--- is allowed as before; the delivery that would make active_id both the one
--- who delivered and the one who approved is not.
+-- ── 12. A peer may not approve an open card ──────────────────────────────────
+-- Approve first, deliver after: the service role (the app route, the team
+-- cascade) skips the guard, so the approval itself has to be refused, or the
+-- one who delivers ends up approving too. submitted_id shares flight 1 with
+-- active_id, so RLS lets the write through and a FALSE is the guard.
 select torny_rls.as_service();
 select torny_rls.reopen(torny_rls.submitted_id());
 select torny_rls.as_user(torny_rls.active_id());
-select torny_rls.try_set_approval(torny_rls.submitted_id(), torny_rls.active_id());
 select ok(
-  NOT torny_rls.try_deliver(torny_rls.submitted_id()),
-  'approving an open card and delivering it after is refused (0191, end state)'
+  NOT torny_rls.try_set_approval(torny_rls.submitted_id(), torny_rls.active_id()),
+  'a peer may not approve a card that is not delivered (0191)'
 );
 
 -- ── 13. Another peer may not write the deliverer in as approver ─────────────
@@ -281,6 +297,19 @@ select is(
     where game_id = torny_rls.game_id() and user_id = torny_rls.outsider_id()),
   torny_rls.admin_id(),
   'a forged submitted_by_user_id on insert is overwritten with auth.uid() (0191)'
+);
+
+-- ── 15. A peer may not un-deliver a card while its approval stands ──────────
+-- The other way to reach «approved, not delivered». The organiser delivered
+-- and approved nothing here; the service role sets the state up.
+select torny_rls.as_service();
+update public.game_players
+   set submitted_at = now(), approved_at = now(), approved_by_user_id = torny_rls.admin_id()
+ where game_id = torny_rls.game_id() and user_id = torny_rls.submitted_id();
+select torny_rls.as_user(torny_rls.active_id());
+select ok(
+  NOT torny_rls.try_undeliver(torny_rls.submitted_id()),
+  'a peer may not un-deliver a card and leave its approval standing (0191)'
 );
 
 select * from finish();
