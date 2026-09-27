@@ -305,12 +305,19 @@ export default async function CreatorSpillerePage({
                   canWithdraw && (role.isAdmin || p.user_id !== role.userId);
                 const submitted = !!p.submitted_at;
                 const approved = !!p.approved_at;
+                // #2200: «Levert av …» when the scorekeeper delivered the card.
+                const deliverer =
+                  p.submitted_by_user_id != null && p.submitted_by_user_id !== p.user_id
+                    ? players.find((q) => q.user_id === p.submitted_by_user_id)
+                    : undefined;
                 const stateLabel = wd
                   ? t('stateWithdrawn')
                   : approved
                     ? t('stateApproved')
                     : submitted
-                      ? t('stateSubmitted')
+                      ? deliverer
+                        ? t('stateSubmittedBy', { name: playerName(deliverer) })
+                        : t('stateSubmitted')
                       : isActive
                         ? t('stateNotSubmitted')
                         : null;

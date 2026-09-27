@@ -38,9 +38,12 @@ function failureHref(
  * (AGENTS trap 4). Kjernen får denne sidens RLS-klient, så oppførselen er
  * uendret; det eneste som bor her er oversettelsen fra utfall til redirect.
  *
+ * #2200: skjemaets skjulte `alsoFor`-felt er makkerne jeg har ført kortet for.
+ * De sendes rett videre; kjernen leverer bare dem regelen tillater.
+ *
  * `redirect()` kaster, så kjerne-kallet er med vilje ikke pakket i try/catch.
  */
-export async function submitScorecard(gameId: string) {
+export async function submitScorecard(gameId: string, formData?: FormData) {
   const locale = await getLocale();
   const supabase = await getServerClient();
   const {
@@ -49,7 +52,8 @@ export async function submitScorecard(gameId: string) {
   if (!maybeUser) redirect({ href: '/login', locale });
   const user = maybeUser!;
 
-  const result = await submitScorecardCore(supabase, gameId, user.id);
+  const alsoFor = (formData?.getAll('alsoFor') ?? []).map(String).filter(Boolean);
+  const result = await submitScorecardCore(supabase, gameId, user.id, { alsoFor });
 
   if (!result.ok) {
     redirect({ href: failureHref(result.reason, gameId) as string, locale });

@@ -224,8 +224,9 @@ async function loadReminderContext(
   }
 
   // #1009: gjester purres ikke — plassholder-adressen kan ikke motta mail, og
-  // gjesten leverer via markøren uansett. #1466: front9-spillere med ulevert
-  // back9-søsken ekskluderes (purres via back9).
+  // gjesten kan ikke levere selv. Kortet leveres av den som fører det, fra
+  // lever-siden (#2200). #1466: front9-spillere med ulevert back9-søsken
+  // ekskluderes (purres via back9).
   const selection = {
     players,
     filledByUser,

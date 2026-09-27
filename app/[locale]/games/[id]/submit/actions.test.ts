@@ -62,6 +62,15 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminSupabaseMock,
 }));
 
+// #2200: the flight rule's read is the boundary here; the rule and the core
+// have their own suites.
+const loadCardsMock = vi.fn(
+  async (..._args: unknown[]) => [] as { userId: string; name: string | null; isGuest: boolean }[],
+);
+vi.mock('@/lib/games/loadFlightDelivery', () => ({
+  loadFlightDeliveryCards: (...args: unknown[]) => loadCardsMock(...args),
+}));
+
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
   if (!arg) return undefined;
@@ -612,6 +621,45 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
     expect(
       adminSupabaseMock.__fromCalls.some((c) => c.method === 'update'),
     ).toBe(false);
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+});
+
+describe('submitScorecard — levering for flighten (#2200)', () => {
+  it('sender skjemaets alsoFor videre til kjernen, som leverer makkeren i samme skriving', async () => {
+    loadCardsMock.mockResolvedValueOnce([{ userId: 'ola', name: 'Ola', isGuest: false }]);
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          name: 'Vinter-cup',
+          status: 'active',
+          require_peer_approval: false,
+          game_mode: 'stableford',
+          hole_segment: 'full',
+          tournament_id: null,
+          source_game_id: null,
+        },
+        error: null,
+      },
+      { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
+      { data: [{ user_id: 'user-1' }, { user_id: 'ola' }], error: null },
+      { data: { name: 'Kari' }, error: null },
+      { data: [], error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+    const form = new FormData();
+    form.append('alsoFor', 'ola');
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(loadCardsMock).toHaveBeenCalledWith('game-1', 'user-1', expect.anything());
+    const inCall = supabaseMock.__fromCalls.find(
+      (c) => c.method === 'in' && c.args[0] === 'user_id',
+    );
+    expect(inCall?.args[1]).toEqual(['user-1', 'ola']);
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
 });

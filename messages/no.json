@@ -149,7 +149,7 @@
       },
       "deliverReminder": {
         "title": "Husk å levere scorekortet",
-        "detail": "Slagene i {gameName} teller ikke før du leverer"
+        "detail": "Lever kortet i {gameName}, så kan arrangøren avslutte runden."
       },
       "paymentReminder": {
         "title": "Betal startkontingenten",
@@ -1913,6 +1913,7 @@
       "ctaHolesFilled": "{count} av {total} hull tastet inn",
       "ctaSubmittedPendingApproval": "Scorekort levert — venter på godkjenning fra en medspiller.",
       "ctaSubmittedApproved": "Scorekort levert og godkjent. Venter på at admin avslutter spillet.",
+      "ctaDeliverFlight": "{count, plural, one {Lever kortet du har ført} other {Lever kortene du har ført ({count})}}",
       "ctaContinueToSibling": "Videre til hull {hole} · {format} →",
       "draftTeamsLabel": "LAG",
       "draftSidesLabel": "SIDER",
@@ -1990,6 +1991,15 @@
       "confirmBase": "Levere scorekortet? Dette kan bare angres av arrangøren.",
       "confirmMissing": "{count, plural, one {1 hull mangler og blir lagret som ikke spilt.} other {# hull mangler og blir lagret som ikke spilt.}}",
       "unknownPlayer": "(ukjent spiller)",
+      "flight": {
+        "intro": "{count, plural, one {Lever også kortet til {names}.} other {Lever også kortene til {names}.}}",
+        "enteredAll": "Du har ført alle hullene.",
+        "enteredAllFor": "Du har ført alle hullene til {names}.",
+        "guests": "{count, plural, one {{names} er gjest og kan ikke levere selv.} other {{names} er gjester og kan ikke levere selv.}}",
+        "submitButton": "Lever {count} kort ✓",
+        "submitOthersButton": "Lever for {names} ✓",
+        "ownDelivered": "Kortet ditt er levert."
+      },
       "puttsPrompt": {
         "heading": "Putter ført på {done} av {total} hull. Fyll inn resten?",
         "allDone": "Nå har alle hull putter. Bra jobba!",
@@ -2076,7 +2086,7 @@
       "pending": "Purrer …",
       "none": "Ingen av dem kan purres nå.",
       "unfinished": "{count} av dem har ikke ført alle hullene ennå. Purring hjelper først da.",
-      "guests": "{count, plural, one {# av dem er gjest og leverer via markøren.} other {# av dem er gjester og leverer via markøren.}}",
+      "guests": "{count, plural, one {# av dem er gjest. Den som fører kortet, leverer det.} other {# av dem er gjester. Den som fører kortene, leverer dem.}}",
       "splitDay": "{count} av dem leverer hele runden på Bak 9 og blir purret der.",
       "sent": "Purret. De får et varsel nå."
     },
@@ -2137,6 +2147,7 @@
       "stateWithdrawn": "Trukket",
       "stateApproved": "Godkjent",
       "stateSubmitted": "Levert",
+      "stateSubmittedBy": "Levert av {name}",
       "stateNotSubmitted": "Ikke levert",
       "removeButton": "Fjern",
       "cupRosterLockedHint": "Dette er en cupkamp. Spillere bytter du på cupsiden.",
@@ -3776,6 +3787,7 @@
           "playing": "Spiller",
           "not_started": "Ikke startet",
           "delivered": "Levert",
+          "deliveredBy": "Levert av {name}",
           "withdrawn": "Trukket"
         },
         "sendingBusy": "Sender …"
@@ -5706,8 +5718,8 @@
       "heading": "Lever scorekortet",
       "salutationNamed": "Hei {name}!",
       "salutationGeneric": "Hei!",
-      "body": "Du spilte ferdig <strong>{gameName}</strong>, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.",
-      "bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Slagene dine teller ikke før du leverer — det tar bare noen sekunder.",
+      "body": "Du spilte ferdig <strong>{gameName}</strong>, men har ikke levert scorekortet ennå. Lever det, så kan arrangøren avslutte runden. Det tar bare noen sekunder.",
+      "bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Lever det, så kan arrangøren avslutte runden. Det tar bare noen sekunder.",
       "submitButton": "Lever scorekortet",
       "submitButtonText": "Lever scorekortet: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."
