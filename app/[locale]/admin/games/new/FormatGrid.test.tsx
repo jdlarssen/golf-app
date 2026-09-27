@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { useState } from 'react';
 import { FormatGrid } from './FormatGrid';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 
@@ -75,5 +76,30 @@ describe('FormatGrid', () => {
     // Klikk Matchplay (sekundær) → onChange caller med slug.
     fireEvent.click(screen.getByRole('radio', { name: /^matchplay$/i }));
     expect(onChange).toHaveBeenLastCalledWith('singles_matchplay');
+  });
+
+  it('piltast flytter valget og beholder fokus på det nye kortet (#2240)', () => {
+    // The selected card is a <div> around its radio and an unselected card is
+    // a bare radio, so moving the selection re-mounts both nodes. Focus must
+    // land on the newly checked radio, not fall back to <body>.
+    function Wrapper() {
+      const [value, setValue] = useState<string | undefined>('stableford');
+      return (
+        <FormatGrid formats={KLUBB_FORMATS} value={value} onChange={setValue} />
+      );
+    }
+    render(<Wrapper />);
+    const primaryRadios = () =>
+      within(screen.getAllByRole('radiogroup')[0]).getAllByRole('radio');
+
+    act(() => {
+      primaryRadios()[0].focus();
+    });
+    fireEvent.keyDown(primaryRadios()[0], { key: 'ArrowRight' });
+
+    const radios = primaryRadios();
+    expect(radios[0]).toHaveAttribute('aria-checked', 'false');
+    expect(radios[1]).toHaveAttribute('aria-checked', 'true');
+    expect(document.activeElement).toBe(radios[1]);
   });
 });
