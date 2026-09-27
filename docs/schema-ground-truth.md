@@ -49,6 +49,8 @@ Typed clients (#672) make wrong column names a compile error — treat a red squ
 
 ## `users`
 
+- **Private columns** (migration 0186, #2207): `authenticated` and `anon` have column-level SELECT on every column **except `email` and `friend_code`**; there is no table-level SELECT grant. RLS still decides which rows. A new column needs its own `grant select (column)`, or the app cannot read it (`supabase/tests/users_private_columns_test.sql` guards this). The server reads the two with the service role: `lib/users/privateUserFields.ts`, admin pages behind `requireAdmin`, mail sends.
+- **Guard trigger `guard_users_self_update`** (0107, last redefined in 0185): a non-admin cannot change `is_admin`, `is_guest`, `deleted_at` or `email` on their own row (42501). The service role and global admins pass.
 - **Guard trigger `guard_users_admin_delete`** (migration 0179, #1903): `BEFORE DELETE` refuses any row with `is_admin = true`, service-role included (no `auth.uid() is null` escape). The `auth.users` cascade rolls back with it, so `auth.admin.deleteUser(adminId)` returns an error. To retire an admin: `update public.users set is_admin = false` first.
 
 ---
@@ -81,6 +83,14 @@ Do **not** assume one shape across the three. `games.status` is a typed enum; th
 - `hole_segment IN ('full', 'front9', 'back9')` — named `games_hole_segment_valid` in BOTH envs
   since migration 0165 (#1649; prod previously carried the auto-named `games_hole_segment_check`,
   renamed 2026-08-29).
+- **Guard trigger `guard_games_competition_links`** (0185, #2207): a non-null, new or changed
+  `tournament_id` or `source_game_id` only from someone who manages the cup
+  (`can_manage_tournament`, the mirror of the tournaments UPDATE policy; a derived game's source
+  must be in the same cup), and `group_id` only from a club member. Changing a link to `NULL`
+  is never checked (ON DELETE SET NULL). Service role and global admins pass.
+- **Guard trigger `guard_games_league_round_id`** (0186, #2207): a non-null, new or changed
+  `league_round_id` only from the service role or a global admin; the flight start inserts
+  through the admin client. Clearing it is never checked.
 
 ## `format_intent_mapping` — operational data, drift from the snapshot is expected
 
