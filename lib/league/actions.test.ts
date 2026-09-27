@@ -70,11 +70,11 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
       { data: [] },
       // 5. users (tee_gender roster)
       { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
-      // 6. games.insert(...).select('id').single
-      { data: { id: 'g1' }, error: null },
-      // 7. game_players.insert (the payload under test)
+      // 6. game_players.insert (the payload under test)
       { error: null },
     ]);
+    // #2207: the flight game itself is inserted by the admin client.
+    adminMock = buildSupabaseMock([{ data: { id: 'g1' }, error: null }]);
     setUser('u1');
 
     const { startLeagueRoundFlight } = await import('./actions');
@@ -99,6 +99,40 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
     // (a value user_gender never had) and silently mapped everyone to 'mens'.
     expect(actor.tee_gender).toBe('mens');
     expect(coPlayer.tee_gender).toBe('ladies');
+  });
+
+  it('inserts the flight game with the admin client, created_by the player (#2207)', async () => {
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          id: 'r1',
+          league_id: 'l1',
+          course_id: 'c1',
+          tee_box_id: 'tb1',
+          opens_at: '2000-01-01T00:00:00Z',
+          closes_at: '2099-01-01T00:00:00Z',
+          original_closes_at: '2099-01-01T00:00:00Z',
+        },
+      },
+      { data: { id: 'l1', name: 'Test-liga', course_id: 'c1', tee_box_id: 'tb1', status: 'active', format: 'stroke' } },
+      { data: [{ user_id: 'u1' }, { user_id: 'u2' }] },
+      { data: [] },
+      { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
+      { error: null },
+    ]);
+    adminMock = buildSupabaseMock([{ data: { id: 'g1' }, error: null }]);
+    setUser('u1');
+
+    const { startLeagueRoundFlight } = await import('./actions');
+    await expect(startLeagueRoundFlight('r1', ['u2'])).rejects.toBeInstanceOf(RedirectError);
+
+    const adminInsert = adminMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect(adminInsert?.args[0]).toMatchObject({ created_by: 'u1', league_round_id: 'r1' });
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
+    ).toBe(false);
   });
 });
 
@@ -401,13 +435,14 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
       { data: [] },
       // 5. tee_gender roster
       { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
-      // 6. games.insert(...).select('id').single
-      { data: { id: 'g1' }, error: null },
-      // 7. game_players.insert FAILS
+      // 6. game_players.insert FAILS
       { error: { message: 'boom' } },
-      // 8. rollback: games.delete().eq('id','g1')
+      // 7. rollback: games.delete().eq('id','g1') — the player's own client,
+      //    under "games creator delete" (created_by is the player)
       { error: null },
     ]);
+    // #2207: games.insert(...).select('id').single runs on the admin client.
+    adminMock = buildSupabaseMock([{ data: { id: 'g1' }, error: null }]);
     setUser('u1');
     const { startLeagueRoundFlight } = await import('./actions');
 

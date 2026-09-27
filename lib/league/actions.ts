@@ -746,7 +746,15 @@ export async function startLeagueRoundFlight(
   const deliveredOutsideWindow = now > new Date(round.original_closes_at).getTime();
   const name = `${league.name} – Runde`.slice(0, GAME_NAME_MAX);
 
-  const { data: game, error: gErr } = await supabase
+  // #2207: league_round_id is server-owned. The league table counts finished
+  // games per round with the service role, so the database lets only the
+  // service role and admins set the link (guard_games_league_round_id). Every
+  // rule above (window, membership, marker, one counted flight) ran here on
+  // the server; the insert itself goes through the admin client. created_by
+  // stays the player, so the game_players insert, the compensation and
+  // startScheduledGame below still run on their own client under the creator
+  // policies.
+  const { data: game, error: gErr } = await getAdminClient()
     .from('games')
     .insert({
       name,
