@@ -28,8 +28,14 @@ const VALUES: number[] = Array.from(
   (_, i) => i + 1,
 );
 
+// Fixed to the viewport, not the page (#2251): anchored to the bottom of
+// <main>, the sheet ended half below the screen edge whenever the hole page
+// was taller than the screen — «Stryk» and the caption out of reach. This
+// only works because the hole page's enter animation leaves no transform
+// behind (`hole-fade-in` in app/globals.css): a transformed ancestor would
+// become the containing block again.
 const backdropStyle: CSSProperties = {
-  position: 'absolute',
+  position: 'fixed',
   inset: 0,
   background: 'rgba(15,22,18,0.4)',
   display: 'flex',
