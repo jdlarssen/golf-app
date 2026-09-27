@@ -20,6 +20,8 @@ import {
   isAlternateShotMatchplay,
 } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
+import { parForPlayer, type HoleParByGender } from './parDisplay';
+import type { TeeGender } from './teeRating';
 
 /**
  * Player som vises i en kolonne på Layout B. `displayName` brukes til
@@ -42,6 +44,13 @@ export interface ScorecardColumnPlayer {
    * team_number siden modi som krever sider validerer kolonnen ved publish.
    */
   teamNumber: number | null;
+  /**
+   * #2209: kolonnens tee-sett (`game_players.tee_gender`). Stableford-poengene
+   * i cellene og footeren regnes mot DENNE spillerens par, som motoren gjør
+   * (`parFor(hole, p.teeGender)`). Foursomes/greensome-sidene bruker
+   * sidekapteinens, som motoren (`lib/scoring/modes/types.ts`).
+   */
+  teeGender: TeeGender;
 }
 
 /**
@@ -300,6 +309,7 @@ export function resolveScorecardLayout(
       courseHandicap: mySideExtra,
       isCurrentUser: true,
       teamNumber: me.team_number ?? null,
+      teeGender: mySideCaptain?.tee_gender ?? 'mens',
     };
     const oppSideColumn: ScorecardColumnPlayer = {
       userId: oppSideCaptainId,
@@ -308,6 +318,7 @@ export function resolveScorecardLayout(
       courseHandicap: oppSideExtra,
       isCurrentUser: false,
       teamNumber: oppSidePlayers[0].team_number,
+      teeGender: oppSideCaptain?.tee_gender ?? 'mens',
     };
 
     return {
@@ -407,6 +418,7 @@ export function resolveScorecardLayout(
     courseHandicap: strokeHandicap(me),
     isCurrentUser: true,
     teamNumber: me.team_number ?? null,
+    teeGender: me.tee_gender,
   };
   const partnerColumns: ScorecardColumnPlayer[] = partners.map((p) => {
     const fallback = isFourball
@@ -423,6 +435,7 @@ export function resolveScorecardLayout(
       courseHandicap: strokeHandicap(p),
       isCurrentUser: false,
       teamNumber: p.team_number ?? null,
+      teeGender: p.tee_gender,
     };
   });
 
@@ -444,7 +457,8 @@ export function resolveScorecardLayout(
 
 export interface LayoutBHoleInput {
   hole_number: number;
-  par: number;
+  /** #2209: par per tee-sett — hver kolonne regnes mot sin egen. */
+  parByGender: HoleParByGender;
   stroke_index: number;
 }
 
@@ -541,7 +555,10 @@ export function computeLayoutBTotals(
       perPlayer[idx].netto += netto;
       nettos.push(netto);
       if (isStableford) {
-        const pts = pointsFn({ par: hole.par, netStrokes: netto });
+        const pts = pointsFn({
+          par: parForPlayer(hole.parByGender, c.teeGender),
+          netStrokes: netto,
+        });
         perPlayer[idx].points += pts;
         pointsPerPlayer.push(pts);
       } else {
