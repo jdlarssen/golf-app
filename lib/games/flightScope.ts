@@ -157,6 +157,32 @@ export function canApproveScorecardFor(
   );
 }
 
+/** Hva arrangørens godkjenningsflate viser på én kort-rad (#2213). */
+export type OrganizerApprovalRow = 'can_approve' | 'own_card_needs_peer' | 'own_card_no_peer';
+
+/**
+ * Om arrangøren kan godkjenne `cardUserId`s kort på vegne av gruppa (#2213).
+ *
+ * En arrangør som ikke er global admin, kan aldri godkjenne sitt eget kort:
+ * vakta `guard_game_players_self_update` (0168) lar hen bare nulle egen
+ * godkjenning, så en knapp på egen rad ville alltid feilet. Global admin
+ * slipper forbi vakta på `is_admin()`. Eget kort skiller mellom at en
+ * medspiller kan godkjenne det (`peersForApproval`) og at ingen kan, for
+ * eksempel når alle andre i flighten er trukket. Da er veien videre å åpne
+ * kortet igjen og avslutte likevel.
+ */
+export function organizerApprovalRow(
+  players: FlightPlayer[],
+  gameMode: GameMode,
+  viewer: { userId: string; isAdmin: boolean },
+  cardUserId: string,
+): OrganizerApprovalRow {
+  if (viewer.isAdmin || cardUserId !== viewer.userId) return 'can_approve';
+  return peersForApproval(players, gameMode, cardUserId).length > 0
+    ? 'own_card_needs_peer'
+    : 'own_card_no_peer';
+}
+
 /**
  * Scorekortene `approverUserId` faktisk kan godkjenne nå: levert, ikke
  * godkjent ennå, og innenfor attestant-regelen. Delt av /approve-siden,
