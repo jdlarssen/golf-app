@@ -2304,6 +2304,10 @@ export type Database = {
       admin_key_metrics: { Args: never; Returns: Json }
       anonymize_user: { Args: { p_user_id: string }; Returns: undefined }
       befriend_inviter: { Args: { p_inviter: string }; Returns: string }
+      can_manage_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       can_react_in_game: { Args: { p_game_id: string }; Returns: boolean }
       can_score_for: {
         Args: { p_game_id: string; p_other_user: string }
@@ -2368,6 +2372,12 @@ export type Database = {
       generate_game_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
       generate_tournament_short_id: { Args: never; Returns: string }
+      incomplete_profile_ids: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          id: string
+        }[]
+      }
       incomplete_profiles_for_ids: {
         Args: { p_user_ids: string[] }
         Returns: {
