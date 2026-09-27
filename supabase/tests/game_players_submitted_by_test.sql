@@ -26,12 +26,17 @@
 --    11. someone in another flight delivers   → 0 rows
 --   Approval, end state:
 --    12. a peer approves an open card         → REJECTED
---    13. another peer writes the deliverer in as approver → REJECTED
+--    13. a forged approver is overwritten     → auth.uid() wins
 --   Insert:
 --    14. a forged value on insert             → auth.uid() wins
 --   Approval on an open card:
 --    15. a peer un-delivers an approved card  → REJECTED
 --    16. the owner un-delivers their own approved card → REJECTED (clause f)
+--   Approver, game and insert:
+--    17. the service role                     → keeps the approver it wrote
+--    18. a row moved to another game          → REJECTED
+--    19. inserting an already approved row    → REJECTED
+--    20. inserting a plain row                → PASS (the path «add player» uses)
 --
 -- Run via:  supabase test db
 -- See supabase/tests/README.md (same rig as #440).
@@ -41,7 +46,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(20);
 
 \ir fixtures/rls_helpers.psql
 
@@ -134,6 +139,42 @@ create or replace function torny_rls.try_undeliver(p_target uuid)
     get diagnostics v_rows = row_count;
     return v_rows > 0;
   exception when insufficient_privilege then return false;
+  end;
+  $$;
+
+create or replace function torny_rls.approved_by_of(p_target uuid)
+  returns uuid language sql security definer as $$
+    select approved_by_user_id from public.game_players
+     where game_id = torny_rls.game_id() and user_id = p_target
+  $$;
+
+-- A second game, created by active_id, for the move and insert probes.
+create or replace function torny_rls.other_game_id() returns uuid language sql immutable as $$
+  select '00000000-0000-4000-a000-0000000000a9'::uuid
+$$;
+
+create or replace function torny_rls.try_move_row(p_target uuid, p_to uuid)
+  returns boolean language plpgsql as $$
+  declare v_rows int;
+  begin
+    update public.game_players
+       set game_id = p_to
+     where game_id = torny_rls.game_id() and user_id = p_target;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception when insufficient_privilege then return false;
+  end;
+  $$;
+
+create or replace function torny_rls.try_insert_row(p_game uuid, p_user uuid, p_approved boolean)
+  returns boolean language plpgsql as $$
+  begin
+    insert into public.game_players (game_id, user_id, flight_number, approved_at, approved_by_user_id)
+      values (p_game, p_user, 1,
+              case when p_approved then now() end,
+              case when p_approved then torny_rls.admin_id() end);
+    return true;
+  exception when insufficient_privilege or unique_violation then return false;
   end;
   $$;
 
@@ -276,15 +317,19 @@ select ok(
   'a peer may not approve a card that is not delivered (0191)'
 );
 
--- ── 13. Another peer may not write the deliverer in as approver ─────────────
+-- ── 13. A forged approver is overwritten with the one who approves ─────────
+-- Another peer names the deliverer as approver; the trigger records the peer.
 select torny_rls.as_service();
 select torny_rls.reopen(torny_rls.submitted_id());
 select torny_rls.as_user(torny_rls.active_id());
 select torny_rls.try_deliver(torny_rls.submitted_id());
 select torny_rls.as_user(torny_rls.withdrawn_id());
-select ok(
-  NOT torny_rls.try_set_approval(torny_rls.submitted_id(), torny_rls.active_id()),
-  'another peer may not set approved_by_user_id to the one who delivered (0191)'
+select torny_rls.try_set_approval(torny_rls.submitted_id(), torny_rls.active_id());
+select torny_rls.as_service();
+select is(
+  torny_rls.approved_by_of(torny_rls.submitted_id()),
+  torny_rls.withdrawn_id(),
+  'a forged approved_by_user_id is overwritten with auth.uid() (0191)'
 );
 
 -- ── 14. Insert: a forged value is overwritten too ────────────────────────────
@@ -322,6 +367,42 @@ select torny_rls.as_user(torny_rls.submitted_id());
 select ok(
   NOT torny_rls.try_undeliver(torny_rls.submitted_id()),
   'the owner may not un-deliver their own card and leave its approval standing (0191, clause f)'
+);
+
+-- ── 17. The service role keeps the approver it wrote ────────────────────────
+select torny_rls.as_service();
+update public.game_players
+   set approved_at = now(), approved_by_user_id = torny_rls.flightmate_id()
+ where game_id = torny_rls.game_id() and user_id = torny_rls.active_id();
+select is(
+  torny_rls.approved_by_of(torny_rls.active_id()),
+  torny_rls.flightmate_id(),
+  'the service role keeps the approved_by_user_id it wrote (0191)'
+);
+
+-- ── 18–20. Another game, created by active_id ───────────────────────────────
+select torny_rls.as_service();
+insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, started_at)
+  values (torny_rls.other_game_id(), 'RLS Other Game', torny_rls.course_id(),
+          torny_rls.tee_box_id(), 'active', 'solo_strokeplay', torny_rls.active_id(), now());
+
+-- 18. A row stays in its game. submitted_id shares flight 1 with active_id.
+select torny_rls.as_user(torny_rls.active_id());
+select ok(
+  NOT torny_rls.try_move_row(torny_rls.submitted_id(), torny_rls.other_game_id()),
+  'a signed-in player may not move a game_players row to another game (0191)'
+);
+
+-- 19. The creator may not insert an already approved row, own row included.
+select ok(
+  NOT torny_rls.try_insert_row(torny_rls.other_game_id(), torny_rls.active_id(), true),
+  'a signed-in non-admin may not insert an approved row (0191)'
+);
+
+-- 20. …but a plain row goes in as before.
+select ok(
+  torny_rls.try_insert_row(torny_rls.other_game_id(), torny_rls.active_id(), false),
+  'a signed-in creator may still insert a plain row (0191)'
 );
 
 select * from finish();

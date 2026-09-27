@@ -31,9 +31,15 @@
 --    The name sorts before `guard_*`, and Postgres fires same-event triggers
 --    in name order, so the guard below sees the final value.
 --
--- 3. `guard_game_players_self_update`, rebuilt from 0168 (the latest
---    create-or-replace; 0159 and 0147 are older). Own-row branch: clause (f)
---    below. Other-row branch:
+-- 3. `game_players_set_approved_by` owns `approved_by_user_id` the same way
+--    (the approver is the signed-in caller, not what the client sends), and
+--    `guard_game_players_insert` refuses a row a signed-in non-admin inserts
+--    already approved.
+--
+-- 4. `guard_game_players_self_update`, rebuilt from 0168 (the latest
+--    create-or-replace; 0159 and 0147 are older). A signed-in non-admin may
+--    not move a row to another game, and every lookup reads the game the row
+--    is in (old.game_id). Own-row branch: clause (f) below. Other-row branch:
 --      - `submitted_by_user_id` joins the peer allowlist. The server sets it in
 --        the same patch as `submitted_at` when a flightmate delivers.
 --      - a true peer (not admin, not the game's creator — both return
@@ -47,7 +53,8 @@
 --        approve it open, or un-deliver it while approved. The service role
 --        skips the guard, so otherwise the app route could complete such a
 --        card with the deliverer as approver.
---    Every other line is 0168's. The function comment is refreshed to match.
+--    Every other line is 0168's, except that its lookups read old.game_id.
+--    The function comment is refreshed to match.
 --
 -- Order against prod: migration FIRST, then merge/deploy. The code on main
 -- never writes the column, and the trigger fills it on its own, so the
@@ -96,6 +103,72 @@ create trigger game_players_set_submitted_by
   before insert or update on public.game_players
   for each row execute function public.game_players_set_submitted_by();
 
+-- Who approved, owned the same way as who delivered: a signed-in caller who
+-- approves is recorded as the approver whatever the client sends, the value
+-- stays when the approval does not move, and it clears with the approval.
+-- The service role keeps what the server wrote.
+create or replace function public.game_players_set_approved_by()
+  returns trigger
+  language plpgsql
+  set search_path to ''
+as $$
+  declare
+    v_uid uuid := auth.uid();
+  begin
+    if new.approved_at is null then
+      new.approved_by_user_id := null;
+      return new;
+    end if;
+
+    -- Service role: keep what the server wrote.
+    if v_uid is null then
+      return new;
+    end if;
+
+    if tg_op = 'INSERT' then
+      new.approved_by_user_id := v_uid;
+    elsif old.approved_at is null then
+      new.approved_by_user_id := v_uid;
+    else
+      new.approved_by_user_id := old.approved_by_user_id;
+    end if;
+    return new;
+  end;
+$$;
+
+create trigger game_players_set_approved_by
+  before insert or update on public.game_players
+  for each row execute function public.game_players_set_approved_by();
+
+-- A row a signed-in non-admin inserts never arrives approved. Every insert
+-- path that adds a player (the organiser's «add player», sign-up, the
+-- waiting room) writes a fresh row; cup and league rows come from the service
+-- role, which passes. The approval rules hold for inserts as well as updates.
+create or replace function public.guard_game_players_insert()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path to ''
+as $$
+  begin
+    if auth.uid() is null or public.is_admin() then
+      return new;
+    end if;
+
+    if new.approved_at is not null or new.approved_by_user_id is not null then
+      raise exception
+        'A player cannot insert an approved scorecard (game_players.approved_at/approved_by_user_id)'
+        using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+    end if;
+
+    return new;
+  end;
+$$;
+
+create trigger guard_game_players_insert
+  before insert on public.game_players
+  for each row execute function public.guard_game_players_insert();
+
 create or replace function public.guard_game_players_self_update()
   returns trigger
   language plpgsql
@@ -114,6 +187,14 @@ as $$
       return new;
     end if;
 
+    -- #2200: a row never moves to another game for a signed-in non-admin, and
+    -- every lookup below reads the game the row is IN (old.game_id).
+    if new.game_id is distinct from old.game_id then
+      raise exception
+        'A player cannot move a game_players row to another game (game_players.game_id)'
+        using errcode = 'insufficient_privilege';  -- SQLSTATE 42501
+    end if;
+
     if new.user_id = v_uid then
       -- ── OWN row ──────────────────────────────────────────────────────────
       -- (a) Self-approval (0103, #670), with ONE narrow exception (0159,
@@ -124,7 +205,7 @@ as $$
       if new.approved_at is distinct from old.approved_at
          or new.approved_by_user_id is distinct from old.approved_by_user_id then
         select (g.created_by = v_uid) into v_is_creator
-          from public.games g where g.id = new.game_id;
+          from public.games g where g.id = old.game_id;
 
         if not (coalesce(v_is_creator, false)
                 and new.approved_at is null
@@ -154,7 +235,7 @@ as $$
       if new.team_number is distinct from old.team_number
          or new.flight_number is distinct from old.flight_number then
         select (g.created_by = v_uid) into v_is_creator
-          from public.games g where g.id = new.game_id;
+          from public.games g where g.id = old.game_id;
 
         if not coalesce(v_is_creator, false) then
           raise exception
@@ -177,7 +258,7 @@ as $$
       if new.course_handicap is distinct from old.course_handicap then
         select g.status into v_status
           from public.games g
-         where g.id = new.game_id;
+         where g.id = old.game_id;
 
         if v_status in ('active', 'finished') then
           raise exception
@@ -212,7 +293,7 @@ as $$
       -- Admin already passed above. The game CREATOR keeps full roster access
       -- (mirrors the "game_players creator update" policy).
       select (g.created_by = v_uid) into v_is_creator
-        from public.games g where g.id = new.game_id;
+        from public.games g where g.id = old.game_id;
       if coalesce(v_is_creator, false) then
         return new;
       end if;
@@ -285,7 +366,9 @@ comment on function public.guard_game_players_self_update() is
   'self-regrouping UNLESS they created the game; the creator may CLEAR their '
   'own approval (#1362 reopen) but never set it; restricts a non-admin peer to '
   'ONLY the approval and delivery columns on another player''s row, and never '
-  'lets that peer approve a card they delivered (#2200). No-ops for admin, the '
+  'lets that peer approve a card they delivered (#2200); no signed-in player '
+  'leaves an approval on an undelivered card or moves a row to another game '
+  '(#2200). No-ops for admin, the '
   'game creator (another''s row), and the service role. When changing this '
   'body: copy from the LATEST create-or-replace — find it with grep, not from '
   'a file''s own claim (trap 4, #1855).';
