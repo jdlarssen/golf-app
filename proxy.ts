@@ -10,6 +10,7 @@ import { OFF_APP_THRESHOLD_MS } from '@/lib/notifications/thresholds';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { courseSlugGuard } from '@/lib/courses/slugGuard';
 import { ARRANGE_AUDIENCES } from '@/lib/seo/arrangeAudiences';
+import { clearVerifiedUser, setVerifiedUser } from '@/lib/auth/proxyIdentity';
 
 // Handles locale detection, the as-needed rewrite (/x -> /no/x internally)
 // and /en/... prefix routing. Runs for EVERY page — public ones included —
@@ -265,10 +266,11 @@ export async function proxy(request: NextRequest) {
   }
 
   // Public pages: no session work (same as the old matcher exclusions),
-  // locale routing only. Strip any client-sent x-torny-user-id so the
-  // verified-user header can never be spoofed on paths that skip getUser().
+  // locale routing only. Strip any client-sent verified-user headers so a
+  // public page never sees an identity (#2206: the pair is signed, see
+  // lib/auth/proxyIdentity.ts).
   if (PUBLIC_PATH_PATTERN.test(barePathname)) {
-    request.headers.delete('x-torny-user-id');
+    clearVerifiedUser(request.headers);
     return handleI18nRouting(request);
   }
 
@@ -283,11 +285,11 @@ export async function proxy(request: NextRequest) {
 
   if (!user) {
     // #1185: auth-optional routes render an anonymous view instead of gating
-    // to /login. Strip any client-sent header (same guard as the public
+    // to /login. Strip any client-sent headers (same guard as the public
     // branch) and hand off to i18n routing; the page's null-user branch takes
     // over. All other routes still redirect to /login below.
     if (AUTH_OPTIONAL_PATH_PATTERN.test(barePathname)) {
-      request.headers.delete('x-torny-user-id');
+      clearVerifiedUser(request.headers);
       return handleI18nRouting(request);
     }
     const url = request.nextUrl.clone();
@@ -342,8 +344,9 @@ export async function proxy(request: NextRequest) {
   // Forward verified user id to the route handler so server components don't
   // need to call auth.getUser() again. Saves a Supabase Auth round-trip per
   // request (~80 ms) — adds up across the layout + page + Suspense bodies.
+  // Signed (#2206) so getProxyVerifiedUserId accepts only what the proxy set.
   // Set directly on the request so the i18n rewrite response forwards it.
-  request.headers.set('x-torny-user-id', user.id);
+  setVerifiedUser(request.headers, user.id);
 
   // Best-effort last_seen_at update — one round-trip, debounced via the
   // WHERE clause så Postgres no-ops når last_seen_at er ferskere enn
@@ -367,7 +370,7 @@ export async function proxy(request: NextRequest) {
   })();
 
   // Locale routing LAST so the rewrite carries the mutated request
-  // (x-torny-user-id header + refreshed session cookies) downstream.
+  // (verified-user headers + refreshed session cookies) downstream.
   const intlResponse = handleI18nRouting(request);
 
   // Merge session cookies refreshed during getUser() onto the response the
