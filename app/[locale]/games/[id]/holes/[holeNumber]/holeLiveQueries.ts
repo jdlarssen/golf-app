@@ -1,15 +1,9 @@
 'use client';
 
-// De fire Dexie-live-queryene hull-flaten kjører, samlet på ett sted (#1716).
-//
-// ⚠️ REKKEFØLGE-KONTRAKT: `HoleClient` MÅ kalle disse hookene i rekkefølgen
-// under, og `HoleClient.test.tsx` mocker `useLiveQuery` med en teller som er
-// keyet på nøyaktig den rekkefølgen:
-//   1. useHoleCards            — localRows (én rad per spillerkort)
-//   2. useMyScoredHoles        — mine førte hull i denne runden
-//   3. useSiblingScoredHoles   — søsken-halvdelens førte hull (#1578)
-//   4. usePendingSyncCount     — sync-køen
-// Legger du til en live-query her, legg den til i test-mocken i samme commit.
+// De fire Dexie-live-queryene hull-flaten kjører, samlet på ett sted (#1716):
+// kortene på hullet, mine førte hull, søsken-halvdelens førte hull (#1578) og
+// sync-køen. Limet i hver hook testes i `holeLiveQueries.test.ts`;
+// `HoleClient.test.tsx` mocker hookene ved navn (#2226).
 
 import { useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
