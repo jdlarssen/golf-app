@@ -151,7 +151,9 @@ videre kun av eieren via PR når tilliten er etablert.
 
 - Finnes staging-env i routine-miljøet (`NEXT_PUBLIC_SUPABASE_URL` peker på
   staging-ref `snwmueecmfqqdurxedxv`): kjør `npm run e2e:gate`. Grønn → noter
-  i PR-kommentaren.
+  i PR-kommentaren. Stopper `e2e:gate` med env-meldingen («Refusing to run the
+  suite: … not set») før første spec, er env-en ufullstendig: behandle det som
+  «Mangler env» under (`needs-manual-qa`), ikke som en regresjon (#2226).
 - Matcher ikke miljøets pre-installerte browser-build pinnet Playwright (feiler
   med «Executable doesn't exist»): eksportér
   `PW_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` før `npm run e2e:gate`

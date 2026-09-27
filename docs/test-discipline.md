@@ -74,6 +74,8 @@ Eierbeslutning 2026-07-07 (#1104): behold alle tre nivåer — de fanger ulike t
 
   **Automatisk vakt (#1299):** `e2e/global-setup.ts` spør serveren på porten hvem den er (`/api/health` → cwd, commit, boot-tidspunkt) og stopper kjøringen med en kopier-lim-klar opprydding før noen spec kjører hvis den ikke er dette arbeidstreet — booter den før siste checkout, står den i en annen mappe, eller på en annen commit. Lytter ingenting, hopper vakten over og Playwright booter sin egen server. Den manuelle `lsof`-runden over er dermed ryggdekning, ikke førstelinje.
 
+  **Env-vakt (#2226):** de autentiserte specene hopper over seg selv (`test.skip(!envReady, …)`) når én av `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `E2E_ADMIN_EMAIL` eller `E2E_PLAYER_EMAIL` mangler. Uten vakt ga det exit 0 med alle kjerneflytene hoppet over, og den påkrevde `e2e`-sjekken ble grønn. Nå nekter `e2e/global-setup.ts` hele kjøringen før første spec (regelen bor i `e2e/_helpers/envGate.ts`), i CI og lokalt. Utbedringen står i meldingen: `set -a && source .env.staging.local && set +a`. En utvikler som bevisst vil kjøre bare de offentlige specene lokalt, setter `E2E_ALLOW_ENV_SKIP=1`. Den virker ikke i CI. En agent setter den **aldri** i en kjøring som brukes som bevis (gate, staging-verify, nattkjøreren Steg 4), og en kjøring med den er aldri staging-bevis.
+
 ---
 
 ## Beslutningstre — når en endring kommer
