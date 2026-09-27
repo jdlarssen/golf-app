@@ -132,7 +132,10 @@ export async function saveSideAwardConfig(
     .from('tournament_side_awards')
     .delete()
     .eq('tournament_id', tournamentId);
-  if (deleteErr) return { ok: false, error: 'save_failed' };
+  if (deleteErr) {
+    console.error('[cup] saveSideAwardConfig delete failed', { tournamentId, error: deleteErr });
+    return { ok: false, error: 'save_failed' };
+  }
 
   if (awards.length > 0) {
     // Ekspansjon (#1489): ctp/ld-rad med winnerCount N → N DB-rader slot 1..N;
@@ -145,12 +148,14 @@ export async function saveSideAwardConfig(
       })),
     );
     if (insertErr) {
+      console.error('[cup] saveSideAwardConfig insert failed', { tournamentId, error: insertErr });
       // Kompensert rollback (AGENTS.md-felle #5): legg de FØR-slettingen-
       // leste radene rett tilbake. Trygt — gaten over garanterte at ingen av
       // dem hadde en registrert vinner eller GIR-teller, så ingenting går
-      // tapt.
+      // tapt. #2223: a failed re-insert leaves the cup without its side
+      // awards, so its error is logged.
       if ((existing ?? []).length > 0) {
-        await admin.from('tournament_side_awards').insert(
+        const { error: restoreErr } = await admin.from('tournament_side_awards').insert(
           (existing ?? []).map((a) => ({
             id: a.id,
             tournament_id: a.tournament_id,
@@ -165,6 +170,12 @@ export async function saveSideAwardConfig(
             gir_team2_count: a.gir_team2_count,
           })),
         );
+        if (restoreErr) {
+          console.error('[cup] saveSideAwardConfig restore failed', {
+            tournamentId,
+            error: restoreErr,
+          });
+        }
       }
       return { ok: false, error: 'save_failed' };
     }

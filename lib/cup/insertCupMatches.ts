@@ -419,6 +419,11 @@ export async function insertCupMatches(
       .select('id')
       .single();
     if (gameErr || !game) {
+      // The outcome only carries the string, so the caller cannot log the cause.
+      console.error('[cup] insertCupMatches game insert failed', {
+        tournamentId,
+        error: gameErr,
+      });
       return { error: 'insert_failed' };
     }
 
@@ -446,6 +451,11 @@ export async function insertCupMatches(
       .from('game_players')
       .insert(playerRows);
     if (gpErr) {
+      console.error('[cup] insertCupMatches game_players insert failed', {
+        tournamentId,
+        gameId,
+        error: gpErr,
+      });
       return { error: 'insert_failed' };
     }
 
