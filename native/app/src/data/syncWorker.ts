@@ -1,18 +1,22 @@
 // Native N2 (#1823): speil av webbens `lib/sync/syncWorker.ts`.
 //
 // Selve avgjørelsene er IKKE speilet — de importeres fra repo-kilden, samme
-// filer webben kjører på: `syncRetryDecision` (#668), `resolveConflict` (#688)
-// og `conflictRecordFor` (#1611). Det som er speilet her er rekkefølgen rundt
-// dem: kø i createdAt-orden, karantene-hopp, RPC, ferskhets-sjekk (#1457) og
+// filer webben kjører på: `syncRetryDecision` og `isLockedCardError` (#668,
+// #2211), `interpretUpsertReply` (#2211) og `conflictRecordFor` (#1611). Det
+// som er speilet her er rekkefølgen rundt dem: kø i createdAt-orden,
+// karantene-hopp, RPC, ferskhets-sjekk (#1457), oppgjør av låste avslag og
 // dequeue.
-import { syncRetryDecision } from '../../../../lib/sync/classifyError';
 import {
-  conflictRecordFor,
-  resolveConflict,
-} from '../../../../lib/sync/conflict';
+  isLockedCardError,
+  REFUSED_WRITE_ERROR,
+  syncRetryDecision,
+} from '../../../../lib/sync/classifyError';
+import { conflictRecordFor } from '../../../../lib/sync/conflict';
+import { interpretUpsertReply } from '../../../../lib/sync/upsertReply';
 import { currentDeviceUserId, supabase } from '../supabase';
 import {
   deleteQueueItem,
+  deleteScore,
   getDb,
   getScore,
   listQueue,
@@ -21,6 +25,8 @@ import {
   putConflict,
   putScore,
   withTxn,
+  type LocalScore,
+  type SyncQueueItem,
 } from './db';
 import { isOwnerWipeBlocked } from './ownerWipeBlock';
 
@@ -41,6 +47,9 @@ export interface DrainLog extends DrainResult {
 const EMPTY: DrainResult = { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
 
 let inFlight = false;
+// #2211: et kall som kom mens en drain pågikk, returnerte tomt og lot
+// elementet vente på neste utløser. Husk det og kjør én gang til.
+let rerunRequested = false;
 let lastDrain: DrainLog | null = null;
 
 export function getLastDrain(): DrainLog | null {
@@ -53,8 +62,12 @@ export function getLastDrain(): DrainLog | null {
  */
 export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
   // `inFlight`-vakten: to parallelle drains ville sendt samme kø-element to
-  // ganger og kjempet om de samme radene.
-  if (inFlight) return EMPTY;
+  // ganger og kjempet om de samme radene. Kallet huskes (#2211), og drainen
+  // kjører én gang til når den som pågår, er ferdig.
+  if (inFlight) {
+    rerunRequested = true;
+    return EMPTY;
+  }
   // #1959: eierbytte-wipen kastet — køen tilhører forrige bruker.
   if (isOwnerWipeBlocked()) return EMPTY;
   inFlight = true;
@@ -101,12 +114,24 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
         // #668: bare EKSPLISITT permanente feil (RLS / constraint / malformed)
         // teller mot taket. Nettverk, auth-utløp og rate-limit prøver videre i
         // det uendelige — et ekte slag skal aldri forsvinne fordi spilleren var
-        // offline. Et tilbaketrukket/levert kort feiler ikke her i det hele
-        // tatt: RPC-en svarer med et rolig no-op (was_applied=false).
+        // offline.
         const decision = syncRetryDecision({
           attemptCount: item.attemptCount,
           errorMessage: error.message,
         });
+        // #2211: et låst kort (RLS-bruddet ved innsetting, eller 0148-vakta på
+        // en oppdatering i en avsluttet runde) gjøres opp, ikke bare parkeres.
+        if (decision === 'abandon' && isLockedCardError(error.message)) {
+          const settled = await settleLockedRefusal(
+            item,
+            score,
+            error.message,
+            currentUserId,
+          );
+          if (settled === 'abandoned') abandoned++;
+          else if (settled === 'errored') errored++;
+          continue;
+        }
         if (decision === 'abandon') {
           await withTxn((txn) =>
             markQueueAbandoned(txn, item.id, {
@@ -129,7 +154,23 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
       }
 
       const row = Array.isArray(data) ? data[0] : data;
-      const wasApplied = row?.was_applied ?? false;
+      const reply = interpretUpsertReply(row, score.clientUpdatedAt);
+
+      // #2211: kortet er låst (levert / trukket / runden ikke aktiv). RLS
+      // filtrerte UPDATE-en til 0 rader, og RPC-en svarte med en NULL-rad uten
+      // feil. Før ble den tatt ut av køen som om alt gikk bra, og telefonen
+      // beholdt et tall serveren aldri tok imot.
+      if (reply === 'refused') {
+        const settled = await settleLockedRefusal(
+          item,
+          score,
+          REFUSED_WRITE_ERROR,
+          currentUserId,
+        );
+        if (settled === 'abandoned') abandoned++;
+        else if (settled === 'errored') errored++;
+        continue;
+      }
 
       // #1457: alt etter RPC-en skjer i én transaksjon MED ferskhets-sjekk.
       // Spilleren kan ha tastet videre på samme felt mens RPC-en var i lufta —
@@ -143,29 +184,22 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
           return 'edited-mid-flight' as const;
         }
 
-        if (wasApplied && row) {
+        if (reply === 'applied' && row) {
           await putScore(txn, { ...current, serverUpdatedAt: row.updated_at });
           await deleteQueueItem(txn, item.id);
           return 'applied' as const;
         }
 
-        // Serveren hadde en nyere-eller-lik rad. LWW avgjør hva som skjer:
+        // Serveren beholdt en nyere-eller-lik rad (`interpretUpsertReply`):
         //
         // - 'server-wins': skriv server-raden over den lokale (ekte LWW).
-        // - 'equal': umulig etter #688 (writeScore garanterer strengt økende
-        //   tidsstempler), men beholdt defensivt — behandles som behold-lokal.
-        // - 'local-wins': skal ikke kunne skje (RPC-en avviser bare når server
-        //   >= lokal), men skjer det, beholder vi lokal.
+        // - 'kept-local': samme øyeblikk — ekkoet av en skriving som alt er
+        //   lagret, men der svaret gikk tapt. Behold lokal, ta den ut av køen.
         //
         // Når serveren faktisk vinner, avgjør `conflictRecordFor` om
         // overskrivingen fortjener et varsel — samme regel som realtime-mergen
         // bruker, én definisjon (#1611).
-        const resolution = resolveConflict({
-          localClientUpdatedAt: score.clientUpdatedAt,
-          serverClientUpdatedAt: row?.client_updated_at ?? score.clientUpdatedAt,
-        });
-
-        if (resolution === 'server-wins' && row) {
+        if (reply === 'server-wins' && row) {
           const conflict = conflictRecordFor({
             existing: score,
             incomingStrokes: row.strokes,
@@ -187,7 +221,7 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
           return 'server-wins' as const;
         }
 
-        // 'equal' eller 'local-wins': behold lokale data, bare ta den ut av køen.
+        // 'kept-local': behold lokale data, bare ta den ut av køen.
         await deleteQueueItem(txn, item.id);
         return 'kept-local' as const;
       });
@@ -207,5 +241,89 @@ export async function drainQueue(reason = 'manuell'): Promise<DrainResult> {
     return result;
   } finally {
     inFlight = false;
+    if (rerunRequested) {
+      rerunRequested = false;
+      void drainQueue('etter pågående drain');
+    }
   }
+}
+
+/**
+ * #2211: gjør opp en skriving serveren avviste fordi kortet er låst. Et låst
+ * kort viser det kortet faktisk har, og varselet forklarer hvorfor endringen
+ * ikke kom med. Speiler webbens `settleLockedRefusal` i `lib/sync/syncWorker.ts`.
+ *
+ * - Uten sesjon: en tapt sesjon gir nøyaktig samme RLS-feil som et låst kort.
+ *   Å slette på det ville brutt kjerne-invarianten i `classifyError.ts` (en
+ *   utløpt sesjon sletter aldri slag), så bare tell opp forsøket.
+ * - Feiler serverlesingen: tell opp, la elementet stå. Et avslag går aldri i
+ *   karantene før telefonen har rettet seg etter serveren.
+ * - Raden er redigert mens RPC-en var i lufta (#1457): rør ingenting.
+ * - Ellers: lokal rad ← serverens rad (eller slettet når serveren ikke har
+ *   noen), og elementet settes i karantene med `lastError`. Ingen konfliktpost;
+ *   karantenebanneret er varselet.
+ */
+async function settleLockedRefusal(
+  item: SyncQueueItem,
+  score: LocalScore,
+  lastError: string,
+  currentUserId: string | null,
+): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
+  const keepForRetry = async () => {
+    await withTxn((txn) =>
+      markQueueRetry(txn, item.id, {
+        attemptCount: item.attemptCount + 1,
+        lastError,
+      }),
+    );
+    return 'errored' as const;
+  };
+
+  if (currentUserId == null) return keepForRetry();
+
+  let serverRow: {
+    strokes: number | null;
+    putts: number | null;
+    entered_by: string;
+    client_updated_at: string;
+    updated_at: string;
+  } | null;
+  try {
+    const { data, error } = await supabase
+      .from('scores')
+      .select('strokes, putts, entered_by, client_updated_at, updated_at')
+      .eq('game_id', score.gameId)
+      .eq('user_id', score.userId)
+      .eq('hole_number', score.holeNumber)
+      .maybeSingle();
+    if (error) return keepForRetry();
+    serverRow = data;
+  } catch {
+    return keepForRetry();
+  }
+
+  return withTxn(async (txn) => {
+    const current = await getScore(txn, item.scoreId);
+    if (!current || current.clientUpdatedAt !== score.clientUpdatedAt) {
+      return 'edited-mid-flight' as const;
+    }
+    if (serverRow) {
+      await putScore(txn, {
+        ...current,
+        strokes: serverRow.strokes,
+        putts: serverRow.putts ?? null,
+        enteredBy: serverRow.entered_by,
+        clientUpdatedAt: serverRow.client_updated_at,
+        serverUpdatedAt: serverRow.updated_at,
+      });
+    } else {
+      await deleteScore(txn, item.scoreId);
+    }
+    await markQueueAbandoned(txn, item.id, {
+      attemptCount: item.attemptCount + 1,
+      lastError,
+      abandonedAt: new Date().toISOString(),
+    });
+    return 'abandoned' as const;
+  });
 }
