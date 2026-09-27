@@ -2326,6 +2326,7 @@ export type Database = {
           p_new_team_size?: number
           p_seat_team_size: number
           p_signup_source?: string
+          p_tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           p_user_id: string
         }
         Returns: Json
