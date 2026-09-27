@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SendArgs, SendResult } from './_helpers';
 
 // Strukturelle Resend-kontrakter samlet i ÉN delt fil per Type B-disiplinen
@@ -11,7 +11,7 @@ import type { SendArgs, SendResult } from './_helpers';
 // vi.mock-registreringen hoistes til toppen av denne filen av Vitest, så
 // selve mock-oppsettet ligger her (ikke i _helpers.ts — se kommentar der).
 //
-// Dekker alle 12 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
+// Dekker alle 16 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
 // fortsatt sin egen Resend-mock for å snapshot-e copy/HTML — denne fila
 // kompletterer dem ved å samle de strukturelle kontraktene ett sted.
 
@@ -214,6 +214,52 @@ const senders = [
       });
     },
   },
+  {
+    name: 'sendPaymentReminderNotification',
+    invoke: async () => {
+      const { sendPaymentReminderNotification } = await import(
+        '../paymentReminderNotification'
+      );
+      return sendPaymentReminderNotification({
+        to: 'spiller@example.com',
+        playerFirstName: 'Per',
+        gameName: 'Sommercup 2026',
+        gameId: '11111111-1111-1111-1111-111111111111',
+        entryFeeKr: 200,
+        paymentLink: '12345',
+      });
+    },
+  },
+  // De to idé-senderne har ingen per-modul-test; fiksturene følger kallstedene
+  // (app/[locale]/foreslaa-ide/actions.ts og app/[locale]/admin/ideer/actions.ts).
+  {
+    name: 'sendIdeaSubmittedNotification',
+    invoke: async () => {
+      const { sendIdeaSubmittedNotification } = await import(
+        '../ideaSubmittedNotification'
+      );
+      return sendIdeaSubmittedNotification({
+        to: 'admin@example.com',
+        adminFirstName: 'Jørgen',
+        submitterName: 'Per Spiller',
+        text: 'Vis vind på hvert hull',
+        locale: null,
+      });
+    },
+  },
+  {
+    name: 'sendIdeaBuiltNotification',
+    invoke: async () => {
+      const { sendIdeaBuiltNotification } = await import(
+        '../ideaBuiltNotification'
+      );
+      return sendIdeaBuiltNotification({
+        to: 'spiller@example.com',
+        name: 'Per',
+        locale: null,
+      });
+    },
+  },
 ] as const;
 
 describe('Resend-kontrakt — alle aktive mail-sendere', () => {
@@ -231,5 +277,118 @@ describe('Resend-kontrakt — alle aktive mail-sendere', () => {
     await invoke();
     expect(sendMock).toHaveBeenCalledTimes(1);
     expect(sendMock.mock.calls[0]![0].from).toBe('Tørny <noreply@tornygolf.no>');
+  });
+});
+
+// Resend tillater 10 kall i sekundet per team og svarer 429 med `retry-after`
+// over det (resend.com/docs/api-reference/rate-limit, hentet 2026-09-27).
+// Nyhetsbrevet 1. september nådde 10 av 27: alle kallene gikk i samme sekund.
+// Mocken under speiler grensen på den falske klokka.
+const RATE_LIMITED: SendResult = {
+  data: null,
+  error: { name: 'rate_limit_exceeded', statusCode: 429, message: 'Too many requests' },
+  headers: { 'retry-after': '1' },
+};
+
+function resendWithTeamLimit() {
+  const starts: number[] = [];
+  return async (): Promise<SendResult> => {
+    const t = Date.now();
+    starts.push(t);
+    const startedLastSecond = starts.filter((s) => s > t - 1000).length;
+    return startedLastSecond > 10
+      ? RATE_LIMITED
+      : { data: { id: 'mock-id' }, error: null, headers: {} };
+  };
+}
+
+const digestFixture = {
+  to: 'spiller@example.com',
+  recipientFirstName: 'Per',
+  periodLabel: 'mai 2026',
+  updates: [{ title: 'X', body: 'Y' }],
+  unsubToken: 'tok',
+};
+
+/** Kjører klokka til alt som venter på en timer er ferdig, og melder utfallet. */
+async function settleOnFakeClock(work: Promise<unknown>) {
+  const outcome = work.then(
+    () => 'levert' as const,
+    (e: unknown) => (e instanceof Error ? e.message : String(e)),
+  );
+  await vi.runAllTimersAsync();
+  return outcome;
+}
+
+describe('Resend-kontrakt — tempo og nytt forsøk (#2227)', () => {
+  beforeEach(() => {
+    // Ny modulinstans per test, så avsenderens tempo-tilstand ikke lekker.
+    vi.resetModules();
+    vi.useFakeTimers({ now: 0 });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    sendMock.mockReset();
+  });
+
+  it('27 samtidige nyhetsbrev når alle fram', async () => {
+    sendMock.mockImplementation(resendWithTeamLimit());
+    const { sendProductUpdateDigest } = await import('../productUpdateDigest');
+
+    const all = Promise.allSettled(
+      Array.from({ length: 27 }, () => sendProductUpdateDigest(digestFixture)),
+    );
+    await vi.runAllTimersAsync();
+    const results = await all;
+
+    const levert = results.filter((r) => r.status === 'fulfilled').length;
+    expect({ levert, avvist: results.length - levert }).toEqual({
+      levert: 27,
+      avvist: 0,
+    });
+  });
+
+  it('prøver på nytt etter rate_limit_exceeded og venter retry-after', async () => {
+    const startedAt: number[] = [];
+    sendMock.mockImplementation(async () => {
+      startedAt.push(Date.now());
+      return startedAt.length === 1
+        ? RATE_LIMITED
+        : { data: { id: 'mock-id' }, error: null, headers: {} };
+    });
+    const { sendProductUpdateDigest } = await import('../productUpdateDigest');
+
+    const outcome = await settleOnFakeClock(sendProductUpdateDigest(digestFixture));
+
+    expect({ outcome, kall: sendMock.mock.calls.length }).toEqual({
+      outcome: 'levert',
+      kall: 2,
+    });
+    expect(startedAt[1]! - startedAt[0]!).toBeGreaterThanOrEqual(1000);
+  });
+
+  it('gir opp etter tre rate_limit_exceeded på rad', async () => {
+    sendMock.mockResolvedValue(RATE_LIMITED);
+    const { sendProductUpdateDigest } = await import('../productUpdateDigest');
+
+    const outcome = await settleOnFakeClock(sendProductUpdateDigest(digestFixture));
+
+    expect(outcome).toMatch(/Resend send failed/);
+    expect(sendMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('prøver ikke på nytt når dagskvoten er brukt opp', async () => {
+    sendMock.mockResolvedValue({
+      data: null,
+      error: { name: 'daily_quota_exceeded', statusCode: 429, message: 'Daily quota exceeded' },
+      headers: {},
+    });
+    const { sendProductUpdateDigest } = await import('../productUpdateDigest');
+
+    const outcome = await settleOnFakeClock(sendProductUpdateDigest(digestFixture));
+
+    expect(outcome).toMatch(/Resend send failed/);
+    expect(sendMock).toHaveBeenCalledTimes(1);
   });
 });
