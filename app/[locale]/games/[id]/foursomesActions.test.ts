@@ -26,6 +26,13 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => serverMock,
 }));
 
+// #2223: the write goes through the service-role client after the gates, because
+// no RLS policy lets a player update `games`.
+let adminMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminMock,
+}));
+
 const CALLER_ID = '11111111-1111-1111-1111-111111111111';
 const PARTNER_ID = '22222222-2222-2222-2222-222222222222';
 const OPP_ID = '33333333-3333-3333-3333-333333333333';
@@ -34,6 +41,7 @@ const GAME_ID = '99999999-9999-9999-9999-999999999999';
 beforeEach(() => {
   vi.clearAllMocks();
   serverMock = buildSupabaseMock([]);
+  adminMock = buildSupabaseMock([]);
 });
 
 describe('setFoursomesTeeStarter', () => {
@@ -152,22 +160,23 @@ describe('setFoursomesTeeStarter', () => {
         data: { status: 'active', game_mode: 'foursomes_matchplay' },
         error: null,
       },
-      // update returnerer ingen feil
-      { data: null, error: null },
     ]);
+    adminMock = buildSupabaseMock([{ data: [{ id: GAME_ID }], error: null }]);
     const { setFoursomesTeeStarter } = await import('./foursomesActions');
 
     const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
     expect(result).toEqual({ ok: true });
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
 
-    // Verifiser at update gikk mot riktig kolonne for side 1
-    const updateCall = serverMock.__fromCalls.find(
+    // Verifiser at update gikk mot riktig kolonne for side 1, via admin-klienten
+    const updateCall = adminMock.__fromCalls.find(
       (c) => c.method === 'update',
     );
+    expect(updateCall?.table).toBe('games');
     expect(updateCall?.args[0]).toEqual({
       foursomes_side1_tee_starter_user_id: PARTNER_ID,
     });
+    expect(serverMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 
   it('happy path side 2: update treffer side2-kolonne', async () => {
@@ -180,19 +189,51 @@ describe('setFoursomesTeeStarter', () => {
         data: { status: 'active', game_mode: 'foursomes_matchplay' },
         error: null,
       },
-      { data: null, error: null },
     ]);
+    adminMock = buildSupabaseMock([{ data: [{ id: GAME_ID }], error: null }]);
     const { setFoursomesTeeStarter } = await import('./foursomesActions');
 
     const result = await setFoursomesTeeStarter(GAME_ID, 2, OPP_ID);
     expect(result).toEqual({ ok: true });
 
-    const updateCall = serverMock.__fromCalls.find(
+    const updateCall = adminMock.__fromCalls.find(
       (c) => c.method === 'update',
     );
     expect(updateCall?.args[0]).toEqual({
       foursomes_side2_tee_starter_user_id: OPP_ID,
     });
+    expect(serverMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+  });
+});
+
+/**
+ * #2223: the only UPDATE policies on `games` are for the creator and admins, so a
+ * player on a cup side wrote 0 rows through the RLS-bound client and still got
+ * `ok`. The banner stayed and the hint never showed. A 0-row write or a DB error
+ * now answers `update_failed` and leaves the cache alone.
+ */
+describe('setFoursomesTeeStarter — skrivingen lander ikke (#2223)', () => {
+  const DB_ERR = { message: 'connection reset', code: '' };
+
+  it.each([
+    ['0 rader', { data: [], error: null }],
+    ['DB-feil', { data: null, error: DB_ERR }],
+  ])('%s → update_failed, ingen revalidateTag', async (_label, writeResult) => {
+    getProxyVerifiedUserIdMock.mockResolvedValueOnce(CALLER_ID);
+    serverMock = buildSupabaseMock([
+      { data: { team_number: 1 }, error: null },
+      { data: { team_number: 1 }, error: null },
+      {
+        data: { status: 'active', game_mode: 'foursomes_matchplay' },
+        error: null,
+      },
+    ]);
+    adminMock = buildSupabaseMock([writeResult]);
+    const { setFoursomesTeeStarter } = await import('./foursomesActions');
+
+    const result = await setFoursomesTeeStarter(GAME_ID, 1, PARTNER_ID);
+    expect(result).toEqual({ ok: false, error: 'update_failed' });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
 

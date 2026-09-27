@@ -1,6 +1,8 @@
 'use server';
 
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { expectOne } from '@/lib/supabase/affectedRows';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import type { TablesUpdate } from '@/lib/database.types';
@@ -18,8 +20,16 @@ import type { TablesUpdate } from '@/lib/database.types';
  * Mutere `games.foursomes_side{N}_tee_starter_user_id` og revaliderer
  * `game-${gameId}`-tagen så scorekort-flatene re-rendres med oppdatert hint.
  *
+ * Skrivingen går med tjenestenøkkelen (`getAdminClient`). De eneste UPDATE-
+ * policyene på `games` gjelder skaperen og admin, så en vanlig spiller på en
+ * side (typisk i en cup-kamp, der arrangøren er skaperen) skrev 0 rader
+ * gjennom den brukerbundne klienten og fikk likevel `ok` (#2223). Gatene over
+ * skrivingen ER derfor håndhevelsen: oppslagene går under RLS, og bare én
+ * kolonne i én rad skrives. En policy for spillere ville åpnet hele spill-raden
+ * for en direkte PATCH (felle 3).
+ *
  * Returnerer en kort status — feiler stille med beskjed i stedet for å kaste,
- * slik at client kan vise en in-line feilmelding.
+ * slik at client kan vise en in-line feilmelding. 0 rader er en feil (felle 2).
  */
 export async function setFoursomesTeeStarter(
   gameId: string,
@@ -113,17 +123,23 @@ export async function setFoursomesTeeStarter(
       ? { foursomes_side1_tee_starter_user_id: userId }
       : { foursomes_side2_tee_starter_user_id: userId };
 
-  const { error } = await supabase
-    .from('games')
-    .update(updatePayload)
-    .eq('id', gameId);
-
-  if (error) {
+  // getAdminClient() throws when the env is missing, so it sits inside the try
+  // too: nothing may throw out of the action.
+  try {
+    expectOne(
+      await getAdminClient()
+        .from('games')
+        .update(updatePayload)
+        .eq('id', gameId)
+        .select('id'),
+      'setFoursomesTeeStarter',
+    );
+  } catch (err) {
     console.error('[setFoursomesTeeStarter] update failed', {
       gameId,
       sideNumber,
       userId,
-      error,
+      err,
     });
     return { ok: false, error: 'update_failed' };
   }
