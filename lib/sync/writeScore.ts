@@ -14,6 +14,15 @@ interface WriteScoreArgs {
    */
   strokes?: number | null;
   putts?: number | null;
+  /**
+   * #2211: strokes to use ONLY when `strokes` is omitted AND there is no local
+   * row at all. An existing local row always wins, and an explicit `strokes`
+   * wins over this. The submit page's putt chips pass the server snapshot's
+   * strokes here: sending them as `strokes` wrote a stale number back over a
+   * newer one (a mate's correction, or the player's own still-queued edit),
+   * while sending nothing would null the strokes on a cold local DB.
+   */
+  fallbackStrokes?: number | null;
   enteredBy: string;
 }
 
@@ -32,9 +41,14 @@ function strictlyIncreasingTimestamp(
   nowIso: string,
 ): string {
   if (!existing) return nowIso;
-  if (nowIso > existing.clientUpdatedAt) return nowIso;
-  // nowIso is <= stored → bump stored by 1 ms to guarantee strict >.
-  return new Date(new Date(existing.clientUpdatedAt).getTime() + 1).toISOString();
+  // Compare INSTANTS (#2211): the stored stamp may be in the server's format
+  // (`…+00:00`, stored by server-wins and the locked-card settle), and as
+  // strings `…:00.000Z` sorts after `…:00+00:00` for the same instant.
+  const stored = Date.parse(existing.clientUpdatedAt);
+  // An unparseable stored stamp cannot be bumped; now is the only sane value.
+  if (Number.isNaN(stored) || Date.parse(nowIso) > stored) return nowIso;
+  // now is <= stored → bump stored by 1 ms to guarantee strict >.
+  return new Date(stored + 1).toISOString();
 }
 
 export async function writeScore(args: WriteScoreArgs): Promise<LocalScore> {
@@ -49,7 +63,12 @@ export async function writeScore(args: WriteScoreArgs): Promise<LocalScore> {
     userId: args.userId,
     holeNumber: args.holeNumber,
     // Merge: an omitted field keeps the existing value; explicit null clears it.
-    strokes: args.strokes !== undefined ? args.strokes : (existing?.strokes ?? null),
+    strokes:
+      args.strokes !== undefined
+        ? args.strokes
+        : existing
+          ? (existing.strokes ?? null)
+          : (args.fallbackStrokes ?? null),
     putts: args.putts !== undefined ? args.putts : (existing?.putts ?? null),
     enteredBy: args.enteredBy,
     clientUpdatedAt,

@@ -87,10 +87,17 @@ describe('writeScore', () => {
     expect(result.id).toBe('g1:u1:3');
   });
 
-  it('bumps clientUpdatedAt by 1 ms when a stored row has the same timestamp', async () => {
+  // #2211: the stored stamp may be in the server's format — server-wins and
+  // the locked-card settle store `client_updated_at` as PostgREST sends it
+  // (`…+00:00`). As strings `…:00.000Z` > `…:00+00:00`, so the same instant
+  // read as «now is newer» and the stamp was never bumped.
+  it.each([
+    ['2026-06-17T12:00:00.000Z'],
+    ['2026-06-17T12:00:00+00:00'],
+  ])('bumps clientUpdatedAt by 1 ms when a stored row has the same timestamp (%s)', async (storedTs) => {
     const { writeScore } = await import('./writeScore');
     const frozenTs = '2026-06-17T12:00:00.000Z';
-    // Seed the store with an existing row at the frozen timestamp.
+    // Seed the store with an existing row at the frozen instant.
     const existingRow: FakeRow = {
       id: 'g1:u1:5',
       gameId: 'g1',
@@ -99,7 +106,7 @@ describe('writeScore', () => {
       strokes: 4,
       putts: null,
       enteredBy: 'u1',
-      clientUpdatedAt: frozenTs,
+      clientUpdatedAt: storedTs,
       serverUpdatedAt: null,
     };
     fakeScores.set('g1:u1:5', existingRow);
@@ -119,9 +126,7 @@ describe('writeScore', () => {
         enteredBy: 'u1',
       });
 
-      // The new clientUpdatedAt must be strictly greater than the stored one.
-      expect(result.clientUpdatedAt > frozenTs).toBe(true);
-      // It should be exactly 1 ms ahead.
+      // Exactly 1 ms ahead of the stored instant (compared as instants).
       expect(new RealDate(result.clientUpdatedAt).getTime()).toBe(
         new RealDate(frozenTs).getTime() + 1,
       );
@@ -235,6 +240,50 @@ describe('writeScore', () => {
       });
       expect(result.strokes).toBeNull();
       expect(result.putts).toBe(2);
+    });
+
+    // #2211: the submit page's putt chips pass the snapshot's strokes only as
+    // a fallback for a cold local DB — a local row always wins, so a mate's
+    // later correction is never written back over.
+    it('fallbackStrokes never overrides an existing local row', async () => {
+      const { writeScore } = await import('./writeScore');
+      seed({ id: 'g:u:1', strokes: 6, putts: null });
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 1,
+        putts: 2,
+        fallbackStrokes: 5,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBe(6);
+      expect(result.putts).toBe(2);
+    });
+
+    it('fallbackStrokes fills strokes when there is no local row', async () => {
+      const { writeScore } = await import('./writeScore');
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 3,
+        putts: 2,
+        fallbackStrokes: 5,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBe(5);
+    });
+
+    it('an explicit strokes beats fallbackStrokes', async () => {
+      const { writeScore } = await import('./writeScore');
+      const result = await writeScore({
+        gameId: 'g',
+        userId: 'u',
+        holeNumber: 4,
+        strokes: 7,
+        fallbackStrokes: 5,
+        enteredBy: 'u',
+      });
+      expect(result.strokes).toBe(7);
     });
 
     it('a brand-new row keeps putts null when only strokes are written', async () => {
