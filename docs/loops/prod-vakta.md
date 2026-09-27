@@ -34,9 +34,11 @@ siste minutt, og ingen av signal-issuene fram til da hadde en postgres-telling.
 Fra 2026-09-25 virket ikke kallet i det hele tatt, fordi Supabase hadde flyttet
 loggene til ClickHouse.
 
-**Personvern-regel (ufravikelig):** issues inneholder kun tellinger og
-advisory-nøkler — aldri rå logglinjer (de kan inneholde brukerdata).
-Detalj-graving skjer read-only i interaktive økter via Supabase MCP.
+**Personvern-regel (ufravikelig):** issues inneholder kun tellinger,
+SQLSTATE-koder og advisory-nøkler, aldri rå logglinjer (de kan inneholde
+brukerdata). Spørringen henter bare kode og antall, så et varsel om lesefeil
+kan heller ikke få logglinjer med seg: det viser høyst 200 tegn av API-ets
+feilsvar. Detalj-graving skjer read-only i interaktive økter via Supabase MCP.
 
 ## Baseline (`docs/loops/prod-vakta-baseline.txt`)
 

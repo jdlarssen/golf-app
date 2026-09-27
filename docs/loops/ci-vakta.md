@@ -161,8 +161,9 @@ docs/loops/prod-vakta.md) er del av oppdagelsen i steg 1. Håndtering:
 - **Bug med klar rotårsak og lite omfang:** fiks direkte (stående
   bug-fullmakt, jf. CLAUDE.md «Direct bug-fix execution») → PR med
   `Refs #<prod-vakt-issue>`. Aldri merge, aldri prod-skriv.
-- **Ny advisory som er et bevisst valg:** foreslå baseline-tillegg som PR med
-  begrunnelse — aldri stille aksept, aldri rediger baseline uten PR.
+- **Ny advisory som er et bevisst valg, eller ny type postgres-feil som er
+  diagnostisert og godtatt (`pg:<SQLSTATE>`):** foreslå baseline-tillegg som PR
+  med begrunnelse — aldri stille aksept, aldri rediger baseline uten PR.
 - **Uklart, stort, eller trenger loggdetaljer:** norsk kommentar på issuet med
   hva som er sjekket i koden og hva en interaktiv økt må hente — issuet blir
   stående åpent som handoff.
