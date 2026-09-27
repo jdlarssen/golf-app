@@ -82,3 +82,30 @@ export function rankTeams(teams: TeamForRanking[]): RankedTeam[] {
  * spilte lag beholder sin eksisterende rangering.
  */
 export const UNPLAYED_PADDING = 999;
+
+/**
+ * 18-slot ranking array for `rankTeams`, indexed on HOLE NUMBER (#2217 D5).
+ * ETT hjem for regelen: best ball-motoren (`bestBall.ts`, #1441 D11) og
+ * tavla/drilldownen/CSV-en (`lib/leaderboard.ts`) leser begge herfra.
+ *
+ * `rankTeams`' tie-break-cascade (back9/back6/back3/hull 18) leser plass 9–17
+ * og antar at plass i er hull i+1. Fylt etter POSISJON havnet et back9-spills
+ * hull 10–18 på plass 0–8, og alle lag sto likt på 0 i hvert tie-break-trinn.
+ *
+ * - plass i er hull i+1
+ * - hull utenfor scope (ingen rad, f.eks. 1–9 i et back9-spill) får 0 — de er
+ *   ikke «manglende» for laget, de er ikke en del av kampen
+ * - et manglende hull i scope får 0 når laget har spilt minst ett hull i
+ *   scope, ellers `UNPLAYED_PADDING` (#635: sum 0 skal ikke kåre en vinner)
+ */
+export function rankingHolesByNumber(
+  holes: ReadonlyArray<{ holeNumber: number; teamNet: number | null }>,
+): number[] {
+  const playedAny = holes.some((h) => h.teamNet != null);
+  const teamNetByHoleNumber = new Map(holes.map((h) => [h.holeNumber, h.teamNet]));
+  return Array.from({ length: 18 }, (_, i) => {
+    const holeNumber = i + 1;
+    if (!teamNetByHoleNumber.has(holeNumber)) return 0;
+    return teamNetByHoleNumber.get(holeNumber) ?? (playedAny ? 0 : UNPLAYED_PADDING);
+  });
+}
