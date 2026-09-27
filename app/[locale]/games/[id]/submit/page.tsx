@@ -29,6 +29,10 @@ import { parForPlayer, type HoleParByGender } from '@/lib/games/parDisplay';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isHoleInSegment, firstHoleForSegment } from '@/lib/games/holeScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
+import {
+  loadFlightDeliveryCards,
+  type FlightDeliveryCard,
+} from '@/lib/games/loadFlightDelivery';
 import type { AppLocale } from '@/i18n/routing';
 import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import {
@@ -141,8 +145,11 @@ export default async function SubmitPage({
     redirect({ href: `/games/${id}` as string, locale });
   }
 
-  // Already submitted: nothing more to do here.
-  if (me.submitted_at) {
+  // #2200: the flightmates' cards I kept score for, delivered with my own.
+  const flightCards = await flightCardsFor(id, userId, game);
+
+  // Already submitted and nobody else's card to deliver: nothing more to do.
+  if (me.submitted_at && flightCards.length === 0) {
     redirect({ href: `/games/${id}` as string, locale });
   }
 
@@ -206,6 +213,10 @@ export default async function SubmitPage({
           )}
         </Card>
 
+        {me.submitted_at ? (
+          // #2200: my own card is in; only the flightmates' cards are left.
+          <FlightOnlyBody gameId={id} cards={flightCards} submitAction={submitAction} />
+        ) : (
         <Suspense fallback={<ReviewBodySkeleton />}>
           <ReviewBody
             gameId={id}
@@ -220,8 +231,10 @@ export default async function SubmitPage({
             holeSegment={game.hole_segment}
             tournamentId={game.tournament_id}
             submitAction={submitAction}
+            flightCards={flightCards}
           />
         </Suspense>
+        )}
       </div>
     </AppShell>
   );
@@ -238,6 +251,7 @@ async function ReviewBody({
   holeSegment,
   tournamentId,
   submitAction,
+  flightCards,
 }: {
   gameId: string;
   courseId: string;
@@ -252,7 +266,9 @@ async function ReviewBody({
   /** #1466: non-null on cup matches — drives the "whole round" delivery notice
    *  when this is a back9 host with an undelivered front9 sibling. */
   tournamentId: string | null;
-  submitAction: () => void | Promise<void>;
+  submitAction: (formData: FormData) => void | Promise<void>;
+  /** #2200: the flightmates' cards this delivery also covers. */
+  flightCards: readonly FlightDeliveryCard[];
 }) {
   const t = await getTranslations('game.submit');
   const { supabase } = await getSubmitContext();
@@ -483,6 +499,8 @@ async function ReviewBody({
         <Banner tone="info" testId="whole-round-notice">{t('wholeRoundNotice')}</Banner>
       )}
 
+      {flightCards.length > 0 && <FlightDeliveryNotice cards={flightCards} />}
+
       {/* #1793: gap-6 (24px) gir feiltrykk-margin mellom Rediger og Lever —
           de to knappene har motsatt konsekvens. */}
       <div className="grid grid-cols-2 gap-6">
@@ -501,9 +519,99 @@ async function ReviewBody({
             gameId,
             ...(front9Sibling ? [front9Sibling.gameId] : []),
           ]}
+          alsoFor={flightCards.map((c) => c.userId)}
+          label={
+            flightCards.length > 0
+              ? t('flight.submitButton', { count: flightCards.length + 1 })
+              : undefined
+          }
         />
       </div>
     </>
+  );
+}
+
+/**
+ * #2200: whose cards I kept, and may deliver with my own. A failed read offers
+ * none rather than blocking my own delivery; the core reads the list again.
+ */
+async function flightCardsFor(
+  gameId: string,
+  userId: string,
+  game: { game_mode: GameMode; hole_segment: HoleSegment; source_game_id: string | null },
+): Promise<FlightDeliveryCard[]> {
+  try {
+    return await loadFlightDeliveryCards(gameId, userId, {
+      game_mode: game.game_mode,
+      hole_segment: game.hole_segment,
+      source_game_id: game.source_game_id,
+    });
+  } catch (err) {
+    console.error('[submit page] flight cards read failed', err);
+    return [];
+  }
+}
+
+/** «Ola og Kari» — 'no' → 'nb' so Intl gives the Norwegian conjunction. */
+async function nameJoiner() {
+  const locale = await getLocale();
+  const tSubmit = await getTranslations('game.submit');
+  const list = new Intl.ListFormat(locale === 'no' ? 'nb' : locale, { type: 'conjunction' });
+  return (cards: readonly FlightDeliveryCard[]) =>
+    list.format(cards.map((c) => c.name ?? tSubmit('unknownPlayer')));
+}
+
+/**
+ * #2200: my own card is delivered, and I kept score for flightmates whose
+ * cards are still open. Only their cards are left to deliver here.
+ */
+async function FlightOnlyBody({
+  gameId,
+  cards,
+  submitAction,
+}: {
+  gameId: string;
+  cards: readonly FlightDeliveryCard[];
+  submitAction: (formData: FormData) => void | Promise<void>;
+}) {
+  const t = await getTranslations('game.submit.flight');
+  const joinNames = await nameJoiner();
+  return (
+    <>
+      <Card>
+        <p className="text-sm text-text">{t('ownDelivered')}</p>
+      </Card>
+      <FlightDeliveryNotice cards={cards} />
+      <SubmitForm
+        submitAction={submitAction}
+        missingHoles={0}
+        blockingGameIds={[gameId]}
+        alsoFor={cards.map((c) => c.userId)}
+        label={t('submitOthersButton', { names: joinNames(cards) })}
+      />
+    </>
+  );
+}
+
+/**
+ * «Lever også kortet til Ola og Kari. Du har ført alle hullene.» A guest can
+ * never deliver, and two may have shared the card, so a guest gets their own
+ * sentence instead of «du har ført alle hullene».
+ */
+async function FlightDeliveryNotice({ cards }: { cards: readonly FlightDeliveryCard[] }) {
+  const t = await getTranslations('game.submit.flight');
+  const joinNames = await nameJoiner();
+  const players = cards.filter((c) => !c.isGuest);
+  const guests = cards.filter((c) => c.isGuest);
+  return (
+    <Banner tone="info" testId="flight-delivery">
+      {t('intro', { count: cards.length, names: joinNames(cards) })}{' '}
+      {players.length > 0 &&
+        (guests.length === 0
+          ? t('enteredAll')
+          : t('enteredAllFor', { names: joinNames(players) }))}{' '}
+      {guests.length > 0 && t('guests', { count: guests.length, names: joinNames(guests) })}
+    </Banner>
   );
 }
 

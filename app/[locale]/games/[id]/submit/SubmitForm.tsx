@@ -10,7 +10,7 @@ import { drainQueue } from '@/lib/sync/syncWorker';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
-  submitAction: () => void | Promise<void>;
+  submitAction: (formData: FormData) => void | Promise<void>;
   missingHoles: number;
   /**
    * Every game this delivery can freeze: this round, plus a split-cup front9
@@ -19,6 +19,13 @@ type Props = {
    * rounds do not (#1370).
    */
   blockingGameIds: string[];
+  /**
+   * #2200: the flightmates' cards this delivery also covers. Sent as hidden
+   * `alsoFor` fields; the server delivers only those its own rule allows.
+   */
+  alsoFor?: readonly string[];
+  /** #2200: button text when it covers more than my own card. */
+  label?: string;
 };
 
 /**
@@ -45,6 +52,8 @@ export function SubmitForm({
   submitAction,
   missingHoles,
   blockingGameIds,
+  alsoFor = [],
+  label,
 }: Props) {
   const t = useTranslations('game.submit');
   const router = useRouter();
@@ -103,13 +112,17 @@ export function SubmitForm({
         }
       }}
     >
+      {/* Always mounted (#1011): only mounted inputs reach FormData. */}
+      {alsoFor.map((userId) => (
+        <input key={userId} type="hidden" name="alsoFor" value={userId} />
+      ))}
       <SubmitButton
         data-testid="submit-scorecard"
         className="w-full"
         pendingLabel={t('submitPending')}
         disabled={syncing}
       >
-        {syncing ? t('syncingPending') : t('submitButton')}
+        {syncing ? t('syncingPending') : (label ?? t('submitButton'))}
       </SubmitButton>
     </form>
   );

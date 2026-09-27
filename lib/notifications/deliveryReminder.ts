@@ -158,7 +158,8 @@ export async function maybeSendDeliveryReminder(opts: {
       }>();
 
     // #1009: en gjest med fullt scorekort skal ikke purres — plassholder-
-    // adressen kan ikke motta mail, og gjesten leverer via markøren uansett.
+    // adressen kan ikke motta mail, og gjesten kan ikke levere selv. Kortet
+    // leveres av den som fører det, fra lever-siden (#2200).
     if (u?.is_guest) return;
 
     await sendDeliveryReminder({

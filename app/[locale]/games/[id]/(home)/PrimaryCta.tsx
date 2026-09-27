@@ -4,6 +4,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { firstHoleForSegment, holeNumbersForSegment } from '@/lib/games/holeScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
+import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { getGameContext } from './gameContext';
@@ -161,6 +162,14 @@ export async function PrimaryCtaSection({
       }
     : null;
 
+  // #2200: my own card is delivered, but I kept score for flightmates whose
+  // cards are still open. Before my own delivery the lever-side offers them,
+  // so the read only runs once I have delivered.
+  const flightCardCount =
+    state === 'submitted_pending_approval' || state === 'submitted_approved'
+      ? await countFlightCards(gameId, currentUserId, gameMode, holeSegment)
+      : 0;
+
   return (
     <PrimaryCta
       gameId={gameId}
@@ -169,8 +178,34 @@ export async function PrimaryCtaSection({
       totalHoles={segmentHoles.length}
       nextHole={nextHole}
       sibling={sibling}
+      flightCardCount={flightCardCount}
     />
   );
+}
+
+/**
+ * How many flightmates' cards I can still deliver (#2200). A failed read shows
+ * no button rather than breaking game home: my own card is delivered, and the
+ * lever-side reads the same list again.
+ */
+async function countFlightCards(
+  gameId: string,
+  userId: string,
+  gameMode: GameMode,
+  holeSegment: HoleSegment,
+): Promise<number> {
+  try {
+    const cards = await loadFlightDeliveryCards(gameId, userId, {
+      game_mode: gameMode,
+      hole_segment: holeSegment,
+      // Derived games never render this section (see the prop doc above).
+      source_game_id: null,
+    });
+    return cards.length;
+  } catch (err) {
+    console.error('[PrimaryCta] flight cards read failed', err);
+    return 0;
+  }
 }
 
 export function PrimaryCtaSkeleton() {
@@ -184,6 +219,7 @@ function PrimaryCta({
   totalHoles,
   nextHole,
   sibling,
+  flightCardCount,
 }: {
   gameId: string;
   state: UiState;
@@ -201,8 +237,17 @@ function PrimaryCta({
     holeNumber: number;
     mySubmittedAt: string | null;
   } | null;
+  /** #2200: flightmates' cards I kept and can still deliver. 0 = no button. */
+  flightCardCount: number;
 }) {
   const t = useTranslations('game.home');
+  // #2200: the next thing to do once my own card is in.
+  const flightCta =
+    flightCardCount > 0 ? (
+      <LinkButton href={`/games/${gameId}/submit`} full data-testid="deliver-flight-cta">
+        {t('ctaDeliverFlight', { count: flightCardCount })}
+      </LinkButton>
+    ) : null;
   const tModes = useTranslations('modes');
   const subtext =
     state === 'in_progress' || state === 'ready_to_submit'
@@ -276,6 +321,7 @@ function PrimaryCta({
   if (state === 'submitted_pending_approval') {
     return (
       <div className="space-y-1.5">
+        {flightCta}
         <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
           {t('ctaSubmittedPendingApproval')}
         </div>
@@ -298,6 +344,7 @@ function PrimaryCta({
   // submitted_approved
   return (
     <div className="space-y-1.5">
+      {flightCta}
       <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
         {t('ctaSubmittedApproved')}
       </div>

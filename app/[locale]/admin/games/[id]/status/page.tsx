@@ -52,6 +52,8 @@ type PlayerRow = {
   // #2041: groups the roster into teams so a teammate counts the captain's card.
   team_number: number | null;
   submitted_at: string | null;
+  /** #2200: who delivered the card; differs from user_id when the scorekeeper did. */
+  submitted_by_user_id: string | null;
   approved_at: string | null;
   withdrawn_at: string | null;
   accepted_at: string | null;
@@ -107,7 +109,7 @@ export default async function GameStatusPage({
     getAdminClient()
       .from('game_players')
       .select(
-        'user_id, team_number, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email)',
+        'user_id, team_number, submitted_at, submitted_by_user_id, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email)',
       )
       .eq('game_id', id)
       .returns<PlayerRow[]>(),
@@ -166,6 +168,15 @@ export default async function GameStatusPage({
         expectedHoles,
       });
       const fullName = p.users?.name ?? p.users?.email ?? tDetail('unknownPlayer');
+      // #2200: a card the scorekeeper delivered shows who did it. The one who
+      // delivered is in the game, so the roster has the name.
+      const deliverer =
+        p.submitted_by_user_id != null && p.submitted_by_user_id !== p.user_id
+          ? players.find((q) => q.user_id === p.submitted_by_user_id)
+          : undefined;
+      const delivererName = deliverer
+        ? (firstName(deliverer.users?.name ?? null) ?? tDetail('unknownPlayer'))
+        : null;
       return {
         userId: p.user_id,
         name: fullName,
@@ -174,6 +185,7 @@ export default async function GameStatusPage({
         lastActionAt,
         status,
         acceptedAt: p.accepted_at,
+        delivererName,
       };
     })
     .sort((a, b) =>
@@ -322,6 +334,10 @@ export default async function GameStatusPage({
           <ul className="overflow-hidden rounded-xl border border-border bg-surface">
             {rows.map((r) => {
               const meta = statusLabels[r.status];
+              const label =
+                r.status === 'delivered' && r.delivererName
+                  ? t('statusLabels.deliveredBy', { name: r.delivererName })
+                  : meta.label;
               const isTarget = targetUserIds.has(r.userId);
               return (
                 <li
@@ -352,7 +368,7 @@ export default async function GameStatusPage({
                       className={`font-sans text-[12px] font-semibold ${meta.className}`}
                     >
                       {isTarget && !isFinished ? '⚠️ ' : ''}
-                      {meta.label}
+                      {label}
                     </p>
                     <p className="mt-0.5 font-sans text-[11px] tabular-nums text-muted">
                       {t('hullCount', { filled: r.holesFilled, total: expectedHoles })}

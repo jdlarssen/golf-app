@@ -124,7 +124,7 @@ export function selectDeliveryReminderTargets<T extends ReminderRosterRow>(
 export type UnremindableCounts = {
   /** Not every hole entered yet — a reminder helps once they have. */
   unfinished: number;
-  /** Guests hand in through their marker and have no address to remind. */
+  /** Guests cannot deliver themselves (the scorekeeper does, #2200) and have no address to remind. */
   guests: number;
   /** #1466: hand in the whole round on the same day's back9 game. */
   splitDay: number;

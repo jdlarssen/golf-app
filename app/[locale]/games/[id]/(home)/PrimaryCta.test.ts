@@ -65,6 +65,12 @@ vi.mock('./gameContext', () => ({
 vi.mock('@/lib/games/segmentSibling', () => ({
   findSegmentSibling: vi.fn(async () => null),
 }));
+// #2200: the flight rule and its read have their own tests; here the loader
+// is the boundary.
+const loadCardsMock = vi.fn(async (..._args: unknown[]) => [] as { userId: string }[]);
+vi.mock('@/lib/games/loadFlightDelivery', () => ({
+  loadFlightDeliveryCards: (...args: unknown[]) => loadCardsMock(...args),
+}));
 
 const VIEWER = 'b-viewer';
 const CAPTAIN = 'a-captain'; // lex-min → owns the team rows
@@ -81,6 +87,7 @@ async function callSection(opts: {
   gameMode: string;
   teamScoreOwnerId: string | null;
   formerTeamRowOwnerIds?: string[];
+  submittedAt?: string | null;
 }) {
   const { PrimaryCtaSection } = await import('./PrimaryCta');
   const { client, captured } = makeSupabase(opts.rows);
@@ -88,7 +95,7 @@ async function callSection(opts: {
   const el = await PrimaryCtaSection({
     gameId: 'game-1',
     currentUserId: VIEWER,
-    submittedAt: null,
+    submittedAt: opts.submittedAt ?? null,
     approvedAt: null,
     requirePeerApproval: false,
     holeSegment: 'full',
@@ -186,5 +193,56 @@ describe('PrimaryCtaSection with a withdrawn captain (#2067)', () => {
     });
     expect(props.state).toBe('in_progress');
     expect(props.nextHole).toBe(10);
+  });
+});
+
+// #2200: own card delivered, and I kept score for flightmates whose cards are
+// still open → game home offers «Lever kortene du har ført».
+describe('PrimaryCtaSection flight cards (#2200)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loadCardsMock.mockReset();
+    loadCardsMock.mockResolvedValue([]);
+  });
+
+  it('own card delivered: counts the flightmates\' cards I can deliver', async () => {
+    loadCardsMock.mockResolvedValue([{ userId: 'ola' }, { userId: 'gjest' }]);
+    const { props } = await callSection({
+      rows: rowsFor(VIEWER, range(1, 18)),
+      gameMode: 'stableford',
+      teamScoreOwnerId: null,
+      submittedAt: '2026-09-27T10:00:00Z',
+    });
+    expect(props.state).toBe('submitted_approved');
+    expect(props.flightCardCount).toBe(2);
+    expect(loadCardsMock).toHaveBeenCalledWith('game-1', VIEWER, {
+      game_mode: 'stableford',
+      hole_segment: 'full',
+      source_game_id: null,
+    });
+  });
+
+  it('own card not delivered yet: no read, the lever-side offers them', async () => {
+    const { props } = await callSection({
+      rows: rowsFor(VIEWER, range(1, 18)),
+      gameMode: 'stableford',
+      teamScoreOwnerId: null,
+    });
+    expect(props.state).toBe('ready_to_submit');
+    expect(props.flightCardCount).toBe(0);
+    expect(loadCardsMock).not.toHaveBeenCalled();
+  });
+
+  it('a failed read shows no button instead of breaking game home', async () => {
+    loadCardsMock.mockRejectedValue(new Error('nede'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { props } = await callSection({
+      rows: rowsFor(VIEWER, range(1, 18)),
+      gameMode: 'stableford',
+      teamScoreOwnerId: null,
+      submittedAt: '2026-09-27T10:00:00Z',
+    });
+    expect(props.flightCardCount).toBe(0);
+    errorSpy.mockRestore();
   });
 });

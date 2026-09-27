@@ -149,7 +149,7 @@
       },
       "deliverReminder": {
         "title": "Remember to submit your scorecard",
-        "detail": "Your strokes in {gameName} don't count until you submit"
+        "detail": "Submit your card in {gameName} so the organizer can finish the round."
       },
       "paymentReminder": {
         "title": "Pay the entry fee",
@@ -1913,6 +1913,7 @@
       "ctaHolesFilled": "{count} of {total} holes entered",
       "ctaSubmittedPendingApproval": "Scorecard submitted — waiting for approval from another player.",
       "ctaSubmittedApproved": "Scorecard submitted and approved. Waiting for admin to finish the game.",
+      "ctaDeliverFlight": "{count, plural, one {Submit the card you kept} other {Submit the cards you kept ({count})}}",
       "ctaContinueToSibling": "Continue to hole {hole} · {format} →",
       "draftTeamsLabel": "TEAMS",
       "draftSidesLabel": "SIDES",
@@ -1990,6 +1991,15 @@
       "confirmBase": "Submit the scorecard? Only the organiser can undo this.",
       "confirmMissing": "{count, plural, one {1 hole is missing and will be saved as not played.} other {# holes are missing and will be saved as not played.}}",
       "unknownPlayer": "(unknown player)",
+      "flight": {
+        "intro": "{count, plural, one {Also submit the card for {names}.} other {Also submit the cards for {names}.}}",
+        "enteredAll": "You entered every hole.",
+        "enteredAllFor": "You entered every hole for {names}.",
+        "guests": "{count, plural, one {{names} is a guest and can't submit on their own.} other {{names} are guests and can't submit on their own.}}",
+        "submitButton": "Submit {count} cards ✓",
+        "submitOthersButton": "Submit for {names} ✓",
+        "ownDelivered": "Your card is submitted."
+      },
       "puttsPrompt": {
         "heading": "Putts logged on {done} of {total} holes. Fill in the rest?",
         "allDone": "Every hole has putts now. Nice!",
@@ -2076,7 +2086,7 @@
       "pending": "Reminding …",
       "none": "None of them can be reminded right now.",
       "unfinished": "{count, plural, one {# of them hasn't entered every hole yet.} other {# of them haven't entered every hole yet.}} A reminder only helps once they have.",
-      "guests": "{count, plural, one {# of them is a guest and hands in through their marker.} other {# of them are guests and hand in through their marker.}}",
+      "guests": "{count, plural, one {# of them is a guest. Whoever keeps the card submits it.} other {# of them are guests. Whoever keeps the cards submits them.}}",
       "splitDay": "{count, plural, one {# of them hands in the whole round on Back 9 and is reminded there.} other {# of them hand in the whole round on Back 9 and are reminded there.}}",
       "sent": "Reminder sent. They'll get a notification now."
     },
@@ -2137,6 +2147,7 @@
       "stateWithdrawn": "Withdrawn",
       "stateApproved": "Approved",
       "stateSubmitted": "Submitted",
+      "stateSubmittedBy": "Submitted by {name}",
       "stateNotSubmitted": "Not submitted",
       "removeButton": "Remove",
       "cupRosterLockedHint": "This is a cup match. You swap players on the cup page.",
@@ -3776,6 +3787,7 @@
           "playing": "Playing",
           "not_started": "Not started",
           "delivered": "Submitted",
+          "deliveredBy": "Submitted by {name}",
           "withdrawn": "Withdrawn"
         },
         "sendingBusy": "Sending …"
@@ -5706,8 +5718,8 @@
       "heading": "Submit your scorecard",
       "salutationNamed": "Hi {name}!",
       "salutationGeneric": "Hi!",
-      "body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Your strokes don't count until you submit — it only takes a few seconds.",
-      "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Your strokes don't count until you submit — it only takes a few seconds.",
+      "body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.",
+      "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.",
       "submitButton": "Submit scorecard",
       "submitButtonText": "Submit scorecard: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
