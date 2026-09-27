@@ -54,6 +54,14 @@ export async function removeApnsToken(token: string): Promise<void> {
   if (!user) throw new Error('not_authenticated');
 
   // Best-effort, like removePushSubscription: the sender may already have pruned
-  // this row on a 410, and deleting nothing is the correct outcome then.
-  await supabase.from('apns_tokens').delete().eq('token', token).eq('user_id', user.id);
+  // this row on a 410, and deleting nothing is the correct outcome then. A DB
+  // error is logged.
+  const { error } = await supabase
+    .from('apns_tokens')
+    .delete()
+    .eq('token', token)
+    .eq('user_id', user.id);
+  if (error) {
+    console.error('[removeApnsToken] delete failed', { userId: user.id, error });
+  }
 }

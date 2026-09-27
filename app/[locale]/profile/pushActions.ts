@@ -65,9 +65,13 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 
   // Best-effort: deleting an already-gone row is fine (no expectAffected here —
   // the client may have unsubscribed a sub the server already pruned on 410).
-  await supabase
+  // A DB error is logged.
+  const { error } = await supabase
     .from('push_subscriptions')
     .delete()
     .eq('endpoint', endpoint)
     .eq('user_id', user.id);
+  if (error) {
+    console.error('[removePushSubscription] delete failed', { userId: user.id, error });
+  }
 }

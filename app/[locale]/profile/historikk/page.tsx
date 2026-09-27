@@ -682,7 +682,9 @@ function scheduleDifferentialFreeze(
   after(async () => {
     try {
       const admin = getAdminClient();
-      await Promise.allSettled(
+      // allSettled never rejects, so the catch below cannot see a failed write
+      // (#2223): read each result and log the rejected ones.
+      const writes = await Promise.allSettled(
         toFreeze.map(({ gameId, differential }) =>
           admin
             .from('game_players')
@@ -695,6 +697,14 @@ function scheduleDifferentialFreeze(
             }),
         ),
       );
+      writes.forEach((w, i) => {
+        if (w.status === 'rejected') {
+          console.error('[historikk] lazy-freeze score_differential failed', {
+            gameId: toFreeze[i].gameId,
+            reason: w.reason,
+          });
+        }
+      });
     } catch (err) {
       console.error('[historikk] lazy-freeze score_differential failed', err);
     }
