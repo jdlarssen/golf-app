@@ -5,10 +5,18 @@ import { redirect } from '@/i18n/navigation';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { canApproveScorecardFor } from '@/lib/games/flightScope';
 import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import {
+  sharedCardUserIds,
+  type SharedCardRosterRow,
+} from '@/lib/games/scoreOwner';
+import {
+  modeCollapsesToTeamCard,
+  type GameMode,
+} from '@/lib/scoring/modes/types';
 
 type AuthorizationResult = {
   ok: boolean;
@@ -43,6 +51,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     redirect({ href: `/games/${gameId}/approve?error=not_active` as string, locale });
   }
   const game = maybeGame!;
+  const gameMode = game.game_mode as GameMode;
 
   const { data: profile } = await supabase
     .from('users')
@@ -56,6 +65,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
       supabase,
       user,
       locale,
+      gameMode,
       authz: { ok: true, isAdmin } satisfies AuthorizationResult,
     };
   }
@@ -72,7 +82,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
 
   const canApprove = canApproveScorecardFor(
     allPlayers ?? [],
-    game.game_mode as GameMode,
+    gameMode,
     user.id,
     playerUserId,
   );
@@ -80,6 +90,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     supabase,
     user,
     locale,
+    gameMode,
     authz: { ok: canApprove, isAdmin } satisfies AuthorizationResult,
   };
 }
@@ -194,6 +205,10 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
  *
  * Admin rejection runs through this same action (loadAndAuthorize lets admins
  * straight through), so peer and admin rejection are covered by one call site.
+ *
+ * #2213: in the one-ball team formats the rejection reopens the whole active
+ * team through the service role (`rejectSharedCard`), since every card there
+ * reads the captain's rows. Every other mode keeps the one-row RLS write.
  */
 export async function rejectScorecard(gameId: string, formData: FormData) {
   const locale = await getLocale();
@@ -208,24 +223,31 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   const reason =
     reasonRaw.length > 0 ? reasonRaw.slice(0, 500) : NO_REJECTION_REASON;
 
-  const { supabase, user, authz } = await loadAndAuthorize(gameId, playerUserId);
+  const { supabase, user, authz, gameMode } = await loadAndAuthorize(
+    gameId,
+    playerUserId,
+  );
   if (!authz.ok) redirect({ href: '/', locale });
 
-  const { data: updated, error } = await supabase
-    .from('game_players')
-    .update({
-      submitted_at: null,
-      approved_at: null,
-      approved_by_user_id: null,
-      rejection_reason: reason,
-    })
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId)
-    // #1395: kun et innlevert kort kan avvises. Uten filteret traff et
-    // dobbelttrykk (eller en re-post av skjemaet) fortsatt 1 rad og fyrte et
-    // nytt scorecard_rejected-varsel + push til spilleren.
-    .not('submitted_at', 'is', null)
-    .select('user_id');
+  const rejectPatch = {
+    submitted_at: null,
+    approved_at: null,
+    approved_by_user_id: null,
+    rejection_reason: reason,
+  };
+  const sharedCard = modeCollapsesToTeamCard(gameMode, 18);
+  const { data: updated, error } = sharedCard
+    ? await rejectSharedCard(gameId, gameMode, playerUserId, rejectPatch)
+    : await supabase
+        .from('game_players')
+        .update(rejectPatch)
+        .eq('game_id', gameId)
+        .eq('user_id', playerUserId)
+        // #1395: kun et innlevert kort kan avvises. Uten filteret traff et
+        // dobbelttrykk (eller en re-post av skjemaet) fortsatt 1 rad og fyrte et
+        // nytt scorecard_rejected-varsel + push til spilleren.
+        .not('submitted_at', 'is', null)
+        .select('user_id');
 
   if (error) {
     redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
@@ -275,6 +297,13 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   // Uten den avviser notifications_kind_check inserten og notify() svelger
   // feilen (console.error '[notifications] insert failed') — grønt UI, ingen
   // varsel. Verifiser med en SELECT mot notifications etter staging-runden.
+  //
+  // #2213: on a shared team card, every row the cascade reopened is notified
+  // except the rejecter — they know already, though their own card reopens
+  // too (see rejectSharedCard).
+  const recipients = sharedCard
+    ? (updated ?? []).map((r) => r.user_id).filter((id) => id !== user.id)
+    : [playerUserId];
   try {
     const [gameRes, rejecterRes] = await Promise.all([
       supabase
@@ -288,19 +317,20 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
         .eq('id', user.id)
         .maybeSingle<{ name: string | null }>(),
     ]);
-    await notify({
-      userId: playerUserId,
-      kind: 'scorecard_rejected',
-      payload: {
-        game_id: gameId,
-        game_name: gameRes.data?.name ?? null,
-        rejecter_name: rejecterRes.data?.name?.trim() || null,
-        // Utelat feltet helt når attestanten ikke skrev noe, så kortet kan vise
-        // en lokalisert defaultReason. DB-raden bærer sentinelen i stedet —
-        // den styrer spill-hjem-banneret, som oversetter på samme måte.
-        ...(reasonRaw.length > 0 ? { reason } : {}),
-      },
-    });
+    const payload = {
+      game_id: gameId,
+      game_name: gameRes.data?.name ?? null,
+      rejecter_name: rejecterRes.data?.name?.trim() || null,
+      // Utelat feltet helt når attestanten ikke skrev noe, så kortet kan vise
+      // en lokalisert defaultReason. DB-raden bærer sentinelen i stedet —
+      // den styrer spill-hjem-banneret, som oversetter på samme måte.
+      ...(reasonRaw.length > 0 ? { reason } : {}),
+    };
+    await Promise.all(
+      recipients.map((userId) =>
+        notify({ userId, kind: 'scorecard_rejected', payload }),
+      ),
+    );
   } catch (err) {
     console.error('[rejectScorecard] scorecard_rejected notify failed', err);
   }
@@ -309,4 +339,53 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
   redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
+}
+
+/**
+ * #2213: rejecting a shared team card. In the one-ball formats
+ * (`modeCollapsesToTeamCard`) every card on the team reads the captain's rows.
+ * Clearing only the rejected card left the captain's row submitted, so the hole
+ * page kept the team card locked (`anyTeamMemberSubmitted`) and RLS refused the
+ * correction. The whole active team (`sharedCardUserIds`) reopens instead, in
+ * ONE UPDATE, so the cascade is atomic (trap 5).
+ *
+ * The rejecter often plays on the team (in scramble with more than four players
+ * flight = team), and their own card reopens too. That is deliberate: otherwise
+ * one row on the team stays submitted and the lock stays. If their card was
+ * approved, that approval is cleared as well, which a player cannot do on their
+ * own row with the RLS client (the 0168 guard). Hence the service role. It
+ * mirrors the delivery cascade (#1453) and sits behind the same gate:
+ * `loadAndAuthorize` (admin, or `canApproveScorecardFor` on the rejected card)
+ * has already let the caller through.
+ *
+ * Returns the same shape as the one-row UPDATE, so the 0-row guard
+ * (#704/#1395) and the notifications read both paths alike.
+ */
+async function rejectSharedCard(
+  gameId: string,
+  mode: GameMode,
+  playerUserId: string,
+  patch: {
+    submitted_at: null;
+    approved_at: null;
+    approved_by_user_id: null;
+    rejection_reason: string;
+  },
+) {
+  const admin = getAdminClient();
+  const { data: roster, error: rosterError } = await admin
+    .from('game_players')
+    .select('user_id, team_number, withdrawn_at')
+    .eq('game_id', gameId)
+    .returns<SharedCardRosterRow[]>();
+  // A failed roster read is an error (?error=db), not a cue to reopen just
+  // one card — that would silently shrink the cascade back into the bug.
+  if (rosterError) return { data: null, error: rosterError };
+  return admin
+    .from('game_players')
+    .update(patch)
+    .eq('game_id', gameId)
+    .in('user_id', sharedCardUserIds(mode, roster ?? [], playerUserId))
+    .not('submitted_at', 'is', null)
+    .select('user_id');
 }

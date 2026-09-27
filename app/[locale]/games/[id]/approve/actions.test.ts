@@ -50,6 +50,14 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #2213: a rejected team card reopens the whole team through the service role
+// (the mirror of the #1453 delivery cascade). Defaults to an empty queue, and
+// the per-player modes below never touch it.
+let adminSupabaseMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => adminSupabaseMock,
+}));
+
 const notifyMock = vi.fn<
   (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
 >(async () => ({ shouldAlsoSendMail: false }));
@@ -65,6 +73,7 @@ function lastRedirect(): string | undefined {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminSupabaseMock = buildSupabaseMock([]);
 });
 
 describe('approveScorecard', () => {
@@ -444,5 +453,88 @@ describe('rejectScorecard', () => {
     expect(
       (updateCall?.args[0] as { rejection_reason: string }).rejection_reason,
     ).toBe(NO_REJECTION_REASON);
+  });
+
+  it('#2213: a team card reopens every active team member via the service role', async () => {
+    // Texas scramble: the captain (lex-min) owns every shared row. Rejecting
+    // one card used to clear only that row, so the captain's row stayed
+    // submitted — the hole page kept the team card locked and RLS refused the
+    // correction. Now the whole active team reopens in one service-role UPDATE.
+    // The rejecter plays on the team here: their card reopens too (shared
+    // card), but they are not notified about their own action.
+    const CAPTAIN = 'a-captain';
+    const REJECTER = 'm-admin';
+    const MATE = 'u-mate';
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'texas_scramble' }, error: null }, // games (loadAndAuthorize)
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: { name: 'Sommercup' }, error: null }, // games.name (notify block)
+      { data: { name: 'Kari' }, error: null }, // users.name (the rejecter)
+    ]);
+    adminSupabaseMock = buildSupabaseMock([
+      {
+        data: [
+          { user_id: CAPTAIN, team_number: 1, withdrawn_at: null },
+          { user_id: REJECTER, team_number: 1, withdrawn_at: null },
+          { user_id: MATE, team_number: 1, withdrawn_at: null },
+          { user_id: 'c-other', team_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // admin roster
+      {
+        data: [{ user_id: CAPTAIN }, { user_id: REJECTER }, { user_id: MATE }],
+        error: null,
+      }, // admin game_players.update → the whole team
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: REJECTER } },
+    });
+
+    const { rejectScorecard } = await import('./actions');
+
+    await expect(
+      rejectScorecard('game-1', makeFormData(MATE)),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/approve?status=rejected');
+
+    const admin = adminSupabaseMock.__fromCalls;
+    expect(
+      admin.some((c) => c.table === 'game_players' && c.method === 'update'),
+    ).toBe(true);
+    expect(admin).toContainEqual({
+      table: 'game_players',
+      method: 'in',
+      args: ['user_id', [CAPTAIN, REJECTER, MATE]],
+    });
+    expect(admin).toContainEqual({
+      table: 'game_players',
+      method: 'not',
+      args: ['submitted_at', 'is', null],
+    });
+    // The request-scoped (RLS) client writes nothing on the team path.
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.method === 'update'),
+    ).toBe(false);
+
+    const payload = {
+      game_id: 'game-1',
+      game_name: 'Sommercup',
+      rejecter_name: 'Kari',
+      reason: 'Feil sum',
+    };
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: CAPTAIN,
+      kind: 'scorecard_rejected',
+      payload,
+    });
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: MATE,
+      kind: 'scorecard_rejected',
+      payload,
+    });
+    expect(notifyMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ userId: REJECTER }),
+    );
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 });
