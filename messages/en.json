@@ -2289,6 +2289,7 @@
     },
     "scoreCard": {
       "tapInstruction": "Tap to set par. Use − / +.",
+      "submittedBadge": "Submitted",
       "nettoLabel": "Net {netto}",
       "nettoWithPoints": "Net {netto} · {points} pts",
       "strokesBadge": "+{n} STROKES",

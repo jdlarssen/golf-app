@@ -12,7 +12,7 @@ import { GreenPinChip } from '@/components/hole/GreenPinChip';
 import { PIN_GATE_MAX_PINS } from '@/lib/geo/pinRules';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleCard } from './holeLiveQueries';
-import { stablefordPointsForCard } from './holeCards';
+import { isCardLocked, stablefordPointsForCard } from './holeCards';
 
 export function HoleScoreCardList({
   cards,
@@ -55,9 +55,12 @@ export function HoleScoreCardList({
           isStableford,
         });
         // WD-spilleren kan ikke taste sin egen ball, men flight-kameratene
-        // kan fortsatt taste sine scorer (#386).
-        const isMyCard = c.userId === myUserId;
-        const cardDisabled = disabled || (withdrawn && isMyCard);
+        // kan fortsatt taste sine scorer (#386). Et levert kort er låst (#2211).
+        const cardDisabled = isCardLocked(c, {
+          pageDisabled: disabled,
+          withdrawn,
+          myUserId,
+        });
         return (
           <ScoreCard
             key={c.userId}
@@ -68,6 +71,7 @@ export function HoleScoreCardList({
             score={c.score}
             par={par}
             disabled={cardDisabled}
+            submitted={c.submitted}
             hideNetto={hideNetto}
             stablefordPoints={stablefordPoints}
             onSetScore={onSetScore}

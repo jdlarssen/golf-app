@@ -149,9 +149,18 @@ describe('ScoreCard — helper text', () => {
   });
 
   it('viser instruksjon-tekst når score er null uavhengig av extraStrokes', () => {
-    setup({ score: null, extraStrokes: 3 });
+    const { rerender } = setup({ score: null, extraStrokes: 3 });
     expect(screen.getByText('Trykk kort = par. Bruk − / +.')).toBeInTheDocument();
     expect(screen.queryByText(/Netto/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('score-card-submitted')).toBeNull();
+
+    // #2211: a flight-mate who has submitted — locked card, «Levert» by the
+    // name, and no «tap = par» on a card you cannot tap.
+    rerender(
+      <ScoreCard {...baseProps} score={null} extraStrokes={3} disabled submitted />,
+    );
+    expect(screen.queryByText('Trykk kort = par. Bruk − / +.')).toBeNull();
+    expect(screen.getByTestId('score-card-submitted')).toBeInTheDocument();
   });
 
   it('confirmed border color (score satt) differs from unconfirmed (score null)', () => {

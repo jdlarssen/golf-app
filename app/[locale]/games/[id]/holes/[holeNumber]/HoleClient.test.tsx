@@ -358,8 +358,16 @@ describe('HoleClient — onboarding banner', () => {
 
 describe('HoleClient — score writes', () => {
   it('tapping a ScoreCard fires writeScore and drainQueue', async () => {
-    render(<HoleClient {...baseProps()} />);
+    // #2211: u2 has submitted — their card is locked, so a tap writes nothing.
+    const players = makePlayers();
+    players[1] = { ...players[1], submitted: true };
+    render(<HoleClient {...baseProps({ players })} />);
     const cards = screen.getAllByTestId('score-card');
+    await act(async () => {
+      fireEvent.click(cards[1]);
+    });
+    expect(writeScoreMock).not.toHaveBeenCalled();
+
     // The first ScoreCard belongs to u1 (myUserId in our base props).
     await act(async () => {
       fireEvent.click(cards[0]);

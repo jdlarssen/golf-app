@@ -49,12 +49,33 @@ export function isMySeatSubmitted(
   return findMySeat(players, lookup)?.submitted ?? false;
 }
 
+/**
+ * #2211: one home for «may this card be written to from here?». A card is
+ * locked when the whole page is (round not active, or I have submitted), when
+ * it belongs to a flight-mate who has submitted (the server freezes a
+ * submitted card, so a typed number would never be stored), or when it is my
+ * own card after I withdrew (#386). No admin exception (owner answer 2A): a
+ * submitted card is reopened with «Åpne for redigering» on the players page.
+ */
+export function isCardLocked(
+  card: Pick<HoleCard, 'userId' | 'submitted'>,
+  ctx: { pageDisabled: boolean; withdrawn: boolean; myUserId: string },
+): boolean {
+  return (
+    ctx.pageDisabled ||
+    card.submitted ||
+    (ctx.withdrawn && card.userId === ctx.myUserId)
+  );
+}
+
 export type MyCardSummary = {
   myCard: HoleCard | undefined;
   myScoreEntered: boolean;
   /**
    * Antall ANDRE kort uten score på hullet. Mitt eget kort er ekskludert —
-   * den tilstanden har sin egen affordance (den deaktiverte CTA-en).
+   * den tilstanden har sin egen affordance (den deaktiverte CTA-en). Et
+   * levert kort telles heller ikke: det er låst, så hintet skal ikke be deg
+   * fylle det (#2211).
    */
   missingFlightScoreCount: number;
 };
@@ -76,7 +97,7 @@ export function summarizeMyCard(
     myCard,
     myScoreEntered: myCard?.score != null,
     missingFlightScoreCount: cards.filter(
-      (c) => c.userId !== myCard?.userId && c.score == null,
+      (c) => c.userId !== myCard?.userId && !c.submitted && c.score == null,
     ).length,
   };
 }
