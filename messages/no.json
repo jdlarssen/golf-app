@@ -5756,6 +5756,7 @@
     "quarantineOpenHole": "Åpne hull {holeNumber}",
     "quarantineOpenGame": "Åpne runden",
     "quarantineRecoveryHint": "Tast slaget på nytt mens runden er i gang, så prøver appen å sende det igjen.",
+    "quarantineLockedHint": "Kortet er levert eller runden er over, så endringen kom ikke med. Arrangøren kan åpne kortet igjen hvis tallet må rettes.",
     "quarantineDetailsTitle": "Tekniske detaljer",
     "quarantineDismiss": "Fjern varselet",
     "quarantineDismissConfirm": "Vil du fjerne varselet? Slagene er ikke sendt til arrangøren. Tallene blir bare stående på denne telefonen.",

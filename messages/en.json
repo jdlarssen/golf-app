@@ -5756,6 +5756,7 @@
     "quarantineOpenHole": "Open hole {holeNumber}",
     "quarantineOpenGame": "Open the round",
     "quarantineRecoveryHint": "Re-enter the stroke while the round is still active and the app will try to send it again.",
+    "quarantineLockedHint": "The card has been submitted or the round is over, so the change wasn't saved. The organizer can reopen the card if the number needs fixing.",
     "quarantineDetailsTitle": "Technical details",
     "quarantineDismiss": "Dismiss",
     "quarantineDismissConfirm": "Remove this notice? The strokes were never sent to the organizer. The numbers only remain on this phone.",

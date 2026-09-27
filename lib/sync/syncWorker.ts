@@ -1,11 +1,19 @@
-import { localDb } from './db';
+import { localDb, type LocalScore, type SyncQueueItem } from './db';
 import { getBrowserClient } from '@/lib/supabase/client';
-import { syncRetryDecision } from './classifyError';
-import { conflictRecordFor, resolveConflict } from './conflict';
+import {
+  isLockedCardError,
+  REFUSED_WRITE_ERROR,
+  syncRetryDecision,
+} from './classifyError';
+import { conflictRecordFor } from './conflict';
 import { currentDeviceUserId } from './currentUser';
 import { isOwnerWipeBlocked } from './ownerWipeBlock';
+import { interpretUpsertReply } from './upsertReply';
 
 let inFlight = false;
+// #2211: a call that lands while a drain is running used to return empty and
+// leave its item to the next 30 s tick. Remember it and run once more.
+let rerunRequested = false;
 
 export async function drainQueue(): Promise<{
   pushed: number;
@@ -13,7 +21,10 @@ export async function drainQueue(): Promise<{
   errored: number;
   abandoned: number;
 }> {
-  if (inFlight) return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+  if (inFlight) {
+    rerunRequested = true;
+    return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
+  }
   // #1959: the owner-switch wipe failed — the queue is the previous user's.
   if (isOwnerWipeBlocked()) {
     return { pushed: 0, rejected: 0, errored: 0, abandoned: 0 };
@@ -67,13 +78,24 @@ export async function drainQueue(): Promise<{
         // permanent failures (RLS / constraint / malformed) — transient
         // network / auth / rate-limit / unknown errors keep retrying so a
         // genuinely-entered stroke is never dropped because the player was
-        // offline. A withdrawn / submitted target no longer errors here at
-        // all: the RPC returns a graceful no-op (was_applied=false) and falls
-        // through to the success branch below.
+        // offline.
         const decision = syncRetryDecision({
           attemptCount: item.attemptCount,
           errorMessage: error.message,
         });
+        // #2211: a locked card (the INSERT's RLS violation, or the 0148
+        // finished-game guard on an UPDATE) settles instead of just parking.
+        if (decision === 'abandon' && isLockedCardError(error.message)) {
+          const settled = await settleLockedRefusal(
+            item,
+            score,
+            error.message,
+            currentUserId,
+          );
+          if (settled === 'abandoned') abandoned++;
+          else if (settled === 'errored') errored++;
+          continue;
+        }
         if (decision === 'abandon') {
           await localDb.syncQueue.update(item.id, {
             attemptCount: item.attemptCount + 1,
@@ -92,7 +114,23 @@ export async function drainQueue(): Promise<{
       }
 
       const row = Array.isArray(data) ? data[0] : data;
-      const wasApplied = row?.was_applied ?? false;
+      const reply = interpretUpsertReply(row, score.clientUpdatedAt);
+
+      // #2211: the card is locked (submitted / withdrawn / round not active).
+      // RLS filtered the UPDATE to 0 rows and the RPC answered an all-NULL
+      // row with no error — this used to be dequeued as success, and the
+      // phone kept a number the server never took.
+      if (reply === 'refused') {
+        const settled = await settleLockedRefusal(
+          item,
+          score,
+          REFUSED_WRITE_ERROR,
+          currentUserId,
+        );
+        if (settled === 'abandoned') abandoned++;
+        else if (settled === 'errored') errored++;
+        continue;
+      }
 
       // #1457: alt etter RPC-en skjer i én transaksjon MED ferskhets-sjekk.
       // Spilleren kan ha tastet videre på samme felt mens RPC-en var i lufta —
@@ -111,7 +149,7 @@ export async function drainQueue(): Promise<{
             return 'edited-mid-flight' as const;
           }
 
-          if (wasApplied) {
+          if (reply === 'applied') {
             await localDb.scores.update(item.scoreId, {
               serverUpdatedAt: row.updated_at,
             });
@@ -119,25 +157,17 @@ export async function drainQueue(): Promise<{
             return 'applied' as const;
           }
 
-          // Server had a newer-or-equal entry. Resolve via LWW timestamp
-          // comparison to decide what to do:
+          // The server kept a newer-or-equal entry (`interpretUpsertReply`):
           //
           // - 'server-wins': overwrite local with the server row (genuine LWW).
-          // - 'equal': impossible post-#688 (writeScore now guarantees strictly
-          //   increasing timestamps) but kept defensive — treat as keep-local to
-          //   avoid a silent drop on any edge that bypasses writeScore.
-          // - 'local-wins': should not happen (RPC rejects only when server >=
-          //   local), but if it somehow does, keep local.
+          // - 'kept-local': the same instant — the echo of a write that already
+          //   landed but whose reply was lost, or a second tab draining the
+          //   same item. Keep local, just dequeue.
           //
           // When server genuinely wins AND the local score was entered on this
           // device AND strokes actually differ, write a ConflictRecord so
           // SyncBanner can surface the silent overwrite (#688 Part 2).
-          const resolution = resolveConflict({
-            localClientUpdatedAt: score.clientUpdatedAt,
-            serverClientUpdatedAt: row.client_updated_at,
-          });
-
-          if (resolution === 'server-wins') {
+          if (reply === 'server-wins') {
             // Surface the overwrite as a ConflictRecord when the rule says so.
             // The rule itself lives in `conflictRecordFor` (#1611) because the
             // realtime/catch-up merge needs the very same test; `score` is the
@@ -162,7 +192,7 @@ export async function drainQueue(): Promise<{
             return 'server-wins' as const;
           }
 
-          // 'equal' or 'local-wins': keep local data as-is, just dequeue.
+          // 'kept-local': keep local data as-is, just dequeue.
           await localDb.syncQueue.delete(item.id);
           return 'kept-local' as const;
         },
@@ -176,7 +206,97 @@ export async function drainQueue(): Promise<{
     return { pushed, rejected, errored, abandoned };
   } finally {
     inFlight = false;
+    if (rerunRequested) {
+      rerunRequested = false;
+      void drainQueue();
+    }
   }
+}
+
+/**
+ * #2211: settle a write the server refused because the card is locked. A
+ * locked card shows what the card actually holds, and the notice explains why
+ * the change did not make it.
+ *
+ * - No session: a lost session produces exactly the same RLS error as a
+ *   locked card (the RPC sees no row as anon and falls through to the INSERT).
+ *   Deleting on that would break the core invariant in `classifyError.ts` —
+ *   an expired session never deletes strokes — so only count the attempt and
+ *   retry after the next login.
+ * - The server read fails: count the attempt, keep the item. A refusal is
+ *   never quarantined before the phone has matched the server.
+ * - The row was edited while the RPC was in the air (#1457): touch nothing.
+ *   `writeScore` already re-queued it for the newer value.
+ * - Otherwise: local row ← server row (or deleted when the server has none,
+ *   a refused first stroke), and the item is quarantined with `lastError`,
+ *   which `summarizeQuarantine` recognises as locked. No ConflictRecord — the
+ *   quarantine banner is the notice.
+ */
+async function settleLockedRefusal(
+  item: SyncQueueItem,
+  score: LocalScore,
+  lastError: string,
+  currentUserId: string | null,
+): Promise<'abandoned' | 'errored' | 'edited-mid-flight'> {
+  const keepForRetry = async () => {
+    await localDb.syncQueue.update(item.id, {
+      attemptCount: item.attemptCount + 1,
+      lastError,
+    });
+    return 'errored' as const;
+  };
+
+  if (currentUserId == null) return keepForRetry();
+
+  let serverRow: {
+    strokes: number | null;
+    putts: number | null;
+    entered_by: string;
+    client_updated_at: string;
+    updated_at: string;
+  } | null;
+  try {
+    const { data, error } = await getBrowserClient()
+      .from('scores')
+      .select('strokes, putts, entered_by, client_updated_at, updated_at')
+      .eq('game_id', score.gameId)
+      .eq('user_id', score.userId)
+      .eq('hole_number', score.holeNumber)
+      .maybeSingle();
+    if (error) return keepForRetry();
+    serverRow = data;
+  } catch {
+    return keepForRetry();
+  }
+
+  return localDb.transaction(
+    'rw',
+    localDb.scores,
+    localDb.syncQueue,
+    async () => {
+      const current = await localDb.scores.get(item.scoreId);
+      if (!current || current.clientUpdatedAt !== score.clientUpdatedAt) {
+        return 'edited-mid-flight' as const;
+      }
+      if (serverRow) {
+        await localDb.scores.update(item.scoreId, {
+          strokes: serverRow.strokes,
+          putts: serverRow.putts ?? null,
+          enteredBy: serverRow.entered_by,
+          clientUpdatedAt: serverRow.client_updated_at,
+          serverUpdatedAt: serverRow.updated_at,
+        });
+      } else {
+        await localDb.scores.delete(item.scoreId);
+      }
+      await localDb.syncQueue.update(item.id, {
+        attemptCount: item.attemptCount + 1,
+        lastError,
+        abandonedAt: new Date().toISOString(),
+      });
+      return 'abandoned' as const;
+    },
+  );
 }
 
 // Client-side bootstrap: start listening to online events and a fallback interval.

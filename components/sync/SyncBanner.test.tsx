@@ -21,6 +21,7 @@ import {
   type SyncQueueItem,
   type ConflictRecord,
 } from '@/lib/sync/db';
+import { REFUSED_WRITE_ERROR } from '@/lib/sync/classifyError';
 import { SyncBanner } from './SyncBanner';
 
 /**
@@ -105,12 +106,28 @@ describe('SyncBanner — karantene-varianten', () => {
       qItem({ scoreId: 'g1:u1:7' }),
       qItem({ scoreId: 'g1:u1:9', abandonedAt: null, attemptCount: 1 }),
     ]);
-    render(<SyncBanner gameId="g1" />);
+    const { rerender } = render(<SyncBanner gameId="g1" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Fjern varselet' }));
     await waitFor(() =>
       expect(localDb.syncQueue.bulkDelete).toHaveBeenCalledWith(['g1:u1:7']),
     );
+    expect(screen.queryByTestId('quarantine-locked-hint')).toBeNull();
+
+    // #2211: only locked-card refusals → the banner says why, and the dismiss
+    // skips the confirm (such a stroke can never be sent anyway).
+    vi.mocked(window.confirm).mockClear();
+    mockDexieData([
+      qItem({ scoreId: 'g1:u1:8', lastError: REFUSED_WRITE_ERROR }),
+    ]);
+    rerender(<SyncBanner gameId="g1" />);
+
+    expect(screen.getByTestId('quarantine-locked-hint')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fjern varselet' }));
+    await waitFor(() =>
+      expect(localDb.syncQueue.bulkDelete).toHaveBeenCalledWith(['g1:u1:8']),
+    );
+    expect(window.confirm).not.toHaveBeenCalled();
   });
 
   it('avbrutt bekreftelse sletter ingenting', () => {

@@ -1,4 +1,5 @@
 import type { SyncQueueItem } from './db';
+import { isLockedCardError } from './classifyError';
 
 /**
  * Pure summary of quarantined (#668 `abandonedAt`) sync-queue items, grouped
@@ -30,6 +31,11 @@ export interface QuarantineSummary {
   /** Distinct non-empty lastError texts in queue order, across all games —
    * shown in the banner's details disclosure. */
   errors: string[];
+  /** #2211: true when there is quarantine and EVERY item was refused because
+   * the card is locked (`isLockedCardError`). Such a stroke can never be sent,
+   * so the banner explains why instead of offering recovery, and the dismiss
+   * skips its confirmation. */
+  lockedOnly: boolean;
 }
 
 function parseScoreId(
@@ -89,6 +95,9 @@ export function summarizeQuarantine(
     unparsedCount,
     totalCount: abandoned.length,
     errors,
+    lockedOnly:
+      abandoned.length > 0 &&
+      abandoned.every((item) => isLockedCardError(item.lastError)),
   };
 }
 
