@@ -80,7 +80,7 @@ api_get() { # navn url [curl-argumenter …] → svaret i $TMP/<navn>.json; fail
     || fail_closed "${name}-endepunktet svarte ikke (curl-feil mot ${url})"
   case "$http" in
     (2[0-9][0-9]) ;;
-    (*) fail_closed "${name}-endepunktet svarte HTTP ${http} (401/403 = token; 429 = rate limit; 5xx = API) — $(head -c 200 "$TMP/$name.json" | tr '\n' ' ')" ;;
+    (*) fail_closed "${name}-endepunktet svarte HTTP ${http} (401/403 = token; 429 = rate limit; 5xx = API). Svar: $(head -c 200 "$TMP/$name.json" | tr '\n' ' ')" ;;
   esac
 }
 
@@ -120,7 +120,7 @@ printf '%s' "$PG" | jq -e '
         and ((.n | type == "number" and . >= 0 and . == floor)
              or (.n | type == "string" and test("^[0-9]+$"))))
 ' >/dev/null 2>&1 \
-  || fail_closed "uventet svarform fra logs-endepunktet (ikke en liste med tellinger) — $(head -c 200 "$TMP/logs.json" | tr '\n' ' ')"
+  || fail_closed "uventet svarform fra logs-endepunktet (ikke en liste med tellinger). Svar: $(head -c 200 "$TMP/logs.json" | tr '\n' ' ')"
 
 # «pg:<kode><TAB><antall>», summert per nøkkel (tom kode → pg:-), størst først.
 printf '%s' "$PG" \
@@ -168,7 +168,7 @@ if [ -s "$TMP/pg_known" ]; then
 "
 fi
 if [ "$PG_TOTAL" -gt 0 ]; then
-  PG_SECTION="${PG_SECTION}Totalt ${PG_TOTAL} postgres-feil siste 24 t. Detaljer hentes read-only i interaktiv økt (Supabase MCP, logs explorer). Rå logglinjer skal ikke inn i issues. Diagnostisert og bevisst → legg \`pg:<kode>\` i \`docs/loops/prod-vakta-baseline.txt\` via PR. Reelle feil → fiks.
+  PG_SECTION="${PG_SECTION}Totalt ${PG_TOTAL} postgres-feil siste 24 t. Detaljer hentes read-only i interaktiv økt (Supabase MCP, logs explorer). Rå logglinjer skal ikke inn i issues. Typer som er diagnostisert og godtatt → legg \`pg:<kode>\` i \`docs/loops/prod-vakta-baseline.txt\` via PR. Reelle feil → fiks.
 "
 fi
 
