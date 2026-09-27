@@ -103,6 +103,15 @@ create trigger game_players_set_submitted_by
   before insert or update on public.game_players
   for each row execute function public.game_players_set_submitted_by();
 
+-- A row written before 0191 may carry an approver without an approval. The
+-- trigger below would clear it on the owner's next own-row write, which the
+-- guard then reads as the owner touching their own approval. Clear those
+-- first; there is nothing approved on them to lose.
+update public.game_players
+   set approved_by_user_id = null
+ where approved_at is null
+   and approved_by_user_id is not null;
+
 -- Who approved, owned the same way as who delivered: a signed-in caller who
 -- approves is recorded as the approver whatever the client sends, the value
 -- stays when the approval does not move, and it clears with the approval.
