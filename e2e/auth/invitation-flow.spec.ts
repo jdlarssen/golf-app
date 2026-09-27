@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { adminClient, signInViaOtp } from '../_helpers/games';
 import { rootUrlPattern } from '../_helpers/url';
+import { tapParOnRail } from '../_helpers/scoreRail';
 
 /**
  * Full invitation flow e2e — covers issue #30.
@@ -254,18 +255,10 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
         new RegExp(`/games/${TEST_GAME_ID}/holes/\\d+`),
       );
 
-      // Bruk +1-knappen for å registrere én score (par+1 etter første tap).
-      // Skjer på den første ScoreCard på siden (invitee sin egen).
-      const myPlusButton = inviteePage
-        .getByRole('button', { name: '+1' })
-        .first();
-      await myPlusButton.click();
-
-      // Verifiser at score-tallet ble registrert (sync-bekreftelse skjer
-      // optimistisk via writeScore → Dexie → cache).
-      await expect(
-        inviteePage.locator('[data-testid="score-number"]').first(),
-      ).not.toHaveText('—');
+      // Registrer én score på skinna (#2251): par for spilleren skinna står
+      // på. Hjelperen venter til den raden viser en score (writeScore → Dexie
+      // → cache, optimistisk).
+      await tapParOnRail(inviteePage);
     });
 
     await adminContext.close();
