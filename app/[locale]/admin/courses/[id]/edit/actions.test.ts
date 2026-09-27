@@ -141,7 +141,7 @@ describe('restoreTee', () => {
       { data: { is_admin: true }, error: null },
       // tee_boxes.maybeSingle — null
       { data: null, error: null },
-    ]);
+    ], {}, { strictSingle: true });
     setupAdminAuth();
 
     const { restoreTee } = await import('./actions');
