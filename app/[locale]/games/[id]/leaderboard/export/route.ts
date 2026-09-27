@@ -9,6 +9,7 @@ import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { computeLeaderboard, teamMembersLabel } from '@/lib/leaderboard';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
+import { teamLineVsPar } from '@/lib/leaderboard/vsPar';
 import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { getResultReadClient } from '../leaderboardContext';
@@ -222,8 +223,10 @@ export async function GET(
   for (const line of ordered) {
     const brutto = bruttoByTeam.get(line.teamNumber);
     const bruttoTotal = brutto?.total ?? '';
-    const vsPar = line.total - coursePar;
-    const vsParLabel = vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar);
+    // #2217: over the holes the team played, like the board; '—' without one.
+    const vsPar = teamLineVsPar(line, coursePar);
+    const vsParLabel =
+      vsPar === null ? '—' : vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar);
     const holesPlayed = teamHolesPlayed(line);
     const tiedSuffix = line.tiedWith.length > 0 ? ` ${t('tiedSuffix')}` : '';
 

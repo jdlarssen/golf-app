@@ -112,7 +112,12 @@ export type BuildRoundReportFactsOpts = {
   courseName: string | null;
   endedAt: string | null;
   gameMode: GameMode;
-  coursePar: number | null;
+  /**
+   * Par per hole (`par_mens`) over the game's scope, passed to the share card
+   * so the standings' vs-par labels count only the played holes (#2217).
+   * Empty when the course holes are unknown.
+   */
+  parByHole: ReadonlyMap<number, number>;
   /**
    * #1441: holes in scope for this game — drives the matchplay band's
    * "went the distance" check (`decidedAtHole === totalHoles` reads as no
@@ -136,14 +141,14 @@ const PLAYER_FALLBACK = 'Ukjent spiller';
 export function buildRoundReportFacts(
   opts: BuildRoundReportFactsOpts,
 ): RoundReportFacts {
-  const { result, nameByUserId, gameName, courseName, endedAt, gameMode, coursePar } = opts;
+  const { result, nameByUserId, gameName, courseName, endedAt, gameMode, parByHole } = opts;
   const totalHoles = opts.totalHoles ?? 18;
 
   const card = buildShareCardData({
     result,
     nameByUserId,
     sharerId: null,
-    coursePar: coursePar ?? 0,
+    parByHole,
     sideWinners: [],
     playerFallback: PLAYER_FALLBACK,
   });

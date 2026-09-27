@@ -195,7 +195,7 @@ export async function GET(
   const holeRows = (holesRes.data ?? []).filter((h) =>
     isHoleInSegment(h.hole_number, game.hole_segment),
   );
-  const coursePar = holeRows.reduce((sum, h) => sum + h.par_mens, 0);
+  const parByHole = new Map(holeRows.map((h) => [h.hole_number, h.par_mens]));
   const holeCount = holeRows.length;
   const dateLabel = osloDate(gameMetaRes.data?.ended_at ?? null, resolvedLocale);
   // Satori wraps on spaces but clips a single long unbroken token; cap the
@@ -225,7 +225,7 @@ export async function GET(
           result,
           nameByUserId,
           sharerId,
-          coursePar,
+          parByHole,
           sideWinners,
           playerFallback,
         });

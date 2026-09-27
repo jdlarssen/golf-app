@@ -11,7 +11,8 @@
  * Mirrors the band-routing of computeResultSummaries in lib/scoring/resultSummary.ts.
  */
 
-import type { ModeResult } from '@/lib/scoring/modes/types';
+import type { ModeResult, ShambleHoleRow, SoloStrokeplayHoleRow } from '@/lib/scoring/modes/types';
+import { vsParOverPlayed } from '@/lib/leaderboard/vsPar';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -83,8 +84,12 @@ export function buildShareCardData(opts: {
   nameByUserId: Map<string, string>;
   /** The sharer's userId, or null for a non-participant (=> neutral card, no strip/highlight). */
   sharerId: string | null;
-  /** Course par total, for vs-par score labels on strokeplay modes. */
-  coursePar: number;
+  /**
+   * Par for one ball per hole (`par_mens`), for the holes in the game's scope.
+   * Drives the vs-par labels on the strokeplay modes, counted only over the
+   * holes a competitor has a score on (#2217).
+   */
+  parByHole: ReadonlyMap<number, number>;
   /** Resolved side-tournament winners. winnerUserId null => unawarded (skip). */
   sideWinners: { label: string; winnerUserId: string | null }[];
   /**
@@ -99,10 +104,11 @@ export function buildShareCardData(opts: {
     result,
     nameByUserId,
     sharerId,
-    coursePar,
+    parByHole,
     sideWinners,
     playerFallback = '',
   } = opts;
+  const vsParScore = makeVsParScore(parByHole);
 
   const sideTournaments = buildSideTournaments(
     sideWinners,
@@ -177,7 +183,7 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.players.map((p) => ({
         userIds: [p.userId],
         rank: p.rank,
-        score: { kind: 'vsPar', label: vsParLabel(p.totalNetStrokes, coursePar) },
+        score: vsParScore(p.totalNetStrokes, soloUnplayedHoles(result.holes, p.userId), result.holes.length),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
@@ -190,7 +196,7 @@ export function buildShareCardData(opts: {
         userIds: t.playerIds,
         rank: t.rank,
         // best_ball uses `total` (net total strokes)
-        score: { kind: 'vsPar', label: vsParLabel(t.total, coursePar) },
+        score: vsParScore(t.total, teamUnplayedHoles(t.holes), t.holes.length),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
@@ -199,7 +205,7 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.members.map((m) => m.userId),
         rank: t.rank,
-        score: { kind: 'vsPar', label: vsParLabel(t.totalNet, coursePar) },
+        score: vsParScore(t.totalNet, teamUnplayedHoles(t.holes), t.holes.length),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
@@ -208,8 +214,14 @@ export function buildShareCardData(opts: {
       const rows: IndividualCompetitor[] = result.teams.map((t) => ({
         userIds: t.members,
         rank: t.rank,
-        // shamble uses `totalScore` (net strokes sum)
-        score: { kind: 'vsPar', label: vsParLabel(t.totalScore, coursePar) },
+        // shamble uses `totalScore` (net strokes sum) — the `count` lowest
+        // balls per hole, so par counts `count` times (#2217).
+        score: vsParScore(
+          t.totalScore,
+          shambleUnplayedHoles(result.holes, t.teamNumber),
+          result.holes.length,
+          result.count,
+        ),
       }));
       return buildPlacementModel('placement', rows, nameByUserId, sharerId, sideTournaments, playerFallback);
     }
@@ -370,12 +382,61 @@ function resolveTeamName(
 }
 
 /**
- * Formats a net-strokes total versus course par as a vs-par string.
- * Uses U+2212 (minus sign) for negative values, as per the spec.
- * E.g.: 70 vs par 72 → "−2", 72 vs par 72 → "E", 75 vs par 72 → "+3".
+ * A vs-par score builder over the given par map (#2217 D6): total − balls ×
+ * (par for the holes the competitor has a score on), via `vsParOverPlayed`.
+ * `holesInScope` is the number of hole rows the competitor has; 0 (no rows,
+ * as in hand-built fixtures) compares with the full scope par.
  */
-function vsParLabel(netStrokes: number, coursePar: number): string {
-  const diff = netStrokes - coursePar;
+function makeVsParScore(parByHole: ReadonlyMap<number, number>) {
+  let scopePar = 0;
+  for (const par of parByHole.values()) scopePar += par;
+  return (
+    total: number,
+    unplayedHoleNumbers: readonly number[],
+    holesInScope: number,
+    balls = 1,
+  ): ShareCardScore => ({
+    kind: 'vsPar',
+    label: vsParLabel(
+      vsParOverPlayed({
+        total,
+        scopePar,
+        unplayedPars: unplayedHoleNumbers.map((n) => parByHole.get(n) ?? 0),
+        holesInScope,
+        balls,
+      }),
+    ),
+  });
+}
+
+/** Holes a solo player has no net on: the cell is missing or `net` is null. */
+function soloUnplayedHoles(holes: readonly SoloStrokeplayHoleRow[], userId: string): number[] {
+  return holes
+    .filter((h) => h.perPlayer.find((c) => c.userId === userId)?.net == null)
+    .map((h) => h.holeNumber);
+}
+
+/** Holes a best-ball or scramble team has no net on. */
+function teamUnplayedHoles(
+  holes: ReadonlyArray<{ holeNumber: number; teamNet: number | null }>,
+): number[] {
+  return holes.filter((h) => h.teamNet == null).map((h) => h.holeNumber);
+}
+
+/** Holes a shamble team has no score on: the cell is missing or `teamScore` is null. */
+function shambleUnplayedHoles(holes: readonly ShambleHoleRow[], teamNumber: number): number[] {
+  return holes
+    .filter((h) => h.teams.find((c) => c.teamNumber === teamNumber)?.teamScore == null)
+    .map((h) => h.holeNumber);
+}
+
+/**
+ * Formats a vs-par difference as a label. Uses U+2212 (minus sign) for
+ * negative values, as per the spec: −2 → "−2", 0 → "E", 3 → "+3". `null` (no
+ * played hole) → "—".
+ */
+function vsParLabel(diff: number | null): string {
+  if (diff === null) return '—';
   if (diff === 0) return 'E';
   if (diff < 0) return `−${Math.abs(diff)}`; // U+2212 minus sign
   return `+${diff}`;
