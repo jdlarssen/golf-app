@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { AppShell } from '@/components/ui/AppShell';
@@ -46,12 +47,13 @@ type CupTournamentForCopy = {
 function cupHeaderSubtitle(
   tournament: CupTournamentForCopy,
   t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+  locale: AppLocale,
 ): string {
   if (tournament.points_to_win !== null) {
     return t('manage.headerSubtitle', {
       team1: tournament.team_1_name,
       team2: tournament.team_2_name,
-      points: formatPoints(tournament.points_to_win),
+      points: formatPoints(tournament.points_to_win, locale),
     });
   }
   // #1441 (D8): egendefinerte poeng-vekter holder points_to_win NULL gjennom
@@ -67,10 +69,11 @@ function cupMatchesSummary(
   tournament: CupTournamentForCopy,
   leaderboard: { finishedMatches: number; matches: unknown[] },
   t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+  locale: AppLocale,
 ): string {
   if (tournament.points_to_win !== null) {
     return t('manage.matchesSummary', {
-      points: formatPoints(tournament.points_to_win),
+      points: formatPoints(tournament.points_to_win, locale),
       finished: leaderboard.finishedMatches,
       total: leaderboard.matches.length,
     });
@@ -181,7 +184,7 @@ export async function CupManagement({
   statusCode?: string;
 }) {
   // Oversettelsene først: navne-fallbacken (#1527) er input til snapshot-en.
-  const t = await getTranslations('cup');
+  const [t, locale] = await Promise.all([getTranslations('cup'), getLocale()]);
   const unknownLabel = t('manage.unknownPlayer');
 
   const snapshot = await getCupSnapshot(tournamentId, unknownLabel);
@@ -354,7 +357,7 @@ export async function CupManagement({
       <BrassRibbon kicker={ribbonKicker} />
       <PageHeader
         title={tournament.name}
-        subtitle={cupHeaderSubtitle(tournament, t)}
+        subtitle={cupHeaderSubtitle(tournament, t, locale)}
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
 
@@ -377,7 +380,7 @@ export async function CupManagement({
           resultatsiden (samme låse-oppførsel som for spillerne). */}
       <Card className="mb-5">
         <p className="text-center text-xs text-muted">
-          {cupMatchesSummary(tournament, leaderboard, t)}
+          {cupMatchesSummary(tournament, leaderboard, t, locale)}
         </p>
         <div className="mt-3 flex flex-col items-center gap-0">
           <SmartLink

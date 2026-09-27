@@ -1,7 +1,8 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { firstName } from '@/lib/firstName';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { nameInitials } from '@/lib/names/initials';
 import { getGameContext } from './gameContext';
 
@@ -48,6 +49,7 @@ export async function FlightRoster({
   ).returns<FlightRosterRow[]>();
 
   const tHome = await getTranslations('game.home');
+  const locale = await getLocale();
   const flight = (flightRows ?? []).map((row) => ({
     userId: row.user_id,
     isCurrentUser: row.user_id === currentUserId,
@@ -94,7 +96,7 @@ export async function FlightRoster({
             <UnconfirmedBadge className="shrink-0" />
           )}
           <span className="shrink-0 text-xs text-muted tabular-nums">
-            HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
+            HCP {p.hcpIndex != null ? formatHcpDisplay(p.hcpIndex, locale) : '—'}
           </span>
         </li>
       ))}

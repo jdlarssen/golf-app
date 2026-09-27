@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -81,6 +81,7 @@ export function SideAwardsPanel({
   showWinnerRegistration,
 }: Props) {
   const t = useTranslations('cup.sideAwards');
+  const locale = useLocale();
   const router = useRouter();
   const [rows, setRows] = useState<SideAwardConfigInput[]>(() => toConfigRows(initialAwards));
   const [isSaving, startSaving] = useTransition();
@@ -256,9 +257,9 @@ export function SideAwardsPanel({
               {lockedRows.map((row) => (
                 <li key={`${row.kind}-${row.holeNumber}-${row.points}`}>
                   {kindLabel(row.kind)} · {t('holeShort', { n: row.holeNumber })} ·{' '}
-                  {formatPoints(row.points)} p
+                  {formatPoints(row.points, locale)} p
                   {row.kind === 'gir'
-                    ? ` · ${t('girMaxSuffix', { maxPoints: formatPoints(row.points * row.maxPerTeam) })}`
+                    ? ` · ${t('girMaxSuffix', { maxPoints: formatPoints(row.points * row.maxPerTeam, locale) })}`
                     : row.winnerCount > 1
                       ? ` · ${t('winnerCountSuffix', { count: row.winnerCount })}`
                       : ''}
@@ -417,6 +418,7 @@ function GirCountsRow({
   team2Name: string;
 }) {
   const t = useTranslations('cup.sideAwards');
+  const locale = useLocale();
   const router = useRouter();
   const [team1, setTeam1] = useState(award.team1Count === null ? '' : String(award.team1Count));
   const [team2, setTeam2] = useState(award.team2Count === null ? '' : String(award.team2Count));
@@ -457,8 +459,8 @@ function GirCountsRow({
   return (
     <Card className="!p-3">
       <p className="font-sans text-sm text-text mb-2">
-        {t('kindGir')} · {t('holeShort', { n: award.holeNumber })} · {formatPoints(award.points)} p ·{' '}
-        {t('girMaxSuffix', { maxPoints: formatPoints(award.points * award.maxPerTeam) })}
+        {t('kindGir')} · {t('holeShort', { n: award.holeNumber })} · {formatPoints(award.points, locale)} p ·{' '}
+        {t('girMaxSuffix', { maxPoints: formatPoints(award.points * award.maxPerTeam, locale) })}
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted">

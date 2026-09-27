@@ -1,4 +1,4 @@
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import type { CupPlayerPointsRow } from '@/lib/cup/computeCupPlayerPoints';
 
@@ -33,18 +33,19 @@ export function CupPlayerPoints({
   currentUserId: string | null;
 }) {
   const t = useTranslations('cup');
+  const locale = useLocale();
 
   function contributionLabel(c: CupPlayerPointsRow['contributions'][number]): string {
     if (c.type === 'match') {
       return t(c.outcome === 'tied' ? 'results.tiedWith' : 'results.wonAgainst', {
         opponent: c.opponentLabel,
-        points: formatPoints(c.points),
+        points: formatPoints(c.points, locale),
       });
     }
     return t('results.sideContribution', {
       kind: t(c.type === 'ctp' ? 'sideAwards.kindCtp' : 'sideAwards.kindLd'),
       hole: t('sideAwards.holeShort', { n: c.holeNumber }),
-      points: formatPoints(c.points),
+      points: formatPoints(c.points, locale),
     });
   }
 
@@ -88,7 +89,7 @@ export function CupPlayerPoints({
                 );
                 const points = (
                   <span className="shrink-0 font-serif text-base tabular-nums text-primary">
-                    {formatPoints(row.points)}
+                    {formatPoints(row.points, locale)}
                   </span>
                 );
 

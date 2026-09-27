@@ -1,4 +1,4 @@
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { formatPoints } from '@/lib/cup/formatPoints';
 import type {
@@ -30,6 +30,7 @@ export function SideAwardDetails({
   team2Name: string;
 }) {
   const t = useTranslations('cup');
+  const locale = useLocale();
 
   if (groups.length === 0) return null;
 
@@ -90,7 +91,7 @@ export function SideAwardDetails({
                         </div>
                         {row.outcome === 'won' && (
                           <p className="shrink-0 font-serif text-base tabular-nums text-primary">
-                            {t('results.sideAwardPoints', { points: formatPoints(row.points) })}
+                            {t('results.sideAwardPoints', { points: formatPoints(row.points, locale) })}
                           </p>
                         )}
                       </div>
@@ -114,6 +115,7 @@ function GirRow({
   teamName: (team: 1 | 2) => string;
 }) {
   const t = useTranslations('cup');
+  const locale = useLocale();
 
   return (
     <div>
@@ -126,7 +128,7 @@ function GirRow({
                 team: teamName(team.team),
                 count: team.count ?? 0,
                 max: row.maxPerTeam,
-                points: formatPoints(team.points),
+                points: formatPoints(team.points, locale),
               })}
             </li>
           ))}

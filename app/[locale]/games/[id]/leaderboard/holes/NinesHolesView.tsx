@@ -1,5 +1,7 @@
 import type { JSX } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatNumber } from '@/lib/i18n/format';
 import { Card } from '@/components/ui/Card';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
@@ -38,8 +40,10 @@ function potTotal(variant: NinesResult['variant']): number {
 }
 
 /** Poeng-formatering: hele tall vises rent, evt. del-poeng med én desimal. */
-function formatPoints(points: number): string {
-  return Number.isInteger(points) ? String(points) : points.toFixed(1);
+function formatPoints(points: number, locale: AppLocale): string {
+  return Number.isInteger(points)
+    ? String(points)
+    : formatNumber(points, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 /**
@@ -174,6 +178,7 @@ function HoleCard({
 }) {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
+  const locale = useLocale();
   const placements = placementByPlayer(hole);
 
   // Best score øverst (lavest effective = flest poeng). Pending/manglende
@@ -257,7 +262,7 @@ function HoleCard({
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                   {pts > 0 && (
                     <span className="text-[12px] font-semibold text-accent-text">
-                      +{formatPoints(pts)}
+                      +{formatPoints(pts, locale)}
                     </span>
                   )}
                   {showGross && cell.gross != null && (

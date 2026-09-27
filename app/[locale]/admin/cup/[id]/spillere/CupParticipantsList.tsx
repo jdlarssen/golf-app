@@ -1,7 +1,7 @@
 'use client';
 
 import { startTransition, useActionState, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
@@ -15,6 +15,7 @@ import {
 import { setCupParticipantRole } from '@/lib/cup/lineupActions';
 import type { CupTeamNumber } from '@/lib/cup/captainRoles';
 import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 
 export type ParticipantRow = {
   userId: string;
@@ -68,6 +69,7 @@ export function CupParticipantsList({
   emptyCandidatesLinkKey,
 }: Props) {
   const t = useTranslations('cup.participants');
+  const locale = useLocale();
 
   const [state, dispatch, isPending] = useActionState(
     async (_prev: CupPlanActionError, formData: FormData) => {
@@ -147,7 +149,7 @@ export function CupParticipantsList({
                       )}
                     </p>
                     <p className="font-sans text-xs text-muted tabular-nums">
-                      HCP {p.hcpIndex.toFixed(1)}
+                      HCP {formatHcpDisplay(p.hcpIndex, locale)}
                     </p>
                   </div>
                   <form onSubmit={submit} className="shrink-0">
@@ -237,7 +239,7 @@ export function CupParticipantsList({
                         {c.displayName}
                       </p>
                       <p className="font-sans text-xs text-muted tabular-nums">
-                        HCP {c.hcpIndex.toFixed(1)}
+                        HCP {formatHcpDisplay(c.hcpIndex, locale)}
                       </p>
                     </div>
                     <form onSubmit={submit} className="shrink-0">

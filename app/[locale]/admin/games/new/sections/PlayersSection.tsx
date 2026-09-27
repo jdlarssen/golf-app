@@ -8,13 +8,14 @@
  * flighter ligger ikke her — det er TeamsAssignmentSection sitt domene.
  */
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { GuestPlayerAdd } from './GuestPlayerAdd';
 import { TEAM_FORMAT_PLAYER_CAP, teamFormatPlayerCap } from '@/lib/games/teamFormatLimits';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 
 type Props = {
   state: GameFormState;
@@ -47,6 +48,7 @@ export function PlayersSection({
   selectableIds,
 }: Props) {
   const t = useTranslations('wizard.sections.players');
+  const locale = useLocale();
   const pendingLabel = t('pendingLabel');
 
   function playerLabel(p: PlayerOption): string {
@@ -54,7 +56,7 @@ export function PlayersSection({
       return p.email ?? pendingLabel;
     }
     const displayName = p.name ?? p.email ?? pendingLabel; // defensive — non-pending should always have name
-    const hcp = p.hcp_index.toFixed(1);
+    const hcp = formatHcpDisplay(p.hcp_index, locale);
     if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
     return `${displayName} — HCP ${hcp}`;
   }
