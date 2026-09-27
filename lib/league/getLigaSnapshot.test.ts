@@ -338,3 +338,97 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
     expect(snap!.rounds[0].deliveredUserIds).not.toContain('U3');
   });
 });
+
+describe('getLigaSnapshot — game_players over 1 000 rader (#2227)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('tar med en spiller som bare står på side 2 av game_players', async () => {
+    // PostgREST kutter ved 1 000 rader uten å si fra. En full første side og en
+    // side på 40 er 40 medlemmer × 26 runder; spilleren på side 2 må med.
+    const row = (userId: string) => ({
+      game_id: 'g1',
+      user_id: userId,
+      course_handicap: 18,
+      tee_gender: 'mens',
+      submitted_at: '2026-06-15T18:00:00Z',
+      withdrawn_at: null,
+    });
+    const page1 = Array.from({ length: 1000 }, (_, i) => row(`P${i}`));
+    const page2 = [...Array.from({ length: 39 }, (_, i) => row(`Q${i}`)), row('SIDE2')];
+
+    supabaseMock = buildSupabaseMock(
+      [
+        // 1. leagues.maybeSingle
+        {
+          data: {
+            id: 'l1',
+            name: 'Klubbliga',
+            season_start: '2026-04-01',
+            season_end: '2026-10-01',
+            format: 'stroke',
+            scoring: 'net',
+            standings_model: 'total',
+            missed_round_policy: 'must_play_all',
+            penalty_kind: 'worst_plus_one',
+            penalty_fixed_over_par: null,
+            best_n_count: null,
+            course_scope: 'single_course',
+            course_id: null,
+            tee_box_id: null,
+            status: 'active',
+            created_by: 'admin',
+            created_at: '2026-04-01T00:00:00Z',
+            started_at: '2026-04-01T00:00:00Z',
+            finished_at: null,
+            group_id: null,
+          },
+        },
+        // 2. Promise.all → league_rounds, league_players
+        {
+          data: [
+            {
+              id: 'r1',
+              sequence: 1,
+              label: 'Runde 1',
+              course_id: null,
+              tee_box_id: null,
+              opens_at: '2026-06-15T04:00:00Z',
+              closes_at: '2026-06-15T20:00:00Z',
+              original_closes_at: '2026-06-15T20:00:00Z',
+              window_overridden_at: null,
+            },
+          ],
+        },
+        { data: [] }, // league_players
+        // 3. games
+        {
+          data: [
+            {
+              id: 'g1',
+              status: 'finished',
+              course_id: null,
+              tee_box_id: null,
+              league_round_id: 'r1',
+              delivered_outside_window: false,
+            },
+          ],
+        },
+        { data: [] }, // scores
+      ],
+      {},
+      { byTable: { game_players: [{ data: page1 }, { data: page2 }] } },
+    );
+
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+
+    const delivered = snap!.rounds[0].deliveredUserIds;
+    expect({ antall: delivered.length, harSide2: delivered.includes('SIDE2') }).toEqual({
+      antall: 1040,
+      harSide2: true,
+    });
+  });
+});
