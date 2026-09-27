@@ -5,7 +5,8 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
 /**
  * Type C render test (docs/test-discipline.md) — ONE test, structure only:
  * a draft cup offers the confirm form with the right ids; a started cup offers
- * no button (the server would refuse it with `not_draft`), only the way back;
+ * no button (the server would refuse it with `not_draft`), only the way back
+ * under a neutral locked heading;
  * and the way back stays on the organiser's door (#2244). The action's
  * redirect contract lives in lib/cup/planActions.test.ts.
  */
@@ -21,31 +22,38 @@ vi.mock('@/lib/cup/planActions', () => ({
 
 import { CupRemoveConfirm } from './CupRemoveConfirm';
 
+const CUP = '33333333-3333-4333-8333-333333333333';
+const PLAYER = '44444444-4444-4444-8444-444444444444';
+
 describe('CupRemoveConfirm (#2244)', () => {
   it.each([
-    ['admin', 'draft', '/admin/cup/cup-1/spillere', true],
-    ['club', 'active', '/klubber/g1/cup/cup-1/spillere', false],
+    ['admin', 'draft', `/admin/cup/${CUP}/spillere`, true],
+    ['club', 'active', `/klubber/g1/cup/${CUP}/spillere`, false],
   ] as const)(
     'variant %s, cup %s: back → %s, form visible: %s',
     async (variant, status, backHref, formVisible) => {
       adminMock = buildSupabaseMock([
         // tournaments.maybeSingle — a club cup
-        { data: { id: 'cup-1', name: 'Høstcupen', status, group_id: 'g1' } },
+        { data: { id: CUP, name: 'Høstcupen', status, group_id: 'g1' } },
         // tournament_participants.maybeSingle — the player is enrolled
         {
           data: {
-            user_id: 'p1',
+            user_id: PLAYER,
             is_captain: true,
             users: { name: 'Kari Nordmann', nickname: null },
           },
         },
+        // groups.maybeSingle — club chrome only: the club name for the kicker
+        { data: { name: 'Solnedgang GK' } },
       ]);
 
       const { container } = render(
-        await CupRemoveConfirm({ tournamentId: 'cup-1', userId: 'p1', variant }),
+        await CupRemoveConfirm({ tournamentId: CUP, userId: PLAYER, variant }),
       );
 
       expect(screen.getByTestId('cup-remove-cancel').getAttribute('href')).toBe(backHref);
+      // Club chrome names the club, as the Spillere room does; admin chrome doesn't.
+      expect(screen.queryByText('Solnedgang GK') !== null).toBe(variant === 'club');
       if (formVisible) {
         expect(screen.getByTestId('cup-remove-confirm')).toBeTruthy();
         expect(screen.queryByTestId('cup-remove-not-draft')).toBeNull();
@@ -55,7 +63,7 @@ describe('CupRemoveConfirm (#2244)', () => {
             (el as HTMLInputElement).value,
           ]),
         );
-        expect(hidden).toEqual({ id: 'cup-1', user_id: 'p1' });
+        expect(hidden).toEqual({ id: CUP, user_id: PLAYER });
       } else {
         expect(screen.getByTestId('cup-remove-not-draft')).toBeTruthy();
         expect(screen.queryByTestId('cup-remove-confirm')).toBeNull();

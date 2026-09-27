@@ -8,7 +8,8 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { firstName } from '@/lib/firstName';
+import { participantNames } from '@/lib/format/participantNames';
+import { isUuid } from '@/lib/url/isUuid';
 import { cupBasePath } from '@/lib/cup/cupPaths';
 import { submitRemoveCupParticipant } from '@/lib/cup/planActions';
 
@@ -24,22 +25,39 @@ import { submitRemoveCupParticipant } from '@/lib/cup/planActions';
  * room itself, so the participant's name shows regardless of users-RLS.
  *
  * Removal is draft-only (`removeCupParticipant` answers `not_draft`). A cup that
- * has started shows that message and a way back instead of a button the server
- * is certain to refuse.
+ * has started shows that the enrollment is locked and a way back, instead of a
+ * button the server is certain to refuse.
  */
 export type CupRemoveVariant = 'admin' | 'club';
 
-type UserRel = { name: string | null; nickname: string | null };
+type CupT = Awaited<ReturnType<typeof getTranslations<'cup'>>>;
 
 /**
- * `?error=` → banner text. A started cup gets the not-draft box instead, so no
+ * Club name for the TopBar kicker in club chrome, as in the Spillere room: the
+ * club variant of a club cup only.
+ */
+async function clubNameOf(
+  variant: CupRemoveVariant,
+  groupId: string | null,
+): Promise<string | null> {
+  if (variant !== 'club' || !groupId) return null;
+  const { data } = await getAdminClient()
+    .from('groups')
+    .select('name')
+    .eq('id', groupId)
+    .maybeSingle();
+  return (data?.name as string | null | undefined) ?? null;
+}
+
+/**
+ * `?error=` → banner text. A started cup gets the locked box instead, so no
  * banner then; other codes map to the Spillere room's own messages, and an
  * unknown code never reaches the page raw.
  */
 function errorMessageFor(
   errorCode: string | undefined,
   isDraft: boolean,
-  t: Awaited<ReturnType<typeof getTranslations<'cup'>>>,
+  t: CupT,
 ): string | undefined {
   if (!errorCode || !isDraft) return undefined;
   return t(
@@ -60,6 +78,9 @@ export async function CupRemoveConfirm({
   variant: CupRemoveVariant;
   errorCode?: string;
 }) {
+  // A hand-typed id that isn't a UUID is a missing page, not a DB error.
+  if (!isUuid(tournamentId) || !isUuid(userId)) notFound();
+
   const t = await getTranslations('cup');
   const admin = getAdminClient();
 
@@ -86,11 +107,13 @@ export async function CupRemoveConfirm({
   // Not (or no longer) a participant: nothing to confirm.
   if (!participantRes.data) notFound();
 
-  const rel = participantRes.data.users as UserRel | UserRel[] | null;
-  const user = Array.isArray(rel) ? (rel[0] ?? null) : rel;
-  const preferred = user?.nickname?.trim() || user?.name?.trim() || '';
-  const name = preferred || t('manage.unknownPlayer');
-  const first = firstName(preferred) ?? t('participants.remove.fallbackFirstName');
+  const clubName = await clubNameOf(variant, cup.group_id);
+
+  const { name, firstName: first } = participantNames(
+    participantRes.data.users,
+    t('manage.unknownPlayer'),
+    t('participants.remove.fallbackFirstName'),
+  );
   const isCaptain = participantRes.data.is_captain === true;
 
   const isDraft = cup.status === 'draft';
@@ -102,12 +125,14 @@ export async function CupRemoveConfirm({
 
   return (
     <Shell>
-      <TopBar backHref={backHref} kicker={t('ledger.kicker')} />
+      <TopBar backHref={backHref} kicker={clubName ?? t('ledger.kicker')} />
       <BrassRibbon kicker={t('participants.remove.brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('participants.remove.heading', { name, cup: cup.name })}
+          {isDraft
+            ? t('participants.remove.heading', { name, cup: cup.name })
+            : t('participants.remove.lockedHeading')}
         </h1>
         {isDraft && (
           <>
@@ -136,7 +161,7 @@ export async function CupRemoveConfirm({
             className="font-sans text-[13px] leading-relaxed text-text"
             data-testid="cup-remove-not-draft"
           >
-            {t('participants.errors.not_draft')}
+            {t('participants.remove.lockedBody')}
           </p>
         </div>
       )}

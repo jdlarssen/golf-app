@@ -4827,6 +4827,8 @@
         "pending": "Fjerner …",
         "cancel": "Avbryt",
         "back": "Tilbake",
+        "lockedHeading": "Påmeldingen er låst",
+        "lockedBody": "Cupen har startet, så du kan ikke fjerne spillere fra deltakerlista lenger.",
         "fallbackFirstName": "Spilleren"
       },
       "errors": {
