@@ -44,6 +44,15 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
 
+// #2200: the flight rule has its own tests (flightDelivery.test.ts); here the
+// loader is the boundary, and the core is tested for what it does with it.
+const loadCardsMock = vi.fn<
+  (...args: unknown[]) => Promise<{ userId: string; name: string | null; isGuest: boolean }[]>
+>(async () => []);
+vi.mock('@/lib/games/loadFlightDelivery', () => ({
+  loadFlightDeliveryCards: (...args: unknown[]) => loadCardsMock(...args),
+}));
+
 import { submitScorecardCore } from './submitScorecardCore';
 
 type CoreClient = Parameters<typeof submitScorecardCore>[0];
@@ -188,7 +197,7 @@ describe('submitScorecardCore — levering', () => {
       USER_ID,
     );
 
-    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1 });
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1, alsoDelivered: 0 });
 
     // Egen-rads-formen: kallerens klient skriver; admin-klienten leser bare
     // admin-enes adresser (#2207) og skriver ingenting.
@@ -241,7 +250,7 @@ describe('submitScorecardCore — levering', () => {
       USER_ID,
     );
 
-    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 2 });
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 2, alsoDelivered: 0 });
 
     // Lag-bredden går via admin-klienten; kallerens klient skriver ingenting.
     expect(updateCalls(supabase)).toEqual([]);
@@ -283,7 +292,7 @@ describe('submitScorecardCore — levering', () => {
       USER_ID,
     );
 
-    expect(result).toEqual({ ok: true, alreadySubmitted: true, submitted: 0 });
+    expect(result).toEqual({ ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 });
     expect(updateCalls(supabase)).toEqual([]);
     expect(adminMock.__fromCalls).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
@@ -308,7 +317,7 @@ describe('submitScorecardCore — levering', () => {
       USER_ID,
     );
 
-    expect(result).toEqual({ ok: true, alreadySubmitted: true, submitted: 0 });
+    expect(result).toEqual({ ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 });
     expect(notifyMock).not.toHaveBeenCalled();
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
@@ -331,5 +340,216 @@ describe('submitScorecardCore — levering', () => {
     expect(notifyMock).not.toHaveBeenCalled();
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('submitScorecardCore — levering for flighten (#2200)', () => {
+  const OLA = 'ola';
+  const PER = 'per';
+  const cards = [
+    { userId: OLA, name: 'Ola Nordmann', isGuest: false },
+    { userId: PER, name: 'Per Gjest', isGuest: true },
+  ];
+
+  /** Caller's client for a flight delivery with no admins to notify. */
+  function flightClient(updated: { user_id: string }[], meOverrides = {}) {
+    return buildSupabaseMock([
+      { data: activeGame(), error: null },
+      { data: membership(meOverrides), error: null },
+      { data: updated, error: null }, // the one flight UPDATE
+      { data: { name: 'Kari Fører' }, error: null }, // caller's name
+      { data: [], error: null }, // admins (none)
+    ]);
+  }
+
+  function flightUpdate(mock: ReturnType<typeof buildSupabaseMock>) {
+    const calls = mock.__fromCalls;
+    const at = calls.findIndex((c) => c.method === 'update');
+    return {
+      patch: calls[at]?.args[0] as Record<string, unknown>,
+      userIds: calls.slice(at).find((c) => c.method === 'in' && c.args[0] === 'user_id')
+        ?.args[1],
+    };
+  }
+
+  it('eget kort pluss makkere: én UPDATE, levert av meg', async () => {
+    loadCardsMock.mockResolvedValueOnce(cards);
+    const supabase = flightClient([{ user_id: USER_ID }, { user_id: OLA }, { user_id: PER }]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA, PER],
+    });
+
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 3, alsoDelivered: 2 });
+    expect(updateCalls(supabase)).toHaveLength(1);
+    const { patch, userIds } = flightUpdate(supabase);
+    expect(userIds).toEqual([USER_ID, OLA, PER]);
+    expect(patch).toMatchObject({ submitted_by_user_id: USER_ID, rejection_reason: null });
+    expect(
+      supabase.__fromCalls.some((c) => c.method === 'is' && c.args[0] === 'withdrawn_at'),
+    ).toBe(true);
+    expect(loadCardsMock).toHaveBeenCalledWith(GAME_ID, USER_ID, {
+      game_mode: 'stableford',
+      hole_segment: 'full',
+      source_game_id: null,
+    });
+  });
+
+  it('submitted_by_user_id står i patchen også for eget kort alene', async () => {
+    const supabase = flightClient([{ user_id: USER_ID }]);
+
+    await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(flightUpdate(supabase).patch).toMatchObject({ submitted_by_user_id: USER_ID });
+    expect(loadCardsMock).not.toHaveBeenCalled();
+  });
+
+  it('eget kort alt levert: bare makkerne leveres', async () => {
+    loadCardsMock.mockResolvedValueOnce(cards);
+    const supabase = flightClient([{ user_id: OLA }], { submitted_at: '2026-09-27T10:00:00Z' });
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1, alsoDelivered: 1 });
+    expect(flightUpdate(supabase).userIds).toEqual([OLA]);
+  });
+
+  it('forfalskede id-er ignoreres og utvider aldri settet', async () => {
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = flightClient([{ user_id: USER_ID }, { user_id: OLA }]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA, 'annen-flight', USER_ID],
+    });
+
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 2, alsoDelivered: 1 });
+    expect(flightUpdate(supabase).userIds).toEqual([USER_ID, OLA]);
+  });
+
+  it('bare forfalskede id-er: vanlig egen levering', async () => {
+    loadCardsMock.mockResolvedValueOnce(cards);
+    const supabase = flightClient([{ user_id: USER_ID }]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: ['en-fremmed'],
+    });
+
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1, alsoDelivered: 0 });
+    expect(
+      supabase.__fromCalls.some((c) => c.method === 'in' && c.args[0] === 'user_id'),
+    ).toBe(false);
+  });
+
+  it('kappløp: makkeren leverte selv i mellomtiden → tåles', async () => {
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = flightClient([{ user_id: USER_ID }]);
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        game_players: [
+          { data: [{ user_id: OLA, submitted_at: '2026-09-27T10:01:00Z', withdrawn_at: null }], error: null },
+        ],
+      },
+    });
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1, alsoDelivered: 0 });
+    expect(updateCalls(adminMock)).toEqual([]);
+  });
+
+  it('drift: RLS nektet en makker → tilbakestill det som ble satt, svar db, ingen varsler', async () => {
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = flightClient([{ user_id: USER_ID }]);
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        game_players: [
+          { data: [{ user_id: OLA, submitted_at: null, withdrawn_at: null }], error: null },
+          { data: [{ user_id: USER_ID }], error: null }, // the revert
+        ],
+      },
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'db' });
+    const revert = updateCalls(adminMock);
+    expect(revert).toHaveLength(1);
+    expect(revert[0].args[0]).toEqual({ submitted_at: null });
+    expect(
+      adminMock.__fromCalls.find((c) => c.method === 'in' && c.args[1] !== undefined && (c.args[1] as string[]).includes(USER_ID))?.args,
+    ).toEqual(['user_id', [USER_ID]]);
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[submitScorecard] flight rule drift — reverting',
+      expect.anything(),
+    );
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('lesefeil i kandidat-oppslaget → db, ingenting skrives', async () => {
+    loadCardsMock.mockRejectedValueOnce(new Error('boom'));
+    const supabase = flightClient([]);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'db' });
+    expect(updateCalls(supabase)).toEqual([]);
+    errorSpy.mockRestore();
+  });
+
+  it('varsler per levert kort; den som leverte er ikke attestant på makkerens kort', async () => {
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = buildSupabaseMock([
+      { data: activeGame({ require_peer_approval: true }), error: null },
+      { data: membership(), error: null },
+      { data: [{ user_id: USER_ID }, { user_id: OLA }], error: null },
+      // The peers query is built before the Promise.all, so it resolves first.
+      {
+        data: [
+          { user_id: USER_ID, flight_number: 1, withdrawn_at: null },
+          { user_id: OLA, flight_number: 1, withdrawn_at: null },
+          { user_id: 'lise', flight_number: 1, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      { data: { name: 'Kari Fører' }, error: null },
+      { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
+    ]);
+    adminMock = buildSupabaseMock([
+      { data: [{ id: 'admin-1', email: 'arrangoren@example.test', friend_code: 'k0de' }], error: null },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 2, alsoDelivered: 1 });
+
+    const peerCalls = notifyMock.mock.calls
+      .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
+      .filter((c) => c.kind === 'peer_approval_request');
+    // My card: Ola and Lise approve. Ola's card: only Lise — not me, who delivered it.
+    expect(peerCalls.filter((c) => c.payload.submitter_name === 'Kari Fører').map((c) => c.userId).sort()).toEqual(['lise', OLA]);
+    expect(peerCalls.filter((c) => c.payload.submitter_name === 'Ola Nordmann').map((c) => c.userId)).toEqual(['lise']);
+
+    const adminCalls = notifyMock.mock.calls
+      .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
+      .filter((c) => c.kind === 'scorecard_submitted');
+    expect(adminCalls.map((c) => c.payload.player_name)).toEqual(['Kari Fører', 'Ola Nordmann']);
+    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(2);
+    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ playerName: 'Ola Nordmann' }),
+    );
   });
 });

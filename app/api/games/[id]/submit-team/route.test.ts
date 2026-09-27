@@ -239,9 +239,11 @@ describe('POST — leveringen', () => {
     expect(extra).toEqual([]);
     expect(mark.table).toBe('game_players');
     expect(mark.columns).toBe('user_id');
+    // #2200: who delivered rides along, so teammates show «Levert av» the captain.
     expect(Object.keys(mark.payload ?? {})).toEqual([
       'submitted_at',
       'rejection_reason',
+      'submitted_by_user_id',
     ]);
     expect(mark.filters).toEqual([
       { op: 'eq', column: 'game_id', value: GAME_ID },

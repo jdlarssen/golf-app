@@ -13,6 +13,8 @@ import { firstName } from '@/lib/firstName';
 import { notify } from '@/lib/notifications/notify';
 import { peersForApproval } from '@/lib/games/flightScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
+import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
+import type { DeliveryGame } from '@/lib/games/flightDelivery';
 import {
   isScrambleFamily,
   isAlternateShotMatchplay,
@@ -43,6 +45,13 @@ import {
 //
 // Revalideringen bor HER, ikke hos kalleren: en glemt tag-bust i ruta hadde
 // gitt et stille stale kort på nettsiden.
+//
+// **Levering for flighten (#2200).** Den som fører, kan levere makkernes kort
+// sammen med sitt eget (`opts.alsoFor`). Klienten kan bare snevre inn: kjernen
+// spør selv `flightDeliveryCandidates` (via `loadFlightDeliveryCards`) og
+// leverer snittet. En id utenfor snittet ignoreres, uten feil. Eget kort og
+// makkerkortene skrives i ÉN UPDATE gjennom kallerens klient, så på webben er
+// det `can_score_for`-policyen som håndhever regelen i basen.
 
 // Logg-prefikset følger med fra server-action-en med vilje: det er
 // søkestrengen for leverings-feil i Vercel-loggen (CLAUDE.md «Mail-debug»), og
@@ -58,7 +67,13 @@ const LOG_PREFIX = 'submitScorecard';
  * Begge er suksess — 0 rader er lovlig her, så ingen `expectAffected`.
  */
 export type SubmitScorecardResult =
-  | { ok: true; alreadySubmitted: boolean; submitted: number }
+  | {
+      ok: true;
+      alreadySubmitted: boolean;
+      submitted: number;
+      /** #2200: how many of `submitted` were flightmates' cards, not the caller's. */
+      alsoDelivered: number;
+    }
   | {
       ok: false;
       reason: 'not_found' | 'not_active' | 'not_player' | 'withdrawn' | 'db';
@@ -81,6 +96,13 @@ export async function submitScorecardCore(
   supabase: SupabaseClient<Database>,
   gameId: string,
   userId: string,
+  opts: {
+    /**
+     * #2200: flightmates whose cards the caller also delivers. Only the ids
+     * `flightDeliveryCandidates` allows are delivered; the rest are ignored.
+     */
+    alsoFor?: readonly string[];
+  } = {},
 ): Promise<SubmitScorecardResult> {
   // Refuse to submit if the game isn't active. Draft games shouldn't have
   // scores yet and finished games are read-only. `name` is fetched here so
@@ -132,14 +154,24 @@ export async function submitScorecardCore(
 
   if (meRow.withdrawn_at) return { ok: false, reason: 'withdrawn' };
 
+  const mode = game.game_mode as GameMode;
+
+  // #2200: the flightmates' cards to deliver too — `alsoFor ∩ candidates`.
+  const mates = await flightMatesToDeliver(gameId, userId, opts.alsoFor, {
+    game_mode: mode,
+    hole_segment: game.hole_segment,
+    source_game_id: game.source_game_id,
+  });
+  if (mates === null) return { ok: false, reason: 'db' };
+
   // #1453: har innsenderen alt levert er hele kallet idempotent — hopp over
   // oppdatering og side-effekter (samme UX som 0-rads-grenen under). Uten
   // denne kunne et re-klikk i lag-modusene re-fyre varsler for en lagkamerat
-  // som ennå ikke sto som levert.
-  if (meRow.submitted_at) {
+  // som ennå ikke sto som levert. #2200: med makkerkort igjen leveres bare de.
+  if (meRow.submitted_at && mates.length === 0) {
     expireGameCache(gameId);
     revalidatePath(`/games/${gameId}`);
-    return { ok: true, alreadySubmitted: true, submitted: 0 };
+    return { ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 };
   }
 
   // #1453: én-ball-lagformat (scramble-familien + alternate-shot-matchplay) —
@@ -148,7 +180,6 @@ export async function submitScorecardCore(
   // (can_score_for) dekker ikke alle flight-konfigurasjoner, og authz er alt
   // verifisert hos kalleren (innsenderen er aktiv spiller i spillet). Patsome er
   // bevisst utenfor — bytter mellom individuell og lag-føring midtveis.
-  const mode = game.game_mode as GameMode;
   const teamSubmit =
     (isScrambleFamily(mode) || isAlternateShotMatchplay(mode)) &&
     meRow.team_number != null;
@@ -156,7 +187,16 @@ export async function submitScorecardCore(
     submitted_at: new Date().toISOString(),
     // A previous rejection clears once the player re-submits.
     rejection_reason: null,
+    // #2200: who delivered. The trigger in 0191 sets the same value for a
+    // signed-in client; the service role (the app route) keeps this one.
+    submitted_by_user_id: userId,
   };
+  // #2200: own card (unless already delivered) plus the flightmates', in ONE
+  // update, so a card is never left half-delivered (trap 5).
+  const flightIds = [
+    ...(meRow.submitted_at ? [] : [userId]),
+    ...mates.map((m) => m.userId),
+  ];
   const { data: updated, error } = teamSubmit
     ? await getAdminClient()
         .from('game_players')
@@ -166,24 +206,52 @@ export async function submitScorecardCore(
         .is('withdrawn_at', null)
         .is('submitted_at', null)
         .select('user_id')
-    : await supabase
-        .from('game_players')
-        .update(submitPatch)
-        .eq('game_id', gameId)
-        .eq('user_id', userId)
-        .is('submitted_at', null)
-        .select('user_id');
+    : mates.length > 0
+      ? await supabase
+          .from('game_players')
+          .update(submitPatch)
+          .eq('game_id', gameId)
+          .in('user_id', flightIds)
+          .is('submitted_at', null)
+          .is('withdrawn_at', null)
+          .select('user_id')
+      : await supabase
+          .from('game_players')
+          .update(submitPatch)
+          .eq('game_id', gameId)
+          .eq('user_id', userId)
+          .is('submitted_at', null)
+          .select('user_id');
 
   if (error) return { ok: false, reason: 'db' };
 
+  const writtenIds = (updated ?? []).map((r) => r.user_id);
+
+  // #2200: fewer rows than asked for. A row that is delivered or withdrawn by
+  // now lost a race, which is fine. A row still open means RLS refused it:
+  // the TS rule and `can_score_for` disagree. Undo what this call set and
+  // fail, rather than leave the flight half-delivered.
+  if (
+    !teamSubmit &&
+    mates.length > 0 &&
+    (await flightWriteDrifted(gameId, userId, flightIds, writtenIds))
+  ) {
+    return { ok: false, reason: 'db' };
+  }
+
   // Zero rows = already submitted (re-click or race). Skip notify + mail
   // but keep the revalidate so UX matches a fresh submit.
-  const submitted = updated?.length ?? 0;
+  const submitted = writtenIds.length;
   if (submitted === 0) {
     expireGameCache(gameId);
     revalidatePath(`/games/${gameId}`);
-    return { ok: true, alreadySubmitted: true, submitted: 0 };
+    return { ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 };
   }
+
+  // The cards this call delivered, each notified as if its owner delivered
+  // it. The team cascade stays one card: the submitter's, as before (#1453).
+  const deliveredCards = teamSubmit ? [userId] : writtenIds;
+  const alsoDelivered = deliveredCards.filter((id) => id !== userId).length;
 
   // #1466: one delivery covers the whole split cup round. A back9 host's
   // submit ALSO marks the submitter's front9 sibling delivered, so the player
@@ -197,7 +265,7 @@ export async function submitScorecardCore(
     game.tournament_id != null &&
     game.source_game_id == null
   ) {
-    const updatedUserIds = (updated ?? []).map((r) => r.user_id);
+    const updatedUserIds = writtenIds;
     try {
       const sibling = await findSegmentSibling(userId, {
         gameId,
@@ -325,40 +393,44 @@ export async function submitScorecardCore(
     return email ? [{ ...a, email }] : [];
   });
 
-  // Peer-varsler hvis peer-godkjenning er på.
-  // #543: peersForApproval() håndterer én-flight-regelen: alle andre aktive
-  // spillere i ≤4-spill (eller wolf) er attestanter, ellers kun samme flight.
-  if (game.require_peer_approval) {
-    const peerIds = peersForApproval(
-      peersRes.data ?? [],
-      game.game_mode as GameMode,
-      userId,
-    );
-    if (peerIds.length > 0) {
-      const peerResults = await Promise.allSettled(
-        peerIds.map((peerId) =>
-          notify({
-            userId: peerId,
-            kind: 'peer_approval_request',
-            payload: {
-              game_id: gameId,
-              game_name: game.name,
-              submitter_name: playerName,
-            },
-          }),
-        ),
-      );
-      for (const r of peerResults) {
-        if (r.status === 'rejected') {
-          console.error(
-            `[${LOG_PREFIX}] peer_approval_request notify failed`,
-            r.reason,
-          );
+  // #2200: one round of varsler per delivered card, as if its owner had
+  // delivered it — the mail volume is the same as when everyone delivers
+  // themselves. The deliverer never counts as a peer on a flightmate's card
+  // (owner's decision 2026-09-27: someone else approves it).
+  const gameName = game.name;
+  const requirePeerApproval = game.require_peer_approval;
+  const notifyDeliveredCard = async (cardUserId: string, cardName: string | null) => {
+    // Peer-varsler hvis peer-godkjenning er på.
+    // #543: peersForApproval() håndterer én-flight-regelen: alle andre aktive
+    // spillere i ≤4-spill (eller wolf) er attestanter, ellers kun samme flight.
+    if (requirePeerApproval) {
+      const peerIds = peersForApproval(peersRes.data ?? [], mode, cardUserId, userId);
+      if (peerIds.length > 0) {
+        const peerResults = await Promise.allSettled(
+          peerIds.map((peerId) =>
+            notify({
+              userId: peerId,
+              kind: 'peer_approval_request',
+              payload: {
+                game_id: gameId,
+                game_name: gameName,
+                submitter_name: cardName,
+              },
+            }),
+          ),
+        );
+        for (const r of peerResults) {
+          if (r.status === 'rejected') {
+            console.error(
+              `[${LOG_PREFIX}] peer_approval_request notify failed`,
+              r.reason,
+            );
+          }
         }
       }
     }
-  }
-  if (admins.length > 0) {
+    if (admins.length === 0) return;
+
     // In-app varsel til admin-ene + mail-gating på shouldAlsoSendMail.
     // Aktive admin-er (last_seen_at < 5 min) får kun in-app; off-app-admin-er
     // får mail som backup. Hvis notify feiler for en admin, defaultes
@@ -371,8 +443,8 @@ export async function submitScorecardCore(
           kind: 'scorecard_submitted',
           payload: {
             game_id: gameId,
-            game_name: game.name,
-            player_name: playerName,
+            game_name: gameName,
+            player_name: cardName,
           },
         }).then((r) => ({ userId: a.id, sendMail: r.shouldAlsoSendMail })),
       ),
@@ -398,8 +470,8 @@ export async function submitScorecardCore(
           sendScorecardSubmittedNotification({
             to: a.email,
             adminFirstName: firstName(a.name),
-            playerName,
-            gameName: game.name,
+            playerName: cardName,
+            gameName,
             gameId,
             locale: a.locale,
           }),
@@ -411,9 +483,84 @@ export async function submitScorecardCore(
         }
       }
     }
+  };
+
+  const mateNames = new Map(mates.map((m) => [m.userId, m.name]));
+  for (const cardUserId of deliveredCards) {
+    await notifyDeliveredCard(
+      cardUserId,
+      cardUserId === userId ? playerName : (mateNames.get(cardUserId) ?? null),
+    );
   }
 
   expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);
-  return { ok: true, alreadySubmitted: false, submitted };
+  return { ok: true, alreadySubmitted: false, submitted, alsoDelivered };
+}
+
+/**
+ * #2200: the flightmates whose cards this call delivers — the caller's
+ * `alsoFor` narrowed to what `flightDeliveryCandidates` allows. The client can
+ * only narrow the set, never widen it. Nothing is read when `alsoFor` is
+ * empty, so a plain delivery costs nothing extra. `null` = the read failed.
+ */
+async function flightMatesToDeliver(
+  gameId: string,
+  userId: string,
+  alsoFor: readonly string[] | undefined,
+  game: DeliveryGame,
+): Promise<{ userId: string; name: string | null }[] | null> {
+  const asked = new Set(alsoFor ?? []);
+  asked.delete(userId);
+  if (asked.size === 0) return [];
+  try {
+    const cards = await loadFlightDeliveryCards(gameId, userId, game);
+    return cards.filter((c) => asked.has(c.userId));
+  } catch (err) {
+    console.error(`[${LOG_PREFIX}] flight candidates read failed`, err);
+    return null;
+  }
+}
+
+/**
+ * #2200: the one flight update wrote fewer rows than it asked for. A row that
+ * is delivered or withdrawn by now lost a race, which is fine. A row still
+ * open means RLS refused it — the TS rule and `can_score_for` disagree. Then
+ * the rows this call set are undone, so no card is left half-delivered
+ * (trap 5), and the caller answers `db`. Returns true when it reverted.
+ */
+async function flightWriteDrifted(
+  gameId: string,
+  userId: string,
+  flightIds: readonly string[],
+  writtenIds: readonly string[],
+): Promise<boolean> {
+  const missing = flightIds.filter((id) => !writtenIds.includes(id));
+  if (missing.length === 0) return false;
+
+  const { data: reread, error: rereadError } = await getAdminClient()
+    .from('game_players')
+    .select('user_id, submitted_at, withdrawn_at')
+    .eq('game_id', gameId)
+    .in('user_id', missing)
+    .returns<{ user_id: string; submitted_at: string | null; withdrawn_at: string | null }[]>();
+  const drifted =
+    rereadError != null ||
+    (reread ?? []).some((r) => r.submitted_at == null && r.withdrawn_at == null);
+  if (!drifted) return false;
+
+  console.error(`[${LOG_PREFIX}] flight rule drift — reverting`, {
+    gameId,
+    userId,
+    missing,
+    rereadError,
+  });
+  if (writtenIds.length > 0) {
+    await getAdminClient()
+      .from('game_players')
+      .update({ submitted_at: null })
+      .eq('game_id', gameId)
+      .in('user_id', [...writtenIds]);
+  }
+  return true;
 }
