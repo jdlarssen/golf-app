@@ -5,7 +5,10 @@
 
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
-import { readTeamStrokesOverride } from '@/lib/scoring/modes/greensomeMatchplay';
+import {
+  alternateShotSideExtras,
+  playerStrokeHandicap,
+} from '@/lib/scoring/allocatedStrokes';
 import { nameInitials } from '@/lib/names/initials';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
@@ -106,21 +109,19 @@ export function buildPlayersForClient(args: {
   const isPatsome = game.game_mode === 'patsome';
 
   if (!modeCollapsesToTeamCard(game.game_mode, holeNumber)) {
-    // Patsome hull 1–6: 4BBB — begge taster sin egen ball.
-    // I brutto-modus har ingen spillere ekstra slag.
-    const patsomeScoringForPerPlayer =
-      isPatsome && game.mode_config.kind === 'patsome'
-        ? game.mode_config.patsome_scoring
-        : 'net';
+    // #2218: the strokes the engine counts — fourball/round robin allowance,
+    // 0 for the gross options (patsome holes 1–6 included). The raw frozen
+    // CH made the card give strokes the leaderboard never did.
     return flight.map((p) => {
       const name = p.users?.name ?? unknownPlayer;
       const rawNickname = p.users?.nickname ?? null;
       const nickname =
         rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
-      const ch =
-        isPatsome && patsomeScoringForPerPlayer === 'gross'
-          ? 0
-          : (p.course_handicap ?? 0);
+      const ch = playerStrokeHandicap(
+        game.game_mode,
+        game.mode_config,
+        p.course_handicap ?? 0,
+      );
       const scoreRow = scoresByUser[p.user_id];
       return {
         userId: p.user_id,
@@ -148,22 +149,7 @@ export function buildPlayersForClient(args: {
   // WHS-diff-formel (foursomes/greensome/chapman/gruesome) beregnes globalt
   // mot motstander-sidens combined CH. Vi trenger alle aktive lag-spillere
   // for begge sider — bruk allPlayers (ikke flight) for å få motstander-tallene.
-  const isSixtyForty = isGreensome || isChapman;
   const isDiffFormat = isFoursomes || isGreensome || isChapman || isGruesome;
-
-  // #1447: manuelt tastede lag-slag (D10) må styre prikkene her identisk med
-  // motoren — override erstatter formel-CH per side FØR diff × allowance.
-  // Kun greensome_matchplay har feltet; undefined = formelen under.
-  const teamStrokesOverride = readTeamStrokesOverride(game.mode_config);
-
-  function sideHandicap(players: PlayerForHole[]): number {
-    if (isSixtyForty) {
-      const chs = players.map((p) => p.course_handicap ?? 0);
-      if (chs.length === 0) return 0;
-      return Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
-    }
-    return players.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
-  }
 
   // #2067: et medlem som slettet kontoen midt i runden, er trukket og ute av
   // flighten, men teller fortsatt i lag-handicapet så lenge noen på laget
@@ -198,31 +184,22 @@ export function buildPlayersForClient(args: {
         ...activeOppPlayers,
         ...withdrawnOnTeamInPlay(activeOppPlayers),
       ];
-      const thisSideCH = teamStrokesOverride
-        ? teamNum === 1
-          ? teamStrokesOverride.side1
-          : teamStrokesOverride.side2
-        : isSixtyForty
-          ? sideHandicap(teamPlayers)
-          : combinedCH;
-      const oppCH = teamStrokesOverride
-        ? teamNum === 1
-          ? teamStrokesOverride.side2
-          : teamStrokesOverride.side1
-        : sideHandicap(oppPlayers);
-      const allowancePct =
-        game.mode_config.kind === 'foursomes_matchplay'
-          ? game.mode_config.allowance_pct
-          : game.mode_config.kind === 'greensome_matchplay'
-            ? game.mode_config.allowance_pct
-            : game.mode_config.kind === 'chapman_matchplay'
-              ? game.mode_config.allowance_pct
-              : game.mode_config.kind === 'gruesome_matchplay'
-                ? game.mode_config.allowance_pct
-                : 50;
-      const diff = Math.abs(thisSideCH - oppCH);
-      const highSideExtra = Math.round((diff * allowancePct) / 100);
-      return thisSideCH > oppCH ? highSideExtra : 0;
+      // #1447/#2218: side handicap, the organiser's own team strokes
+      // (D10 override) and allowance come from the one home the scorecard
+      // and the engine test share — not a third copy of the rule here.
+      const chs = (players: PlayerForHole[]) =>
+        players.map((p) => p.course_handicap ?? 0);
+      const [side1, side2] =
+        teamNum === 1
+          ? [chs(teamPlayers), chs(oppPlayers)]
+          : [chs(oppPlayers), chs(teamPlayers)];
+      const { side1Extra, side2Extra } = alternateShotSideExtras(
+        game.game_mode,
+        game.mode_config,
+        side1,
+        side2,
+      );
+      return teamNum === 1 ? side1Extra : side2Extra;
     } else if (isPatsome) {
       const patsomeScoring =
         game.mode_config.kind === 'patsome'

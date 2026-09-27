@@ -287,7 +287,13 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   // knappene inni som bærer semantikken, og +/− dekker tastatur (fra tomt kort
   // gir + par+1 og − par−1).
   return (
-    <div data-testid="score-card" style={cardStyle} onClick={onCardClick}>
+    <div
+      data-testid="score-card"
+      data-player-id={playerId}
+      data-extra-strokes={extraStrokes}
+      style={cardStyle}
+      onClick={onCardClick}
+    >
       <div style={avatarStyle}>{initialChars}</div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
