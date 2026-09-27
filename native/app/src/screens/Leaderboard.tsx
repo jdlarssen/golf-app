@@ -21,6 +21,7 @@ import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import { firstHalfTableView } from '../../../../lib/leaderboard/firstHalfReveal';
 import { isFrontNineOpen } from '../../../../lib/leaderboard/frontNineGate';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
+import { settlementForResult } from '../../../../lib/scoring/settlement';
 import {
   ResultView,
   UNKNOWN_FORMAT_RESULT_MESSAGE,
@@ -50,6 +51,7 @@ import {
   type ScoringContextProblem,
   type ScoringExtras,
 } from '../lib/scoringContext';
+import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { buildSideTournament } from '../lib/sideTournament';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
@@ -313,6 +315,16 @@ export function LeaderboardBody({
     );
   }
 
+  // Pengeoppgjøret (#2221) — null når formatet ikke spiller om penger eller
+  // `kr_per_unit` mangler. Samme delte regel som nettsidens resultattavle, så de
+  // to kan ikke vise ulike beløp. Det regnes fra resultatet over, altså etter
+  // alle portene: en blind runde som pågår har returnert før denne linja.
+  const settlement = settlementForResult(
+    outcome.result,
+    game.modeConfig,
+    (unit) => SETTLEMENT_TEXT.units[unit],
+  );
+
   // Sideturneringen ligger UNDER hovedresultatet — ikke i en fane som på
   // webben. Matchplay får dermed nøyaktig webbens plassering (der ligger den
   // allerede under duellkortet, #585), og de øvrige formatene en RN-tilpasning
@@ -359,6 +371,7 @@ export function LeaderboardBody({
         result={outcome.result}
         status={game.status}
         gameId={game.id}
+        settlement={settlement}
         nameOf={nameOf}
       />
       {clipped && (

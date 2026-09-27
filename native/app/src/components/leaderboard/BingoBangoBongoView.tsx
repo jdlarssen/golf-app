@@ -10,13 +10,18 @@
 // ingenting om.
 import { StyleSheet, Text, View } from 'react-native';
 import type { BingoBangoBongoResult } from '../../../../../lib/scoring/modes/types';
+import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { useTheme } from '../../theme';
+import { SettlementCard } from './SettlementCard';
 
 export function BingoBangoBongoView({
   result,
+  settlement,
   nameOf,
 }: {
   result: BingoBangoBongoResult;
+  /** Pengeoppgjøret (#2221), eller null når spillet ikke har kroner per poeng. */
+  settlement: Settlement | null;
   nameOf: (userId: string) => string;
 }) {
   const { colors, ui } = useTheme();
@@ -62,6 +67,8 @@ export function BingoBangoBongoView({
           Ingen prestasjoner er registrert ennå.
         </Text>
       ) : null}
+
+      {settlement ? <SettlementCard settlement={settlement} nameOf={nameOf} /> : null}
 
       <Text style={ui.muted}>
         Bingo = først på green · Bango = nærmest hullet · Bongo = først i hull.
