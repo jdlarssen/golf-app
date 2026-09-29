@@ -657,7 +657,8 @@ function NameBlock({ name, sub }: { name: string; sub: string | null }) {
         {name || FRIENDS_TEXT.someoneFallback}
       </Text>
       {sub ? (
-        <Text style={[styles.sub, styles.num, { color: colors.muted }]} numberOfLines={1}>
+        // To linjer, som designet: «Spilte med deg i …» bryter heller enn å kuttes.
+        <Text style={[styles.sub, styles.num, { color: colors.muted }]} numberOfLines={2}>
           {sub}
         </Text>
       ) : null}
