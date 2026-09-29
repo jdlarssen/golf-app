@@ -9,10 +9,13 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type {
-  SoloStrokeplayResult,
-  SoloStrokeplayHoleRow,
-} from '@/lib/scoring/modes/types';
+import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
+import {
+  soloStrokeplayScorecard,
+  type SoloScorecardHole,
+  type SoloScorecardNine,
+  type SoloScorecardStanding,
+} from '@/lib/leaderboard/soloScorecard';
 import type { SoloStrokeplayPlayerInfo } from '../leaderboardTypes';
 
 export interface SoloStrokeplayHolesViewProps {
@@ -83,10 +86,10 @@ export function SoloStrokeplayHolesView({
     );
   }
 
-  // Stabil spiller-rekkefølge for subtotal-stripene: rangert (leder først).
-  const rankedIds = result.players.map((p) => p.userId);
-  const frontHoles = result.holes.filter((h) => h.holeNumber <= 9);
-  const backHoles = result.holes.filter((h) => h.holeNumber >= 10);
+  // #2255: radene, deltotalene og par-chippen regnes i `lib/leaderboard/
+  // soloScorecard.ts`, som appen også tegner fra. Deltotalene står i
+  // stillingens rekkefølge (leder først).
+  const card = soloStrokeplayScorecard(result, (id) => playersById.get(id)?.teeGender);
 
   return (
     <LeaderboardShell>
@@ -104,23 +107,21 @@ export function SoloStrokeplayHolesView({
         </p>
       </div>
 
-      <TotalsHeader result={result} playersById={playersById} />
+      <TotalsHeader standings={card.standings} playersById={playersById} />
 
       <div className="flex flex-col gap-6 px-3.5 pt-4 pb-3.5">
         <NineBlock
           testId="solo-strokeplay-holes-front9"
           heading={tc('nineHeadingFront')}
           subheading={tc('nineSubFront')}
-          holes={frontHoles}
-          rankedIds={rankedIds}
+          nine={card.front}
           playersById={playersById}
         />
         <NineBlock
           testId="solo-strokeplay-holes-back9"
           heading={tc('nineHeadingBack')}
           subheading={tc('nineSubBack')}
-          holes={backHoles}
-          rankedIds={rankedIds}
+          nine={card.back}
           playersById={playersById}
         />
       </div>
@@ -133,14 +134,14 @@ export function SoloStrokeplayHolesView({
 
 /**
  * Rangert totals-header (løpende netto): per spiller netto-total stort, brutto
- * + hull-spilt smått, leder i champagne. Reflekterer `result.players` (allerede
+ * + hull-spilt smått, leder i champagne. Reflekterer stillingen fra modellen (allerede
  * rank-sortert lavest netto først).
  */
 function TotalsHeader({
-  result,
+  standings,
   playersById,
 }: {
-  result: SoloStrokeplayResult;
+  standings: SoloScorecardStanding[];
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
@@ -154,12 +155,12 @@ function TotalsHeader({
           data-testid="solo-strokeplay-holes-totals"
           className="flex flex-col gap-1.5 list-none"
         >
-          {result.players.map((line) => {
+          {standings.map((line) => {
             const info = playersById.get(line.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : t('common.unknownPlayerFull');
-            const isLeader = line.rank === 1 && line.tiedWith.length === 0;
+            const isLeader = line.isLeader;
             return (
               <li
                 key={line.userId}
@@ -179,14 +180,14 @@ function TotalsHeader({
                 </span>
                 <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
                   <span className="text-[10.5px] text-muted">
-                    {t('common.grossBrutto', { count: line.totalGrossStrokes })}
+                    {t('common.grossBrutto', { count: line.totalGross ?? 0 })}
                   </span>
                   <span
                     className={`score-num text-[20px] leading-none ${
                       isLeader ? 'text-accent-text' : 'text-text'
                     }`}
                   >
-                    {line.totalNetStrokes}
+                    {line.total}
                   </span>
                 </span>
               </li>
@@ -205,15 +206,13 @@ function NineBlock({
   testId,
   heading,
   subheading,
-  holes,
-  rankedIds,
+  nine,
   playersById,
 }: {
   testId: string;
   heading: string;
   subheading: string;
-  holes: SoloStrokeplayHoleRow[];
-  rankedIds: string[];
+  nine: SoloScorecardNine;
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
   return (
@@ -225,14 +224,10 @@ function NineBlock({
         <p className="text-[11px] tabular-nums text-muted">{subheading}</p>
       </header>
 
-      <SubtotalStrip
-        holes={holes}
-        rankedIds={rankedIds}
-        playersById={playersById}
-      />
+      <SubtotalStrip subtotals={nine.subtotals} playersById={playersById} />
 
       <ul className="flex flex-col gap-2 list-none">
-        {holes.map((hole) => (
+        {nine.holes.map((hole) => (
           <HoleCard key={hole.holeNumber} hole={hole} playersById={playersById} />
         ))}
       </ul>
@@ -245,42 +240,22 @@ function NineBlock({
  * Ut/Inn-bruddet — det klassiske scorekortets sjekkpunkt.
  */
 function SubtotalStrip({
-  holes,
-  rankedIds,
+  subtotals,
   playersById,
 }: {
-  holes: SoloStrokeplayHoleRow[];
-  rankedIds: string[];
+  subtotals: SoloScorecardNine['subtotals'];
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
-  // Netto-sum per spiller for nien (kun spilte hull). null = ingen spilte hull.
-  const sums = new Map<string, number | null>();
-  for (const id of rankedIds) {
-    let sum = 0;
-    let played = 0;
-    for (const hole of holes) {
-      const cell = hole.perPlayer.find((c) => c.userId === id);
-      if (cell && cell.net != null) {
-        sum += cell.net;
-        played += 1;
-      }
-    }
-    sums.set(id, played > 0 ? sum : null);
-  }
-  const playedSums = [...sums.values()].filter((v): v is number => v != null);
-  const leaderSum = playedSums.length > 0 ? Math.min(...playedSums) : null;
 
   return (
     <ul
       data-testid="solo-strokeplay-holes-subtotal"
       className="flex flex-wrap gap-1.5 px-1 list-none"
     >
-      {rankedIds.map((id) => {
+      {subtotals.map(({ userId: id, sum, isLeader }) => {
         const info = playersById.get(id);
         const name = info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayer');
-        const sum = sums.get(id) ?? null;
-        const isLeader = sum != null && sum === leaderSum;
         return (
           <li
             key={id}
@@ -309,33 +284,13 @@ function HoleCard({
   hole,
   playersById,
 }: {
-  hole: SoloStrokeplayHoleRow;
+  hole: SoloScorecardHole;
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
-  const scored = hole.bestUserIds.length > 0;
-  const uniqueWinnerId =
-    hole.bestUserIds.length === 1 ? hole.bestUserIds[0] : null;
-  const rows = [...hole.perPlayer].sort(
-    (a, b) =>
-      (a.net ?? Number.POSITIVE_INFINITY) - (b.net ?? Number.POSITIVE_INFINITY),
-  );
-
-  // #734: par-chip viser spillerens eget par når alle er på samme tee,
-  // ellers herre-par som safe fallback for blandet-kjønn-felt.
-  const firstPlayerTeeGender = rows[0]
-    ? playersById.get(rows[0].userId)?.teeGender
-    : undefined;
-  const allSameTee =
-    rows.length > 0 &&
-    rows.every(
-      (c) => playersById.get(c.userId)?.teeGender === firstPlayerTeeGender,
-    );
-  const chipPar =
-    allSameTee && hole.parByGender && firstPlayerTeeGender
-      ? hole.parByGender[firstPlayerTeeGender]
-      : hole.par;
+  // Sortering, hullvinner og par-chip (#734) kommer ferdig fra modellen.
+  const { scored, rows, chipPar } = hole;
 
   return (
     <li className="list-none" data-testid={`solo-strokeplay-holes-card-${hole.holeNumber}`}>
@@ -358,7 +313,7 @@ function HoleCard({
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : t('common.unknownPlayerFull');
-            const isBest = cell.userId === uniqueWinnerId;
+            const isBest = cell.isBest;
             return (
               <li
                 key={cell.userId}
@@ -396,7 +351,7 @@ function HoleCard({
                       isBest ? 'text-accent-text' : 'text-text'
                     }`}
                   >
-                    {cell.net ?? '–'}
+                    {cell.value ?? '–'}
                   </span>
                 </span>
               </li>
