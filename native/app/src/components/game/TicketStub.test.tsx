@@ -93,9 +93,12 @@ it('fremdriftslinja er skjult for skjermleseren; teksten over sier det samme', a
   expect(screen.getByTestId('ticket-progress', { includeHiddenElements: true })).toBeTruthy();
 });
 
-it('gull bare på egen seier', async () => {
+it('gull bare på egen seier, som en skive ved teksten', async () => {
   const { view } = await renderStub({ kind: 'finished', result: { text: '🥇 Du vant', isWin: true } });
-  expect(screen.getByTestId('ticket-result')).toHaveStyle({ color: PALETTES.light.accent });
+  expect(screen.getByTestId('ticket-result')).toHaveTextContent('🥇 Du vant');
+  expect(screen.getByTestId('ticket-result-gold', { includeHiddenElements: true })).toHaveStyle({
+    backgroundColor: PALETTES.light.accent,
+  });
 
   await view.rerender(
     <TicketStub
@@ -108,7 +111,7 @@ it('gull bare på egen seier', async () => {
       onNavigate={jest.fn()}
     />,
   );
-  expect(screen.getByTestId('ticket-result')).not.toHaveStyle({ color: PALETTES.light.accent });
+  expect(screen.queryByTestId('ticket-result-gold', { includeHiddenElements: true })).toBeNull();
 });
 
 it('med et makkerkort å levere står knappen over levert-teksten (#2200)', async () => {
