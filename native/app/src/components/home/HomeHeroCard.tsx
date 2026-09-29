@@ -278,9 +278,10 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     fontVariant: ['tabular-nums'],
   },
+  // Pille på 52 pt, som hovedknappen i designet for Hjem og i startbilletten.
   button: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: 52,
+    borderRadius: 999,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
