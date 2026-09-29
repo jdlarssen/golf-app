@@ -158,6 +158,7 @@ const mockState: { bundle: unknown; scores: unknown[] } = {
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 // Telefonens lys/mørk, satt per test. Sollys (#2252) skal slå den på hullsiden.
 const mockScheme: { value: 'light' | 'dark' } = { value: 'light' };
+const mockFocus = { value: true };
 jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
   __esModule: true,
   default: () => mockScheme.value,
@@ -203,6 +204,16 @@ jest.mock('../session', () => ({
 jest.mock('@react-navigation/native', () => ({
    
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+  // Står hullsiden øverst? Tavla og scorekortet legges oppå den (#2252).
+  useIsFocused: () => mockFocus.value,
+}));
+// Statuslinja er appens, ikke skjermens: en merket stand-in viser om hullsiden
+// ber om mørk tekst.
+jest.mock('expo-status-bar', () => ({
+  StatusBar: ({ style }: { style: string }) =>
+    require('react').createElement(require('react-native').View, {
+      testID: `status-bar-${style}`,
+    }),
 }));
 
 // RNTL 14 er asynkron hele veien: både `render` og `fireEvent` returnerer
@@ -233,6 +244,7 @@ describe('Hole', () => {
     mockState.bundle = mockSoloBundle;
     mockState.scores = [];
     mockScheme.value = 'light';
+    mockFocus.value = true;
     // Sollys bor i minnet for hele appen: hver test starter med det av.
     await AsyncStorage.clear();
     await loadSunlight();
@@ -471,6 +483,9 @@ describe('Hole', () => {
     });
     expect(screen.queryByTestId('score-rail')).toBeNull();
     expect(screen.getByTestId('flight-row-mate')).toBeDisabled();
+    // Sollys styrer bare visningen, så bryteren virker på et låst hull.
+    await fireEvent.press(screen.getByRole('switch', { name: 'Sollysmodus' }));
+    expect(screen.getByRole('switch', { name: 'Sollysmodus' })).toBeChecked();
   });
 
   // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad
@@ -512,6 +527,19 @@ describe('Hole', () => {
     expect(screen.getByTestId('rail-option-4')).toHaveStyle({ height: 84, borderWidth: 3 });
     expect(screen.getByTestId('flight-row-mate')).toHaveStyle({ borderWidth: 3 });
     expect(screen.getByTestId('hole-strip-2')).toHaveStyle({ borderWidth: 3 });
+    // Valgt tilstand er en fylt flate: hullet du står på, og putte-bryteren.
+    expect(screen.getByTestId('hole-strip-1')).toHaveStyle({ backgroundColor: '#1B4332' });
+    await fireEvent.press(screen.getByTestId('hole-putts-toggle'));
+    expect(screen.getByTestId('hole-putts-toggle')).toHaveStyle({ backgroundColor: '#1B4332' });
+    // Mørk tekst i statuslinja mens hullsiden står øverst, men ikke når tavla
+    // eller scorekortet er lagt oppå den.
+    expect(screen.getByTestId('status-bar-dark')).toBeTruthy();
+    mockFocus.value = false;
+    await rerender(holeElement(1, navigation));
+    expect(screen.queryByTestId('status-bar-dark')).toBeNull();
+    mockFocus.value = true;
+    await rerender(holeElement(1, navigation));
+    expect(screen.getByTestId('status-bar-dark')).toBeTruthy();
     expect(navigation.setOptions).toHaveBeenLastCalledWith(
       expect.objectContaining({
         headerStyle: { backgroundColor: '#FFFFFF' },
@@ -537,9 +565,12 @@ describe('Hole', () => {
     expect(screen.getByTestId('hole-loading')).toHaveStyle({ backgroundColor: '#FFFFFF' });
     mockState.bundle = mockSoloBundle;
 
-    // Av igjen: hullsiden følger telefonen, og nøkkelen er borte.
+    // Av igjen: hullsiden og headeren følger telefonen, og nøkkelen er borte.
     await act(async () => setSunlight(false));
     expect(screen.getByTestId('hole-loading')).toHaveStyle({ backgroundColor: '#14201A' });
+    expect(navigation.setOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ headerStyle: { backgroundColor: '#14201A' } }),
+    );
     await waitFor(async () => {
       expect(await AsyncStorage.getItem('torny-sunlight')).toBeNull();
     });

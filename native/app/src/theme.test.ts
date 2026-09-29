@@ -132,6 +132,7 @@ describe('themeFor / resolveScheme', () => {
         railButton: 64,
         borderW: 1,
         activeBarW: 4,
+        selectedFill: false,
       });
     }
   });
@@ -219,6 +220,7 @@ describe('SUNLIGHT_THEME', () => {
       railButton: 84,
       borderW: 3,
       activeBarW: 10,
+      selectedFill: true,
     });
     // Lys og mørk er urørt.
     expect(themeFor('light').ui.card.borderWidth).toBe(1);

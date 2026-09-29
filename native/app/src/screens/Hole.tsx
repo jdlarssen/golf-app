@@ -41,6 +41,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -133,6 +134,7 @@ const POLL_MS = 1500;
 export function Hole(props: ScreenProps<'Hole'>) {
   const { navigation } = props;
   const sunlight = useSunlight();
+  const focused = useIsFocused();
   const system = useTheme();
   const theme = sunlight ? SUNLIGHT_THEME : system;
 
@@ -149,9 +151,11 @@ export function Hole(props: ScreenProps<'Hole'>) {
 
   return (
     <ThemeScope theme={sunlight ? SUNLIGHT_THEME : null}>
-      {/* Mørk tekst i statuslinja over den hvite siden. Når hullsiden
-          forsvinner, gjelder appens «auto» igjen. */}
-      {sunlight ? <StatusBar style="dark" /> : null}
+      {/* Mørk tekst i statuslinja over den hvite siden, men bare mens
+          hullsiden står øverst. Tavla og scorekortet legger seg OPPÅ
+          hullsiden, som blir liggende montert under; uten fokus-sjekken
+          arvet de den mørke statuslinja over sin mørke side. */}
+      {sunlight && focused ? <StatusBar style="dark" /> : null}
       <HoleScreen {...props} />
     </ThemeScope>
   );
@@ -689,6 +693,9 @@ function HoleView({
             {Array.from({ length: HOLE_COUNT }, (_, i) => i + 1).map((n) => {
               const isCurrent = n === holeNumber;
               const isFilled = myFilled.includes(n);
+              // I sollys er ført hull svarte og kantene svarte, så hullet du
+              // står på fylles med skog i stedet for å få en farget kant.
+              const currentFill = isCurrent && holeMetrics.selectedFill;
               return (
                 <Pressable
                   key={n}
@@ -696,7 +703,11 @@ function HoleView({
                   style={[
                     styles.stripHole,
                     {
-                      backgroundColor: isFilled ? colors.accent : colors.surface,
+                      backgroundColor: currentFill
+                        ? colors.primary
+                        : isFilled
+                          ? colors.accent
+                          : colors.surface,
                       borderColor: isCurrent ? colors.primary : colors.border,
                       // Temaets kant (3 i sollys), én tykkere på hullet du står på.
                       borderWidth: isCurrent ? holeMetrics.borderW + 1 : holeMetrics.borderW,
@@ -710,7 +721,13 @@ function HoleView({
                       styles.stripText,
                       // Blekket på gull er mørkt i begge palettene; ellers vanlig
                       // tekstfarge.
-                      { color: isFilled ? colors.onAccent : colors.text },
+                      {
+                        color: currentFill
+                          ? colors.onPrimary
+                          : isFilled
+                            ? colors.onAccent
+                            : colors.text,
+                      },
                       isCurrent && styles.stripTextCurrent,
                     ]}
                   >
@@ -974,8 +991,10 @@ function PuttsToggle({
   disabled: boolean;
   onToggle: () => void;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, hole, ui } = useTheme();
   if (!visible) return null;
+  // I sollys er kant og tekst svarte, så «på» vises som fylt flate (#2252).
+  const filled = enabled && hole.selectedFill;
   return (
     <Pressable
       onPress={onToggle}
@@ -988,7 +1007,7 @@ function PuttsToggle({
           // Her skal den stå midt i headerraden.
           alignSelf: 'center',
           borderColor: enabled ? colors.primary : colors.border,
-          backgroundColor: enabled ? colors.surface : colors.bg,
+          backgroundColor: filled ? colors.primary : enabled ? colors.surface : colors.bg,
         },
         disabled && styles.puttsToggleDisabled,
       ]}
@@ -997,7 +1016,12 @@ function PuttsToggle({
       accessibilityState={{ checked: enabled }}
       accessibilityLabel="Registrer putter"
     >
-      <Text style={[ui.badgeText, enabled && { color: colors.primary }]}>
+      <Text
+        style={[
+          ui.badgeText,
+          enabled && { color: filled ? colors.onPrimary : colors.primary },
+        ]}
+      >
         Registrer putter
       </Text>
     </Pressable>
