@@ -5,6 +5,7 @@ import { expireGameCache } from './expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { runFinishPipeline } from '@/lib/games/runFinishPipeline';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { isSideWinnerNotActive } from '@/lib/games/sideWinnerGuard';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -91,6 +92,9 @@ export type EndGameCoreResult =
         | 'not_all_submitted'
         | 'not_all_approved'
         | 'db_winners'
+        // #2284: the DB refused a winner who is withdrawn or not in the game
+        // (migration 0193). The game stays active; the list was stale.
+        | 'winner_withdrawn'
         | 'db_finish';
     };
 
@@ -229,6 +233,16 @@ export async function endGameCore(
       .from('game_side_winners')
       .upsert(rows, { onConflict: 'game_id,category,position' })
       .select('position');
+    // #2284: the trigger (migration 0193) refuses a winner who withdrew while
+    // the organiser had the page open. A race, not a DB fault: its own reason
+    // and a warn. The upsert is one statement, so no winner row was written.
+    if (isSideWinnerNotActive(written.error)) {
+      console.warn(
+        `[${logContext}] a side winner is no longer an active player`,
+        written.error,
+      );
+      return { ok: false, reason: 'winner_withdrawn' };
+    }
     try {
       expectAffected(written, `${logContext}.sideWinners`);
     } catch (err) {

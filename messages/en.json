@@ -3742,6 +3742,7 @@
       "sideWinners": {
         "validationError": "You must select a winner in all fields before finishing.",
         "dbError": "Couldn't save the winners. Please try again.",
+        "winnerWithdrawnError": "One of the winners you picked has withdrawn. Nothing was saved and the game is still open. Pick again from the list.",
         "longestDriveLabel": "Longest drive",
         "longestDriveSlot": "Longest drive #{pos}",
         "closestToPinLabel": "Closest to pin",

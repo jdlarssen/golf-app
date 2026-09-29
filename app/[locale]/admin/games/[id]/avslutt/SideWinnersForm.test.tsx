@@ -31,4 +31,14 @@ describe('SideWinnersForm (#1567)', () => {
       screen.getByText('Du må velge vinner i alle feltene før du kan avslutte.'),
     ).toBeInTheDocument();
   });
+
+  it('viser egen melding når databasen nektet en trukket vinner (#2284)', () => {
+    render(<SideWinnersForm {...baseProps} error="winner_withdrawn" />);
+    expect(
+      screen.getByTestId('side-winners-error-winner-withdrawn'),
+    ).toHaveTextContent(
+      'En av vinnerne du valgte har trukket seg. Ingenting ble lagret, og spillet er ikke avsluttet. Velg på nytt fra lista.',
+    );
+    expect(screen.queryByTestId('side-winners-error-db')).toBeNull();
+  });
 });
