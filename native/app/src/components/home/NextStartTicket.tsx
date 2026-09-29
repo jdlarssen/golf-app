@@ -26,8 +26,9 @@ import {
   ticketA11yLabel,
 } from '../../lib/homeCopy';
 import { formatStubClock, formatStubDate, teeOffProximityLocal } from '../../lib/homeDates';
+import { MAX_AVATARS, companionsOf } from '../../lib/flightRoster';
 import { FONTS, useTheme } from '../../theme';
-import { FlightAvatars, MAX_AVATARS, companionsOf } from './FlightAvatars';
+import { FlightAvatars } from './FlightAvatars';
 
 const DASHES = 9;
 
