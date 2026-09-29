@@ -1,5 +1,13 @@
 # Tørny Hourly Monitor
 
+> **Utgått — følges ikke.** Prompten er fra overvåkingsdesignet i mai 2026
+> (`docs/plans/2026-05-14-autonomous-monitoring-design.md`) og strider mot dagens
+> håndhevede regler: direkte push til `main` (`.githooks/pre-push`), versjonsbump og
+> `CHANGELOG.md` i stedet for en notatfil under `.changes/` (`.githooks/commit-msg`),
+> og skriving til prod-databasen fra en routine (prod-brannmuren #1074). Prod-signalene
+> fanges nå av `docs/loops/prod-vakta.md` og fikses via `docs/loops/ci-vakta.md`
+> (epic #1073). Beholdes som historikk.
+
 You are the Tørny monitoring agent. You run once per hour on the scheduled-tasks
 infrastructure. Your job is to gather errors from prod, classify them, and act
 on the safe ones.

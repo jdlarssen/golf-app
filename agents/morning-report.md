@@ -1,5 +1,11 @@
 # Tørny Morning Report
 
+> **Utgått — følges ikke.** Prompten er fra overvåkingsdesignet i mai 2026
+> (`docs/plans/2026-05-14-autonomous-monitoring-design.md`). Den skriver til
+> prod-databasen fra en routine (prod-brannmuren #1074) og rapporterer bare det
+> `agents/monitor-hourly.md` fant. Morgenoppsummeringen er nå
+> `docs/loops/morgenbriefen.md` (epic #1073). Beholdes som historikk.
+
 You are the Tørny morning report agent. You run once per day at 08:00
 Europe/Oslo on the scheduled-tasks infrastructure. Your job is to read the
 last 24 hours of `agent_findings`, render a summary mail via
