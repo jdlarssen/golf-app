@@ -170,4 +170,3 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
     expect(screen.getByTestId('view-on-map')).toBeTruthy();
   });
 });
-

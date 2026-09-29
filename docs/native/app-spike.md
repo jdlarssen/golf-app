@@ -2063,6 +2063,11 @@ systemets eget ark for ny hendelse (`createEventInCalendarAsync` fra
   klassebaserte API-en (`addEventWithForm`) krever skrivetilgang og er derfor ikke brukt.
 - **Android** er en vanlig `ACTION_INSERT`-forespørsel uten tillatelse. Pluginen legger
   alltid inn `READ_CALENDAR`/`WRITE_CALENDAR`, så begge står i `android.blockedPermissions`.
-- **Modulen lastes ved trykk** (`lib/addToCalendar.ts`), slik at et app-bygg uten den
-  native delen ikke krasjer spillets side; knappen gir da «Fikk ikke åpnet kalenderen.».
+- **Et bygg uten den native delen** (`lib/addToCalendar.ts`): en lat `require` alene
+  hjelper ikke. Metro melder en feil i en modul som lastes, som fatal før `try` rundt
+  kallet ser den, og i Release avslutter det appen. Sjekk derfor først med
+  `requireOptionalNativeModule('ExpoCalendar')` (fra `expo`, svarer `null` og kaster
+  aldri), og last modulen bare når den finnes. Da gir knappen «Fikk ikke åpnet
+  kalenderen.». Samme grep gjelder neste native modul som skal tåle et eldre bygg.
+- `location` sendes bare når spillet har bane: iOS-posten har feltet som påkrevd tekst.
 - Krever nytt app-bygg (native modul).

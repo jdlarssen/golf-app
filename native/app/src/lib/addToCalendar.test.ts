@@ -8,6 +8,11 @@ const mockCalendar = {
   createEventInCalendarAsync: jest.fn(),
 };
 jest.mock('expo-calendar/legacy', () => mockCalendar);
+// Finnes den native delen i bygget? `null` = et bygg fra før modulen kom inn.
+const mockOptionalNativeModule = jest.fn();
+jest.mock('expo', () => ({
+  requireOptionalNativeModule: (name: string) => mockOptionalNativeModule(name),
+}));
 
 const EVENT = {
   title: 'Klubbmesterskap',
@@ -24,6 +29,7 @@ function onIos(version: string) {
 
 beforeEach(() => {
   jest.restoreAllMocks();
+  mockOptionalNativeModule.mockReset().mockReturnValue({});
   mockCalendar.requestCalendarPermissionsAsync.mockReset();
   mockCalendar.createEventInCalendarAsync.mockReset().mockResolvedValue({ action: 'saved' });
 });
@@ -62,7 +68,24 @@ describe('addToCalendar', () => {
     expect(mockCalendar.createEventInCalendarAsync).toHaveBeenCalledTimes(1);
   });
 
-  it('en feil fra modulen (f.eks. et gammelt app-bygg uten den) blir «failed», ikke et kast', async () => {
+  it('et app-bygg uten den native modulen: «failed» uten å laste modulen, så Metro aldri melder en fatal feil', async () => {
+    onIos('26.5');
+    mockOptionalNativeModule.mockReturnValue(null);
+    await expect(addToCalendar(EVENT)).resolves.toEqual({ ok: false, reason: 'failed' });
+    expect(mockOptionalNativeModule).toHaveBeenCalledWith('ExpoCalendar');
+    expect(mockCalendar.requestCalendarPermissionsAsync).not.toHaveBeenCalled();
+    expect(mockCalendar.createEventInCalendarAsync).not.toHaveBeenCalled();
+  });
+
+  it('uten bane sendes ingen stedsangivelse (iOS-posten godtar ikke null)', async () => {
+    onIos('26.5');
+    await addToCalendar({ ...EVENT, location: null });
+    const sent = mockCalendar.createEventInCalendarAsync.mock.calls[0]![0] as Record<string, unknown>;
+    expect('location' in sent).toBe(false);
+    expect(sent.title).toBe(EVENT.title);
+  });
+
+  it('en feil fra modulen blir «failed», ikke et kast', async () => {
     onIos('26.5');
     mockCalendar.createEventInCalendarAsync.mockRejectedValue(new Error('Cannot find native module'));
     await expect(addToCalendar(EVENT)).resolves.toEqual({ ok: false, reason: 'failed' });

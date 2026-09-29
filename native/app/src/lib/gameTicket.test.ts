@@ -376,4 +376,3 @@ describe('calendarEvent — «Legg til i kalender» (#2255 PR 2)', () => {
     expect(calendarEvent(bundleWith({ scheduledTeeOffAt: iso }, []))).toBeNull();
   });
 });
-
