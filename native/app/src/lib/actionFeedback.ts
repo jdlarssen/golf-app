@@ -129,4 +129,3 @@ export function describeSubmitFailure(reason: SubmitCardFailure): string {
       return 'Fikk ikke levert kortet. Prøv igjen.';
   }
 }
-
