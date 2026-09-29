@@ -67,11 +67,11 @@ target.
   §Brukerflyt-forankring).
 - **Routing (this repo):** an implementation-plan document exists → run it via the
   subagent-driven-development skill (choice already made — §Utførelse below).
-  Expected ≥ 5 files or > 100 LOC → implementer subagent, or the forge contract-first
-  flow when forge is invoked — never `/forge:auto` without a contract file or a contract
-  comment on an open issue (`docs/forge-workflow.md`). Below the threshold → direct
-  edits with FULL intake. Bug reports → direct systematic debugging (§T4), not a
-  contract.
+  Everything else → direct edits with FULL intake, multi-file work included; delegate
+  only on the criteria in §Utførelse «Delegering». When forge is invoked, the
+  contract-first flow applies — never `/forge:auto` without a contract file or a
+  contract comment on an open issue (`docs/forge-workflow.md`). Bug reports → direct
+  systematic debugging (§T4), not a contract.
 - **Notes file:** put it in the session scratchpad directory (path in the system
   prompt).
 
@@ -205,7 +205,8 @@ target.
 
 ## §Utførelse — subagenter vs direkte
 
-Moved verbatim from CLAUDE.md §Arbeidsflyt (#2100). Read at intake routing (§T1).
+Moved from CLAUDE.md §Arbeidsflyt (#2100); the delegation rules were rewritten for
+current models in #2364. Read at intake routing (§T1).
 
 **Plan-eksekvering: alltid subagent-drevet.** Når det finnes et implementeringsplan-dokument (typisk `docs/plans/*-implementation.md`), kjøres den via `superpowers:subagent-driven-development`-skillet — fresh subagent per task, review mellom tasks. Ikke spør brukeren hvilket alternativ — valget er gjort.
 
@@ -216,9 +217,14 @@ Moved verbatim from CLAUDE.md §Arbeidsflyt (#2100). Read at intake routing (§T
 - **opus** for code-quality-reviewer (krever skjønn om tradeoffs), final whole-branch-review, brainstorming-co-pilot.
 - **haiku** for trivielle lookups (sjelden verdt en subagent).
 
-- **Substansielle oppgaver** (ny phase, ny side fra null, refaktorering over flere filer, ny komponent med tester): dispatch implementer-subagent via `Agent`-tool. Etterpå: spec-reviewer + code-quality-reviewer per workflow i `superpowers:subagent-driven-development`-skill. Holder hovedchat-konteksten ren.
+**Delegering: direkte er standard.** Hovedchatten gjør arbeidet selv, også endringer over flere filer som den kan fullføre i samme økt. En subagent koster tid og tokens: den bygger konteksten på nytt, leser seg opp og rapporterer, og hovedchatten må lese rapporten. Deleger bare når gevinsten klart er større:
+- **Store, uavhengige spor** som kan gå parallelt, for eksempel en bred undersøkelse på tvers av mange moduler.
+- **Lesetungt feltarbeid** som ellers ville fylt hovedkonteksten.
+
+Én subagent framfor flere når én holder. Gi den en presis brief første gang, og ikke gjør arbeidet dens om igjen. Leverer den kode, leser hovedchatten diffen selv før commit (T6 steg 2): review og verifisering hører hjemme i hovedløkka, ikke i egne reviewer-subagenter.
+
 - **Småfikser** (typo, en-linje-bug, justering av kopi): rediger direkte. Subagent er overkill.
 - **Debugging og utforskning:** direkte (les filer, sjekk DNS, kjør curl). Subagent kun hvis det er tydelig avgrenset feltarbeid.
-- **TDD for ren logikk** (scoring, sync, math): subagent-disiplin. Skriv test → feile → implementer → grønn → commit.
+- **TDD for ren logikk** (scoring, sync, math): test først. Skriv test → feile → implementer → grønn → commit.
 
-Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produsere 5+ filer eller mer enn 100 LOC — bruk subagent.
+Ved tvil: gjør det direkte.

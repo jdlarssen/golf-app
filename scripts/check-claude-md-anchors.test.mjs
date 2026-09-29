@@ -126,7 +126,7 @@ const ANCHORS = [
   'Plan-eksekvering: alltid subagent-drevet.',
   'Sett `model`-parameteren eksplisitt på hvert `Agent`-kall',
   '`/orchestrator:dispatch <N>`',
-  '5+ filer eller mer enn 100 LOC',
+  'Delegering: direkte er standard.', // #2364: erstatter «5+ filer eller mer enn 100 LOC»
   // Style and brand
   'Tall i tabeller/leaderboards: ALLTID `tabular-nums`',
   'tap-targets ≥44px',
