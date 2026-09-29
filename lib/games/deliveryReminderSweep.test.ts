@@ -97,6 +97,29 @@ describe('deliveryReminderGroups', () => {
     expect(result.length).toBe(due ? 1 : 0);
   });
 
+  it('en fører med flere kort får én påminnelse et kvarter etter det siste av dem, ikke én per kort', () => {
+    // Evaluator F1: Kari keyed three cards. Ola's hole 7 was corrected two
+    // minutes after the last hole, so his card went quiet later than the other
+    // two. A run in between must not remind Kari twice.
+    const T0 = Date.parse('2026-09-29T11:00:00.000Z');
+    const at = (ms: number) => new Date(ms).toISOString();
+    const players = [player('kari'), player('ola'), player('gjest', { is_guest: true })];
+    const scores = [
+      ...card('kari', 'kari', { lastAt: at(T0) }),
+      ...card('ola', 'kari', { lastAt: at(T0) }).map((s) =>
+        s.hole_number === 7 ? { ...s, updated_at: at(T0 + 2 * 60_000) } : s,
+      ),
+      ...card('gjest', 'kari', { lastAt: at(T0) }),
+    ];
+    const runAt = (minutes: number) =>
+      deliveryReminderGroups({ players, scores, game: stableford, now: T0 + minutes * 60_000 });
+
+    expect(runAt(16)).toEqual([]);
+    expect(runAt(17)).toEqual([
+      { recipientId: 'kari', cardUserIds: ['kari', 'ola', 'gjest'], otherCardUserIds: ['ola', 'gjest'] },
+    ]);
+  });
+
   it('17 av 18 hull: ikke ferdig, ingen påminnelse', () => {
     expect(groups([player('kari')], card('kari', 'kari', { holes: 17 }))).toEqual([]);
   });
@@ -208,6 +231,23 @@ describe('deliveryReminderGroups', () => {
 
     expect(groups(players, scores, { game })).toEqual([
       { recipientId: 'makker', cardUserIds: ['makker'], otherCardUserIds: [] },
+    ]);
+  });
+
+  it('lagkort ført av en fra det andre laget: én påminnelse til laget, ikke én per medlem', () => {
+    // Evaluator F3: four players are one flight, so Per (team 2) could key
+    // team 1's shared ball. Per cannot deliver it, but anyone on team 1 can,
+    // with one delivery. One reminder goes to the team's row owner (Kari).
+    const game: DeliveryGame = { game_mode: 'texas_scramble', hole_segment: 'full', source_game_id: null };
+    const players = [
+      player('kari', { team_number: 1 }),
+      player('ola', { team_number: 1 }),
+      player('per', { team_number: 2 }),
+      player('pia', { team_number: 2 }),
+    ];
+
+    expect(groups(players, rows('kari', 1, 18, 'per'), { game })).toEqual([
+      { recipientId: 'kari', cardUserIds: ['kari', 'ola'], otherCardUserIds: [] },
     ]);
   });
 

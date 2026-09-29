@@ -6,6 +6,7 @@ import {
   type DeliveryScore,
 } from './flightDelivery';
 import { holeCountForSegment } from './holeScope';
+import { teamScoreOwnerId } from './teamCaptain';
 import { deliveryCoversWholeTeam } from './teamDelivery';
 
 // Påminnelsen går til den som fører (#2200 del 2). Før gikk den bare når
@@ -46,15 +47,19 @@ export type ReminderGroup = {
  * Hvem som skal ha leverings-påminnelse nå, og for hvilke kort.
  *
  * Et kort er med når det er fullt (hvert hull i segmentet har slag), ikke
- * levert, ikke trukket, ikke purret før, og siste hull ble skrevet for minst et
- * kvarter siden. En front9-spiller med ulevert back9-søsken purres via back9
- * (#1466) og er ikke med.
+ * levert, ikke trukket og ikke purret før. En front9-spiller med ulevert
+ * back9-søsken purres via back9 (#1466) og er ikke med.
  *
  * Mottakeren er den som tastet siste hull, når hen kan levere kortet: sitt eget,
  * lagets kort der én levering dekker laget, eller et kort leveringsregelen lar hen
- * levere for en makker. Ellers går påminnelsen til eieren. En mottaker må være
- * aktiv og ikke gjest; finnes ingen, sendes ingenting. Kortene samles per
- * mottaker, så en fører får én påminnelse for alle kortene hen har ført.
+ * levere for en makker. Ellers går påminnelsen til eieren, og i formatene der én
+ * levering dekker laget, til lagets radeier, så laget får én påminnelse. En
+ * mottaker må være aktiv og ikke gjest; finnes ingen, sendes ingenting.
+ *
+ * Kortene samles per mottaker, og gruppen går når det nyeste siste hullet i
+ * hele gruppen er minst et kvarter gammelt. Da får en fører ÉN påminnelse for
+ * alle kortene hen har ført, også når hull 18 ble tastet kort for kort eller et
+ * hull ble rettet etterpå.
  *
  * Grupper og kort kommer i roster-rekkefølge.
  */
@@ -98,6 +103,17 @@ export function deliveryReminderGroups(input: {
     return deliverable.get(actorId)!.has(ownerId);
   };
 
+  // Eiersiden: i formatene der én levering dekker laget, lagets radeier (samme
+  // kaptein som leveringen og hullsiden bruker), ellers eieren selv.
+  const ownerSide = (ownerId: string): string | null => {
+    const team = byId.get(ownerId)?.team_number;
+    if (teamCascade && team != null) {
+      const captain = teamScoreOwnerId(players.filter((p) => p.team_number === team));
+      if (captain != null && canRemind(captain)) return captain;
+    }
+    return canRemind(ownerId) ? ownerId : null;
+  };
+
   const recipientFor = (ownerId: string, lastKeyer: string | null): string | null => {
     if (
       lastKeyer != null &&
@@ -108,10 +124,10 @@ export function deliveryReminderGroups(input: {
     ) {
       return lastKeyer;
     }
-    return canRemind(ownerId) ? ownerId : null;
+    return ownerSide(ownerId);
   };
 
-  const cardsByRecipient = new Map<string, string[]>();
+  const byRecipient = new Map<string, { cards: string[]; newestMs: number }>();
   for (const p of players) {
     if (p.submitted_at != null || p.withdrawn_at != null) continue;
     if (p.deliver_reminder_sent_at != null) continue;
@@ -126,17 +142,21 @@ export function deliveryReminderGroups(input: {
       const diff = Date.parse(row.updated_at) - Date.parse(last.updated_at);
       if (diff > 0 || (diff === 0 && row.hole_number > last.hole_number)) last = row;
     }
-    if (now - Date.parse(last.updated_at) < REMINDER_QUIET_MS) continue;
-
     const recipient = recipientFor(p.user_id, last.entered_by);
     if (recipient == null) continue;
-    cardsByRecipient.set(recipient, [...(cardsByRecipient.get(recipient) ?? []), p.user_id]);
+    const entry = byRecipient.get(recipient) ?? { cards: [], newestMs: -Infinity };
+    entry.cards.push(p.user_id);
+    entry.newestMs = Math.max(entry.newestMs, Date.parse(last.updated_at));
+    byRecipient.set(recipient, entry);
   }
 
   return players
-    .filter((p) => cardsByRecipient.has(p.user_id))
+    .filter((p) => {
+      const entry = byRecipient.get(p.user_id);
+      return entry != null && now - entry.newestMs >= REMINDER_QUIET_MS;
+    })
     .map((p) => {
-      const cardUserIds = cardsByRecipient.get(p.user_id)!;
+      const cardUserIds = byRecipient.get(p.user_id)!.cards;
       return {
         recipientId: p.user_id,
         cardUserIds,
