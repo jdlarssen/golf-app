@@ -29,6 +29,13 @@
 -- in the same commit:
 --   games.status = 'active'                  the round is on
 --   games.source_game_id is null             derived games never hold scores
+--   games.started_at > now() - 2 days        a round runs over one day; an
+--                                            active game nobody finishes has
+--                                            cards that never fill, and without
+--                                            a window it would keep the gate
+--                                            open (and hold a route batch slot)
+--                                            for good. Same reason as 0094's
+--                                            window.
 --   a game_players row with submitted_at, withdrawn_at and
 --   deliver_reminder_sent_at all null        a card that may still need one
 -- The gate is open for the whole round while cards are undelivered, so a
@@ -73,6 +80,7 @@ begin
         join public.game_players gp on gp.game_id = g.id
         where g.status = 'active'
           and g.source_game_id is null
+          and g.started_at > now() - interval '2 days'
           and gp.submitted_at is null
           and gp.withdrawn_at is null
           and gp.deliver_reminder_sent_at is null

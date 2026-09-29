@@ -31,7 +31,7 @@
  * `value` og tom `column` — leddet gjelder flere kolonner (#2200).
  */
 export type QueryFilter = {
-  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or';
+  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or' | 'gt';
   column: string;
   value: unknown;
 };
@@ -73,6 +73,7 @@ export type QueryResponse = {
 export interface QueryChain extends PromiseLike<QueryResponse> {
   select(columns?: string): QueryChain;
   eq(column: string, value: unknown): QueryChain;
+  gt(column: string, value: unknown): QueryChain;
   ilike(column: string, value: unknown): QueryChain;
   /**
    * `.filter(kolonne, operator, verdi)`. Adressene slås opp slik
@@ -158,6 +159,7 @@ export function createAdminClientMock(opts: {
         return api;
       },
       eq: (column, value) => push('eq', column, value),
+      gt: (column, value) => push('gt', column, value),
       ilike: (column, value) => push('ilike', column, value),
       filter: (column, operator, value) => push(operator, column, value),
       in: (column, value) => push('in', column, value),

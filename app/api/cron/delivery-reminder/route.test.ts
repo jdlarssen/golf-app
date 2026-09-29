@@ -94,8 +94,11 @@ describe('POST /api/cron/delivery-reminder — porten', () => {
 });
 
 describe('POST /api/cron/delivery-reminder — kandidatene', () => {
-  it('spør etter aktive, ikke-avledede spill med et ulevert, upurret kort, eldste først, med tak', async () => {
+  it('spør etter aktive, ikke-avledede spill fra de siste to døgnene med et ulevert, upurret kort, med tak', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-29T12:00:00.000Z'));
     await POST(cronRequest());
+    vi.useRealTimers();
 
     const [read, ...extra] = fake.ops;
     expect(extra).toEqual([]);
@@ -105,6 +108,9 @@ describe('POST /api/cron/delivery-reminder — kandidatene', () => {
     expect(read.filters).toEqual([
       { op: 'eq', column: 'status', value: 'active' },
       { op: 'is', column: 'source_game_id', value: null },
+      // An active game nobody finishes stays open forever; without a window
+      // it would hold a batch slot for good and starve new rounds.
+      { op: 'gt', column: 'started_at', value: '2026-09-27T12:00:00.000Z' },
       { op: 'is', column: 'game_players.submitted_at', value: null },
       { op: 'is', column: 'game_players.withdrawn_at', value: null },
       { op: 'is', column: 'game_players.deliver_reminder_sent_at', value: null },
