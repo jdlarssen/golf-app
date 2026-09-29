@@ -172,6 +172,11 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
   og ren svart (`#000000`): kanter på 3 px og ingen tonede flater, for en skjerm i
   direkte sol. Scorefargene og `primary` er lys-verdiene. Unntaket er godkjent i
   forslaget og gjelder bare der.
+- **Gull kicker på startbilletten i appen** (#2255) er det ene unntaket fra «gull er en
+  medalje»: spillnavnet over banenavnet står i `accent` på det skoggrønne hodet, som
+  eieren valgte fra designlerretet 29.09.2026. Mot `surface-strong` holder gullet 4,9:1 i
+  lys og 6,3:1 i klubbhus-natt, så det er lesbar tekst der. Unntaket gjelder bare den
+  kickeren; på lyse flater er gull tekst fortsatt `accent-text`.
 
 ## Typografi
 
