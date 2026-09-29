@@ -2134,9 +2134,11 @@
         "registrationDeleted": "Your registration will be deleted",
         "requestDeleted": "Any pending join request will also be deleted",
         "teamNotified": "Team members and captain will be notified if you were on a team",
-        "unansweredInvitesWithdrawn": "Teammates who haven't answered lose their invitation and are told"
+        "unansweredInvitesWithdrawn": "Teammates who haven't answered lose their invitation and are told",
+        "captainRequestWithdrawn": "Your sign-up is marked as withdrawn for the organiser"
       },
       "preStartNote": "If you change your mind, you can sign up again as long as registration is still open.",
+      "captainPreStartNote": "If you still want to play, the organiser has to add you again.",
       "withdrawButton": "Withdraw from game",
       "withdrawPending": "Withdrawing …",
       "cancelButton": "Cancel",

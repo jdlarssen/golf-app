@@ -337,16 +337,17 @@ describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
       teamName: 'Bjørka',
       teamRequestId: 'req-cap',
     });
-    render(
+    const view = (requests: RequestRow[]) => (
       <PåmeldingerClient
         gameId={GAME_ID}
-        requests={[captain, mate]}
+        requests={requests}
         tab="approved"
         locked={false}
         gameMode="texas_scramble"
         approvedCount={2}
-      />,
+      />
     );
+    const { rerender } = render(view([captain, mate]));
 
     expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
     fireEvent.click(screen.getByTestId('make-captain'));
@@ -356,5 +357,11 @@ describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
       fireEvent.click(screen.getByTestId('make-captain-confirm-button'));
     });
     expect(transferTeamCaptaincyMock).toHaveBeenCalledWith(GAME_ID, 'req-ola');
+
+    // Serveren svarer med en ny rendering (omdirigering med ?status eller
+    // ?error). Da skal knappen være klar igjen, ikke stå fast på «Lagrer …».
+    rerender(view([{ ...captain }, { ...mate }]));
+    expect(screen.queryByTestId('make-captain-confirm')).toBeNull();
+    expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
   });
 });

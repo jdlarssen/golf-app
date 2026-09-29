@@ -2134,9 +2134,11 @@
         "registrationDeleted": "Påmeldingen din slettes",
         "requestDeleted": "Eventuell forespørsel om å bli med slettes også",
         "teamNotified": "Lag-medlemmer og kaptein får varsel hvis du var på lag",
-        "unansweredInvitesWithdrawn": "Lagkamerater som ikke har svart, mister invitasjonen og får beskjed"
+        "unansweredInvitesWithdrawn": "Lagkamerater som ikke har svart, mister invitasjonen og får beskjed",
+        "captainRequestWithdrawn": "Påmeldingen din står som trukket hos arrangøren"
       },
       "preStartNote": "Hvis du ombestemmer deg, kan du melde deg på igjen så lenge påmelding fortsatt er åpen.",
+      "captainPreStartNote": "Vil du være med likevel, må arrangøren legge deg til igjen.",
       "withdrawButton": "Trekk meg fra spillet",
       "withdrawPending": "Trekker tilbake …",
       "cancelButton": "Avbryt",

@@ -177,14 +177,20 @@ export default async function TrekkFraPage({
           <>
             <ul className="space-y-1 font-sans text-[13px] text-text">
               <li>{t('preStartItems.registrationDeleted')}</li>
-              <li>{t('preStartItems.requestDeleted')}</li>
+              {/* #2358: en kapteins påmelding merkes trukket, ikke slettet, og
+                  kapteinen melder seg ikke på igjen selv (eierens svar 2). */}
+              <li>
+                {captain
+                  ? t('preStartItems.captainRequestWithdrawn')
+                  : t('preStartItems.requestDeleted')}
+              </li>
               <li>{t('preStartItems.teamNotified')}</li>
               {captain && captain.unanswered > 0 && (
                 <li>{t('preStartItems.unansweredInvitesWithdrawn')}</li>
               )}
             </ul>
             <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-              {t('preStartNote')}
+              {captain ? t('captainPreStartNote') : t('preStartNote')}
             </p>
           </>
         )}
