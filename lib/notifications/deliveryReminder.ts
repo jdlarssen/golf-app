@@ -1,18 +1,26 @@
 import 'server-only';
-import { getAdminClient } from '@/lib/supabase/admin';
+import type { getAdminClient } from '@/lib/supabase/admin';
 import { firstName } from '@/lib/firstName';
 import { sendDeliverReminderNotification } from '@/lib/mail/deliverReminderNotification';
-import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
-import { filledHolesByPlayer, type FilledRosterRow } from '@/lib/games/filledHoles';
-import { scoreOwnerUserIds } from '@/lib/games/scoreOwner';
-import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
+import {
+  deliveryReminderGroups,
+  type SweepPlayer,
+  type SweepScore,
+} from '@/lib/games/deliveryReminderSweep';
+import { undeliveredBack9SiblingUserIds } from '@/lib/games/segmentSibling';
+import type { HoleSegment } from '@/lib/scoring';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { selectAllRows } from '@/lib/supabase/selectAllRows';
 import { notify } from './notify';
 
 /**
  * Delt primitiv for leverings-påminnelse (#376): in-app `deliver_reminder`-
- * varsel + betinget off-app-mail. Brukes av både auto-nudgen
- * (`maybeSendDeliveryReminder`) og admin-purringen (`remindUnsubmittedPlayers`).
+ * varsel + betinget off-app-mail. Brukes av både sveipen
+ * (`runDeliveryReminderSweepForGame`, #2200) og admin-purringen
+ * (`remindUnsubmittedPlayers`).
+ *
+ * #2200: `othersCount` > 0 betyr at påminnelsen gjelder kort mottakeren har
+ * ført for andre. Da får varselet `others_count` og mailen sin egen ordlyd.
  *
  * In-app-først: vi sender alltid in-app (via notify), og maler kun til
  * off-app-spillere (`shouldAlsoSendMail`). Best-effort — feiler stille i
@@ -24,15 +32,21 @@ export async function sendDeliveryReminder(opts: {
   player: { userId: string; email: string | null; name: string | null; locale?: string | null };
   game: { id: string; name: string };
   logPrefix: string;
+  othersCount?: number;
 }): Promise<void> {
   const { player, game, logPrefix } = opts;
+  const othersCount = opts.othersCount ?? 0;
 
   let shouldMail = false;
   try {
     const r = await notify({
       userId: player.userId,
       kind: 'deliver_reminder',
-      payload: { game_id: game.id, game_name: game.name },
+      payload: {
+        game_id: game.id,
+        game_name: game.name,
+        ...(othersCount > 0 ? { others_count: othersCount } : {}),
+      },
     });
     shouldMail = r.shouldAlsoSendMail;
   } catch (e) {
@@ -48,6 +62,7 @@ export async function sendDeliveryReminder(opts: {
         gameName: game.name,
         gameId: game.id,
         locale: player.locale ?? null,
+        forKeptCards: othersCount > 0,
       });
     } catch (e) {
       console.error(`[${logPrefix}] deliver_reminder mail failed`, e);
@@ -55,119 +70,128 @@ export async function sendDeliveryReminder(opts: {
   }
 }
 
+/** Spillet sveipen går over — lest av ruta, sendt inn her. */
+export type SweepGame = {
+  id: string;
+  name: string;
+  game_mode: GameMode;
+  hole_segment: HoleSegment;
+  source_game_id: string | null;
+  tournament_id: string | null;
+  scheduled_tee_off_at: string | null;
+  created_at: string | null;
+};
+
+type SweepRosterRow = Omit<SweepPlayer, 'is_guest'> & {
+  users: {
+    email: string | null;
+    name: string | null;
+    locale: string | null;
+    is_guest: boolean;
+  } | null;
+};
+
+const SWEEP_LOG_PREFIX = 'deliveryReminderSweep';
+
 /**
- * Auto-nudge: fyr én leverings-påminnelse til spilleren hvis hen har registrert
- * alle hullene sine (18, eller 9 på et front9/back9-segment, #1441) men ikke
- * levert. Kalt fra game-home-render via `after()` (notify kaller revalidateTag
- * som kaster i render-fasen). Self-gater på hull-telling + en atomisk
- * idempotens-guard, så den er trygg å kalle på hvert besøk:
+ * Sveipen for ett spill (#2200 del 2): les rosteret og slagene, spør
+ * mottakerregelen (`deliveryReminderGroups`), og send én påminnelse per
+ * mottaker for kortene hen kan levere.
  *
- *   1. Tell hull med registrert slag for spilleren — lagets kort i
- *      én-ball-formatene (#2041). < expectedHoles → return.
- *   2. Atomisk «vinn raden»-update: sett deliver_reminder_sent_at = now() KUN
- *      hvis den er null + ikke levert + ikke trukket. Ingen rad tilbake →
- *      tapte race / allerede purret / levert / trukket → return.
- *   3. Vant raden → sendDeliveryReminder. Kjøres nøyaktig én gang per spiller.
+ * Hver påminnelse går etter et atomisk vinn-raden-krav: `deliver_reminder_sent_at`
+ * settes bare på kort som fortsatt er upurret, ulevert og ikke trukket. Bare
+ * kortene kravet vant, teller; vant det ingen, sendes ingenting. To kjøringer
+ * samtidig, eller en kjøring nr. 2, sender derfor ikke noe to ganger, og hvert
+ * kort purres én gang (eierens svar 2026-09-27: «Et kvarter, én gang»).
  *
- * Bruker admin-client (RLS-bypass) siden cookies ikke er tilgjengelig inni
- * `after()`-callbacken, og fordi vi uansett skriver på vegne av systemet.
- * Best-effort — svelger alle feil.
+ * Kaster ved en feilet lesing. Ruta fanger det per spill, så ett spill aldri
+ * koster de andre påminnelsen. Selve sendingen er best-effort
+ * (`sendDeliveryReminder`).
  */
-export async function maybeSendDeliveryReminder(opts: {
-  gameId: string;
-  userId: string;
-  gameName: string;
-  /** Hull som skal til for «ferdig» (#1441). Default `TOTAL_HOLES` (18). */
-  expectedHoles?: number;
-  /**
-   * #2041: the game's whole roster, withdrawn members included and `userId`
-   * among them. It picks the team's row owner, so a teammate in a one-ball
-   * format counts the team's card.
-   */
-  players: readonly FilledRosterRow[];
-  mode: GameMode;
-}): Promise<void> {
-  const {
-    gameId,
-    userId,
-    gameName,
-    expectedHoles = TOTAL_HOLES,
+export async function runDeliveryReminderSweepForGame(
+  admin: ReturnType<typeof getAdminClient>,
+  game: SweepGame,
+  now: number,
+): Promise<{ reminded: number }> {
+  const { data: roster, error: rosterError } = await admin
+    .from('game_players')
+    .select(
+      'user_id, team_number, flight_number, submitted_at, withdrawn_at, deliver_reminder_sent_at, users!game_players_user_id_fkey(email, name, locale, is_guest)',
+    )
+    .eq('game_id', game.id)
+    .returns<SweepRosterRow[]>();
+  if (rosterError) throw new Error(`${SWEEP_LOG_PREFIX} roster: ${rosterError.message}`);
+
+  const scores = await selectAllRows(
+    (from, to) =>
+      admin
+        .from('scores')
+        .select('user_id, hole_number, strokes, entered_by, updated_at')
+        .eq('game_id', game.id)
+        .not('strokes', 'is', null)
+        .order('id')
+        .range(from, to)
+        .returns<SweepScore[]>(),
+    `${SWEEP_LOG_PREFIX} scores`,
+  );
+
+  const rows = roster ?? [];
+  const players: SweepPlayer[] = rows.map((r) => ({
+    user_id: r.user_id,
+    team_number: r.team_number,
+    flight_number: r.flight_number,
+    submitted_at: r.submitted_at,
+    withdrawn_at: r.withdrawn_at,
+    deliver_reminder_sent_at: r.deliver_reminder_sent_at,
+    is_guest: r.users?.is_guest ?? false,
+  }));
+  const groups = deliveryReminderGroups({
     players,
-    mode,
-  } = opts;
-  const admin = getAdminClient();
+    scores,
+    game: {
+      game_mode: game.game_mode,
+      hole_segment: game.hole_segment,
+      source_game_id: game.source_game_id,
+    },
+    now,
+    undeliveredSiblingUserIds: await undeliveredBack9SiblingUserIds(admin, game),
+  });
 
-  try {
-    // #2041: in the one-ball formats the captain owns the team's rows, so
-    // counting the player's own rows never reached «done» for a teammate (a
-    // patsome teammate stopped at 6). Fetch the player's and the captain's rows
-    // — the same fetch as the Home card (#1624) — and let `filledHolesByPlayer`
-    // decide per hole which row counts. Read only this player's entry: the rest
-    // of the roster's rows were never fetched.
-    // #2067: a captain who deleted their account mid-round is withdrawn but
-    // still holds the holes entered before that — fetch them too; the count
-    // folds them onto the owner.
-    const me = players.find((p) => p.user_id === userId);
-    const team =
-      me?.team_number == null
-        ? []
-        : players.filter((p) => p.team_number === me.team_number);
-    const owner = me?.team_number == null ? null : teamScoreOwnerId(team);
-    const { data: rows, error: scoresErr } = await admin
-      .from('scores')
-      .select('user_id, hole_number')
-      .eq('game_id', gameId)
-      .in(
-        'user_id',
-        scoreOwnerUserIds(mode, userId, owner, formerTeamRowOwnerIds(team)),
-      )
-      .not('strokes', 'is', null)
-      .returns<{ user_id: string; hole_number: number }[]>();
-
-    if (scoresErr) return;
-    const filled =
-      filledHolesByPlayer({ players, scores: rows ?? [], mode }).get(userId) ?? 0;
-    if (filled < expectedHoles) return;
-
-    const { data: won, error: updErr } = await admin
+  let reminded = 0;
+  for (const group of groups) {
+    const { data: won, error: claimError } = await admin
       .from('game_players')
-      .update({ deliver_reminder_sent_at: new Date().toISOString() })
-      .eq('game_id', gameId)
-      .eq('user_id', userId)
+      .update({ deliver_reminder_sent_at: new Date(now).toISOString() })
+      .eq('game_id', game.id)
+      .in('user_id', group.cardUserIds)
       .is('deliver_reminder_sent_at', null)
       .is('submitted_at', null)
       .is('withdrawn_at', null)
-      .select('user_id')
-      .maybeSingle<{ user_id: string }>();
-
-    if (updErr) {
-      console.error('[autoDeliverReminder] reminder claim failed', { gameId, userId, error: updErr });
-      return;
+      .select('user_id');
+    if (claimError) {
+      console.error(`[${SWEEP_LOG_PREFIX}] reminder claim failed`, {
+        gameId: game.id,
+        recipientId: group.recipientId,
+        error: claimError,
+      });
+      continue;
     }
-    if (!won) return;
+    const wonIds = new Set((won ?? []).map((r) => r.user_id));
+    if (wonIds.size === 0) continue;
 
-    const { data: u } = await admin
-      .from('users')
-      .select('email, name, locale, is_guest')
-      .eq('id', userId)
-      .maybeSingle<{
-        email: string | null;
-        name: string | null;
-        locale: string | null;
-        is_guest: boolean;
-      }>();
-
-    // #1009: en gjest med fullt scorekort skal ikke purres — plassholder-
-    // adressen kan ikke motta mail, og gjesten kan ikke levere selv. Kortet
-    // leveres av den som fører det, fra lever-siden (#2200).
-    if (u?.is_guest) return;
-
+    const recipient = rows.find((r) => r.user_id === group.recipientId)?.users;
     await sendDeliveryReminder({
-      player: { userId, email: u?.email ?? null, name: u?.name ?? null, locale: u?.locale ?? null },
-      game: { id: gameId, name: gameName },
-      logPrefix: 'autoDeliverReminder',
+      player: {
+        userId: group.recipientId,
+        email: recipient?.email ?? null,
+        name: recipient?.name ?? null,
+        locale: recipient?.locale ?? null,
+      },
+      game: { id: game.id, name: game.name },
+      logPrefix: SWEEP_LOG_PREFIX,
+      othersCount: group.otherCardUserIds.filter((id) => wonIds.has(id)).length,
     });
-  } catch (e) {
-    console.error('[autoDeliverReminder] failed', e);
+    reminded += 1;
   }
+  return { reminded };
 }

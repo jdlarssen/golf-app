@@ -102,9 +102,10 @@ type ReminderContext = {
 
 /**
  * «Sist noen fikk purring» for spillet: største `deliver_reminder_sent_at` over
- * ALLE spillerne, ikke bare dagens mål. Auto-nudgen
- * (`maybeSendDeliveryReminder`) stempler den samme kolonnen, og en spiller som
- * ble purret og siden leverte er fortsatt et vitne om at det ble purret.
+ * ALLE spillerne, ikke bare dagens mål. Påminnelses-sveipen
+ * (`runDeliveryReminderSweepForGame`, #2200) stempler den samme kolonnen, og en
+ * spiller som ble purret og siden leverte er fortsatt et vitne om at det ble
+ * purret.
  *
  * Sammenlignet som instant, ikke som streng: Postgres klipper etterfølgende
  * nuller i sekundbrøken, så to stempler kan ha ulik lengde. Returnerer den
@@ -233,8 +234,8 @@ export async function previewReminder(gameId: string): Promise<ReminderPreview> 
  * Send påminnelse til alle som er ferdige uten å ha levert, og stempel dem.
  *
  * Bevisst uten idempotens-sperre (eiervalg #1891): arrangøren skal kunne purre
- * på nytt. Auto-nudgens `maybeSendDeliveryReminder` har sin egen guard og bryr
- * seg ikke om denne.
+ * på nytt. Påminnelses-sveipen (#2200) har sin egen guard og bryr seg ikke om
+ * denne.
  */
 export async function sendReminders(gameId: string): Promise<ReminderResult> {
   const admin = getAdminClient();
@@ -262,9 +263,8 @@ export async function sendReminders(gameId: string): Promise<ReminderResult> {
   );
 
   if (targets.length > 0) {
-    // Stemplet er auto-nudgens idempotens-guard: uten det ville
-    // `maybeSendDeliveryReminder` purre de samme spillerne en gang til ved
-    // neste sidevisning.
+    // Stemplet er påminnelses-sveipens engangs-guard (#2200): uten det ville
+    // sveipen purre de samme kortene en gang til et kvarter etter.
     //
     // `.select()` fordi PostgREST svarer `error == null` på en update som traff
     // 0 rader (AGENTS trap 2). Men vi kaster IKKE på avvik: mailene er allerede
