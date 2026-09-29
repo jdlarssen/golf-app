@@ -639,7 +639,14 @@ function HoleView({
         ) : null}
 
         <Text style={ui.sectionTitle}>Runden</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="hole-strip">
+        {/* `flexGrow: 0`: en ScrollView vokser ellers og legger et tomrom over
+            «Forrige»/«Neste» når flighten er kort. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.stripScroll}
+          testID="hole-strip"
+        >
           <View style={styles.strip}>
             {Array.from({ length: HOLE_COUNT }, (_, i) => i + 1).map((n) => {
               const isCurrent = n === holeNumber;
@@ -1043,6 +1050,7 @@ const styles = StyleSheet.create({
   undo: { alignItems: 'flex-start' },
   stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
   stepValue: { width: 44, textAlign: 'center' },
+  stripScroll: { flexGrow: 0 },
   strip: { flexDirection: 'row', gap: 6, paddingVertical: 8 },
   stripHole: {
     width: TAP,
