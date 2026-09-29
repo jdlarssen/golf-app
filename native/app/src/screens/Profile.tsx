@@ -208,7 +208,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   // full høyde. Feiler hentingen, faller navnet til e-posten (det ærligste vi
   // har), og feillinja står under kortet. Kjeden eget navn → e-post → «Profil»
   // bor i `bagTagModel`.
-  const club = extras?.club ?? null;
+  // `undefined` = klubben lastes ennå; `null` = ingen klubb. Forskjellen er
+  // hele poenget: uten den sto «Tørny» som kicker til klubben landet.
+  const club = extras === undefined ? undefined : extras.club;
   const model = useMemo(
     () => (profile ? bagTagModel(profile, club, new Date(), email) : null),
     [profile, club, email],

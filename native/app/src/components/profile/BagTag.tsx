@@ -67,7 +67,7 @@ export function BagTag({ model, placeholderName = '', onEditProfile }: BagTagPro
           {model ? (
             <View
               accessible
-              accessibilityLabel={`${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? '–'}`}
+              accessibilityLabel={`${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}`}
               testID="profile-hcp"
             >
               <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>

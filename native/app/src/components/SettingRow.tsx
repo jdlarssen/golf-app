@@ -77,8 +77,11 @@ export function SettingRow({
   return (
     <Pressable
       accessibilityRole="button"
-      // Et valg leses som etiketten pluss «valgt», ikke som «Lys hake».
-      accessibilityLabel={selected === undefined ? undefined : label}
+      // Et valg leses som etiketten (og underlinja) pluss «valgt», ikke som
+      // «Lys hake».
+      accessibilityLabel={
+        selected === undefined ? undefined : [label, sublabel].filter(Boolean).join(', ')
+      }
       accessibilityState={selected === undefined ? { disabled } : { disabled, selected }}
       disabled={disabled}
       onPress={onPress}
