@@ -63,7 +63,7 @@ export function TicketStub({
     case 'gated':
       return (
         <View style={styles.block} testID="format-gate">
-          <Text style={ui.body}>{gateMessage(stub.reason)}</Text>
+          <Text style={[styles.text, { color: colors.muted }]}>{gateMessage(stub.reason)}</Text>
           {/* #1891: uten knappen er setningen en blindvei. */}
           <WebLinkButton label={GATE_LINK_LABEL} path={gameWebPath(gameId)} testID="format-gate-link" />
         </View>
@@ -71,7 +71,7 @@ export function TicketStub({
     case 'notPlayer':
       return (
         <View style={styles.block} testID="not-a-player">
-          <Text style={ui.body}>{TICKET_TEXT.notPlayer}</Text>
+          <Text style={[styles.text, { color: colors.muted }]}>{TICKET_TEXT.notPlayer}</Text>
         </View>
       );
     case 'withdrawn':
@@ -79,7 +79,7 @@ export function TicketStub({
     case 'draft':
       return (
         <View style={styles.block} testID="ticket-draft">
-          <Text style={ui.body}>{TICKET_TEXT.draft}</Text>
+          <Text style={[styles.text, { color: colors.muted }]}>{TICKET_TEXT.draft}</Text>
         </View>
       );
     case 'scheduled':
@@ -105,7 +105,7 @@ export function TicketStub({
               {stub.result.text}
             </Text>
           ) : (
-            <Text style={ui.body}>{TICKET_TEXT.finishedNoResult}</Text>
+            <Text style={[styles.text, { color: colors.muted }]}>{TICKET_TEXT.finishedNoResult}</Text>
           )}
           <Pressable
             accessibilityRole="button"
@@ -162,7 +162,7 @@ function ActiveStub({
       <View style={styles.block}>
         {flightButton}
         <View testID="submitted-banner">
-          <Text style={ui.body}>
+          <Text style={[styles.text, { color: colors.muted }]}>
             {stub.state === 'submitted_pending_approval'
               ? TICKET_TEXT.submittedPending
               : TICKET_TEXT.submittedApproved}
@@ -296,7 +296,7 @@ function WithdrawnStub({
   bySelf: boolean;
   onChanged: () => void | Promise<void>;
 }) {
-  const { ui } = useTheme();
+  const { colors, ui } = useTheme();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -316,7 +316,7 @@ function WithdrawnStub({
 
   return (
     <View style={styles.block} testID="withdrawn-banner">
-      <Text style={ui.body}>
+      <Text style={[styles.text, { color: colors.muted }]}>
         {bySelf ? WITHDRAW_SELF.withdrawnBySelf : WITHDRAW_SELF.withdrawnByOrganiser}
       </Text>
       {bySelf ? (
@@ -347,6 +347,8 @@ function WithdrawnStub({
 
 const styles = StyleSheet.create({
   block: { gap: 8 },
+  /** Brødtekst i stubben: 13 pt i muted, som i designet. */
+  text: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans },
   registered: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   result: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   /** Hovedknappen i billetten er høyere enn appens 44 pt, som i designet. */

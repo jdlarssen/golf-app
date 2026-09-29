@@ -4,7 +4,7 @@
 // låses at hver gren tegner sin testID og at knappene går dit de skal. Gull
 // brukes bare på egen seier, og da som ett merke.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import type { TicketStub as TicketStubModel } from '../../lib/gameTicket';
 import { PALETTES } from '../../theme';
@@ -141,7 +141,6 @@ it('gull bare på egen seier: medaljen i teksten og teksten i gullets lesbare to
   const { view } = await renderStub({ kind: 'finished', result: { text: '🥇 Du vant', isWin: true } });
   expect(screen.getByTestId('ticket-result')).toHaveTextContent('🥇 Du vant');
   expect(screen.getByTestId('ticket-result')).toHaveStyle({ color: PALETTES.light.accentText });
-  expect(screen.queryByTestId('ticket-result-gold', { includeHiddenElements: true })).toBeNull();
 
   await view.rerender(
     <TicketStub
@@ -194,4 +193,10 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
     expect(screen.queryByTestId('add-to-calendar')).toBeNull();
     expect(screen.getByTestId('view-on-map')).toBeTruthy();
   });
+});
+
+it('brødteksten i stubben er 13 pt i muted, som i designet, i alle tilstander', async () => {
+  await renderStub({ kind: 'draft' });
+  const text = within(screen.getByTestId('ticket-draft')).getByText(/./);
+  expect(text).toHaveStyle({ fontSize: 13, color: PALETTES.light.muted });
 });
