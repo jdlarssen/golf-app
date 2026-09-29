@@ -15,10 +15,11 @@ export default async function GameLayout({
   const { id } = await params;
   // Gate the realtime subscription on game-lifecycle: draft and scheduled
   // games have no scores yet, so the websocket subscription is pure idle
-  // overhead on the waiting-room screen. ScheduledWaitingRoom owns its own
-  // narrow subscription on `games.status` that triggers router.refresh()
-  // when admin starts the round — that re-runs this layout, sees status
-  // flipped to 'active', and mounts RealtimeMount for the live round.
+  // overhead on the waiting-room screen. GameStartListener, mounted for every
+  // scheduled game with or without a tee-off, owns its own narrow
+  // subscription on `games.status` that triggers router.refresh() when the
+  // round starts — that re-runs this layout, sees status flipped to
+  // 'active', and mounts RealtimeMount for the live round.
   //
   // Read through the same tag-cached helper the children use (hull-page,
   // leaderboard, etc.) so this layout adds zero network round-trips.

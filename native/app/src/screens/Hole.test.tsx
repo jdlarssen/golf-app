@@ -194,16 +194,23 @@ jest.mock('@react-navigation/native', () => ({
 
 // RNTL 14 er asynkron hele veien: både `render` og `fireEvent` returnerer
 // løfter (de wrapper act selv). Uten await settes aldri `screen`.
-async function renderHole(holeNumber = 1) {
-  const navigation = { setParams: jest.fn(), navigate: jest.fn() };
-  await render(
+function holeElement(
+  holeNumber: number,
+  navigation: { setParams: jest.Mock; navigate: jest.Mock },
+) {
+  return (
     <Hole
       {...({
         route: { params: { gameId: GAME_ID, holeNumber } },
         navigation,
       } as unknown as ScreenProps<'Hole'>)}
-    />,
+    />
   );
+}
+
+async function renderHole(holeNumber = 1) {
+  const navigation = { setParams: jest.fn(), navigate: jest.fn() };
+  await render(holeElement(holeNumber, navigation));
   return navigation;
 }
 
@@ -235,13 +242,17 @@ describe('Hole', () => {
     expect(seedGameScores).toHaveBeenLastCalledWith(GAME_ID);
   });
 
-  it('henter slagene på nytt når appen kommer i forgrunnen og når nettet er tilbake (#1980)', async () => {
-    await renderHole();
+  it('henter slagene og spillet på nytt i forgrunnen, ved nett tilbake og ved hullbytte (#1980, #2219)', async () => {
+    const navigation = { setParams: jest.fn(), navigate: jest.fn() };
+    const { rerender } = await render(holeElement(1, navigation));
     const { subscribeGameScores } = require('../data/realtime') as {
       subscribeGameScores: jest.Mock;
     };
     const { seedGameScores } = require('../data/seedScores') as {
       seedGameScores: jest.Mock;
+    };
+    const { refreshGameBundle } = require('../data/gameBundle') as {
+      refreshGameBundle: jest.Mock;
     };
     const { addForegroundListener, addOnlineListener } = require('../data/syncTriggers') as {
       addForegroundListener: jest.Mock;
@@ -250,13 +261,24 @@ describe('Hole', () => {
     await waitFor(() => {
       expect(seedGameScores).toHaveBeenCalledTimes(1);
     });
+    // Åpningen henter spillet én gang (fokus), ikke to.
+    expect(refreshGameBundle).toHaveBeenCalledTimes(1);
 
     // Sokkelen overlevde bakgrunnen: ingen resubscribe, men forgrunnen skal
-    // likevel hente det makkeren førte i mellomtiden.
+    // likevel hente det makkeren førte i mellomtiden, og spillet på nytt: ble
+    // runden avsluttet mens telefonen lå i lomma, låses hullet (#2219).
     await act(async () => {
-      addForegroundListener.mock.calls[0]![0]();
+      for (const [listener] of addForegroundListener.mock.calls) listener();
     });
     expect(seedGameScores).toHaveBeenCalledTimes(2);
+    expect(refreshGameBundle).toHaveBeenCalledTimes(2);
+
+    // «Neste» bytter bare parameteren og gir ikke nytt fokus. Status leses
+    // likevel på nytt, som på nettsiden (#2219).
+    await rerender(holeElement(2, navigation));
+    await waitFor(() => {
+      expect(refreshGameBundle).toHaveBeenCalledTimes(3);
+    });
 
     await act(async () => {
       addOnlineListener.mock.calls[0]![0]();

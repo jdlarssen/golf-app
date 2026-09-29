@@ -14,6 +14,7 @@ import {
   refreshGameBundle,
   type GameBundle,
 } from '../data/gameBundle';
+import { addForegroundListener } from '../data/syncTriggers';
 import { toRoster } from './roster';
 import { foldLocalScores } from './teamPlay';
 
@@ -31,11 +32,16 @@ export interface GameBundleState {
 
 /**
  * Spill-bundelen: cache med én gang, refetch i bakgrunnen og på nytt hver gang
- * skjermen får fokus.
+ * skjermen får fokus eller appen kommer i forgrunnen.
  *
- * Fokus-refetchen er det som fanger status-drift: blir spillet avsluttet mens
- * skjermen ligger bak i stacken, oppdager vi det når spilleren kommer tilbake —
- * ikke først når en skriving avvises.
+ * Refetchen er det som fanger status-drift: blir spillet avsluttet, lagkortet
+ * levert eller spilleren trukket mens skjermen ligger bak i stacken eller
+ * telefonen ligger i lomma, oppdager vi det når spilleren kommer tilbake, ikke
+ * først når en skriving avvises (#2219). Bare skjermen som har fokus lytter på
+ * forgrunnen, så skjermene bak i stacken henter ikke i kor.
+ *
+ * Et hullbytte gir ikke nytt fokus (`navigation.setParams`). Hullsiden kaller
+ * derfor `refresh` selv når hullet byttes.
  */
 export function useGameBundle(gameId: string): GameBundleState {
   const [bundle, setBundle] = useState<GameBundle | null>(null);
@@ -72,6 +78,9 @@ export function useGameBundle(gameId: string): GameBundleState {
   useFocusEffect(
     useCallback(() => {
       void refresh();
+      return addForegroundListener(() => {
+        void refresh();
+      });
     }, [refresh]),
   );
 

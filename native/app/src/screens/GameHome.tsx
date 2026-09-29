@@ -32,6 +32,7 @@ import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { OrganiserSection } from '../components/game/OrganiserSection';
+import { WaitingRoom } from '../components/game/WaitingRoom';
 import { HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
@@ -300,7 +301,10 @@ function PrimarySection({
    * Regelen er den delte `flightDeliveryFor`, over de lokale slagene.
    */
   flightCta: string | null;
-  /** Hent bundelen på nytt. Kalles etter «Angre trekk», uansett utfall. */
+  /**
+   * Hent bundelen på nytt. Kalles etter «Angre trekk», uansett utfall, og fra
+   * venterommet når runden starter (#2219).
+   */
   onChanged: () => void | Promise<void>;
   onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
 }) {
@@ -404,12 +408,11 @@ function PrimarySection({
 
   if (game.status === 'scheduled') {
     return (
-      <View style={ui.banner} testID="waiting-room">
-        <Text style={ui.body}>
-          Runden er ikke startet ennå. Spillet åpner for føring når arrangøren
-          starter det.
-        </Text>
-      </View>
+      <WaitingRoom
+        gameId={game.id}
+        teeOffAt={game.scheduledTeeOffAt}
+        onChanged={onChanged}
+      />
     );
   }
 

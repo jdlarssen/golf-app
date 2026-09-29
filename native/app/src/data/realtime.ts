@@ -370,3 +370,40 @@ export function subscribeGameScores(
     handlers,
   );
 }
+
+/**
+ * #2219: abonner på spillets egen rad. Venterommet på spill-hjem bruker den til
+ * å oppdage at runden starter. `onUpdate` får den nye raden; skjermen henter
+ * uansett bundelen på nytt og lar serveren si hvilken status spillet har.
+ * `onResubscribed` fyrer når kanalen er tilbake etter et brudd (#2093): en
+ * start som kom mens den lå nede, spilles aldri av.
+ *
+ * Samme topic og filter som webbens `GameStartListener`. Ingen ny kanal på
+ * hull-, scorekort- eller resultatskjermen: der leses statusen ved fokus,
+ * forgrunn og hullbytte (`useGameBundle`).
+ */
+export function subscribeGameStatus(
+  gameId: string,
+  handlers: {
+    onUpdate: (row: { id?: string; status?: string }) => void;
+    onResubscribed?: () => void;
+  },
+): () => void {
+  return subscribeRealtimeChannel(
+    `game-status:${gameId}`,
+    (channel) =>
+      channel.on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'games',
+          filter: `id=eq.${gameId}`,
+        },
+        (payload) => {
+          handlers.onUpdate(payload.new as { id?: string; status?: string });
+        },
+      ),
+    { onResubscribed: handlers.onResubscribed },
+  );
+}

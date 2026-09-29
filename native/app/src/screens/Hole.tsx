@@ -19,7 +19,7 @@
 // regnestykket deres ikke er slag i det hele tatt — det er valg og
 // prestasjoner, ført på hullet. De to seksjonene er additive: de legger seg
 // over og under de vanlige kortene, og resten av skjermen merker dem ikke.
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -95,7 +95,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   const { colors, ui } = useTheme();
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
-  const { bundle, loading } = useGameBundle(gameId);
+  const { bundle, loading, refresh: refreshBundle } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
   // #2067: lagets rader fra før en kontosletting ligger på den trukne
   // kapteinen. Foldes inn her, før noe annet leser slagene, så kortet, stripen
@@ -142,6 +142,17 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
       unsubscribe();
     };
   }, [gameId, reload]);
+
+  // #2219: «Neste» bytter bare parameteren og gir ikke nytt fokus. Status
+  // leses likevel på nytt ved hvert hullbytte, som på nettsiden: er runden
+  // avsluttet eller lagkortet levert, låses hullet du går til. Åpningen hentes
+  // av fokus i `useGameBundle`, så ikke her.
+  const lastHole = useRef(holeNumber);
+  useEffect(() => {
+    if (lastHole.current === holeNumber) return;
+    lastHole.current = holeNumber;
+    void refreshBundle();
+  }, [holeNumber, refreshBundle]);
 
   const goToHole = useCallback(
     (next: number) => {
