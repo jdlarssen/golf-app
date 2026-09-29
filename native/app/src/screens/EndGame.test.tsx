@@ -18,6 +18,8 @@
 //     kort. At de to er ulike er hele poenget, og differansen får en setning.
 //  6. **Godkjenn på vegne av gruppa (#1891)** når fram til den skrivingen som
 //     alt finnes — og henter bundelen på nytt etterpå, uansett utfall.
+//  7. **En valgt vinner som trakk seg (#2284)** gir ny henting, og valget som
+//     pekte på hen, faller bort før neste trykk.
 //
 // Selve setningene er dekket av `lib/endGameCopy.test.ts`; det som testes her
 // er at riktig oversetter brukes på riktig sted.
@@ -276,6 +278,73 @@ describe('EndGame', () => {
     });
     // Et avslag skal ikke se ut som en avslutning: ingen navigasjon videre.
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('henter lista på nytt når en valgt vinner har trukket seg, og glemmer det valget (#2284)', async () => {
+    // Kappløpet: makkeren trekker seg mens arrangøren står her. Databasen
+    // nekter kåringen (0193), skjermen henter bundelen på nytt, og valget som
+    // pekte på makkeren skal ikke stå usynlig igjen og sendes en gang til.
+    const sideOn = { sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 1 };
+    setBundle(
+      [
+        player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+        player({ userId: MATE, submittedAt: '2026-09-01T09:10:00.000Z' }),
+      ],
+      sideOn,
+    );
+    autoConfirm();
+    (finishRound as jest.Mock).mockImplementationOnce(async () => {
+      // Det neste hentingen ser: makkeren har trukket seg.
+      setBundle(
+        [
+          player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+          player({
+            userId: MATE,
+            submittedAt: '2026-09-01T09:10:00.000Z',
+            withdrawnAt: '2026-09-01T09:20:00.000Z',
+          }),
+        ],
+        sideOn,
+      );
+      return { ok: false, reason: 'winner-withdrawn' };
+    });
+    await renderScreen();
+
+    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${MATE}`));
+    await fireEvent.press(screen.getByTestId(`end-game-slot-ctp-1-${mockMe}`));
+    const before = (refreshGameBundle as jest.Mock).mock.calls.length;
+    await fireEvent.press(screen.getByTestId('end-game-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('end-game-notice')).toHaveTextContent(
+        /har trukket seg/,
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId(`end-game-slot-ld-1-${MATE}`)).toBeNull();
+    });
+    expect((refreshGameBundle as jest.Mock).mock.calls.length).toBeGreaterThan(
+      before,
+    );
+    expect(replace).not.toHaveBeenCalled();
+
+    // LD-valget er borte, så knappen er sperret til arrangøren velger på nytt.
+    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    expect(finishRound).toHaveBeenCalledTimes(1);
+
+    // CTP-valget pekte på en aktiv spiller og står.
+    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${mockMe}`));
+    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    await waitFor(() => {
+      expect(finishRound).toHaveBeenLastCalledWith(GAME_ID, {
+        allowMissing: false,
+        withdrawUserIds: [],
+        sideWinners: [
+          { category: 'longest_drive', position: 1, winner_user_id: mockMe },
+          { category: 'closest_to_pin', position: 1, winner_user_id: mockMe },
+        ],
+      });
+    });
   });
 
   it('avslutter ikke cup-runder — de hører til nettsiden', async () => {
