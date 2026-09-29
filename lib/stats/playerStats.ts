@@ -38,7 +38,8 @@ export type MyStats = {
   achievements: Achievements;
 };
 
-const COMPLETE_ROUND_HOLES = 18;
+/** Hull i en komplett runde. Eksportert så appen (#2256) ikke skriver av tallet. */
+export const COMPLETE_ROUND_HOLES = 18;
 
 /** En spilt score: ikke-null slag. */
 function isPlayed(h: HoleScore): h is HoleScore & { strokes: number } {
