@@ -1,5 +1,9 @@
 import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
-import type { ScoringGender } from '@/lib/scoring/modes/types';
+import {
+  modeCollapsesToTeamCard,
+  type GameMode,
+  type ScoringGender,
+} from '@/lib/scoring/modes/types';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { parForGender } from '@/lib/stats/achievements';
 import type { CourseHoleRow } from '@/lib/supabase/queryFragments';
@@ -10,6 +14,8 @@ const COMPLETE_ROUND_HOLES = 18;
 /** Det historikk-siden vet om ett avsluttet spill, fra spillerens ståsted. */
 export type DifferentialGame = {
   id: string;
+  /** Spillemodus — avgjør om laget delte én ball (#2273). */
+  game_mode: GameMode;
   course_id: string | null;
   tee_box_id: string | null;
   /** Strokes received — banehandicapet i spillet. */
@@ -38,6 +44,11 @@ export type DifferentialDeps = {
  * runde-data (samme `computeScoreDifferential` som fryse-helperen — formelen bor
  * ett sted). Runder uten 18 hull, slope/CR eller banehandicap hoppes over.
  * `toFreeze` lister live-beregnede runder som bør lazy-fryses.
+ *
+ * #2273: runder der laget delte én ball (`modeCollapsesToTeamCard` på hull 18)
+ * hoppes over FØR den frosne verdien leses. Slagene ligger på kapteinen, men er
+ * lagets ball, så runden gir ingen personlig differensial — heller ikke en som
+ * ble frosset før regelen kom. Samme regel som Kavalkaden.
  */
 export function computeDifferentials(
   games: DifferentialGame[],
@@ -50,6 +61,7 @@ export function computeDifferentials(
   const toFreeze: { gameId: string; differential: number }[] = [];
   for (const game of games) {
     if (game.holeCount !== COMPLETE_ROUND_HOLES) continue;
+    if (modeCollapsesToTeamCard(game.game_mode, 18)) continue;
     if (game.score_differential != null) {
       byGame.set(game.id, game.score_differential);
       continue;
