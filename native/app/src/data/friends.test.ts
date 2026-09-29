@@ -26,11 +26,14 @@ function friends(): Friends {
   return require('./friends') as Friends;
 }
 
+const PLAYED = { roundsTogether: 8, lastPlayedAt: '2026-09-26T09:00:00Z', lastGameName: 'Onsdagsgolfen' };
+const NONE = { roundsTogether: 0, lastPlayedAt: null, lastGameName: null };
+
 const LIST = {
-  friends: [{ id: 'kari', name: 'Kari' }],
-  incoming: [{ requestId: 'req-1', id: 'ola', name: 'Ola' }],
+  friends: [{ id: 'kari', name: 'Kari', hcp: 9.4, stats: PLAYED }],
+  incoming: [{ requestId: 'req-1', id: 'ola', name: 'Ola', stats: NONE }],
   outgoing: [],
-  suggestions: [{ id: 'per', name: 'Per' }],
+  suggestions: [{ id: 'per', name: 'Per', stats: null }],
   friendCode: 'KODE123',
 };
 
@@ -52,12 +55,23 @@ describe('fetchFriends', () => {
       ok: true,
       data: {
         friends: [],
-        incoming: [{ requestId: 'r', id: 'x', name: 'X' }],
+        incoming: [{ requestId: 'r', id: 'x', name: 'X', stats: null }],
         outgoing: [],
         suggestions: [],
         friendCode: null,
       },
     });
+  });
+
+  it('gir tall og handicap som mangler eller er noe annet videre som null', async () => {
+    respondWith(200, {
+      friends: [{ id: 'kari', name: 'Kari', hcp: '9,4', stats: { roundsTogether: 'åtte' } }],
+    });
+
+    const result = await friends().fetchFriends();
+    expect(result.ok && result.data.friends).toEqual([
+      { id: 'kari', name: 'Kari', hcp: null, stats: null },
+    ]);
   });
 
   it.each([

@@ -1,12 +1,13 @@
 // native/app/src/screens/Friends.test.tsx
 // #2256: vennesiden (Type C).
 //
-// Tekstene er `friendsCopy.test.ts` sine (paritet mot webben), og hvilken sti
-// og kropp hver handling sender, er `data/friends.test.ts` sitt. Her låses
-// koblingene bare en render kan bekrefte: seksjonene står når det finnes noe
-// i dem, knappene kaller riktig handling og lista hentes på nytt, «Fjern»
-// spør først, en ukjent adresse gir tilbudet om invitasjon, og uten nett
-// står linja om tilkobling.
+// Tekstene er `friendsCopy.test.ts` sine (paritet mot webben, underlinjene),
+// og hvilken sti og kropp hver handling sender, er `data/friends.test.ts`
+// sitt. Her låses koblingene bare en render kan bekrefte: seksjonene står når
+// det finnes noe i dem, knappene kaller riktig handling og lista hentes på
+// nytt, en venn åpner arket med tallene og «Fjern venn» spør først,
+// «På e-post» viser feltet, en ukjent adresse gir tilbudet om invitasjon, og
+// uten nett står linja om tilkobling.
 //
 // Tre renders og ikke én: full liste, tom liste og uten nett er tilstander
 // skjermen ikke kan være i samtidig (samme grunn som Profile.test.tsx).
@@ -44,11 +45,19 @@ const removeMock = removeFriend as jest.Mock;
 const addByEmailMock = addFriendByEmail as jest.Mock;
 const inviteMock = inviteFriend as jest.Mock;
 
+const NONE = { roundsTogether: 0, lastPlayedAt: null, lastGameName: null };
 const FULL = {
-  friends: [{ id: 'kari', name: 'Kari' }],
-  incoming: [{ requestId: 'req-1', id: 'ola', name: 'Ola' }],
-  outgoing: [{ requestId: 'req-2', id: 'per', name: 'Per' }],
-  suggestions: [{ id: 'siri', name: 'Siri' }],
+  friends: [
+    {
+      id: 'kari',
+      name: 'Kari',
+      hcp: 9.4,
+      stats: { roundsTogether: 8, lastPlayedAt: '2026-09-26T09:00:00Z', lastGameName: 'Onsdagsgolfen' },
+    },
+  ],
+  incoming: [{ requestId: 'req-1', id: 'ola', name: 'Ola', stats: NONE }],
+  outgoing: [{ requestId: 'req-2', id: 'per', name: 'Per', stats: NONE }],
+  suggestions: [{ id: 'siri', name: 'Siri', stats: NONE }],
   friendCode: 'KODE123',
 };
 const EMPTY = { friends: [], incoming: [], outgoing: [], suggestions: [], friendCode: null };
@@ -67,16 +76,18 @@ describe('Friends', () => {
     jest.restoreAllMocks();
   });
 
-  it('viser seksjonene, godtar, spør før den fjerner og deler lenka', async () => {
+  it('viser seksjonene, godtar, åpner arket, spør før den fjerner og deler lenka', async () => {
     fetchFriendsMock.mockResolvedValue({ ok: true, data: FULL });
     respondMock.mockResolvedValue({ ok: true, status: 'accepted' });
     removeMock.mockResolvedValue({ ok: true, status: 'removed' });
     const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
     await renderScreen();
 
-    for (const id of ['friends-incoming', 'friends-list', 'friends-outgoing', 'friends-suggestions', 'friends-add-by-email', 'friends-share']) {
+    for (const id of ['friends-hero', 'friends-incoming', 'friends-list', 'friends-outgoing', 'friends-suggestions']) {
       expect(await screen.findByTestId(id)).toBeTruthy();
     }
+    // E-postfeltet står bak «På e-post».
+    expect(screen.queryByTestId('friends-add-by-email')).toBeNull();
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('friends-accept-ola'));
@@ -86,7 +97,11 @@ describe('Friends', () => {
     // Lista hentes på nytt etter handlingen.
     expect(fetchFriendsMock).toHaveBeenCalledTimes(2);
 
-    // «Fjern» spør først, og bare «Fjern venn» fjerner.
+    // En venn åpner arket med tallene; «Fjern venn» der spør først, og bare
+    // «Fjern venn» i dialogen fjerner.
+    await fireEvent.press(screen.getByTestId('friends-open-kari'));
+    expect(screen.getByTestId('friend-sheet-hcp')).toHaveTextContent('9,4', { exact: false });
+    expect(screen.getByTestId('friend-sheet-rounds')).toHaveTextContent('8', { exact: false });
     await fireEvent.press(screen.getByTestId('friends-remove-kari'));
     expect(removeMock).not.toHaveBeenCalled();
     const [, , buttons, options] = (Alert.alert as unknown as jest.Mock).mock.calls[0] as [
@@ -101,6 +116,7 @@ describe('Friends', () => {
       buttons[1].onPress?.();
     });
     expect(removeMock).toHaveBeenCalledWith('kari');
+    expect(screen.queryByTestId('friend-sheet')).toBeNull();
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('friends-share-link'));
@@ -116,8 +132,9 @@ describe('Friends', () => {
 
     expect(await screen.findByTestId('friends-empty')).toBeTruthy();
     expect(screen.queryByTestId('friends-incoming')).toBeNull();
-    expect(screen.queryByTestId('friends-share')).toBeNull();
+    expect(screen.queryByTestId('friends-share-link')).toBeNull();
 
+    await fireEvent.press(screen.getByTestId('friends-email-toggle'));
     await fireEvent.changeText(screen.getByTestId('friends-email-input'), 'Ny@Example.com');
     await act(async () => {
       fireEvent.press(screen.getByTestId('friends-email-submit'));
