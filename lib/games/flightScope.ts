@@ -183,7 +183,9 @@ export type OrganizerApprovalRow = 'can_approve' | 'own_card_needs_peer' | 'own_
  * kortet igjen og avslutte likevel.
  */
 export function organizerApprovalRow(
-  players: (FlightPlayer & { submitted_by_user_id?: string | null })[],
+  // #2200: required, like on `pendingApprovalsFor`: a surface that forgets to
+  // read the column fails tsc instead of offering an approval the guard refuses.
+  players: (FlightPlayer & { submitted_by_user_id: string | null })[],
   gameMode: GameMode,
   viewer: { userId: string; isAdmin: boolean },
   cardUserId: string,

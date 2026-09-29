@@ -48,7 +48,7 @@ type SearchParams = Promise<{ error?: string; status?: string }>;
  * anyway.
  */
 function unapprovedApprovalState(
-  players: FlightPlayer[],
+  players: (FlightPlayer & { submitted_by_user_id: string | null })[],
   gameMode: GameMode,
   viewer: { userId: string; isAdmin: boolean },
   unapprovedUserIds: string[],
@@ -136,7 +136,7 @@ export default async function CreatorAvsluttPage({
   const { data: gamePlayers } = await getAdminClient()
     .from('game_players')
     .select(
-      'user_id, flight_number, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+      'user_id, flight_number, submitted_at, submitted_by_user_id, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -144,6 +144,8 @@ export default async function CreatorAvsluttPage({
         user_id: string;
         flight_number: number | null;
         submitted_at: string | null;
+        // #2200: who delivered — the one who did may not approve the card.
+        submitted_by_user_id: string | null;
         approved_at: string | null;
         withdrawn_at: string | null;
         users: { name: string | null; nickname: string | null } | null;

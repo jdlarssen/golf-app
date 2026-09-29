@@ -494,6 +494,61 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
     errorSpy.mockRestore();
   });
 
+  it('drift der tilbakestillingen også feiler → db, og feilen logges høyt', async () => {
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = flightClient([{ user_id: USER_ID }]);
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        game_players: [
+          { data: [{ user_id: OLA, submitted_at: null, withdrawn_at: null }], error: null },
+          { data: null, error: { message: 'connection reset' } }, // the revert fails
+        ],
+      },
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'db' });
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[submitScorecard] flight drift revert failed',
+      expect.objectContaining({
+        gameId: GAME_ID,
+        error: expect.objectContaining({ message: 'connection reset' }),
+      }),
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('drift der tilbakestillingen treffer 0 rader → db, og det logges som feilet (#2223)', async () => {
+    // Tilbakestillingen ER kompensasjonen. Uten feil, men uten rader, står
+    // flighten halvt levert — like galt som en feil, og skal ikke se angret ut.
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = flightClient([{ user_id: USER_ID }]);
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        game_players: [
+          { data: [{ user_id: OLA, submitted_at: null, withdrawn_at: null }], error: null },
+          { data: [], error: null }, // the revert matched nothing
+        ],
+      },
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
+      alsoFor: [OLA],
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'db' });
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[submitScorecard] flight drift revert failed',
+      expect.objectContaining({ gameId: GAME_ID, writtenIds: [USER_ID], error: null }),
+    );
+    errorSpy.mockRestore();
+  });
+
   it('lesefeil i kandidat-oppslaget → db, ingenting skrives', async () => {
     loadCardsMock.mockRejectedValueOnce(new Error('boom'));
     const supabase = flightClient([]);

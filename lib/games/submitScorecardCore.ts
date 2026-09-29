@@ -556,11 +556,24 @@ async function flightWriteDrifted(
     rereadError,
   });
   if (writtenIds.length > 0) {
-    await getAdminClient()
+    // A cleared rejection_reason on these rows is not restored — the same
+    // accepted cosmetic loss as the back9 revert above.
+    // #2223: the revert is the compensation, so check it. An error or 0 rows
+    // leaves the flight half-delivered; log it with the rows so it can be put
+    // right by hand, rather than let the drift line read as if it was undone.
+    const { data: reverted, error: revertError } = await getAdminClient()
       .from('game_players')
       .update({ submitted_at: null })
       .eq('game_id', gameId)
-      .in('user_id', [...writtenIds]);
+      .in('user_id', [...writtenIds])
+      .select('user_id');
+    if (revertError || (reverted ?? []).length === 0) {
+      console.error(`[${LOG_PREFIX}] flight drift revert failed`, {
+        gameId,
+        writtenIds: [...writtenIds],
+        error: revertError,
+      });
+    }
   }
   return true;
 }
