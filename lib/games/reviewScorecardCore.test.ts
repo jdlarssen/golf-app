@@ -108,13 +108,17 @@ beforeEach(() => {
 });
 
 describe('approveScorecardCore', () => {
-  const approve = (approverRole: 'peer' | 'organizer' = 'peer') =>
+  const approve = (
+    approverRole: 'peer' | 'organizer' = 'peer',
+    delivererMayApprove = false,
+  ) =>
     approveScorecardCore({
       client: client(),
       gameId: GAME_ID,
       approverUserId: REVIEWER,
       playerUserId: PLAYER,
       approverRole,
+      delivererMayApprove,
     });
 
   it.each(['peer', 'organizer'] as const)(
@@ -155,9 +159,31 @@ describe('approveScorecardCore', () => {
       { op: 'eq', column: 'user_id', value: PLAYER },
       { op: 'not', column: 'submitted_at', value: null },
       { op: 'is', column: 'approved_at', value: null },
+      // #2200: den som leverte kortet, godkjenner det ikke. I samme skriving,
+      // så porten og skrivingen ikke kan komme i utakt. Ukjent leverandør
+      // (kort levert før 0191) er som før.
+      {
+        op: 'or',
+        column: '',
+        value: `submitted_by_user_id.is.null,submitted_by_user_id.neq.${REVIEWER}`,
+      },
     ]);
     // Godkjenning kaskaderer aldri — admin-klienten rører ingenting.
     expect(admin.ops).toEqual([]);
+  });
+
+  it('arrangør og admin er unntatt leverandør-regelen, som i vakta (0191)', async () => {
+    await approve('organizer', true);
+
+    const [write] = updates(caller);
+    // Fortsatt bare et levert kort, og godkjenneren er den som gjør det.
+    expect(write.payload).toMatchObject({ approved_by_user_id: REVIEWER });
+    expect(write.filters).toEqual([
+      { op: 'eq', column: 'game_id', value: GAME_ID },
+      { op: 'eq', column: 'user_id', value: PLAYER },
+      { op: 'not', column: 'submitted_at', value: null },
+      { op: 'is', column: 'approved_at', value: null },
+    ]);
   });
 
   it('0 rader og kortet er alt godkjent: alreadyDone, ingen varsel, cachen tømmes', async () => {

@@ -30,6 +30,10 @@ const MATE = 'flightkamerat';
 const OWNER = 'kortets-eier';
 const FAR = 'annen-flight';
 const WITHDRAWN = 'trukket-spiller';
+// #2200: kort noen andre i flighten leverte. Den som leverte, kan ikke også
+// godkjenne kortet (vakta i 0191), men arrangøren og admin er unntatt.
+const CARRIED = 'kort-levert-av-kamerat';
+const CARRIED_BY_CREATOR = 'kort-levert-av-oppretteren';
 
 /** Et spill med én flight (≤4 aktive) der oppretteren selv spiller. */
 const SMALL_GAME = 'spill-med-en-flight';
@@ -40,6 +44,7 @@ type RosterRow = {
   user_id: string;
   flight_number: number | null;
   withdrawn_at: string | null;
+  submitted_by_user_id?: string | null;
 };
 
 const GAMES: Record<string, Game> = {
@@ -53,6 +58,13 @@ const ROSTERS: Record<string, RosterRow[]> = {
     { user_id: CREATOR, flight_number: 1, withdrawn_at: null },
     { user_id: MATE, flight_number: 1, withdrawn_at: null },
     { user_id: OWNER, flight_number: 1, withdrawn_at: null },
+    { user_id: CARRIED, flight_number: 1, withdrawn_at: null, submitted_by_user_id: MATE },
+    {
+      user_id: CARRIED_BY_CREATOR,
+      flight_number: 1,
+      withdrawn_at: null,
+      submitted_by_user_id: CREATOR,
+    },
     { user_id: FAR, flight_number: 2, withdrawn_at: null },
     { user_id: 'f2-b', flight_number: 2, withdrawn_at: null },
     { user_id: 'f2-c', flight_number: 2, withdrawn_at: null },
@@ -60,7 +72,8 @@ const ROSTERS: Record<string, RosterRow[]> = {
   ],
   [SMALL_GAME]: [
     { user_id: CREATOR, flight_number: null, withdrawn_at: null },
-    { user_id: MATE, flight_number: null, withdrawn_at: null },
+    // Klubb-adminen under leverte MATEs kort.
+    { user_id: MATE, flight_number: null, withdrawn_at: null, submitted_by_user_id: ADMIN },
     { user_id: OWNER, flight_number: null, withdrawn_at: null },
     // En klubb-admin som selv spiller i den ene flighten.
     { user_id: ADMIN, flight_number: null, withdrawn_at: null },
@@ -205,6 +218,15 @@ describe('scorecardReviewAccess (#2215)', () => {
     { navn: 'admin åpner', caller: ADMIN, game: GAME, player: FAR, decision: 'reopen', svar: 'organizer' },
     { navn: 'medspiller som ikke er arrangør åpner', caller: MATE, game: GAME, player: OWNER, decision: 'reopen', svar: 'forbidden' },
     { navn: 'oppretter åpner egen rad', caller: CREATOR, game: GAME, player: CREATOR, decision: 'reopen', svar: 'organizer' },
+    // #2200: den som leverte kortet, er ikke attestant for det. Vakta i 0191
+    // stopper det under RLS, men ruta skriver med service-role, så porten må
+    // gi samme svar. Samme regel for avvisning som på webbens /approve.
+    { navn: 'den som leverte kortet, godkjenner det', caller: MATE, game: GAME, player: CARRIED, decision: 'approve', svar: 'forbidden' },
+    { navn: 'den som leverte kortet, avviser det', caller: MATE, game: GAME, player: CARRIED, decision: 'reject', svar: 'forbidden' },
+    { navn: 'en annen i flighten godkjenner et kort en makker leverte', caller: OWNER, game: GAME, player: CARRIED, decision: 'approve', svar: 'peer' },
+    // Unntaket er vaktas: arrangøren og admin kan godkjenne et kort de leverte.
+    { navn: 'oppretter i flighten godkjenner et kort hun leverte', caller: CREATOR, game: GAME, player: CARRIED_BY_CREATOR, decision: 'approve', svar: 'organizer' },
+    { navn: 'admin i flighten godkjenner et kort hen leverte', caller: ADMIN, game: SMALL_GAME, player: MATE, decision: 'approve', svar: 'organizer' },
   ] as const)('$navn → $svar', async ({ caller, game, player, decision, svar }) => {
     const result = await scorecardReviewAccess(caller, game, player, decision);
 

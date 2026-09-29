@@ -1548,6 +1548,12 @@ som spiller i en runde med én flight godkjenner som medspiller), og `gameRefres
 slipper inn arrangøren og aktive spillere i runden. Tester med fiendtlige tilfeller står
 ved siden av hver port og rute.
 
+Vakta fra 0191 (#2200) kjører heller ikke for ruta, så godkjenningen bærer reglene selv:
+porten gir ikke `peer` til den som leverte kortet, og `approveScorecardCore` skriver bare
+på et levert kort, alltid med den faktiske godkjenneren, og med et filter i samme UPDATE
+som stopper den som leverte. Admin og arrangør er unntatt, som i vakta
+(`delivererMayApprove`).
+
 `refresh` sender aldri varsler. Den tømmer bare cachen etter skrivinger webben heller ikke
 varsler på: fjern spiller, lag, flight, trekk og angre, avslutning, og wolf- og BBB-valg.
 `confirmParticipation` kaller den ikke, fordi «ikke bekreftet»-merkene på nettsiden leser

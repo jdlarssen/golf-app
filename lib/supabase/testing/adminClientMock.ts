@@ -25,9 +25,13 @@
  * ```
  */
 
-/** Ett registrert filter-ledd. `not('strokes','is',null)` blir op `'not'`. */
+/**
+ * Ett registrert filter-ledd. `not('strokes','is',null)` blir op `'not'`.
+ * `or('a.is.null,a.neq.x')` blir op `'or'` med hele filter-strengen som
+ * `value` og tom `column` — leddet gjelder flere kolonner (#2200).
+ */
 export type QueryFilter = {
-  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch';
+  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or';
   column: string;
   value: unknown;
 };
@@ -78,6 +82,7 @@ export interface QueryChain extends PromiseLike<QueryResponse> {
   in(column: string, value: unknown): QueryChain;
   is(column: string, value: unknown): QueryChain;
   not(column: string, operator: string, value: unknown): QueryChain;
+  or(filters: string): QueryChain;
   /** Sortering registreres ikke; sidevinduet står i `op.range`. */
   order(column: string, options?: unknown): QueryChain;
   range(from: number, to: number): QueryChain;
@@ -158,6 +163,7 @@ export function createAdminClientMock(opts: {
       in: (column, value) => push('in', column, value),
       is: (column, value) => push('is', column, value),
       not: (column, _operator, value) => push('not', column, value),
+      or: (filters) => push('or', '', filters),
       order: () => api,
       range: (from, to) => {
         op.range = [from, to];

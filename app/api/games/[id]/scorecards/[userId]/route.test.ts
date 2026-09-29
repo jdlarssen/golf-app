@@ -28,6 +28,8 @@ const OWNER = 'kortets-eier';
 const FAR = 'annen-flight';
 const ADMIN = 'klubb-admin';
 const STRANGER = 'en-fremmed';
+// #2200: et kort flightkameraten (PEER) leverte for eieren.
+const CARRIED = 'kort-levert-av-kamerat';
 
 const TOKENS: Record<string, string> = {
   'token-oppretter': CREATOR,
@@ -77,13 +79,14 @@ function respond(op: QueryOp): QueryResponse {
   if (op.table === 'game_players' && op.kind === 'update') {
     return { data: db.updated };
   }
-  if (op.table === 'game_players' && op.columns === 'user_id, flight_number, withdrawn_at') {
-    // Seks aktive i to flighter: attestant-regelen går på flight.
+  if (op.table === 'game_players' && op.columns?.startsWith('user_id, flight_number, withdrawn_at')) {
+    // Sju aktive i to flighter: attestant-regelen går på flight.
     return {
       data: [
         { user_id: CREATOR, flight_number: 1, withdrawn_at: null },
         { user_id: PEER, flight_number: 1, withdrawn_at: null },
         { user_id: OWNER, flight_number: 1, withdrawn_at: null },
+        { user_id: CARRIED, flight_number: 1, withdrawn_at: null, submitted_by_user_id: PEER },
         { user_id: FAR, flight_number: 2, withdrawn_at: null },
         { user_id: 'f2-b', flight_number: 2, withdrawn_at: null },
         { user_id: 'f2-c', flight_number: 2, withdrawn_at: null },
@@ -205,6 +208,23 @@ describe('porten', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  // #2200: ruta skriver med service-role, så vakta i 0191 kjører ikke. Porten
+  // og skrivingen må selv gi vaktas svar.
+  it.each([
+    { navn: 'kortet hen leverte for en makker', player: CARRIED },
+    { navn: 'sitt eget kort', player: PEER },
+  ])('en flightkamerat godkjenner $navn: 403, ingen rad skrives', async ({ player }) => {
+    const res = await POST(
+      request({ token: bearer(PEER), body: { decision: 'approve' } }),
+      ctx(player),
+    );
+
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: 'forbidden' });
+    expect(updates()).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
   it.each([ADMIN, PEER])('mot et ukjent spill: 404 — også for %s', async (caller) => {
     db.gameExists = false;
 
@@ -265,6 +285,17 @@ describe('POST — valgene', () => {
     expect(extra).toEqual([]);
     expect(write.payload).toMatchObject({ approved_by_user_id: caller });
     expect(write.filters).toContainEqual({ op: 'eq', column: 'user_id', value: player });
+    // Bare et levert kort, uansett rolle (#2200: vakta kjører ikke her).
+    expect(write.filters).toContainEqual({ op: 'not', column: 'submitted_at', value: null });
+    // Den som leverte, godkjenner ikke: i skrivingen for en medspiller. Arrangør
+    // og admin er unntatt, som i vakta.
+    const delivererFilter = {
+      op: 'or',
+      column: '',
+      value: `submitted_by_user_id.is.null,submitted_by_user_id.neq.${caller}`,
+    };
+    if (role === 'peer') expect(write.filters).toContainEqual(delivererFilter);
+    else expect(write.filters).not.toContainEqual(delivererFilter);
     expect(notifyMock.mock.calls).toEqual([
       [
         {

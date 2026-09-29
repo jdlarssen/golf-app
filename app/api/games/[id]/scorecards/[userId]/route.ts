@@ -137,6 +137,9 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
           approverUserId: userId,
           playerUserId,
           approverRole: access.role,
+          // #2200: vaktas unntak (admin eller arrangør). Service-role hopper
+          // over vakta, så kjernen håndhever regelen i skrivingen.
+          delivererMayApprove: access.role === 'organizer',
         });
         break;
       case 'reject':

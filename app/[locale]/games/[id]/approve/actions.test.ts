@@ -131,6 +131,46 @@ describe('approveScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1/approve?status=approved');
   });
 
+  it('#2200: the deliverer filter rides on a peer\'s write, and an admin is exempt as in the guard', async () => {
+    // Under RLS the 0191 guard refuses the deliverer too; the filter in the
+    // write is the same rule, and the app route (service role) relies on it.
+    // Admin passes the guard (is_admin), so the filter must not refuse them.
+    const orCalls = () =>
+      supabaseMock.__fromCalls.filter((c) => c.table === 'game_players' && c.method === 'or');
+
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    const { approveScorecard } = await import('./actions');
+    await expect(approveScorecard('game-1', 'player-2')).rejects.toBeInstanceOf(RedirectError);
+    expect(orCalls()).toEqual([]);
+
+    supabaseMock = buildSupabaseMock([
+      { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
+      { data: { is_admin: false }, error: null }, // users.is_admin — a plain peer
+      {
+        data: [
+          { user_id: 'side1', flight_number: 1, withdrawn_at: null },
+          { user_id: 'side2', flight_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      }, // game_players (canApproveScorecardFor)
+      { data: [{ user_id: 'side1' }], error: null }, // game_players.update → 1 row
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'side2' } },
+    });
+    await expect(approveScorecard('game-1', 'side1')).rejects.toBeInstanceOf(RedirectError);
+    expect(orCalls().map((c) => c.args)).toEqual([
+      ['submitted_by_user_id.is.null,submitted_by_user_id.neq.side2'],
+    ]);
+  });
+
   it('#1598: the approval payload carries approver_role «peer» so a nameless approver stays «En spiller»', async () => {
     // Denne stien er alltid en medspiller — arrangøren godkjenner via
     // adminApproveScorecard. Rollen følger med så kortet velger riktig
