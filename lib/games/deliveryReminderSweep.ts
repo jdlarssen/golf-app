@@ -104,12 +104,17 @@ export function deliveryReminderGroups(input: {
   };
 
   // Eiersiden: i formatene der én levering dekker laget, lagets radeier (samme
-  // kaptein som leveringen og hullsiden bruker), ellers eieren selv.
+  // kaptein som leveringen og hullsiden bruker). Er radeieren en gjest, det
+  // første medlemmet på laget som kan få påminnelse, så laget fortsatt får én.
+  // Ellers eieren selv.
   const ownerSide = (ownerId: string): string | null => {
     const team = byId.get(ownerId)?.team_number;
     if (teamCascade && team != null) {
-      const captain = teamScoreOwnerId(players.filter((p) => p.team_number === team));
+      const members = players.filter((p) => p.team_number === team);
+      const captain = teamScoreOwnerId(members);
       if (captain != null && canRemind(captain)) return captain;
+      const firstRemindable = members.find((m) => canRemind(m.user_id));
+      if (firstRemindable) return firstRemindable.user_id;
     }
     return canRemind(ownerId) ? ownerId : null;
   };
