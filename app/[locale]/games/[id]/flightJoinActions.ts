@@ -3,7 +3,9 @@
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
-import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
+import { MAX_FLIGHT_SIZE, flightIsFreeGrouping } from '@/lib/games/flightScope';
+import { expectedTeamSize } from '@/lib/games/teamScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 export type FlightJoinResult =
   | { ok: true }
@@ -64,19 +66,31 @@ export async function joinFlight(
   // taste for feil lag og ser feil kort. Velgeren (#543) er for solo-formater
   // der flight er en fri gruppering; den skjules på hjemmesiden for spillere
   // med lag, og dette er server-siden av samme regel (#2009: første spill med
-  // fire lag gjorde knappene synlige i praksis).
+  // fire lag gjorde knappene synlige i praksis). Sjekken på `team_number`
+  // dekker også round robin, der `team_number` er en rotasjonsplass.
   if (typeof membership.team_number === 'number') {
     return { ok: false, error: 'flight_bound_to_team' };
   }
 
   const { data: game } = await admin
     .from('games')
-    .select('status')
+    .select('status, game_mode, mode_config')
     .eq('id', gameId)
-    .maybeSingle<{ status: string }>();
+    .maybeSingle<{
+      status: string;
+      game_mode: GameMode;
+      mode_config: { team_size?: number } | null;
+    }>();
 
   if (!game || game.status !== 'scheduled') {
     return { ok: false, error: 'game_not_scheduled' };
+  }
+
+  // #2290: the format decides, not just whether the player has a team yet.
+  // With solo signup into a team format the player has no team until the
+  // organiser assigns one, and a flight picked here would split them from it.
+  if (!flightIsFreeGrouping(game.game_mode, expectedTeamSize(game.mode_config))) {
+    return { ok: false, error: 'flight_bound_to_team' };
   }
 
   const previousFlight = membership.flight_number;

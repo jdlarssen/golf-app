@@ -65,7 +65,7 @@ import {
   MAX_FLIGHT_SIZE,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
-import { unassignedTeamPlayers } from '@/lib/games/teamScope';
+import { expectedTeamSize, unassignedTeamPlayers } from '@/lib/games/teamScope';
 import type { FlightOption } from '../ScheduledWaitingRoom';
 import { getGameContext } from './gameContext';
 import { FlightRoster, FlightRosterSkeleton } from './FlightRoster';
@@ -593,7 +593,8 @@ export default async function GameHomePage({
     });
 
     // #543: venteroms-velger og unassigned_flights-banner.
-    // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
+    // Vises bare når spillet er eligible for flight-inndeling (solo-format, ikke
+    // wolf, >4 aktive — #2290).
     const flightPlayers: FlightPlayer[] = gwp.players.map((p) => ({
       user_id: p.user_id,
       flight_number: p.flight_number,
@@ -603,8 +604,11 @@ export default async function GameHomePage({
     // for solo-formater der flighten er en fri gruppering. `joinFlight` avviser
     // det samme på serversiden (#2009).
     const showFlightPicker =
-      eligibleForFlightAssignment(game.game_mode, flightPlayers) &&
-      me.team_number == null;
+      eligibleForFlightAssignment(
+        game.game_mode,
+        expectedTeamSize(game.mode_config),
+        flightPlayers,
+      ) && me.team_number == null;
 
     // Bygg flight-alternativ-listen for velgeren. Grupper aktive spillere på
     // flight_number; én ekstra tom flight så spillere kan omfordele 3+3.

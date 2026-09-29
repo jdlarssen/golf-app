@@ -916,7 +916,8 @@ async function PlayersSections({
 
       {/* #543: Flighter-seksjon for solo-spill >4 aktive — scheduled og active.
           eligibleForFlightAssignment er den delte sannhetskilden for om seksjonen
-          vises, slik at admin-UI og start-vakten holder seg i sync. */}
+          vises, slik at admin-UI og start-vakten holder seg i sync. I lag-formater
+          er flighten laget, og seksjonen finnes ikke (#2290). */}
       {(() => {
         if (game.status !== 'scheduled' && game.status !== 'active') return null;
         const flightPlayers: FlightPlayer[] = players.map((p) => ({
@@ -924,7 +925,15 @@ async function PlayersSections({
           flight_number: p.flight_number,
           withdrawn_at: p.withdrawn_at,
         }));
-        if (!eligibleForFlightAssignment(game.game_mode, flightPlayers)) return null;
+        if (
+          !eligibleForFlightAssignment(
+            game.game_mode,
+            expectedTeamSize(game.mode_config),
+            flightPlayers,
+          )
+        ) {
+          return null;
+        }
         const activePlayers = flightPlayers.filter((p) => !p.withdrawn_at);
         return (
           <FlighterSeksjon

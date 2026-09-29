@@ -15,6 +15,7 @@ import {
 } from '@/lib/games/flightScope';
 import {
   suggestTeamSplit,
+  flightForTeam,
   modeRequiresTeamNumber,
   expectedTeamSize,
   type TeamPlayer,
@@ -78,6 +79,14 @@ async function fetchFlightPlayers(
   return data ?? [];
 }
 
+/** The game fields the flight actions read (the guard needs `mode_config`, #2290). */
+type FlightGameRow = {
+  id: string;
+  status: string;
+  game_mode: GameMode;
+  mode_config: { team_size?: number } | null;
+};
+
 /**
  * Admin/creator: foreslår og skriver flight-inndeling for alle aktive
  * spillere i grupper av MAX_FLIGHT_SIZE (påmeldingsrekkefølge).
@@ -92,9 +101,9 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
   // Verifiser at spillet er scheduled/active og trenger inndeling.
   const { data: game } = await admin
     .from('games')
-    .select('id, status, game_mode')
+    .select('id, status, game_mode, mode_config')
     .eq('id', gameId)
-    .single<{ id: string; status: string; game_mode: GameMode }>();
+    .single<FlightGameRow>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   // TypeScript cannot narrow past next-intl redirect (not declared `never`),
   // so the post-guard non-null assertions are the established 2b pattern.
@@ -107,8 +116,15 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
   const players = await fetchFlightPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
-  if (!eligibleForFlightAssignment(game!.game_mode, players!)) {
-    // Spillet er ≤4 aktive eller wolf — ingen inndeling nødvendig.
+  if (
+    !eligibleForFlightAssignment(
+      game!.game_mode,
+      expectedTeamSize(game!.mode_config),
+      players!,
+    )
+  ) {
+    // ≤4 active, wolf, or a format where the flight is the team/side (#2290):
+    // a split in signup order would break the teams up.
     redirect({ href: detailPath, locale });
   }
 
@@ -134,6 +150,8 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
 /**
  * Admin/creator: setter flight_number for én spiller (per-spiller-justering).
  *
+ * Samme vakt som Flighter-seksjonen (`eligibleForFlightAssignment`): i et
+ * lag-format er flighten laget, og én lagspiller flyttes aldri alene (#2290).
  * Validerer at target-flight ikke overstiger MAX_FLIGHT_SIZE aktive spillere
  * (kapasitetsgrense).
  */
@@ -152,12 +170,25 @@ export async function setPlayerFlight(
 
   const { data: game } = await admin
     .from('games')
-    .select('id, status, game_mode')
+    .select('id, status, game_mode, mode_config')
     .eq('id', gameId)
-    .single<{ id: string; status: string; game_mode: GameMode }>();
+    .single<FlightGameRow>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'scheduled' && game!.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
+  }
+
+  const players = await fetchFlightPlayers(admin, gameId);
+  if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
+  if (
+    !eligibleForFlightAssignment(
+      game!.game_mode,
+      expectedTeamSize(game!.mode_config),
+      players!,
+    )
+  ) {
+    // Same answer as page.tsx: no Flighter section, nothing to move.
+    redirect({ href: detailPath, locale });
   }
 
   // Kapasitetssjekk: tell aktive spillere i target-flight eksklusive denne spilleren
@@ -217,7 +248,8 @@ async function fetchTeamPlayers(
 
 /**
  * Leser spillet og verifiserer at det er et lag-format i scheduled/active.
- * Redirecter ved avvik; returnerer lagstørrelsen når alt er i orden.
+ * Redirecter ved avvik; returnerer formatet og lagstørrelsen når alt er i
+ * orden.
  *
  * Delt av begge lag-actionene så UI-gaten (`modeRequiresTeamNumber` i
  * page.tsx) og skrive-gaten ikke kan divergere. Wolf og Round Robin bruker
@@ -228,7 +260,7 @@ async function loadTeamGame(
   gameId: string,
   detailPath: string,
   locale: Awaited<ReturnType<typeof getLocale>>,
-): Promise<number> {
+): Promise<{ mode: GameMode; teamSize: number }> {
   const { data: game } = await admin
     .from('games')
     .select('id, status, game_mode, mode_config')
@@ -250,7 +282,7 @@ async function loadTeamGame(
     // Solo-format eller matchplay — ingen lag å tildele her.
     redirect({ href: detailPath, locale });
   }
-  return teamSize;
+  return { mode: game!.game_mode, teamSize };
 }
 
 /**
@@ -264,14 +296,14 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
   const locale = await getLocale();
   const { admin, detailPath } = await loadFlightContext(gameId);
 
-  const teamSize = await loadTeamGame(admin, gameId, detailPath, locale);
+  const { mode, teamSize } = await loadTeamGame(admin, gameId, detailPath, locale);
 
   // Error (if any) is logged at source in fetchTeamPlayers — the call site
   // only sees null, so logging here would add nothing but a `null`.
   const players = await fetchTeamPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
-  const assignments = suggestTeamSplit(players!, teamSize);
+  const assignments = suggestTeamSplit(mode, players!, teamSize);
   if (assignments.length === 0) {
     // Alle har allerede lag — ingenting å gjøre.
     redirect({ href: detailPath, locale });
@@ -310,8 +342,9 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
  * Admin/creator: setter team_number for én spiller (per-spiller-justering).
  *
  * Validerer at target-laget ikke overstiger lagstørrelsen fra mode_config, og
- * setter flight = lag når spilleren ikke har flight fra før (CHECK
- * `game_players_team_flight_consistency`: lag krever flight).
+ * setter flighten etter laget med `flightForTeam` (#2290): i lag-formatene er
+ * flighten laget, og en spiller som bytter lag tar aldri med seg den gamle
+ * flighten. CHECK `game_players_team_flight_consistency` krever at den er satt.
  */
 export async function setPlayerTeam(
   gameId: string,
@@ -325,7 +358,14 @@ export async function setPlayerTeam(
     redirect({ href: `${detailPath}?error=bad_team`, locale });
   }
 
-  const teamSize = await loadTeamGame(admin, gameId, detailPath, locale);
+  const { mode, teamSize } = await loadTeamGame(admin, gameId, detailPath, locale);
+
+  // The whole roster: the flight depends on who is already in the target team.
+  const players = await fetchTeamPlayers(admin, gameId);
+  if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
+  if (!players!.some((p) => p.user_id === targetUserId)) {
+    redirect({ href: `${detailPath}?error=not_found`, locale });
+  }
 
   // Kapasitetssjekk: tell aktive spillere i target-laget eksklusive denne.
   const { count: existingCount, error: countError } = await admin
@@ -343,20 +383,6 @@ export async function setPlayerTeam(
     redirect({ href: `${detailPath}?error=team_full`, locale });
   }
 
-  // Flight må være satt så snart laget er det (CHECK 0030/0095). Behold den
-  // spilleren har; ellers speil lagnummeret, som lag-påmeldingen gjør.
-  const { data: row, error: rowError } = await admin
-    .from('game_players')
-    .select('flight_number')
-    .eq('game_id', gameId)
-    .eq('user_id', targetUserId)
-    .maybeSingle<{ flight_number: number | null }>();
-  if (rowError) {
-    console.error('[setPlayerTeam] player row read failed', rowError);
-    redirect({ href: `${detailPath}?error=db_roster`, locale });
-  }
-  if (!row) redirect({ href: `${detailPath}?error=not_found`, locale });
-
   let failure: unknown = null;
   try {
     expectAffected(
@@ -364,7 +390,9 @@ export async function setPlayerTeam(
         .from('game_players')
         .update({
           team_number: targetTeam,
-          flight_number: row!.flight_number ?? targetTeam,
+          // The CHECK (0030/0095) needs a flight once there is a team, and the
+          // flight follows the team (#2290).
+          flight_number: flightForTeam(mode, players!, targetUserId, targetTeam),
         })
         .eq('game_id', gameId)
         .eq('user_id', targetUserId)
