@@ -36,6 +36,8 @@ import {
   describeProfileSaveFailure,
   formatHcpNb,
   friendsWaitingLine,
+  handicapSeasonChange,
+  handicapSeasonChangeSpoken,
   hcpUpdatedLine,
   isHandicapAgeStale,
   memberSinceLine,
@@ -308,5 +310,17 @@ describe('describeHandicapAge', () => {
     // `isHandicapStale` leser NaN-differansen som «ikke gammelt», så uten den
     // egne vakten hadde denne havnet i dato-grenen.
     expect(describeHandicapAge('tull', NOW)).toBe(PROFILE_TEXT.hcpStaleShort);
+  });
+});
+
+describe('handicap-kurven på bag-taggen', () => {
+  it.each([
+    [-2.6, '−2,6 denne sesongen', 'ned 2,6 denne sesongen'],
+    [1.2, '+1,2 denne sesongen', 'opp 1,2 denne sesongen'],
+    [-3, '−3,0 denne sesongen', 'ned 3,0 denne sesongen'],
+    [0, 'Uendret denne sesongen', 'uendret denne sesongen'],
+  ])('sier %p som «%s»', (change, shown, spoken) => {
+    expect(handicapSeasonChange(change)).toBe(shown);
+    expect(handicapSeasonChangeSpoken(change)).toBe(spoken);
   });
 });
