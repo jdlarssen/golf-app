@@ -15,6 +15,22 @@
 export const NARRATIVE_MODEL = 'claude-sonnet-5';
 
 /**
+ * Hvor mye modellen tenker før den skriver. Modellen i `NARRATIVE_MODEL` tenker
+ * adaptivt også når `thinking` utelates, og uten en verdi her gjelder API-ets
+ * standard for den. Noen få setninger er en kort, latensfølsom oppgave, så `low`
+ * er utgangspunktet. Blir tekstene merkbart svakere, er `medium` neste trinn.
+ */
+export const NARRATIVE_EFFORT = 'low' as const;
+
+/**
+ * Taket på alt modellen produserer i ett kall, tenkingen medregnet. Tenkingen
+ * teller mot `max_tokens` selv om teksten ikke returneres, så et tak som bare
+ * rommer svaret kutter det. Lengden på teksten styres av prompten og vasken,
+ * ikke av dette taket. Følger modellen: vurder det på nytt ved modellbytte.
+ */
+export const NARRATIVE_MAX_TOKENS = 4_000;
+
+/**
  * Hvor lenge vi venter på modellen. En tekst er pynt — den skal aldri holde
  * igjen flyten som utløste den (et avsluttet spill, en side som skal vises).
  */

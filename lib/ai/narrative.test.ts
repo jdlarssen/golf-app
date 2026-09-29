@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  NARRATIVE_EFFORT,
   NARRATIVE_MAX_RETRIES,
+  NARRATIVE_MAX_TOKENS,
   NARRATIVE_MODEL,
   NARRATIVE_TIMEOUT_MS,
   sanitizeNarrative,
@@ -48,6 +50,8 @@ describe('sanitizeNarrative', () => {
 describe('delte konstanter', () => {
   it('holder modell, timeout og retries på ett sted', () => {
     expect(NARRATIVE_MODEL).toBe('claude-sonnet-5');
+    expect(NARRATIVE_EFFORT).toBe('low');
+    expect(NARRATIVE_MAX_TOKENS).toBe(4_000);
     expect(NARRATIVE_TIMEOUT_MS).toBe(20_000);
     expect(NARRATIVE_MAX_RETRIES).toBe(1);
   });

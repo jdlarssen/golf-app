@@ -1,7 +1,9 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  NARRATIVE_EFFORT,
   NARRATIVE_MAX_RETRIES,
+  NARRATIVE_MAX_TOKENS,
   NARRATIVE_MODEL,
   NARRATIVE_TIMEOUT_MS,
 } from '@/lib/ai/narrative';
@@ -13,10 +15,9 @@ import { buildRoundReportFacts } from './roundReportFacts';
 import { buildRoundReportPrompt, sanitizeRoundReport } from './roundReportPrompt';
 import { holeCountForSegment, isHoleInSegment } from './holeScope';
 
-// Modell, timeout og retries deles med Kavalkadens innledning (#2128) —
-// `lib/ai/narrative.ts` er hjemmet, så de to AI-tekstene ikke driver fra
-// hverandre neste gang noen bytter modell.
-const MAX_TOKENS = 800;
+// Modell, innsats, token-tak, timeout og retries deles med Kavalkadens
+// innledning (#2128) — `lib/ai/narrative.ts` er hjemmet, så de to AI-tekstene
+// ikke driver fra hverandre neste gang noen bytter modell.
 const MIN_SCORED_HOLES = 6;
 // nb-only surface by design (#1527) — rundereferatet skrives på norsk.
 const PLAYER_FALLBACK = 'Ukjent spiller';
@@ -162,7 +163,8 @@ export async function generateAndPersistRoundReport(
     });
     const response = await client.messages.create({
       model: NARRATIVE_MODEL,
-      max_tokens: MAX_TOKENS,
+      max_tokens: NARRATIVE_MAX_TOKENS,
+      output_config: { effort: NARRATIVE_EFFORT },
       system,
       messages: [{ role: 'user', content: user }],
     });
@@ -171,6 +173,16 @@ export async function generateAndPersistRoundReport(
       stopReason: response.stop_reason,
       usage: response.usage,
     });
+
+    // A stop at the token cap (or a refusal) leaves a cut-off or empty text;
+    // the sanitizer only rejects empty or overlong output, so check here.
+    if (response.stop_reason !== 'end_turn') {
+      console.error('[generateRoundReport] model stopped early', {
+        gameId,
+        stopReason: response.stop_reason,
+      });
+      return { status: 'failed', report: null };
+    }
 
     const rawText = response.content
       .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')

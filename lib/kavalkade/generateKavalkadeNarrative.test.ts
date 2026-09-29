@@ -52,7 +52,7 @@ function makeFacts(overrides: Partial<KavalkadeFacts> = {}): KavalkadeFacts {
 }
 
 function textResponse(text: string) {
-  return { content: [{ type: 'text', text }] };
+  return { stop_reason: 'end_turn', content: [{ type: 'text', text }] };
 }
 
 const ORIGINAL_KEY = process.env.ANTHROPIC_API_KEY;
@@ -87,6 +87,7 @@ describe('generateKavalkadeNarrative', () => {
 
     const call = messagesCreateMock.mock.calls[0][0];
     expect(call.model).toBe('claude-sonnet-5');
+    expect(call.output_config).toEqual({ effort: 'low' });
     expect(call.messages[0].content).toContain('Lørdagscup');
     expect(call.messages[0].content).not.toContain('userId');
     expect(call.messages[0].content).not.toContain('gameId');
@@ -108,6 +109,15 @@ describe('generateKavalkadeNarrative', () => {
       ),
     ).resolves.toBeNull();
     expect(messagesCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('svarer null når modellen stopper på taket, selv med tekst i svaret', async () => {
+    messagesCreateMock.mockResolvedValue({
+      stop_reason: 'max_tokens',
+      content: [{ type: 'text', text: 'Året ditt ble' }],
+    });
+
+    await expect(generateKavalkadeNarrative(makeFacts())).resolves.toBeNull();
   });
 
   it('svarer null når vasken forkaster svaret', async () => {
