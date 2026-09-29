@@ -223,8 +223,8 @@ export function teamExtraForHole(
   const result = outcome.result;
 
   if (result.kind === 'texas_scramble') {
-    const team = result.teams.find((line) => line.teamNumber === teamNumber);
-    return team ? strokesForHole(team.teamHandicap, strokeIndex) : null;
+    const teamHandicap = teamHandicapFor(outcome, teamNumber);
+    return teamHandicap != null ? strokesForHole(teamHandicap, strokeIndex) : null;
   }
 
   if (result.kind === 'foursomes_matchplay') {
@@ -236,6 +236,24 @@ export function teamExtraForHole(
   }
 
   return null;
+}
+
+/**
+ * Lagets handicap i scramble-familien, slik motoren regnet det (#2262: hodet
+ * på scorekortet sier «lagshandicap N»). {@link teamExtraForHole} fordeler det
+ * samme tallet på hullene, så hodet og NETTO-raden kan ikke si noe forskjellig.
+ *
+ * `null` utenfor scramble: i alternate shot er slagene per hull en forskjell
+ * mellom sidene, ikke ett tall for laget. Også `null` når motoren ikke kunne
+ * regne, eller laget ikke står i resultatet.
+ */
+export function teamHandicapFor(
+  outcome: LeaderboardOutcome,
+  teamNumber: number,
+): number | null {
+  if (!outcome.ok || outcome.result.kind !== 'texas_scramble') return null;
+  const team = outcome.result.teams.find((line) => line.teamNumber === teamNumber);
+  return team ? team.teamHandicap : null;
 }
 
 /**

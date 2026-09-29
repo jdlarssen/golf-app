@@ -71,3 +71,34 @@ export function formatClock(iso: string | null): string | null {
   if (Number.isNaN(date.getTime())) return null;
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+const MONTHS = [
+  'januar',
+  'februar',
+  'mars',
+  'april',
+  'mai',
+  'juni',
+  'juli',
+  'august',
+  'september',
+  'oktober',
+  'november',
+  'desember',
+] as const;
+
+/**
+ * Når et scorekort ble signert, som «27. september 2026 · 14:32» — datoen i
+ * stempelet på et levert kort (#2262).
+ *
+ * Enhetens egne gettere og månedsnavn skrevet ut her, samme valg og samme
+ * grunn som {@link formatClock}: Hermes har ikke ICU-tidssonene, så `Intl` er
+ * ingen trygg vei til verken Oslo-tid eller norske månedsnavn.
+ *
+ * @returns teksten, eller `null` for en ulesbar verdi.
+ */
+export function formatSignedAt(iso: string): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return `${date.getDate()}. ${MONTHS[date.getMonth()]} ${date.getFullYear()} · ${formatClock(iso)}`;
+}
