@@ -9,7 +9,7 @@
 //    Da kan hver kolonne være ett VoiceOver-element — «Hull 3, par 4, 5 slag,
 //    2 poeng» — i stedet for at skjermleseren leser 40 løsrevne tall.
 // 2. **Ti like kolonner som fyller bredden.** På 375 pt og bredere får hver
-//    kolonne plass til en 28 pt-form. Er skjermen smalere, ruller kortet
+//    kolonne plass til en 26 pt-form med luft rundt. Er skjermen smalere, ruller kortet
 //    sidelengs, aldri skjermen.
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -24,7 +24,8 @@ export interface EnteredByName {
   fullName: string;
 }
 
-const SHAPE = 28;
+// 26 og ikke 28: to firkanter i nabokolonner skal ha luft mellom seg på 390 pt.
+const SHAPE = 26;
 const MIN_COLUMN = 28;
 const LABEL_WIDTH = 40;
 const ROW_HEIGHT = 26;
