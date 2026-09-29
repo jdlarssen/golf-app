@@ -14,6 +14,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
+import { homeBundle, homePlayer } from '../test/homeFixtures';
 import { GameHome, RosterRow } from './GameHome';
 
 // Skjermen drar inn arrangør-seksjonen, som drar inn klienten. Raden selv rører
@@ -407,5 +408,98 @@ describe('GameHome — trukket-banneret (#2358)', () => {
 
     await waitFor(() => expect(screen.getByTestId('withdrawn-banner')).toBeTruthy());
     expect(screen.queryByTestId('withdrawn-undo') !== null).toBe(showsUndo);
+  });
+});
+
+// #2255: spillets side er én startbillett. Rekkefølgen og hva som står per
+// status låses her; hva billetten og stubben SIER, er låst i sine egne tester.
+describe('GameHome — startbilletten (#2255)', () => {
+  /** testID-ene på skjermen, i den rekkefølgen de tegnes. */
+  function testIdsInOrder(): string[] {
+    const ids: string[] = [];
+    const walk = (node: unknown): void => {
+      if (node == null || typeof node !== 'object') return;
+      if (Array.isArray(node)) return node.forEach(walk);
+      const element = node as { props?: { testID?: string }; children?: unknown };
+      if (element.props?.testID) ids.push(element.props.testID);
+      walk(element.children);
+    };
+    walk(screen.toJSON());
+    return ids;
+  }
+
+  const SECTIONS = ['game-ticket', 'game-tiles', 'roster', 'rules-section'];
+
+  it.each([
+    ['planlagt', { status: 'scheduled' }, ['game-ticket', 'roster', 'rules-section'], 'waiting-room'],
+    ['utkast', { status: 'draft' }, ['game-ticket', 'roster', 'rules-section'], 'ticket-draft'],
+    ['pågår', { status: 'active' }, ['game-ticket', 'game-tiles', 'rules-section'], 'primary-cta'],
+    ['avsluttet', { status: 'finished' }, ['game-ticket', 'game-tiles', 'rules-section'], 'finished-banner'],
+  ])('%s: seksjonene i riktig rekkefølge', async (_case, game, expected, stubId) => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', modeConfig: { kind: 'stableford', team_size: 1 }, ...game },
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'ola' })],
+    });
+    mockState.scores = [];
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+    expect(screen.getByTestId(stubId)).toBeTruthy();
+    expect(testIdsInOrder().filter((id) => SECTIONS.includes(id))).toEqual(expected);
+    expect(screen.getByTestId('rules-heading')).toHaveTextContent('Regler: Stableford');
+  });
+
+  it('pågående runde: Tavla og Scorekort går til sine skjermer, og Regler står', async () => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', modeConfig: { kind: 'stableford', team_size: 1 } },
+      players: [homePlayer({ userId: 'me' })],
+    });
+    mockState.scores = [];
+    const navigation = { navigate: jest.fn() };
+
+    await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('game-tiles')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('open-leaderboard'));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Leaderboard', { gameId: 'game-1' });
+    await fireEvent.press(screen.getByTestId('open-scorecard'));
+    expect(navigation.navigate).toHaveBeenLastCalledWith('Scorecard', { gameId: 'game-1' });
+    await fireEvent.press(screen.getByTestId('open-rules'));
+    expect(navigation.navigate).toHaveBeenCalledTimes(2);
+  });
+
+  it('stengt runde (halv cup-dag): bare Regler-flisa, og stengeteksten med nettlenken', async () => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', gameMode: 'singles_matchplay', modeConfig: {}, holeSegment: 'front9' },
+      players: [homePlayer({ userId: 'me', teamNumber: 1 }), homePlayer({ userId: 'ola', teamNumber: 2 })],
+    });
+    mockState.scores = [];
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('game-tiles')).toBeTruthy());
+    expect(screen.getByTestId('open-rules')).toBeTruthy();
+    expect(screen.queryByTestId('open-leaderboard')).toBeNull();
+    expect(screen.queryByTestId('open-scorecard')).toBeNull();
+    expect(screen.getByTestId('format-gate-link')).toBeTruthy();
   });
 });
