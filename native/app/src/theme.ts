@@ -33,6 +33,14 @@ export type ThemeColors = {
    */
   onAccent: string;
   danger: string;
+  /**
+   * Den skoggrønne flaten (#2254, heltekortet på Hjem) — webbens
+   * `--surface-strong`. Skogen er mørk i begge draktene, så teksten oppå den
+   * er lys i begge: det er {@link ThemeColors.onStrong}.
+   */
+  surfaceStrong: string;
+  /** Tekst og strek på `surfaceStrong` — webbens `--bg-tint`. */
+  onStrong: string;
 };
 
 /**
@@ -54,6 +62,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accent: '#C9A961',
     onAccent: '#1B4332',
     danger: '#B8463E',
+    surfaceStrong: '#1B4332',
+    onStrong: '#F0EDE5',
   },
   dark: {
     bg: '#14201A',
@@ -66,6 +76,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accent: '#D4B870',
     onAccent: '#14201A',
     danger: '#D67268',
+    surfaceStrong: '#1F3B2C',
+    onStrong: '#ECE5D2',
   },
 };
 

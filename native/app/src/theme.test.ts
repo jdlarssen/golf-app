@@ -25,6 +25,7 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   primary: '--primary',
   accent: '--accent',
   danger: '--danger',
+  onStrong: '--bg-tint',
 };
 
 const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');
@@ -53,6 +54,16 @@ describe('PALETTES', () => {
         value: web[cssVar!],
       });
     }
+  });
+
+  // #2254: den skoggrønne flaten til heltekortet på Hjem. Webben setter den
+  // mørke verdien bare i `prefers-color-scheme`-blokka, ikke i klubbhus-natt-
+  // blokka testen over leser, så rollen låses mot sin egen blokk her.
+  it.each([
+    ['light', ':root {'],
+    ['dark', ":root:not([data-theme='light']) {"],
+  ] as const)('matches the web %s --surface-strong', (scheme, opener) => {
+    expect(PALETTES[scheme].surfaceStrong.toLowerCase()).toBe(cssVars(opener)['--surface-strong']);
   });
 
   it('keeps the app-only ink roles', () => {
