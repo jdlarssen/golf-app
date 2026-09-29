@@ -197,15 +197,22 @@ i profil-rommet, og bare i staging-bygg.
   Lista caches i `cache_entries` (`home`) og re-hentes ved fokus.
 - **GameHome** — leser `gameBundle`-cachen øyeblikkelig, re-henter i bakgrunnen.
   Primær-CTA-en er webbens `computeState`-maskin speilet i
-  `src/lib/primaryCtaState.ts`.
+  `src/lib/primaryCtaState.ts`. Et planlagt spill viser venterommet
+  (`src/components/game/WaitingRoom.tsx`, #2219): webbens overskrift, nedtelling
+  til tee-off, og en lytter på spillets rad (`subscribeGameStatus`) som henter
+  bundelen når runden starter. Etter tee-off henter hvert 30-sekunders tikk
+  bundelen, i tilfelle realtime ligger nede.
 - **Hole** — flighten avgjøres av delt `isSingleFlightGame`-regel (≤4 aktive
   eller wolf = alle; ellers samme `flight_number`); «+N»-badgen kommer fra delt
   `strokesForHole`. Slag- og putte-stepperne skriver via N2s `writeScore`
   (putte-skriv sender IKKE slag med — mergen bevarer det) og drainer etter hver
-  tasting, som webben.
-- **Scorecard** — webbens Layout A (Hull/Par/SI/Slag/Netto + totaler).
-  «Lever»-knappen speiler webbens to porter: drain + kø-vakt (delt
-  `isActiveForGame`), og bekreftelses-Alert ved manglende hull.
+  tasting, som webben. Bundelen hentes på nytt ved hvert hullbytte og når appen
+  kommer i forgrunnen (#2219), så hullet låses når runden er avsluttet.
+- **Scorecard** — webbens Layout A (Hull/Par/SI/Slag/Netto + totaler). I en
+  blind runde som pågår, skjules Netto-kolonnen og netto-totalene (#2219), som
+  på webben. «Lever»-knappen speiler webbens to porter: drain + kø-vakt (delt
+  `isActiveForGame`), og bekreftelses-Alert ved manglende hull. Knappen er
+  sperret til køen er lest første gang (#2219).
 - **Approve** — lista fra delt `pendingApprovalsFor`; godkjenn/avvis går via
   `POST /api/games/{id}/scorecards/{userId}` (#2215), som varsler spilleren.
 
@@ -1766,7 +1773,7 @@ tilbake i `sign.ts`.** Appen formaterer handicap lokalt (`formatHcpNb` i
 ### Bokførte gap
 
 - **Appens cachede spill-bundle viser gammelt banehandicap til neste refetch.** Recompute
-  skjer på serveren; GameHome refetcher ved fokus, så det retter seg selv — men i det
+  skjer på serveren; GameHome refetcher ved fokus og forgrunn, så det retter seg selv — men i det
   sekundet du går tilbake fra skjemaet, kan tallet være gammelt.
 - **Lagring legges aldri i sync-køen.** Skriv krever nett. En profil-endring kan ikke
   ligge lokalt og gå opp senere, for det er serveren som må regne om de aktive rundene.

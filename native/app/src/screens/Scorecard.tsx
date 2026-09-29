@@ -1,7 +1,8 @@
 // Native N3 (#1825): scorekortet — webbens Layout A speilet, pluss lever-porten.
 //
 // Tabellen er ren visning av lokale tall: par per tee-kjønn, SI, slag og netto
-// (netto = slag − tildelte slag fra delt `strokesForHole`).
+// (netto = slag − tildelte slag fra delt `strokesForHole`). I en blind runde
+// som pågår, skjules netto og tildelte slag (#2219).
 //
 // Lever-knappen har webbens to porter, og de er ikke pynt:
 //  1. **Kø-vakta (#668/#1370):** vi drainer først, og blokkerer så lenge køen
@@ -48,6 +49,12 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { GameStatus } from '../../../../lib/games/status';
+import {
+  revealState,
+  shouldHideNetto,
+  type ScoreVisibility,
+} from '../../../../lib/games/visibility';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
@@ -178,6 +185,19 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     leaderboard,
   });
   const missing = HOLE_COUNT - totals.playedHoles;
+  // #2219: blind runde. Mens den pågår, viser kortet brutto, men ikke netto og
+  // tildelte slag, som nettsidens scorekort. Samme delte regel som
+  // resultatlista (`leaderboardModel.ts`). Banehandicapet står, som på
+  // nettsidens spill-hjem.
+  const hideNetto = shouldHideNetto(
+    revealState(
+      bundle.game.scoreVisibility as ScoreVisibility,
+      bundle.game.status as GameStatus,
+    ),
+  );
+  const headLabels = hideNetto
+    ? ['Hull', 'Par', 'SI', 'Slag']
+    : ['Hull', 'Par', 'SI', 'Slag', 'Netto'];
 
   const canSubmit =
     bundle.game.status === 'active' &&
@@ -291,7 +311,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         ]}
       >
         <View style={[styles.row, styles.headRow, { backgroundColor: colors.bg }]}>
-          {['Hull', 'Par', 'SI', 'Slag', 'Netto'].map((label, index) => (
+          {headLabels.map((label, index) => (
             <Text
               key={label}
               style={[
@@ -300,6 +320,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                 index === 0 ? styles.holeCell : null,
                 { color: colors.muted },
               ]}
+              testID={label === 'Netto' ? 'scorecard-netto-head' : undefined}
             >
               {label}
             </Text>
@@ -321,9 +342,14 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             <Text style={[styles.cell, ui.num, { color: colors.text }]}>
               {row.strokes ?? '—'}
             </Text>
-            <Text style={[styles.cell, ui.num, { color: colors.text }]}>
-              {row.netto ?? '—'}
-            </Text>
+            {hideNetto ? null : (
+              <Text
+                style={[styles.cell, ui.num, { color: colors.text }]}
+                testID={`card-row-${row.holeNumber}-netto`}
+              >
+                {row.netto ?? '—'}
+              </Text>
+            )}
           </View>
         ))}
       </View>
@@ -331,7 +357,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       <View style={ui.card} testID="scorecard-totals">
         <Total label="Spilte hull" value={totals.playedHoles} />
         <Total label="Brutto" value={totals.totalGross} />
-        {totals.totalExtra != null && totals.totalNet != null ? (
+        {!hideNetto && totals.totalExtra != null && totals.totalNet != null ? (
           <>
             <Total label="Tildelte slag" value={totals.totalExtra} />
             <Total label="Netto" value={totals.totalNet} />
