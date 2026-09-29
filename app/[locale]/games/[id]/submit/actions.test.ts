@@ -684,4 +684,40 @@ describe('submitScorecard — levering for flighten (#2200)', () => {
     expect(inCall?.args[1]).toEqual(['user-1', 'ola']);
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
+
+  it('leverte serveren færre makkerkort enn skjemaet ba om, sier kvitteringen det', async () => {
+    // The page offered Ola and Per, but by now only Ola passes the rule
+    // (Per keyed a hole himself in the meantime). The receipt must not read
+    // as if every card went.
+    loadCardsMock.mockResolvedValueOnce([{ userId: 'ola', name: 'Ola', isGuest: false }]);
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          name: 'Vinter-cup',
+          status: 'active',
+          require_peer_approval: false,
+          game_mode: 'stableford',
+          hole_segment: 'full',
+          tournament_id: null,
+          source_game_id: null,
+        },
+        error: null,
+      },
+      { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
+      { data: [{ user_id: 'user-1' }, { user_id: 'ola' }], error: null },
+      { data: { name: 'Kari' }, error: null },
+      { data: [], error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+    const form = new FormData();
+    form.append('alsoFor', 'ola');
+    form.append('alsoFor', 'per');
+
+    const { submitScorecard } = await import('./actions');
+    await expect(submitScorecard('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted_partial');
+  });
 });

@@ -1868,6 +1868,7 @@
       "backToHome": "Back to home",
       "draftBanner": "Draft — admin is still planning. Details may change.",
       "bannerSubmitted": "✓ Scorecard submitted.",
+      "bannerSubmittedPartial": "✓ Submitted, but not all of your flightmates' cards. Someone may have submitted them or entered a hole on them in the meantime.",
       "rejectionBannerPrefix": "Your scorecard was rejected: «",
       "rejectionBannerSuffix": "». Edit your holes and resubmit.",
       "rejectionBannerNoReason": "Your scorecard was rejected, with no reason given. Edit your holes and resubmit.",

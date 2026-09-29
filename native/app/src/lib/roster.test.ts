@@ -14,6 +14,7 @@ import {
   flightDeliveryButton,
   flightDeliveryFor,
   flightDeliveryLines,
+  partialDeliveryNotice,
   pendingApprovals,
   resolveFlight,
   rosterMarks,
@@ -265,6 +266,22 @@ describe('setningene for levering for flighten (#2200)', () => {
   it('navngir makkerne når mitt eget kort alt er levert', () => {
     expect(deliverForButton([ola, kari])).toBe('Lever for Ola og Kari ✓');
   });
+
+  // Serveren spør regelen selv og kan levere færre enn knappen lovet (slagene
+  // på serveren er nyere enn telefonens). Da skal ikke skjermen late som alt
+  // gikk: `null` betyr at alle ble levert.
+  it.each([
+    ['alle levert', 2, 2, null],
+    ['ingen makkere spurt', 0, 0, null],
+    ['den ene makkeren ble ikke levert', 0, 1, 'Makkerkortet ble ikke levert. Noen kan ha levert det eller ført et hull på det i mellomtiden.'],
+    ['ingen av flere', 0, 2, 'Ingen av de 2 makkerkortene ble levert. Noen kan ha levert dem eller ført hull på dem i mellomtiden.'],
+    ['noen av flere', 1, 3, '1 av 3 makkerkort ble levert. Noen kan ha levert de andre eller ført hull på dem i mellomtiden.'],
+  ] as [string, number, number, string | null][])(
+    'beskjeden når serveren leverte færre: %s',
+    (_label, delivered, asked, expected) => {
+      expect(partialDeliveryNotice(delivered, asked)).toBe(expected);
+    },
+  );
 });
 
 describe('rosterStatus', () => {

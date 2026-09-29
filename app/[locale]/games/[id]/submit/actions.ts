@@ -59,5 +59,11 @@ export async function submitScorecard(gameId: string, formData?: FormData) {
     redirect({ href: failureHref(result.reason, gameId) as string, locale });
   }
 
-  redirect({ href: `/games/${gameId}?status=submitted` as string, locale });
+  // #2200: the core narrows `alsoFor` with its own rule, over scores that may
+  // be newer than the page. Fewer flightmates' cards than the form asked for
+  // gets its own receipt, so it never reads as if every card went.
+  const askedMates = new Set(alsoFor.filter((id) => id !== user.id)).size;
+  const status =
+    result.ok && result.alsoDelivered < askedMates ? 'submitted_partial' : 'submitted';
+  redirect({ href: `/games/${gameId}?status=${status}` as string, locale });
 }

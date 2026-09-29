@@ -1868,6 +1868,7 @@
       "backToHome": "Tilbake til hjem",
       "draftBanner": "Utkast — admin planlegger fortsatt. Detaljer kan endre seg.",
       "bannerSubmitted": "✓ Scorekortet er levert.",
+      "bannerSubmittedPartial": "✓ Levert, men ikke alle makkerkortene. Noen kan ha levert dem eller ført hull på dem i mellomtiden.",
       "rejectionBannerPrefix": "Scorekortet ditt ble avvist: «",
       "rejectionBannerSuffix": "». Rediger hullene og lever på nytt.",
       "rejectionBannerNoReason": "Scorekortet ditt ble avvist uten begrunnelse. Rediger hullene og lever på nytt.",
