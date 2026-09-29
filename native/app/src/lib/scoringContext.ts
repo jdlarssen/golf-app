@@ -243,7 +243,7 @@ const MODE_CONFIG_FALLBACK_FIELDS: Partial<Record<GameMode, Record<string, unkno
  * har noensinne sett dem (alle vaktene narrower på kind først), så å plukke
  * dem opp nå ville gitt appen andre tall enn nettsiden.
  */
-function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | null {
+export function asModeConfig(mode: GameMode, raw: unknown): GameModeConfig | null {
   const derived = { kind: mode, ...MODE_CONFIG_FALLBACK_FIELDS[mode] } as GameModeConfig;
   if (typeof raw !== 'object' || raw === null) return derived;
   const kind = (raw as { kind?: unknown }).kind;
@@ -286,8 +286,14 @@ export function playerStrokeHandicapFor(
   return playerStrokeHandicap(mode, cfg, courseHandicap);
 }
 
-/** HELE rosteret, trukne spillere inkludert — se punkt 2 i topptekstet. */
-function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
+/**
+ * HELE rosteret, trukne spillere inkludert — se punkt 2 i topptekstet.
+ *
+ * Eksportert (#2254) for Hjem-heltekortet, som mater tavlas `computeLiveBoard`
+ * med samme rader som tabellen her får. En kopi ville vært et andre hjem for
+ * kartleggingen.
+ */
+export function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
   return bundle.players.map((player) => ({
     user_id: player.userId,
     // Kolonnen er nullable i prod (#844). `?? 0` er samme kollaps som
@@ -302,7 +308,7 @@ function toPlayerRows(bundle: GameBundle): ContextPlayerRow[] {
   }));
 }
 
-function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
+export function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
   return bundle.holes.map((hole) => ({
     hole_number: hole.holeNumber,
     par_mens: hole.parMens,
@@ -320,7 +326,7 @@ function toHoleRows(bundle: GameBundle): ContextHoleRow[] {
  * hele tatt. Slagene til trukne spillere blir med videre; byggerne som
  * filtrerer dem dropper dem selv, og de som ikke gjør det skal ha dem (web).
  */
-function toScoreRows(
+export function toScoreRows(
   scores: readonly LocalScore[],
   rosterUserIds: ReadonlySet<string>,
 ): ContextScoreRow[] {
