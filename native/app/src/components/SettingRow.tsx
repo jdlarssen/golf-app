@@ -37,6 +37,11 @@ interface SettingRowProps {
   onPress: () => void;
   /** Tekst-chevron «›» — kun på rader som navigerer videre. */
   chevron?: boolean;
+  /**
+   * Raden er ett av flere valg (#2256, temavalget). `true` tegner «✓» og sier
+   * «valgt» til skjermleseren; utelatt betyr at raden ikke er et valg.
+   */
+  selected?: boolean;
   disabled?: boolean;
   testID?: string;
 }
@@ -50,6 +55,7 @@ export function SettingRow({
   tone = 'default',
   onPress,
   chevron = false,
+  selected,
   disabled = false,
   testID,
 }: SettingRowProps): React.JSX.Element {
@@ -71,7 +77,9 @@ export function SettingRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      // Et valg leses som etiketten pluss «valgt», ikke som «Lys hake».
+      accessibilityLabel={selected === undefined ? undefined : label}
+      accessibilityState={selected === undefined ? { disabled } : { disabled, selected }}
       disabled={disabled}
       onPress={onPress}
       testID={testID}
@@ -83,6 +91,11 @@ export function SettingRow({
           <Text style={[styles.sublabel, { color: colors.muted }]}>{sublabel}</Text>
         ) : null}
       </View>
+      {selected ? (
+        <Text style={[styles.check, { color: colors.primary }]} testID={testID ? `${testID}-check` : undefined}>
+          ✓
+        </Text>
+      ) : null}
       {chevron ? <Text style={[styles.chevron, chevronStyle]}>›</Text> : null}
     </Pressable>
   );
@@ -147,5 +160,6 @@ const styles = StyleSheet.create({
   // Ett hakk under etiketten, så raden leses som én ting og ikke som to.
   sublabel: { fontSize: 13, fontFamily: FONTS.sans },
   chevron: { fontSize: 20, fontFamily: FONTS.sans },
+  check: { fontSize: 18, fontFamily: FONTS.sansSemiBold },
   separator: { height: StyleSheet.hairlineWidth },
 });

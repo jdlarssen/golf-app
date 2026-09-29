@@ -12,17 +12,17 @@
 //  1. **Sync-lab finnes ikke i et butikk-bygg.** Den viktigste asserten i fila:
 //     den er porten mot at en utviklerflate følger med appen ut i App Store.
 //     Ikke skjult, ikke deaktivert — ikke i treet.
-//  2. **«Slett konto» og «Rediger profil» navigerer** og gjør ingenting selv.
-//     Både bekreftelsen og skjemaet er egne rom; rommet her er inngangen.
+//  2. **Menyen navigerer** og gjør ingenting selv (#2256): «Varsler og tema»
+//     og «Personvern og konto» er egne rom. «Rediger» står i navigatorens
+//     header, og personvernerklæringen og «Slett konto» er flyttet til
+//     «Personvern og konto» (`AccountSettings.test.tsx`).
 //  3. **«Logg ut» spør før den lar slag ligge igjen.** `logOut` svarer `unsent`,
 //     skjermen viser dialogen, «Avbryt» setter raden tilbake slik den var, og
 //     «Logg ut likevel» er det ENESTE som sender `keepUnsent`.
 //  4. **Raden låser seg ikke når sesjonen overlevde.** `signout-failed` betyr at
 //     spilleren fortsatt er innlogget; da må «Logger ut …» gå tilbake til «Logg
 //     ut», for skjermen unmountes aldri — `SIGNED_OUT` kom jo ikke.
-//  5. **Personvernerklæringen er ett trykk unna (#2229).** Apple krever lenken
-//     inne i appen. Raden åpner `/legal/privacy` i nettleseren, og når det
-//     ikke går, står grunnen under raden i stedet for at trykket gjør ingenting.
+//  5. **Flisene forsvinner bare når sesongen ikke kunne leses (#2256).**
 //
 // Fire renders og ikke én: staging-på og staging-av er to bygg, og en dialog som
 // står åpen (eller en feilet utlogging) er tilstander skjermen ikke kan være i
@@ -31,11 +31,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
+import { fetchBagTagExtras } from '../data/bagTag';
 import { logOut } from '../data/logout';
 import { fetchOwnProfile } from '../data/profile';
 import { PROFILE_TEXT, formatHcpNb, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
-import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { Profile } from './Profile';
 
@@ -49,19 +49,14 @@ jest.mock('../session', () => ({
   useSession: () => ({ userId: mockMe, email: mockEmail }),
 }));
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
+jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
 jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
-// Bare `openWeb` byttes ut: feilteksten skal komme fra den ekte
-// `describeWebLinkFailure`, slik skjermen henter den.
-jest.mock('../lib/webLink', () => ({
-  ...jest.requireActual('../lib/webLink'),
-  openWeb: jest.fn(),
-}));
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
+const fetchBagTagExtrasMock = fetchBagTagExtras as jest.Mock;
 const logOutMock = logOut as jest.Mock;
 const isStagingBuildMock = isStagingBuild as jest.Mock;
-const openWebMock = openWeb as jest.Mock;
 
 const MY_NAME = 'Jørgen Larssen';
 const MY_HCP = 12.4;
@@ -102,10 +97,16 @@ describe('Profile', () => {
       // En vanlig spiller HAR fullført profilen. Uten stempelet leser kortet
       // handicapet som «aldri satt» (#1979), og det er en annen test.
       profileCompletedAt: '2026-08-30T10:00:00.000Z',
+      createdAt: '2026-04-12T18:00:00.000Z',
+    });
+    // Tallene er `computeProfileSeason` sine og asserteres ikke her.
+    fetchBagTagExtrasMock.mockResolvedValue({
+      year: 2026,
+      club: 'Losby GK',
+      season: { rounds: 3, bestRound: 82, wins: 1 },
     });
     logOutMock.mockResolvedValue({ ok: true });
     isStagingBuildMock.mockReturnValue(false);
-    openWebMock.mockResolvedValue({ ok: true });
     // Spionen settes for HVER test, ikke bare den som venter dialogen: uten den
     // er `Alert.alert` den ekte funksjonen, og «ble ikke spurt» kunne ikke
     // uttrykkes som en assert i det hele tatt.
@@ -130,6 +131,7 @@ describe('Profile', () => {
       gender: null,
       level: null,
       profileCompletedAt: null,
+      createdAt: null,
     });
 
     await renderScreen();
@@ -141,50 +143,26 @@ describe('Profile', () => {
     expect(screen.getByTestId('profile-set-handicap')).toBeTruthy();
   });
 
-  it('viser hvem du er, åpner personvernerklæringen, logger ut, og har ingen utviklerflate i et butikk-bygg', async () => {
+  it('viser hvem du er, fører videre fra menyen, logger ut, og har ingen utviklerflate i et butikk-bygg', async () => {
     await renderScreen();
 
     expect(screen.getByTestId('profile-name')).toHaveTextContent(MY_NAME);
-    expect(screen.getByTestId('profile-email')).toHaveTextContent(mockEmail);
     expect(screen.getByTestId('profile-hcp-value')).toHaveTextContent(
       formatHcpNb(MY_HCP),
     );
+    expect(await screen.findByTestId('season-tile-wins')).toBeTruthy();
 
     // Porten mot App Store: raden skal ikke finnes, ikke bare være usynlig.
     expect(screen.queryByTestId('profile-sync-lab')).toBeNull();
     expect(screen.queryByTestId('profile-developer')).toBeNull();
 
-    // Begge inngangene navigerer bare — skjemaet fylles ut i sitt eget rom, og
-    // sletting bekreftes i sitt. Ingen av dem logger deg ut på veien.
-    await fireEvent.press(screen.getByTestId('profile-edit-entry'));
-    expect(navigate).toHaveBeenCalledWith('EditProfile');
-
-    await fireEvent.press(screen.getByTestId('profile-delete-entry'));
-    expect(navigate).toHaveBeenCalledWith('DeleteAccount');
+    // Menyradene navigerer bare. Sletting og personvern bor ikke her lenger.
+    await fireEvent.press(screen.getByTestId('profile-notifications-theme'));
+    expect(navigate).toHaveBeenCalledWith('NotificationsAndTheme');
+    await fireEvent.press(screen.getByTestId('profile-account-settings'));
+    expect(navigate).toHaveBeenCalledWith('AccountSettings');
+    expect(screen.queryByTestId('profile-delete-entry')).toBeNull();
     expect(logOutMock).not.toHaveBeenCalled();
-
-    // #2229: personvernerklæringen åpnes på nettsiden. Går det bra, står det
-    // ingenting under raden.
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('profile-privacy'));
-    });
-    expect(openWebMock).toHaveBeenCalledWith('/legal/privacy');
-    expect(screen.queryByTestId('profile-privacy-error')).toBeNull();
-
-    // Mangler bygget adressen, sier raden det i stedet for å gjøre ingenting.
-    openWebMock.mockResolvedValueOnce({ ok: false, reason: 'no-web-base-url' });
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('profile-privacy'));
-    });
-    expect(screen.getByTestId('profile-privacy-error')).toHaveTextContent(
-      describeWebLinkFailure('no-web-base-url'),
-    );
-
-    // Linja står til neste trykk, og et trykk som går bra tar den bort.
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('profile-privacy'));
-    });
-    expect(screen.queryByTestId('profile-privacy-error')).toBeNull();
 
     // Første forsøk går alltid uten `keepUnsent`: det er `logOut` som avgjør om
     // køen er tom, ikke skjermen.
@@ -193,6 +171,16 @@ describe('Profile', () => {
       expect(logOutMock).toHaveBeenCalledWith();
     });
     expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  it('skjuler flisene når sesongen ikke kunne leses, men beholder kortet', async () => {
+    fetchBagTagExtrasMock.mockResolvedValue({ year: 2026, club: null, season: null });
+    await renderScreen();
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('season-tiles')).toBeNull();
+    });
+    expect(screen.getByTestId('profile-name')).toHaveTextContent(MY_NAME);
   });
 
   it('slipper Sync-lab inn i et staging-bygg', async () => {
@@ -297,8 +285,6 @@ describe('Profile', () => {
     const name = screen.getByTestId('profile-name');
     expect(name).not.toHaveTextContent(mockEmail);
     expect(name).not.toHaveTextContent(MY_NAME);
-    // Hvem du er står likevel på skjermen hele tiden — på linja under.
-    expect(screen.getByTestId('profile-email')).toHaveTextContent(mockEmail);
 
     await act(async () => {
       land({
@@ -309,6 +295,7 @@ describe('Profile', () => {
         gender: null,
         level: null,
         profileCompletedAt: '2026-08-30T10:00:00.000Z',
+        createdAt: '2026-04-12T18:00:00.000Z',
       });
     });
 

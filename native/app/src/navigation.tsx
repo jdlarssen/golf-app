@@ -22,6 +22,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import Constants from 'expo-constants';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
+import { AccountSettings } from './screens/AccountSettings';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
@@ -31,6 +32,7 @@ import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
+import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
@@ -67,8 +69,15 @@ export type RootStackParamList = {
    * veiviseren står montert under med alt du har valgt.
    */
   EditProfile: { returnTo?: 'CreateGame' } | undefined;
-  /** Bekreftelse på konto-sletting (#1876) — egen skjerm, husregelen. */
+  /**
+   * Bekreftelse på konto-sletting (#1876) — egen skjerm, husregelen. Åpnes fra
+   * «Personvern og konto» (#2256), og `goBack()` lander der.
+   */
   DeleteAccount: undefined;
+  /** «Personvern og konto» (#2256): e-post, personvernerklæring, «Slett konto». */
+  AccountSettings: undefined;
+  /** «Varsler og tema» (#2256): temavalget; varslene kommer i PR 4. */
+  NotificationsAndTheme: undefined;
   SyncLab: undefined;
 };
 
@@ -79,25 +88,32 @@ export type ScreenProps<T extends keyof RootStackParamList> =
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 /**
- * Ordet «Profil» oppe til høyre på hjem.
+ * Et ord oppe til høyre i headeren: «Profil» på hjem, «Rediger» i profilen
+ * (#2256).
  *
  * Et ord og ikke et ikon: ikonspråket (#1879) er ikke bygget ennå, og en løs
  * silhuett her ville forskuttert det valget. Tap-flaten er `TAP` bred og høy
  * selv om ordet er smalere — headeren er det trangeste stedet i appen å treffe,
  * og et ord på fem tegn er ikke en tap-flate i seg selv.
  */
-function HeaderProfileLink({ onPress }: { onPress: () => void }) {
+function HeaderTextLink({
+  label,
+  onPress,
+  testID,
+}: {
+  label: string;
+  onPress: () => void;
+  testID: string;
+}) {
   const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={styles.headerLink}
-      testID="open-profile"
+      testID={testID}
     >
-      <Text style={[styles.headerLinkText, { color: colors.primary }]}>
-        {PROFILE_TEXT.heading}
-      </Text>
+      <Text style={[styles.headerLinkText, { color: colors.primary }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -167,7 +183,11 @@ export function RootNavigator() {
             // gjort det slik siden #1954 P1b — dette er den siste hardkodingen.
             title: Constants.expoConfig?.name ?? APP_NAME_FALLBACK,
             headerRight: () => (
-              <HeaderProfileLink onPress={() => navigation.navigate('Profile')} />
+              <HeaderTextLink
+                label={PROFILE_TEXT.heading}
+                onPress={() => navigation.navigate('Profile')}
+                testID="open-profile"
+              />
             ),
           })}
         />
@@ -209,7 +229,18 @@ export function RootNavigator() {
         <Stack.Screen
           name="Profile"
           component={Profile}
-          options={{ title: PROFILE_TEXT.heading }}
+          // «Rediger» bor her av samme grunn som «Profil» på hjem: headeren er
+          // navigatorens flate. Skjemaet er et eget rom (`EditProfile`).
+          options={({ navigation }) => ({
+            title: PROFILE_TEXT.heading,
+            headerRight: () => (
+              <HeaderTextLink
+                label={PROFILE_TEXT.editAction}
+                onPress={() => navigation.navigate('EditProfile')}
+                testID="profile-edit-entry"
+              />
+            ),
+          })}
         />
         <Stack.Screen
           name="EditProfile"
@@ -220,6 +251,16 @@ export function RootNavigator() {
           name="DeleteAccount"
           component={DeleteAccount}
           options={{ title: 'Slett konto' }}
+        />
+        <Stack.Screen
+          name="AccountSettings"
+          component={AccountSettings}
+          options={{ title: PROFILE_TEXT.menuAccount }}
+        />
+        <Stack.Screen
+          name="NotificationsAndTheme"
+          component={NotificationsAndTheme}
+          options={{ title: PROFILE_TEXT.menuNotificationsTheme }}
         />
         <Stack.Screen
           name="SyncLab"
