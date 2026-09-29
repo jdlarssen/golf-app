@@ -362,7 +362,8 @@ export async function withdrawSelf(
  *          blir stående på et lag uten kaptein;
  *       3. kapteinens egen plass slettes.
  *     Feiler steg 1, er ingenting skrevet. Et nytt forsøk etter en feil i steg
- *     2 eller 3 hopper over steg 1 (raden er alt trukket) og fullfører resten.
+ *     2 eller 3 hopper over steg 1 (raden er alt trukket) og fullfører resten,
+ *     og cachen tømmes ved feilen, så spillerlista ikke viser en gammel tilstand.
  *   - De som mistet invitasjonen får det eksisterende `team_removed`-varselet.
  *
  * Kappløpet der en lagkamerat takker ja i samme øyeblikk er kjent og sjeldent:
@@ -383,9 +384,19 @@ async function withdrawCaptainPreStart(
 
   const decidedAt = new Date().toISOString();
 
-  // 1. Kapteinens påmelding. 0 rader = noe endret raden mellom lesing og
-  // skriving (felle 2): svar db_error før noe annet er rørt.
-  if (myReq.status !== 'withdrawn') {
+  // Etter første skriving tømmes cachen også når et senere steg feiler: en
+  // halvveis utført trekking skal ikke stå skjult bak en gammel spillerliste.
+  const failAfterWrites = (): SelfWithdrawResult => {
+    expireGameCache(game.id);
+    return { ok: false, error: 'db_error' };
+  };
+
+  // 1. Kapteinens påmelding, når den er ventende eller godkjent. En avvist
+  // eller alt trukket påmelding står som den er: arrangøren kan ha avvist
+  // laget og lagt kapteinen til for hånd, og da er det bare plassen som skal
+  // bort. 0 rader = noe endret raden mellom lesing og skriving (felle 2): svar
+  // db_error før noe annet er rørt.
+  if (myReq.status === 'pending' || myReq.status === 'approved') {
     try {
       expectAffected(
         await admin
@@ -423,7 +434,7 @@ async function withdrawCaptainPreStart(
         gameId: game.id,
         error: rosterError,
       });
-      return { ok: false, error: 'db_error' };
+      return failAfterWrites();
     }
     const { error: invitesError } = await admin
       .from('game_registration_requests')
@@ -443,7 +454,7 @@ async function withdrawCaptainPreStart(
         gameId: game.id,
         error: invitesError,
       });
-      return { ok: false, error: 'db_error' };
+      return failAfterWrites();
     }
   }
 
@@ -455,7 +466,7 @@ async function withdrawCaptainPreStart(
     .eq('user_id', userId);
   if (deleteError) {
     console.error('[withdrawSelf] captain delete failed', deleteError);
-    return { ok: false, error: 'db_error' };
+    return failAfterWrites();
   }
 
   expireGameCache(game.id);

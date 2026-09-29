@@ -810,6 +810,58 @@ describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
+  it('avvist kaptein som arrangøren la til for hånd → trekker seg, påmeldingen står som avvist', async () => {
+    // Evaluator runde 1, funn 2: arrangøren avviste laget og la så kapteinen
+    // til fra spillerlista. Markeringen gjelder bare ventende og godkjente
+    // påmeldinger; en avvist rad skal ikke stoppe trekket med db_error.
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster, ok],
+        game_registration_requests: [
+          { data: { ...captainReq.data, status: 'rejected' }, error: null },
+          { data: [], error: null },
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+    expect(writes('game_registration_requests')).toHaveLength(0);
+    expect(writes('game_players').map((c) => c.method)).toEqual(['delete']);
+  });
+
+  it('feil etter at noe er skrevet → db_error, og cachen tømmes likevel', async () => {
+    // Evaluator runde 1, funn 3: de ubekreftede plassene er alt fjernet når
+    // markeringen av invitasjonene feiler. Spillerlista i cachen skal ikke
+    // vise dem i et kvarter til.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          onRoster,
+          { data: [{ user_id: TEAMMATE_ID, accepted_at: null }], error: null },
+          ok, // DELETE ubekreftede plasser — går gjennom
+        ],
+        game_registration_requests: [
+          captainReq,
+          {
+            data: [{ id: CHILD_REQ_ID, user_id: TEAMMATE_ID, status: 'approved', decided_by_user_id: USER_ID }],
+            error: null,
+          },
+          { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
+          { data: null, error: { code: '08006', message: 'reset' } }, // invitasjonene feiler
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'db_error' });
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
   it('feil når påmeldingen leses → db_error, ikke «ingen påmelding»', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     adminMock = buildSupabaseMock([], {}, {

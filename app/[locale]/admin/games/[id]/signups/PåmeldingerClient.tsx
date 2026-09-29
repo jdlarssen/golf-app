@@ -94,6 +94,15 @@ export function PåmeldingerClient({
   // Bekreftelsen står på samme skjerm, ikke i en nettleser-confirm().
   const [captainFor, setCaptainFor] = useState<string | null>(null);
   const [transferring, setTransferring] = useState<string | null>(null);
+  // Actionen svarer med en omdirigering (?status eller ?error), og siden sender
+  // nye rader. Da er valget ferdig — også når det feilet — så knappen skal ikke
+  // stå fast på «Lagrer …». Nullstilles under rendering, ikke i en effekt.
+  const [seenRequests, setSeenRequests] = useState(requests);
+  if (seenRequests !== requests) {
+    setSeenRequests(requests);
+    setCaptainFor(null);
+    setTransferring(null);
+  }
   const [reason, setReason] = useState('');
   const [, startTransition] = useTransition();
 
