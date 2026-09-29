@@ -263,6 +263,24 @@ export function formatHcpNb(signed: number): string {
 }
 
 /**
+ * Linja under handicap-kurven på bag-taggen (#2256): «−2,6 denne sesongen».
+ * Ned er bedre, og tegnet er et ekte minus (−), som i designet. En sesong som
+ * ender der den begynte, er «Uendret denne sesongen».
+ */
+export function handicapSeasonChange(change: number): string {
+  if (change === 0) return 'Uendret denne sesongen';
+  const size = Math.abs(change).toFixed(1).replace('.', ',');
+  return `${change < 0 ? '−' : '+'}${size} denne sesongen`;
+}
+
+/** Det samme i ord for skjermleseren: «ned 2,6 denne sesongen». */
+export function handicapSeasonChangeSpoken(change: number): string {
+  if (change === 0) return 'uendret denne sesongen';
+  const size = Math.abs(change).toFixed(1).replace('.', ',');
+  return `${change < 0 ? 'ned' : 'opp'} ${size} denne sesongen`;
+}
+
+/**
  * Undertittelen på handicap-raden: enten påminnelsen om at det er gammelt,
  * eller når det sist ble satt.
  *

@@ -1,4 +1,5 @@
-// #2256: klubben og sesongen til bag-taggen. Type A mot supabase-mocken.
+// #2256: klubben, sesongen og handicap-kurven til bag-taggen. Type A mot
+// supabase-mocken.
 //
 // Sesongen går gjennom den ekte runde-lista (`data/roundHistory.ts`), så
 // testen under er hele veien fra rader til flis-tall: året rundt nyttår i
@@ -57,6 +58,15 @@ describe('fetchBagTagExtras', () => {
   it('reads the first club and this year’s season', async () => {
     const { queryStub, routeFrom, stepArgs } = mocks();
     const clubs = queryStub({ data: [{ joined_at: '2025-03-01', groups: { name: 'Losby GK' } }], error: null });
+    // PostgREST gir numeric som tekst; rekkefølgen er basens.
+    const history = queryStub({
+      data: [
+        { hcp_index: '16.8', recorded_at: '2025-11-03T10:00:00.000Z' },
+        { hcp_index: '15.9', recorded_at: '2026-05-02T10:00:00.000Z' },
+        { hcp_index: '14.2', recorded_at: '2026-09-20T10:00:00.000Z' },
+      ],
+      error: null,
+    });
     routeFrom({
       group_members: [clubs],
       game_players: [
@@ -82,11 +92,14 @@ describe('fetchBagTagExtras', () => {
           error: null,
         }),
       ],
+      handicap_history: [history],
     });
 
     const extras = await subject().fetchBagTagExtras(ME, NOW);
 
     expect(stepArgs(clubs, 'eq')).toEqual([['user_id', ME]]);
+    expect(stepArgs(history, 'eq')).toEqual([['user_id', ME]]);
+    expect(stepArgs(history, 'order')).toEqual([['recorded_at', { ascending: true }]]);
     expect(stepArgs(clubs, 'order')).toEqual([['joined_at', { ascending: true }]]);
     expect(stepArgs(clubs, 'limit')).toEqual([[1]]);
     expect(extras).toEqual({
@@ -95,6 +108,8 @@ describe('fetchBagTagExtras', () => {
       // Fire runder i 2026. Scramble (lagets 58 slag) og 17 slag gir ingen
       // beste runde, så den er 76. To seire: scramble som lag og matchplay.
       season: { rounds: 4, bestRound: 76, wins: 2 },
+      // Sesongen starter fra verdien før nyttår.
+      trend: { points: [16.8, 15.9, 14.2], change: -2.6 },
     });
   });
 
@@ -103,6 +118,7 @@ describe('fetchBagTagExtras', () => {
     routeFrom({
       group_members: [queryStub({ data: [{ joined_at: '2025-03-01', groups: [{ name: 'Bogstad' }] }], error: null })],
       game_players: [queryStub({ data: [], error: null })],
+      handicap_history: [queryStub({ data: [], error: null })],
     });
 
     expect((await subject().fetchBagTagExtras(ME, NOW)).club).toBe('Bogstad');
@@ -113,16 +129,19 @@ describe('fetchBagTagExtras', () => {
     routeFrom({
       group_members: [queryStub({ data: [], error: null })],
       game_players: [queryStub({ data: [], error: null })],
+      handicap_history: [queryStub({ data: [{ hcp_index: '14.2', recorded_at: '2026-09-20T10:00:00.000Z' }], error: null })],
     });
 
     expect(await subject().fetchBagTagExtras(ME, NOW)).toEqual({
       year: 2026,
       club: null,
       season: { rounds: 0, bestRound: null, wins: 0 },
+      // Ett punkt er ingen kurve: «Oppdatert …» står.
+      trend: null,
     });
   });
 
-  it('keeps the season when the club lookup fails, and the club when the season fails', async () => {
+  it('keeps the rest when the club, the season or the curve fails', async () => {
     const { queryStub, routeFrom } = mocks();
     routeFrom({
       group_members: [
@@ -133,11 +152,17 @@ describe('fetchBagTagExtras', () => {
         queryStub({ data: [], error: null }),
         queryStub({ data: null, error: { message: 'tidsavbrudd' } }),
       ],
+      handicap_history: [
+        // Før migrasjonen er i basen: tabellen finnes ikke.
+        queryStub({ data: null, error: { message: 'relation "public.handicap_history" does not exist' } }),
+        queryStub({ data: [], error: null }),
+      ],
     });
 
     expect(await subject().fetchBagTagExtras(ME, NOW)).toMatchObject({
       club: null,
       season: { rounds: 0 },
+      trend: null,
     });
     expect(await subject().fetchBagTagExtras(ME, NOW)).toMatchObject({
       club: 'Losby GK',
