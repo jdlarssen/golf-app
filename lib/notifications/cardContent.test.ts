@@ -98,6 +98,24 @@ describe('buildNotificationText', () => {
     );
   });
 
+  it('deliver_reminder for kort føreren har ført for andre, har egen tekst (#2200)', () => {
+    const textFor = (payload: Record<string, unknown>) =>
+      buildNotificationText(
+        'deliver_reminder',
+        { game_id: 'g', game_name: 'Vinter-cup', ...payload } as NotificationPayload,
+        t,
+      );
+
+    expect(textFor({})).toEqual({
+      title: 'kinds.deliverReminder.title',
+      detail: `kinds.deliverReminder.detail|${JSON.stringify({ gameName: 'Vinter-cup' })}`,
+    });
+    expect(textFor({ others_count: 2 })).toEqual({
+      title: 'kinds.deliverReminder.titleKept',
+      detail: `kinds.deliverReminder.detailKept|${JSON.stringify({ gameName: 'Vinter-cup' })}`,
+    });
+  });
+
   it('cup_signup velger tittel på retningen, med locale-fallback for navnet (#1490)', () => {
     const titleFor = (payload: Record<string, unknown>) =>
       buildNotificationText(

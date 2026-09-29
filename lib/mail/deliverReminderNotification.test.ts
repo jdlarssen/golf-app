@@ -153,6 +153,30 @@ describe('sendDeliverReminderNotification', () => {
     `);
   });
 
+  // #2200: føreren som har ført kort for andre, får en egen variant.
+  it('kort ført for andre: egen tittel, tekst og knapp', async () => {
+    const payload = await send({ ...baseParams, forKeptCards: true });
+    expect(payload.subject).toBe('Lever kortene du har ført i Sommercup 2026');
+    expect(bodyLineHtml(payload.html)).toBe(
+      'Du har ført kort i <strong>Sommercup 2026</strong> som ikke er levert ennå. Lever dem med ett trykk, så kan arrangøren avslutte runden.',
+    );
+    expect(payload.text).toContain(
+      'Du har ført kort i Sommercup 2026 som ikke er levert ennå. Lever dem med ett trykk, så kan arrangøren avslutte runden.',
+    );
+    expect(payload.text).toContain(
+      'Lever kortene: https://tornygolf.no/games/11111111-1111-1111-1111-111111111111/submit',
+    );
+    expect(payload.html).toContain('Lever kortene du har ført');
+  });
+
+  it('kort ført for andre, engelsk', async () => {
+    const payload = await send({ ...baseParams, forKeptCards: true, locale: 'en' });
+    expect(payload.subject).toBe('Submit the cards you kept in Sommercup 2026');
+    expect(bodyLineHtml(payload.html)).toBe(
+      "You kept cards in <strong>Sommercup 2026</strong> that haven't been submitted yet. Submit them in one tap so the organizer can finish the round.",
+    );
+  });
+
   // ─────────────────────────────────────────────────────────────────────
   // Engelsk (locale: 'en') — Fase M.
   // ─────────────────────────────────────────────────────────────────────

@@ -25,16 +25,23 @@ export type DeliverReminderNotificationParams = {
   gameId: string;
   /** Mottakerens locale (#594). Normalt udefinert → norsk. */
   locale?: string | null;
+  /**
+   * #2200: påminnelsen gjelder kort mottakeren har ført for andre. Da har
+   * mailen sin egen tittel, tekst og knapp («Lever kortene du har ført»).
+   */
+  forKeptCards?: boolean;
 };
 
 export async function sendDeliverReminderNotification(
   params: DeliverReminderNotificationParams,
 ): Promise<void> {
-  const { to, playerFirstName, gameName, gameId, locale } = params;
+  const { to, playerFirstName, gameName, gameId, locale, forKeptCards } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
-  const subject = t('deliverReminder.subject', { gameName });
+  const subject = forKeptCards
+    ? t('deliverReminder.subjectKept', { gameName })
+    : t('deliverReminder.subject', { gameName });
   const submitUrl = mailUrl(locale, `/games/${gameId}/submit`);
   const homeUrl = mailUrl(locale, '');
 
@@ -42,11 +49,20 @@ export async function sendDeliverReminderNotification(
     ? t('deliverReminder.salutationNamed', { name: playerFirstName })
     : t('deliverReminder.salutationGeneric');
 
-  const bodyHtml = t.markup('deliverReminder.body', {
+  const bodyHtml = t.markup(forKeptCards ? 'deliverReminder.bodyKept' : 'deliverReminder.body', {
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
   });
-  const bodyText = t('deliverReminder.bodyText', { gameName });
+  const bodyText = forKeptCards
+    ? t('deliverReminder.bodyTextKept', { gameName })
+    : t('deliverReminder.bodyText', { gameName });
+  const heading = forKeptCards ? t('deliverReminder.headingKept') : t('deliverReminder.heading');
+  const submitButton = forKeptCards
+    ? t('deliverReminder.submitButtonKept')
+    : t('deliverReminder.submitButton');
+  const submitButtonText = forKeptCards
+    ? t('deliverReminder.submitButtonTextKept', { url: submitUrl })
+    : t('deliverReminder.submitButtonText', { url: submitUrl });
 
   const footerHtml = t.markup('deliverReminder.footer', {
     link: (c) =>
@@ -72,7 +88,7 @@ export async function sendDeliverReminderNotification(
               ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              ${t('deliverReminder.heading')}
+              ${heading}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${escapeHtml(salutation)}
@@ -82,7 +98,7 @@ export async function sendDeliverReminderNotification(
             </p>
             <div style="margin:32px 0;">
               <a href="${submitUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                ${t('deliverReminder.submitButton')}
+                ${submitButton}
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
@@ -100,7 +116,7 @@ export async function sendDeliverReminderNotification(
     `${subject}\n\n` +
     `${salutation}\n\n` +
     `${bodyText}\n\n` +
-    `${t('deliverReminder.submitButtonText', { url: submitUrl })}\n\n` +
+    `${submitButtonText}\n\n` +
     `${t('common.footerTagline')}\n`;
 
   await sendMail({
