@@ -120,6 +120,9 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     approverUserId: user.id,
     playerUserId,
     approverRole: 'peer',
+    // #2200: admin is the guard's exemption (0191); loadAndAuthorize has
+    // already refused a non-admin who delivered this card.
+    delivererMayApprove: authz.isAdmin,
   });
 
   // `not_pending` and `db` share the existing `db` code («Klarte ikke å lagre

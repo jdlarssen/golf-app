@@ -75,6 +75,16 @@ function expireReviewedGame(gameId: string): void {
  * Godkjenn en medspillers scorekort. Idempotent — er kortet alt godkjent, er
  * dette en no-op uten nytt varsel. Nuller en tidligere `rejection_reason` så
  * den ikke blir hengende.
+ *
+ * #2200: skrivingen bærer selv vaktas regler fra 0191, fordi ruta skriver med
+ * service-role og vakta da ikke kjører:
+ *   - bare et levert kort godkjennes (`submitted_at` satt), uansett rolle;
+ *   - godkjenneren er alltid `approverUserId`, den som faktisk gjør det;
+ *   - den som leverte kortet, godkjenner det ikke, med mindre kalleren sier
+ *     `delivererMayApprove` — admin eller arrangør, samme unntak som vakta.
+ *     Ukjent leverandør (kort levert før 0191) er som før.
+ * Regelen står i samme UPDATE som godkjenningen, så porten og skrivingen ikke
+ * kan komme i utakt. Et kort regelen stopper, blir `not_pending`.
  */
 export async function approveScorecardCore(opts: {
   client: CoreClient;
@@ -82,10 +92,16 @@ export async function approveScorecardCore(opts: {
   approverUserId: string;
   playerUserId: string;
   approverRole: 'peer' | 'organizer';
+  /**
+   * Admin eller arrangør (#2200). Påkrevd, så et nytt kallsted må ta stilling.
+   * Ikke det samme som `approverRole`: webbens /approve sier `peer` også for
+   * en admin, fordi rollen bare styrer ordlyden i varselet.
+   */
+  delivererMayApprove: boolean;
 }): Promise<ReviewScorecardResult> {
   const { client, gameId, approverUserId, playerUserId, approverRole } = opts;
 
-  const { data: updated, error } = await client
+  let approve = client
     .from('game_players')
     .update({
       approved_at: new Date().toISOString(),
@@ -95,8 +111,13 @@ export async function approveScorecardCore(opts: {
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
     .not('submitted_at', 'is', null)
-    .is('approved_at', null)
-    .select('user_id');
+    .is('approved_at', null);
+  if (!opts.delivererMayApprove) {
+    approve = approve.or(
+      `submitted_by_user_id.is.null,submitted_by_user_id.neq.${approverUserId}`,
+    );
+  }
+  const { data: updated, error } = await approve.select('user_id');
 
   if (error) {
     console.error('[approveScorecard] update failed', { gameId, playerUserId, error });
@@ -107,7 +128,8 @@ export async function approveScorecardCore(opts: {
   // denne vakta ville en RLS-blokkert peer-godkjenning rapportere falsk suksess
   // og sende varsel mens approved_at aldri ble skrevet. Skiller to 0-rads-grunner:
   //   • allerede godkjent → idempotent no-op (suksess, IKKE nytt varsel)
-  //   • RLS/rad-tilgang nektet, eller kortet er ikke levert → ekte feil (ingen varsel)
+  //   • RLS/rad-tilgang nektet, kortet er ikke levert, eller godkjenneren
+  //     leverte det (#2200) → ekte feil (ingen varsel)
   if (!updated || updated.length === 0) {
     const { data: existing } = await client
       .from('game_players')

@@ -104,6 +104,9 @@ export type ScorecardDecision = 'approve' | 'reject' | 'reopen';
  *
  * `role` går videre til kjernen som `approver_role` i `scorecard_approved`, så
  * kortet velger riktig reserve-tekst når godkjenneren mangler navn (#1598).
+ * `organizer` (admin eller arrangør) er også vaktas unntak fra regelen om at
+ * den som leverte kortet, ikke kan godkjenne det (#2200, 0191); ruta sender
+ * det videre som `delivererMayApprove`.
  * `gameMode` og `gameName` er lest her uansett, og kjernen trenger dem (lagkort-
  * kaskaden, reopen-payloaden) — ruta slipper et andre oppslag.
  */
@@ -130,7 +133,10 @@ export type ScorecardReviewAccess =
  *    webbens `loadAdminOrCreatorContext`, og 0159 åpner egen rad for oppretteren.
  * 3. Attestant-regelen (`canApproveScorecardFor`) → `peer`. I et spill med én
  *    flight (≤4 aktive eller wolf) er alle i samme flight, så en oppretter som
- *    selv spiller får `peer` her — før arrangør-grenen.
+ *    selv spiller får `peer` her — før arrangør-grenen. #2200: regelen får
+ *    kortets `submitted_by_user_id`, så den som leverte kortet, ikke er
+ *    attestant for det (vakta i 0191, som service-role hopper over). Er hen
+ *    admin eller arrangør, faller hen til grenene under, som i vakta.
  * 4. Global admin → `organizer`, for begge valg og også på egen rad: webbens
  *    `loadAndAuthorize` slipper admin gjennom, og 0106 slipper admin forbi på
  *    egen rad.
@@ -175,11 +181,15 @@ export async function scorecardReviewAccess(
 
   const { data: roster, error: rosterError } = await admin
     .from('game_players')
-    .select('user_id, flight_number, withdrawn_at')
+    .select('user_id, flight_number, withdrawn_at, submitted_by_user_id')
     .eq('game_id', gameId)
-    .returns<FlightPlayer[]>();
+    .returns<(FlightPlayer & { submitted_by_user_id: string | null })[]>();
   if (rosterError) throw new Error(`scorecardReviewAccess: ${rosterError.message}`);
-  if (canApproveScorecardFor(roster ?? [], game.game_mode, userId, playerUserId)) {
+  const submittedBy =
+    roster?.find((p) => p.user_id === playerUserId)?.submitted_by_user_id ?? null;
+  if (
+    canApproveScorecardFor(roster ?? [], game.game_mode, userId, playerUserId, submittedBy)
+  ) {
     return granted('peer');
   }
 
