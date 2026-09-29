@@ -610,8 +610,8 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(screen.queryByTestId('ticket-total')).toBeNull();
   });
 
-  it('Del-knappen: en delingsfeil gir en melding, og uten nettadresse står ingen knapp', async () => {
-    const mod = require('../lib/shareLive') as { shareLiveFollow: jest.Mock; canShareLiveFollow: jest.Mock };
+  it('Del-knappen: en delingsfeil gir en melding', async () => {
+    const mod = require('../lib/shareLive') as { shareLiveFollow: jest.Mock };
     mod.shareLiveFollow.mockResolvedValueOnce({ ok: false, reason: 'failed' });
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     mockState.bundle = homeBundle({
@@ -621,7 +621,7 @@ describe('GameHome — startbilletten (#2255)', () => {
     mockState.scores = [];
     const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
 
-    const view = await render(
+    await render(
       <GameHome
         {...({ route: { params: { gameId: 'g-live' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
       />,
@@ -634,18 +634,29 @@ describe('GameHome — startbilletten (#2255)', () => {
     await fireEvent.press(screen.getByTestId('share-live'));
     await waitFor(() => expect(alert).toHaveBeenCalledWith(TICKET_TEXT.shareFailed));
     alert.mockRestore();
-    view.unmount();
+  });
 
-    // Bygget mangler nettadressen: hvert trykk ville feilet, så knappen står ikke.
+  it('Del-knappen: uten nettadresse i bygget står ingen knapp, selv med live-følging på', async () => {
+    const mod = require('../lib/shareLive') as { canShareLiveFollow: jest.Mock };
+    // Hvert trykk ville feilet uten adressen (`canShareLiveFollow` er låst i shareLive.test).
     mod.canShareLiveFollow.mockReturnValue(false);
-    const second = { navigate: jest.fn(), setOptions: jest.fn() };
-    await render(
-      <GameHome
-        {...({ route: { params: { gameId: 'g-live' } }, navigation: second } as unknown as ScreenProps<'GameHome'>)}
-      />,
-    );
-    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
-    expect(second.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
-    mod.canShareLiveFollow.mockImplementation((token: string | null) => token !== null);
+    mockState.bundle = homeBundle({
+      game: { spectateToken: 'tok-123' },
+      players: [homePlayer({ userId: 'me' })],
+    });
+    mockState.scores = [];
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+
+    try {
+      await render(
+        <GameHome
+          {...({ route: { params: { gameId: 'g-live' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+        />,
+      );
+      await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+      expect(navigation.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
+    } finally {
+      mod.canShareLiveFollow.mockImplementation((token: string | null) => token !== null);
+    }
   });
 });
