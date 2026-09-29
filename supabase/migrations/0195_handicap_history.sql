@@ -11,6 +11,10 @@
 -- klient trenger skriverett: tabellen har bare en lese-policy for egne rader,
 -- og insert/update/delete er trukket fra anon og authenticated.
 --
+-- En rad skrives bare når verdien er en annen enn den siste. En spiller kan
+-- sette sin egen profile_completed_at av og på (0185-vakta dekker den ikke),
+-- og uten den regelen ville hver runde gitt en kopi av samme punkt.
+--
 -- En uferdig profil står på standardverdien 54, som ikke er et handicap, så
 -- den gir ingen rad. En slettet konto (deleted_at) gir heller ingen, og
 -- anonymize_user sletter historikken med de andre personlige radene.
@@ -52,15 +56,20 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_last numeric;
 begin
-  if new.deleted_at is null
-     and new.profile_completed_at is not null
-     and (
-       tg_op = 'INSERT'
-       or old.profile_completed_at is null
-       or new.hcp_index is distinct from old.hcp_index
-     )
-  then
+  if new.deleted_at is not null or new.profile_completed_at is null then
+    return null;
+  end if;
+
+  select h.hcp_index into v_last
+    from public.handicap_history h
+   where h.user_id = new.id
+   order by h.recorded_at desc, h.id desc
+   limit 1;
+
+  if v_last is distinct from new.hcp_index then
     insert into public.handicap_history (user_id, hcp_index)
     values (new.id, new.hcp_index);
   end if;
