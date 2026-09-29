@@ -103,6 +103,20 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   );
   expect(screen.getByTestId('home-hero-state')).toHaveTextContent('Levert');
   expect(screen.queryByTestId('home-hero-cta')).toBeNull();
+  // Levert er fortsatt en runde du spiller: ringen og tavle-lenken står.
+  expect(screen.getByTestId('home-hero-ring')).toBeTruthy();
+  expect(screen.getByText('Se tavla →')).toBeTruthy();
+  // Plasslinja leses med komma, ikke «·».
+  expect(screen.getByTestId('home-hero-detail').props.accessibilityLabel).toBe(
+    '15 poeng etter 7 hull, 3 poeng bak ledelsen',
+  );
+
+  // Midt i runden uten plass (lagformat): linja med spilte hull leses, for
+  // ringen sier neste hull, ikke hvor mange som er spilt.
+  await rerender(
+    <HomeHeroCard card={CARD} model={{ ...LIVE, standing: null, unit: null }} {...handlers} />,
+  );
+  expect(screen.getByTestId('home-hero-played')).toHaveTextContent('7 av 18 hull spilt');
 
   // Uten bundel: navn og bane, ingen ring, og «Åpne runden».
   await rerender(<HomeHeroCard card={CARD} model={null} {...handlers} />);
