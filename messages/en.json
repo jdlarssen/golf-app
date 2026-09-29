@@ -150,7 +150,9 @@
       },
       "deliverReminder": {
         "title": "Remember to submit your scorecard",
-        "detail": "Submit your card in {gameName} so the organizer can finish the round."
+        "detail": "Submit your card in {gameName} so the organizer can finish the round.",
+        "titleKept": "Submit the cards you kept",
+        "detailKept": "You kept cards in {gameName} that aren't submitted yet. Submit them so the organizer can finish the round."
       },
       "paymentReminder": {
         "title": "Pay the entry fee",
@@ -5725,6 +5727,12 @@
       "bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it so the organizer can finish the round. It only takes a few seconds.",
       "submitButton": "Submit scorecard",
       "submitButtonText": "Submit scorecard: {url}",
+      "subjectKept": "Submit the cards you kept in {gameName}",
+      "headingKept": "Submit the cards you kept",
+      "bodyKept": "You kept cards in <strong>{gameName}</strong> that haven't been submitted yet. Submit them in one tap so the organizer can finish the round.",
+      "bodyTextKept": "You kept cards in {gameName} that haven't been submitted yet. Submit them in one tap so the organizer can finish the round.",
+      "submitButtonKept": "Submit the cards",
+      "submitButtonTextKept": "Submit the cards: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
     },
     "paymentReminder": {

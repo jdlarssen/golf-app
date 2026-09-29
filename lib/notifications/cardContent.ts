@@ -189,6 +189,13 @@ export function buildNotificationText(
     }
     case 'deliver_reminder': {
       const p = payload as NotificationPayload<'deliver_reminder'>;
+      // #2200: kort mottakeren har ført for andre har sin egen tekst.
+      if (p.others_count) {
+        return {
+          title: t('kinds.deliverReminder.titleKept'),
+          detail: t('kinds.deliverReminder.detailKept', { gameName: p.game_name }),
+        };
+      }
       return {
         title: t('kinds.deliverReminder.title'),
         detail: t('kinds.deliverReminder.detail', { gameName: p.game_name }),

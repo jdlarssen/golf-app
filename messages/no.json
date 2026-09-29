@@ -150,7 +150,9 @@
       },
       "deliverReminder": {
         "title": "Husk å levere scorekortet",
-        "detail": "Lever kortet i {gameName}, så kan arrangøren avslutte runden."
+        "detail": "Lever kortet i {gameName}, så kan arrangøren avslutte runden.",
+        "titleKept": "Lever kortene du har ført",
+        "detailKept": "Du har ført kort i {gameName} som ikke er levert. Lever dem, så kan arrangøren avslutte runden."
       },
       "paymentReminder": {
         "title": "Betal startkontingenten",
@@ -5725,6 +5727,12 @@
       "bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Lever det, så kan arrangøren avslutte runden. Det tar bare noen sekunder.",
       "submitButton": "Lever scorekortet",
       "submitButtonText": "Lever scorekortet: {url}",
+      "subjectKept": "Lever kortene du har ført i {gameName}",
+      "headingKept": "Lever kortene du har ført",
+      "bodyKept": "Du har ført kort i <strong>{gameName}</strong> som ikke er levert ennå. Lever dem med ett trykk, så kan arrangøren avslutte runden.",
+      "bodyTextKept": "Du har ført kort i {gameName} som ikke er levert ennå. Lever dem med ett trykk, så kan arrangøren avslutte runden.",
+      "submitButtonKept": "Lever kortene",
+      "submitButtonTextKept": "Lever kortene: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."
     },
     "paymentReminder": {

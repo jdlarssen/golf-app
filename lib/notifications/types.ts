@@ -213,12 +213,15 @@ const teamMemberWithdrewSchema = z.object({
 });
 
 // deliver_reminder: spilleren har registrert alle 18 hull men ikke levert
-// scorekortet. Fyres automatisk (game-home-render) eller manuelt fra admin-
+// scorekortet. Fyres automatisk (sveipen, #2200) eller manuelt fra admin-
 // purringen. Deeplinker til /games/[game_id]/submit. Samme slanke payload
 // som game_finished — game_name brukes i innboks-detalj + mail. (#376)
+// #2200: `others_count` er satt når påminnelsen gjelder kort mottakeren har
+// ført for andre; da har varselet sin egen tekst («Lever kortene du har ført»).
 const deliverReminderSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
+  others_count: z.number().int().positive().optional(),
 });
 
 // cup_finished: en cup (tournament av matcher) er avsluttet. Fyres til alle
