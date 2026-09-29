@@ -33,6 +33,16 @@ export type ThemeColors = {
    */
   onAccent: string;
   danger: string;
+  /** Aktiv rad i flighten på hullsiden (#2252), webbens `--primary-soft`. */
+  primarySoft: string;
+  /**
+   * Strek og tall i scoreformene på hullsiden (#2252), webbens
+   * `--score-*-fg`: under par, par, bogey og dobbel bogey eller verre.
+   */
+  scoreUnderFg: string;
+  scoreParFg: string;
+  scoreOver1Fg: string;
+  scoreOver2Fg: string;
 };
 
 /**
@@ -54,6 +64,11 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accent: '#C9A961',
     onAccent: '#1B4332',
     danger: '#B8463E',
+    primarySoft: '#E8EFE8',
+    scoreUnderFg: '#2F5A3C',
+    scoreParFg: '#5C5347',
+    scoreOver1Fg: '#7A5410',
+    scoreOver2Fg: '#7A2F2A',
   },
   dark: {
     bg: '#14201A',
@@ -66,6 +81,11 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accent: '#D4B870',
     onAccent: '#14201A',
     danger: '#D67268',
+    primarySoft: '#1F2C24',
+    scoreUnderFg: '#7DAA8A',
+    scoreParFg: '#9A9180',
+    scoreOver1Fg: '#E5B26F',
+    scoreOver2Fg: '#D67268',
   },
 };
 
@@ -220,15 +240,40 @@ const uiVariants: Record<Scheme, Ui> = {
   dark: createUi(PALETTES.dark),
 };
 
+/**
+ * Målene på hullsiden (#2252), i punkter. Komponentene i
+ * `components/hole/` leser dem herfra og har ingen av tallene hardkodet.
+ * Standard er webbens (`--hole-number-size`, `--score-button-size`,
+ * `--hole-border-w`, `--active-bar-w`).
+ */
+export type HoleMetrics = {
+  /** Det store hullnummeret øverst. */
+  numberSize: number;
+  /** Høyden på knappene i scoreskinna. */
+  railButton: number;
+  /** Kanten på rader, skinneknapper og steppere. */
+  borderW: number;
+  /** Streken langs venstre kant på den aktive raden. */
+  activeBarW: number;
+};
+
+const HOLE_METRICS: HoleMetrics = {
+  numberSize: 44,
+  railButton: 64,
+  borderW: 1,
+  activeBarW: 4,
+};
+
 export type Theme = {
   scheme: Scheme;
   colors: ThemeColors;
   ui: Ui;
+  hole: HoleMetrics;
 };
 
 const THEMES: Record<Scheme, Theme> = {
-  light: { scheme: 'light', colors: PALETTES.light, ui: uiVariants.light },
-  dark: { scheme: 'dark', colors: PALETTES.dark, ui: uiVariants.dark },
+  light: { scheme: 'light', colors: PALETTES.light, ui: uiVariants.light, hole: HOLE_METRICS },
+  dark: { scheme: 'dark', colors: PALETTES.dark, ui: uiVariants.dark, hole: HOLE_METRICS },
 };
 
 /** OS-rapportert scheme → vårt. Ingen rapport (null/undefined/'unspecified') = lys. */

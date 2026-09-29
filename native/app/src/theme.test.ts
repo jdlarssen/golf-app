@@ -25,6 +25,11 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   primary: '--primary',
   accent: '--accent',
   danger: '--danger',
+  primarySoft: '--primary-soft',
+  scoreUnderFg: '--score-under-fg',
+  scoreParFg: '--score-par-fg',
+  scoreOver1Fg: '--score-over1-fg',
+  scoreOver2Fg: '--score-over2-fg',
 };
 
 const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');
@@ -101,6 +106,19 @@ describe('themeFor / resolveScheme', () => {
     expect(themeFor('light').ui).toBe(light.ui);
     expect(dark.ui).not.toBe(light.ui);
     expect(Object.keys(dark.ui).sort()).toEqual(Object.keys(light.ui).sort());
+  });
+
+  // #2252: hullsidens mål er webbens standard i begge scheme. Sollys er den
+  // eneste som skal kunne endre dem.
+  it('gives both schemes the web defaults for the hole page', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      expect(themeFor(scheme).hole).toEqual({
+        numberSize: 44,
+        railButton: 64,
+        borderW: 1,
+        activeBarW: 4,
+      });
+    }
   });
 
   it('selects the matching palette per scheme', () => {
