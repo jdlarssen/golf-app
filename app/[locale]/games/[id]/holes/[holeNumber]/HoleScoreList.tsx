@@ -13,7 +13,8 @@ import { GreenPinChip } from '@/components/hole/GreenPinChip';
 import { PIN_GATE_MAX_PINS } from '@/lib/geo/pinRules';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleCard } from './holeLiveQueries';
-import { isCardLocked, stablefordPointsForCard } from './holeCards';
+import { stablefordPointsForCard } from '@/lib/scorecard/railPoints';
+import { isCardLocked } from './holeCards';
 
 export function HoleScoreCardList({
   cards,

@@ -23,6 +23,7 @@ import {
   strikeStrokes,
   strokeTerm,
 } from '@/lib/scorecard/scoreRail';
+import { stablefordPointsForCard } from '@/lib/scorecard/railPoints';
 import { PokalIcon } from '@/components/icons';
 import {
   isStablefordFamily,
@@ -52,7 +53,6 @@ import {
   isMySeatSubmitted,
   summarizeMyCard,
   isCardLocked,
-  stablefordPointsForCard,
   type MySeatLookup,
 } from './holeCards';
 import { useScoreRail } from './useScoreRail';

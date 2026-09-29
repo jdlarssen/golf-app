@@ -1,10 +1,10 @@
 // Rene avledninger over spillerkortene på hull-flaten (#1716 — ren flytting
 // ut av `HoleClient`). Ingen hooks, ingen IO: gitt kortene + hvem jeg er,
 // svarer disse på «hvilket kort er mitt», «hvor mange mangler», og
-// stableford-poengene som vises live mens man taster.
+// «Dine poeng» live mens man taster. Poengene per kort bor i
+// `lib/scorecard/railPoints.ts`, så appen regner likt (#2252).
 
-import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
-import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
+import { stablefordPointsFnFor } from '@/lib/scorecard/railPoints';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleCard } from './holeLiveQueries';
 
@@ -100,36 +100,6 @@ export function summarizeMyCard(
       (c) => c.userId !== myCard?.userId && !c.submitted && c.score == null,
     ).length,
   };
-}
-
-/** Modified stableford har egen poengtabell; resten bruker standardtabellen. */
-export function stablefordPointsFnFor(
-  gameMode: GameMode,
-): typeof computeStablefordPoints {
-  return gameMode === 'modified_stableford'
-    ? computeModifiedStablefordPoints
-    : computeStablefordPoints;
-}
-
-/**
- * Per-kort stableford-poeng for gjeldende hull. Vi regner client-side av
- * samme grunn som vi viser dem live (= umiddelbar feedback uten å vente på
- * neste server-render). Bruker spillerens egne extraStrokes som allerede er
- * bakt inn i ClientPlayer.
- */
-export function stablefordPointsForCard(args: {
-  card: HoleCard;
-  par: number;
-  gameMode: GameMode;
-  isStableford: boolean;
-}): number | null {
-  const { card, par, gameMode, isStableford } = args;
-  return isStableford && card.score != null
-    ? stablefordPointsFnFor(gameMode)({
-        par,
-        netStrokes: card.score - card.extraStrokes,
-      })
-    : null;
 }
 
 /**
