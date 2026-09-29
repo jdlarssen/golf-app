@@ -87,7 +87,7 @@ type SearchParams = Promise<{
 
 // Map player-facing game lifecycle onto StatusChip's admin tone palette —
 // each tone's hue happens to fit the player meaning too:
-//  · aktiv (sage)      → Pågående
+//  · aktiv (sage)      → Pågår
 //  · påmelding (amber) → Planlagt (waiting for tee-off)
 //  · signert (muted)   → Avsluttet (round closed)
 //  · utkast (brick)    → Utkast (admin only — players never see this state)
