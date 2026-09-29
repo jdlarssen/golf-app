@@ -11,10 +11,13 @@
 // tilgang først, og der finnes ikke skrivetilgang alene. Sier spilleren nei,
 // spør iOS aldri på nytt av seg selv, og appen gjør det heller ikke.
 //
-// **Modulen lastes ved trykk, ikke ved oppstart.** Et app-bygg fra før
-// modulen kom inn, har ikke den native delen. Lastes den med én gang, krasjer
-// spillets side. Lastes den ved trykk, får spilleren en rolig melding i
-// stedet.
+// **Et bygg uten den native delen.** Et app-bygg fra før modulen kom inn, har
+// den ikke. Da krasjer også en lat `require`: Metro melder en feil i en
+// modul som lastes, som fatal før `try` her ser den (evaluator-runde 1, PR
+// #2380). Vi spør derfor først om den native delen finnes
+// (`requireOptionalNativeModule` svarer `null` og kaster aldri), og laster
+// modulen bare når den gjør det. Ellers får spilleren den rolige linja.
+import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 import type { CalendarEvent } from './gameTicket';
 
@@ -31,8 +34,9 @@ export function needsPermissionFirst(os: string, version: string | number): bool
 
 export async function addToCalendar(event: CalendarEvent): Promise<AddToCalendarResult> {
   try {
+    if (!requireOptionalNativeModule('ExpoCalendar')) return { ok: false, reason: 'failed' };
     // Lat `require`, ikke `import()`: jest kjører ikke dynamisk import, og
-    // Metro gir samme lat lasting for begge.
+    // modulen skal bare lastes når den native delen finnes (over).
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- lastes ved trykk, se toppen av fila
     const calendar = require('expo-calendar/legacy') as typeof import('expo-calendar/legacy');
     if (needsPermissionFirst(Platform.OS, Platform.Version)) {
@@ -41,7 +45,9 @@ export async function addToCalendar(event: CalendarEvent): Promise<AddToCalendar
     }
     await calendar.createEventInCalendarAsync({
       title: event.title,
-      location: event.location,
+      // iOS-posten har `location` som påkrevd tekst: `null` avvises. Uten bane
+      // sendes feltet ikke.
+      ...(event.location ? { location: event.location } : {}),
       startDate: event.startDate,
       endDate: event.endDate,
       notes: event.notes,
