@@ -9,7 +9,12 @@ import { useCallback, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { undoSelfWithdraw } from '../../data/withdrawSelf';
 import { GATE_LINK_LABEL, gameWebPath, gateMessage } from '../../lib/formatGate';
-import { mapSearchUrl, type TicketStub as TicketStubModel } from '../../lib/gameTicket';
+import { addToCalendar } from '../../lib/addToCalendar';
+import {
+  mapSearchUrl,
+  type CalendarEvent,
+  type TicketStub as TicketStubModel,
+} from '../../lib/gameTicket';
 import { HOME_TEXT, continueOnHole } from '../../lib/homeCopy';
 import { WITHDRAW_SELF, describeSelfWithdrawFailure } from '../../lib/rosterCopy';
 import { TICKET_TEXT, playedLine } from '../../lib/ticketCopy';
@@ -25,6 +30,7 @@ export function TicketStub({
   gameId,
   courseName,
   teeOffAt,
+  calendarEvent,
   flightCta,
   onChanged,
   onNavigate,
@@ -34,6 +40,8 @@ export function TicketStub({
   /** Til «Vis på kart». Uten bane står ikke knappen. */
   courseName: string | null;
   teeOffAt: string | null;
+  /** Til «Legg til i kalender». `null` uten tee-off, og da står ikke knappen. */
+  calendarEvent: CalendarEvent | null;
   /**
    * #2200: knappen til scorekortet når mitt kort er levert og makkerkort jeg
    * har ført, står igjen. `null` = ingen knapp.
@@ -75,7 +83,7 @@ export function TicketStub({
             {TICKET_TEXT.registered}
           </Text>
           <WaitingRoom gameId={gameId} teeOffAt={teeOffAt} onChanged={onChanged} />
-          {courseName ? <MapButton courseName={courseName} /> : null}
+          <ScheduledActions calendarEvent={calendarEvent} courseName={courseName} />
         </View>
       );
     case 'finished':
@@ -194,34 +202,68 @@ function ActiveStub({
 }
 
 /**
- * «Vis på kart»: banenavnet som søk i kartappen. Feiler åpningen, står en rolig
- * setning under knappen i stedet for en dialog.
+ * «Legg til i kalender» og «Vis på kart», side om side. Hver knapp står bare
+ * når den har noe å gjøre: kalenderen trenger en tee-off, kartet en bane.
+ * Feiler en av dem, står en rolig setning under raden i stedet for en dialog.
  */
-function MapButton({ courseName }: { courseName: string }) {
+function ScheduledActions({
+  calendarEvent,
+  courseName,
+}: {
+  calendarEvent: CalendarEvent | null;
+  courseName: string | null;
+}) {
   const { ui } = useTheme();
-  const [failed, setFailed] = useState(false);
-  const open = useCallback(async () => {
-    try {
-      await Linking.openURL(mapSearchUrl(courseName, Platform.OS));
-      setFailed(false);
-    } catch {
-      setFailed(true);
-    }
-  }, [courseName]);
+  const [notice, setNotice] = useState<string | null>(null);
 
+  const openCalendar = useCallback(async (event: CalendarEvent) => {
+    const result = await addToCalendar(event);
+    setNotice(
+      result.ok
+        ? null
+        : result.reason === 'denied'
+          ? TICKET_TEXT.calendarDenied
+          : TICKET_TEXT.calendarFailed,
+    );
+  }, []);
+
+  const openMap = useCallback(async (name: string) => {
+    try {
+      await Linking.openURL(mapSearchUrl(name, Platform.OS));
+      setNotice(null);
+    } catch {
+      setNotice(TICKET_TEXT.mapFailed);
+    }
+  }, []);
+
+  if (!calendarEvent && !courseName) return null;
   return (
-    <View>
-      <Pressable
-        accessibilityRole="button"
-        style={ui.buttonSecondary}
-        onPress={() => void open()}
-        testID="view-on-map"
-      >
-        <Text style={ui.buttonSecondaryText}>{TICKET_TEXT.viewOnMap}</Text>
-      </Pressable>
-      {failed ? (
-        <Text style={ui.error} testID="view-on-map-failed">
-          {TICKET_TEXT.mapFailed}
+    <View style={styles.actions}>
+      <View style={styles.actionRow}>
+        {calendarEvent ? (
+          <Pressable
+            accessibilityRole="button"
+            style={[ui.buttonSecondary, styles.action]}
+            onPress={() => void openCalendar(calendarEvent)}
+            testID="add-to-calendar"
+          >
+            <Text style={[ui.buttonSecondaryText, styles.actionText]}>{TICKET_TEXT.addToCalendar}</Text>
+          </Pressable>
+        ) : null}
+        {courseName ? (
+          <Pressable
+            accessibilityRole="button"
+            style={[ui.buttonSecondary, styles.action]}
+            onPress={() => void openMap(courseName)}
+            testID="view-on-map"
+          >
+            <Text style={[ui.buttonSecondaryText, styles.actionText]}>{TICKET_TEXT.viewOnMap}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {notice ? (
+        <Text style={ui.error} testID="scheduled-action-notice">
+          {notice}
         </Text>
       ) : null}
     </View>
@@ -304,6 +346,10 @@ const styles = StyleSheet.create({
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gold: { width: 14, height: 14, borderRadius: 7 },
   result: { flexShrink: 1, fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  actions: { gap: 6 },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  action: { flex: 1, paddingHorizontal: 10 },
+  actionText: { textAlign: 'center' },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
 });

@@ -26,6 +26,10 @@ export const TICKET_TEXT = {
   /** Webbens `game.home.viewOnMap`. */
   viewOnMap: 'Vis på kart',
   mapFailed: 'Fikk ikke åpnet kartet.',
+  /** Webbens `game.home.addToCalendar`. */
+  addToCalendar: 'Legg til i kalender',
+  calendarFailed: 'Fikk ikke åpnet kalenderen.',
+  calendarDenied: 'Tørny har ikke tilgang til kalenderen. Du kan slå det på i Innstillinger.',
   /** Webbens `game.home.ctaStartRound`. */
   startRound: 'Start runden →',
   /** Webbens `game.home.ctaReviewAndSubmit`. */

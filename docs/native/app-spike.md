@@ -2021,3 +2021,21 @@ Nøkkelen velges med `resolveFormatContentKey`. Teksten på billetten bor i
 Banene har ingen koordinater. Knappen åpner kartappen med banenavnet som søk via
 `Linking` (`maps.apple.com/?q=` på iPhone, `geo:0,0?q=` på Android), uten ny modul.
 Uten bane står ikke knappen.
+
+### «Legg til i kalender» (#2255 PR 2)
+
+Planlagt stubb har «Legg til i kalender» ved siden av «Vis på kart». Knappen åpner
+systemets eget ark for ny hendelse (`createEventInCalendarAsync` fra
+`expo-calendar/legacy`), fylt med spillnavn, bane, tee-off og varighet (4 t 30 min for
+18 hull, 2 t 15 min for 9), og hodelinja som notat (`calendarEvent` i
+`lib/gameTicket.ts`). Uten tee-off står ikke knappen.
+
+- **Minst tilgang.** På iOS 17+ trenger arket ingen kalendertilgang (modulen sjekker bare
+  før 17). Bare iOS før 17 spør, med den norske teksten fra config-pluginen. Et nei gir en
+  rolig linje under knappene, og appen spør aldri på nytt av seg selv. Den nye
+  klassebaserte API-en (`addEventWithForm`) krever skrivetilgang og er derfor ikke brukt.
+- **Android** er en vanlig `ACTION_INSERT`-forespørsel uten tillatelse. Pluginen legger
+  alltid inn `READ_CALENDAR`/`WRITE_CALENDAR`, så begge står i `android.blockedPermissions`.
+- **Modulen lastes ved trykk** (`lib/addToCalendar.ts`), slik at et app-bygg uten den
+  native delen ikke krasjer spillets side; knappen gir da «Fikk ikke åpnet kalenderen.».
+- Krever nytt app-bygg (native modul).

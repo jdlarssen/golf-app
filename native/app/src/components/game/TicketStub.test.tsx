@@ -15,8 +15,25 @@ jest.mock('../../supabase', () => require('../../test/supabaseMock'));
 jest.mock('../../data/realtime', () => ({
   subscribeGameStatus: jest.fn(() => () => undefined),
 }));
+// Kalendermodulen er native; skjermtesten ser bare svaret (#2255 PR 2).
+const mockAddToCalendar = jest.fn();
+jest.mock('../../lib/addToCalendar', () => ({
+  addToCalendar: (...args: unknown[]) => mockAddToCalendar(...args),
+}));
 
-async function renderStub(stub: TicketStubModel, flightCta: string | null = null) {
+const EVENT = {
+  title: 'Klubbmesterskap',
+  location: 'Losby Golf',
+  startDate: '2026-10-03T07:30:00.000Z',
+  endDate: '2026-10-03T12:00:00.000Z',
+  notes: 'Tee: Gul · Stableford',
+};
+
+async function renderStub(
+  stub: TicketStubModel,
+  flightCta: string | null = null,
+  calendarEvent: typeof EVENT | null = EVENT,
+) {
   const onNavigate = jest.fn();
   const view = await render(
     <TicketStub
@@ -24,6 +41,7 @@ async function renderStub(stub: TicketStubModel, flightCta: string | null = null
       gameId="g1"
       courseName="Losby Golf"
       teeOffAt={new Date(Date.now() + 30 * 60_000).toISOString()}
+      calendarEvent={calendarEvent}
       flightCta={flightCta}
       onChanged={jest.fn()}
       onNavigate={onNavigate}
@@ -106,6 +124,7 @@ it('gull bare på egen seier, som en skive ved teksten', async () => {
       gameId="g1"
       courseName={null}
       teeOffAt={null}
+      calendarEvent={null}
       flightCta={null}
       onChanged={jest.fn()}
       onNavigate={jest.fn()}
@@ -123,3 +142,32 @@ it('med et makkerkort å levere står knappen over levert-teksten (#2200)', asyn
   await fireEvent.press(screen.getByTestId('deliver-flight-cta'));
   expect(onNavigate).toHaveBeenCalledWith('Scorecard', { gameId: 'g1' });
 });
+
+describe('«Legg til i kalender» (#2255 PR 2)', () => {
+  beforeEach(() => mockAddToCalendar.mockReset());
+
+  it('sender hendelsen til kalenderen, og et ja gir ingen melding', async () => {
+    mockAddToCalendar.mockResolvedValue({ ok: true });
+    await renderStub({ kind: 'scheduled' });
+    await fireEvent.press(screen.getByTestId('add-to-calendar'));
+    expect(mockAddToCalendar).toHaveBeenCalledWith(EVENT);
+    expect(screen.queryByTestId('scheduled-action-notice')).toBeNull();
+  });
+
+  it.each([
+    ['nei til tilgang', { ok: false, reason: 'denied' }],
+    ['feil fra modulen', { ok: false, reason: 'failed' }],
+  ])('%s gir en rolig melding under knappene, ingen krasj', async (_case, result) => {
+    mockAddToCalendar.mockResolvedValue(result);
+    await renderStub({ kind: 'scheduled' });
+    await fireEvent.press(screen.getByTestId('add-to-calendar'));
+    expect(screen.getByTestId('scheduled-action-notice')).toBeTruthy();
+  });
+
+  it('uten tee-off står ikke knappen, men kartet gjør det', async () => {
+    await renderStub({ kind: 'scheduled' }, null, null);
+    expect(screen.queryByTestId('add-to-calendar')).toBeNull();
+    expect(screen.getByTestId('view-on-map')).toBeTruthy();
+  });
+});
+

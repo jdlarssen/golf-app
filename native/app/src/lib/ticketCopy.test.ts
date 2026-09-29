@@ -23,6 +23,7 @@ const home = source.game.home;
 describe('paritet mot messages/no.json', () => {
   it('knappene og utkast-teksten er webbens', () => {
     expect(TICKET_TEXT.viewOnMap).toBe(home.viewOnMap);
+    expect(TICKET_TEXT.addToCalendar).toBe(home.addToCalendar);
     expect(TICKET_TEXT.startRound).toBe(home.ctaStartRound);
     expect(TICKET_TEXT.reviewAndSubmit).toBe(home.ctaReviewAndSubmit);
     expect(TICKET_TEXT.draft).toBe(home.draftBanner);
