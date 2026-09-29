@@ -181,13 +181,18 @@ export default async function CreatorAvsluttPage({
   }));
 
   const missingList = missing.length > 0 && (
-    <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
+    <div
+      data-testid="finish-missing"
+      className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text"
+    >
       <p className="font-medium">
         {t('missingCount', { count: missing.length })}
       </p>
       <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
         {missing.map((gp) => (
-          <li key={gp.user_id}>{displayName(gp)}</li>
+          <li key={gp.user_id} data-testid={`finish-missing-${gp.user_id}`}>
+            {displayName(gp)}
+          </li>
         ))}
       </ul>
       <p className="mt-2 text-text">
