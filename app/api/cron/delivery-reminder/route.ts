@@ -28,11 +28,17 @@ export const maxDuration = 60;
 
 const LOG_PREFIX = 'deliveryReminderSweep';
 
+// Vinduet: bare spill startet de siste to døgnene. En runde går over én dag,
+// og et aktivt spill ingen avslutter, har kort som aldri blir fulle. Uten
+// vinduet ville slike spill vært kandidater for alltid, tatt plassene i
+// batchen og til slutt stengt nye runder ute. Samme grunn som
+// start-scheduled-games sitt vindu (0094).
+const SWEEP_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
+
 // Taket er per kjøring. Et aktivt spill med kort som ikke er ferdige ennå, blir
 // stående som kandidat hele runden, så med flere enn 25 samtidige spill med noe
-// å purre kan de nyeste vente. Eldste start først, så ingen blir liggende
-// bakerst for alltid mens eldre spill blir ferdige. 25 × (roster + slag) holder
-// seg godt innenfor 60 s.
+// å purre kan de nyeste vente én kjøring. Eldste start først. 25 × (roster +
+// slag) holder seg godt innenfor 60 s.
 const SWEEP_BATCH_LIMIT = 25;
 
 type PendingGame = SweepGame & { game_players: { user_id: string }[] };
@@ -49,8 +55,10 @@ export async function POST(request: NextRequest) {
   // 0192s EXISTS-port. Endres ett predikat, endres begge i samme commit:
   //   status = 'active'                  runden pågår
   //   source_game_id is null             avledede spill har aldri egne slag
+  //   started_at > now - 2 døgn          se SWEEP_WINDOW_MS
   //   en spiller med submitted_at null, withdrawn_at null og
   //   deliver_reminder_sent_at null      et kort som kan trenge påminnelse
+  const now = Date.now();
   const { data: pending, error: pendingError } = await admin
     .from('games')
     .select(
@@ -58,6 +66,7 @@ export async function POST(request: NextRequest) {
     )
     .eq('status', 'active')
     .is('source_game_id', null)
+    .gt('started_at', new Date(now - SWEEP_WINDOW_MS).toISOString())
     .is('game_players.submitted_at', null)
     .is('game_players.withdrawn_at', null)
     .is('game_players.deliver_reminder_sent_at', null)
@@ -73,7 +82,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const now = Date.now();
   let reminded = 0;
   const failed: Array<{ id: string; error: string }> = [];
 

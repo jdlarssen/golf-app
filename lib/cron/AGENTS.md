@@ -10,7 +10,7 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 |---|---|---|---|
 | `start-scheduled-games` | 0094, 0146 (apex URL) | a `scheduled` game has `scheduled_tee_off_at` in the last 7 days | `app/api/cron/start-scheduled-games/route.ts` |
 | `finish-pipeline-sweep` | 0170 | a finished non-cup, non-derived game has `finish_pipeline_at is null` | `app/api/cron/finish-pipeline/route.ts` |
-| `delivery-reminder-sweep` (every 5 min) | 0192 | an active, non-derived game has a player with `submitted_at`, `withdrawn_at` and `deliver_reminder_sent_at` all null | `app/api/cron/delivery-reminder/route.ts` |
+| `delivery-reminder-sweep` (every 5 min) | 0192 | an active, non-derived game started in the last 2 days has a player with `submitted_at`, `withdrawn_at` and `deliver_reminder_sent_at` all null | `app/api/cron/delivery-reminder/route.ts` |
 
 `/api/cron/product-update-digest` is not pg_cron: it is the one Vercel Cron in `vercel.json` (daily, GET). Both transports send the same `Authorization: Bearer <CRON_SECRET>`.
 
