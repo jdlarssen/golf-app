@@ -127,6 +127,7 @@ beforeEach(() => {
   getGameWithPlayersMock.mockResolvedValue(GAME_ROW);
   buildModeResultForGameMock.mockResolvedValue(makeSoloStrokeplayResult(18));
   messagesCreateMock.mockResolvedValue({
+    stop_reason: 'end_turn',
     content: [{ type: 'text', text: 'Alice vant Lørdagscup med solid margin foran Bob.' }],
   });
 });
@@ -212,6 +213,7 @@ describe('generateAndPersistRoundReport', () => {
   it("returns 'failed' when the sanitizer rejects the model output (too long)", async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     messagesCreateMock.mockResolvedValue({
+      stop_reason: 'end_turn',
       content: [{ type: 'text', text: 'a'.repeat(1501) }],
     });
 
@@ -220,6 +222,25 @@ describe('generateAndPersistRoundReport', () => {
     expect(result).toEqual({ status: 'failed', report: null });
     expect(updateSpy).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("returns 'failed' and persists nothing when the model stops at the token cap", async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    messagesCreateMock.mockResolvedValue({
+      stop_reason: 'max_tokens',
+      content: [{ type: 'text', text: 'Alice vant Lørdagscup med solid' }],
+    });
+
+    const result = await generateAndPersistRoundReport(GAME_ID);
+
+    expect(result).toEqual({ status: 'failed', report: null });
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[generateRoundReport] model stopped early',
+      expect.objectContaining({ gameId: GAME_ID, stopReason: 'max_tokens' }),
+    );
 
     consoleErrorSpy.mockRestore();
   });
@@ -246,7 +267,8 @@ describe('generateAndPersistRoundReport', () => {
     const callArgs = messagesCreateMock.mock.calls[0][0];
     expect(callArgs).toMatchObject({
       model: 'claude-sonnet-5',
-      max_tokens: 800,
+      max_tokens: 4_000,
+      output_config: { effort: 'low' },
     });
     expect(callArgs).not.toHaveProperty('temperature');
     expect(callArgs).not.toHaveProperty('thinking');

@@ -3,10 +3,11 @@ import 'server-only';
 /**
  * AI-innledningen til Kavalkaden (#2128, epic #1040).
  *
- * Speiler `lib/games/generateRoundReport.ts`: samme modell, timeout og vask
- * (`lib/ai/narrative.ts`), hel try/catch rundt kroppen, `console.error` med
- * fast prefiks — og **kaster aldri**. Teksten er pynt. En kavalkade uten
- * innledning er en kavalkade; en kavalkade som krasjer, er ingenting.
+ * Speiler `lib/games/generateRoundReport.ts`: samme modell, innsats, token-tak,
+ * timeout og vask (`lib/ai/narrative.ts`), hel try/catch rundt kroppen,
+ * `console.error` med fast prefiks — og **kaster aldri**. Teksten er pynt. En
+ * kavalkade uten innledning er en kavalkade; en kavalkade som krasjer, er
+ * ingenting.
  *
  * ## Uten nøkkel: stille av
  *
@@ -26,7 +27,9 @@ import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  NARRATIVE_EFFORT,
   NARRATIVE_MAX_RETRIES,
+  NARRATIVE_MAX_TOKENS,
   NARRATIVE_MODEL,
   NARRATIVE_TIMEOUT_MS,
 } from '@/lib/ai/narrative';
@@ -35,9 +38,6 @@ import {
   buildKavalkadeNarrativePrompt,
   sanitizeKavalkadeNarrative,
 } from './kavalkadeNarrativePrompt';
-
-/** 2–4 setninger trenger ikke mer. Taket er en brems, ikke et mål. */
-const MAX_TOKENS = 400;
 
 /**
  * Skriver innledningen til én spillers kavalkade, eller `null` når den ikke
@@ -64,7 +64,8 @@ export async function generateKavalkadeNarrative(
     });
     const response = await client.messages.create({
       model: NARRATIVE_MODEL,
-      max_tokens: MAX_TOKENS,
+      max_tokens: NARRATIVE_MAX_TOKENS,
+      output_config: { effort: NARRATIVE_EFFORT },
       system,
       messages: [{ role: 'user', content: user }],
     });
@@ -73,6 +74,16 @@ export async function generateKavalkadeNarrative(
       stopReason: response.stop_reason,
       usage: response.usage,
     });
+
+    // Stoppet modellen på taket, eller avslo den, er svaret kuttet eller tomt.
+    // Vasken forkaster bare tomt og for langt, så det sjekkes her.
+    if (response.stop_reason !== 'end_turn') {
+      console.error('[generateKavalkadeNarrative] model stopped early', {
+        year: facts.year,
+        stopReason: response.stop_reason,
+      });
+      return null;
+    }
 
     const rawText = response.content
       .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
