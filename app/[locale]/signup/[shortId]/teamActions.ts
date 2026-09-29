@@ -24,6 +24,7 @@ import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import {
   getCaptainDisplayName,
+  loadInviterTeams,
   pickCaptainRequest,
 } from './team/captainLookup';
 
@@ -989,13 +990,20 @@ export async function removeTeamMember(
     return { ok: false, error: 'not_found' };
   }
 
-  // Verifiser at den autentiserte brukeren er kaptein for det laget.
+  // Verifiser at den autentiserte brukeren er kaptein for det laget. Etter en
+  // overføring av kapteinsbindet (#2358) peker `team_request_id` på den nye
+  // kapteinen, så den gamle styrer ikke laget lenger. En kaptein som har
+  // trukket seg, styrer det heller ikke.
   const { data: captainReq } = await admin
     .from('game_registration_requests')
-    .select('user_id, team_name')
+    .select('user_id, team_name, status')
     .eq('id', child.team_request_id)
-    .maybeSingle<{ user_id: string; team_name: string | null }>();
-  if (!captainReq || captainReq.user_id !== user.id) {
+    .maybeSingle<{ user_id: string; team_name: string | null; status: string }>();
+  if (
+    !captainReq ||
+    captainReq.user_id !== user.id ||
+    captainReq.status === 'withdrawn'
+  ) {
     return { ok: false, error: 'not_found' };
   }
 
@@ -1143,7 +1151,18 @@ export async function attachToCaptainTeam(
         status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
       }[]
     >();
-  const picked = pickCaptainRequest(captains ?? [], invitation.invited_by);
+  let picked = pickCaptainRequest(captains ?? [], invitation.invited_by);
+  // #2358: inviteren kan ha gitt kapteinsbindet videre siden. Da står hen
+  // fortsatt på laget, og egen påmelding peker på den nye kapteinen. Lagkartet
+  // leses bare når inviteren ikke selv er kaptein.
+  if (picked && picked.source !== 'invited_by') {
+    const inviterTeams = await loadInviterTeams(
+      admin,
+      game.id,
+      (captains ?? []).map((c) => c.id),
+    );
+    picked = pickCaptainRequest(captains ?? [], invitation.invited_by, inviterTeams);
+  }
   if (!picked) {
     return { ok: false, error: 'not_found' };
   }
@@ -1353,12 +1372,18 @@ export async function resendTeamInvite(
     return { ok: false, error: 'not_found' };
   }
 
+  // #2358: samme vakt som removeTeamMember — bare lagets nåværende kaptein,
+  // og ikke en kaptein som har trukket seg.
   const { data: captainReq } = await admin
     .from('game_registration_requests')
-    .select('user_id, team_name')
+    .select('user_id, team_name, status')
     .eq('id', child.team_request_id)
-    .maybeSingle<{ user_id: string; team_name: string | null }>();
-  if (!captainReq || captainReq.user_id !== user.id) {
+    .maybeSingle<{ user_id: string; team_name: string | null; status: string }>();
+  if (
+    !captainReq ||
+    captainReq.user_id !== user.id ||
+    captainReq.status === 'withdrawn'
+  ) {
     return { ok: false, error: 'not_found' };
   }
 
@@ -1379,4 +1404,68 @@ export async function resendTeamInvite(
   });
 
   return { ok: true };
+}
+
+/**
+ * #2358: kapteinen gir kapteinsbindet til en lagkamerat.
+ *
+ * Eierens valg: en kaptein med lagkamerater som har takket ja kan ikke trekke
+ * seg før start, men må gi bindet videre først. Selve flyttingen — hvem som får
+ * gjøre det, hvem som kan ta imot, og hvilke rader som flyttes — bor i
+ * `transfer_team_captaincy` (0194), i én transaksjon. Actionen er porten: den
+ * sender den EKTE kalleren som aktør, fordi funksjonen kjører som
+ * tjenesterollen og ikke kan lese `auth.uid()`.
+ */
+export type TransferCaptaincyResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: 'not_authed' | 'not_found' | 'game_locked' | 'not_approved' | 'db_error';
+    };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function transferCaptaincy(
+  requestId: string,
+  shortId: string,
+): Promise<TransferCaptaincyResult> {
+  if (!/^[0-9a-z]{8}$/.test(shortId) || !UUID_PATTERN.test(requestId)) {
+    return { ok: false, error: 'not_found' };
+  }
+  const user = await requireAuthedUser(shortId, { next: teamPagePath(shortId) });
+
+  const game = await getGameByShortId(shortId);
+  if (!game) {
+    return { ok: false, error: 'not_found' };
+  }
+
+  const { data, error } = await getAdminClient().rpc('transfer_team_captaincy', {
+    p_game_id: game.id,
+    p_actor_user_id: user.id,
+    p_new_captain_request_id: requestId,
+  });
+  if (error) {
+    console.error('[transferCaptaincy] rpc failed', { gameId: game.id, error });
+    return { ok: false, error: 'db_error' };
+  }
+
+  const outcome = (data as { outcome?: string } | null)?.outcome;
+  switch (outcome) {
+    case 'ok':
+      expireGameCache(game.id);
+      return { ok: true };
+    case 'game_locked':
+      return { ok: false, error: 'game_locked' };
+    case 'not_approved':
+      return { ok: false, error: 'not_approved' };
+    // Ikke kalleren sitt lag å styre, eller ikke noe lag: samme svar som de
+    // andre lag-actionene gir en fremmed.
+    case 'not_allowed':
+    case 'not_a_teammate':
+    case 'game_not_found':
+      return { ok: false, error: 'not_found' };
+    default:
+      console.error('[transferCaptaincy] unexpected outcome', { gameId: game.id, data });
+      return { ok: false, error: 'db_error' };
+  }
 }

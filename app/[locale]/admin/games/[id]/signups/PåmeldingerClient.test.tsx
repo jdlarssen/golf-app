@@ -3,9 +3,11 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PåmeldingerClient } from './PåmeldingerClient';
 import type { RequestRow } from './types';
 
+const transferTeamCaptaincyMock = vi.fn();
 vi.mock('./actions', () => ({
   approveRequest: vi.fn(),
   rejectRequest: vi.fn(),
+  transferTeamCaptaincy: (...args: unknown[]) => transferTeamCaptaincyMock(...args),
 }));
 
 const GAME_ID = '11111111-1111-1111-1111-111111111111';
@@ -313,5 +315,46 @@ describe('PåmeldingerClient — kapasitets-advarsel i lag-format (#2069)', () =
       />,
     );
     expect(screen.queryByTestId('cap-warning')).toBeNull();
+  });
+});
+
+// #2358: arrangøren utpeker ny kaptein blant dem som står på laget. Knappen
+// står bare på lagmedlemmer i godkjent-fanen, og ingenting skjer før
+// bekreftelsen.
+describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
+  it('bekreft på samme skjerm, så overføring til akkurat det lagmedlemmet', async () => {
+    const captain = makeRequest({
+      id: 'req-cap',
+      status: 'approved',
+      displayName: 'Kari',
+      isTeamCaptain: true,
+      teamName: 'Bjørka',
+    });
+    const mate = makeRequest({
+      id: 'req-ola',
+      status: 'approved',
+      displayName: 'Ola',
+      teamName: 'Bjørka',
+      teamRequestId: 'req-cap',
+    });
+    render(
+      <PåmeldingerClient
+        gameId={GAME_ID}
+        requests={[captain, mate]}
+        tab="approved"
+        locked={false}
+        gameMode="texas_scramble"
+        approvedCount={2}
+      />,
+    );
+
+    expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
+    fireEvent.click(screen.getByTestId('make-captain'));
+    expect(transferTeamCaptaincyMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('make-captain-confirm-button'));
+    });
+    expect(transferTeamCaptaincyMock).toHaveBeenCalledWith(GAME_ID, 'req-ola');
   });
 });

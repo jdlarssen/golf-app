@@ -3807,7 +3807,8 @@
         "inviteOnlyBanner": "This game is invite-only and does not appear in Find tournaments. Anyone with the link can still request to join. Requests will appear here for you to approve or decline.",
         "statusBanners": {
           "approved": "✓ Signup approved. Player added to the roster.",
-          "rejected": "✓ Signup declined. Player will be notified."
+          "rejected": "✓ Signup declined. Player will be notified.",
+          "captain_transferred": "✓ The captaincy has been handed over."
         },
         "errors": {
           "not_pending": "The request has already been decided by another administrator. Reload the page.",
@@ -3818,7 +3819,9 @@
           "db_cascade": "Could not retrieve team members. Try again.",
           "db_team_slot": "Could not find a free team slot. Try again.",
           "no_team_slot": "The game has no available team slots.",
-          "reason_too_long": "The reason is too long (max 200 characters)."
+          "reason_too_long": "The reason is too long (max 200 characters).",
+          "transfer_not_approved": "Only a player who is on the player list can become captain.",
+          "transfer_failed": "Could not hand over the captaincy. Try again."
         },
         "tabs": {
           "pending": "Pending",
@@ -3835,6 +3838,11 @@
         "teamLabel": "Team · {name}",
         "playerCount": "{count, plural, one {# player} other {# players}}",
         "captainBadge": "Captain",
+        "makeCaptainButton": "Make captain",
+        "makeCaptainConfirm": "Make {name} captain of {teamName}?",
+        "makeCaptainConfirmButton": "Yes, make captain",
+        "makeCaptainCancel": "Cancel",
+        "makeCaptainPending": "Saving …",
         "registeredAt": "Signed up {date}",
         "decidedAt": "Decided {date}",
         "approveButton": "Approve",
@@ -5556,6 +5564,12 @@
     "teamDashRemoveButton": "Remove",
     "teamDashRemovePending": "Removing…",
     "teamDashRemoveSuccess": "Playing partner removed.",
+    "teamDashMakeCaptainButton": "Make captain",
+    "teamDashMakeCaptainConfirm": "Hand the captaincy to {name}? You become a regular team member.",
+    "teamDashMakeCaptainConfirmButton": "Hand it over",
+    "teamDashMakeCaptainCancel": "Cancel",
+    "teamDashMakeCaptainPending": "Handing it over …",
+    "teamDashMakeCaptainSuccess": "The captaincy has been handed over.",
     "memberStatus": {
       "pending": "Waiting for reply",
       "approved": "On the team",
@@ -5597,7 +5611,8 @@
       "teamDashGameLocked": "The game has started — no further changes are allowed.",
       "teamDashSignupClosed": "Sign-up is closed. The organiser is making final adjustments.",
       "teamDashTeamUnknown": "We couldn't find your team — ask the captain for a team invitation, or register a team of your own.",
-      "teamDashDbError": "Couldn't complete the action. Please try again in a moment."
+      "teamDashDbError": "Couldn't complete the action. Please try again in a moment.",
+      "teamDashNotApproved": "Only a teammate who is on the player list can become captain."
     },
     "public": {
       "courseLabel": "Course:",

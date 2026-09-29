@@ -5,7 +5,7 @@ import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notify } from '@/lib/notifications/notify';
@@ -489,4 +489,50 @@ export async function rejectRequest(
 
   expireGameCache(game.id);
   redirect({ href: `${detailPath}?status=rejected`, locale });
+}
+
+/**
+ * #2358: arrangøren utpeker ny kaptein blant dem som står på laget (eierens
+ * svar 3 på #2358).
+ *
+ * En kaptein med lagkamerater som har takket ja kan ikke trekke seg før start;
+ * kapteinsbindet må gis videre først. Kapteinen gjør det på lagsida, og
+ * arrangøren kan gjøre det her. Flyttingen bor i `transfer_team_captaincy`
+ * (0194), som autoriserer aktøren på nytt (lagets kaptein, spillets oppretter
+ * eller admin). Porten her er `requireAdminOrCreator`, og aktøren er den ekte
+ * kalleren — funksjonen kjører som tjenesterollen og kan ikke lese `auth.uid()`.
+ */
+export async function transferTeamCaptaincy(
+  gameId: string,
+  requestId: string,
+): Promise<void> {
+  const locale = await getLocale();
+  const supabase = await getServerClient();
+  const ctx = await requireAdminOrCreator(supabase, gameId);
+  const detailPath = `/admin/games/${gameId}/signups?tab=approved`;
+
+  const { data, error } = await getAdminClient().rpc('transfer_team_captaincy', {
+    p_game_id: gameId,
+    p_actor_user_id: ctx.userId,
+    p_new_captain_request_id: requestId,
+  });
+  const outcome = error ? null : (data as { outcome?: string } | null)?.outcome;
+  if (error) {
+    console.error('[transferTeamCaptaincy] rpc failed', { gameId, error });
+  }
+
+  if (outcome === 'ok') {
+    expireGameCache(gameId);
+    redirect({ href: `${detailPath}&status=captain_transferred`, locale });
+  }
+  const code =
+    outcome === 'not_approved'
+      ? 'transfer_not_approved'
+      : outcome === 'game_locked'
+        ? 'game_locked'
+        : 'transfer_failed';
+  if (code === 'transfer_failed' && !error) {
+    console.error('[transferTeamCaptaincy] refused', { gameId, requestId, outcome });
+  }
+  redirect({ href: `${detailPath}&error=${code}`, locale });
 }

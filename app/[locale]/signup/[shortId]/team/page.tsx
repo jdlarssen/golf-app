@@ -14,8 +14,10 @@ import { Banner } from '@/components/ui/Banner';
 import { TeamDashboardClient } from './TeamDashboardClient';
 import {
   getCaptainDisplayName,
+  loadInviterTeams,
   pickCaptainRequest,
   pickPendingInvitation,
+  type InviterTeams,
 } from './captainLookup';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 import { displayNameForOthers } from '@/lib/users/displayName';
@@ -106,6 +108,7 @@ export default async function TeamDashboardPage({
   // invitations-rad for spillet — da kan vi tilby attach-knapp.
   let pendingInvitation: PendingInvitation | null = null;
   let captainRows: CaptainRequestRow[] = [];
+  let inviterTeams: InviterTeams = new Map();
   if (!myRow) {
     const { data: userRow } = await admin
       .from('users')
@@ -141,10 +144,17 @@ export default async function TeamDashboardPage({
           .order('created_at', { ascending: false })
           .returns<CaptainRequestRow[]>();
         captainRows = captains ?? [];
-        pendingInvitation = pickPendingInvitation(
-          invitations,
-          captainRows.map((r) => r.user_id),
+        // #2358: en kaptein som har gitt fra seg bindet, står fortsatt på
+        // laget — invitasjonene hen sendte gjelder det laget.
+        inviterTeams = await loadInviterTeams(
+          admin,
+          game.id,
+          captainRows.map((r) => r.id),
         );
+        pendingInvitation = pickPendingInvitation(invitations, [
+          ...captainRows.map((r) => r.user_id),
+          ...inviterTeams.keys(),
+        ]);
       }
     }
   }
@@ -173,6 +183,7 @@ export default async function TeamDashboardPage({
     const picked = pickCaptainRequest(
       captainRows,
       pendingInvitation.invited_by,
+      inviterTeams,
     );
     if (picked?.source !== 'invited_by') {
       // Eierbeslutning på #1343: to stopp-varianter. `picked === null` betyr

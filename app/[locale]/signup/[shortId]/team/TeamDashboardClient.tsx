@@ -11,6 +11,7 @@ import {
   removeTeamMember,
   resendTeamInvite,
   attachToCaptainTeam,
+  transferCaptaincy,
 } from '../teamActions';
 
 type Status = 'pending' | 'approved' | 'rejected' | 'withdrawn';
@@ -83,7 +84,9 @@ type Props =
 /**
  * Captain dashboard + member view + ukjent-attach. Rendres som en av tre
  * modi avhengig av rolle:
- *   - captain: oversikt over alle medspillere med remove/resend-knapper.
+ *   - captain: oversikt over alle medspillere med remove/resend-knapper, og
+ *     «Gjør til kaptein» på dem som er med i spillet (#2358). Kapteinen må gi
+ *     bindet videre før hen kan trekke seg når noen har takket ja.
  *   - member: viser laget med aksepter/avslå-knapper hvis status='pending'.
  *   - invited_unknown: viser "Bli med på lag"-knapp som kjører attach-action.
  *
@@ -97,6 +100,9 @@ export function TeamDashboardClient(props: Props) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // #2358: medspilleren kapteinen er i ferd med å gi bindet til. Bekreftelsen
+  // står på samme skjerm, ikke i en nettleser-confirm().
+  const [confirmCaptainFor, setConfirmCaptainFor] = useState<string | null>(null);
 
   const runAction = (
     key: string,
@@ -139,6 +145,9 @@ export function TeamDashboardClient(props: Props) {
       // fanen sto åpen fra før.
       case 'team_unknown':
         return t('errors.teamDashTeamUnknown');
+      // #2358: overføringen krever en lagkamerat som står på spillerlista.
+      case 'not_approved':
+        return t('errors.teamDashNotApproved');
       case 'db_error':
       default:
         return t('errors.teamDashDbError');
@@ -225,6 +234,50 @@ export function TeamDashboardClient(props: Props) {
                 <p className="min-w-0 break-words font-sans text-sm text-text">{m.displayName}</p>
                 <StatusChipMini status={m.status} />
               </div>
+              {isCaptain && m.status === 'approved' && (
+                confirmCaptainFor === m.requestId ? (
+                  <div className="space-y-2" data-testid="make-captain-confirm">
+                    <p className="font-sans text-sm text-text">
+                      {t('teamDashMakeCaptainConfirm', { name: m.displayName })}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        data-testid="make-captain-confirm-button"
+                        pending={pendingKey === `captain:${m.requestId}`}
+                        disabled={isPending}
+                        pendingLabel={t('teamDashMakeCaptainPending')}
+                        onClick={() =>
+                          runAction(
+                            `captain:${m.requestId}`,
+                            () => transferCaptaincy(m.requestId, props.shortId),
+                            t('teamDashMakeCaptainSuccess'),
+                          )
+                        }
+                      >
+                        {t('teamDashMakeCaptainConfirmButton')}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={isPending}
+                        onClick={() => setConfirmCaptainFor(null)}
+                      >
+                        {t('teamDashMakeCaptainCancel')}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      data-testid="make-captain"
+                      disabled={isPending}
+                      onClick={() => setConfirmCaptainFor(m.requestId)}
+                    >
+                      {t('teamDashMakeCaptainButton')}
+                    </Button>
+                  </div>
+                )
+              )}
               {isCaptain && m.status === 'pending' && (
                 <div className="flex flex-wrap gap-2">
                   <Button

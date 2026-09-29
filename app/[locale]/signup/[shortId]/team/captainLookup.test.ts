@@ -100,3 +100,41 @@ describe('resolveCertainTeamInvitation', () => {
     expect(resolveCertainTeamInvitation([], [NEWEST, OLDER])).toBeNull();
   });
 });
+
+/**
+ * Type A (#2358) — kapteinsbindet kan gis videre. Da er den som sendte
+ * e-postinvitasjonen et vanlig lagmedlem, og laget finnes via inviterens egen
+ * påmelding: `team_request_id` peker på den nye kapteinen.
+ */
+describe('invitasjon fra en kaptein som har gitt fra seg bindet (#2358)', () => {
+  const FORMER = 'captain-former';
+  const FROM_FORMER = { id: 'inv-former', invited_by: FORMER };
+  // Den tidligere kapteinen står under OLDER sin kapteinsrad nå.
+  const TEAMS = new Map([[FORMER, OLDER.id]]);
+
+  it('pickCaptainRequest følger inviteren til lagets nye kaptein, sikkert treff', () => {
+    expect(pickCaptainRequest([NEWEST, OLDER], FORMER, TEAMS)).toEqual({
+      row: OLDER,
+      source: 'invited_by',
+    });
+  });
+
+  it('uten lagkart er inviteren ukjent, som før', () => {
+    expect(pickCaptainRequest([NEWEST, OLDER], FORMER)).toEqual({
+      row: NEWEST,
+      source: 'fallback',
+    });
+  });
+
+  it('pickPendingInvitation foretrekker invitasjonen fra lagmedlemmet framfor arrangørens', () => {
+    expect(
+      pickPendingInvitation([FROM_ORGANIZER, FROM_FORMER], [NEWEST.user_id, ...TEAMS.keys()]),
+    ).toEqual(FROM_FORMER);
+  });
+
+  it('resolveCertainTeamInvitation gir sikkert treff på laget', () => {
+    expect(
+      resolveCertainTeamInvitation([FROM_ORGANIZER, FROM_FORMER], [NEWEST, OLDER], TEAMS),
+    ).toEqual({ invitation: FROM_FORMER, captain: OLDER });
+  });
+});

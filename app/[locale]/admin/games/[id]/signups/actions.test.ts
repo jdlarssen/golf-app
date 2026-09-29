@@ -921,3 +921,53 @@ describe('#2061: hele laget på samme lag', () => {
     expect(notifyMock).toHaveBeenCalledTimes(3);
   });
 });
+
+/**
+ * #2358: arrangøren utpeker ny kaptein blant dem som står på laget (eierens
+ * svar 3). Regelen bor i `transfer_team_captaincy` (0194); her bevises porten
+ * (arrangør eller admin, den ekte kalleren som aktør) og landingen.
+ */
+describe('#2358: transferTeamCaptaincy', () => {
+  beforeEach(() => {
+    serverMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null },
+    ]);
+    authedAsAdmin();
+  });
+
+  it('sender arrangøren som aktør og lander på godkjent-fanen med kvittering', async () => {
+    adminMock = buildSupabaseMock([], { transfer_team_captaincy: { outcome: 'ok' } });
+    const { transferTeamCaptaincy } = await import('./actions');
+
+    await expect(transferTeamCaptaincy(GAME_ID, MATE_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(adminMock.__rpcCalls).toEqual([
+      {
+        name: 'transfer_team_captaincy',
+        params: {
+          p_game_id: GAME_ID,
+          p_actor_user_id: ADMIN_ID,
+          p_new_captain_request_id: MATE_REQUEST_ID,
+        },
+      },
+    ]);
+    expect(lastRedirect()).toBe(
+      `/admin/games/${GAME_ID}/signups?tab=approved&status=captain_transferred`,
+    );
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it.each([
+    ['not_approved', 'transfer_not_approved'],
+    ['game_locked', 'game_locked'],
+    ['not_a_teammate', 'transfer_failed'],
+    ['not_allowed', 'transfer_failed'],
+  ])('utfallet %s → ?error=%s', async (outcome, code) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], { transfer_team_captaincy: { outcome } });
+    const { transferTeamCaptaincy } = await import('./actions');
+
+    await expect(transferTeamCaptaincy(GAME_ID, MATE_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?tab=approved&error=${code}`);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+});

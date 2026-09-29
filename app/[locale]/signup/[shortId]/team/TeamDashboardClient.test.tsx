@@ -1,17 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { TeamDashboardClient } from './TeamDashboardClient';
 
 // Server-actions er irrelevante her — vi tester bare den mode-aware
 // neste-steg-copyen (#362, K5). Stubbes så importen ikke drar inn
 // 'use server'-moduler i jsdom.
+const transferCaptaincyMock = vi.fn(async () => ({ ok: true as const }));
 vi.mock('../teamActions', () => ({
   acceptTeamInvite: vi.fn(),
   declineTeamInvite: vi.fn(),
   removeTeamMember: vi.fn(),
   resendTeamInvite: vi.fn(),
   attachToCaptainTeam: vi.fn(),
+  transferCaptaincy: (...args: unknown[]) => transferCaptaincyMock(...(args as [])),
 }));
+vi.mock('@/i18n/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const SHORT_ID = 'abc12345';
 
@@ -77,5 +80,36 @@ describe('TeamDashboardClient — mode-aware «bli med»-copy', () => {
     expect(
       screen.getByText(/Sier du ja.*godkjenne laget/i),
     ).toBeInTheDocument();
+  });
+});
+
+// #2358: kapteinen gir bindet videre fra lagsida. Knappen står bare på en
+// medspiller som er med i spillet, og ingenting skjer før bekreftelsen.
+describe('TeamDashboardClient — gi kapteinsbindet videre (#2358)', () => {
+  it('bekreft på samme skjerm, så overføring til akkurat den medspilleren', async () => {
+    render(
+      <TeamDashboardClient
+        mode="captain"
+        shortId={SHORT_ID}
+        myRowId="cap-1"
+        myStatus="approved"
+        joinEffect="instant"
+        captain={{ requestId: 'cap-1', userId: 'u-cap', displayName: 'Kari', status: 'approved' }}
+        members={[
+          { requestId: 'req-ola', userId: 'u-ola', displayName: 'Ola', status: 'approved' },
+          { requestId: 'req-per', userId: 'u-per', displayName: 'Per', status: 'pending' },
+        ]}
+      />,
+    );
+
+    // Bare den godkjente medspilleren får knappen.
+    expect(screen.getAllByTestId('make-captain')).toHaveLength(1);
+    fireEvent.click(screen.getByTestId('make-captain'));
+    expect(transferCaptaincyMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('make-captain-confirm-button'));
+    await vi.waitFor(() =>
+      expect(transferCaptaincyMock).toHaveBeenCalledWith('req-ola', SHORT_ID),
+    );
   });
 });
