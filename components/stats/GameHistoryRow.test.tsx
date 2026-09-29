@@ -46,5 +46,24 @@ describe('GameHistoryRow', () => {
       />,
     );
     expect(screen.getByRole('link')).toHaveTextContent('—');
+
+    // Team-ball round (#2273) → the label takes the number slot: no brutto,
+    // no «—», no netto.
+    rerender(
+      <GameHistoryRow
+        href="/games/g3/leaderboard?from=/"
+        dateLabel="19. mai"
+        courseName="Byneset North"
+        formatLabel="Texas scramble"
+        resultText={null}
+        resultIsWin={false}
+        brutto={null}
+        nettoLabel={null}
+        teamRoundLabel="Lagrunde"
+      />,
+    );
+    const teamRow = screen.getByRole('link');
+    expect(teamRow).toHaveTextContent('Lagrunde');
+    expect(teamRow).not.toHaveTextContent('—');
   });
 });

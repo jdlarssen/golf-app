@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
+import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * The viewer's own stroke entries + course handicap for one finished game —
@@ -8,6 +9,12 @@ import type { Database } from '@/lib/database.types';
 export type RoundScoreInputs = {
   strokes: (number | null)[];
   courseHandicap: number | null;
+  /**
+   * #2273: the team shared one ball (`modeCollapsesToTeamCard` on hole 18).
+   * The strokes are the team's, stored on the captain, so they are nobody's
+   * own round: `strokes` is always empty and the row shows «Lagrunde».
+   */
+  teamBall: boolean;
 };
 
 /**
@@ -28,6 +35,11 @@ export type RoundScoreInputs = {
  * to the requested game's own `game_players` row (netto must use THAT
  * match's handicap, e.g. a 100%-allowance derived singles match, not the
  * host's 85%-allowance best-ball handicap).
+ *
+ * #2273: a game where the team shares one ball gets `teamBall: true` and no
+ * strokes, for every player on the team (the rule is the format, not who owns
+ * the rows). A derived game follows its host's mode, since the host's rows are
+ * the ones it reads.
  */
 export async function getRoundScoresForGames(
   supabase: SupabaseClient<Database>,
@@ -36,13 +48,13 @@ export async function getRoundScoresForGames(
 ): Promise<Map<string, RoundScoreInputs>> {
   const result = new Map<string, RoundScoreInputs>();
   for (const id of gameIds) {
-    result.set(id, { strokes: [], courseHandicap: null });
+    result.set(id, { strokes: [], courseHandicap: null, teamBall: false });
   }
   if (gameIds.length === 0) return result;
 
   const { data: gamesRows, error: gamesError } = await supabase
     .from('games')
-    .select('id, source_game_id')
+    .select('id, source_game_id, game_mode')
     .in('id', gameIds);
   if (gamesError) throw gamesError;
 
@@ -66,6 +78,7 @@ export async function getRoundScoresForGames(
       .select('game_id, course_handicap')
       .eq('user_id', userId)
       .in('game_id', gameIds),
+    markTeamBallRounds(supabase, result, gamesRows ?? [], scoresGameIdFor),
   ]);
 
   if (scoresRes.error) throw scoresRes.error;
@@ -87,8 +100,42 @@ export async function getRoundScoresForGames(
   for (const s of scoresRes.data ?? []) {
     for (const requestedId of requestersByScoresGameId.get(s.game_id) ?? []) {
       const entry = result.get(requestedId);
-      if (entry) entry.strokes.push(s.strokes);
+      if (entry && !entry.teamBall) entry.strokes.push(s.strokes);
     }
   }
   return result;
+}
+
+/**
+ * #2273: sets `teamBall` on every entry. The mode that counts is the one of
+ * the game whose rows hold the strokes: the host for a derived game, else the
+ * game itself. Hosts that weren't requested are looked up here; a host the
+ * viewer can't read falls back to the game's own mode.
+ */
+async function markTeamBallRounds(
+  supabase: SupabaseClient<Database>,
+  result: Map<string, RoundScoreInputs>,
+  gamesRows: { id: string; source_game_id: string | null; game_mode: string }[],
+  scoresGameIdFor: Map<string, string>,
+): Promise<void> {
+  const modeById = new Map<string, GameMode>(
+    gamesRows.map((g) => [g.id, g.game_mode as GameMode]),
+  );
+  const hostIds = [...new Set(scoresGameIdFor.values())].filter(
+    (id) => !modeById.has(id),
+  );
+  if (hostIds.length > 0) {
+    const { data, error } = await supabase
+      .from('games')
+      .select('id, game_mode')
+      .in('id', hostIds);
+    if (error) throw error;
+    for (const h of data ?? []) modeById.set(h.id, h.game_mode as GameMode);
+  }
+  for (const [requestedId, entry] of result) {
+    const mode =
+      modeById.get(scoresGameIdFor.get(requestedId) ?? requestedId) ??
+      modeById.get(requestedId);
+    entry.teamBall = mode != null && modeCollapsesToTeamCard(mode, 18);
+  }
 }
