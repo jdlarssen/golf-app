@@ -3,13 +3,15 @@
 // Kortet tegner bare det `bagTagModel` svarer (`lib/bagTag.ts`); det regner
 // ingenting selv.
 //
-// **Drakten.** Flaten er `surfaceStrong` og teksten `onStrong` i begge
-// draktene: skogen er mørk i lys og mørk modus, så blekket oppå er lyst i
-// begge. Kickeren og initialringen er i samme lin; gull hører til seire-flisa.
-// Skråstillingen er statisk (ingen animasjon), og den flytter ingenting i
-// layouten: `transform` tegnes etter at plassen er regnet ut.
+// **Drakten følger designlerretet** (eierens retning 29.09). Flaten er
+// `surfaceStrong` og teksten `onStrong` i begge draktene: skogen er mørk i lys
+// og mørk modus, så blekket oppå er lyst i begge. Klubben står i gull, og
+// initialringen har gull kant. Øverst er en stanset spalte for stroppen, og
+// kortet har en skogfarget skygge. Skråstillingen er statisk (ingen animasjon),
+// og den flytter ingenting i layouten: `transform` tegnes etter at plassen er
+// regnet ut.
 //
-// **Skjermleseren.** Navnet er sidens overskrift. Hullet og ringen er pynt og
+// **Skjermleseren.** Navnet er sidens overskrift. Spalten og ringen er pynt og
 // skjult. Handicapet leses som én setning («Handicap 14,2»), og påminnelsen
 // om et gammelt handicap er en knapp til skjemaet, med minst 44 pt å treffe.
 //
@@ -41,48 +43,55 @@ export function BagTag({ model, placeholderName = '', onEditProfile }: BagTagPro
   return (
     <View
       testID="bag-tag"
-      style={[styles.card, { backgroundColor: colors.surfaceStrong }]}
+      style={[
+        styles.card,
+        { backgroundColor: colors.surfaceStrong, shadowColor: colors.surfaceStrong },
+      ]}
     >
+      <View {...hidden} style={[styles.slot, { backgroundColor: colors.bg }]} />
+
       <View style={styles.topRow}>
-        <View {...hidden} style={[styles.hole, { backgroundColor: colors.bg, borderColor: colors.onStrong }]} />
-        <Text style={[styles.kicker, ink]} numberOfLines={1} testID="bag-tag-kicker">
-          {model?.kicker ?? ''}
-        </Text>
-      </View>
-
-      <Text
-        accessibilityRole="header"
-        style={[styles.name, ink]}
-        numberOfLines={2}
-        testID="profile-name"
-      >
-        {model?.name ?? placeholderName}
-      </Text>
-      <Text style={[styles.subline, ink]} testID="bag-tag-subline">
-        {model?.subline ?? ''}
-      </Text>
-
-      <View style={styles.bottomRow}>
-        <View style={styles.hcpBlock}>
-          {model ? (
-            <View
-              accessible
-              accessibilityLabel={`${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}`}
-              testID="profile-hcp"
-            >
-              <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>
-              <Text style={[styles.hcpValue, ink]} testID="profile-hcp-value">
-                {model.hcpText ?? '–'}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.hcpPlaceholder} />
-          )}
-          {model ? <HandicapAge model={model} onEditProfile={onEditProfile} /> : null}
+        <View style={styles.identity}>
+          <Text
+            style={[styles.kicker, { color: colors.accent }]}
+            numberOfLines={1}
+            testID="bag-tag-kicker"
+          >
+            {model?.kicker ?? ''}
+          </Text>
+          <Text
+            accessibilityRole="header"
+            style={[styles.name, ink]}
+            numberOfLines={2}
+            testID="profile-name"
+          >
+            {model?.name ?? placeholderName}
+          </Text>
+          <Text style={[styles.subline, ink]} testID="bag-tag-subline">
+            {model?.subline ?? ''}
+          </Text>
         </View>
-        <View {...hidden} style={[styles.ring, { borderColor: colors.onStrong }]}>
+        <View {...hidden} style={[styles.ring, { borderColor: `${colors.accent}B3` }]}>
           <Text style={[styles.initials, ink]}>{model?.initials ?? ''}</Text>
         </View>
+      </View>
+
+      <View style={styles.hcpBlock}>
+        {model ? (
+          <View
+            accessible
+            accessibilityLabel={`${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}`}
+            testID="profile-hcp"
+          >
+            <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>
+            <Text style={[styles.hcpValue, ink]} testID="profile-hcp-value">
+              {model.hcpText ?? '–'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.hcpPlaceholder} />
+        )}
+        {model ? <HandicapAge model={model} onEditProfile={onEditProfile} /> : null}
       </View>
     </View>
   );
@@ -121,66 +130,68 @@ function HandicapAge({ model, onEditProfile }: { model: BagTagModel; onEditProfi
   );
 }
 
-const RING = 64;
+const RING = 52;
+/** Linjehøyden til det store handicaptallet (64 pt i Fraunces). */
+const HCP_LINE = 62;
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
-    padding: 20,
-    paddingTop: 16,
-    gap: 4,
-    // Luft til skråstillingen: hjørnene stikker et par punkter ut.
-    marginVertical: 12,
+    borderRadius: 28,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 22,
+    gap: 14,
+    // Designet står 28 pt fra kanten; skjermen har alt 20.
+    marginHorizontal: 8,
+    // Luft til skråstillingen og skyggen.
+    marginVertical: 16,
+    shadowOpacity: 0.22,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 14 },
     transform: [{ rotate: '-1.5deg' }],
   },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 20 },
-  // Det stansede hullet viser sidens bakgrunn gjennom kortet.
-  hole: { width: 14, height: 14, borderRadius: 7, borderWidth: 1 },
+  // Den stansede spalten viser sidens bakgrunn gjennom kortet.
+  slot: { alignSelf: 'center', width: 44, height: 14, borderRadius: 7 },
+  topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  identity: { flexShrink: 1 },
   kicker: {
-    flexShrink: 1,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
+    minHeight: 14,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  name: { fontSize: 24, lineHeight: 30, minHeight: 30, fontFamily: FONTS.serifScore, marginTop: 6 },
-  subline: { fontSize: 14, lineHeight: 20, minHeight: 20, fontFamily: FONTS.sans, opacity: 0.9 },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 12,
-  },
-  hcpBlock: { flexShrink: 1 },
+  name: { fontSize: 28, lineHeight: 32, minHeight: 32, fontFamily: FONTS.serifDisplay, marginTop: 6 },
+  subline: { fontSize: 12, lineHeight: 17, minHeight: 17, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
+  hcpBlock: { alignSelf: 'flex-start' },
   hcpLabel: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
+    letterSpacing: 2,
     textTransform: 'uppercase',
   },
   hcpValue: {
-    fontSize: 44,
-    lineHeight: 52,
+    fontSize: 64,
+    lineHeight: HCP_LINE,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
+    letterSpacing: -1,
   },
   // Samme høyde som etikett + tall + linja under, så kortet står stille.
-  hcpPlaceholder: { height: 16 + 52 + TAP },
-  age: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sans },
+  hcpPlaceholder: { height: 14 + HCP_LINE + TAP },
+  age: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans, opacity: 0.9 },
   ageLine: { minHeight: TAP, justifyContent: 'center' },
   ageLink: { minHeight: TAP, justifyContent: 'center', alignSelf: 'flex-start' },
-  ageLinkText: { fontFamily: FONTS.sansMedium, textDecorationLine: 'underline' },
+  ageLinkText: { fontFamily: FONTS.sansMedium, textDecorationLine: 'underline', opacity: 1 },
   ring: {
     width: RING,
     height: RING,
     borderRadius: RING / 2,
-    borderWidth: 2,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
   },
-  initials: { fontSize: 22, fontFamily: FONTS.serifDisplay },
+  initials: { fontSize: 18, fontFamily: FONTS.serifDisplay },
 });
