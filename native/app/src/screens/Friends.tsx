@@ -255,7 +255,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
       ) : null}
 
       {incoming.length > 0 ? (
-        <Section title={FRIENDS_TEXT.incomingSection} testID="friends-incoming">
+        <Section title={FRIENDS_TEXT.incomingSection} testID="friends-incoming" rows>
           <PeopleList>
           {incoming.map((r) => (
             <PersonRow key={r.requestId} name={r.name}>
@@ -286,7 +286,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
         </Section>
       ) : null}
 
-      <Section title={FRIENDS_TEXT.friendsSection} testID="friends-list">
+      <Section title={FRIENDS_TEXT.friendsSection} testID="friends-list" rows>
         {friends.length === 0 ? (
           <Text style={ui.muted} testID="friends-empty">
             {FRIENDS_TEXT.noFriendsYet}
@@ -311,7 +311,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
       </Section>
 
       {outgoing.length > 0 ? (
-        <Section title={FRIENDS_TEXT.outgoingSection} testID="friends-outgoing">
+        <Section title={FRIENDS_TEXT.outgoingSection} testID="friends-outgoing" rows>
           <PeopleList>
           {outgoing.map((r) => (
             <PersonRow key={r.requestId} name={r.name}>
@@ -331,7 +331,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
       ) : null}
 
       {suggestions.length > 0 ? (
-        <Section title={FRIENDS_TEXT.suggestionsSection} testID="friends-suggestions">
+        <Section title={FRIENDS_TEXT.suggestionsSection} testID="friends-suggestions" rows>
           <PeopleList>
           {suggestions.map((s) => (
             <PersonRow key={s.id} name={s.name}>
@@ -413,12 +413,27 @@ function PeopleList({ children }: { children: ReactNode }) {
   );
 }
 
-function Section({ title, children, testID }: { title: string; children: ReactNode; testID: string }) {
+/**
+ * En overskrift og et kort. Kort med personrader (`rows`) har lite luft over og
+ * under, fordi radene har sin egen høyde; kort med tekst og felter har kortets
+ * vanlige luft.
+ */
+function Section({
+  title,
+  children,
+  testID,
+  rows = false,
+}: {
+  title: string;
+  children: ReactNode;
+  testID: string;
+  rows?: boolean;
+}) {
   const { ui } = useTheme();
   return (
     <View testID={testID}>
       <Text style={ui.sectionTitle}>{title}</Text>
-      <View style={[ui.card, styles.sectionCard]}>{children}</View>
+      <View style={[ui.card, styles.sectionCard, rows ? styles.rowsCard : null]}>{children}</View>
     </View>
   );
 }
@@ -482,7 +497,8 @@ function SmallButton({
 }
 
 const styles = StyleSheet.create({
-  sectionCard: { marginTop: 8, paddingVertical: 4 },
+  sectionCard: { marginTop: 8 },
+  rowsCard: { paddingVertical: 4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
