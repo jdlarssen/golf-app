@@ -45,7 +45,7 @@ describe('formene', () => {
     expect(playedLine(7, 18)).toBe('Du har spilt 7 av 18 hull');
     expect(flightOf(2, 3)).toBe('2 av 3');
     // Hardt mellomrom: «85» og «%» skal aldri brytes fra hverandre.
-    expect(allowancePart(85)).toBe('85 % handicap');
+    expect(allowancePart(85)).toBe('85\u00A0% handicap');
     expect(fieldA11y('Dine slag', '15')).toBe('Dine slag: 15');
     expect(rosterA11y(true, 'Du og Marte')).toBe('Flighten din: Du og Marte');
     expect(rosterA11y(false, 'Du og Marte')).toBe('Med i runden: Du og Marte');

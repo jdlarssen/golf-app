@@ -93,12 +93,14 @@ export function GameTicket({
 
         <View style={styles.body}>
           <View style={styles.fields}>
-            {fields.map((field) => (
+            {fields.map((field, i) => (
               <View
                 key={field.testID}
                 accessible
                 accessibilityLabel={field.a11y}
-                style={styles.field}
+                // Datoen i første felt («Ons 30. sep») er lengst og får litt
+                // mer plass, så den står på én linje på en 390 pt-telefon.
+                style={[styles.field, i === 0 && styles.fieldWide]}
                 testID={field.testID}
               >
                 <Text style={[styles.fieldLabel, { color: colors.muted }]}>{field.label}</Text>
@@ -205,6 +207,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8, gap: 12 },
   fields: { flexDirection: 'row', gap: 10 },
   field: { flex: 1, gap: 2 },
+  fieldWide: { flex: 1.4 },
   fieldLabel: {
     fontSize: 11,
     fontFamily: FONTS.sansSemiBold,
@@ -212,8 +215,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   fieldValue: {
-    fontSize: 19,
-    lineHeight: 24,
+    fontSize: 18,
+    lineHeight: 23,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
   },

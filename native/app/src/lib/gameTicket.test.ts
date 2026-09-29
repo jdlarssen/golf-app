@@ -130,7 +130,7 @@ describe('ticketSlot — felt 2', () => {
 
 describe('ticketHeaderLine', () => {
   it.each([
-    ['stableford bruker den generelle andelen', 'stableford', 85, 'Tee: Gul · Stableford · 85 % handicap'],
+    ['stableford bruker den generelle andelen', 'stableford', 85, 'Tee: Gul · Stableford · 85\u00A0% handicap'],
     ['fourball har sin egen andel i mode_config', 'fourball_matchplay', 85, 'Tee: Gul · Fourball'],
     ['texas scramble likeså', 'texas_scramble', 100, 'Tee: Gul · Texas scramble'],
     ['uten lagret andel står ingen prosent', 'stableford', undefined, 'Tee: Gul · Stableford'],
@@ -147,10 +147,10 @@ describe('ticketHeaderLine', () => {
 
 describe('ticketFacts', () => {
   it.each([
-    ['herre: hele linja', 'mens', '18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5'],
-    ['dame: dame-ratingen, CR uten desimal', 'ladies', '18 hull · Par 72 · 6 124 m · Slope 128 · CR 73'],
-    ['junior uten rating: bare hull og lengde', 'juniors', '18 hull · 6 124 m'],
-    ['ukjent kjønn fra basen: som manglende rating', 'x', '18 hull · 6 124 m'],
+    ['herre: hele linja', 'mens', '18\u00A0hull · Par\u00A072 · 6\u00A0124\u00A0m · Slope\u00A0125 · CR\u00A071,5'],
+    ['dame: dame-ratingen, CR uten desimal', 'ladies', '18\u00A0hull · Par\u00A072 · 6\u00A0124\u00A0m · Slope\u00A0128 · CR\u00A073'],
+    ['junior uten rating: bare hull og lengde', 'juniors', '18\u00A0hull · 6\u00A0124\u00A0m'],
+    ['ukjent kjønn fra basen: som manglende rating', 'x', '18\u00A0hull · 6\u00A0124\u00A0m'],
   ])('%s', (_case, teeGender, expected) => {
     const bundle = bundleWith({}, [homePlayer({ userId: 'me', teeGender })]);
     expect(ticketFacts(bundle, bundle.players[0])).toBe(expected);
@@ -158,11 +158,11 @@ describe('ticketFacts', () => {
 
   it('uten tee står bare hullene, og en halv runde har ikke 18-hullstallene', () => {
     const noTee = { ...bundleWith({}, [homePlayer({ userId: 'me' })]), teeRatings: null };
-    expect(ticketFacts(noTee, noTee.players[0])).toBe('18 hull');
+    expect(ticketFacts(noTee, noTee.players[0])).toBe('18\u00A0hull');
     const front9 = bundleWith({ holeSegment: 'front9' }, [homePlayer({ userId: 'me' })]);
-    expect(ticketFacts(front9, front9.players[0])).toBe('9 hull · Slope 125 · CR 71,5');
+    expect(ticketFacts(front9, front9.players[0])).toBe('9\u00A0hull · Slope\u00A0125 · CR\u00A071,5');
     // Den som ikke er spiller (arrangøren), har ikke noe kjønn å lese rating for.
-    expect(ticketFacts(front9, undefined)).toBe('9 hull');
+    expect(ticketFacts(front9, undefined)).toBe('9\u00A0hull');
   });
 });
 
