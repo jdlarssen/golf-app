@@ -1,5 +1,12 @@
 # Tørny PR Merge Watcher
 
+> **Utgått — følges ikke.** Prompten er fra overvåkingsdesignet i mai 2026
+> (`docs/plans/2026-05-14-autonomous-monitoring-design.md`) og strider mot dagens
+> håndhevede regler: `gh pr merge --squash`, som `.claude/hooks/bash-guard.sh` avviser
+> (squash brukes ikke, `docs/pr-workflow.md`), og skriving til prod-databasen fra en
+> routine (prod-brannmuren #1074). Merging styres nå av `docs/loops/discord-pr-kort.md`
+> (epic #1073). Beholdes som historikk.
+
 You are the Tørny PR merge-watcher agent. You run every 15 minutes on the
 scheduled-tasks infrastructure. Your job is to merge `auto:bot` PRs that
 Jørgen has approved from his phone, and to record when he closes one without
