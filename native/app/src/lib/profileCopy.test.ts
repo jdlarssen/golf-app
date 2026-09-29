@@ -35,6 +35,7 @@ import {
   describeHandicapAge,
   describeProfileSaveFailure,
   formatHcpNb,
+  friendsWaitingLine,
   hcpUpdatedLine,
   isHandicapAgeStale,
   memberSinceLine,
@@ -120,6 +121,8 @@ describe('PROFILE_TEXT', () => {
     ['themeHeading', PROFILE_TEXT.themeHeading, web.theme.rowLabel],
     ['themeLight', PROFILE_TEXT.themeLight, web.theme.options.light],
     ['themeDark', PROFILE_TEXT.themeDark, web.theme.options.dark],
+    ['friendsRow', PROFILE_TEXT.friendsRow, web.friendsRow],
+    ['friendsSublabel', PROFILE_TEXT.friendsSublabel, web.friendsSublabel],
   ])('«%s» er webbens streng tegn for tegn', (_key, appText, webText) => {
     expect(appText).toBe(webText);
   });
@@ -157,6 +160,13 @@ describe('bag-taggens linjer', () => {
   it('setter året inn i sublinja og overskriften', () => {
     expect(memberSinceLine(2026)).toBe('med siden 2026');
     expect(seasonHeading(2026)).toBe('Sesongen 2026');
+  });
+
+  it('skriver ut webbens flertall for «vil bli venn(er) med deg»', () => {
+    // Webben: {count, plural, one {1 vil bli venn med deg} other {{count} vil bli venner med deg}}
+    expect(web.friendsBadgeSublabel).toContain(`one {${friendsWaitingLine(1)}}`);
+    expect(web.friendsBadgeSublabel).toContain(`other {${friendsWaitingLine(7).replace('7', '{count}')}}`);
+    expect(friendsWaitingLine(2)).toBe('2 vil bli venner med deg');
   });
 
   it('leser en flis som én setning', () => {

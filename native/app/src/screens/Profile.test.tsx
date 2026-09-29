@@ -34,9 +34,15 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
 import { fetchBagTagExtras } from '../data/bagTag';
+import { fetchFriends } from '../data/friends';
 import { logOut } from '../data/logout';
 import { fetchOwnProfile } from '../data/profile';
-import { PROFILE_TEXT, formatHcpNb, unsentStrokesWarning } from '../lib/profileCopy';
+import {
+  PROFILE_TEXT,
+  formatHcpNb,
+  friendsWaitingLine,
+  unsentStrokesWarning,
+} from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import type { ScreenProps } from '../navigation';
 import { Profile } from './Profile';
@@ -52,11 +58,13 @@ jest.mock('../session', () => ({
 }));
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
+jest.mock('../data/friends', () => ({ fetchFriends: jest.fn() }));
 jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
 jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const fetchBagTagExtrasMock = fetchBagTagExtras as jest.Mock;
+const fetchFriendsMock = fetchFriends as jest.Mock;
 const logOutMock = logOut as jest.Mock;
 const isStagingBuildMock = isStagingBuild as jest.Mock;
 
@@ -65,10 +73,14 @@ const MY_HCP = 12.4;
 
 const navigate = jest.fn();
 const setParams = jest.fn();
-// Rommet abonnerer på `blur` for å nullstille lagrings-kvitteringen. Stubben
-// svarer med en avmeldingsfunksjon, slik den ekte gjør — uten den ville
-// effektens opprydding kastet.
-const addListener = jest.fn(() => jest.fn());
+// Rommet abonnerer på `blur` for å nullstille lagrings-kvitteringen, og på
+// `focus` for å hente hvor mange som venter på svar (#2256). Stubben fyrer
+// `focus` med en gang, slik navigatoren gjør når skjermen åpnes, og svarer
+// med en avmeldingsfunksjon — uten den ville effektens opprydding kastet.
+const addListener = jest.fn((event: string, listener: () => void) => {
+  if (event === 'focus') listener();
+  return jest.fn();
+});
 
 /** Rendrer rommet og venter til profilraden har landet i kortet. */
 async function renderScreen() {
@@ -106,6 +118,19 @@ describe('Profile', () => {
       year: 2026,
       club: 'Losby GK',
       season: { rounds: 3, bestRound: 82, wins: 1 },
+    });
+    fetchFriendsMock.mockResolvedValue({
+      ok: true,
+      data: {
+        friends: [],
+        incoming: [
+          { requestId: 'r1', id: 'kari', name: 'Kari' },
+          { requestId: 'r2', id: 'ola', name: 'Ola' },
+        ],
+        outgoing: [],
+        suggestions: [],
+        friendCode: null,
+      },
     });
     logOutMock.mockResolvedValue({ ok: true });
     isStagingBuildMock.mockReturnValue(false);
@@ -159,6 +184,12 @@ describe('Profile', () => {
     expect(screen.queryByTestId('profile-developer')).toBeNull();
 
     // Menyradene navigerer bare. Sletting og personvern bor ikke her lenger.
+    // Vennerraden sier hvor mange som venter på svar (#2256 PR 2).
+    expect(screen.getByTestId('profile-friends')).toHaveTextContent(friendsWaitingLine(2), {
+      exact: false,
+    });
+    await fireEvent.press(screen.getByTestId('profile-friends'));
+    expect(navigate).toHaveBeenCalledWith('Friends');
     await fireEvent.press(screen.getByTestId('profile-notifications-theme'));
     expect(navigate).toHaveBeenCalledWith('NotificationsAndTheme');
     await fireEvent.press(screen.getByTestId('profile-account-settings'));

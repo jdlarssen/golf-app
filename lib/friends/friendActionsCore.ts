@@ -9,6 +9,9 @@ import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import { notify } from '@/lib/notifications/notify';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { displayNameForOthers } from '@/lib/users/displayName';
+import { asFriendStatus as asStatus, type FriendStatus, type InviteStatus } from './friendStatus';
+
+export type { FriendStatus, InviteStatus };
 
 /**
  * Vennehandlingene (#2256): ett hjem for det webbens server-handlinger og
@@ -27,29 +30,6 @@ import { displayNameForOthers } from '@/lib/users/displayName';
  */
 
 type Client = SupabaseClient<Database>;
-
-/** Statusene RPC-ene svarer med, pluss de to kjernen selv kan gi. */
-export const FRIEND_STATUSES = [
-  'requested',
-  'accepted',
-  'already_friends',
-  'already_pending',
-  'self',
-  'not_found',
-  'already_decided',
-  'declined',
-  'removed',
-  'email_required',
-  'error',
-] as const;
-export type FriendStatus = (typeof FRIEND_STATUSES)[number];
-
-/** En kode fra basen vi ikke kjenner, blir «error», aldri en rå streng videre. */
-function asStatus(value: unknown): FriendStatus {
-  return typeof value === 'string' && (FRIEND_STATUSES as readonly string[]).includes(value)
-    ? (value as FriendStatus)
-    : 'error';
-}
 
 /**
  * Visningsnavn for varsel-payload: nickname-dekorert navn → maskert e-post
@@ -198,17 +178,6 @@ export async function remove(client: Client, otherId: string): Promise<FriendSta
 }
 
 // ── Invitasjon til en som ikke er på Tørny ──────────────────────────────────
-
-export type InviteStatus =
-  | 'invited'
-  | 'email_required'
-  | 'invalid_email'
-  | 'disposable_email'
-  | 'profile_incomplete'
-  | 'quota'
-  | 'already_user'
-  | 'already_invited'
-  | 'unknown';
 
 // Lightweight format check. We rely on browser `type="email"` + the
 // fact that Supabase will reject malformed addresses too. Just guard

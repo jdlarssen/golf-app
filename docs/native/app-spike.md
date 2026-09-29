@@ -1970,6 +1970,25 @@ som er for spillernes slag, køen og cachen.
 Gull som tekst er rollen `accentText` (webbens `--accent-text`). `accent` er for lys til
 tekst på en lys flate.
 
+### Venner i appen (#2256 PR 2)
+
+«Venner» i profilen er appens versjon av webbens `/profile/venner`, med samme seksjoner i
+samme rekkefølge. Alt går gjennom serverruter, fordi vennene og forslagene leses med
+admin-klienten (`users` er ikke lesbar for andre), og varslene sendes med den:
+
+- `GET /api/friends` gir listene med bare `id` og visningsnavn (navn, ellers maskert adresse)
+  og kallerens egen venne-kode. Ingen andres e-postadresse forlater serveren.
+- `POST /api/friends/request | by-email | respond | remove | invite` svarer `{ status }`,
+  de samme kodene som webbens `?status=`.
+- Webbens server-handlinger og rutene kaller den samme kjernen
+  (`lib/friends/friendActionsCore.ts`); statuskodene har ett hjem i
+  `lib/friends/friendStatus.ts`, som appen også leser. Porten for POST-rutene er
+  `lib/friends/friendRoute.ts`: bruker-id fra tokenet, RPC-ene med kallerens klient.
+
+Vennehandlinger legges aldri i en kø: uten nett sier skjermen at venner krever nett.
+«Fjern» spør med en dialog, og «Del lenke» åpner delearket (`Share.share`, ingen ny modul).
+Raden i profilen henter antallet som venter på svar hver gang profilen får fokus.
+
 ## Startbilletten (#2255)
 
 Spillets side i appen (`screens/GameHome.tsx`) er én startbillett. Webbens spillside er
