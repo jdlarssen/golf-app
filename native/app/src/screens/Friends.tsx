@@ -51,7 +51,7 @@ import {
 import type { WebApiFailure } from '../data/webApi';
 import {
   FRIENDS_TEXT,
-  declineA11yLabel,
+  friendRowA11yLabel,
   friendSheetValues,
   friendStatusLine,
   friendSubline,
@@ -63,6 +63,7 @@ import {
   inviteFailureLine,
   invitePrompt,
   invitedLine,
+  personActionA11yLabel,
   removeConfirmMessage,
   roundsSubline,
   type StatusLine,
@@ -401,11 +402,12 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                   onPress={() =>
                     void run(`accept:${r.requestId}`, () => respondToFriendRequest(r.requestId, true))
                   }
+                  accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.acceptLabel, r.name)}
                   testID={`friends-accept-${r.id}`}
                 />
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={declineA11yLabel(r.name)}
+                  accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.declineLabel, r.name)}
                   accessibilityState={{ disabled: locked, busy: busy === `decline:${r.requestId}` }}
                   disabled={locked}
                   onPress={() =>
@@ -462,7 +464,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                       pending={busy === `add:${s.id}`}
                       disabled={locked}
                       onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id))}
-                      accessibilityLabel={`${FRIENDS_TEXT.addEmailButton} ${s.name || FRIENDS_TEXT.someoneFallback}`}
+                      accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.addEmailButton, s.name)}
                       testID={`friends-add-${s.id}`}
                     />
                   </View>
@@ -493,7 +495,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                   <Pressable
                     key={f.id}
                     accessibilityRole="button"
-                    accessibilityLabel={sub ? `${f.name}, ${sub}` : f.name}
+                    accessibilityLabel={friendRowA11yLabel(f.name, sub)}
                     disabled={locked}
                     onPress={() => setSheetFriend(f)}
                     style={({ pressed }) => [styles.personRow, pressed ? styles.pressed : null]}
@@ -528,6 +530,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                     pending={busy === `withdraw:${r.id}`}
                     disabled={locked}
                     onPress={() => void run(`withdraw:${r.id}`, () => removeFriend(r.id))}
+                    accessibilityLabel={personActionA11yLabel(FRIENDS_TEXT.withdrawLabel, r.name)}
                     testID={`friends-withdraw-${r.id}`}
                   />
                 </View>
