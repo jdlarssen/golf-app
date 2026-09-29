@@ -149,6 +149,80 @@ describe('RosterRow', () => {
 });
 
 describe('GameHome', () => {
+  it('med eget kort levert og et makkerkort klart, går «Lever kortet du har ført» til scorekortet (#2200)', async () => {
+    const game: BundleGame = {
+      id: 'game-1',
+      name: 'Testrunden',
+      status: 'active',
+      gameMode: 'stableford',
+      modeConfig: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+      courseId: 'course-1',
+      teeBoxId: 'tee-1',
+      requirePeerApproval: true,
+      scheduledTeeOffAt: null,
+      holeSegment: 'full',
+      sourceGameId: null,
+      createdBy: 'other',
+      scoreVisibility: 'live',
+      tournamentId: null,
+      foursomesSide1TeeStarterUserId: null,
+      foursomesSide2TeeStarterUserId: null,
+      sideTournamentEnabled: false,
+      sideLdCount: 0,
+      sideCtpCount: 0,
+      sideDisabledCategories: [],
+    } as BundleGame;
+    const at = '2026-09-17T08:00:00.000Z';
+    mockState.bundle = {
+      game,
+      players: [
+        player({ userId: 'me', acceptedAt: at, submittedAt: at, submittedByUserId: 'me' }),
+        player({ userId: 'ola', acceptedAt: at }),
+        player({ userId: 'other', acceptedAt: at }),
+      ],
+      courseName: 'Testbanen',
+      teeBoxName: 'Gul',
+      holes: Array.from({ length: 18 }, (_, i) => ({
+        holeNumber: i + 1,
+        parMens: 4,
+        parLadies: 5,
+        parJuniors: 4,
+        strokeIndex: i + 1,
+      })),
+      fetchedAt: at,
+    };
+    // I førte alle 18 hullene for meg selv og for Ola.
+    mockState.scores = ['me', 'ola'].flatMap((userId) =>
+      Array.from({ length: 18 }, (_, i) => ({
+        id: `game-1#${userId}#${i + 1}`,
+        gameId: 'game-1',
+        userId,
+        holeNumber: i + 1,
+        strokes: 4,
+        putts: null,
+        enteredBy: 'me',
+        clientUpdatedAt: at,
+        serverUpdatedAt: null,
+      })),
+    );
+    const navigation = { navigate: jest.fn() };
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation,
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(async () => {
+      await fireEvent.press(screen.getByTestId('deliver-flight-cta'));
+      expect(navigation.navigate).toHaveBeenLastCalledWith('Scorecard', { gameId: 'game-1' });
+    });
+    expect(screen.getByTestId('submitted-banner')).toBeTruthy();
+  });
+
   it('kapteinen har slettet kontoen: 9 hull på kapteinen og 9 på makkeren gir lever-knappen (#2067)', async () => {
     const game: BundleGame = {
       id: 'game-1',

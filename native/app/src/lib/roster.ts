@@ -232,6 +232,15 @@ export function flightDeliveryLines(candidates: readonly BundlePlayer[]): string
   return lines;
 }
 
+/**
+ * Knappen på spillhjemmet når mitt eget kort er levert og makkerkort står
+ * igjen (#2200), som nettsidens `game.home.ctaDeliverFlight`. `null` = ingen.
+ */
+export function flightCtaLabel(count: number): string | null {
+  if (count <= 0) return null;
+  return count === 1 ? 'Lever kortet du har ført' : `Lever kortene du har ført (${count})`;
+}
+
 /** Lever-knappen når makkerne leveres med: mitt kort pluss deres. */
 export function flightDeliveryButton(candidates: readonly BundlePlayer[]): string {
   return `Lever ${candidates.length + 1} kort ✓`;
