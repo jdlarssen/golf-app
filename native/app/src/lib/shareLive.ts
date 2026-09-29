@@ -18,6 +18,14 @@ export function liveFollowPath(token: string): string {
 export type ShareLiveResult = { ok: true } | { ok: false; reason: 'no-web-base-url' | 'failed' };
 
 /**
+ * Kan knappen dele noe? Mangler bygget nettadressen, ville hvert trykk feilet,
+ * og da skal knappen ikke stå (aldri en knapp som gjør ingenting, `webLink.ts`).
+ */
+export function canShareLiveFollow(token: string | null): token is string {
+  return token !== null && webUrl(liveFollowPath(token)).ok;
+}
+
+/**
  * Åpne delingsarket med lenka. iOS tar teksten og lenka hver for seg; Android
  * har bare `message`, så lenka står i teksten der. Å lukke arket er ikke en feil.
  */

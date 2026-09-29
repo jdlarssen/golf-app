@@ -12,7 +12,7 @@
 //     på en smal telefon (#1842: tekst som klippes er tekst som lyver).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { AccessibilityInfo, ScrollView } from 'react-native';
+import { AccessibilityInfo, Alert, ScrollView } from 'react-native';
 import type { ReactElement } from 'react';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { TICKET_TEXT } from '../lib/ticketCopy';
@@ -45,6 +45,7 @@ jest.mock('../session', () => ({
 // Del-knappen (#2255) deler via RN `Share`; her holder det å se hva den får.
 jest.mock('../lib/shareLive', () => ({
   shareLiveFollow: jest.fn(async () => ({ ok: true })),
+  canShareLiveFollow: jest.fn((token: string | null) => token !== null),
 }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
@@ -585,5 +586,66 @@ describe('GameHome — startbilletten (#2255)', () => {
     await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
 
     expect(navigation.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
+  });
+  it('lagformat: ingen tall ved fremdriften, som helten på Hjem', async () => {
+    mockState.bundle = homeBundle({
+      game: { gameMode: 'texas_scramble', modeConfig: {} },
+      players: [
+        homePlayer({ userId: 'me', teamNumber: 1 }),
+        homePlayer({ userId: 'ola', teamNumber: 1 }),
+      ],
+    });
+    mockState.scores = holeScores('g-live', 'me', 7, 4);
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'g-live' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('ticket-played')).toBeTruthy());
+    expect(screen.queryByTestId('ticket-total')).toBeNull();
+  });
+
+  it('Del-knappen: en delingsfeil gir en melding, og uten nettadresse står ingen knapp', async () => {
+    const mod = require('../lib/shareLive') as { shareLiveFollow: jest.Mock; canShareLiveFollow: jest.Mock };
+    mod.shareLiveFollow.mockResolvedValueOnce({ ok: false, reason: 'failed' });
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    mockState.bundle = homeBundle({
+      game: { spectateToken: 'tok-123' },
+      players: [homePlayer({ userId: 'me' })],
+    });
+    mockState.scores = [];
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+
+    const view = await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'g-live' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+    const { headerRight } = navigation.setOptions.mock.lastCall![0] as {
+      headerRight?: () => ReactElement;
+    };
+    await render(headerRight!());
+    await fireEvent.press(screen.getByTestId('share-live'));
+    await waitFor(() => expect(alert).toHaveBeenCalledWith(TICKET_TEXT.shareFailed));
+    alert.mockRestore();
+    view.unmount();
+
+    // Bygget mangler nettadressen: hvert trykk ville feilet, så knappen står ikke.
+    mod.canShareLiveFollow.mockReturnValue(false);
+    const second = { navigate: jest.fn(), setOptions: jest.fn() };
+    await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'g-live' } }, navigation: second } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+    expect(second.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
+    mod.canShareLiveFollow.mockImplementation((token: string | null) => token !== null);
   });
 });

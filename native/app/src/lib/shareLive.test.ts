@@ -1,6 +1,6 @@
 // #2255: Del-knappen deler webbens «følg live»-lenke med telefonens delingsark.
 import { Platform, Share } from 'react-native';
-import { liveFollowPath, shareLiveFollow } from './shareLive';
+import { canShareLiveFollow, liveFollowPath, shareLiveFollow } from './shareLive';
 
 const ENV = process.env.EXPO_PUBLIC_WEB_BASE_URL;
 afterEach(() => {
@@ -34,4 +34,13 @@ it('uten webadresse i bygget, eller når arket feiler: et svar, ikke et kast', a
   process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://tornygolf.no';
   jest.spyOn(Share, 'share').mockRejectedValue(new Error('nei'));
   await expect(shareLiveFollow('abc')).resolves.toEqual({ ok: false, reason: 'failed' });
+});
+
+it('knappen står bare med et token OG en nettadresse i bygget', () => {
+  process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://tornygolf.no';
+  expect(canShareLiveFollow('abc')).toBe(true);
+  expect(canShareLiveFollow(null)).toBe(false);
+  // Uten nettadresse ville hvert trykk feilet: da står ingen knapp.
+  process.env.EXPO_PUBLIC_WEB_BASE_URL = '';
+  expect(canShareLiveFollow('abc')).toBe(false);
 });
