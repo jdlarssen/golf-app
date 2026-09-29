@@ -9,7 +9,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { scoreShape, type ScoreShape as ShapeKind } from '../../../../../lib/scoring/scoreShape';
 import { useTheme } from '../../theme';
 
-const RING_GAP = 2;
+// Tett nok til at fire ringer (kvadruppel bogey) har plass til tallet i 26 pt.
+const RING_GAP = 1.5;
 
 const RINGS: Record<ShapeKind, { count: number; round: boolean }> = {
   none: { count: 0, round: false },
@@ -26,7 +27,7 @@ const RINGS: Record<ShapeKind, { count: number; round: boolean }> = {
 export function ScoreShape({
   strokes,
   par,
-  size = 28,
+  size = 26,
 }: {
   strokes: number;
   par: number;
