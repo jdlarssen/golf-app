@@ -90,6 +90,40 @@ export const PROFILE_TEXT = {
   savePending: 'Lagrer …',
   saveHint: 'Lagre blir aktiv når du endrer noe.',
 
+  // --- Webbens ordlyd: sesongen og temaet (#2256) --------------------------
+  // Flisene bruker webbens ord for de samme tallene: «Runder» er kolonnen i
+  // sesongoppsummeringen (`profile.historikk.seasonColRounds`), «Beste runde»
+  // er «Mine tall» (`profile.myStats.bestRound`). Temavalget er webbens
+  // `profile.theme`: overskriften og de to faste draktene.
+  tileRounds: 'Runder',
+  tileBestRound: 'Beste runde',
+  themeHeading: 'Tema',
+  themeLight: 'Lys',
+  themeDark: 'Mørk',
+
+  // --- App-egent: bag-taggen og menyen (#2256) ----------------------------
+  // Webbens profil er ennå ikke en bag-tag (#2250), så her finnes ingen fasit.
+  // «Rediger» står oppe til høyre i profilen og fører til skjemaet. Profilen
+  // har ikke lenger raden `editRow`; den lever videre som knappen i
+  // veiviseren (`createGameCopy`).
+  editAction: 'Rediger',
+  /** Kickeren på kortet når spilleren ikke er med i noen klubb. */
+  bagTagFallbackKicker: 'Tørny',
+  // «med siden 2026» og «Sesongen 2026»: året settes inn av
+  // {@link memberSinceLine} og {@link seasonHeading}, som med `hcpUpdatedPrefix`.
+  memberSincePrefix: 'med siden ',
+  seasonHeadingPrefix: 'Sesongen ',
+  tileWins: 'Seire',
+  /** Beste runde uten en eneste hel runde i året. */
+  tileEmpty: '–',
+  /** Det skjermleseren sier i stedet for streken. */
+  tileEmptySpoken: 'ingen hel runde ennå',
+  menuNotificationsTheme: 'Varsler og tema',
+  menuAccount: 'Personvern og konto',
+  // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.
+  themeSystem: 'Følg telefonen',
+  themeSaveFailedNote: 'Fikk ikke lagret valget, så temaet gjelder bare til du lukker appen.',
+
   // --- App-egent: veien inn i skjemaet ------------------------------------
   // To nøkler for det som i dag er samme ord, av samme grunn som `deleteRow`
   // og `ACCOUNT_TEXT.heading` er to: den ene er raden som fører dit, den andre
@@ -148,6 +182,24 @@ export const PROFILE_TEXT = {
  */
 export function hcpUpdatedLine(dateText: string): string {
   return `${PROFILE_TEXT.hcpUpdatedPrefix}${dateText}`;
+}
+
+/** «med siden 2026» — sublinja på bag-taggen. */
+export function memberSinceLine(year: number): string {
+  return `${PROFILE_TEXT.memberSincePrefix}${year}`;
+}
+
+/** «Sesongen 2026» — overskriften over flisene. */
+export function seasonHeading(year: number): string {
+  return `${PROFILE_TEXT.seasonHeadingPrefix}${year}`;
+}
+
+/**
+ * Det skjermleseren sier om én flis: «Seire i 2026: 2». Hver flis er én node,
+ * så tallet og hva det teller leses som én setning.
+ */
+export function seasonTileSpoken(label: string, year: number, value: string): string {
+  return `${label} i ${year}: ${value}`;
 }
 
 /**
@@ -214,15 +266,28 @@ export function describeHandicapAge(
   updatedAt: string | null | undefined,
   now?: Date,
 ): string {
-  if (!updatedAt) return PROFILE_TEXT.hcpStaleShort;
+  if (isHandicapAgeStale(updatedAt, now)) return PROFILE_TEXT.hcpStaleShort;
+  // `isHandicapAgeStale` har sagt at stempelet finnes og kan leses.
+  return hcpUpdatedLine(formatShortDateNb(new Date(updatedAt as string)));
+}
+
+/**
+ * Om handicapet skal regnes som gammelt — grenen {@link describeHandicapAge}
+ * velger påminnelsen på. Bag-taggen (#2256) trenger svaret for seg, fordi
+ * påminnelsen der er en lenke til skjemaet og ikke bare en linje.
+ */
+export function isHandicapAgeStale(
+  updatedAt: string | null | undefined,
+  now?: Date,
+): boolean {
+  if (!updatedAt) return true;
   const updated = new Date(updatedAt);
   // Et ulesbart tidsstempel gir en NaN-differanse, og `isHandicapStale` leser
   // den som «ikke gammelt» — da ville raden stått med «Oppdatert Invalid
   // Date». Vi vet ikke NÅR det ble satt, så vi ber om det på nytt: samme svar
   // som når tidsstempelet mangler helt.
-  if (Number.isNaN(updated.getTime())) return PROFILE_TEXT.hcpStaleShort;
-  if (isHandicapStale(updated, now)) return PROFILE_TEXT.hcpStaleShort;
-  return hcpUpdatedLine(formatShortDateNb(updated));
+  if (Number.isNaN(updated.getTime())) return true;
+  return isHandicapStale(updated, now);
 }
 
 /**

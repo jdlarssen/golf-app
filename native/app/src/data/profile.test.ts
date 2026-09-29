@@ -57,12 +57,13 @@ const ROW = {
   level: 'intermediate',
   is_admin: false,
   profile_completed_at: '2026-08-30T10:00:00.000Z',
+  created_at: '2026-04-12T18:00:00.000Z',
 };
 
 describe('fetchOwnProfile', () => {
   useFreshModules();
 
-  it('mapper raden til camelCase og ber om alle åtte kolonnene', async () => {
+  it('mapper raden til camelCase og ber om alle ni kolonnene', async () => {
     const { queryStub, routeFrom, stepArgs } = mocks();
     const stub = queryStub({ data: ROW, error: null });
     routeFrom({ users: [stub] });
@@ -76,10 +77,11 @@ describe('fetchOwnProfile', () => {
       level: 'intermediate',
       isAdmin: false,
       profileCompletedAt: '2026-08-30T10:00:00.000Z',
+      createdAt: '2026-04-12T18:00:00.000Z',
     });
 
     expect(stepArgs(stub, 'select')[0]![0]).toBe(
-      'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin, profile_completed_at',
+      'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin, profile_completed_at, created_at',
     );
     // Egen rad, ingen andres: id-filteret ER hele avgrensningen.
     expect(stepArgs(stub, 'eq')).toEqual([['id', ME]]);

@@ -36,6 +36,10 @@ import {
   describeProfileSaveFailure,
   formatHcpNb,
   hcpUpdatedLine,
+  isHandicapAgeStale,
+  memberSinceLine,
+  seasonHeading,
+  seasonTileSpoken,
   unsentStrokesWarning,
 } from './profileCopy';
 
@@ -110,6 +114,12 @@ describe('PROFILE_TEXT', () => {
     ['saveButton', PROFILE_TEXT.saveButton, webForm.saveButton],
     ['savePending', PROFILE_TEXT.savePending, webForm.savePending],
     ['saveHint', PROFILE_TEXT.saveHint, webForm.saveHint],
+    // #2256: flisene og temavalget bruker webbens ord for det samme.
+    ['tileRounds', PROFILE_TEXT.tileRounds, web.historikk.seasonColRounds],
+    ['tileBestRound', PROFILE_TEXT.tileBestRound, web.myStats.bestRound],
+    ['themeHeading', PROFILE_TEXT.themeHeading, web.theme.rowLabel],
+    ['themeLight', PROFILE_TEXT.themeLight, web.theme.options.light],
+    ['themeDark', PROFILE_TEXT.themeDark, web.theme.options.dark],
   ])('«%s» er webbens streng tegn for tegn', (_key, appText, webText) => {
     expect(appText).toBe(webText);
   });
@@ -139,6 +149,35 @@ describe('PROFILE_TEXT', () => {
     // `ACCOUNT_TEXT.heading`: den ene er veien inn, den andre er stedet.
     expect(PROFILE_TEXT.editRow).toBe('Rediger profil');
     expect(PROFILE_TEXT.editHeading).toBe('Rediger profil');
+  });
+});
+
+// #2256: bag-taggen setter året inn selv, som «Oppdatert {dato}» over.
+describe('bag-taggens linjer', () => {
+  it('setter året inn i sublinja og overskriften', () => {
+    expect(memberSinceLine(2026)).toBe('med siden 2026');
+    expect(seasonHeading(2026)).toBe('Sesongen 2026');
+  });
+
+  it('leser en flis som én setning', () => {
+    expect(seasonTileSpoken(PROFILE_TEXT.tileWins, 2026, '2')).toBe('Seire i 2026: 2');
+  });
+
+  it('sier «gammelt» for det samme som describeHandicapAge viser påminnelsen for', () => {
+    const now = new Date('2026-09-29T12:00:00.000Z');
+    const cases = [
+      null,
+      'ikke en dato',
+      new Date(now.getTime() - HANDICAP_STALENESS_MS).toISOString(),
+      new Date(now.getTime() - HANDICAP_STALENESS_MS + 60_000).toISOString(),
+      new Date(now.getTime() - 86_400_000).toISOString(),
+    ];
+    for (const updatedAt of cases) {
+      expect(isHandicapAgeStale(updatedAt, now)).toBe(
+        describeHandicapAge(updatedAt, now) === PROFILE_TEXT.hcpStaleShort,
+      );
+    }
+    expect(cases.map((c) => isHandicapAgeStale(c, now))).toEqual([true, true, true, false, false]);
   });
 });
 

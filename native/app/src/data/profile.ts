@@ -59,6 +59,11 @@ export interface OwnProfile {
    * kolonnen er det eneste som skiller «satt til 54» fra «aldri satt».
    */
   profileCompletedAt: string | null;
+  /**
+   * Når kontoen ble laget — «med siden 2026» på bag-taggen (#2256).
+   * Kolonnen er lesbar for eieren selv (`0186_private_user_columns.sql`).
+   */
+  createdAt: string | null;
 }
 
 interface ProfileRow {
@@ -70,10 +75,11 @@ interface ProfileRow {
   level: string | null;
   is_admin: boolean | null;
   profile_completed_at: string | null;
+  created_at: string | null;
 }
 
 const PROFILE_SELECT =
-  'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin, profile_completed_at';
+  'name, nickname, hcp_index, handicap_updated_at, gender, level, is_admin, profile_completed_at, created_at';
 
 /**
  * Hent egen profilrad.
@@ -105,6 +111,7 @@ export async function fetchOwnProfile(userId: string): Promise<OwnProfile> {
     // til en side som sender brukeren rett hjem igjen.
     isAdmin: data.is_admin === true,
     profileCompletedAt: data.profile_completed_at,
+    createdAt: data.created_at ?? null,
   };
 }
 
