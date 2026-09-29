@@ -7,7 +7,7 @@ import {
   type UnremindableCounts,
 } from '@/lib/games/deliveryStatus';
 import { holeCountForSegment } from '@/lib/games/holeScope';
-import { candidatesOnSameSplitDay } from '@/lib/games/splitDayPairing';
+import { undeliveredBack9SiblingUserIds } from '@/lib/games/segmentSibling';
 import { filledHolesByPlayer } from '@/lib/games/filledHoles';
 import type { HoleSegment } from '@/lib/scoring';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -187,41 +187,9 @@ async function loadReminderContext(
 
   // #1466: on a split-cup front9 host, a player whose back9 sibling is still
   // undelivered is nagged via the back9 game (one delivery covers the whole
-  // round). Exclude them here. Batch: find the tournament's back9 host(s), then
-  // ONE query for which finished front9 players are still undelivered there — no
-  // per-player loop. Non-split games (hole_segment='full') skip this entirely.
-  //
-  // #1449 finding 1: a two-day cup shares one `tournament_id`, so scope the back9
-  // hosts to THIS front9's Oslo split-day — otherwise day-2's front9 could read
-  // day-1's back9 undelivered set. Same day-rule as findSegmentSibling
-  // (`candidatesOnSameSplitDay`), one home for it (AGENTS.md trap 4).
-  let undeliveredSiblingUserIds: Set<string> | undefined;
-  if (game.hole_segment === 'front9' && game.tournament_id != null) {
-    const { data: back9Hosts } = await admin
-      .from('games')
-      .select('id, scheduled_tee_off_at, created_at')
-      .eq('tournament_id', game.tournament_id)
-      .eq('hole_segment', 'back9')
-      .is('source_game_id', null)
-      .returns<
-        { id: string; scheduled_tee_off_at: string | null; created_at: string | null }[]
-      >();
-    const back9Ids = candidatesOnSameSplitDay(game, back9Hosts ?? []).map(
-      (g) => g.id,
-    );
-    if (back9Ids.length > 0) {
-      const { data: undelivered } = await admin
-        .from('game_players')
-        .select('user_id')
-        .in('game_id', back9Ids)
-        .is('submitted_at', null)
-        .is('withdrawn_at', null)
-        .returns<{ user_id: string }[]>();
-      undeliveredSiblingUserIds = new Set(
-        (undelivered ?? []).map((r) => r.user_id),
-      );
-    }
-  }
+  // round). Exclude them here. The set has one home (#2200), shared with the
+  // delivery-reminder sweep; non-split games skip it entirely.
+  const undeliveredSiblingUserIds = await undeliveredBack9SiblingUserIds(admin, game);
 
   // #1009: gjester purres ikke — plassholder-adressen kan ikke motta mail, og
   // gjesten kan ikke levere selv. Kortet leveres av den som fører det, fra
