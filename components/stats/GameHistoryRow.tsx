@@ -74,12 +74,18 @@ export function GameHistoryRow({
 
       <div className="shrink-0 text-right leading-tight">
         {teamRoundLabel ? (
-          <p className="font-sans text-sm font-medium text-muted">
+          <p
+            data-testid="game-history-team-round"
+            className="font-sans text-sm font-medium text-muted"
+          >
             {teamRoundLabel}
           </p>
         ) : (
           <>
-            <p className="font-sans text-lg font-semibold tabular-nums text-text">
+            <p
+              data-testid="game-history-brutto"
+              className="font-sans text-lg font-semibold tabular-nums text-text"
+            >
               {brutto != null ? brutto : '—'}
             </p>
             {nettoLabel && (

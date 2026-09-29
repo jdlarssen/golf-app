@@ -426,7 +426,7 @@ export default async function HistorikkPage() {
         </Card>
       )}
       {diff.trend && diff.summary && (
-        <Card>
+        <Card data-testid="historikk-handicap-form" data-rounds={diff.count}>
           <ScoringTrendChart
             geometry={diff.trend}
             summary={diff.summary}
