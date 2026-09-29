@@ -15,11 +15,8 @@ import { peersForApproval } from '@/lib/games/flightScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
 import type { DeliveryGame } from '@/lib/games/flightDelivery';
-import {
-  isScrambleFamily,
-  isAlternateShotMatchplay,
-  type GameMode,
-} from '@/lib/scoring/modes/types';
+import { deliveryCoversWholeTeam } from '@/lib/games/teamDelivery';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 // Leverings-kjernen (#1453/#1466 → #1918): ett hjem for «marker kortet som
 // levert». Regelen bodde inni server-action-en `submitScorecard` på webbens
@@ -194,7 +191,7 @@ export async function submitScorecardCore(
   // verifisert hos kalleren (innsenderen er aktiv spiller i spillet). Patsome er
   // bevisst utenfor — bytter mellom individuell og lag-føring midtveis.
   const teamSubmit =
-    (isScrambleFamily(mode) || isAlternateShotMatchplay(mode)) &&
+    deliveryCoversWholeTeam(mode) &&
     meRow.team_number != null;
   const submitPatch = {
     submitted_at: new Date().toISOString(),
@@ -302,9 +299,7 @@ export async function submitScorecardCore(
         // (greensome IS — #1453); own-row otherwise. Same guarded, admin-client
         // form as the primary update above.
         const siblingTeamSubmit =
-          (isScrambleFamily(sibling.gameMode) ||
-            isAlternateShotMatchplay(sibling.gameMode)) &&
-          sibling.myTeamNumber != null;
+          deliveryCoversWholeTeam(sibling.gameMode) && sibling.myTeamNumber != null;
         const { error: siblingError } = siblingTeamSubmit
           ? await getAdminClient()
               .from('game_players')
