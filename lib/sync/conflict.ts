@@ -8,6 +8,16 @@ export interface ConflictInput {
 export type ConflictResolution = 'local-wins' | 'server-wins' | 'equal';
 
 /**
+ * The `scores` columns a client pulls to merge server rows into its local
+ * store: the web catch-up (`catchUp.ts`) and the app seed
+ * (`native/app/src/data/seedScores.ts`) read the same shape. Kept as a
+ * literal type (no `: string`) so supabase-js still infers the row type at
+ * every `.select(SERVER_SCORE_COLUMNS)`.
+ */
+export const SERVER_SCORE_COLUMNS =
+  'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at';
+
+/**
  * Compares INSTANTS, not strings (#2211). The local stamp comes from
  * `toISOString()` (`…:00.123Z`); PostgREST echoes timestamptz as
  * `…:00.123+00:00` (or `…:00+00:00` on whole seconds). As strings 'Z' and '.'
