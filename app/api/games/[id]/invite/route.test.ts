@@ -41,6 +41,13 @@ let db: {
   admins: Record<string, boolean>;
   /** Adressen har alt en konto. */
   registered: string | null;
+  /**
+   * #2358: kontoene arrangøren SER under RLS (egen, admin, medspiller i et
+   * felles spill). Svaret kommer fra `viewer`, klienten med kallerens token.
+   */
+  visibleToCaller: string[];
+  /** #2358: en åpen invitasjon til samme adresse og runde, sendt av `invited_by`. */
+  openInvite: { id: string; invited_by: string } | null;
   /** Radene som ble skrevet, så et negativt bevis er billig. */
   inserted: Array<{ table: string; payload: Record<string, unknown> | null }>;
   /** Settes for å bevise at et kast fra kjernen blir 500, ikke en halv 200. */
@@ -84,7 +91,16 @@ function respond(op: QueryOp): QueryResponse {
       db.inserted.push({ table: op.table, payload: op.payload });
       return { data: { id: 'invitation-1' } };
     }
-    return { data: null };
+    if (op.kind === 'update') {
+      db.inserted.push({ table: 'invitations:update', payload: op.payload });
+      return { data: [{ id: String(value('id')) }] };
+    }
+    // Lesingen av åpne invitasjoner. Filteret på `invited_by` virker som i
+    // Postgres: en annens rad finnes ikke for spørringen.
+    const invite = db.openInvite;
+    const by = value('invited_by');
+    if (!invite || (by !== undefined && by !== invite.invited_by)) return { data: null };
+    return { data: { id: invite.id, token: 'token-1', expires_at: '2020-01-01T00:00:00.000Z' } };
   }
 
   if (op.table === 'game_players') {
@@ -103,9 +119,35 @@ const fake = createAdminClientMock({
   respond: (op) => respond(op),
 });
 
+/**
+ * #2358: klienten med kallerens token. Den svarer bare på synlighetssjekken, og
+ * svarer som RLS: en konto utenfor `visibleToCaller` finnes ikke.
+ */
+const viewer = createAdminClientMock({
+  respond: (op) => {
+    if (op.table !== 'users') throw new Error(`uventet viewer-spørring: ${op.kind} ${op.table}`);
+    const id = String(op.filters.find((f) => f.column === 'id')?.value);
+    return { data: db.visibleToCaller.includes(id) ? { id } : null };
+  },
+});
+/** Hvilket Authorization-header viewer-klienten ble bygd fra. */
+const viewerBuiltFrom: string[] = [];
+
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => fake.client,
 }));
+// Porten (`authenticatedUserId`, `gameOrganiserAccess`) er den ekte. Bare
+// klienten med kallerens token byttes: den ekte snakker HTTP med Supabase.
+vi.mock('@/lib/api/appAuth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/appAuth')>();
+  return {
+    ...actual,
+    callerScopedClient: (req: Request) => {
+      viewerBuiltFrom.push(req.headers.get('authorization') ?? '');
+      return viewer.client;
+    },
+  };
+});
 // Kjernen revaliderer selv, og `revalidateTag` kaster utenfor en Next-request.
 vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }));
 vi.mock('@/lib/notifications/notifyInvitedToGame', () => ({
@@ -151,12 +193,16 @@ const ctx = () => ({ params: Promise.resolve({ id: GAME_ID }) });
 beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
+  viewer.reset();
+  viewerBuiltFrom.length = 0;
   rateLimitMock.mockResolvedValue(true);
   db = {
     gameExists: true,
     status: 'scheduled',
     admins: {},
     registered: null,
+    visibleToCaller: [],
+    openInvite: null,
     inserted: [],
     coreThrows: false,
   };
@@ -240,6 +286,44 @@ describe('invitasjonen', () => {
       },
     ]);
     expect(sendInviteNotificationMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('en registrert konto arrangøren ikke ser: e-postinvitasjon, som på nettsiden (#2358)', async () => {
+    // Før #2358 sjekket ruta synligheten med tjenesteklienten, som ser alle
+    // kontoer: appen svarte 409 invite_not_allowed der nettsiden sendte en
+    // invitasjon. Nå avgjør RLS med arrangørens eget token.
+    db.registered = STRANGER;
+    db.visibleToCaller = [];
+
+    const res = await POST(request({ token: `Bearer ${ORGANISER_TOKEN}` }), ctx());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ status: 'sent' });
+    expect(viewerBuiltFrom).toEqual([`Bearer ${ORGANISER_TOKEN}`]);
+    expect(viewer.ops).toEqual([
+      expect.objectContaining({ table: 'users', filters: [{ op: 'eq', column: 'id', value: STRANGER }] }),
+    ]);
+    expect(db.inserted.map((r) => r.table)).toEqual(['invitations']);
+  });
+
+  it('en åpen invitasjon en annen sendte, forlenges ikke — arrangøren får sin egen (#2358)', async () => {
+    // RLS gir arrangøren bare egne invitasjoner (0092). En kapteins
+    // laginvitasjon til samme adresse skal verken forlenges eller sendes på
+    // nytt i arrangørens navn.
+    db.openInvite = { id: 'captain-invite', invited_by: STRANGER };
+
+    const res = await POST(request({ token: `Bearer ${ORGANISER_TOKEN}` }), ctx());
+
+    expect(res.status).toBe(200);
+    expect(db.inserted).toEqual([
+      {
+        table: 'invitations',
+        payload: expect.objectContaining({ invited_by: ORGANISER }),
+      },
+    ]);
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ inviteToken: 'token-1' }),
+    );
   });
 
   it('en uleselig kropp er 400 invalid_email, aldri 500', async () => {
