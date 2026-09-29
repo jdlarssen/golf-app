@@ -446,6 +446,21 @@ describe('Hole', () => {
     expect(screen.queryByTestId('specific-value-sheet')).toBeNull();
   });
 
+  // Et hull i et spill som ikke er aktivt har ingenting å taste: skinna står
+  // ikke, og radene kan ikke velges (#2219-låsen).
+  it('et låst hull har ingen skinne', async () => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      game: { ...mockSoloBundle.game, status: 'finished' },
+    };
+    await renderHole();
+    await waitFor(() => {
+      expect(screen.getByTestId('hole-locked')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('score-rail')).toBeNull();
+    expect(screen.getByTestId('flight-row-mate')).toBeDisabled();
+  });
+
   // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad
   // du valgte på hull 1, skal ikke stå valgt på hull 2.
   it('et nytt hull starter skinna på meg igjen', async () => {

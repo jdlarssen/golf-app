@@ -8,6 +8,10 @@
 //
 // Ingen animasjon, som på web: arket står der med en gang og forsvinner med en
 // gang.
+//
+// Bakgrunnen og arket er søsken, ikke forelder og barn. En Pressable er
+// tilgjengelig som standard, og på iOS gjør det alt inni til ÉTT element for
+// VoiceOver. Lå knappene inni bakgrunnen, hørte en skjermleser bare «Lukk».
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
 import { FONTS, useTheme } from '../../theme';
@@ -32,26 +36,30 @@ export function SpecificValueSheet({
   onClose,
   strike,
 }: SpecificValueSheetProps) {
-  const { colors } = useTheme();
+  const { colors, hole } = useTheme();
   if (!open) return null;
 
-  const cell = [styles.cell, { borderColor: colors.border, backgroundColor: colors.bg }];
+  const cell = [
+    styles.cell,
+    { borderWidth: hole.borderW, borderColor: colors.border, backgroundColor: colors.bg },
+  ];
   const cellText = [styles.cellText, { color: colors.text }];
 
   return (
     <Modal transparent visible animationType="none" onRequestClose={onClose}>
-      <Pressable
-        style={styles.backdrop}
-        onPress={onClose}
-        testID="specific-value-backdrop"
-        accessibilityLabel="Lukk"
-      >
-        {/* Et trykk i selve arket skal ikke lukke det: den indre Pressable-en
-            tar berøringen før bakgrunnen får den. */}
+      <View style={styles.backdrop}>
         <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          testID="specific-value-backdrop"
+          accessibilityRole="button"
+          accessibilityLabel="Lukk"
+        />
+        <View
           style={[styles.sheet, { backgroundColor: colors.surface }]}
           testID="specific-value-sheet"
-          accessibilityViewIsModal
+          // VoiceOvers «tilbake»-bevegelse (to fingre i Z) lukker arket.
+          onAccessibilityEscape={onClose}
         >
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <Text style={[styles.kicker, { color: colors.muted }]} accessibilityRole="header">
@@ -103,8 +111,8 @@ export function SpecificValueSheet({
           <Text style={[styles.caption, { color: colors.muted }]}>
             Trykk for å sette. X fjerner.
           </Text>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -130,7 +138,6 @@ const styles = StyleSheet.create({
     flexBasis: '22%',
     flexGrow: 1,
     minHeight: 52,
-    borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

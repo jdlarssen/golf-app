@@ -1,8 +1,10 @@
 // #2252: den ene render-testen (Type C) for «Annet»-arket: hele spennet står,
 // et valg sendes og lukker arket, X fjerner, og «Stryk» står bare når
-// kalleren gir den.
-import { fireEvent, render, screen } from '@testing-library/react-native';
+// kalleren gir den. Knappene ligger ikke inni bakgrunnen: en Pressable er ett
+// element for VoiceOver, og da ville en skjermleser bare hørt «Lukk».
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
+import { themeFor } from '../../theme';
 import { SpecificValueSheet } from './SpecificValueSheet';
 
 describe('SpecificValueSheet', () => {
@@ -24,6 +26,12 @@ describe('SpecificValueSheet', () => {
     expect(screen.getByTestId('specific-value-1')).toBeTruthy();
     expect(screen.getByTestId(`specific-value-${MAX_STROKES}`)).toBeTruthy();
     expect(screen.queryByTestId(`specific-value-${MAX_STROKES + 1}`)).toBeNull();
+    expect(
+      within(screen.getByTestId('specific-value-backdrop')).queryByTestId('specific-value-9'),
+    ).toBeNull();
+    expect(screen.getByTestId('specific-value-9')).toHaveStyle({
+      borderWidth: themeFor('light').hole.borderW,
+    });
 
     await fireEvent.press(screen.getByTestId('specific-value-9'));
     expect(onPick).toHaveBeenCalledWith(9);
@@ -34,6 +42,9 @@ describe('SpecificValueSheet', () => {
 
     await fireEvent.press(screen.getByLabelText('Fjern score'));
     expect(onClear).toHaveBeenCalledTimes(1);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Lukk' }));
+    expect(onClose).toHaveBeenCalledTimes(4);
 
     await rerender(
       <SpecificValueSheet open par={4} onPick={onPick} onClear={onClear} onClose={onClose} />,

@@ -254,7 +254,13 @@ export function ScoreRail({
 
       {puttsTracking ? (
         <View style={styles.puttsRow} testID="rail-putts">
-          <Text style={[styles.puttsLabel, { color: colors.muted }]} importantForAccessibility="no">
+          {/* Chipene har navnet i etiketten sin, så overskriften skjules for
+              skjermleseren (iOS og Android). */}
+          <Text
+            style={[styles.puttsLabel, { color: colors.muted }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          >
             PUTTER
           </Text>
           {/* key: «5+»-stepperen skal ikke følge skinna til neste spiller. */}

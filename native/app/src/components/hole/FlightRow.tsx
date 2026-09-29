@@ -177,9 +177,9 @@ export function FlightRow({
       testID={`flight-row-${seatId}`}
       accessibilityRole="button"
       accessibilityState={{ selected: active, disabled: locked }}
-      accessibilityLabel={
+      accessibilityLabel={`${
         score == null ? `${name}: ingen score ennå` : `${name}: ${score} slag`
-      }
+      }${submitted ? ', levert' : ''}`}
       style={[
         styles.row,
         {
