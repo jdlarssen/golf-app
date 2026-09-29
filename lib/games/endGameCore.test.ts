@@ -505,6 +505,51 @@ describe('endGameCore — write order', () => {
     consoleErr.mockRestore();
   });
 
+  it('a winner refused as withdrawn returns winner_withdrawn and leaves the game active (#2284)', async () => {
+    // Migration 0193: the trigger refuses a winner who is withdrawn or not in
+    // the game. That is a race (the list was stale), not a DB fault: its own
+    // reason so the wizard can say what happened, a warn instead of an error.
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = buildSupabaseMock([
+      gameRow(),
+      playersRows([PLAYER_A, PLAYER_B]),
+      { data: null, error: { code: 'P0001', message: 'side_winner_not_active' } },
+    ]);
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR, {
+      sideWinners: SIDE_WINNERS,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'winner_withdrawn' });
+    expect(callSeq(client)).not.toContain('games.update');
+    expectTailUntouched();
+    expect(consoleErr).not.toHaveBeenCalled();
+    expect(consoleWarn).toHaveBeenCalledWith(
+      '[endGame] a side winner is no longer an active player',
+      expect.objectContaining({ code: 'P0001' }),
+    );
+    consoleErr.mockRestore();
+    consoleWarn.mockRestore();
+  });
+
+  it('another P0001 from the winners upsert stays db_winners (#2284)', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const client = buildSupabaseMock([
+      gameRow(),
+      playersRows([PLAYER_A, PLAYER_B]),
+      { data: null, error: { code: 'P0001', message: 'something_else' } },
+    ]);
+
+    const result = await endGameCore(client as never, GAME_ID, ACTOR, {
+      sideWinners: SIDE_WINNERS,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'db_winners' });
+    expect(callSeq(client)).not.toContain('games.update');
+    consoleErr.mockRestore();
+  });
+
   it('a 0-row winners upsert returns db_winners and leaves the game active', async () => {
     // #1885 (trap 2): PostgREST reports a write that matched nothing as
     // `error: null`. Without the row check the finish went on to the flip and

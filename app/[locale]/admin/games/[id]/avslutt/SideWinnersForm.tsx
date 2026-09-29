@@ -34,23 +34,30 @@ export function SideWinnersForm({
 
   // typeof-guard: searchParams kan levere string[] ved duplisert ?error-param —
   // da (og for alle ikke-missing_-koder, i praksis db_winners) er retry-rådet
-  // det trygge valget (#1567).
-  const isValidationError =
-    typeof error === 'string' && error.startsWith('missing_');
+  // det trygge valget (#1567). #2284: winner_withdrawn har sin egen tekst —
+  // databasen nektet en vinner som trakk seg mens siden sto åpen.
+  const kind: 'validation' | 'winner-withdrawn' | 'db' =
+    typeof error === 'string' && error.startsWith('missing_')
+      ? 'validation'
+      : error === 'winner_withdrawn'
+        ? 'winner-withdrawn'
+        : 'db';
+  const message =
+    kind === 'validation'
+      ? t('validationError')
+      : kind === 'winner-withdrawn'
+        ? t('winnerWithdrawnError')
+        : t('dbError');
 
   return (
     <form action={action} className="space-y-6">
       {error && (
         <div
           role="alert"
-          data-testid={
-            isValidationError
-              ? 'side-winners-error-validation'
-              : 'side-winners-error-db'
-          }
+          data-testid={`side-winners-error-${kind}`}
           className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900"
         >
-          {isValidationError ? t('validationError') : t('dbError')}
+          {message}
         </div>
       )}
 

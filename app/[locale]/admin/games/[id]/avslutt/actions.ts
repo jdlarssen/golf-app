@@ -78,7 +78,8 @@ async function loadFinishContext(gameId: string) {
  *     and `logContext: 'endGameWithSideWinners'`,
  *  3. maps the core result back to the exact redirects this flow used before
  *     (`missing_ld_N`/`missing_ctp_N`/`not_active`/`no_players`/
- *     `not_all_submitted`/`not_all_approved`/`db_winners`/`db_finish`).
+ *     `not_all_submitted`/`not_all_approved`/`db_winners`/`db_finish`), plus
+ *     `winner_withdrawn` (#2284) when the DB refused a withdrawn winner.
  *
  * Winners are upserted on the (game_id, category, position) PK so the action is
  * idempotent, and the flip runs AFTER the upsert — a partial failure leaves the
@@ -164,9 +165,11 @@ export async function endGameWithSideWinners(
   if (!result.ok) {
     // `db_winners` lands back on the wizard (the winner picks are still there);
     // everything else on the detail page, byte-identical to the old redirects.
+    // #2284: `winner_withdrawn` too. The wizard reloads with a fresh list, so
+    // the withdrawn player is gone from it.
     const href =
-      result.reason === 'db_winners'
-        ? `${wizardPath}?error=db_winners`
+      result.reason === 'db_winners' || result.reason === 'winner_withdrawn'
+        ? `${wizardPath}?error=${result.reason}`
         : `${detailPath}?error=${result.reason}`;
     redirect({ href, locale });
   }
