@@ -22,7 +22,7 @@ Denne arbeidsdelingen har vist seg å fungere bra. Hold deg til den.
 - **SQL og migrasjoner:** lager migrasjonsfiler i `supabase/migrations/` og påfører dem selv via Supabase MCP — staging først, verifiser, deretter prod KUN etter eksplisitt eier-godkjenning i økten (prod-brannmuren #1074 håndhever engangs-luken `touch .claude/approve-prod`). Read-only SELECT mot prod er sanksjonert.
 - **Diagnostikk:** legger til console.logs eller inline-debug i koden, leser server-side errors fra Vercel via brukerens skjermbilder
 - **Plan, design, brainstorming:** med skills som `superpowers:brainstorming`, `superpowers:writing-plans`, etc.
-- **Subagent-koordinering:** dispatcher implementer/reviewer-subagenter for store endringer
+- **Subagent-koordinering:** dispatcher subagenter bare når arbeidet deler seg i store, uavhengige spor (`docs/agent-discipline/bindings.md` §Utførelse)
 - **Forklare hvordan og hvorfor:** lange forklaringer er OK når det hjelper bruker å beslutte
 
 ### Når noe må gjøres i et UI hos en tredjepart
