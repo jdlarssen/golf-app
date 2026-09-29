@@ -1,0 +1,235 @@
+// #2255: forklaringen av spillformen nederst på spillets side («Regler»).
+//
+// Teksten er webbens `formatGuide.content.<nøkkel>.summary` og `.points`, den
+// samme som formatguiden og kortet på nettsidens spillside viser. Appen har
+// ingen i18n, og hele `messages/no.json` (over 380 kB) skal ikke inn i
+// bundelen for 23 korte forklaringer. Derfor er dette en håndkopi, samme
+// mønster som `appFormats.ts`: `formatGuideCopy.test.ts` leser `no.json` på
+// node-siden og krever tegn-for-tegn likhet, og at appen har hver nøkkel webben
+// har. Nøkkelen velges med den delte `resolveFormatContentKey`.
+//
+// De lange seksjonene, eksemplene og spørsmålene (`sections`, `long`,
+// `example`, `faq`) er ikke med: de hører til formatguiden på nettsiden.
+
+export interface FormatGuide {
+  summary: string;
+  points: readonly string[];
+}
+
+export const FORMAT_GUIDE: Readonly<Record<string, FormatGuide>> = {
+  stableford: {
+    summary:
+      'Du spiller for deg selv og samler poeng på hvert hull. Jo bedre du gjør det mot par, jo flere poeng.',
+    points: [
+      'Par gir 2 poeng, ett over gir 1, ett under gir 3, og så videre.',
+      'Slagene du får på handikap regnes med før poengene settes.',
+      'Høyest poengsum til slutt vinner.',
+    ],
+  },
+  'stableford-4bbb': {
+    summary:
+      'Dere er to på lag. På hvert hull teller den beste poengsummen av dere to.',
+    points: [
+      'Begge spiller hele runden og samler stableford-poeng hver for seg.',
+      'På hvert hull tar laget med den høyeste poengsummen av de to.',
+      'Høyest lagtotal vinner.',
+    ],
+  },
+  modified_stableford: {
+    summary:
+      'Stableford med proff-skala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.',
+    points: [
+      'Birdie gir 2 poeng, eagle 5, albatross 8. Par gir 0.',
+      'Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan altså havne under null.',
+      'Slagene du får på handikap regnes med, og høyest poengsum vinner.',
+    ],
+  },
+  solo_strokeplay: {
+    summary:
+      'Vanlig slagspill: du teller alle slagene dine, og færrest netto-slag vinner.',
+    points: [
+      'Netto er totalen din minus slagene du får på handikap.',
+      'Du spiller for deg selv, ingen lag.',
+      'Lavest sum etter 18 hull vinner.',
+    ],
+  },
+  best_ball: {
+    summary:
+      'Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.',
+    points: [
+      'Begge spiller hele runden, men laget tar med den laveste av de to på hvert hull.',
+      'Netto er antall slag minus slagene du får på hullet.',
+      'Lavest lagtotal vinner.',
+    ],
+  },
+  texas_scramble: {
+    summary:
+      'Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.',
+    points: [
+      'Slik fortsetter dere til ballen er i hull. Laget får én score per hull.',
+      'Laget får et felles handikap som trekkes fra.',
+      'Lavest lagtotal vinner.',
+    ],
+  },
+  ambrose: {
+    summary:
+      'En scramble der laget plukker det beste slaget hele veien, men med et lag-handikap som veier inn alle og jevner ut sterke og svake lag.',
+    points: [
+      'Alle slår fra tee, dere velger det beste slaget, og alle spiller videre derfra.',
+      'Lag-handikapet bygger på alle på laget, så sterke og svake lag stiller likere.',
+      'Lavest lagtotal etter handikap vinner.',
+    ],
+  },
+  florida_scramble: {
+    summary:
+      'Som Texas scramble, men med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4.',
+    points: [
+      'Den som slo det valgte slaget, står over neste slag. Resten av laget slår videre.',
+      'Slik bytter dere på, og alle er med gjennom hullet. Laget får én score per hull.',
+      'Laget får et felles handikap som trekkes fra. Lavest lagtotal vinner.',
+    ],
+  },
+  singles_matchplay: {
+    summary:
+      'Én mot én, hull for hull. Den som bruker færrest slag på et hull vinner hullet.',
+    points: [
+      'Det er hull som teller, ikke total score — vinn flere hull enn motstanderen.',
+      'Slagene du får på handikap er med når hullet avgjøres.',
+      'Den som leder med flere hull enn det er igjen å spille, har vunnet.',
+    ],
+  },
+  fourball_matchplay: {
+    summary:
+      'To mot to, hull for hull. Hver spiller spiller sin egen ball, og lagets beste score teller på hvert hull.',
+    points: [
+      'Laget med best netto-score vinner hullet.',
+      'Det er antall vunne hull som avgjør, ikke total score.',
+      'Laget som leder med flere hull enn det er igjen, har vunnet.',
+    ],
+  },
+  foursomes_matchplay: {
+    summary:
+      'To mot to, men dere deler én ball og slår annenhver gang hele runden.',
+    points: [
+      'Den ene slår ut på oddetallshull, den andre på partallshull, så bytter dere på.',
+      'Laget med best score vinner hullet — det er hull som teller, ikke total.',
+      'Laget som leder med flere hull enn det er igjen, har vunnet.',
+    ],
+  },
+  greensome_matchplay: {
+    summary:
+      'To mot to — begge slår ut, dere velger det beste utslaget og spiller annenhver gang derfra.',
+    points: [
+      'Begge i paret slår ut på hvert hull. Velg det beste utslaget, og spill alternate derfra.',
+      'Laget med lavest score vinner hullet — hull teller, ikke total.',
+      'Laget som leder med flere hull enn det er igjen, har vunnet.',
+    ],
+  },
+  chapman_matchplay: {
+    summary:
+      'To mot to. Begge slår ut, dere bytter ball, velger den beste og spiller annenhver derfra. Også kjent som Pinehurst.',
+    points: [
+      'Begge slår ut. Så slår hver av dere partnerens ball som andreslag.',
+      'Velg den beste ballen etter andreslagene, og spill annenhver til hullet er i mål.',
+      'Laget med best score vinner hullet — det er hull som teller, ikke total.',
+    ],
+  },
+  gruesome_matchplay: {
+    summary:
+      'To mot to. Begge slår ut, men motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes.',
+    points: [
+      'Begge på laget slår ut på hvert hull. Motstanderne peker på ballen dere må spille videre med.',
+      'Partneren til den som eier den valgte ballen slår neste slag, så spiller dere vekselvis derfra.',
+      'Laget med lavest score vinner hullet. I matchplay teller vunne hull, ikke sammenlagt score.',
+    ],
+  },
+  wolf: {
+    summary:
+      'Tre til fem spillere bytter på å være «ulv». Ulven velger på hvert hull om den vil spille med en partner, eller alene mot de andre.',
+    points: [
+      'Velger ulven å spille alene og vinner hullet, gir det mest poeng. Men det er også mest å tape.',
+      'Dere bytter på å være ulv gjennom runden.',
+      'Flest poeng til slutt vinner.',
+    ],
+  },
+  nassau: {
+    summary:
+      'Én runde, tre oppgjør: de første 9 hullene, de siste 9, og alle 18 samlet.',
+    points: [
+      'Hvert oppgjør avgjøres for seg. Du kan tape de første 9 og likevel ta de siste.',
+      'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.',
+      'Vinner du alle tre, har du gjort rent bord.',
+    ],
+  },
+  skins: {
+    summary:
+      'Hvert hull er verdt ett «skin». Den som har lavest score på hullet helt alene, vinner skinnet.',
+    points: [
+      'Deler to eller flere den laveste scoren, ruller skinnet videre. Neste hull er da verdt to.',
+      'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.',
+      'Flest skins til slutt vinner.',
+    ],
+  },
+  bingo_bango_bongo: {
+    summary:
+      'Tre poeng er på spill på hvert hull — én for å nå green først, én for å ligge nærmest hullet når alle er på green, og én for å gå i hull først.',
+    points: [
+      'Du trenger ikke de fleste slagene for å vinne — rekkefølge og presisjon teller.',
+      'Du spiller for deg selv, og alle tre poengene på et hull kan gå til én og samme spiller.',
+      'Flest poeng etter 18 hull vinner.',
+    ],
+  },
+  nines: {
+    summary:
+      'Tre spillere kjemper om poeng på hvert hull. Lavest score tar mest, høyest tar minst.',
+    points: [
+      'Nines deler ut ni poeng per hull: fem til lavest, tre til nest, ett til høyest.',
+      'Split Sixes deler ut seks: fire, to og null.',
+      'Likt på et hull? Da deler dere poengene for plassene dere står på.',
+      'Flest poeng sammenlagt vinner.',
+    ],
+  },
+  round_robin: {
+    summary:
+      'Fire spillere bytter partner hvert sjette hull. Du spiller med og mot alle de tre andre i løpet av runden.',
+    points: [
+      'Hvert hull spilles som besteball matchplay: lagets beste netto teller, og lavest beste netto vinner hullet.',
+      'Den som vinner hullet for laget sitt, får ett poeng. Delt hull gir ingenting til noen.',
+      'Flest vunne hull etter 18 vinner.',
+    ],
+  },
+  acey_deucey: {
+    summary:
+      'Fire spillere. På hvert hull tar den med lavest score tre poeng, ett fra hver av de andre. Den med høyest gir tre poeng fra seg.',
+    points: [
+      'Lavest score alene gir +3. Høyest score alene gir −3. De to i midten står i ro.',
+      'Deler to eller flere den laveste (eller høyeste) scoren, gir ikke den siden poeng det hullet.',
+      'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt. Totalen kan bli negativ.',
+    ],
+  },
+  shamble: {
+    summary:
+      'Alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hullet teller for laget.',
+    points: [
+      'Etter det felles utslaget fortsetter hver spiller med sin egen ball.',
+      'På hvert hull legges de laveste scorene sammen til lagets resultat — som regel de to beste av fire.',
+      'I Champagne Scramble velger arrangøren om én, to eller tre scorer skal telle.',
+      'Lavest sammenlagt for laget vinner.',
+    ],
+  },
+  patsome: {
+    summary:
+      'Dere er på lag à to og spiller 18 hull i tre lagformer, seks hull av hver.',
+    points: [
+      'Hull 1–6 er 4BBB: begge spiller sin egen ball, og lagets beste stableford-poeng teller.',
+      'Hull 7–12 er greensome: begge slår ut, dere velger det beste utslaget, og så slår dere annethvert slag.',
+      'Hull 13–18 er foursomes: dere deler én ball og slår annethvert slag, også fra tee.',
+      'Lagets samlede poeng fra alle tre delene teller. Flest poeng vinner.',
+    ],
+  },
+};
+
+/** Forklaringen for en nøkkel fra `resolveFormatContentKey`, eller `null`. */
+export function formatGuideFor(key: string): FormatGuide | null {
+  return Object.hasOwn(FORMAT_GUIDE, key) ? FORMAT_GUIDE[key]! : null;
+}
