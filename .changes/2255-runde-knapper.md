@@ -1,6 +1,6 @@
 ---
 type: feat
 issue: 2255
-title: Runde knapper i hele appen
+title: Runde knapper i appen
 ---
-Knappene i appen er nå runde i endene, som på nettsiden.
+De vanlige knappene i appen er nå runde i endene, som på nettsiden.
