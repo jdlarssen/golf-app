@@ -26,6 +26,7 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { finishRoster } from '@/lib/games/finishRoster';
 import {
   SideWinnersForm,
   type PlayerOption,
@@ -156,8 +157,7 @@ export default async function CreatorAvsluttPage({
     formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null);
 
   // Withdrawn players are out of the ranking entirely — never block the end.
-  const active = (gamePlayers ?? []).filter((gp) => !gp.withdrawn_at);
-  const missing = active.filter((gp) => !gp.submitted_at);
+  const { active, missing } = finishRoster(gamePlayers ?? []);
   // Peer approval (when required) blocks finishing — endGame bounces unapproved
   // scorecards. The creator's sanctioned way out is the approval override on
   // /spillere (#429), so the wait state below links there instead of dead-ending.
