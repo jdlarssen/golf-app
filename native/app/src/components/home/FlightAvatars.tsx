@@ -7,11 +7,13 @@
 //
 // To drakter, samme regel (#2255): `home` er Hjems små overlappende skiver.
 // `ticket` er startbillettens: deg først i `primary`, så inntil tre andre i
-// blek grønn, fire separate skiver. `primary` og ikke `surfaceStrong`: i lys er
-// de samme skoggrønne, men i klubbhus-natt er `surfaceStrong` nesten kortets
-// egen farge (1,2:1), mens salvie-`primary` skiller seg ut (5,7:1), som
-// hovedknappen. Navnene står i billettens egen kolonne, og skivene har ingen
-// etikett selv (raden rundt har den).
+// blek grønn, fire separate skiver. Designet er tegnet i lys; i klubbhus-natt
+// er `primarySoft` og `surfaceStrong` nesten kortets egen farge (1,03:1 og
+// 1,2:1). Der blir du salvie-`primary` (5,7:1, som hovedknappen) og de andre
+// dyp skoggrønn `surfaceStrong`, som skiller seg mer fra kortet enn designets
+// blekgrønne gjør i lys (1,23:1 mot 1,17:1), med initialer på 4,6:1. Navnene
+// står i billettens egen kolonne, og skivene har ingen etikett selv (raden
+// rundt har den).
 import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
 import type { BundlePlayer } from '../../data/gameBundle';
@@ -33,12 +35,13 @@ export function FlightAvatars({
   variant?: 'home' | 'ticket';
   testID?: string;
 }) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const companions = companionsOf(players, userId, flightNumber);
   if (companions.length === 0) return null;
 
   if (variant === 'ticket') {
     const me = players.find((p) => p.userId === userId);
+    const otherFill = scheme === 'dark' ? colors.surfaceStrong : colors.primarySoft;
     const discs = [
       ...(me ? [{ player: me, self: true }] : []),
       ...companions.slice(0, MAX_TICKET_COMPANIONS).map((player) => ({ player, self: false })),
@@ -55,7 +58,7 @@ export function FlightAvatars({
             key={player.userId}
             style={[
               styles.ticketDisc,
-              { backgroundColor: self ? colors.primary : colors.primarySoft },
+              { backgroundColor: self ? colors.primary : otherFill },
             ]}
             testID={self ? `${testID}-self` : `${testID}-disc`}
           >

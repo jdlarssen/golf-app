@@ -8,7 +8,7 @@
 import { render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { homePlayer } from '../../test/homeFixtures';
-import { PALETTES } from '../../theme';
+import { PALETTES, ThemeScope, themeFor } from '../../theme';
 import { GameTicket, type TicketField } from './GameTicket';
 
 const HIDDEN = { includeHiddenElements: true };
@@ -64,7 +64,9 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
   const self = within(roster).getByTestId('game-ticket-avatars-self', HIDDEN);
   expect(self).toHaveStyle({ backgroundColor: PALETTES.light.primary });
   expect(self).toHaveTextContent('SA');
-  expect(within(roster).getAllByTestId('game-ticket-avatars-disc', HIDDEN)).toHaveLength(2);
+  const others = within(roster).getAllByTestId('game-ticket-avatars-disc', HIDDEN);
+  expect(others).toHaveLength(2);
+  expect(others[0]).toHaveStyle({ backgroundColor: PALETTES.light.primarySoft });
 
   // Dekoren er skjult for skjermleseren.
   expect(screen.queryByTestId('game-ticket-perforation')).toBeNull();
@@ -120,4 +122,36 @@ it('fire skiver på det meste: deg og tre andre; navnelista tar med resten', asy
   expect(within(roster).getByTestId('game-ticket-avatars-self', HIDDEN)).toBeTruthy();
   expect(within(roster).getAllByTestId('game-ticket-avatars-disc', HIDDEN)).toHaveLength(3);
   expect(screen.getByTestId('game-ticket-names', HIDDEN).props.children).toBe('Du, Marte, Jonas, Kari og 2 til');
+});
+
+it('klubbhus-natt: skiva di er salvie og de andres dyp skoggrønn, så begge skiller seg fra kortet', async () => {
+  const players = [
+    homePlayer({ userId: 'me', name: 'Siri Aas', flightNumber: null }),
+    homePlayer({ userId: 'marte', name: 'Marte Holm', flightNumber: null }),
+  ];
+
+  await render(
+    <ThemeScope theme={themeFor('dark')}>
+      <GameTicket
+        kicker={null}
+        title="Losby"
+        headerLine=""
+        statusLabel="Pågår"
+        fields={FIELDS}
+        facts=""
+        roster={{ players, userId: 'me', flightNumber: null }}
+      >
+        {null}
+      </GameTicket>
+    </ThemeScope>,
+  );
+
+  // Designets lyse toner (`primarySoft`, `surfaceStrong` for deg) står nesten
+  // likt med kortet i mørk (1,03:1 og 1,2:1); disse skiller seg ut.
+  expect(screen.getByTestId('game-ticket-avatars-self', HIDDEN)).toHaveStyle({
+    backgroundColor: PALETTES.dark.primary,
+  });
+  expect(screen.getByTestId('game-ticket-avatars-disc', HIDDEN)).toHaveStyle({
+    backgroundColor: PALETTES.dark.surfaceStrong,
+  });
 });
