@@ -107,10 +107,6 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['getAdminClient()'],
     reason: '(a) egen rad, id-en er verifisert av proxy',
   },
-  'app/[locale]/profile/venner/actions.ts': {
-    receivers: ['admin'],
-    reason: '(c) serverside utsending: egen rad som avsender av venneforespørselen',
-  },
   'app/[locale]/signup/[shortId]/actions.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending: egen rad som avsender, arrangørens adresse som mottaker',
@@ -150,6 +146,11 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/cup/tournamentParticipants.ts': {
     receivers: ['admin'],
     reason: '(c) serverside utsending til cup-deltakere',
+  },
+  'lib/friends/friendActionsCore.ts': {
+    receivers: ['getAdminClient()'],
+    reason:
+      '(c) serverside utsending: avsenderens navn i venne-varselet, maskert (D6); kjernen bak webbens handlinger og /api/friends (#2256)',
   },
   'lib/friends/getFriendData.ts': {
     receivers: ['admin'],

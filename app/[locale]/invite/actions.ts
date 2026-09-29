@@ -2,39 +2,24 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
-import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
-import { inviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
-import { getQuotaState } from '@/lib/invitations/quota';
-import { sendInviteNotification } from '@/lib/mail/inviteNotification';
+import { inviteByEmail, inviteEmailProblem } from '@/lib/friends/friendActionsCore';
 import type { AppLocale } from '@/i18n/routing';
 
-// Lightweight format check. We rely on browser `type="email"` + the
-// fact that Supabase will reject malformed addresses too. Just guard
-// against trivially-empty / no-@ submissions here.
-function looksLikeEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
+// Skallet rundt venne-invitasjonen (#2256). Vernet (adressesjekkene, fullført
+// profil, kvoten, dedup mot kontoer og åpne invitasjoner) og selve
+// invitasjonen bor i `lib/friends/friendActionsCore.ts`, som appens
+// `POST /api/friends/invite` også kaller. Her leses skjemaet og statusen blir
+// en redirect, med de samme kodene som før.
 
 export async function sendFriendInvite(formData: FormData) {
   const locale = (await getLocale()) as AppLocale;
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
-  if (!email) {
-    redirect({ href: '/profile?invite_error=email_required', locale });
-  }
-  if (!looksLikeEmail(email)) {
-    redirect({ href: '/profile?invite_error=invalid_email', locale });
-  }
-  // #422: reject known disposable/throwaway inbox domains on the user-driven
-  // invite flows. Unlike the /login block (#365), this is always on — a
-  // disposable invitation never has value: with self-reg off it lets an
-  // invited throwaway address create an account, and with self-reg on it just
-  // leaves a dead invitations row + a wasted notification mail. Admin/trusted-
-  // creator invite flows are deliberately not guarded (owner decision, #422).
-  if (isDisposableEmailDomain(email)) {
-    redirect({ href: '/profile?invite_error=disposable_email', locale });
+  // Adressen sjekkes før innloggingen, slik handlingen alltid har gjort.
+  const problem = inviteEmailProblem(email);
+  if (problem) {
+    redirect({ href: `/profile?invite_error=${problem}`, locale });
   }
 
   const supabase = await getServerClient();
@@ -47,102 +32,12 @@ export async function sendFriendInvite(formData: FormData) {
     return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
-  // Look up inviter profile. If the inviter hasn't completed their own
-  // profile, send them there first — same defensive pattern as /profile.
-  // Migration 0014 ensures the row always exists for authenticated users,
-  // so we gate on `profile_completed_at` rather than "row missing".
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('name, profile_completed_at')
-    .eq('id', user.id)
-    .single<{ name: string | null; profile_completed_at: string | null }>();
-
-  // Best-effort by design (#1445): migrasjon 0014 garanterer at raden finnes
-  // for en autentisert bruker, så «mangler rad» og «oppslaget feilet» er begge
-  // uventede tilstander med samme svar til brukeren — /profile med en generisk
-  // beskjed. Feilen logges så den ikke forsvinner.
-  if (profileError || !profile) {
-    if (profileError) {
-      console.error('[sendFriendInvite] inviter profile lookup failed', profileError);
-    }
-    redirect({ href: '/profile?invite_error=unknown', locale });
-    return;
-  }
-  if (!profile.profile_completed_at) {
+  const { status } = await inviteByEmail(supabase, user.id, email);
+  if (status === 'profile_incomplete') {
     redirect({ href: '/complete-profile', locale });
   }
-
-  // Defensive quota re-check — the /invite page already gates on this,
-  // but server-side enforcement is what actually protects the rule.
-  const quota = await getQuotaState(supabase, user.id);
-  if (quota.isExhausted) {
-    redirect({ href: '/profile?invite_error=quota', locale });
-  }
-
-  // Block invites to addresses that already exist anywhere in Tørny.
-  // We check two sources in parallel:
-  //   1. public.users (email_is_registered) — accounts that completed
-  //      /complete-profile and have a row in the public schema.
-  //   2. auth.users (email_is_in_auth_users) — accounts that exist in
-  //      Supabase Auth but never finished /complete-profile (e.g. leftover
-  //      from the legacy magic-link flow). Without this second check those
-  //      partial accounts would slip through and receive a confusing invite
-  //      mail, and their user_metadata.inviter_name would be overwritten
-  //      by the subsequent signInWithOtp call.
-  // The third check is the shared cross-door dedup (#348): email_is_invited
-  // is the same SECURITY DEFINER RPC the admin door and the login flow use,
-  // so it sees open invitations regardless of who created them — which a
-  // direct `invitations` query couldn't (RLS 0020 hides other users' rows).
-  const [registeredResult, inAuthResult, invitedResult] = await Promise.all([
-    supabase.rpc('email_is_registered', { p_email: email }),
-    supabase.rpc('email_is_in_auth_users', { email_to_check: email }),
-    supabase.rpc('email_is_invited', { check_email: email }),
-  ]);
-
-  if (registeredResult.error || inAuthResult.error || invitedResult.error) {
-    redirect({ href: '/profile?invite_error=unknown', locale });
-  }
-  if (registeredResult.data || inAuthResult.data) {
-    redirect({ href: '/profile?invite_error=already_user', locale });
-  }
-  // An open invitation already exists for this address (from the admin door
-  // or another friend-invite) — don't send a second invite-mail.
-  if (invitedResult.data) {
-    redirect({ href: '/profile?invite_error=already_invited', locale });
-  }
-
-  const inviterName = profile.name?.trim() || 'En venn';
-
-  // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
-  // just to satisfy the column. The actual OTP code is sent by Supabase
-  // when the invitee reaches /login and asks for one.
-  const expiresAt = inviteExpiresAtFromNow();
-  const inviteToken = randomUUID();
-  const { error: insertError } = await supabase.from('invitations').insert({
-    email,
-    token: inviteToken,
-    invited_by: user.id,
-    game_id: null,
-    expires_at: expiresAt,
-  });
-
-  if (insertError) {
-    console.error('[sendFriendInvite] invitation insert failed', insertError);
-    redirect({ href: '/profile?invite_error=unknown', locale });
-  }
-
-  // Send the "you've been invited" notification. The OTP code itself is
-  // sent later by Supabase when the invitee reaches /login. Best-effort:
-  // a mail failure doesn't roll back the invitation.
-  try {
-    await sendInviteNotification({
-      to: email,
-      invitedByName: inviterName,
-      inviteToken,
-      expiresAt,
-    });
-  } catch (err) {
-    console.error('[invite] notification mail failed', err);
+  if (status !== 'invited') {
+    redirect({ href: `/profile?invite_error=${status}`, locale });
   }
 
   const returnTo = String(formData.get('return') ?? '').trim();
