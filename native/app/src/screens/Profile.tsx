@@ -251,6 +251,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         model={model}
         placeholderName={loadFailed ? failedName : ''}
         onEditProfile={openEditProfile}
+        trend={extras === undefined ? 'loading' : extras.trend}
       />
       {loadFailed ? (
         <Text style={ui.error} testID="profile-load-error">
