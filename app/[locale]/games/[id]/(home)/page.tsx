@@ -43,10 +43,8 @@ import {
 import { getRatingForGender } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
-import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
-import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
@@ -435,56 +433,9 @@ export default async function GameHomePage({
     }
   }
 
-  // Auto-nudge (#376): har spilleren registrert alle hullene sine uten å
-  // levere, fyr én «husk å levere»-påminnelse. Pre-gate billig her (aktivt
-  // spill + ikke levert + ikke trukket + ikke et avledet spill —
-  // et avledet spill (#1441) har aldri egne scores, så reminderen ville
-  // bare vært et gratis no-op-oppslag); maybeSendDeliveryReminder self-gater
-  // på hull-telling + atomisk idempotens-guard, så den er trygg på hvert
-  // besøk. Wrap i `after()` fordi notify() kaller revalidateTag som kaster i
-  // render-fasen (samme mønster som markNotificationsRead + auto-start over).
-  // #1466: a front9 split-cup host in broModus never delivers here — the whole
-  // round is delivered once, on the back9 host. Skip the auto-nudge so the
-  // player isn't told to deliver a card they'll never deliver. Only front9 cup
-  // hosts pay the sibling lookup (normal games have hole_segment='full'), so
-  // ordinary rounds never take on the extra query.
-  let broModusFront9 = false;
-  if (
-    game.status === 'active' &&
-    !me.submitted_at &&
-    !me.withdrawn_at &&
-    game.source_game_id == null &&
-    game.hole_segment === 'front9' &&
-    game.tournament_id != null
-  ) {
-    const sibling = await findSegmentSibling(userId, {
-      gameId: game.id,
-      holeSegment: 'front9',
-      sourceGameId: null,
-      tournamentId: game.tournament_id,
-    });
-    broModusFront9 = sibling != null && sibling.mySubmittedAt == null;
-  }
-
-  if (
-    game.status === 'active' &&
-    !me.submitted_at &&
-    !me.withdrawn_at &&
-    !game.source_game_id &&
-    !broModusFront9
-  ) {
-    after(() =>
-      maybeSendDeliveryReminder({
-        gameId: id,
-        userId,
-        gameName: game.name,
-        expectedHoles: holeCountForSegment(game.hole_segment),
-        // #2041: roster + mode let a teammate count the team's card.
-        players: gwp.players,
-        mode: game.game_mode,
-      }),
-    );
-  }
+  // #2200: the delivery reminder no longer fires from a visit to this page.
+  // A sweep (app/api/cron/delivery-reminder) sends it to whoever keeps the
+  // card, a quarter of an hour after the last hole, on web and app alike.
 
   // Resolve this player's rating-set from the game's tee. Drives Par/Slope/CR
   // surfacing in both the scheduled-state hero and the active-state info-card.

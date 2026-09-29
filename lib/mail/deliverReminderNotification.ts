@@ -1,7 +1,8 @@
 // Sends a "Husk å levere scorekortet"-mail to a player who has registered all
-// 18 holes but not submitted their scorecard (#376).
+// 18 holes but not submitted their scorecard (#376), or to the scorekeeper for
+// the cards they kept (#2200, `forKeptCards`).
 //
-// Triggered from the auto-nudge (game-home render) and the admin purring, but
+// Triggered from the delivery-reminder sweep (#2200) and the admin purring, but
 // ONLY for off-app players (notify() returns shouldAlsoSendMail) — active
 // players get the in-app varsel alone. Best-effort: callers wrap a
 // Promise.allSettled() around sends so one failure doesn't block the rest, and

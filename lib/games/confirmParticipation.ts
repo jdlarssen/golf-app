@@ -4,7 +4,7 @@ import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows
 /**
  * #463 — auto-bekreft deltakelse når spilleren viser aktivitet (åpner spillet).
  *
- * Speiler `maybeSendDeliveryReminder`-mønsteret: atomisk «vinn raden»-update
+ * Samme mønster som påminnelses-kravet (#376/#2200): atomisk «vinn raden»-update
  * som setter `accepted_at = now()` KUN hvis den fortsatt er null. Idempotent —
  * kjører reelt nøyaktig én gang per spiller per spill. Bruker admin-client
  * siden cookies ikke er tilgjengelig inni `after()`-callbacken og vi skriver
