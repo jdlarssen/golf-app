@@ -229,3 +229,33 @@ describe('subscribeGameScores: gjenoppkobling (#2093)', () => {
     expect(onResubscribed).not.toHaveBeenCalled();
   });
 });
+
+describe('subscribeGameStatus (#2219)', () => {
+  useFreshModules();
+
+  it('lytter på UPDATE av spillet og sender raden videre', async () => {
+    const { subscribeGameStatus } = require('./realtime') as typeof import('./realtime');
+    const { realtimeChannels } =
+      require('../test/supabaseMock') as typeof import('../test/supabaseMock');
+    const onUpdate = jest.fn();
+
+    const stop = subscribeGameStatus(GAME, { onUpdate });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const channel = realtimeChannels.at(-1)!;
+    // Hjelperen gir hver kanal et eget løpenummer, så supabase-js ikke gjenbruker en gammel.
+    expect(channel.topic).toMatch(new RegExp(`^game-status:${GAME}#\\d+$`));
+    const [event, filter, handler] = channel.bindings[0]!;
+    expect(event).toBe('postgres_changes');
+    expect(filter).toEqual({
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'games',
+      filter: `id=eq.${GAME}`,
+    });
+
+    (handler as (payload: unknown) => void)({ new: { id: GAME, status: 'active' } });
+    expect(onUpdate).toHaveBeenCalledWith({ id: GAME, status: 'active' });
+    stop();
+  });
+});

@@ -51,6 +51,7 @@ import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
+import { GameStartListener } from '../GameStartListener';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
 import { submitUndoWithdraw } from '../trekk-fra/actions';
 import {
@@ -663,6 +664,10 @@ export default async function GameHomePage({
         </header>
 
         {errorBanner}
+
+        {/* #2219: catches the start for every scheduled game, with or without
+            a tee-off. The countdown below only mounts with one. */}
+        <GameStartListener gameId={id} />
 
         {profileIncomplete && !meIsGuest && (
           <ProfileGateStripe gameId={id} />

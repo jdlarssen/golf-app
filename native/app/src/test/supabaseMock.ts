@@ -99,10 +99,13 @@ export function routeFrom(plan: Record<string, QueryStub[]>): void {
 /**
  * En realtime-kanal slik datalaget ser den: `on` kjeder, og `subscribe` lagrer
  * statuscallbacken så testen kan fyre `SUBSCRIBED`/`CHANNEL_ERROR` selv.
+ * `bindings` tar vare på `on`-argumentene (#2219): filteret er kontrakten, og
+ * handleren er det testen fyrer en payload mot.
  */
 export interface FakeRealtimeChannel {
   topic: string;
   status: ((status: string) => void) | null;
+  bindings: unknown[][];
   on: (...args: unknown[]) => FakeRealtimeChannel;
   subscribe: (callback?: (status: string) => void) => FakeRealtimeChannel;
 }
@@ -141,7 +144,11 @@ export const supabase: {
     const channel: FakeRealtimeChannel = {
       topic,
       status: null,
-      on: () => channel,
+      bindings: [],
+      on: (...args: unknown[]) => {
+        channel.bindings.push(args);
+        return channel;
+      },
       subscribe: (callback) => {
         channel.status = callback ?? null;
         return channel;

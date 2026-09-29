@@ -11,7 +11,7 @@
 //     18» er så lang som det blir, og uten `flexShrink` renner den ut av raden
 //     på en smal telefon (#1842: tekst som klippes er tekst som lyver).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
 import { GameHome, RosterRow } from './GameHome';
@@ -25,6 +25,10 @@ jest.mock('../data/gameBundle', () => ({
   refreshGameBundle: jest.fn(async () => mockState.bundle),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
+// Venterommet (#2219) lytter på spillets status. Testen fyrer oppdateringen selv.
+jest.mock('../data/realtime', () => ({
+  subscribeGameStatus: jest.fn(() => () => undefined),
+}));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),
@@ -223,7 +227,7 @@ describe('GameHome', () => {
     expect(screen.getByTestId('submitted-banner')).toBeTruthy();
   });
 
-  it('kapteinen har slettet kontoen: 9 hull på kapteinen og 9 på makkeren gir lever-knappen (#2067)', async () => {
+  it('venterommet teller ned og åpner seg når runden starter (#2219); kapteinen har slettet kontoen: 9 hull på kapteinen og 9 på makkeren gir lever-knappen (#2067)', async () => {
     const game: BundleGame = {
       id: 'game-1',
       name: 'Testrunden',
@@ -252,7 +256,7 @@ describe('GameHome', () => {
       sideDisabledCategories: [],
     };
     const accepted = '2026-09-17T08:00:00.000Z';
-    mockState.bundle = {
+    const active: GameBundle = {
       game,
       players: [
         // «makker» er lex-min og var kaptein; kontoen er slettet etter hull 9.
@@ -276,6 +280,15 @@ describe('GameHome', () => {
         strokeIndex: i + 1,
       })),
       fetchedAt: '2026-09-17T08:00:00.000Z',
+    };
+    // #2219: spilleren står på spill-hjem før tee-off.
+    mockState.bundle = {
+      ...active,
+      game: {
+        ...game,
+        status: 'scheduled',
+        scheduledTeeOffAt: new Date(Date.now() + 12 * 60_000).toISOString(),
+      },
     };
     mockState.scores = Array.from({ length: 18 }, (_, i) => {
       const holeNumber = i + 1;
@@ -303,9 +316,27 @@ describe('GameHome', () => {
       />,
     );
 
+    // Venterommet teller ned til tee-off.
+    await waitFor(() => {
+      expect(screen.getByTestId('waiting-room-countdown')).toBeTruthy();
+    });
+    expect(screen.getByTestId('waiting-room')).toBeTruthy();
+    expect(screen.queryByTestId('primary-cta')).toBeNull();
+
+    // Runden starter (cron ved tee-off eller arrangøren). Realtime melder det,
+    // og skjermen henter spillet uten at spilleren går ut og inn.
+    const { subscribeGameStatus } = require('../data/realtime') as {
+      subscribeGameStatus: jest.Mock;
+    };
+    mockState.bundle = active;
+    await act(async () => {
+      subscribeGameStatus.mock.calls.at(-1)![1].onUpdate({ id: 'game-1', status: 'active' });
+    });
+
     await waitFor(() => {
       expect(screen.getByTestId('primary-cta')).toBeTruthy();
     });
+    expect(screen.queryByTestId('waiting-room')).toBeNull();
     // Leveringen går via scorekortet; en runde med hull igjen peker på neste
     // hull. Trykket står inne i waitFor fordi bundelen og slagene lastes hver
     // for seg: CTA-en finnes før slagene har landet.

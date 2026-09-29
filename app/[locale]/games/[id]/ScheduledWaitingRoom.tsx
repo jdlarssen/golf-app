@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { countdownParts } from '@/lib/i18n/format';
-import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 import { joinFlight } from './flightJoinActions';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 
@@ -26,10 +25,10 @@ type WaitingRoomProps = {
 
 
 /**
- * Client-side countdown ticker + realtime listener for the "scheduled" state
- * (Scorekort venter). Updates the countdown label every 30s and refreshes the
- * route as soon as `games.status` flips to `active` so the player sees the
- * normal home view without manually reloading.
+ * Client-side countdown ticker for the "scheduled" state (Scorekort venter).
+ * Updates the countdown label every 30s. The start itself is caught by
+ * `GameStartListener`, which the page mounts for every scheduled game, with or
+ * without a tee-off (#2219).
  *
  * #543: hvis spillet er eligible for flight-inndeling, vises en selvbetjenings-
  * velger der spillerne kan plassere seg selv i en flight.
@@ -50,8 +49,8 @@ export function ScheduledWaitingRoom({
   );
 
   // Tick every 30s to update countdown text. 30s is precise enough for
-  // a ballpark "starter om X min/t" label; the realtime subscription
-  // flips the route to active well before sub-30s precision matters.
+  // a ballpark "starter om X min/t" label; `GameStartListener` flips the
+  // route to active well before sub-30s precision matters.
   // Also force a fresh tick whenever the tab returns to foreground —
   // browsers throttle background intervals, so the user reopens to a
   // possibly-stale countdown without this.
@@ -67,30 +66,6 @@ export function ScheduledWaitingRoom({
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
-
-  // Realtime: listen for game.status flipping to 'active'.
-  useEffect(() => {
-    return subscribeRealtimeChannel(`game-status:${gameId}`, (channel) =>
-      channel.on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'games',
-          filter: `id=eq.${gameId}`,
-        },
-        (payload) => {
-          const next = payload.new as { status?: string };
-          if (next?.status === 'active') {
-            router.refresh();
-          }
-        },
-      ),
-      // #2093: a start committed while the channel was down is never
-      // replayed. Refresh and let the server say which status the game has.
-      { onResubscribed: () => router.refresh() },
-    );
-  }, [gameId, router]);
 
   const msUntil = new Date(teeOffAt).getTime() - now;
   const parts = countdownParts(msUntil);
