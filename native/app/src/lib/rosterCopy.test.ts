@@ -74,6 +74,9 @@ const ROSTER_REASON_MAP = {
   'bad-flight': 'bad_flight',
   'team-full': 'team_full',
   'flight-full': 'flight_full',
+  // #2290: webbens `flight_bound_to_team` er skrevet til spilleren selv
+  // («Laget ditt …»); her er det arrangøren som leser.
+  'flight-bound-to-team': null,
   'rls-denied': null,
   'already-submitted': null,
   'no-rows': null,

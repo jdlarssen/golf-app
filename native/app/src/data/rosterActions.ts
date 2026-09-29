@@ -31,9 +31,10 @@
 //   • raden er det ikke → RLS/rad-tilgang nektet → `{ ok: false }`
 // Stille suksess finnes ikke her.
 //
-// **Reglene er delt kode.** `expectedTeamSize` og `modeRequiresTeamNumber`
-// (`lib/games/teamScope`), `MAX_FLIGHT_SIZE` (`lib/games/flightScope`) og
-// `supportsWithdrawal` (`lib/scoring/modes/types`) importeres — aldri kopieres.
+// **Reglene er delt kode.** `expectedTeamSize`, `modeRequiresTeamNumber` og
+// `flightForTeam` (`lib/games/teamScope`), `MAX_FLIGHT_SIZE` og
+// `flightIsFreeGrouping` (`lib/games/flightScope`), samt `supportsWithdrawal`
+// (`lib/scoring/modes/types`), importeres — aldri kopieres.
 // Et tall som står to steder driver fra hverandre (AGENTS.md felle 4).
 //
 // **Web-cachen (#2215).** Webben leser status og roster fra spillets cache
@@ -45,9 +46,13 @@
 //
 // Admin-hendelsesloggen (`logAdminEvent`, også `scorecard.reopened`) er
 // server-eid og skrives IKKE for arrangørhandlinger herfra. Bokført gap.
-import { MAX_FLIGHT_SIZE } from '../../../../lib/games/flightScope';
+import {
+  MAX_FLIGHT_SIZE,
+  flightIsFreeGrouping,
+} from '../../../../lib/games/flightScope';
 import {
   expectedTeamSize,
+  flightForTeam,
   modeRequiresTeamNumber,
 } from '../../../../lib/games/teamScope';
 import {
@@ -94,6 +99,8 @@ export type RosterActionFailure =
   | 'bad-flight'
   | 'team-full'
   | 'flight-full'
+  /** In the team formats and matchplay the flight is the team or side (#2290). */
+  | 'flight-bound-to-team'
   /**
    * Nektet: SQLSTATE 42501 fra Postgres (policy eller vakt-trigger), eller
    * rutas port (403, og `invite_not_allowed` når du legger til).
@@ -500,8 +507,10 @@ export async function removePlayerFromGame(
  *
  *  1. **`flight_number` skrives SAMMEN med `team_number`.** CHECK
  *     `game_players_team_flight_consistency` (0030/0095) sier at et lag
- *     impliserer en flight. Spillerens eksisterende flight beholdes; mangler
- *     den, speiles lagnummeret — nøyaktig `row.flight_number ?? targetTeam`.
+ *     impliserer en flight. Den settes etter laget med den delte
+ *     `flightForTeam` (#2290): i best ball får spilleren partnerens flight, i
+ *     de andre lag-formatene er flighten laget. Den gamle flighten følger
+ *     aldri med til et annet lag.
  *  2. **Kapasiteten kommer fra `expectedTeamSize(mode_config)`,** ikke fra et
  *     tall skrevet inn her. Trukne spillere teller ikke, og spilleren vi
  *     flytter teller ikke mot sin egen nye plass.
@@ -547,7 +556,12 @@ export async function setPlayerTeam(
       .from('game_players')
       .update({
         team_number: teamNumber,
-        flight_number: me.flight_number ?? teamNumber,
+        flight_number: flightForTeam(
+          game.row.game_mode as GameMode,
+          grouping.rows,
+          playerUserId,
+          teamNumber,
+        ),
       })
       .eq('game_id', gameId)
       .eq('user_id', playerUserId)
@@ -571,8 +585,9 @@ export async function setPlayerTeam(
  * Kapasiteten er `MAX_FLIGHT_SIZE` fra den delte modulen — fire baller på ett
  * hull er en fysisk grense, ikke en preferanse. Trukne spillere teller ikke.
  *
- * Ingen lag-gate her: flight er meningsfull i alle formater, også de som ikke
- * har lag i det hele tatt.
+ * Bare der flighten er en fri gruppering (`flightIsFreeGrouping`, #2290). I
+ * lag-formatene er flighten laget: én lagspiller i en annen flight kan taste
+ * for feil lag. Der flytter arrangøren spilleren til et annet lag i stedet.
  */
 export async function setPlayerFlight(
   gameId: string,
@@ -591,6 +606,14 @@ export async function setPlayerFlight(
   if ('error' in game) return game.error;
   if (game.row.status !== 'scheduled' && game.row.status !== 'active') {
     return failed('not-active');
+  }
+  if (
+    !flightIsFreeGrouping(
+      game.row.game_mode as GameMode,
+      expectedTeamSize(game.row.mode_config),
+    )
+  ) {
+    return failed('flight-bound-to-team');
   }
 
   const grouping = await loadGrouping(gameId);

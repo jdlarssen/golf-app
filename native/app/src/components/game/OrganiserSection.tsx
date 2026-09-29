@@ -12,8 +12,9 @@
 //
 // **Reglene er delte, monteringen er lokal.** Om formatet har lag i det hele
 // tatt svarer `modeRequiresTeamNumber`, og om noen MANGLER lag svarer
-// `needsTeamAssignment`; flight-tvillingene er `isSingleFlightGame` og
-// `needsFlightAssignment`; om formatet kjenner frafall svarer
+// `needsTeamAssignment`; flight-tvillingene er `eligibleForFlightAssignment`
+// (bare solo-formater, ikke wolf, #2290) og `needsFlightAssignment`; om
+// formatet kjenner frafall svarer
 // `supportsWithdrawal`. Ingen av spørsmålene besvares på nytt her, og selve
 // skrivingene ligger i `data/rosterActions.ts`: RLS er porten for de direkte
 // skrivingene, og ruta på serveren for «legg til» og «åpne kortet igjen» (#2215).
@@ -44,7 +45,7 @@ import {
   View,
 } from 'react-native';
 import {
-  isSingleFlightGame,
+  eligibleForFlightAssignment,
   MAX_FLIGHT_SIZE,
   needsFlightAssignment,
 } from '../../../../../lib/games/flightScope';
@@ -304,7 +305,10 @@ export function OrganiserSection({
   // Er alle fordelt, ligger de bak «Juster», og arrangøren bestemmer selv når
   // lista lukkes igjen.
   const hasTeamRows = scheduled && modeRequiresTeamNumber(mode, teamSize);
-  const hasFlightRows = scheduled && !isSingleFlightGame(mode, teamPlayers);
+  // #2290: in the team formats the flight is the team. A player there moves
+  // to another team, never to another flight alone.
+  const hasFlightRows =
+    scheduled && eligibleForFlightAssignment(mode, teamSize, teamPlayers);
   const teamsMissing = scheduled && needsTeamAssignment(mode, teamSize, teamPlayers);
   const flightsMissing = scheduled && needsFlightAssignment(mode, teamPlayers);
   const showTeams = hasTeamRows && (teamsMissing || adjusting);
