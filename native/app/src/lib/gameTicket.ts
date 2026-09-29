@@ -154,8 +154,8 @@ function decimalComma(n: number): string {
 }
 
 /**
- * Faktalinja: «18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5». Par og
- * lengde er tallene for hele banen, så de står bare på en hel runde. Det som
+ * Faktalinja: «18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5». Par, lengde
+ * og CR er tallene for hele banen, så de står bare på en hel runde. Det som
  * mangler, hoppes over. Hvert ledd holdes sammen med hardt mellomrom, så linja
  * brekker mellom leddene og aldri mellom «CR» og tallet.
  */
@@ -173,7 +173,7 @@ export function ticketFacts(
     full && rating ? `Par\u00A0${rating.par}` : null,
     full && length != null ? `${groupThousands(length)}\u00A0m` : null,
     rating ? `Slope\u00A0${rating.slope}` : null,
-    rating ? `CR\u00A0${decimalComma(rating.courseRating)}` : null,
+    full && rating ? `CR\u00A0${decimalComma(rating.courseRating)}` : null,
   ]
     .filter((part): part is string => part != null)
     .join(SEPARATOR);
@@ -204,6 +204,9 @@ export function ticketStrokes(opts: {
 }): string {
   const { bundle, me } = opts;
   if (!me) return TICKET_TEXT.noValue;
+  // Lagshandicapen finnes først når banehandicapene er frosset ved start.
+  // Før det regner motoren de manglende som 0, og laget ville fått 0 slag.
+  if (opts.teamMode && me.courseHandicap == null) return TICKET_TEXT.noValue;
   const { game } = bundle;
   const revealActive = shouldHideNetto(
     revealState(game.scoreVisibility as ScoreVisibility, game.status as GameStatus),
