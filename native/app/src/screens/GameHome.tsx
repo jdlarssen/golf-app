@@ -16,10 +16,21 @@
 // N6c (#1856): arrangøren avslutter runden herfra — men på en egen flate
 // (`EndGame`), ikke med en knapp her. Flippen er praktisk irreversibel, og
 // husregelen er at slikt får sin egen bekreftelses-side.
-import { useCallback, useEffect, useState } from 'react';
+//
+// #2255: siden er én startbillett. Rekkefølgen er:
+//  1. synk-banneret og banneret for avvist kort,
+//  2. billetten (hode, felt, faktalinje, avatarrad) med stubben,
+//  3. flisene Tavla, Scorekort og Regler når runden pågår eller er avsluttet,
+//     og «Godkjenn (n)»,
+//  4. spillerlista, bare når runden er planlagt eller et utkast,
+//  5. forklaringen av spillformen («Regler»),
+//  6. arrangørdelen.
+// Reglene bak billetten bor i `lib/gameTicket.ts`; stubben velger de samme
+// grenene, i samme rekkefølge, som `PrimarySection` gjorde før.
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,32 +42,30 @@ import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
+import { GameTicket, type TicketField } from '../components/game/GameTicket';
+import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
-import { WaitingRoom } from '../components/game/WaitingRoom';
+import { RulesSection } from '../components/game/RulesSection';
+import { TicketStub } from '../components/game/TicketStub';
 import { HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
-import type { BundlePlayer, GameBundle } from '../data/gameBundle';
+import type { BundlePlayer } from '../data/gameBundle';
+import { fetchOwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
 import { seedGameScores } from '../data/seedScores';
-import { undoSelfWithdraw } from '../data/withdrawSelf';
+import { displayName } from '../lib/display';
+import { gateReason } from '../lib/formatGate';
 import {
-  describeSelfWithdrawFailure,
-  WITHDRAW_SELF,
-} from '../lib/rosterCopy';
-import { displayName, formatTeeOff } from '../lib/display';
-import {
-  GATE_LINK_LABEL,
-  gameWebPath,
-  gateMessage,
-  gateReason,
-  type GateReason,
-} from '../lib/formatGate';
-import { WebLinkButton } from '../components/WebLinkButton';
+  slotField,
+  startField,
+  ticketFacts,
+  ticketHeaderLine,
+  ticketSlot,
+  ticketStrokes,
+  ticketStub,
+} from '../lib/gameTicket';
+import { HOME_TEXT } from '../lib/homeCopy';
 import { nameLookup } from '../lib/leaderboardModel';
-import {
-  computePrimaryCtaState,
-  nextUnfilledHole,
-} from '../lib/primaryCtaState';
 import {
   findInRoster,
   flightCtaLabel,
@@ -68,12 +77,15 @@ import {
   shouldConfirmParticipation,
   toRoster,
 } from '../lib/roster';
+import { computeGameLeaderboard } from '../lib/scoringContext';
 import {
   buildTeamCards,
   filledHolesForOwner,
   findMyTeamCard,
   myTeamCaptainId,
+  teamHandicapFor,
 } from '../lib/teamPlay';
+import { TICKET_TEXT, approveButton, fieldA11y } from '../lib/ticketCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -91,6 +103,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
   const scores = useTeamScores(localScores, bundle);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const rulesHeadingRef = useRef<ComponentRef<typeof Text>>(null);
+  const rulesY = useRef<number | null>(null);
+  const [profileHcpIndex, setProfileHcpIndex] = useState<number | null>(null);
 
   // Hent ned det serveren har hver gang skjermen åpnes, og les lokalt etterpå.
   // Feiler seeden (offline), står de lokale radene som de var.
@@ -110,14 +126,40 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // flagget slår om til false — effekten kan derfor ikke gå i ring.
   // Skrivingen er best-effort: uten nett skjer ingenting, og neste åpning
   // prøver igjen.
-  const confirmNeeded = shouldConfirmParticipation(
-    bundle?.players.find((player) => player.userId === userId),
-    bundle?.game.status ?? 'draft',
-  );
+  const myRow = bundle?.players.find((player) => player.userId === userId);
+  const confirmNeeded = shouldConfirmParticipation(myRow, bundle?.game.status ?? 'draft');
   useEffect(() => {
     if (!confirmNeeded) return;
     void confirmParticipation(gameId).then(() => refresh());
   }, [confirmNeeded, gameId, refresh]);
+
+  // #2255: DINE SLAG før start. Banehandicapen fryses først ved tee-off, så
+  // til da regnes den fra hcp-indeksen i profilen (samme vei som webben).
+  // Uten nett står «—», og tallet kommer neste gang skjermen åpnes.
+  const needsHcpIndex = myRow != null && myRow.courseHandicap == null;
+  useEffect(() => {
+    if (!needsHcpIndex) return;
+    let live = true;
+    void fetchOwnProfile(userId).then(
+      (profile) => {
+        if (live) setProfileHcpIndex(profile.hcpIndex);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [needsHcpIndex, userId]);
+
+  // «Regler»-flisa hopper ned til forklaringen og gir den fokus for
+  // skjermleseren. Uten animasjon: det er et hopp, ikke en reise.
+  const scrollToRules = useCallback(() => {
+    if (rulesY.current === null) return;
+    scrollRef.current?.scrollTo({ y: rulesY.current, animated: false });
+    if (rulesHeadingRef.current) {
+      AccessibilityInfo.sendAccessibilityEvent(rulesHeadingRef.current, 'focus');
+    }
+  }, []);
 
   if (!bundle) {
     if (loading) {
@@ -145,39 +187,70 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Lag-formatene: mine hull er kapteinens rader, og «levert» er lagets
   // stempel («noen på laget» — samme regel webbens lagkort bruker).
   const myCaptainId = myTeamCaptainId(roster, userId);
-  const myTeamCard =
-    myCaptainId != null && modeCollapsesToTeamCard(mode, HOLE_COUNT)
-      ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
-      : null;
+  const teamMode = myCaptainId != null && modeCollapsesToTeamCard(mode, HOLE_COUNT);
+  const myTeamCard = teamMode
+    ? findMyTeamCard(buildTeamCards(roster, nameLookup(bundle.players)), userId)
+    : null;
   const filled = filledHolesForOwner(scores, mode, userId, myCaptainId);
   // Godkjenn-lista er per SPILLER også i lag-formater: hvert medlem har sin
   // egen `game_players`-rad, og den delte regelen er alt mode-bevisst. Spillet
   // sendes med for gaten (#2220): bare når runden krever godkjenning og pågår.
   const approvals = me ? pendingApprovals(roster, bundle.game, userId) : [];
 
+  // DINE SLAG i et lagkort er lagets handicap fra motoren, som på scorekortet.
+  // Motoren spørres bare når det faktisk er et lagkort.
+  const teamNumber = myTeamCard?.teamNumber ?? me?.player.teamNumber ?? null;
+  const teamHandicap =
+    teamMode && teamNumber != null
+      ? teamHandicapFor(computeGameLeaderboard(bundle, scores), teamNumber)
+      : null;
+  const start = startField(game.scheduledTeeOffAt);
+  const slot = slotField(ticketSlot(bundle, userId));
+  const strokes = ticketStrokes({
+    bundle,
+    me: me?.player,
+    profileHcpIndex,
+    teamMode,
+    teamHandicap,
+  });
+  const fields: TicketField[] = [
+    {
+      label: TICKET_TEXT.start,
+      value: start.date ?? HOME_TEXT.noTeeOff,
+      sub: start.clock,
+      a11y: start.a11y,
+      testID: 'ticket-start',
+    },
+    { label: slot.label, value: slot.value, a11y: fieldA11y(slot.label, slot.value), testID: 'ticket-slot' },
+    {
+      label: TICKET_TEXT.strokes,
+      value: strokes,
+      a11y: fieldA11y(
+        TICKET_TEXT.strokes,
+        strokes === TICKET_TEXT.noValue ? TICKET_TEXT.noValueSpoken : strokes,
+      ),
+      testID: 'ticket-strokes',
+    },
+  ];
+  const stub = ticketStub({
+    status: game.status,
+    gate: gated,
+    me: me?.player,
+    filled,
+    totalHoles: HOLE_COUNT,
+    submittedAt: myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null),
+    approvedAt: myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null),
+    requirePeerApproval: game.requirePeerApproval,
+  });
+  const inPlay = game.status === 'active' || game.status === 'finished';
+  // Eierens svar på #2255: lista står bare før runden. Når den pågår eller er
+  // avsluttet, er avatarraden i billetten eneste spillerliste.
+  const showRoster = game.status === 'scheduled' || game.status === 'draft';
+
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="game-home-screen">
+    <ScrollView ref={scrollRef} contentContainerStyle={ui.scroll} testID="game-home-screen">
       {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
       <SyncBanner gameId={gameId} />
-      <Text style={ui.title} testID="game-name">
-        {game.name}
-      </Text>
-      <Text style={ui.muted} testID="game-status">
-        {STATUS_LABELS[game.status as GameStatus] ?? game.status}
-        {bundle.courseName ? ` · ${bundle.courseName}` : ''}
-        {bundle.teeBoxName ? ` · ${bundle.teeBoxName}` : ''}
-      </Text>
-      {game.scheduledTeeOffAt ? (
-        <Text style={ui.muted} testID="game-tee-off">
-          Tee-off {formatTeeOff(game.scheduledTeeOffAt)}
-        </Text>
-      ) : null}
-
-      {me?.player.courseHandicap != null ? (
-        <Text style={[ui.body, ui.num]} testID="my-course-handicap">
-          Banehandicapet ditt: {me.player.courseHandicap}
-        </Text>
-      ) : null}
 
       {me?.player.rejectionReason ? (
         <View style={ui.banner} testID="rejected-banner">
@@ -191,63 +264,71 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         </View>
       ) : null}
 
-      <PrimarySection
-        bundle={bundle}
-        me={me?.player}
-        gated={gated}
-        filled={filled}
-        submittedAt={myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null)}
-        approvedAt={myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null)}
-        flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
-        onChanged={refresh}
-        onNavigate={navigation.navigate}
-      />
+      <GameTicket
+        kicker={bundle.courseName ? game.name : null}
+        title={bundle.courseName ?? game.name}
+        headerLine={ticketHeaderLine(bundle)}
+        statusLabel={STATUS_LABELS[game.status as GameStatus] ?? game.status}
+        fields={fields}
+        facts={ticketFacts(bundle, me?.player)}
+        roster={me ? { players: bundle.players, userId, flightNumber: me.player.flightNumber } : null}
+      >
+        <TicketStub
+          stub={stub}
+          gameId={gameId}
+          courseName={bundle.courseName}
+          teeOffAt={game.scheduledTeeOffAt}
+          flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
+          onChanged={refresh}
+          onNavigate={navigation.navigate}
+        />
+      </GameTicket>
 
-      {supported ? (
-        <Pressable
-          style={ui.buttonSecondary}
-          onPress={() => navigation.navigate('Scorecard', { gameId })}
-          testID="open-scorecard"
-        >
-          <Text style={ui.buttonSecondaryText}>Scorekort</Text>
-        </Pressable>
-      ) : null}
-
-      {/* Resultattabellen følger samme gate som føringen (#1828): et format
-          appen ikke kan taste, viser den heller ikke tall for. Planlagte spill
-          har ingen slag ennå, så lenken dukker opp når runden er i gang. */}
-      {supported && game.status !== 'scheduled' ? (
-        <Pressable
-          style={ui.buttonSecondary}
-          onPress={() => navigation.navigate('Leaderboard', { gameId })}
-          testID="open-leaderboard"
-        >
-          <Text style={ui.buttonSecondaryText}>Resultater</Text>
-        </Pressable>
+      {inPlay ? (
+        <GameTiles
+          supported={supported}
+          onBoard={() => navigation.navigate('Leaderboard', { gameId })}
+          onScorecard={() => navigation.navigate('Scorecard', { gameId })}
+          onRules={scrollToRules}
+        />
       ) : null}
 
       {approvals.length > 0 ? (
         <Pressable
+          accessibilityRole="button"
           style={ui.buttonSecondary}
           onPress={() => navigation.navigate('Approve', { gameId })}
           testID="open-approve"
         >
-          <Text style={ui.buttonSecondaryText}>Godkjenn ({approvals.length})</Text>
+          <Text style={ui.buttonSecondaryText}>{approveButton(approvals.length)}</Text>
         </Pressable>
       ) : null}
 
-      <Text style={ui.sectionTitle}>Spillere</Text>
-      <View style={ui.card} testID="roster">
-        {bundle.players.map((player) => (
-          <RosterRow
-            key={player.userId}
-            player={player}
-            isMe={player.userId === userId}
-            gameMode={mode}
-            players={bundle.players}
-          />
-        ))}
-      </View>
+      {showRoster ? (
+        <>
+          <Text style={ui.sectionTitle}>{TICKET_TEXT.roster}</Text>
+          <View style={ui.card} testID="roster">
+            {bundle.players.map((player) => (
+              <RosterRow
+                key={player.userId}
+                player={player}
+                isMe={player.userId === userId}
+                gameMode={mode}
+                players={bundle.players}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      <RulesSection
+        gameMode={game.gameMode}
+        modeConfig={game.modeConfig}
+        headingRef={rulesHeadingRef}
+        onLayout={(event) => {
+          rulesY.current = event.nativeEvent.layout.y;
+        }}
+      />
 
       {/* Arrangør-seksjonen henger på `created_by`, ikke på et admin-flagg:
           appen er arrangørens flate, Sekretariatet bor på nettsiden. */}
@@ -266,238 +347,6 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         </Text>
       ) : null}
     </ScrollView>
-  );
-}
-
-/**
- * CTA-en, banneret eller henvisningen til nettsiden — i den rekkefølgen
- * spilleren skal møte dem.
- */
-function PrimarySection({
-  bundle,
-  me,
-  gated,
-  filled,
-  submittedAt,
-  approvedAt,
-  flightCta,
-  onChanged,
-  onNavigate,
-}: {
-  bundle: GameBundle;
-  me: BundlePlayer | undefined;
-  gated: GateReason | null;
-  filled: number[];
-  /**
-   * Stemplene CTA-en skal regne på — mine egne, eller lagets i de formatene
-   * som deler ett kort. Sendes inn i stedet for å leses av `me`, slik at
-   * begge tilfellene går gjennom samme fem grener.
-   */
-  submittedAt: string | null;
-  approvedAt: string | null;
-  /**
-   * #2200: knappen til scorekortet når mitt kort er levert og makkerkort jeg
-   * har ført, står igjen, som nettsidens PrimaryCta. `null` = ingen knapp.
-   * Regelen er den delte `flightDeliveryFor`, over de lokale slagene.
-   */
-  flightCta: string | null;
-  /**
-   * Hent bundelen på nytt. Kalles etter «Angre trekk», uansett utfall, og fra
-   * venterommet når runden starter (#2219).
-   */
-  onChanged: () => void | Promise<void>;
-  onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
-}) {
-  const { ui } = useTheme();
-  const { game } = bundle;
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  /**
-   * «Angre trekk» på trukket-banneret (#1917).
-   *
-   * Banneret sa bare at du var trukket. Trakk du deg ved et uhell — eller
-   * ombestemte du deg på banen — var eneste vei ut nettsiden, og det er nøyaktig
-   * blindveien #1891 ryddet et annet sted.
-   *
-   * Går via `DELETE /api/games/[id]/withdraw-self`, aldri en skriving:
-   * `guard_game_players_self_update` vakt (c) (0147/0168) nekter appen å røre
-   * `withdrawn_at` på egen rad. `onChanged()` uansett utfall — bundelen er
-   * fasiten for hva skjermen skal vise etterpå, så `kept` leses ikke.
-   */
-  const undoWithdraw = useCallback(async () => {
-    setBusy(true);
-    setNotice(null);
-    try {
-      const result = await undoSelfWithdraw(game.id);
-      setNotice(
-        result.ok ? null : describeSelfWithdrawFailure(result.reason, 'undo'),
-      );
-    } catch {
-      setNotice(describeSelfWithdrawFailure('withdraw_failed', 'undo'));
-    } finally {
-      await onChanged();
-      setBusy(false);
-    }
-  }, [game.id, onChanged]);
-
-  if (gated !== null) {
-    return (
-      <View style={ui.banner} testID="format-gate">
-        <Text style={ui.body}>{gateMessage(gated)}</Text>
-        {/* #1891: dette er hovedstedet spilleren møter gaten — leaderboardet er
-            det andre. Uten knappen er setningen en blindvei: den sier hvor
-            runden føres, men ikke hvordan du kommer dit. */}
-        <WebLinkButton
-          label={GATE_LINK_LABEL}
-          path={gameWebPath(game.id)}
-          testID="format-gate-link"
-        />
-      </View>
-    );
-  }
-
-  if (!me) {
-    return (
-      <View style={ui.banner} testID="not-a-player">
-        <Text style={ui.body}>Du står ikke oppført som spiller her.</Text>
-      </View>
-    );
-  }
-
-  if (me.withdrawnAt) {
-    // #2358: bare den som trakk seg selv kan angre. Et trekk arrangøren satte,
-    // er arrangørens å angre; serveren nekter uansett (`withdrawn_by_other`),
-    // så knappen vises ikke — samme regel som nettsidens banner.
-    const selfWithdrawn = me.withdrawnByUserId === me.userId;
-    return (
-      <View style={ui.banner} testID="withdrawn-banner">
-        <Text style={ui.body}>
-          {selfWithdrawn ? WITHDRAW_SELF.withdrawnBySelf : WITHDRAW_SELF.withdrawnByOrganiser}
-        </Text>
-        {/* #1917: banneret var bare en beskjed. Nå har det en vei ut for den
-            som trakk seg selv. */}
-        {selfWithdrawn ? (
-          <Pressable
-            style={ui.buttonSecondary}
-            disabled={busy}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: busy }}
-            testID="withdrawn-undo"
-            onPress={() =>
-              Alert.alert(WITHDRAW_SELF.undoTitle, WITHDRAW_SELF.undoBody, [
-                { text: 'Avbryt', style: 'cancel' },
-                {
-                  text: WITHDRAW_SELF.undoCta,
-                  onPress: () => void undoWithdraw(),
-                },
-              ])
-            }
-          >
-            <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.undoLabel}</Text>
-          </Pressable>
-        ) : null}
-        {notice ? (
-          <Text style={ui.error} testID="withdrawn-undo-notice">
-            {notice}
-          </Text>
-        ) : null}
-      </View>
-    );
-  }
-
-  if (game.status === 'scheduled') {
-    return (
-      <WaitingRoom
-        gameId={game.id}
-        teeOffAt={game.scheduledTeeOffAt}
-        onChanged={onChanged}
-      />
-    );
-  }
-
-  if (game.status === 'finished') {
-    return (
-      <View style={ui.banner} testID="finished-banner">
-        <Text style={ui.body}>Runden er avsluttet. Scorekortet er lesevisning.</Text>
-      </View>
-    );
-  }
-
-  if (game.status !== 'active') {
-    return null;
-  }
-
-  const state = computePrimaryCtaState({
-    strokesCount: filled.length,
-    totalHoles: HOLE_COUNT,
-    submittedAt,
-    approvedAt,
-    requirePeerApproval: game.requirePeerApproval,
-  });
-
-  const flightButton = flightCta ? (
-    <Pressable
-      style={ui.button}
-      onPress={() => onNavigate('Scorecard', { gameId: game.id })}
-      testID="deliver-flight-cta"
-    >
-      <Text style={ui.buttonText}>{flightCta}</Text>
-    </Pressable>
-  ) : null;
-
-  if (state === 'submitted_pending_approval') {
-    return (
-      <>
-        {flightButton}
-        <View style={ui.banner} testID="submitted-banner">
-          <Text style={ui.body}>Kortet er levert. Nå venter det på en makker.</Text>
-        </View>
-      </>
-    );
-  }
-
-  if (state === 'submitted_approved') {
-    return (
-      <>
-        {flightButton}
-        <View style={ui.banner} testID="submitted-banner">
-          <Text style={ui.body}>Kortet er levert og godkjent.</Text>
-        </View>
-      </>
-    );
-  }
-
-  if (state === 'ready_to_submit') {
-    return (
-      <Pressable
-        style={ui.button}
-        onPress={() => onNavigate('Scorecard', { gameId: game.id })}
-        testID="primary-cta"
-      >
-        <Text style={ui.buttonText}>Se over og lever</Text>
-      </Pressable>
-    );
-  }
-
-  const nextHole = nextUnfilledHole(filled, HOLE_COUNT);
-  return (
-    <View>
-      <Pressable
-        style={ui.button}
-        onPress={() => onNavigate('Hole', { gameId: game.id, holeNumber: nextHole })}
-        testID="primary-cta"
-      >
-        <Text style={ui.buttonText}>
-          {state === 'not_started' ? 'Start runden' : 'Fortsett runden'}
-        </Text>
-      </Pressable>
-      {state === 'in_progress' ? (
-        <Text style={[ui.muted, ui.num, styles.ctaSubtext]}>
-          {filled.length} av {HOLE_COUNT} hull ført
-        </Text>
-      ) : null}
-    </View>
   );
 }
 
@@ -570,7 +419,6 @@ export function RosterRow({
 }
 
 const styles = StyleSheet.create({
-  ctaSubtext: { textAlign: 'center', marginTop: 6 },
   rosterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

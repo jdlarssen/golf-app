@@ -19,6 +19,8 @@ export const TICKET_TEXT = {
   strokes: 'Dine slag',
   /** Verdien når tallet ikke finnes eller er skjult (reveal). */
   noValue: '—',
+  /** Det samme for skjermleseren, som ellers leser streken høyt. */
+  noValueSpoken: 'ikke vist',
   /** Webbens `game.home.registered` («DU ER PÅMELDT»), i setningsform. */
   registered: 'Du er påmeldt',
   /** Webbens `game.home.viewOnMap`. */

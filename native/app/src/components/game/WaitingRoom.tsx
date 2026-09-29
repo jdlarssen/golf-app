@@ -14,8 +14,11 @@
 //   runden innen omtrent ett minutt.
 //
 // Venterommet lover ikke noe varsel. Appen har ingen push om at runden starter.
+//
+// #2255: venterommet står i stubben på startbilletten og har stubbens drakt,
+// ikke et eget banner. Oppførselen er den samme.
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { subscribeGameStatus } from '../../data/realtime';
 import { waitingRoomView } from '../../lib/waitingRoom';
 import { useTheme } from '../../theme';
@@ -61,7 +64,7 @@ export function WaitingRoom({
   const view = waitingRoomView(teeOffAt, now);
 
   return (
-    <View style={ui.banner} testID="waiting-room">
+    <View style={styles.room} testID="waiting-room">
       <Text style={ui.body}>{view.headline}</Text>
       {view.countdown ? (
         <Text style={[ui.muted, ui.num]} testID="waiting-room-countdown">
@@ -71,3 +74,7 @@ export function WaitingRoom({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  room: { gap: 4 },
+});
