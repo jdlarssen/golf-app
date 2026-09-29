@@ -6,8 +6,13 @@
 //
 // **Perforeringen** er en kolonne små streker, ikke `borderStyle: 'dashed'`.
 // React Native tegner stiplet kant på én side ujevnt på iOS, og strekene ser
-// like ut på iOS og Android. Hakkene oppe og nede er halve sirkler i sidens
-// bakgrunnsfarge; resten av sirkelen klippes av billettens `overflow`.
+// like ut på iOS og Android.
+//
+// **Hakkene** oppe og nede ligger OVER billetten som søsken, ikke inni den:
+// iOS tegner et elements kant over sine egne barn, så et hakk inni billetten
+// ble en bule under kantlinja i stedet for et kutt i den (simulator-beviset,
+// #2254). Hvert hakk er en halvsirkel i sidens bakgrunnsfarge med kantfarget
+// bue, klippet av en boks så bare den indre halvdelen synes.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { GameBundle } from '../../data/gameBundle';
 import type { HomeCard } from '../../data/homeList';
@@ -66,105 +71,134 @@ export function NextStartTicket({
       : null,
   ]);
 
+  const notch = { backgroundColor: colors.bg, borderColor: colors.border };
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={a11yLabel}
-      style={[styles.ticket, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      testID={`home-ticket-${card.gameId}`}
-    >
-      <View style={styles.stub}>
-        {date ? (
-          <>
-            <Text style={[styles.date, { color: colors.text }]} testID="home-ticket-date">
-              {date}
-            </Text>
-            {clock ? (
-              <Text style={[ui.muted, ui.num]} testID="home-ticket-clock">
-                {clock}
-              </Text>
-            ) : null}
-          </>
-        ) : (
-          <Text style={[ui.muted, styles.noTime]} testID="home-ticket-no-time">
-            {HOME_TEXT.noTeeOff}
-          </Text>
-        )}
-        {proximity ? (
-          <Text style={[styles.proximity, { color: colors.primary }]} testID="home-ticket-proximity">
-            {proximity}
-          </Text>
-        ) : null}
-      </View>
-
-      <View
-        style={styles.perforation}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        testID="home-ticket-perforation"
+    <View style={styles.wrap}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        style={[styles.ticket, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        testID={`home-ticket-${card.gameId}`}
       >
-        <View style={[styles.notch, styles.notchTop, { backgroundColor: colors.bg, borderColor: colors.border }]} />
-        <View style={styles.dashes}>
+        <View style={styles.stub}>
+          {date ? (
+            <>
+              <Text style={[styles.date, { color: colors.text }]} testID="home-ticket-date">
+                {date}
+              </Text>
+              {clock ? (
+                <Text style={[ui.muted, ui.num]} testID="home-ticket-clock">
+                  {clock}
+                </Text>
+              ) : null}
+            </>
+          ) : (
+            <Text style={[ui.muted, styles.noTime]} testID="home-ticket-no-time">
+              {HOME_TEXT.noTeeOff}
+            </Text>
+          )}
+          {proximity ? (
+            <Text style={[styles.proximity, { color: colors.primary }]} testID="home-ticket-proximity">
+              {proximity}
+            </Text>
+          ) : null}
+        </View>
+
+        <View
+          style={styles.perforation}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          testID="home-ticket-perforation"
+        >
           {Array.from({ length: DASHES }, (_, i) => (
             <View key={i} style={[styles.dash, { backgroundColor: colors.border }]} />
           ))}
         </View>
-        <View style={[styles.notch, styles.notchBottom, { backgroundColor: colors.bg, borderColor: colors.border }]} />
-      </View>
 
-      <View style={styles.body}>
-        <Text style={ui.value} numberOfLines={2}>
-          {card.name}
-        </Text>
-        {detail ? (
-          <Text style={ui.muted} testID="home-ticket-detail">
-            {detail}
+        <View style={styles.body}>
+          <Text style={[ui.value, styles.name]} numberOfLines={3}>
+            {card.name}
           </Text>
-        ) : null}
-        {bundle ? (
-          <FlightAvatars
-            players={bundle.players}
-            userId={userId}
-            flightNumber={flightNumber}
-            testID="home-ticket-avatars"
-          />
-        ) : null}
+          {detail ? (
+            <Text style={ui.muted} testID="home-ticket-detail">
+              {detail}
+            </Text>
+          ) : null}
+          {bundle ? (
+            <FlightAvatars
+              players={bundle.players}
+              userId={userId}
+              flightNumber={flightNumber}
+              testID="home-ticket-avatars"
+            />
+          ) : null}
+        </View>
+      </Pressable>
+      <View
+        style={[styles.notchClip, styles.notchClipTop]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <View style={[styles.notch, styles.notchTop, notch]} />
       </View>
-    </Pressable>
+      <View
+        style={[styles.notchClip, styles.notchClipBottom]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <View style={[styles.notch, styles.notchBottom, notch]} />
+      </View>
+    </View>
   );
 }
 
 const NOTCH = 16;
+const STUB = 116;
+/** Billettens kant; hakkene sentreres på den. */
+const EDGE = 1;
 
 const styles = StyleSheet.create({
+  wrap: { marginTop: 8 },
   ticket: {
     flexDirection: 'row',
-    borderWidth: 1,
+    borderWidth: EDGE,
     borderRadius: 14,
-    marginTop: 8,
-    overflow: 'hidden',
     minHeight: 112,
   },
-  stub: { width: 96, padding: 14, gap: 4, justifyContent: 'center' },
+  stub: { width: STUB, paddingVertical: 14, paddingHorizontal: 12, gap: 4, justifyContent: 'center' },
   date: { fontSize: 16, fontFamily: FONTS.serifScore },
   noTime: { fontSize: 13 },
   proximity: { fontSize: 13, fontFamily: FONTS.sansSemiBold, marginTop: 2 },
-  perforation: { width: NOTCH, alignItems: 'center' },
+  perforation: {
+    width: NOTCH,
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    paddingVertical: NOTCH / 2 + 4,
+  },
+  // Boksen dekker kanten og den indre halvdelen av sirkelen; resten klippes.
+  notchClip: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    left: EDGE + STUB,
+    width: NOTCH,
+    height: NOTCH / 2 + EDGE,
+    overflow: 'hidden',
+  },
+  notchClipTop: { top: 0 },
+  notchClipBottom: { bottom: 0 },
   notch: {
     position: 'absolute',
     width: NOTCH,
     height: NOTCH,
     borderRadius: NOTCH / 2,
-    borderWidth: 1,
+    borderWidth: EDGE,
   },
-  notchTop: { top: -NOTCH / 2 },
-  notchBottom: { bottom: -NOTCH / 2 },
-  dashes: {
-    flex: 1,
-    justifyContent: 'space-evenly',
-    paddingVertical: NOTCH / 2 + 4,
-  },
+  notchTop: { top: EDGE / 2 - NOTCH / 2 },
+  notchBottom: { bottom: EDGE / 2 - NOTCH / 2 },
   dash: { width: 2, height: 6, borderRadius: 1 },
   body: { flex: 1, padding: 14, gap: 6, justifyContent: 'center' },
+  // Mindre enn `ui.value`: ved siden av stubben får et langt ord som
+  // «Klubbmesterskap» ellers ikke plass på én linje og blir klippet.
+  name: { fontSize: 19, lineHeight: 24 },
 });

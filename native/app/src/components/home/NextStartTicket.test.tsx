@@ -58,7 +58,7 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
   // Ett element for skjermleseren, med det øyet leser.
   const ticket = screen.getByTestId('home-ticket-next');
   expect(ticket.props.accessibilityLabel).toBe(
-    'Neste start. Klubbmesterskap. Fre 2. okt kl. 09:30. Om 3 dager. Losby, Flight 2, Stableford. ' +
+    'Neste start. Klubbmesterskap. Fre 2. okt kl. 09:30. Om 3 dager. Losby, Flight\u00A02, Stableford. ' +
       'Flighten din: Marte Kirkerud, Ola Nordmann, Kari Nordmann, Per Hansen og 1 til',
   );
   await fireEvent.press(ticket);

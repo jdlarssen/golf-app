@@ -120,8 +120,9 @@ export function proximityText(proximity: TeeOffProximity): string | null {
   return `Om ${proximity.days} dager`;
 }
 
+/** «Flight 2», med hardt mellomrom så tallet aldri brytes bort fra ordet. */
 export function flightPart(flightNumber: number): string {
-  return `Flight ${flightNumber}`;
+  return `Flight\u00A0${flightNumber}`;
 }
 
 /** Resten som ikke fikk egen skive: «+1 til». */
