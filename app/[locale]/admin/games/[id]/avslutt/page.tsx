@@ -111,9 +111,10 @@ export default async function AvsluttPage({
   // Vis hvem som mangler her, og send allowMissing til actionen så den hopper
   // over dem (submitted_at forblir null → «ikke levert», ikke falsk levering;
   // scorene deres teller fortsatt i resultatet).
-  const missing = roster.missing.map((gp) =>
-    formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null),
-  );
+  const missing = roster.missing.map((gp) => ({
+    userId: gp.user_id,
+    name: formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null),
+  }));
 
   const action = endGameWithSideWinners.bind(null, gameId, missing.length > 0);
 
@@ -131,13 +132,21 @@ export default async function AvsluttPage({
         // Purreknappen (#1889) hører til her, i blokken som sier hvem som
         // mangler — ikke på status-siden i et annet rom.
         <div className="mb-4 space-y-3">
-          <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text">
+          <div
+            data-testid="finish-missing"
+            className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning-text"
+          >
             <p className="font-medium">
               {t('missingHeader', { count: missing.length })}
             </p>
             <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
-              {missing.map((name, i) => (
-                <li key={i}>{name}</li>
+              {missing.map((player) => (
+                <li
+                  key={player.userId}
+                  data-testid={`finish-missing-${player.userId}`}
+                >
+                  {player.name}
+                </li>
               ))}
             </ul>
             <p className="mt-2 text-text">
