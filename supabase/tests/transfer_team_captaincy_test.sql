@@ -5,7 +5,10 @@
 --   1. The team's captain, the game's creator and a global admin may hand the
 --      captaincy to an approved teammate on the roster. The new captain takes
 --      the team name; the old captain and every other child point at the new
---      one; game_players (team_number) is untouched.
+--      one; team numbers are untouched. The old captain's roster place is
+--      marked confirmed: they registered the team, so as a member they have
+--      said yes (otherwise an organiser-approved team would read them as an
+--      unanswered invitation, and the new captain could withdraw them).
 --   2. Everyone else is refused and nothing is written: a third party gets
 --      not_allowed, another team's captain gets not_a_teammate, a pending or
 --      off-roster teammate gives not_approved, a started game gives
@@ -26,7 +29,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(30);
 
 -- ── Fixture ids ──────────────────────────────────────────────────────────────
 create schema if not exists torny_ttc;
@@ -105,6 +108,14 @@ create or replace function torny_ttc.shape(p_user int) returns text language sql
    where r.id = torny_ttc.rid(p_user)
 $$;
 
+-- accepted(game, user): 'yes' when the roster place is confirmed, 'no' when
+-- not, '-' when there is no roster row.
+create or replace function torny_ttc.accepted(p_game int, p_user int) returns text language sql stable as $$
+  select coalesce((select case when accepted_at is null then 'no' else 'yes' end
+                     from public.game_players
+                    where game_id = torny_ttc.gid(p_game) and user_id = torny_ttc.uid(p_user)), '-')
+$$;
+
 create or replace function torny_ttc.team_numbers(p_game int) returns text language sql stable as $$
   select string_agg(substr(user_id::text, 26)::int::text || ':' || team_number, ',' order by user_id)
     from public.game_players where game_id = torny_ttc.gid(p_game)
@@ -169,6 +180,9 @@ select is(torny_ttc.shape(1), 'false|2|Lag 1', 'the old captain is a member unde
 select is(torny_ttc.shape(3), 'false|2|Lag 1', 'an approved teammate points at the new captain');
 select is(torny_ttc.shape(4), 'false|2|Lag 1', 'a pending teammate points at the new captain');
 select is(torny_ttc.team_numbers(1), '1:1,2:1,3:1,5:2,6:2', 'team numbers are unchanged');
+select is(torny_ttc.accepted(1, 1), 'yes', 'the old captain''s roster place is confirmed');
+select is(torny_ttc.accepted(1, 3), 'no', 'another teammate''s roster place is left as it was');
+select is(torny_ttc.accepted(1, 2), 'no', 'the new captain''s roster place is left as it was');
 
 -- ── 3. The organiser and an admin may move it too ────────────────────────────
 select is(torny_ttc.transfer(1, 0, 6), 'ok', 'the game creator → ok');

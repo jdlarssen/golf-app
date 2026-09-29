@@ -22,8 +22,12 @@
 --                 keeps team_name
 --   every other   team_request_id = new captain
 --   child row
--- game_players is not touched: the team is the same, only the captain changes,
--- so team_number stays.
+-- team_number is not touched: the team is the same, only the captain changes.
+-- The old captain's roster place is marked confirmed (accepted_at, #463): they
+-- registered the team, so as a member they have said yes. Without it an
+-- organiser-approved team leaves the old captain looking like an unanswered
+-- invitation (approveRequest writes neither accepted_at nor their own
+-- decided_by), and the new captain could withdraw and take them off the team.
 --
 -- Outcomes: ok | game_not_found | game_locked | not_a_teammate | not_allowed |
 -- not_approved. not_a_teammate also answers a captain who names a player on
@@ -143,6 +147,11 @@ as $function$
      where team_request_id = v_captain_id
        and id <> p_new_captain_request_id;
 
+    update public.game_players
+       set accepted_at = coalesce(accepted_at, now())
+     where game_id = p_game_id
+       and user_id = v_captain_user;
+
     return jsonb_build_object('outcome', 'ok');
   end;
 $function$;
@@ -152,7 +161,7 @@ comment on function public.transfer_team_captaincy(uuid, uuid, uuid) is
   'roster. Locks the game (draft/scheduled only) and both request rows; the actor '
   'must be the team''s captain, the game''s creator or a global admin. The new '
   'captain takes the team name, the old captain and every other child point at '
-  'the new one; game_players is untouched. Returns jsonb {outcome}: ok | '
+  'the new one; the old captain''s roster place is marked confirmed. Returns jsonb {outcome}: ok | '
   'game_not_found | game_locked | not_a_teammate | not_allowed | not_approved. '
   'Kun service_role.';
 
