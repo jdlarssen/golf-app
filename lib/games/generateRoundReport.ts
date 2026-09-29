@@ -166,6 +166,11 @@ export async function generateAndPersistRoundReport(
       system,
       messages: [{ role: 'user', content: user }],
     });
+    console.log('[generateRoundReport] model call', {
+      gameId,
+      stopReason: response.stop_reason,
+      usage: response.usage,
+    });
 
     const rawText = response.content
       .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
