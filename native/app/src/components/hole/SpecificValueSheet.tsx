@@ -52,6 +52,9 @@ export function SpecificValueSheet({
         testID="specific-value-modal"
         // VoiceOver holdes inne i arket, og «tilbake»-bevegelsen (to fingre i
         // Z) lukker det, uansett om fokus står på «Lukk» eller en knapp.
+        // `accessibilityViewIsModal` gjør også at knappene ligger rett under
+        // denne visningen i det native treet, så bevegelsen når dem. Fjernes
+        // den, må `collapsable={false}` inn i stedet.
         accessibilityViewIsModal
         onAccessibilityEscape={onClose}
       >
