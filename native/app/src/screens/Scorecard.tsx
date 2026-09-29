@@ -439,7 +439,10 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       ) : (
         <>
           {readonlyText ? (
-            <Text style={ui.muted} testID="scorecard-readonly">
+            <Text
+              style={[ui.muted, stamp ? styles.centered : null]}
+              testID="scorecard-readonly"
+            >
               {readonlyText}
             </Text>
           ) : null}
@@ -481,6 +484,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 }
 
 const styles = StyleSheet.create({
+  // Under stempelet står linjene midtstilt, og veien videre står sammen med dem.
+  centered: { textAlign: 'center' },
   buttonDisabled: { opacity: 0.5 },
   // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
   // ned til lever-knappen, over kravet på 24.
