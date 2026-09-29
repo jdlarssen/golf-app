@@ -63,7 +63,12 @@ export function EndGameButton({
         }
       }}
     >
-      <SubmitButton className="w-full" disabled={disabled} pendingLabel={t('endingGame')}>
+      <SubmitButton
+        data-testid="end-game-submit"
+        className="w-full"
+        disabled={disabled}
+        pendingLabel={t('endingGame')}
+      >
         {t('endGame')}
       </SubmitButton>
     </form>
