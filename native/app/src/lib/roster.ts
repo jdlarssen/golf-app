@@ -218,6 +218,23 @@ export function deliverForButton(candidates: readonly BundlePlayer[]): string {
 }
 
 /**
+ * Beskjeden når serveren leverte færre makkerkort enn knappen lovet (#2200),
+ * eller `null` når alle gikk. Ruta spør leveringsregelen selv over slagene på
+ * serveren, og de kan være nyere enn telefonens: en makker har levert, eller
+ * noen har ført et hull. Da skal ikke skjermen late som alt gikk.
+ */
+export function partialDeliveryNotice(delivered: number, asked: number): string | null {
+  if (delivered >= asked) return null;
+  if (asked === 1) {
+    return 'Makkerkortet ble ikke levert. Noen kan ha levert det eller ført et hull på det i mellomtiden.';
+  }
+  if (delivered === 0) {
+    return `Ingen av de ${asked} makkerkortene ble levert. Noen kan ha levert dem eller ført hull på dem i mellomtiden.`;
+  }
+  return `${delivered} av ${asked} makkerkort ble levert. Noen kan ha levert de andre eller ført hull på dem i mellomtiden.`;
+}
+
+/**
  * Skal appen bekrefte deltakelsen min nå? (#463, N6b #1855)
  *
  * Webbens modell er «besøk = bekreftelse»: åpner du spillsiden, regnes du som

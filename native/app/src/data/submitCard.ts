@@ -61,10 +61,11 @@ export type SubmitCardFailure =
  * `alreadySubmitted` er sant når kortet alt sto som levert — UPDATE-en traff 0
  * rader, og det ER det lovlige utfallet av et dobbelttrykk, eller av at
  * makkeren rakk det først. Feltet styrer ordlyd, ikke suksess: kortet er levert
- * uansett hvilken vei det gikk.
+ * uansett hvilken vei det gikk. `alsoDelivered` er hvor mange av makkerkortene
+ * i `alsoFor` som faktisk ble levert (#2200); mangler feltet, er det 0.
  */
 export type SubmitCardResult =
-  | { ok: true; alreadySubmitted: boolean }
+  | { ok: true; alreadySubmitted: boolean; alsoDelivered: number }
   | { ok: false; reason: SubmitCardFailure };
 
 /**
@@ -120,7 +121,14 @@ export async function submitCard(
   if (!call.ok) return call;
 
   if (call.status === 200) {
-    return { ok: true, alreadySubmitted: call.body.alreadySubmitted === true };
+    // #2200: hvor mange makkerkort serveren faktisk leverte. Den snevrer inn
+    // med sin egen regel, så skjermen sammenligner med hvor mange den ba om.
+    const alsoDelivered = call.body.alsoDelivered;
+    return {
+      ok: true,
+      alreadySubmitted: call.body.alreadySubmitted === true,
+      alsoDelivered: typeof alsoDelivered === 'number' ? alsoDelivered : 0,
+    };
   }
 
   return { ok: false, reason: failureForStatus(call.status) };

@@ -49,6 +49,7 @@ describe('levering', () => {
     expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: false,
+      alsoDelivered: 0,
     });
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -73,6 +74,7 @@ describe('levering', () => {
     expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: false,
+      alsoDelivered: 0,
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch.mock.calls[0][0]).toBe(SUBMIT_URL);
@@ -87,6 +89,7 @@ describe('levering', () => {
     expect(await submitCard().submitCard(GAME_ID, ['mate-a', 'mate-b'])).toEqual({
       ok: true,
       alreadySubmitted: false,
+      alsoDelivered: 2,
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockFetch.mock.calls[0][0]).toBe(SUBMIT_URL);
@@ -113,6 +116,7 @@ describe('levering', () => {
     expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: false,
+      alsoDelivered: 0,
     });
   });
 
@@ -124,6 +128,7 @@ describe('levering', () => {
     expect(await submitCard().submitCard(GAME_ID)).toEqual({
       ok: true,
       alreadySubmitted: true,
+      alsoDelivered: 0,
     });
   });
 

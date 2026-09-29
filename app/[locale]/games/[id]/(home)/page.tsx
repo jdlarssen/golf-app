@@ -102,6 +102,8 @@ const STATUS_TONES: Record<GameStatus, StatusChipTone> = {
 
 const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
+  // #2200: the server delivered fewer flightmates' cards than the form asked.
+  submitted_partial: 'bannerSubmittedPartial',
 };
 
 // #1361: every ?error code a creator-facing redirect lands on /games/[id]

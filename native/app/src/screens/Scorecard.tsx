@@ -62,6 +62,7 @@ import {
   flightDeliveryButton,
   flightDeliveryFor,
   flightDeliveryLines,
+  partialDeliveryNotice,
   toRoster,
 } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
@@ -80,7 +81,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
-  const { bundle } = useGameBundle(gameId);
+  const { bundle, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
@@ -88,6 +89,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const [queued, setQueued] = useState(0);
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [noticeText, setNoticeText] = useState<string | null>(null);
 
   const refreshQueue = useCallback(async () => {
     const db = await getDb();
@@ -184,6 +186,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const doSubmit = async () => {
     setBusy(true);
     setErrorText(null);
+    setNoticeText(null);
     // Solo og lag går samme vei (#2215): ruta leverer, varsler og tømmer
     // web-cachen. Laget kan bare leveres der uansett — RLS lar appen skrive sin
     // egen rad, og halve laget levert er verre enn ingen. #2200: makker-kortene
@@ -194,6 +197,15 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     );
     setBusy(false);
     if (result.ok) {
+      // #2200: leverte serveren færre makkerkort enn knappen lovet, blir
+      // spilleren stående med en beskjed, og kortet hentes på nytt så det viser
+      // hva som står igjen.
+      const notice = partialDeliveryNotice(result.alsoDelivered, flightMates.length);
+      if (notice) {
+        setNoticeText(notice);
+        void refresh();
+        return;
+      }
       navigation.navigate('GameHome', { gameId });
       return;
     }
@@ -381,6 +393,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         </>
       )}
 
+      {noticeText ? (
+        <Text style={ui.muted} testID="submit-partial">
+          {noticeText}
+        </Text>
+      ) : null}
       {errorText ? (
         <Text style={ui.error} testID="submit-error">
           {errorText}
