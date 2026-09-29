@@ -243,9 +243,18 @@ export function roundsSubline(stats: FriendStats | null): string | null {
   return stats && stats.roundsTogether > 0 ? roundsTogetherLine(stats.roundsTogether) : null;
 }
 
-/** Skjermleserens navn på ✕-knappen: «Avslå Kari». */
-export function declineA11yLabel(name: string): string {
-  return `${FRIENDS_TEXT.declineLabel} ${name || FRIENDS_TEXT.someoneFallback}`;
+/**
+ * Skjermleserens navn på en knapp som gjelder én person: «Avslå Kari»,
+ * «Godta Kari». Med flere forespørsler sier ellers alle knappene det samme.
+ */
+export function personActionA11yLabel(action: string, name: string): string {
+  return `${action} ${name || FRIENDS_TEXT.someoneFallback}`;
+}
+
+/** Skjermleserens navn på en vennerad: navnet og underlinja. */
+export function friendRowA11yLabel(name: string, sub: string | null): string {
+  const shown = name || FRIENDS_TEXT.someoneFallback;
+  return sub ? `${shown}, ${sub}` : shown;
 }
 
 /** Arkets tre tall. En strek der tallet mangler. */

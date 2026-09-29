@@ -17,7 +17,7 @@ import type { WebApiFailure } from '../data/webApi';
 import { isFinishedSentence } from '../test/copy';
 import {
   FRIENDS_TEXT,
-  declineA11yLabel,
+  friendRowA11yLabel,
   friendSheetValues,
   friendStatusLine,
   friendSubline,
@@ -30,6 +30,7 @@ import {
   invitePrompt,
   invitedLine,
   lastPlayedLabel,
+  personActionA11yLabel,
   removeConfirmMessage,
   roundsSubline,
 } from './friendsCopy';
@@ -169,9 +170,11 @@ describe('overskriften og underlinjene (designet)', () => {
     expect(roundsSubline(stats)).toBe('2 runder sammen');
   });
 
-  it('gir ✕-knappen et navn skjermleseren kan si', () => {
-    expect(declineA11yLabel('Kari')).toBe('Avslå Kari');
-    expect(declineA11yLabel('')).toBe(`Avslå ${web.someoneFallback}`);
+  it('gir knappene og radene et navn skjermleseren kan si, også uten navn', () => {
+    expect(personActionA11yLabel(web.declineLabel, 'Kari')).toBe('Avslå Kari');
+    expect(personActionA11yLabel(web.acceptLabel, '')).toBe(`Godta ${web.someoneFallback}`);
+    expect(friendRowA11yLabel('Kari', 'HCP 9,4')).toBe('Kari, HCP 9,4');
+    expect(friendRowA11yLabel('', null)).toBe(web.someoneFallback);
   });
 
   it('fyller arket, med en strek der tallet mangler', () => {
