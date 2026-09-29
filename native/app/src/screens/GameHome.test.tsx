@@ -660,3 +660,32 @@ describe('GameHome — startbilletten (#2255)', () => {
     }
   });
 });
+
+// #2255 PR 3a: når runden er avsluttet og formatet har «Hull for hull» i
+// appen, bytter den første flisa fra Tavla til Hull for hull.
+describe('GameHome — «Hull for hull»-flisa (#2255 PR 3a)', () => {
+  it.each([
+    ['avsluttet solo stableford', 'finished', 'stableford', { kind: 'stableford', team_size: 1 }, 'open-hole-by-hole', 'HoleByHole'],
+    ['pågående solo stableford', 'active', 'stableford', { kind: 'stableford', team_size: 1 }, 'open-leaderboard', 'Leaderboard'],
+    ['avsluttet lag-stableford (ingen visning på webben heller)', 'finished', 'stableford', { kind: 'stableford', team_size: 2 }, 'open-leaderboard', 'Leaderboard'],
+    ['avsluttet wolf (kommer i PR 3b)', 'finished', 'wolf', { kind: 'wolf' }, 'open-leaderboard', 'Leaderboard'],
+  ])('%s → %s', async (_case, status, gameMode, modeConfig, tileId, route) => {
+    mockState.bundle = homeBundle({
+      game: { id: 'game-1', status, gameMode, modeConfig },
+      players: [homePlayer({ userId: 'me', teamNumber: gameMode === 'stableford' && (modeConfig as { team_size: number }).team_size === 2 ? 1 : null })],
+    });
+    mockState.scores = [];
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+
+    await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'game-1' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('game-tiles')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId(tileId));
+    expect(navigation.navigate).toHaveBeenLastCalledWith(route, { gameId: 'game-1' });
+  });
+});
+

@@ -66,6 +66,7 @@ import {
   ticketStrokes,
   ticketStub,
 } from '../lib/gameTicket';
+import { holeByHoleKind } from '../lib/holeByHole';
 import { buildHeroModel } from '../lib/homeHero';
 import { nameLookup } from '../lib/leaderboardModel';
 import {
@@ -303,7 +304,9 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       {inPlay ? (
         <GameTiles
           supported={supported}
+          holeByHole={game.status === 'finished' && holeByHoleKind(game) !== null}
           onBoard={() => navigation.navigate('Leaderboard', { gameId })}
+          onHoleByHole={() => navigation.navigate('HoleByHole', { gameId })}
           onScorecard={() => navigation.navigate('Scorecard', { gameId })}
           onRules={scrollToRules}
         />
