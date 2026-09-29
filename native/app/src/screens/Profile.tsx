@@ -91,10 +91,10 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
 
   useEffect(load, [load]);
 
-  // Klubben og sesongen hentes én gang når rommet åpnes. De avhenger ikke av
-  // profilraden, så en lagring i skjemaet trenger ikke hente dem på nytt, og
-  // kortet venter aldri på dem.
-  useEffect(() => {
+  // Klubben, sesongen og handicap-kurven hentes når rommet åpnes, og kortet
+  // venter aldri på dem. Kurven følger handicapet, så en lagring i skjemaet
+  // henter dem på nytt (under).
+  const loadExtras = useCallback(() => {
     let cancelled = false;
     void fetchBagTagExtras(userId, new Date()).then((next) => {
       if (!cancelled) setExtras(next);
@@ -104,14 +104,17 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
     };
   }, [userId]);
 
-  // Ny lagring → les raden på nytt, så kortet viser det som faktisk står i
-  // basen og ikke det skjemaet trodde det sendte. Opprydningen fra `load`
-  // kastes her: kvitteringen kommer én gang, og en avbrutt henting ville vært
-  // nettopp den vi ba om.
+  useEffect(loadExtras, [loadExtras]);
+
+  // Ny lagring → les raden og kurven på nytt, så kortet viser det som faktisk
+  // står i basen og ikke det skjemaet trodde det sendte. Opprydningen kastes
+  // her: kvitteringen kommer én gang, og en avbrutt henting ville vært nettopp
+  // den vi ba om.
   useEffect(() => {
     if (!updated) return;
     load();
-  }, [updated, load]);
+    loadExtras();
+  }, [updated, load, loadExtras]);
 
   // Antallet som venter på svar hentes hver gang rommet får fokus, så raden
   // stemmer også når spilleren kommer tilbake fra vennesiden. Best-effort:

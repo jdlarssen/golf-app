@@ -99,7 +99,11 @@ describe('fetchBagTagExtras', () => {
 
     expect(stepArgs(clubs, 'eq')).toEqual([['user_id', ME]]);
     expect(stepArgs(history, 'eq')).toEqual([['user_id', ME]]);
-    expect(stepArgs(history, 'order')).toEqual([['recorded_at', { ascending: true }]]);
+    expect(stepArgs(history, 'order')).toEqual([
+      ['recorded_at', { ascending: true }],
+      ['id', { ascending: true }],
+    ]);
+    expect(stepArgs(history, 'range')).toEqual([[0, 999]]);
     expect(stepArgs(clubs, 'order')).toEqual([['joined_at', { ascending: true }]]);
     expect(stepArgs(clubs, 'limit')).toEqual([[1]]);
     expect(extras).toEqual({
