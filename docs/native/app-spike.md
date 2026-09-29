@@ -1905,3 +1905,59 @@ Datolinja, billettens stubb og nærheten («I dag», «I morgen», «Om 3 dager�
 enhetens lokaltid (`lib/homeDates.ts`). Webbens `teeOffProximity` bygger på `osloParts`
 (Intl med `Europe/Oslo`), og den kan ikke brukes under Hermes (se «Ikke bruk webbens
 Oslo-parser i appen»). `teeOffProximityLocal` speiler bøttene og grensen (0–6 dager).
+
+## Profilen som bag-tag (#2256)
+
+Profilen i appen åpner på bag-taggen: et skoggrønt, litt skrått kort med klubb, navn,
+«Dame · Junior · med siden 2026», handicapet i stort og initialene i en ring. Under står
+«Sesongen 2026» med runder, beste runde og seire, og en kort meny fører videre. Webbens
+`/profile` er uendret (#2250). Leveransen er fire PR-er; denne delen beskriver PR 1.
+
+### Rekkefølgen fra toppen
+
+1. «Rediger» oppe til høyre (navigatorens header, som «Profil» på Hjem) → `EditProfile`.
+2. Banneret etter lagring (`saved`-parameteren, som før).
+3. Bag-taggen (`components/profile/BagTag.tsx`), tegnet fra `bagTagModel`
+   (`lib/bagTag.ts`).
+4. Flisene (`components/profile/SeasonTiles.tsx`).
+5. Menyen: «Varsler og tema» (`NotificationsAndTheme.tsx`) og «Personvern og konto»
+   (`AccountSettings.tsx`). «Historikk og statistikk» kobles på med #2265, «Venner» med
+   PR 2.
+6. Utvikler-seksjonen (bare staging) og «Logg ut».
+
+Personvernerklæringen (#2229) og «Slett konto» står i «Personvern og konto».
+`DeleteAccount` går tilbake dit med `goBack()`.
+
+### Datakildene
+
+- **Profilraden** (`fetchOwnProfile`) leser nå også `created_at` («med siden …»).
+- **Klubben** er første rad i `group_members` sortert på `joined_at`, som webbens
+  `getMyClubs`. Anon-klienten leser selv (RLS, 0074).
+- **Sesongen** kommer fra runde-lista: `data/roundHistory.ts` (`fetchRoundHistory`) og
+  `lib/roundHistory.ts` (`buildHistoryRounds`). Filtrene er webbens historikk: egne rader
+  i ferdige, ikke-avledede spill, så egne slag (sidevis med `selectAllRows`). Med et år
+  hentes bare det årets runder og slag. #2265 utvider de samme to filene. Tallene regnes
+  med `computeProfileSeason` (`lib/stats/profileSeason.ts`), som bruker
+  `computeSeasonStats` og `isWinningSummary`, de samme reglene som webben.
+- Klubb og sesong hentes side om side (`data/bagTag.ts`, `Promise.allSettled`). Feiler
+  klubben, står «Tørny». Feiler sesongen, vises ikke flisene. Ingen cache.
+
+### Lagball og hele runder
+
+En runde der laget deler én ball (`modeCollapsesToTeamCard(mode, 18)`) teller som runde,
+men gir ingen brutto: slagene er lagets, lagret på kapteinen. Beste runde krever 18 egne
+slag. Webbens sesongoppsummering regner i dag kapteinens lagslag som brutto; #2265 gjør
+regelen lik på webben.
+
+### Temaet hører til telefonen
+
+«Lys», «Mørk» og «Følg telefonen» (`lib/themePreference.ts`) slås på med
+`Appearance.setColorScheme`, som overstyrer `useColorScheme()` for hele appen.
+`useTheme()`, navigasjonens tema og statuslinja følger da med uten egen kode. «Følg
+telefonen» er `'unspecified'`. Valget ligger i SQLite-tabellen `device_settings`
+(skjema v3), som `wipeLocalData` ikke tømmer, så temaet står igjen etter utlogging.
+`App.tsx` venter på valget bak splashen (maks ett sekund), så appen ikke blinker i feil
+drakt ved oppstart.
+
+Gull som tekst er rollen `accentText` (webbens `--accent-text`). `accent` er for lys til
+tekst på en lys flate.
