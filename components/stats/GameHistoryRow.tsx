@@ -16,6 +16,11 @@ type Props = {
   brutto: number | null;
   /** Ferdig-rendret netto-etikett («77 netto»), eller `null`. */
   nettoLabel: string | null;
+  /**
+   * Ferdig-rendret «Lagrunde» (#2273): laget delte én ball, så runden er ingen
+   * sin egen. Når satt, står den i stedet for brutto og netto.
+   */
+  teamRoundLabel?: string | null;
 };
 
 /**
@@ -36,6 +41,7 @@ export function GameHistoryRow({
   resultIsWin,
   brutto,
   nettoLabel,
+  teamRoundLabel = null,
 }: Props) {
   const subline = [courseName, formatLabel].filter(Boolean).join(' · ');
 
@@ -67,13 +73,21 @@ export function GameHistoryRow({
       </div>
 
       <div className="shrink-0 text-right leading-tight">
-        <p className="font-sans text-lg font-semibold tabular-nums text-text">
-          {brutto != null ? brutto : '—'}
-        </p>
-        {nettoLabel && (
-          <p className="font-sans text-[11px] tabular-nums text-muted">
-            {nettoLabel}
+        {teamRoundLabel ? (
+          <p className="font-sans text-sm font-medium text-muted">
+            {teamRoundLabel}
           </p>
+        ) : (
+          <>
+            <p className="font-sans text-lg font-semibold tabular-nums text-text">
+              {brutto != null ? brutto : '—'}
+            </p>
+            {nettoLabel && (
+              <p className="font-sans text-[11px] tabular-nums text-muted">
+                {nettoLabel}
+              </p>
+            )}
+          </>
         )}
       </div>
 

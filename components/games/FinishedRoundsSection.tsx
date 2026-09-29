@@ -17,7 +17,9 @@ import type { FinishedEntry } from '@/lib/games/finishedEntries';
  * Hjem-seksjonen «Avsluttede spill» (#986): de 3 nyeste avsluttede oppføringene.
  * Vanlige runder rendres som tette «Runder»-rader med brutto (hero) + netto —
  * samme rad-mønster som Profil → Historikk, via den delte `computeRoundScore`-
- * helperen så tallene ikke driver fra hverandre. En splittet cup-dag (#1449)
+ * helperen så tallene ikke driver fra hverandre. En runde der laget delte én
+ * ball (#2273) viser «Lagrunde» i stedet for tall, for alle på laget: slagene
+ * er lagets, ikke kapteinens egne. En splittet cup-dag (#1449)
  * folder de to host-halvdelene til ETT cup-merket kort som lenker til cup-siden.
  * «Se alle» → /spill-arkiv når det finnes flere enn 3.
  *
@@ -71,10 +73,9 @@ export async function FinishedRoundsSection({
     <Card data-focus-inset className="p-0 overflow-hidden">
       <div className="divide-y divide-border">
         {games.map((g) => {
-          const { strokes, courseHandicap } = roundScores.get(g.id) ?? {
-            strokes: [],
-            courseHandicap: null,
-          };
+          const { strokes, courseHandicap, teamBall } = roundScores.get(
+            g.id,
+          ) ?? { strokes: [], courseHandicap: null, teamBall: false };
           const { brutto, netto } = computeRoundScore(strokes, courseHandicap);
           const badge = g.result_summary
             ? finishedResultBadge(g.result_summary)
@@ -106,6 +107,7 @@ export async function FinishedRoundsSection({
               resultIsWin={badge?.isWin ?? false}
               brutto={brutto}
               nettoLabel={netto != null ? t('roundNetto', { netto }) : null}
+              teamRoundLabel={teamBall ? t('roundTeamBall') : null}
             />
           );
         })}
