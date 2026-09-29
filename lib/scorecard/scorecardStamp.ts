@@ -6,8 +6,8 @@
 // rejecting or reopening a card clears them again. The stamp only reads.
 //
 // «Markør» is reserved for a flight mate (owner's answer 2026-09-27). An
-// organizer or admin from another flight — or from no flight — who approves
-// gets «Godkjent av arrangøren». The flight part of that rule lives next to
+// organizer or admin who approves from another flight, or from no flight at
+// all, gets «Godkjent av arrangøren». The flight part of that rule lives next to
 // the approval rule in `flightScope.ts`, so the two cannot disagree.
 import { firstName } from '../firstName';
 import { isFlightMate, type FlightPlayer } from '../games/flightScope';
