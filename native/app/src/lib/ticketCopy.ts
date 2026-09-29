@@ -55,7 +55,7 @@ export function teePart(teeName: string): string {
 
 /** «85 % handicap», med hardt mellomrom så tallet og tegnet står sammen. */
 export function allowancePart(pct: number): string {
-  return `${pct} % handicap`;
+  return `${pct}\u00A0% handicap`;
 }
 
 /** Verdien i FLIGHT-feltet: «2 av 3». */
