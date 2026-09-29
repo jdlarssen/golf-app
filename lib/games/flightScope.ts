@@ -161,11 +161,31 @@ export function canApproveScorecardFor(
   const owner = players.find((p) => p.user_id === ownerUserId);
   if (!approver || !owner) return false;
   if (approver.withdrawn_at != null || owner.withdrawn_at != null) return false;
+  return isFlightMate(players, gameMode, approverUserId, ownerUserId);
+}
+
+/**
+ * True når to spillere går i samme flight: begge står i rosteret, de er to
+ * forskjellige, og spillet er én flight eller de har samme `flight_number`.
+ *
+ * Flight-delen av attestant-regelen, uten aktiv-kravet. Scorekort-stempelet
+ * (#2262) bruker den for å skille «Markør: Anders har godkjent» fra «Godkjent
+ * av arrangøren», og en markør som trakk seg etter å ha godkjent, er fortsatt
+ * markøren. `canApproveScorecardFor` legger aktiv-kravet og leverandør-vakta
+ * oppå, så de to kan ikke si noe forskjellig om flighten.
+ */
+export function isFlightMate(
+  players: FlightPlayer[],
+  gameMode: GameMode,
+  a: string,
+  b: string,
+): boolean {
+  if (a === b) return false;
+  const first = players.find((p) => p.user_id === a);
+  const second = players.find((p) => p.user_id === b);
+  if (!first || !second) return false;
   if (isSingleFlightGame(gameMode, players)) return true;
-  return (
-    approver.flight_number != null &&
-    approver.flight_number === owner.flight_number
-  );
+  return first.flight_number != null && first.flight_number === second.flight_number;
 }
 
 /** Hva arrangørens godkjenningsflate viser på én kort-rad (#2213). */
