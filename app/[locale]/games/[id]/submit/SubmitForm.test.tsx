@@ -19,7 +19,9 @@ import { SubmitForm } from './SubmitForm';
 
 /**
  * Type C render-test (én per komponent): at «Lever ✓» faktisk låses av et
- * køet slag leveringen kan fryse — og bare av det (#1370). Selve
+ * køet slag leveringen kan fryse — og bare av det (#1370) — og av en kø som
+ * ikke er lest ennå (#2219: `useLiveQuery` gir `undefined` fram til Dexie har
+ * svart, også i serverens HTML). Selve
  * scope-reglene er Type A i `lib/sync/queueScope.test.ts` og re-asserteres
  * ikke her; testen kjører dem gjennom komponenten i stedet for å telle på nytt.
  *
@@ -58,15 +60,21 @@ beforeEach(() => {
 });
 
 describe('SubmitForm', () => {
-  it('låser «Lever» for et køet slag i denne runden, men ikke for en urelatert runde', () => {
+  it('låser «Lever» til køen er lest, og for et køet slag i denne runden, men ikke for en urelatert runde', () => {
     const props = {
       submitAction: vi.fn(),
       missingHoles: 0,
       blockingGameIds: ['g1'],
     };
 
-    setQueue([qItem('g1:u1:7')]);
+    // #2219: Dexie har ikke svart ennå (første render, og serverens HTML).
+    useLiveQueryMock.mockImplementation(() => undefined);
     const { rerender } = render(<SubmitForm {...props} />);
+    expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
+
+    useLiveQueryMock.mockImplementation((querier: () => number) => querier());
+    setQueue([qItem('g1:u1:7')]);
+    rerender(<SubmitForm {...props} />);
     expect(screen.getByTestId('submit-scorecard')).toBeDisabled();
 
     setQueue([qItem('g2:u1:7')]);

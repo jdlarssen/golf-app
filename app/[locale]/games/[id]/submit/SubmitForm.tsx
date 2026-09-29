@@ -47,6 +47,11 @@ type Props = {
  * #1370: the block counts only strokes queued for a game THIS delivery can
  * freeze (see `blockingGameIds`). A leftover stroke from an unrelated round no
  * longer locks «Lever ✓» — it was never at risk from this submit.
+ *
+ * #2219: the button also stays locked until Dexie has answered.
+ * `useLiveQuery` returns `undefined` until then, and in the server HTML, so a
+ * tap before hydration or in the first milliseconds cannot deliver ahead of a
+ * queued stroke.
  */
 export function SubmitForm({
   submitAction,
@@ -61,15 +66,15 @@ export function SubmitForm({
   // Dexie query deps must be value-stable; the prop is a fresh array on every
   // render, so key the query on its contents instead.
   const blockingKey = blockingGameIds.join(',');
-  const pendingCount =
-    useLiveQuery(
-      () =>
-        localDb.syncQueue
-          .filter((i) => isBlockingItem(i, blockingGameIds))
-          .count(),
-      [blockingKey],
-    ) ?? 0;
-  const syncing = pendingCount > 0;
+  const pendingCount = useLiveQuery(
+    () =>
+      localDb.syncQueue
+        .filter((i) => isBlockingItem(i, blockingGameIds))
+        .count(),
+    [blockingKey],
+  );
+  const syncing = pendingCount !== undefined && pendingCount > 0;
+  const blocked = pendingCount === undefined || syncing;
 
   // Kick a drain as soon as the review screen mounts so any strokes entered
   // offline reach the server before the card can be frozen by submit. Still
@@ -95,8 +100,9 @@ export function SubmitForm({
     <form
       action={submitAction}
       onSubmit={(event) => {
-        // Never submit while strokes are still syncing — they'd be frozen out.
-        if (syncing) {
+        // Never submit while strokes are still syncing — they'd be frozen out
+        // — or before the queue has been read at all (#2219).
+        if (blocked) {
           event.preventDefault();
           return;
         }
@@ -120,7 +126,7 @@ export function SubmitForm({
         data-testid="submit-scorecard"
         className="w-full"
         pendingLabel={t('submitPending')}
-        disabled={syncing}
+        disabled={blocked}
       >
         {syncing ? t('syncingPending') : (label ?? t('submitButton'))}
       </SubmitButton>

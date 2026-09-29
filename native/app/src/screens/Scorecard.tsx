@@ -6,8 +6,10 @@
 // Lever-knappen har webbens to porter, og de er ikke pynt:
 //  1. **Kø-vakta (#668/#1370):** vi drainer først, og blokkerer så lenge køen
 //     har elementer for DETTE spillet. Leverer man med usynkede slag, fryser
-//     RLS kortet og avviser skrivingen; drainen setter elementet i karantene
-//     (#2211, `interpretUpsertReply`), men slaget kommer uansett ikke fram.
+//     RLS kortet og avviser skrivingen; drainen retter telefonen etter
+//     serveren og setter elementet i karantene (#2211, `interpretUpsertReply`),
+//     men slaget kommer uansett ikke fram. Knappen er også sperret til køen er
+//     lest første gang (#2219): før det vet vi ikke om den er tom.
 //  2. **Manglende hull (#1793):** et komplett kort leveres uten spørsmål; er
 //     det hull uten slag, spør vi først, for de låses som ikke spilt.
 //
@@ -86,15 +88,22 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
   // noe annet leser slagene.
   const scores = useTeamScores(localScores, bundle);
-  const [queued, setQueued] = useState(0);
+  // `null` til køen er lest første gang (#2219). Da er lever-knappen sperret.
+  const [queued, setQueued] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [noticeText, setNoticeText] = useState<string | null>(null);
 
+  // En feil lar `queued` stå: står den på `null`, er knappen fortsatt sperret,
+  // og intervallet prøver igjen.
   const refreshQueue = useCallback(async () => {
-    const db = await getDb();
-    const items = await listQueue(db);
-    setQueued(items.filter((item) => isActiveForGame(item, gameId)).length);
+    try {
+      const db = await getDb();
+      const items = await listQueue(db);
+      setQueued(items.filter((item) => isActiveForGame(item, gameId)).length);
+    } catch (err: unknown) {
+      console.error('[Scorecard] listQueue', err);
+    }
   }, [gameId]);
 
   // Drain først (port 1), les så både køen og serververdiene. Rekkefølgen er
@@ -102,8 +111,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // gang skjermen får fokus (#2220): «Rediger hullene» legger hullene oppå et
   // scorekort som står montert, og kommer spilleren tilbake etter å ha rettet
   // et hull, skal kortet vise det nye tallet før det leveres.
+  //
+  // #2219: køen leses også med én gang, parallelt med drainen. Uten det sto
+  // knappen åpen til drainen var ferdig eller intervallet slo inn, og et
+  // komplett kort gikk da rett til levering foran slagene i køen.
   useFocusEffect(
     useCallback(() => {
+      void refreshQueue();
       void drainQueue('lever')
         .catch(() => undefined)
         .then(() => refreshQueue())
@@ -212,8 +226,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     setErrorText(describeSubmitFailure(result.reason));
   };
 
+  // Sperret til køen er lest (`null`) og mens den har slag for spillet.
+  const queueBlocked = queued === null || queued > 0;
+  const syncing = queued !== null && queued > 0;
+
   const onSubmitPress = () => {
-    if (queued > 0 || busy) return;
+    if (queueBlocked || busy) return;
     if (missing === 0) {
       void doSubmit();
       return;
@@ -233,12 +251,12 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   };
 
   const onDeliverForPress = () => {
-    if (queued > 0 || busy) return;
+    if (queueBlocked || busy) return;
     void doSubmit();
   };
 
   const queueGuard =
-    queued > 0 ? (
+    syncing ? (
       <Text style={ui.muted} testID="queue-guard">
         {queued} slag venter på å bli sendt. Knappen åpner når de er framme.
       </Text>
@@ -336,9 +354,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           {flightBlock}
           {queueGuard}
           <Pressable
-            style={[ui.button, (queued > 0 || busy) && styles.buttonDisabled]}
+            style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
             onPress={onSubmitPress}
-            disabled={queued > 0 || busy}
+            disabled={queueBlocked || busy}
             testID={
               teamMode
                 ? 'submit-team-card'
@@ -350,7 +368,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
             <Text style={ui.buttonText}>
               {busy
                 ? 'Leverer …'
-                : queued > 0
+                : syncing
                   ? 'Synker slag …'
                   : teamMode
                     ? 'Lever lagets kort'
@@ -375,15 +393,15 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
               {flightBlock}
               {queueGuard}
               <Pressable
-                style={[ui.button, (queued > 0 || busy) && styles.buttonDisabled]}
+                style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
                 onPress={onDeliverForPress}
-                disabled={queued > 0 || busy}
+                disabled={queueBlocked || busy}
                 testID="deliver-for-flight"
               >
                 <Text style={ui.buttonText}>
                   {busy
                     ? 'Leverer …'
-                    : queued > 0
+                    : syncing
                       ? 'Synker slag …'
                       : deliverForButton(flightMates)}
                 </Text>
