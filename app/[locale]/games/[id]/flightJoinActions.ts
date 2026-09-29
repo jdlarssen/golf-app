@@ -66,8 +66,7 @@ export async function joinFlight(
   // taste for feil lag og ser feil kort. Velgeren (#543) er for solo-formater
   // der flight er en fri gruppering; den skjules på hjemmesiden for spillere
   // med lag, og dette er server-siden av samme regel (#2009: første spill med
-  // fire lag gjorde knappene synlige i praksis). Sjekken på `team_number`
-  // dekker også round robin, der `team_number` er en rotasjonsplass.
+  // fire lag gjorde knappene synlige i praksis).
   if (typeof membership.team_number === 'number') {
     return { ok: false, error: 'flight_bound_to_team' };
   }

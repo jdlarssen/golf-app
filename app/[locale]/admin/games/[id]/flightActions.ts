@@ -265,12 +265,7 @@ async function loadTeamGame(
     .from('games')
     .select('id, status, game_mode, mode_config')
     .eq('id', gameId)
-    .single<{
-      id: string;
-      status: string;
-      game_mode: GameMode;
-      mode_config: { team_size?: number } | null;
-    }>();
+    .single<FlightGameRow>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   // TypeScript cannot narrow past next-intl redirect (not declared `never`),
   // so the post-guard non-null assertions are the established 2b pattern.

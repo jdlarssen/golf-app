@@ -60,11 +60,12 @@ export function isSingleFlightGame(
  * og minst én aktiv spiller mangler flight_number.
  *
  * Strukturell regel uten format-enumering: matchplay er eksakt 2/4 spillere
- * (aldri > 4), og lag-formater har alltid flight satt av validatorene —
- * disse treffes derfor aldri av `needsFlightAssignment`.
+ * (aldri > 4). I lag-formatene settes flighten sammen med laget (CHECK
+ * 0030/0095); en solo-påmeldt lagspiller mangler begge til arrangøren
+ * fordeler lagene, og start-vakta spør om lag (`needsTeamAssignment`) før den
+ * spør om flight.
  *
- * Brukes i start-vakta i `startScheduledGame` og i admin-UI for å vise
- * Flighter-seksjonen.
+ * Brukes i start-vakta i `startScheduledGame` og i appens arrangørseksjon.
  */
 export function needsFlightAssignment(
   gameMode: GameMode,

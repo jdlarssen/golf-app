@@ -504,9 +504,10 @@ describe('setPlayerTeam', () => {
   it('Texas: spiller i lag 1/flight 1 flyttes til lag 2 → flighten følger laget (#2290)', async () => {
     authedAdmin();
 
+    // Lag 2 har én ledig plass (u8 er ikke påmeldt), så byttet får plass.
     adminMock = buildSupabaseMock([
       { data: TEXAS_GAME, error: null },
-      { data: texasRoster(), error: null },
+      { data: texasRoster().filter((p) => p.user_id !== 'u8'), error: null },
       { data: null, error: null, count: 3 } as { data: null; error: null; count: number },
       { data: [{ user_id: 'u1' }], error: null },
     ]);
