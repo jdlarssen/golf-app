@@ -24,10 +24,12 @@
 //     ut», for skjermen unmountes aldri — `SIGNED_OUT` kom jo ikke.
 //  5. **Flisene forsvinner bare når sesongen ikke kunne leses (#2256).**
 //
-// Fire renders og ikke én: staging-på og staging-av er to bygg, og en dialog som
-// står åpen (eller en feilet utlogging) er tilstander skjermen ikke kan være i
-// samtidig med utgangspunktet. Samme grunn som `DeleteAccount.test.tsx` har
-// flere. Kontrakten ba om «én Type C-render»; avviket er bokført i PR-en.
+// Flere renders og ikke én: staging-på og staging-av er to bygg, og en dialog
+// som står åpen (eller en feilet utlogging, en rad som lastes, en sesong som
+// ikke kunne leses) er tilstander skjermen ikke kan være i samtidig med
+// utgangspunktet. Samme grunn som `DeleteAccount.test.tsx` har flere.
+// Kontrakten ba om «én Type C-render»; avviket er bokført i PR-ene (#1906,
+// #2256).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';

@@ -89,7 +89,11 @@ function Tile({
         {
           backgroundColor: colors.surface,
           borderColor: gold ? colors.accent : colors.border,
+          // Den gule kanten er ett punkt tykkere, og luften innenfor ett punkt
+          // mindre, så flisa er like høy med og uten seire og menyen under
+          // ikke flytter seg når tallene kommer.
           borderWidth: gold ? 2 : 1,
+          padding: gold ? 11 : 12,
         },
       ]}
       testID={testID}
@@ -112,8 +116,6 @@ const styles = StyleSheet.create({
   tile: {
     flex: 1,
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
     gap: 2,
   },
   value: {
