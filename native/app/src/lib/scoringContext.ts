@@ -266,10 +266,24 @@ export function playerExtraForHole(
   courseHandicap: number | null,
   strokeIndex: number,
 ): number | null {
+  const playing = playerStrokeHandicapFor(game, courseHandicap ?? 0);
+  return playing != null ? strokesForHole(playing, strokeIndex) : null;
+}
+
+/**
+ * Handicapen slagene over er fordelt fra: banehandicapen etter formatets
+ * allowance eller brutto-valg. Hodet på scorekortet (#2262) viser den, så
+ * tallet i hodet og NETTO-raden kommer fra samme sted. `null` = ukjent config,
+ * som {@link playerExtraForHole}.
+ */
+export function playerStrokeHandicapFor(
+  game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
+  courseHandicap: number,
+): number | null {
   const mode = game.gameMode as GameMode;
   const cfg = asModeConfig(mode, game.modeConfig);
   if (cfg === null) return null;
-  return strokesForHole(playerStrokeHandicap(mode, cfg, courseHandicap ?? 0), strokeIndex);
+  return playerStrokeHandicap(mode, cfg, courseHandicap);
 }
 
 /** HELE rosteret, trukne spillere inkludert — se punkt 2 i topptekstet. */
