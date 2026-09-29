@@ -1961,3 +1961,63 @@ drakt ved oppstart.
 
 Gull som tekst er rollen `accentText` (webbens `--accent-text`). `accent` er for lys til
 tekst på en lys flate.
+
+## Startbilletten (#2255)
+
+Spillets side i appen (`screens/GameHome.tsx`) er én startbillett. Webbens spillside er
+uendret; dette er appens flate (eierens retning i #2250). PR 1 er billetten, stubben,
+flisene, reglene og «Vis på kart». «Legg til i kalender» og «Hull for hull» kommer i PR 2.
+
+### Rekkefølgen fra toppen
+
+1. Synk-banneret og banneret for avvist kort (uendret).
+2. Billetten (`components/game/GameTicket.tsx`): skoggrønt hode med spillnavnet som
+   kicker, banenavnet som overskrift, statusmerket og «Tee: Gul · Stableford · 85 %
+   handicap». Så feltene START, FLIGHT/LAG/SIDE/SPILLERE og DINE SLAG, faktalinja og
+   avatarraden. Under perforeringen står stubben (`TicketStub.tsx`).
+3. Flisene Tavla, Scorekort og Regler (`GameTiles.tsx`), bare når runden pågår eller er
+   avsluttet. I et stengt format står bare Regler. «Godkjenn (n)» står under flisene.
+4. Spillerlista (`RosterRow`), bare når runden er planlagt eller et utkast (eierens svar).
+   Når runden pågår, er avatarraden eneste liste. Hvem som er Wolf, står på hullsiden
+   (`WolfChoiceCard`) for hvert hull; den samlede lista «Wolf på hull 3, 7, 11 og 15»
+   fantes bare i spillerlista og vises ikke lenger mens runden pågår.
+5. Regler (`RulesSection.tsx`): forklaringen av spillformen. Flisa «Regler» hopper hit
+   uten animasjon og flytter VoiceOver-fokus til overskriften.
+6. Arrangørdelen (uendret).
+
+### Stubben speiler `PrimarySection`-grenene
+
+`lib/gameTicket.ts` (`ticketStub`) velger stubben med de samme grenene, i samme
+rekkefølge, som `PrimarySection` hadde: stengt format, ikke spiller, trukket, utkast,
+planlagt, avsluttet, og i en aktiv runde `computePrimaryCtaState` med
+`filledHolesForOwner` for kapteinsradene. Utkast er den eneste nye grenen (før sto det
+ingenting). testID-ene er de samme (`primary-cta`, `deliver-flight-cta`, `waiting-room`,
+`withdrawn-banner`, `withdrawn-undo`, `submitted-banner`, `format-gate`), så
+`GameHome.test.tsx` beviser de samme grenene som før. Venterommet (#2219) står i stubben
+med samme oppførsel, bare uten eget banner.
+
+### Datakildene
+
+- Bundelen (v7) har teens rating og lengde (`teeRatings`), `hcpAllowancePct` og hver
+  spillers `resultSummary`. En v6-cache leses som «ingen cache» og hentes på nytt.
+- DINE SLAG er tallet hodet på scorekortet viser (`scorecardHandicapPart`, #2262), også
+  lagshandicap i scramble. Før start er banehandicapen ikke frosset: den regnes fra
+  `hcp_index` i profilen (`fetchOwnProfile`), ratingen og spillets andel med
+  `displayCourseHandicap`, og går så gjennom samme regel. Uten nett står «—».
+- Plassen i en avsluttet runde er `result_summary` via `finishedResultBadge` og
+  `finishedResultText` (samme tekst som «Forrige runde» på Hjem). Gull bare på egen seier.
+- Avatarraden og navnelista bruker `lib/flightRoster.ts` (`companionsOf`), som Hjem.
+
+### Reglene som kopi
+
+`lib/formatGuideCopy.ts` er webbens `formatGuide.content.<nøkkel>.summary` og `.points`
+for alle 23 nøklene, låst tegn for tegn mot `messages/no.json` i
+`formatGuideCopy.test.ts` (testen feiler også når webben får en nøkkel appen mangler).
+Nøkkelen velges med `resolveFormatContentKey`. Teksten på billetten bor i
+`lib/ticketCopy.ts`; setningene webben også har, er låst i `ticketCopy.test.ts`.
+
+### «Vis på kart»
+
+Banene har ingen koordinater. Knappen åpner kartappen med banenavnet som søk via
+`Linking` (`maps.apple.com/?q=` på iPhone, `geo:0,0?q=` på Android), uten ny modul.
+Uten bane står ikke knappen.
