@@ -36,6 +36,13 @@
 // spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
 // fullt kort en blindvei: spill-hjem sender et fullt kort hit, og radene under
 // er ren visning.
+//
+// #2262: kortet er et klassisk scorekort — UT og INN med HULL, PAR, SLAG og så
+// POENG (stableford-familien) eller NETTO — med summene i store tall under, og
+// et stempel når kortet er levert. Tallene er de samme radene som før
+// (`buildScorecardRows`, som følger motoren), delt i halvdeler av den delte
+// `buildScorecardGrid`. Et reveal-spill som pågår, viser bare SLAG og BRUTTO:
+// netto er det reveal holder tilbake. Leveringsdelen under er uendret.
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -46,9 +53,23 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import type { GameStatus } from '../../../../lib/games/status';
+import { revealState, shouldHideNetto, type ScoreVisibility } from '../../../../lib/games/visibility';
+import { nameInitials } from '../../../../lib/names/initials';
+import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/scorecard/scorecardGrid';
+import { resolveScorecardStamp, type StampPlayer } from '../../../../lib/scorecard/scorecardStamp';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
+import {
+  ScorecardGrid,
+  type EnteredByName,
+  type ScorecardRowKind,
+} from '../components/scorecard/ScorecardGrid';
+import { ScorecardHeader } from '../components/scorecard/ScorecardHeader';
+import { ScorecardStamp } from '../components/scorecard/ScorecardStamp';
+import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
+import type { BundlePlayer } from '../data/gameBundle';
 import { getDb, listQueue } from '../data/db';
 import { seedGameScores } from '../data/seedScores';
 import { submitCard } from '../data/submitCard';
@@ -66,19 +87,40 @@ import {
   toRoster,
 } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
+import { scorecardHandicapPart, scorecardHeaderLine } from '../lib/scorecardHeader';
 import { buildScorecardRows } from '../lib/scorecardRows';
 import { computeGameLeaderboard } from '../lib/scoringContext';
-import { buildTeamCards, findMyTeamCard, myTeamCaptainId } from '../lib/teamPlay';
+import {
+  buildTeamCards,
+  findMyTeamCard,
+  myTeamCaptainId,
+  teamHandicapFor,
+} from '../lib/teamPlay';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, useTheme } from '../theme';
+import { useTheme } from '../theme';
 
 const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
 
+/** Rosteret i formen den delte stempel-regelen leser. */
+function toStampPlayers(players: readonly BundlePlayer[]): StampPlayer[] {
+  return players.map((player) => ({
+    user_id: player.userId,
+    flight_number: player.flightNumber,
+    withdrawn_at: player.withdrawnAt,
+    submitted_at: player.submittedAt,
+    submitted_by_user_id: player.submittedByUserId,
+    approved_at: player.approvedAt,
+    approved_by_user_id: player.approvedByUserId ?? null,
+    name: player.name,
+    nickname: player.nickname,
+  }));
+}
+
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
-  const { colors, ui } = useTheme();
+  const { ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle, refresh } = useGameBundle(gameId);
@@ -165,11 +207,71 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   });
   const missing = HOLE_COUNT - totals.playedHoles;
 
+  // #2262: kortet. POENG i stableford-familien, NETTO ellers — og ingen av dem
+  // i et reveal-spill som pågår.
+  const revealActive = shouldHideNetto(
+    revealState(
+      bundle.game.scoreVisibility as ScoreVisibility,
+      bundle.game.status as GameStatus,
+    ),
+  );
+  const pointsFn = revealActive ? null : stablefordPointsFnFor(mode);
+  const grid = buildScorecardGrid({ rows, pointsFn });
+  const valueRows: ScorecardRowKind[] = revealActive ? [] : pointsFn ? ['points'] : ['net'];
+
+  const teamNumber = myTeamCard?.teamNumber ?? me.player.teamNumber;
+  const headerLine = scorecardHeaderLine({
+    courseName: bundle.courseName,
+    teeBoxName: bundle.teeBoxName,
+    teeGender: me.player.teeGender,
+    gameMode: bundle.game.gameMode,
+    handicapPart: scorecardHandicapPart({
+      game: bundle.game,
+      courseHandicap: me.player.courseHandicap,
+      teamMode,
+      teamHandicap:
+        leaderboard != null && teamNumber != null ? teamHandicapFor(leaderboard, teamNumber) : null,
+      revealActive,
+    }),
+  });
+
+  const stamp = resolveScorecardStamp({
+    ownerUserId: userId,
+    players: toStampPlayers(bundle.players),
+    gameMode: mode,
+    gameStatus: bundle.game.status,
+    requirePeerApproval: bundle.game.requirePeerApproval,
+  });
+
   const canSubmit =
     bundle.game.status === 'active' &&
     me.submitted_at == null &&
     me.withdrawn_at == null &&
     isScoringSupported(bundle.game);
+
+  // «Ført av» (eierens svar 2026-09-29): før levering, og bare når noen andre
+  // har ført minst ett av hullene på kortet. Har du ført alt selv, ville raden
+  // bare vært dine egne initialer 18 ganger.
+  const enteredByOthers = rows.some(
+    (row) => row.enteredBy != null && row.enteredBy !== userId,
+  );
+  const showEnteredBy = canSubmit && enteredByOthers;
+  const enteredBy = new Map<number, EnteredByName>();
+  if (showEnteredBy) {
+    for (const row of rows) {
+      if (row.enteredBy == null) continue;
+      const who = bundle.players.find((player) => player.userId === row.enteredBy);
+      enteredBy.set(row.holeNumber, {
+        initials: nameInitials(who?.name ?? null),
+        fullName: who?.name ?? 'ukjent',
+      });
+    }
+  }
+  const gridRows: ScorecardRowKind[] = [
+    'strokes',
+    ...valueRows,
+    ...(showEnteredBy ? (['enteredBy'] as const) : []),
+  ];
 
   // #2200: makkernes kort jeg kan levere med mitt eget. De rå lokale slagene,
   // ikke de lag-foldede: den delte regelen finner selv eieren av hver rad.
@@ -237,6 +339,19 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     void doSubmit();
   };
 
+  // Under et stempel sier «Kortet er levert» seg selv (#2262); da står bare
+  // veien videre for en runde som pågår (#2220).
+  const readonlyText =
+    me.submitted_at == null
+      ? 'Kortet kan ikke leveres herfra nå.'
+      : stamp != null
+        ? bundle.game.status === 'active'
+          ? reopenHint(bundle.game.createdBy === userId)
+          : null
+        : bundle.game.status === 'active'
+          ? `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
+          : 'Kortet er levert. Dette er lesevisning.';
+
   const queueGuard =
     queued > 0 ? (
       <Text style={ui.muted} testID="queue-guard">
@@ -257,69 +372,30 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="scorecard-screen">
-      <Text style={ui.title}>{bundle.game.name}</Text>
-      {teamMode ? (
-        <Text style={ui.muted} testID="scorecard-team-label">
-          {myTeamCard?.label ?? 'Lagets kort'}
+      <ScorecardHeader
+        kicker={
+          teamMode
+            ? `Lagets scorekort${myTeamCard?.label ? ` · ${myTeamCard.label}` : ''}`
+            : 'Mitt scorekort'
+        }
+        title={bundle.game.name}
+        line={headerLine}
+      />
+
+      <ScorecardGrid grid={grid} rows={gridRows} enteredBy={enteredBy} />
+      {showEnteredBy ? (
+        <Text style={ui.muted} testID="scorecard-entered-by-note">
+          Initialene viser hvem som førte hvert hull.
         </Text>
-      ) : (
-        <Text style={[ui.muted, ui.num]}>Banehandicap {courseHandicap}</Text>
-      )}
+      ) : null}
 
-      <View
-        style={[
-          styles.table,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
-      >
-        <View style={[styles.row, styles.headRow, { backgroundColor: colors.bg }]}>
-          {['Hull', 'Par', 'SI', 'Slag', 'Netto'].map((label, index) => (
-            <Text
-              key={label}
-              style={[
-                styles.cell,
-                styles.headCell,
-                index === 0 ? styles.holeCell : null,
-                { color: colors.muted },
-              ]}
-            >
-              {label}
-            </Text>
-          ))}
-        </View>
-        {rows.map((row) => (
-          <View
-            style={[styles.row, { borderTopColor: colors.border }]}
-            key={row.holeNumber}
-            testID={`card-row-${row.holeNumber}`}
-          >
-            <Text style={[styles.cell, styles.holeCell, ui.num, { color: colors.text }]}>
-              {row.holeNumber}
-            </Text>
-            <Text style={[styles.cell, ui.num, { color: colors.muted }]}>{row.par}</Text>
-            <Text style={[styles.cell, ui.num, { color: colors.muted }]}>
-              {row.strokeIndex}
-            </Text>
-            <Text style={[styles.cell, ui.num, { color: colors.text }]}>
-              {row.strokes ?? '—'}
-            </Text>
-            <Text style={[styles.cell, ui.num, { color: colors.text }]}>
-              {row.netto ?? '—'}
-            </Text>
-          </View>
-        ))}
-      </View>
+      <ScorecardTotals
+        totals={grid.totals}
+        showNet={valueRows.includes('net')}
+        showPoints={valueRows.includes('points')}
+      />
 
-      <View style={ui.card} testID="scorecard-totals">
-        <Total label="Spilte hull" value={totals.playedHoles} />
-        <Total label="Brutto" value={totals.totalGross} />
-        {totals.totalExtra != null && totals.totalNet != null ? (
-          <>
-            <Total label="Tildelte slag" value={totals.totalExtra} />
-            <Total label="Netto" value={totals.totalNet} />
-          </>
-        ) : null}
-      </View>
+      {stamp ? <ScorecardStamp stamp={stamp} ownerFullName={me.player.name} /> : null}
 
       {canSubmit ? (
         <>
@@ -362,14 +438,11 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         </>
       ) : (
         <>
-          <Text style={ui.muted} testID="scorecard-readonly">
-            {me.submitted_at == null
-              ? 'Kortet kan ikke leveres herfra nå.'
-              : bundle.game.status === 'active'
-                ? // #2220: veien videre for et levert kort i en runde som pågår.
-                  `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
-                : 'Kortet er levert. Dette er lesevisning.'}
-          </Text>
+          {readonlyText ? (
+            <Text style={ui.muted} testID="scorecard-readonly">
+              {readonlyText}
+            </Text>
+          ) : null}
           {canDeliverForFlight ? (
             <>
               {flightBlock}
@@ -407,37 +480,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   );
 }
 
-function Total({ label, value }: { label: string; value: number }) {
-  const { ui } = useTheme();
-  return (
-    <View style={styles.totalRow}>
-      <Text style={ui.body}>{label}</Text>
-      <Text style={[ui.value, ui.num]} testID={`total-${label.toLowerCase().replace(/\s+/g, '-')}`}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  table: {
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginTop: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  headRow: { borderTopWidth: 0 },
-  cell: { flex: 1, textAlign: 'right', fontSize: 15 },
-  // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
-  headCell: { fontSize: 12, fontFamily: FONTS.sansBold },
-  holeCell: { textAlign: 'left' },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   buttonDisabled: { opacity: 0.5 },
   // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
   // ned til lever-knappen, over kravet på 24.
