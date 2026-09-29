@@ -22,10 +22,24 @@ import {
 } from '../../../../lib/friends/friendStatus';
 import { callWebRoute, type WebApiFailure } from './webApi';
 
+/** Det dere har spilt sammen (`lib/friends/friendStats.ts` på serveren). */
+export interface FriendStats {
+  roundsTogether: number;
+  lastPlayedAt: string | null;
+  lastGameName: string | null;
+}
+
 export interface FriendPerson {
   id: string;
   /** Visningsnavnet serveren ga (navn, ellers maskert adresse). */
   name: string;
+  /** `null` = tallene kunne ikke leses (eller en eldre server uten dem). */
+  stats: FriendStats | null;
+}
+
+export interface FriendItem extends FriendPerson {
+  /** Handicap når profilen er ferdig, ellers `null`. */
+  hcp: number | null;
 }
 
 export interface FriendRequestItem extends FriendPerson {
@@ -34,7 +48,8 @@ export interface FriendRequestItem extends FriendPerson {
 }
 
 export interface FriendsData {
-  friends: FriendPerson[];
+  /** Sist spilt først, så navn (serverens rekkefølge). */
+  friends: FriendItem[];
   incoming: FriendRequestItem[];
   outgoing: FriendRequestItem[];
   suggestions: FriendPerson[];
@@ -52,11 +67,40 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
 }
 
+function readStats(value: unknown): FriendStats | null {
+  if (!isRecord(value) || typeof value.roundsTogether !== 'number') return null;
+  return {
+    roundsTogether: value.roundsTogether,
+    lastPlayedAt: typeof value.lastPlayedAt === 'string' ? value.lastPlayedAt : null,
+    lastGameName: typeof value.lastGameName === 'string' ? value.lastGameName : null,
+  };
+}
+
+function readPerson(item: Record<string, unknown> & { id: string }): FriendPerson {
+  return {
+    id: item.id,
+    name: typeof item.name === 'string' ? item.name : '',
+    stats: readStats(item.stats),
+  };
+}
+
 function readPeople(value: unknown): FriendPerson[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) =>
+    isRecord(item) && typeof item.id === 'string' ? [readPerson({ ...item, id: item.id })] : [],
+  );
+}
+
+function readFriends(value: unknown): FriendItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) =>
     isRecord(item) && typeof item.id === 'string'
-      ? [{ id: item.id, name: typeof item.name === 'string' ? item.name : '' }]
+      ? [
+          {
+            ...readPerson({ ...item, id: item.id }),
+            hcp: typeof item.hcp === 'number' ? item.hcp : null,
+          },
+        ]
       : [],
   );
 }
@@ -65,13 +109,7 @@ function readRequests(value: unknown): FriendRequestItem[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) =>
     isRecord(item) && typeof item.id === 'string' && typeof item.requestId === 'string'
-      ? [
-          {
-            requestId: item.requestId,
-            id: item.id,
-            name: typeof item.name === 'string' ? item.name : '',
-          },
-        ]
+      ? [{ requestId: item.requestId, ...readPerson({ ...item, id: item.id }) }]
       : [],
   );
 }
@@ -87,7 +125,7 @@ export async function fetchFriends(): Promise<FriendsLoadResult> {
   return {
     ok: true,
     data: {
-      friends: readPeople(body.friends),
+      friends: readFriends(body.friends),
       incoming: readRequests(body.incoming),
       outgoing: readRequests(body.outgoing),
       suggestions: readPeople(body.suggestions),

@@ -1,25 +1,32 @@
 // native/app/src/screens/Friends.tsx
-// #2256: «Venner» i appen — det webbens `/profile/venner` viser, i samme
-// rekkefølge: svarlinja etter en handling, tilbudet om å invitere en ukjent
-// adresse, forespørslene, vennene, de sendte, forslagene fra folk du har
-// spilt med, «Legg til på e-post» og «Del en lenke».
+// #2256: «Venner» i appen, etter designet (Venner-forslag): heltekortet «Få
+// med gjengen» med delelenka og e-postfeltet, forespørslene til deg, folk du
+// har spilt med som kort i en rad, vennene dine (sist spilt først) og til
+// slutt det du har sendt og venter svar på.
 //
 // Alt går gjennom `/api/friends/*` (`data/friends.ts`), som kjører den samme
 // kjernen som webben. Etter hver handling hentes lista på nytt, så skjermen
 // viser det som faktisk står i basen og ikke det den trodde den gjorde.
 //
+// **Tallene i underlinjene** (runder sammen, sist spilt, handicap) kommer fra
+// ruta. Mangler de (`stats: null`), står radene med navnet alene.
+//
 // **Uten nett** står en linje om at venner krever tilkobling, med «Prøv
 // igjen». Handlingene legges aldri i en kø.
 //
-// **«Fjern» spør først** med en dialog. Webben har en to-trinns knapp; på en
-// telefon er dialogen den vanlige formen for «er du sikker».
+// **En venn åpner et lite ark** med tallene og «Fjern venn». «Fjern venn»
+// spør først med en dialog; en egen venneside kommer senere i en egen sak.
 //
 // **Delingen** åpner telefonens delearke med lenka (`Share.share`, ingen ny
 // modul). Adressen bygges med `webUrl`, så butikkbygget deler tornygolf.no.
+//
+// Toppen (tilbake, stor tittel, undertittel) blir #2255 sin felles topp når
+// den finnes; til da står tittelen i navigasjonen og undertittelen her.
 import { Children, Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   Share,
@@ -29,6 +36,7 @@ import {
   View,
 } from 'react-native';
 import type { FriendStatus } from '../../../../lib/friends/friendStatus';
+import { nameInitials } from '../../../../lib/names/initials';
 import {
   addFriendByEmail,
   fetchFriends,
@@ -37,18 +45,26 @@ import {
   respondToFriendRequest,
   sendFriendRequest,
   type FriendActionResult,
+  type FriendItem,
   type FriendsData,
 } from '../data/friends';
 import type { WebApiFailure } from '../data/webApi';
 import {
   FRIENDS_TEXT,
+  declineA11yLabel,
+  friendSheetValues,
   friendStatusLine,
+  friendSubline,
   friendsFailureLine,
+  friendsSectionTitle,
+  friendsSubtitle,
+  incomingSubline,
   inviteButton,
   inviteFailureLine,
   invitePrompt,
   invitedLine,
   removeConfirmMessage,
+  roundsSubline,
   type StatusLine,
 } from '../lib/friendsCopy';
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
@@ -64,9 +80,9 @@ function toLoadState(result: Awaited<ReturnType<typeof fetchFriends>>): LoadStat
   return result.ok ? { state: 'ready', data: result.data } : { state: 'failed', reason: result.reason };
 }
 
-// Skjermen tar ingen props fra navigasjonen; typen står for å låse ruta.
-export function Friends(_props: ScreenProps<'Friends'>) {
+export function Friends({ route }: ScreenProps<'Friends'>) {
   const { ui, colors } = useTheme();
+  const selfInitials = route.params?.selfInitials ?? null;
   const [load, setLoad] = useState<LoadState>({ state: 'loading' });
   const [line, setLine] = useState<StatusLine | null>(null);
   const [inviteEmail, setInviteEmail] = useState<string | null>(null);
@@ -74,7 +90,9 @@ export function Friends(_props: ScreenProps<'Friends'>) {
   // er ferdig, så et dobbelt trykk aldri sender to forespørsler.
   const [busy, setBusy] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [emailOpen, setEmailOpen] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const [sheetFriend, setSheetFriend] = useState<FriendItem | null>(null);
 
   // Første henting bor i effekten, med avbrudd hvis skjermen lukkes først.
   // Etter en handling og ved «Prøv igjen» hentes lista med `reload`.
@@ -153,17 +171,21 @@ export function Friends(_props: ScreenProps<'Friends'>) {
   }, [inviteEmail]);
 
   const onRemove = useCallback(
-    (id: string, name: string) => {
+    (friend: FriendItem) => {
       // To knapper, og dialogen kan ikke avvises: svaret skal komme fra en av dem.
+      // Arket står til svaret kommer, så «Avbryt» fører tilbake dit.
       Alert.alert(
         FRIENDS_TEXT.removeConfirmLabel,
-        removeConfirmMessage(name),
+        removeConfirmMessage(friend.name),
         [
           { text: FRIENDS_TEXT.cancelLabel, style: 'cancel' },
           {
             text: FRIENDS_TEXT.removeConfirmLabel,
             style: 'destructive',
-            onPress: () => void run(`remove:${id}`, () => removeFriend(id)),
+            onPress: () => {
+              setSheetFriend(null);
+              void run(`remove:${friend.id}`, () => removeFriend(friend.id));
+            },
           },
         ],
         { cancelable: false },
@@ -217,248 +239,468 @@ export function Friends(_props: ScreenProps<'Friends'>) {
 
   const { friends, incoming, outgoing, suggestions, friendCode } = load.data;
   const locked = busy !== null;
+  const now = new Date();
+  // Serveren setter vennene etter siste runde når den har tallene.
+  const sortedByLastPlayed = friends.length > 1 && friends.some((f) => f.stats?.lastPlayedAt);
 
   return (
-    <ScrollView
-      contentContainerStyle={ui.scroll}
-      keyboardShouldPersistTaps="handled"
-      testID="friends-screen"
-    >
-      <Text style={ui.muted}>{FRIENDS_TEXT.subtitle}</Text>
+    <>
+      <ScrollView
+        contentContainerStyle={[ui.scroll, styles.scroll]}
+        keyboardShouldPersistTaps="handled"
+        testID="friends-screen"
+      >
+        <Text style={[ui.muted, styles.inset]} testID="friends-subtitle">
+          {friendsSubtitle(friends.length)}
+        </Text>
 
-      {line ? (
-        line.tone === 'error' ? (
-          <Text style={ui.error} testID="friends-status">
-            {line.text}
-          </Text>
-        ) : (
-          <View style={ui.banner}>
-            <Text style={ui.body} testID="friends-status">
+        {line ? (
+          line.tone === 'error' ? (
+            <Text style={[ui.error, styles.inset]} testID="friends-status">
               {line.text}
             </Text>
+          ) : (
+            <View style={ui.banner}>
+              <Text style={ui.body} testID="friends-status">
+                {line.text}
+              </Text>
+            </View>
+          )
+        ) : null}
+
+        <View style={[styles.hero, { backgroundColor: colors.surfaceStrong }]} testID="friends-hero">
+          <View style={styles.heroTop}>
+            {/* Pynt: deg og en ledig plass. Skjermleseren leser tittelen. */}
+            <View
+              style={styles.heroAvatars}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              {selfInitials ? (
+                <View
+                  style={[
+                    styles.heroAvatar,
+                    { backgroundColor: colors.onStrong, borderColor: colors.surfaceStrong },
+                  ]}
+                >
+                  <Text style={[styles.heroAvatarText, { color: colors.surfaceStrong }]}>
+                    {selfInitials}
+                  </Text>
+                </View>
+              ) : null}
+              <View
+                style={[
+                  styles.heroAvatar,
+                  styles.heroPlus,
+                  selfInitials ? styles.heroPlusOverlap : null,
+                  { borderColor: `${colors.onStrong}B3`, backgroundColor: colors.surfaceStrong },
+                ]}
+              >
+                <Text style={[styles.heroPlusText, { color: colors.onStrong }]}>+</Text>
+              </View>
+            </View>
+            <View style={styles.flexText}>
+              <Text accessibilityRole="header" style={[styles.heroTitle, { color: colors.onStrong }]}>
+                {FRIENDS_TEXT.heroTitle}
+              </Text>
+              <Text style={[styles.heroLine, { color: colors.onStrong }]}>
+                {friendCode ? FRIENDS_TEXT.shareLinkSubtitle : FRIENDS_TEXT.addByEmailSubtitle}
+              </Text>
+            </View>
           </View>
-        )
-      ) : null}
-
-      {inviteEmail ? (
-        <View style={ui.card} testID="friends-invite-offer">
-          <Text style={ui.body}>{invitePrompt(inviteEmail)}</Text>
-          <SmallButton
-            label={inviteButton(inviteEmail)}
-            pendingLabel={FRIENDS_TEXT.invitePending}
-            pending={busy === 'invite'}
-            disabled={locked}
-            onPress={() => void onInvite()}
-            testID="friends-invite"
-          />
-        </View>
-      ) : null}
-
-      {incoming.length > 0 ? (
-        <Section title={FRIENDS_TEXT.incomingSection} testID="friends-incoming" rows>
-          <PeopleList>
-          {incoming.map((r) => (
-            <PersonRow key={r.requestId} name={r.name}>
-              <SmallButton
-                variant="ghost"
-                label={FRIENDS_TEXT.declineLabel}
-                pendingLabel={FRIENDS_TEXT.declinePending}
-                pending={busy === `decline:${r.requestId}`}
-                disabled={locked}
-                onPress={() =>
-                  void run(`decline:${r.requestId}`, () => respondToFriendRequest(r.requestId, false))
-                }
-                testID={`friends-decline-${r.id}`}
+          <View style={styles.heroButtons}>
+            {friendCode ? (
+              <Pill
+                tone="onStrongFilled"
+                size="large"
+                grow
+                label={FRIENDS_TEXT.heroShareButton}
+                onPress={() => void onShare(friendCode)}
+                testID="friends-share-link"
               />
-              <SmallButton
-                label={FRIENDS_TEXT.acceptLabel}
-                pendingLabel={FRIENDS_TEXT.acceptPending}
-                pending={busy === `accept:${r.requestId}`}
-                disabled={locked}
-                onPress={() =>
-                  void run(`accept:${r.requestId}`, () => respondToFriendRequest(r.requestId, true))
-                }
-                testID={`friends-accept-${r.id}`}
-              />
-            </PersonRow>
-          ))}
-          </PeopleList>
-        </Section>
-      ) : null}
-
-      <Section title={FRIENDS_TEXT.friendsSection} testID="friends-list" rows>
-        {friends.length === 0 ? (
-          <Text style={ui.muted} testID="friends-empty">
-            {FRIENDS_TEXT.noFriendsYet}
-          </Text>
-        ) : (
-          <PeopleList>
-          {friends.map((f) => (
-            <PersonRow key={f.id} name={f.name}>
-              <SmallButton
-                variant="ghost"
-                label={FRIENDS_TEXT.removeIdleLabel}
-                pendingLabel={FRIENDS_TEXT.removePending}
-                pending={busy === `remove:${f.id}`}
-                disabled={locked}
-                onPress={() => onRemove(f.id, f.name)}
-                testID={`friends-remove-${f.id}`}
-              />
-            </PersonRow>
-          ))}
-          </PeopleList>
-        )}
-      </Section>
-
-      {outgoing.length > 0 ? (
-        <Section title={FRIENDS_TEXT.outgoingSection} testID="friends-outgoing" rows>
-          <PeopleList>
-          {outgoing.map((r) => (
-            <PersonRow key={r.requestId} name={r.name}>
-              <SmallButton
-                variant="ghost"
-                label={FRIENDS_TEXT.withdrawLabel}
-                pendingLabel={FRIENDS_TEXT.withdrawPending}
-                pending={busy === `withdraw:${r.id}`}
-                disabled={locked}
-                onPress={() => void run(`withdraw:${r.id}`, () => removeFriend(r.id))}
-                testID={`friends-withdraw-${r.id}`}
-              />
-            </PersonRow>
-          ))}
-          </PeopleList>
-        </Section>
-      ) : null}
-
-      {suggestions.length > 0 ? (
-        <Section title={FRIENDS_TEXT.suggestionsSection} testID="friends-suggestions" rows>
-          <PeopleList>
-          {suggestions.map((s) => (
-            <PersonRow key={s.id} name={s.name}>
-              <SmallButton
-                variant="secondary"
-                label={FRIENDS_TEXT.addEmailButton}
-                pendingLabel={FRIENDS_TEXT.addEmailPending}
-                pending={busy === `add:${s.id}`}
-                disabled={locked}
-                onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id))}
-                testID={`friends-add-${s.id}`}
-              />
-            </PersonRow>
-          ))}
-          </PeopleList>
-        </Section>
-      ) : null}
-
-      <Section title={FRIENDS_TEXT.addByEmailSection} testID="friends-add-by-email">
-        <Text style={ui.muted}>{FRIENDS_TEXT.addByEmailSubtitle}</Text>
-        <Text style={ui.label}>{FRIENDS_TEXT.addEmailLabel}</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder={FRIENDS_TEXT.addEmailPlaceholder}
-          placeholderTextColor={colors.muted}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          returnKeyType="send"
-          onSubmitEditing={onAddByEmail}
-          accessibilityLabel={FRIENDS_TEXT.addEmailLabel}
-          style={ui.input}
-          testID="friends-email-input"
-        />
-        <SmallButton
-          label={FRIENDS_TEXT.addEmailButton}
-          pendingLabel={FRIENDS_TEXT.addEmailPending}
-          pending={busy === 'email'}
-          disabled={locked}
-          onPress={onAddByEmail}
-          testID="friends-email-submit"
-        />
-      </Section>
-
-      {friendCode ? (
-        <Section title={FRIENDS_TEXT.shareLinkSection} testID="friends-share">
-          <Text style={ui.muted}>{FRIENDS_TEXT.shareLinkSubtitle}</Text>
-          <SmallButton
-            variant="secondary"
-            label={FRIENDS_TEXT.shareLinkButton}
-            onPress={() => void onShare(friendCode)}
-            testID="friends-share-link"
-          />
+            ) : null}
+            <Pill
+              tone="onStrongOutline"
+              size="large"
+              grow={!friendCode}
+              label={FRIENDS_TEXT.heroEmailButton}
+              expanded={emailOpen}
+              onPress={() => setEmailOpen((open) => !open)}
+              testID="friends-email-toggle"
+            />
+          </View>
           {shareNote ? (
-            <Text style={ui.error} testID="friends-share-error">
+            <Text style={[styles.heroLine, { color: colors.onStrong }]} testID="friends-share-error">
               {shareNote}
             </Text>
           ) : null}
-        </Section>
-      ) : null}
-    </ScrollView>
+        </View>
+
+        {emailOpen ? (
+          <View style={[ui.card, styles.cardRound]} testID="friends-add-by-email">
+            <Text style={ui.muted}>{FRIENDS_TEXT.addByEmailSubtitle}</Text>
+            <Text style={ui.label}>{FRIENDS_TEXT.addEmailLabel}</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder={FRIENDS_TEXT.addEmailPlaceholder}
+              placeholderTextColor={colors.muted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              textContentType="emailAddress"
+              returnKeyType="send"
+              onSubmitEditing={onAddByEmail}
+              accessibilityLabel={FRIENDS_TEXT.addEmailLabel}
+              style={ui.input}
+              testID="friends-email-input"
+            />
+            <Pill
+              label={FRIENDS_TEXT.addEmailButton}
+              pendingLabel={FRIENDS_TEXT.addEmailPending}
+              pending={busy === 'email'}
+              disabled={locked}
+              onPress={onAddByEmail}
+              testID="friends-email-submit"
+            />
+          </View>
+        ) : null}
+
+        {inviteEmail ? (
+          <View style={[ui.card, styles.cardRound]} testID="friends-invite-offer">
+            <Text style={ui.body}>{invitePrompt(inviteEmail)}</Text>
+            <Pill
+              label={inviteButton(inviteEmail)}
+              pendingLabel={FRIENDS_TEXT.invitePending}
+              pending={busy === 'invite'}
+              disabled={locked}
+              onPress={() => void onInvite()}
+              testID="friends-invite"
+            />
+          </View>
+        ) : null}
+
+        {incoming.length > 0 ? (
+          <View style={styles.section} testID="friends-incoming">
+            <Text style={[ui.sectionTitle, styles.inset, { color: colors.accentText }]}>
+              {FRIENDS_TEXT.incomingSection}
+            </Text>
+            {incoming.map((r) => (
+              <View
+                key={r.requestId}
+                style={[styles.requestCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
+                <Avatar name={r.name} tone="soft" />
+                <NameBlock name={r.name} sub={incomingSubline(r.stats)} />
+                <Pill
+                  label={FRIENDS_TEXT.acceptLabel}
+                  pendingLabel={FRIENDS_TEXT.acceptPending}
+                  pending={busy === `accept:${r.requestId}`}
+                  disabled={locked}
+                  onPress={() =>
+                    void run(`accept:${r.requestId}`, () => respondToFriendRequest(r.requestId, true))
+                  }
+                  testID={`friends-accept-${r.id}`}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={declineA11yLabel(r.name)}
+                  accessibilityState={{ disabled: locked, busy: busy === `decline:${r.requestId}` }}
+                  disabled={locked}
+                  onPress={() =>
+                    void run(`decline:${r.requestId}`, () => respondToFriendRequest(r.requestId, false))
+                  }
+                  style={[
+                    styles.roundButton,
+                    { borderColor: colors.border, backgroundColor: colors.surface },
+                    locked && busy !== `decline:${r.requestId}` ? styles.dimmed : null,
+                  ]}
+                  testID={`friends-decline-${r.id}`}
+                >
+                  {busy === `decline:${r.requestId}` ? (
+                    <ActivityIndicator color={colors.muted} />
+                  ) : (
+                    <Text style={[styles.roundButtonText, { color: colors.muted }]}>✕</Text>
+                  )}
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {suggestions.length > 0 ? (
+          <View style={styles.section} testID="friends-suggestions">
+            <Text style={[ui.sectionTitle, styles.inset]}>{FRIENDS_TEXT.suggestionsSection}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.suggestionRow}
+            >
+              {suggestions.map((s) => {
+                const sub = roundsSubline(s.stats);
+                return (
+                  <View
+                    key={s.id}
+                    style={[styles.suggestionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <Avatar name={s.name} tone="warm" />
+                    <View>
+                      <Text style={[styles.suggestionName, { color: colors.text }]} numberOfLines={1}>
+                        {s.name || FRIENDS_TEXT.someoneFallback}
+                      </Text>
+                      {sub ? (
+                        <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={1}>
+                          {sub}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Pill
+                      tone="outline"
+                      label={`+ ${FRIENDS_TEXT.addEmailButton}`}
+                      pendingLabel={FRIENDS_TEXT.addEmailPending}
+                      pending={busy === `add:${s.id}`}
+                      disabled={locked}
+                      onPress={() => void run(`add:${s.id}`, () => sendFriendRequest(s.id))}
+                      accessibilityLabel={`${FRIENDS_TEXT.addEmailButton} ${s.name || FRIENDS_TEXT.someoneFallback}`}
+                      testID={`friends-add-${s.id}`}
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
+        <View style={styles.section} testID="friends-list">
+          <View style={[styles.sectionHead, styles.inset]}>
+            <Text style={ui.sectionTitle}>{friendsSectionTitle(friends.length)}</Text>
+            {sortedByLastPlayed ? (
+              <Text style={[styles.sortNote, { color: colors.muted }]}>
+                {FRIENDS_TEXT.sortedByLastPlayed}
+              </Text>
+            ) : null}
+          </View>
+          {friends.length === 0 ? (
+            <Text style={[ui.muted, styles.inset]} testID="friends-empty">
+              {FRIENDS_TEXT.noFriendsYet}
+            </Text>
+          ) : (
+            <RowsCard>
+              {friends.map((f) => {
+                const sub = friendSubline(f, now);
+                return (
+                  <Pressable
+                    key={f.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={sub ? `${f.name}, ${sub}` : f.name}
+                    disabled={locked}
+                    onPress={() => setSheetFriend(f)}
+                    style={({ pressed }) => [styles.personRow, pressed ? styles.pressed : null]}
+                    testID={`friends-open-${f.id}`}
+                  >
+                    <Avatar name={f.name} tone="strong" />
+                    <NameBlock name={f.name} sub={sub} />
+                    {busy === `remove:${f.id}` ? (
+                      <ActivityIndicator color={colors.primary} />
+                    ) : (
+                      <Text style={[styles.arrow, { color: colors.primary }]}>→</Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </RowsCard>
+          )}
+        </View>
+
+        {outgoing.length > 0 ? (
+          <View style={styles.section} testID="friends-outgoing">
+            <Text style={[ui.sectionTitle, styles.inset]}>{FRIENDS_TEXT.outgoingSection}</Text>
+            <RowsCard>
+              {outgoing.map((r) => (
+                <View key={r.requestId} style={styles.personRow}>
+                  <Avatar name={r.name} tone="soft" />
+                  <NameBlock name={r.name} sub={roundsSubline(r.stats)} />
+                  <Pill
+                    tone="outline"
+                    label={FRIENDS_TEXT.withdrawLabel}
+                    pendingLabel={FRIENDS_TEXT.withdrawPending}
+                    pending={busy === `withdraw:${r.id}`}
+                    disabled={locked}
+                    onPress={() => void run(`withdraw:${r.id}`, () => removeFriend(r.id))}
+                    testID={`friends-withdraw-${r.id}`}
+                  />
+                </View>
+              ))}
+            </RowsCard>
+          </View>
+        ) : null}
+      </ScrollView>
+
+      <FriendSheet
+        friend={sheetFriend}
+        now={now}
+        onClose={() => setSheetFriend(null)}
+        onRemove={onRemove}
+      />
+    </>
+  );
+}
+
+/**
+ * Arket fra en venn: navnet, de tre tallene og «Fjern venn». Dras ned eller
+ * lukkes med «Lukk» og med et trykk utenfor.
+ */
+function FriendSheet({
+  friend,
+  now,
+  onClose,
+  onRemove,
+}: {
+  friend: FriendItem | null;
+  now: Date;
+  onClose: () => void;
+  onRemove: (friend: FriendItem) => void;
+}) {
+  const { ui, colors } = useTheme();
+  const values = friend ? friendSheetValues(friend, now) : null;
+  return (
+    <Modal visible={friend !== null} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.sheetRoot}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={FRIENDS_TEXT.sheetClose}
+          testID="friend-sheet-backdrop"
+        />
+        {friend && values ? (
+          <View
+            style={[styles.sheet, { backgroundColor: colors.bg, borderColor: colors.border }]}
+            accessibilityViewIsModal
+            testID="friend-sheet"
+          >
+            <View style={styles.sheetHead}>
+              <Avatar name={friend.name} tone="strong" />
+              <Text
+                accessibilityRole="header"
+                style={[styles.sheetName, { color: colors.text }]}
+                numberOfLines={2}
+              >
+                {friend.name || FRIENDS_TEXT.someoneFallback}
+              </Text>
+            </View>
+            <RowsCard>
+              <SheetRow label={FRIENDS_TEXT.sheetHcp} value={values.hcp} testID="friend-sheet-hcp" />
+              <SheetRow label={FRIENDS_TEXT.sheetRounds} value={values.rounds} testID="friend-sheet-rounds" />
+              <SheetRow
+                label={FRIENDS_TEXT.sheetLastPlayed}
+                value={values.lastPlayed}
+                testID="friend-sheet-last"
+              />
+            </RowsCard>
+            <Pill
+              tone="danger"
+              size="large"
+              label={FRIENDS_TEXT.removeConfirmLabel}
+              onPress={() => onRemove(friend)}
+              testID={`friends-remove-${friend.id}`}
+            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={onClose}
+              style={ui.buttonSecondary}
+              testID="friend-sheet-close"
+            >
+              <Text style={ui.buttonSecondaryText}>{FRIENDS_TEXT.sheetClose}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+    </Modal>
+  );
+}
+
+function SheetRow({ label, value, testID }: { label: string; value: string; testID: string }) {
+  const { ui, colors } = useTheme();
+  return (
+    <View style={styles.sheetRow} accessible accessibilityLabel={`${label}: ${value}`} testID={testID}>
+      <Text style={[styles.sheetLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.sheetValue, ui.num, { color: colors.text }]} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
   );
 }
 
 /** Radene i et kort, med streker mellom dem, ikke under den siste (som webben). */
-function PeopleList({ children }: { children: ReactNode }) {
+function RowsCard({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
   return (
-    <>
+    <View style={[styles.rowsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {Children.toArray(children).map((row, index) => (
         <Fragment key={index}>
           {index > 0 ? <View style={[styles.separator, { backgroundColor: colors.border }]} /> : null}
           {row}
         </Fragment>
       ))}
-    </>
+    </View>
+  );
+}
+
+/** Navnet og underlinja, med plass til knappene til høyre. */
+function NameBlock({ name, sub }: { name: string; sub: string | null }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.flexText}>
+      <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+        {name || FRIENDS_TEXT.someoneFallback}
+      </Text>
+      {sub ? (
+        <Text style={[styles.sub, styles.num, { color: colors.muted }]} numberOfLines={1}>
+          {sub}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
 /**
- * En overskrift og et kort. Kort med personrader (`rows`) har lite luft over og
- * under, fordi radene har sin egen høyde; kort med tekst og felter har kortets
- * vanlige luft.
+ * Initialene i en sirkel. Skogen for venner, den lyse grønne for forespørsler
+ * og gull-tonen for forslag, som i designet. Pynt: navnet står ved siden av.
  */
-function Section({
-  title,
-  children,
-  testID,
-  rows = false,
-}: {
-  title: string;
-  children: ReactNode;
-  testID: string;
-  rows?: boolean;
-}) {
-  const { ui } = useTheme();
+function Avatar({ name, tone }: { name: string; tone: 'strong' | 'soft' | 'warm' }) {
+  const { colors } = useTheme();
+  const look =
+    tone === 'strong'
+      ? { bg: colors.surfaceStrong, ink: colors.onStrong }
+      : tone === 'soft'
+        ? { bg: colors.primarySoft, ink: colors.primary }
+        : { bg: `${colors.accent}29`, ink: colors.muted };
   return (
-    <View testID={testID}>
-      <Text style={ui.sectionTitle}>{title}</Text>
-      <View style={[ui.card, styles.sectionCard, rows ? styles.rowsCard : null]}>{children}</View>
+    <View
+      style={[styles.avatar, { backgroundColor: look.bg }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Text style={[styles.avatarText, { color: look.ink }]}>{nameInitials(name)}</Text>
     </View>
   );
 }
 
-/** Navnet til venstre, knappene til høyre, som webbens rader. */
-function PersonRow({ name, children }: { name: string; children: ReactNode }) {
-  const { ui } = useTheme();
-  return (
-    <View style={styles.row}>
-      <Text style={[ui.body, styles.name]} numberOfLines={1}>
-        {name || FRIENDS_TEXT.someoneFallback}
-      </Text>
-      <View style={styles.actions}>{children}</View>
-    </View>
-  );
-}
+type PillTone = 'filled' | 'outline' | 'danger' | 'onStrongFilled' | 'onStrongOutline';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
-
-function SmallButton({
+/** Knappene på siden: piller som i designet, ≥ 44 pt høye. */
+function Pill({
   label,
   pendingLabel,
   pending = false,
   disabled = false,
-  variant = 'primary',
+  tone = 'filled',
+  size = 'regular',
+  grow = false,
+  expanded,
+  accessibilityLabel,
   onPress,
   testID,
 }: {
@@ -466,58 +708,176 @@ function SmallButton({
   pendingLabel?: string;
   pending?: boolean;
   disabled?: boolean;
-  variant?: Variant;
+  tone?: PillTone;
+  size?: 'regular' | 'large';
+  grow?: boolean;
+  expanded?: boolean;
+  accessibilityLabel?: string;
   onPress: () => void;
   testID: string;
 }) {
   const { colors } = useTheme();
-  const filled = variant === 'primary';
+  const look = {
+    filled: { bg: colors.primary, border: colors.primary, ink: colors.onPrimary },
+    outline: { bg: 'transparent', border: colors.primary, ink: colors.primary },
+    danger: { bg: 'transparent', border: colors.danger, ink: colors.danger },
+    onStrongFilled: { bg: colors.onStrong, border: colors.onStrong, ink: colors.surfaceStrong },
+    onStrongOutline: { bg: 'transparent', border: `${colors.onStrong}80`, ink: colors.onStrong },
+  }[tone];
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled, busy: pending }}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled, busy: pending, ...(expanded === undefined ? {} : { expanded }) }}
       disabled={disabled}
       onPress={onPress}
       style={[
-        styles.button,
-        filled
-          ? { backgroundColor: colors.primary }
-          : variant === 'secondary'
-            ? { borderWidth: 1, borderColor: colors.primary }
-            : null,
+        styles.pill,
+        size === 'large' ? styles.pillLarge : null,
+        grow ? styles.pillGrow : null,
+        { backgroundColor: look.bg, borderColor: look.border },
         disabled && !pending ? styles.dimmed : null,
       ]}
       testID={testID}
     >
-      <Text style={[styles.buttonText, { color: filled ? colors.onPrimary : colors.primary }]}>
+      <Text
+        style={[styles.pillText, size === 'large' ? styles.pillTextLarge : null, { color: look.ink }]}
+        numberOfLines={1}
+      >
         {pending && pendingLabel ? pendingLabel : label}
       </Text>
     </Pressable>
   );
 }
 
+const AVATAR = 36;
+const HERO_AVATAR = 30;
+
 const styles = StyleSheet.create({
-  sectionCard: { marginTop: 8 },
-  rowsCard: { paddingVertical: 4 },
-  row: {
+  scroll: { paddingHorizontal: 16, paddingBottom: 32 },
+  inset: { paddingHorizontal: 4 },
+  section: { gap: 8 },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  sortNote: { fontSize: 12, fontFamily: FONTS.sans },
+  cardRound: { borderRadius: 16 },
+  flexText: { flex: 1, minWidth: 0 },
+
+  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 6 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  heroAvatars: { flexDirection: 'row' },
+  heroAvatar: {
+    width: HERO_AVATAR,
+    height: HERO_AVATAR,
+    borderRadius: HERO_AVATAR / 2,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroAvatarText: { fontSize: 10, fontFamily: FONTS.sansSemiBold },
+  heroPlus: { borderWidth: 1.5, borderStyle: 'dashed' },
+  heroPlusOverlap: { marginLeft: -6 },
+  heroPlusText: { fontSize: 16, fontFamily: FONTS.sans },
+  heroTitle: { fontSize: 18, fontFamily: FONTS.serifDisplay },
+  heroLine: { fontSize: 12, fontFamily: FONTS.sans, opacity: 0.85 },
+  heroButtons: { flexDirection: 'row', gap: 8 },
+
+  requestCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minHeight: TAP,
-    paddingVertical: 6,
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
+  roundButton: {
+    width: TAP,
+    height: TAP,
+    borderRadius: TAP / 2,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roundButtonText: { fontSize: 16, fontFamily: FONTS.sans },
+
+  suggestionRow: { gap: 10, paddingHorizontal: 0 },
+  suggestionCard: {
+    width: 150,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    gap: 8,
+  },
+  suggestionName: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
+
+  rowsCard: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+  personRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 60,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  pressed: { opacity: 0.6 },
   separator: { height: StyleSheet.hairlineWidth },
-  name: { flex: 1, minWidth: 0 },
-  actions: { flexDirection: 'row', gap: 8, flexShrink: 0 },
-  button: {
+  name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  sub: { fontSize: 12, fontFamily: FONTS.sans },
+  num: { fontVariant: ['tabular-nums'] },
+  arrow: { fontSize: 16, fontFamily: FONTS.sans },
+
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  avatarText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
+
+  pill: {
     minHeight: TAP,
     minWidth: TAP,
     paddingHorizontal: 14,
-    borderRadius: 10,
+    borderRadius: 999,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
+    flexShrink: 0,
   },
-  buttonText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  pillLarge: { minHeight: 48 },
+  pillGrow: { flexGrow: 1 },
+  pillText: { fontSize: 13, fontFamily: FONTS.sansSemiBold },
+  pillTextLarge: { fontSize: 15 },
   dimmed: { opacity: 0.5 },
+
+  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)' },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 14,
+  },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sheetName: { flex: 1, fontSize: 22, fontFamily: FONTS.serifDisplay },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: TAP,
+    paddingHorizontal: 14,
+  },
+  sheetLabel: { fontSize: 14, fontFamily: FONTS.sans },
+  sheetValue: { flexShrink: 1, fontSize: 15, fontFamily: FONTS.sansSemiBold, textAlign: 'right' },
 });

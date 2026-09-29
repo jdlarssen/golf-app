@@ -189,7 +189,8 @@ describe('Profile', () => {
       exact: false,
     });
     await fireEvent.press(screen.getByTestId('profile-friends'));
-    expect(navigate).toHaveBeenCalledWith('Friends');
+    // Initialene følger med til heltekortet på vennesiden.
+    expect(navigate).toHaveBeenCalledWith('Friends', { selfInitials: 'JL' });
     await fireEvent.press(screen.getByTestId('profile-notifications-theme'));
     expect(navigate).toHaveBeenCalledWith('NotificationsAndTheme');
     await fireEvent.press(screen.getByTestId('profile-account-settings'));

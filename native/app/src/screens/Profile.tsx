@@ -275,7 +275,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
             friendsWaiting > 0 ? friendsWaitingLine(friendsWaiting) : PROFILE_TEXT.friendsSublabel
           }
           chevron
-          onPress={() => navigation.navigate('Friends')}
+          onPress={() => navigation.navigate('Friends', { selfInitials: model?.initials })}
           testID="profile-friends"
         />
         <SettingRow

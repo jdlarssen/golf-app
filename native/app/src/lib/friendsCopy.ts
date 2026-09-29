@@ -10,9 +10,20 @@
 // delearket), spørsmålet før «Fjern» (webben har en to-trinns knapp, appen en
 // dialog), linjene for nett og lasting (webben kan ikke være offline), og
 // feilene fra invitasjonen, som webben i dag ikke viser noe sted
-// (`?invite_error=` på `/profile` leses ikke, se PR-en).
+// (`?invite_error=` på `/profile` leses ikke, se PR-en). Det samme gjelder det
+// designet (#2256) la til: heltekortet «Få med gjengen», underlinjene med
+// tallene fra `/api/friends` og arket som åpnes fra en venn.
+//
+// **Datoene er enhetens lokaltid**, som runde-lista (`roundHistory.ts`):
+// Hermes mangler tidssonene, og for en spiller i Norge gir det samme dag.
 import type { FriendStatus, InviteStatus } from '../../../../lib/friends/friendStatus';
+import {
+  formatShortDateNb,
+  formatShortDateNbWithYear,
+} from '../../../../lib/format/date';
+import type { FriendStats } from '../data/friends';
 import type { WebApiFailure } from '../data/webApi';
+import { formatHcpNb } from './profileCopy';
 
 /** Tekstene vennesiden viser. Flat, som `PROFILE_TEXT`. */
 export const FRIENDS_TEXT = {
@@ -23,12 +34,9 @@ export const FRIENDS_TEXT = {
   friendsSection: 'Vennene dine',
   outgoingSection: 'Venter på svar',
   suggestionsSection: 'Folk du har spilt med',
-  addByEmailSection: 'Legg til på e-post',
   addByEmailSubtitle:
     'Send en venneforespørsel til e-posten. Er de ikke på Tørny, kan du invitere dem.',
-  shareLinkSection: 'Del en lenke',
   shareLinkSubtitle: 'Den som åpner lenken din, blir venn med deg med en gang.',
-  noFriendsYet: 'Du har ingen venner på Tørny ennå. Legg til noen under.',
   declineLabel: 'Avslå',
   declinePending: 'Avslår …',
   acceptLabel: 'Godta',
@@ -46,8 +54,26 @@ export const FRIENDS_TEXT = {
   someoneFallback: 'En venn',
 
   // --- App-egent ----------------------------------------------------------
+  /**
+   * Webben sier «Legg til noen under», men i appen står «Få med gjengen»
+   * øverst, over lista.
+   */
+  noFriendsYet: 'Du har ingen venner på Tørny ennå. Del lenken din øverst eller legg til noen du har spilt med.',
+  /** Heltekortet øverst (designet). Linja under tittelen er `shareLinkSubtitle`. */
+  heroTitle: 'Få med gjengen',
   /** Knappen som åpner delearket med lenka. */
-  shareLinkButton: 'Del lenke',
+  heroShareButton: 'Del lenken din',
+  /** Knappen som viser e-postfeltet. */
+  heroEmailButton: 'På e-post',
+  /** Til høyre for «Vennene dine» når lista står etter siste runde. */
+  sortedByLastPlayed: 'Sist spilt først',
+  /** Arket som åpnes fra en venn. */
+  sheetHcp: 'Handicap',
+  sheetRounds: 'Runder sammen',
+  sheetLastPlayed: 'Sist spilt',
+  sheetClose: 'Lukk',
+  /** Et tall arket ikke har: handicap uten ferdig profil, eller tall som ikke kunne leses. */
+  sheetNone: '–',
   /**
    * Plassholderen i e-postfeltet. Webbens plassholder står på et domene som
    * kan være ekte, og slike adresser hører ikke hjemme i repoet (#1929);
@@ -147,4 +173,97 @@ export function friendsFailureLine(reason: WebApiFailure): string {
 /** Spørsmålet før en venn fjernes. App-egent: webben har en to-trinns knapp. */
 export function removeConfirmMessage(name: string): string {
   return `Vil du fjerne ${name || FRIENDS_TEXT.someoneFallback} som venn?`;
+}
+
+// --- Designet (#2256): overskriften og underlinjene -------------------------
+
+/** «12 venner · de dukker opp når du fyller lag»; uten venner webbens linje. */
+export function friendsSubtitle(count: number): string {
+  if (count === 0) return FRIENDS_TEXT.subtitle;
+  if (count === 1) return '1 venn · vennen din dukker opp når du fyller lag';
+  return `${count} venner · de dukker opp når du fyller lag`;
+}
+
+/** «Vennene dine · 12» (versaler kommer fra stilen). */
+export function friendsSectionTitle(count: number): string {
+  return `${FRIENDS_TEXT.friendsSection} · ${count}`;
+}
+
+/** «1 runde sammen», «8 runder sammen». */
+export function roundsTogetherLine(count: number): string {
+  return count === 1 ? '1 runde sammen' : `${count} runder sammen`;
+}
+
+const WEEKDAYS = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'] as const;
+
+function startOfDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+/**
+ * Når dere sist spilte: «i dag», «i går», «sist lørdag» den siste uka, ellers
+ * «14. sep» (med år når det ikke er i år).
+ */
+export function lastPlayedLabel(iso: string, now: Date): string {
+  const date = new Date(iso);
+  // Math.round tar sommertida: et døgn over skiftet er 23 eller 25 timer.
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+  if (days === 0) return 'i dag';
+  if (days === 1) return 'i går';
+  if (days > 1 && days < 7) return `sist ${WEEKDAYS[date.getDay()]}`;
+  return date.getFullYear() === now.getFullYear()
+    ? formatShortDateNb(date)
+    : formatShortDateNbWithYear(date);
+}
+
+/**
+ * Underlinja til en venn: «HCP 9,4 · 8 runder sammen · sist lørdag». Det
+ * serveren ikke har, står ute; `null` når ingenting er igjen.
+ */
+export function friendSubline(
+  friend: { hcp: number | null; stats: FriendStats | null },
+  now: Date,
+): string | null {
+  const parts: string[] = [];
+  if (friend.hcp !== null) parts.push(`HCP ${formatHcpNb(friend.hcp)}`);
+  if (friend.stats && friend.stats.roundsTogether > 0) {
+    parts.push(roundsTogetherLine(friend.stats.roundsTogether));
+  }
+  if (friend.stats?.lastPlayedAt) parts.push(lastPlayedLabel(friend.stats.lastPlayedAt, now));
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+/** «Spilte med deg i Onsdagsgolfen» under en forespørsel, når dere har spilt sammen. */
+export function incomingSubline(stats: FriendStats | null): string | null {
+  return stats?.lastGameName ? `Spilte med deg i ${stats.lastGameName}` : null;
+}
+
+/** «2 runder sammen» under et forslag og en sendt forespørsel. */
+export function roundsSubline(stats: FriendStats | null): string | null {
+  return stats && stats.roundsTogether > 0 ? roundsTogetherLine(stats.roundsTogether) : null;
+}
+
+/** Skjermleserens navn på ✕-knappen: «Avslå Kari». */
+export function declineA11yLabel(name: string): string {
+  return `${FRIENDS_TEXT.declineLabel} ${name || FRIENDS_TEXT.someoneFallback}`;
+}
+
+/** Arkets tre tall. En strek der tallet mangler. */
+export function friendSheetValues(
+  friend: { hcp: number | null; stats: FriendStats | null },
+  now: Date,
+): { hcp: string; rounds: string; lastPlayed: string } {
+  const { stats } = friend;
+  const none = FRIENDS_TEXT.sheetNone;
+  let lastPlayed: string = none;
+  if (stats?.lastGameName) {
+    lastPlayed = stats.lastPlayedAt
+      ? `${stats.lastGameName}, ${lastPlayedLabel(stats.lastPlayedAt, now)}`
+      : stats.lastGameName;
+  }
+  return {
+    hcp: friend.hcp !== null ? formatHcpNb(friend.hcp) : none,
+    rounds: stats ? String(stats.roundsTogether) : none,
+    lastPlayed,
+  };
 }
