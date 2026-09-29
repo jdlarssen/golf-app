@@ -199,7 +199,7 @@ function Chip({
   disabled: boolean;
   onPress: () => void;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, hole, ui } = useTheme();
   return (
     <Pressable
       style={[
@@ -207,7 +207,8 @@ function Chip({
         {
           backgroundColor: colors.bg,
           borderColor: selected ? colors.accent : colors.border,
-          borderWidth: selected ? 2 : 1,
+          // Temaets kant (3 i sollys, #2252), én tykkere når valgt.
+          borderWidth: selected ? hole.borderW + 1 : hole.borderW,
         },
         disabled && styles.chipDisabled,
       ]}

@@ -26,7 +26,13 @@
 // kortene (`formatUsesScoreRail`). Visningen bor i `HoleView`, som monteres
 // på nytt per hull: skinnas valg og ventende skrivinger hører til ETT hull og
 // skal ikke følge med når «Neste» bare bytter parameteren.
-import { useCallback, useEffect, useRef, useState } from 'react';
+//
+// #2252 del 2: sollys. Bryteren ved pokalen gjør hullsiden hvit og svart med
+// tykke kanter og store mål, uansett telefonens lys/mørk. Hele skjermen, også
+// laste- og feilgrenene, står i en `ThemeScope`, så alt som henter farger fra
+// `useTheme()` følger med. Headeren er navigatorens og statuslinja appens, så
+// de settes her mens hullsiden står.
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -35,6 +41,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameStatus } from '../../../../lib/games/status';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
@@ -71,6 +78,7 @@ import {
   type RailOption,
 } from '../components/hole/ScoreRail';
 import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
+import { SunlightToggle } from '../components/hole/SunlightToggle';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { LocalScore } from '../data/db';
@@ -98,10 +106,11 @@ import { useGameChoices, type GameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { usePuttsTracking, type PuttsTracking } from '../lib/usePuttsTracking';
 import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
+import { setSunlight, useSunlight } from '../lib/sunlight';
 import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, TAP, useTheme } from '../theme';
+import { FONTS, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
 
 const HOLE_COUNT = 18;
 /**
@@ -121,7 +130,34 @@ const SUBMITTED_BADGE = 'Levert';
 /** Hvor ofte skjermen leser SQLite på nytt. Samme takt som Sync-laben. */
 const POLL_MS = 1500;
 
-export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
+export function Hole(props: ScreenProps<'Hole'>) {
+  const { navigation } = props;
+  const sunlight = useSunlight();
+  const system = useTheme();
+  const theme = sunlight ? SUNLIGHT_THEME : system;
+
+  // Headeren tilhører navigatoren og ville ellers stått mørk over en hvit side.
+  // Uten sollys er verdiene de samme som i `screenOptions`, så ingenting endres.
+  // Valget er per skjerm: forlates hullsiden, har de andre sin egen header.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerStyle: { backgroundColor: theme.colors.bg },
+      headerTintColor: theme.colors.text,
+      headerTitleStyle: { color: theme.colors.text, fontFamily: FONTS.sansBold },
+    });
+  }, [navigation, theme]);
+
+  return (
+    <ThemeScope theme={sunlight ? SUNLIGHT_THEME : null}>
+      {/* Mørk tekst i statuslinja over den hvite siden. Når hullsiden
+          forsvinner, gjelder appens «auto» igjen. */}
+      {sunlight ? <StatusBar style="dark" /> : null}
+      <HoleScreen {...props} />
+    </ThemeScope>
+  );
+}
+
+function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   const { colors, ui } = useTheme();
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
@@ -281,8 +317,9 @@ function HoleView({
   onLeaderboard: () => void;
   onSubmit: () => void;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, hole: holeMetrics, ui } = useTheme();
   const insets = useSafeAreaInsets();
+  const sunlight = useSunlight();
   const { extras, refresh: refreshChoices } = choices;
   // Setet «Annet»-arket er åpent for, eller `null`.
   const [sheetSeatId, setSheetSeatId] = useState<string | null>(null);
@@ -538,6 +575,10 @@ function HoleView({
               onToggle={putts.toggle}
             />
           }
+          // Bare visningen: virker også når kortet er låst.
+          headerAccessory={
+            <SunlightToggle on={sunlight} onToggle={() => setSunlight(!sunlight)} />
+          }
           onLeaderboard={onLeaderboard}
         />
 
@@ -657,7 +698,8 @@ function HoleView({
                     {
                       backgroundColor: isFilled ? colors.accent : colors.surface,
                       borderColor: isCurrent ? colors.primary : colors.border,
-                      borderWidth: isCurrent ? 2 : 1,
+                      // Temaets kant (3 i sollys), én tykkere på hullet du står på.
+                      borderWidth: isCurrent ? holeMetrics.borderW + 1 : holeMetrics.borderW,
                     },
                   ]}
                   testID={`hole-strip-${n}`}

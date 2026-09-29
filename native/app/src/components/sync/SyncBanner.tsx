@@ -40,7 +40,7 @@ const POLL_MS = 1500;
 const RETRY_MIN_FEEDBACK_MS = 500;
 
 export function SyncBanner({ gameId }: { gameId: string }) {
-  const { colors } = useTheme();
+  const { colors, hole } = useTheme();
   const [queue, setQueue] = useState<SyncQueueItem[]>([]);
   const [conflicts, setConflicts] = useState<ConflictRecord[]>([]);
   const [retrying, setRetrying] = useState(false);
@@ -142,8 +142,10 @@ export function SyncBanner({ gameId }: { gameId: string }) {
     await reload();
   };
 
-  const tone = { borderColor: colors.danger, backgroundColor: colors.surface };
-  const actionStyle = [styles.action, { borderColor: colors.danger }];
+  // Temaets kant: 3 i sollys på hullsiden (#2252), ellers 1.
+  const edge = { borderWidth: hole.borderW };
+  const tone = { borderColor: colors.danger, backgroundColor: colors.surface, ...edge };
+  const actionStyle = [styles.action, edge, { borderColor: colors.danger }];
   const actionText = [styles.actionText, { color: colors.danger }];
 
   return (
@@ -214,7 +216,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
       {conflicts.map((conflict) => (
         <View
           key={conflict.id}
-          style={[styles.box, styles.row, { borderColor: colors.border, backgroundColor: colors.surface }]}
+          style={[styles.box, styles.row, edge, { borderColor: colors.border, backgroundColor: colors.surface }]}
           testID="conflict-notice"
         >
           <Text style={[styles.message, styles.flex, { color: colors.text }]}>
@@ -223,7 +225,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
           <Pressable
             accessibilityRole="button"
             onPress={() => void dismissConflict(conflict.id)}
-            style={[styles.action, { borderColor: colors.text }]}
+            style={[styles.action, edge, { borderColor: colors.text }]}
             testID="conflict-dismiss"
           >
             <Text style={[styles.actionText, { color: colors.text }]}>
@@ -238,7 +240,7 @@ export function SyncBanner({ gameId }: { gameId: string }) {
 
 const styles = StyleSheet.create({
   stack: { gap: 6, marginBottom: 8 },
-  box: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
+  box: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, gap: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flex: { flex: 1 },
   message: { fontSize: 14, fontFamily: FONTS.sansMedium },
@@ -246,7 +248,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   action: {
     minHeight: TAP,
-    borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 12,
     justifyContent: 'center',

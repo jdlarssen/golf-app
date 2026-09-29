@@ -18,8 +18,10 @@
 // ÉN render-test per skjerm (docs/test-discipline.md, Type C) — tallene og
 // reglene er dekket av Type A-testene, så det som står igjen her er koblingen.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { writeScore } from '../data/writeScore';
+import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
 import { Hole } from './Hole';
 
@@ -154,6 +156,12 @@ const mockState: { bundle: unknown; scores: unknown[] } = {
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Telefonens lys/mørk, satt per test. Sollys (#2252) skal slå den på hullsiden.
+const mockScheme: { value: 'light' | 'dark' } = { value: 'light' };
+jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
+  __esModule: true,
+  default: () => mockScheme.value,
+}));
 // Skinna står over hjem-indikatoren. Uten navigatorens SafeAreaProvider gir
 // pakkens egen mock innfelling 0.
 jest.mock('react-native-safe-area-context', () =>
@@ -201,7 +209,7 @@ jest.mock('@react-navigation/native', () => ({
 // løfter (de wrapper act selv). Uten await settes aldri `screen`.
 function holeElement(
   holeNumber: number,
-  navigation: { setParams: jest.Mock; navigate: jest.Mock },
+  navigation: { setParams: jest.Mock; navigate: jest.Mock; setOptions: jest.Mock },
 ) {
   return (
     <Hole
@@ -214,16 +222,20 @@ function holeElement(
 }
 
 async function renderHole(holeNumber = 1) {
-  const navigation = { setParams: jest.fn(), navigate: jest.fn() };
+  const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
   await render(holeElement(holeNumber, navigation));
   return navigation;
 }
 
 describe('Hole', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     mockState.bundle = mockSoloBundle;
     mockState.scores = [];
+    mockScheme.value = 'light';
+    // Sollys bor i minnet for hele appen: hver test starter med det av.
+    await AsyncStorage.clear();
+    await loadSunlight();
   });
 
   it('henter slagene på nytt når kanalen er tilbake etter et brudd (#2093)', async () => {
@@ -248,7 +260,7 @@ describe('Hole', () => {
   });
 
   it('henter slagene og spillet på nytt i forgrunnen, ved nett tilbake og ved hullbytte (#1980, #2219)', async () => {
-    const navigation = { setParams: jest.fn(), navigate: jest.fn() };
+    const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
     const { rerender } = await render(holeElement(1, navigation));
     const { subscribeGameScores } = require('../data/realtime') as {
       subscribeGameScores: jest.Mock;
@@ -464,7 +476,7 @@ describe('Hole', () => {
   // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad
   // du valgte på hull 1, skal ikke stå valgt på hull 2.
   it('et nytt hull starter skinna på meg igjen', async () => {
-    const navigation = { setParams: jest.fn(), navigate: jest.fn() };
+    const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
     const { rerender } = await render(holeElement(1, navigation));
     await waitFor(() => {
       expect(screen.getByTestId('flight-row-mate')).toBeTruthy();
@@ -478,6 +490,61 @@ describe('Hole', () => {
     expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv · får 1 slag');
   });
 
+  // #2252 del 2: sollys. Med telefonen i mørk modus blir hullsiden hvit og svart
+  // når bryteren er på, valget ligger på telefonen, og det står gjennom
+  // hullbytte. Skjermroten, headeren og hullnummeret viser det.
+  it('sollys gjør hullsiden hvit i mørk modus, huskes og står gjennom hullbytte', async () => {
+    mockScheme.value = 'dark';
+    const navigation = { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
+    const { rerender, unmount } = await render(holeElement(1, navigation));
+    await waitFor(() => {
+      expect(screen.getByTestId('hole-hero')).toBeTruthy();
+    });
+    expect(screen.getByTestId('hole-screen')).toHaveStyle({ backgroundColor: '#14201A' });
+
+    const toggle = screen.getByRole('switch', { name: 'Sollysmodus' });
+    expect(toggle).not.toBeChecked();
+    await fireEvent.press(toggle);
+    expect(screen.getByRole('switch', { name: 'Sollysmodus' })).toBeChecked();
+    expect(screen.getByTestId('hole-screen')).toHaveStyle({ backgroundColor: '#FFFFFF' });
+    expect(screen.getByTestId('hole-hero-number')).toHaveStyle({ fontSize: 130 });
+    // Kantene er 3 og knappene 84, også i stripa og radene.
+    expect(screen.getByTestId('rail-option-4')).toHaveStyle({ height: 84, borderWidth: 3 });
+    expect(screen.getByTestId('flight-row-mate')).toHaveStyle({ borderWidth: 3 });
+    expect(screen.getByTestId('hole-strip-2')).toHaveStyle({ borderWidth: 3 });
+    expect(navigation.setOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        headerStyle: { backgroundColor: '#FFFFFF' },
+        headerTintColor: '#000000',
+      }),
+    );
+    await waitFor(async () => {
+      expect(await AsyncStorage.getItem('torny-sunlight')).toBe('1');
+    });
+
+    // «Neste» bytter bare parameteren: sollys står.
+    await rerender(holeElement(2, navigation));
+    expect(screen.getByTestId('hole-screen')).toHaveStyle({ backgroundColor: '#FFFFFF' });
+
+    // Appen startet på nytt: valget leses fra telefonen, og siden er hvit fra
+    // første bilde, også mens spillet lastes.
+    await unmount();
+    await act(async () => {
+      await loadSunlight();
+    });
+    mockState.bundle = null;
+    await render(holeElement(1, navigation));
+    expect(screen.getByTestId('hole-loading')).toHaveStyle({ backgroundColor: '#FFFFFF' });
+    mockState.bundle = mockSoloBundle;
+
+    // Av igjen: hullsiden følger telefonen, og nøkkelen er borte.
+    await act(async () => setSunlight(false));
+    expect(screen.getByTestId('hole-loading')).toHaveStyle({ backgroundColor: '#14201A' });
+    await waitFor(async () => {
+      expect(await AsyncStorage.getItem('torny-sunlight')).toBeNull();
+    });
+  });
+
   // #2219: i en blind runde som pågår viser hullsiden verken poeng eller
   // netto. Samme bundel med og uten blind runde, så forskjellen er regelen.
   it('stableford viser poeng på knappene, radene og «Stryk», men ikke i en blind runde', async () => {
@@ -488,7 +555,7 @@ describe('Hole', () => {
     mockState.bundle = stableford;
     mockState.scores = [localScore('mate', 5, null)];
     const { unmount } = await render(
-      holeElement(1, { setParams: jest.fn(), navigate: jest.fn() }),
+      holeElement(1, { setParams: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() }),
     );
 
     await waitFor(() => {

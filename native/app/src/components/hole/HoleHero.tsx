@@ -2,10 +2,11 @@
 // `components/hole/HoleHero.tsx` og headerraden over den (#2251).
 //
 // Headerraden har putte-bryteren til venstre og pokalen til høyre. Pokalen går
-// til resultatlista. Under står det store hullnummeret med «av 18», og par og
-// indeks til høyre. Størrelsen på nummeret er temaets (`hole.numberSize`), så
-// sollys kan gjøre det større uten at komponenten vet om det. Raden brytes når
-// nummeret blir for bredt, og da legger par og indeks seg under.
+// til resultatlista, og sollys-bryteren står rett til venstre for den. Under
+// står det store hullnummeret med «av 18», og par og indeks til høyre.
+// Størrelsen på nummeret er temaets (`hole.numberSize`), så sollys kan gjøre
+// det større uten at komponenten vet om det. Raden brytes når nummeret blir
+// for bredt, og da legger par og indeks seg under.
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PokalIcon } from '../icons/Icons';
@@ -18,6 +19,8 @@ export type HoleHeroProps = {
   strokeIndex: number;
   /** Putte-bryteren, når formatet fanger putter. */
   puttsToggle?: ReactNode;
+  /** Står til venstre for pokalen: sollys-bryteren. */
+  headerAccessory?: ReactNode;
   onLeaderboard: () => void;
 };
 
@@ -27,6 +30,7 @@ export function HoleHero({
   par,
   strokeIndex,
   puttsToggle,
+  headerAccessory,
   onLeaderboard,
 }: HoleHeroProps) {
   const { colors, hole } = useTheme();
@@ -34,15 +38,18 @@ export function HoleHero({
     <View style={styles.hero} testID="hole-hero">
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>{puttsToggle}</View>
-        <Pressable
-          onPress={onLeaderboard}
-          style={styles.iconButton}
-          testID="hole-leaderboard"
-          accessibilityRole="button"
-          accessibilityLabel="Vis resultatene"
-        >
-          <PokalIcon color={colors.text} size={22} />
-        </Pressable>
+        <View style={styles.headerRight}>
+          {headerAccessory}
+          <Pressable
+            onPress={onLeaderboard}
+            style={styles.iconButton}
+            testID="hole-leaderboard"
+            accessibilityRole="button"
+            accessibilityLabel="Vis resultatene"
+          >
+            <PokalIcon color={colors.text} size={22} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.numberRow}>
@@ -84,6 +91,7 @@ const styles = StyleSheet.create({
     minHeight: TAP,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   iconButton: {
     width: TAP,
     height: TAP,

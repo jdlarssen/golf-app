@@ -9,7 +9,8 @@
 // #1830: Fraunces/Inter lastes med `useFonts`, og splashen står til BÅDE
 // fontene og sesjons-sjekken er ferdig — ingen font-hopp og ingen
 // spinner-blits ved kaldstart. Font-feil slipper appen videre på systemfonter
-// (aldri heng på splash).
+// (aldri heng på splash). #2252: splashen venter også på sollys-valget, så en
+// hullside i sollys aldri blinker mørk ved åpning.
 //
 // #1942: eier-vakten. Sesjonen alene er ikke nok til å montere stacken — den
 // lokale basen må tilhøre den som logget inn. Vakten (`data/localOwner.ts`)
@@ -35,6 +36,7 @@ import { OwnerGate } from './src/components/OwnerGate';
 import { RootNavigator } from './src/navigation';
 import { Login } from './src/screens/Login';
 import { SessionProvider } from './src/session';
+import { loadSunlight } from './src/lib/sunlight';
 import { supabase } from './src/supabase';
 import { useTheme } from './src/theme';
 
@@ -44,6 +46,7 @@ export default function App() {
   const { colors, ui } = useTheme();
   const [session, setSession] = useState<Session | null>(null);
   const [booting, setBooting] = useState(true);
+  const [sunlightLoaded, setSunlightLoaded] = useState(false);
   const [fontsLoaded, fontsError] = useFonts({
     Fraunces_500Medium,
     Fraunces_600SemiBold,
@@ -67,7 +70,12 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const ready = (fontsLoaded || fontsError != null) && !booting;
+  // Kaster aldri: en lesefeil gir sollys av, og splashen slippes uansett.
+  useEffect(() => {
+    void loadSunlight().finally(() => setSunlightLoaded(true));
+  }, []);
+
+  const ready = (fontsLoaded || fontsError != null) && !booting && sunlightLoaded;
 
   useEffect(() => {
     if (ready) {
