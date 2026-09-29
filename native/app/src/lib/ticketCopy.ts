@@ -52,7 +52,7 @@ export const TICKET_TEXT = {
   topTitle: 'Startbillett',
   /** Del-knappen øverst til høyre (designets `aria-label`). */
   share: 'Del spillet',
-  shareFailed: 'Fikk ikke åpnet delingen.',
+  shareFailed: 'Fikk ikke delt lenka. Prøv igjen.',
   /** Webbens `spectate.shareText`, teksten som følger lenka. */
   shareText: 'Følg turneringen live i Tørny',
 } as const;
