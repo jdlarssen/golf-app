@@ -10,6 +10,7 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 |---|---|---|---|
 | `start-scheduled-games` | 0094, 0146 (apex URL) | a `scheduled` game has `scheduled_tee_off_at` in the last 7 days | `app/api/cron/start-scheduled-games/route.ts` |
 | `finish-pipeline-sweep` | 0170 | a finished non-cup, non-derived game has `finish_pipeline_at is null` | `app/api/cron/finish-pipeline/route.ts` |
+| `delivery-reminder-sweep` (every 5 min) | 0192 | an active, non-derived game has a player with `submitted_at`, `withdrawn_at` and `deliver_reminder_sent_at` all null | `app/api/cron/delivery-reminder/route.ts` |
 
 `/api/cron/product-update-digest` is not pg_cron: it is the one Vercel Cron in `vercel.json` (daily, GET). Both transports send the same `Authorization: Bearer <CRON_SECRET>`.
 
@@ -46,11 +47,22 @@ where status = 'finished' and tournament_id is null and source_game_id is null
 order by ended_at desc limit 20;
 ```
 
-A start within ~2 minutes of tee-off and a tail within ~1 minute of `ended_at` mean the chain works, whatever signals 1 and 2 look like.
+```sql
+-- 3c. Delivery reminder (#2200): when each card was reminded, against its last
+--     hole. Due 15 minutes after the last hole; the sweep runs every 5.
+select gp.game_id, gp.user_id, gp.deliver_reminder_sent_at,
+       (select max(s.updated_at) from public.scores s
+         where s.game_id = gp.game_id and s.user_id = gp.user_id) as last_hole
+from public.game_players gp join public.games g on g.id = gp.game_id
+where g.status = 'active' and gp.deliver_reminder_sent_at is not null
+order by gp.deliver_reminder_sent_at desc limit 20;
+```
+
+A start within ~2 minutes of tee-off and a tail within ~1 minute of `ended_at` mean the chain works, whatever signals 1 and 2 look like. A reminder lands between 15 and 20 minutes after a card's last hole (in the one-ball formats the last hole sits on the captain's rows).
 
 ## Staging has no cron jobs (#2246)
 
-Both jobs POST to a hardcoded prod URL with `cron_secret` from Vault. Only prod has that secret, and staging has no URL cron could reach (the staging app runs locally). 0188 unschedules the jobs wherever `cron_secret` is missing, so staging's `cron.job` is empty.
+Every job POSTs to a hardcoded prod URL with `cron_secret` from Vault. Only prod has that secret, and staging has no URL cron could reach (the staging app runs locally). 0188 unschedules the jobs wherever `cron_secret` is missing, so staging's `cron.job` is empty.
 
 - A scheduled test game on staging starts when someone opens it (the game page's fallback), or when you POST the start route by hand.
 - To test a sweep: run the app locally with your own `CRON_SECRET` and `curl -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/<route>`.
