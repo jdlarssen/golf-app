@@ -1,3 +1,4 @@
+import { SERVER_SCORE_COLUMNS } from './conflict';
 import { currentDeviceUserId } from './currentUser';
 import { mergeServerScores } from './mergeServerScore';
 import { getBrowserClient } from '@/lib/supabase/client';
@@ -41,9 +42,6 @@ export type CatchUpPlan = { kind: 'full' } | { kind: 'delta'; sinceIso: string }
  */
 const states = new Map<string, CatchUpState>();
 
-const SCORE_SELECT =
-  'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at';
-
 export function planCatchUp(state: CatchUpState | undefined, nowMs: number): CatchUpPlan {
   if (!state || state.watermarkIso === null || nowMs - state.lastFullAt >= FULL_CATCH_UP_EVERY_MS) {
     return { kind: 'full' };
@@ -86,7 +84,7 @@ export async function catchUpGameScores(gameId: string): Promise<void> {
     (from, to) => {
       const query = supabase
         .from('scores')
-        .select(SCORE_SELECT)
+        .select(SERVER_SCORE_COLUMNS)
         .eq('game_id', gameId);
       return (plan.kind === 'delta' ? query.gte('updated_at', plan.sinceIso) : query)
         .order('id')

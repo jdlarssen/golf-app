@@ -11,12 +11,10 @@
 // gjennom `mergeServerScores` (samme regel som `mergeServerScore`, alle radene i
 // én transaksjon, #2227), som dropper alt som ikke er strengt nyere. En seed kan
 // derfor aldri kaste et slag spilleren nettopp tastet offline.
+import { SERVER_SCORE_COLUMNS } from '../../../../lib/sync/conflict';
 import { selectAllRows } from '../../../../lib/supabase/selectAllRows';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { mergeServerScores } from './realtime';
-
-const SCORE_SELECT =
-  'game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, updated_at';
 
 /**
  * Sync ned alle synlige scores for spillet. Returnerer antall rader som ble
@@ -28,7 +26,7 @@ export async function seedGameScores(gameId: string): Promise<number> {
     (from, to) =>
       supabase
         .from('scores')
-        .select(SCORE_SELECT)
+        .select(SERVER_SCORE_COLUMNS)
         .eq('game_id', gameId)
         .order('id')
         .range(from, to),
