@@ -127,6 +127,12 @@ describe('resolveScorecardStamp — approval line', () => {
     expect(stamp(players)?.approval).toEqual({ kind: 'marker', name: 'Anders' });
   });
 
+  it('approved: a flight mate without any name is not passed off as the organizer', () => {
+    const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'anders' });
+    players[1] = { ...players[1], name: null, nickname: null };
+    expect(stamp(players)?.approval).toEqual({ kind: 'approved' });
+  });
+
   it('organizer: the approver played in another flight', () => {
     const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'per' });
     expect(stamp(players)?.approval).toEqual({ kind: 'organizer' });
