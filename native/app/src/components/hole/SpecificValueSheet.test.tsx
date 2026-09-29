@@ -29,6 +29,8 @@ describe('SpecificValueSheet', () => {
     expect(
       within(screen.getByTestId('specific-value-backdrop')).queryByTestId('specific-value-9'),
     ).toBeNull();
+    // Kanten er temaets. I lys og mørk er den 1, som før; testen biter først
+    // når sollys (del 2) gir en annen verdi.
     expect(screen.getByTestId('specific-value-9')).toHaveStyle({
       borderWidth: themeFor('light').hole.borderW,
     });
@@ -45,6 +47,11 @@ describe('SpecificValueSheet', () => {
 
     await fireEvent.press(screen.getByRole('button', { name: 'Lukk' }));
     expect(onClose).toHaveBeenCalledTimes(4);
+    // VoiceOver: dobbelttrykk på «Lukk» og tilbake-bevegelsen lukker også.
+    await fireEvent(screen.getByRole('button', { name: 'Lukk' }), 'accessibilityTap');
+    expect(onClose).toHaveBeenCalledTimes(5);
+    await fireEvent(screen.getByTestId('specific-value-modal'), 'accessibilityEscape');
+    expect(onClose).toHaveBeenCalledTimes(6);
 
     await rerender(
       <SpecificValueSheet open par={4} onPick={onPick} onClear={onClear} onClose={onClose} />,

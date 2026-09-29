@@ -47,10 +47,20 @@ export function SpecificValueSheet({
 
   return (
     <Modal transparent visible animationType="none" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <View
+        style={styles.backdrop}
+        testID="specific-value-modal"
+        // VoiceOver holdes inne i arket, og «tilbake»-bevegelsen (to fingre i
+        // Z) lukker det, uansett om fokus står på «Lukk» eller en knapp.
+        accessibilityViewIsModal
+        onAccessibilityEscape={onClose}
+      >
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={onClose}
+          // Et dobbelttrykk med VoiceOver trykker ellers midt på bakgrunnen,
+          // og der ligger arket på en liten telefon.
+          onAccessibilityTap={onClose}
           testID="specific-value-backdrop"
           accessibilityRole="button"
           accessibilityLabel="Lukk"
@@ -58,8 +68,6 @@ export function SpecificValueSheet({
         <View
           style={[styles.sheet, { backgroundColor: colors.surface }]}
           testID="specific-value-sheet"
-          // VoiceOvers «tilbake»-bevegelse (to fingre i Z) lukker arket.
-          onAccessibilityEscape={onClose}
         >
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <Text style={[styles.kicker, { color: colors.muted }]} accessibilityRole="header">
