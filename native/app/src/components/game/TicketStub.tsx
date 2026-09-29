@@ -243,7 +243,9 @@ function ScheduledActions({
         {calendarEvent ? (
           <Pressable
             accessibilityRole="button"
-            style={[ui.buttonSecondary, styles.action]}
+            // Lengst tekst, så litt mer plass: «Legg til i kalender» står da
+            // på én linje på en 390 pt-telefon.
+            style={[ui.buttonSecondary, styles.action, styles.actionWide]}
             onPress={() => void openCalendar(calendarEvent)}
             testID="add-to-calendar"
           >
@@ -348,7 +350,8 @@ const styles = StyleSheet.create({
   result: { flexShrink: 1, fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   actions: { gap: 6 },
   actionRow: { flexDirection: 'row', gap: 10 },
-  action: { flex: 1, paddingHorizontal: 10 },
+  action: { flex: 1, paddingHorizontal: 8, paddingVertical: 8 },
+  actionWide: { flex: 1.4 },
   actionText: { textAlign: 'center' },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
