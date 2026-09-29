@@ -19,7 +19,7 @@ export type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 export const STATUS_LABELS: Record<GameStatus, string> = {
   draft: 'Utkast',
   scheduled: 'Planlagt',
-  active: 'Pågående',
+  active: 'Pågår',
   finished: 'Avsluttet',
 };
 

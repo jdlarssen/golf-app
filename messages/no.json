@@ -473,7 +473,7 @@
   "gameStatus": {
     "draft": "Utkast",
     "scheduled": "Planlagt",
-    "active": "Pågående",
+    "active": "Pågår",
     "finished": "Avsluttet"
   },
   "payment": {
