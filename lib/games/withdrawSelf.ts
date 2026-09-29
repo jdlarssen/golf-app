@@ -5,6 +5,7 @@ import { displayNameForOthers } from '@/lib/users/displayName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { readCaptainTeam, type TeamChild } from '@/lib/games/teamCaptaincy';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 // Selv-frafalls-kjernen (#199 chunk 11, #386 chunk 3 → #1917): ett hjem for
@@ -31,6 +32,16 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 // på sin EGEN rad. Det er med vilje: den vakta er grunnen til at appen ikke får
 // skrive frafallet selv, og til at denne ruta finnes. Vakta skal stå.
 //
+// **Service-role betyr at databasens egne regler ikke slår inn** (#2358). Denne
+// fila speiler dem derfor for de samme radene, og hver skriving filtrerer på
+// regelen i tillegg, så et kappløp mellom lesing og skriving ikke slipper forbi:
+//   - vakt (c) stopper en spiller fra å angre et trekk arrangøren satte, og fra
+//     å skrive over hvem som trakk dem. Her: bare eget trekk angres, og et
+//     trekk som finnes, skrives ikke over.
+//   - `game_registration_requests` har ingen DELETE-policy (0042/0092). En
+//     kapteinsrad slettes aldri herfra: `team_request_id … on delete cascade`
+//     ville tatt hele laget med seg.
+//
 // **Cup-kamper før start avvises** (#1814/#1937). Gaten står HER og ikke i
 // wrapperen: sto den der, ville ruta gått utenom den, og appen kunne slettet en
 // cup-rad før start.
@@ -50,6 +61,13 @@ export type SelfWithdrawError =
   | 'not_registered'
   | 'game_not_found'
   | 'game_locked'
+  /** #2358: angre et trekk arrangøren eller en admin satte. Vakt (c) i 0108. */
+  | 'withdrawn_by_other'
+  /**
+   * #2358: kapteinen har lagkamerater som har takket ja. Kapteinsbindet må
+   * gis videre før kapteinen kan trekke seg (eierens valg).
+   */
+  | 'captain_has_team'
   | 'db_error';
 
 /**
@@ -81,15 +99,30 @@ type GameSnapshot = {
 type PlayerSnapshot = {
   user_id: string;
   team_number: number | null;
+  withdrawn_at: string | null;
+};
+
+type OwnRequest = {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  team_name: string | null;
+  team_request_id: string | null;
+  is_team_captain: boolean;
 };
 
 /**
  * Trekk spilleren selv fra runden.
  *
  * Aktiv runde i et format som kjenner frafall → mykt trekk (`withdrawn_at`
- * settes, raden blir stående, slagene blir liggende). Før start → raden
- * SLETTES. Alt annet (ferdig runde, aktiv runde i et format uten frafall,
- * cup-kamp før start) → `game_locked`.
+ * settes, raden blir stående, slagene blir liggende). Er spilleren alt trukket
+ * (av seg selv eller arrangøren), skrives ingenting (#2358). Før start → raden
+ * SLETTES, med kapteinen som unntak (under). Alt annet (ferdig runde, aktiv
+ * runde i et format uten frafall, cup-kamp før start) → `game_locked`.
+ *
+ * Kaptein før start (#2358, eierens valg): har noen på laget takket ja, nekter
+ * kjernen med `captain_has_team`. Ellers merkes kapteinens påmelding som
+ * trukket (ikke slettet), ubesvarte laginvitasjoner trekkes med, og plassene
+ * lagkameratene ikke har bekreftet fjernes — de får beskjed.
  *
  * Team-deteksjon: var spilleren lagmedlem (har `team_number` OG det finnes
  * andre på samme `team_number` i samme spill), finner vi kapteinen via
@@ -121,7 +154,7 @@ export async function withdrawSelf(
       .maybeSingle<GameSnapshot>(),
     admin
       .from('game_players')
-      .select('user_id, team_number')
+      .select('user_id, team_number, withdrawn_at')
       .eq('game_id', gameId)
       .eq('user_id', userId)
       .maybeSingle<PlayerSnapshot>(),
@@ -154,9 +187,17 @@ export async function withdrawSelf(
     if (!playerRes.data) {
       return { ok: false, error: 'not_registered' };
     }
+    // #2358: alt trukket — av spilleren selv eller av arrangøren. Et nytt
+    // trekk ville skrevet over hvem som trakk dem, og det er nettopp det vakt
+    // (c) nekter en spiller. Intensjonen er oppfylt, så svaret er ok.
+    if (playerRes.data.withdrawn_at != null) {
+      return { ok: true, kept: true };
+    }
     // UPDATE game_players SET withdrawn_at, withdrawn_by_user_id.
     // #712: expectAffected catches 0-row no-op (row vanished between the
     // pre-flight read above and this write — e.g. concurrent admin removal).
+    // #2358: `.is('withdrawn_at', null)` so an organiser's withdrawal that
+    // lands between the read and this write is never overwritten.
     try {
       expectAffected(
         await admin
@@ -167,6 +208,7 @@ export async function withdrawSelf(
           })
           .eq('game_id', gameId)
           .eq('user_id', userId)
+          .is('withdrawn_at', null)
           .select('user_id'),
         'withdrawSelf/active',
       );
@@ -188,6 +230,28 @@ export async function withdrawSelf(
   }
   const me = playerRes.data;
 
+  // Egen påmelding FØR noe skrives: den avgjør om kalleren er kaptein.
+  // Error ≠ absence (#1445): en feilet lesing skal ikke leses som «ingen
+  // påmelding» — da ville en kaptein falt ned i slette-grenen under.
+  const { data: myReq, error: myReqError } = await admin
+    .from('game_registration_requests')
+    .select('id, status, team_name, team_request_id, is_team_captain')
+    .eq('game_id', gameId)
+    .eq('user_id', userId)
+    .maybeSingle<OwnRequest>();
+  if (myReqError) {
+    console.error('[withdrawSelf] own request lookup failed', {
+      gameId,
+      userId,
+      error: myReqError,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+
+  if (myReq?.is_team_captain) {
+    return withdrawCaptainPreStart(admin, game, userId, myReq);
+  }
+
   // Sjekk om brukeren var en team-medlem (ikke kaptein selv) — vi vil ha
   // team-info FØR DELETE slik at vi kan varsle kapteinen etter sletting.
   const teamNumber = me.team_number;
@@ -208,20 +272,9 @@ export async function withdrawSelf(
       teamMatesUserId = mates[0]!.user_id; // bare for å bekrefte at det er flere
     }
 
-    // Finn brukerens egen registration-request-rad for å hente team_name.
-    // Vi bruker den til å slå opp kapteinen.
-    const { data: myReq } = await admin
-      .from('game_registration_requests')
-      .select('team_name, team_request_id, is_team_captain')
-      .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .maybeSingle<{
-        team_name: string | null;
-        team_request_id: string | null;
-        is_team_captain: boolean;
-      }>();
-
-    if (myReq && !myReq.is_team_captain && myReq.team_request_id) {
+    // Kapteinen slås opp via egen påmeldings `team_request_id`. Etter en
+    // overføring av kapteinsbindet peker den på den nye kapteinen.
+    if (myReq && myReq.team_request_id) {
       teamName = myReq.team_name;
       const { data: captainReq } = await admin
         .from('game_registration_requests')
@@ -244,13 +297,16 @@ export async function withdrawSelf(
     return { ok: false, error: 'db_error' };
   }
 
-  // Slett også eventuelle registration-request-rader (cleanup). Best-effort:
-  // 0 rows is normal, an error is logged.
+  // Slett også egen påmelding (cleanup), så gjenpåmelding er åpen. Best-effort:
+  // 0 rows is normal, an error is logged. #2358: `is_team_captain = false` i
+  // filteret — en kapteinsrad slettes aldri her. Den har barn, og kaskaden i
+  // 0042 ville tatt lagkameratenes påmeldinger med seg.
   const { error: requestDeleteError } = await admin
     .from('game_registration_requests')
     .delete()
     .eq('game_id', gameId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('is_team_captain', false);
   if (requestDeleteError) {
     console.error('[withdrawSelf] request cleanup failed', {
       gameId,
@@ -295,11 +351,146 @@ export async function withdrawSelf(
 }
 
 /**
+ * Kapteinen trekker seg før start (#2358, eierens valg).
+ *
+ *   - Noen på laget har takket ja → `captain_has_team`, ingenting skrives.
+ *     Kapteinsbindet gis videre på lagsida først (`transfer_team_captaincy`).
+ *   - Ellers, i denne rekkefølgen:
+ *       1. kapteinens påmelding merkes `withdrawn` (ikke slettet);
+ *       2. ubesvarte laginvitasjoner merkes `withdrawn`, og plassene
+ *          lagkameratene ikke har bekreftet fjernes fra spillerlista, så ingen
+ *          blir stående på et lag uten kaptein;
+ *       3. kapteinens egen plass slettes.
+ *     Feiler steg 1, er ingenting skrevet. Et nytt forsøk etter en feil i steg
+ *     2 eller 3 hopper over steg 1 (raden er alt trukket) og fullfører resten.
+ *   - De som mistet invitasjonen får det eksisterende `team_removed`-varselet.
+ *
+ * Kappløpet der en lagkamerat takker ja i samme øyeblikk er kjent og sjeldent:
+ * plass-slettingen filtrerer på `accepted_at is null`, så en bekreftet plass
+ * står uansett.
+ */
+async function withdrawCaptainPreStart(
+  admin: ReturnType<typeof getAdminClient>,
+  game: GameSnapshot,
+  userId: string,
+  myReq: OwnRequest,
+): Promise<SelfWithdrawResult> {
+  const team = await readCaptainTeam(admin, game.id, myReq.id);
+  if (!team.ok) return { ok: false, error: 'db_error' };
+  if (team.accepted.length > 0) {
+    return { ok: false, error: 'captain_has_team' };
+  }
+
+  const decidedAt = new Date().toISOString();
+
+  // 1. Kapteinens påmelding. 0 rader = noe endret raden mellom lesing og
+  // skriving (felle 2): svar db_error før noe annet er rørt.
+  if (myReq.status !== 'withdrawn') {
+    try {
+      expectAffected(
+        await admin
+          .from('game_registration_requests')
+          .update({
+            status: 'withdrawn',
+            decided_at: decidedAt,
+            decided_by_user_id: userId,
+          })
+          .eq('id', myReq.id)
+          .in('status', ['pending', 'approved'])
+          .select('id'),
+        'withdrawSelf/captain',
+      );
+    } catch (markErr) {
+      console.error('[withdrawSelf] captain request mark failed', markErr);
+      return { ok: false, error: 'db_error' };
+    }
+  }
+
+  // 2. Ubesvarte invitasjoner går med kapteinen.
+  const unanswered: TeamChild[] = team.unanswered;
+  if (unanswered.length > 0) {
+    const { error: rosterError } = await admin
+      .from('game_players')
+      .delete()
+      .eq('game_id', game.id)
+      .in(
+        'user_id',
+        unanswered.map((c) => c.user_id),
+      )
+      .is('accepted_at', null);
+    if (rosterError) {
+      console.error('[withdrawSelf] unconfirmed teammates delete failed', {
+        gameId: game.id,
+        error: rosterError,
+      });
+      return { ok: false, error: 'db_error' };
+    }
+    const { error: invitesError } = await admin
+      .from('game_registration_requests')
+      .update({
+        status: 'withdrawn',
+        decided_at: decidedAt,
+        decided_by_user_id: userId,
+      })
+      .in(
+        'id',
+        unanswered.map((c) => c.id),
+      )
+      .in('status', ['pending', 'approved'])
+      .select('id');
+    if (invitesError) {
+      console.error('[withdrawSelf] team invitations mark failed', {
+        gameId: game.id,
+        error: invitesError,
+      });
+      return { ok: false, error: 'db_error' };
+    }
+  }
+
+  // 3. Kapteinens egen plass.
+  const { error: deleteError } = await admin
+    .from('game_players')
+    .delete()
+    .eq('game_id', game.id)
+    .eq('user_id', userId);
+  if (deleteError) {
+    console.error('[withdrawSelf] captain delete failed', deleteError);
+    return { ok: false, error: 'db_error' };
+  }
+
+  expireGameCache(game.id);
+
+  // Best-effort: de som mistet invitasjonen får vite det. Samme varsel som når
+  // kapteinen fjerner noen fra laget; ingen ny varseltype (eierens valg A).
+  const notified = await Promise.allSettled(
+    unanswered.map((c) =>
+      notify({
+        userId: c.user_id,
+        kind: 'registration_rejected',
+        payload: {
+          game_id: game.id,
+          game_name: game.name,
+          reason_code: 'team_removed',
+        },
+      }),
+    ),
+  );
+  for (const r of notified) {
+    if (r.status === 'rejected') {
+      console.error('[withdrawSelf] team_removed notify failed', r.reason);
+    }
+  }
+
+  return { ok: true, kept: false };
+}
+
+/**
  * Angre eget frafall i en aktiv runde (#386 chunk 3).
  *
  * Nullstiller `withdrawn_at` + `withdrawn_by_user_id` hvis runden er `active`
- * og spilleren faktisk er trukket. Samme gate som {@link withdrawSelf} sin
- * aktiv-gren. Arrangørens angre-på-andres bor i admin-server-action-en.
+ * og spilleren trakk seg selv. Samme gate som {@link withdrawSelf} sin
+ * aktiv-gren. Arrangørens angre-på-andres bor i admin-server-action-en; et
+ * trekk arrangøren satte gir `withdrawn_by_other` her (#2358).
  *
  * `kept: true` alltid ved suksess: det finnes ingen gren her som sletter en rad.
  */
@@ -321,10 +512,14 @@ export async function undoSelfWithdraw(
       .maybeSingle<Pick<GameSnapshot, 'id' | 'status' | 'game_mode'>>(),
     admin
       .from('game_players')
-      .select('user_id, withdrawn_at')
+      .select('user_id, withdrawn_at, withdrawn_by_user_id')
       .eq('game_id', gameId)
       .eq('user_id', userId)
-      .maybeSingle<{ user_id: string; withdrawn_at: string | null }>(),
+      .maybeSingle<{
+        user_id: string;
+        withdrawn_at: string | null;
+        withdrawn_by_user_id: string | null;
+      }>(),
   ]);
 
   if (!gameRes.data) {
@@ -340,8 +535,18 @@ export async function undoSelfWithdraw(
     return { ok: false, error: 'not_registered' };
   }
 
+  // #2358: bare den som trakk seg selv kan angre. Satte arrangøren eller en
+  // admin trekket (eller er det ukjent hvem), er det deres å angre — vakt (c)
+  // i `guard_game_players_self_update` (0108 → 0191) nekter spilleren det
+  // samme ved en direkte skriving.
+  if (playerRes.data.withdrawn_by_user_id !== userId) {
+    return { ok: false, error: 'withdrawn_by_other' };
+  }
+
   // #712: expectAffected catches 0-row no-op (row vanished or withdrawn_at
-  // already null — e.g. concurrent undo by admin).
+  // already null — e.g. concurrent undo by admin). #2358: the write is also
+  // filtered on the caller as the one who withdrew, so an organiser's
+  // withdrawal landing between the read and this write is never cleared.
   try {
     expectAffected(
       await admin
@@ -349,6 +554,7 @@ export async function undoSelfWithdraw(
         .update({ withdrawn_at: null, withdrawn_by_user_id: null })
         .eq('game_id', gameId)
         .eq('user_id', userId)
+        .eq('withdrawn_by_user_id', userId)
         .select('user_id'),
       'undoSelfWithdraw',
     );

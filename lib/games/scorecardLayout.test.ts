@@ -77,6 +77,7 @@ function player(
     approved_at: null,
     rejection_reason: null,
     withdrawn_at: null,
+    withdrawn_by_user_id: null,
     accepted_at: null,
     paid_at: null,
     users: { name: user_id, nickname: null, is_guest: false },

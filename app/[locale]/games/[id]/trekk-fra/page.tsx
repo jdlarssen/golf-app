@@ -15,7 +15,10 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { captainWithdrawalState } from '@/lib/games/teamCaptaincy';
 import { submitWithdraw } from './actions';
+import { CaptainHasTeamNotice } from './CaptainHasTeamNotice';
 
 /**
  * Dedikert konfirmasjons-side for self-withdraw fra et spill (#199 chunk 11).
@@ -30,6 +33,8 @@ import { submitWithdraw } from './actions';
  *   - Spillet må eksistere.
  *   - Bruker må være påmeldt (game_players-rad finnes).
  *   - Spillet må være pre-active (draft / scheduled).
+ *   - #2358: en kaptein med lagkamerater som har takket ja får ingen
+ *     trekk-knapp, men en lenke til lagsida for å gi kapteinsbindet videre.
  *
  * Hvis noen av disse failer, redirecter vi tilbake til `/games/[id]` med
  * en error-param — fronten viser ikke en stillstands-side fordi
@@ -42,6 +47,7 @@ type SearchParams = Promise<{ error?: string | string[] }>;
 type GameRow = {
   id: string;
   name: string;
+  short_id: string;
   status: GameStatus;
   game_mode: GameMode;
   scheduled_tee_off_at: string | null;
@@ -72,7 +78,7 @@ export default async function TrekkFraPage({
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, game_mode, scheduled_tee_off_at, tournament_id, courses(name)')
+    .select('id, name, short_id, status, game_mode, scheduled_tee_off_at, tournament_id, courses(name)')
     .eq('id', id)
     .maybeSingle<GameRow>();
 
@@ -111,6 +117,13 @@ export default async function TrekkFraPage({
   if (!isPreStart && !isActiveWithdrawable) {
     redirect({ href: `/games/${id}` as string, locale });
   }
+
+  // #2358: samme regel som kjernen (`lib/games/teamCaptaincy.ts`). Laget er
+  // lest med tjenesteklienten: lagkameratenes påmeldinger er ikke synlige for
+  // kapteinen under RLS.
+  const captain = isPreStart
+    ? await captainWithdrawalState(getAdminClient(), game.id, userId)
+    : null;
 
   const teeOffDate = game.scheduled_tee_off_at
     ? formatTeeOffDateLocale(new Date(game.scheduled_tee_off_at), locale)
@@ -166,6 +179,9 @@ export default async function TrekkFraPage({
               <li>{t('preStartItems.registrationDeleted')}</li>
               <li>{t('preStartItems.requestDeleted')}</li>
               <li>{t('preStartItems.teamNotified')}</li>
+              {captain && captain.unanswered > 0 && (
+                <li>{t('preStartItems.unansweredInvitesWithdrawn')}</li>
+              )}
             </ul>
             <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
               {t('preStartNote')}
@@ -175,20 +191,24 @@ export default async function TrekkFraPage({
       </div>
 
       <div className="mt-6 flex flex-col gap-2.5">
-        <form action={submitWithdraw} data-testid="withdraw-form">
-          <input type="hidden" name="gameId" value={game.id} />
-          <SubmitButton
-            className="w-full"
-            data-testid="withdraw-submit"
-            pendingLabel={t('withdrawPending')}
-            style={{
-              background: 'var(--danger-deep)',
-              borderColor: 'var(--danger-deep)',
-            }}
-          >
-            {t('withdrawButton')}
-          </SubmitButton>
-        </form>
+        {captain?.blocked ? (
+          <CaptainHasTeamNotice shortId={game.short_id} />
+        ) : (
+          <form action={submitWithdraw} data-testid="withdraw-form">
+            <input type="hidden" name="gameId" value={game.id} />
+            <SubmitButton
+              className="w-full"
+              data-testid="withdraw-submit"
+              pendingLabel={t('withdrawPending')}
+              style={{
+                background: 'var(--danger-deep)',
+                borderColor: 'var(--danger-deep)',
+              }}
+            >
+              {t('withdrawButton')}
+            </SubmitButton>
+          </form>
+        )}
         <SmartLink
           href={`/games/${id}`}
           className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"

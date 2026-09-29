@@ -41,7 +41,22 @@ let db: {
   status: string;
   gameMode: string;
   /** Radene i `game_players`, nøkkel = user_id. */
-  players: Record<string, { withdrawn_at: string | null }>;
+  players: Record<
+    string,
+    { withdrawn_at: string | null; withdrawn_by_user_id?: string | null }
+  >;
+  /** Påmeldingene, nøkkel = user_id (#2358: kapteinen før start). */
+  requests: Record<
+    string,
+    {
+      id: string;
+      status: string;
+      is_team_captain: boolean;
+      team_request_id: string | null;
+      team_name: string | null;
+      decided_by_user_id: string | null;
+    }
+  >;
   /** Settes for å bevise at et kast fra kjernen blir 500, ikke en halv 200. */
   coreThrows: boolean;
 };
@@ -72,14 +87,43 @@ function respond(op: QueryOp): QueryResponse {
     if (op.kind === 'update') {
       const row = db.players[userId];
       if (!row) return { data: [] };
+      // Filtrene kjernen legger på skrivingen (#2358) håndheves her som i
+      // Postgres: en rad som ikke matcher, gir 0 rader.
+      const byFilter = op.filters.find((f) => f.column === 'withdrawn_by_user_id');
+      if (byFilter && (row.withdrawn_by_user_id ?? null) !== byFilter.value) {
+        return { data: [] };
+      }
+      const nullFilter = op.filters.find(
+        (f) => f.op === 'is' && f.column === 'withdrawn_at',
+      );
+      if (nullFilter && row.withdrawn_at !== null) return { data: [] };
       // Skrivingen utføres, så neste lesing ser resultatet — det er dette som
       // gjør «POST satte feltet på KALLERENS rad» til et ekte bevis.
       row.withdrawn_at =
         (op.payload?.withdrawn_at as string | null) ?? null;
+      row.withdrawn_by_user_id =
+        (op.payload?.withdrawn_by_user_id as string | null) ?? null;
       return { data: [{ user_id: userId }] };
     }
+    if (op.kind === 'select' && !op.filters.some((f) => f.column === 'user_id' && f.op === 'eq')) {
+      // Lagkameratenes plasser — ingen i disse casene.
+      return { data: [] };
+    }
     const row = db.players[userId];
-    return { data: row ? { user_id: userId, ...row } : null };
+    return { data: row ? { user_id: userId, team_number: 1, ...row } : null };
+  }
+
+  if (op.table === 'game_registration_requests' && op.kind === 'select') {
+    const parent = op.filters.find((f) => f.column === 'team_request_id');
+    if (parent) {
+      return {
+        data: Object.entries(db.requests)
+          .filter(([, r]) => r.team_request_id === parent.value)
+          .map(([userId, r]) => ({ ...r, user_id: userId })),
+      };
+    }
+    const row = db.requests[String(value('user_id'))];
+    return { data: row ?? null };
   }
 
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
@@ -139,6 +183,7 @@ beforeEach(() => {
     status: 'active',
     gameMode: 'best_ball',
     players: { [PLAYER]: { withdrawn_at: null }, [OTHER]: { withdrawn_at: null } },
+    requests: {},
     coreThrows: false,
   };
 });
@@ -231,7 +276,10 @@ describe('handlingen', () => {
   });
 
   it('DELETE nuller feltet igjen', async () => {
-    db.players[PLAYER] = { withdrawn_at: '2026-06-01T10:00:00.000Z' };
+    db.players[PLAYER] = {
+      withdrawn_at: '2026-06-01T10:00:00.000Z',
+      withdrawn_by_user_id: PLAYER,
+    };
 
     const res = await DELETE(
       request('DELETE', { token: `Bearer ${PLAYER_TOKEN}` }),
@@ -278,6 +326,73 @@ describe('handlingen', () => {
       const userFilter = op.filters.find((f) => f.column === 'user_id');
       if (userFilter) expect(userFilter.value).toBe(PLAYER);
     }
+  });
+
+  it('DELETE på et trekk arrangøren satte: 409 withdrawn_by_other, trekket står', async () => {
+    db.players[PLAYER] = {
+      withdrawn_at: '2026-06-01T10:00:00.000Z',
+      withdrawn_by_user_id: OTHER,
+    };
+
+    const res = await DELETE(
+      request('DELETE', { token: `Bearer ${PLAYER_TOKEN}` }),
+      ctx(),
+    );
+
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ error: 'withdrawn_by_other' });
+    expect(db.players[PLAYER]).toEqual({
+      withdrawn_at: '2026-06-01T10:00:00.000Z',
+      withdrawn_by_user_id: OTHER,
+    });
+  });
+
+  it('POST når arrangøren alt har trukket deg: 200, hvem som trakk står', async () => {
+    db.players[PLAYER] = {
+      withdrawn_at: '2026-06-01T10:00:00.000Z',
+      withdrawn_by_user_id: OTHER,
+    };
+
+    const res = await POST(
+      request('POST', { token: `Bearer ${PLAYER_TOKEN}` }),
+      ctx(),
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.players[PLAYER]!.withdrawn_by_user_id).toBe(OTHER);
+    expect(fake.ops.filter((op) => op.kind === 'update')).toEqual([]);
+  });
+
+  it('POST før start fra en kaptein med et lag som har takket ja: 409 captain_has_team', async () => {
+    db.status = 'scheduled';
+    db.requests = {
+      [PLAYER]: {
+        id: 'req-captain',
+        status: 'approved',
+        is_team_captain: true,
+        team_request_id: null,
+        team_name: 'Bjørka',
+        decided_by_user_id: PLAYER,
+      },
+      [OTHER]: {
+        id: 'req-mate',
+        status: 'approved',
+        is_team_captain: false,
+        team_request_id: 'req-captain',
+        team_name: 'Bjørka',
+        // Sa ja selv før laget kom på lista.
+        decided_by_user_id: OTHER,
+      },
+    };
+
+    const res = await POST(
+      request('POST', { token: `Bearer ${PLAYER_TOKEN}` }),
+      ctx(),
+    );
+
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ error: 'captain_has_team' });
+    expect(fake.ops.filter((op) => op.kind !== 'select')).toEqual([]);
   });
 
   it('et kast fra kjernen blir 500 med en ugjennomsiktig kode', async () => {

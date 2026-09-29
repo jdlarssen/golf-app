@@ -20,7 +20,6 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
-import { SubmitButton } from '@/components/ui/SubmitButton';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
@@ -52,7 +51,7 @@ import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
 import { GAME_HOME_SELECT, type GameRow } from './gameHomeSelect';
-import { submitUndoWithdraw } from '../trekk-fra/actions';
+import { WithdrawnBanner } from './WithdrawnBanner';
 import {
   isMatchplayMode,
   computeSideShortfall,
@@ -1135,28 +1134,12 @@ export default async function GameHomePage({
                 </LinkButton>
               </div>
             ) : me.withdrawn_at ? (
-              // WD — viser angre-banner i stedet for scorekort-CTA (#386).
-              <div
-                className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4"
-                data-testid="withdrawn-banner"
-              >
-                <p className="mb-3 font-sans text-[14px] font-medium text-text">
-                  {t('withdrawnHeading')}
-                </p>
-                <p className="mb-4 font-sans text-[12px] leading-relaxed text-muted">
-                  {t('withdrawnBody')}
-                </p>
-                <form action={submitUndoWithdraw}>
-                  <input type="hidden" name="gameId" value={id} />
-                  <SubmitButton
-                    className="w-full"
-                    data-testid="undo-withdraw-submit"
-                    pendingLabel={t('undoWithdrawPending')}
-                  >
-                    {t('undoWithdraw')}
-                  </SubmitButton>
-                </form>
-              </div>
+              // WD — viser banneret i stedet for scorekort-CTA (#386). Angre
+              // bare for den som trakk seg selv (#2358).
+              <WithdrawnBanner
+                gameId={id}
+                selfWithdrawn={me.withdrawn_by_user_id === userId}
+              />
             ) : (
               <Suspense fallback={<PrimaryCtaSkeleton />}>
                 <PrimaryCtaSection

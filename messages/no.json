@@ -1894,6 +1894,8 @@
       "derivedNoticeUnknownHost": "en annen runde",
       "withdrawnHeading": "Du har trukket deg fra spillet",
       "withdrawnBody": "Scorene dine teller ikke i rangeringen. Du kan angre så lenge spillet er aktivt.",
+      "withdrawnByOrganiserHeading": "Arrangøren har trukket deg fra spillet",
+      "withdrawnByOrganiserBody": "Scorene dine teller ikke i rangeringen. Er det feil, si fra til arrangøren.",
       "undoWithdraw": "Angre",
       "undoWithdrawPending": "Angrer …",
       "leaderboardButton": "🏆 Se leaderboard →",
@@ -2114,8 +2116,11 @@
       "kicker": "Trekk deg",
       "heading": "Trekk deg fra «{name}»?",
       "errors": {
-        "withdraw_failed": "Klarte ikke å trekke deg fra spillet. Prøv igjen, eller si fra til arrangøren."
+        "withdraw_failed": "Klarte ikke å trekke deg fra spillet. Prøv igjen, eller si fra til arrangøren.",
+        "captain_has_team": "Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en lagkamerat før du trekker deg."
       },
+      "captainHasTeamBody": "Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en av dem på lagsiden først. Da kan du trekke deg.",
+      "captainHasTeamLink": "Til lagsiden",
       "warningActive": "Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.",
       "warningPreStart": "Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.",
       "whatHappensLabel": "Dette skjer",
@@ -2128,7 +2133,8 @@
       "preStartItems": {
         "registrationDeleted": "Påmeldingen din slettes",
         "requestDeleted": "Eventuell forespørsel om å bli med slettes også",
-        "teamNotified": "Lag-medlemmer og kaptein får varsel hvis du var på lag"
+        "teamNotified": "Lag-medlemmer og kaptein får varsel hvis du var på lag",
+        "unansweredInvitesWithdrawn": "Lagkamerater som ikke har svart, mister invitasjonen og får beskjed"
       },
       "preStartNote": "Hvis du ombestemmer deg, kan du melde deg på igjen så lenge påmelding fortsatt er åpen.",
       "withdrawButton": "Trekk meg fra spillet",
