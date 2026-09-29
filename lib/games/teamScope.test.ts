@@ -6,6 +6,7 @@ import {
   unassignedTeamPlayers,
   needsTeamAssignment,
   suggestTeamSplit,
+  flightForTeam,
   teamBuckets,
   type TeamPlayer,
 } from './teamScope';
@@ -159,22 +160,62 @@ describe('needsTeamAssignment', () => {
   });
 });
 
+// ─── flightForTeam (#2290) ───────────────────────────────────────────────────
+
+describe('flightForTeam', () => {
+  it('Texas: flighten blir det nye laget, uansett gammel flight', () => {
+    const players = [p('u1', 1, 1), p('u2', 1, 1), p('u3', 2, 2)];
+    expect(flightForTeam('texas_scramble', players, 'u1', 2)).toBe(2);
+    expect(flightForTeam('texas_scramble', [p('u1', null, 7)], 'u1', 2)).toBe(2);
+  });
+
+  it('par-stableford og de andre lagformatene: flight = lag', () => {
+    const players = [p('u1', 1, 1), p('u2', 2, 2)];
+    for (const mode of ['stableford', 'ambrose', 'florida_scramble', 'shamble', 'patsome'] as const) {
+      expect(flightForTeam(mode, players, 'u1', 2)).toBe(2);
+    }
+  });
+
+  it('best ball: til et lag der partneren har flight 1 → 1 (paret holdes samlet)', () => {
+    const players = [p('u1', 1, 3), p('u2', 2, 1)];
+    expect(flightForTeam('best_ball', players, 'u1', 2)).toBe(1);
+  });
+
+  it('best ball: tomt lag, egen flight 7 → 7', () => {
+    expect(flightForTeam('best_ball', [p('u1', null, 7)], 'u1', 3)).toBe(7);
+  });
+
+  it('best ball: tomt lag uten flight → lagnummeret', () => {
+    expect(flightForTeam('best_ball', [p('u1')], 'u1', 3)).toBe(3);
+  });
+
+  it('best ball: en trukket lagkamerat holder ikke flighten', () => {
+    const players = [p('u1'), withdrawn('u2', 2, 5)];
+    expect(flightForTeam('best_ball', players, 'u1', 2)).toBe(2);
+  });
+
+  it('ingen spillere i lista → lagnummeret', () => {
+    expect(flightForTeam('best_ball', [], 'u1', 4)).toBe(4);
+    expect(flightForTeam('texas_scramble', [], 'u1', 4)).toBe(4);
+  });
+});
+
 // ─── suggestTeamSplit ────────────────────────────────────────────────────────
 
 describe('suggestTeamSplit', () => {
   it('tom liste → tomt forslag', () => {
-    expect(suggestTeamSplit([], 2)).toEqual([]);
+    expect(suggestTeamSplit('best_ball', [], 2)).toEqual([]);
   });
 
   it('én spiller → lag 1, flight 1', () => {
-    expect(suggestTeamSplit([p('u1')], 2)).toEqual([
+    expect(suggestTeamSplit('best_ball', [p('u1')], 2)).toEqual([
       { user_id: 'u1', team_number: 1, flight_number: 1 },
     ]);
   });
 
   it('4 utildelte à 2 → lag 1, 1, 2, 2 (flight = lag)', () => {
     const players = [p('u1'), p('u2'), p('u3'), p('u4')];
-    expect(suggestTeamSplit(players, 2)).toEqual([
+    expect(suggestTeamSplit('best_ball', players, 2)).toEqual([
       { user_id: 'u1', team_number: 1, flight_number: 1 },
       { user_id: 'u2', team_number: 1, flight_number: 1 },
       { user_id: 'u3', team_number: 2, flight_number: 2 },
@@ -184,19 +225,21 @@ describe('suggestTeamSplit', () => {
 
   it('5 utildelte à 2 → siste lag blir delvis (lag 3 med én spiller)', () => {
     const players = [p('u1'), p('u2'), p('u3'), p('u4'), p('u5')];
-    expect(suggestTeamSplit(players, 2).map((a) => a.team_number)).toEqual([1, 1, 2, 2, 3]);
+    expect(suggestTeamSplit('best_ball', players, 2).map((a) => a.team_number)).toEqual([
+      1, 1, 2, 2, 3,
+    ]);
   });
 
   it('lagstørrelse 4 → fire per lag', () => {
     const players = Array.from({ length: 6 }, (_, i) => p(`u${i + 1}`));
-    expect(suggestTeamSplit(players, 4).map((a) => a.team_number)).toEqual([
-      1, 1, 1, 1, 2, 2,
-    ]);
+    expect(
+      suggestTeamSplit('texas_scramble', players, 4).map((a) => a.team_number),
+    ).toEqual([1, 1, 1, 1, 2, 2]);
   });
 
   it('foreslår kun for de utildelte — rører aldri spillere som har lag', () => {
     const players = [p('u1', 1, 1), p('u2', 1, 1), p('u3'), p('u4')];
-    const result = suggestTeamSplit(players, 2);
+    const result = suggestTeamSplit('best_ball', players, 2);
     expect(result.map((a) => a.user_id)).toEqual(['u3', 'u4']);
   });
 
@@ -211,24 +254,44 @@ describe('suggestTeamSplit', () => {
       p('u5'),
       p('u6'),
     ];
-    expect(suggestTeamSplit(players, 2)).toEqual([
+    expect(suggestTeamSplit('best_ball', players, 2)).toEqual([
       { user_id: 'u4', team_number: 3, flight_number: 3 },
       { user_id: 'u5', team_number: 2, flight_number: 2 },
       { user_id: 'u6', team_number: 2, flight_number: 2 },
     ]);
   });
 
-  it('beholder eksisterende flight_number når spilleren allerede har flight', () => {
+  it('best ball: holder paret i samme flight — partneren får flighten den første hadde (#2290)', () => {
     const players = [p('u1', null, 7), p('u2')];
-    expect(suggestTeamSplit(players, 2)).toEqual([
+    expect(suggestTeamSplit('best_ball', players, 2)).toEqual([
       { user_id: 'u1', team_number: 1, flight_number: 7 },
+      { user_id: 'u2', team_number: 1, flight_number: 7 },
+    ]);
+  });
+
+  it('best ball: den nye spilleren får flighten til partneren som alt står i laget', () => {
+    // Lag 1 og 2 er gruppert i flight 1; lag 2 har én ledig plass.
+    const players = [p('u1', 1, 1), p('u2', 1, 1), p('u3', 2, 1), p('u4')];
+    expect(suggestTeamSplit('best_ball', players, 2)).toEqual([
+      { user_id: 'u4', team_number: 2, flight_number: 1 },
+    ]);
+  });
+
+  it('Texas: flight = lag, også når spilleren hadde en annen flight fra før (#2290)', () => {
+    // «Foreslå inndeling» kjørte før lagene fantes, og ga flighter etter
+    // påmeldingsrekkefølge. Laget vinner.
+    const players = [p('u1', null, 3), p('u2', null, 3), p('u3', null, 1), p('u4')];
+    expect(suggestTeamSplit('texas_scramble', players, 2)).toEqual([
+      { user_id: 'u1', team_number: 1, flight_number: 1 },
       { user_id: 'u2', team_number: 1, flight_number: 1 },
+      { user_id: 'u3', team_number: 2, flight_number: 2 },
+      { user_id: 'u4', team_number: 2, flight_number: 2 },
     ]);
   });
 
   it('hopper over trukkede spillere — de får ikke lag og teller ikke mot kapasitet', () => {
     const players = [withdrawn('u1'), p('u2'), p('u3')];
-    expect(suggestTeamSplit(players, 2)).toEqual([
+    expect(suggestTeamSplit('best_ball', players, 2)).toEqual([
       { user_id: 'u2', team_number: 1, flight_number: 1 },
       { user_id: 'u3', team_number: 1, flight_number: 1 },
     ]);
@@ -236,7 +299,9 @@ describe('suggestTeamSplit', () => {
 
   it('ugyldig lagstørrelse faller tilbake til 1 (ett lag per spiller)', () => {
     const players = [p('u1'), p('u2'), p('u3')];
-    expect(suggestTeamSplit(players, 0).map((a) => a.team_number)).toEqual([1, 2, 3]);
+    expect(suggestTeamSplit('best_ball', players, 0).map((a) => a.team_number)).toEqual([
+      1, 2, 3,
+    ]);
   });
 });
 

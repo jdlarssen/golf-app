@@ -123,10 +123,13 @@ export function needsTeamAssignment(
  * Rekkefølgen på `players` er fordelingsrekkefølgen — kallsteder sorterer på
  * `accepted_at ASC` (påmeldingsrekkefølge), som `flightScope.suggestFlightSplit`.
  *
- * `flight_number` beholdes hvis spilleren allerede har en; ellers settes den lik
- * lagnummeret. CHECK-en krever at den er satt så snart laget er det.
+ * `flight_number` settes med {@link flightForTeam} etter hvert tildelt lag, så
+ * forslaget følger samme regel som et manuelt lagbytte: i best ball får nummer
+ * to i paret partnerens flight, i de andre lag-formatene er flighten laget.
+ * CHECK-en krever at flighten er satt så snart laget er det.
  */
 export function suggestTeamSplit(
+  mode: GameMode,
   players: TeamPlayer[],
   teamSize: number,
 ): TeamAssignment[] {
@@ -142,18 +145,52 @@ export function suggestTeamSplit(
     }
   }
 
+  // The roster as it stands after each assignment, so the next player in the
+  // same team sees their partner.
+  const roster: TeamPlayer[] = players.map((p) => ({ ...p }));
   const assignments: TeamAssignment[] = [];
   for (const p of active) {
     if (p.team_number != null) continue;
     const team = nextTeamWithSpace(counts, size);
     counts.set(team, (counts.get(team) ?? 0) + 1);
-    assignments.push({
-      user_id: p.user_id,
-      team_number: team,
-      flight_number: p.flight_number ?? team,
-    });
+    const flight = flightForTeam(mode, roster, p.user_id, team);
+    const row = roster.find((r) => r.user_id === p.user_id);
+    if (row) {
+      row.team_number = team;
+      row.flight_number = flight;
+    }
+    assignments.push({ user_id: p.user_id, team_number: team, flight_number: flight });
   }
   return assignments;
+}
+
+/**
+ * The flight a player gets when joining or switching to `targetTeam` (#2290).
+ * In the team formats the flight follows the team and is never carried over
+ * from the player's old flight:
+ *
+ *   • `best_ball`: a flight groups whole pairs. The player gets the flight of
+ *     an active teammate in `targetTeam`, so the pair stays together. With no
+ *     teammate the player keeps their own flight, or gets the team number when
+ *     they have none.
+ *   • Every other format: `targetTeam`, as the validators in `gamePayload.ts`
+ *     set it.
+ *
+ * Shared by the web Lag section, «Foreslå laginndeling» and the app.
+ */
+export function flightForTeam(
+  mode: GameMode,
+  players: TeamPlayer[],
+  userId: string,
+  targetTeam: number,
+): number {
+  if (mode !== 'best_ball') return targetTeam;
+  const teammate = activePlayers(players).find(
+    (p) =>
+      p.user_id !== userId && p.team_number === targetTeam && p.flight_number != null,
+  );
+  if (teammate?.flight_number != null) return teammate.flight_number;
+  return players.find((p) => p.user_id === userId)?.flight_number ?? targetTeam;
 }
 
 /**

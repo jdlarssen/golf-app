@@ -10,11 +10,12 @@ import {
   canApproveScorecardFor,
   pendingApprovalsFor,
   eligibleForFlightAssignment,
+  flightIsFreeGrouping,
   organizerApprovalRow,
   type FlightPlayer,
   type OrganizerApprovalRow,
 } from './flightScope';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 
 // Helper: active player with flight
 function p(
@@ -627,6 +628,58 @@ describe('pendingApprovalsFor', () => {
   });
 });
 
+// ─── flightIsFreeGrouping (#2290) ────────────────────────────────────────────
+
+describe('flightIsFreeGrouping', () => {
+  // Kartet er porten: en ny GameMode uten rad gir rød tsc. Lagstørrelsen er den
+  // formatet faktisk spilles med, og svaret er om flighten er en fri gruppering
+  // (solo) eller bundet til laget/siden.
+  const EXPECTED = {
+    solo_strokeplay: [1, true],
+    stableford: [1, true],
+    modified_stableford: [1, true],
+    skins: [1, true],
+    nassau: [1, true],
+    bingo_bango_bongo: [1, true],
+    nines: [1, true],
+    round_robin: [1, true],
+    acey_deucey: [1, true],
+    wolf: [1, false],
+    best_ball: [2, false],
+    texas_scramble: [4, false],
+    ambrose: [4, false],
+    florida_scramble: [4, false],
+    shamble: [4, false],
+    patsome: [2, false],
+    singles_matchplay: [1, false],
+    fourball_matchplay: [2, false],
+    foursomes_matchplay: [2, false],
+    greensome_matchplay: [2, false],
+    chapman_matchplay: [2, false],
+    gruesome_matchplay: [2, false],
+  } as const satisfies Record<GameMode, readonly [number, boolean]>;
+
+  it('dekker alle GameMode-verdiene', () => {
+    expect(Object.keys(EXPECTED).sort()).toEqual(Object.keys(MODE_LABELS).sort());
+  });
+
+  it.each(Object.entries(EXPECTED) as [GameMode, readonly [number, boolean]][])(
+    '%s → %j',
+    (mode, [teamSize, expected]) => {
+      expect(flightIsFreeGrouping(mode, teamSize)).toBe(expected);
+    },
+  );
+
+  it('par-stableford (team_size 2) er lag, ikke fri gruppering', () => {
+    expect(flightIsFreeGrouping('stableford', 2)).toBe(false);
+    expect(flightIsFreeGrouping('modified_stableford', 2)).toBe(false);
+  });
+
+  it('ukjent format under kjøring → false (lukket)', () => {
+    expect(flightIsFreeGrouping('ukjent' as GameMode, 1)).toBe(false);
+  });
+});
+
 // ─── eligibleForFlightAssignment ─────────────────────────────────────────────
 
 describe('eligibleForFlightAssignment', () => {
@@ -635,57 +688,79 @@ describe('eligibleForFlightAssignment', () => {
   const wolf: GameMode = 'wolf';
   const singles: GameMode = 'singles_matchplay';
 
-  it.each<[string, GameMode, FlightPlayer[], boolean]>([
+  /** `n` aktive spillere fordelt fire og fire, slik lagene står i flighten sin. */
+  const many = (n: number) =>
+    Array.from({ length: n }, (_, i) => p(`u${i + 1}`, Math.floor(i / 4) + 1));
+
+  it.each<[string, GameMode, number, FlightPlayer[], boolean]>([
     [
       '5 aktive skins-spillere → eligible',
       skins,
+      1,
       Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`)),
       true,
     ],
     [
-      '8 aktive stableford-spillere → eligible',
+      '8 aktive solo-stableford-spillere → eligible',
       stableford,
+      1,
       Array.from({ length: 8 }, (_, i) => p(`u${i + 1}`)),
       true,
     ],
     [
       '4 aktive spillere → ikke eligible (single-flight)',
       skins,
+      1,
       [p('u1'), p('u2'), p('u3'), p('u4')],
       false,
     ],
     [
       '3 aktive spillere → ikke eligible (single-flight)',
       stableford,
+      1,
       [p('u1'), p('u2'), p('u3')],
       false,
     ],
     [
       'wolf med 5 spillere → ikke eligible (wolf = alltid én gruppe)',
       wolf,
+      1,
       Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`)),
       false,
     ],
     [
       'singles matchplay 2 spillere → ikke eligible (single-flight)',
       singles,
+      1,
       [p('u1', 1), p('u2', 2)],
       false,
     ],
     [
       'trukkede teller ikke: 6 totalt, 2 trukkede → 4 aktive → ikke eligible',
       skins,
+      1,
       [p('u1'), p('u2'), p('u3'), p('u4'), withdrawn('u5'), withdrawn('u6')],
       false,
     ],
     [
       'trukkede teller ikke: 6 totalt, 1 trukket → 5 aktive → eligible',
       skins,
+      1,
       [p('u1'), p('u2'), p('u3'), p('u4'), p('u5'), withdrawn('u6')],
       true,
     ],
-  ])('%s', (_, mode, players, expected) => {
-    expect(eligibleForFlightAssignment(mode, players)).toBe(expected);
+    // #2290: i lagformatene er flighten laget — ingen fri inndeling, uansett
+    // hvor mange aktive spillere påmeldingen har gitt.
+    ['Texas à 4 med 12 aktive → ikke eligible (flight = lag)', 'texas_scramble', 4, many(12), false],
+    ['Ambrose à 4 med 8 aktive → ikke eligible', 'ambrose', 4, many(8), false],
+    ['Florida à 4 med 8 aktive → ikke eligible', 'florida_scramble', 4, many(8), false],
+    ['shamble à 4 med 8 aktive → ikke eligible', 'shamble', 4, many(8), false],
+    ['patsome à 2 med 8 aktive → ikke eligible', 'patsome', 2, many(8), false],
+    ['best ball à 2 med 8 aktive → ikke eligible (flighten holder hele par)', 'best_ball', 2, many(8), false],
+    ['par-stableford (team_size 2) med 8 aktive → ikke eligible', stableford, 2, many(8), false],
+    ['singles matchplay med 8 aktive → ikke eligible (formatvakta, ikke antallet)', singles, 1, many(8), false],
+  ])('%s', (_, mode, teamSize, players, expected) => {
+    expect(eligibleForFlightAssignment(mode, teamSize, players)).toBe(expected);
   });
 });
 

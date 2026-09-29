@@ -12,7 +12,7 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  *
  * Spørsmålsrekkefølge (adminMock FIFO):
  *   adminMock[0]: game_players.select(user_id, withdrawn_at, flight_number, team_number).eq.eq.maybeSingle
- *   adminMock[1]: games.select(status).eq.maybeSingle
+ *   adminMock[1]: games.select(status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is    (before-count)
  *   adminMock[3]: game_players.update({flight_number}).eq.eq
  *   adminMock[4]: game_players.select({count}).eq.eq.is        (after-count, race-guard)
@@ -36,6 +36,13 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 const GAME_ID = 'game-3333-3333-3333-333333333333';
 const USER_ID = 'user-4444-4444-4444-444444444444';
+
+/** Planlagt solo-stableford: flighten er en fri gruppering. */
+const SOLO_GAME = {
+  status: 'scheduled',
+  game_mode: 'stableford',
+  mode_config: { kind: 'stableford', team_size: 1 },
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -81,6 +88,32 @@ describe('joinFlight', () => {
     expect(adminMock.from).toHaveBeenCalledTimes(1);
   });
 
+  it('spiller uten lag i Texas → flight_bound_to_team uten skriving (#2290)', async () => {
+    // Solo-påmelding i et lagformat: laget er ikke fordelt ennå, men flighten
+    // er fortsatt laget. Et valg her ville blitt stående når lagene fordeles.
+    adminMock = buildSupabaseMock([
+      {
+        data: { user_id: USER_ID, withdrawn_at: null, flight_number: null, team_number: null },
+        error: null,
+      },
+      {
+        data: {
+          status: 'scheduled',
+          game_mode: 'texas_scramble',
+          mode_config: { kind: 'texas_scramble', team_size: 4 },
+        },
+        error: null,
+      },
+    ]);
+
+    const { joinFlight } = await import('./flightJoinActions');
+    const result = await joinFlight(GAME_ID, 1);
+
+    expect(result).toEqual({ ok: false, error: 'flight_bound_to_team' });
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
   it('trukket spiller → not_member', async () => {
     adminMock = buildSupabaseMock([
       {
@@ -101,7 +134,7 @@ describe('joinFlight', () => {
         data: { user_id: USER_ID, withdrawn_at: null, flight_number: null },
         error: null,
       }, // membership (aktiv)
-      { data: { status: 'scheduled' }, error: null },   // games
+      { data: SOLO_GAME, error: null },   // games
       { data: null, error: null, count: 4 } as { data: null; error: null; count: number }, // before-count = 4 (full)
     ]);
 
@@ -118,7 +151,7 @@ describe('joinFlight', () => {
         data: { user_id: USER_ID, withdrawn_at: null, flight_number: null },
         error: null,
       }, // membership
-      { data: { status: 'scheduled' }, error: null },   // games
+      { data: SOLO_GAME, error: null },   // games
       { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // before-count = 2
       { data: null, error: null }, // update
       { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // after-count = 3 (≤ 4)
@@ -137,7 +170,7 @@ describe('joinFlight', () => {
         data: { user_id: USER_ID, withdrawn_at: null, flight_number: null },
         error: null,
       }, // membership
-      { data: { status: 'scheduled' }, error: null },   // games
+      { data: SOLO_GAME, error: null },   // games
       { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // before-count = 3
       { data: null, error: null }, // update (skriv vår flight)
       { data: null, error: null, count: 5 } as { data: null; error: null; count: number }, // after-count = 5 (over 4 — vi tapte racen)

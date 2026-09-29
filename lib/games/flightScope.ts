@@ -8,15 +8,18 @@
  *
  * Flight-inndeling er bare relevant for spill med > 4 aktive spillere der
  * formatet er flight-løst by design (solo-buildere setter flight = null).
- * Matchplay-familien og lag-formater har flight = side/lag, styrt av
- * validatorene i gamePayload.ts — disse formatene rører aldri denne modulen.
+ * Matchplay-familien og lag-formatene har flight = side/lag, styrt av
+ * validatorene i gamePayload.ts. For dem er flighten ingen fri gruppering:
+ * `flightIsFreeGrouping` er regelen, og `eligibleForFlightAssignment` holder
+ * dem utenfor inndelingen uansett hvor mange som er påmeldt (#2290). Når en
+ * lagspiller bytter lag, setter `teamScope.flightForTeam` flighten.
  *
  * Erstatter den null-only-grenen i 0088 (coscore_flightless_small_games):
  * RLS-hjelperne `can_score_for` og `same_flight_or_solo` oppdateres i
  * migrasjon 0095 til å tillate på tvers av sider/lag ved ≤4 aktive ELLER wolf.
  */
 
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isSoloFormat, type GameMode } from '@/lib/scoring/modes/types';
 
 /** Maks antall spillere per fysisk flight på banen. */
 export const MAX_FLIGHT_SIZE = 4;
@@ -230,27 +233,43 @@ export function pendingApprovalsFor<
 }
 
 /**
+ * True when the flight in this format is a free grouping the organiser and the
+ * player may move people between (#2290): a solo format (`isSoloFormat`, which
+ * tells solo and pair stableford apart on `team_size`), but not wolf, which is
+ * always one group.
+ *
+ * In the team formats and matchplay the flight is the team or the side. The
+ * validators set it, and the RLS helper `can_score_for` grants writes within
+ * the flight, so a team player moved to another flight could score for the
+ * wrong team. This is the one rule every surface reads: the admin page, the
+ * waiting-room picker, the organiser actions on the web, `joinFlight` and the
+ * app.
+ */
+export function flightIsFreeGrouping(gameMode: GameMode, teamSize: number): boolean {
+  return gameMode !== 'wolf' && isSoloFormat(gameMode, teamSize);
+}
+
+/**
  * True når spillet er et kandidat for flight-inndeling via admin-UI og
  * venteroms-velgeren. Betingelser:
- *   1. Solo-format (ikke lag, ikke matchplay) med team_size = 1.
- *   2. Ikke wolf (wolf = alltid én gruppe, håndteres av isSingleFlightGame).
- *   3. Status scheduled ELLER active (inndeling kan justeres på banen).
- *   4. Aktive spillere > 4 (ellers er vi én-flight og trenger ingen inndeling).
+ *   1. Flighten er en fri gruppering (`flightIsFreeGrouping`): solo-format,
+ *      ikke wolf. Lag-formater og matchplay er aldri kandidater, uansett hvor
+ *      mange aktive spillere påmeldingen har gitt.
+ *   2. Aktive spillere > 4 (ellers er vi én-flight og trenger ingen inndeling).
  *
- * Brukes av admin-siden, venterommet og actions for at UI og guards deler
- * én sannhetskilde.
+ * Status (scheduled eller active) sjekker kallstedet.
+ *
+ * Brukes av admin-siden, venterommet, arrangørhandlingene og appen, så UI og
+ * vakter deler én sannhetskilde.
  */
 export function eligibleForFlightAssignment(
   gameMode: GameMode,
+  teamSize: number,
   players: FlightPlayer[],
 ): boolean {
-  // Wolf er alltid én gruppe — ingen inndeling
-  if (gameMode === 'wolf') return false;
-  // Vi gater bare på >4 aktive, ikke på solo-format: lag/matchplay-formater
-  // er alltid ≤4 aktive i praksis (begge sider + begge lag = maks 8 best-ball,
-  // men matchplay ≤4, lag ≤4 per flight satt av validatoren).
-  // isSingleFlightGame vil returnere true for dem og blokkerer.
-  return !isSingleFlightGame(gameMode, players);
+  return (
+    flightIsFreeGrouping(gameMode, teamSize) && !isSingleFlightGame(gameMode, players)
+  );
 }
 
 /**

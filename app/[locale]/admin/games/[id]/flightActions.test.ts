@@ -23,15 +23,16 @@ import {
  *   serverMock[0]: auth.getUser
  *   serverMock[1]: users.select(is_admin, email, name).eq.single        (loadRole)
  *   serverMock[2]: games.select(created_by).eq.maybeSingle              (creator-sjekk)
- *   adminMock[0]:  games.select(id, status, game_mode).eq.single
+ *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.single
  *   adminMock[1]:  game_players.select(...).eq.order.order.returns
  *   adminMock[2…]: game_players.update({flight_number}).eq.eq (én per aktiv spiller)
  *
  * setPlayerFlight:
  *   serverMock[0..2]: samme som over
- *   adminMock[0]: games.select(id, status, game_mode).eq.single
- *   adminMock[1]: game_players.select({count}).eq.eq.neq.is    (kapasitetssjekk)
- *   adminMock[2]: game_players.update({flight_number}).eq.eq
+ *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[1]: game_players.select(...).eq.order.order.returns  (vakta, #2290)
+ *   adminMock[2]: game_players.select({count}).eq.eq.neq.is    (kapasitetssjekk)
+ *   adminMock[3]: game_players.update({flight_number}).eq.eq
  *
  * toggleSignupsClosed (admin):
  *   serverMock[0..1]: auth.getUser + users (isAdmin=true → ingen creator-sjekk)
@@ -115,6 +116,43 @@ beforeEach(() => {
   adminMock = buildSupabaseMock([]);
 });
 
+/** Planlagt Texas scramble med fire per lag (#2290). */
+const TEXAS_GAME = {
+  id: GAME_ID,
+  status: 'scheduled',
+  game_mode: 'texas_scramble',
+  mode_config: { kind: 'texas_scramble', team_size: 4 },
+};
+
+/** Tre lag à fire, flight = lag, i påmeldingsrekkefølge. */
+function texasRoster() {
+  return Array.from({ length: 12 }, (_, i) => ({
+    user_id: `u${i + 1}`,
+    team_number: Math.floor(i / 4) + 1,
+    flight_number: Math.floor(i / 4) + 1,
+    withdrawn_at: null,
+    accepted_at: `2026-01-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+  }));
+}
+
+/** Planlagt solo-stableford (team_size 1). */
+const SOLO_STABLEFORD_GAME = {
+  id: GAME_ID,
+  status: 'scheduled',
+  game_mode: 'stableford',
+  mode_config: { kind: 'stableford', team_size: 1 },
+};
+
+/** Åtte solo-spillere uten flight. */
+function soloRoster() {
+  return Array.from({ length: 8 }, (_, i) => ({
+    user_id: i === 0 ? 'target-user' : `u${i + 1}`,
+    flight_number: null,
+    withdrawn_at: null,
+    accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
+  }));
+}
+
 // ─── suggestFlightAssignment ────────────────────────────────────────────────
 
 describe('suggestFlightAssignment', () => {
@@ -159,6 +197,20 @@ describe('suggestFlightAssignment', () => {
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_suggested`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('Texas med tre lag à fire → ingen ny inndeling, redirect til detaljsiden (#2290)', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: TEXAS_GAME, error: null },
+      { data: texasRoster(), error: null },
+    ]);
+
+    const { suggestFlightAssignment } = await import('./flightActions');
+    await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 });
 
@@ -208,7 +260,8 @@ describe('setPlayerFlight', () => {
     authedAdmin();
 
     adminMock = buildSupabaseMock([
-      { data: { id: GAME_ID, status: 'scheduled', game_mode: 'stableford' }, error: null }, // games
+      { data: SOLO_STABLEFORD_GAME, error: null }, // games
+      { data: soloRoster(), error: null }, // game_players (vakta)
       { data: null, error: null, count: 4 } as { data: null; error: null; count: number }, // count = 4 (full)
     ]);
 
@@ -221,7 +274,8 @@ describe('setPlayerFlight', () => {
     authedAdmin();
 
     adminMock = buildSupabaseMock([
-      { data: { id: GAME_ID, status: 'scheduled', game_mode: 'stableford' }, error: null }, // games
+      { data: SOLO_STABLEFORD_GAME, error: null }, // games
+      { data: soloRoster(), error: null }, // game_players (vakta)
       { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // count = 2 (har plass)
       { data: null, error: null }, // update
     ]);
@@ -230,6 +284,22 @@ describe('setPlayerFlight', () => {
     await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_updated`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toEqual({ flight_number: 2 });
+  });
+
+  it('Texas med tre lag à fire → ingen skriving, redirect til detaljsiden (#2290)', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: TEXAS_GAME, error: null },
+      { data: texasRoster(), error: null },
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'u1', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 });
 
@@ -245,8 +315,8 @@ describe('setPlayerFlight', () => {
  *
  * setPlayerTeam:
  *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.single
- *   adminMock[1]: game_players.select({count}).eq.eq.neq.is  (kapasitetssjekk)
- *   adminMock[2]: game_players.select(flight_number).eq.eq.maybeSingle
+ *   adminMock[1]: game_players.select(...).eq.order.order.returns  (hele rosteret, #2290)
+ *   adminMock[2]: game_players.select({count}).eq.eq.neq.is  (kapasitetssjekk)
  *   adminMock[3]: game_players.update({...}).eq.eq.select
  */
 const BEST_BALL_GAME = {
@@ -255,6 +325,11 @@ const BEST_BALL_GAME = {
   game_mode: 'best_ball',
   mode_config: { kind: 'best_ball', team_size: 2 },
 };
+
+/** En rad slik `fetchTeamPlayers` leser den. */
+function teamRow(user_id: string, team_number: number | null, flight_number: number | null) {
+  return { user_id, team_number, flight_number, withdrawn_at: null };
+}
 
 describe('suggestTeamAssignment', () => {
   it('uautentisert → redirect til /login', async () => {
@@ -376,6 +451,7 @@ describe('setPlayerTeam', () => {
 
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
+      { data: [teamRow('target-user', null, null)], error: null },
       { data: null, error: null, count: 2 } as { data: null; error: null; count: number },
     ]);
 
@@ -391,8 +467,8 @@ describe('setPlayerTeam', () => {
 
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
+      { data: [teamRow('target-user', null, null)], error: null },
       { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
-      { data: { flight_number: null }, error: null },
       { data: [{ user_id: 'target-user' }], error: null },
     ]);
 
@@ -412,8 +488,8 @@ describe('setPlayerTeam', () => {
 
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
+      { data: [teamRow('target-user', null, 7)], error: null },
       { data: null, error: null, count: 0 } as { data: null; error: null; count: number },
-      { data: { flight_number: 7 }, error: null },
       { data: [{ user_id: 'target-user' }], error: null },
     ]);
 
@@ -423,6 +499,49 @@ describe('setPlayerTeam', () => {
     );
     const update = adminMock.__fromCalls.find((c) => c.method === 'update');
     expect(update?.args[0]).toEqual({ team_number: 2, flight_number: 7 });
+  });
+
+  it('Texas: spiller i lag 1/flight 1 flyttes til lag 2 → flighten følger laget (#2290)', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: TEXAS_GAME, error: null },
+      { data: texasRoster(), error: null },
+      { data: null, error: null, count: 3 } as { data: null; error: null; count: number },
+      { data: [{ user_id: 'u1' }], error: null },
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'u1', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=team_updated`);
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toEqual({ team_number: 2, flight_number: 2 });
+  });
+
+  it('best ball: til et lag der partneren har flight 1 → flight 1 (#2290)', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      {
+        data: [
+          teamRow('target-user', 3, 3),
+          teamRow('partner', 2, 1),
+          teamRow('annen', 1, 1),
+          teamRow('fjerde', 1, 1),
+        ],
+        error: null,
+      },
+      { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
+      { data: [{ user_id: 'target-user' }], error: null },
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toEqual({ team_number: 2, flight_number: 1 });
   });
 });
 
