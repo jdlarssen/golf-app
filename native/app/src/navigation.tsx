@@ -81,8 +81,11 @@ export type RootStackParamList = {
   AccountSettings: undefined;
   /** «Varsler og tema» (#2256): temavalget; varslene kommer i PR 4. */
   NotificationsAndTheme: undefined;
-  /** «Venner» (#2256 PR 2): det webbens `/profile/venner` viser, via `/api/friends`. */
-  Friends: undefined;
+  /**
+   * «Venner» (#2256): vennene dine, via `/api/friends`. `selfInitials` er
+   * dine initialer til heltekortet, fra profilen som åpner skjermen.
+   */
+  Friends: { selfInitials?: string } | undefined;
   SyncLab: undefined;
 };
 
