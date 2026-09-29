@@ -31,6 +31,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Compone
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -86,7 +87,7 @@ import {
   myTeamCaptainId,
   teamHandicapFor,
 } from '../lib/teamPlay';
-import { shareLiveFollow } from '../lib/shareLive';
+import { canShareLiveFollow, shareLiveFollow } from '../lib/shareLive';
 import { TICKET_TEXT, approveButton, fieldA11y, stubTotal } from '../lib/ticketCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
@@ -166,13 +167,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   // Del-knappen øverst til høyre (eierens svar b): bare når arrangøren har
   // slått på live-følging, og da deler den webbens «følg live»-lenke.
   const liveToken = bundle?.game.spectateToken ?? null;
+  const shareToken = canShareLiveFollow(liveToken) ? liveToken : null;
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: liveToken
-        ? () => <ShareLiveButton token={liveToken} />
-        : undefined,
+      headerRight: shareToken ? () => <ShareLiveButton token={shareToken} /> : undefined,
     });
-  }, [navigation, liveToken]);
+  }, [navigation, shareToken]);
 
   if (!bundle) {
     if (loading) {
@@ -366,15 +366,23 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   );
 }
 
-/** Del-ikonet i toppen. Knappen bærer etiketten; ikonet i den er dekor. */
+/**
+ * Del-ikonet i toppen. Knappen bærer etiketten; ikonet i den er dekor. Feiler
+ * delingsarket, sier en melding det. Toppen har ingen plass til en linje, og
+ * feilen er forbigående, så den står ikke fast som på lenkeknappene.
+ */
 function ShareLiveButton({ token }: { token: string }) {
   const { colors } = useTheme();
+  const share = useCallback(async () => {
+    const result = await shareLiveFollow(token);
+    if (!result.ok) Alert.alert(TICKET_TEXT.shareFailed);
+  }, [token]);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={TICKET_TEXT.share}
       hitSlop={8}
-      onPress={() => void shareLiveFollow(token)}
+      onPress={() => void share()}
       style={styles.headerButton}
       testID="share-live"
     >
