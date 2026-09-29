@@ -54,6 +54,7 @@ describe('FlightRow', () => {
       />,
     );
     expect(screen.getByTestId('flight-row-p1-submitted')).toBeTruthy();
+    expect(screen.getByLabelText('Marte Moe: ingen score ennå, levert')).toBeTruthy();
     expect(screen.getByTestId('flight-row-p1-score').props.children).toBe('—');
     expect(screen.queryByTestId('flight-row-p1-points')).toBeNull();
     expect(screen.getByTestId('flight-row-p1')).toBeDisabled();

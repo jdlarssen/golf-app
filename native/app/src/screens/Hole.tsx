@@ -485,24 +485,21 @@ function HoleView({
   const railSkipSeat = rail.skipToSeatId == null ? undefined : seatOf(rail.skipToSeatId);
 
   // «Stryk» i «Annet»-arket: bare stableford-familien, netto dobbel bogey for
-  // setet arket er åpent for.
+  // setet arket er åpent for. Kan motoren ikke svare på slagene setet får,
+  // finnes ingen netto dobbel bogey å sette, og da står ikke knappen.
   const sheetSeat = sheetSeatId == null ? undefined : seatOf(sheetSeatId);
   let sheetStrike: { value: number; label: string } | undefined;
-  if (isStableford && sheetSeat) {
-    const extra = sheetSeat.extraStrokes ?? 0;
-    const value = strikeStrokes(par, extra);
+  if (isStableford && sheetSeat && sheetSeat.extraStrokes != null) {
+    const value = strikeStrokes(par, sheetSeat.extraStrokes);
     const points = stablefordPointsForCard({
-      card: { score: value, extraStrokes: extra },
+      card: { score: value, extraStrokes: sheetSeat.extraStrokes },
       par,
       gameMode: mode,
       isStableford,
     });
     sheetStrike = {
       value,
-      label:
-        hideNetto || points == null || sheetSeat.extraStrokes == null
-          ? 'Stryk'
-          : `Stryk · ${points} p`,
+      label: hideNetto || points == null ? 'Stryk' : `Stryk · ${points} p`,
     };
   }
 
