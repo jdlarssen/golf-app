@@ -255,6 +255,16 @@ describe('submitScorecardCore — levering', () => {
     // Lag-bredden går via admin-klienten; kallerens klient skriver ingenting.
     expect(updateCalls(supabase)).toEqual([]);
     const admin = adminMock.__fromCalls;
+    // #2200: service-rollen hopper over triggerens aktør og vakta, så patchen
+    // sier selv hvem som leverte lagkortet, og tar aldri med seg en godkjenning
+    // (en godkjenning på et ulevert kort er en tilstand 0191 nekter).
+    expect(admin.find((c) => c.method === 'update')?.args[0]).toEqual({
+      submitted_at: expect.any(String),
+      rejection_reason: null,
+      submitted_by_user_id: USER_ID,
+      approved_at: null,
+      approved_by_user_id: null,
+    });
     expect(
       admin.some((c) => c.table === 'game_players' && c.method === 'update'),
     ).toBe(true);
@@ -384,7 +394,12 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
     expect(updateCalls(supabase)).toHaveLength(1);
     const { patch, userIds } = flightUpdate(supabase);
     expect(userIds).toEqual([USER_ID, OLA, PER]);
-    expect(patch).toMatchObject({ submitted_by_user_id: USER_ID, rejection_reason: null });
+    expect(patch).toMatchObject({
+      submitted_by_user_id: USER_ID,
+      rejection_reason: null,
+      approved_at: null,
+      approved_by_user_id: null,
+    });
     expect(
       supabase.__fromCalls.some((c) => c.method === 'is' && c.args[0] === 'withdrawn_at'),
     ).toBe(true);

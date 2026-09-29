@@ -201,8 +201,16 @@ export async function submitScorecardCore(
     // A previous rejection clears once the player re-submits.
     rejection_reason: null,
     // #2200: who delivered. The trigger in 0191 sets the same value for a
-    // signed-in client; the service role (the app route) keeps this one.
+    // signed-in client; the service role (the app route, the team and sibling
+    // cascades) keeps this one.
     submitted_by_user_id: userId,
+    // #2200: a delivery never carries an approval forward. Every row this
+    // writes is undelivered, and an undelivered card holds no approval (0191,
+    // and every un-deliver here clears it with UNDELIVER_PATCH), so for a valid
+    // row this changes nothing. It keeps a stale approval from surviving into
+    // a delivered card on the service-role paths, which skip the guard.
+    approved_at: null,
+    approved_by_user_id: null,
   };
   // #2200: own card (unless already delivered) plus the flightmates', in ONE
   // update, so a card is never left half-delivered (trap 5).
