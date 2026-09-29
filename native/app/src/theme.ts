@@ -139,6 +139,10 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   scoreParFg: '#5C5347',
   scoreOver1Fg: '#7A5410',
   scoreOver2Fg: '#7A2F2A',
+  // Heltekortets skogflate på Hjem (#2254). Hullsiden tegner den ikke, så
+  // lys-verdiene står her bare for at paletten skal ha alle rollene.
+  surfaceStrong: '#1B4332',
+  onStrong: '#F0EDE5',
 };
 
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
