@@ -2,7 +2,7 @@
 //
 // Hvilken gren som velges, er låst i `gameTicket.test.ts` (`ticketStub`). Her
 // låses at hver gren tegner sin testID og at knappene går dit de skal. Gull
-// brukes bare på egen seier.
+// brukes bare på egen seier, og da som ett merke.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Linking } from 'react-native';
@@ -33,6 +33,7 @@ async function renderStub(
   stub: TicketStubModel,
   flightCta: string | null = null,
   calendarEvent: typeof EVENT | null = EVENT,
+  runningTotal: string | null = null,
 ) {
   const onNavigate = jest.fn();
   const view = await render(
@@ -42,6 +43,7 @@ async function renderStub(
       courseName="Losby Golf"
       teeOffAt={new Date(Date.now() + 30 * 60_000).toISOString()}
       calendarEvent={calendarEvent}
+      runningTotal={runningTotal}
       flightCta={flightCta}
       onChanged={jest.fn()}
       onNavigate={onNavigate}
@@ -108,15 +110,38 @@ it('fremdriftslinja er skjult for skjermleseren; teksten over sier det samme', a
   await renderStub({ kind: 'active', state: 'in_progress', played: 7, total: 18, nextHole: 8 });
   expect(screen.getByTestId('ticket-played')).toBeTruthy();
   expect(screen.queryByTestId('ticket-progress')).toBeNull();
-  expect(screen.getByTestId('ticket-progress', { includeHiddenElements: true })).toBeTruthy();
+  // Kremfarget spor som i designet, ikke kantfargen.
+  expect(screen.getByTestId('ticket-progress', { includeHiddenElements: true })).toHaveStyle({
+    backgroundColor: PALETTES.light.trackBg,
+  });
 });
 
-it('gull bare på egen seier, som en skive ved teksten', async () => {
+it('tavlas tall står til høyre for fremdriften når skjermen har ett, ellers ingenting', async () => {
+  const active: TicketStubModel = { kind: 'active', state: 'in_progress', played: 7, total: 18, nextHole: 8 };
+  const { view } = await renderStub(active, null, EVENT, '15\u00A0p');
+  expect(screen.getByTestId('ticket-total')).toHaveTextContent('15 p');
+
+  await view.rerender(
+    <TicketStub
+      stub={active}
+      gameId="g1"
+      courseName={null}
+      teeOffAt={null}
+      calendarEvent={null}
+      runningTotal={null}
+      flightCta={null}
+      onChanged={jest.fn()}
+      onNavigate={jest.fn()}
+    />,
+  );
+  expect(screen.queryByTestId('ticket-total')).toBeNull();
+});
+
+it('gull bare på egen seier: medaljen i teksten og teksten i gullets lesbare tone, ingen ekstra skive', async () => {
   const { view } = await renderStub({ kind: 'finished', result: { text: '🥇 Du vant', isWin: true } });
   expect(screen.getByTestId('ticket-result')).toHaveTextContent('🥇 Du vant');
-  expect(screen.getByTestId('ticket-result-gold', { includeHiddenElements: true })).toHaveStyle({
-    backgroundColor: PALETTES.light.accent,
-  });
+  expect(screen.getByTestId('ticket-result')).toHaveStyle({ color: PALETTES.light.accentText });
+  expect(screen.queryByTestId('ticket-result-gold', { includeHiddenElements: true })).toBeNull();
 
   await view.rerender(
     <TicketStub
@@ -130,7 +155,7 @@ it('gull bare på egen seier, som en skive ved teksten', async () => {
       onNavigate={jest.fn()}
     />,
   );
-  expect(screen.queryByTestId('ticket-result-gold', { includeHiddenElements: true })).toBeNull();
+  expect(screen.getByTestId('ticket-result')).toHaveStyle({ color: PALETTES.light.text });
 });
 
 it('med et makkerkort å levere står knappen over levert-teksten (#2200)', async () => {

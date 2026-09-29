@@ -2,6 +2,7 @@
 //
 // Ingen i18n i appen ennå (N8 eier paritet med webbens no/en) — spike-copyen er
 // norsk og bor rett i skjermene. Dette er bare formatering.
+import { firstName } from '../../../../lib/firstName';
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
 
 /** Badge-teksten for et aktivt spill på hjem-kortet. */
@@ -22,6 +23,19 @@ export function displayName(player: {
   const name = player.name?.trim();
   if (name) return name;
   return 'Ukjent spiller';
+}
+
+/**
+ * Kort navn til billettens navneliste (#2255): kallenavnet hvis det finnes,
+ * ellers fornavnet (den delte `firstName`), ellers samme plassholder som over.
+ */
+export function shortDisplayName(player: {
+  name: string | null;
+  nickname: string | null;
+}): string {
+  const nickname = player.nickname?.trim();
+  if (nickname) return nickname;
+  return firstName(player.name) ?? 'Ukjent spiller';
 }
 
 function pad(n: number): string {

@@ -30,7 +30,8 @@ import type { BundlePlayer, BundleTeeRatings, GameBundle } from '../data/gameBun
 import { MAX_AVATARS } from './flightRoster';
 import type { GateReason } from './formatGate';
 import { HOME_TEXT, finishedResultText } from './homeCopy';
-import { formatStubClock, formatStubDate, formatWeekdayDayMonth } from './homeDates';
+import { formatClock } from './display';
+import { formatStubDate, formatWeekdayDayMonth, teeOffProximityLocal } from './homeDates';
 import { computePrimaryCtaState, nextUnfilledHole, type PrimaryCtaState } from './primaryCtaState';
 import { scorecardHandicapPart } from './scorecardHeader';
 import { TICKET_TEXT, allowancePart, fieldA11y, flightOf, teePart } from './ticketCopy';
@@ -154,8 +155,9 @@ function decimalComma(n: number): string {
 }
 
 /**
- * Faktalinja: «18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5». Par, lengde
- * og CR er tallene for hele banen, så de står bare på en hel runde. Det som
+ * Faktalinja: «18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5». Par, lengde,
+ * slope og CR er tallene for hele banen, så de står bare på en hel runde; en
+ * halv runde er bare «9 hull» (design, #2255). Det som
  * mangler, hoppes over. Hvert ledd holdes sammen med hardt mellomrom, så linja
  * brekker mellom leddene og aldri mellom «CR» og tallet.
  */
@@ -172,7 +174,7 @@ export function ticketFacts(
     `${holes}\u00A0hull`,
     full && rating ? `Par\u00A0${rating.par}` : null,
     full && length != null ? `${groupThousands(length)}\u00A0m` : null,
-    rating ? `Slope\u00A0${rating.slope}` : null,
+    full && rating ? `Slope\u00A0${rating.slope}` : null,
     full && rating ? `CR\u00A0${decimalComma(rating.courseRating)}` : null,
   ]
     .filter((part): part is string => part != null)
@@ -254,23 +256,29 @@ export function rosterNames(names: readonly string[], max = MAX_AVATARS): string
 }
 
 /**
- * START-feltet: «Lør 3. okt» over «kl. 09:30», og hele setningen for
- * skjermleseren. Enhetens lokaltid, som Hjem (`homeDates.ts`).
+ * START-feltet: klokkeslettet er verdien («09:30», som i designet), og datoen
+ * står under når runden ikke er i dag («Lør 3. okt»). Uten tid: en strek, og
+ * «Tid ikke satt» under. Skjermleseren får hele setningen. Enhetens lokaltid,
+ * som Hjem (`homeDates.ts`).
  */
-export function startField(iso: string | null): {
-  date: string | null;
-  clock: string | null;
-  a11y: string;
-} {
+export function startField(
+  iso: string | null,
+  now: Date,
+): { value: string; sub: string | null; a11y: string } {
+  const clock = formatClock(iso);
   const date = formatStubDate(iso);
-  if (!date || !iso) {
-    return { date: null, clock: null, a11y: fieldA11y(TICKET_TEXT.start, HOME_TEXT.noTeeOff) };
+  if (!iso || !clock || !date) {
+    return {
+      value: TICKET_TEXT.noValue,
+      sub: HOME_TEXT.noTeeOff,
+      a11y: fieldA11y(TICKET_TEXT.start, HOME_TEXT.noTeeOff),
+    };
   }
-  const clock = formatStubClock(iso);
+  const today = teeOffProximityLocal(iso, now)?.kind === 'today';
   // Etter kolon midt i setningen: liten forbokstav («Start: lørdag 3. oktober»).
   const day = formatWeekdayDayMonth(new Date(iso));
-  const spoken = [day.charAt(0).toLowerCase() + day.slice(1), clock].filter(Boolean).join(' ');
-  return { date, clock, a11y: fieldA11y(TICKET_TEXT.start, spoken) };
+  const spoken = `${day.charAt(0).toLowerCase() + day.slice(1)} kl. ${clock}`;
+  return { value: clock, sub: today ? null : date, a11y: fieldA11y(TICKET_TEXT.start, spoken) };
 }
 
 /**

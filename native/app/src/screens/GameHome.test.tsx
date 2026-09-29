@@ -13,9 +13,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { AccessibilityInfo, ScrollView } from 'react-native';
+import type { ReactElement } from 'react';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
+import { TICKET_TEXT } from '../lib/ticketCopy';
 import type { ScreenProps } from '../navigation';
-import { homeBundle, homePlayer } from '../test/homeFixtures';
+import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import { GameHome, RosterRow } from './GameHome';
 
 // Skjermen drar inn arrangør-seksjonen, som drar inn klienten. Raden selv rører
@@ -40,6 +42,10 @@ jest.mock('../session', () => ({
 }));
 // Fokus-refetchen kommer fra navigasjonen; effekten er den samme uten en hel
 // NavigationContainer.
+// Del-knappen (#2255) deler via RN `Share`; her holder det å se hva den får.
+jest.mock('../lib/shareLive', () => ({
+  shareLiveFollow: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -212,7 +218,7 @@ describe('GameHome', () => {
         serverUpdatedAt: null,
       })),
     );
-    const navigation = { navigate: jest.fn() };
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
 
     await render(
       <GameHome
@@ -308,7 +314,7 @@ describe('GameHome', () => {
         serverUpdatedAt: null,
       };
     });
-    const navigation = { navigate: jest.fn() };
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
 
     await render(
       <GameHome
@@ -402,7 +408,7 @@ describe('GameHome — trukket-banneret (#2358)', () => {
       <GameHome
         {...({
           route: { params: { gameId: 'game-1' } },
-          navigation: { navigate: jest.fn() },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
         } as unknown as ScreenProps<'GameHome'>)}
       />,
     );
@@ -447,7 +453,7 @@ describe('GameHome — startbilletten (#2255)', () => {
       <GameHome
         {...({
           route: { params: { gameId: 'game-1' } },
-          navigation: { navigate: jest.fn() },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
         } as unknown as ScreenProps<'GameHome'>)}
       />,
     );
@@ -464,7 +470,7 @@ describe('GameHome — startbilletten (#2255)', () => {
       players: [homePlayer({ userId: 'me' })],
     });
     mockState.scores = [];
-    const navigation = { navigate: jest.fn() };
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
 
     await render(
       <GameHome
@@ -503,7 +509,7 @@ describe('GameHome — startbilletten (#2255)', () => {
       <GameHome
         {...({
           route: { params: { gameId: 'game-1' } },
-          navigation: { navigate: jest.fn() },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
         } as unknown as ScreenProps<'GameHome'>)}
       />,
     );
@@ -513,5 +519,71 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(screen.queryByTestId('open-leaderboard')).toBeNull();
     expect(screen.queryByTestId('open-scorecard')).toBeNull();
     expect(screen.getByTestId('format-gate-link')).toBeTruthy();
+  });
+  it('pågående runde: tavlas tall står til høyre for fremdriften, fra samme modell som helten på Hjem', async () => {
+    // Samme oppsett som heltens test (`homeHero.test.ts`): 7 hull på par med
+    // handicap 0 er 14 poeng.
+    mockState.bundle = homeBundle({
+      players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'leader' })],
+    });
+    mockState.scores = [...holeScores('g-live', 'me', 7, 4), ...holeScores('g-live', 'leader', 7, 3)];
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'g-live' } },
+          navigation: { navigate: jest.fn(), setOptions: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('ticket-total')).toBeTruthy());
+    expect(screen.getByTestId('ticket-total').props.children).toBe('14\u00A0p');
+  });
+
+  it('Del-knappen står øverst når arrangøren har slått på live-følging, og deler lenka', async () => {
+    const { shareLiveFollow } = require('../lib/shareLive') as { shareLiveFollow: jest.Mock };
+    shareLiveFollow.mockClear();
+    mockState.bundle = homeBundle({
+      game: { spectateToken: 'tok-123' },
+      players: [homePlayer({ userId: 'me' })],
+    });
+    mockState.scores = [];
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+
+    await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'g-live' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+
+    const { headerRight } = navigation.setOptions.mock.lastCall![0] as {
+      headerRight?: () => ReactElement;
+    };
+    expect(headerRight).toBeDefined();
+    await render(headerRight!());
+    const button = screen.getByTestId('share-live');
+    expect(button.props.accessibilityLabel).toBe(TICKET_TEXT.share);
+    await fireEvent.press(button);
+    expect(shareLiveFollow).toHaveBeenCalledWith('tok-123');
+  });
+
+  it('uten live-følging står ingen Del-knapp', async () => {
+    mockState.bundle = homeBundle({
+      game: { spectateToken: null },
+      players: [homePlayer({ userId: 'me' })],
+    });
+    mockState.scores = [];
+    const navigation = { navigate: jest.fn(), setOptions: jest.fn() };
+
+    await render(
+      <GameHome
+        {...({ route: { params: { gameId: 'g-live' } }, navigation } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
+
+    expect(navigation.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
   });
 });

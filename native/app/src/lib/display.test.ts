@@ -11,7 +11,7 @@
 //
 // `formatTeeOff` og `displayName` er dekket av kallstedenes egne tester og
 // gjentas ikke her.
-import { formatClock, formatSignedAt } from './display';
+import { formatClock, formatSignedAt, shortDisplayName } from './display';
 
 describe('formatClock', () => {
   it('viser enhetens veggklokke, ikke en Oslo-konvertering', () => {
@@ -62,5 +62,18 @@ describe('formatSignedAt', () => {
 
   it('svarer null på en ulesbar verdi', () => {
     expect(formatSignedAt('ikke en dato')).toBeNull();
+  });
+});
+
+// #2255: navnelista ved avatarene på startbilletten har bare fornavn, som i
+// designet («Du, Marte og Jonas»).
+describe('shortDisplayName', () => {
+  it.each<[string, { name: string | null; nickname: string | null }, string]>([
+    ['fornavnet av fullt navn', { name: 'Marte Holm Berg', nickname: null }, 'Marte'],
+    ['kallenavnet vinner', { name: 'Jonas Rud', nickname: 'Rudi' }, 'Rudi'],
+    ['tomt kallenavn teller ikke', { name: 'Jonas Rud', nickname: '  ' }, 'Jonas'],
+    ['uten navn: plassholderen', { name: null, nickname: null }, 'Ukjent spiller'],
+  ])('%s', (_case, player, expected) => {
+    expect(shortDisplayName(player)).toBe(expected);
   });
 });

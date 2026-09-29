@@ -6,6 +6,9 @@
 // `ticketCopy.test.ts`. Plassen i en avsluttet runde er `finishedResultText`
 // i `homeCopy.ts`, og statusmerket er de delte `STATUS_LABELS`.
 
+import type { LiveBoardUnit } from '../../../../lib/leaderboard/liveBoard';
+import { formatVsPar } from '../../../../lib/leaderboard/vsPar';
+
 export const TICKET_TEXT = {
   // Feltene på billetten. Stilen setter dem i versaler.
   start: 'Start',
@@ -45,6 +48,12 @@ export const TICKET_TEXT = {
   tileScorecard: 'Scorekort',
   tileRules: 'Regler',
   roster: 'Spillere',
+  /** Toppen av spillets side (designet: «STARTBILLETT», satt i versaler av stilen). */
+  topTitle: 'Startbillett',
+  /** Del-knappen øverst til høyre (designets `aria-label`). */
+  share: 'Del spillet',
+  /** Webbens `spectate.shareText`, teksten som følger lenka. */
+  shareText: 'Følg turneringen live i Tørny',
 } as const;
 
 /** «Du har spilt 7 av 18 hull». */
@@ -84,4 +93,15 @@ export function rulesHeading(format: string): string {
 
 export function approveButton(count: number): string {
   return `Godkjenn (${count})`;
+}
+
+/**
+ * Tallet til høyre for fremdriften i stubben (#2255, eierens svar a): tavlas
+ * total, i helten på Hjems enhet, kort. Poeng blir «15 p», netto slag «72
+ * netto», og mot par «+3» (den delte `formatVsPar`).
+ */
+export function stubTotal(total: number, unit: LiveBoardUnit): string {
+  if (unit === 'points') return `${total}\u00A0p`;
+  if (unit === 'net') return `${total}\u00A0netto`;
+  return formatVsPar(total);
 }

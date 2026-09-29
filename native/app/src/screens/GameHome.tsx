@@ -27,7 +27,7 @@
 //  6. arrangørdelen.
 // Reglene bak billetten bor i `lib/gameTicket.ts`; stubben velger de samme
 // grenene, i samme rekkefølge, som `PrimarySection` gjorde før.
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -47,7 +47,7 @@ import { GameTiles } from '../components/game/GameTiles';
 import { OrganiserSection } from '../components/game/OrganiserSection';
 import { RulesSection } from '../components/game/RulesSection';
 import { TicketStub } from '../components/game/TicketStub';
-import { HakeIcon } from '../components/icons/Icons';
+import { DelIcon, HakeIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer } from '../data/gameBundle';
 import { fetchOwnProfile } from '../data/profile';
@@ -65,7 +65,7 @@ import {
   ticketStrokes,
   ticketStub,
 } from '../lib/gameTicket';
-import { HOME_TEXT } from '../lib/homeCopy';
+import { buildHeroModel } from '../lib/homeHero';
 import { nameLookup } from '../lib/leaderboardModel';
 import {
   findInRoster,
@@ -86,7 +86,8 @@ import {
   myTeamCaptainId,
   teamHandicapFor,
 } from '../lib/teamPlay';
-import { TICKET_TEXT, approveButton, fieldA11y } from '../lib/ticketCopy';
+import { shareLiveFollow } from '../lib/shareLive';
+import { TICKET_TEXT, approveButton, fieldA11y, stubTotal } from '../lib/ticketCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -162,6 +163,17 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     }
   }, []);
 
+  // Del-knappen øverst til høyre (eierens svar b): bare når arrangøren har
+  // slått på live-følging, og da deler den webbens «følg live»-lenke.
+  const liveToken = bundle?.game.spectateToken ?? null;
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: liveToken
+        ? () => <ShareLiveButton token={liveToken} />
+        : undefined,
+    });
+  }, [navigation, liveToken]);
+
   if (!bundle) {
     if (loading) {
       return (
@@ -206,7 +218,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     teamMode && teamNumber != null && me?.player.courseHandicap != null
       ? teamHandicapFor(computeGameLeaderboard(bundle, scores), teamNumber)
       : null;
-  const start = startField(game.scheduledTeeOffAt);
+  const start = startField(game.scheduledTeeOffAt, new Date());
   const slot = slotField(ticketSlot(bundle, userId));
   const strokes = ticketStrokes({
     bundle,
@@ -216,13 +228,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
     teamHandicap,
   });
   const fields: TicketField[] = [
-    {
-      label: TICKET_TEXT.start,
-      value: start.date ?? HOME_TEXT.noTeeOff,
-      sub: start.clock,
-      a11y: start.a11y,
-      testID: 'ticket-start',
-    },
+    { label: TICKET_TEXT.start, value: start.value, sub: start.sub, a11y: start.a11y, testID: 'ticket-start' },
     { label: slot.label, value: slot.value, a11y: fieldA11y(slot.label, slot.value), testID: 'ticket-slot' },
     {
       label: TICKET_TEXT.strokes,
@@ -234,6 +240,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
       testID: 'ticket-strokes',
     },
   ];
+  // «15 p» til høyre for fremdriften (eierens svar a): tavlas tall for meg,
+  // fra den samme modellen helten på Hjem bruker. Regnes bare når runden pågår;
+  // modellen svarer uten plass for lagformater, reveal og andre formater.
+  const hero = game.status === 'active' ? buildHeroModel({ bundle, scores: localScores, userId }) : null;
+  const runningTotal =
+    hero?.standing?.total != null && hero.unit ? stubTotal(hero.standing.total, hero.unit) : null;
   const stub = ticketStub({
     status: game.status,
     gate: gated,
@@ -281,6 +293,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           courseName={bundle.courseName}
           teeOffAt={game.scheduledTeeOffAt}
           calendarEvent={calendarEvent(bundle)}
+          runningTotal={runningTotal}
           flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
           onChanged={refresh}
           onNavigate={navigation.navigate}
@@ -353,6 +366,23 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   );
 }
 
+/** Del-ikonet i toppen. Knappen bærer etiketten; ikonet i den er dekor. */
+function ShareLiveButton({ token }: { token: string }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={TICKET_TEXT.share}
+      hitSlop={8}
+      onPress={() => void shareLiveFollow(token)}
+      style={styles.headerButton}
+      testID="share-live"
+    >
+      <DelIcon color={colors.text} size={22} />
+    </Pressable>
+  );
+}
+
 /**
  * Én rad i spillerlista. Eksportert for render-testen (samme grep som
  * `LeaderboardBody`) — hva raden SIER er delt logikk i `rosterMarks`, men at
@@ -422,6 +452,7 @@ export function RosterRow({
 }
 
 const styles = StyleSheet.create({
+  headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   rosterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

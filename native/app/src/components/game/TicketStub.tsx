@@ -31,6 +31,7 @@ export function TicketStub({
   courseName,
   teeOffAt,
   calendarEvent,
+  runningTotal = null,
   flightCta,
   onChanged,
   onNavigate,
@@ -42,6 +43,11 @@ export function TicketStub({
   teeOffAt: string | null;
   /** Til «Legg til i kalender». `null` uten tee-off, og da står ikke knappen. */
   calendarEvent: CalendarEvent | null;
+  /**
+   * Tallet til høyre for fremdriften, som «15 p» (eierens svar a). Tavlas
+   * total for meg, i samme enhet som helten på Hjem. `null` = ikke noe tall.
+   */
+  runningTotal?: string | null;
   /**
    * #2200: knappen til scorekortet når mitt kort er levert og makkerkort jeg
    * har ført, står igjen. `null` = ingen knapp.
@@ -79,7 +85,7 @@ export function TicketStub({
     case 'scheduled':
       return (
         <View style={styles.block}>
-          <Text style={[styles.kicker, { color: colors.primary }]} testID="ticket-registered">
+          <Text style={[styles.registered, { color: colors.text }]} testID="ticket-registered">
             {TICKET_TEXT.registered}
           </Text>
           <WaitingRoom gameId={gameId} teeOffAt={teeOffAt} onChanged={onChanged} />
@@ -90,28 +96,20 @@ export function TicketStub({
       return (
         <View style={styles.block} testID="finished-banner">
           {stub.result ? (
-            <View style={styles.resultRow}>
-              {/* Gull er medalje: bare egen seier (DESIGN.md). Som på Hjem er
-                  gullet en skive, ikke tekstfarge — gull tekst på hvitt har for
-                  svak kontrast. */}
-              {stub.result.isWin ? (
-                <View
-                  style={[styles.gold, { backgroundColor: colors.accent }]}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                  testID="ticket-result-gold"
-                />
-              ) : null}
-              <Text style={[styles.result, { color: colors.text }]} testID="ticket-result">
-                {stub.result.text}
-              </Text>
-            </View>
+            // Gull er medalje: bare egen seier (DESIGN.md), og da ett merke,
+            // medaljen i teksten. `accentText` er gullets lesbare tone.
+            <Text
+              style={[styles.result, { color: stub.result.isWin ? colors.accentText : colors.text }]}
+              testID="ticket-result"
+            >
+              {stub.result.text}
+            </Text>
           ) : (
             <Text style={ui.body}>{TICKET_TEXT.finishedNoResult}</Text>
           )}
           <Pressable
             accessibilityRole="button"
-            style={ui.button}
+            style={[ui.button, styles.cta]}
             onPress={() => onNavigate('Leaderboard', { gameId })}
             testID="ticket-board"
           >
@@ -124,6 +122,7 @@ export function TicketStub({
         <ActiveStub
           stub={stub}
           gameId={gameId}
+          runningTotal={runningTotal}
           flightCta={flightCta}
           onNavigate={onNavigate}
         />
@@ -136,11 +135,13 @@ export function TicketStub({
 function ActiveStub({
   stub,
   gameId,
+  runningTotal,
   flightCta,
   onNavigate,
 }: {
   stub: Extract<TicketStubModel, { kind: 'active' }>;
   gameId: string;
+  runningTotal: string | null;
   flightCta: string | null;
   onNavigate: Navigate;
 }) {
@@ -148,7 +149,7 @@ function ActiveStub({
   const flightButton = flightCta ? (
     <Pressable
       accessibilityRole="button"
-      style={ui.button}
+      style={[ui.button, styles.cta]}
       onPress={() => onNavigate('Scorecard', { gameId })}
       testID="deliver-flight-cta"
     >
@@ -182,19 +183,26 @@ function ActiveStub({
 
   return (
     <View style={styles.block}>
-      <Text style={[ui.body, ui.num]} testID="ticket-played">
-        {playedLine(stub.played, stub.total)}
-      </Text>
+      <View style={styles.playedRow}>
+        <Text style={[styles.played, ui.num, { color: colors.muted }]} testID="ticket-played">
+          {playedLine(stub.played, stub.total)}
+        </Text>
+        {runningTotal ? (
+          <Text style={[styles.total, { color: colors.text }]} testID="ticket-total">
+            {runningTotal}
+          </Text>
+        ) : null}
+      </View>
       {/* Linja sier det samme som teksten over, så skjermleseren hopper over den. */}
       <View
-        style={[styles.track, { backgroundColor: colors.border }]}
+        style={[styles.track, { backgroundColor: colors.trackBg }]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         testID="ticket-progress"
       >
         <View style={[styles.fill, { width: `${share * 100}%`, backgroundColor: colors.primary }]} />
       </View>
-      <Pressable accessibilityRole="button" style={ui.button} onPress={onPress} testID="primary-cta">
+      <Pressable accessibilityRole="button" style={[ui.button, styles.cta]} onPress={onPress} testID="primary-cta">
         <Text style={ui.buttonText}>{label}</Text>
       </Pressable>
     </View>
@@ -339,20 +347,18 @@ function WithdrawnStub({
 
 const styles = StyleSheet.create({
   block: { gap: 8 },
-  kicker: {
-    fontSize: 13,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  gold: { width: 14, height: 14, borderRadius: 7 },
-  result: { flexShrink: 1, fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  registered: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  result: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  /** Hovedknappen i billetten er høyere enn appens 44 pt, som i designet. */
+  cta: { minHeight: 52 },
+  playedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  played: { flexShrink: 1, fontSize: 13, fontFamily: FONTS.sans },
+  total: { fontSize: 16, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   actions: { gap: 6 },
   actionRow: { flexDirection: 'row', gap: 10 },
   action: { flex: 1, paddingHorizontal: 8, paddingVertical: 8 },
   actionWide: { flex: 1.4 },
   actionText: { textAlign: 'center' },
-  track: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  fill: { height: 6, borderRadius: 3 },
+  track: { height: 8, borderRadius: 999, overflow: 'hidden' },
+  fill: { height: 8, borderRadius: 999 },
 });
