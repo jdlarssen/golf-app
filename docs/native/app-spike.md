@@ -208,12 +208,15 @@ i profil-rommet, og bare i staging-bygg.
   (putte-skriv sender IKKE slag med — mergen bevarer det) og drainer etter hver
   tasting, som webben. Bundelen hentes på nytt ved hvert hullbytte og når appen
   kommer i forgrunnen (#2219), så hullet låses når runden er avsluttet.
-- **Scorecard** — webbens Layout A (Hull/Par/SI/Slag/Netto + totaler). I en
-  blind runde som pågår, skjules Netto-kolonnen og netto-totalene (#2219), som
-  på webben. «Lever»-knappen speiler webbens to porter: drain + kø-vakt (delt
-  `isActiveForGame`), og bekreftelses-Alert ved manglende hull. Knappen er
-  sperret til køen er lest første gang (#2219).
-- **Approve** — lista fra delt `pendingApprovalsFor`; godkjenn/avvis går via
+- **Scorecard** — det klassiske kortet (#2262): UT og INN med Hull/Par/Slag og
+  Poeng (stableford-familien) eller Netto, summer under, og et stempel etter
+  levering (delt `lib/scorecard/scorecardGrid.ts` og `scorecardStamp.ts`). I en
+  blind runde som pågår, står bare Slag og Brutto (#2219, #2262). «Lever»-
+  knappen speiler webbens to porter: drain + kø-vakt (delt `isActiveForGame`),
+  og bekreftelses-Alert ved manglende hull. Knappen er sperret til køen er lest
+  første gang (#2219).
+- **Approve** — lista fra delt `pendingApprovalsFor`, med hvert kort som det
+  samme klassiske kortet (#2262); godkjenn/avvis går via
   `POST /api/games/{id}/scorecards/{userId}` (#2215), som varsler spilleren.
 
 ### Format-gaten
@@ -1850,3 +1853,55 @@ xcrun devicectl device info files --device <udid> --domain-type appDataContainer
 
 Kravet er at `fsCachedData/` ikke finnes eller er tom, og at `Cache.db` har null rader med
 `rest/v1` i `request_key`.
+
+## Startboden (#2254)
+
+Hjem i appen er startboden: runden du er midt i står øverst som et stort skoggrønt
+heltekort, neste runde som en billett og forrige runde som én rad. Webbens Hjem er
+uendret; dette er appens flate (eierens retning i #2250).
+
+### Rekkefølgen fra toppen
+
+1. Datolinja («Tirsdag 29. september») og «Hei, {fornavn}.» med HCP-pillen (trykk →
+   profil-rommet). Profilen hentes ved hvert fokus og caches ikke: uten nett står
+   bare datoen.
+2. Heltekortet (`components/home/HomeHeroCard.tsx`) og godkjenningsraden under det.
+3. «Flere runder i gang»: resten av de aktive, som dagens kort.
+4. «Neste start»: første planlagte (sortert på tee-off) som billett
+   (`NextStartTicket.tsx`); resten under «Mine spill».
+5. «Forrige runde» (`LastRoundCard.tsx`): nyeste `ended_at`. «Alle runder →» folder ut
+   de andre (opptil fire) på stedet, til historikken (#2265) finnes.
+6. «Opprett spill» står nederst når en runde pågår, ellers øverst som før (eierens svar).
+
+### Datakildene
+
+- **Hjem-lista** (`data/homeList.ts`) er fortsatt én spørring. Den leser også
+  `result_summary` og `flight_number` fra egen rad og `game_mode`, `hole_segment` og
+  `ended_at` fra spillet. Nyttelasten har versjon (`HOME_PAYLOAD_VERSION`); en eldre cache
+  leses som «ingen cache», samme mønster som `BUNDLE_PAYLOAD_VERSION`.
+- **Brutto for forrige runde** (`lastRound`) er webbens «Runder»-tall
+  (`getRoundScoresForGames` + `computeRoundScore`), hentet for den ene runden.
+  Best-effort: feiler det, står raden med plassen alene.
+- **Heltekortet og billetten** leser spill-bundelen og de lokale slagene
+  (`data/homeHero.ts`), de samme spillets side leser. Hjem leser dem på nytt fra enheten
+  ved hvert fokus og henter så fra serveren (`refreshGameBundle`, og `seedGameScores` for
+  helten). Derfor tegnes heltekortet i flymodus når spillet har vært åpnet før.
+
+### Heltekortet bruker spillets egen neste-hull-regel
+
+`lib/homeHero.ts` regner ingenting selv. Neste hull og tilstanden kommer fra nøyaktig de
+hjelperne `GameHome.tsx` bruker: `foldLocalScores`, `filledHolesForOwner` med kapteinens
+rader, `nextUnfilledHole` og `computePrimaryCtaState` med lagets stempel når laget deler
+kort. Endres regelen på spillets side, skal heltekortet følge med, ellers sender Hjem og
+spillets side spilleren til to ulike hull. Plassen er tavlas (`computeLiveBoard` +
+`viewerStanding`, #2253), matet med radene resultattabellen alt bygger
+(`toPlayerRows`/`toHoleRows`/`toScoreRows` i `scoringContext.ts`). Tavla svarer `null` for
+lagformater, andre formater og reveal-spill, og da står «N av 18 hull spilt» i stedet.
+Stengte spill (`gateReason`) får «Åpne runden →», ingen ring og ingen plass.
+
+### Lokaltid, ikke Oslo
+
+Datolinja, billettens stubb og nærheten («I dag», «I morgen», «Om 3 dager») regnes i
+enhetens lokaltid (`lib/homeDates.ts`). Webbens `teeOffProximity` bygger på `osloParts`
+(Intl med `Europe/Oslo`), og den kan ikke brukes under Hermes (se «Ikke bruk webbens
+Oslo-parser i appen»). `teeOffProximityLocal` speiler bøttene og grensen (0–6 dager).

@@ -131,3 +131,184 @@ describe('refreshHomeCards', () => {
     expect(await cacheRow()).toBeUndefined();
   });
 });
+
+// #2254: startboden trenger mer fra samme spørring — formatet, segmentet,
+// avslutningstiden, plassen og flighten — og brutto for forrige runde.
+describe('startboden (#2254)', () => {
+  useFreshModules();
+
+  /** Et avsluttet spill i formen spørringen gir, med egen plass lagret. */
+  function finishedRow(id: string, endedAt: string | null, createdAt: string) {
+    return {
+      game_id: id,
+      submitted_at: '2026-09-01T12:00:00.000Z',
+      withdrawn_at: null,
+      approved_at: null,
+      result_summary: { kind: 'placement', rank: 2, fieldSize: 8, isTeam: false },
+      flight_number: 1,
+      games: {
+        id,
+        name: `Runde ${id}`,
+        status: 'finished',
+        game_mode: 'stableford',
+        hole_segment: 'full',
+        created_at: createdAt,
+        ended_at: endedAt,
+        scheduled_tee_off_at: null,
+        require_peer_approval: false,
+        courses: { name: 'Losby' },
+      },
+    };
+  }
+
+  it('tar med format, segment, avslutningstid, plass og flight på kortet', async () => {
+    const { queryStub, routeFrom } = mocks();
+    const active = {
+      ...ROW,
+      result_summary: null,
+      flight_number: 2,
+      games: { ...ROW.games, game_mode: 'texas_scramble', hole_segment: 'full', ended_at: null },
+    };
+    routeFrom({ game_players: [queryStub({ data: [active], error: null })] });
+
+    const list = await home().fetchHomeCards(ME);
+
+    expect(list.version).toBe(2);
+    expect(list.lastRound).toBeNull();
+    expect(list.cards[0]).toMatchObject({
+      gameMode: 'texas_scramble',
+      holeSegment: 'full',
+      endedAt: null,
+      resultSummary: null,
+      flightNumber: 2,
+    });
+  });
+
+  it('henter brutto for forrige runde, og bare for den', async () => {
+    const { queryStub, routeFrom, stepArgs } = mocks();
+    const gamesStub = queryStub({
+      data: [{ id: 'new', source_game_id: null, game_mode: 'stableford' }],
+      error: null,
+    });
+    const scoresStub = queryStub({
+      data: [
+        { game_id: 'new', strokes: 5 },
+        { game_id: 'new', strokes: 4 },
+      ],
+      error: null,
+    });
+    routeFrom({
+      game_players: [
+        queryStub({
+          data: [
+            finishedRow('old', '2026-09-20T15:00:00.000Z', '2026-09-25T08:00:00.000Z'),
+            finishedRow('new', '2026-09-27T15:00:00.000Z', '2026-09-01T08:00:00.000Z'),
+          ],
+          error: null,
+        }),
+        queryStub({ data: [{ game_id: 'new', course_handicap: 3 }], error: null }),
+      ],
+      games: [gamesStub],
+      scores: [scoresStub],
+    });
+
+    const list = await home().fetchHomeCards(ME);
+
+    // Forrige runde er den som ble avsluttet sist, ikke den som ble laget sist.
+    expect(list.lastRound).toEqual({ gameId: 'new', brutto: 9, netto: 6, teamBall: false });
+    expect(stepArgs(gamesStub, 'in')).toEqual([['id', ['new']]]);
+    expect(list.cards.find((c) => c.gameId === 'new')?.resultSummary).toEqual({
+      kind: 'placement',
+      rank: 2,
+      fieldSize: 8,
+      isTeam: false,
+    });
+  });
+
+  it('lar forrige runde stå uten brutto når hentingen av slagene feiler', async () => {
+    const { queryStub, routeFrom } = mocks();
+    mocks().currentDeviceUserId.mockResolvedValue(ME);
+    routeFrom({
+      game_players: [
+        queryStub({
+          data: [finishedRow('new', '2026-09-27T15:00:00.000Z', '2026-09-01T08:00:00.000Z')],
+          error: null,
+        }),
+      ],
+      games: [queryStub({ data: null, error: { message: 'nettet falt' } })],
+    });
+
+    const list = await home().refreshHomeCards(ME);
+
+    expect(list.cards).toHaveLength(1);
+    expect(list.lastRound).toBeNull();
+    // Lista havner likevel i cachen.
+    expect(await home().loadHomeCards()).toEqual(list);
+  });
+
+  it('leser en cache uten riktig versjon som «ingen cache»', async () => {
+    const { getDb, putCacheEntry } = db();
+    const write = async (payload: string) =>
+      putCacheEntry(await getDb(), {
+        key: home().HOME_CACHE_KEY,
+        payload,
+        fetchedAt: '2026-09-28T00:00:00.000Z',
+      });
+
+    // Formen appen skrev før #2254: ingen versjon, ingen nye felt på kortene.
+    await write(JSON.stringify({ cards: [ROW], fetchedAt: '2026-09-28T00:00:00.000Z' }));
+    expect(await home().loadHomeCards()).toBeUndefined();
+
+    await write(JSON.stringify({ version: 1, cards: [], lastRound: null, fetchedAt: 'x' }));
+    expect(await home().loadHomeCards()).toBeUndefined();
+
+    await write('{ødelagt');
+    expect(await home().loadHomeCards()).toBeUndefined();
+  });
+});
+
+describe('splitHomeCards', () => {
+  const card = (
+    gameId: string,
+    status: string,
+    createdAt: string,
+    endedAt: string | null = null,
+  ) => ({
+    gameId,
+    name: gameId,
+    status,
+    courseName: null,
+    scheduledTeeOffAt: null,
+    createdAt,
+    state: null,
+    gameMode: 'stableford',
+    holeSegment: 'full',
+    endedAt,
+    resultSummary: null,
+    flightNumber: null,
+  });
+
+  it('sorterer avsluttede på avslutningstid, nyest først, og faller tilbake på opprettet', () => {
+    const { splitHomeCards } = require('./homeList') as Home;
+    const { finished } = splitHomeCards([
+      card('laget-sist', 'finished', '2026-09-26T08:00:00.000Z', '2026-09-10T15:00:00.000Z'),
+      card('spilt-sist', 'finished', '2026-09-01T08:00:00.000Z', '2026-09-27T15:00:00.000Z'),
+      card('uten-slutt', 'finished', '2026-09-20T08:00:00.000Z', null),
+    ]);
+    expect(finished.map((c) => c.gameId)).toEqual(['spilt-sist', 'uten-slutt', 'laget-sist']);
+  });
+
+  it('holder grensen på fem avsluttede', () => {
+    const { splitHomeCards } = require('./homeList') as Home;
+    const many = Array.from({ length: 7 }, (_, i) =>
+      card(`g${i}`, 'finished', '2026-09-01T08:00:00.000Z', `2026-09-0${i + 1}T15:00:00.000Z`),
+    );
+    expect(splitHomeCards(many).finished.map((c) => c.gameId)).toEqual([
+      'g6',
+      'g5',
+      'g4',
+      'g3',
+      'g2',
+    ]);
+  });
+});

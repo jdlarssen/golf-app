@@ -8,6 +8,7 @@ import {
   flightBuckets,
   peersForApproval,
   canApproveScorecardFor,
+  isFlightMate,
   pendingApprovalsFor,
   eligibleForFlightAssignment,
   flightIsFreeGrouping,
@@ -479,6 +480,46 @@ describe('canApproveScorecardFor', () => {
               owner.user_id,
             ),
           );
+        }
+      }
+    }
+  });
+});
+
+// ─── isFlightMate ────────────────────────────────────────────────────────────
+
+describe('isFlightMate (#2262)', () => {
+  const splitSix: FlightPlayer[] = [
+    p('a', 1), p('b', 1), p('c', 1), p('d', 1),
+    p('e', 2), p('f', 2),
+  ];
+
+  it.each<[string, GameMode, FlightPlayer[], string, string, boolean]>([
+    ['én-flight-spill: på tvers av sider', 'singles_matchplay', [p('alice', 1), p('bob', 2)], 'bob', 'alice', true],
+    ['>4 med flighter: samme flight', 'skins', splitSix, 'a', 'b', true],
+    ['>4 med flighter: annen flight', 'skins', splitSix, 'a', 'e', false],
+    ['>4 uten flight', 'stableford', Array.from({ length: 6 }, (_, i) => p(`u${i + 1}`, null)), 'u1', 'u2', false],
+    ['markør som har trukket seg, er fortsatt kamerat', 'skins', [...splitSix, withdrawn('g', 1)], 'g', 'a', true],
+    ['trukket eier i samme flight', 'skins', [...splitSix.slice(1), withdrawn('a', 1)], 'b', 'a', true],
+    ['seg selv', 'singles_matchplay', [p('alice', 1), p('bob', 2)], 'alice', 'alice', false],
+    ['ukjent spiller', 'singles_matchplay', [p('alice', 1), p('bob', 2)], 'ghost', 'alice', false],
+  ])('%s', (_, mode, players, a, b, expected) => {
+    expect(isFlightMate(players, mode, a, b)).toBe(expected);
+  });
+
+  it('er alltid sann der canApproveScorecardFor er sann (samme regel, uten aktiv-kravet)', () => {
+    const setups: [GameMode, FlightPlayer[]][] = [
+      ['singles_matchplay', [p('alice', 1), p('bob', 2)]],
+      ['wolf', Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`, null))],
+      ['skins', splitSix],
+      ['singles_matchplay', [p('a', 1), p('b', 2), p('c', null), withdrawn('wd')]],
+    ];
+    for (const [mode, players] of setups) {
+      for (const approver of players) {
+        for (const owner of players) {
+          if (canApproveScorecardFor(players, mode, approver.user_id, owner.user_id)) {
+            expect(isFlightMate(players, mode, approver.user_id, owner.user_id)).toBe(true);
+          }
         }
       }
     }
