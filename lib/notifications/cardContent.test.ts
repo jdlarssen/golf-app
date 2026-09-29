@@ -65,6 +65,29 @@ describe('buildNotificationText', () => {
     );
   });
 
+  it('scorecard_rejected til den som leverte kortet for en annen, sier hvem kortet tilhører (#2200)', () => {
+    const detailFor = (payload: Record<string, unknown>) =>
+      buildNotificationText(
+        'scorecard_rejected',
+        { game_id: 'g', game_name: 'Vinter-cup', rejecter_name: 'Per', reason: 'hull 7', ...payload } as NotificationPayload,
+        t,
+      ).detail;
+
+    // The card's owner: the plain sentence, as before.
+    expect(detailFor({})).toBe(
+      `kinds.scorecardRejected.detail|${JSON.stringify({ rejecterName: 'Per', gameName: 'Vinter-cup', reason: 'hull 7' })}`,
+    );
+    // The one who delivered it for Ola: the sentence names Ola's card.
+    expect(detailFor({ player_name: 'Ola' })).toBe(
+      `kinds.scorecardRejected.detailFor|${JSON.stringify({
+        rejecterName: 'Per',
+        playerName: 'Ola',
+        gameName: 'Vinter-cup',
+        reason: 'hull 7',
+      })}`,
+    );
+  });
+
   it('cup_signup velger tittel på retningen, med locale-fallback for navnet (#1490)', () => {
     const titleFor = (payload: Record<string, unknown>) =>
       buildNotificationText(

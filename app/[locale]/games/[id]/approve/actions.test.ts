@@ -349,6 +349,7 @@ describe('rejectScorecard', () => {
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
       { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: { submitted_by_user_id: null }, error: null }, // #2200: who delivered, read before the reject
       { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -378,6 +379,7 @@ describe('rejectScorecard', () => {
         ],
         error: null,
       }, // game_players for attestant-regelen
+      { data: { submitted_by_user_id: null }, error: null }, // #2200: who delivered, read before the reject
       { data: [], error: null }, // game_players.update → 0 rows (RLS blocked)
       { data: null, error: null }, // follow-up read: row not visible → denied
     ]);
@@ -404,6 +406,7 @@ describe('rejectScorecard', () => {
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
       { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: { submitted_by_user_id: null }, error: null }, // #2200: who delivered, read before the reject
       { data: [], error: null }, // game_players.update → 0 rows (already rejected)
       { data: { submitted_at: null }, error: null }, // follow-up read: card is not submitted
     ]);
@@ -430,6 +433,7 @@ describe('rejectScorecard', () => {
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games (loadAndAuthorize)
       { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: { submitted_by_user_id: null }, error: null }, // #2200: who delivered, read before the reject
       { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
       { data: { name: 'Sommercup' }, error: null }, // games.name (notify block)
       { data: { name: 'Kari' }, error: null }, // users.name (the rejecter)
@@ -463,6 +467,7 @@ describe('rejectScorecard', () => {
     supabaseMock = buildSupabaseMock([
       { data: { status: 'active', game_mode: 'singles_matchplay' }, error: null }, // games
       { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: { submitted_by_user_id: null }, error: null }, // #2200: who delivered, read before the reject
       { data: [{ user_id: 'player-2' }], error: null }, // game_players.update → 1 row
       { data: { name: 'Sommercup' }, error: null }, // games.name
       { data: { name: null }, error: null }, // users.name — rejecter has no name

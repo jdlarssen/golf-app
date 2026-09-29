@@ -51,6 +51,8 @@ let db: {
   /** Rosteret lagkort-kaskaden leser. */
   roster: { user_id: string; team_number: number | null; withdrawn_at: string | null }[];
   reviewerName: string | null;
+  /** Who delivered the card (#2200), read before a reject. */
+  deliverer: string | null;
 };
 
 function respond(op: QueryOp): QueryResponse {
@@ -62,9 +64,15 @@ function respond(op: QueryOp): QueryResponse {
   if (op.table === 'game_players' && op.columns === 'user_id, team_number, withdrawn_at') {
     return { data: db.roster };
   }
+  if (op.table === 'game_players' && op.columns === 'submitted_by_user_id') {
+    return { data: { submitted_by_user_id: db.deliverer } };
+  }
   if (op.table === 'game_players') return { data: db.existing };
   if (op.table === 'games') return { data: { name: 'Sommercup' } };
-  if (op.table === 'users') return { data: { name: db.reviewerName } };
+  if (op.table === 'users') {
+    const id = op.filters.find((f) => f.column === 'id')?.value;
+    return { data: { name: id === PLAYER ? 'Ola Spiller' : db.reviewerName } };
+  }
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
 }
 
@@ -104,6 +112,7 @@ beforeEach(() => {
     existing: null,
     roster: [],
     reviewerName: 'Kari',
+    deliverer: null,
   };
 });
 
@@ -273,6 +282,50 @@ describe('rejectScorecardCore', () => {
       },
     ]);
     expectCacheExpired();
+  });
+
+  it('kortet levert av en annen (#2200): den som leverte, varsles også, med spillerens navn', async () => {
+    // A guest never receives a notice, and a flightmate's card was keyed by
+    // the one who delivered it — they are the one who can put it right.
+    db.deliverer = 'foereren';
+
+    await expect(reject('Hull 7 er feil')).resolves.toEqual({ ok: true, alreadyDone: false });
+
+    expect(notified()).toEqual([
+      {
+        userId: PLAYER,
+        kind: 'scorecard_rejected',
+        payload: {
+          game_id: GAME_ID,
+          game_name: 'Sommercup',
+          rejecter_name: 'Kari',
+          reason: 'Hull 7 er feil',
+        },
+      },
+      {
+        userId: 'foereren',
+        kind: 'scorecard_rejected',
+        payload: {
+          game_id: GAME_ID,
+          game_name: 'Sommercup',
+          rejecter_name: 'Kari',
+          reason: 'Hull 7 er feil',
+          player_name: 'Ola Spiller',
+        },
+      },
+    ]);
+  });
+
+  it.each([
+    { navn: 'eieren leverte selv', deliverer: PLAYER },
+    { navn: 'avviseren leverte kortet (arrangør)', deliverer: REVIEWER },
+    { navn: 'ukjent leverandør (før 0191)', deliverer: null },
+  ])('$navn: bare eieren varsles', async ({ deliverer }) => {
+    db.deliverer = deliverer;
+
+    await reject('Feil');
+
+    expect(notified().map((n) => (n as { userId: string }).userId)).toEqual([PLAYER]);
   });
 
   it('tom grunn: raden får sentinelen, og varselet utelater reason', async () => {

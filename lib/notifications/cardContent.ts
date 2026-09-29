@@ -69,15 +69,23 @@ export function buildNotificationText(
     }
     case 'scorecard_rejected': {
       const p = payload as NotificationPayload<'scorecard_rejected'>;
+      const rejecterName = p.rejecter_name ?? t('somePlayerFallback');
+      const gameName = p.game_name ?? t('someGameFallback');
+      // Utelatt reason = attestanten skrev ingenting; vis en lokalisert
+      // tekst i stedet for DB-radens norske plassholder (#1358).
+      const reason = p.reason ?? t('kinds.scorecardRejected.defaultReason');
       return {
         title: t('kinds.scorecardRejected.title'),
-        detail: t('kinds.scorecardRejected.detail', {
-          rejecterName: p.rejecter_name ?? t('somePlayerFallback'),
-          gameName: p.game_name ?? t('someGameFallback'),
-          // Utelatt reason = attestanten skrev ingenting; vis en lokalisert
-          // tekst i stedet for DB-radens norske plassholder (#1358).
-          reason: p.reason ?? t('kinds.scorecardRejected.defaultReason'),
-        }),
+        // #2200: the one who delivered the card for someone else is told
+        // whose card it is.
+        detail: p.player_name
+          ? t('kinds.scorecardRejected.detailFor', {
+              rejecterName,
+              playerName: p.player_name,
+              gameName,
+              reason,
+            })
+          : t('kinds.scorecardRejected.detail', { rejecterName, gameName, reason }),
       };
     }
     case 'scorecard_reopened': {
