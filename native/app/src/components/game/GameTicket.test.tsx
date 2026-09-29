@@ -60,9 +60,9 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
   const roster = screen.getByTestId('game-ticket-roster');
   expect(roster.props.accessibilityLabel).toBe('Flighten din: Du, Marte og Jonas');
   expect(within(roster).getByTestId('game-ticket-names', HIDDEN)).toHaveTextContent('Du, Marte og Jonas');
-  // Deg først i skogfargen, så de andre som egne skiver.
+  // Deg først i skogfargen (`primary`, salvie i mørk), så de andre som egne skiver.
   const self = within(roster).getByTestId('game-ticket-avatars-self', HIDDEN);
-  expect(self).toHaveStyle({ backgroundColor: PALETTES.light.surfaceStrong });
+  expect(self).toHaveStyle({ backgroundColor: PALETTES.light.primary });
   expect(self).toHaveTextContent('SA');
   expect(within(roster).getAllByTestId('game-ticket-avatars-disc', HIDDEN)).toHaveLength(2);
 
