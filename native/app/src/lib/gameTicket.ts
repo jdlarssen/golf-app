@@ -243,9 +243,10 @@ function preStartCourseHandicap(opts: {
 }
 
 /**
- * Navnelista under avatarene: «Du, Marte, Jonas og Kristian». Som avatarene
- * står fire andre med navn, og resten som et tall («og 2 til»): i et klubbspill
- * uten flighter ville en full liste vært over hundre navn.
+ * Navnelista ved avatarene: «Du, Marte, Jonas og Kristian». Like mange andre
+ * som det står skiver for (`max`; billetten sender `MAX_TICKET_COMPANIONS`),
+ * og resten som et tall («og 2 til»): i et klubbspill uten flighter ville en
+ * full liste vært over hundre navn.
  */
 export function rosterNames(names: readonly string[], max = MAX_AVATARS): string {
   const shown = ['Du', ...names.slice(0, max)];
