@@ -18,10 +18,6 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "the viewer's in-progress games, own and captain user_ids only",
   },
-  'lib/notifications/deliveryReminder.ts': {
-    count: 1,
-    reason: 'one game, own and captain user_ids only',
-  },
   'app/[locale]/admin/games/[id]/slett/page.tsx': {
     count: 1,
     reason: 'head: true count, no rows',
