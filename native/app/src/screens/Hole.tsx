@@ -19,7 +19,14 @@
 // regnestykket deres ikke er slag i det hele tatt — det er valg og
 // prestasjoner, ført på hullet. De to seksjonene er additive: de legger seg
 // over og under de vanlige kortene, og resten av skjermen merker dem ikke.
-import { useCallback, useEffect, useRef } from 'react';
+//
+// #2252: scoreskinna fra nettsiden (#2251). Flighten står som kompakte rader,
+// og store knapper nederst viser resultatet før trykket. Ett trykk fører
+// scoren og går videre til neste som mangler. Bingo Bango Bongo beholder
+// kortene (`formatUsesScoreRail`). Visningen bor i `HoleView`, som monteres
+// på nytt per hull: skinnas valg og ventende skrivinger hører til ETT hull og
+// skal ikke følge med når «Neste» bare bytter parameteren.
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -28,8 +35,23 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { GameStatus } from '../../../../lib/games/status';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
+import {
+  revealState,
+  shouldHideNetto,
+  type ScoreVisibility,
+} from '../../../../lib/games/visibility';
+import { nameInitials } from '../../../../lib/names/initials';
+import { stablefordPointsForCard } from '../../../../lib/scorecard/railPoints';
+import {
+  formatUsesScoreRail,
+  railStrokes,
+  strikeStrokes,
+  strokeTerm,
+} from '../../../../lib/scorecard/scoreRail';
 import {
   firstEntryStrokes,
   nextStrokes,
@@ -37,13 +59,22 @@ import {
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import {
   formatCapturesPutts,
+  isStablefordFamily,
   modeCollapsesToTeamCard,
 } from '../../../../lib/scoring/modes/types';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
+import { FlightRow } from '../components/hole/FlightRow';
+import { HoleHero } from '../components/hole/HoleHero';
+import {
+  ScoreRail,
+  type RailDisplay,
+  type RailOption,
+} from '../components/hole/ScoreRail';
+import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { LocalScore } from '../data/db';
-import type { BundleGame, BundleHole, BundlePlayer } from '../data/gameBundle';
+import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { subscribeGameScores } from '../data/realtime';
 import { seedGameScores } from '../data/seedScores';
 import { addForegroundListener, addOnlineListener } from '../data/syncTriggers';
@@ -63,9 +94,10 @@ import {
   teamExtraForHole,
   type TeamCard,
 } from '../lib/teamPlay';
-import { useGameChoices } from '../lib/useChoices';
+import { useGameChoices, type GameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
-import { usePuttsTracking } from '../lib/usePuttsTracking';
+import { usePuttsTracking, type PuttsTracking } from '../lib/usePuttsTracking';
+import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
 import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -86,8 +118,6 @@ const TAP_INSTRUCTION = 'Trykk kort = par. Bruk − / +.';
  * åpnes igjen med «Åpne for redigering» på spillersiden.
  */
 const SUBMITTED_BADGE = 'Levert';
-/** `scores.putts` har CHECK (0..10) fra migrasjon 0123 — samme tak her. */
-const MAX_PUTTS = 10;
 /** Hvor ofte skjermen leser SQLite på nytt. Samme takt som Sync-laben. */
 const POLL_MS = 1500;
 
@@ -105,10 +135,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   // Wolf/BBB henter valgene sine fra serveren. De elleve andre formatene
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste nettkall — og
   // før bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
-  const { extras, refresh: refreshChoices } = useGameChoices(
-    gameId,
-    bundle?.game.gameMode ?? '',
-  );
+  const choices = useGameChoices(gameId, bundle?.game.gameMode ?? '');
   // Putt-føring er opt-in per runde (#939), som på web. Kallet står her oppe
   // med de andre hookene fordi skjermen har tidlige `return`-er lenger nede.
   const putts = usePuttsTracking(gameId);
@@ -174,8 +201,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     );
   }
 
-  const roster = toRoster(bundle.players);
-  const me = findInRoster(roster, userId);
+  const me = findInRoster(toRoster(bundle.players), userId);
   const hole = bundle.holes.find((h) => h.holeNumber === holeNumber);
 
   if (!me || !hole) {
@@ -188,10 +214,95 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     );
   }
 
+  return (
+    <HoleView
+      key={holeNumber}
+      gameId={gameId}
+      holeNumber={holeNumber}
+      userId={userId}
+      bundle={bundle}
+      me={me}
+      hole={hole}
+      scores={scores}
+      reload={reload}
+      choices={choices}
+      putts={putts}
+      goToHole={goToHole}
+      onLeaderboard={() => navigation.navigate('Leaderboard', { gameId })}
+      onSubmit={() => navigation.navigate('Scorecard', { gameId })}
+    />
+  );
+}
+
+/**
+ * Ett sete på hullet: en spiller, eller et lag i lagformatene. Raden, skinna
+ * og «Annet»-arket leser alle herfra.
+ */
+type HoleSeat = ScoreRailSeat & {
+  /** Navnet i skinna og i skjermleserens tekst. */
+  name: string;
+  /** Navnet i raden, med «(deg)» eller «(ditt lag)». */
+  rowName: string;
+  initial: string;
+  /** Slagene setet får på hullet. `null` = motoren kunne ikke svare. */
+  extraStrokes: number | null;
+  submitted: boolean;
+  note: string | null;
+  /** Raden slagene skrives til (`scoreOwnerForHole` i lagformatene). */
+  owner: string;
+};
+
+function HoleView({
+  gameId,
+  holeNumber,
+  userId,
+  bundle,
+  me,
+  hole,
+  scores,
+  reload,
+  choices,
+  putts,
+  goToHole,
+  onLeaderboard,
+  onSubmit,
+}: {
+  gameId: string;
+  holeNumber: number;
+  userId: string;
+  bundle: GameBundle;
+  me: RosterEntry;
+  hole: BundleHole;
+  scores: LocalScore[];
+  reload: () => Promise<void>;
+  choices: GameChoices;
+  putts: PuttsTracking;
+  goToHole: (next: number) => void;
+  onLeaderboard: () => void;
+  onSubmit: () => void;
+}) {
+  const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { extras, refresh: refreshChoices } = choices;
+  // Setet «Annet»-arket er åpent for, eller `null`.
+  const [sheetSeatId, setSheetSeatId] = useState<string | null>(null);
+
+  const roster = toRoster(bundle.players);
   const mode = bundle.game.gameMode as GameMode;
   // Hvilke formater som i det hele tatt fanger putter er DELT regel — samme
   // uttrykk som webbens `HoleScoreList` gater på. Appen kopierer den ikke.
   const capturesPutts = formatCapturesPutts(mode);
+  // #2252: alle formater unntatt Bingo Bango Bongo fører slag på skinna.
+  const usesRail = formatUsesScoreRail(mode);
+  const isStableford = isStablefordFamily(mode);
+  // #2219: i en blind runde som pågår viser verken rader eller knapper poeng
+  // eller netto. Samme delte regel som scorekortet og resultatlista.
+  const hideNetto = shouldHideNetto(
+    revealState(
+      bundle.game.scoreVisibility as ScoreVisibility,
+      bundle.game.status as GameStatus,
+    ),
+  );
   const flight = resolveFlight(roster, mode, me);
   const par = parForPlayer(
     { mens: hole.parMens, ladies: hole.parLadies, juniors: hole.parJuniors },
@@ -216,7 +327,7 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
   // lagets stempel som gjelder: leverer én makker, er kortet frosset for alle.
   const mySubmittedAt = collapsed ? (myCard?.submittedAt ?? null) : me.submitted_at;
   const locked = bundle.game.status !== 'active' || mySubmittedAt != null;
-  // Badgen hentes fra motoren, og bare når vi faktisk skal tegne lagkort.
+  // Badgen hentes fra motoren, og bare når vi faktisk skal tegne lagrader.
   // Wolf og BBB kollapser aldri (`modeCollapsesToTeamCard` dekker
   // scramble-familien, alternate shot og patsome fra hull 7), så dette
   // kallstedet trenger ingen valg — wolf-grenen under har sitt eget.
@@ -242,7 +353,60 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
       })
     : null;
 
-  // Alle tre slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
+  // Setene på hullet. I lagformatene er setet lagets: kapteinens rad, og
+  // hvert tapp går dit via den delte `scoreOwnerForHole`.
+  const seats: HoleSeat[] = collapsed
+    ? teamCards.map((card) => {
+        const row = byUserHole.get(`${card.captainId}#${holeNumber}`);
+        const isMine = card.teamNumber === myCard?.teamNumber;
+        const teeStarter = teeStarterNameFor({
+          card,
+          gameMode: mode,
+          game: bundle.game,
+          holeNumber,
+          nameOf,
+        });
+        return {
+          id: card.captainId,
+          score: row?.strokes ?? null,
+          putts: row?.putts ?? null,
+          locked: locked || card.submittedAt != null,
+          name: card.label,
+          rowName: isMine ? `${card.label} (ditt lag)` : card.label,
+          initial: String(card.teamNumber),
+          extraStrokes: leaderboard
+            ? teamExtraForHole(leaderboard, card.teamNumber, holeNumber, hole.strokeIndex)
+            : null,
+          submitted: card.submittedAt != null,
+          note: teeStarter ? `${teeStarter} slår ut` : null,
+          owner: scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
+        };
+      })
+    : flight.map((entry) => {
+        const row = byUserHole.get(`${entry.user_id}#${holeNumber}`);
+        const name = displayName(entry.player);
+        return {
+          id: entry.user_id,
+          score: row?.strokes ?? null,
+          putts: row?.putts ?? null,
+          locked: locked || entry.submitted_at != null,
+          name,
+          rowName: entry.user_id === userId ? `${name} (deg)` : name,
+          initial: nameInitials(entry.player.name),
+          // `null` = configen peker på et annet format: da vises ingen badge.
+          extraStrokes: playerExtraForHole(
+            bundle.game,
+            entry.player.courseHandicap,
+            hole.strokeIndex,
+          ),
+          submitted: entry.submitted_at != null,
+          note: null,
+          owner: entry.user_id,
+        };
+      });
+  const seatOf = (seatId: string) => seats.find((seat) => seat.id === seatId);
+
+  // Alle slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
   // writeScore beholder dem), så les tilbake og drain køen.
   const writeStrokes = async (playerUserId: string, strokes: number | null) => {
     await writeScore({
@@ -256,6 +420,93 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     void drainQueue('tasting');
   };
 
+  // Skinna skriver via setet. Et låst sete avvises også her, ikke bare i
+  // knappene: et ark som sto åpent, eller et sent trykk, skal ikke nå fram.
+  const setSeatScore = async (seatId: string, strokes: number) => {
+    const seat = seatOf(seatId);
+    if (!seat || seat.locked) return;
+    await writeStrokes(seat.owner, strokes);
+  };
+
+  // «Angre» og X i arket: eksplisitt `null`, IKKE et utelatt felt. Utelatt
+  // betyr «behold» i writeScore-mergen, og da ville et feiltastet slag blitt
+  // stående.
+  const clearSeatScore = async (seatId: string) => {
+    const seat = seatOf(seatId);
+    if (!seat || seat.locked) return;
+    await writeStrokes(seat.owner, null);
+  };
+
+  // Putter skrives alene. Å sende `strokes` med ville vasket ut slaget som
+  // står der, fordi `writeScore` merger (#939).
+  const setSeatPutts = async (seatId: string, next: number) => {
+    const seat = seatOf(seatId);
+    if (!seat || seat.locked) return;
+    await writeScore({
+      gameId,
+      userId: seat.owner,
+      holeNumber,
+      putts: next,
+      enteredBy: userId,
+    });
+    await reload();
+    void drainQueue('tasting');
+  };
+
+  const rail = useScoreRail({
+    seats,
+    mySeatId: collapsed ? (myCard?.captainId ?? null) : userId,
+    par,
+    puttsTracking: capturesPutts && putts.enabled,
+    onSetScore: setSeatScore,
+    onSetPutts: setSeatPutts,
+    clearScoreFor: clearSeatScore,
+  });
+
+  // Det knappene viser før trykket: poeng i stableford-familien, netto ellers,
+  // bare navnet i en blind runde. Kan motoren ikke svare på slagene setet får,
+  // gjetter vi ikke: da vises bare navnet.
+  const railSeat = rail.activeSeatId == null ? undefined : seatOf(rail.activeSeatId);
+  const railDisplay: RailDisplay =
+    hideNetto || railSeat?.extraStrokes == null ? 'plain' : isStableford ? 'points' : 'netto';
+  const railOptions: RailOption[] = railSeat
+    ? railStrokes(par).map((strokes) => ({
+        strokes,
+        term: strokeTerm(strokes, par),
+        points: stablefordPointsForCard({
+          card: { score: strokes, extraStrokes: railSeat.extraStrokes ?? 0 },
+          par,
+          gameMode: mode,
+          isStableford,
+        }),
+        netto: strokes - (railSeat.extraStrokes ?? 0),
+      }))
+    : [];
+  const railSkipSeat = rail.skipToSeatId == null ? undefined : seatOf(rail.skipToSeatId);
+
+  // «Stryk» i «Annet»-arket: bare stableford-familien, netto dobbel bogey for
+  // setet arket er åpent for.
+  const sheetSeat = sheetSeatId == null ? undefined : seatOf(sheetSeatId);
+  let sheetStrike: { value: number; label: string } | undefined;
+  if (isStableford && sheetSeat) {
+    const extra = sheetSeat.extraStrokes ?? 0;
+    const value = strikeStrokes(par, extra);
+    const points = stablefordPointsForCard({
+      card: { score: value, extraStrokes: extra },
+      par,
+      gameMode: mode,
+      isStableford,
+    });
+    sheetStrike = {
+      value,
+      label:
+        hideNetto || points == null || sheetSeat.extraStrokes == null
+          ? 'Stryk'
+          : `Stryk · ${points} p`,
+    };
+  }
+
+  // Kortveien (Bingo Bango Bongo): «−»/«+» og tapp på kortet, som før.
   const adjustStrokes = async (playerUserId: string, delta: number) => {
     const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.strokes ?? null;
     await writeStrokes(playerUserId, nextStrokes({ current, par, delta }));
@@ -270,130 +521,85 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
     await writeStrokes(playerUserId, firstEntryStrokes(par));
   };
 
-  // «Angre»: eksplisitt `null` — IKKE et utelatt felt. Utelatt betyr «behold»
-  // i writeScore-mergen, og da ville et feiltastet slag blitt stående.
-  const clearStrokes = async (playerUserId: string) => {
-    await writeStrokes(playerUserId, null);
-  };
-
-  const adjustPutts = async (playerUserId: string, delta: number) => {
-    const current = byUserHole.get(`${playerUserId}#${holeNumber}`)?.putts ?? null;
-    let next: number | null;
-    if (current == null) {
-      // Fra «—» gir første + to putter: det vanligste tallet, ett tapp unna.
-      if (delta < 0) return;
-      next = 2;
-    } else if (delta < 0 && current <= 0) {
-      next = null; // 0 → tilbake til «—»
-    } else {
-      next = Math.min(MAX_PUTTS, Math.max(0, current + delta));
-    }
-    // Slag sendes IKKE med: `writeScore` merger, så et utelatt felt beholder
-    // verdien som ligger der. Å sende `strokes` her ville vasket den ut.
-    await writeScore({
-      gameId,
-      userId: playerUserId,
-      holeNumber,
-      putts: next,
-      enteredBy: userId,
-    });
-    await reload();
-    void drainQueue('tasting');
-  };
-
   const allHolesFilled = myFilled.length >= HOLE_COUNT;
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="hole-screen">
-      {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
-      <SyncBanner gameId={gameId} />
-      <Text style={ui.title}>Hull {holeNumber}</Text>
-      {/* Fakta-linja hadde all bredden til høyre stående ubrukt. Pillen legger
-          seg der, som webbens bryter gjør i header-høyden ved siden av Par —
-          den koster altså ingen egen rad. */}
-      <View style={styles.factsRow}>
-        <Text style={[ui.muted, ui.num]} testID="hole-facts">
-          Par {par} · SI {hole.strokeIndex}
-        </Text>
-        <PuttsToggle
-          visible={capturesPutts}
-          enabled={putts.enabled}
-          disabled={locked}
-          onToggle={putts.toggle}
-        />
-      </View>
-
-      {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
-          det. Et avsluttet spill kan bare admin åpne, på nettsiden. */}
-      {locked ? (
-        <Text style={ui.muted} testID="hole-locked">
-          {bundle.game.status !== 'active'
-            ? 'Spillet er ikke aktivt. Føringen er låst.'
-            : collapsed
-              ? `Lagkortet er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`
-              : `Kortet ditt er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`}
-        </Text>
-      ) : null}
-
-      {/* Wolf-badgen står over kortene, som på web: hvem som er Wolf avgjør
-          hva slagene under er verdt. `key` på hullet nullstiller feil- og
-          lagre-tilstanden når spilleren blar videre. */}
-      {wolf ? (
-        <WolfChoiceCard
-          key={holeNumber}
-          gameId={gameId}
+    <View style={[styles.root, { backgroundColor: colors.bg }]} testID="hole-screen">
+      <ScrollView contentContainerStyle={ui.scroll} testID="hole-scroll">
+        {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
+        <SyncBanner gameId={gameId} />
+        <HoleHero
           holeNumber={holeNumber}
-          state={wolf}
-          onSaved={refreshChoices}
-        />
-      ) : null}
-
-      {collapsed
-        ? teamCards.map((card) => (
-            <TeamCardView
-              key={card.teamNumber}
-              card={card}
-              // Kapteinens rad er lagets rad — samme oppslag for alle på laget.
-              score={byUserHole.get(`${card.captainId}#${holeNumber}`)}
-              isMine={card.teamNumber === myCard?.teamNumber}
-              extra={
-                leaderboard
-                  ? teamExtraForHole(
-                      leaderboard,
-                      card.teamNumber,
-                      holeNumber,
-                      hole.strokeIndex,
-                    )
-                  : null
-              }
-              teeStarterName={teeStarterNameFor({
-                card,
-                gameMode: mode,
-                game: bundle.game,
-                holeNumber,
-                nameOf,
-              })}
-              locked={locked || card.submittedAt != null}
-              submitted={card.submittedAt != null}
-              onStrokes={(delta) =>
-                void adjustStrokes(
-                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
-                  delta,
-                )
-              }
-              onFirstEntry={() =>
-                void setFirstEntryStrokes(
-                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
-                )
-              }
-              onClearStrokes={() =>
-                void clearStrokes(
-                  scoreOwnerForHole(mode, holeNumber, userId, card.captainId),
-                )
-              }
+          totalHoles={HOLE_COUNT}
+          par={par}
+          strokeIndex={hole.strokeIndex}
+          puttsToggle={
+            <PuttsToggle
+              visible={capturesPutts}
+              enabled={putts.enabled}
+              disabled={locked}
+              onToggle={putts.toggle}
             />
-          ))
-        : flight.map((entry) => (
+          }
+          onLeaderboard={onLeaderboard}
+        />
+
+        {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
+            det. Et avsluttet spill kan bare admin åpne, på nettsiden. */}
+        {locked ? (
+          <Text style={ui.muted} testID="hole-locked">
+            {bundle.game.status !== 'active'
+              ? 'Spillet er ikke aktivt. Føringen er låst.'
+              : collapsed
+                ? `Lagkortet er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`
+                : `Kortet ditt er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`}
+          </Text>
+        ) : null}
+
+        {/* Wolf-badgen står over radene, som på web: hvem som er Wolf avgjør
+            hva slagene under er verdt. `key` på hullet nullstiller feil- og
+            lagre-tilstanden når spilleren blar videre. */}
+        {wolf ? (
+          <WolfChoiceCard
+            key={holeNumber}
+            gameId={gameId}
+            holeNumber={holeNumber}
+            state={wolf}
+            onSaved={refreshChoices}
+          />
+        ) : null}
+
+        {usesRail ? (
+          <View style={styles.flightList} testID="flight-list">
+            {seats.map((seat) => (
+              <FlightRow
+                key={seat.id}
+                seatId={seat.id}
+                name={seat.rowName}
+                initial={seat.initial}
+                extraStrokes={seat.extraStrokes}
+                score={seat.score}
+                par={par}
+                active={!locked && seat.id === rail.activeSeatId}
+                locked={seat.locked}
+                submitted={seat.submitted}
+                points={
+                  hideNetto || seat.extraStrokes == null
+                    ? null
+                    : stablefordPointsForCard({
+                        card: { score: seat.score, extraStrokes: seat.extraStrokes },
+                        par,
+                        gameMode: mode,
+                        isStableford,
+                      })
+                }
+                note={seat.note}
+                onSelect={rail.selectRow}
+              />
+            ))}
+          </View>
+        ) : (
+          flight.map((entry) => (
             <PlayerCard
               key={entry.user_id}
               entry={entry}
@@ -403,107 +609,150 @@ export function Hole({ route, navigation }: ScreenProps<'Hole'>) {
               isMe={entry.user_id === userId}
               locked={locked || entry.submitted_at != null}
               submitted={entry.submitted_at != null}
-              showPutts={capturesPutts && putts.enabled}
               onStrokes={(delta) => void adjustStrokes(entry.user_id, delta)}
               onFirstEntry={() => void setFirstEntryStrokes(entry.user_id)}
-              onClearStrokes={() => void clearStrokes(entry.user_id)}
-              onPutts={(delta) => void adjustPutts(entry.user_id, delta)}
+              onClearStrokes={() => void writeStrokes(entry.user_id, null)}
             />
-          ))}
+          ))
+        )}
 
-      {/* BBB-registreringen står under kortene, som på web: den handler om
-          det flighten så, ikke om tallene over. */}
-      {isBingoBangoBongo ? (
-        <BingoBangoBongoCard
-          key={holeNumber}
-          gameId={gameId}
-          holeNumber={holeNumber}
-          gameStatus={bundle.game.status}
-          players={flight.map((entry) => ({
-            userId: entry.user_id,
-            name: displayName(entry.player),
-          }))}
-          saved={
-            extras.bingoBangoBongoHoles?.find(
-              (row) => row.holeNumber === holeNumber,
-            ) ?? null
-          }
-          loaded={extras.bingoBangoBongoHoles !== undefined}
-          onSaved={refreshChoices}
-        />
-      ) : null}
+        {/* BBB-registreringen står under kortene, som på web: den handler om
+            det flighten så, ikke om tallene over. */}
+        {isBingoBangoBongo ? (
+          <BingoBangoBongoCard
+            key={holeNumber}
+            gameId={gameId}
+            holeNumber={holeNumber}
+            gameStatus={bundle.game.status}
+            players={flight.map((entry) => ({
+              userId: entry.user_id,
+              name: displayName(entry.player),
+            }))}
+            saved={
+              extras.bingoBangoBongoHoles?.find(
+                (row) => row.holeNumber === holeNumber,
+              ) ?? null
+            }
+            loaded={extras.bingoBangoBongoHoles !== undefined}
+            onSaved={refreshChoices}
+          />
+        ) : null}
 
-      <Text style={ui.sectionTitle}>Runden</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="hole-strip">
-        <View style={styles.strip}>
-          {Array.from({ length: HOLE_COUNT }, (_, i) => i + 1).map((n) => {
-            const isCurrent = n === holeNumber;
-            const isFilled = myFilled.includes(n);
-            return (
-              <Pressable
-                key={n}
-                onPress={() => goToHole(n)}
-                style={[
-                  styles.stripHole,
-                  {
-                    backgroundColor: isFilled ? colors.accent : colors.surface,
-                    borderColor: isCurrent ? colors.primary : colors.border,
-                    borderWidth: isCurrent ? 2 : 1,
-                  },
-                ]}
-                testID={`hole-strip-${n}`}
-              >
-                <Text
+        <Text style={ui.sectionTitle}>Runden</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="hole-strip">
+          <View style={styles.strip}>
+            {Array.from({ length: HOLE_COUNT }, (_, i) => i + 1).map((n) => {
+              const isCurrent = n === holeNumber;
+              const isFilled = myFilled.includes(n);
+              return (
+                <Pressable
+                  key={n}
+                  onPress={() => goToHole(n)}
                   style={[
-                    ui.num,
-                    styles.stripText,
-                    // Blekket på gull er mørkt i begge palettene; ellers vanlig
-                    // tekstfarge.
-                    { color: isFilled ? colors.onAccent : colors.text },
-                    isCurrent && styles.stripTextCurrent,
+                    styles.stripHole,
+                    {
+                      backgroundColor: isFilled ? colors.accent : colors.surface,
+                      borderColor: isCurrent ? colors.primary : colors.border,
+                      borderWidth: isCurrent ? 2 : 1,
+                    },
                   ]}
+                  testID={`hole-strip-${n}`}
                 >
-                  {n}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[
+                      ui.num,
+                      styles.stripText,
+                      // Blekket på gull er mørkt i begge palettene; ellers vanlig
+                      // tekstfarge.
+                      { color: isFilled ? colors.onAccent : colors.text },
+                      isCurrent && styles.stripTextCurrent,
+                    ]}
+                  >
+                    {n}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        <View style={styles.navRow}>
+          <Pressable
+            style={[ui.buttonSecondary, styles.navButton]}
+            onPress={() => goToHole(holeNumber - 1)}
+            disabled={holeNumber <= 1}
+            testID="hole-prev"
+          >
+            <Text style={ui.buttonSecondaryText}>Forrige</Text>
+          </Pressable>
+          <Pressable
+            style={[ui.buttonSecondary, styles.navButton]}
+            onPress={() => goToHole(holeNumber + 1)}
+            disabled={holeNumber >= HOLE_COUNT}
+            testID="hole-next"
+          >
+            <Text style={ui.buttonSecondaryText}>Neste</Text>
+          </Pressable>
         </View>
+
+        {holeNumber === HOLE_COUNT || allHolesFilled ? (
+          <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
+            {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
+                hjem der (#1918). */}
+            <Text style={ui.buttonText}>
+              {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
+            </Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
-      <View style={styles.navRow}>
-        <Pressable
-          style={[ui.buttonSecondary, styles.navButton]}
-          onPress={() => goToHole(holeNumber - 1)}
-          disabled={holeNumber <= 1}
-          testID="hole-prev"
-        >
-          <Text style={ui.buttonSecondaryText}>Forrige</Text>
-        </Pressable>
-        <Pressable
-          style={[ui.buttonSecondary, styles.navButton]}
-          onPress={() => goToHole(holeNumber + 1)}
-          disabled={holeNumber >= HOLE_COUNT}
-          testID="hole-next"
-        >
-          <Text style={ui.buttonSecondaryText}>Neste</Text>
-        </Pressable>
-      </View>
-
-      {holeNumber === HOLE_COUNT || allHolesFilled ? (
-        <Pressable
-          style={ui.button}
-          onPress={() => navigation.navigate('Scorecard', { gameId })}
-          testID="hole-submit"
-        >
-          {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
-              hjem der (#1918). */}
-          <Text style={ui.buttonText}>
-            {collapsed ? 'Lever lagets kort' : 'Lever scorekort'}
-          </Text>
-        </Pressable>
+      {/* Skinna står fast i tommelsonen mens flighten ruller over den, som
+          på web. Et låst hull har ingenting å taste, og da står den ikke. */}
+      {usesRail && !locked ? (
+        <View style={{ paddingBottom: insets.bottom, backgroundColor: colors.bg }}>
+          <ScoreRail
+            active={
+              railSeat
+                ? {
+                    seatId: railSeat.id,
+                    name: railSeat.name,
+                    extraStrokes: railSeat.extraStrokes,
+                    score: rail.activeScore,
+                    putts: railSeat.putts,
+                  }
+                : null
+            }
+            par={par}
+            options={railOptions}
+            display={railDisplay}
+            puttsTracking={capturesPutts && putts.enabled}
+            skipTo={railSkipSeat ? railSkipSeat.name : null}
+            onPick={rail.pick}
+            onOther={() => {
+              if (rail.activeSeatId != null) setSheetSeatId(rail.activeSeatId);
+            }}
+            onStep={rail.step}
+            onUndo={rail.undo}
+            onSkip={rail.skip}
+            onPutts={rail.pickPutts}
+          />
+        </View>
       ) : null}
-    </ScrollView>
+
+      <SpecificValueSheet
+        open={sheetSeat != null && !sheetSeat.locked}
+        par={par}
+        // Et valg i arket går videre som et trykk på skinna.
+        onPick={(value) => {
+          if (sheetSeatId != null) rail.pickFor(sheetSeatId, value);
+        }}
+        onClear={() => {
+          if (sheetSeatId != null) void clearSeatScore(sheetSeatId);
+        }}
+        onClose={() => setSheetSeatId(null)}
+        strike={sheetStrike}
+      />
+    </View>
   );
 }
 
@@ -530,105 +779,13 @@ function teeStarterNameFor(opts: {
 }
 
 /**
- * Ett lag, ett kort, én rad.
+ * Ett spillerkort med «−»/«+», for formatene som ikke bruker skinna (Bingo
+ * Bango Bongo, #2252).
  *
- * Kortet ser ut som spiller-kortet med vilje — samme stepper, samme
- * badge-plass — for det er den samme handlingen. Forskjellen er hvem tallet
- * havner hos, og det står i overskriften («Lag 1 · Anna, Bjørn»).
- *
- * #2000: ingen putte-stepper her. Snittet mellom `formatCapturesPutts` og
- * `modeCollapsesToTeamCard` er tomt — ingen modus som tegner lagkort fanger
- * putter — så feltet kunne aldri tegnes. Endrer et framtidig format på det,
- * er `formatCapturesPutts` stedet regelen bor.
+ * Ingen putte-stepper: ingen av kortformatene fanger putter
+ * (`formatCapturesPutts`). Endrer et framtidig format på det, er det skinna
+ * som tar puttene.
  */
-function TeamCardView({
-  card,
-  score,
-  isMine,
-  extra,
-  teeStarterName,
-  locked,
-  submitted,
-  onStrokes,
-  onFirstEntry,
-  onClearStrokes,
-}: {
-  card: TeamCard;
-  score: LocalScore | undefined;
-  isMine: boolean;
-  /** `null` = motoren kunne ikke svare. Da vises ingen badge. */
-  extra: number | null;
-  teeStarterName: string | null;
-  locked: boolean;
-  /** #2211: laget har levert — «Levert»-merket ved navnet. */
-  submitted: boolean;
-  onStrokes: (delta: number) => void;
-  onFirstEntry: () => void;
-  onClearStrokes: () => void;
-}) {
-  const { ui } = useTheme();
-  return (
-    <Pressable
-      style={[ui.card, locked && styles.cardLocked]}
-      testID={`team-card-${card.teamNumber}`}
-      onPress={onFirstEntry}
-      disabled={locked}
-    >
-      <View style={styles.cardHead}>
-        <View style={styles.nameRow}>
-          <Text style={[ui.body, isMine && styles.meName]}>
-            {card.label}
-            {isMine ? ' (ditt lag)' : ''}
-          </Text>
-          {submitted ? (
-            <View style={ui.badge}>
-              <Text style={ui.badgeText} testID={`team-${card.teamNumber}-submitted`}>
-                {SUBMITTED_BADGE}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-        {extra != null && extra !== 0 ? (
-          <View style={ui.badge}>
-            <Text
-              style={[ui.badgeText, ui.num]}
-              testID={`team-${card.teamNumber}-extra`}
-            >
-              {extra > 0 ? `+${extra}` : String(extra)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      {teeStarterName ? (
-        <Text style={ui.muted} testID={`team-${card.teamNumber}-tee-starter`}>
-          {teeStarterName} slår ut
-        </Text>
-      ) : null}
-
-      <Stepper
-        label="Slag"
-        value={score?.strokes ?? null}
-        disabled={locked}
-        onChange={onStrokes}
-        testIDPrefix={`team-${card.teamNumber}`}
-      />
-      <UndoStrokes
-        visible={!locked && score?.strokes != null}
-        label={`Nullstill scoren for lag ${card.teamNumber}`}
-        onPress={onClearStrokes}
-        testID={`team-${card.teamNumber}-undo`}
-      />
-      {/* «Trykk kort = par» er et løfte et låst kort ikke kan holde (#2211). */}
-      {score?.strokes == null && !locked ? (
-        <Text style={ui.muted} testID={`team-${card.teamNumber}-hint`}>
-          {TAP_INSTRUCTION}
-        </Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
 function PlayerCard({
   entry,
   game,
@@ -637,11 +794,9 @@ function PlayerCard({
   isMe,
   locked,
   submitted,
-  showPutts,
   onStrokes,
   onFirstEntry,
   onClearStrokes,
-  onPutts,
 }: {
   entry: RosterEntry;
   /** Formatet og configen — badgen viser slagene motoren regner med (#2218). */
@@ -652,12 +807,9 @@ function PlayerCard({
   locked: boolean;
   /** #2211: spilleren har levert — «Levert»-merket ved navnet. */
   submitted: boolean;
-  /** `formatCapturesPutts(mode) && bryteren er på` — webbens gate (#2000). */
-  showPutts: boolean;
   onStrokes: (delta: number) => void;
   onFirstEntry: () => void;
   onClearStrokes: () => void;
-  onPutts: (delta: number) => void;
 }) {
   const { ui } = useTheme();
   const player: BundlePlayer = entry.player;
@@ -710,15 +862,6 @@ function PlayerCard({
         onPress={onClearStrokes}
         testID={`player-${entry.user_id}-undo`}
       />
-      {showPutts ? (
-        <Stepper
-          label="Putter"
-          value={score?.putts ?? null}
-          disabled={locked}
-          onChange={onPutts}
-          testIDPrefix={`player-${entry.user_id}-putts`}
-        />
-      ) : null}
       {score?.strokes == null && !locked ? (
         <Text style={ui.muted} testID={`player-${entry.user_id}-hint`}>
           {TAP_INSTRUCTION}
@@ -765,8 +908,8 @@ function UndoStrokes({
 /**
  * Putt-føring av/på for runden — appens pille, webbens `PuttsTogglePill`.
  *
- * Vises kun i formater som fanger putter, som på web. Den står i fakta-linjas
- * ledige bredde og har ingen egen rad; `hitSlop` løfter trykkflaten til
+ * Vises kun i formater som fanger putter, som på web. Den står i headerraden
+ * over hullnummeret (#2252) og har ingen egen rad; `hitSlop` løfter trykkflaten til
  * stilguidens 44 px uten å koste layout (webben gjør det samme med padding og
  * negativ margin).
  *
@@ -796,7 +939,7 @@ function PuttsToggle({
         ui.badge,
         {
           // `ui.badge` er bygget for kort-hodet og topp-stiller seg selv der.
-          // Her skal den stå midt i fakta-linja.
+          // Her skal den stå midt i headerraden.
           alignSelf: 'center',
           borderColor: enabled ? colors.primary : colors.border,
           backgroundColor: enabled ? colors.surface : colors.bg,
@@ -862,6 +1005,9 @@ function Stepper({
 }
 
 const styles = StyleSheet.create({
+  // Rulleflaten over, skinna fast under.
+  root: { flex: 1 },
+  flightList: { gap: 8 },
   cardHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -882,14 +1028,6 @@ const styles = StyleSheet.create({
   cardLocked: { opacity: 0.6 },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   meName: { fontFamily: FONTS.sansBold },
-  // Fakta til venstre, putt-bryteren til høyre. `gap` holder dem fra hverandre
-  // om par- og SI-tallene blir lange.
-  factsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
   puttsToggleDisabled: { opacity: 0.4 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepperLabel: { width: 60 },
