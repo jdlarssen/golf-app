@@ -44,6 +44,8 @@ const GAME_ROW = {
   side_ld_count: 2,
   side_ctp_count: 1,
   side_disabled_categories: [],
+  // #2255: «85 % handicap» i billetthodet.
+  hcp_allowance_pct: 85,
   courses: {
     name: 'Losby',
     // Med vilje i feil rekkefølge: bundelen skal sortere hullene.
@@ -64,7 +66,20 @@ const GAME_ROW = {
       },
     ],
   },
-  tee_boxes: { name: 'Gul' },
+  tee_boxes: {
+    name: 'Gul',
+    length_meters: 6124,
+    slope_mens: 125,
+    // numeric-kolonne: PostgREST kan levere den som tekst.
+    course_rating_mens: '71.5',
+    par_total_mens: 72,
+    slope_ladies: null,
+    course_rating_ladies: null,
+    par_total_ladies: null,
+    slope_juniors: null,
+    course_rating_juniors: null,
+    par_total_juniors: null,
+  },
 };
 
 const PLAYER_ROWS = [
@@ -82,6 +97,7 @@ const PLAYER_ROWS = [
     rejection_reason: null,
     withdrawn_at: null,
     withdrawn_by_user_id: null,
+    result_summary: { kind: 'placement', rank: 3, fieldSize: 12, isTeam: false },
     users: { name: 'Jørgen', nickname: 'Jøgge', is_guest: false },
   },
 ];
@@ -124,9 +140,23 @@ describe('gameBundle', () => {
       sideLdCount: 2,
       sideCtpCount: 1,
       sideDisabledCategories: [],
+      hcpAllowancePct: 85,
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
+    // #2255: faktalinja og DINE SLAG på billetten. CR-en er gjort om til tall.
+    expect(fetched.teeRatings).toEqual({
+      lengthMeters: 6124,
+      slopeMens: 125,
+      courseRatingMens: 71.5,
+      parTotalMens: 72,
+      slopeLadies: null,
+      courseRatingLadies: null,
+      parTotalLadies: null,
+      slopeJuniors: null,
+      courseRatingJuniors: null,
+      parTotalJuniors: null,
+    });
     expect(fetched.holes.map((h) => h.holeNumber)).toEqual([1, 2]);
     expect(fetched.players).toEqual([
       {
@@ -150,6 +180,8 @@ describe('gameBundle', () => {
         // #2358: trukket-banneret viser angre-knappen bare for eget trekk.
         withdrawnByUserId: null,
         isGuest: false,
+        // #2255: plassen i stubben når runden er avsluttet.
+        resultSummary: { kind: 'placement', rank: 3, fieldSize: 12, isTeam: false },
       },
     ]);
 
@@ -170,6 +202,25 @@ describe('gameBundle', () => {
     expect(String(stepArgs(players, 'select')[0]![0])).toContain(
       'users!game_players_user_id_fkey(name, nickname, is_guest)',
     );
+  });
+
+  it('gir ingen rating når spillet mangler tee (#2255)', async () => {
+    const { queryStub, routeFrom } = mocks();
+    routeFrom({
+      games: [queryStub({ data: { ...GAME_ROW, tee_boxes: null }, error: null })],
+      game_players: [
+        queryStub({
+          data: PLAYER_ROWS.map(({ result_summary: _drop, ...row }) => row),
+          error: null,
+        }),
+      ],
+    });
+
+    const bundle = await bundleModule().fetchGameBundle(GAME);
+
+    expect(bundle.teeRatings).toBeNull();
+    // En rad uten kolonnen (eldre select) gir null, ikke undefined.
+    expect(bundle.players[0]!.resultSummary).toBeNull();
   });
 
   it('lar den forrige bundelen stå når en refetch feiler', async () => {
@@ -221,12 +272,13 @@ describe('gameBundle', () => {
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
   });
 
-  it.each([[2], [3]])(
+  it.each([[2], [3], [6]])(
     'forkaster en v%i-nyttelast — den mangler felt koden narrower på',
     async (version: number) => {
       // v2 mangler `sideTournamentEnabled` (seksjonen ville blitt skrudd av på
       // et spill med LD/CTP); v3 mangler `acceptedAt` (hele rosteret ville stått
-      // «Ikke bekreftet»). Begge er falsy-hull, ikke krasj — derfor bumpen.
+      // «Ikke bekreftet»); v6 mangler ratingen og plassen (#2255: billetten ville
+      // stått uten faktalinje og plass). Falsy-hull, ikke krasj — derfor bumpen.
       const { gameBundleCacheKey, loadGameBundle } = bundleModule();
       const db = require('./db') as typeof import('./db');
       const connection = await db.getDb();

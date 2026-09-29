@@ -9,6 +9,7 @@
 // Hvorfor JSON og ikke normaliserte tabeller: skjermene trenger hele bundelen
 // samlet, og normalisering er støy helt til noe faktisk spør om delene hver for
 // seg. Ingen scores her — de eier `scores`-tabellen og LWW-regelen.
+import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { supabase } from '../supabase';
 import { getCacheEntry, getDb, putCacheEntry } from './db';
 
@@ -40,8 +41,11 @@ import { getCacheEntry, getDb, putCacheEntry } from './db';
  * mangler begge: stempelet på scorekortet ville sagt «Godkjent» i stedet for
  * «Markør: Anders har godkjent», og trukket-banneret ville ikke visst hvem som
  * trakk spilleren.
+ * v7 (#2255): la til `teeRatings`, `hcpAllowancePct` og `resultSummary` for
+ * startbilletten. En v6-oppføring mangler dem: billetten ville stått uten
+ * faktalinje, uten «85 % handicap» og uten plassen i en avsluttet runde.
  */
-export const BUNDLE_PAYLOAD_VERSION = 6;
+export const BUNDLE_PAYLOAD_VERSION = 7;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -89,6 +93,13 @@ export interface BundleGame {
    * fortsatt fordi gamle spill kan ha verdier her.
    */
   sideDisabledCategories: string[];
+  /**
+   * `games.hcp_allowance_pct` (#2255): «85 % handicap» i billetthodet og
+   * andelen DINE SLAG regnes med før start. Bare formatene i
+   * `usesGameHcpAllowance` bruker den. Valgfri, som `approvedByUserId`: kode
+   * som bygger et spill uten den (testene), står som før.
+   */
+  hcpAllowancePct?: number;
 }
 
 /**
@@ -139,6 +150,30 @@ export interface BundlePlayer {
    * kortet hens kan leveres av hvem som helst i flighten når det er fullt.
    */
   isGuest: boolean;
+  /**
+   * `game_players.result_summary` (#2255, kolonnen fra 0096): plassen som
+   * settes når runden avsluttes. Stubben på billetten viser den. `null` før
+   * runden er avsluttet, og når utfallet ikke gir mening (en uavgjort duell).
+   */
+  resultSummary?: ResultSummary | null;
+}
+
+/**
+ * Teens rating og lengde (#2255), til faktalinja og DINE SLAG før start.
+ * Én trio (slope, CR, par) per kjønn; `getRatingForGender` velger. Alt kan
+ * mangle på en bane som er lagt inn uten rating.
+ */
+export interface BundleTeeRatings {
+  lengthMeters: number | null;
+  slopeMens: number | null;
+  courseRatingMens: number | null;
+  parTotalMens: number | null;
+  slopeLadies: number | null;
+  courseRatingLadies: number | null;
+  parTotalLadies: number | null;
+  slopeJuniors: number | null;
+  courseRatingJuniors: number | null;
+  parTotalJuniors: number | null;
 }
 
 export interface BundleHole {
@@ -154,6 +189,8 @@ export interface GameBundle {
   players: BundlePlayer[];
   courseName: string | null;
   teeBoxName: string | null;
+  /** `null` når spillet ikke har tee. Valgfri av samme grunn som over. */
+  teeRatings?: BundleTeeRatings | null;
   holes: BundleHole[];
   /** Når bundelen sist ble hentet fra serveren (ISO). */
   fetchedAt: string;
@@ -186,8 +223,24 @@ interface GameRow {
   side_ld_count: number;
   side_ctp_count: number;
   side_disabled_categories: string[];
+  hcp_allowance_pct: number;
   courses: { name: string; course_holes: CourseHoleRow[] } | null;
-  tee_boxes: { name: string } | null;
+  tee_boxes: TeeBoxRow | null;
+}
+
+// `course_rating_*` er `numeric` i basen, og PostgREST kan levere den som tekst.
+interface TeeBoxRow {
+  name: string;
+  length_meters: number | null;
+  slope_mens: number | null;
+  course_rating_mens: number | string | null;
+  par_total_mens: number | null;
+  slope_ladies: number | null;
+  course_rating_ladies: number | string | null;
+  par_total_ladies: number | null;
+  slope_juniors: number | null;
+  course_rating_juniors: number | string | null;
+  par_total_juniors: number | null;
 }
 
 interface CourseHoleRow {
@@ -212,6 +265,7 @@ interface PlayerRow {
   rejection_reason: string | null;
   withdrawn_at: string | null;
   withdrawn_by_user_id?: string | null;
+  result_summary?: ResultSummary | null;
   users: { name: string | null; nickname: string | null; is_guest: boolean | null } | null;
 }
 
@@ -220,13 +274,35 @@ interface PlayerRow {
 // submitted_by_user_id), så et bart `users(...)` er tvetydig og feiler. Samme
 // hint som webben bruker.
 const PLAYER_SELECT =
-  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, approved_by_user_id, rejection_reason, withdrawn_at, withdrawn_by_user_id, users!game_players_user_id_fkey(name, nickname, is_guest)';
+  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, approved_by_user_id, rejection_reason, withdrawn_at, withdrawn_by_user_id, result_summary, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 // Bane, tee og hullene rir med på games-raden som embeds. Det gjør hele
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+
+function toNumber(value: number | string | null): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toTeeRatings(tee: TeeBoxRow | null): BundleTeeRatings | null {
+  if (!tee) return null;
+  return {
+    lengthMeters: tee.length_meters,
+    slopeMens: tee.slope_mens,
+    courseRatingMens: toNumber(tee.course_rating_mens),
+    parTotalMens: tee.par_total_mens,
+    slopeLadies: tee.slope_ladies,
+    courseRatingLadies: toNumber(tee.course_rating_ladies),
+    parTotalLadies: tee.par_total_ladies,
+    slopeJuniors: tee.slope_juniors,
+    courseRatingJuniors: toNumber(tee.course_rating_juniors),
+    parTotalJuniors: tee.par_total_juniors,
+  };
+}
 
 function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
   return {
@@ -253,6 +329,7 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       // NOT NULL i skjemaet, men en eldre cache-rad eller en select som mister
       // kolonnen skal gi tom liste — ikke `undefined` inn i kategori-filteret.
       sideDisabledCategories: game.side_disabled_categories ?? [],
+      hcpAllowancePct: game.hcp_allowance_pct,
     },
     players: players.map((row) => ({
       userId: row.user_id,
@@ -271,9 +348,11 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       withdrawnAt: row.withdrawn_at,
       withdrawnByUserId: row.withdrawn_by_user_id ?? null,
       isGuest: row.users?.is_guest === true,
+      resultSummary: row.result_summary ?? null,
     })),
     courseName: game.courses?.name ?? null,
     teeBoxName: game.tee_boxes?.name ?? null,
+    teeRatings: toTeeRatings(game.tee_boxes),
     holes: (game.courses?.course_holes ?? [])
       .map((hole) => ({
         holeNumber: hole.hole_number,
