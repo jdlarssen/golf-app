@@ -7,7 +7,7 @@ import {
 } from '@/lib/supabase/testing/adminClientMock';
 
 /**
- * Type A (#1918): rutas port og transport.
+ * Type A (#1918, #2200): rutas port og transport.
  *
  * Hverken adgangssjekken (`lib/api/appAuth.ts`) eller leverings-kjernen
  * (`lib/games/submitScorecardCore.ts`) er stubbet her — bare Supabase, varslene
@@ -16,14 +16,24 @@ import {
  * token aldri når kjernen, at en som ikke er med i spillet ikke får skrevet en
  * eneste rad, og at en POST faktisk markerer hele laget.
  *
+ * #2200 la til makkerne i `alsoFor`: den eneste id-lista i kroppen, og den kan
+ * bare snevre inn. Her bevises at en feilformet liste gir 400 før noe leses,
+ * og at en forfalsket id aldri utvider settet som leveres.
+ *
  * Det fila bevisst IKKE re-asserterer: leverings-regelen selv (idempotens,
- * lag-deteksjon, varsel-mottakere), som har sin egen Type A-suite i
- * `lib/games/submitScorecardCore.test.ts`.
+ * lag-deteksjon, varsel-mottakere, hvem som kan leveres for flighten), som har
+ * sine egne Type A-suiter i `lib/games/submitScorecardCore.test.ts` og
+ * `lib/games/flightDelivery.test.ts`.
  */
 
 const GAME_ID = 'spill-1';
 const PLAYER = 'spilleren';
 const STRANGER = 'en-fremmed';
+// Makkerne i flighten (#2200). Uuid-er, fordi ruta avviser alt annet i `alsoFor`.
+const OLA = '00000000-0000-4000-a000-000000000002';
+const GUEST = '00000000-0000-4000-a000-000000000003';
+const PER = '00000000-0000-4000-a000-000000000004';
+const OUTSIDER = '00000000-0000-4000-a000-000000000009';
 
 const PLAYER_TOKEN = 'token-spiller';
 const STRANGER_TOKEN = 'token-fremmed';
@@ -71,7 +81,25 @@ function respond(op: QueryOp): QueryResponse {
     };
   }
   if (op.table === 'game_players' && op.kind === 'update') {
+    // #2200: flight-leveringen er ÉN skriving med `in('user_id', …)`. Alle de
+    // spurte radene står fortsatt åpne, så svaret er de samme id-ene.
+    const ids = op.filters.find((f) => f.op === 'in' && f.column === 'user_id')?.value;
+    if (Array.isArray(ids)) return { data: ids.map((user_id) => ({ user_id })) };
     return { data: db.updated };
+  }
+  if (op.table === 'game_players' && op.columns?.includes('users!')) {
+    // Flighten (#2200): spilleren fører for Ola og gjesten; Per fører selv.
+    return {
+      data: [rosterRow(PLAYER), rosterRow(OLA), rosterRow(GUEST, true), rosterRow(PER)],
+    };
+  }
+  if (op.table === 'scores') {
+    return {
+      data:
+        op.range?.[0] === 0
+          ? [...card(OLA, PLAYER), ...card(GUEST, PLAYER), ...card(PER, PER)]
+          : [],
+    };
   }
   if (op.table === 'game_players') {
     return { data: value('user_id') === PLAYER ? db.me : null };
@@ -82,6 +110,27 @@ function respond(op: QueryOp): QueryResponse {
   }
   if (op.table === 'users') return { data: [] };
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
+}
+
+/** Et kort med alle 18 hull ført av `enteredBy`. */
+function card(userId: string, enteredBy: string) {
+  return Array.from({ length: 18 }, (_, i) => ({
+    user_id: userId,
+    hole_number: i + 1,
+    strokes: 4,
+    entered_by: enteredBy,
+  }));
+}
+
+function rosterRow(user_id: string, is_guest = false) {
+  return {
+    user_id,
+    team_number: null,
+    flight_number: null,
+    withdrawn_at: null,
+    submitted_at: null,
+    users: { name: user_id, is_guest },
+  };
 }
 
 const fake = createAdminClientMock({
@@ -122,7 +171,9 @@ function request({
     {
       method: 'POST',
       headers,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined
+        ? {}
+        : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
     },
   );
 }
@@ -233,6 +284,7 @@ describe('POST — leveringen', () => {
     await expect(res.json()).resolves.toEqual({
       submitted: 2,
       alreadySubmitted: false,
+      alsoDelivered: 0,
     });
 
     const [mark, ...extra] = updates();
@@ -265,6 +317,7 @@ describe('POST — leveringen', () => {
     await expect(res.json()).resolves.toEqual({
       submitted: 1,
       alreadySubmitted: false,
+      alsoDelivered: 0,
     });
 
     const [mark, ...extra] = updates();
@@ -291,6 +344,7 @@ describe('POST — leveringen', () => {
     await expect(res.json()).resolves.toEqual({
       submitted: 0,
       alreadySubmitted: true,
+      alsoDelivered: 0,
     });
     expect(updates()).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
@@ -310,6 +364,7 @@ describe('POST — leveringen', () => {
     await expect(res.json()).resolves.toEqual({
       submitted: 2,
       alreadySubmitted: false,
+      alsoDelivered: 0,
     });
     // Hvert eneste spill-oppslag gjaldt id-en fra stien.
     expect(gameIdsTouched().length).toBeGreaterThan(0);
@@ -320,6 +375,81 @@ describe('POST — leveringen', () => {
       .filter((f) => f.column === 'user_id')
       .map((f) => f.value);
     expect(userIds).not.toContain(STRANGER);
+  });
+});
+
+describe('POST — makkerne i samme levering (#2200)', () => {
+  const asPlayer = (body: unknown) => request({ token: `Bearer ${PLAYER_TOKEN}`, body });
+
+  beforeEach(() => {
+    db.gameMode = 'stableford';
+    db.me = { withdrawn_at: null, submitted_at: null, team_number: null };
+    db.updated = [{ user_id: PLAYER }];
+  });
+
+  it.each([
+    ['ikke JSON', 'lever alt'],
+    ['alsoFor er ikke en liste', { alsoFor: OLA }],
+    ['en id er ikke en uuid', { alsoFor: ['ola'] }],
+    ['mer enn 20 id-er', { alsoFor: Array.from({ length: 21 }, () => OLA) }],
+  ])('feilformet kropp (%s): 400, ingenting leses eller skrives', async (_, body) => {
+    const res = await POST(asPlayer(body), ctx());
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: 'bad_request' });
+    expect(fake.ops).toEqual([]);
+  });
+
+  it('en feilformet kropp uten token er fortsatt 401 — tokenet sjekkes først', async () => {
+    const res = await POST(request({ body: 'lever alt' }), ctx());
+
+    expect(res.status).toBe(401);
+    expect(fake.ops).toEqual([]);
+  });
+
+  it('eget kort, makkeren jeg førte og gjesten i én skriving, levert av meg', async () => {
+    const res = await POST(asPlayer({ alsoFor: [OLA, GUEST] }), ctx());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      submitted: 3,
+      alreadySubmitted: false,
+      alsoDelivered: 2,
+    });
+    const [mark, ...extra] = updates();
+    expect(extra).toEqual([]);
+    expect(mark.payload).toMatchObject({ submitted_by_user_id: PLAYER });
+    expect(mark.filters).toContainEqual({
+      op: 'in',
+      column: 'user_id',
+      value: [PLAYER, OLA, GUEST],
+    });
+  });
+
+  it('forfalskede id-er (fører selv, utenfor spillet) ignoreres og utvider aldri settet', async () => {
+    const res = await POST(asPlayer({ alsoFor: [OLA, PER, OUTSIDER] }), ctx());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      submitted: 2,
+      alreadySubmitted: false,
+      alsoDelivered: 1,
+    });
+    const [mark, ...extra] = updates();
+    expect(extra).toEqual([]);
+    expect(mark.filters).toContainEqual({ op: 'in', column: 'user_id', value: [PLAYER, OLA] });
+  });
+
+  it('tom alsoFor: vanlig egen levering, og regelen spørres ikke', async () => {
+    const res = await POST(asPlayer({ alsoFor: [] }), ctx());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      submitted: 1,
+      alreadySubmitted: false,
+      alsoDelivered: 0,
+    });
+    expect(fake.ops.some((op) => op.table === 'scores')).toBe(false);
   });
 });
 
