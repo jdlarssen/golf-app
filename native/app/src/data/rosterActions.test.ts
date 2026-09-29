@@ -78,6 +78,9 @@ function gameRow(
 /** Et lag-format: best ball med to per lag. */
 const TEAM_GAME = gameRow('scheduled', 'best_ball', { team_size: 2 });
 
+/** Texas scramble med fire per lag: flighten er laget (#2290). */
+const TEXAS_GAME = gameRow('scheduled', 'texas_scramble', { team_size: 4 });
+
 const ONE_ROW = { data: [{ user_id: MATE }], error: null };
 const ZERO_ROWS = { data: [], error: null };
 /** PostgREST når RLS eller en vakt avviser skrivingen. */
@@ -521,6 +524,52 @@ describe('rosterActions', () => {
       });
     });
 
+    it('Texas: flighten følger det nye laget, ikke den gamle flighten (#2290)', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const update = queryStub(ONE_ROW);
+      routeFrom({
+        games: [queryStub(TEXAS_GAME)],
+        game_players: [
+          queryStub({
+            data: [groupingRow(MATE, 1, 1), groupingRow(OTHER, 2, 2)],
+            error: null,
+          }),
+          update,
+        ],
+      });
+
+      expect(await actions().setPlayerTeam(GAME, MATE, 2)).toEqual({
+        ok: true,
+        alreadyDone: false,
+      });
+      expect(patchOf(update, 'update')).toEqual({
+        team_number: 2,
+        flight_number: 2,
+      });
+    });
+
+    it('best ball: får flighten til partneren i det nye laget (#2290)', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const update = queryStub(ONE_ROW);
+      routeFrom({
+        games: [queryStub(TEAM_GAME)],
+        game_players: [
+          queryStub({
+            data: [groupingRow(MATE, 3, 3), groupingRow(OTHER, 2, 1)],
+            error: null,
+          }),
+          update,
+        ],
+      });
+
+      await actions().setPlayerTeam(GAME, MATE, 2);
+
+      expect(patchOf(update, 'update')).toEqual({
+        team_number: 2,
+        flight_number: 1,
+      });
+    });
+
     it('avviser et fullt lag — og teller hverken trukne eller spilleren selv', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
@@ -701,6 +750,18 @@ describe('rosterActions', () => {
         ok: false,
         reason: 'flight-full',
       });
+    });
+
+    it('nekter flight i Texas — laget er flighten, og ingenting skrives (#2290)', async () => {
+      const { queryStub, routeFrom, supabase } = mocks();
+      routeFrom({ games: [queryStub(TEXAS_GAME)] });
+
+      expect(await actions().setPlayerFlight(GAME, MATE, 2)).toEqual({
+        ok: false,
+        reason: 'flight-bound-to-team',
+      });
+      // Bare spill-oppslaget: ingen roster-lesing, ingen skriving.
+      expect(supabase.from).toHaveBeenCalledTimes(1);
     });
 
     it.each([[0], [2.5]])('avviser flight-nummer %p før den spør DB', async (n: number) => {

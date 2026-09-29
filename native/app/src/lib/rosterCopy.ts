@@ -283,6 +283,8 @@ export function describeRosterFailure(
       return 'Det laget er fullt. Velg et annet lag.';
     case 'flight-full':
       return 'Den valgte flighten er full (maks 4 spillere). Velg en annen flight.';
+    case 'flight-bound-to-team':
+      return 'I dette formatet er laget flighten. Flytt spilleren til et annet lag i stedet.';
     case 'rls-denied':
       return 'Du har ikke lov til å endre dette.';
     case 'already-submitted':

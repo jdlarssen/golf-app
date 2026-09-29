@@ -222,6 +222,59 @@ describe('OrganiserSection — Juster (#1875)', () => {
   });
 });
 
+describe('OrganiserSection — flight i lagformater (#2290)', () => {
+  // I lagformatene er flighten laget. Flight-brikker per spiller lot arrangøren
+  // flytte én lagspiller til en annen flight, og da kunne hen taste for feil lag.
+
+  /** `n` spillere, fire og fire, med lag og flight = lag. */
+  function roster(n: number, withTeams: boolean): BundlePlayer[] {
+    return Array.from({ length: n }, (_, i) =>
+      player({
+        userId: i === 0 ? ME : `user-${i}`,
+        teamNumber: withTeams ? Math.floor(i / 4) + 1 : null,
+        flightNumber: withTeams ? Math.floor(i / 4) + 1 : null,
+      }),
+    );
+  }
+
+  it('Texas med tre lag à fire: lag-brikker under Juster, ingen flight-brikker', async () => {
+    const base = bundle('scheduled', {
+      gameMode: 'texas_scramble',
+      modeConfig: { team_size: 4 },
+    });
+    await render(
+      <OrganiserSection
+        bundle={{ ...base, players: roster(12, true) }}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+      />,
+    );
+
+    await fireEvent.press(screen.getByTestId('organiser-adjust-toggle'));
+    expect(screen.getByTestId('organiser-team-user-5-1')).toBeTruthy();
+    expect(screen.queryByTestId('organiser-flight-user-5-1')).toBeNull();
+  });
+
+  it('solo-stableford med åtte viser fortsatt flight-brikkene', async () => {
+    const base = bundle('scheduled', {
+      gameMode: 'stableford',
+      modeConfig: { team_size: 1 },
+    });
+    await render(
+      <OrganiserSection
+        bundle={{ ...base, players: roster(8, false) }}
+        userId={ME}
+        onChanged={jest.fn()}
+        onFinish={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('organiser-flight-user-5-1')).toBeTruthy();
+    expect(screen.queryByTestId('organiser-team-user-5-1')).toBeNull();
+  });
+});
+
 describe('OrganiserSection', () => {
   it('aapner egen rad der basen tillater det, holder den utenfor der den ikke gjoer, og tegner en tapt start-flipp som suksess', async () => {
     // Bekreftelses-dialogen svarer ja med én gang: det som testes er skrivingen
