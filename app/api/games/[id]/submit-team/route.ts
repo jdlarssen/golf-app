@@ -1,12 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatedUserId } from '@/lib/api/appAuth';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { isUuid } from '@/lib/url/isUuid';
 import {
   submitScorecardCore,
   type SubmitScorecardResult,
 } from '@/lib/games/submitScorecardCore';
 
-// Levering av scorekort fra native-appen, solo og lag (#1918, #2215).
+// Levering av scorekort fra native-appen, solo, lag og flighten (#1918, #2215,
+// #2200).
 //
 // Stien sier `submit-team` fordi ruta kom til for lagkortet: i formatene som
 // kollapser til ett lagkort (scramble-familien + alternate-shot-matchplay)
@@ -34,13 +36,24 @@ import {
 // innsenderens EGEN rad. Er kalleren ikke med i spillet, finnes ingen slik rad
 // — kjernen svarer `not_player` og ruta 403.
 //
+// **Makkerne i samme levering (#2200).** Den som fører for flighten, leverer
+// makkernes kort med det samme kallet: `alsoFor` er appens liste over dem.
+// Klienten kan bare snevre inn. Kjernen spør selv leveringsregelen
+// (`lib/games/flightDelivery.ts`) og leverer snittet; en id utenfor (annen
+// flight, annet spill, kort som ikke er fullt) ignoreres uten feil. Uten kropp,
+// eller uten `alsoFor`, er det en vanlig egen levering, slik installerte bygg
+// alltid har kalt ruta.
+//
 // WIRE (frosset — appen speiler den):
-//   POST 200 { submitted: number, alreadySubmitted: boolean }
+//   POST [{ alsoFor: string[] }]   valgfri, 0–20 uuid-er
+//        200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
+//        400 { error: 'bad_request' }    kroppen er ikke JSON, eller `alsoFor` er feilformet
 //        401 { error: 'unauthorized' }   403 { error: 'forbidden' }
 //        404 { error: 'not_found' }      409 { error: 'not_active' }
 //        422 { error: 'withdrawn' }      500 { error: 'submit_failed' }
 //
-// Ingen body, ingen query — verken spill-id eller bruker-id leses derfra.
+// Ingen id fra body eller query identifiserer spillet eller kalleren. Den eneste
+// id-lista i kroppen er `alsoFor`, og den kan bare snevre inn.
 // 404 for et ukjent spill gjelder ALLE kallere, også en admin, så statusen
 // ikke røper hvilke spill som finnes. `withdrawn` får sin egen status og ikke
 // en andre 409, fordi appen leser KUN statusen for å velge melding.
@@ -73,6 +86,31 @@ const FAILURE: Record<
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+/** En flight er aldri større enn dette; et lengre `alsoFor` er feilformet. */
+const MAX_ALSO_FOR = 20;
+
+/**
+ * `alsoFor` fra kroppen: `[]` uten kropp eller uten feltet, `null` når kroppen
+ * er feilformet. En uleselig kropp er en KLIENT-feil (400), ikke «vi feilet»
+ * (500) — samme vakt som invite- og profil-ruta.
+ */
+async function readAlsoFor(request: NextRequest): Promise<string[] | null> {
+  let parsed: unknown;
+  try {
+    const text = await request.text();
+    if (text.trim() === '') return [];
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const alsoFor = (parsed as { alsoFor?: unknown }).alsoFor;
+  if (alsoFor === undefined) return [];
+  if (!Array.isArray(alsoFor) || alsoFor.length > MAX_ALSO_FOR) return null;
+  if (!alsoFor.every((id) => typeof id === 'string' && isUuid(id))) return null;
+  return alsoFor;
+}
+
 export async function POST(request: NextRequest, ctx: RouteContext) {
   try {
     const { id: gameId } = await ctx.params;
@@ -82,17 +120,25 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const result = await submitScorecardCore(getAdminClient(), gameId, userId);
+    const alsoFor = await readAlsoFor(request);
+    if (!alsoFor) {
+      return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+    }
+
+    const result = await submitScorecardCore(getAdminClient(), gameId, userId, {
+      alsoFor,
+    });
     if (!result.ok) {
       const { status, error } = FAILURE[result.reason];
       return NextResponse.json({ error }, { status });
     }
 
-    // `alreadySubmitted` styrer ordlyd i appen, ikke suksess: 200 ER
-    // kvitteringen, også når kortet alt sto som levert.
+    // `alreadySubmitted` og `alsoDelivered` styrer ordlyd i appen, ikke
+    // suksess: 200 ER kvitteringen, også når kortet alt sto som levert.
     return NextResponse.json({
       submitted: result.submitted,
       alreadySubmitted: result.alreadySubmitted,
+      alsoDelivered: result.alsoDelivered,
     });
   } catch (err) {
     console.error(`[${LOG_PREFIX}] submit threw`, err);
