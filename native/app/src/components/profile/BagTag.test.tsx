@@ -42,5 +42,14 @@ describe('BagTag', () => {
     expect(screen.getByTestId('bag-tag-kicker')).toHaveTextContent('Losby GK');
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByTestId('profile-hcp-age')).toHaveTextContent('Oppdatert 26. sep');
+
+    // Uten handicap sier skjermleseren det i ord, ikke «strek».
+    await rerender(
+      <BagTag model={{ ...STALE, hcpText: null, hcpAge: null }} onEditProfile={onEditProfile} />,
+    );
+    expect(screen.getByTestId('profile-hcp')).toHaveProp(
+      'accessibilityLabel',
+      `${PROFILE_TEXT.handicapLabel} ${PROFILE_TEXT.hcpNotSetSpoken}`,
+    );
   });
 });

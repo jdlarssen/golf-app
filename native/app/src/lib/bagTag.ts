@@ -22,7 +22,7 @@ import {
 } from './profileCopy';
 
 export interface BagTagModel {
-  /** Klubbnavnet, ellers «Tørny». */
+  /** Klubbnavnet, ellers «Tørny». Tom mens klubben lastes (#1973). */
   kicker: string;
   name: string;
   /** «Dame · Junior · med siden 2026», med delene som er satt. Kan være tom. */
@@ -57,13 +57,15 @@ function joinYear(createdAt: string | null): number | null {
 }
 
 /**
- * @param club navnet på den første klubben spilleren ble med i, eller `null`.
+ * @param club navnet på den første klubben spilleren ble med i, `null` uten
+ *   klubb, eller `undefined` mens oppslaget pågår. Da står kickeren tom i
+ *   stedet for å vise «Tørny» og bytte til klubben et øyeblikk etter (#1973).
  * @param email reserve for navnet, som overskriften i profilen alltid har hatt
  *   (#1973): eget navn, ellers e-posten, ellers «Profil».
  */
 export function bagTagModel(
   profile: OwnProfile,
-  club: string | null,
+  club: string | null | undefined,
   now: Date,
   email?: string | null,
 ): BagTagModel {
@@ -84,7 +86,7 @@ export function bagTagModel(
   const hcp = profile.profileCompletedAt == null ? null : profile.hcpIndex;
 
   return {
-    kicker: club?.trim() || PROFILE_TEXT.bagTagFallbackKicker,
+    kicker: club === undefined ? '' : club?.trim() || PROFILE_TEXT.bagTagFallbackKicker,
     name,
     subline,
     hcpText: hcp != null ? formatHcpNb(hcp) : null,

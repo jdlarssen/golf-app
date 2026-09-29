@@ -118,6 +118,8 @@ export const PROFILE_TEXT = {
   tileEmpty: '–',
   /** Det skjermleseren sier i stedet for streken. */
   tileEmptySpoken: 'ingen hel runde ennå',
+  /** «Handicap ikke satt» for skjermleseren, der kortet viser «–». */
+  hcpNotSetSpoken: 'ikke satt',
   menuNotificationsTheme: 'Varsler og tema',
   menuAccount: 'Personvern og konto',
   // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.

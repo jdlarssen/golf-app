@@ -173,6 +173,17 @@ describe('Profile', () => {
     expect(Alert.alert).not.toHaveBeenCalled();
   });
 
+  // Evaluator-funn (#2256): klubben kommer etter profilraden. Uten denne
+  // vakten sto «Tørny» som kicker til klubben landet, og byttet så.
+  it('viser ikke reserve-kickeren mens klubben lastes', async () => {
+    fetchBagTagExtrasMock.mockReturnValue(new Promise(() => {}));
+    await renderScreen();
+
+    expect(screen.getByTestId('bag-tag-kicker')).not.toHaveTextContent(
+      PROFILE_TEXT.bagTagFallbackKicker,
+    );
+  });
+
   it('skjuler flisene når sesongen ikke kunne leses, men beholder kortet', async () => {
     fetchBagTagExtrasMock.mockResolvedValue({ year: 2026, club: null, season: null });
     await renderScreen();

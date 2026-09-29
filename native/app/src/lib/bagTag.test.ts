@@ -42,6 +42,12 @@ describe('bagTagModel', () => {
     expect(bagTagModel(profile(), '   ', NOW).kicker).toBe(PROFILE_TEXT.bagTagFallbackKicker);
   });
 
+  // #1973: «Tørny» først og klubben et øyeblikk etter er en tekst som bytter
+  // foran øynene på deg. Mens klubben lastes, står kickeren tom.
+  it('leaves the kicker empty while the club is still loading', () => {
+    expect(bagTagModel(profile(), undefined, NOW).kicker).toBe('');
+  });
+
   it.each([
     ['men, adult level', { gender: 'mens', level: 'normal' }, `${PROFILE_TEXT.genderMale} · med siden 2026`],
     ['senior, no gender', { gender: null, level: 'senior' }, `${PROFILE_TEXT.levelSenior} · med siden 2026`],
