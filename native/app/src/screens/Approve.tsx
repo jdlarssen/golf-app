@@ -12,6 +12,10 @@
 // som får godkjenne og avvise, og kjernen bak den skriver, varsler og tømmer
 // web-cachen. Skjermen er UX foran den porten, ikke porten selv — derfor MÅ et
 // `{ ok: false }` vises, også når kortet bare ikke var til vurdering lenger.
+//
+// #2262: hvert kort vises som det klassiske scorekortet — UT og INN med PAR og
+// SLAG — og BRUTTO under, samme kort som spilleren selv ser. Uten NETTO: den
+// som godkjenner, attesterer slagene, ikke handicapen.
 import { useCallback, useState } from 'react';
 import {
   Alert,
@@ -23,7 +27,13 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { parForPlayer } from '../../../../lib/games/parDisplay';
+import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
+import type { ScoringGender } from '../../../../lib/scoring/modes/types';
+import { ScorecardGrid } from '../components/scorecard/ScorecardGrid';
+import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import type { LocalScore } from '../data/db';
+import type { BundleHole } from '../data/gameBundle';
 import { approveScorecard, rejectScorecard } from '../data/playerActions';
 import { seedGameScores } from '../data/seedScores';
 import { describeFailure } from '../lib/actionFeedback';
@@ -35,7 +45,7 @@ import { useSession } from '../session';
 import { useTheme } from '../theme';
 
 export function Approve({ route }: ScreenProps<'Approve'>) {
-  const { ui } = useTheme();
+  const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   const { bundle, refresh } = useGameBundle(gameId);
@@ -119,9 +129,13 @@ export function Approve({ route }: ScreenProps<'Approve'>) {
       ) : null}
 
       {pending.map((entry) => (
-        <View style={ui.card} key={entry.user_id} testID={`approve-card-${entry.user_id}`}>
+        <View
+          style={[styles.entry, { borderTopColor: colors.border }]}
+          key={entry.user_id}
+          testID={`approve-card-${entry.user_id}`}
+        >
           <Text style={ui.value}>{displayName(entry.player)}</Text>
-          <ScoreSummary scores={scores} userId={entry.user_id} />
+          <ScoreSummary holes={bundle.holes} scores={scores} entry={entry} />
           <View style={styles.actions}>
             <Pressable
               style={[ui.button, styles.action]}
@@ -157,51 +171,55 @@ export function Approve({ route }: ScreenProps<'Approve'>) {
 }
 
 /**
- * Kortet i kortformat: hvor mange hull som er ført, brutto, og selve tallene.
- * Radene kommer fra den lokale basen etter seed — RLS har alt bestemt hva
- * enheten får se, så det finnes ingen ekstra gate å gjøre her.
+ * Kortet slik spilleren selv ser det (#2262): UT og INN med PAR og SLAG, og
+ * BRUTTO under. Radene kommer fra den lokale basen etter seed — RLS har alt
+ * bestemt hva enheten får se, så det finnes ingen ekstra gate å gjøre her.
  */
 function ScoreSummary({
+  holes,
   scores,
-  userId,
+  entry,
 }: {
+  holes: readonly BundleHole[];
   scores: readonly LocalScore[];
-  userId: string;
+  entry: RosterEntry;
 }) {
   const { ui } = useTheme();
-  const byHole = scoresByHoleFor(scores, userId);
-  const played = [...byHole.values()]
-    .filter((row) => row.strokes != null)
-    .sort((a, b) => a.holeNumber - b.holeNumber);
-  const brutto = played.reduce((sum, row) => sum + (row.strokes ?? 0), 0);
+  const byHole = scoresByHoleFor(scores, entry.user_id);
+  const teeGender = entry.player.teeGender as ScoringGender;
+  const grid = buildScorecardGrid({
+    rows: holes.map((hole) => ({
+      holeNumber: hole.holeNumber,
+      par: parForPlayer(
+        { mens: hole.parMens, ladies: hole.parLadies, juniors: hole.parJuniors },
+        teeGender,
+      ),
+      strokes: byHole.get(hole.holeNumber)?.strokes ?? null,
+      extra: null,
+    })),
+    pointsFn: null,
+  });
 
-  if (played.length === 0) {
+  if (grid.totals.played === 0) {
     return (
-      <Text style={ui.muted} testID={`summary-${userId}`}>
+      <Text style={ui.muted} testID={`summary-${entry.user_id}`}>
         Ingen slag synlige på denne enheten.
       </Text>
     );
   }
 
   return (
-    <View>
-      <Text style={[ui.muted, ui.num]} testID={`summary-${userId}`}>
-        {played.length} hull ført · brutto {brutto}
-      </Text>
-      <View style={styles.holeGrid}>
-        {played.map((row) => (
-          <Text style={[ui.muted, ui.num, styles.holeChip]} key={row.holeNumber}>
-            {row.holeNumber}: {row.strokes}
-          </Text>
-        ))}
-      </View>
+    <View testID={`summary-${entry.user_id}`}>
+      <ScorecardGrid grid={grid} rows={['strokes']} />
+      <ScorecardTotals totals={grid.totals} showNet={false} showPoints={false} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Ikke `ui.card`: kortene inni er egne kort, og en ramme rundt dem ville
+  // spist bredden hullkolonnene trenger.
+  entry: { borderTopWidth: 1, paddingTop: 16, marginTop: 8, gap: 8 },
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },
-  holeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
-  holeChip: { minWidth: 52 },
 });

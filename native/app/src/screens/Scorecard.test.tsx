@@ -7,7 +7,7 @@
 // flighten, og hva blokken over knappen sier, er `lib/roster.test.ts` sitt.
 // Ingen av dem gjentas her.
 //
-// Det som blir igjen er fire koblinger:
+// Det som blir igjen er fem koblinger:
 //
 //  1. **I et format som kollapser til ett lagkort leverer appen selv.** Fram
 //     til #1918 sto det en setning og en lenke ut («Levering av lagkort gjøres
@@ -25,8 +25,14 @@
 //     rett til levering. `listQueue` er et utsatt løfte her, så testen ser
 //     knappen både før og etter svaret.
 //  4. **En blind runde skjuler netto (#2219).** Samme delte regel som
-//     resultatlista (`shouldHideNetto`): netto-kolonnen og netto-totalene står i
-//     en live-runde og er borte mens en reveal-runde pågår. Brutto står.
+//     resultatlista (`shouldHideNetto`): NETTO-raden og netto-summen står i en
+//     live-runde og er borte mens en reveal-runde pågår, og det samme er POENG
+//     (#2262). Brutto står. Etter #2262 er tabellen et klassisk kort, så
+//     sjekkene leser kortets radetiketter (skjult for skjermleseren, derav
+//     `HIDDEN`) i stedet for tabellens netto-kolonne.
+//  5. **Kortet og stempelet (#2262).** Før levering: UT og INN, og ikke noe
+//     stempel. Etter levering: stempel og godkjenningslinje. Tallene er
+//     `scorecardGrid`- og `scorecardStamp`-testenes; her låses bare koblingen.
 //
 // Innlesingen ved fokus testes ikke: mocken under gjør `useFocusEffect` om til
 // `useEffect`, så testen kan ikke skille fokus fra mount.
@@ -50,7 +56,7 @@ const PLAYER_BASE = {
   flightNumber: null as number | null,
   teeGender: 'mens',
   acceptedAt: null,
-  submittedAt: null,
+  submittedAt: null as string | null,
   submittedByUserId: null,
   approvedAt: null,
   rejectionReason: null,
@@ -123,6 +129,19 @@ const mockRevealBundle = {
   ],
 };
 
+// Samme blinde runde, der kortet mitt er levert og venter på godkjenning (#2262).
+const mockDeliveredBundle = {
+  ...mockRevealBundle,
+  game: { ...mockRevealBundle.game, id: 'game-3', requirePeerApproval: true },
+  players: mockRevealBundle.players.map((player) =>
+    player.userId === 'me' ? { ...player, submittedAt: '2026-09-01T12:32:00.000Z' } : player,
+  ),
+};
+
+// Radetikettene er skjult for skjermleseren (kolonnene sier alt), så de må
+// letes fram med vilje.
+const HIDDEN = { includeHiddenElements: true };
+
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
 const mockState: { bundle: unknown; queue: Promise<unknown[]> } = {
   bundle: mockBundle,
@@ -180,9 +199,13 @@ describe('Scorecard', () => {
     // slag som fortsatt ligger i kø, og da fryser serveren kortet uten dem.
     expect(screen.getByTestId('submit-team-card')).toBeDisabled();
     expect(screen.queryByTestId('queue-guard')).toBeNull();
-    // Live-runde: netto står i tabellen.
-    expect(screen.getByTestId('scorecard-netto-head')).toBeTruthy();
-    expect(screen.getByTestId('card-row-1-netto')).toBeTruthy();
+    // Live-runde: NETTO står på begge kortene, UT og INN (#2262). Ikke noe
+    // stempel før kortet er levert.
+    expect(screen.getByTestId('scorecard-half-out')).toBeTruthy();
+    expect(screen.getByTestId('scorecard-half-in')).toBeTruthy();
+    expect(screen.getAllByTestId('scorecard-row-label-net', HIDDEN)).toHaveLength(2);
+    expect(screen.queryByTestId('scorecard-row-label-points', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('scorecard-stamp')).toBeNull();
 
     await act(async () => {
       releaseQueue([]);
@@ -213,9 +236,21 @@ describe('Scorecard', () => {
       expect(screen.getByTestId('submit-scorecard')).toBeTruthy();
     });
     expect(screen.getByTestId('total-brutto')).toBeTruthy();
-    expect(screen.queryByTestId('scorecard-netto-head')).toBeNull();
-    expect(screen.queryByTestId('card-row-1-netto')).toBeNull();
+    expect(screen.getAllByTestId('scorecard-row-label-strokes', HIDDEN)).toHaveLength(2);
+    expect(screen.queryByTestId('scorecard-row-label-net', HIDDEN)).toBeNull();
+    // Stableford: poengene er like avslørende som netto (#2262).
+    expect(screen.queryByTestId('scorecard-row-label-points', HIDDEN)).toBeNull();
     expect(screen.queryByTestId('total-netto')).toBeNull();
-    expect(screen.queryByTestId('total-tildelte-slag')).toBeNull();
+    expect(screen.queryByTestId('total-poeng')).toBeNull();
+
+    // #2262: kortet er levert. Stempelet og godkjenningslinja står, og
+    // lever-knappen er borte.
+    mockState.bundle = mockDeliveredBundle;
+    await rerender(scorecardElement('game-3', navigate));
+    await waitFor(() => {
+      expect(screen.getByTestId('scorecard-stamp')).toBeTruthy();
+    });
+    expect(screen.getByTestId('scorecard-approval')).toBeTruthy();
+    expect(screen.queryByTestId('submit-scorecard')).toBeNull();
   });
 });
