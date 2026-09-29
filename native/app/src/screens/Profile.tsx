@@ -12,31 +12,36 @@
 // innrammet knapp og «Slett konto» en dempet lenke under den: den reversible
 // handlingen sto tyngst, og den som ikke kan angres så ut som en fotnote. Her
 // er «Logg ut» en helt vanlig rad, og «Slett konto» står alene nederst i rødt
-// med luft over. Luften er ikke pynt — den er avstanden en tommel på vei mot
-// raden over trenger for ikke å treffe sletting.
+// med luft over, nå i «Personvern og konto» (`AccountSettings.tsx`). Luften er
+// ikke pynt — den er avstanden en tommel på vei mot raden over trenger for
+// ikke å treffe sletting.
 //
-// **Rommet leser; skrivingen bor i sitt eget rom.** «Rediger profil» fører til
+// **Rommet leser; skrivingen bor i sitt eget rom.** «Rediger» fører til
 // `EditProfile`, og lagringen derfra går gjennom `PUT /api/profile` — appen kan
 // aldri skrive rett mot `users`, for en handicap-retting må også regne om de
 // frosne banehandicapene i pågående runder, og den jobben er service-role. Her
 // vises resultatet: kommer spilleren tilbake med en kvittering, står banneret
 // øverst og raden hentes på nytt.
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+//
+// **#2256: rommet åpner på bag-taggen.** Kortet sier hvem du er (klubb, navn,
+// handicap), flisene under viser sesongen, og en kort meny fører videre:
+// «Varsler og tema» og «Personvern og konto» er egne skjermer. «Rediger»
+// står oppe til høyre (navigatorens header). Personvernerklæringen og «Slett
+// konto» bor nå i «Personvern og konto»; «Logg ut» står igjen nederst her.
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, ScrollView, Text, View } from 'react-native';
+import { BagTag } from '../components/profile/BagTag';
+import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { SettingList, SettingRow } from '../components/SettingRow';
+import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
 import { logOut } from '../data/logout';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
-import {
-  PROFILE_TEXT,
-  describeHandicapAge,
-  formatHcpNb,
-  unsentStrokesWarning,
-} from '../lib/profileCopy';
+import { bagTagModel } from '../lib/bagTag';
+import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
-import { describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { TAP, useTheme } from '../theme';
+import { useTheme } from '../theme';
 
 export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
@@ -49,9 +54,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   // «du er fortsatt logget inn» (sesjonen overlevde, `signout-failed`) eller
   // den generelle når kallet kastet. To ulike årsaker, to ulike setninger.
   const [logoutNote, setLogoutNote] = useState<string | null>(null);
-  // Samme mønster for personvern-raden: null til et trykk ikke fikk åpnet
-  // nettsiden, og da står grunnen under raden til neste trykk.
-  const [privacyNote, setPrivacyNote] = useState<string | null>(null);
+  // Klubben og sesongen (#2256). `undefined` mens de lastes; hver del kan
+  // være `null` for seg når oppslaget feilet (`data/bagTag.ts`).
+  const [extras, setExtras] = useState<BagTagExtras | undefined>(undefined);
 
   // Kvitteringen `EditProfile` kommer tilbake med. Banneret er RENT avledet av
   // ruteparameteren — ingen egen state, ingen setState i en effekt — og
@@ -80,6 +85,19 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   }, [userId]);
 
   useEffect(load, [load]);
+
+  // Klubben og sesongen hentes én gang når rommet åpnes. De avhenger ikke av
+  // profilraden, så en lagring i skjemaet trenger ikke hente dem på nytt, og
+  // kortet venter aldri på dem.
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBagTagExtras(userId, new Date()).then((next) => {
+      if (!cancelled) setExtras(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Ny lagring → les raden på nytt, så kortet viser det som faktisk står i
   // basen og ikke det skjemaet trodde det sendte. Opprydningen fra `load`
@@ -185,35 +203,18 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       });
   }, [askAboutUnsent]);
 
-  // #2229: personvernerklæringen åpnes på nettsiden. `openWeb` kaster aldri —
-  // den svarer typet — så det finnes ingen catch-gren å skrive her.
-  const onOpenPrivacy = useCallback(() => {
-    setPrivacyNote(null);
-    void openWeb('/legal/privacy').then((result) => {
-      if (!result.ok) setPrivacyNote(describeWebLinkFailure(result.reason));
-    });
-  }, []);
-
   // #1973: overskriften venter på raden i stedet for å bytte tekst foran
-  // øynene på deg.
-  //
-  // Kjeden under er webbens — eget navn, ellers e-posten, ellers literalen — og
-  // den holder fra det øyeblikket raden er lest. Men FØR svaret har landet er
-  // `profile` null, og kjeden falt da til e-posten: hver eneste gang rommet ble
-  // åpnet sto e-postadressen som overskrift i et halvt sekund og ble så byttet
-  // ut med navnet. Det var mest sannsynlig dette eieren så som «forrige brukers
-  // navn» etter et eierbytte — de to testkontoene deler adresse og skilles bare
-  // av en `+`-endelse, så glimtet er lett å lese feil.
-  //
-  // Mens vi venter står linja derfor tom. Den beholder høyden sin (`nameLine`),
-  // så kortet under flytter seg ikke når navnet kommer, og e-postlinja rett
-  // under sier hvem du er hele tiden. Feiler hentingen faller vi tilbake til
-  // kjeden, som før — da er e-posten det ærligste vi har, og feillinja står
-  // under den.
-  const nameKnown = profile != null || loadFailed;
-  const shownName = nameKnown
-    ? profile?.name?.trim() || email?.trim() || PROFILE_TEXT.displayNameFallback
-    : '';
+  // øynene på deg. Mens raden lastes, står navnelinja på bag-taggen tom med
+  // full høyde. Feiler hentingen, faller navnet til e-posten (det ærligste vi
+  // har), og feillinja står under kortet. Kjeden eget navn → e-post → «Profil»
+  // bor i `bagTagModel`.
+  const club = extras?.club ?? null;
+  const model = useMemo(
+    () => (profile ? bagTagModel(profile, club, new Date(), email) : null),
+    [profile, club, email],
+  );
+  const failedName = email?.trim() || PROFILE_TEXT.displayNameFallback;
+  const openEditProfile = useCallback(() => navigation.navigate('EditProfile'), [navigation]);
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="profile-screen">
@@ -225,43 +226,45 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         </View>
       ) : null}
 
-      <View style={ui.card} testID="profile-identity">
-        <Text style={[ui.value, styles.nameLine]} testID="profile-name">
-          {shownName}
+      <BagTag
+        model={model}
+        placeholderName={loadFailed ? failedName : ''}
+        onEditProfile={openEditProfile}
+      />
+      {loadFailed ? (
+        <Text style={ui.error} testID="profile-load-error">
+          {PROFILE_TEXT.loadFailedNote}
         </Text>
-        {/* Innlogging går via engangskode på e-post, så feltet er i praksis
-            alltid satt — men sesjonstypen tillater null, og da er «Innlogget»
-            ærligere enn en tom linje. */}
-        <Text style={ui.muted} testID="profile-email">
-          {email ?? 'Innlogget'}
-        </Text>
+      ) : null}
 
-        {loadFailed ? (
-          <Text style={ui.error} testID="profile-load-error">
-            {PROFILE_TEXT.loadFailedNote}
-          </Text>
-        ) : profile ? (
-          <HandicapLine
-            profile={profile}
-            onSetHandicap={() => navigation.navigate('EditProfile')}
-          />
-        ) : null}
-      </View>
+      {/* Flisene står tomme med full høyde mens sesongen lastes, og forsvinner
+          bare når runde-lista ikke kunne leses. */}
+      {extras === undefined ? (
+        <SeasonTiles year={new Date().getFullYear()} season={null} />
+      ) : extras.season ? (
+        <SeasonTiles year={extras.year} season={extras.season} />
+      ) : null}
 
-      {/* Chevron: raden fører til et rom, den handler ikke her og nå. */}
-      <SettingList testID="profile-edit">
+      {/* Chevron: hver rad fører til et rom. «Historikk og statistikk» (#2265)
+          og «Venner» (#2256 PR 2) kommer inn her når skjermene finnes. */}
+      <SettingList testID="profile-menu">
         <SettingRow
-          label={PROFILE_TEXT.editRow}
+          label={PROFILE_TEXT.menuNotificationsTheme}
           chevron
-          onPress={() => navigation.navigate('EditProfile')}
-          testID="profile-edit-entry"
+          onPress={() => navigation.navigate('NotificationsAndTheme')}
+          testID="profile-notifications-theme"
+        />
+        <SettingRow
+          label={PROFILE_TEXT.menuAccount}
+          chevron
+          onPress={() => navigation.navigate('AccountSettings')}
+          testID="profile-account-settings"
         />
       </SettingList>
 
-      {/* Utvikler-seksjonen står ØVERST av de to, slik at sletting forblir den
-          siste raden på skjermen uansett hvilket bygg appen er. I et
-          butikk-bygg finnes den ikke i treet i det hele tatt — `isStagingBuild`
-          er fail-closed, og en skjult rad er fortsatt en rad. */}
+      {/* I et butikk-bygg finnes utvikler-seksjonen ikke i treet i det hele
+          tatt — `isStagingBuild` er fail-closed, og en skjult rad er fortsatt
+          en rad. */}
       {isStagingBuild() ? (
         <>
           <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionDeveloper}</Text>
@@ -277,9 +280,10 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         </>
       ) : null}
 
-      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionAccount}</Text>
       {/* Ingen chevron: raden navigerer ikke, den handler. Og ingen knappeform
-          — utlogging er dagligdags, og skal ikke veie mer enn den er verdt. */}
+          — utlogging er dagligdags, og skal ikke veie mer enn den er verdt.
+          Ingen «Konto»-overskrift over den lenger: menyraden «Personvern og
+          konto» ville da stått rett over en seksjon med nesten samme navn. */}
       <SettingList testID="profile-account">
         <SettingRow
           label={pending ? PROFILE_TEXT.logoutPending : PROFILE_TEXT.logout}
@@ -294,109 +298,6 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
           {logoutNote}
         </Text>
       ) : null}
-
-      {/* #2229: Apple krever at personvernerklæringen kan nås inne i appen.
-          Ingen chevron: raden fører ikke til et rom i appen, den åpner
-          nettsiden — underteksten sier hvor. Den står over sletting, så
-          «Slett konto» fortsatt er den siste raden på skjermen. */}
-      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionAbout}</Text>
-      <SettingList testID="profile-about">
-        <SettingRow
-          label={PROFILE_TEXT.privacyRow}
-          sublabel={PROFILE_TEXT.privacySublabel}
-          onPress={onOpenPrivacy}
-          testID="profile-privacy"
-        />
-      </SettingList>
-
-      {privacyNote ? (
-        <Text style={ui.error} testID="profile-privacy-error">
-          {privacyNote}
-        </Text>
-      ) : null}
-
-      {/* Luften over sletting er en tap-buffer, ikke en marg: `SettingList` har
-          alt 8 på toppen, og disse 24 gjør avstanden ned fra raden over til 32.
-          Webben klarer seg med 16 fordi en musepeker ikke bommer. */}
-      <View style={styles.dangerGap}>
-        <SettingList testID="profile-danger">
-          <SettingRow
-            label={PROFILE_TEXT.deleteRow}
-            tone="danger"
-            chevron
-            onPress={() => navigation.navigate('DeleteAccount')}
-            testID="profile-delete-entry"
-          />
-        </SettingList>
-      </View>
     </ScrollView>
   );
 }
-
-/**
- * «hcp 12,4» med ferskheten på linja under.
- *
- * Uten handicap står det «hcp –» og en «Sett handicap»-lenke i stedet for
- * ferskhets-linja — webbens ordlyd, og nå med et sted å gå: skjemaet den peker
- * på finnes fra og med denne PR-en. Lenka har tap-flate (`TAP`) selv om
- * teksten er smalere; to ord er ikke en trykkflate i seg selv.
- */
-function HandicapLine({
-  profile,
-  onSetHandicap,
-}: {
-  profile: OwnProfile;
-  onSetHandicap: () => void;
-}) {
-  const { ui } = useTheme();
-  // Lokal konstant, ikke `profile.hcpIndex` direkte: `tsc` snevrer inn en const
-  // etter null-sjekken, men ikke et felt på et objekt som kan ha endret seg
-  // mellom de to lesningene. Alternativet ville vært en cast.
-  //
-  // #1979: en ufullført profil har ikke noe handicap å vise. Kolonnen er
-  // `not null default 54.0`, så raden sier «54» selv om spilleren aldri har
-  // tastet noe — og kortet sto dermed og presenterte databasens default som et
-  // tall hen hadde valgt, med «Oppdatert i dag» under. Vi lar den falle til
-  // samme gren som en tom profil: «hcp –» og en vei til skjemaet.
-  const hcp = profile.profileCompletedAt == null ? null : profile.hcpIndex;
-
-  return (
-    <View style={styles.hcpLine} testID="profile-hcp">
-      <Text style={ui.muted}>
-        {'hcp '}
-        {/* Tabulær tallbredde på selve tallet, ikke på ordet foran. */}
-        <Text style={[ui.muted, ui.num]} testID="profile-hcp-value">
-          {hcp != null ? formatHcpNb(hcp) : '–'}
-        </Text>
-      </Text>
-      {/* Ferskhets-merket hører til et handicap. Uten et tall er det ingenting
-          å si «oppdatert» om — da er spørsmålet i stedet om å sette det. */}
-      {hcp != null ? (
-        <Text style={ui.muted} testID="profile-hcp-age">
-          {describeHandicapAge(profile.handicapUpdatedAt)}
-        </Text>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onSetHandicap}
-          style={styles.setHandicap}
-          testID="profile-set-handicap"
-        >
-          <Text style={ui.linkText}>{PROFILE_TEXT.setHandicap}</Text>
-        </Pressable>
-      )}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  // Både `lineHeight` og `minHeight`, med samme tall: det første gir linja en
-  // høyde som ikke avhenger av fonten som tilfeldigvis rakk å laste, det andre
-  // holder den høyden mens teksten er tom. Uten paret ville kortet hoppet i det
-  // navnet kom — som er nettopp det #1973 handler om. 28 er `ui.value` sine 22
-  // punkter pluss luften Fraunces uansett tar.
-  nameLine: { lineHeight: 28, minHeight: 28 },
-  hcpLine: { gap: 2 },
-  setHandicap: { minHeight: TAP, justifyContent: 'center', alignSelf: 'flex-start' },
-  dangerGap: { marginTop: 24 },
-});
