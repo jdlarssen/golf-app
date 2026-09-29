@@ -20,6 +20,11 @@
 //     tar spilleren til hull 1, som nettsidens «← Rediger». Uten den var et
 //     avvist, fullt kort en blindvei: scorekortet var eneste stopp, og radene
 //     er ren visning.
+//  3. **Kortet og stempelet (#2262).** Før levering: UT og INN med NETTO-rad,
+//     og ikke noe stempel. Etter levering i et reveal-spill som pågår: stempel,
+//     og ingen NETTO, for netto er det reveal holder tilbake. Tallene er
+//     `scorecardGrid`- og `scorecardStamp`-testenes; her låses bare koblingen.
+//     Det krever en andre bundel, så testen rendrer to ganger.
 //
 // Kø-vakta testes ikke her. `listQueue` er mocket tom, så en disabled-assertion
 // ville krevd en andre render, og fila har ÉN (Type C). Innlesingen ved fokus
@@ -45,7 +50,7 @@ const PLAYER_BASE = {
   flightNumber: null as number | null,
   teeGender: 'mens',
   acceptedAt: null,
-  submittedAt: null,
+  submittedAt: null as string | null,
   submittedByUserId: null,
   approvedAt: null,
   rejectionReason: null,
@@ -55,7 +60,7 @@ const PLAYER_BASE = {
 
 // Greensome: 2v2 alternate shot — hele laget deler kapteinens rad hele veien
 // til hull 18, så `modeCollapsesToTeamCard` er sann og kortet er lagets.
-const mockBundle = {
+const liveBundle = {
   game: {
     id: GAME_ID,
     name: 'Torsdagsrunden',
@@ -101,10 +106,25 @@ const mockBundle = {
   fetchedAt: '2026-09-01T10:00:00.000Z',
 };
 
+// Samme runde, levert og i reveal: kortet er mitt, og ingen har godkjent ennå.
+const deliveredRevealBundle = {
+  ...liveBundle,
+  game: { ...liveBundle.game, scoreVisibility: 'reveal', requirePeerApproval: true },
+  players: liveBundle.players.map((player) =>
+    player.userId === 'me' ? { ...player, submittedAt: '2026-09-01T12:32:00.000Z' } : player,
+  ),
+};
+
+const mockState: { bundle: typeof liveBundle } = { bundle: liveBundle };
+
+// Radetikettene er skjult for skjermleseren (kolonnene sier alt), så de må
+// letes fram med vilje.
+const HIDDEN = { includeHiddenElements: true };
+
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/gameBundle', () => ({
-  loadGameBundle: jest.fn(async () => mockBundle),
-  refreshGameBundle: jest.fn(async () => mockBundle),
+  loadGameBundle: jest.fn(async () => mockState.bundle),
+  refreshGameBundle: jest.fn(async () => mockState.bundle),
 }));
 jest.mock('../data/submitCard', () => ({
   submitCard: jest.fn(async () => ({ ok: true, alreadySubmitted: false, alsoDelivered: 0 })),
@@ -126,9 +146,9 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 describe('Scorecard', () => {
-  it('viser lever-knappen for laget, og en vei til hullene for å rette', async () => {
+  it('viser lever-knappen for laget, en vei til hullene, og stempelet først etter levering', async () => {
     const navigate = jest.fn();
-    await render(
+    const { unmount } = await render(
       <Scorecard
         {...({
           route: { params: { gameId: GAME_ID } },
@@ -154,5 +174,35 @@ describe('Scorecard', () => {
     // hull-stripen tar spilleren videre derfra.
     await fireEvent.press(screen.getByTestId('scorecard-edit'));
     expect(navigate).toHaveBeenCalledWith('Hole', { gameId: GAME_ID, holeNumber: 1 });
+
+    // #2262: UT og INN, NETTO i et format uten poeng, og ikke noe stempel før
+    // kortet er levert.
+    expect(screen.getByTestId('scorecard-half-out')).toBeTruthy();
+    expect(screen.getByTestId('scorecard-half-in')).toBeTruthy();
+    expect(screen.getAllByTestId('scorecard-row-label-net', HIDDEN)).toHaveLength(2);
+    expect(screen.queryByTestId('scorecard-row-label-points', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('scorecard-stamp')).toBeNull();
+
+    await unmount();
+    mockState.bundle = deliveredRevealBundle;
+    await render(
+      <Scorecard
+        {...({
+          route: { params: { gameId: GAME_ID } },
+          navigation: { navigate },
+        } as unknown as ScreenProps<'Scorecard'>)}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('scorecard-stamp')).toBeTruthy();
+    });
+    expect(screen.getByTestId('scorecard-approval')).toBeTruthy();
+    expect(screen.queryByTestId('submit-team-card')).toBeNull();
+    // Reveal: slagene står, netto er borte fra både kortet og summene.
+    expect(screen.getAllByTestId('scorecard-row-label-strokes', HIDDEN)).toHaveLength(2);
+    expect(screen.queryByTestId('scorecard-row-label-net', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('total-netto')).toBeNull();
+    expect(screen.getByTestId('total-brutto')).toBeTruthy();
   });
 });
