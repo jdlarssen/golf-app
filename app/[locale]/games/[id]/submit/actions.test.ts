@@ -492,6 +492,15 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
   // tournament (source + candidates) and day-scopes them. The source (game-1,
   // back9) and its front9 sibling share one tee-off day so the sibling resolves.
   const TEE = '2026-08-07T08:00:00Z';
+  /** What every delivery writes (#2200), whichever client writes it. */
+  const DELIVERY_PATCH = {
+    submitted_at: expect.any(String),
+    rejection_reason: null,
+    submitted_by_user_id: 'user-1',
+    approved_at: null,
+    approved_by_user_id: null,
+  };
+
   const hostRows = (front9Mode: string) => [
     { id: 'game-1', game_mode: 'best_ball', hole_segment: 'back9', scheduled_tee_off_at: TEE, created_at: null },
     { id: 'front9-a', game_mode: front9Mode, hole_segment: 'front9', scheduled_tee_off_at: TEE, created_at: null },
@@ -520,6 +529,10 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
     // Søsken-oppdateringen fyrte via admin-client mot front9-spillet.
     const calls = adminSupabaseMock.__fromCalls;
     expect(calls.some((c) => c.method === 'update' && c.table === 'game_players')).toBe(true);
+    // #2200: service-rollen hopper over vakta og triggerens aktør, så patchen
+    // sier selv hvem som leverte, og en levering tar aldri med seg en
+    // godkjenning (0191).
+    expect(calls.find((c) => c.method === 'update')?.args[0]).toEqual(DELIVERY_PATCH);
     expect(
       calls.some((c) => c.method === 'eq' && c.args[0] === 'game_id' && c.args[1] === 'front9-a'),
     ).toBe(true);
@@ -550,6 +563,8 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
     await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(RedirectError);
 
     const calls = adminSupabaseMock.__fromCalls;
+    // #2200: lagkaskaden er service-rolle, så leverandøren står i patchen.
+    expect(calls.find((c) => c.method === 'update')?.args[0]).toEqual(DELIVERY_PATCH);
     // Lag-bred form: eq team_number=2 + is withdrawn_at + is submitted_at.
     expect(
       calls.some((c) => c.method === 'eq' && c.args[0] === 'team_number' && c.args[1] === 2),
@@ -585,6 +600,13 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
         (c.args[0] as { submitted_at?: unknown })?.submitted_at === null,
     );
     expect(revert).toBeDefined();
+    // #2200: godkjenningen går med leveringen. En godkjenning igjen på et
+    // ulevert kort kunne senere blitt fullført av en levering (0191).
+    expect(revert?.args[0]).toEqual({
+      submitted_at: null,
+      approved_at: null,
+      approved_by_user_id: null,
+    });
     // Reverten scopes til back9-spillet + de returnerte user_id-ene.
     expect(
       adminSupabaseMock.__fromCalls.some(
