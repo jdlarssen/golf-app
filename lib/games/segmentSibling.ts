@@ -217,3 +217,48 @@ export async function findSegmentSibling(
       }
     : null;
 }
+
+/**
+ * #1466: on a split-cup front9 host, the players whose same-day back9 sibling
+ * is still undelivered. One delivery covers the whole round, so they are
+ * reminded via the back9 game and never from the front9 one. `undefined` for
+ * anything but a front9 cup host, and when no back9 host is found.
+ *
+ * Batch, never a per-player loop: find the tournament's back9 host(s), then ONE
+ * query for which of their players are still undelivered. A two-day cup shares
+ * one `tournament_id`, so the back9 hosts are scoped to THIS front9's Oslo
+ * split-day (#1449 finding 1) with the same day rule as `findSegmentSibling`.
+ *
+ * The one home for this set (#2200): the organiser's reminder
+ * (`remindUnsubmitted`) and the delivery-reminder sweep both ask here.
+ */
+export async function undeliveredBack9SiblingUserIds(
+  admin: ReturnType<typeof getAdminClient>,
+  game: {
+    hole_segment: HoleSegment;
+    tournament_id: string | null;
+    scheduled_tee_off_at: string | null;
+    created_at: string | null;
+  },
+): Promise<Set<string> | undefined> {
+  if (game.hole_segment !== 'front9' || game.tournament_id == null) return undefined;
+  const { data: back9Hosts } = await admin
+    .from('games')
+    .select('id, scheduled_tee_off_at, created_at')
+    .eq('tournament_id', game.tournament_id)
+    .eq('hole_segment', 'back9')
+    .is('source_game_id', null)
+    .returns<
+      { id: string; scheduled_tee_off_at: string | null; created_at: string | null }[]
+    >();
+  const back9Ids = candidatesOnSameSplitDay(game, back9Hosts ?? []).map((g) => g.id);
+  if (back9Ids.length === 0) return undefined;
+  const { data: undelivered } = await admin
+    .from('game_players')
+    .select('user_id')
+    .in('game_id', back9Ids)
+    .is('submitted_at', null)
+    .is('withdrawn_at', null)
+    .returns<{ user_id: string }[]>();
+  return new Set((undelivered ?? []).map((r) => r.user_id));
+}
