@@ -225,6 +225,10 @@ export async function rejectScorecardCore(opts: {
     rejection_reason: reason,
   };
   const sharedCard = modeCollapsesToTeamCard(gameMode, 18);
+  // #2200: who delivered the card, read before the reject clears it (the 0191
+  // trigger nulls submitted_by_user_id together with submitted_at). A shared
+  // team card notifies the whole team anyway.
+  const deliverer = sharedCard ? null : await cardDeliverer(client, gameId, playerUserId);
   const { data: updated, error } = sharedCard
     ? await rejectSharedCard(gameId, gameMode, playerUserId, rejectPatch)
     : await client
@@ -285,11 +289,20 @@ export async function rejectScorecardCore(opts: {
   // #2213: on a shared team card, every row the cascade reopened is notified
   // except the rejecter — they know already, though their own card reopens
   // too (see rejectSharedCard).
+  //
+  // #2200: a card someone else delivered (a flightmate's or a guest's) is
+  // also told to the one who delivered it. They keyed it and can put it
+  // right; a guest never receives a notice at all. Their copy names whose
+  // card it is.
   const recipients = sharedCard
     ? updated.map((r) => r.user_id).filter((id) => id !== rejecterUserId)
     : [playerUserId];
+  const alsoDeliverer =
+    deliverer != null && deliverer !== playerUserId && deliverer !== rejecterUserId
+      ? deliverer
+      : null;
   try {
-    const [gameRes, rejecterRes] = await Promise.all([
+    const [gameRes, rejecterRes, playerRes] = await Promise.all([
       client
         .from('games')
         .select('name')
@@ -300,6 +313,13 @@ export async function rejectScorecardCore(opts: {
         .select('name')
         .eq('id', rejecterUserId)
         .maybeSingle<{ name: string | null }>(),
+      alsoDeliverer
+        ? client
+            .from('users')
+            .select('name')
+            .eq('id', playerUserId)
+            .maybeSingle<{ name: string | null }>()
+        : Promise.resolve({ data: null }),
     ]);
     const payload = {
       game_id: gameId,
@@ -310,17 +330,48 @@ export async function rejectScorecardCore(opts: {
       // den styrer spill-hjem-banneret, som oversetter på samme måte.
       ...(reasonRaw.length > 0 ? { reason } : {}),
     };
-    await Promise.all(
-      recipients.map((userId) =>
+    await Promise.all([
+      ...recipients.map((userId) =>
         notify({ userId, kind: 'scorecard_rejected', payload }),
       ),
-    );
+      ...(alsoDeliverer
+        ? [
+            notify({
+              userId: alsoDeliverer,
+              kind: 'scorecard_rejected',
+              payload: { ...payload, player_name: playerRes.data?.name?.trim() || null },
+            }),
+          ]
+        : []),
+    ]);
   } catch (err) {
     console.error('[rejectScorecard] scorecard_rejected notify failed', err);
   }
 
   expireReviewedGame(gameId);
   return { ok: true, alreadyDone: false };
+}
+
+/**
+ * #2200: who delivered this card, or `null`. Only feeds a notice, so a failed
+ * read is logged and reads as «unknown» rather than stopping the reject.
+ */
+async function cardDeliverer(
+  client: CoreClient,
+  gameId: string,
+  playerUserId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('game_players')
+    .select('submitted_by_user_id')
+    .eq('game_id', gameId)
+    .eq('user_id', playerUserId)
+    .maybeSingle<{ submitted_by_user_id: string | null }>();
+  if (error) {
+    console.error('[rejectScorecard] deliverer read failed', { gameId, playerUserId, error });
+    return null;
+  }
+  return data?.submitted_by_user_id ?? null;
 }
 
 /**

@@ -92,11 +92,14 @@ const scorecardApprovedSchema = z.object({
 // rejecter_name + game_name nullable: NotificationCard fyller locale-fallbacken
 // ved render (#583, #1364). `reason` utelates når attestanten ikke skrev noe —
 // kortet viser da en lokalisert defaultReason i stedet for en plassholdertekst.
+// #2200: `player_name` is set on the copy sent to the one who delivered the
+// card for someone else, so their card says whose card it is.
 const scorecardRejectedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1).nullable().optional(),
   rejecter_name: z.string().min(1).nullable().optional(),
   reason: z.string().optional(),
+  player_name: z.string().min(1).nullable().optional(),
 });
 
 // scorecard_reopened: en arrangør åpnet et allerede levert (og kanskje
