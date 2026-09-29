@@ -39,7 +39,6 @@ import {
   hcpUpdatedLine,
   isHandicapAgeStale,
   memberSinceLine,
-  seasonHeading,
   seasonTileSpoken,
   unsentStrokesWarning,
 } from './profileCopy';
@@ -115,9 +114,7 @@ describe('PROFILE_TEXT', () => {
     ['saveButton', PROFILE_TEXT.saveButton, webForm.saveButton],
     ['savePending', PROFILE_TEXT.savePending, webForm.savePending],
     ['saveHint', PROFILE_TEXT.saveHint, webForm.saveHint],
-    // #2256: flisene og temavalget bruker webbens ord for det samme.
-    ['tileRounds', PROFILE_TEXT.tileRounds, web.historikk.seasonColRounds],
-    ['tileBestRound', PROFILE_TEXT.tileBestRound, web.myStats.bestRound],
+    // #2256: temavalget bruker webbens ord for det samme.
     ['themeHeading', PROFILE_TEXT.themeHeading, web.theme.rowLabel],
     ['themeLight', PROFILE_TEXT.themeLight, web.theme.options.light],
     ['themeDark', PROFILE_TEXT.themeDark, web.theme.options.dark],
@@ -157,9 +154,8 @@ describe('PROFILE_TEXT', () => {
 
 // #2256: bag-taggen setter året inn selv, som «Oppdatert {dato}» over.
 describe('bag-taggens linjer', () => {
-  it('setter året inn i sublinja og overskriften', () => {
+  it('setter året inn i sublinja', () => {
     expect(memberSinceLine(2026)).toBe('med siden 2026');
-    expect(seasonHeading(2026)).toBe('Sesongen 2026');
   });
 
   it('skriver ut webbens flertall for «vil bli venn(er) med deg»', () => {
@@ -170,7 +166,7 @@ describe('bag-taggens linjer', () => {
   });
 
   it('leser en flis som én setning', () => {
-    expect(seasonTileSpoken(PROFILE_TEXT.tileWins, 2026, '2')).toBe('Seire i 2026: 2');
+    expect(seasonTileSpoken(PROFILE_TEXT.tileWinsSpoken, 2026, '2')).toBe('Seire i 2026: 2');
   });
 
   it('sier «gammelt» for det samme som describeHandicapAge viser påminnelsen for', () => {

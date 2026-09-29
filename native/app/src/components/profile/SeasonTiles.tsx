@@ -1,18 +1,20 @@
-// #2256: «Sesongen 2026» — runder, beste runde og seire under bag-taggen.
+// #2256: runder, beste runde og seire under bag-taggen.
 //
 // Tallene kommer ferdig regnet fra `computeProfileSeason` (Type A der); flisa
-// viser dem bare. Seire over null gir gull kant og gull tall: kanten er
-// `accent`, tallet `accentText`, som holder kontrasten som tekst i begge
-// draktene (webbens `--accent-text`).
+// viser dem bare. Utseendet følger designlerretet (eierens retning 29.09):
+// ingen overskrift over flisene, tallet stort i Fraunces og en liten etikett
+// under («runder i år», «beste runde», «seire»). Seire over null gir gull kant,
+// en svak gulltone i flisa og tallet i `accentText`, som holder kontrasten
+// som tekst i begge draktene (webbens `--accent-text`).
 //
-// **Hver flis er én node for skjermleseren** — «Seire i 2026: 2» — i stedet
+// **Hver flis er én node for skjermleseren** («Seire i 2026: 2») i stedet
 // for et tall og et ord hver for seg.
 //
 // **Mens sesongen lastes** står flisene tomme med full høyde, så menyen under
 // ikke flytter seg når tallene kommer. De er da skjult for skjermleseren.
 import { StyleSheet, Text, View } from 'react-native';
 import type { ProfileSeason } from '../../../../../lib/stats/profileSeason';
-import { PROFILE_TEXT, seasonHeading, seasonTileSpoken } from '../../lib/profileCopy';
+import { PROFILE_TEXT, seasonTileSpoken } from '../../lib/profileCopy';
 import { FONTS, useTheme } from '../../theme';
 
 export interface SeasonTilesProps {
@@ -22,41 +24,39 @@ export interface SeasonTilesProps {
 }
 
 export function SeasonTiles({ year, season }: SeasonTilesProps) {
-  const { ui } = useTheme();
   const best = season?.bestRound;
 
   return (
-    <View testID="season-tiles">
-      <Text style={ui.sectionTitle}>{seasonHeading(year)}</Text>
-      <View style={styles.row}>
-        <Tile
-          label={PROFILE_TEXT.tileRounds}
-          value={season ? String(season.rounds) : null}
-          spoken={season ? seasonTileSpoken(PROFILE_TEXT.tileRounds, year, String(season.rounds)) : null}
-          testID="season-tile-rounds"
-        />
-        <Tile
-          label={PROFILE_TEXT.tileBestRound}
-          value={season ? (best != null ? String(best) : PROFILE_TEXT.tileEmpty) : null}
-          spoken={
-            season
-              ? seasonTileSpoken(
-                  PROFILE_TEXT.tileBestRound,
-                  year,
-                  best != null ? String(best) : PROFILE_TEXT.tileEmptySpoken,
-                )
-              : null
-          }
-          testID="season-tile-best"
-        />
-        <Tile
-          label={PROFILE_TEXT.tileWins}
-          value={season ? String(season.wins) : null}
-          spoken={season ? seasonTileSpoken(PROFILE_TEXT.tileWins, year, String(season.wins)) : null}
-          gold={season != null && season.wins > 0}
-          testID="season-tile-wins"
-        />
-      </View>
+    <View style={styles.row} testID="season-tiles">
+      <Tile
+        label={PROFILE_TEXT.tileRounds}
+        value={season ? String(season.rounds) : null}
+        spoken={
+          season ? seasonTileSpoken(PROFILE_TEXT.tileRoundsSpoken, year, String(season.rounds)) : null
+        }
+        testID="season-tile-rounds"
+      />
+      <Tile
+        label={PROFILE_TEXT.tileBestRound}
+        value={season ? (best != null ? String(best) : PROFILE_TEXT.tileEmpty) : null}
+        spoken={
+          season
+            ? seasonTileSpoken(
+                PROFILE_TEXT.tileBestRoundSpoken,
+                year,
+                best != null ? String(best) : PROFILE_TEXT.tileEmptySpoken,
+              )
+            : null
+        }
+        testID="season-tile-best"
+      />
+      <Tile
+        label={PROFILE_TEXT.tileWins}
+        value={season ? String(season.wins) : null}
+        spoken={season ? seasonTileSpoken(PROFILE_TEXT.tileWinsSpoken, year, String(season.wins)) : null}
+        gold={season != null && season.wins > 0}
+        testID="season-tile-wins"
+      />
     </View>
   );
 }
@@ -86,15 +86,10 @@ function Tile({
       accessibilityElementsHidden={!loaded}
       style={[
         styles.tile,
-        {
-          backgroundColor: colors.surface,
-          borderColor: gold ? colors.accent : colors.border,
-          // Den gule kanten er ett punkt tykkere, og luften innenfor ett punkt
-          // mindre, så flisa er like høy med og uten seire og menyen under
-          // ikke flytter seg når tallene kommer.
-          borderWidth: gold ? 2 : 1,
-          padding: gold ? 11 : 12,
-        },
+        gold
+          ? // Gulltonen er `accent` med lav dekning, ingen ny farge.
+            { backgroundColor: `${colors.accent}1F`, borderColor: `${colors.accent}CC` }
+          : { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
       testID={testID}
     >
@@ -112,18 +107,21 @@ function Tile({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  row: { flexDirection: 'row', gap: 10, marginTop: 12 },
   tile: {
     flex: 1,
-    borderRadius: 12,
-    gap: 2,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    gap: 4,
   },
   value: {
     fontSize: 28,
-    lineHeight: 34,
-    minHeight: 34,
+    lineHeight: 30,
+    minHeight: 30,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
   },
-  label: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans },
+  label: { fontSize: 12, lineHeight: 16, fontFamily: FONTS.sans },
 });

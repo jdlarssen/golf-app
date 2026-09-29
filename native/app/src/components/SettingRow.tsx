@@ -3,12 +3,14 @@
 //
 // Portert fra webbens `components/ui/SettingRow.tsx` med samme semantikk, så
 // en spiller som har brukt `/profile` kjenner igjen listen: én linje per ting,
-// etiketten i serif, en dempet underlinje når raden trenger å forklare seg, og
-// en chevron BARE når det finnes et rom bak raden.
+// en dempet underlinje når raden trenger å forklare seg, og en pil BARE når det
+// finnes et rom bak raden. #2256: utseendet følger designlerretet for profilen
+// (eierens retning 29.09): etiketten i Inter, raden 52 pt høy, og pila «→» i
+// skoggrønt.
 //
-// **Chevronen er et løfte, ikke pynt.** «Slett konto» fører videre til en egen
+// **Pila er et løfte, ikke pynt.** «Slett konto» fører videre til en egen
 // skjerm og får den; «Logg ut» skjer der og da og får den ikke. Blander man
-// dem, slutter chevronen å bety noe. Den tegnes som tekst-glyfen «›» med vilje:
+// dem, slutter pila å bety noe. Den tegnes som tekst-glyfen «→» med vilje:
 // ikonspråket (#1879) er ikke bygget ennå, og et løst SVG eller et helt
 // ikonbibliotek for én pil ville forskuttert det valget.
 //
@@ -24,7 +26,7 @@
 // komponent, `docs/test-discipline.md`). Det er et valg, ikke en glipp.
 import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { FONTS, TAP, useTheme } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 type Tone = 'default' | 'danger';
 
@@ -35,7 +37,7 @@ interface SettingRowProps {
   /** `danger` farger etiketten rød — for rader som fjerner noe for godt. */
   tone?: Tone;
   onPress: () => void;
-  /** Tekst-chevron «›» — kun på rader som navigerer videre. */
+  /** Pila «→» — kun på rader som navigerer videre. */
   chevron?: boolean;
   /**
    * Raden er ett av flere valg (#2256, temavalget). `true` tegner «✓» og sier
@@ -67,12 +69,12 @@ export function SettingRow({
     : tone === 'danger'
       ? colors.danger
       : colors.text;
-  // Chevronen følger tonen, men dempet: på en rød rad skal pila ikke rope
-  // like høyt som etiketten (webbens `text-danger-deep/70`).
+  // Pila er skoggrønn som i designet, og følger tonen på en rød rad, dempet:
+  // der skal den ikke rope like høyt som etiketten (webbens `text-danger-deep/70`).
   const chevronStyle =
     tone === 'danger'
       ? { color: colors.danger, opacity: 0.7 }
-      : { color: colors.muted };
+      : { color: colors.primary };
 
   return (
     <Pressable
@@ -99,7 +101,7 @@ export function SettingRow({
           ✓
         </Text>
       ) : null}
-      {chevron ? <Text style={[styles.chevron, chevronStyle]}>›</Text> : null}
+      {chevron ? <Text style={[styles.chevron, chevronStyle]}>→</Text> : null}
     </Pressable>
   );
 }
@@ -153,16 +155,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    // Gulvet, ikke målet: en rad med underlinje blir høyere enn dette.
-    minHeight: TAP,
+    // Gulvet, ikke målet: en rad med underlinje blir høyere enn dette. 52 er
+    // designets radhøyde; trykkflaten er uansett over `TAP`.
+    minHeight: 52,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   texts: { flexShrink: 1, gap: 2 },
-  label: { fontSize: 16, fontFamily: FONTS.serifDisplay },
+  label: { fontSize: 15, fontFamily: FONTS.sans },
   // Ett hakk under etiketten, så raden leses som én ting og ikke som to.
-  sublabel: { fontSize: 13, fontFamily: FONTS.sans },
-  chevron: { fontSize: 20, fontFamily: FONTS.sans },
+  sublabel: { fontSize: 12, fontFamily: FONTS.sans },
+  chevron: { fontSize: 16, fontFamily: FONTS.sans },
   check: { fontSize: 18, fontFamily: FONTS.sansSemiBold },
   separator: { height: StyleSheet.hairlineWidth },
 });

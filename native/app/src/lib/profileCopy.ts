@@ -91,12 +91,8 @@ export const PROFILE_TEXT = {
   saveHint: 'Lagre blir aktiv når du endrer noe.',
 
   // --- Webbens ordlyd: sesongen og temaet (#2256) --------------------------
-  // Flisene bruker webbens ord for de samme tallene: «Runder» er kolonnen i
-  // sesongoppsummeringen (`profile.historikk.seasonColRounds`), «Beste runde»
-  // er «Mine tall» (`profile.myStats.bestRound`). Temavalget er webbens
-  // `profile.theme`: overskriften og de to faste draktene.
-  tileRounds: 'Runder',
-  tileBestRound: 'Beste runde',
+  // Temavalget er webbens `profile.theme`: overskriften og de to faste
+  // draktene.
   // Raden til vennesiden (#2256 PR 2): webbens `profile.friendsRow` og
   // `profile.friendsSublabel`. Når noen venter på svar, byttes underlinja med
   // {@link friendsWaitingLine}.
@@ -114,11 +110,17 @@ export const PROFILE_TEXT = {
   editAction: 'Rediger',
   /** Kickeren på kortet når spilleren ikke er med i noen klubb. */
   bagTagFallbackKicker: 'Tørny',
-  // «med siden 2026» og «Sesongen 2026»: året settes inn av
-  // {@link memberSinceLine} og {@link seasonHeading}, som med `hcpUpdatedPrefix`.
+  // «med siden 2026»: året settes inn av {@link memberSinceLine}, som med
+  // `hcpUpdatedPrefix`.
   memberSincePrefix: 'med siden ',
-  seasonHeadingPrefix: 'Sesongen ',
-  tileWins: 'Seire',
+  // Flisene under kortet, med designlerretets små etiketter under tallet.
+  // Skjermleseren får hele ord i stedet ({@link seasonTileSpoken}).
+  tileRounds: 'runder i år',
+  tileBestRound: 'beste runde',
+  tileWins: 'seire',
+  tileRoundsSpoken: 'Runder',
+  tileBestRoundSpoken: 'Beste runde',
+  tileWinsSpoken: 'Seire',
   /** Beste runde uten en eneste hel runde i året. */
   tileEmpty: '–',
   /** Det skjermleseren sier i stedet for streken. */
@@ -202,11 +204,6 @@ export function friendsWaitingLine(count: number): string {
 /** «med siden 2026» — sublinja på bag-taggen. */
 export function memberSinceLine(year: number): string {
   return `${PROFILE_TEXT.memberSincePrefix}${year}`;
-}
-
-/** «Sesongen 2026» — overskriften over flisene. */
-export function seasonHeading(year: number): string {
-  return `${PROFILE_TEXT.seasonHeadingPrefix}${year}`;
 }
 
 /**
