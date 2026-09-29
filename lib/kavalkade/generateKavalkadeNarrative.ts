@@ -68,6 +68,11 @@ export async function generateKavalkadeNarrative(
       system,
       messages: [{ role: 'user', content: user }],
     });
+    console.log('[generateKavalkadeNarrative] model call', {
+      year: facts.year,
+      stopReason: response.stop_reason,
+      usage: response.usage,
+    });
 
     const rawText = response.content
       .filter((block): block is Extract<typeof block, { type: 'text' }> => block.type === 'text')
