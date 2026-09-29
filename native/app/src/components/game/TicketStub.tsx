@@ -82,16 +82,22 @@ export function TicketStub({
       return (
         <View style={styles.block} testID="finished-banner">
           {stub.result ? (
-            <Text
-              style={[
-                styles.result,
-                // Gull er medalje: bare egen seier (DESIGN.md).
-                { color: stub.result.isWin ? colors.accent : colors.text },
-              ]}
-              testID="ticket-result"
-            >
-              {stub.result.text}
-            </Text>
+            <View style={styles.resultRow}>
+              {/* Gull er medalje: bare egen seier (DESIGN.md). Som på Hjem er
+                  gullet en skive, ikke tekstfarge — gull tekst på hvitt har for
+                  svak kontrast. */}
+              {stub.result.isWin ? (
+                <View
+                  style={[styles.gold, { backgroundColor: colors.accent }]}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  testID="ticket-result-gold"
+                />
+              ) : null}
+              <Text style={[styles.result, { color: colors.text }]} testID="ticket-result">
+                {stub.result.text}
+              </Text>
+            </View>
           ) : (
             <Text style={ui.body}>{TICKET_TEXT.finishedNoResult}</Text>
           )}
@@ -295,7 +301,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  result: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  resultRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  gold: { width: 14, height: 14, borderRadius: 7 },
+  result: { flexShrink: 1, fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: 6, borderRadius: 3 },
 });
