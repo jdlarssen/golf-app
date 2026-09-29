@@ -69,9 +69,9 @@ target.
   subagent-driven-development skill (choice already made — §Utførelse below).
   Everything else → direct edits with FULL intake, multi-file work included; delegate
   only on the criteria in §Utførelse «Delegering». When forge is invoked, the
-  contract-first flow applies — never `/forge:auto` without a contract file or a
-  contract comment on an open issue (`docs/forge-workflow.md`). Bug reports → direct
-  systematic debugging (§T4), not a contract.
+  contract-first flow applies — never `/forge:auto` without a contract comment on an
+  open issue (`docs/forge-workflow.md`; contract files are never committed, #1931).
+  Bug reports → direct systematic debugging (§T4), not a contract.
 - **Notes file:** put it in the session scratchpad directory (path in the system
   prompt).
 
@@ -156,7 +156,8 @@ target.
   limits: `.changes/README.md`. Never bump `package.json` or edit `CHANGELOG.md` in a
   normal commit — the weekly release job (`.github/workflows/ukesversjon.yml`) owns both,
   and the hook blocks any non-`chore(release)` commit that changes the version field.
-- **Untracked work:** decide at intake — `gh issue create` with `type:`/`area:` labels +
+- **Untracked work:** decide at intake — `gh issue create` with a type label (`bug`,
+  `enhancement`, `documentation` …) and an `area:` label where one fits, plus a
   milestone (mandatory, `docs/issue-workflow.md`), or the rare genuine `[no-issue]`. Tier 1/Tier 5 milestone
   titles are mojibake-corrupted — set by number:
   `gh api -X PATCH repos/jdlarssen/golf-app/issues/N -F milestone=<num>`.
