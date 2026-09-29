@@ -1,4 +1,4 @@
-// #2262: summene under scorekortet i store tall — BRUTTO · NETTO · POENG — og
+// #2262: summene under scorekortet i store tall (BRUTTO · NETTO · POENG) og
 // «14 av 18 hull» så lenge noe mangler. Bare tallene kortet selv viser: et
 // reveal-spill har ingen NETTO-rad, og da står heller ingen netto-sum her.
 import { StyleSheet, Text, View } from 'react-native';
