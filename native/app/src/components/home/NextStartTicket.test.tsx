@@ -59,13 +59,14 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
   const ticket = screen.getByTestId('home-ticket-next');
   expect(ticket.props.accessibilityLabel).toBe(
     'Neste start. Klubbmesterskap. Fre 2. okt kl. 09:30. Om 3 dager. Losby, Flight 2, Stableford. ' +
-      'Flighten din: Marte Kirkerud, Ola Nordmann, Kari Nordmann, Per Hansen, Siri Dahl',
+      'Flighten din: Marte Kirkerud, Ola Nordmann, Kari Nordmann, Per Hansen og 1 til',
   );
   await fireEvent.press(ticket);
   expect(onPress).toHaveBeenCalled();
 
   // Uten tee-off og uten bundel: «Tid ikke satt», ingen nærhet og ingen skiver.
-  // Et format appen ikke kjenner, står ikke i linja.
+  // Formatnavnet kommer fra appens åtte opprett-formater (`APP_MODE_LABELS`);
+  // et format utenfor dem står ikke i linja.
   await rerender(
     <NextStartTicket
       card={{ ...card, scheduledTeeOffAt: null, gameMode: 'solo_strokeplay' }}
