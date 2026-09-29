@@ -194,6 +194,10 @@ export function ScoreRail({
               <Text
                 style={[styles.optionDetail, { color: selected ? colors.onPrimary : colors.muted }]}
                 numberOfLines={1}
+                // «Dobbeltbogey · 1 p» er for bred for en tredel av en smal
+                // telefon. Teksten krymper heller enn å kuttes.
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
                 testID={`rail-option-${option.strokes}-detail`}
               >
                 {detailText(option)}
@@ -393,7 +397,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
   },
-  optionDetail: { fontSize: 12, fontFamily: FONTS.sansMedium, fontVariant: ['tabular-nums'] },
+  optionDetail: { fontSize: 11, fontFamily: FONTS.sansMedium, fontVariant: ['tabular-nums'] },
   otherText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   correctRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   step: {
