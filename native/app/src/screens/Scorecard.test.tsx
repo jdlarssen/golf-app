@@ -129,11 +129,14 @@ const mockRevealBundle = {
   ],
 };
 
-// Samme blinde runde, der kortet mitt er levert og venter på godkjenning (#2262).
+// Greensome-laget, nå i en blind runde, der kortet mitt er levert og venter på
+// godkjenning (#2262). Et netto-format med vilje: stableford-runden over viser
+// POENG, så bare denne kan fange en reveal-regel som skjuler poeng, men lar
+// NETTO lekke.
 const mockDeliveredBundle = {
-  ...mockRevealBundle,
-  game: { ...mockRevealBundle.game, id: 'game-3', requirePeerApproval: true },
-  players: mockRevealBundle.players.map((player) =>
+  ...mockBundle,
+  game: { ...mockBundle.game, id: 'game-3', scoreVisibility: 'reveal', requirePeerApproval: true },
+  players: mockBundle.players.map((player) =>
     player.userId === 'me' ? { ...player, submittedAt: '2026-09-01T12:32:00.000Z' } : player,
   ),
 };
@@ -251,6 +254,10 @@ describe('Scorecard', () => {
       expect(screen.getByTestId('scorecard-stamp')).toBeTruthy();
     });
     expect(screen.getByTestId('scorecard-approval')).toBeTruthy();
-    expect(screen.queryByTestId('submit-scorecard')).toBeNull();
+    expect(screen.queryByTestId('submit-team-card')).toBeNull();
+    // Netto-format i blind runde: NETTO er borte også her, BRUTTO står.
+    expect(screen.queryByTestId('scorecard-row-label-net', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('total-netto')).toBeNull();
+    expect(screen.getByTestId('total-brutto')).toBeTruthy();
   });
 });
