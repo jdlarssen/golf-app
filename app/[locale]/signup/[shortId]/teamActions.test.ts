@@ -1847,3 +1847,32 @@ describe('#2358: lagstyringen følger kapteinsbindet', () => {
     expect(upsert?.args[0]).toMatchObject({ user_id: INVITEE_ID, team_number: 3 });
   });
 });
+
+describe('#2358: declineTeamInvite gjelder bare en invitasjon, ikke en kapteinsrad', () => {
+  it('kapteinen kan ikke «avslå» sin egen kapteinsrad → not_found, ingen skriving', async () => {
+    // En kapteinsrad avslått ville latt lagkameratene stå under en avvist
+    // kaptein. Kapteinen trekker seg via «Trekk meg» (eller gir bindet videre).
+    authedAsCaptain();
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: CAPTAIN_REQUEST_ID,
+          game_id: GAME_ID,
+          user_id: CAPTAIN_ID,
+          status: 'approved',
+          team_request_id: null,
+          team_name: 'Bjørka',
+          is_team_captain: true,
+        },
+        error: null,
+      },
+    ]);
+    const { declineTeamInvite } = await import('./teamActions');
+
+    expect(await declineTeamInvite(CAPTAIN_REQUEST_ID, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(
+      adminMock.__fromCalls.filter((c) => c.method === 'update' || c.method === 'delete'),
+    ).toHaveLength(0);
+  });
+});

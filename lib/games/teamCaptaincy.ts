@@ -112,19 +112,21 @@ export async function readCaptainTeam(
  * (`/games/[id]/trekk-fra`), som skal si det samme som kjernen gjør.
  *
  * `null` = kalleren er ikke kaptein, eller lesingen feilet. Siden viser da det
- * vanlige skjemaet, og kjernen er vakta uansett.
+ * vanlige skjemaet, og kjernen er vakta uansett. `marksRequest` = påmeldingen
+ * blir merket som trukket (den er ventende eller godkjent); en avvist påmelding
+ * står som den er.
  */
 export async function captainWithdrawalState(
   admin: ReturnType<typeof getAdminClient>,
   gameId: string,
   userId: string,
-): Promise<{ blocked: boolean; unanswered: number } | null> {
+): Promise<{ blocked: boolean; unanswered: number; marksRequest: boolean } | null> {
   const { data: own, error } = await admin
     .from('game_registration_requests')
-    .select('id, is_team_captain')
+    .select('id, status, is_team_captain')
     .eq('game_id', gameId)
     .eq('user_id', userId)
-    .maybeSingle<{ id: string; is_team_captain: boolean }>();
+    .maybeSingle<{ id: string; status: string; is_team_captain: boolean }>();
   if (error || !own?.is_team_captain) return null;
 
   const team = await readCaptainTeam(admin, gameId, own.id);
@@ -132,5 +134,7 @@ export async function captainWithdrawalState(
   return {
     blocked: team.accepted.length > 0,
     unanswered: team.unanswered.length,
+    // Kjernen merker bare en ventende eller godkjent påmelding som trukket.
+    marksRequest: own.status === 'pending' || own.status === 'approved',
   };
 }

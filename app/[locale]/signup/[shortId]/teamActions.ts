@@ -862,7 +862,7 @@ export async function declineTeamInvite(
 
   const { data: req } = await admin
     .from('game_registration_requests')
-    .select('id, game_id, user_id, status, team_request_id, team_name')
+    .select('id, game_id, user_id, status, team_request_id, team_name, is_team_captain')
     .eq('id', requestId)
     .maybeSingle<{
       id: string;
@@ -871,9 +871,18 @@ export async function declineTeamInvite(
       status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
       team_request_id: string | null;
       team_name: string | null;
+      is_team_captain: boolean;
     }>();
 
-  if (!req || req.user_id !== user.id || req.status === 'rejected') {
+  // #2358: bare en invitasjon kan avslås. En avslått kapteinsrad ville latt
+  // lagkameratene stå under en avvist kaptein; kapteinen trekker seg med
+  // «Trekk meg», eller gir kapteinsbindet videre først.
+  if (
+    !req ||
+    req.user_id !== user.id ||
+    req.status === 'rejected' ||
+    req.is_team_captain
+  ) {
     return { ok: false, error: 'not_found' };
   }
 

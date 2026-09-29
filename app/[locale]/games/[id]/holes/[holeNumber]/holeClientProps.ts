@@ -88,6 +88,13 @@ export interface HoleClientProps {
    */
   withdrawn?: boolean;
   /**
+   * #2358: the current player withdrew themself (`withdrawn_by_user_id` is
+   * them). Only then does the withdrawn banner link to «Angre»; a withdrawal
+   * the organiser set is theirs to undo. Unknown → false, as the server
+   * refuses the undo then too.
+   */
+  selfWithdrawn?: boolean;
+  /**
    * Spillets modus. Stableford bytter ut «Lever lagets scorekort» med
    * «Lever ditt scorekort», viser «Dine poeng»-subtittel i headeren, og
    * surfacer stableford-poeng per hull på score-kortet. Default-prop
@@ -258,6 +265,7 @@ export type ResolvedHoleClientProps = HoleClientProps &
       | 'gameMode'
       | 'holeSegment'
       | 'withdrawn'
+      | 'selfWithdrawn'
       | 'myTeamNumber'
       | 'myTeamScoreOwnerId'
       | 'myFormerTeamRowOwnerIds'
@@ -281,6 +289,7 @@ export function resolveHoleClientProps(
     gameMode = 'best_ball',
     holeSegment = 'full',
     withdrawn = false,
+    selfWithdrawn = false,
     myTeamNumber = null,
     myTeamScoreOwnerId = null,
     myFormerTeamRowOwnerIds = [],
@@ -299,6 +308,7 @@ export function resolveHoleClientProps(
     gameMode,
     holeSegment,
     withdrawn,
+    selfWithdrawn,
     myTeamNumber,
     myTeamScoreOwnerId,
     myFormerTeamRowOwnerIds,

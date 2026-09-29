@@ -2400,6 +2400,7 @@
     "banners": {
       "floridaStepAside": "Remember: the player who hit the chosen shot sits out the next shot.",
       "withdrawn": "You have withdrawn",
+      "withdrawnByOrganiser": "The organiser has withdrawn you",
       "withdrawnUndo": "Undo",
       "skinsBanner": "{count, plural, one {1 skin at stake} other {# skins at stake}}",
       "skinsCarried": "The pot has carried over"
