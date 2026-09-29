@@ -1,10 +1,10 @@
 // Native N3 (#1825), utvidet i N4 (#1828): den ene render-testen (Type C) på
 // spillerskjermene.
 //
-// Den svarer på det ingen ren funksjon kan svare på: at kortene faktisk tegnes
-// og at et tapp på «+» havner i N2-datalaget med RIKTIGE argumenter. To
-// varianter av samme spørsmål, og begge kan gå galt uten at noen Type A-test
-// ser det:
+// Den svarer på det ingen ren funksjon kan svare på: at radene og skinna
+// (#2252) faktisk tegnes, og at et trykk havner i N2-datalaget med RIKTIGE
+// argumenter. To varianter av samme spørsmål, og begge kan gå galt uten at noen
+// Type A-test ser det:
 //
 //  1. **Solo:** `userId` = makkeren, `enteredBy` = meg. Bytter de to plass,
 //     skriver appen stille i feil rad.
@@ -154,6 +154,11 @@ const mockState: { bundle: unknown; scores: unknown[] } = {
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Skinna står over hjem-indikatoren. Uten navigatorens SafeAreaProvider gir
+// pakkens egen mock innfelling 0.
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 // Putt-bryteren (#2000) bor i AsyncStorage. Pakkens egen jest-mock er et lager
 // i minnet — hver test starter med bryteren av, som på en fersk telefon.
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -289,7 +294,10 @@ describe('Hole', () => {
     expect(subscribeGameScores).toHaveBeenCalledTimes(1);
   });
 
-  it('tegner hele flighten og sender et tapp på «+» videre til writeScore', async () => {
+  // #2252: skinna. Første trykk på en knapp fører scoren for setet skinna står
+  // på, og skinna går videre til neste som mangler. Tallene på knappene er
+  // dekket av Type A (railPoints, scoreRail); her er det koblingen som testes.
+  it('tegner flighten som rader, og ett trykk på skinna fører scoren og går videre', async () => {
     // #2211: en tredje spiller har levert og har ingen score på hullet.
     mockState.bundle = {
       ...mockSoloBundle,
@@ -311,150 +319,204 @@ describe('Hole', () => {
       expect(screen.getByText('Makker Makkersen')).toBeTruthy();
     });
     expect(screen.getByText('Meg Selv (deg)')).toBeTruthy();
+    expect(screen.queryByTestId('player-card-me')).toBeNull();
 
-    // Det leverte kortet er låst: grått, merket «Levert», uten «Trykk kort =
-    // par», og «+» skriver ingenting.
-    const doneCard = screen.getByTestId('player-card-done');
-    expect(doneCard).toBeDisabled();
-    expect(doneCard).toHaveStyle({ opacity: 0.6 });
-    expect(screen.getByTestId('player-done-submitted')).toBeTruthy();
-    expect(screen.queryByTestId('player-done-hint')).toBeNull();
-    await fireEvent.press(screen.getByTestId('player-done-plus'));
-    expect(writeScore).not.toHaveBeenCalled();
+    // Den leverte raden er låst: grå, merket «Levert», og kan ikke velges.
+    const doneRow = screen.getByTestId('flight-row-done');
+    expect(doneRow).toBeDisabled();
+    expect(doneRow).toHaveStyle({ opacity: 0.6 });
+    expect(screen.getByTestId('flight-row-done-submitted')).toBeTruthy();
 
-    // #1988: første «+» på et tomt kort fører PAR + 1 (par 4 → 5), ikke 1.
-    await fireEvent.press(screen.getByTestId('player-mate-plus'));
+    // Skinna starter på meg. Slagene jeg får på hullet står i overskriften, og
+    // netto på knappene regnes med dem (solo slagspill viser netto).
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe(
+      'Meg Selv · får 1 slag',
+    );
+    expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · netto 3');
 
-    await waitFor(() => {
-      expect(writeScore).toHaveBeenCalledWith({
-        gameId: GAME_ID,
-        userId: 'mate',
-        holeNumber: 1,
-        strokes: 5,
-        enteredBy: 'me',
-      });
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    expect(writeScore).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      userId: 'me',
+      holeNumber: 1,
+      strokes: 4,
+      enteredBy: 'me',
     });
+    // Videre til makkeren. Den leverte hoppes over.
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-heading').props.children).toBe(
+        'Makker Makkersen · får 1 slag',
+      );
+    });
+    expect(screen.queryByTestId('score-rail-skip')).toBeNull();
 
     // #2000: putt-føring er opt-in. Solo-slagspill FANGER putter, så bryteren
-    // finnes — men den er av til noen slår den på, og da finnes ikke feltet.
-    expect(screen.queryByTestId('player-me-putts-plus')).toBeNull();
+    // finnes, men putte-valget kommer først når den er på.
+    expect(screen.queryByTestId('rail-putts')).toBeNull();
     await fireEvent.press(screen.getByTestId('hole-putts-toggle'));
     await waitFor(() => {
-      expect(screen.getByTestId('player-me-putts-plus')).toBeTruthy();
+      expect(screen.getByTestId('rail-putts')).toBeTruthy();
     });
 
-    // Samme render, andre stepper: putt-tastingen skal sende PUTTS ALENE.
-    // Sendes `strokes` med her, vasker mergen ut slaget som står der (#939).
-    await fireEvent.press(screen.getByTestId('player-me-putts-plus'));
-
-    await waitFor(() => {
-      expect(writeScore).toHaveBeenCalledWith({
-        gameId: GAME_ID,
-        userId: 'me',
-        holeNumber: 1,
-        putts: 2,
-        enteredBy: 'me',
-      });
+    // Putter skrives ALENE. Sendes `strokes` med, vasker mergen ut slaget som
+    // står der (#939).
+    await fireEvent.press(screen.getByTestId('rail-putts-2'));
+    expect(writeScore).toHaveBeenLastCalledWith({
+      gameId: GAME_ID,
+      userId: 'mate',
+      holeNumber: 1,
+      putts: 2,
+      enteredBy: 'me',
     });
   });
 
-  it('lag-format: ett kort per lag, og tappet havner i KAPTEINENS rad', async () => {
+  it('lag-format: én rad per lag, og trykket havner i KAPTEINENS rad', async () => {
     mockState.bundle = mockTeamBundle;
     await renderHole();
 
-    // Ett kort per lag — ikke fire spillerkort.
+    // Én rad per lag, ikke fire spillerrader. Setet er kapteinens.
     await waitFor(() => {
-      expect(screen.getByTestId('team-card-1')).toBeTruthy();
+      expect(screen.getByTestId('flight-row-makker')).toBeTruthy();
     });
     expect(screen.getByText('Lag 1 · Makker, Meg (ditt lag)')).toBeTruthy();
     expect(screen.getByText('Lag 2 · Rival, Rita')).toBeTruthy();
-    expect(screen.queryByTestId('player-card-me')).toBeNull();
+    expect(screen.queryByTestId('flight-row-me')).toBeNull();
 
-    // Badgen er motorens tall: høysiden får 10 slag, altså ett på SI 1.
-    expect(screen.getByTestId('team-1-extra').props.children).toBe('+1');
-    // Lavsiden får ingen — og da vises ingen badge i det hele tatt.
-    expect(screen.queryByTestId('team-2-extra')).toBeNull();
+    // Merket er motorens tall: høysiden får 10 slag, altså ett på SI 1.
+    expect(screen.getByTestId('flight-row-makker-strokes').props.children).toBe('+1 SLAG');
+    // Lavsiden får ingen, og da vises ikke merket.
+    expect(screen.queryByTestId('flight-row-rival-a-strokes')).toBeNull();
 
     // Jeg taster, men raden er kapteinens («makker» er lex-min av laget).
-    await fireEvent.press(screen.getByTestId('team-1-plus'));
-
-    await waitFor(() => {
-      expect(writeScore).toHaveBeenCalledWith({
-        gameId: GAME_ID,
-        userId: 'makker',
-        holeNumber: 1,
-        strokes: 5,
-        enteredBy: 'me',
-      });
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    expect(writeScore).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      userId: 'makker',
+      holeNumber: 1,
+      strokes: 4,
+      enteredBy: 'me',
     });
 
     // #2000: greensome fanger ikke putter (`formatCapturesPutts`), så hverken
-    // bryteren eller putte-raden skal finnes — lagkortet har aldri kunnet vise
-    // dem, uansett hva som ligger lagret på telefonen.
+    // bryteren eller putte-valget skal finnes.
     expect(screen.queryByTestId('hole-putts-toggle')).toBeNull();
-    expect(screen.queryByTestId('team-1-putts-plus')).toBeNull();
+    expect(screen.queryByTestId('rail-putts')).toBeNull();
   });
 
-  // #1988: de to føringsveiene webben har hatt hele tiden. Tallene er dekket av
-  // lib/scorecard/strokeEntry.test.ts — det som testes her er KOBLINGEN: at
-  // kortflaten er trykkbar, at «Angre» dukker opp først når det står et tall
-  // der, og at den skriver eksplisitt `null` (utelatt felt = behold, #939).
-  it('tapp på tomt kort fører par, og «Angre» nullstiller et ført slag', async () => {
+  // Retting: raden gir skinna til den spilleren, «Angre» skriver eksplisitt
+  // `null` (utelatt felt = behold, #939), og «Annet» setter et hvilket som
+  // helst tall og går videre som et vanlig trykk.
+  it('rad-trykk velger setet, «Angre» nullstiller og lar putterne stå, og «Annet» setter et tall', async () => {
+    mockState.scores = [localScore('me', 6, 2)];
+    await renderHole();
+
+    // Jeg har score, så skinna står på makkeren.
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-heading').props.children).toBe(
+        'Makker Makkersen · får 1 slag',
+      );
+    });
+    expect(screen.getByTestId('flight-row-me-score').props.children).toBe(6);
+
+    await fireEvent.press(screen.getByTestId('flight-row-me'));
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv · får 1 slag');
+
+    await fireEvent.press(screen.getByTestId('rail-undo'));
+    expect(writeScore).toHaveBeenCalledTimes(1);
+    expect(writeScore).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      userId: 'me',
+      holeNumber: 1,
+      strokes: null,
+      enteredBy: 'me',
+    });
+    // `putts` er UTELATT, ikke null: mergen i writeScore beholder de 2 puttene.
+    expect((writeScore as jest.Mock).mock.calls[0][0]).not.toHaveProperty('putts');
+
+    // Skinna blir stående på meg etter «Angre».
+    await fireEvent.press(screen.getByTestId('rail-other'));
+    await fireEvent.press(screen.getByTestId('specific-value-9'));
+    expect(writeScore).toHaveBeenLastCalledWith({
+      gameId: GAME_ID,
+      userId: 'me',
+      holeNumber: 1,
+      strokes: 9,
+      enteredBy: 'me',
+    });
+    expect(screen.queryByTestId('specific-value-sheet')).toBeNull();
+  });
+
+  // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad
+  // du valgte på hull 1, skal ikke stå valgt på hull 2.
+  it('et nytt hull starter skinna på meg igjen', async () => {
+    const navigation = { setParams: jest.fn(), navigate: jest.fn() };
+    const { rerender } = await render(holeElement(1, navigation));
+    await waitFor(() => {
+      expect(screen.getByTestId('flight-row-mate')).toBeTruthy();
+    });
+    await fireEvent.press(screen.getByTestId('flight-row-mate'));
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe(
+      'Makker Makkersen · får 1 slag',
+    );
+
+    await rerender(holeElement(2, navigation));
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv · får 1 slag');
+  });
+
+  // #2219: i en blind runde som pågår viser hullsiden verken poeng eller
+  // netto. Samme bundel med og uten blind runde, så forskjellen er regelen.
+  it('stableford viser poeng på knappene, radene og «Stryk», men ikke i en blind runde', async () => {
+    const stableford = {
+      ...mockSoloBundle,
+      game: { ...GAME_BASE, gameMode: 'stableford' },
+    };
+    mockState.bundle = stableford;
+    mockState.scores = [localScore('mate', 5, null)];
+    const { unmount } = await render(
+      holeElement(1, { setParams: jest.fn(), navigate: jest.fn() }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · 3 p');
+    });
+    expect(screen.getByTestId('flight-row-mate-points').props.children).toBe('2 p');
+    await fireEvent.press(screen.getByTestId('rail-other'));
+    expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk · 0 p');
+    await unmount();
+
+    mockState.bundle = { ...stableford, game: { ...stableford.game, scoreVisibility: 'reveal' } };
+    await renderHole();
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
+    });
+    expect(screen.queryByTestId('flight-row-mate-points')).toBeNull();
+    await fireEvent.press(screen.getByTestId('rail-other'));
+    expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk');
+  });
+
+  // Bingo Bango Bongo er formatet uten skinne (`formatUsesScoreRail`): kortene
+  // står som før, og tapp på et tomt kort fører par.
+  it('bingo bango bongo beholder kortene', async () => {
+    mockState.bundle = {
+      ...mockSoloBundle,
+      game: { ...GAME_BASE, gameMode: 'bingo_bango_bongo' },
+    };
     await renderHole();
 
     await waitFor(() => {
       expect(screen.getByTestId('player-card-me')).toBeTruthy();
     });
-
-    // Uten score: ingen «Angre», men hint-linja peker på snarveien.
-    expect(screen.queryByTestId('player-me-undo')).toBeNull();
-    expect(screen.getByTestId('player-me-hint')).toBeTruthy();
+    expect(screen.queryByTestId('score-rail')).toBeNull();
+    expect(screen.queryByTestId('flight-list')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('player-card-me'));
-
-    await waitFor(() => {
-      expect(writeScore).toHaveBeenCalledWith({
-        gameId: GAME_ID,
-        userId: 'me',
-        holeNumber: 1,
-        strokes: 4,
-        enteredBy: 'me',
-      });
+    expect(writeScore).toHaveBeenCalledWith({
+      gameId: GAME_ID,
+      userId: 'me',
+      holeNumber: 1,
+      strokes: 4,
+      enteredBy: 'me',
     });
-  });
-
-  it('«Angre» skriver strokes: null og lar putterne stå', async () => {
-    mockState.scores = [localScore('me', 6, 2)];
-    await renderHole();
-
-    await waitFor(() => {
-      expect(screen.getByTestId('player-me-undo')).toBeTruthy();
-    });
-    // Hint-linja viker for tallet så snart noe er ført.
-    expect(screen.queryByTestId('player-me-hint')).toBeNull();
-    expect(screen.getByTestId('player-me-value').props.children).toBe(6);
-
-    // Kortflaten er en no-op når et tall står der — ellers ville en tommel på
-    // avveie skrevet par over en ærlig 6-er.
-    await fireEvent.press(screen.getByTestId('player-card-me'));
-    expect(writeScore).not.toHaveBeenCalled();
-
-    await fireEvent.press(screen.getByTestId('player-me-undo'));
-
-    await waitFor(() => {
-      expect(writeScore).toHaveBeenCalledWith({
-        gameId: GAME_ID,
-        userId: 'me',
-        holeNumber: 1,
-        strokes: null,
-        enteredBy: 'me',
-      });
-    });
-    // `putts` er UTELATT, ikke null: mergen i writeScore beholder de 2 puttene.
-    expect(writeScore).toHaveBeenCalledTimes(1);
-    expect(
-      (writeScore as jest.Mock).mock.calls[0][0],
-    ).not.toHaveProperty('putts');
   });
 
   it('kapteinen har slettet kontoen: hullet viser verdien hans, og «+» skriver til den nye eieren', async () => {
@@ -464,12 +526,13 @@ describe('Hole', () => {
     );
     await renderHole(5);
 
-    // Hull 5 ble ført av kapteinen før slettingen.
+    // Hull 5 ble ført av kapteinen før slettingen. Raden er nå «me» sin.
     await waitFor(() => {
-      expect(screen.getByTestId('team-1-value').props.children).toBe(6);
+      expect(screen.getByTestId('flight-row-me-score').props.children).toBe(6);
     });
 
-    await fireEvent.press(screen.getByTestId('team-1-plus'));
+    await fireEvent.press(screen.getByTestId('flight-row-me'));
+    await fireEvent.press(screen.getByTestId('rail-step-up'));
 
     await waitFor(() => {
       expect(writeScore).toHaveBeenCalledWith({
