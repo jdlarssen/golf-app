@@ -60,6 +60,12 @@ const getFriendDataMock = vi.fn();
 vi.mock('@/lib/friends/getFriendData', () => ({
   getFriendData: (...args: unknown[]) => getFriendDataMock(...args),
 }));
+const statsMock = vi.fn();
+const handicapsMock = vi.fn();
+vi.mock('@/lib/friends/getFriendStats', () => ({
+  getFriendStats: (...args: unknown[]) => statsMock(...args),
+  getFriendHandicaps: (...args: unknown[]) => handicapsMock(...args),
+}));
 const privateFieldsMock = vi.fn();
 vi.mock('@/lib/users/privateUserFields', () => ({
   getPrivateUserFields: (...args: unknown[]) => privateFieldsMock(...args),
@@ -100,7 +106,13 @@ beforeEach(() => {
   privateFieldsMock.mockResolvedValue(
     new Map([[ME, { email: 'meg@example.com', friendCode: 'KODE123' }]]),
   );
+  statsMock.mockResolvedValue(
+    new Map([[KARI, { roundsTogether: 8, lastPlayedAt: '2026-09-26T09:00:00Z', lastGameName: 'Onsdagsgolfen' }]]),
+  );
+  handicapsMock.mockResolvedValue(new Map([[KARI, 9.4]]));
 });
+
+const NONE = { roundsTogether: 0, lastPlayedAt: null, lastGameName: null };
 
 describe('GET /api/friends', () => {
   it.each([undefined, 'feil-token'])('svarer 401 uten gyldig token (%p) og leser ingenting', async (token) => {
@@ -109,18 +121,59 @@ describe('GET /api/friends', () => {
     expect(getFriendDataMock).not.toHaveBeenCalled();
   });
 
-  it('gir listene med id og visningsnavn, og kallerens egen venne-kode', async () => {
+  it('gir listene med id, visningsnavn og tallene, og kallerens egen venne-kode', async () => {
     const res = await GET(req('', { token: TOKEN }));
     expect(res.status).toBe(200);
     expect(getFriendDataMock).toHaveBeenCalledWith(ME);
     expect(privateFieldsMock).toHaveBeenCalledWith([ME]);
+    expect(statsMock).toHaveBeenCalledWith(ME, [KARI, 'uten-navn', 'ola', 'per']);
+    expect(handicapsMock).toHaveBeenCalledWith([KARI]);
     expect(await res.json()).toEqual({
-      friends: [{ id: KARI, name: 'Kari Nordmann «Kaka»' }],
-      incoming: [{ requestId: 'req-inn', id: 'uten-navn', name: expect.any(String) }],
-      outgoing: [{ requestId: 'req-ut', id: 'ola', name: 'Ola' }],
-      suggestions: [{ id: 'per', name: 'Per' }],
+      friends: [
+        {
+          id: KARI,
+          name: 'Kari Nordmann «Kaka»',
+          hcp: 9.4,
+          stats: { roundsTogether: 8, lastPlayedAt: '2026-09-26T09:00:00Z', lastGameName: 'Onsdagsgolfen' },
+        },
+      ],
+      incoming: [{ requestId: 'req-inn', id: 'uten-navn', name: expect.any(String), stats: NONE }],
+      outgoing: [{ requestId: 'req-ut', id: 'ola', name: 'Ola', stats: NONE }],
+      suggestions: [{ id: 'per', name: 'Per', stats: NONE }],
       friendCode: 'KODE123',
     });
+  });
+
+  it('setter vennen dere spilte med sist først, og resten etter navn', async () => {
+    getFriendDataMock.mockResolvedValue({
+      friends: [
+        { id: 'anne', name: 'Anne', nickname: null, email: 'anne@example.com' },
+        { id: 'bjorn', name: 'Bjørn', nickname: null, email: 'bjorn@example.com' },
+        KARI_USER,
+      ],
+      incoming: [],
+      outgoing: [],
+      suggestions: [],
+    });
+    statsMock.mockResolvedValue(
+      new Map([
+        [KARI, { roundsTogether: 1, lastPlayedAt: '2026-06-01T09:00:00Z', lastGameName: 'Vår' }],
+        ['bjorn', { roundsTogether: 3, lastPlayedAt: '2026-09-01T09:00:00Z', lastGameName: 'Høst' }],
+      ]),
+    );
+    const body = await (await GET(req('', { token: TOKEN }))).json();
+    expect(body.friends.map((f: { id: string }) => f.id)).toEqual(['bjorn', KARI, 'anne']);
+  });
+
+  it('gir listene uten tallene når de ikke kan leses', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    statsMock.mockRejectedValue(new Error('nede'));
+    handicapsMock.mockRejectedValue(new Error('nede'));
+    const res = await GET(req('', { token: TOKEN }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.friends).toEqual([{ id: KARI, name: 'Kari Nordmann «Kaka»', hcp: null, stats: null }]);
+    expect(body.suggestions).toEqual([{ id: 'per', name: 'Per', stats: null }]);
   });
 
   it('sender ingen e-postadresse til andre ut av serveren', async () => {
