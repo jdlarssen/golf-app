@@ -27,6 +27,11 @@ export interface ScorecardRow {
   extra: number | null;
   /** `strokes − extra`, eller `null` når ett av dem mangler. */
   netto: number | null;
+  /**
+   * Hvem som førte raden som vises (#2262, «Ført av» på kortet), eller `null`
+   * når hullet ikke har noen rad.
+   */
+  enteredBy: string | null;
 }
 
 export interface ScorecardTotals {
@@ -73,7 +78,8 @@ export function buildScorecardRows(opts: {
     );
     const collapsed =
       opts.teamOwnerId != null && modeCollapsesToTeamCard(opts.mode, hole.holeNumber);
-    const strokes = byUserHole.get(`${ownerId}#${hole.holeNumber}`)?.strokes ?? null;
+    const scoreRow = byUserHole.get(`${ownerId}#${hole.holeNumber}`);
+    const strokes = scoreRow?.strokes ?? null;
     const extra = collapsed
       ? opts.leaderboard != null && opts.teamNumber != null
         ? teamExtraForHole(
@@ -95,6 +101,7 @@ export function buildScorecardRows(opts: {
       strokes,
       extra,
       netto: strokes != null && extra != null ? strokes - extra : null,
+      enteredBy: scoreRow?.enteredBy ?? null,
     };
   });
 

@@ -11,7 +11,7 @@
 //
 // `formatTeeOff` og `displayName` er dekket av kallstedenes egne tester og
 // gjentas ikke her.
-import { formatClock } from './display';
+import { formatClock, formatSignedAt } from './display';
 
 describe('formatClock', () => {
   it('viser enhetens veggklokke, ikke en Oslo-konvertering', () => {
@@ -30,5 +30,37 @@ describe('formatClock', () => {
 
   it('svarer null på en ulesbar verdi i stedet for «NaN.NaN»', () => {
     expect(formatClock('ikke en dato')).toBeNull();
+  });
+});
+
+// #2262: datoen i stempelet på et levert scorekort.
+describe('formatSignedAt', () => {
+  it('skriver dato og klokkeslett i enhetens tid', () => {
+    // 12:32Z, altså 14.32 i Oslo. Under TZ=UTC skal det stå 12:32.
+    expect(formatSignedAt('2026-09-27T12:32:00.000Z')).toBe('27. september 2026 · 12:32');
+  });
+
+  it('har alle tolv månedene, og dagen uten null foran', () => {
+    const months = Array.from({ length: 12 }, (_, i) =>
+      formatSignedAt(`2026-${String(i + 1).padStart(2, '0')}-05T09:04:00.000Z`),
+    );
+    expect(months).toEqual([
+      '5. januar 2026 · 09:04',
+      '5. februar 2026 · 09:04',
+      '5. mars 2026 · 09:04',
+      '5. april 2026 · 09:04',
+      '5. mai 2026 · 09:04',
+      '5. juni 2026 · 09:04',
+      '5. juli 2026 · 09:04',
+      '5. august 2026 · 09:04',
+      '5. september 2026 · 09:04',
+      '5. oktober 2026 · 09:04',
+      '5. november 2026 · 09:04',
+      '5. desember 2026 · 09:04',
+    ]);
+  });
+
+  it('svarer null på en ulesbar verdi', () => {
+    expect(formatSignedAt('ikke en dato')).toBeNull();
   });
 });

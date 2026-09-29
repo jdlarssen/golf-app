@@ -26,6 +26,7 @@ import {
   foursomesTeeStarterId,
   myTeamCaptainId,
   teamExtraForHole,
+  teamHandicapFor,
 } from './teamPlay';
 
 const SCRAMBLE: GameMode = 'texas_scramble';
@@ -440,6 +441,20 @@ const greensomeBundle = bundle(
     player({ userId: 'dina', teamNumber: 2, courseHandicap: 6 }),
   ],
 );
+
+// #2262: hodet på scorekortet sier «lagshandicap N» med motorens tall.
+describe('teamHandicapFor', () => {
+  it('scramble: lagets handicap fra motoren', () => {
+    const outcome = computeGameLeaderboard(scrambleBundle, []);
+    expect(teamHandicapFor(outcome, 1)).toBe(10);
+    expect(teamHandicapFor(outcome, 2)).toBe(3);
+  });
+
+  it('null for et lag motoren ikke kjenner, og for alternate shot', () => {
+    expect(teamHandicapFor(computeGameLeaderboard(scrambleBundle, []), 9)).toBeNull();
+    expect(teamHandicapFor(computeGameLeaderboard(foursomesBundle, []), 1)).toBeNull();
+  });
+});
 
 describe('teamExtraForHole', () => {
   it('scramble: lagets teamHandicap fra motoren, fordelt med delt SI-allokering', () => {
