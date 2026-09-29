@@ -2448,6 +2448,14 @@ export type Database = {
         Returns: string
       }
       slugify_course_name: { Args: { input: string }; Returns: string }
+      transfer_team_captaincy: {
+        Args: {
+          p_actor_user_id: string
+          p_game_id: string
+          p_new_captain_request_id: string
+        }
+        Returns: Json
+      }
       update_course_with_layout: {
         Args: {
           p_course_id: string
