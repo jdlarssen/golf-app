@@ -35,6 +35,7 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   scoreOver1Fg: '--score-over1-fg',
   scoreOver2Fg: '--score-over2-fg',
   onStrong: '--bg-tint',
+  accentText: '--accent-text',
 };
 
 const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');
@@ -201,6 +202,7 @@ describe('SUNLIGHT_THEME', () => {
     'scoreParFg',
     'scoreOver1Fg',
     'scoreOver2Fg',
+    'accentText',
   ] as const)('%s holder minst 4,5:1 mot hvit', (role) => {
     expect(contrast(c[role], '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
   });

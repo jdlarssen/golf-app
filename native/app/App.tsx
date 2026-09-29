@@ -9,8 +9,10 @@
 // #1830: Fraunces/Inter lastes med `useFonts`, og splashen står til BÅDE
 // fontene og sesjons-sjekken er ferdig — ingen font-hopp og ingen
 // spinner-blits ved kaldstart. Font-feil slipper appen videre på systemfonter
-// (aldri heng på splash). #2252: splashen venter også på sollys-valget, så en
-// hullside i sollys aldri blinker mørk ved åpning.
+// (aldri heng på splash). Splashen venter også på de to valgene som bor på
+// telefonen: sollys (#2252), så en hullside i sollys aldri blinker mørk ved
+// åpning, og temaet (#2256: «Lys», «Mørk», «Følg telefonen»), så appen aldri
+// blinker i feil drakt ved oppstart.
 //
 // #1942: eier-vakten. Sesjonen alene er ikke nok til å montere stacken — den
 // lokale basen må tilhøre den som logget inn. Vakten (`data/localOwner.ts`)
@@ -35,6 +37,7 @@ import type { Session } from '@supabase/supabase-js';
 import { OwnerGate } from './src/components/OwnerGate';
 import { RootNavigator } from './src/navigation';
 import { Login } from './src/screens/Login';
+import { applyStoredThemePreference } from './src/lib/themePreference';
 import { SessionProvider } from './src/session';
 import { loadSunlight } from './src/lib/sunlight';
 import { supabase } from './src/supabase';
@@ -42,14 +45,17 @@ import { useTheme } from './src/theme';
 
 SplashScreen.preventAutoHideAsync();
 
-/** Så lenge splashen venter på sollys-valget (#2252) før den slippes uansett. */
-const SUNLIGHT_LOAD_TIMEOUT_MS = 1000;
+/**
+ * Så lenge splashen venter på valgene som bor på telefonen (sollys #2252,
+ * tema #2256) før den slippes uansett.
+ */
+const DEVICE_CHOICES_TIMEOUT_MS = 1000;
 
 export default function App() {
   const { colors, ui } = useTheme();
   const [session, setSession] = useState<Session | null>(null);
   const [booting, setBooting] = useState(true);
-  const [sunlightLoaded, setSunlightLoaded] = useState(false);
+  const [deviceChoicesLoaded, setDeviceChoicesLoaded] = useState(false);
   const [fontsLoaded, fontsError] = useFonts({
     Fraunces_500Medium,
     Fraunces_600SemiBold,
@@ -73,19 +79,19 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Kaster aldri: en lesefeil gir sollys av. Svarer ikke lageret innen et
-  // sekund, slippes splashen likevel (aldri heng på splash); valget kommer da
-  // på plass når lesingen blir ferdig.
+  // Ingen av de to kaster: en lesefeil gir sollys av og «Følg telefonen».
+  // Svarer ikke lagrene innen et sekund, slippes splashen likevel (aldri heng
+  // på splash); valgene kommer da på plass når lesingen blir ferdig.
   useEffect(() => {
-    const timer = setTimeout(() => setSunlightLoaded(true), SUNLIGHT_LOAD_TIMEOUT_MS);
-    void loadSunlight().finally(() => {
+    const timer = setTimeout(() => setDeviceChoicesLoaded(true), DEVICE_CHOICES_TIMEOUT_MS);
+    void Promise.allSettled([loadSunlight(), applyStoredThemePreference()]).finally(() => {
       clearTimeout(timer);
-      setSunlightLoaded(true);
+      setDeviceChoicesLoaded(true);
     });
     return () => clearTimeout(timer);
   }, []);
 
-  const ready = (fontsLoaded || fontsError != null) && !booting && sunlightLoaded;
+  const ready = (fontsLoaded || fontsError != null) && !booting && deviceChoicesLoaded;
 
   useEffect(() => {
     if (ready) {
