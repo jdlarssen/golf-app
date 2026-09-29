@@ -137,6 +137,27 @@ describe('buildScorecardRows — vanlig kort', () => {
     expect(totals.totalNet).toBe(7);
   });
 
+  // #2262: «Ført av»-raden på kortet leser hvem som førte raden som vises.
+  it('bærer med seg hvem som førte hvert hull, og null der ingen har ført', () => {
+    const { rows } = buildScorecardRows({
+      holes: HOLES,
+      scores: [
+        { ...score('me', 1, 5), enteredBy: 'me' },
+        { ...score('me', 2, 4), enteredBy: 'mate' },
+      ],
+      mode: SOLO,
+      game: { gameMode: SOLO, modeConfig: null },
+      viewerId: 'me',
+      teamOwnerId: null,
+      teeGender: MENS,
+      courseHandicap: 0,
+      teamNumber: null,
+      leaderboard: null,
+    });
+
+    expect(rows.slice(0, 3).map((row) => row.enteredBy)).toEqual(['me', 'mate', null]);
+  });
+
   it('par følger tee-kjønnet, ikke herre-paret som standard', () => {
     const { rows } = buildScorecardRows({
       holes: HOLES,
