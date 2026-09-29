@@ -210,8 +210,16 @@ describe('EndGame', () => {
     await fireEvent.press(screen.getByTestId('end-game-submit'));
     expect(finishRound).not.toHaveBeenCalled();
 
-    await fireEvent.press(screen.getByTestId(`end-game-check-${MATE}`));
     await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${MATE}`));
+    await fireEvent.press(screen.getByTestId(`end-game-check-${MATE}`));
+    // #2284: makkeren er huket av for frafall og er ikke lenger et vinnervalg.
+    // Valget som pekte på hen, faller bort — databasen (0193) ville nektet
+    // kåringen etter at frafallet alt var skrevet.
+    expect(screen.queryByTestId(`end-game-slot-ld-1-${MATE}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    expect(finishRound).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByTestId(`end-game-slot-ld-1-${mockMe}`));
     // «Ingen kvalifiserte» er et VALG, ikke en tom verdi — uten den ville
     // sloten stått som en null ingen tok stilling til.
     await fireEvent.press(screen.getByTestId('end-game-slot-ctp-1-none'));
@@ -223,7 +231,7 @@ describe('EndGame', () => {
         allowMissing: true,
         withdrawUserIds: [MATE],
         sideWinners: [
-          { category: 'longest_drive', position: 1, winner_user_id: MATE },
+          { category: 'longest_drive', position: 1, winner_user_id: mockMe },
           { category: 'closest_to_pin', position: 1, winner_user_id: null },
         ],
       });

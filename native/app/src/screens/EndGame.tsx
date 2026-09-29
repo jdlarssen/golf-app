@@ -77,6 +77,7 @@ import {
   buildFinishPlan,
   canFinish,
   toSideWinners,
+  winnerCandidates,
   withdrawUserIds,
   NO_WINNER,
   type FinishPlan,
@@ -143,7 +144,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           withdrawUserIds: withdrawUserIds(plan, acknowledged),
           sideWinners: toSideWinners(
             plan.slots,
-            activeChoices(choices, plan.active),
+            activeChoices(choices, winnerCandidates(plan, acknowledged)),
           ),
         });
         if (result.ok) {
@@ -283,10 +284,12 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   }
 
   const plan = buildFinishPlan(bundle, userId);
-  // #2284: bare valg som peker på en aktiv spiller teller. En vinner som trakk
+  // #2284: bare valg som peker på en som kan kåres, teller. En vinner som trakk
   // seg etter at hen ble valgt, er borte fra velgeren etter neste henting, og
-  // valget skal ikke stå usynlig igjen og sendes på nytt ved neste trykk.
-  const liveChoices = activeChoices(choices, plan.active);
+  // en som er huket av for frafall her, er borte med én gang. Valget skal ikke
+  // stå usynlig igjen og sendes ved neste trykk.
+  const candidates = winnerCandidates(plan, acknowledged);
+  const liveChoices = activeChoices(choices, candidates);
   const ready = canFinish(plan, acknowledged, liveChoices);
 
   return (
@@ -450,7 +453,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
             <SlotPicker
               key={slot.key}
               slot={slot}
-              players={plan.active}
+              players={candidates}
               value={liveChoices[slot.key] ?? null}
               disabled={busy}
               onPick={(value) =>
