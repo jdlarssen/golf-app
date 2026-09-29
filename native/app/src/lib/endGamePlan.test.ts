@@ -12,6 +12,7 @@ import {
   needsPeerApproval,
   sideSlots,
   toSideWinners,
+  winnerCandidates,
   withdrawUserIds,
   NO_WINNER,
 } from './endGamePlan';
@@ -246,6 +247,42 @@ describe('withdrawUserIds', () => {
     // som et frafall Postgres uansett ville nektet.
     expect(withdrawUserIds(plan, new Set([ME, MATE]))).toEqual([MATE]);
     expect(withdrawUserIds(plan, new Set([ME]))).toEqual([]);
+  });
+});
+
+describe('winnerCandidates (#2284)', () => {
+  it('tar ikke med en spiller som er huket av for frafall', () => {
+    // Frafallet skrives før kåringen, og databasen (0193) nekter da vinneren.
+    // Da ville «Ingenting ble lagret» vært feil, for frafallet står.
+    const plan = buildFinishPlan(
+      bundle([
+        player({ userId: ME, submittedAt: SUBMITTED }),
+        player({ userId: MATE }),
+        player({ userId: THIRD }),
+      ]),
+      ME,
+    );
+    const ids = (acknowledged: Set<string>) =>
+      winnerCandidates(plan, acknowledged).map((p) => p.userId);
+    expect(ids(new Set())).toEqual([ME, MATE, THIRD]);
+    expect(ids(new Set([MATE]))).toEqual([ME, THIRD]);
+  });
+
+  it('beholder en kvittert spiller som ikke trekkes', () => {
+    // Egen rad og formater uten frafall er kvittert, ikke trukket — de er
+    // fortsatt i runden og kan kåres.
+    const own = buildFinishPlan(bundle([player({ userId: ME })]), ME);
+    expect(winnerCandidates(own, new Set([ME])).map((p) => p.userId)).toEqual([ME]);
+
+    const noWd = buildFinishPlan(
+      bundle([player({ userId: ME }), player({ userId: MATE })], {
+        gameMode: 'texas_scramble',
+      }),
+      ME,
+    );
+    expect(
+      winnerCandidates(noWd, new Set([MATE])).map((p) => p.userId),
+    ).toEqual([ME, MATE]);
   });
 });
 

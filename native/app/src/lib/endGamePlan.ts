@@ -196,6 +196,25 @@ export function withdrawUserIds(
 }
 
 /**
+ * Hvem som kan kåres (#2284): de aktive, minus dem arrangøren har huket av for
+ * frafall i denne avslutningen.
+ *
+ * Frafallet skrives før kåringen ({@link withdrawUserIds} går først i
+ * `finishRound`), så en spiller som både trekkes og kåres i samme trykk er
+ * trukket når vinnerne lagres, og databasen (0193) nekter kåringen. Da står
+ * frafallet, men arrangøren får høre at ingenting ble lagret. En kvittert rad
+ * som ikke trekkes (egen rad, format uten frafall) er fortsatt i runden og kan
+ * kåres.
+ */
+export function winnerCandidates(
+  plan: FinishPlan,
+  acknowledged: ReadonlySet<string>,
+): BundlePlayer[] {
+  const leaving = new Set(withdrawUserIds(plan, acknowledged));
+  return plan.active.filter((player) => !leaving.has(player.userId));
+}
+
+/**
  * Valgene som fortsatt peker på en aktiv spiller (#2284).
  *
  * Trekker en valgt vinner seg mens skjermen står åpen, forsvinner hen fra
