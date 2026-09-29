@@ -157,3 +157,66 @@ export function PinFlagHero({
     </Svg>
   );
 }
+
+/**
+ * Ringen på heltekortet (#2254): et spor rundt hele sirkelen og en bue for
+ * andelen spilte hull, startet klokka tolv. Grafikk, ikke et ikon, og alltid
+ * dekor: kalleren legger hullnummeret oppå og gir hele ringen etiketten
+ * («Hull 8 av 18, 7 spilt»), så skjermleseren leser tall og tekst samlet.
+ *
+ * Sporet er samme farge som buen med lav opasitet: det finnes ingen lys
+ * salvie-rolle som synes på skoggrønt i lys drakt.
+ */
+export function HoleRing({
+  color,
+  fraction,
+  size = 112,
+  strokeWidth = 8,
+  testID,
+}: {
+  color: string;
+  /** Spilte hull delt på hullene i runden, 0–1. */
+  fraction: number;
+  size?: number;
+  strokeWidth?: number;
+  testID?: string;
+}) {
+  const center = size / 2;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const shown = Math.max(0, Math.min(1, fraction));
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      fill="none"
+      testID={testID}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Circle
+        cx={center}
+        cy={center}
+        r={radius}
+        stroke={color}
+        strokeOpacity={0.2}
+        strokeWidth={strokeWidth}
+      />
+      {shown > 0 ? (
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={circumference * (1 - shown)}
+          transform={`rotate(-90 ${center} ${center})`}
+          testID={testID ? `${testID}-arc` : undefined}
+        />
+      ) : null}
+    </Svg>
+  );
+}
