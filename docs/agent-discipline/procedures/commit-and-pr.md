@@ -11,8 +11,8 @@ bindings §T6).
    before staging. Exit condition: you can say why each file is in the diff.
 
 2. **Read the full staged diff hunk by hunk.** Each hunk must trace to the task (I4).
-   Unrelated hunk → unstage and revert it; file the finding per the project's issue
-   conventions instead (bindings §T6). Never smuggle it into this PR.
+   Unrelated hunk → unstage and revert it; record the finding per the project's
+   findings rule instead (bindings §T6). Never smuggle it into this PR.
 
 3. **Sweep session debris.** Mechanical part: `git diff HEAD | grep DEBUG-T4` must return
    zero lines (the T4 sentinel; `HEAD` so staged changes are covered too). Then grep the
@@ -44,8 +44,8 @@ bindings §T6).
    comment. **After merge:** run the cleanup block in bindings §T6 (Merge) — a merged
    branch left on remote or a stale worktree is #1675's failure mode.
 
-9. **Reviewer findings** not fixed in this PR → filed as issues BEFORE merge
-   (bindings §T6). A verbal report evaporates with the context window.
+9. **Reviewer findings** not fixed in this PR → recorded per the project's findings
+   rule BEFORE merge (bindings §T6). A verbal report evaporates with the context window.
 
 ## Output
 

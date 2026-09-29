@@ -35,8 +35,8 @@ no file, environment or data change in between.
    force-push, bypass environment variables, rewording a command to dodge the rule,
    deleting or weakening the check (I7). Documented workarounds for known false
    positives (bindings §Enforcement) are legitimate — they satisfy the rule's intent.
-   If the hook itself is provably wrong, that is a finding for a separate issue; the
-   current task still complies with it.
+   If the hook itself is provably wrong, that is a finding: record it per the
+   project's findings rule (bindings §T6); the current task still complies with it.
 
 5. **Instruction conflicts — precedence:**
    1. Hook/guard-enforced rules — not overridable in-session even by user request; the
