@@ -1,4 +1,3 @@
-import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import { ownedScoresByPlayer } from './filledHoles';
 import {
   flightDeliveryCandidates,
@@ -7,6 +6,7 @@ import {
   type DeliveryScore,
 } from './flightDelivery';
 import { holeCountForSegment } from './holeScope';
+import { deliveryCoversWholeTeam } from './teamDelivery';
 
 // Påminnelsen går til den som fører (#2200 del 2). Før gikk den bare når
 // spilleren selv åpnet spillsiden, og aldri til gjester. Målt i prod: de som
@@ -30,12 +30,16 @@ export type SweepPlayer = DeliveryPlayer & {
 /** En `scores`-rad med serverens skrivetid (`updated_at`, ikke telefonens klokke). */
 export type SweepScore = DeliveryScore & { updated_at: string };
 
-/** Én påminnelse: til hvem, for hvilke kort, og hvor mange av dem som er andres. */
+/** Én påminnelse: til hvem, for hvilke kort, og hvilke av dem som er andres. */
 export type ReminderGroup = {
   recipientId: string;
   cardUserIds: string[];
-  /** Kort som ikke er mottakerens eget, og ikke lagets felles kort i ett-balls-format. */
-  othersCount: number;
+  /**
+   * Kortene som ikke er mottakerens eget, og ikke lagets felles kort i et
+   * format der én levering dekker laget. Styrer ordlyden («kortene du har
+   * ført»); sveipen teller dem blant kortene den faktisk stemplet.
+   */
+  otherCardUserIds: string[];
 };
 
 /**
@@ -47,7 +51,7 @@ export type ReminderGroup = {
  * (#1466) og er ikke med.
  *
  * Mottakeren er den som tastet siste hull, når hen kan levere kortet: sitt eget,
- * lagets felles kort i ett-balls-format, eller et kort leveringsregelen lar hen
+ * lagets kort der én levering dekker laget, eller et kort leveringsregelen lar hen
  * levere for en makker. Ellers går påminnelsen til eieren. En mottaker må være
  * aktiv og ikke gjest; finnes ingen, sendes ingenting. Kortene samles per
  * mottaker, så en fører får én påminnelse for alle kortene hen har ført.
@@ -75,9 +79,11 @@ export function deliveryReminderGroups(input: {
     const p = byId.get(userId);
     return p != null && p.withdrawn_at == null && !p.is_guest;
   };
-  const oneBallTeam = modeCollapsesToTeamCard(mode, 18);
+  // Samme predikat som leverings-kjernens lagkaskade: bare der kan en på laget
+  // levere lagkameratens kort. Patsome er ikke med.
+  const teamCascade = deliveryCoversWholeTeam(mode);
   const sameTeamCard = (a: string, b: string): boolean => {
-    if (!oneBallTeam) return false;
+    if (!teamCascade) return false;
     const team = byId.get(a)?.team_number;
     return team != null && team === byId.get(b)?.team_number;
   };
@@ -134,9 +140,9 @@ export function deliveryReminderGroups(input: {
       return {
         recipientId: p.user_id,
         cardUserIds,
-        othersCount: cardUserIds.filter(
+        otherCardUserIds: cardUserIds.filter(
           (id) => id !== p.user_id && !sameTeamCard(id, p.user_id),
-        ).length,
+        ),
       };
     });
 }

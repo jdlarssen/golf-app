@@ -66,7 +66,7 @@ describe('deliveryReminderGroups', () => {
 
   it('ett fullt eget kort, siste hull for over et kvarter siden: eieren får én påminnelse', () => {
     expect(groups([player('kari')], card('kari', 'kari'))).toEqual([
-      { recipientId: 'kari', cardUserIds: ['kari'], othersCount: 0 },
+      { recipientId: 'kari', cardUserIds: ['kari'], otherCardUserIds: [] },
     ]);
   });
 
@@ -75,7 +75,7 @@ describe('deliveryReminderGroups', () => {
     const scores = [...card('kari', 'kari'), ...card('ola', 'kari'), ...card('gjest', 'kari')];
 
     expect(groups(players, scores)).toEqual([
-      { recipientId: 'kari', cardUserIds: ['kari', 'ola', 'gjest'], othersCount: 2 },
+      { recipientId: 'kari', cardUserIds: ['kari', 'ola', 'gjest'], otherCardUserIds: ['ola', 'gjest'] },
     ]);
   });
 
@@ -84,7 +84,7 @@ describe('deliveryReminderGroups', () => {
     const scores = [...card('kari', 'kari'), ...card('ola', 'kari')];
 
     expect(groups(players, scores)).toEqual([
-      { recipientId: 'kari', cardUserIds: ['ola'], othersCount: 1 },
+      { recipientId: 'kari', cardUserIds: ['ola'], otherCardUserIds: ['ola'] },
     ]);
   });
 
@@ -115,7 +115,7 @@ describe('deliveryReminderGroups', () => {
 
     // Ola can deliver his own card; the guest cannot, and nobody else keyed it.
     expect(groups(players, scores)).toEqual([
-      { recipientId: 'ola', cardUserIds: ['ola'], othersCount: 0 },
+      { recipientId: 'ola', cardUserIds: ['ola'], otherCardUserIds: [] },
     ]);
   });
 
@@ -126,7 +126,7 @@ describe('deliveryReminderGroups', () => {
     const scores = card('ola', 'ola', { lastBy: 'kari' });
 
     expect(groups(players, scores)).toEqual([
-      { recipientId: 'ola', cardUserIds: ['ola'], othersCount: 0 },
+      { recipientId: 'ola', cardUserIds: ['ola'], otherCardUserIds: [] },
     ]);
   });
 
@@ -139,7 +139,7 @@ describe('deliveryReminderGroups', () => {
       s.hole_number >= 17 ? { ...s, updated_at: OLD, entered_by: s.hole_number === 18 ? 'kari' : 'ola' } : s,
     );
     expect(groups(players, scores)).toEqual([
-      { recipientId: 'kari', cardUserIds: ['gjest'], othersCount: 1 },
+      { recipientId: 'kari', cardUserIds: ['gjest'], otherCardUserIds: ['gjest'] },
     ]);
   });
 
@@ -149,7 +149,7 @@ describe('deliveryReminderGroups', () => {
 
     expect(groups([player('kari')], scores, { game: front9, siblings: new Set(['kari']) })).toEqual([]);
     expect(groups([player('kari')], scores, { game: front9 })).toEqual([
-      { recipientId: 'kari', cardUserIds: ['kari'], othersCount: 0 },
+      { recipientId: 'kari', cardUserIds: ['kari'], otherCardUserIds: [] },
     ]);
   });
 
@@ -160,7 +160,54 @@ describe('deliveryReminderGroups', () => {
     const scores = card('kari', 'kari');
 
     expect(groups(players, scores, { game: scramble })).toEqual([
-      { recipientId: 'kari', cardUserIds: ['kari', 'ola'], othersCount: 0 },
+      { recipientId: 'kari', cardUserIds: ['kari', 'ola'], otherCardUserIds: [] },
+    ]);
+  });
+
+  // Porterte fra den gamle sidebesøk-purringen (#2041, #2067): lagkortene.
+  function rows(user_id: string, from: number, to: number, by = user_id): SweepScore[] {
+    return Array.from({ length: to - from + 1 }, (_, i) => ({
+      user_id,
+      hole_number: from + i,
+      strokes: 4,
+      entered_by: by,
+      updated_at: new Date(Date.parse(OLD) - (to - from - i) * 60_000).toISOString(),
+    }));
+  }
+
+  it('patsome: hver leverer sitt eget, så kapteinen får ikke makkerens påminnelse', () => {
+    // Makker has 6 own rows and 12 on the captain's shared ball. Patsome has
+    // no team cascade and no flight delivery: the captain cannot deliver the
+    // makker's card, so the makker gets their own reminder.
+    const game: DeliveryGame = { game_mode: 'patsome', hole_segment: 'full', source_game_id: null };
+    const players = [player('kaptein', { team_number: 1 }), player('makker', { team_number: 1 })];
+    const scores = [...rows('kaptein', 1, 18), ...rows('makker', 1, 6)];
+
+    expect(groups(players, scores, { game })).toEqual([
+      { recipientId: 'kaptein', cardUserIds: ['kaptein'], otherCardUserIds: [] },
+      { recipientId: 'makker', cardUserIds: ['makker'], otherCardUserIds: [] },
+    ]);
+  });
+
+  it('best ball: makkeren uten egne rader er ikke ferdig, selv om kapteinen har 18', () => {
+    const game: DeliveryGame = { game_mode: 'best_ball', hole_segment: 'full', source_game_id: null };
+    const players = [player('kaptein', { team_number: 1 }), player('makker', { team_number: 1 })];
+
+    expect(groups(players, rows('kaptein', 1, 18), { game })).toEqual([
+      { recipientId: 'kaptein', cardUserIds: ['kaptein'], otherCardUserIds: [] },
+    ]);
+  });
+
+  it('texas scramble med trukket kaptein: makkeren med 9 hull på kapteinen og 9 egne purres (#2067)', () => {
+    const game: DeliveryGame = { game_mode: 'texas_scramble', hole_segment: 'full', source_game_id: null };
+    const players = [
+      player('kaptein', { team_number: 1, withdrawn_at: '2026-09-29T09:00:00.000Z' }),
+      player('makker', { team_number: 1 }),
+    ];
+    const scores = [...rows('kaptein', 1, 9), ...rows('makker', 10, 18)];
+
+    expect(groups(players, scores, { game })).toEqual([
+      { recipientId: 'makker', cardUserIds: ['makker'], otherCardUserIds: [] },
     ]);
   });
 
