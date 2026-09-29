@@ -18,9 +18,21 @@
 // **Høyden står mens raden lastes (#1973).** Uten modell tegnes samme kort
 // med tomme linjer. Hver linje har fast `lineHeight` og `minHeight`, så kortet
 // ikke hopper når navnet og handicapet kommer.
+//
+// **Handicap-kurven** (0195) står til høyre for tallet når sesongen har minst
+// to punkter, med «−2,6 denne sesongen» på linja under. Uten kurve står
+// «Oppdatert …» der, som før. Linja har samme høyde i alle tilstander, og mens
+// kurven lastes står den tom, så teksten ikke bytter foran øynene på deg.
+// Påminnelsen om et gammelt handicap vinner alltid: den er en knapp.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Polyline } from 'react-native-svg';
+import type { HandicapTrend } from '../../../../../lib/stats/handicapTrend';
 import type { BagTagModel } from '../../lib/bagTag';
-import { PROFILE_TEXT } from '../../lib/profileCopy';
+import {
+  PROFILE_TEXT,
+  handicapSeasonChange,
+  handicapSeasonChangeSpoken,
+} from '../../lib/profileCopy';
 import { FONTS, TAP, useTheme } from '../../theme';
 
 export interface BagTagProps {
@@ -33,12 +45,19 @@ export interface BagTagProps {
   placeholderName?: string;
   /** Åpner skjemaet — fra «Sett handicap» og fra påminnelsen om et gammelt handicap. */
   onEditProfile: () => void;
+  /**
+   * Sesongens handicap-kurve. `'loading'` mens den lastes, `null` når det
+   * ikke er noen (under to punkter, eller lesingen feilet).
+   */
+  trend?: HandicapTrend | null | 'loading';
 }
 
-export function BagTag({ model, placeholderName = '', onEditProfile }: BagTagProps) {
+export function BagTag({ model, placeholderName = '', onEditProfile, trend = null }: BagTagProps) {
   const { colors } = useTheme();
   const ink = { color: colors.onStrong };
   const hidden = { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const;
+  // Kurven hører til et handicap som står; uten tall er det ingenting å tegne.
+  const curve = model?.hcpText && trend && trend !== 'loading' ? trend : null;
 
   return (
     <View
@@ -78,36 +97,68 @@ export function BagTag({ model, placeholderName = '', onEditProfile }: BagTagPro
 
       <View style={styles.hcpBlock}>
         {model ? (
-          <View
-            accessible
-            accessibilityLabel={`${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}`}
-            testID="profile-hcp"
-          >
-            <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>
-            <Text style={[styles.hcpValue, ink]} testID="profile-hcp-value">
-              {model.hcpText ?? '–'}
-            </Text>
+          <View style={styles.hcpRow}>
+            <View
+              accessible
+              accessibilityLabel={
+                `${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}` +
+                (curve ? `, ${handicapSeasonChangeSpoken(curve.change)}` : '')
+              }
+              testID="profile-hcp"
+            >
+              <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>
+              <Text style={[styles.hcpValue, ink]} testID="profile-hcp-value">
+                {model.hcpText ?? '–'}
+              </Text>
+            </View>
+            {curve ? <HandicapCurve points={curve.points} /> : null}
           </View>
         ) : (
           <View style={styles.hcpPlaceholder} />
         )}
-        {model ? <HandicapAge model={model} onEditProfile={onEditProfile} /> : null}
+        {model ? (
+          <HandicapAge model={model} trend={model.hcpText ? trend : null} onEditProfile={onEditProfile} />
+        ) : null}
       </View>
     </View>
   );
 }
 
 /**
- * Linja under handicapet: «Oppdatert 26. sep», eller en knapp til skjemaet —
- * «Ikke oppdatert på over en måned» når tallet er gammelt, «Sett handicap»
- * når profilen aldri ble fullført (#1979).
+ * Linja under handicapet: «−2,6 denne sesongen» når kurven står, ellers
+ * «Oppdatert 26. sep», eller en knapp til skjemaet — «Ikke oppdatert på over
+ * en måned» når tallet er gammelt, «Sett handicap» når profilen aldri ble
+ * fullført (#1979). Tom, men like høy, mens kurven lastes.
  */
-function HandicapAge({ model, onEditProfile }: { model: BagTagModel; onEditProfile: () => void }) {
+function HandicapAge({
+  model,
+  trend,
+  onEditProfile,
+}: {
+  model: BagTagModel;
+  trend: HandicapTrend | null | 'loading';
+  onEditProfile: () => void;
+}) {
   const { colors } = useTheme();
   const ink = { color: colors.onStrong };
 
   if (model.hcpAge && !model.hcpAge.stale) {
-    // Samme høyde som knappen under, så kortet er like høyt i begge tilstander.
+    // Samme høyde som knappen under, så kortet er like høyt i alle tilstander.
+    // Kurven er lest i ord i handicapet over, så linja er skjult for skjermleseren.
+    if (trend === 'loading') return <View style={styles.ageLine} />;
+    if (trend) {
+      return (
+        <View
+          style={styles.ageLine}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Text style={[styles.age, styles.change, ink]} testID="profile-hcp-change">
+            {handicapSeasonChange(trend.change)}
+          </Text>
+        </View>
+      );
+    }
     return (
       <View style={styles.ageLine}>
         <Text style={[styles.age, ink]} testID="profile-hcp-age">
@@ -127,6 +178,51 @@ function HandicapAge({ model, onEditProfile }: { model: BagTagModel; onEditProfi
     >
       <Text style={[styles.age, styles.ageLinkText, ink]}>{label}</Text>
     </Pressable>
+  );
+}
+
+const CURVE_WIDTH = 132;
+const CURVE_HEIGHT = 44;
+const CURVE_PAD = 4;
+
+/**
+ * Sesongens handicap som en linje, eldste til venstre. Et lavere handicap står
+ * lavere, så en god sesong går nedover mot høyre, som i designet. Pynt: tallet
+ * og endringen leses i ord.
+ */
+function HandicapCurve({ points }: { points: readonly number[] }) {
+  const { colors } = useTheme();
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const span = max - min;
+  const innerW = CURVE_WIDTH - CURVE_PAD * 2;
+  const innerH = CURVE_HEIGHT - CURVE_PAD * 2;
+  const xy = points.map((value, index) => ({
+    x: CURVE_PAD + (index / (points.length - 1)) * innerW,
+    // Flat sesong (samme verdi hele veien): linja står midt i feltet.
+    y: CURVE_PAD + (span === 0 ? innerH / 2 : ((max - value) / span) * innerH),
+  }));
+  const last = xy[xy.length - 1];
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={styles.curve}
+      testID="profile-hcp-curve"
+    >
+      <Svg width={CURVE_WIDTH} height={CURVE_HEIGHT}>
+        <Polyline
+          points={xy.map((p) => `${p.x},${p.y}`).join(' ')}
+          fill="none"
+          stroke={colors.onStrong}
+          strokeOpacity={0.6}
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <Circle cx={last.x} cy={last.y} r={3.5} fill={colors.onStrong} />
+      </Svg>
+    </View>
   );
 }
 
@@ -168,7 +264,16 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 28, lineHeight: 32, minHeight: 32, fontFamily: FONTS.serifDisplay, marginTop: 6 },
   subline: { fontSize: 12, lineHeight: 17, minHeight: 17, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
-  hcpBlock: { alignSelf: 'flex-start' },
+  hcpBlock: { alignSelf: 'stretch' },
+  hcpRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  // Kurven står midt på sifrene, ikke på grunnlinja under kommaet.
+  curve: { marginBottom: 14 },
+  change: { alignSelf: 'flex-end', fontVariant: ['tabular-nums'] },
   hcpLabel: {
     fontSize: 11,
     lineHeight: 14,
