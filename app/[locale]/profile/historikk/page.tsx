@@ -55,8 +55,11 @@ import {
 } from '@/lib/supabase/queryFragments';
 import { osloParts } from '@/lib/format/teeOff';
 import { effectiveDate, effectiveYear } from '@/lib/stats/effectiveDate';
-import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
-import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import type { TeeBoxRatings } from '@/lib/games/teeRating';
+import {
+  computeDifferentials,
+  type DifferentialDeps,
+} from '@/lib/stats/roundDifferentials';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { KAVALKADE_YEAR, isKavalkadeOpen } from '@/lib/kavalkade/release';
@@ -709,76 +712,6 @@ function scheduleDifferentialFreeze(
       console.error('[historikk] lazy-freeze score_differential failed', err);
     }
   });
-}
-
-type DifferentialDeps = {
-  teeById: Map<string, TeeBoxRatings>;
-  genderByGame: Map<string, ScoringGender | null>;
-  holesByCourse: Map<string, Map<number, CourseHoleRow>>;
-  scoresByGame: Map<string, ScoreRow[]>;
-};
-
-/**
- * #941 — WHS score-differensial per komplett 18-hulls-runde. Frosset verdi
- * (`game_players.score_differential`) vinner; ellers beregnes den live fra rå
- * runde-data (samme `computeScoreDifferential` som fryse-helperen — formelen bor
- * ett sted). Runder uten 18 hull, slope/CR eller banehandicap hoppes over.
- * `toFreeze` lister live-beregnede runder som bør lazy-fryses.
- */
-function computeDifferentials(
-  games: GameWithStats[],
-  deps: DifferentialDeps,
-): {
-  byGame: Map<string, number>;
-  toFreeze: { gameId: string; differential: number }[];
-} {
-  const byGame = new Map<string, number>();
-  const toFreeze: { gameId: string; differential: number }[] = [];
-  for (const game of games) {
-    if (game.holeCount !== COMPLETE_ROUND_HOLES) continue;
-    if (game.score_differential != null) {
-      byGame.set(game.id, game.score_differential);
-      continue;
-    }
-    const tee =
-      game.tee_box_id != null ? deps.teeById.get(game.tee_box_id) : undefined;
-    const gender = deps.genderByGame.get(game.id) ?? null;
-    const rating = tee ? getRatingForGender(tee, gender ?? 'mens') : null;
-    if (!rating) continue;
-    const perHole = game.course_id
-      ? deps.holesByCourse.get(game.course_id)
-      : undefined;
-    const scoreByHole = new Map(
-      (deps.scoresByGame.get(game.id) ?? []).map((s) => [
-        s.hole_number,
-        s.strokes,
-      ]),
-    );
-    const holes = Array.from({ length: COMPLETE_ROUND_HOLES }, (_, i) => {
-      const holeRow = perHole?.get(i + 1);
-      if (!holeRow) return null;
-      return {
-        strokes: scoreByHole.get(i + 1) ?? null,
-        par: parForGender(holeRow, gender),
-        strokeIndex: holeRow.stroke_index,
-      };
-    });
-    if (holes.some((h) => h === null)) continue;
-    const differential = computeScoreDifferential({
-      holes: holes as {
-        strokes: number | null;
-        par: number;
-        strokeIndex: number;
-      }[],
-      courseHandicap: game.course_handicap,
-      slope: rating.slope,
-      courseRating: rating.courseRating,
-    });
-    if (differential == null) continue;
-    byGame.set(game.id, differential);
-    toFreeze.push({ gameId: game.id, differential });
-  }
-  return { byGame, toFreeze };
 }
 
 /**
