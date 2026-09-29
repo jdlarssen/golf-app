@@ -143,7 +143,7 @@ function ChoiceButton({
   disabled: boolean;
   onPress: () => void;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, hole, ui } = useTheme();
   return (
     <Pressable
       style={[
@@ -151,6 +151,8 @@ function ChoiceButton({
         {
           backgroundColor: colors.bg,
           borderColor: accent ? colors.accent : colors.border,
+          // Temaets kant: 3 i sollys (#2252), ellers 1.
+          borderWidth: hole.borderW,
         },
         disabled && styles.choiceDisabled,
       ]}
@@ -169,7 +171,6 @@ const styles = StyleSheet.create({
   choice: {
     minHeight: TAP + 12,
     borderRadius: 10,
-    borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
     justifyContent: 'center',

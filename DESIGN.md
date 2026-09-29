@@ -168,6 +168,10 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
   skog-svart, teksten er lin (`#ece5d2`), aldri ren hvit, og `primary` blir salvie.
 - **Aldri nøytral grå.** Skjeletter, deaktiverte knapper og tomme tall er varme
   lin-toner (`--skel-*`, `--disabled-*`, `--score-unset-fg`).
+- **Sollys på hullsiden i appen** (#2252) er det ene stedet med ren hvit (`#ffffff`)
+  og ren svart (`#000000`): kanter på 3 px og ingen tonede flater, for en skjerm i
+  direkte sol. Scorefargene og `primary` er lys-verdiene. Unntaket er godkjent i
+  forslaget og gjelder bare der.
 
 ## Typografi
 

@@ -5,14 +5,18 @@
 // `ui` per scheme, med samme nøkler.
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { createElement, type ReactNode } from 'react';
 import { renderHook } from '@testing-library/react-native';
 import * as theme from './theme';
 import {
   FONTS,
   PALETTES,
+  SUNLIGHT_THEME,
+  ThemeScope,
   resolveScheme,
   themeFor,
   useTheme,
+  type Theme,
 } from './theme';
 
 /** Appens roller som har et motstykke i webbens CSS-variabler. */
@@ -140,5 +144,89 @@ describe('useTheme', () => {
     expect(result.current.scheme).toBe('light');
     expect(result.current.colors).toBe(PALETTES.light);
     expect(result.current.ui).toBe(themeFor('light').ui);
+  });
+});
+
+/** WCAG 2 relativ luminans for `#RRGGBB`. */
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+}
+
+/** Kontrastforholdet mellom to farger, som WCAG regner det. */
+function contrast(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi! + 0.05) / (lo! + 0.05);
+}
+
+// #2252: sollys på hullsiden. Hvit og svart uten tonede flater, all tekst
+// lesbar mot hvit, tykke kanter og store mål. Kontrasten er regnet, ikke
+// påstått.
+describe('SUNLIGHT_THEME', () => {
+  const c = SUNLIGHT_THEME.colors;
+
+  it('har de samme rollene som lys og mørk', () => {
+    expect(Object.keys(c).sort()).toEqual(Object.keys(PALETTES.light).sort());
+    expect(Object.keys(SUNLIGHT_THEME.ui).sort()).toEqual(
+      Object.keys(themeFor('light').ui).sort(),
+    );
+  });
+
+  it('er ren hvit og ren svart, uten tonede flater', () => {
+    expect([c.bg, c.surface, c.primarySoft]).toEqual(['#FFFFFF', '#FFFFFF', '#FFFFFF']);
+    expect([c.text, c.border, c.muted]).toEqual(['#000000', '#000000', '#000000']);
+  });
+
+  it.each([
+    'text',
+    'muted',
+    'primary',
+    'danger',
+    'scoreUnderFg',
+    'scoreParFg',
+    'scoreOver1Fg',
+    'scoreOver2Fg',
+  ] as const)('%s holder minst 4,5:1 mot hvit', (role) => {
+    expect(contrast(c[role], '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('har lesbart blekk på de fylte flatene', () => {
+    expect(contrast(c.onPrimary, c.primary)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(c.onAccent, c.accent)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('er lyst, med kanter på 3 og hullsidens store mål', () => {
+    expect(SUNLIGHT_THEME.scheme).toBe('light');
+    expect(SUNLIGHT_THEME.ui.card.borderWidth).toBe(3);
+    expect(SUNLIGHT_THEME.ui.badge.borderWidth).toBe(3);
+    expect(SUNLIGHT_THEME.ui.buttonSecondary.borderWidth).toBe(3);
+    expect(SUNLIGHT_THEME.hole).toEqual({
+      numberSize: 130,
+      railButton: 84,
+      borderW: 3,
+      activeBarW: 10,
+    });
+    // Lys og mørk er urørt.
+    expect(themeFor('light').ui.card.borderWidth).toBe(1);
+    expect(themeFor('dark').ui.card.borderWidth).toBe(1);
+  });
+});
+
+describe('ThemeScope', () => {
+  function SunlightScope({ children }: { children: ReactNode }) {
+    return createElement(ThemeScope, { theme: SUNLIGHT_THEME }, children);
+  }
+  function EmptyScope({ children }: { children: ReactNode }) {
+    return createElement(ThemeScope, { theme: null as Theme | null }, children);
+  }
+
+  it('gir temaet sitt til alt under seg, og telefonens igjen med null', async () => {
+    const on = await renderHook(() => useTheme(), { wrapper: SunlightScope });
+    expect(on.result.current).toBe(SUNLIGHT_THEME);
+    const off = await renderHook(() => useTheme(), { wrapper: EmptyScope });
+    expect(off.result.current).toBe(themeFor('light'));
   });
 });

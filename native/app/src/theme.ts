@@ -8,6 +8,7 @@
 //
 // Mønsteret alle flatene følger: layout i et statisk `StyleSheet.create`-ark,
 // farger inline fra `colors`/`ui`. Aldri hardkodede farger eller fonter.
+import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
@@ -103,8 +104,33 @@ export const FONTS = {
   sansBold: 'Inter_700Bold',
 } as const;
 
-/** De delte stilene, bygget én gang per palett. */
-const createUi = (c: ThemeColors) =>
+/**
+ * #2252: sollys på hullsiden. Ren hvit og ren svart, uten tonede flater. Ren
+ * svart er et bevisst unntak fra «ingen nye farger» (DESIGN.md §Farger).
+ * `primary`, `danger` og scorefargene er lys-verdiene, som alle holder minst
+ * 4,5:1 mot hvit. Ferdige hull i stripa blir svarte med hvite tall (`accent`/
+ * `onAccent`) i stedet for gull.
+ */
+export const SUNLIGHT_COLORS: ThemeColors = {
+  bg: '#FFFFFF',
+  surface: '#FFFFFF',
+  border: '#000000',
+  text: '#000000',
+  muted: '#000000',
+  primary: '#1B4332',
+  onPrimary: '#FFFFFF',
+  accent: '#000000',
+  onAccent: '#FFFFFF',
+  danger: '#B8463E',
+  primarySoft: '#FFFFFF',
+  scoreUnderFg: '#2F5A3C',
+  scoreParFg: '#5C5347',
+  scoreOver1Fg: '#7A5410',
+  scoreOver2Fg: '#7A2F2A',
+};
+
+/** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
+const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
   StyleSheet.create({
     screen: {
       flex: 1,
@@ -147,7 +173,7 @@ const createUi = (c: ThemeColors) =>
     card: {
       backgroundColor: c.surface,
       borderRadius: 12,
-      borderWidth: 1,
+      borderWidth: borderW,
       borderColor: c.border,
       padding: 16,
       gap: 8,
@@ -164,7 +190,7 @@ const createUi = (c: ThemeColors) =>
     buttonText: { color: c.onPrimary, fontSize: 16, fontFamily: FONTS.sansSemiBold },
     buttonSecondary: {
       borderRadius: 10,
-      borderWidth: 1,
+      borderWidth: borderW,
       borderColor: c.primary,
       minHeight: TAP,
       paddingHorizontal: 16,
@@ -201,7 +227,7 @@ const createUi = (c: ThemeColors) =>
      * `minHeight` er tap-flaten (44), ikke en estetisk høyde.
      */
     input: {
-      borderWidth: 1,
+      borderWidth: borderW,
       borderColor: c.border,
       borderRadius: 10,
       backgroundColor: c.surface,
@@ -215,7 +241,7 @@ const createUi = (c: ThemeColors) =>
     banner: {
       backgroundColor: c.surface,
       borderRadius: 10,
-      borderWidth: 1,
+      borderWidth: borderW,
       borderColor: c.border,
       padding: 14,
       marginTop: 8,
@@ -224,7 +250,7 @@ const createUi = (c: ThemeColors) =>
     badge: {
       alignSelf: 'flex-start',
       borderRadius: 999,
-      borderWidth: 1,
+      borderWidth: borderW,
       borderColor: c.border,
       paddingHorizontal: 10,
       paddingVertical: 4,
@@ -276,13 +302,39 @@ const THEMES: Record<Scheme, Theme> = {
   dark: { scheme: 'dark', colors: PALETTES.dark, ui: uiVariants.dark, hole: HOLE_METRICS },
 };
 
+/**
+ * #2252: hullsiden i sollys. Et lyst tema uansett hva telefonen står på, med
+ * kanter på 3, hullnummer på 130, skinneknapper på 84 og en strek på 10
+ * langs aktiv rad.
+ */
+export const SUNLIGHT_THEME: Theme = {
+  scheme: 'light',
+  colors: SUNLIGHT_COLORS,
+  ui: createUi(SUNLIGHT_COLORS, { borderW: 3 }),
+  hole: { numberSize: 130, railButton: 84, borderW: 3, activeBarW: 10 },
+};
+
 /** OS-rapportert scheme → vårt. Ingen rapport (null/undefined/'unspecified') = lys. */
 export const resolveScheme = (raw: ColorSchemeName | null | undefined): Scheme =>
   raw === 'dark' ? 'dark' : 'light';
 
 export const themeFor = (scheme: Scheme): Theme => THEMES[scheme];
 
+const ThemeScopeContext = createContext<Theme | null>(null);
+
+/**
+ * #2252: et tema for ett utsnitt av appen. Alt under bruker `theme` i stedet
+ * for telefonens lys/mørk, og `null` gir telefonens igjen. Hullsiden pakker
+ * seg i den når sollys er på, så Wolf, BBB, synk-banneret og skinna følger med
+ * uten egen kode, og andre skjermer merker ingenting.
+ */
+export function ThemeScope({ theme, children }: { theme: Theme | null; children?: ReactNode }) {
+  return createElement(ThemeScopeContext.Provider, { value: theme }, children);
+}
+
 /** Tema-bevisst inngang for skjermer: stabile objekter, re-render ved scheme-bytte. */
 export function useTheme(): Theme {
-  return themeFor(resolveScheme(useColorScheme()));
+  const scoped = useContext(ThemeScopeContext);
+  const system = themeFor(resolveScheme(useColorScheme()));
+  return scoped ?? system;
 }

@@ -6,8 +6,8 @@
 // er bevisst: ikonene endres så godt som aldri, og en delt kilde ville krevd
 // en refaktor av webben. Endres et ikon der, endres det her også.
 //
-// Hake, pluss og chevron finnes ikke i webbens sett; de er tegnet her i samme
-// strek.
+// Hake, pluss, chevron og sol finnes ikke i webbens sett; de er tegnet her i
+// samme strek.
 //
 // Reglene ikonene brukes etter (eier, #1879):
 //  - ikon + etikett er hovedregelen, og teksten bærer meningen — derfor er
@@ -101,6 +101,24 @@ export const PlussIcon = (props: IconProps) => (
   <LineIcon {...props}>
     <Line x1="12" y1="5" x2="12" y2="19" />
     <Line x1="5" y1="12" x2="19" y2="12" />
+  </LineIcon>
+);
+
+/**
+ * Sol: sollys-bryteren på hullsiden (#2252). Webben har ikke ikonet; det er
+ * tegnet her i samme strek og safe-zone som resten.
+ */
+export const SolIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Circle cx="12" cy="12" r="4" />
+    <Line x1="12" y1="2.5" x2="12" y2="5" />
+    <Line x1="12" y1="19" x2="12" y2="21.5" />
+    <Line x1="2.5" y1="12" x2="5" y2="12" />
+    <Line x1="19" y1="12" x2="21.5" y2="12" />
+    <Line x1="5.3" y1="5.3" x2="7" y2="7" />
+    <Line x1="17" y1="17" x2="18.7" y2="18.7" />
+    <Line x1="5.3" y1="18.7" x2="7" y2="17" />
+    <Line x1="17" y1="7" x2="18.7" y2="5.3" />
   </LineIcon>
 );
 
