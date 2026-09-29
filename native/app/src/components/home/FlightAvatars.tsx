@@ -1,32 +1,16 @@
-// #2254: hvem du spiller med, som initialer i små skiver. Deles senere med
-// startbilletten (#2255).
+// #2254: hvem du spiller med, som initialer i små skiver. Deles med
+// startbilletten på spillets side (#2255).
 //
-// Med flight satt er det de andre i flighten din; uten flight de andre i
-// spillet. Trukne spillere står ikke på banen og tas ikke med. Skivene er
-// dekor for skjermleseren, og raden har én etikett med navnene.
+// Hvem som står i raden, er regelen i `lib/flightRoster.ts`: med flight satt
+// de andre i flighten din, uten flight de andre i spillet, aldri de trukne.
+// Skivene er dekor for skjermleseren, og raden har én etikett med navnene.
 import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
+import { MAX_AVATARS, companionsOf } from '../../lib/flightRoster';
 import { companionsLabel, moreAvatars } from '../../lib/homeCopy';
 import { FONTS, useTheme } from '../../theme';
-
-/** Maks antall skiver; resten blir «+N til». */
-export const MAX_AVATARS = 4;
-
-/** De andre du spiller med, i rosterens rekkefølge. */
-export function companionsOf(
-  players: readonly BundlePlayer[],
-  userId: string,
-  flightNumber: number | null,
-): BundlePlayer[] {
-  return players.filter(
-    (p) =>
-      p.userId !== userId &&
-      p.withdrawnAt == null &&
-      (flightNumber == null || p.flightNumber === flightNumber),
-  );
-}
 
 export function FlightAvatars({
   players,
