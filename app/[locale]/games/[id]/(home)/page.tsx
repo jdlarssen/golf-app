@@ -1126,7 +1126,7 @@ export default async function GameHomePage({
       {errorBanner}
 
       {statusBanner && (
-        <div className="mb-4">
+        <div className="mb-4" data-testid={`game-status-${statusBannerKey}`}>
           <Banner tone="success">{statusBanner}</Banner>
         </div>
       )}
