@@ -16,13 +16,13 @@ const ME = 'user-me';
 describe('lokalt skjema', () => {
   useFreshModules();
 
-  it('åpner en fersk base rett på v2', async () => {
+  it('åpner en fersk base rett på v3', async () => {
     const { getCacheEntry, getDb, putCacheEntry } = require('./db') as Db;
     const db = await getDb();
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 2 });
+    ).toEqual({ user_version: 3 });
 
     await putCacheEntry(db, {
       key: 'game:1',
@@ -36,7 +36,7 @@ describe('lokalt skjema', () => {
     });
   });
 
-  it('løfter en v1-base til v2 med N2-dataene i behold', async () => {
+  it('løfter en v1-base til v3 med N2-dataene i behold', async () => {
     const { DATABASE_NAME, MIGRATION_V1 } = require('./db') as Db;
     const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
 
@@ -63,7 +63,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 2 });
+    ).toEqual({ user_version: 3 });
 
     // Slaget står, uendret.
     expect(await listScoresForGame(db, GAME)).toEqual([
@@ -89,6 +89,48 @@ describe('lokalt skjema', () => {
     expect(await getCacheEntry(db, `game:${GAME}`)).toMatchObject({
       payload: '{"game":{}}',
     });
+  });
+
+  // #2256: en telefon som alt har appen, står på v2 med hjem-lista og spill i
+  // cachen. Løftet til v3 legger bare til `device_settings`.
+  it('løfter en v2-base til v3 med cachen i behold', async () => {
+    const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2 } = require('./db') as Db;
+    const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
+
+    const existing = await openDatabaseAsync(DATABASE_NAME);
+    await existing.execAsync(MIGRATION_V1);
+    await existing.execAsync(MIGRATION_V2);
+    await existing.execAsync('PRAGMA user_version = 2;');
+    await existing.runAsync(
+      `INSERT INTO cache_entries (key, payload, fetched_at)
+       VALUES ('home', '{"cards":[]}', '2026-09-29T10:00:00.000Z');`,
+    );
+
+    const { getCacheEntry, getDb, getDeviceSetting, putDeviceSetting } =
+      require('./db') as Db;
+    const db = await getDb();
+
+    expect(
+      await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
+    ).toEqual({ user_version: 3 });
+    expect(await getCacheEntry(db, 'home')).toMatchObject({ payload: '{"cards":[]}' });
+
+    expect(await getDeviceSetting(db, 'theme')).toBeUndefined();
+    await putDeviceSetting(db, 'theme', 'dark');
+    expect(await getDeviceSetting(db, 'theme')).toBe('dark');
+  });
+
+  it('erstatter en innstilling i stedet for å legge på en ny rad', async () => {
+    const { getDb, getDeviceSetting, putDeviceSetting } = require('./db') as Db;
+    const db = await getDb();
+
+    await putDeviceSetting(db, 'theme', 'dark');
+    await putDeviceSetting(db, 'theme', 'light');
+
+    expect(await getDeviceSetting(db, 'theme')).toBe('light');
+    expect(
+      await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM device_settings;'),
+    ).toEqual({ n: 1 });
   });
 
   it('erstatter en cache-nøkkel i stedet for å legge på en ny rad', async () => {
@@ -154,11 +196,12 @@ describe('wipeLocalData', () => {
     return counts;
   }
 
-  it('etterlater ingen rad i noen tabell', async () => {
+  it('etterlater ingen rad fra kontoen, men lar telefonens innstillinger stå', async () => {
     const {
       getDb,
       putCacheEntry,
       putConflict,
+      putDeviceSetting,
       putQueueItem,
       putScore,
       wipeLocalData,
@@ -199,6 +242,7 @@ describe('wipeLocalData', () => {
       payload: '{"game":{}}',
       fetchedAt: '2026-09-01T09:00:03.000Z',
     });
+    await putDeviceSetting(db, 'theme', 'dark');
 
     const tables = await tableNames(db);
 
@@ -210,6 +254,7 @@ describe('wipeLocalData', () => {
     expect(await countRows(db, tables)).toEqual({
       cache_entries: 1,
       conflicts: 1,
+      device_settings: 1,
       scores: 1,
       sync_queue: 1,
     });
@@ -217,9 +262,12 @@ describe('wipeLocalData', () => {
     await wipeLocalData();
 
     // Fasiten leses ut av basen: en tabell wipe-en ikke rører blir rød her,
-    // uten at noen må huske å utvide en liste i testen.
+    // uten at noen må huske å utvide en liste i testen. Det ene unntaket står
+    // navngitt: `device_settings` hører til telefonen, ikke kontoen (#2256),
+    // så temaet overlever utlogging og sletting.
+    const SURVIVES_WIPE: Record<string, number> = { device_settings: 1 };
     expect(await countRows(db, tables)).toEqual(
-      Object.fromEntries(tables.map((table) => [table, 0])),
+      Object.fromEntries(tables.map((table) => [table, SURVIVES_WIPE[table] ?? 0])),
     );
   });
 
@@ -238,7 +286,7 @@ describe('wipeLocalData', () => {
     // Ingen ny migrasjonsrunde, ingen død forbindelse: samme `getDb()` svarer.
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 2 });
+    ).toEqual({ user_version: 3 });
     expect(await getCacheEntry(db, 'home')).toBeUndefined();
 
     await putCacheEntry(db, {

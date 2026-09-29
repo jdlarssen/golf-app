@@ -22,7 +22,7 @@ export type { ConflictRecord, LocalScore, SyncQueueItem };
 export const DATABASE_NAME = 'torny.db';
 
 /** Bumpes når skjemaet endres; styrer `PRAGMA user_version`-migrasjonen. */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 /**
  * Nøkkelen for én score-rad. Speiler `scoreKey` i `lib/sync/db.ts` — den kan
@@ -93,6 +93,19 @@ CREATE TABLE IF NOT EXISTS cache_entries (
 );
 `;
 
+/**
+ * #2256: innstillinger som hører til TELEFONEN, ikke kontoen — i dag bare
+ * temaet («Lys», «Mørk», «Følg telefonen»). Nøkkel/verdi, rent additiv.
+ * `wipeLocalData` rører den ikke: logger en annen spiller inn på samme
+ * telefon, er telefonen fortsatt satt opp slik eieren ville ha den.
+ */
+export const MIGRATION_V3 = `
+CREATE TABLE IF NOT EXISTS device_settings (
+  key TEXT PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL
+);
+`;
+
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
@@ -107,11 +120,12 @@ async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
     'PRAGMA user_version;',
   );
   const current = versionRow?.user_version ?? 0;
-  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → 2, en
-  // enhet som alt kjørte N2 går 1 → 2 og beholder radene sine. Skrittene er
-  // additive (`CREATE TABLE IF NOT EXISTS`), aldri destruktive.
+  // Sekvensielt, ett steg om gangen: en fersk installasjon går 0 → 1 → 2 → 3,
+  // en enhet som alt kjørte N2 går 1 → 2 → 3 og beholder radene sine. Skrittene
+  // er additive (`CREATE TABLE IF NOT EXISTS`), aldri destruktive.
   if (current < 1) await db.execAsync(MIGRATION_V1);
   if (current < 2) await db.execAsync(MIGRATION_V2);
+  if (current < 3) await db.execAsync(MIGRATION_V3);
   if (current < SCHEMA_VERSION) {
     // PRAGMA tar ikke bind-parametre; SCHEMA_VERSION er en tallkonstant i denne
     // fila, aldri brukerdata.
@@ -162,7 +176,8 @@ export function withTxn<T>(
 }
 
 /**
- * Tømmer alt lokalt lager: hver rad i hver tabell, skjemaet står igjen.
+ * Tømmer alt lokalt lager som hører til kontoen, skjemaet står igjen.
+ * `device_settings` (#2256) hører til telefonen og står også igjen.
  *
  * Primitiven bor her, ikke i flyten som kaller den, fordi «glem denne enheten»
  * trengs to steder: konto-sletting (#1876) og utlogging (#1877). Regelen skal
@@ -481,6 +496,30 @@ export async function putCacheEntry(
       $payload: entry.payload,
       $fetched_at: entry.fetchedAt,
     },
+  );
+}
+
+/** En innstilling for telefonen (#2256), eller `undefined` om den aldri er satt. */
+export async function getDeviceSetting(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+): Promise<string | undefined> {
+  const row = await db.getFirstAsync<{ value: string }>(
+    'SELECT value FROM device_settings WHERE key = $key;',
+    { $key: key },
+  );
+  return row?.value;
+}
+
+/** Skriv (eller overskriv) en innstilling for telefonen. */
+export async function putDeviceSetting(
+  db: SQLite.SQLiteDatabase,
+  key: string,
+  value: string,
+): Promise<void> {
+  await db.runAsync(
+    'INSERT OR REPLACE INTO device_settings (key, value) VALUES ($key, $value);',
+    { $key: key, $value: value },
   );
 }
 

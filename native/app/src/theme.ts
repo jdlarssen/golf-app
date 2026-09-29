@@ -52,6 +52,12 @@ export type ThemeColors = {
   surfaceStrong: string;
   /** Tekst og strek på `surfaceStrong` — webbens `--bg-tint`. */
   onStrong: string;
+  /**
+   * Gull som TEKST (#2256, seire-flisa på profilen) — webbens `--accent-text`.
+   * `accent` er for lys som tekst på lys flate; denne er mørkere i lys drakt
+   * og lik `accent` i mørk.
+   */
+  accentText: string;
 };
 
 /**
@@ -80,6 +86,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     scoreOver2Fg: '#7A2F2A',
     surfaceStrong: '#1B4332',
     onStrong: '#F0EDE5',
+    accentText: '#7D6224',
   },
   dark: {
     bg: '#14201A',
@@ -99,6 +106,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     scoreOver2Fg: '#D67268',
     surfaceStrong: '#1F3B2C',
     onStrong: '#ECE5D2',
+    accentText: '#D4B870',
   },
 };
 
@@ -143,6 +151,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   // lys-verdiene står her bare for at paletten skal ha alle rollene.
   surfaceStrong: '#1B4332',
   onStrong: '#F0EDE5',
+  // Gull som tekst (#2256). I sollys er gullet svart, som `accent` over.
+  accentText: '#000000',
 };
 
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
