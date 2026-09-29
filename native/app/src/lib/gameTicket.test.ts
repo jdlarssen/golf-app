@@ -156,11 +156,12 @@ describe('ticketFacts', () => {
     expect(ticketFacts(bundle, bundle.players[0])).toBe(expected);
   });
 
-  it('uten tee står bare hullene, og en halv runde har ikke 18-hullstallene', () => {
+  it('uten tee står bare hullene, og en halv runde har ikke 18-hullstallene (par, lengde, CR)', () => {
     const noTee = { ...bundleWith({}, [homePlayer({ userId: 'me' })]), teeRatings: null };
     expect(ticketFacts(noTee, noTee.players[0])).toBe('18\u00A0hull');
     const front9 = bundleWith({ holeSegment: 'front9' }, [homePlayer({ userId: 'me' })]);
-    expect(ticketFacts(front9, front9.players[0])).toBe('9\u00A0hull · Slope\u00A0125 · CR\u00A071,5');
+    // Par, lengde og CR er tallene for hele banen; slope står.
+    expect(ticketFacts(front9, front9.players[0])).toBe('9\u00A0hull · Slope\u00A0125');
     // Den som ikke er spiller (arrangøren), har ikke noe kjønn å lese rating for.
     expect(ticketFacts(front9, undefined)).toBe('9\u00A0hull');
   });
@@ -201,6 +202,17 @@ describe('ticketStrokes — DINE SLAG', () => {
     expect(
       ticketStrokes({ bundle, me: bundle.players[0], profileHcpIndex: 12.4, teamMode: false, teamHandicap: null }),
     ).toBe('11');
+  });
+
+  it('lagkort i scramble før start: «—», ikke 0 — lagshandicapen finnes først når handicapene er frosset', () => {
+    // Motoren regner et manglende banehandicap som 0, og lagshandicapen blir da 0.
+    const bundle = bundleWith(
+      { gameMode: 'texas_scramble', modeConfig: { kind: 'texas_scramble', team_size: 2 }, status: 'scheduled' },
+      [homePlayer({ userId: 'me', courseHandicap: null, teamNumber: 1 })],
+    );
+    expect(
+      ticketStrokes({ bundle, me: bundle.players[0], profileHcpIndex: 12.4, teamMode: true, teamHandicap: 0 }),
+    ).toBe('—');
   });
 
   it('lagkort i scramble: lagets handicap fra motoren', () => {

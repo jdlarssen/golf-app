@@ -12,6 +12,7 @@
 //     på en smal telefon (#1842: tekst som klippes er tekst som lyver).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { AccessibilityInfo, ScrollView } from 'react-native';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
 import { homeBundle, homePlayer } from '../test/homeFixtures';
@@ -476,8 +477,19 @@ describe('GameHome — startbilletten (#2255)', () => {
     expect(navigation.navigate).toHaveBeenLastCalledWith('Leaderboard', { gameId: 'game-1' });
     await fireEvent.press(screen.getByTestId('open-scorecard'));
     expect(navigation.navigate).toHaveBeenLastCalledWith('Scorecard', { gameId: 'game-1' });
+    // «Regler» navigerer ikke: den ruller ned til seksjonen, uten animasjon,
+    // og gir overskriften fokus for skjermleseren.
+    const scrollTo = ScrollView.prototype.scrollTo as jest.Mock;
+    scrollTo.mockClear();
+    const focus = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => undefined);
+    await fireEvent(screen.getByTestId('rules-section'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 640, width: 350, height: 300 } },
+    });
     await fireEvent.press(screen.getByTestId('open-rules'));
     expect(navigation.navigate).toHaveBeenCalledTimes(2);
+    expect(scrollTo).toHaveBeenCalledWith({ y: 640, animated: false });
+    expect(focus).toHaveBeenCalledWith(expect.anything(), 'focus');
+    focus.mockRestore();
   });
 
   it('stengt runde (halv cup-dag): bare Regler-flisa, og stengeteksten med nettlenken', async () => {
