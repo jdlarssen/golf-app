@@ -6,9 +6,12 @@
 // Skivene er dekor for skjermleseren, og raden har én etikett med navnene.
 //
 // To drakter, samme regel (#2255): `home` er Hjems små overlappende skiver.
-// `ticket` er startbillettens: deg først i skogfargen, så inntil tre andre i
-// blek grønn, fire separate skiver. Der står navnene i billettens egen
-// kolonne, og skivene har ingen etikett selv (raden rundt har den).
+// `ticket` er startbillettens: deg først i `primary`, så inntil tre andre i
+// blek grønn, fire separate skiver. `primary` og ikke `surfaceStrong`: i lys er
+// de samme skoggrønne, men i klubbhus-natt er `surfaceStrong` nesten kortets
+// egen farge (1,2:1), mens salvie-`primary` skiller seg ut (5,7:1), som
+// hovedknappen. Navnene står i billettens egen kolonne, og skivene har ingen
+// etikett selv (raden rundt har den).
 import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
 import type { BundlePlayer } from '../../data/gameBundle';
@@ -52,11 +55,11 @@ export function FlightAvatars({
             key={player.userId}
             style={[
               styles.ticketDisc,
-              { backgroundColor: self ? colors.surfaceStrong : colors.primarySoft },
+              { backgroundColor: self ? colors.primary : colors.primarySoft },
             ]}
             testID={self ? `${testID}-self` : `${testID}-disc`}
           >
-            <Text style={[styles.ticketInitials, { color: self ? colors.onStrong : colors.primary }]}>
+            <Text style={[styles.ticketInitials, { color: self ? colors.onPrimary : colors.primary }]}>
               {nameInitials(player.name ?? player.nickname)}
             </Text>
           </View>
