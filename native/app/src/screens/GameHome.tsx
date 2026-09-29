@@ -198,10 +198,11 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const approvals = me ? pendingApprovals(roster, bundle.game, userId) : [];
 
   // DINE SLAG i et lagkort er lagets handicap fra motoren, som på scorekortet.
-  // Motoren spørres bare når det faktisk er et lagkort.
+  // Motoren spørres bare når det faktisk er et lagkort, og først når
+  // banehandicapene er frosset ved start (før det viser billetten «—»).
   const teamNumber = myTeamCard?.teamNumber ?? me?.player.teamNumber ?? null;
   const teamHandicap =
-    teamMode && teamNumber != null
+    teamMode && teamNumber != null && me?.player.courseHandicap != null
       ? teamHandicapFor(computeGameLeaderboard(bundle, scores), teamNumber)
       : null;
   const start = startField(game.scheduledTeeOffAt);
