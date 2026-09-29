@@ -21,7 +21,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { subscribeGameStatus } from '../../data/realtime';
 import { waitingRoomView } from '../../lib/waitingRoom';
-import { useTheme } from '../../theme';
+import { FONTS, useTheme } from '../../theme';
 
 /** Samme takt som webbens `ScheduledWaitingRoom`. */
 const TICK_MS = 30_000;
@@ -36,7 +36,7 @@ export function WaitingRoom({
   /** Hent bundelen på nytt. Spill-hjem tegner deretter den nye statusen. */
   onChanged: () => void | Promise<void>;
 }) {
-  const { ui } = useTheme();
+  const { colors, ui } = useTheme();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function WaitingRoom({
 
   return (
     <View style={styles.room} testID="waiting-room">
-      <Text style={ui.body}>{view.headline}</Text>
+      <Text style={[styles.headline, { color: colors.muted }]}>{view.headline}</Text>
       {view.countdown ? (
         <Text style={[ui.muted, ui.num]} testID="waiting-room-countdown">
           {view.countdown}
@@ -77,4 +77,6 @@ export function WaitingRoom({
 
 const styles = StyleSheet.create({
   room: { gap: 4 },
+  /** Brødtekst i billetten er 13 pt i muted, som i designet (#2255). */
+  headline: { fontSize: 13, fontFamily: FONTS.sans },
 });

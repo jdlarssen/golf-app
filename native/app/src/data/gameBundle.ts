@@ -44,8 +44,11 @@ import { getCacheEntry, getDb, putCacheEntry } from './db';
  * v7 (#2255): la til `teeRatings`, `hcpAllowancePct` og `resultSummary` for
  * startbilletten. En v6-oppføring mangler dem: billetten ville stått uten
  * faktalinje, uten «85 % handicap» og uten plassen i en avsluttet runde.
+ * v8 (#2255, design): la til `spectateToken`. En v7-oppføring mangler det, og
+ * Del-knappen på billetten ville stått skjult selv om arrangøren har slått på
+ * live-følging.
  */
-export const BUNDLE_PAYLOAD_VERSION = 7;
+export const BUNDLE_PAYLOAD_VERSION = 8;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -100,6 +103,12 @@ export interface BundleGame {
    * som bygger et spill uten den (testene), står som før.
    */
   hcpAllowancePct?: number;
+  /**
+   * `games.spectate_token` (#2255): satt når arrangøren har slått på
+   * live-følging, og da deler Del-knappen på billetten lenka
+   * `/spectate/<token>`. Spillere har lesetilgang til kolonnen. `null` = av.
+   */
+  spectateToken?: string | null;
 }
 
 /**
@@ -224,6 +233,7 @@ interface GameRow {
   side_ctp_count: number;
   side_disabled_categories: string[];
   hcp_allowance_pct: number;
+  spectate_token?: string | null;
   courses: { name: string; course_holes: CourseHoleRow[] } | null;
   tee_boxes: TeeBoxRow | null;
 }
@@ -280,7 +290,7 @@ const PLAYER_SELECT =
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
 // der hullene må vente på at course_id kommer tilbake.
 const GAME_SELECT =
-  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, game_mode, mode_config, course_id, tee_box_id, require_peer_approval, scheduled_tee_off_at, hole_segment, source_game_id, created_by, score_visibility, tournament_id, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, hcp_allowance_pct, spectate_token, courses(name, course_holes(hole_number, par_mens, par_ladies, par_juniors, stroke_index)), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 function toNumber(value: number | string | null): number | null {
   if (value == null) return null;
@@ -330,6 +340,7 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       // kolonnen skal gi tom liste — ikke `undefined` inn i kategori-filteret.
       sideDisabledCategories: game.side_disabled_categories ?? [],
       hcpAllowancePct: game.hcp_allowance_pct,
+      spectateToken: game.spectate_token ?? null,
     },
     players: players.map((row) => ({
       userId: row.user_id,

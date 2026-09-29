@@ -15,6 +15,7 @@ import {
   playedLine,
   rosterA11y,
   rulesHeading,
+  stubTotal,
   teePart,
 } from './ticketCopy';
 
@@ -24,6 +25,7 @@ describe('paritet mot messages/no.json', () => {
   it('knappene og utkast-teksten er webbens', () => {
     expect(TICKET_TEXT.viewOnMap).toBe(home.viewOnMap);
     expect(TICKET_TEXT.addToCalendar).toBe(home.addToCalendar);
+    expect(TICKET_TEXT.shareText).toBe(source.spectate.shareText);
     expect(TICKET_TEXT.startRound).toBe(home.ctaStartRound);
     expect(TICKET_TEXT.reviewAndSubmit).toBe(home.ctaReviewAndSubmit);
     expect(TICKET_TEXT.draft).toBe(home.draftBanner);
@@ -52,6 +54,11 @@ describe('formene', () => {
     expect(rosterA11y(false, 'Du og Marte')).toBe('Med i runden: Du og Marte');
     expect(rulesHeading('Stableford')).toBe('Regler: Stableford');
     expect(approveButton(2)).toBe('Godkjenn (2)');
+    // «15 p» til høyre for fremdriften: tavlas tall, med enheten helten bruker.
+    expect(stubTotal(15, 'points')).toBe('15\u00A0p');
+    expect(stubTotal(72, 'net')).toBe('72\u00A0netto');
+    expect(stubTotal(3, 'toPar')).toBe('+3');
+    expect(stubTotal(0, 'toPar')).toBe('E');
   });
 
   it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {

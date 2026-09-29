@@ -4,11 +4,16 @@
 // Hvem som står i raden, er regelen i `lib/flightRoster.ts`: med flight satt
 // de andre i flighten din, uten flight de andre i spillet, aldri de trukne.
 // Skivene er dekor for skjermleseren, og raden har én etikett med navnene.
+//
+// To drakter, samme regel (#2255): `home` er Hjems små overlappende skiver.
+// `ticket` er startbillettens: deg først i skogfargen, så inntil tre andre i
+// blek grønn, fire separate skiver. Der står navnene i billettens egen
+// kolonne, og skivene har ingen etikett selv (raden rundt har den).
 import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
-import { MAX_AVATARS, companionsOf } from '../../lib/flightRoster';
+import { MAX_AVATARS, MAX_TICKET_COMPANIONS, companionsOf } from '../../lib/flightRoster';
 import { companionsLabel, moreAvatars } from '../../lib/homeCopy';
 import { FONTS, useTheme } from '../../theme';
 
@@ -16,16 +21,50 @@ export function FlightAvatars({
   players,
   userId,
   flightNumber,
+  variant = 'home',
   testID = 'flight-avatars',
 }: {
   players: readonly BundlePlayer[];
   userId: string;
   flightNumber: number | null;
+  variant?: 'home' | 'ticket';
   testID?: string;
 }) {
   const { colors } = useTheme();
   const companions = companionsOf(players, userId, flightNumber);
   if (companions.length === 0) return null;
+
+  if (variant === 'ticket') {
+    const me = players.find((p) => p.userId === userId);
+    const discs = [
+      ...(me ? [{ player: me, self: true }] : []),
+      ...companions.slice(0, MAX_TICKET_COMPANIONS).map((player) => ({ player, self: false })),
+    ];
+    return (
+      <View
+        style={styles.ticketDiscs}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        testID={testID}
+      >
+        {discs.map(({ player, self }) => (
+          <View
+            key={player.userId}
+            style={[
+              styles.ticketDisc,
+              { backgroundColor: self ? colors.surfaceStrong : colors.primarySoft },
+            ]}
+            testID={self ? `${testID}-self` : `${testID}-disc`}
+          >
+            <Text style={[styles.ticketInitials, { color: self ? colors.onStrong : colors.primary }]}>
+              {nameInitials(player.name ?? player.nickname)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
   const shown = companions.slice(0, MAX_AVATARS);
   const more = companions.length - shown.length;
 
@@ -85,4 +124,7 @@ const styles = StyleSheet.create({
   overlap: { marginLeft: -8 },
   initials: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
   more: { fontSize: 13, fontFamily: FONTS.sansMedium },
+  ticketDiscs: { flexDirection: 'row', gap: 8 },
+  ticketDisc: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  ticketInitials: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
 });

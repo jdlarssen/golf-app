@@ -4,6 +4,12 @@
 // (`lib/gameTicket.ts`), og stubben kommer inn som `children`. Billetten vet
 // ingenting om status.
 //
+// **Drakten er designlerretets** (eierens «følg designet», 29.09): gull
+// kicker og fylt statusmerke på samme rad, banenavnet i 30 pt, tre like
+// kolonner med 24 pt-tall, faktalinja på én linje, deg først i avatarraden med
+// fornavnene i egen kolonne, en tett perforering og kortskyggen fra DESIGN.md.
+// Gull kicker er et bevisst unntak fra «gull er medalje» (DESIGN.md).
+//
 // **Skjermleseren.** Banenavnet er overskriften. Hvert felt er én node med
 // etikett og verdi («Dine slag: 15»), og avatarraden er én node med navnene.
 // Skivene, perforeringen og hakkene er dekor og skjult.
@@ -16,17 +22,17 @@
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { BundlePlayer } from '../../data/gameBundle';
-import { displayName } from '../../lib/display';
-import { companionsOf } from '../../lib/flightRoster';
+import { shortDisplayName } from '../../lib/display';
+import { MAX_TICKET_COMPANIONS, companionsOf } from '../../lib/flightRoster';
 import { rosterNames } from '../../lib/gameTicket';
 import { rosterA11y } from '../../lib/ticketCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, cardShadow, useTheme } from '../../theme';
 import { FlightAvatars } from '../home/FlightAvatars';
 
 export interface TicketField {
   label: string;
   value: string;
-  /** En andre linje under verdien, som klokkeslettet under datoen. */
+  /** En andre linje under verdien, som datoen under klokkeslettet. */
   sub?: string | null;
   /** Hele feltet som én setning for skjermleseren. */
   a11y: string;
@@ -55,35 +61,40 @@ export function GameTicket({
   /** Stubben under perforeringen. */
   children: ReactNode;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, ui, scheme } = useTheme();
   const [perforationY, setPerforationY] = useState<number | null>(null);
   const ink = { color: colors.onStrong };
   const companions = roster ? companionsOf(roster.players, roster.userId, roster.flightNumber) : [];
+  const names = rosterNames(companions.map(shortDisplayName), MAX_TICKET_COMPANIONS);
 
   const notch = { backgroundColor: colors.bg, borderColor: colors.border };
   const notchTop = perforationY === null ? null : perforationY + PERFORATION / 2 - NOTCH / 2;
 
   return (
-    <View style={styles.wrap} testID="game-ticket">
+    <View style={[styles.wrap, { boxShadow: cardShadow(scheme) }]} testID="game-ticket">
       <View style={[styles.ticket, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={[styles.head, { backgroundColor: colors.surfaceStrong }]}>
-          {kicker ? (
-            <Text style={[styles.kicker, ink]} testID="game-ticket-kicker">
-              {kicker}
-            </Text>
-          ) : null}
-          <View style={styles.titleRow}>
-            <Text
-              accessibilityRole="header"
-              style={[styles.title, ink]}
-              testID="game-ticket-title"
-            >
-              {title}
-            </Text>
-            <View style={[styles.badge, { borderColor: colors.onStrong }]} testID="game-ticket-status">
+          <View style={[styles.kickerRow, !kicker && styles.kickerRowEnd]}>
+            {kicker ? (
+              <Text
+                style={[styles.kicker, { color: colors.accent }]}
+                numberOfLines={1}
+                testID="game-ticket-kicker"
+              >
+                {kicker}
+              </Text>
+            ) : null}
+            <View style={styles.badge} testID="game-ticket-status">
+              {/* Fylt merke uten kant: lin i lav dekning under teksten. */}
+              <View
+                style={[StyleSheet.absoluteFill, styles.badgeFill, { backgroundColor: colors.onStrong }]}
+              />
               <Text style={[styles.badgeText, ink]}>{statusLabel}</Text>
             </View>
           </View>
+          <Text accessibilityRole="header" style={[styles.title, ink]} testID="game-ticket-title">
+            {title}
+          </Text>
           {headerLine ? (
             <Text style={[styles.headerLine, ink]} testID="game-ticket-line">
               {headerLine}
@@ -91,51 +102,56 @@ export function GameTicket({
           ) : null}
         </View>
 
-        <View style={styles.body}>
-          <View style={styles.fields}>
-            {fields.map((field, i) => (
-              <View
-                key={field.testID}
-                accessible
-                accessibilityLabel={field.a11y}
-                // Datoen i første felt («Ons 30. sep») er lengst og får litt
-                // mer plass, så den står på én linje på en 390 pt-telefon.
-                style={[styles.field, i === 0 && styles.fieldWide]}
-                testID={field.testID}
-              >
-                <Text style={[styles.fieldLabel, { color: colors.muted }]}>{field.label}</Text>
-                <Text style={[styles.fieldValue, { color: colors.text }]}>{field.value}</Text>
-                {field.sub ? <Text style={[ui.muted, ui.num]}>{field.sub}</Text> : null}
-              </View>
-            ))}
-          </View>
-          {facts ? (
-            <Text style={[ui.muted, ui.num]} testID="game-ticket-facts">
-              {facts}
-            </Text>
-          ) : null}
-          {roster && companions.length > 0 ? (
+        <View style={styles.fields}>
+          {fields.map((field) => (
             <View
+              key={field.testID}
               accessible
-              accessibilityLabel={rosterA11y(
-                roster.flightNumber != null,
-                rosterNames(companions.map(displayName)),
-              )}
-              style={styles.roster}
-              testID="game-ticket-roster"
+              accessibilityLabel={field.a11y}
+              style={styles.field}
+              testID={field.testID}
             >
-              <FlightAvatars
-                players={roster.players}
-                userId={roster.userId}
-                flightNumber={roster.flightNumber}
-                testID="game-ticket-avatars"
-              />
-              <Text style={[ui.body, styles.names]}>
-                {rosterNames(companions.map(displayName))}
+              <Text style={[styles.fieldLabel, { color: colors.muted }]}>{field.label}</Text>
+              <Text style={[styles.fieldValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+                {field.value}
               </Text>
+              {field.sub ? <Text style={[styles.small, ui.num, { color: colors.muted }]}>{field.sub}</Text> : null}
             </View>
-          ) : null}
+          ))}
         </View>
+
+        {facts ? (
+          // Én linje: krymper heller litt enn å brekke med et hengende punkt.
+          <Text
+            style={[styles.facts, ui.num, { color: colors.muted }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            testID="game-ticket-facts"
+          >
+            {facts}
+          </Text>
+        ) : null}
+
+        {roster && companions.length > 0 ? (
+          <View
+            accessible
+            accessibilityLabel={rosterA11y(roster.flightNumber != null, names)}
+            style={styles.roster}
+            testID="game-ticket-roster"
+          >
+            <FlightAvatars
+              players={roster.players}
+              userId={roster.userId}
+              flightNumber={roster.flightNumber}
+              variant="ticket"
+              testID="game-ticket-avatars"
+            />
+            <Text style={[styles.names, { color: colors.muted }]} testID="game-ticket-names">
+              {names}
+            </Text>
+          </View>
+        ) : null}
 
         <View
           style={styles.perforation}
@@ -176,61 +192,60 @@ export function GameTicket({
   );
 }
 
-const DASHES = 14;
-const NOTCH = 18;
-const PERFORATION = 18;
+/** Tett perforering som i designet: korte streker nesten fra hakk til hakk. */
+const DASHES = 30;
+const NOTCH = 20;
+const PERFORATION = 20;
+const RADIUS = 20;
 /** Billettens kant; hakkene sentreres på den. */
 const EDGE = 1;
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 4 },
-  ticket: { borderWidth: EDGE, borderRadius: 18, overflow: 'hidden' },
-  head: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 16, gap: 4 },
+  wrap: { marginTop: 4, borderRadius: RADIUS },
+  ticket: { borderWidth: EDGE, borderRadius: RADIUS, overflow: 'hidden' },
+  head: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 20 },
+  kickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  kickerRowEnd: { justifyContent: 'flex-end' },
   kicker: {
-    fontSize: 12,
+    flexShrink: 1,
+    fontSize: 10,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, overflow: 'hidden' },
+  badgeFill: { opacity: 0.16 },
+  badgeText: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
+  title: { fontSize: 30, lineHeight: 35, fontFamily: FONTS.serifDisplay, marginTop: 8 },
+  headerLine: { fontSize: 13, fontFamily: FONTS.sans, opacity: 0.9, marginTop: 4 },
+  fields: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
+  field: { flex: 1 },
+  fieldLabel: {
+    fontSize: 10,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    opacity: 0.85,
-  },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  title: { flex: 1, fontSize: 24, lineHeight: 30, fontFamily: FONTS.serifScore },
-  badge: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginTop: 4,
-  },
-  badgeText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-  headerLine: { fontSize: 14, fontFamily: FONTS.sans, opacity: 0.9 },
-  body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8, gap: 12 },
-  fields: { flexDirection: 'row', gap: 10 },
-  field: { flex: 1, gap: 2 },
-  fieldWide: { flex: 1.4 },
-  fieldLabel: {
-    fontSize: 11,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
   },
   fieldValue: {
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 24,
+    lineHeight: 30,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
+    marginTop: 2,
   },
-  roster: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  names: { flexShrink: 1 },
+  small: { fontSize: 12, fontFamily: FONTS.sans },
+  facts: { fontSize: 13, fontFamily: FONTS.sans, paddingHorizontal: 20, paddingBottom: 12, marginTop: -4 },
+  roster: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 16 },
+  names: { flex: 1, fontSize: 12, lineHeight: 16, fontFamily: FONTS.sans },
   perforation: {
     height: PERFORATION,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: NOTCH,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
-  dash: { width: 8, height: 2, borderRadius: 1 },
-  stub: { paddingHorizontal: 18, paddingTop: 4, paddingBottom: 18, gap: 10 },
+  dash: { width: 6, height: 2, borderRadius: 1 },
+  stub: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 12 },
   // Boksen dekker kanten og den indre halvdelen av sirkelen; resten klippes.
   notchClip: {
     position: 'absolute',

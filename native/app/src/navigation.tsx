@@ -23,6 +23,7 @@ import Constants from 'expo-constants';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
+import { TICKET_TEXT } from './lib/ticketCopy';
 import { AccountSettings } from './screens/AccountSettings';
 import { Approve } from './screens/Approve';
 import { CreateGame } from './screens/CreateGame';
@@ -203,7 +204,14 @@ export function RootNavigator() {
         <Stack.Screen
           name="GameHome"
           component={GameHome}
-          options={{ title: 'Spill' }}
+          // Startbilletten (#2255, designlerretet): «STARTBILLETT» i små
+          // sperrede versaler og ingen skillelinje. Del-knappen til høyre
+          // setter skjermen selv, for bare den vet om live-følging er på.
+          options={{
+            title: TICKET_TEXT.topTitle,
+            headerTitle: () => <TicketTopTitle />,
+            headerShadowVisible: false,
+          }}
         />
         <Stack.Screen
           name="Hole"
@@ -281,7 +289,23 @@ export function RootNavigator() {
   );
 }
 
+/** Toppen på spillets side: samme kicker-stil som feltetikettene i billetten. */
+function TicketTopTitle() {
+  const { colors } = useTheme();
+  return (
+    <Text accessibilityRole="header" style={[styles.ticketTitle, { color: colors.muted }]}>
+      {TICKET_TEXT.topTitle}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
+  ticketTitle: {
+    fontSize: 10,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
   headerLink: {
     minWidth: TAP,
     minHeight: TAP,

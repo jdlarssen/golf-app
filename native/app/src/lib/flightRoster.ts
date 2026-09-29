@@ -8,6 +8,12 @@
 /** Maks antall skiver; resten blir «+N til». */
 export const MAX_AVATARS = 4;
 
+/**
+ * Billetten (#2255, design): deg først og så inntil tre andre, fire skiver i
+ * alt. Navnelista ved siden av nevner de samme tre og resten som et tall.
+ */
+export const MAX_TICKET_COMPANIONS = 3;
+
 /** Det utvalget trenger å vite om en spiller. */
 export interface FlightMember {
   userId: string;

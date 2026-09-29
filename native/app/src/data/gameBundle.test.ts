@@ -46,6 +46,8 @@ const GAME_ROW = {
   side_disabled_categories: [],
   // #2255: «85 % handicap» i billetthodet.
   hcp_allowance_pct: 85,
+  // #2255: Del-knappen på billetten; satt når arrangøren har slått på live-følging.
+  spectate_token: 'tok-123',
   courses: {
     name: 'Losby',
     // Med vilje i feil rekkefølge: bundelen skal sortere hullene.
@@ -141,6 +143,7 @@ describe('gameBundle', () => {
       sideCtpCount: 1,
       sideDisabledCategories: [],
       hcpAllowancePct: 85,
+      spectateToken: 'tok-123',
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
@@ -272,13 +275,15 @@ describe('gameBundle', () => {
     expect(await bundleModule().loadGameBundle(GAME)).toEqual(fresh);
   });
 
-  it.each([[2], [3], [6]])(
+  it.each([[2], [3], [6], [7]])(
     'forkaster en v%i-nyttelast — den mangler felt koden narrower på',
     async (version: number) => {
       // v2 mangler `sideTournamentEnabled` (seksjonen ville blitt skrudd av på
       // et spill med LD/CTP); v3 mangler `acceptedAt` (hele rosteret ville stått
       // «Ikke bekreftet»); v6 mangler ratingen og plassen (#2255: billetten ville
-      // stått uten faktalinje og plass). Falsy-hull, ikke krasj — derfor bumpen.
+      // stått uten faktalinje og plass); v7 mangler live-tokenet (Del-knappen
+      // ville stått skjult selv om arrangøren har slått på live-følging).
+      // Falsy-hull, ikke krasj — derfor bumpen.
       const { gameBundleCacheKey, loadGameBundle } = bundleModule();
       const db = require('./db') as typeof import('./db');
       const connection = await db.getDb();

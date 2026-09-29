@@ -90,6 +90,34 @@ export const KalenderIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** Scorekortet: flisa på startbilletten (#2255), tegnet etter designet. */
+export const DokumentIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Rect x="4" y="3" width="16" height="18" rx="2" />
+    <Line x1="8" y1="8" x2="16" y2="8" />
+    <Line x1="8" y1="12" x2="16" y2="12" />
+    <Line x1="8" y1="16" x2="13" y2="16" />
+  </LineIcon>
+);
+
+/** Regler: flisa på startbilletten (#2255), tegnet etter designet. */
+export const InfoIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Circle cx="12" cy="12" r="9" />
+    <Line x1="12" y1="11" x2="12" y2="16" />
+    <Line x1="12" y1="8" x2="12.01" y2="8" />
+  </LineIcon>
+);
+
+/** Del: pil opp ut av en skål (#2255, øverst til høyre på startbilletten). */
+export const DelIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Line x1="12" y1="3" x2="12" y2="15" />
+    <Path d="M 7 8 L 12 3 L 17 8" />
+    <Path d="M 5 13 L 5 19 Q 5 21 7 21 L 17 21 Q 19 21 19 19 L 19 13" />
+  </LineIcon>
+);
+
 /** Levert/godkjent — statusglyfen i tette rader. */
 export const HakeIcon = (props: IconProps) => (
   <LineIcon {...props}>

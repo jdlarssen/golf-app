@@ -161,8 +161,8 @@ describe('ticketFacts', () => {
     const noTee = { ...bundleWith({}, [homePlayer({ userId: 'me' })]), teeRatings: null };
     expect(ticketFacts(noTee, noTee.players[0])).toBe('18\u00A0hull');
     const front9 = bundleWith({ holeSegment: 'front9' }, [homePlayer({ userId: 'me' })]);
-    // Par, lengde og CR er tallene for hele banen; slope står.
-    expect(ticketFacts(front9, front9.players[0])).toBe('9\u00A0hull · Slope\u00A0125');
+    // Par, lengde, slope og CR er tallene for hele banen (design, #2255).
+    expect(ticketFacts(front9, front9.players[0])).toBe('9\u00A0hull');
     // Den som ikke er spiller (arrangøren), har ikke noe kjønn å lese rating for.
     expect(ticketFacts(front9, undefined)).toBe('9\u00A0hull');
   });
@@ -258,18 +258,30 @@ describe('rosterNames', () => {
 });
 
 describe('startField', () => {
-  it('dato og klokkeslett i lokaltid, og en hel setning for skjermleseren', () => {
-    const local = new Date(2026, 9, 3, 9, 30).toISOString(); // lørdag 3. oktober
-    expect(startField(local)).toEqual({
-      date: 'Lør 3. okt',
-      clock: 'kl. 09:30',
+  const now = new Date(2026, 8, 29, 12, 0); // tirsdag 29. september
+
+  it('klokkeslettet er verdien, datoen står under når runden ikke er i dag', () => {
+    const later = new Date(2026, 9, 3, 9, 30).toISOString(); // lørdag 3. oktober
+    expect(startField(later, now)).toEqual({
+      value: '09:30',
+      sub: 'Lør 3. okt',
       a11y: 'Start: lørdag 3. oktober kl. 09:30',
     });
   });
 
-  it('uten tid: «Tid ikke satt»', () => {
-    expect(startField(null)).toEqual({ date: null, clock: null, a11y: 'Start: Tid ikke satt' });
-    expect(startField('ikke en dato')).toEqual({ date: null, clock: null, a11y: 'Start: Tid ikke satt' });
+  it('i dag: bare klokkeslettet, som i designet', () => {
+    const today = new Date(2026, 8, 29, 9, 20).toISOString();
+    expect(startField(today, now)).toEqual({
+      value: '09:20',
+      sub: null,
+      a11y: 'Start: tirsdag 29. september kl. 09:20',
+    });
+  });
+
+  it('uten tid: strek som verdi, «Tid ikke satt» under', () => {
+    for (const iso of [null, 'ikke en dato']) {
+      expect(startField(iso, now)).toEqual({ value: '—', sub: 'Tid ikke satt', a11y: 'Start: Tid ikke satt' });
+    }
   });
 });
 
