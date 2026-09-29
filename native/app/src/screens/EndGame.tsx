@@ -40,6 +40,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { WebLinkButton } from '../components/WebLinkButton';
 import { finishRound } from '../data/endGame';
 import type { BundlePlayer } from '../data/gameBundle';
@@ -53,7 +54,7 @@ import {
 } from '../data/remind';
 import { describeFailure } from '../lib/actionFeedback';
 import { displayName, formatClock } from '../lib/display';
-import { submittedLabel } from '../lib/roster';
+import { ownCardApproval, submittedLabel, toRoster } from '../lib/roster';
 import {
   approveConfirmBody,
   CUP_LINK_LABEL,
@@ -304,10 +305,23 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               kunne bare feilet — med den rå engelske Postgres-teksten på
               skjermen. Kortet står fortsatt i lista over: det blokkerer
               avslutningen, og arrangøren skal se hvorfor. */}
+          {/* #2200: leverte eneste makker kortet mitt, kan ingen godkjenne
+              det, og «be en medspiller» ville vært en blindvei. Da står veien
+              ut i stedet, som på nettsidens avslutt-side. */}
           {plan.unapproved.some((player) => player.userId === userId) ? (
-            <Text style={ui.muted} testID="end-game-own-card-needs-peer">
-              {END_GAME_TEXT.ownCardNeedsPeer}
-            </Text>
+            ownCardApproval(
+              toRoster(bundle.players),
+              bundle.game.gameMode as GameMode,
+              userId,
+            ) === 'own_card_no_peer' ? (
+              <Text style={ui.muted} testID="end-game-own-card-no-peer">
+                {END_GAME_TEXT.ownCardNoPeer}
+              </Text>
+            ) : (
+              <Text style={ui.muted} testID="end-game-own-card-needs-peer">
+                {END_GAME_TEXT.ownCardNeedsPeer}
+              </Text>
+            )
           ) : null}
           {plan.unapproved
             .filter((player) => player.userId !== userId)

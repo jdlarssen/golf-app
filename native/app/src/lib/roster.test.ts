@@ -14,6 +14,7 @@ import {
   flightDeliveryButton,
   flightDeliveryFor,
   flightDeliveryLines,
+  ownCardApproval,
   partialDeliveryNotice,
   pendingApprovals,
   resolveFlight,
@@ -171,6 +172,29 @@ describe('den som leverte kortet, godkjenner det ikke (#2200)', () => {
   it('sier nei i enkeltoppslaget også', () => {
     expect(canApprove(roster, SOLO, 'me', 'mate')).toBe(false);
     expect(canApprove(roster, SOLO, 'me', 'other')).toBe(true);
+  });
+});
+
+describe('arrangørens eget kort i ventelista (#2213, #2200)', () => {
+  // Den delte `organizerApprovalRow` er regelen; her testes at leverandøren
+  // kommer fram til den. Leverte eneste makker kortet mitt, kan ingen godkjenne
+  // det, og da er veien ut en annen enn «be en medspiller».
+  const at = '2026-09-27T10:00:00.000Z';
+
+  it('ingen kan godkjenne når eneste makker leverte kortet mitt', () => {
+    const roster = toRoster([
+      player({ userId: 'me', submittedAt: at, submittedByUserId: 'mate' }),
+      player({ userId: 'mate', submittedAt: at, submittedByUserId: 'mate' }),
+    ]);
+    expect(ownCardApproval(roster, SOLO, 'me')).toBe('own_card_no_peer');
+  });
+
+  it('en medspiller kan godkjenne når jeg leverte selv', () => {
+    const roster = toRoster([
+      player({ userId: 'me', submittedAt: at, submittedByUserId: 'me' }),
+      player({ userId: 'mate', submittedAt: at, submittedByUserId: 'mate' }),
+    ]);
+    expect(ownCardApproval(roster, SOLO, 'me')).toBe('own_card_needs_peer');
   });
 });
 

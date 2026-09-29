@@ -196,6 +196,13 @@ export const END_GAME_TEXT = {
    */
   ownCardNeedsPeer:
     'Ditt eget kort må en medspiller godkjenne. Det kan du ikke gjøre selv.',
+  /**
+   * Egen rad når ingen kan godkjenne kortet (#2200): eneste makker leverte
+   * det, eller de andre er trukket. Samme vei ut som nettsidens
+   * `game.players.ownCard.noPeer`, med appens knapp.
+   */
+  ownCardNoPeer:
+    'Ingen medspiller kan godkjenne kortet ditt nå. Gå tilbake til spillet og åpne kortet ditt med «Åpne for redigering» under «Arrangør». Da kan du avslutte spillet selv om kortet ikke er levert. Slagene dine teller.',
   /** Både knappe-etiketten og tittelen i bekreftelsen — det er samme handling. */
   approveOnBehalf: 'Godkjenn på vegne av gruppa',
   approveConfirmCta: 'Godkjenn',
