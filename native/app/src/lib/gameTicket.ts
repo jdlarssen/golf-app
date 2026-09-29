@@ -145,7 +145,7 @@ function ratingFor(
 
 /** «6 124» med hardt mellomrom som tusenskille, uten `Intl`. */
 function groupThousands(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
 }
 
 /** «71,5» med desimalkomma; et helt tall står uten. */
@@ -156,7 +156,8 @@ function decimalComma(n: number): string {
 /**
  * Faktalinja: «18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5». Par og
  * lengde er tallene for hele banen, så de står bare på en hel runde. Det som
- * mangler, hoppes over.
+ * mangler, hoppes over. Hvert ledd holdes sammen med hardt mellomrom, så linja
+ * brekker mellom leddene og aldri mellom «CR» og tallet.
  */
 export function ticketFacts(
   bundle: Pick<GameBundle, 'game' | 'teeRatings'>,
@@ -168,11 +169,11 @@ export function ticketFacts(
   const rating = ratingFor(bundle.teeRatings, me);
   const length = bundle.teeRatings?.lengthMeters ?? null;
   return [
-    `${holes} hull`,
-    full && rating ? `Par ${rating.par}` : null,
-    full && length != null ? `${groupThousands(length)} m` : null,
-    rating ? `Slope ${rating.slope}` : null,
-    rating ? `CR ${decimalComma(rating.courseRating)}` : null,
+    `${holes}\u00A0hull`,
+    full && rating ? `Par\u00A0${rating.par}` : null,
+    full && length != null ? `${groupThousands(length)}\u00A0m` : null,
+    rating ? `Slope\u00A0${rating.slope}` : null,
+    rating ? `CR\u00A0${decimalComma(rating.courseRating)}` : null,
   ]
     .filter((part): part is string => part != null)
     .join(SEPARATOR);
