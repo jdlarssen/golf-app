@@ -56,6 +56,7 @@ import { seedGameScores } from '../data/seedScores';
 import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import {
+  calendarEvent,
   slotField,
   startField,
   ticketFacts,
@@ -279,6 +280,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           gameId={gameId}
           courseName={bundle.courseName}
           teeOffAt={game.scheduledTeeOffAt}
+          calendarEvent={calendarEvent(bundle)}
           flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
           onChanged={refresh}
           onNavigate={navigation.navigate}

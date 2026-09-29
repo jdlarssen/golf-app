@@ -282,6 +282,42 @@ export function mapSearchUrl(courseName: string, os: string): string {
   return os === 'ios' ? `https://maps.apple.com/?q=${query}` : `geo:0,0?q=${query}`;
 }
 
+/** Minutter en runde tar i kalenderen: 4 t 30 min for 18 hull, 2 t 15 min for 9. */
+const ROUND_MINUTES = { full: 270, half: 135 } as const;
+
+/** Det «Legg til i kalender» fyller inn i systemets ark for ny hendelse. */
+export interface CalendarEvent {
+  title: string;
+  /** Banenavnet, eller `null` når spillet ikke har bane. */
+  location: string | null;
+  /** ISO-tidspunkt. */
+  startDate: string;
+  endDate: string;
+  /** «Tee: Gul · Stableford», hodelinja fra billetten. */
+  notes: string;
+}
+
+/**
+ * Hendelsen for «Legg til i kalender», eller `null` når runden ikke har en
+ * gyldig tee-off. Da vises ikke knappen: en hendelse uten tid er ikke en
+ * hendelse.
+ */
+export function calendarEvent(
+  bundle: Pick<GameBundle, 'game' | 'courseName' | 'teeBoxName'>,
+): CalendarEvent | null {
+  const iso = bundle.game.scheduledTeeOffAt;
+  const startMs = iso == null ? Number.NaN : Date.parse(iso);
+  if (Number.isNaN(startMs)) return null;
+  const minutes = bundle.game.holeSegment === 'full' ? ROUND_MINUTES.full : ROUND_MINUTES.half;
+  return {
+    title: bundle.game.name,
+    location: bundle.courseName,
+    startDate: new Date(startMs).toISOString(),
+    endDate: new Date(startMs + minutes * 60_000).toISOString(),
+    notes: ticketHeaderLine(bundle),
+  };
+}
+
 /** Hvilken stubb billetten skal ha. */
 export type TicketStub =
   | { kind: 'gated'; reason: GateReason }

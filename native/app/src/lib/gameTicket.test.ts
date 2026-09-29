@@ -6,6 +6,7 @@
 import type { BundleTeeRatings, GameBundle } from '../data/gameBundle';
 import { homeBundle, homePlayer } from '../test/homeFixtures';
 import {
+  calendarEvent,
   mapSearchUrl,
   rosterNames,
   slotField,
@@ -343,3 +344,36 @@ describe('ticketStub — samme grener og rekkefølge som før', () => {
     expect(ticketStub({ ...base, ...overrides })).toEqual(expected);
   });
 });
+
+describe('calendarEvent — «Legg til i kalender» (#2255 PR 2)', () => {
+  const teeOff = '2026-10-03T07:30:00.000Z';
+
+  it('18 hull: spillnavn, bane, tee-off og 4 t 30 min, med hodelinja som notat', () => {
+    const bundle = bundleWith({ name: 'Klubbmesterskap', scheduledTeeOffAt: teeOff, hcpAllowancePct: 85 }, []);
+    expect(calendarEvent(bundle)).toEqual({
+      title: 'Klubbmesterskap',
+      location: 'Losby',
+      startDate: teeOff,
+      endDate: '2026-10-03T12:00:00.000Z',
+      notes: 'Tee: Gul · Stableford · 85\u00A0% handicap',
+    });
+  });
+
+  it('9 hull: 2 t 15 min', () => {
+    const bundle = bundleWith({ scheduledTeeOffAt: teeOff, holeSegment: 'back9' }, []);
+    expect(calendarEvent(bundle)?.endDate).toBe('2026-10-03T09:45:00.000Z');
+  });
+
+  it('uten bane står ingen stedsangivelse', () => {
+    const bundle = { ...bundleWith({ scheduledTeeOffAt: teeOff }, []), courseName: null };
+    expect(calendarEvent(bundle)?.location).toBeNull();
+  });
+
+  it.each([
+    ['uten tee-off', null],
+    ['med en ulesbar tee-off', 'ikke en dato'],
+  ])('%s: ingen hendelse, og knappen vises ikke', (_case, iso) => {
+    expect(calendarEvent(bundleWith({ scheduledTeeOffAt: iso }, []))).toBeNull();
+  });
+});
+
