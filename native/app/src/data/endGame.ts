@@ -52,6 +52,7 @@ import {
   expectAffected,
   NoRowsAffectedError,
 } from '../../../../lib/supabase/affectedRows';
+import { isSideWinnerNotActive } from '../../../../lib/games/sideWinnerGuard';
 import { needsPeerApproval } from '../lib/endGamePlan';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { withdrawPlayer } from './rosterActions';
@@ -108,6 +109,12 @@ export type EndRoundFailure =
   | 'db-withdraw'
   /** Kåringen ble ikke lagret; spillet står fortsatt `active`, retry er trygt. */
   | 'db-winners'
+  /**
+   * #2284: databasen nektet en vinner som har trukket seg (eller ikke er med i
+   * spillet), vakta fra migrasjon 0193. Kappløp mot en utdatert liste: ingenting
+   * ble lagret, spillet står `active`, og skjermen henter lista på nytt.
+   */
+  | 'winner-withdrawn'
   /** SQLSTATE 42501 — Postgres nektet skrivingen (policy eller vakt-trigger). */
   | 'rls-denied'
   /** Ingen feil, men heller ingen rad, og raden er ikke i måltilstanden. */
@@ -462,14 +469,16 @@ async function upsertSideWinners(
     winner_user_id: winner.winner_user_id,
   }));
 
-  const written = readWriteResult(
-    await supabase
-      .from('game_side_winners')
-      .upsert(rows, { onConflict: 'game_id,category,position' })
-      // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
-      .select('position'),
-    'finishRound.sideWinners',
-  );
+  const response = await supabase
+    .from('game_side_winners')
+    .upsert(rows, { onConflict: 'game_id,category,position' })
+    // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
+    .select('position');
+  // #2284: vakta i databasen (0193) svarer P0001, som `readWriteResult` ville
+  // gjort til en anonym `db`. Sjekkes på det rå svaret, med samme gjenkjenning
+  // som webben. Upserten er ett statement, så ingen rad i bunken ble skrevet.
+  if (isSideWinnerNotActive(response.error)) return failed('winner-withdrawn');
+  const written = readWriteResult(response, 'finishRound.sideWinners');
   if (written.ok) return null;
   return failed(
     written.error === 'rls-denied' ? 'rls-denied' : 'db-winners',

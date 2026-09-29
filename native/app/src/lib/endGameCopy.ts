@@ -103,6 +103,9 @@ export function describeEndRoundFailure(
         : 'Fikk ikke trukket spilleren. Prøv igjen.';
     case 'db-winners':
       return 'Klarte ikke å lagre vinnerne. Prøv igjen.';
+    case 'winner-withdrawn':
+      // Webbens `admin.game.sideWinners.winnerWithdrawnError`, tegn for tegn.
+      return 'En av vinnerne du valgte har trukket seg. Ingenting ble lagret, og spillet er ikke avsluttet. Velg på nytt fra lista.';
     case 'rls-denied':
       return 'Du har ikke lov til å avslutte denne runden.';
     case 'no-rows':
