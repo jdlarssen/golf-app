@@ -18,6 +18,7 @@ import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { maxTeamsForSize, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
+import { flightForTeam, type TeamPlayer } from '@/lib/games/teamScope';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
@@ -766,6 +767,7 @@ export async function acceptTeamInvite(
   // got the next one, and the team was split in two.
   // Error ≠ absence (#1445): a failed lookup must not read as «no captain».
   let teamNumber: number | null = null;
+  let captainRow: TeamPlayer | null = null;
   if (req.team_request_id) {
     const { data: captainReqRow, error: captainReqError } = await admin
       .from('game_registration_requests')
@@ -782,10 +784,10 @@ export async function acceptTeamInvite(
     if (captainReqRow?.user_id) {
       const { data: captainPlayer, error: captainPlayerError } = await admin
         .from('game_players')
-        .select('team_number')
+        .select('team_number, flight_number, withdrawn_at')
         .eq('game_id', game.id)
         .eq('user_id', captainReqRow.user_id)
-        .maybeSingle<{ team_number: number | null }>();
+        .maybeSingle<Omit<TeamPlayer, 'user_id'>>();
       if (captainPlayerError) {
         console.error('[acceptTeamInvite] captain player lookup failed', {
           requestId,
@@ -794,6 +796,7 @@ export async function acceptTeamInvite(
         return { ok: false, error: 'db_error' };
       }
       teamNumber = captainPlayer?.team_number ?? null;
+      if (captainPlayer) captainRow = { ...captainPlayer, user_id: captainReqRow.user_id };
     }
   }
 
@@ -828,7 +831,14 @@ export async function acceptTeamInvite(
         game_id: game.id,
         user_id: user.id,
         team_number: teamNumber,
-        flight_number: teamNumber,
+        // #2290: the flight follows the team — the captain's flight in best
+        // ball, where the organiser may have grouped pairs into flights.
+        flight_number: flightForTeam(
+          game.game_mode,
+          captainRow ? [captainRow] : [],
+          user.id,
+          teamNumber,
+        ),
         course_handicap: null,
         // #463: spilleren godtar invitasjonen selv → bekreftet med en gang.
         accepted_at: acceptedAtForActor(user.id, user.id),
@@ -1227,10 +1237,10 @@ export async function attachToCaptainTeam(
   if (childStatus === 'approved') {
     const { data: captainPlayer, error: captainPlayerError } = await admin
       .from('game_players')
-      .select('team_number')
+      .select('team_number, flight_number, withdrawn_at')
       .eq('game_id', game.id)
       .eq('user_id', captain.user_id)
-      .maybeSingle<{ team_number: number | null }>();
+      .maybeSingle<Omit<TeamPlayer, 'user_id'>>();
     if (captainPlayerError) {
       console.error('[attachToCaptainTeam] captain player lookup failed', {
         gameId: game.id,
@@ -1257,7 +1267,13 @@ export async function attachToCaptainTeam(
           game_id: game.id,
           user_id: user.id,
           team_number: teamNumber,
-          flight_number: teamNumber,
+          // #2290: the flight follows the team (the captain's in best ball).
+          flight_number: flightForTeam(
+            game.game_mode,
+            [{ ...captainPlayer!, user_id: captain.user_id }],
+            user.id,
+            teamNumber,
+          ),
           course_handicap: null,
           // #463: brukeren kobler seg selv på et lag → bekreftet med en gang.
           accepted_at: acceptedAtForActor(user.id, user.id),

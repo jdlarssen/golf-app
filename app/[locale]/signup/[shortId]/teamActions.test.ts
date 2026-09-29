@@ -1398,6 +1398,77 @@ describe('#2061: medspiller som godtar før kapteinen har lag, venter', () => {
     });
   });
 
+  it('best ball: medspilleren får kapteinens flight, ikke lagnummeret (#2290)', async () => {
+    // Arrangøren har gruppert parene i flighter: lag 2 går i flight 1.
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'manual_approval',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+      }),
+    );
+    adminMock = buildSupabaseMock([
+      mateRequest,
+      captainRequest,
+      { data: { team_number: 2, flight_number: 1, withdrawn_at: null }, error: null },
+      { data: [{ id: MATE_REQUEST_ID }], error: null },
+      { data: null, error: null }, // player upsert
+    ]);
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite(MATE_REQUEST_ID, SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    expect(playerWrites()[0]?.args[0]).toMatchObject({
+      user_id: KNOWN_USER_ID,
+      team_number: 2,
+      flight_number: 1,
+    });
+  });
+
+  it('attachToCaptainTeam, best ball: medspilleren får kapteinens flight (#2290)', async () => {
+    const INVITEE_EMAIL = 'ny.spiller@example.com';
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: KNOWN_USER_ID, email: INVITEE_EMAIL } },
+    });
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+      }),
+    );
+    adminMock = buildSupabaseMock([
+      {
+        data: { id: 'inv-1', email: INVITEE_EMAIL, game_id: GAME_ID, invited_by: CAPTAIN_ID },
+        error: null,
+      },
+      { data: { email: INVITEE_EMAIL }, error: null },
+      {
+        data: [
+          { id: CAPTAIN_REQUEST_ID, user_id: CAPTAIN_ID, team_name: 'Lag A', status: 'approved' },
+        ],
+        error: null,
+      },
+      { data: { id: 'child-1' }, error: null }, // child insert
+      { data: { team_number: 2, flight_number: 1, withdrawn_at: null }, error: null }, // captain's row
+      { data: null, error: null }, // player upsert
+      { data: null, error: null }, // invitations update
+    ]);
+
+    const { attachToCaptainTeam } = await import('./teamActions');
+    const result = await attachToCaptainTeam('inv-1', SHORT_ID);
+
+    expect(result).toEqual({ ok: true });
+    expect(playerWrites()[0]?.args[0]).toMatchObject({
+      user_id: KNOWN_USER_ID,
+      team_number: 2,
+      flight_number: 1,
+    });
+  });
+
   it.each([
     ['kaptein-forespørselen', [mateRequest, { data: null, error: DB_ERR }]],
     [
