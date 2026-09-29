@@ -251,6 +251,22 @@ describe('deliveryReminderGroups', () => {
     ]);
   });
 
+  it('er lagets radeier en gjest, går lagets ene påminnelse til første medlem som kan få den', () => {
+    // Round 2 residual: 'agjest' is lex-min, so the captain, but a guest can
+    // never be reminded. The team still gets one reminder, not one each.
+    const game: DeliveryGame = { game_mode: 'texas_scramble', hole_segment: 'full', source_game_id: null };
+    const players = [
+      player('agjest', { team_number: 1, is_guest: true }),
+      player('bo', { team_number: 1 }),
+      player('cato', { team_number: 1 }),
+      player('per', { team_number: 2 }),
+    ];
+
+    expect(groups(players, rows('agjest', 1, 18, 'per'), { game })).toEqual([
+      { recipientId: 'bo', cardUserIds: ['agjest', 'bo', 'cato'], otherCardUserIds: [] },
+    ]);
+  });
+
   it('en gjest som ingen aktiv kan levere for, gir ingen påminnelse', () => {
     const players = [player('gjest', { is_guest: true })];
     expect(groups(players, card('gjest', 'gjest'))).toEqual([]);
