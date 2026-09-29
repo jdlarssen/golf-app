@@ -77,11 +77,13 @@ export function buildNotificationText(
       return {
         title: t('kinds.scorecardRejected.title'),
         // #2200: the one who delivered the card for someone else is told
-        // whose card it is.
-        detail: p.player_name
+        // whose card it is. The field is present (null when the name could
+        // not be read) only on that copy, so a missing name still never reads
+        // as the recipient's own card.
+        detail: p.player_name !== undefined
           ? t('kinds.scorecardRejected.detailFor', {
               rejecterName,
-              playerName: p.player_name,
+              playerName: p.player_name ?? t('somePlayerFallback'),
               gameName,
               reason,
             })
