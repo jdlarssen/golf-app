@@ -77,7 +77,8 @@ const PLAYER_ROWS = [
     accepted_at: '2026-08-29T18:00:00.000Z',
     submitted_at: null,
     submitted_by_user_id: null,
-    approved_at: null,
+    approved_at: '2026-08-30T16:00:00.000Z',
+    approved_by_user_id: 'user-anders',
     rejection_reason: null,
     withdrawn_at: null,
     withdrawn_by_user_id: null,
@@ -141,7 +142,9 @@ describe('gameBundle', () => {
         acceptedAt: '2026-08-29T18:00:00.000Z',
         submittedAt: null,
         submittedByUserId: null,
-        approvedAt: null,
+        approvedAt: '2026-08-30T16:00:00.000Z',
+        // #2262: stempelet skiller markøren fra arrangøren på denne.
+        approvedByUserId: 'user-anders',
         rejectionReason: null,
         withdrawnAt: null,
         // #2358: trukket-banneret viser angre-knappen bare for eget trekk.
