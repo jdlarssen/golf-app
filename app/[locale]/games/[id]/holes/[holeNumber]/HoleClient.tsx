@@ -161,6 +161,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     gameMode,
     holeSegment,
     withdrawn,
+    selfWithdrawn,
     currentHole,
     par,
     parByGender,
@@ -578,7 +579,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
         variant={usesRail ? 'rail' : 'cards'}
       />
 
-      <WithdrawnBanner withdrawn={withdrawn} gameId={gameId} />
+      <WithdrawnBanner withdrawn={withdrawn} selfWithdrawn={selfWithdrawn} gameId={gameId} />
 
       <div style={listStyle}>
         {usesRail ? (

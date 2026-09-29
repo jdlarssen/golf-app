@@ -62,13 +62,17 @@ export function StablefordTotalSubtitle({
 
 /**
  * WD-banner: vises øverst i score-lista når innlogget spiller er
- * trukket (#386). Lenker til game-home for angre-knapp.
+ * trukket (#386). Lenker til game-home for angre-knapp — bare når spilleren
+ * trakk seg selv (#2358). Et trekk arrangøren satte, er arrangørens å angre,
+ * og game-home har ingen knapp for det.
  */
 export function WithdrawnBanner({
   withdrawn,
+  selfWithdrawn,
   gameId,
 }: {
   withdrawn: boolean;
+  selfWithdrawn: boolean;
   gameId: string;
 }): JSX.Element | null {
   const t = useTranslations('holes');
@@ -92,25 +96,30 @@ export function WithdrawnBanner({
         gap: 8,
       }}
     >
-      <span>{t('banners.withdrawn')}</span>
-      <SmartLink
-        href={`/games/${gameId}`}
-        className="tap-extend"
-        style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: 'var(--text)',
-          textDecoration: 'underline',
-          textUnderlineOffset: 2,
-          whiteSpace: 'nowrap',
-          // Draws 18px tall, hits 44px (#2240). Up it stops at the banner's
-          // top edge (the hole hero sits right above); down it uses the
-          // banner padding and the 8px margin before the score cards.
-          ['--tap-extend' as string]: '-11px -8px -15px',
-        }}
-      >
-        {t('banners.withdrawnUndo')}
-      </SmartLink>
+      <span>
+        {selfWithdrawn ? t('banners.withdrawn') : t('banners.withdrawnByOrganiser')}
+      </span>
+      {selfWithdrawn && (
+        <SmartLink
+          href={`/games/${gameId}`}
+          data-testid="withdrawn-undo-link"
+          className="tap-extend"
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--text)',
+            textDecoration: 'underline',
+            textUnderlineOffset: 2,
+            whiteSpace: 'nowrap',
+            // Draws 18px tall, hits 44px (#2240). Up it stops at the banner's
+            // top edge (the hole hero sits right above); down it uses the
+            // banner padding and the 8px margin before the score cards.
+            ['--tap-extend' as string]: '-11px -8px -15px',
+          }}
+        >
+          {t('banners.withdrawnUndo')}
+        </SmartLink>
+      )}
     </div>
   );
 }

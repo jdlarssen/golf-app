@@ -2402,6 +2402,7 @@
     "banners": {
       "floridaStepAside": "Husk: den som slo det valgte slaget, står over neste slag.",
       "withdrawn": "Du har trukket deg",
+      "withdrawnByOrganiser": "Arrangøren har trukket deg",
       "withdrawnUndo": "Angre",
       "skinsBanner": "{count, plural, one {1 skin på spill} other {# skins på spill}}",
       "skinsCarried": "Potten har rullet videre"

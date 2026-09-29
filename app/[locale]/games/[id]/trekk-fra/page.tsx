@@ -179,11 +179,11 @@ export default async function TrekkFraPage({
               <li>{t('preStartItems.registrationDeleted')}</li>
               {/* #2358: en kapteins påmelding merkes trukket, ikke slettet, og
                   kapteinen melder seg ikke på igjen selv (eierens svar 2). */}
-              <li>
-                {captain
-                  ? t('preStartItems.captainRequestWithdrawn')
-                  : t('preStartItems.requestDeleted')}
-              </li>
+              {!captain ? (
+                <li>{t('preStartItems.requestDeleted')}</li>
+              ) : captain.marksRequest ? (
+                <li>{t('preStartItems.captainRequestWithdrawn')}</li>
+              ) : null}
               <li>{t('preStartItems.teamNotified')}</li>
               {captain && captain.unanswered > 0 && (
                 <li>{t('preStartItems.unansweredInvitesWithdrawn')}</li>
