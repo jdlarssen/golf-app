@@ -231,6 +231,10 @@ export async function findSegmentSibling(
  *
  * The one home for this set (#2200): the organiser's reminder
  * (`remindUnsubmitted`) and the delivery-reminder sweep both ask here.
+ *
+ * A failed read throws. Reading it as «no undelivered siblings» would remind
+ * front9 players who deliver on the back9 game; the callers catch per game
+ * (the sweep retries on its next run, the remind route answers 500).
  */
 export async function undeliveredBack9SiblingUserIds(
   admin: ReturnType<typeof getAdminClient>,
@@ -242,7 +246,7 @@ export async function undeliveredBack9SiblingUserIds(
   },
 ): Promise<Set<string> | undefined> {
   if (game.hole_segment !== 'front9' || game.tournament_id == null) return undefined;
-  const { data: back9Hosts } = await admin
+  const { data: back9Hosts, error: hostsError } = await admin
     .from('games')
     .select('id, scheduled_tee_off_at, created_at')
     .eq('tournament_id', game.tournament_id)
@@ -251,14 +255,18 @@ export async function undeliveredBack9SiblingUserIds(
     .returns<
       { id: string; scheduled_tee_off_at: string | null; created_at: string | null }[]
     >();
+  if (hostsError) throw new Error(`undeliveredBack9SiblingUserIds hosts: ${hostsError.message}`);
   const back9Ids = candidatesOnSameSplitDay(game, back9Hosts ?? []).map((g) => g.id);
   if (back9Ids.length === 0) return undefined;
-  const { data: undelivered } = await admin
+  const { data: undelivered, error: undeliveredError } = await admin
     .from('game_players')
     .select('user_id')
     .in('game_id', back9Ids)
     .is('submitted_at', null)
     .is('withdrawn_at', null)
     .returns<{ user_id: string }[]>();
+  if (undeliveredError) {
+    throw new Error(`undeliveredBack9SiblingUserIds players: ${undeliveredError.message}`);
+  }
   return new Set((undelivered ?? []).map((r) => r.user_id));
 }
