@@ -627,4 +627,47 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
       expect.objectContaining({ playerName: 'Ola Nordmann' }),
     );
   });
+
+  it('en admin som er makker, får ikke admin-varsel eller -mail om sitt eget kort', async () => {
+    // Each card is announced as if its owner delivered it, and an owner who
+    // delivers is never told about their own card. Ola is a global admin here.
+    loadCardsMock.mockResolvedValueOnce([cards[0]]);
+    const supabase = buildSupabaseMock([
+      { data: activeGame(), error: null },
+      { data: membership(), error: null },
+      { data: [{ user_id: USER_ID }, { user_id: OLA }], error: null },
+      { data: { name: 'Kari Fører' }, error: null },
+      {
+        data: [
+          { id: 'admin-1', name: 'Jørgen', locale: 'no' },
+          { id: OLA, name: 'Ola Nordmann', locale: 'no' },
+        ],
+        error: null,
+      },
+    ]);
+    adminMock = buildSupabaseMock([
+      {
+        data: [
+          { id: 'admin-1', email: 'arrangoren@example.test', friend_code: 'k0de' },
+          { id: OLA, email: 'ola@example.test', friend_code: 'k0d2' },
+        ],
+        error: null,
+      },
+    ]);
+
+    await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, { alsoFor: [OLA] });
+
+    const adminCalls = notifyMock.mock.calls
+      .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
+      .filter((c) => c.kind === 'scorecard_submitted');
+    // Kari's card: both admins. Ola's card: only the other admin.
+    expect(adminCalls.filter((c) => c.payload.player_name === 'Kari Fører').map((c) => c.userId).sort()).toEqual(['admin-1', OLA]);
+    expect(adminCalls.filter((c) => c.payload.player_name === 'Ola Nordmann').map((c) => c.userId)).toEqual(['admin-1']);
+    const mails = sendScorecardSubmittedNotificationMock.mock.calls.map(
+      (c) => c[0] as { to: string; playerName: string },
+    );
+    expect(mails.filter((m) => m.playerName === 'Ola Nordmann').map((m) => m.to)).toEqual([
+      'arrangoren@example.test',
+    ]);
+  });
 });
