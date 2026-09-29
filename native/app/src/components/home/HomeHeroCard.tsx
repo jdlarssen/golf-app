@@ -174,6 +174,7 @@ function Standing({ model }: { model: HeroModel }) {
     );
   }
   const leads = model.standing.rank === 1;
+  const detail = standingDetail(model.standing, model.unit);
   return (
     <>
       <View style={styles.placeRow}>
@@ -189,8 +190,13 @@ function Standing({ model }: { model: HeroModel }) {
           {placeLine(model.standing)}
         </Text>
       </View>
-      <Text style={[styles.detail, ink]} testID="home-hero-detail">
-        {standingDetail(model.standing, model.unit)}
+      <Text
+        style={[styles.detail, ink]}
+        // Komma, ikke «·»: VoiceOver leser midtpunktet høyt.
+        accessibilityLabel={detail.split(' · ').join(', ')}
+        testID="home-hero-detail"
+      >
+        {detail}
       </Text>
     </>
   );
