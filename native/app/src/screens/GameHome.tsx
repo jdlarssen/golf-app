@@ -61,6 +61,7 @@ import {
   pendingApprovals,
   rosterPlacementMarks,
   rosterStatus,
+  rosterStatusKind,
   shouldConfirmParticipation,
   toRoster,
 } from '../lib/roster';
@@ -473,7 +474,8 @@ function PrimarySection({
  * Statusen står for seg (#1879): «Levert» og «Godkjent» får en hake foran
  * ordet — glyfen leses raskere i en tett liste. Aldri haken alene: den er lik
  * for begge, så det er ordet som skiller dem. «Trukket» har ingen glyf som
- * leses riktig uten ord, og står derfor som tekst.
+ * leses riktig uten ord, og står derfor som tekst. Haken følger tilstanden
+ * (`rosterStatusKind`), ikke ordet: «Levert av Ola» (#2200) er også levert.
  */
 export function RosterRow({
   player,
@@ -489,8 +491,9 @@ export function RosterRow({
 }) {
   const { colors, ui } = useTheme();
   const marks = rosterPlacementMarks(player, gameMode, players);
-  const status = rosterStatus(player);
-  const checked = status === 'Levert' || status === 'Godkjent';
+  const kind = rosterStatusKind(player);
+  const status = rosterStatus(player, players);
+  const checked = kind === 'submitted' || kind === 'approved';
 
   return (
     <View style={styles.rosterRow} testID={`roster-row-${player.userId}`}>
@@ -516,7 +519,7 @@ export function RosterRow({
             <View style={styles.rosterStatus} testID={`roster-status-${player.userId}`}>
               {checked ? (
                 <HakeIcon
-                  color={status === 'Godkjent' ? colors.primary : colors.muted}
+                  color={kind === 'approved' ? colors.primary : colors.muted}
                   size={16}
                   testID={`roster-status-check-${player.userId}`}
                 />

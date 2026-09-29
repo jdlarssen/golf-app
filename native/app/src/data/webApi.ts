@@ -29,6 +29,9 @@
 // ingen id fra kroppen, uansett hva som skulle stå der.
 // Alt som skal identifisere noe ANNET enn brukeren står i STIEN
 // (`/api/games/<id>/remind`), og gates av ruta. Ingen av kallene bruker query.
+// Ett unntak (#2200): `submit-team` sender makkernes id-er i `alsoFor`. De er
+// et ønske som bare kan snevre inn — serveren spør leveringsregelen selv og
+// leverer snittet, så en id utenfor flighten gjør ingenting.
 //
 // Utfallene er TYPEDE koder, aldri bruker-tekst (samme linje som `startGame.ts`
 // og `rosterActions.ts`). HTTP-status oversettes én gang, i kaller-modulen, slik

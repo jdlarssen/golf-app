@@ -121,9 +121,12 @@ export function describeSubmitFailure(reason: SubmitCardFailure): string {
     case 'withdrawn':
       return 'Du er trukket fra dette spillet.';
     case 'network':
+    // #2200: appen bygde kroppen (`alsoFor`), så spilleren kan ikke rette noe.
+    case 'bad_request':
     case 'forbidden':
     case 'not_found':
     case 'submit_failed':
       return 'Fikk ikke levert kortet. Prøv igjen.';
   }
 }
+

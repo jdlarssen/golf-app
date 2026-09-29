@@ -31,6 +31,8 @@ function player(overrides: Partial<BundlePlayer> = {}): BundlePlayer {
     approvedAt: null,
     rejectionReason: null,
     withdrawnAt: null,
+    submittedByUserId: null,
+    isGuest: false,
     ...overrides,
   };
 }

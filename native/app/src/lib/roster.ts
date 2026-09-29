@@ -8,7 +8,15 @@
 //
 // `player` bæres med gjennom oversettelsen, så en spiller som kommer ut av
 // `pendingApprovalsFor` fortsatt har navn, lag og banehandicap å vise.
+//
+// #2200: det samme gjelder leveringen for flighten. Hvem jeg kan levere for, er
+// den delte `flightDeliveryCandidates`; her er bare oversettelsen inn og
+// setningene ut.
 import { rotationSlotRange } from '../../../../lib/games/assignRotationSlots';
+import {
+  flightDeliveryCandidates,
+  type DeliveryPlayer,
+} from '../../../../lib/games/flightDelivery';
 import {
   canApproveScorecardFor,
   isSingleFlightGame,
@@ -16,14 +24,19 @@ import {
   type FlightPlayer,
 } from '../../../../lib/games/flightScope';
 import { isMatchplayMode } from '../../../../lib/games/matchplaySides';
+import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { wolfLinearHolesForSlot } from '../../../../lib/wolf/wolfLinearHolesForSlot';
+import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer } from '../data/gameBundle';
+import { displayName } from './display';
 import { wolfRotationPlayers } from './wolfHole';
 
 /** En roster-rad i den formen de delte reglene leser, med spilleren vedlagt. */
 export interface RosterEntry extends FlightPlayer {
   submitted_at: string | null;
+  /** Hvem som leverte kortet (#2200). Den kan ikke også godkjenne det. */
+  submitted_by_user_id: string | null;
   approved_at: string | null;
   player: BundlePlayer;
 }
@@ -34,6 +47,7 @@ export function toRoster(players: readonly BundlePlayer[]): RosterEntry[] {
     flight_number: player.flightNumber,
     withdrawn_at: player.withdrawnAt,
     submitted_at: player.submittedAt,
+    submitted_by_user_id: player.submittedByUserId,
     approved_at: player.approvedAt,
     player,
   }));
@@ -91,6 +105,9 @@ export function pendingApprovals(
 /**
  * Kan jeg attestere dette kortet? Delt regel for knappen. Porten er
  * `scorecardReviewAccess` bak `POST /api/games/{id}/scorecards/{userId}` (#2215).
+ *
+ * Kortets leverandør slås opp i rosteret og sendes med (#2200): den som
+ * leverte kortet for en annen, kan ikke også godkjenne det.
  */
 export function canApprove(
   roster: readonly RosterEntry[],
@@ -103,7 +120,101 @@ export function canApprove(
     gameMode,
     approverUserId,
     ownerUserId,
+    findInRoster(roster, ownerUserId)?.submitted_by_user_id ?? null,
   );
+}
+
+/**
+ * Kortene jeg kan levere sammen med mitt eget (#2200), i roster-rekkefølge.
+ * Tom liste når det ikke er noen.
+ *
+ * Regelen er den delte `flightDeliveryCandidates`, og serveren spør den samme
+ * regelen igjen før den leverer. Her er bare oversettelsen: bundelens camelCase
+ * og de lokale slagene inn, bundel-spillerne ut, så skjermen har navn og
+ * gjeste-flagg å vise.
+ *
+ * Slagene er de lokale radene slik de ligger i SQLite, med `entered_by`. Det er
+ * dem spilleren ser, og kø-vakta på scorekortet holder knappen igjen til de er
+ * framme på serveren.
+ */
+export function flightDeliveryFor(
+  bundle: {
+    game: Pick<BundleGame, 'gameMode' | 'holeSegment' | 'sourceGameId'>;
+    players: readonly BundlePlayer[];
+  },
+  scores: readonly LocalScore[],
+  actorId: string,
+): BundlePlayer[] {
+  const players: DeliveryPlayer[] = bundle.players.map((player) => ({
+    user_id: player.userId,
+    flight_number: player.flightNumber,
+    withdrawn_at: player.withdrawnAt,
+    team_number: player.teamNumber,
+    submitted_at: player.submittedAt,
+    is_guest: player.isGuest,
+  }));
+  const ids = new Set(
+    flightDeliveryCandidates(actorId, {
+      players,
+      scores: scores.map((score) => ({
+        user_id: score.userId,
+        hole_number: score.holeNumber,
+        strokes: score.strokes,
+        entered_by: score.enteredBy,
+      })),
+      game: {
+        game_mode: bundle.game.gameMode as GameMode,
+        hole_segment: bundle.game.holeSegment as HoleSegment,
+        source_game_id: bundle.game.sourceGameId,
+      },
+    }),
+  );
+  return bundle.players.filter((player) => ids.has(player.userId));
+}
+
+/** «Ola», «Ola og Kari», «Ola, Kari og Per» — navnene slik rosteret viser dem. */
+function namesOf(players: readonly BundlePlayer[]): string {
+  return joinWithOg(players.map(displayName));
+}
+
+/**
+ * Setningene over lever-knappen når jeg kan levere for makkerne (#2200).
+ *
+ * Første linje nevner alle kortene. Resten sier hvorfor: jeg har ført hullene
+ * til de vanlige spillerne, og en gjest kan ikke levere selv. Uten gjester
+ * holder det med «Du har ført alle hullene.»
+ */
+export function flightDeliveryLines(candidates: readonly BundlePlayer[]): string[] {
+  const guests = candidates.filter((player) => player.isGuest);
+  const others = candidates.filter((player) => !player.isGuest);
+  const lines = [
+    candidates.length === 1
+      ? `Lever også kortet til ${namesOf(candidates)}.`
+      : `Lever også kortene til ${namesOf(candidates)}.`,
+  ];
+  if (guests.length === 0) {
+    lines.push('Du har ført alle hullene.');
+    return lines;
+  }
+  if (others.length > 0) {
+    lines.push(`Du har ført alle hullene til ${namesOf(others)}.`);
+  }
+  lines.push(
+    guests.length === 1
+      ? `${namesOf(guests)} er gjest og kan ikke levere selv.`
+      : `${namesOf(guests)} er gjester og kan ikke levere selv.`,
+  );
+  return lines;
+}
+
+/** Lever-knappen når makkerne leveres med: mitt kort pluss deres. */
+export function flightDeliveryButton(candidates: readonly BundlePlayer[]): string {
+  return `Lever ${candidates.length + 1} kort ✓`;
+}
+
+/** Knappen når mitt eget kort alt er levert, og bare makkernes står igjen. */
+export function deliverForButton(candidates: readonly BundlePlayer[]): string {
+  return `Lever for ${namesOf(candidates)} ✓`;
 }
 
 /**
@@ -165,7 +276,7 @@ export function rosterMarks(
   gameMode: GameMode,
   players: readonly BundlePlayer[],
 ): string[] {
-  const status = rosterStatus(player);
+  const status = rosterStatus(player, players);
   return [...rosterPlacementMarks(player, gameMode, players), ...(status ? [status] : [])];
 }
 
@@ -203,12 +314,59 @@ export function rosterPlacementMarks(
   return marks;
 }
 
-export type RosterStatus = 'Trukket' | 'Godkjent' | 'Levert';
+/**
+ * Kortets tilstand som data, eller `null` før noe er levert. Trukket vinner,
+ * så Godkjent, så Levert.
+ *
+ * Skjermene som tegner noe ut fra tilstanden (haken i rosteret), spør denne og
+ * ikke etiketten. Etiketten har navn i seg (#2200), så en sammenligning mot
+ * «Levert» ville mistet haken på et kort en makker leverte.
+ */
+export type RosterStatusKind = 'withdrawn' | 'approved' | 'submitted';
 
-/** Kortets tilstand, eller `null` før noe er levert. Trukket vinner. */
-export function rosterStatus(player: BundlePlayer): RosterStatus | null {
-  if (player.withdrawnAt) return 'Trukket';
-  if (player.approvedAt) return 'Godkjent';
-  if (player.submittedAt) return 'Levert';
+export function rosterStatusKind(player: BundlePlayer): RosterStatusKind | null {
+  if (player.withdrawnAt) return 'withdrawn';
+  if (player.approvedAt) return 'approved';
+  if (player.submittedAt) return 'submitted';
   return null;
+}
+
+export type RosterStatus = 'Trukket' | 'Godkjent' | 'Levert' | `Levert av ${string}`;
+
+/**
+ * «Levert», eller «Levert av Ola» når en annen leverte kortet (#2200). Delt av
+ * rosteret og avslutt-skjermen, så arrangøren ser det samme begge steder.
+ * Står leverandøren ikke i rosteret, eller er ukjent, står det bare «Levert».
+ */
+export function submittedLabel(
+  player: BundlePlayer,
+  players: readonly BundlePlayer[],
+): 'Levert' | `Levert av ${string}` {
+  const by = player.submittedByUserId;
+  if (by == null || by === player.userId) return 'Levert';
+  const deliverer = players.find((other) => other.userId === by);
+  return deliverer ? `Levert av ${displayName(deliverer)}` : 'Levert';
+}
+
+/**
+ * Etiketten for {@link rosterStatusKind}.
+ *
+ * #2200: har en annen enn spilleren levert kortet, står det «Levert av Ola».
+ * Navnet hentes fra rosteret; står leverandøren ikke der, eller er ukjent,
+ * står det bare «Levert».
+ */
+export function rosterStatus(
+  player: BundlePlayer,
+  players: readonly BundlePlayer[],
+): RosterStatus | null {
+  switch (rosterStatusKind(player)) {
+    case 'withdrawn':
+      return 'Trukket';
+    case 'approved':
+      return 'Godkjent';
+    case 'submitted':
+      return submittedLabel(player, players);
+    case null:
+      return null;
+  }
 }

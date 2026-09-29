@@ -53,6 +53,7 @@ import {
 } from '../data/remind';
 import { describeFailure } from '../lib/actionFeedback';
 import { displayName, formatClock } from '../lib/display';
+import { submittedLabel } from '../lib/roster';
 import {
   approveConfirmBody,
   CUP_LINK_LABEL,
@@ -286,7 +287,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               {player.userId === userId ? ' (deg)' : ''}
             </Text>
             <Text style={ui.muted} testID={`end-game-status-${player.userId}`}>
-              {statusFor(player, plan.requirePeerApproval)}
+              {statusFor(player, plan.requirePeerApproval, bundle.players)}
             </Text>
           </View>
         ))}
@@ -599,13 +600,21 @@ function ReminderPanel({ gameId }: { gameId: string }) {
   );
 }
 
-/** «Levert · Godkjent», «Ikke levert», … — én linje per spiller. */
-function statusFor(player: BundlePlayer, requirePeerApproval: boolean): string {
+/**
+ * «Levert · Godkjent», «Levert av Ola», «Ikke levert», … — én linje per
+ * spiller. #2200: «Levert av …» når en annen leverte kortet (`submittedLabel`).
+ */
+function statusFor(
+  player: BundlePlayer,
+  requirePeerApproval: boolean,
+  players: readonly BundlePlayer[],
+): string {
   if (player.submittedAt === null) return END_GAME_TEXT.notSubmitted;
-  if (!requirePeerApproval) return END_GAME_TEXT.submitted;
+  const submitted = submittedLabel(player, players);
+  if (!requirePeerApproval) return submitted;
   return player.approvedAt === null
-    ? `${END_GAME_TEXT.submitted} · ${END_GAME_TEXT.awaitingApproval}`
-    : `${END_GAME_TEXT.submitted} · ${END_GAME_TEXT.approved}`;
+    ? `${submitted} · ${END_GAME_TEXT.awaitingApproval}`
+    : `${submitted} · ${END_GAME_TEXT.approved}`;
 }
 
 /** Navnene bak `blockedUserIds` — datalaget kjenner bare id-er. */

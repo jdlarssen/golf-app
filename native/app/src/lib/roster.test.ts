@@ -5,12 +5,19 @@
 // camelCase kommer riktig inn i dem, og at de fire grenene i webbens
 // `resolveFlight` gir samme utvalg i appen.
 import type { GameMode } from '../../../../lib/scoring/modes/types';
+import type { LocalScore } from '../data/db';
 import type { BundlePlayer } from '../data/gameBundle';
 import {
+  canApprove,
+  deliverForButton,
   findInRoster,
+  flightDeliveryButton,
+  flightDeliveryFor,
+  flightDeliveryLines,
   pendingApprovals,
   resolveFlight,
   rosterMarks,
+  rosterStatus,
   shouldConfirmParticipation,
   toRoster,
 } from './roster';
@@ -25,9 +32,11 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
     teeGender: 'mens',
     acceptedAt: null,
     submittedAt: null,
+    submittedByUserId: null,
     approvedAt: null,
     rejectionReason: null,
     withdrawnAt: null,
+    isGuest: false,
     ...overrides,
   };
 }
@@ -134,6 +143,150 @@ describe('pendingApprovals', () => {
       expect(idsOf(pendingApprovals(roster, game, 'me'))).toEqual(expected);
     },
   );
+});
+
+describe('den som leverte kortet, godkjenner det ikke (#2200)', () => {
+  // Oversettelsen er det som testes: `submittedByUserId` må komme fram til den
+  // delte regelen, ellers ber appen meg godkjenne et kort jeg leverte selv.
+  const roster = toRoster([
+    player({ userId: 'me', submittedAt: '2026-09-27T10:00:00.000Z' }),
+    player({
+      userId: 'mate',
+      submittedAt: '2026-09-27T10:00:00.000Z',
+      submittedByUserId: 'me',
+    }),
+    player({
+      userId: 'other',
+      submittedAt: '2026-09-27T10:05:00.000Z',
+      submittedByUserId: 'other',
+    }),
+  ]);
+  const game = { gameMode: SOLO, status: 'active', requirePeerApproval: true };
+
+  it('holder kortet jeg leverte for makkeren utenfor lista mi', () => {
+    expect(idsOf(pendingApprovals(roster, game, 'me'))).toEqual(['other']);
+  });
+
+  it('sier nei i enkeltoppslaget også', () => {
+    expect(canApprove(roster, SOLO, 'me', 'mate')).toBe(false);
+    expect(canApprove(roster, SOLO, 'me', 'other')).toBe(true);
+  });
+});
+
+describe('flightDeliveryFor (#2200)', () => {
+  // Regelen er den delte `flightDeliveryCandidates` og testes der. Her testes
+  // at bundelen og de lokale slagene kommer riktig inn, og at svaret er
+  // bundel-spillere i roster-rekkefølge.
+  const GAME = { gameMode: SOLO, holeSegment: 'full', sourceGameId: null };
+
+  /** Et fullt kort for `userId`, tastet av `enteredBy`. */
+  function card(userId: string, enteredBy: string): LocalScore[] {
+    return Array.from({ length: 18 }, (_, i) => ({
+      id: `g:${userId}:${i + 1}`,
+      gameId: 'g',
+      userId,
+      holeNumber: i + 1,
+      strokes: 4,
+      putts: null,
+      enteredBy,
+      clientUpdatedAt: '2026-09-27T10:00:00.000Z',
+      serverUpdatedAt: '2026-09-27T10:00:01.000Z',
+    }));
+  }
+
+  it('gir makkeren jeg førte for og gjesten med fullt kort, ikke den som førte selv', () => {
+    const players = [
+      player({ userId: 'guest', isGuest: true }),
+      player({ userId: 'me' }),
+      player({ userId: 'mate' }),
+      player({ userId: 'self' }),
+    ];
+    const scores = [
+      ...card('me', 'me'),
+      ...card('mate', 'me'),
+      ...card('self', 'self'),
+      // En gjest kan ikke levere selv, så det holder at kortet er fullt.
+      ...card('guest', 'self'),
+    ];
+
+    const mates = flightDeliveryFor({ game: GAME, players }, scores, 'me');
+    expect(mates.map((p) => p.userId)).toEqual(['guest', 'mate']);
+    expect(mates[0]).toBe(players[0]);
+  });
+
+  it('gir ingen når ingen kort er fulle', () => {
+    const players = [player({ userId: 'me' }), player({ userId: 'mate' })];
+    const scores = card('mate', 'me').slice(0, 17);
+
+    expect(flightDeliveryFor({ game: GAME, players }, scores, 'me')).toEqual([]);
+  });
+});
+
+describe('setningene for levering for flighten (#2200)', () => {
+  const ola = player({ userId: 'ola', name: 'Ola' });
+  const kari = player({ userId: 'kari', name: 'Kari' });
+  const gjest = player({ userId: 'gjest', name: 'Per', isGuest: true });
+  const gjest2 = player({ userId: 'gjest2', name: 'Liv', isGuest: true });
+
+  it.each([
+    ['én vanlig spiller', [ola], ['Lever også kortet til Ola.', 'Du har ført alle hullene.']],
+    [
+      'flere vanlige spillere',
+      [ola, kari],
+      ['Lever også kortene til Ola og Kari.', 'Du har ført alle hullene.'],
+    ],
+    [
+      'én gjest alene',
+      [gjest],
+      ['Lever også kortet til Per.', 'Per er gjest og kan ikke levere selv.'],
+    ],
+    [
+      'vanlige spillere og én gjest',
+      [ola, kari, gjest],
+      [
+        'Lever også kortene til Ola, Kari og Per.',
+        'Du har ført alle hullene til Ola og Kari.',
+        'Per er gjest og kan ikke levere selv.',
+      ],
+    ],
+    [
+      'flere gjester',
+      [gjest, gjest2],
+      ['Lever også kortene til Per og Liv.', 'Per og Liv er gjester og kan ikke levere selv.'],
+    ],
+  ] as [string, BundlePlayer[], string[]][])('%s', (_label, candidates, expected) => {
+    expect(flightDeliveryLines(candidates)).toEqual(expected);
+  });
+
+  it('teller mitt eget kort med på knappen', () => {
+    expect(flightDeliveryButton([ola, gjest])).toBe('Lever 3 kort ✓');
+  });
+
+  it('navngir makkerne når mitt eget kort alt er levert', () => {
+    expect(deliverForButton([ola, kari])).toBe('Lever for Ola og Kari ✓');
+  });
+});
+
+describe('rosterStatus', () => {
+  const deliverer = player({ userId: 'ola', name: 'Ola Nordmann', nickname: 'Olabola' });
+  const at = '2026-09-27T10:00:00.000Z';
+
+  it.each([
+    ['en annen leverte', { submittedAt: at, submittedByUserId: 'ola' }, 'Levert av Olabola'],
+    ['spilleren leverte selv', { submittedAt: at, submittedByUserId: 'me' }, 'Levert'],
+    ['leverandøren er ukjent', { submittedAt: at, submittedByUserId: null }, 'Levert'],
+    ['leverandøren står ikke i rosteret', { submittedAt: at, submittedByUserId: 'x' }, 'Levert'],
+    [
+      'kortet er godkjent',
+      { submittedAt: at, submittedByUserId: 'ola', approvedAt: at },
+      'Godkjent',
+    ],
+    ['spilleren er trukket', { submittedAt: at, submittedByUserId: 'ola', withdrawnAt: at }, 'Trukket'],
+    ['ingenting er levert', {}, null],
+  ] as [string, Partial<BundlePlayer>, string | null][])('%s', (_label, overrides, expected) => {
+    const me = player({ userId: 'me', ...overrides });
+    expect(rosterStatus(me, [me, deliverer])).toBe(expected);
+  });
 });
 
 describe('shouldConfirmParticipation', () => {

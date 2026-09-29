@@ -20,6 +20,18 @@
 // varslene til makkerne og admin er serverens. Kjernen avgjør selv om kortet er
 // et lagkort.
 //
+// #2200: den som fører, leverer for flighten. Har spilleren ført hvert hull til
+// en makker, eller er makkeren en gjest med fullt kort, leverer knappen de
+// kortene sammen med spillerens eget («Lever 3 kort ✓»), og en blokk over
+// knappen sier hvem og hvorfor. Hvem som kan leveres, er den delte regelen
+// (`flightDeliveryFor` → `lib/games/flightDelivery.ts`) over de lokale slagene.
+// Makker-kortene går med i det samme kallet til `data/submitCard.ts`
+// (`alsoFor`), så appen har én vei inn for levering; ruta spør regelen igjen
+// og leverer bare snittet. Er mitt eget kort alt levert, står «Lever for Ola ✓»
+// under lesevisningen, og samme kall leverer da bare makkernes kort. Kø-vakta
+// gjelder begge knappene: makkernes slag skal også være framme før kortene
+// fryses. Lag-formatene med én ball gir ingen makkere i den delte regelen.
+//
 // #2220: et kort som kan leveres, kan også rettes. «Rediger hullene» tar
 // spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
 // fullt kort en blindvei: spill-hjem sender et fullt kort hit, og radene under
@@ -44,7 +56,14 @@ import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
 import { isScoringSupported } from '../lib/formatGate';
 import { nameLookup } from '../lib/leaderboardModel';
-import { findInRoster, toRoster } from '../lib/roster';
+import {
+  deliverForButton,
+  findInRoster,
+  flightDeliveryButton,
+  flightDeliveryFor,
+  flightDeliveryLines,
+  toRoster,
+} from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
 import { buildScorecardRows } from '../lib/scorecardRows';
 import { computeGameLeaderboard } from '../lib/scoringContext';
@@ -150,13 +169,29 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     me.withdrawn_at == null &&
     isScoringSupported(bundle.game);
 
+  // #2200: makkernes kort jeg kan levere med mitt eget. De rå lokale slagene,
+  // ikke de lag-foldede: den delte regelen finner selv eieren av hver rad.
+  const flightMates = flightDeliveryFor(bundle, localScores, userId);
+  // Mitt kort er levert, men makkernes står igjen: egen knapp under
+  // lesevisningen. Samme porter som lever-knappen, bortsett fra eget kort.
+  const canDeliverForFlight =
+    flightMates.length > 0 &&
+    bundle.game.status === 'active' &&
+    me.submitted_at != null &&
+    me.withdrawn_at == null &&
+    isScoringSupported(bundle.game);
+
   const doSubmit = async () => {
     setBusy(true);
     setErrorText(null);
     // Solo og lag går samme vei (#2215): ruta leverer, varsler og tømmer
     // web-cachen. Laget kan bare leveres der uansett — RLS lar appen skrive sin
-    // egen rad, og halve laget levert er verre enn ingen.
-    const result = await submitCard(gameId);
+    // egen rad, og halve laget levert er verre enn ingen. #2200: makker-kortene
+    // jeg har ført, går med i samme kall (`alsoFor`); ruta spør regelen igjen.
+    const result = await submitCard(
+      gameId,
+      flightMates.map((player) => player.userId),
+    );
     setBusy(false);
     if (result.ok) {
       navigation.navigate('GameHome', { gameId });
@@ -184,6 +219,29 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       ],
     );
   };
+
+  const onDeliverForPress = () => {
+    if (queued > 0 || busy) return;
+    void doSubmit();
+  };
+
+  const queueGuard =
+    queued > 0 ? (
+      <Text style={ui.muted} testID="queue-guard">
+        {queued} slag venter på å bli sendt. Knappen åpner når de er framme.
+      </Text>
+    ) : null;
+
+  const flightBlock =
+    flightMates.length > 0 ? (
+      <View style={ui.card} testID="flight-delivery">
+        {flightDeliveryLines(flightMates).map((line) => (
+          <Text key={line} style={ui.body}>
+            {line}
+          </Text>
+        ))}
+      </View>
+    ) : null;
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="scorecard-screen">
@@ -263,16 +321,19 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           >
             <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
           </Pressable>
-          {queued > 0 ? (
-            <Text style={ui.muted} testID="queue-guard">
-              {queued} slag venter på å bli sendt. Knappen åpner når de er framme.
-            </Text>
-          ) : null}
+          {flightBlock}
+          {queueGuard}
           <Pressable
             style={[ui.button, (queued > 0 || busy) && styles.buttonDisabled]}
             onPress={onSubmitPress}
             disabled={queued > 0 || busy}
-            testID={teamMode ? 'submit-team-card' : 'submit-scorecard'}
+            testID={
+              teamMode
+                ? 'submit-team-card'
+                : flightMates.length > 0
+                  ? 'submit-flight'
+                  : 'submit-scorecard'
+            }
           >
             <Text style={ui.buttonText}>
               {busy
@@ -281,19 +342,43 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
                   ? 'Synker slag …'
                   : teamMode
                     ? 'Lever lagets kort'
-                    : 'Lever scorekort'}
+                    : flightMates.length > 0
+                      ? flightDeliveryButton(flightMates)
+                      : 'Lever scorekort'}
             </Text>
           </Pressable>
         </>
       ) : (
-        <Text style={ui.muted} testID="scorecard-readonly">
-          {me.submitted_at == null
-            ? 'Kortet kan ikke leveres herfra nå.'
-            : bundle.game.status === 'active'
-              ? // #2220: veien videre for et levert kort i en runde som pågår.
-                `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
-              : 'Kortet er levert. Dette er lesevisning.'}
-        </Text>
+        <>
+          <Text style={ui.muted} testID="scorecard-readonly">
+            {me.submitted_at == null
+              ? 'Kortet kan ikke leveres herfra nå.'
+              : bundle.game.status === 'active'
+                ? // #2220: veien videre for et levert kort i en runde som pågår.
+                  `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
+                : 'Kortet er levert. Dette er lesevisning.'}
+          </Text>
+          {canDeliverForFlight ? (
+            <>
+              {flightBlock}
+              {queueGuard}
+              <Pressable
+                style={[ui.button, (queued > 0 || busy) && styles.buttonDisabled]}
+                onPress={onDeliverForPress}
+                disabled={queued > 0 || busy}
+                testID="deliver-for-flight"
+              >
+                <Text style={ui.buttonText}>
+                  {busy
+                    ? 'Leverer …'
+                    : queued > 0
+                      ? 'Synker slag …'
+                      : deliverForButton(flightMates)}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
+        </>
       )}
 
       {errorText ? (

@@ -76,10 +76,11 @@ const PLAYER_ROWS = [
     tee_gender: 'mens',
     accepted_at: '2026-08-29T18:00:00.000Z',
     submitted_at: null,
+    submitted_by_user_id: null,
     approved_at: null,
     rejection_reason: null,
     withdrawn_at: null,
-    users: { name: 'Jørgen', nickname: 'Jøgge' },
+    users: { name: 'Jørgen', nickname: 'Jøgge', is_guest: false },
   },
 ];
 
@@ -138,9 +139,11 @@ describe('gameBundle', () => {
         // #463: arrangør-flatene skiller bekreftet fra ubekreftet på dette feltet.
         acceptedAt: '2026-08-29T18:00:00.000Z',
         submittedAt: null,
+        submittedByUserId: null,
         approvedAt: null,
         rejectionReason: null,
         withdrawnAt: null,
+        isGuest: false,
       },
     ]);
 
@@ -159,7 +162,7 @@ describe('gameBundle', () => {
     await bundleModule().fetchGameBundle(GAME);
 
     expect(String(stepArgs(players, 'select')[0]![0])).toContain(
-      'users!game_players_user_id_fkey(name, nickname)',
+      'users!game_players_user_id_fkey(name, nickname, is_guest)',
     );
   });
 

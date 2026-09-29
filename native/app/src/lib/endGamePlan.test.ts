@@ -34,6 +34,8 @@ function player(
     approvedAt: null,
     rejectionReason: null,
     withdrawnAt: null,
+    submittedByUserId: null,
+    isGuest: false,
     ...overrides,
   };
 }

@@ -32,8 +32,11 @@ import { getCacheEntry, getDb, putCacheEntry } from './db';
  * v4 (N6b, #1855): la til `acceptedAt` på spiller-radene. En v3-oppføring
  * mangler feltet, og `undefined` er falsy — hele rosteret ville stått som
  * «Ikke bekreftet» i arrangør-visningen, også spillere som har sagt ja.
+ * v5 (#2200): la til `isGuest` og `submittedByUserId` på spiller-radene. En
+ * v4-oppføring mangler dem: en gjest ville stått som vanlig spiller, og
+ * scorekortet ville ikke tilbudt å levere kortet hens.
  */
-export const BUNDLE_PAYLOAD_VERSION = 4;
+export const BUNDLE_PAYLOAD_VERSION = 5;
 
 /** Spillet selv. Feltene er nøyaktig de skjermene gater og viser på. */
 export interface BundleGame {
@@ -103,9 +106,20 @@ export interface BundlePlayer {
    */
   acceptedAt: string | null;
   submittedAt: string | null;
+  /**
+   * Hvem som leverte kortet (#2200, 0191), eller null. En trigger fyller den;
+   * er det en annen enn spilleren selv, står det «Levert av …» i rosteret, og
+   * den som leverte kan ikke også godkjenne kortet.
+   */
+  submittedByUserId: string | null;
   approvedAt: string | null;
   rejectionReason: string | null;
   withdrawnAt: string | null;
+  /**
+   * `users.is_guest` (#1009). En gjest kan ikke logge inn og levere selv, så
+   * kortet hens kan leveres av hvem som helst i flighten når det er fullt.
+   */
+  isGuest: boolean;
 }
 
 export interface BundleHole {
@@ -173,17 +187,19 @@ interface PlayerRow {
   tee_gender: string;
   accepted_at: string | null;
   submitted_at: string | null;
+  submitted_by_user_id: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
   withdrawn_at: string | null;
-  users: { name: string | null; nickname: string | null } | null;
+  users: { name: string | null; nickname: string | null; is_guest: boolean | null } | null;
 }
 
 // `users!game_players_user_id_fkey`: game_players har TRE fremmednøkler mot
-// users (user_id, approved_by_user_id, withdrawn_by_user_id), så et bart
-// `users(...)` er tvetydig og feiler. Samme hint som webben bruker.
+// users (user_id, approved_by_user_id, withdrawn_by_user_id, og fra 0191
+// submitted_by_user_id), så et bart `users(...)` er tvetydig og feiler. Samme
+// hint som webben bruker.
 const PLAYER_SELECT =
-  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, approved_at, rejection_reason, withdrawn_at, users!game_players_user_id_fkey(name, nickname)';
+  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 // Bane, tee og hullene rir med på games-raden som embeds. Det gjør hele
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
@@ -227,9 +243,11 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       teeGender: row.tee_gender,
       acceptedAt: row.accepted_at,
       submittedAt: row.submitted_at,
+      submittedByUserId: row.submitted_by_user_id ?? null,
       approvedAt: row.approved_at,
       rejectionReason: row.rejection_reason,
       withdrawnAt: row.withdrawn_at,
+      isGuest: row.users?.is_guest === true,
     })),
     courseName: game.courses?.name ?? null,
     teeBoxName: game.tee_boxes?.name ?? null,
