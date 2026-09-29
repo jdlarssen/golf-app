@@ -208,12 +208,15 @@ i profil-rommet, og bare i staging-bygg.
   (putte-skriv sender IKKE slag med — mergen bevarer det) og drainer etter hver
   tasting, som webben. Bundelen hentes på nytt ved hvert hullbytte og når appen
   kommer i forgrunnen (#2219), så hullet låses når runden er avsluttet.
-- **Scorecard** — webbens Layout A (Hull/Par/SI/Slag/Netto + totaler). I en
-  blind runde som pågår, skjules Netto-kolonnen og netto-totalene (#2219), som
-  på webben. «Lever»-knappen speiler webbens to porter: drain + kø-vakt (delt
-  `isActiveForGame`), og bekreftelses-Alert ved manglende hull. Knappen er
-  sperret til køen er lest første gang (#2219).
-- **Approve** — lista fra delt `pendingApprovalsFor`; godkjenn/avvis går via
+- **Scorecard** — det klassiske kortet (#2262): UT og INN med Hull/Par/Slag og
+  Poeng (stableford-familien) eller Netto, summer under, og et stempel etter
+  levering (delt `lib/scorecard/scorecardGrid.ts` og `scorecardStamp.ts`). I en
+  blind runde som pågår, står bare Slag og Brutto (#2219, #2262). «Lever»-
+  knappen speiler webbens to porter: drain + kø-vakt (delt `isActiveForGame`),
+  og bekreftelses-Alert ved manglende hull. Knappen er sperret til køen er lest
+  første gang (#2219).
+- **Approve** — lista fra delt `pendingApprovalsFor`, med hvert kort som det
+  samme klassiske kortet (#2262); godkjenn/avvis går via
   `POST /api/games/{id}/scorecards/{userId}` (#2215), som varsler spilleren.
 
 ### Format-gaten
