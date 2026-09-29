@@ -45,7 +45,10 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 //
 // **Klienten sendes inn, den hentes ikke.** Webben beholder sine RLS-skrivinger
 // (minst mulig blast-radius på en flate som er i produksjon); ruta sender
-// `getAdminClient()`. Ett unntak står igjen med et eksplisitt `getAdminClient()`
+// `getAdminClient()`. #2358: hva kalleren SER, avgjøres av en egen `viewer`-
+// klient — webbens RLS-klient, og på ruta en klient med kallerens eget token
+// (`callerScopedClient`). Da er RLS regelens ene hjem på begge stiene. Før
+// dette sjekket ruta synligheten med tjenesteklienten og så alle kontoer. Ett unntak står igjen med et eksplisitt `getAdminClient()`
 // i koden: frist-forlengelsen på en åpen invitasjon, fordi den eneste
 // UPDATE-policyen på `invitations` er «self mark accepted» — en ikke-admin
 // arrangørs bruker-klient ville truffet 0 rader (AGENTS trap 2/3).
@@ -130,6 +133,12 @@ export function normalizeInviteEmail(raw: string): string {
  */
 export async function inviteEmailToGameCore(params: {
   client: SupabaseClient<Database>;
+  /**
+   * Klienten med kallerens egen synlighet under RLS (#2358). Webben sender sin
+   * RLS-klient (samme som `client`), ruta en klient med kallerens token. Aldri
+   * tjenesteklienten: da ser kalleren alle kontoer.
+   */
+  viewer: SupabaseClient<Database>;
   gameId: string;
   inviterUserId: string;
   /** Visningsnavnet i mailen. `null` faller til rolle-fallbacken. */
@@ -137,7 +146,7 @@ export async function inviteEmailToGameCore(params: {
   isAdmin: boolean;
   rawEmail: string;
 }): Promise<InviteOutcome> {
-  const { client, gameId, inviterUserId, inviterName, isAdmin } = params;
+  const { client, viewer, gameId, inviterUserId, inviterName, isAdmin } = params;
 
   const email = normalizeInviteEmail(params.rawEmail);
   if (!email || !email.includes('@')) {
@@ -163,7 +172,7 @@ export async function inviteEmailToGameCore(params: {
   }
 
   // Eksisterende bruker? Da går vi rett til picker-add-stien.
-  const existingUser = await findVisibleUserByEmail(client, email);
+  const existingUser = await findVisibleUserByEmail(viewer, email);
 
   if (existingUser) {
     return addExistingUser({
@@ -246,13 +255,13 @@ export async function addExistingPlayerToGameCore(params: {
  * Kontoen bak adressen, men bare hvis kalleren alt ser den (#2207).
  *
  * `users.email` er ikke lesbar for innloggede, så oppslaget på adressen går
- * via admin-klienten. Synligheten sjekkes så med kallerens egen klient: en
- * konto kalleren ikke ser, behandles som ukjent adresse (e-post-grenen),
- * akkurat som da oppslaget gikk under RLS. Web (brukerklient) og API-ruta
- * (admin-klient) får dermed samme utfall som før.
+ * via admin-klienten. Synligheten sjekkes så med `viewer`, kallerens egen
+ * klient under RLS: en konto kalleren ikke ser, behandles som ukjent adresse
+ * (e-post-grenen). #2358: ruta sender nå en klient med kallerens token her, så
+ * nettsiden og appen gir samme utfall for en registrert ikke-venn.
  */
 async function findVisibleUserByEmail(
-  client: SupabaseClient<Database>,
+  viewer: SupabaseClient<Database>,
   email: string,
 ): Promise<{ id: string } | null> {
   const { data: found } = await getAdminClient()
@@ -262,7 +271,7 @@ async function findVisibleUserByEmail(
     .maybeSingle<{ id: string }>();
   if (!found) return null;
 
-  const { data: visible } = await client
+  const { data: visible } = await viewer
     .from('users')
     .select('id')
     .eq('id', found.id)
@@ -387,13 +396,23 @@ async function inviteUnknownEmail(args: {
   const { client, gameId, inviterUserId, inviterName, isAdmin, email, game } = args;
   const invitedByName = inviterName?.trim() || (isAdmin ? 'Admin' : 'En arrangør');
 
-  const { data: existingInvite } = await client
+  // #2358: en ikke-admin gjenbruker bare invitasjoner hen selv har sendt —
+  // det RLS gir webben («invitations creator game-invite select», 0092). Ruta
+  // leser med tjenesteklienten, så filteret står her og ikke i policyen alene:
+  // uten det forlenget appen en kapteins eller en admins invitasjon og sendte
+  // den på nytt i arrangørens navn. En admin ser alle, som under RLS.
+  let openInvites = client
     .from('invitations')
     .select('id, token, expires_at')
     .filter('email', 'imatch', emailMatchPattern(email))
     .eq('game_id', gameId)
-    .is('accepted_at', null)
-    .maybeSingle<{ id: string; token: string; expires_at: string }>();
+    .is('accepted_at', null);
+  if (!isAdmin) openInvites = openInvites.eq('invited_by', inviterUserId);
+  const { data: existingInvite } = await openInvites.maybeSingle<{
+    id: string;
+    token: string;
+    expires_at: string;
+  }>();
 
   if (existingInvite) {
     // «Send på nytt» means «give this person a fresh chance» (#1381/#1613):

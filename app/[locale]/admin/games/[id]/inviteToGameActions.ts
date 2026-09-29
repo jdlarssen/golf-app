@@ -103,6 +103,8 @@ export async function inviteEmailToGame(
   const rawEmail = String(formData.get('email') ?? '');
   const result = await inviteEmailToGameCore({
     client: supabase,
+    // RLS-klienten er også den som avgjør hvilke kontoer arrangøren ser.
+    viewer: supabase,
     gameId,
     inviterUserId: ctx.userId,
     inviterName: ctx.name,

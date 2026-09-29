@@ -92,6 +92,8 @@ async function invite(
   const client = buildSupabaseMock(queue, {}, mockOpts);
   const result = await inviteEmailToGameCore({
     client: client as unknown as SupabaseClient<Database>,
+    // Webbens form: RLS-klienten er både skriver og viewer.
+    viewer: client as unknown as SupabaseClient<Database>,
     gameId: GAME_ID,
     inviterUserId: INVITER_ID,
     inviterName: 'Kari',
@@ -205,6 +207,27 @@ describe('adressen tilhører en registrert bruker', () => {
     expect(lookup).toMatchObject({ table: 'users', args: ['email', 'imatch', '^ny@example\\.com$'] });
     expect(client.__fromCalls.some((c) => c.method === 'filter' || c.method === 'ilike')).toBe(false);
     expect(client.__fromCalls).toContainEqual({ table: 'users', method: 'eq', args: ['id', RECIPIENT_ID] });
+  });
+
+  it('synligheten sjekkes med viewer-klienten, ikke med skriveklienten (#2358)', async () => {
+    // App-ruta skriver med tjenesteklienten, men hva arrangøren SER skal
+    // avgjøres av RLS, slik det gjør på nettsiden. Ellers ble en registrert
+    // ikke-venn avvist i appen, mens nettsiden sendte en e-postinvitasjon.
+    const viewer = buildSupabaseMock([{ data: null, error: null }]);
+    const { result, client } = await invite(
+      [
+        gameRow(),
+        { data: null, error: null }, // ingen åpen invitasjon
+        { data: { id: 'invitation-1' }, error: null },
+      ],
+      { viewer: viewer as unknown as SupabaseClient<Database> },
+    );
+
+    expect(viewer.__fromCalls).toContainEqual({ table: 'users', method: 'eq', args: ['id', RECIPIENT_ID] });
+    expect(client.__fromCalls.some((c) => c.table === 'users')).toBe(false);
+    // Ikke synlig for kalleren → e-post-grenen, som på nettsiden.
+    expect(result).toEqual({ ok: true, kind: 'sent', email: 'ny@example.com' });
+    expect(inviteEligibleIdsMock).not.toHaveBeenCalled();
   });
 
   it('en konto kalleren ikke ser, behandles som ukjent adresse (e-post-grenen)', async () => {
@@ -397,6 +420,35 @@ describe('åpen invitasjon for samme adresse og runde', () => {
     expect(adminSupabaseMock.from.mock.invocationCallOrder.at(-1)).toBeLessThan(
       sendInviteNotificationMock.mock.invocationCallOrder[0]!,
     );
+  });
+
+  it('en ikke-admin finner bare sine egne åpne invitasjoner (#2358)', async () => {
+    // RLS gir arrangøren bare radene hen selv har sendt («invitations creator
+    // game-invite select», 0092). Filteret står i kjernen, så appen — som
+    // leser med tjenesteklienten — ikke forlenger en kapteins eller en admins
+    // invitasjon.
+    adminSupabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { client } = await invite([gameRow(), { data: null, error: null }, { data: { id: 'invitation-2' }, error: null }]);
+
+    expect(client.__fromCalls).toContainEqual({
+      table: 'invitations',
+      method: 'eq',
+      args: ['invited_by', INVITER_ID],
+    });
+  });
+
+  it('en admin finner alle åpne invitasjoner, som under RLS', async () => {
+    adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null },
+      { data: [{ id: 'invitation-1' }], error: null },
+    ]);
+
+    const { client } = await invite([gameRow(), openInvite], { isAdmin: true });
+
+    expect(
+      client.__fromCalls.some((c) => c.method === 'eq' && c.args[0] === 'invited_by'),
+    ).toBe(false);
   });
 
   it('0 rader på frist-forlengelsen → invite_failed, ingen mail', async () => {

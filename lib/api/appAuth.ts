@@ -1,5 +1,7 @@
 import 'server-only';
 import type { NextRequest } from 'next/server';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
 import {
   canApproveScorecardFor,
@@ -35,14 +37,47 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 export async function authenticatedUserId(
   request: NextRequest,
 ): Promise<string | null> {
-  const header = request.headers.get('authorization');
-  if (!header?.startsWith('Bearer ')) return null;
-  const token = header.slice('Bearer '.length).trim();
+  const token = bearerToken(request);
   if (!token) return null;
 
   const { data, error } = await getAdminClient().auth.getUser(token);
   if (error || !data.user) return null;
   return data.user.id;
+}
+
+/** Tokenet fra `Authorization: Bearer <token>`, eller `null`. */
+function bearerToken(request: NextRequest): string | null {
+  const header = request.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) return null;
+  const token = header.slice('Bearer '.length).trim();
+  return token || null;
+}
+
+/**
+ * En Supabase-klient som leser med KALLERENS rettigheter under RLS (#2358).
+ *
+ * For de få oppslagene der svaret skal være det kalleren selv ser, slik
+ * webbens RLS-klient gir det — ikke det tjenesteklienten ser. Første kunde:
+ * synlighetssjekken i `inviteEmailToGameCore`, der tjenesteklienten så alle
+ * kontoer og appen derfor avviste en registrert ikke-venn som nettsiden sendte
+ * en e-postinvitasjon til.
+ *
+ * Anon-nøkkelen + kallerens token i `Authorization`, Supabase sitt mønster for
+ * en klient på vegne av en bruker; supabase-js overstyrer ikke en header som
+ * alt er satt. Kalles bare etter `authenticatedUserId`, så tokenet er validert.
+ * `null` uten token.
+ */
+export function callerScopedClient(
+  request: NextRequest,
+): SupabaseClient<Database> | null {
+  const token = bearerToken(request);
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!token || !url || !anonKey) return null;
+  return createClient<Database>(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
 }
 
 /**

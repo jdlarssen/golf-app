@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { authenticatedUserId, gameOrganiserAccess } from '@/lib/api/appAuth';
+import {
+  authenticatedUserId,
+  callerScopedClient,
+  gameOrganiserAccess,
+} from '@/lib/api/appAuth';
 import { consumeAdminInviteRateLimit, getClientIp } from '@/lib/admin/rateLimit';
 import { getAdminClient } from '@/lib/supabase/admin';
 import {
@@ -26,6 +30,9 @@ import {
 // (`auth.uid()` er NULL under service-role), og `isAdmin` + eligibility-sjekken
 // inne i kjernen er den ENESTE håndhevelsen av venne-/klubb-scopingen på denne
 // stien. Derfor leses `is_admin` for den EKTE kalleren under, aldri fra kroppen.
+// #2358: hvilke kontoer arrangøren SER, leses likevel med arrangørens eget
+// token (`callerScopedClient`), så appen og nettsiden svarer likt for en
+// registrert ikke-venn: e-postinvitasjon, ikke `invite_not_allowed`.
 //
 // **Rate-limit selv om webbens spill-invitasjon ikke har en.** Et HTTP-endepunkt
 // er eksponert på en annen måte enn en server-action bak et skjema. Bøttene
@@ -175,9 +182,16 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
     }
 
+    // #2358: hvilke kontoer arrangøren ser, avgjøres av RLS med arrangørens
+    // eget token — samme svar som webbens RLS-klient gir. Tokenet er validert
+    // i porten; mangler klienten (ingen anon-nøkkel), er det en 500.
+    const viewer = callerScopedClient(request);
+    if (!viewer) throw new Error('caller-scoped client unavailable');
+
     const profile = await inviterProfile(gated.userId);
     const result = await inviteEmailToGameCore({
       client: getAdminClient(),
+      viewer,
       gameId: gated.gameId,
       inviterUserId: gated.userId,
       inviterName: profile.name,
