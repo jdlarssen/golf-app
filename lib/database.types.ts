@@ -1199,6 +1199,35 @@ export type Database = {
           },
         ]
       }
+      handicap_history: {
+        Row: {
+          hcp_index: number
+          id: number
+          recorded_at: string
+          user_id: string
+        }
+        Insert: {
+          hcp_index: number
+          id?: never
+          recorded_at?: string
+          user_id: string
+        }
+        Update: {
+          hcp_index?: number
+          id?: never
+          recorded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handicap_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       idea_submissions: {
         Row: {
           built_at: string | null
