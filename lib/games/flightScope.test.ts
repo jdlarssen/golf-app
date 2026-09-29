@@ -527,7 +527,8 @@ describe('organizerApprovalRow (#2213)', () => {
       'own_card_no_peer',
     ],
   ])('%s', (_, players, viewer, card, expected) => {
-    expect(organizerApprovalRow(players, stableford, viewer, card)).toBe(expected);
+    const rows = players.map((row) => ({ ...row, submitted_by_user_id: null }));
+    expect(organizerApprovalRow(rows, stableford, viewer, card)).toBe(expected);
   });
 
   it('#2200: eget kort levert av eneste medspiller: ingen kan godkjenne', () => {
