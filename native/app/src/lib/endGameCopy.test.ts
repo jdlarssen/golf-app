@@ -283,11 +283,11 @@ describe('purre-malene', () => {
     // #1933: én setning per grunn, bare de som gjelder, entall for én gjest.
     expect(unremindableNotes({ unfinished: 2, guests: 1, splitDay: 3 })).toEqual([
       '2 av dem har ikke ført alle hullene ennå. Purring hjelper først da.',
-      '1 av dem er gjest og leverer via markøren.',
+      '1 av dem er gjest. Den som fører kortet, leverer det.',
       '3 av dem leverer hele runden på Bak 9 og blir purret der.',
     ]);
     expect(unremindableNotes({ unfinished: 0, guests: 2, splitDay: 0 })).toEqual([
-      '2 av dem er gjester og leverer via markøren.',
+      '2 av dem er gjester. Den som fører kortene, leverer dem.',
     ]);
     expect(unremindableNotes({ unfinished: 0, guests: 0, splitDay: 0 })).toEqual([]);
     expect(lastRemindedNote('14:05')).toBe('Sist purret kl. 14:05');

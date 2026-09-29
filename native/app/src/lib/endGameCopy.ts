@@ -162,7 +162,6 @@ export const END_GAME_TEXT = {
   notActive: 'Denne runden er ikke i gang, så det er ingenting å avslutte.',
   alreadyFinished: 'Runden er alt avsluttet.',
   deliveryHeading: 'Leveringer',
-  submitted: 'Levert',
   notSubmitted: 'Ikke levert',
   approved: 'Godkjent',
   awaitingApproval: 'Venter på godkjenning',
@@ -248,8 +247,9 @@ export function ownRowHint(withdrawalSupported: boolean): string {
 const REMIND_LABEL = 'Purr på dem som mangler ({n})';
 const UNFINISHED_NOTE =
   '{m} av dem har ikke ført alle hullene ennå. Purring hjelper først da.';
-const GUEST_NOTE = '1 av dem er gjest og leverer via markøren.';
-const GUESTS_NOTE = '{m} av dem er gjester og leverer via markøren.';
+// #2200: den som fører en gjests kort, leverer det selv fra scorekortet.
+const GUEST_NOTE = '1 av dem er gjest. Den som fører kortet, leverer det.';
+const GUESTS_NOTE = '{m} av dem er gjester. Den som fører kortene, leverer dem.';
 const SPLIT_DAY_NOTE = '{m} av dem leverer hele runden på Bak 9 og blir purret der.';
 const LAST_REMINDED_NOTE = 'Sist purret kl. {clock}';
 const APPROVE_CONFIRM_BODY =

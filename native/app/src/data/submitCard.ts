@@ -1,5 +1,5 @@
 // native/app/src/data/submitCard.ts
-// Native #1918, #2215: «Lever» fra scorekortet — levering, solo og lag.
+// Native #1918, #2215, #2200: «Lever» fra scorekortet — solo, lag og flighten.
 //
 // **Hvorfor en rute og ikke en skriving.** I formatene som kollapser til ett
 // lagkort markerer leveringen HELE lagets aktive, uleverte rader, og det krever
@@ -16,10 +16,16 @@
 // `submit-team`, fordi installerte bygg kaller den. Kjernen avgjør selv om
 // kortet er et lagkort eller et solo-kort. Denne fila er den andre halvdelen av
 // kontrakten; endres den ene, endres den andre i samme PR:
-//   POST /api/games/{id}/submit-team
-//     200 { submitted: number, alreadySubmitted: boolean }
-//     401 unauthorized · 403 forbidden · 404 not_found · 409 not_active
-//     422 withdrawn · 500 submit_failed
+//   POST /api/games/{id}/submit-team   [{ alsoFor: string[] }]  (0–20 uuid-er)
+//     200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
+//     400 bad_request · 401 unauthorized · 403 forbidden · 404 not_found
+//     409 not_active · 422 withdrawn · 500 submit_failed
+//
+// **Makkerne i samme kall (#2200).** Den som fører for flighten, leverer
+// makkernes kort med det samme trykket: id-ene står i `alsoFor`. Lista er et
+// ønske som bare kan snevre inn. Serveren spør leveringsregelen selv
+// (`lib/games/flightDelivery.ts`) og leverer snittet. Uten makkere sendes ingen
+// kropp, slik installerte bygg alltid har gjort.
 //
 // Vakt-rekkefølgen (nett → adresse → token → kall) og den trygge kropp-lesingen
 // er `webApi.ts` sin; her ligger bare oversettelsen fra status til kode og
@@ -42,6 +48,7 @@ import { callWebRoute, type WebApiFailure } from './webApi';
  */
 export type SubmitCardFailure =
   | WebApiFailure
+  | 'bad_request'
   | 'forbidden'
   | 'not_found'
   | 'not_active'
@@ -77,6 +84,7 @@ function submitCardPath(gameId: string): string {
  * statusene betyr, og å stole på begge ville gitt to sannheter om samme svar.
  */
 function failureForStatus(status: number): SubmitCardFailure {
+  if (status === 400) return 'bad_request';
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'not_found';
@@ -86,7 +94,8 @@ function failureForStatus(status: number): SubmitCardFailure {
 }
 
 /**
- * Lever kortet: spillerens eget, eller hele lagets i et lagformat.
+ * Lever kortet: spillerens eget, eller hele lagets i et lagformat — og kortene
+ * til makkerne i `alsoFor`, dem spilleren har ført for (#2200).
  *
  * **200 ER kvitteringen.** Varslene på serversiden er best-effort
  * (`Promise.allSettled`), så ruta svarer 200 selv om en mail ikke gikk — og
@@ -99,8 +108,15 @@ function failureForStatus(status: number): SubmitCardFailure {
  * Et lagkort låses for alle på laget, ikke bare for den som trykket. Advarselen
  * om det bor på skjermen, foran trykket; her er det for sent å spørre.
  */
-export async function submitCard(gameId: string): Promise<SubmitCardResult> {
-  const call = await callWebRoute(submitCardPath(gameId), 'POST');
+export async function submitCard(
+  gameId: string,
+  alsoFor: readonly string[] = [],
+): Promise<SubmitCardResult> {
+  const call = await callWebRoute(
+    submitCardPath(gameId),
+    'POST',
+    alsoFor.length > 0 ? { alsoFor: [...alsoFor] } : undefined,
+  );
   if (!call.ok) return call;
 
   if (call.status === 200) {

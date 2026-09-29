@@ -1,5 +1,5 @@
 // native/app/src/data/submitCard.test.ts
-// Native #1918, #2215: leveringen sett fra appen, solo og lag.
+// Native #1918, #2215, #2200: leveringen sett fra appen, solo, lag og flighten.
 //
 // Suiten har ett tyngdepunkt: **at et svar aldri blir til noe annet enn det det
 // var.** Leveringen låser kortet (for HELE laget i et lagformat) og sender varsel
@@ -79,6 +79,31 @@ describe('levering', () => {
     expect(requestInit().body).toBeUndefined();
   });
 
+  it('sender makkerne i `alsoFor` på samme sti, ikke på en egen (#2200)', async () => {
+    // Én vei inn: den som fører, leverer makkernes kort med det samme kallet.
+    // Kroppen bærer bare id-ene, og serveren snevrer dem inn med sin egen regel.
+    respondWith(200, { submitted: 3, alreadySubmitted: false, alsoDelivered: 2 });
+
+    expect(await submitCard().submitCard(GAME_ID, ['mate-a', 'mate-b'])).toEqual({
+      ok: true,
+      alreadySubmitted: false,
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls[0][0]).toBe(SUBMIT_URL);
+    const init = requestInit();
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect(JSON.parse(String(init.body))).toEqual({ alsoFor: ['mate-a', 'mate-b'] });
+  });
+
+  it('sender ingen kropp når lista er tom', async () => {
+    // Ruta leser «ingen kropp» som egen levering. Å sende `{ alsoFor: [] }`
+    // ville vært det samme, men da hadde to former betydd én ting.
+    respondWith(200, { submitted: 1, alreadySubmitted: false, alsoDelivered: 0 });
+
+    await submitCard().submitCard(GAME_ID, []);
+    expect(requestInit().body).toBeUndefined();
+  });
+
   it('er levert selv om svaret ikke sa hvilken vei det gikk', async () => {
     // 200 er kvitteringen; `alreadySubmitted` er informasjon. Mangler feltet,
     // faller det til `false` — å kalle en fullført levering mislykket fordi et
@@ -103,6 +128,7 @@ describe('levering', () => {
   });
 
   it.each([
+    [400, 'bad_request'],
     [401, 'unauthorized'],
     [403, 'forbidden'],
     [404, 'not_found'],

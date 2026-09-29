@@ -2,8 +2,10 @@
 // Native #1918: den ene render-testen (Type C) for scorekortet.
 //
 // Kortets tall er dekket av `lib/scorecardRows.test.ts`, lag-oppslaget av
-// `lib/teamPlay.test.ts` og rute-kallet (solo og lag, #2215) av
-// `data/submitCard.test.ts`. Ingen av dem gjentas her.
+// `lib/teamPlay.test.ts` og rute-kallet (solo og lag, #2215, og makker-kortene
+// i `alsoFor`, #2200) av `data/submitCard.test.ts`. Hvem som kan leveres for
+// flighten, og hva blokken over knappen sier, er `lib/roster.test.ts` sitt.
+// Ingen av dem gjentas her.
 //
 // Det som blir igjen er to koblinger:
 //
@@ -12,7 +14,8 @@
 //     på nettsiden ennå»), fordi lag-leveringen markerer alle medlemmenes rader
 //     med service-role — en evne appen ikke har. Nå gjør ruta det på appens
 //     vegne, og testen låser at det er lagets knapp som står der: ikke
-//     setningen, ikke lenka, og ikke solo-knappen.
+//     setningen, ikke lenka, ikke solo-knappen, og ikke flight-knappen
+//     (#2200).
 //  2. **Et kort som kan leveres, kan også rettes (#2220).** «Rediger hullene»
 //     tar spilleren til hull 1, som nettsidens «← Rediger». Uten den var et
 //     avvist, fullt kort en blindvei: scorekortet var eneste stopp, og radene
@@ -43,9 +46,11 @@ const PLAYER_BASE = {
   teeGender: 'mens',
   acceptedAt: null,
   submittedAt: null,
+  submittedByUserId: null,
   approvedAt: null,
   rejectionReason: null,
   withdrawnAt: null,
+  isGuest: false,
 };
 
 // Greensome: 2v2 alternate shot — hele laget deler kapteinens rad hele veien
@@ -140,8 +145,10 @@ describe('Scorecard', () => {
     expect(screen.queryByTestId('team-submit-link')).toBeNull();
     expect(screen.queryByTestId('team-submit-gate')).toBeNull();
     // Og det er LAGETS knapp som står der, ikke solo-knappen: leveringen går
-    // gjennom ruta, ikke gjennom spillerens egen rad.
+    // gjennom ruta, ikke gjennom spillerens egen rad. Heller ikke flight-
+    // knappen (#2200): laget med én ball leveres som ett lag.
     expect(screen.queryByTestId('submit-scorecard')).toBeNull();
+    expect(screen.queryByTestId('submit-flight')).toBeNull();
 
     // #2220: kortet kan rettes før det leveres. Knappen går til hull 1, og
     // hull-stripen tar spilleren videre derfra.

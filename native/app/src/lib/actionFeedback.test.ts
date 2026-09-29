@@ -59,6 +59,7 @@ const SUBMIT_REASON_MAP = {
   'no-web-base-url': true,
   unauthorized: true,
   network: true,
+  bad_request: true,
   forbidden: true,
   not_found: true,
   not_active: true,

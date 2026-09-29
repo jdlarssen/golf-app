@@ -1362,6 +1362,11 @@ ved et uhell. Begge rutene har en test på nettopp det, og det er verifisert liv
 staging: en POST med en annen brukers id OG et annet spills id i kroppen purret spillet
 i stien, og rørte ikke det i kroppen.
 
+Unntaket er `alsoFor` i `submit-team` (#2200): makkernes id-er, som bare kan snevre
+inn. Kallerens id kommer fortsatt fra tokenet og spill-id-en fra stien, og serveren
+leverer bare de id-ene leveringsregelen selv godtar. Se «Makkerne i samme levering»
+under wire-kontrakten for levering.
+
 ### Wire-kontrakten for purring
 
 ```
@@ -1382,9 +1387,10 @@ du til et kallsted, er gaten din del av sikkerheten; det finnes ingen RLS bak de
 ### Wire-kontrakten for lagkort-levering (#1918)
 
 ```
-POST /api/games/{id}/submit-team   200 { submitted: number, alreadySubmitted: boolean }
-     401 unauthorized · 403 forbidden · 404 not_found · 409 not_active
-     422 withdrawn · 500 submit_failed
+POST /api/games/{id}/submit-team   [{ alsoFor: string[] }]   (valgfri, 0–20 uuid-er)
+     200 { submitted: number, alreadySubmitted: boolean, alsoDelivered: number }
+     400 bad_request · 401 unauthorized · 403 forbidden · 404 not_found
+     409 not_active · 422 withdrawn · 500 submit_failed
 ```
 
 Frosset, og speilet i `src/data/submitCard.ts`. Fila het `submitTeam.ts` til #2215, da
@@ -1406,6 +1412,32 @@ arrangør-sjekk ville stengt ute nettopp dem ruta er for. Autorisasjonen er at k
 der `team_number` = lagnummeret på innsenderens EGEN rad. Er du ikke deltaker, finnes det
 ingen rad å utlede et lag fra, og svaret er 403. Service-role betyr at denne porten ER
 hele autorisasjonen — det finnes ingen RLS bak den.
+
+#### Makkerne i samme levering (#2200)
+
+Den som fører for flighten, leverer makkernes kort med det samme kallet: id-ene står i
+`alsoFor`. Uten kropp, eller med en tom liste, er det en vanlig egen levering, slik
+installerte bygg alltid har kalt ruta. En kropp som er der, men feilformet, gir `400
+bad_request` før noe leses. Appen leser KUN statusen, så den har sin egen kode.
+
+`alreadySubmitted` er sant når kallerens eget kort alt var levert (knappen «Lever for Ola
+✓» under et levert kort); `alsoDelivered` er hvor mange makker-kort som faktisk ble
+levert. Begge styrer ordlyd, ikke suksess. Hver makker får de samme varslene som en
+vanlig levering.
+
+⚠️ **Dette er den ene ruta med id-er i kroppen, og de kan bare snevre inn.** `alsoFor` er
+makkerne scorekortet fant med den delte regelen (`lib/games/flightDelivery.ts`,
+`flightDeliveryCandidates`). Kjernen spør den samme regelen igjen og leverer snittet; en id
+utenfor (annen flight, annet spill, kort som ikke er fullt) ignoreres uten feil. Kroppen
+kan altså aldri få serveren til å levere et kort regelen ikke ville levert. Hvem som
+leverer, kommer fortsatt bare fra tokenet, og spillet bare fra stien, slik
+§«Adgangssjekken» krever.
+
+Regelen om hvem som kan leveres, bor i `lib/games/flightDelivery.ts`, og regelen om hva
+en levering ER, i `lib/games/submitScorecardCore.ts`. Ingen av dem speiles i appen.
+Appen kaller regelen over de lokale slagene (`flightDeliveryFor` i `src/lib/roster.ts`)
+bare for å vite om knappen skal stå der og hvem blokken over den skal nevne. Lag-formatene
+med én ball gir ingen makkere i regelen, og da sender appen ingen kropp.
 
 ### Wire-kontrakten for selv-frafall (#1917)
 
