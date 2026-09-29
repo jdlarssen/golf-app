@@ -119,7 +119,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
     () =>
       navigation.addListener('focus', () => {
         void fetchFriends().then((result) => {
-          if (result.ok) setFriendsWaiting(result.data.incoming.length);
+          // En feilet henting nullstiller tallet, så raden aldri står med et
+          // gammelt «2 vil bli venner med deg» etter at forespørslene er besvart.
+          setFriendsWaiting(result.ok ? result.data.incoming.length : 0);
         });
       }),
     [navigation],
