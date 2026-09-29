@@ -57,6 +57,7 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
     approvedAt: null,
     rejectionReason: null,
     withdrawnAt: null,
+    withdrawnByUserId: null,
     submittedByUserId: null,
     isGuest: false,
     ...overrides,
@@ -313,5 +314,67 @@ describe('GameHome', () => {
       await fireEvent.press(screen.getByTestId('primary-cta'));
       expect(navigation.navigate).toHaveBeenLastCalledWith('Scorecard', { gameId: 'game-1' });
     });
+  });
+});
+
+// #2358: angre-knappen står bare hos den som trakk seg selv. Et trekk
+// arrangøren satte, er arrangørens å angre — serveren nekter uansett.
+describe('GameHome — trukket-banneret (#2358)', () => {
+  it.each([
+    ['meg selv', 'me', true],
+    ['arrangøren', 'other', false],
+  ])('trukket av %s: angre-knappen vises=%s', async (_who, by, showsUndo) => {
+    const at = '2026-09-17T08:00:00.000Z';
+    mockState.bundle = {
+      game: {
+        id: 'game-1',
+        name: 'Testrunden',
+        status: 'active',
+        gameMode: 'stableford',
+        modeConfig: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        courseId: 'course-1',
+        teeBoxId: 'tee-1',
+        requirePeerApproval: false,
+        scheduledTeeOffAt: null,
+        holeSegment: 'full',
+        sourceGameId: null,
+        createdBy: 'other',
+        scoreVisibility: 'live',
+        tournamentId: null,
+        foursomesSide1TeeStarterUserId: null,
+        foursomesSide2TeeStarterUserId: null,
+        sideTournamentEnabled: false,
+        sideLdCount: 0,
+        sideCtpCount: 0,
+        sideDisabledCategories: [],
+      } as BundleGame,
+      players: [
+        player({ userId: 'me', acceptedAt: at, withdrawnAt: at, withdrawnByUserId: by }),
+        player({ userId: 'other', acceptedAt: at }),
+      ],
+      courseName: 'Testbanen',
+      teeBoxName: 'Gul',
+      holes: Array.from({ length: 18 }, (_, i) => ({
+        holeNumber: i + 1,
+        parMens: 4,
+        parLadies: 5,
+        parJuniors: 4,
+        strokeIndex: i + 1,
+      })),
+      fetchedAt: at,
+    };
+    mockState.scores = [];
+
+    await render(
+      <GameHome
+        {...({
+          route: { params: { gameId: 'game-1' } },
+          navigation: { navigate: jest.fn() },
+        } as unknown as ScreenProps<'GameHome'>)}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('withdrawn-banner')).toBeTruthy());
+    expect(screen.queryByTestId('withdrawn-undo') !== null).toBe(showsUndo);
   });
 });

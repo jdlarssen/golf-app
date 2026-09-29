@@ -116,6 +116,13 @@ export interface BundlePlayer {
   rejectionReason: string | null;
   withdrawnAt: string | null;
   /**
+   * Hvem som trakk spilleren (#2358), eller null. Bare den som trakk seg selv
+   * kan angre; et trekk arrangøren satte, er arrangørens å angre. Serveren
+   * nekter uansett (`withdrawn_by_other`), så trukket-banneret skjuler knappen
+   * i stedet for å tilby et trykk som alltid feiler.
+   */
+  withdrawnByUserId: string | null;
+  /**
    * `users.is_guest` (#1009). En gjest kan ikke logge inn og levere selv, så
    * kortet hens kan leveres av hvem som helst i flighten når det er fullt.
    */
@@ -191,6 +198,7 @@ interface PlayerRow {
   approved_at: string | null;
   rejection_reason: string | null;
   withdrawn_at: string | null;
+  withdrawn_by_user_id?: string | null;
   users: { name: string | null; nickname: string | null; is_guest: boolean | null } | null;
 }
 
@@ -199,7 +207,7 @@ interface PlayerRow {
 // submitted_by_user_id), så et bart `users(...)` er tvetydig og feiler. Samme
 // hint som webben bruker.
 const PLAYER_SELECT =
-  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, users!game_players_user_id_fkey(name, nickname, is_guest)';
+  'user_id, team_number, flight_number, course_handicap, tee_gender, accepted_at, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, users!game_players_user_id_fkey(name, nickname, is_guest)';
 
 // Bane, tee og hullene rir med på games-raden som embeds. Det gjør hele
 // metadata-hentingen til to spørringer i én Promise.all i stedet for en kjede
@@ -247,6 +255,7 @@ function toBundle(game: GameRow, players: PlayerRow[]): GameBundle {
       approvedAt: row.approved_at,
       rejectionReason: row.rejection_reason,
       withdrawnAt: row.withdrawn_at,
+      withdrawnByUserId: row.withdrawn_by_user_id ?? null,
       isGuest: row.users?.is_guest === true,
     })),
     courseName: game.courses?.name ?? null,

@@ -80,6 +80,7 @@ const PLAYER_ROWS = [
     approved_at: null,
     rejection_reason: null,
     withdrawn_at: null,
+    withdrawn_by_user_id: null,
     users: { name: 'Jørgen', nickname: 'Jøgge', is_guest: false },
   },
 ];
@@ -143,6 +144,8 @@ describe('gameBundle', () => {
         approvedAt: null,
         rejectionReason: null,
         withdrawnAt: null,
+        // #2358: trukket-banneret viser angre-knappen bare for eget trekk.
+        withdrawnByUserId: null,
         isGuest: false,
       },
     ]);

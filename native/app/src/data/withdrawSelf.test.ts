@@ -82,6 +82,28 @@ describe('selv-frafall', () => {
       expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: false, reason });
     });
 
+    it.each([
+      [{ error: 'captain_has_team' }, 'captain_has_team'],
+      [{ error: 'withdrawn_by_other' }, 'withdrawn_by_other'],
+      [{ error: 'noe_nytt' }, 'game_locked'],
+      [{}, 'game_locked'],
+    ])('409 leser error for å si hvorfor: %o → %s (#2358)', async (body, reason) => {
+      // Statusen er klassen, `error` detaljen. Ukjent detalj faller tilbake på
+      // klassen, så et nyere serversvar aldri blir en ANNEN feil enn 409 betyr.
+      respondWith(409, body);
+
+      expect(await api().withdrawSelf(GAME_ID)).toEqual({ ok: false, reason });
+    });
+
+    it('403 er not_registered uansett hva kroppen sier (#2358)', async () => {
+      respondWith(403, { error: 'withdrawn_by_other' });
+
+      expect(await api().withdrawSelf(GAME_ID)).toEqual({
+        ok: false,
+        reason: 'not_registered',
+      });
+    });
+
     it('holder på statusen selv når kroppen er uleselig', async () => {
       // En 409 fra et lag foran appen vår kan være HTML. Statusen er allerede
       // lest, så et uleselig svar skal ikke bli en ANNEN feil enn den sier.
@@ -163,6 +185,15 @@ describe('selv-frafall', () => {
       expect(await api().undoSelfWithdraw(GAME_ID)).toEqual({
         ok: false,
         reason,
+      });
+    });
+
+    it('angre på et trekk arrangøren satte → withdrawn_by_other (#2358)', async () => {
+      respondWith(409, { error: 'withdrawn_by_other' });
+
+      expect(await api().undoSelfWithdraw(GAME_ID)).toEqual({
+        ok: false,
+        reason: 'withdrawn_by_other',
       });
     });
 

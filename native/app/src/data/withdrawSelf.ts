@@ -17,7 +17,8 @@
 // halvdelen av den; endres den ene, endres den andre i samme PR:
 //   POST   200 { ok: true, kept: boolean }
 //   DELETE 200 { ok: true, kept: true }
-//   401 unauthorized · 403 not_registered · 404 not_found · 409 game_locked
+//   401 unauthorized · 403 not_registered · 404 not_found
+//   409 game_locked | withdrawn_by_other | captain_has_team
 //   500 withdraw_failed
 //
 // **Appen leser ikke `kept`.** Kallstedene henter bundelen på nytt etterpå, og
@@ -43,6 +44,10 @@ export type SelfWithdrawFailure =
   | 'not_registered'
   | 'not_found'
   | 'game_locked'
+  /** #2358: angre et trekk arrangøren satte. Det er arrangørens å angre. */
+  | 'withdrawn_by_other'
+  /** #2358: kaptein med et lag som har takket ja — bindet gis videre først. */
+  | 'captain_has_team'
   | 'withdraw_failed';
 
 export type SelfWithdrawResult =
@@ -62,14 +67,25 @@ function withdrawSelfPath(gameId: string): string {
  * Status → kode, oversatt ÉN gang. Alt over 200 ender her, slik at skjermen
  * aldri leser et statusnummer.
  *
- * Kroppens `error`-felt leses bevisst ikke: ruta sender de samme kodene som
- * statusene betyr, og å stole på begge ville gitt to sannheter om samme svar.
+ * Statusen er klassen. Bare 409 bærer flere koder (#2358): «ikke nå, ikke fra
+ * deg» — rundens tilstand, et trekk arrangøren satte, eller en kaptein med et
+ * lag som har takket ja. Der leses `error` for å si hvorfor; alt annet i
+ * kroppen, og en kropp som ikke lar seg lese, faller tilbake på `game_locked`.
+ * Et eldre bygg som bare leser statusen, viser dermed en tekst som fortsatt
+ * stemmer.
  */
-function failureForStatus(status: number): SelfWithdrawFailure {
+function failureForStatus(
+  status: number,
+  body: Record<string, unknown>,
+): SelfWithdrawFailure {
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'not_registered';
   if (status === 404) return 'not_found';
-  if (status === 409) return 'game_locked';
+  if (status === 409) {
+    if (body.error === 'withdrawn_by_other') return 'withdrawn_by_other';
+    if (body.error === 'captain_has_team') return 'captain_has_team';
+    return 'game_locked';
+  }
   return 'withdraw_failed';
 }
 
@@ -80,7 +96,7 @@ export async function withdrawSelf(gameId: string): Promise<SelfWithdrawResult> 
 
   if (call.status === 200) return { ok: true };
 
-  return { ok: false, reason: failureForStatus(call.status) };
+  return { ok: false, reason: failureForStatus(call.status, call.body) };
 }
 
 /** Angre frafallet. Samme sti, motsatt verb. */
@@ -92,5 +108,5 @@ export async function undoSelfWithdraw(
 
   if (call.status === 200) return { ok: true };
 
-  return { ok: false, reason: failureForStatus(call.status) };
+  return { ok: false, reason: failureForStatus(call.status, call.body) };
 }

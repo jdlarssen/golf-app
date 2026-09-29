@@ -123,6 +123,8 @@ const SELF_WITHDRAW_REASON_MAP = {
   not_registered: true,
   not_found: true,
   game_locked: true,
+  withdrawn_by_other: true,
+  captain_has_team: true,
   withdraw_failed: true,
 } as const satisfies Record<SelfWithdrawFailure, true>;
 
