@@ -57,6 +57,7 @@ insert into fk_coverage (tbl, col, handling) values
   ('game_registration_requests', 'user_id',                             'deleted'),
   ('group_join_requests',        'user_id',                             'deleted'),
   ('group_members',              'user_id',                             'deleted'),
+  ('handicap_history',           'user_id',                             'deleted'),
   ('idea_submissions',           'user_id',                             'deleted'),
   ('kavalkade_shares',           'user_id',                             'deleted'),
   ('kavalkades',                 'user_id',                             'deleted'),
