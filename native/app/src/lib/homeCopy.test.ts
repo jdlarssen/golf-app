@@ -109,7 +109,7 @@ describe('startbodens egne tekster', () => {
       holesPlayedLine(7, 18),
       approvalsLine(2),
       moreAvatars(1),
-      companionsLabel(['Marte', 'Ola'], true),
+      companionsLabel(['Marte', 'Ola'], true, 4),
     ]) {
       expect(isFinishedSentence(text)).toBe(true);
     }
@@ -151,8 +151,11 @@ describe('startbodens egne tekster', () => {
     expect(proximityText({ kind: 'today' })).toBe('I dag');
     expect(proximityText(null)).toBeNull();
     expect(moreAvatars(1)).toBe('+1 til');
-    expect(companionsLabel(['Marte', 'Ola', 'Kari'], true)).toBe('Flighten din: Marte, Ola, Kari');
-    expect(companionsLabel(['Marte'], false)).toBe('Med i runden: Marte');
+    expect(companionsLabel(['Marte', 'Ola', 'Kari'], true, 4)).toBe('Flighten din: Marte, Ola, Kari');
+    expect(companionsLabel(['Marte'], false, 4)).toBe('Med i runden: Marte');
+    expect(companionsLabel(['A', 'B', 'C', 'D', 'E', 'F'], false, 4)).toBe(
+      'Med i runden: A, B, C, D og 2 til',
+    );
     expect(ticketA11yLabel(['Klubbmesterskap', 'Lør 3. okt kl. 09:30', null, ''])).toBe(
       'Neste start. Klubbmesterskap. Lør 3. okt kl. 09:30',
     );

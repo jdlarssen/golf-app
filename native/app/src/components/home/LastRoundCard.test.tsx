@@ -25,7 +25,7 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
   );
   expect(screen.getByTestId('home-last-round-medal', HIDDEN)).toHaveTextContent('2');
   expect(screen.queryByTestId('home-last-round-gold', HIDDEN)).toBeNull();
-  await fireEvent.press(screen.getByLabelText('Høstpokalen. 2. plass av 8 · 88 brutto'));
+  await fireEvent.press(screen.getByLabelText('Høstpokalen. 2. plass av 8, 88 brutto'));
   expect(onPress).toHaveBeenCalled();
 
   // Seier: gull skive med 1.

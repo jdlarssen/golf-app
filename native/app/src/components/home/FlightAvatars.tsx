@@ -49,7 +49,11 @@ export function FlightAvatars({
     <View
       style={styles.row}
       accessible
-      accessibilityLabel={companionsLabel(companions.map(displayName), flightNumber != null)}
+      accessibilityLabel={companionsLabel(
+        companions.map(displayName),
+        flightNumber != null,
+        MAX_AVATARS,
+      )}
       testID={testID}
     >
       <View

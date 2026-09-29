@@ -50,7 +50,10 @@ export function HomeHeroCard({
 }: HomeHeroCardProps) {
   const { colors, ui } = useTheme();
   const ink = { color: colors.onStrong };
-  const playable = model !== null && model.gate === null;
+  // Samme dom som modellen: «åpne runden» betyr at appen ikke kan love mer enn
+  // spillets side (stengt spill, ikke i rosteret, eller en bundel som ennå ikke
+  // sier at runden er i gang). Da står verken ring, plass eller tavle-lenke.
+  const playable = model !== null && model.action?.kind !== 'open';
 
   return (
     <View testID="home-hero">
@@ -156,8 +159,16 @@ function Standing({ model }: { model: HeroModel }) {
   const { colors } = useTheme();
   const ink = { color: colors.onStrong };
   if (!model.standing || !model.unit) {
+    // Uten neste hull sier ringens etikett alt det samme, så linja skjules for
+    // skjermleseren i stedet for å bli lest to ganger.
+    const echoesRing = model.action?.kind !== 'hole';
     return (
-      <Text style={[styles.detail, ink]} testID="home-hero-played">
+      <Text
+        style={[styles.detail, ink]}
+        accessibilityElementsHidden={echoesRing}
+        importantForAccessibility={echoesRing ? 'no-hide-descendants' : 'auto'}
+        testID="home-hero-played"
+      >
         {holesPlayedLine(model.played, model.holeCount)}
       </Text>
     );
