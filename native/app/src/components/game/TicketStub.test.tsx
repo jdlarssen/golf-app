@@ -195,8 +195,20 @@ describe('«Legg til i kalender» (#2255 PR 2)', () => {
   });
 });
 
-it('brødteksten i stubben er 13 pt i muted, som i designet, i alle tilstander', async () => {
-  await renderStub({ kind: 'draft' });
-  const text = within(screen.getByTestId('ticket-draft')).getByText(/./);
-  expect(text).toHaveStyle({ fontSize: 13, color: PALETTES.light.muted });
+it.each<[string, TicketStubModel, string]>([
+  ['stengt format', { kind: 'gated', reason: 'mode' }, 'format-gate'],
+  ['ikke spiller', { kind: 'notPlayer' }, 'not-a-player'],
+  ['utkast', { kind: 'draft' }, 'ticket-draft'],
+  ['avsluttet uten plass', { kind: 'finished', result: null }, 'finished-banner'],
+  [
+    'levert',
+    { kind: 'active', state: 'submitted_pending_approval', played: 18, total: 18, nextHole: 1 },
+    'submitted-banner',
+  ],
+  ['trukket', { kind: 'withdrawn', bySelf: true }, 'withdrawn-banner'],
+])('%s: brødteksten er 13 pt i muted, som i designet', async (_case, stub, testID) => {
+  await renderStub(stub);
+  // Første tekst i blokken er setningen; knapper kommer etter den.
+  const [sentence] = within(screen.getByTestId(testID)).getAllByText(/./);
+  expect(sentence).toHaveStyle({ fontSize: 13, color: PALETTES.light.muted });
 });
