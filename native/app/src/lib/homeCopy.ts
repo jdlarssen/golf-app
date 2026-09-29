@@ -129,9 +129,19 @@ export function moreAvatars(count: number): string {
   return `+${count} til`;
 }
 
-/** Avatarradens etikett: hvem du spiller med. */
-export function companionsLabel(names: readonly string[], inFlight: boolean): string {
-  return `${inFlight ? 'Flighten din' : 'Med i runden'}: ${names.join(', ')}`;
+/**
+ * Avatarradens etikett: hvem du spiller med. Navnene til de `max` som har egen
+ * skive, og resten som «og N til», som på skjermen. I et klubbspill uten
+ * flighter ville en full liste vært over hundre navn å høre på.
+ */
+export function companionsLabel(
+  names: readonly string[],
+  inFlight: boolean,
+  max: number,
+): string {
+  const shown = names.slice(0, max).join(', ');
+  const rest = names.length - Math.min(names.length, max);
+  return `${inFlight ? 'Flighten din' : 'Med i runden'}: ${shown}${rest > 0 ? ` og ${rest} til` : ''}`;
 }
 
 /** Skjermleserteksten for hele billetten, som er ett trykkfelt. */

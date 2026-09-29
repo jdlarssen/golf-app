@@ -22,7 +22,7 @@ import {
 } from '../../lib/homeCopy';
 import { formatStubClock, formatStubDate, teeOffProximityLocal } from '../../lib/homeDates';
 import { FONTS, useTheme } from '../../theme';
-import { FlightAvatars, companionsOf } from './FlightAvatars';
+import { FlightAvatars, MAX_AVATARS, companionsOf } from './FlightAvatars';
 
 const DASHES = 9;
 
@@ -62,7 +62,7 @@ export function NextStartTicket({
     // Komma, ikke «·»: VoiceOver leser midtpunktet høyt.
     detailParts.join(', '),
     companions.length > 0
-      ? companionsLabel(companions.map(displayName), flightNumber != null)
+      ? companionsLabel(companions.map(displayName), flightNumber != null, MAX_AVATARS)
       : null,
   ]);
 

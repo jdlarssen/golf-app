@@ -86,8 +86,10 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
       {...handlers}
     />,
   );
-  expect(screen.getByTestId('home-hero-played')).toHaveTextContent('18 av 18 hull spilt');
+  expect(screen.getByTestId('home-hero-played', HIDDEN)).toHaveTextContent('18 av 18 hull spilt');
   expect(screen.getByLabelText('18 av 18 hull spilt')).toBeTruthy();
+  // Ringen sier det allerede; linja leses ikke en gang til.
+  expect(screen.queryByTestId('home-hero-played')).toBeNull();
   await fireEvent.press(screen.getByText('Lever scorekort →'));
   expect(handlers.onSubmit).toHaveBeenCalled();
 
@@ -108,4 +110,16 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   expect(screen.queryByText('Se tavla →')).toBeNull();
   await fireEvent.press(screen.getByText('Åpne runden →'));
   expect(handlers.onOpenGame).toHaveBeenCalledTimes(2);
+
+  // Et stengt spill, og en bundel som ennå sier at runden ikke er i gang: kortet
+  // lover ikke mer enn modellen, så heller ikke her står ring eller tavle-lenke.
+  for (const model of [
+    { ...LIVE, gate: 'mode' as const, action: { kind: 'open' as const }, standing: null, unit: null },
+    { ...LIVE, action: { kind: 'open' as const }, played: 0, standing: null, unit: null },
+  ]) {
+    await rerender(<HomeHeroCard card={CARD} model={model} {...handlers} />);
+    expect(screen.queryByTestId('home-hero-ring')).toBeNull();
+    expect(screen.queryByText('Se tavla →')).toBeNull();
+    expect(screen.getByText('Åpne runden →')).toBeTruthy();
+  }
 });

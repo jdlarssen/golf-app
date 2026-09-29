@@ -220,3 +220,14 @@ it('uten runde i gang står «Opprett spill» øverst, som før, også på et to
   expect(await screen.findByTestId('home-empty')).toBeTruthy();
   expect(screen.getByTestId('home-create-game')).toBeTruthy();
 });
+
+it('bruker aldri en bundel som hører til et annet spill enn helten', async () => {
+  // Cachen ga bundelen for en annen runde (id-en stemmer ikke med helten).
+  mockState.bundles = { new: { ...HERO_BUNDLE, bundle: { ...HERO_BUNDLE.bundle, game: { ...HERO_BUNDLE.bundle.game, id: 'old' } } } };
+  const { view } = renderHome();
+  await view;
+
+  expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+  expect(await screen.findByText('Åpne runden →')).toBeTruthy();
+  expect(screen.queryByTestId('home-hero-ring')).toBeNull();
+});

@@ -35,19 +35,19 @@ export function LastRoundCard({
   const rank = win ? 1 : medalRank(card);
   const own = score && score.gameId === card.gameId ? score : null;
 
-  const line = [
+  const parts = [
     badge ? finishedResultText(badge) : null,
     own?.teamBall ? HOME_TEXT.teamRound : null,
     own && !own.teamBall && own.brutto != null ? bruttoText(own.brutto) : null,
-  ]
-    .filter((part): part is string => part != null)
-    .join(' · ');
+  ].filter((part): part is string => part != null);
+  const line = parts.join(' · ');
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={[card.name, line].filter(Boolean).join('. ')}
+      // Komma, ikke «·»: VoiceOver leser midtpunktet høyt.
+      accessibilityLabel={[card.name, parts.join(', ')].filter(Boolean).join('. ')}
       style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
       testID={`home-last-round-${card.gameId}`}
     >
