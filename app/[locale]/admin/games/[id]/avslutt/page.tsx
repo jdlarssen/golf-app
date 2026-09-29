@@ -11,6 +11,7 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { finishRoster } from '@/lib/games/finishRoster';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
 import { endGameWithSideWinners, remindMissingPlayers } from './actions';
 
@@ -82,34 +83,37 @@ export default async function AvsluttPage({
 
   const { data: gamePlayers } = await supabase
     .from('game_players')
-    .select('user_id, submitted_at, users!game_players_user_id_fkey(name, nickname)')
+    .select(
+      'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+    )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
         submitted_at: string | null;
+        withdrawn_at: string | null;
         users: { name: string | null; nickname: string | null } | null;
       }[]
     >();
 
-  const players: PlayerOption[] =
-    gamePlayers?.map((gp) => ({
-      user_id: gp.user_id,
-      display_name: formatRevealName(
-        gp.users?.name ?? '',
-        gp.users?.nickname ?? null,
-      ),
-    })) ?? [];
+  // #2284: withdrawn players are neither missing nor winner candidates.
+  const roster = finishRoster(gamePlayers ?? []);
+
+  const players: PlayerOption[] = roster.active.map((gp) => ({
+    user_id: gp.user_id,
+    display_name: formatRevealName(
+      gp.users?.name ?? '',
+      gp.users?.nickname ?? null,
+    ),
+  }));
 
   // «Avslutt likevel» (#375): spillere som aldri leverte blokkerer ikke lenger.
   // Vis hvem som mangler her, og send allowMissing til actionen så den hopper
   // over dem (submitted_at forblir null → «ikke levert», ikke falsk levering;
   // scorene deres teller fortsatt i resultatet).
-  const missing = (gamePlayers ?? [])
-    .filter((gp) => !gp.submitted_at)
-    .map((gp) =>
-      formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null),
-    );
+  const missing = roster.missing.map((gp) =>
+    formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null),
+  );
 
   const action = endGameWithSideWinners.bind(null, gameId, missing.length > 0);
 

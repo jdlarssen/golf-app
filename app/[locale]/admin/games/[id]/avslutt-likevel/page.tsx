@@ -19,6 +19,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { finishRoster } from '@/lib/games/finishRoster';
 import { endGameMarkingWithdrawals } from './actions';
 // Purringen deles med søsterflaten «/avslutt» — én action, én gate
 // (`requireAdmin`), og `surface` sier bare hvor brukeren skal tilbake (#1889).
@@ -118,14 +119,12 @@ export default async function AvsluttLikevelPage({
 
   // Allerede trukne er allerede ute av rangeringen — filtrer dem vekk.
   // endGame hopper over dem automatisk (#386).
-  const missing = (gamePlayers ?? [])
-    .filter((gp) => !gp.submitted_at && !gp.withdrawn_at)
-    .map((gp) => {
-      const u = gp.users;
-      const base = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
-      const displayName = u?.nickname ? `${base} «${u.nickname}»` : base;
-      return { userId: gp.user_id, displayName };
-    });
+  const missing = finishRoster(gamePlayers ?? []).missing.map((gp) => {
+    const u = gp.users;
+    const base = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
+    const displayName = u?.nickname ? `${base} «${u.nickname}»` : base;
+    return { userId: gp.user_id, displayName };
+  });
 
   // Ingen mangler → ingenting å «avslutte likevel». Bruk den vanlige stien.
   if (missing.length === 0) {
