@@ -80,6 +80,7 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
     approvedAt: null,
     rejectionReason: null,
     withdrawnAt: null,
+    withdrawnByUserId: null,
     submittedByUserId: null,
     isGuest: false,
     ...overrides,

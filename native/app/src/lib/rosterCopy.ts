@@ -72,6 +72,10 @@ export const WITHDRAW_SELF = {
   undoTitle: 'Angre frafallet?',
   undoBody: 'Du teller med i resultatene igjen.',
   undoCta: 'Angre',
+  // #2358: trukket-banneret når arrangøren trakk spilleren. Da finnes ingen
+  // angre-knapp — det er arrangørens trekk å angre.
+  withdrawnBySelf: 'Du er trukket fra dette spillet.',
+  withdrawnByOrganiser: 'Arrangøren har trukket deg fra dette spillet. Er det feil, si fra til arrangøren.',
 } as const;
 
 /**
@@ -152,6 +156,13 @@ export function describeSelfWithdrawFailure(
         : 'Denne runden kan du ikke trekke deg fra nå.';
     case 'not_found':
       return 'Fant ikke runden. Den er kanskje slettet.';
+    // #2358: knappen vises ikke for et trekk arrangøren satte, men et eldre
+    // bilde av runden kan ha den fremme.
+    case 'withdrawn_by_other':
+      return 'Bare arrangøren kan angre dette trekket.';
+    // #2358: appen har ingen lagside ennå — den står på nettsiden.
+    case 'captain_has_team':
+      return 'Du er kaptein, og noen på laget har takket ja. Gi kapteinsbindet til en lagkamerat først. Lagsiden finner du på nettsiden.';
     case 'network':
     case 'withdraw_failed':
       return action === 'undo'

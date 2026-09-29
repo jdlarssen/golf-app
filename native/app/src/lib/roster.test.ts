@@ -39,6 +39,7 @@ function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePl
     approvedAt: null,
     rejectionReason: null,
     withdrawnAt: null,
+    withdrawnByUserId: null,
     isGuest: false,
     ...overrides,
   };

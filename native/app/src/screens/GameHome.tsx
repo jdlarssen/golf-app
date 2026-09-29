@@ -362,30 +362,37 @@ function PrimarySection({
   }
 
   if (me.withdrawnAt) {
+    // #2358: bare den som trakk seg selv kan angre. Et trekk arrangøren satte,
+    // er arrangørens å angre; serveren nekter uansett (`withdrawn_by_other`),
+    // så knappen vises ikke — samme regel som nettsidens banner.
+    const selfWithdrawn = me.withdrawnByUserId === me.userId;
     return (
       <View style={ui.banner} testID="withdrawn-banner">
-        <Text style={ui.body}>Du er trukket fra dette spillet.</Text>
-        {/* #1917: banneret var bare en beskjed. Nå har det en vei ut. Knappen
-            står her for ALLE trukne, også den arrangøren trakk — nøyaktig som
-            nettsidens angre-knapp gjør i dag. */}
-        <Pressable
-          style={ui.buttonSecondary}
-          disabled={busy}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: busy }}
-          testID="withdrawn-undo"
-          onPress={() =>
-            Alert.alert(WITHDRAW_SELF.undoTitle, WITHDRAW_SELF.undoBody, [
-              { text: 'Avbryt', style: 'cancel' },
-              {
-                text: WITHDRAW_SELF.undoCta,
-                onPress: () => void undoWithdraw(),
-              },
-            ])
-          }
-        >
-          <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.undoLabel}</Text>
-        </Pressable>
+        <Text style={ui.body}>
+          {selfWithdrawn ? WITHDRAW_SELF.withdrawnBySelf : WITHDRAW_SELF.withdrawnByOrganiser}
+        </Text>
+        {/* #1917: banneret var bare en beskjed. Nå har det en vei ut for den
+            som trakk seg selv. */}
+        {selfWithdrawn ? (
+          <Pressable
+            style={ui.buttonSecondary}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy }}
+            testID="withdrawn-undo"
+            onPress={() =>
+              Alert.alert(WITHDRAW_SELF.undoTitle, WITHDRAW_SELF.undoBody, [
+                { text: 'Avbryt', style: 'cancel' },
+                {
+                  text: WITHDRAW_SELF.undoCta,
+                  onPress: () => void undoWithdraw(),
+                },
+              ])
+            }
+          >
+            <Text style={ui.buttonSecondaryText}>{WITHDRAW_SELF.undoLabel}</Text>
+          </Pressable>
+        ) : null}
         {notice ? (
           <Text style={ui.error} testID="withdrawn-undo-notice">
             {notice}
