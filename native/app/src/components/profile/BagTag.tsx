@@ -131,8 +131,12 @@ function HandicapAge({ model, onEditProfile }: { model: BagTagModel; onEditProfi
 }
 
 const RING = 52;
-/** Linjehøyden til det store handicaptallet (64 pt i Fraunces). */
-const HCP_LINE = 62;
+/**
+ * Linjehøyden til det store handicaptallet (64 pt i Fraunces). Under
+ * skriftstørrelsen tegner iOS sifrene opp over «HANDICAP» (sett i
+ * simulatoren); 72 gir luften designet har mellom etiketten og tallet.
+ */
+const HCP_LINE = 72;
 
 const styles = StyleSheet.create({
   card: {
