@@ -7,13 +7,13 @@
 //
 // To drakter, samme regel (#2255): `home` er Hjems små overlappende skiver.
 // `ticket` er startbillettens: deg først i `primary`, så inntil tre andre i
-// blek grønn, fire separate skiver. Designet er tegnet i lys; i klubbhus-natt
-// er `primarySoft` og `surfaceStrong` nesten kortets egen farge (1,03:1 og
-// 1,2:1). Der blir du salvie-`primary` (5,7:1, som hovedknappen) og de andre
-// dyp skoggrønn `surfaceStrong`, som skiller seg mer fra kortet enn designets
-// blekgrønne gjør i lys (1,23:1 mot 1,17:1), med initialer på 4,6:1. Navnene
-// står i billettens egen kolonne, og skivene har ingen etikett selv (raden
-// rundt har den).
+// blek grønn, fire separate skiver. Designet er tegnet i lys, der den
+// blekgrønne skiva står svakt mot kortet (1,17:1). I klubbhus-natt forsvinner
+// `primarySoft` helt (1,03:1). Der får de andre dyp skoggrønn `surfaceStrong`,
+// som står like svakt som designets skive i lys (1,23:1), med initialer på
+// 4,6:1. Du skal skille deg tydelig ut og blir salvie-`primary` (5,7:1, som
+// hovedknappen). Navnene står i billettens egen kolonne, og skivene har ingen
+// etikett selv (raden rundt har den).
 import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
 import type { BundlePlayer } from '../../data/gameBundle';

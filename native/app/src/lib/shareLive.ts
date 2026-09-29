@@ -21,7 +21,7 @@ export type ShareLiveResult = { ok: true } | { ok: false; reason: 'no-web-base-u
  * Kan knappen dele noe? Mangler bygget nettadressen, ville hvert trykk feilet,
  * og da skal knappen ikke stå (aldri en knapp som gjør ingenting, `webLink.ts`).
  */
-export function canShareLiveFollow(token: string | null): token is string {
+export function canShareLiveFollow(token: string | null): boolean {
   return token !== null && webUrl(liveFollowPath(token)).ok;
 }
 
