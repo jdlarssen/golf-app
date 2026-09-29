@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { computeScoreDifferential } from '@/lib/scoring/scoreDifferential';
 import { getRatingForGender } from '@/lib/games/teeRating';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { modeCollapsesToTeamCard, type GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Beregner og lagrer WHS score-differensial for hvert kvalifisert spillerpar i
@@ -21,6 +22,11 @@ import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
  * blokkere at spillet avsluttes. Returnerer antall spillerrader som faktisk fikk
  * en differensial skrevet.
  *
+ * **Lagball-runder (#2273):** der laget deler én ball (`modeCollapsesToTeamCard`
+ * på hull 18 — scramble-familien, foursomes-familien, patsome) ligger alle lagets
+ * slag på kapteinen. De 18 «egne» hullene er lagets ball, så ingen får en
+ * personlig differensial. Samme regel som Kavalkaden (`isTeamBallRound`).
+ *
  * **Affected-rows-sjekk:** hvert UPDATE chains `.select('user_id')` og feiler
  * eksplisitt på 0 returnerte rader (0-rad-skriv = feil, ikke suksess, per AGENTS.md
  * trap #2). Feilmeldingen logges men kaster ikke ut av best-effort-løkken.
@@ -38,7 +44,7 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
     const [gameRes, playersRes, scoresRes] = await Promise.all([
       admin
         .from('games')
-        .select('course_id, tee_box_id')
+        .select('course_id, tee_box_id, game_mode')
         .eq('id', gameId)
         .single(),
       admin
@@ -66,6 +72,9 @@ export async function persistScoreDifferentials(gameId: string): Promise<number>
     }
 
     const game = gameRes.data;
+    // #2273: the team's ball is not anyone's own round — nothing to freeze.
+    if (modeCollapsesToTeamCard(game.game_mode as GameMode, 18)) return 0;
+
     if (!game.course_id || !game.tee_box_id) {
       console.error('[persistScoreDifferentials] missing course_id or tee_box_id', {
         gameId,
