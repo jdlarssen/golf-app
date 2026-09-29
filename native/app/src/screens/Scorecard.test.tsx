@@ -7,7 +7,7 @@
 // flighten, og hva blokken over knappen sier, er `lib/roster.test.ts` sitt.
 // Ingen av dem gjentas her.
 //
-// Det som blir igjen er tre koblinger:
+// Det som blir igjen er fire koblinger:
 //
 //  1. **I et format som kollapser til ett lagkort leverer appen selv.** Fram
 //     til #1918 sto det en setning og en lenke ut («Levering av lagkort gjøres
@@ -24,6 +24,9 @@
 //     sto åpen fram til første `listQueue` svarte, og et komplett kort gikk da
 //     rett til levering. `listQueue` er et utsatt løfte her, så testen ser
 //     knappen både før og etter svaret.
+//  4. **En blind runde skjuler netto (#2219).** Samme delte regel som
+//     resultatlista (`shouldHideNetto`): netto-kolonnen og netto-totalene står i
+//     en live-runde og er borte mens en reveal-runde pågår. Brutto står.
 //
 // Innlesingen ved fokus testes ikke: mocken under gjør `useFocusEffect` om til
 // `useEffect`, så testen kan ikke skille fokus fra mount.
@@ -103,15 +106,33 @@ const mockBundle = {
   fetchedAt: '2026-09-01T10:00:00.000Z',
 };
 
+// Solo stableford med skjult resultat til slutt, midt i runden (#2219).
+const mockRevealBundle = {
+  ...mockBundle,
+  game: {
+    ...mockBundle.game,
+    id: 'game-2',
+    gameMode: 'stableford',
+    modeConfig: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    createdBy: 'other',
+    scoreVisibility: 'reveal',
+  },
+  players: [
+    { ...PLAYER_BASE, userId: 'me', name: 'Meg Selv', teamNumber: null, courseHandicap: 20 },
+    { ...PLAYER_BASE, userId: 'other', name: 'Ola Kompis', teamNumber: null, courseHandicap: 8 },
+  ],
+};
+
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
-const mockState: { queue: Promise<unknown[]> } = {
+const mockState: { bundle: unknown; queue: Promise<unknown[]> } = {
+  bundle: mockBundle,
   queue: Promise.resolve([]),
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/gameBundle', () => ({
-  loadGameBundle: jest.fn(async () => mockBundle),
-  refreshGameBundle: jest.fn(async () => mockBundle),
+  loadGameBundle: jest.fn(async () => mockState.bundle),
+  refreshGameBundle: jest.fn(async () => mockState.bundle),
 }));
 jest.mock('../data/submitCard', () => ({
   submitCard: jest.fn(async () => ({ ok: true, alreadySubmitted: false, alsoDelivered: 0 })),
@@ -132,21 +153,25 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
 
+function scorecardElement(gameId: string, navigate: jest.Mock) {
+  return (
+    <Scorecard
+      {...({
+        route: { params: { gameId } },
+        navigation: { navigate },
+      } as unknown as ScreenProps<'Scorecard'>)}
+    />
+  );
+}
+
 describe('Scorecard', () => {
-  it('viser lever-knappen for laget når køen er lest, og en vei til hullene for å rette', async () => {
+  it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, og skjuler netto i blind runde', async () => {
     let releaseQueue!: (items: unknown[]) => void;
     mockState.queue = new Promise((resolve) => {
       releaseQueue = resolve;
     });
     const navigate = jest.fn();
-    await render(
-      <Scorecard
-        {...({
-          route: { params: { gameId: GAME_ID } },
-          navigation: { navigate },
-        } as unknown as ScreenProps<'Scorecard'>)}
-      />,
-    );
+    const { rerender } = await render(scorecardElement(GAME_ID, navigate));
 
     await waitFor(() => {
       expect(screen.getByTestId('submit-team-card')).toBeTruthy();
@@ -155,6 +180,9 @@ describe('Scorecard', () => {
     // slag som fortsatt ligger i kø, og da fryser serveren kortet uten dem.
     expect(screen.getByTestId('submit-team-card')).toBeDisabled();
     expect(screen.queryByTestId('queue-guard')).toBeNull();
+    // Live-runde: netto står i tabellen.
+    expect(screen.getByTestId('scorecard-netto-head')).toBeTruthy();
+    expect(screen.getByTestId('card-row-1-netto')).toBeTruthy();
 
     await act(async () => {
       releaseQueue([]);
@@ -176,5 +204,18 @@ describe('Scorecard', () => {
     // hull-stripen tar spilleren videre derfra.
     await fireEvent.press(screen.getByTestId('scorecard-edit'));
     expect(navigate).toHaveBeenCalledWith('Hole', { gameId: GAME_ID, holeNumber: 1 });
+
+    // #2219: en blind runde som pågår. Netto og tildelte slag er borte til
+    // arrangøren avslutter, som på nettsiden. Brutto står.
+    mockState.bundle = mockRevealBundle;
+    await rerender(scorecardElement('game-2', navigate));
+    await waitFor(() => {
+      expect(screen.getByTestId('submit-scorecard')).toBeTruthy();
+    });
+    expect(screen.getByTestId('total-brutto')).toBeTruthy();
+    expect(screen.queryByTestId('scorecard-netto-head')).toBeNull();
+    expect(screen.queryByTestId('card-row-1-netto')).toBeNull();
+    expect(screen.queryByTestId('total-netto')).toBeNull();
+    expect(screen.queryByTestId('total-tildelte-slag')).toBeNull();
   });
 });
