@@ -73,6 +73,7 @@ import {
   unremindableNotes,
 } from '../lib/endGameCopy';
 import {
+  activeChoices,
   buildFinishPlan,
   canFinish,
   toSideWinners,
@@ -126,6 +127,11 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
    * manglende spiller er huket av. Uten en refetch her ville arrangøren stått
    * fast i samme avslag ved hvert nye trykk. Fokus-refetchen redder oss ikke —
    * skjermen mister aldri fokus.
+   *
+   * `winner-withdrawn` (#2284) er samme sak for kåringen: en valgt vinner har
+   * trukket seg, og lista må hentes på nytt. Valget som pekte på hen, faller
+   * bort av seg selv ({@link activeChoices}): sloten står tom og knappen er grå
+   * til arrangøren velger på nytt.
    */
   const finish = useCallback(
     async (plan: FinishPlan, players: readonly BundlePlayer[]) => {
@@ -135,7 +141,10 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         const result = await finishRound(gameId, {
           allowMissing: plan.missing.length > 0,
           withdrawUserIds: withdrawUserIds(plan, acknowledged),
-          sideWinners: toSideWinners(plan.slots, choices),
+          sideWinners: toSideWinners(
+            plan.slots,
+            activeChoices(choices, plan.active),
+          ),
         });
         if (result.ok) {
           navigation.replace('Leaderboard', { gameId });
@@ -150,7 +159,8 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         );
         if (
           result.reason === 'withdraw-after-submit' ||
-          result.reason === 'withdraw-after-submit-partial'
+          result.reason === 'withdraw-after-submit-partial' ||
+          result.reason === 'winner-withdrawn'
         ) {
           await refresh();
         }
@@ -273,7 +283,11 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   }
 
   const plan = buildFinishPlan(bundle, userId);
-  const ready = canFinish(plan, acknowledged, choices);
+  // #2284: bare valg som peker på en aktiv spiller teller. En vinner som trakk
+  // seg etter at hen ble valgt, er borte fra velgeren etter neste henting, og
+  // valget skal ikke stå usynlig igjen og sendes på nytt ved neste trykk.
+  const liveChoices = activeChoices(choices, plan.active);
+  const ready = canFinish(plan, acknowledged, liveChoices);
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="end-game-screen">
@@ -437,7 +451,7 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
               key={slot.key}
               slot={slot}
               players={plan.active}
-              value={choices[slot.key] ?? null}
+              value={liveChoices[slot.key] ?? null}
               disabled={busy}
               onPick={(value) =>
                 setChoices((prev) => ({ ...prev, [slot.key]: value }))

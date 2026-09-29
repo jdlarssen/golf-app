@@ -196,6 +196,30 @@ export function withdrawUserIds(
 }
 
 /**
+ * Valgene som fortsatt peker på en aktiv spiller (#2284).
+ *
+ * Trekker en valgt vinner seg mens skjermen står åpen, forsvinner hen fra
+ * velgeren ved neste henting, men valget ville blitt stående i `choices`:
+ * usynlig i velgeren og sendt på nytt ved neste trykk, der databasen nekter
+ * igjen. Et slikt valg droppes, så sloten står tom og knappen er grå til
+ * arrangøren velger på nytt. «Ingen kvalifiserte» beholdes.
+ *
+ * Skjermen regner den ut på hver render i stedet for å skrive over state, og
+ * får samme objekt tilbake når ingenting er droppet.
+ */
+export function activeChoices(
+  choices: Readonly<Record<string, string>>,
+  active: readonly BundlePlayer[],
+): Readonly<Record<string, string>> {
+  const activeIds = new Set(active.map((player) => player.userId));
+  const kept = Object.entries(choices).filter(
+    ([, value]) => value === NO_WINNER || activeIds.has(value),
+  );
+  if (kept.length === Object.keys(choices).length) return choices;
+  return Object.fromEntries(kept);
+}
+
+/**
  * Kåringen som rader.
  *
  * `NO_WINNER` blir `winner_user_id: null` — «ingen kvalifiserte» er et valg

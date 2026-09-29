@@ -425,6 +425,30 @@ describe('finishRound', () => {
       });
       expect(result).toMatchObject({ ok: false, reason: 'rls-denied' });
     });
+
+    it('melder winner-withdrawn når databasen nekter en trukket vinner (#2284)', async () => {
+      // Vakta fra migrasjon 0193: vinneren trakk seg mens skjermen sto åpen.
+      // Ingenting lagres, og flippen forsøkes aldri — runden står aktiv.
+      const { queryStub, routeFrom } = mocks();
+      routeFrom({
+        games: [queryStub(gameRow())],
+        game_players: [queryStub(roster(playerRow(ME), playerRow(MATE)))],
+        game_side_winners: [
+          queryStub({
+            data: null,
+            error: { message: 'side_winner_not_active', code: 'P0001' },
+          }),
+        ],
+      });
+
+      const result = await endGame().finishRound(GAME, {
+        sideWinners: [
+          { category: 'longest_drive', position: 1, winner_user_id: MATE },
+        ],
+      });
+      expect(result).toEqual({ ok: false, reason: 'winner-withdrawn' });
+      expect(tablesTouched()).toEqual(['games', 'game_players', 'game_side_winners']);
+    });
   });
 
   describe('kåringen', () => {

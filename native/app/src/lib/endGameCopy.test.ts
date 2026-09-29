@@ -46,6 +46,7 @@ const REASON_MAP = {
   'withdraw-after-submit-partial': true,
   'db-withdraw': true,
   'db-winners': true,
+  'winner-withdrawn': true,
   'rls-denied': true,
   'no-rows': true,
   db: true,
@@ -58,7 +59,7 @@ describe('describeEndRoundFailure', () => {
     expect(isFinishedSentence(describeEndRoundFailure(reason))).toBe(true);
   });
 
-  it('gir seksten FORSKJELLIGE setninger', () => {
+  it('gir én FORSKJELLIG setning per grunn', () => {
     const sentences = REASONS.map((reason) => describeEndRoundFailure(reason));
     expect(new Set(sentences).size).toBe(REASONS.length);
   });
@@ -80,6 +81,9 @@ describe('describeEndRoundFailure', () => {
     // regel, avhengig av hvilken flate hen står på.
     expect(describeEndRoundFailure('db-winners')).toBe(
       source.admin.game.sideWinners.dbError,
+    );
+    expect(describeEndRoundFailure('winner-withdrawn')).toBe(
+      source.admin.game.sideWinners.winnerWithdrawnError,
     );
     expect(END_GAME_TEXT.noQualified).toBe(
       source.admin.game.sideWinners.noQualified,

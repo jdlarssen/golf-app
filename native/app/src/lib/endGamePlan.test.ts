@@ -6,6 +6,7 @@
 // gjentas ikke der.
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import {
+  activeChoices,
   buildFinishPlan,
   canFinish,
   needsPeerApproval,
@@ -273,5 +274,29 @@ describe('toSideWinners', () => {
     expect(toSideWinners(slots, { 'ld-1': MATE })).toEqual([
       { category: 'longest_drive', position: 1, winner_user_id: MATE },
     ]);
+  });
+});
+
+describe('activeChoices (#2284)', () => {
+  const active = [player({ userId: ME }), player({ userId: MATE })];
+
+  it('beholder valg som peker på en aktiv spiller, og «Ingen kvalifiserte»', () => {
+    const choices = { 'ld-1': MATE, 'ctp-1': NO_WINNER };
+    expect(activeChoices(choices, active)).toEqual(choices);
+  });
+
+  it('dropper et valg som peker på en spiller som ikke lenger er aktiv', () => {
+    // Vinneren trakk seg: etter refresh er hen borte fra velgeren, og et valg
+    // som ble stående ville vært usynlig og blitt sendt på nytt ved neste trykk.
+    expect(
+      activeChoices({ 'ld-1': THIRD, 'ld-2': MATE, 'ctp-1': NO_WINNER }, active),
+    ).toEqual({ 'ld-2': MATE, 'ctp-1': NO_WINNER });
+  });
+
+  it('gir samme objekt tilbake når ingenting endres', () => {
+    // Skjermen regner den ut på hver render; ingen grunn til et nytt objekt
+    // når ingenting er droppet.
+    const choices = { 'ld-1': ME };
+    expect(activeChoices(choices, active)).toBe(choices);
   });
 });
