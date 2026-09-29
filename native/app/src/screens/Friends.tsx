@@ -16,7 +16,7 @@
 //
 // **Delingen** åpner telefonens delearke med lenka (`Share.share`, ingen ny
 // modul). Adressen bygges med `webUrl`, så butikkbygget deler tornygolf.no.
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Children, Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -88,8 +88,12 @@ export function Friends(_props: ScreenProps<'Friends'>) {
     };
   }, []);
 
+  // Feiler hentingen etter en handling, står lista og svarlinja som de var:
+  // handlingen gikk gjennom, bare oppfriskingen uteble. Feilvisningen er for
+  // når det ikke finnes noen liste å vise.
   const reload = useCallback(async () => {
-    setLoad(toLoadState(await fetchFriends()));
+    const next = toLoadState(await fetchFriends());
+    setLoad((prev) => (next.state === 'failed' && prev.state === 'ready' ? prev : next));
   }, []);
 
   /** Kjør én handling, vis svarlinja og hent lista på nytt. */
@@ -117,6 +121,8 @@ export function Friends(_props: ScreenProps<'Friends'>) {
   );
 
   const onAddByEmail = useCallback(() => {
+    // Retur-tasten på tastaturet er ikke en knapp og låses ikke av `disabled`.
+    if (busy !== null) return;
     const address = email.trim().toLowerCase();
     setInviteEmail(null);
     void run('email', () => addFriendByEmail(address), (status) => {
@@ -127,7 +133,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
       if (status === 'requested' || status === 'accepted') setEmail('');
       return false;
     });
-  }, [email, run]);
+  }, [busy, email, run]);
 
   const onInvite = useCallback(async () => {
     if (!inviteEmail) return;
@@ -250,6 +256,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
 
       {incoming.length > 0 ? (
         <Section title={FRIENDS_TEXT.incomingSection} testID="friends-incoming">
+          <PeopleList>
           {incoming.map((r) => (
             <PersonRow key={r.requestId} name={r.name}>
               <SmallButton
@@ -275,6 +282,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
               />
             </PersonRow>
           ))}
+          </PeopleList>
         </Section>
       ) : null}
 
@@ -284,7 +292,8 @@ export function Friends(_props: ScreenProps<'Friends'>) {
             {FRIENDS_TEXT.noFriendsYet}
           </Text>
         ) : (
-          friends.map((f) => (
+          <PeopleList>
+          {friends.map((f) => (
             <PersonRow key={f.id} name={f.name}>
               <SmallButton
                 variant="ghost"
@@ -296,12 +305,14 @@ export function Friends(_props: ScreenProps<'Friends'>) {
                 testID={`friends-remove-${f.id}`}
               />
             </PersonRow>
-          ))
+          ))}
+          </PeopleList>
         )}
       </Section>
 
       {outgoing.length > 0 ? (
         <Section title={FRIENDS_TEXT.outgoingSection} testID="friends-outgoing">
+          <PeopleList>
           {outgoing.map((r) => (
             <PersonRow key={r.requestId} name={r.name}>
               <SmallButton
@@ -315,11 +326,13 @@ export function Friends(_props: ScreenProps<'Friends'>) {
               />
             </PersonRow>
           ))}
+          </PeopleList>
         </Section>
       ) : null}
 
       {suggestions.length > 0 ? (
         <Section title={FRIENDS_TEXT.suggestionsSection} testID="friends-suggestions">
+          <PeopleList>
           {suggestions.map((s) => (
             <PersonRow key={s.id} name={s.name}>
               <SmallButton
@@ -333,6 +346,7 @@ export function Friends(_props: ScreenProps<'Friends'>) {
               />
             </PersonRow>
           ))}
+          </PeopleList>
         </Section>
       ) : null}
 
@@ -384,6 +398,21 @@ export function Friends(_props: ScreenProps<'Friends'>) {
   );
 }
 
+/** Radene i et kort, med streker mellom dem, ikke under den siste (som webben). */
+function PeopleList({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
+  return (
+    <>
+      {Children.toArray(children).map((row, index) => (
+        <Fragment key={index}>
+          {index > 0 ? <View style={[styles.separator, { backgroundColor: colors.border }]} /> : null}
+          {row}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
 function Section({ title, children, testID }: { title: string; children: ReactNode; testID: string }) {
   const { ui } = useTheme();
   return (
@@ -396,9 +425,9 @@ function Section({ title, children, testID }: { title: string; children: ReactNo
 
 /** Navnet til venstre, knappene til høyre, som webbens rader. */
 function PersonRow({ name, children }: { name: string; children: ReactNode }) {
-  const { ui, colors } = useTheme();
+  const { ui } = useTheme();
   return (
-    <View style={[styles.row, { borderBottomColor: colors.border }]}>
+    <View style={styles.row}>
       <Text style={[ui.body, styles.name]} numberOfLines={1}>
         {name || FRIENDS_TEXT.someoneFallback}
       </Text>
@@ -460,8 +489,8 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: TAP,
     paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  separator: { height: StyleSheet.hairlineWidth },
   name: { flex: 1, minWidth: 0 },
   actions: { flexDirection: 'row', gap: 8, flexShrink: 0 },
   button: {
