@@ -58,6 +58,12 @@ export type ThemeColors = {
    * og lik `accent` i mørk.
    */
   accentText: string;
+  /**
+   * Kremfarget spor (#2255, fremdriftslinja på startbilletten) — webbens
+   * `--hole-completed-bg`, samme kremtone designet bruker. `surface-2` er for
+   * blek på det hvite kortet, `border` for grå.
+   */
+  trackBg: string;
 };
 
 /**
@@ -87,6 +93,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     surfaceStrong: '#1B4332',
     onStrong: '#F0EDE5',
     accentText: '#7D6224',
+    trackBg: '#EFE9DA',
   },
   dark: {
     bg: '#14201A',
@@ -107,6 +114,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     surfaceStrong: '#1F3B2C',
     onStrong: '#ECE5D2',
     accentText: '#D4B870',
+    trackBg: '#243429',
   },
 };
 
@@ -153,7 +161,20 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   onStrong: '#F0EDE5',
   // Gull som tekst (#2256). I sollys er gullet svart, som `accent` over.
   accentText: '#000000',
+  // Billettens spor (#2255). Hullsiden tegner det ikke; ren hvit som flatene.
+  trackBg: '#FFFFFF',
 };
+
+/**
+ * Kortskyggen (#2255, DESIGN.md: «Skygger er hvisking … mørk modus bytter til en
+ * svak svart»). Lys drakt er designlerretets to lag i skoggrønt; mørk er en svak
+ * svart. Brukes som `boxShadow` på kort som skal løfte seg fra linet.
+ */
+export function cardShadow(scheme: Scheme): string {
+  return scheme === 'dark'
+    ? '0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25)'
+    : '0 1px 2px rgba(26, 46, 31, 0.04), 0 8px 24px rgba(26, 46, 31, 0.06)';
+}
 
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
 const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
@@ -204,9 +225,11 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       padding: 16,
       gap: 8,
     },
+    // Knappene er piller (DESIGN.md: «Button / LinkButton: pill, minst 44 px
+    // høy»), i hele appen (#2255).
     button: {
       backgroundColor: c.primary,
-      borderRadius: 10,
+      borderRadius: 999,
       minHeight: TAP,
       paddingHorizontal: 16,
       alignItems: 'center',
@@ -215,7 +238,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
     },
     buttonText: { color: c.onPrimary, fontSize: 16, fontFamily: FONTS.sansSemiBold },
     buttonSecondary: {
-      borderRadius: 10,
+      borderRadius: 999,
       borderWidth: borderW,
       borderColor: c.primary,
       minHeight: TAP,
