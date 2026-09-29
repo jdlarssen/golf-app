@@ -21,6 +21,7 @@ import {
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Constants from 'expo-constants';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
+import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
 import { AccountSettings } from './screens/AccountSettings';
 import { Approve } from './screens/Approve';
@@ -28,6 +29,7 @@ import { CreateGame } from './screens/CreateGame';
 import { DeleteAccount } from './screens/DeleteAccount';
 import { EditProfile } from './screens/EditProfile';
 import { EndGame } from './screens/EndGame';
+import { Friends } from './screens/Friends';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
 import { Home } from './screens/Home';
@@ -78,6 +80,8 @@ export type RootStackParamList = {
   AccountSettings: undefined;
   /** «Varsler og tema» (#2256): temavalget; varslene kommer i PR 4. */
   NotificationsAndTheme: undefined;
+  /** «Venner» (#2256 PR 2): det webbens `/profile/venner` viser, via `/api/friends`. */
+  Friends: undefined;
   SyncLab: undefined;
 };
 
@@ -261,6 +265,11 @@ export function RootNavigator() {
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
           options={{ title: PROFILE_TEXT.menuNotificationsTheme }}
+        />
+        <Stack.Screen
+          name="Friends"
+          component={Friends}
+          options={{ title: FRIENDS_TEXT.heading }}
         />
         <Stack.Screen
           name="SyncLab"

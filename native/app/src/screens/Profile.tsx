@@ -34,10 +34,11 @@ import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
+import { fetchFriends } from '../data/friends';
 import { logOut } from '../data/logout';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { bagTagModel } from '../lib/bagTag';
-import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
+import { PROFILE_TEXT, friendsWaitingLine, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -57,6 +58,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   // Klubben og sesongen (#2256). `undefined` mens de lastes; hver del kan
   // være `null` for seg når oppslaget feilet (`data/bagTag.ts`).
   const [extras, setExtras] = useState<BagTagExtras | undefined>(undefined);
+  // Hvor mange som venter på svar fra deg (#2256 PR 2). `0` til noe annet er
+  // kjent; en feilet henting lar raden stå med den vanlige underlinja.
+  const [friendsWaiting, setFriendsWaiting] = useState(0);
 
   // Kvitteringen `EditProfile` kommer tilbake med. Banneret er RENT avledet av
   // ruteparameteren — ingen egen state, ingen setState i en effekt — og
@@ -107,6 +111,19 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
     if (!updated) return;
     load();
   }, [updated, load]);
+
+  // Antallet som venter på svar hentes hver gang rommet får fokus, så raden
+  // stemmer også når spilleren kommer tilbake fra vennesiden. Best-effort:
+  // uten nett eller svar står den vanlige underlinja.
+  useEffect(
+    () =>
+      navigation.addListener('focus', () => {
+        void fetchFriends().then((result) => {
+          if (result.ok) setFriendsWaiting(result.data.incoming.length);
+        });
+      }),
+    [navigation],
+  );
 
   // Kvitteringen er en engangsbeskjed, og den nullstilles når rommet mister
   // fokus. Uten det ville flagget blitt stående i ruteparameteren — skjermen
@@ -248,8 +265,17 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       ) : null}
 
       {/* Chevron: hver rad fører til et rom. «Historikk og statistikk» (#2265)
-          og «Venner» (#2256 PR 2) kommer inn her når skjermene finnes. */}
+          kommer inn her når skjermen finnes. */}
       <SettingList testID="profile-menu">
+        <SettingRow
+          label={PROFILE_TEXT.friendsRow}
+          sublabel={
+            friendsWaiting > 0 ? friendsWaitingLine(friendsWaiting) : PROFILE_TEXT.friendsSublabel
+          }
+          chevron
+          onPress={() => navigation.navigate('Friends')}
+          testID="profile-friends"
+        />
         <SettingRow
           label={PROFILE_TEXT.menuNotificationsTheme}
           chevron
