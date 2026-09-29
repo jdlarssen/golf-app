@@ -77,6 +77,16 @@ describe('buildNotificationText', () => {
     expect(detailFor({})).toBe(
       `kinds.scorecardRejected.detail|${JSON.stringify({ rejecterName: 'Per', gameName: 'Vinter-cup', reason: 'hull 7' })}`,
     );
+    // A deliverer's copy without a readable name still says it was someone
+    // else's card, with the locale fallback, never the owner's sentence.
+    expect(detailFor({ player_name: null })).toBe(
+      `kinds.scorecardRejected.detailFor|${JSON.stringify({
+        rejecterName: 'Per',
+        playerName: 'somePlayerFallback',
+        gameName: 'Vinter-cup',
+        reason: 'hull 7',
+      })}`,
+    );
     // The one who delivered it for Ola: the sentence names Ola's card.
     expect(detailFor({ player_name: 'Ola' })).toBe(
       `kinds.scorecardRejected.detailFor|${JSON.stringify({
