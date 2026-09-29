@@ -17,9 +17,11 @@
 // enhetens lokaltid.
 //
 // **Kurven** leses fra `handicap_history` (0195), der spilleren bare ser sine
-// egne rader (RLS). Tabellen har én rad per endring, så lista er kort.
-// `seasonHandicapTrend` gir `null` under to punkter; da står «Oppdatert …»
-// som før. Før migrasjonen er i basen feiler lesingen, med samme utfall.
+// egne rader (RLS). Tabellen har én rad per endring, så lista er kort, men den
+// leses side for side likevel: den vokser med årene, og en avkuttet liste ville
+// mistet de nyeste punktene. `seasonHandicapTrend` gir `null` under to punkter;
+// da står «Oppdatert …» som før. Før migrasjonen er i basen feiler lesingen,
+// med samme utfall.
 //
 // Ingen cache: uten nett står profilens feillinje, som før.
 import {
@@ -30,6 +32,7 @@ import {
   computeProfileSeason,
   type ProfileSeason,
 } from '../../../../lib/stats/profileSeason';
+import { selectAllRows } from '../../../../lib/supabase/selectAllRows';
 import { supabase } from '../supabase';
 import { fetchRoundHistory } from './roundHistory';
 
@@ -75,15 +78,22 @@ async function fetchSeason(userId: string, year: number): Promise<ProfileSeason>
 }
 
 async function fetchHandicapTrend(userId: string, year: number): Promise<HandicapTrend | null> {
-  const { data, error } = await supabase
-    .from('handicap_history')
-    .select('hcp_index, recorded_at')
-    .eq('user_id', userId)
-    .order('recorded_at', { ascending: true })
-    .returns<{ hcp_index: number | string; recorded_at: string }[]>();
-  if (error) throw new Error(error.message);
+  // `id` gjør rekkefølgen entydig, så sidene aldri hopper over eller gjentar
+  // en rad (samme tidspunkt to ganger er mulig).
+  const rows = await selectAllRows(
+    (from, to) =>
+      supabase
+        .from('handicap_history')
+        .select('hcp_index, recorded_at')
+        .eq('user_id', userId)
+        .order('recorded_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)
+        .returns<{ hcp_index: number | string; recorded_at: string }[]>(),
+    'bagTag handicap_history',
+  );
   return seasonHandicapTrend(
-    (data ?? []).map((row) => ({ hcpIndex: Number(row.hcp_index), recordedAt: row.recorded_at })),
+    rows.map((row) => ({ hcpIndex: Number(row.hcp_index), recordedAt: row.recorded_at })),
     year,
   );
 }
