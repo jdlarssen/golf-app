@@ -2071,3 +2071,26 @@ systemets eget ark for ny hendelse (`createEventInCalendarAsync` fra
   kalenderen.». Samme grep gjelder neste native modul som skal tåle et eldre bygg.
 - `location` sendes bare når spillet har bane: iOS-posten har feltet som påkrevd tekst.
 - Krever nytt app-bygg (native modul).
+
+## «Hull for hull» i appen (#2255, PR 3)
+
+Når runden er avsluttet og formatet har «Hull for hull» i appen, bytter den første flisa
+på spillets side fra «Tavla» til «Hull for hull» (`screens/HoleByHole.tsx`), med flagget
+som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk unna via
+«Se tavla →» i stubben.
+
+- **Gaten** (`lib/holeByHole.ts`) er webbens `hasHoleByHoleView`, gitt den rå
+  `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
+  bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. De andre
+  formatene webben har visning for, står som «Tavla» til de kommer.
+- **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
+  hullvinner og ledere selv. For solo-scorekortet bor det nå i
+  `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,
+  `SoloStrokeplayHolesView` og appen tegner fra. Neste format flytter sitt regnestykke til
+  `lib/` på samme måte før appen får visningen.
+- **Data:** motoren er den samme som tavla bruker (`computeGameLeaderboard`), på de lokale
+  slagene, seedet når skjermen åpnes. Etter at runden er avsluttet gir RLS deltakerne alle
+  slag i spillet, så appen leser med spillerens egen sesjon (webben bruker service-role
+  her, #1632).
+- **Blind runde** som pågår holder alt tilbake, som på webben.
+- **Tekst:** alt står også på webben og er låst mot `messages/no.json` (`lib/holesCopy.ts`).
