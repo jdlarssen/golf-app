@@ -281,6 +281,12 @@ export type HoleMetrics = {
   borderW: number;
   /** Streken langs venstre kant på den aktive raden. */
   activeBarW: number;
+  /**
+   * Valgt tilstand (putte-bryteren, BBB-valget, hullet du står på) tegnes som
+   * fylt flate i stedet for en farget kant. I sollys er kant og tekst svarte,
+   * så en farget kant ville ikke synes (#2252).
+   */
+  selectedFill: boolean;
 };
 
 const HOLE_METRICS: HoleMetrics = {
@@ -288,6 +294,7 @@ const HOLE_METRICS: HoleMetrics = {
   railButton: 64,
   borderW: 1,
   activeBarW: 4,
+  selectedFill: false,
 };
 
 export type Theme = {
@@ -304,14 +311,14 @@ const THEMES: Record<Scheme, Theme> = {
 
 /**
  * #2252: hullsiden i sollys. Et lyst tema uansett hva telefonen står på, med
- * kanter på 3, hullnummer på 130, skinneknapper på 84 og en strek på 10
- * langs aktiv rad.
+ * kanter på 3, hullnummer på 130, skinneknapper på 84, en strek på 10
+ * langs aktiv rad, og valgt tilstand som fylt flate.
  */
 export const SUNLIGHT_THEME: Theme = {
   scheme: 'light',
   colors: SUNLIGHT_COLORS,
   ui: createUi(SUNLIGHT_COLORS, { borderW: 3 }),
-  hole: { numberSize: 130, railButton: 84, borderW: 3, activeBarW: 10 },
+  hole: { numberSize: 130, railButton: 84, borderW: 3, activeBarW: 10, selectedFill: true },
 };
 
 /** OS-rapportert scheme → vårt. Ingen rapport (null/undefined/'unspecified') = lys. */

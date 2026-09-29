@@ -200,13 +200,15 @@ function Chip({
   onPress: () => void;
 }) {
   const { colors, hole, ui } = useTheme();
+  // I sollys er kant og tekst svarte, så valget vises som fylt flate (#2252).
+  const filled = selected && hole.selectedFill;
   return (
     <Pressable
       style={[
         styles.chip,
         {
-          backgroundColor: colors.bg,
-          borderColor: selected ? colors.accent : colors.border,
+          backgroundColor: filled ? colors.primary : colors.bg,
+          borderColor: filled ? colors.primary : selected ? colors.accent : colors.border,
           // Temaets kant (3 i sollys, #2252), én tykkere når valgt.
           borderWidth: selected ? hole.borderW + 1 : hole.borderW,
         },
@@ -216,7 +218,9 @@ function Chip({
       onPress={onPress}
       testID={testID}
     >
-      <Text style={selected ? ui.body : ui.muted}>{label}</Text>
+      <Text style={[selected ? ui.body : ui.muted, filled && { color: colors.onPrimary }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }

@@ -12,6 +12,7 @@
 //     i stedet.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { setBingoBangoBongoHole } from '../../data/choices';
+import { SUNLIGHT_THEME, ThemeScope } from '../../theme';
 import { BingoBangoBongoCard } from './BingoBangoBongoCard';
 
 jest.mock('../../data/choices', () => ({
@@ -92,6 +93,27 @@ describe('BingoBangoBongoCard', () => {
     expect(screen.getByTestId('bbb-bingoUserId-p1')).toBeDisabled();
     await fireEvent.press(screen.getByTestId('bbb-bingoUserId-p1'));
     expect(setHoleMock.mock.calls.length).toBe(callsBefore);
+
+    // #2252: i sollys er kant og tekst svarte, så valget er en fylt flate.
+    await rerender(
+      <ThemeScope theme={SUNLIGHT_THEME}>
+        <BingoBangoBongoCard
+          gameId="game-1"
+          holeNumber={3}
+          gameStatus="active"
+          players={PLAYERS}
+          saved={{ holeNumber: 3, bingoUserId: 'p1', bangoUserId: null, bongoUserId: null }}
+          loaded
+          onSaved={onSaved}
+        />
+      </ThemeScope>,
+    );
+    expect(screen.getByTestId('bbb-bingoUserId-p1')).toHaveStyle({
+      backgroundColor: SUNLIGHT_THEME.colors.primary,
+    });
+    expect(screen.getByTestId('bbb-bingoUserId-p2')).toHaveStyle({
+      backgroundColor: SUNLIGHT_THEME.colors.bg,
+    });
   });
 
   // #2090: the card shows a poll snapshot that can be up to 10 s old, or older

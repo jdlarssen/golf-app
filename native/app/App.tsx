@@ -42,6 +42,9 @@ import { useTheme } from './src/theme';
 
 SplashScreen.preventAutoHideAsync();
 
+/** Så lenge splashen venter på sollys-valget (#2252) før den slippes uansett. */
+const SUNLIGHT_LOAD_TIMEOUT_MS = 1000;
+
 export default function App() {
   const { colors, ui } = useTheme();
   const [session, setSession] = useState<Session | null>(null);
@@ -70,9 +73,16 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Kaster aldri: en lesefeil gir sollys av, og splashen slippes uansett.
+  // Kaster aldri: en lesefeil gir sollys av. Svarer ikke lageret innen et
+  // sekund, slippes splashen likevel (aldri heng på splash); valget kommer da
+  // på plass når lesingen blir ferdig.
   useEffect(() => {
-    void loadSunlight().finally(() => setSunlightLoaded(true));
+    const timer = setTimeout(() => setSunlightLoaded(true), SUNLIGHT_LOAD_TIMEOUT_MS);
+    void loadSunlight().finally(() => {
+      clearTimeout(timer);
+      setSunlightLoaded(true);
+    });
+    return () => clearTimeout(timer);
   }, []);
 
   const ready = (fontsLoaded || fontsError != null) && !booting && sunlightLoaded;
