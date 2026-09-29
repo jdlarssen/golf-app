@@ -48,10 +48,15 @@ function resolveApproval(
   if (owner.approved_at != null) {
     const approverId = owner.approved_by_user_id;
     if (approverId == null) return { kind: 'approved' };
-    const approver = players.find((p) => p.user_id === approverId);
-    const name = approver ? firstName(approver.nickname ?? approver.name) : null;
-    if (approver && name && isFlightMate(players, gameMode, approverId, owner.user_id)) {
-      return { kind: 'marker', name };
+    // «Flightkamerat» reads today's roster (`isSingleFlightGame` counts the
+    // players active now), the same way `canApproveScorecardFor` does. A
+    // withdrawal after the approval can therefore move a game across the
+    // one-flight line; the label follows the rule, not the history.
+    if (isFlightMate(players, gameMode, approverId, owner.user_id)) {
+      const approver = players.find((p) => p.user_id === approverId);
+      const name = approver ? firstName(approver.nickname ?? approver.name) : null;
+      // A flight mate without any name is still not the organizer.
+      return name ? { kind: 'marker', name } : { kind: 'approved' };
     }
     return { kind: 'organizer' };
   }
