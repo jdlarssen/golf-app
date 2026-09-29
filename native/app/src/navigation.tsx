@@ -20,6 +20,7 @@ import {
 } from '@react-navigation/native-stack';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Constants from 'expo-constants';
+import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
@@ -33,6 +34,7 @@ import { EndGame } from './screens/EndGame';
 import { Friends } from './screens/Friends';
 import { GameHome } from './screens/GameHome';
 import { Hole } from './screens/Hole';
+import { HoleByHole } from './screens/HoleByHole';
 import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
@@ -49,6 +51,8 @@ export type RootStackParamList = {
   Hole: { gameId: string; holeNumber: number };
   Scorecard: { gameId: string };
   Leaderboard: { gameId: string };
+  /** «Hull for hull» (#2255) — flisa på spillets side når runden er avsluttet. */
+  HoleByHole: { gameId: string };
   Approve: { gameId: string };
   /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
   EndGame: { gameId: string };
@@ -227,6 +231,11 @@ export function RootNavigator() {
           name="Leaderboard"
           component={Leaderboard}
           options={{ title: 'Resultater' }}
+        />
+        <Stack.Screen
+          name="HoleByHole"
+          component={HoleByHole}
+          options={{ title: HOLES_TEXT.heading }}
         />
         <Stack.Screen
           name="Approve"
