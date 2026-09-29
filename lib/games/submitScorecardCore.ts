@@ -450,7 +450,11 @@ export async function submitScorecardCore(
         }
       }
     }
-    if (admins.length === 0) return;
+    // An owner who delivers is never told about their own card (`adminRows`
+    // drops the caller), so a card delivered for a flightmate who is an admin
+    // skips that admin too.
+    const cardAdmins = admins.filter((a) => a.id !== cardUserId);
+    if (cardAdmins.length === 0) return;
 
     // In-app varsel til admin-ene + mail-gating på shouldAlsoSendMail.
     // Aktive admin-er (last_seen_at < 5 min) får kun in-app; off-app-admin-er
@@ -458,7 +462,7 @@ export async function submitScorecardCore(
     // sendMail til false (samme rasjonale som inni notify() ved insert-error
     // — vil ikke maile uten in-app-varsel).
     const adminNotifyResults = await Promise.allSettled(
-      admins.map((a) =>
+      cardAdmins.map((a) =>
         notify({
           userId: a.id,
           kind: 'scorecard_submitted',
@@ -482,7 +486,7 @@ export async function submitScorecardCore(
       }
     }
 
-    const mailRecipients = admins.filter(
+    const mailRecipients = cardAdmins.filter(
       (a) => sendMailByAdminId.get(a.id) === true,
     );
     if (mailRecipients.length > 0) {
