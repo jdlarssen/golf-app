@@ -20,6 +20,7 @@ import {
 import {
   canApproveScorecardFor,
   isSingleFlightGame,
+  organizerApprovalRow,
   pendingApprovalsFor,
   type FlightPlayer,
 } from '../../../../lib/games/flightScope';
@@ -122,6 +123,30 @@ export function canApprove(
     ownerUserId,
     findInRoster(roster, ownerUserId)?.submitted_by_user_id ?? null,
   );
+}
+
+/**
+ * Arrangørens eget kort i ventelista (#2213, #2200): kan en medspiller godkjenne
+ * det, eller ingen? Regelen er den delte `organizerApprovalRow`, som webbens
+ * avslutt-side bruker. Arrangøren er `games.created_by` og aldri admin i appen,
+ * så egen rad gir aldri `can_approve`.
+ *
+ * Ingen kan godkjenne kortet når eneste mulige makker leverte det (den som
+ * leverte, godkjenner ikke) eller de andre er trukket. Da er veien ut å åpne
+ * kortet igjen og avslutte likevel.
+ */
+export function ownCardApproval(
+  roster: readonly RosterEntry[],
+  gameMode: GameMode,
+  organiserUserId: string,
+): 'own_card_needs_peer' | 'own_card_no_peer' {
+  const row = organizerApprovalRow(
+    [...roster],
+    gameMode,
+    { userId: organiserUserId, isAdmin: false },
+    organiserUserId,
+  );
+  return row === 'own_card_no_peer' ? 'own_card_no_peer' : 'own_card_needs_peer';
 }
 
 /**

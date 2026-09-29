@@ -450,6 +450,27 @@ describe('EndGame', () => {
     expect(screen.getByTestId(`end-game-approve-${MATE}`)).toBeTruthy();
   });
 
+  it('viser veien ut når ingen kan godkjenne arrangørens kort (#2200)', async () => {
+    // Makkeren leverte kortet mitt og er den eneste i flighten, så ingen kan
+    // godkjenne det. «Be en medspiller» ville vært en blindvei; nettsiden
+    // viser samme vei ut (`own_card_no_peer`).
+    setBundle(
+      [
+        player({
+          userId: mockMe,
+          submittedAt: '2026-09-01T09:00:00.000Z',
+          submittedByUserId: MATE,
+        }),
+        player({ userId: MATE, submittedAt: '2026-09-01T09:00:00.000Z', submittedByUserId: MATE }),
+      ],
+      { requirePeerApproval: true },
+    );
+    await renderScreen();
+
+    expect(screen.getByTestId('end-game-own-card-no-peer')).toBeTruthy();
+    expect(screen.queryByTestId('end-game-own-card-needs-peer')).toBeNull();
+  });
+
   it('tilbyr ikke frafall i et format som ikke har frafall', async () => {
     // `singles_matchplay` er utenfor `supportsWithdrawal`. Uten denne gaten
     // lovet knappen en handling kjernen svarer `game_locked` på.
