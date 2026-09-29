@@ -26,6 +26,13 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  *   - Aktivt spill + egen WD-rad → nullstiller withdrawn_at
  *   - Bruker ikke trukket → not_registered
  *   - Spill finished → game_locked
+ *
+ * #2358 — kjernen speiler databasens regler for de samme radene:
+ *   - angre går bare når kalleren trakk seg selv (vakt (c), 0108)
+ *   - «trekk meg» på en rad som alt er trukket skriver ingenting
+ *   - en kaptein med lagkamerater som har takket ja kan ikke trekke seg før
+ *     start; ubesvarte invitasjoner trekkes sammen med kapteinen
+ *   - ingen kapteinsrad slettes, så kaskaden i 0042 når aldri laget
  */
 
 // Kjernen revaliderer selv (`expireGameCache`), og `revalidateTag` kaster
@@ -53,6 +60,10 @@ const GAME_ID = '22222222-2222-2222-2222-222222222222';
 const CAPTAIN_ID = '33333333-3333-3333-3333-333333333333';
 const TEAMMATE_ID = '44444444-4444-4444-4444-444444444444';
 const CAPTAIN_REQ_ID = '55555555-5555-5555-5555-555555555555';
+const MY_REQ_ID = '66666666-6666-6666-6666-666666666666';
+const CHILD_REQ_ID = '77777777-7777-7777-7777-777777777777';
+const OTHER_CHILD_REQ_ID = '88888888-8888-8888-8888-888888888888';
+const SECOND_MATE_ID = '99999999-9999-9999-9999-999999999999';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -175,9 +186,11 @@ describe('withdrawSelf', () => {
       },
       // 2) game_players — solo (team_number=null)
       { data: { user_id: USER_ID, team_number: null }, error: null },
-      // 3) DELETE game_players
+      // 3) egen påmeldingsrad (#2358: kaptein-sjekken) — ingen
       { data: null, error: null },
-      // 4) DELETE game_registration_requests
+      // 4) DELETE game_players
+      { data: null, error: null },
+      // 5) DELETE game_registration_requests
       { data: null, error: null },
     ]);
     const { withdrawSelf } = await import('./withdrawSelf');
@@ -204,17 +217,20 @@ describe('withdrawSelf', () => {
       },
       // 2) game_players — team_number=1
       { data: { user_id: USER_ID, team_number: 1 }, error: null },
-      // 3) mates lookup (samme team_number) → finnes en til
-      { data: [{ user_id: TEAMMATE_ID }], error: null },
-      // 4) min request-rad (team_name + team_request_id)
+      // 3) min request-rad (team_name + team_request_id). #2358: leses først,
+      // fordi den avgjør om kalleren er kaptein.
       {
         data: {
+          id: MY_REQ_ID,
+          status: 'approved',
           team_name: 'Bjørka',
           team_request_id: CAPTAIN_REQ_ID,
           is_team_captain: false,
         },
         error: null,
       },
+      // 4) mates lookup (samme team_number) → finnes en til
+      { data: [{ user_id: TEAMMATE_ID }], error: null },
       // 5) captain request lookup
       { data: { user_id: CAPTAIN_ID }, error: null },
       // 6) DELETE game_players
@@ -263,7 +279,9 @@ describe('withdrawSelf', () => {
       },
       // 2) game_players (solo)
       { data: { user_id: USER_ID, team_number: null }, error: null },
-      // 3) DELETE feiler
+      // 3) egen påmeldingsrad — ingen
+      { data: null, error: null },
+      // 4) DELETE feiler
       { data: null, error: { code: '12345', message: 'sql crashed' } },
     ]);
     const { withdrawSelf } = await import('./withdrawSelf');
@@ -315,9 +333,14 @@ describe('undoSelfWithdraw', () => {
         },
         error: null,
       },
-      // 2) game_players — trukket
+      // 2) game_players — trukket av spilleren selv (#2358: bare da kan
+      // spilleren angre)
       {
-        data: { user_id: USER_ID, withdrawn_at: '2026-06-01T10:00:00.000Z' },
+        data: {
+          user_id: USER_ID,
+          withdrawn_at: '2026-06-01T10:00:00.000Z',
+          withdrawn_by_user_id: USER_ID,
+        },
         error: null,
       },
       // 3) UPDATE game_players (clear withdrawn_at) — #712: .select() returns affected rows
@@ -482,6 +505,7 @@ describe('withdrawSelf — cup-kamper er låst før start (#1814)', () => {
         error: null,
       },
       { data: { user_id: USER_ID, team_number: null }, error: null },
+      { data: null, error: null }, // egen påmeldingsrad — ingen
       { data: null, error: null }, // DELETE game_players
       { data: null, error: null }, // DELETE registration requests
     ]);
@@ -491,5 +515,364 @@ describe('withdrawSelf — cup-kamper er låst før start (#1814)', () => {
       ok: true,
       kept: false,
     });
+  });
+});
+
+/**
+ * #2358: kjernen skriver med tjenestenøkkelen, så databasens regler for de
+ * samme radene slår ikke inn av seg selv. Casene under er de reglene, speilet:
+ *
+ *   - vakt (c) i `guard_game_players_self_update` (0108 → 0191): en spiller
+ *     rører ikke `withdrawn_at`/`withdrawn_by_user_id` på egen rad. Kjernen
+ *     slipper bare gjennom sitt eget trekk og sin egen angring.
+ *   - `game_registration_requests` har ingen DELETE-policy, og en spiller kan
+ *     bare flytte egen ventende rad til `withdrawn` (0042/0092). Kjernen
+ *     sletter derfor aldri en kapteinsrad — kaskaden i 0042 ville tatt laget.
+ */
+describe('withdrawSelf — mykt trekk skriver ikke over et trekk som finnes (#2358)', () => {
+  function activeGame() {
+    return {
+      data: {
+        id: GAME_ID,
+        name: 'X',
+        short_id: 'abc12345',
+        status: 'active',
+        game_mode: 'best_ball',
+        tournament_id: null,
+      },
+      error: null,
+    };
+  }
+
+  it('alt trukket av arrangøren → ok uten skriving, hvem som trakk står', async () => {
+    adminMock = buildSupabaseMock([
+      activeGame(),
+      {
+        data: {
+          user_id: USER_ID,
+          team_number: null,
+          withdrawn_at: '2026-06-01T10:00:00.000Z',
+        },
+        error: null,
+      },
+    ]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: true });
+    expect(
+      adminMock.__fromCalls.filter((c) => c.method === 'update' || c.method === 'delete'),
+    ).toHaveLength(0);
+  });
+
+  it('skrivingen krever at raden fortsatt ikke er trukket', async () => {
+    adminMock = buildSupabaseMock([
+      activeGame(),
+      { data: { user_id: USER_ID, team_number: null, withdrawn_at: null }, error: null },
+      { data: [{ user_id: USER_ID }], error: null },
+    ]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: true });
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'is',
+      args: ['withdrawn_at', null],
+    });
+  });
+});
+
+describe('undoSelfWithdraw — bare eget trekk kan angres (#2358)', () => {
+  function activeGame() {
+    return {
+      data: { id: GAME_ID, status: 'active', game_mode: 'best_ball' },
+      error: null,
+    };
+  }
+
+  it.each([
+    ['arrangøren', CAPTAIN_ID],
+    ['ukjent (null)', null],
+  ])('trukket av %s → withdrawn_by_other, ingen UPDATE', async (_who, by) => {
+    adminMock = buildSupabaseMock([
+      activeGame(),
+      {
+        data: {
+          user_id: USER_ID,
+          withdrawn_at: '2026-06-01T10:00:00.000Z',
+          withdrawn_by_user_id: by,
+        },
+        error: null,
+      },
+    ]);
+    const { undoSelfWithdraw } = await import('./withdrawSelf');
+
+    expect(await undoSelfWithdraw(GAME_ID, USER_ID)).toEqual({
+      ok: false,
+      error: 'withdrawn_by_other',
+    });
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(0);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('egen angring filtrerer skrivingen på kalleren som den som trakk', async () => {
+    adminMock = buildSupabaseMock([
+      activeGame(),
+      {
+        data: {
+          user_id: USER_ID,
+          withdrawn_at: '2026-06-01T10:00:00.000Z',
+          withdrawn_by_user_id: USER_ID,
+        },
+        error: null,
+      },
+      { data: [{ user_id: USER_ID }], error: null },
+    ]);
+    const { undoSelfWithdraw } = await import('./withdrawSelf');
+
+    expect(await undoSelfWithdraw(GAME_ID, USER_ID)).toEqual({ ok: true, kept: true });
+    // Et samtidig trekk fra arrangøren mellom lesing og skriving treffer 0
+    // rader i stedet for å bli nullet.
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'eq',
+      args: ['withdrawn_by_user_id', USER_ID],
+    });
+  });
+});
+
+describe('withdrawSelf — kapteinen og laget før start (#2358)', () => {
+  const scheduledGame = {
+    data: {
+      id: GAME_ID,
+      name: 'Sommercup',
+      short_id: 'abc12345',
+      status: 'scheduled',
+      game_mode: 'texas_scramble',
+      tournament_id: null,
+    },
+    error: null,
+  };
+  const captainReq = {
+    data: {
+      id: MY_REQ_ID,
+      status: 'approved',
+      team_name: 'Bjørka',
+      team_request_id: null,
+      is_team_captain: true,
+    },
+    error: null,
+  };
+  const onRoster = { data: { user_id: USER_ID, team_number: 1 }, error: null };
+  const ok = { data: null, error: null };
+
+  function writes(table: string) {
+    return adminMock.__fromCalls.filter(
+      (c) => c.table === table && (c.method === 'update' || c.method === 'delete' || c.method === 'insert'),
+    );
+  }
+
+  it.each([
+    [
+      'bekreftet på spillerlista',
+      { id: CHILD_REQ_ID, user_id: TEAMMATE_ID, status: 'approved', decided_by_user_id: USER_ID },
+      [{ user_id: TEAMMATE_ID, accepted_at: '2026-09-29T10:00:00.000Z' }],
+    ],
+    [
+      'sa ja selv før arrangøren godkjente',
+      { id: CHILD_REQ_ID, user_id: TEAMMATE_ID, status: 'approved', decided_by_user_id: TEAMMATE_ID },
+      [],
+    ],
+  ])('lagkamerat som har takket ja (%s) → captain_has_team, ingen skriving', async (_label, child, roster) => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster, { data: roster, error: null }],
+        game_registration_requests: [captainReq, { data: [child], error: null }],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({
+      ok: false,
+      error: 'captain_has_team',
+    });
+    expect(writes('game_players')).toHaveLength(0);
+    expect(writes('game_registration_requests')).toHaveLength(0);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('bare ubesvarte → kapteinen og invitasjonene trekkes, ubekreftede plasser fjernes, ingen sletting av påmeldinger', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          onRoster,
+          // lagkameratenes plasser: én ubekreftet (åpen påmelding), én uten rad
+          { data: [{ user_id: TEAMMATE_ID, accepted_at: null }], error: null },
+          ok, // DELETE ubekreftede plasser
+          ok, // DELETE egen rad
+        ],
+        game_registration_requests: [
+          captainReq,
+          {
+            data: [
+              { id: CHILD_REQ_ID, user_id: TEAMMATE_ID, status: 'approved', decided_by_user_id: USER_ID },
+              { id: OTHER_CHILD_REQ_ID, user_id: SECOND_MATE_ID, status: 'pending', decided_by_user_id: null },
+            ],
+            error: null,
+          },
+          { data: [{ id: MY_REQ_ID }], error: null }, // egen rad → withdrawn
+          { data: [{ id: CHILD_REQ_ID }, { id: OTHER_CHILD_REQ_ID }], error: null }, // invitasjonene → withdrawn
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+
+    const requestWrites = writes('game_registration_requests');
+    expect(requestWrites.map((c) => c.method)).toEqual(['update', 'update']);
+    for (const w of requestWrites) {
+      expect(w.args[0]).toEqual(expect.objectContaining({ status: 'withdrawn' }));
+    }
+
+    // Bare plasser som fortsatt er ubekreftet, fjernes.
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'is',
+      args: ['accepted_at', null],
+    });
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_players',
+      method: 'in',
+      args: ['user_id', [TEAMMATE_ID, SECOND_MATE_ID]],
+    });
+
+    // Begge får beskjed med det eksisterende varselet (eierens valg A).
+    for (const recipient of [TEAMMATE_ID, SECOND_MATE_ID]) {
+      expect(notifyMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: recipient,
+          kind: 'registration_rejected',
+          payload: expect.objectContaining({
+            game_id: GAME_ID,
+            reason_code: 'team_removed',
+          }),
+        }),
+      );
+    }
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('kaptein alene → egen påmelding merkes trukket FØR spillerraden slettes, ingen DELETE av påmeldingen', async () => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster, ok],
+        game_registration_requests: [
+          captainReq,
+          { data: [], error: null },
+          { data: [{ id: MY_REQ_ID }], error: null },
+        ],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+
+    const requestWrites = writes('game_registration_requests');
+    expect(requestWrites).toHaveLength(1);
+    expect(requestWrites[0]!.method).toBe('update');
+    expect(requestWrites[0]!.args[0]).toEqual(expect.objectContaining({ status: 'withdrawn' }));
+
+    const calls = adminMock.__fromCalls;
+    const markIdx = calls.findIndex((c) => c.table === 'game_registration_requests' && c.method === 'update');
+    const deleteIdx = calls.findIndex((c) => c.table === 'game_players' && c.method === 'delete');
+    expect(markIdx).toBeGreaterThanOrEqual(0);
+    expect(deleteIdx).toBeGreaterThan(markIdx);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('markeringen treffer 0 rader → db_error, og ingenting er slettet', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster],
+        game_registration_requests: [captainReq, { data: [], error: null }, { data: [], error: null }],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'db_error' });
+    expect(writes('game_players')).toHaveLength(0);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('feil når påmeldingen leses → db_error, ikke «ingen påmelding»', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [onRoster],
+        game_registration_requests: [{ data: null, error: { code: '08006', message: 'reset' } }],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: false, error: 'db_error' });
+    expect(writes('game_players')).toHaveLength(0);
+  });
+
+  it.each([
+    ['vanlig lagmedlem', CAPTAIN_REQ_ID],
+    ['gammel kaptein etter overføring', CHILD_REQ_ID],
+  ])('%s → bare egen rad slettes, filtrert på is_team_captain = false', async (_label, parentReq) => {
+    adminMock = buildSupabaseMock([], {}, {
+      byTable: {
+        games: [scheduledGame],
+        game_players: [
+          onRoster,
+          { data: [{ user_id: TEAMMATE_ID }], error: null }, // makker på samme lag
+          ok, // DELETE egen rad
+        ],
+        game_registration_requests: [
+          {
+            data: {
+              id: MY_REQ_ID,
+              status: 'approved',
+              team_name: 'Bjørka',
+              team_request_id: parentReq,
+              is_team_captain: false,
+            },
+            error: null,
+          },
+          { data: { user_id: CAPTAIN_ID }, error: null }, // kapteinen i dag
+          ok, // DELETE egen påmelding
+        ],
+        users: [{ data: { name: 'Per Spiller', nickname: null, email: 'per@example.test' }, error: null }],
+      },
+    });
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    expect(await withdrawSelf(GAME_ID, USER_ID)).toEqual({ ok: true, kept: false });
+
+    const requestWrites = writes('game_registration_requests');
+    expect(requestWrites.map((c) => c.method)).toEqual(['delete']);
+    expect(adminMock.__fromCalls).toContainEqual({
+      table: 'game_registration_requests',
+      method: 'eq',
+      args: ['is_team_captain', false],
+    });
+    // Ingen andre påmeldinger røres: kaskaden i 0042 kan ikke nå laget.
+    expect(
+      adminMock.__fromCalls.filter(
+        (c) => c.table === 'game_registration_requests' && c.method === 'eq' && c.args[0] === 'team_request_id',
+      ),
+    ).toHaveLength(0);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: CAPTAIN_ID, kind: 'team_member_withdrew' }),
+    );
   });
 });

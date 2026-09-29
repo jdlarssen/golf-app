@@ -11,8 +11,10 @@ import { withdrawFromGame, undoWithdraw } from '../withdrawActions';
  * brukeren til startsiden — påmeldingen finnes ikke lenger så `/games/[id]`
  * ville notFound() rendere.
  *
- * Ved feil: redirect tilbake til `/games/[id]/trekk-fra?error=withdraw_failed`
- * så confirm-siden re-rendrer med en error-banner.
+ * Ved feil: redirect tilbake til `/games/[id]/trekk-fra?error=<kode>` så
+ * confirm-siden re-rendrer med en error-banner. `captain_has_team` (#2358) får
+ * sin egen tekst — kapteinen skal vite hva som må til. Alt annet er
+ * `withdraw_failed`.
  */
 export async function submitWithdraw(formData: FormData): Promise<void> {
   const locale = await getLocale();
@@ -23,7 +25,8 @@ export async function submitWithdraw(formData: FormData): Promise<void> {
 
   const result = await withdrawFromGame(gameId);
   if (!result.ok) {
-    redirect({ href: `/games/${gameId}/trekk-fra?error=withdraw_failed` as string, locale });
+    const code = result.error === 'captain_has_team' ? 'captain_has_team' : 'withdraw_failed';
+    redirect({ href: `/games/${gameId}/trekk-fra?error=${code}` as string, locale });
   }
 
   // Active withdrawal keeps the row → land on game home to show «Du har

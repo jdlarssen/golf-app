@@ -35,15 +35,21 @@ import {
 //   POST   200 { ok: true, kept: boolean }   ← trekk deg
 //   DELETE 200 { ok: true, kept: true }      ← angre
 //          401 { error: 'unauthorized' }     403 { error: 'not_registered' }
-//          404 { error: 'not_found' }        409 { error: 'game_locked' }
+//          404 { error: 'not_found' }
+//          409 { error: 'game_locked' | 'withdrawn_by_other' | 'captain_has_team' }
 //          500 { error: 'withdraw_failed' }
 //
 // Ingen body, ingen query. Ett verb per handling på ÉN sti, som purringen: en
 // kropp som bærer kommandoer bryter doktrinen i `native/app/src/data/webApi.ts`
 // (kroppen bærer verdier, aldri identitet eller kommandoer).
 //
-// Én status = én kode, så appen slipper å lese `error`-feltet. Derfor svares
-// `not_registered` som 403 og ikke som 404: 404 betyr «spillet finnes ikke».
+// Statusen er klassen, `error` er detaljen. Derfor svares `not_registered` som
+// 403 og ikke som 404: 404 betyr «spillet finnes ikke». De to kodene fra #2358
+// (`withdrawn_by_other`, `captain_has_team`) deler 409 med `game_locked` med
+// vilje: «ikke nå, ikke fra deg». Et eldre app-bygg som bare leser statusen,
+// viser da «Frafallet kan du ikke angre nå» / «Denne runden kan du ikke trekke
+// deg fra nå» — riktig nok. Med 403 hadde det vist «Du står ikke som trukket»
+// til en spiller som ER trukket. Nye bygg leser `error` for å si hvorfor.
 //
 // `maxDuration` settes IKKE. Purringen trenger 60 s for N mail; her er det maks
 // ett `notify()`, og standard-taket holder.
@@ -55,6 +61,8 @@ const ERROR_STATUS: Record<SelfWithdrawError, number> = {
   not_registered: 403,
   game_not_found: 404,
   game_locked: 409,
+  withdrawn_by_other: 409,
+  captain_has_team: 409,
   db_error: 500,
 };
 
@@ -67,6 +75,8 @@ const ERROR_CODE: Record<SelfWithdrawError, string> = {
   not_registered: 'not_registered',
   game_not_found: 'not_found',
   game_locked: 'game_locked',
+  withdrawn_by_other: 'withdrawn_by_other',
+  captain_has_team: 'captain_has_team',
   db_error: 'withdraw_failed',
 };
 

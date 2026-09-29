@@ -189,6 +189,11 @@ export type PlayerForHole = {
   /** WD / «trekk spiller» (#386): non-null = player has been withdrawn. */
   withdrawn_at: string | null;
   /**
+   * #2358: who set `withdrawn_at`. The player may undo only their own
+   * withdrawal; one the organiser or an admin set is theirs to undo.
+   */
+  withdrawn_by_user_id: string | null;
+  /**
    * #463: non-null = deltakelse bekreftet. null = lagt til av arrangør, ikke
    * bekreftet ennå («Ikke bekreftet»-badge). Ikke en sperre — scorene teller.
    */
@@ -231,7 +236,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),

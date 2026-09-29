@@ -1892,6 +1892,8 @@
       "derivedNoticeUnknownHost": "another round",
       "withdrawnHeading": "You have withdrawn from the game",
       "withdrawnBody": "Your scores don't count in the standings. You can undo this while the game is active.",
+      "withdrawnByOrganiserHeading": "The organiser has withdrawn you from the game",
+      "withdrawnByOrganiserBody": "Your scores don't count in the standings. If this is a mistake, talk to the organiser.",
       "undoWithdraw": "Undo",
       "undoWithdrawPending": "Undoing …",
       "leaderboardButton": "🏆 View leaderboard →",
@@ -2112,8 +2114,11 @@
       "kicker": "Withdraw",
       "heading": "Withdraw from «{name}»?",
       "errors": {
-        "withdraw_failed": "Could not withdraw you from the game. Please try again or contact the organiser."
+        "withdraw_failed": "Could not withdraw you from the game. Please try again or contact the organiser.",
+        "captain_has_team": "You're the captain, and teammates have said yes. Hand the captaincy to a teammate before you withdraw."
       },
+      "captainHasTeamBody": "You're the captain, and teammates have said yes. Hand the captaincy to one of them on the team page first. Then you can withdraw.",
+      "captainHasTeamLink": "Go to the team page",
       "warningActive": "You are withdrawing from an active game. Your scores won't count in the results and your scorecard will be locked. You can undo this while the game is active.",
       "warningPreStart": "You will be removed from the sign-up list and your scorecard won't open at tee-off. The organiser will be notified automatically if you were on a team.",
       "whatHappensLabel": "What happens",
@@ -2126,7 +2131,8 @@
       "preStartItems": {
         "registrationDeleted": "Your registration will be deleted",
         "requestDeleted": "Any pending join request will also be deleted",
-        "teamNotified": "Team members and captain will be notified if you were on a team"
+        "teamNotified": "Team members and captain will be notified if you were on a team",
+        "unansweredInvitesWithdrawn": "Teammates who haven't answered lose their invitation and are told"
       },
       "preStartNote": "If you change your mind, you can sign up again as long as registration is still open.",
       "withdrawButton": "Withdraw from game",
