@@ -66,7 +66,8 @@ export function FlightAvatars({
             key={player.userId}
             style={[
               styles.disc,
-              { backgroundColor: colors.bg, borderColor: colors.surface },
+              // Kantfargen som fyll: `bg` forsvant nesten på det hvite kortet.
+              { backgroundColor: colors.border, borderColor: colors.surface },
               i > 0 && styles.overlap,
             ]}
             testID={`${testID}-disc`}
