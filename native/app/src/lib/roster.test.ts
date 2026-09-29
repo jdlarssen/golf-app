@@ -13,6 +13,7 @@ import {
   findInRoster,
   flightDeliveryButton,
   flightDeliveryFor,
+  flightCtaLabel,
   flightDeliveryLines,
   ownCardApproval,
   partialDeliveryNotice,
@@ -289,6 +290,16 @@ describe('setningene for levering for flighten (#2200)', () => {
 
   it('navngir makkerne når mitt eget kort alt er levert', () => {
     expect(deliverForButton([ola, kari])).toBe('Lever for Ola og Kari ✓');
+  });
+
+  // Spillhjemmet etter egen levering (#2200), som nettsidens
+  // `game.home.ctaDeliverFlight`. `null` = ingen knapp.
+  it.each([
+    [0, null],
+    [1, 'Lever kortet du har ført'],
+    [3, 'Lever kortene du har ført (3)'],
+  ] as [number, string | null][])('knappen på spillhjemmet for %i kort', (count, expected) => {
+    expect(flightCtaLabel(count)).toBe(expected);
   });
 
   // Serveren spør regelen selv og kan levere færre enn knappen lovet (slagene

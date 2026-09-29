@@ -58,6 +58,8 @@ import {
 } from '../lib/primaryCtaState';
 import {
   findInRoster,
+  flightCtaLabel,
+  flightDeliveryFor,
   pendingApprovals,
   rosterPlacementMarks,
   rosterStatus,
@@ -195,6 +197,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         filled={filled}
         submittedAt={myTeamCard ? myTeamCard.submittedAt : (me?.player.submittedAt ?? null)}
         approvedAt={myTeamCard ? myTeamCard.approvedAt : (me?.player.approvedAt ?? null)}
+        flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
         onChanged={refresh}
         onNavigate={navigation.navigate}
       />
@@ -276,6 +279,7 @@ function PrimarySection({
   filled,
   submittedAt,
   approvedAt,
+  flightCta,
   onChanged,
   onNavigate,
 }: {
@@ -290,6 +294,12 @@ function PrimarySection({
    */
   submittedAt: string | null;
   approvedAt: string | null;
+  /**
+   * #2200: knappen til scorekortet når mitt kort er levert og makkerkort jeg
+   * har ført, står igjen, som nettsidens PrimaryCta. `null` = ingen knapp.
+   * Regelen er den delte `flightDeliveryFor`, over de lokale slagene.
+   */
+  flightCta: string | null;
   /** Hent bundelen på nytt. Kalles etter «Angre trekk», uansett utfall. */
   onChanged: () => void | Promise<void>;
   onNavigate: ScreenProps<'GameHome'>['navigation']['navigate'];
@@ -416,19 +426,35 @@ function PrimarySection({
     requirePeerApproval: game.requirePeerApproval,
   });
 
+  const flightButton = flightCta ? (
+    <Pressable
+      style={ui.button}
+      onPress={() => onNavigate('Scorecard', { gameId: game.id })}
+      testID="deliver-flight-cta"
+    >
+      <Text style={ui.buttonText}>{flightCta}</Text>
+    </Pressable>
+  ) : null;
+
   if (state === 'submitted_pending_approval') {
     return (
-      <View style={ui.banner} testID="submitted-banner">
-        <Text style={ui.body}>Kortet er levert. Nå venter det på en makker.</Text>
-      </View>
+      <>
+        {flightButton}
+        <View style={ui.banner} testID="submitted-banner">
+          <Text style={ui.body}>Kortet er levert. Nå venter det på en makker.</Text>
+        </View>
+      </>
     );
   }
 
   if (state === 'submitted_approved') {
     return (
-      <View style={ui.banner} testID="submitted-banner">
-        <Text style={ui.body}>Kortet er levert og godkjent.</Text>
-      </View>
+      <>
+        {flightButton}
+        <View style={ui.banner} testID="submitted-banner">
+          <Text style={ui.body}>Kortet er levert og godkjent.</Text>
+        </View>
+      </>
     );
   }
 
