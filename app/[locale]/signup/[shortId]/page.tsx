@@ -22,7 +22,10 @@ import {
   type PendingRequestView,
 } from './pendingRequestView';
 import { shouldShowTeamInvitePointer } from './teamInvitePointer';
-import { resolveCertainTeamInvitation } from './team/captainLookup';
+import {
+  loadInviterTeams,
+  resolveCertainTeamInvitation,
+} from './team/captainLookup';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import {
   isPubliclyViewable,
@@ -269,14 +272,21 @@ export default async function PåmeldingPage({
     if (openInvitations.length > 0 && game.registration_type !== 'solo') {
       const { data: captainRows } = await admin
         .from('game_registration_requests')
-        .select('user_id')
+        .select('id, user_id')
         .eq('game_id', game.id)
         .eq('is_team_captain', true)
         .in('status', ['pending', 'approved'])
         .order('created_at', { ascending: false })
-        .returns<{ user_id: string }[]>();
+        .returns<{ id: string; user_id: string }[]>();
+      // #2358: en kaptein som har gitt fra seg bindet, står fortsatt på laget.
+      const inviterTeams = await loadInviterTeams(
+        admin,
+        game.id,
+        (captainRows ?? []).map((r) => r.id),
+      );
       hasCertainTeamInvitation =
-        resolveCertainTeamInvitation(openInvitations, captainRows ?? []) != null;
+        resolveCertainTeamInvitation(openInvitations, captainRows ?? [], inviterTeams) !=
+        null;
     }
   }
 

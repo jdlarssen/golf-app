@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useModalFocus } from '@/hooks/useModalFocus';
 import type { AppLocale } from '@/i18n/routing';
 import { formatDateTime } from '@/lib/i18n/format';
-import { approveRequest, rejectRequest } from './actions';
+import { approveRequest, rejectRequest, transferTeamCaptaincy } from './actions';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { RequestRow, TabKey } from './types';
@@ -90,6 +90,10 @@ export function PåmeldingerClient({
   const t = useTranslations('admin.game.signups');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [rejectingFor, setRejectingFor] = useState<RequestRow | null>(null);
+  // #2358: lagmedlemmet arrangøren er i ferd med å gjøre til kaptein.
+  // Bekreftelsen står på samme skjerm, ikke i en nettleser-confirm().
+  const [captainFor, setCaptainFor] = useState<string | null>(null);
+  const [transferring, setTransferring] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [, startTransition] = useTransition();
 
@@ -151,9 +155,13 @@ export function PåmeldingerClient({
     });
   }
 
-  // Mute the param so unused-var lint doesn't bite when gameId is needed by
-  // caller-side wiring (action ids) but not here.
-  void gameId;
+  function confirmCaptain(row: RequestRow) {
+    if (locked) return;
+    setTransferring(row.id);
+    startTransition(() => {
+      void transferTeamCaptaincy(gameId, row.id);
+    });
+  }
 
   if (groups.length === 0) {
     return (
@@ -238,6 +246,51 @@ export function PåmeldingerClient({
                   )}
                 </div>
 
+                {/* #2358: arrangøren utpeker ny kaptein blant dem som står
+                    på laget — bare godkjente lagmedlemmer, bare før start. */}
+                {tab === 'approved' &&
+                  row.status === 'approved' &&
+                  !locked &&
+                  idx > 0 &&
+                  group[0].isTeamCaptain &&
+                  (captainFor === row.id ? (
+                    <div className="space-y-2" data-testid="make-captain-confirm">
+                      <p className="text-sm text-text">
+                        {t('makeCaptainConfirm', {
+                          name: row.displayName,
+                          teamName: group[0].teamName ?? '',
+                        })}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          data-testid="make-captain-confirm-button"
+                          onClick={() => confirmCaptain(row)}
+                          pending={transferring === row.id}
+                          pendingLabel={t('makeCaptainPending')}
+                        >
+                          {t('makeCaptainConfirmButton')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => setCaptainFor(null)}
+                          disabled={transferring === row.id}
+                        >
+                          {t('makeCaptainCancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      data-testid="make-captain"
+                      onClick={() => setCaptainFor(row.id)}
+                    >
+                      {t('makeCaptainButton')}
+                    </Button>
+                  ))}
                 {row.status === 'pending' && !locked && idx === 0 && (
                   <div className="flex flex-wrap gap-2">
                     <Button

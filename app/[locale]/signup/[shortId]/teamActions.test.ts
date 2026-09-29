@@ -1649,3 +1649,201 @@ describe('#2223: roster-skrivingen feiler → ingen falsk suksess', () => {
     },
   );
 });
+
+/**
+ * #2358: kapteinsbindet kan gis videre (`transfer_team_captaincy`, 0194).
+ *
+ * RPC-en er regelens ene hjem — hvem som får overføre, hvem som kan ta imot, og
+ * hva som flyttes — og den bevises i `supabase/tests/transfer_team_captaincy_test.sql`.
+ * Her bevises bare at actionen sender den EKTE kalleren som aktør, og at
+ * utfallene blir koder lagsida kan vise.
+ */
+describe('#2358: transferCaptaincy', () => {
+  const NEW_CAPTAIN_REQUEST = '66666666-6666-6666-6666-666666666666';
+
+  beforeEach(() => {
+    authedAsCaptain();
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+  });
+
+  it('sender kalleren som aktør og spillet fra shortId, og tømmer cachen ved ok', async () => {
+    adminMock = buildSupabaseMock([], { transfer_team_captaincy: { outcome: 'ok' } });
+    const { transferCaptaincy } = await import('./teamActions');
+
+    expect(await transferCaptaincy(NEW_CAPTAIN_REQUEST, SHORT_ID)).toEqual({ ok: true });
+    expect(adminMock.__rpcCalls).toEqual([
+      {
+        name: 'transfer_team_captaincy',
+        params: {
+          p_game_id: GAME_ID,
+          p_actor_user_id: CAPTAIN_ID,
+          p_new_captain_request_id: NEW_CAPTAIN_REQUEST,
+        },
+      },
+    ]);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it.each([
+    ['not_approved', 'not_approved'],
+    ['game_locked', 'game_locked'],
+    ['not_allowed', 'not_found'],
+    ['not_a_teammate', 'not_found'],
+    ['game_not_found', 'not_found'],
+    ['noe_ukjent', 'db_error'],
+  ])('utfallet %s → %s, uten cache-tømming', async (outcome, error) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], { transfer_team_captaincy: { outcome } });
+    const { transferCaptaincy } = await import('./teamActions');
+
+    expect(await transferCaptaincy(NEW_CAPTAIN_REQUEST, SHORT_ID)).toEqual({ ok: false, error });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('en RPC-feil → db_error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([], {}, { rpcErrors: { transfer_team_captaincy: { message: 'boom' } } });
+    const { transferCaptaincy } = await import('./teamActions');
+
+    expect(await transferCaptaincy(NEW_CAPTAIN_REQUEST, SHORT_ID)).toEqual({ ok: false, error: 'db_error' });
+  });
+
+  it('en request-id som ikke er en uuid → not_found, uten RPC', async () => {
+    adminMock = buildSupabaseMock([]);
+    const { transferCaptaincy } = await import('./teamActions');
+
+    expect(await transferCaptaincy('ikke-en-id', SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(adminMock.__rpcCalls).toEqual([]);
+  });
+});
+
+describe('#2358: lagstyringen følger kapteinsbindet', () => {
+  const OLD_CAPTAIN_ID = CAPTAIN_ID;
+  const NEW_CAPTAIN_ID = '77777777-7777-7777-7777-777777777777';
+  const NEW_CAPTAIN_REQUEST = '88888888-8888-8888-8888-888888888888';
+  const CHILD_REQUEST = '99999999-9999-9999-9999-999999999999';
+
+  function childRow() {
+    return {
+      data: {
+        id: CHILD_REQUEST,
+        game_id: GAME_ID,
+        user_id: KNOWN_USER_ID,
+        team_request_id: NEW_CAPTAIN_REQUEST,
+        team_name: 'Bjørka',
+        status: 'approved',
+      },
+      error: null,
+    };
+  }
+
+  function actingAs(userId: string) {
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: userId, email: 'x@example.com' } },
+    });
+  }
+
+  beforeEach(() => {
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+  });
+
+  it('den nye kapteinen kan fjerne et lagmedlem', async () => {
+    actingAs(NEW_CAPTAIN_ID);
+    adminMock = buildSupabaseMock([
+      childRow(),
+      { data: { user_id: NEW_CAPTAIN_ID, team_name: 'Bjørka', status: 'approved' }, error: null },
+      { data: null, error: null }, // DELETE game_players
+      { data: null, error: null }, // DELETE request
+    ]);
+    const { removeTeamMember } = await import('./teamActions');
+
+    expect(await removeTeamMember(CHILD_REQUEST, SHORT_ID)).toEqual({ ok: true });
+  });
+
+  it('den gamle kapteinen kan ikke lenger styre laget → not_found, ingen skriving', async () => {
+    actingAs(OLD_CAPTAIN_ID);
+    adminMock = buildSupabaseMock([
+      childRow(),
+      { data: { user_id: NEW_CAPTAIN_ID, team_name: 'Bjørka', status: 'approved' }, error: null },
+    ]);
+    const { removeTeamMember, resendTeamInvite } = await import('./teamActions');
+
+    expect(await removeTeamMember(CHILD_REQUEST, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'delete')).toHaveLength(0);
+
+    actingAs(OLD_CAPTAIN_ID);
+    adminMock = buildSupabaseMock([
+      childRow(),
+      { data: { user_id: NEW_CAPTAIN_ID, team_name: 'Bjørka', status: 'approved' }, error: null },
+    ]);
+    expect(await resendTeamInvite(CHILD_REQUEST, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+  });
+
+  it('en kaptein som har trukket seg, styrer ikke laget lenger → not_found', async () => {
+    actingAs(NEW_CAPTAIN_ID);
+    adminMock = buildSupabaseMock([
+      childRow(),
+      { data: { user_id: NEW_CAPTAIN_ID, team_name: 'Bjørka', status: 'withdrawn' }, error: null },
+    ]);
+    const { removeTeamMember, resendTeamInvite } = await import('./teamActions');
+
+    expect(await removeTeamMember(CHILD_REQUEST, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'delete')).toHaveLength(0);
+
+    actingAs(NEW_CAPTAIN_ID);
+    adminMock = buildSupabaseMock([
+      childRow(),
+      { data: { user_id: NEW_CAPTAIN_ID, team_name: 'Bjørka', status: 'withdrawn' }, error: null },
+    ]);
+    expect(await resendTeamInvite(CHILD_REQUEST, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+  });
+
+  it('attachToCaptainTeam: invitasjon fra en kaptein som siden ga fra seg bindet → lagets nummer under den nye kapteinen', async () => {
+    const INVITEE_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    const INVITEE_EMAIL = 'ny.spiller@example.com';
+    actingAs(INVITEE_ID);
+    adminMock = buildSupabaseMock([
+      // 1) invitasjonen — sendt av den gamle kapteinen
+      {
+        data: { id: 'inv-1', email: INVITEE_EMAIL, game_id: GAME_ID, invited_by: OLD_CAPTAIN_ID },
+        error: null,
+      },
+      // 2) e-post-eierskap
+      { data: { email: INVITEE_EMAIL }, error: null },
+      // 3) aktive kapteiner: bare den nye
+      {
+        data: [{ id: NEW_CAPTAIN_REQUEST, user_id: NEW_CAPTAIN_ID, team_name: 'Bjørka', status: 'approved' }],
+        error: null,
+      },
+      // 4) lagkartet: den gamle kapteinen står under den nye
+      { data: [{ user_id: OLD_CAPTAIN_ID, team_request_id: NEW_CAPTAIN_REQUEST }], error: null },
+      // 5) child-insert
+      { data: { id: 'child-1' }, error: null },
+      // 6) den nye kapteinens plass: lag 3
+      { data: { team_number: 3 }, error: null },
+      // 7) game_players-upsert
+      { data: null, error: null },
+      // 8) invitasjonen merkes akseptert
+      { data: null, error: null },
+    ]);
+    const { attachToCaptainTeam } = await import('./teamActions');
+
+    expect(await attachToCaptainTeam('inv-1', SHORT_ID)).toEqual({ ok: true });
+    const insert = adminMock.__fromCalls.find(
+      (c) => c.method === 'insert' && c.table === 'game_registration_requests',
+    );
+    expect(insert?.args[0]).toMatchObject({
+      user_id: INVITEE_ID,
+      team_request_id: NEW_CAPTAIN_REQUEST,
+      team_name: 'Bjørka',
+      status: 'approved',
+    });
+    const upsert = adminMock.__fromCalls.find((c) => c.method === 'upsert');
+    expect(upsert?.args[0]).toMatchObject({ user_id: INVITEE_ID, team_number: 3 });
+  });
+});

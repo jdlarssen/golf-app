@@ -158,6 +158,8 @@ export default async function PåmeldingerPage({
     ? t('statusBanners.approved')
     : statusKey === 'rejected'
     ? t('statusBanners.rejected')
+    : statusKey === 'captain_transferred'
+    ? t('statusBanners.captain_transferred')
     : undefined;
   const errorCode = first(sp.error);
   const errorMessage = errorCode

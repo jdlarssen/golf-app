@@ -3810,7 +3810,8 @@
         "inviteOnlyBanner": "Dette spillet er invitasjonsbasert og dukker ikke opp i Finn turneringer. Folk som har lenken kan likevel be om å bli med. Forespørslene havner her, så du kan godkjenne eller avslå.",
         "statusBanners": {
           "approved": "✓ Påmeldingen er godkjent. Spilleren er lagt til i spillerlisten.",
-          "rejected": "✓ Påmeldingen er avvist. Spilleren får varsel."
+          "rejected": "✓ Påmeldingen er avvist. Spilleren får varsel.",
+          "captain_transferred": "✓ Kapteinsbindet er gitt videre."
         },
         "errors": {
           "not_pending": "Forespørselen er allerede avgjort av en annen administrator. Last siden på nytt.",
@@ -3821,7 +3822,9 @@
           "db_cascade": "Klarte ikke å hente lag-medlemmene. Prøv igjen.",
           "db_team_slot": "Klarte ikke å finne en ledig lag-plass. Prøv igjen.",
           "no_team_slot": "Spillet har ingen ledige lag igjen.",
-          "reason_too_long": "Begrunnelsen er for lang (maks 200 tegn)."
+          "reason_too_long": "Begrunnelsen er for lang (maks 200 tegn).",
+          "transfer_not_approved": "Bare en spiller som står på spillerlisten, kan bli kaptein.",
+          "transfer_failed": "Klarte ikke å gi kapteinsbindet videre. Prøv igjen."
         },
         "tabs": {
           "pending": "Venter",
@@ -3838,6 +3841,11 @@
         "teamLabel": "Lag · {name}",
         "playerCount": "{count, plural, one {# spiller} other {# spillere}}",
         "captainBadge": "Kaptein",
+        "makeCaptainButton": "Gjør til kaptein",
+        "makeCaptainConfirm": "Gjøre {name} til kaptein for {teamName}?",
+        "makeCaptainConfirmButton": "Ja, gjør til kaptein",
+        "makeCaptainCancel": "Avbryt",
+        "makeCaptainPending": "Lagrer …",
         "registeredAt": "Påmeldt {date}",
         "decidedAt": "Avgjort {date}",
         "approveButton": "Godkjenn",
@@ -5559,6 +5567,12 @@
     "teamDashRemoveButton": "Fjern",
     "teamDashRemovePending": "Fjerner …",
     "teamDashRemoveSuccess": "Medspiller fjernet.",
+    "teamDashMakeCaptainButton": "Gjør til kaptein",
+    "teamDashMakeCaptainConfirm": "Gi kapteinsbindet til {name}? Du blir et vanlig lagmedlem.",
+    "teamDashMakeCaptainConfirmButton": "Gi bindet videre",
+    "teamDashMakeCaptainCancel": "Avbryt",
+    "teamDashMakeCaptainPending": "Gir bindet videre …",
+    "teamDashMakeCaptainSuccess": "Kapteinsbindet er gitt videre.",
     "memberStatus": {
       "pending": "Venter på svar",
       "approved": "Med på laget",
@@ -5600,7 +5614,8 @@
       "teamDashGameLocked": "Spillet er startet — endringer er ikke tillatt lenger.",
       "teamDashSignupClosed": "Påmeldingen er stengt. Arrangøren gjør de siste justeringene.",
       "teamDashTeamUnknown": "Vi fant ikke laget ditt — spør kapteinen om en laginvitasjon, eller registrer eget lag.",
-      "teamDashDbError": "Klarte ikke å fullføre handlingen. Prøv igjen om litt."
+      "teamDashDbError": "Klarte ikke å fullføre handlingen. Prøv igjen om litt.",
+      "teamDashNotApproved": "Bare en lagkamerat som står på spillerlisten, kan bli kaptein."
     },
     "public": {
       "courseLabel": "Bane:",

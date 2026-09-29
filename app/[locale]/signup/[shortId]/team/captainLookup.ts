@@ -11,7 +11,18 @@ import { displayNameForOthers } from '@/lib/users/displayName';
  */
 
 /** Minimum en rad må bære for at pickeren skal kunne velge den. */
-type CaptainCandidate = { user_id: string };
+type CaptainCandidate = { id: string; user_id: string };
+
+/**
+ * Lagmedlem → kapteinsraden hen står under (`team_request_id`), for lagene
+ * med en aktiv kaptein (#2358).
+ *
+ * Kapteinsbindet kan gis videre (`transfer_team_captaincy`, 0194). Da er den
+ * som sendte en e-postinvitasjon ikke lenger kaptein, og `invited_by` alene
+ * finner ikke laget. Inviterens egen påmelding peker på den nye kapteinen.
+ * `invited_by` skrives aldri om: den sier hvem som faktisk inviterte.
+ */
+export type InviterTeams = ReadonlyMap<string, string>;
 
 export type CaptainPick<T extends CaptainCandidate> = {
   row: T;
@@ -24,10 +35,13 @@ export type CaptainPick<T extends CaptainCandidate> = {
  * `invitations.invited_by` peker på den som sendte invitasjonen. Er det en
  * kaptein i spillet, er svaret sikkert (`source: 'invited_by'`) — det finnes
  * maks én kaptein-rad per bruker per spill (unique (game_id, user_id), 0042).
- * Er inviteren arrangøren eller en kaptein som har trukket laget, vet vi ikke
- * hvilket lag invitéen hører til, og vi faller tilbake på dagens heuristikk:
- * nyeste lag (`source: 'fallback'`). Callere som viser lagnavn i UI skal kun
- * stole på `'invited_by'` — å navngi feil lag er verre enn å la være.
+ * Har inviteren gitt kapteinsbindet videre, står hen fortsatt på laget, og
+ * `inviterTeams` peker på den nye kapteinen — også det er et sikkert treff
+ * (#2358). Er inviteren arrangøren eller en kaptein som har trukket laget, vet
+ * vi ikke hvilket lag invitéen hører til, og vi faller tilbake på dagens
+ * heuristikk: nyeste lag (`source: 'fallback'`). Callere som viser lagnavn i
+ * UI skal kun stole på `'invited_by'` — å navngi feil lag er verre enn å la
+ * være.
  *
  * Ren funksjon: `rows` forventes sortert nyest først (`order created_at desc`),
  * så fallback er `rows[0]`.
@@ -35,10 +49,14 @@ export type CaptainPick<T extends CaptainCandidate> = {
 export function pickCaptainRequest<T extends CaptainCandidate>(
   rows: T[],
   invitedBy: string,
+  inviterTeams?: InviterTeams,
 ): CaptainPick<T> | null {
   if (rows.length === 0) return null;
   const invited = rows.find((r) => r.user_id === invitedBy);
   if (invited) return { row: invited, source: 'invited_by' };
+  const teamId = inviterTeams?.get(invitedBy);
+  const viaTeam = teamId ? rows.find((r) => r.id === teamId) : undefined;
+  if (viaTeam) return { row: viaTeam, source: 'invited_by' };
   return { row: rows[0], source: 'fallback' };
 }
 
@@ -91,15 +109,47 @@ export function pickPendingInvitation<T extends InvitationCandidate>(
 export function resolveCertainTeamInvitation<
   I extends InvitationCandidate,
   C extends CaptainCandidate,
->(invitations: I[], captainRows: C[]): { invitation: I; captain: C } | null {
-  const invitation = pickPendingInvitation(
-    invitations,
-    captainRows.map((r) => r.user_id),
-  );
+>(
+  invitations: I[],
+  captainRows: C[],
+  inviterTeams?: InviterTeams,
+): { invitation: I; captain: C } | null {
+  const invitation = pickPendingInvitation(invitations, [
+    ...captainRows.map((r) => r.user_id),
+    ...(inviterTeams?.keys() ?? []),
+  ]);
   if (!invitation) return null;
-  const picked = pickCaptainRequest(captainRows, invitation.invited_by);
+  const picked = pickCaptainRequest(captainRows, invitation.invited_by, inviterTeams);
   if (picked?.source !== 'invited_by') return null;
   return { invitation, captain: picked.row };
+}
+
+/**
+ * Lagkartet {@link InviterTeams} for kapteinsradene i et spill (#2358).
+ *
+ * Lest med tjenesteklienten: lagkameratenes påmeldinger er ikke synlige for
+ * invitéen under RLS. En lesefeil gir et tomt kart — da oppfører oppslaget seg
+ * som før overføringer fantes (stopp-skjermen), aldri som en gjetning.
+ */
+export async function loadInviterTeams(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+  captainRequestIds: string[],
+): Promise<InviterTeams> {
+  if (captainRequestIds.length === 0) return new Map();
+  const { data, error } = await admin
+    .from('game_registration_requests')
+    .select('user_id, team_request_id')
+    .eq('game_id', gameId)
+    .eq('is_team_captain', false)
+    .in('status', ['pending', 'approved'])
+    .in('team_request_id', captainRequestIds)
+    .returns<{ user_id: string; team_request_id: string }[]>();
+  if (error) {
+    console.error('[loadInviterTeams] lookup failed', { gameId, error });
+    return new Map();
+  }
+  return new Map((data ?? []).map((r) => [r.user_id, r.team_request_id]));
 }
 
 /**
