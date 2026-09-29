@@ -302,7 +302,12 @@ export async function getGameWithPlayers(
   // select — a stale 'gwp7' entry would resolve it as `undefined`, so «Levert
   // av …» would silently not render and the approval rule would not see who
   // delivered the card.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp8', id], {
+  //
+  // #2358: bumped to 'gwp9' when `withdrawn_by_user_id` (players) joined the
+  // select — a stale 'gwp8' entry would resolve it as `undefined`, so spill-hjem
+  // would read every withdrawal as the organiser's and hide «Angre» from a
+  // player who withdrew themself.
+  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp9', id], {
     tags: [`game-${id}`],
     revalidate: 900,
   })();
