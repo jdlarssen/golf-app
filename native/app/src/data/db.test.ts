@@ -13,16 +13,43 @@ type SqliteMock = typeof import('../test/sqliteMock');
 const GAME = 'game-1';
 const ME = 'user-me';
 
+/** Tabell-lista slik BASEN kjenner den — ikke en kopi skrevet av her. */
+async function tableNames(db: Awaited<ReturnType<Db['getDb']>>) {
+  const rows = await db.getAllAsync<{ name: string }>(
+    `SELECT name FROM sqlite_master
+      WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+      ORDER BY name;`,
+  );
+  return rows.map((row) => row.name);
+}
+
+async function countRows(
+  db: Awaited<ReturnType<Db['getDb']>>,
+  tables: string[],
+) {
+  const counts: Record<string, number> = {};
+  for (const table of tables) {
+    // Navnet kommer fra sqlite_master, aldri fra brukerdata; PRAGMA-lignende
+    // identifikatorer kan uansett ikke bindes som parameter.
+    const row = await db.getFirstAsync<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM "${table}";`,
+    );
+    counts[table] = row?.n ?? 0;
+  }
+  return counts;
+}
+
 describe('lokalt skjema', () => {
   useFreshModules();
 
-  it('åpner en fersk base rett på v3', async () => {
+  it('åpner en fersk base rett på v4, uten device_settings', async () => {
     const { getCacheEntry, getDb, putCacheEntry } = require('./db') as Db;
     const db = await getDb();
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 3 });
+    ).toEqual({ user_version: 4 });
+    expect(await tableNames(db)).not.toContain('device_settings');
 
     await putCacheEntry(db, {
       key: 'game:1',
@@ -36,7 +63,7 @@ describe('lokalt skjema', () => {
     });
   });
 
-  it('løfter en v1-base til v3 med N2-dataene i behold', async () => {
+  it('løfter en v1-base til v4 med N2-dataene i behold', async () => {
     const { DATABASE_NAME, MIGRATION_V1 } = require('./db') as Db;
     const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
 
@@ -63,7 +90,7 @@ describe('lokalt skjema', () => {
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 3 });
+    ).toEqual({ user_version: 4 });
 
     // Slaget står, uendret.
     expect(await listScoresForGame(db, GAME)).toEqual([
@@ -92,8 +119,9 @@ describe('lokalt skjema', () => {
   });
 
   // #2256: en telefon som alt har appen, står på v2 med hjem-lista og spill i
-  // cachen. Løftet til v3 legger bare til `device_settings`.
-  it('løfter en v2-base til v3 med cachen i behold', async () => {
+  // cachen. Løftet til v4 går gjennom v3 (lager `device_settings`) og v4
+  // (fjerner den igjen), og cachen står.
+  it('løfter en v2-base til v4 med cachen i behold', async () => {
     const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2 } = require('./db') as Db;
     const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
 
@@ -106,31 +134,59 @@ describe('lokalt skjema', () => {
        VALUES ('home', '{"cards":[]}', '2026-09-29T10:00:00.000Z');`,
     );
 
-    const { getCacheEntry, getDb, getDeviceSetting, putDeviceSetting } =
-      require('./db') as Db;
+    const { getCacheEntry, getDb, takeLegacyDeviceSetting } = require('./db') as Db;
     const db = await getDb();
 
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 3 });
+    ).toEqual({ user_version: 4 });
     expect(await getCacheEntry(db, 'home')).toMatchObject({ payload: '{"cards":[]}' });
-
-    expect(await getDeviceSetting(db, 'theme')).toBeUndefined();
-    await putDeviceSetting(db, 'theme', 'dark');
-    expect(await getDeviceSetting(db, 'theme')).toBe('dark');
+    expect(await tableNames(db)).not.toContain('device_settings');
+    expect(takeLegacyDeviceSetting('theme')).toBeUndefined();
   });
 
-  it('erstatter en innstilling i stedet for å legge på en ny rad', async () => {
-    const { getDb, getDeviceSetting, putDeviceSetting } = require('./db') as Db;
+  // #2256: telefonens innstillinger har ett hjem, AsyncStorage. En telefon som
+  // fikk v3 fra #2256 PR 1 kan ha temaet i `device_settings`: v4 leser verdiene
+  // før tabellen fjernes, og alt annet i basen står.
+  it('løfter en v3-base til v4, tar vare på temaet og lar resten av basen stå', async () => {
+    const { DATABASE_NAME, MIGRATION_V1, MIGRATION_V2, MIGRATION_V3 } = require('./db') as Db;
+    const { openDatabaseAsync } = require('../test/sqliteMock') as SqliteMock;
+
+    const existing = await openDatabaseAsync(DATABASE_NAME);
+    await existing.execAsync(MIGRATION_V1);
+    await existing.execAsync(MIGRATION_V2);
+    await existing.execAsync(MIGRATION_V3);
+    await existing.execAsync('PRAGMA user_version = 3;');
+    await existing.runAsync(`INSERT INTO device_settings (key, value) VALUES ('theme', 'dark');`);
+    await existing.runAsync(
+      `INSERT INTO scores
+         (id, game_id, user_id, hole_number, strokes, putts, entered_by, client_updated_at, server_updated_at)
+       VALUES ('${GAME}:${ME}:3', '${GAME}', '${ME}', 3, 4, 2, '${ME}', '2026-09-29T09:00:00.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO sync_queue (id, score_id, attempt_count, last_error, created_at, abandoned_at)
+       VALUES ('kø-1', '${GAME}:${ME}:3', 0, NULL, '2026-09-29T09:00:01.000Z', NULL);`,
+    );
+    await existing.runAsync(
+      `INSERT INTO cache_entries (key, payload, fetched_at)
+       VALUES ('home', '{"cards":[]}', '2026-09-29T10:00:00.000Z');`,
+    );
+
+    const { getDb, takeLegacyDeviceSetting } = require('./db') as Db;
     const db = await getDb();
 
-    await putDeviceSetting(db, 'theme', 'dark');
-    await putDeviceSetting(db, 'theme', 'light');
-
-    expect(await getDeviceSetting(db, 'theme')).toBe('light');
     expect(
-      await db.getFirstAsync<{ n: number }>('SELECT COUNT(*) AS n FROM device_settings;'),
-    ).toEqual({ n: 1 });
+      await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
+    ).toEqual({ user_version: 4 });
+    expect(await tableNames(db)).not.toContain('device_settings');
+    expect(await countRows(db, ['scores', 'sync_queue', 'cache_entries'])).toEqual({
+      scores: 1,
+      sync_queue: 1,
+      cache_entries: 1,
+    });
+    // Verdien leveres én gang; den som tar den, eier den.
+    expect(takeLegacyDeviceSetting('theme')).toBe('dark');
+    expect(takeLegacyDeviceSetting('theme')).toBeUndefined();
   });
 
   it('erstatter en cache-nøkkel i stedet for å legge på en ny rad', async () => {
@@ -170,38 +226,11 @@ describe('lokalt skjema', () => {
 describe('wipeLocalData', () => {
   useFreshModules();
 
-  /** Tabell-lista slik BASEN kjenner den — ikke en kopi skrevet av her. */
-  async function tableNames(db: Awaited<ReturnType<Db['getDb']>>) {
-    const rows = await db.getAllAsync<{ name: string }>(
-      `SELECT name FROM sqlite_master
-        WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-        ORDER BY name;`,
-    );
-    return rows.map((row) => row.name);
-  }
-
-  async function countRows(
-    db: Awaited<ReturnType<Db['getDb']>>,
-    tables: string[],
-  ) {
-    const counts: Record<string, number> = {};
-    for (const table of tables) {
-      // Navnet kommer fra sqlite_master, aldri fra brukerdata; PRAGMA-lignende
-      // identifikatorer kan uansett ikke bindes som parameter.
-      const row = await db.getFirstAsync<{ n: number }>(
-        `SELECT COUNT(*) AS n FROM "${table}";`,
-      );
-      counts[table] = row?.n ?? 0;
-    }
-    return counts;
-  }
-
-  it('etterlater ingen rad fra kontoen, men lar telefonens innstillinger stå', async () => {
+  it('etterlater ingen rad i noen tabell', async () => {
     const {
       getDb,
       putCacheEntry,
       putConflict,
-      putDeviceSetting,
       putQueueItem,
       putScore,
       wipeLocalData,
@@ -242,7 +271,6 @@ describe('wipeLocalData', () => {
       payload: '{"game":{}}',
       fetchedAt: '2026-09-01T09:00:03.000Z',
     });
-    await putDeviceSetting(db, 'theme', 'dark');
 
     const tables = await tableNames(db);
 
@@ -254,7 +282,6 @@ describe('wipeLocalData', () => {
     expect(await countRows(db, tables)).toEqual({
       cache_entries: 1,
       conflicts: 1,
-      device_settings: 1,
       scores: 1,
       sync_queue: 1,
     });
@@ -262,12 +289,10 @@ describe('wipeLocalData', () => {
     await wipeLocalData();
 
     // Fasiten leses ut av basen: en tabell wipe-en ikke rører blir rød her,
-    // uten at noen må huske å utvide en liste i testen. Det ene unntaket står
-    // navngitt: `device_settings` hører til telefonen, ikke kontoen (#2256),
-    // så temaet overlever utlogging og sletting.
-    const SURVIVES_WIPE: Record<string, number> = { device_settings: 1 };
+    // uten at noen må huske å utvide en liste i testen. Telefonens egne
+    // innstillinger (temaet, #2256) bor ikke i basen, men i AsyncStorage.
     expect(await countRows(db, tables)).toEqual(
-      Object.fromEntries(tables.map((table) => [table, SURVIVES_WIPE[table] ?? 0])),
+      Object.fromEntries(tables.map((table) => [table, 0])),
     );
   });
 
@@ -286,7 +311,7 @@ describe('wipeLocalData', () => {
     // Ingen ny migrasjonsrunde, ingen død forbindelse: samme `getDb()` svarer.
     expect(
       await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version;'),
-    ).toEqual({ user_version: 3 });
+    ).toEqual({ user_version: 4 });
     expect(await getCacheEntry(db, 'home')).toBeUndefined();
 
     await putCacheEntry(db, {

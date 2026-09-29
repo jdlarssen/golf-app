@@ -1954,10 +1954,18 @@ regelen lik på webben.
 «Lys», «Mørk» og «Følg telefonen» (`lib/themePreference.ts`) slås på med
 `Appearance.setColorScheme`, som overstyrer `useColorScheme()` for hele appen.
 `useTheme()`, navigasjonens tema og statuslinja følger da med uten egen kode. «Følg
-telefonen» er `'unspecified'`. Valget ligger i SQLite-tabellen `device_settings`
-(skjema v3), som `wipeLocalData` ikke tømmer, så temaet står igjen etter utlogging.
-`App.tsx` venter på valget bak splashen (maks ett sekund), så appen ikke blinker i feil
+telefonen» er `'unspecified'`. Valget ligger i AsyncStorage (`torny-theme`), som
+`wipeLocalData` ikke tømmer, så temaet står igjen etter utlogging. `App.tsx` venter på
+valget bak splashen (maks ett sekund, sammen med sollys), så appen ikke blinker i feil
 drakt ved oppstart.
+
+**Telefonens innstillinger har ett hjem: AsyncStorage.** Sollys, putter,
+eierstempelet, innloggingen og temaet bor der. PR 1 la temaet i en egen SQLite-tabell
+(`device_settings`, skjema v3); skjema v4 fjerner den igjen og leser verdiene rett før
+(`takeLegacyDeviceSetting`), så en telefon som fikk v3 beholder valget. Et valg som alt
+står i AsyncStorage vinner alltid over den gamle verdien. Nye innstillinger for
+telefonen (som APNs-tokenet i #2256 PR 4) legges i AsyncStorage, ikke i SQLite-basen,
+som er for spillernes slag, køen og cachen.
 
 Gull som tekst er rollen `accentText` (webbens `--accent-text`). `accent` er for lys til
 tekst på en lys flate.
