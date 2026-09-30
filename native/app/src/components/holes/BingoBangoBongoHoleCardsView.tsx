@@ -100,7 +100,9 @@ function AwardRow({
         <View style={styles.winner}>
           {row.isSweeper ? (
             <Text
-              style={[holesStyles.star, { color: colors.accent }]}
+              // Webbens stjerne her har ingen egen farge og arver navnets
+              // `text-accent-text`; derfor `accentText`, ikke dekorgull.
+              style={[holesStyles.star, { color: colors.accentText }]}
               accessibilityElementsHidden
               importantForAccessibility="no"
               testID={`hole-by-hole-star-${holeNumber}-${row.category}`}

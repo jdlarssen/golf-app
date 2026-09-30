@@ -310,20 +310,20 @@ describe('buildHoleByHole', () => {
 
 describe('waitsForChoices', () => {
   it('Wolf venter til valgene er hentet; en tom liste er et svar', () => {
-    expect(waitsForChoices('wolf', {})).toBe(true);
-    expect(waitsForChoices('wolf', { wolfChoices: [] })).toBe(false);
-    expect(waitsForChoices('solo-stableford', {})).toBe(false);
-    expect(waitsForChoices('nines', {})).toBe(false);
-    expect(waitsForChoices('round-robin', {})).toBe(false);
-    expect(waitsForChoices('acey-deucey', {})).toBe(false);
-    expect(waitsForChoices(null, {})).toBe(false);
+    expect(waitsForChoices({ gameMode: 'wolf', modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' } }, {})).toBe(true);
+    expect(waitsForChoices({ gameMode: 'wolf', modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' } }, { wolfChoices: [] })).toBe(false);
+    expect(waitsForChoices({ gameMode: 'stableford', modeConfig: { kind: 'stableford', team_size: 1, points_table: 'standard' } }, {})).toBe(false);
+    expect(waitsForChoices({ gameMode: 'nines', modeConfig: { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' } }, {})).toBe(false);
+    expect(waitsForChoices({ gameMode: 'round_robin', modeConfig: { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 85 } }, {})).toBe(false);
+    expect(waitsForChoices({ gameMode: 'acey_deucey', modeConfig: { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' } }, {})).toBe(false);
+    expect(waitsForChoices({ gameMode: 'skins', modeConfig: { kind: 'skins' } }, {})).toBe(false);
   });
 
   it('Bingo Bango Bongo venter til prestasjonene er hentet; en tom liste er et svar', () => {
-    expect(waitsForChoices('bingo-bango-bongo', {})).toBe(true);
-    expect(waitsForChoices('bingo-bango-bongo', { bingoBangoBongoHoles: [] })).toBe(false);
+    expect(waitsForChoices({ gameMode: 'bingo_bango_bongo', modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 } }, {})).toBe(true);
+    expect(waitsForChoices({ gameMode: 'bingo_bango_bongo', modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 } }, { bingoBangoBongoHoles: [] })).toBe(false);
     // Wolfs valg er ikke BBBs, og omvendt.
-    expect(waitsForChoices('bingo-bango-bongo', { wolfChoices: [] })).toBe(true);
-    expect(waitsForChoices('wolf', { bingoBangoBongoHoles: [] })).toBe(true);
+    expect(waitsForChoices({ gameMode: 'bingo_bango_bongo', modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 } }, { wolfChoices: [] })).toBe(true);
+    expect(waitsForChoices({ gameMode: 'wolf', modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' } }, { bingoBangoBongoHoles: [] })).toBe(true);
   });
 });
