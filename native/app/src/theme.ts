@@ -71,6 +71,23 @@ export type ThemeColors = {
    * skogen.
    */
   live: string;
+  /**
+   * Strekene mellom radene i en liste (Profil v2, designlerretet) — webbens
+   * `--row-divider-warm`, varmere enn `border`.
+   */
+  divider: string;
+  /**
+   * Flaten i seire-flisa (Profil v2) — webbens `--leader-fill-bottom`, kremen
+   * webben bruker under lederkortets gullstrek.
+   */
+  leaderFill: string;
+  /**
+   * Den varme kremen designet bruker på skogflaten for etiketter, initialer og
+   * tekst som ikke er navn eller tall (Profil v2: «HANDICAP», initialene,
+   * endepunktet på kurven, «Få med gjengen»). `onStrong` er kaldere i lys
+   * drakt; i mørk er de like, fordi skogen er mørk i begge.
+   */
+  onStrongWarm: string;
 };
 
 /**
@@ -102,6 +119,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#7D6224',
     trackBg: '#EFE9DA',
     live: '#7DAA8A',
+    divider: '#EDE6D2',
+    leaderFill: '#FBF8EE',
+    onStrongWarm: '#ECE5D2',
   },
   dark: {
     bg: '#14201A',
@@ -124,6 +144,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#D4B870',
     trackBg: '#243429',
     live: '#7DAA8A',
+    divider: '#2F3F34',
+    leaderFill: '#1A3D2E',
+    onStrongWarm: '#ECE5D2',
   },
 };
 
@@ -174,6 +197,10 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   trackBg: '#FFFFFF',
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
+  // Profil v2. Hullsiden tegner ingen av dem; sollysets svart og hvitt.
+  divider: '#000000',
+  leaderFill: '#FFFFFF',
+  onStrongWarm: '#F0EDE5',
 };
 
 /**

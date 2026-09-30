@@ -30,7 +30,7 @@ describe('bagTagModel', () => {
     expect(model).toEqual({
       kicker: 'Losby GK',
       name: 'Kari Nordmann',
-      subline: `${PROFILE_TEXT.genderFemale} · ${PROFILE_TEXT.levelJunior} · med siden 2026`,
+      subline: `${PROFILE_TEXT.genderFemale} · med siden 2026`,
       hcpText: formatHcpNb(14.2),
       hcpAge: { stale: false, text: hcpUpdatedLine('26. sep') },
       initials: 'KN',
@@ -50,7 +50,7 @@ describe('bagTagModel', () => {
 
   it.each([
     ['men, adult level', { gender: 'mens', level: 'normal' }, `${PROFILE_TEXT.genderMale} · med siden 2026`],
-    ['senior, no gender', { gender: null, level: 'senior' }, `${PROFILE_TEXT.levelSenior} · med siden 2026`],
+    ['senior, no gender', { gender: null, level: 'senior' }, 'med siden 2026'],
     ['unknown values', { gender: 'x', level: 'y' }, 'med siden 2026'],
     ['no join date', { gender: null, level: null, createdAt: null }, ''],
     ['unreadable join date', { gender: 'ladies', level: null, createdAt: 'ikke en dato' }, PROFILE_TEXT.genderFemale],
@@ -58,10 +58,13 @@ describe('bagTagModel', () => {
     expect(bagTagModel(profile(partial), null, NOW).subline).toBe(subline);
   });
 
-  it('says «Voksen» nowhere on the card', () => {
-    expect(bagTagModel(profile({ level: 'normal' }), null, NOW).subline).not.toContain(
-      PROFILE_TEXT.levelAdult,
-    );
+  // Profil v2: designet har kjønn · tee · år, og klassen skal ikke inn der
+  // tee-en sto. Ingen klasse på kortet, heller ikke «Voksen».
+  it.each(['junior', 'senior', 'normal'])('shows no class on the card: %s', (level) => {
+    const subline = bagTagModel(profile({ level }), null, NOW).subline;
+    for (const label of [PROFILE_TEXT.levelJunior, PROFILE_TEXT.levelSenior, PROFILE_TEXT.levelAdult]) {
+      expect(subline).not.toContain(label);
+    }
   });
 
   it('marks a handicap older than a month as stale', () => {

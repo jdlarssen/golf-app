@@ -79,7 +79,8 @@ export function ShareBagTagButton({
         ]}
         testID="profile-share-bag-tag"
       >
-        <DelIcon color={colors.primary} size={18} />
+        {/* Designet tegner ikonet med 1,8 i strek (i 24-rutenettet). */}
+        <DelIcon color={colors.primary} size={18} strokeWidth={1.8} />
         <Text style={[styles.buttonText, { color: colors.primary }]}>{PROFILE_TEXT.shareBagTag}</Text>
       </Pressable>
       {failed ? (
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
+    marginTop: 16,
   },
   buttonText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
   dimmed: { opacity: 0.6 },
