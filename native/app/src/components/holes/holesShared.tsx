@@ -11,14 +11,15 @@ import { HOLES_TEXT, holeNumberLabel, parSiChip } from '../../lib/holesCopy';
 import { FONTS, useTheme } from '../../theme';
 
 /**
- * Navnet slik webben skriver det: «Ola "Kompis" N.», med webbens reserve.
- * Uten navn (en slettet bruker står i bundelen med `name: null`) får spilleren
- * samme reserve som webben gir en spiller den ikke har i `playersById`.
+ * Navnet slik webben skriver det: «Ola "Kompis" N.». Uten navn (en invitert
+ * som aldri registrerte seg) blir det «(ukjent)», som webbens
+ * `p.users.name ?? tCommon('unknownPlayer')`. Bare en id som ikke er med i
+ * spillet får kallerens reserve.
  */
 export function nameOf(players: readonly BundlePlayer[], userId: string, fallback: string): string {
   const player = players.find((p) => p.userId === userId);
-  if (!player || player.name == null) return fallback;
-  return formatRevealName(player.name, player.nickname);
+  if (!player) return fallback;
+  return formatRevealName(player.name ?? HOLES_TEXT.unknownPlayer, player.nickname);
 }
 
 /**
