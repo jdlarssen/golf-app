@@ -19,7 +19,9 @@
 // reglene er dekket av Type A-testene, så det som står igjen her er koblingen.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
+import { useMemo, useState, type ReactNode } from 'react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { writeScore } from '../data/writeScore';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
@@ -218,18 +220,49 @@ jest.mock('expo-status-bar', () => ({
 
 // RNTL 14 er asynkron hele veien: både `render` og `fireEvent` returnerer
 // løfter (de wrapper act selv). Uten await settes aldri `screen`.
-function holeElement(
-  holeNumber: number,
-  navigation: { setParams: jest.Mock; navigate: jest.Mock; setOptions: jest.Mock },
-) {
-  return (
-    <Hole
-      {...({
-        route: { params: { gameId: GAME_ID, holeNumber } },
-        navigation,
-      } as unknown as ScreenProps<'Hole'>)}
-    />
+type TestNavigation = { setParams: jest.Mock; navigate: jest.Mock; setOptions: jest.Mock };
+type HeaderOptions = NativeStackHeaderProps['options'];
+
+/**
+ * Hullsiden med toppen den setter (#2385: den delte raden med Sollys og
+ * pokalen). `setOptions` går fortsatt til testens mock, og toppen tegnes over
+ * skjermen med navigatorens egne header-props, så testene kan trykke i den.
+ */
+function HoleWithTop({ holeNumber, navigation }: { holeNumber: number; navigation: TestNavigation }) {
+  const [top, setTop] = useState<ReactNode>(null);
+  const nav = useMemo(
+    () => ({
+      ...navigation,
+      goBack: jest.fn(),
+      setOptions: (options: HeaderOptions) => {
+        navigation.setOptions(options);
+        setTop(
+          options.header?.({
+            back: { title: 'Lørdagsrunden', href: undefined },
+            options,
+            route: { key: 'hole', name: 'Hole' },
+            navigation: nav as unknown as NativeStackHeaderProps['navigation'],
+          }) ?? null,
+        );
+      },
+    }),
+    [navigation],
   );
+  return (
+    <>
+      {top}
+      <Hole
+        {...({
+          route: { params: { gameId: GAME_ID, holeNumber } },
+          navigation: nav,
+        } as unknown as ScreenProps<'Hole'>)}
+      />
+    </>
+  );
+}
+
+function holeElement(holeNumber: number, navigation: TestNavigation) {
+  return <HoleWithTop holeNumber={holeNumber} navigation={navigation} />;
 }
 
 async function renderHole(holeNumber = 1) {
@@ -342,7 +375,10 @@ describe('Hole', () => {
     await waitFor(() => {
       expect(screen.getByText('Makker Makkersen')).toBeTruthy();
     });
-    expect(screen.getByText('Meg Selv (deg)')).toBeTruthy();
+    // Designet (#2385): ingen «(deg)» på skjermen; skjermleseren får det.
+    // Navnet står både i raden og øverst i skinna.
+    expect(within(screen.getByTestId('flight-row-me')).getByText('Meg Selv')).toBeTruthy();
+    expect(screen.getByLabelText('Meg Selv (deg): ingen score ennå')).toBeTruthy();
     expect(screen.queryByTestId('player-card-me')).toBeNull();
 
     // Den leverte raden er låst: grå, merket «Levert», og kan ikke velges.
@@ -353,9 +389,7 @@ describe('Hole', () => {
 
     // Skinna starter på meg. Slagene jeg får på hullet står i overskriften, og
     // netto på knappene regnes med dem (solo slagspill viser netto).
-    expect(screen.getByTestId('score-rail-heading').props.children).toBe(
-      'Meg Selv · får 1 slag',
-    );
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
     expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · netto 3');
 
     await fireEvent.press(screen.getByTestId('rail-option-4'));
@@ -368,16 +402,15 @@ describe('Hole', () => {
     });
     // Videre til makkeren. Den leverte hoppes over.
     await waitFor(() => {
-      expect(screen.getByTestId('score-rail-heading').props.children).toBe(
-        'Makker Makkersen · får 1 slag',
-      );
+      expect(screen.getByTestId('score-rail-heading').props.children).toBe('Makker Makkersen');
     });
     expect(screen.queryByTestId('score-rail-skip')).toBeNull();
 
     // #2000: putt-føring er opt-in. Solo-slagspill FANGER putter, så bryteren
     // finnes, men putte-valget kommer først når den er på.
     expect(screen.queryByTestId('rail-putts')).toBeNull();
-    await fireEvent.press(screen.getByTestId('hole-putts-toggle'));
+    // #2385: bryteren står i skinnas nederste rad.
+    await fireEvent.press(screen.getByTestId('rail-putts-toggle'));
     await waitFor(() => {
       expect(screen.getByTestId('rail-putts')).toBeTruthy();
     });
@@ -402,14 +435,16 @@ describe('Hole', () => {
     await waitFor(() => {
       expect(screen.getByTestId('flight-row-makker')).toBeTruthy();
     });
-    expect(screen.getByText('Lag 1 · Makker, Meg (ditt lag)')).toBeTruthy();
+    expect(within(screen.getByTestId('flight-row-makker')).getByText('Lag 1 · Makker, Meg')).toBeTruthy();
+    expect(screen.getByLabelText(/^Lag 1 · Makker, Meg \(ditt lag\)/)).toBeTruthy();
     expect(screen.getByText('Lag 2 · Rival, Rita')).toBeTruthy();
     expect(screen.queryByTestId('flight-row-me')).toBeNull();
 
-    // Merket er motorens tall: høysiden får 10 slag, altså ett på SI 1.
-    expect(screen.getByTestId('flight-row-makker-strokes').props.children).toBe('+1 SLAG');
-    // Lavsiden får ingen, og da vises ikke merket.
-    expect(screen.queryByTestId('flight-row-rival-a-strokes')).toBeNull();
+    // Tildelingen er motorens tall: høysiden får 10 slag, altså ett på SI 1.
+    // Laget som er på tur, har den øverst i skinna (#2385); lavsiden får
+    // ingen, og raden sier «Scratch».
+    expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent(/^Får 1 slag her/);
+    expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe('Scratch · venter');
 
     // Jeg taster, men raden er kapteinens («makker» er lex-min av laget).
     await fireEvent.press(screen.getByTestId('rail-option-4'));
@@ -423,7 +458,7 @@ describe('Hole', () => {
 
     // #2000: greensome fanger ikke putter (`formatCapturesPutts`), så hverken
     // bryteren eller putte-valget skal finnes.
-    expect(screen.queryByTestId('hole-putts-toggle')).toBeNull();
+    expect(screen.queryByTestId('rail-putts-toggle')).toBeNull();
     expect(screen.queryByTestId('rail-putts')).toBeNull();
   });
 
@@ -436,14 +471,12 @@ describe('Hole', () => {
 
     // Jeg har score, så skinna står på makkeren.
     await waitFor(() => {
-      expect(screen.getByTestId('score-rail-heading').props.children).toBe(
-        'Makker Makkersen · får 1 slag',
-      );
+      expect(screen.getByTestId('score-rail-heading').props.children).toBe('Makker Makkersen');
     });
     expect(screen.getByTestId('flight-row-me-score').props.children).toBe(6);
 
     await fireEvent.press(screen.getByTestId('flight-row-me'));
-    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv · får 1 slag');
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
 
     await fireEvent.press(screen.getByTestId('rail-undo'));
     expect(writeScore).toHaveBeenCalledTimes(1);
@@ -484,8 +517,8 @@ describe('Hole', () => {
     expect(screen.queryByTestId('score-rail')).toBeNull();
     expect(screen.getByTestId('flight-row-mate')).toBeDisabled();
     // Sollys styrer bare visningen, så bryteren virker på et låst hull.
-    await fireEvent.press(screen.getByRole('switch', { name: 'Sollysmodus' }));
-    expect(screen.getByRole('switch', { name: 'Sollysmodus' })).toBeChecked();
+    await fireEvent.press(screen.getByRole('switch', { name: 'Sollys' }));
+    expect(screen.getByRole('switch', { name: 'Sollys' })).toBeChecked();
   });
 
   // «Neste» bytter bare parameteren. Skinnas valg hører til ett hull: en rad
@@ -497,12 +530,10 @@ describe('Hole', () => {
       expect(screen.getByTestId('flight-row-mate')).toBeTruthy();
     });
     await fireEvent.press(screen.getByTestId('flight-row-mate'));
-    expect(screen.getByTestId('score-rail-heading').props.children).toBe(
-      'Makker Makkersen · får 1 slag',
-    );
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Makker Makkersen');
 
     await rerender(holeElement(2, navigation));
-    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv · får 1 slag');
+    expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
   });
 
   // #2252 del 2: sollys. Med telefonen i mørk modus blir hullsiden hvit og svart
@@ -517,20 +548,18 @@ describe('Hole', () => {
     });
     expect(screen.getByTestId('hole-screen')).toHaveStyle({ backgroundColor: '#14201A' });
 
-    const toggle = screen.getByRole('switch', { name: 'Sollysmodus' });
+    const toggle = screen.getByRole('switch', { name: 'Sollys' });
     expect(toggle).not.toBeChecked();
     await fireEvent.press(toggle);
-    expect(screen.getByRole('switch', { name: 'Sollysmodus' })).toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Sollys' })).toBeChecked();
     expect(screen.getByTestId('hole-screen')).toHaveStyle({ backgroundColor: '#FFFFFF' });
-    expect(screen.getByTestId('hole-hero-number')).toHaveStyle({ fontSize: 130 });
-    // Kantene er 3 og knappene 84, også i stripa og radene.
-    expect(screen.getByTestId('rail-option-4')).toHaveStyle({ height: 84, borderWidth: 3 });
-    expect(screen.getByTestId('flight-row-mate')).toHaveStyle({ borderWidth: 3 });
-    expect(screen.getByTestId('hole-strip-2')).toHaveStyle({ borderWidth: 3 });
-    // Valgt tilstand er en fylt flate: hullet du står på, og putte-bryteren.
-    expect(screen.getByTestId('hole-strip-1')).toHaveStyle({ backgroundColor: '#1B4332' });
-    await fireEvent.press(screen.getByTestId('hole-putts-toggle'));
-    expect(screen.getByTestId('hole-putts-toggle')).toHaveStyle({ backgroundColor: '#1B4332' });
+    expect(screen.getByTestId('hole-hero-number')).toHaveStyle({ fontSize: 132 });
+    // Hull-sollys (#2385): knappene er 84 med kant på 3, og før noen score står
+    // er par fylt svart. Raden på tur er en svart flate, og det er ingen stripe.
+    expect(screen.getByTestId('rail-option-5')).toHaveStyle({ height: 84, borderWidth: 3 });
+    expect(screen.getByTestId('rail-option-4')).toHaveStyle({ backgroundColor: '#000000' });
+    expect(screen.getByTestId('flight-row-me')).toHaveStyle({ backgroundColor: '#000000' });
+    expect(screen.queryByTestId('hole-strip')).toBeNull();
     // Mørk tekst i statuslinja mens hullsiden står øverst, men ikke når tavla
     // eller scorekortet er lagt oppå den.
     expect(screen.getByTestId('status-bar-dark')).toBeTruthy();
@@ -540,12 +569,8 @@ describe('Hole', () => {
     mockFocus.value = true;
     await rerender(holeElement(1, navigation));
     expect(screen.getByTestId('status-bar-dark')).toBeTruthy();
-    expect(navigation.setOptions).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        headerStyle: { backgroundColor: '#FFFFFF' },
-        headerTintColor: '#000000',
-      }),
-    );
+    // Toppen er den delte raden, og den er hvit i sollys også.
+    expect(screen.getByTestId('kicker-top-bar')).toHaveStyle({ backgroundColor: '#FFFFFF' });
     await waitFor(async () => {
       expect(await AsyncStorage.getItem('torny-sunlight')).toBe('1');
     });
@@ -568,12 +593,45 @@ describe('Hole', () => {
     // Av igjen: hullsiden og headeren følger telefonen, og nøkkelen er borte.
     await act(async () => setSunlight(false));
     expect(screen.getByTestId('hole-loading')).toHaveStyle({ backgroundColor: '#14201A' });
-    expect(navigation.setOptions).toHaveBeenLastCalledWith(
-      expect.objectContaining({ headerStyle: { backgroundColor: '#14201A' } }),
-    );
+    expect(screen.getByTestId('kicker-top-bar')).toHaveStyle({ backgroundColor: '#14201A' });
     await waitFor(async () => {
       expect(await AsyncStorage.getItem('torny-sunlight')).toBeNull();
     });
+  });
+
+  // #2385 (eierens svar): sollys har ingen hullstripe. Man bytter hull ved å
+  // sveipe på hullnummeret (VoiceOver: handlingene), og når alle i flighten
+  // har fått score, går siden selv til neste hull.
+  it('sollys: handlingene «Neste hull» og «Forrige hull» bytter hull, og siste score går videre', async () => {
+    await act(async () => setSunlight(true));
+    mockState.scores = [localScore('mate', 4, null)];
+    const navigation = await renderHole(2);
+    await waitFor(() => {
+      expect(screen.getByTestId('hole-hero-swipe')).toBeTruthy();
+    });
+    const hero = screen.getByTestId('hole-hero-swipe');
+    expect(hero.props.accessibilityLabel).toMatch(/^Hull 2 av 18, par \d, indeks \d+$/);
+
+    // RNTL sin `fireEvent` regner en flate med PanResponder som avslått for
+    // alle hendelser (den svarer nei på berøringsstart), så handlingen kalles
+    // direkte, slik VoiceOver gjør.
+    const a11yAction = (actionName: string) =>
+      act(async () => hero.props.onAccessibilityAction({ nativeEvent: { actionName } }));
+    await a11yAction('nextHole');
+    expect(navigation.setParams).toHaveBeenLastCalledWith({ holeNumber: 3 });
+    await a11yAction('previousHole');
+    expect(navigation.setParams).toHaveBeenLastCalledWith({ holeNumber: 1 });
+
+    // Siste score på hullet: siden går videre av seg selv.
+    navigation.setParams.mockClear();
+    mockState.scores = [localScore('mate', 4, null, 2), localScore('me', 4, null, 2)];
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    await waitFor(
+      () => {
+        expect(navigation.setParams).toHaveBeenCalledWith({ holeNumber: 3 });
+      },
+      { timeout: 2000 },
+    );
   });
 
   // #2219: i en blind runde som pågår viser hullsiden verken poeng eller
@@ -592,7 +650,8 @@ describe('Hole', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · 3 p');
     });
-    expect(screen.getByTestId('flight-row-mate-points').props.children).toBe('2 p');
+    // Slagene og poengene står i linja under navnet (#2385).
+    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe('Får 1 slag · 2 poeng');
     await fireEvent.press(screen.getByTestId('rail-other'));
     expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk · 0 p');
     await unmount();
@@ -602,7 +661,8 @@ describe('Hole', () => {
     await waitFor(() => {
       expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
     });
-    expect(screen.queryByTestId('flight-row-mate-points')).toBeNull();
+    // Blind runde: slagene er tildelingen og står, men poengene er borte.
+    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe('Får 1 slag');
     await fireEvent.press(screen.getByTestId('rail-other'));
     expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk');
   });

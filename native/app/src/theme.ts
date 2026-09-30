@@ -45,6 +45,14 @@ export type ThemeColors = {
   scoreOver1Fg: string;
   scoreOver2Fg: string;
   /**
+   * Flaten bak en score-tone (#2385, skinneknappene på hullsiden), webbens
+   * `--score-*-bg`: under par, par, bogey og dobbel bogey eller verre.
+   */
+  scoreUnderBg: string;
+  scoreParBg: string;
+  scoreOver1Bg: string;
+  scoreOver2Bg: string;
+  /**
    * Den skoggrønne flaten (#2254, heltekortet på Hjem) — webbens
    * `--surface-strong`. Skogen er mørk i begge draktene, så teksten oppå den
    * er lys i begge: det er {@link ThemeColors.onStrong}.
@@ -114,6 +122,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     scoreParFg: '#5C5347',
     scoreOver1Fg: '#7A5410',
     scoreOver2Fg: '#7A2F2A',
+    scoreUnderBg: 'rgba(74, 124, 89, 0.16)',
+    scoreParBg: 'rgba(92, 83, 71, 0.10)',
+    scoreOver1Bg: 'rgba(216, 155, 58, 0.18)',
+    scoreOver2Bg: 'rgba(184, 70, 62, 0.16)',
     surfaceStrong: '#1B4332',
     onStrong: '#F0EDE5',
     accentText: '#7D6224',
@@ -140,6 +152,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     scoreParFg: '#9A9180',
     scoreOver1Fg: '#E5B26F',
     scoreOver2Fg: '#D67268',
+    scoreUnderBg: 'rgba(125, 170, 138, 0.18)',
+    scoreParBg: 'rgba(154, 145, 128, 0.14)',
+    scoreOver1Bg: 'rgba(229, 178, 111, 0.18)',
+    scoreOver2Bg: 'rgba(214, 114, 104, 0.18)',
     surfaceStrong: '#1F3B2C',
     onStrong: '#ECE5D2',
     accentText: '#D4B870',
@@ -157,7 +173,33 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
  * `fontWeight` velger IKKE snitt for custom-fonter, bruk disse).
  * Vektskalaen speiler webbens (`--fw-*` i globals.css).
  */
+/**
+ * Fraunces sin egen linjehøyde, i skriftstørrelser: (ascent 1956 + descent 510)
+ * / 2000 fra `hhea`, lik i alle snittene appen har (pakkens og hullnummerets).
+ */
+export const FRAUNCES_LINE = 1.233;
+
+/**
+ * Nettleserens linjeboks for tall og ord i Fraunces (#2385). Designet setter
+ * ofte `line-height: 1` (eller 0,9), og da legger nettleseren halve forskjellen
+ * mellom linjehøyden og skriftens egen høyde over og under glyfen. iOS gjør
+ * det ikke: med `lineHeight` under skriftens høyde havner glyfen høyere, og
+ * under skriftstørrelsen krymper den i tillegg (målt i simulatoren). Her står
+ * teksten i sin egen høyde, og marger trekker den inn til linjeboksen.
+ */
+export function frauncesLine(size: number, lineHeight: number) {
+  return { fontSize: size, marginVertical: (lineHeight - size * FRAUNCES_LINE) / 2 };
+}
+
 export const FONTS = {
+  /** Små tall i Fraunces uten vekt (#2385: hullstripa, «?» og «–» på hullsiden). */
+  serifRegular: 'Fraunces_400Regular',
+  /**
+   * Hullnummeret (#2385): Fraunces tegnet for 96 og 132 pt, som nettleseren
+   * gjør det. Bare sifre (`assets/fonts/README.md`).
+   */
+  holeNumber: 'FrauncesHole96',
+  holeNumberSun: 'FrauncesHole132',
   serifDisplay: 'Fraunces_500Medium',
   serifScore: 'Fraunces_600SemiBold',
   sans: 'Inter_400Regular',
@@ -189,6 +231,11 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   scoreParFg: '#5C5347',
   scoreOver1Fg: '#7A5410',
   scoreOver2Fg: '#7A2F2A',
+  // Ingen tonede flater i sollys: skinneknappene er hvite med svart kant.
+  scoreUnderBg: '#FFFFFF',
+  scoreParBg: '#FFFFFF',
+  scoreOver1Bg: '#FFFFFF',
+  scoreOver2Bg: '#FFFFFF',
   // Heltekortets skogflate på Hjem (#2254). Hullsiden tegner den ikke, så
   // lys-verdiene står her bare for at paletten skal ha alle rollene.
   surfaceStrong: '#1B4332',
@@ -391,9 +438,8 @@ const uiVariants: Record<Scheme, Ui> = {
 
 /**
  * Målene på hullsiden (#2252), i punkter. Komponentene i
- * `components/hole/` leser dem herfra og har ingen av tallene hardkodet.
- * Standard er webbens (`--hole-number-size`, `--score-button-size`,
- * `--hole-border-w`, `--active-bar-w`).
+ * `components/hole/` leser dem herfra. Fra #2385 er de app-designets (`Main`
+ * og `Hull-sollys`), ikke webbens.
  */
 export type HoleMetrics = {
   /** Det store hullnummeret øverst. */
@@ -402,8 +448,9 @@ export type HoleMetrics = {
   railButton: number;
   /** Kanten på rader, skinneknapper og steppere. */
   borderW: number;
-  /** Streken langs venstre kant på den aktive raden. */
-  activeBarW: number;
+  /** Tallet og etiketten i skinneknappene (#2385: 28/11, sollys 40/13). */
+  railNumber: number;
+  railLabel: number;
   /**
    * Valgt tilstand (putte-bryteren, BBB-valget, hullet du står på) tegnes som
    * fylt flate i stedet for en farget kant. I sollys er kant og tekst svarte,
@@ -413,10 +460,12 @@ export type HoleMetrics = {
 };
 
 const HOLE_METRICS: HoleMetrics = {
-  numberSize: 44,
-  railButton: 64,
+  // `Main` (#2385): nummeret på 96 og skinneknappene på 72.
+  numberSize: 96,
+  railButton: 72,
   borderW: 1,
-  activeBarW: 4,
+  railNumber: 28,
+  railLabel: 11,
   selectedFill: false,
 };
 
@@ -434,14 +483,21 @@ const THEMES: Record<Scheme, Theme> = {
 
 /**
  * #2252: hullsiden i sollys. Et lyst tema uansett hva telefonen står på, med
- * kanter på 3, hullnummer på 130, skinneknapper på 84, en strek på 10
- * langs aktiv rad, og valgt tilstand som fylt flate.
+ * kanter på 3, hullnummer på 132 (`Hull-sollys`), skinneknapper på 84, og valgt
+ * tilstand som fylt flate.
  */
 export const SUNLIGHT_THEME: Theme = {
   scheme: 'light',
   colors: SUNLIGHT_COLORS,
   ui: createUi(SUNLIGHT_COLORS, { borderW: 3 }),
-  hole: { numberSize: 130, railButton: 84, borderW: 3, activeBarW: 10, selectedFill: true },
+  hole: {
+    numberSize: 132,
+    railButton: 84,
+    borderW: 3,
+    railNumber: 40,
+    railLabel: 13,
+    selectedFill: true,
+  },
 };
 
 /** OS-rapportert scheme → vårt. Ingen rapport (null/undefined/'unspecified') = lys. */

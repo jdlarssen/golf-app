@@ -20,80 +20,132 @@
 // designet kaller den der det sier noe (`backLabel`: «Tilbake til profil» i
 // rommene under profilen).
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAP, useTheme } from '../theme';
+import { FONTS, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
 import { TilbakeIcon } from './icons/Icons';
 
 /** Luften over raden (under sikker-sonen) og ut til kantene, som i designet. */
 const BAR_INSET = 8;
 /** Pila sin etikett når designet ikke sier noe annet. */
 const BACK_LABEL = 'Tilbake';
+/**
+ * Sollys (`Hull-sollys`): raden er 56 pt, med 12 pt ut til høyre kant, og
+ * pila er 22 pt med 2,4 pt strek.
+ */
+const SUNLIGHT_ROW = 48;
+const SUNLIGHT_RIGHT = 12;
+
+type TopOptions = {
+  backLabel?: string;
+  /** En linje under ordet (hullsiden: «format · bane»). */
+  subtitle?: string;
+  /** Gull er spillnavnet på hullsiden; ellers det dempede ordet. */
+  tone?: 'muted' | 'gold';
+  /** Hullsiden i sollys: svart og hvitt, større pil, ingen tittel. */
+  sunlight?: boolean;
+};
 
 /**
  * Header-valgene for toppen. `title` er skjermens navn for systemet: iOS
  * bruker det på tilbake-knappen og i tilbake-menyen på neste skjerm med
- * native topp (hullsiden, tavla), og det kan være et annet enn ordet i toppen.
- * Høyre-knappen er skjermens egen `headerRight` (del-knappen på billetten),
- * som skjermen setter med `setOptions`.
+ * native topp (tavla), og det kan være et annet enn ordet i toppen.
+ * Høyre-knappene er skjermens egen `headerRight` (del-knappen på billetten,
+ * sollys og pokalen på hullsiden), som skjermen setter med `setOptions`.
  */
 export function kickerHeader(
   kicker: string,
   title: string,
-  { backLabel = BACK_LABEL }: { backLabel?: string } = {},
+  { backLabel = BACK_LABEL, subtitle, tone = 'muted', sunlight = false }: TopOptions = {},
 ): NativeStackNavigationOptions {
   return {
     title,
     header: ({ back, navigation, options }) => (
-      <KickerTopBar
-        kicker={kicker}
-        backLabel={backLabel}
-        onBack={back ? () => navigation.goBack() : undefined}
-        right={options.headerRight?.({ canGoBack: back != null })}
-      />
+      <ThemeScope theme={sunlight ? SUNLIGHT_THEME : null}>
+        <KickerTopBar
+          kicker={kicker}
+          subtitle={subtitle}
+          tone={tone}
+          sunlight={sunlight}
+          backLabel={backLabel}
+          onBack={back ? () => navigation.goBack() : undefined}
+          right={options.headerRight?.({ canGoBack: back != null })}
+        />
+      </ThemeScope>
     ),
   };
 }
 
 /**
- * Raden: tilbake-pila til venstre, ordet i midten og høyre-knappen. En tom
- * boks står der det ikke er noen knapp, så ordet alltid står midt på skjermen.
+ * Raden: tilbake-pila til venstre, ordet i midten og høyre-knappene. Venstre
+ * side er alltid like bred som høyre (minst 44 pt), så ordet står midt på
+ * skjermen også når høyre side har to knapper.
  */
 function KickerTopBar({
   kicker,
+  subtitle,
+  tone,
+  sunlight,
   backLabel,
   onBack,
   right,
 }: {
   kicker: string;
+  subtitle?: string;
+  tone: 'muted' | 'gold';
+  sunlight: boolean;
   backLabel: string;
   onBack?: () => void;
   right?: ReactNode;
 }) {
   const { colors, ui } = useTheme();
   const insets = useSafeAreaInsets();
+  const [rightWidth, setRightWidth] = useState<number>(TAP);
+  const side = Math.max(TAP, rightWidth);
+  const ink = tone === 'gold' ? colors.accentText : colors.muted;
   return (
-    <View style={[styles.bar, { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.bg }]}>
-      <View style={styles.slot}>
-        {onBack ? <BareBack label={backLabel} onPress={onBack} /> : null}
+    <View
+      style={[
+        styles.bar,
+        { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.bg },
+        sunlight && [styles.barSunlight, { minHeight: insets.top + BAR_INSET + SUNLIGHT_ROW }],
+      ]}
+      testID="kicker-top-bar"
+    >
+      <View style={[styles.side, { width: side }]}>
+        {onBack ? <BareBack label={backLabel} large={sunlight} onPress={onBack} /> : null}
       </View>
       {/* Et langt ord (et spillnavn, #2392) kuttes med «…» på én linje i
           stedet for å bryte toppen over to; skjermleseren får hele. */}
       {kicker ? (
-        <Text
+        <View
+          style={styles.title}
+          accessible
           accessibilityRole="header"
-          accessibilityLabel={kicker}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-          style={[ui.kicker, styles.kicker]}
+          accessibilityLabel={[kicker, subtitle].filter(Boolean).join(', ')}
         >
-          {kicker}
-        </Text>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={[ui.kicker, styles.center, { color: ink }]}>
+            {kicker}
+          </Text>
+          {subtitle ? (
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[styles.subtitle, styles.center, { color: colors.muted }]}
+            >
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
       ) : (
-        <View style={styles.kicker} />
+        <View style={styles.title} />
       )}
-      <View style={styles.slot} testID="kicker-top-bar-right">
+      <View
+        style={[styles.side, styles.right]}
+        onLayout={(e) => setRightWidth(e.nativeEvent.layout.width)}
+        testID="kicker-top-bar-right"
+      >
         {right}
       </View>
     </View>
@@ -101,23 +153,36 @@ function KickerTopBar({
 }
 
 /** Tilbake-pila uten bakgrunn, midt i 44 pt å treffe på. */
-function BareBack({ label, onPress }: { label: string; onPress: () => void }) {
+function BareBack({
+  label,
+  large,
+  onPress,
+}: {
+  label: string;
+  large: boolean;
+  onPress: () => void;
+}) {
   const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={styles.slot}
+      style={styles.back}
       testID="header-back"
     >
-      <TilbakeIcon color={colors.text} size={20} strokeWidth={2} />
+      <TilbakeIcon color={colors.text} size={large ? 22 : 20} strokeWidth={large ? 2.4 : 2} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: BAR_INSET },
-  slot: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
-  kicker: { flex: 1, textAlign: 'center' },
+  barSunlight: { paddingRight: SUNLIGHT_RIGHT },
+  side: { minWidth: TAP, height: TAP, justifyContent: 'center' },
+  right: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
+  back: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
+  title: { flex: 1, alignItems: 'center' },
+  center: { textAlign: 'center' },
+  subtitle: { fontSize: 12, fontFamily: FONTS.sans, marginTop: 2 },
 });

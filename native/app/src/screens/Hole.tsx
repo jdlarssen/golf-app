@@ -30,11 +30,21 @@
 // #2252 del 2: sollys. Bryteren ved pokalen gjør hullsiden hvit og svart med
 // tykke kanter og store mål, uansett telefonens lys/mørk. Hele skjermen, også
 // laste- og feilgrenene, står i en `ThemeScope`, så alt som henter farger fra
-// `useTheme()` følger med. Headeren er navigatorens og statuslinja appens, så
-// de settes her mens hullsiden står.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+// `useTheme()` følger med. Statuslinja er appens, så den settes her mens
+// hullsiden står.
+//
+// #2385: siden er designlerretets (`Main` og `Hull-sollys`), identisk. Toppen
+// er den delte raden med spillnavnet i gull og sol-knappen og pokalen til
+// høyre (i sollys bare den svarte «Sollys på»-pillen). Hullstripa står
+// øverst, uten sidemarg på siden: hver del har sin egen luft. Skinna er et
+// ark som ligger fast nederst mens lista ruller under det. Eierens svar:
+// formene regnes av netto, putter er fortsatt noe man slår på, og i sollys
+// (uten stripe) bytter man hull ved å sveipe på hullnummeret, og siden går
+// selv videre når alle i flighten har score.
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,7 +53,6 @@ import {
 } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameStatus } from '../../../../lib/games/status';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { scoreOwnerForHole } from '../../../../lib/games/scoreOwner';
@@ -52,6 +61,7 @@ import {
   shouldHideNetto,
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
+import { firstName } from '../../../../lib/firstName';
 import { nameInitials } from '../../../../lib/names/initials';
 import { stablefordPointsForCard } from '../../../../lib/scorecard/railPoints';
 import {
@@ -66,13 +76,16 @@ import {
 } from '../../../../lib/scorecard/strokeEntry';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import {
+  MODE_LABELS,
   formatCapturesPutts,
   isStablefordFamily,
   modeCollapsesToTeamCard,
 } from '../../../../lib/scoring/modes/types';
+import { kickerHeader } from '../components/KickerHeader';
 import { BingoBangoBongoCard } from '../components/hole/BingoBangoBongoCard';
 import { FlightRow } from '../components/hole/FlightRow';
 import { HoleHero } from '../components/hole/HoleHero';
+import { HoleStrip } from '../components/hole/HoleStrip';
 import {
   ScoreRail,
   type RailDisplay,
@@ -81,6 +94,7 @@ import {
 import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
 import { SunlightToggle } from '../components/hole/SunlightToggle';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
+import { PokalHankerIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/gameBundle';
@@ -128,27 +142,21 @@ const TAP_INSTRUCTION = 'Trykk kort = par. Bruk − / +.';
  * åpnes igjen med «Åpne for redigering» på spillersiden.
  */
 const SUBMITTED_BADGE = 'Levert';
+/**
+ * Sollys (eierens svar, #2385): så lenge siden venter etter siste score på
+ * hullet før den går videre, så tallet rekker å synes.
+ */
+const AUTO_NEXT_MS = 800;
+/** Så langt sidelengs et sveip på hullnummeret må gå for å bytte hull. */
+const SWIPE_DISTANCE = 40;
 /** Hvor ofte skjermen leser SQLite på nytt. Samme takt som Sync-laben. */
 const POLL_MS = 1500;
 
 export function Hole(props: ScreenProps<'Hole'>) {
-  const { navigation } = props;
   const sunlight = useSunlight();
   const focused = useIsFocused();
-  const system = useTheme();
-  const theme = sunlight ? SUNLIGHT_THEME : system;
 
-  // Headeren tilhører navigatoren og ville ellers stått mørk over en hvit side.
-  // Uten sollys er verdiene de samme som i `screenOptions`, så ingenting endres.
-  // Valget er per skjerm: forlates hullsiden, har de andre sin egen header.
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerStyle: { backgroundColor: theme.colors.bg },
-      headerTintColor: theme.colors.text,
-      headerTitleStyle: { color: theme.colors.text, fontFamily: FONTS.sansBold },
-    });
-  }, [navigation, theme]);
-
+  // Toppen er den delte raden (`kickerHeader`), som selv bytter til sollys.
   return (
     <ThemeScope theme={sunlight ? SUNLIGHT_THEME : null}>
       {/* Mørk tekst i statuslinja over den hvite siden, men bare mens
@@ -229,6 +237,32 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
     [navigation],
   );
 
+  // #2385 (designlerretet): toppen har spillnavnet i gull med «format · bane»
+  // under, og Sollys og pokalen til høyre. I sollys står ingen tittel, som på
+  // `Hull-sollys`. Et langt navn kuttes på skjermen, men leses helt.
+  const sunlight = useSunlight();
+  const gameName = bundle?.game.name ?? '';
+  const topLine = bundle
+    ? [MODE_LABELS[bundle.game.gameMode as GameMode] ?? null, bundle.courseName]
+        .filter((part): part is string => !!part)
+        .join(' · ')
+    : '';
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      ...kickerHeader(sunlight ? '' : gameName, `Hull ${holeNumber}`, {
+        subtitle: topLine || undefined,
+        tone: 'gold',
+        sunlight,
+      }),
+      headerRight: () => (
+        <HoleTopTools
+          sunlight={sunlight}
+          onLeaderboard={() => navigation.navigate('Leaderboard', { gameId })}
+        />
+      ),
+    });
+  }, [navigation, sunlight, gameName, topLine, holeNumber, gameId]);
+
   if (!bundle) {
     return (
       <View style={ui.centered} testID="hole-loading">
@@ -268,9 +302,33 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
       choices={choices}
       putts={putts}
       goToHole={goToHole}
-      onLeaderboard={() => navigation.navigate('Leaderboard', { gameId })}
       onSubmit={() => navigation.navigate('Scorecard', { gameId })}
     />
+  );
+}
+
+/**
+ * Sollys og pokalen oppe til høyre i toppen (#2385). Begge har 44 pt å treffe
+ * på: pokalen er en 44 pt-knapp, og sollys-pillen løftes dit av `hitSlop`.
+ */
+function HoleTopTools({ sunlight, onLeaderboard }: { sunlight: boolean; onLeaderboard: () => void }) {
+  const { colors } = useTheme();
+  // I sollys står bare den svarte pillen (Hull-sollys); pokalen er borte.
+  return (
+    <View style={styles.topTools}>
+      <SunlightToggle on={sunlight} onToggle={() => setSunlight(!sunlight)} />
+      {sunlight ? null : (
+        <Pressable
+          onPress={onLeaderboard}
+          style={styles.topIcon}
+          testID="hole-leaderboard"
+          accessibilityRole="button"
+          accessibilityLabel="Vis resultatene"
+        >
+          <PokalHankerIcon color={colors.text} size={20} strokeWidth={1.8} />
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -279,10 +337,12 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
  * og «Annet»-arket leser alle herfra.
  */
 type HoleSeat = ScoreRailSeat & {
-  /** Navnet i skinna og i skjermleserens tekst. */
+  /** Navnet i skinna og i raden. */
   name: string;
-  /** Navnet i raden, med «(deg)» eller «(ditt lag)». */
-  rowName: string;
+  /** Fornavnet (eller lagets navn): «Neste: X →» og raden i sollys. */
+  shortName: string;
+  /** Navnet skjermleseren får i raden, med «(deg)» eller «(ditt lag)». */
+  a11yName: string;
   initial: string;
   /** Slagene setet får på hullet. `null` = motoren kunne ikke svare. */
   extraStrokes: number | null;
@@ -304,7 +364,6 @@ function HoleView({
   choices,
   putts,
   goToHole,
-  onLeaderboard,
   onSubmit,
 }: {
   gameId: string;
@@ -318,11 +377,12 @@ function HoleView({
   choices: GameChoices;
   putts: PuttsTracking;
   goToHole: (next: number) => void;
-  onLeaderboard: () => void;
   onSubmit: () => void;
 }) {
-  const { colors, hole: holeMetrics, ui } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors, ui } = useTheme();
+  // Skinna ligger fast over bunnen av siden (designet); lista ruller under den,
+  // og slutter så høyt at siste rad kan rulles fram over skinna.
+  const [railHeight, setRailHeight] = useState(0);
   const sunlight = useSunlight();
   const { extras, refresh: refreshChoices } = choices;
   // Setet «Annet»-arket er åpent for, eller `null`.
@@ -413,7 +473,8 @@ function HoleView({
           putts: row?.putts ?? null,
           locked: locked || card.submittedAt != null,
           name: card.label,
-          rowName: isMine ? `${card.label} (ditt lag)` : card.label,
+          shortName: card.label,
+          a11yName: isMine ? `${card.label} (ditt lag)` : card.label,
           initial: String(card.teamNumber),
           extraStrokes: leaderboard
             ? teamExtraForHole(leaderboard, card.teamNumber, holeNumber, hole.strokeIndex)
@@ -432,7 +493,8 @@ function HoleView({
           putts: row?.putts ?? null,
           locked: locked || entry.submitted_at != null,
           name,
-          rowName: entry.user_id === userId ? `${name} (deg)` : name,
+          shortName: firstName(entry.player.name) ?? name,
+          a11yName: entry.user_id === userId ? `${name} (deg)` : name,
           initial: nameInitials(entry.player.name),
           // `null` = configen peker på et annet format: da vises ingen badge.
           extraStrokes: playerExtraForHole(
@@ -559,32 +621,58 @@ function HoleView({
     await writeStrokes(playerUserId, firstEntryStrokes(par));
   };
 
+  // Sollys (eierens svar, #2385): har alle i flighten fått score på hullet,
+  // går siden selv til neste hull. Bare når det skjer her, ikke når man åpner
+  // et hull som alt er ferdig; hvert hull har sin egen `HoleView` (`key`).
+  const everyoneScored = usesRail && seats.length > 0 && seats.every((seat) => seat.score != null);
+  const scoredBefore = useRef(everyoneScored);
+  useEffect(() => {
+    const before = scoredBefore.current;
+    scoredBefore.current = everyoneScored;
+    if (!sunlight || before || !everyoneScored || holeNumber >= HOLE_COUNT) return;
+    const timer = setTimeout(() => goToHole(holeNumber + 1), AUTO_NEXT_MS);
+    return () => clearTimeout(timer);
+  }, [everyoneScored, sunlight, holeNumber, goToHole]);
+
   const allHolesFilled = myFilled.length >= HOLE_COUNT;
+  // Telleren over radene: seter på skinna, spillere i kortformatene.
+  const rowCount = usesRail ? seats.length : flight.length;
+  const enteredCount = usesRail
+    ? seats.filter((seat) => seat.score != null).length
+    : flight.filter((entry) => byUserHole.get(`${entry.user_id}#${holeNumber}`)?.strokes != null)
+        .length;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]} testID="hole-screen">
-      <ScrollView contentContainerStyle={ui.scroll} testID="hole-scroll">
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: railHeight + 8 }]}
+        testID="hole-scroll"
+      >
         {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
-        <SyncBanner gameId={gameId} />
-        <HoleHero
+        <View style={styles.pad}>
+          <SyncBanner gameId={gameId} />
+        </View>
+        {/* #2385 (designlerretet): hullstripa står øverst, uten overskrift og
+            uten «Forrige»/«Neste»: de ni hullene i halvdelen du står i.
+            Sollys har ingen stripe (Hull-sollys). */}
+        {sunlight ? null : (
+          <HoleStrip holeNumber={holeNumber} holeCount={HOLE_COUNT} filled={myFilled} onGo={goToHole} />
+        )}
+        <HoleSwipe
+          enabled={sunlight}
           holeNumber={holeNumber}
-          totalHoles={HOLE_COUNT}
-          par={par}
-          strokeIndex={hole.strokeIndex}
-          puttsToggle={
-            <PuttsToggle
-              visible={capturesPutts}
-              enabled={putts.enabled}
-              disabled={locked}
-              onToggle={putts.toggle}
-            />
-          }
-          // Bare visningen: virker også når kortet er låst.
-          headerAccessory={
-            <SunlightToggle on={sunlight} onToggle={() => setSunlight(!sunlight)} />
-          }
-          onLeaderboard={onLeaderboard}
-        />
+          label={`Hull ${holeNumber} av ${HOLE_COUNT}, par ${par}, indeks ${hole.strokeIndex}`}
+          onGo={goToHole}
+        >
+          <HoleHero
+            holeNumber={holeNumber}
+            totalHoles={HOLE_COUNT}
+            par={par}
+            strokeIndex={hole.strokeIndex}
+            sunlight={sunlight}
+          />
+        </HoleSwipe>
+        <View style={styles.pad}>
 
         {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
             det. Et avsluttet spill kan bare admin åpne, på nettsiden. */}
@@ -611,13 +699,30 @@ function HoleView({
           />
         ) : null}
 
+        </View>
+
+        {/* «Flighten på hull 7» og hvor mange som har tastet (designet). Sollys
+            har ingen overskrift, som på artboardet. */}
+        {sunlight ? null : (
+          <View style={styles.flightHead}>
+            <Text style={[styles.flightKicker, { color: colors.muted }]} accessibilityRole="header">
+              {`Flighten på hull ${holeNumber}`}
+            </Text>
+            <Text style={[styles.flightCount, { color: colors.muted }]} testID="flight-count">
+              {`${enteredCount} av ${rowCount} tastet`}
+            </Text>
+          </View>
+        )}
+
         {usesRail ? (
-          <View style={styles.flightList} testID="flight-list">
+          <View style={sunlight ? null : styles.flightList} testID="flight-list">
             {seats.map((seat) => (
               <FlightRow
                 key={seat.id}
                 seatId={seat.id}
-                name={seat.rowName}
+                name={sunlight ? seat.shortName : seat.name}
+                a11yName={seat.a11yName}
+                sunlight={sunlight}
                 initial={seat.initial}
                 extraStrokes={seat.extraStrokes}
                 score={seat.score}
@@ -641,7 +746,8 @@ function HoleView({
             ))}
           </View>
         ) : (
-          flight.map((entry) => (
+          <View style={styles.pad}>
+          {flight.map((entry) => (
             <PlayerCard
               key={entry.user_id}
               entry={entry}
@@ -655,8 +761,11 @@ function HoleView({
               onFirstEntry={() => void setFirstEntryStrokes(entry.user_id)}
               onClearStrokes={() => void writeStrokes(entry.user_id, null)}
             />
-          ))
+          ))}
+          </View>
         )}
+
+        <View style={styles.pad}>
 
         {/* BBB-registreringen står under kortene, som på web: den handler om
             det flighten så, ikke om tallene over. */}
@@ -680,84 +789,6 @@ function HoleView({
           />
         ) : null}
 
-        <Text style={ui.sectionTitle}>Runden</Text>
-        {/* `flexGrow: 0`: en ScrollView vokser ellers og legger et tomrom over
-            «Forrige»/«Neste» når flighten er kort. */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.stripScroll}
-          testID="hole-strip"
-        >
-          <View style={styles.strip}>
-            {Array.from({ length: HOLE_COUNT }, (_, i) => i + 1).map((n) => {
-              const isCurrent = n === holeNumber;
-              const isFilled = myFilled.includes(n);
-              // I sollys er ført hull svarte og kantene svarte, så hullet du
-              // står på fylles med skog i stedet for å få en farget kant.
-              const currentFill = isCurrent && holeMetrics.selectedFill;
-              return (
-                <Pressable
-                  key={n}
-                  onPress={() => goToHole(n)}
-                  style={[
-                    styles.stripHole,
-                    {
-                      backgroundColor: currentFill
-                        ? colors.primary
-                        : isFilled
-                          ? colors.accent
-                          : colors.surface,
-                      borderColor: isCurrent ? colors.primary : colors.border,
-                      // Temaets kant (3 i sollys), én tykkere på hullet du står på.
-                      borderWidth: isCurrent ? holeMetrics.borderW + 1 : holeMetrics.borderW,
-                    },
-                  ]}
-                  testID={`hole-strip-${n}`}
-                >
-                  <Text
-                    style={[
-                      ui.num,
-                      styles.stripText,
-                      // Blekket på gull er mørkt i begge palettene; ellers vanlig
-                      // tekstfarge.
-                      {
-                        color: currentFill
-                          ? colors.onPrimary
-                          : isFilled
-                            ? colors.onAccent
-                            : colors.text,
-                      },
-                      isCurrent && styles.stripTextCurrent,
-                    ]}
-                  >
-                    {n}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        <View style={styles.navRow}>
-          <Pressable
-            style={[ui.buttonSecondary, styles.navButton]}
-            onPress={() => goToHole(holeNumber - 1)}
-            disabled={holeNumber <= 1}
-            testID="hole-prev"
-          >
-            <Text style={ui.buttonSecondaryText}>Forrige</Text>
-          </Pressable>
-          <Pressable
-            style={[ui.buttonSecondary, styles.navButton]}
-            onPress={() => goToHole(holeNumber + 1)}
-            disabled={holeNumber >= HOLE_COUNT}
-            testID="hole-next"
-          >
-            <Text style={ui.buttonSecondaryText}>Neste</Text>
-          </Pressable>
-        </View>
-
         {holeNumber === HOLE_COUNT || allHolesFilled ? (
           <Pressable style={ui.button} onPress={onSubmit} testID="hole-submit">
             {/* Begge veier går til Scorecard — kø-vakta og hull-dialogen har ett
@@ -767,12 +798,18 @@ function HoleView({
             </Text>
           </Pressable>
         ) : null}
+        </View>
       </ScrollView>
 
-      {/* Skinna står fast i tommelsonen mens flighten ruller over den, som
-          på web. Et låst hull har ingenting å taste, og da står den ikke. */}
+      {/* Skinna står fast i tommelsonen mens flighten ruller under den, som
+          arket i designet. Et låst hull har ingenting å taste, og da står den
+          ikke. */}
       {usesRail && !locked ? (
-        <View style={{ paddingBottom: insets.bottom, backgroundColor: colors.bg }}>
+        <View
+          style={styles.railDock}
+          onLayout={(e) => setRailHeight(e.nativeEvent.layout.height)}
+          testID="rail-dock"
+        >
           <ScoreRail
             active={
               railSeat
@@ -789,7 +826,15 @@ function HoleView({
             options={railOptions}
             display={railDisplay}
             puttsTracking={capturesPutts && putts.enabled}
-            skipTo={railSkipSeat ? railSkipSeat.name : null}
+            puttsAvailable={capturesPutts}
+            skipTo={railSkipSeat ? railSkipSeat.shortName : null}
+            otherTop={`${par + 4}+`}
+            otherHint={
+              isStableford && railSeat?.extraStrokes != null
+                ? `${par + 4}+ eller stryk`
+                : `${par + 4}+`
+            }
+            onPuttsToggle={putts.toggle}
             onPick={rail.pick}
             onOther={() => {
               if (rail.activeSeatId != null) setSheetSeatId(rail.activeSeatId);
@@ -815,6 +860,58 @@ function HoleView({
         onClose={() => setSheetSeatId(null)}
         strike={sheetStrike}
       />
+    </View>
+  );
+}
+
+/**
+ * Sollys (eierens svar, #2385): uten hullstripe bytter man hull ved å sveipe
+ * sidelengs på hullnummeret, mot venstre til neste og mot høyre til forrige.
+ * VoiceOver får det samme som handlingene «Neste hull» og «Forrige hull» på
+ * helten, som da leses som én linje. Utenfor sollys står helten som før.
+ */
+function HoleSwipe({
+  enabled,
+  holeNumber,
+  label,
+  onGo,
+  children,
+}: {
+  enabled: boolean;
+  holeNumber: number;
+  label: string;
+  onGo: (hole: number) => void;
+  children: ReactNode;
+}) {
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+        onPanResponderRelease: (_event, gesture) => {
+          if (gesture.dx <= -SWIPE_DISTANCE) onGo(holeNumber + 1);
+          else if (gesture.dx >= SWIPE_DISTANCE) onGo(holeNumber - 1);
+        },
+      }),
+    [holeNumber, onGo],
+  );
+  if (!enabled) return <>{children}</>;
+  return (
+    <View
+      {...responder.panHandlers}
+      accessible
+      accessibilityLabel={label}
+      accessibilityActions={[
+        { name: 'nextHole', label: 'Neste hull' },
+        { name: 'previousHole', label: 'Forrige hull' },
+      ]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === 'nextHole') onGo(holeNumber + 1);
+        if (event.nativeEvent.actionName === 'previousHole') onGo(holeNumber - 1);
+      }}
+      testID="hole-hero-swipe"
+    >
+      {children}
     </View>
   );
 }
@@ -968,65 +1065,6 @@ function UndoStrokes({
   );
 }
 
-/**
- * Putt-føring av/på for runden — appens pille, webbens `PuttsTogglePill`.
- *
- * Vises kun i formater som fanger putter, som på web. Den står i headerraden
- * over hullnummeret (#2252) og har ingen egen rad; `hitSlop` løfter trykkflaten til
- * stilguidens 44 px uten å koste layout (webben gjør det samme med padding og
- * negativ margin).
- *
- * Teksten er webbens `holes.putts.toggleLabel` («Registrer putter»), ikke
- * pille-teksten webben viser («Putter» + flagg-ikon): appen har ikke bygget
- * ikonspråket ennå, og «Putter» alene leser som en etikett, ikke en bryter.
- */
-function PuttsToggle({
-  visible,
-  enabled,
-  disabled,
-  onToggle,
-}: {
-  visible: boolean;
-  enabled: boolean;
-  disabled: boolean;
-  onToggle: () => void;
-}) {
-  const { colors, hole, ui } = useTheme();
-  if (!visible) return null;
-  // I sollys er kant og tekst svarte, så «på» vises som fylt flate (#2252).
-  const filled = enabled && hole.selectedFill;
-  return (
-    <Pressable
-      onPress={onToggle}
-      disabled={disabled}
-      hitSlop={10}
-      style={[
-        ui.badge,
-        {
-          // `ui.badge` er bygget for kort-hodet og topp-stiller seg selv der.
-          // Her skal den stå midt i headerraden.
-          alignSelf: 'center',
-          borderColor: enabled ? colors.primary : colors.border,
-          backgroundColor: filled ? colors.primary : enabled ? colors.surface : colors.bg,
-        },
-        disabled && styles.puttsToggleDisabled,
-      ]}
-      testID="hole-putts-toggle"
-      accessibilityRole="switch"
-      accessibilityState={{ checked: enabled }}
-      accessibilityLabel="Registrer putter"
-    >
-      <Text
-        style={[
-          ui.badgeText,
-          enabled && { color: filled ? colors.onPrimary : colors.primary },
-        ]}
-      >
-        Registrer putter
-      </Text>
-    </Pressable>
-  );
-}
 
 function Stepper({
   label,
@@ -1077,7 +1115,32 @@ function Stepper({
 const styles = StyleSheet.create({
   // Rulleflaten over, skinna fast under.
   root: { flex: 1 },
-  flightList: { gap: 8 },
+  // Designet (#2385) har ingen sidemarg på selve siden: hver del har sin egen.
+  scroll: { flexGrow: 1 },
+  // Det som ikke er i designet (kø-banneret, låst-teksten, Wolf og BBB, kort-
+  // formatenes kort og «Lever»), står med appens vanlige luft.
+  pad: { paddingHorizontal: 20, gap: 8 },
+  // Radene står 12 pt fra kanten (Main); i sollys går de kant til kant.
+  flightList: { paddingHorizontal: 12 },
+  flightHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+  },
+  railDock: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  flightKicker: {
+    fontSize: 10,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  flightCount: { fontSize: 12, fontFamily: FONTS.sans, fontVariant: ['tabular-nums'] },
+  topTools: { flexDirection: 'row', alignItems: 'center' },
+  topIcon: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
   cardHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1098,7 +1161,6 @@ const styles = StyleSheet.create({
   cardLocked: { opacity: 0.6 },
   // Egen familie, ikke `fontWeight` — expo-font velger snitt på familienavn.
   meName: { fontFamily: FONTS.sansBold },
-  puttsToggleDisabled: { opacity: 0.4 },
   stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepperLabel: { width: 60 },
   step: {
@@ -1113,17 +1175,4 @@ const styles = StyleSheet.create({
   undo: { alignItems: 'flex-start' },
   stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
   stepValue: { width: 44, textAlign: 'center' },
-  stripScroll: { flexGrow: 0 },
-  strip: { flexDirection: 'row', gap: 6, paddingVertical: 8 },
-  stripHole: {
-    width: TAP,
-    height: TAP,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stripText: { fontSize: 15 },
-  stripTextCurrent: { fontFamily: FONTS.sansBold },
-  navRow: { flexDirection: 'row', gap: 12 },
-  navButton: { flex: 1 },
 });

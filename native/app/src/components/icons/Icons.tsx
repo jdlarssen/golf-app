@@ -9,6 +9,9 @@
 // Hake, pluss, chevron og sol finnes ikke i webbens sett; de er tegnet her i
 // samme strek.
 //
+// Fra app-designet (#2385): sola er tegnet som i `Hull-sollys`, og pokalen med
+// hanker i toppen av hullsiden (`PokalHankerIcon`) som i `Main`.
+//
 // Reglene ikonene brukes etter (eier, #1879):
 //  - ikon + etikett er hovedregelen, og teksten bærer meningen — derfor er
 //    ikonene skjult for skjermleseren som standard;
@@ -83,6 +86,17 @@ export const PokalIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/**
+ * Pokalen med hanker i toppen av hullsiden (#2385, `Main`): bred skål med
+ * runde hanker, én stett og én fot. Ikke webbens sett.
+ */
+export const PokalHankerIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z" />
+    <Path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" />
+  </LineIcon>
+);
+
 export const KalenderIcon = (props: IconProps) => (
   <LineIcon {...props}>
     <Rect x="4" y="6" width="16" height="14" rx="1.75" />
@@ -137,19 +151,12 @@ export const PlussIcon = (props: IconProps) => (
 
 /**
  * Sol: sollys-bryteren på hullsiden (#2252). Webben har ikke ikonet; det er
- * tegnet her i samme strek og safe-zone som resten.
+ * tegnet som i `Hull-sollys` (#2385).
  */
 export const SolIcon = (props: IconProps) => (
   <LineIcon {...props}>
     <Circle cx="12" cy="12" r="4" />
-    <Line x1="12" y1="2.5" x2="12" y2="5" />
-    <Line x1="12" y1="19" x2="12" y2="21.5" />
-    <Line x1="2.5" y1="12" x2="5" y2="12" />
-    <Line x1="19" y1="12" x2="21.5" y2="12" />
-    <Line x1="5.3" y1="5.3" x2="7" y2="7" />
-    <Line x1="17" y1="17" x2="18.7" y2="18.7" />
-    <Line x1="5.3" y1="18.7" x2="7" y2="17" />
-    <Line x1="17" y1="7" x2="18.7" y2="5.3" />
+    <Path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
   </LineIcon>
 );
 
@@ -280,32 +287,42 @@ export function HoleRing({
 }
 
 /**
- * Designets stiplede sirkel slik nettleseren tegner `1.5px dashed` rundt 22 pt:
- * 14 streker på 3 pt, som i praksis er 1 pt tykke, og der én strek står midt
- * på toppen. Målt i Chromium både i 2x og 3x (#2385).
+ * Designets stiplede sirkler slik Chromium tegner dem (målt i 2x og 3x, #2385):
+ * - `check`: `1.5px dashed` rundt 22 pt i sjekklista under scorekortet. 14
+ *   streker på 3 pt, i praksis 1 pt tykke, dreid 10,4° så én står midt på toppen.
+ * - `score`: `2px dashed` rundt 40 pt på den aktive raden på hullsiden. 12
+ *   streker på 6 pt, 2 pt tykke, der den første begynner rett ut til høyre.
  */
-const RING = 22;
-const RING_STROKE = 1;
-const DASHES = 14;
-const DASH = 3;
-/** Hvor langt mønsteret er dreid med klokka, så strekene står der Chromium setter dem. */
-const DASH_PHASE = 10.4;
+const DASHED_RINGS = {
+  check: { size: 22, stroke: 1, dashes: 14, dash: 3, phase: 10.4 },
+  score: { size: 40, stroke: 2, dashes: 12, dash: 6, phase: 0 },
+} as const;
 
 /**
- * Den stiplede sirkelen for et steg som gjenstår (#2385, sjekklista under
- * scorekortet). RN sin `borderStyle: 'dashed'` tegner andre og tettere streker
- * enn nettleseren, så sirkelen er tegnet her med designets mønster. Alltid
- * dekor: teksten ved siden av sier det samme.
+ * Den stiplede sirkelen for noe som ikke er tastet ennå (#2385): et steg som
+ * gjenstår i sjekklista, eller scoren på raden som er på tur. RN sin
+ * `borderStyle: 'dashed'` tegner andre og tettere streker enn nettleseren, så
+ * sirkelen er tegnet her med designets mønster. Alltid dekor: teksten ved
+ * siden av, eller radens etikett, sier det samme.
  */
-export function DashedRing({ color, testID }: { color: string; testID?: string }) {
-  const center = RING / 2;
-  const radius = (RING - RING_STROKE) / 2;
-  const period = (2 * Math.PI * radius) / DASHES;
+export function DashedRing({
+  color,
+  kind = 'check',
+  testID,
+}: {
+  color: string;
+  kind?: keyof typeof DASHED_RINGS;
+  testID?: string;
+}) {
+  const { size, stroke, dashes, dash, phase } = DASHED_RINGS[kind];
+  const center = size / 2;
+  const radius = (size - stroke) / 2;
+  const period = (2 * Math.PI * radius) / dashes;
   return (
     <Svg
-      width={RING}
-      height={RING}
-      viewBox={`0 0 ${RING} ${RING}`}
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
       fill="none"
       testID={testID}
       accessibilityElementsHidden
@@ -316,9 +333,9 @@ export function DashedRing({ color, testID }: { color: string; testID?: string }
         cy={center}
         r={radius}
         stroke={color}
-        strokeWidth={RING_STROKE}
-        strokeDasharray={`${DASH} ${period - DASH}`}
-        transform={`rotate(${DASH_PHASE} ${center} ${center})`}
+        strokeWidth={stroke}
+        strokeDasharray={`${dash} ${period - dash}`}
+        transform={`rotate(${phase} ${center} ${center})`}
       />
     </Svg>
   );

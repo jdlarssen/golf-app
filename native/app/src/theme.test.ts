@@ -10,6 +10,7 @@ import { renderHook } from '@testing-library/react-native';
 import * as theme from './theme';
 import {
   FONTS,
+  frauncesLine,
   PALETTES,
   SUNLIGHT_THEME,
   ThemeScope,
@@ -34,6 +35,10 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   scoreParFg: '--score-par-fg',
   scoreOver1Fg: '--score-over1-fg',
   scoreOver2Fg: '--score-over2-fg',
+  scoreUnderBg: '--score-under-bg',
+  scoreParBg: '--score-par-bg',
+  scoreOver1Bg: '--score-over1-bg',
+  scoreOver2Bg: '--score-over2-bg',
   onStrong: '--bg-tint',
   accentText: '--accent-text',
   trackBg: '--hole-completed-bg',
@@ -116,9 +121,26 @@ describe('withAlpha', () => {
   });
 });
 
+describe('frauncesLine', () => {
+  // Nettleserens linjeboks: halve forskjellen mot Fraunces sin egen høyde
+  // (1,233) over og under. Hullnummeret i `Main` er 96 med linje 0,9.
+  it.each([
+    [96, 86.4, -16],
+    [30, 30, -3.5],
+    [132, 112.2, -25.3],
+  ])('%s pt i en linje på %s gir marg %s', (size, line, margin) => {
+    const box = frauncesLine(size, line);
+    expect(box.fontSize).toBe(size);
+    expect(box.marginVertical).toBeCloseTo(margin, 1);
+  });
+});
+
 describe('FONTS', () => {
-  it('names the six loaded faces', () => {
+  it('names the loaded faces', () => {
     expect(FONTS).toEqual({
+      serifRegular: 'Fraunces_400Regular',
+      holeNumber: 'FrauncesHole96',
+      holeNumberSun: 'FrauncesHole132',
       serifDisplay: 'Fraunces_500Medium',
       serifScore: 'Fraunces_600SemiBold',
       sans: 'Inter_400Regular',
@@ -148,15 +170,16 @@ describe('themeFor / resolveScheme', () => {
     expect(Object.keys(dark.ui).sort()).toEqual(Object.keys(light.ui).sort());
   });
 
-  // #2252: hullsidens mål er webbens standard i begge scheme. Sollys er den
-  // eneste som skal kunne endre dem.
-  it('gives both schemes the web defaults for the hole page', () => {
+  // #2252: hullsidens mål er de samme i begge scheme (#2385: app-designets
+  // `Main`). Sollys er den eneste som skal kunne endre dem.
+  it('gives both schemes the design defaults for the hole page', () => {
     for (const scheme of ['light', 'dark'] as const) {
       expect(themeFor(scheme).hole).toEqual({
-        numberSize: 44,
-        railButton: 64,
+        numberSize: 96,
+        railButton: 72,
         borderW: 1,
-        activeBarW: 4,
+        railNumber: 28,
+        railLabel: 11,
         selectedFill: false,
       });
     }
@@ -242,10 +265,11 @@ describe('SUNLIGHT_THEME', () => {
     expect(SUNLIGHT_THEME.ui.badge.borderWidth).toBe(3);
     expect(SUNLIGHT_THEME.ui.buttonSecondary.borderWidth).toBe(3);
     expect(SUNLIGHT_THEME.hole).toEqual({
-      numberSize: 130,
+      numberSize: 132,
       railButton: 84,
       borderW: 3,
-      activeBarW: 10,
+      railNumber: 40,
+      railLabel: 13,
       selectedFill: true,
     });
     // Lys og mørk er urørt.
