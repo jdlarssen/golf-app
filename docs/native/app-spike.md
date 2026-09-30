@@ -1611,9 +1611,11 @@ lenker nederst på hjem (e-post, Konto, Sync-lab, Logg ut) — en restehylle som
 hver gang noe ikke passet andre steder. #1906 ga det ett rom, og #1877 ga utloggingen
 en opprydding.
 
-**Inngangen er ordet «Profil» oppe til høyre på Hjem** (`testID="open-profile"`). Fram
-til #2385 sto den i hjem-headeren; nå har Hjem ingen navigasjonslinje (designlerretet), og
-lenka står til høyre på datolinja i `Home.tsx` til bunnmenyen kommer.
+**Inngangen er HCP-pillen oppe til høyre på Hjem** (`testID="open-profile"`). Fram
+til #2385 var det ordet «Profil» i hjem-headeren. Nå har Hjem ingen navigasjonslinje
+(designlerretet), og pillen åpner profilen til bunnmenyen kommer (Hjem v2, eierens svar
+30.09). Uten handicap, eller før profilen er hentet, står ordet «Profil» der pillen skulle
+stått, så profilen alltid har en dør.
 Hjem-footeren er borte i sin helhet, og `Account.tsx` er slettet.
 
 ### Hierarkiet ER endringen

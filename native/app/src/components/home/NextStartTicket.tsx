@@ -21,7 +21,7 @@
 // #2254). Designets hakk er en sirkel i sidens bakgrunnsfarge med kant bare
 // nederst (øverste hakk) eller øverst (nederste): kanten er en tynn månesigd
 // som er 1 pt midt på og smalner mot sidene. Her er den to sirkler, en i
-// kantfarge forskjøvet 1 pt utover og en i bakgrunnsfarge over den.
+// kantfarge forskjøvet 1 pt inn i billetten og en i bakgrunnsfarge over den.
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { GameBundle } from '../../data/gameBundle';
