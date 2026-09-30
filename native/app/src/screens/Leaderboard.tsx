@@ -10,7 +10,7 @@
 // Regnestykket er ikke her: `computeGameLeaderboard` bygger konteksten og kaller
 // den DELTE motoren. Denne fila velger visning og passer på hva reveal-runden
 // får lov å vise.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import {
   firstHalfHoleNumbersForSegment,
@@ -54,6 +54,7 @@ import {
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { buildSideTournament } from '../lib/sideTournament';
 import { useGameChoices } from '../lib/useChoices';
+import { SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
@@ -144,10 +145,15 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // Påheng på det eksisterende abonnementet: samme kanal hull-siden bruker,
   // og hver merge leser den lokale basen på nytt. Seeden kjører også når
   // kanalen er tilbake etter et brudd, som på hull-siden (#2093).
+  // Feilet hentingen (uten nett), sier en linje det: et sluttresultat fra bare
+  // telefonens slag ser ellers ferdig ut (#2255 PR 3a, samme som «Hull for hull»).
+  const [seedFailed, setSeedFailed] = useState(false);
+
   useEffect(() => {
     const seed = () => {
       void seedGameScores(gameId)
-        .catch(() => undefined)
+        .then(() => setSeedFailed(false))
+        .catch(() => setSeedFailed(true))
         .then(() => reload());
     };
     const unsubscribe = subscribeGameScores(gameId, {
@@ -178,6 +184,11 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
       <Text style={ui.muted} testID="leaderboard-subtitle">
         {bundle.game.status === 'finished' ? 'Sluttresultat' : 'Slik står det nå'}
       </Text>
+      {seedFailed ? (
+        <Text style={ui.muted} testID="leaderboard-seed-failed">
+          {SEED_FAILED_TEXT}
+        </Text>
+      ) : null}
 
       <LeaderboardBody
         bundle={bundle}

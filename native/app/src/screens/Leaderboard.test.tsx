@@ -172,6 +172,22 @@ describe('Leaderboard', () => {
   });
 });
 
+describe('Leaderboard — hentingen av slagene (#2255 PR 3a)', () => {
+  it('feiler den (uten nett): tavla fra telefonens slag, og en linje som sier det', async () => {
+    const { seedGameScores } = require('../data/seedScores') as { seedGameScores: jest.Mock };
+    seedGameScores.mockRejectedValueOnce(new Error('nett'));
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-seed-failed')).toBeTruthy());
+    expect(screen.getByTestId('leaderboard-table')).toBeTruthy();
+  });
+
+  it('lykkes den: ingen linje', async () => {
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-table')).toBeTruthy());
+    expect(screen.queryByTestId('leaderboard-seed-failed')).toBeNull();
+  });
+});
+
 describe('LeaderboardBody', () => {
   const withGame = (overrides: Record<string, unknown>) =>
     ({ ...mockBundle, game: { ...bundleGame, ...overrides } }) as never;
