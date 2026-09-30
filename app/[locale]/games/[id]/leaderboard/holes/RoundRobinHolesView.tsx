@@ -7,11 +7,13 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type {
-  RoundRobinResult,
-  RoundRobinHoleRow,
-  RoundRobinPlayerCell,
-} from '@/lib/scoring/modes/types';
+import {
+  roundRobinHoleCards,
+  type RoundRobinHoleCard,
+  type RoundRobinHoleSide,
+  type RoundRobinSegment,
+} from '@/lib/leaderboard/roundRobinHoles';
+import type { RoundRobinResult } from '@/lib/scoring/modes/types';
 import type { RoundRobinPlayerInfo } from '../RoundRobinView';
 
 export interface RoundRobinHolesViewProps {
@@ -62,6 +64,10 @@ function sideNames(
  * Segment-gruppert: tre bolker, hver med en konstellasjons-header som viser
  * rotasjonen («{Side 1} mot {Side 2}»), deretter de 6 hull-kortene med begge
  * sidenes per-spiller-netto, contributor-markering og hvem som vant hullet.
+ *
+ * Regnestykket (segmentene, konstellasjonen, rekkefølgen, utfallet, vinneren,
+ * stjerna og brutto ved siden av) bor i `lib/leaderboard/roundRobinHoles.ts`,
+ * delt med appen (#2255 PR 3c). Her tegnes det.
  */
 export function RoundRobinHolesView({
   gameId,
@@ -99,15 +105,7 @@ export function RoundRobinHolesView({
     );
   }
 
-  // Grupper hull på segment (1/2/3), segment-rekkefølge stigende. Rotasjonen
-  // er konstant innen et segment, så konstellasjonen leses fra første hull.
-  const segments: Array<{ segment: 1 | 2 | 3; holes: RoundRobinHoleRow[] }> = [];
-  for (const seg of [1, 2, 3] as const) {
-    const holes = result.holes
-      .filter((h) => h.segment === seg)
-      .sort((a, b) => a.holeNumber - b.holeNumber);
-    if (holes.length > 0) segments.push({ segment: seg, holes });
-  }
+  const cards = roundRobinHoleCards(result);
 
   return (
     <LeaderboardShell>
@@ -127,11 +125,10 @@ export function RoundRobinHolesView({
         data-testid="round-robin-holes-segments"
         className="flex flex-col gap-5 px-3.5 pt-1 pb-3.5"
       >
-        {segments.map(({ segment, holes }) => (
+        {cards.segments.map((segment) => (
           <SegmentBlock
-            key={segment}
+            key={segment.segment}
             segment={segment}
-            holes={holes}
             playersById={playersById}
           />
         ))}
@@ -145,31 +142,25 @@ export function RoundRobinHolesView({
 
 function SegmentBlock({
   segment,
-  holes,
   playersById,
 }: {
-  segment: 1 | 2 | 3;
-  holes: RoundRobinHoleRow[];
+  segment: RoundRobinSegment;
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
 
-  const SEGMENT_HOLES: Record<1 | 2 | 3, string> = {
-    1: t('roundRobin.segmentHoles1'),
-    2: t('roundRobin.segmentHoles2'),
-    3: t('roundRobin.segmentHoles3'),
-  };
-
-  const first = holes[0]!;
-  const side1 = sideNames(first.side1PlayerIds, playersById, t('common.unknownPlayer'));
-  const side2 = sideNames(first.side2PlayerIds, playersById, t('common.unknownPlayer'));
+  const side1 = sideNames(segment.side1PlayerIds, playersById, t('common.unknownPlayer'));
+  const side2 = sideNames(segment.side2PlayerIds, playersById, t('common.unknownPlayer'));
 
   return (
-    <section data-testid={`round-robin-holes-segment-${segment}`}>
+    <section data-testid={`round-robin-holes-segment-${segment.segment}`}>
       {/* Konstellasjons-header: hvem som er partnere DETTE segmentet. */}
       <div className="px-1 pb-2">
         <Kicker tone="muted" className="pb-1">
-          {t('roundRobin.segmentLabel', { number: segment, holes: SEGMENT_HOLES[segment] })}
+          {t('roundRobin.segmentLabel', {
+            number: segment.segment,
+            holes: t(`roundRobin.${segment.holesKey}`),
+          })}
         </Kicker>
         <p className="text-[12.5px] text-muted">
           <span className="text-text">{side1}</span>
@@ -181,7 +172,7 @@ function SegmentBlock({
       </div>
 
       <ul className="flex flex-col gap-2.5 list-none">
-        {holes.map((hole) => (
+        {segment.holes.map((hole) => (
           <HoleCard key={hole.holeNumber} hole={hole} playersById={playersById} />
         ))}
       </ul>
@@ -189,34 +180,15 @@ function SegmentBlock({
   );
 }
 
-function outcomeChip(
-  result: RoundRobinHoleRow['result'],
-  t: ReturnType<typeof useTranslations<'leaderboard'>>,
-): {
-  label: string;
-  className: string;
-} | null {
-  switch (result) {
-    case 'tied':
-      return { label: t('roundRobin.outcomeChipTied'), className: 'text-muted' };
-    case 'unplayed':
-      return { label: t('roundRobin.outcomeChipVenter'), className: 'text-muted' };
-    default:
-      // side1_wins / side2_wins markeres på selve siden, ingen topp-chip.
-      return null;
-  }
-}
-
 function HoleCard({
   hole,
   playersById,
 }: {
-  hole: RoundRobinHoleRow;
+  hole: RoundRobinHoleCard;
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
-  const chip = outcomeChip(hole.result, t);
 
   return (
     <li
@@ -234,27 +206,19 @@ function HoleCard({
               {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
-          {chip && (
-            <span
-              className={`text-[10.5px] font-medium uppercase tracking-[0.1em] ${chip.className}`}
-            >
-              {chip.label}
+          {/* Delt eller venter; en side som vant markeres på selve siden. */}
+          {hole.outcomeKey && (
+            <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-muted">
+              {t(`roundRobin.${hole.outcomeKey}`)}
             </span>
           )}
         </div>
 
         {/* To side-blokker: vinnende side uthevet (accent), per-spiller netto. */}
         <div className="mt-2 flex flex-col gap-1.5">
-          <SideBlock
-            players={hole.side1Players}
-            isWinner={hole.result === 'side1_wins'}
-            playersById={playersById}
-          />
-          <SideBlock
-            players={hole.side2Players}
-            isWinner={hole.result === 'side2_wins'}
-            playersById={playersById}
-          />
+          {hole.sides.map((side) => (
+            <SideBlock key={side.side} side={side} playersById={playersById} />
+          ))}
         </div>
       </Card>
     </li>
@@ -262,15 +226,14 @@ function HoleCard({
 }
 
 function SideBlock({
-  players,
-  isWinner,
+  side,
   playersById,
 }: {
-  players: RoundRobinPlayerCell[];
-  isWinner: boolean;
+  side: RoundRobinHoleSide;
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
+  const { isWinner } = side;
   return (
     <div
       className={`rounded-xl px-2.5 py-1.5 ${
@@ -285,18 +248,16 @@ function SideBlock({
         </span>
       )}
       <ul className="flex flex-col gap-1 list-none">
-        {players.map((cell) => {
-          const name = nameOf(cell.userId, playersById, t('common.unknownPlayer'));
-          const showGross =
-            cell.gross != null && cell.net != null && cell.gross !== cell.net;
+        {side.rows.map((row) => {
+          const name = nameOf(row.userId, playersById, t('common.unknownPlayer'));
 
           return (
             <li
-              key={cell.userId}
+              key={row.userId}
               className="flex items-center justify-between gap-3"
             >
               <span className="flex min-w-0 items-center gap-1.5">
-                {cell.isContributor && cell.net != null && (
+                {row.isContributor && (
                   <span
                     aria-hidden
                     className={`text-[11px] ${isWinner ? 'text-accent' : 'text-muted'}`}
@@ -306,18 +267,16 @@ function SideBlock({
                 )}
                 <span
                   className={`truncate font-sans text-[14px] ${
-                    cell.isContributor && cell.net != null
-                      ? 'font-medium text-text'
-                      : 'text-text'
+                    row.isContributor ? 'font-medium text-text' : 'text-text'
                   }`}
                 >
                   {name}
                 </span>
               </span>
               <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
-                {showGross && cell.gross != null && (
+                {row.grossShown != null && (
                   <span className="text-[10.5px] text-muted">
-                    {t('roundRobin.bruttoLabel', { gross: cell.gross })}
+                    {t('roundRobin.bruttoLabel', { gross: row.grossShown })}
                   </span>
                 )}
                 <span
@@ -325,7 +284,7 @@ function SideBlock({
                     isWinner ? 'text-accent-text' : 'text-text'
                   }`}
                 >
-                  {cell.net ?? '–'}
+                  {row.net ?? '–'}
                 </span>
               </span>
             </li>
