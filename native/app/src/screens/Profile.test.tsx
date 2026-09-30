@@ -9,8 +9,9 @@
 //
 // Det som blir igjen er koblingene bare en render kan bekrefte:
 //
-//  1. **Menyen navigerer** og gjør ingenting selv (#2256): «Venner», «Varsler
-//     og tema» og «Personvern og konto» er egne rom. «Rediger» står ved
+//  1. **Menyen navigerer** og gjør ingenting selv (#2256): «Historikk og
+//     statistikk» (#2265), «Venner», «Varsler og tema» og «Personvern og
+//     konto» er egne rom. «Rediger» står ved
 //     tittelen. «Logg ut», utviklerflaten, personvernerklæringen og «Slett
 //     konto» bor i «Personvern og konto» (`AccountSettings.test.tsx`, Profil
 //     v2), så ingen av dem finnes her.
@@ -131,7 +132,13 @@ describe('Profile', () => {
     );
     expect(await screen.findByTestId('season-tile-wins')).toBeTruthy();
 
-    // Menyradene navigerer bare, og vennerraden har én linje (designet).
+    // Menyradene navigerer bare. Historikken står øverst (#2265), og
+    // vennerraden har én linje (designet).
+    expect(screen.getByTestId('profile-history')).toHaveTextContent(PROFILE_TEXT.menuHistory, {
+      exact: false,
+    });
+    await fireEvent.press(screen.getByTestId('profile-history'));
+    expect(navigate).toHaveBeenCalledWith('RoundDiary');
     expect(screen.getByTestId('profile-friends')).toHaveTextContent(PROFILE_TEXT.friendsRow, {
       exact: false,
     });

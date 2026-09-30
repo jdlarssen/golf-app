@@ -100,7 +100,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   );
   // Økes når enheten skal leses på nytt: ved hvert fokus og etter en henting.
   const [deviceTick, setDeviceTick] = useState(0);
-  const [showAllRounds, setShowAllRounds] = useState(false);
 
   // Drain-triggerne (nett tilbake, app i forgrunnen, intervall) skal gå så
   // lenge appen er innlogget, ikke bare mens en hull-side står åpen. Hjem er
@@ -231,7 +230,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           lastExtras?.gameId === lastRound.gameId ? lastExtras.extras : {},
         )
       : null;
-  const olderRounds = finished.slice(1);
   const openGame = (gameId: string) => navigation.navigate('GameHome', { gameId });
 
   const createGame = (
@@ -320,30 +318,17 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
             points={lastPoints}
             onPress={() => openGame(lastRound.gameId)}
           />
-          {showAllRounds
-            ? olderRounds.map((card) => (
-                <LastRoundCard
-                  key={card.gameId}
-                  card={card}
-                  score={null}
-                  points={null}
-                  onPress={() => openGame(card.gameId)}
-                />
-              ))
-            : null}
-          {olderRounds.length > 0 ? (
-            <Pressable
-              style={[ui.link, styles.allRounds]}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: showAllRounds }}
-              onPress={() => setShowAllRounds((open) => !open)}
-              testID="home-all-rounds"
-            >
-              <Text style={ui.linkText}>
-                {showAllRounds ? HOME_TEXT.showFewer : HOME_TEXT.allRounds}
-              </Text>
-            </Pressable>
-          ) : null}
+          {/* #2265: alle rundene står i Rundedagboka (eierens svar 2 på
+              #2254), også når det bare er én: formkortet og statistikken
+              står der. */}
+          <Pressable
+            style={[ui.link, styles.allRounds]}
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('RoundDiary', { from: 'home' })}
+            testID="home-all-rounds"
+          >
+            <Text style={ui.linkText}>{HOME_TEXT.allRounds}</Text>
+          </Pressable>
         </View>
       ) : null}
 

@@ -45,7 +45,6 @@ describe('paritet mot messages/no.json', () => {
     expect(HOME_TEXT.myGames).toBe(web.home.sectionMyGames);
     expect(HOME_TEXT.teamRound).toBe(web.home.roundTeamBall);
     expect(HOME_TEXT.submit).toBe(board.stripSubmit);
-    expect(HOME_TEXT.showFewer).toBe(board.showFewer);
     // Samme ord som webben; bare forbokstaven er liten i stubben.
     expect(HOME_TEXT.tomorrow).toBe(lowerFirst(web.home.proximity.tomorrow));
     expect(proximityText({ kind: 'days', days: 3 })).toBe(

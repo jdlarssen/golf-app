@@ -22,9 +22,8 @@ export const HOME_TEXT = {
   moreInProgress: 'Flere runder i gang',
   nextStart: 'Neste start',
   lastRound: 'Forrige runde',
+  /** Åpner Rundedagboka (#2265). */
   allRounds: 'Alle runder →',
-  /** Webbens `leaderboard.board.showFewer`. */
-  showFewer: 'Vis færre',
   createGame: 'Opprett spill',
   /** Webbens `home.playerFallback`, når profilen mangler navn. */
   playerFallback: 'spiller',

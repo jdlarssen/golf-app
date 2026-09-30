@@ -105,6 +105,11 @@ export type ThemeColors = {
    * hull») — webbens `--surface-2`.
    */
   surface2: string;
+  /**
+   * Formsetningen i Rundedagboka når formen går opp (#2265, designlerretet:
+   * «▲ 3,8 slag bedre …»). Finnes bare i appen, og låses i `theme.test.ts`.
+   */
+  formUp: string;
 };
 
 /**
@@ -145,6 +150,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     leaderFill: '#FBF8EE',
     onStrongWarm: '#ECE5D2',
     surface2: '#F0EDE5',
+    formUp: '#1F6B3A',
   },
   dark: {
     bg: '#14201A',
@@ -176,6 +182,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     leaderFill: '#1A3D2E',
     onStrongWarm: '#ECE5D2',
     surface2: '#243429',
+    formUp: '#7DAA8A',
   },
 };
 
@@ -288,6 +295,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   onStrongWarm: '#F0EDE5',
   // Deuce-raden i «Hull for hull» (#2255). Hullsiden tegner den ikke; ren hvit.
   surface2: '#FFFFFF',
+  // Formsetningen i Rundedagboka (#2265). Hullsiden tegner den ikke; lys-verdien.
+  formUp: '#1F6B3A',
 };
 
 /**

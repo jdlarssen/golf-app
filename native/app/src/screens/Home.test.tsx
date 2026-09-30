@@ -185,14 +185,14 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   expect(screen.getByTestId('game-card-later')).toBeTruthy();
   expect(screen.queryByTestId('game-card-next')).toBeNull();
 
-  // Forrige runde er den som ble avsluttet sist; de andre foldes ut på stedet.
+  // Forrige runde er den som ble avsluttet sist; alle rundene står i
+  // Rundedagboka (#2265), ikke foldet ut her.
   expect(screen.getByTestId('home-last-round-line-last')).toHaveTextContent(
     '2. plass av 8 · 88 brutto',
   );
   expect(screen.queryByTestId('home-last-round-older')).toBeNull();
   await fireEvent.press(screen.getByText('Alle runder →'));
-  expect(screen.getByTestId('home-last-round-older')).toBeTruthy();
-  await fireEvent.press(screen.getByText('Vis færre'));
+  expect(navigate).toHaveBeenCalledWith('RoundDiary', { from: 'home' });
   expect(screen.queryByTestId('home-last-round-older')).toBeNull();
 
   await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));

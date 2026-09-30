@@ -130,6 +130,8 @@ export const PROFILE_TEXT = {
   tileEmptySpoken: 'ingen hel runde ennå',
   /** «Handicap ikke satt» for skjermleseren, der kortet viser «–». */
   hcpNotSetSpoken: 'ikke satt',
+  /** Raden til Rundedagboka (#2265), øverst i menyen. */
+  menuHistory: 'Historikk og statistikk',
   menuNotificationsTheme: 'Varsler og tema',
   /**
    * Tittelen på siden menyraden «Varsler og tema» åpner: «Varsler», som i
