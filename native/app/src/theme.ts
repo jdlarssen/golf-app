@@ -80,15 +80,23 @@ export type ThemeColors = {
    */
   live: string;
   /**
-   * Skillelinja mellom radene i scorekortet (#2385, designlerretet) — webbens
+   * Skillelinja mellom radene i scorekortet (#2385) og i listene i
+   * profil-rommene (Profil v2), fra designlerretet — webbens
    * `--row-divider-warm`, varmere enn `border`.
    */
   divider: string;
   /** Det som ennå ikke er tastet (#2385): stiplede sirkler — webbens `--score-unset-fg`. */
   scoreUnsetFg: string;
   /**
+   * Flaten i seire-flisa (Profil v2) — webbens `--leader-fill-bottom`, kremen
+   * webben bruker under lederkortets gullstrek.
+   */
+  leaderFill: string;
+  /**
    * Den varme kremen designet bruker for små ord på skogflaten (#2385: «UT»
-   * og «INN» i scorekortets bånd). Lik i begge draktene, som `live`.
+   * og «INN» i scorekortets bånd; Profil v2: «HANDICAP», initialene,
+   * endepunktet på kurven og «Få med gjengen»). Lik i begge draktene, som
+   * `live`; `onStrong` er kaldere i lys drakt.
    */
   onStrongWarm: string;
   /**
@@ -133,6 +141,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     live: '#7DAA8A',
     divider: '#EDE6D2',
     scoreUnsetFg: '#9A8F7C',
+    leaderFill: '#FBF8EE',
     onStrongWarm: '#ECE5D2',
     surface2: '#F0EDE5',
   },
@@ -163,6 +172,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     live: '#7DAA8A',
     divider: '#2F3F34',
     scoreUnsetFg: '#9A9180',
+    leaderFill: '#1A3D2E',
     onStrongWarm: '#ECE5D2',
     surface2: '#243429',
   },
@@ -221,9 +231,11 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   trackBg: '#FFFFFF',
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
-  // Sollys: svarte streker og ren kontrast, som resten av drakten.
+  // Sollys: svarte streker og ren kontrast, som resten av drakten. Seire-flisa
+  // (Profil v2) tegnes ikke på hullsiden; ren hvit som flatene.
   divider: '#000000',
   scoreUnsetFg: '#000000',
+  leaderFill: '#FFFFFF',
   onStrongWarm: '#F0EDE5',
   // Deuce-raden i «Hull for hull» (#2255). Hullsiden tegner den ikke; ren hvit.
   surface2: '#FFFFFF',

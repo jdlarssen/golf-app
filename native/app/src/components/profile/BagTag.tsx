@@ -20,10 +20,12 @@
 // ikke hopper når navnet og handicapet kommer.
 //
 // **Handicap-kurven** (0195) står til høyre for tallet når sesongen har minst
-// to punkter, med «−2,6 denne sesongen» på linja under. Uten kurve står
-// «Oppdatert …» der, som før. Linja har samme høyde i alle tilstander, og mens
-// kurven lastes står den tom, så teksten ikke bytter foran øynene på deg.
-// Påminnelsen om et gammelt handicap vinner alltid: den er en knapp.
+// to punkter, med «−2,6 denne sesongen» rett under, nederst til høyre i samme
+// rad som tallet (Profil v2, som i designet). Uten kurve står «Oppdatert …» på
+// samme plass. Mens kurven lastes står plassen tom, så teksten ikke bytter
+// foran øynene på deg. Påminnelsen om et gammelt handicap vinner alltid: den
+// er en knapp, med 44 pt å treffe. Raden er like høy i alle tilstander, fordi
+// tallet til venstre bestemmer høyden.
 //
 // **Deleversjonen** (`variant="share"`, #2256 PR 3) er kortet slik det blir
 // som bilde: rett (ingen skråstilling eller skygge), uten knapper og uten
@@ -39,7 +41,7 @@ import {
   handicapSeasonChange,
   handicapSeasonChangeSpoken,
 } from '../../lib/profileCopy';
-import { FONTS, TAP, useTheme } from '../../theme';
+import { FONTS, useTheme } from '../../theme';
 
 export interface BagTagProps {
   /** `null` mens profilraden lastes, eller når den ikke kunne leses. */
@@ -73,6 +75,9 @@ export function BagTag({
   const tid = (id: string) => (share ? undefined : id);
   const { colors } = useTheme();
   const ink = { color: colors.onStrong };
+  // Etiketten og initialene står i den varme kremen, navnet og tallet i
+  // `onStrong`, som i designet.
+  const warm = { color: colors.onStrongWarm };
   const hidden = { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const;
   // Kurven hører til et handicap som står; uten tall er det ingenting å tegne.
   const curve = model?.hcpText && trend && trend !== 'loading' ? trend : null;
@@ -110,42 +115,43 @@ export function BagTag({
           </Text>
         </View>
         <View {...hidden} style={[styles.ring, { borderColor: `${colors.accent}B3` }]}>
-          <Text style={[styles.initials, ink]}>{model?.initials ?? ''}</Text>
+          <Text style={[styles.initials, warm]}>{model?.initials ?? ''}</Text>
         </View>
       </View>
 
-      <View style={styles.hcpBlock}>
-        {model ? (
-          <View style={styles.hcpRow}>
-            <View
-              accessible
-              accessibilityLabel={
-                `${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}` +
-                (curve ? `, ${handicapSeasonChangeSpoken(curve.change)}` : '')
-              }
-              testID={tid('profile-hcp')}
-            >
-              <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>
-              <Text style={[styles.hcpValue, ink]} testID={tid('profile-hcp-value')}>
-                {model.hcpText ?? '–'}
-              </Text>
-            </View>
-            {curve ? <HandicapCurve points={curve.points} testID={tid('profile-hcp-curve')} /> : null}
+      {model ? (
+        <View style={styles.hcpRow}>
+          <View
+            accessible
+            accessibilityLabel={
+              `${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}` +
+              (curve ? `, ${handicapSeasonChangeSpoken(curve.change)}` : '')
+            }
+            testID={tid('profile-hcp')}
+          >
+            <Text style={[styles.hcpLabel, warm]}>{PROFILE_TEXT.handicapLabel}</Text>
+            <Text style={[styles.hcpValue, ink]} testID={tid('profile-hcp-value')}>
+              {model.hcpText ?? '–'}
+            </Text>
           </View>
-        ) : (
-          <View style={styles.hcpPlaceholder} />
-        )}
-        {model && !share ? (
-          <HandicapAge model={model} trend={model.hcpText ? trend : null} onEditProfile={onEditProfile} />
-        ) : null}
-        {/* Som linja på skjermen: ved et gammelt handicap står påminnelsen
-            der, ikke endringen, så bildet viser heller ingen endring. */}
-        {share && curve && !model?.hcpAge?.stale ? (
-          <Text style={[styles.age, styles.change, ink]} testID="share-hcp-change">
-            {handicapSeasonChange(curve.change)}
-          </Text>
-        ) : null}
-      </View>
+          <View style={styles.hcpSide}>
+            {curve ? <HandicapCurve points={curve.points} testID={tid('profile-hcp-curve')} /> : null}
+            {share ? (
+              // Som linja på skjermen: ved et gammelt handicap står påminnelsen
+              // der, ikke endringen, så bildet viser heller ingen endring.
+              curve && !model.hcpAge?.stale ? (
+                <Text style={[styles.side, ink]} testID="share-hcp-change">
+                  {handicapSeasonChange(curve.change)}
+                </Text>
+              ) : null
+            ) : (
+              <HandicapAge model={model} trend={model.hcpText ? trend : null} onEditProfile={onEditProfile} />
+            )}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.hcpPlaceholder} />
+      )}
 
       {share ? (
         <Text style={[styles.wordmark, ink]} testID="share-wordmark">
@@ -157,10 +163,10 @@ export function BagTag({
 }
 
 /**
- * Linja under handicapet: «−2,6 denne sesongen» når kurven står, ellers
- * «Oppdatert 26. sep», eller en knapp til skjemaet — «Ikke oppdatert på over
- * en måned» når tallet er gammelt, «Sett handicap» når profilen aldri ble
- * fullført (#1979). Tom, men like høy, mens kurven lastes.
+ * Linja nederst til høyre for handicapet: «−2,6 denne sesongen» når kurven
+ * står, ellers «Oppdatert 26. sep», eller en knapp til skjemaet — «Ikke
+ * oppdatert på over en måned» når tallet er gammelt, «Sett handicap» når
+ * profilen aldri ble fullført (#1979). Tom mens kurven lastes.
  */
 function HandicapAge({
   model,
@@ -175,28 +181,24 @@ function HandicapAge({
   const ink = { color: colors.onStrong };
 
   if (model.hcpAge && !model.hcpAge.stale) {
-    // Samme høyde som knappen under, så kortet er like høyt i alle tilstander.
-    // Kurven er lest i ord i handicapet over, så linja er skjult for skjermleseren.
-    if (trend === 'loading') return <View style={styles.ageLine} />;
+    if (trend === 'loading') return null;
     if (trend) {
+      // Kurven er lest i ord i handicapet, så linja er skjult for skjermleseren.
       return (
-        <View
-          style={styles.ageLine}
+        <Text
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
+          style={[styles.side, ink]}
+          testID="profile-hcp-change"
         >
-          <Text style={[styles.age, styles.change, ink]} testID="profile-hcp-change">
-            {handicapSeasonChange(trend.change)}
-          </Text>
-        </View>
+          {handicapSeasonChange(trend.change)}
+        </Text>
       );
     }
     return (
-      <View style={styles.ageLine}>
-        <Text style={[styles.age, ink]} testID="profile-hcp-age">
-          {model.hcpAge.text}
-        </Text>
-      </View>
+      <Text style={[styles.side, ink]} testID="profile-hcp-age">
+        {model.hcpAge.text}
+      </Text>
     );
   }
 
@@ -205,34 +207,40 @@ function HandicapAge({
     <Pressable
       accessibilityRole="button"
       onPress={onEditProfile}
-      style={styles.ageLink}
+      // Linja er liten; trykkflaten er 44 pt høy uansett.
+      hitSlop={SIDE_HIT_SLOP}
       testID={model.hcpAge ? 'profile-hcp-age' : 'profile-set-handicap'}
     >
-      <Text style={[styles.age, styles.ageLinkText, ink]}>{label}</Text>
+      <Text style={[styles.side, styles.sideLink, ink]}>{label}</Text>
     </Pressable>
   );
 }
 
-const CURVE_WIDTH = 132;
+/** Kurvefeltet i designet: 120 × 44, linja fra 8 til 36 pt ned, 2 pt inn fra kantene. */
+const CURVE_WIDTH = 120;
 const CURVE_HEIGHT = 44;
-const CURVE_PAD = 4;
+const CURVE_X = 2;
+const CURVE_TOP = 8;
+const CURVE_BOTTOM = 36;
 
 /**
  * Sesongens handicap som en linje, eldste til venstre. Et lavere handicap står
- * lavere, så en god sesong går nedover mot høyre, som i designet. Pynt: tallet
- * og endringen leses i ord.
+ * lavere, så en god sesong går nedover mot høyre, som i designet. Streken er
+ * salvie (`live`, samme salvie som ellers på skogflaten), og prikken i enden
+ * er klippet mot feltets høyrekant, som i designet. Pynt: tallet og endringen
+ * leses i ord.
  */
 function HandicapCurve({ points, testID }: { points: readonly number[]; testID?: string }) {
   const { colors } = useTheme();
   const max = Math.max(...points);
   const min = Math.min(...points);
   const span = max - min;
-  const innerW = CURVE_WIDTH - CURVE_PAD * 2;
-  const innerH = CURVE_HEIGHT - CURVE_PAD * 2;
+  const innerW = CURVE_WIDTH - CURVE_X * 2;
+  const innerH = CURVE_BOTTOM - CURVE_TOP;
   const xy = points.map((value, index) => ({
-    x: CURVE_PAD + (index / (points.length - 1)) * innerW,
+    x: CURVE_X + (index / (points.length - 1)) * innerW,
     // Flat sesong (samme verdi hele veien): linja står midt i feltet.
-    y: CURVE_PAD + (span === 0 ? innerH / 2 : ((max - value) / span) * innerH),
+    y: CURVE_TOP + (span === 0 ? innerH / 2 : ((max - value) / span) * innerH),
   }));
   const last = xy[xy.length - 1];
   return (
@@ -246,25 +254,28 @@ function HandicapCurve({ points, testID }: { points: readonly number[]; testID?:
         <Polyline
           points={xy.map((p) => `${p.x},${p.y}`).join(' ')}
           fill="none"
-          stroke={colors.onStrong}
-          strokeOpacity={0.6}
-          strokeWidth={2}
+          stroke={colors.live}
+          strokeWidth={2.5}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        <Circle cx={last.x} cy={last.y} r={3.5} fill={colors.onStrong} />
+        <Circle cx={last.x} cy={last.y} r={4} fill={colors.onStrongWarm} />
       </Svg>
     </View>
   );
 }
 
-const RING = 52;
+const SIDE_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 };
+
+/** Ringen i designet: 52 pt innvendig pluss 1 pt kant på hver side. */
+const RING = 54;
 /**
- * Linjehøyden til det store handicaptallet (64 pt i Fraunces). Under
- * skriftstørrelsen tegner iOS sifrene opp over «HANDICAP» (sett i
- * simulatoren); 72 gir luften designet har mellom etiketten og tallet.
+ * Linjehøyden til det store handicaptallet (64 pt i Fraunces). iOS legger
+ * luften over sifrene; 68 gir de 10 pt designet har mellom «HANDICAP» og
+ * toppen av sifrene. Under skriftstørrelsen tegner iOS sifrene opp over
+ * etiketten.
  */
-const HCP_LINE = 72;
+const HCP_LINE = 68;
 
 const styles = StyleSheet.create({
   card: {
@@ -273,20 +284,21 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 22,
     gap: 14,
-    // Designet står 28 pt fra kanten; skjermen har alt 20.
-    marginHorizontal: 8,
-    // Luft til skråstillingen og skyggen.
-    marginVertical: 16,
+    // Profilen har 16 pt til kanten; designet har kortet 28 pt inn.
+    marginHorizontal: 12,
+    marginTop: 16,
     shadowOpacity: 0.22,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 14 },
     transform: [{ rotate: '-1.5deg' }],
+    // Skyggen legger seg over toppen av flisene under, som i designet.
+    zIndex: 1,
   },
   // Bildet: rett, uten skygge og uten luft rundt, så kortet fyller bildet.
   shareCard: {
     transform: [],
     marginHorizontal: 0,
-    marginVertical: 0,
+    marginTop: 0,
     shadowOpacity: 0,
   },
   wordmark: { alignSelf: 'flex-end', fontSize: 18, fontFamily: FONTS.serifDisplay, opacity: 0.85 },
@@ -295,28 +307,29 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   identity: { flexShrink: 1 },
   kicker: {
-    fontSize: 11,
-    lineHeight: 14,
-    minHeight: 14,
+    fontSize: 10,
+    lineHeight: 12,
+    minHeight: 12,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  name: { fontSize: 28, lineHeight: 32, minHeight: 32, fontFamily: FONTS.serifDisplay, marginTop: 6 },
-  subline: { fontSize: 12, lineHeight: 17, minHeight: 17, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
-  hcpBlock: { alignSelf: 'stretch' },
+  name: { fontSize: 28, lineHeight: 31, minHeight: 31, fontFamily: FONTS.serifDisplay, marginTop: 6 },
+  subline: { fontSize: 12, lineHeight: 15, minHeight: 15, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
   hcpRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: 12,
   },
-  // Kurven står midt på sifrene, ikke på grunnlinja under kommaet.
-  curve: { marginBottom: 14 },
-  change: { alignSelf: 'flex-end', fontVariant: ['tabular-nums'] },
+  // Kurven øverst og linja under, nederst til høyre i raden.
+  hcpSide: { flexShrink: 1, alignItems: 'flex-end', gap: 4 },
+  curve: {},
+  side: { fontSize: 11, lineHeight: 13, fontFamily: FONTS.sans, opacity: 0.9, textAlign: 'right' },
+  sideLink: { fontFamily: FONTS.sansMedium, textDecorationLine: 'underline', opacity: 1 },
   hcpLabel: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 12,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 2,
     textTransform: 'uppercase',
@@ -325,15 +338,10 @@ const styles = StyleSheet.create({
     fontSize: 64,
     lineHeight: HCP_LINE,
     fontFamily: FONTS.serifScore,
-    fontVariant: ['tabular-nums'],
-    letterSpacing: -1,
+    letterSpacing: -1.28,
   },
-  // Samme høyde som etikett + tall + linja under, så kortet står stille.
-  hcpPlaceholder: { height: 14 + HCP_LINE + TAP },
-  age: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans, opacity: 0.9 },
-  ageLine: { minHeight: TAP, justifyContent: 'center' },
-  ageLink: { minHeight: TAP, justifyContent: 'center', alignSelf: 'flex-start' },
-  ageLinkText: { fontFamily: FONTS.sansMedium, textDecorationLine: 'underline', opacity: 1 },
+  // Samme høyde som etikett + tall, så kortet står stille mens raden lastes.
+  hcpPlaceholder: { height: 12 + HCP_LINE },
   ring: {
     width: RING,
     height: RING,

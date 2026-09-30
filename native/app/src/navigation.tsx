@@ -220,15 +220,12 @@ export function RootNavigator() {
         <Stack.Screen
           name="Profile"
           component={Profile}
-          // Designet (#2256): «Profil» står stort i innholdet med «Rediger»
-          // som pille ved siden av (`Profile.tsx`). Toppen har bare
-          // tilbake-pila til hjem, og ingen skillelinje.
-          // Tom streng, ikke en funksjon som gir `null`: da faller den native
-          // headeren tilbake til `title` og viser «Profil» to ganger.
+          // Designet (#2256, Profil v2): ingen navigasjonslinje. «Profil» og
+          // «Rediger» står øverst i innholdet (`Profile.tsx`), og tilbake til
+          // Hjem er sveipet. `title` er skjermens navn for systemet.
           options={{
             title: PROFILE_TEXT.heading,
-            headerTitle: '',
-            headerShadowVisible: false,
+            headerShown: false,
           }}
         />
         <Stack.Screen
