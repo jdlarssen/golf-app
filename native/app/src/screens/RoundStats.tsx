@@ -19,7 +19,7 @@ import {
   SeasonSection,
   StreakSection,
 } from '../components/history/StatsSections';
-import { PageTitle } from '../components/PageTitle';
+import { HistoryTitle } from '../components/history/HistoryTitle';
 import { HISTORY_TEXT } from '../lib/historyCopy';
 import { historyStats } from '../lib/roundHistory';
 import { useRoundHistory } from '../lib/useRoundHistory';
@@ -42,9 +42,7 @@ export function RoundStats(_props: ScreenProps<'RoundStats'>) {
       contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
       testID="round-stats-screen"
     >
-      <View style={styles.title}>
-        <PageTitle title={HISTORY_TEXT.statsTitle} />
-      </View>
+      <HistoryTitle title={HISTORY_TEXT.statsTitle} />
 
       {load.state === 'failed' ? (
         <View style={styles.inset}>
@@ -83,7 +81,6 @@ export function RoundStats(_props: ScreenProps<'RoundStats'>) {
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingBottom: 32 },
-  title: { paddingHorizontal: 16, paddingTop: 7.5 },
   inset: { paddingHorizontal: 20, marginTop: 14, gap: 8 },
   empty: { marginHorizontal: 16, marginTop: 14 },
 });
