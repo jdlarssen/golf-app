@@ -9,8 +9,8 @@
 // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke her.
 //
 // Regnestykket er delt med webben: motoren (`computeGameLeaderboard`, samme
-// som tavla) og radene (`lib/leaderboard/soloScorecard.ts`). Skjermen tegner
-// bare det som kommer herfra.
+// som tavla) og radene (`lib/leaderboard/soloScorecard.ts`,
+// `lib/leaderboard/wolfHoles.ts`). Skjermen tegner bare det som kommer herfra.
 import { hasHoleByHoleView } from '../../../../lib/leaderboard/holeByHoleView';
 import {
   soloStablefordScorecard,
@@ -27,6 +27,7 @@ import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
 import { HOLES_TEXT, wolfSubtitle } from './holesCopy';
 import { computeGameLeaderboard, type ScoringExtras } from './scoringContext';
+import { choicesNotYetHere } from './choiceSource';
 
 export type HoleByHoleKind = 'solo-stableford' | 'solo-strokeplay' | 'wolf';
 
@@ -63,7 +64,7 @@ export function holeByHoleKind(
  * hull». Da venter skjermen, og sier fra hvis hentingen feiler.
  */
 export function waitsForChoices(kind: HoleByHoleKind | null, extras: ScoringExtras): boolean {
-  return kind === 'wolf' && extras.wolfChoices === undefined;
+  return kind === 'wolf' && choicesNotYetHere('wolf', extras);
 }
 
 /**

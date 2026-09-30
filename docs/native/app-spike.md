@@ -2087,13 +2087,15 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   De andre formatene webben har visning for, står som «Tavla» til de kommer.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
   `WolfHolesView` også tegner. Motoren trenger valgene (`wolf_hole_choices`), som skjermen
-  henter med `useGameChoices` som tavla (én gang, uten polling, siden runden er avsluttet). Uten
-  valgene kan motoren ikke regne Wolf. Til de er hentet står hjulet, og feiler hentingen før de
-  noen gang er kommet, sier skjermen fra med samme første setning som tavla
-  (`lib/seedCopy.ts`). Ulven står først på sin side, og ellers avgjør stillingen, ved delt plass
-  rotasjonsplassen. De delte bitene i visningene (navnet, tittelen, hull-hodet, raden,
-  gulltonen og bunnteksten «Vel spilt!») bor i `components/holes/holesShared.tsx`. Toppen er
-  den felles `kickerHeader` (`components/KickerHeader.tsx`) med spillnavnet.
+  henter med `useGameChoices` som tavla. Runden er avsluttet, så hooken prøver igjen bare til
+  første svar er kommet (`pollMs: null`), og så står den. Uten valgene kan motoren ikke regne
+  Wolf. Til de er hentet står hjulet, og feiler hentingen før de noen gang er kommet, sier
+  skjermen fra med samme første setning som tavla (`lib/seedCopy.ts`), til nettet er tilbake.
+  Tavla viser nå også hjulet mens første henting går, i stedet for feilmeldingen. Ulven står
+  først på sin side, og ellers avgjør stillingen, ved delt plass rotasjonsplassen. De delte
+  bitene i visningene (navnet, tittelen, hull-hodet, raden, gulltonen og bunnteksten «Vel
+  spilt!») bor i `components/holes/holesShared.tsx`. Toppen er den felles `kickerHeader` med
+  spillnavnet, som følger med som ruteparameter (`gameName`) fra spillets side.
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,

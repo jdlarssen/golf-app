@@ -18,9 +18,9 @@ import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
+import { Text } from 'react-native';
 import Constants from 'expo-constants';
 import { HOLES_TEXT } from './lib/holesCopy';
-import { kickerHeader } from './components/KickerHeader';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
@@ -52,7 +52,12 @@ export type RootStackParamList = {
   Scorecard: { gameId: string };
   Leaderboard: { gameId: string };
   /** «Hull for hull» (#2255) — flisa på spillets side når runden er avsluttet. */
-  HoleByHole: { gameId: string };
+  /**
+   * `gameName` står i toppen som kicker, som på webben (#2255 PR 3b). Den
+   * følger med fra spillets side, så toppen er riktig fra første bilde uten
+   * at skjermen må sette den selv.
+   */
+  HoleByHole: { gameId: string; gameName?: string };
   Approve: { gameId: string };
   /** Arrangørens avslutt-flate (N6c, #1856) — kåring + status-flipp. */
   EndGame: { gameId: string };
@@ -195,9 +200,9 @@ export function RootNavigator() {
         <Stack.Screen
           name="HoleByHole"
           component={HoleByHole}
-          // Spillnavnet i toppen, som på webben; skjermen setter det når
-          // bundelen er lastet. Til da står «HULL FOR HULL».
-          options={kickerHeader(HOLES_TEXT.heading, HOLES_TEXT.heading)}
+          options={({ route }) =>
+            kickerHeader(route.params.gameName ?? HOLES_TEXT.heading, HOLES_TEXT.heading)
+          }
         />
         <Stack.Screen
           name="Approve"
@@ -260,3 +265,28 @@ export function RootNavigator() {
   );
 }
 
+/**
+ * Toppen fra designlerretet (#2255, #2256): tilbake-pila, et lite sperret ord
+ * i midten og ingen skillelinje. Ordet sier hvor du er («STARTBILLETT»,
+ * «PROFIL»); sidens egen tittel står stort i innholdet (`PageTitle`). Én
+ * stil for alle, i samme kicker-stil som feltetikettene i billetten.
+ *
+ * `title` er skjermens navn for systemet (app-bytteren, VoiceOver sin
+ * «tilbake»), som kan være et annet enn ordet i toppen.
+ */
+function kickerHeader(kicker: string, title: string) {
+  return {
+    title,
+    headerTitle: () => <KickerTitle label={kicker} />,
+    headerShadowVisible: false,
+  };
+}
+
+function KickerTitle({ label }: { label: string }) {
+  const { ui } = useTheme();
+  return (
+    <Text accessibilityRole="header" style={ui.kicker}>
+      {label}
+    </Text>
+  );
+}

@@ -5,7 +5,6 @@
 // stillingen og begge niene kommer på skjermen, at stjerna er dekor, og at en
 // blind runde som pågår holder alt tilbake.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import type { ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import type { GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
@@ -29,6 +28,7 @@ const mockScreen: {
 };
 // Valgene (Wolf) hentes med fokus og polling; her leverer testen dem selv.
 jest.mock('../lib/useChoices', () => ({
+  ...jest.requireActual('../lib/useChoices'),
   useGameChoices: () => ({
     extras: mockScreen.extras,
     refresh: async () => undefined,
@@ -67,6 +67,8 @@ it('avsluttet solo stableford: overskrift, stilling, Ut og Inn, og hullvinneren 
   expect(screen.queryByTestId('hole-by-hole-best-1')).toBeNull();
   expect(screen.getByTestId('hole-by-hole-best-1', HIDDEN)).toBeTruthy();
   expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+  // Bunnteksten som på webben (`LeaderboardFooter`, i anførselstegn).
+  expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
 });
 
 it('blind runde som pågår: alt holdes tilbake', async () => {
@@ -115,24 +117,6 @@ describe('hentingen av slagene', () => {
     await render(<HoleByHole {...props} />);
     await waitFor(() => expect(screen.getByTestId('hole-by-hole-seed-failed')).toBeTruthy());
     expect(screen.getByTestId('hole-by-hole-front9')).toBeTruthy();
-  });
-
-  it('toppen får spillnavnet som kicker, som på webben', async () => {
-    mockNavigation.setOptions.mockClear();
-    mockScreen.bundle = finished();
-    mockScreen.scores = scores;
-    mockScreen.seed = async () => 0;
-    await render(<HoleByHole {...props} />);
-    await waitFor(() => expect(mockNavigation.setOptions).toHaveBeenCalled());
-    const options = mockNavigation.setOptions.mock.lastCall![0] as {
-      title: string;
-      headerTitle: () => ReactElement;
-      headerShadowVisible: boolean;
-    };
-    expect(options.title).toBe('Hull for hull');
-    expect(options.headerShadowVisible).toBe(false);
-    await render(options.headerTitle());
-    expect(screen.getByTestId('kicker-title')).toHaveTextContent(finished().game.name);
   });
 
   it('lykkes den: ingen linje', async () => {
@@ -209,7 +193,6 @@ describe('Wolf (#2255 PR 3b)', () => {
     // Ingen innsats over 1 på hull 1.
     expect(screen.queryByTestId('hole-by-hole-stake-1')).toBeNull();
     // Bunnteksten som på webben: runden er ferdig.
-    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('Vel spilt!');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
   });
 });
-

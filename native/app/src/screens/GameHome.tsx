@@ -306,7 +306,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           supported={supported}
           holeByHole={game.status === 'finished' && holeByHoleKind(game) !== null}
           onBoard={() => navigation.navigate('Leaderboard', { gameId })}
-          onHoleByHole={() => navigation.navigate('HoleByHole', { gameId })}
+          onHoleByHole={() => navigation.navigate('HoleByHole', { gameId, gameName: game.name })}
           onScorecard={() => navigation.navigate('Scorecard', { gameId })}
           onRules={scrollToRules}
         />
