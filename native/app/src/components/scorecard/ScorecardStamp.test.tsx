@@ -1,10 +1,10 @@
 // #2262: stempelet på et levert scorekort.
 //
 // Hvilken godkjenningslinje et kort får, er `lib/scorecard/scorecardStamp.test.ts`
-// sitt. Her prøves to ting: at hver linje blir riktig tekst (`stampCopy`, ren
-// funksjon), og én render-test som låser at stempelet er ett skjermleser-
-// element med hele teksten, og at godkjenningslinja bare står når det finnes
-// en.
+// sitt. Her prøves at hver linje i sjekklista blir riktig tekst (`stampCopy`,
+// ren funksjon), og to render-tester: stempelet er ett skjermleser-element med
+// kort dato og klubbnavn, og sjekklista merker hvert steg som gjort eller
+// gjenstående og hopper over godkjenningen når det ikke finnes en.
 import { render, screen } from '@testing-library/react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { ScorecardStampMark, ScorecardStatusList, stampCopy } from './ScorecardStamp';
@@ -18,10 +18,8 @@ const BASE: Stamp = {
 };
 
 describe('stampCopy', () => {
-  it('dato, klokkeslett og «Signert av deg» med eierens navn', () => {
+  it('«Signert av deg» med eierens navn', () => {
     expect(stampCopy(BASE, 'Kari Nordmann')).toEqual({
-      signedAt: '27. september 2026 · 12:32',
-      stampDate: '27.09 · 12:32',
       signedBy: 'Signert av deg, Kari Nordmann',
       approval: null,
       lock: 'Arrangøren låser resultatet når alle har levert',
@@ -52,8 +50,8 @@ describe('stampCopy', () => {
 
 const HIDDEN = { includeHiddenElements: true };
 
-describe('ScorecardStamp', () => {
-  it('stempelet er ett skjermleser-element med kort dato og «TØRNY» uten klubb; sjekklista har merkene', async () => {
+describe('ScorecardStampMark', () => {
+  it('er ett skjermleser-element med kort dato, og «TØRNY» når banen ikke har klubbnavn', async () => {
     const { rerender } = await render(<ScorecardStampMark stamp={BASE} />);
 
     const stamp = screen.getByTestId('scorecard-stamp');
@@ -63,13 +61,16 @@ describe('ScorecardStamp', () => {
     expect(screen.getByText('TØRNY')).toBeTruthy();
     await rerender(<ScorecardStampMark stamp={BASE} clubName="Byneset GK" />);
     expect(screen.getByText('BYNESET GK')).toBeTruthy();
+  });
+});
 
-    // Sjekklista (#2385): hvem som signerte er gjort, godkjenningen venter, og
-    // låsingen gjenstår.
-    await rerender(
+describe('ScorecardStatusList', () => {
+  it('hake når steget er gjort, stiplet sirkel når det gjenstår, og ingen godkjenningslinje uten godkjenning', async () => {
+    // #2385: hvem som signerte er gjort, godkjenningen venter, og låsingen
+    // gjenstår.
+    const { rerender } = await render(
       <ScorecardStatusList stamp={{ ...BASE, approval: { kind: 'pending' } }} ownerFullName="Kari Nordmann" />,
     );
-    expect(screen.getByTestId('scorecard-signed-by')).toHaveTextContent('Signert av deg, Kari Nordmann');
     expect(screen.getByTestId('scorecard-signed-by-done', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('scorecard-approval-pending', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('scorecard-lock-pending', HIDDEN)).toBeTruthy();
