@@ -112,6 +112,29 @@ describe('wolfHoleCards', () => {
     expect(cards.holes.map((h) => h.outcomeTone)).toEqual(['accent', 'text', 'muted', 'muted']);
   });
 
+  it('delt plass på samme side: rotasjonsplassen avgjør, ikke userId', () => {
+    // «zed» har plass 1 i rotasjonen og «amy» plass 2; begge delt 2. og på de
+    // andres side. userId-rekkefølgen (amy før zed) er motsatt.
+    const tied: WolfResult = {
+      ...result([]),
+      players: [
+        { userId: 'kari', teamNumber: 3, totalPoints: 9, wolfHolesPlayed: 1, blindWolfWins: 0, rank: 1, tiedWith: [] },
+        { userId: 'amy', teamNumber: 2, totalPoints: 4, wolfHolesPlayed: 1, blindWolfWins: 0, rank: 2, tiedWith: ['zed'] },
+        { userId: 'zed', teamNumber: 1, totalPoints: 4, wolfHolesPlayed: 1, blindWolfWins: 0, rank: 2, tiedWith: ['amy'] },
+      ],
+      holes: [
+        hole({
+          holeNumber: 1,
+          wolfUserId: 'kari',
+          choice: 'lone',
+          partnerUserId: null,
+          players: [cell('kari', 'wolf', 4), cell('amy', 'opp', 5), cell('zed', 'opp', 5)],
+        }),
+      ],
+    };
+    expect(wolfHoleCards(tied).holes[0]!.rows.map((r) => r.userId)).toEqual(['kari', 'zed', 'amy']);
+  });
+
   it('delt plass i stillingen ordnes likt på hullet uansett rekkefølgen inn', () => {
     const run = (order: string[]) =>
       wolfHoleCards(
