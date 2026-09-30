@@ -49,6 +49,8 @@ describe('stampCopy', () => {
   });
 });
 
+const HIDDEN = { includeHiddenElements: true };
+
 describe('ScorecardStamp', () => {
   it('er ett skjermleser-element, og har godkjenningslinja bare når det finnes en', async () => {
     const { rerender } = await render(
@@ -57,11 +59,13 @@ describe('ScorecardStamp', () => {
 
     const stamp = screen.getByTestId('scorecard-stamp');
     expect(stamp.props.accessible).toBe(true);
-    expect(stamp.props.accessibilityLabel).toBe(
-      'Signert av deg, Kari Nordmann, 27. september 2026 kl. 12:32',
-    );
-    expect(screen.getByTestId('scorecard-approval')).toBeTruthy();
-    expect(screen.getByTestId('scorecard-lock')).toBeTruthy();
+    expect(stamp.props.accessibilityLabel).toBe('Signert, 27. september 2026 kl. 12:32');
+    // Sjekklista (#2385): hvem som signerte er gjort, godkjenningen venter, og
+    // låsingen gjenstår.
+    expect(screen.getByTestId('scorecard-signed-by')).toHaveTextContent('Signert av deg, Kari Nordmann');
+    expect(screen.getByTestId('scorecard-signed-by-done', HIDDEN)).toBeTruthy();
+    expect(screen.getByTestId('scorecard-approval-pending', HIDDEN)).toBeTruthy();
+    expect(screen.getByTestId('scorecard-lock-pending', HIDDEN)).toBeTruthy();
 
     await rerender(<ScorecardStamp stamp={BASE} ownerFullName="Kari Nordmann" />);
     expect(screen.queryByTestId('scorecard-approval')).toBeNull();
