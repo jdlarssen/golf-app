@@ -57,14 +57,15 @@ export function RoundRobinHoleCardsView({
 }
 
 function SegmentView({ segment, players }: { segment: RoundRobinSegment; players: readonly BundlePlayer[] }) {
-  const { colors } = useTheme();
+  const { colors, ui } = useTheme();
   // Webben: ukjent spiller som «(ukjent)», både her og i radene.
   const sideNames = (ids: readonly string[]) =>
     roundRobinSideNames(ids.map((id) => nameOf(players, id, HOLES_TEXT.unknownPlayer)));
   return (
     <View style={styles.segment} testID={`hole-by-hole-segment-${segment.segment}`}>
       <View style={styles.constellation}>
-        <Text style={[holesStyles.kicker, { color: colors.muted }]}>
+        {/* Webbens `Kicker` (10 px, 0,2em), samme stil som appens `ui.kicker`. */}
+        <Text style={ui.kicker}>
           {roundRobinSegmentLabel(segment.segment, segment.holesKey)}
         </Text>
         <View style={styles.sidesLine}>
