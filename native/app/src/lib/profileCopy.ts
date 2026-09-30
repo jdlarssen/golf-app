@@ -132,6 +132,12 @@ export const PROFILE_TEXT = {
   // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.
   themeSystem: 'Følg telefonen',
   themeSaveFailedNote: 'Fikk ikke lagret valget, så temaet gjelder bare til du lukker appen.',
+  /** Knappen under menyen (#2256 PR 3), som i designet. */
+  shareBagTag: 'Del bag-taggen',
+  /** Når bildet eller delearket feilet. Et avbrutt ark er ingen feil. */
+  shareBagTagFailed: 'Fikk ikke delt bag-taggen. Prøv igjen.',
+  /** Ordmerket nederst på bildet som deles. */
+  shareWordmark: 'Tørny',
 
   // --- App-egent: veien inn i skjemaet ------------------------------------
   // To nøkler for det som i dag er samme ord, av samme grunn som `deleteRow`
