@@ -389,7 +389,7 @@ function ShareLiveButton({ token }: { token: string }) {
       style={styles.headerButton}
       testID="share-live"
     >
-      <DelIcon color={colors.text} size={22} />
+      <DelIcon color={colors.text} size={20} strokeWidth={1.8} />
     </Pressable>
   );
 }

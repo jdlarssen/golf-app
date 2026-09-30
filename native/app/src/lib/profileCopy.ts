@@ -40,6 +40,11 @@ export const PROFILE_TEXT = {
   // --- Webbens ordlyd (messages/no.json → profile) ------------------------
   /** Header-tittelen, og ordet oppe til høyre på Hjem som fører hit. */
   heading: 'Profil',
+  /**
+   * Tilbake-pila i rommene under profilen (Venner, «Varsler og tema»), som
+   * designet og webbens egne profil-rom (#2385).
+   */
+  backToProfile: 'Tilbake til profil',
   /** Overskriften når spilleren verken har navn eller kallenavn. */
   displayNameFallback: 'Profil',
   sectionAccount: 'Konto',

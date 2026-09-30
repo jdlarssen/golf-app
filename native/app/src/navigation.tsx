@@ -251,12 +251,16 @@ export function RootNavigator() {
         <Stack.Screen
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
-          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuNotificationsTheme)}
+          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuNotificationsTheme, {
+            backLabel: PROFILE_TEXT.backToProfile,
+          })}
         />
         <Stack.Screen
           name="Friends"
           component={Friends}
-          options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading)}
+          options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
+            backLabel: PROFILE_TEXT.backToProfile,
+          })}
         />
         <Stack.Screen
           name="SyncLab"
