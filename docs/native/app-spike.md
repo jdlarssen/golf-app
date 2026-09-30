@@ -1611,8 +1611,9 @@ lenker nederst på hjem (e-post, Konto, Sync-lab, Logg ut) — en restehylle som
 hver gang noe ikke passet andre steder. #1906 ga det ett rom, og #1877 ga utloggingen
 en opprydding.
 
-**Inngangen er ordet «Profil» oppe til høyre i hjem-headeren** (`testID="open-profile"`,
-satt i `navigation.tsx` via `options`-funksjonen, så `Home.tsx` slipper å vite om den).
+**Inngangen er ordet «Profil» oppe til høyre på Hjem** (`testID="open-profile"`). Fram
+til #2385 sto den i hjem-headeren; nå har Hjem ingen navigasjonslinje (designlerretet), og
+lenka står til høyre på datolinja i `Home.tsx` til bunnmenyen kommer.
 Hjem-footeren er borte i sin helhet, og `Account.tsx` er slettet.
 
 ### Hierarkiet ER endringen

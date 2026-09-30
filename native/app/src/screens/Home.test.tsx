@@ -37,6 +37,11 @@ jest.mock('../data/syncTriggers', () => ({ startSyncTriggers: jest.fn(() => () =
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
 }));
+// Hjem har ingen navigasjonslinje (#2385) og leser innfellingen selv. Uten
+// navigatorens SafeAreaProvider gir pakkens egen mock innfelling 0.
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -157,6 +162,7 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   };
   const sequence = [
     'home-date',
+    'open-profile',
     'home-greeting',
     'home-hero',
     'home-active',
@@ -187,6 +193,13 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
 
   await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));
   expect(navigate).toHaveBeenCalledWith('Hole', { gameId: 'new', holeNumber: 8 });
+
+  // Veien til profil-rommet er lenka på datolinja (#2385).
+  const profileLink = screen.getByTestId('open-profile');
+  expect(profileLink.props.accessibilityRole).toBe('link');
+  expect(profileLink).toHaveTextContent('Profil');
+  await fireEvent.press(profileLink);
+  expect(navigate).toHaveBeenCalledWith('Profile');
 });
 
 it('tegner heltekortet fra enheten når nettet er borte', async () => {

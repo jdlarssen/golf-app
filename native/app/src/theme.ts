@@ -234,6 +234,17 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       color: c.muted,
       marginTop: 16,
     },
+    /**
+     * Små sperrede versaler over en seksjon (#2385, designlerretet: 10 px,
+     * 0,2em sperring). Designets seksjonsoverskrifter og feltetiketter.
+     */
+    kicker: {
+      fontSize: 10,
+      fontFamily: FONTS.sansSemiBold,
+      letterSpacing: 2,
+      textTransform: 'uppercase',
+      color: c.muted,
+    },
     body: { fontSize: 16, fontFamily: FONTS.sans, color: c.text },
     muted: { fontSize: 14, fontFamily: FONTS.sans, color: c.muted },
     value: { fontSize: 22, fontFamily: FONTS.serifScore, color: c.text },
