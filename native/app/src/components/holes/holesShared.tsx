@@ -144,8 +144,8 @@ export const holesStyles = StyleSheet.create({
   chipText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
   /**
    * Etikett i små versaler (webbens `text-[11px] font-semibold uppercase
-   * tracking-[0.16em]` og `Kicker`): «Stillingen», Round Robins segment og
-   * «Vant hullet».
+   * tracking-[0.16em]`/`[0.14em]`): «Stillingen» og «Vant hullet». Webbens
+   * `Kicker` (10 px) er appens `ui.kicker`.
    */
   kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6, textTransform: 'uppercase' },
   /**
