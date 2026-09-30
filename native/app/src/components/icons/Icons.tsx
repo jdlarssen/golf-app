@@ -377,6 +377,27 @@ export function MedalDisc({
 }
 
 /**
+ * Pila foran formsetningen i Rundedagboka (#2265): designets «▲»/«▼», 8 × 8 pt
+ * slik nettleseren tegner tegnet i Inter 13. iOS henter tegnet fra en bredere
+ * reservefont (nesten 12 pt), så den er tegnet her. Alltid dekor: setningen
+ * sier «bedre» eller «dårligere».
+ */
+export function FormArrow({ direction, color }: { direction: 'up' | 'down'; color: string }) {
+  return (
+    <Svg
+      width={8}
+      height={8}
+      viewBox="0 0 8 8"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      testID={`form-arrow-${direction}`}
+    >
+      <Path d={direction === 'up' ? 'M4 0 L8 8 L0 8 Z' : 'M0 0 L8 0 L4 8 Z'} fill={color} />
+    </Svg>
+  );
+}
+
+/**
  * Formkurven i Rundedagboka (#2265), som designlerretet (`Historikk-forslag`)
  * tegner den: tre rutelinjer, en ugjennomsiktig flate under linja, linja på
  * 2,5 pt med runde ledd, en prikk på første runde og gullprikken med ring på

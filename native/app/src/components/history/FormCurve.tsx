@@ -1,7 +1,7 @@
 // #2265: kurven i formkortet og handicap-formen, med tallene ved prikkene.
 //
-// Målene er designlerretets (`Historikk-forslag`): 124 pt høy, full indre
-// bredde, rutelinjer på y 24, 60 og 96, beste runde på den øverste og
+// Målene er designlerretets (`Historikk-forslag`): 124 pt høy, kortets indre
+// bredde minus 2 pt (se `CURVE.trailing`), rutelinjer på y 24, 60 og 96, beste runde på den øverste og
 // dårligste på den nederste linja (ingen luft i domenet), x fra 12 til
 // bredden − 14, og flaten ned til y 118. Bedre runder står høyere
 // (`invertY`), så «opp er bedre» i begge kurvene.
@@ -23,6 +23,11 @@ import { TrendCurve } from '../icons/Icons';
 /** Designets mål, i punkter. */
 export const CURVE = {
   height: 124,
+  /**
+   * Designet tegner kurven 326 pt bred i kortets 328 pt indre bredde, så den
+   * slutter 2 pt før høyrekanten.
+   */
+  trailing: 2,
   padding: { top: 24, right: 14, bottom: 28, left: 12 },
   areaBottom: 118,
   gridYs: [24, 60, 96],
@@ -78,7 +83,9 @@ export function FormCurve({
   return (
     <View
       style={styles.box}
-      onLayout={(e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width))}
+      onLayout={(e: LayoutChangeEvent) =>
+        setWidth(Math.round(e.nativeEvent.layout.width) - CURVE.trailing)
+      }
       accessible
       accessibilityRole="image"
       accessibilityLabel={accessibilityLabel}

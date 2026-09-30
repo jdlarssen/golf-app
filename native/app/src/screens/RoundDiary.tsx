@@ -17,8 +17,8 @@
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FormCard } from '../components/history/FormCard';
+import { HistoryTitle } from '../components/history/HistoryTitle';
 import { RoundDiaryList } from '../components/history/RoundDiaryList';
-import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { HISTORY_TEXT, seasonLine } from '../lib/historyCopy';
 import { groupDiaryByMonth } from '../lib/roundDiary';
@@ -52,13 +52,11 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
       contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
       testID="round-diary-screen"
     >
-      <View style={styles.title}>
-        <PageTitle
-          title={HISTORY_TEXT.title}
-          subtitle={season ? seasonLine(season.rounds, season.year) : load.state === 'loading' ? ' ' : undefined}
-          subtitleTestID="round-diary-subtitle"
-        />
-      </View>
+      <HistoryTitle
+        title={HISTORY_TEXT.title}
+        subtitle={season ? seasonLine(season.rounds, season.year) : load.state === 'loading' ? ' ' : undefined}
+        subtitleTestID="round-diary-subtitle"
+      />
 
       {load.state === 'failed' ? (
         <View style={styles.inset}>
@@ -112,10 +110,7 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
 }
 
 const styles = StyleSheet.create({
-  // Designet: tittelblokka har 6 pt luft over og står 20 pt fra kanten
-  // (`PageTitle` legger 4 til de 16 her), som «Venner».
   scroll: { flexGrow: 1, paddingBottom: 32 },
-  title: { paddingHorizontal: 16, paddingTop: 7.5 },
   inset: { paddingHorizontal: 20, marginTop: 14, gap: 8 },
   empty: { marginHorizontal: 16, marginTop: 14 },
   statsLink: { marginHorizontal: 16, marginTop: 16 },
