@@ -33,6 +33,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { PageTitle } from '../components/PageTitle';
 import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
+import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
 import { fetchFriends } from '../data/friends';
@@ -315,6 +316,12 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
           testID="profile-account-settings"
         />
       </SettingList>
+
+      {/* «Del bag-taggen» (PR 3) rett under menyen, som i designet. Bare når
+          kortet og sesongen er lastet: bildet skal være det du ser. */}
+      {model && extras?.season ? (
+        <ShareBagTagButton model={model} trend={extras.trend} />
+      ) : null}
 
       {/* I et butikk-bygg finnes utvikler-seksjonen ikke i treet i det hele
           tatt — `isStagingBuild` er fail-closed, og en skjult rad er fortsatt

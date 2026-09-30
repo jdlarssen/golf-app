@@ -24,6 +24,12 @@
 // «Oppdatert …» der, som før. Linja har samme høyde i alle tilstander, og mens
 // kurven lastes står den tom, så teksten ikke bytter foran øynene på deg.
 // Påminnelsen om et gammelt handicap vinner alltid: den er en knapp.
+//
+// **Deleversjonen** (`variant="share"`, #2256 PR 3) er kortet slik det blir
+// som bilde: rett (ingen skråstilling eller skygge), uten knapper og uten
+// «Oppdatert …», med endringen i sesongen når kurven står, og ordmerket
+// «Tørny» nederst. Drakten velges av den som tegner den (`ShareBagTagButton`
+// pakker den i lys drakt).
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Polyline } from 'react-native-svg';
 import type { HandicapTrend } from '../../../../../lib/stats/handicapTrend';
@@ -50,9 +56,18 @@ export interface BagTagProps {
    * ikke er noen (under to punkter, eller lesingen feilet).
    */
   trend?: HandicapTrend | null | 'loading';
+  /** `share` = bildet som deles (se toppen av fila). */
+  variant?: 'profile' | 'share';
 }
 
-export function BagTag({ model, placeholderName = '', onEditProfile, trend = null }: BagTagProps) {
+export function BagTag({
+  model,
+  placeholderName = '',
+  onEditProfile,
+  trend = null,
+  variant = 'profile',
+}: BagTagProps) {
+  const share = variant === 'share';
   const { colors } = useTheme();
   const ink = { color: colors.onStrong };
   const hidden = { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const;
@@ -65,6 +80,7 @@ export function BagTag({ model, placeholderName = '', onEditProfile, trend = nul
       style={[
         styles.card,
         { backgroundColor: colors.surfaceStrong, shadowColor: colors.surfaceStrong },
+        share ? styles.shareCard : null,
       ]}
     >
       <View {...hidden} style={[styles.slot, { backgroundColor: colors.bg }]} />
@@ -116,10 +132,21 @@ export function BagTag({ model, placeholderName = '', onEditProfile, trend = nul
         ) : (
           <View style={styles.hcpPlaceholder} />
         )}
-        {model ? (
+        {model && !share ? (
           <HandicapAge model={model} trend={model.hcpText ? trend : null} onEditProfile={onEditProfile} />
         ) : null}
+        {share && curve ? (
+          <Text style={[styles.age, styles.change, ink]} testID="share-hcp-change">
+            {handicapSeasonChange(curve.change)}
+          </Text>
+        ) : null}
       </View>
+
+      {share ? (
+        <Text style={[styles.wordmark, ink]} testID="share-wordmark">
+          {PROFILE_TEXT.shareWordmark}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -250,6 +277,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 14 },
     transform: [{ rotate: '-1.5deg' }],
   },
+  // Bildet: rett, uten skygge og uten luft rundt, så kortet fyller bildet.
+  shareCard: {
+    transform: [],
+    marginHorizontal: 0,
+    marginVertical: 0,
+    shadowOpacity: 0,
+  },
+  wordmark: { alignSelf: 'flex-end', fontSize: 18, fontFamily: FONTS.serifDisplay, opacity: 0.85 },
   // Den stansede spalten viser sidens bakgrunn gjennom kortet.
   slot: { alignSelf: 'center', width: 44, height: 14, borderRadius: 7 },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
