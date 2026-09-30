@@ -4,16 +4,16 @@
 // webbens side gjør (en stableford-rad med tom config har ingen «Hull for
 // hull» der heller). Oppå den står appens egen liste over formatene skjermen
 // er bygget for. Den vokser format for format (PR 3a: solo stableford,
-// modifisert stableford og solo slagspill; PR 3b: Wolf; PR 3c: Nines og Round
-// Robin). For resten står flisa på spillets side som «Tavla», som for
-// formatene webben sender til tavla.
+// modifisert stableford og solo slagspill; PR 3b: Wolf; PR 3c: Nines, Round
+// Robin og Acey Deucey). For resten står flisa på spillets side som «Tavla»,
+// som for formatene webben sender til tavla.
 // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke her.
 //
 // Regnestykket er delt med webben: motoren (`computeGameLeaderboard`, samme
 // som tavla) og radene (`lib/leaderboard/soloScorecard.ts`,
 // `lib/leaderboard/wolfHoles.ts`, `lib/leaderboard/ninesHoles.ts`,
-// `lib/leaderboard/roundRobinHoles.ts`). Skjermen tegner bare det som kommer
-// herfra.
+// `lib/leaderboard/roundRobinHoles.ts`, `lib/leaderboard/aceyDeuceyHoles.ts`).
+// Skjermen tegner bare det som kommer herfra.
 import { hasHoleByHoleView } from '../../../../lib/leaderboard/holeByHoleView';
 import {
   soloStablefordScorecard,
@@ -27,27 +27,44 @@ import {
   type RoundRobinHoleCards,
 } from '../../../../lib/leaderboard/roundRobinHoles';
 import {
+  aceyDeuceyHoleCards,
+  type AceyDeuceyHoleCards,
+} from '../../../../lib/leaderboard/aceyDeuceyHoles';
+import {
   MODE_LABELS,
   type GameMode,
   type GameModeConfig,
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
-import { HOLES_TEXT, ROUND_ROBIN_HOLES_TEXT, ninesSubtitle, wolfSubtitle } from './holesCopy';
+import {
+  HOLES_TEXT,
+  ROUND_ROBIN_HOLES_TEXT,
+  aceyDeuceySubtitle,
+  ninesSubtitle,
+  wolfSubtitle,
+} from './holesCopy';
 import { computeGameLeaderboard, type ScoringExtras } from './scoringContext';
 import { choicesNotYetHere } from './choiceSource';
 
-export type HoleByHoleKind = 'solo-stableford' | 'solo-strokeplay' | 'wolf' | 'nines' | 'round-robin';
+export type HoleByHoleKind =
+  | 'solo-stableford'
+  | 'solo-strokeplay'
+  | 'wolf'
+  | 'nines'
+  | 'round-robin'
+  | 'acey-deucey';
 
 /**
  * Linja under overskriften er formatet («Stableford», «Wolf · Netto», «Nines ·
- * Netto», «Round Robin»).
+ * Netto», «Round Robin», «Acey Deucey · Netto»).
  */
 export type HoleByHoleModel =
   | { kind: 'solo-stableford' | 'solo-strokeplay'; subtitle: string; card: SoloScorecard }
   | { kind: 'wolf'; subtitle: string; wolf: WolfHoleCards }
   | { kind: 'nines'; subtitle: string; nines: NinesHoleCards }
-  | { kind: 'round-robin'; subtitle: string; roundRobin: RoundRobinHoleCards };
+  | { kind: 'round-robin'; subtitle: string; roundRobin: RoundRobinHoleCards }
+  | { kind: 'acey-deucey'; subtitle: string; aceyDeucey: AceyDeuceyHoleCards };
 
 function isKnownMode(mode: string): mode is GameMode {
   return Object.hasOwn(MODE_LABELS, mode);
@@ -69,6 +86,7 @@ export function holeByHoleKind(
   if (mode === 'wolf') return 'wolf';
   if (mode === 'nines') return 'nines';
   if (mode === 'round_robin') return 'round-robin';
+  if (mode === 'acey_deucey') return 'acey-deucey';
   return null;
 }
 
@@ -122,6 +140,10 @@ export function buildHoleByHole(
   }
   if (kind === 'round-robin' && result.kind === 'round_robin') {
     return { kind, subtitle: ROUND_ROBIN_HOLES_TEXT.subtitle, roundRobin: roundRobinHoleCards(result) };
+  }
+  if (kind === 'acey-deucey' && result.kind === 'acey_deucey') {
+    const aceyDeucey = aceyDeuceyHoleCards(result);
+    return { kind, subtitle: aceyDeuceySubtitle(aceyDeucey.scoringKey), aceyDeucey };
   }
   return null;
 }

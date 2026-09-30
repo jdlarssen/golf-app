@@ -19,6 +19,7 @@ describe('holeByHoleKind', () => {
     ['wolf', { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' }, 'wolf'],
     ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 'nines'],
     ['round_robin', { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 85 }, 'round-robin'],
+    ['acey_deucey', { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' }, 'acey-deucey'],
     // Webben har ingen egen visning for lag-stableford: tavla.
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, null],
     // Matchplay og scramble har ingen «Hull for hull» på webben heller.
@@ -202,6 +203,55 @@ describe('buildHoleByHole', () => {
     expect(segments[1]!.holes[0]!.outcomeKey).toBe('outcomeChipTied');
   });
 
+  it('Acey Deucey: lavest først med ace og deuce, lik score etter stillingen, poeng med fortegn og brutto ved siden av', () => {
+    // Spillerne i motsatt rekkefølge av stillingen, så motorens rekkefølge
+    // inn ikke er den ferdige.
+    const adPlayers = [
+      homePlayer({ userId: 'd', name: 'D' }),
+      homePlayer({ userId: 'c', name: 'C' }),
+      homePlayer({ userId: 'b', name: 'B', courseHandicap: 18 }),
+      homePlayer({ userId: 'a', name: 'A' }),
+    ];
+    const bundle = homeBundle({
+      game: {
+        id: 'ga',
+        status: 'finished',
+        gameMode: 'acey_deucey',
+        modeConfig: { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' },
+      },
+      players: adPlayers,
+    });
+    // Hull 1: A 3 (ace), B 5 med et slag (netto 4), C 4, D 6 (deuce). B og C
+    // er like på hullet og i stillingen (0 poeng hver): den faste rekkefølgen
+    // gir B før C, motsatt av motorens rekkefølge inn.
+    const scores = [
+      ...holeScores('ga', 'a', 1, 3),
+      ...holeScores('ga', 'b', 1, 5),
+      ...holeScores('ga', 'c', 1, 4),
+      ...holeScores('ga', 'd', 1, 6),
+    ];
+    const model = buildHoleByHole(bundle, scores);
+    expect(model?.kind).toBe('acey-deucey');
+    if (model?.kind !== 'acey-deucey') return;
+    expect(model.subtitle).toBe('Acey Deucey · Netto');
+    const [hole1, hole2] = model.aceyDeucey.holes;
+    expect(hole1!.scored).toBe(true);
+    expect(hole1!.rows.map((r) => [r.userId, r.tone, r.pointsText, r.grossShown, r.effectiveScore])).toEqual([
+      ['a', 'ace', '+3', null, 3],
+      ['b', 'neutral', '0', 5, 4],
+      ['c', 'neutral', '0', null, 4],
+      ['d', 'deuce', '\u22123', null, 6],
+    ]);
+    // Hull 2 er ikke spilt: ingen poeng og ingen tone, radene etter stillingen.
+    expect(hole2!.scored).toBe(false);
+    expect(hole2!.rows.map((r) => [r.userId, r.tone, r.pointsText])).toEqual([
+      ['a', 'neutral', null],
+      ['b', 'neutral', null],
+      ['c', 'neutral', null],
+      ['d', 'neutral', null],
+    ]);
+  });
+
   it('et format uten appens «Hull for hull» gir null', () => {
     const bundle = homeBundle({
       game: { id: 'g3', gameMode: 'skins', modeConfig: { kind: 'skins' } },
@@ -218,6 +268,7 @@ describe('waitsForChoices', () => {
     expect(waitsForChoices('solo-stableford', {})).toBe(false);
     expect(waitsForChoices('nines', {})).toBe(false);
     expect(waitsForChoices('round-robin', {})).toBe(false);
+    expect(waitsForChoices('acey-deucey', {})).toBe(false);
     expect(waitsForChoices(null, {})).toBe(false);
   });
 });

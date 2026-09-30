@@ -39,6 +39,7 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   trackBg: '--hole-completed-bg',
   divider: '--row-divider-warm',
   scoreUnsetFg: '--score-unset-fg',
+  surface2: '--surface-2',
 };
 
 const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');

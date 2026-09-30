@@ -83,6 +83,11 @@ export type ThemeColors = {
    * og «INN» i scorekortets bånd). Lik i begge draktene, som `live`.
    */
   onStrongWarm: string;
+  /**
+   * Den litt nedsenkede flaten (#2255, deuce-raden i Acey Deucey «Hull for
+   * hull») — webbens `--surface-2`.
+   */
+  surface2: string;
 };
 
 /**
@@ -117,6 +122,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     divider: '#EDE6D2',
     scoreUnsetFg: '#9A8F7C',
     onStrongWarm: '#ECE5D2',
+    surface2: '#F0EDE5',
   },
   dark: {
     bg: '#14201A',
@@ -142,6 +148,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     divider: '#2F3F34',
     scoreUnsetFg: '#9A9180',
     onStrongWarm: '#ECE5D2',
+    surface2: '#243429',
   },
 };
 
@@ -196,6 +203,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   divider: '#000000',
   scoreUnsetFg: '#000000',
   onStrongWarm: '#F0EDE5',
+  // Deuce-raden i «Hull for hull» (#2255). Hullsiden tegner den ikke; ren hvit.
+  surface2: '#FFFFFF',
 };
 
 /**
