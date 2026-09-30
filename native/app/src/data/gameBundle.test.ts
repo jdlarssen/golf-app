@@ -147,7 +147,7 @@ describe('gameBundle', () => {
     });
     expect(fetched.courseName).toBe('Losby');
     expect(fetched.teeBoxName).toBe('Gul');
-    // #2255: faktalinja og DINE SLAG på billetten. CR-en er gjort om til tall.
+    // #2255: DINE SLAG på billetten (lengden står i bundelen, men brukes ikke lenger). CR-en er gjort om til tall.
     expect(fetched.teeRatings).toEqual({
       lengthMeters: 6124,
       slopeMens: 125,

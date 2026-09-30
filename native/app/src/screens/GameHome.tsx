@@ -19,7 +19,7 @@
 //
 // #2255: siden er én startbillett. Rekkefølgen er:
 //  1. synk-banneret og banneret for avvist kort,
-//  2. billetten (hode, felt, faktalinje, avatarrad) med stubben,
+//  2. billetten (hode, felt, avatarrad) med stubben,
 //  3. flisene Tavla, Scorekort og Regler når runden pågår eller er avsluttet,
 //     og «Godkjenn (n)»,
 //  4. spillerlista, bare når runden er planlagt eller et utkast,

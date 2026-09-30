@@ -1,7 +1,7 @@
 // #2255: reglene bak startbilletten (Type A).
 //
 // Billetten og stubben tegner bare det disse funksjonene svarer. Her låses
-// felt 2 (lag, side, flight, spillere), faktalinja, DINE SLAG før og etter
+// felt 2 (lag, side, flight, spillere), DINE SLAG før og etter
 // start, navnelista, kartlenken og hvilken stubb som tegnes i hvilken gren.
 import type { BundleTeeRatings, GameBundle } from '../data/gameBundle';
 import { homeBundle, homePlayer } from '../test/homeFixtures';
