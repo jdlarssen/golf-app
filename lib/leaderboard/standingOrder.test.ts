@@ -15,6 +15,13 @@ describe('inStandingOrder', () => {
 });
 
 describe('byStanding', () => {
+  it('to som begge mangler i stillingen er like, ikke NaN (en sortering med NaN er ikke til å stole på)', () => {
+    const cmp = byStanding(['kari']);
+    expect(cmp({ userId: 'x' }, { userId: 'y' })).toBe(0);
+    expect(cmp({ userId: 'kari' }, { userId: 'x' })).toBeLessThan(0);
+    expect(cmp({ userId: 'x' }, { userId: 'kari' })).toBeGreaterThan(0);
+  });
+
   it('den som står høyere i stillingen først; ukjente sist', () => {
     const cmp = byStanding(['kari', 'ola']);
     const rows = [{ userId: 'ukjent' }, { userId: 'ola' }, { userId: 'kari' }];
