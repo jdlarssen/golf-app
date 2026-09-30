@@ -180,7 +180,8 @@ export async function turnOffPush(): Promise<PushResult> {
 /**
  * Utlogging: slett raden mens sesjonen ennå lever (RLS krever den).
  *
- * Tokenet glemmes bare når basen bekreftet at raden er borte. Ellers (uten
+ * Tokenet glemmes når basen har svart for kontoen: raden er slettet, eller
+ * den var alt borte (senderen rydder etter en 410 fra Apple). Ellers (uten
  * nett, eller sesjonen døde på veien) huskes det med kontoen, og neste
  * innlogging rydder raden (`settlePushOwner`). Logger den samme kontoen inn
  * igjen, står varslene fortsatt på, som bryteren viser. Best-effort, kaster
@@ -190,7 +191,7 @@ export async function forgetPushBeforeSignOut(): Promise<void> {
   const stored = await storedPush();
   if (!stored) return;
   try {
-    if ((await deleteRow(stored)) === 'deleted') await forgetStoredToken();
+    if ((await deleteRow(stored)) !== 'failed') await forgetStoredToken();
   } catch (err) {
     console.error('[pushDevice] fikk ikke slettet raden ved utlogging', err);
   }

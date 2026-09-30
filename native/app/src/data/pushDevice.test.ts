@@ -132,13 +132,19 @@ describe('pushDevice', () => {
     await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
     const failed = queryStub({ data: null, error: { message: 'uten nett' } });
     const deleted = queryStub({ data: [{ id: 'row-1' }], error: null });
-    routeFrom({ apns_tokens: [failed, deleted] });
+    // 0 rader: senderen ryddet raden etter en 410. Borte er borte.
+    const gone = queryStub({ data: [], error: null });
+    routeFrom({ apns_tokens: [failed, deleted, gone] });
 
     // Uten nett: husket med kontoen, så neste innlogging kan rydde.
     await subject().forgetPushBeforeSignOut();
     expect(failed.steps.map((s) => s.method)).toEqual(['delete', 'eq', 'eq', 'select']);
     expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
 
+    await subject().forgetPushBeforeSignOut();
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
+
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
     await subject().forgetPushBeforeSignOut();
     expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
   });

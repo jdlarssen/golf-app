@@ -177,9 +177,10 @@ function PushSection({
           onValueChange={(next) => void onToggle(next)}
           label={PROFILE_TEXT.pushTitle}
           // Kortet er skog i begge drakter. «På» er designets salvie (`live`);
-          // av-sporet er kremen halvt gjennomsiktig, så det synes mot skogen.
+          // av-sporet er kremen på 45 %, som gir 3:1 mot skogen i begge
+          // draktene (WCAG 1.4.11), og knotten 3,6:1 mot sporet.
           onColor={colors.live}
-          offColor={`${colors.onStrongWarm}4D`}
+          offColor={`${colors.onStrongWarm}73`}
           testID="push-switch"
         />
       </View>
