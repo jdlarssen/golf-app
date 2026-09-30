@@ -8,6 +8,7 @@
 // feil merke aldri blinker forbi.
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text } from 'react-native';
+import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { PROFILE_TEXT } from '../lib/profileCopy';
 import {
@@ -57,6 +58,7 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="notifications-theme-screen">
+      <PageTitle title={PROFILE_TEXT.menuNotificationsTheme} />
       <Text style={ui.sectionTitle}>{PROFILE_TEXT.themeHeading}</Text>
       <SettingList testID="theme-choices">
         {THEME_PREFERENCES.map((preference) => (

@@ -29,7 +29,8 @@
 // står oppe til høyre (navigatorens header). Personvernerklæringen og «Slett
 // konto» bor nå i «Personvern og konto»; «Logg ut» står igjen nederst her.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PageTitle } from '../components/PageTitle';
 import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { SettingList, SettingRow } from '../components/SettingRow';
@@ -42,11 +43,11 @@ import { PROFILE_TEXT, friendsWaitingLine, unsentStrokesWarning } from '../lib/p
 import { isStagingBuild } from '../lib/stagingGate';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { useTheme } from '../theme';
+import { FONTS, TAP, useTheme } from '../theme';
 
 export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
-  const { ui } = useTheme();
+  const { ui, colors } = useTheme();
 
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -239,6 +240,25 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="profile-screen">
+      <PageTitle
+        title={PROFILE_TEXT.heading}
+        right={
+          <Pressable
+            accessibilityRole="button"
+            onPress={openEditProfile}
+            style={({ pressed }) => [
+              styles.editPill,
+              { borderColor: colors.border, backgroundColor: colors.surface },
+              pressed ? styles.pressed : null,
+            ]}
+            testID="profile-edit-entry"
+          >
+            <Text style={[styles.editPillText, { color: colors.primary }]}>
+              {PROFILE_TEXT.editAction}
+            </Text>
+          </Pressable>
+        }
+      />
       {updated ? (
         <View style={ui.banner}>
           <Text style={ui.body} testID="profile-updated-banner">
@@ -331,3 +351,17 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  // «Rediger» som i designet: en lys pille ved tittelen, minst 44 pt å treffe.
+  editPill: {
+    minHeight: TAP,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editPillText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  pressed: { opacity: 0.6 },
+});

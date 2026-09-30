@@ -193,6 +193,9 @@ describe('Profile', () => {
     expect(navigate).toHaveBeenCalledWith('Friends', { selfInitials: 'JL' });
     await fireEvent.press(screen.getByTestId('profile-notifications-theme'));
     expect(navigate).toHaveBeenCalledWith('NotificationsAndTheme');
+    // «Rediger» står ved tittelen i innholdet (designet), ikke i headeren.
+    await fireEvent.press(screen.getByTestId('profile-edit-entry'));
+    expect(navigate).toHaveBeenCalledWith('EditProfile');
     await fireEvent.press(screen.getByTestId('profile-account-settings'));
     expect(navigate).toHaveBeenCalledWith('AccountSettings');
     expect(screen.queryByTestId('profile-delete-entry')).toBeNull();
