@@ -27,6 +27,7 @@ import type { PushTarget } from './lib/pushRoute';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
+import { HISTORY_TEXT } from './lib/historyCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
 import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
@@ -44,6 +45,8 @@ import { Home } from './screens/Home';
 import { Leaderboard } from './screens/Leaderboard';
 import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
+import { RoundDiary } from './screens/RoundDiary';
+import { RoundStats } from './screens/RoundStats';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
@@ -101,6 +104,13 @@ export type RootStackParamList = {
    * dine initialer til heltekortet, fra profilen som åpner skjermen.
    */
   Friends: { selfInitials?: string } | undefined;
+  /**
+   * Rundedagboka (#2265). `from: 'home'` når «Alle runder →» på Hjem åpnet
+   * den: da heter pila bare «Tilbake», ellers «Tilbake til profil».
+   */
+  RoundDiary: { from?: 'home' } | undefined;
+  /** Statistikken bak Rundedagboka («Se all statistikk», #2265). */
+  RoundStats: undefined;
   SyncLab: undefined;
 };
 
@@ -293,6 +303,22 @@ export function RootNavigator() {
           options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading, {
             backLabel: PROFILE_TEXT.backToProfile,
           })}
+        />
+        {/* Rundedagboka (#2265, designlerretet): «HISTORIKK» i toppen og
+            «Rundedagboka» stort i innholdet. Pila sier hvor den fører. */}
+        <Stack.Screen
+          name="RoundDiary"
+          component={RoundDiary}
+          options={({ route }) =>
+            kickerHeader(HISTORY_TEXT.kicker, HISTORY_TEXT.kicker, {
+              backLabel: route.params?.from === 'home' ? undefined : PROFILE_TEXT.backToProfile,
+            })
+          }
+        />
+        <Stack.Screen
+          name="RoundStats"
+          component={RoundStats}
+          options={kickerHeader(HISTORY_TEXT.kicker, HISTORY_TEXT.statsTitle)}
         />
         <Stack.Screen
           name="SyncLab"

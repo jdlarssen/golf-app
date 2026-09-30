@@ -125,6 +125,9 @@ describe('PALETTES', () => {
     // Profil v2: designlerretets varme krem på skogflaten, lik i begge draktene.
     expect(PALETTES.light.onStrongWarm).toBe('#ECE5D2');
     expect(PALETTES.dark.onStrongWarm).toBe('#ECE5D2');
+    // #2265: formsetningen i Rundedagboka når formen går opp (designlerretet).
+    expect(PALETTES.light.formUp).toBe('#1F6B3A');
+    expect(PALETTES.dark.formUp).toBe('#7DAA8A');
     expect(PALETTES.light.onPrimary).toBe('#FFFFFF');
     expect(PALETTES.light.onAccent).toBe('#1B4332');
     expect(PALETTES.dark.onPrimary).toBe('#14201A');
