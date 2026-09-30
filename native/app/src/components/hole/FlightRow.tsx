@@ -27,7 +27,7 @@ import {
 } from '../../../../../lib/scoring/scoreShape';
 import { scoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 import { DashedRing } from '../icons/Icons';
 
 /** Designets form: 40 pt med strek på 2, firkanten med hjørner på 6. */
@@ -161,8 +161,8 @@ function ScoreShapeView({
       })}
       <Text
         style={[
-          styles.shapeNumber,
-          { fontSize: numberFontSize(shape, score), color: tone === 'par' ? colors.text : color },
+          fraunces(600, numberFontSize(shape, score)),
+          { color: tone === 'par' ? colors.text : color },
         ]}
         testID={`flight-row-${seatId}-score`}
       >
@@ -356,14 +356,12 @@ const styles = StyleSheet.create({
   note: { fontSize: 12, fontFamily: FONTS.sans },
   pointsSun: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   scoreSun: {
+    ...fraunces(600, 34),
     width: SUN_SCORE_WIDTH,
     textAlign: 'right',
-    fontSize: 34,
-    fontFamily: FONTS.serifScore,
   },
   shape: { width: SHAPE_SIZE, height: SHAPE_SIZE, alignItems: 'center', justifyContent: 'center' },
   ringOverlay: { position: 'absolute', top: 0, left: 0 },
   ring: { position: 'absolute', borderWidth: SHAPE_STROKE },
-  shapeNumber: { fontFamily: FONTS.serifScore },
-  unset: { fontSize: 20, fontFamily: FONTS.serifDisplay },
+  unset: { ...fraunces(500, 20) },
 });

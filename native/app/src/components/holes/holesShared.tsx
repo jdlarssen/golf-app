@@ -8,7 +8,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { formatRevealName } from '../../../../../lib/names/formatRevealName';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, holeNumberLabel, parSiChip } from '../../lib/holesCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 
 /**
  * Navnet slik webben skriver det: «Ola "Kompis" N.». Uten navn (en invitert
@@ -107,14 +107,14 @@ export function GoldChip({ text, testID }: { text: string; testID?: string }) {
 export const holesStyles = StyleSheet.create({
   page: { gap: 14 },
   titleBlock: { alignItems: 'center', gap: 2, paddingVertical: 4 },
-  title: { fontSize: 28, fontFamily: FONTS.serifDisplay },
+  title: { ...fraunces(500, 28) },
   center: { textAlign: 'center' },
   small: { fontSize: 12, fontFamily: FONTS.sans },
   medium: { fontFamily: FONTS.sansMedium },
   shrink: { flexShrink: 1 },
   holeHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   holeTitle: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  holeNumber: { fontSize: 16, fontFamily: FONTS.serifScore },
+  holeNumber: { ...fraunces(600, 16) },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -135,7 +135,7 @@ export const holesStyles = StyleSheet.create({
   /** Stjerna er dekor (skjult for skjermleseren), 11 pt. Fargen settes der den brukes. */
   star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
+  value: { ...fraunces(600, 18), minWidth: 24, textAlign: 'right' },
   /** «+5» foran scoren, i gull tekst (webbens `text-[12px] font-semibold`). */
   points: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   /** «brutto 5» ved siden av netto, dempet (webbens `text-[10.5px]`). */
@@ -154,5 +154,5 @@ export const holesStyles = StyleSheet.create({
    * «Delt» og «Venter» er `font-medium` på webben og legger vekten på selv.
    */
   caps: { fontSize: 11, fontFamily: FONTS.sans, letterSpacing: 1, textTransform: 'uppercase' },
-  footer: { fontSize: 12, fontFamily: FONTS.serifDisplay, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
+  footer: { ...fraunces(500, 12), fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });

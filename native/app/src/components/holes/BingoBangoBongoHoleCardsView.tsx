@@ -21,7 +21,7 @@ import type {
 } from '../../../../../lib/leaderboard/bingoBangoBongoHoles';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { BINGO_BANGO_BONGO_HOLES_TEXT, HOLES_TEXT } from '../../lib/holesCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 import { GoldChip, HoleHeader, HolesFooter, HolesTitle, holesStyles, nameOf } from './holesShared';
 
 export function BingoBangoBongoHoleCardsView({
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   /** Navnet og hintet på linje (webbens `items-baseline gap-1.5`), hintet kuttes først. */
   award: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexShrink: 1 },
   /** Webbens `font-serif text-[13.5px] font-medium`. */
-  label: { fontSize: 14, fontFamily: FONTS.serifDisplay },
+  label: { ...fraunces(500, 14) },
   /** Webbens `text-[10.5px] text-muted truncate`. */
   hint: { fontSize: 11, fontFamily: FONTS.sans, flexShrink: 1 },
   /**

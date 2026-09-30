@@ -37,7 +37,7 @@ import {
 } from '../../lib/homeCopy';
 import { formatStubClock, formatStubDate, teeOffProximityLocal } from '../../lib/homeDates';
 import { MAX_HOME_COMPANIONS, companionsOf } from '../../lib/flightRoster';
-import { FONTS, frauncesLine, interLine, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { FlightAvatars } from './FlightAvatars';
 
 /** Designets stiplede strek på 2 pt: streker på 6 pt og rundt 4 pt mellom. */
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.3,
     textTransform: 'uppercase',
   },
-  clock: { ...frauncesLine(30, 33), fontFamily: FONTS.serifScore },
+  clock: { ...fraunces(600, 30, 33) },
   noTime: { fontSize: 13, textAlign: 'center' },
   proximity: { ...interLine(11, 14), fontFamily: FONTS.sans },
   perforation: {
@@ -249,6 +249,6 @@ const styles = StyleSheet.create({
   notchDiscLow: { top: EDGE },
   dash: { width: PERFORATION, height: DASH },
   body: { flex: 1, padding: 14, gap: 6, justifyContent: 'center' },
-  name: { fontSize: 18, lineHeight: 23, fontFamily: FONTS.serifDisplay },
+  name: { ...fraunces(500, 18), lineHeight: 23 },
   detail: { fontSize: 12, fontFamily: FONTS.sans },
 });

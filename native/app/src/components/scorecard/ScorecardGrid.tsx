@@ -23,7 +23,7 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ScorecardCell, ScorecardGrid as Grid, ScorecardHalf } from '../../../../../lib/scorecard/scorecardGrid';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 import { ScoreShape, scoreShapeRings } from './ScoreShape';
 
 export type ScorecardRowKind = 'strokes' | 'net' | 'points' | 'enteredBy';
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   halfHead: { letterSpacing: 0.8 },
   num: { fontSize: 13, fontFamily: FONTS.sans, textAlign: 'center' },
   holeNumber: { fontFamily: FONTS.sansSemiBold },
-  strokeNum: { fontSize: 15, fontFamily: FONTS.serifScore, textAlign: 'center' },
+  strokeNum: { ...fraunces(600, 15), textAlign: 'center' },
   strong: { fontFamily: FONTS.sansSemiBold },
   sum: { fontFamily: FONTS.sansSemiBold },
   footer: { borderTopWidth: 2, paddingTop: 10, paddingHorizontal: 6, paddingBottom: 2 },

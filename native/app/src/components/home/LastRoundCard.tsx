@@ -16,7 +16,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadge';
 import type { HomeCard, LastRoundScore } from '../../data/homeList';
 import { HOME_TEXT, bruttoText, finishedResultText, pointsText } from '../../lib/homeCopy';
-import { FONTS, TAP, useTheme } from '../../theme';
+import { FONTS, fraunces, TAP, useTheme } from '../../theme';
 import { MedalDisc, PokalIcon } from '../icons/Icons';
 
 /** Tallet i medaljongen, eller `null` når runden ikke har en plass (matchplay). */
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  medalText: { fontSize: 16, fontFamily: FONTS.serifScore },
+  medalText: { ...fraunces(600, 16) },
   text: { flex: 1 },
   name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   line: { fontSize: 12, fontFamily: FONTS.sans },

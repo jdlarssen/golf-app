@@ -10,6 +10,7 @@
 // farger inline fra `colors`/`ui`. Aldri hardkodede farger eller fonter.
 import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { PixelRatio, StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
+import FRAUNCES_SIZES from '../assets/fonts/fraunces-sizes.json';
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
 export const TAP = 44;
@@ -219,10 +220,48 @@ function textLine(size: number, lineHeight: number, naturalLine: number, pixelRa
   return { fontSize: size, marginVertical: (lineHeight - natural) / 2 };
 }
 
+/** Fraunces-vektene appen bruker: 500 til ord, 600 til tall og uthevinger. */
+export type FrauncesWeight = 500 | 600;
+
+/**
+ * Fraunces-snittet for en vekt og størrelse (#2385). Nettleseren tegner
+ * Fraunces med optisk størrelse lik skriftstørrelsen; appen har ett snitt per
+ * størrelse den bruker (`assets/fonts/fraunces-sizes.json`), så teksten blir
+ * like bred og like formet som i designet. En størrelse uten eget snitt (en
+ * dynamisk størrelse) får det nærmeste, og midt mellom to det største.
+ */
+export function frauncesFamily(weight: FrauncesWeight, size: number): string {
+  const sizes: readonly number[] = FRAUNCES_SIZES[weight];
+  let best = sizes[0];
+  for (const candidate of sizes) {
+    const gap = Math.abs(candidate - size);
+    const bestGap = Math.abs(best - size);
+    if (gap < bestGap || (gap === bestGap && candidate > best)) best = candidate;
+  }
+  return `Fraunces${weight}O${best}`;
+}
+
+/**
+ * Stilen for Fraunces i en vekt og størrelse: snittet, og med `lineHeight`
+ * også nettleserens linjeboks (`frauncesLine`).
+ */
+export function fraunces(
+  weight: FrauncesWeight,
+  size: number,
+  lineHeight?: number,
+  pixelRatio = PixelRatio.get(),
+): { fontSize: number; fontFamily: string; marginVertical?: number } {
+  const family = frauncesFamily(weight, size);
+  return lineHeight === undefined
+    ? { fontSize: size, fontFamily: family }
+    : { ...frauncesLine(size, lineHeight, pixelRatio), fontFamily: family };
+}
+
 /**
  * Familienavn per snitt (expo-font registrerer én familie per vekt —
  * `fontWeight` velger IKKE snitt for custom-fonter, bruk disse).
- * Vektskalaen speiler webbens (`--fw-*` i globals.css).
+ * Vektskalaen speiler webbens (`--fw-*` i globals.css). Fraunces velges med
+ * `fraunces()` over, etter størrelsen.
  */
 export const FONTS = {
   /**
@@ -231,8 +270,6 @@ export const FONTS = {
    */
   holeNumber: 'FrauncesHole96',
   holeNumberSun: 'FrauncesHole132',
-  serifDisplay: 'Fraunces_500Medium',
-  serifScore: 'Fraunces_600SemiBold',
   sans: 'Inter_400Regular',
   sansMedium: 'Inter_500Medium',
   sansSemiBold: 'Inter_600SemiBold',
@@ -346,8 +383,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       gap: 12,
     },
     title: {
-      fontSize: 26,
-      fontFamily: FONTS.serifScore,
+      ...fraunces(600, 26),
       color: c.text,
     },
     sectionTitle: {
@@ -371,7 +407,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
     },
     body: { fontSize: 16, fontFamily: FONTS.sans, color: c.text },
     muted: { fontSize: 14, fontFamily: FONTS.sans, color: c.muted },
-    value: { fontSize: 22, fontFamily: FONTS.serifScore, color: c.text },
+    value: { ...fraunces(600, 22), color: c.text },
     /** Tall i tabeller og totaler — samme regel som på web. */
     num: { fontVariant: ['tabular-nums'] },
     card: {

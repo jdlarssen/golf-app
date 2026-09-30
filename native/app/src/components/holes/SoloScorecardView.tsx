@@ -16,7 +16,7 @@ import type {
 import { formatSignedPoints } from '../../../../../lib/leaderboard/soloScorecard';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, grossChip, holesPlayedChip } from '../../lib/holesCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 import { ScoreShape } from '../scorecard/ScoreShape';
 import { HoleHeader, HolesFooter, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
 
@@ -238,10 +238,10 @@ const styles = StyleSheet.create({
   rank: { width: 18 },
   standingRight: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   chip: { fontSize: 12, fontFamily: FONTS.sans },
-  total: { fontSize: 20, fontFamily: FONTS.serifScore, minWidth: 28, textAlign: 'right' },
+  total: { ...fraunces(600, 20), minWidth: 28, textAlign: 'right' },
   nine: { gap: 10 },
   nineHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4 },
-  nineTitle: { fontSize: 19, fontFamily: FONTS.serifDisplay },
+  nineTitle: { ...fraunces(500, 19) },
   subtotals: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   subtotal: {
     flexDirection: 'row',
@@ -255,6 +255,6 @@ const styles = StyleSheet.create({
   },
   subtotalName: { flexShrink: 1, maxWidth: 120 },
   /** Tallet i pillen er et scoretall, som webbens `score-num`. */
-  subtotalSum: { fontSize: 12, fontFamily: FONTS.serifScore },
+  subtotalSum: { ...fraunces(600, 12) },
   dash: { width: 24, textAlign: 'center' },
 });

@@ -80,7 +80,7 @@ import type { ScoringExtras } from '../lib/scoringContext';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, frauncesLine, useTheme } from '../theme';
+import { FONTS, fraunces, useTheme } from '../theme';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   topText: { flexShrink: 1 },
   dateLine: { fontSize: 12, fontFamily: FONTS.sans },
   profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-  greeting: { fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
+  greeting: { ...fraunces(500, 28), marginTop: 2 },
   hcpPill: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   // Nettleserens linjeboks for Fraunces 18 er 23 pt; da blir pillen 41 høy.
-  hcpValue: { ...frauncesLine(18, 23), fontFamily: FONTS.serifScore },
+  hcpValue: { ...fraunces(600, 18, 23) },
   empty: { alignItems: 'center', gap: 16, marginVertical: 8 },
   emptyText: { textAlign: 'center' },
   // 22 pt luft over (14 + mellomrommet i lista) og 8 under, som i designet.

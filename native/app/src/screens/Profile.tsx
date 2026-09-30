@@ -43,7 +43,7 @@ import { bagTagModel } from '../lib/bagTag';
 import { PROFILE_TEXT } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, TAP, useTheme } from '../theme';
+import { FONTS, fraunces, TAP, useTheme } from '../theme';
 
 export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     marginRight: -8,
   },
-  title: { flexShrink: 1, fontSize: 22, lineHeight: 27, fontFamily: FONTS.serifDisplay },
+  title: { ...fraunces(500, 22), flexShrink: 1, lineHeight: 27 },
   // «Rediger» som i designet: en lys pille, 44 pt høy.
   editPill: {
     minHeight: TAP,

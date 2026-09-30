@@ -78,7 +78,7 @@ import {
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
 import type { ScreenProps } from '../navigation';
-import { FONTS, TAP, useTheme } from '../theme';
+import { FONTS, fraunces, TAP, useTheme } from '../theme';
 
 type LoadState =
   | { state: 'loading' }
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   heroPlusOverlap: { marginLeft: -6 },
   heroPlusText: { fontSize: 16, fontFamily: FONTS.sans },
   // Linjehøydene er nettleserens «normal» for størrelsene i designet.
-  heroTitle: { fontSize: 18, lineHeight: 22, fontFamily: FONTS.serifDisplay },
+  heroTitle: { ...fraunces(500, 18), lineHeight: 22 },
   heroLine: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
   // Teksten under tittelen står 1,5 pt lenger ned i designet (målt).
   heroBody: { marginTop: 1.5 },
@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  sheetName: { flex: 1, fontSize: 22, fontFamily: FONTS.serifDisplay },
+  sheetName: { ...fraunces(500, 22), flex: 1 },
   sheetRow: {
     flexDirection: 'row',
     alignItems: 'center',

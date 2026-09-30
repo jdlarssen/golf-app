@@ -1,0 +1,41 @@
+// #2385: fontfilene bak `fraunces()` (theme.ts) og hullnummeret, lastet i
+// `App.tsx`. Nøklene er familienavnene stilene bruker, og hver fil har samme
+// navn inne i seg (`assets/fonts/README.md`). `theme.test.ts` holder lista lik
+// `fraunces-sizes.json` og filene i `assets/fonts`.
+/* eslint-disable @typescript-eslint/no-require-imports -- Metro laster fontfiler med `require` (Expo sin måte) */
+export const FRAUNCES_FILES = {
+  Fraunces500O11: require('../assets/fonts/Fraunces500O11.ttf'),
+  Fraunces500O12: require('../assets/fonts/Fraunces500O12.ttf'),
+  Fraunces500O13: require('../assets/fonts/Fraunces500O13.ttf'),
+  Fraunces500O14: require('../assets/fonts/Fraunces500O14.ttf'),
+  Fraunces500O15: require('../assets/fonts/Fraunces500O15.ttf'),
+  Fraunces500O18: require('../assets/fonts/Fraunces500O18.ttf'),
+  Fraunces500O19: require('../assets/fonts/Fraunces500O19.ttf'),
+  Fraunces500O20: require('../assets/fonts/Fraunces500O20.ttf'),
+  Fraunces500O22: require('../assets/fonts/Fraunces500O22.ttf'),
+  Fraunces500O26: require('../assets/fonts/Fraunces500O26.ttf'),
+  Fraunces500O28: require('../assets/fonts/Fraunces500O28.ttf'),
+  Fraunces500O30: require('../assets/fonts/Fraunces500O30.ttf'),
+  Fraunces600O9: require('../assets/fonts/Fraunces600O9.ttf'),
+  Fraunces600O11: require('../assets/fonts/Fraunces600O11.ttf'),
+  Fraunces600O12: require('../assets/fonts/Fraunces600O12.ttf'),
+  Fraunces600O13: require('../assets/fonts/Fraunces600O13.ttf'),
+  Fraunces600O14: require('../assets/fonts/Fraunces600O14.ttf'),
+  Fraunces600O15: require('../assets/fonts/Fraunces600O15.ttf'),
+  Fraunces600O16: require('../assets/fonts/Fraunces600O16.ttf'),
+  Fraunces600O18: require('../assets/fonts/Fraunces600O18.ttf'),
+  Fraunces600O20: require('../assets/fonts/Fraunces600O20.ttf'),
+  Fraunces600O22: require('../assets/fonts/Fraunces600O22.ttf'),
+  Fraunces600O24: require('../assets/fonts/Fraunces600O24.ttf'),
+  Fraunces600O26: require('../assets/fonts/Fraunces600O26.ttf'),
+  Fraunces600O28: require('../assets/fonts/Fraunces600O28.ttf'),
+  Fraunces600O30: require('../assets/fonts/Fraunces600O30.ttf'),
+  Fraunces600O32: require('../assets/fonts/Fraunces600O32.ttf'),
+  Fraunces600O34: require('../assets/fonts/Fraunces600O34.ttf'),
+  Fraunces600O40: require('../assets/fonts/Fraunces600O40.ttf'),
+  Fraunces600O44: require('../assets/fonts/Fraunces600O44.ttf'),
+  Fraunces600O48: require('../assets/fonts/Fraunces600O48.ttf'),
+  Fraunces600O64: require('../assets/fonts/Fraunces600O64.ttf'),
+  FrauncesHole96: require('../assets/fonts/FrauncesHole96.ttf'),
+  FrauncesHole132: require('../assets/fonts/FrauncesHole132.ttf'),
+};

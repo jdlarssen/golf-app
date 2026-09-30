@@ -10,7 +10,7 @@
 // artboardet tegnes i nettleseren (eierens svar #2385).
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { FONTS, TAP, useTheme } from '../../theme';
+import { FONTS, fraunces, frauncesFamily, TAP, useTheme } from '../../theme';
 
 const HALF = 9;
 
@@ -82,7 +82,7 @@ export function HoleStrip({
                 style={[
                   styles.number,
                   isCurrent
-                    ? { color: onCurrent, fontFamily: FONTS.serifScore }
+                    ? { color: onCurrent, fontFamily: frauncesFamily(600, 14) }
                     : { color: colors.muted },
                 ]}
               >
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  number: { fontSize: 14, fontFamily: FONTS.serifDisplay },
+  number: { ...fraunces(500, 14) },
   chip: { minHeight: TAP, marginLeft: 2, justifyContent: 'center' },
   chipText: { fontSize: 11, fontFamily: FONTS.sans },
 });

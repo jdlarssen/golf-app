@@ -19,7 +19,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { formatSignedAt, formatStampDateLocal } from '../../lib/display';
-import { FONTS, useTheme, withAlpha } from '../../theme';
+import { FONTS, fraunces, useTheme, withAlpha } from '../../theme';
 import { DashedRing, HakeIcon } from '../icons/Icons';
 
 /**
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
     maxWidth: STAMP - 24,
   },
-  signed: { fontSize: 20, lineHeight: 25, fontFamily: FONTS.serifScore, letterSpacing: 1.2 },
+  signed: { ...fraunces(600, 20), lineHeight: 25, letterSpacing: 1.2 },
   date: { fontSize: 10, lineHeight: 12, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
   // Designet: 30 pt under kortet (stempelet stikker 34 ned) og 16 pt fra kanten.
   checklist: { gap: 8, marginTop: 22, marginHorizontal: -4 },

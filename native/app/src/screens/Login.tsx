@@ -44,7 +44,7 @@ import {
   type DevLoginUser,
 } from '../devLogin';
 import { supabase } from '../supabase';
-import { FONTS, useTheme } from '../theme';
+import { fraunces, useTheme } from '../theme';
 
 /** Hvilken knapp som venter på Supabase — alle veiene deler ett felt. */
 type Busy = 'code' | 'password' | 'dev' | null;
@@ -272,8 +272,7 @@ const styles = StyleSheet.create({
   heading: {
     // Egen familie, ikke `fontWeight`: expo-font registrerer ett snitt per
     // familie, og en vekt oppå den ville ikke valgt noe snitt.
-    fontFamily: FONTS.serifScore,
-    fontSize: 28,
+    ...fraunces(600, 28),
     textAlign: 'center',
     marginBottom: 16,
   },

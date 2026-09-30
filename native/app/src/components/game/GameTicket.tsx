@@ -26,7 +26,7 @@ import { shortDisplayName } from '../../lib/display';
 import { MAX_TICKET_COMPANIONS, companionsOf } from '../../lib/flightRoster';
 import { rosterNames } from '../../lib/gameTicket';
 import { rosterA11y } from '../../lib/ticketCopy';
-import { FONTS, cardShadow, useTheme, withAlpha } from '../../theme';
+import { cardShadow, FONTS, fraunces, useTheme, withAlpha } from '../../theme';
 import { FlightAvatars } from '../home/FlightAvatars';
 
 export interface TicketField {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   // Linjehøydene er det nettleseren gir designets `line-height: normal`.
   badgeText: { fontSize: 11, lineHeight: 14, fontFamily: FONTS.sansSemiBold },
-  title: { fontSize: 30, lineHeight: 34.5, fontFamily: FONTS.serifDisplay, marginTop: 8 },
+  title: { ...fraunces(500, 30), lineHeight: 34.5, marginTop: 8 },
   headerLine: { fontSize: 13, fontFamily: FONTS.sans, opacity: 0.9, marginTop: 4 },
   fields: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
   field: { flex: 1 },
@@ -212,9 +212,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   fieldValue: {
-    fontSize: 24,
+    ...fraunces(600, 24),
     lineHeight: 29,
-    fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
     marginTop: 2,
   },

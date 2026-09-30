@@ -11,7 +11,7 @@
 // kanten, uten de 4 pt profilen har inn). «Varsler» har 28 pt (Profil v2).
 // Samme komponent, tre størrelser.
 import { StyleSheet, Text, View } from 'react-native';
-import { FONTS, useTheme } from '../theme';
+import { FONTS, fraunces, useTheme } from '../theme';
 
 export function PageTitle({
   title,
@@ -61,9 +61,9 @@ const styles = StyleSheet.create({
   blockMedium: { paddingHorizontal: 0 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   // Samme snitt og størrelse som tittelen på startbilletten (#2255).
-  title: { flexShrink: 1, fontSize: 30, lineHeight: 35, fontFamily: FONTS.serifDisplay },
+  title: { ...fraunces(500, 30), flexShrink: 1, lineHeight: 35 },
   subtitle: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans, marginTop: 2 },
-  titleMedium: { fontSize: 26, lineHeight: 31 },
+  titleMedium: { ...fraunces(500, 26), lineHeight: 31 },
   subtitleMedium: { fontSize: 12, lineHeight: 16 },
-  titleSettings: { fontSize: 28, lineHeight: 34 },
+  titleSettings: { ...fraunces(500, 28), lineHeight: 34 },
 });
