@@ -32,11 +32,20 @@ export function pushUrl(request: PushRequestLike | null | undefined): string | n
   return typeof fromData === 'string' ? fromData : null;
 }
 
+/** `decodeURIComponent` kaster på en ødelagt `%`-sekvens; da går trykket til Hjem. */
+function decodedOrNull(segment: string): string | null {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return null;
+  }
+}
+
 /** Skjermen et trykk på varselet skal åpne. */
 export function pushTarget(url: string | null): PushTarget {
   const match = url ? GAME_PATH.exec(url) : null;
   if (match) {
-    const gameId = decodeURIComponent(match[1]);
+    const gameId = decodedOrNull(match[1]);
     if (gameId) return { name: 'GameHome', params: { gameId } };
   }
   return { name: 'Home' };

@@ -102,6 +102,15 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   return { promise, resolve };
 }
 
+/** Samme minnelager som koden ser: modulene hentes på nytt per test. */
+function storage(): typeof import('@react-native-async-storage/async-storage').default {
+  return (
+    require('@react-native-async-storage/async-storage') as {
+      default: typeof import('@react-native-async-storage/async-storage').default;
+    }
+  ).default;
+}
+
 async function queueLength(): Promise<number> {
   const { getDb, listQueue } = db();
   return (await listQueue(await getDb())).length;
@@ -176,14 +185,10 @@ describe('logOut', () => {
   // utloggingen. Raden slettes mens sesjonen lever (RLS krever den).
   it('sletter telefonens varsel-rad før sesjonen dør, og glemmer tokenet', async () => {
     const { supabase, queryStub } = mocks();
-    const AsyncStorage = (
-      require('@react-native-async-storage/async-storage') as {
-        default: typeof import('@react-native-async-storage/async-storage').default;
-      }
-    ).default;
+    const AsyncStorage = storage();
     const { PUSH_TOKEN_KEY } = require('./pushDevice') as typeof import('./pushDevice');
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, 'apns-token');
-    const deleted = queryStub({ data: null, error: null });
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, JSON.stringify({ userId: ME, token: 'apns-token' }));
+    const deleted = queryStub({ data: [{ id: 'row-1' }], error: null });
     supabase.from.mockImplementation((table: string) => {
       mockCalls.push(`from:${table}`);
       return deleted;
@@ -192,8 +197,39 @@ describe('logOut', () => {
     expect(await logout().logOut()).toEqual({ ok: true });
 
     expect(mockCalls).toEqual(['from:apns_tokens', 'signOut', 'wipe']);
-    expect(deleted.steps.map((step) => step.method)).toEqual(['delete', 'eq', 'eq']);
+    expect(deleted.steps.map((step) => step.method)).toEqual(['delete', 'eq', 'eq', 'select']);
     expect(await AsyncStorage.getItem(PUSH_TOKEN_KEY)).toBeNull();
+  });
+
+  // Uten nett ved utloggingen skal den ikke henge. Tokenet huskes da med
+  // kontoen, og neste innlogging rydder raden (`settlePushOwner`).
+  it('venter ikke lenger enn tidsavbruddet på varsel-raden, og husker tokenet', async () => {
+    const { supabase } = mocks();
+    const AsyncStorage = storage();
+    const { PUSH_TOKEN_KEY } = require('./pushDevice') as typeof import('./pushDevice');
+    const stored = JSON.stringify({ userId: ME, token: 'apns-token' });
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, stored);
+    const hanging = deferred<unknown>();
+    const stub: Record<string, unknown> = {
+      then: (onFulfilled?: (value: unknown) => unknown, onRejected?: (reason: unknown) => unknown) =>
+        hanging.promise.then(onFulfilled, onRejected),
+    };
+    for (const method of ['delete', 'eq', 'select']) stub[method] = () => stub;
+    supabase.from.mockImplementation((table: string) => {
+      mockCalls.push(`from:${table}`);
+      return stub;
+    });
+
+    jest.useFakeTimers();
+    const { LOGOUT_DRAIN_TIMEOUT_MS, logOut } = logout();
+    const pending = logOut();
+    await jest.advanceTimersByTimeAsync(LOGOUT_DRAIN_TIMEOUT_MS);
+
+    expect(await pending).toEqual({ ok: true });
+    expect(mockCalls).toEqual(['from:apns_tokens', 'signOut', 'wipe']);
+    expect(await AsyncStorage.getItem(PUSH_TOKEN_KEY)).toBe(stored);
+
+    hanging.resolve({ data: null, error: { message: 'uten nett' } });
   });
 
   it('nekter å logge ut når et slag ikke kom fram', async () => {

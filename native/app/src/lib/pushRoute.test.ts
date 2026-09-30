@@ -30,7 +30,8 @@ describe('pushTarget', () => {
     expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
   });
 
-  it.each([['/'], [`/admin/games/${GAME}`], ['/profile/venner'], ['/games/'], [null]])(
+  // `/games/%E0%A4%A` er en ødelagt `%`-sekvens: `decodeURIComponent` kaster.
+  it.each([['/'], [`/admin/games/${GAME}`], ['/profile/venner'], ['/games/'], ['/games/%E0%A4%A'], [null]])(
     '%p åpner Hjem',
     (url) => {
       expect(pushTarget(url)).toEqual({ name: 'Home' });

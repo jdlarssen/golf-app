@@ -21,6 +21,7 @@ import {
 } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef } from 'react';
+import { settlePushOwner } from './data/pushDevice';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
 import { HOLES_TEXT } from './lib/holesCopy';
@@ -169,6 +170,10 @@ export function RootNavigator() {
       }),
     [],
   );
+  // Ny innlogging: varsler for en annen konto på telefonen ryddes (#2256 PR 4).
+  useEffect(() => {
+    void settlePushOwner();
+  }, []);
   const onReady = useCallback(() => {
     const target = pendingPush.current;
     pendingPush.current = null;

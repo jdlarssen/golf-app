@@ -1,7 +1,8 @@
 // #2256 PR 4: registreringen av telefonens APNs-token (Type A mot
 // supabase-mocken). Kriteriene 15, 17 og 18 i kontrakten, uten telefon: raden
 // skrives for riktig bruker, en annen konto overtar via `claim_apns_token`,
-// «Slå av» og utlogging sletter raden, og et nei lagrer ingenting.
+// «Slå av» og utlogging sletter raden, et nei lagrer ingenting, og et token
+// husket for en annen konto ryddes ved neste innlogging.
 /* eslint-disable @typescript-eslint/no-require-imports -- modulene hentes per test, etter jest.resetModules() (se harness.ts) */
 import { Platform } from 'react-native';
 import { useFreshModules } from '../test/harness';
@@ -24,7 +25,10 @@ jest.mock('expo', () => ({
 }));
 
 const ME = 'user-me';
+const OTHER = 'user-other';
 const TOKEN = 'a1b2c3d4e5f6';
+/** Det telefonen husker når varslene står på for `userId`. */
+const remembered = (userId: string) => JSON.stringify({ userId, token: TOKEN });
 
 type Mocks = typeof import('../test/supabaseMock');
 type PushDevice = typeof import('./pushDevice');
@@ -71,7 +75,7 @@ describe('pushDevice', () => {
     expect(row).toMatchObject({ user_id: ME, token: TOKEN });
     expect(options).toEqual({ onConflict: 'token' });
     expect(stepArgs(upsert, 'select')).toEqual([[]]);
-    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(TOKEN);
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
     expect(mocks().supabase.rpc).not.toHaveBeenCalled();
   });
 
@@ -85,7 +89,7 @@ describe('pushDevice', () => {
       p_token: TOKEN,
       p_user_agent: expect.stringContaining('iOS'),
     });
-    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(TOKEN);
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
   });
 
   it('lagrer ingenting når spilleren sier nei', async () => {
@@ -105,15 +109,71 @@ describe('pushDevice', () => {
 
   it('slår av: sletter egen rad for tokenet, og glemmer det først når basen svarte', async () => {
     const { queryStub, routeFrom, stepArgs } = mocks();
-    await storage().setItem(subject().PUSH_TOKEN_KEY, TOKEN);
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
     const failed = queryStub({ data: null, error: { message: 'uten nett' } });
-    const deleted = queryStub({ data: null, error: null });
-    routeFrom({ apns_tokens: [failed, deleted] });
+    // 0 rader: senderen ryddet raden etter en 410 fra Apple. Av er av.
+    const gone = queryStub({ data: [], error: null });
+    routeFrom({ apns_tokens: [failed, gone] });
 
     expect(await subject().turnOffPush()).toEqual({ ok: false, reason: 'failed' });
-    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(TOKEN);
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
 
     expect(await subject().turnOffPush()).toEqual({ ok: true });
+    expect(stepArgs(gone, 'eq')).toEqual([
+      ['token', TOKEN],
+      ['user_id', ME],
+    ]);
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
+  });
+
+  it('utlogging glemmer tokenet bare når basen bekreftet at raden er borte', async () => {
+    const { queryStub, routeFrom } = mocks();
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
+    const failed = queryStub({ data: null, error: { message: 'uten nett' } });
+    const deleted = queryStub({ data: [{ id: 'row-1' }], error: null });
+    routeFrom({ apns_tokens: [failed, deleted] });
+
+    // Uten nett: husket med kontoen, så neste innlogging kan rydde.
+    await subject().forgetPushBeforeSignOut();
+    expect(failed.steps.map((s) => s.method)).toEqual(['delete', 'eq', 'eq', 'select']);
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
+
+    await subject().forgetPushBeforeSignOut();
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
+  });
+
+  it('utlogging uten sesjonen for kontoen sletter ingenting og husker tokenet', async () => {
+    mocks().currentDeviceUserId.mockResolvedValue(null);
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
+    await subject().forgetPushBeforeSignOut();
+    expect(mocks().supabase.from).not.toHaveBeenCalled();
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
+  });
+
+  it('viser på bare for kontoen tokenet ble slått på for', async () => {
+    expect(await subject().readPushState()).toBe('off');
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
+    expect(await subject().readPushState()).toBe('on');
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(OTHER));
+    expect(await subject().readPushState()).toBe('off');
+    mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
+    expect(await subject().readPushState()).toBe('denied');
+  });
+
+  it('ny innlogging rydder raden til forrige konto, så den ikke får varsler hit', async () => {
+    const { queryStub, routeFrom, stepArgs, supabase } = mocks();
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(OTHER));
+    supabase.rpc.mockResolvedValue({ data: null, error: null });
+    const deleted = queryStub({ data: [{ id: 'row-1' }], error: null });
+    routeFrom({ apns_tokens: [deleted] });
+
+    await subject().settlePushOwner();
+
+    // Telefonen viser fram tokenet og flytter raden hit, og sletter den så.
+    expect(supabase.rpc).toHaveBeenCalledWith('claim_apns_token', {
+      p_token: TOKEN,
+      p_user_agent: expect.stringContaining('iOS'),
+    });
     expect(stepArgs(deleted, 'eq')).toEqual([
       ['token', TOKEN],
       ['user_id', ME],
@@ -121,23 +181,18 @@ describe('pushDevice', () => {
     expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
   });
 
-  it('utlogging sletter raden og glemmer tokenet, også når basen ikke svarer', async () => {
-    const { queryStub, routeFrom } = mocks();
-    await storage().setItem(subject().PUSH_TOKEN_KEY, TOKEN);
-    const failed = queryStub({ data: null, error: { message: 'uten nett' } });
-    routeFrom({ apns_tokens: [failed] });
+  it('ny innlogging rører ingenting for samme konto, og prøver igjen når basen ikke svarer', async () => {
+    const { supabase } = mocks();
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(ME));
+    await subject().settlePushOwner();
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(ME));
 
-    await subject().forgetPushBeforeSignOut();
-    expect(failed.steps.map((s) => s.method)).toEqual(['delete', 'eq', 'eq']);
-    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBeNull();
-  });
-
-  it('viser av, på og nektet ut fra tillatelsen og tokenet', async () => {
-    expect(await subject().readPushState()).toBe('off');
-    await storage().setItem(subject().PUSH_TOKEN_KEY, TOKEN);
-    expect(await subject().readPushState()).toBe('on');
-    mockNotifications.getPermissionsAsync.mockResolvedValue({ granted: false, canAskAgain: false });
-    expect(await subject().readPushState()).toBe('denied');
+    await storage().setItem(subject().PUSH_TOKEN_KEY, remembered(OTHER));
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: 'uten nett' } });
+    await subject().settlePushOwner();
+    expect(supabase.from).not.toHaveBeenCalled();
+    expect(await storage().getItem(subject().PUSH_TOKEN_KEY)).toBe(remembered(OTHER));
   });
 
   it('har ingen varsler uten den native delen, og ikke på Android', async () => {

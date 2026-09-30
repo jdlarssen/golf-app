@@ -13,8 +13,11 @@
 // vi sender selv, uten Expos push-tjeneste.
 //
 // **Tokenet huskes i AsyncStorage** (`PUSH_TOKEN_KEY`), telefonens ene hjem for
-// innstillinger (PR 2), så skjermen vet at denne telefonen er på, og
-// utloggingen vet hvilken rad den skal slette.
+// innstillinger (PR 2), sammen med kontoen raden står på. Skjermen viser «På»
+// bare for den kontoen, og utloggingen vet hvilken rad den skal slette. Husker
+// telefonen et token for en annen konto (utloggingen nådde ikke basen, eller
+// sesjonen døde uten utlogging), rydder neste innlogging raden
+// (`settlePushOwner`), så forrige konto ikke får varsler hit.
 //
 // **Et bygg uten den native delen** (fra før modulen kom inn) viser ingen
 // varsel-seksjon. `expo-notifications` laster flere native moduler med
@@ -55,9 +58,17 @@ export function notificationsModule(): typeof import('expo-notifications') {
   return require('expo-notifications') as typeof import('expo-notifications');
 }
 
-async function storedToken(): Promise<string | null> {
+/** Det telefonen husker: tokenet, og kontoen raden i `apns_tokens` står på. */
+type StoredPush = { userId: string; token: string };
+
+async function storedPush(): Promise<StoredPush | null> {
   try {
-    return await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+    const raw = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredPush> | null;
+    return typeof parsed?.userId === 'string' && typeof parsed.token === 'string'
+      ? { userId: parsed.userId, token: parsed.token }
+      : null;
   } catch {
     return null;
   }
@@ -85,7 +96,10 @@ export async function readPushState(): Promise<PushState> {
   } catch (err) {
     console.error('[pushDevice] fikk ikke lest tillatelsen', err);
   }
-  return (await storedToken()) ? 'on' : 'off';
+  const stored = await storedPush();
+  if (!stored) return 'off';
+  // Et token husket for en annen konto er ikke denne kontoens varsler.
+  return stored.userId === (await currentDeviceUserId()) ? 'on' : 'off';
 }
 
 export type PushResult =
@@ -120,7 +134,7 @@ export async function turnOnPush(): Promise<PushResult> {
       'turnOnPush',
       () => supabase.rpc('claim_apns_token', { p_token: token, p_user_agent: agent }),
     );
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, JSON.stringify({ userId, token } satisfies StoredPush));
     return { ok: true };
   } catch (err) {
     console.error('[pushDevice] fikk ikke slått på varsler', err);
@@ -129,30 +143,32 @@ export async function turnOnPush(): Promise<PushResult> {
 }
 
 /**
- * Slett denne telefonens rad for kontoen. `true` når basen svarte uten feil;
- * 0 rader er også riktig (senderen kan ha ryddet raden etter en 410).
+ * Slett telefonens rad for kontoen den står på. `deleted` når basen tok bort
+ * raden, `none` når den svarte uten rad (senderen kan ha ryddet den etter en
+ * 410 fra Apple), `failed` ellers. Uten den kontoens sesjon kan ingenting
+ * slettes (RLS), og svaret er `failed`.
  */
-async function deleteRow(token: string): Promise<boolean> {
-  const userId = await currentDeviceUserId();
-  if (!userId) return true;
-  const { error } = await supabase
+async function deleteRow(stored: StoredPush): Promise<'deleted' | 'none' | 'failed'> {
+  if ((await currentDeviceUserId()) !== stored.userId) return 'failed';
+  const { data, error } = await supabase
     .from('apns_tokens')
     .delete()
-    .eq('token', token)
-    .eq('user_id', userId);
+    .eq('token', stored.token)
+    .eq('user_id', stored.userId)
+    .select('id');
   if (error) {
     console.error('[pushDevice] fikk ikke slettet raden', error);
-    return false;
+    return 'failed';
   }
-  return true;
+  return data && data.length > 0 ? 'deleted' : 'none';
 }
 
 /** «Slå av»: raden slettes før tokenet glemmes, så bryteren aldri lyver. */
 export async function turnOffPush(): Promise<PushResult> {
-  const token = await storedToken();
-  if (!token) return { ok: true };
+  const stored = await storedPush();
+  if (!stored) return { ok: true };
   try {
-    if (!(await deleteRow(token))) return { ok: false, reason: 'failed' };
+    if ((await deleteRow(stored)) === 'failed') return { ok: false, reason: 'failed' };
   } catch (err) {
     console.error('[pushDevice] fikk ikke slått av varsler', err);
     return { ok: false, reason: 'failed' };
@@ -162,18 +178,44 @@ export async function turnOffPush(): Promise<PushResult> {
 }
 
 /**
- * Utlogging: slett raden mens sesjonen ennå lever (RLS krever den), og glem
- * tokenet lokalt uansett, så neste konto på telefonen starter med varsler av.
- * Best-effort, kaster aldri. Feiler slettingen uten nett, står raden til
- * senderen får en 410 og rydder den, og det logges her.
+ * Utlogging: slett raden mens sesjonen ennå lever (RLS krever den).
+ *
+ * Tokenet glemmes bare når basen bekreftet at raden er borte. Ellers (uten
+ * nett, eller sesjonen døde på veien) huskes det med kontoen, og neste
+ * innlogging rydder raden (`settlePushOwner`). Logger den samme kontoen inn
+ * igjen, står varslene fortsatt på, som bryteren viser. Best-effort, kaster
+ * aldri. Utloggingen setter et tak på ventetiden (`logout.ts`).
  */
 export async function forgetPushBeforeSignOut(): Promise<void> {
-  const token = await storedToken();
-  if (!token) return;
+  const stored = await storedPush();
+  if (!stored) return;
   try {
-    await deleteRow(token);
+    if ((await deleteRow(stored)) === 'deleted') await forgetStoredToken();
   } catch (err) {
     console.error('[pushDevice] fikk ikke slettet raden ved utlogging', err);
   }
-  await forgetStoredToken();
+}
+
+/**
+ * Ved innlogging: husker telefonen et token for en ANNEN konto, får den kontoen
+ * fortsatt varsler hit. Telefonen viser fram tokenet (`claim_apns_token`
+ * flytter raden til den som er logget inn), og så slettes raden. Den nye
+ * kontoen starter med varsler av. Best-effort og kaster aldri; feiler det,
+ * prøves det igjen ved neste innlogging.
+ */
+export async function settlePushOwner(): Promise<void> {
+  const stored = await storedPush();
+  if (!stored) return;
+  try {
+    const userId = await currentDeviceUserId();
+    if (!userId || userId === stored.userId) return;
+    const { error } = await supabase.rpc('claim_apns_token', {
+      p_token: stored.token,
+      p_user_agent: userAgent(),
+    });
+    if (error) throw error;
+    if ((await deleteRow({ userId, token: stored.token })) !== 'failed') await forgetStoredToken();
+  } catch (err) {
+    console.error('[pushDevice] fikk ikke ryddet forrige kontos varsler', err);
+  }
 }

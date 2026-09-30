@@ -2,8 +2,11 @@
 //
 // **Trykk** åpner skjermen `pushTarget` peker på: spillets side for alt som
 // gjelder et spill, ellers Hjem (lib/pushRoute.ts). Et trykk som startet appen
-// (kaldstart) hentes med `getLastNotificationResponseAsync` og tømmes etterpå,
-// så det ikke åpnes på nytt neste gang navigatoren monteres.
+// (kaldstart) hentes med `getLastNotificationResponse`. iOS husker det siste
+// trykket også når appen var åpen, så det tømmes etter HVERT trykk; ellers
+// åpnes det gamle spillet igjen neste gang navigatoren monteres (ny
+// innlogging). Kommer samme trykk både som kaldstart og i lytteren, åpnes det
+// én gang.
 //
 // **Mens appen er åpen** vises ikke varselet som banner eller i varsellista:
 // spilleren ser alt allerede i appen.
@@ -29,20 +32,20 @@ export function listenForPushTaps(open: (target: PushTarget) => void): () => voi
       }),
     });
 
+    let lastHandled: string | null = null;
     const handle = (response: ResponseLike) => {
       // Bare selve trykket på varselet; andre handlinger har appen ikke.
       if (response.actionIdentifier !== notifications.DEFAULT_ACTION_IDENTIFIER) return;
-      open(pushTarget(pushUrl(response.notification.request as PushRequestLike)));
+      const request = response.notification.request as PushRequestLike & { identifier?: string };
+      const id = request.identifier ?? null;
+      notifications.clearLastNotificationResponse();
+      if (id != null && id === lastHandled) return;
+      lastHandled = id;
+      open(pushTarget(pushUrl(request)));
     };
 
-    void notifications
-      .getLastNotificationResponseAsync()
-      .then(async (response) => {
-        if (!response) return;
-        handle(response);
-        await notifications.clearLastNotificationResponseAsync();
-      })
-      .catch((err: unknown) => console.error('[pushTaps] fikk ikke lest trykket som startet appen', err));
+    const coldStart = notifications.getLastNotificationResponse();
+    if (coldStart) handle(coldStart);
 
     const subscription = notifications.addNotificationResponseReceivedListener(handle);
     return () => subscription.remove();
