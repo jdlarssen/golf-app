@@ -47,10 +47,20 @@ function BareBack() {
   );
 }
 
+/**
+ * Ordet i toppen. Et langt ord (et spillnavn, #2392) kuttes med «…» på én
+ * linje i stedet for å bryte toppen over to; skjermleseren får hele.
+ */
 function KickerTitle({ label }: { label: string }) {
   const { ui } = useTheme();
   return (
-    <Text accessibilityRole="header" style={ui.kicker}>
+    <Text
+      accessibilityRole="header"
+      accessibilityLabel={label}
+      numberOfLines={1}
+      ellipsizeMode="tail"
+      style={ui.kicker}
+    >
       {label}
     </Text>
   );
