@@ -32,4 +32,3 @@ describe('inStandingOrder med lagnummer (Wolf: rotasjonsplassen)', () => {
     expect(inStandingOrder(lines).map((l) => l.userId)).toEqual(['b', 'c', 'a']);
   });
 });
-
