@@ -1,37 +1,18 @@
-// #2262: hodet på scorekortet — hvem sitt kort det er, spillnavnet, og linja
-// «Byneset · Gul tee (dame) · Stableford · banehandicap 15» fra
-// `scorecardHeaderLine`.
-import { StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../theme';
+// #2262: hodet på scorekortet — spillnavnet og linja «Byneset · Gul tee (dame)
+// · Stableford · banehandicap 15» fra `scorecardHeaderLine`.
+//
+// #2385 (designlerretet): «Mitt scorekort» står i navigatorens topp
+// (`kickerHeader`), ikke en gang til over tittelen, og tittelen er den delte
+// `PageTitle`. Et hardt mellomrom foran hvert «·» gjør at en lang linje aldri
+// bryter slik at neste linje starter med skilletegnet.
+import { PageTitle } from '../PageTitle';
 
-export function ScorecardHeader({
-  kicker,
-  title,
-  line,
-}: {
-  kicker: string;
-  title: string;
-  line: string;
-}) {
-  const { ui } = useTheme();
+export function ScorecardHeader({ title, line }: { title: string; line: string }) {
   return (
-    <View style={styles.wrap}>
-      <Text style={[ui.sectionTitle, styles.kicker]} testID="scorecard-kicker">
-        {kicker}
-      </Text>
-      <Text style={ui.title} accessibilityRole="header">
-        {title}
-      </Text>
-      {line ? (
-        <Text style={ui.muted} testID="scorecard-header-line">
-          {line}
-        </Text>
-      ) : null}
-    </View>
+    <PageTitle
+      title={title}
+      subtitle={line ? line.split(' · ').join('\u00A0· ') : undefined}
+      subtitleTestID="scorecard-header-line"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 2 },
-  kicker: { marginTop: 0 },
-});

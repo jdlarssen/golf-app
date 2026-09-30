@@ -43,7 +43,7 @@
 // spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
 // fullt kort en blindvei: spill-hjem sender et fullt kort hit, og radene under
 // er ren visning.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -70,6 +70,7 @@ import {
   type EnteredByName,
   type ScorecardRowKind,
 } from '../components/scorecard/ScorecardGrid';
+import { kickerHeader } from '../components/KickerHeader';
 import { ScorecardHeader } from '../components/scorecard/ScorecardHeader';
 import { ScorecardStamp } from '../components/scorecard/ScorecardStamp';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
@@ -91,7 +92,12 @@ import {
   toRoster,
 } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
-import { scorecardHandicapPart, scorecardHeaderLine } from '../lib/scorecardHeader';
+import {
+  SCORECARD_TEXT,
+  scorecardHandicapPart,
+  scorecardHeaderLine,
+  teamScorecardKicker,
+} from '../lib/scorecardHeader';
 import { buildScorecardRows } from '../lib/scorecardRows';
 import { computeGameLeaderboard } from '../lib/scoringContext';
 import {
@@ -393,28 +399,28 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="scorecard-screen">
-      <ScorecardHeader
-        kicker={
-          teamMode
-            ? `Lagets scorekort${myTeamCard?.label ? ` · ${myTeamCard.label}` : ''}`
-            : 'Mitt scorekort'
-        }
-        title={bundle.game.name}
-        line={headerLine}
-      />
+      {teamMode ? (
+        <HeaderKicker navigation={navigation} kicker={teamScorecardKicker(myTeamCard?.label)} />
+      ) : null}
+      <ScorecardHeader title={bundle.game.name} line={headerLine} />
 
-      <ScorecardGrid grid={grid} rows={gridRows} enteredBy={enteredBy} />
+      <ScorecardGrid
+        grid={grid}
+        rows={gridRows}
+        enteredBy={enteredBy}
+        footer={
+          <ScorecardTotals
+            totals={grid.totals}
+            showNet={valueRows.includes('net')}
+            showPoints={valueRows.includes('points')}
+          />
+        }
+      />
       {showEnteredBy ? (
         <Text style={ui.muted} testID="scorecard-entered-by-note">
           Initialene viser hvem som førte hvert hull.
         </Text>
       ) : null}
-
-      <ScorecardTotals
-        totals={grid.totals}
-        showNet={valueRows.includes('net')}
-        showPoints={valueRows.includes('points')}
-      />
 
       {stamp ? <ScorecardStamp stamp={stamp} ownerFullName={me.player.name} /> : null}
 
@@ -460,10 +466,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       ) : (
         <>
           {readonlyText ? (
-            <Text
-              style={[ui.muted, stamp ? styles.centered : null]}
-              testID="scorecard-readonly"
-            >
+            <Text style={ui.muted} testID="scorecard-readonly">
               {readonlyText}
             </Text>
           ) : null}
@@ -504,9 +507,25 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   );
 }
 
+/**
+ * Lagkortet sier «Lagets scorekort · Lag 2» i toppen (#2385). Ordet er først
+ * kjent når bundelen er lest, så skjermen setter det selv; solo-kortet har
+ * navigatorens «Mitt scorekort».
+ */
+function HeaderKicker({
+  navigation,
+  kicker,
+}: {
+  navigation: ScreenProps<'Scorecard'>['navigation'];
+  kicker: string;
+}) {
+  useLayoutEffect(() => {
+    navigation.setOptions(kickerHeader(kicker, SCORECARD_TEXT.screenTitle));
+  }, [navigation, kicker]);
+  return null;
+}
+
 const styles = StyleSheet.create({
-  // Under stempelet står linjene midtstilt, og veien videre står sammen med dem.
-  centered: { textAlign: 'center' },
   buttonDisabled: { opacity: 0.5 },
   // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
   // ned til lever-knappen, over kravet på 24.

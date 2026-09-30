@@ -16,6 +16,20 @@ import {
 import type { BundleGame } from '../data/gameBundle';
 import { playerStrokeHandicapFor } from './scoringContext';
 
+/**
+ * Ordene i toppen av scorekortet (#2385): kickeren i navigatorens header og
+ * skjermens navn for systemet.
+ */
+export const SCORECARD_TEXT = {
+  kicker: 'Mitt scorekort',
+  screenTitle: 'Scorekort',
+} as const;
+
+/** Kickeren på et lagkort: «Lagets scorekort · Lag 2», eller uten laget. */
+export function teamScorecardKicker(teamLabel: string | null | undefined): string {
+  return `Lagets scorekort${teamLabel ? ` · ${teamLabel}` : ''}`;
+}
+
 export type HandicapPart = { kind: 'course' | 'playing' | 'team'; value: number };
 
 /**

@@ -18,12 +18,12 @@ import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
 import Constants from 'expo-constants';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
+import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
 import { AccountSettings } from './screens/AccountSettings';
 import { Approve } from './screens/Approve';
@@ -42,6 +42,7 @@ import { Profile } from './screens/Profile';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
+import { kickerHeader } from './components/KickerHeader';
 import { FONTS, useTheme, type Theme } from './theme';
 
 export type RootStackParamList = {
@@ -190,7 +191,9 @@ export function RootNavigator() {
         <Stack.Screen
           name="Scorecard"
           component={Scorecard}
-          options={{ title: 'Scorekort' }}
+          // Designet (#2385): «MITT SCOREKORT» i toppen, og spillnavnet stort
+          // i innholdet. Lagformatene setter sitt eget ord fra skjermen.
+          options={kickerHeader(SCORECARD_TEXT.kicker, SCORECARD_TEXT.screenTitle)}
         />
         <Stack.Screen
           name="Leaderboard"
@@ -265,28 +268,3 @@ export function RootNavigator() {
   );
 }
 
-/**
- * Toppen fra designlerretet (#2255, #2256): tilbake-pila, et lite sperret ord
- * i midten og ingen skillelinje. Ordet sier hvor du er («STARTBILLETT»,
- * «PROFIL»); sidens egen tittel står stort i innholdet (`PageTitle`). Én
- * stil for alle, i samme kicker-stil som feltetikettene i billetten.
- *
- * `title` er skjermens navn for systemet (app-bytteren, VoiceOver sin
- * «tilbake»), som kan være et annet enn ordet i toppen.
- */
-function kickerHeader(kicker: string, title: string) {
-  return {
-    title,
-    headerTitle: () => <KickerTitle label={kicker} />,
-    headerShadowVisible: false,
-  };
-}
-
-function KickerTitle({ label }: { label: string }) {
-  const { ui } = useTheme();
-  return (
-    <Text accessibilityRole="header" style={ui.kicker}>
-      {label}
-    </Text>
-  );
-}

@@ -175,12 +175,14 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
 
+const mockSetOptions = jest.fn();
+
 function scorecardElement(gameId: string, navigate: jest.Mock) {
   return (
     <Scorecard
       {...({
         route: { params: { gameId } },
-        navigation: { navigate },
+        navigation: { navigate, setOptions: mockSetOptions },
       } as unknown as ScreenProps<'Scorecard'>)}
     />
   );
