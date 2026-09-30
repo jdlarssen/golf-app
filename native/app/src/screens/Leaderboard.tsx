@@ -54,7 +54,7 @@ import {
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { buildSideTournament } from '../lib/sideTournament';
 import { useGameChoices } from '../lib/useChoices';
-import { SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
@@ -110,8 +110,7 @@ const PROBLEM_MESSAGES: Record<ScoringContextProblem, string> = {
   'missing-config': 'Formatet er ikke satt opp for denne runden.',
   // Wolf og BBB uten valgene: ærlig melding, ALDRI en tabell der hvert hull
   // står uavgjort. Den ville sett like autoritativ ut som en ekte stilling.
-  'missing-choices':
-    'Fikk ikke tak i valgene som avgjør poengene. Tabellen kommer når nettet er tilbake.',
+  'missing-choices': CHOICES_MISSING_BOARD_TEXT,
   'no-course': 'Banen er ikke satt for denne runden ennå.',
   'no-players': 'Ingen spillere står oppført i runden.',
 };
@@ -137,7 +136,12 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // Wolf og BBB henter halve regnestykket fra serveren. Alle andre formater
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste kall — og før
   // bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
-  const { extras } = useGameChoices(gameId, bundle?.game.gameMode ?? '');
+  const { extras } = useGameChoices(
+    gameId,
+    bundle?.game.gameMode ?? '',
+    // Et avsluttet spill endres ikke: én henting ved fokus, ingen polling.
+    bundle?.game.status === 'finished' ? null : undefined,
+  );
   // LD/CTP-vinnerne. Samme gate som seksjonen selv, så et aktivt spill aldri
   // koster et nettkall for data det uansett ikke får vise.
   const sideWinners = useSideWinners(gameId, sideTournamentVisible(bundle));

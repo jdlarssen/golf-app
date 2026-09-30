@@ -135,3 +135,41 @@ describe('useGameChoices: svarrekkefølge (#2094)', () => {
     expect(result.current.extras).toEqual({ wolfChoices: [lone] });
   });
 });
+
+describe('useGameChoices: feil og polling (#2255 PR 3b)', () => {
+  const choice: WolfHoleChoice = { holeNumber: 1, wolfUserId: 'w', choice: 'lone', partnerUserId: null };
+
+  beforeEach(() => {
+    fetchWolfChoices.mockReset();
+  });
+
+  it('første henting feiler: failed, og ingen valg', async () => {
+    fetchWolfChoices.mockRejectedValue(new Error('nett'));
+    const { result } = await renderHook(() => useGameChoices('game-1', 'wolf', null));
+    await act(async () => undefined);
+    expect(result.current.failed).toBe(true);
+    expect(result.current.extras).toEqual({});
+  });
+
+  it('med et tidligere svar er en senere feil ikke «failed»: svaret står', async () => {
+    fetchWolfChoices.mockResolvedValueOnce([choice]).mockRejectedValueOnce(new Error('nett'));
+    const { result } = await renderHook(() => useGameChoices('game-1', 'wolf', null));
+    await act(async () => undefined);
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.failed).toBe(false);
+    expect(result.current.extras).toEqual({ wolfChoices: [choice] });
+  });
+
+  it('pollMs null: én henting ved fokus, ingen intervall (et avsluttet spill endres ikke)', async () => {
+    fetchWolfChoices.mockResolvedValue([choice]);
+    const interval = jest.spyOn(global, 'setInterval');
+    await renderHook(() => useGameChoices('game-1', 'wolf', null));
+    await act(async () => undefined);
+    expect(fetchWolfChoices).toHaveBeenCalledTimes(1);
+    expect(interval).not.toHaveBeenCalled();
+    interval.mockRestore();
+  });
+});
+

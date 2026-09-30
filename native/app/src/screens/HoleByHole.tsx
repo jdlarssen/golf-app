@@ -25,7 +25,7 @@ import type { GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
 import { buildHoleByHole, holeByHoleKind, waitsForChoices } from '../lib/holeByHole';
 import { HOLES_TEXT } from '../lib/holesCopy';
-import { SEED_FAILED_TEXT } from '../lib/seedCopy';
+import { CHOICES_MISSING_HOLES_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { useGameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
@@ -39,7 +39,12 @@ export function HoleByHole({ route, navigation }: ScreenProps<'HoleByHole'>) {
   const { scores, reload } = useLocalScores(gameId);
   // Wolf regner med valgene fra serveren (hvem som var ulv og valgte hva),
   // som tavla. Andre formater fyrer ingen spørring (`choiceSourceFor`).
-  const { extras } = useGameChoices(gameId, bundle?.game.gameMode ?? '');
+  const { extras, failed: choicesFailed } = useGameChoices(
+    gameId,
+    bundle?.game.gameMode ?? '',
+    // Et avsluttet spill endres ikke: én henting ved fokus, ingen polling.
+    bundle?.game.status === 'finished' ? null : undefined,
+  );
   // Spillnavnet som kicker i toppen, som på webben (felles `kickerHeader`).
   const gameName = bundle?.game.name ?? null;
   useLayoutEffect(() => {
@@ -66,10 +71,9 @@ export function HoleByHole({ route, navigation }: ScreenProps<'HoleByHole'>) {
       });
   }, [gameId, reload]);
 
+  const needsChoices = bundle != null && waitsForChoices(holeByHoleKind(bundle.game), extras);
   const waiting =
-    !bundle ||
-    (seed === 'loading' && scores.length === 0) ||
-    waitsForChoices(holeByHoleKind(bundle.game), extras);
+    !bundle || (seed === 'loading' && scores.length === 0) || (needsChoices && !choicesFailed);
   if (waiting) {
     return (
       <View style={ui.centered} testID="hole-by-hole-loading">
@@ -89,7 +93,16 @@ export function HoleByHole({ route, navigation }: ScreenProps<'HoleByHole'>) {
           {SEED_FAILED_TEXT}
         </Text>
       ) : null}
-      <HoleByHoleBody bundle={bundle} scores={scores} extras={extras} />
+      {needsChoices ? (
+        // Valgene kom ikke (uten nett, og aldri hentet før): motoren kan ikke
+        // regne Wolf uten dem. Samme ærlige beskjed som tavla, ikke et hjul
+        // som aldri stopper.
+        <Text style={ui.muted} testID="hole-by-hole-choices-missing">
+          {CHOICES_MISSING_HOLES_TEXT}
+        </Text>
+      ) : (
+        <HoleByHoleBody bundle={bundle} scores={scores} extras={extras} />
+      )}
     </ScrollView>
   );
 }
@@ -133,7 +146,14 @@ export function HoleByHoleBody({
   }
 
   if (model.kind === 'wolf') {
-    return <WolfHoleCardsView cards={model.wolf} subtitle={model.subtitle} players={bundle.players} />;
+    return (
+      <WolfHoleCardsView
+        cards={model.wolf}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
   }
   return (
     <SoloScorecardView
@@ -141,6 +161,7 @@ export function HoleByHoleBody({
       metric={model.kind === 'solo-stableford' ? 'points' : 'net'}
       subtitle={model.subtitle}
       players={bundle.players}
+      finished={game.status === 'finished'}
     />
   );
 }

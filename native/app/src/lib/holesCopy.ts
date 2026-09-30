@@ -19,6 +19,8 @@ export const HOLES_TEXT = {
   revealHiddenTitle: 'Resultatene avsløres etter runden',
   revealHiddenSub: 'Hull for hull åpnes når admin avslutter spillet.',
   goodLuck: 'Lykke til.',
+  /** Bunnteksten når runden er ferdig, som webbens `LeaderboardFooter`. */
+  wellPlayed: 'Vel spilt!',
   unknownPlayerFull: '(ukjent spiller)',
   unknownPlayer: '(ukjent)',
   /** Undertittelen i slagspill. */

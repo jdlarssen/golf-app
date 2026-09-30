@@ -15,7 +15,7 @@ import {
   wolfChoicePartner,
 } from '../../lib/holesCopy';
 import { FONTS, useTheme, type ThemeColors } from '../../theme';
-import { HoleHeader, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
+import { HoleHeader, HolesFooter, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
 
 /** Tonen fra modellen (`wolfOutcomeTone`, samme regel som webben) som farge. */
 function toneColor(tone: WolfHoleCard['outcomeTone'], colors: ThemeColors): string {
@@ -37,10 +37,13 @@ export function WolfHoleCardsView({
   cards,
   subtitle,
   players,
+  finished,
 }: {
   cards: WolfHoleCards;
   subtitle: string;
   players: readonly BundlePlayer[];
+  /** Runden er ferdig: bunnteksten sier «Vel spilt!». */
+  finished: boolean;
 }) {
   return (
     <View style={holesStyles.page} testID="hole-by-hole">
@@ -48,6 +51,7 @@ export function WolfHoleCardsView({
       {cards.holes.map((hole) => (
         <WolfHoleCardView key={hole.holeNumber} hole={hole} players={players} />
       ))}
+      <HolesFooter finished={finished} />
     </View>
   );
 }
@@ -80,11 +84,11 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
           {WOLF_HOLES_TEXT.wolfLabel}{' '}
           <Text style={{ color: colors.text }}>{nameOf(players, hole.wolfUserId, HOLES_TEXT.unknownPlayer)}</Text>
         </Text>
-        <Text style={[holesStyles.small, styles.dot, { color: colors.muted }]} accessibilityElementsHidden>
+        <Text style={[holesStyles.small, styles.dot, { color: colors.muted }]} accessibilityElementsHidden importantForAccessibility="no">
           ·
         </Text>
         <Text style={[holesStyles.small, { color: colors.text }]}>{choiceText(hole, players)}</Text>
-        <Text style={[holesStyles.small, styles.dot, { color: colors.muted }]} accessibilityElementsHidden>
+        <Text style={[holesStyles.small, styles.dot, { color: colors.muted }]} accessibilityElementsHidden importantForAccessibility="no">
           ·
         </Text>
         <Text style={[holesStyles.small, holesStyles.medium, { color: toneColor(hole.outcomeTone, colors) }]}>

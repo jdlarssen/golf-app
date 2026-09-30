@@ -58,8 +58,9 @@ export function holeByHoleKind(
 
 /**
  * Trenger formatet valg fra serveren før det kan regnes (Wolf: hvem valgte
- * hva), og er de ikke hentet ennå? Da venter skjermen i stedet for å vise
- * hvert hull som «Venter».
+ * hva), og er de ikke hentet ennå? Uten dem kan motoren ikke regne Wolf
+ * (`missing-choices`), og skjermen ville sagt at runden ikke har «Hull for
+ * hull». Da venter skjermen, og sier fra hvis hentingen feiler.
  */
 export function waitsForChoices(kind: HoleByHoleKind | null, extras: ScoringExtras): boolean {
   return kind === 'wolf' && extras.wolfChoices === undefined;
