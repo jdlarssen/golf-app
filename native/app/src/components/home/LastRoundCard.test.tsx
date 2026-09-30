@@ -2,8 +2,8 @@
 //
 // Ordlyden er låst mot webben i `homeCopy.test.ts`. Her låses koblingen: plass
 // og brutto står på raden, gull bare når du vant, og brutto bare når tallet
-// hører til nettopp denne runden. I stableford står poengene i stedet for
-// brutto (Hjem v2, #2385).
+// hører til nettopp denne runden. Når tavla viser poeng, står poengene i
+// stedet for brutto (Hjem v2, #2385).
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { homeCard } from '../../test/homeFixtures';
 import { LastRoundCard } from './LastRoundCard';

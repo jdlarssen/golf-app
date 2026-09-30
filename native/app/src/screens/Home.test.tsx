@@ -26,6 +26,7 @@ jest.mock('../data/homeList', () => ({
 jest.mock('../data/homeHero', () => ({
   loadCardBundle: jest.fn(async (gameId: string) => mockState.bundles[gameId] ?? null),
   refreshCardBundle: jest.fn(async () => undefined),
+  fetchCardExtras: jest.fn(async () => ({})),
 }));
 jest.mock('../data/profile', () => ({
   fetchOwnProfile: jest.fn(async () => {
@@ -270,4 +271,38 @@ it('forrige runde viser poengene dine i stableford, regnet på enheten (Hjem v2)
 
   expect(await screen.findByText('2. plass av 8 · 36 poeng')).toBeTruthy();
   expect(refreshCardBundle).toHaveBeenCalledWith('last', { withScores: true });
+});
+
+it('forrige runde i wolf regner med valgene fra serveren, som tavla', async () => {
+  const { fetchCardExtras } = require('../data/homeHero') as { fetchCardExtras: jest.Mock };
+  fetchCardExtras.mockResolvedValue({ wolfChoices: [] });
+  const trio = ['me', 'ola', 'kari'].map((userId, i) => homePlayer({ userId, teamNumber: i + 1 }));
+  mockState.list = {
+    ...LIST,
+    cards: LIST.cards.map((card) => (card.gameId === 'last' ? { ...card, gameMode: 'wolf' } : card)),
+  };
+  mockState.bundles = {
+    new: HERO_BUNDLE,
+    last: {
+      bundle: homeBundle({
+        game: {
+          id: 'last',
+          status: 'finished',
+          gameMode: 'wolf',
+          modeConfig: { kind: 'wolf', team_size: 1, teams_count: 3, wolf_scoring: 'gross' },
+        },
+        players: trio,
+      }),
+      scores: [
+        ...holeScores('last', 'me', 18, 3),
+        ...holeScores('last', 'ola', 18, 4),
+        ...holeScores('last', 'kari', 18, 5),
+      ],
+    },
+  };
+  const { view } = renderHome();
+  await view;
+
+  expect(await screen.findByText(/^2\. plass av 8 · \d+ poeng$/)).toBeTruthy();
+  expect(fetchCardExtras).toHaveBeenCalledWith('last', 'wolf');
 });

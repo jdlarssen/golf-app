@@ -2,13 +2,17 @@
 // si fra før, så en feil her skal aldri kaste og aldri tømme noe.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
-import { loadCardBundle, refreshCardBundle } from './homeHero';
+import { fetchCardExtras, loadCardBundle, refreshCardBundle } from './homeHero';
 
 jest.mock('./gameBundle', () => ({
   loadGameBundle: jest.fn(),
   refreshGameBundle: jest.fn(),
 }));
 jest.mock('./seedScores', () => ({ seedGameScores: jest.fn() }));
+jest.mock('./choices', () => ({
+  fetchWolfChoices: jest.fn(),
+  fetchBingoBangoBongoHoles: jest.fn(),
+}));
 jest.mock('./db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(),
@@ -19,6 +23,10 @@ const bundleMod = require('./gameBundle') as {
   refreshGameBundle: jest.Mock;
 };
 const seedMod = require('./seedScores') as { seedGameScores: jest.Mock };
+const choicesMod = require('./choices') as {
+  fetchWolfChoices: jest.Mock;
+  fetchBingoBangoBongoHoles: jest.Mock;
+};
 const dbMod = require('./db') as { listScoresForGame: jest.Mock };
 
 const BUNDLE = homeBundle({ players: [homePlayer({ userId: 'me' })] });
@@ -64,5 +72,26 @@ describe('refreshCardBundle', () => {
     seedMod.seedGameScores.mockRejectedValue(new Error('offline'));
 
     await expect(refreshCardBundle('hero', { withScores: true })).resolves.toBeUndefined();
+  });
+});
+
+describe('fetchCardExtras (Hjem v2, #2385)', () => {
+  it('henter valgene bare for wolf og bingo bango bongo', async () => {
+    const choice = { holeNumber: 1, wolfUserId: 'me', choice: 'lone', partnerUserId: null };
+    choicesMod.fetchWolfChoices.mockResolvedValue([choice]);
+    choicesMod.fetchBingoBangoBongoHoles.mockResolvedValue([]);
+
+    expect(await fetchCardExtras('g', 'wolf')).toEqual({ wolfChoices: [choice] });
+    expect(await fetchCardExtras('g', 'bingo_bango_bongo')).toEqual({ bingoBangoBongoHoles: [] });
+    expect(await fetchCardExtras('g', 'stableford')).toEqual({});
+    expect(choicesMod.fetchWolfChoices).toHaveBeenCalledTimes(1);
+    expect(choicesMod.fetchBingoBangoBongoHoles).toHaveBeenCalledTimes(1);
+  });
+
+  it('gir tomt svar når hentingen feiler, aldri en tom liste', async () => {
+    // En tom liste ville betydd «ingen valg», og motoren ville regnet poeng av
+    // det. Uten svar sier motoren at valgene mangler, og raden viser brutto.
+    choicesMod.fetchWolfChoices.mockRejectedValue(new Error('offline'));
+    expect(await fetchCardExtras('g', 'wolf')).toEqual({});
   });
 });
