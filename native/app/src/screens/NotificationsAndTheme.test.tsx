@@ -62,6 +62,8 @@ describe('NotificationsAndTheme', () => {
     });
     expect(onMock).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOn);
+    // Bryteren sier «på» til skjermleseren.
+    expect(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle })).toBeChecked();
 
     await act(async () => {
       fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));

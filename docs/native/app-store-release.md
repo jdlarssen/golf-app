@@ -294,7 +294,11 @@ Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen»
 - **Tokenet** er det rå APNs-tokenet (`getDevicePushTokenAsync`), ikke Expos push-token.
   Det lagres i `apns_tokens` (`0166`) med spillerens egen klient, og en annen konto på
   samme telefon overtar det med `claim_apns_token` (`0167`). Telefonen husker tokenet
-  i AsyncStorage (`torny-push-token`), og utloggingen sletter raden før sesjonen dør.
+  sammen med kontoen i AsyncStorage (`torny-push-token`, `{ userId, token }`), og
+  bryteren står på bare for den kontoen. Utloggingen sletter raden før sesjonen dør
+  (med samme tak på ventetiden som drainen). Finner en ny innlogging et token for en
+  annen konto, overtar og sletter den raden (`settlePushOwner`), så forrige konto ikke
+  får varsler på telefonen.
 - **Senderen** er den samme som for skallet (`lib/notifications/push/apns.ts`):
   `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` og `APNS_PRIVATE_KEY` (se
   `ios-shell.md`). Prod bruker `APNS_BUNDLE_ID=no.tornygolf.app`, så butikkbygget
