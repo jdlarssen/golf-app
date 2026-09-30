@@ -252,9 +252,11 @@ export function RootNavigator() {
           // Designet (#2256): «Profil» står stort i innholdet med «Rediger»
           // som pille ved siden av (`Profile.tsx`). Toppen har bare
           // tilbake-pila til hjem, og ingen skillelinje.
+          // Tom streng, ikke en funksjon som gir `null`: da faller den native
+          // headeren tilbake til `title` og viser «Profil» to ganger.
           options={{
             title: PROFILE_TEXT.heading,
-            headerTitle: () => null,
+            headerTitle: '',
             headerShadowVisible: false,
           }}
         />
