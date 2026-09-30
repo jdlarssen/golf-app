@@ -2004,8 +2004,8 @@ flisene, reglene og «Vis på kart». «Legg til i kalender» og «Hull for hull
    handicap». Så feltene START, FLIGHT/LAG/SIDE/SPILLERE og DINE SLAG og avatarraden.
    Under perforeringen står stubben (`TicketStub.tsx`). Billetten er identisk med
    designlerretet (eieren 30.09): ingen faktalinje, statusmerket i salvie med krem
-   tekst, rette streker i perforeringen, 16 pt fra kantene, og del-knappen som et bart
-   ikon uten systemets glass (`hidesSharedBackground`).
+   tekst, rette streker i perforeringen og 16 pt fra kantene. Del-knappen er skjermens
+   `headerRight`, som den felles toppen (#2403) tegner i høyre-plassen sin, uten boble.
 3. Flisene Tavla, Scorekort og Regler (`GameTiles.tsx`), bare når runden pågår eller er
    avsluttet. I et stengt format står bare Regler. «Godkjenn (n)» står under flisene.
 4. Spillerlista (`RosterRow`), bare når runden er planlagt eller et utkast (eierens svar).

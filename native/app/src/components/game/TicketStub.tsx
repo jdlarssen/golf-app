@@ -184,7 +184,8 @@ function ActiveStub({
   return (
     <View style={[styles.block, styles.progress]}>
       <View style={styles.playedRow}>
-        <Text style={[styles.played, ui.num, { color: colors.muted }]} testID="ticket-played">
+        {/* Vanlige tall, som i designet: tabellsiffer er for talloner (DESIGN.md). */}
+        <Text style={[styles.played, { color: colors.muted }]} testID="ticket-played">
           {playedLine(stub.played, stub.total)}
         </Text>
         {runningTotal ? (
