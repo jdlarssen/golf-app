@@ -164,11 +164,22 @@ function byStanding(rankedIds: readonly string[]): (a: { userId: string }, b: { 
   return (a, b) => at(a.userId) - at(b.userId);
 }
 
+/**
+ * Stillingen i fast rekkefølge: plassen, og ved delt plass `userId`. Motoren
+ * beholder rekkefølgen den fikk spillerne i, og den er ikke den samme på
+ * webben og i appen (#2255 PR 3a). `userId` betyr ingenting for spilleren,
+ * men gir samme liste på begge flatene.
+ */
+function inStandingOrder<T extends { userId: string; rank: number }>(players: readonly T[]): T[] {
+  return [...players].sort((a, b) => a.rank - b.rank || (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0));
+}
+
 export function soloStablefordScorecard(
   result: StablefordSoloResult,
   teeGenderOf: TeeGenderOf,
 ): SoloScorecard {
-  const rankedIds = result.players.map((p) => p.userId);
+  const players = inStandingOrder(result.players);
+  const rankedIds = players.map((p) => p.userId);
   const tie = byStanding(rankedIds);
   const holes = result.holes.map((hole) => {
     // Flest poeng først; uspilte (brutto null) sist; likt etter stillingen.
@@ -188,7 +199,7 @@ export function soloStablefordScorecard(
     return buildHole(hole, cells, teeGenderOf);
   });
   return {
-    standings: result.players.map((line) => ({
+    standings: players.map((line) => ({
       userId: line.userId,
       rank: line.rank,
       isLeader: line.rank === 1 && line.tiedWith.length === 0,
@@ -205,7 +216,8 @@ export function soloStrokeplayScorecard(
   result: SoloStrokeplayResult,
   teeGenderOf: TeeGenderOf,
 ): SoloScorecard {
-  const rankedIds = result.players.map((p) => p.userId);
+  const players = inStandingOrder(result.players);
+  const rankedIds = players.map((p) => p.userId);
   const tie = byStanding(rankedIds);
   const holes = result.holes.map((hole) => {
     // Lavest netto først; uspilte (netto null) sist; likt etter stillingen.
@@ -223,7 +235,7 @@ export function soloStrokeplayScorecard(
     return buildHole(hole, cells, teeGenderOf);
   });
   return {
-    standings: result.players.map((line) => ({
+    standings: players.map((line) => ({
       userId: line.userId,
       rank: line.rank,
       isLeader: line.rank === 1 && line.tiedWith.length === 0,
