@@ -18,7 +18,7 @@ import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import Constants from 'expo-constants';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
@@ -42,7 +42,7 @@ import { Profile } from './screens/Profile';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
-import { FONTS, TAP, useTheme, type Theme } from './theme';
+import { FONTS, useTheme, type Theme } from './theme';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -100,37 +100,6 @@ export type ScreenProps<T extends keyof RootStackParamList> =
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 /**
- * Et ord oppe til høyre i headeren: «Profil» på hjem. («Rediger» i profilen
- * står som pille ved tittelen i innholdet, som i designet, #2256.)
- *
- * Et ord og ikke et ikon: ikonspråket (#1879) er ikke bygget ennå, og en løs
- * silhuett her ville forskuttert det valget. Tap-flaten er `TAP` bred og høy
- * selv om ordet er smalere — headeren er det trangeste stedet i appen å treffe,
- * og et ord på fem tegn er ikke en tap-flate i seg selv.
- */
-function HeaderTextLink({
-  label,
-  onPress,
-  testID,
-}: {
-  label: string;
-  onPress: () => void;
-  testID: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={styles.headerLink}
-      testID={testID}
-    >
-      <Text style={[styles.headerLinkText, { color: colors.primary }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-/**
  * Sync-laben fra N2 beholdes som dev-verktøy. Den tar `userId` + `onBack` og
  * vet ingenting om navigasjon; wrapperen holder den slik — testene og
  * testID-ene fra N2 gjelder fortsatt uendret.
@@ -184,24 +153,16 @@ export function RootNavigator() {
         <Stack.Screen
           name="Home"
           component={Home}
-          // `options` som funksjon får sin egen `navigation`, så inngangen til
-          // profil-rommet kan bo her i stedet for i `Home.tsx`. Hjem slipper
-          // dermed å kjenne til en skjerm den ellers ikke har noe med — og
-          // headeren er uansett navigatorens flate, ikke skjermens.
-          options={({ navigation }) => ({
+          options={{
+            // #2385: Hjem har ingen navigasjonslinje (designlerretet). Datoen
+            // står øverst, og «Profil» er en lenke på datolinja i `Home.tsx`.
+            headerShown: false,
             // Navnet leses fra den oppløste configen, ikke hardkodes (#1975):
             // butikk-varianten setter `name` til «Tørny», og en hardkodet
-            // «Tørny Dev» ville fulgt med inn i App Store. Login-skjermen har
-            // gjort det slik siden #1954 P1b — dette er den siste hardkodingen.
+            // «Tørny Dev» ville fulgt med inn i App Store. Tittelen synes ikke
+            // på Hjem, men iOS viser den i tilbake-menyen på skjermene over.
             title: Constants.expoConfig?.name ?? APP_NAME_FALLBACK,
-            headerRight: () => (
-              <HeaderTextLink
-                label={PROFILE_TEXT.heading}
-                onPress={() => navigation.navigate('Profile')}
-                testID="open-profile"
-              />
-            ),
-          })}
+          }}
         />
         <Stack.Screen
           name="CreateGame"
@@ -330,11 +291,4 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  headerLink: {
-    minWidth: TAP,
-    minHeight: TAP,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  headerLinkText: { fontSize: 16, fontFamily: FONTS.sansMedium },
 });

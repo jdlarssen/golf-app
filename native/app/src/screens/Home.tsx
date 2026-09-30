@@ -7,9 +7,11 @@
 //
 // #1906 tok footeren bort. E-posten, «Konto», «Sync-lab» og «Logg ut» lå der
 // som fire lenker under spillene dine — alt sammen ting som handler om deg og
-// ikke om runden. De bor i profil-rommet nå, og veien dit er ordet «Profil»
-// oppe til høyre i headeren (satt i `navigation.tsx`). Hjem handler igjen bare
-// om spill.
+// ikke om runden. De bor i profil-rommet nå. Hjem handler igjen bare om spill.
+//
+// #2385: Hjem har ingen navigasjonslinje (designlerretet). Veien til
+// profil-rommet er lenka «Profil» til høyre på datolinja, til bunnmenyen kommer
+// (eierens svar 29.09: «Profil står oppe til høyre til da»).
 //
 // #2254 gjorde Hjem til startboden. Fra toppen: datoen, hilsenen med
 // HCP-pillen, heltekortet for runden du er midt i (med godkjenningsraden
@@ -18,14 +20,15 @@
 // ellers, som før (eierens svar på #2254).
 //
 // #2385 la toppen og margene på designlerretet (`Hjem-forslag`): datoen står
-// tett over hilsenen, HCP-pillen er midtstilt mot begge linjene, kortene står
-// 16 pt fra kanten og tekstene 20 pt inn.
+// 16 pt under statuslinja og tett over hilsenen, HCP-pillen står til høyre for
+// hilsenen, seksjonsoverskriftene er små sperrede versaler uten ikon, kortene
+// står 16 pt fra kanten og tekstene 20 pt inn.
 //
 // Heltekortet og billetten leser spill-bundelen og slagene som ligger på
 // enheten (`data/homeHero.ts`). Hvert fokus leser dem på nytt med én gang, så
 // et hull tastet i flymodus flytter ringen også uten nett, og henter dem så fra
 // serveren når lista har svart.
-import { useCallback, useEffect, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -35,6 +38,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { firstName } from '../../../../lib/firstName';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
@@ -52,18 +56,12 @@ import {
 } from '../data/homeList';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
-import {
-  FlaggIcon,
-  KalenderIcon,
-  PinFlagHero,
-  PokalIcon,
-  type IconProps,
-} from '../components/icons/Icons';
+import { PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
-import { formatHcpNb } from '../lib/profileCopy';
+import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, TAP, useTheme } from '../theme';
@@ -71,6 +69,8 @@ import { FONTS, TAP, useTheme } from '../theme';
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
   const { userId } = useSession();
+  // Uten navigasjonslinje står innholdet rett under statuslinja.
+  const insets = useSafeAreaInsets();
   const [list, setList] = useState<HomeList | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -166,7 +166,10 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
   if (list === null || split === null) {
     return (
-      <ScrollView contentContainerStyle={ui.scroll} testID="home-screen">
+      <ScrollView
+        contentContainerStyle={[ui.scroll, { paddingTop: insets.top + 20 }]}
+        testID="home-screen"
+      >
         <Text style={ui.error} testID="home-error">
           Fikk ikke tak i spillene dine. Sjekk nettet og prøv igjen.
         </Text>
@@ -198,8 +201,15 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   );
 
   return (
-    <ScrollView contentContainerStyle={[ui.scroll, styles.scroll]} testID="home-screen">
-      <Top profile={profile} onHcp={() => navigation.navigate('Profile')} />
+    <ScrollView
+      contentContainerStyle={[ui.scroll, styles.scroll, { paddingTop: insets.top + 16 }]}
+      testID="home-screen"
+    >
+      <Top
+        profile={profile}
+        onProfile={() => navigation.navigate('Profile')}
+        onHcp={() => navigation.navigate('Profile')}
+      />
 
       {empty ? (
         // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
@@ -237,7 +247,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
       <Section
         title={HOME_TEXT.moreInProgress}
-        Icon={FlaggIcon}
         cards={rest}
         onOpen={openGame}
         testID="home-active"
@@ -245,7 +254,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
       {ticket ? (
         <View testID="home-next-start">
-          <SectionHead title={HOME_TEXT.nextStart} Icon={KalenderIcon} testID="home-next-start" />
+          <SectionHead title={HOME_TEXT.nextStart} />
           <NextStartTicket
             card={ticket}
             bundle={ticketBundle && ticketBundle.game.id === ticket.gameId ? ticketBundle : null}
@@ -258,7 +267,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
       <Section
         title={HOME_TEXT.myGames}
-        Icon={KalenderIcon}
         cards={scheduled.slice(1)}
         onOpen={openGame}
         testID="home-scheduled"
@@ -266,7 +274,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 
       {lastRound ? (
         <View testID="home-last-round">
-          <SectionHead title={HOME_TEXT.lastRound} Icon={PokalIcon} testID="home-last-round" />
+          <SectionHead title={HOME_TEXT.lastRound} />
           <LastRoundCard
             card={lastRound}
             score={list.lastRound}
@@ -310,13 +318,21 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 }
 
 /**
- * Datoen, «Hei, Sigrid.» og HCP-pillen, som på webbens Hjem. Fornavnet er
- * webbens `firstName`; pillen vises bare når både handicap og dato finnes
- * (webbens regel), og kanten blir gull når handicapet er gammelt
- * (`isHandicapStale`). Trykk på pillen åpner profil-rommet, der handicapet
- * oppdateres. Uten profil står bare datoen.
+ * Datoen med «Profil» til høyre, og under den «Hei, Sigrid.» med HCP-pillen,
+ * som på webbens Hjem. Fornavnet er webbens `firstName`; pillen vises bare når
+ * både handicap og dato finnes (webbens regel), og kanten blir gull når
+ * handicapet er gammelt (`isHandicapStale`). Både lenka og pillen åpner
+ * profil-rommet, der handicapet oppdateres. Uten profil står datoen og lenka.
  */
-function Top({ profile, onHcp }: { profile: OwnProfile | null; onHcp: () => void }) {
+function Top({
+  profile,
+  onProfile,
+  onHcp,
+}: {
+  profile: OwnProfile | null;
+  onProfile: () => void;
+  onHcp: () => void;
+}) {
   const { colors } = useTheme();
   const name = profile ? (firstName(profile.name) ?? HOME_TEXT.playerFallback) : null;
   const hcp =
@@ -326,65 +342,68 @@ function Top({ profile, onHcp }: { profile: OwnProfile | null; onHcp: () => void
   const stale = hcp !== null && isHandicapStale(profile?.handicapUpdatedAt ?? null);
   return (
     <View style={styles.top}>
-      <View style={styles.topText}>
+      <View style={styles.topRow}>
         <Text style={[styles.dateLine, { color: colors.muted }]} testID="home-date">
           {formatWeekdayDayMonth(new Date())}
         </Text>
+        <Pressable
+          onPress={onProfile}
+          accessibilityRole="link"
+          // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på
+          // uten å skyve hilsenen ned.
+          hitSlop={PROFILE_SLOP}
+          testID="open-profile"
+        >
+          <Text style={[styles.profileLink, { color: colors.primary }]}>
+            {PROFILE_TEXT.heading}
+          </Text>
+        </Pressable>
+      </View>
+      <View style={styles.topRow}>
         {name !== null ? (
           <Text style={[styles.greeting, { color: colors.text }]} testID="home-greeting">
             {greeting(name)}
           </Text>
         ) : null}
+        {hcp !== null ? (
+          <Pressable
+            onPress={onHcp}
+            accessibilityRole="button"
+            accessibilityLabel={hcpA11yLabel(hcp)}
+            style={[
+              styles.hcpPill,
+              { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
+            ]}
+            testID="home-hcp"
+          >
+            <View style={styles.hcpInner}>
+              <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+              <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+            </View>
+          </Pressable>
+        ) : null}
       </View>
-      {hcp !== null ? (
-        <Pressable
-          onPress={onHcp}
-          accessibilityRole="button"
-          accessibilityLabel={hcpA11yLabel(hcp)}
-          style={[
-            styles.hcpPill,
-            { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
-          ]}
-          testID="home-hcp"
-        >
-          <View style={styles.hcpInner}>
-            <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-            <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
-          </View>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
 
-function SectionHead({
-  title,
-  Icon,
-  testID,
-}: {
-  title: string;
-  /** Seksjonsankeret — samme ikon som webben bruker for samme ting. */
-  Icon: ComponentType<IconProps>;
-  testID: string;
-}) {
-  const { colors, ui } = useTheme();
+/** Seksjonsoverskriften: små sperrede versaler, uten ikon, som i designet. */
+function SectionHead({ title }: { title: string }) {
+  const { ui } = useTheme();
   return (
-    <View style={styles.sectionHead}>
-      <Icon color={colors.muted} size={16} testID={`${testID}-icon`} />
-      <Text style={[ui.sectionTitle, styles.sectionTitle]}>{title}</Text>
-    </View>
+    <Text accessibilityRole="header" style={[ui.kicker, styles.sectionHead]}>
+      {title}
+    </Text>
   );
 }
 
 function Section({
   title,
-  Icon,
   cards,
   onOpen,
   testID,
 }: {
   title: string;
-  Icon: ComponentType<IconProps>;
   cards: HomeCard[];
   onOpen: (gameId: string) => void;
   testID: string;
@@ -393,7 +412,7 @@ function Section({
   if (cards.length === 0) return null;
   return (
     <View testID={testID}>
-      <SectionHead title={title} Icon={Icon} testID={testID} />
+      <SectionHead title={title} />
       {cards.map((card) => (
         <Pressable
           key={card.gameId}
@@ -426,18 +445,21 @@ function Section({
 /** Tekstene står 20 pt inn, kortene 16 (designet): 4 pt ekstra på tekstene. */
 const TEXT_INSET = 4;
 
+/** «Profil» er rundt 16 pt høy og 35 bred; slakken gir minst 44 pt å treffe på. */
+const PROFILE_SLOP = { top: 14, bottom: 14, left: 12, right: 12 };
+
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
-  top: {
+  top: { marginHorizontal: TEXT_INSET },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginHorizontal: TEXT_INSET,
   },
-  topText: { flexShrink: 1 },
-  dateLine: { fontSize: 12, fontFamily: FONTS.sans },
-  greeting: { fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
+  dateLine: { flexShrink: 1, fontSize: 12, fontFamily: FONTS.sans },
+  profileLink: { fontSize: 13, fontFamily: FONTS.sansMedium },
+  greeting: { flexShrink: 1, fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
   hcpPill: {
     minHeight: TAP,
     justifyContent: 'center',
@@ -455,16 +477,8 @@ const styles = StyleSheet.create({
   hcpValue: { fontSize: 18, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   empty: { alignItems: 'center', gap: 16, marginVertical: 8 },
   emptyText: { textAlign: 'center' },
-  // Ikon og overskrift på samme linje. `sectionTitle` bærer luften over seg
-  // selv; her flyttes den til raden så ikonet følger med ned.
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 16,
-    marginHorizontal: TEXT_INSET,
-  },
-  sectionTitle: { marginTop: 0 },
+  // 22 pt luft over (14 + mellomrommet i lista) og 8 under, som i designet.
+  sectionHead: { marginTop: 14, marginHorizontal: TEXT_INSET },
   gameCard: {
     borderRadius: 12,
     borderWidth: 1,
