@@ -12,16 +12,27 @@
 
 import { osloParts } from './teeOff';
 
+/** A calendar date: year, month index 0–11 and day of month. */
+export type CalendarDateParts = { year: number; month: number; day: number };
+
+/**
+ * Reads the calendar date of an instant. The default everywhere is
+ * `osloParts`; the native app passes its own local-time reader (#2265),
+ * because Hermes has no Europe/Oslo zone.
+ */
+export type DatePartsReader = (date: Date) => CalendarDateParts;
+
 /**
  * ISO 8601 week number (1–53) of the Oslo-local date of `date`.
  *
  * The arithmetic runs on a UTC-constructed date built from the Oslo y/m/d, so
  * all reads go through `getUTC*` and stay TZ-stable — the same algorithm the
  * Klubbhuset page used inline, but anchored to the Oslo date instead of the
- * server-local one.
+ * server-local one. `parts` swaps the calendar the date is read on (#2265);
+ * the web never passes it.
  */
-export function osloIsoWeek(date: Date): number {
-  const { year, month, day } = osloParts(date);
+export function osloIsoWeek(date: Date, parts: DatePartsReader = osloParts): number {
+  const { year, month, day } = parts(date);
   const target = new Date(Date.UTC(year, month, day));
   const dayNr = (target.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
   target.setUTCDate(target.getUTCDate() - dayNr + 3); // move to the week's Thursday

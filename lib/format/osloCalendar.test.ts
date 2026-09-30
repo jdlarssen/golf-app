@@ -9,6 +9,7 @@ import {
   osloTimeOfDayBucket,
   osloYearWindow,
 } from './osloCalendar';
+import { osloParts } from './teeOff';
 
 describe('osloIsoWeek', () => {
   it('returns the ISO week of the Oslo-local date for a mid-day instant', () => {
@@ -88,5 +89,25 @@ describe('osloTimeOfDayBucket', () => {
     ['2026-06-15T21:00:00Z', '23:00', 'kveld'],
   ] as const)('%s (Oslo %s) -> %s', (iso, _osloHour, expected) => {
     expect(osloTimeOfDayBucket(new Date(iso))).toBe(expected);
+  });
+});
+
+// #2265: appen kan ikke lese Oslo-kalenderen under Hermes, så den sender sin
+// egen dato-deler (telefonens lokaltid). Standarden står uendret for webben.
+describe('osloIsoWeek — injected date parts (#2265)', () => {
+  const utcParts = (date: Date) => ({
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth(),
+    day: date.getUTCDate(),
+  });
+
+  it('gives the same week as the default when handed the Oslo parts', () => {
+    const date = new Date('2026-06-14T23:32:00Z');
+    expect(osloIsoWeek(date, osloParts)).toBe(osloIsoWeek(date));
+  });
+
+  it('reads the calendar date from the injected parts', () => {
+    // 23:32 UTC søndag 14. juni er mandag i Oslo (uke 25), men søndag i UTC (uke 24).
+    expect(osloIsoWeek(new Date('2026-06-14T23:32:00Z'), utcParts)).toBe(24);
   });
 });
