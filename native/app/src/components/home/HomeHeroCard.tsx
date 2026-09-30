@@ -95,7 +95,7 @@ export function HomeHeroCard({
             style={styles.middle}
             testID="home-hero-middle"
           >
-            <Ring model={model} color={colors.onStrong} />
+            <Ring model={model} color={colors.onStrong} arcColor={colors.live} />
             <View style={styles.standing}>
               <Standing model={model} />
             </View>
@@ -138,7 +138,7 @@ export function HomeHeroCard({
 }
 
 /** Ringen med hullet du skal til, eller hvor mange du har spilt når alt er tastet. */
-function Ring({ model, color }: { model: HeroModel; color: string }) {
+function Ring({ model, color, arcColor }: { model: HeroModel; color: string; arcColor: string }) {
   const next = model.action?.kind === 'hole' ? model.action.holeNumber : null;
   const label =
     next !== null
@@ -154,6 +154,7 @@ function Ring({ model, color }: { model: HeroModel; color: string }) {
     >
       <HoleRing
         color={color}
+        arcColor={arcColor}
         fraction={model.played / model.holeCount}
         size={RING_SIZE}
         testID="home-hero-ring-svg"

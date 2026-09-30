@@ -210,17 +210,19 @@ export function PinFlagHero({
  * dekor: kalleren legger hullnummeret oppå og gir hele ringen etiketten
  * («Hull 8 av 18, 7 spilt»), så skjermleseren leser tall og tekst samlet.
  *
- * Sporet er samme farge som buen med lav opasitet: det finnes ingen lys
- * salvie-rolle som synes på skoggrønt i lys drakt.
+ * Sporet er `color` med lav opasitet. Buen er `arcColor` når den er gitt
+ * (heltekortet gir salvie-`live`, som designet, #2385), ellers `color`.
  */
 export function HoleRing({
   color,
+  arcColor,
   fraction,
   size = 112,
   strokeWidth = 8,
   testID,
 }: {
   color: string;
+  arcColor?: string;
   /** Spilte hull delt på hullene i runden, 0–1. */
   fraction: number;
   size?: number;
@@ -254,7 +256,7 @@ export function HoleRing({
           cx={center}
           cy={center}
           r={radius}
-          stroke={color}
+          stroke={arcColor ?? color}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={`${circumference} ${circumference}`}

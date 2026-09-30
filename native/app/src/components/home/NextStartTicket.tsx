@@ -4,6 +4,10 @@
 // skjermleseren: etiketten samler det øyet leser i stubben og til høyre,
 // avatarraden inkludert.
 //
+// #2385 la billetten på designlerretet (`Hjem-forslag`): stubben er 104 pt
+// med datoen som gull kicker, klokkeslettet stort i Fraunces og nærheten
+// under, og til høyre står navnet, linja og skivene i designets størrelser.
+//
 // **Perforeringen** er en kolonne små streker, ikke `borderStyle: 'dashed'`.
 // React Native tegner stiplet kant på én side ujevnt på iOS, og strekene ser
 // like ut på iOS og Android.
@@ -17,7 +21,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { GameBundle } from '../../data/gameBundle';
 import type { HomeCard } from '../../data/homeList';
 import { APP_MODE_LABELS, isAppSupportedMode } from '../../lib/appFormats';
-import { displayName } from '../../lib/display';
+import { displayName, formatClock } from '../../lib/display';
 import {
   HOME_TEXT,
   companionsLabel,
@@ -26,7 +30,7 @@ import {
   ticketA11yLabel,
 } from '../../lib/homeCopy';
 import { formatStubClock, formatStubDate, teeOffProximityLocal } from '../../lib/homeDates';
-import { MAX_AVATARS, companionsOf } from '../../lib/flightRoster';
+import { MAX_HOME_COMPANIONS, companionsOf } from '../../lib/flightRoster';
 import { FONTS, useTheme } from '../../theme';
 import { FlightAvatars } from './FlightAvatars';
 
@@ -48,6 +52,8 @@ export function NextStartTicket({
 }) {
   const { colors, ui } = useTheme();
   const date = formatStubDate(card.scheduledTeeOffAt);
+  // Stort klokkeslett uten «kl.» i stubben; etiketten leser «kl. 09:20».
+  const time = formatClock(card.scheduledTeeOffAt);
   const clock = formatStubClock(card.scheduledTeeOffAt);
   const proximity = proximityText(teeOffProximityLocal(card.scheduledTeeOffAt, now));
   const format = isAppSupportedMode(card.gameMode) ? APP_MODE_LABELS[card.gameMode] : null;
@@ -68,7 +74,7 @@ export function NextStartTicket({
     // Komma, ikke «·»: VoiceOver leser midtpunktet høyt.
     detailParts.join(', '),
     companions.length > 0
-      ? companionsLabel(companions.map(displayName), flightNumber != null, MAX_AVATARS)
+      ? companionsLabel(companions.map(displayName), flightNumber != null, MAX_HOME_COMPANIONS)
       : null,
   ]);
 
@@ -85,12 +91,12 @@ export function NextStartTicket({
         <View style={styles.stub}>
           {date ? (
             <>
-              <Text style={[styles.date, { color: colors.text }]} testID="home-ticket-date">
+              <Text style={[styles.date, { color: colors.accentText }]} testID="home-ticket-date">
                 {date}
               </Text>
-              {clock ? (
-                <Text style={[ui.muted, ui.num]} testID="home-ticket-clock">
-                  {clock}
+              {time ? (
+                <Text style={[styles.clock, { color: colors.text }]} testID="home-ticket-clock">
+                  {time}
                 </Text>
               ) : null}
             </>
@@ -100,7 +106,7 @@ export function NextStartTicket({
             </Text>
           )}
           {proximity ? (
-            <Text style={[styles.proximity, { color: colors.primary }]} testID="home-ticket-proximity">
+            <Text style={[styles.proximity, { color: colors.muted }]} testID="home-ticket-proximity">
               {proximity}
             </Text>
           ) : null}
@@ -118,11 +124,11 @@ export function NextStartTicket({
         </View>
 
         <View style={styles.body}>
-          <Text style={[ui.value, styles.name]} numberOfLines={3}>
+          <Text style={[styles.name, { color: colors.text }]} numberOfLines={3}>
             {card.name}
           </Text>
           {detail ? (
-            <Text style={ui.muted} testID="home-ticket-detail">
+            <Text style={[styles.detail, { color: colors.muted }]} testID="home-ticket-detail">
               {detail}
             </Text>
           ) : null}
@@ -154,25 +160,43 @@ export function NextStartTicket({
   );
 }
 
-const NOTCH = 16;
-const STUB = 116;
+const NOTCH = 18;
+const STUB = 104;
 /** Billettens kant; hakkene sentreres på den. */
 const EDGE = 1;
+/** Perforeringen er en smal kolonne, som designets stiplede strek på 2 pt. */
+const PERFORATION = 2;
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 8 },
   ticket: {
     flexDirection: 'row',
     borderWidth: EDGE,
-    borderRadius: 14,
-    minHeight: 112,
+    borderRadius: 16,
   },
-  stub: { width: STUB, paddingVertical: 14, paddingHorizontal: 12, gap: 4, justifyContent: 'center' },
-  date: { fontSize: 16, fontFamily: FONTS.serifScore },
-  noTime: { fontSize: 13 },
-  proximity: { fontSize: 13, fontFamily: FONTS.sansSemiBold, marginTop: 2 },
+  stub: {
+    width: STUB,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  date: {
+    fontSize: 11,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  clock: {
+    fontSize: 30,
+    lineHeight: 33,
+    fontFamily: FONTS.serifScore,
+    fontVariant: ['tabular-nums'],
+  },
+  noTime: { fontSize: 13, textAlign: 'center' },
+  proximity: { fontSize: 11, fontFamily: FONTS.sans },
   perforation: {
-    width: NOTCH,
+    width: PERFORATION,
     alignItems: 'center',
     justifyContent: 'space-evenly',
     paddingVertical: NOTCH / 2 + 4,
@@ -181,7 +205,7 @@ const styles = StyleSheet.create({
   notchClip: {
     position: 'absolute',
     pointerEvents: 'none',
-    left: EDGE + STUB,
+    left: EDGE + STUB + PERFORATION / 2 - NOTCH / 2,
     width: NOTCH,
     height: NOTCH / 2 + EDGE,
     overflow: 'hidden',
@@ -199,7 +223,6 @@ const styles = StyleSheet.create({
   notchBottom: { bottom: EDGE / 2 - NOTCH / 2 },
   dash: { width: 2, height: 6, borderRadius: 1 },
   body: { flex: 1, padding: 14, gap: 6, justifyContent: 'center' },
-  // Mindre enn `ui.value`: ved siden av stubben får et langt ord som
-  // «Klubbmesterskap» ellers ikke plass på én linje og blir klippet.
-  name: { fontSize: 19, lineHeight: 24 },
+  name: { fontSize: 18, lineHeight: 23, fontFamily: FONTS.serifDisplay },
+  detail: { fontSize: 12, fontFamily: FONTS.sans },
 });

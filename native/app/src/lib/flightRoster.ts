@@ -5,7 +5,7 @@
 // til navnelista under skivene, og to kopier av «hvem er i flighten din» ville
 // kunnet vise to ulike lag med folk (AGENTS felle 4). Nå har regelen ett hjem.
 
-/** Maks antall skiver; resten blir «+N til». */
+/** Standardgrensen for navnelista (`rosterNames`) når kalleren ikke sender en. */
 export const MAX_AVATARS = 4;
 
 /**
@@ -13,6 +13,12 @@ export const MAX_AVATARS = 4;
  * alt. Navnelista ved siden av nevner de samme tre og resten som et tall.
  */
 export const MAX_TICKET_COMPANIONS = 3;
+
+/**
+ * Billetten på Hjem (#2385, designet for Hjem): deg først og så inntil to
+ * andre, og resten som «+N til». Kortet er smalere enn startbilletten.
+ */
+export const MAX_HOME_COMPANIONS = 2;
 
 /** Det utvalget trenger å vite om en spiller. */
 export interface FlightMember {
