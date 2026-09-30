@@ -42,7 +42,7 @@ function BareBack() {
       style={styles.back}
       testID="header-back"
     >
-      <TilbakeIcon color={colors.text} size={22} />
+      <TilbakeIcon color={colors.text} size={20} strokeWidth={2} />
     </Pressable>
   );
 }
