@@ -131,7 +131,10 @@ describe('soloStablefordScorecard', () => {
     expect(card.front.holes[0]!.chipPar).toBe(4);
     const allLadies = soloStablefordScorecard(STABLEFORD, () => 'ladies');
     expect(allLadies.front.holes[0]!.chipPar).toBe(5);
-    const mixed = soloStablefordScorecard(STABLEFORD, (id) => (id === 'kari' ? 'ladies' : 'mens'));
+    // Blandet: hullets par (4), ikke den første radens eget par. Ola står
+    // først på hullet og går fra dame-tee (5), så testen skiller de to.
+    const mixed = soloStablefordScorecard(STABLEFORD, (id) => (id === 'ola' ? 'ladies' : 'mens'));
+    expect(mixed.front.holes[0]!.rows[0]!.userId).toBe('ola');
     expect(mixed.front.holes[0]!.chipPar).toBe(4);
   });
 });
@@ -189,6 +192,40 @@ describe('likt på et hull: den som ligger best an i stillingen står først', (
       () => 'mens',
     );
     expect(card.front.holes[0]!.rows.map((r) => r.userId)).toEqual(['ola', 'kari']);
+  });
+
+  it('to uspilte på samme hull står også etter stillingen', () => {
+    const card = soloStablefordScorecard(
+      {
+        ...STABLEFORD,
+        holes: [
+          stablefordHole(
+            1,
+            [
+              { userId: 'per', gross: null, points: 0 },
+              { userId: 'kari', gross: null, points: 0 },
+              { userId: 'ola', gross: 4, points: 3 },
+            ],
+            ['ola'],
+          ),
+        ],
+      },
+      () => 'mens',
+    );
+    expect(card.front.holes[0]!.rows.map((r) => r.userId)).toEqual(['ola', 'kari', 'per']);
+  });
+
+  it('delt plass i stillingen får fast rekkefølge, uansett rekkefølgen inn', () => {
+    const tied = (order: string[]) =>
+      soloStablefordScorecard(
+        {
+          ...STABLEFORD,
+          players: order.map((userId) => ({ userId, totalPoints: 5, rank: 1, holesPlayed: 1, tiedWith: [] })),
+          holes: [],
+        },
+        () => 'mens',
+      ).standings.map((s) => s.userId);
+    expect(tied(['per', 'ola', 'kari'])).toEqual(tied(['kari', 'per', 'ola']));
   });
 
   it('slagspill: samme netto sorteres etter stillingen', () => {
