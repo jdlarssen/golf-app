@@ -1910,21 +1910,25 @@ Oslo-parser i appen»). `teeOffProximityLocal` speiler bøttene og grensen (0–
 ## Profilen som bag-tag (#2256)
 
 Profilen i appen åpner på bag-taggen: et skoggrønt, litt skrått kort med klubb, navn,
-«Dame · Junior · med siden 2026», handicapet i stort og initialene i en ring. Under står
+«Dame · med siden 2026», handicapet i stort og initialene i en ring. Klassen (junior/senior)
+står ikke på kortet etter Profil v2 (#2406). Under står
 «Sesongen 2026» med runder, beste runde og seire, og en kort meny fører videre. Webbens
 `/profile` er uendret (#2250). Leveransen er fire PR-er; denne delen beskriver PR 1.
 
 ### Rekkefølgen fra toppen
 
-1. «Rediger» oppe til høyre (navigatorens header, som «Profil» på Hjem) → `EditProfile`.
+1. Den felles toppen med bare tilbakepila, og under den «Profil» med «Rediger» som pille på
+   samme rad (Profil v2, #2406) → `EditProfile`.
 2. Banneret etter lagring (`saved`-parameteren, som før).
 3. Bag-taggen (`components/profile/BagTag.tsx`), tegnet fra `bagTagModel`
    (`lib/bagTag.ts`).
 4. Flisene (`components/profile/SeasonTiles.tsx`).
-5. Menyen: «Varsler og tema» (`NotificationsAndTheme.tsx`) og «Personvern og konto»
-   (`AccountSettings.tsx`). «Historikk og statistikk» kobles på med #2265, «Venner» med
-   PR 2.
-6. Utvikler-seksjonen (bare staging) og «Logg ut».
+5. Menyen: «Venner» (`Friends.tsx`), «Varsler og tema» (`NotificationsAndTheme.tsx`) og
+   «Personvern og konto» (`AccountSettings.tsx`). «Historikk og statistikk» kobles på med
+   #2265.
+
+«Logg ut» og utvikler-seksjonen (bare staging) står i «Personvern og konto» etter Profil v2
+(#2406).
 
 Personvernerklæringen (#2229) og «Slett konto» står i «Personvern og konto».
 `DeleteAccount` går tilbake dit med `goBack()`.
@@ -1988,7 +1992,8 @@ admin-klienten (`users` er ikke lesbar for andre), og varslene sendes med den:
 
 Vennehandlinger legges aldri i en kø: uten nett sier skjermen at venner krever nett.
 «Fjern» spør med en dialog, og «Del lenke» åpner delearket (`Share.share`, ingen ny modul).
-Raden i profilen henter antallet som venter på svar hver gang profilen får fokus.
+Raden i profilen har én linje etter Profil v2 (#2406). Forespørslene som venter, står på
+vennesiden, ikke på raden.
 
 ## Startbilletten (#2255)
 
