@@ -7,15 +7,21 @@
 // animasjon. Hvilke linjer som vises, avgjør den delte
 // `resolveScorecardStamp`; her blir de bare tekst.
 //
-// #2385 (designlerretet): linjene under stempelet er en sjekkliste til venstre.
-// Et steg som er gjort, har en blekgrønn skive med hake; et steg som gjenstår
-// (godkjenning som venter, resultatet som ikke er låst ennå), har en stiplet
-// sirkel. Merkene er dekor: teksten sier det samme til skjermleseren.
+// #2385 (designlerretet): stempelet er rundt, med dobbel ring, «TØRNY» langs
+// den øvre buen, «SIGNERT» i midten og datoen under (#2262-formen, på to
+// linjer). «Signert av deg, …» er første linje i sjekklista under, som i
+// designet (orkestratorens svar A). Sjekklista står til venstre: et steg som
+// er gjort, har en blekgrønn skive med hake; et steg som gjenstår (godkjenning
+// som venter, resultatet som ikke er låst ennå), har en stiplet sirkel.
+// Merkene er dekor: teksten sier det samme til skjermleseren.
 import { StyleSheet, Text, View } from 'react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { formatSignedAt } from '../../lib/display';
 import { FONTS, useTheme } from '../../theme';
-import { HakeIcon } from '../icons/Icons';
+import { HakeIcon, StampRing } from '../icons/Icons';
+
+/** Stempelets diameter: den lange datoen (#2262) får plass i sirkelen. */
+const STAMP = 136;
 
 export interface StampCopy {
   signedAt: string | null;
@@ -70,23 +76,27 @@ export function ScorecardStamp({
   const { colors, ui } = useTheme();
   const copy = stampCopy(stamp, ownerFullName);
   const ink = { color: colors.primary };
+  const [date, time] = copy.signedAt ? copy.signedAt.split(' · ') : [null, null];
 
   return (
     <View style={styles.wrap} testID="scorecard-stamp-section">
       <View
-        style={[styles.stamp, { borderColor: colors.primary }]}
+        style={styles.stamp}
         accessible
-        accessibilityLabel={[copy.signedBy, copy.signedAt?.replace(' · ', ' kl. ')]
+        accessibilityLabel={['Signert', copy.signedAt?.replace(' · ', ' kl. ')]
           .filter(Boolean)
           .join(', ')}
         testID="scorecard-stamp"
       >
-        <Text style={[styles.brand, ink]}>TØRNY</Text>
-        <Text style={[styles.signed, ink]}>SIGNERT</Text>
-        {copy.signedAt ? <Text style={[styles.line, ui.num, ink]}>{copy.signedAt}</Text> : null}
-        <Text style={[styles.line, ink]}>{copy.signedBy}</Text>
+        <StampRing size={STAMP} color={colors.primary} kicker="TØRNY" fontFamily={FONTS.sansSemiBold} />
+        <View style={styles.stampText}>
+          <Text style={[styles.signed, ink]}>SIGNERT</Text>
+          {date ? <Text style={[styles.date, ui.num, ink]}>{date}</Text> : null}
+          {time ? <Text style={[styles.date, ui.num, ink]}>{time}</Text> : null}
+        </View>
       </View>
       <View style={styles.checklist}>
+        <StatusLine done text={copy.signedBy} testID="scorecard-signed-by" />
         {copy.approval ? (
           <StatusLine
             done={stamp.approval.kind !== 'pending'}
@@ -126,18 +136,15 @@ function StatusLine({ done, text, testID }: { done: boolean; text: string; testI
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 8, marginTop: 16 },
   stamp: {
-    borderWidth: 2,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    width: STAMP,
+    height: STAMP,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
     transform: [{ rotate: '-2deg' }],
-    marginBottom: 8,
   },
-  brand: { fontSize: 12, fontFamily: FONTS.sansBold, letterSpacing: 3 },
-  signed: { fontSize: 24, fontFamily: FONTS.serifScore, letterSpacing: 2 },
-  line: { fontSize: 14, fontFamily: FONTS.sansMedium, textAlign: 'center' },
+  stampText: { position: 'absolute', alignItems: 'center', paddingTop: 10 },
+  signed: { fontSize: 20, lineHeight: 24, fontFamily: FONTS.serifScore, letterSpacing: 1.2 },
+  date: { fontSize: 10, lineHeight: 13, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
   checklist: { alignSelf: 'stretch', gap: 8, marginTop: 8 },
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   mark: {
