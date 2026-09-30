@@ -21,6 +21,7 @@ import {
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Constants from 'expo-constants';
 import { HOLES_TEXT } from './lib/holesCopy';
+import { kickerHeader } from './components/KickerHeader';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
@@ -234,7 +235,9 @@ export function RootNavigator() {
         <Stack.Screen
           name="HoleByHole"
           component={HoleByHole}
-          options={{ title: HOLES_TEXT.heading }}
+          // Spillnavnet i toppen, som på webben; skjermen setter det når
+          // bundelen er lastet. Til da står «HULL FOR HULL».
+          options={kickerHeader(HOLES_TEXT.heading, HOLES_TEXT.heading)}
         />
         <Stack.Screen
           name="Approve"
@@ -297,39 +300,7 @@ export function RootNavigator() {
   );
 }
 
-/**
- * Toppen fra designlerretet (#2255, #2256): tilbake-pila, et lite sperret ord
- * i midten og ingen skillelinje. Ordet sier hvor du er («STARTBILLETT»,
- * «PROFIL»); sidens egen tittel står stort i innholdet (`PageTitle`). Én
- * stil for alle, i samme kicker-stil som feltetikettene i billetten.
- *
- * `title` er skjermens navn for systemet (app-bytteren, VoiceOver sin
- * «tilbake»), som kan være et annet enn ordet i toppen.
- */
-function kickerHeader(kicker: string, title: string) {
-  return {
-    title,
-    headerTitle: () => <KickerTitle label={kicker} />,
-    headerShadowVisible: false,
-  };
-}
-
-function KickerTitle({ label }: { label: string }) {
-  const { colors } = useTheme();
-  return (
-    <Text accessibilityRole="header" style={[styles.kickerTitle, { color: colors.muted }]}>
-      {label}
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
-  kickerTitle: {
-    fontSize: 10,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
   headerLink: {
     minWidth: TAP,
     minHeight: TAP,
