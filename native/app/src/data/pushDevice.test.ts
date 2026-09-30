@@ -17,7 +17,7 @@ const mockNotifications = {
   requestPermissionsAsync: jest.fn(),
   getDevicePushTokenAsync: jest.fn(),
 };
-jest.mock('expo-notifications', () => mockNotifications, { virtual: true });
+jest.mock('expo-notifications', () => mockNotifications);
 // Finnes den native delen i bygget? `null` = et bygg fra før modulen kom inn.
 const mockOptionalNativeModule = jest.fn();
 jest.mock('expo', () => ({
