@@ -220,8 +220,8 @@ function ScoreSummary({
 }
 
 const styles = StyleSheet.create({
-  // Ikke `ui.card`: kortene inni er egne kort, og en ramme rundt dem ville
-  // spist bredden hullkolonnene trenger.
+  // Ikke `ui.card`: scorekortet er sitt eget kort (#2385), og en ramme rundt
+  // det ville spist bredden hullkolonnene trenger.
   entry: { borderTopWidth: 1, paddingTop: 16, marginTop: 8, gap: 8 },
   actions: { flexDirection: 'row', gap: 12 },
   action: { flex: 1 },
