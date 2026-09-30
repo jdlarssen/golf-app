@@ -2086,8 +2086,12 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,
-  `SoloStrokeplayHolesView` og appen tegner fra. Neste format flytter sitt regnestykke til
-  `lib/` på samme måte før appen får visningen.
+  `SoloStrokeplayHolesView` og appen tegner fra. Likt på et hull ordnes etter stillingen:
+  webben og appen gir motoren spillerne i ulik rekkefølge, og uten regelen så samme hull
+  ulikt ut på de to flatene. Neste format flytter sitt regnestykke til `lib/` på samme måte
+  før appen får visningen.
+- **Ringene** er scorekortets former (`ScoreShape`), men med scoretonen (`toned`), som på
+  nettsiden. Scorekortet selv tegner fortsatt i blekk.
 - **Data:** motoren er den samme som tavla bruker (`computeGameLeaderboard`), på de lokale
   slagene, seedet når skjermen åpnes. Etter at runden er avsluttet gir RLS deltakerne alle
   slag i spillet, så appen leser med spillerens egen sesjon (webben bruker service-role
