@@ -87,7 +87,8 @@ export const holesStyles = StyleSheet.create({
     paddingVertical: 6,
   },
   rowName: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
-  star: { fontSize: 12 },
+  /** Stjerna er dekor (skjult for skjermleseren), så den har webbens `accent`, 11 pt. */
+  star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
 });
