@@ -198,6 +198,16 @@ export function heroShadow(scheme: Scheme): string {
     : '0 10px 28px rgba(26, 46, 31, 0.2)';
 }
 
+/**
+ * En temafarge (`#RRGGBB`) med dekning `alpha` (0–1), som `rgba(...)`. Brukt der
+ * designet legger blekk eller en flate delvis gjennomsiktig oppå noe annet
+ * (#2385: stempelet over scorekortets hjørne).
+ */
+export function withAlpha(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
 const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
   StyleSheet.create({

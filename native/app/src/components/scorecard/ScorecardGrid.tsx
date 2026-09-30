@@ -1,28 +1,29 @@
-// #2262: det klassiske scorekortet — ett kort per ni hull, UT (1–9) og INN
-// (10–18), med radene HULL, PAR, SLAG og så POENG eller NETTO.
+// #2262: det klassiske scorekortet, med radene HULL, PAR, SLAG og så POENG
+// eller NETTO for UT (1–9) og INN (10–18).
 //
 // Tallene kommer ferdig regnet fra den delte `buildScorecardGrid`; her tegnes
-// de bare. To valg bærer layouten:
+// de bare. **Kolonner, ikke rader:** hvert hull er én kolonne med cellene
+// stablet under hverandre, og radene står på linje fordi hver rad har fast
+// høyde. Da kan hver kolonne være ett VoiceOver-element («Hull 3, par 4, 5
+// slag, 2 poeng») i stedet for at skjermleseren leser 40 løsrevne tall.
 //
-// 1. **Kolonner, ikke rader.** Hvert hull er én kolonne med cellene stablet
-//    under hverandre, og radene står på linje fordi hver rad har fast høyde.
-//    Da kan hver kolonne være ett VoiceOver-element — «Hull 3, par 4, 5 slag,
-//    2 poeng» — i stedet for at skjermleseren leser 40 løsrevne tall.
-// 2. **Ti like kolonner som fyller bredden.** På 375 pt og bredere får hver
-//    kolonne plass til en 26 pt-form med luft rundt. Er skjermen smalere, ruller kortet
-//    sidelengs, aldri skjermen.
-//
-// #2385 la kortet på designlerretet (`Scorekort-forslag`): HULL-raden er et
-// bånd i `primary` med `onPrimary`-tall (skog og hvitt i lys drakt, som
-// designet; salvie og mørkt i mørk, der skogflaten forsvant mot kortet).
-// Radetikettene står til venstre, SLAG står i Fraunces med tonens farge,
-// poeng bedre enn netto par er grønne, og summene (`footer`) står nederst i
-// det siste kortet under en tykk strek.
+// #2385 la kortet på designlerretet (`Scorekort-forslag`), identisk:
+// - **Ett kort** med begge halvdelene og summene nederst (`footer`, under en
+//   tykk strek), og plass til stempelet over nedre høyre hjørne (`overlay`).
+// - Kolonnene er designets: etiketter på 44 pt til venstre, ni hull som deler
+//   resten, og en sumkolonne på 38 pt uten tonet bakgrunn.
+// - HULL-raden er et bånd i `primary` med `onPrimary`-tall (skog og hvitt i
+//   lys drakt; salvie og mørkt i mørk, der skogflaten forsvant mot kortet).
+//   Sumkolonnen i båndet heter «UT» og «INN», i krem i lys drakt.
+// - SLAG står i Fraunces med tonens farge i former på 22 pt; en dobbel form
+//   vokser utover (29 pt), som designets ekstra ring. Poeng bedre enn netto
+//   par er grønne. Skillelinjene står under PAR og under SLAG.
+// - Er skjermen for smal, ruller kortet sidelengs, aldri skjermen.
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ScorecardCell, ScorecardGrid as Grid, ScorecardHalf } from '../../../../../lib/scorecard/scorecardGrid';
 import { FONTS, useTheme } from '../../theme';
-import { ScoreShape } from './ScoreShape';
+import { ScoreShape, scoreShapeRings } from './ScoreShape';
 
 export type ScorecardRowKind = 'strokes' | 'net' | 'points' | 'enteredBy';
 
@@ -31,14 +32,22 @@ export interface EnteredByName {
   fullName: string;
 }
 
-// 26 og ikke 28: to firkanter i nabokolonner skal ha luft mellom seg på 390 pt.
-const SHAPE = 26;
-// Etikettkolonnen er bred nok til at «POENG» står på én linje til venstre. Da
-// blir en kolonne 27,5 pt på 375 pt; 27 er grensen før kortet ruller sidelengs.
-const MIN_COLUMN = 27;
-const LABEL_WIDTH = 46;
-const ROW_HEIGHT = 26;
-const SHAPE_ROW_HEIGHT = 34;
+/** Formene er 22 pt; hver ring til legger 7 pt utenpå (1,5 strek og 2 luft). */
+const SHAPE = 22;
+const RING_GROWTH = 7;
+/** Designets kolonner: etiketter 44, sum 38, og hullene deler resten. */
+const LABEL_WIDTH = 44;
+const SUM_WIDTH = 38;
+const MIN_COLUMN = 26;
+/** Radhøydene fra designet: båndet, PAR, SLAG (formene) og tallradene. */
+const ROW_HEIGHTS: Record<'hole' | 'par' | ScorecardRowKind, number> = {
+  hole: 28,
+  par: 31,
+  strokes: 35,
+  net: 30,
+  points: 30,
+  enteredBy: 30,
+};
 
 const ROW_LABELS: Record<'hole' | 'par' | ScorecardRowKind, string> = {
   hole: 'Hull',
@@ -54,8 +63,10 @@ const HALF_TITLES: Record<ScorecardHalf['key'], { title: string; a11y: string }>
   in: { title: 'Inn', a11y: 'Inn, hull 10 til 18' },
 };
 
-function rowHeight(kind: 'hole' | 'par' | ScorecardRowKind): number {
-  return kind === 'strokes' ? SHAPE_ROW_HEIGHT : ROW_HEIGHT;
+/** Formens ytre mål: 22 pt, og 7 pt til per ekstra ring, men aldri over 29. */
+function shapeSize(strokes: number, par: number): number {
+  const rings = scoreShapeRings(strokes, par);
+  return rings <= 1 ? SHAPE : Math.min(SHAPE + RING_GROWTH, SHAPE + RING_GROWTH * (rings - 1));
 }
 
 function holeLabel(
@@ -91,33 +102,30 @@ function sumLabel(half: ScorecardHalf, rows: readonly ScorecardRowKind[]): strin
 
 function Cell({
   kind,
-  first,
-  tint,
   corner,
   align = 'center',
   children,
 }: {
   kind: 'hole' | 'par' | ScorecardRowKind;
-  first: boolean;
-  /** Sumkolonnens bakgrunn under båndet. */
-  tint?: string;
   /** Det grønne båndet runder av hjørnet ytterst til venstre og høyre. */
   corner?: 'left' | 'right';
   align?: 'center' | 'left';
   children: ReactNode;
 }) {
   const { colors } = useTheme();
-  const band = kind === 'hole';
+  // Designets skillelinjer står under PAR og under SLAG: altså over radene
+  // etter PAR, ikke mellom båndet og PAR.
+  const ruled = kind !== 'hole' && kind !== 'par';
   return (
     <View
       style={[
         styles.cell,
         align === 'left' && styles.cellLeft,
-        { height: rowHeight(kind) },
-        band ? { backgroundColor: colors.primary } : tint ? { backgroundColor: tint } : null,
+        { height: ROW_HEIGHTS[kind] },
+        kind === 'hole' ? { backgroundColor: colors.primary } : null,
         corner === 'left' && styles.bandLeft,
         corner === 'right' && styles.bandRight,
-        first ? null : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+        ruled ? { borderTopWidth: 1, borderTopColor: colors.border } : null,
       ]}
     >
       {children}
@@ -129,12 +137,10 @@ function Half({
   half,
   rows,
   enteredBy,
-  footer,
 }: {
   half: ScorecardHalf;
   rows: readonly ScorecardRowKind[];
   enteredBy?: ReadonlyMap<number, EnteredByName>;
-  footer?: ReactNode;
 }) {
   const { colors, ui, scheme } = useTheme();
   const kinds: ('hole' | 'par' | ScorecardRowKind)[] = ['hole', 'par', ...rows];
@@ -143,16 +149,26 @@ function Half({
   const mutedNum = [styles.num, ui.num, { color: colors.muted }];
   const headStyle = [styles.head, { color: colors.muted }];
   const bandHead = [styles.head, { color: colors.onPrimary }];
-  // SUM-hodet står i krem på skogen, som i designet; i mørk drakt er båndet
+  // «UT»/«INN» står i krem på skogen, som i designet; i mørk drakt er båndet
   // salvie, og der er kremen for svak, så det følger tallene.
-  const sumHead = [styles.head, { color: scheme === 'dark' ? colors.onPrimary : colors.onStrong }];
+  const halfHead = [
+    styles.head,
+    styles.halfHead,
+    { color: scheme === 'dark' ? colors.onPrimary : colors.onStrong },
+  ];
   const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onPrimary }];
   const strokeNum = [styles.strokeNum, ui.num, { color: colors.text }];
 
   const cellValue = (cell: ScorecardCell, kind: ScorecardRowKind) => {
     if (kind === 'strokes') {
       return cell.strokes != null ? (
-        <ScoreShape strokes={cell.strokes} par={cell.par} size={SHAPE} toned tonedNumber />
+        <ScoreShape
+          strokes={cell.strokes}
+          par={cell.par}
+          size={shapeSize(cell.strokes, cell.par)}
+          toned
+          tonedNumber
+        />
       ) : (
         <Text style={mutedNum}>—</Text>
       );
@@ -186,20 +202,17 @@ function Half({
     if (kind === 'strokes' && value != null) return <Text style={strokeNum}>{value}</Text>;
     return <Text style={[...(value != null ? numStyle : mutedNum), styles.sum]}>{value ?? '—'}</Text>;
   };
-  const sumTint = colors.bg;
 
   return (
-    <View
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      testID={`scorecard-half-${half.key}`}
-    >
-      <Text
-        style={[ui.sectionTitle, styles.title]}
+    <View testID={`scorecard-half-${half.key}`}>
+      {/* Halvdelen har ingen synlig overskrift i designet («UT»/«INN» står i
+          båndet); skjermleseren får den her. */}
+      <View
+        style={styles.a11yHeader}
+        accessible
         accessibilityRole="header"
         accessibilityLabel={HALF_TITLES[half.key].a11y}
-      >
-        {HALF_TITLES[half.key].title}
-      </Text>
+      />
       <ScrollView horizontal contentContainerStyle={styles.columns} showsHorizontalScrollIndicator={false}>
         {/* Radetikettene er for øyet; kolonnene sier alt til skjermleseren. */}
         <View
@@ -209,19 +222,18 @@ function Half({
           testID={`scorecard-labels-${half.key}`}
         >
           {kinds.map((kind, index) => (
-            <Cell
-              key={kind}
-              kind={kind}
-              first={index === 0}
-              corner={index === 0 ? 'left' : undefined}
-              align="left"
-            >
-              <Text
-                style={kind === 'hole' ? bandHead : headStyle}
-                testID={`scorecard-row-label-${kind}`}
-              >
-                {ROW_LABELS[kind].toUpperCase()}
-              </Text>
+            <Cell key={kind} kind={kind} corner={index === 0 ? 'left' : undefined} align="left">
+              {/* Etiketten ligger fritt: «POENG» er litt bredere enn kolonnen,
+                  og i designet går den over kanten i stedet for å brytes. */}
+              <View style={styles.labelBox}>
+                <Text
+                  style={kind === 'hole' ? bandHead : headStyle}
+                  numberOfLines={1}
+                  testID={`scorecard-row-label-${kind}`}
+                >
+                  {ROW_LABELS[kind].toUpperCase()}
+                </Text>
+              </View>
             </Cell>
           ))}
         </View>
@@ -234,14 +246,14 @@ function Half({
             accessibilityLabel={holeLabel(cell, rows, enteredBy)}
             testID={`scorecard-col-${cell.holeNumber}`}
           >
-            <Cell kind="hole" first>
+            <Cell kind="hole">
               <Text style={bandNum}>{cell.holeNumber}</Text>
             </Cell>
-            <Cell kind="par" first={false}>
+            <Cell kind="par">
               <Text style={mutedNum}>{cell.par}</Text>
             </Cell>
             {rows.map((kind) => (
-              <Cell key={kind} kind={kind} first={false}>
+              <Cell key={kind} kind={kind}>
                 {cellValue(cell, kind)}
               </Cell>
             ))}
@@ -249,87 +261,100 @@ function Half({
         ))}
 
         <View
-          style={styles.column}
+          style={styles.sumColumn}
           accessible
           accessibilityLabel={sumLabel(half, rows)}
           testID={`scorecard-sum-${half.key}`}
         >
-          <Cell kind="hole" first corner="right">
-            <Text style={sumHead}>SUM</Text>
+          <Cell kind="hole" corner="right">
+            <Text style={halfHead}>{HALF_TITLES[half.key].title.toUpperCase()}</Text>
           </Cell>
-          <Cell kind="par" first={false} tint={sumTint}>
+          <Cell kind="par">
             <Text style={[...numStyle, styles.sum]}>{half.sum.par}</Text>
           </Cell>
           {rows.map((kind) => (
-            <Cell key={kind} kind={kind} first={false} tint={sumTint}>
+            <Cell key={kind} kind={kind}>
               {sumValue(kind)}
             </Cell>
           ))}
         </View>
       </ScrollView>
-      {footer ? (
-        <View style={[styles.footer, { borderTopColor: colors.primary }]} testID="scorecard-footer">
-          {footer}
-        </View>
-      ) : null}
     </View>
   );
 }
 
 /**
- * Kortene for én runde: ett per halvdel som har hull. `rows` er radene under
- * HULL og PAR, i den rekkefølgen de står. `footer` (summene) står nederst i det
- * siste kortet, under en tykk strek.
+ * Scorekortet for én runde: én flate med en tabell per halvdel som har hull.
+ * `rows` er radene under HULL og PAR, i den rekkefølgen de står. `footer`
+ * (summene) står nederst under en tykk strek, og `overlay` (stempelet) ligger
+ * over nedre høyre hjørne.
  */
 export function ScorecardGrid({
   grid,
   rows,
   enteredBy,
   footer,
+  overlay,
 }: {
   grid: Grid;
   rows: readonly ScorecardRowKind[];
   enteredBy?: ReadonlyMap<number, EnteredByName>;
   footer?: ReactNode;
+  overlay?: ReactNode;
 }) {
-  const last = grid.halves.length - 1;
+  const { colors } = useTheme();
   return (
-    <View style={styles.halves} testID="scorecard-grid">
-      {grid.halves.map((half, index) => (
-        <Half
-          key={half.key}
-          half={half}
-          rows={rows}
-          enteredBy={enteredBy}
-          footer={index === last ? footer : undefined}
-        />
+    <View
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      testID="scorecard-grid"
+    >
+      {grid.halves.map((half) => (
+        <Half key={half.key} half={half} rows={rows} enteredBy={enteredBy} />
       ))}
+      {footer ? (
+        <View style={[styles.footer, { borderTopColor: colors.primary }]} testID="scorecard-footer">
+          {footer}
+        </View>
+      ) : null}
+      {overlay ? (
+        <View style={styles.overlay} pointerEvents="box-none">
+          {overlay}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  halves: { gap: 12, marginTop: 8 },
+  // Designet: kortet står 12 pt fra kanten (skjermens padding er 20).
   card: {
-    borderRadius: 12,
+    marginHorizontal: -8,
+    marginTop: 4,
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    gap: 12,
   },
-  title: { marginTop: 8, marginLeft: 4, marginBottom: 2 },
+  a11yHeader: { width: 1, height: 1, position: 'absolute' },
   columns: { flexGrow: 1 },
   labelColumn: { width: LABEL_WIDTH },
   column: { flex: 1, minWidth: MIN_COLUMN },
+  sumColumn: { width: SUM_WIDTH },
   cell: { alignItems: 'center', justifyContent: 'center' },
-  cellLeft: { alignItems: 'flex-start', paddingLeft: 5 },
+  cellLeft: { alignItems: 'flex-start' },
   bandLeft: { borderTopLeftRadius: 6 },
   bandRight: { borderTopRightRadius: 6 },
   head: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 1 },
+  labelBox: { position: 'absolute', left: 6, top: 0, bottom: 0, justifyContent: 'center' },
+  halfHead: { letterSpacing: 0.8 },
   num: { fontSize: 13, fontFamily: FONTS.sans, textAlign: 'center' },
   holeNumber: { fontFamily: FONTS.sansSemiBold },
   strokeNum: { fontSize: 15, fontFamily: FONTS.serifScore, textAlign: 'center' },
   strong: { fontFamily: FONTS.sansSemiBold },
   sum: { fontFamily: FONTS.sansSemiBold },
-  footer: { borderTopWidth: 2, marginTop: 10, paddingTop: 10, paddingHorizontal: 6 },
+  footer: { borderTopWidth: 2, paddingTop: 10, paddingHorizontal: 6, paddingBottom: 2 },
+  // Stempelet står 18 pt fra høyre og stikker 34 pt ned under kortet.
+  overlay: { position: 'absolute', right: 18, bottom: -34 },
   initials: { fontSize: 11, fontFamily: FONTS.sansMedium, textAlign: 'center' },
 });

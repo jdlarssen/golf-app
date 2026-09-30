@@ -7,7 +7,8 @@
 // designet, og ruller med siden.
 //
 // `size` (#2385): scorekortets artboard har en mindre tittel (26 pt) og
-// undertekst (12 pt) enn profil-rommene. Samme komponent, to størrelser.
+// undertekst (12 pt) enn profil-rommene, i flukt med tekstkolonnen (20 pt fra
+// kanten, uten de 4 pt profilen har inn). Samme komponent, to størrelser.
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FONTS, useTheme } from '../theme';
@@ -29,7 +30,7 @@ export function PageTitle({
 }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.block}>
+    <View style={[styles.block, size === 'medium' && styles.blockMedium]}>
       <View style={styles.row}>
         <Text
           accessibilityRole="header"
@@ -53,6 +54,7 @@ export function PageTitle({
 
 const styles = StyleSheet.create({
   block: { paddingHorizontal: 4 },
+  blockMedium: { paddingHorizontal: 0 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   // Samme snitt og størrelse som tittelen på startbilletten (#2255).
   title: { flexShrink: 1, fontSize: 30, lineHeight: 35, fontFamily: FONTS.serifDisplay },

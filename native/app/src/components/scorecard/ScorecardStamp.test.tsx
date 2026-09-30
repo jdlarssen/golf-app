@@ -7,7 +7,7 @@
 // en.
 import { render, screen } from '@testing-library/react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
-import { ScorecardStamp, stampCopy } from './ScorecardStamp';
+import { ScorecardStampMark, ScorecardStatusList, stampCopy } from './ScorecardStamp';
 
 // 12:32Z; jest kjører med TZ=UTC, så klokka står som 12:32.
 const BASE: Stamp = {
@@ -53,22 +53,28 @@ describe('stampCopy', () => {
 const HIDDEN = { includeHiddenElements: true };
 
 describe('ScorecardStamp', () => {
-  it('er ett skjermleser-element, og har godkjenningslinja bare når det finnes en', async () => {
-    const { rerender } = await render(
-      <ScorecardStamp stamp={{ ...BASE, approval: { kind: 'pending' } }} ownerFullName="Kari Nordmann" />,
-    );
+  it('stempelet er ett skjermleser-element med kort dato og «TØRNY» uten klubb; sjekklista har merkene', async () => {
+    const { rerender } = await render(<ScorecardStampMark stamp={BASE} />);
 
     const stamp = screen.getByTestId('scorecard-stamp');
     expect(stamp.props.accessible).toBe(true);
     expect(stamp.props.accessibilityLabel).toBe('Signert, 27. september 2026 kl. 12:32');
+    expect(screen.getByTestId('scorecard-stamp-date')).toHaveTextContent('27.09 · 12:32');
+    expect(screen.getByText('TØRNY')).toBeTruthy();
+    await rerender(<ScorecardStampMark stamp={BASE} clubName="Byneset GK" />);
+    expect(screen.getByText('BYNESET GK')).toBeTruthy();
+
     // Sjekklista (#2385): hvem som signerte er gjort, godkjenningen venter, og
     // låsingen gjenstår.
+    await rerender(
+      <ScorecardStatusList stamp={{ ...BASE, approval: { kind: 'pending' } }} ownerFullName="Kari Nordmann" />,
+    );
     expect(screen.getByTestId('scorecard-signed-by')).toHaveTextContent('Signert av deg, Kari Nordmann');
     expect(screen.getByTestId('scorecard-signed-by-done', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('scorecard-approval-pending', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('scorecard-lock-pending', HIDDEN)).toBeTruthy();
 
-    await rerender(<ScorecardStamp stamp={BASE} ownerFullName="Kari Nordmann" />);
+    await rerender(<ScorecardStatusList stamp={BASE} ownerFullName="Kari Nordmann" />);
     expect(screen.queryByTestId('scorecard-approval')).toBeNull();
   });
 });

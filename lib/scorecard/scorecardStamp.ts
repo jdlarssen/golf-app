@@ -63,6 +63,7 @@ function resolveApproval(
   gameMode: GameMode,
   requirePeerApproval: boolean,
   locked: boolean,
+  markerName: 'first' | 'full',
 ): StampApproval {
   if (owner.approved_at != null) {
     const approverId = owner.approved_by_user_id;
@@ -73,7 +74,11 @@ function resolveApproval(
     // one-flight line; the label follows the rule, not the history.
     if (isFlightMate(players, gameMode, approverId, owner.user_id)) {
       const approver = players.find((p) => p.user_id === approverId);
-      const name = approver ? firstName(approver.nickname ?? approver.name) : null;
+      const name = !approver
+        ? null
+        : markerName === 'full'
+          ? (approver.name ?? approver.nickname)
+          : firstName(approver.nickname ?? approver.name);
       // A flight mate without any name is still not the organizer.
       return name ? { kind: 'marker', name } : { kind: 'approved' };
     }
@@ -96,6 +101,11 @@ export function resolveScorecardStamp(opts: {
   gameMode: GameMode;
   gameStatus: string;
   requirePeerApproval: boolean;
+  /**
+   * How the marker is named: `first` (the default) is the first name or the
+   * nickname; `full` is the full name, as on the app's scorecard canvas (#2385).
+   */
+  markerName?: 'first' | 'full';
 }): ScorecardStamp | null {
   const owner = opts.players.find((p) => p.user_id === opts.ownerUserId);
   if (!owner || owner.submitted_at == null || owner.withdrawn_at != null) return null;
@@ -113,7 +123,14 @@ export function resolveScorecardStamp(opts: {
   return {
     signedAt: owner.submitted_at,
     signedBy,
-    approval: resolveApproval(owner, opts.players, opts.gameMode, opts.requirePeerApproval, locked),
+    approval: resolveApproval(
+      owner,
+      opts.players,
+      opts.gameMode,
+      opts.requirePeerApproval,
+      locked,
+      opts.markerName ?? 'first',
+    ),
     locked,
   };
 }
