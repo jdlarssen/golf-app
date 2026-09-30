@@ -88,6 +88,8 @@ describe('Friends', () => {
     }
     // E-postfeltet står bak «På e-post».
     expect(screen.queryByTestId('friends-add-by-email')).toBeNull();
+    // «Sist spilt først» står ved etiketten også med én venn (designet).
+    expect(screen.getByTestId('friends-sort-note')).toBeTruthy();
 
     await act(async () => {
       fireEvent.press(screen.getByTestId('friends-accept-ola'));

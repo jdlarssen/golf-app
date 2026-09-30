@@ -249,8 +249,11 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
   const { friends, incoming, outgoing, suggestions, friendCode } = load.data;
   const locked = busy !== null;
   const now = new Date();
-  // Serveren setter vennene etter siste runde når den har tallene.
-  const sortedByLastPlayed = friends.length > 1 && friends.some((f) => f.stats?.lastPlayedAt);
+  // Serveren setter vennene etter siste runde når den har tallene. Designet
+  // viser «Sist spilt først» ved etiketten uansett antall venner (Profil v2,
+  // orkestratoren 30.09), men bare når tallene finnes, så linja ikke lover en
+  // rekkefølge lista ikke har.
+  const sortedByLastPlayed = friends.some((f) => f.stats?.lastPlayedAt);
 
   return (
     <>
@@ -497,7 +500,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
           <View style={[styles.sectionHead, styles.label]}>
             <Text style={ui.kicker}>{friendsSectionTitle(friends.length)}</Text>
             {sortedByLastPlayed ? (
-              <Text style={[styles.sortNote, { color: colors.muted }]}>
+              <Text style={[styles.sortNote, { color: colors.muted }]} testID="friends-sort-note">
                 {FRIENDS_TEXT.sortedByLastPlayed}
               </Text>
             ) : null}
