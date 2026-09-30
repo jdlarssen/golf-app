@@ -18,7 +18,7 @@ import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, grossChip, holesPlayedChip } from '../../lib/holesCopy';
 import { FONTS, useTheme } from '../../theme';
 import { ScoreShape } from '../scorecard/ScoreShape';
-import { HoleHeader, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
+import { HoleHeader, HolesFooter, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
 
 type Metric = 'points' | 'net';
 
@@ -32,12 +32,15 @@ export function SoloScorecardView({
   metric,
   subtitle,
   players,
+  finished,
 }: {
   card: SoloScorecard;
   /** Poeng (stableford, flest er best) eller netto (slagspill, lavest er best). */
   metric: Metric;
   subtitle: string;
   players: readonly BundlePlayer[];
+  /** Runden er ferdig: bunnteksten sier «Vel spilt!». */
+  finished: boolean;
 }) {
   const { colors, ui } = useTheme();
   return (
@@ -93,6 +96,7 @@ export function SoloScorecardView({
         players={players}
         testID="hole-by-hole-back9"
       />
+      <HolesFooter finished={finished} />
     </View>
   );
 }

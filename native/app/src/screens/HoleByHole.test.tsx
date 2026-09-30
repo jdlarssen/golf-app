@@ -19,15 +19,21 @@ const mockScreen: {
   scores: unknown[];
   seed: () => Promise<number>;
   extras: Record<string, unknown>;
+  choicesFailed: boolean;
 } = {
   bundle: null,
   scores: [],
   seed: async () => 0,
   extras: {},
+  choicesFailed: false,
 };
 // Valgene (Wolf) hentes med fokus og polling; her leverer testen dem selv.
 jest.mock('../lib/useChoices', () => ({
-  useGameChoices: () => ({ extras: mockScreen.extras, refresh: async () => undefined }),
+  useGameChoices: () => ({
+    extras: mockScreen.extras,
+    refresh: async () => undefined,
+    failed: mockScreen.choicesFailed,
+  }),
 }));
 jest.mock('../lib/useGameData', () => ({
   useGameBundle: () => ({ bundle: mockScreen.bundle, loading: false }),
@@ -86,6 +92,7 @@ describe('hentingen av slagene', () => {
   beforeEach(() => {
     mockReload.mockClear();
     mockScreen.extras = {};
+    mockScreen.choicesFailed = false;
   });
   const props = { route: { params: { gameId: 'g1' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
   const finished = () =>
@@ -161,7 +168,7 @@ describe('Wolf (#2255 PR 3b)', () => {
   ];
   const props = { route: { params: { gameId: 'gw' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
 
-  it('venter på valgene før noe regnes, i stedet for «Venter» på hvert hull', async () => {
+  it('venter på valgene før noe regnes: uten dem kan motoren ikke regne Wolf', async () => {
     mockScreen.bundle = wolfBundle();
     mockScreen.scores = wolfScores;
     mockScreen.seed = async () => 0;
@@ -170,6 +177,19 @@ describe('Wolf (#2255 PR 3b)', () => {
     await waitFor(() => expect(mockReload).toHaveBeenCalled());
     expect(screen.getByTestId('hole-by-hole-spinner')).toBeTruthy();
     expect(screen.queryByTestId('hole-by-hole')).toBeNull();
+  });
+
+  it('uten nett, og valgene aldri hentet: en ærlig beskjed, ikke et hjul som aldri stopper', async () => {
+    mockScreen.bundle = wolfBundle();
+    mockScreen.scores = wolfScores;
+    mockScreen.seed = async () => 0;
+    mockScreen.extras = {};
+    mockScreen.choicesFailed = true;
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(screen.getByTestId('hole-by-hole-choices-missing')).toBeTruthy());
+    expect(screen.queryByTestId('hole-by-hole-spinner')).toBeNull();
+    expect(screen.queryByTestId('hole-by-hole')).toBeNull();
+    mockScreen.choicesFailed = false;
   });
 
   it('med valgene: ett kort per hull, ulven, valget og utfallet, og ulvens side først', async () => {
@@ -188,6 +208,8 @@ describe('Wolf (#2255 PR 3b)', () => {
     expect(rows.slice(0, 2)).toEqual(['hole-by-hole-row-1-a', 'hole-by-hole-row-1-b']);
     // Ingen innsats over 1 på hull 1.
     expect(screen.queryByTestId('hole-by-hole-stake-1')).toBeNull();
+    // Bunnteksten som på webben: runden er ferdig.
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('Vel spilt!');
   });
 });
 
