@@ -72,7 +72,10 @@ import {
 } from '../components/scorecard/ScorecardGrid';
 import { kickerHeader } from '../components/KickerHeader';
 import { ScorecardHeader } from '../components/scorecard/ScorecardHeader';
-import { ScorecardStamp } from '../components/scorecard/ScorecardStamp';
+import {
+  ScorecardStampMark,
+  ScorecardStatusList,
+} from '../components/scorecard/ScorecardStamp';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import type { BundlePlayer } from '../data/gameBundle';
 import { getDb, listQueue } from '../data/db';
@@ -246,7 +249,6 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const headerLine = scorecardHeaderLine({
     courseName: bundle.courseName,
     teeBoxName: bundle.teeBoxName,
-    teeGender: me.player.teeGender,
     gameMode: bundle.game.gameMode,
     handicapPart: scorecardHandicapPart({
       game: bundle.game,
@@ -264,6 +266,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     gameMode: mode,
     gameStatus: bundle.game.status,
     requirePeerApproval: bundle.game.requirePeerApproval,
+    // Designet (#2385): «Markør: Jonas Berg har godkjent», fullt navn.
+    markerName: 'full',
   });
 
   const canSubmit =
@@ -366,15 +370,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     void doSubmit();
   };
 
-  // Under et stempel sier «Kortet er levert» seg selv (#2262); da står bare
-  // veien videre for en runde som pågår (#2220).
+  // Under et stempel sier «Kortet er levert» seg selv (#2262), og designet
+  // har ingen linje til under sjekklista (#2385).
   const readonlyText =
     me.submitted_at == null
       ? 'Kortet kan ikke leveres herfra nå.'
       : stamp != null
-        ? bundle.game.status === 'active'
-          ? reopenHint(bundle.game.createdBy === userId)
-          : null
+        ? null
         : bundle.game.status === 'active'
           ? `Kortet er levert. Dette er lesevisning. ${reopenHint(bundle.game.createdBy === userId)}`
           : 'Kortet er levert. Dette er lesevisning.';
@@ -398,7 +400,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     ) : null;
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="scorecard-screen">
+    <ScrollView contentContainerStyle={[ui.scroll, styles.scroll]} testID="scorecard-screen">
       {teamMode ? (
         <HeaderKicker navigation={navigation} kicker={teamScorecardKicker(myTeamCard?.label)} />
       ) : null}
@@ -411,10 +413,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         footer={
           <ScorecardTotals
             totals={grid.totals}
-            showNet={valueRows.includes('net')}
+            // Designet har BRUTTO · NETTO også i stableford; en blind runde
+            // skjuler netto som før (#2219).
+            showNet={!revealActive}
             showPoints={valueRows.includes('points')}
           />
         }
+        overlay={stamp ? <ScorecardStampMark stamp={stamp} /> : null}
       />
       {showEnteredBy ? (
         <Text style={ui.muted} testID="scorecard-entered-by-note">
@@ -422,7 +427,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
         </Text>
       ) : null}
 
-      {stamp ? <ScorecardStamp stamp={stamp} ownerFullName={me.player.name} /> : null}
+      {stamp ? <ScorecardStatusList stamp={stamp} ownerFullName={me.player.name} /> : null}
 
       {canSubmit ? (
         <>
@@ -526,6 +531,8 @@ function HeaderKicker({
 }
 
 const styles = StyleSheet.create({
+  // Designet: tittelen står rett under toppen.
+  scroll: { paddingTop: 4 },
   buttonDisabled: { opacity: 0.5 },
   // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
   // ned til lever-knappen, over kravet på 24.

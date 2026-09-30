@@ -31,7 +31,7 @@ const RING_W = 1.5;
 const ringSpace = (count: number) => (count <= 2 ? 2 : 0.5);
 
 /** Tallet krymper med ringene rundt; uten form står det litt større. */
-const NUMBER_SIZE = [15, 14, 13, 11, 9] as const;
+const NUMBER_SIZE = [15, 14, 14, 11, 9] as const;
 
 const RINGS: Record<ShapeKind, { count: number; round: boolean }> = {
   none: { count: 0, round: false },
@@ -43,6 +43,11 @@ const RINGS: Record<ShapeKind, { count: number; round: boolean }> = {
   'triple-square': { count: 3, round: false },
   'quadruple-square': { count: 4, round: false },
 };
+
+/** Hvor mange ringer slaget får mot par (0 for par). */
+export function scoreShapeRings(strokes: number, par: number): number {
+  return RINGS[scoreShape(strokes, par)].count;
+}
 
 /** Slaget på ett hull, i formen det har mot par. */
 export function ScoreShape({

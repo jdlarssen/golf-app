@@ -1,5 +1,5 @@
-// #2262: hodet på scorekortet — «Byneset · Gul tee (dame) · Stableford ·
-// banehandicap 15».
+// #2262: hodet på scorekortet — «Byneset North · Gul tee · Stableford ·
+// banehandicap 15» (#2385: som designet, uten kjønn).
 //
 // Handicapdelen viser tallet NETTO- og POENG-raden faktisk er regnet med, ikke
 // alltid banehandicapen. I fourball med 85 % er slagene fordelt fra 17, ikke
@@ -11,7 +11,6 @@ import {
   isScrambleFamily,
   MODE_LABELS,
   type GameMode,
-  type ScoringGender,
 } from '../../../../lib/scoring/modes/types';
 import type { BundleGame } from '../data/gameBundle';
 import { playerStrokeHandicapFor } from './scoringContext';
@@ -78,24 +77,18 @@ export function handicapPartText(part: HandicapPart): string {
   return `${PART_LABELS[part.kind]} ${isPlus ? '+' : ''}${magnitude}`;
 }
 
-const GENDER_LABELS: Record<ScoringGender, string> = {
-  mens: 'herre',
-  ladies: 'dame',
-  juniors: 'junior',
-};
-
-/** Linja under spillnavnet. Det som mangler, hoppes over. */
+/**
+ * Linja under spillnavnet, som designet: «Byneset North · Gul tee ·
+ * Stableford · banehandicap 15» (#2385, uten kjønn i parentes). Det som
+ * mangler, hoppes over.
+ */
 export function scorecardHeaderLine(opts: {
   courseName: string | null;
   teeBoxName: string | null;
-  teeGender: string;
   gameMode: string;
   handicapPart: HandicapPart | null;
 }): string {
-  const gender = GENDER_LABELS[opts.teeGender as ScoringGender];
-  const tee = opts.teeBoxName
-    ? `${opts.teeBoxName} tee${gender ? ` (${gender})` : ''}`
-    : null;
+  const tee = opts.teeBoxName ? `${opts.teeBoxName} tee` : null;
   return [
     opts.courseName,
     tee,

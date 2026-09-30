@@ -38,7 +38,12 @@ function roster(kari: Partial<StampPlayer> = {}, extra: StampPlayer[] = []): Sta
 
 function stamp(
   players: StampPlayer[],
-  opts: { gameMode?: GameMode; gameStatus?: string; requirePeerApproval?: boolean } = {},
+  opts: {
+    gameMode?: GameMode;
+    gameStatus?: string;
+    requirePeerApproval?: boolean;
+    markerName?: 'first' | 'full';
+  } = {},
 ) {
   return resolveScorecardStamp({
     ownerUserId: 'kari',
@@ -46,6 +51,7 @@ function stamp(
     gameMode: opts.gameMode ?? 'stableford',
     gameStatus: opts.gameStatus ?? 'active',
     requirePeerApproval: opts.requirePeerApproval ?? true,
+    markerName: opts.markerName,
   });
 }
 
@@ -102,6 +108,17 @@ describe('resolveScorecardStamp — approval line', () => {
   it('marker: a flight mate approved, by first name', () => {
     const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'anders' });
     expect(stamp(players)?.approval).toEqual({ kind: 'marker', name: 'Anders' });
+  });
+
+  // #2385: the app's scorecard shows the marker's full name, as on the design
+  // canvas. The web keeps the first name or nickname (the default).
+  it('marker: the full name when asked for it, even with a nickname', () => {
+    const players = roster({ approved_at: SIGNED_AT, approved_by_user_id: 'anders' });
+    players[1] = { ...players[1], nickname: 'Andy' };
+    expect(stamp(players, { markerName: 'full' })?.approval).toEqual({
+      kind: 'marker',
+      name: players[1].name,
+    });
   });
 
   it('marker: uses the nickname when there is one', () => {

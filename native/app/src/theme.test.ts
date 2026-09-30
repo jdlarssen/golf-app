@@ -102,6 +102,13 @@ describe('PALETTES', () => {
   });
 });
 
+describe('withAlpha', () => {
+  it('gjør en #RRGGBB-farge om til rgba med dekningen', () => {
+    expect(theme.withAlpha('#1B4332', 0.75)).toBe('rgba(27, 67, 50, 0.75)');
+    expect(theme.withAlpha('#FFFFFF', 0.86)).toBe('rgba(255, 255, 255, 0.86)');
+  });
+});
+
 describe('FONTS', () => {
   it('names the six loaded faces', () => {
     expect(FONTS).toEqual({

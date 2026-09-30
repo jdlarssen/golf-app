@@ -1,4 +1,4 @@
-// #2262: hodet på scorekortet — «Byneset · Gul tee (dame) · Stableford ·
+// #2262: hodet på scorekortet — «Byneset North · Gul tee · Stableford ·
 // banehandicap 15».
 //
 // Handicapdelen er det som prøves: hodet skal vise tallet NETTO- og POENG-raden
@@ -88,16 +88,16 @@ describe('handicapPartText', () => {
 });
 
 describe('scorecardHeaderLine', () => {
-  it('setter sammen bane, tee med kjønn, format og handicap', () => {
+  // #2385: som designet, uten kjønn i parentes.
+  it('setter sammen bane, tee, format og handicap', () => {
     expect(
       scorecardHeaderLine({
-        courseName: 'Byneset',
+        courseName: 'Byneset North',
         teeBoxName: 'Gul',
-        teeGender: 'ladies',
         gameMode: 'stableford',
         handicapPart: { kind: 'course', value: 15 },
       }),
-    ).toBe('Byneset · Gul tee (dame) · Stableford · banehandicap 15');
+    ).toBe('Byneset North · Gul tee · Stableford · banehandicap 15');
   });
 
   it('hopper over det som mangler', () => {
@@ -105,7 +105,6 @@ describe('scorecardHeaderLine', () => {
       scorecardHeaderLine({
         courseName: null,
         teeBoxName: null,
-        teeGender: 'mens',
         gameMode: 'solo_strokeplay',
         handicapPart: null,
       }),

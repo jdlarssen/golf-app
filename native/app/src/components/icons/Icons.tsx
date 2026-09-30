@@ -22,16 +22,7 @@
 //
 // Dette er appens ENESTE import-flate for `react-native-svg`.
 import type { ReactNode } from 'react';
-import Svg, {
-  Circle,
-  Defs,
-  Ellipse,
-  Line,
-  Path,
-  Rect,
-  Text as SvgText,
-  TextPath,
-} from 'react-native-svg';
+import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
 
 export type IconProps = {
   color: string;
@@ -39,6 +30,8 @@ export type IconProps = {
   /** Kun for ikon som står alene. Uten den er ikonet dekor. */
   accessibilityLabel?: string;
   testID?: string;
+  /** Streken i 24-rutenettet; 1,5 som standard (#2385: haken i sjekklista er 2,4). */
+  strokeWidth?: number;
 };
 
 function LineIcon({
@@ -46,6 +39,7 @@ function LineIcon({
   size = 24,
   accessibilityLabel,
   testID,
+  strokeWidth = 1.5,
   children,
 }: IconProps & { children: ReactNode }) {
   const decorative = accessibilityLabel == null;
@@ -56,7 +50,7 @@ function LineIcon({
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
-      strokeWidth={1.5}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       testID={testID}
@@ -165,59 +159,6 @@ export const ChevronIcon = ({ up = false, ...props }: IconProps & { up?: boolean
     <Path d={up ? 'M 6 15 L 12 9 L 18 15' : 'M 6 9 L 12 15 L 18 9'} />
   </LineIcon>
 );
-
-/**
- * Ringene i scorekortets stempel (#2385, designlerretet): en ytre ring på 2 og
- * en indre på 1,5, og `kicker` i sperrede versaler langs den øvre buen. Alltid
- * dekor: stempelet rundt har etiketten, og ordene i midten er vanlig tekst.
- */
-export function StampRing({
-  size,
-  color,
-  kicker,
-  fontFamily,
-  testID,
-}: {
-  size: number;
-  color: string;
-  kicker: string;
-  fontFamily: string;
-  testID?: string;
-}) {
-  const c = size / 2;
-  const outer = c - 1;
-  const inner = c - 6.25;
-  // Grunnlinja for buen: bokstavene står utover mot den indre ringen.
-  const arc = inner - 10;
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      fill="none"
-      testID={testID}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      <Circle cx={c} cy={c} r={outer} stroke={color} strokeWidth={2} />
-      <Circle cx={c} cy={c} r={inner} stroke={color} strokeWidth={1.5} />
-      <Defs>
-        <Path id="stamp-arc" d={`M ${c - arc} ${c} A ${arc} ${arc} 0 0 1 ${c + arc} ${c}`} />
-      </Defs>
-      <SvgText
-        fill={color}
-        fontSize={9}
-        fontFamily={fontFamily}
-        letterSpacing={1.8}
-        textAnchor="middle"
-      >
-        <TextPath href="#stamp-arc" startOffset="50%">
-          {kicker}
-        </TextPath>
-      </SvgText>
-    </Svg>
-  );
-}
 
 /** Tilbake-pila i toppen (#2385, designlerretet): en bar vinkel mot venstre. */
 export const TilbakeIcon = (props: IconProps) => (
