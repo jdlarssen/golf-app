@@ -131,6 +131,11 @@ export const PROFILE_TEXT = {
   /** «Handicap ikke satt» for skjermleseren, der kortet viser «–». */
   hcpNotSetSpoken: 'ikke satt',
   menuNotificationsTheme: 'Varsler og tema',
+  /**
+   * Tittelen på siden menyraden «Varsler og tema» åpner: «Varsler», som i
+   * designet (Profil v2). Temaet står nederst på samme side.
+   */
+  notificationsHeading: 'Varsler',
   menuAccount: 'Personvern og konto',
   // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.
   themeSystem: 'Følg telefonen',
