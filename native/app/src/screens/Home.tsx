@@ -10,8 +10,9 @@
 // ikke om runden. De bor i profil-rommet nå. Hjem handler igjen bare om spill.
 //
 // #2385: Hjem har ingen navigasjonslinje (designlerretet). Veien til
-// profil-rommet er lenka «Profil» til høyre på datolinja, til bunnmenyen kommer
-// (eierens svar 29.09: «Profil står oppe til høyre til da»).
+// profil-rommet er HCP-pillen oppe til høyre, til bunnmenyen kommer (Hjem v2,
+// eierens svar 30.09: «Trykk på HCP-pillen»). Uten handicap står lenka
+// «Profil» der pillen skulle stått, så profilen aldri blir uten dør.
 //
 // #2254 gjorde Hjem til startboden. Fra toppen: datoen, hilsenen med
 // HCP-pillen, heltekortet for runden du er midt i (med godkjenningsraden
@@ -64,7 +65,7 @@ import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, useTheme } from '../theme';
+import { FONTS, frauncesLine, useTheme } from '../theme';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
@@ -205,11 +206,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       contentContainerStyle={[ui.scroll, styles.scroll, { paddingTop: insets.top + 16 }]}
       testID="home-screen"
     >
-      <Top
-        profile={profile}
-        onProfile={() => navigation.navigate('Profile')}
-        onHcp={() => navigation.navigate('Profile')}
-      />
+      <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
 
       {empty ? (
         // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
@@ -317,21 +314,14 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 }
 
 /**
- * Datoen med «Profil» til høyre, og under den «Hei, Sigrid.» med HCP-pillen,
- * som på webbens Hjem. Fornavnet er webbens `firstName`; pillen vises bare når
- * både handicap og dato finnes (webbens regel), og kanten blir gull når
- * handicapet er gammelt (`isHandicapStale`). Både lenka og pillen åpner
- * profil-rommet, der handicapet oppdateres. Uten profil står datoen og lenka.
+ * Datoen og hilsenen i én kolonne, med HCP-pillen til høyre midt på begge
+ * linjene, som i designet. Fornavnet er webbens `firstName`; pillen vises bare
+ * når både handicap og dato finnes (webbens regel), og kanten blir gull når
+ * handicapet er gammelt (`isHandicapStale`). Pillen åpner profil-rommet, der
+ * handicapet oppdateres. Uten pille (ingen handicap, eller profilen er ikke
+ * hentet) står lenka «Profil» på samme sted.
  */
-function Top({
-  profile,
-  onProfile,
-  onHcp,
-}: {
-  profile: OwnProfile | null;
-  onProfile: () => void;
-  onHcp: () => void;
-}) {
+function Top({ profile, onProfile }: { profile: OwnProfile | null; onProfile: () => void }) {
   const { colors } = useTheme();
   const name = profile ? (firstName(profile.name) ?? HOME_TEXT.playerFallback) : null;
   const hcp =
@@ -339,17 +329,39 @@ function Top({
       ? formatHcpNb(profile.hcpIndex)
       : null;
   const stale = hcp !== null && isHandicapStale(profile?.handicapUpdatedAt ?? null);
+  const now = new Date();
   return (
     <View style={styles.top}>
-      <View style={styles.topRow}>
+      <View style={styles.topText}>
         <Text style={[styles.dateLine, { color: colors.muted }]} testID="home-date">
-          {formatWeekdayDayMonth(new Date())}
+          {formatWeekdayDayMonth(now)}
         </Text>
+        {name !== null ? (
+          <Text style={[styles.greeting, { color: colors.text }]} testID="home-greeting">
+            {greeting(name, now)}
+          </Text>
+        ) : null}
+      </View>
+      {hcp !== null ? (
+        <Pressable
+          onPress={onProfile}
+          hitSlop={HCP_SLOP}
+          accessibilityRole="link"
+          accessibilityLabel={hcpA11yLabel(hcp)}
+          style={[
+            styles.hcpPill,
+            { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
+          ]}
+          testID="open-profile"
+        >
+          <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+          <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+        </Pressable>
+      ) : (
         <Pressable
           onPress={onProfile}
           accessibilityRole="link"
-          // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på
-          // uten å skyve hilsenen ned.
+          // Lenka er én liten tekstlinje; slakken gir den 44 pt å treffe på.
           hitSlop={PROFILE_SLOP}
           testID="open-profile"
         >
@@ -357,32 +369,7 @@ function Top({
             {PROFILE_TEXT.heading}
           </Text>
         </Pressable>
-      </View>
-      <View style={styles.topRow}>
-        {name !== null ? (
-          <Text style={[styles.greeting, { color: colors.text }]} testID="home-greeting">
-            {greeting(name)}
-          </Text>
-        ) : null}
-        {hcp !== null ? (
-          <Pressable
-            onPress={onHcp}
-            hitSlop={HCP_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel={hcpA11yLabel(hcp)}
-            style={[
-              styles.hcpPill,
-              { backgroundColor: colors.surface, borderColor: stale ? colors.accent : colors.border },
-            ]}
-            testID="home-hcp"
-          >
-            <View style={styles.hcpInner}>
-              <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-              <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
-            </View>
-          </Pressable>
-        ) : null}
-      </View>
+      )}
     </View>
   );
 }
@@ -448,40 +435,40 @@ const TEXT_INSET = 4;
 /** «Profil» er rundt 15 pt høy og 35 bred; slakken gir minst 44 pt å treffe på. */
 const PROFILE_SLOP = { top: 15, bottom: 15, left: 12, right: 12 };
 
-/** HCP-pillen er rundt 34 pt høy; slakken gir 44 pt å treffe på. */
-const HCP_SLOP = { top: 5, bottom: 5, left: 5, right: 5 };
+/** HCP-pillen er rundt 40 pt høy; slakken gir 44 pt å treffe på. */
+const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
-  top: { marginHorizontal: TEXT_INSET },
-  topRow: {
+  // Pillen står midt på dato og hilsen sammen (designets `align-items: center`).
+  top: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+    marginHorizontal: TEXT_INSET,
   },
-  dateLine: { flexShrink: 1, fontSize: 12, fontFamily: FONTS.sans },
-  // Samme høyde som datoen, så lenka ikke gjør datolinja høyere.
+  topText: { flexShrink: 1 },
+  dateLine: { fontSize: 12, fontFamily: FONTS.sans },
   profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-  greeting: { flexShrink: 1, fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
-  // Ikke høyere enn hilsenlinja (rundt 34 pt), så raden ikke skyver hilsenen
-  // ned og datoen står tett over den som i designet; `hitSlop` gir 44 pt å
-  // treffe på.
+  greeting: { fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
   hcpPill: {
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
   },
-  hcpInner: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   hcpLabel: {
     fontSize: 10,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
-  hcpValue: { fontSize: 18, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  // Nettleserens linjeboks for Fraunces 18 er 23 pt; da blir pillen 41 høy.
+  hcpValue: { ...frauncesLine(18, 23), fontFamily: FONTS.serifScore },
   empty: { alignItems: 'center', gap: 16, marginVertical: 8 },
   emptyText: { textAlign: 'center' },
   // 22 pt luft over (14 + mellomrommet i lista) og 8 under, som i designet.
