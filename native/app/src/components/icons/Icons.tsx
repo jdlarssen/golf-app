@@ -279,9 +279,17 @@ export function HoleRing({
   );
 }
 
-/** Designets stiplede sirkel: 14 streker på 3 pt, som nettleseren tegner `1.5px dashed` på 22 pt. */
+/**
+ * Designets stiplede sirkel slik nettleseren tegner `1.5px dashed` rundt 22 pt:
+ * 14 streker på 3 pt, som i praksis er 1 pt tykke, og der én strek står midt
+ * på toppen. Målt i Chromium både i 2x og 3x (#2385).
+ */
+const RING = 22;
+const RING_STROKE = 1;
 const DASHES = 14;
 const DASH = 3;
+/** Hvor langt mønsteret er dreid med klokka, så strekene står der Chromium setter dem. */
+const DASH_PHASE = 10.4;
 
 /**
  * Den stiplede sirkelen for et steg som gjenstår (#2385, sjekklista under
@@ -289,25 +297,15 @@ const DASH = 3;
  * enn nettleseren, så sirkelen er tegnet her med designets mønster. Alltid
  * dekor: teksten ved siden av sier det samme.
  */
-export function DashedRing({
-  color,
-  size = 22,
-  strokeWidth = 1.5,
-  testID,
-}: {
-  color: string;
-  size?: number;
-  strokeWidth?: number;
-  testID?: string;
-}) {
-  const center = size / 2;
-  const radius = (size - strokeWidth) / 2;
+export function DashedRing({ color, testID }: { color: string; testID?: string }) {
+  const center = RING / 2;
+  const radius = (RING - RING_STROKE) / 2;
   const period = (2 * Math.PI * radius) / DASHES;
   return (
     <Svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
+      width={RING}
+      height={RING}
+      viewBox={`0 0 ${RING} ${RING}`}
       fill="none"
       testID={testID}
       accessibilityElementsHidden
@@ -318,8 +316,9 @@ export function DashedRing({
         cy={center}
         r={radius}
         stroke={color}
-        strokeWidth={strokeWidth}
+        strokeWidth={RING_STROKE}
         strokeDasharray={`${DASH} ${period - DASH}`}
+        transform={`rotate(${DASH_PHASE} ${center} ${center})`}
       />
     </Svg>
   );
