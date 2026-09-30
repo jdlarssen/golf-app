@@ -71,6 +71,18 @@ export type ThemeColors = {
    * skogen.
    */
   live: string;
+  /**
+   * Skillelinja mellom radene i scorekortet (#2385, designlerretet) — webbens
+   * `--row-divider-warm`, varmere enn `border`.
+   */
+  rowDivider: string;
+  /** Det som ennå ikke er tastet (#2385): stiplede sirkler — webbens `--score-unset-fg`. */
+  scoreUnsetFg: string;
+  /**
+   * Den varme kremen designet bruker for små ord på skogflaten (#2385: «UT»
+   * og «INN» i scorekortets bånd). Lik i begge draktene, som `live`.
+   */
+  onStrongSoft: string;
 };
 
 /**
@@ -102,6 +114,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#7D6224',
     trackBg: '#EFE9DA',
     live: '#7DAA8A',
+    rowDivider: '#EDE6D2',
+    scoreUnsetFg: '#9A8F7C',
+    onStrongSoft: '#ECE5D2',
   },
   dark: {
     bg: '#14201A',
@@ -124,6 +139,9 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#D4B870',
     trackBg: '#243429',
     live: '#7DAA8A',
+    rowDivider: '#2F3F34',
+    scoreUnsetFg: '#9A9180',
+    onStrongSoft: '#ECE5D2',
   },
 };
 
@@ -174,6 +192,10 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   trackBg: '#FFFFFF',
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
+  // Sollys: svarte streker og ren kontrast, som resten av drakten.
+  rowDivider: '#000000',
+  scoreUnsetFg: '#000000',
+  onStrongSoft: '#F0EDE5',
 };
 
 /**
