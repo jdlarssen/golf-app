@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  MAX_TREND_ROUNDS,
   buildScoringTrend,
+  compareRecentForm,
+  isNewRecord,
   summarizeTrendRounds,
   type TrendRound,
 } from './scoringTrend';
@@ -167,5 +170,133 @@ describe('summarizeTrendRounds (#949)', () => {
     const s = summarizeTrendRounds([r(88, 72)]);
     expect(s.brutto).toEqual({ start: 88, now: 88, best: 88 });
     expect(s.netto).toEqual({ start: 72, now: 72, best: 72 });
+  });
+});
+
+// #2265: appens formkurve (Rundedagboka) snur kurven og tegner designets
+// geometri. Valgene er additive; standarden over står uendret for webben.
+describe('buildScoringTrend — invertY (#2265, better rounds sit higher)', () => {
+  it('maps a lower score to a SMALLER svg-y than a higher score', () => {
+    const g = buildScoringTrend([r(95), r(80)], { ...SQUARE, invertY: true })!;
+    const [worst, best] = g.bruttoPoints;
+    expect(best.y).toBeLessThan(worst.y);
+  });
+
+  it('mirrors the default direction inside the same box', () => {
+    const rounds = [r(92), r(88), r(90)];
+    const plain = buildScoringTrend(rounds, SQUARE)!;
+    const flipped = buildScoringTrend(rounds, { ...SQUARE, invertY: true })!;
+    flipped.bruttoPoints.forEach((p, i) => {
+      expect(p.x).toBe(plain.bruttoPoints[i].x);
+      expect(p.y).toBeCloseTo(100 - plain.bruttoPoints[i].y, 10);
+    });
+  });
+
+  it('keeps the best-round marker on the earliest lowest score', () => {
+    const g = buildScoringTrend([r(84), r(90), r(84)], { ...SQUARE, invertY: true })!;
+    expect(g.bruttoBestPoint).toEqual(g.bruttoPoints[0]);
+  });
+});
+
+describe('buildScoringTrend — padDomain false (#2265, the design geometry)', () => {
+  const DESIGN = {
+    width: 326,
+    height: 124,
+    padding: { top: 24, right: 14, bottom: 28, left: 12 },
+    invertY: true,
+    padDomain: false,
+  };
+
+  it('puts the best round on the top line and the worst on the bottom line', () => {
+    const g = buildScoringTrend([r(92), r(87), r(82)], DESIGN)!;
+    expect(g.bruttoPoints.map((p) => p.y)).toEqual([96, 60, 24]);
+    expect(g.yMin).toBe(82);
+    expect(g.yMax).toBe(92);
+  });
+
+  it('runs x from the left padding to width minus the right padding', () => {
+    const g = buildScoringTrend([r(92), r(87), r(82)], DESIGN)!;
+    expect(g.bruttoPoints.map((p) => p.x)).toEqual([12, 162, 312]);
+  });
+
+  it('centres a flat line instead of dividing by zero', () => {
+    const g = buildScoringTrend([r(85), r(85)], DESIGN)!;
+    expect(g.bruttoPoints.map((p) => p.y)).toEqual([60, 60]);
+  });
+});
+
+describe('buildScoringTrend — areaPath (#2265)', () => {
+  it('closes the area under the line down to the plot floor by default', () => {
+    const g = buildScoringTrend([r(90), r(80)], SQUARE)!;
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const [a, b] = g.bruttoPoints;
+    expect(g.areaPath).toBe(
+      `M${a.x},${round2(a.y)} L${b.x},${round2(b.y)} L${b.x},100 L${a.x},100 Z`,
+    );
+  });
+
+  it('closes down to areaBottom when it is given', () => {
+    const g = buildScoringTrend([r(92), r(82)], {
+      width: 326,
+      height: 124,
+      padding: { top: 24, right: 14, bottom: 28, left: 12 },
+      invertY: true,
+      padDomain: false,
+      areaBottom: 118,
+    })!;
+    expect(g.areaPath).toBe('M12,96 L312,24 L312,118 L12,118 Z');
+  });
+});
+
+describe('compareRecentForm (#2265)', () => {
+  const seq = (...values: number[]) => values;
+
+  it('returns null under ten rounds', () => {
+    expect(compareRecentForm([])).toBeNull();
+    expect(compareRecentForm(seq(90, 90, 90, 90, 90, 86, 86, 86, 86))).toBeNull();
+  });
+
+  it('gives the five before minus the last five, to one decimal', () => {
+    // Snitt 91,2 før og 87,4 nå → 3,8 slag bedre.
+    expect(compareRecentForm(seq(92, 90, 91, 93, 90, 88, 87, 88, 86, 88))).toBe(3.8);
+  });
+
+  it('uses only the last ten of a longer run', () => {
+    const older = seq(70, 70, 70, 70, 70);
+    const last10 = seq(92, 90, 91, 93, 90, 88, 87, 88, 86, 88);
+    expect(compareRecentForm([...older, ...last10])).toBe(3.8);
+  });
+
+  it('is negative when the last five are worse', () => {
+    expect(compareRecentForm(seq(86, 86, 86, 86, 86, 88, 88, 88, 88, 88))).toBe(-2);
+  });
+
+  it('is zero when the two halves are equal', () => {
+    expect(compareRecentForm(seq(88, 88, 88, 88, 88, 88, 88, 88, 88, 88))).toBe(0);
+  });
+});
+
+describe('isNewRecord (#2265)', () => {
+  it('is false without a round before the newest', () => {
+    expect(isNewRecord([])).toBe(false);
+    expect(isNewRecord([82])).toBe(false);
+  });
+
+  it('is true when the newest is strictly lower than every round before', () => {
+    expect(isNewRecord([90, 85, 84])).toBe(true);
+  });
+
+  it('is false when the newest only equals the old best', () => {
+    expect(isNewRecord([90, 84, 84])).toBe(false);
+  });
+
+  it('is false when an older round was lower', () => {
+    expect(isNewRecord([80, 90, 85])).toBe(false);
+  });
+});
+
+describe('MAX_TREND_ROUNDS', () => {
+  it('is the WHS/Golfbox window of 20 rounds', () => {
+    expect(MAX_TREND_ROUNDS).toBe(20);
   });
 });
