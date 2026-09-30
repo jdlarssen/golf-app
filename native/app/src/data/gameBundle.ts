@@ -168,7 +168,8 @@ export interface BundlePlayer {
 }
 
 /**
- * Teens rating og lengde (#2255), til faktalinja og DINE SLAG før start.
+ * Teens rating og lengde (#2255), til DINE SLAG før start. Lengden brukes
+ * ikke lenger (faktalinja er borte fra billetten), men står i bundelen.
  * Én trio (slope, CR, par) per kjønn; `getRatingForGender` velger. Alt kan
  * mangle på en bane som er lagt inn uten rating.
  */
