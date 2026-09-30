@@ -17,6 +17,10 @@
 // «Forrige runde». «Opprett spill» står nederst når en runde pågår, og øverst
 // ellers, som før (eierens svar på #2254).
 //
+// #2385 la toppen og margene på designlerretet (`Hjem-forslag`): datoen står
+// tett over hilsenen, HCP-pillen er midtstilt mot begge linjene, kortene står
+// 16 pt fra kanten og tekstene 20 pt inn.
+//
 // Heltekortet og billetten leser spill-bundelen og slagene som ligger på
 // enheten (`data/homeHero.ts`). Hvert fokus leser dem på nytt med én gang, så
 // et hull tastet i flymodus flytter ringen også uten nett, og henter dem så fra
@@ -194,13 +198,8 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   );
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="home-screen">
-      <Text style={[ui.muted, styles.dateLine]} testID="home-date">
-        {formatWeekdayDayMonth(new Date())}
-      </Text>
-      {profile ? (
-        <Greeting profile={profile} onHcp={() => navigation.navigate('Profile')} />
-      ) : null}
+    <ScrollView contentContainerStyle={[ui.scroll, styles.scroll]} testID="home-screen">
+      <Top profile={profile} onHcp={() => navigation.navigate('Profile')} />
 
       {empty ? (
         // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
@@ -311,24 +310,32 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
 }
 
 /**
- * «Hei, Sigrid.» og HCP-pillen, som på webbens Hjem. Fornavnet er webbens
- * `firstName`; pillen vises bare når både handicap og dato finnes (webbens
- * regel), og kanten blir gull når handicapet er gammelt (`isHandicapStale`).
- * Trykk på pillen åpner profil-rommet, der handicapet oppdateres.
+ * Datoen, «Hei, Sigrid.» og HCP-pillen, som på webbens Hjem. Fornavnet er
+ * webbens `firstName`; pillen vises bare når både handicap og dato finnes
+ * (webbens regel), og kanten blir gull når handicapet er gammelt
+ * (`isHandicapStale`). Trykk på pillen åpner profil-rommet, der handicapet
+ * oppdateres. Uten profil står bare datoen.
  */
-function Greeting({ profile, onHcp }: { profile: OwnProfile; onHcp: () => void }) {
-  const { colors, ui } = useTheme();
-  const name = firstName(profile.name) ?? HOME_TEXT.playerFallback;
+function Top({ profile, onHcp }: { profile: OwnProfile | null; onHcp: () => void }) {
+  const { colors } = useTheme();
+  const name = profile ? (firstName(profile.name) ?? HOME_TEXT.playerFallback) : null;
   const hcp =
-    profile.hcpIndex != null && profile.handicapUpdatedAt
+    profile?.hcpIndex != null && profile.handicapUpdatedAt
       ? formatHcpNb(profile.hcpIndex)
       : null;
-  const stale = hcp !== null && isHandicapStale(profile.handicapUpdatedAt);
+  const stale = hcp !== null && isHandicapStale(profile?.handicapUpdatedAt ?? null);
   return (
-    <View style={styles.greetingRow}>
-      <Text style={[ui.title, styles.greeting]} testID="home-greeting">
-        {greeting(name)}
-      </Text>
+    <View style={styles.top}>
+      <View style={styles.topText}>
+        <Text style={[styles.dateLine, { color: colors.muted }]} testID="home-date">
+          {formatWeekdayDayMonth(new Date())}
+        </Text>
+        {name !== null ? (
+          <Text style={[styles.greeting, { color: colors.text }]} testID="home-greeting">
+            {greeting(name)}
+          </Text>
+        ) : null}
+      </View>
       {hcp !== null ? (
         <Pressable
           onPress={onHcp}
@@ -340,8 +347,10 @@ function Greeting({ profile, onHcp }: { profile: OwnProfile; onHcp: () => void }
           ]}
           testID="home-hcp"
         >
-          <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
-          <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+          <View style={styles.hcpInner}>
+            <Text style={[styles.hcpLabel, { color: colors.muted }]}>{HOME_TEXT.hcp}</Text>
+            <Text style={[styles.hcpValue, { color: colors.text }]}>{hcp}</Text>
+          </View>
         </Pressable>
       ) : null}
     </View>
@@ -414,37 +423,47 @@ function Section({
   );
 }
 
+/** Tekstene står 20 pt inn, kortene 16 (designet): 4 pt ekstra på tekstene. */
+const TEXT_INSET = 4;
+
 const styles = StyleSheet.create({
-  dateLine: { fontFamily: FONTS.sansMedium },
-  greetingRow: {
+  scroll: { paddingHorizontal: 16, paddingTop: 16 },
+  top: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 8,
+    marginHorizontal: TEXT_INSET,
   },
-  greeting: { flexShrink: 1 },
+  topText: { flexShrink: 1 },
+  dateLine: { fontSize: 12, fontFamily: FONTS.sans },
+  greeting: { fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
   hcpPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     minHeight: TAP,
+    justifyContent: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
+  hcpInner: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   hcpLabel: {
     fontSize: 10,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
-  hcpValue: { fontSize: 15, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  hcpValue: { fontSize: 18, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   empty: { alignItems: 'center', gap: 16, marginVertical: 8 },
   emptyText: { textAlign: 'center' },
   // Ikon og overskrift på samme linje. `sectionTitle` bærer luften over seg
   // selv; her flyttes den til raden så ikonet følger med ned.
-  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    marginHorizontal: TEXT_INSET,
+  },
   sectionTitle: { marginTop: 0 },
   gameCard: {
     borderRadius: 12,

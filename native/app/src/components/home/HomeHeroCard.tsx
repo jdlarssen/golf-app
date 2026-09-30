@@ -6,6 +6,10 @@
 // borte) står navn, bane og «Åpne runden →», og ringen og plassen kommer når
 // bundelen er på plass.
 //
+// #2385 la kortet på designlerretet (`Hjem-forslag`): toppen er én rad med
+// salvieprikken og «PÅGÅR NÅ» til venstre og «navn · bane» til høyre, ringen
+// er 96 pt, og kortet har en tydelig skygge.
+//
 // **Skjermleseren.** Kortet er ikke ett stort trykkfelt: da ville VoiceOver
 // lest det som én knapp, og ringen og knappene inni ville forsvunnet. Toppen
 // (navn og bane) er knappen som åpner runden. Ringen er et bilde med egen
@@ -25,7 +29,7 @@ import {
   standingDetail,
 } from '../../lib/homeCopy';
 import type { HeroModel } from '../../lib/homeHero';
-import { FONTS, TAP, useTheme } from '../../theme';
+import { FONTS, TAP, heroShadow, useTheme } from '../../theme';
 import { HoleRing } from '../icons/Icons';
 
 export interface HomeHeroCardProps {
@@ -48,7 +52,7 @@ export function HomeHeroCard({
   onBoard,
   onApprove,
 }: HomeHeroCardProps) {
-  const { colors, ui } = useTheme();
+  const { colors, ui, scheme } = useTheme();
   const ink = { color: colors.onStrong };
   // Samme dom som modellen: «åpne runden» betyr at appen ikke kan love mer enn
   // spillets side (stengt spill, ikke i rosteret, eller en bundel som ennå ikke
@@ -58,7 +62,10 @@ export function HomeHeroCard({
   return (
     <View testID="home-hero">
       <View
-        style={[styles.card, { backgroundColor: colors.surfaceStrong }]}
+        style={[
+          styles.card,
+          { backgroundColor: colors.surfaceStrong, boxShadow: heroShadow(scheme) },
+        ]}
         testID={`home-hero-card-${card.gameId}`}
       >
         <Pressable
@@ -68,13 +75,17 @@ export function HomeHeroCard({
             .filter(Boolean)
             .join(', ')}
           style={styles.head}
+          // Raden er én tekstlinje høy; slakken gir den 44 pt å treffe på.
+          hitSlop={HEAD_SLOP}
           testID="home-hero-open"
         >
-          <Text style={[styles.kicker, ink]}>{HOME_TEXT.inProgress}</Text>
-          <Text style={[styles.name, ink]}>{card.name}</Text>
-          {card.courseName ? (
-            <Text style={[styles.course, ink]}>{card.courseName}</Text>
-          ) : null}
+          <View style={styles.kickerRow}>
+            <View style={[styles.liveDot, { backgroundColor: colors.live }]} />
+            <Text style={[styles.kicker, ink]}>{HOME_TEXT.inProgress}</Text>
+          </View>
+          <Text style={[styles.where, ink]} numberOfLines={1} testID="home-hero-where">
+            {[card.name, card.courseName].filter(Boolean).join(' · ')}
+          </Text>
         </Pressable>
 
         {playable ? (
@@ -141,7 +152,12 @@ function Ring({ model, color }: { model: HeroModel; color: string }) {
       accessibilityLabel={label}
       testID="home-hero-ring"
     >
-      <HoleRing color={color} fraction={model.played / model.holeCount} testID="home-hero-ring-svg" />
+      <HoleRing
+        color={color}
+        fraction={model.played / model.holeCount}
+        size={RING_SIZE}
+        testID="home-hero-ring-svg"
+      />
       <View style={styles.ringCenter}>
         <Text style={[styles.ringKicker, { color }]}>
           {next !== null ? HOME_TEXT.holeKicker : HOME_TEXT.playedKicker}
@@ -196,7 +212,8 @@ function Standing({ model }: { model: HeroModel }) {
         accessibilityLabel={detail.split(' · ').join(', ')}
         testID="home-hero-detail"
       >
-        {detail}
+        {/* Én del per linje, som i designet. */}
+        {detail.split(' · ').join('\n')}
       </Text>
     </>
   );
@@ -246,34 +263,56 @@ function PrimaryAction({
   );
 }
 
+/** Ringen er 96 pt ytterst (radius 44, strek 8), i en boks på 104 som i designet. */
+const RING_SIZE = 96;
+const RING_BOX = 104;
+
+/** Toppraden er rundt 15 pt høy; 15 pt over og under gir 44 pt å treffe på. */
+const HEAD_SLOP = { top: 15, bottom: 15 };
+
 const styles = StyleSheet.create({
-  card: { borderRadius: 22, padding: 20, gap: 14, marginTop: 8 },
-  head: { gap: 2, minHeight: TAP },
-  kicker: {
-    fontSize: 12,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    opacity: 0.85,
+  card: { borderRadius: 22, padding: 18, gap: 14, marginTop: 8 },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  name: { fontSize: 22, fontFamily: FONTS.serifScore },
-  course: { fontSize: 14, fontFamily: FONTS.sans, opacity: 0.85 },
-  middle: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  ring: { width: 112, height: 112, alignItems: 'center', justifyContent: 'center' },
+  kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  kicker: {
+    fontSize: 10,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  where: { flexShrink: 1, fontSize: 12, fontFamily: FONTS.sans, opacity: 0.85 },
+  middle: { flexDirection: 'row', alignItems: 'center', gap: 18 },
+  ring: { width: RING_BOX, height: RING_BOX, alignItems: 'center', justifyContent: 'center' },
   ringCenter: { position: 'absolute', alignItems: 'center' },
   ringKicker: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.4,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
-  ringNumber: { fontSize: 36, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
-  standing: { flex: 1, gap: 4 },
+  ringNumber: {
+    fontSize: 40,
+    lineHeight: 44,
+    fontFamily: FONTS.serifScore,
+    fontVariant: ['tabular-nums'],
+  },
+  standing: { flex: 1, gap: 8 },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gold: { width: 14, height: 14, borderRadius: 7 },
-  place: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  place: {
+    fontSize: 26,
+    lineHeight: 29,
+    fontFamily: FONTS.serifDisplay,
+    fontVariant: ['tabular-nums'],
+  },
   detail: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: FONTS.sans,
     opacity: 0.9,
     fontVariant: ['tabular-nums'],

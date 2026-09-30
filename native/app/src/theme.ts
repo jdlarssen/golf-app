@@ -64,6 +64,13 @@ export type ThemeColors = {
    * blek på det hvite kortet, `border` for grå.
    */
   trackBg: string;
+  /**
+   * Salvieprikken foran «Pågår nå» på heltekortet (#2385, designlerretet) —
+   * webbens mørke `--success`. Den sitter på `surfaceStrong`, som er mørk skog
+   * i begge draktene, så den er lik i begge: webbens lyse salvie forsvinner i
+   * skogen.
+   */
+  live: string;
 };
 
 /**
@@ -94,6 +101,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     onStrong: '#F0EDE5',
     accentText: '#7D6224',
     trackBg: '#EFE9DA',
+    live: '#7DAA8A',
   },
   dark: {
     bg: '#14201A',
@@ -115,6 +123,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     onStrong: '#ECE5D2',
     accentText: '#D4B870',
     trackBg: '#243429',
+    live: '#7DAA8A',
   },
 };
 
@@ -163,6 +172,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   accentText: '#000000',
   // Billettens spor (#2255). Hullsiden tegner det ikke; ren hvit som flatene.
   trackBg: '#FFFFFF',
+  // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
+  live: '#7DAA8A',
 };
 
 /**
@@ -174,6 +185,17 @@ export function cardShadow(scheme: Scheme): string {
   return scheme === 'dark'
     ? '0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25)'
     : '0 1px 2px rgba(26, 46, 31, 0.04), 0 8px 24px rgba(26, 46, 31, 0.06)';
+}
+
+/**
+ * Skyggen under heltekortet på Hjem (#2385, designlerretet: «0 10px 28px» med
+ * 20 % skog). Tydeligere enn {@link cardShadow}, fordi kortet er det ene som
+ * skal løfte seg på skjermen. Mørk drakt bytter til svart, som kortskyggen.
+ */
+export function heroShadow(scheme: Scheme): string {
+  return scheme === 'dark'
+    ? '0 10px 28px rgba(0, 0, 0, 0.35)'
+    : '0 10px 28px rgba(26, 46, 31, 0.2)';
 }
 
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
