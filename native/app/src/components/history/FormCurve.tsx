@@ -7,10 +7,10 @@
 // (`invertY`), så «opp er bedre» i begge kurvene.
 //
 // Tallene er vanlig tekst lagt oppå, ikke SVG-tekst: da er skriften appens
-// Inter, og grunnlinja står der designet setter den (startverdien på y 112,
-// etiketten ved gullprikken på y 12). Etiketten står 8 pt til venstre for
-// prikken, høyrejustert; er det ikke plass (beste runde helt til venstre),
-// står den 8 pt til høyre i stedet.
+// Inter, og grunnlinja står der designet setter den: startverdien 16 pt under
+// startprikken (høyst på y 112), og etiketten ved gullprikken på y 12.
+// Etiketten står 8 pt til venstre for prikken, høyrejustert; er det ikke plass
+// (beste runde helt til venstre), står den 8 pt til høyre i stedet.
 //
 // Hele kurven er ÉN node for skjermleseren, med en oppsummering fra kalleren.
 // Rundene står som tekst i dagboka under.
@@ -32,6 +32,12 @@ export const CURVE = {
   areaBottom: 118,
   gridYs: [24, 60, 96],
   startBaseline: 112,
+  /**
+   * Startverdien står 16 pt under startprikken, som i designet når første
+   * runde er den dårligste (prikken på y 96, tallet på y 112). Er første runde
+   * bedre, følger tallet prikken opp i stedet for å bli stående nederst.
+   */
+  startBelowDot: 16,
   bestBaseline: 12,
   labelGap: 8,
   startGap: 6,
@@ -108,7 +114,11 @@ export function FormCurve({
           <Text
             style={[
               styles.label,
-              { color: colors.muted, left: first.x + CURVE.startGap, top: labelTop(CURVE.startBaseline) },
+              {
+                color: colors.muted,
+                left: first.x + CURVE.startGap,
+                top: labelTop(Math.min(CURVE.startBaseline, first.y + CURVE.startBelowDot)),
+              },
             ]}
             testID={testID ? `${testID}-start` : undefined}
           >
