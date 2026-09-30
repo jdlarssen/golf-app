@@ -174,7 +174,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
   const { bundle, loading, refresh: refreshBundle } = useGameBundle(gameId);
-  const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
+  const { scores: localScores, reload, loaded: scoresLoaded } = useLocalScores(gameId, POLL_MS);
   // #2067: lagets rader fra før en kontosletting ligger på den trukne
   // kapteinen. Foldes inn her, før noe annet leser slagene, så kortet, stripen
   // og «+» ser ett sett rader på den nye eieren. Skrivingen går fortsatt på
@@ -298,6 +298,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
       me={me}
       hole={hole}
       scores={scores}
+      scoresLoaded={scoresLoaded}
       reload={reload}
       choices={choices}
       putts={putts}
@@ -360,6 +361,7 @@ function HoleView({
   me,
   hole,
   scores,
+  scoresLoaded,
   reload,
   choices,
   putts,
@@ -373,6 +375,8 @@ function HoleView({
   me: RosterEntry;
   hole: BundleHole;
   scores: LocalScore[];
+  /** SQLite er lest minst én gang (`useLocalScores`). */
+  scoresLoaded: boolean;
   reload: () => Promise<void>;
   choices: GameChoices;
   putts: PuttsTracking;
@@ -623,16 +627,20 @@ function HoleView({
 
   // Sollys (eierens svar, #2385): har alle i flighten fått score på hullet,
   // går siden selv til neste hull. Bare når det skjer her, ikke når man åpner
-  // et hull som alt er ferdig; hvert hull har sin egen `HoleView` (`key`).
+  // et hull som alt er ferdig. Utgangspunktet settes derfor først når scorene
+  // er lest fra SQLite (før det er lista tom fordi den ikke er lest), og hvert
+  // hull har sin egen `HoleView` (`key`).
   const everyoneScored = usesRail && seats.length > 0 && seats.every((seat) => seat.score != null);
-  const scoredBefore = useRef(everyoneScored);
+  const scoredBefore = useRef<boolean | null>(scoresLoaded ? everyoneScored : null);
   useEffect(() => {
+    if (!scoresLoaded) return;
     const before = scoredBefore.current;
     scoredBefore.current = everyoneScored;
+    if (before === null) return;
     if (!sunlight || before || !everyoneScored || holeNumber >= HOLE_COUNT) return;
     const timer = setTimeout(() => goToHole(holeNumber + 1), AUTO_NEXT_MS);
     return () => clearTimeout(timer);
-  }, [everyoneScored, sunlight, holeNumber, goToHole]);
+  }, [everyoneScored, scoresLoaded, sunlight, holeNumber, goToHole]);
 
   const allHolesFilled = myFilled.length >= HOLE_COUNT;
   // Telleren over radene: seter på skinna, spillere i kortformatene.
@@ -661,6 +669,7 @@ function HoleView({
         <HoleSwipe
           enabled={sunlight}
           holeNumber={holeNumber}
+          holeCount={HOLE_COUNT}
           label={`Hull ${holeNumber} av ${HOLE_COUNT}, par ${par}, indeks ${hole.strokeIndex}`}
           onGo={goToHole}
         >
@@ -868,17 +877,20 @@ function HoleView({
  * Sollys (eierens svar, #2385): uten hullstripe bytter man hull ved å sveipe
  * sidelengs på hullnummeret, mot venstre til neste og mot høyre til forrige.
  * VoiceOver får det samme som handlingene «Neste hull» og «Forrige hull» på
- * helten, som da leses som én linje. Utenfor sollys står helten som før.
+ * helten, som da leses som én linje, og bare de som finnes (ikke «Forrige
+ * hull» på hull 1). Utenfor sollys står helten som før.
  */
 function HoleSwipe({
   enabled,
   holeNumber,
+  holeCount,
   label,
   onGo,
   children,
 }: {
   enabled: boolean;
   holeNumber: number;
+  holeCount: number;
   label: string;
   onGo: (hole: number) => void;
   children: ReactNode;
@@ -902,8 +914,8 @@ function HoleSwipe({
       accessible
       accessibilityLabel={label}
       accessibilityActions={[
-        { name: 'nextHole', label: 'Neste hull' },
-        { name: 'previousHole', label: 'Forrige hull' },
+        ...(holeNumber < holeCount ? [{ name: 'nextHole', label: 'Neste hull' }] : []),
+        ...(holeNumber > 1 ? [{ name: 'previousHole', label: 'Forrige hull' }] : []),
       ]}
       onAccessibilityAction={(event) => {
         if (event.nativeEvent.actionName === 'nextHole') onGo(holeNumber + 1);

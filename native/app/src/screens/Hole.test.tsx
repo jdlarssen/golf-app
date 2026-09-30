@@ -25,6 +25,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { writeScore } from '../data/writeScore';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
+import { strokesLine } from '../components/hole/FlightRow';
 import { Hole } from './Hole';
 
 const GAME_ID = 'game-1';
@@ -444,7 +445,7 @@ describe('Hole', () => {
     // Laget som er på tur, har den øverst i skinna (#2385); lavsiden får
     // ingen, og raden sier «Scratch».
     expect(screen.getByTestId('score-rail-strokes')).toHaveTextContent(/^Får 1 slag her/);
-    expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe('Scratch · venter');
+    expect(screen.getByTestId('flight-row-rival-a-note').props.children).toBe(`${strokesLine(0)} · venter`);
 
     // Jeg taster, men raden er kapteinens («makker» er lex-min av laget).
     await fireEvent.press(screen.getByTestId('rail-option-4'));
@@ -602,9 +603,8 @@ describe('Hole', () => {
   // #2385 (eierens svar): sollys har ingen hullstripe. Man bytter hull ved å
   // sveipe på hullnummeret (VoiceOver: handlingene), og når alle i flighten
   // har fått score, går siden selv til neste hull.
-  it('sollys: handlingene «Neste hull» og «Forrige hull» bytter hull, og siste score går videre', async () => {
+  it('sollys: VoiceOver-handlingene bytter hull, og bare de som finnes tilbys', async () => {
     await act(async () => setSunlight(true));
-    mockState.scores = [localScore('mate', 4, null)];
     const navigation = await renderHole(2);
     await waitFor(() => {
       expect(screen.getByTestId('hole-hero-swipe')).toBeTruthy();
@@ -622,8 +622,21 @@ describe('Hole', () => {
     await a11yAction('previousHole');
     expect(navigation.setParams).toHaveBeenLastCalledWith({ holeNumber: 1 });
 
-    // Siste score på hullet: siden går videre av seg selv.
-    navigation.setParams.mockClear();
+    // På hull 1 finnes ikke «Forrige hull».
+    await render(holeElement(1, navigation));
+    const names = screen
+      .getByTestId('hole-hero-swipe')
+      .props.accessibilityActions.map((action: { name: string }) => action.name);
+    expect(names).toEqual(['nextHole']);
+  });
+
+  it('sollys: siste score i flighten går videre til neste hull', async () => {
+    await act(async () => setSunlight(true));
+    mockState.scores = [localScore('mate', 4, null, 2)];
+    const navigation = await renderHole(2);
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4')).toBeTruthy();
+    });
     mockState.scores = [localScore('mate', 4, null, 2), localScore('me', 4, null, 2)];
     await fireEvent.press(screen.getByTestId('rail-option-4'));
     await waitFor(
@@ -633,6 +646,37 @@ describe('Hole', () => {
       { timeout: 2000 },
     );
   });
+
+  it('sollys: et hull som alt er ferdig når det åpnes, blir stående, og det samme gjør hull 18', async () => {
+    await act(async () => setSunlight(true));
+    // Som på telefonen: scorene kommer fra SQLite etter spillet.
+    const { listScoresForGame } = jest.requireMock('../data/db') as { listScoresForGame: jest.Mock };
+    listScoresForGame.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockState.scores), 30)),
+    );
+    try {
+      mockState.scores = [localScore('mate', 4, null, 2), localScore('me', 4, null, 2)];
+      const navigation = await renderHole(2);
+      await waitFor(() => {
+        expect(screen.getByTestId('flight-row-me-score')).toHaveTextContent('4');
+      });
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 1200)));
+      expect(navigation.setParams).not.toHaveBeenCalled();
+    } finally {
+      listScoresForGame.mockImplementation(async () => mockState.scores);
+    }
+
+    // Hull 18: siste score, men det finnes ikke noe neste hull.
+    mockState.scores = [localScore('mate', 4, null, 18)];
+    const last = await renderHole(18);
+    await waitFor(() => {
+      expect(screen.getByTestId('rail-option-4')).toBeTruthy();
+    });
+    mockState.scores = [localScore('mate', 4, null, 18), localScore('me', 4, null, 18)];
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 1200)));
+    expect(last.setParams).not.toHaveBeenCalled();
+  }, 10000);
 
   // #2219: i en blind runde som pågår viser hullsiden verken poeng eller
   // netto. Samme bundel med og uten blind runde, så forskjellen er regelen.
@@ -651,7 +695,7 @@ describe('Hole', () => {
       expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · 3 p');
     });
     // Slagene og poengene står i linja under navnet (#2385).
-    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe('Får 1 slag · 2 poeng');
+    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe(`${strokesLine(1)} · 2 poeng`);
     await fireEvent.press(screen.getByTestId('rail-other'));
     expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk · 0 p');
     await unmount();
@@ -662,7 +706,7 @@ describe('Hole', () => {
       expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par');
     });
     // Blind runde: slagene er tildelingen og står, men poengene er borte.
-    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe('Får 1 slag');
+    expect(screen.getByTestId('flight-row-mate-note').props.children).toBe(strokesLine(1));
     await fireEvent.press(screen.getByTestId('rail-other'));
     expect(screen.getByTestId('specific-value-strike')).toHaveTextContent('Stryk');
   });

@@ -98,12 +98,23 @@ export function useGameBundle(gameId: string): GameBundleState {
 export function useLocalScores(
   gameId: string,
   pollMs?: number,
-): { scores: LocalScore[]; reload: () => Promise<void> } {
+): {
+  scores: LocalScore[];
+  reload: () => Promise<void>;
+  /**
+   * SQLite er lest minst én gang. Før det er `scores` tom fordi den ikke er
+   * lest, ikke fordi ingen har ført (#2385: hullsiden skal ikke tro at et
+   * ferdig hull nettopp ble ferdig).
+   */
+  loaded: boolean;
+} {
   const [scores, setScores] = useState<LocalScore[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const reload = useCallback(async () => {
     const db = await getDb();
     setScores(await listScoresForGame(db, gameId));
+    setLoaded(true);
   }, [gameId]);
 
   // Førstelesningen skrives inn her og ikke via `reload`, slik at en skjerm som
@@ -114,7 +125,10 @@ export function useLocalScores(
     void (async () => {
       const db = await getDb();
       const rows = await listScoresForGame(db, gameId);
-      if (!cancelled) setScores(rows);
+      if (!cancelled) {
+        setScores(rows);
+        setLoaded(true);
+      }
     })();
     return () => {
       cancelled = true;
@@ -129,7 +143,7 @@ export function useLocalScores(
     return () => clearInterval(interval);
   }, [pollMs, reload]);
 
-  return { scores, reload };
+  return { scores, reload, loaded };
 }
 
 /**
