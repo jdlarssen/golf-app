@@ -189,6 +189,13 @@ const RADIUS = 20;
 /** Billettens kant; hakkene sentreres på den. */
 const EDGE = 1;
 
+/**
+ * Designets linjebokser: tittelen har `line-height: 1.15` (34,5), og tallene
+ * nettleserens `normal` for Fraunces 24 (29). Margen over kommer i tillegg.
+ */
+const TITLE = fraunces(500, 30, 34.5);
+const FIELD_VALUE = fraunces(600, 24, 29);
+
 const styles = StyleSheet.create({
   // Avstanden over billetten gir skjermen (8 pt under toppen, som i designet).
   wrap: { borderRadius: RADIUS },
@@ -201,7 +208,7 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   // Linjehøydene er det nettleseren gir designets `line-height: normal`.
   badgeText: { fontSize: 11, lineHeight: 14, fontFamily: FONTS.sansSemiBold },
-  title: { ...fraunces(500, 30), lineHeight: 34.5, marginTop: 8 },
+  title: { ...TITLE, marginTop: 8 + TITLE.marginVertical },
   headerLine: { fontSize: 13, fontFamily: FONTS.sans, opacity: 0.9, marginTop: 4 },
   fields: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
   field: { flex: 1 },
@@ -212,10 +219,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   fieldValue: {
-    ...fraunces(600, 24),
-    lineHeight: 29,
+    ...FIELD_VALUE,
     fontVariant: ['tabular-nums'],
-    marginTop: 2,
+    marginTop: 2 + FIELD_VALUE.marginVertical,
   },
   small: { fontSize: 12, fontFamily: FONTS.sans },
   roster: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 16 },

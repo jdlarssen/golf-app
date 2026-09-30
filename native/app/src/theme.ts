@@ -243,8 +243,20 @@ export function frauncesFamily(weight: FrauncesWeight, size: number): string {
 
 /**
  * Stilen for Fraunces i en vekt og størrelse: snittet, og med `lineHeight`
- * også nettleserens linjeboks (`frauncesLine`).
+ * også nettleserens linjeboks (`frauncesLine`). Linjeboksen er marger; en stil
+ * som også har `marginTop` eller `marginBottom`, må legge `marginVertical` til
+ * selv, ellers overstyrer den linjeboksen på den siden.
  */
+export function fraunces(
+  weight: FrauncesWeight,
+  size: number,
+): { fontSize: number; fontFamily: string };
+export function fraunces(
+  weight: FrauncesWeight,
+  size: number,
+  lineHeight: number,
+  pixelRatio?: number,
+): { fontSize: number; fontFamily: string; marginVertical: number };
 export function fraunces(
   weight: FrauncesWeight,
   size: number,

@@ -269,18 +269,14 @@ const SIDE_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 };
 /** Ringen i designet: 52 pt innvendig pluss 1 pt kant på hver side. */
 const RING = 54;
 /**
- * Linjehøyden til det store handicaptallet (64 pt i Fraunces). iOS legger
- * luften over sifrene; 68 gir de 7 pt designet har mellom «HANDICAP» og
- * toppen av sifrene. Under skriftstørrelsen tegner iOS sifrene opp over
- * etiketten.
+ * Navnet og handicapet har designets linjebokser (#2385): navnet 28 pt på
+ * `line-height: 1.1`, og tallet 64 pt på 0,95, der kommaet stikker ut under
+ * boksen som i nettleseren. Snittet er tegnet for størrelsen, så «14,2» har
+ * designets bredde med designets sperring (−0,02em).
  */
-const HCP_LINE = 68;
-/**
- * Designets linjehøyde (0,95) lar kommaet stikke ut under boksen; iOS gir
- * plass til hele. Så mye trekkes fra under tallet, så raden, og kurven og
- * linja som står nederst i den, får designets høyde (målt i simulatoren).
- */
-const HCP_OVERHANG = 7;
+const NAME = fraunces(500, 28, 30.8);
+const HCP_LINE = 60.8;
+const HCP_VALUE = fraunces(600, 64, HCP_LINE);
 
 const styles = StyleSheet.create({
   card: {
@@ -319,7 +315,13 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  name: { ...fraunces(500, 28), lineHeight: 31, minHeight: 31, marginTop: 6 },
+  // Et tomt navn (mens raden lastes) holder linja: tekstens egen høyde, så
+  // margene gir 30,8.
+  name: {
+    ...NAME,
+    minHeight: 30.8 - 2 * NAME.marginVertical,
+    marginTop: 6 + NAME.marginVertical,
+  },
   subline: { fontSize: 12, lineHeight: 15, minHeight: 15, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
   hcpRow: {
     flexDirection: 'row',
@@ -338,16 +340,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  hcpValue: {
-    ...fraunces(600, 64),
-    lineHeight: HCP_LINE,
-    marginBottom: -HCP_OVERHANG,
-    // Designet er 64 pt Fraunces med optisk størrelse, som er smalere enn
-    // appens faste snitt. Tettere sperring gir samme bredde på «14,2».
-    letterSpacing: -3.2,
-  },
+  hcpValue: { ...HCP_VALUE, letterSpacing: -1.28 },
   // Samme høyde som etikett + tall, så kortet står stille mens raden lastes.
-  hcpPlaceholder: { height: 12 + HCP_LINE - HCP_OVERHANG },
+  hcpPlaceholder: { height: 12 + HCP_LINE },
   ring: {
     width: RING,
     height: RING,

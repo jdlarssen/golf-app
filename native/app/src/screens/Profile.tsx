@@ -236,7 +236,8 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     marginRight: -8,
   },
-  title: { ...fraunces(500, 22), flexShrink: 1, lineHeight: 27 },
+  // Nettleserens `normal` for Fraunces 22 (designet): 22 + 6 = 28.
+  title: { ...fraunces(500, 22, 28), flexShrink: 1 },
   // «Rediger» som i designet: en lys pille, 44 pt høy.
   editPill: {
     minHeight: TAP,

@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   // høyde, og tallene nettleserens 28, så alt står på samme punkt som i
   // designet.
   rowLabel: { lineHeight: 12 },
-  value: { ...fraunces(600, 22), lineHeight: 28 },
+  value: { ...fraunces(600, 22, 28) },
   // Designets `line-height: 1`, som nettleseren tegner den (#2385).
   points: { ...fraunces(600, 30, 30) },
 });

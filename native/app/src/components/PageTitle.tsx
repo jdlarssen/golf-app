@@ -60,10 +60,11 @@ const styles = StyleSheet.create({
   block: { paddingHorizontal: 4 },
   blockMedium: { paddingHorizontal: 0 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  // Samme snitt og størrelse som tittelen på startbilletten (#2255).
-  title: { ...fraunces(500, 30), flexShrink: 1, lineHeight: 35 },
+  // Designet har `line-height: normal`, som nettleseren regner som avrundet
+  // ascent pluss avrundet descent: 37 for Fraunces 30, 32 for 26 og 34 for 28.
+  title: { ...fraunces(500, 30, 37), flexShrink: 1 },
   subtitle: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans, marginTop: 2 },
-  titleMedium: { ...fraunces(500, 26), lineHeight: 31 },
+  titleMedium: { ...fraunces(500, 26, 32) },
   subtitleMedium: { fontSize: 12, lineHeight: 16 },
-  titleSettings: { ...fraunces(500, 28), lineHeight: 34 },
+  titleSettings: { ...fraunces(500, 28, 34) },
 });

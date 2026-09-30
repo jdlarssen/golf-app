@@ -846,8 +846,9 @@ const styles = StyleSheet.create({
   },
   heroPlusOverlap: { marginLeft: -6 },
   heroPlusText: { fontSize: 16, fontFamily: FONTS.sans },
-  // Linjehøydene er nettleserens «normal» for størrelsene i designet.
-  heroTitle: { ...fraunces(500, 18), lineHeight: 22 },
+  // Linjehøydene er nettleserens «normal» for størrelsene i designet
+  // (Fraunces 18: 18 + 5 = 23).
+  heroTitle: { ...fraunces(500, 18, 23) },
   heroLine: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
   // Teksten under tittelen står 1,5 pt lenger ned i designet (målt).
   heroBody: { marginTop: 1.5 },

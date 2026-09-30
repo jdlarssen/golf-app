@@ -249,6 +249,6 @@ const styles = StyleSheet.create({
   notchDiscLow: { top: EDGE },
   dash: { width: PERFORATION, height: DASH },
   body: { flex: 1, padding: 14, gap: 6, justifyContent: 'center' },
-  name: { ...fraunces(500, 18), lineHeight: 23 },
+  name: { ...fraunces(500, 18, 23) },
   detail: { fontSize: 12, fontFamily: FONTS.sans },
 });

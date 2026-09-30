@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   /** Webbens `text-[11px] font-semibold uppercase tracking-[0.20em]`. */
   kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 2.2, textTransform: 'uppercase' },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  rank: { ...fraunces(600, 48), minWidth: 50, textAlign: 'center', lineHeight: 52 },
+  rank: { ...fraunces(600, 48, 52), minWidth: 50, textAlign: 'center' },
   teamName: { ...fraunces(500, 22) },
   meta: { fontSize: 11.5, fontFamily: FONTS.sans, marginTop: 2 },
   heroRight: { marginLeft: 'auto', alignItems: 'flex-end' },
