@@ -7,7 +7,7 @@
 // BRUTTO og NETTO til venstre og POENG større og skoggrønt til høyre.
 import { StyleSheet, Text, View } from 'react-native';
 import type { ScorecardGridTotals } from '../../../../../lib/scorecard/scorecardGrid';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, frauncesLine, useTheme } from '../../theme';
 
 export function ScorecardTotals({
   totals,
@@ -84,5 +84,6 @@ const styles = StyleSheet.create({
   // designet.
   rowLabel: { lineHeight: 12 },
   value: { fontSize: 22, lineHeight: 28, fontFamily: FONTS.serifScore },
-  points: { fontSize: 30, lineHeight: 30, fontFamily: FONTS.serifScore },
+  // Designets `line-height: 1`, som nettleseren tegner den (#2385).
+  points: { ...frauncesLine(30, 30), fontFamily: FONTS.serifScore },
 });
