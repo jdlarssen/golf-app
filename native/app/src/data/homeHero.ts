@@ -87,11 +87,16 @@ function finishedRoundKey(gameId: string): string {
  * at runden er avsluttet, så en halv henting prøves igjen ved neste besøk. En
  * retting etter avslutningen kommer inn når tavla for runden åpnes (den henter
  * slagene hver gang), og merket forsvinner med resten av basen ved utlogging.
+ * Kan bundelen ikke leses lenger (ny app-versjon), hentes runden på nytt.
  */
 export async function refreshFinishedRound(gameId: string): Promise<void> {
   try {
     const db = await getDb();
-    if (await getCacheEntry(db, finishedRoundKey(gameId))) return;
+    // Merket gjelder bare så lenge bundelen kan leses: en ny app-versjon med
+    // ny `BUNDLE_PAYLOAD_VERSION` leser den gamle som «ingen cache».
+    if ((await getCacheEntry(db, finishedRoundKey(gameId))) && (await loadGameBundle(gameId))) {
+      return;
+    }
     const [bundle] = await Promise.all([refreshGameBundle(gameId), seedGameScores(gameId)]);
     if (bundle.game.status !== 'finished') return;
     await putCacheEntry(db, {
