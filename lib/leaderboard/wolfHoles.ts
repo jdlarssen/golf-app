@@ -42,7 +42,10 @@ export interface WolfHoleCard {
   choiceKey: WolfChoiceKey;
   outcome: WolfHoleOutcome;
   outcomeKey: WolfOutcomeKey;
-  /** Ulvens side først, så de andre, så uplasserte; likt etter stillingen. */
+  /**
+   * Ulvens side først (ulven selv før partneren), så de andre, så uplasserte.
+   * Ellers etter stillingen i fast rekkefølge.
+   */
   rows: WolfHoleCardRow[];
 }
 
@@ -53,6 +56,11 @@ export interface WolfHoleCards {
 
 function sideRank(side: 'wolf' | 'opp' | null): number {
   return side === 'wolf' ? 0 : side === 'opp' ? 1 : 2;
+}
+
+/** Ulven selv foran alle andre på sin side. */
+function wolfFirst(wolfUserId: string): (a: { userId: string }, b: { userId: string }) => number {
+  return (a, b) => Number(b.userId === wolfUserId) - Number(a.userId === wolfUserId);
 }
 
 export function wolfHoleCards(result: WolfResult): WolfHoleCards {
@@ -70,7 +78,9 @@ export function wolfHoleCards(result: WolfResult): WolfHoleCards {
       outcome: hole.outcome,
       outcomeKey: wolfOutcomeKey(hole.outcome),
       rows: [...hole.players]
-        .sort((a, b) => sideRank(a.side) - sideRank(b.side) || tie(a, b))
+        .sort(
+          (a, b) => sideRank(a.side) - sideRank(b.side) || wolfFirst(hole.wolfUserId)(a, b) || tie(a, b),
+        )
         .map((cell) => ({
           userId: cell.userId,
           side: cell.side,
