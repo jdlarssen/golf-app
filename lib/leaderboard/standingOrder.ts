@@ -34,5 +34,10 @@ export function byStanding(
 ): (a: { userId: string }, b: { userId: string }) => number {
   const place = new Map(rankedIds.map((id, i) => [id, i]));
   const at = (id: string) => place.get(id) ?? Number.POSITIVE_INFINITY;
-  return (a, b) => at(a.userId) - at(b.userId);
+  return (a, b) => {
+    const pa = at(a.userId);
+    const pb = at(b.userId);
+    // To ukjente er like: ∞ − ∞ er NaN, og en sortering med NaN er ikke stabil.
+    return pa === pb ? 0 : pa - pb;
+  };
 }
