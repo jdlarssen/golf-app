@@ -3,7 +3,7 @@
 // knapp til høyre når siden har det.
 //
 // Toppen over (tilbake-pila og det lille sperrede ordet) er navigatorens
-// header (`kickerHeader` i `navigation.tsx`, fra #2255). Tittelen står i
+// header (`kickerHeader` i `components/KickerHeader.tsx`, fra #2255). Tittelen står i
 // innholdet, som i designet, og ruller med siden.
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';

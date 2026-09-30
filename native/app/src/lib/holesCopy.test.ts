@@ -36,6 +36,7 @@ describe('paritet mot messages/no.json', () => {
     expect(HOLES_TEXT.revealHiddenTitle).toBe(common.revealHiddenTitle);
     expect(HOLES_TEXT.revealHiddenSub).toBe(common.hullForHullRevealSub);
     expect(HOLES_TEXT.goodLuck).toBe(common.goodLuck);
+    expect(HOLES_TEXT.wellPlayed).toBe(common.wellPlayed);
     expect(HOLES_TEXT.unknownPlayerFull).toBe(common.unknownPlayerFull);
     expect(HOLES_TEXT.unknownPlayer).toBe(common.unknownPlayer);
   });

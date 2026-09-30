@@ -60,6 +60,12 @@ export interface GameChoices {
   extras: ScoringExtras;
   /** Hent på nytt nå — brukes rett etter at skjermen selv har skrevet et valg. */
   refresh: () => Promise<void>;
+  /**
+   * Siste henting feilet, og ingen henting har lyktes ennå (#2255 PR 3b). Da
+   * kommer valgene ikke av seg selv, og skjermen skal si fra i stedet for å
+   * vente. Med et tidligere svar står det svaret, og dette er `false`.
+   */
+  failed: boolean;
 }
 
 /**
@@ -73,10 +79,12 @@ export interface GameChoices {
 export function useGameChoices(
   gameId: string,
   gameMode: string,
-  pollMs: number = CHOICES_POLL_MS,
+  /** `null` = hent én gang ved fokus, ingen polling (et avsluttet spill endres ikke). */
+  pollMs: number | null = CHOICES_POLL_MS,
 ): GameChoices {
   const source = choiceSourceFor(gameMode);
   const [extras, setExtras] = useState<ScoringExtras>({});
+  const [failed, setFailed] = useState(false);
 
   // Skjermen kan forsvinne mens en spørring er i lufta; da skal svaret falle
   // på gulvet i stedet for å lande i en avmontert komponent.
@@ -102,9 +110,11 @@ export function useGameChoices(
       if (!alive.current || mySeq <= appliedSeq.current) return;
       appliedSeq.current = mySeq;
       setExtras(next);
+      setFailed(false);
     } catch {
       // Fetch-en KASTER ved feil nettopp så den ikke kan forveksles med en tom
       // liste. Vi lar forrige svar stå; har vi ikke noe, sier skjermen fra.
+      if (alive.current && appliedSeq.current === 0) setFailed(true);
     }
   }, [gameId, source]);
 
@@ -112,6 +122,7 @@ export function useGameChoices(
     useCallback(() => {
       if (source === null) return;
       void refresh();
+      if (pollMs === null) return;
       const interval = setInterval(() => {
         void refresh();
       }, pollMs);
@@ -119,5 +130,5 @@ export function useGameChoices(
     }, [pollMs, refresh, source]),
   );
 
-  return { extras, refresh };
+  return { extras, refresh, failed };
 }

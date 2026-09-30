@@ -37,6 +37,19 @@ export function HolesTitle({ subtitle }: { subtitle: string }) {
   );
 }
 
+/**
+ * Bunnteksten, som webbens `LeaderboardFooter`: «Vel spilt!» når runden er
+ * ferdig, ellers «Lykke til.».
+ */
+export function HolesFooter({ finished }: { finished: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Text style={[holesStyles.footer, { color: colors.muted }]} testID="hole-by-hole-footer">
+      {finished ? HOLES_TEXT.wellPlayed : HOLES_TEXT.goodLuck}
+    </Text>
+  );
+}
+
 /** Hodet på et hull-kort: «Hull 4», «Par 4 · SI 7», og det som står til høyre. */
 export function HoleHeader({
   holeNumber,
@@ -91,4 +104,5 @@ export const holesStyles = StyleSheet.create({
   star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
+  footer: { fontSize: 12, fontFamily: FONTS.serifDisplay, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });
