@@ -30,6 +30,11 @@ function fill(template: string, values: Record<string, string | number>): string
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key]));
 }
 
+/** Stubben skriver nærheten med liten forbokstav, som designet (#2385). */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 const web = source;
 const board = web.leaderboard.board;
 
@@ -41,9 +46,10 @@ describe('paritet mot messages/no.json', () => {
     expect(HOME_TEXT.teamRound).toBe(web.home.roundTeamBall);
     expect(HOME_TEXT.submit).toBe(board.stripSubmit);
     expect(HOME_TEXT.showFewer).toBe(board.showFewer);
-    expect(HOME_TEXT.tomorrow).toBe(web.home.proximity.tomorrow);
+    // Samme ord som webben; bare forbokstaven er liten i stubben.
+    expect(HOME_TEXT.tomorrow).toBe(lowerFirst(web.home.proximity.tomorrow));
     expect(proximityText({ kind: 'days', days: 3 })).toBe(
-      fill(web.home.proximity.days, { days: 3 }),
+      lowerFirst(fill(web.home.proximity.days, { days: 3 })),
     );
   });
 
@@ -163,7 +169,8 @@ describe('startbodens egne tekster', () => {
   });
 
   it('nærhet, avatarer og billettens skjermlesertekst', () => {
-    expect(proximityText({ kind: 'today' })).toBe('I dag');
+    expect(proximityText({ kind: 'today' })).toBe('i dag');
+    expect(proximityText({ kind: 'days', days: 7 })).toBe('om 7 dager');
     expect(proximityText(null)).toBeNull();
     expect(moreAvatars(1)).toBe('+1 til');
     expect(companionsLabel(['Marte', 'Ola', 'Kari'], true, 4)).toBe('Flighten din: Marte, Ola, Kari');
