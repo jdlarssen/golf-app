@@ -669,6 +669,7 @@ describe('GameHome — «Hull for hull»-flisa (#2255 PR 3a)', () => {
     ['pågående solo stableford', 'active', 'stableford', { kind: 'stableford', team_size: 1 }, 'open-leaderboard', 'Leaderboard'],
     ['avsluttet lag-stableford (ingen visning på webben heller)', 'finished', 'stableford', { kind: 'stableford', team_size: 2 }, 'open-leaderboard', 'Leaderboard'],
     ['avsluttet wolf (PR 3b)', 'finished', 'wolf', { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' }, 'open-hole-by-hole', 'HoleByHole'],
+    ['avsluttet nines (PR 3c)', 'finished', 'nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 'open-hole-by-hole', 'HoleByHole'],
     ['avsluttet skins (bygges etter tegningen, #2317)', 'finished', 'skins', { kind: 'skins' }, 'open-leaderboard', 'Leaderboard'],
   ])('%s → %s', async (_case, status, gameMode, modeConfig, tileId, route) => {
     mockState.bundle = homeBundle({

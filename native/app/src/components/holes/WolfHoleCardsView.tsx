@@ -15,7 +15,16 @@ import {
   wolfChoicePartner,
 } from '../../lib/holesCopy';
 import { FONTS, useTheme, type ThemeColors } from '../../theme';
-import { HoleHeader, HolesFooter, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
+import {
+  GoldChip,
+  HoleHeader,
+  HolesFooter,
+  HolesTitle,
+  goldEdge,
+  goldWash,
+  holesStyles,
+  nameOf,
+} from './holesShared';
 
 /** Tonen fra modellen (`wolfOutcomeTone`, samme regel som webben) som farge. */
 function toneColor(tone: WolfHoleCard['outcomeTone'], colors: ThemeColors): string {
@@ -66,15 +75,7 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
         strokeIndex={hole.strokeIndex}
         right={
           hole.stake != null ? (
-            <View
-              style={[
-                styles.stake,
-                { borderColor: goldEdge(colors.accent), backgroundColor: goldWash(colors.accent, '14') },
-              ]}
-              testID={`hole-by-hole-stake-${hole.holeNumber}`}
-            >
-              <Text style={[styles.stakeText, ui.num, { color: colors.accentText }]}>{`${hole.stake}x`}</Text>
-            </View>
+            <GoldChip text={`${hole.stake}x`} testID={`hole-by-hole-stake-${hole.holeNumber}`} />
           ) : null
         }
       />
@@ -130,10 +131,10 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
             </View>
             <View style={holesStyles.rowRight}>
               {row.pointsShown != null ? (
-                <Text style={[styles.points, ui.num, { color: colors.accentText }]}>{`+${row.pointsShown}`}</Text>
+                <Text style={[holesStyles.points, ui.num, { color: colors.accentText }]}>{`+${row.pointsShown}`}</Text>
               ) : null}
               {row.grossShown != null ? (
-                <Text style={[styles.gross, ui.num, { color: colors.muted }]}>{wolfBruttoLabel(row.grossShown)}</Text>
+                <Text style={[holesStyles.gross, ui.num, { color: colors.muted }]}>{wolfBruttoLabel(row.grossShown)}</Text>
               ) : null}
               <Text style={[holesStyles.value, ui.num, { color: colors.text }]}>
                 {row.effectiveScore ?? '–'}
@@ -147,11 +148,7 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
 }
 
 const styles = StyleSheet.create({
-  stake: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  stakeText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
   wolfLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8, rowGap: 4 },
   dot: { opacity: 0.4 },
   side: { fontSize: 11, fontFamily: FONTS.sans, letterSpacing: 1.1, textTransform: 'uppercase', flexShrink: 0 },
-  points: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-  gross: { fontSize: 11, fontFamily: FONTS.sans },
 });
