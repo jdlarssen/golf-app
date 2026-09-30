@@ -41,7 +41,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const { extras, failed: choicesFailed } = useGameChoices(
     gameId,
     bundle?.game.gameMode ?? '',
-    // Et avsluttet spill endres ikke: én henting ved fokus, ingen polling.
+    // Et avsluttet spill endres ikke: prøv igjen bare til første svar, så ingen polling.
     bundle?.game.status === 'finished' ? null : undefined,
   );
   // Hentingen av slagene: mens den pågår, og uten noe lokalt, står et hjul i
