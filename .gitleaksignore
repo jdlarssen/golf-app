@@ -17,3 +17,10 @@ ede4f6ae9f820c6a7b6ad4019b71e92fd2484a3a:lib/auth/getInviteLoginContext.test.ts:
 # `git show 36bf95e1:lib/auth/getInviteLoginContext.test.ts` — a vitest
 # fixture, not a real credential.
 36bf95e1a013e6ff198cb04a60490bbdb599155e:lib/auth/getInviteLoginContext.test.ts:generic-api-key:16
+# Verified false positive 2026-09-30 (#2256 PR 4, secret scan on #2408): the
+# fake APNs token `a1b2c3d4e5f6` in a jest fixture for the mocked phone
+# (native/app/src/data/pushDevice.test.ts), not a credential. Fixed forward to
+# the canonical dummy UUID in the next commit, same as the #2241 entry above;
+# this fingerprint unblocks the PR's own CI on the commit already in its
+# history.
+c2ea6835b2075f200b47993dd866099634784c25:native/app/src/data/pushDevice.test.ts:generic-api-key:27
