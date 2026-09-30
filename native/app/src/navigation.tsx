@@ -100,8 +100,8 @@ export type ScreenProps<T extends keyof RootStackParamList> =
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 /**
- * Et ord oppe til høyre i headeren: «Profil» på hjem, «Rediger» i profilen
- * (#2256).
+ * Et ord oppe til høyre i headeren: «Profil» på hjem. («Rediger» i profilen
+ * står som pille ved tittelen i innholdet, som i designet, #2256.)
  *
  * Et ord og ikke et ikon: ikonspråket (#1879) er ikke bygget ennå, og en løs
  * silhuett her ville forskuttert det valget. Tap-flaten er `TAP` bred og høy
@@ -214,11 +214,7 @@ export function RootNavigator() {
           // Startbilletten (#2255, designlerretet): «STARTBILLETT» i små
           // sperrede versaler og ingen skillelinje. Del-knappen til høyre
           // setter skjermen selv, for bare den vet om live-følging er på.
-          options={{
-            title: TICKET_TEXT.topTitle,
-            headerTitle: () => <TicketTopTitle />,
-            headerShadowVisible: false,
-          }}
+          options={kickerHeader(TICKET_TEXT.topTitle, TICKET_TEXT.topTitle)}
         />
         <Stack.Screen
           name="Hole"
@@ -253,18 +249,14 @@ export function RootNavigator() {
         <Stack.Screen
           name="Profile"
           component={Profile}
-          // «Rediger» bor her av samme grunn som «Profil» på hjem: headeren er
-          // navigatorens flate. Skjemaet er et eget rom (`EditProfile`).
-          options={({ navigation }) => ({
+          // Designet (#2256): «Profil» står stort i innholdet med «Rediger»
+          // som pille ved siden av (`Profile.tsx`). Toppen har bare
+          // tilbake-pila til hjem, og ingen skillelinje.
+          options={{
             title: PROFILE_TEXT.heading,
-            headerRight: () => (
-              <HeaderTextLink
-                label={PROFILE_TEXT.editAction}
-                onPress={() => navigation.navigate('EditProfile')}
-                testID="profile-edit-entry"
-              />
-            ),
-          })}
+            headerTitle: () => null,
+            headerShadowVisible: false,
+          }}
         />
         <Stack.Screen
           name="EditProfile"
@@ -281,15 +273,17 @@ export function RootNavigator() {
           component={AccountSettings}
           options={{ title: PROFILE_TEXT.menuAccount }}
         />
+        {/* Rommene under profilen (#2256, designet): «PROFIL» i toppen, og
+            sidens navn stort i innholdet. */}
         <Stack.Screen
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
-          options={{ title: PROFILE_TEXT.menuNotificationsTheme }}
+          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuNotificationsTheme)}
         />
         <Stack.Screen
           name="Friends"
           component={Friends}
-          options={{ title: FRIENDS_TEXT.heading }}
+          options={kickerHeader(PROFILE_TEXT.heading, FRIENDS_TEXT.heading)}
         />
         <Stack.Screen
           name="SyncLab"
@@ -301,18 +295,34 @@ export function RootNavigator() {
   );
 }
 
-/** Toppen på spillets side: samme kicker-stil som feltetikettene i billetten. */
-function TicketTopTitle() {
+/**
+ * Toppen fra designlerretet (#2255, #2256): tilbake-pila, et lite sperret ord
+ * i midten og ingen skillelinje. Ordet sier hvor du er («STARTBILLETT»,
+ * «PROFIL»); sidens egen tittel står stort i innholdet (`PageTitle`). Én
+ * stil for alle, i samme kicker-stil som feltetikettene i billetten.
+ *
+ * `title` er skjermens navn for systemet (app-bytteren, VoiceOver sin
+ * «tilbake»), som kan være et annet enn ordet i toppen.
+ */
+function kickerHeader(kicker: string, title: string) {
+  return {
+    title,
+    headerTitle: () => <KickerTitle label={kicker} />,
+    headerShadowVisible: false,
+  };
+}
+
+function KickerTitle({ label }: { label: string }) {
   const { colors } = useTheme();
   return (
-    <Text accessibilityRole="header" style={[styles.ticketTitle, { color: colors.muted }]}>
-      {TICKET_TEXT.topTitle}
+    <Text accessibilityRole="header" style={[styles.kickerTitle, { color: colors.muted }]}>
+      {label}
     </Text>
   );
 }
 
 const styles = StyleSheet.create({
-  ticketTitle: {
+  kickerTitle: {
     fontSize: 10,
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 2,

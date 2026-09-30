@@ -20,8 +20,8 @@
 // **Delingen** åpner telefonens delearke med lenka (`Share.share`, ingen ny
 // modul). Adressen bygges med `webUrl`, så butikkbygget deler tornygolf.no.
 //
-// Toppen (tilbake, stor tittel, undertittel) blir #2255 sin felles topp når
-// den finnes; til da står tittelen i navigasjonen og undertittelen her.
+// Toppen er designets: «PROFIL» i navigatorens header (`kickerHeader`), og
+// «Venner» stort med undertittelen øverst i innholdet (`PageTitle`).
 import { Children, Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -69,6 +69,7 @@ import {
   type StatusLine,
 } from '../lib/friendsCopy';
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
+import { PageTitle } from '../components/PageTitle';
 import type { ScreenProps } from '../navigation';
 import { FONTS, TAP, useTheme } from '../theme';
 
@@ -251,9 +252,11 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
         keyboardShouldPersistTaps="handled"
         testID="friends-screen"
       >
-        <Text style={[ui.muted, styles.inset]} testID="friends-subtitle">
-          {friendsSubtitle(friends.length)}
-        </Text>
+        <PageTitle
+          title={FRIENDS_TEXT.heading}
+          subtitle={friendsSubtitle(friends.length)}
+          subtitleTestID="friends-subtitle"
+        />
 
         {line ? (
           line.tone === 'error' ? (
@@ -671,7 +674,8 @@ function NameBlock({ name, sub }: { name: string; sub: string | null }) {
 
 /**
  * Initialene i en sirkel. Skogen for venner, den lyse grønne for forespørsler
- * og gull-tonen for forslag, som i designet. Pynt: navnet står ved siden av.
+ * og kremtonen (`trackBg`) for forslag, som i designet. Pynt: navnet står ved
+ * siden av.
  */
 function Avatar({ name, tone }: { name: string; tone: 'strong' | 'soft' | 'warm' }) {
   const { colors } = useTheme();
@@ -680,7 +684,7 @@ function Avatar({ name, tone }: { name: string; tone: 'strong' | 'soft' | 'warm'
       ? { bg: colors.surfaceStrong, ink: colors.onStrong }
       : tone === 'soft'
         ? { bg: colors.primarySoft, ink: colors.primary }
-        : { bg: `${colors.accent}29`, ink: colors.muted };
+        : { bg: colors.trackBg, ink: colors.muted };
   return (
     <View
       style={[styles.avatar, { backgroundColor: look.bg }]}
