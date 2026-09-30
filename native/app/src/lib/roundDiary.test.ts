@@ -5,34 +5,8 @@
 // lokaltid. Datoene bygges derfor med lokale konstruktører, så «31. august kl.
 // 23.30» betyr det i sonen koden faktisk regner i.
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
-import type { HistoryRound } from './roundHistory';
+import { historyRound as round, localIso as local } from '../test/historyFixtures';
 import { diaryResult, diaryRowLabel, diarySubline, groupDiaryByMonth } from './roundDiary';
-
-const local = (month0: number, day: number, hour = 12, minute = 0) =>
-  new Date(2026, month0, day, hour, minute).toISOString();
-
-function round(partial: Partial<HistoryRound> & { gameId: string }): HistoryRound {
-  const date = partial.date === undefined ? local(8, 19) : partial.date;
-  return {
-    name: 'Lørdagsrunden',
-    courseName: 'Byneset North',
-    courseId: 'c1',
-    gameMode: 'solo_strokeplay',
-    holeSegment: 'full',
-    year: date ? new Date(date).getFullYear() : null,
-    teamBall: false,
-    holeCount: 18,
-    brutto: 86,
-    netto: 72,
-    completeBrutto: 86,
-    holes: [],
-    putts: [],
-    differential: null,
-    resultSummary: null,
-    ...partial,
-    date,
-  };
-}
 
 describe('groupDiaryByMonth', () => {
   it('gives no months for no rounds', () => {

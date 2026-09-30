@@ -31,10 +31,12 @@ import Svg, {
   Ellipse,
   Line,
   Path,
+  Polyline,
   RadialGradient,
   Rect,
   Stop,
 } from 'react-native-svg';
+import type { ScoringTrendGeometry } from '../../../../../lib/stats/scoringTrend';
 
 export type IconProps = {
   color: string;
@@ -319,12 +321,16 @@ export function MedalDisc({
   edge,
   ring,
   size = 36,
+  gradientId = 'medal',
   testID,
 }: {
   highlight: string;
   edge: string;
-  ring: string;
+  /** Den innfelte ringen; utelatt = ingen ring (bronsen i Rundedagboka, #2265). */
+  ring?: string;
   size?: number;
+  /** Egen id per metall når flere skiver står på samme skjerm (#2265). */
+  gradientId?: string;
   testID?: string;
 }) {
   const r = size / 2;
@@ -342,7 +348,7 @@ export function MedalDisc({
     >
       <Defs>
         <RadialGradient
-          id="medal"
+          id={gradientId}
           cx={r}
           cy={cy}
           fx={r}
@@ -354,15 +360,80 @@ export function MedalDisc({
           <Stop offset={1} stopColor={edge} />
         </RadialGradient>
       </Defs>
-      <Circle cx={r} cy={r} r={r} fill="url(#medal)" />
-      <Circle
-        cx={r}
-        cy={r}
-        r={r - 0.5}
+      <Circle cx={r} cy={r} r={r} fill={`url(#${gradientId})`} />
+      {ring ? (
+        <Circle
+          cx={r}
+          cy={r}
+          r={r - 0.5}
+          fill="none"
+          stroke={ring}
+          strokeOpacity={0.6}
+          strokeWidth={1}
+        />
+      ) : null}
+    </Svg>
+  );
+}
+
+/**
+ * Formkurven i Rundedagboka (#2265), som designlerretet (`Historikk-forslag`)
+ * tegner den: tre rutelinjer, en ugjennomsiktig flate under linja, linja på
+ * 2,5 pt med runde ledd, en prikk på første runde og gullprikken med ring på
+ * beste runde. Geometrien kommer ferdig fra `buildScoringTrend`; tallene ved
+ * prikkene er tekst kalleren legger oppå. Alltid dekor: kalleren gir hele
+ * kurven én etikett.
+ */
+export function TrendCurve({
+  geometry,
+  gridYs,
+  colors,
+  testID,
+}: {
+  geometry: ScoringTrendGeometry;
+  /** Rutelinjene, i punkter fra toppen; de går fra kant til kant. */
+  gridYs: readonly number[];
+  colors: {
+    grid: string;
+    area: string;
+    line: string;
+    best: string;
+    bestRing: string;
+  };
+  testID?: string;
+}) {
+  const { width, height, bruttoPoints, bruttoBestPoint } = geometry;
+  const first = bruttoPoints[0];
+  return (
+    <Svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      testID={testID}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {gridYs.map((y) => (
+        <Line key={y} x1={0} y1={y} x2={width} y2={y} stroke={colors.grid} strokeWidth={1} />
+      ))}
+      <Path d={geometry.areaPath} fill={colors.area} />
+      <Polyline
+        points={geometry.bruttoPolyline}
         fill="none"
-        stroke={ring}
-        strokeOpacity={0.6}
-        strokeWidth={1}
+        stroke={colors.line}
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <Circle cx={first.x} cy={first.y} r={3.5} fill={colors.line} />
+      <Circle
+        cx={bruttoBestPoint.x}
+        cy={bruttoBestPoint.y}
+        r={6}
+        fill={colors.best}
+        stroke={colors.bestRing}
+        strokeWidth={2}
+        testID={testID ? `${testID}-best` : undefined}
       />
     </Svg>
   );

@@ -190,10 +190,16 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         <SeasonTiles year={extras.year} season={extras.season} />
       ) : null}
 
-      {/* Chevron: hver rad fører til et rom. «Historikk og statistikk» (#2265)
-          kommer inn øverst her når skjermen finnes (kontrakten, del F). */}
+      {/* Chevron: hver rad fører til et rom. «Historikk og statistikk» står
+          øverst og åpner Rundedagboka (#2265). */}
       <View style={styles.menu}>
         <SettingList testID="profile-menu">
+          <SettingRow
+            label={PROFILE_TEXT.menuHistory}
+            chevron
+            onPress={() => navigation.navigate('RoundDiary')}
+            testID="profile-history"
+          />
           <SettingRow
             label={PROFILE_TEXT.friendsRow}
             chevron
