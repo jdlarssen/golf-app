@@ -19,7 +19,7 @@ const FIELDS: TicketField[] = [
   { label: 'Dine slag', value: '15', a11y: 'Dine slag: C', testID: 'ticket-strokes' },
 ];
 
-it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
+it('tegner hode, tre felt, avatarrad og stubben', async () => {
   const players = [
     homePlayer({ userId: 'me', name: 'Siri Aas', flightNumber: 2 }),
     homePlayer({ userId: 'marte', name: 'Marte Holm', flightNumber: 2 }),
@@ -46,7 +46,7 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
   expect(screen.getByTestId('game-ticket-kicker')).toHaveStyle({ color: PALETTES.light.accent });
   expect(screen.getByTestId('game-ticket-status')).toHaveTextContent('Planlagt');
   // Merket som i designet: salvie i 22 % og krem tekst, uten linlag over.
-  expect(screen.getByTestId('game-ticket-status')).toHaveStyle({ backgroundColor: `${PALETTES.light.live}38` });
+  expect(screen.getByTestId('game-ticket-status')).toHaveStyle({ backgroundColor: 'rgba(125, 170, 138, 0.22)' });
   expect(within(screen.getByTestId('game-ticket-status')).getByText('Planlagt')).toHaveStyle({ color: '#ECE5D2' });
 
   // Hvert felt er én node: skjermleseren får etikett og verdi i én setning.
@@ -66,6 +66,8 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
   const self = within(roster).getByTestId('game-ticket-avatars-self', HIDDEN);
   expect(self).toHaveStyle({ backgroundColor: PALETTES.light.primary });
   expect(self).toHaveTextContent('SA');
+  // Dine initialer i krem, som designlerretet (ikke hvitt).
+  expect(within(self).getByText('SA', HIDDEN)).toHaveStyle({ color: PALETTES.light.onStrong });
   const others = within(roster).getAllByTestId('game-ticket-avatars-disc', HIDDEN);
   expect(others).toHaveLength(2);
   expect(others[0]).toHaveStyle({ backgroundColor: PALETTES.light.primarySoft });

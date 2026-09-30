@@ -383,11 +383,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
  * Del-ikonet i toppen. Knappen bærer etiketten; ikonet i den er dekor. Feiler
  * delingsarket, sier en melding det. Toppen har ingen plass til en linje, og
  * feilen er forbigående, så den står ikke fast som på lenkeknappene.
- */
-/**
+ *
  * `edge`: knappen står som eget element i iOS-toppen, der UIKit legger sin
- * egen marg. Designet har ikonet 8 pt fra kanten i en 44 pt-boks (sentrum 30 pt
- * fra kanten); forskyvningen tar det systemet legger til.
+ * egen marg. Ikonet legges mot høyre i boksen, så sentrum havner 30 pt fra
+ * kanten som i designet (8 pt inn i en 44 pt-boks).
  */
 function ShareLiveButton({ token, edge = false }: { token: string; edge?: boolean }) {
   const { colors } = useTheme();
@@ -479,7 +478,7 @@ export function RosterRow({
 
 const styles = StyleSheet.create({
   headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerButtonEdge: { transform: [{ translateX: 12 }] },
+  headerButtonEdge: { alignItems: 'flex-end' },
   /**
    * Designets marger: 16 pt fra kantene, og billetten rett under toppen.
    * Designets rad er 44 pt med 8 pt luft under; den native toppen er høyere,
