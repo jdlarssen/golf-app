@@ -38,6 +38,9 @@ const bundleGame = {
 
 // Par 4 på alle hull, banehandicap 0: 4 slag = 2 poeng, 6 slag = 0 poeng.
 // Makkeren taster bedre enn meg, så motoren skal sette HAM øverst.
+/** Et annet spill enn standardbundelen, når en test trenger det. */
+const mockBundleOverride: { current: unknown } = { current: null };
+
 const mockBundle = {
   game: bundleGame,
   players: [
@@ -97,10 +100,16 @@ const mockLocalScores = [
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../data/gameBundle', () => ({
-  loadGameBundle: jest.fn(async () => mockBundle),
-  refreshGameBundle: jest.fn(async () => mockBundle),
+  loadGameBundle: jest.fn(async () => mockBundleOverride.current ?? mockBundle),
+  refreshGameBundle: jest.fn(async () => mockBundleOverride.current ?? mockBundle),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
+// Wolf-valgene (#2255 PR 3b): testen styrer når og om de kommer.
+const mockFetchWolfChoices = jest.fn();
+jest.mock('../data/choices', () => ({
+  fetchWolfChoices: (...args: unknown[]) => mockFetchWolfChoices(...args),
+  fetchBingoBangoBongoHoles: jest.fn(async () => []),
+}));
 jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
 }));
@@ -185,6 +194,40 @@ describe('Leaderboard — hentingen av slagene (#2255 PR 3a)', () => {
     await renderLeaderboard();
     await waitFor(() => expect(screen.getByTestId('leaderboard-table')).toBeTruthy());
     expect(screen.queryByTestId('leaderboard-seed-failed')).toBeNull();
+  });
+});
+
+describe('Leaderboard — Wolf-valgene (#2255 PR 3b)', () => {
+  const wolfBundle = () => ({
+    ...mockBundle,
+    game: {
+      ...mockBundle.game,
+      gameMode: 'wolf',
+      modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+    },
+  });
+
+  afterEach(() => {
+    mockBundleOverride.current = null;
+    mockFetchWolfChoices.mockReset();
+  });
+
+  it('mens første henting går: et hjul, ikke «Fikk ikke tak i valgene»', async () => {
+    mockBundleOverride.current = wolfBundle();
+    mockFetchWolfChoices.mockReturnValue(new Promise(() => undefined));
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-spinner')).toBeTruthy());
+    expect(screen.queryByTestId('leaderboard-missing-choices')).toBeNull();
+  });
+
+  it('når hentingen feiler: den ærlige beskjeden', async () => {
+    mockBundleOverride.current = wolfBundle();
+    mockFetchWolfChoices.mockRejectedValue(new Error('nett'));
+    await renderLeaderboard();
+    await waitFor(() => expect(screen.getByTestId('leaderboard-missing-choices')).toBeTruthy());
+    expect(screen.getByTestId('leaderboard-missing-choices')).toHaveTextContent(
+      'Fikk ikke tak i valgene som avgjør poengene. Tabellen kommer når nettet er tilbake.',
+    );
   });
 });
 

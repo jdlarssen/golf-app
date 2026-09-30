@@ -162,14 +162,28 @@ describe('useGameChoices: feil og polling (#2255 PR 3b)', () => {
     expect(result.current.extras).toEqual({ wolfChoices: [choice] });
   });
 
-  it('pollMs null: én henting ved fokus, ingen intervall (et avsluttet spill endres ikke)', async () => {
-    fetchWolfChoices.mockResolvedValue([choice]);
-    const interval = jest.spyOn(global, 'setInterval');
-    await renderHook(() => useGameChoices('game-1', 'wolf', null));
-    await act(async () => undefined);
-    expect(fetchWolfChoices).toHaveBeenCalledTimes(1);
-    expect(interval).not.toHaveBeenCalled();
-    interval.mockRestore();
+  it('pollMs null: prøver igjen til første svar (uten nett ved åpning), så ingen flere hentinger', async () => {
+    jest.useFakeTimers();
+    try {
+      fetchWolfChoices.mockRejectedValueOnce(new Error('nett')).mockResolvedValue([choice]);
+      const { result } = await renderHook(() => useGameChoices('game-1', 'wolf', null));
+      await act(async () => undefined);
+      expect(result.current.failed).toBe(true);
+
+      await act(async () => {
+        jest.advanceTimersByTime(CHOICES_POLL_MS);
+      });
+      expect(fetchWolfChoices).toHaveBeenCalledTimes(2);
+      expect(result.current.failed).toBe(false);
+      expect(result.current.extras).toEqual({ wolfChoices: [choice] });
+
+      // Et avsluttet spill endres ikke: etter første svar hentes ingenting mer.
+      await act(async () => {
+        jest.advanceTimersByTime(CHOICES_POLL_MS * 3);
+      });
+      expect(fetchWolfChoices).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
-
