@@ -71,6 +71,9 @@ it('et format appen ikke har «Hull for hull» for: en rolig linje', async () =>
 });
 
 describe('hentingen av slagene', () => {
+  beforeEach(() => {
+    mockReload.mockClear();
+  });
   const props = { route: { params: { gameId: 'g1' } } } as unknown as ScreenProps<'HoleByHole'>;
   const finished = () =>
     homeBundle({ game: { id: 'g1', status: 'finished', ...stableford }, players });
@@ -80,7 +83,8 @@ describe('hentingen av slagene', () => {
     mockScreen.scores = [];
     mockScreen.seed = () => new Promise(() => undefined);
     await render(<HoleByHole {...props} />);
-    expect(screen.getByTestId('hole-by-hole-loading')).toBeTruthy();
+    // Hjulet, ikke feilteksten «Fikk ikke tak i spillet.» som deler blokka.
+    expect(screen.getByTestId('hole-by-hole-spinner')).toBeTruthy();
     expect(screen.queryByTestId('hole-by-hole-screen')).toBeNull();
   });
 
@@ -98,7 +102,8 @@ describe('hentingen av slagene', () => {
     mockScreen.scores = scores;
     mockScreen.seed = async () => 5;
     await render(<HoleByHole {...props} />);
-    await waitFor(() => expect(mockReload).toHaveBeenCalled());
+    await waitFor(() => expect(mockReload).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('hole-by-hole-front9')).toBeTruthy();
     expect(screen.queryByTestId('hole-by-hole-seed-failed')).toBeNull();
   });
 });
