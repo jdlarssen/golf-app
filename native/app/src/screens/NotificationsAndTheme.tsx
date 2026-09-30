@@ -89,9 +89,10 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
 }
 
 const styles = StyleSheet.create({
-  // Designet: 16 pt til kanten, og tittelen på designets høyde (målt i
-  // simulatoren; linjehøyden på 34 gir selv litt luft over versalene).
-  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 32 },
+  // Designet: 16 pt til kanten, og tittelen 4 pt under topp-raden. Tallet er
+  // målt i simulatoren under den felles topp-raden; linjehøyden på 34 gir
+  // selv litt luft over versalene.
+  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 3.5, paddingBottom: 32 },
   // Etiketten 20 pt fra kanten, 16 pt over og 8 under.
   label: { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 8 },
   list: { marginTop: 0 },

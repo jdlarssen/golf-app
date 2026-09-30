@@ -25,14 +25,14 @@
 // handicap), flisene under viser sesongen, og en kort meny fører videre:
 // «Venner», «Varsler og tema» og «Personvern og konto» er egne skjermer.
 //
-// **Profil v2: identisk med designlerretet.** Ingen navigasjonslinje over
-// (tilbake til Hjem er sveipet, som på iOS ellers), «Profil» og «Rediger» øverst
-// på samme rad, 16 pt til kanten, og siden slutter med «Del bag-taggen».
+// **Profil v2: identisk med designlerretet.** Over står den felles
+// topp-raden med bare tilbake-pila (eierens svar: til bunnmenyen kommer).
+// «Profil» og «Rediger» står på samme rad under den, 16 pt til kanten, og
+// siden slutter med «Del bag-taggen».
 // «Logg ut» og utviklerflaten bor i «Personvern og konto»
 // (`AccountSettings.tsx`), sammen med personvernerklæringen og «Slett konto».
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
@@ -48,8 +48,6 @@ import { FONTS, TAP, useTheme } from '../theme';
 export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
   const { ui, colors } = useTheme();
-  // Uten navigasjonslinje står innholdet rett under statuslinja.
-  const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -140,7 +138,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg, paddingTop: insets.top }]}
+      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
       testID="profile-screen"
     >
       {/* Designet: «Profil» i Fraunces 22 og «Rediger» som pille på samme rad,

@@ -40,10 +40,6 @@ jest.mock('../session', () => ({
 }));
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
-// Rommet har ingen navigasjonslinje og leser selv avstanden til statuslinja.
-jest.mock('react-native-safe-area-context', () =>
-  require('react-native-safe-area-context/jest/mock').default,
-);
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const fetchBagTagExtrasMock = fetchBagTagExtras as jest.Mock;

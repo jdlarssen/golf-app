@@ -220,13 +220,10 @@ export function RootNavigator() {
         <Stack.Screen
           name="Profile"
           component={Profile}
-          // Designet (#2256, Profil v2): ingen navigasjonslinje. «Profil» og
-          // «Rediger» står øverst i innholdet (`Profile.tsx`), og tilbake til
-          // Hjem er sveipet. `title` er skjermens navn for systemet.
-          options={{
-            title: PROFILE_TEXT.heading,
-            headerShown: false,
-          }}
+          // Eierens svar (#2256, Profil v2): den felles topp-raden med bare
+          // tilbake-pila, til bunnmenyen kommer. «Profil» og «Rediger» står
+          // som raden under, i innholdet (`Profile.tsx`), som i designet.
+          options={kickerHeader('', PROFILE_TEXT.heading)}
         />
         <Stack.Screen
           name="EditProfile"

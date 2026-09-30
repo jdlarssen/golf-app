@@ -795,8 +795,10 @@ const DECLINE_WIDTH = 39;
 const DECLINE_HIT_SLOP = { left: (TAP - DECLINE_WIDTH) / 2, right: (TAP - DECLINE_WIDTH) / 2 };
 
 const styles = StyleSheet.create({
-  // Designet: tittelen 6 pt under toppen.
-  scroll: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 32 },
+  // Designet: tittelen 6 pt under topp-raden. Tallet er målt i simulatoren
+  // under den felles topp-raden: iOS legger mer luft over Fraunces-versalene
+  // enn nettleseren.
+  scroll: { paddingHorizontal: 16, paddingTop: 7.5, paddingBottom: 32 },
   inset: { paddingHorizontal: 4 },
   // Seksjonsetiketten: 18 pt over (10 + gapet på 8), 8 under (seksjonens gap).
   label: { paddingHorizontal: 4, marginTop: 10 },
@@ -811,9 +813,9 @@ const styles = StyleSheet.create({
   cardRound: { borderRadius: 16 },
   flexText: { flex: 1, minWidth: 0 },
 
-  // 14 pt under undertittelen i designet: 4 + gapet på 8, og undertittelens
+  // 14 pt under undertittelen i designet: 4,5 + gapet på 8, og undertittelens
   // linje er 2 pt høyere enn nettleserens (målt i simulatoren).
-  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 4 },
+  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 4.5 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroAvatars: { flexDirection: 'row' },
   // Ringen ligger utenfor de 30 pt, så boksen tar ikke mer plass enn kremen.
