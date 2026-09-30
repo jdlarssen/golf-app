@@ -10,13 +10,19 @@
 //
 // **Perforeringen** er en kolonne små streker, ikke `borderStyle: 'dashed'`.
 // React Native tegner stiplet kant på én side ujevnt på iOS, og strekene ser
-// like ut på iOS og Android.
+// like ut på iOS og Android. Hjem v2 (#2385) tegner dem som nettleseren gjør
+// designets `border-right: 2px dashed`: streker på 6 pt med rundt 4 pt mellom,
+// fra toppen til bunnen av billetten, med første og siste strek helt i hver
+// ende. Hakkene dekker endene, så strekene går fra hakk til hakk.
 //
 // **Hakkene** oppe og nede ligger OVER billetten som søsken, ikke inni den:
 // iOS tegner et elements kant over sine egne barn, så et hakk inni billetten
 // ble en bule under kantlinja i stedet for et kutt i den (simulator-beviset,
-// #2254). Hvert hakk er en halvsirkel i sidens bakgrunnsfarge med kantfarget
-// bue, klippet av en boks så bare den indre halvdelen synes.
+// #2254). Designets hakk er en sirkel i sidens bakgrunnsfarge med kant bare
+// nederst (øverste hakk) eller øverst (nederste): kanten er en tynn månesigd
+// som er 1 pt midt på og smalner mot sidene. Her er den to sirkler, en i
+// kantfarge forskjøvet 1 pt utover og en i bakgrunnsfarge over den.
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { GameBundle } from '../../data/gameBundle';
 import type { HomeCard } from '../../data/homeList';
@@ -31,10 +37,17 @@ import {
 } from '../../lib/homeCopy';
 import { formatStubClock, formatStubDate, teeOffProximityLocal } from '../../lib/homeDates';
 import { MAX_HOME_COMPANIONS, companionsOf } from '../../lib/flightRoster';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, frauncesLine, interLine, useTheme } from '../../theme';
 import { FlightAvatars } from './FlightAvatars';
 
-const DASHES = 9;
+/** Designets stiplede strek på 2 pt: streker på 6 pt og rundt 4 pt mellom. */
+const DASH = 6;
+const DASH_GAP = 4;
+
+/** Så mange streker som får plass, med en strek i hver ende. */
+export function dashCount(length: number): number {
+  return Math.max(2, Math.round((length + DASH_GAP) / (DASH + DASH_GAP)));
+}
 
 export function NextStartTicket({
   card,
@@ -78,7 +91,7 @@ export function NextStartTicket({
       : null,
   ]);
 
-  const notch = { backgroundColor: colors.bg, borderColor: colors.border };
+  const [perforation, setPerforation] = useState(0);
   return (
     <View style={styles.wrap}>
       <Pressable
@@ -114,13 +127,16 @@ export function NextStartTicket({
 
         <View
           style={styles.perforation}
+          onLayout={(e) => setPerforation(e.nativeEvent.layout.height)}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           testID="home-ticket-perforation"
         >
-          {Array.from({ length: DASHES }, (_, i) => (
-            <View key={i} style={[styles.dash, { backgroundColor: colors.border }]} />
-          ))}
+          {perforation > 0
+            ? Array.from({ length: dashCount(perforation) }, (_, i) => (
+                <View key={i} style={[styles.dash, { backgroundColor: colors.border }]} />
+              ))
+            : null}
         </View>
 
         <View style={styles.body}>
@@ -142,30 +158,47 @@ export function NextStartTicket({
           ) : null}
         </View>
       </Pressable>
-      <View
-        style={[styles.notchClip, styles.notchClipTop]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <View style={[styles.notch, styles.notchTop, notch]} />
-      </View>
-      <View
-        style={[styles.notchClip, styles.notchClipBottom]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <View style={[styles.notch, styles.notchBottom, notch]} />
-      </View>
+      {(['top', 'bottom'] as const).map((side) => (
+        <View
+          key={side}
+          style={[styles.notch, side === 'top' ? styles.notchTop : styles.notchBottom]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          testID={`home-ticket-notch-${side}`}
+        >
+          <View
+            style={[
+              styles.notchDisc,
+              side === 'top' ? styles.notchDiscLow : null,
+              { backgroundColor: colors.border },
+            ]}
+          />
+          <View
+            style={[
+              styles.notchDisc,
+              side === 'bottom' ? styles.notchDiscLow : null,
+              { backgroundColor: colors.bg },
+            ]}
+          />
+        </View>
+      ))}
     </View>
   );
 }
 
 const NOTCH = 18;
 const STUB = 104;
-/** Billettens kant; hakkene sentreres på den. */
+/** Billettens kant. */
 const EDGE = 1;
 /** Perforeringen er en smal kolonne, som designets stiplede strek på 2 pt. */
 const PERFORATION = 2;
+/**
+ * Designets hakk står `left: 95px` og `top`/`bottom: -9px` fra innsiden av
+ * kanten, og er 19 høyt (18 og kanten på 1). Midten står 1 pt til venstre for
+ * perforeringens midte, og hakket rekker 10 pt inn i billetten.
+ */
+const NOTCH_LEFT = 95;
+const NOTCH_OUT = 9;
 
 const styles = StyleSheet.create({
   wrap: { marginTop: 8 },
@@ -181,47 +214,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Nettleserens linjebokser: Inter 11 er 14 pt høy, og klokka har
+  // `line-height: 1.1` (33 pt).
   date: {
-    fontSize: 11,
+    ...interLine(11, 14),
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 1.3,
     textTransform: 'uppercase',
   },
-  clock: {
-    fontSize: 30,
-    lineHeight: 33,
-    fontFamily: FONTS.serifScore,
-    fontVariant: ['tabular-nums'],
-  },
+  clock: { ...frauncesLine(30, 33), fontFamily: FONTS.serifScore },
   noTime: { fontSize: 13, textAlign: 'center' },
-  proximity: { fontSize: 11, fontFamily: FONTS.sans },
+  proximity: { ...interLine(11, 14), fontFamily: FONTS.sans },
   perforation: {
     width: PERFORATION,
     alignItems: 'center',
-    justifyContent: 'space-evenly',
-    paddingVertical: NOTCH / 2 + 4,
+    justifyContent: 'space-between',
   },
-  // Boksen dekker kanten og den indre halvdelen av sirkelen; resten klippes.
-  notchClip: {
-    position: 'absolute',
-    pointerEvents: 'none',
-    left: EDGE + STUB + PERFORATION / 2 - NOTCH / 2,
-    width: NOTCH,
-    height: NOTCH / 2 + EDGE,
-    overflow: 'hidden',
-  },
-  notchClipTop: { top: 0 },
-  notchClipBottom: { bottom: 0 },
   notch: {
     position: 'absolute',
+    pointerEvents: 'none',
+    left: EDGE + NOTCH_LEFT,
+    width: NOTCH,
+    height: NOTCH + EDGE,
+  },
+  notchTop: { top: EDGE - NOTCH_OUT },
+  notchBottom: { bottom: EDGE - NOTCH_OUT },
+  notchDisc: {
+    position: 'absolute',
+    top: 0,
     width: NOTCH,
     height: NOTCH,
     borderRadius: NOTCH / 2,
-    borderWidth: EDGE,
   },
-  notchTop: { top: EDGE / 2 - NOTCH / 2 },
-  notchBottom: { bottom: EDGE / 2 - NOTCH / 2 },
-  dash: { width: 2, height: 6, borderRadius: 1 },
+  notchDiscLow: { top: EDGE },
+  dash: { width: PERFORATION, height: DASH },
   body: { flex: 1, padding: 14, gap: 6, justifyContent: 'center' },
   name: { fontSize: 18, lineHeight: 23, fontFamily: FONTS.serifDisplay },
   detail: { fontSize: 12, fontFamily: FONTS.sans },

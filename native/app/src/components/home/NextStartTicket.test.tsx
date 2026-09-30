@@ -6,7 +6,7 @@
 // samlet etikett.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { homeBundle, homeCard, homePlayer } from '../../test/homeFixtures';
-import { NextStartTicket } from './NextStartTicket';
+import { NextStartTicket, dashCount } from './NextStartTicket';
 
 const HIDDEN = { includeHiddenElements: true };
 
@@ -47,7 +47,7 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
 
   expect(screen.getByTestId('home-ticket-date', HIDDEN)).toHaveTextContent('Fre 2. okt');
   expect(screen.getByTestId('home-ticket-clock', HIDDEN)).toHaveTextContent('09:30');
-  expect(screen.getByTestId('home-ticket-proximity', HIDDEN)).toHaveTextContent('Om 3 dager');
+  expect(screen.getByTestId('home-ticket-proximity', HIDDEN)).toHaveTextContent('om 3 dager');
   expect(screen.getByTestId('home-ticket-detail', HIDDEN)).toHaveTextContent(
     'Losby · Flight 2 · Stableford',
   );
@@ -61,7 +61,7 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
   // Ett element for skjermleseren, med det øyet leser.
   const ticket = screen.getByTestId('home-ticket-next');
   expect(ticket.props.accessibilityLabel).toBe(
-    'Neste start. Klubbmesterskap. Fre 2. okt kl. 09:30. Om 3 dager. Losby, Flight\u00A02, Stableford. ' +
+    'Neste start. Klubbmesterskap. Fre 2. okt kl. 09:30. om 3 dager. Losby, Flight\u00A02, Stableford. ' +
       'Flighten din: Marte Kirkerud, Ola Nordmann og 3 til',
   );
   await fireEvent.press(ticket);
@@ -83,4 +83,12 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
   expect(screen.queryByTestId('home-ticket-proximity', HIDDEN)).toBeNull();
   expect(screen.queryByTestId('home-ticket-avatars', HIDDEN)).toBeNull();
   expect(screen.getByTestId('home-ticket-detail', HIDDEN)).toHaveTextContent('Losby · Flight 2');
+});
+
+it('perforeringen får streker fra ende til ende, som designets stiplede kant', () => {
+  // Designets billett er 106,3 pt høy innvendig: 11 streker på 6 pt med rundt
+  // 4 pt mellom, målt i nettleseren (Hjem v2, #2385).
+  expect(dashCount(106.33)).toBe(11);
+  // Aldri færre enn én strek i hver ende.
+  expect(dashCount(0)).toBe(2);
 });

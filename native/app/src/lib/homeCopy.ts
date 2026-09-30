@@ -38,9 +38,10 @@ export const HOME_TEXT = {
   leading: 'Du leder',
   sharedLead: 'Delt ledelse',
   noTeeOff: 'Tid ikke satt',
-  today: 'I dag',
-  /** Webbens `home.proximity.tomorrow`. */
-  tomorrow: 'I morgen',
+  /** Nærheten i stubben har liten forbokstav, som «om 7 dager» i designet. */
+  today: 'i dag',
+  /** Webbens `home.proximity.tomorrow`, med liten forbokstav. */
+  tomorrow: 'i morgen',
   /** Webbens `home.roundTeamBall`. */
   teamRound: 'Lagrunde',
 } as const;
@@ -120,14 +121,15 @@ export function approvalsLine(count: number): string {
 }
 
 /**
- * Nærheten i billettens stubb. «I dag» står uten klokkeslett, for det står
- * rett over. De to andre er webbens `home.proximity.*`.
+ * Nærheten i billettens stubb, med liten forbokstav som i designet. «i dag»
+ * står uten klokkeslett, for det står rett over. De to andre er webbens
+ * `home.proximity.*`.
  */
 export function proximityText(proximity: TeeOffProximity): string | null {
   if (proximity === null) return null;
   if (proximity.kind === 'today') return HOME_TEXT.today;
   if (proximity.kind === 'tomorrow') return HOME_TEXT.tomorrow;
-  return `Om ${proximity.days} dager`;
+  return `om ${proximity.days} dager`;
 }
 
 /** «Flight 2», med hardt mellomrom så tallet aldri brytes bort fra ordet. */
