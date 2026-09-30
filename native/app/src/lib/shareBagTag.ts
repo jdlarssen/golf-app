@@ -18,9 +18,11 @@ import type { RefObject } from 'react';
 import { NativeModules, TurboModuleRegistry, type View } from 'react-native';
 
 /**
- * Finnes begge de native delene i dette bygget? View-shot slås opp slik
- * pakken selv gjør det (`specs/NativeRNViewShot.ts`): i TurboModule-registeret
- * når den nye arkitekturen er på, som i appen, ellers i `NativeModules`.
+ * Finnes begge de native delene i dette bygget? View-shot slås opp nøyaktig
+ * slik pakken selv gjør det (`specs/NativeRNViewShot.ts`): i TurboModule-
+ * registeret når `__turboModuleProxy` finnes, ellers i `NativeModules`. Appen
+ * kjører bridgeless, der `__turboModuleProxy` ikke settes, så der er det
+ * `NativeModules` (som svarer `null` for en modul som mangler) som gjelder.
  */
 export function canShareBagTag(): boolean {
   try {
