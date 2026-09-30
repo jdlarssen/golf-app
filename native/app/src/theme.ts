@@ -71,6 +71,11 @@ export type ThemeColors = {
    * skogen.
    */
   live: string;
+  /**
+   * Den litt nedsenkede flaten (#2255, deuce-raden i Acey Deucey «Hull for
+   * hull») — webbens `--surface-2`.
+   */
+  surface2: string;
 };
 
 /**
@@ -102,6 +107,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#7D6224',
     trackBg: '#EFE9DA',
     live: '#7DAA8A',
+    surface2: '#F0EDE5',
   },
   dark: {
     bg: '#14201A',
@@ -124,6 +130,7 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#D4B870',
     trackBg: '#243429',
     live: '#7DAA8A',
+    surface2: '#243429',
   },
 };
 
@@ -174,6 +181,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   trackBg: '#FFFFFF',
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
+  // Deuce-raden i «Hull for hull» (#2255). Hullsiden tegner den ikke; ren hvit.
+  surface2: '#FFFFFF',
 };
 
 /**

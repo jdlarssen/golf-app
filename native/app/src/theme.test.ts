@@ -37,6 +37,7 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   onStrong: '--bg-tint',
   accentText: '--accent-text',
   trackBg: '--hole-completed-bg',
+  surface2: '--surface-2',
 };
 
 const GLOBALS_CSS = readFileSync(join(__dirname, '../../../app/globals.css'), 'utf8');

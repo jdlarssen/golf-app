@@ -2,19 +2,21 @@
 //
 // Det meste står også på webbens «Hull for hull» (`leaderboard.common.*`,
 // `leaderboard.soloStrokeplay.*`, `leaderboard.wolf.*`, `leaderboard.nines.*`,
-// `leaderboard.roundRobin.*`, `game.home.hullForHull`) og låses tegn for tegn
-// mot `messages/no.json` i `holesCopy.test.ts`. Unntakene er hardkodet i
-// webbens visninger, ikke meldinger: `pointsUnit` («p»), «Wolf · » foran
-// scoringen, « · » mellom Nines-varianten og scoringen, «Round Robin» under
-// overskriften og « + » mellom partnerne i Round Robin. `notAvailable` finnes
-// bare i appen. Samme mønster som `ticketCopy.ts`: appen har ingen i18n, så
-// teksten er en håndkopi.
+// `leaderboard.roundRobin.*`, `leaderboard.aceyDeucey.*`,
+// `game.home.hullForHull`) og låses tegn for tegn mot `messages/no.json` i
+// `holesCopy.test.ts`. Unntakene er hardkodet i webbens visninger, ikke
+// meldinger: `pointsUnit` («p»), «Wolf · » foran scoringen, « · » mellom
+// Nines-varianten og scoringen, «Round Robin» under overskriften, « + » mellom
+// partnerne i Round Robin og «Acey Deucey · » foran scoringen. `notAvailable`
+// finnes bare i appen. Samme mønster som `ticketCopy.ts`: appen har ingen
+// i18n, så teksten er en håndkopi.
 import {
   ninesPointsText,
   type NinesScoringKey,
   type NinesVariantKey,
 } from '../../../../lib/leaderboard/ninesHoles';
 import type { RoundRobinSegmentHolesKey } from '../../../../lib/leaderboard/roundRobinHoles';
+import type { AceyDeuceyScoringKey } from '../../../../lib/leaderboard/aceyDeuceyHoles';
 
 export const HOLES_TEXT = {
   /** Overskriften, og flisa på spillets side når runden er avsluttet. */
@@ -163,5 +165,26 @@ export function roundRobinSideNames(names: readonly string[]): string {
 
 /** «brutto 5», ved siden av netto. */
 export function roundRobinBruttoLabel(gross: number): string {
+  return `brutto ${gross}`;
+}
+
+/**
+ * Acey Deucey (#2255 PR 3c): webbens `leaderboard.aceyDeucey.*`, låst i
+ * `holesCopy.test.ts`. Poengene («+3», «0», «−3») kommer ferdig skrevet fra
+ * modellen (`lib/leaderboard/aceyDeuceyHoles.ts`); «Venter» og netto/brutto
+ * står i `HOLES_TEXT`.
+ */
+export const ACEY_DEUCEY_HOLES_TEXT = {
+  /** Formatet foran scoringen under overskriften, hardkodet i webbens visning. */
+  formatName: 'Acey Deucey',
+} as const;
+
+/** Linja under overskriften: «Acey Deucey · Netto». */
+export function aceyDeuceySubtitle(scoringKey: AceyDeuceyScoringKey): string {
+  return `${ACEY_DEUCEY_HOLES_TEXT.formatName} · ${HOLES_TEXT[scoringKey]}`;
+}
+
+/** «brutto 5», ved siden av netto. */
+export function aceyDeuceyBruttoLabel(gross: number): string {
   return `brutto ${gross}`;
 }
