@@ -210,7 +210,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
   // Sollys: svarte streker og ren kontrast, som resten av drakten. Seire-flisa
-  // (Profil v2) tegnes ikke på hullsiden; ren hvit som flatene.
+  // (Profil v2) tegnes ikke på hullsiden; ren hvit som flatene, og kremen på
+  // skogen som `onStrong`.
   divider: '#000000',
   scoreUnsetFg: '#000000',
   leaderFill: '#FFFFFF',

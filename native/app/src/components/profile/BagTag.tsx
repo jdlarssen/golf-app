@@ -247,7 +247,6 @@ function HandicapCurve({ points, testID }: { points: readonly number[]; testID?:
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={styles.curve}
       testID={testID}
     >
       <Svg width={CURVE_WIDTH} height={CURVE_HEIGHT}>
@@ -330,7 +329,6 @@ const styles = StyleSheet.create({
   },
   // Kurven øverst og linja under, nederst til høyre i raden.
   hcpSide: { flexShrink: 1, alignItems: 'flex-end', gap: 4 },
-  curve: {},
   side: { fontSize: 11, lineHeight: 13, fontFamily: FONTS.sans, opacity: 0.9, textAlign: 'right' },
   sideLink: { fontFamily: FONTS.sansMedium, textDecorationLine: 'underline', opacity: 1 },
   hcpLabel: {
