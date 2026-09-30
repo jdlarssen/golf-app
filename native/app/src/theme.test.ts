@@ -37,7 +37,7 @@ const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   onStrong: '--bg-tint',
   accentText: '--accent-text',
   trackBg: '--hole-completed-bg',
-  rowDivider: '--row-divider-warm',
+  divider: '--row-divider-warm',
   scoreUnsetFg: '--score-unset-fg',
 };
 
@@ -97,9 +97,9 @@ describe('PALETTES', () => {
   it('gives every role a distinct klubbhus-natt value in dark mode', () => {
     const roles = Object.keys(PALETTES.light) as (keyof typeof PALETTES.light)[];
     expect(Object.keys(PALETTES.dark).sort()).toEqual([...roles].sort());
-    // `live` og `onStrongSoft` sitter på skogflaten i begge draktene og er like
-    // med vilje.
-    for (const role of roles.filter((r) => r !== 'live' && r !== 'onStrongSoft')) {
+    // `live` og `onStrongWarm` sitter på skogflaten i begge draktene og er
+    // like med vilje.
+    for (const role of roles.filter((r) => r !== 'live' && r !== 'onStrongWarm')) {
       expect(PALETTES.dark[role]).not.toBe(PALETTES.light[role]);
     }
   });

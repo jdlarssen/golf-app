@@ -18,7 +18,7 @@
 // - SLAG står i Fraunces med tonens farge i former på 22 pt; en dobbel form
 //   vokser utover (29 pt), som designets ekstra ring. Poeng bedre enn netto
 //   par er grønne. Skillelinjene står under PAR og under SLAG, i den varme
-//   `rowDivider`.
+//   `divider`.
 // - Er skjermen for smal, ruller kortet sidelengs, aldri skjermen.
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -143,7 +143,7 @@ function Cell({
         kind === 'hole' ? { backgroundColor: colors.primary } : null,
         corner === 'left' && styles.bandLeft,
         corner === 'right' && styles.bandRight,
-        ruled ? { borderTopWidth: 1, borderTopColor: colors.rowDivider } : null,
+        ruled ? { borderTopWidth: 1, borderTopColor: colors.divider } : null,
       ]}
     >
       {children}
@@ -172,7 +172,7 @@ function Half({
   const halfHead = [
     styles.head,
     styles.halfHead,
-    { color: scheme === 'dark' ? colors.onPrimary : colors.onStrongSoft },
+    { color: scheme === 'dark' ? colors.onPrimary : colors.onStrongWarm },
   ];
   const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onPrimary }];
   const strokeNum = [styles.strokeNum, ui.num, { color: colors.text }];
