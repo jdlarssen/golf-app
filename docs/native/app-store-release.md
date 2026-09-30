@@ -280,6 +280,31 @@ Forutsetning for (2): `native/ios/` beholdes buildbar til N8 er lukket + én app
 - **To feilede byggeforsøk → stopp** og skriv opp hva som skjedde (T8 i
   `docs/agent-discipline/core.md`). Ikke forsøk nummer tre på håp.
 
+## Varsler (push) fra appen
+
+Fra #2256 PR 4 kan appen få varsler på iPhone («Varsler på denne telefonen» under
+«Varsler og tema»).
+
+- **Pluginen** `expo-notifications` står i `app.json` for begge varianter. Den setter
+  `aps-environment` selv: `development` i bygget, og Xcode bytter til `production` i
+  arkivet til App Store. Ingen egen entitlement i `app.json`.
+- **Apple:** App-ID-en må ha «Push Notifications» slått på i Apple Developer
+  (Identifiers). `no.tornygolf.app` har det fra skallet. `no.tornygolf.dev` må få det
+  før varsler kan testes mot staging.
+- **Tokenet** er det rå APNs-tokenet (`getDevicePushTokenAsync`), ikke Expos push-token.
+  Det lagres i `apns_tokens` (`0166`) med spillerens egen klient, og en annen konto på
+  samme telefon overtar det med `claim_apns_token` (`0167`). Telefonen husker tokenet
+  i AsyncStorage (`torny-push-token`), og utloggingen sletter raden før sesjonen dør.
+- **Senderen** er den samme som for skallet (`lib/notifications/push/apns.ts`):
+  `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` og `APNS_PRIVATE_KEY` (se
+  `ios-shell.md`). Prod bruker `APNS_BUNDLE_ID=no.tornygolf.app`, så butikkbygget
+  treffer den uten endring. Staging trenger de samme variablene med
+  `APNS_BUNDLE_ID=no.tornygolf.dev`. Nøkkelen (`.p8`) gjelder hele teamet og kan være den
+  samme. Den ligger bare hos eieren og i Vercel, aldri i repoet.
+- **Et eldre bygg** uten modulen viser ingen varsel-del (`canUsePush` i
+  `native/app/src/data/pushDevice.ts`). Android har ingen varsler (serveren sender ikke
+  dit).
+
 ## Hva som ikke byttes
 
 Nettsiden `tornygolf.no` består i sin helhet (døråpner: invitasjoner, `/spectate`,

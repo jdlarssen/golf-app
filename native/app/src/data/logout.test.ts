@@ -172,6 +172,30 @@ describe('logOut', () => {
     expect(mocks().supabase.rpc).not.toHaveBeenCalled();
   });
 
+  // #2256 PR 4: forrige konto skal ikke få varsler på telefonen etter
+  // utloggingen. Raden slettes mens sesjonen lever (RLS krever den).
+  it('sletter telefonens varsel-rad før sesjonen dør, og glemmer tokenet', async () => {
+    const { supabase, queryStub } = mocks();
+    const AsyncStorage = (
+      require('@react-native-async-storage/async-storage') as {
+        default: typeof import('@react-native-async-storage/async-storage').default;
+      }
+    ).default;
+    const { PUSH_TOKEN_KEY } = require('./pushDevice') as typeof import('./pushDevice');
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, 'apns-token');
+    const deleted = queryStub({ data: null, error: null });
+    supabase.from.mockImplementation((table: string) => {
+      mockCalls.push(`from:${table}`);
+      return deleted;
+    });
+
+    expect(await logout().logOut()).toEqual({ ok: true });
+
+    expect(mockCalls).toEqual(['from:apns_tokens', 'signOut', 'wipe']);
+    expect(deleted.steps.map((step) => step.method)).toEqual(['delete', 'eq', 'eq']);
+    expect(await AsyncStorage.getItem(PUSH_TOKEN_KEY)).toBeNull();
+  });
+
   it('nekter å logge ut når et slag ikke kom fram', async () => {
     const { supabase } = mocks();
     // Offline-formen: transient feil, så drainen prøver videre og køen består.
