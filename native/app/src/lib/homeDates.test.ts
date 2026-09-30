@@ -6,9 +6,12 @@
 // sonen koden faktisk regner i.
 import { formatShortDateNb } from '../../../../lib/format/date';
 import {
+  diaryMonthLabel,
+  formatDiaryDay,
   formatStubClock,
   formatStubDate,
   formatWeekdayDayMonth,
+  localDateParts,
   teeOffProximityLocal,
 } from './homeDates';
 
@@ -113,5 +116,35 @@ describe('stubben på billetten', () => {
     expect(formatStubDate('ikke en dato')).toBeNull();
     expect(formatStubClock(null)).toBeNull();
     expect(formatStubClock('ikke en dato')).toBeNull();
+  });
+});
+
+// #2265: Rundedagboka. Dagen og ukedagen i datokolonnen, og overskriften over
+// hver måned — alt i telefonens lokaltid.
+describe('localDateParts', () => {
+  it('leser år, måned (0–11) og dag i lokaltid', () => {
+    expect(localDateParts(at(7, 31, 23, 30))).toEqual({ year: 2026, month: 7, day: 31 });
+  });
+});
+
+describe('formatDiaryDay', () => {
+  it('gir dagen og ukedagen i versaler, som «20 / LØR» i designet', () => {
+    // 20. september 2026 er en søndag, 19. en lørdag.
+    expect(formatDiaryDay(at(8, 19))).toEqual({ day: '19', weekday: 'LØR' });
+    expect(formatDiaryDay(at(8, 16))).toEqual({ day: '16', weekday: 'ONS' });
+  });
+
+  it('holder seg på dagen rett før midnatt', () => {
+    expect(formatDiaryDay(at(7, 31, 23, 59))).toEqual({ day: '31', weekday: 'MAN' });
+  });
+});
+
+describe('diaryMonthLabel', () => {
+  it('gir bare måneden når året er undertittelens', () => {
+    expect(diaryMonthLabel(2026, 8, 2026)).toBe('september');
+  });
+
+  it('tar med årstallet for et annet år', () => {
+    expect(diaryMonthLabel(2025, 8, 2026)).toBe('september 2025');
   });
 });
