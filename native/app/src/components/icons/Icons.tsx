@@ -157,6 +157,13 @@ export const ChevronIcon = ({ up = false, ...props }: IconProps & { up?: boolean
   </LineIcon>
 );
 
+/** Tilbake-pila i toppen (#2385, designlerretet): en bar vinkel mot venstre. */
+export const TilbakeIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M 15 18 L 9 12 L 15 6" />
+  </LineIcon>
+);
+
 /**
  * Hero-flagget fra webbens tomtilstand på hjem (64×64-rutenett). Stanga i
  * `color`, vimpelen i `accent` — samme to roller som webbens

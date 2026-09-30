@@ -6,10 +6,16 @@
 // ikke en seier. Rotasjonen er statisk; stempelet står der det står, uten
 // animasjon. Hvilke linjer som vises, avgjør den delte
 // `resolveScorecardStamp`; her blir de bare tekst.
+//
+// #2385 (designlerretet): linjene under stempelet er en sjekkliste til venstre.
+// Et steg som er gjort, har en blekgrønn skive med hake; et steg som gjenstår
+// (godkjenning som venter, resultatet som ikke er låst ennå), har en stiplet
+// sirkel. Merkene er dekor: teksten sier det samme til skjermleseren.
 import { StyleSheet, Text, View } from 'react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { formatSignedAt } from '../../lib/display';
 import { FONTS, useTheme } from '../../theme';
+import { HakeIcon } from '../icons/Icons';
 
 export interface StampCopy {
   signedAt: string | null;
@@ -80,14 +86,39 @@ export function ScorecardStamp({
         {copy.signedAt ? <Text style={[styles.line, ui.num, ink]}>{copy.signedAt}</Text> : null}
         <Text style={[styles.line, ink]}>{copy.signedBy}</Text>
       </View>
-      {copy.approval ? (
-        <Text style={[ui.body, styles.center]} testID="scorecard-approval">
-          {copy.approval}
-        </Text>
-      ) : null}
-      <Text style={[ui.muted, styles.center]} testID="scorecard-lock">
-        {copy.lock}
-      </Text>
+      <View style={styles.checklist}>
+        {copy.approval ? (
+          <StatusLine
+            done={stamp.approval.kind !== 'pending'}
+            text={copy.approval}
+            testID="scorecard-approval"
+          />
+        ) : null}
+        <StatusLine done={stamp.locked} text={copy.lock} testID="scorecard-lock" />
+      </View>
+    </View>
+  );
+}
+
+/** Én linje i sjekklista: hake i blekgrønt når steget er gjort, stiplet sirkel ellers. */
+function StatusLine({ done, text, testID }: { done: boolean; text: string; testID: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.statusLine} testID={testID}>
+      <View
+        style={[
+          styles.mark,
+          done
+            ? { backgroundColor: colors.primarySoft }
+            : { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.muted },
+        ]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        testID={`${testID}-${done ? 'done' : 'pending'}`}
+      >
+        {done ? <HakeIcon color={colors.primary} size={14} /> : null}
+      </View>
+      <Text style={[styles.lineText, { color: done ? colors.text : colors.muted }]}>{text}</Text>
     </View>
   );
 }
@@ -107,5 +138,14 @@ const styles = StyleSheet.create({
   brand: { fontSize: 12, fontFamily: FONTS.sansBold, letterSpacing: 3 },
   signed: { fontSize: 24, fontFamily: FONTS.serifScore, letterSpacing: 2 },
   line: { fontSize: 14, fontFamily: FONTS.sansMedium, textAlign: 'center' },
-  center: { textAlign: 'center' },
+  checklist: { alignSelf: 'stretch', gap: 8, marginTop: 8 },
+  statusLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mark: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lineText: { flex: 1, fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans },
 });
