@@ -20,6 +20,7 @@ import {
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
 import { AceyDeuceyHoleCardsView } from '../components/holes/AceyDeuceyHoleCardsView';
+import { BestBallHoleCardsView } from '../components/holes/BestBallHoleCardsView';
 import { BingoBangoBongoHoleCardsView } from '../components/holes/BingoBangoBongoHoleCardsView';
 import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
 import { RoundRobinHoleCardsView } from '../components/holes/RoundRobinHoleCardsView';
@@ -195,6 +196,9 @@ export function HoleByHoleBody({
         finished={game.status === 'finished'}
       />
     );
+  }
+  if (model.kind === 'best-ball') {
+    return <BestBallHoleCardsView lines={model.lines} coursePar={model.coursePar} />;
   }
   return (
     <SoloScorecardView
