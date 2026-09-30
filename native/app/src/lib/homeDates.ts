@@ -83,6 +83,31 @@ export function formatStubDate(iso: string | null): string | null {
   return `${capitalize(WEEKDAYS_SHORT[date.getDay()])} ${formatShortDateNb(date)}`;
 }
 
+/**
+ * Kalenderdatoen i enhetens lokaltid (#2265): ukesrekka i Rundedagboka leser
+ * uker og år med den i stedet for webbens `osloParts` (se toppen av fila).
+ */
+export function localDateParts(date: Date): { year: number; month: number; day: number } {
+  return { year: date.getFullYear(), month: date.getMonth(), day: date.getDate() };
+}
+
+/** Datokolonnen i Rundedagboka (#2265): «20» over «LØR». */
+export function formatDiaryDay(date: Date): { day: string; weekday: string } {
+  return {
+    day: String(date.getDate()),
+    weekday: WEEKDAYS_SHORT[date.getDay()].toUpperCase(),
+  };
+}
+
+/**
+ * Overskriften over en måned i Rundedagboka (#2265): «september», eller
+ * «september 2025» når året ikke er det i undertittelen. Stilen setter den i
+ * versaler, som designets «SEPTEMBER».
+ */
+export function diaryMonthLabel(year: number, month: number, currentYear: number | null): string {
+  return year === currentYear ? MONTHS[month] : `${MONTHS[month]} ${year}`;
+}
+
 /** Klokkeslettet i stubben: «kl. 09:30», samme form som `formatTeeOff`. */
 export function formatStubClock(iso: string | null): string | null {
   const clock = formatClock(iso);
