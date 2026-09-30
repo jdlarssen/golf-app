@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeSeasonStats,
+  seasonGrossAverageExact,
   type SeasonRoundInput,
 } from './seasonStats';
 import { EMPTY_ACHIEVEMENTS, type Achievements } from './achievements';
@@ -87,5 +88,26 @@ describe('computeSeasonStats — achievements', () => {
       turkey: 0,
       snowman: 0,
     });
+  });
+});
+
+// #2265: formkortet i appen viser snittet med én desimal («86,6»). Tallet
+// kommer fra samme bøtting som `computeSeasonStats`, men står utenfor
+// `SeasonSummary`, så Kavalkadens lagrede fakta ikke endrer form.
+describe('seasonGrossAverageExact (#2265)', () => {
+  it('gives the unrounded average over the year\'s complete rounds', () => {
+    const rounds = [round(2026, 86), round(2026, 87), round(2026, 87), round(2026, null)];
+    expect(seasonGrossAverageExact(rounds, 2026)).toBeCloseTo(86.667, 3);
+    expect(computeSeasonStats(rounds)[0].grossAverage).toBe(87);
+  });
+
+  it('ignores other years and undated rounds', () => {
+    const rounds = [round(2025, 70), round(null, 60), round(2026, 90)];
+    expect(seasonGrossAverageExact(rounds, 2026)).toBe(90);
+  });
+
+  it('is null when the year has no complete round', () => {
+    expect(seasonGrossAverageExact([round(2026, null)], 2026)).toBeNull();
+    expect(seasonGrossAverageExact([], 2026)).toBeNull();
   });
 });

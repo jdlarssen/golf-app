@@ -40,11 +40,8 @@ type Bucket = {
   achievements: Achievements;
 };
 
-/**
- * Bøtter runder per år, summerer, og rapporterer per-år snitt/beste (komplett-18)
- * + runde-antall + bragder. Sortert NYESTE år først. Udaterte runder hoppes over.
- */
-export function computeSeasonStats(rounds: SeasonRoundInput[]): SeasonSummary[] {
+/** Bøttingen begge funksjonene under deler: én bøtte per datert år. */
+function bucketByYear(rounds: readonly SeasonRoundInput[]): Map<number, Bucket> {
   const buckets = new Map<number, Bucket>();
 
   for (const round of rounds) {
@@ -68,6 +65,15 @@ export function computeSeasonStats(rounds: SeasonRoundInput[]): SeasonSummary[] 
     bucket.achievements.turkey += round.achievements.turkey;
     bucket.achievements.snowman += round.achievements.snowman;
   }
+  return buckets;
+}
+
+/**
+ * Bøtter runder per år, summerer, og rapporterer per-år snitt/beste (komplett-18)
+ * + runde-antall + bragder. Sortert NYESTE år først. Udaterte runder hoppes over.
+ */
+export function computeSeasonStats(rounds: SeasonRoundInput[]): SeasonSummary[] {
+  const buckets = bucketByYear(rounds);
 
   const summaries: SeasonSummary[] = [];
   for (const [year, b] of buckets) {
@@ -89,4 +95,20 @@ export function computeSeasonStats(rounds: SeasonRoundInput[]): SeasonSummary[] 
   }
 
   return summaries.sort((a, b) => b.year - a.year);
+}
+
+/**
+ * Snittet brutto for ett år UTEN avrunding (#2265): formkortet i appen viser
+ * én desimal («86,6»). Samme bøtting og samme komplett-18-disiplin som
+ * `computeSeasonStats`. Tallet står utenfor `SeasonSummary` med vilje:
+ * Kavalkaden lagrer den, og formen på lagrede fakta skal ikke endres her.
+ * `null` når året ikke har en komplett runde.
+ */
+export function seasonGrossAverageExact(
+  rounds: readonly SeasonRoundInput[],
+  year: number,
+): number | null {
+  const totals = bucketByYear(rounds).get(year)?.completeTotals ?? [];
+  if (totals.length === 0) return null;
+  return totals.reduce((a, c) => a + c, 0) / totals.length;
 }

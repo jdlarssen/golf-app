@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { osloParts } from '@/lib/format/teeOff';
 import { computeStreak, roundStreakGrowth } from './streak';
 
 /**
@@ -236,5 +237,45 @@ describe('roundStreakGrowth — celebrate only genuine growth', () => {
     });
     expect(out.grew).toBe(true);
     expect(out.weeklyStreak).toBe(3);
+  });
+});
+
+// #2265: appen sender telefonens dato-deler (Hermes har ikke Oslo-sonen).
+// Standarden er fortsatt Oslo, så webben er uendret.
+describe('computeStreak — injected date parts (#2265)', () => {
+  const dates = [
+    d('2026-06-24T12:00:00Z'),
+    d('2026-07-01T12:00:00Z'),
+    d('2026-07-08T12:00:00Z'),
+  ];
+  const utcParts = (date: Date) => ({
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth(),
+    day: date.getUTCDate(),
+  });
+
+  it('gives the same summary as the default when handed the Oslo parts', () => {
+    expect(computeStreak({ dates, now: NOW, dateParts: osloParts })).toEqual(
+      computeStreak({ dates, now: NOW }),
+    );
+  });
+
+  it('buckets weeks and the season on the injected calendar', () => {
+    // Nyttårsaften 23:30 UTC er 1. januar i Oslo, men 31. desember i UTC.
+    const newYearsEve = d('2026-12-31T23:30:00Z');
+    const now = d('2027-01-02T12:00:00Z');
+    expect(computeStreak({ dates: [newYearsEve], now }).roundsThisSeason).toBe(1);
+    expect(
+      computeStreak({ dates: [newYearsEve], now, dateParts: utcParts }).roundsThisSeason,
+    ).toBe(0);
+  });
+
+  it('keys the last week on the injected calendar', () => {
+    // 23:32 UTC søndag 14. juni: uke 25 i Oslo, uke 24 i UTC.
+    const late = d('2026-06-14T23:32:00Z');
+    expect(computeStreak({ dates: [late], now: NOW }).lastRoundWeekKey).toBe('2026-W25');
+    expect(
+      computeStreak({ dates: [late], now: NOW, dateParts: utcParts }).lastRoundWeekKey,
+    ).toBe('2026-W24');
   });
 });

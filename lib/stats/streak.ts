@@ -11,9 +11,12 @@
  * uke i N uker»). Alt avledes fra Oslo-veggklokke via `osloParts`/`osloIsoWeek`,
  * så tellingen er DST-uavhengig og host-TZ-uavhengig. Ren og I/O-fri (Type A, jf.
  * `lib/scoring/AGENTS.md`).
+ *
+ * #2265: appen kan ikke lese Oslo-kalenderen under Hermes, og sender sin egen
+ * dato-deler (`dateParts`, telefonens lokaltid). Uten den er alt som før.
  */
 import { osloParts } from '@/lib/format/teeOff';
-import { osloIsoWeek } from '@/lib/format/osloCalendar';
+import { osloIsoWeek, type DatePartsReader } from '@/lib/format/osloCalendar';
 
 const WEEK_MS = 604_800_000; // 7 × 24 × 3600 × 1000
 
@@ -30,6 +33,11 @@ export type StreakInput = {
   dates: Date[];
   /** «Nå» — injiseres for testbarhet; ingen klokke-lesing her inne. */
   now: Date;
+  /**
+   * Kalenderen datoene leses på. Standard `osloParts`; appen sender
+   * telefonens lokaltid (#2265).
+   */
+  dateParts?: DatePartsReader;
 };
 
 export type StreakSummary = {
@@ -55,8 +63,11 @@ export type StreakSummary = {
  * all uke-aritmetikk er DST-uavhengig — samme teknikk som `osloIsoWeek` bruker for
  * selve uke-NUMMERET. To påfølgende ukers mandager skiller nøyaktig `WEEK_MS`.
  */
-function osloWeekAnchor(date: Date): { mondayMs: number; isoWeekYear: number } {
-  const { year, month, day } = osloParts(date);
+function osloWeekAnchor(
+  date: Date,
+  parts: DatePartsReader,
+): { mondayMs: number; isoWeekYear: number } {
+  const { year, month, day } = parts(date);
   const target = new Date(Date.UTC(year, month, day));
   const dayNr = (target.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
   const monday = new Date(target.valueOf());
@@ -66,14 +77,14 @@ function osloWeekAnchor(date: Date): { mondayMs: number; isoWeekYear: number } {
   return { mondayMs: monday.valueOf(), isoWeekYear: thursday.getUTCFullYear() };
 }
 
-function weekKey(date: Date): string {
-  const { isoWeekYear } = osloWeekAnchor(date);
-  const week = osloIsoWeek(date);
+function weekKey(date: Date, parts: DatePartsReader): string {
+  const { isoWeekYear } = osloWeekAnchor(date, parts);
+  const week = osloIsoWeek(date, parts);
   return `${isoWeekYear}-W${String(week).padStart(2, '0')}`;
 }
 
 export function computeStreak(input: StreakInput): StreakSummary {
-  const { dates, now } = input;
+  const { dates, now, dateParts: parts = osloParts } = input;
   if (dates.length === 0) {
     return {
       weeklyStreak: 0,
@@ -86,7 +97,7 @@ export function computeStreak(input: StreakInput): StreakSummary {
 
   const rounds = dates.map((date) => ({
     date,
-    mondayMs: osloWeekAnchor(date).mondayMs,
+    mondayMs: osloWeekAnchor(date, parts).mondayMs,
   }));
   const weekSet = new Set(rounds.map((r) => r.mondayMs));
   const lastMonday = Math.max(...rounds.map((r) => r.mondayMs));
@@ -108,14 +119,14 @@ export function computeStreak(input: StreakInput): StreakSummary {
   ).length;
 
   // Grace: siste runde i inneværende eller forrige Oslo-uke.
-  const currentMonday = osloWeekAnchor(now).mondayMs;
+  const currentMonday = osloWeekAnchor(now, parts).mondayMs;
   const weeklyStreakActive =
     lastMonday === currentMonday || lastMonday === currentMonday - WEEK_MS;
 
   // Sesong = Oslo-kalenderår for `now`.
-  const nowYear = osloParts(now).year;
+  const nowYear = parts(now).year;
   const roundsThisSeason = dates.filter(
-    (date) => osloParts(date).year === nowYear,
+    (date) => parts(date).year === nowYear,
   ).length;
 
   const lastRoundDate = rounds.find((r) => r.mondayMs === lastMonday)!.date;
@@ -125,7 +136,7 @@ export function computeStreak(input: StreakInput): StreakSummary {
     weeklyStreakActive,
     roundsThisSeason,
     roundsInStreak,
-    lastRoundWeekKey: weekKey(lastRoundDate),
+    lastRoundWeekKey: weekKey(lastRoundDate, parts),
   };
 }
 
