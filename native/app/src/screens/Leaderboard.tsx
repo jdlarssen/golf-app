@@ -53,7 +53,7 @@ import {
 } from '../lib/scoringContext';
 import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { buildSideTournament } from '../lib/sideTournament';
-import { useGameChoices } from '../lib/useChoices';
+import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
@@ -136,12 +136,16 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // Wolf og BBB henter halve regnestykket fra serveren. Alle andre formater
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste kall — og før
   // bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
-  const { extras } = useGameChoices(
+  const { extras, failed: choicesFailed } = useGameChoices(
     gameId,
     bundle?.game.gameMode ?? '',
-    // Et avsluttet spill endres ikke: én henting ved fokus, ingen polling.
+    // Et avsluttet spill endres ikke: bare til første svar, så ingen polling.
     bundle?.game.status === 'finished' ? null : undefined,
   );
+  // Valgene er på vei (første henting går): et hjul, ikke «Fikk ikke tak i
+  // valgene», som skal stå bare når hentingen faktisk feilet (#2255 PR 3b).
+  const choicesPending =
+    bundle != null && choicesNotYetHere(bundle.game.gameMode, extras) && !choicesFailed;
   // LD/CTP-vinnerne. Samme gate som seksjonen selv, så et aktivt spill aldri
   // koster et nettkall for data det uansett ikke får vise.
   const sideWinners = useSideWinners(gameId, sideTournamentVisible(bundle));
@@ -170,11 +174,11 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
     return unsubscribe;
   }, [gameId, reload]);
 
-  if (!bundle) {
+  if (!bundle || choicesPending) {
     return (
       <View style={ui.centered} testID="leaderboard-loading">
-        {loading ? (
-          <ActivityIndicator color={colors.primary} />
+        {loading || bundle ? (
+          <ActivityIndicator color={colors.primary} testID="leaderboard-spinner" />
         ) : (
           <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
         )}

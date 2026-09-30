@@ -39,13 +39,13 @@ export function HolesTitle({ subtitle }: { subtitle: string }) {
 
 /**
  * Bunnteksten, som webbens `LeaderboardFooter`: «Vel spilt!» når runden er
- * ferdig, ellers «Lykke til.».
+ * ferdig, ellers «Lykke til.», i webbens anførselstegn (`PullQuote`).
  */
 export function HolesFooter({ finished }: { finished: boolean }) {
   const { colors } = useTheme();
   return (
     <Text style={[holesStyles.footer, { color: colors.muted }]} testID="hole-by-hole-footer">
-      {finished ? HOLES_TEXT.wellPlayed : HOLES_TEXT.goodLuck}
+      {`«${finished ? HOLES_TEXT.wellPlayed : HOLES_TEXT.goodLuck}»`}
     </Text>
   );
 }

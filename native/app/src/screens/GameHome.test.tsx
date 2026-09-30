@@ -686,7 +686,11 @@ describe('GameHome — «Hull for hull»-flisa (#2255 PR 3a)', () => {
 
     await waitFor(() => expect(screen.getByTestId('game-tiles')).toBeTruthy());
     await fireEvent.press(screen.getByTestId(tileId));
-    expect(navigation.navigate).toHaveBeenLastCalledWith(route, { gameId: 'game-1' });
+    // «Hull for hull» får spillnavnet med til toppen (kicker, som på webben).
+    expect(navigation.navigate).toHaveBeenLastCalledWith(
+      route,
+      route === 'HoleByHole' ? { gameId: 'game-1', gameName: mockState.bundle!.game.name } : { gameId: 'game-1' },
+    );
   });
 });
 

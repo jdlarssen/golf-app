@@ -3,13 +3,13 @@
 //
 // Webbens side har en egen visning per format. Appen tar dem format for
 // format (`lib/holeByHole.ts` sier hvilke), og tegner samme modell som webben
-// (`lib/leaderboard/soloScorecard.ts`). I en blind runde som pågår holdes alt
-// tilbake, som på webben.
+// (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`). I en
+// blind runde som pågår holdes alt tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
 // med spillerens egen sesjon (webben bruker service-role her, #1632).
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import type { GameStatus } from '../../../../lib/games/status';
 import {
@@ -17,7 +17,6 @@ import {
   shouldHideNetto,
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
-import { kickerHeader } from '../components/KickerHeader';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
 import { WolfHoleCardsView } from '../components/holes/WolfHoleCardsView';
 import type { LocalScore } from '../data/db';
@@ -32,7 +31,7 @@ import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
 
-export function HoleByHole({ route, navigation }: ScreenProps<'HoleByHole'>) {
+export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
@@ -45,11 +44,6 @@ export function HoleByHole({ route, navigation }: ScreenProps<'HoleByHole'>) {
     // Et avsluttet spill endres ikke: én henting ved fokus, ingen polling.
     bundle?.game.status === 'finished' ? null : undefined,
   );
-  // Spillnavnet som kicker i toppen, som på webben (felles `kickerHeader`).
-  const gameName = bundle?.game.name ?? null;
-  useLayoutEffect(() => {
-    if (gameName) navigation.setOptions(kickerHeader(gameName, HOLES_TEXT.heading));
-  }, [navigation, gameName]);
   // Hentingen av slagene: mens den pågår, og uten noe lokalt, står et hjul i
   // stedet for et tomt kort. Feiler den (uten nett), sier en linje det, for et
   // kort med bare telefonens slag ser ellers ferdig ut.
@@ -131,7 +125,7 @@ export function HoleByHoleBody({
       <View style={[ui.card, { alignItems: 'center' }]} testID="hole-by-hole-reveal-hidden">
         <Text style={[ui.value, { textAlign: 'center' }]}>{HOLES_TEXT.revealHiddenTitle}</Text>
         <Text style={[ui.muted, { textAlign: 'center' }]}>{HOLES_TEXT.revealHiddenSub}</Text>
-        <Text style={[ui.body, { color: colors.muted, fontStyle: 'italic' }]}>{HOLES_TEXT.goodLuck}</Text>
+        <Text style={[ui.body, { color: colors.muted, fontStyle: 'italic' }]}>{`«${HOLES_TEXT.goodLuck}»`}</Text>
       </View>
     );
   }

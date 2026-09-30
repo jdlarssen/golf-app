@@ -30,6 +30,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBingoBangoBongoHoles, fetchWolfChoices } from '../data/choices';
+import { choiceSourceFor } from './choiceSource';
 import type { ScoringExtras } from './scoringContext';
 
 /**
@@ -39,21 +40,7 @@ import type { ScoringExtras } from './scoringContext';
  */
 export const CHOICES_POLL_MS = 10_000;
 
-/** Hvilken valg-tabell formatet henter halve regnestykket sitt fra. */
-export type ChoiceSource = 'wolf' | 'bingo_bango_bongo';
-
-/**
- * Valg-kilden formatet trenger, eller `null` når det ikke trenger noen.
- *
- * Skrevet som et oppslag på `game_mode` og ikke utledet fra noe delt predikat:
- * «henter poeng fra en egen per-hull-tabell» er ikke et begrep motoren har, og
- * en gate som lot som den fulgte et delt begrep ville drevet fra det.
- */
-export function choiceSourceFor(gameMode: string): ChoiceSource | null {
-  if (gameMode === 'wolf') return 'wolf';
-  if (gameMode === 'bingo_bango_bongo') return 'bingo_bango_bongo';
-  return null;
-}
+export { choiceSourceFor, choicesNotYetHere, type ChoiceSource } from './choiceSource';
 
 export interface GameChoices {
   /** Klar til å tres rett inn i `computeGameLeaderboard`. */
@@ -79,7 +66,11 @@ export interface GameChoices {
 export function useGameChoices(
   gameId: string,
   gameMode: string,
-  /** `null` = hent én gang ved fokus, ingen polling (et avsluttet spill endres ikke). */
+  /**
+   * `null` = et avsluttet spill, som ikke endres: prøv igjen med vanlig
+   * intervall bare til første svar er kommet, så stopp (uten nett ved åpning
+   * henter skjermen fortsatt av seg selv når nettet er tilbake).
+   */
   pollMs: number | null = CHOICES_POLL_MS,
 ): GameChoices {
   const source = choiceSourceFor(gameMode);
@@ -122,10 +113,10 @@ export function useGameChoices(
     useCallback(() => {
       if (source === null) return;
       void refresh();
-      if (pollMs === null) return;
       const interval = setInterval(() => {
+        if (pollMs === null && appliedSeq.current > 0) return;
         void refresh();
-      }, pollMs);
+      }, pollMs ?? CHOICES_POLL_MS);
       return () => clearInterval(interval);
     }, [pollMs, refresh, source]),
   );
