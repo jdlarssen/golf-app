@@ -134,6 +134,15 @@ it('gir ingen poeng for formater som teller slag, uten egne slag, eller når tav
   expect(lastRoundPoints(finished('solo_strokeplay'), scores, 'me')).toBeNull();
   expect(lastRoundPoints(finished('stableford'), holeScores('last', 'marte', 18, 4), 'me')).toBeNull();
   expect(lastRoundPoints(finished('stableford'), scores, 'ikke-med')).toBeNull();
-  // En cup-halvdel vises ikke på tavla i appen, og da heller ikke her.
-  expect(lastRoundPoints(finished('stableford', { holeSegment: 'front9' }), scores, 'me')).toBeNull();
+  // Patsome og avledede spill regner appens motor ikke på.
+  expect(lastRoundPoints(finished('patsome'), scores, 'me')).toBeNull();
+});
+
+// #2265: motoren regner en ni-hullsrunde på nierne, som webbens tavle
+// (`scoringContext.ts`), så runden får poengene sine, som i designet for
+// Rundedagboka («9 hull · 18 p»).
+it('gir poeng for en ni-hullsrunde, regnet på nierne', () => {
+  const scores = holeScores('last', 'me', 18, 4);
+  expect(lastRoundPoints(finished('stableford', { holeSegment: 'front9' }), scores, 'me')).toBe(18);
+  expect(lastRoundPoints(finished('stableford', { holeSegment: 'back9' }), scores, 'me')).toBe(18);
 });
