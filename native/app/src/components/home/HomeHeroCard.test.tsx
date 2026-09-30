@@ -38,7 +38,6 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
     onOpenGame: jest.fn(),
     onHole: jest.fn(),
     onSubmit: jest.fn(),
-    onBoard: jest.fn(),
     onApprove: jest.fn(),
   };
   const { rerender } = await render(<HomeHeroCard card={CARD} model={LIVE} {...handlers} />);
@@ -62,8 +61,8 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
 
   await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));
   expect(handlers.onHole).toHaveBeenCalledWith(8);
-  await fireEvent.press(screen.getByText('Se tavla →'));
-  expect(handlers.onBoard).toHaveBeenCalled();
+  // Hjem v2 (#2385): kortet slutter med knappen, som i designet.
+  expect(screen.queryByText('Se tavla →')).toBeNull();
   await fireEvent.press(screen.getByTestId('home-hero-open'));
   expect(handlers.onOpenGame).toHaveBeenCalledTimes(1);
 
@@ -105,9 +104,8 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   );
   expect(screen.getByTestId('home-hero-state')).toHaveTextContent('Levert');
   expect(screen.queryByTestId('home-hero-cta')).toBeNull();
-  // Levert er fortsatt en runde du spiller: ringen og tavle-lenken står.
+  // Levert er fortsatt en runde du spiller: ringen står.
   expect(screen.getByTestId('home-hero-ring')).toBeTruthy();
-  expect(screen.getByText('Se tavla →')).toBeTruthy();
   // Plasslinja leses med komma, ikke «·».
   expect(screen.getByTestId('home-hero-detail').props.accessibilityLabel).toBe(
     '15 poeng etter 7 hull, 3 poeng bak ledelsen',
