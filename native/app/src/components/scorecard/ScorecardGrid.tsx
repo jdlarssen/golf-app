@@ -13,9 +13,11 @@
 //    sidelengs, aldri skjermen.
 //
 // #2385 la kortet på designlerretet (`Scorekort-forslag`): HULL-raden er et
-// skoggrønt bånd med lyse tall, radetikettene står til venstre, SLAG står i
-// Fraunces med tonens farge, poeng bedre enn netto par er grønne, og summene
-// (`footer`) står nederst i det siste kortet under en tykk strek.
+// bånd i `primary` med `onPrimary`-tall (skog og hvitt i lys drakt, som
+// designet; salvie og mørkt i mørk, der skogflaten forsvant mot kortet).
+// Radetikettene står til venstre, SLAG står i Fraunces med tonens farge,
+// poeng bedre enn netto par er grønne, og summene (`footer`) står nederst i
+// det siste kortet under en tykk strek.
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ScorecardCell, ScorecardGrid as Grid, ScorecardHalf } from '../../../../../lib/scorecard/scorecardGrid';
@@ -112,7 +114,7 @@ function Cell({
         styles.cell,
         align === 'left' && styles.cellLeft,
         { height: rowHeight(kind) },
-        band ? { backgroundColor: colors.surfaceStrong } : tint ? { backgroundColor: tint } : null,
+        band ? { backgroundColor: colors.primary } : tint ? { backgroundColor: tint } : null,
         corner === 'left' && styles.bandLeft,
         corner === 'right' && styles.bandRight,
         first ? null : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
@@ -140,8 +142,8 @@ function Half({
   const numStyle = [styles.num, ui.num, { color: colors.text }];
   const mutedNum = [styles.num, ui.num, { color: colors.muted }];
   const headStyle = [styles.head, { color: colors.muted }];
-  const bandHead = [styles.head, { color: colors.onStrong }];
-  const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onStrong }];
+  const bandHead = [styles.head, { color: colors.onPrimary }];
+  const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onPrimary }];
   const strokeNum = [styles.strokeNum, ui.num, { color: colors.text }];
 
   const cellValue = (cell: ScorecardCell, kind: ScorecardRowKind) => {
