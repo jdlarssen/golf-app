@@ -1,7 +1,8 @@
 // #2255: bitene alle «Hull for hull»-visningene i appen deler — navnet slik
 // webben skriver det, overskriften med formatlinja, hodet på hvert hull-kort,
-// raden og gulltonen for den som utmerker seg. Ett hjem, så formatene ser like
-// ut og en rettelse når alle (samme grep som webbens `LeaderboardChrome`).
+// gullbrikka i hodet, raden med poeng og brutto, og gulltonen for den som
+// utmerker seg. Ett hjem, så formatene ser like ut og en rettelse når alle
+// (samme grep som webbens `LeaderboardChrome`).
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { formatRevealName } from '../../../../../lib/names/formatRevealName';
@@ -78,6 +79,22 @@ export function HoleHeader({
   );
 }
 
+/**
+ * Gullbrikka til høyre i hull-hodet (Wolf: innsatsen, Nines: potten), som
+ * webbens `rounded-full border-accent/40 bg-accent/[0.08]` med gull tekst.
+ */
+export function GoldChip({ text, testID }: { text: string; testID?: string }) {
+  const { colors, ui } = useTheme();
+  return (
+    <View
+      style={[holesStyles.chip, { borderColor: goldEdge(colors.accent), backgroundColor: goldWash(colors.accent, '14') }]}
+      testID={testID}
+    >
+      <Text style={[holesStyles.chipText, ui.num, { color: colors.accentText }]}>{text}</Text>
+    </View>
+  );
+}
+
 export const holesStyles = StyleSheet.create({
   page: { gap: 14 },
   titleBlock: { alignItems: 'center', gap: 2, paddingVertical: 4 },
@@ -104,5 +121,11 @@ export const holesStyles = StyleSheet.create({
   star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
+  /** «+5» foran scoren, i gull tekst (webbens `text-[12px] font-semibold`). */
+  points: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
+  /** «brutto 5» ved siden av netto, dempet (webbens `text-[10.5px]`). */
+  gross: { fontSize: 11, fontFamily: FONTS.sans },
+  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  chipText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
   footer: { fontSize: 12, fontFamily: FONTS.serifDisplay, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });

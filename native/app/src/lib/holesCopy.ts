@@ -1,11 +1,18 @@
 // #2255: teksten på «Hull for hull» i appen.
 //
 // Det meste står også på webbens «Hull for hull» (`leaderboard.common.*`,
-// `leaderboard.soloStrokeplay.*`, `game.home.hullForHull`) og låses tegn for
-// tegn mot `messages/no.json` i `holesCopy.test.ts`. To unntak: `pointsUnit`
-// er hardkodet «p» i webbens visning, ikke en melding, og `notAvailable` finnes
-// bare i appen. Samme mønster som `ticketCopy.ts`: appen har ingen i18n, så
-// teksten er en håndkopi.
+// `leaderboard.soloStrokeplay.*`, `leaderboard.wolf.*`, `leaderboard.nines.*`,
+// `game.home.hullForHull`) og låses tegn for tegn mot `messages/no.json` i
+// `holesCopy.test.ts`. Unntakene er hardkodet i webbens visninger, ikke
+// meldinger: `pointsUnit` («p»), «Wolf · » foran scoringen og « · » mellom
+// Nines-varianten og scoringen. `notAvailable` finnes bare i appen. Samme
+// mønster som `ticketCopy.ts`: appen har ingen i18n, så teksten er en
+// håndkopi.
+import {
+  ninesPointsText,
+  type NinesScoringKey,
+  type NinesVariantKey,
+} from '../../../../lib/leaderboard/ninesHoles';
 
 export const HOLES_TEXT = {
   /** Overskriften, og flisa på spillets side når runden er avsluttet. */
@@ -25,6 +32,9 @@ export const HOLES_TEXT = {
   unknownPlayer: '(ukjent)',
   /** Undertittelen i slagspill. */
   strokeplaySubtitle: 'Slagspill · Netto',
+  /** Scoringen i undertittelen (Wolf, Nines). */
+  netto: 'Netto',
+  brutto: 'Brutto',
   /** Enheten bak poengene på hvert hull. */
   pointsUnit: 'p',
   notAvailable: 'Hull for hull finnes ikke for denne runden.',
@@ -51,9 +61,8 @@ export function parSiChip(par: number, strokeIndex: number): string {
 }
 
 /**
- * Wolf (#2255 PR 3b): webbens `leaderboard.wolf.*` og `leaderboard.common.netto`
- * / `brutto`, låst i `holesCopy.test.ts`. «Wolf · » foran scoringen er
- * hardkodet i webbens visning, som «p» over.
+ * Wolf (#2255 PR 3b): webbens `leaderboard.wolf.*`, låst i `holesCopy.test.ts`.
+ * Netto og brutto står i `HOLES_TEXT`.
  */
 export const WOLF_HOLES_TEXT = {
   wolfLabel: 'Wolf:',
@@ -66,8 +75,6 @@ export const WOLF_HOLES_TEXT = {
   outcomeVenter: 'Venter',
   wolfSide: 'Wolf-side',
   andreSide: 'Andre',
-  netto: 'Netto',
-  brutto: 'Brutto',
 } as const;
 
 /** «Partner: Ola». */
@@ -82,5 +89,42 @@ export function wolfBruttoLabel(count: number): string {
 
 /** Linja under overskriften: «Wolf · Netto». */
 export function wolfSubtitle(scoring: 'gross' | 'net'): string {
-  return `Wolf · ${scoring === 'net' ? WOLF_HOLES_TEXT.netto : WOLF_HOLES_TEXT.brutto}`;
+  return `Wolf · ${scoring === 'net' ? HOLES_TEXT.netto : HOLES_TEXT.brutto}`;
+}
+
+/**
+ * Nines / Split Sixes (#2255 PR 3c): webbens `leaderboard.nines.*`, låst i
+ * `holesCopy.test.ts`. Nøklene er de samme som modellen bærer
+ * (`lib/leaderboard/ninesHoles.ts`).
+ */
+export const NINES_HOLES_TEXT = {
+  variantNines: 'Nines',
+  variantSplitSixes: 'Split Sixes',
+  /** Til høyre i hodet på et hull som ikke er ferdig spilt. */
+  ventePaaScore: 'Venter på score',
+} as const;
+
+/** Linja under overskriften: «Nines · Netto», «Split Sixes · Brutto». */
+export function ninesSubtitle(variantKey: NinesVariantKey, scoringKey: NinesScoringKey): string {
+  return `${NINES_HOLES_TEXT[variantKey]} · ${HOLES_TEXT[scoringKey]}`;
+}
+
+/** «9 poeng», potten på hullet. */
+export function ninesPotLabel(pot: number): string {
+  return `${pot} poeng`;
+}
+
+/** «brutto 5», ved siden av netto. */
+export function ninesBruttoLabel(gross: number): string {
+  return `brutto ${gross}`;
+}
+
+/**
+ * Poengene fra potten: «4», og del-poeng med én desimal og norsk komma
+ * («2,3»). Regelen er webbens (`ninesPointsText`); desimalen bygges her,
+ * for Hermes har ikke ICU (samme grunn som `formatHcpNb` i `profileCopy.ts`).
+ * Testen låser den mot webbens `formatNumber` for hver andel potten kan gi.
+ */
+export function ninesPoints(points: number): string {
+  return ninesPointsText(points, (n) => n.toFixed(1).replace('.', ','));
 }

@@ -1,11 +1,13 @@
-// #2255 PR 3a: hvilke runder appen har «Hull for hull» for, og at modellen
+// #2255 PR 3a–3c: hvilke runder appen har «Hull for hull» for, og at modellen
 // bygges fra bundelen og de lokale slagene med samme motor som tavla.
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import { buildHoleByHole, holeByHoleKind, waitsForChoices, type HoleByHoleModel } from './holeByHole';
 
 /** Solo-kortet, eller en feil hvis modellen er et annet format. */
 function soloCard(model: HoleByHoleModel | null) {
-  if (!model || model.kind === 'wolf') throw new Error(`forventet solo, fikk ${model?.kind}`);
+  if (!model || (model.kind !== 'solo-stableford' && model.kind !== 'solo-strokeplay')) {
+    throw new Error(`forventet solo, fikk ${model?.kind}`);
+  }
   return model.card;
 }
 
@@ -15,12 +17,13 @@ describe('holeByHoleKind', () => {
     ['modified_stableford', { kind: 'modified_stableford', team_size: 1 }, 'solo-stableford'],
     ['solo_strokeplay', { kind: 'solo_strokeplay' }, 'solo-strokeplay'],
     ['wolf', { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' }, 'wolf'],
+    ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 'nines'],
     // Webben har ingen egen visning for lag-stableford: tavla.
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, null],
     // Matchplay og scramble har ingen «Hull for hull» på webben heller.
     ['singles_matchplay', { kind: 'singles_matchplay', team_size: 1, teams_count: 2 }, null],
     ['texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 }, null],
-    // Webben har visningen, men appen har den ikke ennå (PR 3c): flisa står som «Tavla».
+    // Webben har visningen, men appen har den ikke ennå: flisa står som «Tavla».
     ['best_ball', { kind: 'best_ball', team_size: 2 }, null],
     // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke som en webkopi.
     ['skins', { kind: 'skins' }, null],
@@ -104,6 +107,44 @@ describe('buildHoleByHole', () => {
     expect(hole1.rows.slice(0, 2).map((r) => r.side)).toEqual(['wolf', 'wolf']);
   });
 
+  it('Nines: kortene fra slagene, lik score deler plassen og stillingen avgjør, brutto ved siden av netto', () => {
+    // Spillerne i motsatt rekkefølge av stillingen, så motorens rekkefølge
+    // ikke er den ferdige.
+    const ninesPlayers = [
+      homePlayer({ userId: 'c', name: 'C', courseHandicap: 0 }),
+      homePlayer({ userId: 'b', name: 'B', courseHandicap: 18 }),
+      homePlayer({ userId: 'a', name: 'A', courseHandicap: 0 }),
+    ];
+    const bundle = homeBundle({
+      game: {
+        id: 'gn',
+        status: 'finished',
+        gameMode: 'nines',
+        modeConfig: { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' },
+      },
+      players: ninesPlayers,
+    });
+    // Hull 1: A 4, B 5 med et slag (netto 4), C 5. A og B delt lavest: 4 poeng hver, C 1.
+    const scores = [
+      ...holeScores('gn', 'a', 1, 4),
+      ...holeScores('gn', 'b', 1, 5),
+      ...holeScores('gn', 'c', 1, 5),
+    ];
+    const model = buildHoleByHole(bundle, scores);
+    expect(model?.kind).toBe('nines');
+    if (model?.kind !== 'nines') return;
+    expect(model.subtitle).toBe('Nines · Netto');
+    const hole1 = model.nines.holes[0]!;
+    expect(hole1.pot).toBe(9);
+    expect(hole1.rows.map((r) => [r.userId, r.placement, r.pointsShown, r.grossShown, r.effectiveScore])).toEqual([
+      ['a', 1, 4, null, 4],
+      ['b', 1, 4, 5, 4],
+      ['c', 3, 1, null, 5],
+    ]);
+    // Hull 2 er ikke spilt: ingen pott.
+    expect(model.nines.holes[1]!.pot).toBeNull();
+  });
+
   it('et format uten appens «Hull for hull» gir null', () => {
     const bundle = homeBundle({
       game: { id: 'g3', gameMode: 'skins', modeConfig: { kind: 'skins' } },
@@ -118,6 +159,7 @@ describe('waitsForChoices', () => {
     expect(waitsForChoices('wolf', {})).toBe(true);
     expect(waitsForChoices('wolf', { wolfChoices: [] })).toBe(false);
     expect(waitsForChoices('solo-stableford', {})).toBe(false);
+    expect(waitsForChoices('nines', {})).toBe(false);
     expect(waitsForChoices(null, {})).toBe(false);
   });
 });
