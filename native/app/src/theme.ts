@@ -9,7 +9,7 @@
 // Mønsteret alle flatene følger: layout i et statisk `StyleSheet.create`-ark,
 // farger inline fra `colors`/`ui`. Aldri hardkodede farger eller fonter.
 import { createContext, createElement, useContext, type ReactNode } from 'react';
-import { StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
+import { PixelRatio, StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
 export const TAP = 44;
@@ -45,8 +45,9 @@ export type ThemeColors = {
   scoreOver1Fg: string;
   scoreOver2Fg: string;
   /**
-   * Flaten bak mot par-pillene i «Hull for hull» for best ball (#2255 PR 3d),
-   * webbens `--score-*-bg`: tonen over, svakt, bak tallet i samme tone.
+   * Flaten bak en score-tone, webbens `--score-*-bg`: under par, par, bogey og
+   * dobbel bogey eller verre. Skinneknappene på hullsiden (#2385) og mot par-
+   * pillene i «Hull for hull» for best ball (#2255 PR 3d).
    */
   scoreUnderBg: string;
   scoreParBg: string;
@@ -179,11 +180,57 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
 };
 
 /**
+ * Fraunces sin egen linjehøyde, i skriftstørrelser: (ascent 1956 + descent 510)
+ * / 2000 fra `hhea`, lik i alle snittene appen har (pakkens og hullnummerets).
+ */
+export const FRAUNCES_LINE = 1.233;
+
+/**
+ * Nettleserens linjeboks for tall og ord i Fraunces (#2385). Designet setter
+ * ofte `line-height: 1` (eller 0,9), og da legger nettleseren halve forskjellen
+ * mellom linjehøyden og skriftens egen høyde over og under glyfen. iOS gjør
+ * det ikke: med `lineHeight` under skriftens høyde havner glyfen høyere, og
+ * under skriftstørrelsen krymper den i tillegg (målt i simulatoren). Her står
+ * teksten i sin egen høyde, og marger trekker den inn til linjeboksen. iOS
+ * runder tekstens høyde opp til hel piksel (96 pt blir 118,667, ikke 118,368),
+ * så marginene regnes av den rundede høyden.
+ *
+ * Regnet og målt for iOS. Android legger til `includeFontPadding` og bruker
+ * skriftens win-mål (1,47), så en Android-versjon må måles for seg.
+ */
+export function frauncesLine(size: number, lineHeight: number, pixelRatio = PixelRatio.get()) {
+  return textLine(size, lineHeight, FRAUNCES_LINE, pixelRatio);
+}
+
+/** Inter sin egen linjehøyde: (ascent 1984 + descent 494) / 2048 fra `hhea`. */
+export const INTER_LINE = 1.2099609375;
+
+/**
+ * Samme linjeboks for Inter. Nettleserens `normal` for Inter på 10 pt er 12
+ * (den runder ascent og descent hver for seg), mens iOS legger teksten ut på
+ * 12,333 (#2385: «HULL» over hullnummeret).
+ */
+export function interLine(size: number, lineHeight: number, pixelRatio = PixelRatio.get()) {
+  return textLine(size, lineHeight, INTER_LINE, pixelRatio);
+}
+
+function textLine(size: number, lineHeight: number, naturalLine: number, pixelRatio: number) {
+  const natural = Math.ceil(size * naturalLine * pixelRatio) / pixelRatio;
+  return { fontSize: size, marginVertical: (lineHeight - natural) / 2 };
+}
+
+/**
  * Familienavn per snitt (expo-font registrerer én familie per vekt —
  * `fontWeight` velger IKKE snitt for custom-fonter, bruk disse).
  * Vektskalaen speiler webbens (`--fw-*` i globals.css).
  */
 export const FONTS = {
+  /**
+   * Hullnummeret (#2385): Fraunces tegnet for 96 og 132 pt, som nettleseren
+   * gjør det. Bare sifre (`assets/fonts/README.md`).
+   */
+  holeNumber: 'FrauncesHole96',
+  holeNumberSun: 'FrauncesHole132',
   serifDisplay: 'Fraunces_500Medium',
   serifScore: 'Fraunces_600SemiBold',
   sans: 'Inter_400Regular',
@@ -216,7 +263,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   scoreOver1Fg: '#7A5410',
   scoreOver2Fg: '#7A2F2A',
   // Pillene bak mot par i best ball (#2255 PR 3d): samme toner som lys drakt,
-  // som strekene over. Sollys har ingen egen CSS-blokk å låses mot.
+  // som strekene over. Sollys har ingen egen CSS-blokk å låses mot. Skinna på
+  // hullsiden bruker dem ikke i sollys: knappene der er hvite med svart kant.
   scoreUnderBg: 'rgba(74, 124, 89, 0.16)',
   scoreParBg: 'rgba(92, 83, 71, 0.10)',
   scoreOver1Bg: 'rgba(216, 155, 58, 0.18)',
@@ -426,9 +474,8 @@ const uiVariants: Record<Scheme, Ui> = {
 
 /**
  * Målene på hullsiden (#2252), i punkter. Komponentene i
- * `components/hole/` leser dem herfra og har ingen av tallene hardkodet.
- * Standard er webbens (`--hole-number-size`, `--score-button-size`,
- * `--hole-border-w`, `--active-bar-w`).
+ * `components/hole/` leser dem herfra. Fra #2385 er de app-designets (`Main`
+ * og `Hull-sollys`), ikke webbens.
  */
 export type HoleMetrics = {
   /** Det store hullnummeret øverst. */
@@ -437,8 +484,9 @@ export type HoleMetrics = {
   railButton: number;
   /** Kanten på rader, skinneknapper og steppere. */
   borderW: number;
-  /** Streken langs venstre kant på den aktive raden. */
-  activeBarW: number;
+  /** Tallet og etiketten i skinneknappene (#2385: 28/11, sollys 40/13). */
+  railNumber: number;
+  railLabel: number;
   /**
    * Valgt tilstand (putte-bryteren, BBB-valget, hullet du står på) tegnes som
    * fylt flate i stedet for en farget kant. I sollys er kant og tekst svarte,
@@ -448,10 +496,12 @@ export type HoleMetrics = {
 };
 
 const HOLE_METRICS: HoleMetrics = {
-  numberSize: 44,
-  railButton: 64,
+  // `Main` (#2385): nummeret på 96 og skinneknappene på 72.
+  numberSize: 96,
+  railButton: 72,
   borderW: 1,
-  activeBarW: 4,
+  railNumber: 28,
+  railLabel: 11,
   selectedFill: false,
 };
 
@@ -469,14 +519,21 @@ const THEMES: Record<Scheme, Theme> = {
 
 /**
  * #2252: hullsiden i sollys. Et lyst tema uansett hva telefonen står på, med
- * kanter på 3, hullnummer på 130, skinneknapper på 84, en strek på 10
- * langs aktiv rad, og valgt tilstand som fylt flate.
+ * kanter på 3, hullnummer på 132 (`Hull-sollys`), skinneknapper på 84, og valgt
+ * tilstand som fylt flate.
  */
 export const SUNLIGHT_THEME: Theme = {
   scheme: 'light',
   colors: SUNLIGHT_COLORS,
   ui: createUi(SUNLIGHT_COLORS, { borderW: 3 }),
-  hole: { numberSize: 130, railButton: 84, borderW: 3, activeBarW: 10, selectedFill: true },
+  hole: {
+    numberSize: 132,
+    railButton: 84,
+    borderW: 3,
+    railNumber: 40,
+    railLabel: 13,
+    selectedFill: true,
+  },
 };
 
 /** OS-rapportert scheme → vårt. Ingen rapport (null/undefined/'unspecified') = lys. */

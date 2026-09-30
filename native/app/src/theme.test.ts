@@ -10,6 +10,8 @@ import { renderHook } from '@testing-library/react-native';
 import * as theme from './theme';
 import {
   FONTS,
+  frauncesLine,
+  interLine,
   PALETTES,
   SUNLIGHT_THEME,
   ThemeScope,
@@ -121,9 +123,30 @@ describe('withAlpha', () => {
   });
 });
 
+describe('frauncesLine', () => {
+  // Nettleserens linjeboks: halve forskjellen mot Fraunces sin egen høyde
+  // (1,233, rundet opp til hel piksel slik iOS gjør) over og under.
+  // Hullnummeret i `Main` er 96 med linje 0,9; 3x som på iPhone.
+  it.each([
+    [96, 86.4, -16.13],
+    [30, 30, -3.5],
+    [132, 112.2, -25.4],
+  ])('%s pt i en linje på %s gir marg %s', (size, line, margin) => {
+    const box = frauncesLine(size, line, 3);
+    expect(box.fontSize).toBe(size);
+    expect(box.marginVertical).toBeCloseTo(margin, 2);
+  });
+
+  it('Inter på 10 pt får nettleserens 12 i stedet for iOS sin 12,333', () => {
+    expect(interLine(10, 12, 3).marginVertical).toBeCloseTo(-0.167, 2);
+  });
+});
+
 describe('FONTS', () => {
-  it('names the six loaded faces', () => {
+  it('names the loaded faces', () => {
     expect(FONTS).toEqual({
+      holeNumber: 'FrauncesHole96',
+      holeNumberSun: 'FrauncesHole132',
       serifDisplay: 'Fraunces_500Medium',
       serifScore: 'Fraunces_600SemiBold',
       sans: 'Inter_400Regular',
@@ -153,15 +176,16 @@ describe('themeFor / resolveScheme', () => {
     expect(Object.keys(dark.ui).sort()).toEqual(Object.keys(light.ui).sort());
   });
 
-  // #2252: hullsidens mål er webbens standard i begge scheme. Sollys er den
-  // eneste som skal kunne endre dem.
-  it('gives both schemes the web defaults for the hole page', () => {
+  // #2252: hullsidens mål er de samme i begge scheme (#2385: app-designets
+  // `Main`). Sollys er den eneste som skal kunne endre dem.
+  it('gives both schemes the design defaults for the hole page', () => {
     for (const scheme of ['light', 'dark'] as const) {
       expect(themeFor(scheme).hole).toEqual({
-        numberSize: 44,
-        railButton: 64,
+        numberSize: 96,
+        railButton: 72,
         borderW: 1,
-        activeBarW: 4,
+        railNumber: 28,
+        railLabel: 11,
         selectedFill: false,
       });
     }
@@ -247,10 +271,11 @@ describe('SUNLIGHT_THEME', () => {
     expect(SUNLIGHT_THEME.ui.badge.borderWidth).toBe(3);
     expect(SUNLIGHT_THEME.ui.buttonSecondary.borderWidth).toBe(3);
     expect(SUNLIGHT_THEME.hole).toEqual({
-      numberSize: 130,
+      numberSize: 132,
       railButton: 84,
       borderW: 3,
-      activeBarW: 10,
+      railNumber: 40,
+      railLabel: 13,
       selectedFill: true,
     });
     // Lys og mørk er urørt.

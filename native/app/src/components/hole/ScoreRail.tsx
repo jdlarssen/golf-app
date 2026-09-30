@@ -11,10 +11,24 @@
 //
 // Høyden på knappene og kantene er temaets (`hole.railButton`,
 // `hole.borderW`), så sollys kan gjøre dem større uten at skinna vet om det.
+//
+// #2385 la skinna på designlerretet, identisk:
+// - **Vanlig** (`Main`): et hvitt ark nederst med runde øvre hjørner, skygge og
+//   et lite håndtak. Øverst navnet og «Får 1 slag her · netto par = 5». Knappene
+//   er 72 pt med tonens flate og farge og uten kant (birdie grønn, par nøytral,
+//   bogey amber, dobbel og verre murstein), og før noen score står er par
+//   foreslått med skogkant. «Annet» har «8+ eller stryk» under. Nederst putte-
+//   valget (av: «Registrer putter»; på: designets runde chips, eierens svar B)
+//   og «Neste: fornavn →».
+// - **Sollys** (`Hull-sollys`): bare knappene, 84 pt med svart kant under en
+//   svart strek på 3, og bare navnet på resultatet. Par foreslås som svart
+//   flate. Ingen overskrift og ingen nederste rad.
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
-import { FONTS, TAP, useTheme } from '../../theme';
+import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
+import { scoreToneColor } from '../../lib/scoreToneColor';
+import { FONTS, TAP, frauncesLine, useTheme, type ThemeColors } from '../../theme';
 
 /** Hva knappene viser etter navnet på resultatet. */
 export type RailDisplay = 'points' | 'netto' | 'plain';
@@ -44,15 +58,39 @@ export type ScoreRailProps = {
   options: RailOption[];
   display: RailDisplay;
   puttsTracking: boolean;
-  /** Navnet i «Neste: X →», eller `null` når ingen andre mangler score. */
+  /**
+   * Formatet fanger putter og hullet er åpent: da står «Registrer putter»
+   * (av) eller putte-chipsene (på) i nederste rad.
+   */
+  puttsAvailable: boolean;
+  /** Fornavnet i «Neste: X →», eller `null` når ingen andre mangler score. */
   skipTo: string | null;
+  /** Talltegnet på «Annet» i sollys og underlinja ellers: «8+» og «8+ eller stryk». */
+  otherTop: string;
+  otherHint: string;
   onPick: (strokes: number) => void;
   onOther: () => void;
   onStep: (delta: 1 | -1) => void;
   onUndo: () => void;
   onSkip: () => void;
   onPutts: (putts: number) => void;
+  /** Slår putte-føring på eller av for runden. */
+  onPuttsToggle: () => void;
 };
+
+/** Flaten bak en tone. */
+function toneBg(tone: ScoreTone, colors: ThemeColors): string {
+  switch (tone) {
+    case 'under':
+      return colors.scoreUnderBg;
+    case 'over1':
+      return colors.scoreOver1Bg;
+    case 'over2':
+      return colors.scoreOver2Bg;
+    default:
+      return colors.scoreParBg;
+  }
+}
 
 const TERM_LABELS: Record<Exclude<StrokeTerm, 'over'>, string> = {
   albatross: 'Albatross',
@@ -64,7 +102,18 @@ const TERM_LABELS: Record<Exclude<StrokeTerm, 'over'>, string> = {
   tripleBogey: 'Trippelbogey',
 };
 
+/**
+ * Det knappene viser (designet, #2385): «Dobbel» og «Trippel» får plass i en
+ * tredel av skjermen. Skjermleseren får hele ordet (`TERM_LABELS`).
+ */
+const SHORT_LABELS: Partial<Record<StrokeTerm, string>> = {
+  doubleBogey: 'Dobbel',
+  tripleBogey: 'Trippel',
+};
+
 const ALL_SCORED = 'Alle har score på hullet. Trykk på et navn for å rette.';
+/** Ordrett webbens `holes.putts.fieldLabel` (låst i testen). */
+export const PUTTS_LABEL = 'Putter';
 
 /** `scores.putts` har CHECK (0..10) fra migrasjon 0123. */
 const MAX_PUTTS = 10;
@@ -76,19 +125,33 @@ function termText(option: RailOption, par: number): string {
   return option.term === 'over' ? `+${option.strokes - par}` : TERM_LABELS[option.term];
 }
 
+function shortTermText(option: RailOption, par: number): string {
+  return SHORT_LABELS[option.term] ?? termText(option, par);
+}
+
+/** Linja til høyre for navnet: slagene setet får og hva par blir netto. */
+export function railStrokesLine(extraStrokes: number | null, par: number): string | null {
+  if (extraStrokes == null || extraStrokes <= 0) return null;
+  return `Får ${extraStrokes} slag her · netto par = ${par + extraStrokes}`;
+}
+
 export function ScoreRail({
   active,
   par,
   options,
   display,
   puttsTracking,
+  puttsAvailable,
   skipTo,
+  otherTop,
+  otherHint,
   onPick,
   onOther,
   onStep,
   onUndo,
   onSkip,
   onPutts,
+  onPuttsToggle,
 }: ScoreRailProps) {
   const { colors, hole } = useTheme();
 
@@ -102,14 +165,20 @@ export function ScoreRail({
     AccessibilityInfo.announceForAccessibility(announcement);
   }, [announcement]);
 
-  const section = [
-    styles.section,
-    { borderTopWidth: hole.borderW, borderTopColor: colors.border, backgroundColor: colors.bg },
-  ];
+  // Sollys (`selectedFill`): hvite knapper med svart kant under en svart strek.
+  const sunlight = hole.selectedFill;
+  const section = sunlight
+    ? [styles.sectionSun, { borderTopColor: colors.border, backgroundColor: colors.bg }]
+    : [styles.sheet, { backgroundColor: colors.surface }];
+  // Arket har et lite håndtak øverst, som designet.
+  const handle = sunlight ? null : (
+    <View style={[styles.handle, { backgroundColor: colors.border }]} />
+  );
 
   if (!active) {
     return (
       <View style={section} testID="score-rail">
+        {handle}
         <Text style={[styles.allScored, { color: colors.muted }]} testID="score-rail-all-scored">
           {ALL_SCORED}
         </Text>
@@ -118,7 +187,8 @@ export function ScoreRail({
   }
 
   const detailText = (option: RailOption): string => {
-    const term = termText(option, par);
+    const term = shortTermText(option, par);
+    if (sunlight) return term;
     if (display === 'points' && option.points != null) return `${term} · ${option.points} p`;
     if (display === 'netto') return `${term} · netto ${option.netto}`;
     return term;
@@ -131,71 +201,90 @@ export function ScoreRail({
     return base;
   };
 
-  const buttonFrame = {
-    height: hole.railButton,
-    borderWidth: hole.borderW,
-  };
   const stepFrame = [
     styles.step,
     { borderWidth: hole.borderW, borderColor: colors.border, backgroundColor: colors.surface },
   ];
+  const strokesLine = railStrokesLine(active.extraStrokes, par);
 
   return (
     <View style={section} testID="score-rail">
-      <View style={styles.header}>
-        <Text
-          style={[styles.heading, { color: colors.text }]}
-          numberOfLines={1}
-          accessibilityRole="header"
-          testID="score-rail-heading"
-        >
-          {active.extraStrokes != null && active.extraStrokes > 0
-            ? `${active.name} · får ${active.extraStrokes} slag`
-            : active.name}
-        </Text>
-        {skipTo != null ? (
-          <Pressable
-            onPress={onSkip}
-            style={styles.linkButton}
-            testID="score-rail-skip"
-            accessibilityRole="button"
-            accessibilityLabel={`Hopp over, gå til ${skipTo}`}
+      {handle}
+      {sunlight ? null : (
+        <View style={styles.header}>
+          <Text
+            style={[styles.heading, { color: colors.text }]}
+            numberOfLines={1}
+            accessibilityRole="header"
+            testID="score-rail-heading"
           >
-            <Text style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo} →`}</Text>
-          </Pressable>
-        ) : null}
-      </View>
+            {active.name}
+          </Text>
+          {strokesLine ? (
+            <Text style={[styles.headingNote, { color: colors.muted }]} testID="score-rail-strokes">
+              {strokesLine}
+            </Text>
+          ) : null}
+        </View>
+      )}
 
-      <View style={styles.grid}>
+      <View style={[styles.grid, { gap: sunlight ? 10 : 8 }]}>
         {options.map((option) => {
           const selected = active.score === option.strokes;
+          // Før noen score står, er par forslaget (designet): skogkant på
+          // nøytral flate, eller fylt svart i sollys.
+          const suggested = !selected && active.score == null && option.term === 'par';
+          const tone = scoreTone(option.strokes, par);
+          const fill = selected
+            ? colors.primary
+            : sunlight
+              ? suggested
+                ? colors.text
+                : colors.bg
+              : toneBg(tone, colors);
+          const ink = selected
+            ? colors.onPrimary
+            : suggested && sunlight
+              ? colors.bg
+              : sunlight || tone === 'par'
+                ? colors.text
+                : scoreToneColor(tone, colors);
+          // Tonede knapper har ingen kant i designet. Valgt eller foreslått par
+          // har skogkant på 2; i sollys har alle svart kant, unntatt den fylte.
+          const frame = sunlight
+            ? { borderWidth: suggested || selected ? 0 : hole.borderW, borderColor: colors.text }
+            : selected || suggested
+              ? { borderWidth: 2, borderColor: colors.primary }
+              : { borderWidth: 0 };
           return (
             <Pressable
               key={option.strokes}
               onPress={() => onPick(option.strokes)}
-              style={[
-                styles.option,
-                buttonFrame,
-                {
-                  borderColor: selected ? colors.primary : colors.border,
-                  backgroundColor: selected ? colors.primary : colors.surface,
-                },
-              ]}
+              style={[styles.option, { height: hole.railButton, backgroundColor: fill }, frame]}
               testID={`rail-option-${option.strokes}`}
               accessibilityRole="button"
               accessibilityState={{ selected }}
               accessibilityLabel={labelText(option)}
             >
               <Text
-                style={[styles.optionNumber, { color: selected ? colors.onPrimary : colors.text }]}
+                style={[
+                  styles.optionNumber,
+                  { color: ink },
+                  frauncesLine(hole.railNumber, hole.railNumber),
+                ]}
               >
                 {option.strokes}
               </Text>
               <Text
-                style={[styles.optionDetail, { color: selected ? colors.onPrimary : colors.muted }]}
+                style={[
+                  styles.optionDetail,
+                  {
+                    color: ink,
+                    fontSize: hole.railLabel,
+                    fontFamily: sunlight ? FONTS.sansBold : FONTS.sansSemiBold,
+                  },
+                ]}
                 numberOfLines={1}
-                // «Dobbeltbogey · 1 p» er for bred for en tredel av en smal
-                // telefon. Teksten krymper heller enn å kuttes.
                 adjustsFontSizeToFit
                 minimumFontScale={0.8}
                 testID={`rail-option-${option.strokes}-detail`}
@@ -209,14 +298,30 @@ export function ScoreRail({
           onPress={onOther}
           style={[
             styles.option,
-            buttonFrame,
-            { borderColor: colors.border, backgroundColor: colors.surface },
+            {
+              height: hole.railButton,
+              borderWidth: hole.borderW,
+              borderColor: sunlight ? colors.text : colors.border,
+              backgroundColor: sunlight ? colors.bg : colors.surface,
+            },
           ]}
           testID="rail-other"
           accessibilityRole="button"
           accessibilityLabel={`Velg en annen score for ${active.name}`}
         >
-          <Text style={[styles.otherText, { color: colors.text }]}>Annet</Text>
+          {sunlight ? (
+            <>
+              <Text style={[styles.otherTop, { color: colors.text }]}>{otherTop}</Text>
+              <Text style={[styles.otherLabelSun, { color: colors.text }]}>Annet</Text>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.otherText, { color: colors.text }]}>Annet</Text>
+              <Text style={[styles.otherHint, { color: colors.muted }]} testID="rail-other-hint">
+                {otherHint}
+              </Text>
+            </>
+          )}
         </Pressable>
       </View>
 
@@ -252,24 +357,54 @@ export function ScoreRail({
         </View>
       ) : null}
 
-      {puttsTracking ? (
-        <View style={styles.puttsRow} testID="rail-putts">
-          {/* Chipene har navnet i etiketten sin, så overskriften skjules for
-              skjermleseren (iOS og Android). */}
-          <Text
-            style={[styles.puttsLabel, { color: colors.muted }]}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-          >
-            PUTTER
-          </Text>
-          {/* key: «5+»-stepperen skal ikke følge skinna til neste spiller. */}
-          <PuttsChips
-            key={active.seatId}
-            value={active.putts}
-            name={active.name}
-            onSelect={onPutts}
-          />
+      {/* Sollys har ingen nederste rad (Hull-sollys). */}
+      {!sunlight && (puttsAvailable || skipTo != null) ? (
+        <View style={styles.bottomRow}>
+          {puttsTracking ? (
+            <View style={styles.puttsRow} testID="rail-putts">
+              {/* «Putter» slår føringen av igjen. Chipene har navnet i
+                  etiketten sin. */}
+              <Pressable
+                onPress={onPuttsToggle}
+                style={styles.puttsToggle}
+                testID="rail-putts-toggle"
+                accessibilityRole="switch"
+                accessibilityState={{ checked: true }}
+                accessibilityLabel="Registrer putter"
+              >
+                <Text style={[styles.puttsLabel, { color: colors.muted }]}>{PUTTS_LABEL}</Text>
+              </Pressable>
+              {/* key: «5+»-stepperen skal ikke følge skinna til neste spiller. */}
+              <PuttsChips
+                key={active.seatId}
+                value={active.putts}
+                name={active.name}
+                onSelect={onPutts}
+              />
+            </View>
+          ) : puttsAvailable ? (
+            <Pressable
+              onPress={onPuttsToggle}
+              style={styles.linkButton}
+              testID="rail-putts-toggle"
+              accessibilityRole="switch"
+              accessibilityState={{ checked: false }}
+              accessibilityLabel="Registrer putter"
+            >
+              <Text style={[styles.linkText, { color: colors.primary }]}>Registrer putter</Text>
+            </Pressable>
+          ) : null}
+          {skipTo != null ? (
+            <Pressable
+              onPress={onSkip}
+              style={[styles.linkButton, styles.skip]}
+              testID="score-rail-skip"
+              accessibilityRole="button"
+              accessibilityLabel={`Hopp over, gå til ${skipTo}`}
+            >
+              <Text style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo} →`}</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -294,10 +429,11 @@ function PuttsChips({
   const showStepper = plusOpen || (value != null && value >= PLUS_THRESHOLD);
   const stepperValue = value != null && value >= PLUS_THRESHOLD ? value : PLUS_THRESHOLD;
 
+  // Designets chips: fylt skog når de er valgt, ellers hvite med tynn kant.
   const chip = (selected: boolean) => [
     styles.chip,
     selected
-      ? { backgroundColor: colors.primary, borderColor: colors.primary, borderWidth: hole.borderW }
+      ? { backgroundColor: colors.primary, borderWidth: 0 }
       : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: hole.borderW },
   ];
   const chipText = (selected: boolean) => [
@@ -370,41 +506,58 @@ function PuttsChips({
 }
 
 const styles = StyleSheet.create({
-  section: {
-    paddingHorizontal: 20,
+  // `Main`: arket med runde øvre hjørner, skygge og 10/16/22 luft, 12 mellom.
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingTop: 10,
-    paddingBottom: 8,
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 22,
+    gap: 12,
+    shadowColor: '#1A2E1F',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
-  header: {
+  // `Hull-sollys`: svart strek på 3 over knappene, 12/12/24 luft.
+  sectionSun: {
+    borderTopWidth: 3,
+    paddingTop: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center' },
+  header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
+  heading: { flexShrink: 1, fontSize: 20, fontFamily: FONTS.serifDisplay },
+  headingNote: { fontSize: 12, fontFamily: FONTS.sans },
+  linkButton: { minHeight: TAP, justifyContent: 'center' },
+  linkText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
+  bottomRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
-    minHeight: TAP,
+    columnGap: 8,
   },
-  heading: { flex: 1, minWidth: 0, fontSize: 17, fontFamily: FONTS.serifDisplay },
-  linkButton: { minHeight: TAP, minWidth: TAP, justifyContent: 'center', paddingHorizontal: 4 },
-  linkText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  // Tre i bredden: 30 % + vekst fyller raden med to mellomrom på 8.
+  skip: { marginLeft: 'auto', alignItems: 'flex-end' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  // Tre i bredden: 30 % + vekst fyller raden med to mellomrom.
   option: {
     flexBasis: '30%',
     flexGrow: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingHorizontal: 4,
   },
-  optionNumber: {
-    fontSize: 24,
-    lineHeight: 26,
-    fontFamily: FONTS.serifScore,
-    fontVariant: ['tabular-nums'],
-  },
-  optionDetail: { fontSize: 11, fontFamily: FONTS.sansMedium, fontVariant: ['tabular-nums'] },
-  otherText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  optionNumber: { fontFamily: FONTS.serifScore },
+  optionDetail: {},
+  otherText: { ...frauncesLine(22, 22), fontFamily: FONTS.serifDisplay },
+  otherHint: { fontSize: 11, fontFamily: FONTS.sans },
+  otherTop: { ...frauncesLine(28, 28), fontFamily: FONTS.serifScore },
+  otherLabelSun: { fontSize: 13, fontFamily: FONTS.sansBold },
   correctRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   step: {
     width: TAP,
@@ -416,18 +569,19 @@ const styles = StyleSheet.create({
   stepText: { fontSize: 20, fontFamily: FONTS.sansSemiBold },
   undo: { marginLeft: 'auto' },
   undoText: { fontSize: 14, fontFamily: FONTS.sansSemiBold, textDecorationLine: 'underline' },
-  puttsRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  puttsLabel: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.5 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, flex: 1 },
+  puttsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  puttsToggle: { minHeight: TAP, justifyContent: 'center' },
+  puttsLabel: { fontSize: 12, fontFamily: FONTS.sans },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, flexShrink: 1 },
   chip: {
-    minHeight: TAP,
+    height: TAP,
     minWidth: TAP,
     borderRadius: TAP / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
   },
-  chipText: { fontSize: 15, fontFamily: FONTS.sansMedium, fontVariant: ['tabular-nums'] },
+  chipText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
   chipStepper: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,6 +7,7 @@
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import { themeFor } from '../theme';
 import { kickerHeader } from './KickerHeader';
 
 jest.mock('react-native-safe-area-context', () =>
@@ -38,6 +39,21 @@ it('pila går tilbake, ordet er overskriften, og høyre-knappen står i raden; u
 
   await rerender(<>{headerElement(false, goBack)}</>);
   expect(screen.queryByTestId('header-back')).toBeNull();
+});
+
+it('hullsiden: undertekst i ordets etikett, gull-tone, og hvit rad i sollys', async () => {
+  const hole = kickerHeader('Lørdagsrunden', 'Hull 7', {
+    subtitle: 'Stableford · Byneset North',
+    tone: 'gold',
+  });
+  const { rerender } = await render(<>{headerElement(true, jest.fn(), hole)}</>);
+  expect(
+    screen.getByRole('header', { name: 'Lørdagsrunden, Stableford · Byneset North' }),
+  ).toBeTruthy();
+  expect(screen.getByText('Lørdagsrunden')).toHaveStyle({ color: themeFor('light').colors.accentText });
+
+  await rerender(<>{headerElement(true, jest.fn(), kickerHeader('', 'Hull 7', { sunlight: true }))}</>);
+  expect(screen.getByTestId('kicker-top-bar')).toHaveStyle({ backgroundColor: '#FFFFFF' });
 });
 
 it('uten ord er raden bare pila, og pila bærer designets etikett', async () => {

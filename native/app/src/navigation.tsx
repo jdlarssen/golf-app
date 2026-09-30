@@ -186,7 +186,9 @@ export function RootNavigator() {
         <Stack.Screen
           name="Hole"
           component={Hole}
-          options={({ route }) => ({ title: `Hull ${route.params.holeNumber}` })}
+          // Designet (#2385): ingen «Hull N»-tittel. Hullsiden setter selv
+          // spillnavnet i toppen og Sollys og pokalen til høyre.
+          options={({ route }) => kickerHeader('', `Hull ${route.params.holeNumber}`)}
         />
         <Stack.Screen
           name="Scorecard"
