@@ -2,6 +2,7 @@ import type {
   SoloStrokeplayResult,
   StablefordSoloResult,
 } from '@/lib/scoring/modes/types';
+import { byStanding, inStandingOrder } from './standingOrder';
 
 /**
  * #2255: «Hull for hull» for solo stableford (også modifisert) og solo
@@ -150,27 +151,6 @@ function split(
     front: nine(holes.filter((h) => h.holeNumber <= 9), rankedIds, better),
     back: nine(holes.filter((h) => h.holeNumber >= 10), rankedIds, better),
   };
-}
-
-/**
- * Likt på et hull: den som ligger best an i stillingen står først. Uten denne
- * regelen arvet radene rekkefølgen motoren fikk spillerne i, og den er ikke
- * den samme på webben og i appen (#2255 PR 3a).
- */
-function byStanding(rankedIds: readonly string[]): (a: { userId: string }, b: { userId: string }) => number {
-  const place = new Map(rankedIds.map((id, i) => [id, i]));
-  const at = (id: string) => place.get(id) ?? Number.POSITIVE_INFINITY;
-  return (a, b) => at(a.userId) - at(b.userId);
-}
-
-/**
- * Stillingen i fast rekkefølge: plassen, og ved delt plass `userId`. Motoren
- * beholder rekkefølgen den fikk spillerne i, og den er ikke den samme på
- * webben og i appen (#2255 PR 3a). `userId` betyr ingenting for spilleren,
- * men gir samme liste på begge flatene.
- */
-function inStandingOrder<T extends { userId: string; rank: number }>(players: readonly T[]): T[] {
-  return [...players].sort((a, b) => a.rank - b.rank || (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0));
 }
 
 /** Solo stableford og modifisert stableford: flest poeng er best. */
