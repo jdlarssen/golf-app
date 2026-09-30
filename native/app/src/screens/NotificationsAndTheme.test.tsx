@@ -58,13 +58,13 @@ describe('NotificationsAndTheme', () => {
     expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOff);
 
     await act(async () => {
-      fireEvent(screen.getByTestId('push-switch'), 'valueChange', true);
+      fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));
     });
     expect(onMock).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOn);
 
     await act(async () => {
-      fireEvent(screen.getByTestId('push-switch'), 'valueChange', false);
+      fireEvent.press(screen.getByRole('switch', { name: PROFILE_TEXT.pushTitle }));
     });
     expect(offMock).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('push-status')).toHaveTextContent(PROFILE_TEXT.pushOn);
@@ -78,7 +78,7 @@ describe('NotificationsAndTheme', () => {
     await renderScreen();
 
     await act(async () => {
-      fireEvent(await screen.findByTestId('push-switch'), 'valueChange', true);
+      fireEvent.press(await screen.findByRole('switch', { name: PROFILE_TEXT.pushTitle }));
     });
     expect(screen.getByTestId('push-denied')).toHaveTextContent(PROFILE_TEXT.pushDenied, { exact: false });
     await act(async () => {

@@ -21,7 +21,7 @@
 // skjermleseren. Til det lagrede valget er lest, er ingen rad merket, så et
 // feil merke aldri blinker forbi.
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { AppState, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import {
@@ -38,7 +38,7 @@ import {
   type ThemePreference,
 } from '../lib/themePreference';
 import type { ScreenProps } from '../navigation';
-import { FONTS, useTheme } from '../theme';
+import { FONTS, PALETTES, useTheme } from '../theme';
 
 const LABEL: Record<ThemePreference, string> = {
   light: PROFILE_TEXT.themeLight,
@@ -171,16 +171,15 @@ function PushSection({
             {on ? PROFILE_TEXT.pushOn : PROFILE_TEXT.pushOff}
           </Text>
         </View>
-        <Switch
+        <DesignSwitch
           value={on}
           disabled={busy || state === 'denied'}
           onValueChange={(next) => void onToggle(next)}
-          accessibilityLabel={PROFILE_TEXT.pushTitle}
+          label={PROFILE_TEXT.pushTitle}
           // Kortet er skog i begge drakter. «På» er designets salvie (`live`);
-          // av-sporet er kremen halvt gjennomsiktig, fordi iOS sitt eget
-          // forsvinner mot skogen (sett i simulatoren).
-          trackColor={{ true: colors.live, false: `${colors.onStrongWarm}4D` }}
-          ios_backgroundColor={`${colors.onStrongWarm}4D`}
+          // av-sporet er kremen halvt gjennomsiktig, så det synes mot skogen.
+          onColor={colors.live}
+          offColor={`${colors.onStrongWarm}4D`}
           testID="push-switch"
         />
       </View>
@@ -211,6 +210,52 @@ function PushSection({
   );
 }
 
+/**
+ * Bryteren fra tegningen: 52 × 32 spor og en rund knott på 26 pt, 3 pt fra
+ * kanten. iOS sin egen `Switch` har en annen form (iOS 26 har en avlang
+ * knott), så den tegnes her. Trykkflaten er 44 pt høy, og skjermleseren
+ * hører en bryter med «på» eller «av».
+ */
+function DesignSwitch({
+  value,
+  disabled,
+  onValueChange,
+  label,
+  onColor,
+  offColor,
+  testID,
+}: {
+  value: boolean;
+  disabled: boolean;
+  onValueChange: (next: boolean) => void;
+  label: string;
+  onColor: string;
+  offColor: string;
+  testID: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
+      onPress={() => onValueChange(!value)}
+      hitSlop={SWITCH_HIT_SLOP}
+      style={[
+        styles.switchTrack,
+        { backgroundColor: value ? onColor : offColor },
+        value ? styles.switchOn : null,
+        disabled ? styles.switchDisabled : null,
+      ]}
+      testID={testID}
+    >
+      <View style={styles.switchKnob} />
+    </Pressable>
+  );
+}
+
+const SWITCH_HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };
+
 const styles = StyleSheet.create({
   // Designet: 16 pt til kanten, og tittelen 4 pt under topp-raden. Tallet er
   // målt i simulatoren under den felles topp-raden; linjehøyden på 34 gir
@@ -222,9 +267,10 @@ const styles = StyleSheet.create({
   // Siden har ingen `gap`; linja trenger luft under lista.
   note: { marginTop: 8 },
   // Designet: skogkortet 14 pt under undertittelen, 16 pt runde hjørner,
-  // 12/14 pt luft inni.
+  // 12/14 pt luft inni. Undertittelens linje er 1,7 pt høyere enn
+  // nettleserens, så avstanden er 12,3 (målt i simulatoren).
   card: {
-    marginTop: 14,
+    marginTop: 12.3,
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -234,9 +280,23 @@ const styles = StyleSheet.create({
   },
   texts: { flex: 1 },
   cardTitle: { fontSize: 15, lineHeight: 18, fontFamily: FONTS.sansSemiBold },
-  cardStatus: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
+  // 1 pt ned fra tittelen, som i designet (målt).
+  cardStatus: { fontSize: 12, lineHeight: 14.5, marginTop: 1, fontFamily: FONTS.sans, opacity: 0.85 },
   // Linjene under kortet står som designets fotnote: 12 pt, 20 pt fra kanten.
   small: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },
   line: { paddingHorizontal: 4, marginTop: 12 },
   denied: { gap: 8, marginTop: 12, paddingHorizontal: 4 },
+  switchTrack: {
+    width: 52,
+    height: 32,
+    borderRadius: 16,
+    padding: 3,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  switchOn: { alignItems: 'flex-end' },
+  switchDisabled: { opacity: 0.5 },
+  // Knotten er hvit i begge drakter, som i tegningen og som iOS sin egen:
+  // lys drakts flate.
+  switchKnob: { width: 26, height: 26, borderRadius: 13, backgroundColor: PALETTES.light.surface },
 });
