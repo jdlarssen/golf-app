@@ -25,7 +25,16 @@
 //
 // Dette er appens ENESTE import-flate for `react-native-svg`.
 import type { ReactNode } from 'react';
-import Svg, { Circle, Ellipse, Line, Path, Rect } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Ellipse,
+  Line,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 
 export type IconProps = {
   color: string;
@@ -295,6 +304,66 @@ export function HoleRing({
           testID={testID ? `${testID}-arc` : undefined}
         />
       ) : null}
+    </Svg>
+  );
+}
+
+/**
+ * Medaljongen i «Forrige runde» (Hjem v2, #2385): designets
+ * `radial-gradient(circle at 50% 38%, #fff, #e5e0d3)` med en innfelt ring på
+ * 1 pt i 60 % dekning. Gradienten har nettleserens standardradius, avstanden fra midten til
+ * det fjerneste hjørnet av boksen. Alltid dekor: kalleren legger tallet oppå.
+ */
+export function MedalDisc({
+  highlight,
+  edge,
+  ring,
+  size = 36,
+  testID,
+}: {
+  highlight: string;
+  edge: string;
+  ring: string;
+  size?: number;
+  testID?: string;
+}) {
+  const r = size / 2;
+  const cy = size * 0.38;
+  const reach = Math.hypot(r, size - cy);
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      style={{ position: 'absolute' }}
+      testID={testID}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Defs>
+        <RadialGradient
+          id="medal"
+          cx={r}
+          cy={cy}
+          fx={r}
+          fy={cy}
+          r={reach}
+          gradientUnits="userSpaceOnUse"
+        >
+          <Stop offset={0} stopColor={highlight} />
+          <Stop offset={1} stopColor={edge} />
+        </RadialGradient>
+      </Defs>
+      <Circle cx={r} cy={r} r={r} fill="url(#medal)" />
+      <Circle
+        cx={r}
+        cy={r}
+        r={r - 0.5}
+        fill="none"
+        stroke={ring}
+        strokeOpacity={0.6}
+        strokeWidth={1}
+      />
     </Svg>
   );
 }

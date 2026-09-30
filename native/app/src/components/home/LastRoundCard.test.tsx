@@ -2,7 +2,8 @@
 //
 // Ordlyden er låst mot webben i `homeCopy.test.ts`. Her låses koblingen: plass
 // og brutto står på raden, gull bare når du vant, og brutto bare når tallet
-// hører til nettopp denne runden.
+// hører til nettopp denne runden. I stableford står poengene i stedet for
+// brutto (Hjem v2, #2385).
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { homeCard } from '../../test/homeFixtures';
 import { LastRoundCard } from './LastRoundCard';
@@ -19,7 +20,9 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
   const score = { gameId: 'last', brutto: 88, netto: 76, teamBall: false };
   const onPress = jest.fn();
 
-  const { rerender } = await render(<LastRoundCard card={second} score={score} onPress={onPress} />);
+  const { rerender } = await render(
+    <LastRoundCard card={second} score={score} points={null} onPress={onPress} />,
+  );
   expect(screen.getByTestId('home-last-round-line-last')).toHaveTextContent(
     '2. plass av 8 · 88 brutto',
   );
@@ -28,11 +31,19 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
   await fireEvent.press(screen.getByLabelText('Høstpokalen. 2. plass av 8, 88 brutto'));
   expect(onPress).toHaveBeenCalled();
 
+  // Stableford: poengene dine i stedet for brutto, som «34 poeng» i designet.
+  await rerender(<LastRoundCard card={second} score={score} points={34} onPress={onPress} />);
+  expect(screen.getByTestId('home-last-round-line-last')).toHaveTextContent(
+    '2. plass av 8 · 34 poeng',
+  );
+  expect(screen.getByLabelText('Høstpokalen. 2. plass av 8, 34 poeng')).toBeTruthy();
+
   // Seier: gull skive med 1.
   await rerender(
     <LastRoundCard
       card={{ ...second, resultSummary: { kind: 'placement', rank: 1, fieldSize: 8, isTeam: false } }}
       score={score}
+      points={null}
       onPress={onPress}
     />,
   );
@@ -40,11 +51,21 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
 
   // Brutto fra en annen runde tas ikke med; lagball merkes som lagrunde.
   await rerender(
-    <LastRoundCard card={second} score={{ ...score, gameId: 'other' }} onPress={onPress} />,
+    <LastRoundCard
+      card={second}
+      score={{ ...score, gameId: 'other' }}
+      points={null}
+      onPress={onPress}
+    />,
   );
   expect(screen.getByTestId('home-last-round-line-last')).toHaveTextContent('2. plass av 8');
   await rerender(
-    <LastRoundCard card={second} score={{ ...score, teamBall: true }} onPress={onPress} />,
+    <LastRoundCard
+      card={second}
+      score={{ ...score, teamBall: true }}
+      points={null}
+      onPress={onPress}
+    />,
   );
   expect(screen.getByTestId('home-last-round-line-last')).toHaveTextContent(
     '2. plass av 8 · Lagrunde',
@@ -55,6 +76,7 @@ it('viser plass og brutto, gull bare ved seier, og brutto bare for sin egen rund
     <LastRoundCard
       card={{ ...second, resultSummary: { kind: 'matchplay', outcome: 'loss', margin: '2&1' } }}
       score={null}
+      points={null}
       onPress={onPress}
     />,
   );
