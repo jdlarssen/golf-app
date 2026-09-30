@@ -274,7 +274,7 @@ const RING = 54;
  * boksen som i nettleseren. Snittet er tegnet for størrelsen, så «14,2» har
  * designets bredde med designets sperring (−0,02em).
  */
-const NAME = fraunces(500, 28, 30.8);
+const NAME = fraunces(500, 28, 30.8, { multiline: true });
 const HCP_LINE = 60.8;
 const HCP_VALUE = fraunces(600, 64, HCP_LINE);
 
@@ -315,12 +315,11 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  // Et tomt navn (mens raden lastes) holder linja: tekstens egen høyde, så
-  // margene gir 30,8.
+  // Et tomt navn (mens raden lastes) holder linja.
   name: {
     ...NAME,
-    minHeight: 30.8 - 2 * NAME.marginVertical,
-    marginTop: 6 + NAME.marginVertical,
+    minHeight: 30.8 - NAME.marginTop - NAME.marginBottom,
+    marginTop: 6 + NAME.marginTop,
   },
   subline: { fontSize: 12, lineHeight: 15, minHeight: 15, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
   hcpRow: {

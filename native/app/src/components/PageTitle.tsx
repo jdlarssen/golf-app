@@ -11,7 +11,7 @@
 // kanten, uten de 4 pt profilen har inn). «Varsler» har 28 pt (Profil v2).
 // Samme komponent, tre størrelser.
 import { StyleSheet, Text, View } from 'react-native';
-import { FONTS, fraunces, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../theme';
 
 export function PageTitle({
   title,
@@ -56,15 +56,20 @@ export function PageTitle({
   );
 }
 
+const SUBTITLE = interLine(13, 16, { multiline: true });
+const SUBTITLE_MEDIUM = interLine(12, 15, { multiline: true });
+
 const styles = StyleSheet.create({
   block: { paddingHorizontal: 4 },
   blockMedium: { paddingHorizontal: 0 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   // Designet har `line-height: normal`, som nettleseren regner som avrundet
   // ascent pluss avrundet descent: 37 for Fraunces 30, 32 for 26 og 34 for 28.
-  title: { ...fraunces(500, 30, 37), flexShrink: 1 },
-  subtitle: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans, marginTop: 2 },
-  titleMedium: { ...fraunces(500, 26, 32) },
-  subtitleMedium: { fontSize: 12, lineHeight: 16 },
-  titleSettings: { ...fraunces(500, 28, 34) },
+  title: { ...fraunces(500, 30, 37, { multiline: true }), flexShrink: 1 },
+  // Underteksten har nettleserens `normal` for Inter (13 pt: 16, 12 pt: 15) og
+  // 2 pt over, som i designet.
+  subtitle: { ...SUBTITLE, fontFamily: FONTS.sans, marginTop: 2 + SUBTITLE.marginTop },
+  titleMedium: { ...fraunces(500, 26, 32, { multiline: true }) },
+  subtitleMedium: { ...SUBTITLE_MEDIUM, marginTop: 2 + SUBTITLE_MEDIUM.marginTop },
+  titleSettings: { ...fraunces(500, 28, 34, { multiline: true }) },
 });

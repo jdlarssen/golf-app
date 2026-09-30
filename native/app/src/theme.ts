@@ -186,38 +186,85 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
  */
 export const FRAUNCES_LINE = 1.233;
 
+/** `multiline`: teksten kan brekke og trenger designets linjeavstand. */
+export type LineOptions = { multiline?: boolean; pixelRatio?: number };
+
+/** Fraunces sin ascent og descent i skriftstørrelser (`hhea`: 1956 og 510 av 2000). */
+const FRAUNCES_METRICS = { ascent: 0.978, descent: 0.255, natural: FRAUNCES_LINE };
+
 /**
- * Nettleserens linjeboks for tall og ord i Fraunces (#2385). Designet setter
- * ofte `line-height: 1` (eller 0,9), og da legger nettleseren halve forskjellen
- * mellom linjehøyden og skriftens egen høyde over og under glyfen. iOS gjør
- * det ikke: med `lineHeight` under skriftens høyde havner glyfen høyere, og
- * under skriftstørrelsen krymper den i tillegg (målt i simulatoren). Her står
- * teksten i sin egen høyde, og marger trekker den inn til linjeboksen. iOS
- * runder tekstens høyde opp til hel piksel (96 pt blir 118,667, ikke 118,368),
- * så marginene regnes av den rundede høyden.
+ * Nettleserens linjeboks for Fraunces (#2385), så teksten står der den står i
+ * designet. Målt med samme tekst i 20 størrelser og linjehøyder i Chromium og
+ * i simulatoren:
+ *
+ *  - **Chromium** runder ascent og descent til hele CSS-piksler. Grunnlinja
+ *    står ascent pluss halve ledningen (linjehøyden minus ascent og descent)
+ *    under toppen av linja, med halve ledningen rundet ned.
+ *  - **iOS med `lineHeight`** legger grunnlinja `descent` over bunnen av linja,
+ *    og krymper glyfen når linja er lavere enn skriftstørrelsen.
+ *  - **iOS uten `lineHeight`** gir teksten sin egen høyde (1,233, rundet opp
+ *    til hel piksel), med grunnlinja ascent (også rundet opp) under toppen.
+ *
+ * Teksten står i sin egen høyde, og margene gir linjeboksen, med grunnlinja
+ * der Chromium har den (treffer innenfor en piksel). Det holder for én linje.
+ * En tekst som kan brekke (`multiline`), beholder `lineHeight`, så linjene står
+ * med designets avstand, og grunnlinja flyttes med like store marger over og
+ * under (treffer innenfor to piksler). Linjer lavere enn skriftstørrelsen får
+ * alltid marger, for der krymper iOS glyfen. Boksen blir `lineHeight` høy.
  *
  * Regnet og målt for iOS. Android legger til `includeFontPadding` og bruker
  * skriftens win-mål (1,47), så en Android-versjon må måles for seg.
  */
-export function frauncesLine(size: number, lineHeight: number, pixelRatio = PixelRatio.get()) {
-  return textLine(size, lineHeight, FRAUNCES_LINE, pixelRatio);
+export function frauncesLine(size: number, lineHeight: number, options: LineOptions = {}) {
+  return browserLine(FRAUNCES_METRICS, size, lineHeight, options);
 }
 
 /** Inter sin egen linjehøyde: (ascent 1984 + descent 494) / 2048 fra `hhea`. */
 export const INTER_LINE = 1.2099609375;
+const INTER_METRICS = { ascent: 1984 / 2048, descent: 494 / 2048, natural: INTER_LINE };
 
 /**
- * Samme linjeboks for Inter. Nettleserens `normal` for Inter på 10 pt er 12
- * (den runder ascent og descent hver for seg), mens iOS legger teksten ut på
- * 12,333 (#2385: «HULL» over hullnummeret).
+ * Samme linjeboks for Inter (`frauncesLine` forklarer modellen). Nettleserens
+ * `normal` for Inter på 10 pt er 12, mens iOS legger teksten ut på 12,333
+ * (#2385: «HULL» over hullnummeret).
  */
-export function interLine(size: number, lineHeight: number, pixelRatio = PixelRatio.get()) {
-  return textLine(size, lineHeight, INTER_LINE, pixelRatio);
+export function interLine(size: number, lineHeight: number, options: LineOptions = {}) {
+  return browserLine(INTER_METRICS, size, lineHeight, options);
 }
 
-function textLine(size: number, lineHeight: number, naturalLine: number, pixelRatio: number) {
-  const natural = Math.ceil(size * naturalLine * pixelRatio) / pixelRatio;
-  return { fontSize: size, marginVertical: (lineHeight - natural) / 2 };
+function browserLine(
+  metrics: { ascent: number; descent: number; natural: number },
+  size: number,
+  lineHeight: number,
+  { multiline = false, pixelRatio = PixelRatio.get() }: LineOptions,
+): { fontSize: number; lineHeight?: number; marginTop: number; marginBottom: number } {
+  const ascent = Math.round(size * metrics.ascent);
+  const descent = Math.round(size * metrics.descent);
+  // Chromium regner i 1/64 piksel: halve ledningen rundes dit før den rundes
+  // ned (−0,005 blir 0, −0,015 blir −1).
+  const halfLeading = Math.round(((lineHeight - ascent - descent) / 2) * 64) / 64;
+  const baseline = ascent + Math.floor(halfLeading);
+  if (multiline && lineHeight >= size) {
+    const shift = baseline - (lineHeight - size * metrics.descent);
+    return { fontSize: size, lineHeight, marginTop: shift, marginBottom: -shift };
+  }
+  const ceilPx = (value: number) => Math.ceil(value * pixelRatio) / pixelRatio;
+  const marginTop = baseline - ceilPx(size * metrics.ascent);
+  return {
+    fontSize: size,
+    marginTop,
+    marginBottom: lineHeight - ceilPx(size * metrics.natural) - marginTop,
+  };
+}
+
+/**
+ * Nettleserens `normal` linjehøyde for Fraunces: ascent og descent rundet
+ * hver for seg til hele piksler (28 pt gir 27 + 7 = 34).
+ */
+export function frauncesNormalLine(size: number): number {
+  return (
+    Math.round(size * FRAUNCES_METRICS.ascent) + Math.round(size * FRAUNCES_METRICS.descent)
+  );
 }
 
 /** Fraunces-vektene appen bruker: 500 til ord, 600 til tall og uthevinger. */
@@ -241,32 +288,21 @@ export function frauncesFamily(weight: FrauncesWeight, size: number): string {
   return `Fraunces${weight}O${best}`;
 }
 
+
 /**
- * Stilen for Fraunces i en vekt og størrelse: snittet, og med `lineHeight`
- * også nettleserens linjeboks (`frauncesLine`). Linjeboksen er marger; en stil
- * som også har `marginTop` eller `marginBottom`, må legge `marginVertical` til
- * selv, ellers overstyrer den linjeboksen på den siden.
+ * Stilen for Fraunces i en vekt og størrelse: snittet og nettleserens
+ * linjeboks (`frauncesLine`), med designets linjehøyde eller `normal` når den
+ * ikke er gitt. Linjeboksen bruker `marginTop` og `marginBottom`; en stil med
+ * egen margin over eller under må legge den til, ellers overstyrer den
+ * linjeboksen på den siden.
  */
 export function fraunces(
   weight: FrauncesWeight,
   size: number,
-): { fontSize: number; fontFamily: string };
-export function fraunces(
-  weight: FrauncesWeight,
-  size: number,
-  lineHeight: number,
-  pixelRatio?: number,
-): { fontSize: number; fontFamily: string; marginVertical: number };
-export function fraunces(
-  weight: FrauncesWeight,
-  size: number,
-  lineHeight?: number,
-  pixelRatio = PixelRatio.get(),
-): { fontSize: number; fontFamily: string; marginVertical?: number } {
-  const family = frauncesFamily(weight, size);
-  return lineHeight === undefined
-    ? { fontSize: size, fontFamily: family }
-    : { ...frauncesLine(size, lineHeight, pixelRatio), fontFamily: family };
+  lineHeight = frauncesNormalLine(size),
+  options: LineOptions = {},
+): ReturnType<typeof frauncesLine> & { fontFamily: string } {
+  return { ...frauncesLine(size, lineHeight, options), fontFamily: frauncesFamily(weight, size) };
 }
 
 /**

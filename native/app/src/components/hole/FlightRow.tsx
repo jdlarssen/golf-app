@@ -27,7 +27,7 @@ import {
 } from '../../../../../lib/scoring/scoreShape';
 import { scoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
-import { FONTS, fraunces, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { DashedRing } from '../icons/Icons';
 
 /** Designets form: 40 pt med strek på 2, firkanten med hjørner på 6. */
@@ -351,7 +351,8 @@ const styles = StyleSheet.create({
   middle: { flex: 1, minWidth: 0 },
   nameLine: { flexDirection: 'row', alignItems: 'baseline', columnGap: 8 },
   name: { fontSize: 15, fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
-  nameSun: { fontSize: 20, fontFamily: FONTS.sansBold },
+  // Nettleserens `normal` for Inter 20 er 24 (#2385).
+  nameSun: { ...interLine(20, 24), fontFamily: FONTS.sansBold },
   badge: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6 },
   note: { fontSize: 12, fontFamily: FONTS.sans },
   pointsSun: { fontSize: 15, fontFamily: FONTS.sansSemiBold },

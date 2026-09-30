@@ -120,11 +120,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   // Designet har linjehøyde 1 (28 pt), med nettleserens linjeboks (#2385).
-  // En tom flis (mens sesongen lastes) holder linja: tekstens egen høyde, så
-  // margene gir 28.
+  // En tom flis (mens sesongen lastes) holder linja.
   value: {
     ...VALUE,
-    minHeight: 28 - 2 * VALUE.marginVertical,
+    minHeight: 28 - VALUE.marginTop - VALUE.marginBottom,
     fontVariant: ['tabular-nums'],
   },
   label: { fontSize: 12, lineHeight: 15, fontFamily: FONTS.sans },

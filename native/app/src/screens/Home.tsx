@@ -80,7 +80,7 @@ import type { ScoringExtras } from '../lib/scoringContext';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, fraunces, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../theme';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
@@ -483,6 +483,9 @@ const PROFILE_SLOP = { top: 15, bottom: 15, left: 12, right: 12 };
 /** HCP-pillen er rundt 40 pt høy; slakken gir 44 pt å treffe på. */
 const HCP_SLOP = { top: 2, bottom: 2, left: 2, right: 2 };
 
+// Et langt navn kan brekke hilsenen.
+const GREETING = fraunces(500, 28, undefined, { multiline: true });
+
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
   // Pillen står midt på dato og hilsen sammen (designets `align-items: center`).
@@ -494,9 +497,10 @@ const styles = StyleSheet.create({
     marginHorizontal: TEXT_INSET,
   },
   topText: { flexShrink: 1 },
-  dateLine: { fontSize: 12, fontFamily: FONTS.sans },
+  // Nettleserens `normal` for Inter 12 er 15; datoen bestemmer hvor alt under står.
+  dateLine: { ...interLine(12, 15), fontFamily: FONTS.sans },
   profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
-  greeting: { ...fraunces(500, 28), marginTop: 2 },
+  greeting: { ...GREETING, marginTop: 2 + GREETING.marginTop },
   hcpPill: {
     flexDirection: 'row',
     alignItems: 'baseline',

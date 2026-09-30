@@ -1087,11 +1087,10 @@ function buildAwardRows({
   return rows;
 }
 
+const LINE_15 = fraunces(500, 15);
+
 const styles = StyleSheet.create({
-  headline: {
-    ...fraunces(500, 15),
-    marginTop: 2,
-  },
+  headline: { ...LINE_15, marginTop: 2 + LINE_15.marginTop },
   teamCard: {
     borderRadius: 12,
     borderWidth: 1,
@@ -1133,8 +1132,5 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-  awardRow: {
-    ...fraunces(500, 15),
-    marginTop: 2,
-  },
+  awardRow: { ...LINE_15, marginTop: 2 + LINE_15.marginTop },
 });
