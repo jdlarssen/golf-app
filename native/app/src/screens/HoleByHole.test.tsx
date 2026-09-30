@@ -5,11 +5,25 @@
 // stillingen og begge niene kommer på skjermen, at stjerna er dekor, og at en
 // blind runde som pågår holder alt tilbake.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, waitFor } from '@testing-library/react-native';
+import type { GameBundle } from '../data/gameBundle';
+import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
-import { HoleByHoleBody } from './HoleByHole';
+import { HoleByHole, HoleByHoleBody } from './HoleByHole';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Skjermen rundt kroppen: bundel og slag fra enheten, og hentingen av slagene.
+const mockScreen: { bundle: GameBundle | null; scores: unknown[]; seed: () => Promise<number> } = {
+  bundle: null,
+  scores: [],
+  seed: async () => 0,
+};
+jest.mock('../lib/useGameData', () => ({
+  useGameBundle: () => ({ bundle: mockScreen.bundle, loading: false }),
+  useLocalScores: () => ({ scores: mockScreen.scores, reload: mockReload }),
+}));
+const mockReload = jest.fn();
+jest.mock('../data/seedScores', () => ({ seedGameScores: () => mockScreen.seed() }));
 
 const HIDDEN = { includeHiddenElements: true };
 
@@ -54,4 +68,37 @@ it('et format appen ikke har «Hull for hull» for: en rolig linje', async () =>
   });
   await render(<HoleByHoleBody bundle={bundle} scores={[]} />);
   expect(screen.getByTestId('hole-by-hole-unavailable')).toBeTruthy();
+});
+
+describe('hentingen av slagene', () => {
+  const props = { route: { params: { gameId: 'g1' } } } as unknown as ScreenProps<'HoleByHole'>;
+  const finished = () =>
+    homeBundle({ game: { id: 'g1', status: 'finished', ...stableford }, players });
+
+  it('mens den pågår og telefonen ikke har noe: et hjul, ikke et tomt kort', async () => {
+    mockScreen.bundle = finished();
+    mockScreen.scores = [];
+    mockScreen.seed = () => new Promise(() => undefined);
+    await render(<HoleByHole {...props} />);
+    expect(screen.getByTestId('hole-by-hole-loading')).toBeTruthy();
+    expect(screen.queryByTestId('hole-by-hole-screen')).toBeNull();
+  });
+
+  it('feiler den (uten nett): kortet med telefonens slag, og en linje som sier det', async () => {
+    mockScreen.bundle = finished();
+    mockScreen.scores = scores;
+    mockScreen.seed = () => Promise.reject(new Error('nett'));
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(screen.getByTestId('hole-by-hole-seed-failed')).toBeTruthy());
+    expect(screen.getByTestId('hole-by-hole-front9')).toBeTruthy();
+  });
+
+  it('lykkes den: ingen linje', async () => {
+    mockScreen.bundle = finished();
+    mockScreen.scores = scores;
+    mockScreen.seed = async () => 5;
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(mockReload).toHaveBeenCalled());
+    expect(screen.queryByTestId('hole-by-hole-seed-failed')).toBeNull();
+  });
 });

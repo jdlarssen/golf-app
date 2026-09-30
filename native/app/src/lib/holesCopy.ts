@@ -1,9 +1,11 @@
 // #2255: teksten på «Hull for hull» i appen.
 //
-// Alt her står også på webbens «Hull for hull» (`leaderboard.common.*`,
-// `leaderboard.soloStrokeplay.*`, `game.home.hullForHull`), og låses tegn for
-// tegn mot `messages/no.json` i `holesCopy.test.ts`. Samme mønster som
-// `ticketCopy.ts`: appen har ingen i18n, så teksten er en håndkopi.
+// Det meste står også på webbens «Hull for hull» (`leaderboard.common.*`,
+// `leaderboard.soloStrokeplay.*`, `game.home.hullForHull`) og låses tegn for
+// tegn mot `messages/no.json` i `holesCopy.test.ts`. Tre unntak: `pointsUnit`
+// er hardkodet «p» i webbens visning, ikke en melding, og `notAvailable` og
+// `seedFailed` finnes bare i appen. Samme mønster som `ticketCopy.ts`: appen
+// har ingen i18n, så teksten er en håndkopi.
 
 export const HOLES_TEXT = {
   /** Overskriften, og flisa på spillets side når runden er avsluttet. */
@@ -24,6 +26,8 @@ export const HOLES_TEXT = {
   /** Enheten bak poengene på hvert hull. */
   pointsUnit: 'p',
   notAvailable: 'Hull for hull finnes ikke for denne runden.',
+  /** Slagene kom ikke fra serveren (uten nett): skjermen viser det telefonen har. */
+  seedFailed: 'Fikk ikke hentet slagene fra serveren. Dette er det som ligger på telefonen.',
 } as const;
 
 /** «7 hull». */

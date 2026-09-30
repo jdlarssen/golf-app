@@ -9,7 +9,7 @@
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
 // med spillerens egen sesjon (webben bruker service-role her, #1632).
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import type { GameStatus } from '../../../../lib/games/status';
 import {
@@ -32,17 +32,24 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
+  // Hentingen av slagene: mens den pågår, og uten noe lokalt, står et hjul i
+  // stedet for et tomt kort. Feiler den (uten nett), sier en linje det, for et
+  // kort med bare telefonens slag ser ellers ferdig ut.
+  const [seed, setSeed] = useState<'loading' | 'done' | 'failed'>('loading');
 
+  // Starter som 'loading'; `gameId` er en ruteparameter, så en ny verdi er en
+  // ny skjerm og ingen nullstilling trengs her.
   useEffect(() => {
     void seedGameScores(gameId)
-      .catch(() => undefined)
+      .then(() => setSeed('done'))
+      .catch(() => setSeed('failed'))
       .then(() => reload());
   }, [gameId, reload]);
 
-  if (!bundle) {
+  if (!bundle || (seed === 'loading' && scores.length === 0)) {
     return (
       <View style={ui.centered} testID="hole-by-hole-loading">
-        {loading ? (
+        {loading || bundle ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
           <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
@@ -53,6 +60,11 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
 
   return (
     <ScrollView contentContainerStyle={ui.scroll} testID="hole-by-hole-screen">
+      {seed === 'failed' ? (
+        <Text style={[ui.muted, { marginBottom: 8 }]} testID="hole-by-hole-seed-failed">
+          {HOLES_TEXT.seedFailed}
+        </Text>
+      ) : null}
       <HoleByHoleBody bundle={bundle} scores={scores} />
     </ScrollView>
   );
