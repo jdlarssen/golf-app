@@ -1,5 +1,6 @@
-// #2255 PR 3a–3c: hvilke runder appen har «Hull for hull» for, og at modellen
-// bygges fra bundelen og de lokale slagene med samme motor som tavla.
+// #2255 PR 3a–3d: hvilke runder appen har «Hull for hull» for, og at modellen
+// bygges fra bundelen og de lokale slagene med samme motor som tavla (best
+// ball: med samme regnestykke som webbens drilldown).
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
 import { buildHoleByHole, holeByHoleKind, waitsForChoices, type HoleByHoleModel } from './holeByHole';
 
@@ -21,13 +22,12 @@ describe('holeByHoleKind', () => {
     ['round_robin', { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 85 }, 'round-robin'],
     ['acey_deucey', { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' }, 'acey-deucey'],
     ['bingo_bango_bongo', { kind: 'bingo_bango_bongo', team_size: 1 }, 'bingo-bango-bongo'],
+    ['best_ball', { kind: 'best_ball', team_size: 2 }, 'best-ball'],
     // Webben har ingen egen visning for lag-stableford: tavla.
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, null],
     // Matchplay og scramble har ingen «Hull for hull» på webben heller.
     ['singles_matchplay', { kind: 'singles_matchplay', team_size: 1, teams_count: 2 }, null],
     ['texas_scramble', { kind: 'texas_scramble', team_size: 2, teams_count: 2, team_handicap_pct: 25 }, null],
-    // Webben har visningen, men appen har den ikke ennå: flisa står som «Tavla».
-    ['best_ball', { kind: 'best_ball', team_size: 2 }, null],
     // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke som en webkopi.
     ['skins', { kind: 'skins' }, null],
     ['nassau', { kind: 'nassau' }, null],
@@ -54,7 +54,7 @@ describe('buildHoleByHole', () => {
     const scores = [...holeScores('g1', 'ola', 3, 4), ...holeScores('g1', 'kari', 2, 5)];
     const model = buildHoleByHole(bundle, scores);
     expect(model?.kind).toBe('solo-stableford');
-    expect(model?.subtitle).toBe('Stableford');
+    expect(model && 'subtitle' in model ? model.subtitle : null).toBe('Stableford');
     expect(soloCard(model).standings.map((s) => [s.userId, s.total])).toEqual([
       ['ola', 6],
       ['kari', 2],
@@ -70,7 +70,7 @@ describe('buildHoleByHole', () => {
     });
     const model = buildHoleByHole(bundle, holeScores('g2', 'ola', 2, 4));
     expect(model?.kind).toBe('solo-strokeplay');
-    expect(model?.subtitle).toBe('Slagspill · Netto');
+    expect(model && 'subtitle' in model ? model.subtitle : null).toBe('Slagspill · Netto');
     expect(soloCard(model).standings[0]!.userId).toBe('ola');
   });
 
@@ -297,6 +297,61 @@ describe('buildHoleByHole', () => {
     });
     expect(buildHoleByHole(bundle, [])).toBeNull();
     expect(buildHoleByHole(bundle, [], { bingoBangoBongoHoles: [] })?.kind).toBe('bingo-bango-bongo');
+  });
+
+  describe('best ball', () => {
+    const team = (userId: string, teamNumber: number, extra: Partial<Parameters<typeof homePlayer>[0]> = {}) =>
+      homePlayer({ userId, name: userId, teamNumber, courseHandicap: 0, ...extra });
+    const bestBall = (game: Record<string, unknown> = {}, roster = [team('ola', 1), team('kari', 1), team('per', 2), team('lise', 2)]) =>
+      homeBundle({
+        game: { id: 'bb', status: 'finished', gameMode: 'best_ball', modeConfig: { kind: 'best_ball', team_size: 2 }, ...game },
+        players: roster,
+      });
+    const lines = (model: HoleByHoleModel | null) => {
+      if (model?.kind !== 'best-ball') throw new Error(`forventet best ball, fikk ${model?.kind}`);
+      return model;
+    };
+
+    it('lagene som webbens drilldown regner dem: best ball per hull, plass og tavlas par', () => {
+      // Lag 1: Ola 4 og Kari 5 på alle 18 → 72. Lag 2: Per og Lise 5 → 90.
+      const scores = [
+        ...holeScores('bb', 'ola', 18, 4),
+        ...holeScores('bb', 'kari', 18, 5),
+        ...holeScores('bb', 'per', 18, 5),
+        ...holeScores('bb', 'lise', 18, 5),
+      ];
+      const model = lines(buildHoleByHole(bestBall(), scores));
+      expect(model.coursePar).toBe(72);
+      expect(model.lines.map((l) => [l.teamNumber, l.rank, l.total, l.players.map((p) => p.userId)])).toEqual([
+        [1, 1, 72, ['ola', 'kari']],
+        [2, 2, 90, ['per', 'lise']],
+      ]);
+    });
+
+    it('et spill på de ni siste regner bare hull 10–18, og tavlas par er de ni', () => {
+      const scores = [...holeScores('bb', 'ola', 18, 4), ...holeScores('bb', 'per', 18, 5)];
+      const model = lines(buildHoleByHole(bestBall({ holeSegment: 'back9' }), scores));
+      expect(model.coursePar).toBe(36);
+      expect(model.lines[0]!.holes.map((h) => h.holeNumber)).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18]);
+      expect(model.lines.map((l) => l.total)).toEqual([36, 45]);
+    });
+
+    it('en trukket spiller og slagene hans holdes utenfor lagets best ball, som på tavla', () => {
+      const roster = [team('ola', 1), team('trukket', 1, { withdrawnAt: '2026-09-29T10:00:00.000Z' }), team('per', 2)];
+      const scores = [
+        ...holeScores('bb', 'ola', 18, 5),
+        ...holeScores('bb', 'trukket', 18, 3),
+        ...holeScores('bb', 'per', 18, 4),
+      ];
+      const model = lines(buildHoleByHole(bestBall({}, roster), scores));
+      const team1 = model.lines.find((l) => l.teamNumber === 1)!;
+      expect(team1.players.map((p) => p.userId)).toEqual(['ola']);
+      expect(team1.total).toBe(90);
+    });
+
+    it('uten spillere er det ingen lag å vise, og modellen er null', () => {
+      expect(buildHoleByHole(bestBall({}, []), [])).toBeNull();
+    });
   });
 
   it('et format uten appens «Hull for hull» gir null', () => {

@@ -3,8 +3,10 @@ import source from '../../../../messages/no.json';
 import { formatNumber } from '../../../../lib/i18n/format';
 import { ninesPointsText } from '../../../../lib/leaderboard/ninesHoles';
 import { isFinishedSentence } from '../test/copy';
+import { formatOtherGendersPar } from '../../../../lib/games/parDisplay';
 import {
   ACEY_DEUCEY_HOLES_TEXT,
+  BEST_BALL_HOLES_TEXT,
   BINGO_BANGO_BONGO_HOLES_TEXT,
   HOLES_TEXT,
   NINES_HOLES_TEXT,
@@ -12,6 +14,12 @@ import {
   WOLF_HOLES_TEXT,
   aceyDeuceyBruttoLabel,
   aceyDeuceySubtitle,
+  bestBallHolesWon,
+  bestBallParAsideAria,
+  bestBallPlayerAria,
+  bestBallTeamHeader,
+  bestBallTeamLabel,
+  bestBallTeamNav,
   grossChip,
   holeNumberLabel,
   holesPlayedChip,
@@ -189,6 +197,49 @@ describe('Bingo Bango Bongo (#2255 PR 3c): paritet mot messages/no.json', () => 
   });
 });
 
+describe('best ball (#2255 PR 3d): paritet mot messages/no.json', () => {
+  const holes = source.leaderboard.holes;
+  it('forklaringen, niene, summene, totalen og laget uten spillere', () => {
+    expect(BEST_BALL_HOLES_TEXT.legendNetLabel).toBe(holes.legendNetLabel);
+    expect(BEST_BALL_HOLES_TEXT.legendFormat).toBe(holes.legendFormat);
+    expect(BEST_BALL_HOLES_TEXT.frontNineLabel).toBe(holes.frontNineLabel);
+    expect(BEST_BALL_HOLES_TEXT.backNineLabel).toBe(holes.backNineLabel);
+    expect(BEST_BALL_HOLES_TEXT.summaryUt).toBe(holes.summaryUt);
+    expect(BEST_BALL_HOLES_TEXT.summaryInn).toBe(holes.summaryInn);
+    expect(BEST_BALL_HOLES_TEXT.totalLabel).toBe(holes.totalLabel);
+    expect(BEST_BALL_HOLES_TEXT.noPlayers).toBe(holes.noPlayers);
+  });
+
+  it('toppen, lagnavnet, hull vunnet og forrige og neste lag', () => {
+    expect(bestBallTeamHeader(2, 1)).toBe(fill(holes.teamHeader, { number: 2, rank: 1 }));
+    expect(bestBallTeamLabel(2)).toBe(fill(common.teamLabel, { number: 2 }));
+    expect(bestBallHolesWon(4)).toBe(fill(holes.holesWon, { count: 4 }));
+    expect(bestBallTeamNav('prev', 1, 3)).toBe(fill(holes.prevTeam, { rank: 1, number: 3 }));
+    expect(bestBallTeamNav('next', 3, 1)).toBe(fill(holes.nextTeam, { rank: 3, number: 1 }));
+  });
+
+  it('det skjermleseren sier om en spiller og om stjerna ved par', () => {
+    const cell = { initial: 'KH', grossText: '5', extraStrokes: 1, netText: '4' };
+    const values = { initial: 'KH', gross: '5', extra: 1, net: '4' };
+    expect(bestBallPlayerAria(cell, false)).toBe(fill(holes.playerScoreAria, values));
+    expect(bestBallPlayerAria(cell, true)).toBe(fill(holes.playerScoreAriaUsed, values));
+    // Appen sender ingen etiketter til `formatOtherGendersPar`: reserven er
+    // webbens `parGender*` ord for ord.
+    const par = { mens: 4, ladies: 5, juniors: 4 };
+    const webGenders = [
+      fill(holes.parGenderMens, { par: 4 }),
+      fill(holes.parGenderLadies, { par: 5 }),
+      fill(holes.parGenderJuniors, { par: 4 }),
+    ].join(', ');
+    expect(formatOtherGendersPar(par, undefined)).toBe(webGenders);
+    expect(bestBallParAsideAria(webGenders)).toBe(fill(holes.parAsideAriaLabel, { genders: webGenders }));
+  });
+
+  it('«B» og « PAR» er hardkodet i webbens drilldown, ikke i meldingene', () => {
+    expect([BEST_BALL_HOLES_TEXT.legendBest, BEST_BALL_HOLES_TEXT.vsParSuffix]).toEqual(['B', 'PAR']);
+  });
+});
+
 it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
   for (const text of [
     ...Object.values(HOLES_TEXT),
@@ -197,6 +248,7 @@ it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
     ...Object.values(ROUND_ROBIN_HOLES_TEXT),
     ...Object.values(ACEY_DEUCEY_HOLES_TEXT),
     ...Object.values(BINGO_BANGO_BONGO_HOLES_TEXT),
+    ...Object.values(BEST_BALL_HOLES_TEXT),
   ]) {
     expect(isFinishedSentence(text)).toBe(true);
   }

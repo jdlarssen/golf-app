@@ -5,13 +5,14 @@
 // format (`lib/holeByHole.ts` sier hvilke), og tegner samme modell som webben
 // (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`,
 // `lib/leaderboard/ninesHoles.ts`, `lib/leaderboard/roundRobinHoles.ts`,
-// `lib/leaderboard/aceyDeuceyHoles.ts`, `lib/leaderboard/bingoBangoBongoHoles.ts`).
+// `lib/leaderboard/aceyDeuceyHoles.ts`, `lib/leaderboard/bingoBangoBongoHoles.ts`,
+// `lib/leaderboard/bestBallHoles.ts`).
 // I en blind runde som pågår holdes alt tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
 // med spillerens egen sesjon (webben bruker service-role her, #1632).
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import type { GameStatus } from '../../../../lib/games/status';
 import {
@@ -20,6 +21,7 @@ import {
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
 import { AceyDeuceyHoleCardsView } from '../components/holes/AceyDeuceyHoleCardsView';
+import { BestBallHoleCardsView } from '../components/holes/BestBallHoleCardsView';
 import { BingoBangoBongoHoleCardsView } from '../components/holes/BingoBangoBongoHoleCardsView';
 import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
 import { RoundRobinHoleCardsView } from '../components/holes/RoundRobinHoleCardsView';
@@ -38,6 +40,9 @@ import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
 
 export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
+  // Best ball: nytt lag starter øverst, som webben når `?team=` byttes.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
@@ -88,7 +93,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   }
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="hole-by-hole-screen">
+    <ScrollView ref={scrollRef} contentContainerStyle={ui.scroll} testID="hole-by-hole-screen">
       {seed === 'failed' ? (
         <Text style={[ui.muted, { marginBottom: 8 }]} testID="hole-by-hole-seed-failed">
           {SEED_FAILED_TEXT}
@@ -102,7 +107,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
           {CHOICES_MISSING_HOLES_TEXT}
         </Text>
       ) : (
-        <HoleByHoleBody bundle={bundle} scores={scores} extras={extras} />
+        <HoleByHoleBody bundle={bundle} scores={scores} extras={extras} onTeamChange={scrollToTop} />
       )}
     </ScrollView>
   );
@@ -113,11 +118,14 @@ export function HoleByHoleBody({
   bundle,
   scores,
   extras = {},
+  onTeamChange,
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
   /** Valgene formatet trenger fra serveren (Wolf, Bingo Bango Bongo). */
   extras?: ScoringExtras;
+  /** Best ball: et annet lag er valgt; skjermen ruller til toppen, som webben. */
+  onTeamChange?: () => void;
 }) {
   const { colors, ui } = useTheme();
   const { game } = bundle;
@@ -195,6 +203,9 @@ export function HoleByHoleBody({
         finished={game.status === 'finished'}
       />
     );
+  }
+  if (model.kind === 'best-ball') {
+    return <BestBallHoleCardsView lines={model.lines} coursePar={model.coursePar} onTeamChange={onTeamChange} />;
   }
   return (
     <SoloScorecardView

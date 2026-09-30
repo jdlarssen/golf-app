@@ -45,6 +45,14 @@ export type ThemeColors = {
   scoreOver1Fg: string;
   scoreOver2Fg: string;
   /**
+   * Flaten bak mot par-pillene i «Hull for hull» for best ball (#2255 PR 3d),
+   * webbens `--score-*-bg`: tonen over, svakt, bak tallet i samme tone.
+   */
+  scoreUnderBg: string;
+  scoreParBg: string;
+  scoreOver1Bg: string;
+  scoreOver2Bg: string;
+  /**
    * Den skoggrønne flaten (#2254, heltekortet på Hjem) — webbens
    * `--surface-strong`. Skogen er mørk i begge draktene, så teksten oppå den
    * er lys i begge: det er {@link ThemeColors.onStrong}.
@@ -114,6 +122,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     scoreParFg: '#5C5347',
     scoreOver1Fg: '#7A5410',
     scoreOver2Fg: '#7A2F2A',
+    scoreUnderBg: 'rgba(74, 124, 89, 0.16)',
+    scoreParBg: 'rgba(92, 83, 71, 0.10)',
+    scoreOver1Bg: 'rgba(216, 155, 58, 0.18)',
+    scoreOver2Bg: 'rgba(184, 70, 62, 0.16)',
     surfaceStrong: '#1B4332',
     onStrong: '#F0EDE5',
     accentText: '#7D6224',
@@ -140,6 +152,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     scoreParFg: '#9A9180',
     scoreOver1Fg: '#E5B26F',
     scoreOver2Fg: '#D67268',
+    scoreUnderBg: 'rgba(125, 170, 138, 0.18)',
+    scoreParBg: 'rgba(154, 145, 128, 0.14)',
+    scoreOver1Bg: 'rgba(229, 178, 111, 0.18)',
+    scoreOver2Bg: 'rgba(214, 114, 104, 0.18)',
     surfaceStrong: '#1F3B2C',
     onStrong: '#ECE5D2',
     accentText: '#D4B870',
@@ -189,6 +205,12 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   scoreParFg: '#5C5347',
   scoreOver1Fg: '#7A5410',
   scoreOver2Fg: '#7A2F2A',
+  // Pillene bak mot par i best ball (#2255 PR 3d): samme toner som lys drakt,
+  // som strekene over. Sollys har ingen egen CSS-blokk å låses mot.
+  scoreUnderBg: 'rgba(74, 124, 89, 0.16)',
+  scoreParBg: 'rgba(92, 83, 71, 0.10)',
+  scoreOver1Bg: 'rgba(216, 155, 58, 0.18)',
+  scoreOver2Bg: 'rgba(184, 70, 62, 0.16)',
   // Heltekortets skogflate på Hjem (#2254). Hullsiden tegner den ikke, så
   // lys-verdiene står her bare for at paletten skal ha alle rollene.
   surfaceStrong: '#1B4332',

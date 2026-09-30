@@ -2086,9 +2086,8 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Gaten** (`lib/holeByHole.ts`) er webbens `hasHoleByHoleView`, gitt den rå
   `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
   bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. PR 3b: Wolf.
-  PR 3c: Nines, Round Robin, Acey Deucey og Bingo Bango Bongo.
+  PR 3c: Nines, Round Robin, Acey Deucey og Bingo Bango Bongo. PR 3d: best ball.
   Skins og Nassau bygges etter sine egne tegninger (#2317, #2327) og står som «Tavla» til da.
-  De andre formatene webben har visning for, står som «Tavla» til de kommer.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
   `WolfHolesView` også tegner. Motoren trenger valgene (`wolf_hole_choices`), som skjermen
   henter med `useGameChoices` som tavla. Runden er avsluttet, så hooken prøver igjen bare til
@@ -2149,6 +2148,21 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   skjult for skjermleseren som webbens `aria-hidden`. `HoleHeader` tar nå et hull uten par
   og indeks, og linja uten kant (Round Robins spillere, prestasjonene her) bor i
   `components/holes/holesShared.tsx`.
+- **Best ball** (PR 3d): ett lag om gangen, som webbens drilldown
+  (`holes/formats/drilldown.tsx`), lederen først. Laget kommer fra
+  `lib/leaderboard/bestBallHoles.ts` (`bestBallDrilldown`), som webben også tegner. Øverst
+  står «Lag 2 · 1. plass», så plass, lagnavn, spillerne, total og mot par, forklaringen, «Ut»
+  og «Inn» med én rad per hull og en sumrad, totalen med hull vunnet, og «forrige» og
+  «neste» lag nederst (skjermens egen tilstand, der webben bytter `?team=`). Hver hullrad har
+  spillerne under hverandre: initialer, brutto i scoreformen, netto og netto mot spillerens
+  egen par, og lagets netto til høyre. Den som ga lagets ball, står i halvfet tekst, og
+  skjermleseren får én setning per spiller, som webbens `role="img"`. Best ball regnes ikke
+  med motoren, men som webbens drilldown: `bestBallBoardInput` (segmentet, og trukne
+  spillere og slagene deres utenfor) og `computeLeaderboard` i `lib/leaderboard.ts`, med
+  bundelens rader fra `toPlayerRows`/`toHoleRows`/`toScoreRows`. Skjermen viser bare
+  avsluttede runder, så webbens klipp til første halvdel i en aktiv runde gjelder ikke her.
+  Mot par-pillene har webbens `--score-*-bg` som egne temaroller (`scoreUnderBg` og videre).
+  Webben har ingen «Vel spilt!» under drilldownen, og heller ikke appen.
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,
