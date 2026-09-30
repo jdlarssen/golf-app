@@ -167,6 +167,54 @@ const STROKEPLAY: SoloStrokeplayResult = {
   ],
 };
 
+describe('likt på et hull: den som ligger best an i stillingen står først', () => {
+  // Webben og appen gir motoren spillerne i hver sin rekkefølge. Uten en egen
+  // regel for likhet arvet radene den rekkefølgen, og samme hull så ulikt ut på
+  // de to flatene (#2255 PR 3a, side om side på staging).
+  it('stableford: samme poeng sorteres etter stillingen, ikke etter rekkefølgen inn', () => {
+    const card = soloStablefordScorecard(
+      {
+        ...STABLEFORD,
+        holes: [
+          stablefordHole(
+            1,
+            [
+              { userId: 'kari', gross: 5, points: 2 },
+              { userId: 'ola', gross: 6, points: 2 },
+            ],
+            ['kari', 'ola'],
+          ),
+        ],
+      },
+      () => 'mens',
+    );
+    expect(card.front.holes[0]!.rows.map((r) => r.userId)).toEqual(['ola', 'kari']);
+  });
+
+  it('slagspill: samme netto sorteres etter stillingen', () => {
+    const card = soloStrokeplayScorecard(
+      {
+        ...STROKEPLAY,
+        holes: [
+          {
+            holeNumber: 1,
+            par: 4,
+            strokeIndex: 1,
+            perPlayer: [
+              { userId: 'ola', gross: 5, net: 4, par: 4 },
+              { userId: 'kari', gross: 4, net: 4, par: 4 },
+            ],
+            bestUserIds: ['ola', 'kari'],
+          },
+        ],
+      } as SoloStrokeplayResult,
+      () => 'mens',
+    );
+    // Kari leder stillingen i STROKEPLAY.
+    expect(card.front.holes[0]!.rows.map((r) => r.userId)).toEqual(['kari', 'ola']);
+  });
+});
+
 describe('soloStrokeplayScorecard', () => {
   const card = soloStrokeplayScorecard(STROKEPLAY, () => 'mens');
 
