@@ -6,10 +6,12 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type {
-  BingoBangoBongoResult,
-  BingoBangoBongoHoleRow,
-} from '@/lib/scoring/modes/types';
+import {
+  bingoBangoBongoHoleCards,
+  type BingoBangoBongoCategory,
+  type BingoBangoBongoHoleCard,
+} from '@/lib/leaderboard/bingoBangoBongoHoles';
+import type { BingoBangoBongoResult } from '@/lib/scoring/modes/types';
 import type { BingoBangoBongoPlayerInfo } from '../BingoBangoBongoView';
 
 export interface BingoBangoBongoHolesViewProps {
@@ -42,6 +44,10 @@ export interface BingoBangoBongoHolesViewProps {
  * (Bingo / Bango / Bongo). Hvert hull-kort viser de tre prestasjonene og hvem
  * som tok dem (eller «ikke satt»). Dette er eneste sted per-hull-data vises —
  * BingoBangoBongoView (leaderboardet) har kun en aggregert per-spiller-tabell.
+ *
+ * Regnestykket (prestasjonene i fast rekkefølge, hvem som tok dem, feieren,
+ * «Feiet!» og hull som venter) bor i `lib/leaderboard/bingoBangoBongoHoles.ts`,
+ * delt med appen (#2255 PR 3c). Her tegnes det.
  */
 export function BingoBangoBongoHolesView({
   gameId,
@@ -55,13 +61,6 @@ export function BingoBangoBongoHolesView({
   const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
-
-  /** De tre prestasjonene per hull, i fast rekkefølge. */
-  const CATEGORIES = [
-    { key: 'bingo' as const, label: 'Bingo', hint: t('bingoBangoBongo.firstOnGreen') },
-    { key: 'bango' as const, label: 'Bango', hint: t('bingoBangoBongo.nearestPin') },
-    { key: 'bongo' as const, label: 'Bongo', hint: t('bingoBangoBongo.firstInHole') },
-  ];
 
   if (isRevealHidden) {
     return (
@@ -86,6 +85,8 @@ export function BingoBangoBongoHolesView({
     );
   }
 
+  const cards = bingoBangoBongoHoleCards(result);
+
   return (
     <LeaderboardShell>
       <LeaderboardHeader
@@ -106,13 +107,8 @@ export function BingoBangoBongoHolesView({
         data-testid="bbb-holes-list"
         className="flex flex-col gap-2.5 px-3.5 pt-1 pb-3.5 list-none"
       >
-        {result.holes.map((hole) => (
-          <HoleCard
-            key={hole.holeNumber}
-            hole={hole}
-            playersById={playersById}
-            categories={CATEGORIES}
-          />
+        {cards.holes.map((hole) => (
+          <HoleCard key={hole.holeNumber} hole={hole} playersById={playersById} />
         ))}
       </ul>
 
@@ -121,42 +117,21 @@ export function BingoBangoBongoHolesView({
   );
 }
 
-
-type BbbCategory = { key: 'bingo' | 'bango' | 'bongo'; label: string; hint: string };
+/** Navnene på prestasjonene, hardkodet. Hintet under er en katalognøkkel fra modellen. */
+const CATEGORY_LABEL: Record<BingoBangoBongoCategory, string> = {
+  bingo: 'Bingo',
+  bango: 'Bango',
+  bongo: 'Bongo',
+};
 
 function HoleCard({
   hole,
   playersById,
-  categories,
 }: {
-  hole: BingoBangoBongoHoleRow;
+  hole: BingoBangoBongoHoleCard;
   playersById: Map<string, BingoBangoBongoPlayerInfo>;
-  categories: BbbCategory[];
 }) {
   const t = useTranslations('leaderboard');
-
-  const winnerByKey: Record<'bingo' | 'bango' | 'bongo', string | null> = {
-    bingo: hole.bingoUserId,
-    bango: hole.bangoUserId,
-    bongo: hole.bongoUserId,
-  };
-
-  const isPending =
-    hole.bingoUserId == null &&
-    hole.bangoUserId == null &&
-    hole.bongoUserId == null;
-
-  // Sweep: spilleren som tok ≥2 av de tre på hullet (maks én mulig med tre
-  // kategorier). Driver accent-uthevningen; tok-alle-tre (=3) gir «Feiet!»-chip.
-  let sweepId: string | null = null;
-  let sweepPoints = 0;
-  for (const [uid, pts] of Object.entries(hole.pointsByPlayer)) {
-    if (pts >= 2 && pts > sweepPoints) {
-      sweepPoints = pts;
-      sweepId = uid;
-    }
-  }
-  const sweptAll = sweepPoints === 3;
 
   const nameFor = (uid: string): string => {
     const info = playersById.get(uid);
@@ -174,37 +149,37 @@ function HoleCard({
           <span className="font-serif text-[15px] font-medium tabular-nums text-text">
             {t('common.hullNumber', { number: hole.holeNumber })}
           </span>
-          {sweptAll ? (
+          {hole.sweptAll ? (
             <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text">
               {t('bingoBangoBongo.feietChip')}
             </span>
-          ) : isPending ? (
+          ) : hole.pending ? (
             <span className="text-[11px] uppercase tracking-[0.1em] text-muted">
               {t('common.venter')}
             </span>
           ) : null}
         </div>
 
-        {isPending ? (
+        {hole.pending ? (
           <p className="mt-1.5 text-[12.5px] text-muted">
             {t('bingoBangoBongo.ingenPrestasjoner')}
           </p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1 list-none">
-            {categories.map((cat) => {
-              const uid = winnerByKey[cat.key];
-              const isSweeper = uid != null && uid === sweepId;
+            {hole.rows.map((row) => {
+              const uid = row.userId;
+              const isSweeper = row.isSweeper;
               return (
                 <li
-                  key={cat.key}
+                  key={row.category}
                   className="flex items-center justify-between gap-3"
                 >
                   <span className="flex min-w-0 items-baseline gap-1.5">
                     <span className="font-serif text-[13.5px] font-medium text-text">
-                      {cat.label}
+                      {CATEGORY_LABEL[row.category]}
                     </span>
                     <span className="truncate text-[10.5px] text-muted">
-                      {cat.hint}
+                      {t(`bingoBangoBongo.${row.hintKey}`)}
                     </span>
                   </span>
                   {uid ? (
