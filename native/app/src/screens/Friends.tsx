@@ -320,7 +320,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
               <Text accessibilityRole="header" style={[styles.heroTitle, { color: colors.onStrongWarm }]}>
                 {FRIENDS_TEXT.heroTitle}
               </Text>
-              <Text style={[styles.heroLine, { color: colors.onStrongWarm }]}>
+              <Text style={[styles.heroLine, styles.heroBody, { color: colors.onStrongWarm }]}>
                 {friendCode ? FRIENDS_TEXT.shareLinkSubtitle : FRIENDS_TEXT.addByEmailSubtitle}
               </Text>
             </View>
@@ -811,7 +811,9 @@ const styles = StyleSheet.create({
   cardRound: { borderRadius: 16 },
   flexText: { flex: 1, minWidth: 0 },
 
-  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 6 },
+  // 14 pt under undertittelen i designet: 4 + gapet på 8, og undertittelens
+  // linje er 2 pt høyere enn nettleserens (målt i simulatoren).
+  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 4 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroAvatars: { flexDirection: 'row' },
   // Ringen ligger utenfor de 30 pt, så boksen tar ikke mer plass enn kremen.
@@ -842,6 +844,8 @@ const styles = StyleSheet.create({
   // Linjehøydene er nettleserens «normal» for størrelsene i designet.
   heroTitle: { fontSize: 18, lineHeight: 22, fontFamily: FONTS.serifDisplay },
   heroLine: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
+  // Teksten under tittelen står 1,5 pt lenger ned i designet (målt).
+  heroBody: { marginTop: 1.5 },
   heroButtons: { flexDirection: 'row', gap: 8 },
 
   requestCard: {
@@ -885,7 +889,8 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   separator: { height: 1 },
-  name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  // Nettleserens linje for 15 pt Inter, med luften over navnet (målt).
+  name: { fontSize: 15, lineHeight: 19.5, fontFamily: FONTS.sansSemiBold },
   sub: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },
   arrow: { fontSize: 16, fontFamily: FONTS.sans },
 

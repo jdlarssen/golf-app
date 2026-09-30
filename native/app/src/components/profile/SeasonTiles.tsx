@@ -117,10 +117,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 4,
   },
+  // Designet har linjehøyde 1 (28 pt). iOS legger sifrene 3 pt for høyt i
+  // en så trang linje, så linja er 3 pt høyere, og de 3 gis tilbake under
+  // (målt i simulatoren). Flisa er like høy.
   value: {
     fontSize: 28,
-    lineHeight: 28,
-    minHeight: 28,
+    lineHeight: 31,
+    minHeight: 31,
+    marginBottom: -3,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
   },

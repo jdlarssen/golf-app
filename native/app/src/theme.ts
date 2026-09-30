@@ -197,7 +197,8 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   trackBg: '#FFFFFF',
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
-  // Profil v2. Hullsiden tegner ingen av dem; sollysets svart og hvitt.
+  // Profil v2. Hullsiden tegner ingen av dem: skillelinja og flisa i
+  // sollysets svart og hvitt, kremen på skogen som `onStrong`.
   divider: '#000000',
   leaderFill: '#FFFFFF',
   onStrongWarm: '#F0EDE5',

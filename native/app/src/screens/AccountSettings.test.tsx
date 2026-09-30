@@ -17,6 +17,11 @@
 //     ut», for skjermen unmountes aldri — `SIGNED_OUT` kom jo ikke.
 //
 // Rekkefølgen drain → port → signOut → wipe er `data/logout.test.ts` sin.
+//
+// Flere renders og ikke én: staging-på og staging-av er to bygg, og en dialog
+// som står åpen eller en feilet utlogging er tilstander skjermen ikke kan være
+// i samtidig med utgangspunktet. Samme unntak som `Profile.test.tsx` hadde for
+// de samme testene før flyttingen (Profil v2).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
