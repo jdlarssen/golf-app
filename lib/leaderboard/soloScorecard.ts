@@ -152,7 +152,6 @@ function split(
   };
 }
 
-/** Solo stableford og modifisert stableford: flest poeng er best. */
 /**
  * Likt på et hull: den som ligger best an i stillingen står først. Uten denne
  * regelen arvet radene rekkefølgen motoren fikk spillerne i, og den er ikke
@@ -174,6 +173,7 @@ function inStandingOrder<T extends { userId: string; rank: number }>(players: re
   return [...players].sort((a, b) => a.rank - b.rank || (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0));
 }
 
+/** Solo stableford og modifisert stableford: flest poeng er best. */
 export function soloStablefordScorecard(
   result: StablefordSoloResult,
   teeGenderOf: TeeGenderOf,

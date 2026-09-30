@@ -228,6 +228,64 @@ describe('likt på et hull: den som ligger best an i stillingen står først', (
     expect(tied(['per', 'ola', 'kari'])).toEqual(tied(['kari', 'per', 'ola']));
   });
 
+  it('slagspill: delt plass får fast rekkefølge, og hull og delsum følger den', () => {
+    const run = (order: string[]) =>
+      soloStrokeplayScorecard(
+        {
+          ...STROKEPLAY,
+          players: order.map((userId) => ({
+            userId,
+            totalNetStrokes: 4,
+            totalGrossStrokes: 4,
+            holesPlayed: 1,
+            netToPar: 0,
+            rank: 1,
+            tiedWith: order.filter((o) => o !== userId),
+          })),
+          holes: [
+            {
+              holeNumber: 1,
+              par: 4,
+              strokeIndex: 1,
+              bestUserIds: order,
+              perPlayer: order.map((userId) => ({ userId, gross: 4, net: 4, par: 4 })),
+            },
+          ],
+        } as SoloStrokeplayResult,
+        () => 'mens',
+      );
+    const a = run(['per', 'ola', 'kari']);
+    const b = run(['kari', 'per', 'ola']);
+    const standing = a.standings.map((s) => s.userId);
+    expect(b.standings.map((s) => s.userId)).toEqual(standing);
+    expect(a.front.holes[0]!.rows.map((r) => r.userId)).toEqual(standing);
+    expect(b.front.holes[0]!.rows.map((r) => r.userId)).toEqual(standing);
+    expect(b.front.subtotals.map((s) => s.userId)).toEqual(standing);
+  });
+
+  it('slagspill: to uspilte står etter stillingen', () => {
+    const card = soloStrokeplayScorecard(
+      {
+        ...STROKEPLAY,
+        holes: [
+          {
+            holeNumber: 1,
+            par: 4,
+            strokeIndex: 1,
+            perPlayer: [
+              { userId: 'ola', gross: null, net: null, par: 4 },
+              { userId: 'kari', gross: null, net: null, par: 4 },
+            ],
+            bestUserIds: [],
+          },
+        ],
+      } as SoloStrokeplayResult,
+      () => 'mens',
+    );
+    // Kari leder stillingen i STROKEPLAY.
+    expect(card.front.holes[0]!.rows.map((r) => r.userId)).toEqual(['kari', 'ola']);
+  });
+
   it('slagspill: samme netto sorteres etter stillingen', () => {
     const card = soloStrokeplayScorecard(
       {
