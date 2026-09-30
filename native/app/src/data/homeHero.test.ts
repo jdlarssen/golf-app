@@ -130,10 +130,23 @@ describe('forrige runde hentes komplett én gang (Hjem v2, #2385)', () => {
 
   it('henter ikke igjen når runden alt er merket', async () => {
     dbMod.getCacheEntry.mockResolvedValue({ key: 'last-round:last', payload: '1', fetchedAt: 'x' });
+    bundleMod.loadGameBundle.mockResolvedValue(FINISHED);
 
     await refreshFinishedRound('last');
     expect(bundleMod.refreshGameBundle).not.toHaveBeenCalled();
     expect(seedMod.seedGameScores).not.toHaveBeenCalled();
+  });
+
+  it('henter igjen når bundelen i cachen ikke kan leses lenger', async () => {
+    // En ny app-versjon med ny `BUNDLE_PAYLOAD_VERSION` leser den gamle
+    // bundelen som «ingen cache». Merket alene ville da slått av poengene.
+    dbMod.getCacheEntry.mockResolvedValue({ key: 'last-round:last', payload: '1', fetchedAt: 'x' });
+    bundleMod.loadGameBundle.mockResolvedValue(undefined);
+    bundleMod.refreshGameBundle.mockResolvedValue(FINISHED);
+    seedMod.seedGameScores.mockResolvedValue(54);
+
+    await refreshFinishedRound('last');
+    expect(bundleMod.refreshGameBundle).toHaveBeenCalledWith('last');
   });
 
   it('merker ikke en halv henting, eller en runde som ikke er avsluttet', async () => {
