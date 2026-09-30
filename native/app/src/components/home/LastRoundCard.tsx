@@ -39,7 +39,7 @@ export function LastRoundCard({
   points: number | null;
   onPress: () => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const badge = card.resultSummary ? finishedResultBadge(card.resultSummary) : null;
   const win = badge?.isWin ?? false;
   const rank = win ? 1 : medalRank(card);
@@ -73,8 +73,11 @@ export function LastRoundCard({
       >
         {win ? null : (
           <MedalDisc
-            highlight={colors.surface}
-            edge={colors.border}
+            // Lysest i midten, så skiva ser hevet ut: designets hvitt mot
+            // #E5E0D3 (flaten og kanten). Designet har ingen mørk drakt; der er
+            // kanten lysere enn flaten, så rekkefølgen snus.
+            highlight={scheme === 'dark' ? colors.border : colors.surface}
+            edge={scheme === 'dark' ? colors.surface : colors.border}
             ring={colors.scoreUnsetFg}
             size={MEDAL}
           />
