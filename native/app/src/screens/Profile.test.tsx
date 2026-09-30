@@ -9,41 +9,23 @@
 //
 // Det som blir igjen er koblingene bare en render kan bekrefte:
 //
-//  1. **Sync-lab finnes ikke i et butikk-bygg.** Den viktigste asserten i fila:
-//     den er porten mot at en utviklerflate følger med appen ut i App Store.
-//     Ikke skjult, ikke deaktivert — ikke i treet.
-//  2. **Menyen navigerer** og gjør ingenting selv (#2256): «Varsler og tema»
-//     og «Personvern og konto» er egne rom. «Rediger» står i navigatorens
-//     header, og personvernerklæringen og «Slett konto» er flyttet til
-//     «Personvern og konto» (`AccountSettings.test.tsx`).
-//  3. **«Logg ut» spør før den lar slag ligge igjen.** `logOut` svarer `unsent`,
-//     skjermen viser dialogen, «Avbryt» setter raden tilbake slik den var, og
-//     «Logg ut likevel» er det ENESTE som sender `keepUnsent`.
-//  4. **Raden låser seg ikke når sesjonen overlevde.** `signout-failed` betyr at
-//     spilleren fortsatt er innlogget; da må «Logger ut …» gå tilbake til «Logg
-//     ut», for skjermen unmountes aldri — `SIGNED_OUT` kom jo ikke.
-//  5. **Flisene forsvinner bare når sesongen ikke kunne leses (#2256).**
+//  1. **Menyen navigerer** og gjør ingenting selv (#2256): «Venner», «Varsler
+//     og tema» og «Personvern og konto» er egne rom. «Rediger» står ved
+//     tittelen. «Logg ut», utviklerflaten, personvernerklæringen og «Slett
+//     konto» bor i «Personvern og konto» (`AccountSettings.test.tsx`, Profil
+//     v2), så ingen av dem finnes her.
+//  2. **Flisene forsvinner bare når sesongen ikke kunne leses (#2256).**
 //
-// Flere renders og ikke én: staging-på og staging-av er to bygg, og en dialog
-// som står åpen (eller en feilet utlogging, en rad som lastes, en sesong som
-// ikke kunne leses) er tilstander skjermen ikke kan være i samtidig med
+// Flere renders og ikke én: en rad som lastes, en sesong som ikke kunne leses
+// og et oppslag som feilet er tilstander skjermen ikke kan være i samtidig med
 // utgangspunktet. Samme grunn som `DeleteAccount.test.tsx` har flere.
 // Kontrakten ba om «én Type C-render»; avviket er bokført i PR-ene (#1906,
 // #2256).
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Alert, type AlertButton } from 'react-native';
 import { fetchBagTagExtras } from '../data/bagTag';
-import { fetchFriends } from '../data/friends';
-import { logOut } from '../data/logout';
 import { fetchOwnProfile } from '../data/profile';
-import {
-  PROFILE_TEXT,
-  formatHcpNb,
-  friendsWaitingLine,
-  unsentStrokesWarning,
-} from '../lib/profileCopy';
-import { isStagingBuild } from '../lib/stagingGate';
+import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { Profile } from './Profile';
 
@@ -58,29 +40,18 @@ jest.mock('../session', () => ({
 }));
 jest.mock('../data/profile', () => ({ fetchOwnProfile: jest.fn() }));
 jest.mock('../data/bagTag', () => ({ fetchBagTagExtras: jest.fn() }));
-jest.mock('../data/friends', () => ({ fetchFriends: jest.fn() }));
-jest.mock('../data/logout', () => ({ logOut: jest.fn() }));
-jest.mock('../lib/stagingGate', () => ({ isStagingBuild: jest.fn() }));
 
 const fetchOwnProfileMock = fetchOwnProfile as jest.Mock;
 const fetchBagTagExtrasMock = fetchBagTagExtras as jest.Mock;
-const fetchFriendsMock = fetchFriends as jest.Mock;
-const logOutMock = logOut as jest.Mock;
-const isStagingBuildMock = isStagingBuild as jest.Mock;
 
 const MY_NAME = 'Jørgen Larssen';
 const MY_HCP = 12.4;
 
 const navigate = jest.fn();
 const setParams = jest.fn();
-// Rommet abonnerer på `blur` for å nullstille lagrings-kvitteringen, og på
-// `focus` for å hente hvor mange som venter på svar (#2256). Stubben fyrer
-// `focus` med en gang, slik navigatoren gjør når skjermen åpnes, og svarer
-// med en avmeldingsfunksjon — uten den ville effektens opprydding kastet.
-const addListener = jest.fn((event: string, listener: () => void) => {
-  if (event === 'focus') listener();
-  return jest.fn();
-});
+// Rommet abonnerer på `blur` for å nullstille lagrings-kvitteringen. Stubben
+// svarer med en avmeldingsfunksjon — uten den ville effektens opprydding kastet.
+const addListener = jest.fn(() => jest.fn());
 
 /** Rendrer rommet og venter til profilraden har landet i kortet. */
 async function renderScreen() {
@@ -119,25 +90,6 @@ describe('Profile', () => {
       club: 'Losby GK',
       season: { rounds: 3, bestRound: 82, wins: 1 },
     });
-    fetchFriendsMock.mockResolvedValue({
-      ok: true,
-      data: {
-        friends: [],
-        incoming: [
-          { requestId: 'r1', id: 'kari', name: 'Kari' },
-          { requestId: 'r2', id: 'ola', name: 'Ola' },
-        ],
-        outgoing: [],
-        suggestions: [],
-        friendCode: null,
-      },
-    });
-    logOutMock.mockResolvedValue({ ok: true });
-    isStagingBuildMock.mockReturnValue(false);
-    // Spionen settes for HVER test, ikke bare den som venter dialogen: uten den
-    // er `Alert.alert` den ekte funksjonen, og «ble ikke spurt» kunne ikke
-    // uttrykkes som en assert i det hele tatt.
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -170,7 +122,7 @@ describe('Profile', () => {
     expect(screen.getByTestId('profile-set-handicap')).toBeTruthy();
   });
 
-  it('viser hvem du er, fører videre fra menyen, logger ut, og har ingen utviklerflate i et butikk-bygg', async () => {
+  it('viser hvem du er og fører videre fra menyen', async () => {
     await renderScreen();
 
     expect(screen.getByTestId('profile-name')).toHaveTextContent(MY_NAME);
@@ -179,13 +131,8 @@ describe('Profile', () => {
     );
     expect(await screen.findByTestId('season-tile-wins')).toBeTruthy();
 
-    // Porten mot App Store: raden skal ikke finnes, ikke bare være usynlig.
-    expect(screen.queryByTestId('profile-sync-lab')).toBeNull();
-    expect(screen.queryByTestId('profile-developer')).toBeNull();
-
-    // Menyradene navigerer bare. Sletting og personvern bor ikke her lenger.
-    // Vennerraden sier hvor mange som venter på svar (#2256 PR 2).
-    expect(screen.getByTestId('profile-friends')).toHaveTextContent(friendsWaitingLine(2), {
+    // Menyradene navigerer bare, og vennerraden har én linje (designet).
+    expect(screen.getByTestId('profile-friends')).toHaveTextContent(PROFILE_TEXT.friendsRow, {
       exact: false,
     });
     await fireEvent.press(screen.getByTestId('profile-friends'));
@@ -198,16 +145,11 @@ describe('Profile', () => {
     expect(navigate).toHaveBeenCalledWith('EditProfile');
     await fireEvent.press(screen.getByTestId('profile-account-settings'));
     expect(navigate).toHaveBeenCalledWith('AccountSettings');
-    expect(screen.queryByTestId('profile-delete-entry')).toBeNull();
-    expect(logOutMock).not.toHaveBeenCalled();
 
-    // Første forsøk går alltid uten `keepUnsent`: det er `logOut` som avgjør om
-    // køen er tom, ikke skjermen.
-    await fireEvent.press(screen.getByTestId('profile-log-out'));
-    await waitFor(() => {
-      expect(logOutMock).toHaveBeenCalledWith();
-    });
-    expect(Alert.alert).not.toHaveBeenCalled();
+    // Profil v2: siden slutter med «Del bag-taggen». Utloggingen og
+    // utviklerflaten bor i «Personvern og konto».
+    expect(screen.queryByText(PROFILE_TEXT.logout)).toBeNull();
+    expect(screen.queryByText(PROFILE_TEXT.syncLabRow)).toBeNull();
   });
 
   // Evaluator-funn (#2256): klubben kommer etter profilraden. Uten denne
@@ -229,78 +171,6 @@ describe('Profile', () => {
       expect(screen.queryByTestId('season-tiles')).toBeNull();
     });
     expect(screen.getByTestId('profile-name')).toHaveTextContent(MY_NAME);
-  });
-
-  it('slipper Sync-lab inn i et staging-bygg', async () => {
-    isStagingBuildMock.mockReturnValue(true);
-    await renderScreen();
-
-    await fireEvent.press(screen.getByTestId('profile-sync-lab'));
-    expect(navigate).toHaveBeenCalledWith('SyncLab');
-  });
-
-  it('spør før den lar uleverte slag bli liggende', async () => {
-    logOutMock.mockResolvedValue({ ok: false, reason: 'unsent', pending: 3 });
-    await renderScreen();
-
-    await fireEvent.press(screen.getByTestId('profile-log-out'));
-    await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalled();
-    });
-
-
-    const alertMock = Alert.alert as unknown as jest.Mock;
-    const [title, message, buttons] = alertMock.mock.calls[0] as [
-      string,
-      string,
-      AlertButton[],
-    ];
-    expect(title).toBe(PROFILE_TEXT.unsentStrokesTitle);
-    // Antallet MÅ nå fram — «noen slag» er ikke nok til å ta valget på.
-    expect(message).toBe(unsentStrokesWarning(3));
-    expect(buttons).toHaveLength(2);
-
-    const [cancel, confirm] = buttons;
-
-    // «Avbryt»: ingenting har skjedd, og raden er trykkbar igjen med det samme.
-    // Uten dette står den låst på «Logger ut …» for godt.
-    await act(async () => {
-      cancel.onPress?.();
-    });
-    expect(logOutMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('profile-log-out')).toHaveTextContent(
-      PROFILE_TEXT.logout,
-    );
-
-    // «Logg ut likevel» er det eneste stedet `keepUnsent` sendes. Slagene blir
-    // liggende, og den lokale basen tømmes ikke.
-    await act(async () => {
-      confirm.onPress?.();
-    });
-    expect(logOutMock).toHaveBeenLastCalledWith({ keepUnsent: true });
-  });
-
-  it('sier fra og låser opp raden når sesjonen overlevde utloggingen', async () => {
-    // `signout-failed` betyr at spilleren FORTSATT er innlogget: tokenet var
-    // utløpt og appen kom ikke til serveren for å fornye det (offline på en
-    // runde). Da må raden bli trykkbar igjen — ellers står «Logger ut …» til
-    // appen startes på nytt, for skjermen unmountes aldri: `SIGNED_OUT` kom
-    // aldri. Og teksten må si at nett er kravet, ikke bare «prøv igjen».
-    logOutMock.mockResolvedValue({ ok: false, reason: 'signout-failed' });
-    await renderScreen();
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId('profile-log-out'));
-    });
-
-    expect(screen.getByTestId('profile-logout-error')).toHaveTextContent(
-      PROFILE_TEXT.logoutOfflineNote,
-    );
-    expect(screen.getByTestId('profile-log-out')).toHaveTextContent(
-      PROFILE_TEXT.logout,
-    );
-    // Ingen dialog: dette er ikke et spørsmål til spilleren, det er en beskjed.
-    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   // #1973: overskriften skal ikke bytte tekst foran øynene på deg.

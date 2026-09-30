@@ -98,11 +98,9 @@ export const PROFILE_TEXT = {
   // --- Webbens ordlyd: sesongen og temaet (#2256) --------------------------
   // Temavalget er webbens `profile.theme`: overskriften og de to faste
   // draktene.
-  // Raden til vennesiden (#2256 PR 2): webbens `profile.friendsRow` og
-  // `profile.friendsSublabel`. Når noen venter på svar, byttes underlinja med
-  // {@link friendsWaitingLine}.
+  // Raden til vennesiden (#2256 PR 2): webbens `profile.friendsRow`. Én linje,
+  // som i designet (Profil v2); forespørslene står på vennesiden.
   friendsRow: 'Venner',
-  friendsSublabel: 'Legg til venner og se spillene deres',
   themeHeading: 'Tema',
   themeLight: 'Lys',
   themeDark: 'Mørk',
@@ -133,6 +131,11 @@ export const PROFILE_TEXT = {
   /** «Handicap ikke satt» for skjermleseren, der kortet viser «–». */
   hcpNotSetSpoken: 'ikke satt',
   menuNotificationsTheme: 'Varsler og tema',
+  /**
+   * Tittelen på siden menyraden «Varsler og tema» åpner: «Varsler», som i
+   * designet (Profil v2). Temaet står nederst på samme side.
+   */
+  notificationsHeading: 'Varsler',
   menuAccount: 'Personvern og konto',
   // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.
   themeSystem: 'Følg telefonen',
@@ -202,14 +205,6 @@ export const PROFILE_TEXT = {
  */
 export function hcpUpdatedLine(dateText: string): string {
   return `${PROFILE_TEXT.hcpUpdatedPrefix}${dateText}`;
-}
-
-/**
- * «2 vil bli venner med deg» — webbens `profile.friendsBadgeSublabel`, med
- * ICU-flertallet skrevet ut (appen har ingen ICU-motor).
- */
-export function friendsWaitingLine(count: number): string {
-  return count === 1 ? '1 vil bli venn med deg' : `${count} vil bli venner med deg`;
 }
 
 /** «med siden 2026» — sublinja på bag-taggen. */

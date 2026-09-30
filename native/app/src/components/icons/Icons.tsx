@@ -33,7 +33,10 @@ export type IconProps = {
   /** Kun for ikon som står alene. Uten den er ikonet dekor. */
   accessibilityLabel?: string;
   testID?: string;
-  /** Streken i 24-rutenettet; 1,5 som standard (#2385: haken i sjekklista er 2,4). */
+  /**
+   * Streken i 24-rutenettet; 1,5 som standard (#2385: haken i sjekklista er
+   * 2,4; Profil v2: «Del bag-taggen» er 1,8).
+   */
   strokeWidth?: number;
 };
 

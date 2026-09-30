@@ -4,7 +4,7 @@
 // viser dem bare. Utseendet følger designlerretet (eierens retning 29.09):
 // ingen overskrift over flisene, tallet stort i Fraunces og en liten etikett
 // under («runder i år», «beste runde», «seire»). Seire over null gir gull kant,
-// en svak gulltone i flisa og tallet i `accentText`, som holder kontrasten
+// kremflate (`leaderFill`) og tallet i `accentText`, som holder kontrasten
 // som tekst i begge draktene (webbens `--accent-text`).
 //
 // **Hver flis er én node for skjermleseren** («Seire i 2026: 2») i stedet
@@ -87,8 +87,8 @@ function Tile({
       style={[
         styles.tile,
         gold
-          ? // Gulltonen er `accent` med lav dekning, ingen ny farge.
-            { backgroundColor: `${colors.accent}1F`, borderColor: `${colors.accent}CC` }
+          ? // Kremen under webbens lederkort, og gullkanten.
+            { backgroundColor: colors.leaderFill, borderColor: `${colors.accent}CC` }
           : { backgroundColor: colors.surface, borderColor: colors.border },
       ]}
       testID={testID}
@@ -107,7 +107,8 @@ function Tile({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  // Designet: 28 pt under bag-taggen, så skyggen legger seg over toppen.
+  row: { flexDirection: 'row', gap: 10, marginTop: 28 },
   tile: {
     flex: 1,
     borderRadius: 16,
@@ -116,12 +117,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 4,
   },
+  // Designet har linjehøyde 1 (28 pt). iOS legger sifrene 3 pt for høyt i
+  // en så trang linje, så linja er 3 pt høyere, og de 3 gis tilbake under
+  // (målt i simulatoren). Flisa er like høy.
   value: {
     fontSize: 28,
-    lineHeight: 30,
-    minHeight: 30,
+    lineHeight: 31,
+    minHeight: 31,
+    marginBottom: -3,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
   },
-  label: { fontSize: 12, lineHeight: 16, fontFamily: FONTS.sans },
+  label: { fontSize: 12, lineHeight: 15, fontFamily: FONTS.sans },
 });

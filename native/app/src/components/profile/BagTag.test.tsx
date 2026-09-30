@@ -23,7 +23,7 @@ const HIDDEN = { includeHiddenElements: true };
 const STALE: BagTagModel = {
   kicker: PROFILE_TEXT.bagTagFallbackKicker,
   name: 'Kari Nordmann',
-  subline: 'Dame · Junior · med siden 2026',
+  subline: 'Dame · med siden 2026',
   hcpText: '14,2',
   hcpAge: { stale: true, text: PROFILE_TEXT.hcpStaleShort },
   initials: 'KN',

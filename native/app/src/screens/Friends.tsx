@@ -22,7 +22,14 @@
 //
 // Toppen er designets: «PROFIL» i navigatorens header (`kickerHeader`), og
 // «Venner» stort med undertittelen øverst i innholdet (`PageTitle`).
+//
+// **Profil v2: identisk med designlerretet.** Seksjonsetikettene er
+// kicker-stilen (10 pt, sperret), med 18 pt over og 8 under. Kremen i
+// heltekortet er den varme (`onStrongWarm`), den stiplede ringen er tegnet
+// (iOS stipler en `border` grovere enn nettleseren), og tallene i
+// underlinjene har vanlige, ikke faste, sifferbredder.
 import { Children, Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
+import Svg, { Circle } from 'react-native-svg';
 import {
   ActivityIndicator,
   Alert,
@@ -242,8 +249,11 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
   const { friends, incoming, outgoing, suggestions, friendCode } = load.data;
   const locked = busy !== null;
   const now = new Date();
-  // Serveren setter vennene etter siste runde når den har tallene.
-  const sortedByLastPlayed = friends.length > 1 && friends.some((f) => f.stats?.lastPlayedAt);
+  // Serveren setter vennene etter siste runde når den har tallene. Designet
+  // viser «Sist spilt først» ved etiketten uansett antall venner (Profil v2,
+  // orkestratoren 30.09), men bare når tallene finnes, så linja ikke lover en
+  // rekkefølge lista ikke har.
+  const sortedByLastPlayed = friends.some((f) => f.stats?.lastPlayedAt);
 
   return (
     <>
@@ -281,33 +291,39 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
               importantForAccessibility="no-hide-descendants"
             >
               {selfInitials ? (
-                <View
-                  style={[
-                    styles.heroAvatar,
-                    { backgroundColor: colors.onStrong, borderColor: colors.surfaceStrong },
-                  ]}
-                >
-                  <Text style={[styles.heroAvatarText, { color: colors.surfaceStrong }]}>
-                    {selfInitials}
-                  </Text>
+                // Kremen er 30 pt; ringen i kortets farge ligger utenfor den,
+                // som designets `box-shadow`, og synes ikke. Ringen er en egen
+                // flate bak kremen: med `border` tegner iOS kremen under
+                // kanten, og den lyser gjennom som en tynn ring.
+                <View style={[styles.heroSelfRing, { backgroundColor: colors.surfaceStrong }]}>
+                  <View style={[styles.heroSelf, { backgroundColor: colors.onStrongWarm }]}>
+                    <Text style={[styles.heroAvatarText, { color: colors.surfaceStrong }]}>
+                      {selfInitials}
+                    </Text>
+                  </View>
                 </View>
               ) : null}
-              <View
-                style={[
-                  styles.heroAvatar,
-                  styles.heroPlus,
-                  selfInitials ? styles.heroPlusOverlap : null,
-                  { borderColor: `${colors.onStrong}B3`, backgroundColor: colors.surfaceStrong },
-                ]}
-              >
-                <Text style={[styles.heroPlusText, { color: colors.onStrong }]}>+</Text>
+              <View style={[styles.heroPlus, selfInitials ? styles.heroPlusOverlap : null]}>
+                <Svg width={HERO_AVATAR} height={HERO_AVATAR} style={StyleSheet.absoluteFill}>
+                  <Circle
+                    cx={HERO_AVATAR / 2}
+                    cy={HERO_AVATAR / 2}
+                    r={(HERO_AVATAR - 1.5) / 2}
+                    fill={colors.surfaceStrong}
+                    stroke={colors.onStrongWarm}
+                    strokeOpacity={0.7}
+                    strokeWidth={1.5}
+                    strokeDasharray={HERO_DASH}
+                  />
+                </Svg>
+                <Text style={[styles.heroPlusText, { color: colors.onStrongWarm }]}>+</Text>
               </View>
             </View>
             <View style={styles.flexText}>
-              <Text accessibilityRole="header" style={[styles.heroTitle, { color: colors.onStrong }]}>
+              <Text accessibilityRole="header" style={[styles.heroTitle, { color: colors.onStrongWarm }]}>
                 {FRIENDS_TEXT.heroTitle}
               </Text>
-              <Text style={[styles.heroLine, { color: colors.onStrong }]}>
+              <Text style={[styles.heroLine, styles.heroBody, { color: colors.onStrongWarm }]}>
                 {friendCode ? FRIENDS_TEXT.shareLinkSubtitle : FRIENDS_TEXT.addByEmailSubtitle}
               </Text>
             </View>
@@ -326,6 +342,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
             <Pill
               tone="onStrongOutline"
               size="large"
+              smallText
               grow={!friendCode}
               label={FRIENDS_TEXT.heroEmailButton}
               expanded={emailOpen}
@@ -334,7 +351,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
             />
           </View>
           {shareNote ? (
-            <Text style={[styles.heroLine, { color: colors.onStrong }]} testID="friends-share-error">
+            <Text style={[styles.heroLine, { color: colors.onStrongWarm }]} testID="friends-share-error">
               {shareNote}
             </Text>
           ) : null}
@@ -387,7 +404,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
 
         {incoming.length > 0 ? (
           <View style={styles.section} testID="friends-incoming">
-            <Text style={[ui.sectionTitle, styles.inset, { color: colors.accentText }]}>
+            <Text style={[ui.kicker, styles.label, { color: colors.accentText }]}>
               {FRIENDS_TEXT.incomingSection}
             </Text>
             {incoming.map((r) => (
@@ -416,6 +433,8 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                   onPress={() =>
                     void run(`decline:${r.requestId}`, () => respondToFriendRequest(r.requestId, false))
                   }
+                  // Designet: 39 × 44, en stående pille; trykkflaten er 44 × 44.
+                  hitSlop={DECLINE_HIT_SLOP}
                   style={[
                     styles.roundButton,
                     { borderColor: colors.border, backgroundColor: colors.surface },
@@ -436,7 +455,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
 
         {suggestions.length > 0 ? (
           <View style={styles.section} testID="friends-suggestions">
-            <Text style={[ui.sectionTitle, styles.inset]}>{FRIENDS_TEXT.suggestionsSection}</Text>
+            <Text style={[ui.kicker, styles.label]}>{FRIENDS_TEXT.suggestionsSection}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -478,10 +497,10 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
         ) : null}
 
         <View style={styles.section} testID="friends-list">
-          <View style={[styles.sectionHead, styles.inset]}>
-            <Text style={ui.sectionTitle}>{friendsSectionTitle(friends.length)}</Text>
+          <View style={[styles.sectionHead, styles.label]}>
+            <Text style={ui.kicker}>{friendsSectionTitle(friends.length)}</Text>
             {sortedByLastPlayed ? (
-              <Text style={[styles.sortNote, { color: colors.muted }]}>
+              <Text style={[styles.sortNote, { color: colors.muted }]} testID="friends-sort-note">
                 {FRIENDS_TEXT.sortedByLastPlayed}
               </Text>
             ) : null}
@@ -520,7 +539,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
 
         {outgoing.length > 0 ? (
           <View style={styles.section} testID="friends-outgoing">
-            <Text style={[ui.sectionTitle, styles.inset]}>{FRIENDS_TEXT.outgoingSection}</Text>
+            <Text style={[ui.kicker, styles.label]}>{FRIENDS_TEXT.outgoingSection}</Text>
             <RowsCard>
               {outgoing.map((r) => (
                 <View key={r.requestId} style={styles.personRow}>
@@ -646,7 +665,7 @@ function RowsCard({ children }: { children: ReactNode }) {
     <View style={[styles.rowsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {Children.toArray(children).map((row, index) => (
         <Fragment key={index}>
-          {index > 0 ? <View style={[styles.separator, { backgroundColor: colors.border }]} /> : null}
+          {index > 0 ? <View style={[styles.separator, { backgroundColor: colors.divider }]} /> : null}
           {row}
         </Fragment>
       ))}
@@ -664,7 +683,8 @@ function NameBlock({ name, sub }: { name: string; sub: string | null }) {
       </Text>
       {sub ? (
         // To linjer, som designet: «Spilte med deg i …» bryter heller enn å kuttes.
-        <Text style={[styles.sub, styles.num, { color: colors.muted }]} numberOfLines={2}>
+        // Vanlige sifferbredder, som i designet.
+        <Text style={[styles.sub, { color: colors.muted }]} numberOfLines={2}>
           {sub}
         </Text>
       ) : null}
@@ -706,6 +726,7 @@ function Pill({
   disabled = false,
   tone = 'filled',
   size = 'regular',
+  smallText = false,
   grow = false,
   expanded,
   accessibilityLabel,
@@ -718,6 +739,8 @@ function Pill({
   disabled?: boolean;
   tone?: PillTone;
   size?: 'regular' | 'large';
+  /** Høyden fra `size`, men 13 pt tekst («På e-post» i heltekortet). */
+  smallText?: boolean;
   grow?: boolean;
   expanded?: boolean;
   accessibilityLabel?: string;
@@ -729,9 +752,11 @@ function Pill({
     filled: { bg: colors.primary, border: colors.primary, ink: colors.onPrimary },
     outline: { bg: 'transparent', border: colors.primary, ink: colors.primary },
     danger: { bg: 'transparent', border: colors.danger, ink: colors.danger },
-    onStrongFilled: { bg: colors.onStrong, border: colors.onStrong, ink: colors.surfaceStrong },
-    onStrongOutline: { bg: 'transparent', border: `${colors.onStrong}80`, ink: colors.onStrong },
+    onStrongFilled: { bg: colors.onStrongWarm, border: colors.onStrongWarm, ink: colors.surfaceStrong },
+    onStrongOutline: { bg: 'transparent', border: `${colors.onStrongWarm}80`, ink: colors.onStrongWarm },
   }[tone];
+  // Fylte piller har ingen kant i designet, så de blir ikke 2 pt bredere.
+  const filled = tone === 'filled' || tone === 'onStrongFilled';
   return (
     <Pressable
       accessibilityRole="button"
@@ -744,12 +769,17 @@ function Pill({
         size === 'large' ? styles.pillLarge : null,
         grow ? styles.pillGrow : null,
         { backgroundColor: look.bg, borderColor: look.border },
+        filled ? styles.pillFilled : null,
         disabled && !pending ? styles.dimmed : null,
       ]}
       testID={testID}
     >
       <Text
-        style={[styles.pillText, size === 'large' ? styles.pillTextLarge : null, { color: look.ink }]}
+        style={[
+          styles.pillText,
+          size === 'large' && !smallText ? styles.pillTextLarge : null,
+          { color: look.ink },
+        ]}
         numberOfLines={1}
       >
         {pending && pendingLabel ? pendingLabel : label}
@@ -760,10 +790,21 @@ function Pill({
 
 const AVATAR = 36;
 const HERO_AVATAR = 30;
+/** Ringen rundt deg i heltekortet, utenfor kremen (designets `box-shadow`). */
+const HERO_RING = 2;
+/** Stiplene i «+»-ringen: 14 rundt, som nettleserens 1,5 pt `dashed`. */
+const HERO_DASH = `${(Math.PI * (HERO_AVATAR - 1.5)) / 28} ${(Math.PI * (HERO_AVATAR - 1.5)) / 28}`;
+const DECLINE_WIDTH = 39;
+const DECLINE_HIT_SLOP = { left: (TAP - DECLINE_WIDTH) / 2, right: (TAP - DECLINE_WIDTH) / 2 };
 
 const styles = StyleSheet.create({
-  scroll: { paddingHorizontal: 16, paddingBottom: 32 },
+  // Designet: tittelen 6 pt under topp-raden. Tallet er målt i simulatoren
+  // under den felles topp-raden: iOS legger mer luft over Fraunces-versalene
+  // enn nettleseren.
+  scroll: { paddingHorizontal: 16, paddingTop: 7.5, paddingBottom: 32 },
   inset: { paddingHorizontal: 4 },
+  // Seksjonsetiketten: 18 pt over (10 + gapet på 8), 8 under (seksjonens gap).
+  label: { paddingHorizontal: 4, marginTop: 10 },
   section: { gap: 8 },
   sectionHead: {
     flexDirection: 'row',
@@ -775,23 +816,41 @@ const styles = StyleSheet.create({
   cardRound: { borderRadius: 16 },
   flexText: { flex: 1, minWidth: 0 },
 
-  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 6 },
+  // 14 pt under undertittelen i designet: 4,5 + gapet på 8, og undertittelens
+  // linje er 2 pt høyere enn nettleserens (målt i simulatoren).
+  hero: { borderRadius: 18, padding: 16, gap: 12, marginTop: 4.5 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroAvatars: { flexDirection: 'row' },
-  heroAvatar: {
+  // Ringen ligger utenfor de 30 pt, så boksen tar ikke mer plass enn kremen.
+  heroSelfRing: {
+    width: HERO_AVATAR + HERO_RING * 2,
+    height: HERO_AVATAR + HERO_RING * 2,
+    borderRadius: HERO_AVATAR / 2 + HERO_RING,
+    margin: -HERO_RING,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroSelf: {
     width: HERO_AVATAR,
     height: HERO_AVATAR,
     borderRadius: HERO_AVATAR / 2,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroAvatarText: { fontSize: 10, fontFamily: FONTS.sansSemiBold },
-  heroPlus: { borderWidth: 1.5, borderStyle: 'dashed' },
+  heroPlus: {
+    width: HERO_AVATAR,
+    height: HERO_AVATAR,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   heroPlusOverlap: { marginLeft: -6 },
   heroPlusText: { fontSize: 16, fontFamily: FONTS.sans },
-  heroTitle: { fontSize: 18, fontFamily: FONTS.serifDisplay },
-  heroLine: { fontSize: 12, fontFamily: FONTS.sans, opacity: 0.85 },
+  // Linjehøydene er nettleserens «normal» for størrelsene i designet.
+  heroTitle: { fontSize: 18, lineHeight: 22, fontFamily: FONTS.serifDisplay },
+  heroLine: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
+  // Teksten under tittelen står 1,5 pt lenger ned i designet (målt).
+  heroBody: { marginTop: 1.5 },
   heroButtons: { flexDirection: 'row', gap: 8 },
 
   requestCard: {
@@ -804,7 +863,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   roundButton: {
-    width: TAP,
+    width: DECLINE_WIDTH,
     height: TAP,
     borderRadius: TAP / 2,
     borderWidth: 1,
@@ -814,8 +873,9 @@ const styles = StyleSheet.create({
   roundButtonText: { fontSize: 16, fontFamily: FONTS.sans },
 
   suggestionRow: { gap: 10, paddingHorizontal: 0 },
+  // Designet: 150 pt innhold + 2 × 12 luft + 2 × 1 kant.
   suggestionCard: {
-    width: 150,
+    width: 176,
     borderWidth: 1,
     borderRadius: 16,
     padding: 12,
@@ -833,10 +893,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   pressed: { opacity: 0.6 },
-  separator: { height: StyleSheet.hairlineWidth },
-  name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
-  sub: { fontSize: 12, fontFamily: FONTS.sans },
-  num: { fontVariant: ['tabular-nums'] },
+  separator: { height: 1 },
+  // Nettleserens linje for 15 pt Inter, med luften over navnet (målt).
+  name: { fontSize: 15, lineHeight: 19.5, fontFamily: FONTS.sansSemiBold },
+  sub: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },
   arrow: { fontSize: 16, fontFamily: FONTS.sans },
 
   avatar: {
@@ -861,6 +921,7 @@ const styles = StyleSheet.create({
   },
   pillLarge: { minHeight: 48 },
   pillGrow: { flexGrow: 1 },
+  pillFilled: { borderWidth: 0 },
   pillText: { fontSize: 13, fontFamily: FONTS.sansSemiBold },
   pillTextLarge: { fontSize: 15 },
   dimmed: { opacity: 0.5 },

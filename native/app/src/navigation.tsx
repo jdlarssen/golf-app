@@ -222,16 +222,10 @@ export function RootNavigator() {
         <Stack.Screen
           name="Profile"
           component={Profile}
-          // Designet (#2256): «Profil» står stort i innholdet med «Rediger»
-          // som pille ved siden av (`Profile.tsx`). Toppen har bare
-          // tilbake-pila til hjem, og ingen skillelinje.
-          // Tom streng, ikke en funksjon som gir `null`: da faller den native
-          // headeren tilbake til `title` og viser «Profil» to ganger.
-          options={{
-            title: PROFILE_TEXT.heading,
-            headerTitle: '',
-            headerShadowVisible: false,
-          }}
+          // Eierens svar (#2256, Profil v2): den felles topp-raden med bare
+          // tilbake-pila, til bunnmenyen kommer. «Profil» og «Rediger» står
+          // som raden under, i innholdet (`Profile.tsx`), som i designet.
+          options={kickerHeader('', PROFILE_TEXT.heading)}
         />
         <Stack.Screen
           name="EditProfile"
@@ -253,7 +247,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
-          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuNotificationsTheme, {
+          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.notificationsHeading, {
             backLabel: PROFILE_TEXT.backToProfile,
           })}
         />

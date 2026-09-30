@@ -3,11 +3,12 @@
 // Kortet tegner bare det denne modellen svarer; det regner ingenting selv.
 // Tekstene bor i `profileCopy.ts` og er låst mot webben der de finnes.
 //
-// **Sublinja hopper over det som ikke er satt.** «Dame · Junior · med siden
-// 2026» er tre deler, og hver av dem kan mangle: kjønn er valgfritt, «Voksen»
-// (`normal`) er standardklassen og sier ingenting om spilleren, og en rad uten
-// lesbar `created_at` har ikke noe år å vise. Ingen «ukjent» og ingen dobbel
-// prikk der en del mangler.
+// **Sublinja hopper over det som ikke er satt.** «Dame · med siden 2026» er to
+// deler, og begge kan mangle: kjønn er valgfritt, og en rad uten lesbar
+// `created_at` har ikke noe år å vise. Ingen «ukjent» og ingen dobbel prikk
+// der en del mangler. Klassen (junior/senior) står ikke på kortet: designet
+// har kjønn · tee · år, tee-en finnes ikke (eierens svar), og klassen skal
+// ikke inn i stedet (orkestratoren 30.09, Profil v2).
 //
 // **Året er enhetens lokaltid**, som resten av appen (Hermes har ikke
 // Oslo-sonen).
@@ -25,7 +26,7 @@ export interface BagTagModel {
   /** Klubbnavnet, ellers «Tørny». Tom mens klubben lastes (#1973). */
   kicker: string;
   name: string;
-  /** «Dame · Junior · med siden 2026», med delene som er satt. Kan være tom. */
+  /** «Dame · med siden 2026», med delene som er satt. Kan være tom. */
   subline: string;
   /** Handicapet klart til visning, `null` for en profil som ikke er fullført. */
   hcpText: string | null;
@@ -37,12 +38,6 @@ export interface BagTagModel {
 const GENDER_LABEL: Record<string, string> = {
   ladies: PROFILE_TEXT.genderFemale,
   mens: PROFILE_TEXT.genderMale,
-};
-
-/** `normal` («Voksen») står med vilje ikke her: den vises ikke på kortet. */
-const LEVEL_LABEL: Record<string, string> = {
-  junior: PROFILE_TEXT.levelJunior,
-  senior: PROFILE_TEXT.levelSenior,
 };
 
 /** Etiketten for en kjent verdi. `hasOwn`, så «constructor» og slikt ikke slipper gjennom. */
@@ -75,7 +70,6 @@ export function bagTagModel(
   const year = joinYear(profile.createdAt);
   const subline = [
     labelFor(GENDER_LABEL, profile.gender),
-    labelFor(LEVEL_LABEL, profile.level),
     year != null ? memberSinceLine(year) : undefined,
   ]
     .filter((part): part is string => part != null)

@@ -8,13 +8,11 @@
 // restehylle. Nå står det ett ord oppe til høyre på hjem, og bak det ligger
 // rommet — samme form som webbens `/profile`.
 //
-// **Hierarkiet er hele endringen.** På Konto-skjermen var «Logg ut» en
-// innrammet knapp og «Slett konto» en dempet lenke under den: den reversible
-// handlingen sto tyngst, og den som ikke kan angres så ut som en fotnote. Her
-// er «Logg ut» en helt vanlig rad, og «Slett konto» står alene nederst i rødt
-// med luft over, nå i «Personvern og konto» (`AccountSettings.tsx`). Luften er
-// ikke pynt — den er avstanden en tommel på vei mot raden over trenger for
-// ikke å treffe sletting.
+// **Hierarkiet.** På Konto-skjermen var «Logg ut» en innrammet knapp og
+// «Slett konto» en dempet lenke under den: den reversible handlingen sto
+// tyngst, og den som ikke kan angres så ut som en fotnote. Begge bor nå i
+// «Personvern og konto» (`AccountSettings.tsx`), der «Logg ut» er en vanlig
+// rad og «Slett konto» står alene nederst i rødt med luft over.
 //
 // **Rommet leser; skrivingen bor i sitt eget rom.** «Rediger» fører til
 // `EditProfile`, og lagringen derfra går gjennom `PUT /api/profile` — appen kan
@@ -25,23 +23,24 @@
 //
 // **#2256: rommet åpner på bag-taggen.** Kortet sier hvem du er (klubb, navn,
 // handicap), flisene under viser sesongen, og en kort meny fører videre:
-// «Varsler og tema» og «Personvern og konto» er egne skjermer. «Rediger»
-// står oppe til høyre (navigatorens header). Personvernerklæringen og «Slett
-// konto» bor nå i «Personvern og konto»; «Logg ut» står igjen nederst her.
+// «Venner», «Varsler og tema» og «Personvern og konto» er egne skjermer.
+//
+// **Profil v2: identisk med designlerretet.** Over står den felles
+// topp-raden med bare tilbake-pila (eierens svar: til bunnmenyen kommer).
+// «Profil» og «Rediger» står på samme rad under den, 16 pt til kanten, og
+// siden slutter med «Del bag-taggen».
+// «Logg ut» og utviklerflaten bor i «Personvern og konto»
+// (`AccountSettings.tsx`), sammen med personvernerklæringen og «Slett konto».
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { PageTitle } from '../components/PageTitle';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BagTag } from '../components/profile/BagTag';
 import { SeasonTiles } from '../components/profile/SeasonTiles';
 import { ShareBagTagButton } from '../components/profile/ShareBagTagButton';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { fetchBagTagExtras, type BagTagExtras } from '../data/bagTag';
-import { fetchFriends } from '../data/friends';
-import { logOut } from '../data/logout';
 import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { bagTagModel } from '../lib/bagTag';
-import { PROFILE_TEXT, friendsWaitingLine, unsentStrokesWarning } from '../lib/profileCopy';
-import { isStagingBuild } from '../lib/stagingGate';
+import { PROFILE_TEXT } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, TAP, useTheme } from '../theme';
@@ -52,17 +51,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
 
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [pending, setPending] = useState(false);
-  // Null = ingenting galt. Ellers er det linja som skal stå under raden: enten
-  // «du er fortsatt logget inn» (sesjonen overlevde, `signout-failed`) eller
-  // den generelle når kallet kastet. To ulike årsaker, to ulike setninger.
-  const [logoutNote, setLogoutNote] = useState<string | null>(null);
   // Klubben og sesongen (#2256). `undefined` mens de lastes; hver del kan
   // være `null` for seg når oppslaget feilet (`data/bagTag.ts`).
   const [extras, setExtras] = useState<BagTagExtras | undefined>(undefined);
-  // Hvor mange som venter på svar fra deg (#2256 PR 2). `0` til noe annet er
-  // kjent; en feilet henting lar raden stå med den vanlige underlinja.
-  const [friendsWaiting, setFriendsWaiting] = useState(0);
 
   // Kvitteringen `EditProfile` kommer tilbake med. Banneret er RENT avledet av
   // ruteparameteren — ingen egen state, ingen setState i en effekt — og
@@ -117,21 +108,6 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
     loadExtras();
   }, [updated, load, loadExtras]);
 
-  // Antallet som venter på svar hentes hver gang rommet får fokus, så raden
-  // stemmer også når spilleren kommer tilbake fra vennesiden. Best-effort:
-  // uten nett eller svar står den vanlige underlinja.
-  useEffect(
-    () =>
-      navigation.addListener('focus', () => {
-        void fetchFriends().then((result) => {
-          // En feilet henting nullstiller tallet, så raden aldri står med et
-          // gammelt «2 vil bli venner med deg» etter at forespørslene er besvart.
-          setFriendsWaiting(result.ok ? result.data.incoming.length : 0);
-        });
-      }),
-    [navigation],
-  );
-
   // Kvitteringen er en engangsbeskjed, og den nullstilles når rommet mister
   // fokus. Uten det ville flagget blitt stående i ruteparameteren — skjermen
   // ligger jo igjen i stacken — og banneret dukket opp på nytt neste gang
@@ -144,88 +120,6 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       }),
     [navigation],
   );
-
-  /**
-   * Spørsmålet `logOut` stiller når køen ikke er tom.
-   *
-   * Webben logger deg stille ut fordi den ikke har noe lokalt lager å rydde.
-   * Appen har det (#1877), og et slag som ikke rakk å bli sendt ville forsvunnet
-   * uten et ord. En teeboks uten dekning er ikke kanten her — det er det helt
-   * normale tilfellet, og derfor spør vi i stedet for å velge på spillerens
-   * vegne.
-   *
-   * Dialogen kan ikke avvises: hvert svar må komme fra en av de to knappene.
-   * Kunne den lukkes med Android-tilbake eller et trykk utenfor, ville ingen
-   * `onPress` fyrt, og raden stått deaktivert til neste gang skjermen bygges.
-   */
-  const askAboutUnsent = useCallback((unsent: number) => {
-    Alert.alert(
-      PROFILE_TEXT.unsentStrokesTitle,
-      unsentStrokesWarning(unsent),
-      [
-        {
-          text: PROFILE_TEXT.unsentStrokesCancel,
-          style: 'cancel',
-          // Ingenting har skjedd — ingen signOut, ingen wipe. Raden skal være
-          // trykkbar igjen med det samme.
-          onPress: () => setPending(false),
-        },
-        {
-          text: PROFILE_TEXT.unsentStrokesConfirm,
-          style: 'destructive',
-          onPress: () => {
-            void logOut({ keepUnsent: true })
-              .then((result) => {
-                // `unsent` kan ikke komme tilbake her — `keepUnsent` hopper
-                // over den porten. Blir sesjonen stående, skal raden bli
-                // trykkbar igjen med den ærlige forklaringen.
-                if (result.ok || result.reason !== 'signout-failed') return;
-                setPending(false);
-                setLogoutNote(PROFILE_TEXT.logoutOfflineNote);
-              })
-              .catch((err: unknown) => {
-                console.error('[Profile] utlogging kastet', err);
-                setPending(false);
-                setLogoutNote(PROFILE_TEXT.logoutFailedNote);
-              });
-          },
-        },
-      ],
-      { cancelable: false },
-    );
-  }, []);
-
-  /**
-   * Trykket på «Logg ut».
-   *
-   * Ved suksess settes `pending` bevisst ikke tilbake: sesjonen er borte,
-   * `SIGNED_OUT` bytter til Login-stacken, og denne skjermen unmountes sammen
-   * med resten. «Logger ut …» er da den siste sanne tilstanden raden har —
-   * samme valg som `DeleteAccount` gjør etter en fullført sletting.
-   */
-  const onLogOut = useCallback(() => {
-    setPending(true);
-    setLogoutNote(null);
-    void logOut()
-      .then((result) => {
-        if (result.ok) return;
-        if (result.reason === 'unsent') {
-          askAboutUnsent(result.pending);
-          return;
-        }
-        // Sesjonen overlevde utloggingen. Spilleren ER innlogget, basen er
-        // urørt, og raden må bli trykkbar igjen — ellers står «Logger ut …»
-        // til appen startes på nytt, på en skjerm som ikke unmountes fordi
-        // `SIGNED_OUT` aldri kom.
-        setPending(false);
-        setLogoutNote(PROFILE_TEXT.logoutOfflineNote);
-      })
-      .catch((err: unknown) => {
-        console.error('[Profile] utlogging kastet', err);
-        setPending(false);
-        setLogoutNote(PROFILE_TEXT.logoutFailedNote);
-      });
-  }, [askAboutUnsent]);
 
   // #1973: overskriften venter på raden i stedet for å bytte tekst foran
   // øynene på deg. Mens raden lastes, står navnelinja på bag-taggen tom med
@@ -243,26 +137,31 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const openEditProfile = useCallback(() => navigation.navigate('EditProfile'), [navigation]);
 
   return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="profile-screen">
-      <PageTitle
-        title={PROFILE_TEXT.heading}
-        right={
-          <Pressable
-            accessibilityRole="button"
-            onPress={openEditProfile}
-            style={({ pressed }) => [
-              styles.editPill,
-              { borderColor: colors.border, backgroundColor: colors.surface },
-              pressed ? styles.pressed : null,
-            ]}
-            testID="profile-edit-entry"
-          >
-            <Text style={[styles.editPillText, { color: colors.primary }]}>
-              {PROFILE_TEXT.editAction}
-            </Text>
-          </Pressable>
-        }
-      />
+    <ScrollView
+      contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
+      testID="profile-screen"
+    >
+      {/* Designet: «Profil» i Fraunces 22 og «Rediger» som pille på samme rad,
+          med pillens høyrekant 8 pt fra skjermkanten. */}
+      <View style={styles.titleRow}>
+        <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
+          {PROFILE_TEXT.heading}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={openEditProfile}
+          style={({ pressed }) => [
+            styles.editPill,
+            { borderColor: colors.border, backgroundColor: colors.surface },
+            pressed ? styles.pressed : null,
+          ]}
+          testID="profile-edit-entry"
+        >
+          <Text style={[styles.editPillText, { color: colors.primary }]}>
+            {PROFILE_TEXT.editAction}
+          </Text>
+        </Pressable>
+      </View>
       {updated ? (
         <View style={ui.banner}>
           <Text style={ui.body} testID="profile-updated-banner">
@@ -278,7 +177,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         trend={extras === undefined ? 'loading' : extras.trend}
       />
       {loadFailed ? (
-        <Text style={ui.error} testID="profile-load-error">
+        <Text style={[ui.error, styles.note]} testID="profile-load-error">
           {PROFILE_TEXT.loadFailedNote}
         </Text>
       ) : null}
@@ -292,87 +191,65 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
       ) : null}
 
       {/* Chevron: hver rad fører til et rom. «Historikk og statistikk» (#2265)
-          kommer inn her når skjermen finnes. */}
-      <SettingList testID="profile-menu">
-        <SettingRow
-          label={PROFILE_TEXT.friendsRow}
-          sublabel={
-            friendsWaiting > 0 ? friendsWaitingLine(friendsWaiting) : PROFILE_TEXT.friendsSublabel
-          }
-          chevron
-          onPress={() => navigation.navigate('Friends', { selfInitials: model?.initials })}
-          testID="profile-friends"
-        />
-        <SettingRow
-          label={PROFILE_TEXT.menuNotificationsTheme}
-          chevron
-          onPress={() => navigation.navigate('NotificationsAndTheme')}
-          testID="profile-notifications-theme"
-        />
-        <SettingRow
-          label={PROFILE_TEXT.menuAccount}
-          chevron
-          onPress={() => navigation.navigate('AccountSettings')}
-          testID="profile-account-settings"
-        />
-      </SettingList>
+          kommer inn øverst her når skjermen finnes (kontrakten, del F). */}
+      <View style={styles.menu}>
+        <SettingList testID="profile-menu">
+          <SettingRow
+            label={PROFILE_TEXT.friendsRow}
+            chevron
+            onPress={() => navigation.navigate('Friends', { selfInitials: model?.initials })}
+            testID="profile-friends"
+          />
+          <SettingRow
+            label={PROFILE_TEXT.menuNotificationsTheme}
+            chevron
+            onPress={() => navigation.navigate('NotificationsAndTheme')}
+            testID="profile-notifications-theme"
+          />
+          <SettingRow
+            label={PROFILE_TEXT.menuAccount}
+            chevron
+            onPress={() => navigation.navigate('AccountSettings')}
+            testID="profile-account-settings"
+          />
+        </SettingList>
+      </View>
 
       {/* «Del bag-taggen» (PR 3) rett under menyen, som i designet. Bare når
           kortet og sesongen er lastet: bildet skal være det du ser. */}
       {model && extras?.season ? (
         <ShareBagTagButton model={model} trend={extras.trend} />
       ) : null}
-
-      {/* I et butikk-bygg finnes utvikler-seksjonen ikke i treet i det hele
-          tatt — `isStagingBuild` er fail-closed, og en skjult rad er fortsatt
-          en rad. */}
-      {isStagingBuild() ? (
-        <>
-          <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionDeveloper}</Text>
-          <SettingList testID="profile-developer">
-            <SettingRow
-              label={PROFILE_TEXT.syncLabRow}
-              sublabel={PROFILE_TEXT.syncLabSublabel}
-              chevron
-              onPress={() => navigation.navigate('SyncLab')}
-              testID="profile-sync-lab"
-            />
-          </SettingList>
-        </>
-      ) : null}
-
-      {/* Ingen chevron: raden navigerer ikke, den handler. Og ingen knappeform
-          — utlogging er dagligdags, og skal ikke veie mer enn den er verdt.
-          Ingen «Konto»-overskrift over den lenger: menyraden «Personvern og
-          konto» ville da stått rett over en seksjon med nesten samme navn. */}
-      <SettingList testID="profile-account">
-        <SettingRow
-          label={pending ? PROFILE_TEXT.logoutPending : PROFILE_TEXT.logout}
-          disabled={pending}
-          onPress={onLogOut}
-          testID="profile-log-out"
-        />
-      </SettingList>
-
-      {logoutNote ? (
-        <Text style={ui.error} testID="profile-logout-error">
-          {logoutNote}
-        </Text>
-      ) : null}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  // «Rediger» som i designet: en lys pille ved tittelen, minst 44 pt å treffe.
+  // Designet: 16 pt til kanten, og avstandene står på hver blokk.
+  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 32 },
+  // Tittelen 20 pt fra kanten; pillen går 8 pt forbi innholdskolonnen.
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    paddingLeft: 4,
+    marginRight: -8,
+  },
+  title: { flexShrink: 1, fontSize: 22, lineHeight: 27, fontFamily: FONTS.serifDisplay },
+  // «Rediger» som i designet: en lys pille, 44 pt høy.
   editPill: {
     minHeight: TAP,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editPillText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  editPillText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
   pressed: { opacity: 0.6 },
+  // 20 pt fra flisene; lista har selv 8 på toppen.
+  menu: { marginTop: 12 },
+  // Siden har ingen `gap`; linja trenger luft under det skrå kortet.
+  note: { marginTop: 12 },
 });
