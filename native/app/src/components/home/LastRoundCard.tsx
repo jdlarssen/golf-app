@@ -10,8 +10,8 @@
 // 15 pt og en pil til høyre som sier at raden kan trykkes.
 //
 // Hjem v2 (#2385): medaljongen er designets hevede sølvskive (`MedalDisc`), og
-// i stableford står poengene dine i stedet for brutto, som «34 poeng» i
-// designet. Poengene regnes på telefonen (`lastRoundPoints`).
+// i formatene der tavla viser poeng står poengene dine i stedet for brutto,
+// som «34 poeng» i designet. Poengene regnes på telefonen (`lastRoundPoints`).
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadge';
 import type { HomeCard, LastRoundScore } from '../../data/homeList';

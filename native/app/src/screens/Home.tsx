@@ -31,9 +31,10 @@
 // serveren når lista har svart.
 //
 // Hjem v2 (#2385): «Forrige runde» leser det samme for runden som ble avsluttet
-// sist, så raden kan vise poengene dine i stableford («34 poeng», designet).
-// Samme to hentinger som spillets side gjør (bundelen og `seedGameScores`), og
-// bare for den ene runden.
+// sist, så raden kan vise poengene dine («34 poeng», designet) i formatene der
+// tavla viser poeng. Samme hentinger som spillets side og tavla gjør (bundelen,
+// `seedGameScores`, og valgene i wolf og bingo bango bongo), og bare for den
+// ene runden.
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -52,7 +53,12 @@ import { HomeHeroCard } from '../components/home/HomeHeroCard';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
 import type { GameBundle } from '../data/gameBundle';
-import { loadCardBundle, refreshCardBundle, type CardBundle } from '../data/homeHero';
+import {
+  fetchCardExtras,
+  loadCardBundle,
+  refreshCardBundle,
+  type CardBundle,
+} from '../data/homeHero';
 import {
   loadHomeCards,
   refreshHomeCards,
@@ -68,6 +74,7 @@ import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { lastRoundPoints } from '../lib/lastRound';
+import type { ScoringExtras } from '../lib/scoringContext';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -85,6 +92,10 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
   const [lastData, setLastData] = useState<CardBundle | null>(null);
+  // Wolf- og BBB-valgene for forrige runde; bare nettet har dem.
+  const [lastExtras, setLastExtras] = useState<{ gameId: string; extras: ScoringExtras } | null>(
+    null,
+  );
   // Økes når enheten skal leses på nytt: ved hvert fokus og etter en henting.
   const [deviceTick, setDeviceTick] = useState(0);
   const [showAllRounds, setShowAllRounds] = useState(false);
@@ -111,6 +122,11 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
         hero ? refreshCardBundle(hero.gameId, { withScores: true }) : null,
         ticket ? refreshCardBundle(ticket.gameId) : null,
         last ? refreshCardBundle(last.gameId, { withScores: true }) : null,
+        last
+          ? fetchCardExtras(last.gameId, last.gameMode).then((extras) =>
+              setLastExtras({ gameId: last.gameId, extras }),
+            )
+          : null,
       ]);
       setDeviceTick((n) => n + 1);
     } catch (err: unknown) {
@@ -202,7 +218,12 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const lastRound = finished[0] ?? null;
   const lastPoints =
     lastRound && lastData && lastData.bundle.game.id === lastRound.gameId
-      ? lastRoundPoints(lastData.bundle, lastData.scores, userId)
+      ? lastRoundPoints(
+          lastData.bundle,
+          lastData.scores,
+          userId,
+          lastExtras?.gameId === lastRound.gameId ? lastExtras.extras : {},
+        )
       : null;
   const olderRounds = finished.slice(1);
   const openGame = (gameId: string) => navigation.navigate('GameHome', { gameId });
