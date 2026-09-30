@@ -1,19 +1,35 @@
-// #2256: «Varsler og tema». I denne omgangen bare temaet: «Lys», «Mørk» eller
-// «Følg telefonen». Varsler på denne enheten kommer i #2256 PR 4.
+// #2256: «Varsler» (menyraden heter «Varsler og tema»). Øverst varslene på
+// denne telefonen (PR 4, etter Varsler-tegningen), nederst temaet: «Lys»,
+// «Mørk» eller «Følg telefonen» (eierens svar: temaet står nederst).
+//
+// **Varslene** er ett skogkort med en bryter, som i designet. «På» ber iOS om
+// lov, registrerer telefonens token og husker det (`data/pushDevice.ts`).
+// «Av» sletter raden. Har iOS sagt nei, kan bare Innstillinger snu det, så
+// under kortet står en linje og «Åpne Innstillinger», og tilstanden leses på
+// nytt når appen kommer tilbake i forgrunnen. «Hva som varsles» og «Stille
+// tid» fra tegningen hører til #2315; til da står én linje om hva som
+// varsles der seksjonen kommer. Uten den native delen, og på Android, vises
+// ikke varsel-delen i det hele tatt.
 //
 // **Profil v2: som designlerretet.** Tittelen er «Varsler» (28 pt), 16 pt til
 // kanten, etiketten i kicker-stil med 16 pt over og 8 under, og radene 14 pt
-// inn. Temaet er ikke i designet; det står nederst (eierens svar).
+// inn.
 //
-// Et trykk slår drakten på med én gang for hele appen
+// Et trykk på et tema slår drakten på med én gang for hele appen
 // (`lib/themePreference.ts`), og valget lagres på telefonen til neste
 // oppstart. Det valgte er merket med «✓» og sagt som «valgt» til
 // skjermleseren. Til det lagrede valget er lest, er ingen rad merket, så et
 // feil merke aldri blinker forbi.
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { AppState, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { PageTitle } from '../components/PageTitle';
 import { SettingList, SettingRow } from '../components/SettingRow';
+import {
+  readPushState,
+  turnOffPush,
+  turnOnPush,
+  type PushState,
+} from '../data/pushDevice';
 import { PROFILE_TEXT } from '../lib/profileCopy';
 import {
   THEME_PREFERENCES,
@@ -22,7 +38,7 @@ import {
   type ThemePreference,
 } from '../lib/themePreference';
 import type { ScreenProps } from '../navigation';
-import { useTheme } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 const LABEL: Record<ThemePreference, string> = {
   light: PROFILE_TEXT.themeLight,
@@ -60,12 +76,39 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
     });
   }, []);
 
+  // `null` til tilstanden er lest; da står varsel-delen ikke ennå.
+  const [push, setPush] = useState<PushState | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const read = () =>
+      void readPushState().then((state) => {
+        if (!cancelled) setPush(state);
+      });
+    read();
+    // Tilbake fra Innstillinger: kanskje har spilleren slått varsler på der.
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') read();
+    });
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, []);
+
+  const showPush = push !== null && push !== 'unsupported';
+
   return (
     <ScrollView
       contentContainerStyle={[styles.scroll, { backgroundColor: colors.bg }]}
       testID="notifications-theme-screen"
     >
-      <PageTitle size="settings" title={PROFILE_TEXT.notificationsHeading} />
+      <PageTitle
+        size="settings"
+        title={PROFILE_TEXT.notificationsHeading}
+        subtitle={showPush ? PROFILE_TEXT.pushSubtitle : undefined}
+      />
+      {showPush ? <PushSection state={push} onChange={setPush} /> : null}
       <Text style={[ui.kicker, styles.label]}>{PROFILE_TEXT.themeHeading}</Text>
       <SettingList testID="theme-choices" style={styles.list}>
         {THEME_PREFERENCES.map((preference) => (
@@ -88,6 +131,86 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
   );
 }
 
+/** Skogkortet med bryteren, linja om hva som varsles, og fotnoten. */
+function PushSection({
+  state,
+  onChange,
+}: {
+  state: Exclude<PushState, 'unsupported'>;
+  onChange: (state: PushState) => void;
+}) {
+  const { ui, colors } = useTheme();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const on = state === 'on';
+  const cream = { color: colors.onStrongWarm };
+
+  const onToggle = useCallback(
+    async (next: boolean) => {
+      setBusy(true);
+      setNote(null);
+      const result = next ? await turnOnPush() : await turnOffPush();
+      setBusy(false);
+      if (result.ok) {
+        onChange(next ? 'on' : 'off');
+      } else if (result.reason === 'denied') {
+        onChange('denied');
+      } else {
+        setNote(next ? PROFILE_TEXT.pushOnFailed : PROFILE_TEXT.pushOffFailed);
+      }
+    },
+    [onChange],
+  );
+
+  return (
+    <View testID="push-section">
+      <View style={[styles.card, { backgroundColor: colors.surfaceStrong }]}>
+        <View style={styles.texts}>
+          <Text style={[styles.cardTitle, cream]}>{PROFILE_TEXT.pushTitle}</Text>
+          <Text style={[styles.cardStatus, cream]} testID="push-status">
+            {on ? PROFILE_TEXT.pushOn : PROFILE_TEXT.pushOff}
+          </Text>
+        </View>
+        <Switch
+          value={on}
+          disabled={busy || state === 'denied'}
+          onValueChange={(next) => void onToggle(next)}
+          accessibilityLabel={PROFILE_TEXT.pushTitle}
+          // Kortet er skog i begge drakter. «På» er designets salvie (`live`);
+          // av-sporet er kremen halvt gjennomsiktig, fordi iOS sitt eget
+          // forsvinner mot skogen (sett i simulatoren).
+          trackColor={{ true: colors.live, false: `${colors.onStrongWarm}4D` }}
+          ios_backgroundColor={`${colors.onStrongWarm}4D`}
+          testID="push-switch"
+        />
+      </View>
+      {state === 'denied' ? (
+        <View style={styles.denied} testID="push-denied">
+          <Text style={[styles.small, { color: colors.muted }]}>{PROFILE_TEXT.pushDenied}</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void Linking.openSettings()}
+            style={ui.buttonSecondary}
+            testID="push-open-settings"
+          >
+            <Text style={ui.buttonSecondaryText}>{PROFILE_TEXT.pushOpenSettings}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Text style={[styles.small, styles.line, { color: colors.muted }]}>
+          {PROFILE_TEXT.pushWhat}
+        </Text>
+      )}
+      {note ? (
+        <Text style={[ui.error, styles.note]} testID="push-error">
+          {note}
+        </Text>
+      ) : null}
+      <Text style={[styles.small, styles.line, { color: colors.muted }]}>{PROFILE_TEXT.pushFooter}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   // Designet: 16 pt til kanten, og tittelen 4 pt under topp-raden. Tallet er
   // målt i simulatoren under den felles topp-raden; linjehøyden på 34 gir
@@ -98,4 +221,22 @@ const styles = StyleSheet.create({
   list: { marginTop: 0 },
   // Siden har ingen `gap`; linja trenger luft under lista.
   note: { marginTop: 8 },
+  // Designet: skogkortet 14 pt under undertittelen, 16 pt runde hjørner,
+  // 12/14 pt luft inni.
+  card: {
+    marginTop: 14,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  texts: { flex: 1 },
+  cardTitle: { fontSize: 15, lineHeight: 18, fontFamily: FONTS.sansSemiBold },
+  cardStatus: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
+  // Linjene under kortet står som designets fotnote: 12 pt, 20 pt fra kanten.
+  small: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },
+  line: { paddingHorizontal: 4, marginTop: 12 },
+  denied: { gap: 8, marginTop: 12, paddingHorizontal: 4 },
 });

@@ -12,6 +12,7 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  createNavigationContainerRef,
   type Theme as NavigationTheme,
 } from '@react-navigation/native';
 import {
@@ -19,6 +20,9 @@ import {
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
+import { useCallback, useEffect, useRef } from 'react';
+import { listenForPushTaps } from './data/pushTaps';
+import type { PushTarget } from './lib/pushRoute';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
@@ -140,11 +144,38 @@ function navigationThemeFor(theme: Theme): NavigationTheme {
   };
 }
 
+/**
+ * Ref til navigatoren, så et trykk på et varsel kan åpne en skjerm utenfra
+ * skjermtreet (#2256 PR 4).
+ */
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+function openPushTarget(target: PushTarget) {
+  if (target.name === 'GameHome') navigationRef.navigate('GameHome', target.params);
+  else navigationRef.navigate('Home');
+}
+
 export function RootNavigator() {
   const theme = useTheme();
   const { colors } = theme;
+  // Et trykk som startet appen kan komme før navigatoren er klar; da venter
+  // skjermen her til `onReady`.
+  const pendingPush = useRef<PushTarget | null>(null);
+  useEffect(
+    () =>
+      listenForPushTaps((target) => {
+        if (navigationRef.isReady()) openPushTarget(target);
+        else pendingPush.current = target;
+      }),
+    [],
+  );
+  const onReady = useCallback(() => {
+    const target = pendingPush.current;
+    pendingPush.current = null;
+    if (target) openPushTarget(target);
+  }, []);
   return (
-    <NavigationContainer theme={navigationThemeFor(theme)}>
+    <NavigationContainer ref={navigationRef} onReady={onReady} theme={navigationThemeFor(theme)}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },

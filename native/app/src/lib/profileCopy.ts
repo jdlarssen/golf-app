@@ -140,6 +140,21 @@ export const PROFILE_TEXT = {
   // Temaet hører til telefonen, ikke kontoen: det står igjen etter utlogging.
   themeSystem: 'Følg telefonen',
   themeSaveFailedNote: 'Fikk ikke lagret valget, så temaet gjelder bare til du lukker appen.',
+  // --- Varsler på denne telefonen (#2256 PR 4, Varsler-tegningen) ----------
+  /** Undertittelen under «Varsler og tema», som i designet. */
+  pushSubtitle: 'Du bestemmer hva som får telefonen til å plinge.',
+  pushTitle: 'Varsler på denne telefonen',
+  pushOn: 'På · iPhone',
+  pushOff: 'Av',
+  /** Hva som varsles i dag. Valg per gruppe kommer i #2315. */
+  pushWhat:
+    'Du får varsel om invitasjoner, runder som starter, scorekort som venter på deg, resultater og venneforespørsler.',
+  pushDenied: 'Du har slått av varsler fra Tørny i Innstillinger på telefonen. Slå dem på der.',
+  pushOpenSettings: 'Åpne Innstillinger',
+  pushOnFailed: 'Fikk ikke slått på varsler. Prøv igjen.',
+  pushOffFailed: 'Fikk ikke slått av varsler. Prøv igjen.',
+  /** Designets fotnote. Appen har ingen innboks ennå, webben har. */
+  pushFooter: 'Innboksen på tornygolf.no får alt uansett. Dette styrer bare pling på telefonen.',
   /** Knappen under menyen (#2256 PR 3), som i designet. */
   shareBagTag: 'Del bag-taggen',
   /** Når bildet eller delearket feilet. Et avbrutt ark er ingen feil. */

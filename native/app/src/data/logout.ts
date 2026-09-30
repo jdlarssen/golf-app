@@ -28,6 +28,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { getDb, listQueue, wipeLocalData } from './db';
+import { forgetPushBeforeSignOut } from './pushDevice';
 import { LOCAL_DATA_OWNER_KEY } from './localOwner';
 import { drainQueue } from './syncWorker';
 
@@ -161,6 +162,10 @@ async function drainWithinTimeout(): Promise<void> {
  * en spiller som fortsatt er innlogget — og svart at utloggingen gikk bra.
  */
 async function signOutAndConfirm(): Promise<boolean> {
+  // #2256 PR 4: telefonens varsel-rad slettes mens sesjonen ennå lever (RLS
+  // krever den), så forrige konto ikke får varsler her etter utloggingen.
+  // Best-effort og kaster aldri; se `forgetPushBeforeSignOut`.
+  await forgetPushBeforeSignOut();
   let removed = false;
   // Abonnementet settes FØR kallet: `_notifyAllSubscribers` kjører inne i
   // `signOut()`, ikke etter den.
