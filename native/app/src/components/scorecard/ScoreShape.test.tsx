@@ -5,16 +5,14 @@ import { render, screen } from '@testing-library/react-native';
 import { PALETTES } from '../../theme';
 import { ScoreShape } from './ScoreShape';
 
-it('uten tone: ringene og tallet i blekk', async () => {
-  await render(<ScoreShape strokes={5} par={3} />);
+it('uten tone i blekk; på scorekortet står tallet i tonen, og par i blekk uten form', async () => {
+  const { rerender } = await render(<ScoreShape strokes={5} par={3} />);
   expect(screen.getByTestId('shape-double-square').children[0]).toHaveStyle({
     borderColor: PALETTES.light.text,
   });
   expect(screen.getByTestId('score-shape-number')).toHaveStyle({ color: PALETTES.light.text });
-});
 
-it('scorekortet: tallet i tonen også, og par i blekk uten form', async () => {
-  const { rerender } = await render(<ScoreShape strokes={5} par={4} toned tonedNumber />);
+  await rerender(<ScoreShape strokes={5} par={4} toned tonedNumber />);
   expect(screen.getByTestId('score-shape-number')).toHaveStyle({ color: PALETTES.light.scoreOver1Fg });
   await rerender(<ScoreShape strokes={4} par={4} toned tonedNumber />);
   expect(screen.getByTestId('shape-none')).toBeTruthy();

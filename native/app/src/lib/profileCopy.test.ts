@@ -86,6 +86,7 @@ describe('PROFILE_TEXT', () => {
 
   it.each([
     ['heading', PROFILE_TEXT.heading, web.kicker],
+    ['backToProfile', PROFILE_TEXT.backToProfile, web.historikk.backLabel],
     ['displayNameFallback', PROFILE_TEXT.displayNameFallback, web.displayNameFallback],
     ['sectionAccount', PROFILE_TEXT.sectionAccount, web.sectionAccount],
     ['setHandicap', PROFILE_TEXT.setHandicap, web.setHandicap],

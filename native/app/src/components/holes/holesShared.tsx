@@ -1,7 +1,8 @@
 // #2255: bitene alle «Hull for hull»-visningene i appen deler — navnet slik
 // webben skriver det, overskriften med formatlinja, hodet på hvert hull-kort,
-// raden og gulltonen for den som utmerker seg. Ett hjem, så formatene ser like
-// ut og en rettelse når alle (samme grep som webbens `LeaderboardChrome`).
+// gullbrikka i hodet, raden med poeng og brutto, etikettene i små versaler, og
+// gulltonen for den som utmerker seg. Ett hjem, så formatene ser like ut og en
+// rettelse når alle (samme grep som webbens `LeaderboardChrome`).
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { formatRevealName } from '../../../../../lib/names/formatRevealName';
@@ -9,7 +10,12 @@ import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, holeNumberLabel, parSiChip } from '../../lib/holesCopy';
 import { FONTS, useTheme } from '../../theme';
 
-/** Navnet slik webben skriver det: «Ola "Kompis" N.», med webbens reserve. */
+/**
+ * Navnet slik webben skriver det: «Ola "Kompis" N.». Uten navn (en invitert
+ * som aldri registrerte seg) blir det «(ukjent)», som webbens
+ * `p.users.name ?? tCommon('unknownPlayer')`. Bare en id som ikke er med i
+ * spillet får kallerens reserve.
+ */
 export function nameOf(players: readonly BundlePlayer[], userId: string, fallback: string): string {
   const player = players.find((p) => p.userId === userId);
   if (!player) return fallback;
@@ -50,7 +56,11 @@ export function HolesFooter({ finished }: { finished: boolean }) {
   );
 }
 
-/** Hodet på et hull-kort: «Hull 4», «Par 4 · SI 7», og det som står til høyre. */
+/**
+ * Hodet på et hull-kort: «Hull 4», «Par 4 · SI 7», og det som står til høyre.
+ * Uten par og indeks bare «Hull 4», som webbens Bingo Bango Bongo: poengene
+ * der kommer ikke fra slagene, og motoren gir hullet verken par eller indeks.
+ */
 export function HoleHeader({
   holeNumber,
   par,
@@ -58,10 +68,8 @@ export function HoleHeader({
   right,
 }: {
   holeNumber: number;
-  par: number;
-  strokeIndex: number;
   right?: ReactNode;
-}) {
+} & ({ par: number; strokeIndex: number } | { par?: undefined; strokeIndex?: undefined })) {
   const { colors, ui } = useTheme();
   return (
     <View style={holesStyles.holeHeader}>
@@ -69,11 +77,29 @@ export function HoleHeader({
         <Text style={[holesStyles.holeNumber, ui.num, { color: colors.text }]}>
           {holeNumberLabel(holeNumber)}
         </Text>
-        <Text style={[holesStyles.small, ui.num, { color: colors.muted }]}>
-          {parSiChip(par, strokeIndex)}
-        </Text>
+        {par !== undefined && strokeIndex !== undefined ? (
+          <Text style={[holesStyles.small, ui.num, { color: colors.muted }]}>
+            {parSiChip(par, strokeIndex)}
+          </Text>
+        ) : null}
       </View>
       {right ?? null}
+    </View>
+  );
+}
+
+/**
+ * Gullbrikka til høyre i hull-hodet (Wolf: innsatsen, Nines: potten), som
+ * webbens `rounded-full border-accent/40 bg-accent/[0.08]` med gull tekst.
+ */
+export function GoldChip({ text, testID }: { text: string; testID?: string }) {
+  const { colors, ui } = useTheme();
+  return (
+    <View
+      style={[holesStyles.chip, { borderColor: goldEdge(colors.accent), backgroundColor: goldWash(colors.accent, '14') }]}
+      testID={testID}
+    >
+      <Text style={[holesStyles.chipText, ui.num, { color: colors.accentText }]}>{text}</Text>
     </View>
   );
 }
@@ -100,9 +126,33 @@ export const holesStyles = StyleSheet.create({
     paddingVertical: 6,
   },
   rowName: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
-  /** Stjerna er dekor (skjult for skjermleseren), så den har webbens `accent`, 11 pt. */
+  /**
+   * En linje uten kant: navn til venstre, verdien til høyre (webbens `flex
+   * items-center justify-between gap-3`). Round Robins spillere på en side,
+   * Bingo Bango Bongos prestasjoner.
+   */
+  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  /** Stjerna er dekor (skjult for skjermleseren), 11 pt. Fargen settes der den brukes. */
   star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
+  /** «+5» foran scoren, i gull tekst (webbens `text-[12px] font-semibold`). */
+  points: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
+  /** «brutto 5» ved siden av netto, dempet (webbens `text-[10.5px]`). */
+  gross: { fontSize: 11, fontFamily: FONTS.sans },
+  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  chipText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
+  /**
+   * Etikett i små versaler (webbens `text-[11px] font-semibold uppercase
+   * tracking-[0.16em]`/`[0.14em]`): «Stillingen» og «Vant hullet». Webbens
+   * `Kicker` (10 px) er appens `ui.kicker`.
+   */
+  kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6, textTransform: 'uppercase' },
+  /**
+   * Små versaler (webbens `text-[11px] uppercase tracking-[0.1em]`, vanlig
+   * vekt): enheten «p» i solo og «Venter» i Bingo Bango Bongo. Round Robins
+   * «Delt» og «Venter» er `font-medium` på webben og legger vekten på selv.
+   */
+  caps: { fontSize: 11, fontFamily: FONTS.sans, letterSpacing: 1, textTransform: 'uppercase' },
   footer: { fontSize: 12, fontFamily: FONTS.serifDisplay, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });

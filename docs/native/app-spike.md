@@ -2086,6 +2086,7 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Gaten** (`lib/holeByHole.ts`) er webbens `hasHoleByHoleView`, gitt den rå
   `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
   bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. PR 3b: Wolf.
+  PR 3c: Nines, Round Robin, Acey Deucey og Bingo Bango Bongo.
   Skins og Nassau bygges etter sine egne tegninger (#2317, #2327) og står som «Tavla» til da.
   De andre formatene webben har visning for, står som «Tavla» til de kommer.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
@@ -2099,6 +2100,55 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   bitene i visningene (navnet, tittelen, hull-hodet, raden, gulltonen og bunnteksten «Vel
   spilt!») bor i `components/holes/holesShared.tsx`. Toppen er den felles `kickerHeader` med
   spillnavnet, som følger med som ruteparameter (`gameName`) fra spillets side.
+- **Nines** (PR 3c): kortene per hull kommer fra `lib/leaderboard/ninesHoles.ts`, som webbens
+  `NinesHolesView` også tegner. Hvert kort har potten (Nines 9 poeng, Split Sixes 6), eller
+  «Venter på score» når ikke alle har tastet, og så spillerne med plassen på hullet, poengene,
+  brutto ved siden av netto og scoren. Lik score deler plassen (1, 1, 3), og da avgjør
+  stillingen hvem som står først. Et hull som venter, plasserer ingen, så ingen kåres for
+  tidlig, og spillerne står etter stillingen. Nines trenger ingen valg fra serveren, bare
+  slagene. Del-poeng (bare mulig med andre spillertall enn tre) skrives med norsk komma.
+  Appen bygger desimalen selv fordi Hermes mangler ICU, og testen låser den mot webbens
+  `formatNumber`. Gullbrikka i hull-hodet (Wolf: innsatsen, Nines: potten) og teksten for
+  poeng og brutto bor i `components/holes/holesShared.tsx`.
+- **Round Robin** (PR 3c): segmentene og kortene kommer fra
+  `lib/leaderboard/roundRobinHoles.ts`, som webbens `RoundRobinHolesView` også tegner. Tre
+  segmenter på seks hull, hvert med hull-spennet og hvem som er partnere («A + B vs C + D»),
+  og så ett kort per hull med begge sidene: hver spillers netto, brutto ved siden av når den er
+  annerledes, og en stjerne ved sidens beste. Siden som vant hullet står i gull med «Vant
+  hullet». Et delt hull sier «Delt» i hodet, et hull som ikke er ferdig spilt «Venter».
+  Spillerne på en side står slik konstellasjonen står (rotasjonsplassen), så motorens
+  rekkefølge inn spiller ingen rolle og stillingen trengs ikke. Round Robin trenger ingen
+  valg fra serveren, bare slagene. Stjerna og «vs» er dekor, skjult for skjermleseren som
+  webbens `aria-hidden`. Etiketten i små versaler (Solos «Stillingen» og «Vant hullet») bor i
+  `components/holes/holesShared.tsx`. Segmentet bruker temaets `ui.kicker` (webbens `Kicker`),
+  og «Delt»/«Venter» er små versaler i medium vekt, som på webben.
+- **Acey Deucey** (PR 3c): kortene per hull kommer fra `lib/leaderboard/aceyDeuceyHoles.ts`,
+  som webbens `AceyDeuceyHolesView` også tegner. Hvert kort har alle fire spillerne rangert på
+  score, lavest øverst, med poengene («+3», «0», «−3» med ekte minustegn), brutto ved siden
+  av netto og scoren. Ace (unik lavest) står i gull med stjerne, deuce (unik høyest) på dempet
+  flate med kald ramme, som på webben. Et hull som ikke alle har spilt, sier «Venter» i hodet
+  og viser ingen poeng. Lik score, og hele hullet som venter, står etter stillingen, så
+  motorens rekkefølge inn ikke spiller noen rolle. Acey Deucey trenger ingen valg fra
+  serveren, bare slagene. Stjerna er dekor, skjult for skjermleseren som webbens
+  `aria-hidden`. Deuce-flaten er webbens `--surface-2`, ny rolle i temaet (`surface2`), låst
+  mot `app/globals.css` i `theme.test.ts`. Minustegnet kommer fra `formatSignedPoints` i
+  `lib/leaderboard/soloScorecard.ts`.
+- **Bingo Bango Bongo** (PR 3c): kortene per hull kommer fra
+  `lib/leaderboard/bingoBangoBongoHoles.ts`, som webbens `BingoBangoBongoHolesView` også
+  tegner. Hodet sier bare «Hull 4», som på webben: poengene kommer ikke fra slagene, og
+  motoren gir hullet verken par eller indeks. Så følger de tre prestasjonene i fast
+  rekkefølge, bingo (først på green), bango (nærmest hullet) og bongo (først i hull), med
+  hvem som tok dem, eller «ikke satt». Den som tok to av tre, står i gull med stjerne, og
+  tok én alle tre, står «★ Feiet!» i gullbrikka i hodet. Et hull der ingen av de tre er
+  satt, sier «Venter» og «Ingen prestasjoner registrert ennå.». Ingenting sorteres på
+  spillere, og bare én kan ha to av tre, så motorens rekkefølge inn spiller ingen rolle og
+  stillingen trengs ikke. Motoren trenger prestasjonene (`bingo_bango_bongo_holes`), som
+  skjermen henter med `useGameChoices` som for Wolf: hjulet til de er hentet, og samme
+  ærlige beskjed hvis hentingen feiler før første svar. `waitsForChoices` spør
+  `choicesNotYetHere`, så regelen for når valgene er kommet har ett hjem. Stjerna er dekor,
+  skjult for skjermleseren som webbens `aria-hidden`. `HoleHeader` tar nå et hull uten par
+  og indeks, og linja uten kant (Round Robins spillere, prestasjonene her) bor i
+  `components/holes/holesShared.tsx`.
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,

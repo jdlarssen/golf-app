@@ -1,7 +1,7 @@
 // #2262: stempelet på et levert scorekort og linjene under det.
 //
 // #2385 la begge på designlerretet (`Scorekort-forslag`), identisk:
-// - **Stempelet** (`ScorecardStampMark`) er en sirkel på 112 pt som ligger
+// - **Stempelet** (`ScorecardStampMark`) er en sirkel på 116 pt som ligger
 //   over scorekortets nedre høyre hjørne, rotert −12°, med dobbel ring i
 //   skoggrønt blekk (75 % dekning) og en nesten hvit flate (86 %). Linjene er
 //   klubbnavnet (eller «TØRNY» når banen ikke har noe), «SIGNERT» og datoen i
@@ -10,8 +10,8 @@
 // - **Sjekklista** (`ScorecardStatusList`) står til venstre under kortet.
 //   «Signert av deg, …» først; et steg som er gjort, har en blekgrønn skive
 //   med hake, og et steg som gjenstår (godkjenning som venter, resultatet som
-//   ikke er låst ennå), har en stiplet sirkel. Merkene er dekor: teksten sier
-//   det samme til skjermleseren.
+//   ikke er låst ennå), har en stiplet sirkel (`DashedRing`, designets
+//   mønster). Merkene er dekor: teksten sier det samme til skjermleseren.
 //
 // Skoggrønt (`primary`), ikke gull: gull er seier i Tørny, og et levert kort er
 // ikke en seier. Hvilke linjer som vises, avgjør den delte
@@ -20,26 +20,25 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { formatSignedAt, formatStampDateLocal } from '../../lib/display';
 import { FONTS, useTheme, withAlpha } from '../../theme';
-import { HakeIcon } from '../icons/Icons';
+import { DashedRing, HakeIcon } from '../icons/Icons';
 
-/** Stempelets diameter, som i designet. */
-const STAMP = 112;
+/**
+ * Stempelets ytre diameter. Designet er 112 pt innenfor rammen på 2 pt (CSS
+ * teller rammen utenpå), altså 116 pt i alt.
+ */
+const STAMP = 116;
 /** Den indre ringen: 4 pt luft innenfor den ytre, og 1,5 pt strek. */
 const INNER_INSET = 4;
 /** Ordet øverst i stempelet når banen ikke har noe klubbnavn. */
 export const STAMP_FALLBACK_CLUB = 'TØRNY';
 
 export interface StampCopy {
-  /** Den lange formen, til skjermleseren. */
-  signedAt: string | null;
-  /** Den korte formen i stempelet. */
-  stampDate: string | null;
   signedBy: string;
   approval: string | null;
   lock: string;
 }
 
-/** Tekstene i og under stempelet. `ownerFullName` er kortets eier. */
+/** Linjene i sjekklista under stempelet. `ownerFullName` er kortets eier. */
 export function stampCopy(stamp: Stamp, ownerFullName: string | null): StampCopy {
   const signedBy =
     stamp.signedBy.kind === 'self'
@@ -66,8 +65,6 @@ export function stampCopy(stamp: Stamp, ownerFullName: string | null): StampCopy
   })();
 
   return {
-    signedAt: formatSignedAt(stamp.signedAt),
-    stampDate: formatStampDateLocal(stamp.signedAt),
     signedBy,
     approval,
     lock: stamp.locked
@@ -100,6 +97,8 @@ export function ScorecardStampMark({
       accessibilityLabel={['Signert', signedAt?.replace(' · ', ' kl. ')].filter(Boolean).join(', ')}
       testID="scorecard-stamp"
     >
+      {/* Designets 4 pt hvite bånd innenfor rammen, og så den indre ringen. */}
+      <View style={[styles.band, { borderColor: colors.surface }]} />
       <View style={[styles.innerRing, { borderColor: ring }]} />
       <Text style={[styles.club, ink]} numberOfLines={1}>
         {(clubName?.trim() || STAMP_FALLBACK_CLUB).toUpperCase()}
@@ -146,15 +145,17 @@ function StatusLine({ done, text, testID }: { done: boolean; text: string; testI
       <View
         style={[
           styles.mark,
-          done
-            ? { backgroundColor: colors.primarySoft }
-            : { borderWidth: 1.5, borderStyle: 'dashed', borderColor: withAlpha(colors.muted, 0.6) },
+          done ? { backgroundColor: colors.primarySoft } : null,
         ]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         testID={`${testID}-${done ? 'done' : 'pending'}`}
       >
-        {done ? <HakeIcon color={colors.primary} size={14} strokeWidth={2.4} /> : null}
+        {done ? (
+          <HakeIcon color={colors.primary} size={14} strokeWidth={2.4} />
+        ) : (
+          <DashedRing color={colors.scoreUnsetFg} />
+        )}
       </View>
       <Text style={[styles.lineText, { color: done ? colors.text : colors.muted }]}>{text}</Text>
     </View>
@@ -171,6 +172,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     transform: [{ rotate: '-12deg' }],
   },
+  band: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: STAMP / 2,
+    borderWidth: INNER_INSET,
+  },
   innerRing: {
     position: 'absolute',
     top: INNER_INSET,
@@ -180,9 +190,16 @@ const styles = StyleSheet.create({
     borderRadius: STAMP / 2,
     borderWidth: 1.5,
   },
-  club: { fontSize: 9, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.8, maxWidth: STAMP - 24 },
-  signed: { fontSize: 20, lineHeight: 24, fontFamily: FONTS.serifScore, letterSpacing: 1.2 },
-  date: { fontSize: 10, lineHeight: 13, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
+  // Linjehøydene er nettleserens avrundede `normal` for hver størrelse.
+  club: {
+    fontSize: 9,
+    lineHeight: 11,
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 1.8,
+    maxWidth: STAMP - 24,
+  },
+  signed: { fontSize: 20, lineHeight: 25, fontFamily: FONTS.serifScore, letterSpacing: 1.2 },
+  date: { fontSize: 10, lineHeight: 12, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
   // Designet: 30 pt under kortet (stempelet stikker 34 ned) og 16 pt fra kanten.
   checklist: { gap: 8, marginTop: 22, marginHorizontal: -4 },
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },

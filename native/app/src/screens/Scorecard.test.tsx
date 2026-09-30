@@ -189,7 +189,7 @@ function scorecardElement(gameId: string, navigate: jest.Mock) {
 }
 
 describe('Scorecard', () => {
-  it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, og skjuler netto i blind runde', async () => {
+  it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, netto i åpen stableford og ikke i blind runde', async () => {
     let releaseQueue!: (items: unknown[]) => void;
     mockState.queue = new Promise((resolve) => {
       releaseQueue = resolve;
@@ -232,6 +232,18 @@ describe('Scorecard', () => {
     // hull-stripen tar spilleren videre derfra.
     await fireEvent.press(screen.getByTestId('scorecard-edit'));
     expect(navigate).toHaveBeenCalledWith('Hole', { gameId: GAME_ID, holeNumber: 1 });
+
+    // #2385: stableford i en åpen runde. NETTO står ved siden av BRUTTO og
+    // POENG til høyre, som i designet.
+    mockState.bundle = {
+      ...mockRevealBundle,
+      game: { ...mockRevealBundle.game, id: 'game-4', scoreVisibility: 'live' },
+    };
+    await rerender(scorecardElement('game-4', navigate));
+    await waitFor(() => {
+      expect(screen.getByTestId('total-poeng')).toBeTruthy();
+    });
+    expect(screen.getByTestId('total-netto')).toBeTruthy();
 
     // #2219: en blind runde som pågår. Netto og tildelte slag er borte til
     // arrangøren avslutter, som på nettsiden. Brutto står.

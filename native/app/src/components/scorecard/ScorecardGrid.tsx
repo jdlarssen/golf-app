@@ -14,10 +14,11 @@
 //   resten, og en sumkolonne på 38 pt uten tonet bakgrunn.
 // - HULL-raden er et bånd i `primary` med `onPrimary`-tall (skog og hvitt i
 //   lys drakt; salvie og mørkt i mørk, der skogflaten forsvant mot kortet).
-//   Sumkolonnen i båndet heter «UT» og «INN», i krem i lys drakt.
+//   Sumkolonnen i båndet heter «UT» og «INN», i designets krem i lys drakt.
 // - SLAG står i Fraunces med tonens farge i former på 22 pt; en dobbel form
 //   vokser utover (29 pt), som designets ekstra ring. Poeng bedre enn netto
-//   par er grønne. Skillelinjene står under PAR og under SLAG.
+//   par er grønne. Skillelinjene står under PAR og under SLAG, i den varme
+//   `divider`.
 // - Er skjermen for smal, ruller kortet sidelengs, aldri skjermen.
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -39,14 +40,18 @@ const RING_GROWTH = 7;
 const LABEL_WIDTH = 44;
 const SUM_WIDTH = 38;
 const MIN_COLUMN = 26;
-/** Radhøydene fra designet: båndet, PAR, SLAG (formene) og tallradene. */
+/**
+ * Radhøydene fra designet: båndet, PAR, SLAG (formene) og tallradene. Designet
+ * har streken nederst i PAR og SLAG; her står den øverst i raden under, så den
+ * ene punkten er med i høyden til SLAG og radene etter.
+ */
 const ROW_HEIGHTS: Record<'hole' | 'par' | ScorecardRowKind, number> = {
   hole: 28,
-  par: 31,
-  strokes: 35,
-  net: 30,
-  points: 30,
-  enteredBy: 30,
+  par: 30,
+  strokes: 36,
+  net: 31,
+  points: 31,
+  enteredBy: 31,
 };
 
 type CellRole = 'label' | 'data' | 'sum';
@@ -138,7 +143,7 @@ function Cell({
         kind === 'hole' ? { backgroundColor: colors.primary } : null,
         corner === 'left' && styles.bandLeft,
         corner === 'right' && styles.bandRight,
-        ruled ? { borderTopWidth: 1, borderTopColor: colors.border } : null,
+        ruled ? { borderTopWidth: 1, borderTopColor: colors.divider } : null,
       ]}
     >
       {children}
@@ -167,7 +172,7 @@ function Half({
   const halfHead = [
     styles.head,
     styles.halfHead,
-    { color: scheme === 'dark' ? colors.onPrimary : colors.onStrong },
+    { color: scheme === 'dark' ? colors.onPrimary : colors.onStrongWarm },
   ];
   const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onPrimary }];
   const strokeNum = [styles.strokeNum, ui.num, { color: colors.text }];

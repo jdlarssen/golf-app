@@ -71,6 +71,23 @@ export type ThemeColors = {
    * skogen.
    */
   live: string;
+  /**
+   * Skillelinja mellom radene i scorekortet (#2385, designlerretet) — webbens
+   * `--row-divider-warm`, varmere enn `border`.
+   */
+  divider: string;
+  /** Det som ennå ikke er tastet (#2385): stiplede sirkler — webbens `--score-unset-fg`. */
+  scoreUnsetFg: string;
+  /**
+   * Den varme kremen designet bruker for små ord på skogflaten (#2385: «UT»
+   * og «INN» i scorekortets bånd). Lik i begge draktene, som `live`.
+   */
+  onStrongWarm: string;
+  /**
+   * Den litt nedsenkede flaten (#2255, deuce-raden i Acey Deucey «Hull for
+   * hull») — webbens `--surface-2`.
+   */
+  surface2: string;
 };
 
 /**
@@ -102,6 +119,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#7D6224',
     trackBg: '#EFE9DA',
     live: '#7DAA8A',
+    divider: '#EDE6D2',
+    scoreUnsetFg: '#9A8F7C',
+    onStrongWarm: '#ECE5D2',
+    surface2: '#F0EDE5',
   },
   dark: {
     bg: '#14201A',
@@ -124,6 +145,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accentText: '#D4B870',
     trackBg: '#243429',
     live: '#7DAA8A',
+    divider: '#2F3F34',
+    scoreUnsetFg: '#9A9180',
+    onStrongWarm: '#ECE5D2',
+    surface2: '#243429',
   },
 };
 
@@ -174,6 +199,12 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   trackBg: '#FFFFFF',
   // Hjem-prikken (#2385). Hullsiden tegner den ikke; lik de andre draktene.
   live: '#7DAA8A',
+  // Sollys: svarte streker og ren kontrast, som resten av drakten.
+  divider: '#000000',
+  scoreUnsetFg: '#000000',
+  onStrongWarm: '#F0EDE5',
+  // Deuce-raden i «Hull for hull» (#2255). Hullsiden tegner den ikke; ren hvit.
+  surface2: '#FFFFFF',
 };
 
 /**

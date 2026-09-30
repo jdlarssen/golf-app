@@ -3,8 +3,10 @@
 //
 // Webbens side har en egen visning per format. Appen tar dem format for
 // format (`lib/holeByHole.ts` sier hvilke), og tegner samme modell som webben
-// (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`). I en
-// blind runde som pågår holdes alt tilbake, som på webben.
+// (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`,
+// `lib/leaderboard/ninesHoles.ts`, `lib/leaderboard/roundRobinHoles.ts`,
+// `lib/leaderboard/aceyDeuceyHoles.ts`, `lib/leaderboard/bingoBangoBongoHoles.ts`).
+// I en blind runde som pågår holdes alt tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
@@ -17,12 +19,16 @@ import {
   shouldHideNetto,
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
+import { AceyDeuceyHoleCardsView } from '../components/holes/AceyDeuceyHoleCardsView';
+import { BingoBangoBongoHoleCardsView } from '../components/holes/BingoBangoBongoHoleCardsView';
+import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
+import { RoundRobinHoleCardsView } from '../components/holes/RoundRobinHoleCardsView';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
 import { WolfHoleCardsView } from '../components/holes/WolfHoleCardsView';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
-import { buildHoleByHole, holeByHoleKind, waitsForChoices } from '../lib/holeByHole';
+import { buildHoleByHole, waitsForChoices } from '../lib/holeByHole';
 import { HOLES_TEXT } from '../lib/holesCopy';
 import { CHOICES_MISSING_HOLES_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import type { ScoringExtras } from '../lib/scoringContext';
@@ -36,8 +42,9 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
-  // Wolf regner med valgene fra serveren (hvem som var ulv og valgte hva),
-  // som tavla. Andre formater fyrer ingen spørring (`choiceSourceFor`).
+  // Wolf og Bingo Bango Bongo regner med valgene fra serveren (hvem som var
+  // ulv og valgte hva, hvem som tok hvilken prestasjon), som tavla. Andre
+  // formater fyrer ingen spørring (`choiceSourceFor`).
   const { extras, failed: choicesFailed } = useGameChoices(
     gameId,
     bundle?.game.gameMode ?? '',
@@ -65,7 +72,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
       });
   }, [gameId, reload]);
 
-  const needsChoices = bundle != null && waitsForChoices(holeByHoleKind(bundle.game), extras);
+  const needsChoices = bundle != null && waitsForChoices(bundle.game, extras);
   const waiting =
     !bundle || (seed === 'loading' && scores.length === 0) || (needsChoices && !choicesFailed);
   if (waiting) {
@@ -89,8 +96,8 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
       ) : null}
       {needsChoices ? (
         // Valgene kom ikke (uten nett, og aldri hentet før): motoren kan ikke
-        // regne Wolf uten dem. Samme ærlige beskjed som tavla, ikke et hjul
-        // som aldri stopper.
+        // regne Wolf eller Bingo Bango Bongo uten dem. Samme ærlige beskjed som
+        // tavla, ikke et hjul som aldri stopper.
         <Text style={ui.muted} testID="hole-by-hole-choices-missing">
           {CHOICES_MISSING_HOLES_TEXT}
         </Text>
@@ -109,7 +116,7 @@ export function HoleByHoleBody({
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
-  /** Valgene formatet trenger fra serveren (Wolf). */
+  /** Valgene formatet trenger fra serveren (Wolf, Bingo Bango Bongo). */
   extras?: ScoringExtras;
 }) {
   const { colors, ui } = useTheme();
@@ -143,6 +150,46 @@ export function HoleByHoleBody({
     return (
       <WolfHoleCardsView
         cards={model.wolf}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'nines') {
+    return (
+      <NinesHoleCardsView
+        cards={model.nines}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'round-robin') {
+    return (
+      <RoundRobinHoleCardsView
+        cards={model.roundRobin}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'acey-deucey') {
+    return (
+      <AceyDeuceyHoleCardsView
+        cards={model.aceyDeucey}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'bingo-bango-bongo') {
+    return (
+      <BingoBangoBongoHoleCardsView
+        cards={model.bingoBangoBongo}
         subtitle={model.subtitle}
         players={bundle.players}
         finished={game.status === 'finished'}

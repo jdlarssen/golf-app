@@ -1,6 +1,6 @@
 // #2262: summene under scorekortet i store tall (BRUTTO · NETTO · POENG) og
-// «14 av 18 hull» så lenge noe mangler. Bare tallene kortet selv viser: et
-// reveal-spill har ingen NETTO-rad, og da står heller ingen netto-sum her.
+// «14 av 18 hull» så lenge noe mangler. NETTO står også i stableford, som i
+// designet (#2385), men aldri mens en reveal-runde pågår.
 //
 // #2385 la summene på designlerretet (`Scorekort-forslag`): de står nederst i
 // det siste kortet (`ScorecardGrid` sin `footer`, under den tykke streken),
@@ -48,7 +48,7 @@ export function ScorecardTotals({
             accessible
             accessibilityLabel={`Poeng ${totals.points ?? 'ukjent'}`}
           >
-            <Text style={label}>Poeng</Text>
+            <Text style={[label, styles.rowLabel]}>Poeng</Text>
             <Text
               style={[styles.points, ui.num, { color: colors.primary }]}
               testID="total-poeng"
@@ -69,7 +69,7 @@ export function ScorecardTotals({
 
 const styles = StyleSheet.create({
   wrap: { gap: 4 },
-  row: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   left: { flexDirection: 'row', gap: 16 },
   right: { alignItems: 'flex-end' },
   label: {
@@ -78,6 +78,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  value: { fontSize: 22, lineHeight: 27, fontFamily: FONTS.serifScore },
-  points: { fontSize: 30, lineHeight: 32, fontFamily: FONTS.serifScore },
+  // POENG-kolonnen er den høyeste og bestemmer raden: 12 + 30, som
+  // nettleserens avrundede linjer. Etikettene til venstre har sin naturlige
+  // høyde, og tallene nettleserens 28, så alt står på samme punkt som i
+  // designet.
+  rowLabel: { lineHeight: 12 },
+  value: { fontSize: 22, lineHeight: 28, fontFamily: FONTS.serifScore },
+  points: { fontSize: 30, lineHeight: 30, fontFamily: FONTS.serifScore },
 });
