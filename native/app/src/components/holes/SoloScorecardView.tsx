@@ -69,7 +69,7 @@ export function SoloScorecardView({
             <View style={styles.standingName}>
               <Text style={[ui.muted, ui.num, styles.rank]}>{line.rank}</Text>
               <Text
-                style={[ui.body, styles.shrink, line.isLeader && styles.bold]}
+                style={[ui.body, styles.shrink, line.isLeader && styles.medium]}
                 numberOfLines={1}
               >
                 {nameOf(players, line.userId, HOLES_TEXT.unknownPlayerFull)}
@@ -147,7 +147,7 @@ function NineBlock({
             style={[
               styles.subtotal,
               s.isLeader
-                ? { borderColor: colors.accent, backgroundColor: colors.surface }
+                ? { borderColor: goldEdge(colors.accent), backgroundColor: goldWash(colors.accent) }
                 : { borderColor: colors.border, backgroundColor: colors.surface },
             ]}
             testID={`${testID}-subtotal-${s.userId}`}
@@ -204,7 +204,7 @@ function HoleCard({
           style={[
             styles.row,
             row.isBest
-              ? { borderColor: colors.accent, backgroundColor: colors.bg }
+              ? { borderColor: goldEdge(colors.accent), backgroundColor: goldWash(colors.accent) }
               : { borderColor: 'transparent' },
           ]}
           testID={`hole-by-hole-row-${hole.holeNumber}-${row.userId}`}
@@ -220,7 +220,7 @@ function HoleCard({
                 ★
               </Text>
             ) : null}
-            <Text style={[ui.body, styles.shrink, row.isBest && styles.bold]} numberOfLines={1}>
+            <Text style={[ui.body, styles.shrink, row.isBest && styles.medium]} numberOfLines={1}>
               {nameOf(players, row.userId, HOLES_TEXT.unknownPlayerFull)}
             </Text>
           </View>
@@ -249,6 +249,14 @@ function HoleCard({
   );
 }
 
+/**
+ * Lederen og hullvinneren som på webben: gullkant på 40 % og en svak
+ * champagnetone på 6 % (`border-accent/40 bg-accent/[0.06]`). `accent` er en
+ * sekssifret hex i temaet, så alfaen legges på som to sifre til.
+ */
+const goldEdge = (accent: string) => `${accent}66`;
+const goldWash = (accent: string) => `${accent}0F`;
+
 const styles = StyleSheet.create({
   page: { gap: 14 },
   titleBlock: { alignItems: 'center', gap: 2, paddingVertical: 4 },
@@ -267,7 +275,7 @@ const styles = StyleSheet.create({
   chip: { fontSize: 12, fontFamily: FONTS.sans },
   total: { fontSize: 20, fontFamily: FONTS.serifScore, minWidth: 28, textAlign: 'right' },
   shrink: { flexShrink: 1 },
-  bold: { fontFamily: FONTS.sansSemiBold },
+  medium: { fontFamily: FONTS.sansMedium },
   nine: { gap: 10 },
   nineHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4 },
   nineTitle: { fontSize: 19, fontFamily: FONTS.serifDisplay },
