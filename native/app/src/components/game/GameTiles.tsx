@@ -7,18 +7,21 @@
 // (`lib/holeByHole.ts`), bytter den første flisa til den. Tavla er da
 // fortsatt ett trykk unna, via «Se tavla →» i stubben.
 //
-// Drakten er designlerretets: et grønt linjeikon over en etikett i blekk,
-// og kortskyggen fra DESIGN.md. Ikonene er dekor; etiketten er knappens navn.
+// Drakten er designlerretets, identisk: et grønt linjeikon (22 pt, strek 1,8)
+// over en etikett i blekk, hvit flis med tynn kant og ingen skygge. Ikonene
+// er dekor; etiketten er knappens navn.
 // «Hull for hull» har ingen tegning på lerretet; flagget sier «hull».
 import type { ComponentType } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { HOLES_TEXT } from '../../lib/holesCopy';
 import { TICKET_TEXT } from '../../lib/ticketCopy';
-import { FONTS, cardShadow, useTheme } from '../../theme';
-import { DokumentIcon, FlaggIcon, InfoIcon, PokalIcon, type IconProps } from '../icons/Icons';
+import { FONTS, useTheme } from '../../theme';
+import { BegerIcon, DokumentIcon, FlaggIcon, InfoIcon, type IconProps } from '../icons/Icons';
 
 /** Flisenes høyde, fra designet. Godt over `TAP`. */
 const TILE_HEIGHT = 84;
+/** Designets strek på flisikonene. */
+const ICON_STROKE = 1.8;
 
 export function GameTiles({
   supported,
@@ -42,7 +45,7 @@ export function GameTiles({
       ? [
           holeByHole
             ? { label: HOLES_TEXT.heading, Icon: FlaggIcon, onPress: onHoleByHole, testID: 'open-hole-by-hole' }
-            : { label: TICKET_TEXT.tileBoard, Icon: PokalIcon, onPress: onBoard, testID: 'open-leaderboard' },
+            : { label: TICKET_TEXT.tileBoard, Icon: BegerIcon, onPress: onBoard, testID: 'open-leaderboard' },
           {
             label: TICKET_TEXT.tileScorecard,
             Icon: DokumentIcon,
@@ -78,7 +81,7 @@ function Tile({
   onPress: () => void;
   testID: string;
 }) {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
@@ -88,19 +91,19 @@ function Tile({
         {
           backgroundColor: pressed ? colors.primarySoft : colors.surface,
           borderColor: colors.border,
-          boxShadow: cardShadow(scheme),
         },
       ]}
       testID={testID}
     >
-      <Icon color={colors.primary} size={22} />
+      <Icon color={colors.primary} size={22} strokeWidth={ICON_STROKE} />
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  // 16 pt fra billetten, som i designet: skjermens mellomrom (8) og 8 til.
+  row: { flexDirection: 'row', gap: 10, marginTop: 8 },
   tile: {
     flex: 1,
     minHeight: TILE_HEIGHT,
