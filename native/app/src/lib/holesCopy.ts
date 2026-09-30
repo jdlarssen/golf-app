@@ -214,3 +214,63 @@ export const BINGO_BANGO_BONGO_HOLES_TEXT = {
   /** Til høyre på en prestasjon ingen har fått. */
   ikkeSatt: 'ikke satt',
 } as const;
+
+/**
+ * Best ball (#2255 PR 3d): webbens `leaderboard.holes.*` og
+ * `leaderboard.common.teamLabel`, låst i `holesCopy.test.ts`. Hardkodet i
+ * webbens drilldown, ikke i meldingene: «B» i forklaringen og « PAR» bak mot
+ * par i heltefeltet.
+ */
+export const BEST_BALL_HOLES_TEXT = {
+  /** Den halvfete bokstaven i forklaringen, foran `legendNetLabel`. */
+  legendBest: 'B',
+  legendNetLabel: '= brukt netto',
+  legendFormat: 'initial · brutto · netto · vs par   →   lag',
+  frontNineLabel: 'Ut · hull 1–9',
+  backNineLabel: 'Inn · hull 10–18',
+  summaryUt: 'UT',
+  summaryInn: 'INN',
+  totalLabel: 'Totalt',
+  /** Under lagnavnet når laget ikke har spillere. */
+  noPlayers: '(uten spillere)',
+  /** Bak mot par i heltefeltet («+3 PAR»). */
+  vsParSuffix: 'PAR',
+} as const;
+
+/** «Lag 2 · 1. plass» øverst, som webbens topp. */
+export function bestBallTeamHeader(teamNumber: number, rank: number): string {
+  return `Lag ${teamNumber} · ${rank}. plass`;
+}
+
+/** «Lag 2». */
+export function bestBallTeamLabel(teamNumber: number): string {
+  return `Lag ${teamNumber}`;
+}
+
+/** «4 hull vunnet». */
+export function bestBallHolesWon(count: number): string {
+  return `${count} hull vunnet`;
+}
+
+/** «Forrige · 1. Lag 3» og «Neste · 3. Lag 1». */
+export function bestBallTeamNav(direction: 'prev' | 'next', rank: number, teamNumber: number): string {
+  return `${direction === 'prev' ? 'Forrige' : 'Neste'} · ${rank}. Lag ${teamNumber}`;
+}
+
+/**
+ * Det skjermleseren sier om én spiller på ett hull, i stedet for tallene:
+ * «KH, brutto 5, +1 slag, netto 4», med «Brukt netto for laget: » foran når
+ * nettoen er lagets ball.
+ */
+export function bestBallPlayerAria(
+  cell: { initial: string; grossText: string; extraStrokes: number; netText: string },
+  used: boolean,
+): string {
+  const text = `${cell.initial}, brutto ${cell.grossText}, +${cell.extraStrokes} slag, netto ${cell.netText}`;
+  return used ? `Brukt netto for laget: ${text}` : text;
+}
+
+/** Stjerna ved «P4» når andre kjønn har annen par: «Avvikende par for andre kjønn. Herrer: 4, …». */
+export function bestBallParAsideAria(genders: string): string {
+  return `Avvikende par for andre kjønn. ${genders}.`;
+}

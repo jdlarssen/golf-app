@@ -45,8 +45,9 @@ export type ThemeColors = {
   scoreOver1Fg: string;
   scoreOver2Fg: string;
   /**
-   * Flaten bak en score-tone (#2385, skinneknappene på hullsiden), webbens
-   * `--score-*-bg`: under par, par, bogey og dobbel bogey eller verre.
+   * Flaten bak en score-tone, webbens `--score-*-bg`: under par, par, bogey og
+   * dobbel bogey eller verre. Skinneknappene på hullsiden (#2385) og mot par-
+   * pillene i «Hull for hull» for best ball (#2255 PR 3d).
    */
   scoreUnderBg: string;
   scoreParBg: string;
@@ -251,11 +252,13 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   scoreParFg: '#5C5347',
   scoreOver1Fg: '#7A5410',
   scoreOver2Fg: '#7A2F2A',
-  // Ingen tonede flater i sollys: skinneknappene er hvite med svart kant.
-  scoreUnderBg: '#FFFFFF',
-  scoreParBg: '#FFFFFF',
-  scoreOver1Bg: '#FFFFFF',
-  scoreOver2Bg: '#FFFFFF',
+  // Pillene bak mot par i best ball (#2255 PR 3d): samme toner som lys drakt,
+  // som strekene over. Sollys har ingen egen CSS-blokk å låses mot. Skinna på
+  // hullsiden bruker dem ikke i sollys: knappene der er hvite med svart kant.
+  scoreUnderBg: 'rgba(74, 124, 89, 0.16)',
+  scoreParBg: 'rgba(92, 83, 71, 0.10)',
+  scoreOver1Bg: 'rgba(216, 155, 58, 0.18)',
+  scoreOver2Bg: 'rgba(184, 70, 62, 0.16)',
   // Heltekortets skogflate på Hjem (#2254). Hullsiden tegner den ikke, så
   // lys-verdiene står her bare for at paletten skal ha alle rollene.
   surfaceStrong: '#1B4332',
