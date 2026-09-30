@@ -2,8 +2,10 @@ import type { WolfHoleOutcome, WolfResult } from '@/lib/scoring/modes/types';
 import {
   wolfChoiceKey,
   wolfOutcomeKey,
+  wolfOutcomeTone,
   type WolfChoiceKey,
   type WolfOutcomeKey,
+  type WolfOutcomeTone,
 } from '../wolf/holeLabels';
 import { byStanding, inStandingOrder } from './standingOrder';
 
@@ -24,8 +26,8 @@ export interface WolfHoleCardRow {
   side: 'wolf' | 'opp' | null;
   /** Hadde best score på sin side. */
   isContributor: boolean;
-  /** Poengene på hullet. Visningen viser dem bare når de er over 0. */
-  points: number;
+  /** Poengene på hullet når de er over 0 («+2»), ellers `null` (ingenting vises). */
+  pointsShown: number | null;
   effectiveScore: number | null;
   /** Brutto ved siden av, bare i netto og bare når den er annerledes. */
   grossShown: number | null;
@@ -42,6 +44,8 @@ export interface WolfHoleCard {
   choiceKey: WolfChoiceKey;
   outcome: WolfHoleOutcome;
   outcomeKey: WolfOutcomeKey;
+  /** Utfallets farge som tone; hver flate gjør den om til sin egen farge. */
+  outcomeTone: WolfOutcomeTone;
   /**
    * Ulvens side først (ulven selv før partneren), så de andre, så uplasserte.
    * Ellers etter stillingen i fast rekkefølge.
@@ -77,6 +81,7 @@ export function wolfHoleCards(result: WolfResult): WolfHoleCards {
       choiceKey: wolfChoiceKey(hole.choice),
       outcome: hole.outcome,
       outcomeKey: wolfOutcomeKey(hole.outcome),
+      outcomeTone: wolfOutcomeTone(hole.outcome),
       rows: [...hole.players]
         .sort(
           (a, b) => sideRank(a.side) - sideRank(b.side) || wolfFirst(hole.wolfUserId)(a, b) || tie(a, b),
@@ -85,7 +90,7 @@ export function wolfHoleCards(result: WolfResult): WolfHoleCards {
           userId: cell.userId,
           side: cell.side,
           isContributor: cell.isContributor,
-          points: hole.pointsByPlayer[cell.userId] ?? 0,
+          pointsShown: (hole.pointsByPlayer[cell.userId] ?? 0) > 0 ? hole.pointsByPlayer[cell.userId]! : null,
           effectiveScore: cell.effectiveScore,
           grossShown:
             result.scoring === 'net' && cell.gross != null && cell.gross !== cell.effectiveScore
