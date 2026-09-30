@@ -134,7 +134,7 @@ function SideView({
         <Text style={[holesStyles.kicker, { color: colors.accentText }]}>{ROUND_ROBIN_HOLES_TEXT.vantHulletLabel}</Text>
       ) : null}
       {side.rows.map((row) => (
-        <View key={row.userId} style={styles.line} testID={`hole-by-hole-row-${holeNumber}-${row.userId}`}>
+        <View key={row.userId} style={holesStyles.line} testID={`hole-by-hole-row-${holeNumber}-${row.userId}`}>
           <View style={holesStyles.rowName}>
             {row.isContributor ? (
               <Text
@@ -176,5 +176,4 @@ const styles = StyleSheet.create({
   vs: { opacity: 0.4 },
   /** Siden på et hull: webbens `rounded-xl px-2.5 py-1.5` med kant bare for vinneren. */
   side: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, gap: 4 },
-  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
 });
