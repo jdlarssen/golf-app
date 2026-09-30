@@ -33,8 +33,8 @@
 // Hjem v2 (#2385): «Forrige runde» leser det samme for runden som ble avsluttet
 // sist, så raden kan vise poengene dine («34 poeng», designet) i formatene der
 // tavla viser poeng. Samme hentinger som spillets side og tavla gjør (bundelen,
-// `seedGameScores`, og valgene i wolf og bingo bango bongo), og bare for den
-// ene runden.
+// `seedGameScores`, og valgene i wolf og bingo bango bongo), bare for den ene
+// runden, og bundelen og slagene bare én gang etter at den er avsluttet.
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -56,7 +56,9 @@ import type { GameBundle } from '../data/gameBundle';
 import {
   fetchCardExtras,
   loadCardBundle,
+  loadFinishedRound,
   refreshCardBundle,
+  refreshFinishedRound,
   type CardBundle,
 } from '../data/homeHero';
 import {
@@ -73,7 +75,7 @@ import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
-import { lastRoundPoints } from '../lib/lastRound';
+import { countsPoints, lastRoundPoints } from '../lib/lastRound';
 import type { ScoringExtras } from '../lib/scoringContext';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
@@ -117,15 +119,18 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       const { active, scheduled, finished } = splitHomeCards(fresh.cards);
       const hero = pickHeroCard(active).hero;
       const ticket = scheduled[0];
-      const last = finished[0];
+      // Forrige runde bare når formatet teller poeng: ellers står brutto, som
+      // `refreshHomeCards` alt har hentet.
+      const last = finished[0] && countsPoints(finished[0].gameMode) ? finished[0] : null;
       await Promise.allSettled([
         hero ? refreshCardBundle(hero.gameId, { withScores: true }) : null,
         ticket ? refreshCardBundle(ticket.gameId) : null,
-        last ? refreshCardBundle(last.gameId, { withScores: true }) : null,
+        last ? refreshFinishedRound(last.gameId) : null,
         last
-          ? fetchCardExtras(last.gameId, last.gameMode).then((extras) =>
-              setLastExtras({ gameId: last.gameId, extras }),
-            )
+          ? fetchCardExtras(last.gameId, last.gameMode).then((extras) => {
+              // En feilet henting (`null`) lar forrige svar stå.
+              if (extras) setLastExtras({ gameId: last.gameId, extras });
+            })
           : null,
       ]);
       setDeviceTick((n) => n + 1);
@@ -164,7 +169,8 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const ticket = split?.scheduled[0] ?? null;
   const heroId = hero?.gameId ?? null;
   const ticketId = ticket?.gameId ?? null;
-  const lastId = split?.finished[0]?.gameId ?? null;
+  const lastCard = split?.finished[0] ?? null;
+  const lastId = lastCard && countsPoints(lastCard.gameMode) ? lastCard.gameId : null;
 
   // Bundelen og slagene fra enheten for helten, billetten og forrige runde.
   useEffect(() => {
@@ -172,7 +178,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
     void Promise.all([
       heroId ? loadCardBundle(heroId) : Promise.resolve(null),
       ticketId ? loadCardBundle(ticketId) : Promise.resolve(null),
-      lastId ? loadCardBundle(lastId) : Promise.resolve(null),
+      lastId ? loadFinishedRound(lastId) : Promise.resolve(null),
     ]).then(([heroCard, ticketCard, lastCard]) => {
       if (cancelled) return;
       setHeroData(heroCard);

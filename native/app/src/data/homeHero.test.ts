@@ -2,7 +2,13 @@
 // si fra før, så en feil her skal aldri kaste og aldri tømme noe.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
-import { fetchCardExtras, loadCardBundle, refreshCardBundle } from './homeHero';
+import {
+  fetchCardExtras,
+  loadCardBundle,
+  loadFinishedRound,
+  refreshCardBundle,
+  refreshFinishedRound,
+} from './homeHero';
 
 jest.mock('./gameBundle', () => ({
   loadGameBundle: jest.fn(),
@@ -16,6 +22,8 @@ jest.mock('./choices', () => ({
 jest.mock('./db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(),
+  getCacheEntry: jest.fn(),
+  putCacheEntry: jest.fn(),
 }));
 
 const bundleMod = require('./gameBundle') as {
@@ -27,7 +35,11 @@ const choicesMod = require('./choices') as {
   fetchWolfChoices: jest.Mock;
   fetchBingoBangoBongoHoles: jest.Mock;
 };
-const dbMod = require('./db') as { listScoresForGame: jest.Mock };
+const dbMod = require('./db') as {
+  listScoresForGame: jest.Mock;
+  getCacheEntry: jest.Mock;
+  putCacheEntry: jest.Mock;
+};
 
 const BUNDLE = homeBundle({ players: [homePlayer({ userId: 'me' })] });
 const SCORES = holeScores('g-live', 'me', 3, 4);
@@ -88,10 +100,63 @@ describe('fetchCardExtras (Hjem v2, #2385)', () => {
     expect(choicesMod.fetchBingoBangoBongoHoles).toHaveBeenCalledTimes(1);
   });
 
-  it('gir tomt svar når hentingen feiler, aldri en tom liste', async () => {
+  it('gir null når hentingen feiler, aldri en tom liste', async () => {
     // En tom liste ville betydd «ingen valg», og motoren ville regnet poeng av
-    // det. Uten svar sier motoren at valgene mangler, og raden viser brutto.
+    // det. `null` lar Hjem beholde valgene fra forrige henting.
     choicesMod.fetchWolfChoices.mockRejectedValue(new Error('offline'));
-    expect(await fetchCardExtras('g', 'wolf')).toEqual({});
+    expect(await fetchCardExtras('g', 'wolf')).toBeNull();
+  });
+});
+
+describe('forrige runde hentes komplett én gang (Hjem v2, #2385)', () => {
+  const FINISHED = homeBundle({
+    game: { id: 'last', status: 'finished' },
+    players: [homePlayer({ userId: 'me' })],
+  });
+
+  it('henter bundel og alle slag, og merker runden når den er avsluttet', async () => {
+    dbMod.getCacheEntry.mockResolvedValue(undefined);
+    bundleMod.refreshGameBundle.mockResolvedValue(FINISHED);
+    seedMod.seedGameScores.mockResolvedValue(54);
+
+    await refreshFinishedRound('last');
+    expect(bundleMod.refreshGameBundle).toHaveBeenCalledWith('last');
+    expect(seedMod.seedGameScores).toHaveBeenCalledWith('last');
+    expect(dbMod.putCacheEntry).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ key: 'last-round:last' }),
+    );
+  });
+
+  it('henter ikke igjen når runden alt er merket', async () => {
+    dbMod.getCacheEntry.mockResolvedValue({ key: 'last-round:last', payload: '1', fetchedAt: 'x' });
+
+    await refreshFinishedRound('last');
+    expect(bundleMod.refreshGameBundle).not.toHaveBeenCalled();
+    expect(seedMod.seedGameScores).not.toHaveBeenCalled();
+  });
+
+  it('merker ikke en halv henting, eller en runde som ikke er avsluttet', async () => {
+    dbMod.getCacheEntry.mockResolvedValue(undefined);
+    bundleMod.refreshGameBundle.mockResolvedValue(FINISHED);
+    seedMod.seedGameScores.mockRejectedValue(new Error('offline'));
+    await expect(refreshFinishedRound('last')).resolves.toBeUndefined();
+
+    seedMod.seedGameScores.mockResolvedValue(54);
+    bundleMod.refreshGameBundle.mockResolvedValue(BUNDLE);
+    await refreshFinishedRound('last');
+    expect(dbMod.putCacheEntry).not.toHaveBeenCalled();
+  });
+
+  it('gir runden fra enheten bare når den er hentet komplett', async () => {
+    bundleMod.loadGameBundle.mockResolvedValue(FINISHED);
+    dbMod.listScoresForGame.mockResolvedValue(SCORES);
+
+    // Uten merket kan slagene på telefonen være bare dine egne.
+    dbMod.getCacheEntry.mockResolvedValue(undefined);
+    expect(await loadFinishedRound('last')).toBeNull();
+
+    dbMod.getCacheEntry.mockResolvedValue({ key: 'last-round:last', payload: '1', fetchedAt: 'x' });
+    expect(await loadFinishedRound('last')).toEqual({ bundle: FINISHED, scores: SCORES });
   });
 });

@@ -26,6 +26,8 @@ jest.mock('../data/homeList', () => ({
 jest.mock('../data/homeHero', () => ({
   loadCardBundle: jest.fn(async (gameId: string) => mockState.bundles[gameId] ?? null),
   refreshCardBundle: jest.fn(async () => undefined),
+  loadFinishedRound: jest.fn(async (gameId: string) => mockState.bundles[gameId] ?? null),
+  refreshFinishedRound: jest.fn(async () => undefined),
   fetchCardExtras: jest.fn(async () => ({})),
 }));
 jest.mock('../data/profile', () => ({
@@ -253,8 +255,8 @@ it('bruker aldri en bundel som hører til et annet spill enn helten', async () =
 });
 
 it('forrige runde viser poengene dine i stableford, regnet på enheten (Hjem v2)', async () => {
-  const { refreshCardBundle } = require('../data/homeHero') as {
-    refreshCardBundle: jest.Mock;
+  const { refreshFinishedRound } = require('../data/homeHero') as {
+    refreshFinishedRound: jest.Mock;
   };
   mockState.bundles = {
     new: HERO_BUNDLE,
@@ -270,7 +272,7 @@ it('forrige runde viser poengene dine i stableford, regnet på enheten (Hjem v2)
   await view;
 
   expect(await screen.findByText('2. plass av 8 · 36 poeng')).toBeTruthy();
-  expect(refreshCardBundle).toHaveBeenCalledWith('last', { withScores: true });
+  expect(refreshFinishedRound).toHaveBeenCalledWith('last');
 });
 
 it('forrige runde i wolf regner med valgene fra serveren, som tavla', async () => {
@@ -305,4 +307,25 @@ it('forrige runde i wolf regner med valgene fra serveren, som tavla', async () =
 
   expect(await screen.findByText(/^2\. plass av 8 · \d+ poeng$/)).toBeTruthy();
   expect(fetchCardExtras).toHaveBeenCalledWith('last', 'wolf');
+});
+
+it('forrige runde i slagspill henter ingenting ekstra og viser brutto', async () => {
+  const homeHero = require('../data/homeHero') as {
+    refreshFinishedRound: jest.Mock;
+    fetchCardExtras: jest.Mock;
+  };
+  homeHero.refreshFinishedRound.mockClear();
+  homeHero.fetchCardExtras.mockClear();
+  mockState.list = {
+    ...LIST,
+    cards: LIST.cards.map((card) =>
+      card.gameId === 'last' ? { ...card, gameMode: 'solo_strokeplay' } : card,
+    ),
+  };
+  const { view } = renderHome();
+  await view;
+
+  expect(await screen.findByText('2. plass av 8 · 88 brutto')).toBeTruthy();
+  expect(homeHero.refreshFinishedRound).not.toHaveBeenCalled();
+  expect(homeHero.fetchCardExtras).not.toHaveBeenCalled();
 });
