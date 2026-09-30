@@ -18,8 +18,9 @@
 //   er 72 pt med tonens flate og farge og uten kant (birdie grønn, par nøytral,
 //   bogey amber, dobbel og verre murstein), og før noen score står er par
 //   foreslått med skogkant. «Annet» har «8+ eller stryk» under. Nederst putte-
-//   valget (av: «Registrer putter»; på: designets runde chips, eierens svar B)
-//   og «Neste: fornavn →».
+//   valget og «Neste: fornavn →». Putter er noe man slår på («Registrer
+//   putter», eierens ord i #2000: putter-delen tok for stor plass når den
+//   alltid sto); står det på, er raden designets: «Putter 1 · 2 · 3+».
 // - **Sollys** (`Hull-sollys`): bare knappene, 84 pt med svart kant under en
 //   svart strek på 3, og bare navnet på resultatet. Par foreslås som svart
 //   flate. Ingen overskrift og ingen nederste rad.
@@ -117,9 +118,13 @@ export const PUTTS_LABEL = 'Putter';
 
 /** `scores.putts` har CHECK (0..10) fra migrasjon 0123. */
 const MAX_PUTTS = 10;
-/** Chipene 0–4 er det vanlige. «5+» åpner en stepper for 5..10. */
-const CHIP_VALUES = [0, 1, 2, 3, 4] as const;
-const PLUS_THRESHOLD = 5;
+/**
+ * Designets chips (#2385): «1», «2» og «3+». «3+» velger 3 og åpner en stepper
+ * som går fra 0 til 10, så også en chip-in (0 putter) kan føres.
+ */
+const CHIP_VALUES = [1, 2] as const;
+const PLUS_START = 3;
+const MIN_PUTTS = 0;
 
 function termText(option: RailOption, par: number): string {
   return option.term === 'over' ? `+${option.strokes - par}` : TERM_LABELS[option.term];
@@ -412,8 +417,9 @@ export function ScoreRail({
 }
 
 /**
- * Putter med ett trykk, som webbens `PuttsChips`: 0–4 som chips, og «5+»
- * åpner en liten stepper for 5..10.
+ * Putter med ett trykk, som designet: «1» og «2» som chips, og «3+» velger 3
+ * og åpner en liten stepper for 0..10. Står det 0 eller 3 og mer, står
+ * stepperen fremme.
  */
 function PuttsChips({
   value,
@@ -425,9 +431,10 @@ function PuttsChips({
   onSelect: (putts: number) => void;
 }) {
   const { colors, hole } = useTheme();
-  const [plusOpen, setPlusOpen] = useState(value != null && value >= PLUS_THRESHOLD);
-  const showStepper = plusOpen || (value != null && value >= PLUS_THRESHOLD);
-  const stepperValue = value != null && value >= PLUS_THRESHOLD ? value : PLUS_THRESHOLD;
+  const outsideChips = value != null && (value < CHIP_VALUES[0] || value >= PLUS_START);
+  const [plusOpen, setPlusOpen] = useState(outsideChips);
+  const showStepper = plusOpen || outsideChips;
+  const stepperValue = value ?? PLUS_START;
 
   // Designets chips: fylt skog når de er valgt, ellers hvite med tynn kant.
   const chip = (selected: boolean) => [
@@ -461,13 +468,16 @@ function PuttsChips({
       ))}
       {!showStepper ? (
         <Pressable
-          onPress={() => setPlusOpen(true)}
+          onPress={() => {
+            setPlusOpen(true);
+            onSelect(PLUS_START);
+          }}
           style={chip(false)}
           testID="rail-putts-plus"
           accessibilityRole="button"
-          accessibilityLabel={`Fem eller flere putter på ${name}`}
+          accessibilityLabel={`Tre eller flere putter på ${name}`}
         >
-          <Text style={chipText(false)}>5+</Text>
+          <Text style={chipText(false)}>{`${PLUS_START}+`}</Text>
         </Pressable>
       ) : (
         <View
@@ -475,11 +485,12 @@ function PuttsChips({
             styles.chipStepper,
             { borderColor: colors.border, borderWidth: hole.borderW, backgroundColor: colors.surface },
           ]}
+          testID="rail-putts-stepper"
         >
           <Pressable
-            onPress={() => onSelect(Math.max(PLUS_THRESHOLD, stepperValue - 1))}
-            disabled={stepperValue <= PLUS_THRESHOLD}
-            style={[styles.chipStep, stepperValue <= PLUS_THRESHOLD && styles.dimmed]}
+            onPress={() => onSelect(Math.max(MIN_PUTTS, stepperValue - 1))}
+            disabled={stepperValue <= MIN_PUTTS}
+            style={[styles.chipStep, stepperValue <= MIN_PUTTS && styles.dimmed]}
             testID="rail-putts-minus"
             accessibilityRole="button"
             accessibilityLabel={`Færre putter på ${name}`}
