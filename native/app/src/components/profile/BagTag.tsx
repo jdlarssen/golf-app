@@ -271,11 +271,17 @@ const SIDE_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 };
 const RING = 54;
 /**
  * Linjehøyden til det store handicaptallet (64 pt i Fraunces). iOS legger
- * luften over sifrene; 68 gir de 10 pt designet har mellom «HANDICAP» og
+ * luften over sifrene; 68 gir de 7 pt designet har mellom «HANDICAP» og
  * toppen av sifrene. Under skriftstørrelsen tegner iOS sifrene opp over
  * etiketten.
  */
 const HCP_LINE = 68;
+/**
+ * Designets linjehøyde (0,95) lar kommaet stikke ut under boksen; iOS gir
+ * plass til hele. Så mye trekkes fra under tallet, så raden, og kurven og
+ * linja som står nederst i den, får designets høyde (målt i simulatoren).
+ */
+const HCP_OVERHANG = 7;
 
 const styles = StyleSheet.create({
   card: {
@@ -337,11 +343,14 @@ const styles = StyleSheet.create({
   hcpValue: {
     fontSize: 64,
     lineHeight: HCP_LINE,
+    marginBottom: -HCP_OVERHANG,
     fontFamily: FONTS.serifScore,
-    letterSpacing: -1.28,
+    // Designet er 64 pt Fraunces med optisk størrelse, som er smalere enn
+    // appens faste snitt. Tettere sperring gir samme bredde på «14,2».
+    letterSpacing: -3.2,
   },
   // Samme høyde som etikett + tall, så kortet står stille mens raden lastes.
-  hcpPlaceholder: { height: 12 + HCP_LINE },
+  hcpPlaceholder: { height: 12 + HCP_LINE - HCP_OVERHANG },
   ring: {
     width: RING,
     height: RING,

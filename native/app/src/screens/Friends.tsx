@@ -289,16 +289,15 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
             >
               {selfInitials ? (
                 // Kremen er 30 pt; ringen i kortets farge ligger utenfor den,
-                // som designets `box-shadow`, og synes ikke.
-                <View
-                  style={[
-                    styles.heroSelf,
-                    { backgroundColor: colors.onStrongWarm, borderColor: colors.surfaceStrong },
-                  ]}
-                >
-                  <Text style={[styles.heroAvatarText, { color: colors.surfaceStrong }]}>
-                    {selfInitials}
-                  </Text>
+                // som designets `box-shadow`, og synes ikke. Ringen er en egen
+                // flate bak kremen: med `border` tegner iOS kremen under
+                // kanten, og den lyser gjennom som en tynn ring.
+                <View style={[styles.heroSelfRing, { backgroundColor: colors.surfaceStrong }]}>
+                  <View style={[styles.heroSelf, { backgroundColor: colors.onStrongWarm }]}>
+                    <Text style={[styles.heroAvatarText, { color: colors.surfaceStrong }]}>
+                      {selfInitials}
+                    </Text>
+                  </View>
                 </View>
               ) : null}
               <View style={[styles.heroPlus, selfInitials ? styles.heroPlusOverlap : null]}>
@@ -816,12 +815,18 @@ const styles = StyleSheet.create({
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroAvatars: { flexDirection: 'row' },
   // Ringen ligger utenfor de 30 pt, så boksen tar ikke mer plass enn kremen.
-  heroSelf: {
+  heroSelfRing: {
     width: HERO_AVATAR + HERO_RING * 2,
     height: HERO_AVATAR + HERO_RING * 2,
     borderRadius: HERO_AVATAR / 2 + HERO_RING,
-    borderWidth: HERO_RING,
     margin: -HERO_RING,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroSelf: {
+    width: HERO_AVATAR,
+    height: HERO_AVATAR,
+    borderRadius: HERO_AVATAR / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
