@@ -85,6 +85,13 @@ describe('ninesHoleCards', () => {
       ['kari', true],
       ['ola', false],
     ]);
+    // Plass 1, 2, 3: bare plass 1 leder, ikke nummer to.
+    const spread = ninesHoleCards(result([playedHole([cell('per', 6), cell('ola', 4), cell('kari', 5)])]));
+    expect(spread.holes[0]!.rows.map((r) => [r.placement, r.isLeader])).toEqual([
+      [1, true],
+      [2, false],
+      [3, false],
+    ]);
   });
 
   it('et hull som venter: ingen pott, ingen plass og ingen leder, bare stillingen', () => {
