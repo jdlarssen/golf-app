@@ -18,7 +18,7 @@ import {
   createNativeStackNavigator,
   type NativeStackScreenProps,
 } from '@react-navigation/native-stack';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import Constants from 'expo-constants';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
@@ -276,19 +276,10 @@ function kickerHeader(kicker: string, title: string) {
 }
 
 function KickerTitle({ label }: { label: string }) {
-  const { colors } = useTheme();
+  const { ui } = useTheme();
   return (
-    <Text accessibilityRole="header" style={[styles.kickerTitle, { color: colors.muted }]}>
+    <Text accessibilityRole="header" style={ui.kicker}>
       {label}
     </Text>
   );
 }
-
-const styles = StyleSheet.create({
-  kickerTitle: {
-    fontSize: 10,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-});

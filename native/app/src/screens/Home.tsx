@@ -64,7 +64,7 @@ import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, TAP, useTheme } from '../theme';
+import { FONTS, useTheme } from '../theme';
 
 export function Home({ navigation }: ScreenProps<'Home'>) {
   const { colors, ui } = useTheme();
@@ -368,6 +368,7 @@ function Top({
         {hcp !== null ? (
           <Pressable
             onPress={onHcp}
+            hitSlop={HCP_SLOP}
             accessibilityRole="button"
             accessibilityLabel={hcpA11yLabel(hcp)}
             style={[
@@ -445,8 +446,11 @@ function Section({
 /** Tekstene står 20 pt inn, kortene 16 (designet): 4 pt ekstra på tekstene. */
 const TEXT_INSET = 4;
 
-/** «Profil» er rundt 16 pt høy og 35 bred; slakken gir minst 44 pt å treffe på. */
-const PROFILE_SLOP = { top: 14, bottom: 14, left: 12, right: 12 };
+/** «Profil» er rundt 15 pt høy og 35 bred; slakken gir minst 44 pt å treffe på. */
+const PROFILE_SLOP = { top: 15, bottom: 15, left: 12, right: 12 };
+
+/** HCP-pillen er rundt 34 pt høy; slakken gir 44 pt å treffe på. */
+const HCP_SLOP = { top: 5, bottom: 5, left: 5, right: 5 };
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
@@ -458,14 +462,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dateLine: { flexShrink: 1, fontSize: 12, fontFamily: FONTS.sans },
-  profileLink: { fontSize: 13, fontFamily: FONTS.sansMedium },
+  // Samme høyde som datoen, så lenka ikke gjør datolinja høyere.
+  profileLink: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
   greeting: { flexShrink: 1, fontSize: 28, fontFamily: FONTS.serifDisplay, marginTop: 2 },
+  // Ikke høyere enn hilsenlinja (rundt 34 pt), så raden ikke skyver hilsenen
+  // ned og datoen står tett over den som i designet; `hitSlop` gir 44 pt å
+  // treffe på.
   hcpPill: {
-    minHeight: TAP,
     justifyContent: 'center',
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   hcpInner: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   hcpLabel: {
