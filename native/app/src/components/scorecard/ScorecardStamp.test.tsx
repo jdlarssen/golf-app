@@ -21,6 +21,7 @@ describe('stampCopy', () => {
   it('dato, klokkeslett og «Signert av deg» med eierens navn', () => {
     expect(stampCopy(BASE, 'Kari Nordmann')).toEqual({
       signedAt: '27. september 2026 · 12:32',
+      stampDate: '27.09 · 12:32',
       signedBy: 'Signert av deg, Kari Nordmann',
       approval: null,
       lock: 'Arrangøren låser resultatet når alle har levert',

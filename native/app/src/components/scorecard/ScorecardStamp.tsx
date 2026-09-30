@@ -7,24 +7,28 @@
 // animasjon. Hvilke linjer som vises, avgjør den delte
 // `resolveScorecardStamp`; her blir de bare tekst.
 //
-// #2385 (designlerretet): stempelet er rundt, med dobbel ring, «TØRNY» langs
-// den øvre buen, «SIGNERT» i midten og datoen under (#2262-formen, på to
-// linjer). «Signert av deg, …» er første linje i sjekklista under, som i
+// #2385 (designlerretet): stempelet er rundt og 112 pt, med dobbel ring,
+// «TØRNY» langs den øvre buen, «SIGNERT» i midten og datoen under i designets
+// korte form («27.09 · 14:32», den delte `formatStampDate`). Skjermleseren
+// får den lange formen («27. september 2026 kl. 14:32»). «Signert av deg, …» er første linje i sjekklista under, som i
 // designet (orkestratorens svar A). Sjekklista står til venstre: et steg som
 // er gjort, har en blekgrønn skive med hake; et steg som gjenstår (godkjenning
 // som venter, resultatet som ikke er låst ennå), har en stiplet sirkel.
 // Merkene er dekor: teksten sier det samme til skjermleseren.
 import { StyleSheet, Text, View } from 'react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
-import { formatSignedAt } from '../../lib/display';
+import { formatSignedAt, formatStampDateLocal } from '../../lib/display';
 import { FONTS, useTheme } from '../../theme';
 import { HakeIcon, StampRing } from '../icons/Icons';
 
-/** Stempelets diameter: den lange datoen (#2262) får plass i sirkelen. */
-const STAMP = 136;
+/** Stempelets diameter, som i designet. */
+const STAMP = 112;
 
 export interface StampCopy {
+  /** Den lange formen, til skjermleseren. */
   signedAt: string | null;
+  /** Den korte formen i stempelet. */
+  stampDate: string | null;
   signedBy: string;
   approval: string | null;
   lock: string;
@@ -58,6 +62,7 @@ export function stampCopy(stamp: Stamp, ownerFullName: string | null): StampCopy
 
   return {
     signedAt: formatSignedAt(stamp.signedAt),
+    stampDate: formatStampDateLocal(stamp.signedAt),
     signedBy,
     approval,
     lock: stamp.locked
@@ -76,7 +81,6 @@ export function ScorecardStamp({
   const { colors, ui } = useTheme();
   const copy = stampCopy(stamp, ownerFullName);
   const ink = { color: colors.primary };
-  const [date, time] = copy.signedAt ? copy.signedAt.split(' · ') : [null, null];
 
   return (
     <View style={styles.wrap} testID="scorecard-stamp-section">
@@ -91,8 +95,11 @@ export function ScorecardStamp({
         <StampRing size={STAMP} color={colors.primary} kicker="TØRNY" fontFamily={FONTS.sansSemiBold} />
         <View style={styles.stampText}>
           <Text style={[styles.signed, ink]}>SIGNERT</Text>
-          {date ? <Text style={[styles.date, ui.num, ink]}>{date}</Text> : null}
-          {time ? <Text style={[styles.date, ui.num, ink]}>{time}</Text> : null}
+          {copy.stampDate ? (
+            <Text style={[styles.date, ui.num, ink]} testID="scorecard-stamp-date">
+              {copy.stampDate}
+            </Text>
+          ) : null}
         </View>
       </View>
       <View style={styles.checklist}>
@@ -142,7 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     transform: [{ rotate: '-2deg' }],
   },
-  stampText: { position: 'absolute', alignItems: 'center', paddingTop: 10 },
+  stampText: { position: 'absolute', alignItems: 'center', paddingTop: 8 },
   signed: { fontSize: 20, lineHeight: 24, fontFamily: FONTS.serifScore, letterSpacing: 1.2 },
   date: { fontSize: 10, lineHeight: 13, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
   checklist: { alignSelf: 'stretch', gap: 8, marginTop: 8 },

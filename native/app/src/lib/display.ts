@@ -3,6 +3,7 @@
 // Ingen i18n i appen ennå (N8 eier paritet med webbens no/en) — spike-copyen er
 // norsk og bor rett i skjermene. Dette er bare formatering.
 import { firstName } from '../../../../lib/firstName';
+import { formatStampDate } from '../../../../lib/scorecard/scorecardStamp';
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
 
 /** Badge-teksten for et aktivt spill på hjem-kortet. */
@@ -102,8 +103,9 @@ const MONTHS = [
 ] as const;
 
 /**
- * Når et scorekort ble signert, som «27. september 2026 · 14:32» — datoen i
- * stempelet på et levert kort (#2262).
+ * Når et scorekort ble signert, som «27. september 2026 · 14:32» — det
+ * skjermleseren leser om stempelet på et levert kort (#2262). Stempelet selv
+ * viser den korte formen, {@link formatStampDateLocal}.
  *
  * Enhetens egne gettere og månedsnavn skrevet ut her, samme valg og samme
  * grunn som {@link formatClock}: Hermes har ikke ICU-tidssonene, så `Intl` er
@@ -115,4 +117,22 @@ export function formatSignedAt(iso: string): string | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   return `${date.getDate()}. ${MONTHS[date.getMonth()]} ${date.getFullYear()} · ${formatClock(iso)}`;
+}
+
+/**
+ * Datoen i stempelet, som «27.09 · 14:32» (#2385, designlerretet): den delte
+ * `formatStampDate` med dag, måned og klokkeslett fra enhetens egne gettere,
+ * samme grunn som {@link formatClock}.
+ *
+ * @returns teksten, eller `null` for en ulesbar verdi.
+ */
+export function formatStampDateLocal(iso: string): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return formatStampDate({
+    day: date.getDate(),
+    month: date.getMonth() + 1,
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+  });
 }
