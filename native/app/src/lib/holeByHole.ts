@@ -108,10 +108,12 @@ export function holeByHoleKind(
  * `choicesNotYetHere` (samme regel som tavla); her står bare hvilken
  * `game_mode` visningen hører til.
  */
-export function waitsForChoices(kind: HoleByHoleKind | null, extras: ScoringExtras): boolean {
-  if (kind === 'wolf') return choicesNotYetHere('wolf', extras);
-  if (kind === 'bingo-bango-bongo') return choicesNotYetHere('bingo_bango_bongo', extras);
-  return false;
+export function waitsForChoices(
+  game: Pick<BundleGame, 'gameMode' | 'modeConfig'>,
+  extras: ScoringExtras,
+): boolean {
+  // Hvilke formater som trenger valg, vet bare `choiceSource.ts`.
+  return holeByHoleKind(game) !== null && choicesNotYetHere(game.gameMode, extras);
 }
 
 /**

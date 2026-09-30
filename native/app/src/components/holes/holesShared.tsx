@@ -10,11 +10,15 @@ import type { BundlePlayer } from '../../data/gameBundle';
 import { HOLES_TEXT, holeNumberLabel, parSiChip } from '../../lib/holesCopy';
 import { FONTS, useTheme } from '../../theme';
 
-/** Navnet slik webben skriver det: «Ola "Kompis" N.», med webbens reserve. */
+/**
+ * Navnet slik webben skriver det: «Ola "Kompis" N.», med webbens reserve.
+ * Uten navn (en slettet bruker står i bundelen med `name: null`) får spilleren
+ * samme reserve som webben gir en spiller den ikke har i `playersById`.
+ */
 export function nameOf(players: readonly BundlePlayer[], userId: string, fallback: string): string {
   const player = players.find((p) => p.userId === userId);
-  if (!player) return fallback;
-  return formatRevealName(player.name ?? HOLES_TEXT.unknownPlayer, player.nickname);
+  if (!player || player.name == null) return fallback;
+  return formatRevealName(player.name, player.nickname);
 }
 
 /**

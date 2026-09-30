@@ -28,7 +28,7 @@ import { WolfHoleCardsView } from '../components/holes/WolfHoleCardsView';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
-import { buildHoleByHole, holeByHoleKind, waitsForChoices } from '../lib/holeByHole';
+import { buildHoleByHole, waitsForChoices } from '../lib/holeByHole';
 import { HOLES_TEXT } from '../lib/holesCopy';
 import { CHOICES_MISSING_HOLES_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import type { ScoringExtras } from '../lib/scoringContext';
@@ -72,7 +72,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
       });
   }, [gameId, reload]);
 
-  const needsChoices = bundle != null && waitsForChoices(holeByHoleKind(bundle.game), extras);
+  const needsChoices = bundle != null && waitsForChoices(bundle.game, extras);
   const waiting =
     !bundle || (seed === 'loading' && scores.length === 0) || (needsChoices && !choicesFailed);
   if (waiting) {

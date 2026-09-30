@@ -434,7 +434,8 @@ describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
     // Anne tok to av tre: stjerna er dekor for skjermleseren (webbens aria-hidden),
     // navnet i gull tekst. Cato fikk én og står uten.
     expect(screen.queryByTestId('hole-by-hole-star-1-bingo')).toBeNull();
-    expect(screen.getByTestId('hole-by-hole-star-1-bingo', HIDDEN)).toHaveStyle({ color: PALETTES.light.accent });
+    // Webbens feier-stjerne arver navnets `text-accent-text` (ingen egen farge).
+    expect(screen.getByTestId('hole-by-hole-star-1-bingo', HIDDEN)).toHaveStyle({ color: PALETTES.light.accentText });
     expect(screen.queryByTestId('hole-by-hole-star-1-bango', HIDDEN)).toBeNull();
     for (const anne of screen.getAllByText('Anne')) {
       expect(anne).toHaveStyle({ color: PALETTES.light.accentText });
