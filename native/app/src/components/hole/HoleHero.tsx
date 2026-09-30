@@ -12,7 +12,7 @@
 // senere, og ingen lengde). Pokalen og sollys-bryteren står i toppen
 // (`Hole.tsx`). Størrelsen på nummeret er temaets (`hole.numberSize`).
 import { StyleSheet, Text, View } from 'react-native';
-import { FONTS, frauncesLine, useTheme } from '../../theme';
+import { FONTS, frauncesLine, interLine, useTheme } from '../../theme';
 
 export type HoleHeroProps = {
   holeNumber: number;
@@ -92,7 +92,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   rowNormal: { paddingTop: 10, paddingHorizontal: 20, paddingBottom: 16 },
   rowSun: { paddingTop: 8, paddingHorizontal: 20, paddingBottom: 18 },
-  kicker: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 2 },
+  // Nettleserens `normal` for Inter på 10 pt er 12 (se `interLine`).
+  kicker: { ...interLine(10, 12), fontFamily: FONTS.sansSemiBold, letterSpacing: 2 },
   kickerSun: { fontSize: 13, fontFamily: FONTS.sansBold, letterSpacing: 2.08 },
   numberGroup: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   // Designet bruker proporsjonale tall i «av 18» og «Indeks 11».

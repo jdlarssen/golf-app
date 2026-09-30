@@ -365,5 +365,5 @@ const styles = StyleSheet.create({
   ringOverlay: { position: 'absolute', top: 0, left: 0 },
   ring: { position: 'absolute', borderWidth: SHAPE_STROKE },
   shapeNumber: { fontFamily: FONTS.serifScore },
-  unset: { fontSize: 20, fontFamily: FONTS.serifRegular },
+  unset: { fontSize: 20, fontFamily: FONTS.serifDisplay },
 });

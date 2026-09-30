@@ -11,6 +11,7 @@ import * as theme from './theme';
 import {
   FONTS,
   frauncesLine,
+  interLine,
   PALETTES,
   SUNLIGHT_THEME,
   ThemeScope,
@@ -123,22 +124,26 @@ describe('withAlpha', () => {
 
 describe('frauncesLine', () => {
   // Nettleserens linjeboks: halve forskjellen mot Fraunces sin egen høyde
-  // (1,233) over og under. Hullnummeret i `Main` er 96 med linje 0,9.
+  // (1,233, rundet opp til hel piksel slik iOS gjør) over og under.
+  // Hullnummeret i `Main` er 96 med linje 0,9; 3x som på iPhone.
   it.each([
-    [96, 86.4, -16],
+    [96, 86.4, -16.13],
     [30, 30, -3.5],
-    [132, 112.2, -25.3],
+    [132, 112.2, -25.4],
   ])('%s pt i en linje på %s gir marg %s', (size, line, margin) => {
-    const box = frauncesLine(size, line);
+    const box = frauncesLine(size, line, 3);
     expect(box.fontSize).toBe(size);
-    expect(box.marginVertical).toBeCloseTo(margin, 1);
+    expect(box.marginVertical).toBeCloseTo(margin, 2);
+  });
+
+  it('Inter på 10 pt får nettleserens 12 i stedet for iOS sin 12,333', () => {
+    expect(interLine(10, 12, 3).marginVertical).toBeCloseTo(-0.167, 2);
   });
 });
 
 describe('FONTS', () => {
   it('names the loaded faces', () => {
     expect(FONTS).toEqual({
-      serifRegular: 'Fraunces_400Regular',
       holeNumber: 'FrauncesHole96',
       holeNumberSun: 'FrauncesHole132',
       serifDisplay: 'Fraunces_500Medium',

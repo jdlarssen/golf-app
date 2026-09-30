@@ -9,7 +9,7 @@
 // Mønsteret alle flatene følger: layout i et statisk `StyleSheet.create`-ark,
 // farger inline fra `colors`/`ui`. Aldri hardkodede farger eller fonter.
 import { createContext, createElement, useContext, type ReactNode } from 'react';
-import { StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
+import { PixelRatio, StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
 export const TAP = 44;
@@ -169,11 +169,6 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
 };
 
 /**
- * Familienavn per snitt (expo-font registrerer én familie per vekt —
- * `fontWeight` velger IKKE snitt for custom-fonter, bruk disse).
- * Vektskalaen speiler webbens (`--fw-*` i globals.css).
- */
-/**
  * Fraunces sin egen linjehøyde, i skriftstørrelser: (ascent 1956 + descent 510)
  * / 2000 fra `hhea`, lik i alle snittene appen har (pakkens og hullnummerets).
  */
@@ -185,15 +180,40 @@ export const FRAUNCES_LINE = 1.233;
  * mellom linjehøyden og skriftens egen høyde over og under glyfen. iOS gjør
  * det ikke: med `lineHeight` under skriftens høyde havner glyfen høyere, og
  * under skriftstørrelsen krymper den i tillegg (målt i simulatoren). Her står
- * teksten i sin egen høyde, og marger trekker den inn til linjeboksen.
+ * teksten i sin egen høyde, og marger trekker den inn til linjeboksen. iOS
+ * runder tekstens høyde opp til hel piksel (96 pt blir 118,667, ikke 118,368),
+ * så marginene regnes av den rundede høyden.
+ *
+ * Regnet og målt for iOS. Android legger til `includeFontPadding` og bruker
+ * skriftens win-mål (1,47), så en Android-versjon må måles for seg.
  */
-export function frauncesLine(size: number, lineHeight: number) {
-  return { fontSize: size, marginVertical: (lineHeight - size * FRAUNCES_LINE) / 2 };
+export function frauncesLine(size: number, lineHeight: number, pixelRatio = PixelRatio.get()) {
+  return textLine(size, lineHeight, FRAUNCES_LINE, pixelRatio);
 }
 
+/** Inter sin egen linjehøyde: (ascent 1984 + descent 494) / 2048 fra `hhea`. */
+export const INTER_LINE = 1.2099609375;
+
+/**
+ * Samme linjeboks for Inter. Nettleserens `normal` for Inter på 10 pt er 12
+ * (den runder ascent og descent hver for seg), mens iOS legger teksten ut på
+ * 12,333 (#2385: «HULL» over hullnummeret).
+ */
+export function interLine(size: number, lineHeight: number, pixelRatio = PixelRatio.get()) {
+  return textLine(size, lineHeight, INTER_LINE, pixelRatio);
+}
+
+function textLine(size: number, lineHeight: number, naturalLine: number, pixelRatio: number) {
+  const natural = Math.ceil(size * naturalLine * pixelRatio) / pixelRatio;
+  return { fontSize: size, marginVertical: (lineHeight - natural) / 2 };
+}
+
+/**
+ * Familienavn per snitt (expo-font registrerer én familie per vekt —
+ * `fontWeight` velger IKKE snitt for custom-fonter, bruk disse).
+ * Vektskalaen speiler webbens (`--fw-*` i globals.css).
+ */
 export const FONTS = {
-  /** Små tall i Fraunces uten vekt (#2385: hullstripa, «?» og «–» på hullsiden). */
-  serifRegular: 'Fraunces_400Regular',
   /**
    * Hullnummeret (#2385): Fraunces tegnet for 96 og 132 pt, som nettleseren
    * gjør det. Bare sifre (`assets/fonts/README.md`).

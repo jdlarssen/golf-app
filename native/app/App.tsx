@@ -26,9 +26,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 // Per-vekt-subpath, ikke pakke-rota: index-fila require-er ALLE snitt og
-// kursiver (~15 MB TTF-er inn i bundelen). Kun de sju vi bruker skal med,
+// kursiver (~15 MB TTF-er inn i bundelen). Kun de seks vi bruker skal med,
 // pluss to små snitt med bare sifre for hullnummeret (`assets/fonts`, #2385).
-import { Fraunces_400Regular } from '@expo-google-fonts/fraunces/400Regular';
 import { Fraunces_500Medium } from '@expo-google-fonts/fraunces/500Medium';
 import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
@@ -64,7 +63,6 @@ export default function App() {
     FrauncesHole96: require('./assets/fonts/FrauncesHole96.ttf'),
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- font-fil, se over
     FrauncesHole132: require('./assets/fonts/FrauncesHole132.ttf'),
-    Fraunces_400Regular,
     Fraunces_500Medium,
     Fraunces_600SemiBold,
     Inter_400Regular,

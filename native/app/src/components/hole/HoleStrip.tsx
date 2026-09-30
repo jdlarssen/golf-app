@@ -95,6 +95,9 @@ export function HoleStrip({
       {halves > 1 ? (
         <Pressable
           onPress={() => setHalf(half === 0 ? 1 : 0)}
+          // Brikka er smal i designet; trykkflaten går ut til hull 9 og til
+          // kanten av skjermen.
+          hitSlop={{ left: 6, right: 16 }}
           style={styles.chip}
           testID="hole-strip-other-half"
           accessibilityRole="button"
@@ -121,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  number: { fontSize: 14, fontFamily: FONTS.serifRegular },
+  number: { fontSize: 14, fontFamily: FONTS.serifDisplay },
   chip: { minHeight: TAP, marginLeft: 2, justifyContent: 'center' },
   chipText: { fontSize: 11, fontFamily: FONTS.sans },
 });
