@@ -106,6 +106,8 @@ function Tile({
   );
 }
 
+const VALUE = fraunces(600, 28, 28);
+
 const styles = StyleSheet.create({
   // Designet: 28 pt under bag-taggen, så skyggen legger seg over toppen.
   row: { flexDirection: 'row', gap: 10, marginTop: 28 },
@@ -117,14 +119,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 4,
   },
-  // Designet har linjehøyde 1 (28 pt). iOS legger sifrene 3 pt for høyt i
-  // en så trang linje, så linja er 3 pt høyere, og de 3 gis tilbake under
-  // (målt i simulatoren). Flisa er like høy.
+  // Designet har linjehøyde 1 (28 pt), med nettleserens linjeboks (#2385).
+  // En tom flis (mens sesongen lastes) holder linja: tekstens egen høyde, så
+  // margene gir 28.
   value: {
-    ...fraunces(600, 28),
-    lineHeight: 31,
-    minHeight: 31,
-    marginBottom: -3,
+    ...VALUE,
+    minHeight: 28 - 2 * VALUE.marginVertical,
     fontVariant: ['tabular-nums'],
   },
   label: { fontSize: 12, lineHeight: 15, fontFamily: FONTS.sans },

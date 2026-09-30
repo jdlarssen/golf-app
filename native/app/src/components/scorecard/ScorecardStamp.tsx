@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
     maxWidth: STAMP - 24,
   },
-  signed: { ...fraunces(600, 20), lineHeight: 25, letterSpacing: 1.2 },
+  signed: { ...fraunces(600, 20, 25), letterSpacing: 1.2 },
   date: { fontSize: 10, lineHeight: 12, fontFamily: FONTS.sansSemiBold, textAlign: 'center' },
   // Designet: 30 pt under kortet (stempelet stikker 34 ned) og 16 pt fra kanten.
   checklist: { gap: 8, marginTop: 22, marginHorizontal: -4 },
