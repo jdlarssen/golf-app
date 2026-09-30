@@ -117,6 +117,16 @@ export const DokumentIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/**
+ * Tavla: flisa på startbilletten (#2255), designets beger (skål, stett og fot),
+ * ikke webbens pokal med ører. Pokalen står fortsatt på Hjem.
+ */
+export const BegerIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z" />
+  </LineIcon>
+);
+
 /** Regler: flisa på startbilletten (#2255), tegnet etter designet. */
 export const InfoIcon = (props: IconProps) => (
   <LineIcon {...props}>

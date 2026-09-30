@@ -182,9 +182,10 @@ function ActiveStub({
   const share = stub.total > 0 ? Math.min(1, stub.played / stub.total) : 0;
 
   return (
-    <View style={styles.block}>
+    <View style={[styles.block, styles.progress]}>
       <View style={styles.playedRow}>
-        <Text style={[styles.played, ui.num, { color: colors.muted }]} testID="ticket-played">
+        {/* Vanlige tall, som i designet: tabellsiffer er for talloner (DESIGN.md). */}
+        <Text style={[styles.played, { color: colors.muted }]} testID="ticket-played">
           {playedLine(stub.played, stub.total)}
         </Text>
         {runningTotal ? (
@@ -202,7 +203,12 @@ function ActiveStub({
       >
         <View style={[styles.fill, { width: `${share * 100}%`, backgroundColor: colors.primary }]} />
       </View>
-      <Pressable accessibilityRole="button" style={[ui.button, styles.cta]} onPress={onPress} testID="primary-cta">
+      <Pressable
+        accessibilityRole="button"
+        style={[ui.button, styles.cta, styles.progressCta]}
+        onPress={onPress}
+        testID="primary-cta"
+      >
         <Text style={ui.buttonText}>{label}</Text>
       </Pressable>
     </View>
@@ -347,13 +353,20 @@ function WithdrawnStub({
 
 const styles = StyleSheet.create({
   block: { gap: 8 },
+  /**
+   * Fremdriften mens runden pågår, som i designet: 12 pt mellom teksten,
+   * linja og knappen, og 4 pt ekstra over knappen (16 pt fra linja).
+   */
+  progress: { gap: 12 },
+  progressCta: { marginTop: 4 },
   /** Brødtekst i stubben: 13 pt i muted, som i designet. */
   text: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans },
   registered: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   result: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   /** Hovedknappen i billetten er høyere enn appens 44 pt, som i designet. */
   cta: { minHeight: 52 },
-  playedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  // Teksten og poengene midtstilt mot hverandre, som i designet (`align-items: center`).
+  playedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   played: { flexShrink: 1, fontSize: 13, fontFamily: FONTS.sans },
   total: { fontSize: 16, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   actions: { gap: 6 },

@@ -19,7 +19,7 @@
 //
 // #2255: siden er én startbillett. Rekkefølgen er:
 //  1. synk-banneret og banneret for avvist kort,
-//  2. billetten (hode, felt, faktalinje, avatarrad) med stubben,
+//  2. billetten (hode, felt, avatarrad) med stubben,
 //  3. flisene Tavla, Scorekort og Regler når runden pågår eller er avsluttet,
 //     og «Godkjenn (n)»,
 //  4. spillerlista, bare når runden er planlagt eller et utkast,
@@ -60,7 +60,6 @@ import {
   calendarEvent,
   slotField,
   startField,
-  ticketFacts,
   ticketHeaderLine,
   ticketSlot,
   ticketStrokes,
@@ -166,7 +165,9 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   }, []);
 
   // Del-knappen øverst til høyre (eierens svar b): bare når arrangøren har
-  // slått på live-følging, og da deler den webbens «følg live»-lenke.
+  // slått på live-følging, og da deler den webbens «følg live»-lenke. Den
+  // felles toppen (#2403) setter den i høyre-plassen sin, 8 pt fra kanten og
+  // uten boble, som i designet.
   const liveToken = bundle?.game.spectateToken ?? null;
   const shareToken = canShareLiveFollow(liveToken) ? liveToken : null;
   useLayoutEffect(() => {
@@ -263,7 +264,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const showRoster = game.status === 'scheduled' || game.status === 'draft';
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={ui.scroll} testID="game-home-screen">
+    <ScrollView ref={scrollRef} contentContainerStyle={[ui.scroll, styles.scroll]} testID="game-home-screen">
       {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
       <SyncBanner gameId={gameId} />
 
@@ -285,7 +286,6 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         headerLine={ticketHeaderLine(bundle)}
         statusLabel={STATUS_LABELS[game.status as GameStatus] ?? game.status}
         fields={fields}
-        facts={ticketFacts(bundle, me?.player)}
         roster={me ? { players: bundle.players, userId, flightNumber: me.player.flightNumber } : null}
       >
         <TicketStub
@@ -464,6 +464,11 @@ export function RosterRow({
 
 const styles = StyleSheet.create({
   headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  /**
+   * Designets marger: 16 pt fra kantene, og billetten 8 pt under toppen. Den
+   * felles toppen (#2403) er designets rad (8 + 44 pt).
+   */
+  scroll: { paddingHorizontal: 16, paddingTop: 8 },
   rosterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

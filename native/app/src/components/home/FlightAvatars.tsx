@@ -42,6 +42,10 @@ export function FlightAvatars({
   testID?: string;
 }) {
   const { colors, scheme } = useTheme();
+  // Dine initialer: krem på skog, som billetten og Hjem på designlerretet.
+  // I mørk drakt er skiva salvie, og der står mørkt blekk (krem ville gitt
+  // om lag 2:1 i kontrast).
+  const selfInk = scheme === 'dark' ? colors.onPrimary : colors.onStrong;
   const companions = companionsOf(players, userId, flightNumber);
   if (companions.length === 0) return null;
 
@@ -68,7 +72,7 @@ export function FlightAvatars({
           style={[styles.disc, size, { backgroundColor: self ? colors.primary : otherFill }]}
           testID={self ? `${testID}-self` : `${testID}-disc`}
         >
-          <Text style={[initials, { color: self ? colors.onPrimary : colors.primary }]}>
+          <Text style={[initials, { color: self ? selfInk : colors.primary }]}>
             {nameInitials(player.name ?? player.nickname)}
           </Text>
         </View>

@@ -19,7 +19,7 @@ const FIELDS: TicketField[] = [
   { label: 'Dine slag', value: '15', a11y: 'Dine slag: C', testID: 'ticket-strokes' },
 ];
 
-it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
+it('tegner hode, tre felt, avatarrad og stubben', async () => {
   const players = [
     homePlayer({ userId: 'me', name: 'Siri Aas', flightNumber: 2 }),
     homePlayer({ userId: 'marte', name: 'Marte Holm', flightNumber: 2 }),
@@ -31,10 +31,9 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
     <GameTicket
       kicker="Torsdagsrunden"
       title="Losby"
-      headerLine="Tee: Gul · Stableford"
+      headerLine="Gul tee · Stableford"
       statusLabel="Planlagt"
       fields={FIELDS}
-      facts="18 hull · Par 72"
       roster={{ players, userId: 'me', flightNumber: 2 }}
     >
       <Text testID="stub-child">stubb</Text>
@@ -46,6 +45,9 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
   // Gull kicker: eierens valg fra designet, unntaket står i DESIGN.md.
   expect(screen.getByTestId('game-ticket-kicker')).toHaveStyle({ color: PALETTES.light.accent });
   expect(screen.getByTestId('game-ticket-status')).toHaveTextContent('Planlagt');
+  // Merket som i designet: salvie i 22 % og krem tekst, uten linlag over.
+  expect(screen.getByTestId('game-ticket-status')).toHaveStyle({ backgroundColor: 'rgba(125, 170, 138, 0.22)' });
+  expect(within(screen.getByTestId('game-ticket-status')).getByText('Planlagt')).toHaveStyle({ color: PALETTES.light.onStrongWarm });
 
   // Hvert felt er én node: skjermleseren får etikett og verdi i én setning.
   for (const field of FIELDS) {
@@ -64,6 +66,8 @@ it('tegner hode, tre felt, faktalinje, avatarrad og stubben', async () => {
   const self = within(roster).getByTestId('game-ticket-avatars-self', HIDDEN);
   expect(self).toHaveStyle({ backgroundColor: PALETTES.light.primary });
   expect(self).toHaveTextContent('SA');
+  // Dine initialer i krem, som designlerretet (ikke hvitt).
+  expect(within(self).getByText('SA', HIDDEN)).toHaveStyle({ color: PALETTES.light.onStrong });
   const others = within(roster).getAllByTestId('game-ticket-avatars-disc', HIDDEN);
   expect(others).toHaveLength(2);
   expect(others[0]).toHaveStyle({ backgroundColor: PALETTES.light.primarySoft });
@@ -83,7 +87,6 @@ it('uten bane er spillnavnet tittelen, og uten andre spillere står ingen avatar
       headerLine=""
       statusLabel="Utkast"
       fields={FIELDS}
-      facts=""
       roster={{ players: [homePlayer({ userId: 'me' })], userId: 'me', flightNumber: null }}
     >
       {null}
@@ -93,7 +96,6 @@ it('uten bane er spillnavnet tittelen, og uten andre spillere står ingen avatar
   expect(screen.getByRole('header')).toHaveTextContent('Torsdagsrunden');
   expect(screen.queryByTestId('game-ticket-kicker')).toBeNull();
   expect(screen.queryByTestId('game-ticket-roster')).toBeNull();
-  expect(screen.queryByTestId('game-ticket-facts')).toBeNull();
 });
 
 it('fire skiver på det meste: deg og tre andre; navnelista tar med resten', async () => {
@@ -111,7 +113,6 @@ it('fire skiver på det meste: deg og tre andre; navnelista tar med resten', asy
       headerLine=""
       statusLabel="Planlagt"
       fields={FIELDS}
-      facts=""
       roster={{ players, userId: 'me', flightNumber: null }}
     >
       {null}
@@ -138,7 +139,6 @@ it('klubbhus-natt: skiva di er salvie og de andres dyp skoggrønn, så begge ski
         headerLine=""
         statusLabel="Pågår"
         fields={FIELDS}
-        facts=""
         roster={{ players, userId: 'me', flightNumber: null }}
       >
         {null}

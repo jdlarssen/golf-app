@@ -26,7 +26,7 @@ const EVENT = {
   location: 'Losby Golf',
   startDate: '2026-10-03T07:30:00.000Z',
   endDate: '2026-10-03T12:00:00.000Z',
-  notes: 'Tee: Gul · Stableford',
+  notes: 'Gul tee · Stableford',
 };
 
 async function renderStub(

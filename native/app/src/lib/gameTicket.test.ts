@@ -1,7 +1,7 @@
 // #2255: reglene bak startbilletten (Type A).
 //
 // Billetten og stubben tegner bare det disse funksjonene svarer. Her låses
-// felt 2 (lag, side, flight, spillere), faktalinja, DINE SLAG før og etter
+// felt 2 (lag, side, flight, spillere), DINE SLAG før og etter
 // start, navnelista, kartlenken og hvilken stubb som tegnes i hvilken gren.
 import type { BundleTeeRatings, GameBundle } from '../data/gameBundle';
 import { homeBundle, homePlayer } from '../test/homeFixtures';
@@ -11,7 +11,6 @@ import {
   rosterNames,
   slotField,
   startField,
-  ticketFacts,
   ticketHeaderLine,
   ticketSlot,
   ticketStrokes,
@@ -131,10 +130,10 @@ describe('ticketSlot — felt 2', () => {
 
 describe('ticketHeaderLine', () => {
   it.each([
-    ['stableford bruker den generelle andelen', 'stableford', 85, 'Tee: Gul · Stableford · 85\u00A0% handicap'],
-    ['fourball har sin egen andel i mode_config', 'fourball_matchplay', 85, 'Tee: Gul · Fourball'],
-    ['texas scramble likeså', 'texas_scramble', 100, 'Tee: Gul · Texas scramble'],
-    ['uten lagret andel står ingen prosent', 'stableford', undefined, 'Tee: Gul · Stableford'],
+    ['stableford bruker den generelle andelen', 'stableford', 85, 'Gul tee · Stableford · 85\u00A0% handicap'],
+    ['fourball har sin egen andel i mode_config', 'fourball_matchplay', 85, 'Gul tee · Fourball'],
+    ['texas scramble likeså', 'texas_scramble', 100, 'Gul tee · Texas scramble'],
+    ['uten lagret andel står ingen prosent', 'stableford', undefined, 'Gul tee · Stableford'],
   ])('%s', (_case, gameMode, pct, expected) => {
     const bundle = bundleWith({ gameMode, hcpAllowancePct: pct }, [homePlayer({ userId: 'me' })]);
     expect(ticketHeaderLine(bundle)).toBe(expected);
@@ -143,28 +142,6 @@ describe('ticketHeaderLine', () => {
   it('uten tee og ukjent format står det som finnes', () => {
     const bundle = { ...bundleWith({ gameMode: 'ukjent' }, []), teeBoxName: null };
     expect(ticketHeaderLine(bundle)).toBe('');
-  });
-});
-
-describe('ticketFacts', () => {
-  it.each([
-    ['herre: hele linja', 'mens', '18\u00A0hull · Par\u00A072 · 6\u00A0124\u00A0m · Slope\u00A0125 · CR\u00A071,5'],
-    ['dame: dame-ratingen, CR uten desimal', 'ladies', '18\u00A0hull · Par\u00A072 · 6\u00A0124\u00A0m · Slope\u00A0128 · CR\u00A073'],
-    ['junior uten rating: bare hull og lengde', 'juniors', '18\u00A0hull · 6\u00A0124\u00A0m'],
-    ['ukjent kjønn fra basen: som manglende rating', 'x', '18\u00A0hull · 6\u00A0124\u00A0m'],
-  ])('%s', (_case, teeGender, expected) => {
-    const bundle = bundleWith({}, [homePlayer({ userId: 'me', teeGender })]);
-    expect(ticketFacts(bundle, bundle.players[0])).toBe(expected);
-  });
-
-  it('uten tee står bare hullene, og en halv runde har ikke 18-hullstallene (par, lengde, CR)', () => {
-    const noTee = { ...bundleWith({}, [homePlayer({ userId: 'me' })]), teeRatings: null };
-    expect(ticketFacts(noTee, noTee.players[0])).toBe('18\u00A0hull');
-    const front9 = bundleWith({ holeSegment: 'front9' }, [homePlayer({ userId: 'me' })]);
-    // Par, lengde, slope og CR er tallene for hele banen (design, #2255).
-    expect(ticketFacts(front9, front9.players[0])).toBe('9\u00A0hull');
-    // Den som ikke er spiller (arrangøren), har ikke noe kjønn å lese rating for.
-    expect(ticketFacts(front9, undefined)).toBe('9\u00A0hull');
   });
 });
 
@@ -367,7 +344,7 @@ describe('calendarEvent — «Legg til i kalender» (#2255 PR 2)', () => {
       location: 'Losby',
       startDate: teeOff,
       endDate: '2026-10-03T12:00:00.000Z',
-      notes: 'Tee: Gul · Stableford · 85\u00A0% handicap',
+      notes: 'Gul tee · Stableford · 85\u00A0% handicap',
     });
   });
 
