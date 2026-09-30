@@ -153,18 +153,30 @@ function split(
 }
 
 /** Solo stableford og modifisert stableford: flest poeng er best. */
+/**
+ * Likt på et hull: den som ligger best an i stillingen står først. Uten denne
+ * regelen arvet radene rekkefølgen motoren fikk spillerne i, og den er ikke
+ * den samme på webben og i appen (#2255 PR 3a).
+ */
+function byStanding(rankedIds: readonly string[]): (a: { userId: string }, b: { userId: string }) => number {
+  const place = new Map(rankedIds.map((id, i) => [id, i]));
+  const at = (id: string) => place.get(id) ?? Number.POSITIVE_INFINITY;
+  return (a, b) => at(a.userId) - at(b.userId);
+}
+
 export function soloStablefordScorecard(
   result: StablefordSoloResult,
   teeGenderOf: TeeGenderOf,
 ): SoloScorecard {
   const rankedIds = result.players.map((p) => p.userId);
+  const tie = byStanding(rankedIds);
   const holes = result.holes.map((hole) => {
-    // Flest poeng først; uspilte (brutto null) sist.
+    // Flest poeng først; uspilte (brutto null) sist; likt etter stillingen.
     const sorted = [...hole.perPlayer].sort((a, b) => {
-      if (a.gross == null && b.gross == null) return 0;
+      if (a.gross == null && b.gross == null) return tie(a, b);
       if (a.gross == null) return 1;
       if (b.gross == null) return -1;
-      return b.points - a.points;
+      return b.points - a.points || tie(a, b);
     });
     const cells = sorted.map((c) => ({
       userId: c.userId,
@@ -194,10 +206,12 @@ export function soloStrokeplayScorecard(
   teeGenderOf: TeeGenderOf,
 ): SoloScorecard {
   const rankedIds = result.players.map((p) => p.userId);
+  const tie = byStanding(rankedIds);
   const holes = result.holes.map((hole) => {
-    // Lavest netto først; uspilte (netto null) sist.
+    // Lavest netto først; uspilte (netto null) sist; likt etter stillingen.
     const sorted = [...hole.perPlayer].sort(
-      (a, b) => (a.net ?? Number.POSITIVE_INFINITY) - (b.net ?? Number.POSITIVE_INFINITY),
+      (a, b) =>
+        (a.net ?? Number.POSITIVE_INFINITY) - (b.net ?? Number.POSITIVE_INFINITY) || tie(a, b),
     );
     const cells = sorted.map((c) => ({
       userId: c.userId,
