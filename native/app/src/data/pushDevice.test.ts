@@ -26,7 +26,8 @@ jest.mock('expo', () => ({
 
 const ME = 'user-me';
 const OTHER = 'user-other';
-const TOKEN = 'a1b2c3d4e5f6';
+// Repoets kanoniske dummy-token (tillatt i .gitleaks.toml); testen bryr seg ikke om formatet.
+const TOKEN = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 /** Det telefonen husker når varslene står på for `userId`. */
 const remembered = (userId: string) => JSON.stringify({ userId, token: TOKEN });
 
