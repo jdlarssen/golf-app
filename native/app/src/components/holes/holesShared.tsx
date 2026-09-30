@@ -1,8 +1,8 @@
 // #2255: bitene alle «Hull for hull»-visningene i appen deler — navnet slik
 // webben skriver det, overskriften med formatlinja, hodet på hvert hull-kort,
-// gullbrikka i hodet, raden med poeng og brutto, og gulltonen for den som
-// utmerker seg. Ett hjem, så formatene ser like ut og en rettelse når alle
-// (samme grep som webbens `LeaderboardChrome`).
+// gullbrikka i hodet, raden med poeng og brutto, etikettene i små versaler, og
+// gulltonen for den som utmerker seg. Ett hjem, så formatene ser like ut og en
+// rettelse når alle (samme grep som webbens `LeaderboardChrome`).
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { formatRevealName } from '../../../../../lib/names/formatRevealName';
@@ -127,5 +127,16 @@ export const holesStyles = StyleSheet.create({
   gross: { fontSize: 11, fontFamily: FONTS.sans },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   chipText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase' },
+  /**
+   * Etikett i små versaler (webbens `text-[11px] font-semibold uppercase
+   * tracking-[0.16em]` og `Kicker`): «Stillingen», Round Robins segment og
+   * «Vant hullet».
+   */
+  kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6, textTransform: 'uppercase' },
+  /**
+   * Små versaler (webbens `text-[10.5px]`/`text-[11px] uppercase
+   * tracking-[0.1em]`): enheten «p» i solo, «Delt» og «Venter» i Round Robin.
+   */
+  caps: { fontSize: 11, fontFamily: FONTS.sansMedium, letterSpacing: 1, textTransform: 'uppercase' },
   footer: { fontSize: 12, fontFamily: FONTS.serifDisplay, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });

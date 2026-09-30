@@ -48,7 +48,7 @@ export function SoloScorecardView({
       <HolesTitle subtitle={subtitle} />
 
       <View style={ui.card} testID="hole-by-hole-standings">
-        <Text style={[styles.kicker, { color: colors.muted }]}>{HOLES_TEXT.standings}</Text>
+        <Text style={[holesStyles.kicker, { color: colors.muted }]}>{HOLES_TEXT.standings}</Text>
         {card.standings.map((line) => (
           <View key={line.userId} style={styles.standing} testID={`hole-by-hole-standing-${line.userId}`}>
             <View style={styles.standingName}>
@@ -223,7 +223,7 @@ function HoleCard({
               {valueText(row.value, metric)}
             </Text>
             {metric === 'points' ? (
-              <Text style={[styles.unit, { color: colors.muted }]}>{HOLES_TEXT.pointsUnit}</Text>
+              <Text style={[holesStyles.caps, { color: colors.muted }]}>{HOLES_TEXT.pointsUnit}</Text>
             ) : null}
           </View>
         </View>
@@ -233,12 +233,6 @@ function HoleCard({
 }
 
 const styles = StyleSheet.create({
-  kicker: {
-    fontSize: 11,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-  },
   standing: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   standingName: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexShrink: 1 },
   rank: { width: 18 },
@@ -263,5 +257,4 @@ const styles = StyleSheet.create({
   /** Tallet i pillen er et scoretall, som webbens `score-num`. */
   subtotalSum: { fontSize: 12, fontFamily: FONTS.serifScore },
   dash: { width: 24, textAlign: 'center' },
-  unit: { fontSize: 11, fontFamily: FONTS.sansMedium, letterSpacing: 1, textTransform: 'uppercase' },
 });

@@ -2083,7 +2083,7 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Gaten** (`lib/holeByHole.ts`) er webbens `hasHoleByHoleView`, gitt den rå
   `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
   bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. PR 3b: Wolf.
-  PR 3c: Nines.
+  PR 3c: Nines og Round Robin.
   Skins og Nassau bygges etter sine egne tegninger (#2317, #2327) og står som «Tavla» til da.
   De andre formatene webben har visning for, står som «Tavla» til de kommer.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
@@ -2107,6 +2107,17 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   Appen bygger desimalen selv fordi Hermes mangler ICU, og testen låser den mot webbens
   `formatNumber`. Gullbrikka i hull-hodet (Wolf: innsatsen, Nines: potten) og teksten for
   poeng og brutto bor i `components/holes/holesShared.tsx`.
+- **Round Robin** (PR 3c): segmentene og kortene kommer fra
+  `lib/leaderboard/roundRobinHoles.ts`, som webbens `RoundRobinHolesView` også tegner. Tre
+  segmenter på seks hull, hvert med hull-spennet og hvem som er partnere («A + B vs C + D»),
+  og så ett kort per hull med begge sidene: hver spillers netto, brutto ved siden av når den er
+  annerledes, og en stjerne ved sidens beste. Siden som vant hullet står i gull med «Vant
+  hullet». Et delt hull sier «Delt» i hodet, et hull som ikke er ferdig spilt «Venter».
+  Spillerne på en side står slik konstellasjonen står (rotasjonsplassen), så motorens
+  rekkefølge inn spiller ingen rolle og stillingen trengs ikke. Round Robin trenger ingen
+  valg fra serveren, bare slagene. Stjerna og «vs» er dekor, skjult for skjermleseren som
+  webbens `aria-hidden`. Etiketten i små versaler (Solos «Stillingen», segmentet og «Vant
+  hullet») og «Delt»/«Venter» (som Solos «p») bor i `components/holes/holesShared.tsx`.
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,
