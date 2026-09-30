@@ -5,6 +5,7 @@
 // stillingen og begge niene kommer på skjermen, at stjerna er dekor, og at en
 // blind runde som pågår holder alt tilbake.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
+import type { ReactElement } from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import type { GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
@@ -33,6 +34,7 @@ jest.mock('../lib/useGameData', () => ({
   useLocalScores: () => ({ scores: mockScreen.scores, reload: mockReload }),
 }));
 const mockReload = jest.fn();
+const mockNavigation = { setOptions: jest.fn() };
 jest.mock('../data/seedScores', () => ({ seedGameScores: () => mockScreen.seed() }));
 
 const HIDDEN = { includeHiddenElements: true };
@@ -85,7 +87,7 @@ describe('hentingen av slagene', () => {
     mockReload.mockClear();
     mockScreen.extras = {};
   });
-  const props = { route: { params: { gameId: 'g1' } } } as unknown as ScreenProps<'HoleByHole'>;
+  const props = { route: { params: { gameId: 'g1' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
   const finished = () =>
     homeBundle({ game: { id: 'g1', status: 'finished', ...stableford }, players });
 
@@ -106,6 +108,24 @@ describe('hentingen av slagene', () => {
     await render(<HoleByHole {...props} />);
     await waitFor(() => expect(screen.getByTestId('hole-by-hole-seed-failed')).toBeTruthy());
     expect(screen.getByTestId('hole-by-hole-front9')).toBeTruthy();
+  });
+
+  it('toppen får spillnavnet som kicker, som på webben', async () => {
+    mockNavigation.setOptions.mockClear();
+    mockScreen.bundle = finished();
+    mockScreen.scores = scores;
+    mockScreen.seed = async () => 0;
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(mockNavigation.setOptions).toHaveBeenCalled());
+    const options = mockNavigation.setOptions.mock.lastCall![0] as {
+      title: string;
+      headerTitle: () => ReactElement;
+      headerShadowVisible: boolean;
+    };
+    expect(options.title).toBe('Hull for hull');
+    expect(options.headerShadowVisible).toBe(false);
+    await render(options.headerTitle());
+    expect(screen.getByTestId('kicker-title')).toHaveTextContent(finished().game.name);
   });
 
   it('lykkes den: ingen linje', async () => {
@@ -139,7 +159,7 @@ describe('Wolf (#2255 PR 3b)', () => {
     ...holeScores('gw', 'c', 1, 5),
     ...holeScores('gw', 'd', 1, 6),
   ];
-  const props = { route: { params: { gameId: 'gw' } } } as unknown as ScreenProps<'HoleByHole'>;
+  const props = { route: { params: { gameId: 'gw' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
 
   it('venter på valgene før noe regnes, i stedet for «Venter» på hvert hull', async () => {
     mockScreen.bundle = wolfBundle();
