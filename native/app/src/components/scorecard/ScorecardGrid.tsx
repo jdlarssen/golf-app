@@ -49,6 +49,19 @@ const ROW_HEIGHTS: Record<'hole' | 'par' | ScorecardRowKind, number> = {
   enteredBy: 30,
 };
 
+type CellRole = 'label' | 'data' | 'sum';
+
+/**
+ * Luften over innholdet i en celle, som designets polstring: tabellen der er
+ * et CSS-rutenett der innholdet står øverst i cellen, ikke midt i. Formene i
+ * SLAG har 5 pt, tallene og etikettene 6–8.
+ */
+function padTop(kind: 'hole' | 'par' | ScorecardRowKind, role: CellRole): number {
+  if (kind === 'hole') return 6;
+  if (kind === 'strokes') return role === 'data' ? 5 : 8;
+  return 7;
+}
+
 const ROW_LABELS: Record<'hole' | 'par' | ScorecardRowKind, string> = {
   hole: 'Hull',
   par: 'Par',
@@ -102,14 +115,14 @@ function sumLabel(half: ScorecardHalf, rows: readonly ScorecardRowKind[]): strin
 
 function Cell({
   kind,
+  role,
   corner,
-  align = 'center',
   children,
 }: {
   kind: 'hole' | 'par' | ScorecardRowKind;
+  role: CellRole;
   /** Det grønne båndet runder av hjørnet ytterst til venstre og høyre. */
   corner?: 'left' | 'right';
-  align?: 'center' | 'left';
   children: ReactNode;
 }) {
   const { colors } = useTheme();
@@ -120,8 +133,8 @@ function Cell({
     <View
       style={[
         styles.cell,
-        align === 'left' && styles.cellLeft,
-        { height: ROW_HEIGHTS[kind] },
+        role === 'label' && styles.cellLeft,
+        { height: ROW_HEIGHTS[kind], paddingTop: padTop(kind, role) },
         kind === 'hole' ? { backgroundColor: colors.primary } : null,
         corner === 'left' && styles.bandLeft,
         corner === 'right' && styles.bandRight,
@@ -161,16 +174,14 @@ function Half({
 
   const cellValue = (cell: ScorecardCell, kind: ScorecardRowKind) => {
     if (kind === 'strokes') {
-      return cell.strokes != null ? (
-        <ScoreShape
-          strokes={cell.strokes}
-          par={cell.par}
-          size={shapeSize(cell.strokes, cell.par)}
-          toned
-          tonedNumber
-        />
-      ) : (
-        <Text style={mutedNum}>—</Text>
+      if (cell.strokes == null) return <Text style={mutedNum}>—</Text>;
+      const size = shapeSize(cell.strokes, cell.par);
+      // Den ekstra ringen vokser utover til alle kanter, også oppover, som i
+      // designet: den indre formen står der en enkel form ville stått.
+      return (
+        <View style={{ marginTop: -(size - SHAPE) / 2 }}>
+          <ScoreShape strokes={cell.strokes} par={cell.par} size={size} toned tonedNumber />
+        </View>
       );
     }
     if (kind === 'points' && cell.points != null && cell.net != null && cell.net < cell.par) {
@@ -222,10 +233,10 @@ function Half({
           testID={`scorecard-labels-${half.key}`}
         >
           {kinds.map((kind, index) => (
-            <Cell key={kind} kind={kind} corner={index === 0 ? 'left' : undefined} align="left">
+            <Cell key={kind} kind={kind} role="label" corner={index === 0 ? 'left' : undefined}>
               {/* Etiketten ligger fritt: «POENG» er litt bredere enn kolonnen,
                   og i designet går den over kanten i stedet for å brytes. */}
-              <View style={styles.labelBox}>
+              <View style={[styles.labelBox, { top: padTop(kind, 'label') }]}>
                 <Text
                   style={kind === 'hole' ? bandHead : headStyle}
                   numberOfLines={1}
@@ -246,14 +257,14 @@ function Half({
             accessibilityLabel={holeLabel(cell, rows, enteredBy)}
             testID={`scorecard-col-${cell.holeNumber}`}
           >
-            <Cell kind="hole">
+            <Cell kind="hole" role="data">
               <Text style={bandNum}>{cell.holeNumber}</Text>
             </Cell>
-            <Cell kind="par">
+            <Cell kind="par" role="data">
               <Text style={mutedNum}>{cell.par}</Text>
             </Cell>
             {rows.map((kind) => (
-              <Cell key={kind} kind={kind}>
+              <Cell key={kind} kind={kind} role="data">
                 {cellValue(cell, kind)}
               </Cell>
             ))}
@@ -266,14 +277,14 @@ function Half({
           accessibilityLabel={sumLabel(half, rows)}
           testID={`scorecard-sum-${half.key}`}
         >
-          <Cell kind="hole" corner="right">
+          <Cell kind="hole" role="sum" corner="right">
             <Text style={halfHead}>{HALF_TITLES[half.key].title.toUpperCase()}</Text>
           </Cell>
-          <Cell kind="par">
+          <Cell kind="par" role="sum">
             <Text style={[...numStyle, styles.sum]}>{half.sum.par}</Text>
           </Cell>
           {rows.map((kind) => (
-            <Cell key={kind} kind={kind}>
+            <Cell key={kind} kind={kind} role="sum">
               {sumValue(kind)}
             </Cell>
           ))}
@@ -341,12 +352,12 @@ const styles = StyleSheet.create({
   labelColumn: { width: LABEL_WIDTH },
   column: { flex: 1, minWidth: MIN_COLUMN },
   sumColumn: { width: SUM_WIDTH },
-  cell: { alignItems: 'center', justifyContent: 'center' },
+  cell: { alignItems: 'center', justifyContent: 'flex-start' },
   cellLeft: { alignItems: 'flex-start' },
   bandLeft: { borderTopLeftRadius: 6 },
   bandRight: { borderTopRightRadius: 6 },
   head: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 1 },
-  labelBox: { position: 'absolute', left: 6, top: 0, bottom: 0, justifyContent: 'center' },
+  labelBox: { position: 'absolute', left: 6 },
   halfHead: { letterSpacing: 0.8 },
   num: { fontSize: 13, fontFamily: FONTS.sans, textAlign: 'center' },
   holeNumber: { fontFamily: FONTS.sansSemiBold },
