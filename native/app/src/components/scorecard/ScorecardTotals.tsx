@@ -69,7 +69,7 @@ export function ScorecardTotals({
 
 const styles = StyleSheet.create({
   wrap: { gap: 4 },
-  row: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   left: { flexDirection: 'row', gap: 16 },
   right: { alignItems: 'flex-end' },
   label: {
@@ -79,5 +79,5 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   value: { fontSize: 22, lineHeight: 27, fontFamily: FONTS.serifScore },
-  points: { fontSize: 30, lineHeight: 32, fontFamily: FONTS.serifScore },
+  points: { fontSize: 30, lineHeight: 30, fontFamily: FONTS.serifScore },
 });
