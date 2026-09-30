@@ -19,7 +19,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { scoreShape, type ScoreShape as ShapeKind } from '../../../../../lib/scoring/scoreShape';
 import { scoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
-import { FONTS, useTheme } from '../../theme';
+import { fraunces, useTheme } from '../../theme';
 
 /** Streken i ringene, som designets 1,5 px. */
 const RING_W = 1.5;
@@ -75,7 +75,7 @@ export function ScoreShape({
 
   let content: ReactNode = (
     <Text
-      style={[styles.number, ui.num, { color: numberColor, fontSize: NUMBER_SIZE[count] ?? 9 }]}
+      style={[styles.number, ui.num, fraunces(600, NUMBER_SIZE[count] ?? 9), { color: numberColor }]}
       testID="score-shape-number"
     >
       {strokes}
@@ -111,5 +111,5 @@ export function ScoreShape({
 const styles = StyleSheet.create({
   box: { alignItems: 'center', justifyContent: 'center' },
   ring: { borderWidth: RING_W, alignItems: 'center', justifyContent: 'center' },
-  number: { fontFamily: FONTS.serifScore, textAlign: 'center' },
+  number: { textAlign: 'center' },
 });

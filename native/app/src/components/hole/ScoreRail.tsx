@@ -29,7 +29,7 @@ import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-nati
 import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
-import { FONTS, TAP, frauncesLine, useTheme, type ThemeColors } from '../../theme';
+import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
 
 /** Hva knappene viser etter navnet på resultatet. */
 export type RailDisplay = 'points' | 'netto' | 'plain';
@@ -273,9 +273,8 @@ export function ScoreRail({
             >
               <Text
                 style={[
-                  styles.optionNumber,
+                  fraunces(600, hole.railNumber, hole.railNumber),
                   { color: ink },
-                  frauncesLine(hole.railNumber, hole.railNumber),
                 ]}
               >
                 {option.strokes}
@@ -540,7 +539,7 @@ const styles = StyleSheet.create({
   },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
-  heading: { flexShrink: 1, fontSize: 20, fontFamily: FONTS.serifDisplay },
+  heading: { ...fraunces(500, 20), flexShrink: 1 },
   headingNote: { fontSize: 12, fontFamily: FONTS.sans },
   linkButton: { minHeight: TAP, justifyContent: 'center' },
   linkText: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
@@ -563,11 +562,10 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 4,
   },
-  optionNumber: { fontFamily: FONTS.serifScore },
   optionDetail: {},
-  otherText: { ...frauncesLine(22, 22), fontFamily: FONTS.serifDisplay },
+  otherText: { ...fraunces(500, 22, 22) },
   otherHint: { fontSize: 11, fontFamily: FONTS.sans },
-  otherTop: { ...frauncesLine(28, 28), fontFamily: FONTS.serifScore },
+  otherTop: { ...fraunces(600, 28, 28) },
   otherLabelSun: { fontSize: 13, fontFamily: FONTS.sansBold },
   correctRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   step: {

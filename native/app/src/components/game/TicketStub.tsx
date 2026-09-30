@@ -19,7 +19,7 @@ import { HOME_TEXT, continueOnHole } from '../../lib/homeCopy';
 import { WITHDRAW_SELF, describeSelfWithdrawFailure } from '../../lib/rosterCopy';
 import { TICKET_TEXT, playedLine } from '../../lib/ticketCopy';
 import type { ScreenProps } from '../../navigation';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { WaitingRoom } from './WaitingRoom';
 
@@ -362,13 +362,13 @@ const styles = StyleSheet.create({
   /** Brødtekst i stubben: 13 pt i muted, som i designet. */
   text: { fontSize: 13, lineHeight: 18, fontFamily: FONTS.sans },
   registered: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
-  result: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  result: { ...fraunces(600, 22), fontVariant: ['tabular-nums'] },
   /** Hovedknappen i billetten er høyere enn appens 44 pt, som i designet. */
   cta: { minHeight: 52 },
   // Teksten og poengene midtstilt mot hverandre, som i designet (`align-items: center`).
   playedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   played: { flexShrink: 1, fontSize: 13, fontFamily: FONTS.sans },
-  total: { fontSize: 16, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  total: { ...fraunces(600, 16), fontVariant: ['tabular-nums'] },
   actions: { gap: 6 },
   actionRow: { flexDirection: 'row', gap: 10 },
   action: { flex: 1, paddingHorizontal: 8, paddingVertical: 8 },

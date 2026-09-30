@@ -15,7 +15,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { ProfileSeason } from '../../../../../lib/stats/profileSeason';
 import { PROFILE_TEXT, seasonTileSpoken } from '../../lib/profileCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 
 export interface SeasonTilesProps {
   year: number;
@@ -121,11 +121,10 @@ const styles = StyleSheet.create({
   // en så trang linje, så linja er 3 pt høyere, og de 3 gis tilbake under
   // (målt i simulatoren). Flisa er like høy.
   value: {
-    fontSize: 28,
+    ...fraunces(600, 28),
     lineHeight: 31,
     minHeight: 31,
     marginBottom: -3,
-    fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
   },
   label: { fontSize: 12, lineHeight: 15, fontFamily: FONTS.sans },

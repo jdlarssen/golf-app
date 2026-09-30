@@ -41,7 +41,7 @@ import {
   handicapSeasonChange,
   handicapSeasonChangeSpoken,
 } from '../../lib/profileCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 
 export interface BagTagProps {
   /** `null` mens profilraden lastes, eller når den ikke kunne leses. */
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     shadowOpacity: 0,
   },
-  wordmark: { alignSelf: 'flex-end', fontSize: 18, fontFamily: FONTS.serifDisplay, opacity: 0.85 },
+  wordmark: { ...fraunces(500, 18), alignSelf: 'flex-end', opacity: 0.85 },
   // Den stansede spalten viser sidens bakgrunn gjennom kortet.
   slot: { alignSelf: 'center', width: 44, height: 14, borderRadius: 7 },
   topRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  name: { fontSize: 28, lineHeight: 31, minHeight: 31, fontFamily: FONTS.serifDisplay, marginTop: 6 },
+  name: { ...fraunces(500, 28), lineHeight: 31, minHeight: 31, marginTop: 6 },
   subline: { fontSize: 12, lineHeight: 15, minHeight: 15, fontFamily: FONTS.sans, opacity: 0.85, marginTop: 2 },
   hcpRow: {
     flexDirection: 'row',
@@ -339,10 +339,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   hcpValue: {
-    fontSize: 64,
+    ...fraunces(600, 64),
     lineHeight: HCP_LINE,
     marginBottom: -HCP_OVERHANG,
-    fontFamily: FONTS.serifScore,
     // Designet er 64 pt Fraunces med optisk størrelse, som er smalere enn
     // appens faste snitt. Tettere sperring gir samme bredde på «14,2».
     letterSpacing: -3.2,
@@ -357,5 +356,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  initials: { fontSize: 18, fontFamily: FONTS.serifDisplay },
+  initials: { ...fraunces(500, 18) },
 });

@@ -48,7 +48,7 @@ import {
   SIDE_TEXT,
   type SideGroupId,
 } from '../../lib/sideTournamentCopy';
-import { FONTS, TAP, useTheme } from '../../theme';
+import { FONTS, fraunces, TAP, useTheme } from '../../theme';
 import { CalmNote } from './Table';
 
 /**
@@ -1089,8 +1089,7 @@ function buildAwardRows({
 
 const styles = StyleSheet.create({
   headline: {
-    fontSize: 15,
-    fontFamily: FONTS.serifDisplay,
+    ...fraunces(500, 15),
     marginTop: 2,
   },
   teamCard: {
@@ -1111,16 +1110,15 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   medal: { fontSize: 18 },
   teamTitle: {
+    ...fraunces(600, 16),
     flexShrink: 1,
-    fontSize: 16,
-    fontFamily: FONTS.serifScore,
   },
   members: {
     marginTop: 2,
     fontSize: 12,
     fontFamily: FONTS.sans,
   },
-  points: { fontSize: 16, fontFamily: FONTS.serifScore },
+  points: { ...fraunces(600, 16) },
   chevron: { fontSize: 14, fontFamily: FONTS.sans },
   body: {
     borderTopWidth: 1,
@@ -1136,8 +1134,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   awardRow: {
+    ...fraunces(500, 15),
     marginTop: 2,
-    fontSize: 15,
-    fontFamily: FONTS.serifDisplay,
   },
 });

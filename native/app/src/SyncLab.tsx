@@ -32,7 +32,7 @@ import { startSyncTriggers } from './data/syncTriggers';
 import { drainQueue, getLastDrain, type DrainLog } from './data/syncWorker';
 import { writeScore } from './data/writeScore';
 import { supabase } from './supabase';
-import { FONTS, TAP, useTheme } from './theme';
+import { FONTS, fraunces, TAP, useTheme } from './theme';
 
 const HOLES = [1, 2, 3];
 const MAX_STROKES = 15;
@@ -331,13 +331,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: 28,
-    fontFamily: FONTS.serifScore,
+    ...fraunces(600, 28),
     textAlign: 'center',
     marginBottom: 16,
   },
   body: { fontSize: 16, fontFamily: FONTS.sans },
-  value: { fontSize: 22, fontFamily: FONTS.serifScore },
+  value: { ...fraunces(600, 22) },
   card: {
     borderRadius: 12,
     padding: 16,
@@ -355,8 +354,7 @@ const styles = StyleSheet.create({
   },
   stepText: { fontSize: 22, fontFamily: FONTS.sansBold },
   strokes: {
-    fontSize: 22,
-    fontFamily: FONTS.serifScore,
+    ...fraunces(600, 22),
     width: 36,
     textAlign: 'center',
   },

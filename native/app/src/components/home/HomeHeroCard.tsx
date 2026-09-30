@@ -31,7 +31,7 @@ import {
   standingDetail,
 } from '../../lib/homeCopy';
 import type { HeroModel } from '../../lib/homeHero';
-import { FONTS, TAP, frauncesLine, heroShadow, interLine, useTheme } from '../../theme';
+import { FONTS, fraunces, heroShadow, interLine, TAP, useTheme } from '../../theme';
 import { HoleRing } from '../icons/Icons';
 
 export interface HomeHeroCardProps {
@@ -304,16 +304,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   ringNumber: {
-    ...frauncesLine(40, 40),
-    fontFamily: FONTS.serifScore,
+    ...fraunces(600, 40, 40),
   },
   standing: { flex: 1, gap: 8 },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gold: { width: 14, height: 14, borderRadius: 7 },
   // Designet: 26 pt med linje 1,1, og proporsjonale tall i begge linjene.
   place: {
-    ...frauncesLine(26, 28.6),
-    fontFamily: FONTS.serifDisplay,
+    ...fraunces(500, 26, 28.6),
   },
   detail: {
     fontSize: 13,

@@ -35,7 +35,7 @@ import {
   bestBallTeamLabel,
   bestBallTeamNav,
 } from '../../lib/holesCopy';
-import { FONTS, TAP, useTheme, type ThemeColors } from '../../theme';
+import { FONTS, fraunces, frauncesFamily, TAP, useTheme, type ThemeColors } from '../../theme';
 import { ScoreShape } from '../scorecard/ScoreShape';
 import { holesStyles } from './holesShared';
 
@@ -231,7 +231,9 @@ function HoleRow({ row, first }: { row: BestBallHoleRow; first: boolean }) {
             <Text
               style={[
                 styles.initial,
-                cell.isBestNet ? { fontFamily: FONTS.serifScore, color: colors.text } : { color: colors.muted },
+                cell.isBestNet
+                  ? { fontFamily: frauncesFamily(600, 12), color: colors.text }
+                  : { color: colors.muted },
               ]}
             >
               {cell.initial}
@@ -247,7 +249,9 @@ function HoleRow({ row, first }: { row: BestBallHoleRow; first: boolean }) {
               style={[
                 styles.net,
                 ui.num,
-                cell.isBestNet ? { fontFamily: FONTS.serifScore, color: colors.text } : { color: colors.muted },
+                cell.isBestNet
+                  ? { fontFamily: frauncesFamily(600, 14), color: colors.text }
+                  : { color: colors.muted },
               ]}
               testID={`hole-by-hole-net-${row.holeNumber}-${cell.userId}`}
             >
@@ -300,37 +304,38 @@ const styles = StyleSheet.create({
   /** Webbens `text-[11px] font-semibold uppercase tracking-[0.20em]`. */
   kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 2.2, textTransform: 'uppercase' },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  rank: { minWidth: 50, textAlign: 'center', fontSize: 48, lineHeight: 52, fontFamily: FONTS.serifScore },
-  teamName: { fontSize: 22, fontFamily: FONTS.serifDisplay },
+  rank: { ...fraunces(600, 48), minWidth: 50, textAlign: 'center', lineHeight: 52 },
+  teamName: { ...fraunces(500, 22) },
   meta: { fontSize: 11.5, fontFamily: FONTS.sans, marginTop: 2 },
   heroRight: { marginLeft: 'auto', alignItems: 'flex-end' },
-  heroTotal: { fontSize: 24, fontFamily: FONTS.serifScore },
+  heroTotal: { ...fraunces(600, 24) },
   heroVsPar: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, textTransform: 'uppercase', marginTop: 4 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 14, rowGap: 4, paddingHorizontal: 4 },
   legendText: { fontSize: 10.5, fontFamily: FONTS.sans },
-  legendBest: { fontFamily: FONTS.serifScore },
-  legendFormat: { marginLeft: 'auto', fontSize: 11, fontFamily: FONTS.serifDisplay, fontStyle: 'italic' },
+  // Står inni legenden på 10,5 pt; rundes til nærmeste snitt (11).
+  legendBest: { fontFamily: frauncesFamily(600, 11) },
+  legendFormat: { ...fraunces(500, 11), marginLeft: 'auto', fontStyle: 'italic' },
   nineBlock: { gap: 6 },
   nineLabel: { paddingHorizontal: 4 },
   table: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
   holeRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
   holeCol: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  holeNumber: { fontSize: 15, fontFamily: FONTS.serifDisplay },
+  holeNumber: { ...fraunces(500, 15) },
   /** «P4»: webbens `text-[11px] font-semibold uppercase tracking-[0.12em]`. */
   parText: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.3, marginTop: 2 },
   parAside: { fontSize: 8 },
   players: { flex: 1, justifyContent: 'center', gap: 6 },
   playerLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  initial: { width: 24, textAlign: 'center', fontSize: 12, fontFamily: FONTS.serifDisplay },
+  initial: { ...fraunces(500, 12), width: 24, textAlign: 'center' },
   noShape: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  dash: { fontSize: 13, fontFamily: FONTS.serifDisplay },
-  net: { minWidth: 18, textAlign: 'right', fontSize: 14, fontFamily: FONTS.serifDisplay },
+  dash: { ...fraunces(500, 13) },
+  net: { ...fraunces(500, 14), minWidth: 18, textAlign: 'right' },
   pill: { borderRadius: 999, paddingVertical: 2, alignItems: 'center' },
   pillText: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
   teamCol: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  teamNet: { fontSize: 18, fontFamily: FONTS.serifScore },
+  teamNet: { ...fraunces(600, 18) },
   summary: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1.5 },
-  summaryLabel: { fontSize: 13, fontFamily: FONTS.serifScore, letterSpacing: 0.5 },
+  summaryLabel: { ...fraunces(600, 13), letterSpacing: 0.5 },
   summaryPill: { marginLeft: 8 },
   flex: { flex: 1 },
   totalBar: {
@@ -343,7 +348,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   totalRight: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
-  barTotal: { fontSize: 32, fontFamily: FONTS.serifScore },
+  barTotal: { ...fraunces(600, 32) },
   barVsPar: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
   nav: { flexDirection: 'row', justifyContent: 'space-between' },
   navHalf: { width: '50%' },

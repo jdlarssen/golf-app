@@ -14,7 +14,7 @@
 // VoiceOver. Lå knappene inni bakgrunnen, hørte en skjermleser bare «Lukk».
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MAX_STROKES } from '../../../../../lib/scorecard/strokeEntry';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, fraunces, useTheme } from '../../theme';
 
 export type SpecificValueSheetProps = {
   open: boolean;
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cellText: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  cellText: { ...fraunces(600, 22), fontVariant: ['tabular-nums'] },
   strike: { flexBasis: 'auto', marginTop: 8 },
   strikeText: { fontSize: 16, fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
   caption: { fontSize: 12, fontFamily: FONTS.sans, textAlign: 'center', marginTop: 14 },

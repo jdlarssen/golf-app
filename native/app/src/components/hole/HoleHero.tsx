@@ -12,7 +12,7 @@
 // senere, og ingen lengde). Pokalen og sollys-bryteren står i toppen
 // (`Hole.tsx`). Størrelsen på nummeret er temaets (`hole.numberSize`).
 import { StyleSheet, Text, View } from 'react-native';
-import { FONTS, frauncesLine, interLine, useTheme } from '../../theme';
+import { FONTS, fraunces, frauncesLine, interLine, useTheme } from '../../theme';
 
 export type HoleHeroProps = {
   holeNumber: number;
@@ -99,8 +99,8 @@ const styles = StyleSheet.create({
   // Designet bruker proporsjonale tall i «av 18» og «Indeks 11».
   total: { fontSize: 13, fontFamily: FONTS.sans, paddingBottom: 8 },
   parColumn: { alignItems: 'flex-end', paddingBottom: 6 },
-  par: { ...frauncesLine(30, 30), fontFamily: FONTS.serifDisplay },
-  parSun: { ...frauncesLine(44, 44), fontFamily: FONTS.serifScore },
+  par: { ...fraunces(500, 30, 30) },
+  parSun: { ...fraunces(600, 44, 44) },
   index: { fontSize: 12, fontFamily: FONTS.sans, marginTop: 4 },
   indexSun: { fontSize: 15, fontFamily: FONTS.sansMedium, marginTop: 8 },
 });

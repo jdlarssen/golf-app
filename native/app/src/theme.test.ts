@@ -3,13 +3,17 @@
 // (lest fra `app/globals.css`, så de ikke kan drive fra hverandre igjen —
 // #1980), at mørk er komplett, og at `useTheme()` er den ene veien inn — én
 // `ui` per scheme, med samme nøkler.
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { createElement, type ReactNode } from 'react';
 import { renderHook } from '@testing-library/react-native';
 import * as theme from './theme';
+import { FRAUNCES_FILES } from './fonts';
+import FRAUNCES_SIZES from '../assets/fonts/fraunces-sizes.json';
 import {
   FONTS,
+  fraunces,
+  frauncesFamily,
   frauncesLine,
   interLine,
   PALETTES,
@@ -147,13 +151,69 @@ describe('FONTS', () => {
     expect(FONTS).toEqual({
       holeNumber: 'FrauncesHole96',
       holeNumberSun: 'FrauncesHole132',
-      serifDisplay: 'Fraunces_500Medium',
-      serifScore: 'Fraunces_600SemiBold',
       sans: 'Inter_400Regular',
       sansMedium: 'Inter_500Medium',
       sansSemiBold: 'Inter_600SemiBold',
       sansBold: 'Inter_700Bold',
     });
+  });
+});
+
+// #2385: Fraunces med optisk størrelse lik skriftstørrelsen, som nettleseren.
+describe('fraunces', () => {
+  it('gir snittet for vekten og størrelsen', () => {
+    expect(frauncesFamily(500, 28)).toBe('Fraunces500O28');
+    expect(frauncesFamily(600, 40)).toBe('Fraunces600O40');
+    expect(fraunces(500, 28)).toEqual({ fontSize: 28, fontFamily: 'Fraunces500O28' });
+  });
+
+  it('runder en størrelse uten eget snitt til nærmeste, og midt mellom til det største', () => {
+    expect(frauncesFamily(600, 10.5)).toBe('Fraunces600O11');
+    expect(frauncesFamily(600, 17)).toBe('Fraunces600O18');
+    expect(frauncesFamily(500, 16)).toBe('Fraunces500O15');
+    expect(frauncesFamily(600, 200)).toBe('Fraunces600O64');
+    expect(frauncesFamily(600, 4)).toBe('Fraunces600O9');
+  });
+
+  it('gir nettleserens linjeboks når linjehøyden er med', () => {
+    expect(fraunces(600, 30, 30, 3)).toEqual({
+      fontSize: 30,
+      fontFamily: 'Fraunces600O30',
+      marginVertical: frauncesLine(30, 30, 3).marginVertical,
+    });
+  });
+
+  it('har ett snitt per størrelse i tabellen, lastet i appen og lagt i assets', () => {
+    const table = Object.entries(FRAUNCES_SIZES).flatMap(([weight, sizes]) =>
+      sizes.map((size) => `Fraunces${weight}O${size}`),
+    );
+    const holes = ['FrauncesHole96', 'FrauncesHole132'];
+    expect(Object.keys(FRAUNCES_FILES).sort()).toEqual([...table, ...holes].sort());
+    const files = readdirSync(join(__dirname, '../assets/fonts'))
+      .filter((file) => file.endsWith('.ttf'))
+      .map((file) => file.replace(/\.ttf$/, ''));
+    expect(files.sort()).toEqual([...table, ...holes].sort());
+  });
+
+  it('har et eget snitt for hver fast størrelse koden bruker', () => {
+    // Bare dynamiske størrelser (et tall fra en tabell eller en funksjon)
+    // skal rundes. Står størrelsen som tall i koden, skal snittet finnes.
+    const missing: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (/\.tsx?$/.test(entry.name) && !/\.test\./.test(entry.name)) {
+          const src = readFileSync(path, 'utf8');
+          for (const m of src.matchAll(/fraunces(?:Family)?\((500|600),\s*([0-9.]+)\b/g)) {
+            const sizes: readonly number[] = FRAUNCES_SIZES[m[1] as '500' | '600'];
+            if (!sizes.includes(Number(m[2]))) missing.push(`${path}: ${m[0]}`);
+          }
+        }
+      }
+    };
+    walk(__dirname);
+    expect(missing).toEqual([]);
   });
 });
 
