@@ -8,7 +8,6 @@
 // champagne (lederen, hullvinneren), får `accentText` her, gull tekst med
 // kontrast nok til å leses.
 import { StyleSheet, Text, View } from 'react-native';
-import { formatRevealName } from '../../../../../lib/names/formatRevealName';
 import type {
   SoloScorecard,
   SoloScorecardHole,
@@ -16,24 +15,12 @@ import type {
 } from '../../../../../lib/leaderboard/soloScorecard';
 import { formatSignedPoints } from '../../../../../lib/leaderboard/soloScorecard';
 import type { BundlePlayer } from '../../data/gameBundle';
-import {
-  HOLES_TEXT,
-  grossChip,
-  holeNumberLabel,
-  holesPlayedChip,
-  parSiChip,
-} from '../../lib/holesCopy';
+import { HOLES_TEXT, grossChip, holesPlayedChip } from '../../lib/holesCopy';
 import { FONTS, useTheme } from '../../theme';
 import { ScoreShape } from '../scorecard/ScoreShape';
+import { HoleHeader, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
 
 type Metric = 'points' | 'net';
-
-/** Navnet slik webben skriver det: «Ola "Kompis" N.», med webbens reserve. */
-function nameOf(players: readonly BundlePlayer[], userId: string, fallback: string): string {
-  const player = players.find((p) => p.userId === userId);
-  if (!player) return fallback;
-  return formatRevealName(player.name ?? HOLES_TEXT.unknownPlayer, player.nickname);
-}
 
 function valueText(value: number | null, metric: Metric): string {
   if (value == null) return '–';
@@ -54,13 +41,8 @@ export function SoloScorecardView({
 }) {
   const { colors, ui } = useTheme();
   return (
-    <View style={styles.page} testID="hole-by-hole">
-      <View style={styles.titleBlock}>
-        <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
-          {HOLES_TEXT.heading}
-        </Text>
-        <Text style={[ui.muted, styles.center]}>{subtitle}</Text>
-      </View>
+    <View style={holesStyles.page} testID="hole-by-hole">
+      <HolesTitle subtitle={subtitle} />
 
       <View style={ui.card} testID="hole-by-hole-standings">
         <Text style={[styles.kicker, { color: colors.muted }]}>{HOLES_TEXT.standings}</Text>
@@ -184,19 +166,16 @@ function HoleCard({
   const { colors, ui } = useTheme();
   return (
     <View style={ui.card} testID={`hole-by-hole-card-${hole.holeNumber}`}>
-      <View style={styles.holeHeader}>
-        <View style={styles.holeTitle}>
-          <Text style={[styles.holeNumber, ui.num, { color: colors.text }]}>
-            {holeNumberLabel(hole.holeNumber)}
-          </Text>
-          <Text style={[styles.small, ui.num, { color: colors.muted }]}>
-            {parSiChip(hole.chipPar, hole.strokeIndex)}
-          </Text>
-        </View>
-        {!hole.scored ? (
-          <Text style={[styles.small, { color: colors.muted }]}>{HOLES_TEXT.waiting}</Text>
-        ) : null}
-      </View>
+      <HoleHeader
+        holeNumber={hole.holeNumber}
+        par={hole.chipPar}
+        strokeIndex={hole.strokeIndex}
+        right={
+          !hole.scored ? (
+            <Text style={[holesStyles.small, { color: colors.muted }]}>{HOLES_TEXT.waiting}</Text>
+          ) : null
+        }
+      />
 
       {hole.rows.map((row) => (
         <View
@@ -249,19 +228,7 @@ function HoleCard({
   );
 }
 
-/**
- * Lederen og hullvinneren som på webben: gullkant på 40 % og en svak
- * champagnetone på 6 % (`border-accent/40 bg-accent/[0.06]`). `accent` er en
- * sekssifret hex i temaet, så alfaen legges på som to sifre til.
- */
-const goldEdge = (accent: string) => `${accent}66`;
-const goldWash = (accent: string) => `${accent}0F`;
-
 const styles = StyleSheet.create({
-  page: { gap: 14 },
-  titleBlock: { alignItems: 'center', gap: 2, paddingVertical: 4 },
-  title: { fontSize: 28, fontFamily: FONTS.serifDisplay },
-  center: { textAlign: 'center' },
   kicker: {
     fontSize: 11,
     fontFamily: FONTS.sansSemiBold,
@@ -294,9 +261,6 @@ const styles = StyleSheet.create({
   subtotalName: { flexShrink: 1, maxWidth: 120 },
   /** Tallet i pillen er et scoretall, som webbens `score-num`. */
   subtotalSum: { fontSize: 12, fontFamily: FONTS.serifScore },
-  holeHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  holeTitle: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  holeNumber: { fontSize: 16, fontFamily: FONTS.serifScore },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
