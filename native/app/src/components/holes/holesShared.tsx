@@ -132,7 +132,7 @@ export const holesStyles = StyleSheet.create({
    * Bingo Bango Bongos prestasjoner.
    */
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  /** Stjerna er dekor (skjult for skjermleseren), så den har webbens `accent`, 11 pt. */
+  /** Stjerna er dekor (skjult for skjermleseren), 11 pt. Fargen settes der den brukes. */
   star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
@@ -149,9 +149,10 @@ export const holesStyles = StyleSheet.create({
    */
   kicker: { fontSize: 11, fontFamily: FONTS.sansSemiBold, letterSpacing: 1.6, textTransform: 'uppercase' },
   /**
-   * Små versaler (webbens `text-[10.5px]`/`text-[11px] uppercase
-   * tracking-[0.1em]`): enheten «p» i solo, «Delt» og «Venter» i Round Robin.
+   * Små versaler (webbens `text-[11px] uppercase tracking-[0.1em]`, vanlig
+   * vekt): enheten «p» i solo og «Venter» i Bingo Bango Bongo. Round Robins
+   * «Delt» og «Venter» er `font-medium` på webben og legger vekten på selv.
    */
-  caps: { fontSize: 11, fontFamily: FONTS.sansMedium, letterSpacing: 1, textTransform: 'uppercase' },
+  caps: { fontSize: 11, fontFamily: FONTS.sans, letterSpacing: 1, textTransform: 'uppercase' },
   footer: { fontSize: 12, fontFamily: FONTS.serifDisplay, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
 });
