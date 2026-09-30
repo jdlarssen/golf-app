@@ -210,8 +210,11 @@ function ScoreSummary({
 
   return (
     <View testID={`summary-${entry.user_id}`}>
-      <ScorecardGrid grid={grid} rows={['strokes']} />
-      <ScorecardTotals totals={grid.totals} showNet={false} showPoints={false} />
+      <ScorecardGrid
+        grid={grid}
+        rows={['strokes']}
+        footer={<ScorecardTotals totals={grid.totals} showNet={false} showPoints={false} />}
+      />
     </View>
   );
 }
