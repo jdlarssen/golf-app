@@ -13,11 +13,21 @@ import { HoleByHole, HoleByHoleBody } from './HoleByHole';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
 // Skjermen rundt kroppen: bundel og slag fra enheten, og hentingen av slagene.
-const mockScreen: { bundle: GameBundle | null; scores: unknown[]; seed: () => Promise<number> } = {
+const mockScreen: {
+  bundle: GameBundle | null;
+  scores: unknown[];
+  seed: () => Promise<number>;
+  extras: Record<string, unknown>;
+} = {
   bundle: null,
   scores: [],
   seed: async () => 0,
+  extras: {},
 };
+// Valgene (Wolf) hentes med fokus og polling; her leverer testen dem selv.
+jest.mock('../lib/useChoices', () => ({
+  useGameChoices: () => ({ extras: mockScreen.extras, refresh: async () => undefined }),
+}));
 jest.mock('../lib/useGameData', () => ({
   useGameBundle: () => ({ bundle: mockScreen.bundle, loading: false }),
   useLocalScores: () => ({ scores: mockScreen.scores, reload: mockReload }),
@@ -73,6 +83,7 @@ it('et format appen ikke har «Hull for hull» for: en rolig linje', async () =>
 describe('hentingen av slagene', () => {
   beforeEach(() => {
     mockReload.mockClear();
+    mockScreen.extras = {};
   });
   const props = { route: { params: { gameId: 'g1' } } } as unknown as ScreenProps<'HoleByHole'>;
   const finished = () =>
@@ -107,3 +118,56 @@ describe('hentingen av slagene', () => {
     expect(screen.queryByTestId('hole-by-hole-seed-failed')).toBeNull();
   });
 });
+
+describe('Wolf (#2255 PR 3b)', () => {
+  const wolfPlayers = ['a', 'b', 'c', 'd'].map((userId, i) =>
+    homePlayer({ userId, name: userId.toUpperCase(), teamNumber: i + 1, courseHandicap: 0 }),
+  );
+  const wolfBundle = () =>
+    homeBundle({
+      game: {
+        id: 'gw',
+        status: 'finished',
+        gameMode: 'wolf',
+        modeConfig: { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' },
+      },
+      players: wolfPlayers,
+    });
+  const wolfScores = [
+    ...holeScores('gw', 'a', 1, 4),
+    ...holeScores('gw', 'b', 1, 5),
+    ...holeScores('gw', 'c', 1, 5),
+    ...holeScores('gw', 'd', 1, 6),
+  ];
+  const props = { route: { params: { gameId: 'gw' } } } as unknown as ScreenProps<'HoleByHole'>;
+
+  it('venter på valgene før noe regnes, i stedet for «Venter» på hvert hull', async () => {
+    mockScreen.bundle = wolfBundle();
+    mockScreen.scores = wolfScores;
+    mockScreen.seed = async () => 0;
+    mockScreen.extras = {};
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(mockReload).toHaveBeenCalled());
+    expect(screen.getByTestId('hole-by-hole-spinner')).toBeTruthy();
+    expect(screen.queryByTestId('hole-by-hole')).toBeNull();
+  });
+
+  it('med valgene: ett kort per hull, ulven, valget og utfallet, og ulvens side først', async () => {
+    const bundle = wolfBundle();
+    await render(
+      <HoleByHoleBody
+        bundle={bundle}
+        scores={wolfScores}
+        extras={{ wolfChoices: [{ holeNumber: 1, wolfUserId: 'a', choice: 'partner', partnerUserId: 'b' }] }}
+      />,
+    );
+    expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+    expect(screen.getByTestId('hole-by-hole-wolf-1')).toHaveTextContent(/Wolf:.*A.*Partner: B.*Wolf vant/);
+    const rows = screen.getAllByTestId(/^hole-by-hole-row-1-/).map((r) => r.props.testID);
+    expect(rows.slice(0, 2)).toEqual(['hole-by-hole-row-1-a', 'hole-by-hole-row-1-b']);
+    // Ingen innsats over 1 på hull 1.
+    expect(screen.queryByTestId('hole-by-hole-stake-1')).toBeNull();
+  });
+});
+

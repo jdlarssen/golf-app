@@ -4,8 +4,9 @@
 // webbens side gjør (en stableford-rad med tom config har ingen «Hull for
 // hull» der heller). Oppå den står appens egen liste over formatene skjermen
 // er bygget for. Den vokser format for format (PR 3a: solo stableford,
-// modifisert stableford og solo slagspill). For resten står flisa på spillets
-// side som «Tavla», som for formatene webben sender til tavla.
+// modifisert stableford og solo slagspill; PR 3b: Wolf). For resten står flisa
+// på spillets side som «Tavla», som for formatene webben sender til tavla.
+// Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke her.
 //
 // Regnestykket er delt med webben: motoren (`computeGameLeaderboard`, samme
 // som tavla) og radene (`lib/leaderboard/soloScorecard.ts`). Skjermen tegner
@@ -16,6 +17,7 @@ import {
   soloStrokeplayScorecard,
   type SoloScorecard,
 } from '../../../../lib/leaderboard/soloScorecard';
+import { wolfHoleCards, type WolfHoleCards } from '../../../../lib/leaderboard/wolfHoles';
 import {
   MODE_LABELS,
   type GameMode,
@@ -23,17 +25,15 @@ import {
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
-import { HOLES_TEXT } from './holesCopy';
-import { computeGameLeaderboard } from './scoringContext';
+import { HOLES_TEXT, wolfSubtitle } from './holesCopy';
+import { computeGameLeaderboard, type ScoringExtras } from './scoringContext';
 
-export type HoleByHoleKind = 'solo-stableford' | 'solo-strokeplay';
+export type HoleByHoleKind = 'solo-stableford' | 'solo-strokeplay' | 'wolf';
 
-export interface HoleByHoleModel {
-  kind: HoleByHoleKind;
-  /** Linja under overskriften: formatet («Stableford», «Slagspill · Netto»). */
-  subtitle: string;
-  card: SoloScorecard;
-}
+/** Linja under overskriften er formatet («Stableford», «Wolf · Netto»). */
+export type HoleByHoleModel =
+  | { kind: 'solo-stableford' | 'solo-strokeplay'; subtitle: string; card: SoloScorecard }
+  | { kind: 'wolf'; subtitle: string; wolf: WolfHoleCards };
 
 function isKnownMode(mode: string): mode is GameMode {
   return Object.hasOwn(MODE_LABELS, mode);
@@ -52,7 +52,17 @@ export function holeByHoleKind(
   if (!hasHoleByHoleView(mode, raw as GameModeConfig)) return null;
   if (mode === 'stableford' || mode === 'modified_stableford') return 'solo-stableford';
   if (mode === 'solo_strokeplay') return 'solo-strokeplay';
+  if (mode === 'wolf') return 'wolf';
   return null;
+}
+
+/**
+ * Trenger formatet valg fra serveren før det kan regnes (Wolf: hvem valgte
+ * hva), og er de ikke hentet ennå? Da venter skjermen i stedet for å vise
+ * hvert hull som «Venter».
+ */
+export function waitsForChoices(kind: HoleByHoleKind | null, extras: ScoringExtras): boolean {
+  return kind === 'wolf' && extras.wolfChoices === undefined;
 }
 
 /**
@@ -62,10 +72,11 @@ export function holeByHoleKind(
 export function buildHoleByHole(
   bundle: GameBundle,
   scores: readonly LocalScore[],
+  extras: ScoringExtras = {},
 ): HoleByHoleModel | null {
   const kind = holeByHoleKind(bundle.game);
   if (kind === null) return null;
-  const outcome = computeGameLeaderboard(bundle, scores);
+  const outcome = computeGameLeaderboard(bundle, scores, extras);
   if (!outcome.ok) return null;
   const { result } = outcome;
   const teeGenderOf = (userId: string) =>
@@ -84,6 +95,9 @@ export function buildHoleByHole(
       subtitle: HOLES_TEXT.strokeplaySubtitle,
       card: soloStrokeplayScorecard(result, teeGenderOf),
     };
+  }
+  if (kind === 'wolf' && result.kind === 'wolf') {
+    return { kind, subtitle: wolfSubtitle(result.scoring), wolf: wolfHoleCards(result) };
   }
   return null;
 }
