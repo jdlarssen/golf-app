@@ -23,6 +23,7 @@ import type { GameBundle } from '../data/gameBundle';
 import { seedGameScores } from '../data/seedScores';
 import { buildHoleByHole } from '../lib/holeByHole';
 import { HOLES_TEXT } from '../lib/holesCopy';
+import { SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
@@ -62,7 +63,7 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
     <ScrollView contentContainerStyle={ui.scroll} testID="hole-by-hole-screen">
       {seed === 'failed' ? (
         <Text style={[ui.muted, { marginBottom: 8 }]} testID="hole-by-hole-seed-failed">
-          {HOLES_TEXT.seedFailed}
+          {SEED_FAILED_TEXT}
         </Text>
       ) : null}
       <HoleByHoleBody bundle={bundle} scores={scores} />
