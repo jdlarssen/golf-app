@@ -2083,6 +2083,7 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Gaten** (`lib/holeByHole.ts`) er webbens `hasHoleByHoleView`, gitt den rå
   `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
   bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. PR 3b: Wolf.
+  PR 3c: Nines.
   Skins og Nassau bygges etter sine egne tegninger (#2317, #2327) og står som «Tavla» til da.
   De andre formatene webben har visning for, står som «Tavla» til de kommer.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
@@ -2096,6 +2097,16 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   bitene i visningene (navnet, tittelen, hull-hodet, raden, gulltonen og bunnteksten «Vel
   spilt!») bor i `components/holes/holesShared.tsx`. Toppen er den felles `kickerHeader` med
   spillnavnet, som følger med som ruteparameter (`gameName`) fra spillets side.
+- **Nines** (PR 3c): kortene per hull kommer fra `lib/leaderboard/ninesHoles.ts`, som webbens
+  `NinesHolesView` også tegner. Hvert kort har potten (Nines 9 poeng, Split Sixes 6), eller
+  «Venter på score» når ikke alle har tastet, og så spillerne med plassen på hullet, poengene,
+  brutto ved siden av netto og scoren. Lik score deler plassen (1, 1, 3), og da avgjør
+  stillingen hvem som står først. Et hull som venter, plasserer ingen, så ingen kåres for
+  tidlig, og spillerne står etter stillingen. Nines trenger ingen valg fra serveren, bare
+  slagene. Del-poeng (bare mulig med andre spillertall enn tre) skrives med norsk komma.
+  Appen bygger desimalen selv fordi Hermes mangler ICU, og testen låser den mot webbens
+  `formatNumber`. Gullbrikka i hull-hodet (Wolf: innsatsen, Nines: potten) og teksten for
+  poeng og brutto bor i `components/holes/holesShared.tsx`.
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,

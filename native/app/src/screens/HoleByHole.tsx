@@ -3,8 +3,9 @@
 //
 // Webbens side har en egen visning per format. Appen tar dem format for
 // format (`lib/holeByHole.ts` sier hvilke), og tegner samme modell som webben
-// (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`). I en
-// blind runde som pågår holdes alt tilbake, som på webben.
+// (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`,
+// `lib/leaderboard/ninesHoles.ts`). I en blind runde som pågår holdes alt
+// tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
@@ -17,6 +18,7 @@ import {
   shouldHideNetto,
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
+import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
 import { WolfHoleCardsView } from '../components/holes/WolfHoleCardsView';
 import type { LocalScore } from '../data/db';
@@ -143,6 +145,16 @@ export function HoleByHoleBody({
     return (
       <WolfHoleCardsView
         cards={model.wolf}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'nines') {
+    return (
+      <NinesHoleCardsView
+        cards={model.nines}
         subtitle={model.subtitle}
         players={bundle.players}
         finished={game.status === 'finished'}

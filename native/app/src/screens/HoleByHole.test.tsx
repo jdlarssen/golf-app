@@ -196,3 +196,46 @@ describe('Wolf (#2255 PR 3b)', () => {
     expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
   });
 });
+
+describe('Nines (#2255 PR 3c)', () => {
+  it('ett kort per hull med potten, plassen, score og poeng; lederne først', async () => {
+    const bundle = homeBundle({
+      game: {
+        id: 'gn',
+        status: 'finished',
+        gameMode: 'nines',
+        modeConfig: { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' },
+      },
+      // Motsatt av stillingen, så motorens rekkefølge ikke er den ferdige.
+      players: [
+        homePlayer({ userId: 'c', name: 'C', courseHandicap: 0 }),
+        homePlayer({ userId: 'b', name: 'B', courseHandicap: 18 }),
+        homePlayer({ userId: 'a', name: 'A', courseHandicap: 0 }),
+      ],
+    });
+    // Hull 1: A 4, B 5 med et slag (netto 4), C 5. A og B delt lavest: 4 poeng hver, C 1.
+    const ninesScores = [
+      ...holeScores('gn', 'a', 1, 4),
+      ...holeScores('gn', 'b', 1, 5),
+      ...holeScores('gn', 'c', 1, 5),
+    ];
+    await render(<HoleByHoleBody bundle={bundle} scores={ninesScores} />);
+
+    expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
+    expect(screen.getByText('Nines · Netto')).toBeTruthy();
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+    expect(screen.getByTestId('hole-by-hole-pot-1')).toHaveTextContent('9 poeng');
+    // Hull 2 er ikke spilt: ingen pott, men «Venter på score».
+    expect(screen.queryByTestId('hole-by-hole-pot-2')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-card-2')).toHaveTextContent(/Venter på score/);
+
+    const rows = screen.getAllByTestId(/^hole-by-hole-row-1-/).map((r) => r.props.testID);
+    expect(rows).toEqual(['hole-by-hole-row-1-a', 'hole-by-hole-row-1-b', 'hole-by-hole-row-1-c']);
+    expect(screen.getByTestId('hole-by-hole-row-1-b')).toHaveTextContent(/B.*\+4.*brutto 5.*4/);
+    // Plassen er dekor for skjermleseren, som på webben (aria-hidden).
+    expect(screen.queryByTestId('hole-by-hole-place-1-c')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-place-1-c', HIDDEN)).toHaveTextContent('3');
+    expect(screen.getByTestId('hole-by-hole-place-2-a', HIDDEN)).toHaveTextContent('–');
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+  });
+});

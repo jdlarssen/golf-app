@@ -4,13 +4,15 @@
 // webbens side gjør (en stableford-rad med tom config har ingen «Hull for
 // hull» der heller). Oppå den står appens egen liste over formatene skjermen
 // er bygget for. Den vokser format for format (PR 3a: solo stableford,
-// modifisert stableford og solo slagspill; PR 3b: Wolf). For resten står flisa
-// på spillets side som «Tavla», som for formatene webben sender til tavla.
+// modifisert stableford og solo slagspill; PR 3b: Wolf; PR 3c: Nines). For
+// resten står flisa på spillets side som «Tavla», som for formatene webben
+// sender til tavla.
 // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke her.
 //
 // Regnestykket er delt med webben: motoren (`computeGameLeaderboard`, samme
 // som tavla) og radene (`lib/leaderboard/soloScorecard.ts`,
-// `lib/leaderboard/wolfHoles.ts`). Skjermen tegner bare det som kommer herfra.
+// `lib/leaderboard/wolfHoles.ts`, `lib/leaderboard/ninesHoles.ts`). Skjermen
+// tegner bare det som kommer herfra.
 import { hasHoleByHoleView } from '../../../../lib/leaderboard/holeByHoleView';
 import {
   soloStablefordScorecard,
@@ -18,6 +20,7 @@ import {
   type SoloScorecard,
 } from '../../../../lib/leaderboard/soloScorecard';
 import { wolfHoleCards, type WolfHoleCards } from '../../../../lib/leaderboard/wolfHoles';
+import { ninesHoleCards, type NinesHoleCards } from '../../../../lib/leaderboard/ninesHoles';
 import {
   MODE_LABELS,
   type GameMode,
@@ -25,16 +28,17 @@ import {
 } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
-import { HOLES_TEXT, wolfSubtitle } from './holesCopy';
+import { HOLES_TEXT, ninesSubtitle, wolfSubtitle } from './holesCopy';
 import { computeGameLeaderboard, type ScoringExtras } from './scoringContext';
 import { choicesNotYetHere } from './choiceSource';
 
-export type HoleByHoleKind = 'solo-stableford' | 'solo-strokeplay' | 'wolf';
+export type HoleByHoleKind = 'solo-stableford' | 'solo-strokeplay' | 'wolf' | 'nines';
 
-/** Linja under overskriften er formatet («Stableford», «Wolf · Netto»). */
+/** Linja under overskriften er formatet («Stableford», «Wolf · Netto», «Nines · Netto»). */
 export type HoleByHoleModel =
   | { kind: 'solo-stableford' | 'solo-strokeplay'; subtitle: string; card: SoloScorecard }
-  | { kind: 'wolf'; subtitle: string; wolf: WolfHoleCards };
+  | { kind: 'wolf'; subtitle: string; wolf: WolfHoleCards }
+  | { kind: 'nines'; subtitle: string; nines: NinesHoleCards };
 
 function isKnownMode(mode: string): mode is GameMode {
   return Object.hasOwn(MODE_LABELS, mode);
@@ -54,6 +58,7 @@ export function holeByHoleKind(
   if (mode === 'stableford' || mode === 'modified_stableford') return 'solo-stableford';
   if (mode === 'solo_strokeplay') return 'solo-strokeplay';
   if (mode === 'wolf') return 'wolf';
+  if (mode === 'nines') return 'nines';
   return null;
 }
 
@@ -100,6 +105,10 @@ export function buildHoleByHole(
   }
   if (kind === 'wolf' && result.kind === 'wolf') {
     return { kind, subtitle: wolfSubtitle(result.scoring), wolf: wolfHoleCards(result) };
+  }
+  if (kind === 'nines' && result.kind === 'nines') {
+    const nines = ninesHoleCards(result);
+    return { kind, subtitle: ninesSubtitle(nines.variantKey, nines.scoringKey), nines };
   }
   return null;
 }
