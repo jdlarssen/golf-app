@@ -175,8 +175,9 @@ const styles = StyleSheet.create({
   heading: { ...frauncesLine(18, 23), fontFamily: FONTS.serifDisplay },
   scope: { ...interLine(12, 15), fontFamily: FONTS.sans },
   sentenceRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 4 },
-  // Designets «▲»: 8 × 8 pt, 1 pt inn, 4⅓ pt under linjetoppen og 5 pt før teksten.
-  arrow: { marginLeft: 1, marginTop: 13 / 3, marginRight: 5 },
+  // Designets «▲»: 8 × 8 pt, 1 pt inn, 4⅓ pt under linjetoppen, og tallet
+  // står 5 pt etter (4⅓ pt luft pluss sifferets egen sidekant).
+  arrow: { marginLeft: 1, marginTop: 13 / 3, marginRight: 13 / 3 },
   sentence: { ...interLine(13, 16), fontFamily: FONTS.sansSemiBold, flexShrink: 1 },
   curvePlaceholder: { height: CURVE.height, marginTop: 8 },
   tooFew: { fontSize: 13, fontFamily: FONTS.sans, marginTop: 8, lineHeight: 18 },
