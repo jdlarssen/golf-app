@@ -73,6 +73,33 @@ if printf '%s' "$msg" | grep -qE '^(feat|fix|perf|refactor)(\([^)]+\))?!?: '; th
 fi
 
 # ─────────────────────────────────────────────────────────────────────
+# H2b — Notatfilene må være gyldige (#2256). Gjelder ALLE commit-typer som
+# stager en notatfil, ny eller endret (README.md er malen). Reglene er
+# ukesslippets egne (`parseNote` i scripts/weekly-release.mjs), sjekket på
+# innholdet i indeksen av scripts/check-changes-notes.mjs. Før dette sjekket
+# hooken bare at en notatfil fantes, og to feat-notater uten «title» nådde
+# main og ville stoppet mandagens slipp.
+# Uten node: en advarsel, og commiten slipper gjennom (ingen økt låses ute).
+# ─────────────────────────────────────────────────────────────────────
+if git diff --cached --name-only --diff-filter=AM \
+   | grep -E '^\.changes/[^/]+\.md$' \
+   | grep -qvxF '.changes/README.md'; then
+  if command -v node >/dev/null 2>&1; then
+    root="$(git rev-parse --show-toplevel)"
+    if ! note_errors="$(node "$root/scripts/check-changes-notes.mjs" 2>&1)"; then
+      printf '\n✗ Commit blokkert: ugyldig notatfil under .changes/\n\n' >&2
+      printf '%s\n\n' "$note_errors" >&2
+      printf '  Mal og feltgrenser: .changes/README.md\n' >&2
+      printf '  Alle ukas notater: node scripts/weekly-release.mjs --dry-run\n\n' >&2
+      exit 1
+    fi
+  else
+    printf '\n⚠ node finnes ikke: notatfilene under .changes/ ble ikke sjekket.\n' >&2
+    printf '  Kjør node scripts/weekly-release.mjs --dry-run før du pusher.\n\n' >&2
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────
 # H3 — Notatfil: bare for bruker-synlige commit-typer.
 # Interne fikser (test-only, refactor-shipped-as-fix, tooling) hopper med
 # [no-changelog], som før.
