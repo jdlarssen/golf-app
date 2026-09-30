@@ -7,8 +7,9 @@
 // har underlinja, og nederste rad har putte-valget og «Neste».
 // `railStrokesLine` er en ren funksjon (Type A).
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import source from '../../../../../messages/no.json';
 import { themeFor } from '../../theme';
-import { ScoreRail, railStrokesLine, type ScoreRailProps } from './ScoreRail';
+import { PUTTS_LABEL, ScoreRail, railStrokesLine, type ScoreRailProps } from './ScoreRail';
 
 function props(over: Partial<ScoreRailProps> = {}): ScoreRailProps {
   return {
@@ -84,6 +85,10 @@ describe('ScoreRail', () => {
     expect(screen.getByTestId('score-rail-all-scored')).toBeTruthy();
     expect(screen.queryByTestId('rail-other')).toBeNull();
   });
+});
+
+it('«Putter» er webbens ord tegn for tegn', () => {
+  expect(PUTTS_LABEL).toBe(source.holes.putts.fieldLabel);
 });
 
 describe('railStrokesLine', () => {

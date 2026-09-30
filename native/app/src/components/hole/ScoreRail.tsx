@@ -112,6 +112,8 @@ const SHORT_LABELS: Partial<Record<StrokeTerm, string>> = {
 };
 
 const ALL_SCORED = 'Alle har score på hullet. Trykk på et navn for å rette.';
+/** Ordrett webbens `holes.putts.fieldLabel` (låst i testen). */
+export const PUTTS_LABEL = 'Putter';
 
 /** `scores.putts` har CHECK (0..10) fra migrasjon 0123. */
 const MAX_PUTTS = 10;
@@ -370,7 +372,7 @@ export function ScoreRail({
                 accessibilityState={{ checked: true }}
                 accessibilityLabel="Registrer putter"
               >
-                <Text style={[styles.puttsLabel, { color: colors.muted }]}>Putter</Text>
+                <Text style={[styles.puttsLabel, { color: colors.muted }]}>{PUTTS_LABEL}</Text>
               </Pressable>
               {/* key: «5+»-stepperen skal ikke følge skinna til neste spiller. */}
               <PuttsChips

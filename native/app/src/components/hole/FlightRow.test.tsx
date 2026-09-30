@@ -49,7 +49,7 @@ describe('FlightRow', () => {
 
     // Tastet og ikke på tur: slagene og poengene.
     await rerender(<FlightRow {...BASE} active={false} note={null} onSelect={onSelect} />);
-    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe('Får 1 slag · 3 poeng');
+    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(`${strokesLine(1)} · 3 poeng`);
 
     // Ikke tastet og ikke på tur: «venter» og en blek skive.
     await rerender(
@@ -64,7 +64,7 @@ describe('FlightRow', () => {
         onSelect={onSelect}
       />,
     );
-    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe('Får 1 slag · venter');
+    expect(screen.getByTestId('flight-row-p1-note').props.children).toBe(`${strokesLine(1)} · venter`);
     expect(screen.getByTestId('flight-row-p1-avatar-waiting', HIDDEN)).toBeTruthy();
     expect(screen.getByTestId('flight-row-p1-submitted')).toBeTruthy();
     expect(screen.getByLabelText('Marte Moe (deg): ingen score ennå, levert')).toBeTruthy();
