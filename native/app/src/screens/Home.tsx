@@ -240,7 +240,6 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
             navigation.navigate('Hole', { gameId: hero.gameId, holeNumber })
           }
           onSubmit={() => navigation.navigate('Scorecard', { gameId: hero.gameId })}
-          onBoard={() => navigation.navigate('Leaderboard', { gameId: hero.gameId })}
           onApprove={() => navigation.navigate('Approve', { gameId: hero.gameId })}
         />
       ) : null}

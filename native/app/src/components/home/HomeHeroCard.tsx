@@ -8,7 +8,9 @@
 //
 // #2385 la kortet på designlerretet (`Hjem-forslag`): toppen er én rad med
 // salvieprikken og «PÅGÅR NÅ» til venstre og «navn · bane» til høyre, ringen
-// er 96 pt, og kortet har en tydelig skygge.
+// er 96 pt, og kortet har en tydelig skygge. Hjem v2 (#2385, den strenge
+// lista): kortet slutter med knappen (tavla nås fra spillets side), «PÅGÅR NÅ»
+// og «HULL» står i designets varme krem, og tallene er proporsjonale.
 //
 // **Skjermleseren.** Kortet er ikke ett stort trykkfelt: da ville VoiceOver
 // lest det som én knapp, og ringen og knappene inni ville forsvunnet. Toppen
@@ -29,7 +31,7 @@ import {
   standingDetail,
 } from '../../lib/homeCopy';
 import type { HeroModel } from '../../lib/homeHero';
-import { FONTS, TAP, heroShadow, useTheme } from '../../theme';
+import { FONTS, TAP, frauncesLine, heroShadow, interLine, useTheme } from '../../theme';
 import { HoleRing } from '../icons/Icons';
 
 export interface HomeHeroCardProps {
@@ -39,7 +41,6 @@ export interface HomeHeroCardProps {
   onOpenGame: () => void;
   onHole: (holeNumber: number) => void;
   onSubmit: () => void;
-  onBoard: () => void;
   onApprove: () => void;
 }
 
@@ -49,14 +50,13 @@ export function HomeHeroCard({
   onOpenGame,
   onHole,
   onSubmit,
-  onBoard,
   onApprove,
 }: HomeHeroCardProps) {
   const { colors, ui, scheme } = useTheme();
   const ink = { color: colors.onStrong };
   // Samme dom som modellen: «åpne runden» betyr at appen ikke kan love mer enn
   // spillets side (stengt spill, ikke i rosteret, eller en bundel som ennå ikke
-  // sier at runden er i gang). Da står verken ring, plass eller tavle-lenke.
+  // sier at runden er i gang). Da står verken ring eller plass.
   const playable = model !== null && model.action?.kind !== 'open';
 
   return (
@@ -81,7 +81,7 @@ export function HomeHeroCard({
         >
           <View style={styles.kickerRow}>
             <View style={[styles.liveDot, { backgroundColor: colors.live }]} />
-            <Text style={[styles.kicker, ink]}>{HOME_TEXT.inProgress}</Text>
+            <Text style={[styles.kicker, { color: colors.onStrongWarm }]}>{HOME_TEXT.inProgress}</Text>
           </View>
           <Text style={[styles.where, ink]} numberOfLines={1} testID="home-hero-where">
             {[card.name, card.courseName].filter(Boolean).join(' · ')}
@@ -95,7 +95,12 @@ export function HomeHeroCard({
             style={styles.middle}
             testID="home-hero-middle"
           >
-            <Ring model={model} color={colors.onStrong} arcColor={colors.live} />
+            <Ring
+              model={model}
+              color={colors.onStrong}
+              kickerColor={colors.onStrongWarm}
+              arcColor={colors.live}
+            />
             <View style={styles.standing}>
               <Standing model={model} />
             </View>
@@ -108,17 +113,6 @@ export function HomeHeroCard({
           onHole={onHole}
           onSubmit={onSubmit}
         />
-
-        {playable ? (
-          <Pressable
-            onPress={onBoard}
-            accessibilityRole="link"
-            style={styles.link}
-            testID="home-hero-board"
-          >
-            <Text style={[styles.linkText, ink]}>{HOME_TEXT.board}</Text>
-          </Pressable>
-        ) : null}
       </View>
 
       {model && model.approvals > 0 ? (
@@ -138,7 +132,18 @@ export function HomeHeroCard({
 }
 
 /** Ringen med hullet du skal til, eller hvor mange du har spilt når alt er tastet. */
-function Ring({ model, color, arcColor }: { model: HeroModel; color: string; arcColor: string }) {
+function Ring({
+  model,
+  color,
+  kickerColor,
+  arcColor,
+}: {
+  model: HeroModel;
+  color: string;
+  /** «HULL» i designets varme krem (#2385). */
+  kickerColor: string;
+  arcColor: string;
+}) {
   const next = model.action?.kind === 'hole' ? model.action.holeNumber : null;
   const label =
     next !== null
@@ -160,7 +165,7 @@ function Ring({ model, color, arcColor }: { model: HeroModel; color: string; arc
         testID="home-hero-ring-svg"
       />
       <View style={styles.ringCenter}>
-        <Text style={[styles.ringKicker, { color }]}>
+        <Text style={[styles.ringKicker, { color: kickerColor }]}>
           {next !== null ? HOME_TEXT.holeKicker : HOME_TEXT.playedKicker}
         </Text>
         <Text style={[styles.ringNumber, { color }]} testID="home-hero-ring-number">
@@ -291,32 +296,29 @@ const styles = StyleSheet.create({
   middle: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   ring: { width: RING_BOX, height: RING_BOX, alignItems: 'center', justifyContent: 'center' },
   ringCenter: { position: 'absolute', alignItems: 'center' },
+  // Designet: «HULL» 10 pt i nettleserens linje (12), og «8» på 40 med linje 1.
   ringKicker: {
-    fontSize: 10,
+    ...interLine(10, 12),
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
   ringNumber: {
-    fontSize: 40,
-    lineHeight: 44,
+    ...frauncesLine(40, 40),
     fontFamily: FONTS.serifScore,
-    fontVariant: ['tabular-nums'],
   },
   standing: { flex: 1, gap: 8 },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   gold: { width: 14, height: 14, borderRadius: 7 },
+  // Designet: 26 pt med linje 1,1, og proporsjonale tall i begge linjene.
   place: {
-    fontSize: 26,
-    lineHeight: 29,
+    ...frauncesLine(26, 28.6),
     fontFamily: FONTS.serifDisplay,
-    fontVariant: ['tabular-nums'],
   },
   detail: {
     fontSize: 13,
     fontFamily: FONTS.sans,
     opacity: 0.9,
-    fontVariant: ['tabular-nums'],
   },
   // Pille på 52 pt, som hovedknappen i designet for Hjem og i startbilletten.
   button: {
@@ -335,7 +337,5 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   stateText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
-  link: { minHeight: TAP, justifyContent: 'center', alignSelf: 'flex-start' },
-  linkText: { fontSize: 15, fontFamily: FONTS.sansMedium, textDecorationLine: 'underline' },
   approvals: { minHeight: TAP, justifyContent: 'center' },
 });
