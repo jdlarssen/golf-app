@@ -13,6 +13,25 @@ import { leaderboardVisibility } from './leaderboardModel';
 import { computeGameLeaderboard, type ScoringExtras } from './scoringContext';
 
 /**
+ * Formatene der tavla i appen har en poengkolonne (`ResultView`, `WolfView`,
+ * `BingoBangoBongoView` og nassau i `PotViews`). Bare for dem henter Hjem
+ * forrige runde til telefonen.
+ */
+const POINTS_MODES: readonly string[] = [
+  'stableford',
+  'modified_stableford',
+  'nines',
+  'acey_deucey',
+  'wolf',
+  'bingo_bango_bongo',
+  'nassau',
+];
+
+export function countsPoints(gameMode: string): boolean {
+  return POINTS_MODES.includes(gameMode);
+}
+
+/**
  * Dine poeng i runden, eller `null` når tavla ikke viser poeng for deg:
  * formatet teller slag, tavla er stengt eller skjult, eller du har ingen slag.
  * Wolf og bingo bango bongo regnes bare med valgene (`extras`), som på tavla.
@@ -24,7 +43,7 @@ export function lastRoundPoints(
   extras: ScoringExtras = {},
 ): number | null {
   const { game } = bundle;
-  if (gateReason(game) !== null) return null;
+  if (!countsPoints(game.gameMode) || gateReason(game) !== null) return null;
   if (leaderboardVisibility(game.scoreVisibility, game.status, game.gameMode as GameMode) !== 'full') {
     return null;
   }
