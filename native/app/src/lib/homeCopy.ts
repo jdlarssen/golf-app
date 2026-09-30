@@ -202,3 +202,8 @@ export function finishedResultText(badge: FinishedResultBadge): string | null {
 export function bruttoText(brutto: number): string {
   return `${brutto} brutto`;
 }
+
+/** Poengene i forrige runde, som «34 poeng» i designet. */
+export function pointsText(points: number): string {
+  return `${points} poeng`;
+}

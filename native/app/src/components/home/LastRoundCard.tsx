@@ -8,12 +8,16 @@
 //
 // #2385 la raden på designlerretet (`Hjem-forslag`): 36 pt medaljong, navnet i
 // 15 pt og en pil til høyre som sier at raden kan trykkes.
+//
+// Hjem v2 (#2385): medaljongen er designets hevede sølvskive (`MedalDisc`), og
+// i stableford står poengene dine i stedet for brutto, som «34 poeng» i
+// designet. Poengene regnes på telefonen (`lastRoundPoints`).
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadge';
 import type { HomeCard, LastRoundScore } from '../../data/homeList';
-import { HOME_TEXT, bruttoText, finishedResultText } from '../../lib/homeCopy';
+import { HOME_TEXT, bruttoText, finishedResultText, pointsText } from '../../lib/homeCopy';
 import { FONTS, TAP, useTheme } from '../../theme';
-import { PokalIcon } from '../icons/Icons';
+import { MedalDisc, PokalIcon } from '../icons/Icons';
 
 /** Tallet i medaljongen, eller `null` når runden ikke har en plass (matchplay). */
 function medalRank(card: HomeCard): number | null {
@@ -25,14 +29,17 @@ function medalRank(card: HomeCard): number | null {
 export function LastRoundCard({
   card,
   score,
+  points,
   onPress,
 }: {
   card: HomeCard;
   /** Brutto for forrige runde; tas bare med når `gameId` er dette spillet. */
   score: LastRoundScore | null;
+  /** Poengene dine i runden når formatet teller poeng, ellers `null`. */
+  points: number | null;
   onPress: () => void;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors } = useTheme();
   const badge = card.resultSummary ? finishedResultBadge(card.resultSummary) : null;
   const win = badge?.isWin ?? false;
   const rank = win ? 1 : medalRank(card);
@@ -41,7 +48,11 @@ export function LastRoundCard({
   const parts = [
     badge ? finishedResultText(badge) : null,
     own?.teamBall ? HOME_TEXT.teamRound : null,
-    own && !own.teamBall && own.brutto != null ? bruttoText(own.brutto) : null,
+    points !== null
+      ? pointsText(points)
+      : own && !own.teamBall && own.brutto != null
+        ? bruttoText(own.brutto)
+        : null,
   ].filter((part): part is string => part != null);
   const line = parts.join(' · ');
 
@@ -55,16 +66,19 @@ export function LastRoundCard({
       testID={`home-last-round-${card.gameId}`}
     >
       <View
-        style={[
-          styles.medal,
-          win
-            ? { backgroundColor: colors.accent, borderColor: colors.accent }
-            : { backgroundColor: colors.bg, borderColor: colors.border },
-        ]}
+        style={[styles.medal, win ? { backgroundColor: colors.accent } : null]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
         testID={win ? 'home-last-round-gold' : 'home-last-round-medal'}
       >
+        {win ? null : (
+          <MedalDisc
+            highlight={colors.surface}
+            edge={colors.border}
+            ring={colors.scoreUnsetFg}
+            size={MEDAL}
+          />
+        )}
         {rank !== null ? (
           <Text
             style={[styles.medalText, { color: win ? colors.onAccent : colors.text }]}
@@ -81,7 +95,7 @@ export function LastRoundCard({
         </Text>
         {line ? (
           <Text
-            style={[styles.line, ui.num, { color: colors.muted }]}
+            style={[styles.line, { color: colors.muted }]}
             testID={`home-last-round-line-${card.gameId}`}
           >
             {line}
@@ -100,6 +114,8 @@ export function LastRoundCard({
   );
 }
 
+const MEDAL = 36;
+
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -113,14 +129,13 @@ const styles = StyleSheet.create({
     minHeight: Math.max(TAP, 64),
   },
   medal: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
+    width: MEDAL,
+    height: MEDAL,
+    borderRadius: MEDAL / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  medalText: { fontSize: 16, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  medalText: { fontSize: 16, fontFamily: FONTS.serifScore },
   text: { flex: 1 },
   name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   line: { fontSize: 12, fontFamily: FONTS.sans },

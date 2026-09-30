@@ -250,3 +250,24 @@ it('bruker aldri en bundel som hører til et annet spill enn helten', async () =
   expect(await screen.findByText('Åpne runden →')).toBeTruthy();
   expect(screen.queryByTestId('home-hero-ring')).toBeNull();
 });
+
+it('forrige runde viser poengene dine i stableford, regnet på enheten (Hjem v2)', async () => {
+  const { refreshCardBundle } = require('../data/homeHero') as {
+    refreshCardBundle: jest.Mock;
+  };
+  mockState.bundles = {
+    new: HERO_BUNDLE,
+    last: {
+      bundle: homeBundle({
+        game: { id: 'last', status: 'finished' },
+        players: [homePlayer({ userId: 'me' }), homePlayer({ userId: 'marte' })],
+      }),
+      scores: [...holeScores('last', 'me', 18, 4), ...holeScores('last', 'marte', 18, 3)],
+    },
+  };
+  const { view } = renderHome();
+  await view;
+
+  expect(await screen.findByText('2. plass av 8 · 36 poeng')).toBeTruthy();
+  expect(refreshCardBundle).toHaveBeenCalledWith('last', { withScores: true });
+});

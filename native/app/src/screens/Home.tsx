@@ -29,6 +29,11 @@
 // enheten (`data/homeHero.ts`). Hvert fokus leser dem på nytt med én gang, så
 // et hull tastet i flymodus flytter ringen også uten nett, og henter dem så fra
 // serveren når lista har svart.
+//
+// Hjem v2 (#2385): «Forrige runde» leser det samme for runden som ble avsluttet
+// sist, så raden kan vise poengene dine i stableford («34 poeng», designet).
+// Samme to hentinger som spillets side gjør (bundelen og `seedGameScores`), og
+// bare for den ene runden.
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -62,6 +67,7 @@ import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
+import { lastRoundPoints } from '../lib/lastRound';
 import { PROFILE_TEXT, formatHcpNb } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -78,6 +84,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [heroData, setHeroData] = useState<CardBundle | null>(null);
   const [ticketBundle, setTicketBundle] = useState<GameBundle | null>(null);
+  const [lastData, setLastData] = useState<CardBundle | null>(null);
   // Økes når enheten skal leses på nytt: ved hvert fokus og etter en henting.
   const [deviceTick, setDeviceTick] = useState(0);
   const [showAllRounds, setShowAllRounds] = useState(false);
@@ -96,12 +103,14 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       const fresh = await refreshHomeCards(userId);
       setList(fresh);
       setErrorText(null);
-      const { active, scheduled } = splitHomeCards(fresh.cards);
+      const { active, scheduled, finished } = splitHomeCards(fresh.cards);
       const hero = pickHeroCard(active).hero;
       const ticket = scheduled[0];
+      const last = finished[0];
       await Promise.allSettled([
         hero ? refreshCardBundle(hero.gameId, { withScores: true }) : null,
         ticket ? refreshCardBundle(ticket.gameId) : null,
+        last ? refreshCardBundle(last.gameId, { withScores: true }) : null,
       ]);
       setDeviceTick((n) => n + 1);
     } catch (err: unknown) {
@@ -139,22 +148,25 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const ticket = split?.scheduled[0] ?? null;
   const heroId = hero?.gameId ?? null;
   const ticketId = ticket?.gameId ?? null;
+  const lastId = split?.finished[0]?.gameId ?? null;
 
-  // Bundelen og slagene fra enheten for helten og billetten.
+  // Bundelen og slagene fra enheten for helten, billetten og forrige runde.
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
       heroId ? loadCardBundle(heroId) : Promise.resolve(null),
       ticketId ? loadCardBundle(ticketId) : Promise.resolve(null),
-    ]).then(([heroCard, ticketCard]) => {
+      lastId ? loadCardBundle(lastId) : Promise.resolve(null),
+    ]).then(([heroCard, ticketCard, lastCard]) => {
       if (cancelled) return;
       setHeroData(heroCard);
       setTicketBundle(ticketCard?.bundle ?? null);
+      setLastData(lastCard);
     });
     return () => {
       cancelled = true;
     };
-  }, [heroId, ticketId, deviceTick]);
+  }, [heroId, ticketId, lastId, deviceTick]);
 
   if (list === null && errorText === null) {
     return (
@@ -188,6 +200,10 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       ? buildHeroModel({ bundle: heroData.bundle, scores: heroData.scores, userId })
       : null;
   const lastRound = finished[0] ?? null;
+  const lastPoints =
+    lastRound && lastData && lastData.bundle.game.id === lastRound.gameId
+      ? lastRoundPoints(lastData.bundle, lastData.scores, userId)
+      : null;
   const olderRounds = finished.slice(1);
   const openGame = (gameId: string) => navigation.navigate('GameHome', { gameId });
 
@@ -274,6 +290,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           <LastRoundCard
             card={lastRound}
             score={list.lastRound}
+            points={lastPoints}
             onPress={() => openGame(lastRound.gameId)}
           />
           {showAllRounds
@@ -282,6 +299,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
                   key={card.gameId}
                   card={card}
                   score={null}
+                  points={null}
                   onPress={() => openGame(card.gameId)}
                 />
               ))
