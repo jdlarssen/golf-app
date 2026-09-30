@@ -6,12 +6,9 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import {
-  wolfChoiceKey,
-  wolfOutcomeKey,
-  wolfOutcomeClass,
-} from '@/lib/wolf/holeLabels';
-import type { WolfResult, WolfHoleRow } from '@/lib/scoring/modes/types';
+import { wolfOutcomeClass } from '@/lib/wolf/holeLabels';
+import { wolfHoleCards, type WolfHoleCard } from '@/lib/leaderboard/wolfHoles';
+import type { WolfResult } from '@/lib/scoring/modes/types';
 import type { WolfPlayerInfo } from '../WolfView';
 
 export interface WolfHolesViewProps {
@@ -43,6 +40,9 @@ export interface WolfHolesViewProps {
  * hvem som var Wolf, valget (Lone/Blind/Partner), utfallet, innsatsen, og —
  * det WolfView sin kompakte PER HULL mangler — hver spillers score, hvilken
  * side de spilte på (Wolf-side/Andre), og poengene de fikk.
+ *
+ * Regnestykket (rekkefølgen, poengene, brutto ved siden av, innsatsen) bor i
+ * `lib/leaderboard/wolfHoles.ts`, delt med appen (#2255 PR 3b). Her tegnes det.
  */
 export function WolfHolesView({
   gameId,
@@ -102,15 +102,8 @@ export function WolfHolesView({
         data-testid="wolf-holes-list"
         className="flex flex-col gap-2.5 px-3.5 pt-1 pb-3.5 list-none"
       >
-        {result.holes.map((hole) => (
-          <HoleCard
-            key={hole.holeNumber}
-            hole={hole}
-            scoring={result.scoring}
-            playersById={playersById}
-            t={t}
-            tc={tc}
-          />
+        {wolfHoleCards(result).holes.map((hole) => (
+          <HoleCard key={hole.holeNumber} hole={hole} playersById={playersById} t={t} tc={tc} />
         ))}
       </ul>
 
@@ -119,19 +112,13 @@ export function WolfHolesView({
   );
 }
 
-function sideRank(side: 'wolf' | 'opp' | null): number {
-  return side === 'wolf' ? 0 : side === 'opp' ? 1 : 2;
-}
-
 function HoleCard({
   hole,
-  scoring,
   playersById,
   t,
   tc,
 }: {
-  hole: WolfHoleRow;
-  scoring: WolfResult['scoring'];
+  hole: WolfHoleCard;
   playersById: Map<string, WolfPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
   tc: ReturnType<typeof useTranslations<'leaderboard.common'>>;
@@ -150,10 +137,6 @@ function HoleCard({
       ? '?'
       : null;
 
-  // Wolf-side øverst, så Andre, så uplasserte (pending).
-  const players = [...hole.players].sort(
-    (a, b) => sideRank(a.side) - sideRank(b.side),
-  );
 
   return (
     <li className="list-none" data-testid={`wolf-holes-card-${hole.holeNumber}`}>
@@ -168,7 +151,7 @@ function HoleCard({
               {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
-          {hole.stake > 1 && (
+          {hole.stake != null && (
             <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
               {hole.stake}x
             </span>
@@ -185,34 +168,26 @@ function HoleCard({
             ·
           </span>
           <span className="text-text">
-            {(() => {
-              const choiceKey = wolfChoiceKey(hole.choice);
-              if (choiceKey === 'choicePartner') {
-                return t('wolf.choicePartner', { partnerName: partnerName ?? '?' });
-              }
-              return t(`wolf.${choiceKey}`);
-            })()}
+            {hole.choiceKey === 'choicePartner'
+              ? t('wolf.choicePartner', { partnerName: partnerName ?? '?' })
+              : t(`wolf.${hole.choiceKey}`)}
           </span>
           <span aria-hidden className="text-muted/40">
             ·
           </span>
           <span className={`font-medium ${wolfOutcomeClass(hole.outcome)}`}>
-            {t(`wolf.${wolfOutcomeKey(hole.outcome)}`)}
+            {t(`wolf.${hole.outcomeKey}`)}
           </span>
         </div>
 
         {/* Per-spiller: side, score, contributor, poeng — det WolfView mangler */}
         <ul className="mt-2 flex flex-col gap-1 list-none">
-          {players.map((cell) => {
+          {hole.rows.map((cell) => {
             const info = playersById.get(cell.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : tc('unknownPlayerFull');
-            const pts = hole.pointsByPlayer[cell.userId] ?? 0;
-            const showGross =
-              scoring === 'net' &&
-              cell.gross != null &&
-              cell.gross !== cell.effectiveScore;
+            const pts = cell.points;
             const onWolfSide = cell.side === 'wolf';
 
             return (
@@ -248,9 +223,9 @@ function HoleCard({
                       +{pts}
                     </span>
                   )}
-                  {showGross && (
+                  {cell.grossShown != null && (
                     <span className="text-[10.5px] text-muted">
-                      {t('wolf.bruttoLabel', { count: cell.gross ?? 0 })}
+                      {t('wolf.bruttoLabel', { count: cell.grossShown })}
                     </span>
                   )}
                   <span className="score-num text-[18px] leading-none text-text">
