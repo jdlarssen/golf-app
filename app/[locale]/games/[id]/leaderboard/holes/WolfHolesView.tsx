@@ -137,7 +137,6 @@ function HoleCard({
       ? '?'
       : null;
 
-
   return (
     <li className="list-none" data-testid={`wolf-holes-card-${hole.holeNumber}`}>
       <Card className="px-3.5 py-3">
@@ -187,7 +186,6 @@ function HoleCard({
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : tc('unknownPlayerFull');
-            const pts = cell.points;
             const onWolfSide = cell.side === 'wolf';
 
             return (
@@ -218,9 +216,9 @@ function HoleCard({
                   )}
                 </span>
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
-                  {pts > 0 && (
+                  {cell.pointsShown != null && (
                     <span className="text-[12px] font-semibold text-accent-text">
-                      +{pts}
+                      +{cell.pointsShown}
                     </span>
                   )}
                   {cell.grossShown != null && (

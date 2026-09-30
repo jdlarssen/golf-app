@@ -21,3 +21,15 @@ describe('byStanding', () => {
     expect([...rows].sort(cmp).map((r) => r.userId)).toEqual(['kari', 'ola', 'ukjent']);
   });
 });
+
+describe('inStandingOrder med lagnummer (Wolf: rotasjonsplassen)', () => {
+  it('delt plass ordnes etter lagnummer før userId', () => {
+    const lines = [
+      { userId: 'a', rank: 1, teamNumber: 3 },
+      { userId: 'b', rank: 1, teamNumber: 1 },
+      { userId: 'c', rank: 1, teamNumber: 2 },
+    ];
+    expect(inStandingOrder(lines).map((l) => l.userId)).toEqual(['b', 'c', 'a']);
+  });
+});
+

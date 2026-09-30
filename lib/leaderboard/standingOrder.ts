@@ -9,12 +9,19 @@
  */
 
 /**
- * Stillingen i fast rekkefølge: plassen, og ved delt plass `userId`. `userId`
- * betyr ingenting for spilleren, men gir samme liste på begge flatene.
+ * Stillingen i fast rekkefølge: plassen, ved delt plass `teamNumber` når
+ * formatet har det (Wolf: rotasjonsplassen, samme som motoren og tavla
+ * bruker), og til sist `userId`. `userId` betyr ingenting for spilleren, men
+ * gir samme liste på begge flatene.
  */
-export function inStandingOrder<T extends { userId: string; rank: number }>(players: readonly T[]): T[] {
+export function inStandingOrder<T extends { userId: string; rank: number; teamNumber?: number | null }>(
+  players: readonly T[],
+): T[] {
   return [...players].sort(
-    (a, b) => a.rank - b.rank || (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0),
+    (a, b) =>
+      a.rank - b.rank ||
+      (a.teamNumber != null && b.teamNumber != null ? a.teamNumber - b.teamNumber : 0) ||
+      (a.userId < b.userId ? -1 : a.userId > b.userId ? 1 : 0),
   );
 }
 

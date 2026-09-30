@@ -49,15 +49,25 @@ export function wolfOutcomeKey(outcome: WolfHoleOutcome): WolfOutcomeKey {
   }
 }
 
+/**
+ * Utfallets tone (#2255 PR 3b): ulvens side vant = gull, de andre vant = tekst,
+ * ellers dempet. Én regel for webbens tavle, webbens «Hull for hull» og appen;
+ * hver flate gjør tonen om til sin egen farge.
+ */
+export type WolfOutcomeTone = 'accent' | 'text' | 'muted';
+
+export function wolfOutcomeTone(outcome: WolfHoleOutcome): WolfOutcomeTone {
+  if (outcome === 'wolf_side_wins') return 'accent';
+  if (outcome === 'opp_side_wins') return 'text';
+  return 'muted';
+}
+
+const TONE_CLASS: Record<WolfOutcomeTone, string> = {
+  accent: 'text-accent-text',
+  text: 'text-text',
+  muted: 'text-muted',
+};
+
 export function wolfOutcomeClass(outcome: WolfHoleOutcome): string {
-  switch (outcome) {
-    case 'wolf_side_wins':
-      return 'text-accent-text';
-    case 'opp_side_wins':
-      return 'text-text';
-    case 'tied':
-      return 'text-muted';
-    default:
-      return 'text-muted';
-  }
+  return TONE_CLASS[wolfOutcomeTone(outcome)];
 }
