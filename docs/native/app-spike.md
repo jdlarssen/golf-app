@@ -2086,9 +2086,10 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,
-  `SoloStrokeplayHolesView` og appen tegner fra. Likt på et hull ordnes etter stillingen:
-  webben og appen gir motoren spillerne i ulik rekkefølge, og uten regelen så samme hull
-  ulikt ut på de to flatene. Neste format flytter sitt regnestykke til `lib/` på samme måte
+  `SoloStrokeplayHolesView` og appen tegner fra. Motoren beholder rekkefølgen den får
+  spillerne i, og webben og appen gir den ulik rekkefølge. Derfor ordner modellen selv:
+  stillingen etter plass og ved delt plass etter `userId`, og likt på et hull etter
+  stillingen. Neste format flytter sitt regnestykke til `lib/` på samme måte
   før appen får visningen.
 - **Ringene** er scorekortets former (`ScoreShape`), men med scoretonen (`toned`), som på
   nettsiden. Scorekortet selv tegner fortsatt i blekk.
@@ -2097,4 +2098,9 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   slag i spillet, så appen leser med spillerens egen sesjon (webben bruker service-role
   her, #1632).
 - **Blind runde** som pågår holder alt tilbake, som på webben.
-- **Tekst:** alt står også på webben og er låst mot `messages/no.json` (`lib/holesCopy.ts`).
+- **Tekst:** det meste står også på webben og er låst mot `messages/no.json`
+  (`lib/holesCopy.ts`). Enheten «p» er hardkodet i webbens visning, og «finnes ikke for
+  denne runden» og linja om slagene (`lib/seedCopy.ts`) finnes bare i appen.
+- **Hentingen av slagene:** mens den første hentingen går og telefonen ikke har noe, står
+  et hjul. Feiler den (uten nett), tegnes kortet fra telefonens slag med en linje over som
+  sier det. Tavla har samme linje.

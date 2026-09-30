@@ -40,18 +40,25 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
 
   // Starter som 'loading'; `gameId` er en ruteparameter, så en ny verdi er en
   // ny skjerm og ingen nullstilling trengs her.
+  // Utfallet settes først når slagene er lest på nytt fra telefonen, ellers
+  // står et tomt kort et øyeblikk mellom hjulet og det ferdige kortet.
   useEffect(() => {
     void seedGameScores(gameId)
-      .then(() => setSeed('done'))
-      .catch(() => setSeed('failed'))
-      .then(() => reload());
+      .then(
+        () => 'done' as const,
+        () => 'failed' as const,
+      )
+      .then(async (result) => {
+        await reload();
+        setSeed(result);
+      });
   }, [gameId, reload]);
 
   if (!bundle || (seed === 'loading' && scores.length === 0)) {
     return (
       <View style={ui.centered} testID="hole-by-hole-loading">
         {loading || bundle ? (
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={colors.primary} testID="hole-by-hole-spinner" />
         ) : (
           <Text style={ui.error}>Fikk ikke tak i spillet.</Text>
         )}
