@@ -364,7 +364,8 @@ const styles = StyleSheet.create({
   result: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   /** Hovedknappen i billetten er høyere enn appens 44 pt, som i designet. */
   cta: { minHeight: 52 },
-  playedRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
+  // Teksten og poengene midtstilt mot hverandre, som i designet (`align-items: center`).
+  playedRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   played: { flexShrink: 1, fontSize: 13, fontFamily: FONTS.sans },
   total: { fontSize: 16, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
   actions: { gap: 6 },
