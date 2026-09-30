@@ -83,6 +83,35 @@ describe('wolfHoleCards', () => {
     expect(cards.holes[0]!.rows.map((r) => r.userId)).toEqual(['per', 'kari', 'ola', 'anne']);
   });
 
+  it('lone wolf: de tre andre står etter stillingen, uansett rekkefølgen inn', () => {
+    // Ola er ulv alene. Andre: Kari (1.), Per (delt 2., lag 3), Anne (4.).
+    const run = (order: string[]) =>
+      wolfHoleCards(
+        result([
+          hole({
+            holeNumber: 1,
+            choice: 'lone',
+            partnerUserId: null,
+            players: [cell('ola', 'wolf', 4), ...order.map((id) => cell(id, 'opp', 5))],
+          }),
+        ]),
+      ).holes[0]!.rows.map((r) => r.userId);
+    expect(run(['anne', 'per', 'kari'])).toEqual(['ola', 'kari', 'per', 'anne']);
+    expect(run(['per', 'kari', 'anne'])).toEqual(['ola', 'kari', 'per', 'anne']);
+  });
+
+  it('utfallets tone: ulvens seier i gull, de andres i tekst, ellers dempet', () => {
+    const cards = wolfHoleCards(
+      result([
+        hole({ holeNumber: 1, outcome: 'wolf_side_wins' }),
+        hole({ holeNumber: 2, outcome: 'opp_side_wins' }),
+        hole({ holeNumber: 3, outcome: 'tied' }),
+        hole({ holeNumber: 4, outcome: 'pending' }),
+      ]),
+    );
+    expect(cards.holes.map((h) => h.outcomeTone)).toEqual(['accent', 'text', 'muted', 'muted']);
+  });
+
   it('delt plass i stillingen ordnes likt på hullet uansett rekkefølgen inn', () => {
     const run = (order: string[]) =>
       wolfHoleCards(
@@ -92,7 +121,7 @@ describe('wolfHoleCards', () => {
     expect(run(['ola', 'per'])).toEqual(['ola', 'per']);
   });
 
-  it('poengene kommer fra hullet, 0 for den som ikke fikk noe', () => {
+  it('poengene kommer fra hullet og vises bare over 0', () => {
     const cards = wolfHoleCards(
       result([
         hole({
@@ -102,9 +131,9 @@ describe('wolfHoleCards', () => {
         }),
       ]),
     );
-    expect(cards.holes[0]!.rows.map((r) => [r.userId, r.points])).toEqual([
+    expect(cards.holes[0]!.rows.map((r) => [r.userId, r.pointsShown])).toEqual([
       ['ola', 2],
-      ['per', 0],
+      ['per', null],
     ]);
   });
 

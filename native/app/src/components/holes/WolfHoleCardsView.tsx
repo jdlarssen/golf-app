@@ -17,10 +17,10 @@ import {
 import { FONTS, useTheme, type ThemeColors } from '../../theme';
 import { HoleHeader, HolesTitle, goldEdge, goldWash, holesStyles, nameOf } from './holesShared';
 
-/** Utfallets farge, som webbens `wolfOutcomeClass`. */
-function outcomeColor(outcome: WolfHoleCard['outcome'], colors: ThemeColors): string {
-  if (outcome === 'wolf_side_wins') return colors.accentText;
-  if (outcome === 'opp_side_wins') return colors.text;
+/** Tonen fra modellen (`wolfOutcomeTone`, samme regel som webben) som farge. */
+function toneColor(tone: WolfHoleCard['outcomeTone'], colors: ThemeColors): string {
+  if (tone === 'accent') return colors.accentText;
+  if (tone === 'text') return colors.text;
   return colors.muted;
 }
 
@@ -87,7 +87,7 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
         <Text style={[holesStyles.small, styles.dot, { color: colors.muted }]} accessibilityElementsHidden>
           ·
         </Text>
-        <Text style={[holesStyles.small, holesStyles.medium, { color: outcomeColor(hole.outcome, colors) }]}>
+        <Text style={[holesStyles.small, holesStyles.medium, { color: toneColor(hole.outcomeTone, colors) }]}>
           {WOLF_HOLES_TEXT[hole.outcomeKey]}
         </Text>
       </View>
@@ -125,8 +125,8 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
               ) : null}
             </View>
             <View style={holesStyles.rowRight}>
-              {row.points > 0 ? (
-                <Text style={[styles.points, ui.num, { color: colors.accentText }]}>{`+${row.points}`}</Text>
+              {row.pointsShown != null ? (
+                <Text style={[styles.points, ui.num, { color: colors.accentText }]}>{`+${row.pointsShown}`}</Text>
               ) : null}
               {row.grossShown != null ? (
                 <Text style={[styles.gross, ui.num, { color: colors.muted }]}>{wolfBruttoLabel(row.grossShown)}</Text>
