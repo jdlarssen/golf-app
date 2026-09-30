@@ -8,13 +8,11 @@
 // restehylle. Nå står det ett ord oppe til høyre på hjem, og bak det ligger
 // rommet — samme form som webbens `/profile`.
 //
-// **Hierarkiet er hele endringen.** På Konto-skjermen var «Logg ut» en
-// innrammet knapp og «Slett konto» en dempet lenke under den: den reversible
-// handlingen sto tyngst, og den som ikke kan angres så ut som en fotnote. Her
-// er «Logg ut» en helt vanlig rad, og «Slett konto» står alene nederst i rødt
-// med luft over, nå i «Personvern og konto» (`AccountSettings.tsx`). Luften er
-// ikke pynt — den er avstanden en tommel på vei mot raden over trenger for
-// ikke å treffe sletting.
+// **Hierarkiet.** På Konto-skjermen var «Logg ut» en innrammet knapp og
+// «Slett konto» en dempet lenke under den: den reversible handlingen sto
+// tyngst, og den som ikke kan angres så ut som en fotnote. Begge bor nå i
+// «Personvern og konto» (`AccountSettings.tsx`), der «Logg ut» er en vanlig
+// rad og «Slett konto» står alene nederst i rødt med luft over.
 //
 // **Rommet leser; skrivingen bor i sitt eget rom.** «Rediger» fører til
 // `EditProfile`, og lagringen derfra går gjennom `PUT /api/profile` — appen kan
@@ -181,7 +179,7 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
         trend={extras === undefined ? 'loading' : extras.trend}
       />
       {loadFailed ? (
-        <Text style={ui.error} testID="profile-load-error">
+        <Text style={[ui.error, styles.note]} testID="profile-load-error">
           {PROFILE_TEXT.loadFailedNote}
         </Text>
       ) : null}
@@ -254,4 +252,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   // 20 pt fra flisene; lista har selv 8 på toppen.
   menu: { marginTop: 12 },
+  // Siden har ingen `gap`; linja trenger luft under det skrå kortet.
+  note: { marginTop: 12 },
 });

@@ -1,6 +1,6 @@
-// #2256: den store sidetittelen fra designlerretet — «Profil», «Venner» og
-// «Varsler og tema» i Fraunces øverst i innholdet, med en undertekst og en
-// knapp til høyre når siden har det.
+// #2256: den store sidetittelen fra designlerretet — «Venner», «Varsler» og
+// scorekortets spillnavn i Fraunces øverst i innholdet, med en undertekst når
+// siden har det. Profilen har sin egen tittelrad med «Rediger» (Profil v2).
 //
 // Toppen over (tilbake-pila og det lille sperrede ordet) er navigatorens
 // header (`kickerHeader`, fra #2255). Tittelen står i innholdet, som i
@@ -10,24 +10,20 @@
 // undertekst (12 pt) enn profil-rommene, i flukt med tekstkolonnen (20 pt fra
 // kanten, uten de 4 pt profilen har inn). «Varsler» har 28 pt (Profil v2).
 // Samme komponent, tre størrelser.
-import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FONTS, useTheme } from '../theme';
 
 export function PageTitle({
   title,
   subtitle,
-  right,
   subtitleTestID,
   size = 'large',
 }: {
   title: string;
   subtitle?: string;
-  /** Knappen til høyre for tittelen, som «Rediger» i profilen. */
-  right?: ReactNode;
   subtitleTestID?: string;
   /**
-   * `large`: 30/13 pt (venner, billetten). `settings`: 28/13 pt («Varsler»,
+   * `large`: 30/13 pt («Venner»). `settings`: 28/13 pt («Varsler»,
    * Profil v2). `medium`: 26/12 pt (scorekortet).
    */
   size?: 'large' | 'settings' | 'medium';
@@ -47,7 +43,6 @@ export function PageTitle({
         >
           {title}
         </Text>
-        {right}
       </View>
       {subtitle ? (
         <Text

@@ -80,7 +80,7 @@ export function NotificationsAndTheme(_props: ScreenProps<'NotificationsAndTheme
         ))}
       </SettingList>
       {saveNote ? (
-        <Text style={ui.error} testID="theme-save-error">
+        <Text style={[ui.error, styles.note]} testID="theme-save-error">
           {saveNote}
         </Text>
       ) : null}
@@ -95,4 +95,6 @@ const styles = StyleSheet.create({
   // Etiketten 20 pt fra kanten, 16 pt over og 8 under.
   label: { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 8 },
   list: { marginTop: 0 },
+  // Siden har ingen `gap`; linja trenger luft under lista.
+  note: { marginTop: 8 },
 });
