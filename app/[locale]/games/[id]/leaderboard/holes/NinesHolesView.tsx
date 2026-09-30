@@ -8,7 +8,12 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type { NinesResult, NinesHoleRow } from '@/lib/scoring/modes/types';
+import {
+  ninesHoleCards,
+  ninesPointsText,
+  type NinesHoleCard,
+} from '@/lib/leaderboard/ninesHoles';
+import type { NinesResult } from '@/lib/scoring/modes/types';
 import type { NinesPlayerInfo } from '../NinesView';
 
 export interface NinesHolesViewProps {
@@ -34,16 +39,12 @@ export interface NinesHolesViewProps {
   navContext?: LeaderboardNavContext;
 }
 
-/** Total pott per hull etter variant: Nines = 9 (5/3/1), Split Sixes = 6 (4/2/0). */
-function potTotal(variant: NinesResult['variant']): number {
-  return variant === 'split_sixes' ? 6 : 9;
-}
-
-/** Poeng-formatering: hele tall vises rent, evt. del-poeng med én desimal. */
-function formatPoints(points: number, locale: AppLocale): string {
-  return Number.isInteger(points)
-    ? String(points)
-    : formatNumber(points, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+/**
+ * Del-poeng med én desimal i webbens språk. Regelen (hele tall rent) bor i
+ * `ninesPointsText`.
+ */
+function oneDecimal(points: number, locale: AppLocale): string {
+  return formatNumber(points, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 /**
@@ -52,6 +53,10 @@ function formatPoints(points: number, locale: AppLocale): string {
  * per-hull-visning grunnet i formatet: hver spillers plassering på hullet
  * (lavest score vinner flest poeng), brutto/netto-score, og poengene fra
  * potten — det NinesView sin kompakte PER HULL (kun poeng-tall) mangler.
+ *
+ * Regnestykket (plassen, rekkefølgen, lederen, potten, poengene og brutto ved
+ * siden av) bor i `lib/leaderboard/ninesHoles.ts`, delt med appen (#2255 PR
+ * 3c). Her tegnes det.
  */
 export function NinesHolesView({
   gameId,
@@ -89,8 +94,7 @@ export function NinesHolesView({
     );
   }
 
-  const variantLabel =
-    result.variant === 'split_sixes' ? t('nines.variantSplitSixes') : t('nines.variantNines');
+  const cards = ninesHoleCards(result);
 
   return (
     <LeaderboardShell>
@@ -104,7 +108,7 @@ export function NinesHolesView({
           {t('common.hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {variantLabel} · {result.scoring === 'net' ? t('common.netto') : t('common.brutto')}
+          {t(`nines.${cards.variantKey}`)} · {t(`common.${cards.scoringKey}`)}
         </p>
       </div>
 
@@ -112,14 +116,8 @@ export function NinesHolesView({
         data-testid="nines-holes-list"
         className="flex flex-col gap-2.5 px-3.5 pt-1 pb-3.5 list-none"
       >
-        {result.holes.map((hole) => (
-          <HoleCard
-            key={hole.holeNumber}
-            hole={hole}
-            variant={result.variant}
-            scoring={result.scoring}
-            playersById={playersById}
-          />
+        {cards.holes.map((hole) => (
+          <HoleCard key={hole.holeNumber} hole={hole} playersById={playersById} />
         ))}
       </ul>
 
@@ -128,69 +126,16 @@ export function NinesHolesView({
   );
 }
 
-
-/**
- * Plassering per spiller på hullet (competition ranking). Spillerne sorteres
- * på effectiveScore ASC; en gruppe med EKSAKT lik score på sorterte posisjoner
- * [i..j-1] deler plassering i+1. Stemmer per konstruksjon med poeng-fordelingen
- * (begge utledes av effectiveScore-rangeringen). Pending/manglende score → ikke
- * plassert.
- */
-function placementByPlayer(hole: NinesHoleRow): Map<string, number> {
-  // Pending hull deler ikke ut poeng (uavhengig per hull), så ingen spiller
-  // plasseres — heller ikke en som tilfeldigvis har tastet før de andre.
-  // Ellers ville et delvis scoret hull kåre en for tidlig leder.
-  if (hole.pending) return new Map();
-
-  const ranked = hole.perPlayer
-    .filter((c) => c.effectiveScore != null)
-    .sort((a, b) => (a.effectiveScore as number) - (b.effectiveScore as number));
-
-  const placements = new Map<string, number>();
-  let i = 0;
-  while (i < ranked.length) {
-    const groupScore = ranked[i]!.effectiveScore as number;
-    let j = i;
-    while (
-      j < ranked.length &&
-      (ranked[j]!.effectiveScore as number) === groupScore
-    ) {
-      j++;
-    }
-    for (let k = i; k < j; k++) {
-      placements.set(ranked[k]!.userId, i + 1);
-    }
-    i = j;
-  }
-  return placements;
-}
-
 function HoleCard({
   hole,
-  variant,
-  scoring,
   playersById,
 }: {
-  hole: NinesHoleRow;
-  variant: NinesResult['variant'];
-  scoring: NinesResult['scoring'];
+  hole: NinesHoleCard;
   playersById: Map<string, NinesPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
   const locale = useLocale();
-  const placements = placementByPlayer(hole);
-
-  // Best score øverst (lavest effective = flest poeng). Pending/manglende
-  // (ingen plassering) faller bakerst, i opprinnelig rekkefølge.
-  const rows = [...hole.perPlayer].sort((a, b) => {
-    const pa = placements.get(a.userId);
-    const pb = placements.get(b.userId);
-    if (pa == null && pb == null) return 0;
-    if (pa == null) return 1;
-    if (pb == null) return -1;
-    return pa - pb;
-  });
 
   return (
     <li className="list-none" data-testid={`nines-holes-card-${hole.holeNumber}`}>
@@ -205,29 +150,23 @@ function HoleCard({
               {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
-          {hole.pending ? (
+          {hole.pot == null ? (
             <span className="text-[10.5px] text-muted">{t('nines.ventePaaScore')}</span>
           ) : (
             <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent-text tabular-nums">
-              {t('nines.potLabel', { pot: potTotal(variant) })}
+              {t('nines.potLabel', { pot: hole.pot })}
             </span>
           )}
         </div>
 
         {/* Per-spiller: plassering, score, poeng — det NinesView mangler */}
         <ul className="mt-2 flex flex-col gap-1 list-none">
-          {rows.map((cell) => {
+          {hole.rows.map((cell) => {
             const info = playersById.get(cell.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : t('common.unknownPlayerFull');
-            const placement = placements.get(cell.userId) ?? null;
-            const isLeader = placement === 1;
-            const pts = hole.pointsByPlayer[cell.userId] ?? 0;
-            const showGross =
-              scoring === 'net' &&
-              cell.gross != null &&
-              cell.gross !== cell.effectiveScore;
+            const { placement, isLeader } = cell;
 
             return (
               <li
@@ -260,14 +199,14 @@ function HoleCard({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
-                  {pts > 0 && (
+                  {cell.pointsShown != null && (
                     <span className="text-[12px] font-semibold text-accent-text">
-                      +{formatPoints(pts, locale)}
+                      +{ninesPointsText(cell.pointsShown, (n) => oneDecimal(n, locale))}
                     </span>
                   )}
-                  {showGross && cell.gross != null && (
+                  {cell.grossShown != null && (
                     <span className="text-[10.5px] text-muted">
-                      {t('nines.bruttoLabel', { gross: cell.gross })}
+                      {t('nines.bruttoLabel', { gross: cell.grossShown })}
                     </span>
                   )}
                   <span
