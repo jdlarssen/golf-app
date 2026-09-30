@@ -5,7 +5,7 @@
 // stillingen og begge niene kommer på skjermen, at stjerna er dekor, og at en
 // blind runde som pågår holder alt tilbake.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
@@ -461,5 +461,87 @@ describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
     expect(screen.queryAllByTestId(/^hole-by-hole-award-4-/)).toHaveLength(0);
 
     expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+  });
+});
+
+describe('best ball (#2255 PR 3d)', () => {
+  it('lederen først: topp, heltefelt, ut og inn med sum, brukt netto og totalen; så neste lag', async () => {
+    const bundle = homeBundle({
+      game: { id: 'gb', status: 'finished', gameMode: 'best_ball', modeConfig: { kind: 'best_ball', team_size: 2 } },
+      players: [
+        homePlayer({ userId: 'ola', name: 'Ola Kompis', teamNumber: 2, courseHandicap: 0 }),
+        homePlayer({ userId: 'kari', name: 'Kari Nordmann', teamNumber: 2, courseHandicap: 18 }),
+        homePlayer({ userId: 'per', name: 'Per Berg', teamNumber: 1, courseHandicap: 0 }),
+        homePlayer({ userId: 'lise', name: 'Lise Dahl', teamNumber: 1, courseHandicap: 0 }),
+      ],
+    });
+    // Lag 2: Ola 4 overalt, Kari 5 med ett slag per hull (netto 4): 72, «E».
+    // Lag 1: Per og Lise 5 overalt: 90, «+18».
+    const bbScores = [
+      ...holeScores('gb', 'ola', 18, 4),
+      ...holeScores('gb', 'kari', 18, 5),
+      ...holeScores('gb', 'per', 18, 5),
+      ...holeScores('gb', 'lise', 18, 5),
+    ];
+    await render(<HoleByHoleBody bundle={bundle} scores={bbScores} />);
+
+    expect(screen.getByTestId('hole-by-hole-team-header')).toHaveTextContent('Lag 2 · 1. plass');
+    expect(screen.getByRole('header', { name: 'Lag 2' })).toBeTruthy();
+    expect(screen.getByText('Ola Kompis · Kari Nordmann')).toBeTruthy();
+    expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveTextContent('1');
+    expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveStyle({ color: PALETTES.light.accentText });
+    expect(screen.getByTestId('hole-by-hole-team-total')).toHaveTextContent('72');
+    expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('E PAR');
+
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+    expect(screen.getByTestId('hole-by-hole-summary-front')).toHaveTextContent(/UTP3636E/);
+    expect(screen.getByTestId('hole-by-hole-summary-back')).toHaveTextContent(/INNP3636E/);
+    // Begge ga netto 4 på hvert hull: begge er lagets ball, og skjermleseren
+    // får setningen i stedet for tallene.
+    expect(screen.getAllByLabelText('Brukt netto for laget: KN, brutto 5, +1 slag, netto 4')).toHaveLength(18);
+    expect(screen.getAllByLabelText('Brukt netto for laget: OK, brutto 4, +0 slag, netto 4')).toHaveLength(18);
+    expect(screen.getByTestId('hole-by-hole-team-net-1')).toHaveTextContent('4');
+    expect(screen.getByTestId('hole-by-hole-holes-won')).toHaveTextContent('18 hull vunnet');
+    expect(screen.getByTestId('hole-by-hole-total-vs-par')).toHaveTextContent('E');
+    // Lederen har ingen «forrige», og webben har ingen «Vel spilt!» under laget.
+    expect(screen.queryByTestId('hole-by-hole-team-prev')).toBeNull();
+    expect(screen.queryByTestId('hole-by-hole-footer')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('hole-by-hole-team-next'));
+    expect(screen.getByTestId('hole-by-hole-team-header')).toHaveTextContent('Lag 1 · 2. plass');
+    expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveStyle({ color: PALETTES.light.muted });
+    expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('+18 PAR');
+    expect(screen.getByTestId('hole-by-hole-holes-won')).toHaveTextContent('0 hull vunnet');
+    expect(screen.getAllByLabelText('Brukt netto for laget: PB, brutto 5, +0 slag, netto 5')).toHaveLength(18);
+    expect(screen.getByTestId('hole-by-hole-team-prev')).toHaveTextContent('‹ Forrige · 1. Lag 2');
+    expect(screen.queryByTestId('hole-by-hole-team-next')).toBeNull();
+  });
+
+  it('et hull med annen par for damer: stjerna ved «P4», og hver spiller mot sin egen par', async () => {
+    const bundle = homeBundle({
+      game: { id: 'gp', status: 'finished', gameMode: 'best_ball', modeConfig: { kind: 'best_ball', team_size: 2 } },
+      players: [
+        homePlayer({ userId: 'ola', name: 'Ola Kompis', teamNumber: 1, courseHandicap: 0 }),
+        homePlayer({ userId: 'kari', name: 'Kari Nordmann', teamNumber: 1, courseHandicap: 0, teeGender: 'ladies' }),
+        homePlayer({ userId: 'per', name: 'Per Berg', teamNumber: 2, courseHandicap: 0 }),
+      ],
+    });
+    bundle.holes[0] = { ...bundle.holes[0]!, parLadies: 5 };
+    const parScores = [
+      ...holeScores('gp', 'ola', 1, 5),
+      ...holeScores('gp', 'kari', 1, 5),
+      // Per 6: lag 1 leder, så det er laget som vises først.
+      ...holeScores('gp', 'per', 1, 6),
+    ];
+    await render(<HoleByHoleBody bundle={bundle} scores={parScores} />);
+
+    expect(screen.getByTestId('hole-by-hole-par-aside-1')).toHaveProp(
+      'accessibilityLabel',
+      'Avvikende par for andre kjønn. Herrer: 4, Damer: 5, Junior: 4.',
+    );
+    expect(screen.queryByTestId('hole-by-hole-par-aside-2')).toBeNull();
+    // Samme brutto og netto, men Kari er på par (5) og Ola én over (4).
+    expect(screen.getByTestId('hole-by-hole-row-1-ola')).toHaveTextContent(/\+1$/);
+    expect(screen.getByTestId('hole-by-hole-row-1-kari')).toHaveTextContent(/E$/);
   });
 });
