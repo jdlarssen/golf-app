@@ -47,3 +47,38 @@ export function holeNumberLabel(holeNumber: number): string {
 export function parSiChip(par: number, strokeIndex: number): string {
   return `Par ${par} · SI ${strokeIndex}`;
 }
+
+/**
+ * Wolf (#2255 PR 3b): webbens `leaderboard.wolf.*` og `leaderboard.common.netto`
+ * / `brutto`, låst i `holesCopy.test.ts`. «Wolf · » foran scoringen er
+ * hardkodet i webbens visning, som «p» over.
+ */
+export const WOLF_HOLES_TEXT = {
+  wolfLabel: 'Wolf:',
+  choiceLone: 'Lone Wolf',
+  choiceBlind: 'Blind Wolf',
+  choiceWaiting: 'Venter…',
+  outcomeWolfVant: 'Wolf vant',
+  outcomeAndreVant: 'Andre vant',
+  outcomeLik: 'Lik',
+  outcomeVenter: 'Venter',
+  wolfSide: 'Wolf-side',
+  andreSide: 'Andre',
+  netto: 'Netto',
+  brutto: 'Brutto',
+} as const;
+
+/** «Partner: Ola». */
+export function wolfChoicePartner(partnerName: string): string {
+  return `Partner: ${partnerName}`;
+}
+
+/** «brutto 5», ved siden av netto. */
+export function wolfBruttoLabel(count: number): string {
+  return `brutto ${count}`;
+}
+
+/** Linja under overskriften: «Wolf · Netto». */
+export function wolfSubtitle(scoring: 'gross' | 'net'): string {
+  return `Wolf · ${scoring === 'net' ? WOLF_HOLES_TEXT.netto : WOLF_HOLES_TEXT.brutto}`;
+}
