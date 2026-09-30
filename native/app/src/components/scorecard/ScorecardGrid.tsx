@@ -11,6 +11,11 @@
 // 2. **Ti like kolonner som fyller bredden.** På 375 pt og bredere får hver
 //    kolonne plass til en 26 pt-form med luft rundt. Er skjermen smalere, ruller kortet
 //    sidelengs, aldri skjermen.
+//
+// #2385 la kortet på designlerretet (`Scorekort-forslag`): HULL-raden er et
+// skoggrønt bånd med lyse tall, radetikettene står til venstre, SLAG står i
+// Fraunces med tonens farge, poeng bedre enn netto par er grønne, og summene
+// (`footer`) står nederst i det siste kortet under en tykk strek.
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { ScorecardCell, ScorecardGrid as Grid, ScorecardHalf } from '../../../../../lib/scorecard/scorecardGrid';
@@ -26,8 +31,10 @@ export interface EnteredByName {
 
 // 26 og ikke 28: to firkanter i nabokolonner skal ha luft mellom seg på 390 pt.
 const SHAPE = 26;
-const MIN_COLUMN = 28;
-const LABEL_WIDTH = 40;
+// Etikettkolonnen er bred nok til at «POENG» står på én linje til venstre. Da
+// blir en kolonne 27,5 pt på 375 pt; 27 er grensen før kortet ruller sidelengs.
+const MIN_COLUMN = 27;
+const LABEL_WIDTH = 46;
 const ROW_HEIGHT = 26;
 const SHAPE_ROW_HEIGHT = 34;
 
@@ -83,18 +90,31 @@ function sumLabel(half: ScorecardHalf, rows: readonly ScorecardRowKind[]): strin
 function Cell({
   kind,
   first,
+  tint,
+  corner,
+  align = 'center',
   children,
 }: {
   kind: 'hole' | 'par' | ScorecardRowKind;
   first: boolean;
+  /** Sumkolonnens bakgrunn under båndet. */
+  tint?: string;
+  /** Det grønne båndet runder av hjørnet ytterst til venstre og høyre. */
+  corner?: 'left' | 'right';
+  align?: 'center' | 'left';
   children: ReactNode;
 }) {
   const { colors } = useTheme();
+  const band = kind === 'hole';
   return (
     <View
       style={[
         styles.cell,
+        align === 'left' && styles.cellLeft,
         { height: rowHeight(kind) },
+        band ? { backgroundColor: colors.surfaceStrong } : tint ? { backgroundColor: tint } : null,
+        corner === 'left' && styles.bandLeft,
+        corner === 'right' && styles.bandRight,
         first ? null : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
       ]}
     >
@@ -107,10 +127,12 @@ function Half({
   half,
   rows,
   enteredBy,
+  footer,
 }: {
   half: ScorecardHalf;
   rows: readonly ScorecardRowKind[];
   enteredBy?: ReadonlyMap<number, EnteredByName>;
+  footer?: ReactNode;
 }) {
   const { colors, ui } = useTheme();
   const kinds: ('hole' | 'par' | ScorecardRowKind)[] = ['hole', 'par', ...rows];
@@ -118,13 +140,27 @@ function Half({
   const numStyle = [styles.num, ui.num, { color: colors.text }];
   const mutedNum = [styles.num, ui.num, { color: colors.muted }];
   const headStyle = [styles.head, { color: colors.muted }];
+  const bandHead = [styles.head, { color: colors.onStrong }];
+  const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onStrong }];
+  const strokeNum = [styles.strokeNum, ui.num, { color: colors.text }];
 
   const cellValue = (cell: ScorecardCell, kind: ScorecardRowKind) => {
     if (kind === 'strokes') {
       return cell.strokes != null ? (
-        <ScoreShape strokes={cell.strokes} par={cell.par} size={SHAPE} />
+        <ScoreShape strokes={cell.strokes} par={cell.par} size={SHAPE} toned tonedNumber />
       ) : (
         <Text style={mutedNum}>—</Text>
+      );
+    }
+    if (kind === 'points' && cell.points != null && cell.net != null && cell.net < cell.par) {
+      // Bedre enn netto par: poengene står grønne og halvfete, som i designet.
+      return (
+        <Text
+          style={[styles.num, ui.num, styles.strong, { color: colors.scoreUnderFg }]}
+          testID={`scorecard-points-good-${cell.holeNumber}`}
+        >
+          {cell.points}
+        </Text>
       );
     }
     if (kind === 'enteredBy') {
@@ -142,8 +178,10 @@ function Half({
     if (kind === 'enteredBy') return null;
     const value =
       kind === 'strokes' ? (played ? half.sum.strokes : null) : kind === 'net' ? half.sum.net : half.sum.points;
+    if (kind === 'strokes' && value != null) return <Text style={strokeNum}>{value}</Text>;
     return <Text style={[...(value != null ? numStyle : mutedNum), styles.sum]}>{value ?? '—'}</Text>;
   };
+  const sumTint = colors.bg;
 
   return (
     <View
@@ -166,8 +204,17 @@ function Half({
           testID={`scorecard-labels-${half.key}`}
         >
           {kinds.map((kind, index) => (
-            <Cell key={kind} kind={kind} first={index === 0}>
-              <Text style={headStyle} testID={`scorecard-row-label-${kind}`}>
+            <Cell
+              key={kind}
+              kind={kind}
+              first={index === 0}
+              corner={index === 0 ? 'left' : undefined}
+              align="left"
+            >
+              <Text
+                style={kind === 'hole' ? bandHead : headStyle}
+                testID={`scorecard-row-label-${kind}`}
+              >
                 {ROW_LABELS[kind].toUpperCase()}
               </Text>
             </Cell>
@@ -183,9 +230,7 @@ function Half({
             testID={`scorecard-col-${cell.holeNumber}`}
           >
             <Cell kind="hole" first>
-              <Text style={[styles.num, ui.num, styles.holeNumber, { color: colors.text }]}>
-                {cell.holeNumber}
-              </Text>
+              <Text style={bandNum}>{cell.holeNumber}</Text>
             </Cell>
             <Cell kind="par" first={false}>
               <Text style={mutedNum}>{cell.par}</Text>
@@ -199,45 +244,60 @@ function Half({
         ))}
 
         <View
-          style={[styles.column, { backgroundColor: colors.bg }]}
+          style={styles.column}
           accessible
           accessibilityLabel={sumLabel(half, rows)}
           testID={`scorecard-sum-${half.key}`}
         >
-          <Cell kind="hole" first>
-            <Text style={headStyle}>SUM</Text>
+          <Cell kind="hole" first corner="right">
+            <Text style={bandHead}>SUM</Text>
           </Cell>
-          <Cell kind="par" first={false}>
-            <Text style={[...mutedNum, styles.sum]}>{half.sum.par}</Text>
+          <Cell kind="par" first={false} tint={sumTint}>
+            <Text style={[...numStyle, styles.sum]}>{half.sum.par}</Text>
           </Cell>
           {rows.map((kind) => (
-            <Cell key={kind} kind={kind} first={false}>
+            <Cell key={kind} kind={kind} first={false} tint={sumTint}>
               {sumValue(kind)}
             </Cell>
           ))}
         </View>
       </ScrollView>
+      {footer ? (
+        <View style={[styles.footer, { borderTopColor: colors.primary }]} testID="scorecard-footer">
+          {footer}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 /**
  * Kortene for én runde: ett per halvdel som har hull. `rows` er radene under
- * HULL og PAR, i den rekkefølgen de står.
+ * HULL og PAR, i den rekkefølgen de står. `footer` (summene) står nederst i det
+ * siste kortet, under en tykk strek.
  */
 export function ScorecardGrid({
   grid,
   rows,
   enteredBy,
+  footer,
 }: {
   grid: Grid;
   rows: readonly ScorecardRowKind[];
   enteredBy?: ReadonlyMap<number, EnteredByName>;
+  footer?: ReactNode;
 }) {
+  const last = grid.halves.length - 1;
   return (
     <View style={styles.halves} testID="scorecard-grid">
-      {grid.halves.map((half) => (
-        <Half key={half.key} half={half} rows={rows} enteredBy={enteredBy} />
+      {grid.halves.map((half, index) => (
+        <Half
+          key={half.key}
+          half={half}
+          rows={rows}
+          enteredBy={enteredBy}
+          footer={index === last ? footer : undefined}
+        />
       ))}
     </View>
   );
@@ -256,9 +316,15 @@ const styles = StyleSheet.create({
   labelColumn: { width: LABEL_WIDTH },
   column: { flex: 1, minWidth: MIN_COLUMN },
   cell: { alignItems: 'center', justifyContent: 'center' },
-  head: { fontSize: 10, fontFamily: FONTS.sansBold, letterSpacing: 0.4, textAlign: 'center' },
-  num: { fontSize: 14, fontFamily: FONTS.sans, textAlign: 'center' },
+  cellLeft: { alignItems: 'flex-start', paddingLeft: 5 },
+  bandLeft: { borderTopLeftRadius: 6 },
+  bandRight: { borderTopRightRadius: 6 },
+  head: { fontSize: 10, fontFamily: FONTS.sansSemiBold, letterSpacing: 1 },
+  num: { fontSize: 13, fontFamily: FONTS.sans, textAlign: 'center' },
   holeNumber: { fontFamily: FONTS.sansSemiBold },
-  sum: { fontFamily: FONTS.sansBold },
+  strokeNum: { fontSize: 15, fontFamily: FONTS.serifScore, textAlign: 'center' },
+  strong: { fontFamily: FONTS.sansSemiBold },
+  sum: { fontFamily: FONTS.sansSemiBold },
+  footer: { borderTopWidth: 2, marginTop: 10, paddingTop: 10, paddingHorizontal: 6 },
   initials: { fontSize: 11, fontFamily: FONTS.sansMedium, textAlign: 'center' },
 });

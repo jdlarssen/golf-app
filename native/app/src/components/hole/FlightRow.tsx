@@ -7,13 +7,15 @@
 // Scoreformen (sirkel under par, firkant over) er tegnet med kanter på vanlige
 // flater, ikke SVG: formene er bare ringer og rammer, og `Icons.tsx` er appens
 // eneste import-flate for `react-native-svg`. Formen og tonen er delt kode
-// (`lib/scoring/scoreShape`, `scoreTone`), fargene er temaets.
+// (`lib/scoring/scoreShape`, `scoreTone`), og tonens farge er den samme som på
+// scorekortet (`lib/scoreToneColor.ts`).
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   scoreShape,
   type ScoreShape,
 } from '../../../../../lib/scoring/scoreShape';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
+import { scoreToneColor } from '../../lib/scoreToneColor';
 import { FONTS, useTheme, type ThemeColors } from '../../theme';
 
 /** Webbens `md`-form: 36 px, strek 1,25. */
@@ -52,21 +54,6 @@ function numberFontSize(shape: ScoreShape, n: number): number {
   if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 11 : 13;
   if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 13 : 16;
   return twoDigit ? 16 : 20;
-}
-
-function strokeColor(tone: ScoreTone, colors: ThemeColors): string {
-  switch (tone) {
-    case 'under':
-      return colors.scoreUnderFg;
-    case 'par':
-      return colors.scoreParFg;
-    case 'over1':
-      return colors.scoreOver1Fg;
-    case 'over2':
-      return colors.scoreOver2Fg;
-    default:
-      return colors.muted;
-  }
 }
 
 /** Tallets farge, som på web: under par og dobbel bogey+ skiller seg ut. */
@@ -117,7 +104,7 @@ function ScoreShapeView({
   const shape = scoreShape(score, par);
   const tone = scoreTone(score, par);
   const { rings, round } = ringCount(shape);
-  const color = strokeColor(tone, colors);
+  const color = scoreToneColor(tone, colors);
   // Samme avstand mellom ringene som webbens SVG.
   const gap = Math.max(2, SHAPE_STROKE + 0.5);
   return (
