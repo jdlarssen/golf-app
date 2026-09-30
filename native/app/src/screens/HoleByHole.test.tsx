@@ -239,3 +239,63 @@ describe('Nines (#2255 PR 3c)', () => {
     expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
   });
 });
+
+describe('Round Robin (#2255 PR 3c)', () => {
+  it('tre segmenter med partnerne, ett kort per hull med begge sidene, og vinnersiden', async () => {
+    const bundle = homeBundle({
+      game: {
+        id: 'gr',
+        status: 'finished',
+        gameMode: 'round_robin',
+        modeConfig: { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 100 },
+      },
+      // Motsatt av rotasjonsplassene, så motorens rekkefølge inn ikke er den ferdige.
+      players: [
+        homePlayer({ userId: 'd', name: 'D', teamNumber: 4 }),
+        homePlayer({ userId: 'c', name: 'C', teamNumber: 3, courseHandicap: 18 }),
+        homePlayer({ userId: 'b', name: 'B', teamNumber: 2 }),
+        homePlayer({ userId: 'a', name: 'A', teamNumber: 1 }),
+      ],
+    });
+    // Hull 1 (A+B mot C+D): A 5, B 5, C 5 med et slag (netto 4), D 6. C+D vant.
+    const rrScores = [
+      ...holeScores('gr', 'a', 1, 5),
+      ...holeScores('gr', 'b', 1, 5),
+      ...holeScores('gr', 'c', 1, 5),
+      ...holeScores('gr', 'd', 1, 6),
+    ];
+    await render(<HoleByHoleBody bundle={bundle} scores={rrScores} />);
+
+    expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
+    expect(screen.getByText('Round Robin')).toBeTruthy();
+    // Tre segmenter, hvert med hull-spennet og hvem som er partnere.
+    expect(screen.getAllByTestId(/^hole-by-hole-segment-\d$/)).toHaveLength(3);
+    expect(screen.getByTestId('hole-by-hole-segment-1')).toHaveTextContent(/^Segment 1 · Hull 1–6.*A \+ B.*C \+ D/);
+    expect(screen.getByTestId('hole-by-hole-segment-2')).toHaveTextContent(/^Segment 2 · Hull 7–12.*A \+ C.*B \+ D/);
+    expect(screen.getByTestId('hole-by-hole-segment-3')).toHaveTextContent(/^Segment 3 · Hull 13–18.*A \+ D.*B \+ C/);
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+
+    // Hull 1: C+D vant, markert på siden og ikke i hodet.
+    expect(screen.queryByTestId('hole-by-hole-outcome-1')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-side-1-2')).toHaveTextContent(/Vant hullet.*C.*brutto 5.*4.*D.*6/);
+    expect(screen.getByTestId('hole-by-hole-side-1-1')).not.toHaveTextContent(/Vant hullet/);
+    const rows = screen.getAllByTestId(/^hole-by-hole-row-1-/).map((r) => r.props.testID);
+    expect(rows).toEqual([
+      'hole-by-hole-row-1-a',
+      'hole-by-hole-row-1-b',
+      'hole-by-hole-row-1-c',
+      'hole-by-hole-row-1-d',
+    ]);
+    // Stjerna (sidens beste) og «vs» er dekor for skjermleseren, som på webben (aria-hidden).
+    expect(screen.queryByTestId('hole-by-hole-star-1-c')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-star-1-c', HIDDEN)).toHaveTextContent('★');
+    expect(screen.queryByTestId('hole-by-hole-star-1-d', HIDDEN)).toBeNull();
+    expect(screen.queryByTestId('hole-by-hole-vs-1')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-vs-1', HIDDEN)).toHaveTextContent('vs');
+    // Hull 2 er ikke spilt: «Venter» i hodet, ingen vinner, netto som «–».
+    expect(screen.getByTestId('hole-by-hole-outcome-2')).toHaveTextContent('Venter');
+    expect(screen.getByTestId('hole-by-hole-card-2')).not.toHaveTextContent(/Vant hullet/);
+    expect(screen.getByTestId('hole-by-hole-row-2-a')).toHaveTextContent(/A.*–/);
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+  });
+});

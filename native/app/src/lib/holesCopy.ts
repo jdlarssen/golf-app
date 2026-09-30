@@ -2,17 +2,19 @@
 //
 // Det meste står også på webbens «Hull for hull» (`leaderboard.common.*`,
 // `leaderboard.soloStrokeplay.*`, `leaderboard.wolf.*`, `leaderboard.nines.*`,
-// `game.home.hullForHull`) og låses tegn for tegn mot `messages/no.json` i
-// `holesCopy.test.ts`. Unntakene er hardkodet i webbens visninger, ikke
-// meldinger: `pointsUnit` («p»), «Wolf · » foran scoringen og « · » mellom
-// Nines-varianten og scoringen. `notAvailable` finnes bare i appen. Samme
-// mønster som `ticketCopy.ts`: appen har ingen i18n, så teksten er en
-// håndkopi.
+// `leaderboard.roundRobin.*`, `game.home.hullForHull`) og låses tegn for tegn
+// mot `messages/no.json` i `holesCopy.test.ts`. Unntakene er hardkodet i
+// webbens visninger, ikke meldinger: `pointsUnit` («p»), «Wolf · » foran
+// scoringen, « · » mellom Nines-varianten og scoringen, «Round Robin» under
+// overskriften og « + » mellom partnerne i Round Robin. `notAvailable` finnes
+// bare i appen. Samme mønster som `ticketCopy.ts`: appen har ingen i18n, så
+// teksten er en håndkopi.
 import {
   ninesPointsText,
   type NinesScoringKey,
   type NinesVariantKey,
 } from '../../../../lib/leaderboard/ninesHoles';
+import type { RoundRobinSegmentHolesKey } from '../../../../lib/leaderboard/roundRobinHoles';
 
 export const HOLES_TEXT = {
   /** Overskriften, og flisa på spillets side når runden er avsluttet. */
@@ -127,4 +129,39 @@ export function ninesBruttoLabel(gross: number): string {
  */
 export function ninesPoints(points: number): string {
   return ninesPointsText(points, (n) => n.toFixed(1).replace('.', ','));
+}
+
+/**
+ * Round Robin (#2255 PR 3c): webbens `leaderboard.roundRobin.*`, låst i
+ * `holesCopy.test.ts`. Utfallet og hull-spennet har de samme nøklene som
+ * modellen bærer (`lib/leaderboard/roundRobinHoles.ts`).
+ */
+export const ROUND_ROBIN_HOLES_TEXT = {
+  /** Linja under overskriften, hardkodet i webbens visning. */
+  subtitle: 'Round Robin',
+  /** Mellom de to sidene i konstellasjonen. */
+  vsLabel: 'vs',
+  /** Over siden som vant hullet. */
+  vantHulletLabel: 'Vant hullet',
+  /** Til høyre i hodet: delt hull, eller et hull som ikke er ferdig spilt. */
+  outcomeChipTied: 'Delt',
+  outcomeChipVenter: 'Venter',
+  segmentHoles1: 'Hull 1–6',
+  segmentHoles2: 'Hull 7–12',
+  segmentHoles3: 'Hull 13–18',
+} as const;
+
+/** «Segment 2 · Hull 7–12». */
+export function roundRobinSegmentLabel(segment: number, holesKey: RoundRobinSegmentHolesKey): string {
+  return `Segment ${segment} · ${ROUND_ROBIN_HOLES_TEXT[holesKey]}`;
+}
+
+/** Partnerne på en side: «Ola + Kari». */
+export function roundRobinSideNames(names: readonly string[]): string {
+  return names.join(' + ');
+}
+
+/** «brutto 5», ved siden av netto. */
+export function roundRobinBruttoLabel(gross: number): string {
+  return `brutto ${gross}`;
 }
