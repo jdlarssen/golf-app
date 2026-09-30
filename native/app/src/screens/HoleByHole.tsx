@@ -9,7 +9,7 @@
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
 // med spillerens egen sesjon (webben bruker service-role her, #1632).
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import type { GameStatus } from '../../../../lib/games/status';
 import {
@@ -17,6 +17,7 @@ import {
   shouldHideNetto,
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
+import { kickerHeader } from '../components/KickerHeader';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
 import { WolfHoleCardsView } from '../components/holes/WolfHoleCardsView';
 import type { LocalScore } from '../data/db';
@@ -31,7 +32,7 @@ import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
 
-export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
+export function HoleByHole({ route, navigation }: ScreenProps<'HoleByHole'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
@@ -39,6 +40,11 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   // Wolf regner med valgene fra serveren (hvem som var ulv og valgte hva),
   // som tavla. Andre formater fyrer ingen spørring (`choiceSourceFor`).
   const { extras } = useGameChoices(gameId, bundle?.game.gameMode ?? '');
+  // Spillnavnet som kicker i toppen, som på webben (felles `kickerHeader`).
+  const gameName = bundle?.game.name ?? null;
+  useLayoutEffect(() => {
+    if (gameName) navigation.setOptions(kickerHeader(gameName, HOLES_TEXT.heading));
+  }, [navigation, gameName]);
   // Hentingen av slagene: mens den pågår, og uten noe lokalt, står et hjul i
   // stedet for et tomt kort. Feiler den (uten nett), sier en linje det, for et
   // kort med bare telefonens slag ser ellers ferdig ut.
