@@ -128,21 +128,49 @@ describe('withAlpha', () => {
 });
 
 describe('frauncesLine', () => {
-  // Nettleserens linjeboks: halve forskjellen mot Fraunces sin egen høyde
-  // (1,233, rundet opp til hel piksel slik iOS gjør) over og under.
-  // Hullnummeret i `Main` er 96 med linje 0,9; 3x som på iPhone.
-  it.each([
-    [96, 86.4, -16.13],
-    [30, 30, -3.5],
-    [132, 112.2, -25.4],
-  ])('%s pt i en linje på %s gir marg %s', (size, line, margin) => {
-    const box = frauncesLine(size, line, 3);
-    expect(box.fontSize).toBe(size);
-    expect(box.marginVertical).toBeCloseTo(margin, 2);
+  // #2385: nettleserens linjeboks for Fraunces, målt i Chromium og simulatoren
+  // med samme tekst i 20 størrelser og linjehøyder. Chromium runder ascent og
+  // descent til hele CSS-piksler og runder halve ledningen ned; grunnlinja er
+  // ascent pluss den. Uten `lineHeight` står grunnlinja på iOS ascent (rundet
+  // opp til hel piksel) under toppen; med `lineHeight` `descent` over bunnen.
+  const px3 = { pixelRatio: 3 };
+
+  it('gir marger rundt tekstens egen høyde, med Chromiums grunnlinje', () => {
+    // 30 pt på 1: grunnlinja 29 − 4 = 25; iOS har den 29,34 rundet opp til
+    // 29,667 under toppen av tekstens egen høyde (37).
+    const box = frauncesLine(30, 30, px3);
+    expect(box.lineHeight).toBeUndefined();
+    expect(box.marginTop).toBeCloseTo(-4.67, 2);
+    expect(box.marginBottom).toBeCloseTo(-2.33, 2);
+    // Nettleserens `normal` for 18 pt er 23, med grunnlinja 18.
+    expect(frauncesLine(18, 23, px3).marginTop).toBeCloseTo(0.33, 2);
+    // Hullnummeret: 96 pt på 0,9. Grunnlinja 94 − 16 = 78.
+    const hole = frauncesLine(96, 86.4, px3);
+    expect(hole.marginTop).toBeCloseTo(-16, 2);
+    expect(hole.marginBottom).toBeCloseTo(-16.27, 2);
   });
 
-  it('Inter på 10 pt får nettleserens 12 i stedet for iOS sin 12,333', () => {
-    expect(interLine(10, 12, 3).marginVertical).toBeCloseTo(-0.167, 2);
+  it('beholder lineHeight for tekst som kan brekke, og flytter grunnlinja', () => {
+    // iOS: 30 − 7,65 = 22,35; Chromium: 25.
+    const box = frauncesLine(30, 30, { ...px3, multiline: true });
+    expect(box).toMatchObject({ fontSize: 30, lineHeight: 30 });
+    expect(box.marginTop).toBeCloseTo(2.65, 2);
+    expect(box.marginBottom).toBeCloseTo(-2.65, 2);
+    // Under skriftstørrelsen krymper iOS glyfen: da blir det marger likevel.
+    expect(frauncesLine(64, 60.8, { ...px3, multiline: true }).lineHeight).toBeUndefined();
+  });
+
+  it('gjør det samme for Inter (ascent 1984 og descent 494 av 2048)', () => {
+    // «HULL», 10 pt på nettleserens 12: grunnlinja 10; iOS 9,6875 rundet opp
+    // til 10, i tekstens egen høyde 12,333.
+    const hull = interLine(10, 12, px3);
+    expect(hull.marginTop).toBeCloseTo(0, 2);
+    expect(hull.marginBottom).toBeCloseTo(-0.33, 2);
+    // Chromium runder halve ledningen til 1/64 piksel før den rundes ned:
+    // 13 × 1,23 = 15,99 gir −0,005, altså 0; 11 × 1,27 = 13,97 gir −0,015,
+    // altså −1/64 og så −1 (målt i Chromium).
+    expect(interLine(13, 13 * 1.23, px3).marginTop).toBeCloseTo(13 - 12.667, 2);
+    expect(interLine(11, 11 * 1.27, px3).marginTop).toBeCloseTo(10 - 10.667, 2);
   });
 });
 
@@ -164,7 +192,11 @@ describe('fraunces', () => {
   it('gir snittet for vekten og størrelsen', () => {
     expect(frauncesFamily(500, 28)).toBe('Fraunces500O28');
     expect(frauncesFamily(600, 40)).toBe('Fraunces600O40');
-    expect(fraunces(500, 28)).toEqual({ fontSize: 28, fontFamily: 'Fraunces500O28' });
+    // Uten linjehøyde: nettleserens `normal`, 27 + 7 = 34 for 28 pt.
+    expect(fraunces(500, 28, undefined, { pixelRatio: 3 })).toEqual({
+      ...frauncesLine(28, 34, { pixelRatio: 3 }),
+      fontFamily: 'Fraunces500O28',
+    });
   });
 
   it('runder en størrelse uten eget snitt til nærmeste, og midt mellom til det største', () => {
@@ -176,10 +208,9 @@ describe('fraunces', () => {
   });
 
   it('gir nettleserens linjeboks når linjehøyden er med', () => {
-    expect(fraunces(600, 30, 30, 3)).toEqual({
-      fontSize: 30,
+    expect(fraunces(600, 30, 30, { pixelRatio: 3 })).toEqual({
+      ...frauncesLine(30, 30, { pixelRatio: 3 }),
       fontFamily: 'Fraunces600O30',
-      marginVertical: frauncesLine(30, 30, 3).marginVertical,
     });
   });
 

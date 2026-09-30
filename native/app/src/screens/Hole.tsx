@@ -125,7 +125,7 @@ import { setSunlight, useSunlight } from '../lib/sunlight';
 import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
+import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
 
 const HOLE_COUNT = 18;
 /**
@@ -1144,8 +1144,9 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   railDock: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  // Nettleserens `normal` for Inter 10 er 12 (#2385).
   flightKicker: {
-    fontSize: 10,
+    ...interLine(10, 12),
     fontFamily: FONTS.sansSemiBold,
     letterSpacing: 2,
     textTransform: 'uppercase',

@@ -262,6 +262,8 @@ export function Login() {
   );
 }
 
+const HEADING = fraunces(600, 28);
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -272,9 +274,9 @@ const styles = StyleSheet.create({
   heading: {
     // Egen familie, ikke `fontWeight`: expo-font registrerer ett snitt per
     // familie, og en vekt oppå den ville ikke valgt noe snitt.
-    ...fraunces(600, 28),
+    ...HEADING,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 16 + HEADING.marginBottom,
   },
   input: {
     borderWidth: 1,

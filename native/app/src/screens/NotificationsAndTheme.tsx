@@ -258,20 +258,18 @@ function DesignSwitch({
 const SWITCH_HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };
 
 const styles = StyleSheet.create({
-  // Designet: 16 pt til kanten, og tittelen 4 pt under topp-raden. Tallet er
-  // målt i simulatoren under den felles topp-raden; linjehøyden på 34 gir
-  // selv litt luft over versalene.
-  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 3.5, paddingBottom: 32 },
+  // Designet: 16 pt til kanten, og tittelen 4 pt under topp-raden. Tittelen
+  // har nettleserens linjeboks (#2385), så tallet er designets.
+  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 32 },
   // Etiketten 20 pt fra kanten, 16 pt over og 8 under.
   label: { paddingHorizontal: 4, paddingTop: 16, paddingBottom: 8 },
   list: { marginTop: 0 },
   // Siden har ingen `gap`; linja trenger luft under lista.
   note: { marginTop: 8 },
   // Designet: skogkortet 14 pt under undertittelen, 16 pt runde hjørner,
-  // 12/14 pt luft inni. Undertittelens linje er 1,7 pt høyere enn
-  // nettleserens, så avstanden er 12,3 (målt i simulatoren).
+  // 12/14 pt luft inni. Undertittelen har nettleserens linjehøyde (#2385).
   card: {
-    marginTop: 12.3,
+    marginTop: 14,
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,

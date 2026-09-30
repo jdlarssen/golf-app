@@ -249,6 +249,7 @@ const styles = StyleSheet.create({
   notchDiscLow: { top: EDGE },
   dash: { width: PERFORATION, height: DASH },
   body: { flex: 1, padding: 14, gap: 6, justifyContent: 'center' },
-  name: { ...fraunces(500, 18, 23) },
+  // Navnet kan gå over tre linjer.
+  name: { ...fraunces(500, 18, 23, { multiline: true }) },
   detail: { fontSize: 12, fontFamily: FONTS.sans },
 });

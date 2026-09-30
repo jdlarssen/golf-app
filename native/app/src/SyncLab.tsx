@@ -323,6 +323,8 @@ export function SyncLab({
 // Kun layout og typografi her — fargene settes inline fra paletten.
 // `fontWeight` er byttet mot familienavn: expo-font registrerer ett snitt per
 // familie, så en vekt oppå Inter Regular gjør ingenting.
+const TITLE = fraunces(600, 28);
+
 const styles = StyleSheet.create({
   screen: {
     flexGrow: 1,
@@ -331,9 +333,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    ...fraunces(600, 28),
+    ...TITLE,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 16 + TITLE.marginBottom,
   },
   body: { fontSize: 16, fontFamily: FONTS.sans },
   value: { ...fraunces(600, 22) },
