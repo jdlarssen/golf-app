@@ -151,8 +151,9 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   // Heltekortet er den nyeste runden, og ringen står på hull 8.
   expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
   expect(await screen.findByText('Fortsett på hull 8 →')).toBeTruthy();
-  expect(await screen.findByText('Hei, Sigrid.')).toBeTruthy();
-  expect(screen.getByLabelText('Handicap 12,4. Trykk for å oppdatere.')).toBeTruthy();
+  expect(await screen.findByTestId('home-greeting')).toHaveTextContent(
+    /^God (morgen|dag|kveld), Sigrid$/,
+  );
 
   const order = testIdsInOrder();
   const at = (id: string) => {
@@ -162,8 +163,8 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   };
   const sequence = [
     'home-date',
-    'open-profile',
     'home-greeting',
+    'open-profile',
     'home-hero',
     'home-active',
     'home-next-start',
@@ -194,11 +195,14 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));
   expect(navigate).toHaveBeenCalledWith('Hole', { gameId: 'new', holeNumber: 8 });
 
-  // Veien til profil-rommet er lenka på datolinja (#2385).
-  const profileLink = screen.getByTestId('open-profile');
-  expect(profileLink.props.accessibilityRole).toBe('link');
-  expect(profileLink).toHaveTextContent('Profil');
-  await fireEvent.press(profileLink);
+  // Veien til profil-rommet er HCP-pillen (Hjem v2, #2385), og ordet «Profil»
+  // står ikke på skjermen.
+  const pill = screen.getByTestId('open-profile');
+  expect(pill.props.accessibilityRole).toBe('link');
+  expect(pill.props.accessibilityLabel).toBe('Profil, handicap 12,4');
+  expect(pill).toHaveTextContent('HCP12,4');
+  expect(screen.queryByText('Profil')).toBeNull();
+  await fireEvent.press(pill);
   expect(navigate).toHaveBeenCalledWith('Profile');
 });
 
@@ -212,9 +216,10 @@ it('tegner heltekortet fra enheten når nettet er borte', async () => {
   expect(await screen.findByText('Fortsett på hull 8 →')).toBeTruthy();
   expect(screen.getByLabelText('Hull 8 av 18, 7 spilt')).toBeTruthy();
   expect(await screen.findByTestId('home-stale')).toBeTruthy();
-  // Uten profil står datoen alene.
+  // Uten profil står datoen alene, og uten pille er «Profil» veien videre.
   expect(screen.getByTestId('home-date')).toBeTruthy();
   expect(screen.queryByTestId('home-greeting')).toBeNull();
+  expect(screen.getByTestId('open-profile')).toHaveTextContent('Profil');
 });
 
 it('uten runde i gang står «Opprett spill» øverst, som før, også på et tomt Hjem', async () => {

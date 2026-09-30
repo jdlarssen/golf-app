@@ -15,6 +15,7 @@ import {
   continueOnHole,
   finishedResultText,
   greeting,
+  hcpA11yLabel,
   holesPlayedLine,
   moreAvatars,
   placeLine,
@@ -33,8 +34,7 @@ const web = source;
 const board = web.leaderboard.board;
 
 describe('paritet mot messages/no.json', () => {
-  it('hilsenen, seksjonene og knappene som finnes på webben', () => {
-    expect(greeting('Sigrid')).toBe(fill(web.home.greeting, { name: 'Sigrid' }));
+  it('seksjonene og knappene som finnes på webben', () => {
     expect(HOME_TEXT.playerFallback).toBe(web.home.playerFallback);
     expect(HOME_TEXT.inProgress).toBe(web.home.sectionInProgress);
     expect(HOME_TEXT.myGames).toBe(web.home.sectionMyGames);
@@ -113,6 +113,21 @@ describe('startbodens egne tekster', () => {
     ]) {
       expect(isFinishedSentence(text)).toBe(true);
     }
+  });
+
+  it('hilsenen følger klokka: morgen 05–10, dag 10–18, kveld 18–05', () => {
+    const at = (hour: number, minute = 0) => greeting('Sigrid', new Date(2026, 8, 27, hour, minute));
+    expect(at(4, 59)).toBe('God kveld, Sigrid');
+    expect(at(5)).toBe('God morgen, Sigrid');
+    expect(at(9, 59)).toBe('God morgen, Sigrid');
+    expect(at(10)).toBe('God dag, Sigrid');
+    expect(at(17, 59)).toBe('God dag, Sigrid');
+    expect(at(18)).toBe('God kveld, Sigrid');
+    expect(at(0)).toBe('God kveld, Sigrid');
+  });
+
+  it('HCP-pillen leses som veien til profilen', () => {
+    expect(hcpA11yLabel('14,2')).toBe('Profil, handicap 14,2');
   });
 
   it('knapp, ring og hull-linje', () => {

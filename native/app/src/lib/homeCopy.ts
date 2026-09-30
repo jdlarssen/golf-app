@@ -2,10 +2,13 @@
 // runde.
 //
 // Samme mønster som `profileCopy.ts`: appen har ingen i18n ennå, så teksten
-// bor her som en håndkopi. Det som også står på nettsiden (hilsenen, tavlas
-// plass- og avstandstekst, webbens `finishedCard.*`), låses tegn for tegn mot
+// bor her som en håndkopi. Det som også står på nettsiden (tavlas plass- og
+// avstandstekst, webbens `finishedCard.*`), låses tegn for tegn mot
 // `messages/no.json` i `homeCopy.test.ts`. Rettes en av dem på webben uten at
 // appen følger etter, blir testen rød.
+//
+// Hjem v2 (#2385) tok hilsenen og nærheten i billetten fra designlerretet: «God
+// morgen, Sigrid» etter klokka, og «om 7 dager» med liten forbokstav.
 import type { TeeOffProximity } from '../../../../lib/format/teeOffProximity';
 import type { FinishedResultBadge } from '../../../../lib/games/finishedResultBadge';
 import type { LiveBoardUnit, ViewerStanding } from '../../../../lib/leaderboard/liveBoard';
@@ -42,14 +45,21 @@ export const HOME_TEXT = {
   teamRound: 'Lagrunde',
 } as const;
 
-/** Webbens `home.greeting`. */
-export function greeting(name: string): string {
-  return `Hei, ${name}.`;
+/**
+ * Hilsenen øverst på Hjem skifter med klokka på telefonen, som «God morgen,
+ * Sigrid» i designet: morgen fra 05 til 10, dag fra 10 til 18 og kveld fra 18
+ * til 05.
+ */
+export function greeting(name: string, now: Date): string {
+  const hour = now.getHours();
+  const part =
+    hour >= 5 && hour < 10 ? 'God morgen' : hour >= 10 && hour < 18 ? 'God dag' : 'God kveld';
+  return `${part}, ${name}`;
 }
 
-/** Skjermleserteksten på HCP-pillen, som webbens `HandicapChip`. */
+/** HCP-pillen er veien til profilen, og skjermleseren sier begge deler. */
 export function hcpA11yLabel(hcp: string): string {
-  return `Handicap ${hcp}. Trykk for å oppdatere.`;
+  return `Profil, handicap ${hcp}`;
 }
 
 export function continueOnHole(hole: number): string {
