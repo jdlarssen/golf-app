@@ -647,7 +647,7 @@ describe('Hole', () => {
     );
   });
 
-  it('sollys: et hull som alt er ferdig når det åpnes, blir stående, og det samme gjør hull 18', async () => {
+  it('sollys: et hull som alt er ferdig når det åpnes, blir stående', async () => {
     await act(async () => setSunlight(true));
     // Som på telefonen: scorene kommer fra SQLite etter spillet.
     const { listScoresForGame } = jest.requireMock('../data/db') as { listScoresForGame: jest.Mock };
@@ -665,18 +665,20 @@ describe('Hole', () => {
     } finally {
       listScoresForGame.mockImplementation(async () => mockState.scores);
     }
+  });
 
-    // Hull 18: siste score, men det finnes ikke noe neste hull.
+  it('sollys: siste score på hull 18 blir stående, for det finnes ikke noe neste hull', async () => {
+    await act(async () => setSunlight(true));
     mockState.scores = [localScore('mate', 4, null, 18)];
-    const last = await renderHole(18);
+    const navigation = await renderHole(18);
     await waitFor(() => {
       expect(screen.getByTestId('rail-option-4')).toBeTruthy();
     });
     mockState.scores = [localScore('mate', 4, null, 18), localScore('me', 4, null, 18)];
     await fireEvent.press(screen.getByTestId('rail-option-4'));
     await act(async () => new Promise((resolve) => setTimeout(resolve, 1200)));
-    expect(last.setParams).not.toHaveBeenCalled();
-  }, 10000);
+    expect(navigation.setParams).not.toHaveBeenCalled();
+  });
 
   // #2219: i en blind runde som pågår viser hullsiden verken poeng eller
   // netto. Samme bundel med og uten blind runde, så forskjellen er regelen.
