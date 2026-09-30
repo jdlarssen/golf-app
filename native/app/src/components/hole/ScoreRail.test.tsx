@@ -87,6 +87,25 @@ describe('ScoreRail', () => {
   });
 });
 
+it('putter på: designets «1», «2» og «3+», og stepperen går ned til 0 for en chip-in', async () => {
+  const onPutts = jest.fn();
+  const active = { seatId: 'p1', name: 'Marte', extraStrokes: 1, score: 4, putts: null };
+  const { rerender } = await render(<ScoreRail {...props({ puttsTracking: true, onPutts, active })} />);
+
+  expect(screen.getByTestId('rail-putts-1')).toBeTruthy();
+  expect(screen.getByTestId('rail-putts-2')).toBeTruthy();
+  expect(screen.queryByTestId('rail-putts-0')).toBeNull();
+  await fireEvent.press(screen.getByTestId('rail-putts-plus'));
+  expect(onPutts).toHaveBeenLastCalledWith(3);
+  expect(screen.getByTestId('rail-putts-stepper')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('rail-putts-minus'));
+  expect(onPutts).toHaveBeenLastCalledWith(2);
+
+  // En chip-in står i stepperen, og «−» stopper der.
+  await rerender(<ScoreRail {...props({ puttsTracking: true, onPutts, active: { ...active, putts: 0 } })} />);
+  expect(screen.getByTestId('rail-putts-minus')).toBeDisabled();
+});
+
 it('«Putter» er webbens ord tegn for tegn', () => {
   expect(PUTTS_LABEL).toBe(source.holes.putts.fieldLabel);
 });
