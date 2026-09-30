@@ -7,8 +7,8 @@
 // tre prestasjonene i fast rekkefølge med navnet, hintet og hvem som tok dem,
 // eller «ikke satt». Som på webben:
 // - den som tok to eller tre av de tre: halvfett navn i `accentText` med en
-//   stjerne foran (dekor i `accent`, skjult for skjermleseren som webbens
-//   `aria-hidden`);
+//   stjerne foran (også `accentText`: webbens stjerne arver navnets farge),
+//   skjult for skjermleseren som webbens `aria-hidden`;
 // - én tok alle tre: «★ Feiet!» i gullbrikka i hodet (webbens
 //   `border-accent/40 bg-accent/[0.08]`, teksten leses opp som på webben);
 // - ingen av de tre er satt: «Venter» i hodet og «Ingen prestasjoner

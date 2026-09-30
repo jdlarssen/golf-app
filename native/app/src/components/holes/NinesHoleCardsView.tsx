@@ -91,7 +91,7 @@ function NinesHoleCardView({ hole, players }: { hole: NinesHoleCard; players: re
                     : { borderColor: colors.border },
               ]}
               accessibilityElementsHidden
-              importantForAccessibility="no"
+              importantForAccessibility="no-hide-descendants"
               testID={`hole-by-hole-place-${hole.holeNumber}-${row.userId}`}
             >
               <Text
