@@ -48,7 +48,7 @@ export function ScorecardTotals({
             accessible
             accessibilityLabel={`Poeng ${totals.points ?? 'ukjent'}`}
           >
-            <Text style={label}>Poeng</Text>
+            <Text style={[label, styles.rowLabel]}>Poeng</Text>
             <Text
               style={[styles.points, ui.num, { color: colors.primary }]}
               testID="total-poeng"
@@ -78,8 +78,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  // 28, nettleserens avrundede `normal` for Fraunces på 22 pt, så summene står
-  // på samme punkt som i designet.
+  // POENG-kolonnen er den høyeste og bestemmer raden: 12 + 30, som
+  // nettleserens avrundede linjer. Etikettene til venstre har sin naturlige
+  // høyde, og tallene nettleserens 28, så alt står på samme punkt som i
+  // designet.
+  rowLabel: { lineHeight: 12 },
   value: { fontSize: 22, lineHeight: 28, fontFamily: FONTS.serifScore },
   points: { fontSize: 30, lineHeight: 30, fontFamily: FONTS.serifScore },
 });
