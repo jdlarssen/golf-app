@@ -248,7 +248,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="NotificationsAndTheme"
           component={NotificationsAndTheme}
-          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.menuNotificationsTheme)}
+          options={kickerHeader(PROFILE_TEXT.heading, PROFILE_TEXT.notificationsHeading)}
         />
         <Stack.Screen
           name="Friends"
