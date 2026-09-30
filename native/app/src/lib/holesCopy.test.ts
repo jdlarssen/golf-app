@@ -5,6 +5,7 @@ import { ninesPointsText } from '../../../../lib/leaderboard/ninesHoles';
 import { isFinishedSentence } from '../test/copy';
 import {
   ACEY_DEUCEY_HOLES_TEXT,
+  BINGO_BANGO_BONGO_HOLES_TEXT,
   HOLES_TEXT,
   NINES_HOLES_TEXT,
   ROUND_ROBIN_HOLES_TEXT,
@@ -163,6 +164,31 @@ describe('Acey Deucey (#2255 PR 3c): paritet mot messages/no.json', () => {
   });
 });
 
+describe('Bingo Bango Bongo (#2255 PR 3c): paritet mot messages/no.json', () => {
+  const bbb = source.leaderboard.bingoBangoBongo;
+  it('undertittelen, hintene, «Feiet!», hull som venter og «ikke satt»', () => {
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.subtitle).toBe(bbb.holesSubtitle);
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.firstOnGreen).toBe(bbb.firstOnGreen);
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.nearestPin).toBe(bbb.nearestPin);
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.firstInHole).toBe(bbb.firstInHole);
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.feietChip).toBe(bbb.feietChip);
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.ingenPrestasjoner).toBe(bbb.ingenPrestasjoner);
+    expect(BINGO_BANGO_BONGO_HOLES_TEXT.ikkeSatt).toBe(bbb.ikkeSatt);
+  });
+
+  it('navnene på prestasjonene er hardkodet i webbens visning, ikke i meldingene', () => {
+    // Webben skriver «Bingo», «Bango» og «Bongo» rett i JSX-en (`CATEGORY_LABEL`).
+    expect([
+      BINGO_BANGO_BONGO_HOLES_TEXT.bingo,
+      BINGO_BANGO_BONGO_HOLES_TEXT.bango,
+      BINGO_BANGO_BONGO_HOLES_TEXT.bongo,
+    ]).toEqual(['Bingo', 'Bango', 'Bongo']);
+    expect(`${BINGO_BANGO_BONGO_HOLES_TEXT.bingo} ${BINGO_BANGO_BONGO_HOLES_TEXT.bango} ${BINGO_BANGO_BONGO_HOLES_TEXT.bongo}`).toBe(
+      bbb.subtitle,
+    );
+  });
+});
+
 it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
   for (const text of [
     ...Object.values(HOLES_TEXT),
@@ -170,6 +196,7 @@ it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
     ...Object.values(NINES_HOLES_TEXT),
     ...Object.values(ROUND_ROBIN_HOLES_TEXT),
     ...Object.values(ACEY_DEUCEY_HOLES_TEXT),
+    ...Object.values(BINGO_BANGO_BONGO_HOLES_TEXT),
   ]) {
     expect(isFinishedSentence(text)).toBe(true);
   }

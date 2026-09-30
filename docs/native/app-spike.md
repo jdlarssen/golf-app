@@ -2083,7 +2083,7 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
 - **Gaten** (`lib/holeByHole.ts`) er webbens `hasHoleByHoleView`, gitt den rå
   `mode_config` slik webbens side gjør, pluss appens egen liste over formatene skjermen er
   bygget for. PR 3a: solo stableford, modifisert stableford og solo slagspill. PR 3b: Wolf.
-  PR 3c: Nines, Round Robin og Acey Deucey.
+  PR 3c: Nines, Round Robin, Acey Deucey og Bingo Bango Bongo.
   Skins og Nassau bygges etter sine egne tegninger (#2317, #2327) og står som «Tavla» til da.
   De andre formatene webben har visning for, står som «Tavla» til de kommer.
 - **Wolf** (PR 3b): kortene per hull kommer fra `lib/leaderboard/wolfHoles.ts`, som webbens
@@ -2129,6 +2129,22 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   `aria-hidden`. Deuce-flaten er webbens `--surface-2`, ny rolle i temaet (`surface2`), låst
   mot `app/globals.css` i `theme.test.ts`. Minustegnet kommer fra `formatSignedPoints` i
   `lib/leaderboard/soloScorecard.ts`.
+- **Bingo Bango Bongo** (PR 3c): kortene per hull kommer fra
+  `lib/leaderboard/bingoBangoBongoHoles.ts`, som webbens `BingoBangoBongoHolesView` også
+  tegner. Hodet sier bare «Hull 4», som på webben: poengene kommer ikke fra slagene, og
+  motoren gir hullet verken par eller indeks. Så følger de tre prestasjonene i fast
+  rekkefølge, bingo (først på green), bango (nærmest hullet) og bongo (først i hull), med
+  hvem som tok dem, eller «ikke satt». Den som tok to av tre, står i gull med stjerne, og
+  tok én alle tre, står «★ Feiet!» i gullbrikka i hodet. Et hull der ingen av de tre er
+  satt, sier «Venter» og «Ingen prestasjoner registrert ennå.». Ingenting sorteres på
+  spillere, og bare én kan ha to av tre, så motorens rekkefølge inn spiller ingen rolle og
+  stillingen trengs ikke. Motoren trenger prestasjonene (`bingo_bango_bongo_holes`), som
+  skjermen henter med `useGameChoices` som for Wolf: hjulet til de er hentet, og samme
+  ærlige beskjed hvis hentingen feiler før første svar. `waitsForChoices` spør
+  `choicesNotYetHere`, så regelen for når valgene er kommet har ett hjem. Stjerna er dekor,
+  skjult for skjermleseren som webbens `aria-hidden`. `HoleHeader` tar nå et hull uten par
+  og indeks, og linja uten kant (Round Robins spillere, prestasjonene her) bor i
+  `components/holes/holesShared.tsx`.
 - **Regnestykket er delt med webben.** Webbens formatvisninger regnet rader, deltotaler,
   hullvinner og ledere selv. For solo-scorekortet bor det nå i
   `lib/leaderboard/soloScorecard.ts`, som både `SoloStablefordHolesView`,

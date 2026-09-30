@@ -51,7 +51,11 @@ export function HolesFooter({ finished }: { finished: boolean }) {
   );
 }
 
-/** Hodet på et hull-kort: «Hull 4», «Par 4 · SI 7», og det som står til høyre. */
+/**
+ * Hodet på et hull-kort: «Hull 4», «Par 4 · SI 7», og det som står til høyre.
+ * Uten par og indeks bare «Hull 4», som webbens Bingo Bango Bongo: poengene
+ * der kommer ikke fra slagene, og motoren gir hullet verken par eller indeks.
+ */
 export function HoleHeader({
   holeNumber,
   par,
@@ -59,10 +63,8 @@ export function HoleHeader({
   right,
 }: {
   holeNumber: number;
-  par: number;
-  strokeIndex: number;
   right?: ReactNode;
-}) {
+} & ({ par: number; strokeIndex: number } | { par?: undefined; strokeIndex?: undefined })) {
   const { colors, ui } = useTheme();
   return (
     <View style={holesStyles.holeHeader}>
@@ -70,9 +72,11 @@ export function HoleHeader({
         <Text style={[holesStyles.holeNumber, ui.num, { color: colors.text }]}>
           {holeNumberLabel(holeNumber)}
         </Text>
-        <Text style={[holesStyles.small, ui.num, { color: colors.muted }]}>
-          {parSiChip(par, strokeIndex)}
-        </Text>
+        {par !== undefined && strokeIndex !== undefined ? (
+          <Text style={[holesStyles.small, ui.num, { color: colors.muted }]}>
+            {parSiChip(par, strokeIndex)}
+          </Text>
+        ) : null}
       </View>
       {right ?? null}
     </View>
@@ -117,6 +121,12 @@ export const holesStyles = StyleSheet.create({
     paddingVertical: 6,
   },
   rowName: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  /**
+   * En linje uten kant: navn til venstre, verdien til høyre (webbens `flex
+   * items-center justify-between gap-3`). Round Robins spillere på en side,
+   * Bingo Bango Bongos prestasjoner.
+   */
+  line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   /** Stjerna er dekor (skjult for skjermleseren), så den har webbens `accent`, 11 pt. */
   star: { fontSize: 11 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },

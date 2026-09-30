@@ -357,3 +357,108 @@ describe('Acey Deucey (#2255 PR 3c)', () => {
     expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
   });
 });
+
+describe('Bingo Bango Bongo (#2255 PR 3c)', () => {
+  const bbbBundle = () =>
+    homeBundle({
+      game: {
+        id: 'gb',
+        status: 'finished',
+        gameMode: 'bingo_bango_bongo',
+        modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 },
+      },
+      players: [
+        homePlayer({ userId: 'a', name: 'Anne' }),
+        homePlayer({ userId: 'b', name: 'Bjørn' }),
+        homePlayer({ userId: 'c', name: 'Cato' }),
+      ],
+    });
+  // Hull 1: Anne to av tre (feier), Cato bango. Hull 2: Bjørn alle tre. Hull 3:
+  // bare bingo. Hull 4 og videre: ingen rad, venter.
+  const bbbHoles = [
+    { holeNumber: 1, bingoUserId: 'a', bangoUserId: 'c', bongoUserId: 'a' },
+    { holeNumber: 2, bingoUserId: 'b', bangoUserId: 'b', bongoUserId: 'b' },
+    { holeNumber: 3, bingoUserId: 'c', bangoUserId: null, bongoUserId: null },
+  ];
+  const props = { route: { params: { gameId: 'gb' } }, navigation: mockNavigation } as unknown as ScreenProps<'HoleByHole'>;
+  beforeEach(() => {
+    mockReload.mockClear();
+    mockScreen.bundle = bbbBundle();
+    mockScreen.scores = [];
+    mockScreen.seed = async () => 0;
+    mockScreen.extras = {};
+    mockScreen.choicesFailed = false;
+  });
+
+  it('venter på prestasjonene før noe regnes: uten dem kan motoren ikke regne Bingo Bango Bongo', async () => {
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(mockReload).toHaveBeenCalled());
+    expect(screen.getByTestId('hole-by-hole-spinner')).toBeTruthy();
+    expect(screen.queryByTestId('hole-by-hole')).toBeNull();
+  });
+
+  it('uten nett, og prestasjonene aldri hentet: en ærlig beskjed, ikke et hjul som aldri stopper', async () => {
+    mockScreen.choicesFailed = true;
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(screen.getByTestId('hole-by-hole-choices-missing')).toBeTruthy());
+    expect(screen.getByTestId('hole-by-hole-choices-missing')).toHaveTextContent(
+      'Fikk ikke tak i valgene som avgjør poengene. Hull for hull kommer når nettet er tilbake.',
+    );
+    expect(screen.queryByTestId('hole-by-hole-spinner')).toBeNull();
+    expect(screen.queryByTestId('hole-by-hole')).toBeNull();
+  });
+
+  it('med prestasjonene: kortene på skjermen, også uten et eneste slag', async () => {
+    mockScreen.extras = { bingoBangoBongoHoles: bbbHoles };
+    await render(<HoleByHole {...props} />);
+    await waitFor(() => expect(screen.getByTestId('hole-by-hole')).toBeTruthy());
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+  });
+
+  it('ett kort per hull: prestasjonene i fast rekkefølge, feieren i gull, «Feiet!», «ikke satt» og hull som venter', async () => {
+    await render(<HoleByHoleBody bundle={bbbBundle()} scores={[]} extras={{ bingoBangoBongoHoles: bbbHoles }} />);
+
+    expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
+    expect(screen.getByText('Bingo Bango Bongo')).toBeTruthy();
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+    // Bare «Hull 1» i hodet, som på webben: ingen par eller indeks.
+    expect(screen.getByTestId('hole-by-hole-card-1')).not.toHaveTextContent(/Par|SI/);
+
+    // Hull 1: bingo, bango, bongo i den rekkefølgen, med hintet og hvem som tok den.
+    const awards = screen.getAllByTestId(/^hole-by-hole-award-1-/).map((r) => r.props.testID);
+    expect(awards).toEqual(['hole-by-hole-award-1-bingo', 'hole-by-hole-award-1-bango', 'hole-by-hole-award-1-bongo']);
+    // Teksten tar med stjerna, som webbens `textContent`.
+    expect(screen.getByTestId('hole-by-hole-award-1-bingo')).toHaveTextContent(/^Bingoførst på green★Anne$/);
+    expect(screen.getByTestId('hole-by-hole-award-1-bango')).toHaveTextContent(/^Bangonærmest hulletCato$/);
+    expect(screen.getByTestId('hole-by-hole-award-1-bongo')).toHaveTextContent(/^Bongoførst i hull★Anne$/);
+    // Anne tok to av tre: stjerna er dekor for skjermleseren (webbens aria-hidden),
+    // navnet i gull tekst. Cato fikk én og står uten.
+    expect(screen.queryByTestId('hole-by-hole-star-1-bingo')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-star-1-bingo', HIDDEN)).toHaveStyle({ color: PALETTES.light.accent });
+    expect(screen.queryByTestId('hole-by-hole-star-1-bango', HIDDEN)).toBeNull();
+    for (const anne of screen.getAllByText('Anne')) {
+      expect(anne).toHaveStyle({ color: PALETTES.light.accentText });
+    }
+    // Cato feier ingen steder (bango på hull 1, bingo på hull 3).
+    for (const cato of screen.getAllByText('Cato')) {
+      expect(cato).toHaveStyle({ color: PALETTES.light.text });
+    }
+    expect(screen.queryByTestId('hole-by-hole-swept-1')).toBeNull();
+
+    // Hull 2: Bjørn tok alle tre, «Feiet!» i hodet.
+    expect(screen.getByTestId('hole-by-hole-swept-2')).toHaveTextContent('★ Feiet!');
+    expect(screen.queryByTestId('hole-by-hole-waiting-2')).toBeNull();
+
+    // Hull 3: bare bingo, resten «ikke satt», og hullet venter ikke.
+    expect(screen.getByTestId('hole-by-hole-award-3-bango')).toHaveTextContent(/ikke satt$/);
+    expect(screen.getByTestId('hole-by-hole-award-3-bongo')).toHaveTextContent(/ikke satt$/);
+    expect(screen.queryByTestId('hole-by-hole-waiting-3')).toBeNull();
+
+    // Hull 4: ingen rad. «Venter» og ingen prestasjoner, ingen rader.
+    expect(screen.getByTestId('hole-by-hole-waiting-4')).toHaveTextContent('Venter');
+    expect(screen.getByTestId('hole-by-hole-none-4')).toHaveTextContent('Ingen prestasjoner registrert ennå.');
+    expect(screen.queryAllByTestId(/^hole-by-hole-award-4-/)).toHaveLength(0);
+
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+  });
+});
