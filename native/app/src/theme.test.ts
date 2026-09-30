@@ -77,6 +77,14 @@ describe('PALETTES', () => {
     expect(PALETTES[scheme].surfaceStrong.toLowerCase()).toBe(cssVars(opener)['--surface-strong']);
   });
 
+  // #2385: prikken på heltekortet er webbens mørke salvie i begge draktene,
+  // fordi den sitter på skogflaten, som er mørk i begge.
+  it('uses the web dark --success for the live dot in both schemes', () => {
+    const sage = cssVars("[data-theme='klubbhus-natt'] {")['--success'];
+    expect(PALETTES.light.live.toLowerCase()).toBe(sage);
+    expect(PALETTES.dark.live.toLowerCase()).toBe(sage);
+  });
+
   it('keeps the app-only ink roles', () => {
     expect(PALETTES.light.onPrimary).toBe('#FFFFFF');
     expect(PALETTES.light.onAccent).toBe('#1B4332');
@@ -87,7 +95,8 @@ describe('PALETTES', () => {
   it('gives every role a distinct klubbhus-natt value in dark mode', () => {
     const roles = Object.keys(PALETTES.light) as (keyof typeof PALETTES.light)[];
     expect(Object.keys(PALETTES.dark).sort()).toEqual([...roles].sort());
-    for (const role of roles) {
+    // `live` sitter på skogflaten i begge draktene og er lik med vilje.
+    for (const role of roles.filter((r) => r !== 'live')) {
       expect(PALETTES.dark[role]).not.toBe(PALETTES.light[role]);
     }
   });

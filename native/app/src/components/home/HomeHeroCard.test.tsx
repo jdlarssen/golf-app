@@ -45,7 +45,8 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
 
   // Midt i runden: hull 8 i ringen, med etiketten skjermleseren leser.
   expect(screen.getByText('Pågår nå')).toBeTruthy();
-  expect(screen.getByText('Torsdagsrunden')).toBeTruthy();
+  // Navn og bane på én linje i toppraden.
+  expect(screen.getByTestId('home-hero-where')).toHaveTextContent('Torsdagsrunden · Losby');
   expect(screen.getByTestId('home-hero-ring-number')).toHaveTextContent('8');
   expect(screen.getByLabelText('Hull 8 av 18, 7 spilt')).toBeTruthy();
   expect(screen.getByTestId('home-hero-ring').props.accessibilityRole).toBe('image');
@@ -53,8 +54,9 @@ it('tegner ring, plass og knapper fra modellen, og uten modell bare «Åpne rund
   expect(screen.queryByTestId('home-hero-ring-svg')).toBeNull();
   expect(screen.getByTestId('home-hero-ring-svg', HIDDEN)).toBeTruthy();
   expect(screen.getByTestId('home-hero-place')).toHaveTextContent('3. plass');
+  // Én del per linje, som i designet.
   expect(screen.getByTestId('home-hero-detail')).toHaveTextContent(
-    '15 poeng etter 7 hull · 3 poeng bak ledelsen',
+    '15 poeng etter 7 hull\n3 poeng bak ledelsen',
   );
   expect(screen.queryByTestId('home-hero-gold', HIDDEN)).toBeNull();
 
