@@ -9,6 +9,7 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 import type { GameBundle } from '../data/gameBundle';
 import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
+import { PALETTES } from '../theme';
 import { HoleByHole, HoleByHoleBody } from './HoleByHole';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -296,6 +297,63 @@ describe('Round Robin (#2255 PR 3c)', () => {
     expect(screen.getByTestId('hole-by-hole-outcome-2')).toHaveTextContent('Venter');
     expect(screen.getByTestId('hole-by-hole-card-2')).not.toHaveTextContent(/Vant hullet/);
     expect(screen.getByTestId('hole-by-hole-row-2-a')).toHaveTextContent(/A.*–/);
+    expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
+  });
+});
+
+describe('Acey Deucey (#2255 PR 3c)', () => {
+  it('ett kort per hull, lavest først: ace med stjerne og +3, deuce med −3 på dempet flate', async () => {
+    const bundle = homeBundle({
+      game: {
+        id: 'ga',
+        status: 'finished',
+        gameMode: 'acey_deucey',
+        modeConfig: { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' },
+      },
+      // Motsatt av stillingen, så motorens rekkefølge inn ikke er den ferdige.
+      players: [
+        homePlayer({ userId: 'd', name: 'D' }),
+        homePlayer({ userId: 'c', name: 'C' }),
+        homePlayer({ userId: 'b', name: 'B', courseHandicap: 18 }),
+        homePlayer({ userId: 'a', name: 'A' }),
+      ],
+    });
+    // Hull 1: A 3 (ace), B 5 med et slag (netto 4), C 4, D 6 (deuce).
+    const adScores = [
+      ...holeScores('ga', 'a', 1, 3),
+      ...holeScores('ga', 'b', 1, 5),
+      ...holeScores('ga', 'c', 1, 4),
+      ...holeScores('ga', 'd', 1, 6),
+    ];
+    await render(<HoleByHoleBody bundle={bundle} scores={adScores} />);
+
+    expect(screen.getByRole('header', { name: 'Hull for hull' })).toBeTruthy();
+    expect(screen.getByText('Acey Deucey · Netto')).toBeTruthy();
+    expect(screen.getAllByTestId(/^hole-by-hole-card-/)).toHaveLength(18);
+
+    // Hull 1: lavest først, B før C på lik score (stillingen), poengene med fortegn.
+    const rows = screen.getAllByTestId(/^hole-by-hole-row-1-/).map((r) => r.props.testID);
+    expect(rows).toEqual([
+      'hole-by-hole-row-1-a',
+      'hole-by-hole-row-1-b',
+      'hole-by-hole-row-1-c',
+      'hole-by-hole-row-1-d',
+    ]);
+    expect(screen.getByTestId('hole-by-hole-row-1-a')).toHaveTextContent(/A.*\+3.*3/);
+    expect(screen.getByTestId('hole-by-hole-row-1-b')).toHaveTextContent(/B.*0.*brutto 5.*4/);
+    expect(screen.getByTestId('hole-by-hole-row-1-d')).toHaveTextContent(/D.*\u22123.*6/);
+    // Deuce-raden på webbens `bg-surface-2`.
+    expect(screen.getByTestId('hole-by-hole-row-1-d')).toHaveStyle({ backgroundColor: PALETTES.light.surface2 });
+    expect(screen.queryByTestId('hole-by-hole-waiting-1')).toBeNull();
+    // Stjerna (ace) er dekor for skjermleseren, som på webben (aria-hidden).
+    expect(screen.queryByTestId('hole-by-hole-star-1-a')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-star-1-a', HIDDEN)).toHaveTextContent('★');
+    expect(screen.queryByTestId('hole-by-hole-star-1-d', HIDDEN)).toBeNull();
+
+    // Hull 2 er ikke spilt: «Venter», ingen poeng, score som «–».
+    expect(screen.getByTestId('hole-by-hole-waiting-2')).toHaveTextContent('Venter');
+    expect(screen.getByTestId('hole-by-hole-card-2')).not.toHaveTextContent(/\+3|\u2212/);
+    expect(screen.getByTestId('hole-by-hole-row-2-a')).toHaveTextContent(/^A–$/);
     expect(screen.getByTestId('hole-by-hole-footer')).toHaveTextContent('«Vel spilt!»');
   });
 });

@@ -4,10 +4,13 @@ import { formatNumber } from '../../../../lib/i18n/format';
 import { ninesPointsText } from '../../../../lib/leaderboard/ninesHoles';
 import { isFinishedSentence } from '../test/copy';
 import {
+  ACEY_DEUCEY_HOLES_TEXT,
   HOLES_TEXT,
   NINES_HOLES_TEXT,
   ROUND_ROBIN_HOLES_TEXT,
   WOLF_HOLES_TEXT,
+  aceyDeuceyBruttoLabel,
+  aceyDeuceySubtitle,
   grossChip,
   holeNumberLabel,
   holesPlayedChip,
@@ -150,12 +153,23 @@ describe('Round Robin (#2255 PR 3c): paritet mot messages/no.json', () => {
   });
 });
 
+describe('Acey Deucey (#2255 PR 3c): paritet mot messages/no.json', () => {
+  const aceyDeucey = source.leaderboard.aceyDeucey;
+  it('tekstene med tall, og undertittelen', () => {
+    expect(aceyDeuceyBruttoLabel(5)).toBe(fill(aceyDeucey.bruttoLabel, { gross: 5 }));
+    // «Acey Deucey · » foran scoringen er hardkodet i webbens visning.
+    expect(aceyDeuceySubtitle('netto')).toBe(`Acey Deucey · ${common.netto}`);
+    expect(aceyDeuceySubtitle('brutto')).toBe(`Acey Deucey · ${common.brutto}`);
+  });
+});
+
 it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
   for (const text of [
     ...Object.values(HOLES_TEXT),
     ...Object.values(WOLF_HOLES_TEXT),
     ...Object.values(NINES_HOLES_TEXT),
     ...Object.values(ROUND_ROBIN_HOLES_TEXT),
+    ...Object.values(ACEY_DEUCEY_HOLES_TEXT),
   ]) {
     expect(isFinishedSentence(text)).toBe(true);
   }

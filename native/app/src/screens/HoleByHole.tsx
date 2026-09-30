@@ -4,8 +4,9 @@
 // Webbens side har en egen visning per format. Appen tar dem format for
 // format (`lib/holeByHole.ts` sier hvilke), og tegner samme modell som webben
 // (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`,
-// `lib/leaderboard/ninesHoles.ts`, `lib/leaderboard/roundRobinHoles.ts`). I en
-// blind runde som pågår holdes alt tilbake, som på webben.
+// `lib/leaderboard/ninesHoles.ts`, `lib/leaderboard/roundRobinHoles.ts`,
+// `lib/leaderboard/aceyDeuceyHoles.ts`). I en blind runde som pågår holdes alt
+// tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
@@ -18,6 +19,7 @@ import {
   shouldHideNetto,
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
+import { AceyDeuceyHoleCardsView } from '../components/holes/AceyDeuceyHoleCardsView';
 import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
 import { RoundRobinHoleCardsView } from '../components/holes/RoundRobinHoleCardsView';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
@@ -166,6 +168,16 @@ export function HoleByHoleBody({
     return (
       <RoundRobinHoleCardsView
         cards={model.roundRobin}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'acey-deucey') {
+    return (
+      <AceyDeuceyHoleCardsView
+        cards={model.aceyDeucey}
         subtitle={model.subtitle}
         players={bundle.players}
         finished={game.status === 'finished'}
