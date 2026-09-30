@@ -68,6 +68,9 @@ export function BagTag({
   variant = 'profile',
 }: BagTagProps) {
   const share = variant === 'share';
+  // Deleversjonen står skjult i samme tre som profilens kort; uten egne
+  // test-ID-er finnes hver ID én gang.
+  const tid = (id: string) => (share ? undefined : id);
   const { colors } = useTheme();
   const ink = { color: colors.onStrong };
   const hidden = { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' } as const;
@@ -76,7 +79,7 @@ export function BagTag({
 
   return (
     <View
-      testID="bag-tag"
+      testID={tid('bag-tag')}
       style={[
         styles.card,
         { backgroundColor: colors.surfaceStrong, shadowColor: colors.surfaceStrong },
@@ -90,7 +93,7 @@ export function BagTag({
           <Text
             style={[styles.kicker, { color: colors.accent }]}
             numberOfLines={1}
-            testID="bag-tag-kicker"
+            testID={tid('bag-tag-kicker')}
           >
             {model?.kicker ?? ''}
           </Text>
@@ -98,11 +101,11 @@ export function BagTag({
             accessibilityRole="header"
             style={[styles.name, ink]}
             numberOfLines={2}
-            testID="profile-name"
+            testID={tid('profile-name')}
           >
             {model?.name ?? placeholderName}
           </Text>
-          <Text style={[styles.subline, ink]} testID="bag-tag-subline">
+          <Text style={[styles.subline, ink]} testID={tid('bag-tag-subline')}>
             {model?.subline ?? ''}
           </Text>
         </View>
@@ -120,14 +123,14 @@ export function BagTag({
                 `${PROFILE_TEXT.handicapLabel} ${model.hcpText ?? PROFILE_TEXT.hcpNotSetSpoken}` +
                 (curve ? `, ${handicapSeasonChangeSpoken(curve.change)}` : '')
               }
-              testID="profile-hcp"
+              testID={tid('profile-hcp')}
             >
               <Text style={[styles.hcpLabel, ink]}>{PROFILE_TEXT.handicapLabel}</Text>
-              <Text style={[styles.hcpValue, ink]} testID="profile-hcp-value">
+              <Text style={[styles.hcpValue, ink]} testID={tid('profile-hcp-value')}>
                 {model.hcpText ?? '–'}
               </Text>
             </View>
-            {curve ? <HandicapCurve points={curve.points} /> : null}
+            {curve ? <HandicapCurve points={curve.points} testID={tid('profile-hcp-curve')} /> : null}
           </View>
         ) : (
           <View style={styles.hcpPlaceholder} />
@@ -135,7 +138,9 @@ export function BagTag({
         {model && !share ? (
           <HandicapAge model={model} trend={model.hcpText ? trend : null} onEditProfile={onEditProfile} />
         ) : null}
-        {share && curve ? (
+        {/* Som linja på skjermen: ved et gammelt handicap står påminnelsen
+            der, ikke endringen, så bildet viser heller ingen endring. */}
+        {share && curve && !model?.hcpAge?.stale ? (
           <Text style={[styles.age, styles.change, ink]} testID="share-hcp-change">
             {handicapSeasonChange(curve.change)}
           </Text>
@@ -217,7 +222,7 @@ const CURVE_PAD = 4;
  * lavere, så en god sesong går nedover mot høyre, som i designet. Pynt: tallet
  * og endringen leses i ord.
  */
-function HandicapCurve({ points }: { points: readonly number[] }) {
+function HandicapCurve({ points, testID }: { points: readonly number[]; testID?: string }) {
   const { colors } = useTheme();
   const max = Math.max(...points);
   const min = Math.min(...points);
@@ -235,7 +240,7 @@ function HandicapCurve({ points }: { points: readonly number[] }) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={styles.curve}
-      testID="profile-hcp-curve"
+      testID={testID}
     >
       <Svg width={CURVE_WIDTH} height={CURVE_HEIGHT}>
         <Polyline

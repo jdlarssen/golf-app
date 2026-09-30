@@ -1,6 +1,6 @@
 // #2256 PR 3: «Del bag-taggen» tar bildet og åpner arket bare når de native
 // delene finnes, og en feil blir et rolig svar, aldri et kast.
-import { TurboModuleRegistry } from 'react-native';
+import { NativeModules, TurboModuleRegistry } from 'react-native';
 import { canShareBagTag, shareBagTagImage, toFileUrl } from './shareBagTag';
 
 const mockCaptureRef = jest.fn();
@@ -15,13 +15,26 @@ jest.mock('expo', () => ({
 
 const CARD = { current: {} as never };
 
-// Appen kjører med den nye arkitekturen, der view-shot bor i
-// TurboModule-registeret (jest-expo har en fast mock i `NativeModules`).
-const withTurbo = globalThis as { __turboModuleProxy?: unknown };
+// Appen kjører bridgeless: `__turboModuleProxy` er ikke satt, og view-shot
+// slås opp i `NativeModules`. Med `__turboModuleProxy` (den eldre veien til
+// TurboModules) slår pakken opp i registeret; begge veiene testes.
+const runtime = globalThis as { __turboModuleProxy?: unknown };
 
-function nativeParts({ viewShot, sharing }: { viewShot: boolean; sharing: boolean }) {
+function nativeParts({
+  viewShot,
+  sharing,
+  turboProxy = false,
+}: {
+  viewShot: boolean;
+  sharing: boolean;
+  turboProxy?: boolean;
+}) {
+  if (turboProxy) runtime.__turboModuleProxy = () => null;
+  else delete runtime.__turboModuleProxy;
+  // jest-expo har en fast mock i `NativeModules`; getteren styres her.
+  jest.spyOn(NativeModules, 'RNViewShot', 'get').mockReturnValue(viewShot && !turboProxy ? {} : undefined);
   jest.spyOn(TurboModuleRegistry, 'get').mockImplementation((name: string) =>
-    name === 'RNViewShot' && viewShot ? ({} as never) : null,
+    name === 'RNViewShot' && viewShot && turboProxy ? ({} as never) : null,
   );
   mockOptionalNativeModule.mockImplementation((name: string) =>
     name === 'ExpoSharing' && sharing ? {} : null,
@@ -29,12 +42,11 @@ function nativeParts({ viewShot, sharing }: { viewShot: boolean; sharing: boolea
 }
 
 afterAll(() => {
-  delete withTurbo.__turboModuleProxy;
+  delete runtime.__turboModuleProxy;
 });
 
 beforeEach(() => {
   jest.restoreAllMocks();
-  withTurbo.__turboModuleProxy = () => null;
   mockCaptureRef.mockReset().mockResolvedValue('/tmp/ReactNative/bag-tag.png');
   mockShareAsync.mockReset().mockResolvedValue(undefined);
   nativeParts({ viewShot: true, sharing: true });
@@ -42,11 +54,13 @@ beforeEach(() => {
 
 describe('canShareBagTag', () => {
   it.each([
-    [true, true, true],
-    [false, true, false],
-    [true, false, false],
-  ])('view-shot %p, deling %p → %p', (viewShot, sharing, expected) => {
-    nativeParts({ viewShot, sharing });
+    [false, true, true, true],
+    [false, false, true, false],
+    [false, true, false, false],
+    [true, true, true, true],
+    [true, false, true, false],
+  ])('turbo-proxy %p: view-shot %p, deling %p → %p', (turboProxy, viewShot, sharing, expected) => {
+    nativeParts({ viewShot, sharing, turboProxy });
     expect(canShareBagTag()).toBe(expected);
   });
 });
