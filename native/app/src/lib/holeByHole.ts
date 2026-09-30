@@ -5,15 +5,16 @@
 // hull» der heller). Oppå den står appens egen liste over formatene skjermen
 // er bygget for. Den vokser format for format (PR 3a: solo stableford,
 // modifisert stableford og solo slagspill; PR 3b: Wolf; PR 3c: Nines, Round
-// Robin og Acey Deucey). For resten står flisa på spillets side som «Tavla»,
-// som for formatene webben sender til tavla.
+// Robin, Acey Deucey og Bingo Bango Bongo). For resten står flisa på spillets
+// side som «Tavla», som for formatene webben sender til tavla.
 // Skins og Nassau bygges etter sine egne tegninger (#2317, #2327), ikke her.
 //
 // Regnestykket er delt med webben: motoren (`computeGameLeaderboard`, samme
 // som tavla) og radene (`lib/leaderboard/soloScorecard.ts`,
 // `lib/leaderboard/wolfHoles.ts`, `lib/leaderboard/ninesHoles.ts`,
-// `lib/leaderboard/roundRobinHoles.ts`, `lib/leaderboard/aceyDeuceyHoles.ts`).
-// Skjermen tegner bare det som kommer herfra.
+// `lib/leaderboard/roundRobinHoles.ts`, `lib/leaderboard/aceyDeuceyHoles.ts`,
+// `lib/leaderboard/bingoBangoBongoHoles.ts`). Skjermen tegner bare det som
+// kommer herfra.
 import { hasHoleByHoleView } from '../../../../lib/leaderboard/holeByHoleView';
 import {
   soloStablefordScorecard,
@@ -31,6 +32,10 @@ import {
   type AceyDeuceyHoleCards,
 } from '../../../../lib/leaderboard/aceyDeuceyHoles';
 import {
+  bingoBangoBongoHoleCards,
+  type BingoBangoBongoHoleCards,
+} from '../../../../lib/leaderboard/bingoBangoBongoHoles';
+import {
   MODE_LABELS,
   type GameMode,
   type GameModeConfig,
@@ -38,6 +43,7 @@ import {
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
 import {
+  BINGO_BANGO_BONGO_HOLES_TEXT,
   HOLES_TEXT,
   ROUND_ROBIN_HOLES_TEXT,
   aceyDeuceySubtitle,
@@ -53,18 +59,20 @@ export type HoleByHoleKind =
   | 'wolf'
   | 'nines'
   | 'round-robin'
-  | 'acey-deucey';
+  | 'acey-deucey'
+  | 'bingo-bango-bongo';
 
 /**
  * Linja under overskriften er formatet («Stableford», «Wolf · Netto», «Nines ·
- * Netto», «Round Robin», «Acey Deucey · Netto»).
+ * Netto», «Round Robin», «Acey Deucey · Netto», «Bingo Bango Bongo»).
  */
 export type HoleByHoleModel =
   | { kind: 'solo-stableford' | 'solo-strokeplay'; subtitle: string; card: SoloScorecard }
   | { kind: 'wolf'; subtitle: string; wolf: WolfHoleCards }
   | { kind: 'nines'; subtitle: string; nines: NinesHoleCards }
   | { kind: 'round-robin'; subtitle: string; roundRobin: RoundRobinHoleCards }
-  | { kind: 'acey-deucey'; subtitle: string; aceyDeucey: AceyDeuceyHoleCards };
+  | { kind: 'acey-deucey'; subtitle: string; aceyDeucey: AceyDeuceyHoleCards }
+  | { kind: 'bingo-bango-bongo'; subtitle: string; bingoBangoBongo: BingoBangoBongoHoleCards };
 
 function isKnownMode(mode: string): mode is GameMode {
   return Object.hasOwn(MODE_LABELS, mode);
@@ -87,17 +95,23 @@ export function holeByHoleKind(
   if (mode === 'nines') return 'nines';
   if (mode === 'round_robin') return 'round-robin';
   if (mode === 'acey_deucey') return 'acey-deucey';
+  if (mode === 'bingo_bango_bongo') return 'bingo-bango-bongo';
   return null;
 }
 
 /**
  * Trenger formatet valg fra serveren før det kan regnes (Wolf: hvem valgte
- * hva), og er de ikke hentet ennå? Uten dem kan motoren ikke regne Wolf
- * (`missing-choices`), og skjermen ville sagt at runden ikke har «Hull for
- * hull». Da venter skjermen, og sier fra hvis hentingen feiler.
+ * hva; Bingo Bango Bongo: hvem tok hvilken prestasjon), og er de ikke hentet
+ * ennå? Uten dem kan motoren ikke regne formatet (`missing-choices`), og
+ * skjermen ville sagt at runden ikke har «Hull for hull». Da venter skjermen,
+ * og sier fra hvis hentingen feiler. Om valgene er kommet, avgjør
+ * `choicesNotYetHere` (samme regel som tavla); her står bare hvilken
+ * `game_mode` visningen hører til.
  */
 export function waitsForChoices(kind: HoleByHoleKind | null, extras: ScoringExtras): boolean {
-  return kind === 'wolf' && choicesNotYetHere('wolf', extras);
+  if (kind === 'wolf') return choicesNotYetHere('wolf', extras);
+  if (kind === 'bingo-bango-bongo') return choicesNotYetHere('bingo_bango_bongo', extras);
+  return false;
 }
 
 /**
@@ -144,6 +158,13 @@ export function buildHoleByHole(
   if (kind === 'acey-deucey' && result.kind === 'acey_deucey') {
     const aceyDeucey = aceyDeuceyHoleCards(result);
     return { kind, subtitle: aceyDeuceySubtitle(aceyDeucey.scoringKey), aceyDeucey };
+  }
+  if (kind === 'bingo-bango-bongo' && result.kind === 'bingo_bango_bongo') {
+    return {
+      kind,
+      subtitle: BINGO_BANGO_BONGO_HOLES_TEXT.subtitle,
+      bingoBangoBongo: bingoBangoBongoHoleCards(result),
+    };
   }
   return null;
 }

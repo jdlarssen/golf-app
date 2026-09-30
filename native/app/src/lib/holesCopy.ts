@@ -3,13 +3,14 @@
 // Det meste står også på webbens «Hull for hull» (`leaderboard.common.*`,
 // `leaderboard.soloStrokeplay.*`, `leaderboard.wolf.*`, `leaderboard.nines.*`,
 // `leaderboard.roundRobin.*`, `leaderboard.aceyDeucey.*`,
-// `game.home.hullForHull`) og låses tegn for tegn mot `messages/no.json` i
-// `holesCopy.test.ts`. Unntakene er hardkodet i webbens visninger, ikke
-// meldinger: `pointsUnit` («p»), «Wolf · » foran scoringen, « · » mellom
-// Nines-varianten og scoringen, «Round Robin» under overskriften, « + » mellom
-// partnerne i Round Robin og «Acey Deucey · » foran scoringen. `notAvailable`
-// finnes bare i appen. Samme mønster som `ticketCopy.ts`: appen har ingen
-// i18n, så teksten er en håndkopi.
+// `leaderboard.bingoBangoBongo.*`, `game.home.hullForHull`) og låses tegn for
+// tegn mot `messages/no.json` i `holesCopy.test.ts`. Unntakene er hardkodet i
+// webbens visninger, ikke meldinger: `pointsUnit` («p»), «Wolf · » foran
+// scoringen, « · » mellom Nines-varianten og scoringen, «Round Robin» under
+// overskriften, « + » mellom partnerne i Round Robin, «Acey Deucey · » foran
+// scoringen og navnene «Bingo», «Bango» og «Bongo» på prestasjonene.
+// `notAvailable` finnes bare i appen. Samme mønster som `ticketCopy.ts`: appen
+// har ingen i18n, så teksten er en håndkopi.
 import {
   ninesPointsText,
   type NinesScoringKey,
@@ -188,3 +189,28 @@ export function aceyDeuceySubtitle(scoringKey: AceyDeuceyScoringKey): string {
 export function aceyDeuceyBruttoLabel(gross: number): string {
   return `brutto ${gross}`;
 }
+
+/**
+ * Bingo Bango Bongo (#2255 PR 3c): webbens `leaderboard.bingoBangoBongo.*`,
+ * låst i `holesCopy.test.ts`. Hintene har de samme nøklene som modellen bærer
+ * (`lib/leaderboard/bingoBangoBongoHoles.ts`), og navnene på prestasjonene
+ * har kategorien som nøkkel. «Venter» står i `HOLES_TEXT`.
+ */
+export const BINGO_BANGO_BONGO_HOLES_TEXT = {
+  /** Linja under overskriften. */
+  subtitle: 'Bingo Bango Bongo',
+  /** Navnene på prestasjonene, hardkodet i webbens visning. */
+  bingo: 'Bingo',
+  bango: 'Bango',
+  bongo: 'Bongo',
+  /** Hintet under hver prestasjon. */
+  firstOnGreen: 'først på green',
+  nearestPin: 'nærmest hullet',
+  firstInHole: 'først i hull',
+  /** Til høyre i hodet når én spiller tok alle tre. */
+  feietChip: '★ Feiet!',
+  /** I stedet for radene på et hull som venter. */
+  ingenPrestasjoner: 'Ingen prestasjoner registrert ennå.',
+  /** Til høyre på en prestasjon ingen har fått. */
+  ikkeSatt: 'ikke satt',
+} as const;

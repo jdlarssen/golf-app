@@ -20,6 +20,7 @@ describe('holeByHoleKind', () => {
     ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 'nines'],
     ['round_robin', { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 85 }, 'round-robin'],
     ['acey_deucey', { kind: 'acey_deucey', team_size: 1, acey_deucey_scoring: 'net' }, 'acey-deucey'],
+    ['bingo_bango_bongo', { kind: 'bingo_bango_bongo', team_size: 1 }, 'bingo-bango-bongo'],
     // Webben har ingen egen visning for lag-stableford: tavla.
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, null],
     // Matchplay og scramble har ingen «Hull for hull» på webben heller.
@@ -252,6 +253,52 @@ describe('buildHoleByHole', () => {
     ]);
   });
 
+  it('Bingo Bango Bongo: kortene fra valgene, ikke fra slagene; feieren, «Feiet!» og hull som venter', () => {
+    const bundle = homeBundle({
+      game: {
+        id: 'gb',
+        status: 'finished',
+        gameMode: 'bingo_bango_bongo',
+        modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 },
+      },
+      players: ['a', 'b', 'c'].map((userId) => homePlayer({ userId, name: userId.toUpperCase() })),
+    });
+    // Slagene teller ikke: B har det beste hullet, men A tar prestasjonene.
+    const scores = [...holeScores('gb', 'a', 1, 6), ...holeScores('gb', 'b', 1, 3)];
+    const extras = {
+      bingoBangoBongoHoles: [
+        { holeNumber: 1, bingoUserId: 'a', bangoUserId: 'c', bongoUserId: 'a' },
+        { holeNumber: 2, bingoUserId: 'b', bangoUserId: 'b', bongoUserId: 'b' },
+        { holeNumber: 3, bingoUserId: 'c', bangoUserId: null, bongoUserId: null },
+      ],
+    };
+    const model = buildHoleByHole(bundle, scores, extras);
+    expect(model?.kind).toBe('bingo-bango-bongo');
+    if (model?.kind !== 'bingo-bango-bongo') return;
+    expect(model.subtitle).toBe('Bingo Bango Bongo');
+    const [hole1, hole2, hole3, hole4] = model.bingoBangoBongo.holes;
+    expect(model.bingoBangoBongo.holes).toHaveLength(18);
+    expect(hole1!.rows.map((r) => [r.category, r.hintKey, r.userId, r.isSweeper])).toEqual([
+      ['bingo', 'firstOnGreen', 'a', true],
+      ['bango', 'nearestPin', 'c', false],
+      ['bongo', 'firstInHole', 'a', true],
+    ]);
+    expect([hole1!.sweptAll, hole1!.pending]).toEqual([false, false]);
+    expect([hole2!.sweptAll, hole2!.pending]).toEqual([true, false]);
+    expect(hole3!.rows.map((r) => r.userId)).toEqual(['c', null, null]);
+    // Hull 4 har ingen rad: det venter, uten prestasjoner.
+    expect([hole4!.pending, hole4!.rows]).toEqual([true, []]);
+  });
+
+  it('Bingo Bango Bongo uten valgene: motoren kan ikke regne, og modellen er null', () => {
+    const bundle = homeBundle({
+      game: { id: 'gb', status: 'finished', gameMode: 'bingo_bango_bongo', modeConfig: { kind: 'bingo_bango_bongo', team_size: 1 } },
+      players: [homePlayer({ userId: 'a' })],
+    });
+    expect(buildHoleByHole(bundle, [])).toBeNull();
+    expect(buildHoleByHole(bundle, [], { bingoBangoBongoHoles: [] })?.kind).toBe('bingo-bango-bongo');
+  });
+
   it('et format uten appens «Hull for hull» gir null', () => {
     const bundle = homeBundle({
       game: { id: 'g3', gameMode: 'skins', modeConfig: { kind: 'skins' } },
@@ -270,5 +317,13 @@ describe('waitsForChoices', () => {
     expect(waitsForChoices('round-robin', {})).toBe(false);
     expect(waitsForChoices('acey-deucey', {})).toBe(false);
     expect(waitsForChoices(null, {})).toBe(false);
+  });
+
+  it('Bingo Bango Bongo venter til prestasjonene er hentet; en tom liste er et svar', () => {
+    expect(waitsForChoices('bingo-bango-bongo', {})).toBe(true);
+    expect(waitsForChoices('bingo-bango-bongo', { bingoBangoBongoHoles: [] })).toBe(false);
+    // Wolfs valg er ikke BBBs, og omvendt.
+    expect(waitsForChoices('bingo-bango-bongo', { wolfChoices: [] })).toBe(true);
+    expect(waitsForChoices('wolf', { bingoBangoBongoHoles: [] })).toBe(true);
   });
 });

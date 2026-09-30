@@ -5,8 +5,8 @@
 // format (`lib/holeByHole.ts` sier hvilke), og tegner samme modell som webben
 // (`lib/leaderboard/soloScorecard.ts`, `lib/leaderboard/wolfHoles.ts`,
 // `lib/leaderboard/ninesHoles.ts`, `lib/leaderboard/roundRobinHoles.ts`,
-// `lib/leaderboard/aceyDeuceyHoles.ts`). I en blind runde som pågår holdes alt
-// tilbake, som på webben.
+// `lib/leaderboard/aceyDeuceyHoles.ts`, `lib/leaderboard/bingoBangoBongoHoles.ts`).
+// I en blind runde som pågår holdes alt tilbake, som på webben.
 //
 // Slagene er de lokale, seedet fra serveren når skjermen åpnes. Etter at
 // runden er avsluttet gir RLS deltakerne alle slag i spillet, så appen leser
@@ -20,6 +20,7 @@ import {
   type ScoreVisibility,
 } from '../../../../lib/games/visibility';
 import { AceyDeuceyHoleCardsView } from '../components/holes/AceyDeuceyHoleCardsView';
+import { BingoBangoBongoHoleCardsView } from '../components/holes/BingoBangoBongoHoleCardsView';
 import { NinesHoleCardsView } from '../components/holes/NinesHoleCardsView';
 import { RoundRobinHoleCardsView } from '../components/holes/RoundRobinHoleCardsView';
 import { SoloScorecardView } from '../components/holes/SoloScorecardView';
@@ -41,8 +42,9 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
   const { gameId } = route.params;
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
-  // Wolf regner med valgene fra serveren (hvem som var ulv og valgte hva),
-  // som tavla. Andre formater fyrer ingen spørring (`choiceSourceFor`).
+  // Wolf og Bingo Bango Bongo regner med valgene fra serveren (hvem som var
+  // ulv og valgte hva, hvem som tok hvilken prestasjon), som tavla. Andre
+  // formater fyrer ingen spørring (`choiceSourceFor`).
   const { extras, failed: choicesFailed } = useGameChoices(
     gameId,
     bundle?.game.gameMode ?? '',
@@ -94,8 +96,8 @@ export function HoleByHole({ route }: ScreenProps<'HoleByHole'>) {
       ) : null}
       {needsChoices ? (
         // Valgene kom ikke (uten nett, og aldri hentet før): motoren kan ikke
-        // regne Wolf uten dem. Samme ærlige beskjed som tavla, ikke et hjul
-        // som aldri stopper.
+        // regne Wolf eller Bingo Bango Bongo uten dem. Samme ærlige beskjed som
+        // tavla, ikke et hjul som aldri stopper.
         <Text style={ui.muted} testID="hole-by-hole-choices-missing">
           {CHOICES_MISSING_HOLES_TEXT}
         </Text>
@@ -114,7 +116,7 @@ export function HoleByHoleBody({
 }: {
   bundle: GameBundle;
   scores: readonly LocalScore[];
-  /** Valgene formatet trenger fra serveren (Wolf). */
+  /** Valgene formatet trenger fra serveren (Wolf, Bingo Bango Bongo). */
   extras?: ScoringExtras;
 }) {
   const { colors, ui } = useTheme();
@@ -178,6 +180,16 @@ export function HoleByHoleBody({
     return (
       <AceyDeuceyHoleCardsView
         cards={model.aceyDeucey}
+        subtitle={model.subtitle}
+        players={bundle.players}
+        finished={game.status === 'finished'}
+      />
+    );
+  }
+  if (model.kind === 'bingo-bango-bongo') {
+    return (
+      <BingoBangoBongoHoleCardsView
+        cards={model.bingoBangoBongo}
         subtitle={model.subtitle}
         players={bundle.players}
         finished={game.status === 'finished'}
