@@ -177,8 +177,8 @@ export function GameTicket({
 }
 
 /**
- * Perforeringen som i designet (`border-top: 2px dashed`): 33 rette streker på
- * 6,5 pt med om lag 3,5 pt mellom, fra hakk til hakk.
+ * Perforeringen som i designet (`border-top: 2px dashed`, som nettleseren
+ * tegner med 6 pt lange streker): 33 rette streker fra hakk til hakk.
  */
 const DASHES = 33;
 /** Statusmerket: designets `rgba(125,170,138,0.22)`, altså `live` i 22 %. */
@@ -199,8 +199,9 @@ const styles = StyleSheet.create({
   // Selve stilen er den delte `ui.kicker` (#2385); her bare krympingen.
   kicker: { flexShrink: 1 },
   badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeText: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
-  title: { fontSize: 30, lineHeight: 35, fontFamily: FONTS.serifDisplay, marginTop: 8 },
+  // Linjehøydene er det nettleseren gir designets `line-height: normal`.
+  badgeText: { fontSize: 11, lineHeight: 14, fontFamily: FONTS.sansSemiBold },
+  title: { fontSize: 30, lineHeight: 34.5, fontFamily: FONTS.serifDisplay, marginTop: 8 },
   headerLine: { fontSize: 13, fontFamily: FONTS.sans, opacity: 0.9, marginTop: 4 },
   fields: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
   field: { flex: 1 },
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   },
   fieldValue: {
     fontSize: 24,
-    lineHeight: 30,
+    lineHeight: 29,
     fontFamily: FONTS.serifScore,
     fontVariant: ['tabular-nums'],
     marginTop: 2,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  dash: { width: 6.5, height: 2 },
+  dash: { width: 6, height: 2 },
   stub: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 12 },
   // Boksen dekker kanten og den indre halvdelen av sirkelen; resten klippes.
   notchClip: {
