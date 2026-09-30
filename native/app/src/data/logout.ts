@@ -33,7 +33,8 @@ import { LOCAL_DATA_OWNER_KEY } from './localOwner';
 import { drainQueue } from './syncWorker';
 
 /**
- * Hvor lenge utloggingen venter på drainen. Samme tall som webbens
+ * Hvor lenge utloggingen venter på drainen, og på slettingen av telefonens
+ * varsel-rad (#2256). Samme tall som webbens
  * `LOGOUT_DRAIN_TIMEOUT_MS` — en utlogging skal aldri stå og henge på et nett
  * som ikke svarer, og et tidsavbrudd er alltid trygt: da ser køen fortsatt
  * ikke-tom ut, og vi beholder alt.
@@ -107,22 +108,23 @@ async function ownedBySomeoneElse(): Promise<boolean> {
 }
 
 /**
- * Ett forsøk på å tømme køen, med tak på ventetiden.
+ * Vent på `work`, men aldri lenger enn `LOGOUT_DRAIN_TIMEOUT_MS`.
  *
- * Et kast fra drainen er IKKE en feil her — offline er den vanligste grunnen
- * til at noen har rader i kø i det hele tatt. Tellingen etterpå avgjør, ikke
- * dette kallet. Timeren ryddes uansett hvem som vinner kappløpet, ellers holder
- * den jest-suiten (og enhetens event-loop) i live i fire sekunder til ingen
- * nytte.
+ * Et kast er IKKE en feil her. For drainen er offline den vanligste grunnen
+ * til at noen har rader i kø i det hele tatt, og tellingen etterpå avgjør, ikke
+ * dette kallet. Varsel-raden (#2256) glemmes først når basen har bekreftet
+ * slettingen (`forgetPushBeforeSignOut`), så et tidsavbrudd der er også trygt.
+ * Timeren ryddes uansett hvem som vinner kappløpet, ellers holder den
+ * jest-suiten (og enhetens event-loop) i live i fire sekunder til ingen nytte.
  */
-async function drainWithinTimeout(): Promise<void> {
+async function withinLogoutTimeout(work: Promise<unknown>): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<void>((resolve) => {
     timer = setTimeout(resolve, LOGOUT_DRAIN_TIMEOUT_MS);
   });
   try {
     await Promise.race([
-      drainQueue('utlogging').then(
+      work.then(
         () => undefined,
         () => undefined,
       ),
@@ -164,8 +166,8 @@ async function drainWithinTimeout(): Promise<void> {
 async function signOutAndConfirm(): Promise<boolean> {
   // #2256 PR 4: telefonens varsel-rad slettes mens sesjonen ennå lever (RLS
   // krever den), så forrige konto ikke får varsler her etter utloggingen.
-  // Best-effort og kaster aldri; se `forgetPushBeforeSignOut`.
-  await forgetPushBeforeSignOut();
+  // Best-effort, og aldri lenger enn drainen; se `forgetPushBeforeSignOut`.
+  await withinLogoutTimeout(forgetPushBeforeSignOut());
   let removed = false;
   // Abonnementet settes FØR kallet: `_notifyAllSubscribers` kjører inne i
   // `signOut()`, ikke etter den.
@@ -217,7 +219,7 @@ export async function logOut(opts?: {
   let pending = await pendingCountOrNull();
 
   if (pending != null && pending > 0) {
-    await drainWithinTimeout();
+    await withinLogoutTimeout(drainQueue('utlogging'));
     // Svarer ikke basen på andre telling, gjelder den første: vi vet at det lå
     // slag der, og spilleren skal fortsatt få spørsmålet.
     pending = (await pendingCountOrNull()) ?? pending;

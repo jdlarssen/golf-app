@@ -1,5 +1,6 @@
 // #2256 PR 4: trykk på et varsel åpner spillet (kriterium 16), og varsler
-// vises ikke som banner mens appen er åpen. Type A mot en mock av pakken.
+// vises ikke som banner mens appen er åpen. Et håndtert trykk åpnes aldri
+// igjen. Type A mot en mock av pakken.
 import { Platform } from 'react-native';
 import { listenForPushTaps } from './pushTaps';
 
@@ -9,8 +10,8 @@ const mockRemove = jest.fn();
 const mockNotifications = {
   DEFAULT_ACTION_IDENTIFIER: DEFAULT_ACTION,
   setNotificationHandler: jest.fn(),
-  getLastNotificationResponseAsync: jest.fn(),
-  clearLastNotificationResponseAsync: jest.fn(),
+  getLastNotificationResponse: jest.fn(),
+  clearLastNotificationResponse: jest.fn(),
   addNotificationResponseReceivedListener: jest.fn((listener: (response: unknown) => void) => {
     responseListener = listener;
     return { remove: mockRemove };
@@ -25,10 +26,12 @@ jest.mock('../supabase', () => ({ supabase: {}, currentDeviceUserId: jest.fn() }
 
 const GAME = 'game-1';
 
-function tap(url: string, actionIdentifier = DEFAULT_ACTION) {
+function tap(url: string, actionIdentifier = DEFAULT_ACTION, identifier = `id-${url}`) {
   return {
     actionIdentifier,
-    notification: { request: { content: { data: null }, trigger: { type: 'push', payload: { url } } } },
+    notification: {
+      request: { identifier, content: { data: null }, trigger: { type: 'push', payload: { url } } },
+    },
   };
 }
 
@@ -37,8 +40,7 @@ beforeEach(() => {
   responseListener = null;
   jest.replaceProperty(Platform, 'OS', 'ios');
   mockOptionalNativeModule.mockReturnValue({});
-  mockNotifications.getLastNotificationResponseAsync.mockResolvedValue(null);
-  mockNotifications.clearLastNotificationResponseAsync.mockResolvedValue(undefined);
+  mockNotifications.getLastNotificationResponse.mockReturnValue(null);
 });
 
 afterEach(() => {
@@ -69,14 +71,23 @@ describe('listenForPushTaps', () => {
     expect(mockRemove).toHaveBeenCalled();
   });
 
-  it('åpner spillet når trykket startet appen, og tømmer det etterpå', async () => {
-    mockNotifications.getLastNotificationResponseAsync.mockResolvedValue(tap(`/games/${GAME}`));
+  it('åpner spillet når trykket startet appen, og tømmer det etterpå', () => {
+    mockNotifications.getLastNotificationResponse.mockReturnValue(tap(`/games/${GAME}`));
     const open = jest.fn();
     listenForPushTaps(open);
-    await new Promise((resolve) => setImmediate(resolve));
 
     expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
-    expect(mockNotifications.clearLastNotificationResponseAsync).toHaveBeenCalled();
+    expect(mockNotifications.clearLastNotificationResponse).toHaveBeenCalled();
+
+    // Samme trykk kan også komme i lytteren; det åpnes én gang.
+    responseListener?.(tap(`/games/${GAME}`));
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('tømmer også et trykk mens appen var åpen, så neste innlogging ikke åpner det igjen', () => {
+    listenForPushTaps(jest.fn());
+    responseListener?.(tap(`/games/${GAME}`));
+    expect(mockNotifications.clearLastNotificationResponse).toHaveBeenCalledTimes(1);
   });
 
   it('ser bort fra andre handlinger enn selve trykket', () => {
