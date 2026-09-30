@@ -60,7 +60,6 @@ import {
   calendarEvent,
   slotField,
   startField,
-  ticketFacts,
   ticketHeaderLine,
   ticketSlot,
   ticketStrokes,
@@ -167,11 +166,23 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
 
   // Del-knappen øverst til høyre (eierens svar b): bare når arrangøren har
   // slått på live-følging, og da deler den webbens «følg live»-lenke.
+  // Designet tegner et bart ikon. På iOS 26 legger systemet et glass under
+  // knapper i toppen; som eget element med `hidesSharedBackground` står
+  // ikonet uten (`headerRightItems` er bare iOS, `headerRight` tar Android).
   const liveToken = bundle?.game.spectateToken ?? null;
   const shareToken = canShareLiveFollow(liveToken) ? liveToken : null;
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: shareToken ? () => <ShareLiveButton token={shareToken} /> : undefined,
+      unstable_headerRightItems: shareToken
+        ? () => [
+            {
+              type: 'custom',
+              element: <ShareLiveButton token={shareToken} edge />,
+              hidesSharedBackground: true,
+            },
+          ]
+        : undefined,
     });
   }, [navigation, shareToken]);
 
@@ -263,7 +274,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const showRoster = game.status === 'scheduled' || game.status === 'draft';
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={ui.scroll} testID="game-home-screen">
+    <ScrollView ref={scrollRef} contentContainerStyle={[ui.scroll, styles.scroll]} testID="game-home-screen">
       {/* #1980: slag som strandet i køen, synlig også i butikkbygget. */}
       <SyncBanner gameId={gameId} />
 
@@ -285,7 +296,6 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
         headerLine={ticketHeaderLine(bundle)}
         statusLabel={STATUS_LABELS[game.status as GameStatus] ?? game.status}
         fields={fields}
-        facts={ticketFacts(bundle, me?.player)}
         roster={me ? { players: bundle.players, userId, flightNumber: me.player.flightNumber } : null}
       >
         <TicketStub
@@ -374,7 +384,12 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
  * delingsarket, sier en melding det. Toppen har ingen plass til en linje, og
  * feilen er forbigående, så den står ikke fast som på lenkeknappene.
  */
-function ShareLiveButton({ token }: { token: string }) {
+/**
+ * `edge`: knappen står som eget element i iOS-toppen, der UIKit legger sin
+ * egen marg. Designet har ikonet 8 pt fra kanten i en 44 pt-boks (sentrum 30 pt
+ * fra kanten); forskyvningen tar det systemet legger til.
+ */
+function ShareLiveButton({ token, edge = false }: { token: string; edge?: boolean }) {
   const { colors } = useTheme();
   const share = useCallback(async () => {
     const result = await shareLiveFollow(token);
@@ -386,10 +401,10 @@ function ShareLiveButton({ token }: { token: string }) {
       accessibilityLabel={TICKET_TEXT.share}
       hitSlop={8}
       onPress={() => void share()}
-      style={styles.headerButton}
+      style={[styles.headerButton, edge && styles.headerButtonEdge]}
       testID="share-live"
     >
-      <DelIcon color={colors.text} size={22} />
+      <DelIcon color={colors.text} size={20} strokeWidth={1.8} />
     </Pressable>
   );
 }
@@ -464,6 +479,13 @@ export function RosterRow({
 
 const styles = StyleSheet.create({
   headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  headerButtonEdge: { transform: [{ translateX: 12 }] },
+  /**
+   * Designets marger: 16 pt fra kantene, og billetten rett under toppen.
+   * Designets rad er 44 pt med 8 pt luft under; den native toppen er høyere,
+   * så luften over billetten ligger allerede i den.
+   */
+  scroll: { paddingHorizontal: 16, paddingTop: 0 },
   rosterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

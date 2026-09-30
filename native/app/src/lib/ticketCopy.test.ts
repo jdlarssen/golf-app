@@ -29,7 +29,11 @@ describe('paritet mot messages/no.json', () => {
     expect(TICKET_TEXT.startRound).toBe(home.ctaStartRound);
     expect(TICKET_TEXT.reviewAndSubmit).toBe(home.ctaReviewAndSubmit);
     expect(TICKET_TEXT.draft).toBe(home.draftBanner);
-    expect(teePart('Gul')).toBe(home.teeInfo.replace('{teeName}', 'Gul'));
+  });
+
+  it('teen står som på designlerretet, «Gul tee», ikke som webbens «Tee: Gul»', () => {
+    expect(teePart('Gul')).toBe('Gul tee');
+    expect(home.teeInfo.replace('{teeName}', 'Gul')).not.toBe(teePart('Gul'));
   });
 
   it('feltetikettene er webbens ord', () => {

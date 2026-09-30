@@ -1,14 +1,14 @@
 // #2255: startbilletten øverst på spillets side.
 //
-// Ren presentasjon: skjermen regner ut hodet, feltene og faktalinja
-// (`lib/gameTicket.ts`), og stubben kommer inn som `children`. Billetten vet
-// ingenting om status.
+// Ren presentasjon: skjermen regner ut hodet og feltene (`lib/gameTicket.ts`),
+// og stubben kommer inn som `children`. Billetten vet ingenting om status.
 //
-// **Drakten er designlerretets** (eierens «følg designet», 29.09): gull
-// kicker og fylt statusmerke på samme rad, banenavnet i 30 pt, tre like
-// kolonner med 24 pt-tall, faktalinja på én linje, deg først i avatarraden med
-// fornavnene i egen kolonne, en tett perforering og kortskyggen fra DESIGN.md.
-// Gull kicker er et bevisst unntak fra «gull er medalje» (DESIGN.md).
+// **Drakten er designlerretets, identisk** (eieren 30.09: «identisk med
+// artboardet»): gull kicker og fylt statusmerke i salvie på samme rad,
+// banenavnet i 30 pt, tre like kolonner med 24 pt-tall, deg først i
+// avatarraden med fornavnene i egen kolonne, en tett perforering med rette
+// streker og kortskyggen fra DESIGN.md. Ingen faktalinje: den står ikke på
+// tegningen. Gull kicker er et bevisst unntak fra «gull er medalje» (DESIGN.md).
 //
 // **Skjermleseren.** Banenavnet er overskriften. Hvert felt er én node med
 // etikett og verdi («Dine slag: 15»), og avatarraden er én node med navnene.
@@ -45,7 +45,6 @@ export function GameTicket({
   headerLine,
   statusLabel,
   fields,
-  facts,
   roster,
   children,
 }: {
@@ -55,7 +54,6 @@ export function GameTicket({
   headerLine: string;
   statusLabel: string;
   fields: readonly TicketField[];
-  facts: string;
   /** Hvem du spiller med. `null` når skjermen ikke vet hvem du er. */
   roster: { players: readonly BundlePlayer[]; userId: string; flightNumber: number | null } | null;
   /** Stubben under perforeringen. */
@@ -84,12 +82,11 @@ export function GameTicket({
                 {kicker}
               </Text>
             ) : null}
-            <View style={styles.badge} testID="game-ticket-status">
-              {/* Fylt merke uten kant: lin i lav dekning under teksten. */}
-              <View
-                style={[StyleSheet.absoluteFill, styles.badgeFill, { backgroundColor: colors.onStrong }]}
-              />
-              <Text style={[styles.badgeText, ink]}>{statusLabel}</Text>
+            {/* Fylt merke uten kant, som i designet: salvie (`live`) i 22 %
+                dekning og krem tekst. Hodet er skog i begge draktene, så
+                merket er likt i begge. */}
+            <View style={[styles.badge, { backgroundColor: `${colors.live}${BADGE_ALPHA}` }]} testID="game-ticket-status">
+              <Text style={[styles.badgeText, { color: BADGE_INK }]}>{statusLabel}</Text>
             </View>
           </View>
           <Text accessibilityRole="header" style={[styles.title, ink]} testID="game-ticket-title">
@@ -119,19 +116,6 @@ export function GameTicket({
             </View>
           ))}
         </View>
-
-        {facts ? (
-          // Én linje: krymper heller litt enn å brekke med et hengende punkt.
-          <Text
-            style={[styles.facts, ui.num, { color: colors.muted }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-            testID="game-ticket-facts"
-          >
-            {facts}
-          </Text>
-        ) : null}
 
         {roster && companions.length > 0 ? (
           <View
@@ -192,8 +176,15 @@ export function GameTicket({
   );
 }
 
-/** Tett perforering som i designet: korte streker nesten fra hakk til hakk. */
-const DASHES = 30;
+/**
+ * Perforeringen som i designet (`border-top: 2px dashed`): 33 rette streker på
+ * 6,5 pt med om lag 3,5 pt mellom, fra hakk til hakk.
+ */
+const DASHES = 33;
+/** Statusmerket: designets `rgba(125,170,138,0.22)`, altså `live` med alfa 0x38. */
+const BADGE_ALPHA = '38';
+/** Designets krem på merket (`#ece5d2`), lik i begge drakter som hodet. */
+const BADGE_INK = '#ECE5D2';
 const NOTCH = 20;
 const PERFORATION = 20;
 const RADIUS = 20;
@@ -201,15 +192,15 @@ const RADIUS = 20;
 const EDGE = 1;
 
 const styles = StyleSheet.create({
-  wrap: { marginTop: 4, borderRadius: RADIUS },
+  // Avstanden over billetten gir skjermen (8 pt under toppen, som i designet).
+  wrap: { borderRadius: RADIUS },
   ticket: { borderWidth: EDGE, borderRadius: RADIUS, overflow: 'hidden' },
   head: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 20 },
   kickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   kickerRowEnd: { justifyContent: 'flex-end' },
   // Selve stilen er den delte `ui.kicker` (#2385); her bare krympingen.
   kicker: { flexShrink: 1 },
-  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, overflow: 'hidden' },
-  badgeFill: { opacity: 0.16 },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
   title: { fontSize: 30, lineHeight: 35, fontFamily: FONTS.serifDisplay, marginTop: 8 },
   headerLine: { fontSize: 13, fontFamily: FONTS.sans, opacity: 0.9, marginTop: 4 },
@@ -229,7 +220,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   small: { fontSize: 12, fontFamily: FONTS.sans },
-  facts: { fontSize: 13, fontFamily: FONTS.sans, paddingHorizontal: 20, paddingBottom: 12, marginTop: -4 },
   roster: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 16 },
   names: { flex: 1, fontSize: 12, lineHeight: 16, fontFamily: FONTS.sans },
   perforation: {
@@ -239,7 +229,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  dash: { width: 6, height: 2, borderRadius: 1 },
+  dash: { width: 6.5, height: 2 },
   stub: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 12 },
   // Boksen dekker kanten og den indre halvdelen av sirkelen; resten klippes.
   notchClip: {
