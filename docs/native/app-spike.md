@@ -1925,9 +1925,9 @@ står ikke på kortet etter Profil v2 (#2406). Under står
 3. Bag-taggen (`components/profile/BagTag.tsx`), tegnet fra `bagTagModel`
    (`lib/bagTag.ts`).
 4. Flisene (`components/profile/SeasonTiles.tsx`).
-5. Menyen: «Venner» (`Friends.tsx`), «Varsler og tema» (`NotificationsAndTheme.tsx`) og
-   «Personvern og konto» (`AccountSettings.tsx`). «Historikk og statistikk» kobles på med
-   #2265.
+5. Menyen: «Historikk og statistikk» (Rundedagboka, #2265), «Venner» (`Friends.tsx`),
+   «Varsler og tema» (`NotificationsAndTheme.tsx`) og «Personvern og konto»
+   (`AccountSettings.tsx`).
 
 «Logg ut» og utvikler-seksjonen (bare staging) står i «Personvern og konto» etter Profil v2
 (#2406).
@@ -1951,10 +1951,10 @@ Personvernerklæringen (#2229) og «Slett konto» står i «Personvern og konto�
 
 ### Lagball og hele runder
 
-En runde der laget deler én ball (`modeCollapsesToTeamCard(mode, 18)`) teller som runde,
-men gir ingen brutto: slagene er lagets, lagret på kapteinen. Beste runde krever 18 egne
-slag. Webbens sesongoppsummering regner i dag kapteinens lagslag som brutto; #2265 gjør
-regelen lik på webben.
+En runde der laget deler én ball teller som runde, men gir ingen brutto: slagene er
+lagets, lagret på kapteinen. Beste runde krever 18 egne slag. Regelen bor i
+`lib/stats/ownRoundScores.ts` (#2265), som appens runde-liste og webbens `/profile/historikk`
+begge kaller.
 
 ### Temaet hører til telefonen
 
@@ -1996,6 +1996,63 @@ Vennehandlinger legges aldri i en kø: uten nett sier skjermen at venner krever 
 «Fjern» spør med en dialog, og «Del lenke» åpner delearket (`Share.share`, ingen ny modul).
 Raden i profilen har én linje etter Profil v2 (#2406). Forespørslene som venter, står på
 vennesiden, ikke på raden.
+
+## Rundedagboka (#2265)
+
+Historikken i appen er Rundedagboka, identisk med designlerretet (`Historikk-forslag`, eierens
+retning 29.09 og 30.09). Den åpnes fra «Historikk og statistikk» i profilmenyen og fra «Alle
+runder →» under «Forrige runde» på Hjem (da heter tilbake-pila bare «Tilbake»). Webbens
+`/profile/historikk` har fått samme lagball-regel, men ikke nytt utseende (#2250).
+
+### Rekkefølgen fra toppen
+
+1. Den felles toppen med «HISTORIKK» (`kickerHeader`).
+2. «Rundedagboka» og «16 runder i 2026» (`HistoryTitle`): siste sesong med runder.
+3. Formkortet (`components/history/FormCard.tsx`): setningen fra ti hele runder, kurven over
+   de siste 20 hele rundene (`FormCurve` og `TrendCurve` i `Icons.tsx`) og sesongstripa.
+4. Dagboka måned for måned (`RoundDiaryList`, `DiaryRow`, `DiaryMedallion`). En rad åpner
+   resultatlista.
+5. «Se all statistikk» → `RoundStats`: Mine tall, Handicap-form, Sesongen din, Serien din,
+   Bragd-veggen, Putte-snitt og Baner, i webbens rekkefølge. Eieren valgte tegningen pluss en
+   lenke i stedet for faner (svar 1, 01.10).
+
+### Én runde-liste
+
+Alt leses fra runde-lista bag-taggen også bruker: `data/roundHistory.ts` henter egne
+`game_players` i ferdige, ikke-avledede spill (alle år), egne slag med putter, og banenes
+hull og tee-ene side om side (sidevis). `lib/roundHistory.ts` bygger rundene
+(`buildHistoryRounds`) og tallene (`historyStats`, `formSeries`). Sesongene er
+`computeSeasonStats`, samme funksjon som `computeProfileSeason` bruker, så runder og beste
+runde i formkortet er tallene på bag-taggen. Snittet med én desimal
+(`seasonGrossAverageExact`) står utenfor `SeasonSummary`, fordi Kavalkaden lagrer den.
+
+### Kurven snus
+
+`buildScoringTrend` har additive valg (`invertY`, `padDomain`, `areaBottom`): appen tegner
+bedre runder høyere, uten luft i domenet, som designet. Webbens kurver er uendret.
+`compareRecentForm` og `isNewRecord` (alle hele runder, ikke bare vinduet) gir setningen og
+«ny rekord». Artboardet tegner kurven 326 pt bred i kortets 328 pt (`CURVE.trailing`).
+
+### Poeng per runde
+
+I formatene der tavla viser poeng står «38 p». Tallet er det «Forrige runde» på Hjem viser
+(`lastRoundPoints`), regnet på telefonen (`data/roundPoints.ts`): runden hentes komplett én
+gang (`refreshFinishedRound`), så neste åpning regner uten nett. Rundene regnes én om gangen,
+nyeste først. Til poengene er regnet, står bare «Bane · Format». En ni-hullsrunde er alltid
+matchplay (`games_hole_segment_matchplay_only`), så den får aldri poeng.
+
+### Lokaltid for år, måned og uke
+
+Måned og år i dagboka er telefonens lokaltid, som bag-taggen. Ukesrekka regnes med den delte
+`computeStreak`, som tar en dato-deler (`localDateParts` fra `lib/homeDates.ts`) i stedet
+for webbens `osloParts` (Hermes har ikke Oslo-sonen). For en spiller i Norge gir de samme tall.
+
+### Tekst som linjer i nettleseren
+
+Designet står i nettleserens `normal` linjehøyde. Tekstene i kortet og radene bruker
+`frauncesLine`/`interLine`, og «▲»/«▼» er tegnet som en form (`FormArrow`), fordi iOS henter
+tegnet fra en bredere reservefont. Målt mot artboard-renderen i 3x ligger alle kanter og
+skillelinjer på samme punkt.
 
 ## Startbilletten (#2255)
 
