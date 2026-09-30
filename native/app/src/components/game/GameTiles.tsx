@@ -18,8 +18,11 @@ import { TICKET_TEXT } from '../../lib/ticketCopy';
 import { FONTS, useTheme } from '../../theme';
 import { BegerIcon, DokumentIcon, FlaggIcon, InfoIcon, type IconProps } from '../icons/Icons';
 
-/** Flisenes høyde, fra designet. Godt over `TAP`. */
-const TILE_HEIGHT = 84;
+/**
+ * Flisenes høyde: designets `min-height: 84px` er innholdet, og kantene kommer
+ * i tillegg (84 + 2 × 1), altså 86 pt her. Godt over `TAP`.
+ */
+const TILE_HEIGHT = 86;
 /** Designets strek på flisikonene. */
 const ICON_STROKE = 1.8;
 

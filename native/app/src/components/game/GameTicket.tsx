@@ -26,7 +26,7 @@ import { shortDisplayName } from '../../lib/display';
 import { MAX_TICKET_COMPANIONS, companionsOf } from '../../lib/flightRoster';
 import { rosterNames } from '../../lib/gameTicket';
 import { rosterA11y } from '../../lib/ticketCopy';
-import { FONTS, cardShadow, useTheme } from '../../theme';
+import { FONTS, cardShadow, useTheme, withAlpha } from '../../theme';
 import { FlightAvatars } from '../home/FlightAvatars';
 
 export interface TicketField {
@@ -85,7 +85,7 @@ export function GameTicket({
             {/* Fylt merke uten kant, som i designet: salvie (`live`) i 22 %
                 dekning og krem tekst. Hodet er skog i begge draktene, så
                 merket er likt i begge. */}
-            <View style={[styles.badge, { backgroundColor: `${colors.live}${BADGE_ALPHA}` }]} testID="game-ticket-status">
+            <View style={[styles.badge, { backgroundColor: withAlpha(colors.live, BADGE_ALPHA) }]} testID="game-ticket-status">
               <Text style={[styles.badgeText, { color: BADGE_INK }]}>{statusLabel}</Text>
             </View>
           </View>
@@ -181,8 +181,8 @@ export function GameTicket({
  * 6,5 pt med om lag 3,5 pt mellom, fra hakk til hakk.
  */
 const DASHES = 33;
-/** Statusmerket: designets `rgba(125,170,138,0.22)`, altså `live` med alfa 0x38. */
-const BADGE_ALPHA = '38';
+/** Statusmerket: designets `rgba(125,170,138,0.22)`, altså `live` i 22 %. */
+const BADGE_ALPHA = 0.22;
 /** Designets krem på merket (`#ece5d2`), lik i begge drakter som hodet. */
 const BADGE_INK = '#ECE5D2';
 const NOTCH = 20;
