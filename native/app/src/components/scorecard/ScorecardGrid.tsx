@@ -136,13 +136,16 @@ function Half({
   enteredBy?: ReadonlyMap<number, EnteredByName>;
   footer?: ReactNode;
 }) {
-  const { colors, ui } = useTheme();
+  const { colors, ui, scheme } = useTheme();
   const kinds: ('hole' | 'par' | ScorecardRowKind)[] = ['hole', 'par', ...rows];
   const played = half.cells.some((cell) => cell.strokes != null);
   const numStyle = [styles.num, ui.num, { color: colors.text }];
   const mutedNum = [styles.num, ui.num, { color: colors.muted }];
   const headStyle = [styles.head, { color: colors.muted }];
   const bandHead = [styles.head, { color: colors.onPrimary }];
+  // SUM-hodet står i krem på skogen, som i designet; i mørk drakt er båndet
+  // salvie, og der er kremen for svak, så det følger tallene.
+  const sumHead = [styles.head, { color: scheme === 'dark' ? colors.onPrimary : colors.onStrong }];
   const bandNum = [styles.num, ui.num, styles.holeNumber, { color: colors.onPrimary }];
   const strokeNum = [styles.strokeNum, ui.num, { color: colors.text }];
 
@@ -252,7 +255,7 @@ function Half({
           testID={`scorecard-sum-${half.key}`}
         >
           <Cell kind="hole" first corner="right">
-            <Text style={bandHead}>SUM</Text>
+            <Text style={sumHead}>SUM</Text>
           </Cell>
           <Cell kind="par" first={false} tint={sumTint}>
             <Text style={[...numStyle, styles.sum]}>{half.sum.par}</Text>
