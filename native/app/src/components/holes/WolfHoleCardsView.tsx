@@ -108,7 +108,7 @@ function WolfHoleCardView({ hole, players }: { hole: WolfHoleCard; players: read
             <View style={holesStyles.rowName}>
               {row.isContributor ? (
                 <Text
-                  style={[holesStyles.star, { color: onWolfSide ? colors.accentText : colors.muted }]}
+                  style={[holesStyles.star, { color: onWolfSide ? colors.accent : colors.muted }]}
                   accessibilityElementsHidden
                   importantForAccessibility="no"
                 >

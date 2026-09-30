@@ -51,7 +51,7 @@ export function SoloScorecardView({
             <View style={styles.standingName}>
               <Text style={[ui.muted, ui.num, styles.rank]}>{line.rank}</Text>
               <Text
-                style={[ui.body, styles.shrink, line.isLeader && styles.medium]}
+                style={[ui.body, holesStyles.shrink, line.isLeader && holesStyles.medium]}
                 numberOfLines={1}
               >
                 {nameOf(players, line.userId, HOLES_TEXT.unknownPlayerFull)}
@@ -119,7 +119,7 @@ function NineBlock({
         <Text accessibilityRole="header" style={[styles.nineTitle, { color: colors.text }]}>
           {heading}
         </Text>
-        <Text style={[ui.muted, ui.num, styles.small]}>{sub}</Text>
+        <Text style={[ui.muted, ui.num, holesStyles.small]}>{sub}</Text>
       </View>
 
       <View style={styles.subtotals} testID={`${testID}-subtotals`}>
@@ -135,7 +135,7 @@ function NineBlock({
             testID={`${testID}-subtotal-${s.userId}`}
           >
             <Text
-              style={[styles.small, styles.subtotalName, { color: s.isLeader ? colors.accentText : colors.muted }]}
+              style={[holesStyles.small, styles.subtotalName, { color: s.isLeader ? colors.accentText : colors.muted }]}
               numberOfLines={1}
             >
               {nameOf(players, s.userId, HOLES_TEXT.unknownPlayer)}
@@ -181,17 +181,17 @@ function HoleCard({
         <View
           key={row.userId}
           style={[
-            styles.row,
+            holesStyles.row,
             row.isBest
               ? { borderColor: goldEdge(colors.accent), backgroundColor: goldWash(colors.accent) }
               : { borderColor: 'transparent' },
           ]}
           testID={`hole-by-hole-row-${hole.holeNumber}-${row.userId}`}
         >
-          <View style={styles.rowName}>
+          <View style={holesStyles.rowName}>
             {row.isBest ? (
               <Text
-                style={[styles.star, { color: colors.accentText }]}
+                style={[holesStyles.star, { color: colors.accent }]}
                 accessibilityElementsHidden
                 importantForAccessibility="no"
                 testID={`hole-by-hole-best-${hole.holeNumber}`}
@@ -199,11 +199,11 @@ function HoleCard({
                 ★
               </Text>
             ) : null}
-            <Text style={[ui.body, styles.shrink, row.isBest && styles.medium]} numberOfLines={1}>
+            <Text style={[ui.body, holesStyles.shrink, row.isBest && holesStyles.medium]} numberOfLines={1}>
               {nameOf(players, row.userId, HOLES_TEXT.unknownPlayerFull)}
             </Text>
           </View>
-          <View style={styles.rowRight}>
+          <View style={holesStyles.rowRight}>
             {row.gross == null ? (
               <Text style={[ui.muted, styles.dash]}>–</Text>
             ) : (
@@ -211,7 +211,7 @@ function HoleCard({
             )}
             <Text
               style={[
-                styles.value,
+                holesStyles.value,
                 ui.num,
                 { color: row.isBest ? colors.accentText : colors.text },
               ]}
@@ -241,12 +241,9 @@ const styles = StyleSheet.create({
   standingRight: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   chip: { fontSize: 12, fontFamily: FONTS.sans },
   total: { fontSize: 20, fontFamily: FONTS.serifScore, minWidth: 28, textAlign: 'right' },
-  shrink: { flexShrink: 1 },
-  medium: { fontFamily: FONTS.sansMedium },
   nine: { gap: 10 },
   nineHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4 },
   nineTitle: { fontSize: 19, fontFamily: FONTS.serifDisplay },
-  small: { fontSize: 12, fontFamily: FONTS.sans },
   subtotals: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   subtotal: {
     flexDirection: 'row',
@@ -261,20 +258,6 @@ const styles = StyleSheet.create({
   subtotalName: { flexShrink: 1, maxWidth: 120 },
   /** Tallet i pillen er et scoretall, som webbens `score-num`. */
   subtotalSum: { fontSize: 12, fontFamily: FONTS.serifScore },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  rowName: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
-  star: { fontSize: 12 },
-  rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dash: { width: 24, textAlign: 'center' },
-  value: { fontSize: 18, fontFamily: FONTS.serifScore, minWidth: 24, textAlign: 'right' },
   unit: { fontSize: 11, fontFamily: FONTS.sansMedium, letterSpacing: 1, textTransform: 'uppercase' },
 });
