@@ -47,7 +47,8 @@
           "calendarPermission": "Tørny legger runden inn i kalenderen din når du ber om det.",
           "remindersPermission": "Tørny bruker ikke påminnelsene dine."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

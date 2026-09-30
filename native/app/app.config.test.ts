@@ -111,6 +111,16 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     expect(cfg.android?.versionCode).toBe(STORE_ANDROID_VERSION_CODE);
   });
 
+  // #2256 PR 4: varsler i begge varianter. Pluginen setter `aps-environment`
+  // (development i bygget, production i arkivet), og butikkbygget beholder
+  // `no.tornygolf.app`, som er temaet dagens APNs-sender bruker.
+  it('har varsel-pluginen i begge varianter, med butikkens bundle-ID', () => {
+    expect(resolveConfig(base, DEV_ENV).plugins).toContain('expo-notifications');
+    const store = resolveConfig(base, STORE_ENV);
+    expect(store.plugins).toContain('expo-notifications');
+    expect(store.ios?.bundleIdentifier).toBe('no.tornygolf.app');
+  });
+
   it('setter ingen associated domains — lenker skal åpnes i Safari, der sesjonen finnes', () => {
     expect(resolveConfig(base, STORE_ENV).ios?.associatedDomains).toBeUndefined();
   });
