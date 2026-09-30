@@ -31,6 +31,7 @@ import {
   type SeasonRoundInput,
 } from '@/lib/stats/seasonStats';
 import { computeStreak } from '@/lib/stats/streak';
+import { isTeamBallRound, ownRoundScores } from '@/lib/stats/ownRoundScores';
 import {
   computePlayerStats,
   type MyStats,
@@ -122,6 +123,7 @@ export default async function HistorikkPage() {
   const t = await getTranslations('profile.historikk');
   const tModes = await getTranslations('modes');
   const tFinished = await getTranslations('finishedCard');
+  const tHome = await getTranslations('home');
   const userIdRaw = await getProxyVerifiedUserId();
   if (!userIdRaw) redirect({ href: '/login', locale });
   const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
@@ -261,9 +263,21 @@ export default async function HistorikkPage() {
       return bTime - aTime;
     });
 
+  // #2265: lagets ball er ingen sin egen runde. Når laget delte én ball, står
+  // slagene på kapteinen, men de er lagets: runden teller som runde, men gir
+  // ingen egne slag i Mine tall, formkurven, sesongen, bragdene, putter eller
+  // baner. Regelen bor i `ownRoundScores`, som appens Rundedagboka også bruker.
+  // Differensialen hopper alt over lagball (#2273) og leser `scoresByGame`.
+  const ownScoresByGame = new Map<string, readonly ScoreRow[]>(
+    sortedGames.map((game) => [
+      game.id,
+      ownRoundScores(game.game_mode, scoresByGame.get(game.id) ?? []),
+    ]),
+  );
+
   // Compute brutto + netto per game.
   const gamesWithStats: GameWithStats[] = sortedGames.map((game) => {
-    const gameScores = scoresByGame.get(game.id) ?? [];
+    const gameScores = ownScoresByGame.get(game.id) ?? [];
     const holeCount = gameScores.length;
     const { brutto: bruttoSum, netto: nettoSum } = computeRoundScore(
       gameScores.map((s) => s.strokes),
@@ -318,7 +332,7 @@ export default async function HistorikkPage() {
   // som formkurven/per-bane). `playedHoles` = hull med slag ført (holeCount),
   // slik at en delvis ført runde kan telles som «nesten».
   const puttsRounds: PuttsRoundInput[] = gamesWithStats.map((game) => ({
-    recordedPutts: (scoresByGame.get(game.id) ?? [])
+    recordedPutts: (ownScoresByGame.get(game.id) ?? [])
       .map((s) => s.putts)
       .filter((p): p is number => p != null),
     playedHoles: game.holeCount,
@@ -345,7 +359,7 @@ export default async function HistorikkPage() {
       ? holesByCourse.get(game.course_id)
       : undefined;
     const gender = genderByGame.get(game.id) ?? null;
-    return (scoresByGame.get(game.id) ?? []).map((s) => {
+    return (ownScoresByGame.get(game.id) ?? []).map((s) => {
       const holeRow = courseHoles?.get(s.hole_number);
       return {
         holeNumber: s.hole_number,
@@ -536,6 +550,9 @@ export default async function HistorikkPage() {
                 game.nettoSum != null
                   ? t('roundNetto', { netto: game.nettoSum })
                   : null
+              }
+              teamRoundLabel={
+                isTeamBallRound(game.game_mode) ? tHome('roundTeamBall') : null
               }
             />
           );
