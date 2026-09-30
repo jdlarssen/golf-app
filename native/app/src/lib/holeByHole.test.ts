@@ -18,6 +18,7 @@ describe('holeByHoleKind', () => {
     ['solo_strokeplay', { kind: 'solo_strokeplay' }, 'solo-strokeplay'],
     ['wolf', { kind: 'wolf', team_size: 1, teams_count: 4, wolf_scoring: 'net' }, 'wolf'],
     ['nines', { kind: 'nines', team_size: 1, nines_variant: 'nines', nines_scoring: 'net' }, 'nines'],
+    ['round_robin', { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 85 }, 'round-robin'],
     // Webben har ingen egen visning for lag-stableford: tavla.
     ['stableford', { kind: 'stableford', team_size: 2, points_table: 'standard' }, null],
     // Matchplay og scramble har ingen «Hull for hull» på webben heller.
@@ -145,6 +146,62 @@ describe('buildHoleByHole', () => {
     expect(model.nines.holes[1]!.pot).toBeNull();
   });
 
+  it('Round Robin: segmentene med konstellasjonen, sidene i rotasjonen, vinneren og brutto ved siden av', () => {
+    // Spillerne i motsatt rekkefølge av rotasjonsplassene, så motorens
+    // rekkefølge inn ikke er den ferdige.
+    const rrPlayers = [
+      homePlayer({ userId: 'd', name: 'D', teamNumber: 4 }),
+      homePlayer({ userId: 'c', name: 'C', teamNumber: 3, courseHandicap: 18 }),
+      homePlayer({ userId: 'b', name: 'B', teamNumber: 2 }),
+      homePlayer({ userId: 'a', name: 'A', teamNumber: 1 }),
+    ];
+    const bundle = homeBundle({
+      game: {
+        id: 'gr',
+        status: 'finished',
+        gameMode: 'round_robin',
+        modeConfig: { kind: 'round_robin', team_size: 1, teams_count: 4, allowance_pct: 100 },
+      },
+      players: rrPlayers,
+    });
+    // Hull 1 (A+B mot C+D): A 5, B 5, C 5 med et slag (netto 4), D 6. C+D vant.
+    // Hull 7 (A+C mot B+D): A 4, C 5 (netto 4), B 4, D 5. Delt.
+    const scores = [
+      ...holeScores('gr', 'a', 1, 5),
+      ...holeScores('gr', 'b', 1, 5),
+      ...holeScores('gr', 'c', 1, 5),
+      ...holeScores('gr', 'd', 1, 6),
+      ...holeScores('gr', 'a', 7, 4, 7),
+      ...holeScores('gr', 'b', 7, 4, 7),
+      ...holeScores('gr', 'c', 7, 5, 7),
+      ...holeScores('gr', 'd', 7, 5, 7),
+    ];
+    const model = buildHoleByHole(bundle, scores);
+    expect(model?.kind).toBe('round-robin');
+    if (model?.kind !== 'round-robin') return;
+    expect(model.subtitle).toBe('Round Robin');
+    const { segments } = model.roundRobin;
+    expect(segments.map((s) => [s.segment, s.side1PlayerIds, s.side2PlayerIds, s.holes.length])).toEqual([
+      [1, ['a', 'b'], ['c', 'd'], 6],
+      [2, ['a', 'c'], ['b', 'd'], 6],
+      [3, ['a', 'd'], ['b', 'c'], 6],
+    ]);
+    const hole1 = segments[0]!.holes[0]!;
+    expect(hole1.outcomeKey).toBeNull();
+    expect(hole1.sides.map((s) => s.isWinner)).toEqual([false, true]);
+    expect(
+      hole1.sides.flatMap((s) => s.rows.map((r) => [r.userId, r.isContributor, r.grossShown, r.net])),
+    ).toEqual([
+      ['a', true, null, 5],
+      ['b', true, null, 5],
+      ['c', true, 5, 4],
+      ['d', false, null, 6],
+    ]);
+    // Hull 2 er ikke spilt, hull 7 er delt.
+    expect(segments[0]!.holes[1]!.outcomeKey).toBe('outcomeChipVenter');
+    expect(segments[1]!.holes[0]!.outcomeKey).toBe('outcomeChipTied');
+  });
+
   it('et format uten appens «Hull for hull» gir null', () => {
     const bundle = homeBundle({
       game: { id: 'g3', gameMode: 'skins', modeConfig: { kind: 'skins' } },
@@ -160,6 +217,7 @@ describe('waitsForChoices', () => {
     expect(waitsForChoices('wolf', { wolfChoices: [] })).toBe(false);
     expect(waitsForChoices('solo-stableford', {})).toBe(false);
     expect(waitsForChoices('nines', {})).toBe(false);
+    expect(waitsForChoices('round-robin', {})).toBe(false);
     expect(waitsForChoices(null, {})).toBe(false);
   });
 });

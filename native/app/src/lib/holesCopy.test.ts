@@ -6,6 +6,7 @@ import { isFinishedSentence } from '../test/copy';
 import {
   HOLES_TEXT,
   NINES_HOLES_TEXT,
+  ROUND_ROBIN_HOLES_TEXT,
   WOLF_HOLES_TEXT,
   grossChip,
   holeNumberLabel,
@@ -15,6 +16,9 @@ import {
   ninesPotLabel,
   ninesSubtitle,
   parSiChip,
+  roundRobinBruttoLabel,
+  roundRobinSegmentLabel,
+  roundRobinSideNames,
   wolfBruttoLabel,
   wolfChoicePartner,
   wolfSubtitle,
@@ -124,11 +128,34 @@ describe('Nines (#2255 PR 3c): paritet mot messages/no.json', () => {
   });
 });
 
+describe('Round Robin (#2255 PR 3c): paritet mot messages/no.json', () => {
+  const roundRobin = source.leaderboard.roundRobin;
+  it('mot, vant hullet, utfallet og hull-spennet', () => {
+    expect(ROUND_ROBIN_HOLES_TEXT.vsLabel).toBe(roundRobin.vsLabel);
+    expect(ROUND_ROBIN_HOLES_TEXT.vantHulletLabel).toBe(roundRobin.vantHulletLabel);
+    expect(ROUND_ROBIN_HOLES_TEXT.outcomeChipTied).toBe(roundRobin.outcomeChipTied);
+    expect(ROUND_ROBIN_HOLES_TEXT.outcomeChipVenter).toBe(roundRobin.outcomeChipVenter);
+    expect(ROUND_ROBIN_HOLES_TEXT.segmentHoles1).toBe(roundRobin.segmentHoles1);
+    expect(ROUND_ROBIN_HOLES_TEXT.segmentHoles2).toBe(roundRobin.segmentHoles2);
+    expect(ROUND_ROBIN_HOLES_TEXT.segmentHoles3).toBe(roundRobin.segmentHoles3);
+  });
+
+  it('tekstene med tall og navn', () => {
+    expect(roundRobinSegmentLabel(2, 'segmentHoles2')).toBe(
+      fill(roundRobin.segmentLabel, { number: 2, holes: roundRobin.segmentHoles2 }),
+    );
+    expect(roundRobinBruttoLabel(5)).toBe(fill(roundRobin.bruttoLabel, { gross: 5 }));
+    // « + » mellom partnerne er hardkodet i webbens visning (`sideNames`).
+    expect(roundRobinSideNames(['Ola', 'Kari'])).toBe('Ola + Kari');
+  });
+});
+
 it('ingen tekst står tom eller med en plassholder ingen fylte inn', () => {
   for (const text of [
     ...Object.values(HOLES_TEXT),
     ...Object.values(WOLF_HOLES_TEXT),
     ...Object.values(NINES_HOLES_TEXT),
+    ...Object.values(ROUND_ROBIN_HOLES_TEXT),
   ]) {
     expect(isFinishedSentence(text)).toBe(true);
   }
