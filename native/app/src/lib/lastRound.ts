@@ -5,10 +5,6 @@
 // fra enheten. Raden bruker formatets egen enhet, altså den tavla viser:
 // poeng i formatene der tavla har en poengkolonne (`ResultView`), og brutto
 // som før i alle andre.
-//
-// #2265: Rundedagboka viser de samme poengene per runde. En ni-hullsrunde
-// (cup-halvdel) får også poeng: motoren regner den på nierne, som webbens
-// tavle, selv om tavla for den runden fortsatt står på nettsiden.
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
@@ -37,8 +33,7 @@ export function countsPoints(gameMode: string): boolean {
 
 /**
  * Dine poeng i runden, eller `null` når tavla ikke viser poeng for deg:
- * formatet teller slag, motoren regner ikke på formatet, tavla er skjult,
- * eller du har ingen slag.
+ * formatet teller slag, tavla er stengt eller skjult, eller du har ingen slag.
  * Wolf og bingo bango bongo regnes bare med valgene (`extras`), som på tavla.
  */
 export function lastRoundPoints(
@@ -48,11 +43,7 @@ export function lastRoundPoints(
   extras: ScoringExtras = {},
 ): number | null {
   const { game } = bundle;
-  if (!countsPoints(game.gameMode)) return null;
-  // Patsome og avledede spill regner ikke appens motor på; en ni-hullsrunde
-  // gjør den (se toppen).
-  const gate = gateReason(game);
-  if (gate !== null && gate !== 'segment') return null;
+  if (!countsPoints(game.gameMode) || gateReason(game) !== null) return null;
   if (leaderboardVisibility(game.scoreVisibility, game.status, game.gameMode as GameMode) !== 'full') {
     return null;
   }

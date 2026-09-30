@@ -34,7 +34,7 @@
 //     appen ikke kjenner igjen gir et typet «nei» tilbake, ikke et unntak. En
 //     leaderboard-skjerm som krasjer midt i runden er verre enn en som sier at
 //     tabellen kommer på nettsiden.
-import { computeLeaderboard, holesForSegment, type HoleSegment } from '../../../../lib/scoring';
+import { computeLeaderboard } from '../../../../lib/scoring';
 import { playerStrokeHandicap } from '../../../../lib/scoring/allocatedStrokes';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import { buildAceyDeuceyContext } from '../../../../lib/scoring/context/buildAceyDeuceyContext';
@@ -339,11 +339,6 @@ export function toScoreRows(
     }));
 }
 
-/** Kolonnen er tekst i bundelen; en verdi vi ikke kjenner regnes som hel runde. */
-function asHoleSegment(value: string): HoleSegment {
-  return value === 'front9' || value === 'back9' ? value : 'full';
-}
-
 /**
  * Bygg `ScoringContext` for ett spill fra bundelen og de lokale slagene.
  *
@@ -361,15 +356,8 @@ export function buildScoringContext(
   const modeConfig = asModeConfig(mode, bundle.game.modeConfig);
   if (modeConfig === null) return { ok: false, problem: 'missing-config' };
 
-  // #2265: en ni-hullsrunde regnes på nierne, som webbens resultat-bygger
-  // (`buildModeResultForGame`, #1441): banens hull avgrenses FØR byggeren, og
-  // slagene følger hullene. `'full'` er uendret, så hele runder regnes som før.
-  const holesRows = holesForSegment(
-    toHoleRows(bundle).map((row) => ({ row, number: row.hole_number })),
-    asHoleSegment(bundle.game.holeSegment),
-  ).map((wrapped) => wrapped.row);
+  const holesRows = toHoleRows(bundle);
   if (holesRows.length === 0) return { ok: false, problem: 'no-course' };
-  const segmentHoles = new Set(holesRows.map((row) => row.hole_number));
 
   const players = toPlayerRows(bundle);
   // Tomt roster er `no-players` uansett format, og avgjøres FØR switchen: et
@@ -378,9 +366,7 @@ export function buildScoringContext(
   // filtrerer — kan bare avgjøres på den ferdige konteksten, under.
   if (players.length === 0) return { ok: false, problem: 'no-players' };
   const rosterUserIds = new Set(players.map((player) => player.user_id));
-  const scoresRows = toScoreRows(scores, rosterUserIds).filter((row) =>
-    segmentHoles.has(row.hole_number),
-  );
+  const scoresRows = toScoreRows(scores, rosterUserIds);
 
   const outcome = buildContextForMode({
     mode,

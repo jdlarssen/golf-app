@@ -5,9 +5,6 @@
 // hvilke spillere som er med, hvilket par som følger hvilket kjønn, at slag
 // blir til gross, og at et spill vi ikke kan regne på svarer «nei» i stedet
 // for å kaste.
-import { computeLeaderboard, holesForSegment } from '../../../../lib/scoring';
-import { buildNassauContext } from '../../../../lib/scoring/context/buildNassauContext';
-import { buildStablefordContext } from '../../../../lib/scoring/context/buildStablefordContext';
 import { determineWolfForHole } from '../../../../lib/wolf/wolfRotation';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
@@ -15,9 +12,6 @@ import {
   buildScoringContext,
   computeGameLeaderboard,
   playerExtraForHole,
-  toHoleRows,
-  toPlayerRows,
-  toScoreRows,
 } from './scoringContext';
 import { wolfRotationPlayers } from './wolfHole';
 
@@ -378,42 +372,6 @@ describe('computeGameLeaderboard', () => {
       ['a', 2, 1],
       ['b', 0, 2],
     ]);
-  });
-
-  // #2265: en ni-hullsrunde regnes som webbens resultat-bygger gjør den
-  // (`buildModeResultForGame`, #1441): banens hull og slagene avgrenses til
-  // nierne FØR byggeren. Fasiten under bygges på webbens måte.
-  it.each([
-    ['stableford', { kind: 'stableford', team_size: 1, points_table: 'standard' }],
-    ['nassau', { kind: 'nassau', team_size: 1, nassau_scoring: 'net' }],
-  ] as const)('regner en ni-hullsrunde (%s) på nierne, som webben', (gameMode, modeConfig) => {
-    const players = [
-      player({ userId: 'a', courseHandicap: 5 }),
-      player({ userId: 'b', courseHandicap: 1 }),
-    ];
-    const game = bundle({ game: { holeSegment: 'back9', gameMode, modeConfig } as never, players });
-    const scores = [10, 11, 12, 13, 14, 15, 16, 17, 18].flatMap((hole) => [
-      score({ id: `${GAME}:a:${hole}`, userId: 'a', holeNumber: hole, strokes: hole % 2 ? 5 : 4 }),
-      score({ id: `${GAME}:b:${hole}`, userId: 'b', holeNumber: hole, strokes: hole % 3 ? 4 : 6 }),
-    ]);
-
-    // Webbens rekkefølge: hullene avgrenses, og slagene følger dem, før byggeren.
-    const holesRows = holesForSegment(
-      toHoleRows(game).map((row) => ({ row, number: row.hole_number })),
-      'back9',
-    ).map((wrapped) => wrapped.row);
-    const rawPlayers = toPlayerRows(game);
-    const scoresRows = toScoreRows(scores, new Set(['a', 'b'])).filter(
-      (row) => row.hole_number >= 10,
-    );
-    const web = computeLeaderboard(
-      gameMode === 'stableford'
-        ? buildStablefordContext({ gameId: GAME, gameMode, modeConfig, players: rawPlayers, holesRows, scoresRows })
-        : buildNassauContext({ gameId: GAME, modeConfig, players: rawPlayers, holesRows, scoresRows }),
-    );
-
-    const outcome = computeGameLeaderboard(game, scores);
-    expect(outcome).toEqual({ ok: true, result: web });
   });
 
   it('sender problemet videre uten å røre motoren', () => {
