@@ -189,7 +189,7 @@ function scorecardElement(gameId: string, navigate: jest.Mock) {
 }
 
 describe('Scorecard', () => {
-  it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, og skjuler netto i blind runde', async () => {
+  it('viser lever-knappen for laget når køen er lest, en vei til hullene for å rette, netto i åpen stableford og ikke i blind runde', async () => {
     let releaseQueue!: (items: unknown[]) => void;
     mockState.queue = new Promise((resolve) => {
       releaseQueue = resolve;

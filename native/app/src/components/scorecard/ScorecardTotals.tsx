@@ -1,6 +1,6 @@
 // #2262: summene under scorekortet i store tall (BRUTTO · NETTO · POENG) og
-// «14 av 18 hull» så lenge noe mangler. Bare tallene kortet selv viser: et
-// reveal-spill har ingen NETTO-rad, og da står heller ingen netto-sum her.
+// «14 av 18 hull» så lenge noe mangler. NETTO står også i stableford, som i
+// designet (#2385), men aldri mens en reveal-runde pågår.
 //
 // #2385 la summene på designlerretet (`Scorekort-forslag`): de står nederst i
 // det siste kortet (`ScorecardGrid` sin `footer`, under den tykke streken),
@@ -78,6 +78,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  value: { fontSize: 22, lineHeight: 27, fontFamily: FONTS.serifScore },
+  // 28, nettleserens avrundede `normal` for Fraunces på 22 pt, så summene står
+  // på samme punkt som i designet.
+  value: { fontSize: 22, lineHeight: 28, fontFamily: FONTS.serifScore },
   points: { fontSize: 30, lineHeight: 30, fontFamily: FONTS.serifScore },
 });

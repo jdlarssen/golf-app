@@ -88,6 +88,9 @@ describe('PALETTES', () => {
   });
 
   it('keeps the app-only ink roles', () => {
+    // Profil v2: designlerretets varme krem på skogflaten, lik i begge draktene.
+    expect(PALETTES.light.onStrongWarm).toBe('#ECE5D2');
+    expect(PALETTES.dark.onStrongWarm).toBe('#ECE5D2');
     expect(PALETTES.light.onPrimary).toBe('#FFFFFF');
     expect(PALETTES.light.onAccent).toBe('#1B4332');
     expect(PALETTES.dark.onPrimary).toBe('#14201A');
