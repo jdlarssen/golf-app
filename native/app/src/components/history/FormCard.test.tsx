@@ -26,7 +26,7 @@ const TEN = [92, 90, 91, 93, 90, 88, 87, 88, 86, 88];
 /** Kurven tegnes først når bredden er målt, som på telefonen. */
 async function layOut() {
   await fireEvent(screen.getByTestId('form-curve'), 'layout', {
-    nativeEvent: { layout: { x: 0, y: 0, width: 326, height: 124 } },
+    nativeEvent: { layout: { x: 0, y: 0, width: 328, height: 124 } },
   });
 }
 
@@ -38,8 +38,9 @@ describe('FormCard', () => {
     expect(screen.getByText('Formen din')).toBeTruthy();
     expect(screen.getByText(HISTORY_TEXT.formScope)).toBeTruthy();
     expect(screen.getByTestId('form-card-sentence')).toHaveTextContent(
-      `▲ ${formSentence(compare([...TEN, 82]))}`,
+      formSentence(compare([...TEN, 82])),
     );
+    expect(screen.getByTestId('form-arrow-up', HIDDEN)).toBeTruthy();
     const curve = screen.getByTestId('form-curve');
     expect(curve.props.accessibilityRole).toBe('image');
     expect(curve.props.accessibilityLabel).toBe(formCurveLabel(11, 92, 82));
@@ -61,7 +62,8 @@ describe('FormCard', () => {
       <FormCard series={[86, 86, 86, 86, 86, 88, 88, 88, 88, 88]} season={SEASON} seasonAverage={87} />,
     );
 
-    expect(screen.getByTestId('form-card-sentence')).toHaveTextContent(`▼ ${formSentence(-2)}`);
+    expect(screen.getByTestId('form-card-sentence')).toHaveTextContent(formSentence(-2));
+    expect(screen.getByTestId('form-arrow-down', HIDDEN)).toBeTruthy();
   });
 
   it('has no sentence under ten rounds, or when the form is unchanged', async () => {

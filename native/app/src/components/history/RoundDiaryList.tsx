@@ -10,7 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { HISTORY_TEXT } from '../../lib/historyCopy';
 import { diaryMonthLabel } from '../../lib/homeDates';
 import type { DiaryMonth } from '../../lib/roundDiary';
-import { useTheme } from '../../theme';
+import { interLine, useTheme } from '../../theme';
 import { DiaryRow } from './DiaryRow';
 
 export function RoundDiaryList({
@@ -56,6 +56,7 @@ export function RoundDiaryList({
 }
 
 const styles = StyleSheet.create({
-  monthLabel: { paddingTop: 18, paddingHorizontal: 20, paddingBottom: 8 },
+  // Inter 10 i nettleserens `normal` (12 pt), som designet.
+  monthLabel: { ...interLine(10, 12), paddingTop: 18, paddingHorizontal: 20, paddingBottom: 8 },
   card: { marginHorizontal: 16, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
 });
