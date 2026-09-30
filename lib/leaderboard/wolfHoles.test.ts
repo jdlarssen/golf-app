@@ -45,7 +45,7 @@ const cell = (userId: string, side: 'wolf' | 'opp' | null, gross: number | null,
 });
 
 describe('wolfHoleCards', () => {
-  it('ulvens side først, så Andre, så uplasserte; likt etter stillingen, uansett rekkefølgen inn', () => {
+  it('ulvens side først (ulven selv først), så Andre, så uplasserte; ellers etter stillingen', () => {
     const cards = wolfHoleCards(
       result([
         hole({
@@ -54,7 +54,8 @@ describe('wolfHoleCards', () => {
         }),
       ]),
     );
-    expect(cards.holes[0]!.rows.map((r) => r.userId)).toEqual(['kari', 'ola', 'per', 'anne']);
+    // Ola er ulv (standard i `hole`): først på sin side, selv om Kari leder stillingen.
+    expect(cards.holes[0]!.rows.map((r) => r.userId)).toEqual(['ola', 'kari', 'per', 'anne']);
 
     const reversed = wolfHoleCards(
       result([
@@ -64,7 +65,22 @@ describe('wolfHoleCards', () => {
         }),
       ]),
     );
-    expect(reversed.holes[0]!.rows.map((r) => r.userId)).toEqual(['kari', 'ola', 'per', 'anne']);
+    expect(reversed.holes[0]!.rows.map((r) => r.userId)).toEqual(['ola', 'kari', 'per', 'anne']);
+  });
+
+  it('på ulvens side står ulven først, så partneren, selv om partneren ligger bedre an', () => {
+    // Kari (1. i stillingen) er partner; Per (delt 2.) er ulv.
+    const cards = wolfHoleCards(
+      result([
+        hole({
+          holeNumber: 1,
+          wolfUserId: 'per',
+          partnerUserId: 'kari',
+          players: [cell('kari', 'wolf', 4), cell('per', 'wolf', 5), cell('ola', 'opp', 5), cell('anne', 'opp', 6)],
+        }),
+      ]),
+    );
+    expect(cards.holes[0]!.rows.map((r) => r.userId)).toEqual(['per', 'kari', 'ola', 'anne']);
   });
 
   it('delt plass i stillingen ordnes likt på hullet uansett rekkefølgen inn', () => {
