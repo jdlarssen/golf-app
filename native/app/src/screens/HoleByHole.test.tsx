@@ -476,14 +476,15 @@ describe('best ball (#2255 PR 3d)', () => {
       ],
     });
     // Lag 2: Ola 4 overalt, Kari 5 med ett slag per hull (netto 4): 72, «E».
-    // Lag 1: Per og Lise 5 overalt: 90, «+18».
+    // Lag 1: Per 5 og Lise 6 overalt: 90, «+18», og Lises netto brukes aldri.
     const bbScores = [
       ...holeScores('gb', 'ola', 18, 4),
       ...holeScores('gb', 'kari', 18, 5),
       ...holeScores('gb', 'per', 18, 5),
-      ...holeScores('gb', 'lise', 18, 5),
+      ...holeScores('gb', 'lise', 18, 6),
     ];
-    await render(<HoleByHoleBody bundle={bundle} scores={bbScores} />);
+    const onTeamChange = jest.fn();
+    await render(<HoleByHoleBody bundle={bundle} scores={bbScores} onTeamChange={onTeamChange} />);
 
     expect(screen.getByTestId('hole-by-hole-team-header')).toHaveTextContent('Lag 2 · 1. plass');
     expect(screen.getByRole('header', { name: 'Lag 2' })).toBeTruthy();
@@ -508,11 +509,15 @@ describe('best ball (#2255 PR 3d)', () => {
     expect(screen.queryByTestId('hole-by-hole-footer')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('hole-by-hole-team-next'));
+    // Skjermen ruller til toppen av det nye laget, som webben.
+    expect(onTeamChange).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('hole-by-hole-team-header')).toHaveTextContent('Lag 1 · 2. plass');
     expect(screen.getByTestId('hole-by-hole-team-rank')).toHaveStyle({ color: PALETTES.light.muted });
     expect(screen.getByTestId('hole-by-hole-team-vs-par')).toHaveTextContent('+18 PAR');
     expect(screen.getByTestId('hole-by-hole-holes-won')).toHaveTextContent('0 hull vunnet');
     expect(screen.getAllByLabelText('Brukt netto for laget: PB, brutto 5, +0 slag, netto 5')).toHaveLength(18);
+    // En netto som ikke er lagets ball, leses uten «Brukt netto for laget».
+    expect(screen.getAllByLabelText('LD, brutto 6, +0 slag, netto 6')).toHaveLength(18);
     expect(screen.getByTestId('hole-by-hole-team-prev')).toHaveTextContent('‹ Forrige · 1. Lag 2');
     expect(screen.queryByTestId('hole-by-hole-team-next')).toBeNull();
   });
@@ -535,11 +540,14 @@ describe('best ball (#2255 PR 3d)', () => {
     ];
     await render(<HoleByHoleBody bundle={bundle} scores={parScores} />);
 
-    expect(screen.getByTestId('hole-by-hole-par-aside-1')).toHaveProp(
+    // Forklaringen står på «P4» selv: VoiceOver leser ikke etiketter på tekst inni tekst.
+    expect(screen.getByTestId('hole-by-hole-par-aside-1')).toHaveTextContent('*');
+    expect(screen.getByTestId('hole-by-hole-par-1')).toHaveProp(
       'accessibilityLabel',
-      'Avvikende par for andre kjønn. Herrer: 4, Damer: 5, Junior: 4.',
+      'P4. Avvikende par for andre kjønn. Herrer: 4, Damer: 5, Junior: 4.',
     );
     expect(screen.queryByTestId('hole-by-hole-par-aside-2')).toBeNull();
+    expect(screen.getByTestId('hole-by-hole-par-2').props.accessibilityLabel).toBeUndefined();
     // Samme brutto og netto, men Kari er på par (5) og Ola én over (4).
     expect(screen.getByTestId('hole-by-hole-row-1-ola')).toHaveTextContent(/\+1$/);
     expect(screen.getByTestId('hole-by-hole-row-1-kari')).toHaveTextContent(/E$/);

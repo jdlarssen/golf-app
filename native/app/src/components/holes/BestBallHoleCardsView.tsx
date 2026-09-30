@@ -72,9 +72,22 @@ function VsParPill({
   );
 }
 
-export function BestBallHoleCardsView({ lines, coursePar }: { lines: readonly TeamLine[]; coursePar: number }) {
+export function BestBallHoleCardsView({
+  lines,
+  coursePar,
+  onTeamChange,
+}: {
+  lines: readonly TeamLine[];
+  coursePar: number;
+  /** Et annet lag er valgt; skjermen ruller til toppen av det nye laget. */
+  onTeamChange?: () => void;
+}) {
   const { colors, ui } = useTheme();
   const [team, setTeam] = useState<number | null>(null);
+  const selectTeam = (teamNumber: number) => {
+    setTeam(teamNumber);
+    onTeamChange?.();
+  };
   const view = bestBallDrilldown({ lines, requestedTeam: team, coursePar });
   if (view === null) return null;
   const front = view.nines.find((n) => n.key === 'front');
@@ -140,8 +153,8 @@ export function BestBallHoleCardsView({ lines, coursePar }: { lines: readonly Te
 
       {view.teamCount > 1 && (
         <View style={styles.nav}>
-          <TeamNavButton target={view.prev} direction="prev" onPress={setTeam} />
-          <TeamNavButton target={view.next} direction="next" onPress={setTeam} />
+          <TeamNavButton target={view.prev} direction="prev" onPress={selectTeam} />
+          <TeamNavButton target={view.next} direction="next" onPress={selectTeam} />
         </View>
       )}
     </View>
@@ -185,14 +198,20 @@ function HoleRow({ row, first }: { row: BestBallHoleRow; first: boolean }) {
     >
       <View style={styles.holeCol}>
         <Text style={[styles.holeNumber, ui.num, { color: colors.text }]}>{row.holeNumber}</Text>
-        <Text style={[styles.parText, ui.num, { color: colors.muted }]}>
+        <Text
+          style={[styles.parText, ui.num, { color: colors.muted }]}
+          // VoiceOver leser ikke etiketter på tekst inni tekst, så stjernas
+          // forklaring (webbens `aria-label` på `<sup>`) står på «P4» selv.
+          accessibilityLabel={
+            row.parAside && row.parByGender
+              ? `P${row.par}. ${bestBallParAsideAria(formatOtherGendersPar(row.parByGender, undefined))}`
+              : undefined
+          }
+          testID={`hole-by-hole-par-${row.holeNumber}`}
+        >
           {`P${row.par}`}
           {row.parAside && row.parByGender && (
-            <Text
-              style={styles.parAside}
-              accessibilityLabel={bestBallParAsideAria(formatOtherGendersPar(row.parByGender, undefined))}
-              testID={`hole-by-hole-par-aside-${row.holeNumber}`}
-            >
+            <Text style={styles.parAside} testID={`hole-by-hole-par-aside-${row.holeNumber}`}>
               *
             </Text>
           )}
