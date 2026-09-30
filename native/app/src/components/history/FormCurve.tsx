@@ -58,7 +58,9 @@ export function FormCurve({
   testID?: string;
 }) {
   const { colors } = useTheme();
-  const [width, setWidth] = useState(0);
+  // Boksens bredde; kurven er `CURVE.trailing` smalere (se over).
+  const [boxWidth, setBoxWidth] = useState(0);
+  const width = boxWidth > 0 ? boxWidth - CURVE.trailing : 0;
   const [bestWidth, setBestWidth] = useState(0);
 
   const geometry =
@@ -83,9 +85,7 @@ export function FormCurve({
   return (
     <View
       style={styles.box}
-      onLayout={(e: LayoutChangeEvent) =>
-        setWidth(Math.round(e.nativeEvent.layout.width) - CURVE.trailing)
-      }
+      onLayout={(e: LayoutChangeEvent) => setBoxWidth(Math.round(e.nativeEvent.layout.width))}
       accessible
       accessibilityRole="image"
       accessibilityLabel={accessibilityLabel}
@@ -122,7 +122,7 @@ export function FormCurve({
               { color: colors.accentText, top: labelTop(CURVE.bestBaseline) },
               bestOnRight
                 ? { left: best.x + CURVE.labelGap }
-                : { right: width - bestRoomLeft, textAlign: 'right' },
+                : { right: boxWidth - bestRoomLeft, textAlign: 'right' },
             ]}
             testID={testID ? `${testID}-best-label` : undefined}
           >
