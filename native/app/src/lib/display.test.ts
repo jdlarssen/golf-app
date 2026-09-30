@@ -11,7 +11,7 @@
 //
 // `formatTeeOff` og `displayName` er dekket av kallstedenes egne tester og
 // gjentas ikke her.
-import { formatClock, formatSignedAt, shortDisplayName } from './display';
+import { formatClock, formatSignedAt, formatStampDateLocal, shortDisplayName } from './display';
 
 describe('formatClock', () => {
   it('viser enhetens veggklokke, ikke en Oslo-konvertering', () => {
@@ -62,6 +62,17 @@ describe('formatSignedAt', () => {
 
   it('svarer null på en ulesbar verdi', () => {
     expect(formatSignedAt('ikke en dato')).toBeNull();
+  });
+});
+
+// #2385: datoen i stempelet er designets korte form, i enhetens tid. Formen
+// selv er den delte `formatStampDate`; her låses koblingen til klokka.
+describe('formatStampDateLocal', () => {
+  it('gir den korte formen i enhetens tid, og null for en ulesbar verdi', () => {
+    // 12:32Z. Under TZ=UTC skal det stå 12:32.
+    expect(formatStampDateLocal('2026-09-27T12:32:00.000Z')).toBe('27.09 · 12:32');
+    expect(formatStampDateLocal('2026-01-05T09:04:00.000Z')).toBe('05.01 · 09:04');
+    expect(formatStampDateLocal('ikke en dato')).toBeNull();
   });
 });
 

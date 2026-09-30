@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import { resolveScorecardStamp, type StampPlayer } from './scorecardStamp';
+import { formatStampDate, resolveScorecardStamp, type StampPlayer } from './scorecardStamp';
 
 const SIGNED_AT = '2026-09-27T12:32:00Z';
 const WITHDRAWN_AT = '2026-09-27T11:00:00Z';
@@ -168,5 +168,20 @@ describe('resolveScorecardStamp — approval line', () => {
     const result = stamp(roster(), { gameStatus: 'finished', requirePeerApproval: true });
     expect(result?.approval).toEqual({ kind: 'none' });
     expect(result?.locked).toBe(true);
+  });
+});
+
+// #2385: the date in the stamp is the canvas' short form, «27.09 · 14:32».
+// The caller turns the instant into day, month, hour and minute in the time
+// zone it shows (the app: the phone's own), so the form has one home.
+describe('formatStampDate', () => {
+  it('pads day, month, hour and minute to two digits', () => {
+    expect(formatStampDate({ day: 27, month: 9, hour: 14, minute: 32 })).toBe('27.09 · 14:32');
+    expect(formatStampDate({ day: 5, month: 1, hour: 9, minute: 4 })).toBe('05.01 · 09:04');
+  });
+
+  it('handles the ends of the day and the year', () => {
+    expect(formatStampDate({ day: 1, month: 1, hour: 0, minute: 0 })).toBe('01.01 · 00:00');
+    expect(formatStampDate({ day: 31, month: 12, hour: 23, minute: 59 })).toBe('31.12 · 23:59');
   });
 });

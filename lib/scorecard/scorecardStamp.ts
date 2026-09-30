@@ -31,6 +31,25 @@ export type StampApproval =
   | { kind: 'pending' }
   | { kind: 'none' };
 
+/** Day, month (1–12), hour and minute of the signing, in the zone shown. */
+export interface StampDateParts {
+  day: number;
+  month: number;
+  hour: number;
+  minute: number;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * The date in the stamp, as on the design canvas (#2385): «27.09 · 14:32».
+ * The caller supplies the parts in the time zone it shows, so the form has one
+ * home whichever clock the platform can read.
+ */
+export function formatStampDate({ day, month, hour, minute }: StampDateParts): string {
+  return `${pad2(day)}.${pad2(month)} · ${pad2(hour)}:${pad2(minute)}`;
+}
+
 export interface ScorecardStamp {
   signedAt: string;
   signedBy: SignedBy;
