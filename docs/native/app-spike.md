@@ -2116,8 +2116,9 @@ som ikon (lerretet har ingen tegning av den flisa). Tavla er fortsatt ett trykk 
   Spillerne på en side står slik konstellasjonen står (rotasjonsplassen), så motorens
   rekkefølge inn spiller ingen rolle og stillingen trengs ikke. Round Robin trenger ingen
   valg fra serveren, bare slagene. Stjerna og «vs» er dekor, skjult for skjermleseren som
-  webbens `aria-hidden`. Etiketten i små versaler (Solos «Stillingen», segmentet og «Vant
-  hullet») og «Delt»/«Venter» (som Solos «p») bor i `components/holes/holesShared.tsx`.
+  webbens `aria-hidden`. Etiketten i små versaler (Solos «Stillingen» og «Vant hullet») bor i
+  `components/holes/holesShared.tsx`. Segmentet bruker temaets `ui.kicker` (webbens `Kicker`),
+  og «Delt»/«Venter» er små versaler i medium vekt, som på webben.
 - **Acey Deucey** (PR 3c): kortene per hull kommer fra `lib/leaderboard/aceyDeuceyHoles.ts`,
   som webbens `AceyDeuceyHolesView` også tegner. Hvert kort har alle fire spillerne rangert på
   score, lavest øverst, med poengene («+3», «0», «−3» med ekte minustegn), brutto ved siden
