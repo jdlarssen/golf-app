@@ -17,14 +17,12 @@
 // Ren fil: ingen React, ingen nett, ingen `Intl` (Hermes mangler dataene).
 import { usesGameHcpAllowance, effectiveHcpAllowancePct } from '../../../../lib/games/hcpAllowance';
 import { finishedResultBadge } from '../../../../lib/games/finishedResultBadge';
-import { holeCountForSegment } from '../../../../lib/games/holeScope';
 import type { GameStatus } from '../../../../lib/games/status';
 import { expectedTeamSize, modeRequiresTeamNumber } from '../../../../lib/games/teamScope';
 import { getRatingForGender, type Rating, type TeeGender } from '../../../../lib/games/teeRating';
 import { revealState, shouldHideNetto, type ScoreVisibility } from '../../../../lib/games/visibility';
 import { fromSignedHcp } from '../../../../lib/handicap/sign';
 import { displayCourseHandicap } from '../../../../lib/scoring/courseHandicap';
-import type { HoleSegment } from '../../../../lib/scoring';
 import { isMatchplayFamily, MODE_LABELS, type GameMode } from '../../../../lib/scoring/modes/types';
 import type { BundlePlayer, BundleTeeRatings, GameBundle } from '../data/gameBundle';
 import { MAX_AVATARS } from './flightRoster';
@@ -101,7 +99,7 @@ export function slotField(slot: TicketSlot): { label: string; value: string } {
 }
 
 /**
- * Linja i hodet: «Tee: Gul · Stableford · 85 % handicap». Prosenten står bare
+ * Linja i hodet: «Gul tee · Stableford · 85 % handicap». Prosenten står bare
  * for formatene som bruker den generelle andelen (`usesGameHcpAllowance`); de
  * andre har sin egen i `mode_config`, og da ville tallet her lyve. Det som
  * mangler, hoppes over.
@@ -142,43 +140,6 @@ function ratingFor(
 ): Rating | null {
   if (!tee || !me) return null;
   return getRatingForGender(toTeeBoxRatings(tee), me.teeGender as TeeGender);
-}
-
-/** «6 124» med hardt mellomrom som tusenskille, uten `Intl`. */
-function groupThousands(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
-}
-
-/** «71,5» med desimalkomma; et helt tall står uten. */
-function decimalComma(n: number): string {
-  return String(n).replace('.', ',');
-}
-
-/**
- * Faktalinja: «18 hull · Par 72 · 6 124 m · Slope 125 · CR 71,5». Par, lengde,
- * slope og CR er tallene for hele banen, så de står bare på en hel runde; en
- * halv runde er bare «9 hull» (design, #2255). Det som
- * mangler, hoppes over. Hvert ledd holdes sammen med hardt mellomrom, så linja
- * brekker mellom leddene og aldri mellom «CR» og tallet.
- */
-export function ticketFacts(
-  bundle: Pick<GameBundle, 'game' | 'teeRatings'>,
-  me: Pick<BundlePlayer, 'teeGender'> | undefined,
-): string {
-  const segment = bundle.game.holeSegment;
-  const full = segment === 'full';
-  const holes = full ? 18 : holeCountForSegment(segment as HoleSegment);
-  const rating = ratingFor(bundle.teeRatings, me);
-  const length = bundle.teeRatings?.lengthMeters ?? null;
-  return [
-    `${holes}\u00A0hull`,
-    full && rating ? `Par\u00A0${rating.par}` : null,
-    full && length != null ? `${groupThousands(length)}\u00A0m` : null,
-    full && rating ? `Slope\u00A0${rating.slope}` : null,
-    full && rating ? `CR\u00A0${decimalComma(rating.courseRating)}` : null,
-  ]
-    .filter((part): part is string => part != null)
-    .join(SEPARATOR);
 }
 
 /** «15», eller «+2» for pluss-handicap (lagret negativt), som i Golfbox. */
@@ -302,7 +263,7 @@ export interface CalendarEvent {
   /** ISO-tidspunkt. */
   startDate: string;
   endDate: string;
-  /** «Tee: Gul · Stableford», hodelinja fra billetten. */
+  /** «Gul tee · Stableford», hodelinja fra billetten. */
   notes: string;
 }
 

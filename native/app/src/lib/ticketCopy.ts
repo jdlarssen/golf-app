@@ -62,9 +62,13 @@ export function playedLine(played: number, total: number): string {
   return `Du har spilt ${played} av ${total} hull`;
 }
 
-/** Webbens `game.home.teeInfo`: «Tee: Gul». */
+/**
+ * «Gul tee», som på designlerretet (strict-billett, eierens «identisk med
+ * artboardet»). Webbens `game.home.teeInfo` sier «Tee: Gul»; appen følger
+ * tegningen, ikke nettsiden, her.
+ */
 export function teePart(teeName: string): string {
-  return `Tee: ${teeName}`;
+  return `${teeName} tee`;
 }
 
 /** «85 % handicap», med hardt mellomrom så tallet og tegnet står sammen. */
