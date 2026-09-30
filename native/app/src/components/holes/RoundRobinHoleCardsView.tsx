@@ -97,7 +97,7 @@ function HoleCardView({ hole, players }: { hole: RoundRobinHoleCard; players: re
         strokeIndex={hole.strokeIndex}
         right={
           hole.outcomeKey ? (
-            <Text style={[holesStyles.caps, { color: colors.muted }]} testID={`hole-by-hole-outcome-${hole.holeNumber}`}>
+            <Text style={[holesStyles.caps, styles.outcome, { color: colors.muted }]} testID={`hole-by-hole-outcome-${hole.holeNumber}`}>
               {ROUND_ROBIN_HOLES_TEXT[hole.outcomeKey]}
             </Text>
           ) : null
@@ -170,6 +170,8 @@ const styles = StyleSheet.create({
   /** Webbens `gap-5` mellom segmentene: sidens 14 og 6 til. */
   segment: { gap: 10, paddingTop: 6 },
   constellation: { gap: 4, paddingHorizontal: 4 },
+  /** «Delt»/«Venter» i hodet: webbens `text-[10.5px] font-medium`. */
+  outcome: { fontSize: 10.5, fontFamily: FONTS.sansMedium },
   sidesLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 6 },
   /** Webbens `text-[12.5px]`. */
   sideNames: { fontSize: 13, fontFamily: FONTS.sans },
