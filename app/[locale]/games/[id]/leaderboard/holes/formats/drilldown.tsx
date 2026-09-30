@@ -1,7 +1,6 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import {
@@ -11,23 +10,13 @@ import {
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
-import {
-  computeLeaderboard,
-  type LbPlayer,
-  type LeaderboardMode,
-  type TeamLine,
-} from '@/lib/leaderboard';
+import { computeLeaderboard, type LeaderboardMode } from '@/lib/leaderboard';
 import {
   drilldownHref,
   leaderboardHref,
   type LeaderboardNavContext,
 } from '@/lib/leaderboard/navContext';
-import { formatRevealName } from '@/lib/names/formatRevealName';
-import { nameInitials } from '@/lib/names/initials';
-import {
-  hasParDifference,
-  formatOtherGendersPar,
-} from '@/lib/games/parDisplay';
+import { formatOtherGendersPar } from '@/lib/games/parDisplay';
 import {
   isHoleInSegment,
   firstHalfHoleNumbersForSegment,
@@ -36,7 +25,16 @@ import {
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
-import { teamLineVsPar, vsParOverPlayed } from '@/lib/leaderboard/vsPar';
+import {
+  bestBallDrilldown,
+  bestBallRevealMeta,
+  formatVsPar,
+  type BestBallDrilldown,
+  type BestBallHoleRow,
+  type BestBallNine,
+  type BestBallTeamRef,
+  type VsParTone,
+} from '@/lib/leaderboard/bestBallHoles';
 import { getDrilldownContext, fetchHolesAndScores } from '../holesData';
 
 /**
@@ -116,59 +114,34 @@ export async function DrilldownBody({
     : scopedScores;
 
   const lines = computeLeaderboard({ mode, players, holes, scores });
-  const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
   // Same par as the board (#2217): `par_mens` over exactly the holes sent to
   // computeLeaderboard — clipped to the first half in an active round.
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
 
-  if (orderedLines.length === 0) {
+  // Which team to render (default: the leader; an invalid `?team=` falls back
+  // to the leader), its nines, holes won and neighbours — one model shared
+  // with the app's «Hull for hull» (#2255 PR 3d).
+  const view = bestBallDrilldown({ lines, requestedTeam, coursePar });
+
+  if (view === null) {
     // Nothing to drill into — bounce back to the parent leaderboard, which
     // will render its own empty state.
     redirect({
       href: leaderboardHref({ gameId, mode, context: navContext }) as string,
       locale: await getLocale(),
     });
+    return null;
   }
-
-  // Resolve which team's drilldown to render. Default = the leader (rank 1).
-  // Invalid `?team=` falls back to the leader rather than erroring, so a
-  // stale link from a deleted team still lands somewhere useful.
-  const fallback = orderedLines[0]!;
-  const selected =
-    (requestedTeam != null
-      ? orderedLines.find((l) => l.teamNumber === requestedTeam)
-      : null) ?? fallback;
-
-  // HOLE_WINNERS: per hole, which team won outright. Null on ties. Computed
-  // once across all teams so each row in the table knows whether to show the
-  // champagne dot.
-  const holeWinners: Array<number | null> = selected.holes.map((h) => {
-    const eligible = orderedLines
-      .map((l) => {
-        const row = l.holes.find((r) => r.holeNumber === h.holeNumber);
-        return row?.teamNet == null
-          ? null
-          : { teamNumber: l.teamNumber, net: row.teamNet };
-      })
-      .filter((x): x is { teamNumber: number; net: number } => x !== null);
-    if (eligible.length === 0) return null;
-    const min = Math.min(...eligible.map((e) => e.net));
-    const winners = eligible.filter((e) => e.net === min);
-    return winners.length === 1 ? winners[0]!.teamNumber : null;
-  });
 
   return (
     <DrilldownView
       gameId={gameId}
       mode={mode}
       isActive={isActive}
-      orderedLines={orderedLines}
-      selected={selected}
-      holeWinners={holeWinners}
+      view={view}
       holeSegment={holeSegment}
       navContext={navContext}
       frozenHandicapByUser={frozenHandicapByUser}
-      coursePar={coursePar}
     />
   );
 }
@@ -181,36 +154,24 @@ function DrilldownView({
   gameId,
   mode,
   isActive,
-  orderedLines,
-  selected,
-  holeWinners,
+  view,
   holeSegment,
   navContext,
   frozenHandicapByUser,
-  coursePar,
 }: {
   gameId: string;
   mode: LeaderboardMode;
   isActive: boolean;
-  orderedLines: TeamLine[];
-  selected: TeamLine;
-  holeWinners: Array<number | null>;
+  view: BestBallDrilldown;
   holeSegment: HoleSegment;
   navContext?: LeaderboardNavContext;
   frozenHandicapByUser: ReadonlyMap<string, number>;
-  /** Board par (`par_mens`) over the computed holes, for «mot par» (#2217). */
-  coursePar: number;
 }) {
   const t = useTranslations('leaderboard.holes');
   const tc = useTranslations('leaderboard.common');
   const locale = useLocale();
-  const frontRows = selected.holes.filter((h) => h.holeNumber <= 9);
-  const backRows = selected.holes.filter((h) => h.holeNumber >= 10);
-
-  const frontPar = frontRows.reduce((sum, h) => sum + h.par, 0);
-  const backPar = backRows.reduce((sum, h) => sum + h.par, 0);
-  const frontNet = frontRows.reduce((sum, h) => sum + (h.teamNet ?? 0), 0);
-  const backNet = backRows.reduce((sum, h) => sum + (h.teamNet ?? 0), 0);
+  const front = view.nines.find((n) => n.key === 'front');
+  const back = view.nines.find((n) => n.key === 'back');
   // Hva som faktisk er skjult (#1602): datalaget klipper aktive runder til
   // segmentets FØRSTE halvdel, så resten av segmentet er det som venter —
   // 10–18 i et fullt spill, 6–9 i et front9-spill, 15–18 i et back9-spill.
@@ -223,34 +184,20 @@ function DrilldownView({
   const hiddenFrom = hiddenHoles[0]!;
   const hiddenTo = hiddenHoles[hiddenHoles.length - 1]!;
 
-  // #2217: over the holes the team played, on the board's par — the hero and
-  // the total bar say the same as the board.
-  const totalVsPar = teamLineVsPar(selected, coursePar);
-  const holesWon = holeWinners.filter((w) => w === selected.teamNumber).length;
-
-  const isLeader = selected.rank === 1;
+  // #2217: `view.totalVsPar` is over the holes the team played, on the
+  // board's par — the hero and the total bar say the same as the board.
   // Finished games surface the dramatic reveal-name; mid-round we keep the
   // compact first-name + HCP label so the drilldown stays readable on
   // narrow tiles.
   const isFinished = !isActive;
   const playerMeta = isFinished
-    ? selected.players
-        .map((p) => formatRevealName(p.name, p.nickname))
-        .join(' · ')
-    : selected.players
+    ? bestBallRevealMeta(view.players)
+    : view.players
         .map(
           (p) =>
             `${firstNameOf(p.name)} (HCP ${formatWholeHcpDisplay(frozenHandicapByUser.get(p.userId) ?? p.courseHandicap, locale)})`,
         )
         .join(' · ');
-
-  // Find sibling teams for prev/next within the ordered list — lets the user
-  // tab through teams without going back to the leaderboard. Index by rank
-  // ascending; if multiple teams tied, sort stably by teamNumber.
-  const stableOrder = orderedLines;
-  const myIdx = stableOrder.findIndex(
-    (l) => l.teamNumber === selected.teamNumber,
-  );
 
   return (
     <div className="min-h-screen bg-bg text-text">
@@ -261,7 +208,7 @@ function DrilldownView({
             label={t('backAriaLabel')}
           />
           <span className="flex-1 truncate text-center text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
-            {t('teamHeader', { number: selected.teamNumber, rank: selected.rank })}
+            {t('teamHeader', { number: view.teamNumber, rank: view.rank })}
           </span>
           <LeaderboardBackLinkSpacer />
         </header>
@@ -271,14 +218,14 @@ function DrilldownView({
           <div
             data-testid="drilldown-team-rank"
             className={`min-w-[50px] text-center font-serif text-[48px] font-semibold leading-none tracking-[-0.04em] tabular-nums ${
-              isLeader ? 'text-accent-text' : 'text-muted'
+              view.isLeader ? 'text-accent-text' : 'text-muted'
             }`}
           >
-            {selected.rank}
+            {view.rank}
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="m-0 font-serif text-[22px] font-medium tracking-[-0.015em] text-text">
-              {tc('teamLabel', { number: selected.teamNumber })}
+              {tc('teamLabel', { number: view.teamNumber })}
             </h1>
             <p className="mt-0.5 truncate text-[11.5px] text-muted">
               {playerMeta || t('noPlayers')}
@@ -289,13 +236,13 @@ function DrilldownView({
               className="block font-serif text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text"
               data-testid="drilldown-team-total"
             >
-              {selected.total}
+              {view.total}
             </span>
             <span
               className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted"
               data-testid="drilldown-team-vs-par"
             >
-              {formatVsPar(totalVsPar)} PAR
+              {formatVsPar(view.totalVsPar)} PAR
             </span>
           </div>
         </div>
@@ -313,36 +260,24 @@ function DrilldownView({
 
         {/* Front nine — #1448: back9-spill har ingen hull ≤ 9 i scope, da
             skjules hele UT-seksjonen i stedet for å rendre en tom tabell. */}
-        {frontRows.length > 0 && (
+        {front && (
           <>
             <div className="px-5 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {t('frontNineLabel')}
             </div>
-            <HoleTable
-              rows={frontRows}
-              teamPlayers={selected.players}
-              summaryLabel={t('summaryUt')}
-              summaryPar={frontPar}
-              summaryNet={frontNet}
-            />
+            <HoleTable nine={front} summaryLabel={t('summaryUt')} />
           </>
         )}
 
         {/* Back nine — datalaget klipper bort andre halvdel i aktive runder,
             så radene finnes bare når de skal vises (#1448: front9-spill har
             ingen, back9-spill får sine her). */}
-        {backRows.length > 0 && (
+        {back && (
           <>
             <div className="px-5 pt-5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.20em] text-muted">
               {t('backNineLabel')}
             </div>
-            <HoleTable
-              rows={backRows}
-              teamPlayers={selected.players}
-              summaryLabel={t('summaryInn')}
-              summaryPar={backPar}
-              summaryNet={backNet}
-            />
+            <HoleTable nine={back} summaryLabel={t('summaryInn')} />
           </>
         )}
 
@@ -366,18 +301,18 @@ function DrilldownView({
                 {t('totalLabel')}
               </span>
               <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
-                {t('holesWon', { count: holesWon })}
+                {t('holesWon', { count: view.holesWon })}
               </span>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                {selected.total}
+                {view.total}
               </span>
               <span
                 className="font-sans text-[14px] font-semibold tabular-nums text-muted"
                 data-testid="drilldown-total-vs-par"
               >
-                {formatVsPar(totalVsPar)}
+                {formatVsPar(view.totalVsPar)}
               </span>
             </div>
           </div>
@@ -386,20 +321,20 @@ function DrilldownView({
         {/* Team prev/next inside the drilldown so the user can scrub through
             the field without going back to the leaderboard first. Hidden if
             there's only one team. */}
-        {stableOrder.length > 1 && (
+        {view.teamCount > 1 && (
           <div className="mt-2 flex items-center justify-between px-4">
             <TeamNavLink
               gameId={gameId}
               mode={mode}
               navContext={navContext}
-              target={stableOrder[myIdx - 1] ?? null}
+              target={view.prev}
               direction="prev"
             />
             <TeamNavLink
               gameId={gameId}
               mode={mode}
               navContext={navContext}
-              target={stableOrder[myIdx + 1] ?? null}
+              target={view.next}
               direction="next"
             />
           </div>
@@ -415,36 +350,19 @@ function DrilldownView({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function HoleTable({
-  rows,
-  teamPlayers,
+  nine,
   summaryLabel,
-  summaryPar,
-  summaryNet,
 }: {
-  rows: TeamLine['holes'];
-  teamPlayers: LbPlayer[];
+  nine: BestBallNine;
   summaryLabel: string;
-  summaryPar: number;
-  summaryNet: number;
 }) {
-  // #2217: the nine's own rows — a missing hole's par is left out, like the
-  // total. «P36» still shows the par for all nine holes.
-  const summaryVsPar = vsParOverPlayed({
-    total: summaryNet,
-    scopePar: summaryPar,
-    unplayedPars: rows.filter((r) => r.teamNet == null).map((r) => r.par),
-    holesInScope: rows.length,
-  });
-  const summaryTone = vsParTone(summaryVsPar ?? 0);
+  // #2217: the nine's own rows — a missing hole's par is left out of
+  // `nine.vsPar`, like the total. «P36» still shows the par for all nine holes.
+  const summaryTone = TONE_VARS[nine.tone];
   return (
     <div className="mx-4 mt-1.5 overflow-hidden rounded-[14px] border border-border bg-surface shadow-[0_1px_2px_rgba(26,46,31,0.03)]">
-      {rows.map((row, ii) => (
-        <HoleRow
-          key={row.holeNumber}
-          row={row}
-          teamPlayers={teamPlayers}
-          staggerIndex={ii}
-        />
+      {nine.rows.map((row, ii) => (
+        <HoleRow key={row.holeNumber} row={row} staggerIndex={ii} />
       ))}
       {/* Summary row — same flex shape as HoleRow but with totals on the right. */}
       <div
@@ -456,12 +374,12 @@ function HoleTable({
             {summaryLabel}
           </span>
           <span className="text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-            P{summaryPar}
+            P{nine.par}
           </span>
         </div>
         <div className="flex-1" />
         <span className="text-right font-serif text-[18px] font-semibold leading-none tracking-[-0.015em] tabular-nums text-text">
-          {summaryNet}
+          {nine.net}
         </span>
         <span
           className="ml-2 w-[40px] shrink-0 rounded-full px-2 py-0.5 text-center text-[11px] font-semibold tabular-nums"
@@ -470,7 +388,7 @@ function HoleTable({
             color: `var(${summaryTone.fg})`,
           }}
         >
-          {formatVsPar(summaryVsPar)}
+          {formatVsPar(nine.vsPar)}
         </span>
       </div>
     </div>
@@ -479,22 +397,12 @@ function HoleTable({
 
 function HoleRow({
   row,
-  teamPlayers,
   staggerIndex,
 }: {
-  row: TeamLine['holes'][number];
-  teamPlayers: LbPlayer[];
+  row: BestBallHoleRow;
   staggerIndex: number;
 }) {
   const t = useTranslations('leaderboard.holes');
-  // Map userId → first + last name initial (e.g. "Karl Hansen" → "KH").
-  const initialFor = new Map<string, string>();
-  for (const p of teamPlayers) {
-    initialFor.set(p.userId, nameInitials(p.name));
-  }
-
-  const teamVsPar = row.teamNet == null ? null : row.teamNet - row.par;
-  const teamTone = vsParTone(teamVsPar ?? 0);
 
   return (
     <div
@@ -508,7 +416,7 @@ function HoleRow({
         </span>
         <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
           P{row.par}
-          {row.parByGender && hasParDifference(row.parByGender) && (
+          {row.parAside && row.parByGender && (
             <sup
               data-testid="par-aside-marker"
               title={t('parAsideTitle', {
@@ -536,16 +444,12 @@ function HoleRow({
       {/* Per-player rows stacked vertically — initial · brutto · netto · vs-par. */}
       <div className="flex flex-1 flex-col justify-center gap-1.5">
         {row.players.map((pc) => {
-          const isBestNet =
-            pc.net !== null && row.teamNet !== null && pc.net === row.teamNet;
-          const grossText = pc.gross == null ? '–' : String(pc.gross);
-          const nettoText = pc.net == null ? '–' : String(pc.net);
-          const initial = initialFor.get(pc.userId) ?? '?';
+          const { isBestNet, grossText, initial } = pc;
+          const nettoText = pc.netText;
           // Per-spiller-par (`pc.par`), ikke lagets representant-par
           // (`row.par`). På blandet-kjønn-lag på avvikshull får medspiller
           // av annet kjønn enn «kapteinen» riktig netto-vs-par og celle-tone. #252.
-          const nettoVsPar = pc.net == null ? null : pc.net - pc.par;
-          const nettoTone = vsParTone(nettoVsPar ?? 0);
+          const nettoVsPar = pc.netVsPar;
 
           return (
             <div
@@ -585,10 +489,10 @@ function HoleRow({
               <span
                 className="w-[32px] rounded-full py-0.5 text-center text-[11px] font-semibold tabular-nums"
                 style={
-                  nettoVsPar !== null
+                  pc.netTone !== null
                     ? {
-                        background: `var(${nettoTone.bg})`,
-                        color: `var(${nettoTone.fg})`,
+                        background: `var(${TONE_VARS[pc.netTone].bg})`,
+                        color: `var(${TONE_VARS[pc.netTone].fg})`,
                       }
                     : { color: 'var(--text-muted)' }
                 }
@@ -608,15 +512,15 @@ function HoleRow({
         <span
           className="w-[40px] rounded-full py-0.5 text-center text-[11px] font-semibold tabular-nums"
           style={
-            teamVsPar !== null
+            row.teamTone !== null
               ? {
-                  background: `var(${teamTone.bg})`,
-                  color: `var(${teamTone.fg})`,
+                  background: `var(${TONE_VARS[row.teamTone].bg})`,
+                  color: `var(${TONE_VARS[row.teamTone].fg})`,
                 }
               : { color: 'var(--text-muted)' }
           }
         >
-          {teamVsPar === null ? '—' : formatVsPar(teamVsPar)}
+          {row.teamVsPar === null ? '—' : formatVsPar(row.teamVsPar)}
         </span>
       </div>
     </div>
@@ -633,7 +537,7 @@ function TeamNavLink({
   gameId: string;
   mode: LeaderboardMode;
   navContext?: LeaderboardNavContext;
-  target: TeamLine | null;
+  target: BestBallTeamRef | null;
   direction: 'prev' | 'next';
 }) {
   const t = useTranslations('leaderboard.holes');
@@ -668,25 +572,13 @@ function TeamNavLink({
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ScoreTone = {
-  fg: '--score-under-fg' | '--score-par-fg' | '--score-over1-fg' | '--score-over2-fg';
-  bg: '--score-under-bg' | '--score-par-bg' | '--score-over1-bg' | '--score-over2-bg';
+/** The model's tone step as the `--score-*` custom properties. */
+const TONE_VARS: Record<VsParTone, { fg: string; bg: string }> = {
+  under: { fg: '--score-under-fg', bg: '--score-under-bg' },
+  par: { fg: '--score-par-fg', bg: '--score-par-bg' },
+  over1: { fg: '--score-over1-fg', bg: '--score-over1-bg' },
+  over2: { fg: '--score-over2-fg', bg: '--score-over2-bg' },
 };
-
-function vsParTone(vs: number): ScoreTone {
-  if (vs < 0) return { fg: '--score-under-fg', bg: '--score-under-bg' };
-  if (vs === 0) return { fg: '--score-par-fg', bg: '--score-par-bg' };
-  if (vs === 1) return { fg: '--score-over1-fg', bg: '--score-over1-bg' };
-  return { fg: '--score-over2-fg', bg: '--score-over2-bg' };
-}
-
-/** `null` = no played hole, so no vs-par value (#2217). */
-function formatVsPar(v: number | null): string {
-  if (v === null) return '—';
-  if (v === 0) return 'E';
-  if (v > 0) return `+${v}`;
-  return String(v);
-}
 
 function firstNameOf(fullName: string): string {
   const t = fullName.trim();
