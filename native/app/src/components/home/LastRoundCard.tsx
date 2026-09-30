@@ -5,6 +5,9 @@
 // `finishedResultBadge` avgjør både ordlyden og om du vant. Gull brukes bare når
 // du vant. Brutto er webbens «Runder»-tall (`computeRoundScore`), og står bare
 // når tallet hører til nettopp denne runden.
+//
+// #2385 la raden på designlerretet (`Hjem-forslag`): 36 pt medaljong, navnet i
+// 15 pt og en pil til høyre som sier at raden kan trykkes.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadge';
 import type { HomeCard, LastRoundScore } from '../../data/homeList';
@@ -73,15 +76,26 @@ export function LastRoundCard({
         )}
       </View>
       <View style={styles.text}>
-        <Text style={[ui.body, styles.name]} numberOfLines={2}>
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
           {card.name}
         </Text>
         {line ? (
-          <Text style={[ui.muted, ui.num]} testID={`home-last-round-line-${card.gameId}`}>
+          <Text
+            style={[styles.line, ui.num, { color: colors.muted }]}
+            testID={`home-last-round-line-${card.gameId}`}
+          >
             {line}
           </Text>
         ) : null}
       </View>
+      <Text
+        style={[styles.arrow, { color: colors.primary }]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        testID="home-last-round-arrow"
+      >
+        →
+      </Text>
     </Pressable>
   );
 }
@@ -92,20 +106,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     marginTop: 8,
-    minHeight: TAP,
+    minHeight: Math.max(TAP, 64),
   },
   medal: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  medalText: { fontSize: 17, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
-  text: { flex: 1, gap: 2 },
-  name: { fontFamily: FONTS.sansSemiBold },
+  medalText: { fontSize: 16, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  text: { flex: 1 },
+  name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
+  line: { fontSize: 12, fontFamily: FONTS.sans },
+  arrow: { fontSize: 18, fontFamily: FONTS.sans },
 });

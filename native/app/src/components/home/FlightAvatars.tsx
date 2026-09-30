@@ -5,9 +5,11 @@
 // de andre i flighten din, uten flight de andre i spillet, aldri de trukne.
 // Skivene er dekor for skjermleseren, og raden har én etikett med navnene.
 //
-// To drakter, samme regel (#2255): `home` er Hjems små overlappende skiver.
-// `ticket` er startbillettens: deg først i `primary`, så inntil tre andre i
-// blek grønn, fire separate skiver. Designet er tegnet i lys, der den
+// To størrelser, samme drakt (#2255, #2385): deg først i `primary`, så de
+// andre i blek grønn, separate skiver. `ticket` er startbillettens store
+// skiver med inntil tre andre (navnene står i billettens egen kolonne). `home`
+// er Hjems små skiver på 26 pt med inntil to andre og «+N til» for resten, som
+// i designet for Hjem. Designet er tegnet i lys, der den
 // blekgrønne skiva står svakt mot kortet (1,17:1). I klubbhus-natt forsvinner
 // `primarySoft` helt (1,03:1). Der får de andre dyp skoggrønn `surfaceStrong`,
 // som står like svakt som designets skive i lys (1,23:1), med initialer på
@@ -18,7 +20,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { nameInitials } from '../../../../../lib/names/initials';
 import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
-import { MAX_AVATARS, MAX_TICKET_COMPANIONS, companionsOf } from '../../lib/flightRoster';
+import {
+  MAX_HOME_COMPANIONS,
+  MAX_TICKET_COMPANIONS,
+  companionsOf,
+} from '../../lib/flightRoster';
 import { companionsLabel, moreAvatars } from '../../lib/homeCopy';
 import { FONTS, useTheme } from '../../theme';
 
@@ -39,41 +45,39 @@ export function FlightAvatars({
   const companions = companionsOf(players, userId, flightNumber);
   if (companions.length === 0) return null;
 
-  if (variant === 'ticket') {
-    const me = players.find((p) => p.userId === userId);
-    const otherFill = scheme === 'dark' ? colors.surfaceStrong : colors.primarySoft;
-    const discs = [
-      ...(me ? [{ player: me, self: true }] : []),
-      ...companions.slice(0, MAX_TICKET_COMPANIONS).map((player) => ({ player, self: false })),
-    ];
-    return (
-      <View
-        style={styles.ticketDiscs}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        testID={testID}
-      >
-        {discs.map(({ player, self }) => (
-          <View
-            key={player.userId}
-            style={[
-              styles.ticketDisc,
-              { backgroundColor: self ? colors.primary : otherFill },
-            ]}
-            testID={self ? `${testID}-self` : `${testID}-disc`}
-          >
-            <Text style={[styles.ticketInitials, { color: self ? colors.onPrimary : colors.primary }]}>
-              {nameInitials(player.name ?? player.nickname)}
-            </Text>
-          </View>
-        ))}
-      </View>
-    );
-  }
+  const me = players.find((p) => p.userId === userId);
+  const otherFill = scheme === 'dark' ? colors.surfaceStrong : colors.primarySoft;
+  const max = variant === 'ticket' ? MAX_TICKET_COMPANIONS : MAX_HOME_COMPANIONS;
+  const shown = companions.slice(0, max);
+  const discs = [
+    ...(me ? [{ player: me, self: true }] : []),
+    ...shown.map((player) => ({ player, self: false })),
+  ];
+  const size = variant === 'ticket' ? styles.ticketDisc : styles.homeDisc;
+  const initials = variant === 'ticket' ? styles.ticketInitials : styles.homeInitials;
+  const row = (
+    <View
+      style={variant === 'ticket' ? styles.ticketDiscs : styles.homeDiscs}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      testID={variant === 'ticket' ? testID : undefined}
+    >
+      {discs.map(({ player, self }) => (
+        <View
+          key={player.userId}
+          style={[styles.disc, size, { backgroundColor: self ? colors.primary : otherFill }]}
+          testID={self ? `${testID}-self` : `${testID}-disc`}
+        >
+          <Text style={[initials, { color: self ? colors.onPrimary : colors.primary }]}>
+            {nameInitials(player.name ?? player.nickname)}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+  if (variant === 'ticket') return row;
 
-  const shown = companions.slice(0, MAX_AVATARS);
   const more = companions.length - shown.length;
-
   return (
     <View
       style={styles.row}
@@ -81,32 +85,11 @@ export function FlightAvatars({
       accessibilityLabel={companionsLabel(
         companions.map(displayName),
         flightNumber != null,
-        MAX_AVATARS,
+        max,
       )}
       testID={testID}
     >
-      <View
-        style={styles.discs}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        {shown.map((player, i) => (
-          <View
-            key={player.userId}
-            style={[
-              styles.disc,
-              // Kantfargen som fyll: `bg` forsvant nesten på det hvite kortet.
-              { backgroundColor: colors.border, borderColor: colors.surface },
-              i > 0 && styles.overlap,
-            ]}
-            testID={`${testID}-disc`}
-          >
-            <Text style={[styles.initials, { color: colors.text }]}>
-              {nameInitials(player.name ?? player.nickname)}
-            </Text>
-          </View>
-        ))}
-      </View>
+      {row}
       {more > 0 ? (
         <Text style={[styles.more, { color: colors.muted }]} testID={`${testID}-more`}>
           {moreAvatars(more)}
@@ -117,20 +100,13 @@ export function FlightAvatars({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  discs: { flexDirection: 'row' },
-  disc: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  overlap: { marginLeft: -8 },
-  initials: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
-  more: { fontSize: 13, fontFamily: FONTS.sansMedium },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  disc: { alignItems: 'center', justifyContent: 'center' },
+  more: { fontSize: 11, fontFamily: FONTS.sans },
+  homeDiscs: { flexDirection: 'row', gap: 4 },
+  homeDisc: { width: 26, height: 26, borderRadius: 13 },
+  homeInitials: { fontSize: 10, fontFamily: FONTS.sansSemiBold },
   ticketDiscs: { flexDirection: 'row', gap: 8 },
-  ticketDisc: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  ticketDisc: { width: 34, height: 34, borderRadius: 17 },
   ticketInitials: { fontSize: 12, fontFamily: FONTS.sansSemiBold },
 });

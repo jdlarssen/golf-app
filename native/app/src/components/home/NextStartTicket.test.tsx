@@ -1,8 +1,9 @@
 // #2254: den ene render-testen (Type C) for billetten «Neste start».
 //
 // Datoene og nærheten er dekket av `homeDates.test.ts`. Her låses koblingen:
-// stubben og linja til høyre kommer på skjermen, flighten gir maks fire skiver
-// og «+N til», og hele billetten er ett trykkfelt med én samlet etikett.
+// stubben og linja til høyre kommer på skjermen, flighten gir deg og inntil to
+// andre som skiver og «+N til», og hele billetten er ett trykkfelt med én
+// samlet etikett.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { homeBundle, homeCard, homePlayer } from '../../test/homeFixtures';
 import { NextStartTicket } from './NextStartTicket';
@@ -45,21 +46,23 @@ it('viser stubb, detaljer og flighten, og åpner spillet ved trykk', async () =>
   );
 
   expect(screen.getByTestId('home-ticket-date', HIDDEN)).toHaveTextContent('Fre 2. okt');
-  expect(screen.getByTestId('home-ticket-clock', HIDDEN)).toHaveTextContent('kl. 09:30');
+  expect(screen.getByTestId('home-ticket-clock', HIDDEN)).toHaveTextContent('09:30');
   expect(screen.getByTestId('home-ticket-proximity', HIDDEN)).toHaveTextContent('Om 3 dager');
   expect(screen.getByTestId('home-ticket-detail', HIDDEN)).toHaveTextContent(
     'Losby · Flight 2 · Stableford',
   );
-  // Fem andre i flighten (den trukne og den i flight 3 er ikke med): fire skiver og «+1 til».
-  expect(screen.getAllByTestId('home-ticket-avatars-disc', HIDDEN)).toHaveLength(4);
-  expect(screen.getByTestId('home-ticket-avatars-more', HIDDEN)).toHaveTextContent('+1 til');
+  // Fem andre i flighten (den trukne og den i flight 3 er ikke med): deg først,
+  // to andre og «+3 til», som i designet.
+  expect(screen.getByTestId('home-ticket-avatars-self', HIDDEN)).toBeTruthy();
+  expect(screen.getAllByTestId('home-ticket-avatars-disc', HIDDEN)).toHaveLength(2);
+  expect(screen.getByTestId('home-ticket-avatars-more', HIDDEN)).toHaveTextContent('+3 til');
   expect(screen.getByTestId('home-ticket-perforation', HIDDEN)).toBeTruthy();
 
   // Ett element for skjermleseren, med det øyet leser.
   const ticket = screen.getByTestId('home-ticket-next');
   expect(ticket.props.accessibilityLabel).toBe(
     'Neste start. Klubbmesterskap. Fre 2. okt kl. 09:30. Om 3 dager. Losby, Flight\u00A02, Stableford. ' +
-      'Flighten din: Marte Kirkerud, Ola Nordmann, Kari Nordmann, Per Hansen og 1 til',
+      'Flighten din: Marte Kirkerud, Ola Nordmann og 3 til',
   );
   await fireEvent.press(ticket);
   expect(onPress).toHaveBeenCalled();
