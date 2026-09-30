@@ -77,7 +77,7 @@ export function GameTicket({
           <View style={[styles.kickerRow, !kicker && styles.kickerRowEnd]}>
             {kicker ? (
               <Text
-                style={[styles.kicker, { color: colors.accent }]}
+                style={[ui.kicker, styles.kicker, { color: colors.accent }]}
                 numberOfLines={1}
                 testID="game-ticket-kicker"
               >
@@ -206,13 +206,8 @@ const styles = StyleSheet.create({
   head: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 20 },
   kickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   kickerRowEnd: { justifyContent: 'flex-end' },
-  kicker: {
-    flexShrink: 1,
-    fontSize: 10,
-    fontFamily: FONTS.sansSemiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
+  // Selve stilen er den delte `ui.kicker` (#2385); her bare krympingen.
+  kicker: { flexShrink: 1 },
   badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, overflow: 'hidden' },
   badgeFill: { opacity: 0.16 },
   badgeText: { fontSize: 11, fontFamily: FONTS.sansSemiBold },
