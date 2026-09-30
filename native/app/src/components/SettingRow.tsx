@@ -25,7 +25,7 @@
 // dekkes av Profil-skjermens ene render-test (Type C — maks én render-test per
 // komponent, `docs/test-discipline.md`). Det er et valg, ikke en glipp.
 import { Children, Fragment, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { FONTS, useTheme } from '../theme';
 
 type Tone = 'default' | 'danger';
@@ -44,6 +44,8 @@ interface SettingRowProps {
    * «valgt» til skjermleseren; utelatt betyr at raden ikke er et valg.
    */
   selected?: boolean;
+  /** 14 pt inn fra kanten i stedet for 16, som radene på «Varsler» (Profil v2). */
+  dense?: boolean;
   disabled?: boolean;
   testID?: string;
 }
@@ -58,6 +60,7 @@ export function SettingRow({
   onPress,
   chevron = false,
   selected,
+  dense = false,
   disabled = false,
   testID,
 }: SettingRowProps): React.JSX.Element {
@@ -88,7 +91,7 @@ export function SettingRow({
       disabled={disabled}
       onPress={onPress}
       testID={testID}
-      style={styles.row}
+      style={[styles.row, dense ? styles.rowDense : null]}
     >
       <View style={styles.texts}>
         <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
@@ -113,9 +116,12 @@ export function SettingRow({
 export function SettingList({
   children,
   testID,
+  style,
 }: {
   children: ReactNode;
   testID?: string;
+  /** Til avstanden over lista når skjermen setter den selv. */
+  style?: StyleProp<ViewStyle>;
 }): React.JSX.Element {
   const { colors } = useTheme();
   const rows = Children.toArray(children);
@@ -126,6 +132,7 @@ export function SettingList({
       style={[
         styles.list,
         { backgroundColor: colors.surface, borderColor: colors.border },
+        style,
       ]}
     >
       {rows.map((row, index) => (
@@ -133,7 +140,7 @@ export function SettingList({
         // nøkkel her. `Children.toArray` har alt gitt selve raden sin egen.
         <Fragment key={index}>
           {index > 0 ? (
-            <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            <View style={[styles.separator, { backgroundColor: colors.divider }]} />
           ) : null}
           {row}
         </Fragment>
@@ -161,11 +168,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
+  rowDense: { paddingHorizontal: 14 },
   texts: { flexShrink: 1, gap: 2 },
   label: { fontSize: 15, fontFamily: FONTS.sans },
   // Ett hakk under etiketten, så raden leses som én ting og ikke som to.
   sublabel: { fontSize: 12, fontFamily: FONTS.sans },
-  chevron: { fontSize: 16, fontFamily: FONTS.sans },
+  chevron: { fontSize: 15, fontFamily: FONTS.sans },
   check: { fontSize: 18, fontFamily: FONTS.sansSemiBold },
-  separator: { height: StyleSheet.hairlineWidth },
+  // Designet: 1 pt i den varme skillefargen (Profil v2).
+  separator: { height: 1 },
 });
