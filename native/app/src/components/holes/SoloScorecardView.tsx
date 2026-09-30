@@ -158,7 +158,7 @@ function NineBlock({
             >
               {nameOf(players, s.userId, HOLES_TEXT.unknownPlayer)}
             </Text>
-            <Text style={[styles.small, ui.num, { color: s.isLeader ? colors.accentText : colors.muted }]}>
+            <Text style={[styles.subtotalSum, ui.num, { color: s.isLeader ? colors.accentText : colors.muted }]}>
               {s.sum == null ? '–' : metric === 'points' ? formatSignedPoints(s.sum) : String(s.sum)}
             </Text>
           </View>
@@ -228,7 +228,7 @@ function HoleCard({
             {row.gross == null ? (
               <Text style={[ui.muted, styles.dash]}>–</Text>
             ) : (
-              <ScoreShape strokes={row.gross} par={row.par} size={24} />
+              <ScoreShape strokes={row.gross} par={row.par} size={24} toned />
             )}
             <Text
               style={[
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   nine: { gap: 10 },
   nineHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4 },
   nineTitle: { fontSize: 19, fontFamily: FONTS.serifDisplay },
-  small: { fontSize: 12 },
+  small: { fontSize: 12, fontFamily: FONTS.sans },
   subtotals: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   subtotal: {
     flexDirection: 'row',
@@ -284,6 +284,8 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   subtotalName: { flexShrink: 1, maxWidth: 120 },
+  /** Tallet i pillen er et scoretall, som webbens `score-num`. */
+  subtotalSum: { fontSize: 12, fontFamily: FONTS.serifScore },
   holeHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   holeTitle: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   holeNumber: { fontSize: 16, fontFamily: FONTS.serifScore },

@@ -4,10 +4,22 @@
 //
 // Tegnet med nestede `View`-er og kantlinjer, ikke SVG: en ring er bare en
 // kant, og nesting holder tallet midt i den innerste ringen uten å regne.
+//
+// Scorekortet tegner ringene i blekk. «Hull for hull» (#2255) farger dem etter
+// scoretonen, som webbens visning gjør (`toned`), med den delte `scoreTone`.
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { scoreShape, type ScoreShape as ShapeKind } from '../../../../../lib/scoring/scoreShape';
-import { useTheme } from '../../theme';
+import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
+import { useTheme, type ThemeColors } from '../../theme';
+
+/** Webbens `--score-*-fg` per tone. Et slag har alltid en tone, aldri `unset`. */
+const TONE_FG: Record<Exclude<ScoreTone, 'unset'>, keyof ThemeColors> = {
+  under: 'scoreUnderFg',
+  par: 'scoreParFg',
+  over1: 'scoreOver1Fg',
+  over2: 'scoreOver2Fg',
+};
 
 // Tett nok til at fire ringer (kvadruppel bogey) har plass til tallet i 26 pt.
 const RING_GAP = 1.5;
@@ -28,13 +40,18 @@ export function ScoreShape({
   strokes,
   par,
   size = 26,
+  toned = false,
 }: {
   strokes: number;
   par: number;
   size?: number;
+  /** Ringene i scoretonen (webbens «Hull for hull»), ellers i blekk. */
+  toned?: boolean;
 }) {
   const { colors, ui } = useTheme();
   const { count, round } = RINGS[scoreShape(strokes, par)];
+  const tone = scoreTone(strokes, par);
+  const ringColor = toned && tone !== 'unset' ? colors[TONE_FG[tone]] : colors.text;
 
   let content: ReactNode = (
     <Text style={[styles.number, ui.num, { color: colors.text }]}>{strokes}</Text>
@@ -50,7 +67,7 @@ export function ScoreShape({
             width: side,
             height: side,
             borderRadius: round ? side / 2 : 2,
-            borderColor: colors.text,
+            borderColor: ringColor,
           },
         ]}
       >
