@@ -6,40 +6,109 @@
 // #2385 flyttet den hit fra `navigation.tsx`, så en skjerm kan sette ordet
 // selv når det først er kjent etter lasting (scorekortet sier «Lagets
 // scorekort · Lag 2» i lagformatene).
-import { useNavigation } from '@react-navigation/native';
+//
+// #2385 («Felles topp»): toppen er designets egen rad (`KickerTopBar`) i
+// stedet for iOS sin navigasjonslinje, gjennom native-stack sin
+// `header`-opsjon. iOS 26 la linja 9 pt høyere enn designet og tegnet
+// glassbobler rundt knappene. Designets rad: 8 pt luft over og på sidene,
+// tilbake-pila og høyre-knappen i hver sin boks på 44 × 44, og ordet midt
+// mellom dem; 52 pt i alt under sikker-sonen. Sveip tilbake er fortsatt
+// systemets, fordi skjermen fortsatt ligger i den native stakken.
+//
+// Uten ord (`kickerHeader('', …)`) er raden bare pila: Profil har den til
+// bunnmenyen kommer (eierens svar, #2385). Pila heter «Tilbake», eller det
+// designet kaller den der det sier noe (`backLabel`: «Tilbake til profil» i
+// rommene under profilen).
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAP, useTheme } from '../theme';
 import { TilbakeIcon } from './icons/Icons';
 
+/** Luften over raden (under sikker-sonen) og ut til kantene, som i designet. */
+const BAR_INSET = 8;
+/** Pila sin etikett når designet ikke sier noe annet. */
+const BACK_LABEL = 'Tilbake';
+
 /**
- * Header-valgene for toppen. `title` er skjermens navn for systemet
- * (app-bytteren, VoiceOver sin «tilbake»), som kan være et annet enn ordet i
- * toppen.
+ * Header-valgene for toppen. `title` er skjermens navn for systemet: iOS
+ * bruker det på tilbake-knappen og i tilbake-menyen på neste skjerm med
+ * native topp (hullsiden, tavla), og det kan være et annet enn ordet i toppen.
+ * Høyre-knappen er skjermens egen `headerRight` (del-knappen på billetten),
+ * som skjermen setter med `setOptions`.
  */
-export function kickerHeader(kicker: string, title: string): NativeStackNavigationOptions {
+export function kickerHeader(
+  kicker: string,
+  title: string,
+  { backLabel = BACK_LABEL }: { backLabel?: string } = {},
+): NativeStackNavigationOptions {
   return {
     title,
-    headerTitle: () => <KickerTitle label={kicker} />,
-    headerShadowVisible: false,
-    // Designets bare vinkel i stedet for iOS 26 sin glassboble: egen knapp,
-    // og `hidesSharedBackground` tar bort boblen bak den.
-    headerBackVisible: false,
-    unstable_headerLeftItems: ({ canGoBack }) =>
-      canGoBack ? [{ type: 'custom', element: <BareBack />, hidesSharedBackground: true }] : [],
+    header: ({ back, navigation, options }) => (
+      <KickerTopBar
+        kicker={kicker}
+        backLabel={backLabel}
+        onBack={back ? () => navigation.goBack() : undefined}
+        right={options.headerRight?.({ canGoBack: back != null })}
+      />
+    ),
   };
 }
 
-/** Tilbake-pila uten bakgrunn, med 44 pt å treffe på. */
-function BareBack() {
-  const navigation = useNavigation();
+/**
+ * Raden: tilbake-pila til venstre, ordet i midten og høyre-knappen. En tom
+ * boks står der det ikke er noen knapp, så ordet alltid står midt på skjermen.
+ */
+function KickerTopBar({
+  kicker,
+  backLabel,
+  onBack,
+  right,
+}: {
+  kicker: string;
+  backLabel: string;
+  onBack?: () => void;
+  right?: ReactNode;
+}) {
+  const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.bar, { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.bg }]}>
+      <View style={styles.slot}>
+        {onBack ? <BareBack label={backLabel} onPress={onBack} /> : null}
+      </View>
+      {/* Et langt ord (et spillnavn, #2392) kuttes med «…» på én linje i
+          stedet for å bryte toppen over to; skjermleseren får hele. */}
+      {kicker ? (
+        <Text
+          accessibilityRole="header"
+          accessibilityLabel={kicker}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[ui.kicker, styles.kicker]}
+        >
+          {kicker}
+        </Text>
+      ) : (
+        <View style={styles.kicker} />
+      )}
+      <View style={styles.slot} testID="kicker-top-bar-right">
+        {right}
+      </View>
+    </View>
+  );
+}
+
+/** Tilbake-pila uten bakgrunn, midt i 44 pt å treffe på. */
+function BareBack({ label, onPress }: { label: string; onPress: () => void }) {
   const { colors } = useTheme();
   return (
     <Pressable
-      onPress={() => navigation.goBack()}
+      onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Tilbake"
-      style={styles.back}
+      accessibilityLabel={label}
+      style={styles.slot}
       testID="header-back"
     >
       <TilbakeIcon color={colors.text} size={20} strokeWidth={2} />
@@ -47,25 +116,8 @@ function BareBack() {
   );
 }
 
-/**
- * Ordet i toppen. Et langt ord (et spillnavn, #2392) kuttes med «…» på én
- * linje i stedet for å bryte toppen over to; skjermleseren får hele.
- */
-function KickerTitle({ label }: { label: string }) {
-  const { ui } = useTheme();
-  return (
-    <Text
-      accessibilityRole="header"
-      accessibilityLabel={label}
-      numberOfLines={1}
-      ellipsizeMode="tail"
-      style={ui.kicker}
-    >
-      {label}
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
-  back: { width: TAP, height: TAP, alignItems: 'flex-start', justifyContent: 'center' },
+  bar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: BAR_INSET },
+  slot: { width: TAP, height: TAP, alignItems: 'center', justifyContent: 'center' },
+  kicker: { flex: 1, textAlign: 'center' },
 });
