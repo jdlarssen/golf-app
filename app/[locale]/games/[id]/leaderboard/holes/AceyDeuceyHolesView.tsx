@@ -6,7 +6,8 @@ import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import type { LeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type { AceyDeuceyResult, AceyDeuceyHoleRow } from '@/lib/scoring/modes/types';
+import { aceyDeuceyHoleCards, type AceyDeuceyHoleCard } from '@/lib/leaderboard/aceyDeuceyHoles';
+import type { AceyDeuceyResult } from '@/lib/scoring/modes/types';
 import type { AceyDeuceyPlayerInfo } from '../AceyDeuceyView';
 
 export interface AceyDeuceyHolesViewProps {
@@ -32,21 +33,16 @@ export interface AceyDeuceyHolesViewProps {
   navContext?: LeaderboardNavContext;
 }
 
-type AdCell = AceyDeuceyHoleRow['perPlayer'][number];
-
-/** Poeng-formatering: +3 / 0 / −3 (U+2212 MINUS SIGN, ikke bindestrek). */
-function formatPoints(points: number): string {
-  if (points > 0) return `+${points}`;
-  if (points < 0) return `−${Math.abs(points)}`;
-  return '0';
-}
-
 /**
  * Format-bevisst «Hull for hull» for Acey-Deucey (epic #496, PR 5). Erstatter
  * det generiske best-ball lag-scorekortet med en Acey-Deucey-riktig per-hull-
  * visning: alle fire spillere rangert på score, med ace (unik lavest, +3)
  * uthevet i champagne og deuce (unik høyest, −3) i en kald markering — det
  * AceyDeuceyView sin kompakte PER HULL (kun ace/deuce-navn) mangler.
+ *
+ * Regnestykket (rekkefølgen, ace/deuce/nøytral, poengene med fortegn og brutto
+ * ved siden av) bor i `lib/leaderboard/aceyDeuceyHoles.ts`, delt med appen
+ * (#2255 PR 3c). Her tegnes det.
  */
 export function AceyDeuceyHolesView({
   gameId,
@@ -84,6 +80,8 @@ export function AceyDeuceyHolesView({
     );
   }
 
+  const cards = aceyDeuceyHoleCards(result);
+
   return (
     <LeaderboardShell>
       <LeaderboardHeader
@@ -96,7 +94,7 @@ export function AceyDeuceyHolesView({
           {t('common.hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Acey Deucey · {result.scoring === 'net' ? t('common.netto') : t('common.brutto')}
+          Acey Deucey · {t(`common.${cards.scoringKey}`)}
         </p>
       </div>
 
@@ -104,13 +102,8 @@ export function AceyDeuceyHolesView({
         data-testid="acey-deucey-holes-list"
         className="flex flex-col gap-2.5 px-3.5 pt-1 pb-3.5 list-none"
       >
-        {result.holes.map((hole) => (
-          <HoleCard
-            key={hole.holeNumber}
-            hole={hole}
-            scoring={result.scoring}
-            playersById={playersById}
-          />
+        {cards.holes.map((hole) => (
+          <HoleCard key={hole.holeNumber} hole={hole} playersById={playersById} />
         ))}
       </ul>
 
@@ -122,23 +115,13 @@ export function AceyDeuceyHolesView({
 
 function HoleCard({
   hole,
-  scoring,
   playersById,
 }: {
-  hole: AceyDeuceyHoleRow;
-  scoring: AceyDeuceyResult['scoring'];
+  hole: AceyDeuceyHoleCard;
   playersById: Map<string, AceyDeuceyPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
-  // Scoret hull: rangér på effective-score ASC (ace øverst, deuce nederst).
-  // Uferdig hull: behold ctx.players-rekkefølge (ingen meningsfull rangering).
-  const rows: AdCell[] = hole.scored
-    ? [...hole.perPlayer].sort(
-        (a, b) =>
-          (a.effectiveScore ?? Infinity) - (b.effectiveScore ?? Infinity),
-      )
-    : hole.perPlayer;
 
   return (
     <li
@@ -163,17 +146,13 @@ function HoleCard({
 
         {/* Per-spiller: score + ace/deuce-markering + poeng. */}
         <ul className="mt-2 flex flex-col gap-1 list-none">
-          {rows.map((cell) => {
+          {hole.rows.map((cell) => {
             const info = playersById.get(cell.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : t('common.unknownPlayerFull');
-            const isAce = hole.scored && cell.userId === hole.aceUserId;
-            const isDeuce = hole.scored && cell.userId === hole.deuceUserId;
-            const showGross =
-              scoring === 'net' &&
-              cell.gross != null &&
-              cell.gross !== cell.effectiveScore;
+            const isAce = cell.tone === 'ace';
+            const isDeuce = cell.tone === 'deuce';
 
             // Ace = varm champagne-glød. Deuce = kald, dempet ramme. Midten nøytral.
             const rowClass = isAce
@@ -202,7 +181,7 @@ function HoleCard({
                   </span>
                 </span>
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
-                  {hole.scored && (
+                  {cell.pointsText != null && (
                     <span
                       className={`text-[12px] font-semibold ${
                         isAce
@@ -212,12 +191,12 @@ function HoleCard({
                             : 'text-muted/40'
                       }`}
                     >
-                      {formatPoints(cell.points)}
+                      {cell.pointsText}
                     </span>
                   )}
-                  {showGross && cell.gross != null && (
+                  {cell.grossShown != null && (
                     <span className="text-[10.5px] text-muted">
-                      {t('aceyDeucey.bruttoLabel', { gross: cell.gross })}
+                      {t('aceyDeucey.bruttoLabel', { gross: cell.grossShown })}
                     </span>
                   )}
                   <span
