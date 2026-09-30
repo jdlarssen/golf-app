@@ -165,24 +165,14 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   }, []);
 
   // Del-knappen øverst til høyre (eierens svar b): bare når arrangøren har
-  // slått på live-følging, og da deler den webbens «følg live»-lenke.
-  // Designet tegner et bart ikon. På iOS 26 legger systemet et glass under
-  // knapper i toppen; som eget element med `hidesSharedBackground` står
-  // ikonet uten (`headerRightItems` er bare iOS, `headerRight` tar Android).
+  // slått på live-følging, og da deler den webbens «følg live»-lenke. Den
+  // felles toppen (#2403) setter den i høyre-plassen sin, 8 pt fra kanten og
+  // uten boble, som i designet.
   const liveToken = bundle?.game.spectateToken ?? null;
   const shareToken = canShareLiveFollow(liveToken) ? liveToken : null;
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: shareToken ? () => <ShareLiveButton token={shareToken} /> : undefined,
-      unstable_headerRightItems: shareToken
-        ? () => [
-            {
-              type: 'custom',
-              element: <ShareLiveButton token={shareToken} edge />,
-              hidesSharedBackground: true,
-            },
-          ]
-        : undefined,
     });
   }, [navigation, shareToken]);
 
@@ -383,12 +373,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
  * Del-ikonet i toppen. Knappen bærer etiketten; ikonet i den er dekor. Feiler
  * delingsarket, sier en melding det. Toppen har ingen plass til en linje, og
  * feilen er forbigående, så den står ikke fast som på lenkeknappene.
- *
- * `edge`: knappen står som eget element i iOS-toppen, der UIKit legger sin
- * egen marg. Ikonet legges mot høyre i boksen, så sentrum havner 30 pt fra
- * kanten som i designet (8 pt inn i en 44 pt-boks).
  */
-function ShareLiveButton({ token, edge = false }: { token: string; edge?: boolean }) {
+function ShareLiveButton({ token }: { token: string }) {
   const { colors } = useTheme();
   const share = useCallback(async () => {
     const result = await shareLiveFollow(token);
@@ -400,7 +386,7 @@ function ShareLiveButton({ token, edge = false }: { token: string; edge?: boolea
       accessibilityLabel={TICKET_TEXT.share}
       hitSlop={8}
       onPress={() => void share()}
-      style={[styles.headerButton, edge && styles.headerButtonEdge]}
+      style={styles.headerButton}
       testID="share-live"
     >
       <DelIcon color={colors.text} size={20} strokeWidth={1.8} />
@@ -478,13 +464,11 @@ export function RosterRow({
 
 const styles = StyleSheet.create({
   headerButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerButtonEdge: { alignItems: 'flex-end' },
   /**
-   * Designets marger: 16 pt fra kantene, og billetten rett under toppen.
-   * Designets rad er 44 pt med 8 pt luft under; den native toppen er høyere,
-   * så luften over billetten ligger allerede i den.
+   * Designets marger: 16 pt fra kantene, og billetten 8 pt under toppen. Den
+   * felles toppen (#2403) er designets rad (8 + 44 pt).
    */
-  scroll: { paddingHorizontal: 16, paddingTop: 0 },
+  scroll: { paddingHorizontal: 16, paddingTop: 8 },
   rosterRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

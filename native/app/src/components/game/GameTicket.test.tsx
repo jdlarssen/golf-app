@@ -47,7 +47,7 @@ it('tegner hode, tre felt, avatarrad og stubben', async () => {
   expect(screen.getByTestId('game-ticket-status')).toHaveTextContent('Planlagt');
   // Merket som i designet: salvie i 22 % og krem tekst, uten linlag over.
   expect(screen.getByTestId('game-ticket-status')).toHaveStyle({ backgroundColor: 'rgba(125, 170, 138, 0.22)' });
-  expect(within(screen.getByTestId('game-ticket-status')).getByText('Planlagt')).toHaveStyle({ color: '#ECE5D2' });
+  expect(within(screen.getByTestId('game-ticket-status')).getByText('Planlagt')).toHaveStyle({ color: PALETTES.light.onStrongWarm });
 
   // Hvert felt er én node: skjermleseren får etikett og verdi i én setning.
   for (const field of FIELDS) {

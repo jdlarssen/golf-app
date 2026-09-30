@@ -559,25 +559,14 @@ describe('GameHome — startbilletten (#2255)', () => {
     );
     await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
 
-    const { headerRight, unstable_headerRightItems } = navigation.setOptions.mock.lastCall![0] as {
+    const { headerRight } = navigation.setOptions.mock.lastCall![0] as {
       headerRight?: () => ReactElement;
-      unstable_headerRightItems?: () => { type: string; element: ReactElement; hidesSharedBackground?: boolean }[];
     };
     expect(headerRight).toBeDefined();
     await render(headerRight!());
     const button = screen.getByTestId('share-live');
     expect(button.props.accessibilityLabel).toBe(TICKET_TEXT.share);
     await fireEvent.press(button);
-    expect(shareLiveFollow).toHaveBeenCalledWith('tok-123');
-
-    // iOS: samme knapp som eget element uten systemets glass (designet har et
-    // bart ikon), og den deler den samme lenka.
-    const items = unstable_headerRightItems!();
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ type: 'custom', hidesSharedBackground: true });
-    shareLiveFollow.mockClear();
-    await render(items[0]!.element);
-    await fireEvent.press(screen.getByTestId('share-live'));
     expect(shareLiveFollow).toHaveBeenCalledWith('tok-123');
   });
 
@@ -596,9 +585,7 @@ describe('GameHome — startbilletten (#2255)', () => {
     );
     await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
 
-    // Ingen del-knapp på noen plattform: verken `headerRight` eller iOS-elementet.
-    expect(navigation.setOptions.mock.lastCall![0]).toMatchObject({ headerRight: undefined, unstable_headerRightItems: undefined });
-    expect(Object.keys(navigation.setOptions.mock.lastCall![0]).sort()).toEqual(['headerRight', 'unstable_headerRightItems']);
+    expect(navigation.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
   });
   it('lagformat: ingen tall ved fremdriften, som helten på Hjem', async () => {
     mockState.bundle = homeBundle({
@@ -667,9 +654,7 @@ describe('GameHome — startbilletten (#2255)', () => {
         />,
       );
       await waitFor(() => expect(screen.getByTestId('game-ticket')).toBeTruthy());
-      // Ingen del-knapp på noen plattform: verken `headerRight` eller iOS-elementet.
-      expect(navigation.setOptions.mock.lastCall![0]).toMatchObject({ headerRight: undefined, unstable_headerRightItems: undefined });
-      expect(Object.keys(navigation.setOptions.mock.lastCall![0]).sort()).toEqual(['headerRight', 'unstable_headerRightItems']);
+      expect(navigation.setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
     } finally {
       mod.canShareLiveFollow.mockImplementation((token: string | null) => token !== null);
     }

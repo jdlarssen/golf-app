@@ -83,10 +83,10 @@ export function GameTicket({
               </Text>
             ) : null}
             {/* Fylt merke uten kant, som i designet: salvie (`live`) i 22 %
-                dekning og krem tekst. Hodet er skog i begge draktene, så
-                merket er likt i begge. */}
+                dekning og den varme kremen (`onStrongWarm`, #ECE5D2). Hodet er
+                skog i begge draktene, så merket er likt i begge. */}
             <View style={[styles.badge, { backgroundColor: withAlpha(colors.live, BADGE_ALPHA) }]} testID="game-ticket-status">
-              <Text style={[styles.badgeText, { color: BADGE_INK }]}>{statusLabel}</Text>
+              <Text style={[styles.badgeText, { color: colors.onStrongWarm }]}>{statusLabel}</Text>
             </View>
           </View>
           <Text accessibilityRole="header" style={[styles.title, ink]} testID="game-ticket-title">
@@ -183,8 +183,6 @@ export function GameTicket({
 const DASHES = 33;
 /** Statusmerket: designets `rgba(125,170,138,0.22)`, altså `live` i 22 %. */
 const BADGE_ALPHA = 0.22;
-/** Designets krem på merket (`#ece5d2`), lik i begge drakter som hodet. */
-const BADGE_INK = '#ECE5D2';
 const NOTCH = 20;
 const PERFORATION = 20;
 const RADIUS = 20;
