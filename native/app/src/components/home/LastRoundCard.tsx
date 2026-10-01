@@ -17,6 +17,7 @@ import { finishedResultBadge } from '../../../../../lib/games/finishedResultBadg
 import type { HomeCard, LastRoundScore } from '../../data/homeList';
 import { HOME_TEXT, bruttoText, finishedResultText, pointsText } from '../../lib/homeCopy';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../../theme';
+import { withSystemArrows } from '../SystemArrow';
 import { MedalDisc, PokalIcon } from '../icons/Icons';
 
 /** Tallet i medaljongen, eller `null` når runden ikke har en plass (matchplay). */
@@ -111,7 +112,7 @@ export function LastRoundCard({
         importantForAccessibility="no-hide-descendants"
         testID="home-last-round-arrow"
       >
-        →
+        {withSystemArrows('→', '400')}
       </Text>
     </Pressable>
   );
@@ -143,5 +144,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   line: { fontSize: 12, fontFamily: FONTS.sans },
   // Nettleserens `normal` for Inter 18 er 21 (#2385).
+  // Linja er Inters, som i designet; bare pila er systemfontens
+  // (`SystemArrow.tsx`).
   arrow: { ...interLine(18, 21), fontFamily: FONTS.sans },
 });

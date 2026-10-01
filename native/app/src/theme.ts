@@ -322,6 +322,11 @@ export const FONTS = {
   sansMedium: 'Inter_500Medium',
   sansSemiBold: 'Inter_600SemiBold',
   sansBold: 'Inter_700Bold',
+  /**
+   * Systemfonten (SF), til «→» (#2385). Inter fra Google Fonts har ikke pila,
+   * så designet tegner den med `system-ui`. Se `SystemArrow.tsx`.
+   */
+  system: 'System',
 } as const;
 
 /**

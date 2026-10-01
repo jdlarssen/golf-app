@@ -52,6 +52,7 @@ import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import { HomeHeroCard } from '../components/home/HomeHeroCard';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
+import { withSystemArrows } from '../components/SystemArrow';
 import type { GameBundle } from '../data/gameBundle';
 import {
   fetchCardExtras,
@@ -340,7 +341,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
               testID="home-all-rounds"
             >
               <Text style={ui.linkText}>
-                {showAllRounds ? HOME_TEXT.showFewer : HOME_TEXT.allRounds}
+                {withSystemArrows(showAllRounds ? HOME_TEXT.showFewer : HOME_TEXT.allRounds, '500')}
               </Text>
             </Pressable>
           ) : null}

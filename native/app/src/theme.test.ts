@@ -204,6 +204,7 @@ describe('FONTS', () => {
       sansMedium: 'Inter_500Medium',
       sansSemiBold: 'Inter_600SemiBold',
       sansBold: 'Inter_700Bold',
+      system: 'System',
     });
   });
 });
