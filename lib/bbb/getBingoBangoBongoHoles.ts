@@ -3,6 +3,8 @@ import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 
+const BBB_HOLES_SELECT = 'hole_number, bingo_user_id, bango_user_id, bongo_user_id';
+
 /**
  * Tag-cached fetch av bingo_bango_bongo_holes for ett spill.
  *
@@ -22,7 +24,7 @@ async function fetchBingoBangoBongoHoles(
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from('bingo_bango_bongo_holes')
-    .select('hole_number, bingo_user_id, bango_user_id, bongo_user_id')
+    .select(BBB_HOLES_SELECT)
     .eq('game_id', gameId)
     .order('hole_number', { ascending: true });
 
@@ -44,7 +46,11 @@ export async function getBingoBangoBongoHoles(
 ): Promise<BingoBangoBongoHoleInput[]> {
   return unstable_cache(
     () => fetchBingoBangoBongoHoles(gameId),
-    ['bbb-holes', gameId],
+    // The select string is in the key (#2224), so a select change gives a new
+    // entry by itself. The cache holds the mapped `BingoBangoBongoHoleInput`
+    // shape, though: change only the mapping above and the key must still be
+    // bumped by hand.
+    ['bbb-holes', BBB_HOLES_SELECT, gameId],
     { tags: [`game-${gameId}`], revalidate: 900 },
   )();
 }
