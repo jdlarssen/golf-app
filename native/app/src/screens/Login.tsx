@@ -57,6 +57,7 @@ import {
   classifyVerifyError,
   describeLoginError,
   formatCountdown,
+  maskSentToEmail,
   resendWaitSeconds,
 } from '../lib/loginCopy';
 import { finishLogin, landsOnCodeStep, requestLoginCode } from '../data/loginCode';
@@ -358,7 +359,7 @@ export function Login() {
               <Text style={[styles.sentTo, { color: colors.muted }]}>
                 {LOGIN_TEXT.sentToPrefix}
                 <Text style={[styles.sentToEmail, { color: colors.text }]} testID="login-sent-to">
-                  {normalizedEmail}
+                  {maskSentToEmail(normalizedEmail)}
                 </Text>
                 {LOGIN_TEXT.sentToSuffix}{' '}
               </Text>
