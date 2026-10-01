@@ -13,7 +13,6 @@ import {
   getDeleteBlockReason,
   type DeleteCheckOutcome,
 } from '@/lib/users/deleteAccount';
-import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -22,11 +21,10 @@ export default async function SlettKontoPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('profile.deleteAccount');
-  const userIdRaw = await getProxyVerifiedUserId();
-  if (!userIdRaw) redirect({ href: '/login', locale });
-  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect({ href: '/login', locale });
 
   const supabase = await getServerClient();
   const params = await searchParams;

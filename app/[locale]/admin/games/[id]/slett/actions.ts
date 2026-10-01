@@ -45,7 +45,7 @@ export async function deleteGame(formData: FormData) {
   // leaderboard belong to every participant, so only an admin can remove it
   // (recovery). The /games/[id]/slett page already gates this; the action
   // self-gates too against a direct POST.
-  if (!ctx.isAdmin && game!.status !== 'draft' && game!.status !== 'scheduled') {
+  if (!ctx.isAdmin && game.status !== 'draft' && game.status !== 'scheduled') {
     redirect({ href: `/games/${gameId}?error=not_deletable`, locale });
   }
 
@@ -69,7 +69,7 @@ export async function deleteGame(formData: FormData) {
   // her skal aldri blokkere flyten — Resend-mønsteret). Service-role-klienten
   // er nødvendig: en admin som sletter andres spill eier ikke objektene, så
   // eier-scopet DELETE-RLS ville matchet 0 rader.
-  const logoPaths = safeParsePrizes(game!.prizes)
+  const logoPaths = safeParsePrizes(game.prizes)
     .map((p) => p.sponsorLogoPath)
     .filter((p): p is string => p != null);
   if (logoPaths.length > 0) {
@@ -94,11 +94,11 @@ export async function deleteGame(formData: FormData) {
   expireGameCache(gameId);
 
   if (ctx.isAdmin) {
-    const qs = new URLSearchParams({ status: 'deleted', name: game!.name });
+    const qs = new URLSearchParams({ status: 'deleted', name: game.name });
     redirect({ href: `/admin/games?${qs.toString()}`, locale });
   }
 
   // Creator: no «Mine spill»-hub yet (Fase 3), so land on home with a
   // confirmation banner (eier-beslutning).
-  redirect({ href: `/?deleted=${encodeURIComponent(game!.name)}`, locale });
+  redirect({ href: `/?deleted=${encodeURIComponent(game.name)}`, locale });
 }
