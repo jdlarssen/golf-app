@@ -12,7 +12,10 @@ import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
-import { gameModeSupportsTeams } from '@/lib/games/registration';
+import {
+  gameModeSupportsTeams,
+  REGISTRATION_MESSAGE_MAX,
+} from '@/lib/games/registration';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
@@ -65,8 +68,6 @@ export type ActionError =
   | 'bad_side'
   | 'side_full'
   | 'game_full';
-
-const MESSAGE_MAX = 200;
 
 /**
  * #1792 (HCD F5): felles gate for begge solo-actions. Solo-påmelding er kun
@@ -471,7 +472,7 @@ export async function requestApproval(
     return { ok: false, error: 'game_not_found' };
   }
 
-  if (rawMessage.length > MESSAGE_MAX) {
+  if (rawMessage.length > REGISTRATION_MESSAGE_MAX) {
     return { ok: false, error: 'message_too_long' };
   }
   const message = rawMessage.length > 0 ? rawMessage : null;

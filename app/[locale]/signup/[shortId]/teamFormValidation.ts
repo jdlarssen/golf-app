@@ -4,16 +4,16 @@
  * Functions now return error CODES (keys into `signup.errors.*`) + optional
  * interpolation values instead of raw Norwegian strings, so the consuming
  * component translates them via `t('signup.errors.<code>', values)`.
- * Server `teamActions.ts` uses the same code constants so client inline-
- * feedback and server errors never diverge.
+ * The team-name bounds come from `lib/games/registration.ts`, which server
+ * `teamActions.ts` reads too, so client inline-feedback and server errors
+ * never diverge (#2222).
  *
  * All functions are pure: take input, return a code+values tuple or `null`
  * when the field is valid. Cross-field checks (duplicates, captain's own
  * email) live in `findSlotConflicts` which sees the whole slot list.
  */
 
-export const TEAM_NAME_MIN = 3;
-export const TEAM_NAME_MAX = 40;
+import { TEAM_NAME_MAX, TEAM_NAME_MIN } from '@/lib/games/registration';
 
 /** Pragmatic email shape: one `@`, chars around it, a dot in the domain. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
