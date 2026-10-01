@@ -2,12 +2,11 @@
 // (`Historikk-forslag`): Fraunces 30/500 med undertittelen i Inter 13 og 2 pt
 // luft, blokka 6 pt under toppen og 20 pt fra kanten.
 //
-// Ikke `PageTitle`: den har faste linjehøyder (35/18) målt mot andre
-// artboard. Her står linjene i nettleserens `normal`, som designet: Fraunces
-// 30 har samme høyde i begge (37 pt), og Inter 13 får nettleserens 16 pt
-// (`interLine`).
+// Ikke `PageTitle`: den har faste linjehøyder målt mot andre artboard. Her
+// står linjene i nettleserens `normal`, som designet: Fraunces 30/500 i sitt
+// eget snitt (`fraunces`, 37 pt) og Inter 13 i 16 pt (`interLine`).
 import { StyleSheet, Text, View } from 'react-native';
-import { FONTS, interLine, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 
 export function HistoryTitle({
   title,
@@ -34,8 +33,11 @@ export function HistoryTitle({
   );
 }
 
+const SUBTITLE_LINE = interLine(13, 16);
+
 const styles = StyleSheet.create({
   block: { paddingTop: 6, paddingHorizontal: 20 },
-  title: { fontSize: 30, fontFamily: FONTS.serifDisplay },
-  subtitle: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 2 },
+  title: fraunces(500, 30),
+  // Linjeboksen bruker margin over; designets 2 pt legges oppå.
+  subtitle: { ...SUBTITLE_LINE, fontFamily: FONTS.sans, marginTop: SUBTITLE_LINE.marginTop + 2 },
 });

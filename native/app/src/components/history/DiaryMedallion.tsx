@@ -14,10 +14,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { DiaryMedal, DiaryResult } from '../../lib/roundDiary';
 import { fieldSizeShort } from '../../lib/historyCopy';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, centeredLineTop, fraunces, frauncesNormalLine, useTheme } from '../../theme';
 import { MedalDisc } from '../icons/Icons';
 
 const SIZE = 24;
+/** Fraunces 12 i nettleserens `normal`: 12 + 3 pt. */
+const RANK_LINE = frauncesNormalLine(12);
 
 /** Designets metaller, like i lys og mørk drakt. */
 const METAL = {
@@ -81,15 +83,17 @@ export function DiaryMedallion({ result, testID }: { result: DiaryResult; testID
 
 const styles = StyleSheet.create({
   cluster: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
+  // Tallet står der nettleseren midtstiller linja (`centeredLineTop`), ikke
+  // der Yoga runder den: 15 pt linje i 24 pt, og i 22 pt innenfor ringens kant.
   medal: {
     width: SIZE,
     height: SIZE,
     borderRadius: SIZE / 2,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: centeredLineTop(SIZE, RANK_LINE),
   },
   disc: { position: 'absolute', width: SIZE, height: SIZE, borderRadius: SIZE / 2 },
-  ring: { borderWidth: 1 },
-  rank: { fontSize: 12, fontFamily: FONTS.serifScore },
+  ring: { borderWidth: 1, paddingTop: centeredLineTop(SIZE - 2, RANK_LINE) },
+  rank: fraunces(600, 12),
   field: { fontSize: 12, fontFamily: FONTS.sans },
 });
