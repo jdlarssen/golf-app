@@ -238,15 +238,28 @@ export type GroupPeople = { named: InboxPerson[]; total: number };
 /**
  * The distinct people behind a group, newest first. Deduplicated by the card
  * owner's id when the row has it, else by name; a row without either counts as
- * its own person (shown only in «+N»).
+ * its own person (shown only in «+N»). A row from before the id existed is
+ * matched to a row with the id through the name, so the same card delivered
+ * before and after the deploy is one person — unless that name belongs to more
+ * than one id, where the name cannot tell them apart.
  */
 export function groupPeople(rows: InboxRow[]): GroupPeople {
+  const idByName = new Map<string, string | null>();
+  for (const row of rows) {
+    const id = rowPersonId(row);
+    const person = inboxPerson(rowPersonName(row));
+    if (!id || !person) continue;
+    const name = person.full.toLowerCase();
+    const known = idByName.get(name);
+    idByName.set(name, known === undefined || known === id ? id : null);
+  }
+
   const seen = new Set<string>();
   const named: InboxPerson[] = [];
   let total = 0;
   for (const row of rows) {
     const person = inboxPerson(rowPersonName(row));
-    const id = rowPersonId(row);
+    const id = rowPersonId(row) ?? (person ? idByName.get(person.full.toLowerCase()) : null);
     const key = id ? `id:${id}` : person ? `name:${person.full.toLowerCase()}` : `row:${row.id}`;
     if (seen.has(key)) continue;
     seen.add(key);

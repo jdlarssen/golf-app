@@ -230,6 +230,27 @@ describe('InboxClient', () => {
     expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Per inviterte deg');
   });
 
+  it('pillen beholder teksten og venter mens «Marker alt lest» pågår', async () => {
+    let finish: (v: { ok: boolean }) => void = () => {};
+    markAllAsReadMock.mockReturnValue(new Promise((r) => (finish = r)));
+    renderInbox([makeInvite('a')]);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('inbox-mark-all'));
+    });
+    const pill = screen.getByTestId('inbox-mark-all');
+    expect(pill).toBeDisabled();
+    expect(pill).toHaveAttribute('aria-busy', 'true');
+    await act(async () => {
+      finish({ ok: true });
+    });
+    expect(screen.getByTestId('inbox-clear-read')).toBeEnabled();
+  });
+
+  it('statuslinja står montert som live-region også når den er tom', () => {
+    renderInbox([makeInvite('a')]);
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
   it('«Tøm leste» arkiverer de leste', () => {
     renderInbox([makeInvite('a', true), makeInvite('b', true)]);
     fireEvent.click(screen.getByRole('button', { name: 'Tøm leste' }));

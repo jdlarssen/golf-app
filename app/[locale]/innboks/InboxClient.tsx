@@ -219,19 +219,27 @@ export function InboxClient({
     return key && key !== 'decide' ? t(`buttons.${key}`) : '';
   }
 
-  const statusLine = status ? (
+  // Always mounted, so screen readers have the live region before a message
+  // lands in it; empty, it takes no room.
+  const statusLine = (
     <p
       role="status"
-      data-testid={status.tone === 'error' ? 'inbox-action-error' : 'inbox-status'}
-      className={`px-5 pb-2 text-[13px] leading-[normal] ${
-        status.tone === 'error' ? 'text-danger' : 'text-text'
-      }`}
+      data-testid={status ? (status.tone === 'error' ? 'inbox-action-error' : 'inbox-status') : undefined}
+      className={
+        status
+          ? `px-5 pb-2 text-[13px] leading-[normal] ${status.tone === 'error' ? 'text-danger' : 'text-text'}`
+          : 'sr-only'
+      }
     >
-      {status.text}
+      {status?.text ?? ''}
     </p>
-  ) : null;
+  );
 
-  const pillPending = hasUnread ? markAllPending : clearReadPending;
+  // While an action is on its way the pill keeps its label and waits (Mål 3):
+  // the optimistic update would otherwise flip it to «Tøm leste» at once, and a
+  // second tap could race the first one's rollback (#1394).
+  const pillBusy = markAllPending || clearReadPending;
+  const pillMarksAll = markAllPending ? true : clearReadPending ? false : hasUnread;
   const header = (
     <div className="flex items-center justify-between pb-1.5 pl-5 pr-3 pt-4">
       <h1 className="font-serif text-[28px] font-medium leading-[normal] text-text">
@@ -240,13 +248,13 @@ export function InboxClient({
       {items.length > 0 && (
         <button
           type="button"
-          onClick={hasUnread ? handleMarkAll : handleClearRead}
-          disabled={pillPending}
-          aria-busy={pillPending || undefined}
-          data-testid={hasUnread ? 'inbox-mark-all' : 'inbox-clear-read'}
+          onClick={pillMarksAll ? handleMarkAll : handleClearRead}
+          disabled={pillBusy}
+          aria-busy={pillBusy || undefined}
+          data-testid={pillMarksAll ? 'inbox-mark-all' : 'inbox-clear-read'}
           className="h-11 rounded-full border border-border bg-surface px-3.5 text-[13px] font-semibold leading-[normal] text-primary disabled:opacity-60"
         >
-          {hasUnread ? t('markAllAsRead') : t('clearRead')}
+          {pillMarksAll ? t('markAllAsRead') : t('clearRead')}
         </button>
       )}
     </div>
