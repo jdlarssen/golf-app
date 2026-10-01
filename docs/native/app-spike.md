@@ -2049,10 +2049,10 @@ for webbens `osloParts` (Hermes har ikke Oslo-sonen). For en spiller i Norge gir
 
 ### Tekst som linjer i nettleseren
 
-Designet står i nettleserens `normal` linjehøyde. Tekstene i kortet og radene bruker
-`frauncesLine`/`interLine`, og «▲»/«▼» er tegnet som en form (`FormArrow`), fordi iOS henter
-tegnet fra en bredere reservefont. Målt mot artboard-renderen i 3x ligger alle kanter og
-skillelinjer på samme punkt.
+Designet står i nettleserens `normal` linjehøyde. Fraunces tegnes med snittet for sin
+størrelse (`fraunces(vekt, størrelse)`, #2411), Inter med `interLine`, og «▲»/«▼» er tegnet som
+en form (`FormArrow`), fordi iOS henter tegnet fra en bredere reservefont. Målt mot
+artboard-renderen i 3x ligger alle kanter og skillelinjer på samme punkt.
 
 ## Startbilletten (#2255)
 
