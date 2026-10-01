@@ -29,6 +29,9 @@ export type ShortIdGame = {
   course_id: string | null;
   // #624 — banenavn for re-lokalisering av auto-genererte spillnavn ved visning.
   courses: { name: string } | null;
+  // #2266 — «{tee} tee» on the invitation card. Poster level, not roster;
+  // null when the game has no tee box (migration 0011).
+  tee_box: { name: string } | null;
   scheduled_tee_off_at: string | null;
   created_by: string | null;
   group_id: string | null;
@@ -62,7 +65,7 @@ export const getGameByShortId = cache(async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, entry_fee_kr, payment_link, prizes',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), tee_box:tee_boxes!games_tee_box_id_fkey(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at, entry_fee_kr, payment_link, prizes',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();
