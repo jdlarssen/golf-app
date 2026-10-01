@@ -3,6 +3,8 @@ import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { WolfChoice, WolfHoleChoice } from '@/lib/scoring/modes/types';
 
+const WOLF_CHOICES_SELECT = 'hole_number, wolf_user_id, choice, partner_user_id';
+
 /**
  * Tag-cached fetch av wolf_hole_choices for ett spill.
  *
@@ -21,7 +23,7 @@ async function fetchWolfChoices(gameId: string): Promise<WolfHoleChoice[]> {
   const supabase = getAdminClient();
   const { data, error } = await supabase
     .from('wolf_hole_choices')
-    .select('hole_number, wolf_user_id, choice, partner_user_id')
+    .select(WOLF_CHOICES_SELECT)
     .eq('game_id', gameId)
     .order('hole_number', { ascending: true });
 
@@ -41,7 +43,10 @@ async function fetchWolfChoices(gameId: string): Promise<WolfHoleChoice[]> {
 export async function getWolfChoices(gameId: string): Promise<WolfHoleChoice[]> {
   return unstable_cache(
     () => fetchWolfChoices(gameId),
-    ['wolf-choices', gameId],
+    // The select string is in the key (#2224), so a select change gives a new
+    // entry by itself. The cache holds the mapped `WolfHoleChoice` shape, though:
+    // change only the mapping above and the key must still be bumped by hand.
+    ['wolf-choices', WOLF_CHOICES_SELECT, gameId],
     { tags: [`game-${gameId}`], revalidate: 900 },
   )();
 }
