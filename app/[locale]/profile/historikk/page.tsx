@@ -145,18 +145,20 @@ export default async function HistorikkPage() {
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished')
-    .is('games.source_game_id', null);
+    .is('games.source_game_id', null)
+    // Only the Json/text columns with a narrower app type are overridden
+    // (#2224); every other field stays typed from the select, so a dropped or
+    // renamed column is a tsc error.
+    .overrideTypes<
+      Array<{
+        result_summary: ResultSummary | null;
+        games: { game_mode: GameMode; mode_config: GameModeConfig };
+      }>
+    >();
 
   if (gpError) throw gpError;
 
-  const rows = (gamePlayers ?? []) as unknown as Array<{
-    game_id: string;
-    tee_gender: ScoringGender | null;
-    course_handicap: number | null;
-    result_summary: ResultSummary | null;
-    score_differential: number | null;
-    games: GameRow;
-  }>;
+  const rows = gamePlayers ?? [];
 
   const gameIds = rows.map((r) => r.game_id);
   // #946 — course ids for the per-gender par lookup (achievements need par).

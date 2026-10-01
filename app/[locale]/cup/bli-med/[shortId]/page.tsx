@@ -107,14 +107,10 @@ export default async function CupBliMedPage({
         'scheduled_tee_off_at, courses:courses!tournament_plans_course_id_fkey(name)',
       )
       .eq('tournament_id', cup.id)
-      .maybeSingle<{
-        scheduled_tee_off_at: string | null;
-        courses: { name: string } | { name: string }[] | null;
-      }>();
+      .maybeSingle();
     if (planError) failRead('plan', planError);
     if (plan) {
-      const rel = plan.courses;
-      const courseName = (Array.isArray(rel) ? rel[0] : rel)?.name ?? null;
+      const courseName = plan.courses?.name ?? null;
       // #2270: a timestamptz, so Oslo-pinned. The datetime-local helper reads
       // the UTC server's local getters and showed 09:20 as 07:20.
       const teeOffParts = plan.scheduled_tee_off_at

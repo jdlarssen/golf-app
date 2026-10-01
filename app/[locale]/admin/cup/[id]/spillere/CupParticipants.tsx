@@ -29,12 +29,6 @@ type UserRel = {
   hcp_index: number | string;
 };
 
-// Supabase JS typer FK-joins som array selv på many-to-one — normaliser.
-function userOf(rel: UserRel | UserRel[] | null | undefined): UserRel | null {
-  if (!rel) return null;
-  return Array.isArray(rel) ? (rel[0] ?? null) : rel;
-}
-
 function displayNameOf(u: UserRel | null, unknownLabel: string): string {
   return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
 }
@@ -107,7 +101,7 @@ export async function CupParticipants({
 
   const participants: ParticipantRow[] = (participantRes.data ?? []).map(
     (row) => {
-      const u = userOf(row.users);
+      const u = row.users;
       return {
         userId: row.user_id,
         displayName: displayNameOf(u, unknownLabel),
