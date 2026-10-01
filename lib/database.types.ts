@@ -2368,6 +2368,13 @@ export type Database = {
       join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
       leave_club_league: { Args: { p_league_id: string }; Returns: string }
+      registration_seats_held: {
+        Args: { p_game_ids: string[]; p_seat_team_sizes: number[] }
+        Returns: {
+          game_id: string
+          seats: number
+        }[]
+      }
       remove_friend: { Args: { p_other: string }; Returns: string }
       respond_friend_request: {
         Args: { p_accept: boolean; p_request_id: string }
