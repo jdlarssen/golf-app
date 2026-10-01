@@ -21,7 +21,16 @@
 // Ingen «Logg ut» her: designet har ingen. Utloggingen ligger i «Personvern og
 // konto» når profilen er fullført.
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { nameInitials } from '../../../../lib/names/initials';
 import { fetchOnboardingGame, type OnboardingGame } from '../data/onboardingGame';
@@ -67,6 +76,9 @@ export function CompleteProfile({
   }, [userId]);
 
   const onSave = () => {
+    // Feilmeldingen står over feltene, som på nettsiden. Med tastaturet nede
+    // står den på skjermen, og skjermleseren får den lest opp.
+    Keyboard.dismiss();
     setPending(true);
     setFailure(null);
     void saveProfile({
@@ -86,6 +98,7 @@ export function CompleteProfile({
         }
         setPending(false);
         setFailure(result.reason);
+        AccessibilityInfo.announceForAccessibility(describeProfileSaveFailure(result.reason));
       })
       .catch((err: unknown) => {
         console.error('[CompleteProfile] lagring kastet', err);
