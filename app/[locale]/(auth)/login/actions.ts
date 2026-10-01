@@ -4,8 +4,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
-import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
+import { sendLoginCode } from '@/lib/auth/sendLoginCode';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
@@ -89,147 +88,27 @@ export async function sendCode(formData: FormData) {
     loginErrorRedirect('unknown', errorCtx);
   }
 
-  // Defense-in-depth on top of Supabase's built-in OTP throttle: a per-email
-  // and per-IP bucket on `admin_action_rate_limit`. Sits after the honeypot
-  // (cheaper short-circuit first) but before signInWithOtp so we don't pay
-  // Supabase quota on a known-abusive sender. Both bucket trips map to the
-  // same `rate_limited` error code so the response doesn't leak which limit
-  // hit.
-  const ip = await getClientIp();
-  const rl = await consumeLoginRateLimit({ email, ip });
-  if (!rl.ok) {
-    loginErrorRedirect('rate_limited', errorCtx);
-  }
-
-  // Self-registration is gated by an env flag so we can ramp it carefully
-  // in prod (kill-switch on abuse). When the flag is off, behaviour is
-  // identical to pre-#166: only emails with an open invitation row get
-  // `shouldCreateUser=true`. When on, any email reaches Supabase OTP and
-  // a new auth.users row is created on first verifyOtp.
-  const allowSelfReg =
-    process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true';
-
-  // #365: with open self-reg on, refuse known disposable / throwaway inbox
-  // providers regardless of invitation status. They're the cheap mass-
-  // account-creation vector (public, readable inboxes), and blocking them
-  // here also closes the spray-invite bypass — any logged-in user can
-  // friend-invite up to 10 addresses/day, so an "invited = exempt" rule
-  // would let a self-registered seed account whitelist disposable domains.
-  // Sits after rate-limit (a disposable spray still burns the IP bucket)
-  // and before the email_is_invited RPC + Supabase OTP (saves quota on a
-  // known-bad domain). Off-flag behaviour is unchanged.
-  if (allowSelfReg && isDisposableEmailDomain(email)) {
-    console.warn('[login/sendCode] disposable email rejected');
-    loginErrorRedirect('disposable_email', errorCtx);
-  }
-
-  const supabase = await getServerClient();
-
-  const { data: isInvited } = await supabase.rpc('email_is_invited', {
-    check_email: email,
-  });
-  const shouldCreateUser = Boolean(isInvited) || allowSelfReg;
-
-  const { error } = await supabase.auth.signInWithOtp({
+  // #2216: the gate itself — rate limit, the self-registration switch, the
+  // disposable-email block, the invitation lookup, GoTrue and the error
+  // mapping — lives in `sendLoginCode`, shared with the app's route
+  // (`app/api/auth/send-code`). This action only turns its answer into a
+  // redirect.
+  const result = await sendLoginCode({
+    supabase: await getServerClient(),
     email,
-    options: { shouldCreateUser },
+    ip: await getClientIp(),
   });
 
-  if (error) {
-    const msg = error.message?.toLowerCase() ?? '';
-    let code:
-      | 'rate_limited_quota'
-      | 'rate_limited_minute'
-      | 'user_not_found'
-      | 'invite_expired'
-      | 'unknown' = 'unknown';
-    if (msg.includes('email rate limit exceeded')) {
-      // #1434: the project-wide mail quota — NO mail was sent, unlike the
-      // 60-second throttle below where a code is already in the inbox. Both
-      // share error.code `over_email_send_rate_limit`, so the message text is
-      // the only discriminator, and this check MUST come before the generic
-      // heuristic: the quota string itself contains "rate".
-      code = 'rate_limited_quota';
-    } else if (
-      msg.includes('rate') ||
-      msg.includes('too many') ||
-      msg.includes('security purposes')
-    ) {
-      // #1347: Supabase's own OTP throttle is a 60-second gap between mails —
-      // a different wait from our 15-minute bucket above, which trips before
-      // this call. Separate code so the copy can name the actual wait.
-      code = 'rate_limited_minute';
-    } else if (
-      msg.includes('not found') ||
-      msg.includes('signups not allowed') ||
-      msg.includes('signups are disabled') ||
-      msg.includes('otp_disabled') ||
-      msg.includes('disabled')
-    ) {
-      code = 'user_not_found';
-    }
-
-    // #361: a "not found" can mean "never invited" OR "was invited, but it
-    // lapsed". email_is_invited already filters expired rows, so both land
-    // here. Look for a lapsed invitation so we can show "ask for a new one"
-    // instead of a dead-end "not registered". Best-effort — falls back to the
-    // generic code if the lookup throws.
-    if (code === 'user_not_found') {
-      try {
-        const admin = getAdminClient();
-        const { data: expiredInvite } = await admin
-          .from('invitations')
-          .select('id')
-          .filter('email', 'imatch', emailMatchPattern(email))
-          .is('accepted_at', null)
-          .not('expires_at', 'is', null)
-          .lte('expires_at', new Date().toISOString())
-          .limit(1)
-          .maybeSingle<{ id: string }>();
-        if (expiredInvite) {
-          code = 'invite_expired';
-        }
-      } catch (err) {
-        console.error('[login/sendCode] expired-invite lookup failed', err);
-      }
-    }
-
+  if (!result.ok) {
     // #1347: the 60-second throttle only fires when a code for this address
     // is already in the user's inbox, so the honest place to land is the code
     // field — regardless of whether the request came from step 1 or from
     // «Send ny kode». The copy («be om ny kode om ett minutt») is only true
     // there. `email` is non-empty here; the guard above redirects otherwise.
-    // (One known impostor remains: Supabase's IP-level `over_request_rate_limit`
-    // — "Too many requests…" — still matches the heuristic and lands here.)
-    if (code === 'rate_limited_minute') {
-      loginErrorRedirect(code, { ...errorCtx, step: 'verify' });
+    if (result.code === 'rate_limited_minute') {
+      loginErrorRedirect(result.code, { ...errorCtx, step: 'verify' });
     }
-
-    loginErrorRedirect(code, errorCtx);
-  }
-
-  // Best-effort: stamp opened_at on the matching pending invitation row so
-  // admins can see "has requested a code" vs "mail never acted on".
-  // Uses the service-role client because the user has no session yet at this
-  // point — RLS cannot grant write access to a pre-auth visitor.
-  // We only set it once (is null guard), so repeated OTP requests don't
-  // overwrite the first-open timestamp.
-  // postgrest-js returns a DB error instead of throwing it, so the error is
-  // read here; the catch only sees synchronous throws (missing env). 0 rows is
-  // normal: no invitation, or opened_at is already set.
-  try {
-    const adminClient = getAdminClient();
-    const { error: stampError } = await adminClient
-      .from('invitations')
-      .update({ opened_at: new Date().toISOString() })
-      .filter('email', 'imatch', emailMatchPattern(email))
-      .is('accepted_at', null)
-      .is('opened_at', null);
-    if (stampError) {
-      console.error('[login/sendCode] opened_at stamp failed', stampError);
-    }
-  } catch (err) {
-    console.error('[login/sendCode] opened_at stamp failed', err);
+    loginErrorRedirect(result.code, errorCtx);
   }
 
   const qs = new URLSearchParams({ step: 'verify', email });

@@ -14,6 +14,7 @@ import { VerifyCodeForm } from './_components/VerifyCodeForm';
 import { InviteContextCard } from './_components/InviteContextCard';
 import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
 import { resolvePasskeyAccess } from '@/lib/auth/passkeyFlag';
+import { selfRegistrationOpen } from '@/lib/auth/sendLoginCode';
 import {
   getInviteLoginContext,
   isInviteToken,
@@ -174,9 +175,7 @@ export default async function LoginPage({
                 defaultEmail={email}
                 next={next}
                 invite={invite}
-                allowSelfRegistration={
-                  process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true'
-                }
+                allowSelfRegistration={selfRegistrationOpen()}
               />
               <div className="mt-6 flex items-center gap-3" aria-hidden="true">
                 <span className="h-px flex-1 bg-border" />

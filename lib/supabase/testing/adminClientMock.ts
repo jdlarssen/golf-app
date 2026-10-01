@@ -31,7 +31,7 @@
  * `value` og tom `column` — leddet gjelder flere kolonner (#2200).
  */
 export type QueryFilter = {
-  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or' | 'gt' | 'gte' | 'lt';
+  op: 'eq' | 'in' | 'is' | 'not' | 'ilike' | 'imatch' | 'or' | 'gt' | 'gte' | 'lt' | 'lte';
   column: string;
   value: unknown;
 };
@@ -77,6 +77,8 @@ export interface QueryChain extends PromiseLike<QueryResponse> {
   /** Tidsvinduer (`hasFinishedRoundInKavalkadeYear`, #2265). */
   gte(column: string, value: unknown): QueryChain;
   lt(column: string, value: unknown): QueryChain;
+  /** Utløpte rader (`sendLoginCode`s oppslag etter en utløpt invitasjon, #2216). */
+  lte(column: string, value: unknown): QueryChain;
   ilike(column: string, value: unknown): QueryChain;
   /**
    * `.filter(kolonne, operator, verdi)`. Adressene slås opp slik
@@ -89,6 +91,8 @@ export interface QueryChain extends PromiseLike<QueryResponse> {
   or(filters: string): QueryChain;
   /** Sortering registreres ikke; sidevinduet står i `op.range`. */
   order(column: string, options?: unknown): QueryChain;
+  /** Registreres ikke: testen svarer med det antallet rader den vil. */
+  limit(count: number): QueryChain;
   range(from: number, to: number): QueryChain;
   returns(): QueryChain;
   single(): QueryChain;
@@ -100,7 +104,7 @@ export interface AdminClientMock {
   client: {
     auth: {
       getUser(jwt: string): Promise<{
-        data: { user: { id: string } | null };
+        data: { user: { id: string; email?: string | null } | null };
         error: { message: string } | null;
       }>;
     };
@@ -121,10 +125,11 @@ export interface AdminClientMock {
 
 export function createAdminClientMock(opts: {
   /**
-   * Token → bruker-id. Alt annet avvises nøyaktig som GoTrue gjør det:
-   * `{ data: { user: null }, error }`.
+   * Token → bruker-id, eller bruker-id med e-post (#2216: ruta etter
+   * innloggingen leser e-posten fra tokenet). Alt annet avvises nøyaktig som
+   * GoTrue gjør det: `{ data: { user: null }, error }`.
    */
-  tokens?: Record<string, string>;
+  tokens?: Record<string, string | { id: string; email: string | null }>;
   /**
    * Svaret på én spørring. Kaster `respond`, kaster kjeden — slik en ekte
    * nettverks- eller konfigurasjonsfeil ville gjort.
@@ -165,6 +170,7 @@ export function createAdminClientMock(opts: {
       gt: (column, value) => push('gt', column, value),
       gte: (column, value) => push('gte', column, value),
       lt: (column, value) => push('lt', column, value),
+      lte: (column, value) => push('lte', column, value),
       ilike: (column, value) => push('ilike', column, value),
       filter: (column, operator, value) => push(operator, column, value),
       in: (column, value) => push('in', column, value),
@@ -172,6 +178,7 @@ export function createAdminClientMock(opts: {
       not: (column, _operator, value) => push('not', column, value),
       or: (filters) => push('or', '', filters),
       order: () => api,
+      limit: () => api,
       range: (from, to) => {
         op.range = [from, to];
         return api;
@@ -202,10 +209,18 @@ export function createAdminClientMock(opts: {
       auth: {
         getUser: (jwt: string) => {
           getUserCalls.push(jwt);
-          const userId = tokens[jwt];
+          const entry = tokens[jwt];
+          // En ren id gir samme bruker som før (uten e-post), så eldre
+          // testfiler står urørt.
+          const user =
+            entry === undefined
+              ? null
+              : typeof entry === 'string'
+                ? { id: entry }
+                : { id: entry.id, email: entry.email };
           return Promise.resolve(
-            userId
-              ? { data: { user: { id: userId } }, error: null }
+            user
+              ? { data: { user }, error: null }
               : { data: { user: null }, error: { message: 'invalid JWT' } },
           );
         },
