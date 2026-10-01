@@ -1,6 +1,6 @@
 // #2256 PR 3: «Del bag-taggen» tar bildet og åpner arket bare når de native
 // delene finnes, og en feil blir et rolig svar, aldri et kast.
-import { NativeModules, TurboModuleRegistry } from 'react-native';
+import { NativeModules, Platform, Share, TurboModuleRegistry } from 'react-native';
 import { canShareImage, shareViewImage, toFileUrl } from './shareImage';
 
 const mockCaptureRef = jest.fn();
@@ -49,6 +49,7 @@ beforeEach(() => {
   jest.restoreAllMocks();
   mockCaptureRef.mockReset().mockResolvedValue('/tmp/ReactNative/bag-tag.png');
   mockShareAsync.mockReset().mockResolvedValue(undefined);
+  jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
   nativeParts({ viewShot: true, sharing: true });
 });
 
@@ -66,9 +67,23 @@ describe('canShareImage', () => {
 });
 
 describe('shareViewImage', () => {
-  it('tar et PNG av kortet og deler det som fil', async () => {
-    expect(await shareViewImage(CARD)).toEqual({ ok: true });
+  it('tar et PNG av kortet og deler det som fil med iOS-arket', async () => {
+    expect(Platform.OS).toBe('ios');
+    expect(await shareViewImage(CARD)).toEqual({ ok: true, shared: true });
     expect(mockCaptureRef).toHaveBeenCalledWith(CARD, { format: 'png', result: 'tmpfile' });
+    expect(Share.share).toHaveBeenCalledWith({ url: 'file:///tmp/ReactNative/bag-tag.png' });
+    expect(mockShareAsync).not.toHaveBeenCalled();
+  });
+
+  // #2265: Kavalkaden teller bare en deling som ble gjort, som webben.
+  it('sier fra når spilleren lukket arket uten å dele', async () => {
+    jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.dismissedAction });
+    expect(await shareViewImage(CARD)).toEqual({ ok: true, shared: false });
+  });
+
+  it('bruker expo-sharing utenfor iOS, der svaret ikke sier noe', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    expect(await shareViewImage(CARD)).toEqual({ ok: true, shared: true });
     expect(mockShareAsync).toHaveBeenCalledWith('file:///tmp/ReactNative/bag-tag.png', {
       UTI: 'public.png',
       mimeType: 'image/png',
@@ -85,7 +100,7 @@ describe('shareViewImage', () => {
   it('svarer rolig når bildet eller arket feiler', async () => {
     mockCaptureRef.mockRejectedValueOnce(new Error('ingen visning'));
     expect(await shareViewImage(CARD)).toEqual({ ok: false });
-    mockShareAsync.mockRejectedValueOnce(new Error('ingen visningskontroller'));
+    jest.spyOn(Share, 'share').mockRejectedValueOnce(new Error('ingen visningskontroller'));
     expect(await shareViewImage(CARD)).toEqual({ ok: false });
   });
 

@@ -1,7 +1,6 @@
 // #2265 PR 2: «Del kortet». Type C — knappen finnes bare med de native delene,
-// bildet tas av deleversjonen, og delingen telles når arket har åpnet. Hva
-// bildet og arket gjør, er `lib/shareImage.test.ts` sitt.
-/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
+// bildet tas av deleversjonen, og delingen telles bare når spilleren delte.
+// Hva bildet og arket gjør, er `lib/shareImage.test.ts` sitt.
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { buildKavalkadeCardModel } from '../../../../../lib/kavalkade/cardModel';
 import { logKavalkadeShare } from '../../data/kavalkade';
@@ -23,7 +22,7 @@ const model = buildKavalkadeCardModel(makeKavalkadeFacts(), 'best-round', {
 beforeEach(() => {
   jest.clearAllMocks();
   (canShareImage as jest.Mock).mockReturnValue(true);
-  (shareViewImage as jest.Mock).mockResolvedValue({ ok: true });
+  (shareViewImage as jest.Mock).mockResolvedValue({ ok: true, shared: true });
 });
 
 it('draws the share version with the web’s image text, out of sight', async () => {
@@ -35,11 +34,20 @@ it('draws the share version with the web’s image text, out of sight', async ()
   expect(image).toHaveTextContent(/tornygolf\.noFyr opp golfturneringen på et par minutter/);
 });
 
-it('shares the picture and counts the share once the sheet has opened', async () => {
+it('shares the picture and counts the share when the player shared it', async () => {
   await render(<ShareKavalkadeCardButton year={2026} model={model} />);
   await fireEvent.press(screen.getByRole('button', { name: 'Del kortet' }));
   await waitFor(() => expect(logKavalkadeShare).toHaveBeenCalledWith(2026, 'best-round'));
   expect(shareViewImage).toHaveBeenCalledTimes(1);
+});
+
+it('counts nothing when the player closed the sheet without sharing', async () => {
+  (shareViewImage as jest.Mock).mockResolvedValue({ ok: true, shared: false });
+  await render(<ShareKavalkadeCardButton year={2026} model={model} />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Del kortet' }));
+  await waitFor(() => expect(shareViewImage).toHaveBeenCalledTimes(1));
+  expect(logKavalkadeShare).not.toHaveBeenCalled();
+  expect(screen.queryByTestId('share-kavalkade-error-best-round')).toBeNull();
 });
 
 it('says so and counts nothing when the picture or the sheet fails', async () => {
