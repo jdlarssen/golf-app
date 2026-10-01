@@ -16,7 +16,8 @@ størrelse den bruker, laget av den variable Fraunces (OFL, se
   vekt 600, med bare sifrene 0–9.
 
 Kilden er låst til google/fonts `ac502d8e` (fonten sier `Version 1.000`), og
-filene lages byte for byte likt med `make_fraunces_fonts.py` (fontTools 4.x):
+filene lages byte for byte likt med `make_fraunces_fonts.py` og fontTools
+4.66.1 (`pip install fonttools==4.66.1`):
 
 ```sh
 curl -L -o Fraunces-VF.ttf "https://raw.githubusercontent.com/google/fonts/ac502d8eff76ef4d9477cdcc8ef7d0c84fde5372/ofl/fraunces/Fraunces%5BSOFT,WONK,opsz,wght%5D.ttf"

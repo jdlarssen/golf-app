@@ -26,7 +26,7 @@ import { shortDisplayName } from '../../lib/display';
 import { MAX_TICKET_COMPANIONS, companionsOf } from '../../lib/flightRoster';
 import { rosterNames } from '../../lib/gameTicket';
 import { rosterA11y } from '../../lib/ticketCopy';
-import { cardShadow, FONTS, fraunces, useTheme, withAlpha } from '../../theme';
+import { cardShadow, FONTS, fraunces, interLine, useTheme, withAlpha } from '../../theme';
 import { FlightAvatars } from '../home/FlightAvatars';
 
 export interface TicketField {
@@ -195,6 +195,7 @@ const EDGE = 1;
  */
 const TITLE = fraunces(500, 30, 34.5, { multiline: true });
 const FIELD_VALUE = fraunces(600, 24, 29);
+const HEADER_LINE = interLine(13, 16, { multiline: true });
 
 const styles = StyleSheet.create({
   // Avstanden over billetten gir skjermen (8 pt under toppen, som i designet).
@@ -209,7 +210,13 @@ const styles = StyleSheet.create({
   // Linjehøydene er det nettleseren gir designets `line-height: normal`.
   badgeText: { fontSize: 11, lineHeight: 14, fontFamily: FONTS.sansSemiBold },
   title: { ...TITLE, marginTop: 8 + TITLE.marginTop },
-  headerLine: { fontSize: 13, fontFamily: FONTS.sans, opacity: 0.9, marginTop: 4 },
+  // Inter 13 på nettleserens `normal` (16), 4 pt under tittelen, som i designet.
+  headerLine: {
+    ...HEADER_LINE,
+    fontFamily: FONTS.sans,
+    opacity: 0.9,
+    marginTop: 4 + HEADER_LINE.marginTop,
+  },
   fields: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 16 },
   field: { flex: 1 },
   fieldLabel: {

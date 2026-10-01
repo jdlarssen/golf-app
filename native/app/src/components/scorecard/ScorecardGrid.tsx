@@ -180,6 +180,11 @@ function Half({
   const cellValue = (cell: ScorecardCell, kind: ScorecardRowKind) => {
     if (kind === 'strokes') {
       if (cell.strokes == null) return <Text style={mutedNum}>—</Text>;
+      // Uten form står tallet øverst i cellen i sin egen linje (Fraunces 15 på
+      // nettleserens `normal`, 19), som i designet, ikke midt i formens 22.
+      if (scoreShapeRings(cell.strokes, cell.par) === 0) {
+        return <Text style={strokeNum}>{cell.strokes}</Text>;
+      }
       const size = shapeSize(cell.strokes, cell.par);
       // Den ekstra ringen vokser utover til alle kanter, også oppover, som i
       // designet: den indre formen står der en enkel form ville stått.
