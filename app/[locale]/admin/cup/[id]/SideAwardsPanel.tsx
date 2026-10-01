@@ -52,6 +52,11 @@ type Props = {
   team2Name: string;
   configEditable: boolean;
   showWinnerRegistration: boolean;
+  /**
+   * #2214: the cup is finished. Side awards can still be corrected, and the
+   * winner is worked out again from the points, so the panel says so.
+   */
+  cupFinished?: boolean;
 };
 
 /** Snapshot-rader → config-rader for redigerbar state og låst recap. */
@@ -79,6 +84,7 @@ export function SideAwardsPanel({
   team2Name,
   configEditable,
   showWinnerRegistration,
+  cupFinished = false,
 }: Props) {
   const t = useTranslations('cup.sideAwards');
   const locale = useLocale();
@@ -275,6 +281,11 @@ export function SideAwardsPanel({
           <h3 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
             {t('winnersHeading')}
           </h3>
+          {cupFinished && (
+            <p className="font-sans text-sm text-muted mb-2" data-testid="side-awards-finished-hint">
+              {t('finishedHint')}
+            </p>
+          )}
           <div className="space-y-2">
             {initialAwards.map((a) =>
               a.kind === 'gir' ? (

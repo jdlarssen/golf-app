@@ -5345,6 +5345,7 @@
       "savingPending": "Lagrer …",
       "saved": "Sidepoengene er lagret.",
       "winnersHeading": "Etter runden",
+      "finishedHint": "Cupen er avsluttet. Retter du et sidepoeng, regnes vinneren på nytt.",
       "winnerLabel": "Vinner",
       "winnerPlaceholder": "— velg vinner —",
       "winnerNoneOption": "Ingen kvalifiserte",
