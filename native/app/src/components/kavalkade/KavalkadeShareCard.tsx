@@ -2,14 +2,16 @@
 // sender. Oppsettet er webbens PNG-rute
 // (`app/[locale]/kavalkade/[year]/card/[kind]/route.tsx`) i en tredjedel av
 // størrelsen: kortet er 360 pt bredt, og telefonens 3x gir de 1080 pikslene
-// webben tegner. Hvert mål under er rutas pikseltall delt på 3.
+// webben tegner. Hvert mål under er rutas pikseltall delt på telefonens skala,
+// så bildet blir 1080 piksler bredt også på en 2x-telefon (view-shot tar
+// bildet i telefonens skala).
 //
 // Innholdet kommer fra `buildKavalkadeCardModel`, som på webben, og bredden og
 // høyden fra `cardImageLayout.ts`. Fargene er merkepaletten for bilder
 // (`lib/og/palette.ts`), som ikke bytter med drakten. Webben tegner med
 // Satori og Googles statiske Fraunces, som har optisk størrelse 14; appen
 // bruker derfor snittene for 14 pt i rutas størrelser.
-import { StyleSheet, Text, View } from 'react-native';
+import { PixelRatio, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import {
   BALL_CENTER_X_EM,
@@ -36,29 +38,48 @@ import {
   TAUPE,
 } from '../../../../../lib/og/palette';
 import { KAVALKADE_SHARE_TEXT } from '../../lib/kavalkadeCopy';
-import { FONTS, frauncesFamily } from '../../theme';
+import { FONTS, frauncesFamily, frauncesLine } from '../../theme';
 
-/** Rutas piksler per punkt her. */
-const SCALE = 3;
+/** Rutas piksler per punkt her: telefonens skala. */
+const SCALE = PixelRatio.get();
 /** Bildets bredde i punkter. */
 export const SHARE_CARD_WIDTH = KAVALKADE_CARD_IMAGE_WIDTH / SCALE;
 
 const px = (value: number) => value / SCALE;
 
+/**
+ * Fraunces-linja Satori tegner, i punkter her: linjeboksen fra `frauncesLine`
+ * regnet i rutas piksler (der én piksel er én skjermpiksel her) og delt på
+ * skalaen, så grunnlinja står der Satori og Chromium har den. Uten den legger
+ * iOS grunnlinja `descent` over bunnen av linja, og tallet sto 9 px for høyt.
+ */
+function satoriLine(size: number, lineHeight: number, multiline = false) {
+  const line = frauncesLine(size, lineHeight, { multiline, pixelRatio: 1 });
+  return {
+    fontSize: px(line.fontSize),
+    marginTop: px(line.marginTop),
+    marginBottom: px(line.marginBottom),
+    ...(line.lineHeight !== undefined ? { lineHeight: px(line.lineHeight) } : {}),
+  };
+}
+
 /** Satori sin grunnlinje i ordmerket (`lib/og/wordmark.tsx`). */
 const SATORI_BASELINE_EM = 0.86;
 
-/** Ordmerket «Tørny» med gullballen over T-en, som `OgWordmark`. */
-function ShareWordmark({ fontSize }: { fontSize: number }) {
+/** Ordmerket «Tørny» med gullballen over T-en, som `OgWordmark` (56 px, linje 1). */
+function ShareWordmark() {
+  const fontSize = px(56);
   const d = BALL_DIAMETER_EM * fontSize;
   const clearance = Math.max(0, BALL_DIAMETER_EM + T_CAP_HEIGHT_EM - SATORI_BASELINE_EM) * fontSize;
   const shaded = d * SCALE >= BALL_SHADING_MIN_PX;
   return (
     <View style={{ paddingTop: clearance }}>
-      <Text style={[styles.wordmark, { fontSize, lineHeight: fontSize }]}>Tørny</Text>
+      <Text style={styles.wordmark}>Tørny</Text>
+      {/* Flaten er to piksler større enn ballen: en flate på 14,56 px rundes
+          ned og klipper sirkelen. Sirkelen står der den står. */}
       <Svg
-        width={d}
-        height={d}
+        width={d + 2 / SCALE}
+        height={d + 2 / SCALE}
         style={{
           position: 'absolute',
           left: (BALL_CENTER_X_EM - BALL_DIAMETER_EM / 2) * fontSize,
@@ -80,11 +101,11 @@ function ShareWordmark({ fontSize }: { fontSize: number }) {
 }
 
 export function KavalkadeShareCard({ model }: { model: KavalkadeCardModel }) {
-  const heroSize = px(heroFontSize(model.hero.value));
+  const heroSize = heroFontSize(model.hero.value);
   return (
     <View style={[styles.card, { height: px(computeCardHeight(model)) }]} testID={`kavalkade-share-${model.kind}`}>
       <View style={styles.header}>
-        <ShareWordmark fontSize={px(56)} />
+        <ShareWordmark />
         <View style={styles.pill}>
           <Text style={styles.eyebrow}>{model.eyebrow}</Text>
         </View>
@@ -95,7 +116,7 @@ export function KavalkadeShareCard({ model }: { model: KavalkadeCardModel }) {
       <View style={styles.rule} />
 
       <View style={styles.hero}>
-        <Text style={[styles.heroValue, { fontSize: heroSize, lineHeight: heroSize * 1.06 }]}>
+        <Text style={[styles.heroValue, satoriLine(heroSize, heroSize * 1.06, true)]}>
           {model.hero.value}
         </Text>
         {model.hero.caption ? <Text style={styles.caption}>{model.hero.caption}</Text> : null}
@@ -117,10 +138,12 @@ export function KavalkadeShareCard({ model }: { model: KavalkadeCardModel }) {
   );
 }
 
+const TITLE = satoriLine(64, 64 * 1.12, true);
+
 const styles = StyleSheet.create({
   card: { width: SHARE_CARD_WIDTH, backgroundColor: LINEN, padding: px(72) },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  wordmark: { fontFamily: frauncesFamily(500, 14), color: FOREST },
+  wordmark: { ...satoriLine(56, 56), fontFamily: frauncesFamily(500, 14), color: FOREST },
   pill: {
     backgroundColor: CHAMP_PILL,
     borderRadius: 999,
@@ -128,13 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: px(28),
   },
   eyebrow: { fontFamily: FONTS.sans, fontSize: px(28), color: CHAMP_DARK },
-  title: {
-    fontFamily: frauncesFamily(600, 14),
-    fontSize: px(64),
-    lineHeight: px(64) * 1.12,
-    color: FOREST,
-    marginTop: px(36),
-  },
+  title: { ...TITLE, fontFamily: frauncesFamily(600, 14), color: FOREST, marginTop: TITLE.marginTop + px(36) },
   rule: { height: px(2), backgroundColor: HAIRLINE, marginTop: px(32), marginBottom: px(8) },
   hero: {
     backgroundColor: CHAMP_TINT,
