@@ -8,9 +8,11 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
 /**
  * `default` is the pill every screen has used. `compact` is the terminliste's
  * row button (#2258): exactly 44 px high, 13 px / 600, no lift and no shadow,
- * so it sits flush at the end of a list row.
+ * so it sits flush at the end of a list row. `large` is the new-game wizard's
+ * «Neste» (#2426): 52 px high, 16 px / 600, no lift or shadow, and a disabled
+ * primary turns hairline-beige with muted text instead of fading.
  */
-type Size = 'default' | 'compact';
+type Size = 'default' | 'compact' | 'large';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
 // hover-lift stay synchronised. Variant-specific colors live in VARIANTS.
@@ -42,10 +44,22 @@ const COMPACT_VARIANTS: Record<Variant, string> = {
   outline: 'px-3 border border-primary bg-surface text-primary hover:bg-primary-soft',
 };
 
+const LARGE_BASE =
+  'inline-flex items-center justify-center h-[52px] px-[18px] rounded-full text-base font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed';
+
+const LARGE_VARIANTS: Record<Variant, string> = {
+  primary:
+    'bg-primary hover:bg-primary-hover text-white dark:text-bg disabled:bg-border disabled:text-muted dark:disabled:text-muted',
+  secondary: 'bg-transparent border border-border hover:bg-primary-soft text-text disabled:opacity-50',
+  danger: 'bg-danger hover:opacity-90 text-white dark:text-bg disabled:opacity-50',
+  ghost: 'bg-transparent hover:bg-primary-soft text-text disabled:opacity-50',
+  outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft disabled:opacity-50',
+};
+
 function buttonClasses(variant: Variant, size: Size): string {
-  return size === 'compact'
-    ? `${COMPACT_BASE} ${COMPACT_VARIANTS[variant]}`
-    : `${BASE_CLASSES} ${VARIANTS[variant]}`;
+  if (size === 'compact') return `${COMPACT_BASE} ${COMPACT_VARIANTS[variant]}`;
+  if (size === 'large') return `${LARGE_BASE} ${LARGE_VARIANTS[variant]}`;
+  return `${BASE_CLASSES} ${VARIANTS[variant]}`;
 }
 
 export function Button({
