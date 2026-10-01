@@ -16,6 +16,7 @@ import {
   trimToWholeDays,
   type InboxRow,
 } from '@/lib/notifications/inboxSections';
+import { readInChunks } from '@/lib/notifications/inboxReads';
 import type { NotificationPayload } from '@/lib/notifications/types';
 import type { ResultSummary } from '@/lib/scoring/resultSummary';
 import { InboxClient } from './InboxClient';
@@ -30,7 +31,10 @@ function gameIdsOf(rows: InboxRow[], kinds: ReadonlySet<string>, unreadOnly = fa
   const ids = new Set<string>();
   for (const row of rows) {
     if (!kinds.has(row.kind) || (unreadOnly && row.read_at != null)) continue;
-    ids.add((row.payload as { game_id: string }).game_id);
+    // A payload without a game id (only possible through a hand-edited row)
+    // must not put `undefined` into an `.in()` list.
+    const id = (row.payload as { game_id?: unknown }).game_id;
+    if (typeof id === 'string') ids.add(id);
   }
   return [...ids];
 }
@@ -96,17 +100,13 @@ export default async function InboxPage() {
   const signupGameIds = collectSignupGameIds(notifications);
   const finishedGameIds = gameIdsOf(notifications, new Set(['game_finished']));
   const lookupGameIds = [...new Set([...signupGameIds, ...finishedGameIds])];
-  let games: { id: string; status: string; scheduled_tee_off_at: string | null }[] = [];
-  if (lookupGameIds.length > 0) {
-    const { data, error } = await getAdminClient()
-      .from('games')
-      .select('id, status, scheduled_tee_off_at')
-      .in('id', lookupGameIds);
-    // A failed lookup would stamp every signup varsel stale — and archive it
-    // (#1393). Error boundary, not a guess.
-    if (error) throw error;
-    games = data ?? [];
-  }
+  // Every `.in()` below goes in slices of 100: the inbox reads up to 600
+  // rows, and a list of a few hundred ids overflows the request URL (#2263).
+  // A failed lookup would stamp every signup varsel stale — and archive it
+  // (#1393). readInChunks throws to the error boundary instead of guessing.
+  const games = await readInChunks(lookupGameIds, (slice) =>
+    getAdminClient().from('games').select('id, status, scheduled_tee_off_at').in('id', slice),
+  );
 
   let visible = notifications;
   if (signupGameIds.length > 0) {
@@ -136,39 +136,32 @@ export default async function InboxPage() {
     return id ? [id] : [];
   });
 
-  const [ownRes, cardsRes, requestsRes] = await Promise.all([
-    ownGameIds.length > 0
-      ? supabase
-          .from('game_players')
-          .select('game_id, result_summary, paid_at, submitted_at')
-          .eq('user_id', userId)
-          .in('game_id', ownGameIds)
-          .overrideTypes<Array<{ result_summary: ResultSummary | null }>>()
-      : Promise.resolve({ data: [], error: null }),
+  const [own, cards, requests] = await Promise.all([
+    readInChunks(ownGameIds, (slice) =>
+      supabase
+        .from('game_players')
+        .select('game_id, result_summary, paid_at, submitted_at')
+        .eq('user_id', userId)
+        .in('game_id', slice)
+        .overrideTypes<Array<{ result_summary: ResultSummary | null }>>(),
+    ),
     // RLS «game_players select shared game»: the cards in games you play in.
-    peerGameIds.length > 0
-      ? supabase
-          .from('game_players')
-          .select('game_id, user_id, submitted_at, approved_at')
-          .in('game_id', peerGameIds)
-      : Promise.resolve({ data: [], error: null }),
+    readInChunks(peerGameIds, (slice) =>
+      supabase
+        .from('game_players')
+        .select('game_id, user_id, submitted_at, approved_at')
+        .in('game_id', slice),
+    ),
     // Admin client, but only for request ids from the user's own varsler.
-    requestIds.length > 0
-      ? getAdminClient()
-          .from('game_registration_requests')
-          .select('id, status')
-          .in('id', requestIds)
-      : Promise.resolve({ data: [], error: null }),
+    readInChunks(requestIds, (slice) =>
+      getAdminClient().from('game_registration_requests').select('id, status').in('id', slice),
+    ),
   ]);
-  if (ownRes.error) throw ownRes.error;
-  if (cardsRes.error) throw cardsRes.error;
-  if (requestsRes.error) throw requestsRes.error;
 
-  const own = ownRes.data ?? [];
   const settledIds = findSettledActionIds(visible, {
     viewerId: userId,
-    requestStatus: new Map((requestsRes.data ?? []).map((r) => [r.id, r.status as string])),
-    cards: cardsRes.data ?? [],
+    requestStatus: new Map(requests.map((r) => [r.id, r.status as string])),
+    cards,
     own: new Map(own.map((r) => [r.game_id, { paid_at: r.paid_at, submitted_at: r.submitted_at }])),
   });
 
