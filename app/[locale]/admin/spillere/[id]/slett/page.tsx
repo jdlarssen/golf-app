@@ -10,7 +10,6 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getDeleteBlockReason } from '@/lib/users/deleteAccount';
-import type { AppLocale } from '@/i18n/routing';
 import { deleteUser } from './actions';
 import { getAdminClient } from '@/lib/supabase/admin';
 
@@ -27,7 +26,7 @@ export default async function DeletePlayerPage({
   await requireAdmin(supabase);
   const adminUserId = await getProxyVerifiedUserId();
 
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
 
   const { data: target } = await getAdminClient()
     .from('users')
@@ -52,17 +51,13 @@ export default async function DeletePlayerPage({
       break;
     case 'admin_account':
       redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
-      break;
     case 'active_engagements':
       redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
-      break;
     case 'sole_club_owner':
       redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
-      break;
     // Sjekken fikk ikke svar fra basen → vis ikke slette-knappen.
     case 'check_failed':
       redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
-      break;
     default: {
       const unhandled: never = blockReason;
       throw new Error(`unhandled delete check outcome: ${String(unhandled)}`);
@@ -75,8 +70,8 @@ export default async function DeletePlayerPage({
     .eq('user_id', id);
   const hasPlayed = (gamePlayerCount ?? 0) > 0;
 
-  const displayName = target!.name?.trim() || target!.email;
-  const firstName = target!.name?.trim().split(/\s+/)[0] || 'Spilleren';
+  const displayName = target.name?.trim() || target.email;
+  const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
   const tDelete = await getTranslations('admin.players.delete');
   const tNav = await getTranslations('admin.nav');
 
@@ -95,8 +90,8 @@ export default async function DeletePlayerPage({
         </h1>
         <p className="font-sans text-[14px] leading-relaxed text-text">
           {hasPlayed
-            ? tDelete('bodyPlayed', { email: target!.email, firstName })
-            : tDelete('body', { email: target!.email, firstName })}
+            ? tDelete('bodyPlayed', { email: target.email, firstName })
+            : tDelete('body', { email: target.email, firstName })}
         </p>
         <p className="mt-2 font-sans text-[13px] leading-relaxed text-muted">
           {tDelete('cannotUndo')}
@@ -105,7 +100,7 @@ export default async function DeletePlayerPage({
 
       <div className="mt-6 flex flex-col gap-2.5">
         <form action={deleteUser}>
-          <input type="hidden" name="id" value={target!.id} />
+          <input type="hidden" name="id" value={target.id} />
           <SubmitButton
             className="w-full"
             style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}

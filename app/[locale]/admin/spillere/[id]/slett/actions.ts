@@ -8,11 +8,10 @@ import {
   deleteOrAnonymizeUser,
   getDeleteBlockReason,
 } from '@/lib/users/deleteAccount';
-import type { AppLocale } from '@/i18n/routing';
 import { getAdminClient } from '@/lib/supabase/admin';
 
 export async function deleteUser(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const id = String(formData.get('id') ?? '');
   if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
 
@@ -34,7 +33,7 @@ export async function deleteUser(formData: FormData) {
     .eq('id', id)
     .maybeSingle();
   if (!target) redirect({ href: '/admin/spillere?error=unknown', locale });
-  const targetName = target!.name?.trim() || target!.email;
+  const targetName = target.name?.trim() || target.email;
 
   // #1012: delt blokk-regel med selv-slett — deltakelse i eller arrangering av
   // noe pågående blokkerer (erstatter den gamle still_has_games-blokken;
@@ -47,18 +46,14 @@ export async function deleteUser(formData: FormData) {
       break;
     case 'admin_account':
       redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
-      return;
     case 'active_engagements':
       redirect({ href: `/admin/spillere/${id}?error=target_active`, locale });
-      return;
     // #1910: også admin må ordne eierskapet i klubben først — en omgåelse her
     // ville gjenskapt den eierløse klubben.
     case 'sole_club_owner':
       redirect({ href: `/admin/spillere/${id}?error=target_sole_club_owner`, locale });
-      return;
     case 'check_failed':
       redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
-      return;
     default: {
       const unhandled: never = outcome;
       throw new Error(`unhandled delete check outcome: ${String(unhandled)}`);
