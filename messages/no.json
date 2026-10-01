@@ -63,7 +63,7 @@
     "emptyHeading": "Ingen nye varsler.",
     "emptyBody": "Når noen inviterer deg, leverer kort eller avslutter et spill du er med i, dukker varselet opp her.",
     "cleanPullQuote": "Innboksen er ren.",
-    "markAllAsRead": "Marker alle som lest",
+    "markAllAsRead": "Marker alt lest",
     "markingPending": "Markerer …",
     "clearRead": "Tøm leste",
     "clearingPending": "Tømmer …",
@@ -230,6 +230,65 @@
       "unassigned_teams": "noen spillere står uten lag",
       "unassigned_flights": "noen spillere står uten flight",
       "default": "åpne spillet for å se hva som mangler"
+    },
+    "emptyFilter": "Ingenting her nå.",
+    "filters": {
+      "label": "Vis varsler",
+      "all": "Alle",
+      "action": "Krever handling",
+      "actionCount": "Krever handling · {count}",
+      "friends": "Venner"
+    },
+    "sections": {
+      "action": "Krever handling",
+      "today": "I dag",
+      "earlier": "Tidligere"
+    },
+    "buttons": {
+      "review": "Se over",
+      "approve": "Godta",
+      "reject": "Avslå",
+      "deliver": "Lever",
+      "fixCard": "Rett kortet",
+      "reply": "Svar",
+      "inviteNew": "Inviter ny",
+      "confirm": "Bekreft",
+      "seeMissing": "Se hva som mangler",
+      "seePayment": "Se betaling"
+    },
+    "board": {
+      "approvalTitle": "{count} scorekort venter på deg",
+      "deliveredBy": "{names} har levert",
+      "moreNames": "{count} til",
+      "somePlayers": "{count} spillere",
+      "teeOff": "{date} kl. {time}",
+      "team": "Lag {teamName}",
+      "quoted": "«{message}»",
+      "deliveredCount": "{count} scorekort levert",
+      "deliveredOne": "{name} leverte scorekortet",
+      "newSignups": "{count} nye påmeldinger",
+      "signups": "{count} påmeldinger",
+      "signedUp": "{name} meldte seg på",
+      "latest": "sist {time}",
+      "friendViaLink": "{name} la deg til som venn",
+      "friendViaAccept": "{name} godtok venneforespørselen din"
+    },
+    "readTitles": {
+      "deliverReminder": "Påminnelse om scorekortet",
+      "deliverReminderKept": "Påminnelse om kortene du har ført",
+      "scorecardRejected": "Scorekortet ble sendt i retur",
+      "friendRequest": "{actorName} sendte deg en venneforespørsel",
+      "teamInvite": "{invitedByName} inviterte deg til {teamName}",
+      "clubJoinRequest": "{requesterName} ba om å bli med i klubben",
+      "paymentReminder": "Påminnelse om startkontingenten"
+    },
+    "status": {
+      "approved": "{name} er med i {gameName}",
+      "approvedTeam": "Lag {teamName} er med i {gameName}",
+      "rejected": "{name} fikk beskjed om at det ble nei",
+      "rejectedTeam": "Lag {teamName} fikk beskjed om at det ble nei",
+      "alreadyDecided": "Den er allerede avgjort",
+      "forbidden": "Du har ikke tilgang til å svare på denne påmeldingen."
     }
   },
   "profile": {
