@@ -167,6 +167,9 @@
   --invitation-page-bg: #efe9da;
   --invitation-paper: #fbf9f3;
   --invitation-field-border: #cfc7b3;
+  /* The artboard's placeholder is the browser default (#757575 light,
+   * #a9a9a9 dark in Chromium), pinned so every browser shows it. */
+  --invitation-placeholder: #757575;
   --invitation-avatar-1: #1b4332;
   --invitation-avatar-2: #2d5a40;
   --invitation-avatar-3: #7daa8a;
@@ -304,6 +307,7 @@
     --invitation-page-bg: var(--bg);
     --invitation-paper: var(--surface);
     --invitation-field-border: #4b5e51;
+    --invitation-placeholder: #a9a9a9;
     --invitation-avatar-1: #2d5a40;
     --invitation-avatar-2: #5a8a66;
     --invitation-avatar-3: #94bf96;
@@ -393,6 +397,7 @@
   --invitation-page-bg: var(--bg);
   --invitation-paper: var(--surface);
   --invitation-field-border: #4b5e51;
+  --invitation-placeholder: #a9a9a9;
   --invitation-avatar-1: #2d5a40;
   --invitation-avatar-2: #5a8a66;
   --invitation-avatar-3: #94bf96;

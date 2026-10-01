@@ -132,7 +132,7 @@ function FormBody({
           labelClassName:
             'block text-[13px] font-semibold leading-[normal] text-text mb-1.5',
           inputClassName:
-            'h-[52px] !border-[var(--invitation-field-border)]',
+            'h-[52px] !border-[var(--invitation-field-border)] placeholder:text-[var(--invitation-placeholder)]!',
         })}
       />
       {allowSelfRegistration && !invite && (
@@ -141,11 +141,11 @@ function FormBody({
         </p>
       )}
       {invite ? (
-        // `!`: Tailwind writes tracking-normal and shadow-none before the
-        // Button base's tracking-tight and shadow-sm.
+        // `!`: Tailwind writes tracking-normal before the Button base's
+        // tracking-tight; box-shadow is `none` outright, as on the artboard.
         <Button
           type="submit"
-          className="w-full h-[52px] !font-semibold !tracking-normal !shadow-none"
+          className="w-full h-[52px] !font-semibold !tracking-normal ![box-shadow:none]"
         >
           {t('submitButton')}
         </Button>
