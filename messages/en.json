@@ -886,7 +886,6 @@
       },
       "players": {
         "headingDefault": "2. Players",
-        "headingWizard": "Who is playing?",
         "pendingLabel": "Invited player",
         "waitingChip": "Waiting",
         "searchLabel": "Search players",

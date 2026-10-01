@@ -126,10 +126,11 @@ export function IntentSelector({
 
   return (
     <fieldset disabled={disabled}>
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {t('legend')}
-      </legend>
-      <div className="mt-2 grid grid-cols-2 gap-3">
+      {/* #2260: the step's title above says the same («Hva slags
+          arrangement?»), so the legend only names the group for screen
+          readers. */}
+      <legend className="sr-only">{t('legend')}</legend>
+      <div className="grid grid-cols-2 gap-3">
         {tiles.map((tile) => {
           const selected = value === tile.intent;
           return (

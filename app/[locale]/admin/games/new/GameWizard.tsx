@@ -166,7 +166,8 @@ type Props = {
   formatGuide?: FormatGuideEntry[];
   /**
    * #1385: startverdi for #373-telleren på steg 2. Utelatt → default-4 (fersk
-   * opprettelse). `null` → «Vis alle», altså ufiltrert format-grid.
+   * opprettelse). `null` → uten antall, altså alle formatene som rader uten
+   * anbefaling (#2260).
    *
    * Et gjenopptatt utkast MÅ sette denne: default-4 filtrerer bort utkastets
    * eget format fra grid-et for alt som ikke passer 4 spillere (singles
@@ -437,7 +438,7 @@ function WizardBody({
     // #1066: seeder arrangøren som spiller ved kompis-intent (se setIntent i
     // useGameFormState). Samme prop #464 allerede bruker for selectablePlayers.
     currentUserId,
-    // Ternær, ikke `??`: et gjenopprettet utkast kan bære `null` («Vis alle»),
+    // Ternær, ikke `??`: et gjenopprettet utkast kan bære `null` (uten antall),
     // og det er et ekte valg arrangøren tok — ikke et fravær som skal falle
     // gjennom til rutas seed.
     initialExpectedPlayerCount: draft
@@ -1084,7 +1085,9 @@ function WizardBody({
             state={state}
             players={state.allPlayers}
             selectableIds={pickIds}
-            heading={t('sections.players.headingWizard')}
+            // #2260: the step's title is «Hvem skal spille?»; a second
+            // heading with the same words would only repeat it.
+            hideHeading
           />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
@@ -1513,7 +1516,7 @@ const PLAYER_COUNT_MAX = TEAM_FORMAT_PLAYER_CAP;
 // state og picker-fallback aldri kommer ut av sync.
 
 const COUNT_BUTTON_CLASS =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-xl leading-none text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40';
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-xl text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40';
 
 function PlayerCountPicker({
   value,
@@ -1543,7 +1546,7 @@ function PlayerCountPicker({
         disabled={count <= PLAYER_COUNT_MIN}
         className={COUNT_BUTTON_CLASS}
       >
-        <span aria-hidden="true" className="select-none">−</span>
+        <span aria-hidden="true" className="select-none leading-[normal]">−</span>
       </button>
       <span
         aria-live="polite"
@@ -1565,7 +1568,7 @@ function PlayerCountPicker({
         disabled={count >= PLAYER_COUNT_MAX}
         className={COUNT_BUTTON_CLASS}
       >
-        <span aria-hidden="true" className="select-none">+</span>
+        <span aria-hidden="true" className="select-none leading-[normal]">+</span>
       </button>
       {/* The live region already says «4 spillere»; the word is for the eye. */}
       <span aria-hidden="true" className="font-sans text-sm leading-[normal] text-muted">

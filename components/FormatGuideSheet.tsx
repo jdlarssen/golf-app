@@ -18,7 +18,7 @@ const CARD_ID_PREFIX = 'format-guide-';
  * fokus-felle og reduced-motion-trygg animasjon (klasser i globals.css).
  *
  * `focusKey` (= valgt format-slug) åpner og scroller til det formatet når arket
- * åpnes fra «Slik funker det →» på et valgt kort.
+ * åpnes fra «Reglene» på formatkortet eller en valgt rad i veiviseren (#2260).
  */
 export function FormatGuideSheet({
   open,

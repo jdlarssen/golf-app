@@ -321,7 +321,7 @@ type UseGameFormStateInput = {
   currentUserId?: string;
   // #1380: seed for #373-telleren når veiviseren gjenopprettes fra et lagret
   // utkast. `undefined` = ingen gjenoppretting (telleren starter på
-  // PLAYER_COUNT_DEFAULT); `null` = arrangøren hadde trykket «Vis alle».
+  // PLAYER_COUNT_DEFAULT); `null` = utkastet var uten antall.
   // De to må kunne skilles fra hverandre, derfor null i stedet for bare et
   // valgfritt tall.
   initialExpectedPlayerCount?: number | null;
@@ -738,11 +738,12 @@ export function useGameFormState({
   );
 
   // #373: Kompis-intent — antall spillere valgt FØR format. Defaulter til 4
-  // (PLAYER_COUNT_DEFAULT) så grid-et er filtrert fra start; «Vis alle» i
-  // teller-kontrollen setter den til undefined for å vise hele katalogen.
+  // (PLAYER_COUNT_DEFAULT) så grid-et er filtrert fra start. Undefined = uten
+  // antall: hele katalogen som rader, uten anbefaling (#2260 fjernet «Vis alle»;
+  // et gammelt utkast eller Rediger spill kan fortsatt starte der).
   // Når count endres slik at gjeldende format ikke lenger passer, nullstilles
   // gameMode til default og formatChosen til false slik at brukeren velger på nytt.
-  // #1380: et gjenopprettet utkast seeder telleren (null = «Vis alle»).
+  // #1380: et gjenopprettet utkast seeder telleren (null = uten antall).
   const [expectedPlayerCount, setExpectedPlayerCountRaw] = useState<
     number | undefined
   >(
