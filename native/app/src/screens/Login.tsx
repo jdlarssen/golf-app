@@ -350,7 +350,10 @@ export function Login() {
             {/* «Feil adresse?» er en egen trykkflate og ikke en lenke inni
                 setningen: en nøstet `Text` er bare så høy som teksten, og den
                 er eneste vei tilbake til e-posten. `hitSlop` gir 44 pt, og
-                raden brekker før lenka når adressen er lang. */}
+                raden brekker før lenka når adressen er lang. Raden og blokka
+                rundt må forbli rene layout-View-er (ingen bakgrunn eller
+                testID): Fabric slår dem sammen, ellers klipper den trykkflaten
+                til radens høyde. */}
             <View style={styles.sentToRow}>
               <Text style={[styles.sentTo, { color: colors.muted }]}>
                 {LOGIN_TEXT.sentToPrefix}

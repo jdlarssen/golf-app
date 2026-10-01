@@ -9,7 +9,7 @@
 //
 // Selve steget er byttet ut med en markør: det har sin egen test.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { afterLoginSettled } from '../data/loginCode';
 import { profileStepFor } from '../data/profileGate';
@@ -46,13 +46,20 @@ const INCOMPLETE = {
 describe('ProfileGate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (afterLoginSettled as jest.Mock).mockResolvedValue(undefined);
   });
 
   it.each([
     { label: 'ikke fullført → steget', step: INCOMPLETE, shows: 'step' },
     { label: 'ingen grunn til steget → appen', step: null, shows: 'app' },
-  ])('$label', async ({ step, shows }) => {
+  ])('$label, først når stegene etter innloggingen er ferdige', async ({ step, shows }) => {
+    // Rekkefølgen er hele grunnen til `afterLoginSettled`: leser porten før den
+    // inviterte står på lista, mangler spillet på kortet og på Hjem.
+    let settle: () => void = () => {};
+    (afterLoginSettled as jest.Mock).mockReturnValue(
+      new Promise<void>((resolve) => {
+        settle = resolve;
+      }),
+    );
     profileStepForMock.mockResolvedValue(step);
 
     await render(
@@ -60,6 +67,11 @@ describe('ProfileGate', () => {
         <Text testID="app-stack">Appen</Text>
       </ProfileGate>,
     );
+    expect(profileStepForMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      settle();
+    });
 
     if (shows === 'app') {
       await waitFor(() => expect(screen.getByTestId('app-stack')).toBeTruthy());
@@ -68,7 +80,7 @@ describe('ProfileGate', () => {
       await waitFor(() => expect(screen.getByTestId('complete-profile-screen')).toBeTruthy());
       expect(screen.queryByTestId('app-stack')).toBeNull();
     }
-    expect(afterLoginSettled).toHaveBeenCalledTimes(1);
+    expect(profileStepForMock).toHaveBeenCalledTimes(1);
     expect(profileStepForMock).toHaveBeenCalledWith('user-me');
   });
 });

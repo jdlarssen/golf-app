@@ -20,7 +20,7 @@
 //
 // Ingen «Logg ut» her: designet har ingen. Utloggingen ligger i «Personvern og
 // konto» når profilen er fullført.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Keyboard,
@@ -64,6 +64,9 @@ export function CompleteProfile({
   const [game, setGame] = useState<OnboardingGame | null>(null);
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<ProfileSaveFailure | null>(null);
+  // Feilmeldingen står over feltene; på en liten skjerm kan den være rullet ut
+  // av syne når «Sett i gang» trykkes.
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +101,7 @@ export function CompleteProfile({
         }
         setPending(false);
         setFailure(result.reason);
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
         AccessibilityInfo.announceForAccessibility(describeProfileSaveFailure(result.reason));
       })
       .catch((err: unknown) => {
@@ -121,6 +125,7 @@ export function CompleteProfile({
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[
         styles.screen,
