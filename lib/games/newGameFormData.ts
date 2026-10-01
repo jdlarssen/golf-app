@@ -28,11 +28,6 @@ type CourseRow = {
 /** En klubb brukeren er medlem av (#442) — for veiviserens klubb-valg. */
 export type ClubOption = { id: string; name: string };
 
-type ClubGroup = { id: string; name: string; valid_until: string | null };
-type ClubMembershipRow = {
-  groups: ClubGroup | ClubGroup[] | null;
-};
-
 type UserRow = {
   id: string;
   name: string | null;
@@ -189,13 +184,13 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       : base;
   });
 
-  // Normaliser FK-join (Supabase typer en-til-en som array) → flat klubb-liste,
-  // sortert på navn. Tomme/manglende rader hoppes over. Utløpte klubber (#50)
-  // utelates — en frossen klubb kan ikke ta imot nye spill, så veiviseren skal
-  // ikke tilby den som «Hvem er dette for?»-valg.
-  const clubs: ClubOption[] = ((clubsResult.data ?? []) as ClubMembershipRow[])
+  // Flat klubb-liste sortert på navn. `groups` er en many-to-one-embed og
+  // kommer som et objekt, men en tom rad hoppes over likevel: RLS kan skjule
+  // gruppa. Utløpte klubber (#50) utelates — en frossen klubb kan ikke ta imot
+  // nye spill, så veiviseren skal ikke tilby den som «Hvem er dette for?»-valg.
+  const clubs: ClubOption[] = (clubsResult.data ?? [])
     .map((row) => {
-      const g = Array.isArray(row.groups) ? row.groups[0] ?? null : row.groups;
+      const g = row.groups;
       if (!g || isClubExpired(g.valid_until)) return null;
       return { id: g.id, name: g.name };
     })
