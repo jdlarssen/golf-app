@@ -602,7 +602,8 @@ const styles = StyleSheet.create({
   codeHeading: { ...fraunces(500, 26, 30, { multiline: true }), marginTop: 6 },
   sentTo: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sans, marginTop: 8 },
   sentToEmail: { fontFamily: FONTS.sansSemiBold },
-  changeEmail: { fontFamily: FONTS.sansSemiBold },
+  // En lenke, som i designet: understreket.
+  changeEmail: { fontFamily: FONTS.sansSemiBold, textDecorationLine: 'underline' },
   codeBlock: { paddingTop: 20, paddingHorizontal: 20 },
   boxRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   box: {
