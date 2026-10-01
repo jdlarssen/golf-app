@@ -110,7 +110,7 @@ describe('buildSocialProof (#1193)', () => {
 });
 
 // #2258: the choice between the line's forms has one home, shared by
-// SocialProofLine (full public names) and the terminliste row (first names).
+// the invitation card (full public names) and the terminliste row (first names).
 describe('socialProofForm (#2258)', () => {
   it('no one joined → nothing', () => {
     expect(
