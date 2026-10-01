@@ -239,8 +239,14 @@ async function computeFacts(
   return buildKavalkadeFacts(input);
 }
 
-/** Er spilleren admin? En feil her leses som «nei» — porten er fail-closed. */
-async function isAdmin(viewerUserId: string): Promise<boolean> {
+/**
+ * Er spilleren admin? En feil her leses som «nei» — porten er fail-closed.
+ *
+ * Eksportert for appens status-rute (`app/api/kavalkade/status/route.ts`,
+ * #2265), som skal svare `canOpen` etter nøyaktig samme admin-regel som
+ * forhåndsvisningen her — én regel, ett hjem (felle 4).
+ */
+export async function isAdmin(viewerUserId: string): Promise<boolean> {
   const { data, error } = await getAdminClient()
     .from('users')
     .select('is_admin')
