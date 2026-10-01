@@ -246,6 +246,31 @@ describe('InboxClient', () => {
     expect(screen.getByTestId('inbox-clear-read')).toBeEnabled();
   });
 
+  it('pillen venter også mens «Godta» pågår, så tilbakerullingene ikke krysser', async () => {
+    let finish: (v: unknown) => void = () => {};
+    decideMock.mockReturnValue(new Promise((r) => (finish = r)));
+    renderInbox([makeRequest('r'), makeInvite('a')]);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('inbox-approve'));
+    });
+    expect(screen.getByTestId('inbox-mark-all')).toBeDisabled();
+    await act(async () => {
+      finish({ ok: false, reason: 'db_update' });
+    });
+    expect(screen.getByTestId('inbox-mark-all')).toBeEnabled();
+    expect(screen.getByTestId('inbox-approve')).toBeInTheDocument();
+  });
+
+  it('statuslinja er samme node når lista tømmes og kommer tilbake', async () => {
+    clearReadMock.mockResolvedValue({ ok: false });
+    renderInbox([makeInvite('a', true)]);
+    const before = screen.getByRole('status');
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('inbox-clear-read'));
+    });
+    expect(screen.getByTestId('inbox-action-error')).toBe(before);
+  });
+
   it('statuslinja står montert som live-region også når den er tom', () => {
     renderInbox([makeInvite('a')]);
     expect(screen.getByRole('status')).toHaveTextContent('');
