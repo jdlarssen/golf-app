@@ -2297,6 +2297,8 @@
       "heading": "Players",
       "subtitle": "Manage who's in «{name}».",
       "rosterSection": "In the game",
+      "signupsLink": "Signups",
+      "signupsWaiting": "{count} waiting",
       "noPlayers": "No players yet.",
       "stateWithdrawn": "Withdrawn",
       "stateApproved": "Approved",

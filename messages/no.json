@@ -2297,6 +2297,8 @@
       "heading": "Spillere",
       "subtitle": "Styr hvem som er med i «{name}».",
       "rosterSection": "Med i spillet",
+      "signupsLink": "Påmeldinger",
+      "signupsWaiting": "{count} venter",
       "noPlayers": "Ingen spillere ennå.",
       "stateWithdrawn": "Trukket",
       "stateApproved": "Godkjent",
