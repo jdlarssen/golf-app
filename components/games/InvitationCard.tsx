@@ -8,7 +8,7 @@ import {
   resolveFormatContentKey,
 } from '@/lib/games/formatLabel';
 import { invitationWhen } from '@/lib/games/invitationCard';
-import { SocialProofText } from '@/components/games/SocialProofLine';
+import { SocialProofText } from '@/components/games/SocialProofText';
 
 export type InvitationCardVariant = 'invite' | 'public' | 'member';
 
@@ -218,7 +218,7 @@ function GameLines({
 
 /**
  * Up to three dots and «{n} er med allerede» — or, for a member with friends
- * on the roster, the friend wording SocialProofLine uses. Nothing at 0.
+ * on the roster, the friend wording from SocialProofText. Nothing at 0.
  */
 function JoinedRow({ socialProof }: { socialProof: GameSocialProof }) {
   const t = useTranslations('invitationCard');

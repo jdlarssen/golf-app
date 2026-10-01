@@ -81,8 +81,8 @@ export function buildSocialProof(
 /**
  * Which form the social-proof line takes (#2258): friends by name — one, two,
  * or one plus the rest — else a plain count, else nothing. One home for the
- * choice, shared by `SocialProofLine` (full public names, «Jonas B.») and the
- * terminliste row (first names). `mapName` only changes how a name reads; it
+ * choice, shared by the invitation card's `SocialProofText` (full public
+ * names, «Jonas B.», #2266) and the terminliste row (first names). `mapName` only changes how a name reads; it
  * never adds one, so the privacy boundary stays in `buildSocialProof`.
  */
 export type SocialProofForm =
