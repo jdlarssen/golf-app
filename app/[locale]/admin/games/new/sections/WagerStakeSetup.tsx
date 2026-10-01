@@ -1,6 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormSection, FormSectionText } from '@/components/ui/FormSection';
+import { CARD_FIELD_CONTROL, CARD_FIELD_LABEL } from '@/components/ui/CardField';
 import type { SettlementUnitKey } from '@/lib/scoring/settlement';
 
 /** Enheten kr-feltet gjelder per — samme nøkler som oppgjøret (#2221). */
@@ -31,15 +33,10 @@ export function WagerStakeSetup({
   const t = useTranslations('wizard.sections.wager');
   const unit = t(`units.${unitKey}`);
   return (
-    <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-text">
-        {t('legend')}
-      </legend>
-      <p className="text-xs text-muted">{t('description', { unit })}</p>
+    <FormSection legend={t('legend')}>
+      <FormSectionText>{t('description', { unit })}</FormSectionText>
       <label className="block">
-        <span className="text-xs font-medium text-muted">
-          {t('krLabel', { unit })}
-        </span>
+        <span className={CARD_FIELD_LABEL}>{t('krLabel', { unit })}</span>
         <input
           type="number"
           inputMode="numeric"
@@ -50,9 +47,9 @@ export function WagerStakeSetup({
           disabled={disabled}
           placeholder={t('placeholder')}
           aria-label={t('ariaLabel')}
-          className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-text focus:border-primary"
+          className={`${CARD_FIELD_CONTROL} border-field-border text-text`}
         />
       </label>
-    </fieldset>
+    </FormSection>
   );
 }

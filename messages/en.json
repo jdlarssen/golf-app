@@ -555,7 +555,7 @@
       "legend": "What kind of event?",
       "kompis": {
         "label": "Friends round",
-        "description": "Make the round more exciting, up to 24 players"
+        "description": "Make the round more exciting, up to 40 players"
       },
       "klubb": {
         "label": "Club tournament",
@@ -865,11 +865,14 @@
       },
       "patsome": {
         "legend": "Patsome setup",
-        "segment1Heading": "Holes 1–6: 4BBB.",
+        "segment1Holes": "Holes 1–6",
+        "segment1Format": "4BBB.",
         "segment1Body": "Both play their own ball; the team's best Stableford score per hole counts.",
-        "segment2Heading": "Holes 7–12: Greensome.",
+        "segment2Holes": "Holes 7–12",
+        "segment2Format": "Greensome.",
         "segment2Body": "Both drive, the team picks the best drive, then alternate shots.",
-        "segment3Heading": "Holes 13–18: Foursomes.",
+        "segment3Holes": "Holes 13–18",
+        "segment3Format": "Foursomes.",
         "segment3Body": "The team shares one ball and alternates shots, including from the tee.",
         "handicapNote": "Net uses the correct handicap allowance per segment: full handicap in 4BBB, 60/40 in greensome, and 50% of the combined total in foursomes.",
         "scoringFromLabel": "Points from",
@@ -895,6 +898,7 @@
         "teePlaceholderWithCourse": "Select tee box…",
         "teeOffLabel": "Tee-off",
         "teeOffHint": "Required when publishing. Optional for drafts.",
+        "teeOffPlaceholder": "Choose date and time",
         "teeOffPastError": "The tee-off time can't be in the past. Pick a time from now on.",
         "shotgunLabel": "Shotgun start",
         "shotgunHint": "Every group starts at the same time, each from its own hole.",
@@ -1231,6 +1235,7 @@
     },
     "club": {
       "legend": "For which club?",
+      "label": "Club",
       "noClub": "No club",
       "hint": "Members can see and sign up for all games you set up for the club."
     },

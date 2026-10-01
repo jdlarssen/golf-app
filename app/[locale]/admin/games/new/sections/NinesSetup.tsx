@@ -1,6 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormSection, FormSectionHeading } from '@/components/ui/FormSection';
+import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 
 export type NinesVariant = 'nines' | 'split_sixes';
 export type NinesScoring = 'gross' | 'net';
@@ -33,100 +35,51 @@ export function NinesSetup({
 }: NinesSetupProps) {
   const t = useTranslations('wizard.sections.nines');
   return (
-    <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-text">
-        {t('legend')}
-      </legend>
-
-      {/* Variant-velger */}
-      <div>
-        <p className="text-xs font-medium text-muted">{t('variantLabel')}</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('variantAriaLabel')}>
-          <label
-            className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
-              variant === 'nines'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-surface-2 text-muted hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="nines_variant"
-              value="nines"
-              checked={variant === 'nines'}
-              onChange={() => onVariantChange('nines')}
-              disabled={disabled}
-              className="sr-only"
-            />
-            <span className="text-xs font-medium">{t('variantNinesTitle')}</span>
-            <span className="text-[11px] text-muted">{t('variantNinesDesc')}</span>
-          </label>
-          <label
-            className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
-              variant === 'split_sixes'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-surface-2 text-muted hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="nines_variant"
-              value="split_sixes"
-              checked={variant === 'split_sixes'}
-              onChange={() => onVariantChange('split_sixes')}
-              disabled={disabled}
-              className="sr-only"
-            />
-            <span className="text-xs font-medium">{t('variantSplitSixesTitle')}</span>
-            <span className="text-[11px] text-muted">{t('variantSplitSixesDesc')}</span>
-          </label>
-        </div>
-      </div>
-
-      {/* Scoring-velger */}
-      <div>
-        <p className="text-xs font-medium text-muted">{t('scoringFromLabel')}</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
-          <label
-            className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
-              scoring === 'net'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-surface-2 text-muted hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="nines_scoring"
-              value="net"
-              checked={scoring === 'net'}
-              onChange={() => onScoringChange('net')}
-              disabled={disabled}
-              className="sr-only"
-            />
-            <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
-            <span className="text-[11px] text-muted">{t('scoringNetDesc')}</span>
-          </label>
-          <label
-            className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
-              scoring === 'gross'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-surface-2 text-muted hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="nines_scoring"
-              value="gross"
-              checked={scoring === 'gross'}
-              onChange={() => onScoringChange('gross')}
-              disabled={disabled}
-              className="sr-only"
-            />
-            <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
-            <span className="text-[11px] text-muted">{t('scoringGrossDesc')}</span>
-          </label>
-        </div>
-      </div>
-    </fieldset>
+    <FormSection legend={t('legend')}>
+      <FormSectionHeading title={t('variantLabel')} />
+      <ChoiceCardGrid columns={1} label={t('variantAriaLabel')}>
+        <RadioChoiceCard
+          name="nines_variant"
+          value="nines"
+          checked={variant === 'nines'}
+          onChange={() => onVariantChange('nines')}
+          disabled={disabled}
+          title={t('variantNinesTitle')}
+          hint={t('variantNinesDesc')}
+        />
+        <RadioChoiceCard
+          name="nines_variant"
+          value="split_sixes"
+          checked={variant === 'split_sixes'}
+          onChange={() => onVariantChange('split_sixes')}
+          disabled={disabled}
+          title={t('variantSplitSixesTitle')}
+          hint={t('variantSplitSixesDesc')}
+        />
+      </ChoiceCardGrid>
+      <FormSectionHeading title={t('scoringFromLabel')} />
+      <ChoiceCardGrid columns={2} label={t('scoringAriaLabel')}>
+        <RadioChoiceCard
+          name="nines_scoring"
+          value="net"
+          checked={scoring === 'net'}
+          onChange={() => onScoringChange('net')}
+          disabled={disabled}
+          title={t('scoringNetTitle')}
+          hint={t('scoringNetDesc')}
+          height={64}
+        />
+        <RadioChoiceCard
+          name="nines_scoring"
+          value="gross"
+          checked={scoring === 'gross'}
+          onChange={() => onScoringChange('gross')}
+          disabled={disabled}
+          title={t('scoringGrossTitle')}
+          hint={t('scoringGrossDesc')}
+          height={64}
+        />
+      </ChoiceCardGrid>
+    </FormSection>
   );
 }
