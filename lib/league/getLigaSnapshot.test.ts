@@ -549,3 +549,91 @@ describe('getLigaSnapshot — the earliest finished flight counts (#2214)', () =
     });
   });
 });
+
+describe('getLigaSnapshot — flights over 1 000 games (#2214)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it('reads the flight that sits on page 2 of the games read', async () => {
+    // 150 players × 26 rounds is over 1 000 flights. PostgREST cuts at 1 000
+    // without saying so; the flight on page 2 must still reach the round.
+    const flight = (id: string) => ({
+      id,
+      status: 'finished',
+      course_id: null,
+      tee_box_id: null,
+      league_round_id: 'r1',
+      delivered_outside_window: false,
+      ended_at: '2026-06-15T18:00:00Z',
+    });
+    const page1 = Array.from({ length: 1000 }, (_, i) => flight(`g${i}`));
+    const page2 = [flight('gLast')];
+
+    supabaseMock = buildSupabaseMock(
+      [
+        {
+          data: {
+            id: 'l1',
+            name: 'Klubbliga',
+            season_start: '2026-04-01',
+            season_end: '2026-10-01',
+            format: 'stroke',
+            scoring: 'net',
+            standings_model: 'total',
+            missed_round_policy: 'must_play_all',
+            penalty_kind: 'worst_plus_one',
+            penalty_fixed_over_par: null,
+            best_n_count: null,
+            course_scope: 'single_course',
+            course_id: null,
+            tee_box_id: null,
+            status: 'active',
+            created_by: 'admin',
+            created_at: '2026-04-01T00:00:00Z',
+            started_at: '2026-04-01T00:00:00Z',
+            finished_at: null,
+            group_id: null,
+          },
+        },
+        {
+          data: [
+            {
+              id: 'r1',
+              sequence: 1,
+              label: 'Runde 1',
+              course_id: null,
+              tee_box_id: null,
+              opens_at: '2026-06-15T04:00:00Z',
+              closes_at: '2026-06-15T20:00:00Z',
+              original_closes_at: '2026-06-15T20:00:00Z',
+              window_overridden_at: null,
+            },
+          ],
+        },
+        { data: [] }, // league_players
+        {
+          data: [
+            { game_id: 'gLast', user_id: 'U1', course_handicap: 18, tee_gender: 'mens', submitted_at: '2026-06-15T18:00:00Z', withdrawn_at: null },
+          ],
+        }, // game_players
+        { data: [] }, // scores
+      ],
+      {},
+      { byTable: { games: [{ data: page1 }, { data: page2 }] } },
+    );
+
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+
+    const gamesRange = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'range',
+    );
+    expect({
+      flightCount: snap!.rounds[0].flightCount,
+      delivered: snap!.rounds[0].deliveredUserIds,
+      ranged: gamesRange !== undefined,
+    }).toEqual({ flightCount: 1001, delivered: ['U1'], ranged: true });
+  });
+});
