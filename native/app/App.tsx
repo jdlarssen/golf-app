@@ -23,6 +23,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 // Per-vekt-subpath, ikke pakke-rota: index-fila require-er ALLE snitt og
@@ -35,6 +36,7 @@ import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
 import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
 import type { Session } from '@supabase/supabase-js';
 import { OwnerGate } from './src/components/OwnerGate';
+import { ProfileGate } from './src/components/ProfileGate';
 import { FRAUNCES_FILES } from './src/fonts';
 import { RootNavigator } from './src/navigation';
 import { Login } from './src/screens/Login';
@@ -108,21 +110,35 @@ export default function App() {
     );
   }
 
+  // #2216: innfellingen har ett hjem for hele appen. Login og «Fullfør
+  // profilen» står utenfor navigatoren og trenger den også; navigatoren bruker
+  // denne i stedet for sin egen. `initialWindowMetrics` gjør at første bilde
+  // tegnes med en gang, uten å vente på målingen.
   if (!session) {
-    return <Login />;
+    return (
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <Login />
+      </SafeAreaProvider>
+    );
   }
 
   return (
-    <OwnerGate key={session.user.id} userId={session.user.id}>
-      <SessionProvider
-        value={{ userId: session.user.id, email: session.user.email ?? null }}
-      >
-        {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
-            tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
-            fantes i lys drakt. */}
-        <StatusBar style="auto" />
-        <RootNavigator />
-      </SessionProvider>
-    </OwnerGate>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <OwnerGate key={session.user.id} userId={session.user.id}>
+        <SessionProvider
+          value={{ userId: session.user.id, email: session.user.email ?? null }}
+        >
+          {/* «auto» følger systemets lys/mørk (#1833): mørk tekst på lys app, lys
+              tekst på mørk. «dark» var en midlertidig sannhet mens skjermene bare
+              fantes i lys drakt. */}
+          <StatusBar style="auto" />
+          {/* #2216: steget for navn og handicap står foran stacken når
+              profilen ikke er fullført, samme regel som nettsidens `/`. */}
+          <ProfileGate userId={session.user.id}>
+            <RootNavigator />
+          </ProfileGate>
+        </SessionProvider>
+      </OwnerGate>
+    </SafeAreaProvider>
   );
 }

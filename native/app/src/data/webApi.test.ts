@@ -166,3 +166,44 @@ describe('callWebRoute', () => {
   });
 
 });
+
+// #2216: den ene ruta appen kaller FØR innloggingen («send meg kode»). Samme
+// vakter for nett og adresse, men ingen token å hente — og ingen å sende.
+describe('callPublicWebRoute', () => {
+  useWebRoute();
+
+  it('sender uten Authorization, også når det ikke finnes noen sesjon', async () => {
+    auth().getSession.mockResolvedValue({ data: { session: null } });
+    respondWith(200, { ok: true });
+
+    const call = await webApi().callPublicWebRoute('/api/auth/send-code', 'POST', {
+      email: 'ny@example.test',
+    });
+
+    expect(call).toEqual({ ok: true, status: 200, body: { ok: true } });
+    expect(mockFetch.mock.calls[0][0]).toBe(`${BASE_URL}/api/auth/send-code`);
+    expect(headers().Authorization).toBeUndefined();
+    expect(headers()['Content-Type']).toBe('application/json');
+    expect(auth().getSession).not.toHaveBeenCalled();
+  });
+
+  it('stopper på nett FØR den ser på adressen', async () => {
+    mockNetwork.online = false;
+    delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
+
+    expect(
+      await webApi().callPublicWebRoute('/api/auth/send-code', 'POST', { email: 'x' }),
+    ).toEqual({ ok: false, reason: 'offline' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('stopper når bygget mangler adressen', async () => {
+    delete process.env.EXPO_PUBLIC_WEB_BASE_URL;
+
+    expect(
+      await webApi().callPublicWebRoute('/api/auth/send-code', 'POST', { email: 'x' }),
+    ).toEqual({ ok: false, reason: 'no-web-base-url' });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+

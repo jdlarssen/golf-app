@@ -1,5 +1,6 @@
 // native/app/src/data/webApi.ts
-// Native #1891: appens ene vei til en autentisert HTTP-rute på web-deployen.
+// Native #1891: appens vei til HTTP-rutene på web-deployen — de autentiserte,
+// og fra #2216 den ene som kalles før innloggingen ({@link callPublicWebRoute}).
 //
 // **Hvorfor rutene finnes.** Alt som krever Node — `notify()`, Resend-mail,
 // push, service-role — er utenfor rekkevidde for en telefon. Regelen bor der
@@ -19,7 +20,9 @@
 //    hjem (AGENTS trap 4). Lest her og ikke på modulnivå: et kast ved import
 //    ville tatt ned hele appen for en skjerm de fleste aldri åpner.
 // 3. **Tokenet.** Uten sesjon finnes det ingenting å autentisere med, og vi
-//    sender ikke et kall vi vet blir avvist.
+//    sender ikke et kall vi vet blir avvist. Gjelder ikke
+//    {@link callPublicWebRoute}: «send meg kode» skjer før det finnes en sesjon,
+//    og ruta har ingen token å sjekke. De to første vaktene gjelder likt.
 //
 // **Kroppen bærer verdier, aldri identitet.** #1906 ga profil-lagringen en
 // rute, og med den den første kroppen — feltene spilleren skrev inn. Regelen
@@ -89,6 +92,8 @@ async function readBody(response: Response): Promise<Record<string, unknown>> {
   }
 }
 
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
 /**
  * Ett kall mot en app→server-rute, med alle guardene foran i fast rekkefølge.
  *
@@ -104,7 +109,7 @@ async function readBody(response: Response): Promise<Record<string, unknown>> {
  */
 export async function callWebRoute(
   path: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  method: Method,
   body?: Record<string, unknown>,
 ): Promise<WebApiCall> {
   if (!isDeviceOnline()) return { ok: false, reason: 'offline' };
@@ -115,11 +120,43 @@ export async function callWebRoute(
   const token = await accessToken();
   if (!token) return { ok: false, reason: 'unauthorized' };
 
+  return send(target.url, path, method, { Authorization: `Bearer ${token}` }, body);
+}
+
+/**
+ * Ett kall mot en rute som ikke krever innlogging (#2216): bare
+ * `/api/auth/send-code`, der appen ber om innloggingskoden.
+ *
+ * Samme vakter for nett og adresse som {@link callWebRoute}, men ingen token:
+ * det finnes ingen sesjon ennå, og ruta sjekker ingen. Svaret leses likt.
+ * Vernet mot misbruk er serverens fartsgrenser, ikke noe appen sender.
+ */
+export async function callPublicWebRoute(
+  path: string,
+  method: Method,
+  body?: Record<string, unknown>,
+): Promise<WebApiCall> {
+  if (!isDeviceOnline()) return { ok: false, reason: 'offline' };
+
+  const target = webUrl(path);
+  if (!target.ok) return { ok: false, reason: target.reason };
+
+  return send(target.url, path, method, {}, body);
+}
+
+/** Selve kallet og lesingen av svaret, delt av de to inngangene over. */
+async function send(
+  url: string,
+  path: string,
+  method: Method,
+  auth: Record<string, string>,
+  body: Record<string, unknown> | undefined,
+): Promise<WebApiCall> {
   try {
-    const response = await fetch(target.url, {
+    const response = await fetch(url, {
       method,
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...auth,
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },

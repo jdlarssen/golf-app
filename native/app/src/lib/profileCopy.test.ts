@@ -31,6 +31,7 @@ import { HANDICAP_STALENESS_MS } from '../../../../lib/handicap/staleness';
 import type { ProfileSaveFailure } from '../data/profile';
 import { isFinishedSentence } from '../test/copy';
 import {
+  ONBOARDING_TEXT,
   PROFILE_TEXT,
   describeHandicapAge,
   describeProfileSaveFailure,
@@ -40,6 +41,10 @@ import {
   hcpUpdatedLine,
   isHandicapAgeStale,
   memberSinceLine,
+  onboardingGameDate,
+  onboardingGameLine,
+  onboardingGameTitle,
+  onboardingPreviewHcp,
   seasonTileSpoken,
   unsentStrokesWarning,
 } from './profileCopy';
@@ -316,3 +321,105 @@ describe('handicap-kurven på bag-taggen', () => {
     expect(handicapSeasonChangeSpoken(change)).toBe(spoken);
   });
 });
+
+// #2216: «Fullfør profilen» i appen er bygget etter det nye designet (#2350,
+// Profilstart-forslag). Nettsiden har ennå de gamle tekstene, så bare det som
+// er likt i dag sammenlignes tegn for tegn. Resten står på `AHEAD_OF_WEB`:
+// når #2350 gir nettsiden de nye tekstene, flyttes radene til `SHARED` og
+// pariteten er tilbake.
+describe('ONBOARDING_TEXT', () => {
+  const webOnboarding = source.onboarding;
+
+  const SHARED: Partial<Record<keyof typeof ONBOARDING_TEXT, string>> = {
+    kicker: webOnboarding.kicker,
+    plusHandicapLabel: webOnboarding.hcpPlusLabel,
+    submitButton: webOnboarding.submitButton,
+    submitPending: webOnboarding.submitPending,
+  };
+
+  const AHEAD_OF_WEB: Partial<Record<keyof typeof ONBOARDING_TEXT, string>> = {
+    heading: '#2350',
+    nameLabel: '#2350',
+    nameHint: '#2350',
+    hcpLabel: '#2350',
+    hcpHint: '#2350',
+    previewKicker: '#2350',
+    previewNamePlaceholder: '#2350',
+    footnote: '#2350',
+  };
+
+  it('hver tekst er ferdig', () => {
+    for (const [key, text] of Object.entries(ONBOARDING_TEXT)) {
+      expect([key, isFinishedSentence(text)]).toEqual([key, true]);
+    }
+  });
+
+  it('det som er likt på nettsiden i dag, er webbens streng tegn for tegn', () => {
+    for (const [key, webText] of Object.entries(SHARED)) {
+      expect([key, ONBOARDING_TEXT[key as keyof typeof ONBOARDING_TEXT]]).toEqual([key, webText]);
+    }
+  });
+
+  it('hver nøkkel er delt med webben eller venter på #2350', () => {
+    const accounted = [...Object.keys(SHARED), ...Object.keys(AHEAD_OF_WEB)].sort();
+    expect(Object.keys(ONBOARDING_TEXT).sort()).toEqual(accounted);
+  });
+
+  it('setter spillets navn inn i kortets tittel', () => {
+    expect(onboardingGameTitle('Lørdagsrunden')).toBe('Lørdagsrunden venter på deg');
+  });
+});
+
+// «Slik ser de andre deg»: handicapet slik det vil stå hos de andre, eller
+// streken mens tallet ikke er gyldig. Grensene er de samme som serveren
+// lagrer under (`HCP_MIN`/`HCP_MAX` i `lib/users/profileInput.ts`), og tallet
+// formateres som overalt ellers i appen (`formatHcpNb`).
+describe('onboardingPreviewHcp', () => {
+  it.each<[string, boolean, string]>([
+    ['18,4', false, 'HCP 18,4'],
+    ['18.4', false, 'HCP 18,4'],
+    ['54', false, 'HCP 54,0'],
+    ['2,5', true, 'HCP +2,5'],
+    ['0', true, 'HCP 0,0'],
+    ['', false, 'HCP –'],
+    ['  ', false, 'HCP –'],
+    ['abc', false, 'HCP –'],
+    ['54,1', false, 'HCP –'],
+    ['10,5', true, 'HCP –'],
+    ['-3', false, 'HCP –'],
+  ])('«%s» (pluss: %s) → «%s»', (typed, isPlus, expected) => {
+    expect(onboardingPreviewHcp(typed, isPlus)).toBe(expected);
+  });
+});
+
+// Spillkortet i «Fullfør profilen». Suiten går i UTC (`jest.config.js`), så
+// klokkeslettet her er UTC; på telefonen er det enhetens egen tid.
+describe('spillkortet', () => {
+  it('dato-ruta har dagen og månedsforkortelsen', () => {
+    expect(onboardingGameDate('2026-10-04T07:20:00Z')).toEqual({ day: '4', month: 'okt' });
+  });
+
+  it.each([null, 'ikke en dato'])('ingen dato-rute uten gyldig tee-off (%p)', (teeOffAt) => {
+    expect(onboardingGameDate(teeOffAt)).toBeNull();
+  });
+
+  it('linja har bane, klokkeslett og format', () => {
+    expect(
+      onboardingGameLine({
+        courseName: 'Byneset',
+        teeOffAt: '2026-10-04T07:20:00Z',
+        gameMode: 'stableford',
+      }),
+    ).toBe('Byneset · kl. 07:20 · Stableford');
+  });
+
+  it('hopper over det som mangler', () => {
+    expect(
+      onboardingGameLine({ courseName: null, teeOffAt: null, gameMode: 'ukjent-format' }),
+    ).toBe('');
+    expect(
+      onboardingGameLine({ courseName: 'Byneset', teeOffAt: null, gameMode: 'stableford' }),
+    ).toBe('Byneset · Stableford');
+  });
+});
+
