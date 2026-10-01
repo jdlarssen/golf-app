@@ -9,7 +9,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { diaryResult, diaryRowLabel, diarySubline } from '../../lib/roundDiary';
 import { formatDiaryDay } from '../../lib/homeDates';
 import type { HistoryRound } from '../../lib/roundHistory';
-import { FONTS, frauncesLine, interLine, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { DiaryMedallion } from './DiaryMedallion';
 
 export function DiaryRow({
@@ -80,8 +80,8 @@ const styles = StyleSheet.create({
   },
   divider: { borderBottomWidth: 1 },
   date: { width: 40, flexShrink: 0, alignItems: 'center' },
-  // Designet: `line-height: 1`, som nettleseren tegner den (`frauncesLine`).
-  day: { ...frauncesLine(20, 20), fontFamily: FONTS.serifScore },
+  // Designet: Fraunces 20/600 med `line-height: 1`, som nettleseren tegner den.
+  day: fraunces(600, 20, 20),
   // Inter i nettleserens `normal`: 10 = 12 pt, 15 = 19 pt og 12 = 15 pt.
   weekday: { ...interLine(10, 12), fontFamily: FONTS.sansSemiBold, letterSpacing: 1.2 },
   middle: { flex: 1, minWidth: 0 },

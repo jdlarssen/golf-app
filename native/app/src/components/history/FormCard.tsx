@@ -30,7 +30,7 @@ import {
   formatOneDecimal,
 } from '../../lib/historyCopy';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
-import { FONTS, frauncesLine, interLine, useTheme } from '../../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../../theme';
 import { FormArrow } from '../icons/Icons';
 import { CURVE, FormCurve } from './FormCurve';
 
@@ -170,9 +170,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  // Linjene i nettleserens `normal` (designet): Fraunces 18 = 23 pt,
-  // Inter 12/13 = 15/16 pt, Fraunces 22 = 28 pt og Inter 11 = 14 pt.
-  heading: { ...frauncesLine(18, 23), fontFamily: FONTS.serifDisplay },
+  // Linjene i nettleserens `normal` (designet): Fraunces 18 = 23 pt og
+  // 22 = 28 pt (`fraunces`), Inter 12/13 = 15/16 pt og 11 = 14 pt.
+  heading: fraunces(500, 18),
   scope: { ...interLine(12, 15), fontFamily: FONTS.sans },
   sentenceRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 4 },
   // Designets «▲»: 8 × 8 pt, 1 pt inn, 4⅓ pt under linjetoppen, og tallet
@@ -184,6 +184,6 @@ const styles = StyleSheet.create({
   strip: { flexDirection: 'row', borderTopWidth: 1, marginTop: 6, paddingTop: 10 },
   cell: { flex: 1, alignItems: 'center' },
   middle: { borderLeftWidth: 1, borderRightWidth: 1 },
-  value: { ...frauncesLine(22, 28), fontFamily: FONTS.serifScore },
+  value: fraunces(600, 22),
   cellLabel: { ...interLine(11, 14), fontFamily: FONTS.sans },
 });

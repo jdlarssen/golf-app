@@ -25,7 +25,7 @@ import {
   streakSeason,
 } from '../../lib/historyCopy';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
-import { FONTS, TAP, useTheme, withAlpha } from '../../theme';
+import { FONTS, TAP, fraunces, useTheme, withAlpha } from '../../theme';
 import { FormCurve } from './FormCurve';
 
 function Section({
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
   },
-  heading: { fontSize: 18, fontFamily: FONTS.serifDisplay },
+  heading: fraunces(500, 18),
   subtitle: { fontSize: 13, fontFamily: FONTS.sans, marginTop: 2, lineHeight: 18 },
   body: { fontSize: 14, fontFamily: FONTS.sans, lineHeight: 20 },
   note: { marginTop: 8 },
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   numbers: { flexDirection: 'row', borderTopWidth: 1, marginTop: 10, paddingTop: 10 },
   cell: { flex: 1, alignItems: 'center' },
   middle: { borderLeftWidth: 1, borderRightWidth: 1 },
-  value: { fontSize: 22, fontFamily: FONTS.serifScore, fontVariant: ['tabular-nums'] },
+  value: { ...fraunces(600, 22), fontVariant: ['tabular-nums'] },
   cellLabel: { fontSize: 11, fontFamily: FONTS.sans },
   delta: { fontSize: 11, fontFamily: FONTS.sans, fontVariant: ['tabular-nums'], marginTop: 2 },
   years: { gap: 8, paddingTop: 10 },
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   divided: { borderTopWidth: 1, marginTop: 10, paddingTop: 12 },
   streakRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   fire: { fontSize: 24 },
-  streakNumber: { fontSize: 30, fontFamily: FONTS.serifDisplay, fontVariant: ['tabular-nums'] },
+  streakNumber: { ...fraunces(500, 30), fontVariant: ['tabular-nums'] },
   wall: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   badge: {
     flexBasis: '47%',
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   badgeEmoji: { fontSize: 24 },
-  badgeCount: { fontSize: 20, fontFamily: FONTS.serifDisplay, fontVariant: ['tabular-nums'] },
+  badgeCount: { ...fraunces(500, 20), fontVariant: ['tabular-nums'] },
   statRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16, flexWrap: 'wrap' },
   statCell: { alignItems: 'flex-end', gap: 4 },
   statValue: { fontSize: 16, fontFamily: FONTS.sansSemiBold, fontVariant: ['tabular-nums'] },
@@ -478,5 +478,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
-  courseName: { flex: 1, minWidth: 120, fontSize: 16, fontFamily: FONTS.serifDisplay },
+  // Webbens 16 pt; appen har snitt for 15 og 18, og banenavnet har ingen tegning.
+  courseName: { ...fraunces(500, 15), flex: 1, minWidth: 120 },
 });
