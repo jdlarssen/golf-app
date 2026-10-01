@@ -63,17 +63,19 @@ function Bone({
 
   useEffect(() => {
     if (still || boneWidth === 0) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
+    // Forskyvningen én gang før løkka, som `animation-delay`: hver sveip tar
+    // 1,8 s, så formene holder samme takt og ikke glir fra hverandre.
+    const loop = Animated.sequence([
+      Animated.delay(delay),
+      Animated.loop(
         Animated.timing(progress, {
           toValue: 1,
           duration: 1800,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ]),
-    );
+      ),
+    ]);
     loop.start();
     return () => loop.stop();
   }, [still, boneWidth, delay, progress]);
