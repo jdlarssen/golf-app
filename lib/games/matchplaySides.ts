@@ -57,6 +57,16 @@ export function countSidePlayers(roster: RosterRow[]): {
 }
 
 /**
+ * True when a side with `activeCount` non-withdrawn players has no seat left:
+ * it is full at `teamSize` (#2258). One home for the rule, read by
+ * `registerForOpenGame` (`side_full`) and by the terminliste («Fullt» when both
+ * sides are full).
+ */
+export function isMatchplaySideFull(activeCount: number, teamSize: number): boolean {
+  return activeCount >= teamSize;
+}
+
+/**
  * Beregn mangel per side gitt nåværende roster og required `teamSize`.
  * Negativ mangel (overbooking) behandles som 0 — spillsiden er ansvarlig
  * for å forhindre overbooking via kapasitetssjekken.

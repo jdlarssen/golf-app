@@ -3,6 +3,8 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import type { RegistrationMode } from './registration';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 
 /**
  * Hjem-sidens «Funn turneringer»-seksjon (#257) henter listene via
@@ -14,7 +16,19 @@ import type { RegistrationMode } from './registration';
  * Returnerer kun base-info som er trygt å eksponere offentlig.
  */
 
-export type DiscoverableOpenGame = {
+/**
+ * Format metadata the terminliste row shows (#2258): «Bane · Format · lag på
+ * N», «9 hull», and the seat cap. Game metadata, so the field whitelist
+ * (#1022) holds. The selects narrow these Json/text columns with
+ * `overrideTypes`, which leaves every other field typed from the select.
+ */
+type DiscoverableFormat = {
+  game_mode: GameMode;
+  mode_config: GameModeConfig;
+  hole_segment: HoleSegment;
+};
+
+export type DiscoverableOpenGame = DiscoverableFormat & {
   id: string;
   name: string;
   short_id: string;
@@ -33,7 +47,7 @@ export type DiscoverableOpenGame = {
  * disse synlige for klubbens medlemmer UANSETT `registration_mode` — også
  * `invite_only` (medlemskap ER invitasjonen). `group_name` brukes til badge.
  */
-export type DiscoverableClubGame = {
+export type DiscoverableClubGame = DiscoverableFormat & {
   id: string;
   name: string;
   short_id: string;
@@ -49,7 +63,7 @@ export type DiscoverableClubGame = {
  * «Be om å bli med». Regler: open → alltid direct; manual_approval +
  * let_friends_skip_gate=true → direct; manual_approval ellers → request.
  */
-export type DiscoverableFriendGame = {
+export type DiscoverableFriendGame = DiscoverableFormat & {
   id: string;
   name: string;
   short_id: string;
@@ -128,7 +142,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
     let clubQuery = admin
       .from('games')
       .select(
-        'id, name, short_id, scheduled_tee_off_at, registration_mode, courses(name), groups(name)',
+        'id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, courses(name), groups(name)',
       )
       .in('group_id', myClubIds)
       .in('status', ['draft', 'scheduled'])
@@ -140,7 +154,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
       clubQuery = clubQuery.not('id', 'in', `(${[...excludedIds].join(',')})`);
     }
 
-    const clubRes = await clubQuery;
+    const clubRes = await clubQuery.overrideTypes<Array<DiscoverableFormat>>();
 
     clubGames = (clubRes.data ?? []).map((row) => {
       const course = row.courses;
@@ -153,6 +167,9 @@ export async function getDiscoverableGames(userId: string): Promise<{
         course_name: course?.name ?? null,
         registration_mode: row.registration_mode as RegistrationMode,
         group_name: group?.name ?? '',
+        game_mode: row.game_mode,
+        mode_config: row.mode_config,
+        hole_segment: row.hole_segment,
       };
     });
   }
@@ -171,7 +188,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
   if (friendIds.length > 0) {
     let friendQuery = admin
       .from('games')
-      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, courses(name)')
+      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, game_mode, mode_config, hole_segment, courses(name)')
       .in('created_by', friendIds)
       .in('registration_mode', ['open', 'manual_approval'])
       .in('status', ['draft', 'scheduled'])
@@ -189,7 +206,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
       );
     }
 
-    const friendRes = await friendQuery;
+    const friendRes = await friendQuery.overrideTypes<Array<DiscoverableFormat>>();
     friendGames = (friendRes.data ?? []).map((row) => {
       const course = row.courses;
       const regMode = row.registration_mode as 'open' | 'manual_approval';
@@ -206,6 +223,9 @@ export async function getDiscoverableGames(userId: string): Promise<{
         course_name: course?.name ?? null,
         registration_mode: regMode,
         joinMode,
+        game_mode: row.game_mode,
+        mode_config: row.mode_config,
+        hole_segment: row.hole_segment,
       };
     });
   }
@@ -220,7 +240,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   let openQuery = admin
     .from('games')
-    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, courses(name)')
+    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, courses(name)')
     // Påmeldingsmåten ER synligheten: open + manual_approval er oppdagbare,
     // invite_only er privat (#357). Ingen egen synlighets-bryter.
     .in('registration_mode', ['open', 'manual_approval'])
@@ -232,7 +252,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
     openQuery = openQuery.not('id', 'in', `(${[...openExcludedIdsWithFriends].join(',')})`);
   }
 
-  const openGamesRes = await openQuery;
+  const openGamesRes = await openQuery.overrideTypes<Array<DiscoverableFormat>>();
 
   const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? []).map(
     (row) => {
@@ -244,6 +264,9 @@ export async function getDiscoverableGames(userId: string): Promise<{
         scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
         course_name: course?.name ?? null,
         registration_mode: row.registration_mode as 'open' | 'manual_approval',
+        game_mode: row.game_mode,
+        mode_config: row.mode_config,
+        hole_segment: row.hole_segment,
       };
     },
   );

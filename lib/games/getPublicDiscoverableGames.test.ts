@@ -33,6 +33,7 @@ vi.mock('@/lib/supabase/admin', () => ({
         },
         order: () => b,
         limit: () => b,
+        overrideTypes: () => b,
         then: (
           resolve: (v: unknown) => unknown,
           reject?: (e: unknown) => unknown,
@@ -60,7 +61,7 @@ describe('getPublicDiscoverableGames', () => {
     expect(await getPublicDiscoverableGames()).toEqual([]);
   });
 
-  it('mapper rad til DiscoverableOpenGame og dropper status/signups_closed_at', async () => {
+  it('mapper rad til DiscoverableOpenGame med format (#2258) og dropper status/signups_closed_at', async () => {
     gamesRows.mockReturnValue({
       data: [
         {
@@ -71,6 +72,9 @@ describe('getPublicDiscoverableGames', () => {
           registration_mode: 'open',
           status: 'scheduled',
           signups_closed_at: null,
+          game_mode: 'skins',
+          mode_config: { kind: 'skins', team_size: 1 },
+          hole_segment: 'full',
           courses: { name: 'Hauger' },
         },
       ],
@@ -87,6 +91,9 @@ describe('getPublicDiscoverableGames', () => {
         scheduled_tee_off_at: '2026-06-01T10:00:00Z',
         course_name: 'Hauger',
         registration_mode: 'open',
+        game_mode: 'skins',
+        mode_config: { kind: 'skins', team_size: 1 },
+        hole_segment: 'full',
       },
     ]);
   });

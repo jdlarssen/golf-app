@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSocialProof } from './socialProof';
+import { buildSocialProof, firstName, socialProofForm } from './socialProof';
 
 /**
  * Type A — pure core of the join-funnel social-proof signal (#1193).
@@ -106,5 +106,63 @@ describe('buildSocialProof (#1193)', () => {
   it('accepts a Set of friend ids as well as an array', () => {
     const r = buildSocialProof(['jonas'], new Set(['jonas']), 'me', nameOf);
     expect(r.knownFriendNames).toEqual(['Jonas']);
+  });
+});
+
+// #2258: the choice between the line's forms has one home, shared by
+// SocialProofLine (full public names) and the terminliste row (first names).
+describe('socialProofForm (#2258)', () => {
+  it('no one joined → nothing', () => {
+    expect(
+      socialProofForm({ joinedCount: 0, knownFriendNames: [], knownFriendOverflow: 0 }),
+    ).toBeNull();
+  });
+
+  it('joined, no friends → the count', () => {
+    expect(
+      socialProofForm({ joinedCount: 3, knownFriendNames: [], knownFriendOverflow: 0 }),
+    ).toEqual({ kind: 'count', count: 3 });
+  });
+
+  it('one friend → one name', () => {
+    expect(
+      socialProofForm({ joinedCount: 2, knownFriendNames: ['Jonas B.'], knownFriendOverflow: 0 }),
+    ).toEqual({ kind: 'friendsOne', name: 'Jonas B.' });
+  });
+
+  it('two friends → both names', () => {
+    expect(
+      socialProofForm({
+        joinedCount: 2,
+        knownFriendNames: ['Jonas B.', 'Marte L.'],
+        knownFriendOverflow: 0,
+      }),
+    ).toEqual({ kind: 'friendsTwo', name1: 'Jonas B.', name2: 'Marte L.' });
+  });
+
+  it('three+ friends → one name and the rest', () => {
+    expect(
+      socialProofForm({ joinedCount: 5, knownFriendNames: ['Jonas B.'], knownFriendOverflow: 2 }),
+    ).toEqual({ kind: 'friendsOverflow', name: 'Jonas B.', count: 2 });
+  });
+
+  it('passes the names through unchanged, and maps them when asked', () => {
+    const proof = { joinedCount: 2, knownFriendNames: ['Jonas B.', 'Marte L.'], knownFriendOverflow: 0 };
+    expect(socialProofForm(proof, firstName)).toEqual({
+      kind: 'friendsTwo',
+      name1: 'Jonas',
+      name2: 'Marte',
+    });
+  });
+});
+
+describe('firstName (#2258)', () => {
+  it.each([
+    ['Jonas B.', 'Jonas'],
+    ['Marte', 'Marte'],
+    ['  Ola   N. ', 'Ola'],
+    ['Anne-Lise K.', 'Anne-Lise'],
+  ])('%j → %j', (input, expected) => {
+    expect(firstName(input)).toBe(expected);
   });
 });
