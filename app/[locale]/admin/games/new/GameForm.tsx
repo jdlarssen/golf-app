@@ -1,6 +1,5 @@
 'use client';
 
-import type { StartType } from '@/lib/games/startType';
 import { Fragment, useState } from 'react';
 import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { Button } from '@/components/ui/Button';
@@ -35,6 +34,7 @@ import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
 import { ShambleSetup } from './sections/ShambleSetup';
+import type { StartType } from '@/lib/games/startType';
 
 export type CourseOption = {
   id: string;
