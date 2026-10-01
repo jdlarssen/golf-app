@@ -44,9 +44,7 @@ import {
  * once, and put back with an error line if the server says no or the request
  * never arrives (offline on the course).
  *
- * The page sets its own edges (`AppShell flush`). Fonts render as on the
- * artboard: Inter without the app's `ss01`/`cv11` and Fraunces with automatic
- * optical size — an exception for this page only, on the root below.
+ * The page sets its own edges (`AppShell flush`).
  */
 
 type Status = { tone: 'ok' | 'error'; text: string } | null;
@@ -263,7 +261,7 @@ export function InboxClient({
     </div>
   );
 
-  const root = 'pb-4 [font-feature-settings:normal] [font-variation-settings:normal]';
+  const root = 'pb-4';
 
   if (items.length === 0) {
     return (
