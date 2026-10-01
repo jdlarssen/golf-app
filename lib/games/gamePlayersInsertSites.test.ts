@@ -25,7 +25,9 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     reason:
       "new regular and guest rows from the form's player_<id>_gender; the compensation re-inserts removed rows verbatim",
   },
-  'app/[locale]/admin/games/[id]/signups/actions.ts': {
+  // #2263: moved from `app/[locale]/admin/games/[id]/signups/actions.ts`, now
+  // shared by the signup page and the inbox's «Godta».
+  'lib/games/registrationDecisionCore.ts': {
     count: 1,
     reason: 'the approved team, joinTeeGenders per member',
   },
