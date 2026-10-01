@@ -6,6 +6,7 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { runFinishPipeline } from '@/lib/games/runFinishPipeline';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { isSideWinnerNotActive } from '@/lib/games/sideWinnerGuard';
+import { finishGate, stampsFromRow } from '@/lib/games/finishGate';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -172,9 +173,11 @@ export async function endGameCore(
     return { ok: false, reason: 'not_active' };
   }
 
-  // Verify every player has submitted; if require_peer_approval, every
-  // submission must also be approved. The user_ids also feed the in-app
-  // `game_finished` varsler after the flip. The «Resultatet er klart»-mail
+  // The finish gate (`finishGate`, #2222): every non-withdrawn player has
+  // submitted (unless allowMissing), and under require_peer_approval every one
+  // is approved. The rule has one home, shared with the app and the finish
+  // pages. The user_ids also feed the in-app `game_finished` varsler after the
+  // flip. The «Resultatet er klart»-mail
   // builds its own recipient list (buildGameFinishedRecipients), so no
   // e-post is read here (#2207: users.email is not readable through the
   // caller's session anyway).
@@ -191,25 +194,16 @@ export async function endGameCore(
       }[]
     >();
 
-  if (!players || players.length === 0) {
-    return { ok: false, reason: 'no_players' };
-  }
-  for (const p of players) {
-    // Withdrawn (WD, #386): out of the ranking entirely — never counts as a
-    // missing submission or a pending approval, so they never block the end.
-    if (p.withdrawn_at) continue;
-    if (!p.submitted_at) {
-      // No-show: block by default, but let «avslutt likevel» skip past them.
-      // submitted_at stays null — they show as «ikke levert», never a false
-      // levering; their registered scores still count in the leaderboard.
-      if (!allowMissing) {
-        return { ok: false, reason: 'not_all_submitted' };
-      }
-      continue;
-    }
-    if (game.require_peer_approval && !p.approved_at) {
-      return { ok: false, reason: 'not_all_approved' };
-    }
+  // A no-show skipped by «avslutt likevel» keeps submitted_at null — they show
+  // as «ikke levert», never a false levering; their registered scores still
+  // count in the leaderboard.
+  const roster = players ?? [];
+  const gate = finishGate(roster, stampsFromRow, {
+    requirePeerApproval: game.require_peer_approval,
+    allowMissing,
+  });
+  if (!gate.ok) {
+    return { ok: false, reason: gate.reason };
   }
 
   // #1488 (K1/K2): persist LD/CTP side-tournament winners BEFORE the status
@@ -297,7 +291,7 @@ export async function endGameCore(
         hole_segment: game.hole_segment,
       },
       // Unfiltered on purpose: withdrawn players still get the round-over varsel.
-      players,
+      players: roster,
       endedAt,
       actor,
       suppressPerGameNotifications,

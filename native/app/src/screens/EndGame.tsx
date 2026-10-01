@@ -8,8 +8,9 @@
 // ut og LD/CTP kåres før knappen i det hele tatt blir aktiv.
 //
 // **Reglene er ikke her.** Hvem som blokkerer og hva knappen krever regnes ut
-// av `lib/endGamePlan.ts`; selve skrivingene og portene bor i
-// `data/endGame.ts`, som speiler webbens `endGameCore` og har RLS bak seg.
+// av `lib/endGamePlan.ts`; selve skrivingene bor i `data/endGame.ts`, som har
+// RLS bak seg. Begge leser sperren fra `lib/games/finishGate.ts`, den samme
+// som webbens `endGameCore` bruker.
 // Skjermen er montering: den viser hva planen sier og sender resultatet videre.
 //
 // **Tema-bevisst via `useTheme()` (#1833).** Avkryssingen og slot-velgeren er

@@ -26,7 +26,7 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { finishRoster } from '@/lib/games/finishRoster';
+import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import {
   SideWinnersForm,
   type PlayerOption,
@@ -156,14 +156,16 @@ export default async function CreatorAvsluttPage({
   const displayName = (gp: { users: { name: string | null; nickname: string | null } | null }) =>
     formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null);
 
-  // Withdrawn players are out of the ranking entirely — never block the end.
-  const { active, missing } = finishRoster(gamePlayers ?? []);
-  // Peer approval (when required) blocks finishing — endGame bounces unapproved
-  // scorecards. The creator's sanctioned way out is the approval override on
-  // /spillere (#429), so the wait state below links there instead of dead-ending.
-  const unapproved = game.require_peer_approval
-    ? active.filter((gp) => gp.submitted_at && !gp.approved_at)
-    : [];
+  // The finish gate's lists (`finishGate`, #2222): withdrawn players are out of
+  // the ranking entirely and never block the end. Peer approval (when required)
+  // blocks finishing — endGame bounces unapproved scorecards. The creator's
+  // sanctioned way out is the approval override on /spillere (#429), so the
+  // wait state below links there instead of dead-ending.
+  const { active, missing, unapproved } = splitFinishRoster(
+    gamePlayers ?? [],
+    stampsFromRow,
+    game.require_peer_approval,
+  );
   const { anyCanApprove, ownCardRow, allOwnCardNoPeer } = unapprovedApprovalState(
     gamePlayers ?? [],
     game.game_mode,

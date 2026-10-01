@@ -9,7 +9,6 @@ import {
   activeChoices,
   buildFinishPlan,
   canFinish,
-  needsPeerApproval,
   sideSlots,
   toSideWinners,
   winnerCandidates,
@@ -87,21 +86,7 @@ function bundle(
 const SUBMITTED = '2026-09-01T09:00:00.000Z';
 const APPROVED = '2026-09-01T09:30:00.000Z';
 
-describe('needsPeerApproval', () => {
-  it.each([
-    ['levert og godkjent', SUBMITTED, APPROVED, false],
-    ['levert, ikke godkjent', SUBMITTED, null, true],
-    ['verken levert eller godkjent', null, null, false],
-    // Uoppnåelig i dag (`reopenScorecard` nuller begge sammen), men fail-closed
-    // for en fremtidig sti som bare nuller den ene halvdelen.
-    ['godkjent uten levering', null, APPROVED, true],
-  ] as [string, string | null, string | null, boolean][])(
-    'svarer %s → %s',
-    (_label, submittedAt, approvedAt, expected) => {
-      expect(needsPeerApproval(submittedAt, approvedAt)).toBe(expected);
-    },
-  );
-});
+// `needsPeerApproval` er testet i `lib/games/finishGate.test.ts` (#2222).
 
 describe('sideSlots', () => {
   it('gir ingen slots når sideturneringen er av — også med tellere satt', () => {

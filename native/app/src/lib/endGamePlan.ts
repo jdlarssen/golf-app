@@ -7,40 +7,20 @@
 // testes uten å rendre noe, og slik at `EndGame.tsx` blir montering.
 //
 // **Planen gater ikke, den forbereder.** Den ekte porten er
-// `finishRound` (`data/endGame.ts`), som speiler `endGameCore` og har RLS bak
-// seg. Blir de to uenige, er det datamodulen som har rett — skjermen skal bare
+// `finishRound` (`data/endGame.ts`), som har RLS bak seg. Skjermen skal bare
 // slippe å tilby et trykk som garantert blir avvist.
 //
-// **`needsPeerApproval` bor her, ikke i datamodulen.** Regelen leses to steder
-// (skjermen navngir hvem som mangler, skrivingen avviser), og en regel har ett
-// hjem (AGENTS.md felle 4). Datamodulen importerer den herfra.
+// **Hvem som mangler, regnes ett sted.** Skjermen navngir hvem som mangler
+// levering og godkjenning, skrivingen avviser, og nettsidens kjerne og
+// avslutt-sider gjør det samme. Alle leser `lib/games/finishGate.ts` (#2222),
+// så de kan ikke bli uenige (AGENTS.md felle 4).
 import {
   supportsWithdrawal,
   type GameMode,
 } from '../../../../lib/scoring/modes/types';
+import { splitFinishRoster } from '../../../../lib/games/finishGate';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { SideWinnerRow } from '../data/sideWinners';
-
-/**
- * Mangler denne raden en peer-godkjenning?
- *
- * Tar de to stemplene, ikke en rad: skjermen leser camelCase fra bundelen og
- * skrivingen leser snake_case fra PostgREST, og regelen skal ikke kjenne noen
- * av delene.
- *
- * Begge halvdelene av paret fanges. «Levert, ikke godkjent» er webbens egen
- * gren (`endGameCore:194-196`). «Godkjent, ikke levert» er uoppnåelig i dag —
- * `reopenScorecard` nuller begge i samme UPDATE — men den er fail-closed for en
- * fremtidig sti som bare nuller den ene.
- */
-export function needsPeerApproval(
-  submittedAt: string | null,
-  approvedAt: string | null,
-): boolean {
-  const submitted = submittedAt !== null;
-  const approved = approvedAt !== null;
-  return (submitted && !approved) || (!submitted && approved);
-}
 
 /** Valget «Ingen kvalifiserte» — webbens `"none"`, som persisteres som null. */
 export const NO_WINNER = 'none';
@@ -117,9 +97,10 @@ export function sideSlots(game: BundleGame): FinishSlot[] {
 /**
  * Alt skjermen trenger å vite om runden, i én gjennomgang av rosteret.
  *
- * Trukne spillere er ute av alle tre listene — de blokkerer hverken levering
- * eller godkjenning, og de kan ikke kåres. Samme filter som webbens
- * `/games/[id]/avslutt` (`active`-lista der).
+ * Listene kommer fra `splitFinishRoster`, den samme som webbens avslutt-sider
+ * leser: trukne spillere er ute av alle tre — de blokkerer hverken levering
+ * eller godkjenning, og de kan ikke kåres. `BundlePlayer` har alt de tre
+ * stemplene i camelCase, så raden er sin egen stempel-leser.
  *
  * @param organiserUserId den innloggede arrangøren; egen rad kan ikke trekkes.
  */
@@ -129,20 +110,17 @@ export function buildFinishPlan(
 ): FinishPlan {
   const { game } = bundle;
   const withdrawalSupported = supportsWithdrawal(game.gameMode as GameMode);
-  const active = bundle.players.filter((player) => player.withdrawnAt === null);
+  const roster = splitFinishRoster(
+    bundle.players,
+    (player) => player,
+    game.requirePeerApproval,
+  );
+  const { active, unapproved } = roster;
 
-  const missing: MissingEntry[] = active
-    .filter((player) => player.submittedAt === null)
-    .map((player) => ({
-      player,
-      withdrawable: withdrawalSupported && player.userId !== organiserUserId,
-    }));
-
-  const unapproved = game.requirePeerApproval
-    ? active.filter((player) =>
-        needsPeerApproval(player.submittedAt, player.approvedAt),
-      )
-    : [];
+  const missing: MissingEntry[] = roster.missing.map((player) => ({
+    player,
+    withdrawable: withdrawalSupported && player.userId !== organiserUserId,
+  }));
 
   return {
     active,

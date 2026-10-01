@@ -11,7 +11,7 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
 import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { finishRoster } from '@/lib/games/finishRoster';
+import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
 import { endGameWithSideWinners, remindMissingPlayers } from './actions';
 
@@ -56,13 +56,14 @@ export default async function AvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
       id: string;
       name: string;
       status: GameStatus;
+      require_peer_approval: boolean;
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
@@ -84,20 +85,28 @@ export default async function AvsluttPage({
   const { data: gamePlayers } = await supabase
     .from('game_players')
     .select(
-      'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
+      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
         submitted_at: string | null;
+        approved_at: string | null;
         withdrawn_at: string | null;
         users: { name: string | null; nickname: string | null } | null;
       }[]
     >();
 
-  // #2284: withdrawn players are neither missing nor winner candidates.
-  const roster = finishRoster(gamePlayers ?? []);
+  // #2284: withdrawn players are neither missing nor winner candidates. The
+  // lists come from the finish gate (`finishGate`, #2222); this page reads only
+  // `active` and `missing`, but gets the real peer flag so the split never
+  // carries a hard-coded guess.
+  const roster = splitFinishRoster(
+    gamePlayers ?? [],
+    stampsFromRow,
+    game.require_peer_approval,
+  );
 
   const players: PlayerOption[] = roster.active.map((gp) => ({
     user_id: gp.user_id,

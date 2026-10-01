@@ -66,6 +66,7 @@ import {
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isStartCountMode } from '@/lib/games/startPlayerCount';
+import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -632,16 +633,21 @@ async function PlayersSections({
   const endAction = endGame.bind(null, gameId);
   const reopenGameAction = reopenGame.bind(null, gameId);
 
-  // Withdrawn players (#386): excluded from readiness counts and the
-  // «Levert X/Y» denominator. The total «Spillere»-row still uses players.length.
-  const rankablePlayers = players.filter((p) => !p.withdrawn_at);
-
-  // Readiness preview for the end-game button (only meaningful when active).
-  const notSubmittedCount = rankablePlayers.filter((p) => !p.submitted_at).length;
-  const pendingApprovalCount = game.require_peer_approval
-    ? rankablePlayers.filter((p) => p.submitted_at != null && p.approved_at == null)
-        .length
-    : 0;
+  // Readiness preview for the end-game button (only meaningful when active),
+  // from the finish gate's own lists (`finishGate`, #2222). Withdrawn players
+  // (#386) are out of them, so out of the readiness counts and the «Levert X/Y»
+  // denominator. The total «Spillere»-row still uses players.length.
+  const finishLists = splitFinishRoster(
+    players,
+    stampsFromRow,
+    game.require_peer_approval,
+  );
+  const rankablePlayers = finishLists.active;
+  const notSubmittedCount = finishLists.missing.length;
+  const pendingApprovalCount = finishLists.unapproved.length;
+  // `rankablePlayers.length > 0` is a deliberate UI choice: when everyone has
+  // withdrawn, the page shows no finish button, even though the gate itself
+  // would accept the finish (it counts raw rows).
   const everyPlayerReady =
     rankablePlayers.length > 0 &&
     notSubmittedCount === 0 &&

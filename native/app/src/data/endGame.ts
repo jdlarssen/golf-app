@@ -1,15 +1,15 @@
 // native/app/src/data/endGame.ts
 // Native N6c (#1856): avslutte runden fra appen.
 //
-// **Hvorfor speilet og ikke delt.** `lib/games/endGameCore.ts` åpner med
+// **Gatene er delt, skrivingene er egne.** `lib/games/endGameCore.ts` åpner med
 // `import 'server-only'` — appens `node_modules/server-only` er en bar `throw`,
 // så modulen kaster ved import under Metro/Hermes. Den drar dessuten inn
 // `next/cache`, Resend-mail og fire service-role-hjelpere. Motsatt konklusjon av
 // N6b, altså: starten kunne kalle en delt, import-ren kjerne
 // (`startScheduledGameCore`; siden #2215 går den via en rute i stedet),
-// avslutningen kan ikke. Gatene under er derfor en
-// SPEILING av `endGameCore.ts:153-196`, og jest-paritet per gren er det som
-// holder de to i lås. Endres kjernen, endres denne fila i samme PR.
+// avslutningen kan ikke. Selve regelen — hvem som sperrer avslutningen — bor
+// derimot i den import-frie `lib/games/finishGate.ts` (#2222), som kjernen og
+// denne fila leser begge. Status-sjekken og skrivingene under er appens egne.
 //
 // **Hva som IKKE skjer her.** Alt etter status-flippen i webben — avledede
 // spill, resultatsammendrag (#572), WHS-differensialer (#941), bragder (#947),
@@ -22,18 +22,15 @@
 // gang i stedet for når fullføreren kommer innom.
 //
 // **Skriverekkefølgen er en regel, ikke en preferanse.** (a) frafall, (b)
-// LD/CTP-vinnerne, (c) status-flippen — nøyaktig som `endGameCore:199-229`.
+// LD/CTP-vinnerne, (c) status-flippen — samme rekkefølge som `endGameCore`.
 // Feiler vinner-upserten står spillet igjen som `active`, og arrangøren kan
 // prøve igjen: upserten er idempotent på PK-en `(game_id, category, position)`.
 // Snus rekkefølgen, kan et spill bli `finished` uten kåring, og #1850-seksjonen
 // viser en tom sideturnering som ser ferdig ut.
 //
-// **Peer-gaten relakseres ALDRI av `allowMissing`.** I webben holder den
-// invarianten på dataform: `continue`-en for en uinnlevert spiller hopper
-// strukturelt over peer-sjekken, og det er ufarlig bare fordi `reopenScorecard`
-// nuller `submitted_at` og `approved_at` i samme UPDATE. Her er vakten skrevet
-// ut i stedet ({@link needsPeerApproval}) — den leser aldri `allowMissing`, og
-// den stopper også en rad der bare den ene av de to er nullet.
+// **Peer-gaten relakseres ALDRI av `allowMissing`.** `finishGate` spør
+// `needsPeerApproval`, som aldri leser `allowMissing`, og som også stopper en
+// rad der bare den ene av `submitted_at`/`approved_at` er nullet.
 //
 // **Trap 2.** PostgREST svarer `error == null` på skriv som traff 0 rader.
 // Begge skrivene kjeder derfor `.select(...)` og går gjennom den delte
@@ -53,7 +50,7 @@ import {
   NoRowsAffectedError,
 } from '../../../../lib/supabase/affectedRows';
 import { isSideWinnerNotActive } from '../../../../lib/games/sideWinnerGuard';
-import { needsPeerApproval } from '../lib/endGamePlan';
+import { finishGate, stampsFromRow } from '../../../../lib/games/finishGate';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { withdrawPlayer } from './rosterActions';
 import { refreshWebCache } from './refreshWebCache';
@@ -83,13 +80,13 @@ export type EndRoundFailure =
   | 'not-found'
   /** Cup-kamp: avslutningen eies av cup-flyten på nettsiden. */
   | 'cup-game'
-  /** Speiler `endGameCore:153-155` — kun en `active` runde kan avsluttes. */
+  /** Samme sjekk som `endGameCore` — kun en `active` runde kan avsluttes. */
   | 'not-active'
-  /** Speiler `endGameCore:178-180` — spillet har ingen spillere. */
+  /** `finishGate`: spillet har ingen spillere. */
   | 'no-players'
-  /** Speiler `endGameCore:181-193`. Relakseres av `allowMissing`. */
+  /** `finishGate`: noen har ikke levert. Relakseres av `allowMissing`. */
   | 'not-all-submitted'
-  /** Speiler `endGameCore:194-196`. Relakseres ALDRI. */
+  /** `finishGate`: noen mangler godkjenning. Relakseres ALDRI. */
   | 'not-all-approved'
   /** Formatet støtter ikke frafall — et WD betyr noe annet der. */
   | 'withdrawal-unsupported'
@@ -224,8 +221,8 @@ async function loadFinishGate(
 }
 
 /**
- * Roster-lesingen speiler `endGameCore:162-176` minus `users`-joinen — den
- * finnes der kun for å bygge mail-mottakerne, og mailen er server-eid.
+ * Samme kolonner som roster-lesingen i `endGameCore`: de tre stemplene
+ * `finishGate` leser, og `user_id` for å navngi hvem som sperrer.
  */
 async function loadFinishPlayers(
   gameId: string,
@@ -273,77 +270,35 @@ function readWriteResult<T>(
 }
 
 // -----------------------------------------------------------------------------
-// Gatene — speilet fra endGameCore:181-197
+// Gatene — delt med webben (`lib/games/finishGate.ts`)
 // -----------------------------------------------------------------------------
-
-/**
- * **Den eksplisitte peer-vakten bor i `lib/endGamePlan.ts`.**
- *
- * Webben stiller aldri spørsmålet for en uinnlevert spiller — `continue`-en
- * hopper strukturelt over sjekken — og det er trygt NÅ bare fordi
- * `reopenScorecard` nuller `submitted_at` og `approved_at` sammen. Regelen er
- * derfor skrevet ut i stedet, og den fanger begge halvdelene av paret (levert
- * uten godkjenning, og godkjent uten levering).
- *
- * Den ligger i `lib/` fordi avslutt-skjermen stiller NØYAKTIG samme spørsmål
- * når den navngir hvem som mangler godkjenning. To kopier ville vært to regler
- * (AGENTS.md felle 4), og skjermen kunne vist en klar liste mens skrivingen
- * avviste.
- *
- * {@link needsPeerApproval} leser ALDRI `allowMissing`. Det er hele poenget:
- * «avslutt likevel» hopper over en manglende LEVERING, aldri over en manglende
- * GODKJENNING.
- */
 
 /**
  * Første blokkerende grunn, med alle spillerne den gjelder — eller `null` når
  * rosteret er klart.
  *
- * Grunnen velges i roster-rekkefølge, som webben (den returnerer på første
- * spiller som blokkerer). Forskjellen er at hele klassen samles opp, slik at
- * skjermen kan navngi alle på én gang i stedet for én per forsøk.
+ * Regelen er `finishGate`, den samme som `endGameCore` bruker (#2222): grunnen
+ * velges i roster-rekkefølge, hele klassen samles opp slik at skjermen kan
+ * navngi alle på én gang, trukne spillere sperrer aldri, og `allowMissing`
+ * slakker aldri peer-gaten. Denne funksjonen oversetter bare svaret til appens
+ * feilkoder.
  *
- * ⚠️ Minst-én-spiller-porten teller RÅ rader, som `endGameCore:178-180` — også
- * trukne. Et spill der alle er trukket kan altså avsluttes, akkurat som på
- * nettsiden. WD-unntaket er lastbærende for cup-flyten og skal ikke strammes
- * her, ensidig, i appen.
+ * ⚠️ Minst-én-spiller-porten teller RÅ rader, også trukne. Et spill der alle er
+ * trukket kan altså avsluttes, akkurat som på nettsiden. WD-unntaket er
+ * lastbærende for cup-flyten.
  */
 function findBlockingPlayers(
   rows: FinishPlayerRow[],
   gate: { allowMissing: boolean; requirePeerApproval: boolean },
 ): EndRoundResult | null {
-  if (rows.length === 0) return failed('no-players');
-
-  let reason: 'not-all-submitted' | 'not-all-approved' | null = null;
-  const missingSubmission: string[] = [];
-  const missingApproval: string[] = [];
-
-  for (const player of rows) {
-    // Trukket (WD, #386): ute av rangeringen, og blokkerer derfor hverken som
-    // manglende levering eller som manglende godkjenning.
-    if (player.withdrawn_at !== null) continue;
-
-    if (player.submitted_at === null && !gate.allowMissing) {
-      missingSubmission.push(player.user_id);
-      reason ??= 'not-all-submitted';
-    }
-
-    if (
-      gate.requirePeerApproval &&
-      needsPeerApproval(player.submitted_at, player.approved_at)
-    ) {
-      missingApproval.push(player.user_id);
-      reason ??= 'not-all-approved';
-    }
-  }
-
-  if (reason === 'not-all-submitted') {
-    return failed('not-all-submitted', undefined, missingSubmission);
-  }
-  if (reason === 'not-all-approved') {
-    return failed('not-all-approved', undefined, missingApproval);
-  }
-  return null;
+  const result = finishGate(rows, stampsFromRow, gate);
+  if (result.ok) return null;
+  if (result.reason === 'no_players') return failed('no-players');
+  return failed(
+    result.reason === 'not_all_submitted' ? 'not-all-submitted' : 'not-all-approved',
+    undefined,
+    result.blocked.map((player) => player.user_id),
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -489,9 +444,9 @@ async function upsertSideWinners(
 /**
  * (c) Flipp `active → finished`, med optimistisk lås.
  *
- * `.eq('status', 'active')` er låsen webben ikke har (den filtrerer bare på
- * `id`). Uten den ville et dobbelttrykk skrevet et nytt `ended_at` oppå det
- * gamle og flyttet tidspunktet runden ble avsluttet.
+ * `.eq('status', 'active')` er samme lås som webben har (#1856). Uten den ville
+ * et dobbelttrykk skrevet et nytt `ended_at` oppå det gamle og flyttet
+ * tidspunktet runden ble avsluttet.
  *
  * 0 rader er IKKE entydig: både «noen andre avsluttet den først» og «RLS nektet
  * skrivingen» filtreres bort til tom liste. Derfor ett oppfølgings-SELECT, som

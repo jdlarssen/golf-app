@@ -2,10 +2,10 @@
 //
 // Suiten har to tyngdepunkt.
 //
-// 1. **Paritet med `lib/games/endGameCore.ts:153-196`.** `endGameCore` er
-//    `server-only` og kan ikke importeres her, så gatene er speilet. Det finnes
-//    ingen kompilator som holder de to i lås — én test per gren gjør det i
-//    stedet. Peer-gaten har sin egen test for at `allowMissing` IKKE slakker
+// 1. **Gatene.** Regelen selv bor i `lib/games/finishGate.ts` og er testet der
+//    (#2222); webbens `endGameCore` leser den samme. Testene her beviser at
+//    `finishRound` spør den og oversetter svaret til appens feilkoder, én test
+//    per gren. Peer-gaten har sin egen test for at `allowMissing` IKKE slakker
 //    den; det er regelen det er lettest å miste i en refaktorering.
 // 2. **Skriverekkefølgen.** Frafall → kåring → status-flipp. Snus de to siste,
 //    kan et spill bli `finished` uten kåring, og #1850-seksjonen viser en tom
@@ -161,7 +161,7 @@ describe('finishRound', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Gatene, speilet fra endGameCore:153-196
+  // Gatene: status-sjekken, og `finishGate` (lib/games/finishGate.ts)
   // ───────────────────────────────────────────────────────────────────────────
 
   describe('gater', () => {
@@ -177,7 +177,7 @@ describe('finishRound', () => {
       expect(tablesTouched()).toEqual(['games']);
     });
 
-    it('avviser et spill som ikke er aktivt (endGameCore:153-155)', async () => {
+    it('avviser et spill som ikke er aktivt (samme sjekk som endGameCore)', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({ games: [queryStub(gameRow({ status: 'scheduled' }))] });
 
@@ -188,7 +188,7 @@ describe('finishRound', () => {
       expect(tablesTouched()).toEqual(['games']);
     });
 
-    it('avviser et spill uten spillere (endGameCore:178-180)', async () => {
+    it('avviser et spill uten spillere (finishGate: no_players)', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         games: [queryStub(gameRow())],
@@ -201,7 +201,7 @@ describe('finishRound', () => {
       });
     });
 
-    it('blokkerer på manglende leveringer, og navngir hvem (endGameCore:181-193)', async () => {
+    it('blokkerer på manglende leveringer, og navngir hvem (finishGate: not_all_submitted)', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         games: [queryStub(gameRow())],
@@ -264,7 +264,7 @@ describe('finishRound', () => {
       });
     });
 
-    it('blokkerer på manglende godkjenning, og navngir hvem (endGameCore:194-196)', async () => {
+    it('blokkerer på manglende godkjenning, og navngir hvem (finishGate: not_all_approved)', async () => {
       const { queryStub, routeFrom } = mocks();
       routeFrom({
         games: [queryStub(gameRow({ require_peer_approval: true }))],
