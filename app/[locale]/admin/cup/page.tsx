@@ -45,7 +45,7 @@ async function fetchAllCups(supabase: ServerSupabase): Promise<CupLedgerRow[]> {
     .limit(50);
   // status/winner_team er text/smallint i DB, låst av CHECK — samme cast som
   // getCupSnapshot gjør på de samme kolonnene.
-  return (data ?? []) as unknown as CupLedgerRow[];
+  return (data ?? []) as CupLedgerRow[];
 }
 
 /**
@@ -67,7 +67,7 @@ async function fetchMyCups(
     .in('id', ids)
     .order('created_at', { ascending: false })
     .limit(50);
-  return (data ?? []) as unknown as CupLedgerRow[];
+  return (data ?? []) as CupLedgerRow[];
 }
 
 export default async function CupListPage({

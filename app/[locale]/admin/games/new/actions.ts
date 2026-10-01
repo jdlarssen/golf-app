@@ -229,9 +229,8 @@ async function createGameInternal(
     // #50: en utløpt klubb (frossen avtale) kan ikke ta imot nye spill —
     // dropp scopingen til null (samme «ugyldig verdi → null»-mønster).
     if (membership) {
-      const g = Array.isArray(membership.groups)
-        ? membership.groups[0] ?? null
-        : membership.groups;
+      // RLS client: the embed reads null-safe, a hidden groups row is possible.
+      const g = membership.groups;
       if (!isClubExpired(g?.valid_until ?? null)) groupId = rawGroupId;
     }
   }

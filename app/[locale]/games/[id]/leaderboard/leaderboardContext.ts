@@ -116,7 +116,7 @@ export async function buildPrizeAwards(
   if (playersRes.error) throw playersRes.error;
 
   const players: PrizeWinnerPlayer[] = (playersRes.data ?? []).map((r) => {
-    const u = Array.isArray(r.users) ? r.users[0] : r.users;
+    const u = r.users;
     return {
       userId: r.user_id,
       name: formatRevealName(u?.name ?? '', u?.nickname ?? null),
