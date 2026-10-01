@@ -1069,8 +1069,13 @@ export async function deleteTournament(formData: FormData) {
   // FK på games.tournament_id er ON DELETE SET NULL — de GJENVÆRENDE matchene
   // (reell spilling, eller status='finished') blir frittstående spill, ikke
   // slettet. Aldri-spilte matcher er allerede fjernet av batchen over.
-  const { error } = await supabase.from('tournaments').delete().eq('id', id);
-  if (error) {
+  // #2214: 0 rader er en feil, ikke «cup slettet» (bug-prevention #2).
+  const { data: deletedCup, error } = await supabase
+    .from('tournaments')
+    .delete()
+    .eq('id', id)
+    .select('id');
+  if (error || (deletedCup ?? []).length === 0) {
     console.error('[cup] deleteTournament failed', { id, error });
     redirect(deleteErrorPath);
   }
