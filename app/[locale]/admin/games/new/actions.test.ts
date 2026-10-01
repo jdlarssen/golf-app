@@ -260,6 +260,32 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
   });
 });
 
+describe('createGameDraft — start_type (#2258)', () => {
+  // The insert writes the wizard's «Shotgun-start»; without the field (an older
+  // tab) a new round starts from the first tee.
+  it.each([
+    ['shotgun', 'shotgun'],
+    [undefined, 'first_tee'],
+  ] as const)('form start_type %j → games.insert start_type %s', async (raw, expected) => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate: not admin
+      { data: { id: 'st-game-1' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    signIn('reg-1', 'random@example.com');
+    const fields: Record<string, string> = { name: 'Høstscramble', side_tournament_enabled: 'false' };
+    if (raw !== undefined) fields.start_type = raw;
+
+    const { createGameDraft } = await import('./actions');
+    await expect(createGameDraft(fd(fields))).rejects.toBeInstanceOf(RedirectError);
+
+    const gamesInsert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect((gamesInsert!.args[0] as { start_type: string }).start_type).toBe(expected);
+  });
+});
+
 describe('cup link (#2207)', () => {
   function gamesInsertPayload() {
     const insert = supabaseMock.__fromCalls.find(
