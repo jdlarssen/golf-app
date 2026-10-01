@@ -26,6 +26,7 @@ import {
 } from './lineupReveal';
 import {
   planLineupPairs,
+  sumPendingLineupSlots,
   validateLineupSubmission,
   validateStoredLineups,
   type LineupSlotInput,
@@ -225,9 +226,7 @@ export async function setCupPlannedMatchCount(
   // Gulvet: kampene som alt finnes + plassene i åpnede, ikke-avdekkede økter.
   // Et lavere tall er en skrivefeil — kampene er alt satt opp og forsvinner
   // ikke av at noen skriver et mindre tall i et felt.
-  const pendingSlots = (sessionRows ?? [])
-    .filter((row) => row.revealed_at === null)
-    .reduce((sum, row) => sum + (row.slot_count as number), 0);
+  const pendingSlots = sumPendingLineupSlots(sessionRows ?? []);
   const floor = Math.max(2, (gameRows ?? []).length + pendingSlots);
 
   const planned = parsePlannedMatchCount(
@@ -373,11 +372,9 @@ export async function openCupLineupSession(
   }
 
   const existingSessions = sessionRows ?? [];
-  // Samme regel som veiviseren bruker (lib/cup/lineupData:countPendingLineupSlots)
-  // — regnet lokalt her fordi radene alt er lest.
-  const pendingSlots = existingSessions
-    .filter((s) => s.revealed_at === null)
-    .reduce((sum, s) => sum + (s.slot_count as number), 0);
+  // Samme sum som veiviseren bruker (`sumPendingLineupSlots`, #2222), over
+  // radene som alt er lest.
+  const pendingSlots = sumPendingLineupSlots(existingSessions);
   const existingMatches = (gameRows ?? []).length;
 
   // Klubb-cuper og global admin er uncapped (#526) — samme regel som

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   seatsPerSlot,
+  sumPendingLineupSlots,
   validateLineupSubmission,
   validateStoredLineups,
   planLineupPairs,
@@ -333,5 +334,32 @@ describe('validateStoredLineups', () => {
         squad2: ['x', 'y', 'z', 'w'],
       }),
     ).toEqual({ ok: false, error: 'lineup_squad_changed' });
+  });
+});
+
+describe('sumPendingLineupSlots (#2222)', () => {
+  const REVEALED = '2026-09-02T10:00:00.000Z';
+
+  it('is 0 for a cup without sessions', () => {
+    expect(sumPendingLineupSlots([])).toBe(0);
+  });
+
+  it('is 0 when every session is revealed', () => {
+    expect(
+      sumPendingLineupSlots([
+        { slot_count: 3, revealed_at: REVEALED },
+        { slot_count: 2, revealed_at: REVEALED },
+      ]),
+    ).toBe(0);
+  });
+
+  it('sums only the sessions not yet revealed', () => {
+    expect(
+      sumPendingLineupSlots([
+        { slot_count: 3, revealed_at: null },
+        { slot_count: 4, revealed_at: REVEALED },
+        { slot_count: 2, revealed_at: null },
+      ]),
+    ).toBe(5);
   });
 });

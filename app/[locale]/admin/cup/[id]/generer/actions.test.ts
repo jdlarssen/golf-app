@@ -101,8 +101,10 @@ let adminExistingPlayerRows: { user_id: string }[] = [];
 let adminExistingPlayersError: unknown = null;
 // #1884: åpnede, ikke-avdekkede uttaks-økter teller mot match-taket sammen med
 // `games` — de er kamper som ER lovet. Tom som default, så alle eldre tester
-// oppfører seg nøyaktig som før.
-let adminPendingLineupRows: { slot_count: number }[] = [];
+// oppfører seg nøyaktig som før. Tellingen henter alle cupens økter og lar
+// `sumPendingLineupSlots` filtrere på `revealed_at` (#2222), så mocken svarer
+// på `eq` og radene bærer stempelet.
+let adminPendingLineupRows: { slot_count: number; revealed_at: string | null }[] = [];
 let adminPendingLineupError: unknown = null;
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
@@ -120,11 +122,9 @@ vi.mock('@/lib/supabase/admin', () => ({
       if (table === 'cup_lineup_sessions') {
         return {
           select: () => ({
-            eq: () => ({
-              is: async () => ({
-                data: adminPendingLineupError ? null : adminPendingLineupRows,
-                error: adminPendingLineupError,
-              }),
+            eq: async () => ({
+              data: adminPendingLineupError ? null : adminPendingLineupRows,
+              error: adminPendingLineupError,
             }),
           }),
         };
@@ -1222,7 +1222,7 @@ describe('createCupMatchesFromPlan — personlig-cup-taket teller avledede match
     adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper
     // Cupen har ingen kamper ennå, men en åpnet singel-økt som vil lage
     // nøyaktig taket minus én. Planen under legger to til → over taket.
-    adminPendingLineupRows = [{ slot_count: MAX_PERSONAL_CUP_MATCHES - 1 }];
+    adminPendingLineupRows = [{ slot_count: MAX_PERSONAL_CUP_MATCHES - 1, revealed_at: null }];
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: false }, error: null },
       { data: draftCup, error: null },

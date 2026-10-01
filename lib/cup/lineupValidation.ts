@@ -12,6 +12,26 @@
 
 import type { CupSessionFormat } from './cupTemplates';
 
+/**
+ * Plassene i cupens ventende uttaks-økter: åpnet, men ikke avdekket (#1884).
+ * En slik økt er en forpliktelse om å opprette akkurat så mange kamper når
+ * begge kapteiner har levert, så match-taket og planlagt-gulvet teller dem
+ * sammen med kampene som alt finnes.
+ *
+ * Definisjonen av «ventende» står her og ingen andre steder (#2222): tavla,
+ * tak-tellingen i `openCupLineupSession`, gulvet i `setCupPlannedMatchCount`
+ * og `countPendingLineupSlots` (som generer-veiviseren bruker) summerer alle
+ * med denne. Ellers kunne to tellinger hver for seg holde seg under taket og
+ * til sammen sprenge det.
+ */
+export function sumPendingLineupSlots(
+  rows: readonly { slot_count: number; revealed_at: string | null }[],
+): number {
+  return rows
+    .filter((row) => row.revealed_at === null)
+    .reduce((sum, row) => sum + row.slot_count, 0);
+}
+
 /** Ett seter-antall per plass: singel spiller én mot én, resten to mot to. */
 export function seatsPerSlot(format: CupSessionFormat): 1 | 2 {
   return format === 'singles_matchplay' ? 1 : 2;
