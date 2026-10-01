@@ -5,6 +5,7 @@
 // og kortet og lista har sine egne tester.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fetchKavalkadeStatus } from '../data/kavalkade';
 import { fetchRoundHistory } from '../data/roundHistory';
 import { fetchRoundPoints } from '../data/roundPoints';
 import { HISTORY_TEXT } from '../lib/historyCopy';
@@ -16,9 +17,14 @@ jest.mock('../supabase', () => require('../test/supabaseMock'));
 jest.mock('../session', () => ({ useSession: () => ({ userId: 'me' }) }));
 jest.mock('../data/roundHistory', () => ({ fetchRoundHistory: jest.fn() }));
 jest.mock('../data/roundPoints', () => ({ fetchRoundPoints: jest.fn() }));
+jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn() }));
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+}));
 
 const fetchRoundHistoryMock = fetchRoundHistory as jest.Mock;
 const fetchRoundPointsMock = fetchRoundPoints as jest.Mock;
+const fetchKavalkadeStatusMock = fetchKavalkadeStatus as jest.Mock;
 const navigate = jest.fn();
 
 async function renderScreen() {
@@ -31,6 +37,7 @@ async function renderScreen() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  fetchKavalkadeStatusMock.mockResolvedValue(null);
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
@@ -82,5 +89,27 @@ describe('RoundDiary', () => {
     await fireEvent.press(screen.getByTestId('round-diary-retry'));
     expect(await screen.findByTestId('diary-row-sp')).toBeTruthy();
     expect(screen.queryByTestId('round-diary-error')).toBeNull();
+  });
+
+  // Eierens svar 4 (01.10): raden står mellom undertittelen og formkortet fra
+  // 24. desember, og for admin før datoen. Serveren svarer `canOpen`.
+  it('shows the Kavalkade row under the subtitle when it is open, and opens it', async () => {
+    fetchRoundHistoryMock.mockResolvedValue([historyRound({ gameId: 'sp' })]);
+    fetchKavalkadeStatusMock.mockResolvedValue({ year: 2026, slot: 'link', canOpen: true, hasRound: true });
+    await renderScreen();
+
+    const row = await screen.findByTestId('round-diary-kavalkade');
+    expect(row).toHaveTextContent('🎄Kavalkaden 2026Golfåret ditt og gjengens, kort for kort.');
+    expect(row.props.accessibilityLabel).toBe('Kavalkaden 2026. Golfåret ditt og gjengens, kort for kort.');
+    await fireEvent.press(row);
+    expect(navigate).toHaveBeenCalledWith('Kavalkade');
+  });
+
+  it('has no Kavalkade row before it opens, or without an answer', async () => {
+    fetchRoundHistoryMock.mockResolvedValue([historyRound({ gameId: 'sp' })]);
+    fetchKavalkadeStatusMock.mockResolvedValue({ year: 2026, slot: 'teaser', canOpen: false, hasRound: true });
+    await renderScreen();
+    expect(await screen.findByTestId('diary-row-sp')).toBeTruthy();
+    expect(screen.queryByTestId('round-diary-kavalkade')).toBeNull();
   });
 });

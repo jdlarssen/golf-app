@@ -49,6 +49,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { firstName } from '../../../../lib/firstName';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
+import { KavalkadeHomeBanner } from '../components/kavalkade/KavalkadeDoors';
 import { HomeHeroCard } from '../components/home/HomeHeroCard';
 import { LastRoundCard } from '../components/home/LastRoundCard';
 import { NextStartTicket } from '../components/home/NextStartTicket';
@@ -75,6 +76,7 @@ import { PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
+import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { countsPoints, lastRoundPoints } from '../lib/lastRound';
 import type { ScoringExtras } from '../lib/scoringContext';
@@ -88,6 +90,7 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
   const { userId } = useSession();
   // Uten navigasjonslinje står innholdet rett under statuslinja.
   const insets = useSafeAreaInsets();
+  const kavalkade = useKavalkadeStatus();
   const [list, setList] = useState<HomeList | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -249,6 +252,18 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       testID="home-screen"
     >
       <Top profile={profile} onProfile={() => navigation.navigate('Profile')} />
+
+      {/* #2265 PR 2: Kavalkaden i desember og januar, for spillere med en
+          ferdig runde i året. Serveren avgjør vinduet. */}
+      {kavalkade?.slot && kavalkade.hasRound ? (
+        <View style={styles.kavalkade}>
+          <KavalkadeHomeBanner
+            slot={kavalkade.slot}
+            year={kavalkade.year}
+            onOpen={() => navigation.navigate('Kavalkade')}
+          />
+        </View>
+      ) : null}
 
       {empty ? (
         // Samme hero-flagg som webbens tomme hjem (#1879). Stanga i `text`:
@@ -474,6 +489,8 @@ const GREETING = fraunces(500, 28, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
+  // Webbens banner har `mb-4`; skjermens `gap` gir de første 8.
+  kavalkade: { marginBottom: 8 },
   // Pillen står midt på dato og hilsen sammen (designets `align-items: center`).
   top: {
     flexDirection: 'row',
