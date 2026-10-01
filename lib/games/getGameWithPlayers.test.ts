@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Pass unstable_cache through — the subject here is the fetch semantics
-// (error vs. genuine 0-row absence), not the caching layer itself. The
+import {
+  buildSupabaseMock,
+  makeUnstableCacheSpy,
+  type QueryResult,
+} from '@/tests/serverActionMocks';
+
+// The spy passes unstable_cache through — most tests here are about the fetch
+// semantics (error vs. genuine 0-row absence), not the caching layer. The
 // distinction matters BECAUSE of the cache: a null returned on a transient
 // query error gets stored under the `game-${id}` tag and serves 404s for
-// every consumer until revalidate (#1441 e2e post-mortem).
+// every consumer until revalidate (#1441 e2e post-mortem). The spy also lets
+// the key test below read what the entry is keyed on.
+const cacheSpy = makeUnstableCacheSpy();
 vi.mock('next/cache', () => ({
-  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+  unstable_cache: (...args: Parameters<typeof cacheSpy>) => cacheSpy(...args),
 }));
 
 const mocks = vi.hoisted(() => ({ getAdminClient: vi.fn() }));
@@ -14,7 +22,6 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: mocks.getAdminClient,
 }));
 
-import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
 import { getGameWithPlayers } from './getGameWithPlayers';
 
 const GAME_ROW = { id: 'g1', name: 'Testspill', status: 'active' };
@@ -33,6 +40,7 @@ function makeAdmin(gameRes: QueryResult, playersRes: QueryResult) {
 describe('getGameWithPlayers — error vs. absence', () => {
   beforeEach(() => {
     mocks.getAdminClient.mockReset();
+    cacheSpy.mockClear();
   });
 
   it('throws on a games-query error instead of returning null', async () => {
@@ -80,5 +88,28 @@ describe('getGameWithPlayers — error vs. absence', () => {
       game: GAME_ROW,
       players: PLAYER_ROWS,
     });
+  });
+
+  // #2224: the key carries both select strings, so adding a column gives a new
+  // cache entry by itself instead of serving the old shape under the new type.
+  it('keys the cache entry on both select strings and tags it game-<id>', async () => {
+    const admin = makeAdmin(
+      { data: GAME_ROW, error: null },
+      { data: PLAYER_ROWS, error: null },
+    );
+    mocks.getAdminClient.mockReturnValue(admin);
+    await getGameWithPlayers('g1');
+
+    const selectOf = (table: string) =>
+      admin.__fromCalls.find((c) => c.table === table && c.method === 'select')
+        ?.args[0];
+    const [, keyParts, options] = cacheSpy.mock.calls[0];
+    expect(keyParts).toEqual([
+      'gwp',
+      selectOf('games'),
+      selectOf('game_players'),
+      'g1',
+    ]);
+    expect(options?.tags).toEqual(['game-g1']);
   });
 });

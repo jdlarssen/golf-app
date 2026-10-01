@@ -42,6 +42,21 @@ export function makeLocaleRedirectMock() {
   });
 }
 
+/**
+ * Build an `unstable_cache` spy for a `next/cache` mock. It passes the callback
+ * through uncached and keeps `(fn, keyParts, options)` in `mock.calls`, so a
+ * test can assert what a cache entry is keyed and tagged on (#2224).
+ */
+export function makeUnstableCacheSpy() {
+  return vi.fn(
+    <Fn extends (...args: never[]) => unknown>(
+      fn: Fn,
+      _keyParts?: string[],
+      _options?: { tags?: string[]; revalidate?: number | false },
+    ) => fn,
+  );
+}
+
 export type QueryResult = {
   data?: unknown;
   error?: unknown;
