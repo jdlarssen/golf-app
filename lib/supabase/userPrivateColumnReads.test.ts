@@ -49,7 +49,8 @@ const ALLOWED: Record<string, Allowed> = {
   },
   'app/[locale]/admin/games/[id]/signups/page.tsx': {
     receivers: ['getAdminClient()'],
-    reason: B,
+    reason:
+      '(b) admin-klient bak requireAdminOrCreator: e-post bare når kalleren er admin; arrangøren får navnet (#2440)',
   },
   'app/[locale]/admin/games/[id]/status/actions.ts': {
     receivers: ['getAdminClient()', 'admin'],

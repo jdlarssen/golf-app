@@ -12,29 +12,30 @@ import {
   loadRegistrationDecision,
   rejectRegistrationCore,
   type DecisionResult,
-  type LoadFailure,
+  type LoadFailureResult,
 } from '@/lib/games/registrationDecisionCore';
 
 /**
  * Approve/reject server-actions for game-registration-requests (issue #199).
  *
  * The work lives in `lib/games/registrationDecisionCore.ts` (#2263), shared
- * with the inbox's «Godta» / «Avslå». These wrappers only turn its result into
- * the redirects this page has always used: `?status=` on success, `?error=`
- * on the signup page for every failure, `/admin/games?error=` when the request
- * or game is gone, and `/` for a non-admin (as `requireAdmin` did).
+ * with the inbox's «Godta» / «Avslå»; so does the rule for who may answer
+ * (an admin, or the game's organiser — #2440). These wrappers only turn its
+ * result into redirects: `?status=` on success, `?error=` on the signup page
+ * for every failure, `/admin/games?error=` for an admin when the request or
+ * game is gone, and `/` for anyone who may not answer — and for an organiser
+ * when the request or game is gone, since `/admin/games` is admin-only.
  */
 
 type Locale = Awaited<ReturnType<typeof getLocale>>;
 
-function redirectLoadFailure(
-  failure: { reason: LoadFailure; gameId: string | null },
-  locale: Locale,
-): never {
+function redirectLoadFailure(failure: LoadFailureResult, locale: Locale): never {
   if (failure.reason === 'forbidden') redirectToRoot('/');
   if (failure.reason === 'game_locked' && failure.gameId) {
     redirect({ href: `/admin/games/${failure.gameId}/signups?error=game_locked`, locale });
   }
+  // An organiser would bounce from the admin-only list to `/` without a word.
+  if (!failure.isAdmin) redirectToRoot('/');
   redirect({ href: `/admin/games?error=${failure.reason}`, locale });
 }
 
