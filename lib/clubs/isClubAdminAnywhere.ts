@@ -2,11 +2,6 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 
-type Row = {
-  role: 'owner' | 'admin' | 'member';
-  groups: { valid_until: string | null } | { valid_until: string | null }[] | null;
-};
-
 /**
  * True hvis brukeren er owner/admin i ≥1 ikke-utløpt klubb. Driver om
  * «Klubb-turnering»-flisen vises i veiviseren (#525): en vanlig spiller uten
@@ -27,14 +22,10 @@ export async function isClubAdminAnywhere(userId: string): Promise<boolean> {
     .from('group_members')
     .select('role, groups(valid_until)')
     .eq('user_id', userId)
-    .in('role', ['owner', 'admin'])
-    .returns<Row[]>();
+    .in('role', ['owner', 'admin']);
   if (error || !data) {
     if (error) console.error('[isClubAdminAnywhere] lookup failed', error);
     return false;
   }
-  return data.some((r) => {
-    const g = Array.isArray(r.groups) ? r.groups[0] ?? null : r.groups;
-    return g !== null && !isClubExpired(g.valid_until);
-  });
+  return data.some((r) => r.groups !== null && !isClubExpired(r.groups.valid_until));
 }

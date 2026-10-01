@@ -45,11 +45,7 @@ export async function getAllClubsForAdmin(): Promise<AdminClubRow[]> {
       const ownerNames = groupMembers
         .filter((m) => m.role === 'owner')
         .map((m) => {
-          const usersRaw = m.users as unknown as
-            | { name: string | null; nickname: string | null }
-            | { name: string | null; nickname: string | null }[]
-            | null;
-          const user = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
+          const user = m.users;
           return user?.nickname?.trim() || user?.name?.trim() || 'Ukjent';
         });
 
