@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import noMessages from '@/messages/no.json';
 import enMessages from '@/messages/en.json';
 import { lastMigrationMatch } from '@/lib/__tests__/migrationCheck';
+import { wholeNumber } from '@/lib/__tests__/copyNumbers';
 import {
   REGISTRATION_MESSAGE_MAX,
   REJECTION_REASON_MAX,
@@ -68,6 +69,6 @@ describe('the signup messages state the same limits (#2222)', () => {
       ['en', key, numbers, get(enMessages, key)],
     ]),
   )('%s: %s nevner %j', (_locale, _key, numbers, text) => {
-    for (const n of numbers) expect(text).toContain(String(n));
+    for (const n of numbers) expect(text).toMatch(wholeNumber(n));
   });
 });

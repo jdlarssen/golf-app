@@ -5,6 +5,7 @@ import enMessages from '@/messages/en.json';
 import { fitsPlayerCount, soloPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { rotationSlotRange } from '@/lib/games/assignRotationSlots';
 import { buildGameInsertPayload } from '@/lib/games/gamePayload';
+import { wholeNumber } from '@/lib/__tests__/copyNumbers';
 import {
   START_COUNT_MODES,
   START_COUNT_RANGES,
@@ -114,7 +115,9 @@ describe('publiseringen leser samme grense som startvakta (#2222)', () => {
 // #2222: veiviser- og startmeldingene har tallene skrevet i teksten. De kan
 // ikke lese hjemmet (appen er låst tegn for tegn mot no.json), så her låses de.
 // En melding som oppgir hele spennet («3 til 5», «2–16»), må ha begge tallene;
-// en som bare oppgir taket («maks 16», «nøyaktig 4»), bare taket.
+// en som bare oppgir taket («maks 16», «nøyaktig 4»), bare taket. `nassauMin`
+// (brukt av Nassau, Skins og BBB) har minimumet i teksten («minst 2 spillere»).
+// Tallene må stå som hele tall: «4» godkjennes ikke av «40».
 const TOO_MANY_KEY: Record<StartCountMode, string> = {
   wolf: 'wolfTooMany',
   nassau: 'nassauTooMany',
@@ -154,12 +157,15 @@ describe('tallene i copyen følger START_COUNT_RANGES (#2222)', () => {
       if (mode === 'wolf') {
         rows.push([locale, 'wizard.form.missing.wolfUnderMin', [min], missing.wolfUnderMin]);
       }
+      if (mode === 'nassau' || mode === 'skins' || mode === 'bingo_bango_bongo') {
+        rows.push([locale, 'wizard.form.missing.nassauMin', [min], missing.nassauMin]);
+      }
       return rows;
     });
   });
 
   it.each(cases)('%s: %s nevner %j', (_locale, _key, numbers, text) => {
-    for (const n of numbers) expect(text).toContain(String(n));
+    for (const n of numbers) expect(text).toMatch(wholeNumber(n));
   });
 });
 
