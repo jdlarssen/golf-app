@@ -14,7 +14,7 @@ import type {
   LeagueStandingsConfig,
   StandingsMetric,
 } from './types';
-import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { selectAllRows, selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 
 /**
  * Server-side snapshot for a league (#453). Mirrors `getCupSnapshot`: loads the
@@ -154,21 +154,30 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   const roundIds = rounds.map((r) => r.id);
 
   // ── flight-games for these rounds ───────────────────────────────────────────
-  const { data: gameRows, error: gErr } = roundIds.length
-    ? await supabase
-        .from('games')
-        .select(
-          'id, status, course_id, tee_box_id, league_round_id, delivered_outside_window, ended_at',
-        )
-        .in('league_round_id', roundIds)
-    : { data: [], error: null };
-  if (gErr) throw gErr;
+  // #2214: paged. Flights grow with players × rounds (150 players over 26
+  // weekly rounds is past 1 000), and PostgREST cuts at 1 000 rows without
+  // saying so. Ordered on the primary key so no row repeats or goes missing
+  // between pages; the finishing order is applied below.
+  const gameRows = roundIds.length
+    ? await selectAllRows(
+        (from, to) =>
+          supabase
+            .from('games')
+            .select(
+              'id, status, course_id, tee_box_id, league_round_id, delivered_outside_window, ended_at',
+            )
+            .in('league_round_id', roundIds)
+            .order('id')
+            .range(from, to),
+        'getLigaSnapshot games',
+      )
+    : [];
 
   // #2214: flights in finishing order (ended_at, then id; no ended_at last), so
   // «the earliest finished flight counts» in computeLeagueStandings is
   // deterministic however the rows came back.
   const games = (
-    (gameRows ?? []) as Array<{
+    gameRows as Array<{
       id: string;
       status: string;
       course_id: string | null;
