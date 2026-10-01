@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isRosterLocked } from '@/lib/games/status';
+import type { GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
  * Kontekst-oppslag for `/login?invite=<token>` (#1169): gitt en invitasjons-
@@ -11,7 +12,8 @@ import { isRosterLocked } from '@/lib/games/status';
  *
  * Token er ren VISNINGS-capability: den logger ingen inn og konsumeres ikke.
  * Innholdet er begrenset til det mottakeren allerede vet fra mailen pluss
- * plakat-nivå (bane/tee-off) — aldri roster, premier, e-poster eller hcp.
+ * plakat-nivå (bane, tee, tee-off, format) — aldri roster, premier, e-poster
+ * eller hcp.
  *
  * Fail-closed: ugyldig/utløpt/akseptert token, token uten game_id, en runde
  * som har startet eller er ferdig (#2212 — innloggingen gir ikke lenger plass,
@@ -25,7 +27,11 @@ export type InviteLoginContext = {
   inviterName: string | null;
   gameName: string;
   gameMode: string;
+  /** Format name and rule on the invitation card (#2266). */
+  modeConfig: GameModeConfig;
   courseName: string | null;
+  /** «{tee} tee» on the card; null when the game has no tee box (0011). */
+  teeName: string | null;
   teeOffAt: string | null;
   /** Driver frist-linja på invitasjonskortet (#1179) via inviteExpiryTier på /login. */
   expiresAt: string;
@@ -38,9 +44,11 @@ type InviteContextRow = {
     id: string;
     name: string;
     game_mode: string;
+    mode_config: GameModeConfig;
     scheduled_tee_off_at: string | null;
     status: string;
     courses: { name: string } | null;
+    tee_box: { name: string } | null;
   } | null;
 };
 
@@ -66,7 +74,7 @@ export async function getInviteLoginContext(
     const { data, error } = await admin
       .from('invitations')
       .select(
-        'expires_at, inviter:users!invitations_invited_by_fkey(name, nickname), games:game_id(id, name, game_mode, scheduled_tee_off_at, status, courses(name))',
+        'expires_at, inviter:users!invitations_invited_by_fkey(name, nickname), games:game_id(id, name, game_mode, mode_config, scheduled_tee_off_at, status, courses(name), tee_box:tee_boxes!games_tee_box_id_fkey(name))',
       )
       .eq('token', token)
       .is('accepted_at', null)
@@ -89,7 +97,9 @@ export async function getInviteLoginContext(
       inviterName,
       gameName: data.games.name,
       gameMode: data.games.game_mode,
+      modeConfig: data.games.mode_config,
       courseName: data.games.courses?.name ?? null,
+      teeName: data.games.tee_box?.name ?? null,
       teeOffAt: data.games.scheduled_tee_off_at,
       expiresAt: data.expires_at,
     };
