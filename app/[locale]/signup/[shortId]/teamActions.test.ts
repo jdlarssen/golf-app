@@ -974,7 +974,8 @@ describe('#543: stengt påmelding — accept/attach-guards', () => {
           game_id: GAME_ID,
           user_id: CAPTAIN_ID,
           status: 'pending',
-          team_request_id: null,
+          // A team member's row: it has a captain (#2440 refuses any other).
+          team_request_id: CAPTAIN_REQUEST_ID,
           team_name: 'Lag A',
           is_team_captain: false,
         },
@@ -1271,6 +1272,81 @@ describe('#1343: attachToCaptainTeam kobler invitéen til kapteinen som invitert
       'invitations-oppslaget må kjede .gt("expires_at", now)',
     ).toBeDefined();
     expect(Number.isNaN(Date.parse(expiryFilter!.args[1] as string))).toBe(false);
+  });
+});
+
+/**
+ * #2440 (søsken-funn): the team invitation's accept answers only a team
+ * member's own row — one with a captain (`team_request_id`) in the same game.
+ * Any other own row (a solo request, the captain's own request) is not an
+ * invitation: it waits for the organiser, so the accept leaves it untouched.
+ */
+describe('#2440: bare lagmedlemmets egen rad kan godtas', () => {
+  const OWN_REQUEST_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+  beforeEach(() => {
+    serverMock = buildSupabaseMock([
+      { data: { profile_completed_at: '2026-01-01T00:00:00Z' }, error: null },
+    ]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: KNOWN_USER_ID, email: 'mate@example.com' } },
+    });
+    getGameByShortIdMock.mockResolvedValue(makeGame({ registration_mode: 'manual_approval' }));
+  });
+
+  const ownRow = (over: { team_request_id: string | null; is_team_captain: boolean }) => ({
+    data: {
+      id: OWN_REQUEST_ID,
+      game_id: GAME_ID,
+      user_id: KNOWN_USER_ID,
+      status: 'pending',
+      team_name: over.is_team_captain ? 'Lag A' : null,
+      ...over,
+    },
+    error: null,
+  });
+
+  const requestWrites = () =>
+    adminMock.__fromCalls.filter(
+      (c) =>
+        (c.table === 'game_registration_requests' || c.table === 'game_players') &&
+        ['update', 'upsert', 'insert', 'delete'].includes(c.method),
+    );
+
+  it.each([
+    ['en vanlig forespørsel (ingen kaptein)', { team_request_id: null, is_team_captain: false }],
+    ['kapteinens egen forespørsel', { team_request_id: null, is_team_captain: true }],
+  ] as const)('%s → not_found, ingenting skrevet', async (_label, row) => {
+    adminMock = buildSupabaseMock(
+      [ownRow(row), { data: [{ id: OWN_REQUEST_ID }], error: null }],
+      {},
+      { strictSingle: true },
+    );
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    expect(await acceptTeamInvite(OWN_REQUEST_ID, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(requestWrites()).toEqual([]);
+  });
+
+  it('kapteinsraden ligger ikke i dette spillet → not_found, ingenting skrevet', async () => {
+    adminMock = buildSupabaseMock(
+      [
+        ownRow({ team_request_id: CAPTAIN_REQUEST_ID, is_team_captain: false }),
+        { data: null, error: null }, // the captain lookup, bound to this game: no row
+        { data: [{ id: OWN_REQUEST_ID }], error: null }, // what a status update would consume
+      ],
+      {},
+      { strictSingle: true },
+    );
+
+    const { acceptTeamInvite } = await import('./teamActions');
+    expect(await acceptTeamInvite(OWN_REQUEST_ID, SHORT_ID)).toEqual({ ok: false, error: 'not_found' });
+    expect(requestWrites()).toEqual([]);
+    const captainLookup = adminMock.__fromCalls
+      .filter((c) => c.table === 'game_registration_requests' && c.method === 'eq')
+      .map((c) => c.args);
+    expect(captainLookup).toContainEqual(['id', CAPTAIN_REQUEST_ID]);
+    expect(captainLookup).toContainEqual(['game_id', GAME_ID]);
   });
 });
 

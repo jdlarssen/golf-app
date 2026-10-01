@@ -742,6 +742,13 @@ export async function acceptTeamInvite(
   if (!req || req.user_id !== user.id) {
     return { ok: false, error: 'not_found' };
   }
+  // #2440: this answers a team invitation, so only a team member's own row —
+  // one with a captain. A solo request or the captain's own request waits for
+  // the organiser; approving it is not this action's to do.
+  const captainRequestId = req.team_request_id;
+  if (!captainRequestId || req.is_team_captain) {
+    return { ok: false, error: 'not_found' };
+  }
   if (req.status === 'rejected' || req.status === 'withdrawn') {
     return { ok: false, error: 'not_found' };
   }
@@ -766,39 +773,41 @@ export async function acceptTeamInvite(
   // this the teammate took the lowest free number for themself, the captain
   // got the next one, and the team was split in two.
   // Error ≠ absence (#1445): a failed lookup must not read as «no captain».
-  let teamNumber: number | null = null;
-  let captainRow: TeamPlayer | null = null;
-  if (req.team_request_id) {
-    const { data: captainReqRow, error: captainReqError } = await admin
-      .from('game_registration_requests')
-      .select('user_id')
-      .eq('id', req.team_request_id)
-      .maybeSingle<{ user_id: string }>();
-    if (captainReqError) {
-      console.error('[acceptTeamInvite] captain request lookup failed', {
-        requestId,
-        error: captainReqError,
-      });
-      return { ok: false, error: 'db_error' };
-    }
-    if (captainReqRow?.user_id) {
-      const { data: captainPlayer, error: captainPlayerError } = await admin
-        .from('game_players')
-        .select('team_number, flight_number, withdrawn_at')
-        .eq('game_id', game.id)
-        .eq('user_id', captainReqRow.user_id)
-        .maybeSingle<Omit<TeamPlayer, 'user_id'>>();
-      if (captainPlayerError) {
-        console.error('[acceptTeamInvite] captain player lookup failed', {
-          requestId,
-          error: captainPlayerError,
-        });
-        return { ok: false, error: 'db_error' };
-      }
-      teamNumber = captainPlayer?.team_number ?? null;
-      if (captainPlayer) captainRow = { ...captainPlayer, user_id: captainReqRow.user_id };
-    }
+  // #2440: the captain's row must be in this game — `team_request_id` is not
+  // bound to the same game in the database. No captain here, no invitation.
+  const { data: captainReqRow, error: captainReqError } = await admin
+    .from('game_registration_requests')
+    .select('user_id')
+    .eq('id', captainRequestId)
+    .eq('game_id', game.id)
+    .maybeSingle<{ user_id: string }>();
+  if (captainReqError) {
+    console.error('[acceptTeamInvite] captain request lookup failed', {
+      requestId,
+      error: captainReqError,
+    });
+    return { ok: false, error: 'db_error' };
   }
+  if (!captainReqRow) {
+    return { ok: false, error: 'not_found' };
+  }
+  const { data: captainPlayer, error: captainPlayerError } = await admin
+    .from('game_players')
+    .select('team_number, flight_number, withdrawn_at')
+    .eq('game_id', game.id)
+    .eq('user_id', captainReqRow.user_id)
+    .maybeSingle<Omit<TeamPlayer, 'user_id'>>();
+  if (captainPlayerError) {
+    console.error('[acceptTeamInvite] captain player lookup failed', {
+      requestId,
+      error: captainPlayerError,
+    });
+    return { ok: false, error: 'db_error' };
+  }
+  const teamNumber: number | null = captainPlayer?.team_number ?? null;
+  const captainRow: TeamPlayer | null = captainPlayer
+    ? { ...captainPlayer, user_id: captainReqRow.user_id }
+    : null;
 
   const decidedAt = new Date().toISOString();
   if (req.status === 'pending') {
