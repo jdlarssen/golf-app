@@ -32,7 +32,7 @@ export async function submitWithdraw(formData: FormData): Promise<void> {
   // Active withdrawal keeps the row → land on game home to show «Du har
   // trukket deg» + angre. Pre-start deletes the row → game home would 404,
   // so go to the app home instead.
-  const kept = (result as { ok: true; kept?: boolean }).kept;
+  const kept = result.kept;
   redirect({ href: kept ? `/games/${gameId}` : '/', locale });
 }
 
