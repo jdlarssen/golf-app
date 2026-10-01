@@ -14,6 +14,7 @@
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
 import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
+import { START_COUNT_RANGES, type StartCountMode } from './startPlayerCount';
 import {
   gameModeSupportsTeams,
   isRegistrationMode,
@@ -1570,18 +1571,44 @@ function validateGruesomeMatchplay(
 }
 
 /**
- * Wolf-validator (issue #274; #465 — 3–5-spiller rotating partner-format).
+ * How many player slots the fixed-count formats read (#2222). This is the
+ * form's ceiling, not the format's rule: an open-signup or manual-approval save
+ * runs the validators as 'draft' and skips the count check, so a smaller
+ * ceiling would drop the players above it without a word. The same ceiling as
+ * `solo_strokeplay` and solo stableford. Publishing still refuses anything
+ * over the format's max, and the start guard does it for everyone.
+ */
+const FIXED_COUNT_SLOTS = MAX_TEAM_FORMAT_PLAYERS + 1;
+
+/**
+ * Publish-time count check for the fixed-count formats (#2222). The limits
+ * have one home, `START_COUNT_RANGES`, which the wizard, the signup cap and
+ * the start guard read too.
+ */
+function startCountError(
+  mode: StartCountMode,
+  n: number,
+): 'min_players_for_mode' | 'too_many_players_for_mode' | null {
+  const { min, max } = START_COUNT_RANGES[mode];
+  if (n < min) return 'min_players_for_mode';
+  if (n > max) return 'too_many_players_for_mode';
+  return null;
+}
+
+/**
+ * Wolf-validator (issue #274; #465 — rotating partner-format).
  *
  * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
- *  - 3-5 spillere ved invite-only publish (n = antall spillere)
+ *  - spillertallet i `START_COUNT_RANGES.wolf` ved invite-only publish
+ *    (n = antall spillere)
  *  - team_number/flight_number = null på alle rader (rotation-slotten trekkes
  *    ved spillstart av assignRotationSlots; begge null tilfredsstiller DB-CHECK
  *    game_players_team_flight_consistency)
- *  - draft / open-signup publish tolererer 0..5 spillere
+ *  - draft / open-signup publish sjekker ikke antallet; startvakta gjør det
  *
  * Feilkoder ved publish (kun invite-only — open signup kjører som draft):
- *  - 0..2 spillere → `min_players_for_mode`
- *  - 6+ spillere → `too_many_players_for_mode`
+ *  - under grensen → `min_players_for_mode`
+ *  - over grensen → `too_many_players_for_mode`
  *
  * Scoring-toggle: form-feltet `wolf_scoring` ('gross' | 'net'). Default 'net'
  * når feltet mangler (matcher Tørny-default + design-doc).
@@ -1595,36 +1622,24 @@ function validateWolf(
   const wolfScoring = parseScoringToggle(formData, 'wolf_scoring');
   const krPerUnit = parseKrPerUnit(formData);
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
   // #969: rotation-slot (team_number) is no longer assigned at publish — it is
   // drawn at game start over the final active roster (see assignRotationSlots /
   // startScheduledGame). Every row is emitted with team_number/flight_number
   // null (both null satisfies the game_players_team_flight_consistency CHECK),
-  // so an open-signup Wolf can be published with 0-2 players. #465: read up to
-  // 6 ids (one over the 5-cap) so a 6th invite-only pick is caught as
-  // `too_many` rather than silently truncated.
-  for (let i = 0; i < 6; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  // so an open-signup Wolf can be published before enough have joined.
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     // Invite-only only: open-signup publishes run through here with
     // effectiveMode 'draft' (set in buildGameInsertPayload) and skip the count
-    // gate — the roster fills via the link, and the 3-5 range is enforced at
+    // gate — the roster fills via the link, and the range is enforced at
     // start. The start-time guard is the real enforcement for everyone.
-    if (players.length < 3) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 5) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    const countError = startCountError('wolf', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1644,15 +1659,15 @@ function validateWolf(
  * Nassau-validator (issue #276 — front 9 + back 9 + total 18).
  *
  * Regler:
- *  - 2-16 spillere ved publish (#460 — hevet fra 4)
+ *  - spillertallet i `START_COUNT_RANGES.nassau` ved publish (#460)
  *  - Solo-format: team_number/flight_number nullstilles (samme som
  *    solo_strokeplay) — DB-CHECK game_players_team_flight_consistency
  *    krever begge satt sammen eller begge null
- *  - draft tolererer partial state (0..16 spillere)
+ *  - draft tolererer partial state (antallet sjekkes ikke)
  *
  * Feilkoder ved publish:
- *  - 0..1 spillere → `min_players_for_mode`
- *  - 17+ spillere → `too_many_players_for_mode`
+ *  - under grensen → `min_players_for_mode`
+ *  - over grensen → `too_many_players_for_mode`
  *
  * Scoring-toggle: form-feltet `nassau_scoring` ('gross' | 'net'). Default 'net'
  * når feltet mangler (matcher Tørny-default + Wolf-mønstret).
@@ -1666,21 +1681,15 @@ function validateNassau(
   const nassauScoring = parseScoringToggle(formData, 'nassau_scoring');
   const krPerUnit = parseKrPerUnit(formData);
 
-  // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
-  // av cap-sjekken under i stedet for å trunkeres stille til 16.
-  const playersResult = parseSoloPlayers(formData, 17);
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
   }
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    if (players.length < 2) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 16) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    const countError = startCountError('nassau', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1698,8 +1707,9 @@ function validateNassau(
 /**
  * Skins-validator (issue #275 — skins med carryover).
  *
- * Speiler `validateNassau`: solo-format, 2-16 spillere ved publish (#460), ingen
- * duplikater, team_number/flight_number nullstilles. Carryover er ren funksjon
+ * Speiler `validateNassau`: solo-format, spillertallet i
+ * `START_COUNT_RANGES.skins` ved publish (#460), ingen duplikater,
+ * team_number/flight_number nullstilles. Carryover er ren funksjon
  * av scores, så ingen ekstra felt å validere.
  *
  * Scoring-toggle: form-feltet `skins_scoring` ('gross' | 'net'). Default 'net'
@@ -1715,21 +1725,15 @@ function validateSkins(
   const skinsScoring = parseScoringToggle(formData, 'skins_scoring');
   const krPerUnit = parseKrPerUnit(formData);
 
-  // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
-  // av cap-sjekken under i stedet for å trunkeres stille til 16.
-  const playersResult = parseSoloPlayers(formData, 17);
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
   }
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    if (players.length < 2) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 16) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    const countError = startCountError('skins', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1747,14 +1751,13 @@ function validateSkins(
 /**
  * Acey Deucey-validator (issue #279 — 4-spiller per-hull point-game).
  *
- * Speiler `validateSkins`/`validateNassau` for scoring-toggle; speiler
- * `validateWolf` for eksakt-4-player-håndhevingen.
+ * Speiler `validateSkins`/`validateNassau` for scoring-toggle.
  *
  * Regler:
  *  - Solo-format: team_number/flight_number nullstilles alltid (ingen lag).
- *  - publish: EKSAKT 4 spillere — < 4 → `min_players_for_mode`,
- *    > 4 → `too_many_players_for_mode`.
- *  - draft tolererer partial state (0..4 spillere).
+ *  - publish: spillertallet i `START_COUNT_RANGES.acey_deucey` — under →
+ *    `min_players_for_mode`, over → `too_many_players_for_mode`.
+ *  - draft tolererer partial state (antallet sjekkes ikke).
  *  - duplikat-sjekk uendret.
  *
  * Scoring-toggle: form-feltet `acey_deucey_scoring` ('gross' | 'net').
@@ -1770,19 +1773,15 @@ function validateAceyDeucey(
   const aceyDeuceyScoring = parseScoringToggle(formData, 'acey_deucey_scoring');
   const krPerUnit = parseKrPerUnit(formData);
 
-  const playersResult = parseSoloPlayers(formData, 8);
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
   }
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    const countError = startCountError('acey_deucey', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1800,8 +1799,8 @@ function validateAceyDeucey(
 /**
  * Bingo Bango Bongo-validator (issue #277).
  *
- * Speiler `validateNassau`/`validateSkins`: individuelt format, 2–16 spillere
- * (#460) ved publish, ingen duplikater, team_number/flight_number nullstilles. BBB
+ * Speiler `validateNassau`/`validateSkins`: individuelt format, spillertallet i
+ * `START_COUNT_RANGES.bingo_bango_bongo` (#460) ved publish, ingen duplikater, team_number/flight_number nullstilles. BBB
  * bruker ikke gross/net-toggle (poeng er rene prestasjons-poeng fra bingo/bango/
  * bongo — ikke utledet fra slag). mode_config er {kind, team_size: 1}.
  */
@@ -1810,21 +1809,15 @@ function validateBingoBangoBongo(
   mode: PayloadMode,
 ): ModeValidationResult {
   const krPerUnit = parseKrPerUnit(formData);
-  // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
-  // av cap-sjekken under i stedet for å trunkeres stille til 16.
-  const playersResult = parseSoloPlayers(formData, 17);
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
   }
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    if (players.length < 2) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 16) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    const countError = startCountError('bingo_bango_bongo', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1847,7 +1840,8 @@ function parseNinesVariant(formData: FormData): 'nines' | 'split_sixes' {
 /**
  * Nines / Split Sixes-validator (issue #278).
  *
- * Individuelt format med NØYAKTIG 3 spillere ved publish. Strokeplay-utledet
+ * Individuelt format med spillertallet i `START_COUNT_RANGES.nines` ved
+ * publish. Strokeplay-utledet
  * (ingen egen input-tabell). To config-dimensjoner: nines_variant (nines=9pts
  * 5-3-1, split_sixes=6pts 4-2-0) og nines_scoring (gross|net, default net).
  *
@@ -1861,19 +1855,15 @@ function validateNines(
   const ninesScoring = parseScoringToggle(formData, 'nines_scoring');
   const krPerUnit = parseKrPerUnit(formData);
 
-  const playersResult = parseSoloPlayers(formData, 8);
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
   }
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    if (players.length < 3) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 3) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    const countError = startCountError('nines', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1893,17 +1883,19 @@ function validateNines(
  * Round Robin-validator (issue #280 — 4-spiller roterende-partner 4BBB-matchplay).
  *
  * Strukturell hybrid av et rotation-slot-format og `validateFourballMatchplay`
- * (allowance). Round Robin krever EKSAKT 4 spillere med unike team_number 1-4
- * ved publish (matematisk tvunget, ikke 3-5 som Wolf). Speiler Fourball for allowance:
- * form-feltet `round_robin_allowance_pct` (0..100), default 85 i draft.
+ * (allowance). Round Robin krever spillertallet i `START_COUNT_RANGES.round_robin`
+ * (nøyaktig én spiller per rotasjons-slot, matematisk tvunget) ved publish.
+ * Speiler Fourball for allowance: form-feltet `round_robin_allowance_pct`
+ * (0..100), default 85 i draft.
  *
  * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
- *  - EKSAKT 4 spillere ved invite-only publish; 0–3 → `min_players_for_mode`, 5+ → `too_many_players_for_mode`
+ *  - invite-only publish: under grensen → `min_players_for_mode`, over →
+ *    `too_many_players_for_mode`
  *  - team_number/flight_number = null på alle rader (slotten trekkes ved
  *    spillstart av assignRotationSlots; begge null tilfredsstiller DB-CHECK)
- *  - draft / open-signup publish tolererer 0..4 spillere
+ *  - draft / open-signup publish sjekker ikke antallet; startvakta gjør det
  *
- * Mode_config-output: `{kind, team_size: 1, teams_count: 4, allowance_pct}`.
+ * Mode_config-output: `{kind, team_size: 1, teams_count: <grensen>, allowance_pct}`.
  */
 function validateRoundRobin(
   formData: FormData,
@@ -1914,30 +1906,20 @@ function validateRoundRobin(
     return { ok: false, errorCode: 'bad_allowance' };
   }
 
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
   // #969: the rotation slot (team_number) is drawn at game start, not at
   // publish — see validateWolf. Rows are emitted with team_number/flight_number
-  // null so an open-signup Round Robin can be published before 4 have joined.
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) continue;
-    if (seen.has(user_id)) {
-      return { ok: false, errorCode: 'duplicate_player' };
-    }
-    seen.add(user_id);
-    players.push({ user_id, team_number: null, flight_number: null });
+  // null so an open-signup Round Robin can be published before all have joined.
+  const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
+  if (!playersResult.ok) {
+    return playersResult;
   }
+  const players = playersResult.players;
 
   if (mode === 'publish') {
     // Invite-only only: open-signup publishes arrive with effectiveMode 'draft'
-    // and skip this gate. Exactly-4 is enforced at start for everyone.
-    if (players.length < 4) {
-      return { ok: false, errorCode: 'min_players_for_mode' };
-    }
-    if (players.length > 4) {
-      return { ok: false, errorCode: 'too_many_players_for_mode' };
-    }
+    // and skip this gate. The count is enforced at start for everyone.
+    const countError = startCountError('round_robin', players.length);
+    if (countError) return { ok: false, errorCode: countError };
   }
 
   return {
@@ -1946,7 +1928,7 @@ function validateRoundRobin(
     mode_config: {
       kind: 'round_robin',
       team_size: 1,
-      teams_count: 4,
+      teams_count: START_COUNT_RANGES.round_robin.max,
       allowance_pct: allowancePct,
     },
   };

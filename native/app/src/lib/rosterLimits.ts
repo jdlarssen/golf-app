@@ -3,37 +3,40 @@
 // i lag.
 //
 // **Hvorfor taket må stå i appen.** `fitsPlayerCount` (delt, ren TS) svarer på
-// minstekravene og på de fleste takene — wolf 3–5, singles nøyaktig 2, best
-// ball partall 2–40, skins/BBB 2–16. Men for stableford svarer den «1 og
+// minstekravene og på de fleste takene — wolf, singles nøyaktig 2, best ball
+// partall 2–40, skins og BBB. Men for stableford svarer den «1 og
 // oppover», mens `buildGameInsertPayload` leser et begrenset antall spiller-
 // slots. En spiller over det ville blitt STILLE DROPPET: runden opprettes,
 // ingen feil vises, og én person mangler på startlista. Det er den ene feilen
 // veiviseren ikke får gjøre.
 //
-// Taket her er derfor UI-ens vakt mot trunkering, ikke en ny regel. For best
-// ball og stableford-familien leses det fra `lib/games/teamFormatLimits.ts`
-// (#2148), samme tall som nettsiden. For de andre modiene er slot-tallene
-// interne i `gamePayload.ts`, så `rosterLimits.test.ts` er koblingen tilbake:
-// den kjører den DELTE byggeren med nøyaktig `maxPlayersForMode(...)` spillere
-// og krever at alle overlever, og at én til IKKE gjør det.
+// Taket her er derfor UI-ens vakt mot trunkering, ikke en ny regel. Det leses
+// fra de delte hjemmene, samme tall som nettsiden: best ball og stableford-
+// familien fra `lib/games/teamFormatLimits.ts` (#2148), formatene med fast
+// spillertall fra `lib/games/startPlayerCount.ts` (#2222). For singles og
+// greensome er tallet fast i formatet. `rosterLimits.test.ts` er koblingen
+// tilbake: den kjører den DELTE byggeren med nøyaktig `maxPlayersForMode(...)`
+// spillere og krever at alle overlever, og at én til IKKE gjør det.
 import {
   TEAM_FORMAT_PLAYER_CAP,
   maxTeamsForSize,
   teamModePlayerCap,
 } from '../../../../lib/games/teamFormatLimits';
+import { START_COUNT_RANGES } from '../../../../lib/games/startPlayerCount';
 import { fitsPlayerCount } from '../../../../lib/wizard/fitsPlayerCount';
 import type { AppGameMode } from './appFormats';
 
 /**
  * Høyeste spillerantall veiviseren tillater per modus.
  *
- * Kildene, én per rad (`lib/games/gamePayload.ts` og `teamFormatLimits.ts`):
+ * Kildene, én per rad (`teamFormatLimits.ts`, `startPlayerCount.ts` og
+ * `lib/games/gamePayload.ts`):
  *  - stableford / modified_stableford: spillertaket på 40 (solo OG par, #2148).
  *  - singles_matchplay: nøyaktig 2 ved publisering.
  *  - best_ball: fulle par opp til taket, 20 par à nøyaktig 2 (#2148).
  *  - greensome_matchplay: 2v2, nøyaktig 4.
- *  - wolf: 5 (6 slots leses, så en sjette fanges som feil).
- *  - skins / bingo_bango_bongo: 16 (17 slots leses, samme grunn).
+ *  - wolf / skins / bingo_bango_bongo: øvre grense i `START_COUNT_RANGES`, som
+ *    publiseringen og startvakta også leser (#2222).
  */
 export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
   stableford: TEAM_FORMAT_PLAYER_CAP,
@@ -41,9 +44,9 @@ export const MAX_PLAYERS_BY_MODE: Record<AppGameMode, number> = {
   singles_matchplay: 2,
   best_ball: teamModePlayerCap('best_ball', 2) ?? TEAM_FORMAT_PLAYER_CAP,
   greensome_matchplay: 4,
-  wolf: 5,
-  bingo_bango_bongo: 16,
-  skins: 16,
+  wolf: START_COUNT_RANGES.wolf.max,
+  bingo_bango_bongo: START_COUNT_RANGES.bingo_bango_bongo.max,
+  skins: START_COUNT_RANGES.skins.max,
 };
 
 export function maxPlayersForMode(mode: AppGameMode): number {
