@@ -226,6 +226,15 @@ describe('fraunces', () => {
     expect(files.sort()).toEqual([...table, ...holes].sort());
   });
 
+  it('laster hver fil under familienavnet den har inni seg', () => {
+    // Skriptet gir hver fil samme familienavn som filnavnet; `fonts.ts` må
+    // bruke det samme navnet som nøkkel, ellers finner ikke iOS snittet.
+    const source = readFileSync(join(__dirname, 'fonts.ts'), 'utf8');
+    const pairs = [...source.matchAll(/(\w+): require\('\.\.\/assets\/fonts\/(\w+)\.ttf'\)/g)];
+    expect(pairs.length).toBe(Object.keys(FRAUNCES_FILES).length);
+    for (const [, key, file] of pairs) expect(key).toBe(file);
+  });
+
   it('har et eget snitt for hver fast størrelse koden bruker', () => {
     // Bare dynamiske størrelser (et tall fra en tabell eller en funksjon)
     // skal rundes. Står størrelsen som tall i koden, skal snittet finnes.

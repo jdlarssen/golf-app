@@ -313,8 +313,9 @@ const styles = StyleSheet.create({
   place: {
     ...fraunces(500, 26, 28.6),
   },
+  // To linjer Inter 13 med nettleserens `normal` (16) mellom dem, som i designet.
   detail: {
-    fontSize: 13,
+    ...interLine(13, 16, { multiline: true }),
     fontFamily: FONTS.sans,
     opacity: 0.9,
   },

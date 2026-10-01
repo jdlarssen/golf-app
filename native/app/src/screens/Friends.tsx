@@ -938,7 +938,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  sheetName: { ...fraunces(500, 22), flex: 1 },
+  // Navnet kan gå over to linjer.
+  sheetName: { ...fraunces(500, 22, undefined, { multiline: true }), flex: 1 },
   sheetRow: {
     flexDirection: 'row',
     alignItems: 'center',

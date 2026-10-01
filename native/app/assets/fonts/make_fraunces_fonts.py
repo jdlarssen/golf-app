@@ -1,4 +1,5 @@
-# Lager appens Fraunces-snitt (#2385) fra den variable fonten. Kjør med fontTools 4.x:
+# Lager appens Fraunces-snitt (#2385) fra den variable fonten. Kjør med
+# fontTools 4.66.1 (`pip install fonttools==4.66.1`), som filene er sjekket med:
 #   curl -L -o Fraunces-VF.ttf https://raw.githubusercontent.com/google/fonts/ac502d8eff76ef4d9477cdcc8ef7d0c84fde5372/ofl/fraunces/Fraunces%5BSOFT,WONK,opsz,wght%5D.ttf
 #   shasum -a 256 Fraunces-VF.ttf  # 177ff6c0f14e5550a3c624247cd1189611d4eb65d000b14944c63d967958abbb
 #   python3 make_fraunces_fonts.py

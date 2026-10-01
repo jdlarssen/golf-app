@@ -107,7 +107,8 @@ export function GoldChip({ text, testID }: { text: string; testID?: string }) {
 export const holesStyles = StyleSheet.create({
   page: { gap: 14 },
   titleBlock: { alignItems: 'center', gap: 2, paddingVertical: 4 },
-  title: { ...fraunces(500, 28) },
+  // Spillnavnet kan brekke.
+  title: { ...fraunces(500, 28, undefined, { multiline: true }) },
   center: { textAlign: 'center' },
   small: { fontSize: 12, fontFamily: FONTS.sans },
   medium: { fontFamily: FONTS.sansMedium },

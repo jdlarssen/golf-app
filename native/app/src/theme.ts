@@ -182,12 +182,13 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
 
 /**
  * Fraunces sin egen linjehøyde, i skriftstørrelser: (ascent 1956 + descent 510)
- * / 2000 fra `hhea`, lik i alle snittene appen har (pakkens og hullnummerets).
+ * / 2000 fra `hhea`, lik i alle snittene appen har (den variable fonten har ingen
+ * mål som endrer seg med størrelsen).
  */
 export const FRAUNCES_LINE = 1.233;
 
 /** `multiline`: teksten kan brekke og trenger designets linjeavstand. */
-export type LineOptions = { multiline?: boolean; pixelRatio?: number };
+type LineOptions = { multiline?: boolean; pixelRatio?: number };
 
 /** Fraunces sin ascent og descent i skriftstørrelser (`hhea`: 1956 og 510 av 2000). */
 const FRAUNCES_METRICS = { ascent: 0.978, descent: 0.255, natural: FRAUNCES_LINE };
@@ -261,14 +262,14 @@ function browserLine(
  * Nettleserens `normal` linjehøyde for Fraunces: ascent og descent rundet
  * hver for seg til hele piksler (28 pt gir 27 + 7 = 34).
  */
-export function frauncesNormalLine(size: number): number {
+function frauncesNormalLine(size: number): number {
   return (
     Math.round(size * FRAUNCES_METRICS.ascent) + Math.round(size * FRAUNCES_METRICS.descent)
   );
 }
 
 /** Fraunces-vektene appen bruker: 500 til ord, 600 til tall og uthevinger. */
-export type FrauncesWeight = 500 | 600;
+type FrauncesWeight = 500 | 600;
 
 /**
  * Fraunces-snittet for en vekt og størrelse (#2385). Nettleseren tegner
@@ -287,7 +288,6 @@ export function frauncesFamily(weight: FrauncesWeight, size: number): string {
   }
   return `Fraunces${weight}O${best}`;
 }
-
 
 /**
  * Stilen for Fraunces i en vekt og størrelse: snittet og nettleserens
@@ -431,7 +431,8 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       gap: 12,
     },
     title: {
-      ...fraunces(600, 26),
+      // Spillnavnet kan brekke.
+      ...fraunces(600, 26, undefined, { multiline: true }),
       color: c.text,
     },
     sectionTitle: {
