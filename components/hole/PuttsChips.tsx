@@ -2,9 +2,8 @@
 
 import { useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
+import { MAX_PUTTS } from '@/lib/scorecard/puttEntry';
 
-// Matches the scores.putts CHECK (0..10) from migration 0123.
-const MAX_PUTTS = 10;
 // Chips 0–4 are the common range; «5+» expands a compact stepper for 5..10.
 const CHIP_VALUES = [0, 1, 2, 3, 4] as const;
 const PLUS_THRESHOLD = 5;
