@@ -172,11 +172,18 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
   og ren svart (`#000000`): kanter på 3 px og ingen tonede flater, for en skjerm i
   direkte sol. Scorefargene og `primary` er lys-verdiene. Unntaket er godkjent i
   forslaget og gjelder bare der.
-- **Gull kicker på startbilletten i appen** (#2255) er det ene unntaket fra «gull er en
+- **Gull kicker på startbilletten i appen** (#2255) er ett av unntakene fra «gull er en
   medalje»: spillnavnet over banenavnet står i `accent` på det skoggrønne hodet, som
   eieren valgte fra designlerretet 29.09.2026. Mot `surface-strong` holder gullet 4,9:1 i
   lys og 6,3:1 i klubbhus-natt, så det er lesbar tekst der. Unntaket gjelder bare den
   kickeren; på lyse flater er gull tekst fortsatt `accent-text`.
+- **Duellfarger i formatkortenes prikkfigur** (#2260): petrol og terrakotta står også i
+  figuren for et format der nøyaktig to sider møtes («2 mot 2», «1 mot 1»), som på
+  artboardet «Forslag: formatkortene» eieren valgte. Lag ellers er skoggrønne (`primary`),
+  og en spiller alene er `--lineup-solo`. Unntaket gjelder bare den figuren.
+- **Gullpille rundt Skins-figuren** (#2260) er ett av unntakene fra «gull er en medalje»:
+  potten i Skins tegnes som en `accent`-strek rundt hele gruppa, som på artboardet. Den er
+  ren dekor (`aria-hidden`) og gjelder bare den figuren.
 
 ## Typografi
 
