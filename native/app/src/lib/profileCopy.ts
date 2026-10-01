@@ -34,6 +34,10 @@
 import type { ProfileSaveFailure } from '../data/profile';
 import { formatShortDateNb } from '../../../../lib/format/date';
 import { isHandicapStale } from '../../../../lib/handicap/staleness';
+import { toSignedHcp } from '../../../../lib/handicap/sign';
+import { HCP_MAX, HCP_MIN, parseHcpMagnitude } from '../../../../lib/users/profileInput';
+import { MODE_LABELS } from '../../../../lib/scoring/modes/types';
+import { formatStubClock } from './homeDates';
 
 /** Tekstene profil-rommet viser. */
 export const PROFILE_TEXT = {
@@ -178,15 +182,16 @@ export const PROFILE_TEXT = {
   syncLabRow: 'Sync-lab',
   syncLabSublabel: 'Kø, konflikter og testverktøy. Vises bare i staging.',
 
-  // --- App-egent: personvernerklæringen (#2229) ---------------------------
+  // --- App-egent: personvernerklæringen (#2229, #2216) --------------------
   // Apple krever en lenke til personvernerklæringen inne i appen (5.1.1(i)).
   // Webben har den i bunnteksten på forsiden; appen har ingen bunntekst, så
-  // den står her. Underteksten sier hvor du havner, fordi raden forlater appen,
-  // i samme aktive form som `WEB_LINK_TEXT.hint`. Butikkbyggets adresse er
-  // låst til tornygolf.no (`app.config.ts`).
-  sectionAbout: 'Om Tørny',
-  privacyRow: 'Personvernerklæring',
-  privacySublabel: 'Åpner tornygolf.no i nettleseren.',
+  // den står i «Personvern og konto». #2216: under «Du bestemmer», med ordene
+  // fra designet for «Dine data» (Data-forslag, #2332). Nettsiden får de samme
+  // ordene når #2332 bygges. Butikkbyggets adresse er låst til tornygolf.no
+  // (`app.config.ts`).
+  sectionYouDecide: 'Du bestemmer',
+  privacyRow: 'Personvernerklæringen',
+  privacySublabel: 'Hele teksten, på vanlig norsk',
 
   // --- App-egent: advarselen ved utlogging --------------------------------
   // Utlogging tømmer den lokale basen (#1877), og det er nettopp derfor denne
@@ -214,6 +219,85 @@ export const PROFILE_TEXT = {
   logoutOfflineNote:
     'Du er fortsatt logget inn. Utlogging krever nett når det er en stund siden sist — koble til og prøv igjen.',
 } as const;
+
+/**
+ * Tekstene i «Fullfør profilen» (#2216), steget en ny spiller møter etter
+ * koden. Ordlyden er designets (Profilstart-forslag, #2350). Nettsiden har ennå
+ * de gamle tekstene, så bare `kicker`, `plusHandicapLabel`, `submitButton` og
+ * `submitPending` er webbens i dag; resten får nettsiden i #2350, og da er
+ * pariteten tilbake (`profileCopy.test.ts`). Flat av samme grunn som
+ * {@link PROFILE_TEXT}.
+ */
+export const ONBOARDING_TEXT = {
+  kicker: 'Velkommen til Tørny',
+  heading: 'To ting, så er du med',
+  nameLabel: 'Hva heter du?',
+  nameHint: 'Fornavn og etternavn, slik gjengen kjenner deg.',
+  hcpLabel: 'Handicapen din',
+  /** Skjermleser-etiketten på «+»-knappen, som webbens `hcpPlusLabel`. */
+  plusHandicapLabel: 'Plusshandicap',
+  hcpHint: 'Tallet du har i Golfbox nå. Har du ikke handicap ennå, skriv 54.',
+  previewKicker: 'Slik ser de andre deg',
+  /** Navnet i forhåndsvisningen før du har skrevet noe. */
+  previewNamePlaceholder: 'Navnet ditt',
+  submitButton: 'Sett i gang',
+  submitPending: 'Lagrer …',
+  footnote: 'Du kan endre begge deler senere i profilen.',
+} as const;
+
+/** Tittelen på spillkortet: «Lørdagsrunden venter på deg». */
+export function onboardingGameTitle(gameName: string): string {
+  return `${gameName} venter på deg`;
+}
+
+/**
+ * Dato-ruta på spillkortet: «4» over «OKT» (stilen setter versalene). `null`
+ * uten tee-off, og da står ingen rute. Enhetens lokaltid, som resten av appen
+ * (`homeDates.ts`): Hermes har ikke Oslo-sonen.
+ */
+export function onboardingGameDate(teeOffAt: string | null): { day: string; month: string } | null {
+  if (!teeOffAt) return null;
+  const date = new Date(teeOffAt);
+  if (Number.isNaN(date.getTime())) return null;
+  // `formatShortDateNb` gir «4. okt»; månedsforkortelsen har ett hjem der.
+  const month = formatShortDateNb(date).split(' ')[1] ?? '';
+  return { day: String(date.getDate()), month };
+}
+
+/**
+ * Linja under tittelen: «Byneset · kl. 09:20 · Stableford». Det som mangler,
+ * hoppes over: banen, klokkeslettet uten tee-off og et format appen ikke har
+ * navn på.
+ */
+export function onboardingGameLine(game: {
+  courseName: string | null;
+  teeOffAt: string | null;
+  gameMode: string;
+}): string {
+  const format = Object.hasOwn(MODE_LABELS, game.gameMode)
+    ? MODE_LABELS[game.gameMode as keyof typeof MODE_LABELS]
+    : null;
+  return [game.courseName, formatStubClock(game.teeOffAt), format]
+    .filter((part): part is string => !!part)
+    .join(' · ');
+}
+
+/**
+ * Handicapet i «Slik ser de andre deg»: «HCP 18,4», «HCP +2,5», eller
+ * «HCP –» mens tallet ikke er gyldig.
+ *
+ * Gyldig er det serveren godtar (`parseHcpMagnitude` og `HCP_MIN`/`HCP_MAX` i
+ * `lib/users/profileInput.ts`), så forhåndsvisningen aldri viser et tall
+ * lagringen vil avvise. Formen er {@link formatHcpNb}, den samme som ellers i
+ * appen.
+ */
+export function onboardingPreviewHcp(typed: string, isPlus: boolean): string {
+  const magnitude = parseHcpMagnitude(typed.trim());
+  if (magnitude === null) return 'HCP –';
+  const signed = toSignedHcp(magnitude, isPlus);
+  if (signed < HCP_MIN || signed > HCP_MAX) return 'HCP –';
+  return `HCP ${formatHcpNb(signed)}`;
+}
 
 /**
  * «Oppdatert 12. mai» — webbens `hcpUpdatedShort` med datoen satt inn.

@@ -13,7 +13,6 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { connectFriend } from './actions';
-import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ code: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -48,7 +47,7 @@ export default async function LeggTilPage({
   params: Params;
   searchParams: SearchParams;
 }) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('friends.leggTil');
   const tf = await getTranslations('friends');
 
@@ -62,7 +61,6 @@ export default async function LeggTilPage({
   } = await supabase.auth.getUser();
   if (!user) {
     redirect({ href: `/login?next=/venner/legg-til/${code}`, locale });
-    return;
   }
 
   const admin = getAdminClient();

@@ -7,14 +7,14 @@ import {
   deleteOrAnonymizeUser,
   getDeleteBlockReason,
 } from '@/lib/users/deleteAccount';
-import type { AppLocale } from '@/i18n/routing';
 
 // #1987: success RETURNS instead of redirecting, so the client form can wipe
 // the browser's local base before it navigates to login. Every failure still
 // redirects back here with `?error=`; called from the client, that redirect
-// rejects the action promise and Next follows it. `void` types the throwing branches.
+// rejects the action promise and Next follows it. Those branches end in `redirect()`,
+// which is typed `never`; `| void` stays only to keep the exported signature unchanged.
 export async function deleteOwnAccount(): Promise<{ ok: true } | void> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -22,7 +22,6 @@ export async function deleteOwnAccount(): Promise<{ ok: true } | void> {
 
   if (!user) {
     redirect({ href: '/login', locale });
-    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
   // #1012: admin-kontoen kan ikke slette seg selv; arrangering av noe
@@ -37,18 +36,14 @@ export async function deleteOwnAccount(): Promise<{ ok: true } | void> {
       break;
     case 'admin_account':
       redirect({ href: '/profile/slett-konto?error=admin_account', locale });
-      return;
     case 'active_engagements':
       redirect({ href: '/profile/slett-konto?error=active_games', locale });
-      return;
     // #1910: uten denne grenen slipper en klubbeier som aldri har spilt rett
     // gjennom på hard-delete-stien, der anonymize_user-vakta aldri er i spill.
     case 'sole_club_owner':
       redirect({ href: '/profile/slett-konto?error=sole_club_owner', locale });
-      return;
     case 'check_failed':
       redirect({ href: '/profile/slett-konto?error=delete_failed', locale });
-      return;
     default: {
       const unhandled: never = outcome;
       throw new Error(`unhandled delete check outcome: ${String(unhandled)}`);

@@ -127,7 +127,7 @@ export default async function PåmeldingPage({
   // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as
   // 07:20. One line for both the public landing and the logged-in header.
   const teeOffParts = game?.scheduled_tee_off_at
-    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale as AppLocale)
+    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale)
     : null;
   const teeOffLine = teeOffParts
     ? `${teeOffParts.date}, ${teeOffParts.time}`
@@ -156,7 +156,7 @@ export default async function PåmeldingPage({
           gameName={localizeGameName(
             game.name,
             game.courses?.name ?? null,
-            locale as AppLocale,
+            locale,
           )}
           modeLabel={tModes(game.game_mode as Parameters<typeof tModes>[0])}
           courseName={game.courses?.name ?? null}
@@ -176,7 +176,7 @@ export default async function PåmeldingPage({
     // (`?next=${encodeURIComponent(...)}`) so /login round-trips it cleanly.
     redirect({
       href: `/login?next=${encodeURIComponent(`/signup/${shortId}${srcSuffix}`)}`,
-      locale: locale as AppLocale,
+      locale,
     });
   }
 
@@ -195,17 +195,21 @@ export default async function PåmeldingPage({
   // profile_completed_at lenger — en profil-løs, invitert spiller skal se hva
   // de er invitert til. Selve påmeldingen (registerForOpenGame / lag-attach)
   // beholder sin egen profil-gate, siden en påmelding eksponerer navnet ditt.
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from('users')
     .select('profile_completed_at, email')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .maybeSingle<{ profile_completed_at: string | null; email: string }>();
+  // A failed read must surface as the PostgREST error, not as a null TypeError
+  // further down (#2224).
+  if (profileError) throw profileError;
+  if (!profile) throw new Error('[signup] profile row missing for signed-in user');
 
   const { data: existingPlayer } = await admin
     .from('game_players')
     .select('game_id')
     .eq('game_id', game.id)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle<{ game_id: string }>();
 
   // #1422: `team_request_id` skiller en kaptein-opprettet child-rad fra en
@@ -214,7 +218,7 @@ export default async function PåmeldingPage({
     .from('game_registration_requests')
     .select('id, status, team_request_id')
     .eq('game_id', game.id)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle<PendingRequestRow & { id: string }>();
 
   if (existingPlayer == null && existingRequest) {
@@ -230,7 +234,7 @@ export default async function PåmeldingPage({
       .from('group_members')
       .select('user_id')
       .eq('group_id', game.group_id)
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .maybeSingle<{ user_id: string }>();
     isClubMember = clubMembership != null;
   }
@@ -246,7 +250,7 @@ export default async function PåmeldingPage({
   // så oppslaget for alle modi gir ingen ny null-flate.
   let hasPendingInvitation = false;
   let hasCertainTeamInvitation = false;
-  if (profile!.email) {
+  if (profile.email) {
     // #1425: ingen unique på (email, game_id) — både arrangøren og en kaptein
     // kan ha invitert samme e-post. `.maybeSingle()` feilet da med PGRST116 og
     // ga `data = null`, altså ingen peker for nettopp de spillerne som trengte
@@ -256,7 +260,7 @@ export default async function PåmeldingPage({
     const { data: invitationRows } = await admin
       .from('invitations')
       .select('id, invited_by')
-      .filter('email', 'imatch', emailMatchPattern(profile!.email))
+      .filter('email', 'imatch', emailMatchPattern(profile.email))
       .eq('game_id', game.id)
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
@@ -308,7 +312,7 @@ export default async function PåmeldingPage({
     game.let_friends_skip_gate === true &&
     game.created_by
   ) {
-    const friendIds = await getFriendIds(user!.id);
+    const friendIds = await getFriendIds(user.id);
     viewerIsFriend = friendIds.includes(game.created_by);
   }
 
@@ -321,7 +325,7 @@ export default async function PåmeldingPage({
     !gameLocked &&
     gameModeSupportsTeams(game.game_mode);
   const teamCandidates: TeamCandidate[] = willRenderTeamForm
-    ? await getTeamCandidates(user!.id)
+    ? await getTeamCandidates(user.id)
     : [];
 
   // #544: side-velger for åpne matchplay-spill. Henter en slank roster
@@ -346,7 +350,7 @@ export default async function PåmeldingPage({
       users: { name: string | null; nickname: string | null } | null;
     };
 
-    const rows: RosterItem[] = (rosterRows ?? []) as unknown as RosterItem[];
+    const rows: RosterItem[] = rosterRows ?? [];
     const teamSize = (game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
     const { side1: side1Count, side2: side2Count } = countSidePlayers(rows);
 
@@ -381,7 +385,7 @@ export default async function PåmeldingPage({
   // #1175: hentes parallelt med den innbetalte potten (aggregert count) som
   // ankerlinjen i PaymentInfo nedenfor bruker.
   const [socialProof, potKr] = await Promise.all([
-    getGameSocialProof(game.id, user!.id),
+    getGameSocialProof(game.id, user.id),
     getPaidPotKr(game.id, game.entry_fee_kr),
   ]);
 
@@ -395,7 +399,7 @@ export default async function PåmeldingPage({
             {tModes(game.game_mode as Parameters<typeof tModes>[0])}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
-            {localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
+            {localizeGameName(game.name, game.courses?.name ?? null, locale)}
           </h1>
           {game.scheduled_tee_off_at && (
             <p className="mt-1 font-sans text-sm text-muted">
@@ -433,7 +437,7 @@ export default async function PåmeldingPage({
             isClubMember,
             viewerIsFriend,
             teamCandidates,
-            captainEmail: profile!.email,
+            captainEmail: profile.email,
             matchplaySideData,
             src: srcRaw,
           })}

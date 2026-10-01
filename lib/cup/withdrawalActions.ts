@@ -111,7 +111,7 @@ async function readCupTarget(
     console.error('[cup] withdrawal games read failed', { tournamentId, gErr });
     return { error: 'withdraw_failed' };
   }
-  const games = (gameRows ?? []) as unknown as GameRow[];
+  const games = (gameRows ?? []) as GameRow[];
   if (games.length === 0) return { error: 'not_participant' };
 
   const { data: playerRows, error: pErr } = await admin
@@ -384,7 +384,6 @@ export async function withdrawCupPlayer(formData: FormData): Promise<CupWithdraw
   const status =
     result.skippedGameIds.length > 0 ? 'player_withdrawn_partial' : 'player_withdrawn';
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=${status}`);
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 /**
@@ -430,7 +429,6 @@ export async function withdrawSelfFromCup(formData: FormData): Promise<CupWithdr
     ...result.skippedGameIds,
   ]);
   redirect(`/cup/${tournamentId}?status=withdrawn`);
-  return { error: '' }; // unreachable
 }
 
 /**
@@ -518,7 +516,6 @@ export async function undoCupWithdrawal(formData: FormData): Promise<CupWithdraw
     toUndo.map((g) => g.id),
   );
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=withdrawal_undone`);
-  return { error: '' }; // unreachable
 }
 
 /**
@@ -621,5 +618,4 @@ export async function setFourballWithdrawalChoice(
 
   revalidateCup(tournamentId, actor.groupId, [gameId]);
   redirect(`${cupBasePath(tournamentId, actor.groupId)}?status=play_on_saved`);
-  return { error: '' }; // unreachable
 }

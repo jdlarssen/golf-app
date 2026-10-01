@@ -76,7 +76,7 @@ async function createGameInternal(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
-  const userId = (user as NonNullable<typeof user>).id;
+  const userId = user.id;
   const { data: gateProfile } = await supabase
     .from('users')
     .select('is_admin')
@@ -229,9 +229,8 @@ async function createGameInternal(
     // #50: en utløpt klubb (frossen avtale) kan ikke ta imot nye spill —
     // dropp scopingen til null (samme «ugyldig verdi → null»-mønster).
     if (membership) {
-      const g = Array.isArray(membership.groups)
-        ? membership.groups[0] ?? null
-        : membership.groups;
+      // RLS client: the embed reads null-safe, a hidden groups row is possible.
+      const g = membership.groups;
       if (!isClubExpired(g?.valid_until ?? null)) groupId = rawGroupId;
     }
   }
@@ -398,9 +397,4 @@ async function createGameInternal(
   // /admin/* til `/`, så de aldri så spillet sitt. Send dem rett til game-home
   // (spiller-visningen) i stedet for blindveien (#363).
   redirect({ href: `/games/${game.id}`, locale });
-
-  // Uåtkommelig: redirect() over kaster NEXT_REDIRECT. TS kan ikke bruke den
-  // til control-flow (destrukturert const fra createNavigation mangler
-  // eksplisitt type-annotasjon), så vi trenger en formell retur.
-  return { error: '' };
 }

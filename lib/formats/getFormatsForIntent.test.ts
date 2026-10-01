@@ -109,26 +109,4 @@ describe('getFormatsForIntent', () => {
       'Failed to fetch formats for intent kompis',
     );
   });
-
-  it('handterer formats-relasjon som array (PostgREST kant-tilfelle)', async () => {
-    fromMock.mockImplementation(() =>
-      buildIntentChain({
-        data: [
-          {
-            format_slug: 'stableford',
-            is_primary: true,
-            sort_order: 10,
-            formats: [{ slug: 'stableford', icon_key: 'stableford', is_active: true }],
-          },
-        ],
-        error: null,
-      }),
-    );
-
-    const result = await getFormatsForIntent('kompis');
-
-    expect(result).toHaveLength(1);
-    expect(result[0].slug).toBe('stableford');
-    expect(result[0].icon_key).toBe('stableford');
-  });
 });

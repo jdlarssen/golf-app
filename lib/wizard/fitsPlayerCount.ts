@@ -1,9 +1,10 @@
 /**
  * fitsPlayerCount — predikat for om et format kan spilles av n spillere.
  *
- * Reglene er utledet fra valideringslogikken i `useGameFormState.ts` og
- * `lib/games/gamePayload.ts`. Single source of truth for wizard-filtreringen
- * (steg 2, Kompis-intent). Ingen UI-avhengigheter — ren logikk.
+ * Wizard-filtreringen (steg 2, Kompis-intent) leser herfra. Grensene selv har
+ * egne hjem: formatene med fast spillertall leser `START_COUNT_RANGES`
+ * (`lib/games/startPlayerCount.ts`, #2222), lagformatene `teamFormatLimits`.
+ * Ingen UI-avhengigheter — ren logikk.
  *
  * Design-regler:
  *  - Returnerer true hvis DET FINNES ÉN GYLDIG konfigurasjon for antallet.
@@ -18,6 +19,7 @@
 
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { fitsTeamFormat, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
+import { fitsStartCount, startPlayerCountRange } from '@/lib/games/startPlayerCount';
 
 export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
   if (n <= 0) return false;
@@ -50,32 +52,26 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'florida_scramble':
       return fitsTeamFormat(gameMode, n);
 
-    // ── 3–5 (#465: Wolf har ekte 3- og 5-spiller-varianter) ─────────────────
+    // ── Fast spillertall: grensen eies av `START_COUNT_RANGES` (#2222) ───────
+    // Wolf (#465), Round Robin, Acey Deucey, Nines og de antalls-agnostiske
+    // individuelle formatene (#460: skins-carryover, nassau-segment, BBB-poeng).
+    // Publisering, påmeldingstak og startvakt leser de samme tallene.
     case 'wolf':
-      return n >= 3 && n <= 5;
-
-    // ── Nøyaktig 4 ──────────────────────────────────────────────────────────
     case 'round_robin':
     case 'acey_deucey':
+    case 'nines':
+    case 'nassau':
+    case 'skins':
+    case 'bingo_bango_bongo':
+      return fitsStartCount(gameMode, n);
+
+    // ── Nøyaktig 4 (2v2-matchplay) ──────────────────────────────────────────
     case 'fourball_matchplay':
     case 'foursomes_matchplay':
     case 'greensome_matchplay':
     case 'chapman_matchplay':
     case 'gruesome_matchplay':
       return n === 4;
-
-    // ── 2–16 (solo-format med carryover/segment-konkurranse) (#460) ─────────
-    // Antalls-agnostiske individuelle format: hver spiller konkurrerer i sin
-    // egen pott (skins-carryover, nassau-segment, BBB-poeng). 4-grensen var
-    // kunstig; 16 er den nye øvre grensen (slot-emisjon er dynamisk).
-    case 'nassau':
-    case 'skins':
-    case 'bingo_bango_bongo':
-      return n >= 2 && n <= 16;
-
-    // ── Nøyaktig 3 ──────────────────────────────────────────────────────────
-    case 'nines':
-      return n === 3;
 
     // ── shamble: krever ≥2 lag (lag på 3 eller 4) (#469) ────────────────────
     // Samme scramble-familie-prinsipp som #467: ett lag er ingen turnering.
@@ -112,36 +108,17 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
  * when the organiser saves, in any format.
  *
  * Returnerer:
- *  - tallet maksimale spillere for formater med et øvre tak
+ *  - øvre grense fra `START_COUNT_RANGES` for formatene med fast spillertall
+ *    (wolf, nines, round_robin, acey_deucey, nassau, skins, bingo_bango_bongo —
+ *    #2222: samme tall som publiseringen og startvakta)
  *  - `null` for formater uten relevant tak (unbounded, lag-format, matchplay-
  *    familien — disse har egne side-cap-logikker eller team_size-validering)
- *
- * Verdiene speiler `fitsPlayerCount`-logikken:
- *  - wolf → 5 (støtter 3–5 spillere)
- *  - nines → 3 (nøyaktig 3)
- *  - round_robin → 4 (nøyaktig 4)
- *  - acey_deucey → 4 (nøyaktig 4)
- *  - nassau / skins / bingo_bango_bongo → 16 (#460: utvidet fra 4)
  *
  * Matchplay-familien ekskluderes bevisst — side-kapasitet håndteres av
  * `isMatchplayMode` + den eksisterende tellingen i `registerForOpenGame`.
  */
 export function soloPlayerCap(gameMode: GameMode): number | null {
-  switch (gameMode) {
-    case 'wolf':
-      return 5;
-    case 'nines':
-      return 3;
-    case 'round_robin':
-    case 'acey_deucey':
-      return 4;
-    case 'nassau':
-    case 'skins':
-    case 'bingo_bango_bongo':
-      return 16;
-    default:
-      return null;
-  }
+  return startPlayerCountRange(gameMode)?.max ?? null;
 }
 
 /**

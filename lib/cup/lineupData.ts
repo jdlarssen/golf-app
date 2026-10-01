@@ -3,7 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { canSeeTeamLineup, teamRoster, type CupTeamNumber } from './captainRoles';
 import { loadCupLineupAccess, type CupLineupAccess } from './lineupAccess';
 import type { CupSessionFormat } from './cupTemplates';
-import type { LineupSlotRow } from './lineupValidation';
+import { sumPendingLineupSlots, type LineupSlotRow } from './lineupValidation';
 import {
   DEFAULT_TIE_POINTS,
   DEFAULT_WIN_POINTS,
@@ -208,12 +208,9 @@ export async function loadCupLineupBoard(
     };
   });
 
-  // Plassene i åpnede, ikke-avdekkede økter — regnet lokalt her fordi radene
-  // alt er lest (samme regel som countPendingLineupSlots, som skrivestien
-  // bruker når den ikke har dem).
-  const pendingSlotCount = (sessionRows ?? [])
-    .filter((row) => row.revealed_at === null)
-    .reduce((sum, row) => sum + (row.slot_count as number), 0);
+  // Plassene i åpnede, ikke-avdekkede økter, summert over radene som alt er
+  // lest (`sumPendingLineupSlots`, #2222).
+  const pendingSlotCount = sumPendingLineupSlots(sessionRows ?? []);
 
   return {
     access,
@@ -261,10 +258,13 @@ export function squadUserIds(
  * Match-taket for en personlig cup må telle disse i tillegg til `games`: en
  * åpnet økt er en forpliktelse om å opprette akkurat så mange kamper når begge
  * kapteiner har levert, og avdekkingen sjekker ikke taket selv (da ville to
- * leverte uttak kunne ende uten kamper). Både `openCupLineupSession` og
- * generer-veiviserens `createCupMatchesFromPlan` bruker den, så regelen har
- * ett hjem — uten det kunne veiviseren og uttaket hver for seg holde seg under
- * taket og til sammen sprenge det.
+ * leverte uttak kunne ende uten kamper). Generer-veiviserens
+ * `createCupMatchesFromPlan` kaller denne; uttaks-stiene, som alt har lest
+ * øktene, summerer dem selv. Alle bruker `sumPendingLineupSlots` (#2222), så
+ * hva som teller som «ventende» står ett sted.
+ *
+ * Henter alle cupens økter, ikke bare de uavdekkede, for at filteret skal stå
+ * i den rene funksjonen. En cup har få økter, så det koster ingenting.
  *
  * Returnerer `null` når tellingen ikke kunne gjøres. Kallerne skal da feile
  * LUKKET: et tak vi ikke kan regne ut, er et tak vi ikke håndhever (I3).
@@ -274,9 +274,8 @@ export async function countPendingLineupSlots(
 ): Promise<number | null> {
   const { data, error } = await getAdminClient()
     .from('cup_lineup_sessions')
-    .select('slot_count')
-    .eq('tournament_id', tournamentId)
-    .is('revealed_at', null);
+    .select('slot_count, revealed_at')
+    .eq('tournament_id', tournamentId);
   if (error) {
     console.error('[cup] countPendingLineupSlots failed', {
       tournamentId,
@@ -284,5 +283,5 @@ export async function countPendingLineupSlots(
     });
     return null;
   }
-  return (data ?? []).reduce((sum, r) => sum + (r.slot_count as number), 0);
+  return sumPendingLineupSlots(data ?? []);
 }

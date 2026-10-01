@@ -16,10 +16,9 @@ import {
 } from '@/components/games/MissingPlayersWithdrawList';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import type { AppLocale } from '@/i18n/routing';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { finishRoster } from '@/lib/games/finishRoster';
+import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import { endGameMarkingWithdrawals } from './actions';
 // Purringen deles med søsterflaten «/avslutt» — én action, én gate
 // (`requireAdmin`), og `surface` sier bare hvor brukeren skal tilbake (#1889).
@@ -73,7 +72,7 @@ export default async function AvsluttLikevelPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
+      'id, name, status, game_mode, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -81,6 +80,7 @@ export default async function AvsluttLikevelPage({
       name: string;
       status: GameStatus;
       game_mode: GameMode;
+      require_peer_approval: boolean;
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
@@ -101,13 +101,14 @@ export default async function AvsluttLikevelPage({
   const { data: gamePlayers } = await getAdminClient()
     .from('game_players')
     .select(
-      'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',
+      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
         submitted_at: string | null;
+        approved_at: string | null;
         withdrawn_at: string | null;
         users: {
           name: string | null;
@@ -118,8 +119,13 @@ export default async function AvsluttLikevelPage({
     >();
 
   // Allerede trukne er allerede ute av rangeringen — filtrer dem vekk.
-  // endGame hopper over dem automatisk (#386).
-  const missing = finishRoster(gamePlayers ?? []).missing.map((gp) => {
+  // endGame hopper over dem automatisk (#386). Lista er sperrens egen
+  // (`finishGate`, #2222).
+  const missing = splitFinishRoster(
+    gamePlayers ?? [],
+    stampsFromRow,
+    game.require_peer_approval,
+  ).missing.map((gp) => {
     const u = gp.users;
     const base = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
     const displayName = u?.nickname ? `${base} «${u.nickname}»` : base;
@@ -145,7 +151,7 @@ export default async function AvsluttLikevelPage({
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
+        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
       />
 
       <div className="space-y-4 px-1">

@@ -119,14 +119,13 @@ type GameWithStats = GameWithMeta & {
 };
 
 export default async function HistorikkPage() {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('profile.historikk');
   const tModes = await getTranslations('modes');
   const tFinished = await getTranslations('finishedCard');
   const tHome = await getTranslations('home');
-  const userIdRaw = await getProxyVerifiedUserId();
-  if (!userIdRaw) redirect({ href: '/login', locale });
-  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect({ href: '/login', locale });
 
   const supabase = await getServerClient();
 
@@ -146,18 +145,20 @@ export default async function HistorikkPage() {
     )
     .eq('user_id', userId)
     .eq('games.status', 'finished')
-    .is('games.source_game_id', null);
+    .is('games.source_game_id', null)
+    // Only the Json/text columns with a narrower app type are overridden
+    // (#2224); every other field stays typed from the select, so a dropped or
+    // renamed column is a tsc error.
+    .overrideTypes<
+      Array<{
+        result_summary: ResultSummary | null;
+        games: { game_mode: GameMode; mode_config: GameModeConfig };
+      }>
+    >();
 
   if (gpError) throw gpError;
 
-  const rows = (gamePlayers ?? []) as unknown as Array<{
-    game_id: string;
-    tee_gender: ScoringGender | null;
-    course_handicap: number | null;
-    result_summary: ResultSummary | null;
-    score_differential: number | null;
-    games: GameRow;
-  }>;
+  const rows = gamePlayers ?? [];
 
   const gameIds = rows.map((r) => r.game_id);
   // #946 — course ids for the per-gender par lookup (achievements need par).
@@ -194,7 +195,7 @@ export default async function HistorikkPage() {
           supabase
             .from('scores')
             .select('game_id, hole_number, strokes, putts')
-            .eq('user_id', userId) // userId is string — narrowed after redirect guard above
+            .eq('user_id', userId)
             .in('game_id', gameIds)
             .not('strokes', 'is', null)
             .order('id')
@@ -219,12 +220,12 @@ export default async function HistorikkPage() {
 
     for (const tee of teeRes.data ?? []) {
       const { id, ...ratings } = tee;
-      teeById.set(id, ratings as TeeBoxRatings);
+      teeById.set(id, ratings);
     }
 
     for (const score of scoresRes.data ?? []) {
       const existing = scoresByGame.get(score.game_id) ?? [];
-      existing.push(score as ScoreRow);
+      existing.push(score);
       scoresByGame.set(score.game_id, existing);
     }
 

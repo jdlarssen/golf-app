@@ -26,6 +26,7 @@ import {
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
+import { START_COUNT_RANGES, fitsStartCount } from '@/lib/games/startPlayerCount';
 import {
   prizeDraftFromList,
   type PrizeDraft,
@@ -1550,43 +1551,22 @@ export function useGameFormState({
     matchplaySide1Count === 1 &&
     matchplaySide2Count === 1;
 
-  // Wolf-validitet: 3-5 spillere (#465). Rotation-slot trekkes ved spillstart
-  // (#969) — ingen manuell tilordning nødvendig. Speiler `validateWolf` i
-  // gamePayload.ts.
-  const wolfPlayersValid =
-    isWolf && selectedPlayerIds.length >= 3 && selectedPlayerIds.length <= 5;
-
-  // Round Robin-validitet: nøyaktig 4 spillere. Rotation-slot 1-4 fordeles
-  // automatisk i valgrekkefølge, ingen manuell tilordning nødvendig.
-  // Speiler `validateRoundRobin` i gamePayload.ts.
-  const roundRobinPlayersValid = isRoundRobin && selectedPlayerIds.length === 4;
-
-  // Nassau-validitet: 2-16 spillere (#460). Solo-format (team/flight null), ingen
-  // lag-tilordning. Speiler `validateNassau` i gamePayload.ts.
-  const nassauPlayersValid =
-    isNassau && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 16;
-
-  // Skins-validitet: 2-16 spillere (#460). Solo-format (team/flight null), ingen
-  // lag-tilordning. Speiler `validateSkins` i gamePayload.ts.
-  const skinsPlayersValid =
-    isSkins && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 16;
-
-  // Bingo Bango Bongo-validitet: 2-16 spillere (#460). Solo-format (team/flight
-  // null), ingen lag-tilordning. Speiler `validateBingoBangoBongo` i gamePayload.ts.
+  // Formatene med fast spillertall (#2222): grensen har ett hjem,
+  // `START_COUNT_RANGES`, som publiseringen (`gamePayload.ts`), påmeldingstaket
+  // og startvakta også leser. Ingen av dem trenger lag-tilordning: rotasjons-
+  // slotten for Wolf og Round Robin trekkes ved spillstart (#969), og resten er
+  // solo-format (team/flight null).
+  const playerCount = selectedPlayerIds.length;
+  const wolfPlayersValid = isWolf && fitsStartCount('wolf', playerCount);
+  const roundRobinPlayersValid =
+    isRoundRobin && fitsStartCount('round_robin', playerCount);
+  const nassauPlayersValid = isNassau && fitsStartCount('nassau', playerCount);
+  const skinsPlayersValid = isSkins && fitsStartCount('skins', playerCount);
   const bingoBangoBongoPlayersValid =
-    isBingoBangoBongo &&
-    selectedPlayerIds.length >= 2 &&
-    selectedPlayerIds.length <= 16;
-
-  // Nines-validitet: nøyaktig 3 spillere. Solo-format (team/flight null),
-  // ingen lag-tilordning. Speiler `validateNines` i gamePayload.ts.
-  const ninesPlayersValid =
-    isNines && selectedPlayerIds.length === 3;
-
-  // Acey Deucey-validitet: nøyaktig 4 spillere. Solo-format (team/flight
-  // null), ingen lag-tilordning. Speiler `validateAceyDeucey` i gamePayload.ts.
+    isBingoBangoBongo && fitsStartCount('bingo_bango_bongo', playerCount);
+  const ninesPlayersValid = isNines && fitsStartCount('nines', playerCount);
   const aceyDeuceyPlayersValid =
-    isAceyDeucey && selectedPlayerIds.length === 4;
+    isAceyDeucey && fitsStartCount('acey_deucey', playerCount);
 
   // Patsome-validitet: minst 4 spillere, partall antall, alle har lag-
   // tilordning, hvert ikke-tomt lag har eksakt 2 spillere. Speiler
@@ -1835,62 +1815,58 @@ export function useGameFormState({
       pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isWolf) {
-    // Wolf: 3-5 spillere (#465). Rotation-slot trekkes ved spillstart (#969).
-    if (selectedPlayerIds.length < 3) {
-      const remaining = 3 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('wolfUnderMin', { remaining }));
-    } else if (selectedPlayerIds.length > 5) {
+    // Grensene for de sju formatene med fast spillertall leses fra
+    // `START_COUNT_RANGES` (#2222). Tallene i meldingstekstene er låst mot den
+    // av `startPlayerCount.test.ts`.
+    const { min, max } = START_COUNT_RANGES.wolf;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('wolfUnderMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('wolfTooMany'));
     }
   } else if (isNassau) {
-    // Nassau: 2-16 spillere (#460), solo (ingen lag-tilordning).
-    if (selectedPlayerIds.length < 2) {
-      const remaining = 2 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('nassauMin', { remaining }));
-    } else if (selectedPlayerIds.length > 16) {
+    const { min, max } = START_COUNT_RANGES.nassau;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('nassauMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('nassauTooMany'));
     }
   } else if (isSkins) {
-    // Skins: 2-16 spillere (#460), solo (ingen lag-tilordning).
-    if (selectedPlayerIds.length < 2) {
-      const remaining = 2 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('nassauMin', { remaining }));
-    } else if (selectedPlayerIds.length > 16) {
+    const { min, max } = START_COUNT_RANGES.skins;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('nassauMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('skinsTooMany'));
     }
   } else if (isBingoBangoBongo) {
-    // Bingo Bango Bongo: 2-16 spillere (#460), solo (ingen lag-tilordning).
-    if (selectedPlayerIds.length < 2) {
-      const remaining = 2 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('nassauMin', { remaining }));
-    } else if (selectedPlayerIds.length > 16) {
+    const { min, max } = START_COUNT_RANGES.bingo_bango_bongo;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('nassauMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('bbbTooMany'));
     }
   } else if (isNines) {
-    // Nines: nøyaktig 3 spillere, solo (ingen lag-tilordning).
-    if (selectedPlayerIds.length < 3) {
-      const remaining = 3 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('ninesUnderMin', { remaining }));
-    } else if (selectedPlayerIds.length > 3) {
+    const { min, max } = START_COUNT_RANGES.nines;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('ninesUnderMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('ninesTooMany'));
     }
   } else if (isRoundRobin) {
-    // Round Robin: nøyaktig 4 spillere. Rotation-slot fordeles automatisk.
-    if (selectedPlayerIds.length < 4) {
-      const remaining = 4 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('rrUnderMin', { remaining }));
-    } else if (selectedPlayerIds.length > 4) {
+    const { min, max } = START_COUNT_RANGES.round_robin;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('rrUnderMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('rrTooMany'));
     }
     if (!roundRobinAllowancePctValid) {
       pushMissing('allowance', tMissing('rrHandicap'));
     }
   } else if (isAceyDeucey) {
-    // Acey Deucey: nøyaktig 4 spillere, solo (ingen lag-tilordning).
-    if (selectedPlayerIds.length < 4) {
-      const remaining = 4 - selectedPlayerIds.length;
-      pushMissing('players', tMissing('ninesUnderMin', { remaining }));
-    } else if (selectedPlayerIds.length > 4) {
+    const { min, max } = START_COUNT_RANGES.acey_deucey;
+    if (playerCount < min) {
+      pushMissing('players', tMissing('ninesUnderMin', { remaining: min - playerCount }));
+    } else if (playerCount > max) {
       pushMissing('players', tMissing('aceyTooMany'));
     }
   } else if (isPatsome) {

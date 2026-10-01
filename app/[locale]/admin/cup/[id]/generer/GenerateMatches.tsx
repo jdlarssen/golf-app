@@ -64,7 +64,6 @@ export type WizardTeeBox = {
   par_total_juniors?: number | null;
 };
 
-// FK-joins typer Supabase JS som array selv på many-to-one — normaliser.
 type ParticipantUser = {
   id: string;
   name: string | null;
@@ -72,13 +71,6 @@ type ParticipantUser = {
   hcp_index: number | string;
   gender: 'mens' | 'ladies' | null;
 };
-
-function userOf(
-  rel: ParticipantUser | ParticipantUser[] | null | undefined,
-): ParticipantUser | null {
-  if (!rel) return null;
-  return Array.isArray(rel) ? (rel[0] ?? null) : rel;
-}
 
 function displayNameOf(u: ParticipantUser | null, unknownLabel: string): string {
   return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
@@ -252,7 +244,7 @@ export async function GenerateMatches({
   // Deltakerne er alltid profil-fullførte ved add-time (Spillere-rommet gater
   // det), så ingen `pending`-rader her — kartlegg rett til WizardPlayer.
   const participants: WizardPlayer[] = (participantRes.data ?? []).map((row) => {
-    const u = userOf(row.users as ParticipantUser | ParticipantUser[] | null);
+    const u = row.users;
     return {
       id: row.user_id,
       displayName: displayNameOf(u, unknownLabel),

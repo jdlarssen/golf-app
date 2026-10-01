@@ -27,10 +27,6 @@ type Allowed = { receivers: string[]; reason: string };
 const B = '(b) admin-klient bak requireAdmin';
 
 const ALLOWED: Record<string, Allowed> = {
-  'app/[locale]/(auth)/login/actions.ts': {
-    receivers: ['admin'],
-    reason: '(a) oppslag på adressen brukeren selv logget inn med; bare id-en går videre',
-  },
   'app/[locale]/admin/games/[id]/InviteToGameSection.tsx': {
     receivers: ['getAdminClient()'],
     reason: `${B}: rendres bare fra admin-spillsida`,
@@ -142,6 +138,11 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/admin/pendingPlayerEmails.ts': {
     receivers: ['getAdminClient()'],
     reason: `${B}: kalles fra admin-spillsida og admin-rediger etter gaten`,
+  },
+  // #2216: flyttet fra `app/[locale]/(auth)/login/actions.ts` (`verifyCode`).
+  'lib/auth/afterLogin.ts': {
+    receivers: ['admin'],
+    reason: '(a) oppslag på adressen brukeren selv logget inn med; bare id-en går videre',
   },
   'lib/cup/tournamentParticipants.ts': {
     receivers: ['admin'],

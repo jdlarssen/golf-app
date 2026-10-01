@@ -7,6 +7,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { REJECTION_REASON_MAX } from '@/lib/games/registration';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notify } from '@/lib/notifications/notify';
 import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
@@ -26,8 +27,6 @@ import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
  * raden-strukturen er konsistent — admin behøver ikke håndtere lag-medlemmer
  * manuelt.
  */
-
-const REJECTION_REASON_MAX = 200;
 
 type GameSnapshot = {
   id: string;
@@ -104,12 +103,12 @@ async function loadDecisionContext(requestId: string): Promise<{
   const { data: game, error: gameError } = await admin
     .from('games')
     .select('id, name, status, created_by')
-    .eq('id', request!.game_id)
+    .eq('id', request.game_id)
     .maybeSingle<GameSnapshot>();
 
   if (gameError) {
     console.error('[loadDecisionContext] game fetch failed', {
-      gameId: request!.game_id,
+      gameId: request.game_id,
       error: gameError,
     });
     throw gameError;
@@ -120,13 +119,13 @@ async function loadDecisionContext(requestId: string): Promise<{
 
   // Approve/reject gir bare mening pre-active. Etter at runden er startet
   // er rosteret låst.
-  if (game!.status === 'active' || game!.status === 'finished') {
-    redirect({ href: `/admin/games/${game!.id}/signups?error=game_locked`, locale });
+  if (game.status === 'active' || game.status === 'finished') {
+    redirect({ href: `/admin/games/${game.id}/signups?error=game_locked`, locale });
   }
 
   return {
-    request: request!,
-    game: game!,
+    request: request,
+    game: game,
     actorId: role.userId,
     actorName: role.name?.trim() || 'Admin',
   };

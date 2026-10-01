@@ -43,7 +43,7 @@ export async function leaveClub(formData: FormData) {
     .from('group_members')
     .select('role')
     .eq('group_id', groupId)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   const isOwner = myRow?.role === 'owner';
@@ -57,7 +57,7 @@ export async function leaveClub(formData: FormData) {
     .from('group_members')
     .delete()
     .eq('group_id', groupId)
-    .eq('user_id', user!.id);
+    .eq('user_id', user.id);
 
   if (error) {
     console.error('[leaveClub]', error);

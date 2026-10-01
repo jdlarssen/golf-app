@@ -206,7 +206,7 @@ export default async function OpprettSpillPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
-  const currentUserId = (user as NonNullable<typeof user>).id;
+  const currentUserId = user.id;
   // #477: «Solo / Test»-arrangementet vises kun for admin i veiviseren.
   const { isAdmin } = await getRoleContext(supabase);
 

@@ -239,8 +239,8 @@ export function draftToFormData(draft: GameDraft): WizardFormData {
 
   // Appen inviterer alltid eksplisitt. Verdien er ikke bare en default:
   // `buildGameInsertPayload` degraderer modus-valideringen til 'draft' når
-  // registration_mode er noe ANNET enn 'invite_only' (gamePayload.ts:2205), og
-  // da ville spillerantall-portene stilltiende sluttet å gjelde.
+  // registration_mode er noe ANNET enn 'invite_only' (der `effectiveMode`
+  // settes), og da ville spillerantall-portene stilltiende sluttet å gjelde.
   form.set('registration_mode', 'invite_only');
   form.set('registration_type', 'solo');
 

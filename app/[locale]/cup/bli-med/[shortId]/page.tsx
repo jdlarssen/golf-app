@@ -12,7 +12,6 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffLongParts } from '@/lib/i18n/format';
-import type { AppLocale } from '@/i18n/routing';
 import { getCupJoinContext } from '@/lib/cup/getCupJoinContext';
 import { evaluateCupJoin } from '@/lib/cup/joinValidation';
 import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
@@ -57,13 +56,13 @@ export default async function CupBliMedPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const selfHref = `/cup/bli-med/${shortId}`;
 
   if (!user) redirect({ href: `/login?next=${selfHref}`, locale });
 
   const [{ cup, facts }, t] = await Promise.all([
-    getCupJoinContext(shortId, user!.id),
+    getCupJoinContext(shortId, user.id),
     getTranslations('cup.join'),
   ]);
 
@@ -79,7 +78,7 @@ export default async function CupBliMedPage({
   const failRead = (which: 'club' | 'plan', error: unknown): never => {
     console.error('[cup] bli-med read failed', {
       shortId,
-      userId: user!.id,
+      userId: user.id,
       which,
       error,
     });
@@ -90,11 +89,11 @@ export default async function CupBliMedPage({
   // sende spilleren dit (medlems-tilstanden). Bane/starttid kun når det finnes
   // en påmeldingsvei å pynte på.
   let club: { name: string; short_id: string } | null = null;
-  if (decision === 'not_member' && cup!.group_id) {
+  if (decision === 'not_member' && cup.group_id) {
     const { data, error } = await admin
       .from('groups')
       .select('name, short_id')
-      .eq('id', cup!.group_id)
+      .eq('id', cup.group_id)
       .maybeSingle<{ name: string; short_id: string }>();
     if (error) failRead('club', error);
     club = data ?? null;
@@ -107,15 +106,11 @@ export default async function CupBliMedPage({
       .select(
         'scheduled_tee_off_at, courses:courses!tournament_plans_course_id_fkey(name)',
       )
-      .eq('tournament_id', cup!.id)
-      .maybeSingle<{
-        scheduled_tee_off_at: string | null;
-        courses: { name: string } | { name: string }[] | null;
-      }>();
+      .eq('tournament_id', cup.id)
+      .maybeSingle();
     if (planError) failRead('plan', planError);
     if (plan) {
-      const rel = plan.courses;
-      const courseName = (Array.isArray(rel) ? rel[0] : rel)?.name ?? null;
+      const courseName = plan.courses?.name ?? null;
       // #2270: a timestamptz, so Oslo-pinned. The datetime-local helper reads
       // the UTC server's local getters and showed 09:20 as 07:20.
       const teeOffParts = plan.scheduled_tee_off_at
@@ -135,16 +130,16 @@ export default async function CupBliMedPage({
   // tilstanden en blindvei. (Global admin kommer også inn, men det vet ikke
   // join-konteksten — da mangler knappen heller enn å lyve.)
   const canOpenCupPage =
-    !cup!.group_id || facts.isClubMember || facts.alreadyJoined;
+    !cup.group_id || facts.isClubMember || facts.alreadyJoined;
 
   return (
     <AppShell>
       <TopBar backHref="/" kicker={t('kicker')} />
       <PageHeader
-        title={cup!.name}
+        title={cup.name}
         subtitle={t('teams', {
-          team1: cup!.team_1_name,
-          team2: cup!.team_2_name,
+          team1: cup.team_1_name,
+          team2: cup.team_2_name,
         })}
       />
 
@@ -181,7 +176,7 @@ export default async function CupBliMedPage({
                 </p>
               )}
               <CupJoinActions shortId={shortId} mode="leave" />
-              <LinkButton href={`/cup/${cup!.id}`} variant="ghost" full>
+              <LinkButton href={`/cup/${cup.id}`} variant="ghost" full>
                 {t('goToCupButton')}
               </LinkButton>
             </>
@@ -191,7 +186,7 @@ export default async function CupBliMedPage({
             <>
               <p className="font-sans text-[15px] text-text">{t('closed')}</p>
               {canOpenCupPage && (
-                <LinkButton href={`/cup/${cup!.id}`} variant="secondary" full>
+                <LinkButton href={`/cup/${cup.id}`} variant="secondary" full>
                   {t('goToCupButton')}
                 </LinkButton>
               )}

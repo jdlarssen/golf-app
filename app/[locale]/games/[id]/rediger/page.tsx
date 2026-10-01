@@ -19,7 +19,6 @@ import {
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import type { AppLocale } from '@/i18n/routing';
 import {
   buildEditInitialValues,
   type EditGameRow,
@@ -82,7 +81,7 @@ export default async function CreatorEditGamePage({
   // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
   await requireAdminOrCreator(supabase, id);
 
-  const { data: maybeGame, error: gameError } = await supabase
+  const { data: game, error: gameError } = await supabase
     .from('games')
     .select(GAME_SELECT)
     .eq('id', id)
@@ -95,23 +94,22 @@ export default async function CreatorEditGamePage({
     console.error('[GameEditPage] game fetch failed', gameError);
     throw gameError;
   }
-  if (!maybeGame) {
-    redirect({ href: `/games/${id}` as string, locale });
+  if (!game) {
+    redirect({ href: `/games/${id}`, locale });
   }
-  const game = maybeGame!;
 
   // Edits are allowed while the game is still in 'draft' or 'scheduled'. Once it
   // flips to 'active' or 'finished', frozen handicaps + recorded scores make the
   // roster and tee-off effectively immutable (same gate as the admin flow).
   if (game.status !== 'draft' && game.status !== 'scheduled') {
-    redirect({ href: `/games/${id}?error=not_editable` as string, locale });
+    redirect({ href: `/games/${id}?error=not_editable`, locale });
   }
 
   return (
     <AppShell>
       <TopBar backHref={`/games/${id}`} kicker={t('kicker')} />
       <PageHeader
-        title={localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
+        title={localizeGameName(game.name, game.courses?.name ?? null, locale)}
         subtitle={t('subtitle')}
       />
 

@@ -19,8 +19,7 @@ export async function fetchGameReactions(
   gameId: string,
   myUserId: string,
 ): Promise<ReactionSummary> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('reactions')
     .select('target_user_id, emoji, user_id')
     .eq('game_id', gameId);
@@ -32,6 +31,5 @@ export async function fetchGameReactions(
     return {};
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return aggregateReactions((data as any[]) ?? [], myUserId);
+  return aggregateReactions(data ?? [], myUserId);
 }

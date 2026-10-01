@@ -2,7 +2,6 @@
 
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
-import type { AppLocale } from '@/i18n/routing';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -16,7 +15,11 @@ import { getTeamCandidateEmails } from '@/lib/users/getTeamCandidates';
 import { maskEmail } from '@/lib/users/maskEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
-import { gameModeSupportsTeams } from '@/lib/games/registration';
+import {
+  gameModeSupportsTeams,
+  TEAM_NAME_MAX,
+  TEAM_NAME_MIN,
+} from '@/lib/games/registration';
 import { maxTeamsForSize, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
 import { flightForTeam, type TeamPlayer } from '@/lib/games/teamScope';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
@@ -124,9 +127,6 @@ export type TeamRegistrationError =
   | 'game_full'
   | 'db_error';
 
-const TEAM_NAME_MIN = 3;
-const TEAM_NAME_MAX = 40;
-
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505). Speiler logikken i
  * `actions.ts:isDuplicateError` — vi holder dem separate for at hver
@@ -158,7 +158,7 @@ async function requireAuthedUser(
   options: { next?: string } = {},
 ): Promise<{ id: string; email: string | null }> {
   const next = options.next ?? `/signup/${shortId}`;
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -169,12 +169,12 @@ async function requireAuthedUser(
   const { data: profile } = await supabase
     .from('users')
     .select('profile_completed_at')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
     redirect({ href: `/complete-profile?next=${next}`, locale });
   }
-  return { id: user!.id, email: user!.email ?? null };
+  return { id: user.id, email: user.email ?? null };
 }
 
 /** Retursti for actionene som kalles fra lag-dashboardet (#1344). */
@@ -236,7 +236,7 @@ export async function submitTeamRegistration(
   const captain = await requireAuthedUser(shortId);
   // #1727: invitéen er konto-løs, så kapteinens UI-språk er beste gjett for
   // mail-språket — før dette gikk lag-invitasjonsmailen alltid ut på norsk.
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
 
   const game = await getGameByShortId(shortId);
   if (!game) {
@@ -352,7 +352,7 @@ export async function submitTeamRegistration(
     console.error('[submitTeamRegistration] captain insert failed', captainError);
     return { ok: false, error: 'db_error' };
   }
-  const captainRequestId = captainRow!.id;
+  const captainRequestId = captainRow.id;
 
   const captainName = await getCaptainDisplayName(captain.id);
 

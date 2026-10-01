@@ -360,11 +360,11 @@ describe('endGameCore — validation gates', () => {
   );
 
   it('characterizes the vacuous branch: an UNSUBMITTED player under allowMissing skips the approval gate entirely', async () => {
-    // `continue` on the missing-submission branch (endGameCore:192) structurally
-    // jumps past the approval check for that player. Harmless today only because
-    // `reopenScorecard` clears submitted_at and approved_at together, so an
-    // unsubmitted-but-approved row cannot exist. Locked here so the extraction
-    // preserves the shape rather than "tidying" it into a behaviour change.
+    // Under allowMissing a player with neither stamp passes the shared gate
+    // (`finishGate`, #2222): nothing is missing that the escape does not skip,
+    // and `needsPeerApproval(null, null)` is false. An unsubmitted-but-APPROVED
+    // row would block (fail-closed); it cannot exist today, because
+    // `reopenScorecard` clears both together, and `finishGate.test.ts` locks it.
     const client = buildSupabaseMock([
       gameRow({ require_peer_approval: true }),
       playersRows([

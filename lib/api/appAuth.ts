@@ -24,25 +24,42 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 // annen — og ingen rute kan gjøre den feilen ved et uhell, fordi hjelperen
 // under er den eneste kilden til «hvem er dette».
 
+/** Den autentiserte kalleren: alt kommer fra det validerte tokenet. */
+export type AuthenticatedUser = {
+  id: string;
+  /** E-posten GoTrue har på brukeren, eller `null` når den mangler. */
+  email: string | null;
+  /** Tokenet selv, for en klient som skal lese som kalleren. */
+  accessToken: string;
+};
+
 /**
- * Bruker-id fra Bearer-tokenet, eller `null` når kalleren ikke er autentisert.
+ * Kalleren fra Bearer-tokenet, eller `null` når kalleren ikke er autentisert.
+ * Det ene stedet tokenet leses og valideres (#2216); `authenticatedUserId`
+ * under bygger på den.
  *
- * Repoet har ingen fabrikk for en cookie-løs anon server-klient
- * (`getServerClient()` leser cookies, `getBrowserClient()` er browser-only), så
- * vi kaller `auth.getUser(token)` på admin-klienten: auth-js legger tokenet i
+ * Vi kaller `auth.getUser(token)` på admin-klienten: auth-js legger tokenet i
  * `Authorization` og lar service-nøkkelen stå som `apikey`, altså validerer
  * GoTrue tokenets signatur og utløp — ikke oss. Kaster `getAdminClient()`
- * (manglende service-nøkkel), bobler det opp til kallerens 500.
+ * (manglende service-nøkkel), bobler det opp til kallerens 500. En klient som
+ * leser SOM kalleren under RLS er `callerScopedClient` lenger ned.
  */
-export async function authenticatedUserId(
+export async function authenticatedUser(
   request: NextRequest,
-): Promise<string | null> {
+): Promise<AuthenticatedUser | null> {
   const token = bearerToken(request);
   if (!token) return null;
 
   const { data, error } = await getAdminClient().auth.getUser(token);
   if (error || !data.user) return null;
-  return data.user.id;
+  return { id: data.user.id, email: data.user.email ?? null, accessToken: token };
+}
+
+/** Bruker-id fra Bearer-tokenet, eller `null` når kalleren ikke er autentisert. */
+export async function authenticatedUserId(
+  request: NextRequest,
+): Promise<string | null> {
+  return (await authenticatedUser(request))?.id ?? null;
 }
 
 /** Tokenet fra `Authorization: Bearer <token>`, eller `null`. */
@@ -64,8 +81,8 @@ function bearerToken(request: NextRequest): string | null {
  *
  * Anon-nøkkelen + kallerens token i `Authorization`, Supabase sitt mønster for
  * en klient på vegne av en bruker; supabase-js overstyrer ikke en header som
- * alt er satt. Kalles bare etter `authenticatedUserId`, så tokenet er validert.
- * `null` uten token.
+ * alt er satt. Kalles bare etter `authenticatedUser` eller `authenticatedUserId`,
+ * så tokenet er validert. `null` uten token.
  */
 export function callerScopedClient(
   request: NextRequest,

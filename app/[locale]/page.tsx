@@ -102,7 +102,7 @@ export default async function Home({
 }: {
   searchParams: SearchParams;
 }) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const { userId } = await getHomeContext();
   // #1265: anonymous visitors get the public landing (proxy.ts makes `/`
   // auth-optional). Return BEFORE the Suspense/HomeBody block below so the
@@ -132,7 +132,7 @@ export default async function Home({
           HomeNudgeRail orkestrerer køen i klienten. Suksess-bannerne under står
           med vilje UTENFOR køen. */}
       <Suspense fallback={null}>
-        <HomeNudges userId={userId!} />
+        <HomeNudges userId={userId} />
       </Suspense>
 
       {profileUpdated && (
@@ -183,7 +183,7 @@ type GameRow = QueryData<ReturnType<typeof activeGamesQuery>>[number];
 
 async function HomeBody() {
   const { supabase, userId } = await getHomeContext();
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('home');
   const tStatus = await getTranslations('gameStatus');
   // #878: reuse the spill-hjem peer-approval strings (pendingApprovals/reviewLink)
@@ -224,7 +224,7 @@ async function HomeBody() {
       ...discoveryData.friendGames,
       ...discoveryData.openGames,
     ].map((g) => g.id),
-    userId!,
+    userId,
   );
 
   const { data: profile, error: profileError } = profileRes;

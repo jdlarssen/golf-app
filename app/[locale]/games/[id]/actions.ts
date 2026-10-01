@@ -20,13 +20,12 @@ import { getServerClient } from '@/lib/supabase/server';
 export async function confirmHandicap(gameId: string) {
   const supabase = await getServerClient();
   const {
-    data: { user: maybeUser },
+    data: { user },
   } = await supabase.auth.getUser();
-  if (!maybeUser) {
+  if (!user) {
     const locale = await getLocale();
     redirect({ href: '/login', locale });
   }
-  const user = maybeUser!;
 
   const { error } = await supabase
     .from('users')

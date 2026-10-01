@@ -131,6 +131,7 @@ describe('touchesNeverList', () => {
       'native/app/src/session.tsx',
       'native/app/src/data/account.ts',
       'native/app/src/data/webApi.ts',
+      'native/app/src/data/loginCode.ts',
       'native/app/src/lib/loginCopy.ts',
       'native/app/app.config.ts',
       'native/app/scripts/store-build-proof.sh',

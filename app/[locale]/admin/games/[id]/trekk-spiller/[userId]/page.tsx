@@ -12,7 +12,6 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import type { AppLocale } from '@/i18n/routing';
 import { adminWithdrawPlayer } from '../../actions';
 import { getAdminClient } from '@/lib/supabase/admin';
 
@@ -80,11 +79,11 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
   }
 
   // Already withdrawn — nothing to confirm.
-  if (player!.withdrawn_at) {
+  if (player.withdrawn_at) {
     redirect({ href: detailPath, locale });
   }
 
-  const u = player!.users;
+  const u = player.users;
   const baseName = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
   const playerName = u?.nickname ? `${baseName} «${u.nickname}»` : baseName;
 
@@ -98,7 +97,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: playerName, game: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
+        subtitle={t('subtitle', { name: playerName, game: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
       />
 
       <div className="space-y-4 px-1">

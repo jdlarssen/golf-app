@@ -55,7 +55,7 @@ export default async function CreatorDeleteGamePage({
   const { id } = await params;
   const sp = await searchParams;
   const t = await getTranslations('game.delete');
-  const locale = await getLocale() as AppLocale;
+  const locale = await getLocale();
   const errorCode = first(sp.error);
   const errorMessage = errorCode ? t(`errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
 
@@ -78,7 +78,7 @@ export default async function CreatorDeleteGamePage({
   // active/finished → only an admin can remove them (from Sekretariatet), so send
   // the creator back to game-home.
   if (game.status !== 'draft' && game.status !== 'scheduled') {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   // Count child rows so the confirmation copy is accurate. A creator-who-plays

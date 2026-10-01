@@ -124,7 +124,7 @@ export async function endGameWithSideWinners(
   // → null. Missing or empty values redirect back to the wizard.
   const winners: EndGameSideWinner[] = [];
 
-  for (let pos = 1; pos <= game!.side_ld_count; pos++) {
+  for (let pos = 1; pos <= game.side_ld_count; pos++) {
     const raw = formData.get(`ld_winner_${pos}`);
     if (typeof raw !== 'string' || raw === '') {
       redirect({ href: `${wizardPath}?error=missing_ld_${pos}`, locale });
@@ -132,10 +132,10 @@ export async function endGameWithSideWinners(
     winners.push({
       category: 'longest_drive',
       position: pos as 1 | 2,
-      winner_user_id: raw === 'none' ? null : (raw as string),
+      winner_user_id: raw === 'none' ? null : raw,
     });
   }
-  for (let pos = 1; pos <= game!.side_ctp_count; pos++) {
+  for (let pos = 1; pos <= game.side_ctp_count; pos++) {
     const raw = formData.get(`ctp_winner_${pos}`);
     if (typeof raw !== 'string' || raw === '') {
       redirect({ href: `${wizardPath}?error=missing_ctp_${pos}`, locale });
@@ -143,7 +143,7 @@ export async function endGameWithSideWinners(
     winners.push({
       category: 'closest_to_pin',
       position: pos as 1 | 2,
-      winner_user_id: raw === 'none' ? null : (raw as string),
+      winner_user_id: raw === 'none' ? null : raw,
     });
   }
 

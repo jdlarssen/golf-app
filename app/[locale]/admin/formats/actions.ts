@@ -8,7 +8,6 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { recordFormatMappingChange } from '@/lib/formats/audit';
 import type { MappingIntent } from '@/lib/formats/getAllFormatsWithMappings';
-import type { AppLocale } from '@/i18n/routing';
 
 const REDIRECT_BASE = '/admin/formats';
 
@@ -32,14 +31,14 @@ function parseNext(raw: string | null): boolean {
  * gå via migrasjon.
  */
 export async function toggleVisibility(formData: FormData): Promise<void> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const slug = String(formData.get('format_slug') ?? '');
   const intentRaw = String(formData.get('intent') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
   if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
   if (!isMappingIntent(intentRaw)) redirect({ href: `${REDIRECT_BASE}?error=bad_intent`, locale });
-  const intent = intentRaw as MappingIntent;
+  const intent = intentRaw;
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -121,14 +120,14 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
  *   atomically setter is_visible=true samtidig. Aldri brudd på CHECK.
  */
 export async function togglePrimary(formData: FormData): Promise<void> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const slug = String(formData.get('format_slug') ?? '');
   const intentRaw = String(formData.get('intent') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
   if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
   if (!isMappingIntent(intentRaw)) redirect({ href: `${REDIRECT_BASE}?error=bad_intent`, locale });
-  const intent = intentRaw as MappingIntent;
+  const intent = intentRaw;
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -220,7 +219,7 @@ export async function togglePrimary(formData: FormData): Promise<void> {
  * Toggle `formats.is_cup_eligible`. Per-format global flag — ikke per-intent.
  */
 export async function toggleCupEligible(formData: FormData): Promise<void> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const slug = String(formData.get('format_slug') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
@@ -237,7 +236,7 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
     .maybeSingle<{ is_cup_eligible: boolean }>();
 
   if (!existing) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
-  if (existing!.is_cup_eligible === next) {
+  if (existing.is_cup_eligible === next) {
     redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
   }
 
@@ -256,7 +255,7 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
     formatSlug: slug,
     intent: null,
     changeType: 'cup_eligible',
-    before: { is_cup_eligible: existing!.is_cup_eligible },
+    before: { is_cup_eligible: existing.is_cup_eligible },
     after: { is_cup_eligible: next },
   });
 
@@ -270,7 +269,7 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
  * Historiske games er upåvirket (ingen FK).
  */
 export async function toggleActive(formData: FormData): Promise<void> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const slug = String(formData.get('format_slug') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
@@ -287,7 +286,7 @@ export async function toggleActive(formData: FormData): Promise<void> {
     .maybeSingle<{ is_active: boolean }>();
 
   if (!existing) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
-  if (existing!.is_active === next) {
+  if (existing.is_active === next) {
     redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
   }
 
@@ -306,7 +305,7 @@ export async function toggleActive(formData: FormData): Promise<void> {
     formatSlug: slug,
     intent: null,
     changeType: 'active',
-    before: { is_active: existing!.is_active },
+    before: { is_active: existing.is_active },
     after: { is_active: next },
   });
 

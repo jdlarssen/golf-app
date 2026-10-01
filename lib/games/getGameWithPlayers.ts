@@ -221,6 +221,16 @@ export type GameWithPlayers = {
   players: PlayerForHole[];
 };
 
+/**
+ * The two selects behind `GameWithPlayers`. They are part of the cache key in
+ * `getGameWithPlayers`, so any change to them gives a fresh cache entry.
+ */
+export const GAME_SELECT =
+  'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+
+export const PLAYERS_SELECT =
+  'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';
+
 async function fetchGameWithPlayers(
   id: string,
 ): Promise<GameWithPlayers | null> {
@@ -228,16 +238,12 @@ async function fetchGameWithPlayers(
   const [gameRes, playersRes] = await Promise.all([
     supabase
       .from('games')
-      .select(
-        'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
-      )
+      .select(GAME_SELECT)
       .eq('id', id)
       .maybeSingle<GameForHole>(),
     supabase
       .from('game_players')
-      .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)',
-      )
+      .select(PLAYERS_SELECT)
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),
   ]);
@@ -265,50 +271,17 @@ async function fetchGameWithPlayers(
 export async function getGameWithPlayers(
   id: string,
 ): Promise<GameWithPlayers | null> {
-  // #1007: keyParts bumped to 'gwp2' when tournament_id/league_round_id/
-  // group_id were added to the select. unstable_cache keys on keyParts, not
-  // on the shape of what fetchGameWithPlayers returns — a stale 'gwp' entry
-  // from before this change would silently resolve those three fields as
-  // `undefined`, which the #1007 revansje-CTA gate would misread as "not a
-  // cup/liga game" and show the button on cup/liga matches. Bumping the key
-  // forces a fresh fetch for every existing cache entry exactly once.
-  //
-  // #1008: bumped again to 'gwp3' when `round_report` was added to the
-  // select. Same trap: a stale 'gwp2' entry would resolve `round_report` as
-  // `undefined` rather than the real (possibly non-null) value, so a
-  // just-finished game's report could silently fail to appear on the
-  // leaderboard/spectate views until the 15-min `revalidate` window expired.
-  //
-  // #1009: bumped to 'gwp4' when `users.is_guest` joined the players-select —
-  // a stale entry would resolve it as `undefined` and the «Gjest»-chip +
-  // claim-seksjonen on the spillere page would silently not render.
-  //
-  // #1049: bumped to 'gwp5' when `entry_fee_kr`/`payment_link` (game) and
-  // `paid_at` (players) joined the select — a stale 'gwp4' entry would resolve
-  // them as `undefined`, so the betal-oppfordringen (`PaymentInfo`) on
-  // spill-hjem could silently fail to render on games with a fee.
-  //
-  // #1051: bumped to 'gwp6' when `prizes` (game) joined the select — a stale
-  // 'gwp5' entry would resolve it as `undefined`, so the premiebord + sponsor-
-  // stripe + premieutdeling would silently not render on games with prizes.
-  //
-  // #1441: bumped to 'gwp7' when `hole_segment`/`source_game_id` (game) joined
-  // the select — a stale 'gwp6' entry would resolve them as `undefined`, so a
-  // front9/back9 game would silently be treated as a full 18-hole round (wrong
-  // "all holes scored" math) and a derived game's score-entry guard would
-  // silently fail to fire (source_game_id read as falsy).
-  //
-  // #2200: bumped to 'gwp8' when `submitted_by_user_id` (players) joined the
-  // select — a stale 'gwp7' entry would resolve it as `undefined`, so «Levert
-  // av …» would silently not render and the approval rule would not see who
-  // delivered the card.
-  //
-  // #2358: bumped to 'gwp9' when `withdrawn_by_user_id` (players) joined the
-  // select — a stale 'gwp8' entry would resolve it as `undefined`, so spill-hjem
-  // would read every withdrawal as the organiser's and hide «Angre» from a
-  // player who withdrew themself.
-  return unstable_cache(() => fetchGameWithPlayers(id), ['gwp9', id], {
-    tags: [`game-${id}`],
-    revalidate: 900,
-  })();
+  // The key carries both select strings (#2224). unstable_cache keys on the
+  // callback's source and keyParts, not on the shape it returns, so a stale
+  // entry used to come back under the new type with the added columns
+  // `undefined` until someone bumped the key by hand (#1007 to #2358). The rows
+  // are returned as fetched, so the selects decide the shape completely.
+  return unstable_cache(
+    () => fetchGameWithPlayers(id),
+    ['gwp', GAME_SELECT, PLAYERS_SELECT, id],
+    {
+      tags: [`game-${id}`],
+      revalidate: 900,
+    },
+  )();
 }

@@ -31,7 +31,6 @@ export default async function ForeslaaIdePage({
 
   if (!user) {
     redirect({ href: '/login', locale });
-    return null;
   }
 
   const [sp, t] = await Promise.all([searchParams, getTranslations('foreslaaIde')]);

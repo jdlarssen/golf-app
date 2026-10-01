@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
-import type { AppLocale } from '@/i18n/routing';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
@@ -28,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
  * under cacheComponents, så ingen force-dynamic trengs — samme som Hjem).
  */
 export default async function SpillArkivPage() {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('home');
 
   const userId = await getProxyVerifiedUserId();
@@ -37,7 +36,7 @@ export default async function SpillArkivPage() {
   }
 
   const supabase = await getServerClient();
-  const finishedGames = await getFinishedGamesForUser(supabase, userId!);
+  const finishedGames = await getFinishedGamesForUser(supabase, userId);
   // #1449: fold split cup days into one cup entry before grouping by month.
   const entries = toFinishedEntries(finishedGames);
   const groups = groupFinishedByMonth(entries, locale, t('archiveNoDate'));

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCupRoster,
   formatSideLabel,
-  userOf,
   type CupNamedPlayerRow,
   type CupRosterGame,
   type CupUserRel,
@@ -18,7 +17,7 @@ const UNKNOWN = 'Ukjent spiller';
 function player(
   user_id: string,
   team_number: number | null,
-  users: CupUserRel | CupUserRel[] | null = { name: user_id, nickname: null },
+  users: CupUserRel | null = { name: user_id, nickname: null },
 ): CupNamedPlayerRow {
   return { user_id, team_number, users, withdrawn_at: null };
 }
@@ -30,18 +29,6 @@ function match(
 ): CupRosterGame {
   return { status, players };
 }
-
-describe('userOf — Supabase-joinens array-eller-objekt-form', () => {
-  it.each<[string, CupUserRel | CupUserRel[] | null | undefined, CupUserRel | null]>([
-    ['objekt-form', { name: 'Per', nickname: null }, { name: 'Per', nickname: null }],
-    ['array-form tar første', [{ name: 'Per', nickname: null }], { name: 'Per', nickname: null }],
-    ['tom array', [], null],
-    ['null', null, null],
-    ['undefined', undefined, null],
-  ])('%s', (_desc, rel, expected) => {
-    expect(userOf(rel)).toEqual(expected);
-  });
-});
 
 describe('formatSideLabel (#217)', () => {
   it.each<[string, CupNamedPlayerRow[], string]>([
@@ -127,13 +114,6 @@ describe('buildCupRoster', () => {
 
   it('tom input → tomme lag', () => {
     expect(buildCupRoster([])).toEqual({ team1: [], team2: [] });
-  });
-
-  it('leser navn gjennom array-formen av users-joinen', () => {
-    const roster = buildCupRoster([match([player('a1', 1, [{ name: 'Per', nickname: 'Pelle' }])])]);
-    expect(roster.team1).toEqual([
-      { userId: 'a1', name: 'Per', nickname: 'Pelle', withdrawn: false },
-    ]);
   });
 
   it('spiller uten users-join får null-navn (ikke krasj)', () => {

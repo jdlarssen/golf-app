@@ -7,13 +7,12 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
-import type { AppLocale } from '@/i18n/routing';
 import { parseCourseHolesAndTees } from '@/lib/courses/parseCourseForm';
 
 export async function updateCourse(courseId: string, formData: FormData) {
   const supabase = await getServerClient();
   const role = await requireAdmin(supabase);
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
 
   const editPath = `/admin/courses/${courseId}/edit`;
 
@@ -107,7 +106,7 @@ export async function restoreTee(
 ) {
   const supabase = await getServerClient();
   const role = await requireAdmin(supabase);
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const editPath = `/admin/courses/${courseId}/edit`;
 
   // Verify tee belongs to the right course — defends against forged POSTs
@@ -125,8 +124,8 @@ export async function restoreTee(
     throw loadError;
   }
   if (!tee) redirect({ href: `${editPath}?error=tee_not_found`, locale });
-  if (tee!.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
-  if (tee!.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
+  if (tee.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
+  if (tee.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
 
   const { error: restoreError } = await supabase
     .from('tee_boxes')
@@ -172,7 +171,7 @@ export async function restoreTee(
 export async function deleteCourse(courseId: string) {
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
 
   // Guard: refuse to delete if any games reference this course. Avoids
   // surprising FK-violation errors and preserves history.

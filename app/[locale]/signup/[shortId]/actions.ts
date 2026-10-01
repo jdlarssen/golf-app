@@ -3,7 +3,6 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
-import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
@@ -12,7 +11,10 @@ import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
-import { gameModeSupportsTeams } from '@/lib/games/registration';
+import {
+  gameModeSupportsTeams,
+  REGISTRATION_MESSAGE_MAX,
+} from '@/lib/games/registration';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import { maxTeamsForSize, registrationSeatTeamSize } from '@/lib/games/teamFormatLimits';
@@ -65,8 +67,6 @@ export type ActionError =
   | 'bad_side'
   | 'side_full'
   | 'game_full';
-
-const MESSAGE_MAX = 200;
 
 /**
  * #1792 (HCD F5): felles gate for begge solo-actions. Solo-påmelding er kun
@@ -126,7 +126,7 @@ async function getRequesterName(userId: string): Promise<string | null> {
  * til /login eller /complete-profile slik at action-en stopper umiddelbart.
  */
 async function requireAuthedUser(shortId: string): Promise<string> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -137,12 +137,12 @@ async function requireAuthedUser(shortId: string): Promise<string> {
   const { data: profile } = await supabase
     .from('users')
     .select('profile_completed_at')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
     redirect({ href: `/complete-profile?next=/signup/${shortId}`, locale });
   }
-  return user!.id;
+  return user.id;
 }
 
 /**
@@ -440,10 +440,8 @@ async function completeOpenRegistration(
     );
   }
 
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   redirect({ href: `/games/${game.id}`, locale });
-  // unreachable — redirect() returns never; satisfies TS return-type checker.
-  return { ok: false, error: 'db_error' as ActionError };
 }
 
 /**
@@ -471,7 +469,7 @@ export async function requestApproval(
     return { ok: false, error: 'game_not_found' };
   }
 
-  if (rawMessage.length > MESSAGE_MAX) {
+  if (rawMessage.length > REGISTRATION_MESSAGE_MAX) {
     return { ok: false, error: 'message_too_long' };
   }
   const message = rawMessage.length > 0 ? rawMessage : null;

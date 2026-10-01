@@ -62,7 +62,7 @@ export default async function KlubbDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
 
-  const detail = await getClubDetail(supabase, id, user!.id);
+  const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();
 
   const { club, members, myRole, pendingRequests, pendingInvitations } = detail;
@@ -91,7 +91,7 @@ export default async function KlubbDetailPage({
       supabase
         .from('tournament_participants')
         .select('tournament_id')
-        .eq('user_id', user!.id),
+        .eq('user_id', user.id),
     ]);
 
   const joinedCupIds = new Set(
@@ -336,7 +336,7 @@ export default async function KlubbDetailPage({
               <div className="flex items-center justify-between gap-3">
                 <span className="truncate font-sans text-[15px] font-medium text-text">
                   {member.name}
-                  {member.userId === user!.id && (
+                  {member.userId === user.id && (
                     <span className="ml-1.5 text-muted font-normal">{t('youSuffix')}</span>
                   )}
                 </span>
@@ -344,7 +344,7 @@ export default async function KlubbDetailPage({
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
                     {tRoles(member.role)}
                   </span>
-                  {myRole === 'owner' && member.userId !== user!.id && (
+                  {myRole === 'owner' && member.userId !== user.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/rolle/${member.userId}`}
                       className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
@@ -352,7 +352,7 @@ export default async function KlubbDetailPage({
                       {t('changeRoleLink')}
                     </SmartLink>
                   )}
-                  {isAdmin && member.userId !== user!.id && (
+                  {isAdmin && member.userId !== user.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/fjern/${member.userId}`}
                       className="min-h-[44px] flex items-center font-sans text-xs text-danger hover:underline"

@@ -40,7 +40,7 @@ export async function withdrawFromGame(
     redirect({ href: '/login', locale });
   }
 
-  return withdrawSelf(gameId, user!.id);
+  return withdrawSelf(gameId, user.id);
 }
 
 /** Angre eget frafall under aktivt spill (#386 chunk 3). Samme port. */
@@ -56,5 +56,5 @@ export async function undoWithdraw(
     redirect({ href: '/login', locale });
   }
 
-  return undoSelfWithdraw(gameId, user!.id);
+  return undoSelfWithdraw(gameId, user.id);
 }

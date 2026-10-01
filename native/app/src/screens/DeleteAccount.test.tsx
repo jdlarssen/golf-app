@@ -18,15 +18,21 @@
 //  4. **Suksess navigerer ikke** — utloggingen bytter ut hele stacken, og
 //     skjermen skal ikke tilby et nytt forsøk i mellomtiden.
 //  5. **Et avslag navngir årsaken**, med den setningen koden hører til.
+//
+// #2216: en sperre du løser på nettsiden har en knapp dit i banneret
+// (`deleteBlockWebLink`). Testen henter etikett og sti fra funksjonen, så
+// den låser koblingen, ikke ordlyden.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { deleteAccount, fetchDeleteStatus } from '../data/account';
 import {
   ACCOUNT_TEXT,
+  deleteBlockWebLink,
   describeDeleteBlock,
   describeDeleteFailure,
   type DeleteBlockReason,
 } from '../lib/accountCopy';
+import { openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { queryStub, routeFrom } from '../test/supabaseMock';
 import { DeleteAccount } from './DeleteAccount';
@@ -43,6 +49,11 @@ jest.mock('../session', () => ({
 jest.mock('../data/account', () => ({
   fetchDeleteStatus: jest.fn(),
   deleteAccount: jest.fn(),
+}));
+// Bare `openWeb` byttes ut, så knappen ikke prøver å åpne en nettleser.
+jest.mock('../lib/webLink', () => ({
+  ...jest.requireActual('../lib/webLink'),
+  openWeb: jest.fn(),
 }));
 
 const goBack = jest.fn();
@@ -65,6 +76,7 @@ describe('DeleteAccount', () => {
     routeFrom({ users: [queryStub({ data: { name: MY_NAME }, error: null })] });
     (fetchDeleteStatus as jest.Mock).mockResolvedValue({ ok: true, blocked: null });
     (deleteAccount as jest.Mock).mockResolvedValue({ ok: true, mode: 'anonymized' });
+    (openWeb as jest.Mock).mockResolvedValue({ ok: true });
   });
 
   it.each<DeleteBlockReason>(['admin_account', 'active_engagements', 'sole_club_owner'])(
@@ -79,6 +91,17 @@ describe('DeleteAccount', () => {
       // Ingen knapp i det hele tatt — ikke en grå én.
       expect(screen.queryByTestId('delete-account-submit')).toBeNull();
       expect(screen.getByTestId('delete-account-back')).toBeTruthy();
+
+      // #2216: veien videre, der banneret sier at du løser det på nettsiden.
+      const link = deleteBlockWebLink(blocked);
+      if (link) {
+        const button = screen.getByTestId('delete-account-web-link');
+        expect(button).toHaveTextContent(link.label);
+        await fireEvent.press(button);
+        expect(openWeb).toHaveBeenCalledWith(link.path);
+      } else {
+        expect(screen.queryByTestId('delete-account-web-link')).toBeNull();
+      }
     },
   );
 

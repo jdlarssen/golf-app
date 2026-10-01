@@ -267,7 +267,6 @@ export async function saveCupPlan(
   if (!propagated) return { error: 'plan_matches_not_updated' };
 
   redirect(`${cupPath(id, groupId)}?status=plan_saved`);
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 /**
@@ -354,7 +353,6 @@ export async function addCupParticipant(
 
   revalidateCup(id, groupId);
   redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_added`);
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 /**
@@ -398,7 +396,6 @@ export async function removeCupParticipant(
 
   revalidateCup(id, groupId);
   redirect(`${cupPath(id, groupId, '/spillere')}?status=participant_removed`);
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 /**

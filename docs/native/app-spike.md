@@ -1290,7 +1290,9 @@ forsøkene — se avsnittet over.
 ### Uten nett: les fritt, slett ikke
 
 Skjermen skiller på to ting som lett blir én. Sier serveren «blokkert», er svaret
-gitt: banner og ingenting mer. Fikk vi ikke SPURT — uten nett, utløpt sesjon, eller
+gitt: banner og ingen slette-knapp. Er det noe du løser på nettsiden
+(`sole_club_owner` og `active_engagements`), har banneret en knapp dit, og samme knapp
+står under feilmeldingen etter et avvist forsøk (#2216). Fikk vi ikke SPURT — uten nett, utløpt sesjon, eller
 et bygg uten server-adresse — står begge boksene der som vanlig, men den røde knappen
 er byttet ut med grunnen til at den ikke er der. En midlertidig nettfeil skal ikke se
 ut som et avslag.
@@ -1311,9 +1313,8 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
   N8 P2 (#1954): `app.config.ts` kaster før prebuild hvis `APP_VARIANT=store` mangler
   noen av de tre `EXPO_PUBLIC_*`-verdiene, og `scripts/store-build-proof.sh` leser
   bundelen etterpå og krever `https://tornygolf.no` der. Se `app-store-release.md`.
-- **Blokk-lesingen er fail-open.** `getDeleteBlockReason` forkaster PostgREST-feil og
-  leser en forbigående DB-feil som «ikke blokkert». En 403 er derfor en port, ikke en
-  garanti. Oppførselen er webbens egen og uendret her — regelen har ett hjem.
+- ~~**Blokk-lesingen er fail-open.**~~ Lukket i #1903: feiler en av lesningene, svarer
+  `getDeleteBlockReason` `check_failed` og sperrer (`lib/users/deleteAccount.ts`).
 - **`anonymize_user` sletter `push_subscriptions`, men ikke `apns_tokens`** (0166 kom
   etter 0142). Push er parkert til N7, så det er filt som eget issue og ikke fikset her.
 - ~~**Konto-skjermen som inngang er et eier-vetopunkt.**~~ Lukket i #1906: inngangen er
@@ -1324,9 +1325,9 @@ brukeren tilbake til en konto som ikke finnes, og neste forsøk svarer uansett 4
   rommet finnes, `goBack()` lander i det, og pariteten er gjenopprettet og låst i test.
 - **Appen viser aldri `mode`.** Feltet er informasjon til logg og staging-bevis; for
   spilleren er utfallet det samme.
-- **Appen oppretter fortsatt ikke kontoer** (`shouldCreateUser: false` i `Login.tsx`), så
-  5.1.1(v) binder strengt tatt først når kontoopprettelse kommer til appen. Must-statusen
-  er eiervalg — web-veien alene blir uansett en blindvei etter butikk-byttet.
+- ~~**Appen oppretter fortsatt ikke kontoer.**~~ Fra #2216 lager appen kontoer gjennom
+  `/api/auth/send-code`, med nettsidens sperrer. 5.1.1(v) er oppfylt av slettingen her
+  (#1876).
 - **Admin-slett av andre spillere forblir web/Sekretariat**, og webbens
   `/profile/slett-konto` er urørt.
 
@@ -1337,6 +1338,10 @@ Slette-ruta (#1876) var den første. Med purringen ble den et **mønster**, og f
 `#1918` (lever lagkort) er den tredje brukeren og arvet begge uendret. `#1917` (trekk deg
 selv) er den fjerde og `#1919` (inviter med e-post) den femte; begge gjorde det samme.
 Ingen skal lage en sjette variant.
+
+#2216 la til innloggingens to ruter (se «Innloggingen gjennom nettsiden» under):
+`POST /api/auth/send-code` er den første uten token, og `POST /api/auth/after-login`
+kjører stegene etter innloggingen med kallerens token.
 
 ### Når trenger noe en rute i det hele tatt?
 
@@ -1584,6 +1589,39 @@ hen får e-post i dag, og APNs-push den dagen appen registrerer tokens (N7).
 Det er ikke en feil, og det trengs ingen ny regel for det — men det betyr at purring fra
 appen i praksis er en e-post til mottakeren. Verdt å vite når N7 lander og den samme
 purringen plutselig også blir en push.
+
+### Innloggingen gjennom nettsiden (#2216)
+
+Appen ber om koden gjennom `POST /api/auth/send-code` (`src/data/loginCode.ts`), ikke rett
+mot Supabase. Ruta kaller `sendLoginCode` (`lib/auth/sendLoginCode.ts`), samme kjerne som
+nettsidens skjema: fartsgrensen per e-post og per IP, bryteren for nye kontoer, sperren
+mot engangs-e-post og invitasjonen som åpner for ny konto. Ruta er den eneste uten
+token, for kalleren har ingen sesjon ennå. Vernet mot direkte kall er fartsgrensene i
+kjernen, ikke noe appen sender (`callPublicWebRoute` i `webApi.ts`).
+
+```
+POST /api/auth/send-code { email }
+  200 { ok: true }
+  400 { error: 'unknown' | 'user_not_found' | 'invite_expired' | 'disposable_email' }
+  429 { error: 'rate_limited' | 'rate_limited_minute' | 'rate_limited_quota' }
+  500 { error: 'unknown' }
+```
+
+Appen verifiserer koden selv (`verifyOtp`) og kaller så `POST /api/auth/after-login` med
+tokenet. Ruta kjører `afterLogin` (`lib/auth/afterLogin.ts`), samme kjerne som
+nettsidens `verifyCode`: gjest-flagget, invitasjonene (plass i spillet, varsel, vennskap)
+og klubbinvitasjonene, med id og e-post fra tokenet og en klient som leser som
+kalleren (`callerScopedClient`). Kallet er best-effort, og porten foran stacken
+(`ProfileGate`) venter på det med et tak før den leser profilen.
+
+```
+POST /api/auth/after-login (Bearer)
+  200 { ok: true }
+  401 { error: 'unauthorized' }
+  500 { error: 'after_login_failed' }
+```
+
+Passord-inngangen for App Review lager fortsatt aldri kontoer.
 
 ### Lenkeknapper: når svaret ikke er en rute
 

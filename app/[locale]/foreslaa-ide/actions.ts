@@ -10,7 +10,6 @@ import {
 } from '@/lib/users/privateUserFields';
 import { sendIdeaSubmittedNotification } from '@/lib/mail/ideaSubmittedNotification';
 import { firstName } from '@/lib/firstName';
-import type { AppLocale } from '@/i18n/routing';
 
 const MAX_TEXT = 2000;
 
@@ -20,13 +19,12 @@ const MAX_TEXT = 2000;
  * success state.
  */
 export async function submitIdea(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
 
   const text = String(formData.get('text') ?? '').trim();
 
   if (!text || text.length > MAX_TEXT) {
     redirect({ href: '/foreslaa-ide?error=empty', locale });
-    return;
   }
 
   const supabase = await getServerClient();
@@ -36,7 +34,6 @@ export async function submitIdea(formData: FormData) {
 
   if (!user) {
     redirect({ href: '/login', locale });
-    return;
   }
 
   // Insert the idea — RLS enforces user_id = auth.uid() on INSERT. expectOne

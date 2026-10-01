@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
-import { userOf, type CupUserRel } from './cupRoster';
+import type { CupUserRel } from './cupRoster';
 import {
   isNotStartedCupMatch,
   isPlayOnAvailable,
@@ -80,11 +80,11 @@ type PlayerRow = {
   user_id: string;
   team_number: number | null;
   withdrawn_at: string | null;
-  users: CupUserRel | CupUserRel[] | null;
+  users: CupUserRel | null;
 };
 
 function displayName(row: PlayerRow | undefined, unknownLabel: string): string {
-  const u = userOf(row?.users);
+  const u = row?.users;
   return u?.nickname?.trim() || u?.name?.trim() || unknownLabel;
 }
 
@@ -146,7 +146,7 @@ export async function loadCupWithdrawalContext(args: {
         .range(from, to),
     'cupWithdrawalContext game_players',
   );
-  const players = playerRows as unknown as PlayerRow[];
+  const players: PlayerRow[] = playerRows;
 
   const byGame = new Map<string, PlayerRow[]>();
   for (const row of players) {

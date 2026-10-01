@@ -17,14 +17,14 @@
 
 import { isNotStartedCupMatch } from './cupWithdrawalOutcome';
 
-/** `users`-joinen. Supabase JS typer FK-joins som array selv på many-to-one. */
+/** `users`-joinen: many-to-one, så PostgREST gir et objekt (eller null). */
 export type CupUserRel = { name: string | null; nickname: string | null };
 
 /** Minste spillerrad-form roster/navne-byggingen trenger. */
 export type CupNamedPlayerRow = {
   user_id: string;
   team_number: number | null;
-  users: CupUserRel | CupUserRel[] | null;
+  users: CupUserRel | null;
   /**
    * `game_players.withdrawn_at` (#1814). Valgfri: `formatSideLabel` bryr seg
    * ikke om den, og eldre call-sites/tester som bare navngir en side slipper å
@@ -70,13 +70,6 @@ export type CupRosterGame = {
   players: readonly CupNamedPlayerRow[];
 };
 
-/** Normaliserer Supabase-joinens array-eller-objekt-form til ett objekt. */
-export function userOf(rel: CupUserRel | CupUserRel[] | null | undefined): CupUserRel | null {
-  if (!rel) return null;
-  if (Array.isArray(rel)) return rel[0] ?? null;
-  return rel;
-}
-
 function preferredName(
   p: { name: string | null; nickname: string | null } | null,
   unknownLabel: string,
@@ -96,12 +89,12 @@ export function formatSideLabel(
   unknownLabel: string,
 ): string {
   if (sidePlayers.length === 0) return unknownLabel;
-  if (sidePlayers.length === 1) return preferredName(userOf(sidePlayers[0].users), unknownLabel);
-  return sidePlayers.map((p) => preferredName(userOf(p.users), unknownLabel)).join('/');
+  if (sidePlayers.length === 1) return preferredName(sidePlayers[0].users, unknownLabel);
+  return sidePlayers.map((p) => preferredName(p.users, unknownLabel)).join('/');
 }
 
 function toRosterPlayer(p: CupNamedPlayerRow): CupRosterPlayer {
-  const u = userOf(p.users);
+  const u = p.users;
   return {
     userId: p.user_id,
     name: u?.name ?? null,

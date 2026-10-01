@@ -141,7 +141,7 @@ export default async function GameHomePage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const locale = await getLocale() as AppLocale;
+  const locale = await getLocale();
   const sp = await searchParams;
   const t = await getTranslations('game.home');
   const tModes = await getTranslations('modes');
@@ -173,10 +173,9 @@ export default async function GameHomePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  const { supabase, userId: userIdOrNull } = await getGameContext();
+  const { supabase, userId } = await getGameContext();
   // Proxy redirects unauthenticated users, but be defensive.
-  if (!userIdOrNull) redirect({ href: '/login', locale });
-  const userId = userIdOrNull as string;
+  if (!userId) redirect({ href: '/login', locale });
 
   // Initial gating data — game + game_players come from the tag-cached
   // helper (per-hole-bytte cache hit; see lib/games/getGameWithPlayers.ts).

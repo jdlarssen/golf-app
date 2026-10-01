@@ -50,11 +50,7 @@ export async function getClubForAdmin(clubId: string): Promise<AdminClubDetail |
 
   const members: ClubMember[] = (membersRes.data ?? [])
     .map((row) => {
-      const usersRaw = row.users as unknown as
-        | { name: string | null; nickname: string | null }
-        | { name: string | null; nickname: string | null }[]
-        | null;
-      const user = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
+      const user = row.users;
       const displayName =
         user?.nickname?.trim() || user?.name?.trim() || 'Ukjent';
 

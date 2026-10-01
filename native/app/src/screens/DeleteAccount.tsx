@@ -17,6 +17,12 @@
 // `App.tsx` bytter til Login, og denne skjermen unmountes med resten av stacken.
 // Derfor står den i «Sletter …»-tilstand helt til den er borte — det er ikke en
 // glemt opprydding, det er den siste sanne tilstanden den har.
+//
+// **Vei videre (#2216).** Sperres kontoen fordi du er eneste klubbeier eller
+// arrangerer noe som ikke er avsluttet, sier teksten at du løser det på
+// nettsiden. Da står det en knapp dit, både i banneret og under feilmeldingen
+// etter et avvist forsøk (`deleteBlockWebLink`). En setning uten knapp er en
+// blindvei (#1891).
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,12 +32,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import { WebLinkButton } from '../components/WebLinkButton';
 import { deleteAccount, fetchDeleteStatus, type AccountDeleteStatus } from '../data/account';
 import {
   ACCOUNT_TEXT,
   DISPLAY_NAME_FALLBACK,
+  deleteBlockWebLink,
   describeDeleteBlock,
   describeDeleteFailure,
+  type AccountDeleteFailure,
 } from '../lib/accountCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -45,7 +54,9 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   const [status, setStatus] = useState<AccountDeleteStatus | null>(null);
   const [ownName, setOwnName] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  // Koden, ikke bare setningen: et avslag du løser på nettsiden får en knapp
+  // dit under setningen.
+  const [notice, setNotice] = useState<AccountDeleteFailure | null>(null);
 
   // Status og navn hentes i parallell: navnet pynter på én setning, statusen
   // avgjør hva skjermen i det hele tatt er. Skjermen venter derfor bare på
@@ -90,10 +101,10 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
     try {
       const result = await deleteAccount();
       if (result.ok) return;
-      setNotice(describeDeleteFailure(result.reason));
+      setNotice(result.reason);
     } catch (err) {
       console.error('[DeleteAccount] sletting kastet', err);
-      setNotice(describeDeleteFailure('delete_failed'));
+      setNotice('delete_failed');
     }
     setPending(false);
   }, []);
@@ -119,6 +130,7 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
   const unreachableText = status.ok ? null : describeDeleteFailure(status.reason);
 
   if (blockText) {
+    const blockLink = status.ok && status.blocked ? deleteBlockWebLink(status.blocked) : null;
     return (
       <ScrollView contentContainerStyle={ui.scroll} testID="delete-account-screen">
         <Text style={ui.title}>{ACCOUNT_TEXT.heading}</Text>
@@ -126,6 +138,13 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
           <Text style={ui.body} testID="delete-account-banner">
             {blockText}
           </Text>
+          {blockLink ? (
+            <WebLinkButton
+              label={blockLink.label}
+              path={blockLink.path}
+              testID="delete-account-web-link"
+            />
+          ) : null}
         </View>
         <Pressable
           style={ui.link}
@@ -137,6 +156,8 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
       </ScrollView>
     );
   }
+
+  const noticeLink = notice ? deleteBlockWebLink(notice) : null;
 
   // Webbens kjede, tegn for tegn: eget navn, ellers e-posten, ellers literalen.
   const shownName = ownName || email?.trim() || DISPLAY_NAME_FALLBACK;
@@ -199,8 +220,15 @@ export function DeleteAccount({ navigation }: ScreenProps<'DeleteAccount'>) {
 
       {notice ? (
         <Text style={ui.error} testID="delete-account-notice">
-          {notice}
+          {describeDeleteFailure(notice)}
         </Text>
+      ) : null}
+      {noticeLink ? (
+        <WebLinkButton
+          label={noticeLink.label}
+          path={noticeLink.path}
+          testID="delete-account-notice-web-link"
+        />
       ) : null}
     </ScrollView>
   );

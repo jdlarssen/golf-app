@@ -34,6 +34,8 @@ type PlanRow = {
 /** Bygger prefill-verdiene til formen fra en (kanskje manglende) plan-rad. */
 function buildInitialValues(plan: PlanRow | null) {
   const presetId = plan?.preset_id ?? 'klassisk';
+  const strategy: 'handicap' | 'random' =
+    plan?.strategy === 'random' ? 'random' : 'handicap';
   return {
     courseId: plan?.course_id ?? '',
     teeBoxId: plan?.tee_box_id ?? '',
@@ -45,9 +47,7 @@ function buildInitialValues(plan: PlanRow | null) {
       presetId === 'tilpasset'
         ? normalizeCustomSessions(plan?.custom_sessions)
         : [],
-    strategy: (plan?.strategy === 'random' ? 'random' : 'handicap') as
-      | 'handicap'
-      | 'random',
+    strategy,
     bestBallAllowancePct: plan?.best_ball_allowance_pct ?? 85,
   };
 }

@@ -39,7 +39,7 @@ export async function removeMember(formData: FormData) {
     .from('group_members')
     .select('role')
     .eq('group_id', groupId)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   const callerRole = callerRow?.role;

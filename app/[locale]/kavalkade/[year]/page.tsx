@@ -16,7 +16,6 @@ import {
   isKavalkadeEmpty,
 } from '@/lib/kavalkade/kavalkadeCards';
 import { KAVALKADE_YEAR } from '@/lib/kavalkade/release';
-import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Kavalkaden — golfåret ditt som bla-bar kortstokk (#2129, epic #1040).
@@ -47,13 +46,13 @@ export default async function KavalkadePage({ params }: { params: Params }) {
   const { year: yearParam } = await params;
   if (Number(yearParam) !== KAVALKADE_YEAR) notFound();
 
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('kavalkade');
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) redirect({ href: '/login', locale });
 
-  const view = await getOrCreateKavalkade(userId as string);
+  const view = await getOrCreateKavalkade(userId);
 
   if (view.status === 'closed') {
     return (

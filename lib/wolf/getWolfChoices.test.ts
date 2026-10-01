@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { makeUnstableCacheSpy } from '@/tests/serverActionMocks';
 
 type ChainResult = {
   data?: Array<Record<string, unknown>> | null;
@@ -11,16 +12,16 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({ from: fromMock }),
 }));
 
+const cacheSpy = makeUnstableCacheSpy();
 vi.mock('next/cache', () => ({
-  unstable_cache: <Args extends unknown[], R>(
-    fn: (...args: Args) => Promise<R>,
-  ) => fn,
+  unstable_cache: (...args: Parameters<typeof cacheSpy>) => cacheSpy(...args),
 }));
 
 import { getWolfChoices } from './getWolfChoices';
 
 beforeEach(() => {
   fromMock.mockReset();
+  cacheSpy.mockClear();
 });
 
 function buildChain(result: ChainResult) {
@@ -100,5 +101,18 @@ describe('getWolfChoices', () => {
     await expect(getWolfChoices('game-1')).rejects.toThrow(
       'Failed to fetch wolf choices',
     );
+  });
+
+  // #2224: the select string is part of the key, so a select change gives a
+  // new cache entry without a hand bump.
+  it('keys the cache entry on the select string and tags it game-<id>', async () => {
+    const chain = buildChain({ data: [], error: null });
+    fromMock.mockImplementation(() => chain);
+
+    await getWolfChoices('game-1');
+
+    const [, keyParts, options] = cacheSpy.mock.calls[0];
+    expect(keyParts).toContain(chain.select.mock.calls[0][0]);
+    expect(options?.tags).toEqual(['game-game-1']);
   });
 });

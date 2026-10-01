@@ -3,10 +3,6 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
-type MyClubRow = {
-  group_id: string;
-  groups: { valid_until: string | null } | { valid_until: string | null }[] | null;
-};
 type MemberRow = { group_id: string; user_id: string };
 type MemberUserRow = {
   id: string;
@@ -46,18 +42,14 @@ export async function getClubMemberPlayerOptions(
   const { data: myClubs, error: clubsErr } = await admin
     .from('group_members')
     .select('group_id, groups(valid_until)')
-    .eq('user_id', userId)
-    .returns<MyClubRow[]>();
+    .eq('user_id', userId);
   if (clubsErr || !myClubs) {
     if (clubsErr)
       console.error('[getClubMemberPlayerOptions] club lookup failed', clubsErr);
     return EMPTY;
   }
   const clubIds = myClubs
-    .filter((r) => {
-      const g = Array.isArray(r.groups) ? r.groups[0] ?? null : r.groups;
-      return g !== null && !isClubExpired(g.valid_until);
-    })
+    .filter((r) => r.groups !== null && !isClubExpired(r.groups.valid_until))
     .map((r) => r.group_id);
   if (clubIds.length === 0) return EMPTY;
 

@@ -60,13 +60,13 @@ export async function addGuestToGame(
     redirect({ href: `${detailPath}?error=not_found`, locale });
   }
 
-  if (game!.status === 'active' || game!.status === 'finished') {
+  if (game.status === 'active' || game.status === 'finished') {
     redirect({ href: `${detailPath}?error=game_locked`, locale });
   }
 
   // Gjester teller som vanlige spillere mot format-capene (kontrakt-beslutning
   // 2) — samme tak og samme aktiv-telling som addExistingPlayerToGame (#2059).
-  const cap = organizerPlayerCap(game!.game_mode, game!.mode_config);
+  const cap = organizerPlayerCap(game.game_mode, game.mode_config);
   if (cap !== null) {
     const { count } = await supabase
       .from('game_players')
@@ -89,7 +89,7 @@ export async function addGuestToGame(
 
   const created = await createGuestPlayer(
     gameId,
-    (parsed as Extract<typeof parsed, { ok: true }>).profile,
+    parsed.profile,
   );
   if (!created.ok) {
     redirect({ href: `${detailPath}?error=${created.error}`, locale });
@@ -189,7 +189,7 @@ export async function sendGuestResult(
   if (!game) {
     redirect({ href: `${detailPath}?error=not_found`, locale });
   }
-  if (game!.status !== 'finished') {
+  if (game.status !== 'finished') {
     redirect({ href: `${detailPath}?error=guest_claim_not_finished`, locale });
   }
 
@@ -201,19 +201,19 @@ export async function sendGuestResult(
 
   // Samme disposable-guard som e-post-invitasjoner (#422): admin er unntatt
   // (kurator-modellen), vanlige arrangører blokkeres.
-  if (!ctx.isAdmin && isDisposableEmailDomain(email!)) {
+  if (!ctx.isAdmin && isDisposableEmailDomain(email)) {
     redirect({ href: `${detailPath}?error=disposable_email`, locale });
   }
 
   const claimed = await claimGuestEmail({
     gameId,
     guestUserId,
-    email: email!,
+    email: email,
   });
   if (!claimed.ok) {
     redirect({ href: `${detailPath}?error=${claimed.error}`, locale });
   }
-  const claim = claimed as Extract<typeof claimed, { ok: true }>;
+  const claim = claimed;
 
   // Invitations-rad (best-effort): gir claim-en et spor i invitasjonslista og
   // lar verifyCode-reconciliation koble venne-forholdet ved første innlogging.
@@ -222,7 +222,7 @@ export async function sendGuestResult(
   try {
     const admin = getAdminClient();
     const { error: inviteError } = await admin.from('invitations').insert({
-      email: email!,
+      email: email,
       token: randomUUID(),
       invited_by: ctx.userId,
       game_id: gameId,
@@ -242,10 +242,10 @@ export async function sendGuestResult(
     ctx.name?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
   try {
     await sendGuestClaimNotification({
-      to: email!,
+      to: email,
       guestFirstName: firstName(claim.guestName),
       invitedByName,
-      gameName: game!.name,
+      gameName: game.name,
     });
   } catch (err) {
     // E-post-flippen beholdes (kontrakt-beslutning 7): gjesten kan logge inn
@@ -253,14 +253,14 @@ export async function sendGuestResult(
     console.error('[sendGuestResult] claim mail failed (flip kept)', err);
     expireGameCache(gameId);
     redirect({
-      href: `${detailPath}?error=guest_claim_mail_failed&email=${encodeURIComponent(email!)}`,
+      href: `${detailPath}?error=guest_claim_mail_failed&email=${encodeURIComponent(email)}`,
       locale,
     });
   }
 
   expireGameCache(gameId);
   redirect({
-    href: `${detailPath}?status=guest_claim_sent&email=${encodeURIComponent(email!)}`,
+    href: `${detailPath}?status=guest_claim_sent&email=${encodeURIComponent(email)}`,
     locale,
   });
 }

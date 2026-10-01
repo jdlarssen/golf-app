@@ -43,8 +43,7 @@ export async function toggleReaction(input: {
   const userId = maybeUser.id;
 
   // Check whether the viewer already has this reaction on the target.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing, error: selectError } = await (supabase as any)
+  const { data: existing, error: selectError } = await supabase
     .from('reactions')
     .select('id')
     .eq('game_id', gameId)
@@ -59,8 +58,7 @@ export async function toggleReaction(input: {
 
   if (existing) {
     // Reaction exists → DELETE (toggle off).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const deleteResult = await (supabase as any)
+    const deleteResult = await supabase
       .from('reactions')
       .delete()
       .eq('id', existing.id)
@@ -71,8 +69,7 @@ export async function toggleReaction(input: {
     return { active: false };
   } else {
     // Reaction does not exist → INSERT (toggle on).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const insertResult = await (supabase as any)
+    const insertResult = await supabase
       .from('reactions')
       .insert({
         game_id: gameId,
