@@ -58,12 +58,15 @@ import { FlighterSeksjon } from './FlighterSeksjon';
 import { LagSeksjon } from './LagSeksjon';
 import {
   eligibleForFlightAssignment,
+  flightBuckets,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
 import {
   modeRequiresTeamNumber,
   expectedTeamSize,
+  teamBuckets,
 } from '@/lib/games/teamScope';
+import { holeCountForSegment } from '@/lib/games/holeScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { isStartCountMode } from '@/lib/games/startPlayerCount';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
@@ -151,25 +154,6 @@ type GamePlayerRow = {
     email: string;
   } | null;
 };
-
-/**
- * Grupperer spillere på et nullable tall-felt (lag eller flight). Rader uten
- * verdi havner ikke i noen bøtte — de vises i Lag-seksjonen som «Uten lag».
- */
-function bucketPlayers(
-  rows: GamePlayerRow[],
-  key: (p: GamePlayerRow) => number | null,
-): Map<number, GamePlayerRow[]> {
-  const buckets = new Map<number, GamePlayerRow[]>();
-  for (const p of rows) {
-    const n = key(p);
-    if (n == null) continue;
-    const bucket = buckets.get(n) ?? [];
-    bucket.push(p);
-    buckets.set(n, bucket);
-  }
-  return buckets;
-}
 
 // Request-scoped Supabase client. Each Suspense body that needs it pulls
 // from this cached helper so we don't pay the cookie-auth cost per section.
@@ -565,9 +549,12 @@ async function PlayersSections({
   const teamLabel = isMatchplay ? tDetail('teamLabel') : tDetail('teamLabelDefault');
   // Bøttene under er avledet av rosteret, ikke av en hardkodet 1..4-liste:
   // lag-påmelding tillater opp til 50 lag (0101), og et spill med lag 5+ eller
-  // flight 5+ var usynlig i denne oversikten fram til #1669.
-  const byTeam = bucketPlayers(players, (p) => p.team_number);
-  const byFlight = bucketPlayers(players, (p) => p.flight_number);
+  // flight 5+ var usynlig i denne oversikten fram til #1669. Den delte regelen
+  // holder trukne spillere utenfor (#2225), som resten av appen: de står bare
+  // i spillertabellen lenger ned, med trukket-merkingen. Rader uten lag eller
+  // flight havner ikke i noen bøtte; Lag-seksjonen viser dem som «Uten lag».
+  const byTeam = teamBuckets(players).assigned;
+  const byFlight = flightBuckets(players).assigned;
   const teamNumbers = [...byTeam.keys()].sort((a, b) => a - b);
   const flightNumbers = [...byFlight.keys()].sort((a, b) => a - b);
 
@@ -595,29 +582,35 @@ async function PlayersSections({
   >();
   if (game.status === 'active') {
     // #2213: each player's filled cells are the rows they OWN per hole
-    // (`ownedScoresByPlayer`, #2017), not their own `user_id`'s rows — in the
-    // one-ball formats the captain owns the team's rows, and a finished
-    // scramble four read 18/72. The progress rows are already filtered on
+    // (`ownedScoresByPlayer`, #2017; `filledHolesByPlayer` counts the same
+    // rows), not their own `user_id`'s rows — in the one-ball formats the
+    // captain owns the team's rows, and a finished scramble four read 18/72.
+    // The whole roster goes in, withdrawn included: the team's row owner is
+    // found from the whole team. The progress rows are already filtered on
     // strokes (no strokes fetched: spoiler guard), as `FilledScoreRow` asks.
     const owned = ownedScoresByPlayer({
       players,
       scores: progressRes.data ?? [],
       mode: game.game_mode,
     });
+    // #2225: a flight is its active players (`byFlight`) times the holes in
+    // the game's segment, so a flight with a withdrawn player and a nine-hole
+    // cup match can both reach 100 %.
+    const holeCount = holeCountForSegment(game.hole_segment);
     for (const f of flightNumbers) {
       const flightPlayers = byFlight.get(f) ?? [];
       if (flightPlayers.length === 0) continue;
-      const flightRows = flightPlayers.flatMap(
+      const ownedRows = flightPlayers.flatMap(
         (p) => owned.get(p.user_id) ?? [],
       );
-      const maxHole = flightRows.reduce(
+      const maxHole = ownedRows.reduce(
         (m, r) => Math.max(m, r.hole_number),
         0,
       );
       progressByFlight.set(f, {
         maxHole,
-        filledCells: flightRows.length,
-        totalCells: flightPlayers.length * 18,
+        filledCells: ownedRows.length,
+        totalCells: flightPlayers.length * holeCount,
       });
     }
   }
@@ -808,7 +801,12 @@ async function PlayersSections({
                     ? tDetail('sideN', { n: f })
                     : tDetail('flightN', { n: f });
                   return (
-                    <li key={f}>
+                    <li
+                      key={f}
+                      data-testid={`flight-progress-${f}`}
+                      data-filled-cells={p?.filledCells ?? 0}
+                      data-total-cells={p?.totalCells ?? 0}
+                    >
                       <div className="mb-1 flex items-center justify-between text-sm">
                         <span className="font-medium tracking-tight text-text">
                           {groupLabel}
@@ -848,6 +846,8 @@ async function PlayersSections({
               return (
                 <div
                   key={team}
+                  data-testid={`team-overview-${team}`}
+                  data-members={members.map((m) => m.user_id).join(',')}
                   className="rounded-xl border border-border px-3 py-2.5"
                 >
                   <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -884,6 +884,10 @@ async function PlayersSections({
               .map((f) => (
                 <li
                   key={f}
+                  data-testid={`flight-overview-${f}`}
+                  data-members={(byFlight.get(f) ?? [])
+                    .map((m) => m.user_id)
+                    .join(',')}
                   className="rounded-xl border border-border px-3 py-2.5"
                 >
                   <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
