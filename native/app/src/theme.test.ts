@@ -16,6 +16,7 @@ import {
   frauncesFamily,
   frauncesLine,
   interLine,
+  centeredLineTop,
   PALETTES,
   SUNLIGHT_THEME,
   ThemeScope,
@@ -192,6 +193,19 @@ describe('frauncesLine', () => {
     // altså −1/64 og så −1 (målt i Chromium).
     expect(interLine(13, 13 * 1.23, px3).marginTop).toBeCloseTo(13 - 12.667, 2);
     expect(interLine(11, 11 * 1.27, px3).marginTop).toBeCloseTo(10 - 10.667, 2);
+  });
+});
+
+// #2385: målt i Chromium. En sentrert linje tegnes på hel piksel, og en halv
+// rundes opp: 23 i 52 står som 23 i 53, og 17 i 42 som 17 i 43.
+describe('centeredLineTop', () => {
+  it('runder en halv opp, som nettleseren', () => {
+    expect(centeredLineTop(51, 23)).toBe(14);
+    expect(centeredLineTop(52, 23)).toBe(15);
+    expect(centeredLineTop(53, 23)).toBe(15);
+    expect(centeredLineTop(42, 17)).toBe(13);
+    expect(centeredLineTop(43, 17)).toBe(13);
+    expect(centeredLineTop(44, 17)).toBe(14);
   });
 });
 

@@ -43,7 +43,7 @@ import { bagTagModel } from '../lib/bagTag';
 import { PROFILE_TEXT } from '../lib/profileCopy';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { FONTS, fraunces, TAP, useTheme } from '../theme';
+import { centeredLineTop, FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
 export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   const { userId, email } = useSession();
@@ -224,6 +224,9 @@ export function Profile({ navigation, route }: ScreenProps<'Profile'>) {
   );
 }
 
+/** Knappetekstens linje: Inter 14 på nettleserens `normal` (14 + 3). */
+const EDIT_LINE = 17;
+
 const styles = StyleSheet.create({
   // Designet: 16 pt til kanten, og avstandene står på hver blokk.
   scroll: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 32 },
@@ -238,16 +241,17 @@ const styles = StyleSheet.create({
   },
   // Nettleserens `normal` for Fraunces 22 (designet): 22 + 6 = 28.
   title: { ...fraunces(500, 22, 28), flexShrink: 1 },
-  // «Rediger» som i designet: en lys pille, 44 pt høy.
+  // «Rediger» som i designet: en lys pille, 44 pt høy. Ordet står der
+  // nettleserens sentrering tegner det (`centeredLineTop`).
   editPill: {
-    minHeight: TAP,
+    height: TAP,
     paddingHorizontal: 16,
+    paddingTop: centeredLineTop(TAP - 2, EDIT_LINE),
     borderRadius: 999,
     borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  editPillText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
+  editPillText: { ...interLine(14, EDIT_LINE), fontFamily: FONTS.sansSemiBold },
   pressed: { opacity: 0.6 },
   // 20 pt fra flisene; lista har selv 8 på toppen.
   menu: { marginTop: 12 },
