@@ -348,6 +348,59 @@ describe('the organiser (not admin) answers on their own game', () => {
 });
 
 /**
+ * #2440: a captain's decision takes only the team rows in the captain's own
+ * game. The link to the captain (`team_request_id`) is not bound to the same
+ * game in the database, so the cascade read carries the game filter itself.
+ */
+describe('the team cascade stays inside the captain\'s game', () => {
+  /** The filters on the cascade read (the select that filters on team_request_id). */
+  function cascadeFilters() {
+    const calls = adminMock.__fromCalls;
+    const at = calls.findIndex((c) => c.method === 'eq' && c.args[0] === 'team_request_id');
+    expect(at).toBeGreaterThan(-1);
+    const start = calls.slice(0, at).map((c) => c.method).lastIndexOf('select');
+    const end = calls.findIndex((c, i) => i > at && c.method === 'returns');
+    return calls
+      .slice(start, end + 1)
+      .filter((c) => c.method === 'eq' || c.method === 'in')
+      .map((c) => c.args);
+  }
+
+  it('approve: the cascade reads only rows in the captain\'s game', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      game(),
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: [{ id: CAPTAIN_REQ }], error: null },
+      { data: [{ user_id: CAPTAIN_USER }], error: null },
+      { data: [], error: null },
+    ]);
+    const { loadRegistrationDecision, approveRegistrationCore } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(true), CAPTAIN_REQ);
+    if (!loaded.ok) throw new Error('load failed');
+    await approveRegistrationCore(loaded.ctx);
+
+    expect(cascadeFilters()).toContainEqual(['game_id', GAME_ID]);
+  });
+
+  it('reject: the cascade reads only rows in the captain\'s game', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      game(),
+      { data: [], error: null },
+      { data: [{ id: CAPTAIN_REQ }], error: null },
+    ]);
+    const { loadRegistrationDecision, rejectRegistrationCore } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(true), CAPTAIN_REQ);
+    if (!loaded.ok) throw new Error('load failed');
+    await rejectRegistrationCore(loaded.ctx, '');
+
+    expect(cascadeFilters()).toContainEqual(['game_id', GAME_ID]);
+  });
+});
+
+/**
  * #2263 follow-up (trap 5, atomic-or-compensated): the status update commits
  * before the roster writes. When a later step fails, the rows this attempt
  * decided go back to 'pending' (and rows it inserted are removed), so a retry

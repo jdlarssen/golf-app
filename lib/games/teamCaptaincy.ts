@@ -60,10 +60,13 @@ export async function readCaptainTeam(
   gameId: string,
   captainRequestId: string,
 ): Promise<CaptainTeam> {
+  // #2440: only rows in this game — `team_request_id` is not bound to the
+  // captain's game in the database.
   const { data: children, error: childrenError } = await admin
     .from('game_registration_requests')
     .select('id, user_id, status, decided_by_user_id')
     .eq('team_request_id', captainRequestId)
+    .eq('game_id', gameId)
     .in('status', ['pending', 'approved'])
     .returns<TeamChild[]>();
   if (childrenError) {
