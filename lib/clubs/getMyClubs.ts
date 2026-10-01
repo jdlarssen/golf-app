@@ -15,9 +15,6 @@ export type MyClub = {
  * Uses the request-scoped client so RLS applies — a user only sees the
  * group_members rows for groups they belong to.
  *
- * FK-join normalisation: Supabase types the groups join as an array even for
- * a one-to-one relation. Mirror the pattern from getDiscoverableGames.ts.
- *
  * Klubb-opprettelse er admin-gated fra #50 (kun is_admin oppretter + overfører),
  * så «opprettet av meg»-tellingen fra #442 er borte — vanlige brukere oppretter
  * ikke lenger klubber.
@@ -33,13 +30,10 @@ export async function getMyClubs(
     .order('joined_at', { ascending: true });
 
   const clubs: MyClub[] = (data ?? []).map((row) => {
-    // Supabase types FK-join as array even for a one-to-one relation.
-    // Normalise to the first element (or null) before reading fields.
-    const groupsRaw = row.groups as unknown as
-      | { id: string; name: string; short_id: string }
-      | { id: string; name: string; short_id: string }[]
-      | null;
-    const group = Array.isArray(groupsRaw) ? groupsRaw[0] ?? null : groupsRaw;
+    // `groups` is a many-to-one embed, so PostgREST returns an object. Read it
+    // null-safe anyway: this is the RLS client, and a groups policy that hides
+    // the row would leave the embed null at runtime.
+    const group = row.groups;
 
     return {
       id: group?.id ?? '',
