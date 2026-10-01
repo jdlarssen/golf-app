@@ -2054,6 +2054,49 @@ størrelse (`fraunces(vekt, størrelse)`, #2411), Inter med `interLine`, og «�
 en form (`FormArrow`), fordi iOS henter tegnet fra en bredere reservefont. Målt mot
 artboard-renderen i 3x ligger alle kanter og skillelinjer på samme punkt.
 
+## Kavalkaden i appen (#2265)
+
+Kavalkaden er webbens kortstokk i appen. Serveren eier alt som kan bli feil i to utgaver:
+fakta, datoen, admin-regelen, lagringen og AI-innledningen. Appen viser og deler.
+
+### Tre ruter
+
+- `GET /api/kavalkade/status` svarer år, Hjem-vinduet (`teaser`/`link`), `canOpen` (åpen,
+  eller admin før datoen) og `hasRound` (lest som spilleren under RLS). Dørene på
+  Rundedagboka og Hjem spør hver gang skjermen kommer i fokus. Feil eller ingen nett gir
+  ingen dør.
+- `GET /api/kavalkade/{år}` gir de samme tre svarene som webbens side
+  (`getOrCreateKavalkade`): `closed`, `preview` og `ready`. Første åpning etter slippet venter
+  på modellen før raden skrives, derfor `maxDuration = 60`. Raden skrives én gang, uansett
+  om spilleren åpner i appen eller på webben først.
+- `POST /api/kavalkade/{år}/share` teller en deling. Kjernen
+  (`lib/kavalkade/logKavalkadeShare.ts`) deles med webbens server-handling.
+
+Serverens miljø styrer datoen, så `KAVALKADE_OPEN_AT` på staging gjelder appen også. Appen
+har ingen egen datoregel.
+
+### Kortene er webbens
+
+Kortstokken bygges av de rene funksjonene webben bruker (`buildKavalkadeDeck`,
+`isKavalkadeEmpty`). Tekstene står i `lib/kavalkadeCopy.ts`, tegn for tegn lik
+`kavalkade.*` og `kavalkadeShare.*` i `messages/no.json`, og `formatMessage` fyller ut
+ICU-malene (flertall, `#`, desimalkomma). Datoene står i telefonens tid, som resten av appen.
+
+Skinna er webbens `snap-center`: kortet er 88 % av innholdsbredden med 16 pt mellomrom, og
+`kavalkadeSnapOffsets` regner ut stoppene på forhånd (første og siste kort ved kanten, de
+andre midt på). Fanene er Fraunces 16 uten vekt, altså 400, og overskriftene 24 og 36 i 500.
+Snittene er laget med #2411-skriptet.
+
+### Delebildet
+
+«Del kortet» tar bilde av en deleversjon (`KavalkadeShareCard`) som er webbens PNG-rute i en
+tredjedel av størrelsen: 360 pt bredt, og 3x gir rutas 1080 piksler. Innholdet kommer fra
+`buildKavalkadeCardModel`, målene fra `lib/kavalkade/cardImageLayout.ts` (delt med ruta), og
+fargene fra `lib/og/palette.ts`. Satori tegner med Googles statiske Fraunces, som har optisk
+størrelse 14, så deleversjonen bruker snittene for 14 pt. Bildet og arket går gjennom
+`lib/shareImage.ts`, den samme hjelperen som bag-taggen. Delingen telles når arket har åpnet.
+iOS sier ikke om spilleren delte eller lukket arket.
+
 ## Startbilletten (#2255)
 
 Spillets side i appen (`screens/GameHome.tsx`) er én startbillett. Webbens spillside er
