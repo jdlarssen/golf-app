@@ -348,14 +348,15 @@ export function FormatGrid({
     ));
   }
 
+  // One radiogroup, named by a screen-reader-only label. Not a fieldset: its
+  // legend named the group a second time («Velg spillform, gruppe» before
+  // «Velg spillform, radiogruppe»). Every radio carries `disabled` itself.
   return (
-    <fieldset disabled={disabled}>
-      <legend id={legendId} className="sr-only">
+    <div role="radiogroup" aria-labelledby={legendId} aria-disabled={disabled || undefined}>
+      <p id={legendId} className="sr-only">
         {t('legend')}
-      </legend>
-      <div role="radiogroup" aria-labelledby={legendId}>
-        {body}
-      </div>
-    </fieldset>
+      </p>
+      {body}
+    </div>
   );
 }
