@@ -30,6 +30,7 @@ import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
+import { withSystemArrows } from '../SystemArrow';
 
 /** Hva knappene viser etter navnet på resultatet. */
 export type RailDisplay = 'points' | 'netto' | 'plain';
@@ -406,7 +407,7 @@ export function ScoreRail({
               accessibilityRole="button"
               accessibilityLabel={`Hopp over, gå til ${skipTo}`}
             >
-              <Text style={[styles.linkText, { color: colors.primary }]}>{`Neste: ${skipTo} →`}</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>{withSystemArrows(`Neste: ${skipTo} →`, '600')}</Text>
             </Pressable>
           ) : null}
         </View>

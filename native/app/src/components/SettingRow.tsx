@@ -27,6 +27,7 @@
 import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { FONTS, useTheme } from '../theme';
+import { withSystemArrows } from './SystemArrow';
 
 type Tone = 'default' | 'danger';
 
@@ -104,7 +105,7 @@ export function SettingRow({
           ✓
         </Text>
       ) : null}
-      {chevron ? <Text style={[styles.chevron, chevronStyle]}>→</Text> : null}
+      {chevron ? <Text style={[styles.chevron, chevronStyle]}>{withSystemArrows('→', '400')}</Text> : null}
     </Pressable>
   );
 }
@@ -173,6 +174,8 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontFamily: FONTS.sans },
   // Ett hakk under etiketten, så raden leses som én ting og ikke som to.
   sublabel: { fontSize: 12, fontFamily: FONTS.sans },
+  // Linja er Inters, som i designet; bare pila er systemfontens
+  // (`SystemArrow.tsx`).
   chevron: { fontSize: 15, fontFamily: FONTS.sans },
   check: { fontSize: 18, fontFamily: FONTS.sansSemiBold },
   // Designet: 1 pt i den varme skillefargen (Profil v2).

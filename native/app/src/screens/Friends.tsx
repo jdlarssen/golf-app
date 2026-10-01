@@ -77,6 +77,7 @@ import {
 } from '../lib/friendsCopy';
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
+import { withSystemArrows } from '../components/SystemArrow';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
@@ -528,7 +529,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
                     {busy === `remove:${f.id}` ? (
                       <ActivityIndicator color={colors.primary} />
                     ) : (
-                      <Text style={[styles.arrow, { color: colors.primary }]}>→</Text>
+                      <Text style={[styles.arrow, { color: colors.primary }]}>{withSystemArrows('→', '400')}</Text>
                     )}
                   </Pressable>
                 );
@@ -897,6 +898,8 @@ const styles = StyleSheet.create({
   // Nettleserens linje for 15 pt Inter, med luften over navnet (målt).
   name: { fontSize: 15, lineHeight: 19.5, fontFamily: FONTS.sansSemiBold },
   sub: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans },
+  // Linja er Inters, som i designet; bare pila er systemfontens
+  // (`SystemArrow.tsx`).
   arrow: { fontSize: 16, fontFamily: FONTS.sans },
 
   avatar: {
