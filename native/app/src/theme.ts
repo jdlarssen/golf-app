@@ -217,7 +217,10 @@ const FRAUNCES_METRICS = { ascent: 0.978, descent: 0.255, natural: FRAUNCES_LINE
  *    står ascent pluss halve ledningen (linjehøyden minus ascent og descent)
  *    under toppen av linja, med halve ledningen rundet ned.
  *  - **iOS med `lineHeight`** legger grunnlinja `descent` over bunnen av linja,
- *    og krymper glyfen når linja er lavere enn skriftstørrelsen.
+ *    og krymper glyfen når linja er lavere enn skriftstørrelsen. Er linja
+ *    høyere enn skriftens egen, løfter React Native grunnlinja med halve
+ *    forskjellen, så teksten står midt i linja (`RCTApplyBaselineOffsetForRange`,
+ *    #2265).
  *  - **iOS uten `lineHeight`** gir teksten sin egen høyde (1,233, rundet opp
  *    til hel piksel), med grunnlinja ascent (også rundet opp) under toppen.
  *
@@ -248,20 +251,40 @@ export function interLine(size: number, lineHeight: number, options: LineOptions
   return browserLine(INTER_METRICS, size, lineHeight, options);
 }
 
+/**
+ * Hvor Chromium setter grunnlinja under toppen av en linje: ascent pluss halve
+ * ledningen, rundet som `browserLine` forklarer. Samme tall som linjeboksene fra
+ * `fraunces()` og `interLine()` gir, så to tekster i ulik størrelse kan stå på
+ * samme grunnlinje (#2265: «70 slag» i Kavalkaden).
+ */
+export function browserBaseline(font: 'fraunces' | 'inter', size: number, lineHeight: number): number {
+  return chromiumBaseline(font === 'fraunces' ? FRAUNCES_METRICS : INTER_METRICS, size, lineHeight);
+}
+
+function chromiumBaseline(
+  metrics: { ascent: number; descent: number },
+  size: number,
+  lineHeight: number,
+): number {
+  const ascent = Math.round(size * metrics.ascent);
+  const descent = Math.round(size * metrics.descent);
+  // Chromium regner i 1/64 piksel: halve ledningen rundes dit før den rundes
+  // ned (−0,005 blir 0, −0,015 blir −1).
+  const halfLeading = Math.round(((lineHeight - ascent - descent) / 2) * 64) / 64;
+  return ascent + Math.floor(halfLeading);
+}
+
 function browserLine(
   metrics: { ascent: number; descent: number; natural: number },
   size: number,
   lineHeight: number,
   { multiline = false, pixelRatio = PixelRatio.get() }: LineOptions,
 ): { fontSize: number; lineHeight?: number; marginTop: number; marginBottom: number } {
-  const ascent = Math.round(size * metrics.ascent);
-  const descent = Math.round(size * metrics.descent);
-  // Chromium regner i 1/64 piksel: halve ledningen rundes dit før den rundes
-  // ned (−0,005 blir 0, −0,015 blir −1).
-  const halfLeading = Math.round(((lineHeight - ascent - descent) / 2) * 64) / 64;
-  const baseline = ascent + Math.floor(halfLeading);
+  const baseline = chromiumBaseline(metrics, size, lineHeight);
   if (multiline && lineHeight >= size) {
-    const shift = baseline - (lineHeight - size * metrics.descent);
+    const natural = size * metrics.natural;
+    const raise = lineHeight >= natural ? (lineHeight - natural) / 2 : 0;
+    const shift = baseline - (lineHeight - size * metrics.descent - raise);
     return { fontSize: size, lineHeight, marginTop: shift, marginBottom: -shift };
   }
   const ceilPx = (value: number) => Math.ceil(value * pixelRatio) / pixelRatio;
