@@ -103,8 +103,15 @@ function respond(op: QueryOp): QueryResponse {
   throw new Error(`uventet spørring: ${op.kind} ${op.table}`);
 }
 
+/** #2216: et token der GoTrue også gir e-posten, slik et ekte token gjør. */
+const EMAIL_TOKEN = 'token-med-epost';
+const TOKEN_EMAIL = 'spiller@example.com';
+
 const fake = createAdminClientMock({
-  tokens: { [VALID_TOKEN]: TOKEN_USER_ID },
+  tokens: {
+    [VALID_TOKEN]: TOKEN_USER_ID,
+    [EMAIL_TOKEN]: { id: TOKEN_USER_ID, email: TOKEN_EMAIL },
+  },
   respond: (op) => respond(op),
 });
 
@@ -113,6 +120,7 @@ vi.mock('@/lib/supabase/admin', () => ({
 }));
 
 const {
+  authenticatedUser,
   authenticatedUserId,
   gameOrganiserAccess,
   scorecardReviewAccess,
@@ -158,6 +166,38 @@ describe('authenticatedUserId', () => {
   ])('svarer null %s — og spør aldri GoTrue', async (_label, header) => {
     expect(await authenticatedUserId(request(header))).toBeNull();
     // Negativt bevis: en request uten brukbart token skal ikke koste en rundtur.
+    expect(fake.getUserCalls).toEqual([]);
+  });
+});
+
+describe('authenticatedUser', () => {
+  it('gir id, e-post og tokenet fra det validerte tokenet', async () => {
+    expect(await authenticatedUser(request(`Bearer ${EMAIL_TOKEN}`))).toEqual({
+      id: TOKEN_USER_ID,
+      email: TOKEN_EMAIL,
+      accessToken: EMAIL_TOKEN,
+    });
+    expect(fake.getUserCalls).toEqual([EMAIL_TOKEN]);
+  });
+
+  it('e-posten er null når GoTrue ikke gir noen', async () => {
+    expect(await authenticatedUser(request(`Bearer ${VALID_TOKEN}`))).toEqual({
+      id: TOKEN_USER_ID,
+      email: null,
+      accessToken: VALID_TOKEN,
+    });
+  });
+
+  it('avviser et token GoTrue ikke godtar', async () => {
+    expect(await authenticatedUser(request('Bearer utløpt'))).toBeNull();
+  });
+
+  it.each([
+    ['uten header', undefined],
+    ['med feil skjema', 'Basic abc'],
+    ['med tom Bearer', 'Bearer    '],
+  ])('svarer null %s — og spør aldri GoTrue', async (_label, header) => {
+    expect(await authenticatedUser(request(header))).toBeNull();
     expect(fake.getUserCalls).toEqual([]);
   });
 });
