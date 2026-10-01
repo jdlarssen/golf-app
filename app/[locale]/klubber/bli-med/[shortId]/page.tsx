@@ -72,7 +72,7 @@ export default async function BliMedPage({
     .from('group_members')
     .select('role')
     .eq('group_id', group.id)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   const t = await getTranslations('klubb.join');
@@ -103,7 +103,7 @@ export default async function BliMedPage({
     .from('group_join_requests')
     .select('id, status')
     .eq('group_id', group.id)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle<{ id: string; status: string }>();
 
   const hasPendingRequest = existingRequest?.status === 'pending';

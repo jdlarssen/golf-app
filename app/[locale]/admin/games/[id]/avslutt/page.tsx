@@ -9,7 +9,6 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { RemindMissing } from '@/components/games/RemindMissing';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
-import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { finishRoster } from '@/lib/games/finishRoster';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
@@ -126,7 +125,7 @@ export default async function AvsluttPage({
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
+        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
       />
       {missing.length > 0 && (
         // Purreknappen (#1889) hører til her, i blokken som sier hvem som

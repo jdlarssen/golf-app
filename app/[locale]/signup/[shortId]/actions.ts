@@ -3,7 +3,6 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
-import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
@@ -126,7 +125,7 @@ async function getRequesterName(userId: string): Promise<string | null> {
  * til /login eller /complete-profile slik at action-en stopper umiddelbart.
  */
 async function requireAuthedUser(shortId: string): Promise<string> {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -137,12 +136,12 @@ async function requireAuthedUser(shortId: string): Promise<string> {
   const { data: profile } = await supabase
     .from('users')
     .select('profile_completed_at')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
     redirect({ href: `/complete-profile?next=/signup/${shortId}`, locale });
   }
-  return user!.id;
+  return user.id;
 }
 
 /**
@@ -440,10 +439,8 @@ async function completeOpenRegistration(
     );
   }
 
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   redirect({ href: `/games/${game.id}`, locale });
-  // unreachable — redirect() returns never; satisfies TS return-type checker.
-  return { ok: false, error: 'db_error' as ActionError };
 }
 
 /**

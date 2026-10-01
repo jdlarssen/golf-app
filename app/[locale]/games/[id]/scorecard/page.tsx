@@ -51,7 +51,6 @@ import {
   firstHoleForSegment,
   lastHoleForSegment,
 } from '@/lib/games/holeScope';
-import type { AppLocale } from '@/i18n/routing';
 import { formatNumber } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
@@ -115,14 +114,14 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   // scorecard to show here. Bounce home, which shows the read-only
   // «Slagene føres i …»-notice with a link to the host instead.
   if (game.source_game_id) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   if (game.status === 'draft') {
     redirect({ href: '/', locale });
   }
   if (game.status === 'scheduled') {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const me = players.find((p) => p.user_id === userId);
@@ -132,7 +131,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   // levere eller redigere scorekortet krever navn + handicap. userId er non-null
   // her (guardet av `if (!userId) redirect` over).
   const { supabase: gateClient } = await getScorecardContext();
-  if (await isProfileIncomplete(gateClient, userId!)) {
+  if (await isProfileIncomplete(gateClient, userId)) {
     redirect({
       href: `/complete-profile?next=${encodeURIComponent(`/games/${id}/scorecard`)}`,
       locale,
@@ -175,7 +174,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
-        backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale as AppLocale) })}
+        backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale) })}
         kicker={kickerText}
         kickerIsPageTitle
       />

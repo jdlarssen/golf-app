@@ -45,7 +45,7 @@ export async function removePlayerFromGame(
 
   const playerUserId = String(formData.get('user_id') ?? '').trim();
   if (!playerUserId) {
-    redirect({ href: `${detailPath}?error=remove_missing_user` as string, locale });
+    redirect({ href: `${detailPath}?error=remove_missing_user`, locale });
   }
 
   const { data: game } = await supabase
@@ -53,13 +53,13 @@ export async function removePlayerFromGame(
     .select('status, tournament_id')
     .eq('id', gameId)
     .single<{ status: GameStatus; tournament_id: string | null }>();
-  if (!game) redirect({ href: `${detailPath}?error=not_found` as string, locale });
-  if (game!.tournament_id !== null && !ctx.isAdmin) {
-    redirect({ href: `${detailPath}?error=cup_roster_locked` as string, locale });
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  if (game.tournament_id !== null && !ctx.isAdmin) {
+    redirect({ href: `${detailPath}?error=cup_roster_locked`, locale });
   }
-  if (game!.status !== 'draft' && game!.status !== 'scheduled') {
+  if (game.status !== 'draft' && game.status !== 'scheduled') {
     // Active/finished: removal isn't allowed — use withdrawal instead.
-    redirect({ href: `${detailPath}?error=roster_locked` as string, locale });
+    redirect({ href: `${detailPath}?error=roster_locked`, locale });
   }
 
   // A delete RLS refuses matches 0 rows with error == null (trap 2), so the
@@ -80,11 +80,11 @@ export async function removePlayerFromGame(
     removed = false;
   }
   if (!removed) {
-    redirect({ href: `${detailPath}?error=db_players` as string, locale });
+    redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
   expireGameCache(gameId);
-  redirect({ href: `${detailPath}?status=player_removed` as string, locale });
+  redirect({ href: `${detailPath}?status=player_removed`, locale });
 }
 
 /**
@@ -104,7 +104,7 @@ export async function cancelGameInvitation(
 
   const invitationId = String(formData.get('invitation_id') ?? '').trim();
   if (!invitationId) {
-    redirect({ href: `${detailPath}?error=cancel_missing_invitation` as string, locale });
+    redirect({ href: `${detailPath}?error=cancel_missing_invitation`, locale });
   }
 
   const { error } = await supabase
@@ -114,9 +114,9 @@ export async function cancelGameInvitation(
     .eq('game_id', gameId);
   if (error) {
     console.error('[cancelGameInvitation] delete failed', error);
-    redirect({ href: `${detailPath}?error=cancel_failed` as string, locale });
+    redirect({ href: `${detailPath}?error=cancel_failed`, locale });
   }
 
   expireGameCache(gameId);
-  redirect({ href: `${detailPath}?status=invite_cancelled` as string, locale });
+  redirect({ href: `${detailPath}?status=invite_cancelled`, locale });
 }

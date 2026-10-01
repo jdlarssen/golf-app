@@ -55,7 +55,7 @@ export default async function PutterPage({ params }: { params: Params }) {
     redirect({ href: leaderboardHref({ gameId: id }), locale });
   }
   if (me.withdrawn_at) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const supabase = await getServerClient();
@@ -70,7 +70,7 @@ export default async function PutterPage({ params }: { params: Params }) {
       .from('scores')
       .select('hole_number, strokes, putts')
       .eq('game_id', id)
-      .eq('user_id', userId as string)
+      .eq('user_id', userId)
       .returns<ScoreRow[]>(),
   ]);
 

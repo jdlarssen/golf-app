@@ -105,9 +105,7 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
     .eq('id', gameId)
     .single<FlightGameRow>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  // TypeScript cannot narrow past next-intl redirect (not declared `never`),
-  // so the post-guard non-null assertions are the established 2b pattern.
-  if (game!.status !== 'scheduled' && game!.status !== 'active') {
+  if (game.status !== 'scheduled' && game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
@@ -118,9 +116,9 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
 
   if (
     !eligibleForFlightAssignment(
-      game!.game_mode,
-      expectedTeamSize(game!.mode_config),
-      players!,
+      game.game_mode,
+      expectedTeamSize(game.mode_config),
+      players,
     )
   ) {
     // ≤4 active, wolf, or a format where the flight is the team/side (#2290):
@@ -128,7 +126,7 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
     redirect({ href: detailPath, locale });
   }
 
-  const assignments = suggestFlightSplit(players!);
+  const assignments = suggestFlightSplit(players);
 
   for (const { user_id, flight_number } of assignments) {
     const { error } = await admin
@@ -174,7 +172,7 @@ export async function setPlayerFlight(
     .eq('id', gameId)
     .single<FlightGameRow>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'scheduled' && game!.status !== 'active') {
+  if (game.status !== 'scheduled' && game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
@@ -182,9 +180,9 @@ export async function setPlayerFlight(
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
   if (
     !eligibleForFlightAssignment(
-      game!.game_mode,
-      expectedTeamSize(game!.mode_config),
-      players!,
+      game.game_mode,
+      expectedTeamSize(game.mode_config),
+      players,
     )
   ) {
     // Same answer as page.tsx: no Flighter section, nothing to move.
@@ -267,17 +265,15 @@ async function loadTeamGame(
     .eq('id', gameId)
     .single<FlightGameRow>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  // TypeScript cannot narrow past next-intl redirect (not declared `never`),
-  // so the post-guard non-null assertions are the established 2b pattern.
-  if (game!.status !== 'scheduled' && game!.status !== 'active') {
+  if (game.status !== 'scheduled' && game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
-  const teamSize = expectedTeamSize(game!.mode_config);
-  if (!modeRequiresTeamNumber(game!.game_mode, teamSize)) {
+  const teamSize = expectedTeamSize(game.mode_config);
+  if (!modeRequiresTeamNumber(game.game_mode, teamSize)) {
     // Solo-format eller matchplay — ingen lag å tildele her.
     redirect({ href: detailPath, locale });
   }
-  return { mode: game!.game_mode, teamSize };
+  return { mode: game.game_mode, teamSize };
 }
 
 /**
@@ -298,7 +294,7 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
   const players = await fetchTeamPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
-  const assignments = suggestTeamSplit(mode, players!, teamSize);
+  const assignments = suggestTeamSplit(mode, players, teamSize);
   if (assignments.length === 0) {
     // Alle har allerede lag — ingenting å gjøre.
     redirect({ href: detailPath, locale });
@@ -358,7 +354,7 @@ export async function setPlayerTeam(
   // The whole roster: the flight depends on who is already in the target team.
   const players = await fetchTeamPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
-  if (!players!.some((p) => p.user_id === targetUserId)) {
+  if (!players.some((p) => p.user_id === targetUserId)) {
     redirect({ href: `${detailPath}?error=not_found`, locale });
   }
 
@@ -387,7 +383,7 @@ export async function setPlayerTeam(
           team_number: targetTeam,
           // The CHECK (0030/0095) needs a flight once there is a team, and the
           // flight follows the team (#2290).
-          flight_number: flightForTeam(mode, players!, targetUserId, targetTeam),
+          flight_number: flightForTeam(mode, players, targetUserId, targetTeam),
         })
         .eq('game_id', gameId)
         .eq('user_id', targetUserId)
@@ -430,10 +426,10 @@ export async function toggleSignupsClosed(
       registration_mode: 'invite_only' | 'manual_approval' | 'open';
     }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'scheduled') redirect({ href: `${detailPath}?error=signups_not_scheduled`, locale });
+  if (game.status !== 'scheduled') redirect({ href: `${detailPath}?error=signups_not_scheduled`, locale });
   if (
-    game!.registration_mode !== 'open' &&
-    game!.registration_mode !== 'manual_approval'
+    game.registration_mode !== 'open' &&
+    game.registration_mode !== 'manual_approval'
   ) {
     // invite_only har ingen registreringsliste å stenge
     redirect({ href: detailPath, locale });

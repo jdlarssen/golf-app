@@ -52,9 +52,8 @@ export default async function LeaderboardHolesPage({
   const navContext = parseLeaderboardNavContext(sp);
 
   const locale = await getLocale();
-  const { supabase, userId: userIdRaw } = await getDrilldownContext();
-  if (!userIdRaw) redirect({ href: '/login', locale });
-  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
+  const { supabase, userId } = await getDrilldownContext();
+  if (!userId) redirect({ href: '/login', locale });
 
   // Game + players come from the tag-cached helper. Admin check stays
   // direct since it isn't game-scoped.
@@ -71,7 +70,7 @@ export default async function LeaderboardHolesPage({
   const game = gwp.game;
 
   if (game.status === 'draft' || game.status === 'scheduled') {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
   const isActive = game.status === 'active';
 

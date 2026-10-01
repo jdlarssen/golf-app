@@ -252,7 +252,7 @@ export async function GenerateMatches({
   // Deltakerne er alltid profil-fullførte ved add-time (Spillere-rommet gater
   // det), så ingen `pending`-rader her — kartlegg rett til WizardPlayer.
   const participants: WizardPlayer[] = (participantRes.data ?? []).map((row) => {
-    const u = userOf(row.users as ParticipantUser | ParticipantUser[] | null);
+    const u = userOf(row.users);
     return {
       id: row.user_id,
       displayName: displayNameOf(u, unknownLabel),

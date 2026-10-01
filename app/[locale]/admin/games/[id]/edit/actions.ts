@@ -137,9 +137,7 @@ async function updateGameInternal(
   if (!sideResult.ok) {
     redirect({ href: editHref({ error: sideResult.errorCode }), locale });
   }
-  // TypeScript cannot narrow past next-intl redirect (not declared `never` at
-  // call-site); assert ok branch explicitly.
-  const sidePayload = (sideResult as Extract<typeof sideResult, { ok: true }>).payload;
+  const sidePayload = sideResult.payload;
   const {
     enabled: sideEnabled,
     ldCount: sideLdCount,
@@ -215,8 +213,8 @@ async function updateGameInternal(
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
   if (
-    existing!.status !== 'draft' &&
-    existing!.game_mode !== payload.game_mode
+    existing.status !== 'draft' &&
+    existing.game_mode !== payload.game_mode
   ) {
     redirect({ href: editHref({ error: 'mode_locked_after_publish' }), locale });
   }
@@ -259,7 +257,7 @@ async function updateGameInternal(
     prior: priorRosterRows,
     desired: desiredRoster,
     loaded: loadedRoster,
-    modeChanged: existing!.game_mode !== payload.game_mode,
+    modeChanged: existing.game_mode !== payload.game_mode,
     formOwnsFlight: formOwnsFlight(payload.game_mode),
     actorUserId: userId,
     guestIds,
@@ -272,7 +270,7 @@ async function updateGameInternal(
   // tee category and flight stay editable; a save that only moves the tee-off
   // plans no roster change at all. Loose `!= null`: a row without the column
   // means «not a cup».
-  if (existing!.tournament_id != null && !ctx.isAdmin && touchesCupRoster(plan)) {
+  if (existing.tournament_id != null && !ctx.isAdmin && touchesCupRoster(plan)) {
     redirect({ href: editHref({ error: 'cup_roster_locked' }), locale });
   }
 
@@ -303,7 +301,7 @@ async function updateGameInternal(
       // nøklene over (og bare når modusen er den samme).
       game_mode: payload.game_mode,
       mode_config: carryPreservedModeConfigKeys(
-        existing!.mode_config,
+        existing.mode_config,
         payload.mode_config,
       ),
       // #199: self-påmelding-akser. Følger samme optimistic-lock-mønster
@@ -438,7 +436,7 @@ async function writeRosterPlan(
       ),
     );
     updateResults.forEach((res, i) =>
-      expectOne(res, `[updateGameInternal] roster update ${plan.updates[i]!.user_id}`),
+      expectOne(res, `[updateGameInternal] roster update ${plan.updates[i].user_id}`),
     );
 
     const rows = plan.inserts.map((r) => ({ ...r, game_id: gameId }));

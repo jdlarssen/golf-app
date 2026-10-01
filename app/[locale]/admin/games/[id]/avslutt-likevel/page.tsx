@@ -16,7 +16,6 @@ import {
 } from '@/components/games/MissingPlayersWithdrawList';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import type { AppLocale } from '@/i18n/routing';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { finishRoster } from '@/lib/games/finishRoster';
@@ -145,7 +144,7 @@ export default async function AvsluttLikevelPage({
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
+        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
       />
 
       <div className="space-y-4 px-1">

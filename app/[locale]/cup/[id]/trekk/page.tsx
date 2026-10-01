@@ -9,7 +9,6 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
-import type { AppLocale } from '@/i18n/routing';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import { loadCupWithdrawalContext } from '@/lib/cup/cupWithdrawalContext';
@@ -45,7 +44,7 @@ export default async function CupSelfWithdrawPage({
   const [userId, t, locale] = await Promise.all([
     getProxyVerifiedUserId(),
     getTranslations('cup'),
-    getLocale() as Promise<AppLocale>,
+    getLocale(),
   ]);
   if (!userId) redirect({ href: `/login?next=/cup/${id}/trekk`, locale });
 
@@ -62,7 +61,7 @@ export default async function CupSelfWithdrawPage({
 
   const ctx = await loadCupWithdrawalContext({
     tournamentId: id,
-    userId: userId as string,
+    userId: userId,
     unknownLabel: t('manage.unknownPlayer'),
   });
   // Ikke-deltaker: ingen kamper i det hele tatt.

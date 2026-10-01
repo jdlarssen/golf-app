@@ -107,7 +107,7 @@ export async function CupParticipants({
 
   const participants: ParticipantRow[] = (participantRes.data ?? []).map(
     (row) => {
-      const u = userOf(row.users as UserRel | UserRel[] | null);
+      const u = userOf(row.users);
       return {
         userId: row.user_id,
         displayName: displayNameOf(u, unknownLabel),

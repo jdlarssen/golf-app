@@ -14,7 +14,6 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
-import type { AppLocale } from '@/i18n/routing';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { captainWithdrawalState } from '@/lib/games/teamCaptaincy';
 import { submitWithdraw } from './actions';
@@ -66,13 +65,12 @@ export default async function TrekkFraPage({
   const { id } = await params;
   const sp = await searchParams;
   const t = await getTranslations('game.withdraw');
-  const locale = await getLocale() as AppLocale;
+  const locale = await getLocale();
   const errorCode = first(sp.error);
   const errorMessage = errorCode ? t(`errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
 
-  const userIdRaw = await getProxyVerifiedUserId();
-  if (!userIdRaw) redirect({ href: '/login', locale });
-  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect({ href: '/login', locale });
 
   const supabase = await getServerClient();
 
@@ -94,7 +92,7 @@ export default async function TrekkFraPage({
     game.tournament_id &&
     (game.status === 'draft' || game.status === 'scheduled')
   ) {
-    redirect({ href: `/cup/${game.tournament_id}/trekk` as string, locale });
+    redirect({ href: `/cup/${game.tournament_id}/trekk`, locale });
   }
 
   // Sjekk at brukeren faktisk er påmeldt og at spillet er pre-active.
@@ -107,7 +105,7 @@ export default async function TrekkFraPage({
     .maybeSingle<{ user_id: string }>();
 
   if (!player) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const isPreStart = game.status === 'draft' || game.status === 'scheduled';
@@ -115,7 +113,7 @@ export default async function TrekkFraPage({
     game.status === 'active' && supportsWithdrawal(game.game_mode);
 
   if (!isPreStart && !isActiveWithdrawable) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   // #2358: samme regel som kjernen (`lib/games/teamCaptaincy.ts`). Laget er

@@ -9,7 +9,6 @@ import {
   respond,
   sendRequest,
 } from '@/lib/friends/friendActionsCore';
-import type { AppLocale } from '@/i18n/routing';
 
 // Skallene rundt vennehandlingene (#2256): de leser skjemaet, sjekker
 // innloggingen og gjør statusen om til en redirect. Selve handlingen (RPC-en,
@@ -19,14 +18,13 @@ import type { AppLocale } from '@/i18n/routing';
 const VENNER = '/profile/venner';
 
 async function requireUser() {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
     redirect({ href: `/login?next=${VENNER}`, locale });
-    return { supabase, user: null as never, locale };
   }
   return { supabase, user, locale };
 }
@@ -35,11 +33,10 @@ async function requireUser() {
  * Send venneforespørsel til en kjent bruker-id (fra co-player-forslag).
  */
 export async function sendFriendRequest(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const addresseeId = String(formData.get('addressee_id') ?? '').trim();
   if (!addresseeId) {
     redirect({ href: `${VENNER}?status=error`, locale });
-    return;
   }
 
   const { supabase, user } = await requireUser();
@@ -52,13 +49,12 @@ export async function sendFriendRequest(formData: FormData) {
  * redirect med invite_email så siden tilbyr å invitere på samme adresse.
  */
 export async function addFriendByEmail(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const email = String(formData.get('email') ?? '')
     .trim()
     .toLowerCase();
   if (!email) {
     redirect({ href: `${VENNER}?status=email_required`, locale });
-    return;
   }
 
   const { supabase, user } = await requireUser();
@@ -66,7 +62,6 @@ export async function addFriendByEmail(formData: FormData) {
   if (status === 'not_found') {
     // Personen er ikke på Tørny — tilby invitasjon på samme e-post.
     redirect({ href: `${VENNER}?invite_email=${encodeURIComponent(email)}`, locale });
-    return;
   }
   redirect({ href: `${VENNER}?status=${status}`, locale });
 }
@@ -76,12 +71,11 @@ export async function addFriendByEmail(formData: FormData) {
  * avsenderen (friend_accepted).
  */
 export async function respondFriendRequest(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const requestId = String(formData.get('request_id') ?? '').trim();
   const accept = String(formData.get('accept') ?? '') === '1';
   if (!requestId) {
     redirect({ href: `${VENNER}?status=error`, locale });
-    return;
   }
 
   const { supabase, user } = await requireUser();
@@ -94,11 +88,10 @@ export async function respondFriendRequest(formData: FormData) {
  * Ingen varsel — fjerning er stille.
  */
 export async function removeFriend(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const otherId = String(formData.get('other_id') ?? '').trim();
   if (!otherId) {
     redirect({ href: `${VENNER}?status=error`, locale });
-    return;
   }
 
   const { supabase } = await requireUser();

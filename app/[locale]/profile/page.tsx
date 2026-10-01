@@ -26,7 +26,6 @@ import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatDate } from '@/lib/i18n/format';
-import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -67,7 +66,7 @@ export default async function ProfilePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('profile');
   const { userId } = await getProfileContext();
   if (!userId) {
@@ -212,7 +211,7 @@ async function ProfileFormCard({
   errorMessage: string | undefined;
   next: string | null;
 }) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('profile');
 
   const result = await getProfileRow();
@@ -227,17 +226,14 @@ async function ProfileFormCard({
     redirect({ href: '/complete-profile', locale });
   }
 
-  // profile is guaranteed non-null after the redirect above (redirect() is not
-  // typed as `never` in next-intl, so TS can't narrow automatically).
-  const p = profile!;
-  const displayName = p.name ?? '';
+  const displayName = profile.name ?? '';
   const initial = displayName.trim().charAt(0).toUpperCase() || '?';
-  const hasHcp = p.hcp_index != null;
-  const hcpDisplay = hasHcp ? formatHcpDisplay(p.hcp_index!, locale) : null;
-  const stale = isHandicapStale(p.handicap_updated_at);
+  const hasHcp = profile.hcp_index != null;
+  const hcpDisplay = hasHcp ? formatHcpDisplay(profile.hcp_index, locale) : null;
+  const stale = isHandicapStale(profile.handicap_updated_at);
   const oppdatertDato =
-    hasHcp && p.handicap_updated_at && !stale
-      ? formatDate(p.handicap_updated_at, locale, {
+    hasHcp && profile.handicap_updated_at && !stale
+      ? formatDate(profile.handicap_updated_at, locale, {
           timeZone: 'Europe/Oslo',
           day: 'numeric',
           month: 'long',
@@ -292,15 +288,15 @@ async function ProfileFormCard({
         </div>
       </div>
       <ProfileFormBody
-        email={p.email}
-        handicapUpdatedAt={p.handicap_updated_at}
+        email={profile.email}
+        handicapUpdatedAt={profile.handicap_updated_at}
         initial={{
-          name: p.name ?? '',
-          nickname: p.nickname ?? '',
+          name: profile.name ?? '',
+          nickname: profile.nickname ?? '',
           hcpIndex:
-            p.hcp_index == null ? '' : String(p.hcp_index),
-          gender: p.gender,
-          level: p.level,
+            profile.hcp_index == null ? '' : String(profile.hcp_index),
+          gender: profile.gender,
+          level: profile.level,
         }}
         action={updateProfile}
         next={next}

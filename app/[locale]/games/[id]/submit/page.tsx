@@ -33,7 +33,6 @@ import {
   loadFlightDeliveryCards,
   type FlightDeliveryCard,
 } from '@/lib/games/loadFlightDelivery';
-import type { AppLocale } from '@/i18n/routing';
 import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
 import {
   isStablefordFamily,
@@ -89,9 +88,8 @@ export default async function SubmitPage({
   const errorKey = first(sp.error);
   const errorMessage = errorKey ? t(`errors.${errorKey}` as Parameters<typeof t>[0]) : undefined;
 
-  const { supabase, userId: userIdOrNull } = await getSubmitContext();
-  if (!userIdOrNull) redirect({ href: '/login', locale });
-  const userId = userIdOrNull as string;
+  const { supabase, userId } = await getSubmitContext();
+  if (!userId) redirect({ href: '/login', locale });
 
   // games + game_players from the tag-cached helper, course/tee_box joins
   // direct (kept out of the cache since invalidating on course edits would
@@ -115,12 +113,12 @@ export default async function SubmitPage({
   // its own scores — there is nothing to review/submit here. Bounce home,
   // which shows the read-only «Slagene føres i …»-notice instead.
   if (game.source_game_id) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   // Only active games can be submitted to. Anything else: bounce home.
   if (game.status !== 'active') {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const me = players.find((p) => p.user_id === userId);
@@ -142,7 +140,7 @@ export default async function SubmitPage({
   // which renders the «Du har trukket deg»-banner + Angre. Defense-in-depth —
   // the submitScorecard action refuses a direct POST too.
   if (me.withdrawn_at) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   // #2200: the flightmates' cards I kept score for, delivered with my own.
@@ -150,7 +148,7 @@ export default async function SubmitPage({
 
   // Already submitted and nobody else's card to deliver: nothing more to do.
   if (me.submitted_at && flightCards.length === 0) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   // Error ≠ absence (#1441): throw on query failure (error boundary), 404
@@ -191,7 +189,7 @@ export default async function SubmitPage({
       <div className="space-y-4">
         <Card>
           <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
-            {localizeGameName(game.name, courseTee.courses?.name ?? null, locale as AppLocale)}
+            {localizeGameName(game.name, courseTee.courses?.name ?? null, locale)}
           </p>
           <p className="text-xs text-muted mt-1.5">
             {courseTee.courses?.name ?? t('unknownCourse')}

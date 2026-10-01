@@ -42,7 +42,7 @@ export default async function EndreMedlemsrollePage({
   const locale = await getLocale();
   if (!user) redirect({ href: '/login', locale });
 
-  const detail = await getClubDetail(supabase, id, user!.id);
+  const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();
 
   const { club, members, myRole } = detail;
@@ -53,7 +53,7 @@ export default async function EndreMedlemsrollePage({
   }
 
   // Can't change your own role via this route.
-  if (targetUserId === user!.id) {
+  if (targetUserId === user.id) {
     redirect({ href: `/klubber/${id}`, locale });
   }
 

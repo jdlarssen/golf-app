@@ -17,7 +17,6 @@ import {
   type Gender,
   type Level,
 } from '@/lib/users/profileInput';
-import type { AppLocale } from '@/i18n/routing';
 import type { TablesUpdate } from '@/lib/database.types';
 
 /**
@@ -37,7 +36,7 @@ async function revertAuthEmail(id: string, previousEmail: string) {
 }
 
 export async function updateUser(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const id = String(formData.get('id') ?? '');
   const name = String(formData.get('name') ?? '').trim();
   const nickname = String(formData.get('nickname') ?? '').trim();

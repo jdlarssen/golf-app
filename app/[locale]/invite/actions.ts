@@ -4,7 +4,6 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { inviteByEmail, inviteEmailProblem } from '@/lib/friends/friendActionsCore';
-import type { AppLocale } from '@/i18n/routing';
 
 // Skallet rundt venne-invitasjonen (#2256). Vernet (adressesjekkene, fullført
 // profil, kvoten, dedup mot kontoer og åpne invitasjoner) og selve
@@ -13,7 +12,7 @@ import type { AppLocale } from '@/i18n/routing';
 // en redirect, med de samme kodene som før.
 
 export async function sendFriendInvite(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
   // Adressen sjekkes før innloggingen, slik handlingen alltid har gjort.
@@ -29,7 +28,6 @@ export async function sendFriendInvite(formData: FormData) {
 
   if (!user) {
     redirect({ href: '/login', locale });
-    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
   const { status } = await inviteByEmail(supabase, user.id, email);

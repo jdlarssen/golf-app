@@ -121,9 +121,8 @@ export async function startScheduledGameAction(gameId: string) {
   // send game_started to every active player except the admin who clicked.
   // started=false means a concurrent cron sweep or page visit won and owns the
   // fan-out. Shared with the app's start route (#2215); best-effort, never
-  // throws. (result.ok re-checked because next-intl redirect isn't typed
-  // `never`, so TS doesn't narrow the union past the !result.ok guard above.)
-  if (result.ok && result.started) {
+  // throws.
+  if (result.started) {
     await announceStartedGame(supabase, gameId, user.id, 'startScheduledGameAction');
   }
 
@@ -154,7 +153,7 @@ export async function adminApproveScorecard(
     .eq('id', gameId)
     .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished' }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'active') {
+  if (game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
@@ -349,7 +348,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     .eq('id', gameId)
     .single<{ name: string; status: GameStatus; game_mode: GameMode }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'active') {
+  if (game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
@@ -358,8 +357,8 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   const result = await reopenScorecardCore({
     client: supabase,
     gameId,
-    gameMode: game!.game_mode,
-    gameName: game!.name,
+    gameMode: game.game_mode,
+    gameName: game.name,
     actorName: name,
     playerUserId,
   });
@@ -375,7 +374,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
       eventType: 'scorecard.reopened',
       targetType: 'scorecard',
       targetId: gameId,
-      payload: modeCollapsesToTeamCard(game!.game_mode, 18)
+      payload: modeCollapsesToTeamCard(game.game_mode, 18)
         ? { gameId, playerUserId, reopenedUserIds: result.reopenedUserIds }
         : { gameId, playerUserId },
     });
@@ -403,8 +402,8 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
     .eq('id', gameId)
     .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
-  if (!supportsWithdrawal(game!.game_mode)) redirect({ href: detailPath, locale });
+  if (game.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
+  if (!supportsWithdrawal(game.game_mode)) redirect({ href: detailPath, locale });
 
   // #2030: the write only matches a player who is still in, and 0 rows (stale
   // tab, double click, withdrawn from the app, player gone) is its own error,
@@ -470,8 +469,8 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
     .eq('id', gameId)
     .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
-  if (!supportsWithdrawal(game!.game_mode)) redirect({ href: detailPath, locale });
+  if (game.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
+  if (!supportsWithdrawal(game.game_mode)) redirect({ href: detailPath, locale });
 
   // #2030: mirror of adminWithdrawPlayer. 0 rows means the player is already
   // back in (or gone), which is the opposite state, so it gets its own code.
@@ -539,14 +538,14 @@ export async function reopenGame(gameId: string) {
       tournament: { status: string } | null;
     }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
-  if (game!.status !== 'finished') {
+  if (game.status !== 'finished') {
     redirect({ href: `${detailPath}?error=not_finished`, locale });
   }
   // #2214: a finished cup stands. Reopening a match in it would make an active
   // match in a finished cup and move the points under a winner who is already
   // named, so it is refused before any write. The caller is an admin
   // (loadAdminContext → requireAdmin), so is_admin() lets them read the cup.
-  if (game!.tournament_id && finishedCupBlocksPlay(game!.tournament?.status)) {
+  if (game.tournament_id && finishedCupBlocksPlay(game.tournament?.status)) {
     redirect({ href: `${detailPath}?error=cup_finished`, locale });
   }
 
@@ -597,7 +596,7 @@ export async function reopenGame(gameId: string) {
     eventType: 'game.reopened',
     targetType: 'game',
     targetId: gameId,
-    payload: { gameName: game!.name },
+    payload: { gameName: game.name },
   });
 
   // #1363: fan-out til alle aktive deltakere — resultatlista forsvinner for
@@ -622,7 +621,7 @@ export async function reopenGame(gameId: string) {
     // gets the audit string.
     await notifyPlayersGameReopened(
       (roster ?? []).filter((p) => p.user_id !== user.id),
-      { id: gameId, name: game!.name, actorName: name },
+      { id: gameId, name: game.name, actorName: name },
       'reopenGame',
     );
   }

@@ -78,9 +78,8 @@ export default async function LeaderboardPage({
       : `/games/${id}`;
 
   const locale = await getLocale();
-  const { supabase, userId: userIdRaw } = await getLeaderboardContext();
-  if (!userIdRaw) redirect({ href: '/login', locale });
-  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
+  const { supabase, userId } = await getLeaderboardContext();
+  if (!userId) redirect({ href: '/login', locale });
 
   // Game + players come from the tag-cached helper. Profile lookup
   // (is_admin) stays direct since it isn't game-scoped.
@@ -98,7 +97,7 @@ export default async function LeaderboardPage({
 
   // Draft games have no leaderboard view — bounce to game home.
   if (game.status === 'draft') {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const isAdmin = profileRes.data?.is_admin === true;
@@ -129,7 +128,7 @@ export default async function LeaderboardPage({
   // før admin avslutter.
   after(() =>
     markNotificationsRead({
-      userId: userId as string,
+      userId,
       kind: 'game_finished',
       entityId: id,
     }),

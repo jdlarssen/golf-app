@@ -24,7 +24,6 @@ import {
 } from '@/lib/games/flightScope';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
-import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { finishRoster } from '@/lib/games/finishRoster';
 import {
@@ -127,7 +126,7 @@ export default async function CreatorAvsluttPage({
 
   if (!game) notFound();
   if (game.status !== 'active') {
-    redirect({ href: `${detailPath}?error=not_active` as string, locale });
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   // #2213: roster via service-role. The `users` SELECT policy has no organiser
@@ -360,8 +359,8 @@ export default async function CreatorAvsluttPage({
         title={t('heading')}
         subtitle={
           sideOn
-            ? t('subtitleSide', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })
-            : t('subtitlePlain', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })
+            ? t('subtitleSide', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })
+            : t('subtitlePlain', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })
         }
       />
       {/* #1986: endGameMarkingWithdrawals lost a race. Rendered outside the

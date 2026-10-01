@@ -104,12 +104,12 @@ async function loadDecisionContext(requestId: string): Promise<{
   const { data: game, error: gameError } = await admin
     .from('games')
     .select('id, name, status, created_by')
-    .eq('id', request!.game_id)
+    .eq('id', request.game_id)
     .maybeSingle<GameSnapshot>();
 
   if (gameError) {
     console.error('[loadDecisionContext] game fetch failed', {
-      gameId: request!.game_id,
+      gameId: request.game_id,
       error: gameError,
     });
     throw gameError;
@@ -120,13 +120,13 @@ async function loadDecisionContext(requestId: string): Promise<{
 
   // Approve/reject gir bare mening pre-active. Etter at runden er startet
   // er rosteret låst.
-  if (game!.status === 'active' || game!.status === 'finished') {
-    redirect({ href: `/admin/games/${game!.id}/signups?error=game_locked`, locale });
+  if (game.status === 'active' || game.status === 'finished') {
+    redirect({ href: `/admin/games/${game.id}/signups?error=game_locked`, locale });
   }
 
   return {
-    request: request!,
-    game: game!,
+    request: request,
+    game: game,
     actorId: role.userId,
     actorName: role.name?.trim() || 'Admin',
   };

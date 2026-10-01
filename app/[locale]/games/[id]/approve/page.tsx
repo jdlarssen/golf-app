@@ -27,7 +27,6 @@ import {
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { isHoleInSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
-import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
@@ -72,9 +71,8 @@ export default async function ApprovePage({
   const errorMessage = errorKey ? tApprove(`errors.${errorKey}` as Parameters<typeof tApprove>[0]) : undefined;
 
   const locale = await getLocale();
-  const { userId: userIdOrNull } = await getApproveContext();
-  if (!userIdOrNull) redirect({ href: '/login', locale });
-  const userId = userIdOrNull as string;
+  const { userId } = await getApproveContext();
+  if (!userId) redirect({ href: '/login', locale });
 
   // games + game_players from the tag-cached helper. See
   // lib/games/getGameWithPlayers.ts for cache + authz rationale.
@@ -83,7 +81,7 @@ export default async function ApprovePage({
   const { game, players } = result;
 
   if (game.status !== 'active') {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const me = players.find((p) => p.user_id === userId);
@@ -113,7 +111,7 @@ export default async function ApprovePage({
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
-        backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale as AppLocale) })}
+        backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale) })}
         kicker={tApprove('kicker')}
         kickerIsPageTitle
       />

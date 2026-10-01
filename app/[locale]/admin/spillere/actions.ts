@@ -17,7 +17,6 @@ import {
   consumeAdminInviteRateLimit,
   getClientIp,
 } from '@/lib/admin/rateLimit';
-import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Self-gate + load `{ supabase, profile }` for the spillere-actions. Wraps
@@ -40,7 +39,7 @@ async function loadAdminContext() {
 }
 
 export async function sendInvitation(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
   // Honeypot — the `website` field is hidden in the form so a real admin
@@ -111,7 +110,7 @@ export async function sendInvitation(formData: FormData) {
 }
 
 export async function resendInvitation(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const id = String(formData.get('id') ?? '');
   if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
 
@@ -142,7 +141,7 @@ export async function resendInvitation(formData: FormData) {
     }
     redirect({ href: '/admin/spillere?error=resend_failed', locale });
   }
-  if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
+  if (inv.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
 
   // #2212: a game invitation keeps the game's terms: the game deadline
   // (GAME_INVITE_TTL_DAYS), the game mail, and the organiser who sent it as
@@ -154,11 +153,11 @@ export async function resendInvitation(formData: FormData) {
   // the game mail as well: the login routes them to the team page anyway.
   let senderName = invitedByName;
   let gameMail: { gameName: string; gameMode: string } | null = null;
-  if (inv!.game_id) {
+  if (inv.game_id) {
     const { data: game, error: gameError } = await supabase
       .from('games')
       .select('name, game_mode, status')
-      .eq('id', inv!.game_id)
+      .eq('id', inv.game_id)
       .maybeSingle();
     if (gameError) {
       console.error('[resendInvitation] game lookup failed', gameError);
@@ -171,14 +170,14 @@ export async function resendInvitation(formData: FormData) {
     const { data: inviter, error: inviterError } = await supabase
       .from('users')
       .select('name')
-      .eq('id', inv!.invited_by)
+      .eq('id', inv.invited_by)
       .maybeSingle();
     if (inviterError) {
       // Best-effort: the fallback sender name is honest enough for a mail.
       console.error('[resendInvitation] inviter lookup failed', inviterError);
     }
     senderName = inviter?.name?.trim() || 'En arrangør';
-    gameMail = { gameName: game!.name, gameMode: game!.game_mode };
+    gameMail = { gameName: game.name, gameMode: game.game_mode };
   }
 
   // «Send på nytt» means «give this person a fresh chance» (#1381), so the
@@ -209,24 +208,24 @@ export async function resendInvitation(formData: FormData) {
 
   try {
     await sendInviteNotification({
-      to: inv!.email,
+      to: inv.email,
       invitedByName: senderName,
-      inviteToken: inv!.token,
+      inviteToken: inv.token,
       expiresAt,
       ...gameMail,
     });
   } catch (err) {
     console.error('[admin/spillere] resend mail failed', err);
-    const qs = new URLSearchParams({ error: 'mail_failed', email: inv!.email });
+    const qs = new URLSearchParams({ error: 'mail_failed', email: inv.email });
     redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
-  const qs = new URLSearchParams({ status: 'resent', email: inv!.email });
+  const qs = new URLSearchParams({ status: 'resent', email: inv.email });
   redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
 }
 
 export async function withdrawInvitation(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const id = String(formData.get('id') ?? '');
   if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
 
@@ -245,7 +244,7 @@ export async function withdrawInvitation(formData: FormData) {
     }
     redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
   }
-  if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
+  if (inv.accepted_at) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
 
   // Delete the invitations row via the cookie client (RLS lets admin do it).
   const { error: delError } = await supabase
@@ -267,7 +266,7 @@ export async function withdrawInvitation(formData: FormData) {
     const admin = getAdminClient();
     const { data: authList } = await admin.auth.admin.listUsers();
     const orphan = authList?.users?.find(
-      (u) => u.email?.toLowerCase() === inv!.email.toLowerCase(),
+      (u) => u.email?.toLowerCase() === inv.email.toLowerCase(),
     );
     if (orphan) {
       const { data: publicRow } = await admin
@@ -295,6 +294,6 @@ export async function withdrawInvitation(formData: FormData) {
     console.error('[admin/spillere] auth orphan cleanup failed', err);
   }
 
-  const qs = new URLSearchParams({ status: 'withdrawn', email: inv!.email });
+  const qs = new URLSearchParams({ status: 'withdrawn', email: inv.email });
   redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
 }

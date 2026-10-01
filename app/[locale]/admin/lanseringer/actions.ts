@@ -9,7 +9,6 @@ import { publishProductUpdate } from '@/lib/productUpdates/publish';
 import { editProductUpdate } from '@/lib/productUpdates/edit';
 import { validateProductUpdateInput } from '@/lib/productUpdates/validateUpdateInput';
 import { stampLaunchBoard } from '@/lib/loops/launchMarker';
-import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Self-gate + return `{ userId }` for the lanseringer-actions. Wraps the
@@ -24,7 +23,7 @@ async function loadAdminContext() {
 }
 
 export async function publishProductUpdateAction(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const { userId } = await loadAdminContext();
 
   const parsed = validateProductUpdateInput({
@@ -35,7 +34,6 @@ export async function publishProductUpdateAction(formData: FormData) {
   });
   if (!parsed.ok) {
     redirect({ href: `/admin/lanseringer?error=${parsed.error}`, locale });
-    throw new Error('unreachable'); // redirect() threw; narrows parsed below.
   }
 
   try {
@@ -68,13 +66,12 @@ export async function publishProductUpdateAction(formData: FormData) {
 }
 
 export async function editProductUpdateAction(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   await loadAdminContext();
 
   const id = String(formData.get('id') ?? '').trim();
   if (!id) {
     redirect({ href: '/admin/lanseringer?error=edit_failed', locale });
-    throw new Error('unreachable');
   }
 
   const parsed = validateProductUpdateInput({
@@ -85,7 +82,6 @@ export async function editProductUpdateAction(formData: FormData) {
   });
   if (!parsed.ok) {
     redirect({ href: `/admin/lanseringer/${id}/rediger?error=${parsed.error}`, locale });
-    throw new Error('unreachable');
   }
 
   try {

@@ -116,8 +116,8 @@ export async function createCupMatchesFromPlan(
   if (!plan || !plan.course_id || !plan.tee_box_id) {
     return { error: 'missing_plan' };
   }
-  const courseId = plan.course_id as string;
-  const teeBoxId = plan.tee_box_id as string;
+  const courseId = plan.course_id;
+  const teeBoxId = plan.tee_box_id;
 
   // Re-valider teen server-side: den kan ha blitt arkivert eller flyttet til en
   // annen bane etter at planen ble lagret (planen ble ikke oppdatert). En
@@ -140,7 +140,7 @@ export async function createCupMatchesFromPlan(
   // stale tee-off i fortiden skal sende arrangøren tilbake til Oppsett for å
   // sette et nytt tidspunkt, ikke stille generere med et forbigått start-tid.
   const scheduledTeeOffAt =
-    (plan.scheduled_tee_off_at as string | null) ?? undefined;
+    plan.scheduled_tee_off_at ?? undefined;
   if (scheduledTeeOffAt !== undefined && isTeeOffInPast(scheduledTeeOffAt)) {
     return { error: 'tee_off_in_past' };
   }
@@ -149,13 +149,13 @@ export async function createCupMatchesFromPlan(
   // inneholde klubbmedlemmer. Pickeren tilbyr bare medlemmer, så en ikke-medlem
   // her betyr manipulert payload → avvis (guardrail, RLS på games er creator-
   // basert og fanger ikke dette).
-  const groupId = (cup.group_id as string | null) ?? null;
+  const groupId = cup.group_id ?? null;
   if (groupId) {
     const { data: memberRows } = await getAdminClient()
       .from('group_members')
       .select('user_id')
       .eq('group_id', groupId);
-    const memberIds = new Set((memberRows ?? []).map((m) => m.user_id as string));
+    const memberIds = new Set((memberRows ?? []).map((m) => m.user_id));
     const allInClub = matches.every((m) =>
       [...m.side1, ...m.side2].every((uid) => memberIds.has(uid)),
     );
@@ -194,7 +194,7 @@ export async function createCupMatchesFromPlan(
       });
       return { error: 'insert_failed' };
     }
-    const existingGameIds = (existingGames ?? []).map((g) => g.id as string);
+    const existingGameIds = (existingGames ?? []).map((g) => g.id);
 
     let existingPlayerIds: string[] = [];
     if (existingGameIds.length > 0) {
@@ -210,7 +210,7 @@ export async function createCupMatchesFromPlan(
         return { error: 'insert_failed' };
       }
       existingPlayerIds = (existingPlayers ?? []).map(
-        (p) => p.user_id as string,
+        (p) => p.user_id,
       );
     }
 
@@ -257,7 +257,7 @@ export async function createCupMatchesFromPlan(
     // vinner når satt; ellers gjenbrukes cupens fourball-override (se
     // `CupAllowancePcts.bestBall`s JSDoc — bunten bruker aldri
     // `fourball_matchplay` som eget sesjonsformat, så ingen kollisjon).
-    bestBall: (plan.best_ball_allowance_pct as number | null) ?? fourballPct,
+    bestBall: plan.best_ball_allowance_pct ?? fourballPct,
   };
 
   // #1884: selve skrivingen (profil-oppslag, to-pass, rollback) bor nå i
@@ -268,7 +268,7 @@ export async function createCupMatchesFromPlan(
     {
       client: supabase,
       tournamentId,
-      cupName: cup.name as string,
+      cupName: cup.name,
       groupId,
       courseId,
       teeBoxId,
@@ -292,6 +292,4 @@ export async function createCupMatchesFromPlan(
       : `/admin/cup/${tournamentId}?status=matches_generated`,
     locale,
   });
-  // redirect() throws NEXT_REDIRECT — unreachable, satisfies return type
-  return { error: '' } as CupBatchError;
 }

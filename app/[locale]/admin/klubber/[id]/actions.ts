@@ -31,11 +31,10 @@ export async function updateClubTerms(formData: FormData) {
   if (!user) redirect({ href: '/login', locale });
 
   // Gate: verify is_admin in code (admin-client is used below, so RLS won't gate).
-  // next-intl redirect is not typed `never`, so we need the non-null assertion here.
   const { data: profile } = await supabase
     .from('users')
     .select('is_admin')
-    .eq('id', user!.id)
+    .eq('id', user.id)
     .single();
 
   if (!profile?.is_admin) {

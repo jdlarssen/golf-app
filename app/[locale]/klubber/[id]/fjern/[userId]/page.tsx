@@ -43,7 +43,7 @@ export default async function FjernMedlemPage({
   const locale = await getLocale();
   if (!user) redirect({ href: '/login', locale });
 
-  const detail = await getClubDetail(supabase, id, user!.id);
+  const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();
 
   const { club, members, myRole } = detail;
@@ -54,7 +54,7 @@ export default async function FjernMedlemPage({
   }
 
   // Prevent removing yourself via this route (use /forlat instead).
-  if (targetUserId === user!.id) {
+  if (targetUserId === user.id) {
     redirect({ href: `/klubber/${id}/forlat`, locale });
   }
 

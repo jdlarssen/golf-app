@@ -127,10 +127,9 @@ export async function DrilldownBody({
     // Nothing to drill into — bounce back to the parent leaderboard, which
     // will render its own empty state.
     redirect({
-      href: leaderboardHref({ gameId, mode, context: navContext }) as string,
+      href: leaderboardHref({ gameId, mode, context: navContext }),
       locale: await getLocale(),
     });
-    return null;
   }
 
   return (
@@ -181,8 +180,8 @@ function DrilldownView({
   const hiddenHoles = holeNumbersForSegment(holeSegment).filter(
     (n) => !firstHalf.has(n),
   );
-  const hiddenFrom = hiddenHoles[0]!;
-  const hiddenTo = hiddenHoles[hiddenHoles.length - 1]!;
+  const hiddenFrom = hiddenHoles[0];
+  const hiddenTo = hiddenHoles[hiddenHoles.length - 1];
 
   // #2217: `view.totalVsPar` is over the holes the team played, on the
   // board's par — the hero and the total bar say the same as the board.
@@ -583,5 +582,5 @@ const TONE_VARS: Record<VsParTone, { fg: string; bg: string }> = {
 function firstNameOf(fullName: string): string {
   const t = fullName.trim();
   if (t === '') return '';
-  return t.split(/\s+/)[0]!;
+  return t.split(/\s+/)[0];
 }

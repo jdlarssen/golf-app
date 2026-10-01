@@ -7,10 +7,9 @@ import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
 import { expectOne } from '@/lib/supabase/affectedRows';
-import type { AppLocale } from '@/i18n/routing';
 
 export async function updateProfile(formData: FormData) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   // Optional ?next=-redirect target. Validation in safeInternalPath rejects
   // anything that isn't a same-origin path (open-redirect vern).
   const nextSafe = safeInternalPath(formData.get('next'));
@@ -43,7 +42,6 @@ export async function updateProfile(formData: FormData) {
       href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=${parsed.error}`,
       locale,
     });
-    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
   const { name, nickname, hcpIndex: hcpParsed, gender, level } = parsed.value;
 
@@ -57,7 +55,6 @@ export async function updateProfile(formData: FormData) {
 
   if (!user) {
     redirect({ href: '/login', locale });
-    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
   // Defence-in-depth: if a user somehow reaches /profile without
