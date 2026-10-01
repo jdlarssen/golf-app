@@ -1,6 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormSection, FormSectionHeading } from '@/components/ui/FormSection';
+import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 
 export type AceyDeuceyScoring = 'gross' | 'net';
 
@@ -29,59 +31,26 @@ export function AceyDeuceySetup({
 }: AceyDeuceySetupProps) {
   const t = useTranslations('wizard.sections.aceyDeucey');
   return (
-    <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
-      <legend className="px-1 text-sm font-semibold text-text">
-        {t('legend')}
-      </legend>
-
-      <div>
-        <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
-        <p className="mt-1 text-xs text-muted">
-          {t('scoringDescription')}
-        </p>
-        <div
-          className="mt-2 grid grid-cols-2 gap-2"
-          role="radiogroup"
-          aria-label={t('scoringAriaLabel')}
-        >
-          <label
-            className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
-              scoring === 'net'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-surface-2 text-muted hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="acey_deucey_scoring"
-              value="net"
-              checked={scoring === 'net'}
-              onChange={() => onScoringChange('net')}
-              disabled={disabled}
-              className="sr-only"
-            />
-            {t('scoringNet')}
-          </label>
-          <label
-            className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
-              scoring === 'gross'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border bg-surface-2 text-muted hover:border-primary/40'
-            }`}
-          >
-            <input
-              type="radio"
-              name="acey_deucey_scoring"
-              value="gross"
-              checked={scoring === 'gross'}
-              onChange={() => onScoringChange('gross')}
-              disabled={disabled}
-              className="sr-only"
-            />
-            {t('scoringGross')}
-          </label>
-        </div>
-      </div>
-    </fieldset>
+    <FormSection legend={t('legend')}>
+      <FormSectionHeading title={t('scoringLabel')} description={t('scoringDescription')} />
+      <ChoiceCardGrid columns={2} label={t('scoringAriaLabel')}>
+        <RadioChoiceCard
+          name="acey_deucey_scoring"
+          value="net"
+          checked={scoring === 'net'}
+          onChange={() => onScoringChange('net')}
+          disabled={disabled}
+          title={t('scoringNet')}
+        />
+        <RadioChoiceCard
+          name="acey_deucey_scoring"
+          value="gross"
+          checked={scoring === 'gross'}
+          onChange={() => onScoringChange('gross')}
+          disabled={disabled}
+          title={t('scoringGross')}
+        />
+      </ChoiceCardGrid>
+    </FormSection>
   );
 }

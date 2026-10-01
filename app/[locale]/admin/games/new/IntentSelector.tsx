@@ -35,50 +35,47 @@ type IntentTile = {
   icon: ReactNode;
 };
 
-// Kompis: to stiliserte figurer skulder-mot-skulder, signaliserer
-// «vennegjeng». Holder samme stroke-vekt og rounded caps som format-ikonene
-// så ikon-språket forblir konsistent.
+// #2426: the artboard's icons — 26 px on a 24-unit grid, 1.6 stroke, always
+// forest green.
+const ICON_PROPS = {
+  width: 26,
+  height: 26,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.6,
+  strokeLinecap: 'round',
+  'aria-hidden': true,
+} as const;
+
+// Kompis: two figures shoulder to shoulder — «the gang».
 const KompisIcon = (
-  <svg width={32} height={32} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <circle cx="11" cy="10" r="3.5" />
-    <circle cx="21" cy="10" r="3.5" />
-    <path d="M 4 27 C 4 21 7 18 11 18 C 15 18 18 21 18 27" />
-    <path d="M 14 27 C 14 21 17 18 21 18 C 25 18 28 21 28 27" />
+  <svg {...ICON_PROPS}>
+    <circle cx="8" cy="8" r="3" />
+    <circle cx="16" cy="8" r="3" />
+    <path d="M2.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5M10.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5" />
   </svg>
 );
 
-// Klubb: stilisert pokal / klubb-trofé. Signaliserer organisert turnering
-// med flere deltakere.
+// Klubb: a trophy — an organised tournament.
 const KlubbIcon = (
-  <svg width={32} height={32} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M 10 5 L 22 5 L 22 13 C 22 17 19 20 16 20 C 13 20 10 17 10 13 Z" />
-    <path d="M 10 8 L 6 8 C 6 12 8 14 10 14" />
-    <path d="M 22 8 L 26 8 C 26 12 24 14 22 14" />
-    <line x1="16" y1="20" x2="16" y2="24" />
-    <path d="M 11 27 L 21 27 L 20 24 L 12 24 Z" />
+  <svg {...ICON_PROPS} strokeLinejoin="round">
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v4M8 21h8" />
   </svg>
 );
 
-// Cup: to lag-flagg som speiler hverandre med en sentral linje — signaliserer
-// to-lag-format med flere matcher. Bevisst forskjellig fra format-ikonene
-// (matchplay/best_ball) så det ikke leser som ett enkelt-format-valg.
+// Cup: two sides facing each other across the middle.
 const CupIcon = (
-  <svg width={32} height={32} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <line x1="7" y1="6" x2="7" y2="26" />
-    <path d="M 7 7 L 14 9 L 7 11 Z" fill="currentColor" stroke="none" />
-    <line x1="25" y1="6" x2="25" y2="26" />
-    <path d="M 25 7 L 18 9 L 25 11 Z" fill="currentColor" stroke="none" />
-    <line x1="16" y1="14" x2="16" y2="26" strokeDasharray="2 2" />
-    <text x="16" y="22" fontSize="9" fontFamily="serif" fontWeight="600" stroke="none" fill="currentColor" textAnchor="middle">vs</text>
+  <svg {...ICON_PROPS} strokeLinejoin="round">
+    <path d="M4 4v16M20 4v16M4 8h5v8H4M20 8h-5v8h5M9 12h6" />
   </svg>
 );
 
-// Solo: enkelt golfflagg + ball, signaliserer «én spiller, øvelse».
+// Solo: a single flag and its hole — one player, practice.
 const SoloIcon = (
-  <svg width={32} height={32} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <line x1="16" y1="5" x2="16" y2="22" />
-    <path d="M 16 6 L 24 8 L 16 10 Z" fill="currentColor" stroke="none" />
-    <circle cx="16" cy="25" r="2.5" />
+  <svg {...ICON_PROPS} strokeLinejoin="round">
+    <path d="M8 21V3l9 4-9 4" />
+    <ellipse cx="8" cy="21" rx="4" ry="1" />
   </svg>
 );
 
@@ -102,8 +99,8 @@ const TILES: IntentTile[] = [
  * `aria-current` — «gjeldende element i settet» — som er synlig når arrangøren
  * kommer tilbake hit via «Forrige» eller en dyplenke med forhåndsvalgt intent.
  *
- * Mobile-først: 2-col grid, ≥44px tap-targets (kortene blir ~140px høye
- * pga padding + ikon + tekst).
+ * Mobile-først: 2-col grid, ≥44px tap-targets. #2426: flisene er 150 px høye
+ * og står 16 px fra skjermkanten, som på artboardet.
  */
 export function IntentSelector({
   value,
@@ -130,7 +127,7 @@ export function IntentSelector({
           arrangement?»), so the legend only names the group for screen
           readers. */}
       <legend className="sr-only">{t('legend')}</legend>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="-mx-1 grid grid-cols-2 gap-2.5">
         {tiles.map((tile) => {
           const selected = value === tile.intent;
           return (
@@ -143,23 +140,17 @@ export function IntentSelector({
               onClick={() => {
                 if (!disabled) onChange(tile.intent);
               }}
-              className={`flex min-h-[140px] flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`flex min-h-[150px] flex-col items-start gap-2 rounded-2xl px-3.5 py-4 text-left text-text transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected
-                  ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
-                  : 'border-border bg-surface text-text hover:bg-primary-soft/60'
+                  ? 'border-2 border-primary bg-primary-soft'
+                  : 'border border-border bg-surface hover:bg-primary-soft/60'
               }`}
             >
-              <span
-                className={`flex h-8 w-8 items-center justify-center ${
-                  selected ? 'text-primary' : 'text-muted'
-                }`}
-              >
-                {tile.icon}
-              </span>
-              <span className="font-serif text-base leading-snug">
+              <span className="flex text-primary">{tile.icon}</span>
+              <span className="font-serif text-[17px] font-semibold leading-[normal]">
                 {t(`${tile.intent}.label`)}
               </span>
-              <span className="font-sans text-xs leading-snug text-muted">
+              <span className="font-sans text-xs leading-[1.4] text-muted">
                 {t(`${tile.intent}.description`)}
               </span>
             </button>

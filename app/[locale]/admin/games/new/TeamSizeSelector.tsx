@@ -3,6 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
+import { FormSection } from '@/components/ui/FormSection';
+import { choiceCardClass, ChoiceCardText, type ChoiceCardHeight } from '@/components/ui/ChoiceCard';
 
 /**
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi
@@ -22,6 +24,11 @@ type Props = {
    * forhindrer at admin uvitende trigger en validation error.
    */
   disabled?: boolean;
+  /**
+   * Flisenes minstehøyde. Artboardene tegner 72 px under kompis-runden (med
+   * antallsvelgeren) og 64 px for klubb og solo (#2426).
+   */
+  tileHeight?: ChoiceCardHeight;
 };
 
 /**
@@ -165,22 +172,16 @@ function tilesForMode(mode: GameMode): TileDef[] {
  * spilles i en gitt størrelse listes ikke, så velgeren viser aldri tomme
  * «kommer snart»-fliser for varianter som ikke gir mening (#478).
  *
- * Visuell konsistens: tile-stilen speiler `ModeSelector` (border, padding,
- * active-state via primary-soft + inset-ring) men droper ikon — per design-
- * dokumentet er lagstørrelse en sekundær parameter og fortjener ikke samme
- * symbolske vekting som modus-valget.
+ * #2426: kickeren «VELG LAGSTØRRELSE» over valgkortene, rett på siden uten
+ * kort rundt, som på artboardene. To fliser står to i bredden; én flis (Solo)
+ * tar en halv rad; tre fliser (scramble) står tre i bredden med mindre tittel.
  */
-const GRID_COLS: Record<number, string> = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-};
-
 export function TeamSizeSelector({
   mode,
   value,
   onChange,
   disabled = false,
+  tileHeight = 64,
 }: Props) {
   const t = useTranslations('wizard.teamSize');
   const tiles = tilesForMode(mode);
@@ -192,13 +193,14 @@ export function TeamSizeSelector({
       if (!disabled) onChange(size);
     },
   );
+  const layout = tiles.length >= 3 ? 'dense' : 'start';
 
   return (
-    <fieldset disabled={disabled}>
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {t('legend')}
-      </legend>
-      <div role="radiogroup" className={`mt-2 grid gap-3 ${GRID_COLS[tiles.length] ?? 'grid-cols-3'}`}>
+    <FormSection legend={t('legend')} variant="bare" disabled={disabled}>
+      <div
+        role="radiogroup"
+        className={`grid gap-2 ${tiles.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
+      >
         {tiles.map((tile, idx) => {
           const selected = value === tile.size;
           const tileTitle = t(`${tile.key}.title` as Parameters<typeof t>[0]);
@@ -214,22 +216,17 @@ export function TeamSizeSelector({
               onClick={() => {
                 if (!disabled) onChange(tile.size);
               }}
-              className={`flex min-h-[44px] flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
-                selected
-                  ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
-                  : 'cursor-pointer border-border bg-surface text-text hover:bg-primary-soft/60'
-              }`}
+              className={`${choiceCardClass(selected, { height: tileHeight, layout })} disabled:cursor-not-allowed disabled:opacity-50`}
             >
-              <span className="font-serif text-base leading-snug">
-                {tileTitle}
-              </span>
-              <span className="font-sans text-[11px] leading-snug text-muted tabular-nums">
-                {t(`${tile.key}.hint` as Parameters<typeof t>[0])}
-              </span>
+              <ChoiceCardText
+                title={tileTitle}
+                hint={t(`${tile.key}.hint` as Parameters<typeof t>[0])}
+                layout={layout}
+              />
             </button>
           );
         })}
       </div>
-    </fieldset>
+    </FormSection>
   );
 }

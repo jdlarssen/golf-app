@@ -555,7 +555,7 @@
       "legend": "Hva slags arrangement?",
       "kompis": {
         "label": "Kompis-runde",
-        "description": "Gjør runden mer spennende, opp til 24 spillere"
+        "description": "Gjør runden mer spennende, opp til 40 spillere"
       },
       "klubb": {
         "label": "Klubb-turnering",
@@ -865,11 +865,14 @@
       },
       "patsome": {
         "legend": "Patsome-oppsett",
-        "segment1Heading": "Hull 1–6: 4BBB.",
+        "segment1Holes": "Hull 1–6",
+        "segment1Format": "4BBB.",
         "segment1Body": "Begge spiller sin egen ball, og lagets beste stableford-poeng per hull teller.",
-        "segment2Heading": "Hull 7–12: Greensome.",
+        "segment2Holes": "Hull 7–12",
+        "segment2Format": "Greensome.",
         "segment2Body": "Begge slår ut, dere velger det beste utslaget, og så slår dere annethvert slag.",
-        "segment3Heading": "Hull 13–18: Foursomes.",
+        "segment3Holes": "Hull 13–18",
+        "segment3Format": "Foursomes.",
         "segment3Body": "Dere deler én ball og slår annethvert slag, også fra tee.",
         "handicapNote": "Netto bruker riktige handicap per segment: full handicap i 4BBB, 60/40 i greensome og 50 % av summen i foursomes.",
         "scoringFromLabel": "Poeng fra",
@@ -895,6 +898,7 @@
         "teePlaceholderWithCourse": "Velg tee-boks…",
         "teeOffLabel": "Tee-off",
         "teeOffHint": "Påkrevd ved publisering. Valgfritt for utkast.",
+        "teeOffPlaceholder": "Velg dato og tid",
         "teeOffPastError": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
         "visibilityLegend": "Synlighet under runden",
         "visibilityLiveTitle": "Vis alt under runden",
@@ -1229,6 +1233,7 @@
     },
     "club": {
       "legend": "For hvilken klubb?",
+      "label": "Klubb",
       "noClub": "Ingen klubb",
       "hint": "Medlemmene kan se og melde seg på alle spill du setter opp for klubben."
     },
