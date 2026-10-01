@@ -89,7 +89,7 @@ export type DecideRegistrationResult =
  * decline from the inbox carries no reason.
  *
  * Afterwards the varsel has done its job: archived on success, marked read
- * when the request was already settled. Both best-effort — if they fail, the
+ * when the request was already settled or its game has started. Both best-effort — if they fail, the
  * next visit sees the request is no longer pending and treats it as read.
  * Anything the core throws (a read error) is `{ ok: false, reason: 'error' }`
  * and the client rolls back.
@@ -131,10 +131,14 @@ export async function decideRegistration(
       teamName: result.teamName,
     };
   }
+  // Settled from here: answered elsewhere, gone, or the round has started
+  // (a started game locks the roster for good). Mark the varsel read so it
+  // leaves «Krever handling» instead of failing on every tap.
   if (
     result.reason === 'not_pending' ||
     result.reason === 'request_not_found' ||
-    result.reason === 'game_not_found'
+    result.reason === 'game_not_found' ||
+    result.reason === 'game_locked'
   ) {
     await markNotificationsRead({ userId, notificationId });
   }

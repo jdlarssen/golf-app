@@ -120,7 +120,7 @@ describe('decideRegistration', () => {
     expect(rejectMock).toHaveBeenCalledWith(CTX, '');
   });
 
-  it.each(['not_pending', 'request_not_found', 'game_not_found'] as const)(
+  it.each(['not_pending', 'request_not_found', 'game_not_found', 'game_locked'] as const)(
     '%s → marks the varsel read, reports the reason',
     async (reason) => {
       if (reason === 'not_pending') {
@@ -136,7 +136,7 @@ describe('decideRegistration', () => {
     },
   );
 
-  it.each(['forbidden', 'game_locked'] as const)('%s (load) → reason, varsel untouched', async (reason) => {
+  it.each(['forbidden'] as const)('%s (load) → reason, varsel untouched', async (reason) => {
     loadMock.mockResolvedValueOnce({ ok: false, reason, gameId: null });
     const { decideRegistration } = await import('./actions');
     expect(await decideRegistration(NOTE, REQ, 'approve')).toEqual({ ok: false, reason });

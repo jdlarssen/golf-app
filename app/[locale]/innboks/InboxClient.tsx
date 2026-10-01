@@ -50,7 +50,10 @@ import {
 type Status = { tone: 'ok' | 'error'; text: string } | null;
 
 const SECTION_ORDER: InboxSectionKey[] = ['action', 'today', 'earlier'];
-const SETTLED_REASONS = new Set(['not_pending', 'request_not_found', 'game_not_found']);
+// The request no longer waits for an answer from here: someone answered first,
+// it is gone, or the round has started (a started game locks the roster, so
+// tapping again would only fail again).
+const SETTLED_REASONS = new Set(['not_pending', 'request_not_found', 'game_not_found', 'game_locked']);
 
 export function InboxClient({
   initialNotifications,
@@ -176,16 +179,19 @@ export function InboxClient({
         return;
       }
       if (SETTLED_REASONS.has(result.reason)) {
-        // Someone answered first: the row stays, read, under I DAG/TIDLIGERE.
+        // The row stays, read, under I DAG/TIDLIGERE, with the reason.
         const nowIso = new Date().toISOString();
         setItems(snapshot.map((n) => (n.id === row.id ? { ...n, read_at: nowIso } : n)));
-        setStatus({ tone: 'ok', text: t('status.alreadyDecided') });
+        setStatus({
+          tone: 'ok',
+          text: result.reason === 'game_locked' ? signupErrorText.game_locked : t('status.alreadyDecided'),
+        });
         return;
       }
       setItems(snapshot);
       const text =
-        result.reason === 'game_locked' || result.reason === 'no_team_slot'
-          ? signupErrorText[result.reason]
+        result.reason === 'no_team_slot'
+          ? signupErrorText.no_team_slot
           : result.reason === 'forbidden'
             ? t('status.forbidden')
             : t('actionFailed');

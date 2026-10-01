@@ -161,6 +161,9 @@ export default async function InboxPage() {
     requestStatus: new Map(requests.map((r) => [r.id, r.status as string])),
     cards,
     own: new Map(own.map((r) => [r.game_id, { paid_at: r.paid_at, submitted_at: r.submitted_at }])),
+    lockedGameIds: new Set(
+      games.filter((g) => g.status === 'active' || g.status === 'finished').map((g) => g.id),
+    ),
   });
 
   // One "now" per request, sent to the client so server and browser write the
