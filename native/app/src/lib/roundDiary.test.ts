@@ -123,13 +123,25 @@ describe('diarySubline', () => {
     ).toBe('Byneset North · Texas scramble · lag');
   });
 
+  // En ni-hullsrunde er alltid matchplay (`games_hole_segment_matchplay_only`).
   it('writes «9 hull» instead of the format on a 9-hole round', () => {
     expect(
-      diarySubline(round({ gameId: 'g', gameMode: 'stableford', holeSegment: 'back9', holeCount: 9, brutto: 42, completeBrutto: null }), 18),
-    ).toBe('Byneset North · 9 hull · 18 p');
-    expect(
-      diarySubline(round({ gameId: 'g', holeSegment: 'front9', holeCount: 9, brutto: 42, completeBrutto: null }), undefined),
-    ).toBe('Byneset North · 9 hull · 42 brutto');
+      diarySubline(
+        round({ gameId: 'g', gameMode: 'singles_matchplay', holeSegment: 'back9', holeCount: 9, brutto: 42, completeBrutto: null }),
+        undefined,
+      ),
+    ).toBe('Byneset North · 9 hull');
+  });
+
+  // Matchplay: resultatet til høyre («Du vant 2&1») er formatets enhet, som
+  // poengene i poengformatene, så underlinja har ingen brutto.
+  it('shows no brutto for matchplay, 18 holes or 9', () => {
+    expect(diarySubline(round({ gameId: 'g', gameMode: 'singles_matchplay' }), undefined)).toBe(
+      'Byneset North · Matchplay',
+    );
+    expect(diarySubline(round({ gameId: 'g', gameMode: 'fourball_matchplay' }), undefined)).toBe(
+      'Byneset North · Fourball',
+    );
   });
 
   it('shows only course and format when the round is not complete for its length', () => {

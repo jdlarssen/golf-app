@@ -8,12 +8,13 @@
 // **Underlinja** er «Bane · Format · resultat». Formatnavnet er webbens
 // `MODE_LABELS`; på en ni-hullsrunde står «9 hull» i stedet. Resultatet er
 // «lag» når laget delte én ball, poengene i formatene der tavla viser poeng
-// (regnet på telefonen som «Forrige runde» på Hjem), og ellers brutto når
-// runden er hel for sin lengde. Ellers står det ingenting etter formatet.
+// (regnet på telefonen som «Forrige runde» på Hjem), ingenting i matchplay
+// (resultatet til høyre er formatets enhet), og ellers brutto når runden er
+// hel for sin lengde. Ellers står det ingenting etter formatet.
 //
 // Ren og I/O-fri (Type A).
 import { finishedResultBadge } from '../../../../lib/games/finishedResultBadge';
-import { MODE_LABELS } from '../../../../lib/scoring/modes/types';
+import { MODE_LABELS, isMatchplayFamily } from '../../../../lib/scoring/modes/types';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { COMPLETE_ROUND_HOLES } from '../../../../lib/stats/playerStats';
 import { HISTORY_TEXT, placementSpoken, pointsShort } from './historyCopy';
@@ -107,6 +108,8 @@ type Result = { shown: string; spoken: string };
  */
 function lineResult(round: HistoryRound, points: number | null | undefined): Result | null {
   if (round.teamBall) return { shown: HISTORY_TEXT.teamShort, spoken: HOME_TEXT.teamRound };
+  // Matchplay: resultatet til høyre («Du vant 2&1») er formatets enhet.
+  if (isMatchplayFamily(round.gameMode)) return null;
   if (countsPoints(round.gameMode)) {
     return points != null ? { shown: pointsShort(points), spoken: pointsText(points) } : null;
   }
