@@ -5628,7 +5628,6 @@
   "signup": {
     "metaTitle": "Påmelding",
     "kicker": "Påmelding",
-    "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "Du er allerede påmeldt dette spillet.",
     "goToGameButton": "Gå til spillet",
     "findMoreButton": "Finn flere turneringer",
@@ -5780,10 +5779,7 @@
       "teamDashNotApproved": "Bare en lagkamerat som står på spillerlisten, kan bli kaptein."
     },
     "public": {
-      "courseLabel": "Bane:",
-      "teeOffLabel": "Tee-off:",
       "emptyRoster": "Ingen har meldt seg på ennå. Bli den første.",
-      "registeredCount": "{count, plural, one {# påmeldt} other {# påmeldte}}",
       "registeredOverflow": "og {count} til",
       "joinButton": "Bli med",
       "joinHint": "Du logger inn med engangskode på e-post. Det tar under et minutt.",

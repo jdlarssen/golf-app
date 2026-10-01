@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { formatTeeOffLongParts } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
@@ -34,7 +33,7 @@ import {
 import { getPublicSignupRoster } from '@/lib/games/getPublicSignupRoster';
 import { getPaidPotKr } from '@/lib/games/getPaidPotKr';
 import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
-import { SocialProofLine } from '@/components/games/SocialProofLine';
+import { InvitationCard } from '@/components/games/InvitationCard';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PublicLandingView } from './PublicLandingView';
 import { PremiebordCard } from '@/components/PremiebordCard';
@@ -124,14 +123,6 @@ export default async function PåmeldingPage({
   // #559-regelen står: uinnloggede med ugyldig ELLER ikke-synlig lenke sendes
   // til /login med next-param, aldri 404.
   const game = await getGameByShortId(shortId);
-  // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as
-  // 07:20. One line for both the public landing and the logged-in header.
-  const teeOffParts = game?.scheduled_tee_off_at
-    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale)
-    : null;
-  const teeOffLine = teeOffParts
-    ? `${teeOffParts.date}, ${teeOffParts.time}`
-    : null;
 
   const supabase = await getServerClient();
   const {
@@ -158,9 +149,11 @@ export default async function PåmeldingPage({
             game.courses?.name ?? null,
             locale,
           )}
-          modeLabel={tModes(game.game_mode as Parameters<typeof tModes>[0])}
+          gameMode={game.game_mode}
+          modeConfig={game.mode_config}
           courseName={game.courses?.name ?? null}
-          teeOff={teeOffLine}
+          teeName={game.tee_box?.name ?? null}
+          teeOffAt={game.scheduled_tee_off_at}
           roster={roster}
           joinHref={`/login?next=${encodeURIComponent(`/signup/${shortId}${srcSuffix}`)}`}
           posterHref={`/signup/${shortId}/plakat`}
@@ -394,23 +387,23 @@ export default async function PåmeldingPage({
       <TopBar backHref="/" back="history" kicker={t('kicker')} />
 
       <div className="space-y-5">
-        <header className="px-1">
-          <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
-            {tModes(game.game_mode as Parameters<typeof tModes>[0])}
-          </p>
-          <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
-            {localizeGameName(game.name, game.courses?.name ?? null, locale)}
-          </h1>
-          {game.scheduled_tee_off_at && (
-            <p className="mt-1 font-sans text-sm text-muted">
-              {t('teeOffLabel')}{' '}
-              <time dateTime={game.scheduled_tee_off_at}>
-                {teeOffLine}
-              </time>
-            </p>
+        {/* #2266: the invitation card is the top of the page; everything
+            below it (registered, waiting, closed, the forms) is unchanged. */}
+        <InvitationCard
+          variant="member"
+          gameName={localizeGameName(
+            game.name,
+            game.courses?.name ?? null,
+            locale,
           )}
-          <SocialProofLine {...socialProof} className="mt-2" />
-        </header>
+          gameMode={game.game_mode}
+          modeConfig={game.mode_config}
+          teeOffAt={game.scheduled_tee_off_at}
+          courseName={game.courses?.name ?? null}
+          teeName={game.tee_box?.name ?? null}
+          socialProof={socialProof}
+          expiresLine={null}
+        />
 
         <PaymentInfo
           entryFeeKr={game.entry_fee_kr}

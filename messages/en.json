@@ -5628,7 +5628,6 @@
   "signup": {
     "metaTitle": "Sign up",
     "kicker": "Sign up",
-    "teeOffLabel": "Tee-off:",
     "alreadyRegisteredBanner": "You're already signed up for this game.",
     "goToGameButton": "Go to the game",
     "findMoreButton": "Find more tournaments",
@@ -5780,10 +5779,7 @@
       "teamDashNotApproved": "Only a teammate who is on the player list can become captain."
     },
     "public": {
-      "courseLabel": "Course:",
-      "teeOffLabel": "Tee-off:",
       "emptyRoster": "No one has signed up yet. Be the first.",
-      "registeredCount": "{count, plural, one {# signed up} other {# signed up}}",
       "registeredOverflow": "and {count} more",
       "joinButton": "Join",
       "joinHint": "You sign in with a one-time code by email. It takes less than a minute.",
