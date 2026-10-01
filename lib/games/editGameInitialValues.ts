@@ -1,4 +1,3 @@
-import type { StartType } from './startType';
 import 'server-only';
 import type { InitialValues } from '@/app/[locale]/admin/games/new/GameForm';
 import { buildSetupStepInitialValues } from '@/lib/games/setupStepInitialValues';
@@ -8,6 +7,7 @@ import {
 } from '@/lib/scoring/sideTournamentConfig';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { safeParsePrizes } from '@/lib/games/prizes';
+import type { StartType } from './startType';
 
 /**
  * Shared by both edit flows: admin's `/admin/games/[id]/edit` (Sekretariatet)
@@ -16,6 +16,17 @@ import { safeParsePrizes } from '@/lib/games/prizes';
  * locking the mode selector for non-draft games — is intricate enough that
  * duplicating it per flow would invite drift. Pure data-mapping; no DB access.
  */
+
+/**
+ * The columns both edit pages select (`/admin/games/[id]/edit` adds the
+ * club/cup/league links; `/games/[id]/rediger` uses it as is). GameForm posts
+ * every field back from state, and state starts from this row, so a column
+ * the save writes but the page did not read is reset on every save — that is
+ * how `rediger` turned «Slipp venner direkte inn» off (#2258).
+ * `editGameInitialValues.test.ts` checks it against the update's columns.
+ */
+export const EDIT_FORM_COLUMNS =
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
 
 export type EditGameRow = {
   id: string;
