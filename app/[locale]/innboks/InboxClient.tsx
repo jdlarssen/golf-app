@@ -57,7 +57,6 @@ const SETTLED_REASONS = new Set(['not_pending', 'request_not_found', 'game_not_f
 
 export function InboxClient({
   initialNotifications,
-  isAdmin,
   teeOffByGame,
   resultByGame,
   finishedGameIds,
@@ -65,7 +64,6 @@ export function InboxClient({
   signupErrorText,
 }: {
   initialNotifications: InboxRowData[];
-  isAdmin: boolean;
   teeOffByGame: Record<string, string | null>;
   resultByGame: Record<string, ResultSummary | null>;
   finishedGameIds: string[];
@@ -89,16 +87,14 @@ export function InboxClient({
   const [filter, setFilter] = useState<InboxFilter>('all');
   const [status, setStatus] = useState<Status>(null);
 
-  const role = { isAdmin };
-  const sections = buildInboxSections(items, { filter, now, isAdmin });
-  const actionCount = countActionRows(items, role);
+  const sections = buildInboxSections(items, { filter, now });
+  const actionCount = countActionRows(items);
   const hasUnread = items.some((n) => n.read_at == null);
   const ctx: InboxTextContext = {
     t: t as unknown as NotificationTranslator,
     tFinished: tFinished as unknown as NotificationTranslator,
     locale,
     now,
-    isAdmin,
     teeOffByGame,
     resultByGame,
     finishedGameIds,

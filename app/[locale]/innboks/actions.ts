@@ -85,8 +85,8 @@ export type DecideRegistrationResult =
 /**
  * «Godta» / «Avslå» on a signup request in the inbox (#2263, owner's answer
  * 13). The same core as the signup page, so the same rule decides who may
- * answer (global admin), and a captain's request takes the whole team. A
- * decline from the inbox carries no reason.
+ * answer (an admin, or the game's organiser — #2440), and a captain's request
+ * takes the whole team. A decline from the inbox carries no reason.
  *
  * Afterwards the varsel has done its job: archived on success, marked read
  * when the request was already settled or its game has started. Both best-effort — if they fail, the
