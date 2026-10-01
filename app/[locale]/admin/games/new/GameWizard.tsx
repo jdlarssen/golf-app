@@ -1567,7 +1567,8 @@ function PlayerCountPicker({
       >
         <span aria-hidden="true" className="select-none">+</span>
       </button>
-      <span className="font-sans text-sm leading-[normal] text-muted">
+      {/* The live region already says «4 spillere»; the word is for the eye. */}
+      <span aria-hidden="true" className="font-sans text-sm leading-[normal] text-muted">
         {t('playerCount.suffix', { count })}
       </span>
     </div>

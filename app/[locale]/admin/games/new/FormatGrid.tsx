@@ -210,8 +210,12 @@ export function FormatGrid({
       <div
         key={f.slug}
         data-testid="format-row"
+        // The row's height includes its divider (border-box), as on the
+        // artboard: 60 px, 64 px when selected.
         className={`flex items-center ${divider ? 'border-b border-row-divider-warm' : ''} ${
-          selected ? 'min-h-[64px] bg-primary-soft shadow-[inset_0_0_0_2px_var(--primary)]' : ''
+          selected
+            ? 'min-h-[64px] bg-primary-soft shadow-[inset_0_0_0_2px_var(--primary)]'
+            : 'min-h-[60px]'
         }`}
       >
         {/* Ekstra negativ offset (#1673): den valgte raden har en inset-linje
@@ -229,7 +233,7 @@ export function FormatGrid({
           disabled={disabled}
           onClick={() => select(f.slug)}
           style={selected ? { outlineOffset: '-5px' } : undefined}
-          className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 self-stretch px-3.5 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-w-0 flex-1 items-center gap-3 self-stretch px-3.5 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
         >
           {withFigure && (
             <FormatLineup lineup={formatLineup(f.slug as GameMode, playerCount!)} variant="row" />
