@@ -1800,9 +1800,10 @@ function validateAceyDeucey(
  * Bingo Bango Bongo-validator (issue #277).
  *
  * Speiler `validateNassau`/`validateSkins`: individuelt format, spillertallet i
- * `START_COUNT_RANGES.bingo_bango_bongo` (#460) ved publish, ingen duplikater, team_number/flight_number nullstilles. BBB
- * bruker ikke gross/net-toggle (poeng er rene prestasjons-poeng fra bingo/bango/
- * bongo — ikke utledet fra slag). mode_config er {kind, team_size: 1}.
+ * `START_COUNT_RANGES.bingo_bango_bongo` (#460) ved publish, ingen duplikater,
+ * team_number/flight_number nullstilles. BBB bruker ikke gross/net-toggle (poeng
+ * er rene prestasjons-poeng fra bingo/bango/bongo — ikke utledet fra slag).
+ * mode_config er {kind, team_size: 1}.
  */
 function validateBingoBangoBongo(
   formData: FormData,
@@ -1841,9 +1842,9 @@ function parseNinesVariant(formData: FormData): 'nines' | 'split_sixes' {
  * Nines / Split Sixes-validator (issue #278).
  *
  * Individuelt format med spillertallet i `START_COUNT_RANGES.nines` ved
- * publish. Strokeplay-utledet
- * (ingen egen input-tabell). To config-dimensjoner: nines_variant (nines=9pts
- * 5-3-1, split_sixes=6pts 4-2-0) og nines_scoring (gross|net, default net).
+ * publish. Strokeplay-utledet (ingen egen input-tabell). To config-dimensjoner:
+ * nines_variant (nines=9pts 5-3-1, split_sixes=6pts 4-2-0) og nines_scoring
+ * (gross|net, default net).
  *
  * Mode_config-output: `{kind, team_size: 1, nines_variant, nines_scoring}`.
  */

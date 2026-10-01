@@ -16,9 +16,10 @@
 // import here must also exist in `native/app/`, and only `expo export` catches
 // it (#1901).
 //
-// A stamp counts as set when it is neither null nor undefined (`!= null`), the
-// same as the truthiness checks the web used before, so a row read without
-// the column behaves as it did.
+// A stamp counts as set when it is neither null nor undefined (`!= null`). For
+// what a timestamp column can hold (null or an ISO string) that is the same as
+// the truthiness checks the web used before, and a row read without the column
+// behaves as it did.
 
 /** The three stamps the gate reads, whatever the caller's row looks like. */
 export interface FinishStamps {
