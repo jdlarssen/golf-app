@@ -91,6 +91,24 @@ function osloDayIndex(ms: number): number {
   return Math.floor(Date.parse(`${y}-${m}-${d}T00:00:00Z`) / 86_400_000);
 }
 
+/**
+ * The deadline the invitation card counts down to (#2266): the earlier of the
+ * invitation's own `expires_at` and the round's tee-off. A game invitation
+ * lives 14 days, but once the round starts it no longer gives a place
+ * (`isRosterLocked`, #2212) — so without the cap the card could say «om 12
+ * dager» about a round that is two days away. No tee-off, or an unparseable
+ * one, leaves `expires_at`.
+ */
+export function effectiveInviteDeadline(
+  expiresAtIso: string,
+  teeOffAtIso: string | null,
+): string {
+  if (!teeOffAtIso) return expiresAtIso;
+  const teeOffMs = Date.parse(teeOffAtIso);
+  if (Number.isNaN(teeOffMs)) return expiresAtIso;
+  return teeOffMs < Date.parse(expiresAtIso) ? teeOffAtIso : expiresAtIso;
+}
+
 export type InviteExpiryTier =
   | { kind: 'today' }
   | { kind: 'tomorrow' }
