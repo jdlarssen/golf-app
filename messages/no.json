@@ -886,7 +886,6 @@
       },
       "players": {
         "headingDefault": "2. Spillere",
-        "headingWizard": "Hvem skal spille?",
         "pendingLabel": "Invitert spiller",
         "waitingChip": "Venter",
         "searchLabel": "Søk i spillere",

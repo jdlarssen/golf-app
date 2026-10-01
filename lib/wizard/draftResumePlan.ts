@@ -115,11 +115,12 @@ export function planDraftResume(
  *  - Rosteret passer formatet → bruk rosteret. Telleren blir sann (steg
  *    4-hintet stemmer også), og formatet består filteret per definisjon.
  *  - Alt annet (tomt roster, eller et roster som ikke passer ennå — utkast er
- *    per definisjon uferdige) → `null`, som er «Vis alle»: filteret slås av,
+ *    per definisjon uferdige) → `null`, altså uten antall: filteret slås av,
  *    og formatet er garantert synlig og valgt.
  *
  * `null` og `undefined` betyr IKKE det samme nedstrøms: `undefined` gir
- * default-4, `null` gir «Vis alle» (useGameFormState.ts).
+ * default-4, `null` gir telleren uten antall (useGameFormState.ts; #2260
+ * fjernet «Vis alle»-knappen, men et gammelt utkast kan fortsatt bære `null`).
  */
 export function resumeExpectedPlayerCount(
   gameMode: GameMode,

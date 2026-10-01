@@ -101,7 +101,8 @@ export type WizardDraft = {
   /** Arrangement-valget fra steg 1. */
   intent?: Intent;
   /**
-   * #373-telleren på steg 2. `null` = arrangøren trykket «Vis alle»;
+   * #373-telleren på steg 2. `null` = uten antall (fra et utkast laget før
+   * #2260 fjernet «Vis alle», eller et gjenopptatt utkast uten roster);
    * `undefined` finnes ikke her — det ville ikke kunne skilles fra «ikke
    * lagret», og telleren har en annen default (4).
    */

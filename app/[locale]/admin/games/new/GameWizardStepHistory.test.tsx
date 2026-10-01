@@ -170,7 +170,7 @@ describe('GameWizard — #1380 per-steg history', () => {
       .toHaveTextContent('Steg 2 av 5');
   });
 
-  it('«Forrige» pusher også — hvert steg er sin egen history-entry', () => {
+  it('«Tilbake» pusher også — hvert steg er sin egen history-entry', () => {
     searchString = 'step=2';
     renderWizard(SEEDED_BY_ROUTE);
 
