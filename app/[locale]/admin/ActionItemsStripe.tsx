@@ -9,8 +9,8 @@ import { getActionItemCounts } from '@/lib/admin/actionItems';
  * dashboardet. **Rendrer ingenting når begge tellingene er 0** så rolige dager
  * forblir rolige. Admin-gated (siden brancher på rolle før dette mountes).
  *
- * Deler `getActionItemCounts()` (cache()-wrappet) med Spill-tile-badgen, så de
- * to flatene koster én query-runde til sammen.
+ * Stripa er eneste leser av `getActionItemCounts()` (cache()-wrappet, én
+ * query-runde per forespørsel).
  */
 export async function ActionItemsStripe() {
   const counts = await getActionItemCounts();

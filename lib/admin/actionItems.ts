@@ -155,8 +155,8 @@ export function holesFilledByGame(opts: {
 /**
  * Fetches action-item counts for all active games.
  *
- * `cache()` dedupes across Suspense siblings — both the ActionItemsStripe and
- * the Spill-tile badge share this single round-trip.
+ * Its one reader is the dashboard's ActionItemsStripe; `cache()` keeps it to a
+ * single round-trip per request.
  *
  * Requires server context (RLS-enforced server client); do not call from
  * client components.
@@ -238,12 +238,3 @@ export const getActionItemCounts = cache(async (): Promise<ActionItemCounts> => 
 
   return computeActionItemCounts(games, players);
 });
-
-/** Total distinct games requiring any admin action (union of both lists). */
-export function totalActionableGames(counts: ActionItemCounts): number {
-  const ids = new Set([
-    ...counts.unsubmitted.map((g) => g.gameId),
-    ...counts.pendingApproval.map((g) => g.gameId),
-  ]);
-  return ids.size;
-}

@@ -86,18 +86,15 @@ const prizesArraySchema = z
   );
 
 /**
- * Strikt parse — kaster på ugyldig input. Brukes på skrivestien (wizard →
- * INSERT/UPDATE) der ugyldige slott aldri skal nå DB-en.
- */
-export function parsePrizes(raw: unknown): GamePrize[] {
-  return prizesArraySchema.parse(raw);
-}
-
-/**
  * Defensiv parse — returnerer [] på ugyldig input. Brukes på lese-/visningsstien
  * (spill-hjem, leaderboard, spectate, embed, signup) så en malformert prizes-blob
- * aldri krasjer en flate. DB-CHECK + Zod-på-skriv garanterer at data er gyldig,
- * så dette er kun en robusthets-backstop.
+ * aldri krasjer en flate.
+ *
+ * Dette er den eneste Zod-sjekken av premiebordet. DB-CHECK-en (0136) låser bare
+ * at `prizes` er en array med høyst 7 elementer. Skrivestien
+ * (`parsePrizesFromFormData` i gamePayload.ts) kjører ikke Zod: den bygger
+ * slottene fra de faste `PRIZE_SLOTS`, trimmer og beskjærer lengdene, så dataene
+ * er gyldige fordi de er konstruert slik. En ny skrivesti må selv sørge for det.
  */
 export function safeParsePrizes(raw: unknown): GamePrize[] {
   const res = prizesArraySchema.safeParse(raw);

@@ -12,7 +12,6 @@ import fs from 'fs';
 import path from 'path';
 
 import {
-  parsePrizes,
   safeParsePrizes,
   prunePrizes,
   prizeFieldName,
@@ -55,9 +54,9 @@ describe('games.prizes DB CHECK ↔ Zod agreement (trap #4)', () => {
   });
 });
 
-describe('parsePrizes — valid input', () => {
+describe('safeParsePrizes — valid input gives the parsed list', () => {
   it('accepts an empty list', () => {
-    expect(parsePrizes([])).toEqual([]);
+    expect(safeParsePrizes([])).toEqual([]);
   });
 
   it('accepts the full 7-slot board (3 placement + 2 LD + 2 CTP)', () => {
@@ -70,11 +69,11 @@ describe('parsePrizes — valid input', () => {
       prize({ category: 'closest_to_pin', position: 1 }),
       prize({ category: 'closest_to_pin', position: 2 }),
     ];
-    expect(parsePrizes(board)).toHaveLength(7);
+    expect(safeParsePrizes(board)).toHaveLength(7);
   });
 
   it('keeps a sponsor string and a null sponsor', () => {
-    const parsed = parsePrizes([
+    const parsed = safeParsePrizes([
       prize({ position: 1, sponsor: 'Klubbshoppen' }),
       prize({ position: 2, sponsor: null }),
     ]);
@@ -83,21 +82,21 @@ describe('parsePrizes — valid input', () => {
   });
 });
 
-describe('parsePrizes — rejects invalid input', () => {
+describe('safeParsePrizes — invalid input gives []', () => {
   it('rejects an 8th slot (over PRIZE_MAX_SLOTS)', () => {
     const eight = Array.from({ length: 8 }, (_, i) =>
       prize({ category: 'longest_drive', position: i + 1 }),
     );
-    expect(() => parsePrizes(eight)).toThrow();
+    expect(safeParsePrizes(eight)).toEqual([]);
   });
 
   it('rejects a duplicate (category, position) slot', () => {
-    expect(() =>
-      parsePrizes([
+    expect(
+      safeParsePrizes([
         prize({ category: 'placement', position: 1 }),
         prize({ category: 'placement', position: 1 }),
       ]),
-    ).toThrow();
+    ).toEqual([]);
   });
 
   it.each([
@@ -106,27 +105,27 @@ describe('parsePrizes — rejects invalid input', () => {
     ['longest_drive', 3],
     ['closest_to_pin', 3],
   ] as const)('rejects %s position %i (out of range)', (category, position) => {
-    expect(() => parsePrizes([prize({ category, position })])).toThrow();
+    expect(safeParsePrizes([prize({ category, position })])).toEqual([]);
   });
 
   it('rejects an empty description', () => {
-    expect(() => parsePrizes([prize({ description: '' })])).toThrow();
+    expect(safeParsePrizes([prize({ description: '' })])).toEqual([]);
   });
 
   it('rejects a description over the max length', () => {
-    expect(() =>
-      parsePrizes([prize({ description: 'x'.repeat(PRIZE_DESCRIPTION_MAX + 1) })]),
-    ).toThrow();
+    expect(
+      safeParsePrizes([prize({ description: 'x'.repeat(PRIZE_DESCRIPTION_MAX + 1) })]),
+    ).toEqual([]);
   });
 
   it('rejects a sponsor over the max length', () => {
-    expect(() =>
-      parsePrizes([prize({ sponsor: 'x'.repeat(PRIZE_SPONSOR_MAX + 1) })]),
-    ).toThrow();
+    expect(
+      safeParsePrizes([prize({ sponsor: 'x'.repeat(PRIZE_SPONSOR_MAX + 1) })]),
+    ).toEqual([]);
   });
 
   it('rejects an unknown category', () => {
-    expect(() => parsePrizes([{ ...prize(), category: 'skins' }])).toThrow();
+    expect(safeParsePrizes([{ ...prize(), category: 'skins' }])).toEqual([]);
   });
 });
 
@@ -143,14 +142,13 @@ describe('sponsorLogoPath (#1052)', () => {
         sponsor: 'Klubbshoppen',
       },
     ];
-    const parsed = parsePrizes(legacy);
+    const parsed = safeParsePrizes(legacy);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].sponsorLogoPath).toBeNull();
-    expect(safeParsePrizes(legacy)).toHaveLength(1);
   });
 
   it('keeps a logo path string and a null', () => {
-    const parsed = parsePrizes([
+    const parsed = safeParsePrizes([
       prize({ position: 1, sponsorLogoPath: 'uid-123/logo.webp' }),
       prize({ position: 2, sponsorLogoPath: null }),
     ]);
@@ -159,13 +157,13 @@ describe('sponsorLogoPath (#1052)', () => {
   });
 
   it('rejects an empty-string logo path', () => {
-    expect(() => parsePrizes([prize({ sponsorLogoPath: '' })])).toThrow();
+    expect(safeParsePrizes([prize({ sponsorLogoPath: '' })])).toEqual([]);
   });
 
   it('rejects a logo path over the max length', () => {
-    expect(() =>
-      parsePrizes([prize({ sponsorLogoPath: 'x'.repeat(PRIZE_LOGO_PATH_MAX + 1) })]),
-    ).toThrow();
+    expect(
+      safeParsePrizes([prize({ sponsorLogoPath: 'x'.repeat(PRIZE_LOGO_PATH_MAX + 1) })]),
+    ).toEqual([]);
   });
 });
 

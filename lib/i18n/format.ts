@@ -566,9 +566,9 @@ export function formatHHMMOslo(input: DateInput): string {
  * Returns which tier the remaining time falls in plus the numbers to render —
  * the actual phrasing lives in the message catalog (`game.waitingRoom.countdown.*`)
  * so every locale gets its own wording via next-intl ICU, with no hardcoded
- * English (the N-locale criterion, #845). The arithmetic mirrors the legacy
- * `formatCountdown` (lib/format/countdown.ts) so the catalog's `no` strings
- * render byte-identically to it.
+ * English (the N-locale criterion, #845). The arithmetic mirrors
+ * `formatCountdown` (lib/format/countdown.ts, the app's waiting-room countdown
+ * since #2219) so the catalog's `no` strings render byte-identically to it.
  */
 export type CountdownParts =
   | { kind: 'soon' }

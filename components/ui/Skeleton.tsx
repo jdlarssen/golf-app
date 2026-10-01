@@ -38,9 +38,3 @@ export function SkeletonCircle(props: SkeletonProps) {
     <Skeleton {...props} className={`rounded-full ${props.className ?? ''}`} />
   );
 }
-
-export function SkeletonPill(props: SkeletonProps) {
-  return (
-    <Skeleton {...props} className={`rounded-full ${props.className ?? ''}`} />
-  );
-}

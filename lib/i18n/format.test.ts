@@ -310,8 +310,9 @@ describe('countdownParts', () => {
 });
 
 // Renders the countdown via the message catalog (the production path) and
-// proves the `no` strings are byte-identical to the legacy formatCountdown
-// helper, while `en` renders idiomatic English — no hardcoded prose in the TS.
+// proves the `no` strings are byte-identical to formatCountdown (the app's
+// waiting-room countdown, #2219), while `en` renders idiomatic English — no
+// hardcoded prose in the TS.
 describe('countdown catalog render', () => {
   const NS = 'game.waitingRoom.countdown';
   const noT = createTranslator({
@@ -354,7 +355,7 @@ describe('countdown catalog render', () => {
     [4 * 24 * 60 * 60_000],
     [36 * 60 * 60_000],
     [86_400_000],
-  ])('no render == legacy formatCountdown (%s ms)', (ms) => {
+  ])('no render == formatCountdown (%s ms)', (ms) => {
     expect(render(noT, ms)).toBe(formatCountdown(ms));
   });
 

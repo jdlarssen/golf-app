@@ -3,23 +3,15 @@
 // Solo → grid fra format_intent_mapping; Cup → multi-select av cup-eligible
 // formats + lag-oppsett).
 //
-// Foundation for F2 (issue #272). Ikke konsumert ennå — neste chunks legger
-// til IntentSelector, FormatGrid, CupSetup som faktisk leser denne.
+// `parseIntent` leser `?intent=` fra URL-en i admin/games/new/page.tsx og
+// opprett-spill/page.tsx (F2, #272); ukjent verdi gir undefined.
 
 export type Intent = 'kompis' | 'klubb' | 'cup' | 'solo';
-
-export const INTENTS: readonly Intent[] = ['kompis', 'klubb', 'cup', 'solo'] as const;
 
 export function parseIntent(raw: string | undefined): Intent | undefined {
   if (raw === 'kompis' || raw === 'klubb' || raw === 'cup' || raw === 'solo') {
     return raw;
   }
   return undefined;
-}
-
-// Cup-intent setter game_mode-løypet til en match-format-velger heller enn
-// en standard format-grid. Brukes av wizard og format-mapping-konsumenter.
-export function isCupIntent(intent: Intent | undefined): boolean {
-  return intent === 'cup';
 }
 
