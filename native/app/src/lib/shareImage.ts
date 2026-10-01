@@ -13,11 +13,14 @@
 // `requireOptionalNativeModule` svarer `null` og kaster aldri), og laster
 // pakkene bare når de gjør det. Uten dem vises ikke knappen i det hele tatt.
 //
-// **Avbrutt deling er ingen feil.** iOS løser løftet fra `shareAsync` både
-// når spilleren deler og når arket lukkes (`SharingModule.swift`).
+// **Avbrutt deling er ingen feil, men heller ingen deling.** På iOS åpnes
+// arket med React Natives `Share`, som svarer `sharedAction` når spilleren
+// delte og `dismissedAction` når arket ble lukket (#2265: Kavalkaden teller
+// bare ekte delinger, som webben). `expo-sharing` svarer likt på begge
+// (`SharingModule.swift`), så den brukes bare utenfor iOS, der vi ikke vet.
 import { requireOptionalNativeModule } from 'expo';
 import type { RefObject } from 'react';
-import { NativeModules, TurboModuleRegistry, type View } from 'react-native';
+import { NativeModules, Platform, Share, TurboModuleRegistry, type View } from 'react-native';
 
 /**
  * Finnes begge de native delene i dette bygget? View-shot slås opp nøyaktig
@@ -43,7 +46,8 @@ export function toFileUrl(path: string): string {
   return path.startsWith('file://') ? path : `file://${path}`;
 }
 
-export type ShareImageResult = { ok: true } | { ok: false };
+/** `shared`: spilleren delte bildet, i stedet for å lukke arket. */
+export type ShareImageResult = { ok: true; shared: boolean } | { ok: false };
 
 /** Ta bilde av kortet (PNG) og åpne delearket med det. Kaster aldri. */
 export async function shareViewImage(card: RefObject<View | null>): Promise<ShareImageResult> {
@@ -56,8 +60,13 @@ export async function shareViewImage(card: RefObject<View | null>): Promise<Shar
     const sharing = require('expo-sharing') as typeof import('expo-sharing');
     /* eslint-enable @typescript-eslint/no-require-imports */
     const path = await captureRef(card, { format: 'png', result: 'tmpfile' });
-    await sharing.shareAsync(toFileUrl(path), { UTI: 'public.png', mimeType: 'image/png' });
-    return { ok: true };
+    const url = toFileUrl(path);
+    if (Platform.OS === 'ios') {
+      const { action } = await Share.share({ url });
+      return { ok: true, shared: action === Share.sharedAction };
+    }
+    await sharing.shareAsync(url, { UTI: 'public.png', mimeType: 'image/png' });
+    return { ok: true, shared: true };
   } catch {
     return { ok: false };
   }

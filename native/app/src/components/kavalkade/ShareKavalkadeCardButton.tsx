@@ -4,7 +4,8 @@
 // Bildet tas av deleversjonen (`KavalkadeShareCard`), som ligger utenfor
 // skjermen og er skjult for skjermleseren. Hjelperen er den bag-taggen bruker
 // (`lib/shareImage.ts`), så et bygg uten de native delene viser ingen knapp.
-// Når arket har åpnet, telles delingen i `kavalkade_shares`, best-effort.
+// Delte spilleren bildet, telles delingen i `kavalkade_shares`, best-effort;
+// et lukket ark telles ikke, som på webben.
 // Feiler bildet eller arket, står en linje under knappen.
 //
 // Knappen vises bare for kort som har en deleversjon: kallstedet sender
@@ -33,8 +34,8 @@ export function ShareKavalkadeCardButton({ year, model }: { year: number; model:
     setFailed(false);
     const result = await shareViewImage(card);
     setBusy(false);
-    if (result.ok) void logKavalkadeShare(year, model.kind);
-    else setFailed(true);
+    if (!result.ok) setFailed(true);
+    else if (result.shared) void logKavalkadeShare(year, model.kind);
   }, [year, model.kind]);
 
   if (!available) return null;

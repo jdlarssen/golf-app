@@ -35,7 +35,7 @@ describe('ShareBagTagButton', () => {
 
   it('deler deleversjonen av kortet, viser feil under knappen, og skjuler seg i et bygg uten modulene', async () => {
     canShareMock.mockReturnValue(true);
-    shareMock.mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true });
+    shareMock.mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true, shared: true });
     const { unmount } = await render(<ShareBagTagButton model={MODEL} trend={null} />);
 
     // Deleversjonen står i treet, skjult for skjermleseren, med ordmerket.
