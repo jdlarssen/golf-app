@@ -1242,6 +1242,7 @@ Web-ruta må kjøre i **prod-server-modus** (dev gir falske røde):
 ```bash
 source ~/.nvm/nvm.sh && nvm use 22
 set -a && source .env.staging.local && set +a
+export NEXT_PUBLIC_ALLOW_SELF_REGISTRATION=true NEXT_PUBLIC_PASSKEYS=on  # samme som prod
 npm run build && npx next start -p 3111
 ```
 
