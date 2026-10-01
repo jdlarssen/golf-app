@@ -52,19 +52,17 @@ beforeEach(() => {
 });
 
 describe('sendRequest', () => {
+  // #2263: an accepted reverse request is a friendship the other side asked
+  // for, so it carries via='accept' and the inbox words it that way.
   it.each([
-    ['requested', 'friend_request'],
-    ['accepted', 'friend_accepted'],
-  ] as const)('«%s» varsler mottakeren med %s', async (status, kind) => {
+    ['requested', 'friend_request', { actor_id: ME, actor_name: 'Jørgen' }],
+    ['accepted', 'friend_accepted', { actor_id: ME, actor_name: 'Jørgen', via: 'accept' }],
+  ] as const)('«%s» varsler mottakeren med %s', async (status, kind, payload) => {
     const client = buildSupabaseMock([], { send_friend_request: status });
 
     expect(await sendRequest(client as never, ME, OTHER)).toBe(status);
     expect(client.rpc).toHaveBeenCalledWith('send_friend_request', { p_addressee: OTHER });
-    expect(notifyMock).toHaveBeenCalledWith({
-      userId: OTHER,
-      kind,
-      payload: { actor_id: ME, actor_name: 'Jørgen' },
-    });
+    expect(notifyMock).toHaveBeenCalledWith({ userId: OTHER, kind, payload });
   });
 
   it.each(['already_friends', 'already_pending', 'self', 'not_found'] as const)(
@@ -150,9 +148,11 @@ describe('respond', () => {
       p_request_id: 'req-1',
       p_accept: true,
     });
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: OTHER, kind: 'friend_accepted' }),
-    );
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: OTHER,
+      kind: 'friend_accepted',
+      payload: { actor_id: ME, actor_name: 'Jørgen', via: 'accept' },
+    });
   });
 
   it.each(['declined', 'already_decided', 'not_found'] as const)('«%s» varsler ingen', async (status) => {

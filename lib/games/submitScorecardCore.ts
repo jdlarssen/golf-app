@@ -431,6 +431,9 @@ export async function submitScorecardCore(
                 game_id: gameId,
                 game_name: gameName,
                 submitter_name: cardName,
+                // #2263: the card owner, never the deliverer — the inbox checks
+                // whether THIS card still waits for approval.
+                submitter_id: cardUserId,
               },
             }),
           ),
@@ -465,6 +468,7 @@ export async function submitScorecardCore(
             game_id: gameId,
             game_name: gameName,
             player_name: cardName,
+            player_id: cardUserId,
           },
         }).then((r) => ({ userId: a.id, sendMail: r.shouldAlsoSendMail })),
       ),

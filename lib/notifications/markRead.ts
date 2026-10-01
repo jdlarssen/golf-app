@@ -81,3 +81,43 @@ export async function markNotificationsRead(
   revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
 }
+
+export type MarkIdsReadOpts = {
+  userId: string;
+  /** The rows the caller just saw as unread — a group in the inbox (#2263). */
+  ids: string[];
+};
+
+/**
+ * Marks exactly these notifications read for `userId` (#2263, a tap on a
+ * group row in the inbox). By id rather than kind + game: one game can hold a
+ * group of signup heads-ups AND a pending request that still needs an answer,
+ * and marking the group must not mark the request.
+ *
+ * Same authz as `markNotificationsRead`: the admin client, always scoped
+ * `.eq('user_id', userId)` with a server-derived id. Same 0-row rule as its
+ * single-id branch (#1665): the caller points at rows it just saw unread, so a
+ * write that touched none was filtered away and reports `false`.
+ */
+export async function markNotificationIdsRead(opts: MarkIdsReadOpts): Promise<boolean> {
+  if (opts.ids.length === 0) return true;
+
+  const { data, error } = await getAdminClient()
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', opts.userId)
+    .in('id', opts.ids)
+    .is('read_at', null)
+    .select('id');
+  if (error) {
+    console.error('[notifications] markIdsRead failed', error);
+    return false;
+  }
+  if ((data?.length ?? 0) === 0) {
+    console.error('[notifications] markIdsRead matched 0 rows', { count: opts.ids.length });
+    return false;
+  }
+
+  revalidateTag(`notifications-${opts.userId}`, 'max');
+  return true;
+}

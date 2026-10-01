@@ -281,4 +281,55 @@ describe('parseNotificationPayload', () => {
       expect(() => parseNotificationPayload('idea_built', {})).toThrow();
     });
   });
+
+  // #2263: the inbox groups and checks delivered cards per card owner, and words
+  // a new friendship by how it came about. The fields are optional so rows
+  // written before them still parse — and zod strips unknown keys, so a field
+  // missing from the schema would never reach the row.
+  describe('innboks-feltene (#2263)', () => {
+    const gameId = '11111111-1111-1111-1111-111111111111';
+    const ownerId = '22222222-2222-2222-2222-222222222222';
+
+    it('peer_approval_request beholder submitter_id', () => {
+      const { payload } = parseNotificationPayload('peer_approval_request', {
+        game_id: gameId,
+        game_name: 'Lørdagsrunden',
+        submitter_name: 'Ola',
+        submitter_id: ownerId,
+      });
+      expect(payload.submitter_id).toBe(ownerId);
+    });
+
+    it('scorecard_submitted beholder player_id', () => {
+      const { payload } = parseNotificationPayload('scorecard_submitted', {
+        game_id: gameId,
+        game_name: 'Lørdagsrunden',
+        player_name: 'Ola',
+        player_id: ownerId,
+      });
+      expect(payload.player_id).toBe(ownerId);
+    });
+
+    it.each(['link', 'accept'] as const)('friend_accepted beholder via=%s', (via) => {
+      const { payload } = parseNotificationPayload('friend_accepted', {
+        actor_id: ownerId,
+        actor_name: 'Anders',
+        via,
+      });
+      expect(payload.via).toBe(via);
+    });
+
+    it('friend_accepted avviser ukjent via', () => {
+      expect(() =>
+        parseNotificationPayload('friend_accepted', { actor_id: ownerId, via: 'magic' }),
+      ).toThrow();
+    });
+
+    it('gamle rader uten feltene parser fortsatt', () => {
+      expect(
+        parseNotificationPayload('peer_approval_request', { game_id: gameId, game_name: 'X' })
+          .payload.submitter_id,
+      ).toBeUndefined();
+    });
+  });
 });

@@ -3,6 +3,7 @@ import {
   formatTeeOffDate as formatTeeOffDateNb,
   formatTeeOffTime as formatTeeOffTimeNb,
   formatDayMonth as formatDayMonthNb,
+  osloParts,
 } from '@/lib/format/teeOff';
 import {
   formatShortDateNb as formatShortDateNbLegacy,
@@ -334,7 +335,18 @@ export function formatRelativeLocale(
   iso: string,
   locale: AppLocale,
   nowMs: number = Date.now(),
+  opts: { shortMinutes?: boolean } = {},
 ): string {
+  // #2263: the inbox writes minutes short («for 2 min siden» / «2 min ago»),
+  // as the design has it. Hand-written rather than Intl `style: 'short'`, which
+  // would also shorten hours («for 1 t siden») and varies between engines.
+  if (opts.shortMinutes) {
+    const diff = Math.max(0, nowMs - new Date(iso).getTime());
+    if (diff >= MINUTE_MS && diff < HOUR_MS) {
+      const n = Math.round(diff / MINUTE_MS);
+      if (n < 60) return locale === 'no' ? `for ${n} min siden` : `${n} min ago`;
+    }
+  }
   if (locale === 'no') return formatRelativeNbLegacy(iso, nowMs);
 
   const diff = Math.max(0, nowMs - new Date(iso).getTime());
@@ -348,6 +360,45 @@ export function formatRelativeLocale(
   if (diff < WEEK_MS) return rtf.format(-Math.round(diff / DAY_MS), 'day');
   if (diff < MONTH_MS) return rtf.format(-Math.round(diff / WEEK_MS), 'week');
   return rtf.format(-Math.round(diff / MONTH_MS), 'month');
+}
+
+/** Days since the epoch for the Oslo calendar date of an instant. */
+function osloDayNumber(ms: number): number {
+  const p = osloParts(new Date(ms));
+  return Math.round(Date.UTC(p.year, p.month, p.day) / DAY_MS);
+}
+
+/**
+ * Relative time for something from an earlier day, counted in Oslo calendar
+ * days rather than hours (#2263, the inbox's TIDLIGERE section): the day
+ * before is «i går» / «yesterday» whether it was 23:00 or 08:00, two to six
+ * days back is «for N dager siden» / «N days ago», and a week or more uses the
+ * week/month scale of `formatRelativeLocale`. An instant on the same Oslo day
+ * falls back to `formatRelativeLocale` with short minutes.
+ *
+ * Oslo-pinned (#648), so the UTC server and the browser agree on the day.
+ */
+export function formatRelativeDayLocale(
+  iso: string,
+  locale: AppLocale,
+  nowMs: number = Date.now(),
+): string {
+  const thenMs = new Date(iso).getTime();
+  const days = Math.max(0, osloDayNumber(nowMs) - osloDayNumber(thenMs));
+  if (days === 0) return formatRelativeLocale(iso, locale, nowMs, { shortMinutes: true });
+
+  const tag = intlLocaleTag(locale);
+  if (days === 1) {
+    return new Intl.RelativeTimeFormat(tag, { numeric: 'auto' }).format(-1, 'day');
+  }
+  if (days < 7) {
+    // Intl's nb-NO says «i forgårs» / «for 3 døgn siden»; the inbox wants days.
+    if (locale === 'no') return `for ${days} dager siden`;
+    return new Intl.RelativeTimeFormat(tag, { numeric: 'always' }).format(-days, 'day');
+  }
+  const rtf = new Intl.RelativeTimeFormat(tag, { numeric: 'auto' });
+  if (days < 30) return rtf.format(-Math.round(days / 7), 'week');
+  return rtf.format(-Math.round(days / 30), 'month');
 }
 
 // ---------------------------------------------------------------------------

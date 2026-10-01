@@ -52,7 +52,8 @@ export async function connectFriend(formData: FormData) {
       await notify({
         userId: result.owner_id,
         kind: 'friend_accepted',
-        payload: { actor_id: user.id, actor_name: actorName },
+        // #2263: they used your friend link — the inbox says «la deg til som venn».
+        payload: { actor_id: user.id, actor_name: actorName, via: 'link' },
       });
     } catch (err) {
       console.error('[venner] connect notify failed', err);

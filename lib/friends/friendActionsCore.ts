@@ -60,7 +60,12 @@ async function notifyFriend(
       kind,
       // actor_name may be null — NotificationCard renders the catalog fallback
       // at render time in the correct locale (§4 payload-fallback contract).
-      payload: { actor_id: actorId, actor_name: actorName },
+      // #2263: both accept paths here are «they accepted your request»; the
+      // friend-link path (venner/legg-til) sends via='link'.
+      payload:
+        kind === 'friend_accepted'
+          ? { actor_id: actorId, actor_name: actorName, via: 'accept' }
+          : { actor_id: actorId, actor_name: actorName },
     });
   } catch (err) {
     console.error('[venner] notify failed', err);
