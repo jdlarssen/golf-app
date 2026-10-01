@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { ScrollToAnchorOnStatus } from '@/components/ui/ScrollToAnchorOnStatus';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
@@ -132,6 +133,34 @@ export default async function CreatorSpillerePage({
     ? await supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
     : { data: null as { name: string } | null };
   const courseName = courseRes.data?.name ?? null;
+
+  // #2440: the way back to the signup requests once their varsel is gone, on
+  // games where the organiser answers requests («Forespørsel — jeg godkjenner»).
+  // RLS lets the creator read both (0071, is_game_creator_or_admin). A failed
+  // read hides the link rather than claiming «0 venter».
+  const [modeRes, pendingRes] = await Promise.all([
+    supabase
+      .from('games')
+      .select('registration_mode')
+      .eq('id', gameId)
+      .maybeSingle<{ registration_mode: 'invite_only' | 'manual_approval' | 'open' }>(),
+    supabase
+      .from('game_registration_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('game_id', gameId)
+      .eq('status', 'pending'),
+  ]);
+  if (modeRes.error || pendingRes.error) {
+    console.error('[spillere] signup link reads failed', {
+      gameId,
+      modeError: modeRes.error,
+      pendingError: pendingRes.error,
+    });
+  }
+  const pendingSignups =
+    !modeRes.error && !pendingRes.error && modeRes.data?.registration_mode === 'manual_approval'
+      ? (pendingRes.count ?? 0)
+      : null;
   const status = game.status;
   const isPreStart = status === 'draft' || status === 'scheduled';
   // #1937: a cup match's roster is changed by swapping players on the cup,
@@ -280,6 +309,19 @@ export default async function CreatorSpillerePage({
 
       <div className="space-y-6">
         {banner}
+
+        {pendingSignups !== null && (
+          <SmartLink
+            href={`/admin/games/${gameId}/signups`}
+            data-testid="signups-link"
+            className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+          >
+            <span>{t('signupsLink')}</span>
+            <span className="tabular-nums text-muted">
+              {t('signupsWaiting', { count: pendingSignups })}
+            </span>
+          </SmartLink>
+        )}
 
         {/* ── Roster ───────────────────────────────────────────────── */}
         <section>
