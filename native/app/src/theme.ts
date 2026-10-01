@@ -111,6 +111,10 @@ export type ThemeColors = {
    * «▲ 3,8 slag bedre …»). Finnes bare i appen, og låses i `theme.test.ts`.
    */
   formUp: string;
+  /** Lasteskjelettet (#2265, Kavalkaden): webbens `--skel-base`. */
+  skeleton: string;
+  /** Glansen som sveiper over skjelettet: webbens `--skel-tint`. */
+  skeletonTint: string;
 };
 
 /**
@@ -152,6 +156,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     onStrongWarm: '#ECE5D2',
     surface2: '#F0EDE5',
     formUp: '#1F6B3A',
+    skeleton: '#ECE5D2',
+    skeletonTint: '#F3EDDD',
   },
   dark: {
     bg: '#14201A',
@@ -184,6 +190,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     onStrongWarm: '#ECE5D2',
     surface2: '#243429',
     formUp: '#7DAA8A',
+    skeleton: '#243828',
+    skeletonTint: '#2F4734',
   },
 };
 
@@ -402,6 +410,9 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   surface2: '#FFFFFF',
   // Formsetningen i Rundedagboka (#2265). Hullsiden tegner den ikke; lys-verdien.
   formUp: '#1F6B3A',
+  // Kavalkadens lasteskjelett (#2265). Hullsiden tegner det ikke; lys-verdien.
+  skeleton: '#ECE5D2',
+  skeletonTint: '#F3EDDD',
 };
 
 /**

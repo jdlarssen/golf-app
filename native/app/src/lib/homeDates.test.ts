@@ -6,6 +6,7 @@
 // sonen koden faktisk regner i.
 import { formatShortDateNb } from '../../../../lib/format/date';
 import {
+  formatDayMonthLong,
   diaryMonthLabel,
   formatDiaryDay,
   formatStubClock,
@@ -146,5 +147,14 @@ describe('diaryMonthLabel', () => {
 
   it('tar med årstallet for et annet år', () => {
     expect(diaryMonthLabel(2025, 8, 2026)).toBe('september 2025');
+  });
+});
+
+describe('formatDayMonthLong', () => {
+  it('writes the whole month, in the phone’s own time', () => {
+    expect(formatDayMonthLong(new Date(2026, 5, 14, 12).toISOString())).toBe('14. juni');
+    expect(formatDayMonthLong(new Date(2026, 11, 23, 23, 30).toISOString())).toBe('23. desember');
+    expect(formatDayMonthLong(null)).toBeNull();
+    expect(formatDayMonthLong('ikke en dato')).toBeNull();
   });
 });

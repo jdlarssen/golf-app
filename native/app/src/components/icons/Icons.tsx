@@ -159,6 +159,18 @@ export const DelIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/**
+ * Deleikonet på webbens «Del kortet» (#2265, Kavalkaden): pil opp av et brett.
+ * Strekene er webbens, 2 i strek.
+ */
+export const ShareCardIcon = (props: IconProps) => (
+  <LineIcon strokeWidth={2} {...props}>
+    <Path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+    <Path d="M12 3v13" />
+    <Path d="m7 8 5-5 5 5" />
+  </LineIcon>
+);
+
 /** Levert/godkjent — statusglyfen i tette rader. */
 export const HakeIcon = (props: IconProps) => (
   <LineIcon {...props}>
