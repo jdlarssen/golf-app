@@ -30,6 +30,7 @@ import { OFFLINE_NOTE } from './rosterCopy';
 import {
   ACCOUNT_TEXT,
   DISPLAY_NAME_FALLBACK,
+  deleteBlockWebLink,
   describeDeleteBlock,
   describeDeleteFailure,
   type AccountDeleteFailure,
@@ -209,6 +210,26 @@ describe('ACCOUNT_TEXT', () => {
     expect(
       `${ACCOUNT_TEXT.confirmLead}${DISPLAY_NAME_FALLBACK}${ACCOUNT_TEXT.confirmTrail}`,
     ).toBe('Du er i ferd med å slette kontoen din permanent. Handlingen kan ikke angres.');
+  });
+});
+
+// #2216: en sperre som sier «gjør det på nettsiden» uten en knapp dit, er en
+// blindvei (#1891). Bare stien låses; etikettene er app-egne og kan endres.
+describe('deleteBlockWebLink', () => {
+  const EXPECTED_PATH: Partial<Record<AccountDeleteFailure, string>> = {
+    sole_club_owner: '/klubber',
+    active_engagements: '/admin',
+  };
+
+  it.each(FAILURES)('«%s» gir riktig side på nettsiden, eller ingen knapp', (reason) => {
+    const link = deleteBlockWebLink(reason);
+    const path = EXPECTED_PATH[reason];
+    if (path) {
+      expect(link?.path).toBe(path);
+      expect(isFinishedSentence(link?.label ?? '')).toBe(true);
+    } else {
+      expect(link).toBeNull();
+    }
   });
 });
 

@@ -33,6 +33,12 @@ export type WebUrlResult =
 
 export type OpenWebResult = { ok: true } | { ok: false; reason: WebLinkFailure };
 
+/** En knapp til en side på nettsiden: hva den heter, og hvor den går. */
+export interface WebLinkTarget {
+  label: string;
+  path: string;
+}
+
 /**
  * Web-deployens adresse uten etterfølgende skråstreker, eller `null` når
  * bygget mangler den.
