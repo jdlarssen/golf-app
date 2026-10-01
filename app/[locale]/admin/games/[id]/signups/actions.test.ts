@@ -2,13 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
   makeLocaleRedirectMock,
+  makeRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
 /**
  * Unit-tester for approve/reject server-actions på /admin/games/[id]/signups
  * (#199). Verifiserer:
- *  - Auth via requireAdmin (admin-only).
+ *  - Auth i kjernen: admin eller spillets arrangør (#2440).
  *  - Status gate: kun pending-requests kan avgjøres.
  *  - Game-lock gate: active/finished blokkerer.
  *  - Cascade for kaptein-rader (alle team-children oppdateres samme status).
@@ -27,6 +28,11 @@ vi.mock('@/i18n/navigation', () => ({
 }));
 vi.mock('next-intl/server', () => ({
   getLocale: async () => 'no',
+}));
+// The locale-free redirect to `/` for someone who may not answer (#2440).
+const rootRedirectMock = makeRedirectMock();
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => rootRedirectMock(url),
 }));
 
 const revalidateTagMock = vi.fn();
@@ -512,6 +518,115 @@ describe('approveRequest', () => {
     expect(lastRedirect()).toBe(
       `/admin/games/${GAME_ID}/signups?error=game_locked`,
     );
+  });
+});
+
+/**
+ * #2440: the organiser without the admin role answers requests to their own
+ * game here; anyone else who is not admin is sent to `/` with nothing
+ * written. The rule lives in registrationDecisionCore — this proves the page's
+ * actions follow it and redirect where the caller can land.
+ */
+describe('#2440: arrangøren uten admin-rolle', () => {
+  const ORGANISER_ID = '99999999-9999-9999-9999-999999999999';
+  const STRANGER_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  const soloRequest = {
+    data: {
+      id: SOLO_REQUEST_ID,
+      game_id: GAME_ID,
+      user_id: SOLO_USER_ID,
+      status: 'pending',
+      is_team_captain: false,
+      team_name: null,
+      team_request_id: null,
+    },
+    error: null,
+  };
+  const organisersGame = (status = 'scheduled') => ({
+    data: { id: GAME_ID, name: 'Vinter-cup', status, created_by: ORGANISER_ID },
+    error: null,
+  });
+
+  function authedAs(userId: string): void {
+    serverMock = buildSupabaseMock([{ data: { is_admin: false, name: 'Ola' }, error: null }]);
+    (serverMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: userId, email: 'ola@example.test' } },
+    });
+  }
+
+  const wrote = () =>
+    adminMock.__fromCalls.some((c) => ['update', 'upsert', 'insert', 'delete'].includes(c.method));
+
+  it('arrangøren godkjenner på sitt eget spill → ?status=approved, avgjort av arrangøren', async () => {
+    authedAs(ORGANISER_ID);
+    adminMock = buildSupabaseMock([
+      soloRequest,
+      organisersGame(),
+      { data: [{ id: SOLO_REQUEST_ID }], error: null },
+      { data: [{ user_id: SOLO_USER_ID }], error: null },
+    ]);
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=approved`);
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toMatchObject({ status: 'approved', decided_by_user_id: ORGANISER_ID });
+  });
+
+  it('arrangøren avviser på sitt eget spill → ?status=rejected', async () => {
+    authedAs(ORGANISER_ID);
+    adminMock = buildSupabaseMock([
+      soloRequest,
+      organisersGame(),
+      { data: [{ id: SOLO_REQUEST_ID }], error: null },
+    ]);
+
+    const { rejectRequest } = await import('./actions');
+    await expect(rejectRequest(SOLO_REQUEST_ID, fd({ reason: '' }))).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=rejected`);
+  });
+
+  it.each(['approve', 'reject'] as const)(
+    'fiendtlig kall (%s): verken admin eller arrangør → `/`, ingenting skrevet',
+    async (decision) => {
+      authedAs(STRANGER_ID);
+      adminMock = buildSupabaseMock([soloRequest, organisersGame()]);
+
+      const { approveRequest, rejectRequest } = await import('./actions');
+      const call =
+        decision === 'approve'
+          ? approveRequest(SOLO_REQUEST_ID)
+          : rejectRequest(SOLO_REQUEST_ID, fd({ reason: '' }));
+      await expect(call).rejects.toBeInstanceOf(RedirectError);
+
+      expect(rootRedirectMock).toHaveBeenCalledWith('/');
+      expect(redirectMock).not.toHaveBeenCalled();
+      expect(wrote()).toBe(false);
+      expect(notifyMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('forespørselen er borte → `/`, ikke den admin-lukkede /admin/games', async () => {
+    authedAs(ORGANISER_ID);
+    adminMock = buildSupabaseMock([{ data: null, error: null }], {}, { strictSingle: true });
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(rootRedirectMock).toHaveBeenCalledWith('/');
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it('spillet er startet → arrangøren får feilen på påmeldingssiden', async () => {
+    authedAs(ORGANISER_ID);
+    adminMock = buildSupabaseMock([soloRequest, organisersGame('active')]);
+
+    const { approveRequest } = await import('./actions');
+    await expect(approveRequest(SOLO_REQUEST_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?error=game_locked`);
+    expect(wrote()).toBe(false);
   });
 });
 

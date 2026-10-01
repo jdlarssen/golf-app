@@ -18,12 +18,13 @@ import type { getServerClient } from '@/lib/supabase/server';
  * functions and redirect exactly as before; the inbox's `decideRegistration`
  * turns the same result into a status line.
  *
- * Authz is unchanged and lives here now: only a global admin may answer
- * (`getRoleContext().isAdmin`, the check `requireAdmin` made). The writes go
- * through the admin client to avoid RLS recursion on the
- * `is_game_creator_or_admin` UPDATE policy (0041), so this role check is the
- * boundary in front of them — it runs before any read or write, and a
- * non-admin gets `forbidden` instead of a redirect.
+ * Authz lives here (#2440): a global admin may answer any request, and the
+ * game's organiser (`games.created_by`) may answer requests to their own game
+ * — the one the `registration_request` varsel goes to. The writes go through
+ * the admin client to avoid RLS recursion on the `is_game_creator_or_admin`
+ * UPDATE policy (0041), so this check is the whole boundary in front of them:
+ * it runs before any write and before anything that tells the caller about
+ * the game's state, and anyone else gets `forbidden` instead of a redirect.
  *
  * Cascade for team requests: deciding a captain's row decides every teammate
  * row (`team_request_id` = captain.id) the same way.
@@ -70,6 +71,12 @@ export type RegistrationDecisionContext = {
 /** Why loading a decision stopped. The codes are the signup page's `?error=`. */
 export type LoadFailure = 'forbidden' | 'request_not_found' | 'game_not_found' | 'game_locked';
 
+/**
+ * A stopped load. `isAdmin` lets the signup page pick a redirect the caller
+ * can open (`/admin/games` is admin-only) without reading the role again.
+ */
+export type LoadFailureResult = { ok: false; reason: LoadFailure; gameId: string | null; isAdmin: boolean };
+
 export type DecisionFailure =
   | LoadFailure
   | 'not_pending'
@@ -92,19 +99,24 @@ export type DecisionResult =
   | { ok: false; reason: DecisionFailure; gameId: string | null };
 
 /**
- * Role check, then the request and its game, then the game-state gate. Read
- * failures throw (#1445): a transient error is retryable at the error
- * boundary, not a claim that the request is gone. Only a genuine 0-row result
- * gives `request_not_found` / `game_not_found`.
+ * The role, then the request and its game, then who may answer (admin or the
+ * game's organiser), then the game-state gate. Read failures throw (#1445): a
+ * transient error is retryable at the error boundary, not a claim that the
+ * request is gone. Only a genuine 0-row result gives `request_not_found` /
+ * `game_not_found` — which a stranger can reach too; it only tells them
+ * whether a random uuid exists.
  */
 export async function loadRegistrationDecision(
   supabase: ServerSupabase,
   requestId: string,
-): Promise<
-  { ok: true; ctx: RegistrationDecisionContext } | { ok: false; reason: LoadFailure; gameId: string | null }
-> {
+): Promise<{ ok: true; ctx: RegistrationDecisionContext } | LoadFailureResult> {
   const role = await getRoleContext(supabase);
-  if (!role.isAdmin) return { ok: false, reason: 'forbidden', gameId: null };
+  const stop = (reason: LoadFailure, gameId: string | null = null): LoadFailureResult => ({
+    ok: false,
+    reason,
+    gameId,
+    isAdmin: role.isAdmin,
+  });
 
   const admin = getAdminClient();
 
@@ -120,7 +132,7 @@ export async function loadRegistrationDecision(
     });
     throw requestError;
   }
-  if (!request) return { ok: false, reason: 'request_not_found', gameId: null };
+  if (!request) return stop('request_not_found');
 
   const { data: game, error: gameError } = await admin
     .from('games')
@@ -134,12 +146,19 @@ export async function loadRegistrationDecision(
     });
     throw gameError;
   }
-  if (!game) return { ok: false, reason: 'game_not_found', gameId: null };
+  if (!game) return stop('game_not_found');
+
+  // #2440: the one rule for who may answer. Before the game-state gate, so
+  // someone else learns nothing about the game. A game without an organiser
+  // (created_by null) is admin-only.
+  if (!role.isAdmin && game.created_by !== role.userId) {
+    return stop('forbidden');
+  }
 
   // Approve/reject only makes sense before the round starts; after that the
   // roster is locked.
   if (game.status === 'active' || game.status === 'finished') {
-    return { ok: false, reason: 'game_locked', gameId: game.id };
+    return stop('game_locked', game.id);
   }
 
   return { ok: true, ctx: { request, game, actorId: role.userId } };

@@ -39,13 +39,19 @@ const GAME_ID = '55555555-5555-5555-5555-555555555555';
 const SOLO_REQ = '66666666-6666-6666-6666-666666666666';
 const CAPTAIN_REQ = '77777777-7777-7777-7777-777777777777';
 const MATE_REQ = '88888888-8888-8888-8888-888888888888';
+// #2440: an organiser without the admin role, and someone who is neither.
+const ORGANISER_ID = '99999999-9999-9999-9999-999999999999';
+const STRANGER_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-function server(isAdmin: boolean) {
+/** Every write the decision makes goes through the admin client (no RLS behind). */
+const WRITE_METHODS = new Set(['update', 'upsert', 'insert', 'delete']);
+
+function server(isAdmin: boolean, userId = ADMIN_ID) {
   const mock = buildSupabaseMock([
     { data: { is_admin: isAdmin, name: 'Jørgen' }, error: null },
   ]);
   (mock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-    data: { user: { id: ADMIN_ID, email: 'admin@example.test' } },
+    data: { user: { id: userId, email: 'caller@example.test' } },
   });
   return mock as never;
 }
@@ -74,8 +80,8 @@ const captainRequest = {
   },
   error: null,
 };
-const game = (status = 'scheduled') => ({
-  data: { id: GAME_ID, name: 'Onsdagsgolfen', status, created_by: ADMIN_ID },
+const game = (status = 'scheduled', createdBy: string | null = ADMIN_ID) => ({
+  data: { id: GAME_ID, name: 'Onsdagsgolfen', status, created_by: createdBy },
   error: null,
 });
 
@@ -89,21 +95,64 @@ async function load(isAdmin = true) {
 }
 
 describe('loadRegistrationDecision', () => {
-  it('a non-admin gets forbidden — no redirect, no read', async () => {
-    adminMock = buildSupabaseMock([]);
-    expect(await load(false)).toEqual({ ok: false, reason: 'forbidden', gameId: null });
+  it('#2440: someone who is neither admin nor organiser gets forbidden — no redirect, no write', async () => {
+    adminMock = buildSupabaseMock([soloRequest(), game('scheduled', ORGANISER_ID)]);
+    const { loadRegistrationDecision } = await import('./registrationDecisionCore');
+    expect(await loadRegistrationDecision(server(false, STRANGER_ID), SOLO_REQ)).toEqual({
+      ok: false,
+      reason: 'forbidden',
+      gameId: null,
+      isAdmin: false,
+    });
     expect(nextRedirectMock).not.toHaveBeenCalled();
-    expect(adminMock.__fromCalls).toHaveLength(0);
+    expect(adminMock.__fromCalls.some((c) => WRITE_METHODS.has(c.method))).toBe(false);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('#2440: a stranger learns nothing about the game — forbidden before game_locked', async () => {
+    adminMock = buildSupabaseMock([soloRequest(), game('active', ORGANISER_ID)]);
+    const { loadRegistrationDecision } = await import('./registrationDecisionCore');
+    expect(await loadRegistrationDecision(server(false, STRANGER_ID), SOLO_REQ)).toMatchObject({
+      ok: false,
+      reason: 'forbidden',
+      gameId: null,
+    });
+  });
+
+  it('#2440: a game without an organiser (created_by null) is admin-only', async () => {
+    adminMock = buildSupabaseMock([soloRequest(), game('scheduled', null)]);
+    const { loadRegistrationDecision } = await import('./registrationDecisionCore');
+    expect(await loadRegistrationDecision(server(false, STRANGER_ID), SOLO_REQ)).toMatchObject({
+      ok: false,
+      reason: 'forbidden',
+    });
+  });
+
+  it('#2440: the organiser without the admin role may answer; the actor is the organiser', async () => {
+    adminMock = buildSupabaseMock([soloRequest(), game('scheduled', ORGANISER_ID)]);
+    const { loadRegistrationDecision } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(false, ORGANISER_ID), SOLO_REQ);
+    expect(loaded).toMatchObject({ ok: true, ctx: { actorId: ORGANISER_ID } });
+  });
+
+  it('an admin may answer on a game someone else made', async () => {
+    adminMock = buildSupabaseMock([soloRequest(), game('scheduled', ORGANISER_ID)]);
+    expect(await load(true)).toMatchObject({ ok: true, ctx: { actorId: ADMIN_ID } });
   });
 
   it('a request that is gone → request_not_found', async () => {
     adminMock = buildSupabaseMock([{ data: null, error: null }]);
-    expect(await load()).toEqual({ ok: false, reason: 'request_not_found', gameId: null });
+    expect(await load()).toEqual({
+      ok: false,
+      reason: 'request_not_found',
+      gameId: null,
+      isAdmin: true,
+    });
   });
 
   it('a started game → game_locked', async () => {
     adminMock = buildSupabaseMock([soloRequest(), game('active')]);
-    expect(await load()).toEqual({ ok: false, reason: 'game_locked', gameId: GAME_ID });
+    expect(await load()).toEqual({ ok: false, reason: 'game_locked', gameId: GAME_ID, isAdmin: true });
   });
 
   it('a read error throws (#1445)', async () => {
@@ -245,6 +294,56 @@ describe('rejectRegistrationCore', () => {
       ok: false,
       reason: 'reason_too_long',
     });
+  });
+});
+
+/**
+ * #2440: the organiser without the admin role answers requests to their own
+ * game, from the signup page and from the inbox — the same core, the same
+ * writes, with the organiser as the one who decided.
+ */
+describe('the organiser (not admin) answers on their own game', () => {
+  it('approves a captain: the whole team goes in, decided by the organiser', async () => {
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      game('scheduled', ORGANISER_ID),
+      { data: [{ id: MATE_REQ, user_id: MATE_USER, status: 'pending' }], error: null },
+      { data: [], error: null },
+      { data: [{ id: CAPTAIN_REQ }, { id: MATE_REQ }], error: null },
+      { data: [{ user_id: CAPTAIN_USER }, { user_id: MATE_USER }], error: null },
+      { data: [], error: null },
+    ]);
+    const { loadRegistrationDecision, approveRegistrationCore } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(false, ORGANISER_ID), CAPTAIN_REQ);
+    if (!loaded.ok) throw new Error('load failed');
+
+    expect(await approveRegistrationCore(loaded.ctx)).toMatchObject({
+      ok: true,
+      outcome: 'approved',
+      teamName: 'Bogeybros',
+    });
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toMatchObject({ status: 'approved', decided_by_user_id: ORGANISER_ID });
+    const notified = notifyMock.mock.calls.map((c) => (c[0] as { userId: string }).userId);
+    expect(notified.sort()).toEqual([CAPTAIN_USER, MATE_USER].sort());
+  });
+
+  it('rejects a solo request, decided by the organiser', async () => {
+    adminMock = buildSupabaseMock([
+      soloRequest(),
+      game('scheduled', ORGANISER_ID),
+      { data: [{ id: SOLO_REQ }], error: null },
+    ]);
+    const { loadRegistrationDecision, rejectRegistrationCore } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(false, ORGANISER_ID), SOLO_REQ);
+    if (!loaded.ok) throw new Error('load failed');
+
+    expect(await rejectRegistrationCore(loaded.ctx, '')).toMatchObject({ ok: true, outcome: 'rejected' });
+    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
+    expect(update?.args[0]).toMatchObject({ status: 'rejected', decided_by_user_id: ORGANISER_ID });
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: SOLO_USER, kind: 'registration_rejected' }),
+    );
   });
 });
 

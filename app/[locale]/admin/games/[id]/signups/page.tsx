@@ -2,7 +2,7 @@ import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -47,8 +47,12 @@ type RawRequestRow = {
   rejection_reason: string | null;
   created_at: string;
   decided_at: string | null;
-  users: { name: string | null; nickname: string | null; email: string } | null;
+  // `email` only when the caller is admin (#2207, #2440).
+  users: { name: string | null; nickname: string | null; email?: string } | null;
 };
+
+const REQUEST_COLUMNS =
+  'id, user_id, status, team_name, is_team_captain, team_request_id, message, rejection_reason, created_at, decided_at';
 
 function toRequestRow(raw: RawRequestRow, unknownPlayer: string): RequestRow {
   const baseName = raw.users?.name ?? raw.users?.email ?? unknownPlayer;
@@ -84,8 +88,10 @@ export default async function PåmeldingerPage({
   const tDetail = await getTranslations('admin.game.detail');
   const locale = (await getLocale()) as AppLocale;
 
+  // #2440: the game's organiser answers requests to their own game here too —
+  // the `registration_request` varsel links to this page. Anyone else → `/`.
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  const role = await requireAdminOrCreator(supabase, id);
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -116,11 +122,15 @@ export default async function PåmeldingerPage({
   // FK-hint blir embedden tvetydig (PostgREST PGRST201) og hele fetchen feiler,
   // så fanen viser null forespørsler. Vi pinner `user_id`-FK-en — det er
   // forespørrerens navn vi rendrer i `toRequestRow`.
+  // #2207: the address is private. It is the fallback name for an admin only;
+  // an organiser without the admin role sees «Ukjent spiller» for a user
+  // without a name (#2440).
+  const requestColumns = role.isAdmin
+    ? `${REQUEST_COLUMNS}, users!game_registration_requests_user_id_fkey(name, nickname, email)`
+    : `${REQUEST_COLUMNS}, users!game_registration_requests_user_id_fkey(name, nickname)`;
   const { data: rawRequests, error: requestsError } = await getAdminClient()
     .from('game_registration_requests')
-    .select(
-      'id, user_id, status, team_name, is_team_captain, team_request_id, message, rejection_reason, created_at, decided_at, users!game_registration_requests_user_id_fkey(name, nickname, email)',
-    )
+    .select(requestColumns)
     .eq('game_id', id)
     .eq('status', activeTab.status)
     .order('created_at', { ascending: true })
@@ -169,14 +179,13 @@ export default async function PåmeldingerPage({
     : undefined;
 
   const gameLocked = game.status === 'active' || game.status === 'finished';
+  // The admin game page is admin-only; the organiser came from «Styr spillere».
+  const backHref = role.isAdmin ? `/admin/games/${id}` : `/games/${id}/spillere`;
   const isInviteOnly = game.registration_mode === 'invite_only';
 
   return (
     <AdminShell>
-      <TopBar
-        backHref={`/admin/games/${id}`}
-        kicker={t('topBarKicker')}
-      />
+      <TopBar backHref={backHref} kicker={t('topBarKicker')} />
 
       <BrassRibbon kicker={t('brassRibbon')} />
 
