@@ -108,22 +108,27 @@ select lives_ok(
 
 select torny_rls.as_service();
 
+-- The columns come from pg_attribute keyed on the relation, and the privilege
+-- is checked by attnum. Over information_schema.columns the planner could run
+-- has_column_privilege(..., 'public.users', <name>, ...) on auth.users columns
+-- before the schema filter, and fail with 42703 «instance_id» depending on the
+-- plan (#2222). Keyed like this there is no plan in which it sees another table.
 select is(
-  (select array_agg(c.column_name::text order by c.column_name)
-     from information_schema.columns c
-    where c.table_schema = 'public' and c.table_name = 'users'
-      and c.column_name not in ('email', 'friend_code')
-      and not has_column_privilege('authenticated', 'public.users', c.column_name, 'SELECT')),
+  (select array_agg(a.attname::text order by a.attname)
+     from pg_attribute a
+    where a.attrelid = 'public.users'::regclass and a.attnum > 0 and not a.attisdropped
+      and a.attname not in ('email', 'friend_code')
+      and not has_column_privilege('authenticated', 'public.users'::regclass, a.attnum, 'SELECT')),
   null::text[],
   'authenticated can SELECT every users column except email and friend_code (a new column needs its own grant)'
 );
 
 select is(
-  (select array_agg(c.column_name::text order by c.column_name)
-     from information_schema.columns c
-    where c.table_schema = 'public' and c.table_name = 'users'
-      and c.column_name not in ('email', 'friend_code')
-      and not has_column_privilege('anon', 'public.users', c.column_name, 'SELECT')),
+  (select array_agg(a.attname::text order by a.attname)
+     from pg_attribute a
+    where a.attrelid = 'public.users'::regclass and a.attnum > 0 and not a.attisdropped
+      and a.attname not in ('email', 'friend_code')
+      and not has_column_privilege('anon', 'public.users'::regclass, a.attnum, 'SELECT')),
   null::text[],
   'anon can SELECT every users column except email and friend_code'
 );
