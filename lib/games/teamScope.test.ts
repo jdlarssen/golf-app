@@ -315,16 +315,20 @@ describe('teamBuckets', () => {
   });
 
   it('grupperer aktive spillere på team_number og samler resten i unassigned', () => {
+    // Kallstedene sender visningsrader med ekstra felt (#2225); de skal komme
+    // ut uendret.
     const players = [
       p('u1', 1, 1),
       p('u2', 1, 1),
       p('u3', 5, 5),
       p('u4'),
       withdrawn('u5', 1, 1),
-    ];
+    ].map((r) => ({ ...r, displayName: `Navn ${r.user_id}` }));
     const { assigned, unassigned } = teamBuckets(players);
     expect(assigned.get(1)?.map((x) => x.user_id)).toEqual(['u1', 'u2']);
     expect(assigned.get(5)?.map((x) => x.user_id)).toEqual(['u3']);
     expect(unassigned.map((x) => x.user_id)).toEqual(['u4']);
+    expect(assigned.get(1)?.map((x) => x.displayName)).toEqual(['Navn u1', 'Navn u2']);
+    expect(unassigned[0].displayName).toBe('Navn u4');
   });
 });

@@ -3,13 +3,12 @@
 import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { suggestTeamAssignment, setPlayerTeam } from './flightActions';
+import { teamBuckets, type TeamPlayer } from '@/lib/games/teamScope';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
-type TeamPlayerDisplay = {
-  user_id: string;
+type TeamPlayerDisplay = Pick<TeamPlayer, 'user_id' | 'team_number' | 'withdrawn_at'> & {
   displayName: string;
-  team_number: number | null;
 };
 
 type Props = {
@@ -40,17 +39,7 @@ export function LagSeksjon({ gameId, players, teamSize }: Props) {
   );
   const teamOptions = Array.from({ length: maxTeam + 1 }, (_, i) => i + 1);
 
-  const byTeam = new Map<number, TeamPlayerDisplay[]>();
-  const unassigned: TeamPlayerDisplay[] = [];
-  for (const p of activePlayers) {
-    if (p.team_number == null) {
-      unassigned.push(p);
-    } else {
-      const bucket = byTeam.get(p.team_number) ?? [];
-      bucket.push(p);
-      byTeam.set(p.team_number, bucket);
-    }
-  }
+  const { assigned: byTeam, unassigned } = teamBuckets(activePlayers);
 
   const suggestAction = suggestTeamAssignment.bind(null, gameId);
 

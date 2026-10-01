@@ -915,6 +915,7 @@ async function PlayersSections({
               user_id: p.user_id,
               displayName: displayName(p),
               team_number: p.team_number,
+              withdrawn_at: p.withdrawn_at,
             }))}
           />
         );
@@ -950,6 +951,7 @@ async function PlayersSections({
                 players.find((r) => r.user_id === p.user_id)!,
               ),
               flight_number: p.flight_number,
+              withdrawn_at: p.withdrawn_at,
             }))}
           />
         );
