@@ -4,6 +4,8 @@
 // `fraunces-sizes.json` og filene i `assets/fonts`.
 /* eslint-disable @typescript-eslint/no-require-imports -- Metro laster fontfiler med `require` (Expo sin måte) */
 export const FRAUNCES_FILES = {
+  Fraunces400O16: require('../assets/fonts/Fraunces400O16.ttf'),
+  Fraunces400O18: require('../assets/fonts/Fraunces400O18.ttf'),
   Fraunces500O11: require('../assets/fonts/Fraunces500O11.ttf'),
   Fraunces500O12: require('../assets/fonts/Fraunces500O12.ttf'),
   Fraunces500O13: require('../assets/fonts/Fraunces500O13.ttf'),
@@ -13,9 +15,11 @@ export const FRAUNCES_FILES = {
   Fraunces500O19: require('../assets/fonts/Fraunces500O19.ttf'),
   Fraunces500O20: require('../assets/fonts/Fraunces500O20.ttf'),
   Fraunces500O22: require('../assets/fonts/Fraunces500O22.ttf'),
+  Fraunces500O24: require('../assets/fonts/Fraunces500O24.ttf'),
   Fraunces500O26: require('../assets/fonts/Fraunces500O26.ttf'),
   Fraunces500O28: require('../assets/fonts/Fraunces500O28.ttf'),
   Fraunces500O30: require('../assets/fonts/Fraunces500O30.ttf'),
+  Fraunces500O36: require('../assets/fonts/Fraunces500O36.ttf'),
   Fraunces600O9: require('../assets/fonts/Fraunces600O9.ttf'),
   Fraunces600O11: require('../assets/fonts/Fraunces600O11.ttf'),
   Fraunces600O12: require('../assets/fonts/Fraunces600O12.ttf'),

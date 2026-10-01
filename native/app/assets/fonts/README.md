@@ -7,7 +7,9 @@ ingen `fontVariationSettings`. Derfor har appen ett statisk snitt per vekt og
 størrelse den bruker, laget av den variable Fraunces (OFL, se
 `Fraunces-OFL.txt`) med `opsz` lik størrelsen, `SOFT` 0 og `WONK` 1:
 
-- `Fraunces500O{størrelse}.ttf` og `Fraunces600O{størrelse}.ttf`: teksten.
+- `Fraunces400O{størrelse}.ttf`, `Fraunces500O{størrelse}.ttf` og
+  `Fraunces600O{størrelse}.ttf`: teksten. Vekt 400 er webbens `font-serif` uten
+  vekt (Kavalkaden, #2265).
   Størrelsene står i `fraunces-sizes.json`, som appen også leser
   (`fraunces()` i `src/theme.ts`). Snittene har alle tegnene fonten har (624,
   som pakkens snitt), så et navn aldri mister Fraunces på grunn av en
