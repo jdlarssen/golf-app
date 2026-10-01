@@ -187,6 +187,18 @@ describe('frauncesLine', () => {
     expect(frauncesLine(64, 60.8, { ...px3, multiline: true }).lineHeight).toBeUndefined();
   });
 
+  // #2265 PR 2: når linja er høyere enn skriftens egen, løfter React Native
+  // grunnlinja med halve forskjellen (`RCTApplyBaselineOffsetForRange`), så
+  // teksten står midt i linja. Inter 14 i 22,75 (webbens `leading-relaxed`):
+  // iOS 22,75 − 3,38 − (22,75 − 16,94) / 2 = 16,47; Chromium: 16. Målt i
+  // simulatoren: uten løftet sto teksten 2,9 pt for høyt.
+  it('regner med løftet når linja er høyere enn skriftens egen', () => {
+    const box = interLine(14, 22.75, { ...px3, multiline: true });
+    expect(box).toMatchObject({ fontSize: 14, lineHeight: 22.75 });
+    expect(box.marginTop).toBeCloseTo(-0.47, 2);
+    expect(box.marginBottom).toBeCloseTo(0.47, 2);
+  });
+
   it('gjør det samme for Inter (ascent 1984 og descent 494 av 2048)', () => {
     // «HULL», 10 pt på nettleserens 12: grunnlinja 10; iOS 9,6875 rundet opp
     // til 10, i tekstens egen høyde 12,333.
@@ -441,5 +453,17 @@ describe('ThemeScope', () => {
     expect(on.result.current).toBe(SUNLIGHT_THEME);
     const off = await renderHook(() => useTheme(), { wrapper: EmptyScope });
     expect(off.result.current).toBe(themeFor('light'));
+  });
+});
+
+// #2265 PR 2: grunnlinja Chromium setter, så to tekster i ulik størrelse kan stå
+// på samme linje (Kavalkadens «70 slag»). Fraunces 36 i 45 har ascent 35 og
+// descent 9, og ledningen (1) halveres og rundes ned; Inter 14 i 20 har 14 og 3,
+// og 1,5 blir 1.
+describe('browserBaseline', () => {
+  it('puts the baseline where Chromium puts it in the line', () => {
+    expect(theme.browserBaseline('fraunces', 36, 45)).toBe(35);
+    expect(theme.browserBaseline('fraunces', 24, 30)).toBe(23);
+    expect(theme.browserBaseline('inter', 14, 20)).toBe(15);
   });
 });
