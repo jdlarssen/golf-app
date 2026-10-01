@@ -40,6 +40,7 @@ import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import { getGamesSocialProof } from '@/lib/games/getGameSocialProof';
+import { getRegistrationSeats } from '@/lib/games/getRegistrationSeats';
 import {
   getActiveGameCardData,
   type ActiveCardExtras,
@@ -215,17 +216,22 @@ async function HomeBody() {
       getUserStreak(supabase, userId!).catch(() => null),
     ]);
 
-  // #1193: sosialt bevis per funn-kort — ett samlet roster- + venne-oppslag for
-  // alle listede spill (klubb/venner/åpne). Lagt etter funn-fetchen fordi det
-  // trenger spill-idene derfra; batches så det blir to spørringer, ikke N.
-  const discoverySocialProof = await getGamesSocialProof(
-    [
-      ...discoveryData.clubGames,
-      ...discoveryData.friendGames,
-      ...discoveryData.openGames,
-    ].map((g) => g.id),
-    userId,
-  );
+  // #1193: sosialt bevis per funn-rad — ett samlet roster- + venne-oppslag for
+  // alle listede spill (klubb/venner/åpne). #2258: setene per rad (plass-linja,
+  // «Fullt») i samme runde. Lagt etter funn-fetchen fordi begge trenger
+  // spill-idene derfra; batches så det blir faste spørringer, ikke N.
+  const discoveryListed = [
+    ...discoveryData.clubGames,
+    ...discoveryData.friendGames,
+    ...discoveryData.openGames,
+  ];
+  const [discoverySocialProof, discoverySeats] = await Promise.all([
+    getGamesSocialProof(
+      discoveryListed.map((g) => g.id),
+      userId,
+    ),
+    getRegistrationSeats(discoveryListed),
+  ]);
 
   const { data: profile, error: profileError } = profileRes;
 
@@ -408,6 +414,8 @@ async function HomeBody() {
           <HomeDiscoverySection
             data={discoveryData}
             socialProof={discoverySocialProof}
+            seats={discoverySeats}
+            now={now}
           />
         )}
       </>
@@ -714,6 +722,8 @@ async function HomeBody() {
           <HomeDiscoverySection
             data={discoveryData}
             socialProof={discoverySocialProof}
+            seats={discoverySeats}
+            now={now}
             preview
           />
         ) : (

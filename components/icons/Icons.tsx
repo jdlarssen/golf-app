@@ -183,3 +183,14 @@ export const KlubbhusIcon = ({ size, ...rest }: IconProps) => (
     <path d="M 12 3.2 L 15.5 4.4 L 12 5.6" />
   </svg>
 );
+
+/**
+ * Plus (#2258) — the terminliste's «Lag din egen runde» card. Outside the
+ * ten-icon set's 1.5 stroke: the design draws it at 2, so callers pass
+ * `strokeWidth={2}`.
+ */
+export const PlusIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);

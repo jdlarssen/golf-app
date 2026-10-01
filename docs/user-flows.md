@@ -54,7 +54,10 @@ fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretaria
 møter et **adaptivt rom** (#892): en invitasjon til å arrangere (aldri en blindvei), klubbene sine,
 spillene/cupene de selv har satt opp, og Verktøy (Baner + Spillformater) nederst. **Opprett
 spill/bane bor inne i Klubbhuset, ikke på Hjem.** Hjem er play + discover-navet: dine spill +
-«Finn turneringer».
+«Finn turneringer». **Finn turneringer er terminlista** (#2258): én liste sortert på starttid og delt i
+dager («Lørdag 4. oktober · om 3 dager»), med filterbrikkene «Alle», «Denne helga» og «Klubben min»
+(`?vis=`), plass-linja der runden har tak og «Fullt» uten knapp når den er full. Hjem og forsiden viser
+de samme dagene og radene.
 
 **Klubber** (#442 + #50, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
 turneringer kan høre til. **Opprettelse er admin-gated** (#50): vanlige brukere oppretter ikke
@@ -78,8 +81,9 @@ admin, ingen identitet (≠ klubb). Du legger til venner på `/profile/venner` p
 med (forslag), e-post (ukjent adresse → tilbud om å invitere på samme e-post), eller en delbar lenke
 (`/venner/legg-til/[friend_code]`) som kobler den som åpner den direkte. Vennskap er gjensidig (forespørsel
 → mottaker godtar i Innboks); `friend_request`/`friend_accepted`-varsler dyplenker til vennelista. Venner
-blir søkbare i lag-påmelding (`getTeamCandidates` = venner ∪ co-players, #408) og synlige i en egen «Fra
-vennene dine»-seksjon i «Finn turneringer» — venners `open`/`manual_approval`-spill, aldri `invite_only`.
+blir søkbare i lag-påmelding (`getTeamCandidates` = venner ∪ co-players, #408), og venners
+`open`/`manual_approval`-spill (aldri `invite_only`) står i «Finn turneringer» med venne-linja («Jonas og
+Marte er med»).
 **Åpen for venner:** på et `manual_approval`-spill kan arrangøren huke av «Slipp venner direkte inn»
 (`games.let_friends_skip_gate`), og da melder venner seg på direkte forbi godkjennings-gaten mens
 ikke-venner fortsatt ber om plass.
