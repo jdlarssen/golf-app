@@ -10,7 +10,7 @@ import { displayNameForOthers } from '@/lib/users/displayName';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { signupSourceFromParam } from '@/lib/games/publicSignupVisibility';
-import { isMatchplayMode } from '@/lib/games/matchplaySides';
+import { isMatchplayMode, isMatchplaySideFull } from '@/lib/games/matchplaySides';
 import {
   gameModeSupportsTeams,
   REGISTRATION_MESSAGE_MAX,
@@ -310,7 +310,8 @@ export async function registerForOpenGame(
       console.error('[registerForOpenGame] side count failed', countError);
       return { ok: false, error: 'db_error' };
     }
-    if ((sideCount ?? 0) >= teamSize) {
+    // #2258: the rule's one home, shared with the terminliste's «Fullt».
+    if (isMatchplaySideFull(sideCount ?? 0, teamSize)) {
       return { ok: false, error: 'side_full' };
     }
     teamNumber = rawSide;

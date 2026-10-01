@@ -25,6 +25,7 @@ import {
   formatLongDateOsloLocale,
   formatMonthLongLocale,
   formatHHMMOslo,
+  formatWeekdayDayMonthOsloLocale,
 } from './format';
 import type { AppLocale } from '@/i18n/routing';
 import {
@@ -795,5 +796,38 @@ describe('formatShortOsloDateWithYearLocale (#2265)', () => {
     expect(formatShortOsloDateWithYearLocale('2026-09-01T10:00:00Z', 'no')).toBe('1. sep 2026');
     expect(formatShortOsloDateWithYearLocale('2026-06-01T10:00:00Z', 'en')).toBe('1 Jun 2026');
     expect(formatShortOsloDateWithYearLocale('2026-06-30T21:59:00Z', 'no')).toBe('30. jun 2026');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatWeekdayDayMonthOsloLocale (#2258)
+// ---------------------------------------------------------------------------
+// The terminliste's day heading: «Lørdag 4. oktober», capitalised, Oslo-pinned,
+// with the year only when it is not this year's.
+// ---------------------------------------------------------------------------
+
+describe('formatWeekdayDayMonthOsloLocale (#2258)', () => {
+  const NOW = new Date('2026-10-01T10:00:00Z');
+
+  it('gives a capitalised weekday, day and month (no + en)', () => {
+    const d = new Date('2026-10-03T07:20:00Z'); // Saturday 3 Oct, 09:20 Oslo
+    expect(formatWeekdayDayMonthOsloLocale(d, 'no', NOW)).toBe('Lørdag 3. oktober');
+    expect(formatWeekdayDayMonthOsloLocale(d, 'en', NOW)).toBe('Saturday 3 October');
+  });
+
+  it('reads the day in Oslo: 22:30 UTC on Saturday is Sunday', () => {
+    const d = new Date('2026-10-03T22:30:00Z');
+    expect(formatWeekdayDayMonthOsloLocale(d, 'no', NOW)).toBe('Søndag 4. oktober');
+  });
+
+  it('adds the year when the Oslo year is not this year', () => {
+    const d = new Date('2027-01-09T10:00:00Z'); // Saturday 9 Jan 2027
+    expect(formatWeekdayDayMonthOsloLocale(d, 'no', NOW)).toBe('Lørdag 9. januar 2027');
+    expect(formatWeekdayDayMonthOsloLocale(d, 'en', NOW)).toBe('Saturday 9 January 2027');
+  });
+
+  it('compares the years in Oslo: 23:30 UTC on 31 Dec is next year', () => {
+    const d = new Date('2026-12-31T23:30:00Z'); // Friday 1 Jan 2027 00:30 Oslo
+    expect(formatWeekdayDayMonthOsloLocale(d, 'no', NOW)).toBe('Fredag 1. januar 2027');
   });
 });

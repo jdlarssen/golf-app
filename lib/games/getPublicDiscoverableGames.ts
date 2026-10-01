@@ -2,6 +2,8 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isPubliclyViewable } from './publicSignupVisibility';
 import type { DiscoverableOpenGame } from './getDiscoverableGames';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { HoleSegment } from '@/lib/scoring';
 
 /**
  * Anonym «Finn turneringer»-liste (#1185). Uinnloggede skal kunne SE åpne
@@ -29,7 +31,7 @@ export async function getPublicDiscoverableGames(): Promise<
   const { data } = await admin
     .from('games')
     .select(
-      'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, courses(name)',
+      'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, game_mode, mode_config, hole_segment, courses(name)',
     )
     // Påmeldingsmåten ER synligheten (#357): open + manual_approval er
     // oppdagbare, invite_only er privat. Speiler isPubliclyViewable.
@@ -37,7 +39,12 @@ export async function getPublicDiscoverableGames(): Promise<
     .in('registration_mode', ['open', 'manual_approval'])
     .is('signups_closed_at', null)
     .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
-    .limit(50);
+    .limit(50)
+    // #2258: format metadata for the terminliste row; only the Json/text
+    // columns with a narrower app type are overridden.
+    .overrideTypes<
+      Array<{ game_mode: GameMode; mode_config: GameModeConfig; hole_segment: HoleSegment }>
+    >();
 
   return (data ?? [])
     .filter((row) =>
@@ -57,6 +64,9 @@ export async function getPublicDiscoverableGames(): Promise<
         course_name: course?.name ?? null,
         // isPubliclyViewable garanterer open | manual_approval her.
         registration_mode: row.registration_mode as 'open' | 'manual_approval',
+        game_mode: row.game_mode,
+        mode_config: row.mode_config,
+        hole_segment: row.hole_segment,
       };
     });
 }

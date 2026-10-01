@@ -77,3 +77,51 @@ export function buildSocialProof(
     knownFriendOverflow: friendNames.length - 1,
   };
 }
+
+/**
+ * Which form the social-proof line takes (#2258): friends by name — one, two,
+ * or one plus the rest — else a plain count, else nothing. One home for the
+ * choice, shared by `SocialProofLine` (full public names, «Jonas B.») and the
+ * terminliste row (first names). `mapName` only changes how a name reads; it
+ * never adds one, so the privacy boundary stays in `buildSocialProof`.
+ */
+export type SocialProofForm =
+  | { kind: 'friendsOverflow'; name: string; count: number }
+  | { kind: 'friendsTwo'; name1: string; name2: string }
+  | { kind: 'friendsOne'; name: string }
+  | { kind: 'count'; count: number };
+
+export function socialProofForm(
+  proof: GameSocialProof,
+  mapName: (name: string) => string = (name) => name,
+): SocialProofForm | null {
+  const { joinedCount, knownFriendNames, knownFriendOverflow } = proof;
+  if (knownFriendNames.length > 0) {
+    if (knownFriendOverflow > 0) {
+      return {
+        kind: 'friendsOverflow',
+        name: mapName(knownFriendNames[0]),
+        count: knownFriendOverflow,
+      };
+    }
+    if (knownFriendNames.length >= 2) {
+      return {
+        kind: 'friendsTwo',
+        name1: mapName(knownFriendNames[0]),
+        name2: mapName(knownFriendNames[1]),
+      };
+    }
+    return { kind: 'friendsOne', name: mapName(knownFriendNames[0]) };
+  }
+  if (joinedCount > 0) return { kind: 'count', count: joinedCount };
+  return null;
+}
+
+/**
+ * The first word of a public name: «Jonas B.» → «Jonas» (#2258). The
+ * terminliste row names friends by first name only, as the design does. It
+ * shows less than the public name, never more.
+ */
+export function firstName(publicName: string): string {
+  return publicName.trim().split(/\s+/)[0] ?? '';
+}

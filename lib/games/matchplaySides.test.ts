@@ -4,6 +4,7 @@ import {
   countSidePlayers,
   computeSideShortfall,
   isSideRosterComplete,
+  isMatchplaySideFull,
   type RosterRow,
 } from './matchplaySides';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -236,5 +237,27 @@ describe('isSideRosterComplete — allowSoloSide (#1814)', () => {
       { team_number: 2, withdrawn_at: null },
     ];
     expect(isSideRosterComplete(nullSide, 2, { allowSoloSide: true })).toBe(false);
+  });
+});
+
+// ─── isMatchplaySideFull (#2258) ──────────────────────────────────────────────
+// One home for `side_full` in registerForOpenGame and «Fullt» in the terminliste.
+
+describe('isMatchplaySideFull', () => {
+  it.each([
+    [0, 1, false],
+    [1, 1, true],
+    [1, 2, false],
+    [2, 2, true],
+    [3, 2, true], // over-full counts as full
+  ])('%i active on a side of %i → %s', (active, teamSize, expected) => {
+    expect(isMatchplaySideFull(active, teamSize)).toBe(expected);
+  });
+
+  it('a fourball with both sides at two is full; one open seat is not', () => {
+    const full = countSidePlayers([row(1), row(1), row(2), row(2)]);
+    expect(isMatchplaySideFull(full.side1, 2) && isMatchplaySideFull(full.side2, 2)).toBe(true);
+    const open = countSidePlayers([row(1), row(1), row(2), row(2, '2026-09-01T10:00:00Z')]);
+    expect(isMatchplaySideFull(open.side1, 2) && isMatchplaySideFull(open.side2, 2)).toBe(false);
   });
 });

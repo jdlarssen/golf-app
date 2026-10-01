@@ -90,3 +90,36 @@ export function osloTimeOfDayBucket(date: Date): OsloTimeOfDay {
   if (hour < 18) return 'ettermiddag';
   return 'kveld';
 }
+
+/** «YYYY-MM-DD» from a calendar date's parts (month index 0–11). */
+function dateKeyFromParts(year: number, month: number, day: number): string {
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * The Oslo calendar date of `date` as «YYYY-MM-DD» (#2258). The terminliste
+ * groups rounds into days with it: a 23:30 UTC tee-off in summer is 01:30 the
+ * next day in Oslo and belongs under that day.
+ */
+export function osloDateKey(date: Date): string {
+  const { year, month, day } = osloParts(date);
+  return dateKeyFromParts(year, month, day);
+}
+
+/**
+ * The Oslo date keys of «Denne helga» seen from `now` (#2258): Monday–Friday
+ * give the coming Saturday and Sunday, Saturday gives today and tomorrow, and
+ * Sunday only today. The day arithmetic runs on `Date.UTC` over the Oslo
+ * date — a pure calendar ordinal, as in `teeOffProximity` — so neither the
+ * host timezone nor a DST change can shift a day.
+ */
+export function osloWeekendDateKeys(now: Date): string[] {
+  const { year, month, day, weekday } = osloParts(now); // weekday: Sun=0 … Sat=6
+  const keyAt = (offset: number) => {
+    const d = new Date(Date.UTC(year, month, day + offset));
+    return dateKeyFromParts(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  };
+  if (weekday === 0) return [keyAt(0)];
+  const toSaturday = 6 - weekday;
+  return [keyAt(toSaturday), keyAt(toSaturday + 1)];
+}

@@ -11,6 +11,9 @@ function openGame(over: Partial<DiscoverableOpenGame>): DiscoverableOpenGame {
     scheduled_tee_off_at: null,
     course_name: null,
     registration_mode: 'open',
+    game_mode: 'stableford',
+    mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    hole_segment: 'full',
     ...over,
   };
 }

@@ -198,6 +198,32 @@ export function formatTeeOffLongParts(
 }
 
 /**
+ * The terminliste's day heading (#2258): «Lørdag 4. oktober» (nb) /
+ * «Saturday 4 October» (en), Oslo-pinned and capitalised, because it starts
+ * the heading. The Oslo year is added when it is not `now`'s Oslo year:
+ * «Lørdag 9. januar 2027». The year is appended rather than asked of Intl,
+ * which puts a comma after the weekday in en-GB («Saturday, 9 January 2027»).
+ */
+export function formatWeekdayDayMonthOsloLocale(
+  input: DateInput,
+  locale: AppLocale,
+  now: Date = new Date(),
+): string {
+  const d = toDate(input);
+  const base = formatDate(d, locale, {
+    timeZone: OSLO,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const capitalised = base.charAt(0).toLocaleUpperCase(intlLocaleTag(locale)) + base.slice(1);
+  const yearOf = (date: Date) =>
+    new Intl.DateTimeFormat('en-GB', { timeZone: OSLO, year: 'numeric' }).format(date);
+  const year = yearOf(d);
+  return year === yearOf(now) ? capitalised : `${capitalised} ${year}`;
+}
+
+/**
  * Locale-aware short date with year.
  *
  * Norwegian ('no'): delegates to legacy helper → "14. mai 2026" (byte-identical).

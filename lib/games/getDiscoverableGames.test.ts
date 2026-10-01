@@ -53,6 +53,7 @@ vi.mock('@/lib/supabase/admin', () => ({
         neq: () => b,
         order: () => b,
         limit: () => b,
+        overrideTypes: () => b,
         not: (...args: unknown[]) => {
           notInArg(...args);
           return b;
@@ -113,7 +114,7 @@ describe('getDiscoverableGames', () => {
     expect(result.pendingRequests).toEqual([]);
   });
 
-  it('mapper open-game-rad til DiscoverableOpenGame med course-navn + modus', async () => {
+  it('mapper open-game-rad til DiscoverableOpenGame med course-navn, modus og format (#2258)', async () => {
     playerRows.mockReturnValue({ data: [] });
     requestRows.mockReturnValue({ data: [] });
     openGamesRows.mockReturnValue({
@@ -124,6 +125,9 @@ describe('getDiscoverableGames', () => {
           short_id: 'k7m3p9qx',
           scheduled_tee_off_at: '2026-06-01T10:00:00Z',
           registration_mode: 'open',
+          game_mode: 'texas_scramble',
+          mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+          hole_segment: 'full',
           courses: { name: 'Hauger' },
         },
       ],
@@ -140,6 +144,9 @@ describe('getDiscoverableGames', () => {
         scheduled_tee_off_at: '2026-06-01T10:00:00Z',
         course_name: 'Hauger',
         registration_mode: 'open',
+        game_mode: 'texas_scramble',
+        mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+        hole_segment: 'full',
       },
     ]);
   });
@@ -334,6 +341,9 @@ describe('getDiscoverableGames', () => {
           short_id: 'club0001',
           scheduled_tee_off_at: '2026-06-10T08:00:00Z',
           registration_mode: 'invite_only',
+          game_mode: 'texas_scramble',
+          mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+          hole_segment: 'full',
           courses: { name: 'Bane' },
           groups: { name: 'Min Klubb' },
         },
@@ -352,6 +362,9 @@ describe('getDiscoverableGames', () => {
         course_name: 'Bane',
         registration_mode: 'invite_only',
         group_name: 'Min Klubb',
+        game_mode: 'texas_scramble',
+        mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
+        hole_segment: 'full',
       },
     ]);
     // Klubb-spill spørres på medlemskapets group_id-er.
@@ -435,6 +448,9 @@ describe('getDiscoverableGames', () => {
           scheduled_tee_off_at: '2026-07-01T09:00:00Z',
           registration_mode: 'manual_approval',
           let_friends_skip_gate: false,
+          game_mode: 'fourball_matchplay',
+          mode_config: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 },
+          hole_segment: 'front9',
           courses: { name: 'Bogstad' },
         },
       ],
@@ -452,6 +468,9 @@ describe('getDiscoverableGames', () => {
         course_name: 'Bogstad',
         registration_mode: 'manual_approval',
         joinMode: 'request',
+        game_mode: 'fourball_matchplay',
+        mode_config: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 },
+        hole_segment: 'front9',
       },
     ]);
   });

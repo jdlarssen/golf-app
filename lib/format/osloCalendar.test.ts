@@ -5,8 +5,10 @@ process.env.TZ = 'UTC';
 
 import { describe, it, expect } from 'vitest';
 import {
+  osloDateKey,
   osloIsoWeek,
   osloTimeOfDayBucket,
+  osloWeekendDateKeys,
   osloYearWindow,
 } from './osloCalendar';
 import { osloParts } from './teeOff';
@@ -109,5 +111,64 @@ describe('osloIsoWeek — injected date parts (#2265)', () => {
   it('reads the calendar date from the injected parts', () => {
     // 23:32 UTC søndag 14. juni er mandag i Oslo (uke 25), men søndag i UTC (uke 24).
     expect(osloIsoWeek(new Date('2026-06-14T23:32:00Z'), utcParts)).toBe(24);
+  });
+});
+
+// #2258: the terminliste groups rounds by Oslo day and filters «Denne helga».
+describe('osloDateKey (#2258)', () => {
+  it('gives the Oslo calendar date as YYYY-MM-DD', () => {
+    expect(osloDateKey(new Date('2026-10-03T10:00:00Z'))).toBe('2026-10-03');
+  });
+
+  it('uses the Oslo date, not UTC, just before midnight UTC', () => {
+    // 23:30 UTC on Friday 2 Oct = 01:30 Saturday 3 Oct in Oslo (CEST).
+    expect(osloDateKey(new Date('2026-10-02T23:30:00Z'))).toBe('2026-10-03');
+  });
+
+  it('crosses the year on the Oslo date', () => {
+    expect(osloDateKey(new Date('2026-12-31T23:30:00Z'))).toBe('2027-01-01');
+  });
+});
+
+describe('osloWeekendDateKeys (#2258)', () => {
+  // Week of Monday 28 Sep – Sunday 4 Oct 2026, noon Oslo (CEST, UTC+2).
+  it.each([
+    ['monday', '2026-09-28T10:00:00Z', ['2026-10-03', '2026-10-04']],
+    ['tuesday', '2026-09-29T10:00:00Z', ['2026-10-03', '2026-10-04']],
+    ['wednesday', '2026-09-30T10:00:00Z', ['2026-10-03', '2026-10-04']],
+    ['thursday', '2026-10-01T10:00:00Z', ['2026-10-03', '2026-10-04']],
+    ['friday', '2026-10-02T10:00:00Z', ['2026-10-03', '2026-10-04']],
+    ['saturday', '2026-10-03T10:00:00Z', ['2026-10-03', '2026-10-04']],
+    ['sunday', '2026-10-04T10:00:00Z', ['2026-10-04']],
+  ] as const)('%s gives the coming (or current) weekend', (_day, iso, expected) => {
+    expect(osloWeekendDateKeys(new Date(iso))).toEqual(expected);
+  });
+
+  it('reads the weekday on the Oslo date: 23:30 UTC Friday is already Saturday', () => {
+    expect(osloWeekendDateKeys(new Date('2026-10-02T23:30:00Z'))).toEqual([
+      '2026-10-03',
+      '2026-10-04',
+    ]);
+  });
+
+  it('reads the weekday on the Oslo date: 22:30 UTC Sunday is already Monday', () => {
+    // Sunday 4 Oct 22:30 UTC = Monday 5 Oct 00:30 Oslo → the next weekend.
+    expect(osloWeekendDateKeys(new Date('2026-10-04T22:30:00Z'))).toEqual([
+      '2026-10-10',
+      '2026-10-11',
+    ]);
+  });
+
+  it('crosses a month and the DST change (25 Oct 2026)', () => {
+    // Thursday 22 Oct → Saturday 24 and Sunday 25 Oct (clocks go back on the 25th).
+    expect(osloWeekendDateKeys(new Date('2026-10-22T10:00:00Z'))).toEqual([
+      '2026-10-24',
+      '2026-10-25',
+    ]);
+    // Friday 30 Oct → 31 Oct and 1 Nov.
+    expect(osloWeekendDateKeys(new Date('2026-10-30T10:00:00Z'))).toEqual([
+      '2026-10-31',
+      '2026-11-01',
+    ]);
   });
 });
