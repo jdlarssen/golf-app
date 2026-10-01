@@ -1,13 +1,10 @@
 import { first } from '@/lib/url/searchParams';
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { AdminShell } from '@/components/ui/AdminShell';
-import { TopBar } from '@/components/ui/TopBar';
-import { Card } from '@/components/ui/Card';
+import { AppShell } from '@/components/ui/AppShell';
 import { Banner } from '@/components/ui/Banner';
-import { BrassRibbon } from '@/components/ui/BrassRibbon';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { GameWizard } from './GameWizard';
+import { WizardFallback } from './WizardFallback';
 import { createGameDraft, createAndPublishGame } from './actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { defaultTeeOffAt } from '@/lib/games/defaultTeeOff';
@@ -89,24 +86,11 @@ export default async function NewGamePage({
     ? 'cup'
     : parseIntent(first(sp.intent)) ?? (first(sp.klubb) ? 'klubb' : undefined);
 
-  return (
-    <AdminShell>
-      <TopBar
-        backHref="/admin/games"
-        kicker={t('page.kicker')}
-      />
-
-      <BrassRibbon kicker={t('page.brassRibbon')} />
-
-      <div className="px-1">
-        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('page.heading')}
-        </h1>
-        <p className="font-sans text-[11.5px] text-muted">
-          {t('page.subtitle')}
-        </p>
-      </div>
-
+  // #2260: veiviseren står som egen skjerm rett på lin-bakgrunnen (AppShell,
+  // ikke AdminShell) og eier toppen selv. Bannerne går inn som `notice` og
+  // står mellom stripen og tittelen; hvert bærer sin egen toppmarg.
+  const notice = (
+    <>
       {cupContext && (
         <div className="mt-4">
           <Banner tone="info">
@@ -125,23 +109,23 @@ export default async function NewGamePage({
           </Banner>
         </div>
       )}
-
       <Suspense fallback={null}>
         <PlayerShortageBanner />
       </Suspense>
+    </>
+  );
 
-      <div className="mt-5">
-        <Card>
-          <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody
-              cupContext={cupContext}
-              initialIntent={initialIntent}
-              defaultGroupId={first(sp.klubb)}
-            />
-          </Suspense>
-        </Card>
-      </div>
-    </AdminShell>
+  return (
+    <AppShell showVersion={false}>
+      <Suspense fallback={<WizardFallback backHref="/admin/games" />}>
+        <GameFormBody
+          cupContext={cupContext}
+          initialIntent={initialIntent}
+          defaultGroupId={first(sp.klubb)}
+          notice={notice}
+        />
+      </Suspense>
+    </AppShell>
   );
 }
 
@@ -285,10 +269,12 @@ async function GameFormBody({
   cupContext,
   initialIntent,
   defaultGroupId,
+  notice,
 }: {
   cupContext: CupContext | null;
   initialIntent: Intent | undefined;
   defaultGroupId: string | undefined;
+  notice: ReactNode;
 }) {
   // #1385: oppsettet veiviseren mountes med er delt med gjenoppta-utkast-
   // grenen på rediger-ruta (lib/wizard/getWizardMountData) — én kilde, så en
@@ -334,6 +320,8 @@ async function GameFormBody({
       // #477: ruten er admin-gatet (redirect over), så «Solo / Test» vises her.
       isAdmin
       formatGuide={formatGuide}
+      backHref="/admin/games"
+      notice={notice}
     />
   );
 }
@@ -396,16 +384,4 @@ function buildCupInitialValues(cup: CupContext) {
     game_mode: 'singles_matchplay' as const,
     team_size: 1 as const,
   };
-}
-
-function GameFormSkeleton() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-full rounded-lg" />
-      <Skeleton className="h-10 w-full rounded-lg" delay={60} />
-      <Skeleton className="h-32 w-full rounded-lg" delay={120} />
-      <Skeleton className="h-32 w-full rounded-lg" delay={180} />
-      <Skeleton className="h-12 w-full rounded-full" delay={240} />
-    </div>
-  );
 }

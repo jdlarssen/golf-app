@@ -101,6 +101,7 @@ function wizardElement(overrides: Partial<WizardProps> = {}) {
       mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={PLAYERS.map((p) => p.id)}
+      backHref="/admin/games"
       {...overrides}
     />
   );
@@ -162,7 +163,7 @@ describe('GameWizard — #1380 per-steg history', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 
-    const heading = screen.getByRole('heading', { name: 'Format' });
+    const heading = screen.getByRole('heading', { name: 'Hva skal dere spille?' });
     expect(document.activeElement).toBe(heading);
     // Annonseringen står på egne ben: telleren er overskriftens beskrivelse.
     expect(document.getElementById(heading.getAttribute('aria-describedby')!))
@@ -173,7 +174,7 @@ describe('GameWizard — #1380 per-steg history', () => {
     searchString = 'step=2';
     renderWizard(SEEDED_BY_ROUTE);
 
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
 
     expect(push).toHaveBeenCalledWith('/admin/games/new', { scroll: false });
     expect(replace).not.toHaveBeenCalled();
@@ -349,9 +350,9 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     expect(screen.getByLabelText(/^spillnavn$/i)).toHaveValue('Serverutkastet');
 
     // Tilbake til steg 2: utkastets eget format må stå der, og stå valgt.
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
 
     const formatCard = screen.getByRole('radio', { name: /^matchplay$/i });
     expect(formatCard.getAttribute('aria-checked')).toBe('true');

@@ -61,6 +61,7 @@ import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
+import { SmartLink } from '@/components/ui/SmartLink';
 import type { Intent } from '@/lib/wizard/intent';
 import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
@@ -96,7 +97,6 @@ import type {
 } from './GameForm';
 import type { ClubOption } from '@/lib/games/newGameFormData';
 import { suggestGameName } from '@/lib/games/autoGameName';
-import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
 import {
   clearWizardDraft,
   loadWizardDraft,
@@ -176,6 +176,22 @@ type Props = {
    * denne.
    */
   initialExpectedPlayerCount?: number | null;
+  /**
+   * #2260: where the back arrow leads on step 1 — out of the wizard, to the
+   * route's old back link (`/`, `/admin/games`, or the game's own page).
+   */
+  backHref: string;
+  /**
+   * #2260: the door in the top kicker («Nytt spill · Steg 2 av 5»). Left out
+   * → «Nytt spill»; the edit route passes «Rediger spill».
+   */
+  entryLabel?: string;
+  /**
+   * #2260: the route's banners (player shortage, cup, revansje, edit). They
+   * render between the stripe and the title; each banner carries its own top
+   * margin, so one that is not shown leaves no gap.
+   */
+  notice?: ReactNode;
 };
 
 const TOTAL_STEPS = 5;
@@ -363,6 +379,9 @@ function WizardBody({
   isAdmin = false,
   isClubAdmin = false,
   formatGuide = [],
+  backHref,
+  entryLabel,
+  notice,
   draft,
   storageKey,
   draftContext,
@@ -374,13 +393,13 @@ function WizardBody({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // #498: «?»-format-ark-state. focusKey = valgt format-slug når arket åpnes
-  // fra «Slik funker det →»; undefined når det åpnes fra «?»-knappen (toppen).
+  // #498: format-arket. #2260: «Reglene» på kortet og på den valgte raden
+  // åpner det på sitt format (focusKey = slug); «?»-knappen i toppen er borte.
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideFocusKey, setGuideFocusKey] = useState<string | undefined>(
     undefined,
   );
-  const openGuide = (slug?: string) => {
+  const openGuide = (slug: string) => {
     setGuideFocusKey(slug);
     setGuideOpen(true);
   };
@@ -498,7 +517,7 @@ function WizardBody({
 
   /** #1837: satt av `handleIntentSelect`, lest av fokus-effekten under. */
   const autoAdvancedRef = useRef(false);
-  const stepTitleRef = useRef<HTMLSpanElement>(null);
+  const stepTitleRef = useRef<HTMLHeadingElement>(null);
 
   function goToStep(next: Step) {
     if (next === step) return;
@@ -567,14 +586,12 @@ function WizardBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.nameTouched]);
 
-  // Steg-spesifikk sub-tekst under stepper-headeren. Mode-aware for steg 4
-  // siden lag/sider/flighter varierer per modus.
+  // Instruksen under tittelen på steg 4. Mode-aware siden lag/sider/flighter
+  // varierer per modus. #2260: de andre stegene har bare tittelen (steg 2 har
+  // telleren på samme plass).
   const subText = useMemo<string | null>(() => {
-    if (step === 1) return t('stepSubText.step1');
-    if (step === 2) return t('stepSubText.step2');
-    if (step === 3) return t('stepSubText.step3');
     if (step === 4) {
-      if (state.isSolo) return t('stepSubText.step4Solo');
+      if (state.isSolo) return null;
       if (state.isBestBall) return t('stepSubText.step4BestBall');
       if (state.isMatchplay) return t('stepSubText.step4Matchplay');
       if (state.isParStableford) return t('stepSubText.step4ParStableford');
@@ -772,9 +789,9 @@ function WizardBody({
   }
 
   function goPrev() {
-    // «Forrige» pusher som «Neste» — ikke router.back(). Arrangøren kan ha
-    // landet rett på `?step=3` fra en lenke, og da ville back tatt dem ut av
-    // veiviseren i stedet for ett steg tilbake.
+    // Tilbakepila (#2260, var «Forrige») pusher som «Neste» — ikke
+    // router.back(). Arrangøren kan ha landet rett på `?step=3` fra en lenke,
+    // og da ville back tatt dem ut av veiviseren i stedet for ett steg tilbake.
     goToStep(Math.max(1, step - 1) as Step);
   }
 
@@ -807,44 +824,63 @@ function WizardBody({
   // match i eksisterende cup) går vi i stedet videre til standard wizard
   // for game-creation, med format låst via lockGameMode.
   // ────────────────────────────────────────────────────────────────────
+  // #2260: én topp for alle steg i begge flytene — pil, kicker, stripe og
+  // tittel (se WizardTop). Rutas bannere står mellom stripen og tittelen.
+  const top = (
+    <WizardTop
+      step={step}
+      totalSteps={isNewCupFlow ? 2 : TOTAL_STEPS}
+      entryLabel={entryLabel ?? t('createDoor.kicker')}
+      title={
+        isNewCupFlow && step === 2
+          ? t('stepTitle.cupSetup')
+          : t(`stepTitle.${step}` as Parameters<typeof t>[0])
+      }
+      backHref={backHref}
+      onBack={goPrev}
+      notice={notice}
+      titleRef={stepTitleRef}
+    />
+  );
+
   if (isNewCupFlow) {
     return (
-      <div className="space-y-6">
-        <StepperHeader
-          step={step}
-          title={t(`steps.${step}` as Parameters<typeof t>[0])}
-          subText={subText}
-          totalSteps={2}
-          titleRef={stepTitleRef}
-        />
+      <div>
+        {top}
 
         {step === 1 && (
-          <IntentSelector
-            value={state.intent}
-            onChange={handleIntentSelect}
-            disabled={state.lockGameMode}
-            isAdmin={isAdmin}
-            isClubAdmin={isClubAdmin}
-          />
+          <div className="pt-6">
+            <IntentSelector
+              value={state.intent}
+              onChange={handleIntentSelect}
+              disabled={state.lockGameMode}
+              isAdmin={isAdmin}
+              isClubAdmin={isClubAdmin}
+            />
+          </div>
         )}
 
         {step === 2 && (
-          <section className="space-y-6">
+          <section className="pt-6">
             <CupSetup />
           </section>
         )}
 
-        <WizardFooter
-          step={step}
-          canAdvance={canAdvance()}
-          disabledHint={nextDisabledHint()}
-          onPrev={goPrev}
-          onNext={goNext}
-          showNext={step < 2}
-        />
+        {step < 2 && (
+          <WizardFooter
+            canAdvance={canAdvance()}
+            disabledHint={nextDisabledHint()}
+            onNext={goNext}
+          />
+        )}
       </div>
     );
   }
+
+  // #2260: «Neste» står alene. På steg 2 kommer den først når et format er
+  // valgt — før det står ingenting under lista. Steg 5 har publiser-knappene
+  // i ReadyStep.
+  const showNext = step === 2 ? state.formatChosen : step < TOTAL_STEPS;
 
   // ────────────────────────────────────────────────────────────────────
   // Standard 5-step wizard. Wrappet i <form> så ReadyStep sine publish/
@@ -852,43 +888,30 @@ function WizardBody({
   // form å sende til.
   // ────────────────────────────────────────────────────────────────────
   return (
-    <form className="space-y-6" onSubmit={handleSubmitStart}>
-      <StepperHeader
-        step={step}
-        title={t(`steps.${step}` as Parameters<typeof t>[0])}
-        subText={subText}
-        totalSteps={TOTAL_STEPS}
-        titleRef={stepTitleRef}
-        action={
-          step === 2 && state.intent !== 'cup' && !state.lockGameMode ? (
-            <button
-              type="button"
-              onClick={() => openGuide()}
-              aria-label={t('formatGuideAriaLabel')}
-              className="tap-extend flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft [--tap-extend:-7px]"
-            >
-              ?
-            </button>
-          ) : undefined
-        }
-      />
+    <form onSubmit={handleSubmitStart}>
+      {top}
+      {subText && (
+        <p className="pt-2.5 font-sans text-sm leading-[normal] text-muted">{subText}</p>
+      )}
 
       {step === 1 && (
-        <IntentSelector
-          value={state.intent}
-          onChange={handleIntentSelect}
-          disabled={state.lockGameMode}
-          isAdmin={isAdmin}
-          isClubAdmin={isClubAdmin}
-        />
+        <div className="pt-6">
+          <IntentSelector
+            value={state.intent}
+            onChange={handleIntentSelect}
+            disabled={state.lockGameMode}
+            isAdmin={isAdmin}
+            isClubAdmin={isClubAdmin}
+          />
+        </div>
       )}
 
       {step === 2 && (
-        <section className="space-y-6">
+        <section>
           {/* Format-velger. Locked-flow (cup-link + lockGameMode) hopper
               over selve grid-en og viser en banner med valgt format. */}
           {state.lockGameMode ? (
-            <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+            <div className="mt-6 rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
               <p>
                 <strong>{t('formatLock.prefix')}</strong>{' '}
                 {tModes(state.gameMode as Parameters<typeof tModes>[0])}.{' '}
@@ -904,26 +927,12 @@ function WizardBody({
                   onChange={state.setExpectedPlayerCount}
                 />
               )}
+              {/* #2260: hele katalogen inn; FormatGrid filtrerer på antallet
+                  og plukker anbefalingen (lib/wizard/formatRecommendation). */}
               <FormatGrid
-                formats={
-                  state.intent
-                    ? (() => {
-                        const all = formatsByIntent[state.intent] ?? [];
-                        // #373: filtrer på antall spillere for Kompis
-                        if (
-                          state.intent === 'kompis' &&
-                          state.expectedPlayerCount !== undefined
-                        ) {
-                          return all.filter((f) =>
-                            fitsPlayerCount(
-                              f.slug as GameMode,
-                              state.expectedPlayerCount as number,
-                            ),
-                          );
-                        }
-                        return all;
-                      })()
-                    : []
+                formats={state.intent ? (formatsByIntent[state.intent] ?? []) : []}
+                playerCount={
+                  state.intent === 'kompis' ? state.expectedPlayerCount : undefined
                 }
                 value={state.formatChosen ? state.gameMode : undefined}
                 onChange={(slug) => state.handleModeChange(slug as GameMode)}
@@ -934,7 +943,7 @@ function WizardBody({
           )}
 
           {state.formatChosen && (
-            <div className="space-y-4">
+            <div className="mt-5 space-y-4">
               {!state.isMatchplay && !state.isTeamMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isBingoBangoBongo && !state.isNines && !state.isRoundRobin && !state.isAceyDeucey && !state.isShamble && !state.isPatsome && (
                 <TeamSizeSelector
                   mode={state.gameMode}
@@ -1033,15 +1042,17 @@ function WizardBody({
       )}
 
       {step === 3 && (
-        <BasicsSection
-          state={state}
-          courses={courses}
-          showName={false}
-        />
+        <div className="pt-6">
+          <BasicsSection
+            state={state}
+            courses={courses}
+            showName={false}
+          />
+        </div>
       )}
 
       {step === 4 && (
-        <div className="space-y-6">
+        <div className="space-y-6 pt-6">
           {/* #1065: registreringsvalget (hvem kan melde seg på) flyttet til
               steg 5 — vi vet derfor ikke ENNÅ om spillerlisten er valgfri når
               admin står her. Hintet under gjelder kun et tomt utvalg (admin
@@ -1087,12 +1098,14 @@ function WizardBody({
       )}
 
       {step === 5 && (
-        <ReadyStep
-          state={state}
-          mode={mode}
-          onGoToPlayersStep={() => goToStep(4)}
-          onSubmitStart={handleSubmitStart}
-        />
+        <div className="pt-6">
+          <ReadyStep
+            state={state}
+            mode={mode}
+            onGoToPlayersStep={() => goToStep(4)}
+            onSubmitStart={handleSubmitStart}
+          />
+        </div>
       )}
 
       {/* Hidden inputs for FormData — speiler ALL state slik at server-
@@ -1107,16 +1120,13 @@ function WizardBody({
         rosterLoadedIds={mode.kind === 'create' ? undefined : rosterLoadedIds}
       />
 
-      {/* Wizard-footer: «Forrige»/«Neste» på steg 1-4, kun «Forrige» på
-          steg 5 (publish/draft-knappene lever inne i ReadyStep). */}
-      <WizardFooter
-        step={step}
-        canAdvance={canAdvance()}
-        disabledHint={nextDisabledHint()}
-        onPrev={goPrev}
-        onNext={goNext}
-        showNext={step < TOTAL_STEPS}
-      />
+      {showNext && (
+        <WizardFooter
+          canAdvance={canAdvance()}
+          disabledHint={nextDisabledHint()}
+          onNext={goNext}
+        />
+      )}
 
       {/* #498: format-oppslagsverket som bunn-ark — over veiviseren, lukk
           legger deg tilbake nøyaktig der du var. */}
@@ -1491,17 +1501,19 @@ function PickerSourceEmptyHint({
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// #373: Antall-spiller-velger for Kompis-intent i steg 2. Vises over
-// FormatGrid slik at admin velger antall FØR format. +/−-knapper med
-// ≥44px tap-target. Forest-and-champagne-palett via CSS-variabler.
-// Min 1, maks spillertaket for lag-formatene (#525 hevet fra 16 til 24; #2148
-// gjør taket til 40, så antall-velgeren kan finne lag-formatene med 40).
+// #373: Antall-spiller-velger for Kompis-intent i steg 2, over FormatGrid så
+// arrangøren velger antall FØR format. Min 1, maks spillertaket for lag-
+// formatene (#525 hevet fra 16 til 24; #2148 gjør taket til 40).
+// #2260: én setning som på artboardet — «Dere er − 4 + spillere».
 // ──────────────────────────────────────────────────────────────────────
 
 const PLAYER_COUNT_MIN = 1;
 const PLAYER_COUNT_MAX = TEAM_FORMAT_PLAYER_CAP;
 // PLAYER_COUNT_DEFAULT importeres fra useGameFormState (state-eieren) så initial
 // state og picker-fallback aldri kommer ut av sync.
+
+const COUNT_BUTTON_CLASS =
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-xl leading-none text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40';
 
 function PlayerCountPicker({
   value,
@@ -1511,141 +1523,200 @@ function PlayerCountPicker({
   onChange: (next: number | undefined) => void;
 }) {
   const t = useTranslations('wizard');
+  // Uten antall (gamle utkast, Rediger spill) står «?», og første trykk tar
+  // utgangspunkt i 4 som før.
   const count = value ?? PLAYER_COUNT_DEFAULT;
 
-  function decrement() {
-    const next = Math.max(PLAYER_COUNT_MIN, count - 1);
-    onChange(next);
-  }
-
-  function increment() {
-    const next = Math.min(PLAYER_COUNT_MAX, count + 1);
-    onChange(next);
-  }
-
   return (
-    <div className="space-y-2">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {t('playerCount.legend')}
-      </p>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label={t('playerCount.lessAriaLabel')}
-          onClick={decrement}
-          disabled={count <= PLAYER_COUNT_MIN}
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <span className="text-xl leading-none select-none">−</span>
-        </button>
-        <span
-          aria-live="polite"
-          className="min-w-[3ch] text-center font-serif text-2xl tabular-nums text-text"
-        >
-          {/* aria-label on a plain span is ignored (and never announced by the
-              live region); the spoken text goes in as sr-only text instead. */}
-          <span aria-hidden="true">{value !== undefined ? count : '?'}</span>
-          <span className="sr-only">
-            {value !== undefined
-              ? t('playerCount.countAriaLabel', { count })
-              : t('playerCount.showAllAriaLabel')}
-          </span>
+    <div
+      role="group"
+      aria-label={t('playerCount.legend')}
+      className="flex items-center gap-2.5 pt-2.5"
+    >
+      <span className="font-sans text-sm leading-[normal] text-muted">
+        {t('playerCount.prefix')}
+      </span>
+      <button
+        type="button"
+        aria-label={t('playerCount.lessAriaLabel')}
+        onClick={() => onChange(Math.max(PLAYER_COUNT_MIN, count - 1))}
+        disabled={count <= PLAYER_COUNT_MIN}
+        className={COUNT_BUTTON_CLASS}
+      >
+        <span aria-hidden="true" className="select-none">−</span>
+      </button>
+      <span
+        aria-live="polite"
+        className="min-w-5 text-center font-serif text-2xl font-semibold leading-[normal] tabular-nums text-text"
+      >
+        {/* aria-label on a plain span is ignored (and never announced by the
+            live region); the spoken text goes in as sr-only text instead. */}
+        <span aria-hidden="true">{value !== undefined ? count : '?'}</span>
+        <span className="sr-only">
+          {value !== undefined
+            ? t('playerCount.countAriaLabel', { count })
+            : t('playerCount.unsetAriaLabel')}
         </span>
-        <button
-          type="button"
-          aria-label={t('playerCount.moreAriaLabel')}
-          onClick={increment}
-          disabled={count >= PLAYER_COUNT_MAX}
-          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <span className="text-xl leading-none select-none">+</span>
-        </button>
-        {value !== undefined && (
-          <button
-            type="button"
-            onClick={() => onChange(undefined)}
-            className="tap-extend ml-1 font-sans text-xs text-muted underline underline-offset-2 hover:text-text [--tap-extend:-14px_-8px]"
-          >
-            {t('playerCount.showAll')}
-          </button>
-        )}
-      </div>
-      <p aria-live="polite" className="font-sans text-xs text-muted">
-        {value !== undefined
-          ? t('playerCount.hint', { count })
-          : t('playerCount.showAllHint')}
-      </p>
+      </span>
+      <button
+        type="button"
+        aria-label={t('playerCount.moreAriaLabel')}
+        onClick={() => onChange(Math.min(PLAYER_COUNT_MAX, count + 1))}
+        disabled={count >= PLAYER_COUNT_MAX}
+        className={COUNT_BUTTON_CLASS}
+      >
+        <span aria-hidden="true" className="select-none">+</span>
+      </button>
+      <span className="font-sans text-sm leading-[normal] text-muted">
+        {t('playerCount.suffix', { count })}
+      </span>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// Subtil tekst-stepper med en tynn progress-bar under. Forest-and-
-// champagne-paletten via `--color-primary`. Reduced-motion-respekt på
-// transition-en.
+// #2260: toppen fra artboardet «Forslag: formatkortene», på alle steg og i
+// cup-flyten: tilbakepil, kicker, stripe og stor tittel. Erstatter
+// StepperHeader og sidekrommen (TopBar, h1, undertittel) rundt veiviseren.
 // ──────────────────────────────────────────────────────────────────────
 
 /**
- * Id-ene som binder steg-telleren til steg-overskriften. Bare én StepperHeader
- * er montert av gangen (cup-grenen returnerer før den vanlige), så de kolliderer
+ * Id-ene som binder kickeren til steg-overskriften (#1837). Bare én topp er
+ * montert av gangen (cup-grenen returnerer før den vanlige), så de kolliderer
  * ikke med seg selv.
  */
 const STEP_COUNTER_ID = 'wizard-step-counter';
 const STEP_TITLE_ID = 'wizard-step-title';
 
-function StepperHeader({
+const BACK_CLASS = 'flex h-11 w-11 items-center justify-center text-text';
+
+function ChevronLeft() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}
+
+/**
+ * The sticky bar at the top of the wizard: the back arrow, the kicker and the
+ * progress stripe. Sticky like TopBar; `-mx-5 -mt-8` cancels the shell's
+ * padding so the blur reaches the edges and the bar starts at the top.
+ *
+ * The arrow is a button (`onBack`) or a link out (`backHref`). Exported for
+ * WizardFallback, which shows the same bar while the route loads.
+ */
+export function WizardTopBar({
+  backHref,
+  onBack,
+  backLabel,
+  kicker,
+  kickerId,
+  progress,
+}: {
+  backHref?: string;
+  onBack?: () => void;
+  backLabel: string;
+  kicker: ReactNode;
+  kickerId?: string;
+  /** 0–1. Left out → an empty track. */
+  progress?: number;
+}) {
+  return (
+    <div className="sticky top-0 z-30 -mx-5 -mt-8 bg-bg/90 px-5 backdrop-blur-sm">
+      <div className="-mx-3 flex items-center justify-between pt-2">
+        {onBack ? (
+          <button type="button" onClick={onBack} aria-label={backLabel} className={BACK_CLASS}>
+            <ChevronLeft />
+          </button>
+        ) : (
+          <SmartLink href={backHref ?? '/'} aria-label={backLabel} className={BACK_CLASS}>
+            <ChevronLeft />
+          </SmartLink>
+        )}
+        <p
+          id={kickerId}
+          className="font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+        >
+          {kicker}
+        </p>
+        <span aria-hidden="true" className="h-11 w-11" />
+      </div>
+      <div className="mt-1 h-1 rounded-full bg-hole-completed-bg">
+        {progress !== undefined && (
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-200 motion-reduce:transition-none"
+            style={{ width: `${progress * 100}%` }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WizardTop({
   step,
-  title,
-  subText,
   totalSteps,
-  action,
+  entryLabel,
+  title,
+  backHref,
+  onBack,
+  notice,
   titleRef,
 }: {
   step: Step;
-  title: string;
-  subText: string | null;
   totalSteps: number;
-  /** Valgfri handling til høyre for tittelen (#498: «?»-knapp på steg 2). */
-  action?: ReactNode;
+  entryLabel: string;
+  title: string;
+  /** Steg 1: pila er en lenke ut av veiviseren. */
+  backHref: string;
+  /** Steg 2–5: pila går ett steg tilbake (goPrev, med historikken). */
+  onBack: () => void;
+  notice?: ReactNode;
   /** #1837: fokusmål ved auto-videre — se `handleIntentSelect`. */
-  titleRef?: RefObject<HTMLSpanElement | null>;
+  titleRef: RefObject<HTMLHeadingElement | null>;
 }) {
   const t = useTranslations('wizard');
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span id={STEP_COUNTER_ID} className="text-muted tabular-nums">
-          {t('stepCounter', { step, total: totalSteps })}
-        </span>
-        <div className="flex items-center gap-2">
-          {/* #1837: overskrift i navn og gagn. `role=heading` gir den en rolle
-              en skjermleser kan annonsere, `aria-describedby` henter «Steg 2 av
-              5» fra telleren så annonseringen står på egne ben, og
-              `tabIndex={-1}` gjør den til et fokusmål uten å legge den inn i
-              tab-rekkefølgen. Fokusregelen i globals.css utelater bevisst
-              `[tabindex='-1']`, så den får ingen ring ved muse-klikk. */}
-          <span
-            ref={titleRef}
-            id={STEP_TITLE_ID}
-            role="heading"
-            aria-level={2}
-            aria-describedby={STEP_COUNTER_ID}
-            tabIndex={-1}
-            className="font-serif text-lg text-text"
-          >
-            {title}
-          </span>
-          {action}
-        </div>
-      </div>
-      <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2">
-        <div
-          className="h-full bg-primary transition-[width] duration-200 motion-reduce:transition-none"
-          style={{ width: `${(step / totalSteps) * 100}%` }}
-        />
-      </div>
-      {subText && <p className="text-xs text-muted">{subText}</p>}
-    </div>
+    <>
+      <WizardTopBar
+        backHref={backHref}
+        onBack={step === 1 ? undefined : onBack}
+        backLabel={t('back')}
+        kickerId={STEP_COUNTER_ID}
+        // Telleren står i sitt eget span, uten inngangen.
+        kicker={
+          <>
+            {entryLabel} · <span>{t('stepCounter', { step, total: totalSteps })}</span>
+          </>
+        }
+        progress={step / totalSteps}
+      />
+      {notice}
+      {/* #1837: sidens overskrift. `aria-describedby` henter «Steg 2 av 5»
+          fra kickeren, og `tabIndex={-1}` gjør den til et fokusmål uten å
+          legge den inn i tab-rekkefølgen. Fokusregelen i globals.css utelater
+          bevisst `[tabindex='-1']`, så den får ingen ring ved muse-klikk. */}
+      <h1
+        ref={titleRef}
+        id={STEP_TITLE_ID}
+        tabIndex={-1}
+        aria-describedby={STEP_COUNTER_ID}
+        className="pt-4 font-serif text-[26px] font-medium leading-[normal] text-text"
+      >
+        {title}
+      </h1>
+    </>
   );
 }
 
@@ -1697,48 +1768,28 @@ function ClubPicker({
 }
 
 function WizardFooter({
-  step,
   canAdvance,
   disabledHint,
-  onPrev,
   onNext,
-  showNext,
 }: {
-  step: Step;
   canAdvance: boolean;
   disabledHint: string | null;
-  onPrev: () => void;
   onNext: () => void;
-  /** Skjul «Neste»-knappen på steg 4 (ReadyStep har publish-knappen). */
-  showNext: boolean;
 }) {
   const t = useTranslations('wizard');
+  // #2260: «Forrige» er borte — tilbakepila i toppen gjør jobben.
   return (
-    <div className="space-y-2 pt-2">
-      <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="secondary"
-          data-testid="wizard-prev"
-          onClick={onPrev}
-          disabled={step === 1}
-          className="flex-1"
-        >
-          {t('footer.prev')}
-        </Button>
-        {showNext && (
-          <Button
-            type="button"
-            data-testid="wizard-next"
-            onClick={onNext}
-            disabled={!canAdvance}
-            className="flex-1"
-          >
-            {t('footer.next')}
-          </Button>
-        )}
-      </div>
-      {showNext && !canAdvance && disabledHint && (
+    <div className="space-y-2 pt-6">
+      <Button
+        type="button"
+        data-testid="wizard-next"
+        onClick={onNext}
+        disabled={!canAdvance}
+        className="w-full"
+      >
+        {t('footer.next')}
+      </Button>
+      {!canAdvance && disabledHint && (
         <p className="text-xs text-muted text-center">{disabledHint}</p>
       )}
     </div>

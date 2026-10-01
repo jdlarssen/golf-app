@@ -20,13 +20,15 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * «Klubbhuset» (#392) er en universell fane til `/admin`-rommet, synlig for
  * ALLE innloggede — fanen gates ikke på rolle; flatene inne gates. Derfor er
  * admin ikke lenger skjult: baren vises på Klubbhus-flatene så brukeren kommer
- * seg ut igjen, og fanen er aktiv også på `/klubbhuset`, `/opprett-spill` og
- * `/opprett-bane`.
+ * seg ut igjen, og fanen er aktiv også på `/klubbhuset` og `/opprett-bane`.
  *
  * Rendret én gang globalt i `app/layout.tsx`. `userId` kommer fra proxy-
  * headeren: null på offentlige (umatchede) ruter → baren skjuler seg selv.
- * I tillegg skjuler den seg på hull-skjermen (fullskjerm scoring) og
- * pre-profil-onboarding, som har egen chrome.
+ * I tillegg skjuler den seg på hull-skjermen (fullskjerm scoring),
+ * pre-profil-onboarding og Nytt spill-veiviseren (#2260), som har egen chrome.
+ * Veiviseren på `/admin/games/[id]/edit` deler rute med GameForm, så der
+ * skjules baren av CSS-regelen for `data-hides-bottom-nav` i globals.css,
+ * som bare veiviser-grenen setter.
  *
  * `usePathname` MÅ komme fra `@/i18n/navigation`, ikke `next/navigation`:
  * `as-needed`-routingen rewriter `/games/x` → `/no/games/x` internt, og
@@ -49,7 +51,8 @@ export function BottomNav({ userId }: { userId: string | null }) {
   const pathname = usePathname() ?? '';
 
   // Skjul når utlogget (null på offentlige ruter) eller på flater med egen
-  // chrome: hull-skjerm (fullskjerm scoring) og pre-profil-onboarding. Admin er
+  // chrome: hull-skjerm (fullskjerm scoring), pre-profil-onboarding og
+  // veiviseren for nytt spill (#2260: en egen skjerm med pil øverst). Admin er
   // IKKE lenger skjult (#392) — det er Klubbhus-rommet, baren hører hjemme der.
   // Vi gater FØR `useUnreadNotificationsCount` (i Bar-en) slik at det globale
   // realtime-abonnementet kun åpnes når baren faktisk vises.
@@ -57,6 +60,8 @@ export function BottomNav({ userId }: { userId: string | null }) {
     userId == null ||
     pathname === '/login' ||
     pathname.startsWith('/complete-profile') ||
+    pathname === '/opprett-spill' ||
+    pathname === '/admin/games/new' ||
     /^\/games\/[^/]+\/holes\//.test(pathname);
   if (hidden) return null;
 
@@ -73,7 +78,8 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
       ? pathname === '/'
       : pathname === href || pathname.startsWith(`${href}/`);
   // En fane kan eie flere ruter: Klubbhuset-rommet (/admin) dekker også Spill-
-  // seksjonen (/klubbhuset) og create-dørene (/opprett-spill, /opprett-bane).
+  // seksjonen (/klubbhuset) og create-døra /opprett-bane. (/opprett-spill har
+  // ingen bar, se `hidden` over.)
   const isActive = (href: string, also: readonly string[] = []) =>
     matchOne(href) || also.some(matchOne);
 
@@ -87,7 +93,6 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
       dot: false,
       also: [
         '/klubbhuset',
-        '/opprett-spill',
         '/opprett-bane',
         '/klubber',
         '/spillformater',
@@ -100,6 +105,7 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
     <nav
       aria-label={t('ariaLabel')}
       data-testid="bottom-nav"
+      data-bottom-nav
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 backdrop-blur-sm"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
