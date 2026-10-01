@@ -1008,7 +1008,7 @@ describe('club cup: any club admin can delete and start it (#2214)', () => {
     supabaseMock = buildSupabaseMock([
       ...ownerGate(),
       { data: { id: 'cup-1', name: 'Klubbcup' }, error: null }, // cup read
-      { error: null }, // tournaments delete
+      { data: [{ id: 'cup-1' }], error: null }, // tournaments delete…select
     ]);
     setUser('owner-b');
 
@@ -1066,6 +1066,22 @@ describe('club cup: any club admin can delete and start it (#2214)', () => {
       redirect: '/klubber/club-1/cup/cup-1/slett?error=delete_failed',
       cupDeleted: false,
     });
+  });
+
+  it('a cup row delete that touches no row is delete_failed, never cup_deleted', async () => {
+    deletionPlanMock.mockResolvedValue({ hostIdsToDelete: [], derivedIdsRidingAlong: [], totalGames: 0 });
+    adminMock = buildSupabaseMock([{ data: { group_id: 'club-1' }, error: null }]); // gate
+    supabaseMock = buildSupabaseMock([
+      ...ownerGate(),
+      { data: { id: 'cup-1', name: 'Klubbcup' }, error: null }, // cup read
+      { data: [], error: null }, // tournaments delete…select → 0 rows
+    ]);
+    setUser('owner-b');
+
+    const { deleteTournament } = await import('./actions');
+    await expect(deleteTournament(deleteForm())).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/klubber/club-1/cup/cup-1/slett?error=delete_failed');
   });
 
   it('startTournament counts the matches with the admin client', async () => {
