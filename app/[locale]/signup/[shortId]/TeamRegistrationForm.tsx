@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import type { TeamCandidate } from '@/lib/users/getTeamCandidates';
+import { TEAM_NAME_MAX } from '@/lib/games/registration';
 import {
   validateTeamName,
   validateSlotEmail,
@@ -285,7 +286,7 @@ export function TeamRegistrationForm({
               if (teamNameError) setTeamNameError(validateTeamName(e.target.value));
             }}
             onBlur={() => setTeamNameError(validateTeamName(teamName))}
-            maxLength={40}
+            maxLength={TEAM_NAME_MAX}
             required
             placeholder={t('teamNamePlaceholder')}
             aria-invalid={teamNameError ? true : undefined}

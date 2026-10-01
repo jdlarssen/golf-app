@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
+import { REGISTRATION_MESSAGE_MAX } from '@/lib/games/registration';
 import {
   registerForOpenGame,
   requestApproval,
@@ -13,8 +14,6 @@ import {
 } from './actions';
 
 type Mode = 'open' | 'manual_approval';
-
-const MESSAGE_MAX = 200;
 
 /** Side-data sendt ned fra serveren for matchplay åpne spill. */
 export type MatchplaySideData = {
@@ -249,14 +248,14 @@ export function RegistrationForm({
             <textarea
               name="message"
               rows={3}
-              maxLength={MESSAGE_MAX}
+              maxLength={REGISTRATION_MESSAGE_MAX}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={t('messagePlaceholder')}
               className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             <span className="mt-1 block text-right font-sans text-[11px] tabular-nums text-muted">
-              {message.length}/{MESSAGE_MAX}
+              {message.length}/{REGISTRATION_MESSAGE_MAX}
             </span>
           </label>
         ) : (

@@ -7,6 +7,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { REJECTION_REASON_MAX } from '@/lib/games/registration';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notify } from '@/lib/notifications/notify';
 import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
@@ -26,8 +27,6 @@ import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
  * raden-strukturen er konsistent — admin behøver ikke håndtere lag-medlemmer
  * manuelt.
  */
-
-const REJECTION_REASON_MAX = 200;
 
 type GameSnapshot = {
   id: string;

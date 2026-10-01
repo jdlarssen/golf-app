@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { TEAM_NAME_MAX, TEAM_NAME_MIN } from '@/lib/games/registration';
 import {
   validateTeamName,
   validateSlotEmail,
   findSlotConflicts,
-  TEAM_NAME_MIN,
-  TEAM_NAME_MAX,
 } from './teamFormValidation';
 
 /**

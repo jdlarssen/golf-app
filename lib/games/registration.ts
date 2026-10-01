@@ -70,3 +70,19 @@ export function isDiscoverableRegistrationMode(mode: RegistrationMode): boolean 
 export function isRegistrationType(v: unknown): v is RegistrationType {
   return v === 'solo' || v === 'team' || v === 'both';
 }
+
+// Tekstgrensene i påmeldingen (#2222): ett hjem for skjemaet, server-actionen
+// og DB-sperrene på `game_registration_requests` (0042: `team_captain_has_name`,
+// `message_length`, `rejection_reason_length`). `registrationDbCheck.test.ts`
+// holder dem like, også tallene i feilmeldingene. Eksporteres herfra og ikke
+// fra en fil med 'use client' eller 'use server': der blir en eksport en
+// referanse, ikke et tall.
+
+/** Lagnavnet til en lagkaptein: minst så mange tegn. */
+export const TEAM_NAME_MIN = 3;
+/** Lagnavnet til en lagkaptein: maks så mange tegn. */
+export const TEAM_NAME_MAX = 40;
+/** Hilsenen en søker kan legge ved påmeldingen. */
+export const REGISTRATION_MESSAGE_MAX = 200;
+/** Grunnen arrangøren kan gi når en påmelding avslås. */
+export const REJECTION_REASON_MAX = 200;

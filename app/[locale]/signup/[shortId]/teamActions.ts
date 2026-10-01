@@ -16,7 +16,11 @@ import { getTeamCandidateEmails } from '@/lib/users/getTeamCandidates';
 import { maskEmail } from '@/lib/users/maskEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
-import { gameModeSupportsTeams } from '@/lib/games/registration';
+import {
+  gameModeSupportsTeams,
+  TEAM_NAME_MAX,
+  TEAM_NAME_MIN,
+} from '@/lib/games/registration';
 import { maxTeamsForSize, teamModePlayerCap } from '@/lib/games/teamFormatLimits';
 import { flightForTeam, type TeamPlayer } from '@/lib/games/teamScope';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
@@ -123,9 +127,6 @@ export type TeamRegistrationError =
   | 'rate_limited'
   | 'game_full'
   | 'db_error';
-
-const TEAM_NAME_MIN = 3;
-const TEAM_NAME_MAX = 40;
 
 /**
  * Sjekk om PG-error er UNIQUE-violation (23505). Speiler logikken i

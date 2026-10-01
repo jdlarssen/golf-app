@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { RequestRow, TabKey } from './types';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import { REJECTION_REASON_MAX } from '@/lib/games/registration';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Props = {
@@ -24,8 +25,6 @@ type Props = {
   /** Antall allerede godkjente spillere på tvers av alle faner (#805). */
   approvedCount: number;
 };
-
-const REJECTION_REASON_MAX = 200;
 
 const STATUS_TONE: Record<RequestRow['status'], string> = {
   pending: 'border-warning/40 bg-warning/10 text-warning-text',
