@@ -268,6 +268,17 @@ function frauncesNormalLine(size: number): number {
   );
 }
 
+/**
+ * Hvor nettleseren tegner en tekstlinje som er sentrert i en boks: midt i,
+ * rundet til hel piksel, og en halv rundes opp (målt i Chromium: en 23-linje
+ * i 52 tegnes som i 53). `justifyContent: 'center'` lar Yoga runde til
+ * skjermpiksel i stedet, så teksten kan havne en halv pt over designet. Gi
+ * boksen dette som `paddingTop` og `justifyContent: 'flex-start'`.
+ */
+export function centeredLineTop(inner: number, line: number): number {
+  return Math.round((inner - line) / 2);
+}
+
 /** Fraunces-vektene appen bruker: 500 til ord, 600 til tall og uthevinger. */
 type FrauncesWeight = 500 | 600;
 
