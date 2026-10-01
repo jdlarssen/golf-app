@@ -160,6 +160,17 @@
   --meter-track: #efe9da;
   --dashed-cta: #9a8f7c;
 
+  /* Invitation card (#2266): the linen page behind it, the paper, the
+   * e-mail field's border and the three joined-avatar dots — values from the
+   * artboard «Forslag: invitasjonskortet». Their own tokens, not palette:
+   * only the card and its page use them. */
+  --invitation-page-bg: #efe9da;
+  --invitation-paper: #fbf9f3;
+  --invitation-field-border: #cfc7b3;
+  --invitation-avatar-1: #1b4332;
+  --invitation-avatar-2: #2d5a40;
+  --invitation-avatar-3: #7daa8a;
+
   /* Destructive CTAer — slett-spill, slett-konto, trekk-tilbake-invitasjon.
    * Deeper than --danger so it reads as a "no going back"-button against
    * the linen page, not just a warning-pill. */
@@ -288,6 +299,15 @@
     --meter-track: #243429;
     --dashed-cta: #5c6358;
 
+    /* Invitation card (#2266) — see :root. The artboard is light only;
+     * the dots run dark to light here too. */
+    --invitation-page-bg: var(--bg);
+    --invitation-paper: var(--surface);
+    --invitation-field-border: #4b5e51;
+    --invitation-avatar-1: #2d5a40;
+    --invitation-avatar-2: #5a8a66;
+    --invitation-avatar-3: #94bf96;
+
     /* Destructive CTAer — lighter brick so it reads as "alarm" against the
      * dark forest bg, not as a black smudge. */
     --danger-deep: #c46868;
@@ -370,6 +390,12 @@
   --hole-completed-bg: #243429;
   --meter-track: #243429;
   --dashed-cta: #5c6358;
+  --invitation-page-bg: var(--bg);
+  --invitation-paper: var(--surface);
+  --invitation-field-border: #4b5e51;
+  --invitation-avatar-1: #2d5a40;
+  --invitation-avatar-2: #5a8a66;
+  --invitation-avatar-3: #94bf96;
   --danger-deep: #c46868;
   --surface-strong: #1f3b2c;
   --leaderboard-backdrop-opacity: 0.10;
@@ -581,6 +607,12 @@ summary {
  * balance to even line-lengths. Both degrade gracefully on older browsers. */
 h1, h2, h3, h4, h5, h6 {
   text-wrap: pretty;
+}
+
+/* The invitation login (#2266) stands on linen, and so must the overscroll
+ * and Safari's toolbar tint — they paint from <body>, not from AppShell. */
+body:has([data-page-bg='invitation']) {
+  background: var(--invitation-page-bg);
 }
 
 .pullquote {
