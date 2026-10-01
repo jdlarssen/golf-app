@@ -4,6 +4,7 @@ process.env.TZ = 'UTC';
 
 import { describe, expect, it } from 'vitest';
 import {
+  effectiveInviteDeadline,
   GAME_INVITE_TTL_DAYS,
   gameInviteExpiresAtFromNow,
   INVITE_TTL_DAYS,
@@ -60,6 +61,27 @@ describe('inviteExpiryTier (#1179)', () => {
 
   it('unparseable timestamp → null', () => {
     expect(inviteExpiryTier('not-a-date', NOW)).toBeNull();
+  });
+});
+
+describe('effectiveInviteDeadline (#2266)', () => {
+  const EXPIRES = '2026-07-24T12:00:00.000Z';
+
+  it('a tee-off before the expiry caps the deadline', () => {
+    expect(effectiveInviteDeadline(EXPIRES, '2026-07-12T07:20:00.000Z')).toBe(
+      '2026-07-12T07:20:00.000Z',
+    );
+  });
+
+  it('an expiry before the tee-off stays the deadline', () => {
+    expect(effectiveInviteDeadline(EXPIRES, '2026-08-01T07:20:00.000Z')).toBe(
+      EXPIRES,
+    );
+  });
+
+  it('no tee-off (or an unparseable one) leaves the expiry', () => {
+    expect(effectiveInviteDeadline(EXPIRES, null)).toBe(EXPIRES);
+    expect(effectiveInviteDeadline(EXPIRES, 'not-a-date')).toBe(EXPIRES);
   });
 });
 
