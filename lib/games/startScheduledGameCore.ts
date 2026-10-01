@@ -25,6 +25,7 @@ import { expectedTeamSize, needsTeamAssignment } from './teamScope';
 import { assignRotationSlots, rotationSlotRange } from './assignRotationSlots';
 import { startPlayerCountRange, type StartCountMode } from './startPlayerCount';
 import { effectiveHcpAllowancePct } from './hcpAllowance';
+import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 
 /**
  * Import-pure core of the scheduled→active start (#1855). Every guard, every
@@ -73,6 +74,10 @@ export type StartScheduledGameFailure = {
     // avgjort utfallet (halvert / walkover). Ikke en oppsettsfeil — arrangøren
     // tok valget selv — så den varsles ALDRI som «auto-start blokkert».
     | 'decided_by_withdrawal'
+    // #2214: kampen hører til en cup som er avsluttet. En avsluttet cup står
+    // fast, så kampen starter aldri. Heller ikke et oppsettsavvik: avslaget er
+    // stille (SILENT_BLOCK_REASONS) og varsles aldri som «auto-start blokkert».
+    | 'cup_finished'
     | 'unassigned_teams'
     | 'unassigned_flights'
     | 'rotation_player_count'
@@ -146,7 +151,7 @@ export async function startScheduledGameCore(
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), tournament:tournaments(status)',
     )
     .eq('id', gameId)
     .maybeSingle<{
@@ -166,6 +171,9 @@ export async function startScheduledGameCore(
       // tilbake ved en re-derivering — derfor en åpen form, ikke bare team_size.
       mode_config: ({ team_size?: number } & Record<string, unknown>) | null;
       tee_boxes: TeeBoxRatings | null;
+      // #2214: the cup's status. null when the game is not in a cup, or when
+      // the caller's client cannot read the cup (see the check below).
+      tournament: { status: string } | null;
     }>();
   // Error ≠ absence (#1445): a transient query failure must report as a
   // transient DB reason, not 'not_found'. The distinction is load-bearing for
@@ -194,6 +202,18 @@ export async function startScheduledGameCore(
       };
     }
     return { ok: false, reason: 'not_scheduled' };
+  }
+  // #2214: a finished cup stands, so no match in it starts. Before the tee
+  // check on purpose: a match without a tee in a finished cup must give this
+  // silent reason, not the structural 'tee_missing' that sends the organiser
+  // «auto-start blokkert». It also runs before the withdrawal rule (#1814).
+  // No write happens. A null embed means «unknown» and the start goes on as
+  // before: only an RLS client that cannot read the cup gets that (an app
+  // build from before #2215), and a club cup's matches only have club members,
+  // who can read their club's cups (tournaments select scoped), so it should
+  // not happen in practice.
+  if (game.tournament_id && finishedCupBlocksPlay(game.tournament?.status)) {
+    return { ok: false, reason: 'cup_finished' };
   }
   const tee = game.tee_boxes;
   if (!tee || !game.tee_box_id) return { ok: false, reason: 'tee_missing' };

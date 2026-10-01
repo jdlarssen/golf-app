@@ -107,6 +107,8 @@ const START_REASON_MAP = {
   pending_players: null,
   incomplete_sides: 'incomplete_sides',
   decided_by_withdrawal: 'decided_by_withdrawal',
+  // #2214: a match in a finished cup never starts.
+  cup_finished: 'cup_finished',
   unassigned_teams: 'unassigned_teams',
   unassigned_flights: 'unassigned_flights',
   rotation_player_count: 'interpolated',

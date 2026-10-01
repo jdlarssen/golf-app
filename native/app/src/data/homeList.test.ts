@@ -267,6 +267,54 @@ describe('startboden (#2254)', () => {
   });
 });
 
+describe('en avsluttet cup (#2214)', () => {
+  useFreshModules();
+
+  /** En cup-kamp i formen spørringen gir, med cupens status embeddet. */
+  function cupRow(id: string, status: string, endedAt: string | null) {
+    return {
+      game_id: id,
+      submitted_at: null,
+      withdrawn_at: null,
+      approved_at: null,
+      result_summary: null,
+      flight_number: null,
+      games: {
+        id,
+        name: `Kamp ${id}`,
+        status,
+        game_mode: 'singles_matchplay',
+        hole_segment: 'full',
+        created_at: '2026-09-01T08:00:00.000Z',
+        ended_at: endedAt,
+        scheduled_tee_off_at: '2026-09-02T08:00:00.000Z',
+        require_peer_approval: false,
+        courses: { name: 'Losby' },
+        tournament: { status: 'finished' },
+      },
+    };
+  }
+
+  it('dropper en planlagt kamp i en avsluttet cup, og lar den ferdige stå', async () => {
+    const { queryStub, routeFrom } = mocks();
+    routeFrom({
+      game_players: [
+        queryStub({
+          data: [
+            cupRow('aldri-spilt', 'scheduled', null),
+            cupRow('spilt', 'finished', '2026-09-01T15:00:00.000Z'),
+          ],
+          error: null,
+        }),
+      ],
+    });
+
+    const list = await home().fetchHomeCards(ME);
+
+    expect(list.cards.map((c) => c.gameId)).toEqual(['spilt']);
+  });
+});
+
 describe('splitHomeCards', () => {
   const card = (
     gameId: string,

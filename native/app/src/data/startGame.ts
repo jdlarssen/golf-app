@@ -85,6 +85,7 @@ const CORE_REASONS: Record<CoreReason, true> = {
   pending_players: true,
   incomplete_sides: true,
   decided_by_withdrawal: true,
+  cup_finished: true,
   unassigned_teams: true,
   unassigned_flights: true,
   rotation_player_count: true,

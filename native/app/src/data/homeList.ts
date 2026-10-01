@@ -21,6 +21,7 @@ import {
 } from '../../../../lib/games/activeCardState';
 import { getRoundScoresForGames } from '../../../../lib/games/getRoundScoresForGames';
 import { computeRoundScore } from '../../../../lib/games/roundScore';
+import { finishedCupBlocksPlay } from '../../../../lib/cup/finishedCup';
 import type { ResultSummary } from '../../../../lib/scoring/resultSummary';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { getCacheEntry, getDb, putCacheEntry } from './db';
@@ -97,11 +98,13 @@ interface HomeRow {
     scheduled_tee_off_at: string | null;
     require_peer_approval: boolean;
     courses: { name: string } | null;
+    /** #2214: cupens status, eller null for et spill utenfor cup. */
+    tournament: { status: string } | null;
   };
 }
 
 const HOME_SELECT =
-  'game_id, submitted_at, withdrawn_at, approved_at, result_summary, flight_number, games!inner(id, name, status, game_mode, hole_segment, created_at, ended_at, scheduled_tee_off_at, require_peer_approval, courses(name))';
+  'game_id, submitted_at, withdrawn_at, approved_at, result_summary, flight_number, games!inner(id, name, status, game_mode, hole_segment, created_at, ended_at, scheduled_tee_off_at, require_peer_approval, courses(name), tournament:tournaments(status))';
 
 /**
  * Statusene en spiller har noe å gjøre med. `draft` er admin-eid og usynlig.
@@ -121,28 +124,36 @@ export async function fetchHomeCards(userId: string): Promise<HomeList> {
 
   if (error) throw new Error(error.message);
 
-  const cards: HomeCard[] = (data ?? []).map((row) => ({
-    gameId: row.games.id,
-    name: row.games.name,
-    status: row.games.status,
-    courseName: row.games.courses?.name ?? null,
-    scheduledTeeOffAt: row.games.scheduled_tee_off_at,
-    createdAt: row.games.created_at,
-    state:
-      row.games.status === 'active'
-        ? resolveActiveCardState({
-            submitted_at: row.submitted_at,
-            withdrawn_at: row.withdrawn_at,
-            approved_at: row.approved_at,
-            require_peer_approval: row.games.require_peer_approval,
-          })
-        : null,
-    gameMode: row.games.game_mode,
-    holeSegment: row.games.hole_segment,
-    endedAt: row.games.ended_at,
-    resultSummary: row.result_summary ?? null,
-    flightNumber: row.flight_number,
-  }));
+  // #2214: en avsluttet cup står fast. En kamp i den som ikke er ferdig, starter
+  // aldri, så den faller ut av lista i stedet for å stå som «Planlagt» for
+  // godt. Ferdige kamper i cupen står i historikken som før.
+  const cards: HomeCard[] = (data ?? [])
+    .filter(
+      (row) =>
+        row.games.status === 'finished' || !finishedCupBlocksPlay(row.games.tournament?.status),
+    )
+    .map((row) => ({
+      gameId: row.games.id,
+      name: row.games.name,
+      status: row.games.status,
+      courseName: row.games.courses?.name ?? null,
+      scheduledTeeOffAt: row.games.scheduled_tee_off_at,
+      createdAt: row.games.created_at,
+      state:
+        row.games.status === 'active'
+          ? resolveActiveCardState({
+              submitted_at: row.submitted_at,
+              withdrawn_at: row.withdrawn_at,
+              approved_at: row.approved_at,
+              require_peer_approval: row.games.require_peer_approval,
+            })
+          : null,
+      gameMode: row.games.game_mode,
+      holeSegment: row.games.hole_segment,
+      endedAt: row.games.ended_at,
+      resultSummary: row.result_summary ?? null,
+      flightNumber: row.flight_number,
+    }));
 
   return {
     version: HOME_PAYLOAD_VERSION,

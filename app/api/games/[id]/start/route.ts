@@ -64,6 +64,7 @@ const REFUSAL_STATUS: Record<StartRefusal, 404 | 409 | 500> = {
   pending_players: 409,
   incomplete_sides: 409,
   decided_by_withdrawal: 409,
+  cup_finished: 409,
   unassigned_teams: 409,
   unassigned_flights: 409,
   rotation_player_count: 409,

@@ -1539,6 +1539,66 @@ describe('startScheduledGame — decided_by_withdrawal (#1814)', () => {
   });
 });
 
+// ─── cup_finished (#2214) ─────────────────────────────────────────────────────
+
+/**
+ * A finished cup stands. A match that never started must not start afterwards
+ * — not by the cron sweep, the E1 fallback, the admin button or the app — and
+ * the refusal writes nothing. The check runs before the tee check, so a match
+ * without a tee in a finished cup is still `cup_finished` (silent), never the
+ * structural `tee_missing` that would send the organiser «auto-start blokkert».
+ */
+describe('startScheduledGame — cup_finished (#2214)', () => {
+  const cupMatch = (tournament: { status: string } | null, withTee = true) => ({
+    ...cupGameRow({ game_mode: 'singles_matchplay', team_size: 1, scheduled_tee_off_at: TEE_OFF }),
+    ...(withTee ? {} : { tee_box_id: null, tee_boxes: null }),
+    tournament,
+  });
+  const writes = (supabase: unknown) =>
+    (supabase as { __fromCalls: Array<{ method: string }> }).__fromCalls.filter((c) =>
+      ['update', 'insert', 'upsert', 'delete'].includes(c.method),
+    );
+
+  it('refuses a match in a finished cup and writes nothing', async () => {
+    const supabase = buildSupabaseMock([
+      { data: cupMatch({ status: 'finished' }), error: null },
+      { data: [PLAYER('a1', 1), PLAYER('b1', 2)], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect({ result, writes: writes(supabase).length }).toEqual({
+      result: { ok: false, reason: 'cup_finished' },
+      writes: 0,
+    });
+  });
+
+  it('a match without a tee in a finished cup is cup_finished, not tee_missing', async () => {
+    const supabase = buildSupabaseMock([
+      { data: cupMatch({ status: 'finished' }, false), error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'cup_finished' });
+  });
+
+  it.each([
+    ['an active cup', { status: 'active' }],
+    ['an unreadable cup (null embed)', null],
+  ])('starts a match in %s as before', async (_label, tournament) => {
+    const supabase = buildSupabaseMock([
+      { data: cupMatch(tournament), error: null },
+      { data: [PLAYER('a1', 1), PLAYER('b1', 2)], error: null },
+      WROTE_ROW, // course_handicap a1
+      WROTE_ROW, // course_handicap b1
+      { data: [{ id: 'game-id' }], error: null }, // status flip
+      { data: [], error: null }, // pending signup requests
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: true });
+  });
+});
+
 // ─── #2210: formats with their own percentage freeze the full CH ─────────────
 
 describe('startScheduledGame — handicapprosenten følger formatet (#2210)', () => {

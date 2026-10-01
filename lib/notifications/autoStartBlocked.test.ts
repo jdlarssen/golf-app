@@ -132,6 +132,13 @@ describe('isSilentBlockReason (#1814)', () => {
     expect(isStructuralBlockReason('decided_by_withdrawal')).toBe(false);
   });
 
+  it('#2214: cup_finished er stille og ikke strukturell', () => {
+    expect({
+      silent: isSilentBlockReason('cup_finished'),
+      structural: isStructuralBlockReason('cup_finished'),
+    }).toEqual({ silent: true, structural: false });
+  });
+
   it('varsler ikke, selv om noen skulle kalle helperen direkte', async () => {
     await maybeNotifyAutoStartBlocked({
       gameId: 'g1',
