@@ -169,9 +169,10 @@ function ThirdLine({
     const warn = tone !== 'normal';
     return (
       <Line3 className="flex items-center gap-1.5">
+        {/* No shrink-0: the design's 64 px track gives way when the label wraps. */}
         <span
           aria-hidden
-          className="block h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-meter-track"
+          className="block h-1.5 w-16 overflow-hidden rounded-full bg-meter-track"
         >
           <span
             className={`block h-1.5 ${warn ? 'bg-warning' : 'bg-primary'}`}
@@ -222,7 +223,7 @@ function ThirdLine({
     <Line3 className="flex items-center gap-1">
       {(socialProof?.knownFriendNames ?? []).map((friend, i) => (
         <span
-          key={friend}
+          key={i}
           aria-hidden
           className={`flex size-[22px] shrink-0 items-center justify-center rounded-full bg-primary-soft text-[9px] font-semibold text-primary${
             i > 0 ? ' -ml-1.5 ring-2 ring-surface' : ''
