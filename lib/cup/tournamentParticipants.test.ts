@@ -84,6 +84,14 @@ describe('loadTournamentParticipantEmails (#1540)', () => {
         { table: 'game_players', method: 'in', args: ['game_id', ['G1', 'G2', 'G3']] },
       ]),
     );
+
+    // #2214: the read is paged on the primary key, so a cup past PostgREST's
+    // 1 000-row cap still reaches every participant (#2227 paged it).
+    const gpCalls = adminMock.__fromCalls.filter((c) => c.table === 'game_players');
+    expect({
+      ranged: gpCalls.some((c) => c.method === 'range'),
+      order: gpCalls.filter((c) => c.method === 'order').map((c) => c.args[0]),
+    }).toEqual({ ranged: true, order: ['game_id', 'user_id'] });
   });
 
   it('logger og returnerer tom liste når games-spørringen feiler (#1543)', async () => {

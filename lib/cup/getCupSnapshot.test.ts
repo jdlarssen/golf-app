@@ -95,6 +95,14 @@ describe('getCupSnapshot — course_holes par-select (#642)', () => {
     expect(cols).toContain('par_juniors');
     // No standalone `par` token — that would re-introduce the 42703 crash.
     expect(cols).not.toMatch(/(^|[\s,])par($|[\s,])/);
+
+    // #2214: the whole-cup game_players read is paged on its primary key, so a
+    // cup past PostgREST's 1 000-row cap keeps every player (#2227 paged it).
+    const gpCalls = supabaseMock.__fromCalls.filter((c) => c.table === 'game_players');
+    expect({
+      ranged: gpCalls.some((c) => c.method === 'range'),
+      order: gpCalls.filter((c) => c.method === 'order').map((c) => c.args[0]),
+    }).toEqual({ ranged: true, order: ['game_id', 'user_id'] });
   });
 });
 
