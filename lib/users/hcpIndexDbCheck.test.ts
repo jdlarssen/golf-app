@@ -12,6 +12,7 @@ import { describe, it, expect } from 'vitest';
 import noMessages from '@/messages/no.json';
 import enMessages from '@/messages/en.json';
 import { lastMigrationMatch } from '@/lib/__tests__/migrationCheck';
+import { wholeNumber } from '@/lib/__tests__/copyNumbers';
 import { HCP_MAX, HCP_MIN } from './profileInput';
 
 describe('users.hcp_index CHECK ↔ HCP_MIN / HCP_MAX (#2222)', () => {
@@ -46,6 +47,6 @@ describe('the handicap error messages state the same bound (#2222)', () => {
       ['en', key, numbers, get(enMessages, key)],
     ]),
   )('%s: %s nevner %j', (_locale, _key, numbers, text) => {
-    for (const n of numbers) expect(text).toContain(String(n));
+    for (const n of numbers) expect(text).toMatch(wholeNumber(n));
   });
 });
