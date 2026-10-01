@@ -40,8 +40,9 @@ som alt gjelder for den som kaller det endepunktet direkte:
 - **Ingen konto-orakel.** Feil adresse, konto uten passord og feil passord gir
   nøyaktig samme melding i appen: «Feil e-post eller passord.» Aldri Supabases
   egen tekst.
-- **Inngangen kan ikke opprette kontoer.** `signInWithPassword` gjør det aldri,
-  og OTP-veien beholder `shouldCreateUser: false`.
+- **Inngangen kan ikke opprette kontoer.** `signInWithPassword` gjør det aldri.
+  Kode-veien lager kontoer med nettsidens sperrer (#2216), men den er ikke en del
+  av passord-inngangen.
 - **Skjult, ikke hemmelig.** Langtrykket er der for at skjermen ikke skal ha en
   synlig «passord»-lenke ingen spillere trenger. Det er ikke en del av
   sikkerheten — de fire punktene over er.
