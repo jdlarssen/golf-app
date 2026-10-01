@@ -21,7 +21,7 @@
     "Ny norsk bruker-copy: kjør skillet humanizer:humanizer før commit.",
     "Aldri skriv til prod-databasen; all testing mot torny-staging (se docs/staging-testing.md).",
     "PR-body: «Closes #{{ISSUE}}», en kort Fordeler/ulemper-blokk, og `## Alternativer (produktvalg)` når det finnes et reelt produktvalg.",
-    "Ingen kan godkjenne tillatelser i en bakgrunnsøkt, så en kommando som venter på et menneske, står fast i timevis. Bruk aldri `pkill`/`kill`, og rør aldri `.env*` (heller ikke flytte eller gjenopprette lenker). Eksporterte staging-variabler går foran `.env.local`, og vakta på `NEXT_PUBLIC_SUPABASE_URL` bekrefter staging (docs/staging-testing.md: «Din vanlige .env.local (prod) røres ikke»). Trengs noe av det, eller venter en kommando på godkjenning, meld orkestratoren straks."
+    "Ingen kan godkjenne tillatelser i en bakgrunnsøkt, så en kommando som venter på et menneske, står fast i timevis. Bruk aldri `pkill`/`kill`, og rør aldri `.env*` (heller ikke flytte eller gjenopprette lenker). Eksporterte staging-variabler går foran `.env.local`, og vakta på `NEXT_PUBLIC_SUPABASE_URL` bekrefter staging (docs/staging-testing.md: «Din vanlige .env.local (prod) røres ikke»). Slett heller aldri rader selv, heller ikke egne testdata på staging (DELETE krever godkjenning). List dem i PR-en under «Rydd etter tapptest», så rydder orkestratoren. Trengs noe av det, eller venter en kommando på godkjenning, meld orkestratoren straks."
   ],
   "routing": {
     "heavyLabels": [
