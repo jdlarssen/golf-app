@@ -17,7 +17,7 @@ import { formatShortDateNb } from '../../../../../lib/format/date';
 import type { KavalkadePlayerRef } from '../../../../../lib/kavalkade/buildKavalkadeFacts';
 import type { KavalkadeCard as Card } from '../../../../../lib/kavalkade/kavalkadeCards';
 import { formatNumberNb, kavalkadeT as t } from '../../lib/kavalkadeCopy';
-import { FONTS, fraunces, interLine, useTheme, type Scheme } from '../../theme';
+import { FONTS, browserBaseline, fraunces, interLine, useTheme, type Scheme } from '../../theme';
 
 /** Tegnet som står der et tall mangler, samme som i «Sesongen din». */
 const MISSING = '–';
@@ -246,7 +246,9 @@ export function KavalkadeCard({
             {body.headline}
           </Text>
           {body.headlineUnit ? (
-            <Text style={[styles.unit, { color: colors.muted }]}>{body.headlineUnit}</Text>
+            <View style={large ? styles.unitDropLarge : styles.unitDropSmall}>
+              <Text style={[styles.unit, { color: colors.muted }]}>{body.headlineUnit}</Text>
+            </View>
           ) : null}
         </View>
         {lines(body).length > 0 ? (
@@ -293,6 +295,12 @@ const KICKER = interLine(10, 15);
 const HEADLINE_LARGE = fraunces(500, 36, 45);
 const HEADLINE_SMALL = fraunces(500, 24, 30);
 const UNIT = interLine(14, 20);
+// Enheten står i overskriftens linje på webben, på samme grunnlinje. I appen
+// står de side om side fra toppen, og en boks over enheten flytter den ned til
+// grunnlinja (`alignItems: 'baseline'` gjorde raden lavere enn webbens linje,
+// og en `marginTop` på teksten ble ikke brukt i raden; målt i simulatoren).
+const UNIT_DROP_LARGE = browserBaseline('fraunces', 36, 45) - browserBaseline('inter', 14, 20);
+const UNIT_DROP_SMALL = browserBaseline('fraunces', 24, 30) - browserBaseline('inter', 14, 20);
 const LINE = interLine(14, 22.75, { multiline: true });
 const TREND_LABEL = interLine(10, 15);
 const TREND_VALUE = fraunces(400, 18, 28);
@@ -300,10 +308,12 @@ const TREND_VALUE = fraunces(400, 18, 28);
 const styles = StyleSheet.create({
   card: { flex: 1, borderWidth: 1, borderRadius: 16, padding: 24 },
   kicker: { ...KICKER, fontFamily: FONTS.sansSemiBold, letterSpacing: 2 },
-  headlineRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', marginTop: 8 },
+  headlineRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 8 },
   headlineLarge: { ...HEADLINE_LARGE, fontVariant: ['tabular-nums'], flexShrink: 1 },
   headlineSmall: { ...HEADLINE_SMALL, fontVariant: ['tabular-nums'], flexShrink: 1 },
-  unit: { ...UNIT, fontFamily: FONTS.sans, marginLeft: 8 },
+  unitDropLarge: { marginLeft: 8, paddingTop: UNIT_DROP_LARGE },
+  unitDropSmall: { marginLeft: 8, paddingTop: UNIT_DROP_SMALL },
+  unit: { ...UNIT, fontFamily: FONTS.sans },
   lines: { marginTop: 12, gap: 4 },
   line: { ...LINE, fontFamily: FONTS.sans, fontVariant: ['tabular-nums'] },
   narrative: { ...LINE, fontFamily: FONTS.sans, marginTop: LINE.marginTop + 16 },
