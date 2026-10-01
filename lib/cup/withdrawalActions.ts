@@ -111,7 +111,7 @@ async function readCupTarget(
     console.error('[cup] withdrawal games read failed', { tournamentId, gErr });
     return { error: 'withdraw_failed' };
   }
-  const games = (gameRows ?? []) as unknown as GameRow[];
+  const games = (gameRows ?? []) as GameRow[];
   if (games.length === 0) return { error: 'not_participant' };
 
   const { data: playerRows, error: pErr } = await admin

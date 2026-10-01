@@ -77,19 +77,10 @@ export async function loadTournamentParticipantEmails(
 
   const seen = new Set<string>();
   const out: TournamentParticipant[] = [];
-  // Supabase JS typer FK-joins som array selv på many-to-one. Normaliser med
-  // unknown-cast og array-håndtering.
-  const rows = (playerRows ?? []) as unknown as Array<{
-    user_id: string;
-    users:
-      | { email: string; name: string | null; locale: string | null }
-      | { email: string; name: string | null; locale: string | null }[]
-      | null;
-  }>;
-  for (const row of rows) {
+  for (const row of playerRows ?? []) {
     if (seen.has(row.user_id)) continue;
     seen.add(row.user_id);
-    const userRel = Array.isArray(row.users) ? row.users[0] : row.users;
+    const userRel = row.users;
     const email = userRel?.email;
     if (!email) continue;
     out.push({
