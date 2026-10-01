@@ -10,6 +10,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { pendingPlayerList } from '@/lib/admin/pendingPlayerEmails';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
+import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -144,6 +145,67 @@ export default async function EditGamePage({
     redirect({ href: `/admin/games/${id}?error=not_editable`, locale });
   }
 
+  // #2260: the wizard owns its chrome (the top from the format-card artboard,
+  // linen background, no bottom nav), so the choice between wizard and
+  // GameForm is made here, before any chrome renders. The cost: resuming a
+  // draft shows no skeleton while the wizard data loads.
+  const resume = await loadWizardResume(id, game);
+  if (resume) {
+    const { wizardData, plan, playerRows } = resume;
+    return (
+      // `data-hides-bottom-nav`: the global bottom nav hides while this branch
+      // is on screen (the rule in app/globals.css). The GameForm branches
+      // below keep it.
+      <div data-hides-bottom-nav>
+        <AppShell showVersion={false}>
+          <GameWizard
+            courses={wizardData.courses}
+            players={wizardData.players}
+            initialValues={buildEditInitialValues(game, playerRows)}
+            mode={{
+              kind: 'edit-draft',
+              gameId: id,
+              saveDraftAction,
+              publishAction: publishFromDraftAction,
+            }}
+            initialIntent={plan.intent}
+            defaultGroupId={plan.groupId}
+            formatsByIntent={wizardData.formatsByIntent}
+            clubs={wizardData.clubs}
+            friendPlayerIds={wizardData.friendPlayerIds}
+            clubMemberIdsByClub={wizardData.clubMemberIdsByClub}
+            currentUserId={wizardData.userId ?? ''}
+            // Uten denne står #373-telleren på default-4, og steg 2 filtrerer
+            // bort utkastets eget format for alt som ikke passer fire spillere.
+            initialExpectedPlayerCount={resumeExpectedPlayerCount(
+              game.game_mode,
+              playerRows.length,
+            )}
+            // Ruta er `requireAdmin`-gatet over, så Solo- og Klubb-flisene i
+            // steg 1 skal vises (IntentSelector skjuler begge uten dette).
+            isAdmin
+            formatGuide={wizardData.formatGuide}
+            backHref={`/admin/games/${id}`}
+            entryLabel={t('kicker')}
+            notice={
+              <div className="mt-4 space-y-2">
+                {errorMessage && (
+                  <Banner tone="error" testId="edit-error-banner">
+                    {errorMessage}
+                  </Banner>
+                )}
+                <Banner tone="info">{t('bannerDraft')}</Banner>
+                <Suspense fallback={null}>
+                  <PlayerShortageBanner gameMode={game.game_mode} />
+                </Suspense>
+              </div>
+            }
+          />
+        </AppShell>
+      </div>
+    );
+  }
+
   return (
     <AdminShell>
       <TopBar
@@ -273,6 +335,36 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
   );
 }
 
+/**
+ * #1385: et utkast gjenopptas i veiviseren det ble laget i. Cup-/liga-koblede
+ * utkast er unntaket (veiviserens cup-gren er en opprettelses-kortslutning,
+ * ikke en redigeringsflate) — de trenger ikke veiviser-oppsettet i det hele
+ * tatt, og heller ikke planlagte spill. Null → GameForm.
+ */
+async function loadWizardResume(gameId: string, game: EditGameRow) {
+  const mayResumeInWizard =
+    game.status === 'draft' && !game.tournament_id && !game.league_round_id;
+  if (!mayResumeInWizard) return null;
+
+  const { supabase } = await getEditContext();
+  const [playersResult, wizardData] = await Promise.all([
+    supabase
+      .from('game_players')
+      .select('user_id, team_number, flight_number, tee_gender')
+      .eq('game_id', gameId)
+      .returns<EditGamePlayerRow[]>(),
+    getWizardMountData(),
+  ]);
+  if (playersResult.error) throw playersResult.error;
+
+  // Katalog-vakten kan fortsatt sende utkastet til GameForm: finnes ikke
+  // formatet i noen av veiviserens kataloger, ville steg 2 vist et grid uten
+  // spillets eget format.
+  const plan = planDraftResume(game, wizardData.formatsByIntent);
+  if (plan.kind !== 'wizard') return null;
+  return { wizardData, plan, playerRows: playersResult.data ?? [] };
+}
+
 async function EditGameFormBody({
   gameId,
   game,
@@ -282,72 +374,19 @@ async function EditGameFormBody({
 }) {
   const { supabase } = await getEditContext();
 
-  // #1385: et utkast gjenopptas i veiviseren det ble laget i. Cup-/liga-koblede
-  // utkast er unntaket (veiviserens cup-gren er en opprettelses-kortslutning,
-  // ikke en redigeringsflate) — de trenger ikke veiviser-oppsettet i det hele
-  // tatt, og heller ikke planlagte spill.
-  const mayResumeInWizard =
-    game.status === 'draft' && !game.tournament_id && !game.league_round_id;
-
-  const [playersResult, wizardData, options] = await Promise.all([
+  const [playersResult, { courses, playerOptions }] = await Promise.all([
     supabase
       .from('game_players')
       .select('user_id, team_number, flight_number, tee_gender')
       .eq('game_id', gameId)
       .returns<EditGamePlayerRow[]>(),
-    mayResumeInWizard ? getWizardMountData() : Promise.resolve(null),
-    // GameForm-grenene henter fortsatt sin egen rosterkilde, parallelt som før.
-    // Veiviser-grenen har sin egen (getWizardMountData) og trenger den ikke —
-    // faller den likevel tilbake til GameForm via katalog-vakten, er
-    // `getOptions` React-`cache`-et, så oppslaget under koster ingenting nytt.
-    mayResumeInWizard ? Promise.resolve(null) : getOptions(),
+    getOptions(),
   ]);
 
   if (playersResult.error) throw playersResult.error;
 
   const playerRows = playersResult.data ?? [];
   const initialValues = buildEditInitialValues(game, playerRows);
-
-  if (wizardData) {
-    // Katalog-vakten kan fortsatt sende utkastet til GameForm: finnes ikke
-    // formatet i noen av veiviserens kataloger, ville steg 2 vist et grid uten
-    // spillets eget format.
-    const plan = planDraftResume(game, wizardData.formatsByIntent);
-    if (plan.kind === 'wizard') {
-      return (
-        <GameWizard
-          courses={wizardData.courses}
-          players={wizardData.players}
-          initialValues={initialValues}
-          mode={{
-            kind: 'edit-draft',
-            gameId,
-            saveDraftAction,
-            publishAction: publishFromDraftAction,
-          }}
-          initialIntent={plan.intent}
-          defaultGroupId={plan.groupId}
-          formatsByIntent={wizardData.formatsByIntent}
-          clubs={wizardData.clubs}
-          friendPlayerIds={wizardData.friendPlayerIds}
-          clubMemberIdsByClub={wizardData.clubMemberIdsByClub}
-          currentUserId={wizardData.userId ?? ''}
-          // Uten denne står #373-telleren på default-4, og steg 2 filtrerer
-          // bort utkastets eget format for alt som ikke passer fire spillere.
-          initialExpectedPlayerCount={resumeExpectedPlayerCount(
-            game.game_mode,
-            playerRows.length,
-          )}
-          // Ruta er `requireAdmin`-gatet over, så Solo- og Klubb-flisene i
-          // steg 1 skal vises (IntentSelector skjuler begge uten dette).
-          isAdmin
-          formatGuide={wizardData.formatGuide}
-        />
-      );
-    }
-  }
-
-  const { courses, playerOptions } = options ?? (await getOptions());
 
   if (game.status === 'draft') {
     return (

@@ -1,14 +1,12 @@
 import { first } from '@/lib/url/searchParams';
-import { Suspense } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
-import { TopBar } from '@/components/ui/TopBar';
-import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
+import { WizardFallback } from '@/app/[locale]/admin/games/new/WizardFallback';
 import type { InitialValues } from '@/app/[locale]/admin/games/new/GameForm';
 import {
   createGameDraft,
@@ -36,6 +34,9 @@ import {
 // i AppShell (ikke AdminShell/Sekretariatet) så vanlige brukere aldri ser
 // admin-shellen. Validerings-/publiseringsfeil vises av veiviseren selv
 // (#1379: server-actionene returnerer feilen som state, ingen redirect hit).
+// #2260: veiviseren står som egen skjerm rett på lin-bakgrunnen og eier
+// toppen selv (pil, kicker, stripe, tittel). Ingen TopBar, sidetittel, kort
+// eller versjonsfot rundt den; bannerne går inn som `notice`.
 
 type SearchParams = Promise<{
   // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
@@ -243,19 +244,10 @@ export default async function OpprettSpillPage({
     (first(sp.klubb) ? 'klubb' : undefined) ??
     revansje?.initialIntent;
 
-  return (
-    <AppShell>
-      <TopBar backHref="/" kicker={t('createDoor.kicker')} />
-
-      <div className="px-1">
-        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('createDoor.heading')}
-        </h1>
-        <p className="font-sans text-[11.5px] text-muted">
-          {t('createDoor.subtitle')}
-        </p>
-      </div>
-
+  // Bannerne står mellom stripen og tittelen; hvert banner bærer sin egen
+  // toppmarg, så et banner som ikke vises, ikke etterlater et hull.
+  const notice = (
+    <>
       {revansje && (
         <div className="mt-4">
           <Banner tone="info" testId="revansje-banner">
@@ -263,30 +255,30 @@ export default async function OpprettSpillPage({
           </Banner>
         </div>
       )}
-
       <Suspense fallback={null}>
         <PlayerShortageBanner userId={currentUserId} />
       </Suspense>
+    </>
+  );
 
-      <div className="mt-5">
-        <Card>
-          <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody
-              defaultGroupId={first(sp.klubb)}
-              initialIntent={initialIntent}
-              initialValues={
-                revansje?.initialValues ??
-                (baneCourseId ? { course_id: baneCourseId } : undefined)
-              }
-              // #1007/#1023: remount når prefill-kilden endres (useGameFormState
-              // leser initialValues kun ved mount — key-remount-fella).
-              wizardKey={fraId ?? baneCourseId ?? 'blank'}
-              userId={currentUserId}
-              isAdmin={isAdmin}
-            />
-          </Suspense>
-        </Card>
-      </div>
+  return (
+    <AppShell showVersion={false}>
+      <Suspense fallback={<WizardFallback backHref="/" />}>
+        <GameFormBody
+          defaultGroupId={first(sp.klubb)}
+          initialIntent={initialIntent}
+          initialValues={
+            revansje?.initialValues ??
+            (baneCourseId ? { course_id: baneCourseId } : undefined)
+          }
+          // #1007/#1023: remount når prefill-kilden endres (useGameFormState
+          // leser initialValues kun ved mount — key-remount-fella).
+          wizardKey={fraId ?? baneCourseId ?? 'blank'}
+          userId={currentUserId}
+          isAdmin={isAdmin}
+          notice={notice}
+        />
+      </Suspense>
     </AppShell>
   );
 }
@@ -348,6 +340,7 @@ async function GameFormBody({
   wizardKey,
   userId,
   isAdmin,
+  notice,
 }: {
   defaultGroupId: string | undefined;
   initialIntent: Intent | undefined;
@@ -358,6 +351,7 @@ async function GameFormBody({
   wizardKey: string;
   userId: string;
   isAdmin: boolean;
+  notice: ReactNode;
 }) {
   // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
   const [
@@ -409,18 +403,8 @@ async function GameFormBody({
       isAdmin={isAdmin}
       isClubAdmin={isClubAdmin}
       formatGuide={formatGuide}
+      backHref="/"
+      notice={notice}
     />
-  );
-}
-
-function GameFormSkeleton() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-10 w-full rounded-lg" />
-      <Skeleton className="h-10 w-full rounded-lg" delay={60} />
-      <Skeleton className="h-32 w-full rounded-lg" delay={120} />
-      <Skeleton className="h-32 w-full rounded-lg" delay={180} />
-      <Skeleton className="h-12 w-full rounded-full" delay={240} />
-    </div>
   );
 }

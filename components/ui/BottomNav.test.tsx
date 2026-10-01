@@ -57,7 +57,6 @@ describe('BottomNav', () => {
     for (const path of [
       '/admin/games/abc',
       '/klubbhuset',
-      '/opprett-spill',
       '/klubber',
       '/klubber/abc',
       '/spillformater',
@@ -83,5 +82,17 @@ describe('BottomNav', () => {
     mockPathname = '/games/abc/holes/4';
     const { container } = render(<BottomNav userId="user-1" />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('skjuler seg i veiviseren for nytt spill, men ikke på spillsidene rundt (#2260)', () => {
+    for (const path of ['/opprett-spill', '/admin/games/new']) {
+      mockPathname = path;
+      const { container, unmount } = render(<BottomNav userId="user-1" />);
+      expect(container, path).toBeEmptyDOMElement();
+      unmount();
+    }
+    mockPathname = '/admin/games';
+    render(<BottomNav userId="user-1" />);
+    expect(screen.getByTestId('bottom-nav')).toBeInTheDocument();
   });
 });

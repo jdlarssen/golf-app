@@ -144,6 +144,11 @@
    * tone tweaks don't drag the disabled-button color along. */
   --score-unset-fg: #9a8f7c;
 
+  /* Solo dots in the wizard's format-card line-up (#2260): one player on
+   * their own. Its own token, not --disabled-fg — a solo player is not
+   * «off». Night value keeps ≥3:1 against --surface. */
+  --lineup-solo: #9a8f7c;
+
   /* Completed-celle background on hull-strip. One step warmer than --border
    * to read as "passed" without blending into the strip's neutral surface. */
   --hole-completed-bg: #efe9da;
@@ -265,6 +270,9 @@
      * so unset digits fade out without going to neutral grey. */
     --score-unset-fg: #9a9180;
 
+    /* Format-card solo dots (#2260): ≥3:1 against --surface #1c2a22. */
+    --lineup-solo: #9a9180;
+
     /* Completed-celle background on hull-strip — reuse --surface-2 dark
      * value so completed cells lift one step above the strip bg. */
     --hole-completed-bg: #243429;
@@ -347,6 +355,7 @@
   --disabled-bg: #2a3a30;
   --disabled-fg: #5c6358;
   --score-unset-fg: #9a9180;
+  --lineup-solo: #9a9180;
   --hole-completed-bg: #243429;
   --danger-deep: #c46868;
   --surface-strong: #1f3b2c;
@@ -390,6 +399,7 @@
   --color-disabled-bg: var(--disabled-bg);
   --color-disabled-fg: var(--disabled-fg);
   --color-score-unset-fg: var(--score-unset-fg);
+  --color-lineup-solo: var(--lineup-solo);
   --color-hole-completed-bg: var(--hole-completed-bg);
   --color-surface-strong: var(--surface-strong);
   --color-danger-deep: var(--danger-deep);
@@ -989,4 +999,15 @@ h1, h2, h3, h4, h5, h6 {
   .animate-pulse {
     animation: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * #2260: Nytt spill-veiviseren er en egen skjerm uten fanelinje. På
+ * `/opprett-spill` og `/admin/games/new` skjuler BottomNav seg selv på
+ * stien. `/admin/games/[id]/edit` deler sti med GameForm, så der setter bare
+ * veiviser-grenen markøren `data-hides-bottom-nav`, og baren skjules her.
+ * Ren CSS fordi markøren står i server-HTML-en: baren blinker aldri inn.
+ * ---------------------------------------------------------------------------*/
+body:has([data-hides-bottom-nav]) [data-bottom-nav] {
+  display: none;
 }

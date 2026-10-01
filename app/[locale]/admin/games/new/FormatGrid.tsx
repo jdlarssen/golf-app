@@ -1,33 +1,45 @@
 'use client';
 
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
-import { FormatStyleBadge } from '@/components/ui/FormatStyleBadge';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { formatPlayStyle, type GameMode } from '@/lib/scoring/modes/types';
 import { useRovingFocus, type RovingProps } from '@/hooks/useRovingFocus';
+import { splitFormatsForCount } from '@/lib/wizard/formatRecommendation';
+import { formatLineup, type FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
+import { Kicker } from '@/components/ui/Kicker';
+import { FormatLineup } from './FormatLineup';
 
 type Props = {
   formats: FormatForIntent[];
   value: string | undefined;
   onChange: (slug: string) => void;
   /**
-   * Åpner «?»-arket fokusert på et bestemt format (#498). Kalles av «Slik funker
-   * det →» på det valgte kortet. Utelatt → ingen «Slik funker det»-knapp.
+   * Opens the format sheet on one format (#498). «Reglene» on the card and on
+   * the selected row call it. Left out → no «Reglene» button.
    */
   onShowGuide?: (slug: string) => void;
   disabled?: boolean;
+  /**
+   * #2260: the Kompis player count. Set → the recommended card, «Andre som
+   * passer» and the rest behind «Se alle N som passer», only formats that fit.
+   * Left out (Klubb, Solo, Kompis without a count) → every format as a row
+   * under «Vanligst» and «Flere muligheter».
+   */
+  playerCount?: number;
 };
 
 /**
- * FormatGrid — wizard step 2 hovedflyt (Kompis / Klubb / Solo). Mottar en
- * flat liste av synlige formats for valgt intent (sortert is_primary desc,
- * sort_order asc av getFormatsForIntent) og partisjonerer på is_primary i
- * UI-laget — F1-helper sender flat liste på prinsipp.
+ * FormatGrid — step 2 of the wizard (Kompis / Klubb / Solo). Gets the visible
+ * formats for the intent, sorted by `getFormatsForIntent` (is_primary desc,
+ * sort_order, format_slug).
  *
- * #498: kompakt stil. Kollapset kort viser bare navn + spillestil-chip(s) — den
- * som vet hva hen vil scroller ikke gjennom forklaringer. Det valgte kortet
- * utvider til full bredde og viser kort-beskrivelsen + «Slik funker det →» som
- * åpner format-arket (uten å forlate veiviseren). Ikonene er fjernet.
+ * #2260: the format cards from the artboard «Forslag: formatkortene». With a
+ * player count the first format that fits is a large card with its line-up and
+ * one sentence on the rule, and three more follow as rows. Every visible
+ * option is one radiogroup with one roving tab stop, so the arrow keys move
+ * across the card and every row. «Reglene» is always a sibling of the radio,
+ * never a button inside a button.
  */
 export function FormatGrid({
   formats,
@@ -35,176 +47,311 @@ export function FormatGrid({
   onChange,
   onShowGuide,
   disabled = false,
+  playerCount,
 }: Props) {
   const t = useTranslations('wizard.formatGrid');
+  const tCards = useTranslations('wizard.formatCards');
   const tModes = useTranslations('modes');
-  const tContent = useTranslations('formatGuide');
-  const primary = formats.filter((f) => f.is_primary);
-  const secondary = formats.filter((f) => !f.is_primary);
-  // Vis gruppe-headere kun når begge gruppene finnes — ellers holder legenden.
-  const showGroupHeaders = primary.length > 0 && secondary.length > 0;
-  // Each radiogroup follows the radiogroup keyboard pattern on its own: one
-  // tab stop (the selected card, or the group's first when the selection is in
-  // the other group), arrow keys move the selection within the group.
+  const legendId = useId();
+  const idPrefix = useId();
+
+  // «Se alle» opens the rest for the count it was pressed at; a new count is a
+  // new recommendation and starts folded again.
+  const [expandedFor, setExpandedFor] = useState<number | undefined>(undefined);
+  const expanded = playerCount !== undefined && expandedFor === playerCount;
+  // Once the rest is open, everything that fits is on screen, so the
+  // selection never has to move up as an extra row.
+  const split = splitFormatsForCount(formats, playerCount, expanded ? undefined : value);
+  const withCount = playerCount !== undefined;
+
+  const groups: FormatForIntent[][] = withCount
+    ? [
+        [
+          ...(split.recommended ? [split.recommended] : []),
+          ...split.others,
+          ...(expanded ? split.rest : []),
+        ],
+      ]
+    : [split.rest.filter((f) => f.is_primary), split.rest.filter((f) => !f.is_primary)];
+  const visible = groups.flat();
+
   const select = (slug: string) => {
     if (!disabled) onChange(slug);
   };
-  const primaryRoving = useRovingFocus(
-    primary.map((f) => f.slug),
-    value,
-    select,
-  );
-  const secondaryRoving = useRovingFocus(
-    secondary.map((f) => f.slug),
+  const roving = useRovingFocus(
+    visible.map((f) => f.slug),
     value,
     select,
   );
 
-  if (formats.length === 0) {
+  // The link disappears when pressed, so focus moves to the first row it
+  // revealed instead of falling to <body>.
+  const revealedRef = useRef<HTMLElement | null>(null);
+  const focusRevealed = useRef(false);
+  useLayoutEffect(() => {
+    if (!focusRevealed.current) return;
+    focusRevealed.current = false;
+    revealedRef.current?.focus();
+  });
+
+  const name = (slug: string) => tModes(slug as Parameters<typeof tModes>[0]);
+  const card = (slug: string, field: 'line' | 'pitch' | 'choose') =>
+    tCards(`${slug}.${field}` as Parameters<typeof tCards>[0]);
+
+  function lineupText(lineup: Lineup): string {
+    switch (lineup.kind) {
+      case 'sides':
+        return t('lineup.sides', { count: lineup.perSide });
+      case 'teams':
+        return t('lineup.teams', { teams: lineup.teams, size: lineup.size });
+      case 'teamSizes':
+        if (lineup.sizes.length === 2) {
+          return t('lineup.teamSizesTwo', { first: lineup.sizes[0], second: lineup.sizes[1] });
+        }
+        return t('lineup.teamSizesRange', {
+          min: Math.min(...lineup.sizes),
+          max: Math.max(...lineup.sizes),
+        });
+      case 'wolf':
+        return t('lineup.wolf', { opponents: lineup.opponents });
+      case 'pot':
+      case 'solo':
+        return t('lineup.players', { count: lineup.players });
+    }
+  }
+
+  function metaLine(slug: string, lineup: Lineup): string {
+    const style = formatPlayStyle(slug as GameMode);
+    const lineupLabel = lineupText(lineup);
+    if (style === 'unknown') return lineupLabel;
+    return `${tModes(`playStyle.${style}` as Parameters<typeof tModes>[0])} · ${lineupLabel}`;
+  }
+
+  function rulesButton(slug: string, className: string, style?: { outlineOffset: string }) {
+    if (!onShowGuide) return null;
     return (
-      <p
-        role="status"
-        className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted"
+      <button
+        type="button"
+        onClick={() => onShowGuide(slug)}
+        aria-label={t('rulesAriaLabel', { name: name(slug) })}
+        style={style}
+        className={`shrink-0 rounded-full border border-border bg-surface px-4 font-sans text-sm font-semibold leading-[normal] text-primary ${className}`}
       >
+        {t('rules')}
+      </button>
+    );
+  }
+
+  function renderRecommended(f: FormatForIntent, rovingProps: RovingProps) {
+    const selected = value === f.slug;
+    const lineup = formatLineup(f.slug as GameMode, playerCount!);
+    const metaId = `${idPrefix}-${f.slug}-meta`;
+    const pitchId = `${idPrefix}-${f.slug}-pitch`;
+    return (
+      <div
+        key={f.slug}
+        data-testid="format-recommended"
+        className="-mx-1 flex flex-col gap-3 rounded-[18px] border-2 border-primary bg-surface p-4"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-serif text-[26px] font-semibold leading-[normal] text-text">
+              {name(f.slug)}
+            </p>
+            <p id={metaId} className="mt-0.5 font-sans text-[13px] leading-[normal] text-muted">
+              {metaLine(f.slug, lineup)}
+            </p>
+          </div>
+          <FormatLineup lineup={lineup} variant="card" />
+        </div>
+        <p id={pitchId} className="font-sans text-[15px] leading-[1.45] text-text">
+          {card(f.slug, 'pitch')}
+        </p>
+        <div className="flex gap-2">
+          <button
+            {...rovingProps}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-describedby={`${metaId} ${pitchId}`}
+            disabled={disabled}
+            onClick={() => select(f.slug)}
+            className="h-12 flex-1 rounded-full bg-primary font-sans text-[15px] font-semibold leading-[normal] text-white disabled:cursor-not-allowed disabled:opacity-50 dark:text-bg"
+          >
+            {selected ? (
+              <>
+                <span aria-hidden="true">✓ </span>
+                {t('chosen')}
+                <span className="sr-only">: {name(f.slug)}</span>
+              </>
+            ) : (
+              card(f.slug, 'choose')
+            )}
+          </button>
+          {rulesButton(f.slug, 'h-12')}
+        </div>
+      </div>
+    );
+  }
+
+  function renderRow(
+    f: FormatForIntent,
+    rovingProps: RovingProps,
+    { divider, withFigure, focusTarget }: { divider: boolean; withFigure: boolean; focusTarget: boolean },
+  ) {
+    const selected = value === f.slug;
+    const nameId = `${idPrefix}-${f.slug}-name`;
+    const lineId = `${idPrefix}-${f.slug}-line`;
+    const ref = (el: HTMLElement | null) => {
+      rovingProps.ref(el);
+      if (focusTarget) revealedRef.current = el;
+    };
+    return (
+      <div
+        key={f.slug}
+        data-testid="format-row"
+        className={`flex items-center ${divider ? 'border-b border-row-divider-warm' : ''} ${
+          selected ? 'min-h-[64px] bg-primary-soft shadow-[inset_0_0_0_2px_var(--primary)]' : ''
+        }`}
+      >
+        {/* Ekstra negativ offset (#1673): den valgte raden har en inset-linje
+            på 2 px i primary, så inset-ringen på −2px ville lagt seg rett
+            inntil den. −5px flytter ringen inn i radens eget fyll. Inline
+            style fordi fokusreglene i globals.css ligger utenfor alle @layer. */}
+        <button
+          {...rovingProps}
+          ref={ref}
+          type="button"
+          role="radio"
+          aria-checked={selected}
+          aria-labelledby={nameId}
+          aria-describedby={lineId}
+          disabled={disabled}
+          onClick={() => select(f.slug)}
+          style={selected ? { outlineOffset: '-5px' } : undefined}
+          className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 self-stretch px-3.5 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {withFigure && (
+            <FormatLineup lineup={formatLineup(f.slug as GameMode, playerCount!)} variant="row" />
+          )}
+          <span className="min-w-0 flex-1">
+            <span
+              id={nameId}
+              className="block font-sans text-[15px] font-semibold leading-[normal] text-text"
+            >
+              {name(f.slug)}
+            </span>
+            <span id={lineId} className="block font-sans text-xs leading-[normal] text-muted">
+              {card(f.slug, 'line')}
+            </span>
+          </span>
+          {!selected && (
+            <span aria-hidden="true" className="font-sans text-base leading-[normal] text-primary">
+              →
+            </span>
+          )}
+        </button>
+        {selected && rulesButton(f.slug, 'mr-3.5 h-11', { outlineOffset: '2px' })}
+      </div>
+    );
+  }
+
+  function rowCard(children: ReactNode) {
+    return (
+      <div
+        data-focus-inset
+        className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface"
+      >
+        {children}
+      </div>
+    );
+  }
+
+  if (visible.length === 0) {
+    return (
+      <p role="status" className="pt-[18px] font-sans text-sm leading-[normal] text-muted">
         {t('emptyState')}
       </p>
     );
   }
 
-  function renderCard(f: FormatForIntent, rovingProps: RovingProps) {
-    const selected = value === f.slug;
-    const name = tModes(f.slug as Parameters<typeof tModes>[0]);
+  let index = 0;
+  const next = () => roving(index++);
 
-    if (selected) {
-      const description = tContent.raw(
-        `content.${f.slug}.shortDescription` as Parameters<
-          typeof tContent.raw
-        >[0],
-      ) as string;
-      return (
-        // data-focus-inset: knappen er flush mot topp/venstre/høyre, så
-        // `overflow-hidden` klipper en outline med positiv offset helt bort
-        // (#1402).
-        <div
-          key={f.slug}
-          data-focus-inset
-          className="col-[1/-1] overflow-hidden rounded-xl border border-primary bg-primary-soft shadow-[inset_0_0_0_1px_var(--primary)]"
-        >
-          {/* Ekstra negativ offset (#1673): den valgte flisen har både
-              border-primary og en inset-linje i samme farge, så inset-ringen på
-              −2px la seg rett inntil dem — 4 px sammenhengende primary, ingen
-              ring å se. −5px flytter ringen inn i flisens egen fyll, så det står
-              3 px primary-soft mellom kanten og ringen.
-
-              Inline style, ikke en Tailwind-utility: fokusreglene i globals.css
-              ligger BEVISST utenfor alle @layer (se kommentaren over dem), og
-              lag-rekkefølge slår spesifisitet — en `focus-visible:[outline-offset:…]`
-              i @layer utilities taper mot dem uansett hvor spesifikk den er
-              (målt i Chromium: utility gir −2px, inline gir −5px). Offseten er
-              inert når ingen outline tegnes, så den koster ingenting utenfor
-              tastaturfokus. */}
-          <button
-            {...rovingProps}
-            type="button"
-            role="radio"
-            aria-checked={true}
-            aria-label={name}
-            disabled={disabled}
-            style={{ outlineOffset: '-5px' }}
-            onClick={() => {
-              if (!disabled) onChange(f.slug);
-            }}
-            className="flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="font-serif text-base leading-snug text-text">
-              {name}
-            </span>
-            <FormatStyleBadge mode={f.slug as GameMode} className="shrink-0" />
-          </button>
-          <div className="space-y-2 border-t border-primary/25 px-3 pb-3 pt-2">
-            <p
-              data-testid="format-desc"
-              className="font-sans text-xs leading-snug text-muted"
-            >
-              {description}
-            </p>
-            {onShowGuide && (
-              <button
-                type="button"
-                onClick={() => onShowGuide(f.slug)}
-                className="tap-extend font-sans text-xs font-medium text-primary hover:underline [--tap-extend:-14px_0]"
-              >
-                {t('howItWorks')}
-              </button>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <button
-        key={f.slug}
-        {...rovingProps}
-        type="button"
-        role="radio"
-        aria-checked={false}
-        aria-label={name}
-        disabled={disabled}
-        onClick={() => {
-          if (!disabled) onChange(f.slug);
-        }}
-        className="flex min-h-[44px] flex-col items-start justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors duration-150 hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {/* Navn over chip(s): et ett-ords navn («Stableford») + den brede
-            to-chip-baren (Solo + Lag) fikk ikke plass på én rad i en smal
-            2-kol-celle, så navnet fløt oppå chippen. Stablet unngår det og gir
-            lange navn full bredde. */}
-        <span className="font-serif text-sm leading-snug text-text">
-          {name}
-        </span>
-        <FormatStyleBadge mode={f.slug as GameMode} />
-      </button>
+  let body: ReactNode;
+  if (withCount) {
+    const recommended = split.recommended!;
+    const rows = groups[0].slice(1);
+    const showLink = !expanded && split.rest.length > 0;
+    const firstRevealed = expanded ? split.others.length : -1;
+    body = (
+      <>
+        <Kicker tone="accent" className="pb-2 pt-[18px] leading-[normal]">
+          {t('recommendedFor', { count: playerCount })}
+        </Kicker>
+        {renderRecommended(recommended, next())}
+        {split.others.length > 0 && (
+          <Kicker className="pb-2 pt-5 leading-[normal]">{t('others')}</Kicker>
+        )}
+        {rows.length > 0 || showLink
+          ? rowCard(
+              <>
+                {rows.map((f, i) =>
+                  renderRow(f, next(), {
+                    divider: showLink || i < rows.length - 1,
+                    withFigure: true,
+                    focusTarget: i === firstRevealed,
+                  }),
+                )}
+                {showLink && (
+                  <button
+                    type="button"
+                    aria-expanded={false}
+                    onClick={() => {
+                      focusRevealed.current = true;
+                      setExpandedFor(playerCount);
+                    }}
+                    className="flex min-h-[52px] w-full items-center justify-center font-sans text-sm font-semibold leading-[normal] text-primary"
+                  >
+                    {t('seeAll', { count: split.fittingCount })}
+                  </button>
+                )}
+              </>,
+            )
+          : null}
+      </>
     );
+  } else {
+    const [primary, secondary] = groups;
+    const showHeaders = primary.length > 0 && secondary.length > 0;
+    const nonEmpty = [
+      { key: 'primary', label: t('groupPrimary'), formats: primary },
+      { key: 'secondary', label: t('groupSecondary'), formats: secondary },
+    ].filter((g) => g.formats.length > 0);
+    body = nonEmpty.map((g, gi) => (
+      <div key={g.key} className={gi === 0 ? 'pt-[18px]' : 'pt-5'}>
+        {showHeaders && <Kicker className="pb-2 leading-[normal]">{g.label}</Kicker>}
+        {rowCard(
+          g.formats.map((f, i) =>
+            renderRow(f, next(), {
+              divider: i < g.formats.length - 1,
+              withFigure: false,
+              focusTarget: false,
+            }),
+          ),
+        )}
+      </div>
+    ));
   }
 
   return (
-    <fieldset disabled={disabled} className="space-y-5">
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+    <fieldset disabled={disabled}>
+      <legend id={legendId} className="sr-only">
         {t('legend')}
       </legend>
-
-      {primary.length > 0 && (
-        <div className="space-y-2">
-          {showGroupHeaders && (
-            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {t('groupPrimary')}
-            </p>
-          )}
-          <div
-            role="radiogroup"
-            aria-label={t('groupAriaMain')}
-            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-          >
-            {primary.map((f, idx) => renderCard(f, primaryRoving(idx)))}
-          </div>
-        </div>
-      )}
-
-      {secondary.length > 0 && (
-        <div className="space-y-2">
-          <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('groupSecondary')}
-          </p>
-          <div
-            role="radiogroup"
-            aria-label={t('groupAriaSecondary')}
-            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
-          >
-            {secondary.map((f, idx) => renderCard(f, secondaryRoving(idx)))}
-          </div>
-        </div>
-      )}
+      <div role="radiogroup" aria-labelledby={legendId}>
+        {body}
+      </div>
     </fieldset>
   );
 }

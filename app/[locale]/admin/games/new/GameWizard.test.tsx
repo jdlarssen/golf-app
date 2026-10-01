@@ -137,6 +137,7 @@ function renderWizard({
       initialValues={initialValues}
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={friendPlayerIds}
+      backHref="/"
     />,
   );
 }
@@ -159,10 +160,15 @@ function pickKompisIntent() {
   fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
 }
 
+// #2260: med 4 spillere (standard) er stableford det anbefalte formatet i
+// test-katalogen, så radioen er kortets «Velg stableford» — og «Valgt:
+// Stableford» når den er valgt.
+const STABLEFORD_CARD = /^(velg stableford|valgt: stableford)$/i;
+
 // Helper: pluck stableford-format i step 2 (Kompis-katalog har stableford
 // som primary).
 function pickStablefordFormat() {
-  fireEvent.click(screen.getByRole('radio', { name: /^stableford$/i }));
+  fireEvent.click(screen.getByRole('radio', { name: STABLEFORD_CARD }));
 }
 
 function pickBestBallFormat() {
@@ -275,16 +281,16 @@ describe('GameWizard — happy-path solo stableford', () => {
     ).toBe('reveal');
   });
 
-  it('Forrige-knappen er disabled på steg 1', () => {
+  it('på steg 1 er «Tilbake» en lenke ut av veiviseren (backHref)', () => {
     renderWizard();
-    expect(screen.getByRole('button', { name: /forrige/i })).toBeDisabled();
+    expect(screen.getByRole('link', { name: /^tilbake$/i })).toHaveAttribute('href', '/');
   });
 
-  it('Forrige fra steg 2 går tilbake til steg 1 og bevarer intent-valg', () => {
+  it('«Tilbake» fra steg 2 går tilbake til steg 1 og bevarer intent-valg', () => {
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
     pickKompisIntent();
     expectStep(2);
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
     expectStep(1);
     // Kompis-tile skal fortsatt være valgt.
     expect(
@@ -402,6 +408,7 @@ function renderWizardWithNines() {
       players={EIGHT_PLAYERS}
       mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
       formatsByIntent={FORMATS_BY_INTENT_WITH_NINES}
+      backHref="/"
     />,
   );
 }
@@ -418,21 +425,16 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
     expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /^nines \/ split sixes$/i })).not.toBeInTheDocument();
 
-    // Trykk «Flere spillere» to ganger: → 6 (default 4 + 2)
-    // Trykk «Færre spillere» tre ganger: → 3
-    fireEvent.click(screen.getByRole('button', { name: /flere spillere/i }));
-    fireEvent.click(screen.getByRole('button', { name: /flere spillere/i }));
-    fireEvent.click(screen.getByRole('button', { name: /færre spillere/i }));
-    fireEvent.click(screen.getByRole('button', { name: /færre spillere/i }));
-    fireEvent.click(screen.getByRole('button', { name: /færre spillere/i }));
+    // Trykk «Én spiller til» to ganger: → 6 (default 4 + 2)
+    // Trykk «Én spiller færre» tre ganger: → 3
+    fireEvent.click(screen.getByRole('button', { name: /én spiller til/i }));
+    fireEvent.click(screen.getByRole('button', { name: /én spiller til/i }));
+    fireEvent.click(screen.getByRole('button', { name: /én spiller færre/i }));
+    fireEvent.click(screen.getByRole('button', { name: /én spiller færre/i }));
+    fireEvent.click(screen.getByRole('button', { name: /én spiller færre/i }));
 
     // count=3: best_ball passer ikke (trenger partall ≥2), nines passer (nøyaktig 3)
     expect(screen.queryByRole('radio', { name: /^best ball$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^nines \/ split sixes$/i })).toBeInTheDocument();
-
-    // «Vis alle»-lenke viser alt igjen
-    fireEvent.click(screen.getByRole('button', { name: /vis alle/i }));
-    expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /^nines \/ split sixes$/i })).toBeInTheDocument();
   });
 });
@@ -963,7 +965,7 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     clickNext();
     expectStep(2);
     expect(
-      screen.getByRole('radio', { name: /^stableford$/i }).getAttribute('aria-checked'),
+      screen.getByRole('radio', { name: STABLEFORD_CARD }).getAttribute('aria-checked'),
     ).toBe('true');
 
     // Steg 3: bane, tee og tee-off er tilbake.
@@ -1060,7 +1062,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
   })();
 
   function clickPrev() {
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
   }
 
   /** Steg 1 → 5 med bane, tee og tee-off fylt ut på steg 3. */
@@ -1211,7 +1213,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
   /** Steg 1 → 5 med bane, tee og tee-off fylt ut. */
   function walkToReadyStep() {
     fireEvent.click(screen.getByRole('button', { name: /kompis-runde/i }));
-    fireEvent.click(screen.getByRole('radio', { name: /^stableford$/i }));
+    fireEvent.click(screen.getByRole('radio', { name: STABLEFORD_CARD }));
     clickNext();
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
@@ -1307,7 +1309,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
       target: { value: 'Lørdagsrunden' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
 
     expect(readDraft()?.values.name).toBe('Lørdagsrunden');
   });
