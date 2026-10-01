@@ -150,3 +150,61 @@ describe('markNotificationsRead', () => {
     consoleErr.mockRestore();
   });
 });
+
+/**
+ * #2263: a tap on a group row in the inbox marks exactly the rows in that group.
+ * One game can have both kinds of signup varsler — a heads-up without
+ * `request_id` (open signup) and a pending request with one. Marking the
+ * heads-up group must leave the pending requests unread, so the write goes by
+ * id, never by kind + game (which would sweep both).
+ */
+describe('markNotificationIdsRead', () => {
+  const HEADS_UP = ['n-open-1', 'n-open-2'];
+
+  it('marks only the given ids, only unread ones, only the owner’s', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: HEADS_UP.map((id) => ({ id })), error: null },
+    ]);
+    const { markNotificationIdsRead } = await import('./markRead');
+
+    const ok = await markNotificationIdsRead({ userId: 'u1', ids: HEADS_UP });
+
+    expect(ok).toBe(true);
+    const calls = supabaseMock.__fromCalls;
+    expect(calls).toContainEqual(
+      expect.objectContaining({ table: 'notifications', method: 'eq', args: ['user_id', 'u1'] }),
+    );
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'in', args: ['id', HEADS_UP] }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'is', args: ['read_at', null] }));
+    // No kind/game filter: that would also mark the pending request in the game.
+    expect(calls.filter((c) => c.method === 'eq')).toHaveLength(1);
+    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
+  });
+
+  it('0 rows touched → false (the caller saw them unread), no revalidate', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { markNotificationIdsRead } = await import('./markRead');
+
+    expect(await markNotificationIdsRead({ userId: 'u1', ids: HEADS_UP })).toBe(false);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+    consoleErr.mockRestore();
+  });
+
+  it('empty list → true without a write', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    const { markNotificationIdsRead } = await import('./markRead');
+
+    expect(await markNotificationIdsRead({ userId: 'u1', ids: [] })).toBe(true);
+    expect(supabaseMock.__fromCalls).toHaveLength(0);
+  });
+
+  it('DB error → false', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: null, error: { message: 'nede' } }]);
+    const { markNotificationIdsRead } = await import('./markRead');
+
+    expect(await markNotificationIdsRead({ userId: 'u1', ids: HEADS_UP })).toBe(false);
+    consoleErr.mockRestore();
+  });
+});

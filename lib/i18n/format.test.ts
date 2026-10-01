@@ -14,6 +14,7 @@ import {
   formatShortDateWithYearLocale,
   formatShortDateLocale,
   formatRelativeLocale,
+  formatRelativeDayLocale,
   countdownParts,
   formatTeeOffLineLocale,
   formatTeeOffLongParts,
@@ -732,6 +733,60 @@ describe('formatRelativeLocale', () => {
     const enResult = formatRelativeLocale(futureIso, 'en', BASE_MS);
     expect(noResult).toBe(formatRelativeNb(futureIso, BASE_MS));
     expect(enResult).toMatch(/now|second/i);
+  });
+});
+
+// #2263: the inbox's short minute form and its calendar-day rule for older rows.
+describe('formatRelativeLocale — shortMinutes (#2263)', () => {
+  const NOW = new Date('2026-10-01T08:00:00Z').getTime();
+  const ago = (ms: number) => new Date(NOW - ms).toISOString();
+
+  it.each([
+    ['no', 90_000, 'for 2 min siden'],
+    ['en', 90_000, '2 min ago'],
+    ['no', 61 * 60_000, 'for 1 time siden'],
+    ['en', 61 * 60_000, '1 hour ago'],
+    ['no', 3 * 60 * 60_000, 'for 3 timer siden'],
+  ] as const)('%s, %i ms → «%s»', (locale, ms, expected) => {
+    expect(formatRelativeLocale(ago(ms), locale, NOW, { shortMinutes: true })).toBe(expected);
+  });
+
+  it('seconds stay as before', () => {
+    expect(formatRelativeLocale(ago(30_000), 'no', NOW, { shortMinutes: true })).toBe(
+      formatRelativeNb(ago(30_000), NOW),
+    );
+  });
+
+  it('without the option nothing changes', () => {
+    expect(formatRelativeLocale(ago(90_000), 'no', NOW)).toBe('for 2 minutter siden');
+  });
+});
+
+describe('formatRelativeDayLocale (#2263)', () => {
+  // 2026-10-01 is summer time in Oslo (UTC+2).
+  it.each([
+    // kl. 23 i går sett kl. 10
+    ['no', '2026-09-30T21:00:00Z', '2026-10-01T08:00:00Z', 'i går'],
+    // kl. 08 i går sett kl. 21
+    ['no', '2026-09-30T06:00:00Z', '2026-10-01T19:00:00Z', 'i går'],
+    ['en', '2026-09-30T21:00:00Z', '2026-10-01T08:00:00Z', 'yesterday'],
+    ['no', '2026-09-29T10:00:00Z', '2026-10-01T08:00:00Z', 'for 2 dager siden'],
+    ['en', '2026-09-29T10:00:00Z', '2026-10-01T08:00:00Z', '2 days ago'],
+    ['no', '2026-09-25T10:00:00Z', '2026-10-01T08:00:00Z', 'for 6 dager siden'],
+    ['no', '2026-09-24T10:00:00Z', '2026-10-01T08:00:00Z', 'forrige uke'],
+    ['no', '2026-09-17T10:00:00Z', '2026-10-01T08:00:00Z', 'for 2 uker siden'],
+    ['en', '2026-09-17T10:00:00Z', '2026-10-01T08:00:00Z', '2 weeks ago'],
+    ['no', '2026-08-17T10:00:00Z', '2026-10-01T08:00:00Z', 'for 2 måneder siden'],
+  ] as const)('%s: %s seen at %s → «%s»', (locale, iso, now, expected) => {
+    expect(formatRelativeDayLocale(iso, locale, new Date(now).getTime())).toBe(expected);
+  });
+
+  it('counts the Oslo day, not the UTC day: 00:30 Oslo is today', () => {
+    // 22:30Z on 30 Sep is 00:30 on 1 Oct in Oslo — same day as the 10:00 view,
+    // so it reads in hours (9.5 h rounds to 10), not «i går».
+    expect(
+      formatRelativeDayLocale('2026-09-30T22:30:00Z', 'no', new Date('2026-10-01T08:00:00Z').getTime()),
+    ).toBe('for 10 timer siden');
   });
 });
 

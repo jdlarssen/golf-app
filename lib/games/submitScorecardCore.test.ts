@@ -622,6 +622,11 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
       .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
       .filter((c) => c.kind === 'scorecard_submitted');
     expect(adminCalls.map((c) => c.payload.player_name)).toEqual(['Kari Fører', 'Ola Nordmann']);
+    // #2263: both varsler point at the CARD OWNER, never at the one who
+    // delivered it — the inbox checks and groups each card by this id.
+    expect(peerCalls.filter((c) => c.payload.submitter_name === 'Ola Nordmann').map((c) => c.payload.submitter_id)).toEqual([OLA]);
+    expect(peerCalls.filter((c) => c.payload.submitter_name === 'Kari Fører').map((c) => c.payload.submitter_id)).toEqual([USER_ID, USER_ID]);
+    expect(adminCalls.map((c) => c.payload.player_id)).toEqual([USER_ID, OLA]);
     expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(2);
     expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
       expect.objectContaining({ playerName: 'Ola Nordmann' }),

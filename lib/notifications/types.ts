@@ -56,16 +56,22 @@ const inviteSchema = z.object({
 // fills the locale fallback at render time (#583, #1364) so the payload never
 // carries Norwegian prose written in the ACTOR's context to a recipient who
 // reads in another locale.
+// #2263: `submitter_id` / `player_id` are the CARD OWNER's id (since #2200 one
+// player can deliver a flightmate's card). The inbox uses them to tell two
+// cards from one person apart and to see when a card no longer waits. Optional:
+// rows written before #2263 fall back to the name.
 const peerApprovalRequestSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   submitter_name: z.string().min(1).nullable().optional(),
+  submitter_id: uuid.optional(),
 });
 
 const scorecardSubmittedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   player_name: z.string().min(1).nullable().optional(),
+  player_id: uuid.optional(),
 });
 
 // scorecard_approved: både medspiller-attestering og arrangør-/admin-overstyring
@@ -305,9 +311,13 @@ const friendRequestSchema = z.object({
 
 // friend_accepted: noen godtok venneforespørselen din. Sendes til avsender. (#369)
 // actor_name is optional (null) — same render-time fallback as friend_request.
+// #2263: `via` says how the friendship came about — 'link' when they used your
+// friend link, 'accept' when they accepted your request. The inbox words the
+// row from it; rows without it keep the neutral «ble venn med deg».
 const friendAcceptedSchema = z.object({
   actor_id: uuid,
   actor_name: z.string().min(1).nullable().optional(),
+  via: z.enum(['link', 'accept']).optional(),
 });
 
 // player_added: en arrangør la deg til i et spill uten at du meldte deg på
