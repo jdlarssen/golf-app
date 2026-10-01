@@ -50,7 +50,8 @@ test.describe('Login form smoke (OTP step 1)', () => {
   });
 
   test('redirecter uautentisert besøkende til /login', async ({ page }) => {
-    await page.goto('/');
+    // Ikke `/`: forsiden er offentlig (auth-optional) siden #1265.
+    await page.goto('/profile');
     await expect(page).toHaveURL(/\/login/);
   });
 
