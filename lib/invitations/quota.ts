@@ -1,32 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
-/**
- * Structured time-until result — locale-agnostic.
- * Translated at call-site using catalog keys or inline strings.
- */
-export type TimeUntilResult =
-  | { kind: 'soon' }
-  | { kind: 'hours'; n: number }
-  | { kind: 'minutes'; n: number };
-
-/**
- * Returns a structured representation of time remaining until `target`.
- * Translate the result at the call-site using catalog keys.
- *
- * - `{ kind: 'soon' }`        → target is now or past
- * - `{ kind: 'hours', n }`    → n hours away (floored, n ≥ 1)
- * - `{ kind: 'minutes', n }`  → n minutes away (ceiled, n ≥ 1)
- */
-export function timeUntilStructured(target: Date): TimeUntilResult {
-  const diffMs = target.getTime() - Date.now();
-  if (diffMs <= 0) return { kind: 'soon' };
-  const hours = Math.floor(diffMs / (60 * 60 * 1000));
-  if (hours >= 1) return { kind: 'hours', n: hours };
-  const minutes = Math.ceil(diffMs / (60 * 1000));
-  return { kind: 'minutes', n: minutes };
-}
-
 export const DAILY_INVITE_LIMIT = 10;
 export const QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000;
 

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   computeActionItemCounts,
   holesFilledByGame,
-  totalActionableGames,
   type ActiveGameInput,
   type ActivePlayerInput,
   type HolesRosterRow,
@@ -179,28 +178,6 @@ describe('computeActionItemCounts', () => {
       [makePlayer('g1', { holesFilled: 9 })],
     );
     expect(result.unsubmitted).toEqual([]);
-  });
-});
-
-describe('totalActionableGames', () => {
-  it('returns 0 when both lists are empty', () => {
-    expect(totalActionableGames({ unsubmitted: [], pendingApproval: [] })).toBe(0);
-  });
-
-  it('deduplicates when a game appears in both lists', () => {
-    const counts = {
-      unsubmitted: [{ gameId: 'g1', name: 'X' }],
-      pendingApproval: [{ gameId: 'g1', name: 'X' }],
-    };
-    expect(totalActionableGames(counts)).toBe(1);
-  });
-
-  it('counts distinct games across both lists', () => {
-    const counts = {
-      unsubmitted: [{ gameId: 'g1', name: 'X' }],
-      pendingApproval: [{ gameId: 'g2', name: 'Y' }],
-    };
-    expect(totalActionableGames(counts)).toBe(2);
   });
 });
 

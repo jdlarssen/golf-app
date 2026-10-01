@@ -229,13 +229,6 @@ export function teamMembersLabel(players: LbPlayer[]): string {
   return names.join(' & ');
 }
 
-export function positionBadge(rank: number): string {
-  if (rank === 1) return '🥇 1.';
-  if (rank === 2) return '🥈 2.';
-  if (rank === 3) return '🥉 3.';
-  return `${rank}.`;
-}
-
 export function parseMode(value: unknown): LeaderboardMode {
   const v = Array.isArray(value) ? value[0] : value;
   return v === 'brutto' ? 'brutto' : 'netto';
