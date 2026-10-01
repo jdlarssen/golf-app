@@ -11,6 +11,7 @@
 // 'best_ball' hvis det mangler — UI-velgeren introduseres først i
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
+import { parseStartType, type StartType } from './startType';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
 import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
@@ -210,6 +211,8 @@ export type ParsedPayload = {
   require_peer_approval: boolean;
   /** 'live' = netto visible from hole 1. 'reveal' = netto hidden until status='finished'. */
   score_visibility: 'live' | 'reveal';
+  /** #2258: first-tee or shotgun start («Shotgun-start» in the wizard). */
+  start_type: StartType;
   /** #1049: startkontingent i hele kr per spiller. 0 = ingen kontingent (feature av). */
   entry_fee_kr: number;
   /** #1049: Vipps-nr eller betalingslenke (fritekst). null når entry_fee_kr = 0 eller tomt. */
@@ -290,6 +293,9 @@ function parseBase(formData: FormData): ParsedBase {
   // det ikke er noen kontingent, så en stale lenke ikke lekker uten et beløp.
   const entry_fee_kr = parseEntryFeeKr(formData);
   const payment_link = parsePaymentLink(formData, entry_fee_kr);
+  // #2258: anything but 'shotgun' is a first-tee start, so a stale or
+  // tampered field never fails the CHECK.
+  const start_type = parseStartType(formData.get('start_type'));
 
   return {
     name,
@@ -298,6 +304,7 @@ function parseBase(formData: FormData): ParsedBase {
     hcp_allowance_pct,
     require_peer_approval,
     score_visibility,
+    start_type,
     entry_fee_kr,
     payment_link,
   };

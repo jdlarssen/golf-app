@@ -75,6 +75,7 @@ describe('getPublicDiscoverableGames', () => {
           game_mode: 'skins',
           mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
           hole_segment: 'full',
+          start_type: 'first_tee',
           courses: { name: 'Hauger' },
         },
       ],
@@ -94,6 +95,7 @@ describe('getPublicDiscoverableGames', () => {
         game_mode: 'skins',
         mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
         hole_segment: 'full',
+        start_type: 'first_tee',
       },
     ]);
   });

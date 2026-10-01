@@ -42,6 +42,7 @@ type TerminGame = Pick<
   | 'game_mode'
   | 'mode_config'
   | 'hole_segment'
+  | 'start_type'
 >;
 
 export type TerminEntry = TerminGame & {
@@ -63,6 +64,7 @@ function pickGame(game: TerminGame): TerminGame {
     game_mode: game.game_mode,
     mode_config: game.mode_config,
     hole_segment: game.hole_segment,
+    start_type: game.start_type,
   };
 }
 
@@ -240,9 +242,20 @@ export function capacityState({ cap, held }: { cap: number; held: number }): {
   return { free, fillRatio, tone };
 }
 
-/** The small line under the clock. PR 2 adds the start type. */
-export type TerminTimeNote = 'nine_holes' | null;
+/** The small line under the clock: «9 hull», «første start» or «shotgun». */
+export type TerminTimeNote = 'nine_holes' | 'first_tee' | 'shotgun' | null;
 
-export function terminTimeNote(entry: Pick<TerminEntry, 'hole_segment'>): TerminTimeNote {
-  return holeCountForSegment(entry.hole_segment) === 9 ? 'nine_holes' : null;
+/**
+ * Nine holes wins — a nine-hole round says «9 hull» with or without a time.
+ * Otherwise a round with a time says how it starts, and a round without a
+ * time says nothing: a start type means little before there is a tee-off.
+ */
+export function terminTimeNote(
+  entry: Pick<TerminEntry, 'hole_segment' | 'start_type' | 'scheduled_tee_off_at'>,
+): TerminTimeNote {
+  if (holeCountForSegment(entry.hole_segment) === 9) return 'nine_holes';
+  if (!entry.scheduled_tee_off_at || Number.isNaN(new Date(entry.scheduled_tee_off_at).getTime())) {
+    return null;
+  }
+  return entry.start_type === 'shotgun' ? 'shotgun' : 'first_tee';
 }

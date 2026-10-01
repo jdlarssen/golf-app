@@ -289,6 +289,7 @@ export function cryptoShuffle<T>(input: T[]): T[] {
 }
 
 import type { Intent } from '@/lib/wizard/intent';
+import type { StartType } from '@/lib/games/startType';
 import { fitsPlayerCount as fitsPlayerCountFn } from '@/lib/wizard/fitsPlayerCount';
 
 type UseGameFormStateInput = {
@@ -455,6 +456,10 @@ export function useGameFormState({
   // `canPublish` below. Drafts may omit it. Empty string === "not set".
   const [scheduledTeeOffAt, setScheduledTeeOffAt] = useState<string>(
     initialValues?.scheduled_tee_off_at ?? '',
+  );
+  // #2258: «Shotgun-start» by the tee-off. Persisted as games.start_type.
+  const [startType, setStartType] = useState<StartType>(
+    initialValues?.start_type ?? 'first_tee',
   );
   // Hydration-safe mount flag (#928). `canPublish` is SSR-rendered into `disabled`
   // on buttons; calling Date.now() during render would cause a hydration mismatch on
@@ -1916,6 +1921,8 @@ export function useGameFormState({
     setPlayerGenders,
     scheduledTeeOffAt,
     setScheduledTeeOffAt,
+    startType,
+    setStartType,
     playerSearch,
     setPlayerSearch,
     selectedPlayerIds,

@@ -128,6 +128,7 @@ describe('getDiscoverableGames', () => {
           game_mode: 'texas_scramble',
           mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
           hole_segment: 'full',
+          start_type: 'shotgun',
           courses: { name: 'Hauger' },
         },
       ],
@@ -147,6 +148,7 @@ describe('getDiscoverableGames', () => {
         game_mode: 'texas_scramble',
         mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 2, team_handicap_pct: 10 },
         hole_segment: 'full',
+        start_type: 'shotgun',
       },
     ]);
   });

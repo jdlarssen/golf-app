@@ -273,6 +273,8 @@ async function createGameInternal(
       // (D5) to flip status to 'active' and freeze handicaps.
       status: mode === 'publish' ? 'scheduled' : 'draft',
       scheduled_tee_off_at: scheduledTeeOffAt,
+      // #2258: «Shotgun-start» by the tee-off time; first_tee otherwise.
+      start_type: payload.start_type,
       created_by: userId,
       started_at: null,
       group_id: groupId,

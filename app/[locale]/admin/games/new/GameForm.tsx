@@ -1,5 +1,6 @@
 'use client';
 
+import type { StartType } from '@/lib/games/startType';
 import { Fragment, useState } from 'react';
 import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { Button } from '@/components/ui/Button';
@@ -71,6 +72,8 @@ export type InitialValues = {
   tee_box_id?: string;
   /** Format: 'YYYY-MM-DDTHH:mm' in Europe/Oslo local time (matches datetime-local input). */
   scheduled_tee_off_at?: string;
+  /** #2258: «Shotgun-start». Omitted = first tee. */
+  start_type?: StartType;
   hcp_allowance_pct?: string;
   require_peer_approval?: boolean;
   /** 'live' (default) shows netto immediately; 'reveal' hides it until the game finishes. */
@@ -470,6 +473,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         name="let_friends_skip_gate"
         value={state.letFriendsSkipGate ? '1' : ''}
       />
+      {/* #2258: the checkbox in BasicsSection has no name; this mirror is the
+          one field FormData reads, so a closed panel never loses it. */}
+      <input type="hidden" name="start_type" value={state.startType} />
       {initialValues?.tournament_id && (
         <>
           <input

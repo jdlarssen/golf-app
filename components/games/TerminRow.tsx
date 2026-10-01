@@ -131,8 +131,14 @@ function TimeBlock({ entry, locale }: { entry: TerminEntry; locale: AppLocale })
           –
         </span>
       )}
-      {note === 'nine_holes' && (
-        <span className="block text-[11px] text-muted">{t('termin.nineHoles')}</span>
+      {note !== null && (
+        <span className="block text-[11px] text-muted">
+          {note === 'nine_holes'
+            ? t('termin.nineHoles')
+            : note === 'shotgun'
+              ? t('termin.shotgun')
+              : t('termin.firstTee')}
+        </span>
       )}
     </span>
   );

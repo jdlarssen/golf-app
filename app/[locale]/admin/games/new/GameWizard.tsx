@@ -1206,6 +1206,7 @@ function FormDataInputs({
     courseId,
     teeBoxId,
     scheduledTeeOffAt,
+    startType,
     hcpAllowance,
     requirePeerApproval,
     registrationMode,
@@ -1405,6 +1406,9 @@ function FormDataInputs({
         name="scheduled_tee_off_at"
         value={scheduledTeeOffAt}
       />
+      {/* #2258: «Shotgun-start» lives in BasicsSection (step 3, no name); the
+          mirror here carries it to a publish from any step. */}
+      <input type="hidden" name="start_type" value={startType} />
 
       <input type="hidden" name="name" value={name} />
       {/* #2210: formats with their own percentage in mode_config get 100 —
