@@ -8,7 +8,6 @@ import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
-import type { AppLocale } from '@/i18n/routing';
 import { withdrawInvitation } from '../../../actions';
 
 type Params = Promise<{ id: string }>;
@@ -23,7 +22,7 @@ export default async function WithdrawInvitationPage({
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223).
   await requireAdmin(supabase);
 
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('admin.players.withdrawInvitation');
   const tNav = await getTranslations('admin.nav');
 
@@ -49,7 +48,7 @@ export default async function WithdrawInvitationPage({
         </h1>
         <p className="font-sans text-[14px] leading-relaxed text-text">
           {t.rich('bodyRich', {
-            email: inv!.email,
+            email: inv.email,
             strong: (chunks) => <strong>{chunks}</strong>,
           })}
         </p>
@@ -60,7 +59,7 @@ export default async function WithdrawInvitationPage({
 
       <div className="mt-6 flex flex-col gap-2.5">
         <form action={withdrawInvitation}>
-          <input type="hidden" name="id" value={inv!.id} />
+          <input type="hidden" name="id" value={inv.id} />
           <SubmitButton
             className="w-full"
             style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}

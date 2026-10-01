@@ -26,23 +26,21 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
   const locale = await getLocale();
   const supabase = await getServerClient();
   const {
-    data: { user: maybeUser },
+    data: { user },
   } = await supabase.auth.getUser();
-  if (!maybeUser) {
+  if (!user) {
     redirect({ href: '/login', locale });
   }
-  const user = maybeUser!;
 
   // Refuse to act on finished games.
-  const { data: maybeGame } = await supabase
+  const { data: game } = await supabase
     .from('games')
     .select('status, game_mode')
     .eq('id', gameId)
     .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished'; game_mode: string }>();
-  if (!maybeGame || maybeGame.status !== 'active') {
-    redirect({ href: `/games/${gameId}/approve?error=not_active` as string, locale });
+  if (!game || game.status !== 'active') {
+    redirect({ href: `/games/${gameId}/approve?error=not_active`, locale });
   }
-  const game = maybeGame!;
   const gameMode = game.game_mode as GameMode;
 
   const { data: profile } = await supabase
@@ -128,9 +126,9 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
   // `not_pending` and `db` share the existing `db` code («Klarte ikke å lagre
   // endringen») rather than a new i18n key.
   if (!result.ok) {
-    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
+    redirect({ href: `/games/${gameId}/approve?error=db`, locale });
   }
-  redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
+  redirect({ href: `/games/${gameId}/approve?status=approved`, locale });
 }
 
 /**
@@ -158,7 +156,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
   const locale = await getLocale();
   const playerUserId = String(formData.get('player_user_id') ?? '');
   if (!playerUserId) {
-    redirect({ href: `/games/${gameId}/approve?error=bad_request` as string, locale });
+    redirect({ href: `/games/${gameId}/approve?error=bad_request`, locale });
   }
 
   const { supabase, user, authz, gameMode } = await loadAndAuthorize(
@@ -178,7 +176,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
 
   // Same mapping as approveScorecard: both refusals share the `db` code.
   if (!result.ok) {
-    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
+    redirect({ href: `/games/${gameId}/approve?error=db`, locale });
   }
-  redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
+  redirect({ href: `/games/${gameId}/approve?status=rejected`, locale });
 }

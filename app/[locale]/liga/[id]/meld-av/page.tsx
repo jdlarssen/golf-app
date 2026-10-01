@@ -13,7 +13,6 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { leaveClubLeague } from '@/lib/league/actions';
-import type { AppLocale } from '@/i18n/routing';
 
 
 type Params = Promise<{ id: string }>;
@@ -38,7 +37,7 @@ export default async function MeldAvLigaPage({
   const sp = await searchParams;
   const [t, locale] = await Promise.all([
     getTranslations('liga.player.meldAv'),
-    getLocale() as Promise<AppLocale>,
+    getLocale(),
   ]);
 
   const supabase = await getServerClient();
@@ -51,7 +50,7 @@ export default async function MeldAvLigaPage({
   if (!snapshot) notFound();
   const { league, participants } = snapshot;
 
-  const me = participants.find((p) => p.userId === user!.id);
+  const me = participants.find((p) => p.userId === user.id);
   const { canLeave } = leagueSelfServiceState({
     groupId: league.group_id,
     status: league.status as LeagueStatus,

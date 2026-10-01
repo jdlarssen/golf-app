@@ -126,7 +126,7 @@ export async function joinCup(
   // (#1863).
   let context: CupJoinContext;
   try {
-    context = await getCupJoinContext(shortId, user!.id);
+    context = await getCupJoinContext(shortId, user.id);
   } catch (err) {
     if (err instanceof CupJoinReadError) return { error: 'read_failed' };
     throw err;
@@ -146,26 +146,25 @@ export async function joinCup(
   const { error: insertErr } = await getAdminClient()
     .from('tournament_participants')
     .upsert(
-      { tournament_id: cup!.id, user_id: user!.id },
+      { tournament_id: cup!.id, user_id: user.id },
       { onConflict: 'tournament_id,user_id', ignoreDuplicates: true },
     );
   if (insertErr) {
     console.error('[cup] joinCup failed', {
       tournamentId: cup!.id,
-      userId: user!.id,
+      userId: user.id,
       error: insertErr,
     });
     return { error: 'save_failed' };
   }
 
   revalidateCup(cup!.id, cup!.group_id);
-  await notifyCreator(cup!, user!.id, 'joined');
+  await notifyCreator(cup!, user.id, 'joined');
 
   // Egen cup ⇒ egen bekreftelse: ingen fikk beskjed, så banneret sier ikke at
   // noen gjorde det.
-  const status = actorIsCreator(cup!, user!.id) ? 'joined_self' : 'joined';
+  const status = actorIsCreator(cup!, user.id) ? 'joined_self' : 'joined';
   redirect({ href: `${joinPath(shortId)}?status=${status}`, locale });
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 /**
@@ -189,7 +188,7 @@ export async function leaveCup(
   // Samme grep som i `joinCup`: kun lesingen fanges, så NEXT_REDIRECT slipper ut.
   let context: CupJoinContext;
   try {
-    context = await getCupJoinContext(shortId, user!.id);
+    context = await getCupJoinContext(shortId, user.id);
   } catch (err) {
     if (err instanceof CupJoinReadError) return { error: 'read_failed' };
     throw err;
@@ -212,20 +211,19 @@ export async function leaveCup(
     .from('tournament_participants')
     .delete()
     .eq('tournament_id', cup!.id)
-    .eq('user_id', user!.id);
+    .eq('user_id', user.id);
   if (deleteErr) {
     console.error('[cup] leaveCup failed', {
       tournamentId: cup!.id,
-      userId: user!.id,
+      userId: user.id,
       error: deleteErr,
     });
     return { error: 'save_failed' };
   }
 
   revalidateCup(cup!.id, cup!.group_id);
-  await notifyCreator(cup!, user!.id, 'left');
+  await notifyCreator(cup!, user.id, 'left');
 
-  const status = actorIsCreator(cup!, user!.id) ? 'left_self' : 'left';
+  const status = actorIsCreator(cup!, user.id) ? 'left_self' : 'left';
   redirect({ href: `${joinPath(shortId)}?status=${status}`, locale });
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }

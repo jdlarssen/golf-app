@@ -34,7 +34,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
     // finnes — knappen står på spillets egen side, så «finnes ikke» er en
     // umulighet i praksis og fortjener ingen egen tekst. Ruta skiller dem
     // (404 vs 409); her beholder vi dagens ene melding.
-    return redirect({ href: `${statusPath}?error=not_active`, locale });
+    redirect({ href: `${statusPath}?error=not_active`, locale });
   }
 
   revalidatePath(statusPath);
@@ -85,12 +85,12 @@ export async function remindUnconfirmedPlayers(gameId: string) {
 
   // Lookup creator name for the notification message. Falls back to 'Tørny'.
   let adderName = 'Tørny';
-  if (game!.created_by) {
+  if (game.created_by) {
     const admin = getAdminClient();
     const { data: creator } = await admin
       .from('users')
       .select('name, email')
-      .eq('id', game!.created_by)
+      .eq('id', game.created_by)
       .maybeSingle<{ name: string | null; email: string | null }>();
     if (creator) {
       // The players see this, so a nameless creator shows masked (#2271).
@@ -104,8 +104,8 @@ export async function remindUnconfirmedPlayers(gameId: string) {
         userId: p.user_id,
         kind: 'player_added',
         payload: {
-          game_id: game!.id,
-          game_name: game!.name,
+          game_id: game.id,
+          game_name: game.name,
           added_by_name: adderName,
         },
       }).catch((err) => {

@@ -26,7 +26,6 @@ import {
   ConfirmSubmit,
   CopyLinkButton,
 } from './VennerClient';
-import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -61,13 +60,12 @@ export default async function VennerPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('friends');
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
     redirect({ href: '/login?next=/profile/venner', locale });
-    return;
   }
 
   const sp = await searchParams;
@@ -102,7 +100,7 @@ export default async function VennerPage({
   const statusBanner =
     statusCode && statusCode in TONE
       ? {
-          tone: TONE[statusCode] as 'success' | 'error' | 'info',
+          tone: TONE[statusCode],
           text:
             statusCode === 'invited' && inviteEmail
               ? t('status.invited', { email: inviteEmail })

@@ -12,7 +12,6 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { formatTeeOffDateLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import type { GameStatus } from '@/lib/games/status';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import type { AppLocale } from '@/i18n/routing';
 
 type CreatedGame = {
   id: string;
@@ -43,7 +42,7 @@ const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
 export default async function KlubbhusetPage() {
   const [t, locale] = await Promise.all([
     getTranslations('klubbhuset'),
-    getLocale() as Promise<AppLocale>,
+    getLocale(),
   ]);
   const supabase = await getServerClient();
   const {
@@ -54,7 +53,7 @@ export default async function KlubbhusetPage() {
   const { data: games } = await supabase
     .from('games')
     .select('id, name, status, scheduled_tee_off_at, courses(name)')
-    .eq('created_by', user!.id)
+    .eq('created_by', user.id)
     .order('created_at', { ascending: false })
     .returns<CreatedGame[]>();
 

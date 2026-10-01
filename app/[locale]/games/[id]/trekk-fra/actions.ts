@@ -26,14 +26,14 @@ export async function submitWithdraw(formData: FormData): Promise<void> {
   const result = await withdrawFromGame(gameId);
   if (!result.ok) {
     const code = result.error === 'captain_has_team' ? 'captain_has_team' : 'withdraw_failed';
-    redirect({ href: `/games/${gameId}/trekk-fra?error=${code}` as string, locale });
+    redirect({ href: `/games/${gameId}/trekk-fra?error=${code}`, locale });
   }
 
   // Active withdrawal keeps the row → land on game home to show «Du har
   // trukket deg» + angre. Pre-start deletes the row → game home would 404,
   // so go to the app home instead.
   const kept = (result as { ok: true; kept?: boolean }).kept;
-  redirect({ href: (kept ? `/games/${gameId}` : '/') as string, locale });
+  redirect({ href: kept ? `/games/${gameId}` : '/', locale });
 }
 
 /**
@@ -52,8 +52,8 @@ export async function submitUndoWithdraw(formData: FormData): Promise<void> {
   const result = await undoWithdraw(gameId);
   if (!result.ok) {
     // Best-effort: gå tilbake til game home; brukeren kan prøve igjen.
-    redirect({ href: `/games/${gameId}` as string, locale });
+    redirect({ href: `/games/${gameId}`, locale });
   }
 
-  redirect({ href: `/games/${gameId}` as string, locale });
+  redirect({ href: `/games/${gameId}`, locale });
 }

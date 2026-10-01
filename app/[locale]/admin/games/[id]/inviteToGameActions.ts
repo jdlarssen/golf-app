@@ -52,7 +52,7 @@ export async function addExistingPlayerToGame(
   if (!result.ok) {
     // Samme query-kart som e-post-døra under: kjernens koder er et delsett av
     // dens, og verdiene står tegn-for-tegn som før flyttingen.
-    return redirect({
+    redirect({
       href: `${detailPath}?error=${REFUSAL_ERROR[result.reason]}`,
       locale,
     });
@@ -120,10 +120,7 @@ export async function inviteEmailToGame(
       result.reason === 'mail_failed'
         ? `error=mail_failed&email=${encodeURIComponent(normalizeInviteEmail(rawEmail))}`
         : `error=${REFUSAL_ERROR[result.reason]}`;
-    // `redirect()` kaster (NEXT_REDIRECT), så denne `return`-en nås aldri —
-    // den står fordi `redirect` ikke er typet `never`, og uten den ser tsc
-    // fortsatt begge grenene av unionen under.
-    return redirect({ href: `${detailPath}?${query}`, locale });
+    redirect({ href: `${detailPath}?${query}`, locale });
   }
 
   const status = result.kind === 'added' ? 'invite_added' : 'invite_sent';

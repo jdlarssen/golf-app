@@ -31,7 +31,7 @@ export default async function KlubbListePage() {
   if (!user) redirect({ href: '/login', locale });
 
   const [{ clubs }, t, tRoles] = await Promise.all([
-    getMyClubs(supabase, user!.id),
+    getMyClubs(supabase, user.id),
     getTranslations('klubb.list'),
     getTranslations('klubb.roles'),
   ]);

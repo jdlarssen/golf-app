@@ -9,11 +9,9 @@ import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
-import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { HoleClient } from './HoleClient';
-import type { AppLocale } from '@/i18n/routing';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { HoleTopBanners } from './HoleTopBanners';
 import {
@@ -57,9 +55,8 @@ export default async function HolePage({ params }: { params: Params }) {
   const unknownPlayer = tHoles('unknownPlayer');
   const playerFallback = tEntry('playerFallback');
 
-  const userIdOrNull = await getProxyVerifiedUserId();
-  if (!userIdOrNull) redirect({ href: '/login', locale });
-  const userId = userIdOrNull as string;
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect({ href: '/login', locale });
 
   // #1176: hard profil-gate ved scoring. Den myke stripa på spill-hjem lar en
   // fersk invitert spiller SE spillet uten profil, men å taste slag krever navn
@@ -90,7 +87,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // renders score entry — its scores live on the host game. Bounce home,
   // which shows the read-only «Slagene føres i …»-notice instead.
   if (game.source_game_id) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   // #1441: front9/back9-spill har kun hull i sitt segment tilgjengelig for
@@ -100,7 +97,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const segmentHoles = holeNumbersForSegment(game.hole_segment);
   if (!segmentHoles.includes(holeNumber)) {
     redirect({
-      href: `/games/${id}/holes/${segmentHoles[0]}` as string,
+      href: `/games/${id}/holes/${segmentHoles[0]}`,
       locale,
     });
   }
@@ -110,14 +107,14 @@ export default async function HolePage({ params }: { params: Params }) {
   }
   if (game.status === 'scheduled') {
     // Round hasn't started; state #2 venterom lives on the game home page.
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
   if (game.status === 'finished') {
     // #1351: the round is over — entry is closed for everyone, submitted or
     // not. Without this branch the page rendered fully disabled with no
     // explanation. Game-home has its own finished state (results + scorecard),
     // and never redirects back here, so there is no bounce loop.
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const me = allPlayers.find((p) => p.user_id === userId);
@@ -126,7 +123,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // Once the player has submitted their scorecard, the hole pages are
   // read-only and confusing to land on. Bounce them home.
   if (me.submitted_at) {
-    redirect({ href: `/games/${id}` as string, locale });
+    redirect({ href: `/games/${id}`, locale });
   }
 
   const siblingMatch = await resolveSiblingMatch(game, userId);
@@ -310,7 +307,7 @@ export default async function HolePage({ params }: { params: Params }) {
       />
       <HoleClient
         gameId={id}
-        gameName={localizeGameName(game.name, data.courseName, locale as AppLocale)}
+        gameName={localizeGameName(game.name, data.courseName, locale)}
         gameStatus={game.status}
         gameMode={game.game_mode}
         holeSegment={game.hole_segment}
@@ -353,7 +350,7 @@ export default async function HolePage({ params }: { params: Params }) {
         wolfPointsByUser={wolf.pointsByUser}
         skinsAtStake={skinsStake.atStake}
         skinsCarriedIn={skinsStake.carriedIn}
-        bingoBangoBongoHoles={isBBB ? (data.bbbHolesData as BingoBangoBongoHoleInput[]) : undefined}
+        bingoBangoBongoHoles={isBBB ? data.bbbHolesData : undefined}
         roundRobinPlayers={roundRobinPlayersForClient}
         segmentSibling={segmentSibling}
         holeStripSibling={holeStripSibling}

@@ -21,7 +21,6 @@ import {
   type FinishedGameForTally,
 } from '@/lib/stats/clubStats';
 import { nameInitials } from '@/lib/names/initials';
-import type { AppLocale } from '@/i18n/routing';
 
 type GameRow = {
   id: string;
@@ -244,7 +243,7 @@ const getClubStatsAggregate = unstable_cache(
 );
 
 export default async function StatistikkPage() {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('profile.statistikk');
   const userId = await getProxyVerifiedUserId();
   if (!userId) {

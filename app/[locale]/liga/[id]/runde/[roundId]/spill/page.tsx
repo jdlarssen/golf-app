@@ -42,14 +42,13 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
   const { id: leagueId, roundId } = await params;
   const [t, locale] = await Promise.all([
     getTranslations('liga.player.runde'),
-    getLocale() as Promise<AppLocale>,
+    getLocale(),
   ]);
 
   const snapshot = await getLigaSnapshot(leagueId);
   if (!snapshot) redirect({ href: `/liga/${leagueId}`, locale });
 
-  // Narrowed after redirect guard above.
-  const { league, rounds, participants } = snapshot!;
+  const { league, rounds, participants } = snapshot;
 
   const round = rounds.find((r: { id: string }) => r.id === roundId);
   if (!round) redirect({ href: `/liga/${leagueId}`, locale });
@@ -70,14 +69,14 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
     participants.some((p: { userId: string }) => p.userId === currentUserId);
   if (!isParticipant) redirect({ href: `/liga/${leagueId}`, locale });
 
-  const ws = windowStatus(round!.opensAt, round!.closesAt);
+  const ws = windowStatus(round.opensAt, round.closesAt);
 
   // #2214: one counted flight per player per round. A player who delivered the
   // round or is playing it now is locked (roundPlayerLocks via the snapshot).
   const lockOf = (userId: string): RoundCoPlayer['lock'] =>
-    round!.deliveredUserIds.includes(userId)
+    round.deliveredUserIds.includes(userId)
       ? 'delivered'
-      : round!.inProgressUserIds.includes(userId)
+      : round.inProgressUserIds.includes(userId)
         ? 'in_progress'
         : null;
   // Opened by direct URL while locked: say why instead of showing the form.
@@ -99,10 +98,10 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
 
       <header className="mb-6">
         <h1 className="font-serif text-2xl text-text leading-tight tracking-[-0.015em]">
-          {round!.label}
+          {round.label}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {fmtWindow(round!.opensAt, locale)} – {fmtWindow(round!.closesAt, locale)}
+          {fmtWindow(round.opensAt, locale)} – {fmtWindow(round.closesAt, locale)}
         </p>
       </header>
 
@@ -119,7 +118,7 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
       )}
 
       {/* Round not ready (no course/tee) */}
-      {ws === 'open' && (!round!.courseId || !round!.teeBoxId) && (
+      {ws === 'open' && (!round.courseId || !round.teeBoxId) && (
         <Card className="space-y-4">
           <p className="text-sm text-text">
             {t('missingSetup')}
@@ -131,7 +130,7 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
       )}
 
       {/* Ready, but you already delivered or are playing the round */}
-      {ws === 'open' && round!.courseId && round!.teeBoxId && selfLock && (
+      {ws === 'open' && round.courseId && round.teeBoxId && selfLock && (
         <Card className="space-y-4">
           <p className="text-sm text-text" data-testid="liga-round-start-self-locked">
             {selfLock === 'delivered'
@@ -145,7 +144,7 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
       )}
 
       {/* Ready to start */}
-      {ws === 'open' && round!.courseId && round!.teeBoxId && !selfLock && (
+      {ws === 'open' && round.courseId && round.teeBoxId && !selfLock && (
         <Card>
           <p className="text-sm text-muted mb-5">
             {t('markerRule')}

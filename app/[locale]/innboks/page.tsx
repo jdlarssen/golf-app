@@ -14,7 +14,6 @@ import { archiveStaleNotifications } from '@/lib/notifications/archive';
 import { InboxClient } from './InboxClient';
 import { MonthlyDigestToggle } from './MonthlyDigestToggle';
 import type { NotificationRow } from '@/components/notifications/NotificationCard';
-import type { AppLocale } from '@/i18n/routing';
 
 // /innboks-flaten lever ved siden av spill-rutene — TopBar med chevron
 // tilbake til /, kicker «INNBOKS». RLS sørger for at vi kun ser egne
@@ -23,13 +22,12 @@ import type { AppLocale } from '@/i18n/routing';
 // `notifications_user_active_created` (#616) brukes — arkiverte varsler
 // skjules fra lista (soft-archive, ikke slettet).
 export default async function InboxPage() {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('inbox');
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
     redirect({ href: '/login', locale });
-    return;
   }
 
   const supabase = await getServerClient();

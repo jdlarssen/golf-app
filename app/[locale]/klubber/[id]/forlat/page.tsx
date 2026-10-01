@@ -43,7 +43,7 @@ export default async function ForlatKlubbPage({
   const locale = await getLocale();
   if (!user) redirect({ href: '/login', locale });
 
-  const detail = await getClubDetail(supabase, id, user!.id);
+  const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();
 
   const { club } = detail;

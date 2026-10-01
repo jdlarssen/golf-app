@@ -37,7 +37,6 @@ import {
   type EditGamePlayerRow,
 } from '@/lib/games/editGameInitialValues';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { getAdminClient } from '@/lib/supabase/admin';
 
@@ -141,12 +140,9 @@ export default async function EditGamePage({
   // Edits are allowed while the game is still in 'draft' or 'scheduled'.
   // Once it flips to 'active' or 'finished', state changes (handicaps, scores)
   // make the roster and tee-off effectively immutable.
-  if (game!.status !== 'draft' && game!.status !== 'scheduled') {
+  if (game.status !== 'draft' && game.status !== 'scheduled') {
     redirect({ href: `/admin/games/${id}?error=not_editable`, locale });
   }
-
-  // TypeScript cannot narrow past next-intl redirect; use non-null assertion.
-  const g = game!;
 
   return (
     <AdminShell>
@@ -159,7 +155,7 @@ export default async function EditGamePage({
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {localizeGameName(g.name, g.courses?.name ?? null, locale as AppLocale)}
+          {localizeGameName(game.name, game.courses?.name ?? null, locale)}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
           {t('subtitle')}
@@ -173,17 +169,17 @@ export default async function EditGamePage({
           </Banner>
         )}
         <Banner tone="info">
-          {g.status === 'draft' ? t('bannerDraft') : t('bannerScheduled')}
+          {game.status === 'draft' ? t('bannerDraft') : t('bannerScheduled')}
         </Banner>
         <Suspense fallback={null}>
-          <PlayerShortageBanner gameMode={g.game_mode} />
+          <PlayerShortageBanner gameMode={game.game_mode} />
         </Suspense>
       </div>
 
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <EditGameFormBody gameId={id} game={g} />
+            <EditGameFormBody gameId={id} game={game} />
           </Suspense>
         </Card>
       </div>

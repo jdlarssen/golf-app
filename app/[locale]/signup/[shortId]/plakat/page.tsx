@@ -36,13 +36,10 @@ export default async function PlakatPage({ params }: { params: Params }) {
   const t = await getTranslations('signup.public');
   const tModes = await getTranslations('modes');
 
-  const gameOrNull = await getGameByShortId(shortId);
-  if (!gameOrNull || !isPubliclyViewable(gameOrNull)) {
-    redirect({ href: `/signup/${shortId}`, locale: locale as AppLocale });
+  const game = await getGameByShortId(shortId);
+  if (!game || !isPubliclyViewable(game)) {
+    redirect({ href: `/signup/${shortId}`, locale });
   }
-  // redirect() kaster, men er ikke typet som `never` — same mønster som
-  // `user!` i ../page.tsx.
-  const game = gameOrNull!;
 
   // Absolutt prod-URL med vilje (presedens: RegistrationOverviewSection) —
   // plakaten skal virke uansett hvor den ble generert fra.
@@ -57,12 +54,12 @@ export default async function PlakatPage({ params }: { params: Params }) {
   const gameName = localizeGameName(
     game.name,
     game.courses?.name ?? null,
-    locale as AppLocale,
+    locale,
   );
 
   // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as 07:20.
   const teeOffParts = game.scheduled_tee_off_at
-    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale as AppLocale, {
+    ? formatTeeOffLongParts(game.scheduled_tee_off_at, locale, {
         weekday: true,
       })
     : null;

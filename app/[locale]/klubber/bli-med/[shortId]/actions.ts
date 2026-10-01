@@ -86,20 +86,20 @@ export async function requestToJoin(formData: FormData) {
   const { data: existingMembership } = await admin
     .from('group_members')
     .select('role')
-    .eq('group_id', group!.id)
-    .eq('user_id', user!.id)
+    .eq('group_id', group.id)
+    .eq('user_id', user.id)
     .maybeSingle();
 
   if (existingMembership) {
-    redirect({ href: `/klubber/${group!.id}`, locale });
+    redirect({ href: `/klubber/${group.id}`, locale });
   }
 
   // INSERT via request-scoped client so RLS self-insert policy applies.
   const { error: insertError } = await supabase
     .from('group_join_requests')
     .insert({
-      group_id: group!.id,
-      user_id: user!.id,
+      group_id: group.id,
+      user_id: user.id,
       status: 'pending',
     });
 
@@ -116,20 +116,20 @@ export async function requestToJoin(formData: FormData) {
   const { data: adminMembers } = await admin
     .from('group_members')
     .select('user_id')
-    .eq('group_id', group!.id)
+    .eq('group_id', group.id)
     .in('role', ['owner', 'admin']);
 
   if (adminMembers && adminMembers.length > 0) {
-    const requesterName = await getRequesterName(user!.id);
+    const requesterName = await getRequesterName(user.id);
 
     await Promise.allSettled(
       adminMembers.map((m) =>
         notify({
-          userId: m.user_id as string,
+          userId: m.user_id,
           kind: 'club_join_request',
           payload: {
-            group_id: group!.id,
-            group_name: group!.name,
+            group_id: group.id,
+            group_name: group.name,
             requester_name: requesterName,
           },
         }).catch((err) => console.error('[requestToJoin] notify failed', err)),

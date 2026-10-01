@@ -1006,7 +1006,6 @@ export async function swapCupMatchPlayer(
   base.revalidate();
   revalidatePath(`/cup/${tournamentId}`);
   redirect(`${base.path}?status=player_swapped`);
-  return { error: '' }; // unreachable — redirect() kaster NEXT_REDIRECT
 }
 
 export async function deleteTournament(formData: FormData) {

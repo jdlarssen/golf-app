@@ -119,14 +119,13 @@ type GameWithStats = GameWithMeta & {
 };
 
 export default async function HistorikkPage() {
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('profile.historikk');
   const tModes = await getTranslations('modes');
   const tFinished = await getTranslations('finishedCard');
   const tHome = await getTranslations('home');
-  const userIdRaw = await getProxyVerifiedUserId();
-  if (!userIdRaw) redirect({ href: '/login', locale });
-  const userId = userIdRaw as string; // guarded non-null above (redirect isn't typed `never`)
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect({ href: '/login', locale });
 
   const supabase = await getServerClient();
 
@@ -194,7 +193,7 @@ export default async function HistorikkPage() {
           supabase
             .from('scores')
             .select('game_id, hole_number, strokes, putts')
-            .eq('user_id', userId) // userId is string — narrowed after redirect guard above
+            .eq('user_id', userId)
             .in('game_id', gameIds)
             .not('strokes', 'is', null)
             .order('id')
@@ -219,12 +218,12 @@ export default async function HistorikkPage() {
 
     for (const tee of teeRes.data ?? []) {
       const { id, ...ratings } = tee;
-      teeById.set(id, ratings as TeeBoxRatings);
+      teeById.set(id, ratings);
     }
 
     for (const score of scoresRes.data ?? []) {
       const existing = scoresByGame.get(score.game_id) ?? [];
-      existing.push(score as ScoreRow);
+      existing.push(score);
       scoresByGame.set(score.game_id, existing);
     }
 

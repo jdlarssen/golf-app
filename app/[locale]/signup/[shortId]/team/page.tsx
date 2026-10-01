@@ -74,7 +74,7 @@ export default async function TeamDashboardPage({
   params: Params;
 }) {
   const { shortId } = await params;
-  const locale = (await getLocale()) as AppLocale;
+  const locale = await getLocale();
   const t = await getTranslations('signup');
   const game = await getGameByShortId(shortId);
   if (!game) {
@@ -101,7 +101,7 @@ export default async function TeamDashboardPage({
     .from('game_registration_requests')
     .select('id, user_id, status, is_team_captain, team_name, team_request_id')
     .eq('game_id', game.id)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .maybeSingle<TeamMemberRow>();
 
   // Hvis brukeren ikke har noen request-rad, sjekk om de har en åpen
@@ -113,7 +113,7 @@ export default async function TeamDashboardPage({
     const { data: userRow } = await admin
       .from('users')
       .select('email')
-      .eq('id', user!.id)
+      .eq('id', user.id)
       .maybeSingle<{ email: string }>();
     if (userRow?.email) {
       // Ingen unique på (email, game_id): både arrangøren og en kaptein kan ha

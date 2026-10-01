@@ -47,16 +47,15 @@ export async function submitScorecard(gameId: string, formData?: FormData) {
   const locale = await getLocale();
   const supabase = await getServerClient();
   const {
-    data: { user: maybeUser },
+    data: { user },
   } = await supabase.auth.getUser();
-  if (!maybeUser) redirect({ href: '/login', locale });
-  const user = maybeUser!;
+  if (!user) redirect({ href: '/login', locale });
 
   const alsoFor = (formData?.getAll('alsoFor') ?? []).map(String).filter(Boolean);
   const result = await submitScorecardCore(supabase, gameId, user.id, { alsoFor });
 
   if (!result.ok) {
-    redirect({ href: failureHref(result.reason, gameId) as string, locale });
+    redirect({ href: failureHref(result.reason, gameId), locale });
   }
 
   // #2200: the core narrows `alsoFor` with its own rule, over scores that may
@@ -65,5 +64,5 @@ export async function submitScorecard(gameId: string, formData?: FormData) {
   const askedMates = new Set(alsoFor.filter((id) => id !== user.id)).size;
   const status =
     result.ok && result.alsoDelivered < askedMates ? 'submitted_partial' : 'submitted';
-  redirect({ href: `/games/${gameId}?status=${status}` as string, locale });
+  redirect({ href: `/games/${gameId}?status=${status}`, locale });
 }
