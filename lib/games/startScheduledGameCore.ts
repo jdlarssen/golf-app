@@ -325,10 +325,11 @@ export async function startScheduledGameCore(
   }
 
   // #969 / #2071: guard the active (non-withdrawn) roster size for every
-  // fixed-count format first (fail fast, before the profile check): Wolf 3–5,
-  // Round Robin / Acey Deucey 4, Nines 3, Nassau / Skins / BBB 2–16. An open
-  // signup game is saved as a draft and the signup cap only prevents "too
-  // many", so this really catches "too few". Wolf / Round Robin also draw their
+  // fixed-count format first (fail fast, before the profile check), with the
+  // limits from `START_COUNT_RANGES` (#2222: publishing, the wizard and the
+  // signup cap read the same numbers). An open signup game is saved as a draft
+  // and the signup cap only prevents "too many", so this really catches "too
+  // few". Wolf / Round Robin also draw their
   // rotation slot at start, not at publish — that draw happens after all
   // guards pass (below), and only when `rotationRange` is non-null.
   const activeIds = roster
