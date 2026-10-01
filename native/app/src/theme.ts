@@ -262,7 +262,7 @@ function browserLine(
  * Nettleserens `normal` linjehøyde for Fraunces: ascent og descent rundet
  * hver for seg til hele piksler (28 pt gir 27 + 7 = 34).
  */
-function frauncesNormalLine(size: number): number {
+export function frauncesNormalLine(size: number): number {
   return (
     Math.round(size * FRAUNCES_METRICS.ascent) + Math.round(size * FRAUNCES_METRICS.descent)
   );

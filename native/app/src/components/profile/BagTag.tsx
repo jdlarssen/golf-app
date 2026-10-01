@@ -41,7 +41,7 @@ import {
   handicapSeasonChange,
   handicapSeasonChangeSpoken,
 } from '../../lib/profileCopy';
-import { FONTS, fraunces, useTheme } from '../../theme';
+import { centeredLineTop, FONTS, fraunces, frauncesNormalLine, useTheme } from '../../theme';
 
 export interface BagTagProps {
   /** `null` mens profilraden lastes, eller når den ikke kunne leses. */
@@ -348,7 +348,9 @@ const styles = StyleSheet.create({
     borderRadius: RING / 2,
     borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    // Initialene står der nettleserens sentrering tegner dem
+    // (`centeredLineTop`): 23-linja i 52 rundes til 15 fra toppen.
+    paddingTop: centeredLineTop(RING - 2, frauncesNormalLine(18)),
   },
   initials: { ...fraunces(500, 18) },
 });
