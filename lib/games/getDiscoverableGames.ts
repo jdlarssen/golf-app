@@ -73,12 +73,6 @@ export type PendingRequest = {
   created_at: string;
 };
 
-/** Normaliser Supabase FK-join (typet som array selv for en-til-en). */
-function firstJoined<T>(raw: T | T[] | null | undefined): T | null {
-  if (Array.isArray(raw)) return raw[0] ?? null;
-  return raw ?? null;
-}
-
 export async function getDiscoverableGames(userId: string): Promise<{
   clubGames: DiscoverableClubGame[];
   openGames: DiscoverableOpenGame[];
@@ -120,9 +114,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
   // = uendelig (alltid aktiv). Pågående spill berøres ikke — kun discovery.
   const myClubIds = (myClubsRes.data ?? [])
     .filter((r) => {
-      const g = firstJoined(
-        r.groups as { valid_until: string | null } | { valid_until: string | null }[] | null,
-      );
+      const g = r.groups;
       return !isClubExpired(g?.valid_until ?? null);
     })
     .map((r) => r.group_id as string);
@@ -151,8 +143,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
     const clubRes = await clubQuery;
 
     clubGames = (clubRes.data ?? []).map((row) => {
-      const course = firstJoined(row.courses as { name: string } | { name: string }[] | null);
-      const group = firstJoined(row.groups as { name: string } | { name: string }[] | null);
+      const course = row.courses;
+      const group = row.groups;
       return {
         id: row.id as string,
         name: row.name as string,
@@ -199,9 +191,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
     const friendRes = await friendQuery;
     friendGames = (friendRes.data ?? []).map((row) => {
-      const course = firstJoined(
-        row.courses as { name: string } | { name: string }[] | null,
-      );
+      const course = row.courses;
       const regMode = row.registration_mode as 'open' | 'manual_approval';
       const joinMode: 'direct' | 'request' =
         regMode === 'open' ||
@@ -246,9 +236,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? []).map(
     (row) => {
-      const course = firstJoined(
-        row.courses as { name: string } | { name: string }[] | null,
-      );
+      const course = row.courses;
       return {
         id: row.id as string,
         name: row.name as string,
@@ -272,17 +260,13 @@ export async function getDiscoverableGames(userId: string): Promise<{
   const pendingRequests: PendingRequest[] = (requestRowsRes.data ?? [])
     .filter((r) => {
       if (r.status === 'pending') return true;
-      const captain = firstJoined(
-        r.captain as { status: string } | { status: string }[] | null,
-      );
+      const captain = r.captain;
       return (
         captain?.status === 'pending' && !joinedIds.has(r.game_id as string)
       );
     })
     .map((r) => {
-      const game = firstJoined(
-        r.games as { name: string; short_id: string } | { name: string; short_id: string }[] | null,
-      );
+      const game = r.games;
       return {
         id: r.id as string,
         game_id: r.game_id as string,

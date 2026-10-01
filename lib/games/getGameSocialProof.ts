@@ -66,7 +66,7 @@ export async function getGamesSocialProof(
   // Venne-oppslaget skjer én gang for hele batchen, og kun for innloggede.
   const friendSet = new Set(viewerUserId ? await getFriendIds(viewerUserId) : []);
 
-  const rows = data as unknown as RosterRow[];
+  const rows: RosterRow[] = data;
   const byGame = new Map<string, RosterRow[]>();
   for (const r of rows) {
     const arr = byGame.get(r.game_id);
