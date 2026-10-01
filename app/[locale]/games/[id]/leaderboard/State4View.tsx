@@ -23,6 +23,7 @@ import {
 } from '@/lib/leaderboard/navContext';
 import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
+import { formatVsPar } from '@/lib/scoring/scoreTone';
 
 const STORAGE_PREFIX = 'torny-leaderboard-confetti-seen-';
 
@@ -651,12 +652,4 @@ function TeamRow({
       )}
     </li>
   );
-}
-
-/** `null` = no played hole, so no vs-par value (#2217). */
-function formatVsPar(v: number | null): string {
-  if (v === null) return '—';
-  if (v === 0) return 'E';
-  if (v > 0) return `+${v}`;
-  return String(v);
 }

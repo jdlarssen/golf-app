@@ -8,6 +8,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { firstName } from '@/lib/firstName';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import type { TeamLine } from '@/lib/leaderboard';
+import { formatVsPar } from '@/lib/scoring/scoreTone';
 
 type Props = {
   gameId: string;
@@ -81,9 +82,7 @@ export function RevealBruttoView({
 /** E / +N / −N relative to par played. Empty when no holes have been played. */
 function deltaText(total: number, parPlayed: number): string {
   if (parPlayed === 0) return '';
-  const diff = total - parPlayed;
-  if (diff === 0) return 'E';
-  return diff > 0 ? `+${diff}` : String(diff);
+  return formatVsPar(total - parPlayed);
 }
 
 function RevealTeamRow({ line }: { line: TeamLine }) {

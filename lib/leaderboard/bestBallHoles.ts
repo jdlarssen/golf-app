@@ -25,14 +25,6 @@ export function vsParTone(vs: number): VsParTone {
   return 'over2';
 }
 
-/** `null` = ingen spilt hull, så ingen mot par-verdi (#2217). */
-export function formatVsPar(v: number | null): string {
-  if (v === null) return '—';
-  if (v === 0) return 'E';
-  if (v > 0) return `+${v}`;
-  return String(v);
-}
-
 export type BestBallCell = {
   userId: string;
   /** Fornavn og etternavn som initialer («KH»), «?» for en ukjent spiller. */

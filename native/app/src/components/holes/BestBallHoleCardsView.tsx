@@ -19,12 +19,12 @@ import type { TeamLine } from '../../../../../lib/leaderboard';
 import {
   bestBallDrilldown,
   bestBallRevealMeta,
-  formatVsPar,
   type BestBallHoleRow,
   type BestBallNine,
   type BestBallTeamRef,
   type VsParTone,
 } from '../../../../../lib/leaderboard/bestBallHoles';
+import { formatVsPar } from '../../../../../lib/scoring/scoreTone';
 import { formatOtherGendersPar } from '../../../../../lib/games/parDisplay';
 import {
   BEST_BALL_HOLES_TEXT,
@@ -66,7 +66,7 @@ function VsParPill({
       testID={testID}
     >
       <Text style={[styles.pillText, ui.num, { color: tone !== null ? colors[TONE[tone].fg] : colors.muted }]}>
-        {value === null ? '—' : formatVsPar(value)}
+        {formatVsPar(value)}
       </Text>
     </View>
   );
