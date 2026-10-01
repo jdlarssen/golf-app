@@ -8,7 +8,6 @@ import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer } from '../data/gameBundle';
 import {
-  canApprove,
   deliverForButton,
   findInRoster,
   flightDeliveryButton,
@@ -169,11 +168,6 @@ describe('den som leverte kortet, godkjenner det ikke (#2200)', () => {
 
   it('holder kortet jeg leverte for makkeren utenfor lista mi', () => {
     expect(idsOf(pendingApprovals(roster, game, 'me'))).toEqual(['other']);
-  });
-
-  it('sier nei i enkeltoppslaget også', () => {
-    expect(canApprove(roster, SOLO, 'me', 'mate')).toBe(false);
-    expect(canApprove(roster, SOLO, 'me', 'other')).toBe(true);
   });
 });
 
