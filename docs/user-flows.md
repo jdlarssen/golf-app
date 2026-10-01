@@ -181,7 +181,7 @@ Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new
 
 ```mermaid
 flowchart LR
-  S1["1 Arrangement<br/>Kompis/Klubb/Cup/Solo"] --> S2["2 Format<br/>DB-drevet grid"]
+  S1["1 Arrangement<br/>Kompis/Klubb/Cup/Solo"] --> S2["2 Format<br/>anbefalt format først"]
   S2 --> S3["3 Bane og tidspunkt"]
   S3 --> S4["4 Spillere<br/>+ lag/flight"]
   S4 --> S5["5 Klar?<br/>Utkast / Publiser"]
@@ -192,7 +192,7 @@ flowchart LR
 | Steg | Komponent | Teknisk |
 |---|---|---|
 | 1 Arrangement | `IntentSelector` | Intent styrer format-katalog (`getFormatsForIntent`). |
-| 2 Format | `FormatGrid` (eller `CupSetup`) | **DB-drevet** fra `formats` + `format_intent_mapping`. Cup → `createTournamentDraft` → `tournaments`-rad → `/admin/cup/[id]`. |
+| 2 Format | `FormatGrid` (eller `CupSetup`) | **DB-drevet** fra `formats` + `format_intent_mapping`, anbefalt format først: med antall (Kompis) er det første formatet som passer, et stort kort, og tre til står under (#2260). Cup → `createTournamentDraft` → `tournaments`-rad → `/admin/cup/[id]`. |
 | 3 Bane og tidspunkt | `BasicsSection` | Bane + tee-boks (fra `getNewGameFormData`), tee-off (Oslo-tz), auto-navn. |
 | 4 Spillere | `PlayersSection` + `TeamsAssignmentSection` | Velg spillere + lag/flight/tee-kjønn. Hoppes hvis selv-påmelding er på. |
 | 5 Klar? | `ReadyStep` | «Opprett som utkast» (`createGameDraft`, status `draft`) eller «Opprett og publiser» (`createAndPublishGame`, status `scheduled` + invitasjoner). «Åpne full skjema» = escape-hatch til `GameForm`. |
