@@ -73,7 +73,7 @@ describe('getPublicDiscoverableGames', () => {
           status: 'scheduled',
           signups_closed_at: null,
           game_mode: 'skins',
-          mode_config: { kind: 'skins', team_size: 1 },
+          mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
           hole_segment: 'full',
           courses: { name: 'Hauger' },
         },
@@ -92,7 +92,7 @@ describe('getPublicDiscoverableGames', () => {
         course_name: 'Hauger',
         registration_mode: 'open',
         game_mode: 'skins',
-        mode_config: { kind: 'skins', team_size: 1 },
+        mode_config: { kind: 'skins', team_size: 1, skins_scoring: 'net' },
         hole_segment: 'full',
       },
     ]);

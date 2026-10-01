@@ -10,6 +10,7 @@ import { SectionHeading, TextLink, FooterLink } from './marketing-primitives';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { FEATURED_FORMAT_KEYS } from '@/lib/formats/featuredFormats';
 import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGames';
+import { getRegistrationSeats } from '@/lib/games/getRegistrationSeats';
 import { AnonDiscoverySection } from './finn-turneringer/AnonDiscoverySection';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -348,11 +349,14 @@ async function AnonOpenGames({
 }) {
   const games = await getPublicDiscoverableGames();
   if (games.length === 0) return null;
+  // #2258: plass-linja per rad (et tall, aldri navn). `now` etter oppslagene.
+  const seats = await getRegistrationSeats(games);
+  const now = new Date();
   return (
     <section>
       <SectionHeading>{heading}</SectionHeading>
       <div className="mt-5">
-        <AnonDiscoverySection games={games} />
+        <AnonDiscoverySection games={games} seats={seats} now={now} />
       </div>
       <div className="mt-4">
         <TextLink href="/finn-turneringer">{linkLabel}</TextLink>

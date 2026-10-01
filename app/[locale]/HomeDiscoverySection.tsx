@@ -1,8 +1,11 @@
-import { useLocale, useTranslations } from 'next-intl';
-import { LinkButton } from '@/components/ui/Button';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { SocialProofLine } from '@/components/games/SocialProofLine';
-import { formatTeeOffParts } from '@/lib/i18n/format';
+import { PendingRequestCard } from '@/components/games/PendingRequestCard';
+import {
+  TerminCard,
+  TerminDayGroups,
+  TerminHeading,
+} from '@/components/games/TerminDayGroups';
 import type {
   DiscoverableClubGame,
   DiscoverableFriendGame,
@@ -10,13 +13,21 @@ import type {
   PendingRequest,
 } from '@/lib/games/getDiscoverableGames';
 import type { GameSocialProof } from '@/lib/games/socialProof';
-import type { AppLocale } from '@/i18n/routing';
-import { localizeGameName } from '@/lib/games/autoGameName';
+import {
+  buildTerminEntries,
+  groupTerminByDate,
+  type GameSeats,
+} from '@/lib/games/terminliste';
 import { capDiscoveryPreview } from '@/lib/games/discoveryPreviewCap';
 
 /**
- * «Funn turneringer»-seksjon på hjem-siden (#257). Vises kun for non-admin/
- * non-trusted-creator-brukere når det faktisk finnes innhold å vise.
+ * «Funn turneringer»-seksjon på hjem-siden (#257). Vises når det faktisk
+ * finnes innhold å vise.
+ *
+ * #2258 (anbefaling 5, godtatt): samme utseende som terminlista — egne
+ * forespørsler øverst, så rundene delt i dager med samme rader og plass-linje.
+ * Overskriftene «I dine klubber» / «Fra vennene dine» / «Åpne turneringer» er
+ * borte; «Se alle» står.
  *
  * Caller (app/page.tsx) henter data via `getDiscoverableGames()` slik at
  * samme query kan styre BÅDE velkomst-teksten over og denne seksjonen —
@@ -25,6 +36,8 @@ import { capDiscoveryPreview } from '@/lib/games/discoveryPreviewCap';
 export function HomeDiscoverySection({
   data,
   socialProof = {},
+  seats,
+  now,
   preview = false,
 }: {
   data: {
@@ -34,109 +47,57 @@ export function HomeDiscoverySection({
     pendingRequests: PendingRequest[];
   };
   /**
-   * #1193: sosialt bevis per funn-kort, `gameId → GameSocialProof`. Kalleren
+   * #1193: sosialt bevis per rad, `gameId → GameSocialProof`. Kalleren
    * batcher ett roster- + ett venne-oppslag for hele lista. Spill uten treff
-   * mangler bare fra kartet — kortet rendrer da ingen linje.
+   * mangler bare fra kartet — raden rendrer da ingen linje.
    */
   socialProof?: Record<string, GameSocialProof>;
+  /** #2258: seter per spill fra `getRegistrationSeats` (plass-linja, «Fullt»). */
+  seats: ReadonlyMap<string, GameSeats>;
+  /** Etter kallerens auth- og dataoppslag: dagsetikettene regnes fra nå. */
+  now: Date;
   /**
    * Hjems fylt-tilstand-forhåndsvisning (#879, tak revidert i #1798): kapp de
    * passive listene til ett samlet totaltak på tvers av klubb/venner/åpne
    * (kuratert klubb > venner > åpne) og legg på en «Se alle»-hale til
-   * /finn-turneringer. Egne ventende forespørsler er spillerens egen handling
-   * og kappes aldri. Default (false) = fulle lister — brukes av Hjems tom-
-   * tilstand og /finn-turneringer-siden.
+   * /finn-turneringer. Radene sorteres på tid ETTER kappingen (#2258). Egne
+   * ventende forespørsler er spillerens egen handling og kappes aldri.
+   * Default (false) = fulle lister — brukes av Hjems tom-tilstand.
    */
   preview?: boolean;
 }) {
   const t = useTranslations('discover');
-  const locale = useLocale() as AppLocale;
   const { pendingRequests } = data;
-  const { clubGames, friendGames, openGames } = preview
-    ? capDiscoveryPreview(data)
-    : data;
-  // «Se alle»-halen og siste-blokk-spacing kobler på om det fantes NOEN passive
-  // funn (før kapping), ikke på om noe ble kuttet.
+  const listed = preview ? capDiscoveryPreview(data) : data;
+  const groups = groupTerminByDate(buildTerminEntries(listed, seats), now);
+  // «Se alle»-halen kobler på om det fantes NOEN passive funn (før kapping),
+  // ikke på om noe ble kuttet.
   const hasPassiveDiscovery =
     data.clubGames.length > 0 ||
     data.friendGames.length > 0 ||
     data.openGames.length > 0;
 
   return (
-    <section className={preview ? 'w-full' : 'mt-10 w-full'}>
-      {clubGames.length > 0 && (
-        <div className="mb-8">
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('inYourClubs')}
-          </h2>
-          <ul className="flex list-none flex-col gap-3 p-0">
-            {clubGames.map((game) => (
-              <li key={game.id}>
-                <ClubGameCard
-                  game={game}
-                  proof={socialProof[game.id]}
-                  t={t}
-                  locale={locale}
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {friendGames.length > 0 && (
-        <div className="mb-8">
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('fromYourFriends')}
-          </h2>
-          <ul className="flex list-none flex-col gap-3 p-0">
-            {friendGames.map((game) => (
-              <li key={game.id}>
-                <FriendGameCard
-                  game={game}
-                  proof={socialProof[game.id]}
-                  t={t}
-                  locale={locale}
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {openGames.length > 0 && (
-        <div className="mb-8">
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('openTournaments')}
-          </h2>
-          <ul className="flex list-none flex-col gap-3 p-0">
-            {openGames.map((game) => (
-              <li key={game.id}>
-                <OpenGameCard
-                  game={game}
-                  proof={socialProof[game.id]}
-                  t={t}
-                  locale={locale}
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
+    <section className={`w-full leading-[normal] ${preview ? '' : 'mt-10'}`}>
       {pendingRequests.length > 0 && (
-        <div className={preview && hasPassiveDiscovery ? 'mb-8' : undefined}>
-          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            {t('myRequests')}
-          </h2>
-          <ul className="flex list-none flex-col gap-3 p-0">
+        <section>
+          <TerminHeading title={t('myRequests')} />
+          <TerminCard>
             {pendingRequests.map((request) => (
-              <li key={request.id}>
-                <PendingRequestCard request={request} t={t} />
-              </li>
+              <PendingRequestCard key={request.id} request={request} />
             ))}
-          </ul>
-        </div>
+          </TerminCard>
+        </section>
+      )}
+
+      {groups.length > 0 && (
+        <TerminDayGroups
+          groups={groups}
+          variant="player"
+          now={now}
+          socialProof={socialProof}
+          firstClassName={pendingRequests.length > 0 ? 'mt-5' : ''}
+        />
       )}
 
       {/* #879: «Se alle»-hale til den fulle funn-siden når Hjem viser en kappet
@@ -144,7 +105,7 @@ export function HomeDiscoverySection({
       {preview && hasPassiveDiscovery && (
         <SmartLink
           href="/finn-turneringer"
-          className="flex min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-2"
+          className="mt-5 flex min-h-[44px] items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-2"
         >
           <span className="font-sans text-sm font-medium text-text">
             {t('seeAllTournaments')}
@@ -155,198 +116,5 @@ export function HomeDiscoverySection({
         </SmartLink>
       )}
     </section>
-  );
-}
-
-type T = ReturnType<typeof useTranslations<'discover'>>;
-
-function formatTeeOffLine(
-  teeOff: Date,
-  locale: AppLocale,
-  t: T,
-): string {
-  const { date, time } = formatTeeOffParts(teeOff, locale);
-  return t('teeOffLine', { date, time });
-}
-
-function ClubGameCard({
-  game,
-  proof,
-  t,
-  locale,
-}: {
-  game: DiscoverableClubGame;
-  proof?: GameSocialProof;
-  t: T;
-  locale: AppLocale;
-}) {
-  const teeOff = game.scheduled_tee_off_at
-    ? new Date(game.scheduled_tee_off_at)
-    : null;
-  // Klubb-medlem kan melde seg på direkte uansett påmeldingsmåte (#442) —
-  // medlemskap ER invitasjonen. Signup-siden kjenner igjen medlemskapet og
-  // viser direkte-påmelding.
-  return (
-    <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-serif text-[17px] leading-tight text-text">
-            {localizeGameName(game.name, game.course_name, locale)}
-          </p>
-          <p className="mt-1 font-sans text-[12px] text-muted">
-            <span className="text-primary">{game.group_name}</span>
-            {' · '}
-            {game.course_name ?? t('courseNotSet')}
-            {teeOff && (
-              <>
-                {' · '}
-                <span className="tabular-nums">
-                  {formatTeeOffLine(teeOff, locale, t)}
-                </span>
-              </>
-            )}
-          </p>
-          {proof && <SocialProofLine {...proof} className="mt-1.5 text-[12px]" />}
-        </div>
-      </div>
-      <div className="mt-3.5">
-        <LinkButton href={`/signup/${game.short_id}`} full>
-          {t('signMeUp')}
-        </LinkButton>
-      </div>
-    </div>
-  );
-}
-
-function FriendGameCard({
-  game,
-  proof,
-  t,
-  locale,
-}: {
-  game: DiscoverableFriendGame;
-  proof?: GameSocialProof;
-  t: T;
-  locale: AppLocale;
-}) {
-  const teeOff = game.scheduled_tee_off_at
-    ? new Date(game.scheduled_tee_off_at)
-    : null;
-  const cta =
-    game.joinMode === 'direct' ? t('signMeUp') : t('requestToJoin');
-
-  return (
-    <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-serif text-[17px] leading-tight text-text">
-            {localizeGameName(game.name, game.course_name, locale)}
-          </p>
-          <p className="mt-1 font-sans text-[12px] text-muted">
-            {game.course_name ?? t('courseNotSet')}
-            {teeOff && (
-              <>
-                {' · '}
-                <span className="tabular-nums">
-                  {formatTeeOffLine(teeOff, locale, t)}
-                </span>
-              </>
-            )}
-          </p>
-          {proof && <SocialProofLine {...proof} className="mt-1.5 text-[12px]" />}
-        </div>
-      </div>
-      <div className="mt-3.5">
-        <LinkButton href={`/signup/${game.short_id}`} full>
-          {cta}
-        </LinkButton>
-      </div>
-    </div>
-  );
-}
-
-function OpenGameCard({
-  game,
-  proof,
-  t,
-  locale,
-}: {
-  game: DiscoverableOpenGame;
-  proof?: GameSocialProof;
-  t: T;
-  locale: AppLocale;
-}) {
-  const teeOff = game.scheduled_tee_off_at
-    ? new Date(game.scheduled_tee_off_at)
-    : null;
-  // Påmeldingsmåten ER synligheten (#357): open lar deg melde seg på direkte,
-  // manual_approval krever at arrangøren godkjenner forespørselen din.
-  const cta =
-    game.registration_mode === 'manual_approval'
-      ? t('requestToJoin')
-      : t('signMeUp');
-
-  return (
-    <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-serif text-[17px] leading-tight text-text">
-            {localizeGameName(game.name, game.course_name, locale)}
-          </p>
-          <p className="mt-1 font-sans text-[12px] text-muted">
-            {game.course_name ?? t('courseNotSet')}
-            {teeOff && (
-              <>
-                {' · '}
-                <span className="tabular-nums">
-                  {formatTeeOffLine(teeOff, locale, t)}
-                </span>
-              </>
-            )}
-          </p>
-          {proof && <SocialProofLine {...proof} className="mt-1.5 text-[12px]" />}
-        </div>
-      </div>
-      <div className="mt-3.5">
-        <LinkButton href={`/signup/${game.short_id}`} full>
-          {cta}
-        </LinkButton>
-      </div>
-    </div>
-  );
-}
-
-function PendingRequestCard({
-  request,
-  t,
-}: {
-  request: {
-    short_id: string;
-    game_name: string;
-    team_name: string | null;
-    is_team_captain: boolean;
-  };
-  t: T;
-}) {
-  const target = request.team_name
-    ? `/signup/${request.short_id}/team`
-    : `/signup/${request.short_id}`;
-
-  const subtitle = request.team_name
-    ? request.is_team_captain
-      ? t('pendingApprovalCaptain', { teamName: request.team_name })
-      : t('pendingApprovalMember', { teamName: request.team_name })
-    : t('pendingApproval');
-
-  return (
-    <SmartLink
-      href={target}
-      className="block rounded-2xl border border-border bg-surface-2/40 px-4 py-3.5 transition-colors hover:bg-surface-2"
-    >
-      <p className="truncate font-serif text-[17px] leading-tight text-text">
-        {request.game_name}
-      </p>
-      <p className="mt-1 font-sans text-[12px] text-muted">{subtitle}</p>
-    </SmartLink>
   );
 }

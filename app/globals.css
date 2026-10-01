@@ -148,6 +148,13 @@
    * to read as "passed" without blending into the strip's neutral surface. */
   --hole-completed-bg: #efe9da;
 
+  /* Terminliste (#2258): the capacity bar's track and the dashed border of
+   * «Lag din egen runde». Same values as --hole-completed-bg and
+   * --disabled-fg, but their own tokens so a hole-strip or disabled-button
+   * tweak does not drag the terminliste along. */
+  --meter-track: #efe9da;
+  --dashed-cta: #9a8f7c;
+
   /* Destructive CTAer — slett-spill, slett-konto, trekk-tilbake-invitasjon.
    * Deeper than --danger so it reads as a "no going back"-button against
    * the linen page, not just a warning-pill. */
@@ -269,6 +276,10 @@
      * value so completed cells lift one step above the strip bg. */
     --hole-completed-bg: #243429;
 
+    /* Terminliste (#2258) — see :root. */
+    --meter-track: #243429;
+    --dashed-cta: #5c6358;
+
     /* Destructive CTAer — lighter brick so it reads as "alarm" against the
      * dark forest bg, not as a black smudge. */
     --danger-deep: #c46868;
@@ -348,6 +359,8 @@
   --disabled-fg: #5c6358;
   --score-unset-fg: #9a9180;
   --hole-completed-bg: #243429;
+  --meter-track: #243429;
+  --dashed-cta: #5c6358;
   --danger-deep: #c46868;
   --surface-strong: #1f3b2c;
   --leaderboard-backdrop-opacity: 0.10;
@@ -391,6 +404,8 @@
   --color-disabled-fg: var(--disabled-fg);
   --color-score-unset-fg: var(--score-unset-fg);
   --color-hole-completed-bg: var(--hole-completed-bg);
+  --color-meter-track: var(--meter-track);
+  --color-dashed-cta: var(--dashed-cta);
   --color-surface-strong: var(--surface-strong);
   --color-danger-deep: var(--danger-deep);
 
