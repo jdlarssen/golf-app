@@ -1,134 +1,47 @@
 'use server';
 
+import { redirect as redirectToRoot } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
-import { expectAffected } from '@/lib/supabase/affectedRows';
-import { REJECTION_REASON_MAX } from '@/lib/games/registration';
-import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
-import { notify } from '@/lib/notifications/notify';
-import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
-import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
+import { requireAdminOrCreator } from '@/lib/admin/auth';
+import {
+  approveRegistrationCore,
+  loadRegistrationDecision,
+  rejectRegistrationCore,
+  type DecisionResult,
+  type LoadFailure,
+} from '@/lib/games/registrationDecisionCore';
 
 /**
  * Approve/reject server-actions for game-registration-requests (issue #199).
  *
- * Authz: `requireAdmin` — these flows are admin-only. We mutate via the
- * admin-client to avoid RLS-recursion on the `is_game_creator_or_admin`
- * UPDATE policy (migrasjon 0041), so the requireAdmin gate in the action
- * code above is the authz boundary.
- *
- * Cascade for team-requests: når kapteinens rad approve-es/reject-es,
- * cascade-er vi automatisk alle medspiller-rader (`team_request_id` =
- * captain.id) i samme status. Lag-formasjon-UI (chunk 8) sørger for at
- * raden-strukturen er konsistent — admin behøver ikke håndtere lag-medlemmer
- * manuelt.
+ * The work lives in `lib/games/registrationDecisionCore.ts` (#2263), shared
+ * with the inbox's «Godta» / «Avslå». These wrappers only turn its result into
+ * the redirects this page has always used: `?status=` on success, `?error=`
+ * on the signup page for every failure, `/admin/games?error=` when the request
+ * or game is gone, and `/` for a non-admin (as `requireAdmin` did).
  */
 
-type GameSnapshot = {
-  id: string;
-  name: string;
-  status: 'draft' | 'scheduled' | 'active' | 'finished';
-  created_by: string | null;
-};
+type Locale = Awaited<ReturnType<typeof getLocale>>;
 
-type RequestSnapshot = {
-  id: string;
-  game_id: string;
-  user_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
-  is_team_captain: boolean;
-  team_name: string | null;
-  team_request_id: string | null;
-};
-
-type CascadeRow = {
-  id: string;
-  user_id: string;
-  status: 'pending' | 'approved';
-};
-
-/**
- * #2061: a teammate who accepts the team invitation before the organiser has
- * approved the captain gets status 'approved' but no game_players row — they
- * wait for the team. The cascades therefore read both statuses.
- */
-const CASCADE_STATUSES = ['pending', 'approved'] as const;
-
-/**
- * Load request + verify auth + verify game is in a state where approval
- * makes sense. Redirects on any failure with appropriate ?error= code.
- * Returns the loaded request and game snapshots for the caller.
- */
-async function loadDecisionContext(requestId: string): Promise<{
-  request: RequestSnapshot;
-  game: GameSnapshot;
-  actorId: string;
-  actorName: string;
-}> {
-  const locale = await getLocale();
-  const supabase = await getServerClient();
-  const role = await requireAdmin(supabase);
-
-  // Admin-client bypass — RLS-policy `admin updates request` gater på
-  // `is_game_creator_or_admin(game_id)` som krever auth-context på samme
-  // forbindelse. Vi har allerede auth-gated via requireAdmin
-  // i action-koden over; admin-client gjør at vi unngår å bygge to parallelle
-  // klient-forbindelser for selve mutasjonen.
-  const admin = getAdminClient();
-
-  const { data: request, error: requestError } = await admin
-    .from('game_registration_requests')
-    .select('id, game_id, user_id, status, is_team_captain, team_name, team_request_id')
-    .eq('id', requestId)
-    .maybeSingle<RequestSnapshot>();
-
-  // Error ≠ absence (#1445): a transient query failure throws to the route's
-  // error boundary (retryable) instead of claiming the request is gone. Only a
-  // genuine 0-row result keeps the request_not_found redirect.
-  if (requestError) {
-    console.error('[loadDecisionContext] request fetch failed', {
-      requestId,
-      error: requestError,
-    });
-    throw requestError;
+function redirectLoadFailure(
+  failure: { reason: LoadFailure; gameId: string | null },
+  locale: Locale,
+): never {
+  if (failure.reason === 'forbidden') redirectToRoot('/');
+  if (failure.reason === 'game_locked' && failure.gameId) {
+    redirect({ href: `/admin/games/${failure.gameId}/signups?error=game_locked`, locale });
   }
-  if (!request) {
-    redirect({ href: `/admin/games?error=request_not_found`, locale });
-  }
+  redirect({ href: `/admin/games?error=${failure.reason}`, locale });
+}
 
-  const { data: game, error: gameError } = await admin
-    .from('games')
-    .select('id, name, status, created_by')
-    .eq('id', request.game_id)
-    .maybeSingle<GameSnapshot>();
-
-  if (gameError) {
-    console.error('[loadDecisionContext] game fetch failed', {
-      gameId: request.game_id,
-      error: gameError,
-    });
-    throw gameError;
-  }
-  if (!game) {
-    redirect({ href: `/admin/games?error=game_not_found`, locale });
-  }
-
-  // Approve/reject gir bare mening pre-active. Etter at runden er startet
-  // er rosteret låst.
-  if (game.status === 'active' || game.status === 'finished') {
-    redirect({ href: `/admin/games/${game.id}/signups?error=game_locked`, locale });
-  }
-
-  return {
-    request: request,
-    game: game,
-    actorId: role.userId,
-    actorName: role.name?.trim() || 'Admin',
-  };
+function redirectResult(result: DecisionResult, gameId: string, locale: Locale): never {
+  const detailPath = `/admin/games/${gameId}/signups`;
+  if (result.ok) redirect({ href: `${detailPath}?status=${result.outcome}`, locale });
+  redirect({ href: `${detailPath}?error=${result.reason}`, locale });
 }
 
 /**
@@ -138,204 +51,9 @@ async function loadDecisionContext(requestId: string): Promise<{
  */
 export async function approveRequest(requestId: string): Promise<void> {
   const locale = await getLocale();
-  const { request, game, actorId } = await loadDecisionContext(requestId);
-  const detailPath = `/admin/games/${game.id}/signups`;
-
-  if (request.status !== 'pending') {
-    redirect({ href: `${detailPath}?error=not_pending`, locale });
-  }
-
-  const admin = getAdminClient();
-
-  // Samle alle request-rader vi vil approve. For kaptein: kaptein + alle
-  // team-children. For solo eller team-medlem (sjelden — admin approve-er
-  // typisk hele lag samtidig via kapteinens rad): bare den ene raden.
-  let cascadeRows: CascadeRow[] = [];
-  if (request.is_team_captain) {
-    const { data: children, error: childrenError } = await admin
-      .from('game_registration_requests')
-      .select('id, user_id, status')
-      .eq('team_request_id', request.id)
-      .in('status', [...CASCADE_STATUSES])
-      .returns<CascadeRow[]>();
-    if (childrenError) {
-      console.error('[approveRequest] team children fetch failed', childrenError);
-      redirect({ href: `${detailPath}?error=db_cascade`, locale });
-    }
-    cascadeRows = children ?? [];
-  }
-
-  const allRows: CascadeRow[] = [
-    { id: request.id, user_id: request.user_id, status: 'pending' },
-    ...cascadeRows,
-  ];
-  // The captain passed the not_pending gate above, so it is always here.
-  const pendingRows = allRows.filter((r) => r.status === 'pending');
-
-  // Bestem team_number for lag-påmelding: laveste ledige slot (1..). For solo
-  // setter vi null på både team_number og flight_number (matcher CHECK i 0030).
-  let teamNumber: number | null = null;
-  if (request.is_team_captain) {
-    const { data: existing, error: existingErr } = await admin
-      .from('game_players')
-      .select('team_number')
-      .eq('game_id', game.id)
-      .not('team_number', 'is', null)
-      .returns<{ team_number: number }[]>();
-    if (existingErr) {
-      console.error('[approveRequest] team-slot lookup failed', existingErr);
-      redirect({ href: `${detailPath}?error=db_team_slot`, locale });
-    }
-    const taken = new Set((existing ?? []).map((r) => r.team_number));
-    // Deliberately wider than the grid (#662): the organiser's approval keeps an
-    // escape hatch past maxTeamsForSize, while open self-registration stops at it
-    // (teamActions.ts, #2011). The widened game_players_team_number_check
-    // (0101) allows it.
-    for (let slot = 1; slot <= 50; slot += 1) {
-      if (!taken.has(slot)) {
-        teamNumber = slot;
-        break;
-      }
-    }
-    if (teamNumber == null) {
-      redirect({ href: `${detailPath}?error=no_team_slot`, locale });
-    }
-  }
-
-  const decidedAt = new Date().toISOString();
-
-  // UPDATE status først — hvis denne feiler, ikke insert i game_players.
-  // #712: expectAffected catches both DB errors (throws Error) and silent
-  // 0-row no-ops (throws NoRowsAffectedError). 0 rows means all requests
-  // were already decided (race between two admin tabs) — redirect to error
-  // rather than proceeding to insert game_players + fire notifications for
-  // a write that never happened.
-  // Only pending rows: a teammate who already accepted keeps their decision.
-  const idsToUpdate = pendingRows.map((r) => r.id);
-  try {
-    expectAffected(
-      await admin
-        .from('game_registration_requests')
-        .update({
-          status: 'approved',
-          decided_at: decidedAt,
-          decided_by_user_id: actorId,
-        })
-        .in('id', idsToUpdate)
-        .eq('status', 'pending')
-        .select('id'),
-      'approveRequest',
-    );
-  } catch (err) {
-    console.error('[approveRequest] status update failed', err);
-    redirect({ href: `${detailPath}?error=db_update`, locale });
-  }
-
-  // INSERT game_players-rader for hele laget — kaptein, ventende og tidlig
-  // godtatte medspillere — med samme lagnummer (#2061). Bruker upsert med
-  // ignore-duplicates for å tåle re-trigger (race mellom to admin-tabs);
-  // `.select()` gir bare radene som faktisk ble satt inn.
-  // #2209: each member's tee category from the profile, clamped to the tee.
-  const teeGenders = await joinTeeGenders(
-    game.id,
-    allRows.map((r) => r.user_id),
-  );
-  const playerRows = allRows.map((r) => ({
-    game_id: game.id,
-    user_id: r.user_id,
-    team_number: teamNumber,
-    // Per kontrakt §5.6: flight_number speiler team_number ved auto-tildeling.
-    // For solo (teamNumber=null) blir også flight null — CHECK 0030 krever
-    // at de er begge null eller begge satt.
-    flight_number: teamNumber,
-    course_handicap: null,
-    tee_gender: teeGenders[r.user_id],
-  }));
-  const { data: insertedPlayers, error: insertError } = await admin
-    .from('game_players')
-    .upsert(playerRows, { onConflict: 'game_id,user_id', ignoreDuplicates: true })
-    .select('user_id')
-    .returns<{ user_id: string }[]>();
-  if (insertError) {
-    console.error('[approveRequest] game_players insert failed', insertError);
-    redirect({ href: `${detailPath}?error=db_players`, locale });
-  }
-  const placedUserIds = new Set((insertedPlayers ?? []).map((r) => r.user_id));
-
-  // #2072: a team member already on the roster without a team (added by the
-  // organiser) keeps their row through the upsert above, so give that row the
-  // team's number. Rows that already have a number are left alone — the
-  // organiser may have moved them on purpose.
-  if (teamNumber !== null) {
-    const { data: numberedPlayers, error: numberError } = await admin
-      .from('game_players')
-      .update({ team_number: teamNumber, flight_number: teamNumber })
-      .eq('game_id', game.id)
-      .in('user_id', allRows.map((r) => r.user_id))
-      .is('team_number', null)
-      .select('user_id')
-      .returns<{ user_id: string }[]>();
-    if (numberError) {
-      console.error('[approveRequest] team number update failed', numberError);
-      redirect({ href: `${detailPath}?error=db_players`, locale });
-    }
-    for (const row of numberedPlayers ?? []) placedUserIds.add(row.user_id);
-  }
-
-  // Varsle dem som ble godkjent nå, og tidlig godtatte medspillere som kom
-  // inn på lista i denne operasjonen. Hver bruker én gang.
-  const notifyRows = allRows.filter(
-    (r) => r.status === 'pending' || placedUserIds.has(r.user_id),
-  );
-
-  // Best-effort notifications + mail. Notify-feil swallow-es slik at
-  // approval-flyten ikke ruller tilbake — admin har allerede bestemt seg.
-  // Vi venter på alle notify()-callene i parallell og bruker
-  // shouldAlsoSendMail-flagget per recipient for å gate mail-utsendelse.
-  const notifyResults = await Promise.allSettled(
-    notifyRows.map((r) =>
-      notify({
-        userId: r.user_id,
-        kind: 'registration_approved',
-        payload: { game_id: game.id, game_name: game.name },
-      }),
-    ),
-  );
-
-  // Mail-backup for off-app-mottakere. Hent e-poster for alle godkjente
-  // brukere i én batch så vi unngår N round-trips.
-  const userIdsForMail: string[] = [];
-  notifyResults.forEach((res, idx) => {
-    if (res.status === 'fulfilled' && res.value.shouldAlsoSendMail) {
-      const row = notifyRows[idx];
-      if (row) userIdsForMail.push(row.user_id);
-    } else if (res.status === 'rejected') {
-      console.error('[approveRequest] notify failed', res.reason);
-    }
-  });
-
-  if (userIdsForMail.length > 0) {
-    const { data: emailRows } = await admin
-      .from('users')
-      .select('id, email, locale')
-      .in('id', userIdsForMail)
-      .returns<{ id: string; email: string; locale: string | null }[]>();
-    await Promise.allSettled(
-      (emailRows ?? []).map((u) =>
-        sendRegistrationApprovedMail({
-          to: u.email,
-          gameName: game.name,
-          gameId: game.id,
-          locale: u.locale,
-        }).catch((err) =>
-          console.error('[approveRequest] mail failed', err),
-        ),
-      ),
-    );
-  }
-
-  expireGameCache(game.id);
-  redirect({ href: `${detailPath}?status=approved`, locale });
+  const loaded = await loadRegistrationDecision(await getServerClient(), requestId);
+  if (!loaded.ok) redirectLoadFailure(loaded, locale);
+  redirectResult(await approveRegistrationCore(loaded.ctx), loaded.ctx.game.id, locale);
 }
 
 /**
@@ -347,147 +65,20 @@ export async function rejectRequest(
   formData: FormData,
 ): Promise<void> {
   const locale = await getLocale();
-  const { request, game, actorId } = await loadDecisionContext(requestId);
-  const detailPath = `/admin/games/${game.id}/signups`;
+  const loaded = await loadRegistrationDecision(await getServerClient(), requestId);
+  if (!loaded.ok) redirectLoadFailure(loaded, locale);
+  const gameId = loaded.ctx.game.id;
 
-  // Honeypot — felt skjult fra ekte admins, populated kun av bots.
-  // Silent-reject med suksess-redirect så bot ikke kan probe forskjell.
+  // Honeypot — a field hidden from real admins, filled only by bots. Silent
+  // reject with the success redirect so a bot cannot probe the difference.
   const honeypot = String(formData.get('website') ?? '').trim();
   if (honeypot) {
     console.warn('[honeypot] silent reject', { route: 'rejectRequest' });
-    redirect({ href: `${detailPath}?status=rejected`, locale });
+    redirect({ href: `/admin/games/${gameId}/signups?status=rejected`, locale });
   }
 
-  if (request.status !== 'pending') {
-    redirect({ href: `${detailPath}?error=not_pending`, locale });
-  }
-
-  const rawReason = String(formData.get('reason') ?? '').trim();
-  if (rawReason.length > REJECTION_REASON_MAX) {
-    redirect({ href: `${detailPath}?error=reason_too_long`, locale });
-  }
-  const reason = rawReason.length > 0 ? rawReason : null;
-
-  const admin = getAdminClient();
-
-  let cascadeRows: CascadeRow[] = [];
-  if (request.is_team_captain) {
-    const { data: children, error: childrenError } = await admin
-      .from('game_registration_requests')
-      .select('id, user_id, status')
-      .eq('team_request_id', request.id)
-      .in('status', [...CASCADE_STATUSES])
-      .returns<CascadeRow[]>();
-    if (childrenError) {
-      console.error('[rejectRequest] team children fetch failed', childrenError);
-      redirect({ href: `${detailPath}?error=db_cascade`, locale });
-    }
-    cascadeRows = children ?? [];
-  }
-
-  const allRows: CascadeRow[] = [
-    { id: request.id, user_id: request.user_id, status: 'pending' },
-    ...cascadeRows,
-  ];
-  // The captain passed the not_pending gate above, so it is always here.
-  const pendingRows = allRows.filter((r) => r.status === 'pending');
-
-  // #712: same 0-row trap as approveRequest. If all requests were already
-  // rejected (race), 0 rows returns error==null — without this guard
-  // notifications would fire for a write that never happened.
-  const decidedAt = new Date().toISOString();
-  try {
-    expectAffected(
-      await admin
-        .from('game_registration_requests')
-        .update({
-          status: 'rejected',
-          rejection_reason: reason,
-          decided_at: decidedAt,
-          decided_by_user_id: actorId,
-        })
-        .in('id', pendingRows.map((r) => r.id))
-        .eq('status', 'pending')
-        .select('id'),
-      'rejectRequest',
-    );
-  } catch (updateErr) {
-    console.error('[rejectRequest] status update failed', updateErr);
-    redirect({ href: `${detailPath}?error=db_update`, locale });
-  }
-
-  // #2061: teammates who accepted before the team was decided go down with it,
-  // so none is left standing as approved in a rejected team. A separate update
-  // filtered on 'approved', run only after the pending update above proved the
-  // captain was still pending — widening that one would let a reject racing an
-  // approval flip rows the other tab just approved. It covers every teammate,
-  // not just those read as approved above, so one who accepts between that
-  // read and now is caught too. Their accept wrote no game_players row, so
-  // there is nothing to remove; 0 rows here is the normal case.
-  if (cascadeRows.length > 0) {
-    const { error: acceptedError } = await admin
-      .from('game_registration_requests')
-      .update({
-        status: 'rejected',
-        rejection_reason: reason,
-        decided_at: decidedAt,
-        decided_by_user_id: actorId,
-      })
-      .in('id', cascadeRows.map((r) => r.id))
-      .eq('status', 'approved')
-      .select('id');
-    if (acceptedError) {
-      console.error('[rejectRequest] accepted teammates update failed', acceptedError);
-      redirect({ href: `${detailPath}?error=db_update`, locale });
-    }
-  }
-
-  const notifyResults = await Promise.allSettled(
-    allRows.map((r) =>
-      notify({
-        userId: r.user_id,
-        kind: 'registration_rejected',
-        payload: {
-          game_id: game.id,
-          game_name: game.name,
-          ...(reason ? { reason } : {}),
-        },
-      }),
-    ),
-  );
-
-  const userIdsForMail: string[] = [];
-  notifyResults.forEach((res, idx) => {
-    if (res.status === 'fulfilled' && res.value.shouldAlsoSendMail) {
-      const row = allRows[idx];
-      if (row) userIdsForMail.push(row.user_id);
-    } else if (res.status === 'rejected') {
-      console.error('[rejectRequest] notify failed', res.reason);
-    }
-  });
-
-  if (userIdsForMail.length > 0) {
-    const { data: emailRows } = await admin
-      .from('users')
-      .select('id, email, locale')
-      .in('id', userIdsForMail)
-      .returns<{ id: string; email: string; locale: string | null }[]>();
-    await Promise.allSettled(
-      (emailRows ?? []).map((u) =>
-        sendRegistrationRejectedMail({
-          to: u.email,
-          gameName: game.name,
-          ...(reason ? { reason } : {}),
-          locale: u.locale,
-        }).catch((err) =>
-          console.error('[rejectRequest] mail failed', err),
-        ),
-      ),
-    );
-  }
-
-  expireGameCache(game.id);
-  redirect({ href: `${detailPath}?status=rejected`, locale });
+  const reason = String(formData.get('reason') ?? '');
+  redirectResult(await rejectRegistrationCore(loaded.ctx, reason), gameId, locale);
 }
 
 /**
