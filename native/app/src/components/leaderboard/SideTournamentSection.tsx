@@ -1087,7 +1087,8 @@ function buildAwardRows({
   return rows;
 }
 
-const LINE_15 = fraunces(500, 15);
+// Overskriften og prisraden kan brekke.
+const LINE_15 = fraunces(500, 15, undefined, { multiline: true });
 
 const styles = StyleSheet.create({
   headline: { ...LINE_15, marginTop: 2 + LINE_15.marginTop },

@@ -25,6 +25,27 @@ import {
   type Theme,
 } from './theme';
 
+/** Familienavnet i en TrueType-fil: `name`-tabellens ID 1, Windows Unicode. */
+function familyName(path: string): string {
+  const font = readFileSync(path);
+  for (let i = 0; i < font.readUInt16BE(4); i++) {
+    const entry = 12 + i * 16;
+    if (font.toString('latin1', entry, entry + 4) !== 'name') continue;
+    const table = font.readUInt32BE(entry + 8);
+    const strings = table + font.readUInt16BE(table + 4);
+    for (let j = 0; j < font.readUInt16BE(table + 2); j++) {
+      const record = table + 6 + j * 12;
+      const [platform, encoding, , nameId, length, offset] = [0, 2, 4, 6, 8, 10].map((at) =>
+        font.readUInt16BE(record + at),
+      );
+      if (platform !== 3 || encoding !== 1 || nameId !== 1) continue;
+      const start = strings + offset;
+      return Buffer.from(font.subarray(start, start + length)).swap16().toString('utf16le');
+    }
+  }
+  throw new Error(`Fant ikke familienavnet i ${path}`);
+}
+
 /** Appens roller som har et motstykke i webbens CSS-variabler. */
 const WEB_VAR: Partial<Record<keyof typeof PALETTES.light, string>> = {
   bg: '--bg',
@@ -232,7 +253,10 @@ describe('fraunces', () => {
     const source = readFileSync(join(__dirname, 'fonts.ts'), 'utf8');
     const pairs = [...source.matchAll(/(\w+): require\('\.\.\/assets\/fonts\/(\w+)\.ttf'\)/g)];
     expect(pairs.length).toBe(Object.keys(FRAUNCES_FILES).length);
-    for (const [, key, file] of pairs) expect(key).toBe(file);
+    for (const [, key, file] of pairs) {
+      expect(key).toBe(file);
+      expect(familyName(join(__dirname, `../assets/fonts/${file}.ttf`))).toBe(key);
+    }
   });
 
   it('har et eget snitt for hver fast størrelse koden bruker', () => {
