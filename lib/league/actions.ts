@@ -697,6 +697,49 @@ export async function handleDeleteLeague(formData: FormData): Promise<void> {
 // ── participant: start a flight for a round ──────────────────────────────────
 
 /**
+ * #2214: one counted flight per player per round. Nobody in the new flight may
+ * already have delivered the round or be playing it in another flight
+ * (roundPlayerLocks). Returns the refusal code, or null when everyone is free.
+ *
+ * The read runs on the admin client: under the games SELECT policy the starter
+ * cannot see a co-player's flight, so a request-client read comes back empty
+ * and lets everyone through. The caller has checked that the user is signed in
+ * and that everyone in flightIds is a member; the read is bounded to one round
+ * and these few players, so it needs no paging. A failed read refuses, never a
+ * silent pass.
+ */
+async function roundLockRefusal(
+  roundId: string,
+  starterId: string,
+  flightIds: string[],
+): Promise<string | null> {
+  const { data: roundFlights, error } = await getAdminClient()
+    .from('games')
+    .select('id, status, game_players!inner(user_id, withdrawn_at)')
+    .eq('league_round_id', roundId)
+    .in('status', ['scheduled', 'active', 'finished'])
+    .in('game_players.user_id', flightIds);
+  if (error || !roundFlights) {
+    console.error('[league] startLeagueRoundFlight round check failed', { roundId, error });
+    return 'round_check_failed';
+  }
+  const locks = roundPlayerLocks(
+    roundFlights.map((g) => ({
+      status: g.status,
+      players: (g.game_players as Array<{ user_id: string; withdrawn_at: string | null }>).map(
+        (p) => ({ userId: p.user_id, withdrawnAt: p.withdrawn_at }),
+      ),
+    })),
+  );
+  if (locks.delivered.has(starterId)) return 'already_played';
+  if (locks.inProgress.has(starterId)) return 'flight_in_progress';
+  if (flightIds.some((id) => locks.delivered.has(id) || locks.inProgress.has(id))) {
+    return 'co_player_locked';
+  }
+  return null;
+}
+
+/**
  * A participant starts a flight for a round. Server-enforces the marker rule
  * (≥2 distinct members) and the play window. Creates a flight game in the
  * league's format (slagspill / stableford / modifisert, via
@@ -758,37 +801,9 @@ export async function startLeagueRoundFlight(
   const memberSet = new Set((members ?? []).map((m) => m.user_id));
   if (!flightIds.every((id) => memberSet.has(id))) return { error: 'not_member' };
 
-  // #2214: one counted flight per player per round. Nobody in the new flight
-  // may already have delivered the round or be playing it in another flight
-  // (roundPlayerLocks). The read runs on the admin client: under the games
-  // SELECT policy the starter cannot see a co-player's flight, so a
-  // request-client read comes back empty and lets everyone through. The caller
-  // is signed in and everyone in flightIds is a member (checked above); the
-  // read is bounded to one round and these few players, so it needs no paging.
-  // A failed read refuses: never a silent pass (I3).
-  const { data: roundFlights, error: fErr } = await getAdminClient()
-    .from('games')
-    .select('id, status, game_players!inner(user_id, withdrawn_at)')
-    .eq('league_round_id', roundId)
-    .in('status', ['scheduled', 'active', 'finished'])
-    .in('game_players.user_id', flightIds);
-  if (fErr || !roundFlights) {
-    console.error('[league] startLeagueRoundFlight round check failed', { roundId, error: fErr });
-    return { error: 'round_check_failed' };
-  }
-  const locks = roundPlayerLocks(
-    roundFlights.map((g) => ({
-      status: g.status,
-      players: (g.game_players as Array<{ user_id: string; withdrawn_at: string | null }>).map(
-        (p) => ({ userId: p.user_id, withdrawnAt: p.withdrawn_at }),
-      ),
-    })),
-  );
-  if (locks.delivered.has(user.id)) return { error: 'already_played' };
-  if (locks.inProgress.has(user.id)) return { error: 'flight_in_progress' };
-  if (flightIds.some((id) => locks.delivered.has(id) || locks.inProgress.has(id))) {
-    return { error: 'co_player_locked' };
-  }
+  // #2214: one counted flight per player per round (roundLockRefusal).
+  const lockRefusal = await roundLockRefusal(roundId, user.id, flightIds);
+  if (lockRefusal) return { error: lockRefusal };
 
   // tee_gender per player from profile.
   const { data: roster } = await supabase.from('users').select('id, gender').in('id', flightIds);
