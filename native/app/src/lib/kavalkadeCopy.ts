@@ -5,8 +5,8 @@
 // er ICU (`{count, plural, one {# runde} other {# runder}}`), og
 // `formatMessage` fyller dem ut slik next-intl gjør for formene webben bruker:
 // enkle verdier, flertall med `one`/`other` og `#`, og tall med desimalkomma.
-// Testen sammenligner hver mal med `intl-messageformat`, biblioteket webben
-// bruker.
+// Testen låser malene mot `no.json` og formene mot webbens utdata; selve
+// `intl-messageformat` er ESM og lar seg ikke laste i appens jest.
 
 /** `kavalkade.*`: siden, fanene, kortene og dørene. */
 export const KAVALKADE_TEXT = {

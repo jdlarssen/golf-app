@@ -75,7 +75,7 @@ export function KavalkadeHomeBanner({
           </Text>
           {teaser ? null : (
             <Pressable
-              accessibilityRole="button"
+              accessibilityRole="link"
               onPress={onOpen}
               style={[styles.cta, { backgroundColor: colors.primary }]}
               testID="kavalkade-home-banner-cta"

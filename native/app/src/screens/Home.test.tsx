@@ -355,7 +355,7 @@ describe('Kavalkaden på Hjem (#2265 PR 2)', () => {
     await view;
 
     expect(await screen.findByText('Kavalkaden 2026 er åpen')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Åpne Kavalkaden' }));
+    await fireEvent.press(screen.getByRole('link', { name: 'Åpne Kavalkaden' }));
     expect(navigate).toHaveBeenCalledWith('Kavalkade');
   });
 
