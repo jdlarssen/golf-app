@@ -163,6 +163,40 @@ async function loadCascade(
   return children ?? [];
 }
 
+/**
+ * Puts the request rows this attempt decided back to 'pending' (trap 5:
+ * atomic-or-compensated). The status update commits before the roster writes;
+ * without this a failed later step left the request decided with nobody on the
+ * roster and no varsel sent, and a retry found it «already decided». Filtered
+ * on the status this attempt set, so a row someone else changed since is left
+ * alone. Best-effort: a failed compensation is logged loudly and the caller
+ * still reports the original failure.
+ */
+async function revertDecision(
+  ids: string[],
+  from: 'approved' | 'rejected',
+  logPrefix: string,
+): Promise<void> {
+  const { data, error } = await getAdminClient()
+    .from('game_registration_requests')
+    .update({
+      status: 'pending',
+      decided_at: null,
+      decided_by_user_id: null,
+      ...(from === 'rejected' ? { rejection_reason: null } : {}),
+    })
+    .in('id', ids)
+    .eq('status', from)
+    .select('id');
+  if (error || (data?.length ?? 0) < ids.length) {
+    console.error(`[${logPrefix}] compensation incomplete: requests may stay '${from}'`, {
+      ids,
+      reverted: data?.length ?? 0,
+      error,
+    });
+  }
+}
+
 function fail(reason: DecisionFailure, ctx: RegistrationDecisionContext): DecisionResult {
   return { ok: false, reason, gameId: ctx.game.id };
 }
@@ -237,6 +271,7 @@ export async function approveRegistrationCore(
   // were already decided (race between two admin tabs) — stop rather than
   // insert game_players + fire notifications for a write that never happened.
   // Only pending rows: a teammate who already accepted keeps their decision.
+  const idsToUpdate = pendingRows.map((r) => r.id);
   try {
     expectAffected(
       await admin
@@ -246,7 +281,7 @@ export async function approveRegistrationCore(
           decided_at: decidedAt,
           decided_by_user_id: actorId,
         })
-        .in('id', pendingRows.map((r) => r.id))
+        .in('id', idsToUpdate)
         .eq('status', 'pending')
         .select('id'),
       'approveRequest',
@@ -283,9 +318,11 @@ export async function approveRegistrationCore(
     .returns<{ user_id: string }[]>();
   if (insertError) {
     console.error('[approveRequest] game_players insert failed', insertError);
+    await revertDecision(idsToUpdate, 'approved', 'approveRequest');
     return fail('db_players', ctx);
   }
-  const placedUserIds = new Set((insertedPlayers ?? []).map((r) => r.user_id));
+  const insertedUserIds = (insertedPlayers ?? []).map((r) => r.user_id);
+  const placedUserIds = new Set(insertedUserIds);
 
   // #2072: a team member already on the roster without a team (added by the
   // organiser) keeps their row through the upsert above, so give that row the
@@ -302,6 +339,24 @@ export async function approveRegistrationCore(
       .returns<{ user_id: string }[]>();
     if (numberError) {
       console.error('[approveRequest] team number update failed', numberError);
+      // Undo this attempt's roster rows too: a retry picks a new team slot,
+      // and rows left with this one would split the team.
+      if (insertedUserIds.length > 0) {
+        const { error: undoError } = await admin
+          .from('game_players')
+          .delete()
+          .eq('game_id', game.id)
+          .in('user_id', insertedUserIds)
+          .select('user_id');
+        if (undoError) {
+          console.error('[approveRequest] compensation failed: inserted players left', {
+            gameId: game.id,
+            userIds: insertedUserIds,
+            error: undoError,
+          });
+        }
+      }
+      await revertDecision(idsToUpdate, 'approved', 'approveRequest');
       return fail('db_players', ctx);
     }
     for (const row of numberedPlayers ?? []) placedUserIds.add(row.user_id);
@@ -391,6 +446,7 @@ export async function rejectRegistrationCore(
   // (race), 0 rows returns error==null — without this guard notifications
   // would fire for a write that never happened.
   const decidedAt = new Date().toISOString();
+  const rejectedIds = pendingRows.map((r) => r.id);
   try {
     expectAffected(
       await admin
@@ -401,7 +457,7 @@ export async function rejectRegistrationCore(
           decided_at: decidedAt,
           decided_by_user_id: actorId,
         })
-        .in('id', pendingRows.map((r) => r.id))
+        .in('id', rejectedIds)
         .eq('status', 'pending')
         .select('id'),
       'rejectRequest',
@@ -433,6 +489,7 @@ export async function rejectRegistrationCore(
       .select('id');
     if (acceptedError) {
       console.error('[rejectRequest] accepted teammates update failed', acceptedError);
+      await revertDecision(rejectedIds, 'rejected', 'rejectRequest');
       return fail('db_update', ctx);
     }
   }

@@ -247,3 +247,92 @@ describe('rejectRegistrationCore', () => {
     });
   });
 });
+
+/**
+ * #2263 follow-up (trap 5, atomic-or-compensated): the status update commits
+ * before the roster writes. When a later step fails, the rows this attempt
+ * decided go back to 'pending' (and rows it inserted are removed), so a retry
+ * works instead of finding the request «already decided» with nobody on the
+ * roster and no varsel sent.
+ */
+describe('compensation when a later step fails', () => {
+  const ERR = { message: 'AbortError' };
+
+  it('approve: the game_players upsert fails → the request is pending again', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      soloRequest(),
+      game(),
+      { data: [{ id: SOLO_REQ }], error: null },
+      { data: null, error: ERR },
+      { data: [{ id: SOLO_REQ }], error: null },
+    ]);
+    const loaded = await load();
+    if (!loaded.ok) throw new Error('load failed');
+    const { approveRegistrationCore } = await import('./registrationDecisionCore');
+
+    expect(await approveRegistrationCore(loaded.ctx)).toMatchObject({ ok: false, reason: 'db_players' });
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates).toHaveLength(2);
+    expect(updates[1]!.args[0]).toEqual({ status: 'pending', decided_at: null, decided_by_user_id: null });
+    const revertFilters = adminMock.__fromCalls.slice(adminMock.__fromCalls.indexOf(updates[1]!));
+    expect(revertFilters).toContainEqual(expect.objectContaining({ method: 'in', args: ['id', [SOLO_REQ]] }));
+    expect(revertFilters).toContainEqual(expect.objectContaining({ method: 'eq', args: ['status', 'approved'] }));
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('approve a captain: the team-number update fails → inserted players removed, requests pending again', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      game(),
+      { data: [{ id: MATE_REQ, user_id: MATE_USER, status: 'pending' }], error: null },
+      { data: [], error: null },
+      { data: [{ id: CAPTAIN_REQ }, { id: MATE_REQ }], error: null },
+      { data: [{ user_id: CAPTAIN_USER }, { user_id: MATE_USER }], error: null },
+      { data: null, error: ERR },
+      { data: [{ user_id: CAPTAIN_USER }, { user_id: MATE_USER }], error: null },
+      { data: [{ id: CAPTAIN_REQ }, { id: MATE_REQ }], error: null },
+    ]);
+    const { loadRegistrationDecision, approveRegistrationCore } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(true), CAPTAIN_REQ);
+    if (!loaded.ok) throw new Error('load failed');
+
+    expect(await approveRegistrationCore(loaded.ctx)).toMatchObject({ ok: false, reason: 'db_players' });
+    const calls = adminMock.__fromCalls;
+    const del = calls.findIndex((c) => c.method === 'delete');
+    expect(del).toBeGreaterThan(-1);
+    expect(calls.slice(del)).toContainEqual(
+      expect.objectContaining({ method: 'in', args: ['user_id', [CAPTAIN_USER, MATE_USER]] }),
+    );
+    const updates = calls.filter((c) => c.method === 'update');
+    expect(updates.at(-1)!.args[0]).toEqual({ status: 'pending', decided_at: null, decided_by_user_id: null });
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('reject a captain: the teammates update fails → the requests are pending again', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    adminMock = buildSupabaseMock([
+      captainRequest,
+      game(),
+      { data: [{ id: MATE_REQ, user_id: MATE_USER, status: 'approved' }], error: null },
+      { data: [{ id: CAPTAIN_REQ }], error: null },
+      { data: null, error: ERR },
+      { data: [{ id: CAPTAIN_REQ }], error: null },
+    ]);
+    const { loadRegistrationDecision, rejectRegistrationCore } = await import('./registrationDecisionCore');
+    const loaded = await loadRegistrationDecision(server(true), CAPTAIN_REQ);
+    if (!loaded.ok) throw new Error('load failed');
+
+    expect(await rejectRegistrationCore(loaded.ctx, '')).toMatchObject({ ok: false, reason: 'db_update' });
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates).toHaveLength(3);
+    expect(updates[2]!.args[0]).toEqual({
+      status: 'pending',
+      decided_at: null,
+      decided_by_user_id: null,
+      rejection_reason: null,
+    });
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+});
