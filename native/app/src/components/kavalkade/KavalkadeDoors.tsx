@@ -98,7 +98,9 @@ const BODY = interLine(13, 17.875, { multiline: true });
 const CTA = interLine(13, 19.5);
 
 const styles = StyleSheet.create({
-  tree: { fontSize: 18, lineHeight: 18 },
+  // iOS gir 🎄 3 pt mer bredde enn Chromium på 18 pt (målt mot webbens dører),
+  // så teksten etter treet starter der den gjør på webben.
+  tree: { fontSize: 18, lineHeight: 18, marginRight: -3 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

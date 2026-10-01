@@ -182,6 +182,8 @@ export function Kavalkade(_props: ScreenProps<'Kavalkade'>) {
 }
 
 // Webben: innholdet står 16 under toppstripa (`mb-4`), med `px-5` og `space-y-4`.
+// Appens toppstripe er den felles `kickerHeader`; målt fra «KAVALKADEN» står
+// webbens overskrift 2 pt lenger ned enn 16 under den, derfor 18.
 // Overskriften er Fraunces 24/500 med `leading-tight` og `mb-4`. Kortene er
 // webbens `Card` (`p-6`, `rounded-2xl`), banneret `rounded-xl px-4 py-3` med
 // tekst 14/500.
@@ -191,7 +193,7 @@ const BODY = interLine(14, 22.75, { multiline: true });
 const BANNER = interLine(14, 20, { multiline: true });
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, paddingHorizontal: PAGE_GUTTER, paddingTop: 16, paddingBottom: 32, gap: 16 },
+  scroll: { flexGrow: 1, paddingHorizontal: PAGE_GUTTER, paddingTop: 18, paddingBottom: 32, gap: 16 },
   failed: { gap: 8 },
   heading: { ...HEADING, marginBottom: HEADING.marginBottom + 16, fontVariant: ['tabular-nums'] },
   card: { borderWidth: 1, borderRadius: 16, padding: 24 },
