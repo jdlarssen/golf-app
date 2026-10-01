@@ -30,16 +30,24 @@ describe('RoundStartClient — locked co-players (#2214)', () => {
     );
     const row = (id: string) => screen.getByTestId(`liga-round-start-player-${id}`);
     const box = (id: string) => row(id).querySelector('input') as HTMLInputElement;
+    const submit = screen.getByTestId('liga-round-start-submit') as HTMLButtonElement;
 
+    // Clicking only the locked rows selects nobody: the submit stays disabled
+    // (it is enabled by a non-empty selection, so it reads the real state).
     fireEvent.click(row('DONE'));
     fireEvent.click(row('BUSY'));
+    const afterLocked = submit.disabled;
     fireEvent.click(row('FREE'));
 
     expect({
+      afterLocked,
+      afterFree: submit.disabled,
       free: [row('FREE').getAttribute('aria-disabled'), row('FREE').getAttribute('data-locked'), box('FREE').checked],
       done: [row('DONE').getAttribute('aria-disabled'), row('DONE').getAttribute('data-locked'), box('DONE').checked],
       busy: [row('BUSY').getAttribute('aria-disabled'), row('BUSY').getAttribute('data-locked'), box('BUSY').checked],
     }).toEqual({
+      afterLocked: true,
+      afterFree: false,
       free: [null, null, true],
       done: ['true', 'delivered', false],
       busy: ['true', 'in_progress', false],
