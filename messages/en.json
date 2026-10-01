@@ -1171,7 +1171,7 @@
       "suffix": "{count, plural, one {player} other {players}}",
       "lessAriaLabel": "One player fewer",
       "moreAriaLabel": "One more player",
-      "countAriaLabel": "{count} players",
+      "countAriaLabel": "{count, plural, one {# player} other {# players}}",
       "unsetAriaLabel": "Number not chosen"
     },
     "club": {

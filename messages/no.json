@@ -1171,7 +1171,7 @@
       "suffix": "{count, plural, one {spiller} other {spillere}}",
       "lessAriaLabel": "Én spiller færre",
       "moreAriaLabel": "Én spiller til",
-      "countAriaLabel": "{count} spillere",
+      "countAriaLabel": "{count, plural, one {# spiller} other {# spillere}}",
       "unsetAriaLabel": "Antall ikke valgt"
     },
     "club": {
