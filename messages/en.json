@@ -3285,6 +3285,9 @@
   "auth": {
     "metaTitle": "Log in",
     "metaDescription": "Log in to Tørny, the golf tournament app. No password, you'll get a code by email.",
+    "joinCard": {
+      "title": "Join the round"
+    },
     "inviteCard": {
       "invitedBy": "{name} has invited you",
       "invitedByFallback": "You're invited",
@@ -3313,7 +3316,9 @@
       "pending": "Sending code to",
       "emailLabel": "Email",
       "selfRegHelper": "Enter your email. New here? We'll create an account for you.",
-      "submitButton": "Send me a code"
+      "submitButton": "Send me a code",
+      "inviteHint": "You'll get a code by email. No app to download, and it takes under a minute.",
+      "emailPlaceholder": "name@example.com"
     },
     "verifyCode": {
       "pending": "Logging in …",
@@ -5543,6 +5548,24 @@
       "emptyClub": "No upcoming rounds in your club.",
       "showAll": "Show all"
     }
+  },
+  "invitationCard": {
+    "kicker": {
+      "invite": "Invitation",
+      "public": "Sign up"
+    },
+    "invitedBy": "{name} has invited you to",
+    "invitedByFallback": "You're invited to",
+    "teeOff": "Tee-off",
+    "tee": "{name} tee",
+    "playStyle": {
+      "solo": "individual",
+      "team": "as a team"
+    },
+    "joined": "{count, plural, one {# has already joined} other {# have already joined}}",
+    "expiresToday": "The invitation expires today",
+    "expiresTomorrow": "The invitation expires tomorrow",
+    "expiresInDays": "The invitation expires in {n} days"
   },
   "socialProof": {
     "friendsOne": "{name} is in",

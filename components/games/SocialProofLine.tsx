@@ -1,5 +1,9 @@
 import { useTranslations } from 'next-intl';
-import { socialProofForm, type GameSocialProof } from '@/lib/games/socialProof';
+import {
+  socialProofForm,
+  type GameSocialProof,
+  type SocialProofForm,
+} from '@/lib/games/socialProof';
 
 /**
  * Sosialt-bevis-linja i join-funnelen (#1193). Ren presentasjon: den tar et
@@ -20,19 +24,8 @@ export function SocialProofLine({
   knownFriendOverflow,
   className,
 }: GameSocialProof & { className?: string }) {
-  const t = useTranslations('socialProof');
-
   const form = socialProofForm({ joinedCount, knownFriendNames, knownFriendOverflow });
   if (form == null) return null;
-
-  const text =
-    form.kind === 'friendsOverflow'
-      ? t('friendsOverflow', { name: form.name, count: form.count })
-      : form.kind === 'friendsTwo'
-        ? t('friendsTwo', { name1: form.name1, name2: form.name2 })
-        : form.kind === 'friendsOne'
-          ? t('friendsOne', { name: form.name })
-          : t('count', { count: form.count });
   const isFriendSignal = form.kind !== 'count';
 
   return (
@@ -46,7 +39,22 @@ export function SocialProofLine({
         .filter(Boolean)
         .join(' ')}
     >
-      {text}
+      <SocialProofText form={form} />
     </p>
   );
+}
+
+/**
+ * The wording for one form. One home, shared with the invitation card
+ * (#2266), which shows the friend forms as they are.
+ */
+export function SocialProofText({ form }: { form: SocialProofForm }) {
+  const t = useTranslations('socialProof');
+  return form.kind === 'friendsOverflow'
+    ? t('friendsOverflow', { name: form.name, count: form.count })
+    : form.kind === 'friendsTwo'
+      ? t('friendsTwo', { name1: form.name1, name2: form.name2 })
+      : form.kind === 'friendsOne'
+        ? t('friendsOne', { name: form.name })
+        : t('count', { count: form.count });
 }

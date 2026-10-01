@@ -3285,6 +3285,9 @@
   "auth": {
     "metaTitle": "Logg inn",
     "metaDescription": "Logg inn i Tørny, turneringsappen for golf. Ingen passord, du får en kode på e-post.",
+    "joinCard": {
+      "title": "Bli med på runden"
+    },
     "inviteCard": {
       "invitedBy": "{name} har invitert deg",
       "invitedByFallback": "Du er invitert",
@@ -3313,7 +3316,9 @@
       "pending": "Sender kode til",
       "emailLabel": "E-post",
       "selfRegHelper": "Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.",
-      "submitButton": "Send meg kode"
+      "submitButton": "Send meg kode",
+      "inviteHint": "Du får en kode på e-post. Ingen app å laste ned, og det tar under et minutt.",
+      "emailPlaceholder": "navn@eksempel.no"
     },
     "verifyCode": {
       "pending": "Logger inn …",
@@ -5543,6 +5548,24 @@
       "emptyClub": "Ingen kommende runder i klubben din.",
       "showAll": "Vis alle"
     }
+  },
+  "invitationCard": {
+    "kicker": {
+      "invite": "Invitasjon",
+      "public": "Påmelding"
+    },
+    "invitedBy": "{name} har invitert deg til",
+    "invitedByFallback": "Du er invitert til",
+    "teeOff": "Tee-off",
+    "tee": "{name} tee",
+    "playStyle": {
+      "solo": "hver for seg",
+      "team": "i lag"
+    },
+    "joined": "{count} er med allerede",
+    "expiresToday": "Invitasjonen utløper i dag",
+    "expiresTomorrow": "Invitasjonen utløper i morgen",
+    "expiresInDays": "Invitasjonen utløper om {n} dager"
   },
   "socialProof": {
     "friendsOne": "{name} er med",
