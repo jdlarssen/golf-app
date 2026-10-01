@@ -188,16 +188,24 @@ export function BasicsSection({
           can pick it up from here. No `name`: the form reads the always-
           mounted `start_type` mirror in GameWizard / GameForm. */}
       <label className="flex min-h-11 cursor-pointer items-start gap-2">
+        {/* The whole label is the 44 px target; the name is only the title,
+            and the hint is read as its description. */}
         <input
           type="checkbox"
           checked={startType === 'shotgun'}
           onChange={(e) => setStartType(e.target.checked ? 'shotgun' : 'first_tee')}
           className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
+          aria-labelledby="shotgun-start-label"
+          aria-describedby="shotgun-start-hint"
           data-testid="shotgun-start"
         />
         <span>
-          <span className="block font-sans text-sm text-text">{t('shotgunLabel')}</span>
-          <span className="mt-0.5 block text-xs text-muted">{t('shotgunHint')}</span>
+          <span id="shotgun-start-label" className="block font-sans text-sm text-text">
+            {t('shotgunLabel')}
+          </span>
+          <span id="shotgun-start-hint" className="mt-0.5 block text-xs text-muted">
+            {t('shotgunHint')}
+          </span>
         </span>
       </label>
     </section>
