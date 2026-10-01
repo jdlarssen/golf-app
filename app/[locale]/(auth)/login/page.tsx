@@ -11,7 +11,7 @@ import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
-import { InviteContextCard } from './_components/InviteContextCard';
+import { InvitationCard } from '@/components/games/InvitationCard';
 import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
 import { resolvePasskeyAccess } from '@/lib/auth/passkeyFlag';
 import { selfRegistrationOpen } from '@/lib/auth/sendLoginCode';
@@ -20,9 +20,12 @@ import {
   isInviteToken,
 } from '@/lib/auth/getInviteLoginContext';
 import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
-import { inviteExpiryTier } from '@/lib/auth/inviteExpiry';
+import {
+  effectiveInviteDeadline,
+  inviteExpiryTier,
+} from '@/lib/auth/inviteExpiry';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { formatTeeOffLongParts } from '@/lib/i18n/format';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
@@ -101,13 +104,13 @@ export default async function LoginPage({
   let inviteCard: ReactNode = null;
   if (inviteCtx) {
     const locale = (await getLocale()) as AppLocale;
-    const tModes = await getTranslations('modes');
-    const tCard = await getTranslations('auth.inviteCard');
-    const modeKey = inviteCtx.gameMode as Parameters<typeof tModes>[0];
+    const tCard = await getTranslations('invitationCard');
     // #1179: vennlig, forward-pekende frist. Kortet rendres per request, så en
-    // relativ nedtelling holder seg fersk. getInviteLoginContext viser bare
-    // ikke-utløpte invitasjoner, så tier er alltid i dag/i morgen/om N dager.
-    const expiryTier = inviteExpiryTier(inviteCtx.expiresAt);
+    // relativ nedtelling holder seg fersk. #2266: fristen har tak ved tee-off —
+    // invitasjonen gir ikke plass etter at runden har startet (#2212).
+    const expiryTier = inviteExpiryTier(
+      effectiveInviteDeadline(inviteCtx.expiresAt, inviteCtx.teeOffAt),
+    );
     const expiresLine =
       expiryTier === null
         ? null
@@ -116,26 +119,25 @@ export default async function LoginPage({
           : expiryTier.kind === 'tomorrow'
             ? tCard('expiresTomorrow')
             : tCard('expiresInDays', { n: expiryTier.days });
-    // #1193: aggregert sosialt bevis på kortet. Den besøkende er anonym
-    // (viewerUserId = null) → helperen gir kun et ekte antall, aldri venne-navn.
-    const { joinedCount } = await getGameSocialProof(inviteCtx.gameId, null);
-    // #2270: Oslo wall-clock, not the UTC server's — otherwise 09:20 shows as 07:20.
-    const teeOffParts = inviteCtx.teeOffAt
-      ? formatTeeOffLongParts(inviteCtx.teeOffAt, locale)
-      : null;
+    // #1193: den besøkende er anonym (viewerUserId = null) → helperen gir kun
+    // et ekte antall, aldri venne-navn.
+    const socialProof = await getGameSocialProof(inviteCtx.gameId, null);
     inviteCard = (
-      <InviteContextCard
+      <InvitationCard
+        variant="invite"
         inviterName={inviteCtx.inviterName}
         gameName={localizeGameName(
           inviteCtx.gameName,
           inviteCtx.courseName,
           locale,
         )}
-        modeLabel={tModes.has(modeKey) ? tModes(modeKey) : null}
+        gameMode={inviteCtx.gameMode as GameMode}
+        modeConfig={inviteCtx.modeConfig}
+        teeOffAt={inviteCtx.teeOffAt}
         courseName={inviteCtx.courseName}
-        teeOff={teeOffParts ? `${teeOffParts.date}, ${teeOffParts.time}` : null}
+        teeName={inviteCtx.teeName}
+        socialProof={socialProof}
         expiresLine={expiresLine}
-        joinedCount={joinedCount}
       />
     );
   }
@@ -152,6 +154,64 @@ export default async function LoginPage({
     changeEmailQs.toString() ? `?${changeEmailQs.toString()}` : ''
   }`;
 
+  const errorBanner = errorMessage ? (
+    <div data-testid={`login-error-${errorCode}`}>
+      <Banner tone="error">{errorMessage}</Banner>
+    </div>
+  ) : null;
+
+  // #2266: fra en invitasjon står siden på lin, med ordmerket uten slagord,
+  // papirkortet og «Bli med på runden» som på artboardet. Demo-lenka og
+  // passkey-knappen hører til den vanlige innloggingen.
+  if (inviteCard) {
+    return (
+      <AppShell bgClassName="bg-[var(--invitation-page-bg)]">
+        <div className="-mt-3.5" data-page-bg="invitation">
+          <h1 className="m-0 text-center font-serif text-[22px] leading-[normal] font-semibold text-primary">
+            Tørny
+          </h1>
+          <div className="mt-4 mb-4 flex justify-center">
+            <LocaleSwitcher />
+          </div>
+          {inviteCard}
+          {step === 'email' ? (
+            <section
+              aria-labelledby="join-card-title"
+              className="-mx-1 mt-4 flex flex-col gap-2.5 rounded-[18px] border border-border bg-surface p-4"
+            >
+              {errorBanner}
+              <h2
+                id="join-card-title"
+                className="font-serif text-[20px] leading-[normal] font-medium"
+              >
+                {t('joinCard.title')}
+              </h2>
+              <SendCodeForm
+                defaultEmail={email}
+                next={next}
+                invite={invite}
+                variant="invite"
+                hint={t('sendCode.inviteHint')}
+              />
+            </section>
+          ) : (
+            <div className="mt-4">
+              <Card>
+                {errorBanner && <div className="mb-4">{errorBanner}</div>}
+                <VerifyCodeForm
+                  email={email}
+                  next={next}
+                  invite={invite}
+                  changeEmailHref={changeEmailHref}
+                />
+              </Card>
+            </div>
+          )}
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="mt-10">
@@ -159,7 +219,6 @@ export default async function LoginPage({
         <div className="flex justify-center mb-4">
           <LocaleSwitcher />
         </div>
-        {inviteCard}
         <Card>
           {errorMessage && (
             <div data-testid={`login-error-${errorCode}`} className="mb-4">

@@ -8,12 +8,15 @@ export function Input({
   error,
   id,
   inputClassName,
+  labelClassName,
   ref,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   /** Keep the label for screen readers but hide it visually (e.g. inline rows). */
   labelHidden?: boolean;
+  /** Replaces the visible label's classes (the invitation form, #2266). */
+  labelClassName?: string;
   hint?: string;
   warning?: string | null;
   error?: string;
@@ -30,7 +33,9 @@ export function Input({
       <label
         htmlFor={id}
         className={
-          labelHidden ? 'sr-only' : 'block text-sm font-medium text-text mb-1.5'
+          labelHidden
+            ? 'sr-only'
+            : (labelClassName ?? 'block text-sm font-medium text-text mb-1.5')
         }
       >
         {label}
