@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { hasAcceptedTeamInvite, type TeamChild } from './teamCaptaincy';
+import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { hasAcceptedTeamInvite, readCaptainTeam, type TeamChild } from './teamCaptaincy';
 
 /**
  * Type A (#2358): who has said yes to a team invitation.
@@ -44,5 +45,29 @@ describe('hasAcceptedTeamInvite', () => {
     ['withdrawn, even with a confirmed roster row', child({ status: 'withdrawn', decided_by_user_id: TEAMMATE }), '2026-09-29T10:00:00.000Z', false],
   ] as const)('%s', (_label, row, rosterAcceptedAt, expected) => {
     expect(hasAcceptedTeamInvite(row, rosterAcceptedAt)).toBe(expected);
+  });
+});
+
+/**
+ * #2440: the teammates under a captain are read inside the captain's game.
+ * `team_request_id` is not bound to the same game in the database, so a row
+ * from another game must not count as a teammate (or be marked with the team).
+ */
+describe('readCaptainTeam', () => {
+  it('reads only the rows in the captain\'s game', async () => {
+    const GAME = '55555555-5555-5555-5555-555555555555';
+    const CAPTAIN_REQUEST = '66666666-6666-6666-6666-666666666666';
+    const admin = buildSupabaseMock([{ data: [], error: null }]);
+
+    expect(await readCaptainTeam(admin as never, GAME, CAPTAIN_REQUEST)).toEqual({
+      ok: true,
+      accepted: [],
+      unanswered: [],
+    });
+    const filters = admin.__fromCalls
+      .filter((c) => c.table === 'game_registration_requests' && c.method === 'eq')
+      .map((c) => c.args);
+    expect(filters).toContainEqual(['team_request_id', CAPTAIN_REQUEST]);
+    expect(filters).toContainEqual(['game_id', GAME]);
   });
 });

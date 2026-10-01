@@ -164,6 +164,11 @@ export async function loadRegistrationDecision(
   return { ok: true, ctx: { request, game, actorId: role.userId } };
 }
 
+/**
+ * The team rows under a captain's request. Only rows in the captain's own game
+ * (#2440): the database does not bind `team_request_id` to the same game, so a
+ * row elsewhere must never be decided, or put on this roster, with the team.
+ */
 async function loadCascade(
   request: RequestSnapshot,
   logPrefix: string,
@@ -173,6 +178,7 @@ async function loadCascade(
     .from('game_registration_requests')
     .select('id, user_id, status')
     .eq('team_request_id', request.id)
+    .eq('game_id', request.game_id)
     .in('status', [...CASCADE_STATUSES])
     .returns<CascadeRow[]>();
   if (error) {
