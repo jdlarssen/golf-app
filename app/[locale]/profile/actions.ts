@@ -3,10 +3,11 @@
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 import { parseProfileInput } from '@/lib/users/profileInput';
 import { recomputeCourseHandicapForUser } from '@/lib/games/recomputeCourseHandicap';
-import { expectOne } from '@/lib/supabase/affectedRows';
+import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 
 export async function updateProfile(formData: FormData) {
   const locale = await getLocale();
@@ -45,9 +46,9 @@ export async function updateProfile(formData: FormData) {
   }
   const { name, nickname, hcpIndex: hcpParsed, gender, level } = parsed.value;
 
-  // Månedsbrev-opt-in (#202) eies nå av Innboks-flaten (toggleProductUpdates),
-  // ikke dette skjemaet — så updateProfile rører ikke
-  // product_updates_unsubscribed_at lenger.
+  // Månedsbrev-opt-in (#202) har sin egen bryter (toggleProductUpdates under,
+  // raden i «App»), ikke dette skjemaet — så updateProfile rører ikke
+  // product_updates_unsubscribed_at.
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -115,4 +116,45 @@ export async function updateProfile(formData: FormData) {
   }
 
   redirect({ href: nextSafe ?? '/profile?profile=updated', locale });
+}
+
+/**
+ * Skru månedsbrevet (product-updates, #202) på eller av. Bryteren står på
+ * Profil under «App», ved siden av push-varslene (#2263, eiersvar 16); før det
+ * sto den nederst i Innboks (#401, #1799). Den hører ikke til profil-skjemaet,
+ * så `updateProfile` rører fortsatt ikke kolonnen. `null` = på (default),
+ * timestamp = av-meldt da.
+ *
+ * Skrivingen verifiseres med `expectAffected` (AGENTS.md trap 2): PostgREST
+ * returnerer `error == null` for en UPDATE som traff 0 rader, så uten
+ * `.select('id')` + radtelling ville en RLS-nekt se ut som suksess og
+ * bryteren bli stående av mens samtykket i DB-en var uendret (#1394). Et
+ * samtykke-signal må være til å stole på, så vi svelger ingen 0-rads-skriving.
+ */
+export async function toggleProductUpdates(
+  optIn: boolean,
+): Promise<{ ok: boolean }> {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) return { ok: false };
+  const supabase = await getServerClient();
+  try {
+    expectAffected(
+      await supabase
+        .from('users')
+        .update({
+          product_updates_unsubscribed_at: optIn
+            ? null
+            : new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select('id'),
+      'toggleProductUpdates',
+    );
+  } catch (err) {
+    // Vi kaster ikke videre til klienten, men rapporterer ok=false så
+    // bryteren ruller tilbake.
+    console.error('[profile] toggleProductUpdates failed', err);
+    return { ok: false };
+  }
+  return { ok: true };
 }

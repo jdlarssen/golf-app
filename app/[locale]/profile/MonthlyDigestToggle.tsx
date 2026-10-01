@@ -6,17 +6,18 @@ import { Switch } from '@/components/ui/Switch';
 import { toggleProductUpdates } from './actions';
 
 /**
- * Kompakt månedsbrev-bryter i Innboks. Optimistisk lokal state + server-action
- * som lagrer. Eierskapet for product-updates-opt-in flyttet hit fra profil-
- * skjemaet (#401) — det hører hjemme der varsler bor.
+ * The monthly digest switch, a row under «App» on Profil next to the push
+ * settings (#2263, owner's answer 16 — it was at the bottom of the inbox,
+ * #1799). Same row as Språk and Tema.
  *
- * Bryteren ruller tilbake og sier fra når lagringen ikke gikk gjennom (#1394).
- * Dette er et samtykke-signal: en bryter som blir stående av mens DB-en sier
- * på, får brukeren til å tro hen har meldt seg av månedsbrevet uten at det er
- * lagret. Action-en verifiserer selve skrivingen (0 rader = feil, trap 2).
+ * Optimistic local state plus a server action that saves. It rolls back and
+ * says so when the save did not go through (#1394): this is a consent signal,
+ * and a switch left off while the database says on makes the user think they
+ * unsubscribed when nothing was saved. The action checks the write itself
+ * (0 rows = failure, trap 2).
  */
 export function MonthlyDigestToggle({ initialOptIn }: { initialOptIn: boolean }) {
-  const t = useTranslations('inbox');
+  const t = useTranslations('profile');
   const [optIn, setOptIn] = useState(initialOptIn);
   const [failed, setFailed] = useState(false);
   const [, startTransition] = useTransition();
@@ -35,7 +36,7 @@ export function MonthlyDigestToggle({ initialOptIn }: { initialOptIn: boolean })
         }
         if (failed) setFailed(false);
       } catch (err) {
-        console.error('[innboks] monthly digest toggle failed', err);
+        console.error('[profile] monthly digest toggle failed', err);
         setOptIn(previous);
         setFailed(true);
       }
@@ -44,29 +45,19 @@ export function MonthlyDigestToggle({ initialOptIn }: { initialOptIn: boolean })
 
   return (
     <div
-      className="rounded-2xl border border-border bg-surface px-4 py-3"
+      className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0"
       data-testid="monthly-digest-toggle"
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-serif text-base font-medium text-text">{t('monthlyDigestTitle')}</p>
-          <p className="text-xs text-muted">{t('monthlyDigestSubtitle')}</p>
-        </div>
-        <Switch
-          checked={optIn}
-          onToggle={toggle}
-          label={t('monthlyDigestAriaLabel')}
-        />
+      <div className="min-w-0">
+        <p className="font-serif text-base font-medium text-text">{t('monthlyDigestTitle')}</p>
+        <p className="text-xs text-muted">{t('monthlyDigestSubtitle')}</p>
+        {failed && (
+          <p role="status" data-testid="monthly-digest-error" className="mt-1 font-sans text-[12px] text-danger">
+            {t('monthlyDigestFailed')}
+          </p>
+        )}
       </div>
-      {failed && (
-        <p
-          role="status"
-          data-testid="inbox-action-error"
-          className="mt-2 font-sans text-[12px] text-danger"
-        >
-          {t('actionFailed')}
-        </p>
-      )}
+      <Switch checked={optIn} onToggle={toggle} label={t('monthlyDigestAriaLabel')} />
     </div>
   );
 }

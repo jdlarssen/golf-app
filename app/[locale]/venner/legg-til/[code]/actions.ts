@@ -46,7 +46,7 @@ export async function connectFriend(formData: FormData) {
         .select('name, nickname, email')
         .eq('id', user.id)
         .maybeSingle<{ name: string | null; nickname: string | null; email: string }>();
-      // actor_name may be null — NotificationCard renders the catalog fallback
+      // actor_name may be null — buildNotificationText renders the catalog fallback
       // at render time in the correct locale (§4 payload-fallback contract).
       const actorName = me ? displayNameForOthers(me) : null;
       await notify({

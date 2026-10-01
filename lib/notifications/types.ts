@@ -95,7 +95,7 @@ const scorecardApprovedSchema = z.object({
 // så spilleren MÅ rette og levere på nytt før spillet kan avsluttes — dette er
 // et handlingsvarsel, ikke bare en beskjed. Deeplinker til /games/[game_id] der
 // rejection-banneret allerede står med begrunnelse og veien videre.
-// rejecter_name + game_name nullable: NotificationCard fyller locale-fallbacken
+// rejecter_name + game_name nullable: buildNotificationText fyller locale-fallbacken
 // ved render (#583, #1364). `reason` utelates når attestanten ikke skrev noe —
 // kortet viser da en lokalisert defaultReason i stedet for en plassholdertekst.
 // #2200: `player_name` is set on the copy sent to the one who delivered the
@@ -157,7 +157,7 @@ const teamInviteSchema = z.object({
   game_id: uuid,
   game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
   game_name: z.string().min(1),
-  // team_name + invited_by_name nullable: NotificationCard fills the locale
+  // team_name + invited_by_name nullable: buildNotificationText fills the locale
   // fallback at render time so payloads stay locale-agnostic (#583).
   team_name: z.string().min(1).nullable().optional(),
   invited_by_name: z.string().min(1).nullable().optional(),
@@ -213,7 +213,7 @@ const teamMemberWithdrewSchema = z.object({
   game_id: uuid,
   game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
   game_name: z.string().min(1),
-  // nullable: NotificationCard fills the locale fallback at render time (#583).
+  // nullable: buildNotificationText fills the locale fallback at render time (#583).
   withdrawn_player_name: z.string().min(1).nullable().optional(),
   team_name: z.string().min(1).nullable().optional(),
 });
@@ -302,7 +302,7 @@ const clubRoleChangedSchema = z.object({
 
 // friend_request: noen sendte deg en venneforespørsel. Sendes til mottaker.
 // Vennelista (/profile/venner) samler godta/avslå; actor_name vises i kortet.
-// actor_name is optional (null) — NotificationCard renders the catalog fallback
+// actor_name is optional (null) — buildNotificationText renders the catalog fallback
 // at render time in the correct locale (§4 payload-fallback, i18n phase 2e).
 const friendRequestSchema = z.object({
   actor_id: uuid,

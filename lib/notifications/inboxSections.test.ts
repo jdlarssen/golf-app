@@ -497,7 +497,7 @@ describe('buildInboxEntryView', () => {
 
   it.each([
     ['deliver_reminder', { game_id: GAME, game_name: 'X' }, 'Påminnelse om scorekortet'],
-    ['scorecard_rejected', { game_id: GAME, game_name: 'X', rejecter_name: 'Ola' }, 'Scorekortet ble sendt i retur'],
+    ['scorecard_rejected', { game_id: GAME, game_name: 'X', rejecter_name: 'Ola' }, 'Scorekortet ble sendt tilbake'],
     ['friend_request', { actor_id: MARTE, actor_name: 'Jonas Berg' }, 'Jonas sendte deg en venneforespørsel'],
     ['team_invite', { game_id: GAME, game_short_id: 'abcd1234', game_name: 'X', team_name: 'Lag 1', invited_by_name: 'Ola', request_id: REQ }, 'Ola inviterte deg til Lag 1'],
     ['club_join_request', { group_id: GAME, group_name: 'Klubben', requester_name: 'Ola' }, 'Ola ba om å bli med i klubben'],
@@ -514,6 +514,17 @@ describe('buildInboxEntryView', () => {
     );
     expect(v.subtitle).toMatch(/^Fullt · /);
     expect(v.subtitleIsFreeText).toBe(true);
+    expect(v.destination).toBeNull();
+  });
+
+  it('product_update keeps its body and its call to action, no arrow target', () => {
+    const v = view(
+      [row('product_update', { source_id: GAME, title: 'Nytt i Tørny', body: 'Lang tekst', link: '/cup', cta_label: 'Se cupene' })],
+      'today',
+    );
+    expect(v.title).toBe('Nytt i Tørny');
+    expect(v.body).toBe('Lang tekst');
+    expect(v.cta).toEqual({ href: '/cup', label: 'Se cupene' });
     expect(v.destination).toBeNull();
   });
 

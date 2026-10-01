@@ -23,6 +23,7 @@ import { PasskeySettings } from '@/components/passkey/PasskeySettings';
 import { getPasskeyEnrollAccess } from '@/lib/auth/passkeyEnrollAccess';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
+import { MonthlyDigestToggle } from './MonthlyDigestToggle';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatDate } from '@/lib/i18n/format';
@@ -50,7 +51,7 @@ const getProfileRow = cache(async () => {
   const { data, error } = await supabase
     .from('users')
     .select(
-      'name, nickname, hcp_index, handicap_updated_at, profile_completed_at, gender, level',
+      'name, nickname, hcp_index, handicap_updated_at, profile_completed_at, gender, level, product_updates_unsubscribed_at',
     )
     .eq('id', userId)
     .single();
@@ -140,6 +141,10 @@ export default async function ProfilePage({
               <ThemeSwitcher />
             </div>
             <InstallButton />
+            {/* #2263, eiersvar 16: månedsbrevet står her, rett over push-varslene. */}
+            <Suspense fallback={null}>
+              <MonthlyDigestSetting />
+            </Suspense>
           </SettingList>
         </section>
 
@@ -396,4 +401,16 @@ async function VennerCard() {
       </Card>
     </SmartLink>
   );
+}
+
+/**
+ * The monthly digest row in «App» (#2263). Reads the opt-in from the same
+ * cached profile row as the form. A failed read goes to the error boundary
+ * (#1392): a switch shown in the wrong state would misreport consent.
+ */
+async function MonthlyDigestSetting() {
+  const result = await getProfileRow();
+  if (!result) return null;
+  if (result.error) throw result.error;
+  return <MonthlyDigestToggle initialOptIn={result.data?.product_updates_unsubscribed_at == null} />;
 }

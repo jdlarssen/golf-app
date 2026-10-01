@@ -845,6 +845,15 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 2px 12px rgba(26, 46, 31, 0.04);
   }
 
+  /* The inbox's 30 px disc (#2263): the place on «Resultatet er klart» — the
+   * same light disc for every place, 1st included (owner's answer 17) — and
+   * the emoji on a row without a person. Two stops, not `.bg-medallion`'s
+   * three, and a hairline instead of the gold medallion ring. */
+  .bg-place-disc {
+    background: radial-gradient(circle at 50% 38%, #ffffff 0%, #e5e0d3 100%);
+    box-shadow: inset 0 0 0 1px rgba(154, 145, 128, 0.6);
+  }
+
   .ring-medallion {
     box-shadow:
       inset 0 0 0 1px rgba(201, 169, 97, 0.35),
@@ -964,6 +973,16 @@ h1, h2, h3, h4, h5, h6 {
       inset 0 0 0 1px rgba(201, 169, 97, 0.4),
       0 2px 12px rgba(26, 46, 31, 0.04);
   }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .bg-place-disc {
+    background: radial-gradient(circle at 50% 38%, #1f4a37 0%, #0f2c1f 100%);
+  }
+}
+
+[data-theme='dark'] .bg-place-disc {
+  background: radial-gradient(circle at 50% 38%, #1f4a37 0%, #0f2c1f 100%);
 }
 
 [data-theme='dark'] .bg-medallion {

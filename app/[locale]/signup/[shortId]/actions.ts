@@ -103,7 +103,7 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
 /**
  * Slå opp displayName for notify-payload: navn, ellers maskert e-post (#2271),
  * med kallenavn i «». Best-effort: hvis users-raden mangler, returnerer vi null —
- * NotificationCard fyller locale-riktig fallback ved render-tid, så payloaden
+ * buildNotificationText fyller locale-riktig fallback ved render-tid, så payloaden
  * holdes språk-nøytral (#583). Vi blokkerer aldri selv-påmelding på display-feil.
  */
 async function getRequesterName(userId: string): Promise<string | null> {

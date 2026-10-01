@@ -20,7 +20,7 @@ export async function notifyInvitedToTeam(opts: {
   gameShortId: string;
   gameName: string;
   teamRequestId: string;
-  // Nullable: NotificationCard fills the locale fallback at render time (#583).
+  // Nullable: buildNotificationText fills the locale fallback at render time (#583).
   teamName: string | null;
   invitedByName: string | null;
 }): Promise<{ shouldAlsoSendMail: boolean }> {

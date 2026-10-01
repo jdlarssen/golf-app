@@ -1,142 +1,212 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from '@/i18n/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import {
-  NotificationCard,
-  type NotificationRow,
-} from '@/components/notifications/NotificationCard';
-import {
-  groupNotificationsByDay,
-  type DayGroup,
-} from '@/lib/notifications/groupByDay';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+  buildInboxEntryView,
+  buildInboxSections,
+  countActionRows,
+  inboxPerson,
+  type InboxEntry,
+  type InboxEntryView,
+  type InboxFilter,
+  type InboxRow as InboxRowData,
+  type InboxSectionKey,
+  type InboxTextContext,
+} from '@/lib/notifications/inboxSections';
+import type { NotificationPayload } from '@/lib/notifications/types';
+import type { NotificationTranslator } from '@/lib/notifications/cardContent';
+import type { ResultSummary } from '@/lib/scoring/resultSummary';
+import { InboxRow } from '@/components/notifications/InboxRow';
+import { InboxActionRow } from '@/components/notifications/InboxActionRow';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
+import { Card } from '@/components/ui/Card';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { markOneAsRead, markAllAsRead, archiveOne, clearRead } from './actions';
-import { notificationDestination } from '@/lib/notifications/deeplink';
+import { InboxFilterChips } from './InboxFilterChips';
+import {
+  clearRead,
+  decideRegistration,
+  markAllAsRead,
+  markGroupAsRead,
+  markOneAsRead,
+  type DecideRegistrationResult,
+} from './actions';
 
 /**
- * Innboks-client. Tar initial notifications-rader fra server-component,
- * grupperer per dag, og lar brukeren markere lest + navigere.
+ * The inbox as a board (#2263, artboard «Forslag: oppslagstavla»): KREVER
+ * HANDLING, I DAG and TIDLIGERE, filter chips, groups. The rules — which row
+ * needs action, what groups, what each row says — live in
+ * `lib/notifications/inboxSections.ts`; this component holds the list, the
+ * filter and the status line, and runs the actions.
  *
- * Tap-flyt:
- *  1. Optimistisk mark som lest lokalt (umiddelbart visuelt feedback)
- *  2. Call markOneAsRead-server-action via useTransition — kun for uleste rader
- *     (`wasUnread`-gate); etter #1665 melder en enkelt-id-skriving som treffer 0
- *     rader `ok:false`, så kallet skal aldri gjøres for en allerede-lest rad
- *  3. Naviger til kortets deeplink via router.push
+ * Every action goes through `runOptimistic` (#1394): the list is updated at
+ * once, and put back with an error line if the server says no or the request
+ * never arrives (offline on the course).
  *
- * «Marker alle som lest» speiler samme pattern på alle uleste rader i én operasjon.
- *
- * Alle fire handlingene går gjennom `runOptimistic`: den tar et snapshot av
- * lista FØR den optimistiske oppdateringen, awaiter server-action-en, og
- * setter lista tilbake + viser en feillinje hvis skrivingen ikke gikk gjennom
- * (#1394). Før dette ble actionene `void`-et: en feilet lagring (typisk
- * offline på banen) ga et kort som forsvant for godt fram til neste last.
- *
- * NB: Vi re-grupperer per render slik at en optimistic-update på read_at
- * ikke flytter kort mellom dag-buckets (dag bestemmes av created_at, ikke
- * read_at). DayGroup-en holder seg derfor stabil.
+ * The page sets its own edges (`AppShell flush`). Fonts render as on the
+ * artboard: Inter without the app's `ss01`/`cv11` and Fraunces with automatic
+ * optical size — an exception for this page only, on the root below.
  */
+
+type Status = { tone: 'ok' | 'error'; text: string } | null;
+
+const SECTION_ORDER: InboxSectionKey[] = ['action', 'today', 'earlier'];
+const SETTLED_REASONS = new Set(['not_pending', 'request_not_found', 'game_not_found']);
+
 export function InboxClient({
   initialNotifications,
+  isAdmin,
+  teeOffByGame,
+  resultByGame,
+  finishedGameIds,
+  now,
+  signupErrorText,
 }: {
-  initialNotifications: NotificationRow[];
+  initialNotifications: InboxRowData[];
+  isAdmin: boolean;
+  teeOffByGame: Record<string, string | null>;
+  resultByGame: Record<string, ResultSummary | null>;
+  finishedGameIds: string[];
+  /** Render time from the server, so server and browser write the same «for 2 min siden». */
+  now: number;
+  /**
+   * The signup page's own texts for the two answers that can fail from here
+   * (owner's answer 13: the same texts). Read on the server, so the heavy
+   * `admin` namespace stays off this route's client bundle (#2227).
+   */
+  signupErrorText: Record<'game_locked' | 'no_team_slot', string>;
 }) {
-  const router = useRouter();
   const t = useTranslations('inbox');
+  const tFinished = useTranslations('finishedCard');
   const locale = useLocale() as AppLocale;
   const [, startTransition] = useTransition();
   const [markAllPending, startMarkAll] = useTransition();
-  const [, startArchive] = useTransition();
   const [clearReadPending, startClearRead] = useTransition();
-  const [items, setItems] = useState<NotificationRow[]>(initialNotifications);
-  const [actionFailed, setActionFailed] = useState(false);
+  const [decidePending, startDecide] = useTransition();
+  const [items, setItems] = useState<InboxRowData[]>(initialNotifications);
+  const [filter, setFilter] = useState<InboxFilter>('all');
+  const [status, setStatus] = useState<Status>(null);
 
+  const role = { isAdmin };
+  const sections = buildInboxSections(items, { filter, now, isAdmin });
+  const actionCount = countActionRows(items, role);
   const hasUnread = items.some((n) => n.read_at == null);
-  const hasRead = items.some((n) => n.read_at != null);
-  // Pass locale + translated today/yesterday labels so groupByDay stays
-  // locale-agnostic (locale drives the «10. des 2025»-style date labels).
-  const groups: DayGroup<NotificationRow>[] = groupNotificationsByDay(items, {
+  const ctx: InboxTextContext = {
+    t: t as unknown as NotificationTranslator,
+    tFinished: tFinished as unknown as NotificationTranslator,
     locale,
-    labels: { today: t('today'), yesterday: t('yesterday') },
-  });
+    now,
+    isAdmin,
+    teeOffByGame,
+    resultByGame,
+    finishedGameIds,
+  };
 
   /**
-   * Kjør en server-action bak en optimistisk oppdatering. `snapshot` er lista
-   * slik den så ut FØR oppdateringen — den legges tilbake hvis action-en
-   * rapporterer `ok: false` (DB-feil / ikke innlogget) eller kaster (offline,
-   * avbrutt request). Feillinja forsvinner igjen ved neste vellykkede handling.
+   * Run a server action behind an optimistic update. `snapshot` is the list
+   * BEFORE the update; it comes back, with the error line, when the action
+   * reports `ok: false` (DB error / not logged in) or throws (offline).
    */
   async function runOptimistic(
-    snapshot: NotificationRow[],
+    snapshot: InboxRowData[],
     action: () => Promise<{ ok: boolean }>,
   ) {
     try {
       const result = await action();
       if (!result?.ok) {
         setItems(snapshot);
-        setActionFailed(true);
-        return;
+        setStatus({ tone: 'error', text: t('actionFailed') });
       }
-      if (actionFailed) setActionFailed(false);
     } catch (err) {
       console.error('[innboks] optimistic action failed', err);
       setItems(snapshot);
-      setActionFailed(true);
+      setStatus({ tone: 'error', text: t('actionFailed') });
     }
   }
 
-  function handleTap(notification: NotificationRow) {
-    const wasUnread = notification.read_at == null;
-
-    if (wasUnread) {
-      // Optimistisk markering lokalt så badgen + kortet oppdateres umiddelbart.
-      const snapshot = items;
-      const nowIso = new Date().toISOString();
-      setItems((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, read_at: nowIso } : n)),
+  /**
+   * A tap on a row, a group or a row's button: mark what it stands for read
+   * (all members of a group, also those merged as one person), then let the
+   * link navigate. Rows already read are never written again (#1665).
+   */
+  function handleOpen(entry: InboxEntry) {
+    setStatus(null);
+    const unreadIds = entry.rows.filter((r) => r.read_at == null).map((r) => r.id);
+    if (unreadIds.length === 0) return;
+    const snapshot = items;
+    const nowIso = new Date().toISOString();
+    const ids = new Set(unreadIds);
+    setItems((prev) => prev.map((n) => (ids.has(n.id) ? { ...n, read_at: nowIso } : n)));
+    startTransition(async () => {
+      await runOptimistic(snapshot, () =>
+        unreadIds.length === 1 ? markOneAsRead(unreadIds[0]!) : markGroupAsRead(unreadIds),
       );
-      startTransition(async () => {
-        await runOptimistic(snapshot, () => markOneAsRead(notification.id));
-      });
-    }
+    });
+  }
 
-    // Naviger kun når varselet har et reelt mål. Varsler uten destinasjon
-    // (avvist påmelding, produktnytt uten lenke) returnerer null og markeres
-    // bare som lest — ingen `router.push('/innboks')` som gir null synlig
-    // endring og får varselet til å føles ødelagt (#613).
-    const dest = notificationDestination(notification);
-    if (dest) router.push(dest);
+  /** «Godta» / «Avslå»: the row leaves at once, the status line says how it went. */
+  function handleDecide(row: InboxRowData, decision: 'approve' | 'reject') {
+    const p = row.payload as NotificationPayload<'registration_request'>;
+    if (!p.request_id) return;
+    const requestId = p.request_id;
+    setStatus(null);
+    const snapshot = items;
+    setItems((prev) => prev.filter((n) => n.id !== row.id));
+    startDecide(async () => {
+      let result: DecideRegistrationResult;
+      try {
+        result = await decideRegistration(row.id, requestId, decision);
+      } catch (err) {
+        console.error('[innboks] decideRegistration failed', err);
+        setItems(snapshot);
+        setStatus({ tone: 'error', text: t('actionFailed') });
+        return;
+      }
+      const name = inboxPerson(p.requester_name)?.short ?? t('somePlayerFallback');
+      if (result.ok) {
+        const values = { name, teamName: result.teamName ?? '', gameName: result.gameName };
+        const key =
+          result.outcome === 'approved'
+            ? result.teamName
+              ? 'status.approvedTeam'
+              : 'status.approved'
+            : result.teamName
+              ? 'status.rejectedTeam'
+              : 'status.rejected';
+        setStatus({ tone: 'ok', text: t(key, values) });
+        return;
+      }
+      if (SETTLED_REASONS.has(result.reason)) {
+        // Someone answered first: the row stays, read, under I DAG/TIDLIGERE.
+        const nowIso = new Date().toISOString();
+        setItems(snapshot.map((n) => (n.id === row.id ? { ...n, read_at: nowIso } : n)));
+        setStatus({ tone: 'ok', text: t('status.alreadyDecided') });
+        return;
+      }
+      setItems(snapshot);
+      const text =
+        result.reason === 'game_locked' || result.reason === 'no_team_slot'
+          ? signupErrorText[result.reason]
+          : result.reason === 'forbidden'
+            ? t('status.forbidden')
+            : t('actionFailed');
+      setStatus({ tone: 'error', text });
+    });
   }
 
   function handleMarkAll() {
+    setStatus(null);
     const snapshot = items;
     const nowIso = new Date().toISOString();
-    setItems((prev) =>
-      prev.map((n) => (n.read_at == null ? { ...n, read_at: nowIso } : n)),
-    );
+    setItems((prev) => prev.map((n) => (n.read_at == null ? { ...n, read_at: nowIso } : n)));
     startMarkAll(async () => {
       await runOptimistic(snapshot, () => markAllAsRead());
     });
   }
 
-  function handleArchive(notification: NotificationRow) {
-    // Fjern kortet optimistisk fra lista (soft-archive på server). Vi navigerer
-    // IKKE — ✕ er en ren rydde-handling, ikke en åpne-handling.
-    const snapshot = items;
-    setItems((prev) => prev.filter((n) => n.id !== notification.id));
-    startArchive(async () => {
-      await runOptimistic(snapshot, () => archiveOne(notification.id));
-    });
-  }
-
   function handleClearRead() {
-    // Fjern alle leste optimistisk; uleste blir stående.
+    setStatus(null);
     const snapshot = items;
     setItems((prev) => prev.filter((n) => n.read_at == null));
     startClearRead(async () => {
@@ -144,93 +214,139 @@ export function InboxClient({
     });
   }
 
-  // Diskret feillinje, delt av tom-tilstanden og lista: en rollback kan lande i
-  // begge (arkiverte du siste kortet, står du i tom-tilstanden mens svaret kommer).
-  const errorLine = actionFailed ? (
+  // «Godta»/«Avslå» have their own labels; every other action key is one button.
+  function buttonLabel(key: InboxEntryView['actionKey']): string {
+    return key && key !== 'decide' ? t(`buttons.${key}`) : '';
+  }
+
+  const statusLine = status ? (
     <p
       role="status"
-      data-testid="inbox-action-error"
-      className="mb-3 font-sans text-[12px] text-danger"
+      data-testid={status.tone === 'error' ? 'inbox-action-error' : 'inbox-status'}
+      className={`px-5 pb-2 text-[13px] leading-[normal] ${
+        status.tone === 'error' ? 'text-danger' : 'text-text'
+      }`}
     >
-      {t('actionFailed')}
+      {status.text}
     </p>
   ) : null;
 
+  const pillPending = hasUnread ? markAllPending : clearReadPending;
+  const header = (
+    <div className="flex items-center justify-between pb-1.5 pl-5 pr-3 pt-4">
+      <h1 className="font-serif text-[28px] font-medium leading-[normal] text-text">
+        {t('kicker')}
+      </h1>
+      {items.length > 0 && (
+        <button
+          type="button"
+          onClick={hasUnread ? handleMarkAll : handleClearRead}
+          disabled={pillPending}
+          aria-busy={pillPending || undefined}
+          data-testid={hasUnread ? 'inbox-mark-all' : 'inbox-clear-read'}
+          className="h-11 rounded-full border border-border bg-surface px-3.5 text-[13px] font-semibold leading-[normal] text-primary disabled:opacity-60"
+        >
+          {hasUnread ? t('markAllAsRead') : t('clearRead')}
+        </button>
+      )}
+    </div>
+  );
+
+  const root = 'pb-4 [font-feature-settings:normal] [font-variation-settings:normal]';
+
   if (items.length === 0) {
     return (
-      <div className="mt-2">
-        {errorLine}
-        <Card className="flex flex-col items-center text-center">
-          <MailEnvelope size={56} className="text-primary" />
-          <p className="mt-3 font-serif text-base text-text">{t('emptyHeading')}</p>
-          <p className="mt-1 font-sans text-[12px] text-muted">
-            {t('emptyBody')}
-          </p>
-        </Card>
-        <PullQuote className="mt-6">{t('cleanPullQuote')}</PullQuote>
+      <div className={root}>
+        {header}
+        {statusLine}
+        <div className="mx-4 mt-2">
+          <Card className="flex flex-col items-center text-center">
+            <MailEnvelope size={56} className="text-primary" />
+            <p className="mt-3 font-serif text-base text-text">{t('emptyHeading')}</p>
+            <p className="mt-1 font-sans text-[12px] text-muted">{t('emptyBody')}</p>
+          </Card>
+          <PullQuote className="mt-6">{t('cleanPullQuote')}</PullQuote>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div>
-      {errorLine}
-      {/* Én tilstands-adaptiv rydde-knapp (#1133): uleste prioriteres, så
-          knappen viser «Marker alle som lest» så lenge det finnes uleste, og
-          morfer til «Tøm leste» først når alt er lest. Fjerner rekkefølge-
-          tvangen fra de gamle to samsynlige pillene uten å arkivere uleste. */}
-      {(hasUnread || hasRead) && (
-        <div className="mb-3 flex justify-end">
-          {hasUnread ? (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleMarkAll}
-              pending={markAllPending}
-              pendingLabel={t('markingPending')}
-              className="tap-extend min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2 [--tap-extend:-8px_0]"
-            >
-              {t('markAllAsRead')}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleClearRead}
-              pending={clearReadPending}
-              pendingLabel={t('clearingPending')}
-              className="tap-extend min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2 [--tap-extend:-8px_0]"
-            >
-              {t('clearRead')}
-            </Button>
-          )}
-        </div>
-      )}
+  const visibleSections = SECTION_ORDER.filter((key) => sections[key].length > 0);
 
-      <ul className="flex flex-col gap-4 list-none p-0">
-        {groups.map((group) => (
-          <li key={group.key}>
-            <p className="mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {group.label}
-            </p>
-            <ul className="flex flex-col gap-2 list-none p-0">
-              {group.items.map((notification) => (
-                <li key={notification.id}>
-                  <NotificationCard
-                    notification={notification}
-                    onTap={() => handleTap(notification)}
-                    onArchive={() => handleArchive(notification)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
+  return (
+    <div className={root}>
+      {header}
+      <InboxFilterChips value={filter} onChange={setFilter} actionCount={actionCount} />
+      {statusLine}
+      {visibleSections.length === 0 ? (
+        <p className="mx-4 mt-2 rounded-2xl border border-border bg-surface px-3.5 py-3 text-[13px] leading-[normal] text-muted">
+          {t('emptyFilter')}
+        </p>
+      ) : (
+        visibleSections.map((key, index) => {
+          const entries = sections[key];
+          const views = entries.map((entry) => buildInboxEntryView(entry, key, ctx));
+          const headingId = `inbox-section-${key}`;
+          const onlyLink =
+            key !== 'action' &&
+            entries.length === 1 &&
+            views[0]!.destination !== null &&
+            views[0]!.body === null;
+          return (
+            <section key={key} aria-labelledby={headingId} data-testid={`inbox-section-${key}`}>
+              <h2
+                id={headingId}
+                className={`px-5 pb-2 text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] ${
+                  index === 0 ? 'pt-2' : 'pt-5'
+                } ${key === 'action' ? 'text-accent-text' : 'text-muted'}`}
+              >
+                {t(`sections.${key}`)}
+              </h2>
+              {onlyLink ? (
+                <InboxRow
+                  view={views[0]!}
+                  unread={entries[0]!.unread}
+                  unreadLabel={t('unreadLabel')}
+                  onActivate={() => handleOpen(entries[0]!)}
+                  asCard
+                />
+              ) : (
+                <div className="mx-4 overflow-hidden rounded-2xl border border-border bg-surface">
+                  {entries.map((entry, i) =>
+                    key === 'action' ? (
+                      <InboxActionRow
+                        key={entry.key}
+                        view={views[i]!}
+                        labels={{
+                          unread: t('unreadLabel'),
+                          button: buttonLabel(views[i]!.actionKey),
+                          approve: t('buttons.approve'),
+                          reject: t('buttons.reject'),
+                        }}
+                        onOpen={() => handleOpen(entry)}
+                        onDecide={
+                          entry.type === 'single'
+                            ? (decision) => handleDecide(entry.row, decision)
+                            : undefined
+                        }
+                        pending={decidePending}
+                      />
+                    ) : (
+                      <InboxRow
+                        key={entry.key}
+                        view={views[i]!}
+                        unread={entry.unread}
+                        unreadLabel={t('unreadLabel')}
+                        onActivate={() => handleOpen(entry)}
+                      />
+                    ),
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })
+      )}
     </div>
   );
 }
-
-// Deeplink-mappingen bor nå i `@/lib/notifications/deeplink`
-// (`notificationDestination`) så den kan enhetstestes og dele én sannhetskilde
-// med null-for-selvpekende-varsler-logikken (#613).

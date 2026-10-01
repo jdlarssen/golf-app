@@ -59,22 +59,13 @@
   },
   "inbox": {
     "kicker": "Innboks",
-    "backLabel": "Tilbake til hjem",
     "emptyHeading": "Ingen nye varsler.",
     "emptyBody": "Når noen inviterer deg, leverer kort eller avslutter et spill du er med i, dukker varselet opp her.",
     "cleanPullQuote": "Innboksen er ren.",
     "markAllAsRead": "Marker alt lest",
-    "markingPending": "Markerer …",
     "clearRead": "Tøm leste",
-    "clearingPending": "Tømmer …",
     "actionFailed": "Fikk ikke lagret — prøv igjen.",
-    "archiveAria": "Arkiver varselet «{title}»",
     "unreadLabel": "Ulest",
-    "today": "I dag",
-    "yesterday": "I går",
-    "monthlyDigestTitle": "Månedsbrev",
-    "monthlyDigestSubtitle": "Nytt i Tørny på e-post",
-    "monthlyDigestAriaLabel": "Månedsbrev på e-post",
     "someoneFallback": "En venn",
     "somePlayerFallback": "En spiller",
     "someTeamFallback": "Laget",
@@ -276,7 +267,7 @@
     "readTitles": {
       "deliverReminder": "Påminnelse om scorekortet",
       "deliverReminderKept": "Påminnelse om kortene du har ført",
-      "scorecardRejected": "Scorekortet ble sendt i retur",
+      "scorecardRejected": "Scorekortet ble sendt tilbake",
       "friendRequest": "{actorName} sendte deg en venneforespørsel",
       "teamInvite": "{invitedByName} inviterte deg til {teamName}",
       "clubJoinRequest": "{requesterName} ba om å bli med i klubben",
@@ -468,7 +459,11 @@
         "light": "Lys",
         "dark": "Mørk"
       }
-    }
+    },
+    "monthlyDigestTitle": "Månedsbrev",
+    "monthlyDigestSubtitle": "Nytt i Tørny på e-post",
+    "monthlyDigestAriaLabel": "Månedsbrev på e-post",
+    "monthlyDigestFailed": "Fikk ikke lagret — prøv igjen."
   },
   "friends": {
     "kicker": "Venner",

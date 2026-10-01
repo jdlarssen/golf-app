@@ -59,22 +59,13 @@
   },
   "inbox": {
     "kicker": "Inbox",
-    "backLabel": "Back to home",
     "emptyHeading": "No new notifications.",
     "emptyBody": "When someone invites you, submits a scorecard, or finishes a game you're in, the notification will appear here.",
     "cleanPullQuote": "Your inbox is clear.",
     "markAllAsRead": "Mark all read",
-    "markingPending": "Marking …",
     "clearRead": "Clear read",
-    "clearingPending": "Clearing …",
     "actionFailed": "Couldn't save — try again.",
-    "archiveAria": "Archive notification “{title}”",
     "unreadLabel": "Unread",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "monthlyDigestTitle": "Monthly digest",
-    "monthlyDigestSubtitle": "What's new in Tørny by email",
-    "monthlyDigestAriaLabel": "Monthly digest by email",
     "someoneFallback": "A friend",
     "somePlayerFallback": "A player",
     "someTeamFallback": "The team",
@@ -468,7 +459,11 @@
         "light": "Light",
         "dark": "Dark"
       }
-    }
+    },
+    "monthlyDigestTitle": "Monthly digest",
+    "monthlyDigestSubtitle": "What's new in Tørny by email",
+    "monthlyDigestAriaLabel": "Monthly digest by email",
+    "monthlyDigestFailed": "Couldn't save — try again."
   },
   "friends": {
     "kicker": "Friends",

@@ -13,7 +13,6 @@ import {
   type DecisionFailure,
 } from '@/lib/games/registrationDecisionCore';
 import { getServerClient } from '@/lib/supabase/server';
-import { expectAffected } from '@/lib/supabase/affectedRows';
 import { isUuid } from '@/lib/url/isUuid';
 
 /**
@@ -139,22 +138,6 @@ export async function decideRegistration(
 }
 
 /**
- * Arkiver ett spesifikt varsel (✕-knapp per kort, #616). Soft-archive:
- * raden skjules fra lista men slettes ikke. Setter også `read_at` så en
- * arkivert-mens-ulest rad ikke etterlater en hengende bunn-nav-prikk.
- *
- * UserId hentes via proxy-header, ikke fra klienten — klienten kan ikke be
- * om å arkivere noen andres varsler.
- */
-export async function archiveOne(
-  notificationId: string,
-): Promise<InboxActionResult> {
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) return { ok: false };
-  return { ok: await archiveNotifications({ userId, notificationId }) };
-}
-
-/**
  * Arkiver alle LESTE varsler for current user («Tøm leste»-knapp, #616).
  * Uleste røres ikke — de blir stående til brukeren leser eller arkiverer dem.
  */
@@ -162,43 +145,4 @@ export async function clearRead(): Promise<InboxActionResult> {
   const userId = await getProxyVerifiedUserId();
   if (!userId) return { ok: false };
   return { ok: await archiveNotifications({ userId }) };
-}
-
-/**
- * Skru månedsbrevet (product-updates, #202) på eller av. Eierskapet flyttet
- * hit fra profil-skjemaet (#401) siden det er en varsel-innstilling, ikke en
- * golfprofil-greie. `null` = på (default), timestamp = av-meldt da.
- *
- * Skrivingen verifiseres med `expectAffected` (AGENTS.md trap 2): PostgREST
- * returnerer `error == null` for en UPDATE som traff 0 rader, så uten
- * `.select('id')` + radtelling ville en RLS-nekt se ut som suksess og
- * bryteren bli stående av mens samtykket i DB-en var uendret (#1394). Et
- * samtykke-signal må være til å stole på, så vi svelger ingen 0-rads-skriving.
- */
-export async function toggleProductUpdates(
-  optIn: boolean,
-): Promise<InboxActionResult> {
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) return { ok: false };
-  const supabase = await getServerClient();
-  try {
-    expectAffected(
-      await supabase
-        .from('users')
-        .update({
-          product_updates_unsubscribed_at: optIn
-            ? null
-            : new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select('id'),
-      'toggleProductUpdates',
-    );
-  } catch (err) {
-    // Best-effort som resten av innboks-handlingene: vi kaster ikke videre til
-    // klienten, men rapporterer ok=false så bryteren ruller tilbake.
-    console.error('[innboks] toggleProductUpdates failed', err);
-    return { ok: false };
-  }
-  return { ok: true };
 }

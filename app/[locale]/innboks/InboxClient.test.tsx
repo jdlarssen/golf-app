@@ -1,19 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { InboxClient } from './InboxClient';
-import type { NotificationRow } from '@/components/notifications/NotificationCard';
+import type { InboxRow } from '@/lib/notifications/inboxSections';
 
 const markOneAsReadMock = vi.fn();
+const markGroupAsReadMock = vi.fn();
 const markAllAsReadMock = vi.fn();
-const archiveOneMock = vi.fn();
 const clearReadMock = vi.fn();
+const decideMock = vi.fn();
 const routerPushMock = vi.fn();
 
 vi.mock('./actions', () => ({
   markOneAsRead: (id: string) => markOneAsReadMock(id),
+  markGroupAsRead: (ids: string[]) => markGroupAsReadMock(ids),
   markAllAsRead: () => markAllAsReadMock(),
-  archiveOne: (id: string) => archiveOneMock(id),
   clearRead: () => clearReadMock(),
+  decideRegistration: (...args: unknown[]) => decideMock(...args),
 }));
 
 vi.mock('next/navigation', async () => {
@@ -50,25 +52,33 @@ vi.mock('@/i18n/navigation', async () => {
       pathname: '/innboks',
     }),
     usePathname: () => '/innboks',
-    Link: ({ children, href }: { children: React.ReactNode; href: string }) =>
-      createElement('a', { href }, children),
+    Link: ({
+      children,
+      href,
+      onClick,
+      className,
+      ...rest
+    }: {
+      children: React.ReactNode;
+      href: string;
+      onClick?: () => void;
+      className?: string;
+    }) => createElement('a', { href, onClick, className, ...rest }, children),
     redirect: vi.fn(),
   };
 });
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2026-05-24T14:30:00Z'));
-  markOneAsReadMock.mockReset();
-  markAllAsReadMock.mockReset();
-  archiveOneMock.mockReset();
-  clearReadMock.mockReset();
-  routerPushMock.mockReset();
-  // Server-actionene returnerer `{ ok }` siden #1394 — default er «lagret»,
-  // og enkelt-tester overstyrer med ok:false for rollback-oppførselen.
+  vi.setSystemTime(new Date(NOW));
+  for (const m of [markOneAsReadMock, markGroupAsReadMock, markAllAsReadMock, clearReadMock, decideMock, routerPushMock]) {
+    m.mockReset();
+  }
+  // The server actions answer `{ ok }` since #1394 — default «saved»; single
+  // tests override with ok:false for the rollback.
   markOneAsReadMock.mockResolvedValue({ ok: true });
+  markGroupAsReadMock.mockResolvedValue({ ok: true });
   markAllAsReadMock.mockResolvedValue({ ok: true });
-  archiveOneMock.mockResolvedValue({ ok: true });
   clearReadMock.mockResolvedValue({ ok: true });
 });
 
@@ -76,213 +86,205 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function makeInvite(id: string, read = false): NotificationRow {
+// 16:30 Oslo on 24 May 2026.
+const NOW = Date.parse('2026-05-24T14:30:00Z');
+const GAME = '11111111-1111-1111-1111-111111111111';
+const GAME_2 = '22222222-2222-2222-2222-222222222222';
+const ID = (n: number) => `00000000-0000-0000-0000-${String(n).padStart(12, '0')}`;
+
+function makeInvite(id: string, read = false): InboxRow {
   return {
     id,
     kind: 'invite',
-    payload: {
-      game_id: '11111111-1111-1111-1111-111111111111',
-      game_name: 'Hauger Open',
-      invited_by_name: 'Per',
-    },
+    payload: { game_id: GAME, game_name: 'Hauger Open', invited_by_name: 'Per' },
     read_at: read ? '2026-05-24T13:00:00Z' : null,
     created_at: '2026-05-24T13:30:00Z',
   };
 }
 
+function makeDelivered(id: string, name: string, read = false, at = '2026-05-24T14:00:00Z'): InboxRow {
+  return {
+    id,
+    kind: 'scorecard_submitted',
+    payload: { game_id: GAME, game_name: 'Lørdagsrunden', player_name: name },
+    read_at: read ? '2026-05-24T14:10:00Z' : null,
+    created_at: at,
+  };
+}
+
+function makeRequest(id: string): InboxRow {
+  return {
+    id,
+    kind: 'registration_request',
+    payload: {
+      game_id: GAME_2,
+      game_name: 'Onsdagsgolfen',
+      requester_name: 'Kristian Holm',
+      request_id: ID(900),
+    },
+    read_at: null,
+    created_at: '2026-05-24T14:20:00Z',
+  };
+}
+
+function renderInbox(rows: InboxRow[], isAdmin = true) {
+  return render(
+    <InboxClient
+      initialNotifications={rows}
+      isAdmin={isAdmin}
+      teeOffByGame={{}}
+      resultByGame={{}}
+      finishedGameIds={[]}
+      now={NOW}
+      signupErrorText={{
+        game_locked: 'Spillet er startet eller avsluttet. Påmeldinger kan ikke endres lenger.',
+        no_team_slot: 'Spillet har ingen ledige lag igjen.',
+      }}
+    />,
+  );
+}
+
 describe('InboxClient', () => {
-  it('viser tom-tilstand når listen er tom', () => {
-    render(<InboxClient initialNotifications={[]} />);
+  it('tom innboks: tittelen står, uten pille og brikker', () => {
+    renderInbox([]);
+    expect(screen.getByRole('heading', { level: 1, name: 'Innboks' })).toBeInTheDocument();
     expect(screen.getByText(/Ingen.*varsler/i)).toBeInTheDocument();
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('inbox-mark-all')).not.toBeInTheDocument();
   });
 
-  it('rendrer kort gruppert per dag-bucket', () => {
-    render(
-      <InboxClient
-        initialNotifications={[
-          { ...makeInvite('a'), created_at: '2026-05-24T13:00:00Z' },
-          { ...makeInvite('b'), created_at: '2026-05-23T13:00:00Z' },
-        ]}
-      />,
-    );
-    expect(screen.getByText('I dag')).toBeInTheDocument();
-    expect(screen.getByText('I går')).toBeInTheDocument();
+  it('seksjoner og filter: KREVER HANDLING, I DAG, TIDLIGERE; brikkene filtrerer', () => {
+    renderInbox([
+      makeInvite('a'),
+      makeDelivered('b', 'Marte', true),
+      makeDelivered('c', 'Jonas', true, '2026-05-22T10:00:00Z'),
+    ]);
+    expect(screen.getByTestId('inbox-section-action')).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-section-today')).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-section-earlier')).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-filter-action')).toHaveTextContent('Krever handling · 1');
+
+    fireEvent.click(screen.getByTestId('inbox-filter-action'));
+    expect(screen.getByTestId('inbox-filter-action')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByTestId('inbox-section-today')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('inbox-filter-friends'));
+    expect(screen.getByText('Ingenting her nå.')).toBeInTheDocument();
   });
 
-  it('viser «Marker alle som lest» når det finnes uleste', () => {
-    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
-    expect(
-      screen.getByRole('button', { name: /Marker alle som lest/i }),
-    ).toBeInTheDocument();
+  it('brikken står uten tall når ingenting krever handling', () => {
+    renderInbox([makeDelivered('b', 'Marte')]);
+    expect(screen.getByTestId('inbox-filter-action')).toHaveTextContent(/^Krever handling$/);
   });
 
-  it('viser IKKE «Marker alle som lest» når alt er lest', () => {
-    render(<InboxClient initialNotifications={[makeInvite('a', true)]} />);
-    expect(
-      screen.queryByRole('button', { name: /Marker alle som lest/i }),
-    ).not.toBeInTheDocument();
+  it('«Marker alt lest» med uleste, «Tøm leste» når alt er lest', () => {
+    const { unmount } = renderInbox([makeInvite('a')]);
+    expect(screen.getByRole('button', { name: 'Marker alt lest' })).toBeInTheDocument();
+    unmount();
+    renderInbox([makeInvite('a', true)]);
+    expect(screen.queryByRole('button', { name: 'Marker alt lest' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tøm leste' })).toBeInTheDocument();
   });
 
-  it('caller markOneAsRead og navigerer på kort-tap (ulest)', async () => {
-    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
-    // Card-button-en har tittel-tekst som accessible name; bruk getByText i stedet.
-    const card = screen
-      .getByText(/Per inviterte deg/)
-      .closest('button')!;
-    fireEvent.click(card);
-    // Server-action skal kalles med id-en
-    expect(markOneAsReadMock).toHaveBeenCalledWith('a');
-    // Router skal navigere til kortets deeplink (invite → /games/<id>)
-    expect(routerPushMock).toHaveBeenCalledWith(
-      '/games/11111111-1111-1111-1111-111111111111',
-    );
-  });
-
-  it('caller IKKE markOneAsRead på allerede-lest kort (men navigerer)', () => {
-    render(<InboxClient initialNotifications={[makeInvite('a', true)]} />);
-    const card = screen
-      .getByText(/Per inviterte deg/)
-      .closest('button')!;
-    fireEvent.click(card);
-    expect(markOneAsReadMock).not.toHaveBeenCalled();
-    expect(routerPushMock).toHaveBeenCalledWith(
-      '/games/11111111-1111-1111-1111-111111111111',
-    );
-  });
-
-  it('caller markAllAsRead når «Marker alle som lest» klikkes', () => {
-    render(<InboxClient initialNotifications={[makeInvite('a'), makeInvite('b')]} />);
-    const button = screen.getByRole('button', { name: /Marker alle som lest/i });
+  it('«Bekreft» markerer raden lest og lenker til spillet', () => {
+    renderInbox([makeInvite('a')]);
+    const button = screen.getByRole('link', { name: 'Bekreft' });
+    expect(button).toHaveAttribute('href', `/games/${GAME}`);
     fireEvent.click(button);
+    expect(markOneAsReadMock).toHaveBeenCalledWith('a');
+  });
+
+  it('en lest rad skrives ikke på nytt, men lenker fortsatt', () => {
+    renderInbox([makeDelivered('b', 'Marte', true)]);
+    const row = screen.getByTestId('inbox-row');
+    expect(row).toHaveAttribute('href', `/admin/games/${GAME}`);
+    fireEvent.click(row);
+    expect(markOneAsReadMock).not.toHaveBeenCalled();
+  });
+
+  it('prikk på uleste rader, ingen på leste; ingen ✕ i lista', () => {
+    renderInbox([makeDelivered('b', 'Marte'), makeDelivered('c', 'Jonas', true, '2026-05-22T10:00:00Z')]);
+    const [unreadRow, readRow] = screen.getAllByTestId('inbox-row');
+    expect(unreadRow!.querySelector('[data-testid="unread-dot"]')).not.toBeNull();
+    expect(unreadRow).toHaveTextContent('Ulest');
+    expect(readRow!.querySelector('[data-testid="unread-dot"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Arkiver/i })).not.toBeInTheDocument();
+  });
+
+  it('en gruppe markerer alle radene lest med ett kall', () => {
+    renderInbox([
+      makeDelivered(ID(1), 'Marte'),
+      makeDelivered(ID(2), 'Jonas', false, '2026-05-24T13:59:00Z'),
+    ]);
+    const row = screen.getByTestId('inbox-row');
+    expect(row).toHaveTextContent('2 scorekort levert');
+    fireEvent.click(row);
+    expect(markGroupAsReadMock).toHaveBeenCalledWith([ID(1), ID(2)]);
+  });
+
+  it('«Marker alt lest» flytter handlingsradene ned', () => {
+    renderInbox([makeInvite('a')]);
+    fireEvent.click(screen.getByRole('button', { name: 'Marker alt lest' }));
     expect(markAllAsReadMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('inbox-section-action')).not.toBeInTheDocument();
+    expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Per inviterte deg');
   });
 
-  it('navigerer game_finished til leaderboard-rute', () => {
-    render(
-      <InboxClient
-        initialNotifications={[
-          {
-            id: 'g1',
-            kind: 'game_finished',
-            payload: {
-              game_id: '22222222-2222-2222-2222-222222222222',
-              game_name: 'X',
-            },
-            read_at: null,
-            created_at: '2026-05-24T13:00:00Z',
-          },
-        ]}
-      />,
-    );
-    const card = screen
-      .getByText(/Resultatet er klart/)
-      .closest('button')!;
-    fireEvent.click(card);
-    expect(routerPushMock).toHaveBeenCalledWith(
-      '/games/22222222-2222-2222-2222-222222222222/leaderboard',
-    );
-  });
-
-  it('navigerer peer_approval_request til approve-rute', () => {
-    render(
-      <InboxClient
-        initialNotifications={[
-          {
-            id: 'p1',
-            kind: 'peer_approval_request',
-            payload: {
-              game_id: '33333333-3333-3333-3333-333333333333',
-              game_name: 'X',
-              submitter_name: 'Per',
-            },
-            read_at: null,
-            created_at: '2026-05-24T13:00:00Z',
-          },
-        ]}
-      />,
-    );
-    const card = screen
-      .getByText(/Godkjenning trengs/)
-      .closest('button')!;
-    fireEvent.click(card);
-    expect(routerPushMock).toHaveBeenCalledWith(
-      '/games/33333333-3333-3333-3333-333333333333/approve',
-    );
-  });
-
-  it('navigerer scorecard_submitted til admin/games/[id]-rute', () => {
-    render(
-      <InboxClient
-        initialNotifications={[
-          {
-            id: 's1',
-            kind: 'scorecard_submitted',
-            payload: {
-              game_id: '44444444-4444-4444-4444-444444444444',
-              game_name: 'X',
-              player_name: 'Per',
-            },
-            read_at: null,
-            created_at: '2026-05-24T13:00:00Z',
-          },
-        ]}
-      />,
-    );
-    const card = screen
-      .getByText(/Nytt scorekort levert/)
-      .closest('button')!;
-    fireEvent.click(card);
-    expect(routerPushMock).toHaveBeenCalledWith(
-      '/admin/games/44444444-4444-4444-4444-444444444444',
-    );
-  });
-
-  it('arkiverer kortet og navigerer IKKE når ✕ klikkes', () => {
-    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
-    const archive = screen.getByRole('button', { name: /Arkiver varsel/i });
-    fireEvent.click(archive);
-    // Server-action kalles med id-en
-    expect(archiveOneMock).toHaveBeenCalledWith('a');
-    // Kortet fjernes optimistisk fra lista
-    expect(screen.queryByText(/Per inviterte deg/)).not.toBeInTheDocument();
-    // ✕ er en rydde-handling, ikke en åpne-handling — ingen navigering
-    expect(routerPushMock).not.toHaveBeenCalled();
-  });
-
-  it('viser «Tøm leste» og arkiverer alle leste når alt er lest', () => {
-    // Den adaptive knappen viser «Tøm leste» kun når det ikke finnes uleste
-    // (uleste prioriterer «Marker alle som lest»), så fixturen er kun-lest.
-    render(
-      <InboxClient
-        initialNotifications={[makeInvite('a', true), makeInvite('b', true)]}
-      />,
-    );
-    const clearBtn = screen.getByRole('button', { name: /Tøm leste/i });
-    fireEvent.click(clearBtn);
+  it('«Tøm leste» arkiverer de leste', () => {
+    renderInbox([makeInvite('a', true), makeInvite('b', true)]);
+    fireEvent.click(screen.getByRole('button', { name: 'Tøm leste' }));
     expect(clearReadMock).toHaveBeenCalledTimes(1);
-    // Alle leste fjernes optimistisk → lista er tom.
     expect(screen.queryByText(/Per inviterte deg/)).not.toBeInTheDocument();
   });
 
-  it('#1394: feilende arkivering ruller kortet tilbake og viser feillinja', async () => {
-    archiveOneMock.mockResolvedValue({ ok: false });
-    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
-
-    // act(async) flusher microtask-køen så den awaitede action-en rekker å
-    // svare før vi asserter (transitionen oppdaterer state asynkront).
+  it('#1394: en lagring som feiler, ruller tilbake og viser feillinja', async () => {
+    markOneAsReadMock.mockResolvedValue({ ok: false });
+    renderInbox([makeDelivered('b', 'Marte')]);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Arkiver varsel/i }));
+      fireEvent.click(screen.getByTestId('inbox-row'));
     });
-
-    // Kortet er tilbake — den optimistiske fjerningen ble rullet tilbake.
-    expect(screen.getByText(/Per inviterte deg/)).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-row').querySelector('[data-testid="unread-dot"]')).not.toBeNull();
     expect(screen.getByTestId('inbox-action-error')).toBeInTheDocument();
   });
 
-  it('viser IKKE «Tøm leste» når alt er ulest', () => {
-    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
-    expect(
-      screen.queryByRole('button', { name: /Tøm leste/i }),
-    ).not.toBeInTheDocument();
+  describe('Godta / Avslå', () => {
+    it('«Godta» svarer på forespørselen og sier hvem som er med', async () => {
+      decideMock.mockResolvedValue({ ok: true, outcome: 'approved', gameName: 'Onsdagsgolfen', teamName: null });
+      renderInbox([makeRequest('r')]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Godta' }));
+      });
+      expect(decideMock).toHaveBeenCalledWith('r', ID(900), 'approve');
+      expect(screen.getByTestId('inbox-status')).toHaveTextContent('Kristian er med i Onsdagsgolfen');
+      expect(screen.queryByRole('button', { name: 'Godta' })).not.toBeInTheDocument();
+    });
+
+    it('allerede avgjort → raden blir stående som lest, med beskjed', async () => {
+      decideMock.mockResolvedValue({ ok: false, reason: 'not_pending' });
+      renderInbox([makeRequest('r')]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Avslå' }));
+      });
+      expect(screen.getByTestId('inbox-status')).toHaveTextContent('Den er allerede avgjort');
+      expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Kristian meldte seg på');
+    });
+
+    it('ingen ledig lagplass → tilbake, med påmeldingssidens tekst', async () => {
+      decideMock.mockResolvedValue({ ok: false, reason: 'no_team_slot' });
+      renderInbox([makeRequest('r')]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Godta' }));
+      });
+      expect(screen.getByTestId('inbox-action-error')).toHaveTextContent('Spillet har ingen ledige lag igjen.');
+      expect(screen.getByRole('button', { name: 'Godta' })).toBeInTheDocument();
+    });
+
+    it('en arrangør uten admin-rolle får verken knapper eller pil', () => {
+      renderInbox([makeRequest('r')], false);
+      expect(screen.queryByRole('button', { name: 'Godta' })).not.toBeInTheDocument();
+      const row = screen.getByTestId('inbox-row');
+      expect(row.tagName).toBe('BUTTON');
+      expect(row).not.toHaveTextContent('→');
+    });
   });
 });
