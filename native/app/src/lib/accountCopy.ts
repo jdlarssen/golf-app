@@ -35,6 +35,8 @@
 // Resten (nett, utløpt sesjon, manglende server-adresse) er app-egne koder uten
 // fasit, skrevet i husets stemme.
 
+import type { WebLinkTarget } from './webLink';
+
 /**
  * Hvorfor kontoen ikke kan slettes, slik GET-en svarer.
  *
@@ -91,6 +93,36 @@ export function describeDeleteBlock(reason: DeleteBlockReason): string {
     // = profile.deleteAccount.soleClubOwnerBanner (#1910)
     case 'sole_club_owner':
       return 'Du er eneste eier av en klubb som har andre medlemmer. Gjør et annet medlem til eier på klubbsiden. Etterpå kan du slette kontoen.';
+  }
+}
+
+/**
+ * Knappen til siden på nettsiden der du løser sperren (#2216), eller `null`.
+ *
+ * Banneret sier «gjør et annet medlem til eier på klubbsiden» og «cup og liga
+ * på nettsiden», men appen har ingen klubbside og ingen cup-administrasjon. En
+ * setning uten knapp er en blindvei (#1891). `/klubber` er «Klubbene dine»;
+ * `/admin` er Klubbhuset, som for en vanlig spiller samler det du arrangerer.
+ *
+ * Tar hele `AccountDeleteFailure`, ikke bare sperre-grunnene: samme knapp står
+ * under feilmeldingen etter et avvist forsøk (POST 403). `admin_account` gjelder
+ * bare eierens egen admin-konto og får ingen knapp, og heller ikke nett-, sesjons-
+ * og serverfeil — der er det ingenting å gjøre på nettsiden.
+ */
+export function deleteBlockWebLink(reason: AccountDeleteFailure): WebLinkTarget | null {
+  switch (reason) {
+    case 'sole_club_owner':
+      return { label: 'Åpne klubbene dine', path: '/klubber' };
+    case 'active_engagements':
+      return { label: 'Åpne Klubbhuset', path: '/admin' };
+    case 'admin_account':
+    case 'offline':
+    case 'no-web-base-url':
+    case 'network':
+    case 'unauthorized':
+    case 'status_failed':
+    case 'delete_failed':
+      return null;
   }
 }
 
