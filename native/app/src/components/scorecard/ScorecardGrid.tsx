@@ -360,7 +360,12 @@ const styles = StyleSheet.create({
   a11yHeader: { width: 1, height: 1, position: 'absolute' },
   columns: { flexGrow: 1 },
   labelColumn: { width: LABEL_WIDTH },
-  column: { flex: 1, minWidth: MIN_COLUMN },
+  // Like brede hullkolonner, som designets `minmax(0, 1fr)`. Inne i en
+  // vannrett ScrollView har innholdet ingen fast bredde, og da bruker Yoga
+  // innholdets bredde som utgangspunkt i stedet for `flex: 1` sin 0, så
+  // kolonnene med bredest form ble bredest. En fast `width` brukes alltid
+  // som utgangspunkt: alle starter på 26 og deler resten likt.
+  column: { flexGrow: 1, width: MIN_COLUMN },
   sumColumn: { width: SUM_WIDTH },
   cell: { alignItems: 'center', justifyContent: 'flex-start' },
   cellLeft: { alignItems: 'flex-start' },
