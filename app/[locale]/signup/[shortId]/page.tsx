@@ -195,11 +195,15 @@ export default async function PåmeldingPage({
   // profile_completed_at lenger — en profil-løs, invitert spiller skal se hva
   // de er invitert til. Selve påmeldingen (registerForOpenGame / lag-attach)
   // beholder sin egen profil-gate, siden en påmelding eksponerer navnet ditt.
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from('users')
     .select('profile_completed_at, email')
     .eq('id', user.id)
     .maybeSingle<{ profile_completed_at: string | null; email: string }>();
+  // A failed read must surface as the PostgREST error, not as a null TypeError
+  // further down (#2224).
+  if (profileError) throw profileError;
+  if (!profile) throw new Error('[signup] profile row missing for signed-in user');
 
   const { data: existingPlayer } = await admin
     .from('game_players')
@@ -246,7 +250,7 @@ export default async function PåmeldingPage({
   // så oppslaget for alle modi gir ingen ny null-flate.
   let hasPendingInvitation = false;
   let hasCertainTeamInvitation = false;
-  if (profile!.email) {
+  if (profile.email) {
     // #1425: ingen unique på (email, game_id) — både arrangøren og en kaptein
     // kan ha invitert samme e-post. `.maybeSingle()` feilet da med PGRST116 og
     // ga `data = null`, altså ingen peker for nettopp de spillerne som trengte
@@ -256,7 +260,7 @@ export default async function PåmeldingPage({
     const { data: invitationRows } = await admin
       .from('invitations')
       .select('id, invited_by')
-      .filter('email', 'imatch', emailMatchPattern(profile!.email))
+      .filter('email', 'imatch', emailMatchPattern(profile.email))
       .eq('game_id', game.id)
       .is('accepted_at', null)
       .gt('expires_at', new Date().toISOString())
@@ -433,7 +437,7 @@ export default async function PåmeldingPage({
             isClubMember,
             viewerIsFriend,
             teamCandidates,
-            captainEmail: profile!.email,
+            captainEmail: profile.email,
             matchplaySideData,
             src: srcRaw,
           })}
