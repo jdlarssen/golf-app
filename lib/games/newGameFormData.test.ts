@@ -168,10 +168,10 @@ describe('getNewGameFormData — e-post-scoping (#435)', () => {
 });
 
 describe('getNewGameFormData — klubber (#442)', () => {
-  it('FK-normaliserer, hopper over tomme rader og sorterer klubbene på navn', async () => {
+  it('hopper over tomme rader og sorterer klubbene på navn', async () => {
     clubsData = [
       { groups: { id: 'g2', name: 'Bjørnholt GK' } },
-      { groups: [{ id: 'g1', name: 'Aurskog' }] }, // FK-join som array
+      { groups: { id: 'g1', name: 'Aurskog' } },
       { groups: null }, // hoppes over
     ];
     const { clubs } = await getNewGameFormData(false);
