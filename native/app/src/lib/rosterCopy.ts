@@ -341,6 +341,9 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
       return 'En eller begge sider mangler spillere. Alle spillere må ha en side og begge sider må være fulltallige før spillet kan startes.';
     case 'decided_by_withdrawal':
       return 'Kampen er allerede avgjort uten spill — noen trakk seg. Kan ikke startes.';
+    // #2214: en avsluttet cup står fast, så kampen starter aldri.
+    case 'cup_finished':
+      return 'Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes.';
     case 'unassigned_teams':
       return 'Noen spillere står uten lag. Fordel dem på lag før du starter runden.';
     case 'unassigned_flights':

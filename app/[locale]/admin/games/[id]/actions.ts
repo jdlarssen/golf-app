@@ -13,6 +13,7 @@ import { syncDerivedGamesStatus } from '@/lib/games/syncDerivedGamesStatus';
 import { announceStartedGame } from '@/lib/games/announceStartedGame';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
+import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 import {
   modeCollapsesToTeamCard,
   type GameMode,
@@ -528,12 +529,25 @@ export async function reopenGame(gameId: string) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status')
+    .select('id, name, status, tournament_id, tournament:tournaments(status)')
     .eq('id', gameId)
-    .single<{ id: string; name: string; status: GameStatus }>();
+    .single<{
+      id: string;
+      name: string;
+      status: GameStatus;
+      tournament_id: string | null;
+      tournament: { status: string } | null;
+    }>();
   if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'finished') {
     redirect({ href: `${detailPath}?error=not_finished`, locale });
+  }
+  // #2214: a finished cup stands. Reopening a match in it would make an active
+  // match in a finished cup and move the points under a winner who is already
+  // named, so it is refused before any write. The caller is an admin
+  // (loadAdminContext → requireAdmin), so is_admin() lets them read the cup.
+  if (game!.tournament_id && finishedCupBlocksPlay(game!.tournament?.status)) {
+    redirect({ href: `${detailPath}?error=cup_finished`, locale });
   }
 
   const { error } = await supabase

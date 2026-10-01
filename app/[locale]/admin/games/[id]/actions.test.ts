@@ -1154,6 +1154,63 @@ describe('reopenGame', () => {
       },
     ]);
   });
+
+  it('#2214: a match in a finished cup is not reopened, nothing is written', async () => {
+    // A finished cup stands: reopening a match would make an active match in
+    // it and move the points under a winner who is already named.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: {
+          id: 'game-1',
+          name: 'Kamp 3',
+          status: 'finished',
+          tournament_id: 'cup-1',
+          tournament: { status: 'finished' },
+        },
+        error: null,
+      }, // games.select
+      { data: null, error: null }, // (must never be claimed by an update)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenGame } = await import('./actions');
+
+    await expect(reopenGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect({
+      redirect: lastRedirect(),
+      updates: supabaseMock.__fromCalls.filter((c) => c.method === 'update').length,
+    }).toEqual({ redirect: '/admin/games/game-1?error=cup_finished', updates: 0 });
+  });
+
+  it('#2214: a match in an active cup is reopened as before', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: {
+          id: 'game-1',
+          name: 'Kamp 3',
+          status: 'finished',
+          tournament_id: 'cup-1',
+          tournament: { status: 'active' },
+        },
+        error: null,
+      }, // games.select
+      { data: null, error: null }, // games.update(...) on the host → ok
+      { data: [], error: null }, // syncDerivedGamesStatus lookup → none
+      { data: [{ user_id: 'admin-1' }], error: null }, // roster (actor only)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenGame } = await import('./actions');
+
+    await expect(reopenGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=game_reopened');
+  });
 });
 
 describe('startScheduledGameAction (#2207)', () => {

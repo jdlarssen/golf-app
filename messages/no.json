@@ -3507,7 +3507,8 @@
         "guest_auth_create_failed": "Klarte ikke å opprette gjesten. Prøv igjen.",
         "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
         "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen.",
-        "game_full": "Spillet er fullt. Fjern noen for å legge til flere."
+        "game_full": "Spillet er fullt. Fjern noen for å legge til flere.",
+        "cup_finished": "Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes."
       },
       "detail": {
         "brassRibbon": "Spill · protokoll",

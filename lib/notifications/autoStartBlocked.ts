@@ -38,11 +38,19 @@ export function isStructuralBlockReason(reason: string): boolean {
  * hvert minutt til tee-off-vinduet lukkes, så et varsel ville dessuten kommet
  * hver gang forsøket kjørte.
  *
+ * `cup_finished` (#2214): kampen hører til en cup arrangøren har avsluttet.
+ * En avsluttet cup står fast, så kampen skal aldri starte, og det er ingenting
+ * å rette. pg_cron-porten fyrer sveipet hvert minutt i opptil sju dager for en
+ * slik kamp, så et varsel ville kommet hver gang.
+ *
  * Bevisst en egen liste, ikke en utvidelse av `STRUCTURAL_BLOCK_REASONS`:
  * strukturelle grunner ER varselverdige (det er hele poenget med den lista) —
  * disse er det motsatte.
  */
-const SILENT_BLOCK_REASONS: ReadonlySet<string> = new Set(['decided_by_withdrawal']);
+const SILENT_BLOCK_REASONS: ReadonlySet<string> = new Set([
+  'decided_by_withdrawal',
+  'cup_finished',
+]);
 
 export function isSilentBlockReason(reason: string): boolean {
   return SILENT_BLOCK_REASONS.has(reason);

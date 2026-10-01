@@ -54,6 +54,7 @@ import type { ActiveCardState } from '@/lib/games/activeCardState';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
+import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 import { routing, type AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
@@ -171,7 +172,8 @@ const activeGamesQuery = (
       // #1449: `source_game_id` filter drops derived cup games (they never
       // render as cards); `tournament_id`/`created_at` + the cup name embed let
       // us pair the two host halves of a split cup day into one merged card.
-      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, created_at, tournament_id, require_peer_approval, game_mode, hole_segment, courses(name), tournament:tournaments(name))',
+      // #2214: the cup's status drops matches in a finished cup (see below).
+      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, created_at, tournament_id, require_peer_approval, game_mode, hole_segment, courses(name), tournament:tournaments(name, status))',
     )
     .eq('user_id', userId)
     .in('games.status', ['draft', 'scheduled', 'active'])
@@ -244,32 +246,37 @@ async function HomeBody() {
     throw rawActiveRes.error;
   }
 
-  const activeGames = (rawActiveRes.data ?? []).map((row: GameRow) => ({
-    ...row.games,
-    // The generated types widen `games.game_mode` to plain `string`; the app
-    // works in the narrower GameMode union. The query never broadens it at
-    // runtime, so bridge the type here (honest cast at the data boundary).
-    game_mode: row.games.game_mode as GameMode,
-    // Same widen-to-string trap as game_mode above (#1441).
-    hole_segment: row.games.hole_segment as HoleSegment,
-    // The query filters status to draft/scheduled/active, so a finished game
-    // never reaches the StatusPill — narrow the type to match the runtime
-    // invariant (and to keep the pill's prop type free of the dead branch).
-    status: row.games.status as Exclude<GameStatus, 'finished'>,
-    // team_number/flight_number are nullable in the schema but always assigned
-    // for a joined player; the prior hand-typed GameRow asserted them non-null
-    // and the teamFlight label still does — keep that exact assumption here.
-    teamNumber: row.team_number as number,
-    flightNumber: row.flight_number as number,
-    submitted_at: row.submitted_at,
-    withdrawn_at: row.withdrawn_at,
-    approved_at: row.approved_at,
-    // #1449: split-day pairing needs the tournament + a day anchor; `cupName`
-    // titles the merged card (the cup, not the per-match host name).
-    tournament_id: row.games.tournament_id,
-    created_at: row.games.created_at,
-    cupName: row.games.tournament?.name ?? null,
-  }));
+  // #2214: a finished cup stands, so a match in it that never finished will
+  // never start either. It leaves the list instead of showing «Planlagt» for
+  // good. The query already drops finished games.
+  const activeGames = (rawActiveRes.data ?? [])
+    .filter((row: GameRow) => !finishedCupBlocksPlay(row.games.tournament?.status))
+    .map((row: GameRow) => ({
+      ...row.games,
+      // The generated types widen `games.game_mode` to plain `string`; the app
+      // works in the narrower GameMode union. The query never broadens it at
+      // runtime, so bridge the type here (honest cast at the data boundary).
+      game_mode: row.games.game_mode as GameMode,
+      // Same widen-to-string trap as game_mode above (#1441).
+      hole_segment: row.games.hole_segment as HoleSegment,
+      // The query filters status to draft/scheduled/active, so a finished game
+      // never reaches the StatusPill — narrow the type to match the runtime
+      // invariant (and to keep the pill's prop type free of the dead branch).
+      status: row.games.status as Exclude<GameStatus, 'finished'>,
+      // team_number/flight_number are nullable in the schema but always assigned
+      // for a joined player; the prior hand-typed GameRow asserted them non-null
+      // and the teamFlight label still does — keep that exact assumption here.
+      teamNumber: row.team_number as number,
+      flightNumber: row.flight_number as number,
+      submitted_at: row.submitted_at,
+      withdrawn_at: row.withdrawn_at,
+      approved_at: row.approved_at,
+      // #1449: split-day pairing needs the tournament + a day anchor; `cupName`
+      // titles the merged card (the cup, not the per-match host name).
+      tournament_id: row.games.tournament_id,
+      created_at: row.games.created_at,
+      cupName: row.games.tournament?.name ?? null,
+    }));
   type ActiveGame = (typeof activeGames)[number];
 
   // #1449: fold split cup days into cup entries; the empty-state (and the
