@@ -38,9 +38,11 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
     reason:
       'captain via the seat-claim RPC, known teammate, accepted invite and attach-to-captain upserts, joinTeeGenders',
   },
-  'app/[locale]/(auth)/login/actions.ts': {
+  // #2216: moved from `app/[locale]/(auth)/login/actions.ts` (`verifyCode`).
+  'lib/auth/afterLogin.ts': {
     count: 1,
-    reason: 'game invitation accepted at login, joinTeeGenders per inv.game_id',
+    reason:
+      "game invitation accepted at login (the website's verifyCode and the app's after-login route), joinTeeGenders per inv.game_id",
   },
   'lib/games/inviteToGame.ts': {
     count: 1,
