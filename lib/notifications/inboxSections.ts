@@ -467,6 +467,8 @@ export type InboxEntryView = {
   quote: string | null;
   /** `product_update` body text. */
   body: string | null;
+  /** `product_update` call to action, when it has a link. */
+  cta: { href: string; label: string } | null;
   avatar: InboxAvatar;
   /** «2. plass av 12» for screen readers when the disc shows a place. */
   placeLabel: string | null;
@@ -652,6 +654,7 @@ export function buildInboxEntryView(
     subtitleIsFreeText: false,
     quote: null,
     body: null,
+    cta: null,
     avatar: { kind: 'emoji', emoji: '' },
     placeLabel: null,
     destination: null,
@@ -769,6 +772,7 @@ export function buildInboxEntryView(
         title: p.title,
         subtitle: time,
         body: p.body,
+        cta: p.link && p.cta_label ? { href: p.link, label: p.cta_label } : null,
         avatar: singleAvatar(row),
         destination,
       };

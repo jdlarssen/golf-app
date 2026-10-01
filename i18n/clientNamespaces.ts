@@ -25,6 +25,8 @@ export const ROOT_CLIENT_NAMESPACES = [
   'courseForm',
   'demo',
   'error',
+  // #2263: the inbox's result row (place for screen readers, matchplay outcome).
+  'finishedCard',
   'game',
   'holes',
   'inbox',

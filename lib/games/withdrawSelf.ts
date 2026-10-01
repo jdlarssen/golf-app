@@ -329,7 +329,7 @@ export async function withdrawSelf(
         nickname: string | null;
         email: string;
       }>();
-    // null when the user row is missing — NotificationCard fills the locale
+    // null when the user row is missing — buildNotificationText fills the locale
     // fallback at render time so the payload stays locale-agnostic (#583).
     const withdrawnName = userRow ? displayNameForOthers(userRow) : null;
 

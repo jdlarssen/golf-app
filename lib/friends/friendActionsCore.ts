@@ -35,7 +35,7 @@ type Client = SupabaseClient<Database>;
  * Visningsnavn for varsel-payload: nickname-dekorert navn → maskert e-post
  * (#2271 — mottakeren ser aldri hele adressen).
  * Returnerer null (ikke norsk fallback) når vi ikke finner brukeren — render-
- * tid fallback i NotificationCard bruker katalog-strengen i riktig locale.
+ * tid fallback i buildNotificationText bruker katalog-strengen i riktig locale.
  */
 async function getDisplayName(userId: string): Promise<string | null> {
   const { data } = await getAdminClient()
@@ -58,7 +58,7 @@ async function notifyFriend(
     await notify({
       userId: targetId,
       kind,
-      // actor_name may be null — NotificationCard renders the catalog fallback
+      // actor_name may be null — buildNotificationText renders the catalog fallback
       // at render time in the correct locale (§4 payload-fallback contract).
       // #2263: both accept paths here are «they accepted your request»; the
       // friend-link path (venner/legg-til) sends via='link'.

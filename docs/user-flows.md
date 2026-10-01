@@ -169,7 +169,7 @@ flowchart LR
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
 | GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
 | Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0174). `admin.deleteUser`. |
-| Varsler | `app/[locale]/innboks/page.tsx` | Via `NotificationBell`. Mark-as-read. |
+| Varsler | `app/[locale]/innboks/page.tsx` (#2263) | Innboks-fanen i bunnmenyen. En oppslagstavle: «Krever handling» (uleste varsler som ber deg gjøre noe, med en knapp), så «I dag» og «Tidligere». Leverte kort, godkjenninger og påmeldinger i åpne spill samles per spill på én rad. Filterbrikker: Alle, Krever handling, Venner. En påmelding som venter på svar har «Godta»/«Avslå» rett i innboksen (bare admin, samme kjerne som påmeldingssiden, `lib/games/registrationDecisionCore.ts`). Reglene bor i `lib/notifications/inboxSections.ts`. Et trykk markerer lest; saker som er avgjort andre steder, vises som lest neste gang. Månedsbrev-bryteren står på Profil under «App». |
 
 ---
 

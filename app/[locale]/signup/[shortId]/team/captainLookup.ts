@@ -156,7 +156,7 @@ export async function loadInviterTeams(
  * Visningsnavn for en kaptein: navn (eller maskert e-post hvis navnet mangler,
  * #2271), med kallenavn i «» når det finnes.
  *
- * Returnerer null når bruker-raden mangler — NotificationCard fyller inn den
+ * Returnerer null når bruker-raden mangler — buildNotificationText fyller inn den
  * locale-korrekte fallbacken ved render, så payloads holdes locale-agnostiske
  * (#583).
  */
