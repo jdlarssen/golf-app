@@ -126,7 +126,7 @@ flowchart LR
 flowchart TD
   S["/signup/[shortId]"] --> M{registration_mode}
   M -- open --> O["«Meld meg på» → game_players<br/>→ /games/[id]"]
-  M -- manual_approval --> R["«Be om å bli med» + melding<br/>→ game_registration_requests (pending)<br/>→ varsel til admin"]
+  M -- manual_approval --> R["«Be om å bli med» + melding<br/>→ game_registration_requests (pending)<br/>→ varsel til arrangøren"]
   M -- invite_only --> I["«Krever invitasjon»<br/>→ /innboks hvis ventende"]
   S -. "registration_type = team" .-> T["/signup/[shortId]/team<br/>lag-påmelding"]
 ```
@@ -173,7 +173,7 @@ flowchart LR
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
 | GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
 | Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0174). `admin.deleteUser`. |
-| Varsler | `app/[locale]/innboks/page.tsx` (#2263) | Innboks-fanen i bunnmenyen. En oppslagstavle: «Krever handling» (uleste varsler som ber deg gjøre noe, med en knapp), så «I dag» og «Tidligere». Leverte kort, godkjenninger og påmeldinger i åpne spill samles per spill på én rad. Filterbrikker: Alle, Krever handling, Venner. En påmelding som venter på svar har «Godta»/«Avslå» rett i innboksen (bare admin, samme kjerne som påmeldingssiden, `lib/games/registrationDecisionCore.ts`). Reglene bor i `lib/notifications/inboxSections.ts`. Et trykk markerer lest; saker som er avgjort andre steder, vises som lest neste gang. Månedsbrev-bryteren står på Profil under «App». |
+| Varsler | `app/[locale]/innboks/page.tsx` (#2263) | Innboks-fanen i bunnmenyen. En oppslagstavle: «Krever handling» (uleste varsler som ber deg gjøre noe, med en knapp), så «I dag» og «Tidligere». Leverte kort, godkjenninger og påmeldinger i åpne spill samles per spill på én rad. Filterbrikker: Alle, Krever handling, Venner. En påmelding som venter på svar har «Godta»/«Avslå» rett i innboksen (arrangøren av spillet eller admin, samme kjerne som påmeldingssiden, `lib/games/registrationDecisionCore.ts`, #2440). Reglene bor i `lib/notifications/inboxSections.ts`. Et trykk markerer lest; saker som er avgjort andre steder, vises som lest neste gang. Månedsbrev-bryteren står på Profil under «App». |
 
 ---
 
@@ -206,7 +206,7 @@ flowchart LR
 `/admin/games` (liste, filtrer status) → `/admin/games/[id]` (detalj). Inline handlinger etter status:
 - **Start** (`startGame` / `startScheduledGameAction`): fryser course-handicap, `→ active`.
 - **Inviter** (`InviteToGameSection`): legg til eksisterende spiller eller inviter på e-post (Resend, spill-scoped).
-- **Påmeldinger** (`/admin/games/[id]/signups`): godkjenn/avvis manuelle forespørsler.
+- **Påmeldinger** (`/admin/games/[id]/signups`): godkjenn/avvis manuelle forespørsler. Arrangøren av spillet slipper også inn, fra varselet eller fra «Påmeldinger» på `/games/[id]/spillere` (#2440).
 - **Godkjenn/Åpne scorekort**: `adminApproveScorecard`, `reopenScorecard` (åpner hele laget i formatene med felles ball, #2213). Statussiden (`/admin/games/[id]/status`) og spillersiden (`/games/[id]/spillere`) viser «Levert av {navn}» på et kort en annen leverte (#2200); gjenåpning virker som før.
 - **Avslutt** (`endGame`): krever alle levert (+ godkjent hvis peer). En gjest kan ikke levere selv, men den som fører kortet, leverer det (#2200), så gjester trenger ikke lenger «Avslutt likevel». Side-turnering → `/admin/games/[id]/avslutt` (velg LD/CTP-vinnere). `→ finished` + `gameFinishedNotification` (Resend, off-app). `reopenGame` reverserer; kortene står fortsatt som levert, admin åpner dem som skal rettes (#2213).
 - **Rediger** (`/admin/games/[id]/edit`), **Slett** (`/admin/games/[id]/slett`, **dedikert side**, status-bevisst advarsel).
