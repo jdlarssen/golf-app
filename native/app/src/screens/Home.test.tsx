@@ -8,6 +8,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { CardBundle } from '../data/homeHero';
+import { fetchKavalkadeStatus } from '../data/kavalkade';
 import type { HomeList } from '../data/homeList';
 import type { OwnProfile } from '../data/profile';
 import type { ScreenProps } from '../navigation';
@@ -37,6 +38,8 @@ jest.mock('../data/profile', () => ({
   }),
 }));
 jest.mock('../data/syncTriggers', () => ({ startSyncTriggers: jest.fn(() => () => undefined) }));
+// #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
+jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
 }));
@@ -141,6 +144,7 @@ function renderHome() {
 }
 
 beforeEach(() => {
+  (fetchKavalkadeStatus as jest.Mock).mockResolvedValue(null);
   mockState.online = true;
   mockState.list = LIST;
   mockState.cached = undefined;
@@ -328,4 +332,44 @@ it('forrige runde i slagspill henter ingenting ekstra og viser brutto', async ()
   expect(await screen.findByText('2. plass av 8 · 88 brutto')).toBeTruthy();
   expect(homeHero.refreshFinishedRound).not.toHaveBeenCalled();
   expect(homeHero.fetchCardExtras).not.toHaveBeenCalled();
+});
+
+describe('Kavalkaden på Hjem (#2265 PR 2)', () => {
+  it('viser teaseren under datolinja, uten lenke, i teaser-vinduet', async () => {
+    (fetchKavalkadeStatus as jest.Mock).mockResolvedValue({ year: 2026, slot: 'teaser', canOpen: false, hasRound: true });
+    const { view } = renderHome();
+    await view;
+
+    expect(await screen.findByTestId('kavalkade-home-banner')).toHaveTextContent(
+      '🎄Kavalkaden kommer 24. desemberGolfåret ditt, kort for kort. Alt du spiller fram til julaften er med.',
+    );
+    expect(screen.queryByTestId('kavalkade-home-banner-cta')).toBeNull();
+    const order = testIdsInOrder();
+    expect(order.indexOf('kavalkade-home-banner')).toBeGreaterThan(order.indexOf('open-profile'));
+    expect(order.indexOf('kavalkade-home-banner')).toBeLessThan(order.indexOf('home-hero'));
+  });
+
+  it('har en knapp inn i Kavalkaden i lenke-vinduet', async () => {
+    (fetchKavalkadeStatus as jest.Mock).mockResolvedValue({ year: 2026, slot: 'link', canOpen: true, hasRound: true });
+    const { navigate, view } = renderHome();
+    await view;
+
+    expect(await screen.findByText('Kavalkaden 2026 er åpen')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Åpne Kavalkaden' }));
+    expect(navigate).toHaveBeenCalledWith('Kavalkade');
+  });
+
+  it('står ikke uten en ferdig runde i året, utenfor vinduet eller uten svar', async () => {
+    for (const status of [
+      { year: 2026, slot: 'link', canOpen: true, hasRound: false },
+      { year: 2026, slot: null, canOpen: false, hasRound: true },
+      null,
+    ]) {
+      (fetchKavalkadeStatus as jest.Mock).mockResolvedValue(status);
+      const rendered = await renderHome().view;
+      expect(await screen.findByTestId('home-hero-card-new')).toBeTruthy();
+      expect(screen.queryByTestId('kavalkade-home-banner')).toBeNull();
+      await rendered.unmount();
+    }
+  });
 });

@@ -11,6 +11,10 @@
 // så runder og beste runde i formkortet er de samme tallene som flisene på
 // profilen. Lagball-runder står som «lag» og er ute av egne slagtall.
 //
+// Fra 24. desember står raden «Kavalkaden 2026» mellom undertittelen og
+// formkortet (eierens svar 4, 01.10), og for admin før datoen. Serveren
+// avgjør når (`useKavalkadeStatus`); uten svar står ingen rad.
+//
 // Mens lista lastes, står tittelen og formkortets ramme med tomme tall (ingen
 // spinner). Uten nett står en feillinje med «Prøv igjen». Uten ferdige runder
 // står webbens tomtekst.
@@ -18,11 +22,13 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FormCard } from '../components/history/FormCard';
 import { HistoryTitle } from '../components/history/HistoryTitle';
+import { KavalkadeHistoryRow } from '../components/kavalkade/KavalkadeDoors';
 import { RoundDiaryList } from '../components/history/RoundDiaryList';
 import { SettingList, SettingRow } from '../components/SettingRow';
 import { HISTORY_TEXT, seasonLine } from '../lib/historyCopy';
 import { groupDiaryByMonth } from '../lib/roundDiary';
 import { formSeries, historyStats } from '../lib/roundHistory';
+import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
 import { useDiaryPoints, useRoundHistory } from '../lib/useRoundHistory';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
@@ -34,6 +40,7 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
   const { load, retry } = useRoundHistory(userId);
   const rounds = load.state === 'ready' ? load.rounds : null;
   const points = useDiaryPoints(rounds, userId);
+  const kavalkade = useKavalkadeStatus();
 
   const view = useMemo(() => {
     if (!rounds) return null;
@@ -57,6 +64,10 @@ export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
         subtitle={season ? seasonLine(season.rounds, season.year) : load.state === 'loading' ? ' ' : undefined}
         subtitleTestID="round-diary-subtitle"
       />
+
+      {kavalkade?.canOpen ? (
+        <KavalkadeHistoryRow year={kavalkade.year} onOpen={() => navigation.navigate('Kavalkade')} />
+      ) : null}
 
       {load.state === 'failed' ? (
         <View style={styles.inset}>
