@@ -97,7 +97,8 @@ export async function getClubDetail(
       .from('group_members')
       .select('user_id, role, joined_at, users(name, nickname)')
       .eq('group_id', clubId),
-    // Pending requests are only fetched for owner/admin — members get [].
+    // Pending requests are only fetched for owner/admin — members get null,
+    // read as [] below.
     isAdmin
       ? admin
           .from('group_join_requests')
@@ -108,7 +109,7 @@ export async function getClubDetail(
           .eq('group_id', clubId)
           .eq('status', 'pending')
           .order('created_at', { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
+      : null,
     // #644: open email invitations — owner/admin only. Open = not accepted.
     isAdmin
       ? admin
@@ -117,7 +118,7 @@ export async function getClubDetail(
           .eq('group_id', clubId)
           .is('accepted_at', null)
           .order('created_at', { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
+      : null,
   ]);
 
   if (!clubRes.data) return null;
@@ -130,21 +131,16 @@ export async function getClubDetail(
   if (membersRes.error) {
     console.error('[getClubDetail] members query failed', { clubId, error: membersRes.error });
   }
-  if (requestsRes.error) {
+  if (requestsRes?.error) {
     console.error('[getClubDetail] join-requests query failed', { clubId, error: requestsRes.error });
   }
-  if (invitationsRes.error) {
+  if (invitationsRes?.error) {
     console.error('[getClubDetail] invitations query failed', { clubId, error: invitationsRes.error });
   }
 
   const members: ClubMember[] = (membersRes.data ?? [])
     .map((row) => {
-      // Supabase types the FK join as array even for one-to-one — normalise.
-      const usersRaw = row.users as unknown as
-        | { name: string | null; nickname: string | null }
-        | { name: string | null; nickname: string | null }[]
-        | null;
-      const user = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
+      const user = row.users;
       const displayName =
         user?.nickname?.trim() || user?.name?.trim() || 'Ukjent';
 
@@ -161,36 +157,26 @@ export async function getClubDetail(
       return a.name.localeCompare(b.name, 'nb');
     });
 
-  const pendingRequests: PendingJoinRequest[] = (requestsRes.data ?? []).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rowAny = row as any;
-    const usersRaw = rowAny.users as unknown as
-      | { name: string | null; nickname: string | null }
-      | { name: string | null; nickname: string | null }[]
-      | null;
-    const userRow = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
+  const pendingRequests: PendingJoinRequest[] = (requestsRes?.data ?? []).map((row) => {
+    const userRow = row.users;
     const requesterName =
       userRow?.nickname?.trim() || userRow?.name?.trim() || 'Ukjent';
 
     return {
-      id: rowAny.id as string,
+      id: row.id,
       requesterName,
-      requestedAt: rowAny.created_at as string,
-      message: (rowAny.message as string | null) ?? null,
+      requestedAt: row.created_at,
+      message: row.message ?? null,
     };
   });
 
   const pendingInvitations: PendingClubInvitation[] = (
-    invitationsRes.data ?? []
-  ).map((row) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rowAny = row as any;
-    return {
-      id: rowAny.id as string,
-      email: rowAny.email as string,
-      invitedAt: rowAny.created_at as string,
-    };
-  });
+    invitationsRes?.data ?? []
+  ).map((row) => ({
+    id: row.id,
+    email: row.email,
+    invitedAt: row.created_at,
+  }));
 
   return {
     club: {

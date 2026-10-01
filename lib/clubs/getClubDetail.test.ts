@@ -33,10 +33,14 @@ function makeBuilder(result: Result) {
 
 let adminResults: Record<string, Result>;
 
+/** The admin client's `from`, so a test can see which tables were read. */
+const adminFrom = vi.fn((table: string) =>
+  makeBuilder(adminResults[table] ?? { data: [], error: null }),
+);
+
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
-    from: (table: string) =>
-      makeBuilder(adminResults[table] ?? { data: [], error: null }),
+    from: (table: string) => adminFrom(table),
   }),
 }));
 
@@ -45,14 +49,17 @@ import { getClubDetail } from './getClubDetail';
 const CLUB_ID = 'club-1';
 const USER_ID = 'me';
 
-/** Request-scoped client: the caller is an owner of the club. */
-function ownerClient(): SupabaseClient {
+/** Request-scoped client: the caller has `role` in the club. */
+function clientWithRole(role: 'owner' | 'member'): SupabaseClient {
   return {
-    from: () => makeBuilder({ data: { role: 'owner' }, error: null }),
+    from: () => makeBuilder({ data: { role }, error: null }),
   } as unknown as SupabaseClient;
 }
 
+const ownerClient = () => clientWithRole('owner');
+
 beforeEach(() => {
+  adminFrom.mockClear();
   adminResults = {
     groups: {
       data: { id: CLUB_ID, name: 'Klubben', short_id: 'abc', member_cap: null, valid_until: null },
@@ -110,5 +117,17 @@ describe('getClubDetail', () => {
       }),
     );
     errorSpy.mockRestore();
+  });
+
+  // #2224: pins the member branch across the Promise.all rewrite. A member gets
+  // empty request and invitation lists, and the admin-only tables are never read.
+  it('gives a member empty request and invitation lists without reading those tables', async () => {
+    const detail = await getClubDetail(clientWithRole('member'), CLUB_ID, USER_ID);
+
+    expect(detail?.pendingRequests).toEqual([]);
+    expect(detail?.pendingInvitations).toEqual([]);
+    const tables = adminFrom.mock.calls.map(([table]) => table);
+    expect(tables).not.toContain('group_join_requests');
+    expect(tables).not.toContain('club_invitations');
   });
 });
