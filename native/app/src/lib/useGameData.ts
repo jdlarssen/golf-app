@@ -172,16 +172,6 @@ export function useTeamScores(
   );
 }
 
-/** Hullene spilleren har slag på — grunnlaget for CTA-tilstanden. */
-export function filledHolesFor(
-  scores: readonly LocalScore[],
-  userId: string,
-): number[] {
-  return scores
-    .filter((row) => row.userId === userId && row.strokes != null)
-    .map((row) => row.holeNumber);
-}
-
 /** Scorene til én spiller, slått opp på hullnummer. */
 export function scoresByHoleFor(
   scores: readonly LocalScore[],

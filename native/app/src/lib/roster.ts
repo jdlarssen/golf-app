@@ -18,7 +18,6 @@ import {
   type DeliveryPlayer,
 } from '../../../../lib/games/flightDelivery';
 import {
-  canApproveScorecardFor,
   isSingleFlightGame,
   organizerApprovalRow,
   pendingApprovalsFor,
@@ -101,28 +100,6 @@ export function pendingApprovals(
 ): RosterEntry[] {
   if (!game.requirePeerApproval || game.status !== 'active') return [];
   return pendingApprovalsFor([...roster], game.gameMode as GameMode, approverUserId);
-}
-
-/**
- * Kan jeg attestere dette kortet? Delt regel for knappen. Porten er
- * `scorecardReviewAccess` bak `POST /api/games/{id}/scorecards/{userId}` (#2215).
- *
- * Kortets leverandør slås opp i rosteret og sendes med (#2200): den som
- * leverte kortet for en annen, kan ikke også godkjenne det.
- */
-export function canApprove(
-  roster: readonly RosterEntry[],
-  gameMode: GameMode,
-  approverUserId: string,
-  ownerUserId: string,
-): boolean {
-  return canApproveScorecardFor(
-    [...roster],
-    gameMode,
-    approverUserId,
-    ownerUserId,
-    findInRoster(roster, ownerUserId)?.submitted_by_user_id ?? null,
-  );
 }
 
 /**
