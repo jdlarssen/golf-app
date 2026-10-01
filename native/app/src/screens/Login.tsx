@@ -36,7 +36,16 @@
 // lista bor i `devLogin.ts`; i alle andre bygg er `devConfig` null, ingenting
 // hentes og skjermen er som før.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import Constants from 'expo-constants';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -62,6 +71,9 @@ import {
 } from '../devLogin';
 import { supabase } from '../supabase';
 import { FONTS, fraunces, useTheme, withAlpha } from '../theme';
+
+/** 44 pt trykkflate rundt «Feil adresse?» (linja er 20 høy). */
+const CHANGE_EMAIL_HIT_SLOP = { top: 12, bottom: 12, left: 6, right: 12 };
 
 /** Hvilken knapp som venter på svar — alle veiene deler ett felt. */
 type Busy = 'code' | 'resend' | 'password' | 'dev' | null;
@@ -276,6 +288,7 @@ export function Login() {
               label={busy === 'code' ? LOGIN_TEXT.sendPending : LOGIN_TEXT.sendButton}
               onPress={() => void sendCode()}
               disabled={busy != null}
+              style={styles.cardButton}
               testID="send-code-button"
             />
             {passwordMode ? (
@@ -298,6 +311,7 @@ export function Login() {
                   }
                   onPress={() => void signInWithPassword()}
                   disabled={busy != null}
+                  style={styles.cardButton}
                   testID="password-login-button"
                 />
               </>
@@ -333,21 +347,31 @@ export function Login() {
             <Text style={[styles.codeHeading, { color: colors.text }]}>
               {LOGIN_TEXT.codeHeading}
             </Text>
-            <Text style={[styles.sentTo, { color: colors.muted }]}>
-              {LOGIN_TEXT.sentToPrefix}
-              <Text style={[styles.sentToEmail, { color: colors.text }]} testID="login-sent-to">
-                {normalizedEmail}
+            {/* «Feil adresse?» er en egen trykkflate og ikke en lenke inni
+                setningen: en nøstet `Text` er bare så høy som teksten, og den
+                er eneste vei tilbake til e-posten. `hitSlop` gir 44 pt, og
+                raden brekker før lenka når adressen er lang. */}
+            <View style={styles.sentToRow}>
+              <Text style={[styles.sentTo, { color: colors.muted }]}>
+                {LOGIN_TEXT.sentToPrefix}
+                <Text style={[styles.sentToEmail, { color: colors.text }]} testID="login-sent-to">
+                  {normalizedEmail}
+                </Text>
+                {LOGIN_TEXT.sentToSuffix}{' '}
               </Text>
-              {LOGIN_TEXT.sentToSuffix}{' '}
-              <Text
-                style={[styles.changeEmail, { color: colors.primary }]}
+              <Pressable
                 onPress={changeEmail}
+                disabled={busy != null}
+                hitSlop={CHANGE_EMAIL_HIT_SLOP}
                 accessibilityRole="link"
+                accessibilityState={{ disabled: busy != null }}
                 testID="login-change-email"
               >
-                {LOGIN_TEXT.changeEmail}
-              </Text>
-            </Text>
+                <Text style={[styles.sentTo, styles.changeEmail, { color: colors.primary }]}>
+                  {LOGIN_TEXT.changeEmail}
+                </Text>
+              </Pressable>
+            </View>
             {errorLine}
           </View>
 
@@ -382,17 +406,20 @@ function PillButton({
   label,
   onPress,
   disabled,
+  style,
   testID,
 }: {
   label: string;
   onPress: () => void;
   disabled: boolean;
+  /** Luft over knappen der den står i et kort; blokken over gir den ellers. */
+  style?: StyleProp<ViewStyle>;
   testID: string;
 }) {
   const { colors } = useTheme();
   return (
     <Pressable
-      style={[styles.pill, { backgroundColor: colors.primary }, disabled && styles.pillOff]}
+      style={[styles.pill, { backgroundColor: colors.primary }, disabled && styles.pillOff, style]}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -580,13 +607,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
   },
   pill: {
-    marginTop: 16,
     height: 52,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pillOff: { opacity: 0.45 },
+  cardButton: { marginTop: 16 },
   pillText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
   error: { fontSize: 14, fontFamily: FONTS.sans, marginTop: 12 },
   devSection: { gap: 8, marginTop: 8, marginHorizontal: 16 },
@@ -600,7 +627,8 @@ const styles = StyleSheet.create({
   devBadge: { alignSelf: 'center' },
   codeTop: { paddingTop: 24, paddingHorizontal: 20 },
   codeHeading: { ...fraunces(500, 26, 30, { multiline: true }), marginTop: 6 },
-  sentTo: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sans, marginTop: 8 },
+  sentToRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', marginTop: 8 },
+  sentTo: { fontSize: 14, lineHeight: 20, fontFamily: FONTS.sans },
   sentToEmail: { fontFamily: FONTS.sansSemiBold },
   // En lenke, som i designet: understreket.
   changeEmail: { fontFamily: FONTS.sansSemiBold, textDecorationLine: 'underline' },
