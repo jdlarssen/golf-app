@@ -771,6 +771,35 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
   });
 });
 
+describe('GameWizard — «Shotgun-start» overlever til steg 5 (#2258)', () => {
+  it.each([
+    [true, 'shotgun'],
+    [false, 'first_tee'],
+  ] as const)('ticked on step 3: %s → FormData start_type %s on step 5', (tick, expected) => {
+    const { container } = renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      initialValues: { game_mode: 'stableford', course_id: 'course-1', tee_box_id: 'tee-1' },
+    });
+
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    if (tick) fireEvent.click(screen.getByRole('checkbox', { name: 'Shotgun-start' }));
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+
+    // Step 3 (and its checkbox) is unmounted here; only the mirror is left.
+    expect(screen.queryByRole('checkbox', { name: 'Shotgun-start' })).toBeNull();
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('start_type')).toEqual([expected]);
+  });
+});
+
 describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () => {
   it('FormData har side_tournament_enabled + riktige counts uten å åpne «Vis avanserte innstillinger»', () => {
     const { container } = renderWizard({

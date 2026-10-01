@@ -1660,6 +1660,33 @@ describe('GameForm — #1011 sideturnering serialiseres inline', () => {
   });
 });
 
+describe('GameForm — «Shotgun-start» (#2258)', () => {
+  // The checkbox has no name; the always-mounted `start_type` mirror is the
+  // one field the save reads, so an edit keeps a shotgun round a shotgun round.
+  it.each([
+    ['shotgun', true],
+    [undefined, false],
+  ] as const)('initial start_type %j → checkbox %s and FormData start_type', (startType, checked) => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
+        initialValues={{ game_mode: 'stableford', course_id: 'course-1', tee_box_id: 'tee-1', start_type: startType }}
+      />,
+    );
+    const box = screen.getByRole('checkbox', { name: 'Shotgun-start' });
+    expect((box as HTMLInputElement).checked).toBe(checked);
+    expect(box).toHaveAccessibleDescription('Alle flightene starter samtidig, hver fra sitt eget hull.');
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('start_type')).toEqual([startType ?? 'first_tee']);
+    fireEvent.click(box);
+    expect(new FormData(container.querySelector('form')!).getAll('start_type')).toEqual([
+      checked ? 'first_tee' : 'shotgun',
+    ]);
+  });
+});
+
 describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
   // Regresjon: `canPublish` deaktiverer også «Lagre endringer», men «Mangler:
   // …»-teksten lå inne i publiser/utkast-grenen. Et scheduled spill med en
