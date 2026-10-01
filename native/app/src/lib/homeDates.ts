@@ -108,6 +108,15 @@ export function diaryMonthLabel(year: number, month: number, currentYear: number
   return year === currentYear ? MONTHS[month] : `${MONTHS[month]} ${year}`;
 }
 
+/**
+ * Datoen på et delt kavalkade-kort (#2265): «14. juni», med hele månedsnavnet,
+ * som webbens PNG-rute skriver den.
+ */
+export function formatDayMonthLong(iso: string | null): string | null {
+  const date = parse(iso);
+  return date ? `${date.getDate()}. ${MONTHS[date.getMonth()]}` : null;
+}
+
 /** Klokkeslettet i stubben: «kl. 09:30», samme form som `formatTeeOff`. */
 export function formatStubClock(iso: string | null): string | null {
   const clock = formatClock(iso);

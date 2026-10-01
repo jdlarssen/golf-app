@@ -28,6 +28,7 @@ import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
 import { HISTORY_TEXT } from './lib/historyCopy';
+import { KAVALKADE_TEXT } from './lib/kavalkadeCopy';
 import { PROFILE_TEXT } from './lib/profileCopy';
 import { SCORECARD_TEXT } from './lib/scorecardHeader';
 import { TICKET_TEXT } from './lib/ticketCopy';
@@ -47,6 +48,7 @@ import { NotificationsAndTheme } from './screens/NotificationsAndTheme';
 import { Profile } from './screens/Profile';
 import { RoundDiary } from './screens/RoundDiary';
 import { RoundStats } from './screens/RoundStats';
+import { Kavalkade } from './screens/Kavalkade';
 import { Scorecard } from './screens/Scorecard';
 import { useSession } from './session';
 import { SyncLab } from './SyncLab';
@@ -111,6 +113,8 @@ export type RootStackParamList = {
   RoundDiary: { from?: 'home' } | undefined;
   /** Statistikken bak Rundedagboka («Se all statistikk», #2265). */
   RoundStats: undefined;
+  /** Kavalkaden (#2265 PR 2): golfåret ditt som kortstokk, fra webben. */
+  Kavalkade: undefined;
   SyncLab: undefined;
 };
 
@@ -319,6 +323,12 @@ export function RootNavigator() {
           name="RoundStats"
           component={RoundStats}
           options={kickerHeader(HISTORY_TEXT.kicker, HISTORY_TEXT.statsTitle)}
+        />
+        {/* Kavalkaden (#2265 PR 2): «KAVALKADEN» i toppen, som webbens side. */}
+        <Stack.Screen
+          name="Kavalkade"
+          component={Kavalkade}
+          options={kickerHeader(KAVALKADE_TEXT.kicker, KAVALKADE_TEXT.kicker)}
         />
         <Stack.Screen
           name="SyncLab"
