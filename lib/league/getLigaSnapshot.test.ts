@@ -448,3 +448,104 @@ describe('getLigaSnapshot — game_players over 1 000 rader (#2227)', () => {
     });
   });
 });
+
+describe('getLigaSnapshot — the earliest finished flight counts (#2214)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("counts A's first flight by ended_at, even when a later, better one comes first", async () => {
+    // Two finished flights in one round, A and B in both. The read returns the
+    // later flight (g2, A −1) first; the earlier one (g1, A +2) must count.
+    // One hole, par 4, CH 0 → net to par = strokes − 4.
+    const gp = (gameId: string, userId: string) => ({
+      game_id: gameId,
+      user_id: userId,
+      course_handicap: 0,
+      tee_gender: 'mens',
+      submitted_at: '2026-06-15T18:00:00Z',
+      withdrawn_at: null,
+    });
+    const game = (id: string, endedAt: string) => ({
+      id,
+      status: 'finished',
+      course_id: 'c1',
+      tee_box_id: 'tb1',
+      league_round_id: 'r1',
+      delivered_outside_window: false,
+      ended_at: endedAt,
+    });
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          id: 'l1',
+          name: 'Test-liga',
+          season_start: '2026-06-01',
+          season_end: '2026-09-01',
+          format: 'stroke',
+          scoring: 'net',
+          standings_model: 'total',
+          missed_round_policy: 'penalty',
+          penalty_kind: 'worst_plus_one',
+          penalty_fixed_over_par: null,
+          best_n_count: null,
+          course_scope: 'single_course',
+          course_id: 'c1',
+          tee_box_id: 'tb1',
+          status: 'active',
+          created_by: 'admin',
+          created_at: '2026-06-01T00:00:00Z',
+          started_at: '2026-06-01T00:00:00Z',
+          finished_at: null,
+          group_id: null,
+        },
+      },
+      {
+        data: [
+          {
+            id: 'r1',
+            sequence: 1,
+            label: 'Runde 1',
+            course_id: 'c1',
+            tee_box_id: 'tb1',
+            opens_at: '2026-06-15T04:00:00Z',
+            closes_at: '2026-06-15T20:00:00Z',
+            original_closes_at: '2026-06-15T20:00:00Z',
+            window_overridden_at: null,
+          },
+        ],
+      },
+      {
+        data: [
+          { user_id: 'A', accepted_at: '2026-06-01T00:00:00Z', users: { name: 'A', nickname: null } },
+          { user_id: 'B', accepted_at: '2026-06-01T00:00:00Z', users: { name: 'B', nickname: null } },
+        ],
+      },
+      { data: [game('g2', '2026-06-15T18:00:00Z'), game('g1', '2026-06-15T12:00:00Z')] },
+      { data: [gp('g1', 'A'), gp('g1', 'B'), gp('g2', 'A'), gp('g2', 'B')] },
+      {
+        data: [
+          { game_id: 'g1', user_id: 'A', hole_number: 1, strokes: 6 },
+          { game_id: 'g1', user_id: 'B', hole_number: 1, strokes: 5 },
+          { game_id: 'g2', user_id: 'A', hole_number: 1, strokes: 3 },
+          { game_id: 'g2', user_id: 'B', hole_number: 1, strokes: 5 },
+        ],
+      },
+      { data: [{ course_id: 'c1', hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }] },
+      { data: [{ id: 'tb1', par_total_mens: 4, par_total_ladies: 4, par_total_juniors: 4 }] },
+    ]);
+
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+
+    const gamesSelect = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'select',
+    );
+    const aRow = snap!.standings.net!.rows.find((r) => r.userId === 'A')!;
+    expect({ selectsEndedAt: String(gamesSelect!.args[0]).includes('ended_at'), aValue: aRow.value }).toEqual({
+      selectsEndedAt: true,
+      aValue: 2,
+    });
+  });
+});

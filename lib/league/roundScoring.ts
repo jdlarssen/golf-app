@@ -32,10 +32,13 @@ export type FlightScoringInput = {
   /** Tee-totalpar per spiller (kjønns-oppslått). Leses kun for slagspill (mot-par). */
   parByUser: Map<string, number | null>;
   deliveredOutsideWindow: boolean;
+  /** Flightens `games.ended_at`; tres videre til hver spillers resultat (#2214). */
+  finishedAt: string | null;
 };
 
 export function computeFlightRoundValues(input: FlightScoringInput): LeagueRoundPlayerScore[] {
-  const { format, gameId, players, holes, scores, parByUser, deliveredOutsideWindow } = input;
+  const { format, gameId, players, holes, scores, parByUser, deliveredOutsideWindow, finishedAt } =
+    input;
   const holeCount = holes.length;
   const { gameMode, modeConfig } = leagueFlightGameConfig(format);
 
@@ -62,6 +65,7 @@ export function computeFlightRoundValues(input: FlightScoringInput): LeagueRound
         net: line.totalPoints,
         gross: line.totalPoints,
         deliveredOutsideWindow,
+        finishedAt,
       });
     }
     return out;
@@ -78,6 +82,7 @@ export function computeFlightRoundValues(input: FlightScoringInput): LeagueRound
       net: line.totalNetStrokes - par,
       gross: line.totalGrossStrokes - par,
       deliveredOutsideWindow,
+      finishedAt,
     });
   }
   return out;

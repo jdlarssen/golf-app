@@ -76,6 +76,11 @@ export type LeagueRoundPlayerScore = {
   gross: number;
   /** Flagget når flighten ble levert utenfor opprinnelig vindu (admin-override). */
   deliveredOutsideWindow: boolean;
+  /**
+   * Når flighten ble avsluttet (`games.ended_at`). Har spilleren flere
+   * resultater i samme runde, teller det tidligste (#2214). null sorteres sist.
+   */
+  finishedAt: string | null;
 };
 
 /** En runde med alle tellende spiller-resultater. */

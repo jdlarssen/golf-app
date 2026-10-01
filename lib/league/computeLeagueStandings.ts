@@ -14,8 +14,12 @@ import type {
  * runs the strokeplay scoring per flight-game and passes net- AND gross-to-par
  * per (round, player) here. `metric` selects which is ranked.
  *
- * A round with no results is ignored entirely. Multiple results for the same
- * player in one round are deduped to the best entry on the active metric.
+ * A round with no results is ignored entirely. A player has one counted
+ * flight per round (#2214): when the same player has several results in one
+ * round, the earliest finished flight (`finishedAt`) counts, never the best.
+ * A missing `finishedAt` sorts last; on a tie the entry that came first in the
+ * input wins. The flight-start gate stops a second flight; this keeps one that
+ * slipped past it (a race, a direct insert) from improving the result.
  *
  * Two independent directions (Fase 4 #452): the PER-ROUND value can be lower-best
  * (mot-par, slagspill) or higher-best (stableford-poeng) via `config.pointsBased`,
@@ -52,12 +56,12 @@ export function computeLeagueStandings(
   const betterRound = (a: number, b: number): boolean =>
     roundHigherIsBetter ? a > b : a < b;
 
-  // Dedupe each round's scores to the best entry per player on the active metric.
+  // #2214: one entry per player per round, the earliest finished flight.
   const roundMaps = rounds.map((r) => {
     const byUser = new Map<string, LeagueRoundPlayerScore>();
     for (const s of r.scores) {
       const existing = byUser.get(s.userId);
-      if (!existing || betterRound(metricOf(s), metricOf(existing))) byUser.set(s.userId, s);
+      if (!existing || finishedBefore(s, existing)) byUser.set(s.userId, s);
     }
     return { round: r, byUser };
   });
@@ -258,4 +262,14 @@ function penaltyForRound(
   // Slagspill: dårligste talte mot-par i runden + 1 slag (skalerer med banen).
   const worst = Math.max(...[...byUser.values()].map(metricOf));
   return worst + 1;
+}
+
+/**
+ * #2214: a finished strictly before b. A missing finishedAt sorts last, so an
+ * entry with a known time beats one without; equal times keep input order.
+ */
+function finishedBefore(a: LeagueRoundPlayerScore, b: LeagueRoundPlayerScore): boolean {
+  const at = a.finishedAt === null ? Number.POSITIVE_INFINITY : Date.parse(a.finishedAt);
+  const bt = b.finishedAt === null ? Number.POSITIVE_INFINITY : Date.parse(b.finishedAt);
+  return at < bt;
 }

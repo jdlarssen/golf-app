@@ -13,15 +13,17 @@ const cfg = (over: Partial<LeagueStandingsConfig> = {}): LeagueStandingsConfig =
 });
 
 // gross defaults to net so net-only tests need no extra metric; pass { gross } to differ.
+// finishedAt (the flight's games.ended_at) defaults to null.
 const score = (
   userId: string,
   net: number,
-  opts: { gross?: number; outside?: boolean } = {},
+  opts: { gross?: number; outside?: boolean; finishedAt?: string | null } = {},
 ) => ({
   userId,
   net,
   gross: opts.gross ?? net,
   deliveredOutsideWindow: opts.outside ?? false,
+  finishedAt: opts.finishedAt ?? null,
 });
 
 const round = (roundId: string, sequence: number, scores: LeagueRoundInput['scores']): LeagueRoundInput => ({
@@ -94,11 +96,35 @@ describe('computeLeagueStandings — total model', () => {
     expect(rowOf(res, 'B').rank).toBe(2);
   });
 
-  it('dedupes multiple scores for the same player in a round to the best (lowest)', () => {
-    const rounds = [round('r1', 1, [score('A', 5), score('A', 2), score('B', 4)])];
+  it('#2214: keeps the earliest finished flight per player in a round, not the best', () => {
+    // A's first flight (+5) finished at 12:00; a later, better one (+2) must not
+    // replace it: one counted flight per player per round.
+    const rounds = [
+      round('r1', 1, [
+        score('A', 2, { finishedAt: '2026-06-15T18:00:00Z' }),
+        score('A', 5, { finishedAt: '2026-06-15T12:00:00Z' }),
+        score('B', 4, { finishedAt: '2026-06-15T12:30:00Z' }),
+      ]),
+    ];
     const res = computeLeagueStandings(cfg(), rounds, ['A', 'B']);
-    expect(rowOf(res, 'A').value).toBe(2);
-    expect(rowOf(res, 'A').rank).toBe(1);
+    expect({ value: rowOf(res, 'A').value, rank: rowOf(res, 'A').rank }).toEqual({ value: 5, rank: 2 });
+  });
+
+  it('#2214: without finishedAt the first entry in input order counts; a known time beats an unknown one', () => {
+    const bothUnknown = computeLeagueStandings(
+      cfg(),
+      [round('r1', 1, [score('A', 5), score('A', 2), score('B', 4)])],
+      ['A', 'B'],
+    );
+    const unknownFirst = computeLeagueStandings(
+      cfg(),
+      [round('r1', 1, [score('A', 2), score('A', 5, { finishedAt: '2026-06-15T12:00:00Z' }), score('B', 4)])],
+      ['A', 'B'],
+    );
+    expect({
+      bothUnknown: rowOf(bothUnknown, 'A').value,
+      unknownFirst: rowOf(unknownFirst, 'A').value,
+    }).toEqual({ bothUnknown: 5, unknownFirst: 5 });
   });
 
   it('ignores rounds with no results (no penalty, null cells)', () => {
@@ -441,11 +467,16 @@ describe('computeLeagueStandings — stableford (points-based, higher best)', ()
     expect(res.rows[res.rows.length - 1].userId).toBe('C');
   });
 
-  it("dedupes a player's multiple flights to the best (highest) points", () => {
-    const rounds = [round('r1', 1, [score('A', 20), score('A', 35), score('B', 30)])];
+  it("#2214: keeps a player's earliest finished flight, not the best (highest) points", () => {
+    const rounds = [
+      round('r1', 1, [
+        score('A', 35, { finishedAt: '2026-06-15T18:00:00Z' }),
+        score('A', 20, { finishedAt: '2026-06-15T12:00:00Z' }),
+        score('B', 30, { finishedAt: '2026-06-15T12:30:00Z' }),
+      ]),
+    ];
     const res = computeLeagueStandings(sf(), rounds, ['A', 'B']);
-    expect(rowOf(res, 'A').value).toBe(35);
-    expect(res.rows[0].userId).toBe('A');
+    expect({ value: rowOf(res, 'A').value, leader: res.rows[0].userId }).toEqual({ value: 20, leader: 'B' });
   });
 
   it('total: breaks ties by countback on the most recent round (higher better)', () => {

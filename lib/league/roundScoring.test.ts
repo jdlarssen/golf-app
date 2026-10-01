@@ -36,6 +36,7 @@ const input = (format: LeagueFormat, over: Partial<FlightScoringInput> = {}): Fl
     ['B', TEE_PAR],
   ]),
   deliveredOutsideWindow: false,
+  finishedAt: null,
   ...over,
 });
 
@@ -97,5 +98,14 @@ describe('computeFlightRoundValues — flag passthrough', () => {
   it('stamps deliveredOutsideWindow on every produced row', () => {
     const rows = computeFlightRoundValues(input('stableford', { deliveredOutsideWindow: true }));
     expect(rows.every((r) => r.deliveredOutsideWindow)).toBe(true);
+  });
+
+  it("#2214: stamps the flight's finishedAt on every produced row, both formats", () => {
+    const at = '2026-06-15T18:00:00Z';
+    const rows = [
+      ...computeFlightRoundValues(input('stroke', { finishedAt: at })),
+      ...computeFlightRoundValues(input('stableford', { finishedAt: at })),
+    ];
+    expect(rows.map((r) => r.finishedAt)).toEqual([at, at, at, at]);
   });
 });

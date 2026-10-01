@@ -158,20 +158,31 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     ? await supabase
         .from('games')
         .select(
-          'id, status, course_id, tee_box_id, league_round_id, delivered_outside_window',
+          'id, status, course_id, tee_box_id, league_round_id, delivered_outside_window, ended_at',
         )
         .in('league_round_id', roundIds)
     : { data: [], error: null };
   if (gErr) throw gErr;
 
-  const games = (gameRows ?? []) as Array<{
-    id: string;
-    status: string;
-    course_id: string | null;
-    tee_box_id: string | null;
-    league_round_id: string | null;
-    delivered_outside_window: boolean;
-  }>;
+  // #2214: flights in finishing order (ended_at, then id; no ended_at last), so
+  // «the earliest finished flight counts» in computeLeagueStandings is
+  // deterministic however the rows came back.
+  const games = (
+    (gameRows ?? []) as Array<{
+      id: string;
+      status: string;
+      course_id: string | null;
+      tee_box_id: string | null;
+      league_round_id: string | null;
+      delivered_outside_window: boolean;
+      ended_at: string | null;
+    }>
+  ).sort((a, b) => {
+    const at = a.ended_at === null ? Number.POSITIVE_INFINITY : Date.parse(a.ended_at);
+    const bt = b.ended_at === null ? Number.POSITIVE_INFINITY : Date.parse(b.ended_at);
+    if (at !== bt) return at < bt ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
   const gameIds = games.map((g) => g.id);
   const courseIds = Array.from(
     new Set(games.map((g) => g.course_id).filter((id): id is string => Boolean(id))),
@@ -383,6 +394,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       scores: gScores.map((s) => ({ userId: s.user_id, holeNumber: s.hole_number, gross: s.strokes })),
       parByUser,
       deliveredOutsideWindow: game.delivered_outside_window,
+      finishedAt: game.ended_at,
     });
 
     if (flightValues.length > 0) {
