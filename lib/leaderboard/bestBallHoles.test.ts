@@ -4,7 +4,6 @@ import {
   bestBallDrilldown,
   bestBallHoleWinners,
   bestBallRevealMeta,
-  formatVsPar,
   vsParTone,
 } from './bestBallHoles';
 
@@ -46,13 +45,9 @@ function lines(
   return computeLeaderboard({ mode: 'netto', players, holes, scores });
 }
 
-describe('vsParTone og formatVsPar', () => {
+describe('vsParTone', () => {
   it('tonen følger webbens trinn: under, par, én over, to eller flere over', () => {
     expect([-2, -1, 0, 1, 2, 5].map(vsParTone)).toEqual(['under', 'under', 'par', 'over1', 'over2', 'over2']);
-  });
-
-  it('mot par skrives «E» for par, med fortegn ellers, og «—» uten verdi', () => {
-    expect([0, 3, -2, null].map(formatVsPar)).toEqual(['E', '+3', '-2', '—']);
   });
 });
 

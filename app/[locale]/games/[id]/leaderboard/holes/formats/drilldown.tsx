@@ -25,10 +25,10 @@ import {
 } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { bestBallBoardInput } from '@/lib/leaderboard/bestBallInput';
+import { formatVsPar } from '@/lib/scoring/scoreTone';
 import {
   bestBallDrilldown,
   bestBallRevealMeta,
-  formatVsPar,
   type BestBallDrilldown,
   type BestBallHoleRow,
   type BestBallNine,
@@ -496,7 +496,7 @@ function HoleRow({
                     : { color: 'var(--text-muted)' }
                 }
               >
-                {nettoVsPar === null ? '—' : formatVsPar(nettoVsPar)}
+                {formatVsPar(nettoVsPar)}
               </span>
             </div>
           );
@@ -519,7 +519,7 @@ function HoleRow({
               : { color: 'var(--text-muted)' }
           }
         >
-          {row.teamVsPar === null ? '—' : formatVsPar(row.teamVsPar)}
+          {formatVsPar(row.teamVsPar)}
         </span>
       </div>
     </div>

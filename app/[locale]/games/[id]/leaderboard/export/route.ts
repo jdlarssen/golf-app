@@ -13,6 +13,7 @@ import { teamLineVsPar } from '@/lib/leaderboard/vsPar';
 import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { getResultReadClient } from '../leaderboardContext';
+import { formatVsPar } from '@/lib/scoring/scoreTone';
 
 type CourseHoleRow = {
   hole_number: number;
@@ -225,8 +226,7 @@ export async function GET(
     const bruttoTotal = brutto?.total ?? '';
     // #2217: over the holes the team played, like the board; '—' without one.
     const vsPar = teamLineVsPar(line, coursePar);
-    const vsParLabel =
-      vsPar === null ? '—' : vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar);
+    const vsParLabel = formatVsPar(vsPar);
     const holesPlayed = teamHolesPlayed(line);
     const tiedSuffix = line.tiedWith.length > 0 ? ` ${t('tiedSuffix')}` : '';
 
