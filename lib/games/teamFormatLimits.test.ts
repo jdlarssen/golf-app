@@ -18,6 +18,7 @@ import {
   teamGridSize,
   teamNumberRange,
   teamSizesForMode,
+  teamSizesThatFit,
 } from './teamFormatLimits';
 import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
 import no from '@/messages/no.json';
@@ -150,6 +151,36 @@ describe('fitsTeamFormat — florida/shamble (3 eller 4 per lag)', () => {
   it('2-mannslag finnes ikke i florida/shamble', () => {
     expect(fitsTeamFormat('florida_scramble', 4)).toBe(false);
     expect(fitsTeamFormat('shamble', 10)).toBe(false);
+  });
+});
+
+// #2260: the format cards list the team sizes that fit, and fitsTeamFormat is
+// «at least one fits» — one rule, two readers (AGENTS.md trap 4).
+describe('teamSizesThatFit — lagstørrelsene som går opp (#2260)', () => {
+  it.each([
+    ['texas_scramble', 4, [2]],
+    ['texas_scramble', 6, [2, 3]],
+    ['texas_scramble', 8, [2, 4]],
+    ['texas_scramble', 12, [2, 3, 4]],
+    ['texas_scramble', 5, []],
+    ['texas_scramble', 42, []],
+    ['ambrose', 9, [3]],
+    ['florida_scramble', 6, [3]],
+    ['florida_scramble', 12, [3, 4]],
+    ['shamble', 4, []],
+    ['best_ball', 4, []],
+    ['wolf', 4, []],
+  ] as const)('%s, n=%i → %j', (mode, n, sizes) => {
+    expect(teamSizesThatFit(mode, n)).toEqual(sizes);
+  });
+
+  it('fitsTeamFormat er sann akkurat når minst én størrelse går opp', () => {
+    const modes = ['texas_scramble', 'ambrose', 'florida_scramble', 'shamble'] as const;
+    for (const mode of modes) {
+      for (let n = 0; n <= 44; n++) {
+        expect(fitsTeamFormat(mode, n)).toBe(teamSizesThatFit(mode, n).length > 0);
+      }
+    }
   });
 });
 
