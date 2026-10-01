@@ -46,9 +46,8 @@ export const getFormatsForIntent = unstable_cache(
     }
 
     return (data ?? []).map((row) => {
-      // PostgREST returns nested relations as an object (or array) depending on
-      // cardinality. With !inner on a single-row FK, it's an object.
-      const format = Array.isArray(row.formats) ? row.formats[0] : row.formats;
+      // `formats!inner` is a many-to-one embed, so PostgREST returns an object.
+      const format = row.formats;
       return {
         slug: format.slug,
         icon_key: format.icon_key,
