@@ -1,6 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
 import { egressFromEnv } from './playwright.egress';
 
+// #2225: e2e skal kjøre samme innloggingsmodus som prod, der selvregistrering
+// og Face ID er på. NEXT_PUBLIC_* bakes inn ved bygg, og process.env vinner
+// over .env.local, så verdiene settes her før webServer (CI: next build +
+// next start, lokalt: next dev) arver miljøet. Bare hvis de er usatt: en
+// eksplisitt verdi i skallet (f.eks. for å teste nødbryteren) vinner fortsatt.
+process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION ??= 'true';
+process.env.NEXT_PUBLIC_PASSKEYS ??= 'on';
+
 // #1259: én kilde for e2e-porten. Lokalt gjenbruker Playwright enhver
 // dev-server som allerede lytter på porten (reuseExistingServer) — også en
 // fremmed worktrees, som gir falskt grønt/rødt. Å styre porten med

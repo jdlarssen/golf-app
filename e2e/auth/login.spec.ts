@@ -55,16 +55,16 @@ test.describe('Login form smoke (OTP step 1)', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  // Selv-registreringsflagget (issue #166) er default av, så hjelpe-teksten
-  // som inviterer nye besøkende til å lage konto skal IKKE være synlig på
-  // standard /login. Toggle-på-staten verifiseres på komponent-nivå i
-  // _components/SendCodeForm.test.tsx — Next.js inliner NEXT_PUBLIC_*-envs
-  // ved build, så vi kan ikke flippe flagget per-Playwright-test uten å
-  // bygge serveren på nytt.
-  test('viser ikke selv-registreringshjelp når flagget er av (default)', async ({
-    page,
-  }) => {
+  // Selvregistrering (issue #166) er på i prod, så hjelpeteksten som
+  // inviterer nye besøkende til å lage konto skal være synlig på /login.
+  // playwright.config.ts setter flagget på når Playwright starter serveren
+  // selv (alltid i CI, lokalt når porten er ledig; ellers gjenbrukes serveren
+  // som alt lytter). Av-grenen (nødbryteren) dekkes av actions.test.ts og
+  // _components/SendCodeForm.test.tsx. Face ID-knappen asserteres ikke: den
+  // tegnes bare når nettleseren støtter WebAuthn, og det er ikke stabilt i
+  // headless Chromium.
+  test('viser selvregistreringshjelp, slik som i prod', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByTestId('self-reg-helper')).toHaveCount(0);
+    await expect(page.getByTestId('self-reg-helper')).toBeVisible();
   });
 });
