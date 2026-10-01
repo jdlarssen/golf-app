@@ -2,7 +2,6 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isPubliclyViewable } from './publicSignupVisibility';
 import type { DiscoverableOpenGame } from './getDiscoverableGames';
-import type { RegistrationMode } from './registration';
 
 /**
  * Anonym «Finn turneringer»-liste (#1185). Uinnloggede skal kunne SE åpne
@@ -40,19 +39,7 @@ export async function getPublicDiscoverableGames(): Promise<
     .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
     .limit(50);
 
-  type PublicRow = {
-    id: string;
-    name: string;
-    short_id: string;
-    scheduled_tee_off_at: string | null;
-    registration_mode: RegistrationMode;
-    status: 'draft' | 'scheduled' | 'active' | 'finished';
-    signups_closed_at: string | null;
-    courses: { name: string } | { name: string }[] | null;
-  };
-
   return (data ?? [])
-    .map((row) => row as unknown as PublicRow)
     .filter((row) =>
       isPubliclyViewable({
         status: row.status,
@@ -61,9 +48,7 @@ export async function getPublicDiscoverableGames(): Promise<
       }),
     )
     .map((row) => {
-      const course = Array.isArray(row.courses)
-        ? (row.courses[0] ?? null)
-        : row.courses;
+      const course = row.courses;
       return {
         id: row.id,
         name: row.name,

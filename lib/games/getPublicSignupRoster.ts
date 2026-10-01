@@ -39,16 +39,13 @@ export async function getPublicSignupRoster(
     return { count: 0, names: [], overflow: 0 };
   }
 
-  type Row = { users: { name: string | null; nickname: string | null } | null };
-  const rows = data as unknown as Row[];
-
-  const names = rows
+  const names = data
     .map((r) => (r.users ? formatPublicName(r.users) : null))
     .filter((n): n is string => n != null)
     .sort((a, b) => a.localeCompare(b, 'nb'));
 
   return {
-    count: rows.length,
+    count: data.length,
     names: names.slice(0, MAX_NAMES),
     overflow: Math.max(0, names.length - MAX_NAMES),
   };
