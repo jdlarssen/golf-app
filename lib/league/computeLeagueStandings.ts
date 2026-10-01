@@ -52,9 +52,6 @@ export function computeLeagueStandings(
   const roundHigherIsBetter = config.pointsBased;
   const seasonHigherIsBetter = config.standingsModel === 'points' || config.pointsBased;
   const usePlacementPoints = config.standingsModel === 'points';
-  /** a is a strictly better per-round value than b, in the active direction. */
-  const betterRound = (a: number, b: number): boolean =>
-    roundHigherIsBetter ? a > b : a < b;
 
   // #2214: one entry per player per round, the earliest finished flight.
   const roundMaps = rounds.map((r) => {
