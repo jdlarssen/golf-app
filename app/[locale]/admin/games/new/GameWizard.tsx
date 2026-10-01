@@ -61,6 +61,8 @@ import { rosterLoadedIdsValue } from '@/lib/games/rosterEdit';
 import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
+import { FormSection } from '@/components/ui/FormSection';
+import { CardSelect } from '@/components/ui/CardField';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { Intent } from '@/lib/wizard/intent';
 import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
@@ -850,7 +852,7 @@ function WizardBody({
         {top}
 
         {step === 1 && (
-          <div className="pt-6">
+          <div className="pt-4">
             <IntentSelector
               value={state.intent}
               onChange={handleIntentSelect}
@@ -862,7 +864,7 @@ function WizardBody({
         )}
 
         {step === 2 && (
-          <section className="pt-6">
+          <section>
             <CupSetup />
           </section>
         )}
@@ -896,7 +898,7 @@ function WizardBody({
       )}
 
       {step === 1 && (
-        <div className="pt-6">
+        <div className="pt-4">
           <IntentSelector
             value={state.intent}
             onChange={handleIntentSelect}
@@ -943,14 +945,19 @@ function WizardBody({
             </>
           )}
 
+          {/* #2426: every section under the list is a kicker over a card
+              (FormSection). The column is pulled out 4 px so the cards sit
+              16 px from the screen edge like the format rows; each section's
+              kicker takes the 4 px back. */}
           {state.formatChosen && (
-            <div className="mt-5 space-y-4">
+            <div className="-mx-1">
               {!state.isMatchplay && !state.isTeamMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isBingoBangoBongo && !state.isNines && !state.isRoundRobin && !state.isAceyDeucey && !state.isShamble && !state.isPatsome && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
                   onChange={state.handleTeamSizeChange}
                   disabled={state.lockGameMode}
+                  tileHeight={state.intent === 'kompis' ? 72 : 64}
                 />
               )}
               {state.isWolf && (
@@ -984,9 +991,11 @@ function WizardBody({
                 />
               )}
               {state.isRoundRobin && (
-                <p className="text-xs text-muted">
-                  {t('sections.roundRobin.startNote')}
-                </p>
+                <FormSection legend={tModes('round_robin')}>
+                  <p className="font-sans text-[13px] leading-[normal] text-muted">
+                    {t('sections.roundRobin.startNote')}
+                  </p>
+                </FormSection>
               )}
               {state.isAceyDeucey && (
                 <AceyDeuceySetup
@@ -1043,7 +1052,7 @@ function WizardBody({
       )}
 
       {step === 3 && (
-        <div className="pt-6">
+        <div className="-mx-1">
           <BasicsSection
             state={state}
             courses={courses}
@@ -1720,7 +1729,9 @@ function WizardTop({
         id={STEP_TITLE_ID}
         tabIndex={-1}
         aria-describedby={STEP_COUNTER_ID}
-        className="pt-4 font-serif text-[26px] font-medium leading-[normal] text-text"
+        // #2426: the Nyttspill artboards set the title 14 px under the stripe
+        // at line-height 1.15.
+        className="pt-3.5 font-serif text-[26px] font-medium leading-[1.15] text-text"
       >
         {title}
       </h1>
@@ -1745,21 +1756,15 @@ function ClubPicker({
   onChange: (id: string) => void;
 }) {
   const t = useTranslations('wizard');
-  // The select is the group's only control: name it after the legend.
-  const legendId = useId();
+  const selectId = useId();
   return (
-    <fieldset className="space-y-2">
-      <legend
-        id={legendId}
-        className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted"
-      >
-        {t('club.legend')}
-      </legend>
-      <select
-        aria-labelledby={legendId}
+    <FormSection legend={t('club.legend')}>
+      <CardSelect
+        id={selectId}
+        label={t('club.label')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 font-sans text-sm text-text focus:ring-2 focus:ring-primary"
+        hint={t('club.hint')}
       >
         <option value="">{t('club.noClub')}</option>
         {clubs.map((c) => (
@@ -1767,11 +1772,8 @@ function ClubPicker({
             {c.name}
           </option>
         ))}
-      </select>
-      <p className="text-xs text-muted">
-        {t('club.hint')}
-      </p>
-    </fieldset>
+      </CardSelect>
+    </FormSection>
   );
 }
 
@@ -1786,10 +1788,12 @@ function WizardFooter({
 }) {
   const t = useTranslations('wizard');
   // #2260: «Forrige» er borte — tilbakepila i toppen gjør jobben.
+  // #2426: the artboards' 52 px button, 16 px from the screen edge.
   return (
-    <div className="space-y-2 pt-6">
+    <div className="-mx-1 space-y-2 pt-[18px]">
       <Button
         type="button"
+        size="large"
         data-testid="wizard-next"
         onClick={onNext}
         disabled={!canAdvance}
@@ -1798,7 +1802,7 @@ function WizardFooter({
         {t('footer.next')}
       </Button>
       {!canAdvance && disabledHint && (
-        <p className="text-xs text-muted text-center">{disabledHint}</p>
+        <p className="text-center font-sans text-xs leading-[normal] text-muted">{disabledHint}</p>
       )}
     </div>
   );

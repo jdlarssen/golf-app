@@ -11,11 +11,19 @@
  */
 
 import { useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { FormSection } from '@/components/ui/FormSection';
+import {
+  CARD_FIELD_CONTROL,
+  CARD_FIELD_HINT,
+  CARD_FIELD_LABEL,
+  CardSelect,
+} from '@/components/ui/CardField';
+import { formatTeeOffFieldValue } from '@/lib/format/teeOff';
 
 type Props = {
   state: GameFormState;
@@ -63,6 +71,7 @@ export function BasicsSection({
   hideHeading = false,
 }: Props) {
   const t = useTranslations('wizard.sections.basics');
+  const locale = useLocale();
   const {
     name,
     setName,
@@ -92,16 +101,18 @@ export function BasicsSection({
     if (el) el.min = getLocalDatetimeMin();
   }, []);
 
-  return (
-    <section className="space-y-4">
-      {!hideHeading && (
-        <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
-      )}
+  const teeOffError = state.teeOffInPast ? t('teeOffPastError') : undefined;
+  const teeOffText = formatTeeOffFieldValue(scheduledTeeOffAt, locale);
+  const teeOffBorder = teeOffError ? 'border-danger' : 'border-field-border';
+
+  const fields = (
+    <>
       {showName && (
         <Input
           id="name"
           name="name"
           type="text"
+          variant="card"
           label={t('gameNameLabel')}
           placeholder={t('gameNamePlaceholder')}
           value={name}
@@ -110,51 +121,43 @@ export function BasicsSection({
         />
       )}
 
-      <div>
-        <label
-          htmlFor="course_id"
-          className="block text-sm font-medium text-text mb-1.5"
+      <CardSelect
+        id="course_id"
+        name="course_id"
+        label={t('courseLabel')}
+        value={courseId}
+        onChange={(e) => setCourseId(e.target.value)}
+        required
+      >
+        <option value="">{t('coursePlaceholder')}</option>
+        {courses.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </CardSelect>
+      {/* Pulled up under the field (the card's gap is 14 px, the hint sits
+          6 px below), and 44 px high so the link is a full tap target. */}
+      <p className="-mt-2 flex min-h-11 items-center gap-1 font-sans text-[13px] leading-[normal] text-muted">
+        {t('courseNotFoundHint')}
+        <SmartLink
+          href="/opprett-bane"
+          className="inline-flex min-h-11 items-center font-semibold text-primary underline"
         >
-          {t('courseLabel')}
-        </label>
-        <select
-          id="course_id"
-          name="course_id"
-          value={courseId}
-          onChange={(e) => setCourseId(e.target.value)}
-          required
-          className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
-        >
-          <option value="">{t('coursePlaceholder')}</option>
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1.5 text-xs text-muted">
-          {t('courseNotFoundHint')}{' '}
-          <SmartLink
-            href="/opprett-bane"
-            className="underline underline-offset-2 hover:text-text"
-          >
-            {t('courseCreateLink')}
-          </SmartLink>
-        </p>
-      </div>
+          {t('courseCreateLink')}
+        </SmartLink>
+      </p>
 
-      <div>
-        <label htmlFor="tee_box_id" className="block text-sm font-medium text-text mb-1.5">
-          {t('teeLabel')}
-        </label>
-        <select
+      {/* Without a course the tee field is faded as a whole, label too. */}
+      <div className={selectedCourse ? undefined : 'opacity-[0.55]'}>
+        <CardSelect
           id="tee_box_id"
           name="tee_box_id"
+          label={t('teeLabel')}
           value={teeBoxId}
           onChange={(e) => setTeeBoxId(e.target.value)}
           disabled={!selectedCourse}
           required
-          className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
         >
           <option value="">{selectedCourse ? t('teePlaceholderWithCourse') : t('teePlaceholderNoCourse')}</option>
           {availableTees.map((tee) => (
@@ -162,52 +165,101 @@ export function BasicsSection({
               {tee.name} ({formatRatingBadge(tee, t)})
             </option>
           ))}
-        </select>
+        </CardSelect>
       </div>
 
       {/* `datetime-local` emits 'YYYY-MM-DDTHH:mm' in browser local time (no
           offset). Server interprets in Europe/Oslo before persisting as
-          timestamptz. See actions.ts. */}
-      <Input
-        id="scheduled_tee_off_at"
-        name="scheduled_tee_off_at"
-        type="datetime-local"
-        label={t('teeOffLabel')}
-        value={scheduledTeeOffAt}
-        onChange={(e) => setScheduledTeeOffAt(e.target.value)}
-        hint={t('teeOffHint')}
-        error={state.teeOffInPast ? t('teeOffPastError') : undefined}
-        // iOS: native datetime-local ignorerer width:100% og strekker seg
-        // utenfor kortet. appearance-none + min-w-0 krymper kontrollen til
-        // containeren (samme fiks som dato-feltene i CreateLigaForm, #453).
-        inputClassName="min-w-0 appearance-none"
-      />
+          timestamptz. See actions.ts.
+          #2426: at rest the field shows the artboard's face — a calendar icon
+          and «lør. 3. okt. 2026, 09:00», or «Velg dato og tid» when empty. The
+          native input lies on top, invisible until it has focus: a tap or
+          click still lands on it and opens the phone's own picker, and while
+          it has focus it shows itself, so keyboard entry works as before. */}
+      <div>
+        <label htmlFor="scheduled_tee_off_at" className={CARD_FIELD_LABEL}>
+          {t('teeOffLabel')}
+        </label>
+        <div className="relative">
+          <div
+            aria-hidden="true"
+            className={`${CARD_FIELD_CONTROL} ${teeOffBorder} flex items-center gap-2 ${teeOffText ? 'text-text' : 'text-muted'}`}
+          >
+            <span className="flex text-muted">
+              <CalendarIcon />
+            </span>
+            <span className="min-w-0 flex-1 truncate">{teeOffText ?? t('teeOffPlaceholder')}</span>
+          </div>
+          <input
+            id="scheduled_tee_off_at"
+            name="scheduled_tee_off_at"
+            type="datetime-local"
+            value={scheduledTeeOffAt}
+            onChange={(e) => setScheduledTeeOffAt(e.target.value)}
+            aria-describedby="scheduled_tee_off_at-desc"
+            aria-invalid={teeOffError ? true : undefined}
+            // iOS: native datetime-local ignores width:100% and stretches out
+            // of the card. appearance-none + min-w-0 shrink the control to its
+            // box (same fix as the date fields in CreateLigaForm, #453).
+            className={`${CARD_FIELD_CONTROL} ${teeOffBorder} absolute inset-0 min-w-0 appearance-none text-text opacity-0 focus:opacity-100 [&::-webkit-date-and-time-value]:text-left`}
+          />
+        </div>
+        {teeOffError ? (
+          <p id="scheduled_tee_off_at-desc" className="mt-1.5 font-sans text-xs leading-[1.4] text-danger">
+            {teeOffError}
+          </p>
+        ) : (
+          <p id="scheduled_tee_off_at-desc" className={CARD_FIELD_HINT}>
+            {t('teeOffHint')}
+          </p>
+        )}
+      </div>
 
-      {/* #2258: «Shotgun-start», off by default. Styled like the section's
-          other checkboxes (RegistrationSection); the wizard restyle (#2426)
-          can pick it up from here. No `name`: the form reads the always-
-          mounted `start_type` mirror in GameWizard / GameForm. */}
-      <label className="flex min-h-11 cursor-pointer items-start gap-2">
-        {/* The whole label is the 44 px target; the name is only the title,
-            and the hint is read as its description. */}
+      {/* #2258: «Shotgun-start», off by default. No artboard draws it (#2426),
+          so it takes the card's field type: the name as a field label and the
+          hint as a field hint. The whole label is the 44 px target, and the
+          hint is read as its description. No `name`: the form reads the
+          always-mounted `start_type` mirror in GameWizard / GameForm. */}
+      <label className="flex min-h-11 cursor-pointer items-start gap-2.5">
         <input
           type="checkbox"
           checked={startType === 'shotgun'}
           onChange={(e) => setStartType(e.target.checked ? 'shotgun' : 'first_tee')}
-          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
+          className="-mt-0.5 h-5 w-5 flex-shrink-0 accent-primary"
           aria-labelledby="shotgun-start-label"
           aria-describedby="shotgun-start-hint"
           data-testid="shotgun-start"
         />
         <span>
-          <span id="shotgun-start-label" className="block font-sans text-sm text-text">
+          <span id="shotgun-start-label" className={CARD_FIELD_LABEL}>
             {t('shotgunLabel')}
           </span>
-          <span id="shotgun-start-hint" className="mt-0.5 block text-xs text-muted">
+          <span id="shotgun-start-hint" className="block font-sans text-xs leading-[1.4] text-muted">
             {t('shotgunHint')}
           </span>
         </span>
       </label>
-    </section>
+    </>
+  );
+
+  // #909: GameForm wraps the section in a Disclosure that carries the title,
+  // so there the fields stand on their own. The wizard's step 3 draws them in
+  // a card under the «BANE OG TIDSPUNKT» kicker (#2426).
+  if (hideHeading) {
+    return <section className="flex flex-col gap-3.5">{fields}</section>;
+  }
+  return (
+    <FormSection legend={t('heading')} gap="lg">
+      {fields}
+    </FormSection>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
   );
 }

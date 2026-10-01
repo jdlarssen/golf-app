@@ -116,3 +116,40 @@ export function expectedFirstScoreTime(teeOff: Date): string {
   const final = new Date(plus30Ms + delta * 60 * 1000);
   return formatTeeOffTime(final);
 }
+
+// The tee-off field's own names (#2426): Norwegian dots every short month but
+// «mai», English has none. Separate from DAY_NAMES/MONTH_NAMES above, which
+// the rest of the app shows without the month dot.
+const FIELD_NAMES = {
+  no: {
+    days: ['søn.', 'man.', 'tir.', 'ons.', 'tor.', 'fre.', 'lør.'],
+    months: ['jan.', 'feb.', 'mar.', 'apr.', 'mai', 'jun.', 'jul.', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'],
+  },
+  en: {
+    days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  },
+} as const;
+
+/**
+ * Shows a `datetime-local` value the way the wizard's tee-off field draws it
+ * (#2426): «lør. 3. okt. 2026, 09:00» / «Sat 3 Oct 2026, 09:00». The value is
+ * wall-clock already (no zone), so it is read as numbers, never through a
+ * local Date — the server and the phone print the same text. Null for an
+ * empty, malformed or impossible value; the field then shows its placeholder.
+ */
+export function formatTeeOffFieldValue(value: string, locale: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/.exec(value);
+  if (!m) return null;
+  const [year, month, day, hour, minute] = m.slice(1).map(Number);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59) return null;
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  if (utc.getUTCDate() !== day) return null;
+  const names = locale === 'en' ? FIELD_NAMES.en : FIELD_NAMES.no;
+  const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const weekday = names.days[utc.getUTCDay()];
+  const monthName = names.months[month - 1];
+  return locale === 'en'
+    ? `${weekday} ${day} ${monthName} ${year}, ${time}`
+    : `${weekday} ${day}. ${monthName} ${year}, ${time}`;
+}

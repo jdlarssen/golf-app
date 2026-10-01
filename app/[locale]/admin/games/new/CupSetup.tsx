@@ -3,6 +3,7 @@
 import { startTransition, useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
+import { FormSection, FormSectionText } from '@/components/ui/FormSection';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { createTournamentDraft, type CupActionError } from '@/lib/cup/actions';
@@ -67,59 +68,59 @@ export function CupSetup({
         const formData = new FormData(e.currentTarget);
         startTransition(() => formAction(formData));
       }}
-      className="space-y-5"
+      // #2426: the column is pulled out 4 px so the cards sit 16 px from the
+      // screen edge; each section's kicker takes the 4 px back.
+      className="-mx-1"
     >
       {groupId && (
         <input type="hidden" name="group_id" value={groupId} />
       )}
       {clubName && (
-        <p className="rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-text">
+        <p className="mx-1 mt-[18px] rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-text">
           {t.rich('clubBanner', {
             clubName,
             strong: (chunks) => <strong>{chunks}</strong>,
           })}
         </p>
       )}
-      <Input
-        label={t('cupNameLabel')}
-        id="name"
-        name="name"
-        required
-        maxLength={80}
-        placeholder={t('cupNamePlaceholder')}
-      />
+      <FormSection legend={t('cupNameLabel')}>
+        <Input
+          variant="card"
+          label={t('cupNameLabel')}
+          id="name"
+          name="name"
+          required
+          maxLength={80}
+          placeholder={t('cupNamePlaceholder')}
+        />
+      </FormSection>
 
-      <fieldset>
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          {t('teamNamesLegend')}
-        </legend>
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label={t('team1Label')}
-            id="team_1_name"
-            name="team_1_name"
-            required
-            maxLength={40}
-            placeholder={t('team1Placeholder')}
-          />
-          <Input
-            label={t('team2Label')}
-            id="team_2_name"
-            name="team_2_name"
-            required
-            maxLength={40}
-            placeholder={t('team2Placeholder')}
-          />
-        </div>
-      </fieldset>
+      <FormSection legend={t('teamNamesLegend')}>
+        <Input
+          variant="card"
+          label={t('team1Label')}
+          id="team_1_name"
+          name="team_1_name"
+          required
+          maxLength={40}
+          placeholder={t('team1Placeholder')}
+        />
+        <Input
+          variant="card"
+          label={t('team2Label')}
+          id="team_2_name"
+          name="team_2_name"
+          required
+          maxLength={40}
+          placeholder={t('team2Placeholder')}
+        />
+      </FormSection>
 
-      <fieldset>
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          {t('pointsWeightLegend')}
-        </legend>
-        <p className="text-xs text-muted mb-3">{t('pointsWeightHint')}</p>
-        <div className="grid grid-cols-2 gap-3">
+      <FormSection legend={t('pointsWeightLegend')}>
+        <FormSectionText>{t('pointsWeightHint')}</FormSectionText>
+        <div className="grid grid-cols-2 gap-2.5">
           <Input
+            variant="card"
             label={t('winPointsLabel')}
             id="win_points"
             name="win_points"
@@ -130,6 +131,7 @@ export function CupSetup({
             placeholder="1"
           />
           <Input
+            variant="card"
             label={t('tiePointsLabel')}
             id="tie_points"
             name="tie_points"
@@ -140,15 +142,16 @@ export function CupSetup({
             placeholder="0,5"
           />
         </div>
-      </fieldset>
+      </FormSection>
 
-      {errorMessage && <Banner tone="error" testId="cup-create-error">{errorMessage}</Banner>}
+      {errorMessage && (
+        <div className="mx-1 mt-[18px]">
+          <Banner tone="error" testId="cup-create-error">{errorMessage}</Banner>
+        </div>
+      )}
 
-      <div className="pt-2">
-        <Button
-          type="submit"
-          className="w-full"
-        >
+      <div className="pt-[18px]">
+        <Button type="submit" size="large" className="w-full">
           {t('submitButton')}
         </Button>
       </div>
