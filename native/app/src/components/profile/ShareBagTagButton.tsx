@@ -6,7 +6,7 @@
 // skjermleseren; bare knappen er synlig. Kortet viser bare det profilen alt
 // viser deg, altså dine egne data, og ingenting går via en server.
 //
-// Knappen finnes bare når appen har de to native delene (`canShareBagTag`);
+// Knappen finnes bare når appen har de to native delene (`canShareImage`);
 // et eldre bygg uten dem viser ingen knapp i stedet for en som ikke virker.
 // Feiler bildet eller arket, står en linje under knappen. Et avbrutt ark er
 // ingen feil.
@@ -15,7 +15,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { HandicapTrend } from '../../../../../lib/stats/handicapTrend';
 import type { BagTagModel } from '../../lib/bagTag';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
-import { canShareBagTag, shareBagTagImage } from '../../lib/shareBagTag';
+import { canShareImage, shareViewImage } from '../../lib/shareImage';
 import { FONTS, TAP, ThemeScope, themeFor, useTheme } from '../../theme';
 import { DelIcon } from '../icons/Icons';
 import { BagTag } from './BagTag';
@@ -34,7 +34,7 @@ export function ShareBagTagButton({
 }) {
   const { ui, colors } = useTheme();
   // Byggets moduler endrer seg ikke mens appen kjører.
-  const [available] = useState(canShareBagTag);
+  const [available] = useState(canShareImage);
   const card = useRef<View>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -42,7 +42,7 @@ export function ShareBagTagButton({
   const onShare = useCallback(async () => {
     setBusy(true);
     setFailed(false);
-    const result = await shareBagTagImage(card);
+    const result = await shareViewImage(card);
     setBusy(false);
     if (!result.ok) setFailed(true);
   }, []);

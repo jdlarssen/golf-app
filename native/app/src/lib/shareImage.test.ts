@@ -1,7 +1,7 @@
 // #2256 PR 3: «Del bag-taggen» tar bildet og åpner arket bare når de native
 // delene finnes, og en feil blir et rolig svar, aldri et kast.
 import { NativeModules, TurboModuleRegistry } from 'react-native';
-import { canShareBagTag, shareBagTagImage, toFileUrl } from './shareBagTag';
+import { canShareImage, shareViewImage, toFileUrl } from './shareImage';
 
 const mockCaptureRef = jest.fn();
 jest.mock('react-native-view-shot', () => ({ captureRef: (...args: unknown[]) => mockCaptureRef(...args) }));
@@ -52,7 +52,7 @@ beforeEach(() => {
   nativeParts({ viewShot: true, sharing: true });
 });
 
-describe('canShareBagTag', () => {
+describe('canShareImage', () => {
   it.each([
     [false, true, true, true],
     [false, false, true, false],
@@ -61,13 +61,13 @@ describe('canShareBagTag', () => {
     [true, false, true, false],
   ])('turbo-proxy %p: view-shot %p, deling %p → %p', (turboProxy, viewShot, sharing, expected) => {
     nativeParts({ viewShot, sharing, turboProxy });
-    expect(canShareBagTag()).toBe(expected);
+    expect(canShareImage()).toBe(expected);
   });
 });
 
-describe('shareBagTagImage', () => {
+describe('shareViewImage', () => {
   it('tar et PNG av kortet og deler det som fil', async () => {
-    expect(await shareBagTagImage(CARD)).toEqual({ ok: true });
+    expect(await shareViewImage(CARD)).toEqual({ ok: true });
     expect(mockCaptureRef).toHaveBeenCalledWith(CARD, { format: 'png', result: 'tmpfile' });
     expect(mockShareAsync).toHaveBeenCalledWith('file:///tmp/ReactNative/bag-tag.png', {
       UTI: 'public.png',
@@ -77,20 +77,20 @@ describe('shareBagTagImage', () => {
 
   it('laster ingen modul i et bygg uten de native delene', async () => {
     nativeParts({ viewShot: false, sharing: true });
-    expect(await shareBagTagImage(CARD)).toEqual({ ok: false });
+    expect(await shareViewImage(CARD)).toEqual({ ok: false });
     expect(mockCaptureRef).not.toHaveBeenCalled();
     expect(mockShareAsync).not.toHaveBeenCalled();
   });
 
   it('svarer rolig når bildet eller arket feiler', async () => {
     mockCaptureRef.mockRejectedValueOnce(new Error('ingen visning'));
-    expect(await shareBagTagImage(CARD)).toEqual({ ok: false });
+    expect(await shareViewImage(CARD)).toEqual({ ok: false });
     mockShareAsync.mockRejectedValueOnce(new Error('ingen visningskontroller'));
-    expect(await shareBagTagImage(CARD)).toEqual({ ok: false });
+    expect(await shareViewImage(CARD)).toEqual({ ok: false });
   });
 
   it('gjør ingenting før kortet finnes', async () => {
-    expect(await shareBagTagImage({ current: null })).toEqual({ ok: false });
+    expect(await shareViewImage({ current: null })).toEqual({ ok: false });
     expect(mockCaptureRef).not.toHaveBeenCalled();
   });
 });

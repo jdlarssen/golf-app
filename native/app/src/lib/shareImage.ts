@@ -1,4 +1,6 @@
 // #2256 PR 3: «Del bag-taggen» — et bilde av kortet og telefonens delearke.
+// #2265 PR 2 deler den med «Del kortet» i Kavalkaden, derfor det generelle
+// navnet.
 //
 // Det eneste stedet appen snakker med de to modulene (`react-native-view-shot`
 // tar bildet, `expo-sharing` åpner arket), så skjermtestene kan mocke dem her.
@@ -24,7 +26,7 @@ import { NativeModules, TurboModuleRegistry, type View } from 'react-native';
  * kjører bridgeless, der `__turboModuleProxy` ikke settes, så der er det
  * `NativeModules` (som svarer `null` for en modul som mangler) som gjelder.
  */
-export function canShareBagTag(): boolean {
+export function canShareImage(): boolean {
   try {
     const newArchitecture = (globalThis as { __turboModuleProxy?: unknown }).__turboModuleProxy != null;
     const viewShot = newArchitecture
@@ -41,12 +43,12 @@ export function toFileUrl(path: string): string {
   return path.startsWith('file://') ? path : `file://${path}`;
 }
 
-export type ShareBagTagResult = { ok: true } | { ok: false };
+export type ShareImageResult = { ok: true } | { ok: false };
 
 /** Ta bilde av kortet (PNG) og åpne delearket med det. Kaster aldri. */
-export async function shareBagTagImage(card: RefObject<View | null>): Promise<ShareBagTagResult> {
+export async function shareViewImage(card: RefObject<View | null>): Promise<ShareImageResult> {
   try {
-    if (!canShareBagTag() || !card.current) return { ok: false };
+    if (!canShareImage() || !card.current) return { ok: false };
     // Lat `require`, ikke `import()`: jest kjører ikke dynamisk import, og
     // pakkene skal bare lastes når de native delene finnes (over).
     /* eslint-disable @typescript-eslint/no-require-imports -- lastes ved trykk, se toppen av fila */

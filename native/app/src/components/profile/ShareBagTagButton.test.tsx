@@ -1,21 +1,21 @@
 // #2256 PR 3: «Del bag-taggen» (Type C, én render-test).
 //
-// Hva bildet og arket gjør, er `lib/shareBagTag.test.ts` sitt (Type A). Her
+// Hva bildet og arket gjør, er `lib/shareImage.test.ts` sitt (Type A). Her
 // låses koblingene bare en render kan bekrefte: uten de native delene finnes
 // ingen knapp, knappen deler deleversjonen av kortet (med ordmerket, skjult for
 // skjermleseren), og en feil gir linja under knappen. Ingen layout-asserts.
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { BagTagModel } from '../../lib/bagTag';
 import { PROFILE_TEXT } from '../../lib/profileCopy';
-import { canShareBagTag, shareBagTagImage } from '../../lib/shareBagTag';
+import { canShareImage, shareViewImage } from '../../lib/shareImage';
 import { ShareBagTagButton } from './ShareBagTagButton';
 
-jest.mock('../../lib/shareBagTag', () => ({
-  canShareBagTag: jest.fn(),
-  shareBagTagImage: jest.fn(),
+jest.mock('../../lib/shareImage', () => ({
+  canShareImage: jest.fn(),
+  shareViewImage: jest.fn(),
 }));
-const canShareMock = canShareBagTag as jest.Mock;
-const shareMock = shareBagTagImage as jest.Mock;
+const canShareMock = canShareImage as jest.Mock;
+const shareMock = shareViewImage as jest.Mock;
 
 const HIDDEN = { includeHiddenElements: true };
 
