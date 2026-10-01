@@ -167,20 +167,29 @@ export function teamSizesForMode(mode: GameMode): readonly number[] {
 }
 
 /**
+ * The supported team sizes that split `n` players into whole teams: the size
+ * goes into `n`, and gives between `MIN_TEAMS` and `maxTeamsForSize(size)`
+ * teams. Ascending; empty outside the scramble family. The format cards read
+ * it for their line-up (#2260): «2 eller 4 per lag» for Texas with 8.
+ */
+export function teamSizesThatFit(mode: GameMode, n: number): number[] {
+  return teamSizesForMode(mode).filter((size) => {
+    if (n % size !== 0) return false;
+    const teams = n / size;
+    return teams >= MIN_TEAMS && teams <= maxTeamsForSize(size);
+  });
+}
+
+/**
  * Kan `n` spillere fordeles på hele lag i dette formatet? Sant når minst én
- * støttet lagstørrelse går opp i `n` OG gir mellom `MIN_TEAMS` og
- * `maxTeamsForSize(lagstørrelse)` lag.
+ * støttet lagstørrelse går opp (`teamSizesThatFit`, så regelen bor ett sted).
  *
  * Eksempler for Texas (2/3/4 per lag): 4 ✓ (2 lag à 2), 10 ✓ (5 lag à 2),
  * 39 ✓ (13 lag à 3), 40 ✓ (20 par / 10 lag à 4), 41 ✗ (går ikke opp),
  * 42 ✗ (over taket).
  */
 export function fitsTeamFormat(mode: GameMode, n: number): boolean {
-  return teamSizesForMode(mode).some((size) => {
-    if (n % size !== 0) return false;
-    const teams = n / size;
-    return teams >= MIN_TEAMS && teams <= maxTeamsForSize(size);
-  });
+  return teamSizesThatFit(mode, n).length > 0;
 }
 
 /**

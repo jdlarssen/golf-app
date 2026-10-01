@@ -38,7 +38,10 @@ export const getFormatsForIntent = unstable_cache(
       .eq('is_visible', true)
       .eq('formats.is_active', true)
       .order('is_primary', { ascending: false })
-      .order('sort_order', { ascending: true });
+      .order('sort_order', { ascending: true })
+      // #2260: several rows share a sort_order, and the first format that
+      // fits is the wizard's recommendation — the order must be stable.
+      .order('format_slug', { ascending: true });
 
     if (error) {
       console.error('[getFormatsForIntent] query failed', { intent, error });
