@@ -19,6 +19,8 @@ export function SendCodeForm({
   next,
   invite = '',
   allowSelfRegistration = false,
+  variant = 'default',
+  hint,
 }: {
   defaultEmail: string;
   next: string;
@@ -36,9 +38,20 @@ export function SendCodeForm({
    * `NEXT_PUBLIC_*` envs at build time.
    */
   allowSelfRegistration?: boolean;
+  /**
+   * `invite`: the form inside «Bli med på runden» on `/login?invite=…`
+   * (#2266) — the artboard's 52 px field and button, a placeholder, and
+   * `hint` under the button instead of the self-registration helper.
+   */
+  variant?: 'default' | 'invite';
+  /** Shown under the button in the `invite` variant. */
+  hint?: string;
 }) {
   return (
-    <form action={sendCode} className="space-y-4">
+    <form
+      action={sendCode}
+      className={variant === 'invite' ? 'flex flex-col gap-2.5' : 'space-y-4'}
+    >
       <input type="hidden" name="next" value={next} />
       <input type="hidden" name="invite" value={invite} />
       {/*
@@ -63,6 +76,8 @@ export function SendCodeForm({
       <FormBody
         defaultEmail={defaultEmail}
         allowSelfRegistration={allowSelfRegistration}
+        variant={variant}
+        hint={hint}
       />
     </form>
   );
@@ -71,9 +86,13 @@ export function SendCodeForm({
 function FormBody({
   defaultEmail,
   allowSelfRegistration,
+  variant,
+  hint,
 }: {
   defaultEmail: string;
   allowSelfRegistration: boolean;
+  variant: 'default' | 'invite';
+  hint?: string;
 }) {
   const { pending, data } = useFormStatus();
   const t = useTranslations('auth.sendCode');
@@ -92,6 +111,7 @@ function FormBody({
     );
   }
 
+  const invite = variant === 'invite';
   return (
     <>
       <Input
@@ -107,15 +127,41 @@ function FormBody({
         autoFocus
         defaultValue={defaultEmail}
         required
+        {...(invite && {
+          placeholder: t('emailPlaceholder'),
+          labelClassName:
+            'block text-[13px] font-semibold leading-[normal] text-text mb-1.5',
+          inputClassName:
+            'h-[52px] !border-[var(--invitation-field-border)]',
+        })}
       />
-      {allowSelfRegistration && (
+      {allowSelfRegistration && !invite && (
         <p data-testid="self-reg-helper" className="text-sm text-muted -mt-1">
           {t('selfRegHelper')}
         </p>
       )}
-      <Button type="submit" className="w-full mt-2">
-        {t('submitButton')}
-      </Button>
+      {invite ? (
+        // `!`: Tailwind writes tracking-normal and shadow-none before the
+        // Button base's tracking-tight and shadow-sm.
+        <Button
+          type="submit"
+          className="w-full h-[52px] !font-semibold !tracking-normal !shadow-none"
+        >
+          {t('submitButton')}
+        </Button>
+      ) : (
+        <Button type="submit" className="w-full mt-2">
+          {t('submitButton')}
+        </Button>
+      )}
+      {invite && hint && (
+        <p
+          data-testid="invite-send-hint"
+          className="text-center text-[12px] leading-[normal] text-muted"
+        >
+          {hint}
+        </p>
+      )}
     </>
   );
 }

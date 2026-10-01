@@ -1,13 +1,13 @@
 // Calendar-day countdown to an invitation's expiry (#1179 — mild tap-aversion).
 //
-// The invite context card on /login (#1169) shows the invitee a friendly,
+// The invitation card on /login (#1169, #2266) shows the invitee a friendly,
 // forward-looking deadline: «utløper i dag / i morgen / om N dager». The card
 // is server-rendered per request, so a relative countdown never goes stale the
 // way a mail (read days later) would — hence the mail uses an absolute date and
 // the card uses this relative tier.
 //
 // Locale-independent classifier: it returns which tier the deadline falls in,
-// the actual wording lives in the `auth.inviteCard.*` catalog so every locale
+// the actual wording lives in the `invitationCard.*` catalog so every locale
 // gets its own phrasing via next-intl (the N-locale criterion, #845). Same
 // shape as `countdownParts` in lib/i18n/format.ts.
 //

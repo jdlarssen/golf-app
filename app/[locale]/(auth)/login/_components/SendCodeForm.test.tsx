@@ -48,3 +48,26 @@ describe('SendCodeForm — self-registration sub-text', () => {
     ).toBeTruthy();
   });
 });
+
+describe('SendCodeForm — invite variant (#2266)', () => {
+  it('shows the hint after the button and never the self-registration helper', () => {
+    render(
+      <SendCodeForm
+        defaultEmail=""
+        next=""
+        invite="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        allowSelfRegistration
+        variant="invite"
+        hint="hint-text"
+      />,
+    );
+
+    const hint = screen.getByTestId('invite-send-hint');
+    const button = screen.getByRole('button', { name: 'Send meg kode' });
+    expect(hint).toHaveTextContent('hint-text');
+    expect(
+      button.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByTestId('self-reg-helper')).toBeNull();
+  });
+});

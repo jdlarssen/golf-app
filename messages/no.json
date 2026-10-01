@@ -3286,16 +3286,6 @@
     "joinCard": {
       "title": "Bli med på runden"
     },
-    "inviteCard": {
-      "invitedBy": "{name} har invitert deg",
-      "invitedByFallback": "Du er invitert",
-      "formatLabel": "Spillformat:",
-      "courseLabel": "Bane:",
-      "teeOffLabel": "Tee-off:",
-      "expiresToday": "Invitasjonen din utløper i dag.",
-      "expiresTomorrow": "Invitasjonen din utløper i morgen.",
-      "expiresInDays": "Invitasjonen din utløper om {n} dager."
-    },
     "tryDemoDivider": "eller",
     "tryDemo": "Prøv Tørny på 60 sekunder",
     "errors": {

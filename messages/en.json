@@ -3286,16 +3286,6 @@
     "joinCard": {
       "title": "Join the round"
     },
-    "inviteCard": {
-      "invitedBy": "{name} has invited you",
-      "invitedByFallback": "You're invited",
-      "formatLabel": "Format:",
-      "courseLabel": "Course:",
-      "teeOffLabel": "Tee-off:",
-      "expiresToday": "Your invitation expires today.",
-      "expiresTomorrow": "Your invitation expires tomorrow.",
-      "expiresInDays": "Your invitation expires in {n} days."
-    },
     "tryDemoDivider": "or",
     "tryDemo": "Try Tørny in 60 seconds",
     "errors": {
