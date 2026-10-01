@@ -78,7 +78,7 @@ import {
 import { describeWebLinkFailure, webUrl } from '../lib/webLink';
 import { PageTitle } from '../components/PageTitle';
 import type { ScreenProps } from '../navigation';
-import { FONTS, fraunces, TAP, useTheme } from '../theme';
+import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
 
 type LoadState =
   | { state: 'loading' }
@@ -323,7 +323,7 @@ export function Friends({ route }: ScreenProps<'Friends'>) {
               <Text accessibilityRole="header" style={[styles.heroTitle, { color: colors.onStrongWarm }]}>
                 {FRIENDS_TEXT.heroTitle}
               </Text>
-              <Text style={[styles.heroLine, styles.heroBody, { color: colors.onStrongWarm }]}>
+              <Text style={[styles.heroLine, { color: colors.onStrongWarm }]}>
                 {friendCode ? FRIENDS_TEXT.shareLinkSubtitle : FRIENDS_TEXT.addByEmailSubtitle}
               </Text>
             </View>
@@ -848,9 +848,9 @@ const styles = StyleSheet.create({
   // Linjehøydene er nettleserens «normal» for størrelsene i designet
   // (Fraunces 18: 18 + 5 = 23).
   heroTitle: { ...fraunces(500, 18, 23) },
-  heroLine: { fontSize: 12, lineHeight: 14.5, fontFamily: FONTS.sans, opacity: 0.85 },
-  // Teksten under tittelen står 1,5 pt lenger ned i designet (målt).
-  heroBody: { marginTop: 1.5 },
+  // Teksten under brekker over to linjer, med nettleserens `normal` for Inter
+  // 12 (15) mellom dem (#2385).
+  heroLine: { ...interLine(12, 15, { multiline: true }), fontFamily: FONTS.sans, opacity: 0.85 },
   heroButtons: { flexDirection: 'row', gap: 8 },
 
   requestCard: {
