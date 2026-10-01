@@ -1,10 +1,12 @@
 // #2256: «Personvern og konto» — e-posten, utloggingen, personvernerklæringen
 // og veien til sletting, flyttet ut av profilen da den ble en bag-tag.
 //
-// Raden til personvernerklæringen er flyttet uendret fra `Profile.tsx`
-// (#2229: Apple krever at den kan nås inne i appen). «Slett konto» står
-// fortsatt alene nederst i rødt, med luft over, og fører til
-// bekreftelsessiden (`DeleteAccount`). Tilbake derfra (`goBack`) lander her.
+// Raden til personvernerklæringen kom fra `Profile.tsx` (#2229: Apple krever
+// at den kan nås inne i appen). #2216 satte den under «Du bestemmer», der
+// designet for «Dine data» (Data-forslag, #2332) har den, med designets ord og
+// pil. Resten av «Dine data» kommer med #2332. «Slett konto» står fortsatt
+// alene nederst i rødt, med luft over, og fører til bekreftelsessiden
+// (`DeleteAccount`). Tilbake derfra (`goBack`) lander her.
 //
 // **Profil v2: «Logg ut» og utviklerflaten bor her.** Profilen skal være
 // identisk med designlerretet, og der slutter siden med «Del bag-taggen».
@@ -21,7 +23,7 @@ import { SettingList, SettingRow } from '../components/SettingRow';
 import { logOut } from '../data/logout';
 import { PROFILE_TEXT, unsentStrokesWarning } from '../lib/profileCopy';
 import { isStagingBuild } from '../lib/stagingGate';
-import { describeWebLinkFailure, openWeb } from '../lib/webLink';
+import { PRIVACY_PATH, describeWebLinkFailure, openWeb } from '../lib/webLink';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -42,7 +44,7 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
   // catch-gren å skrive her.
   const onOpenPrivacy = useCallback(() => {
     setPrivacyNote(null);
-    void openWeb('/legal/privacy').then((result) => {
+    void openWeb(PRIVACY_PATH).then((result) => {
       if (!result.ok) setPrivacyNote(describeWebLinkFailure(result.reason));
     });
   }, []);
@@ -157,11 +159,12 @@ export function AccountSettings({ navigation }: ScreenProps<'AccountSettings'>) 
         </Text>
       ) : null}
 
-      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionAbout}</Text>
-      <SettingList testID="account-about">
+      <Text style={ui.sectionTitle}>{PROFILE_TEXT.sectionYouDecide}</Text>
+      <SettingList testID="account-you-decide">
         <SettingRow
           label={PROFILE_TEXT.privacyRow}
           sublabel={PROFILE_TEXT.privacySublabel}
+          chevron
           onPress={onOpenPrivacy}
           testID="account-privacy"
         />

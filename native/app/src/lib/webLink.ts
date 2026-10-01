@@ -33,6 +33,13 @@ export type WebUrlResult =
 
 export type OpenWebResult = { ok: true } | { ok: false; reason: WebLinkFailure };
 
+/**
+ * Personvernerklæringen på nettsiden (#2216). Stien har ett hjem: raden i
+ * «Personvern og konto» åpner den herfra. Siden er offentlig, så den åpnes
+ * uten innlogging.
+ */
+export const PRIVACY_PATH = '/legal/privacy';
+
 /** En knapp til en side på nettsiden: hva den heter, og hvor den går. */
 export interface WebLinkTarget {
   label: string;
