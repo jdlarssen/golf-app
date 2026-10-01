@@ -439,6 +439,15 @@ export function formatShortUTCDayMonthLocale(iso: string, locale: AppLocale): st
 }
 
 /**
+ * Dagen fra `formatToParts`, uten null foran. en-GB skriver dagen med to sifre
+ * når måneden også er et tall («01/09»), og en dato skrives «1. sep» (#2265).
+ */
+function dayPart(parts: Intl.DateTimeFormatPart[]): string {
+  const value = parts.find((p) => p.type === 'day')?.value ?? '';
+  return value === '' ? '' : String(Number(value));
+}
+
+/**
  * Oslo-based sibling of `formatShortUTCDayMonthLocale`: short day + month in
  * Europe/Oslo wall-clock, so it pairs with `formatTeeOffTimeLocale` for an
  * admin-facing window label that matches the time the admin actually picked.
@@ -463,7 +472,7 @@ export function formatShortOsloDayMonthLocale(
       day: 'numeric',
       month: 'numeric',
     }).formatToParts(d);
-    const dayStr = parts.find((p) => p.type === 'day')?.value ?? '';
+    const dayStr = dayPart(parts);
     const monthIdx = Number(parts.find((p) => p.type === 'month')?.value ?? '1') - 1;
     return `${dayStr}. ${NO_MONTHS_SHORT[monthIdx]}`;
   }
@@ -501,7 +510,7 @@ export function formatShortOsloDateWithYearLocale(
     month: 'numeric',
     year: 'numeric',
   }).formatToParts(d);
-  const dayStr = parts.find((p) => p.type === 'day')?.value ?? '';
+  const dayStr = dayPart(parts);
   const yearStr = parts.find((p) => p.type === 'year')?.value ?? '';
   const monthIdx = Number(parts.find((p) => p.type === 'month')?.value ?? '1') - 1;
   if (locale === 'no') {
