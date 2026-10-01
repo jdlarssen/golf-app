@@ -626,6 +626,16 @@ describe('findSettledActionIds', () => {
     expect(ids).toEqual([pay.id, deliver.id]);
   });
 
+  it('a request still pending in a game that has started is settled (#2263 follow-up)', () => {
+    const inStarted = signup('A', { request_id: REQ });
+    const ids = findSettledActionIds([inStarted], {
+      ...base,
+      requestStatus: new Map([[REQ, 'pending']]),
+      lockedGameIds: new Set([GAME_2]),
+    });
+    expect(ids).toEqual([inStarted.id]);
+  });
+
   it('read rows are never touched', () => {
     expect(findSettledActionIds([signup('A', { request_id: REQ }, { read: true })], base)).toEqual([]);
   });

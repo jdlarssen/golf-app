@@ -315,6 +315,19 @@ describe('InboxClient', () => {
       expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Kristian meldte seg på');
     });
 
+    it('spillet har startet → raden blir stående som lest, med påmeldingssidens tekst', async () => {
+      decideMock.mockResolvedValue({ ok: false, reason: 'game_locked' });
+      renderInbox([makeRequest('r')]);
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Godta' }));
+      });
+      expect(screen.getByTestId('inbox-status')).toHaveTextContent(
+        'Spillet er startet eller avsluttet. Påmeldinger kan ikke endres lenger.',
+      );
+      expect(screen.queryByTestId('inbox-section-action')).not.toBeInTheDocument();
+      expect(screen.getByTestId('inbox-section-today')).toHaveTextContent('Kristian meldte seg på');
+    });
+
     it('ingen ledig lagplass → tilbake, med påmeldingssidens tekst', async () => {
       decideMock.mockResolvedValue({ ok: false, reason: 'no_team_slot' });
       renderInbox([makeRequest('r')]);

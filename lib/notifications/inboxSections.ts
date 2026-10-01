@@ -404,11 +404,18 @@ export type SettledInputs = {
   }>;
   /** The viewer's own player row per game. */
   own: ReadonlyMap<string, { paid_at: string | null; submitted_at: string | null }>;
+  /**
+   * Games that are active or finished. A request still pending there can no
+   * longer be answered: the signup page and «Godta» both refuse a started
+   * game (`game_locked`), and the start's auto-reject is best-effort.
+   */
+  lockedGameIds?: ReadonlySet<string>;
 };
 
 /**
  * Unread action rows whose matter is already settled — a flightmate approved
- * the card, the request was answered or ran out, the fee is paid. Not every
+ * the card, the request was answered or ran out or its round has started, the
+ * fee is paid. Not every
  * target page marks its notification read, so the inbox checks on load and
  * treats these as read (#2263).
  */
@@ -419,7 +426,10 @@ export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): s
     switch (row.kind) {
       case 'registration_request': {
         const p = row.payload as NotificationPayload<'registration_request'>;
-        if (p.request_id && inputs.requestStatus.get(p.request_id) !== 'pending') {
+        if (
+          p.request_id &&
+          (inputs.requestStatus.get(p.request_id) !== 'pending' || inputs.lockedGameIds?.has(p.game_id))
+        ) {
           settled.push(row.id);
         }
         break;
