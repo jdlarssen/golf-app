@@ -789,6 +789,7 @@ export type Database = {
           signups_closed_at: string | null
           source_game_id: string | null
           spectate_token: string | null
+          start_type: string
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           tee_box_id: string | null
@@ -831,6 +832,7 @@ export type Database = {
           signups_closed_at?: string | null
           source_game_id?: string | null
           spectate_token?: string | null
+          start_type?: string
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
@@ -873,6 +875,7 @@ export type Database = {
           signups_closed_at?: string | null
           source_game_id?: string | null
           spectate_token?: string | null
+          start_type?: string
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
