@@ -6,8 +6,12 @@ import { readStoredKavalkade } from '@/lib/kavalkade/getOrCreateKavalkade';
 import {
   buildKavalkadeCardModel,
   isKavalkadeCardKind,
-  type KavalkadeCardModel,
 } from '@/lib/kavalkade/cardModel';
+import {
+  KAVALKADE_CARD_IMAGE_WIDTH,
+  computeCardHeight,
+  heroFontSize,
+} from '@/lib/kavalkade/cardImageLayout';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { loadFonts } from '@/lib/og/fonts';
 import { OgWordmark } from '@/lib/og/wordmark';
@@ -46,10 +50,9 @@ import {
  *     og admin-klienten trenger uansett.
  *
  * Alle tallene kommer fra `buildKavalkadeCardModel`. Denne fila er oppsett og
- * piksler, og regner ingenting.
+ * piksler, og regner ingenting. Bredden og høyden står i
+ * `lib/kavalkade/cardImageLayout.ts`, som appens deleversjon også leser (#2265).
  */
-
-const WIDTH = 1080;
 
 function notFound(): Response {
   return new Response('Not found', { status: 404 });
@@ -67,36 +70,6 @@ function osloDate(iso: string | null, locale: AppLocale): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Det store tallet krymper når det er et navn og ikke to sifre, så «Dina
- * Fossum» får plass på samme kort som «79». Satori bryter på mellomrom.
- */
-function heroFontSize(value: string): number {
-  if (value.length <= 8) return 116;
-  if (value.length <= 14) return 84;
-  return 60;
-}
-
-/**
- * Innholdstilpasset høyde: et kort med bare et navn blir ikke et høyt bilde med
- * tom nedre halvdel i chatten. Anslagene er med vilje rause, og footerens
- * `marginTop: auto` spiser opp slakken.
- */
-function computeCardHeight(model: KavalkadeCardModel): number {
-  const titleLines = model.title.length > 26 ? 2 : 1;
-  const heroSize = heroFontSize(model.hero.value);
-  const heroLines = model.hero.value.length > 26 ? 2 : 1;
-
-  let h = 72 /* topp-pad */ + 76 /* header */;
-  h += 36 + titleLines * 80; // tittel
-  h += 42; // skillelinje
-  h += 8 + 56 + heroLines * Math.round(heroSize * 1.18) + (model.hero.caption ? 16 + 42 : 0) + 56;
-  h += model.lines.length * 104;
-  h += 24 + 2 + 104; // footer
-  h += 72; // bunn-pad
-  return h;
 }
 
 export async function GET(
@@ -247,7 +220,7 @@ export async function GET(
       </div>
     ),
     {
-      width: WIDTH,
+      width: KAVALKADE_CARD_IMAGE_WIDTH,
       height: computeCardHeight(model),
       fonts: fonts.length > 0 ? fonts : undefined,
       headers: {
