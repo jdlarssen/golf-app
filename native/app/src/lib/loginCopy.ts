@@ -16,6 +16,14 @@
 // — svarte på engelsk fra GoTrue: «One of email or phone must be set», «Email
 // address "…" is invalid», «email rate limit exceeded». Passord-inngangen
 // under gjorde det riktig hele tiden; den er unntaket som ble regelen.
+//
+// #2216: appen ber om koden gjennom nettsidens rute (`data/loginCode.ts`), med
+// nettsidens sperrer. Ruta svarer med en kode, ikke en GoTrue-tekst, så bare
+// verify-steget klassifiseres her ({@link classifyVerifyError}). Kodene fra
+// ruta har fått webbens setninger, unntatt `user_not_found`: den betyr nå
+// «ingen konto, og nye kontoer er skrudd av», og appen sier det rett ut i
+// stedet for å be om en admin spilleren ikke har.
+import type { SendLoginCodeError } from '../../../../lib/auth/loginCodeErrors';
 import { OFFLINE_NOTE } from './rosterCopy';
 
 /**
@@ -36,28 +44,69 @@ export const REVEAL_PASSWORD_LOGIN_MS = 1_500;
  */
 export const APP_NAME_FALLBACK = 'Tørny';
 
+/**
+ * Sifrene i koden fra mailen (#2216, åtte ruter). Speiler Supabase-innstillingen
+ * og webbens `OTP_LENGTH` i `VerifyCodeForm.tsx`: endres koden i Supabase, må
+ * begge følge med. Brukes bare til visningen og til å sende koden av seg selv.
+ */
+export const OTP_LENGTH = 8;
+
+/**
+ * Supabase gir samme adresse ny kode tidligst etter ett minutt. Speiler
+ * innstillingen og styrer bare nedtellingen; avgjørelsen er Supabases.
+ */
+export const RESEND_SECONDS = 60;
+
+/** Sekunder til «Send ny kode» kan trykkes, mellom 0 og {@link RESEND_SECONDS}. */
+export function resendWaitSeconds(sentAtMs: number, nowMs: number): number {
+  const elapsed = Math.floor((nowMs - sentAtMs) / 1000);
+  return Math.min(RESEND_SECONDS, Math.max(0, RESEND_SECONDS - elapsed));
+}
+
+/** Nedtellingen som «0:42». */
+export function formatCountdown(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
 export const LOGIN_TEXT = {
+  // --- Innloggingen etter designet (#2216, «Innlogging»-forslaget, #2349) ---
+  // Ordlyden er designets. Nettsiden får den samme i #2349.
+  /** Taglinen i båndet på steg 1, med «par» i gull. */
+  taglinePre: 'Fyr opp golfturneringen på et ',
+  taglineGold: 'par',
+  taglinePost: ' minutter',
+  stepOneKicker: 'Steg 1 av 2',
+  stepTwoKicker: 'Steg 2 av 2',
+  emailLabel: 'E-postadresse',
+  sendButton: 'Send meg kode',
+  sendPending: 'Sender …',
+  codeHeading: 'Skriv inn koden fra mailen',
+  /** «Vi sendte den til <adressen>. Feil adresse?» — adressen settes inn mellom. */
+  sentToPrefix: 'Vi sendte den til ',
+  sentToSuffix: '.',
+  changeEmail: 'Feil adresse?',
+  /** Skjermleser-etiketten på kodefeltet, som webbens `codeLabel`. */
+  codeLabel: 'Kode',
+  codeHint: 'Koden har åtte siffer. På iPhone kan du trykke på koden over tastaturet.',
+  verifyButton: 'Logg inn',
+  verifyPending: 'Sjekker …',
+  noMailTitle: 'Kom ikke mailen?',
+  spamHint: 'Se i søppelposten. Den kommer fra Tørny og kan ta et par minutter.',
+  resendInPrefix: 'Ny kode om ',
+  resendButton: 'Send ny kode',
+  resendPending: 'Sender …',
+
   passwordLabel: 'Passord',
   passwordButton: 'Logg inn med passord',
   passwordPending: 'Logger inn …',
   // Aldri Supabases egen tekst her — den skiller mellom årsakene.
   passwordFailed: 'Feil e-post eller passord.',
-  // Appen sjekker selv før den ringer Supabase (#1977). Webben har `required`
-  // på feltet, så det tomme tilfellet når aldri serveren der. Ordene låner
-  // skjermens eget vokabular: «e-post» fra passord-feilen, «mailen» fra
-  // kode-feilen.
+  // Appen sjekker selv før den spør serveren (#1977). Webben har `required`
+  // på feltet, så det tomme tilfellet når aldri serveren der. «e-post» er
+  // skjermens eget ord, fra passord-feilen.
   emailRequired: 'Skriv e-posten din først.',
-  codeRequired: 'Skriv koden fra mailen.',
 } as const;
-
-/**
- * Hvilken av de to kode-rundene som feilet.
- *
- * Samme GoTrue-tekst betyr ikke det samme i de to stegene, så klassifisereren
- * må vite hvor den står: «expired» på send-steget er noe helt annet enn på
- * verify-steget.
- */
-export type LoginStep = 'send-code' | 'verify-code';
 
 /**
  * Feilene innloggingen kan vise (#1977).
@@ -67,19 +116,11 @@ export type LoginStep = 'send-code' | 'verify-code';
  * direkte. `network` er app-egen: webben har ingen offline-tilstand her, mens
  * appen er offline-først og sier det samme her som overalt ellers.
  *
- * Webbens `rate_limited`, `invite_expired` og `disposable_email` er bevisst
- * IKKE med: alle tre krever noe bare serveren har (webbens egen 15-minutters
- * bøtte, et service-role-oppslag etter utløpt invitasjon, og self-reg-flagget).
- * `link_expired` er fra magic-link-tiden; appen har ingen lenke.
+ * Alle kodene «send meg kode»-ruta kan svare med er med (`SendLoginCodeError`,
+ * #2216), pluss de to fra kode-steget. `link_expired` er fra magic-link-tiden;
+ * appen har ingen lenke.
  */
-export type LoginErrorCode =
-  | 'rate_limited_minute'
-  | 'rate_limited_quota'
-  | 'user_not_found'
-  | 'code_invalid'
-  | 'code_expired'
-  | 'network'
-  | 'unknown';
+export type LoginErrorCode = SendLoginCodeError | 'code_invalid' | 'code_expired' | 'network';
 
 /** Minimumsformen av en GoTrue-feil — hele `AuthError` trengs ikke. */
 export interface LoginErrorLike {
@@ -90,61 +131,22 @@ export interface LoginErrorLike {
 const NETWORK_HINTS = ['network request failed', 'failed to fetch', 'load failed'];
 
 /**
- * GoTrue-feil → kode.
+ * GoTrue-feilen fra kode-steget (`verifyOtp`) → kode.
  *
- * Reglene er webbens (`app/[locale]/(auth)/login/actions.ts`), med de typede
- * `error.code`-verdiene lagt på som en ekstra sikring: matcher teksten ikke,
- * fanger koden det likevel. Delstreng-reglene beholdes, for det er DE som er
- * webbens shippede oppførsel — dropper vi dem, driver flatene fra hverandre.
- *
- * Rekkefølgen er lastbærende to steder:
- *  1. Nett-sjekken først. En forespørsel som aldri kom fram har ingen
- *     HTTP-kode, og «failed to fetch» ville ellers falt til `unknown`.
- *  2. Kvoten FØR den generelle rate-heuristikken. De to deler `error.code`
- *     (`over_email_send_rate_limit`), og kvote-teksten inneholder selv ordet
- *     «rate» — teksten er den eneste som skiller dem. Forskjellen er ekte:
- *     ved 60-sekunders-sperren ligger det alt en kode i innboksen, ved kvoten
- *     ble det aldri sendt noen.
+ * Nett-sjekken går først: en forespørsel som aldri kom fram har ingen
+ * HTTP-kode, og «failed to fetch» ville ellers blitt lest som feil kode.
  */
-export function classifyLoginError(step: LoginStep, error: LoginErrorLike): LoginErrorCode {
+export function classifyVerifyError(error: LoginErrorLike): LoginErrorCode {
   const msg = (error.message ?? '').toLowerCase();
   const code = error.code ?? '';
 
   if (NETWORK_HINTS.some((hint) => msg.includes(hint))) return 'network';
 
-  if (step === 'verify-code') {
-    // GoTrue svarer likt på en feiltastet og en utløpt kode («Token has
-    // expired or is invalid», `otp_expired`). Webben lander derfor på
-    // «gått ut» også for en ren tastefeil. Vi speiler det bevisst: å være
-    // smartere enn webben her ville vært et avvik, ikke en forbedring.
-    return code === 'otp_expired' || msg.includes('expired') ? 'code_expired' : 'code_invalid';
-  }
-
-  if (msg.includes('email rate limit exceeded')) return 'rate_limited_quota';
-  if (
-    code === 'over_email_send_rate_limit' ||
-    code === 'over_request_rate_limit' ||
-    msg.includes('rate') ||
-    msg.includes('too many') ||
-    msg.includes('security purposes')
-  ) {
-    return 'rate_limited_minute';
-  }
-  if (
-    code === 'otp_disabled' ||
-    code === 'signup_disabled' ||
-    code === 'user_not_found' ||
-    code === 'validation_failed' ||
-    msg.includes('not found') ||
-    msg.includes('signups not allowed') ||
-    msg.includes('signups are disabled') ||
-    msg.includes('otp_disabled') ||
-    msg.includes('disabled') ||
-    msg.includes('is invalid')
-  ) {
-    return 'user_not_found';
-  }
-  return 'unknown';
+  // GoTrue svarer likt på en feiltastet og en utløpt kode («Token has
+  // expired or is invalid», `otp_expired`). Webben lander derfor på «gått
+  // ut» også for en ren tastefeil. Vi speiler det bevisst: å være smartere
+  // enn webben her ville vært et avvik, ikke en forbedring.
+  return code === 'otp_expired' || msg.includes('expired') ? 'code_expired' : 'code_invalid';
 }
 
 /**
@@ -152,16 +154,24 @@ export function classifyLoginError(step: LoginStep, error: LoginErrorLike): Logi
  *
  * Uttømmende `switch` uten `default`: legger noen til en kode uten en setning,
  * sier `tsc` fra. Ordlyden er webbens, ord for ord, fra `messages/no.json` →
- * `auth.errors` — paritetstesten sammenligner mot den fila.
+ * `auth.errors` — paritetstesten sammenligner mot den fila. Unntaket er
+ * `user_not_found` (#2216): webben ber om en admin, men den som finner appen i
+ * App Store har ingen admin å spørre.
  */
 export function describeLoginError(code: LoginErrorCode): string {
   switch (code) {
+    case 'rate_limited':
+      return 'Du har bedt om mange koder på kort tid. Vent et kvarter og prøv igjen.';
     case 'rate_limited_minute':
       return 'Du kan be om ny kode om ett minutt.';
     case 'rate_limited_quota':
       return 'Vi får ikke sendt flere koder akkurat nå. Prøv igjen senere.';
     case 'user_not_found':
-      return 'Denne mailen er ikke registrert. Be admin om en invitasjon.';
+      return 'Det finnes ingen konto med denne e-posten, og akkurat nå kan du ikke lage en ny. Be arrangøren om en invitasjon.';
+    case 'invite_expired':
+      return 'Invitasjonen din er utløpt. Be arrangøren om å sende en ny.';
+    case 'disposable_email':
+      return 'Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.';
     case 'code_invalid':
       return 'Feil kode. Sjekk mailen og prøv igjen.';
     case 'code_expired':

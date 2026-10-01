@@ -16,21 +16,44 @@
 // #1923 la til én render til: boksen med testbrukere i et staging-bygg, og at
 // et trykk på en rad logger inn med radens e-post og byggets passord. Gaten
 // selv (prod-vert, manglende passord) er Type A i `devLogin.test.ts`.
+//
+// #2216 la til én render til: koden bes om gjennom nettsidens rute
+// (`requestLoginCode`), e-posten trimmes og gjøres liten én gang, feilen fra
+// ruta vises med appens setning, og etter `verifyOtp` kjøres stegene etter
+// innloggingen (`finishLogin`). Koden sendes av seg selv når alle sifrene står
+// der. Hvilken kode ruta svarer, og hva den betyr, er Type A i
+// `data/loginCode.test.ts`.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-fabrikkene heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { DEV_LOGIN_TEXT } from '../devLogin';
-import { LOGIN_TEXT } from '../lib/loginCopy';
+import { finishLogin, requestLoginCode } from '../data/loginCode';
+import { LOGIN_TEXT, OTP_LENGTH, describeLoginError } from '../lib/loginCopy';
 import { STAGING_SUPABASE_HOST } from '../lib/stagingGate';
 import { supabase } from '../supabase';
 import { Login } from './Login';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// Båndet leser innfellingen (#2216). Uten app-rotas SafeAreaProvider gir
+// pakkens egen mock innfelling 0, som i `Home.test.tsx`.
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: { expoConfig: { name: 'Tørny' } },
 }));
+// Ruta og stegene etter innloggingen byttes ut; regelen for kode-steget
+// (`landsOnCodeStep`) er den ekte.
+jest.mock('../data/loginCode', () => ({
+  ...jest.requireActual('../data/loginCode'),
+  requestLoginCode: jest.fn(),
+  finishLogin: jest.fn(),
+}));
 
 const signInWithPasswordMock = supabase.auth.signInWithPassword as jest.Mock;
+const verifyOtpMock = supabase.auth.verifyOtp as jest.Mock;
+const requestLoginCodeMock = requestLoginCode as jest.Mock;
+const finishLoginMock = finishLogin as jest.Mock;
 
 describe('Login — skjult passord-inngang', () => {
   beforeEach(() => {
@@ -129,3 +152,48 @@ describe('Login — testbrukere i staging-bygget (#1923)', () => {
     });
   });
 });
+
+describe('Login: ny konto gjennom nettsidens sperrer (#2216)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    finishLoginMock.mockResolvedValue(undefined);
+  });
+
+  it('ber om koden gjennom ruta, viser feilen, og kjører stegene etter innloggingen', async () => {
+    requestLoginCodeMock.mockResolvedValueOnce({ ok: false, code: 'user_not_found' });
+    await render(<Login />);
+
+    await fireEvent.changeText(screen.getByTestId('email-input'), ' Ny@Example.TEST ');
+    await fireEvent.press(screen.getByTestId('send-code-button'));
+
+    expect(requestLoginCodeMock).toHaveBeenCalledWith('ny@example.test');
+    expect(await screen.findByTestId('login-error')).toHaveTextContent(
+      describeLoginError('user_not_found'),
+    );
+    // Avslaget holder deg på e-post-steget.
+    expect(screen.queryByTestId('code-input')).toBeNull();
+
+    requestLoginCodeMock.mockResolvedValueOnce({ ok: true });
+    verifyOtpMock.mockResolvedValue({ data: {}, error: null });
+    await fireEvent.press(screen.getByTestId('send-code-button'));
+
+    const codeInput = await screen.findByTestId('code-input');
+    // Ett siffer for lite: ingenting sendes, og «Logg inn» venter.
+    await fireEvent.changeText(codeInput, '1234567');
+    expect(verifyOtpMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('verify-code-button')).toBeDisabled();
+
+    // Alle sifrene på plass sender koden av seg selv. Limt inn med mellomrom,
+    // slik koden kan stå i mailen: bare sifrene teller.
+    expect(OTP_LENGTH).toBe(8);
+    await fireEvent.changeText(codeInput, '1234 5678');
+    await waitFor(() => expect(finishLoginMock).toHaveBeenCalledTimes(1));
+    expect(verifyOtpMock).toHaveBeenCalledTimes(1);
+    expect(verifyOtpMock).toHaveBeenCalledWith({
+      email: 'ny@example.test',
+      token: '12345678',
+      type: 'email',
+    });
+  });
+});
+
