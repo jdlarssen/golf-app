@@ -60,6 +60,14 @@ vi.mock('./getCupCandidatePlayers', () => ({
   getCupCandidatePlayers: (...args: unknown[]) => candidateMock(...args),
 }));
 
+// Boundary mock for deleteTournament (#2214): the plan opens its own admin
+// client and reads scores; which matches count as never played is its own
+// suite's business (tournamentGameDeletion.test.ts).
+const deletionPlanMock = vi.fn();
+vi.mock('./tournamentGameDeletion', () => ({
+  planTournamentGameDeletion: (...args: unknown[]) => deletionPlanMock(...args),
+}));
+
 // Boundary mocks for startTournament's varsel-vifte (#1902). All three open
 // their own clients or reach Resend; their own behaviour is covered where they
 // live. Here they only have to not eat queue entries — and
@@ -871,10 +879,10 @@ describe('startTournament — poengmålet regnes av planlagt antall (#1902)', ()
 
   /** Kjører start-flyten med `actual` eksisterende kamper og et planlagt antall. */
   async function start(actual: number, planned: number | null) {
-    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }]);
+    // #2214: the gate's group_id read, then the match count — both admin client.
+    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }, { count: actual }]);
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'a@x.no', name: 'Arrangør' }, error: null },
-      { count: actual },
       cupRow(planned),
       { data: [{ id: 'cup-1' }], error: null },
     ]);
@@ -933,10 +941,9 @@ describe('startTournament — poengmålet regnes av planlagt antall (#1902)', ()
   });
 
   it('vektet cup får fortsatt NULL, uansett planlagt antall (#1441 D8)', async () => {
-    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }]);
+    adminMock = buildSupabaseMock([{ data: { group_id: null }, error: null }, { count: 8 }]);
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'a@x.no', name: 'Arrangør' }, error: null },
-      { count: 8 },
       {
         data: {
           id: 'cup-1',
@@ -960,5 +967,144 @@ describe('startTournament — poengmålet regnes av planlagt antall (#1902)', ()
     await expect(startTournament(fd)).rejects.toBeInstanceOf(RedirectError);
 
     expect(writtenPointsToWin()).toBeNull();
+  });
+});
+
+/**
+ * #2214: a club cup's matches are created by whoever generated them, and the
+ * games RLS only lets that creator (or a global admin) see and delete them.
+ * Another club admin — say the club owner — passes requireAdminOrClubAdminOfCup
+ * but saw 0 matches (start: too_few_matches) and deleted 0 (delete:
+ * delete_failed), or only their own, leaving the rest stranded as standalone
+ * scheduled games (#1441). The gate has run, so both now use the admin client.
+ *
+ * Caller in these tests: a club owner who is not a global admin.
+ * Request-client queue: 1. loadRole · 2. group_members (owner) · then the
+ * action's own reads. Admin-client queue: 1. the gate's group_id · then the
+ * action's admin reads/writes.
+ */
+describe('club cup: any club admin can delete and start it (#2214)', () => {
+  const ownerGate = () => [
+    { data: { is_admin: false, name: 'Klubbeier' }, error: null }, // loadRole
+    { data: { role: 'owner' }, error: null }, // group_members
+  ];
+  const deleteForm = () => {
+    const fd = new FormData();
+    fd.set('id', 'cup-1');
+    return fd;
+  };
+  const lastRedirect = () => (redirectMock.mock.calls.at(-1)?.[0] as string) ?? '';
+
+  it('deletes the never-played matches with the admin client, scoped to the cup', async () => {
+    deletionPlanMock.mockResolvedValue({
+      hostIdsToDelete: ['g1', 'g2'],
+      derivedIdsRidingAlong: [],
+      totalGames: 2,
+    });
+    adminMock = buildSupabaseMock([
+      { data: { group_id: 'club-1' }, error: null }, // gate
+      { data: [{ id: 'g1' }, { id: 'g2' }], error: null }, // games delete…select
+    ]);
+    supabaseMock = buildSupabaseMock([
+      ...ownerGate(),
+      { data: { id: 'cup-1', name: 'Klubbcup' }, error: null }, // cup read
+      { error: null }, // tournaments delete
+    ]);
+    setUser('owner-b');
+
+    const { deleteTournament } = await import('./actions');
+    await expect(deleteTournament(deleteForm())).rejects.toBeInstanceOf(RedirectError);
+
+    const adminCalls = adminMock.__fromCalls.filter((c) => c.table === 'games');
+    expect({
+      redirect: lastRedirect(),
+      adminDelete: adminCalls.some((c) => c.method === 'delete'),
+      filters: adminCalls
+        .filter((c) => ['in', 'eq', 'neq'].includes(c.method))
+        .map((c) => [c.method, ...c.args]),
+      requestGamesDelete: supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'delete',
+      ),
+    }).toEqual({
+      redirect: '/klubber/club-1?status=cup_deleted&name=Klubbcup',
+      adminDelete: true,
+      filters: [
+        ['in', 'id', ['g1', 'g2']],
+        ['eq', 'tournament_id', 'cup-1'],
+        ['neq', 'status', 'finished'],
+      ],
+      requestGamesDelete: false,
+    });
+  });
+
+  it('fewer rows deleted than planned → delete_failed, and the cup row stays', async () => {
+    deletionPlanMock.mockResolvedValue({
+      hostIdsToDelete: ['g1', 'g2'],
+      derivedIdsRidingAlong: [],
+      totalGames: 2,
+    });
+    adminMock = buildSupabaseMock([
+      { data: { group_id: 'club-1' }, error: null }, // gate
+      { data: [{ id: 'g1' }], error: null }, // only one of two went
+    ]);
+    supabaseMock = buildSupabaseMock([
+      ...ownerGate(),
+      { data: { id: 'cup-1', name: 'Klubbcup' }, error: null },
+      { error: null },
+    ]);
+    setUser('owner-b');
+
+    const { deleteTournament } = await import('./actions');
+    await expect(deleteTournament(deleteForm())).rejects.toBeInstanceOf(RedirectError);
+
+    expect({
+      redirect: lastRedirect(),
+      cupDeleted: supabaseMock.__fromCalls.some(
+        (c) => c.table === 'tournaments' && c.method === 'delete',
+      ),
+    }).toEqual({
+      redirect: '/klubber/club-1/cup/cup-1/slett?error=delete_failed',
+      cupDeleted: false,
+    });
+  });
+
+  it('startTournament counts the matches with the admin client', async () => {
+    adminMock = buildSupabaseMock([
+      { data: { group_id: 'club-1' }, error: null }, // gate
+      { count: 8 }, // games count
+    ]);
+    supabaseMock = buildSupabaseMock([
+      ...ownerGate(),
+      {
+        data: {
+          id: 'cup-1',
+          name: 'Klubbcup',
+          status: 'draft',
+          team_1_name: 'Lag 1',
+          team_2_name: 'Lag 2',
+          win_points: 1,
+          tie_points: 0.5,
+          planned_match_count: null,
+        },
+        error: null,
+      },
+      { data: [{ id: 'cup-1' }], error: null }, // status flip
+    ]);
+    setUser('owner-b');
+
+    const { startTournament } = await import('./actions');
+    await expect(startTournament(deleteForm())).rejects.toBeInstanceOf(RedirectError);
+
+    expect({
+      redirect: lastRedirect(),
+      adminCount: adminMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'select'),
+      requestCount: supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'select',
+      ),
+    }).toEqual({
+      redirect: '/klubber/club-1/cup/cup-1?status=started',
+      adminCount: true,
+      requestCount: false,
+    });
   });
 });
