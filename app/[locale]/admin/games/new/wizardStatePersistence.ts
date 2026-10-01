@@ -53,6 +53,7 @@ export type PersistedInitialValues = Pick<
   | 'course_id'
   | 'tee_box_id'
   | 'scheduled_tee_off_at'
+  | 'start_type'
   | 'hcp_allowance_pct'
   | 'require_peer_approval'
   | 'score_visibility'
@@ -175,6 +176,7 @@ export function wizardDraftFromState({
       course_id: state.courseId,
       tee_box_id: state.teeBoxId,
       scheduled_tee_off_at: state.scheduledTeeOffAt,
+      start_type: state.startType,
       hcp_allowance_pct: String(state.hcpAllowance),
       require_peer_approval: state.requirePeerApproval,
       // #1400: controlled state siden synlighets-valget måtte overleve en

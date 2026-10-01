@@ -5,6 +5,7 @@ import { getFriendIds } from '@/lib/friends/getFriendIds';
 import type { RegistrationMode } from './registration';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
+import type { StartType } from './startType';
 
 /**
  * Hjem-sidens «Funn turneringer»-seksjon (#257) henter listene via
@@ -26,6 +27,8 @@ type DiscoverableFormat = {
   game_mode: GameMode;
   mode_config: GameModeConfig;
   hole_segment: HoleSegment;
+  /** #2258 PR 2: «første start» / «shotgun» under the clock. */
+  start_type: StartType;
 };
 
 export type DiscoverableOpenGame = DiscoverableFormat & {
@@ -142,7 +145,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
     let clubQuery = admin
       .from('games')
       .select(
-        'id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, courses(name), groups(name)',
+        'id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)',
       )
       .in('group_id', myClubIds)
       .in('status', ['draft', 'scheduled'])
@@ -170,6 +173,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
         game_mode: row.game_mode,
         mode_config: row.mode_config,
         hole_segment: row.hole_segment,
+        start_type: row.start_type,
       };
     });
   }
@@ -188,7 +192,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
   if (friendIds.length > 0) {
     let friendQuery = admin
       .from('games')
-      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, game_mode, mode_config, hole_segment, courses(name)')
+      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, game_mode, mode_config, hole_segment, start_type, courses(name)')
       .in('created_by', friendIds)
       .in('registration_mode', ['open', 'manual_approval'])
       .in('status', ['draft', 'scheduled'])
@@ -226,6 +230,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
         game_mode: row.game_mode,
         mode_config: row.mode_config,
         hole_segment: row.hole_segment,
+        start_type: row.start_type,
       };
     });
   }
@@ -240,7 +245,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   let openQuery = admin
     .from('games')
-    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, courses(name)')
+    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, start_type, courses(name)')
     // Påmeldingsmåten ER synligheten: open + manual_approval er oppdagbare,
     // invite_only er privat (#357). Ingen egen synlighets-bryter.
     .in('registration_mode', ['open', 'manual_approval'])
@@ -267,6 +272,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
         game_mode: row.game_mode,
         mode_config: row.mode_config,
         hole_segment: row.hole_segment,
+        start_type: row.start_type,
       };
     },
   );

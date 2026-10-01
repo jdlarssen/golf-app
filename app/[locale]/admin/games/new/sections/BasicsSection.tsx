@@ -3,7 +3,8 @@
 /**
  * BasicsSection — første kort/seksjon i opprett-spill-flyten.
  *
- * Ansvar: spillnavn (valgfritt), bane- og tee-select og tee-off-datetime.
+ * Ansvar: spillnavn (valgfritt), bane- og tee-select, tee-off-datetime og
+ * «Shotgun-start» (#2258).
  * Wizard-en skjuler navnefeltet i steg 2. «Synlighet under runden» og
  * «Sideturnering» bor i AdvancedSettingsSection — begge flatene går dit
  * (#909), og den døde inline-kopien her er fjernet (#1660).
@@ -71,6 +72,8 @@ export function BasicsSection({
     setTeeBoxId,
     scheduledTeeOffAt,
     setScheduledTeeOffAt,
+    startType,
+    setStartType,
     selectedCourse,
     availableTees,
   } = state;
@@ -179,6 +182,24 @@ export function BasicsSection({
         // containeren (samme fiks som dato-feltene i CreateLigaForm, #453).
         inputClassName="min-w-0 appearance-none"
       />
+
+      {/* #2258: «Shotgun-start», off by default. Styled like the section's
+          other checkboxes (RegistrationSection); the wizard restyle (#2426)
+          can pick it up from here. No `name`: the form reads the always-
+          mounted `start_type` mirror in GameWizard / GameForm. */}
+      <label className="flex min-h-11 cursor-pointer items-start gap-2">
+        <input
+          type="checkbox"
+          checked={startType === 'shotgun'}
+          onChange={(e) => setStartType(e.target.checked ? 'shotgun' : 'first_tee')}
+          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
+          data-testid="shotgun-start"
+        />
+        <span>
+          <span className="block font-sans text-sm text-text">{t('shotgunLabel')}</span>
+          <span className="mt-0.5 block text-xs text-muted">{t('shotgunHint')}</span>
+        </span>
+      </label>
     </section>
   );
 }

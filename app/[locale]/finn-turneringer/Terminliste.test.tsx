@@ -25,6 +25,7 @@ function open(over: Partial<DiscoverableOpenGame>): DiscoverableOpenGame {
     game_mode: 'stableford',
     mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
     hole_segment: 'full',
+    start_type: 'first_tee',
     ...over,
   };
 }

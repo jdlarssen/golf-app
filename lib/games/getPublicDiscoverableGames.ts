@@ -4,6 +4,7 @@ import { isPubliclyViewable } from './publicSignupVisibility';
 import type { DiscoverableOpenGame } from './getDiscoverableGames';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
+import type { StartType } from './startType';
 
 /**
  * Anonym «Finn turneringer»-liste (#1185). Uinnloggede skal kunne SE åpne
@@ -31,7 +32,7 @@ export async function getPublicDiscoverableGames(): Promise<
   const { data } = await admin
     .from('games')
     .select(
-      'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, game_mode, mode_config, hole_segment, courses(name)',
+      'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, game_mode, mode_config, hole_segment, start_type, courses(name)',
     )
     // Påmeldingsmåten ER synligheten (#357): open + manual_approval er
     // oppdagbare, invite_only er privat. Speiler isPubliclyViewable.
@@ -43,7 +44,12 @@ export async function getPublicDiscoverableGames(): Promise<
     // #2258: format metadata for the terminliste row; only the Json/text
     // columns with a narrower app type are overridden.
     .overrideTypes<
-      Array<{ game_mode: GameMode; mode_config: GameModeConfig; hole_segment: HoleSegment }>
+      Array<{
+        game_mode: GameMode;
+        mode_config: GameModeConfig;
+        hole_segment: HoleSegment;
+        start_type: StartType;
+      }>
     >();
 
   return (data ?? [])
@@ -67,6 +73,7 @@ export async function getPublicDiscoverableGames(): Promise<
         game_mode: row.game_mode,
         mode_config: row.mode_config,
         hole_segment: row.hole_segment,
+        start_type: row.start_type,
       };
     });
 }

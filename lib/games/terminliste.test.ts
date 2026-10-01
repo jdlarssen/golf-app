@@ -39,6 +39,7 @@ function open(over: Partial<DiscoverableOpenGame> = {}): DiscoverableOpenGame {
     game_mode: 'stableford',
     mode_config: STABLEFORD,
     hole_segment: 'full',
+    start_type: 'first_tee',
     ...over,
   };
 }
@@ -55,6 +56,7 @@ function club(over: Partial<DiscoverableClubGame> = {}): DiscoverableClubGame {
     game_mode: 'stableford',
     mode_config: STABLEFORD,
     hole_segment: 'full',
+    start_type: 'first_tee',
     ...over,
   };
 }
@@ -71,6 +73,7 @@ function friend(over: Partial<DiscoverableFriendGame> = {}): DiscoverableFriendG
     game_mode: 'stableford',
     mode_config: STABLEFORD,
     hole_segment: 'full',
+    start_type: 'first_tee',
     ...over,
   };
 }
@@ -342,12 +345,21 @@ describe('capacityState', () => {
 });
 
 describe('terminTimeNote', () => {
-  it('nine holes → «9 hull»', () => {
-    expect(terminTimeNote({ hole_segment: 'front9' })).toBe('nine_holes');
-    expect(terminTimeNote({ hole_segment: 'back9' })).toBe('nine_holes');
+  const T = '2026-10-03T07:20:00Z';
+
+  it('nine holes → «9 hull», with or without a time and whatever the start', () => {
+    expect(terminTimeNote({ hole_segment: 'front9', start_type: 'shotgun', scheduled_tee_off_at: T })).toBe('nine_holes');
+    expect(terminTimeNote({ hole_segment: 'back9', start_type: 'first_tee', scheduled_tee_off_at: T })).toBe('nine_holes');
+    expect(terminTimeNote({ hole_segment: 'front9', start_type: 'first_tee', scheduled_tee_off_at: null })).toBe('nine_holes');
   });
 
-  it('eighteen holes → nothing (start type arrives in PR 2)', () => {
-    expect(terminTimeNote({ hole_segment: 'full' })).toBeNull();
+  it('eighteen holes with a time → the start type', () => {
+    expect(terminTimeNote({ hole_segment: 'full', start_type: 'shotgun', scheduled_tee_off_at: T })).toBe('shotgun');
+    expect(terminTimeNote({ hole_segment: 'full', start_type: 'first_tee', scheduled_tee_off_at: T })).toBe('first_tee');
+  });
+
+  it('no time (or an unreadable one) → nothing', () => {
+    expect(terminTimeNote({ hole_segment: 'full', start_type: 'shotgun', scheduled_tee_off_at: null })).toBeNull();
+    expect(terminTimeNote({ hole_segment: 'full', start_type: 'first_tee', scheduled_tee_off_at: 'nope' })).toBeNull();
   });
 });

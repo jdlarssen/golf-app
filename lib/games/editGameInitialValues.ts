@@ -1,3 +1,4 @@
+import type { StartType } from './startType';
 import 'server-only';
 import type { InitialValues } from '@/app/[locale]/admin/games/new/GameForm';
 import { buildSetupStepInitialValues } from '@/lib/games/setupStepInitialValues';
@@ -28,6 +29,9 @@ export type EditGameRow = {
   course_id: string | null;
   tee_box_id: string | null;
   scheduled_tee_off_at: string | null;
+  // #2258 — optional: the edit pages select it; the revansje prefill does
+  // not, so a rematch starts from the first tee unless the organiser ticks it.
+  start_type?: StartType;
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
   score_visibility: 'live' | 'reveal';
@@ -204,6 +208,8 @@ export function buildEditInitialValues(
         : undefined,
     registration_mode: game.registration_mode,
     registration_type: game.registration_type,
+    // #2258: pre-fills «Shotgun-start» so a save keeps it.
+    start_type: game.start_type,
     // #369: pre-fyller venn-skip-gate-checkbox i edit-flyten.
     let_friends_skip_gate: game.let_friends_skip_gate,
     // #1049: pre-fyller startkontingent + betalingsmåte. 0/utelatt → undefined

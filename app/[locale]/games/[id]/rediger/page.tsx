@@ -48,10 +48,10 @@ type SearchParams = Promise<{
 }>;
 
 // Every column the form writes back must be read here, or a save resets it:
-// GameForm posts let_friends_skip_gate from state, and state starts from these
-// values.
+// GameForm posts start_type (#2258) and let_friends_skip_gate from state, and
+// state starts from these values.
 const GAME_SELECT =
-  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
 
 export default async function CreatorEditGamePage({
   params,

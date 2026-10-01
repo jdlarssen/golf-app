@@ -287,6 +287,8 @@ async function updateGameInternal(
       course_id: payload.course_id,
       tee_box_id: payload.tee_box_id,
       scheduled_tee_off_at: scheduledTeeOffAt,
+      // #2258: same draft/scheduled gating as the tee-off (status filter below).
+      start_type: payload.start_type,
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
       // game_mode + mode_config skrives med samme optimistic-lock-mønster

@@ -391,6 +391,37 @@ describe('updateScheduledAction — mode-lock', () => {
   });
 });
 
+describe('updateScheduledAction — start_type (#2258)', () => {
+  // The edit form posts the «Shotgun-start» mirror; the update writes it, and
+  // a form without it (an older tab) writes the first-tee default.
+  it.each([
+    ['shotgun', 'shotgun'],
+    [undefined, 'first_tee'],
+  ] as const)('form start_type %j → games.update start_type %s', async (raw, expected) => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // games.select
+        { data: [], error: null }, // game_players.select (prior roster)
+        { data: { id: 'game-1' }, error: null }, // games.update
+        { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // game_players.insert
+      ],
+      { incomplete_profile_ids: [] },
+    );
+    signIn('admin-1');
+    const form = fullBestBallFormData();
+    if (raw !== undefined) form.set('start_type', raw);
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', form)).rejects.toBeInstanceOf(RedirectError);
+
+    const gameUpdate = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    expect((gameUpdate?.args[0] as { start_type: unknown }).start_type).toBe(expected);
+  });
+});
+
 describe('updateScheduledAction — mode_config-nøkler skjemaet ikke eier (#1677)', () => {
   it('beholder team_strokes_override på en planlagt cup-greensome', async () => {
     // Cup-generatoren har skrevet arrangørens manuelle lag-slag inn i

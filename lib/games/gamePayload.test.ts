@@ -152,6 +152,23 @@ describe('buildGameInsertPayload (draft mode)', () => {
     expect(result.errorCode).toBe('name_required');
   });
 
+  // #2258: «Shotgun-start». Only the checked value is a shotgun; a missing or
+  // stale field is a first-tee start, also on the error payload.
+  it.each([
+    ['shotgun', 'shotgun'],
+    ['first_tee', 'first_tee'],
+    [undefined, 'first_tee'],
+    ['on', 'first_tee'],
+  ] as const)('start_type %j → %s', (raw, expected) => {
+    const fields: Record<string, string> = { name: 'Lørdagsrunden' };
+    if (raw !== undefined) fields.start_type = raw;
+    expect(buildGameInsertPayload(fd(fields), 'draft').start_type).toBe(expected);
+  });
+
+  it('carries start_type on the error payload too', () => {
+    expect(buildGameInsertPayload(fd({ name: ' ', start_type: 'shotgun' }), 'draft').start_type).toBe('shotgun');
+  });
+
   it('accepts a partial player list without team-balance check', () => {
     const result = buildGameInsertPayload(
       fd({
