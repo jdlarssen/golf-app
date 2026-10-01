@@ -63,6 +63,6 @@ export async function submitScorecard(gameId: string, formData?: FormData) {
   // gets its own receipt, so it never reads as if every card went.
   const askedMates = new Set(alsoFor.filter((id) => id !== user.id)).size;
   const status =
-    result.ok && result.alsoDelivered < askedMates ? 'submitted_partial' : 'submitted';
+    result.alsoDelivered < askedMates ? 'submitted_partial' : 'submitted';
   redirect({ href: `/games/${gameId}?status=${status}`, locale });
 }
