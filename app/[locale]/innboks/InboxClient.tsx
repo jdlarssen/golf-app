@@ -80,7 +80,7 @@ export function InboxClient({
   const t = useTranslations('inbox');
   const tFinished = useTranslations('finishedCard');
   const locale = useLocale() as AppLocale;
-  const [, startTransition] = useTransition();
+  const [openPending, startTransition] = useTransition();
   const [markAllPending, startMarkAll] = useTransition();
   const [clearReadPending, startClearRead] = useTransition();
   const [decidePending, startDecide] = useTransition();
@@ -221,8 +221,10 @@ export function InboxClient({
 
   // Always mounted, so screen readers have the live region before a message
   // lands in it; empty, it takes no room.
+  // The key keeps it the same node when the inbox empties and refills.
   const statusLine = (
     <p
+      key="inbox-status"
       role="status"
       data-testid={status ? (status.tone === 'error' ? 'inbox-action-error' : 'inbox-status') : undefined}
       className={
@@ -235,10 +237,11 @@ export function InboxClient({
     </p>
   );
 
-  // While an action is on its way the pill keeps its label and waits (Mål 3):
+  // While any action is on its way the pill keeps its label and waits (Mål 3):
   // the optimistic update would otherwise flip it to «Tøm leste» at once, and a
-  // second tap could race the first one's rollback (#1394).
-  const pillBusy = markAllPending || clearReadPending;
+  // tap could race another action's rollback (#1394) — e.g. «Godta» fails, then
+  // «Marker alt lest» fails and puts back a list taken without the request.
+  const pillBusy = markAllPending || clearReadPending || decidePending || openPending;
   const pillMarksAll = markAllPending ? true : clearReadPending ? false : hasUnread;
   const header = (
     <div className="flex items-center justify-between pb-1.5 pl-5 pr-3 pt-4">
