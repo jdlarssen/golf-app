@@ -286,8 +286,12 @@ export function centeredLineTop(inner: number, line: number): number {
   return Math.round((inner - line) / 2);
 }
 
-/** Fraunces-vektene appen bruker: 500 til ord, 600 til tall og uthevinger. */
-type FrauncesWeight = 500 | 600;
+/**
+ * Fraunces-vektene appen bruker: 500 til ord, 600 til tall og uthevinger, og
+ * 400 der webben skriver `font-serif` uten vekt (Kavalkadens faner og
+ * Start/Nå/Beste, #2265).
+ */
+type FrauncesWeight = 400 | 500 | 600;
 
 /**
  * Fraunces-snittet for en vekt og størrelse (#2385). Nettleseren tegner

@@ -27,7 +27,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 
 SOURCE = 'Fraunces-VF.ttf'
 MODIFIED = TTFont(SOURCE)['head'].modified
-STYLE = {500: 'Medium', 600: 'SemiBold'}
+STYLE = {400: 'Regular', 500: 'Medium', 600: 'SemiBold'}
 
 
 def cut(opsz, weight, family, text=None):

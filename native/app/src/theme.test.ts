@@ -287,8 +287,8 @@ describe('fraunces', () => {
         if (entry.isDirectory()) walk(path);
         else if (/\.tsx?$/.test(entry.name) && !/\.test\./.test(entry.name)) {
           const src = readFileSync(path, 'utf8');
-          for (const m of src.matchAll(/fraunces(?:Family)?\((500|600),\s*([0-9.]+)\b/g)) {
-            const sizes: readonly number[] = FRAUNCES_SIZES[m[1] as '500' | '600'];
+          for (const m of src.matchAll(/fraunces(?:Family)?\((400|500|600),\s*([0-9.]+)\b/g)) {
+            const sizes: readonly number[] = FRAUNCES_SIZES[m[1] as '400' | '500' | '600'];
             if (!sizes.includes(Number(m[2]))) missing.push(`${path}: ${m[0]}`);
           }
         }
