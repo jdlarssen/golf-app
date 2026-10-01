@@ -1,6 +1,7 @@
 import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { chunkIds } from './inboxReads';
 import type { NotificationKind } from './types';
 
 export type MarkReadOpts = {
@@ -90,30 +91,40 @@ export type MarkIdsReadOpts = {
 
 /**
  * Marks exactly these notifications read for `userId` (#2263, a tap on a
- * group row in the inbox). By id rather than kind + game: one game can hold a
- * group of signup heads-ups AND a pending request that still needs an answer,
- * and marking the group must not mark the request.
+ * group row in the inbox, and the inbox's settle step). By id rather than
+ * kind + game: one game can hold a group of signup heads-ups AND a pending
+ * request that still needs an answer, and marking the group must not mark the
+ * request.
  *
- * Same authz as `markNotificationsRead`: the admin client, always scoped
+ * The ids travel in the request URL, so the write goes in slices of 100
+ * (`chunkIds`; a club-scale group holds 150). Same authz as
+ * `markNotificationsRead`: the admin client, every slice scoped
  * `.eq('user_id', userId)` with a server-derived id. Same 0-row rule as its
  * single-id branch (#1665): the caller points at rows it just saw unread, so a
- * write that touched none was filtered away and reports `false`.
+ * write that touched none of them was filtered away and reports `false`. A
+ * slice that touched none is fine as long as another one did (read elsewhere
+ * in the meantime); any slice that errors reports `false`.
  */
 export async function markNotificationIdsRead(opts: MarkIdsReadOpts): Promise<boolean> {
   if (opts.ids.length === 0) return true;
 
-  const { data, error } = await getAdminClient()
-    .from('notifications')
-    .update({ read_at: new Date().toISOString() })
-    .eq('user_id', opts.userId)
-    .in('id', opts.ids)
-    .is('read_at', null)
-    .select('id');
-  if (error) {
-    console.error('[notifications] markIdsRead failed', error);
-    return false;
+  const nowIso = new Date().toISOString();
+  let touched = 0;
+  for (const slice of chunkIds(opts.ids)) {
+    const { data, error } = await getAdminClient()
+      .from('notifications')
+      .update({ read_at: nowIso })
+      .eq('user_id', opts.userId)
+      .in('id', slice)
+      .is('read_at', null)
+      .select('id');
+    if (error) {
+      console.error('[notifications] markIdsRead failed', error);
+      return false;
+    }
+    touched += data?.length ?? 0;
   }
-  if ((data?.length ?? 0) === 0) {
+  if (touched === 0) {
     console.error('[notifications] markIdsRead matched 0 rows', { count: opts.ids.length });
     return false;
   }

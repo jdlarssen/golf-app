@@ -50,15 +50,19 @@ export async function markAllAsRead(): Promise<InboxActionResult> {
   return { ok: await markNotificationsRead({ userId }) };
 }
 
-/** A group row covers at most this many notifications (the inbox reads 600). */
-const MAX_GROUP_IDS = 100;
+/**
+ * The inbox shows at most 600 rows (500 unread + 100 read), so no group holds
+ * more; anything longer is not from the inbox. The write itself goes in
+ * slices of 100 (`markNotificationIdsRead`).
+ */
+const MAX_GROUP_IDS = 600;
 
 /**
  * Mark the rows behind one group row read (#2263): «4 scorekort levert»,
  * «3 nye påmeldinger», a read approval group. By id, never by kind + game —
  * see `markNotificationIdsRead`. The ids come from the client, so they are
- * checked (uuid shape, at most 100), and the write is scoped to the proxy's
- * user: someone else's id simply matches nothing.
+ * checked (uuid shape, at most what the inbox can show), and the write is
+ * scoped to the proxy's user: someone else's id simply matches nothing.
  */
 export async function markGroupAsRead(ids: string[]): Promise<InboxActionResult> {
   const userId = await getProxyVerifiedUserId();

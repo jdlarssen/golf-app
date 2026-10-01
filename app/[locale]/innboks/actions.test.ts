@@ -52,9 +52,16 @@ describe('markGroupAsRead', () => {
     expect(markIdsMock).toHaveBeenCalledWith({ userId: 'user-1', ids: [ID(1), ID(2)] });
   });
 
-  it('rejects more than 100 ids', async () => {
+  it('a club-scale group of 150 goes through (the write is sliced in the lib)', async () => {
     const { markGroupAsRead } = await import('./actions');
-    const ids = Array.from({ length: 101 }, (_, i) => ID(i + 1));
+    const ids = Array.from({ length: 150 }, (_, i) => ID(i + 1));
+    expect(await markGroupAsRead(ids)).toEqual({ ok: true });
+    expect(markIdsMock).toHaveBeenCalledWith({ userId: 'user-1', ids });
+  });
+
+  it('rejects more ids than the inbox can show (600)', async () => {
+    const { markGroupAsRead } = await import('./actions');
+    const ids = Array.from({ length: 601 }, (_, i) => ID(i + 1));
     expect(await markGroupAsRead(ids)).toEqual({ ok: false });
     expect(markIdsMock).not.toHaveBeenCalled();
   });

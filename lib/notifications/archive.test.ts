@@ -7,6 +7,9 @@ let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => supabaseMock,
+}));
 
 const revalidateTagMock = vi.fn();
 vi.mock('next/cache', () => ({
@@ -60,3 +63,22 @@ describe('archiveNotifications', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 });
+
+// #2263 follow-up: stale signup varsler can be many; the ids go in the URL.
+describe('archiveStaleNotifications in slices', () => {
+  it('250 ids → three updates of at most 100, each scoped to the user', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    const { archiveStaleNotifications } = await import('./archive');
+    const ids = Array.from({ length: 250 }, (_, i) => `n-${i}`);
+
+    expect(await archiveStaleNotifications({ userId: 'u1', ids })).toBe(true);
+    const ins = supabaseMock.__fromCalls.filter((c) => c.method === 'in');
+    expect(ins.map((c) => (c.args[1] as string[]).length)).toEqual([100, 100, 50]);
+    expect(supabaseMock.__fromCalls.filter((c) => c.method === 'eq' && c.args[0] === 'user_id')).toHaveLength(3);
+  });
+});
+
