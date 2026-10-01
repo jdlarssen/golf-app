@@ -66,15 +66,14 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
       { data: { id: 'l1', name: 'Test-liga', course_id: 'c1', tee_box_id: 'tb1', status: 'active', format: 'stroke' } },
       // 3. league_players (membership)
       { data: [{ user_id: 'u1' }, { user_id: 'u2' }] },
-      // 4. games (prior finished flights → none)
-      { data: [] },
-      // 5. users (tee_gender roster)
+      // 4. users (tee_gender roster)
       { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
-      // 6. game_players.insert (the payload under test)
+      // 5. game_players.insert (the payload under test)
       { error: null },
     ]);
+    // #2214: the round's prior flights are read by the admin client (none);
     // #2207: the flight game itself is inserted by the admin client.
-    adminMock = buildSupabaseMock([{ data: { id: 'g1' }, error: null }]);
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g1' }, error: null }]);
     setUser('u1');
 
     const { startLeagueRoundFlight } = await import('./actions');
@@ -116,11 +115,10 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
       },
       { data: { id: 'l1', name: 'Test-liga', course_id: 'c1', tee_box_id: 'tb1', status: 'active', format: 'stroke' } },
       { data: [{ user_id: 'u1' }, { user_id: 'u2' }] },
-      { data: [] },
       { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
       { error: null },
     ]);
-    adminMock = buildSupabaseMock([{ data: { id: 'g1' }, error: null }]);
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g1' }, error: null }]);
     setUser('u1');
 
     const { startLeagueRoundFlight } = await import('./actions');
@@ -133,6 +131,134 @@ describe('startLeagueRoundFlight — game_players insert (#647)', () => {
     expect(
       supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
     ).toBe(false);
+  });
+});
+
+/**
+ * #2214: one counted flight per player per round. The gate checks everyone in
+ * the new flight, not just the player who starts it, and a flight that is
+ * still being played locks its players too. The read runs on the admin client:
+ * the starter cannot see a co-player's flight under the games SELECT policy, so
+ * a request-client read would come back empty and let everyone through.
+ *
+ * Request-client queue: 1. round · 2. league · 3. membership · 4. tee roster ·
+ * 5. game_players insert. Admin-client queue: 1. the round's flights for the
+ * new flight's players · 2. the games insert.
+ */
+describe('startLeagueRoundFlight — one counted flight per player (#2214)', () => {
+  const requestQueue = () => [
+    {
+      data: {
+        id: 'r1',
+        league_id: 'l1',
+        course_id: 'c1',
+        tee_box_id: 'tb1',
+        opens_at: '2000-01-01T00:00:00Z',
+        closes_at: '2099-01-01T00:00:00Z',
+        original_closes_at: '2099-01-01T00:00:00Z',
+      },
+    },
+    { data: { id: 'l1', name: 'Test-liga', course_id: 'c1', tee_box_id: 'tb1', status: 'active', format: 'stroke' } },
+    { data: [{ user_id: 'u1' }, { user_id: 'u2' }] },
+    { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
+    { error: null },
+  ];
+  // The request client gets its own empty games answer: that is what the
+  // starter's client sees of a co-player's flight under RLS. Before #2214 the
+  // gate read there, so a locked co-player went straight through to the insert.
+  const requestClient = () =>
+    buildSupabaseMock(requestQueue(), {}, { byTable: { games: [{ data: [] }] } });
+  const flightOf = (status: string, userId: string, withdrawnAt: string | null = null) => ({
+    id: `g-${userId}`,
+    status,
+    game_players: [{ user_id: userId, withdrawn_at: withdrawnAt }],
+  });
+  const insertedAnything = () =>
+    adminMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert') ||
+    supabaseMock.__fromCalls.some((c) => c.method === 'insert');
+
+  it('refuses a co-player who already delivered the round, before any insert', async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([{ data: [flightOf('finished', 'u2')] }, { data: { id: 'g1' } }]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    expect(await startLeagueRoundFlight('r1', ['u2'])).toEqual({ error: 'co_player_locked' });
+    expect(insertedAnything()).toBe(false);
+  });
+
+  it('refuses a co-player who is playing the round in another flight', async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([{ data: [flightOf('active', 'u2')] }, { data: { id: 'g1' } }]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    expect(await startLeagueRoundFlight('r1', ['u2'])).toEqual({ error: 'co_player_locked' });
+    expect(insertedAnything()).toBe(false);
+  });
+
+  it('refuses the starter with flight_in_progress while their own flight is open', async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([{ data: [flightOf('scheduled', 'u1')] }, { data: { id: 'g1' } }]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    expect(await startLeagueRoundFlight('r1', ['u2'])).toEqual({ error: 'flight_in_progress' });
+    expect(insertedAnything()).toBe(false);
+  });
+
+  it('refuses the starter with already_played once they delivered', async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([{ data: [flightOf('finished', 'u1')] }, { data: { id: 'g1' } }]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    expect(await startLeagueRoundFlight('r1', ['u2'])).toEqual({ error: 'already_played' });
+    expect(insertedAnything()).toBe(false);
+  });
+
+  it("reads the round's flights for the whole new flight on the admin client", async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g1' } }]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    await expect(startLeagueRoundFlight('r1', ['u2'])).rejects.toBeInstanceOf(RedirectError);
+
+    const adminGames = adminMock.__fromCalls.filter((c) => c.table === 'games');
+    expect(adminGames.find((c) => c.method === 'eq')?.args).toEqual(['league_round_id', 'r1']);
+    expect(
+      adminGames.find((c) => c.method === 'in' && c.args[0] === 'game_players.user_id')?.args[1],
+    ).toEqual(['u1', 'u2']);
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'select'),
+      'no games read on the request client',
+    ).toBe(false);
+  });
+
+  it('a co-player who withdrew from their finished flight may play again', async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([
+      { data: [flightOf('finished', 'u2', '2026-06-15T19:00:00Z')] },
+      { data: { id: 'g1' } },
+    ]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    await expect(startLeagueRoundFlight('r1', ['u2'])).rejects.toBeInstanceOf(RedirectError);
+  });
+
+  it('a failed read refuses with round_check_failed and inserts nothing', async () => {
+    supabaseMock = requestClient();
+    adminMock = buildSupabaseMock([
+      { data: null, error: { message: 'boom' } },
+      { data: { id: 'g1' } },
+    ]);
+    setUser('u1');
+    const { startLeagueRoundFlight } = await import('./actions');
+
+    expect(await startLeagueRoundFlight('r1', ['u2'])).toEqual({ error: 'round_check_failed' });
+    expect(insertedAnything()).toBe(false);
   });
 });
 
@@ -431,18 +557,17 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
       { data: { id: 'l1', name: 'Test-liga', course_id: 'c1', tee_box_id: 'tb1', status: 'active', format: 'stroke' } },
       // 3. membership
       { data: [{ user_id: 'u1' }, { user_id: 'u2' }] },
-      // 4. prior finished flights → none
-      { data: [] },
-      // 5. tee_gender roster
+      // 4. tee_gender roster
       { data: [{ id: 'u1', gender: 'mens' }, { id: 'u2', gender: 'ladies' }] },
-      // 6. game_players.insert FAILS
+      // 5. game_players.insert FAILS
       { error: { message: 'boom' } },
-      // 7. rollback: games.delete().eq('id','g1') — the player's own client,
+      // 6. rollback: games.delete().eq('id','g1') — the player's own client,
       //    under "games creator delete" (created_by is the player)
       { error: null },
     ]);
+    // #2214: prior flights for the round (none) are read by the admin client;
     // #2207: games.insert(...).select('id').single runs on the admin client.
-    adminMock = buildSupabaseMock([{ data: { id: 'g1' }, error: null }]);
+    adminMock = buildSupabaseMock([{ data: [] }, { data: { id: 'g1' }, error: null }]);
     setUser('u1');
     const { startLeagueRoundFlight } = await import('./actions');
 
@@ -457,8 +582,7 @@ describe('startLeagueRoundFlight — rollback on game_players failure (#737)', (
       (c) => c.table === 'games' && c.method === 'delete',
     );
     expect(delIdx, 'games.delete issued for rollback').toBeGreaterThanOrEqual(0);
-    // The `eq` that targets the rollback delete is the first games-eq after it
-    // (earlier games-eq calls belong to the prior-finished-flights query).
+    // The `eq` that targets the rollback delete is the first games-eq after it.
     const eqAfter = calls
       .slice(delIdx)
       .find((c) => c.table === 'games' && c.method === 'eq');

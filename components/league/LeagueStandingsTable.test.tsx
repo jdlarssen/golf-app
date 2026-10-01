@@ -25,6 +25,7 @@ const mkRound = (id: string, sequence: number): LeagueRoundView => ({
   flaggedFlights: 0,
   flightCount: 1,
   deliveredUserIds: [],
+  inProgressUserIds: [],
 });
 const rounds: LeagueRoundView[] = [mkRound('r1', 1), mkRound('r2', 2)];
 

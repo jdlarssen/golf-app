@@ -7,6 +7,13 @@ import { Banner } from '@/components/ui/Banner';
 import { startLeagueRoundFlight } from '@/lib/league/actions';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 
+/**
+ * #2214: a co-player who has delivered the round or is playing it in another
+ * flight cannot be put in a new flight (roundPlayerLocks; the server refuses
+ * with `co_player_locked`). Null = free to pick.
+ */
+export type RoundCoPlayer = LeagueParticipant & { lock: 'delivered' | 'in_progress' | null };
+
 function playerDisplayName(p: LeagueParticipant, unknownLabel: string): string {
   return p.nickname ?? p.name ?? unknownLabel;
 }
@@ -17,7 +24,7 @@ export function RoundStartClient({
 }: {
   roundId: string;
   /** All other league participants (not the current user). */
-  coPlayers: LeagueParticipant[];
+  coPlayers: RoundCoPlayer[];
 }) {
   const t = useTranslations('liga.player.runde');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -66,23 +73,31 @@ export function RoundStartClient({
           </legend>
           <ul className="space-y-2">
             {coPlayers.map((p) => {
-              const checked = selected.has(p.userId);
+              const locked = p.lock !== null;
+              const checked = !locked && selected.has(p.userId);
               return (
                 <li key={p.userId}>
                   <label
                     data-testid={`liga-round-start-player-${p.userId}`}
+                    data-locked={p.lock ?? undefined}
+                    aria-disabled={locked ? 'true' : undefined}
                     className={[
-                      'flex items-center gap-3 cursor-pointer rounded-xl border px-4 py-3 transition-colors min-h-[44px]',
-                      checked
-                        ? 'border-primary bg-primary-soft'
-                        : 'border-border bg-surface hover:bg-primary-soft/50',
+                      'flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors min-h-[44px]',
+                      locked
+                        ? 'cursor-not-allowed border-border bg-surface opacity-60'
+                        : checked
+                          ? 'cursor-pointer border-primary bg-primary-soft'
+                          : 'cursor-pointer border-border bg-surface hover:bg-primary-soft/50',
                     ].join(' ')}
                   >
                     <input
                       type="checkbox"
                       className="sr-only"
                       checked={checked}
-                      onChange={() => togglePlayer(p.userId)}
+                      disabled={locked}
+                      onChange={() => {
+                        if (!locked) togglePlayer(p.userId);
+                      }}
                     />
                     {/* Visual checkbox */}
                     <span
@@ -109,6 +124,11 @@ export function RoundStartClient({
                     <span className="font-sans text-sm text-text">
                       {playerDisplayName(p, t('unknownPlayer'))}
                     </span>
+                    {locked && (
+                      <span className="ml-auto font-sans text-xs text-muted">
+                        {p.lock === 'delivered' ? t('lockDelivered') : t('lockInProgress')}
+                      </span>
+                    )}
                   </label>
                 </li>
               );

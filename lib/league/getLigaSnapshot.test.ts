@@ -337,6 +337,22 @@ describe('getLigaSnapshot — per-round deliveredUserIds (#740)', () => {
     expect(snap).not.toBeNull();
     expect(snap!.rounds[0].deliveredUserIds).not.toContain('U3');
   });
+
+  it('#2214: lists a player in an active flight under inProgressUserIds, not a withdrawn one', async () => {
+    supabaseMock = buildQueue(
+      [
+        { game_id: 'g1', user_id: 'U4', course_handicap: 18, tee_gender: 'mens', submitted_at: null, withdrawn_at: null },
+        { game_id: 'g1', user_id: 'U5', course_handicap: 18, tee_gender: 'mens', submitted_at: null, withdrawn_at: '2026-06-15T19:00:00Z' },
+      ],
+      'active',
+    );
+    const { getLigaSnapshot } = await import('@/lib/league/getLigaSnapshot');
+    const snap = await getLigaSnapshot('l1');
+    expect({
+      inProgress: snap!.rounds[0].inProgressUserIds,
+      delivered: snap!.rounds[0].deliveredUserIds,
+    }).toEqual({ inProgress: ['U4'], delivered: [] });
+  });
 });
 
 describe('getLigaSnapshot — game_players over 1 000 rader (#2227)', () => {

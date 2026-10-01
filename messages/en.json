@@ -4719,6 +4719,8 @@
         "startButton": "Start flight",
         "startPending": "Starting flight …",
         "unknownPlayer": "Unknown player",
+        "lockDelivered": "Delivered",
+        "lockInProgress": "Playing now",
         "errorMap": {
           "need_marker": "You must select at least one playing partner.",
           "outside_window": "The round is not open for play right now.",
@@ -4730,6 +4732,9 @@
           "round_not_found": "Round not found.",
           "league_not_found": "League not found.",
           "insert_failed": "Something went wrong while creating the flight. Please try again.",
+          "flight_in_progress": "You're already in a flight for this round. Finish it or withdraw from it first.",
+          "co_player_locked": "One of your playing partners has already delivered this round or is playing it now. Reload the page and choose again.",
+          "round_check_failed": "Could not check who has already played the round. Try again in a moment.",
           "fallback": "Something went wrong, please try again."
         }
       }

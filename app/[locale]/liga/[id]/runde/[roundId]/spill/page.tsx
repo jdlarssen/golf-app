@@ -12,7 +12,7 @@ import {
   formatShortDateWithYearLocale,
   formatShortOsloDateWithYearLocale,
 } from '@/lib/i18n/format';
-import { RoundStartClient } from './RoundStartClient';
+import { RoundStartClient, type RoundCoPlayer } from './RoundStartClient';
 import type { AppLocale } from '@/i18n/routing';
 
 
@@ -72,8 +72,22 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
 
   const ws = windowStatus(round!.opensAt, round!.closesAt);
 
+  // #2214: one counted flight per player per round. A player who delivered the
+  // round or is playing it now is locked (roundPlayerLocks via the snapshot).
+  const lockOf = (userId: string): RoundCoPlayer['lock'] =>
+    round!.deliveredUserIds.includes(userId)
+      ? 'delivered'
+      : round!.inProgressUserIds.includes(userId)
+        ? 'in_progress'
+        : null;
+  // Opened by direct URL while locked: say why instead of showing the form.
+  // The texts are the server gate's own refusals.
+  const selfLock = lockOf(currentUserId!);
+
   // Co-players = all participants except the current user.
-  const coPlayers = participants.filter((p: { userId: string }) => p.userId !== currentUserId);
+  const coPlayers: RoundCoPlayer[] = participants
+    .filter((p: { userId: string }) => p.userId !== currentUserId)
+    .map((p) => ({ ...p, lock: lockOf(p.userId) }));
 
   return (
     <AppShell>
@@ -116,8 +130,22 @@ export default async function RoundSpillPage({ params }: { params: Params }) {
         </Card>
       )}
 
+      {/* Ready, but you already delivered or are playing the round */}
+      {ws === 'open' && round!.courseId && round!.teeBoxId && selfLock && (
+        <Card className="space-y-4">
+          <p className="text-sm text-text" data-testid="liga-round-start-self-locked">
+            {selfLock === 'delivered'
+              ? t('errorMap.already_played')
+              : t('errorMap.flight_in_progress')}
+          </p>
+          <LinkButton href={`/liga/${leagueId}`} variant="secondary" full>
+            {t('backToLeague')}
+          </LinkButton>
+        </Card>
+      )}
+
       {/* Ready to start */}
-      {ws === 'open' && round!.courseId && round!.teeBoxId && (
+      {ws === 'open' && round!.courseId && round!.teeBoxId && !selfLock && (
         <Card>
           <p className="text-sm text-muted mb-5">
             {t('markerRule')}

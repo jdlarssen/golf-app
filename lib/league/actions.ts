@@ -17,6 +17,7 @@ import { teeGenderOf } from '@/lib/games/teeGender';
 import { generateRounds } from './generateRounds';
 import { ligaBasePath } from './ligaPaths';
 import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
+import { roundPlayerLocks } from './roundLocks';
 import type { TablesUpdate } from '@/lib/database.types';
 import type {
   CourseScope,
@@ -757,16 +758,36 @@ export async function startLeagueRoundFlight(
   const memberSet = new Set((members ?? []).map((m) => m.user_id));
   if (!flightIds.every((id) => memberSet.has(id))) return { error: 'not_member' };
 
-  // Block a second counted flight: already in a finished, non-withdrawn flight
-  // for this round.
-  const { data: priorGames } = await supabase
+  // #2214: one counted flight per player per round. Nobody in the new flight
+  // may already have delivered the round or be playing it in another flight
+  // (roundPlayerLocks). The read runs on the admin client: under the games
+  // SELECT policy the starter cannot see a co-player's flight, so a
+  // request-client read comes back empty and lets everyone through. The caller
+  // is signed in and everyone in flightIds is a member (checked above); the
+  // read is bounded to one round and these few players, so it needs no paging.
+  // A failed read refuses: never a silent pass (I3).
+  const { data: roundFlights, error: fErr } = await getAdminClient()
     .from('games')
     .select('id, status, game_players!inner(user_id, withdrawn_at)')
     .eq('league_round_id', roundId)
-    .eq('status', 'finished')
-    .eq('game_players.user_id', user.id);
-  if ((priorGames ?? []).some((g) => (g.game_players as { withdrawn_at: string | null }[]).some((p) => p.withdrawn_at === null))) {
-    return { error: 'already_played' };
+    .in('status', ['scheduled', 'active', 'finished'])
+    .in('game_players.user_id', flightIds);
+  if (fErr || !roundFlights) {
+    console.error('[league] startLeagueRoundFlight round check failed', { roundId, error: fErr });
+    return { error: 'round_check_failed' };
+  }
+  const locks = roundPlayerLocks(
+    roundFlights.map((g) => ({
+      status: g.status,
+      players: (g.game_players as Array<{ user_id: string; withdrawn_at: string | null }>).map(
+        (p) => ({ userId: p.user_id, withdrawnAt: p.withdrawn_at }),
+      ),
+    })),
+  );
+  if (locks.delivered.has(user.id)) return { error: 'already_played' };
+  if (locks.inProgress.has(user.id)) return { error: 'flight_in_progress' };
+  if (flightIds.some((id) => locks.delivered.has(id) || locks.inProgress.has(id))) {
+    return { error: 'co_player_locked' };
   }
 
   // tee_gender per player from profile.

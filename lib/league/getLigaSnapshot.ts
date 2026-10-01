@@ -5,6 +5,7 @@ import type { TeeGender } from '@/lib/games/teeRating';
 import { computeLeagueStandings } from './computeLeagueStandings';
 import { computeFlightRoundValues } from './roundScoring';
 import { isPointsBasedFormat } from './flightFormat';
+import { roundPlayerLocks, type RoundFlight } from './roundLocks';
 import type {
   LeagueFormat,
   LeagueRoundInput,
@@ -55,12 +56,17 @@ export type LeagueRoundView = {
   flightCount: number;
   /**
    * #740: User IDs who have a finished, non-withdrawn flight on this round.
-   * Mirrors the server gate in startLeagueRoundFlight:
-   *   status === 'finished' AND game_player.withdrawn_at === null
-   * A withdrawn player is NOT in this set (they can start a new flight).
-   * A started-but-not-finished player is NOT in this set either.
+   * Same rule as the server gate in startLeagueRoundFlight (roundPlayerLocks,
+   * #2214). A withdrawn player is NOT in this set (they can start a new
+   * flight). A started-but-not-finished player is in `inProgressUserIds`.
    */
   deliveredUserIds: string[];
+  /**
+   * #2214: User IDs in a scheduled or active, non-withdrawn flight on this
+   * round. They cannot be put in another flight until it is finished or they
+   * withdraw (roundPlayerLocks).
+   */
+  inProgressUserIds: string[];
 };
 
 export type LeagueRow = {
@@ -233,24 +239,6 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   const gamePlayers = (playersRes.data ?? []) as PlayerRow[];
   const gameScores = (scoresRes.data ?? []) as ScoreRow[];
 
-  // #740: per-round set of users who have a finished, non-withdrawn flight.
-  // Mirrors the server gate in startLeagueRoundFlight (actions.ts:656-663):
-  //   status === 'finished' AND game_player.withdrawn_at === null
-  // A withdrawn player is excluded (they can start fresh).
-  // A started-but-not-finished player is excluded (status !== 'finished').
-  const deliveredByRound = new Map<string, Set<string>>();
-  for (const game of games) {
-    if (game.status !== 'finished' || !game.league_round_id) continue;
-    const roundId = game.league_round_id;
-    for (const gp of gamePlayers) {
-      if (gp.game_id === game.id && gp.withdrawn_at === null) {
-        const set = deliveredByRound.get(roundId) ?? new Set<string>();
-        set.add(gp.user_id);
-        deliveredByRound.set(roundId, set);
-      }
-    }
-  }
-
   // #452 Fase 3: a participant has "played" once they delivered a scorecard in
   // any of the league's flights — gates the self-leave button + RPC.
   const playedUserIds = new Set(
@@ -321,6 +309,21 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     const arr = playersByGame.get(p.game_id) ?? [];
     arr.push(p);
     playersByGame.set(p.game_id, arr);
+  }
+  // #740/#2214: per-round locks (delivered / in progress), the same rule the
+  // server gate in startLeagueRoundFlight applies (roundPlayerLocks).
+  const flightsByRound = new Map<string, RoundFlight[]>();
+  for (const game of games) {
+    if (!game.league_round_id) continue;
+    const arr = flightsByRound.get(game.league_round_id) ?? [];
+    arr.push({
+      status: game.status,
+      players: (playersByGame.get(game.id) ?? []).map((gp) => ({
+        userId: gp.user_id,
+        withdrawnAt: gp.withdrawn_at,
+      })),
+    });
+    flightsByRound.set(game.league_round_id, arr);
   }
   const scoresByGame = new Map<string, ScoreRow[]>();
   for (const s of gameScores) {
@@ -421,20 +424,24 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     gross: league.scoring === 'gross' || league.scoring === 'both' ? standingsFor('gross') : null,
   };
 
-  const roundViews: LeagueRoundView[] = rounds.map((r) => ({
-    id: r.id,
-    sequence: r.sequence,
-    label: r.label,
-    courseId: r.course_id,
-    teeBoxId: r.tee_box_id,
-    opensAt: r.opens_at,
-    closesAt: r.closes_at,
-    originalClosesAt: r.original_closes_at,
-    windowOverriddenAt: r.window_overridden_at,
-    flaggedFlights: flaggedByRound.get(r.id) ?? 0,
-    flightCount: flightCountByRound.get(r.id) ?? 0,
-    deliveredUserIds: Array.from(deliveredByRound.get(r.id) ?? []),
-  }));
+  const roundViews: LeagueRoundView[] = rounds.map((r) => {
+    const locks = roundPlayerLocks(flightsByRound.get(r.id) ?? []);
+    return {
+      id: r.id,
+      sequence: r.sequence,
+      label: r.label,
+      courseId: r.course_id,
+      teeBoxId: r.tee_box_id,
+      opensAt: r.opens_at,
+      closesAt: r.closes_at,
+      originalClosesAt: r.original_closes_at,
+      windowOverriddenAt: r.window_overridden_at,
+      flaggedFlights: flaggedByRound.get(r.id) ?? 0,
+      flightCount: flightCountByRound.get(r.id) ?? 0,
+      deliveredUserIds: Array.from(locks.delivered),
+      inProgressUserIds: Array.from(locks.inProgress),
+    };
+  });
 
   return { league, rounds: roundViews, participants, standings };
 }

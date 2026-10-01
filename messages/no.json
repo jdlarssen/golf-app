@@ -4719,6 +4719,8 @@
         "startButton": "Start flight",
         "startPending": "Starter flight …",
         "unknownPlayer": "Ukjent spiller",
+        "lockDelivered": "Har levert",
+        "lockInProgress": "Spiller nå",
         "errorMap": {
           "need_marker": "Du må velge minst én medspiller.",
           "outside_window": "Runden er ikke åpen for spill nå.",
@@ -4730,6 +4732,9 @@
           "round_not_found": "Fant ikke runden.",
           "league_not_found": "Fant ikke ligaen.",
           "insert_failed": "Noe gikk galt under oppretting av flight. Prøv igjen.",
+          "flight_in_progress": "Du er allerede med i en flight i denne runden. Spill den ferdig eller trekk deg fra den først.",
+          "co_player_locked": "En av medspillerne har allerede levert denne runden eller spiller den nå. Last inn siden på nytt og velg igjen.",
+          "round_check_failed": "Klarte ikke å sjekke hvem som allerede har spilt runden. Prøv igjen om litt.",
           "fallback": "Noe gikk galt, prøv igjen."
         }
       }
