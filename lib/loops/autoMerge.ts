@@ -60,6 +60,8 @@ export const NEVER_AUTO_MERGE_RULES: ReadonlyArray<{ glob: string; ownerReason: 
   { glob: 'native/app/src/data/account.ts', ownerReason: AUTH },
   { glob: 'native/app/src/data/logout.ts', ownerReason: AUTH },
   { glob: 'native/app/src/data/webApi.ts', ownerReason: AUTH },
+  // #2216: appen ber om innloggingskode og kjører stegene etter innloggingen her.
+  { glob: 'native/app/src/data/loginCode.ts', ownerReason: AUTH },
   { glob: 'native/app/src/supabase.ts', ownerReason: AUTH },
   { glob: 'native/app/src/lib/loginCopy.ts', ownerReason: AUTH },
   { glob: 'native/app/src/lib/accountCopy.ts', ownerReason: AUTH },
