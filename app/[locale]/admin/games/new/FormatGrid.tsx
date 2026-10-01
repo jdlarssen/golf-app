@@ -250,7 +250,16 @@ export function FormatGrid({
             </span>
           </span>
           {!selected && (
-            <span aria-hidden="true" className="font-sans text-base leading-[normal] text-primary">
+            // The artboard's «→» is the system font's arrow: Inter as Google
+            // Fonts serves it has no U+2192, so the browser falls through to
+            // system-ui. The app's own stack would fall to the Arial-based
+            // Inter fallback instead (a longer arrow), so the arrow names
+            // system-ui itself and matches the artboard on every device.
+            <span
+              aria-hidden="true"
+              className="text-base font-normal leading-[normal] text-primary"
+              style={{ fontFamily: 'system-ui, sans-serif' }}
+            >
               →
             </span>
           )}
