@@ -47,10 +47,6 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['getAdminClient()'],
     reason: B,
   },
-  'app/[locale]/admin/games/[id]/signups/actions.ts': {
-    receivers: ['admin', 'admin'],
-    reason: '(c) serverside utsending av svar på påmelding',
-  },
   'app/[locale]/admin/games/[id]/signups/page.tsx': {
     receivers: ['getAdminClient()'],
     reason: B,
@@ -168,6 +164,11 @@ const ALLOWED: Record<string, Allowed> = {
   'lib/games/newGameFormData.ts': {
     receivers: ['getAdminClient()'],
     reason: `${B}: bare når includeEmail er satt og kalleren er admin`,
+  },
+  // #2263: moved from `app/[locale]/admin/games/[id]/signups/actions.ts`.
+  'lib/games/registrationDecisionCore.ts': {
+    receivers: ['admin', 'admin'],
+    reason: '(c) serverside utsending av svar på påmelding',
   },
   'lib/games/remindUnsubmitted.ts': {
     receivers: ['admin'],
