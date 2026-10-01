@@ -83,9 +83,10 @@ export type TournamentDeletionPlan = {
  * request-scoped read from a non-global-admin club-admin would silently see
  * ZERO scores for an actively-played match and misclassify it as
  * never-played. That is a data-loss risk, not just a UX gap, so this read
- * path does not depend on the caller's own RLS visibility. The actual
- * DELETE in `deleteTournament` stays on the request-scoped client — see
- * that function's own comment for why.
+ * path does not depend on the caller's own RLS visibility. The DELETE in
+ * `deleteTournament` runs on the admin client too (#2214): the games DELETE
+ * policy only lets a match's creator delete it, so another club admin could
+ * not remove matches someone else generated — see that function's comment.
  */
 export async function planTournamentGameDeletion(
   tournamentId: string,

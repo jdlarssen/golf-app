@@ -184,7 +184,11 @@ export async function startTournament(formData: FormData) {
   const base = cupRedirectBase(id, groupId);
 
   // Krev minst 2 matches før start (per kontrakt-success-kriterium).
-  const { count } = await supabase
+  // #2214: tellingen går på admin-klienten. Kampene eies av den som genererte
+  // dem, og games-RLS lar bare oppretteren (eller en global admin) se dem: en
+  // annen klubbadmin så 0 og fikk too_few_matches. Gaten over har kjørt
+  // (samme grunn som finishTournament og slettingen).
+  const { count } = await getAdminClient()
     .from('games')
     .select('id', { head: true, count: 'exact' })
     .eq('tournament_id', id);
@@ -1031,19 +1035,33 @@ export async function deleteTournament(formData: FormData) {
   // hjemmeskjerm. Avledede matcher trenger ingen egen sletting her: FK-en
   // `source_game_id … on delete cascade` (migrasjon 0151) tar dem automatisk
   // når verten deres slettes under.
+  //
+  // #2214: slettingen går på admin-klienten. Kampene eies av den som genererte
+  // dem, og games-DELETE-policyen krever `created_by = auth.uid()` eller
+  // `is_admin()`. En annen klubbadmin (for eksempel klubbeieren) fikk 0 rader
+  // og delete_failed, eller slettet bare sine egne mens resten ble frittstående
+  // planlagte spill på hjemskjermen. `requireAdminOrClubAdminOfCup` over har
+  // gjort autorisasjonen, samme mønster som finishTournament.
+  // `.eq('tournament_id')` er et ekstra vern nå som RLS ikke står bak, og
+  // `.neq('status', 'finished')` verner mot en kamp som ble ferdig etter planen
+  // ble lest (TOCTOU). Alle planlagte rader må gå: ellers stopper vi FØR
+  // cup-raden slettes, så ingen kamp strandes, og et nytt forsøk lager en ny plan.
   const plan = await planTournamentGameDeletion(id);
   if (plan.hostIdsToDelete.length > 0) {
-    try {
-      expectAffected(
-        await supabase
-          .from('games')
-          .delete()
-          .in('id', plan.hostIdsToDelete)
-          .select('id'),
-        'deleteTournament neverPlayedGames',
-      );
-    } catch (err) {
-      console.error('[cup] deleteTournament neverPlayedGames failed', { id, err });
+    const { data: deleted, error: deleteError } = await getAdminClient()
+      .from('games')
+      .delete()
+      .in('id', plan.hostIdsToDelete)
+      .eq('tournament_id', id)
+      .neq('status', 'finished')
+      .select('id');
+    if (deleteError || (deleted ?? []).length !== plan.hostIdsToDelete.length) {
+      console.error('[cup] deleteTournament neverPlayedGames failed', {
+        id,
+        planned: plan.hostIdsToDelete.length,
+        deleted: deleted?.length ?? 0,
+        error: deleteError,
+      });
       redirect(deleteErrorPath);
     }
   }
