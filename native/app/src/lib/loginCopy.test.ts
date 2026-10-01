@@ -27,6 +27,7 @@ import {
   classifyVerifyError,
   describeLoginError,
   formatCountdown,
+  maskSentToEmail,
   resendWaitSeconds,
   type LoginErrorCode,
 } from './loginCopy';
@@ -171,6 +172,22 @@ describe('nedtellingen til ny kode', () => {
   it('teller åtte siffer, som Supabase og nettsiden', () => {
     expect(OTP_LENGTH).toBe(8);
     expect(LOGIN_TEXT.codeHint).toMatch(/åtte siffer/);
+  });
+});
+
+// #2216: «Vi sendte den til k••••@firma.no» på kode-steget, som i designet
+// (Innlogging-forslag): første tegn, én prikk per resten av lokaldelen, og
+// hele domenet.
+describe('maskSentToEmail', () => {
+  it.each<[string, string]>([
+    ['kjell@example.test', 'k••••@example.test'],
+    ['kari@example.test', 'k•••@example.test'],
+    ['ola.nordmann@example.com', 'o•••••••••••@example.com'],
+    ['a@example.test', 'a@example.test'],
+    ['ikke-en-adresse', 'ikke-en-adresse'],
+    ['', ''],
+  ])('«%s» → «%s»', (email, shown) => {
+    expect(maskSentToEmail(email)).toBe(shown);
   });
 });
 

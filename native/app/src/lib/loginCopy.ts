@@ -63,6 +63,21 @@ export function resendWaitSeconds(sentAtMs: number, nowMs: number): number {
   return Math.min(RESEND_SECONDS, Math.max(0, RESEND_SECONDS - elapsed));
 }
 
+/**
+ * Adressen i «Vi sendte den til …» på kode-steget: første tegn, én prikk per
+ * resten av lokaldelen, og hele domenet — «k••••@firma.no», som i designet
+ * (Innlogging-forslag). Uten `@` (eller tom) står den som den er.
+ *
+ * Ikke webbens `maskEmail` (`lib/users/maskEmail.ts`): den viser to tegn og
+ * tre faste prikker («ka•••@firma.no»), en annen form enn designets.
+ */
+export function maskSentToEmail(email: string): string {
+  const at = email.lastIndexOf('@');
+  if (at <= 0) return email;
+  const local = email.slice(0, at);
+  return `${local.slice(0, 1)}${'•'.repeat(local.length - 1)}${email.slice(at)}`;
+}
+
 /** Nedtellingen som «0:42». */
 export function formatCountdown(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));
