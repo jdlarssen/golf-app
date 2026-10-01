@@ -7,8 +7,10 @@
 // fullført, ikke bare rett etter at kontoen ble laget.
 //
 // **Slipper gjennom ved tvil.** Appen er offline-først, og en runde skal aldri
-// stoppe på en profilsjekk. Uten nett, eller når lesingen feiler, rendres
-// barna, og steget kommer neste gang appen starter med nett.
+// stoppe på en profilsjekk. Avgjørelsen bor i `data/profileGate.ts`: en profil
+// enheten har sett fullført, leses ikke igjen; uten nett, når lesingen feiler,
+// og når den henger lenger enn taket, rendres barna. Steget kommer da neste
+// gang appen starter med nett.
 //
 // **Venter på stegene etter innloggingen.** Rett etter en kode-innlogging er
 // `finishLogin` i gang (`data/loginCode.ts`). Porten leser først når den er
@@ -17,8 +19,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { afterLoginSettled } from '../data/loginCode';
-import { fetchOwnProfile, type OwnProfile } from '../data/profile';
-import { isDeviceOnline } from '../data/syncTriggers';
+import type { OwnProfile } from '../data/profile';
+import { profileStepFor, rememberProfileComplete } from '../data/profileGate';
 import { CompleteProfile } from '../screens/CompleteProfile';
 import { useTheme } from '../theme';
 
@@ -35,17 +37,8 @@ export function ProfileGate({ userId, children }: { userId: string; children: Re
     };
     void (async () => {
       await afterLoginSettled();
-      if (!isDeviceOnline()) {
-        settle({ kind: 'open' });
-        return;
-      }
-      try {
-        const profile = await fetchOwnProfile(userId);
-        settle(profile.profileCompletedAt ? { kind: 'open' } : { kind: 'step', profile });
-      } catch (err) {
-        console.error('[ProfileGate] profilen kunne ikke leses', err);
-        settle({ kind: 'open' });
-      }
+      const profile = await profileStepFor(userId);
+      settle(profile ? { kind: 'step', profile } : { kind: 'open' });
     })();
     return () => {
       cancelled = true;
@@ -64,7 +57,10 @@ export function ProfileGate({ userId, children }: { userId: string; children: Re
       <CompleteProfile
         userId={userId}
         profile={state.profile}
-        onDone={() => setState({ kind: 'open' })}
+        onDone={() => {
+          void rememberProfileComplete(userId);
+          setState({ kind: 'open' });
+        }}
       />
     );
   }
