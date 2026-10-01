@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
+import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
 import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
@@ -117,15 +118,12 @@ const ALL_SCORED = 'Alle har score på hullet. Trykk på et navn for å rette.';
 /** Ordrett webbens `holes.putts.fieldLabel` (låst i testen). */
 export const PUTTS_LABEL = 'Putter';
 
-/** `scores.putts` har CHECK (0..10) fra migrasjon 0123. */
-const MAX_PUTTS = 10;
 /**
  * Designets chips (#2385): «1», «2» og «3+». «3+» velger 3 og åpner en stepper
  * som går fra 0 til 10, så også en chip-in (0 putter) kan føres.
  */
 const CHIP_VALUES = [1, 2] as const;
 const PLUS_START = 3;
-const MIN_PUTTS = 0;
 
 function termText(option: RailOption, par: number): string {
   return option.term === 'over' ? `+${option.strokes - par}` : TERM_LABELS[option.term];

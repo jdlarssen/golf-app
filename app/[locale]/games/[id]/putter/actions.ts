@@ -3,10 +3,7 @@
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getServerClient } from '@/lib/supabase/server';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
-
-/** Matches the scores.putts CHECK (0..10) from migration 0123. */
-const MAX_PUTTS = 10;
-const MIN_PUTTS = 0;
+import { MAX_PUTTS, MIN_PUTTS } from '@/lib/scorecard/puttEntry';
 
 export interface PuttsBackfillEntry {
   holeNumber: number;
