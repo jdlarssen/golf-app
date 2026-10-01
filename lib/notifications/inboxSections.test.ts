@@ -318,6 +318,18 @@ describe('groupPeople', () => {
   });
 });
 
+describe('groupPeople across the deploy (#2263)', () => {
+  it('an older row without the card id and a newer one with it are the same person', () => {
+    const p = groupPeople([delivered('Marte Lie', MARTE), delivered('Marte Lie')]);
+    expect(p.total).toBe(1);
+    expect(p.named.map((n) => n.initials)).toEqual(['ML']);
+  });
+
+  it('two people with the same name but different ids stay two', () => {
+    expect(groupPeople([delivered('Ola Nordmann', MARTE), delivered('Ola Nordmann', JONAS)]).total).toBe(2);
+  });
+});
+
 describe('namesLine', () => {
   const people = (...names: (string | null)[]) => groupPeople(names.map((n) => peer(n)));
   it.each([
