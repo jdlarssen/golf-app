@@ -127,6 +127,9 @@
   --stamp-stroke:             rgba(184, 148, 70, 0.35);
   --stamp-fill:               rgba(184, 148, 70, 0.55);
   --row-divider-warm:         #ede6d2;   /* between ledger rows; warmer than --border */
+  /* The new-game wizard's field outline (#2426): the artboards' --input, a
+   * step darker than --border so a text field reads as a field on the card. */
+  --field-border:             #cfc7b3;
 
   /* Skeleton — warm linen, never neutral grey. Base sits between --border and
    * --row-divider-warm; tint is the shimmer-peak lifted one step. */
@@ -262,6 +265,7 @@
     --stamp-stroke:             rgba(201, 169, 97, 0.55);
     --stamp-fill:               rgba(212, 184, 112, 0.70);
     --row-divider-warm:         #2f3f34;
+    --field-border:             #3d4f43;
 
     /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
@@ -359,6 +363,7 @@
   --stamp-stroke:             rgba(201, 169, 97, 0.55);
   --stamp-fill:               rgba(212, 184, 112, 0.70);
   --row-divider-warm:         #2f3f34;
+  --field-border:             #3d4f43;
 
   --skel-base: #243828;
   --skel-tint: #2f4734;
@@ -409,6 +414,7 @@
   --color-score-over2-bg: var(--score-over2-bg);
   --color-admin-bg: var(--admin-bg);
   --color-row-divider-warm: var(--row-divider-warm);
+  --color-field-border: var(--field-border);
   --color-disabled-bg: var(--disabled-bg);
   --color-disabled-fg: var(--disabled-fg);
   --color-score-unset-fg: var(--score-unset-fg);
