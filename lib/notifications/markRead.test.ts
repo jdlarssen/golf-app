@@ -208,3 +208,49 @@ describe('markNotificationIdsRead', () => {
     consoleErr.mockRestore();
   });
 });
+
+/**
+ * #2263 follow-up: a group can hold more than 100 rows (150 open signups for one
+ * club game). The ids travel in the URL, so the write goes in slices of 100 —
+ * still one result for the caller, still scoped to the owner's rows.
+ */
+describe('markNotificationIdsRead in slices', () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => `n-${i}`);
+
+  it('250 ids → three updates of at most 100, each scoped to the user', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: many(100).map((id) => ({ id })), error: null },
+      { data: many(100).map((id) => ({ id })), error: null },
+      { data: many(50).map((id) => ({ id })), error: null },
+    ]);
+    const { markNotificationIdsRead } = await import('./markRead');
+
+    expect(await markNotificationIdsRead({ userId: 'u1', ids: many(250) })).toBe(true);
+    const calls = supabaseMock.__fromCalls;
+    const ins = calls.filter((c) => c.method === 'in');
+    expect(ins.map((c) => (c.args[1] as string[]).length)).toEqual([100, 100, 50]);
+    expect(calls.filter((c) => c.method === 'eq' && c.args[0] === 'user_id')).toHaveLength(3);
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('some slices already read elsewhere still count as success', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: [], error: null },
+      { data: [{ id: 'n-150' }], error: null },
+    ]);
+    const { markNotificationIdsRead } = await import('./markRead');
+    expect(await markNotificationIdsRead({ userId: 'u1', ids: many(150) })).toBe(true);
+  });
+
+  it('a failed slice → false', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: [{ id: 'n-0' }], error: null },
+      { data: null, error: { message: 'nede' } },
+    ]);
+    const { markNotificationIdsRead } = await import('./markRead');
+    expect(await markNotificationIdsRead({ userId: 'u1', ids: many(150) })).toBe(false);
+    consoleErr.mockRestore();
+  });
+});
+

@@ -2,6 +2,7 @@ import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { chunkIds } from './inboxReads';
 
 export type ArchiveOpts = {
   userId: string;
@@ -120,16 +121,19 @@ export async function archiveStaleNotifications(
 ): Promise<boolean> {
   if (opts.ids.length === 0) return true;
 
+  // In slices of 100: the ids travel in the request URL (#2263).
   const nowIso = new Date().toISOString();
-  const { error } = await getAdminClient()
-    .from('notifications')
-    .update({ archived_at: nowIso, read_at: nowIso })
-    .eq('user_id', opts.userId)
-    .in('id', opts.ids)
-    .is('archived_at', null);
-  if (error) {
-    console.error('[innboks] archive stale failed', error);
-    return false;
+  for (const slice of chunkIds(opts.ids)) {
+    const { error } = await getAdminClient()
+      .from('notifications')
+      .update({ archived_at: nowIso, read_at: nowIso })
+      .eq('user_id', opts.userId)
+      .in('id', slice)
+      .is('archived_at', null);
+    if (error) {
+      console.error('[innboks] archive stale failed', error);
+      return false;
+    }
   }
 
   revalidateTag(`notifications-${opts.userId}`, 'max');

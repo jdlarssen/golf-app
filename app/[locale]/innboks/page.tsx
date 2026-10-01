@@ -24,8 +24,6 @@ import { InboxClient } from './InboxClient';
 const COLUMNS = 'id, kind, payload, read_at, created_at';
 const UNREAD_LIMIT = 500;
 const READ_LIMIT = 100;
-// PostgREST carries `.in()` lists in the URL; keep each write's list short.
-const WRITE_CHUNK = 100;
 
 function gameIdsOf(rows: InboxRow[], kinds: ReadonlySet<string>, unreadOnly = false): string[] {
   const ids = new Set<string>();
@@ -176,9 +174,7 @@ export default async function InboxPage() {
     const nowIso = new Date(now).toISOString();
     rows = visible.map((row) => (settled.has(row.id) ? { ...row, read_at: nowIso } : row));
     after(async () => {
-      for (let i = 0; i < settledIds.length; i += WRITE_CHUNK) {
-        await markNotificationIdsRead({ userId, ids: settledIds.slice(i, i + WRITE_CHUNK) });
-      }
+      await markNotificationIdsRead({ userId, ids: settledIds });
     });
   }
 
