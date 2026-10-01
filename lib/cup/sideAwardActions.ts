@@ -11,6 +11,7 @@ import {
   isValidSideAward,
   type SideAwardConfigInput,
 } from './sideAwardRows';
+import { syncFinishedCupWinner } from './finishedCupWinner';
 
 /**
  * Server actions for cup side-awards (#1441, D9): closest-to-pin / longest-
@@ -194,7 +195,7 @@ export async function saveSideAwardConfig(
  * lag klarte på hullet, 0..radens `gir_max_per_team`. Poeng = teller ×
  * `points` (utfoldingen skjer i `getCupSnapshot`). Re-registrering er tillatt
  * og overskriver — speiler `registerSideAwardWinner`, ingen status-lås utover
- * authz-gaten.
+ * authz-gaten. I en avsluttet cup regnes vinneren på nytt etterpå (#2214).
  */
 export async function registerGirCounts(input: {
   tournamentId: string;
@@ -239,6 +240,14 @@ export async function registerGirCounts(input: {
     );
   } catch (err) {
     console.error('[cup] registerGirCounts failed', { tournamentId, awardId, err });
+    return { ok: false, error: 'save_failed' };
+  }
+
+  // #2214: in a finished cup the winner follows the corrected points.
+  try {
+    await syncFinishedCupWinner(tournamentId);
+  } catch (err) {
+    console.error('[cup] registerGirCounts winner sync failed', { tournamentId, awardId, err });
     return { ok: false, error: 'save_failed' };
   }
 
@@ -327,6 +336,18 @@ export async function registerSideAwardWinner(input: {
     );
   } catch (err) {
     console.error('[cup] registerSideAwardWinner failed', { tournamentId, awardId, err });
+    return { ok: false, error: 'save_failed' };
+  }
+
+  // #2214: in a finished cup the winner follows the corrected points.
+  try {
+    await syncFinishedCupWinner(tournamentId);
+  } catch (err) {
+    console.error('[cup] registerSideAwardWinner winner sync failed', {
+      tournamentId,
+      awardId,
+      err,
+    });
     return { ok: false, error: 'save_failed' };
   }
 

@@ -31,6 +31,7 @@ import { allSideAwardsRegistered } from './sideAwardsRegistered';
 import { matchBlocksOneTapFinish } from './matchSubmissionStatus';
 import { endGameCore } from '@/lib/games/endGameCore';
 import { planTournamentGameDeletion } from './tournamentGameDeletion';
+import { cupWinnerFromPoints } from './cupWinner';
 import {
   DEFAULT_TIE_POINTS,
   DEFAULT_WIN_POINTS,
@@ -387,12 +388,11 @@ export async function finishTournament(formData: FormData) {
 
   // Vinner bestemmes av point-status ved avslutning. Hvis ingen lag leder →
   // vinner-team forblir NULL (uavgjort cup avsluttes uten vinner-deklarering).
-  let winnerTeam: 1 | 2 | null = null;
-  if (finalLeaderboard.team1Points > finalLeaderboard.team2Points) {
-    winnerTeam = 1;
-  } else if (finalLeaderboard.team2Points > finalLeaderboard.team1Points) {
-    winnerTeam = 2;
-  }
+  // Samme regel som når et sidepoeng rettes etter avslutningen (#2214).
+  const winnerTeam = cupWinnerFromPoints(
+    finalLeaderboard.team1Points,
+    finalLeaderboard.team2Points,
+  );
 
   // #727: assert the finish update touched a row (bug-prevention #2).
   try {

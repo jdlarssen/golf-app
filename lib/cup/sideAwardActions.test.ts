@@ -48,6 +48,17 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => adminMock,
 }));
 
+// #2214: the winner sync after a correction, and the cache expiry it must run
+// before. Both are mocked at the module boundary so the order can be read.
+const syncFinishedCupWinnerMock = vi.fn<(tournamentId: string) => Promise<void>>(async () => {});
+vi.mock('./finishedCupWinner', () => ({
+  syncFinishedCupWinner: (tournamentId: string) => syncFinishedCupWinnerMock(tournamentId),
+}));
+const expireTournamentCacheMock = vi.fn();
+vi.mock('@/lib/games/expireGameCache', () => ({
+  expireTournamentCache: (...args: unknown[]) => expireTournamentCacheMock(...args),
+}));
+
 function setUser(id: string) {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: { id, email: `${id}@x.no` } },
@@ -562,5 +573,71 @@ describe('registerGirCounts (#1489)', () => {
     });
 
     expect(result).toEqual({ ok: false, error: 'save_failed' });
+  });
+});
+
+/**
+ * #2214: a side award corrected after the cup is finished moves the points, so
+ * the stored winner must follow. Both registration actions run the sync after
+ * their write succeeded and before the cache is expired; a failed sync is a
+ * failed save (a new tap repeats both, idempotently).
+ */
+describe('the winner follows a corrected side award (#2214)', () => {
+  const winnerCall = () =>
+    registerArgs('ctp', [
+      gateQueueItem,
+      { data: { id: 'sa1', kind: 'ctp' }, error: null }, // award lookup
+      { data: [{ id: 'g1' }], error: null }, // cup's games
+      { data: [{ user_id: 'p1' }], error: null }, // roster check
+      { data: [{ id: 'sa1' }], error: null }, // update…select('id')
+    ]);
+  const girCall = () =>
+    registerArgs('gir', [
+      gateQueueItem,
+      { data: { id: 'sa9', kind: 'gir', gir_max_per_team: 3 }, error: null }, // award lookup
+      { data: [{ id: 'sa9' }], error: null }, // update…select('id')
+    ]);
+  function registerArgs(kind: 'ctp' | 'gir', queue: Parameters<typeof buildSupabaseMock>[0]) {
+    return async () => {
+      adminMock = buildSupabaseMock(queue);
+      supabaseMock = buildSupabaseMock([adminUserQueueItem]);
+      setUser('admin-1');
+      const actions = await import('./sideAwardActions');
+      return kind === 'ctp'
+        ? actions.registerSideAwardWinner({ tournamentId: 'cup-1', awardId: 'sa1', winnerUserId: 'p1' })
+        : actions.registerGirCounts({ tournamentId: 'cup-1', awardId: 'sa9', team1Count: 2, team2Count: 0 });
+    };
+  }
+
+  it.each([
+    ['registerSideAwardWinner', winnerCall],
+    ['registerGirCounts', girCall],
+  ])('%s syncs the winner after the write and before the cache expiry', async (_name, call) => {
+    let wroteBeforeSync = false;
+    syncFinishedCupWinnerMock.mockImplementationOnce(async () => {
+      wroteBeforeSync = adminMock.__fromCalls.some(
+        (c) => c.table === 'tournament_side_awards' && c.method === 'update',
+      );
+    });
+
+    const result = await call()();
+
+    const syncOrder = syncFinishedCupWinnerMock.mock.invocationCallOrder[0];
+    const expireOrder = expireTournamentCacheMock.mock.invocationCallOrder[0];
+    expect({
+      result,
+      syncedWith: syncFinishedCupWinnerMock.mock.calls[0]?.[0],
+      wroteBeforeSync,
+      syncBeforeExpire: syncOrder !== undefined && expireOrder !== undefined && syncOrder < expireOrder,
+    }).toEqual({ result: { ok: true }, syncedWith: 'cup-1', wroteBeforeSync: true, syncBeforeExpire: true });
+  });
+
+  it.each([
+    ['registerSideAwardWinner', winnerCall],
+    ['registerGirCounts', girCall],
+  ])('%s answers save_failed when the sync throws', async (_name, call) => {
+    syncFinishedCupWinnerMock.mockRejectedValueOnce(new Error('boom'));
+
+    expect(await call()()).toEqual({ ok: false, error: 'save_failed' });
   });
 });

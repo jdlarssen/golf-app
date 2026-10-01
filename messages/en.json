@@ -5345,6 +5345,7 @@
       "savingPending": "Saving …",
       "saved": "Side awards saved.",
       "winnersHeading": "After the round",
+      "finishedHint": "The cup is finished. If you correct a side award, the winner is worked out again.",
       "winnerLabel": "Winner",
       "winnerPlaceholder": "— choose winner —",
       "winnerNoneOption": "No qualified players",

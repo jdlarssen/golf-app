@@ -449,6 +449,7 @@ export async function CupManagement({
         team2Name={tournament.team_2_name}
         configEditable={tournament.status === 'draft'}
         showWinnerRegistration={tournament.status === 'active' || tournament.status === 'finished'}
+        cupFinished={tournament.status === 'finished'}
       />
 
       <CupDoorsSection
