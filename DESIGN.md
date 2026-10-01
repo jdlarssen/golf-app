@@ -76,7 +76,6 @@ typography:
     fontFamily: "Inter, sans-serif"
     fontSize: 16px
     fontWeight: 400
-    fontFeature: "ss01, cv11"
   label:
     fontFamily: "Inter, sans-serif"
     fontSize: 14px
@@ -180,10 +179,14 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
 
 ## Typografi
 
-- **Fraunces** (`font-serif`) bærer hierarki og tall. Optisk størrelse er låst på 14 i
-  `body`, så overskrifter beholder de nøkterne medlemsbok-formene; «restraint over
-  ornament». Vekt 500 for overskrifter, 600 for scoretall (`--fw-serif-*`).
-- **Inter** (`font-sans`) bærer all UI-tekst, med `ss01` og `cv11` på.
+- **Tegnformene er som på tegningene** (eierens valg 2026-10-01, #2263: «Som
+  tegningene, overalt»). `body` setter verken `font-feature-settings` eller
+  `font-variation-settings`; nettleserens standard er designet.
+- **Fraunces** (`font-serif`) bærer hierarki og tall, med automatisk optisk størrelse,
+  så en stor overskrift får formen tegningene viser. Vekt 500 for overskrifter, 600 for
+  scoretall (`--fw-serif-*`).
+- **Inter** (`font-sans`) bærer all UI-tekst, med standard tegnformer (ingen
+  `ss01`/`cv11`).
 - **Tall er hovedpersoner.** Et tall som er selve poenget (hull, score, total,
   handicap) får `.score-num` (serif, 600, tabulære sifre). Et tall i en setning får
   `.inline-num`. Kolonner med tall får alltid `tabular-nums`.

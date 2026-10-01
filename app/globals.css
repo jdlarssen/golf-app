@@ -402,16 +402,13 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: 'ss01', 'cv11';
-  /* Pin Fraunces optical-size axis to 14 (text grade) globally. Auto-opsz
-   * at headline sizes (24-32px) tips Fraunces into its display grade,
-   * which dials up the wonky descenders and decorative serifs the brand
-   * spec explicitly rejects ("restraint over ornament"). 14 keeps the
-   * functional, member-book letterforms at all sizes. Ignored by Inter
-   * since it has no opsz axis. font-weight via CSS keeps working — per
-   * CSS Fonts L4, font-weight overrides font-variation-settings for the
-   * wght axis unless wght is explicitly set here (it's not). */
-  font-variation-settings: 'opsz' 14;
+  /* Letterforms as on the design artboards (owner's choice 2026-10-01, #2263:
+   * «Som tegningene, overalt»): Inter with its default glyphs (no ss01/cv11
+   * alternates) and Fraunces with automatic optical size, so a 28 px heading
+   * gets the display grade the artboards draw. No font-feature-settings or
+   * font-variation-settings here — the browser defaults are the design.
+   * Numbers keep their own rule: `.score-num` / `.inline-num` below set
+   * tabular figures (and ss01's flat-top 1 on score numbers). */
 }
 
 /* -----------------------------------------------------------------------------
