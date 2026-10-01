@@ -59,6 +59,7 @@ export function InboxActionRow({
             <button
               type="button"
               onClick={() => onDecide('approve')}
+              data-testid="inbox-approve"
               disabled={pending}
               aria-busy={pending || undefined}
               className={`${BUTTON} ${PRIMARY}`}
@@ -68,6 +69,7 @@ export function InboxActionRow({
             <button
               type="button"
               onClick={() => onDecide('reject')}
+              data-testid="inbox-reject"
               disabled={pending}
               aria-busy={pending || undefined}
               className={`${BUTTON} ${SECONDARY}`}

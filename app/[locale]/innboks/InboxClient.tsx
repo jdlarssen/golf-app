@@ -279,7 +279,10 @@ export function InboxClient({
       <InboxFilterChips value={filter} onChange={setFilter} actionCount={actionCount} />
       {statusLine}
       {visibleSections.length === 0 ? (
-        <p className="mx-4 mt-2 rounded-2xl border border-border bg-surface px-3.5 py-3 text-[13px] leading-[normal] text-muted">
+        <p
+          data-testid="inbox-empty-filter"
+          className="mx-4 mt-2 rounded-2xl border border-border bg-surface px-3.5 py-3 text-[13px] leading-[normal] text-muted"
+        >
           {t('emptyFilter')}
         </p>
       ) : (
