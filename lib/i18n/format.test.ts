@@ -607,6 +607,13 @@ describe('formatShortOsloDayMonthLocale (#648)', () => {
     expect(formatShortOsloDayMonthLocale('2026-05-12T10:00:00Z', 'no')).toBe('12. mai');
   });
 
+  // #2265: en-GB gir dagen med to sifre når måneden også er et tall
+  // («01/09»), så de ni første dagene i måneden ble «01. sep».
+  it("'no' writes the first nine days without a leading zero", () => {
+    expect(formatShortOsloDayMonthLocale('2026-09-01T10:00:00Z', 'no')).toBe('1. sep');
+    expect(formatShortOsloDayMonthLocale('2026-06-09T10:00:00Z', 'no')).toBe('9. jun');
+  });
+
   it("'en' formats day/month in Oslo time", () => {
     expect(formatShortOsloDayMonthLocale('2026-05-12T22:30:00Z', 'en')).toBe('13 May');
     expect(formatShortOsloDayMonthLocale('2026-06-03T10:00:00Z', 'en')).toBe('3 Jun');
@@ -724,5 +731,13 @@ describe('formatRelativeLocale', () => {
     const enResult = formatRelativeLocale(futureIso, 'en', BASE_MS);
     expect(noResult).toBe(formatRelativeNb(futureIso, BASE_MS));
     expect(enResult).toMatch(/now|second/i);
+  });
+});
+
+describe('formatShortOsloDateWithYearLocale (#2265)', () => {
+  it('writes the first nine days without a leading zero, in both languages', () => {
+    expect(formatShortOsloDateWithYearLocale('2026-09-01T10:00:00Z', 'no')).toBe('1. sep 2026');
+    expect(formatShortOsloDateWithYearLocale('2026-06-01T10:00:00Z', 'en')).toBe('1 Jun 2026');
+    expect(formatShortOsloDateWithYearLocale('2026-06-30T21:59:00Z', 'no')).toBe('30. jun 2026');
   });
 });
