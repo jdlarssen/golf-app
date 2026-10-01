@@ -3,15 +3,15 @@
 import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { suggestFlightAssignment, setPlayerFlight } from './flightActions';
-import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
+import {
+  MAX_FLIGHT_SIZE,
+  flightBuckets,
+  type FlightPlayer,
+} from '@/lib/games/flightScope';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
-type FlightPlayerDisplay = {
-  user_id: string;
-  displayName: string;
-  flight_number: number | null;
-};
+type FlightPlayerDisplay = FlightPlayer & { displayName: string };
 
 type Props = {
   gameId: string;
@@ -36,18 +36,8 @@ export function FlighterSeksjon({ gameId, players }: Props) {
   // +1 ekstra tom flight gir oppretter mulighet for 3+3 i stedet for 4+2
   const flightOptions = Array.from({ length: maxFlight + 1 }, (_, i) => i + 1);
 
-  // Bucket-visning: grupper på flight_number
-  const byFlight = new Map<number, FlightPlayerDisplay[]>();
-  const unassigned: FlightPlayerDisplay[] = [];
-  for (const p of activePlayers) {
-    if (p.flight_number == null) {
-      unassigned.push(p);
-    } else {
-      const bucket = byFlight.get(p.flight_number) ?? [];
-      bucket.push(p);
-      byFlight.set(p.flight_number, bucket);
-    }
-  }
+  // Bucket-visning: grupper på flight_number med den delte regelen
+  const { assigned: byFlight, unassigned } = flightBuckets(activePlayers);
 
   const suggestAction = suggestFlightAssignment.bind(null, gameId);
 

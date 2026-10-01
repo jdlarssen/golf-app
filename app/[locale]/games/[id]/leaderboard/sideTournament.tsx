@@ -12,6 +12,7 @@ import {
 } from '@/lib/scoring/sideTournament';
 import { buildCourseArrays, mapSideWinners } from '@/lib/scoring/sideTournamentInput';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
+import { teamBuckets } from '@/lib/games/teamScope';
 import { LeaderboardTabs } from './LeaderboardTabs';
 import {
   SideTournamentView,
@@ -126,20 +127,15 @@ export async function computeSideTournament(opts: {
   };
   const teamGroups: TeamGroup[] = [];
   if (teamGrouping === 'byTeamNumber') {
-    const byTeam = new Map<number, string[]>();
-    for (const p of eligiblePlayers) {
-      const t = p.team_number;
-      if (t == null || t === 0) continue;
-      const arr = byTeam.get(t) ?? [];
-      arr.push(p.user_id);
-      byTeam.set(t, arr);
-    }
+    const byTeam = teamBuckets(
+      eligiblePlayers.map((p) => ({ ...p, withdrawn_at: p.withdrawn_at ?? null })),
+    ).assigned;
     const teamNumbers = [...byTeam.keys()].sort((a, b) => a - b);
     for (const t of teamNumbers) {
       teamGroups.push({
         teamId: t,
         label: tc('teamLabel', { number: t }),
-        userIds: byTeam.get(t) ?? [],
+        userIds: (byTeam.get(t) ?? []).map((p) => p.user_id),
       });
     }
   } else {

@@ -49,7 +49,9 @@ export type TeamAssignment = {
 };
 
 /** Returnerer bare aktive (ikke-trukkede) spillere. */
-function activePlayers(players: TeamPlayer[]): TeamPlayer[] {
+function activePlayers<T extends Pick<TeamPlayer, 'withdrawn_at'>>(
+  players: readonly T[],
+): T[] {
   return players.filter((p) => p.withdrawn_at == null);
 }
 
@@ -210,13 +212,19 @@ function nextTeamWithSpace(counts: Map<number, number>, size: number): number {
 /**
  * Grupperer aktive spillere i en Map keyed på `team_number`, pluss en
  * `unassigned`-liste. Trukkede ekskluderes. Speiler `flightBuckets`.
+ *
+ * Generisk: radene kommer ut med alle feltene kallstedet sendte inn.
+ * Brukes av Lag-seksjonen og Lag-/Sider-kortet på admin-siden, og av
+ * sideturneringens lag-gruppering.
  */
-export function teamBuckets(players: TeamPlayer[]): {
-  assigned: Map<number, TeamPlayer[]>;
-  unassigned: TeamPlayer[];
+export function teamBuckets<
+  T extends Pick<TeamPlayer, 'team_number' | 'withdrawn_at'>,
+>(players: readonly T[]): {
+  assigned: Map<number, T[]>;
+  unassigned: T[];
 } {
-  const assigned = new Map<number, TeamPlayer[]>();
-  const unassigned: TeamPlayer[] = [];
+  const assigned = new Map<number, T[]>();
+  const unassigned: T[] = [];
 
   for (const p of activePlayers(players)) {
     if (p.team_number == null) {

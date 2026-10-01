@@ -63,6 +63,7 @@ import {
   isSingleFlightGame,
   unassignedActivePlayers,
   eligibleForFlightAssignment,
+  flightBuckets,
   MAX_FLIGHT_SIZE,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
@@ -616,21 +617,15 @@ export default async function GameHomePage({
     let flightOptions: FlightOption[] | null = null;
     if (showFlightPicker) {
       const activePlayers2 = gwp.players.filter((p) => !p.withdrawn_at);
-      const buckets = new Map<number, string[]>();
-      for (const p of activePlayers2) {
-        if (p.flight_number != null) {
-          const b = buckets.get(p.flight_number) ?? [];
-          const name = p.users
-            ? (p.users.nickname ?? p.users.name ?? t('unknownPlayer'))
-            : t('unknownPlayer');
-          b.push(name);
-          buckets.set(p.flight_number, b);
-        }
-      }
+      const byFlight = flightBuckets(gwp.players).assigned;
       const maxFlight = Math.ceil(activePlayers2.length / MAX_FLIGHT_SIZE);
       flightOptions = Array.from({ length: maxFlight + 1 }, (_, i) => {
         const flightNum = i + 1;
-        const members = buckets.get(flightNum) ?? [];
+        const members = (byFlight.get(flightNum) ?? []).map((p) =>
+          p.users
+            ? (p.users.nickname ?? p.users.name ?? t('unknownPlayer'))
+            : t('unknownPlayer'),
+        );
         return {
           flightNumber: flightNum,
           memberCount: members.length,

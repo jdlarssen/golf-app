@@ -35,7 +35,9 @@ export type FlightPlayer = {
 };
 
 /** Returnerer bare aktive (ikke-trukkede) spillere. */
-function activePlayers(players: FlightPlayer[]): FlightPlayer[] {
+function activePlayers<T extends Pick<FlightPlayer, 'withdrawn_at'>>(
+  players: readonly T[],
+): T[] {
   return players.filter((p) => p.withdrawn_at == null);
 }
 
@@ -297,14 +299,18 @@ export function eligibleForFlightAssignment(
  * Grupperer aktive spillere i en Map keyed på flight_number, pluss en
  * `unassigned`-liste for spillere uten flight. Trukkede ekskluderes.
  *
- * Brukes av admin-UI (Flighter-seksjon) og venteroms-velgeren.
+ * Generisk: radene kommer ut med alle feltene kallstedet sendte inn.
+ * Brukes av Flighter-seksjonen og Flight-kortet + fremdriften på admin-siden,
+ * og av venteroms-velgeren på spill-hjem.
  */
-export function flightBuckets(players: FlightPlayer[]): {
-  assigned: Map<number, FlightPlayer[]>;
-  unassigned: FlightPlayer[];
+export function flightBuckets<
+  T extends Pick<FlightPlayer, 'flight_number' | 'withdrawn_at'>,
+>(players: readonly T[]): {
+  assigned: Map<number, T[]>;
+  unassigned: T[];
 } {
-  const assigned = new Map<number, FlightPlayer[]>();
-  const unassigned: FlightPlayer[] = [];
+  const assigned = new Map<number, T[]>();
+  const unassigned: T[] = [];
 
   for (const p of activePlayers(players)) {
     if (p.flight_number == null) {

@@ -809,16 +809,20 @@ describe('eligibleForFlightAssignment', () => {
 
 describe('flightBuckets', () => {
   it('returnerer tildelte flighter og unassigned-liste', () => {
-    const players: FlightPlayer[] = [
-      p('u1', 1),
-      p('u2', 1),
-      p('u3', 2),
-      p('u4', null),
-    ];
+    // Kallstedene sender visningsrader med ekstra felt (#2225); de skal komme
+    // ut uendret.
+    const players = [p('u1', 1), p('u2', 1), p('u3', 2), p('u4', null)].map(
+      (r) => ({ ...r, displayName: `Navn ${r.user_id}` }),
+    );
     const result = flightBuckets(players);
     expect(result.assigned.get(1)?.map((r) => r.user_id)).toEqual(['u1', 'u2']);
     expect(result.assigned.get(2)?.map((r) => r.user_id)).toEqual(['u3']);
     expect(result.unassigned.map((r) => r.user_id)).toEqual(['u4']);
+    expect(result.assigned.get(1)?.map((r) => r.displayName)).toEqual([
+      'Navn u1',
+      'Navn u2',
+    ]);
+    expect(result.unassigned[0].displayName).toBe('Navn u4');
   });
 
   it('trukkede ekskluderes fra alle buckets', () => {
