@@ -63,7 +63,7 @@
     "emptyHeading": "No new notifications.",
     "emptyBody": "When someone invites you, submits a scorecard, or finishes a game you're in, the notification will appear here.",
     "cleanPullQuote": "Your inbox is clear.",
-    "markAllAsRead": "Mark all as read",
+    "markAllAsRead": "Mark all read",
     "markingPending": "Marking …",
     "clearRead": "Clear read",
     "clearingPending": "Clearing …",
@@ -230,6 +230,65 @@
       "unassigned_teams": "some players don't have a team",
       "unassigned_flights": "some players don't have a flight",
       "default": "open the game to see what's missing"
+    },
+    "emptyFilter": "Nothing here right now.",
+    "filters": {
+      "label": "Show notifications",
+      "all": "All",
+      "action": "Needs action",
+      "actionCount": "Needs action · {count}",
+      "friends": "Friends"
+    },
+    "sections": {
+      "action": "Needs action",
+      "today": "Today",
+      "earlier": "Earlier"
+    },
+    "buttons": {
+      "review": "Review",
+      "approve": "Accept",
+      "reject": "Decline",
+      "deliver": "Deliver",
+      "fixCard": "Fix the card",
+      "reply": "Reply",
+      "inviteNew": "Invite someone",
+      "confirm": "Confirm",
+      "seeMissing": "See what's missing",
+      "seePayment": "See payment"
+    },
+    "board": {
+      "approvalTitle": "{count, plural, one {# scorecard is waiting for you} other {# scorecards are waiting for you}}",
+      "deliveredBy": "{names} delivered",
+      "moreNames": "{count} more",
+      "somePlayers": "{count} players",
+      "teeOff": "{date} at {time}",
+      "team": "Team {teamName}",
+      "quoted": "“{message}”",
+      "deliveredCount": "{count, plural, one {# scorecard delivered} other {# scorecards delivered}}",
+      "deliveredOne": "{name} delivered their scorecard",
+      "newSignups": "{count} new sign-ups",
+      "signups": "{count} sign-ups",
+      "signedUp": "{name} signed up",
+      "latest": "latest {time}",
+      "friendViaLink": "{name} added you as a friend",
+      "friendViaAccept": "{name} accepted your friend request"
+    },
+    "readTitles": {
+      "deliverReminder": "Reminder about your scorecard",
+      "deliverReminderKept": "Reminder about the cards you kept",
+      "scorecardRejected": "Your scorecard was sent back",
+      "friendRequest": "{actorName} sent you a friend request",
+      "teamInvite": "{invitedByName} invited you to {teamName}",
+      "clubJoinRequest": "{requesterName} asked to join the club",
+      "paymentReminder": "Reminder about the entry fee"
+    },
+    "status": {
+      "approved": "{name} is in {gameName}",
+      "approvedTeam": "Team {teamName} is in {gameName}",
+      "rejected": "{name} has been told it's a no",
+      "rejectedTeam": "Team {teamName} has been told it's a no",
+      "alreadyDecided": "That one is already decided",
+      "forbidden": "You don't have access to answer this sign-up."
     }
   },
   "profile": {
