@@ -105,8 +105,6 @@ export type LeagueSnapshot = {
 };
 
 type UserRel = { name: string | null; nickname: string | null };
-const userOf = (rel: UserRel | UserRel[] | null | undefined): UserRel | null =>
-  Array.isArray(rel) ? (rel[0] ?? null) : (rel ?? null);
 
 export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot | null> {
   const supabase = getAdminClient();
@@ -268,10 +266,10 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     (participantsRes.data ?? []) as Array<{
       user_id: string;
       accepted_at: string | null;
-      users: UserRel | UserRel[] | null;
+      users: UserRel | null;
     }>
   ).map((p) => {
-    const u = userOf(p.users);
+    const u = p.users;
     return {
       userId: p.user_id,
       name: u?.name ?? null,
