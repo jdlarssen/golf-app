@@ -127,7 +127,7 @@ describe('decideRegistration', () => {
         loadMock.mockResolvedValueOnce({ ok: true, ctx: CTX });
         approveMock.mockResolvedValueOnce({ ok: false, reason, gameId: CTX.game.id });
       } else {
-        loadMock.mockResolvedValueOnce({ ok: false, reason, gameId: null });
+        loadMock.mockResolvedValueOnce({ ok: false, reason, gameId: null, isAdmin: false });
       }
       const { decideRegistration } = await import('./actions');
       expect(await decideRegistration(NOTE, REQ, 'approve')).toEqual({ ok: false, reason });
@@ -137,7 +137,7 @@ describe('decideRegistration', () => {
   );
 
   it.each(['forbidden'] as const)('%s (load) → reason, varsel untouched', async (reason) => {
-    loadMock.mockResolvedValueOnce({ ok: false, reason, gameId: null });
+    loadMock.mockResolvedValueOnce({ ok: false, reason, gameId: null, isAdmin: false });
     const { decideRegistration } = await import('./actions');
     expect(await decideRegistration(NOTE, REQ, 'approve')).toEqual({ ok: false, reason });
     expect(markReadMock).not.toHaveBeenCalled();

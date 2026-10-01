@@ -127,11 +127,10 @@ function makeRequest(id: string): InboxRow {
   };
 }
 
-function renderInbox(rows: InboxRow[], isAdmin = true) {
+function renderInbox(rows: InboxRow[]) {
   return render(
     <InboxClient
       initialNotifications={rows}
-      isAdmin={isAdmin}
       teeOffByGame={{}}
       resultByGame={{}}
       finishedGameIds={[]}
@@ -336,14 +335,6 @@ describe('InboxClient', () => {
       });
       expect(screen.getByTestId('inbox-action-error')).toHaveTextContent('Spillet har ingen ledige lag igjen.');
       expect(screen.getByRole('button', { name: 'Godta' })).toBeInTheDocument();
-    });
-
-    it('en arrangør uten admin-rolle får verken knapper eller pil', () => {
-      renderInbox([makeRequest('r')], false);
-      expect(screen.queryByRole('button', { name: 'Godta' })).not.toBeInTheDocument();
-      const row = screen.getByTestId('inbox-row');
-      expect(row.tagName).toBe('BUTTON');
-      expect(row).not.toHaveTextContent('→');
     });
   });
 });

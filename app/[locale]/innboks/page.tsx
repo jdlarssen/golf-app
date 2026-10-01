@@ -59,10 +59,7 @@ export default async function InboxPage() {
   }
 
   const supabase = await getServerClient();
-  // `users.is_admin` is the role the signup page and its answers check
-  // (getRoleContext reads the same column). One read, no auth round trip.
-  const [roleRes, unreadRes, readRes] = await Promise.all([
-    supabase.from('users').select('is_admin').eq('id', userId).maybeSingle(),
+  const [unreadRes, readRes] = await Promise.all([
     supabase
       .from('notifications')
       .select(COLUMNS)
@@ -82,10 +79,8 @@ export default async function InboxPage() {
       .limit(READ_LIMIT)
       .returns<InboxRow[]>(),
   ]);
-  if (roleRes.error) throw roleRes.error;
   if (unreadRes.error) throw unreadRes.error;
   if (readRes.error) throw readRes.error;
-  const isAdmin = roleRes.data?.is_admin === true;
 
   const notifications = [
     ...trimToWholeDays(unreadRes.data ?? [], UNREAD_LIMIT),
@@ -187,7 +182,6 @@ export default async function InboxPage() {
     <AppShell flush showVersion={false}>
       <InboxClient
         initialNotifications={rows}
-        isAdmin={isAdmin}
         teeOffByGame={Object.fromEntries(games.map((g) => [g.id, g.scheduled_tee_off_at]))}
         resultByGame={Object.fromEntries(own.map((r) => [r.game_id, r.result_summary]))}
         finishedGameIds={games.filter((g) => g.status === 'finished').map((g) => g.id)}

@@ -78,8 +78,6 @@ export type InboxEntry =
 
 export type InboxSections = Record<InboxSectionKey, InboxEntry[]>;
 
-export type InboxRole = { isAdmin: boolean };
-
 const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', 'friend_accepted']);
 
 /**
@@ -87,21 +85,18 @@ const FRIEND_KINDS: ReadonlySet<NotificationKind> = new Set(['friend_request', '
  * tells you something. Exhaustive over `NotificationKind`: a new kind does not
  * compile until it is placed here.
  *
- * `registration_request` asks for an answer only when it is a manual-approval
- * request (`request_id`) AND you can answer it: the signup page and the answer
- * actions are admin-only, so an organiser without the admin role gets the row
- * as a plain heads-up (orkestratoren, utledet).
+ * `registration_request` asks for an answer when it is a pending request
+ * (`request_id`). The varsel only goes to the game's organiser, and the
+ * server decides who may answer (`registrationDecisionCore`, #2440), so the
+ * inbox carries no role.
  */
-export function inboxActionKey(
-  row: Pick<InboxRow, 'kind' | 'payload'>,
-  { isAdmin }: InboxRole,
-): ActionKey | null {
+export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionKey | null {
   switch (row.kind) {
     case 'peer_approval_request':
       return 'review';
     case 'registration_request': {
       const p = row.payload as NotificationPayload<'registration_request'>;
-      return p.request_id && isAdmin ? 'decide' : null;
+      return p.request_id ? 'decide' : null;
     }
     case 'deliver_reminder':
       return 'deliver';
@@ -144,19 +139,6 @@ export function inboxActionKey(
       return unhandled;
     }
   }
-}
-
-/**
- * Where a row takes you. `notificationDestination`, except that a signup
- * notification has nowhere to go for someone who is not admin: the signup
- * page would send them to `/`.
- */
-export function inboxDestination(
-  row: Pick<InboxRow, 'kind' | 'payload'>,
-  { isAdmin }: InboxRole,
-): string | null {
-  if (row.kind === 'registration_request' && !isAdmin) return null;
-  return notificationDestination(row);
 }
 
 /** `${kind}:${game_id}` for rows that group per game, else `null`. */
@@ -344,13 +326,13 @@ function toEntries(rows: InboxRow[], mode: 'action' | 'rest'): InboxEntry[] {
  */
 export function buildInboxSections(
   rows: InboxRow[],
-  opts: { filter: InboxFilter; now: number; isAdmin: boolean },
+  opts: { filter: InboxFilter; now: number },
 ): InboxSections {
   const sorted = newestFirst(rows);
   const visible =
     opts.filter === 'friends' ? sorted.filter((r) => FRIEND_KINDS.has(r.kind)) : sorted;
   const actionRows = visible.filter(
-    (r) => r.read_at == null && inboxActionKey(r, opts) !== null,
+    (r) => r.read_at == null && inboxActionKey(r) !== null,
   );
   const action = toEntries(actionRows, 'action');
   if (opts.filter === 'action') return { action, today: [], earlier: [] };
@@ -365,9 +347,8 @@ export function buildInboxSections(
 }
 
 /** The number on the «Krever handling» chip: rows in the section, a group counting once. */
-export function countActionRows(rows: InboxRow[], role: InboxRole): number {
-  return buildInboxSections(rows, { filter: 'all', now: 0, isAdmin: role.isAdmin }).action
-    .length;
+export function countActionRows(rows: InboxRow[]): number {
+  return buildInboxSections(rows, { filter: 'all', now: 0 }).action.length;
 }
 
 /**
@@ -506,7 +487,6 @@ export type InboxTextContext = {
   tFinished: NotificationTranslator;
   locale: AppLocale;
   now: number;
-  isAdmin: boolean;
   /** `games.scheduled_tee_off_at` per game id (signup rows). */
   teeOffByGame: Readonly<Record<string, string | null>>;
   /** Own `game_players.result_summary` per game id (result rows). */
@@ -670,7 +650,6 @@ export function buildInboxEntryView(
   ctx: InboxTextContext,
 ): InboxEntryView {
   const { t } = ctx;
-  const role = { isAdmin: ctx.isAdmin };
   const base: InboxEntryView = {
     title: '',
     subtitle: '',
@@ -687,7 +666,7 @@ export function buildInboxEntryView(
   if (entry.type === 'group') {
     const people = groupPeople(entry.rows);
     const game = (entry.newest.payload as { game_name: string }).game_name;
-    const destination = inboxDestination(entry.newest, role);
+    const destination = notificationDestination(entry.newest);
     if (section === 'action') {
       // Only approval requests group in KREVER HANDLING.
       return {
@@ -717,10 +696,10 @@ export function buildInboxEntryView(
   const row = entry.row;
   const time = relTime(row.created_at, ctx);
   const short = inboxPerson(rowPersonName(row))?.short;
-  const destination = inboxDestination(row, role);
+  const destination = notificationDestination(row);
 
   if (section === 'action') {
-    const actionKey = inboxActionKey(row, role);
+    const actionKey = inboxActionKey(row);
     if (row.kind === 'registration_request') {
       const p = row.payload as NotificationPayload<'registration_request'>;
       return {

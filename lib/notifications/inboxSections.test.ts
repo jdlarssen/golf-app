@@ -12,7 +12,6 @@ import {
   findSettledActionIds,
   groupPeople,
   inboxActionKey,
-  inboxDestination,
   inboxGroupKey,
   inboxPerson,
   namesLine,
@@ -78,16 +77,12 @@ function ctx(locale: AppLocale = 'no', over: Partial<InboxTextContext> = {}): In
     tFinished: tFor(locale, 'finishedCard'),
     locale,
     now: NOW,
-    isAdmin: true,
     teeOffByGame: {},
     resultByGame: {},
     finishedGameIds: [],
     ...over,
   };
 }
-
-const ADMIN = { isAdmin: true };
-const PLAYER = { isAdmin: false };
 
 describe('inboxActionKey', () => {
   it.each([
@@ -121,33 +116,22 @@ describe('inboxActionKey', () => {
     ['achievement_unlocked', null],
     ['idea_built', null],
   ] as const)('%s → %s', (kind, expected) => {
-    expect(inboxActionKey({ kind, payload: {} as NotificationPayload }, ADMIN)).toBe(expected);
+    expect(inboxActionKey({ kind, payload: {} as NotificationPayload })).toBe(expected);
   });
 
-  it('registration_request: only with request_id, and only for admin', () => {
-    expect(inboxActionKey(signup('Kristian', { request_id: REQ }), ADMIN)).toBe('decide');
-    expect(inboxActionKey(signup('Kristian'), ADMIN)).toBeNull();
-    expect(inboxActionKey(signup('Kristian', { request_id: REQ }), PLAYER)).toBeNull();
+  // #2440: no role — the varsel goes to the organiser, the server decides.
+  it('registration_request: Godta/Avslå with request_id, a plain row without', () => {
+    expect(inboxActionKey(signup('Kristian', { request_id: REQ }))).toBe('decide');
+    expect(inboxActionKey(signup('Kristian'))).toBeNull();
   });
 
   it('a captain’s request (team_name) still gets Godta/Avslå', () => {
     expect(
-      inboxActionKey(signup('Kristian', { request_id: REQ, team_name: 'Bogeybros' }), ADMIN),
+      inboxActionKey(signup('Kristian', { request_id: REQ, team_name: 'Bogeybros' })),
     ).toBe('decide');
   });
 });
 
-describe('inboxDestination', () => {
-  it('signups have no target for a non-admin organiser', () => {
-    expect(inboxDestination(signup('Kristian', { request_id: REQ }), PLAYER)).toBeNull();
-    expect(inboxDestination(signup('Kristian'), PLAYER)).toBeNull();
-    expect(inboxDestination(signup('Kristian'), ADMIN)).toBe(`/admin/games/${GAME_2}/signups`);
-  });
-
-  it('everything else follows notificationDestination', () => {
-    expect(inboxDestination(peer('Marte'), PLAYER)).toBe(`/games/${GAME}/approve`);
-  });
-});
 
 describe('inboxGroupKey', () => {
   it('groups delivered cards, approval requests and open-signup heads-ups per game', () => {
@@ -204,16 +188,16 @@ describe('rowPersonName', () => {
 
 describe('buildInboxSections', () => {
   it('empty → empty sections, chip 0', () => {
-    expect(buildInboxSections([], { filter: 'all', now: NOW, isAdmin: true })).toEqual({
+    expect(buildInboxSections([], { filter: 'all', now: NOW })).toEqual({
       action: [],
       today: [],
       earlier: [],
     });
-    expect(countActionRows([], ADMIN)).toBe(0);
+    expect(countActionRows([])).toBe(0);
   });
 
   it('one unread approval request → one action group «1 scorekort»', () => {
-    const s = buildInboxSections([peer('Marte', MARTE)], { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections([peer('Marte', MARTE)], { filter: 'all', now: NOW });
     expect(s.action).toHaveLength(1);
     expect(s.action[0]).toMatchObject({ type: 'group', kind: 'peer_approval_request', gameId: GAME });
   });
@@ -226,7 +210,7 @@ describe('buildInboxSections', () => {
       delivered('Kari'),
       delivered('Per'),
     ];
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     expect(s.today.map((e) => e.type)).toEqual(['group', 'single']);
     expect(s.today[0]).toMatchObject({ type: 'group', rows: expect.any(Array) });
     expect((s.today[0] as { rows: InboxRow[] }).rows).toHaveLength(4);
@@ -239,7 +223,7 @@ describe('buildInboxSections', () => {
       delivered('Kari', undefined, { at: '2026-09-29T10:00:00Z' }),
       delivered('Per', undefined, { at: '2026-09-29T09:00:00Z' }),
     ];
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     expect(s.today).toHaveLength(1);
     expect(s.earlier).toHaveLength(1);
     expect(s.today[0]!.type).toBe('group');
@@ -248,7 +232,7 @@ describe('buildInboxSections', () => {
 
   it('the same person twice is one person: a single row that still covers both rows', () => {
     const rows = [delivered('Marte', MARTE), delivered('Marte', MARTE)];
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     expect(s.today).toHaveLength(1);
     expect(s.today[0]).toMatchObject({ type: 'single' });
     expect((s.today[0] as { rows: InboxRow[] }).rows).toHaveLength(2);
@@ -256,13 +240,13 @@ describe('buildInboxSections', () => {
 
   it('a group is unread when one member is', () => {
     const rows = [delivered('Marte', MARTE, { read: true }), delivered('Jonas', JONAS)];
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     expect(s.today[0]).toMatchObject({ type: 'group', unread: true });
   });
 
   it('read approval requests leave KREVER HANDLING and group under I DAG', () => {
     const rows = [peer('Marte', MARTE, { read: true }), peer('Jonas', JONAS, { read: true })];
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     expect(s.action).toEqual([]);
     expect(s.today[0]).toMatchObject({ type: 'group', kind: 'peer_approval_request' });
   });
@@ -272,7 +256,7 @@ describe('buildInboxSections', () => {
       delivered('Marte', MARTE, { at: '2026-09-30T22:30:00Z' }),
       delivered('Jonas', JONAS, { at: '2026-09-30T21:59:00Z' }),
     ];
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     expect(s.today).toHaveLength(1);
     expect(s.earlier).toHaveLength(1);
   });
@@ -284,12 +268,10 @@ describe('buildInboxSections', () => {
       signup('Kristian', { request_id: REQ }),
       delivered('Per'),
     ];
-    const s = buildInboxSections(rows, { filter: 'action', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'action', now: NOW });
     expect(s.action).toHaveLength(2);
     expect(s.today).toEqual([]);
-    expect(countActionRows(rows, ADMIN)).toBe(2);
-    // The same request is a plain row for a non-admin organiser.
-    expect(countActionRows(rows, PLAYER)).toBe(1);
+    expect(countActionRows(rows)).toBe(2);
   });
 
   it('filter friends → friend requests and friendships in every section', () => {
@@ -298,7 +280,7 @@ describe('buildInboxSections', () => {
       row('friend_accepted', { actor_id: MARTE, actor_name: 'Anders' }, { read: true }),
       delivered('Per'),
     ];
-    const s = buildInboxSections(rows, { filter: 'friends', now: NOW, isAdmin: true });
+    const s = buildInboxSections(rows, { filter: 'friends', now: NOW });
     expect(s.action.map((e) => (e as { row: InboxRow }).row.kind)).toEqual(['friend_request']);
     expect(s.today.map((e) => (e as { row: InboxRow }).row.kind)).toEqual(['friend_accepted']);
   });
@@ -367,7 +349,7 @@ describe('teeOffLine', () => {
 
 describe('buildInboxEntryView', () => {
   function view(rows: InboxRow[], section: 'action' | 'today' | 'earlier', c = ctx()) {
-    const s = buildInboxSections(rows, { filter: 'all', now: NOW, isAdmin: c.isAdmin });
+    const s = buildInboxSections(rows, { filter: 'all', now: NOW });
     return buildInboxEntryView(s[section][0]!, section, c);
   }
 
@@ -431,11 +413,11 @@ describe('buildInboxEntryView', () => {
     expect(view([signup('Kristian Holm')], 'today').title).toBe('Kristian meldte seg på');
   });
 
-  it('a request a non-admin organiser cannot answer: plain row, no target', () => {
-    const v = view([signup('Kristian', { request_id: REQ })], 'today', ctx('no', { isAdmin: false }));
-    expect(v.title).toBe('Kristian meldte seg på');
-    expect(v.destination).toBeNull();
-    expect(v.actionKey).toBeNull();
+  it('#2440: a pending request goes to the signup page; a heads-up too', () => {
+    expect(view([signup('Kristian', { request_id: REQ })], 'action').destination).toBe(
+      `/admin/games/${GAME_2}/signups`,
+    );
+    expect(view([signup('Kristian')], 'today').destination).toBe(`/admin/games/${GAME_2}/signups`);
   });
 
   it.each([
