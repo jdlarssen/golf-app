@@ -23,7 +23,7 @@ export type BrandMarkSize = keyof typeof SIZES;
 const TONE_CLASSES = {
   default: 'font-medium tracking-tight leading-none text-text',
   current: 'font-medium tracking-tight leading-none',
-  onStrong: 'font-semibold tracking-normal text-on-strong',
+  onStrong: 'font-semibold tracking-normal leading-[normal] text-on-strong',
 } as const;
 
 /**
@@ -42,7 +42,7 @@ const TONE_CLASSES = {
  *
  * `tone="onStrong"` is the wordmark on --surface-strong (the front page's green
  * top, #2261): linen letters at 600 with normal tracking and line-height, as
- * the artboard draws them, and the gold ball as in `default`. The row it sits
+ * the artboard draws them (CSS `normal`, not Tailwind's 1.5), and the gold ball as in `default`. The row it sits
  * in is tall enough for the ball, so no clearance padding.
  */
 export function BrandMark({

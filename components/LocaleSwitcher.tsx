@@ -50,7 +50,9 @@ export function LocaleSwitcher({
       <input type="hidden" name="pathname" value={pathname} />
       <input type="hidden" name="search" value={search} />
       {/* data-focus-inset: `overflow-hidden` klipper en outline med positiv
-          offset helt bort, så fokusringen tegnes på innsiden (#1386). */}
+          offset helt bort, så fokusringen tegnes på innsiden (#1386). Der
+          lander den på knappens egen fyll, så den aktive knappen setter en
+          ringfarge i fyllets motsatte tone: lin på skog, skog på lin (#2261). */}
       <div
         data-focus-inset
         className={
@@ -75,12 +77,12 @@ export function LocaleSwitcher({
                 onStrong
                   ? `flex min-h-[44px] min-w-[44px] items-center justify-center px-2.5 font-sans text-[13px] font-semibold transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
                       isActive
-                        ? 'bg-on-strong text-surface-strong'
+                        ? 'bg-on-strong text-surface-strong [--focus-ring:var(--surface-strong)]'
                         : 'text-on-strong/80 hover:bg-on-strong/10'
                     }`
                   : `flex min-h-[44px] min-w-[72px] items-center justify-center px-4 font-sans text-sm font-medium transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
                       isActive
-                        ? 'bg-primary text-bg'
+                        ? 'bg-primary text-bg [--focus-ring:var(--bg)]'
                         : 'text-muted hover:bg-primary-soft/60 hover:text-text'
                     }`
               }

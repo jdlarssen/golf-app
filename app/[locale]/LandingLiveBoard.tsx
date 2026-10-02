@@ -111,6 +111,9 @@ export function LandingLiveBoard({
 }
 
 // Keyed by place, not name: the rows stay put and only their text changes.
+// The cells use CSS `normal` line-height as the artboard does: the fonts' own
+// metrics give rows of 42/42/41 px, with or without the arrow, and put every
+// glyph on the artboard's pixel.
 function BoardRow({
   place,
   row,
@@ -125,10 +128,10 @@ function BoardRow({
       data-testid="landing-live-board-row"
       className="grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2.5 border-b border-row-divider-warm py-[9px] last:border-b-0"
     >
-      <span className="text-center font-serif text-base leading-5 font-semibold">
+      <span className="text-center font-serif text-base leading-[normal] font-semibold">
         {place}
       </span>
-      <span className="text-[15px] leading-[19px] font-semibold">
+      <span className="text-[15px] leading-[normal] font-semibold">
         {row.name}
         {row.move && (
           <>
@@ -138,12 +141,18 @@ function BoardRow({
                 row.move.dir === 'up' ? 'text-rank-up' : 'text-score-over2-fg'
               }`}
             >
-              {row.move.dir === 'up' ? '▲' : '▼'} {row.move.by}
+              {/* Inter has no ▲/▼. The artboard falls back to system-ui
+                  for it; next/font's Arial-based «Inter Fallback» would
+                  draw a bigger triangle first. */}
+              <span className="font-[system-ui]">
+                {row.move.dir === 'up' ? '▲' : '▼'}
+              </span>{' '}
+              {row.move.by}
             </span>
           </>
         )}
       </span>
-      <span className="font-serif text-lg leading-[23px] font-semibold tabular-nums">
+      <span className="font-serif text-lg leading-[normal] font-semibold tabular-nums">
         {row.points}
         {pointsSuffix}
       </span>
