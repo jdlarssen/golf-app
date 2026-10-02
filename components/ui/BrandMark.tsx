@@ -41,9 +41,10 @@ const TONE_CLASSES = {
  * (the spectate banner, which switches between champagne and forest).
  *
  * `tone="onStrong"` is the wordmark on --surface-strong (the front page's green
- * top, #2261): linen letters at 600 with normal tracking and line-height, as
- * the artboard draws them (CSS `normal`, not Tailwind's 1.5), and the gold ball as in `default`. The row it sits
- * in is tall enough for the ball, so no clearance padding.
+ * top, #2261): linen letters at 600 with normal tracking and line-height (CSS
+ * `normal`, not Tailwind's 1.5), as the artboard draws them, and the gold ball
+ * as in `default`. The row it sits in is tall enough for the ball, so no
+ * clearance padding.
  */
 export function BrandMark({
   size = 'sm',
