@@ -30,6 +30,10 @@ colors:
   player-a: "#2f6d83"
   player-b: "#c06542"
   admin-bg: "#f5f1e4"
+  on-strong: "#ece5d2"
+  accent-on-strong: "#d4b870"
+  live-dot: "#2d8a4e"
+  rank-up: "#2d7a4a"
 
 colors-dark:
   bg: "#14201a"
@@ -56,6 +60,10 @@ colors-dark:
   player-a: "#6fa3bd"
   player-b: "#db8a66"
   admin-bg: "#1a2620"
+  on-strong: "#ece5d2"
+  accent-on-strong: "#d4b870"
+  live-dot: "#7daa8a"
+  rank-up: "#7daa8a"
 
 typography:
   page-title:
@@ -183,6 +191,9 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
 - **Gullpille rundt Skins-figuren** (#2260) er ett av unntakene fra «gull er en medalje»:
   potten i Skins tegnes som en `accent`-strek rundt hele gruppa, som på artboardet. Den er
   ren dekor (`aria-hidden`) og gjelder bare den figuren.
+- **Den grønne toppen på forsiden for utloggede** (#2261) har gull på to steder, som på
+  artboardet eieren valgte: «par» i overskriften (`accent-on-strong`) og knappen til demoen
+  (`accent`). Teksten der er `on-strong`. Unntaket gjelder bare den flaten.
 
 ## Typografi
 
@@ -202,6 +213,10 @@ messinglinjer (`BrassRibbon`) og klubbstempel (`ClubStamp`).
   når den er gull.
 - **Overskrifter** bruker `text-wrap: pretty` globalt. Sidetittel via `PageHeader`
   (Fraunces 30 px, 500, stram sperring).
+- **Den grønne toppen på forsiden** (#2261) har to unntak: H1 bryter med
+  `text-wrap: wrap`, så linjene blir som på artboardet, og poengene på tavlekortet er
+  `font-serif font-semibold tabular-nums` uten `.score-num`, som legger på `ss01` og
+  sperring artboardet ikke har.
 - **Norsk skikk:** setningsstil i overskrifter og knapper, «» som anførselstegn, `…` for
   ellipse.
 

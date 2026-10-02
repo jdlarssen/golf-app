@@ -6207,11 +6207,14 @@
     "metaDescription": "Free golf tournament app. Set up scramble, stableford or matchplay with friends or your company. Tørny handles the handicaps and keeps the board live.",
     "loginCta": "Log in",
     "hero": {
-      "h1": "Run a golf tournament in a couple of minutes",
-      "sub": "Pick a format, share a link with your group, and the board tallies net handicap while you play. No club or committee required.",
+      "h1Pre": "Run a golf tournament in a ",
+      "h1Gold": "couple",
+      "h1Post": " of minutes",
+      "sub": "Invite your group, enter scores on your phone and watch the board update while you play.",
       "primaryCta": "Try Tørny in 60 seconds",
       "secondaryCta": "Set up your own tournament",
-      "trust": "Free. No app to download."
+      "trust": "Free · No app to download · 20+ formats",
+      "audienceNav": "Tournament types"
     },
     "how": {
       "heading": "How to run a golf tournament",
@@ -6224,18 +6227,11 @@
       "step3Title": "Play",
       "step3Body": "Everyone taps in their own strokes on their phone, and the board updates as you go."
     },
-    "board": {
-      "heading": "The board is live while you play",
-      "colPlayer": "Player",
-      "colPoints": "Points",
-      "rows": [
-        { "name": "Ida", "points": "39" },
-        { "name": "Jonas", "points": "37" },
-        { "name": "Mette", "points": "35" },
-        { "name": "Ola", "points": "34" },
-        { "name": "Kari", "points": "32" }
-      ],
-      "linkLabel": "Try it yourself in the demo"
+    "liveBoard": {
+      "kicker": "Saturday round · hole {hole}",
+      "live": "LIVE",
+      "points": " pts",
+      "caption": "Example of a live leaderboard where positions and points update hole by hole."
     },
     "formats": {
       "heading": "Over 20 formats: scramble, stableford, matchplay and more",

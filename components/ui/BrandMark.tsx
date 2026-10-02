@@ -15,9 +15,16 @@ const SIZES = {
   sm: { className: 'text-xl', px: 20 }, // top of a page
   md: { className: 'text-3xl', px: 30 }, // signup poster
   lg: { className: 'text-5xl', px: 48 }, // BrandHero, /login
+  hero: { className: 'text-2xl', px: 24 }, // the front page's green top (#2261)
 } as const;
 
 export type BrandMarkSize = keyof typeof SIZES;
+
+const TONE_CLASSES = {
+  default: 'font-medium tracking-tight leading-none text-text',
+  current: 'font-medium tracking-tight leading-none',
+  onStrong: 'font-semibold tracking-normal text-on-strong',
+} as const;
 
 /**
  * The «Tørny» wordmark with the champagne ball resting on the T (#1985) —
@@ -32,6 +39,11 @@ export type BrandMarkSize = keyof typeof SIZES;
  *
  * `tone="current"` takes the surrounding text colour for both letters and ball
  * (the spectate banner, which switches between champagne and forest).
+ *
+ * `tone="onStrong"` is the wordmark on --surface-strong (the front page's green
+ * top, #2261): linen letters at 600 with normal tracking and line-height, as
+ * the artboard draws them, and the gold ball as in `default`. The row it sits
+ * in is tall enough for the ball, so no clearance padding.
  */
 export function BrandMark({
   size = 'sm',
@@ -39,23 +51,23 @@ export function BrandMark({
   className = '',
 }: {
   size?: BrandMarkSize;
-  tone?: 'default' | 'current';
+  tone?: 'default' | 'current' | 'onStrong';
   className?: string;
 }) {
   const { className: sizeClass, px } = SIZES[size];
-  const shaded = tone === 'default' && px * BALL_DIAMETER_EM >= BALL_SHADING_MIN_PX;
+  const goldBall = tone !== 'current';
+  const shaded = goldBall && px * BALL_DIAMETER_EM >= BALL_SHADING_MIN_PX;
+  const toneClass = TONE_CLASSES[tone];
   return (
     <span
       data-testid="brand-mark"
-      className={`block font-serif font-medium tracking-tight leading-none ${sizeClass} ${
-        tone === 'default' ? 'text-text' : ''
-      } ${className}`}
-      style={{ paddingTop: `${BALL_CLEARANCE_EM}em` }}
+      className={`block font-serif ${toneClass} ${sizeClass} ${className}`}
+      style={tone === 'onStrong' ? undefined : { paddingTop: `${BALL_CLEARANCE_EM}em` }}
     >
       <span aria-hidden="true" className="relative inline-block h-0 w-0 align-baseline">
         <span
           data-testid="brand-mark-ball"
-          className={`absolute rounded-full ${tone === 'default' ? 'bg-accent' : 'bg-current'}`}
+          className={`absolute rounded-full ${goldBall ? 'bg-accent' : 'bg-current'}`}
           style={{
             left: `${BALL_CENTER_X_EM - BALL_DIAMETER_EM / 2}em`,
             bottom: `${T_CAP_HEIGHT_EM}em`,
