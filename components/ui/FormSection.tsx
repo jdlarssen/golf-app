@@ -55,8 +55,10 @@ export function FormSection({
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
       {aside ? (
+        // The legend content is a flex item of its own: a string becomes an
+        // anonymous item, a heading stays a direct child (no heading in a span).
         <legend className={`flex w-full items-baseline justify-between gap-3 ${legendClass}`}>
-          <span>{legend}</span>
+          {legend}
           <span className="font-sans text-xs font-medium normal-case leading-[normal] tracking-normal tabular-nums text-muted">
             {aside}
           </span>

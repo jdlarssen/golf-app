@@ -967,9 +967,7 @@
           "kickerAll": "All players",
           "hcp": "HCP {hcp}",
           "guest": "Guest",
-          "guestAria": "Add a guest",
           "email": "Email",
-          "emailAria": "Invite by email",
           "showAll": "Show all {count}",
           "hint": "Guests get a name and a handicap, no account. With an email address we send an invitation.",
           "hintCup": "Guests get a name and a handicap, no account."

@@ -53,7 +53,7 @@ describe('PlayerPickerGrid', () => {
     expect(screen.getByRole('checkbox', { name: /spiller 3/i })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: /spiller 3/i })).toBeDisabled();
     expect(screen.getByRole('checkbox', { name: /spiller 2/i })).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: /legg til gjest/i })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /^gjest$/i })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
