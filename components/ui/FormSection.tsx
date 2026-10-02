@@ -3,22 +3,19 @@ import type { FieldsetHTMLAttributes, ReactNode } from 'react';
 type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
   /** The kicker over the card. It is the fieldset's legend, so it also names the group. */
   legend: ReactNode;
-  legendId?: string;
   children: ReactNode;
   /**
-   * `card` (default): the children sit in a white card with a 14 px inset.
+   * `card` (default): the children sit in a card with a 14 px inset.
    * `bare`: no card — the children sit straight on the page, as the team size
    * tiles do.
    */
   variant?: 'card' | 'bare';
   /** Space between the card's children: 12 px, or 14 px for step 3's fields. */
   gap?: 'md' | 'lg';
-  /** Space over the kicker: 18 px between sections, 22 px after a note. */
-  spacing?: 'default' | 'loose';
 };
 
 /**
- * The new-game wizard's section frame (#2426): an uppercase kicker over a white
+ * The new-game wizard's section frame (#2426): an uppercase kicker over a
  * card with rounded corners, as «ANDRE SOM PASSER» over the format rows (#2260).
  * Every setup section on steps 2 and 3 uses it.
  *
@@ -28,22 +25,15 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
  */
 export function FormSection({
   legend,
-  legendId,
   children,
   variant = 'card',
   gap = 'md',
-  spacing = 'default',
   className = '',
   ...rest
 }: Props) {
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
-      <legend
-        id={legendId}
-        className={`px-1 pb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted ${
-          spacing === 'loose' ? 'pt-[22px]' : 'pt-[18px]'
-        }`}
-      >
+      <legend className="px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
         {legend}
       </legend>
       {variant === 'card' ? (

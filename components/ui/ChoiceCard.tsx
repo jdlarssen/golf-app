@@ -27,16 +27,23 @@ const MIN_HEIGHT = {
 } as const;
 export type ChoiceCardHeight = keyof typeof MIN_HEIGHT;
 
+/**
+ * Chosen vs not chosen, shared with the arrangement tiles on step 1, which
+ * have their own shape but the same states.
+ */
+export function choiceStateClass(selected: boolean): string {
+  return selected
+    ? 'border-2 border-primary bg-primary-soft'
+    : 'border border-border bg-surface hover:bg-primary-soft/60';
+}
+
 export function choiceCardClass(
   selected: boolean,
   { height = 60, layout = 'start' }: { height?: ChoiceCardHeight; layout?: ChoiceCardLayout } = {},
 ): string {
   const align =
     layout === 'centered' ? 'items-center text-center px-3' : layout === 'dense' ? 'items-start text-left px-2.5' : 'items-start text-left px-3';
-  const state = selected
-    ? 'border-2 border-primary bg-primary-soft'
-    : 'border border-border bg-surface hover:bg-primary-soft/60';
-  return `relative flex ${MIN_HEIGHT[height]} cursor-pointer flex-col justify-center rounded-[14px] py-2.5 text-text transition-colors duration-150 ${align} ${state}`;
+  return `relative flex ${MIN_HEIGHT[height]} cursor-pointer flex-col justify-center rounded-[14px] py-2.5 text-text transition-colors duration-150 ${align} ${choiceStateClass(selected)}`;
 }
 
 export function ChoiceCardText({
@@ -72,17 +79,15 @@ const GRID_COLS = {
 export function ChoiceCardGrid({
   columns,
   label,
-  className = '',
   children,
 }: {
   columns: keyof typeof GRID_COLS;
   /** Names the radiogroup for screen readers. */
   label: string;
-  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className={`grid gap-2 ${GRID_COLS[columns]} ${className}`}>
+    <div role="radiogroup" aria-label={label} className={`grid gap-2 ${GRID_COLS[columns]}`}>
       {children}
     </div>
   );

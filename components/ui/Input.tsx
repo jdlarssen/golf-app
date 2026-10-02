@@ -1,5 +1,5 @@
 import { InputHTMLAttributes, Ref } from 'react';
-import { CARD_FIELD_CONTROL, CARD_FIELD_HINT, CARD_FIELD_LABEL } from './CardField';
+import { CARD_FIELD_CONTROL, CARD_FIELD_ERROR, CARD_FIELD_HINT, CARD_FIELD_LABEL } from './CardField';
 
 export function Input({
   label,
@@ -34,6 +34,7 @@ export function Input({
   const descId = id && message ? `${id}-desc` : undefined;
   const card = variant === 'card';
   const hintClass = card ? CARD_FIELD_HINT : 'text-xs text-muted mt-1.5';
+  const errorClass = card ? CARD_FIELD_ERROR : 'text-xs text-danger mt-1.5';
   return (
     <div>
       <label
@@ -62,7 +63,7 @@ export function Input({
         }
       />
       {error && (
-        <p id={descId} className="text-xs text-danger mt-1.5">
+        <p id={descId} className={errorClass}>
           {error}
         </p>
       )}
