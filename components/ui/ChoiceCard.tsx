@@ -51,20 +51,31 @@ export function choiceCardClass(
   return `relative flex ${MIN_HEIGHT[height]} cursor-pointer flex-col justify-center rounded-[14px] py-2.5 text-text transition-colors duration-150 ${align} ${choiceStateClass(selected)}`;
 }
 
+/**
+ * Title sizes the artboards draw: 17 px by default, 15 px in three-a-row
+ * tiles, 16 px on the club cards (#2439). Spelled out so Tailwind sees them.
+ */
+const TITLE_SIZE = {
+  15: 'text-[15px]',
+  16: 'text-[16px]',
+  17: 'text-[17px]',
+} as const;
+export type ChoiceCardTitleSize = keyof typeof TITLE_SIZE;
+
 export function ChoiceCardText({
   title,
   hint,
   layout = 'start',
+  titleSize = layout === 'dense' ? 15 : 17,
 }: {
   title: ReactNode;
   hint?: ReactNode;
   layout?: ChoiceCardLayout;
+  titleSize?: ChoiceCardTitleSize;
 }) {
   return (
     <>
-      <span
-        className={`font-serif font-semibold leading-[normal] ${layout === 'dense' ? 'text-[15px]' : 'text-[17px]'}`}
-      >
+      <span className={`font-serif font-semibold leading-[normal] ${TITLE_SIZE[titleSize]}`}>
         {title}
       </span>
       {hint && (
@@ -108,6 +119,7 @@ export function RadioChoiceCard({
   hint,
   height,
   layout,
+  titleSize,
 }: {
   /**
    * Left out when the form gets the value from a hidden mirror instead
@@ -122,6 +134,7 @@ export function RadioChoiceCard({
   hint?: ReactNode;
   height?: ChoiceCardHeight;
   layout?: ChoiceCardLayout;
+  titleSize?: ChoiceCardTitleSize;
 }) {
   return (
     <label
@@ -136,7 +149,7 @@ export function RadioChoiceCard({
         disabled={disabled}
         className="sr-only"
       />
-      <ChoiceCardText title={title} hint={hint} layout={layout} />
+      <ChoiceCardText title={title} hint={hint} layout={layout} titleSize={titleSize} />
     </label>
   );
 }
