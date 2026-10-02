@@ -20,6 +20,8 @@ import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
+import { parseInviteEmailList } from '@/lib/games/inviteEmail';
+import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -77,9 +79,10 @@ async function createGameInternal(
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
   const userId = user.id;
+  // #2321: `name` signs the wizard's e-mail invitations sent at publish.
   const { data: gateProfile } = await supabase
     .from('users')
-    .select('is_admin')
+    .select('is_admin, name')
     .eq('id', userId)
     .single();
   const isAdmin = gateProfile?.is_admin === true;
@@ -373,6 +376,29 @@ async function createGameInternal(
     );
   }
 
+  // #2321: the addresses from the wizard's «Inviter på e-post» go out now
+  // that the game exists. Only on publish (a draft sends nothing, the form says
+  // so) and only without a cup link (the wizard has no e-mail card there). The
+  // gate the core's file header asks for is the insert above: the logged-in
+  // user just created this game with `created_by` = themselves. A failed
+  // address never stops the publish; it only adds the warning banner.
+  let invitesFailed = false;
+  if (mode === 'publish' && !tournamentId) {
+    const emails = parseInviteEmailList(formData.getAll('invite_email'));
+    if (emails.length > 0) {
+      const { failed } = await sendPublishInvites({
+        client: supabase,
+        viewer: supabase,
+        gameId: game.id,
+        inviterUserId: userId,
+        inviterName: gateProfile?.name ?? null,
+        isAdmin,
+        emails,
+      });
+      invitesFailed = failed > 0;
+    }
+  }
+
   // Hvis spillet er koblet til en cup, refresh cup-leaderboard-cachen så
   // /admin/cup/[id] og /cup/[id] viser den nye matchen umiddelbart, og
   // redirect tilbake til cup-detaljsiden i stedet for game-detalj.
@@ -391,9 +417,14 @@ async function createGameInternal(
 
   if (isAdmin) {
     redirect({
-      href: `/admin/games/${game.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
+      href: `/admin/games/${game.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}${invitesFailed ? '&error=invites_failed' : ''}`,
       locale,
     });
+  }
+  // #2321: the players page is where «Inviter på e-post» lives, so a failed
+  // invitation lands there with the banner instead of on game-home.
+  if (invitesFailed) {
+    redirect({ href: `/games/${game.id}/spillere?error=invites_failed`, locale });
   }
   // Trusted-non-admin creator (#198): admin-layouten ville bounce-et dem fra
   // /admin/* til `/`, så de aldri så spillet sitt. Send dem rett til game-home

@@ -79,6 +79,15 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => supabaseMock,
 }));
 
+// #2321: the wizard's e-mail invitations. The sender has its own tests; here
+// only who calls it, with what, and where the organiser lands.
+const sendPublishInvitesMock = vi.fn<(...args: unknown[]) => Promise<{ failed: number }>>(
+  async () => ({ failed: 0 }),
+);
+vi.mock('@/lib/games/sendPublishInvites', () => ({
+  sendPublishInvites: (...args: unknown[]) => sendPublishInvitesMock(...args),
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
@@ -942,5 +951,56 @@ describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () 
       ),
     ).toBe(true);
     expect(rosterWrites()).toEqual([]);
+  });
+});
+
+describe('e-mail invitations when a draft is published (#2321)', () => {
+  it('publish sends them once with the game id and the request client; a failure adds invites_failed; a draft save sends none', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true, name: 'Ola' }, error: null }, // loadRole
+        { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
+        // prior roster identical to the payload → no game_players writes
+        { data: Array.from({ length: 8 }, (_, i) => storedBestBallRow(i)), error: null },
+        { data: { id: 'game-inv' }, error: null }, // games.update
+      ],
+      { incomplete_profile_ids: [] },
+    );
+    signIn('admin-1');
+    sendPublishInvitesMock.mockResolvedValueOnce({ failed: 2 });
+
+    const { publishFromDraftAction, saveDraftAction } = await import('./actions');
+    const publishData = fullBestBallFormData();
+    publishData.append('invite_email', 'a@example.com');
+
+    await expect(publishFromDraftAction('game-inv', publishData)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(sendPublishInvitesMock).toHaveBeenCalledTimes(1);
+    const [call] = sendPublishInvitesMock.mock.calls[0] as [Record<string, unknown>];
+    expect(call).toMatchObject({
+      gameId: 'game-inv',
+      inviterUserId: 'admin-1',
+      isAdmin: true,
+      emails: ['a@example.com'],
+    });
+    expect(call.client).toBe(supabaseMock);
+    expect(call.viewer).toBe(supabaseMock);
+    expect(lastRedirect()).toBe('/admin/games/game-inv?status=scheduled&error=invites_failed');
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Ola' }, error: null },
+      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
+      { data: [], error: null },
+      { data: { id: 'draft-inv' }, error: null },
+    ]);
+    signIn('admin-1');
+    sendPublishInvitesMock.mockClear();
+    const draftData = fd({ name: 'Utkast', side_tournament_enabled: 'false', game_mode: 'best_ball' });
+    draftData.append('invite_email', 'a@example.com');
+
+    await expect(saveDraftAction('draft-inv', draftData)).rejects.toBeInstanceOf(RedirectError);
+    expect(sendPublishInvitesMock).not.toHaveBeenCalled();
   });
 });
