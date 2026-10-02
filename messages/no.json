@@ -962,9 +962,7 @@
           "kickerAll": "Alle spillere",
           "hcp": "HCP {hcp}",
           "guest": "Gjest",
-          "guestAria": "Legg til gjest",
           "email": "E-post",
-          "emailAria": "Inviter på e-post",
           "showAll": "Vis alle {count}",
           "hint": "Gjester får et navn og et handicap, uten konto. Med e-post sender vi en invitasjon.",
           "hintCup": "Gjester får et navn og et handicap, uten konto."

@@ -18,13 +18,14 @@
  *   grid, one at a time. Both are local state.
  */
 
-import { useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { choiceStateClass } from '@/components/ui/ChoiceCard';
 import { FormSection } from '@/components/ui/FormSection';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { MiniChip } from '@/components/ui/MiniChip';
+import { SearchField } from '@/components/ui/SearchField';
 import { firstName } from '@/lib/firstName';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { nameInitials } from '@/lib/names/initials';
@@ -44,23 +45,6 @@ const KICKER = {
   club: 'kickerClub',
   all: 'kickerAll',
 } as const;
-
-function SearchIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
-    </svg>
-  );
-}
 
 // No vertical padding: the artboard's card is 92 px with its content centred.
 const CARD_BASE =
@@ -87,8 +71,21 @@ export function PlayerPickerGrid({
   const [openForm, setOpenForm] = useState<'guest' | 'email' | null>(null);
   const [showAll, setShowAll] = useState(false);
   const tGuest = useTranslations('game.players');
-  // Focus goes back to «+ Gjest» once the added guest closes the form.
+  // Focus goes back to «+ Gjest» once the added guest closes the form. When
+  // that guest filled the last place, «+ Gjest» is disabled and cannot take
+  // focus, so it goes to the guest's own card instead. Run after the render
+  // that shows the closed form and the new card.
   const guestButtonRef = useRef<HTMLButtonElement>(null);
+  const gridRef = useRef<HTMLUListElement>(null);
+  const focusAfterGuestRef = useRef<string | null>(null);
+  useEffect(() => {
+    const guestId = focusAfterGuestRef.current;
+    if (guestId === null) return;
+    focusAfterGuestRef.current = null;
+    const button = guestButtonRef.current;
+    if (button && !button.disabled) button.focus();
+    else gridRef.current?.querySelector<HTMLInputElement>(`input[data-player-id="${guestId}"]`)?.focus();
+  });
 
   const selected = new Set(state.selectedPlayerIds);
   const sessionGuests = new Set(state.extraPlayers.map((g) => g.id));
@@ -132,6 +129,7 @@ export function PlayerPickerGrid({
             checked={isSelected}
             disabled={disabled}
             onChange={() => state.togglePlayer(p.id)}
+            data-player-id={p.id}
             aria-label={`${playerOptionLabel(p, pendingLabel, locale)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
           />
           <span
@@ -177,7 +175,6 @@ export function PlayerPickerGrid({
     icon,
     iconClass,
     label,
-    ariaLabel,
     controls,
     ref,
   }: {
@@ -185,7 +182,6 @@ export function PlayerPickerGrid({
     icon: string;
     iconClass: string;
     label: string;
-    ariaLabel: string;
     controls: string;
     ref?: Ref<HTMLButtonElement>;
   }) {
@@ -197,7 +193,6 @@ export function PlayerPickerGrid({
           type="button"
           aria-expanded={open}
           aria-controls={controls}
-          aria-label={ariaLabel}
           disabled={atCap && !open}
           onClick={() => toggleForm(form)}
           className={`${CARD_BASE} w-full font-sans text-primary disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -207,9 +202,7 @@ export function PlayerPickerGrid({
           <span aria-hidden="true" className={`leading-none ${iconClass}`}>
             {icon}
           </span>
-          <span aria-hidden="true" className="text-xs font-semibold leading-[normal]">
-            {label}
-          </span>
+          <span className="text-xs font-semibold leading-[normal]">{label}</span>
         </button>
       </li>
     );
@@ -217,24 +210,14 @@ export function PlayerPickerGrid({
 
   return (
     <div>
-      <div className="relative mt-3">
-        <span className="pointer-events-none absolute left-[13px] top-1/2 flex -translate-y-1/2 text-muted">
-          <SearchIcon />
-        </span>
-        <label htmlFor="player_search" className="sr-only">
-          {t('searchLabel')}
-        </label>
-        <input
-          id="player_search"
-          type="search"
-          value={query}
-          onChange={(e) => state.setPlayerSearch(e.target.value)}
-          placeholder={t('grid.searchPlaceholder')}
-          autoComplete="off"
-          // 50 px: the artboard's 48 px field draws its 1 px border outside (content-box).
-          className="h-[50px] w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
-        />
-      </div>
+      <SearchField
+        id="player_search"
+        className="mt-3"
+        label={t('searchLabel')}
+        value={query}
+        onChange={state.setPlayerSearch}
+        placeholder={t('grid.searchPlaceholder')}
+      />
 
       <FormSection variant="bare" legendSpacing="tight" legend={t(`grid.${KICKER[source]}`)}>
         {searching && matching.length === 0 && (
@@ -242,14 +225,13 @@ export function PlayerPickerGrid({
             {t('noSearchResults')}
           </p>
         )}
-        <ul className="grid grid-cols-3 gap-2 min-[360px]:grid-cols-4">
+        <ul ref={gridRef} className="grid grid-cols-3 gap-2 min-[360px]:grid-cols-4">
           {cards.map(card)}
           {dashedCard({
             form: 'guest',
             icon: '+',
             iconClass: 'text-[22px]',
             label: t('grid.guest'),
-            ariaLabel: t('grid.guestAria'),
             controls: guestFormId,
             ref: guestButtonRef,
           })}
@@ -259,7 +241,6 @@ export function PlayerPickerGrid({
               icon: '✉',
               iconClass: 'text-lg',
               label: t('grid.email'),
-              ariaLabel: t('grid.emailAria'),
               controls: emailFormId,
             })}
         </ul>
@@ -288,9 +269,9 @@ export function PlayerPickerGrid({
             id={guestFormId}
             state={state}
             disabled={atCap}
-            onAdded={() => {
+            onAdded={(guestId) => {
+              focusAfterGuestRef.current = guestId;
               setOpenForm(null);
-              guestButtonRef.current?.focus();
             }}
           />
         </FormSection>
