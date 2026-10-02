@@ -31,6 +31,7 @@ import {
 } from '@/lib/storage/sponsorLogos';
 import { sponsorLogoUrl } from '@/lib/storage/sponsorLogoUrl';
 import type { GameFormState } from '../useGameFormState';
+import { Button } from '@/components/ui/Button';
 import { FormSection } from '@/components/ui/FormSection';
 import { Input } from '@/components/ui/Input';
 
@@ -228,15 +229,17 @@ function SponsorLogoField({
           </button>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
+          size="chip"
+          variant="dashed"
           data-testid={`prize-${slotKey}-logo-upload`}
           disabled={uploading}
           onClick={() => fileRef.current?.click()}
-          className="h-11 w-full rounded-full border border-dashed border-field-border bg-transparent px-3.5 font-sans text-sm font-semibold text-primary hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-full"
         >
           {uploading ? t('logoUploading') : t('logoUpload')}
-        </button>
+        </Button>
       )}
       {error && (
         <p
