@@ -10,7 +10,8 @@ type Variant =
   | 'ghost'
   | 'outline'
   | 'onStrongGold'
-  | 'onStrongOutline';
+  | 'onStrongOutline'
+  | 'quiet';
 
 /**
  * `default` is the pill every screen has used. `compact` is the terminliste's
@@ -18,8 +19,16 @@ type Variant =
  * so it sits flush at the end of a list row. `large` is the new-game wizard's
  * «Neste» (#2426): 52 px high, 16 px / 600, no lift or shadow, and a disabled
  * primary turns hairline-beige with muted text instead of fading.
+ *
+ * #2321, step 4 of the wizard: `chip` is the 44 px pill sized to its label
+ * («Trekk tilfeldig», «Vis alle 23», the tee pills), 14 px / 600.
+ *
+ * #2282, the tray on step 5: `xl` is «Publiser og del invitasjonen», 54 px at
+ * 16 px / 600 with `large`'s colours (a disabled primary turns hairline-beige
+ * with muted text). «Lagre som utkast» under it is `quiet` at `chip` size: no
+ * frame, no fill, forest text.
  */
-type Size = 'default' | 'compact' | 'large';
+type Size = 'default' | 'compact' | 'large' | 'chip' | 'xl';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
 // hover-lift stay synchronised. Variant-specific colors live in VARIANTS, and
@@ -45,6 +54,7 @@ const VARIANTS: Record<Variant, string> = {
     'bg-accent text-text dark:text-bg font-semibold tracking-normal hover:bg-accent/90',
   onStrongOutline:
     'bg-transparent border border-on-strong/50 text-on-strong font-semibold tracking-normal hover:bg-on-strong/10',
+  quiet: 'font-medium tracking-tight bg-transparent hover:bg-primary-soft text-primary',
 };
 
 // `compact` replaces the size classes instead of adding to them: no py-2.5,
@@ -61,6 +71,7 @@ const COMPACT_VARIANTS: Record<Variant, string> = {
   onStrongGold: 'px-[14px] bg-accent text-text dark:text-bg hover:bg-accent/90',
   onStrongOutline:
     'px-[14px] bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
+  quiet: 'px-[14px] bg-transparent hover:bg-primary-soft text-primary',
 };
 
 const LARGE_BASE =
@@ -76,11 +87,40 @@ const LARGE_VARIANTS: Record<Variant, string> = {
   onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90 disabled:opacity-50',
   onStrongOutline:
     'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10 disabled:opacity-50',
+  quiet: 'bg-transparent hover:bg-primary-soft text-primary disabled:opacity-50',
 };
+
+const CHIP_BASE =
+  'inline-flex shrink-0 items-center justify-center h-11 px-3.5 rounded-full whitespace-nowrap text-sm font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+
+const CHIP_VARIANTS: Record<Variant, string> = {
+  primary: 'bg-primary hover:bg-primary-hover text-white dark:text-bg',
+  secondary: 'border border-border bg-surface hover:bg-primary-soft text-text',
+  danger: 'bg-danger hover:opacity-90 text-white dark:text-bg',
+  ghost: 'bg-transparent hover:bg-primary-soft text-text',
+  outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft',
+  onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90',
+  onStrongOutline: 'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
+  quiet: 'bg-transparent hover:bg-primary-soft text-primary',
+};
+
+/** `large` at 54 px; the colours, disabled look included, are `large`'s. */
+const XL_BASE =
+  'inline-flex items-center justify-center h-[54px] px-[18px] rounded-full text-base font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed';
+
+/**
+ * The classes for a 44 px pill (`chip`), for a control that is not a `Button`
+ * but must look like one.
+ */
+export function chipButtonClasses(variant: Variant): string {
+  return `${CHIP_BASE} ${CHIP_VARIANTS[variant]}`;
+}
 
 function buttonClasses(variant: Variant, size: Size): string {
   if (size === 'compact') return `${COMPACT_BASE} ${COMPACT_VARIANTS[variant]}`;
   if (size === 'large') return `${LARGE_BASE} ${LARGE_VARIANTS[variant]}`;
+  if (size === 'chip') return chipButtonClasses(variant);
+  if (size === 'xl') return `${XL_BASE} ${LARGE_VARIANTS[variant]}`;
   return `${BASE_CLASSES} ${VARIANTS[variant]}`;
 }
 

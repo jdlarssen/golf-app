@@ -8,11 +8,30 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
    * `card` (default): the children sit in a card with a 14 px inset.
    * `bare`: no card — the children sit straight on the page, as the team size
    * tiles do.
+   * `list`: a card without inset whose children are rows split by the warm
+   * divider (the switch rows on step 5, #2282; the lists on step 4, #2321).
    */
-  variant?: 'card' | 'bare';
-  /** Space between the card's children: 12 px, or 14 px for step 3's fields. */
-  gap?: 'md' | 'lg';
+  variant?: 'card' | 'bare' | 'list';
+  /**
+   * Space between the card's children: 10 px for the prize table, 12 px, or
+   * 14 px for step 3's fields.
+   */
+  gap?: 'sm' | 'md' | 'lg';
+  /**
+   * Keep the legend for screen readers only: the peer-approval card on step 5
+   * has no kicker (#2282).
+   */
+  legendHidden?: boolean;
 };
+
+/**
+ * The frame of a card whose rows run edge to edge: the «Klar?» checklist, the
+ * switch rows on step 5 and `FormSection variant="list"`. The rows are
+ * clipped by the rounded corners, so the global focus ring would be cut away;
+ * `data-focus-inset` draws it inside the row instead (app/globals.css, #1402).
+ */
+export const LIST_CARD_CLASS =
+  'divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface';
 
 /**
  * The new-game wizard's section frame (#2426): an uppercase kicker over a
@@ -28,18 +47,29 @@ export function FormSection({
   children,
   variant = 'card',
   gap = 'md',
+  legendHidden = false,
   className = '',
   ...rest
 }: Props) {
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
-      <legend className="px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
+      <legend
+        className={
+          legendHidden
+            ? 'sr-only'
+            : 'px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted'
+        }
+      >
         {legend}
       </legend>
-      {variant === 'card' ? (
+      {variant === 'list' ? (
+        <div data-focus-inset className={LIST_CARD_CLASS}>
+          {children}
+        </div>
+      ) : variant === 'card' ? (
         <div
           className={`flex flex-col rounded-2xl border border-border bg-surface p-3.5 ${
-            gap === 'lg' ? 'gap-3.5' : 'gap-3'
+            gap === 'lg' ? 'gap-3.5' : gap === 'sm' ? 'gap-2.5' : 'gap-3'
           }`}
         >
           {children}
