@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { selectablePlayers, type SelectablePlayersCtx } from './selectablePlayers';
+import { pickerSource, selectablePlayers, type SelectablePlayersCtx } from './selectablePlayers';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 function mk(id: string): PlayerOption {
@@ -113,5 +113,19 @@ describe('selectablePlayers', () => {
     );
     // stranger sits after friend-a/b in ROSTER → order follows the roster, not friendIds
     expect(ids(rows)).toEqual(['self', 'friend-a', 'stranger']);
+  });
+});
+
+describe('pickerSource', () => {
+  const clubs = { 'club-x': new Set(['self', 'club-x1']) };
+  it.each([
+    ['kompis', { intent: 'kompis' as const, groupId: '' }, 'friends'],
+    ['klubb with a known club', { intent: 'klubb' as const, groupId: 'club-x' }, 'club'],
+    ['klubb with an unknown club', { intent: 'klubb' as const, groupId: 'unknown-club' }, 'friends'],
+    ['klubb without a club', { intent: 'klubb' as const, groupId: '' }, 'friends'],
+    ['solo', { intent: 'solo' as const, groupId: '' }, 'all'],
+    ['undefined', { intent: undefined, groupId: '' }, 'friends'],
+  ])('%s → %s', (_label, input, expected) => {
+    expect(pickerSource({ ...input, clubMemberIdsByClub: clubs })).toBe(expected);
   });
 });

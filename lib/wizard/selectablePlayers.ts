@@ -34,15 +34,33 @@ export type SelectablePlayersCtx = {
   clubMemberIdsByClub: Record<string, ReadonlySet<string>>;
 };
 
+/**
+ * Where the picker's players come from (#2321): one rule, read by the filter
+ * below and by the kicker over the cards («VENNENE DINE», «MEDLEMMENE I
+ * KLUBBEN», «ALLE SPILLERE»). A club only counts when its members are known.
+ */
+export type PickerSource = 'friends' | 'club' | 'all';
+
+export function pickerSource({
+  intent,
+  groupId,
+  clubMemberIdsByClub,
+}: Pick<SelectablePlayersCtx, 'intent' | 'groupId'> & {
+  clubMemberIdsByClub: Readonly<Record<string, unknown>>;
+}): PickerSource {
+  if (intent === 'solo') return 'all';
+  if (intent === 'klubb' && groupId && clubMemberIdsByClub[groupId] !== undefined) return 'club';
+  return 'friends';
+}
+
 export function selectablePlayers(ctx: SelectablePlayersCtx): PlayerOption[] {
-  const { intent, groupId, selfId, players, friendIds, clubMemberIdsByClub } = ctx;
+  const { groupId, selfId, players, friendIds, clubMemberIdsByClub } = ctx;
 
+  const source = pickerSource(ctx);
   // Solo lar pickeren stå uendret (utsatt fjerning — #477/#478).
-  if (intent === 'solo') return players;
+  if (source === 'all') return players;
 
-  const clubMembers =
-    intent === 'klubb' && groupId ? clubMemberIdsByClub[groupId] : undefined;
-  const allowed = clubMembers ?? friendIds;
+  const allowed = source === 'club' ? clubMemberIdsByClub[groupId] : friendIds;
 
   return players.filter((p) => p.id === selfId || allowed.has(p.id));
 }
