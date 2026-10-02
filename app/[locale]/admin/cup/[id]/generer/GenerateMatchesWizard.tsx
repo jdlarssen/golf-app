@@ -290,7 +290,9 @@ function Step1Roster({
                   </p>
                 </div>
                 {/* data-focus-inset: segmentert pill-gruppe — `overflow-hidden`
-                    klipper en outline med positiv offset helt bort (#1402). */}
+                    klipper en outline med positiv offset helt bort (#1402).
+                    Ringen lander på knappens egen fyll, så det valgte laget
+                    setter en ringfarge i motsatt tone (#2261). */}
                 <div
                   data-focus-inset
                   className="flex shrink-0 rounded-lg border border-border overflow-hidden text-xs font-medium"
@@ -307,7 +309,7 @@ function Step1Roster({
                       onClick={() => onChange(p.id, opt)}
                       className={`min-h-[44px] px-2.5 py-1 transition-colors ${
                         val === opt
-                          ? 'bg-primary text-white dark:text-bg'
+                          ? 'bg-primary text-white dark:text-bg [--focus-ring:var(--bg)]'
                           : 'bg-surface text-text hover:bg-primary-soft'
                       }`}
                     >
