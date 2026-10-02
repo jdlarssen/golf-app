@@ -199,7 +199,7 @@ flowchart LR
 | 2 Format | `FormatGrid` (eller `CupSetup`) | **DB-drevet** fra `formats` + `format_intent_mapping`, anbefalt format først: med antall (Kompis) er det første formatet som passer, et stort kort, og tre til står under (#2260). Cup → `createTournamentDraft` → `tournaments`-rad → `/admin/cup/[id]`. |
 | 3 Bane og tidspunkt | `BasicsSection` | Bane + tee-boks (fra `getNewGameFormData`), tee-off (Oslo-tz), auto-navn. |
 | 4 Spillere | `PlayersSection` + `TeamsAssignmentSection` | Velg spillere + lag/flight/tee-kjønn. Hoppes hvis selv-påmelding er på. |
-| 5 Klar? | `ReadyStep` | «Opprett som utkast» (`createGameDraft`, status `draft`) eller «Opprett og publiser» (`createAndPublishGame`, status `scheduled` + invitasjoner). «Åpne full skjema» = escape-hatch til `GameForm`. |
+| 5 Klar? | `ReadyStep` | Et lite invitasjonskort med spillnavnet som felt midt i kortet, og en sjekkliste (Bane, Format, Tee-off, Spillere) med status og «Endre» som hopper til steget valget bor på (#2282). Under lista: «Hvem kan melde seg på?» og «Vis avanserte innstillinger». Brettet nederst: «Publiser og del invitasjonen» (`createAndPublishGame`, status `scheduled` + invitasjoner) eller «Lagre som utkast» (`createGameDraft`, status `draft`). |
 
 ### A2 — Administrer spill
 
