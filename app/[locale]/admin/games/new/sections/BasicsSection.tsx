@@ -18,6 +18,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { FormSection } from '@/components/ui/FormSection';
 import {
   CARD_FIELD_CONTROL,
+  CARD_FIELD_ERROR,
   CARD_FIELD_HINT,
   CARD_FIELD_LABEL,
   CardSelect,
@@ -202,7 +203,7 @@ export function BasicsSection({
           />
         </div>
         {teeOffError ? (
-          <p id="scheduled_tee_off_at-desc" className="mt-1.5 font-sans text-xs leading-[1.4] text-danger">
+          <p id="scheduled_tee_off_at-desc" className={CARD_FIELD_ERROR}>
             {teeOffError}
           </p>
         ) : (

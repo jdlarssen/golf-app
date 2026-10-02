@@ -12,6 +12,7 @@ export const CARD_FIELD_LABEL = 'block mb-1.5 font-sans text-[13px] font-semibol
 export const CARD_FIELD_CONTROL =
   'h-[50px] w-full rounded-xl border bg-surface px-3.5 font-sans text-base placeholder:text-muted transition-[border-color,box-shadow] duration-150';
 export const CARD_FIELD_HINT = 'mt-1.5 font-sans text-xs leading-[1.4] text-muted';
+export const CARD_FIELD_ERROR = 'mt-1.5 font-sans text-xs leading-[1.4] text-danger';
 
 function Chevron() {
   return (

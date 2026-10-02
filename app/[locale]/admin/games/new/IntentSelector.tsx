@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import type { Intent } from '@/lib/wizard/intent';
+import { choiceStateClass } from '@/components/ui/ChoiceCard';
 
 type Props = {
   value: Intent | undefined;
@@ -140,11 +141,7 @@ export function IntentSelector({
               onClick={() => {
                 if (!disabled) onChange(tile.intent);
               }}
-              className={`flex min-h-[150px] flex-col items-start gap-2 rounded-2xl px-3.5 py-4 text-left text-text transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
-                selected
-                  ? 'border-2 border-primary bg-primary-soft'
-                  : 'border border-border bg-surface hover:bg-primary-soft/60'
-              }`}
+              className={`flex min-h-[150px] flex-col items-start gap-2 rounded-2xl px-3.5 py-4 text-left text-text transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${choiceStateClass(selected)}`}
             >
               <span className="flex text-primary">{tile.icon}</span>
               <span className="font-serif text-[17px] font-semibold leading-[normal]">
