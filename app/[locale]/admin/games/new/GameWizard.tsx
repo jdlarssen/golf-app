@@ -1654,7 +1654,11 @@ export function WizardTopBar({
   progress?: number;
 }) {
   return (
-    <div className="sticky top-0 z-30 -mx-5 -mt-8 bg-bg/90 px-5 backdrop-blur-sm">
+    // Solid --bg like the artboards, not see-through: cards scrolling under it
+    // must not show behind the arrow and kicker. The 8 px ::after band under
+    // the stripe covers what scrolls up to its edge (#2282); at rest it lies
+    // over the empty space above the title.
+    <div className="sticky top-0 z-30 -mx-5 -mt-8 bg-bg px-5 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-2 after:bg-bg">
       <div className="-mx-3 flex items-center justify-between pt-2">
         {onBack ? (
           <button type="button" onClick={onBack} aria-label={backLabel} className={BACK_CLASS}>
