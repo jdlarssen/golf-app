@@ -57,7 +57,7 @@ export function FormSection({
       {aside ? (
         <legend className={`flex w-full items-baseline justify-between gap-3 ${legendClass}`}>
           <span>{legend}</span>
-          <span className="font-sans text-xs font-medium normal-case tracking-normal tabular-nums text-muted">
+          <span className="font-sans text-xs font-medium normal-case leading-[normal] tracking-normal tabular-nums text-muted">
             {aside}
           </span>
         </legend>

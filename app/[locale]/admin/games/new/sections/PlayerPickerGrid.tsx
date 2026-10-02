@@ -62,8 +62,9 @@ function SearchIcon() {
   );
 }
 
+// No vertical padding: the artboard's card is 92 px with its content centred.
 const CARD_BASE =
-  'relative flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-center transition-colors duration-150';
+  'relative flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-center transition-colors duration-150';
 
 export function PlayerPickerGrid({
   state,
@@ -135,7 +136,7 @@ export function PlayerPickerGrid({
           />
           <span
             aria-hidden="true"
-            className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-[13px] font-semibold leading-none ${
+            className={`flex h-10 w-10 items-center justify-center rounded-full font-sans text-[13px] font-semibold leading-[normal] ${
               isSelected ? 'bg-surface-strong text-bg-tint' : 'bg-hole-completed-bg text-muted'
             }`}
           >
@@ -161,7 +162,7 @@ export function PlayerPickerGrid({
           {isSelected && (
             <span
               aria-hidden="true"
-              className="absolute right-1.5 top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary text-[11px] leading-none text-white dark:text-bg"
+              className="absolute right-1.5 top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary text-[11px] leading-[normal] text-white dark:text-bg"
             >
               ✓
             </span>
@@ -230,7 +231,8 @@ export function PlayerPickerGrid({
           onChange={(e) => state.setPlayerSearch(e.target.value)}
           placeholder={t('grid.searchPlaceholder')}
           autoComplete="off"
-          className="h-12 w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
+          // 50 px: the artboard's 48 px field draws its 1 px border outside (content-box).
+          className="h-[50px] w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
         />
       </div>
 

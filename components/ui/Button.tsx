@@ -83,7 +83,7 @@ const LARGE_VARIANTS: Record<Variant, string> = {
 };
 
 const CHIP_BASE =
-  'inline-flex shrink-0 items-center justify-center h-11 px-3.5 rounded-full whitespace-nowrap text-sm font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex shrink-0 items-center justify-center h-11 px-3.5 rounded-full whitespace-nowrap text-sm font-semibold leading-[normal] transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 const CHIP_VARIANTS: Record<Variant, string> = {
   primary: 'bg-primary hover:bg-primary-hover text-white dark:text-bg',
@@ -96,7 +96,7 @@ const CHIP_VARIANTS: Record<Variant, string> = {
 };
 
 const MEDIUM_BASE =
-  'inline-flex items-center justify-center h-12 px-[18px] rounded-full text-[15px] font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center justify-center h-12 px-[18px] rounded-full text-[15px] font-semibold leading-[normal] transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * The classes for a 44 px pill (`chip`), for a control that is not a `Button`

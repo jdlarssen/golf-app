@@ -107,7 +107,7 @@ export function InviteEmailList({ state, room }: { state: GameFormState; room: n
         return (
           <div key={email} className="flex min-h-[52px] items-center gap-2 py-1 pl-3.5 pr-1">
             <span
-              className={`min-w-0 flex-1 truncate font-sans text-[15px] ${noRoom ? 'text-muted' : 'text-text'}`}
+              className={`min-w-0 flex-1 truncate font-sans text-[15px] leading-[normal] ${noRoom ? 'text-muted' : 'text-text'}`}
             >
               {email}
             </span>

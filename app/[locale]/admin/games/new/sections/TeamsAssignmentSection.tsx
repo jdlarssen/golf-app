@@ -120,7 +120,7 @@ function PlayerGenderToggle({
             disabled={unavailable}
             title={unavailable ? unavailableTitle : undefined}
             onClick={() => select(g)}
-            className={`flex h-11 w-11 items-center justify-center rounded-xl font-sans text-sm font-semibold transition-colors ${
+            className={`flex h-11 w-11 items-center justify-center rounded-xl font-sans text-sm font-semibold leading-[normal] transition-colors ${
               unavailable
                 ? 'cursor-not-allowed border border-dashed border-border bg-surface-2 text-muted opacity-60'
                 : selected
@@ -368,7 +368,7 @@ export function TeamsAssignmentSection({
                 return (
                   <SlotCard key={side} title={t('sideLabel', { side })}>
                     <CardSelect
-                      size="compact"
+                      size="slot"
                       labelHidden
                       id={`matchplay_side_${side}`}
                       label={t('sideSrLabel', { side })}
@@ -443,7 +443,7 @@ export function TeamsAssignmentSection({
                     return (
                       <CardSelect
                         key={slotIndex}
-                        size="compact"
+                        size="slot"
                         labelHidden
                         id={`${idPrefix}-team-${team}-slot-${slotIndex}`}
                         label={
@@ -495,7 +495,7 @@ export function TeamsAssignmentSection({
                   <div key={pid} className="flex flex-col gap-2 px-3.5 py-2.5">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <MiniChip tone="neutral">{t('teamBadge', { team })}</MiniChip>
-                      <span className="min-w-0 truncate font-sans text-[15px] font-semibold text-text">
+                      <span className="min-w-0 truncate font-sans text-[15px] font-semibold leading-[normal] text-text">
                         {shortName(p)}
                       </span>
                     </div>
@@ -556,7 +556,7 @@ export function TeamsAssignmentSection({
               if (!p) return null;
               return (
                 <div key={pid} className="flex min-h-[60px] items-center gap-2.5 px-3.5 py-2">
-                  <span className="min-w-0 flex-1 truncate font-sans text-[15px] font-semibold text-text">
+                  <span className="min-w-0 flex-1 truncate font-sans text-[15px] font-semibold leading-[normal] text-text">
                     {shortName(p)}
                   </span>
                   <PlayerGenderToggle

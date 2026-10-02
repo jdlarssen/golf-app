@@ -38,10 +38,12 @@ type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | '
   id: string;
   hint?: ReactNode;
   /**
-   * `default`: the 50 px field. `compact` (#2321): the 44 px slot on the team
-   * and side cards and the flight picker — radius 10, 14 px text, 10 px inset.
+   * `default`: the 50 px field. `compact` (#2321): the 44 px flight picker —
+   * radius 10, 14 px text, 10 px inset. `slot`: the same field on a team or
+   * side card, 46 px as the artboard renders it (its 44 px box draws the
+   * border outside).
    */
-  size?: 'default' | 'compact';
+  size?: 'default' | 'compact' | 'slot';
   /** Keep the label for screen readers only (the slots on a team card). */
   labelHidden?: boolean;
   /** Classes on the outer wrapper, e.g. a min width for the flight picker. */
@@ -49,7 +51,7 @@ type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | '
 };
 
 const COMPACT_CONTROL =
-  'h-11 w-full rounded-[10px] border bg-surface px-2.5 font-sans text-sm transition-[border-color,box-shadow] duration-150';
+  'w-full rounded-[10px] border bg-surface px-2.5 font-sans text-sm transition-[border-color,box-shadow] duration-150';
 
 /**
  * A native `<select>` drawn as the artboards' field: the chevron is ours (the
@@ -67,7 +69,7 @@ export function CardSelect({
 }: SelectProps) {
   const empty = value === '' || value === undefined;
   const hintId = hint ? `${id}-hint` : undefined;
-  const compact = size === 'compact';
+  const compact = size !== 'default';
   return (
     <div className={wrapperClassName}>
       <label htmlFor={id} className={labelHidden ? 'sr-only' : CARD_FIELD_LABEL}>
@@ -79,7 +81,7 @@ export function CardSelect({
           id={id}
           value={value}
           aria-describedby={hintId}
-          className={`${compact ? `${COMPACT_CONTROL} pr-8` : `${CARD_FIELD_CONTROL} pr-[38px]`} appearance-none border-field-border disabled:cursor-not-allowed [&>option]:text-text ${empty ? 'text-muted' : 'text-text'}`}
+          className={`${compact ? `${COMPACT_CONTROL} ${size === 'slot' ? 'h-[46px]' : 'h-11'} pr-8` : `${CARD_FIELD_CONTROL} pr-[38px]`} appearance-none border-field-border disabled:cursor-not-allowed [&>option]:text-text ${empty ? 'text-muted' : 'text-text'}`}
         />
         {/* 14 px (compact: 10 px) inside the 1 px outline, as on the artboards. */}
         <span
