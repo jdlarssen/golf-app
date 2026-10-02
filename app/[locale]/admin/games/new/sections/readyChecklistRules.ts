@@ -76,11 +76,18 @@ export function readyChecklist({
   if (teeOffPastMessage) byRow.teeOff.push(teeOffPastMessage);
 
   // A broken percentage must stay reachable even when the format is locked,
-  // or the row would be red with no way on.
+  // or the row would be red with no way on. #2439: a missing club comes
+  // first; it is chosen on step 2 and is the first message on the row.
   const hasAllowanceCode = codes.includes('allowance');
   const target: Record<ReadyRowKey, ReadyRowTarget> = {
     course: 3,
-    format: hasAllowanceCode ? 'advanced' : lockGameMode ? null : 2,
+    format: codes.includes('club')
+      ? 2
+      : hasAllowanceCode
+        ? 'advanced'
+        : lockGameMode
+          ? null
+          : 2,
     teeOff: 3,
     players: 4,
   };
