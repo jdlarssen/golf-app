@@ -27,10 +27,11 @@ export function ToggleCard({
       onClick={onToggle}
       aria-expanded={open}
       aria-controls={controls}
-      className={`flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3.5 text-left font-sans text-[15px] font-semibold text-text ${className}`}
+      // 52 px inside the 1 px frame, as the artboard draws it (54 outside).
+      className={`flex min-h-[54px] w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3.5 text-left font-sans text-[15px] leading-[normal] font-semibold text-text ${className}`}
     >
       <span>{label}</span>
-      <span aria-hidden="true" className="text-xl leading-none text-muted">
+      <span aria-hidden="true" className="text-[20px] leading-[normal] text-muted">
         {open ? '–' : '+'}
       </span>
     </button>

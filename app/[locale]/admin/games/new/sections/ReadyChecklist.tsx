@@ -25,13 +25,17 @@ const STATUS_WORD: Record<ReadyRowStatus, 'checklist.statusOk' | 'checklist.stat
   block: 'checklist.statusBlock',
 };
 
-const ROW_CLASS = 'flex min-h-[52px] w-full items-center gap-3 px-3.5 py-2.5 text-left';
+// The row's 52 px include the divider above it (the li is border-box), so the
+// rows sit 52 px apart, as on the artboard. The button fills the li.
+const ROW_CLASS = 'flex w-full items-center gap-3 px-3.5 py-2.5 text-left';
 
 /**
  * The «Klar?» checklist (#2282): Bane, Format, Tee-off and Spillere, each with
  * a status mark and «Endre». A row with somewhere to go is one button; the
  * whole row is the tap target. The mark is decoration: the status word before
  * the label («I orden:», «Merk:», «Ikke klar:») is what a screen reader says.
+ * Only the mark is red on a blocking row; the text keeps the text colour, as
+ * on the amber row the artboard draws.
  */
 export function ReadyChecklist({
   items,
@@ -49,7 +53,7 @@ export function ReadyChecklist({
           <>
             <span
               aria-hidden="true"
-              className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full leading-none ${ICON[item.status].className}`}
+              className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full leading-[normal] ${ICON[item.status].className}`}
             >
               {ICON[item.status].glyph}
             </span>
@@ -60,7 +64,7 @@ export function ReadyChecklist({
               <span className="sr-only">{t(STATUS_WORD[item.status])}</span>{' '}
               <span className="text-muted">{item.label}</span>
               {' · '}
-              <span className={item.status === 'block' ? 'text-danger' : undefined}>{item.value}</span>
+              <span>{item.value}</span>
             </span>{' '}
             {target !== null && (
               <span className="shrink-0 font-sans text-[13px] leading-[normal] font-semibold text-primary">
@@ -70,7 +74,12 @@ export function ReadyChecklist({
           </>
         );
         return (
-          <li key={item.key} data-testid={`ready-row-${item.key}`} data-status={item.status}>
+          <li
+            key={item.key}
+            data-testid={`ready-row-${item.key}`}
+            data-status={item.status}
+            className="flex min-h-[52px]"
+          >
             {target !== null ? (
               <button type="button" onClick={() => onEdit(target)} className={ROW_CLASS}>
                 {body}
