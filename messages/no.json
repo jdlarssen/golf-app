@@ -716,12 +716,12 @@
         "choose": "Velg fourball"
       },
       "foursomes_matchplay": {
-        "line": "To mot to, én ball og annenhvert slag",
+        "line": "To mot to, én ball og annethvert slag",
         "pitch": "Dere er to på lag, deler én ball og slår annenhver gang hele runden. Matchen avgjøres hull for hull.",
         "choose": "Velg foursomes"
       },
       "greensome_matchplay": {
-        "line": "Begge slår ut, så annenhvert slag",
+        "line": "Begge slår ut, så annethvert slag",
         "pitch": "Begge slår ut, dere velger det beste utslaget og slår annenhver gang derfra. To mot to, hull for hull.",
         "choose": "Velg greensome"
       },
@@ -1197,12 +1197,12 @@
         "evenCount": "partall antall spillere",
         "parAssign": "lag-fordeling (par à 2)",
         "minCountPlayers": "minst {count} spillere",
-        "teamOdd2": "partall antall spillere (lag á 2)",
-        "teamOdd4": "antall spillere delelig på 4 (lag á 4)",
-        "teamOdd3": "antall spillere delelig på 3 (lag á 3)",
-        "teamAssign2": "lag-fordeling (lag á 2)",
-        "teamAssign4": "lag-fordeling (lag á 4)",
-        "teamAssign3": "lag-fordeling (lag á 3)",
+        "teamOdd2": "partall antall spillere (lag à 2)",
+        "teamOdd4": "antall spillere delelig på 4 (lag à 4)",
+        "teamOdd3": "antall spillere delelig på 3 (lag à 3)",
+        "teamAssign2": "lag-fordeling (lag à 2)",
+        "teamAssign4": "lag-fordeling (lag à 4)",
+        "teamAssign3": "lag-fordeling (lag à 3)",
         "teamHandicapPct": "lag-handicap-prosent (0-100)",
         "wolfUnderMin": "{remaining} {remaining, plural, one {spiller} other {spillere}} til (minst 3)",
         "wolfTooMany": "for mange spillere — Wolf tar 3 til 5",
