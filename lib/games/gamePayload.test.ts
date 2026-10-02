@@ -1241,7 +1241,7 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     return fd({ ...base, ...extras });
   }
 
-  it('publish med 2 lag á 2 spillere (team_size=2) → ok', () => {
+  it('publish med 2 lag à 2 spillere (team_size=2) → ok', () => {
     const result = buildGameInsertPayload(
       texasFd({
         teamSize: '2',
@@ -1271,7 +1271,7 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     ]);
   });
 
-  it('publish med 2 lag á 4 spillere (team_size=4) → ok', () => {
+  it('publish med 2 lag à 4 spillere (team_size=4) → ok', () => {
     const result = buildGameInsertPayload(
       texasFd({
         teamSize: '4',
@@ -1616,7 +1616,7 @@ describe('buildGameInsertPayload — ambrose (issue #284)', () => {
     return fd({ ...base, ...extras });
   }
 
-  it('publish med 2 lag á 2 spillere (team_size=2, 25 %) → ok', () => {
+  it('publish med 2 lag à 2 spillere (team_size=2, 25 %) → ok', () => {
     const result = buildGameInsertPayload(
       ambroseFd({
         teamSize: '2',
@@ -1777,7 +1777,7 @@ describe('buildGameInsertPayload — florida_scramble (issue #283)', () => {
     return fd({ ...base, ...extras });
   }
 
-  it('publish med 1 lag á 3 spillere (team_size=3, 15 %) → ok', () => {
+  it('publish med 1 lag à 3 spillere (team_size=3, 15 %) → ok', () => {
     const result = buildGameInsertPayload(
       floridaFd({
         teamSize: '3',
@@ -3616,7 +3616,7 @@ describe('buildGameInsertPayload — shamble (issue #285)', () => {
     return fd({ ...base, ...extras });
   }
 
-  it('publish: 2 lag á 4, Shamble-preset → count låst til 2', () => {
+  it('publish: 2 lag à 4, Shamble-preset → count låst til 2', () => {
     const result = buildGameInsertPayload(
       shambleFd({
         teamSize: '4',
@@ -3649,7 +3649,7 @@ describe('buildGameInsertPayload — shamble (issue #285)', () => {
     expect(result.players).toHaveLength(8);
   });
 
-  it('publish: Champagne lag á 3, count=1, brutto → ok', () => {
+  it('publish: Champagne lag à 3, count=1, brutto → ok', () => {
     const result = buildGameInsertPayload(
       shambleFd({
         teamSize: '3',

@@ -1037,7 +1037,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
 
   // ── Texas scramble (requireIntegerPct=true, teamSize=2) ───────────────────
 
-  it('Texas valid: 4 spillere, 2 fulle lag á 2, integer pct=50', () => {
+  it('Texas valid: 4 spillere, 2 fulle lag à 2, integer pct=50', () => {
     expect(
       validateTeamSizeFormat({
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
@@ -1135,7 +1135,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
 
   // ── Ambrose / Florida (requireIntegerPct=false, aksepterer desimaler) ──────
 
-  it('Ambrose valid: 4 spillere, 2 lag á 2, fraksjonell pct=12.5', () => {
+  it('Ambrose valid: 4 spillere, 2 lag à 2, fraksjonell pct=12.5', () => {
     expect(
       validateTeamSizeFormat({
         playersByTeam: makeTeams(['a', 'b'], ['c', 'd']),
@@ -1166,7 +1166,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
     ).toMatchObject({ handicapPctValid: false, playersValid: false });
   });
 
-  it('Florida valid: 6 spillere, 2 lag á 3, pct=15', () => {
+  it('Florida valid: 6 spillere, 2 lag à 3, pct=15', () => {
     expect(
       validateTeamSizeFormat({
         playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
@@ -1200,7 +1200,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
 
   // ── Shamble (ingen handicapPct — undefined) ───────────────────────────────
 
-  it('Shamble valid: 6 spillere, 2 lag á 3, ingen pct-sjekk', () => {
+  it('Shamble valid: 6 spillere, 2 lag à 3, ingen pct-sjekk', () => {
     expect(
       validateTeamSizeFormat({
         playersByTeam: makeTeams(['a', 'b', 'c'], ['d', 'e', 'f']),
@@ -1218,7 +1218,7 @@ describe('validateTeamSizeFormat — pure helper (#808)', () => {
     });
   });
 
-  it('Shamble valid: 8 spillere, 2 lag á 4', () => {
+  it('Shamble valid: 8 spillere, 2 lag à 4', () => {
     expect(
       validateTeamSizeFormat({
         playersByTeam: makeTeams(['a', 'b', 'c', 'd'], ['e', 'f', 'g', 'h']),
