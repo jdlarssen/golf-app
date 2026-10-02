@@ -1,72 +1,56 @@
 'use client';
 
 /**
- * PlayersSection — spiller-velgeren med chips, søk og filtrert liste.
+ * PlayersSection — GameForm's player picker (Rediger spill): the selected
+ * players as chips, a search field and the list of everyone else.
  *
- * Ansvar: mode-aware spiller-counter, chips for valgte spillere, søk på
- * navn/nickname/email, og filtrert liste med checkbox-rader. Lag/sider/
- * flighter ligger ikke her — det er TeamsAssignmentSection sitt domene.
+ * #2321: the wizard's step 4 is `PlayerPickerGrid` now; this list is GameForm's
+ * only, drawn as `Nyttspill-4-spillere` without the hint box and «Neste» (owner
+ * 01.10: «Det må gå igjen over hele greia, for alle spill»). Inside the
+ * Disclosure panel: the VALGTE row (always, with the mode-aware counter), the
+ * chips, the 50 px search, the «Alle spillere» list card and «Legg til gjest».
+ * Teams, sides and flights are TeamsAssignmentSection's.
  */
 
 import { useLocale, useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
-import { StatusChip } from '@/components/ui/StatusChip';
+import { FormSection } from '@/components/ui/FormSection';
 import { GuestBadge } from '@/components/ui/GuestBadge';
-import { GuestPlayerAdd } from './GuestPlayerAdd';
-import { TEAM_FORMAT_PLAYER_CAP, teamFormatPlayerCap } from '@/lib/games/teamFormatLimits';
+import { MiniChip } from '@/components/ui/MiniChip';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
+import { pickerCap } from '@/lib/wizard/playerTarget';
+import { GuestPlayerAdd } from './GuestPlayerAdd';
+import { playerOptionLabel, playerOptionShortName } from './playerLabels';
 
-type Props = {
-  state: GameFormState;
-  players: PlayerOption[];
-  /**
-   * Heading-tekst. Default «2. Spillere». Wizard-en overstyrer per steg
-   * (f.eks. «Hvem skal spille?»).
-   */
-  heading?: string;
-  /**
-   * #909: skjul seksjons-headingen helt (GameForm wrapper seksjonen i et
-   * Disclosure-panel som allerede bærer tittelen, så headingen ville dublert
-   * den). Spiller-telleren beholdes. Default false.
-   */
-  hideHeading?: boolean;
-  /**
-   * #464: begrenser den valgbare checkbox-lista til disse id-ene (picker-kilden
-   * per kontekst — venner/klubbmedlemmer). `players` forblir full roster så
-   * allerede-valgte chips alltid slås opp. `undefined` = ingen begrensning
-   * (full-form-escape-hatchen viser hele rosteren som før).
-   */
-  selectableIds?: ReadonlySet<string>;
-};
+function SearchIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </svg>
+  );
+}
 
 export function PlayersSection({
   state,
   players,
-  heading,
-  hideHeading = false,
-  selectableIds,
-}: Props) {
+}: {
+  state: GameFormState;
+  /** The full roster, so a selected player's chip is always found. */
+  players: PlayerOption[];
+}) {
   const t = useTranslations('wizard.sections.players');
   const locale = useLocale();
   const pendingLabel = t('pendingLabel');
-
-  function playerLabel(p: PlayerOption): string {
-    if (p.pending) {
-      return p.email ?? pendingLabel;
-    }
-    const displayName = p.name ?? p.email ?? pendingLabel; // defensive — non-pending should always have name
-    const hcp = formatHcpDisplay(p.hcp_index, locale);
-    if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
-    return `${displayName} — HCP ${hcp}`;
-  }
-
-  function shortName(p: PlayerOption): string {
-    if (p.pending) return p.email ?? pendingLabel;
-    const displayName = p.name ?? p.email ?? pendingLabel;
-    return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
-  }
-  const resolvedHeading = heading ?? t('headingDefault');
   const {
     selectedPlayerIds,
     togglePlayer,
@@ -79,194 +63,139 @@ export function PlayersSection({
     isTexas,
     isAmbrose,
     isFlorida,
-    requiresTeams,
-    isSolo,
     teamSize,
   } = state;
 
-  // #464: den valgbare lista er roster-en (minus valgte/søk, via filteredPlayers)
-  // skåret ned til kontekst-kilden. Uten `selectableIds` (full-form) er den hele
-  // filteredPlayers. Chips og roster-oppslag bruker fortsatt full `players`-prop.
-  const visiblePlayers = selectableIds
-    ? filteredPlayers.filter((p) => selectableIds.has(p.id))
-    : filteredPlayers;
-
   const count = selectedPlayerIds.length;
+  // The cap has one home (`pickerCap`): the fixed count, the fixed-count
+  // formats' ceiling, the team grid's cap or the solo cap (#2009, #2148, #2321).
+  const cap = pickerCap({
+    gameMode: state.gameMode,
+    requiresTeams: state.requiresTeams,
+    isSolo: state.isSolo,
+    teamSize,
+  });
+  const atCap = cap !== null && count >= cap;
 
-  // Cap-en avhenger av modus:
-  //  - matchplay: 2 spillere (1v1, strengt)
-  //  - lag-modi: fulle lag opp til spillertaket — 40 for lag à 2 og à 4,
-  //    39 for lag à 3. Leses fra `teamFormatLimits` så velgeren aldri stopper
-  //    før rutenettet og validatoren gjør det (#2009, #2148).
-  //  - solo-stableford og slagspill: samme tak på 40 (#2148). Validatoren
-  //    leste før bare åtte plasser, så spiller nummer ni forsvant stille.
-  const atCap = isMatchplay
-    ? count >= 2
-    : requiresTeams
-      ? count >= teamFormatPlayerCap(teamSize)
-      : isSolo && count >= TEAM_FORMAT_PLAYER_CAP;
-
-  // Build the counter string for best-ball / generic modes.
-  function genericCounter(): string {
-    const base = count === 1 ? t('counterSingular', { count }) : t('counterPlural', { count });
-    return base;
-  }
-
-  // Counter er mode-aware:
-  //   - best-ball: «X spillere valgt» med partall-hint (#374 — ikke lenger
-  //     fast 8-krav; 2/4/6/8 er gyldige antall)
-  //   - par-stableford: «X spillere valgt» med subtilt hint om partall-krav
-  //   - matchplay: «X av 2 spillere valgt» (fast 2-krav) — grønn ved akkurat 2
-  //   - solo: «X spillere valgt», ingen øvre tak
-  const counterEl =
-        isBestBall ? (
-          <span
-            className={`text-xs font-medium tabular-nums ${count >= 2 && count % 2 === 0 ? 'text-primary' : 'text-muted'}`}
-          >
-            {genericCounter()}
-            {count >= 2 && count % 2 !== 0 && (
-              <span className="ml-1 text-muted">{t('teamHintPair')}</span>
-            )}
-          </span>
-        ) : isMatchplay ? (
-          <span
-            className={`text-xs font-medium tabular-nums ${count === 2 ? 'text-primary' : 'text-muted'}`}
-          >
-            {t('counterMatchplay', { count })}
-          </span>
-        ) : (
-          <span
-            className={`text-xs font-medium tabular-nums ${count > 0 ? 'text-primary' : 'text-muted'}`}
-          >
-            {genericCounter()}
-            {isParStableford && count >= 2 && count % 2 !== 0 && (
-              <span className="ml-1 text-muted">{t('teamHintPair')}</span>
-            )}
-            {(isTexas || isAmbrose || isFlorida) &&
-              count >= teamSize &&
-              count % teamSize !== 0 && (
-              <span className="ml-1 text-muted">
-                {t('teamHintSize', { size: teamSize })}
-              </span>
-            )}
-          </span>
-        );
+  // Counter er mode-aware: matchplay «X av 2 spillere valgt», ellers
+  // «X spillere valgt» med partall-/lagstørrelse-hint der modusen krever det.
+  const counter = isMatchplay ? (
+    t('counterMatchplay', { count })
+  ) : (
+    <>
+      {count === 1 ? t('counterSingular', { count }) : t('counterPlural', { count })}
+      {(isBestBall || isParStableford) && count >= 2 && count % 2 !== 0 && (
+        <span className="ml-1">{t('teamHintPair')}</span>
+      )}
+      {(isTexas || isAmbrose || isFlorida) && count >= teamSize && count % teamSize !== 0 && (
+        <span className="ml-1">{t('teamHintSize', { size: teamSize })}</span>
+      )}
+    </>
+  );
 
   return (
-    <section className="space-y-3">
-      {hideHeading ? (
-        <div className="flex justify-end">{counterEl}</div>
-      ) : (
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-medium text-text">{resolvedHeading}</h2>
-          {counterEl}
-        </div>
-      )}
-      {players.length === 0 ? (
-        <p className="text-sm text-muted">
-          {t('noPlayersYet')}
-        </p>
-      ) : (
-        <>
-          {/* Chips for valgte spillere — alltid synlig ABOVE søkefeltet
-              slik at admin ikke mister oversikten når søk filtrerer
-              listen under. Tab-rekkefølge: chips først (ÆØÅ-disiplin:
-              avvelg via trykk), så søkefeltet, så filtrert liste. */}
-          {count > 0 && (
-            <ul
-              aria-label={t('selectedPlayersAriaLabel')}
-              className="flex flex-wrap gap-2"
+    <div>
+      <FormSection variant="bare" legend={t('selectedKicker')} aside={counter}>
+        {/* Chips for valgte spillere — over søkefeltet så admin ikke mister
+            oversikten når søket filtrerer lista. Avvelg via trykk. */}
+        {count > 0 && (
+          <ul aria-label={t('selectedPlayersAriaLabel')} className="flex flex-wrap gap-2">
+            {selectedPlayerIds.map((pid) => {
+              const p = players.find((x) => x.id === pid);
+              if (!p) return null;
+              const name = playerOptionShortName(p, pendingLabel);
+              return (
+                <li key={pid}>
+                  <button
+                    type="button"
+                    onClick={() => togglePlayer(pid)}
+                    aria-label={t('removePlayerAriaLabel', { name })}
+                    className="inline-flex h-11 items-center gap-1.5 rounded-full border border-primary bg-primary-soft pl-3.5 pr-1.5 font-sans text-sm font-semibold text-text transition-colors hover:bg-primary/15"
+                  >
+                    <span className="max-w-[14ch] truncate">{name}</span>
+                    {p.isGuest && <GuestBadge className="shrink-0" />}
+                    <span
+                      aria-hidden="true"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none font-normal text-muted"
+                    >
+                      ×
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </FormSection>
+
+      {/* Søkefelt — substring-match på navn/kallenavn/e-post
+          (`playerMatchesSearch`). */}
+      <div className="relative mt-3.5">
+        <span className="pointer-events-none absolute left-[13px] top-1/2 flex -translate-y-1/2 text-muted">
+          <SearchIcon />
+        </span>
+        <label htmlFor="player_search" className="sr-only">
+          {t('searchLabel')}
+        </label>
+        <input
+          id="player_search"
+          type="search"
+          value={playerSearch}
+          onChange={(e) => setPlayerSearch(e.target.value)}
+          placeholder={t('searchPlaceholder')}
+          aria-label={t('searchLabel')}
+          autoComplete="off"
+          className="h-[50px] w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
+        />
+      </div>
+
+      <FormSection variant={filteredPlayers.length === 0 ? 'bare' : 'list'} legend={t('listKicker')}>
+        {players.length === 0 ? (
+          <p className="px-1 font-sans text-sm text-muted">{t('noPlayersYet')}</p>
+        ) : filteredPlayers.length === 0 ? (
+          <p className="px-1 font-sans text-sm text-muted">
+            {playerSearch.trim() === '' ? t('allSelectedEmpty') : t('noSearchResults')}
+          </p>
+        ) : (
+          filteredPlayers.map((p) => (
+            <label
+              key={p.id}
+              className={`flex min-h-[52px] items-center gap-3 px-3.5 py-2 ${
+                atCap ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
             >
-              {selectedPlayerIds.map((pid) => {
-                const p = players.find((x) => x.id === pid);
-                if (!p) return null;
-                return (
-                  <li key={pid}>
-                    <button
-                      type="button"
-                      onClick={() => togglePlayer(pid)}
-                      aria-label={t('removePlayerAriaLabel', { name: shortName(p) })}
-                      className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full border border-primary bg-primary-soft text-sm text-text hover:bg-primary/15 transition-colors"
-                    >
-                      <span className="max-w-[14ch] truncate">
-                        {shortName(p)}
-                      </span>
-                      {p.isGuest && <GuestBadge className="shrink-0" />}
-                      <span aria-hidden="true" className="text-base leading-none text-muted">
-                        ×
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {/* Søkefelt — substring-match (case-insensitive) på
-              navn/nickname/email. Inputen er en standard <input>; ingen
-              downshift/cmdk eller andre deps. min-h sikrer ≥44px
-              tap-target på mobil. */}
-          <div>
-            <label htmlFor="player_search" className="sr-only">
-              {t('searchLabel')}
+              <input
+                type="checkbox"
+                checked={false}
+                disabled={atCap}
+                onChange={() => togglePlayer(p.id)}
+                aria-label={`${playerOptionLabel(p, pendingLabel, locale)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
+                className="h-[22px] w-[22px] shrink-0 appearance-none rounded-md border-[1.5px] border-field-border bg-surface checked:border-primary checked:bg-primary"
+              />
+              <span className="min-w-0 flex-1 truncate font-sans text-[15px] text-text">
+                {p.pending ? (
+                  playerOptionShortName(p, pendingLabel)
+                ) : (
+                  <>
+                    {playerOptionShortName(p, pendingLabel)}{' '}
+                    <span className="tabular-nums text-muted">
+                      — HCP {formatHcpDisplay(p.hcp_index, locale)}
+                    </span>
+                  </>
+                )}
+              </span>
+              {p.pending && <MiniChip tone="waiting">{t('waitingChip')}</MiniChip>}
+              {p.isGuest && <GuestBadge className="shrink-0" />}
             </label>
-            <input
-              id="player_search"
-              type="search"
-              value={playerSearch}
-              onChange={(e) => setPlayerSearch(e.target.value)}
-              placeholder={t('searchPlaceholder')}
-              aria-label={t('searchLabel')}
-              autoComplete="off"
-              className="w-full min-h-[44px] rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:border-accent transition-[border-color,box-shadow] duration-150"
-            />
-          </div>
+          ))
+        )}
+      </FormSection>
 
-          {visiblePlayers.length === 0 ? (
-            <p className="text-sm text-muted px-1">
-              {playerSearch.trim() === ''
-                ? t('allSelectedEmpty')
-                : t('noSearchResults')}
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {visiblePlayers.map((p) => {
-                return (
-                  <li key={p.id}>
-                    <label
-                      className={`flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border transition-colors border-border ${atCap ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        disabled={atCap}
-                        onChange={() => togglePlayer(p.id)}
-                        aria-label={`${playerLabel(p)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
-                        className="h-5 w-5 rounded border-border text-primary accent-primary"
-                      />
-                      <span className="flex-1 min-w-0 truncate text-sm text-text">
-                        {playerLabel(p)}
-                      </span>
-                      {p.pending && (
-                        <StatusChip tone="påmelding" label={t('waitingChip')} className="shrink-0" />
-                      )}
-                      {p.isGuest && <GuestBadge className="shrink-0" />}
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </>
-      )}
-
-      {/* #1009: gjest uten konto — tilgjengelig også når kandidatlista er tom
-          (players.length === 0-grenen over gjelder kun registrerte). Cap-en
-          speiler checkbox-radene (`atCap`). */}
-      <GuestPlayerAdd
-        state={state}
-        disabled={atCap}
-      />
-    </section>
+      {/* #1009: gjest uten konto — også når kandidatlista er tom. Taket
+          speiler radene (`atCap`). */}
+      <div className="mt-3">
+        <GuestPlayerAdd state={state} disabled={atCap} />
+      </div>
+    </div>
   );
 }

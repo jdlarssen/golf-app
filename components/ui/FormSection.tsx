@@ -8,8 +8,8 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
    * `card` (default): the children sit in a card with a 14 px inset.
    * `bare`: no card — the children sit straight on the page, as the team size
    * tiles do.
-   * `list` (#2321): a card without inset whose children are rows split by the
-   * warm divider («FLIGHTS», «TEE PER SPILLER», the player list).
+   * `list`: a card without inset whose children are rows split by the warm
+   * divider (the switch rows on step 5, #2282; the lists on step 4, #2321).
    */
   variant?: 'card' | 'bare' | 'list';
   /** Space between the card's children: 12 px, or 14 px for step 3's fields. */
@@ -21,6 +21,15 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
   /** `tight`: 16 px above the kicker instead of 18, as the step 4 picker draws it. */
   legendSpacing?: 'default' | 'tight';
 };
+
+/**
+ * The frame of a card whose rows run edge to edge: the «Klar?» checklist, the
+ * switch rows on step 5 and `FormSection variant="list"`. The rows are
+ * clipped by the rounded corners, so the global focus ring would be cut away;
+ * `data-focus-inset` draws it inside the row instead (app/globals.css, #1402).
+ */
+export const LIST_CARD_CLASS =
+  'divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface';
 
 /**
  * The new-game wizard's section frame (#2426): an uppercase kicker over a
@@ -59,7 +68,7 @@ export function FormSection({
         <p className="px-1 pb-2.5 font-sans text-xs leading-[1.45] text-muted">{description}</p>
       )}
       {variant === 'list' ? (
-        <div className="divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface">
+        <div data-focus-inset className={LIST_CARD_CLASS}>
           {children}
         </div>
       ) : variant === 'card' ? (

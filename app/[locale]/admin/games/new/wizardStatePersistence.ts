@@ -113,6 +113,12 @@ export type WizardDraft = {
    * auto-navn-effekten overskrive et håndskrevet navn ved neste mount.
    */
   nameTouched: boolean;
+  /**
+   * #2321: the «Inviter på e-post» addresses. Optional so a draft literal
+   * written before the field still type-checks; `parseEnvelope` always gives a
+   * list (empty when missing or invalid), so the version is not bumped.
+   */
+  inviteEmails?: string[];
   values: PersistedInitialValues;
 };
 
@@ -171,6 +177,7 @@ export function wizardDraftFromState({
     intent: state.intent,
     expectedPlayerCount: state.expectedPlayerCount ?? null,
     nameTouched,
+    inviteEmails: state.inviteEmails,
     values: {
       name: state.name,
       course_id: state.courseId,
@@ -383,6 +390,11 @@ function parseEnvelope(raw: string): StoredEnvelope | null {
           ? draft.expectedPlayerCount
           : null,
       nameTouched: draft.nameTouched === true,
+      inviteEmails:
+        Array.isArray(draft.inviteEmails) &&
+        draft.inviteEmails.every((e: unknown) => typeof e === 'string')
+          ? draft.inviteEmails
+          : [],
       values: draft.values,
     },
   };
