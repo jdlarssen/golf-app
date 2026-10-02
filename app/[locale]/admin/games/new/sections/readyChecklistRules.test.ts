@@ -76,6 +76,19 @@ describe('readyChecklist — rows and targets', () => {
     expect(row(rows, 'format').target).toBeNull();
   });
 
+  it('a missing club wins over a broken allowance: «Endre» goes to the club on step 2 (#2439)', () => {
+    const rows = readyChecklist({
+      ...BASE,
+      codes: ['club', 'allowance'],
+      messages: ['klubb', 'ugyldig andel'],
+    });
+    expect(row(rows, 'format')).toMatchObject({
+      status: 'block',
+      messages: ['klubb', 'ugyldig andel'],
+      target: 2,
+    });
+  });
+
   it('a locked format with an allowance code still leads to the advanced settings', () => {
     const rows = readyChecklist({
       ...BASE,
