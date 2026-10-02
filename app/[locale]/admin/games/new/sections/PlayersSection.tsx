@@ -100,7 +100,7 @@ export function PlayersSection({
                     {p.isGuest && <GuestBadge className="shrink-0" />}
                     <span
                       aria-hidden="true"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-base leading-none font-normal text-muted"
+                      className="flex h-8 w-8 items-center justify-center rounded-full leading-none text-muted"
                     >
                       ×
                     </span>
@@ -153,7 +153,7 @@ export function PlayersSection({
                 ) : (
                   <>
                     {playerOptionShortName(p, pendingLabel)}{' '}
-                    <span className="tabular-nums text-muted">
+                    <span className="text-muted">
                       — HCP {formatHcpDisplay(p.hcp_index, locale)}
                     </span>
                   </>

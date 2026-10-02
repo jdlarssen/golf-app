@@ -64,7 +64,7 @@ export function SearchField({
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         autoComplete="off"
-        className={`${size === 'large' ? 'h-[52px]' : 'h-[50px]'} w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted`}
+        className={`${size === 'large' ? 'h-[52px] pl-[38px]' : 'h-[50px] pl-[40px]'} w-full rounded-xl border border-field-border bg-surface pr-3 font-sans text-base text-text placeholder:text-muted`}
       />
     </div>
   );

@@ -46,9 +46,10 @@ const KICKER = {
   all: 'kickerAll',
 } as const;
 
-// No vertical padding: the artboard's card is 92 px with its content centred.
+// The artboard's card is 92 px with its content centred; pt-[2px] puts the
+// stack 1 px lower, where the artboard draws it (the check badge stays).
 const CARD_BASE =
-  'relative flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-2xl px-1 text-center transition-colors duration-150';
+  'relative flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-2xl px-1 pt-[2px] text-center transition-colors duration-150';
 
 export function PlayerPickerGrid({
   state,
@@ -122,7 +123,9 @@ export function PlayerPickerGrid({
   function card(p: PlayerOption) {
     const isSelected = selected.has(p.id);
     const disabled = !isSelected && atCap;
-    const name = p.pending ? pendingLabel : (firstName(p.name) ?? pendingLabel);
+    // A pending invite has no name yet: «Invitert» fits the card where
+    // «Invitert spiller» would be cut (orchestrator's decision 02.10).
+    const name = p.pending ? t('grid.pendingName') : (firstName(p.name) ?? t('grid.pendingName'));
     return (
       <li key={p.id} className="min-w-0">
         <label
@@ -154,12 +157,20 @@ export function PlayerPickerGrid({
             {name}
           </span>
           {p.pending ? (
-            <MiniChip tone="waiting">{t('waitingChip')}</MiniChip>
+            // The pill keeps the HCP line's box height and overflows it
+            // equally above and below, so avatar and name sit where they do
+            // in the neighbouring cards.
+            <span aria-hidden="true" className="relative font-sans text-[10px] leading-[normal]">
+              {'\u200b'}
+              <MiniChip
+                tone="waiting"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+              >
+                {t('waitingChip')}
+              </MiniChip>
+            </span>
           ) : (
-            <span
-              aria-hidden="true"
-              className="font-sans text-[10px] leading-[normal] tabular-nums text-muted"
-            >
+            <span aria-hidden="true" className="font-sans text-[10px] leading-[normal] text-muted">
               {t('grid.hcp', { hcp: formatHcpDisplay(p.hcp_index, locale) })}
             </span>
           )}
