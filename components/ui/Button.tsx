@@ -73,6 +73,9 @@ const LARGE_VARIANTS: Record<Variant, string> = {
   danger: 'bg-danger hover:opacity-90 text-white dark:text-bg disabled:opacity-50',
   ghost: 'bg-transparent hover:bg-primary-soft text-text disabled:opacity-50',
   outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft disabled:opacity-50',
+  onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90 disabled:opacity-50',
+  onStrongOutline:
+    'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10 disabled:opacity-50',
 };
 
 function buttonClasses(variant: Variant, size: Size): string {
