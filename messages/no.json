@@ -1131,7 +1131,7 @@
       "fourball": {
         "legend": "Scoring for fourball-matcher",
         "description": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup."
       },
       "foursomes": {
@@ -1155,7 +1155,7 @@
       "gruesome": {
         "legend": "Scoring for gruesome-matcher",
         "description": "Styrer handicap for gruesome-matcher (begge teer ut, motstanderlaget velger ballen + vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag.",
-        "nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes).",
+        "nettoHelper": "Andel av differansen i lagenes summerte handicap. Tørny foreslår 50, samme som foursomes.",
         "bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
       },
       "scoring": {
@@ -1178,7 +1178,7 @@
       "roundRobin": {
         "legend": "Scoring for Round Robin",
         "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side avgjør. Ren brutto-runde."
       },
       "missing": {
@@ -1293,7 +1293,7 @@
       "fourball": {
         "legend": "Scoring for fourball-matcher",
         "description": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup."
       },
       "foursomes": {
@@ -1317,13 +1317,13 @@
       "gruesome": {
         "legend": "Scoring for gruesome-matcher",
         "description": "Styrer handicap for gruesome-matcher (begge teer ut, motstanderlaget velger ballen + vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag.",
-        "nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes).",
+        "nettoHelper": "Andel av differansen i lagenes summerte handicap. Tørny foreslår 50, samme som foursomes.",
         "bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
       },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
         "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
-        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. Tørny foreslår 85, mens WHS anbefaler 90 for four-ball matchplay. Du velger selv.",
         "bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side avgjør. Ren brutto-runde."
       },
       "scoring": {
