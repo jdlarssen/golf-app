@@ -110,7 +110,7 @@ export function PlayersSection({
                     type="button"
                     onClick={() => togglePlayer(pid)}
                     aria-label={t('removePlayerAriaLabel', { name })}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-full border border-primary bg-primary-soft pl-3.5 pr-1.5 font-sans text-sm font-semibold text-text transition-colors hover:bg-primary/15"
+                    className="inline-flex h-[46px] items-center gap-1.5 rounded-full border border-primary bg-primary-soft pl-3.5 pr-1.5 font-sans text-sm font-semibold leading-[normal] text-text transition-colors hover:bg-primary/15"
                   >
                     <span className="max-w-[14ch] truncate">{name}</span>
                     {p.isGuest && <GuestBadge className="shrink-0" />}
@@ -145,7 +145,7 @@ export function PlayersSection({
           placeholder={t('searchPlaceholder')}
           aria-label={t('searchLabel')}
           autoComplete="off"
-          className="h-[50px] w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
+          className="h-[52px] w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
         />
       </div>
 
@@ -170,9 +170,9 @@ export function PlayersSection({
                 disabled={atCap}
                 onChange={() => togglePlayer(p.id)}
                 aria-label={`${playerOptionLabel(p, pendingLabel, locale)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
-                className="h-[22px] w-[22px] shrink-0 appearance-none rounded-md border-[1.5px] border-field-border bg-surface checked:border-primary checked:bg-primary"
+                className="h-6 w-6 shrink-0 appearance-none rounded-md border-[1.5px] border-field-border bg-surface checked:border-primary checked:bg-primary"
               />
-              <span className="min-w-0 flex-1 truncate font-sans text-[15px] text-text">
+              <span className="min-w-0 flex-1 truncate font-sans text-[15px] leading-[normal] text-text">
                 {p.pending ? (
                   playerOptionShortName(p, pendingLabel)
                 ) : (

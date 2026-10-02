@@ -25,7 +25,7 @@ import type { PlayerOption } from '../GameForm';
 const TRAY_AVATARS = 7;
 
 const AVATAR =
-  'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full shadow-[0_0_0_2px_var(--surface)]';
+  'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full leading-[normal] shadow-[0_0_0_2px_var(--surface)]';
 
 export function PlayerTray({
   selected,
@@ -85,7 +85,7 @@ export function PlayerTray({
             )
           ) : (
             <>
-              <span className="font-serif text-lg font-semibold tabular-nums">
+              <span className="font-serif text-lg font-semibold leading-[normal] tabular-nums">
                 {t('tray.count', { selected: count.selected, target: count.target })}
               </span>
               {count.kind === 'missing' && <> · {t('tray.missing', { missing: count.missing })}</>}
