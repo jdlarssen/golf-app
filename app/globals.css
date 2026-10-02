@@ -171,6 +171,10 @@
   --meter-track: #efe9da;
   --dashed-cta: #9a8f7c;
 
+  /* New-game wizard (#2282, shared with #2321): the dashed line under the
+   * game name in the «Klar?» card (artboard --neutral). */
+  --slot-dashed: #9a8f7c;
+
   /* Invitation card (#2266): the linen page behind it, the paper, the
    * e-mail field's border and the three joined-avatar dots — values from the
    * artboard «Forslag: invitasjonskortet». Their own tokens, not palette:
@@ -320,6 +324,9 @@
     --meter-track: #243429;
     --dashed-cta: #5c6358;
 
+    /* New-game wizard (#2282) — see :root. */
+    --slot-dashed: #8a8170;
+
     /* Invitation card (#2266) — see :root. The artboard is light only;
      * the dots run dark to light here too. */
     --invitation-page-bg: var(--bg);
@@ -417,6 +424,7 @@
   --hole-completed-bg: #243429;
   --meter-track: #243429;
   --dashed-cta: #5c6358;
+  --slot-dashed: #8a8170;
   --invitation-page-bg: var(--bg);
   --invitation-paper: var(--surface);
   --invitation-field-border: #4b5e51;
@@ -471,6 +479,7 @@
   --color-hole-completed-bg: var(--hole-completed-bg);
   --color-meter-track: var(--meter-track);
   --color-dashed-cta: var(--dashed-cta);
+  --color-slot-dashed: var(--slot-dashed);
   --color-surface-strong: var(--surface-strong);
   --color-on-strong: var(--on-strong);
   --color-accent-on-strong: var(--accent-on-strong);
@@ -597,6 +606,14 @@ body {
 :where(label):has(> input.sr-only:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* The same label ring inside a `data-focus-inset` card (#2282): the switch rows
+ * in the peer and side-tournament cards run edge to edge, and the card's
+ * `overflow: hidden` would clip the positive offset away. Same specificity as
+ * the rule above, so it must stay after it. */
+:where([data-focus-inset]) :where(label):has(> input.sr-only:focus-visible) {
+  outline-offset: -2px;
 }
 
 /* iOS Safari zooms the page in on any focused field whose text is under 16 px,
