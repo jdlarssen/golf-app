@@ -910,7 +910,7 @@
         "visibilityLockedNote": "Kan ikke endres etter spill-start.",
         "sideTournamentLegend": "Sideturnering",
         "sideTournamentTitle": "Legg til sideturnering",
-        "sideTournamentDesc": "Parallell lag-konkurranse med poeng. Vises etter at spillet er avsluttet.",
+        "sideTournamentDesc": "Poengkonkurranse ved siden av spillet, der hver spiller eller hvert lag samler poeng. Vises etter at spillet er avsluttet.",
         "sideLdLegend": "Antall longest-drive-vinnere",
         "sideCtpLegend": "Antall closest-to-pin-vinnere",
         "sideLockedNote": "Kan ikke endres etter spill-start."
