@@ -44,8 +44,15 @@ export function LandingLiveBoard({
 }) {
   const [frame, setFrame] = useState(0);
   const figureRef = useRef<HTMLElement>(null);
+  // Refs, not state: Next keeps the page hidden when you navigate away and
+  // re-runs this effect when Back shows it again (the state survives too).
+  // A finished or frozen card then stays as it was; one in mid-play goes on
+  // from the frame it shows.
+  const shownRef = useRef(0);
+  const doneRef = useRef(false);
 
   useEffect(() => {
+    if (doneRef.current) return;
     const figure = figureRef.current;
     const reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -58,12 +65,18 @@ export function LandingLiveBoard({
     const stop = playFrames({
       delaysMs: FRAME_DELAYS_MS,
       reducedMotion,
+      from: shownRef.current,
       onFrame: (next) => {
+        shownRef.current = next;
         setFrame(next);
-        if (next === FRAMES.length - 1) detach();
+        if (next === FRAMES.length - 1) {
+          doneRef.current = true;
+          detach();
+        }
       },
     });
     function freeze() {
+      doneRef.current = true;
       stop();
       detach();
     }

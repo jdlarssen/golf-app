@@ -51,23 +51,33 @@ export const FRAME_DELAYS_MS: readonly number[] = [2500, 5000];
 
 /**
  * Starts one timer per delay; timer `i` shows frame `i + 1`. With reduced
- * motion nothing starts, and the card stays on frame 1. Returns `stop()`,
- * which clears whatever is still pending — the effect calls it on unmount and
- * when the visitor freezes the card. Safe to call more than once.
+ * motion nothing starts, and the card stays on frame 1. `from` is the frame
+ * the card shows now: only the later frames play, each the same time after
+ * the one before as on a first run. Next keeps a route hidden and re-runs its
+ * effects when Back shows it again, so the card goes on from where it stood.
+ * Returns `stop()`, which clears whatever is still pending — the effect calls
+ * it on unmount and when the visitor freezes the card. Safe to call more than
+ * once.
  */
 export function playFrames({
   delaysMs,
   reducedMotion,
+  from = 0,
   onFrame,
 }: {
   delaysMs: readonly number[];
   reducedMotion: boolean;
+  from?: number;
   onFrame: (frame: number) => void;
 }): () => void {
   if (reducedMotion) return () => {};
-  const timers = delaysMs.map((delay, i) =>
-    setTimeout(() => onFrame(i + 1), delay),
-  );
+  const shownAt = from > 0 ? delaysMs[from - 1] : 0;
+  const timers = delaysMs
+    .map((delay, i) => ({ frame: i + 1, delay }))
+    .filter(({ frame }) => frame > from)
+    .map(({ frame, delay }) =>
+      setTimeout(() => onFrame(frame), delay - shownAt),
+    );
   return () => {
     for (const timer of timers) clearTimeout(timer);
   };
