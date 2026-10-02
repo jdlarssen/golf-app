@@ -59,7 +59,8 @@ export function CardSelect({ label, id, hint, value, ...rest }: SelectProps) {
           aria-describedby={hintId}
           className={`${CARD_FIELD_CONTROL} appearance-none border-field-border pr-[38px] disabled:cursor-not-allowed [&>option]:text-text ${empty ? 'text-muted' : 'text-text'}`}
         />
-        <span className="pointer-events-none absolute right-3.5 top-1/2 flex -translate-y-1/2 text-muted">
+        {/* 14 px inside the 1 px outline, as on the artboards. */}
+        <span className="pointer-events-none absolute right-[15px] top-1/2 flex -translate-y-1/2 text-muted">
           <Chevron />
         </span>
       </div>
