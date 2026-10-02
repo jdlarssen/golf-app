@@ -135,7 +135,7 @@ export function FormatGrid({
         onClick={() => onShowGuide(slug)}
         aria-label={t('rulesAriaLabel', { name: name(slug) })}
         style={style}
-        className={`shrink-0 rounded-full border border-border bg-surface px-4 font-sans text-sm font-semibold leading-[normal] text-primary ${className}`}
+        className={`shrink-0 rounded-full border border-border bg-surface font-sans font-semibold leading-[normal] text-primary ${className}`}
       >
         {t('rules')}
       </button>
@@ -188,7 +188,7 @@ export function FormatGrid({
               card(f.slug, 'choose')
             )}
           </button>
-          {rulesButton(f.slug, 'h-12')}
+          {rulesButton(f.slug, 'h-12 px-4 text-sm')}
         </div>
       </div>
     );
@@ -197,7 +197,7 @@ export function FormatGrid({
   function renderRow(
     f: FormatForIntent,
     rovingProps: RovingProps,
-    { divider, withFigure, focusTarget }: { divider: boolean; withFigure: boolean; focusTarget: boolean },
+    { divider, focusTarget }: { divider: boolean; focusTarget: boolean },
   ) {
     const selected = value === f.slug;
     const nameId = `${idPrefix}-${f.slug}-name`;
@@ -210,12 +210,13 @@ export function FormatGrid({
       <div
         key={f.slug}
         data-testid="format-row"
-        // The row's height includes its divider (border-box), as on the
-        // artboard: 60 px, 64 px when selected.
-        className={`flex items-center ${divider ? 'border-b border-row-divider-warm' : ''} ${
-          selected
-            ? 'min-h-[64px] bg-primary-soft shadow-[inset_0_0_0_2px_var(--primary)]'
-            : 'min-h-[60px]'
+        // The row's height includes its divider (border-box): 60 px, the
+        // chosen row 65 px with «Reglene» in it. #2426,
+        // owner 02.10 «Som den nye tegningen»: the chosen row stays on the
+        // card's colour inside a rounded 2 px forest outline, as Nyttspill-2-*
+        // draw it (was a mint fill, 64 px).
+        className={`flex min-h-[60px] items-center ${divider ? 'border-b border-row-divider-warm' : ''} ${
+          selected ? 'rounded-2xl shadow-[inset_0_0_0_2px_var(--primary)]' : ''
         }`}
       >
         {/* Ekstra negativ offset (#1673): den valgte raden har en inset-linje
@@ -233,11 +234,11 @@ export function FormatGrid({
           disabled={disabled}
           onClick={() => select(f.slug)}
           style={selected ? { outlineOffset: '-5px' } : undefined}
-          className="flex min-w-0 flex-1 items-center gap-3 self-stretch px-3.5 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+          // With «Reglene» beside it the gap to the button is the row's 12 px.
+          className={`flex min-w-0 flex-1 items-center gap-3 self-stretch py-2.5 pl-3.5 text-left disabled:cursor-not-allowed disabled:opacity-50 ${
+            selected ? 'pr-3' : 'pr-3.5'
+          }`}
         >
-          {withFigure && (
-            <FormatLineup lineup={formatLineup(f.slug as GameMode, playerCount!)} variant="row" />
-          )}
           <span className="min-w-0 flex-1">
             <span
               id={nameId}
@@ -264,7 +265,9 @@ export function FormatGrid({
             </span>
           )}
         </button>
-        {selected && rulesButton(f.slug, 'mr-3.5 h-11', { outlineOffset: '2px' })}
+        {/* The row's 10 px padding sits around «Reglene» too, so the chosen
+            row is 64 px plus its divider, as drawn. */}
+        {selected && rulesButton(f.slug, 'my-2.5 mr-3.5 h-11 px-3.5 text-[13px]', { outlineOffset: '2px' })}
       </div>
     );
   }
@@ -312,7 +315,6 @@ export function FormatGrid({
                 {rows.map((f, i) =>
                   renderRow(f, next(), {
                     divider: showLink || i < rows.length - 1,
-                    withFigure: true,
                     focusTarget: i === firstRevealed,
                   }),
                 )}
@@ -348,7 +350,6 @@ export function FormatGrid({
           g.formats.map((f, i) =>
             renderRow(f, next(), {
               divider: i < g.formats.length - 1,
-              withFigure: false,
               focusTarget: false,
             }),
           ),
