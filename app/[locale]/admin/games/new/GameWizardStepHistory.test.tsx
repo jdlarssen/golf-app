@@ -350,6 +350,10 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     expect(screen.getByLabelText(/^navn på runden$/i)).toHaveValue('Serverutkastet');
 
     // Tilbake til steg 2: utkastets eget format må stå der, og stå valgt.
+    // #2321: fra steg 5 går «Tilbake» til side-skjermen (singles matchplay med
+    // to valgte), så til velgeren, så til steg 3.
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
+    expect(screen.getByRole('heading', { name: /^sider$/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
@@ -399,5 +403,141 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     searchString = 'step=5';
     rerender(wizardElement(props));
     expect(stepIs(5)).toBe(true);
+  });
+});
+
+describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
+  const FOUR: PlayerOption[] = ['u0', 'u1', 'u2', 'u3'].map((id, i) => ({
+    ...PLAYERS[0],
+    id,
+    name: `Spiller ${i + 1}`,
+    email: `${id}@example.com`,
+  }));
+
+  const FORMATS = {
+    ...FORMATS_BY_INTENT,
+    kompis: [...FORMATS_BY_INTENT.kompis, formatRow('singles_matchplay', 30)],
+  };
+
+  type DraftValues = Parameters<typeof import('./wizardStatePersistence').saveWizardDraft>[1]['values'];
+
+  async function seedDraft(values: DraftValues) {
+    const { saveWizardDraft, wizardDraftContext, wizardDraftStorageKey } = await import(
+      './wizardStatePersistence'
+    );
+    saveWizardDraft(
+      wizardDraftStorageKey('/admin/games/new'),
+      { intent: 'kompis', expectedPlayerCount: 4, nameTouched: false, values },
+      wizardDraftContext({}),
+    );
+  }
+
+  const BEST_BALL_FOUR: DraftValues = {
+    game_mode: 'best_ball',
+    team_size: 2,
+    players: [
+      { user_id: 'u0', team_number: 1, flight_number: 1 },
+      { user_id: 'u1', team_number: 1, flight_number: 1 },
+      { user_id: 'u2', team_number: 2, flight_number: 1 },
+      { user_id: 'u3', team_number: 2, flight_number: 1 },
+    ],
+  };
+
+  function element() {
+    return wizardElement({
+      players: FOUR,
+      friendPlayerIds: FOUR.map((p) => p.id),
+      formatsByIntent: FORMATS,
+    });
+  }
+
+  it('«Neste: lagene» (best ball) pusher ?step=4&skjerm=lag, og tilbakepila pusher ?step=4', async () => {
+    await seedDraft(BEST_BALL_FOUR);
+    searchString = 'step=4';
+    render(element());
+
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
+    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
+    expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
+    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4', { scroll: false });
+    expect(screen.queryByRole('heading', { name: /^lag$/i })).toBeNull();
+  });
+
+  it('«Neste: sidene» (singles matchplay) pusher ?step=4&skjerm=lag', async () => {
+    await seedDraft({
+      game_mode: 'singles_matchplay',
+      team_size: 1,
+      players: [
+        { user_id: 'u0', team_number: null, flight_number: null },
+        { user_id: 'u1', team_number: null, flight_number: null },
+      ],
+    });
+    searchString = 'step=4';
+    render(element());
+
+    fireEvent.click(screen.getByRole('button', { name: /^neste: sidene$/i }));
+    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
+    expect(screen.getByRole('heading', { name: /^sider$/i })).toBeInTheDocument();
+  });
+
+  it('en URL-endring tilbake til ?step=4 viser velgeren', async () => {
+    await seedDraft(BEST_BALL_FOUR);
+    searchString = 'step=4';
+    const { rerender } = render(element());
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
+    expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
+
+    // Nettleserens tilbake: router-en har committet ?step=4.
+    searchString = 'step=4';
+    rerender(element());
+
+    expect(screen.queryByRole('heading', { name: /^lag$/i })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: /spiller 1/i })).toBeChecked();
+  });
+
+  it('«Neste» på lag-skjermen pusher ?step=5 uten skjerm, og tilbakepila på steg 5 pusher ?step=4&skjerm=lag', async () => {
+    await seedDraft(BEST_BALL_FOUR);
+    searchString = 'step=4&skjerm=lag';
+    render(element());
+    expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
+    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=5', { scroll: false });
+
+    fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
+    expect(push).toHaveBeenLastCalledWith('/admin/games/new?step=4&skjerm=lag', { scroll: false });
+  });
+
+  it('en foreldet ?step=4&skjerm=lag uten utkast og forvalg rettes med én replace uten step og skjerm', () => {
+    searchString = 'step=4&skjerm=lag';
+    render(element());
+
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace).toHaveBeenCalledWith('/admin/games/new', { scroll: false });
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('et lagret stableford-utkast på ?step=4&skjerm=lag rettes til ?step=4 når utkastet er hentet', async () => {
+    await seedDraft({
+      game_mode: 'stableford',
+      team_size: 1,
+      players: [{ user_id: 'u0', team_number: null, flight_number: null }],
+    });
+    searchString = 'step=4&skjerm=lag';
+    render(element());
+
+    expect(replace).toHaveBeenCalledWith('/admin/games/new?step=4', { scroll: false });
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('et lagret best ball-utkast med fire valgt viser lag-skjermen etter reload uten replace', async () => {
+    await seedDraft(BEST_BALL_FOUR);
+    searchString = 'step=4&skjerm=lag';
+    render(element());
+
+    expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

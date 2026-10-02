@@ -375,6 +375,9 @@ describe('GameWizard — best-ball inline team/flight på steg 4', () => {
       );
     }
 
+    // #2321: lag og flights står på steg 4s andre skjerm.
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
+
     expect(
       screen.getByRole('heading', { name: /^lag$/i }),
     ).toBeInTheDocument();
@@ -600,11 +603,20 @@ describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', 
     clickNext();
     expectStep(4);
 
-    // Best ball krever partall (2/4/6/8) fordelt 2 per lag — velg ÉN spiller
-    // (ugyldig for modusen) og bekreft at Neste blokkeres.
+    // Best ball krever partall fordelt 2 per lag — velg ÉN spiller (ugyldig
+    // for modusen). #2321: lag-skjermen har ikke innhold med én, så «Neste:
+    // lagene» er av.
     fireEvent.click(
       screen.getByRole('checkbox', { name: /spiller 1/i }),
     );
+    expect(screen.getByRole('button', { name: /^neste: lagene$/i })).toBeDisabled();
+
+    // Med tre valgt åpner den lag-skjermen, og der blokkerer oddetallet «Neste».
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 3/i }));
+    expect(screen.getByRole('button', { name: /^neste: lagene$/i })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
+    expect(screen.getByRole('heading', { name: /^lag$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
   });
 
@@ -708,6 +720,8 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
         screen.getByRole('checkbox', { name: new RegExp(player.name!, 'i') }),
       );
     }
+    // #2321: «Trekk tilfeldig» står på lag-skjermen.
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
     fireEvent.click(screen.getByRole('button', { name: /trekk tilfeldig/i }));
     clickNext();
 
@@ -1008,7 +1022,8 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     clickNext();
     expectStep(4);
     expect(document.querySelector('input[name="player_0_id"]')).toHaveValue('u0');
-    expect(screen.queryByRole('checkbox', { name: /spiller 1/i })).toBeNull();
+    // #2321: a selected card stays in the grid, checked.
+    expect(screen.getByRole('checkbox', { name: /spiller 1/i })).toBeChecked();
   });
 
   it('starter blankt når utkastet ble skrevet i en annen mount-kontekst', () => {

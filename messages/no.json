@@ -940,7 +940,6 @@
         "paymentLinkHint": "Legg inn Vipps-nummeret ditt, eller lim inn en betalingslenke."
       },
       "players": {
-        "headingDefault": "2. Spillere",
         "pendingLabel": "Invitert spiller",
         "waitingChip": "Venter",
         "searchLabel": "Søk i spillere",
@@ -955,7 +954,39 @@
         "teamHintSize": "(lag à {size})",
         "counterMatchplay": "{count} av 2 spillere valgt",
         "counterSingular": "{count} spiller valgt",
-        "counterPlural": "{count} spillere valgt"
+        "counterPlural": "{count} spillere valgt",
+        "grid": {
+          "searchPlaceholder": "Søk etter navn",
+          "kickerFriends": "Vennene dine · sist spilt først",
+          "kickerClub": "Medlemmene i klubben · sist spilt først",
+          "kickerAll": "Alle spillere",
+          "hcp": "HCP {hcp}",
+          "guest": "Gjest",
+          "guestAria": "Legg til gjest",
+          "email": "E-post",
+          "emailAria": "Inviter på e-post",
+          "showAll": "Vis alle {count}",
+          "hint": "Gjester får et navn og et handicap, uten konto. Med e-post sender vi en invitasjon.",
+          "hintCup": "Gjester får et navn og et handicap, uten konto."
+        },
+        "tray": {
+          "count": "{selected} av {target}",
+          "missing": "{missing, plural, one {én til} other {# til}}",
+          "over": "{over, plural, one {én mer enn planlagt} other {# flere enn planlagt}}",
+          "more": "+{count}"
+        },
+        "email": {
+          "legend": "Inviter på e-post",
+          "hint": "Invitasjonen går ut når du publiserer spillet. Lagrer du som utkast, blir ikke adressene med.",
+          "label": "E-post",
+          "add": "Legg til",
+          "listLegend": "Inviteres på e-post",
+          "noRoom": "Ikke plass",
+          "noRoomDescription": "Formatet har ikke plass til alle. Adressene merket «Ikke plass» sendes ikke.",
+          "removeAria": "Fjern {email} fra invitasjonene"
+        },
+        "selectedKicker": "Valgte",
+        "listKicker": "Alle spillere"
       },
       "teams": {
         "sidesHeading": "Sider",
@@ -1209,7 +1240,7 @@
     "stepCounter": "Steg {step} av {total}",
     "back": "Tilbake",
     "stepSubText": {
-      "step4BestBall": "Velg 2, 4, 6 eller 8 spillere, så fordeler du lag og flights.",
+      "step4BestBall": "Velg et partall spillere, så fordeler du lag og flights.",
       "step4Matchplay": "Velg 2 spillere og sett én på hver side",
       "step4ParStableford": "Velg minst 2 spillere fordelt to og to på lag",
       "step4TeamSize": "Velg minst {teamSize} spillere, så fordeler du lag",
@@ -1244,11 +1275,14 @@
       "hint": "Medlemmene kan se og melde seg på alle spill du setter opp for klubben."
     },
     "footer": {
-      "next": "Neste"
+      "next": "Neste",
+      "nextTeams": "Neste: lagene",
+      "nextSides": "Neste: sidene"
     },
     "step4": {
       "emptyRosterHint": "Du bestemmer på neste steg om du vil legge til spillere her, eller la dem melde seg på selv.",
-      "expectedCountHint": "Dere er {count} spillere. Legg til nøyaktig så mange for best mulig spill."
+      "pickerSubtitle": "{format} · {players}",
+      "pickerSubtitleLineup": "{format} · {players}, {lineup}"
     },
     "pickerSource": {
       "noClubMembers": "Ingen andre medlemmer i klubben ennå.",

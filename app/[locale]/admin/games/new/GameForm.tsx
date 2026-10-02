@@ -665,7 +665,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
 
       {/* Section 2: Players */}
       <Disclosure title={t('panelTitlePlayers')} summary={playersSummary}>
-        <PlayersSection state={state} players={state.allPlayers} hideHeading />
+        <PlayersSection state={state} players={state.allPlayers} />
       </Disclosure>
 
       {/* Section 2.5: Modus + lagstørrelse — fyrer mellom spiller-listen og
