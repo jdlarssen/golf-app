@@ -29,9 +29,9 @@ export const SIDE_CATEGORY_CARD_LABEL: Record<SideCategory, string> = {
   best_netto_b9: 'Best netto B9',
 
   // Hull-konkurranser
-  hole_win: 'Hole-win',
-  longest_drive: 'Longest drive',
-  closest_to_pin: 'Closest to pin',
+  hole_win: 'Hull-seier',
+  longest_drive: 'Lengste drive',
+  closest_to_pin: 'Nærmest pinnen',
 
   // Birdier / eagles / pars
   most_birdies_team: 'Flest birdier (lag)',

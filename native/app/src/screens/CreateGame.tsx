@@ -551,8 +551,8 @@ function summaryLines(
 
   const side = draft.sideTournamentEnabled
     ? [
-        `${draft.sideLdCount} longest drive`,
-        `${draft.sideCtpCount} closest to pin`,
+        `${draft.sideLdCount} lengste drive`,
+        `${draft.sideCtpCount} nærmest pinnen`,
       ].join(' · ')
     : 'Av';
 

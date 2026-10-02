@@ -54,7 +54,7 @@ describe('CupPlayerPoints', () => {
     // Kontribusjons-etikett bygges fra kamp-bidraget (utbrettet innhold er
     // alltid i DOM med native <details>).
     expect(within(me).getByText('Vant mot Knut · +1')).toBeInTheDocument();
-    expect(within(me).getByText('Nærmest hullet, hull 7 · +0,5')).toBeInTheDocument();
+    expect(within(me).getByText('Nærmest pinnen, hull 7 · +0,5')).toBeInTheDocument();
 
     // En rad uten bidrag rendres uten <details> (ingen tom utbrett).
     const emptyRow = rows.find((r) => r.getAttribute('data-userid') === 'p2')!;

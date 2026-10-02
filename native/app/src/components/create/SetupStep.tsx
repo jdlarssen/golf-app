@@ -247,14 +247,14 @@ export function SetupStep({
 
       {common.sideTournamentEnabled ? (
         <>
-          <Field label="Longest drive: antall hull">
+          <Field label="Lengste drive: antall hull">
             <Chips
               value={common.sideLdCount}
               onChange={(sideLdCount) => onCommon({ sideLdCount })}
               options={COUNT_OPTIONS('ld')}
             />
           </Field>
-          <Field label="Closest to pin: antall hull">
+          <Field label="Nærmest pinnen: antall hull">
             <Chips
               value={common.sideCtpCount}
               onChange={(sideCtpCount) => onCommon({ sideCtpCount })}

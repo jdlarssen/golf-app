@@ -545,7 +545,7 @@
     "awardsTitle": "Premieutdeling",
     "placementLabel": "{position}. plass",
     "ldLabel": "Lengste drive",
-    "ctpLabel": "Nærmest flagget",
+    "ctpLabel": "Nærmest pinnen",
     "logoAlt": "Sponsorlogo",
     "sponsoredBy": "Sponset av {sponsor}",
     "sponsorStrip": "Premier sponset av {sponsors}"
@@ -911,8 +911,8 @@
         "sideTournamentLegend": "Sideturnering",
         "sideTournamentTitle": "Legg til sideturnering",
         "sideTournamentDesc": "Konkurranse ved siden av spillet, der hver spiller eller hvert lag samler poeng. Vises etter at spillet er avsluttet.",
-        "sideLdLegend": "Antall longest-drive-vinnere",
-        "sideCtpLegend": "Antall closest-to-pin-vinnere",
+        "sideLdLegend": "Lengste drive: antall hull",
+        "sideCtpLegend": "Nærmest pinnen: antall hull",
         "sideLockedNote": "Kan ikke endres etter spill-start."
       },
       "registration": {
@@ -1028,7 +1028,7 @@
         "legend": "Premiebord (valgfritt)",
         "placementLabel": "{position}. plass",
         "ldLabel": "Lengste drive",
-        "ctpLabel": "Nærmest flagget",
+        "ctpLabel": "Nærmest pinnen",
         "prizePlaceholder": "Premie, f.eks. middag for to",
         "sponsorLabel": "Sponsor (valgfritt)",
         "prizeAriaLabel": "Premie for {slot}",
@@ -1368,8 +1368,8 @@
       "bad_team": "Alle spillerne må ha et lag før du publiserer.",
       "bad_flight": "Alle spillerne må ha en flight før du publiserer.",
       "team_balance": "Lagene er ikke jevne. Fordel spillerne likt før du publiserer.",
-      "bad_side_ld_count": "Antall longest-drive-vinnere må være 0, 1 eller 2.",
-      "bad_side_ctp_count": "Antall closest-to-pin-vinnere må være 0, 1 eller 2.",
+      "bad_side_ld_count": "Lengste drive kan spilles på 0, 1 eller 2 hull.",
+      "bad_side_ctp_count": "Nærmest pinnen kan spilles på 0, 1 eller 2 hull.",
       "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
       "tee_off_required": "Tee-off-tidspunkt er påkrevd.",
       "tee_off_in_past": "Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.",
@@ -1828,7 +1828,7 @@
           },
           {
             "heading": "Når potten ruller videre",
-            "body": "Carryover er hele motoren i spillet. Blir et hull delt, legges skinnet til neste hull, som dermed er verdt to. Blir det delt igjen, er det tredje hullet verdt tre, og kjeden fortsetter til noen vinner alene og tar hele potten. Det er derfor skins bygger spenning bakover i runden: en rekke delte hull midtveis kan gjøre hull 17 verdt seks skins, og da er det ingen som prater i innspillet. Blir det siste hullet delt, henger potten igjen uten vinner. De fleste lar den bare stå, mens andre avgjør den med nærmest hullet eller et ekstra hull."
+            "body": "Carryover er hele motoren i spillet. Blir et hull delt, legges skinnet til neste hull, som dermed er verdt to. Blir det delt igjen, er det tredje hullet verdt tre, og kjeden fortsetter til noen vinner alene og tar hele potten. Det er derfor skins bygger spenning bakover i runden: en rekke delte hull midtveis kan gjøre hull 17 verdt seks skins, og da er det ingen som prater i innspillet. Blir det siste hullet delt, henger potten igjen uten vinner. De fleste lar den bare stå, mens andre avgjør den med nærmest pinnen eller et ekstra hull."
           },
           {
             "heading": "Handicap i skins",
@@ -1855,7 +1855,7 @@
           },
           {
             "q": "Hva gjør vi med potten hvis siste hull blir delt?",
-            "a": "Standarden er at den blir stående uvunnet. Vil dere kåre en vinner, avgjør dere den med et ekstra hull eller nærmest flagget på 18."
+            "a": "Standarden er at den blir stående uvunnet. Vil dere kåre en vinner, avgjør dere den med et ekstra hull eller nærmest pinnen på 18."
           }
         ]
       },
@@ -3133,10 +3133,10 @@
         "allParGroupsBirdie": "Allsidig birdie ({name}):",
         "evenParRound": "Even-par-runden ({name}):",
         "backToBackBirdies": "To birdier på rad ({detail}):",
-        "holeWins": "Hole-wins:",
+        "holeWins": "Hull-seire:",
         "holeWinsOn": "på {count} hull ({holes})",
-        "longestDrive": "Longest drive #{pos} ({name}):",
-        "closestToPin": "Closest to pin #{pos} ({name}):",
+        "longestDrive": "Lengste drive #{pos} ({name}):",
+        "closestToPin": "Nærmest pinnen #{pos} ({name}):",
         "turkeyPlayer": "Turkey ({detail}):",
         "turkeyCoord": "Turkey lag-bonus{range}:",
         "solidPlayer": "Solid ({detail}):",
@@ -3203,9 +3203,9 @@
           "allParGroupsBirdie": "Allsidig birdie",
           "evenParRound": "Even-par-runden",
           "backToBackBirdies": "To birdier på rad",
-          "holeWin": "Hole-win",
-          "longestDrive": "Longest drive",
-          "closestToPin": "Closest to pin",
+          "holeWin": "Hull-seier",
+          "longestDrive": "Lengste drive",
+          "closestToPin": "Nærmest pinnen",
           "turkey": "Turkey",
           "solid": "Solid",
           "teamAllBirdied": "Alle birdied (lag-bonus)",
@@ -3920,10 +3920,10 @@
         "validationError": "Du må velge vinner i alle feltene før du kan avslutte.",
         "dbError": "Klarte ikke å lagre vinnerne. Prøv igjen.",
         "winnerWithdrawnError": "En av vinnerne du valgte har trukket seg. Ingenting ble lagret, og spillet er ikke avsluttet. Velg på nytt fra lista.",
-        "longestDriveLabel": "Longest drive",
-        "longestDriveSlot": "Longest drive #{pos}",
-        "closestToPinLabel": "Closest to pin",
-        "closestToPinSlot": "Closest to pin #{pos}",
+        "longestDriveLabel": "Lengste drive",
+        "longestDriveSlot": "Lengste drive #{pos}",
+        "closestToPinLabel": "Nærmest pinnen",
+        "closestToPinSlot": "Nærmest pinnen #{pos}",
         "selectWinner": "— Velg vinner —",
         "noQualified": "Ingen kvalifiserte",
         "submitButton": "Avslutt spillet og publiser sideturneringen",
@@ -5485,10 +5485,10 @@
     },
     "sideAwards": {
       "heading": "Sidepoeng",
-      "hint": "Sidepoeng for nærmest hullet, lengste drive og GIR. Poengene legges på laget i cup-totalen når du registrerer resultatet etter runden.",
+      "hint": "Sidepoeng for nærmest pinnen, lengste drive og GIR. Poengene legges på laget i cup-totalen når du registrerer resultatet etter runden.",
       "empty": "Ingen sidepoeng lagt til ennå.",
       "emptyLocked": "Ingen sidepoeng ble satt opp for denne cupen.",
-      "kindCtp": "Nærmest hullet",
+      "kindCtp": "Nærmest pinnen",
       "kindLd": "Lengste drive",
       "kindGir": "GIR",
       "kindLabel": "Type",
@@ -5496,7 +5496,7 @@
       "holeShort": "hull {n}",
       "pointsLabel": "Poeng",
       "winnersColumnLabel": "Vinnere",
-      "winnersHelp": "«Vinnere» er antall vinnerplasser for nærmest hullet og lengste drive. For GIR er tallet maks antall per lag på hullet.",
+      "winnersHelp": "«Vinnere» er antall vinnerplasser for nærmest pinnen og lengste drive. For GIR er tallet maks antall per lag på hullet.",
       "winnerCountSuffix": "{count} vinnere",
       "girMaxSuffix": "maks {maxPoints} p per lag",
       "slotOfCount": "({slot} av {count})",
@@ -6498,7 +6498,7 @@
           {
             "id": "dagen",
             "heading": "Ni eller atten hull? Legg dagen etter tiden dere har",
-            "body": "Ni hull er ofte riktig for firmagolf. Da rekker dere runde, mat og premieutdeling innenfor en ettermiddag, og ingen sitter og sniktitter på klokka på hull 14. Skal dere ha hele dagen, legg opp til atten hull med shotgun-start og felles lunsj etterpå. Shotgun betyr at alle flightene starter samtidig på hvert sitt hull, så dere begynner og blir ferdige sammen.\n\nSett av mer tid enn du tror. Et felt med mange ferske spillere bruker lengre tid per hull, og en runde som ryker på tida ender med at folk går inn før siste hull. Da mister du både resultatlista og avslutningen.\n\nBestem premiene før første utslag, og hold dem like for alle nivåer. Nærmest flagget og longest drive koster ingenting å arrangere og gir alle noe å gå for, også de som ikke er i nærheten av tetstriden. Sjekk samtidig hva bedriften kan dekke, så slipper du diskusjonen om hvem som betaler når regninga kommer."
+            "body": "Ni hull er ofte riktig for firmagolf. Da rekker dere runde, mat og premieutdeling innenfor en ettermiddag, og ingen sitter og sniktitter på klokka på hull 14. Skal dere ha hele dagen, legg opp til atten hull med shotgun-start og felles lunsj etterpå. Shotgun betyr at alle flightene starter samtidig på hvert sitt hull, så dere begynner og blir ferdige sammen.\n\nSett av mer tid enn du tror. Et felt med mange ferske spillere bruker lengre tid per hull, og en runde som ryker på tida ender med at folk går inn før siste hull. Da mister du både resultatlista og avslutningen.\n\nBestem premiene før første utslag, og hold dem like for alle nivåer. Nærmest pinnen og lengste drive koster ingenting å arrangere og gir alle noe å gå for, også de som ikke er i nærheten av tetstriden. Sjekk samtidig hva bedriften kan dekke, så slipper du diskusjonen om hvem som betaler når regninga kommer."
           }
         ],
         "faq": [
@@ -6526,7 +6526,7 @@
           {
             "id": "format",
             "heading": "Velg format etter kranglingen, ikke etter tradisjonen",
-            "body": "Skins gir en pott per hull, og potten vokser når hullet deles. Ett hull kan avgjøre hele dagen, og den som har ligget bakerst i fem hull kan plutselig ta alt.\n\nWolf roterer på hvem som velger makker fra tee, og gir en ny liten forhandling på hvert hull. Skal du ta sjansen alene, eller sikre deg den beste makkeren før du har sett slaget hans?\n\nNassau deler runden i tre veddemål: første ni, siste ni og hele runden. Den som ligger under er aldri helt ute av det, for det står alltid noe igjen å spille om.\n\nVil dere ha en ryddig resultatliste å se på etterpå, er stableford med netto handicap ryggraden. Legg gjerne skins eller nærmest flagget oppå som sideturnering, så har dere begge deler på samme runde."
+            "body": "Skins gir en pott per hull, og potten vokser når hullet deles. Ett hull kan avgjøre hele dagen, og den som har ligget bakerst i fem hull kan plutselig ta alt.\n\nWolf roterer på hvem som velger makker fra tee, og gir en ny liten forhandling på hvert hull. Skal du ta sjansen alene, eller sikre deg den beste makkeren før du har sett slaget hans?\n\nNassau deler runden i tre veddemål: første ni, siste ni og hele runden. Den som ligger under er aldri helt ute av det, for det står alltid noe igjen å spille om.\n\nVil dere ha en ryddig resultatliste å se på etterpå, er stableford med netto handicap ryggraden. Legg gjerne skins eller nærmest pinnen oppå som sideturnering, så har dere begge deler på samme runde."
           },
           {
             "id": "netto",
@@ -6628,7 +6628,7 @@
       {
         "id": "premier",
         "heading": "5. Premier og sideturneringer",
-        "body": "Premien trenger ikke være stor. Den trenger å være bestemt på forhånd. Si hva som deles ut og hvordan det betales før første utslag, så slipper du diskusjonen på 18. green.\n\nTre premier holder for de fleste turneringer: nettovinner, bruttovinner og nærmest flagget. Legg gjerne til longest drive på et åpent hull. Sideturneringer koster ingenting å arrangere og gir spillerne som er ute av tetstriden noe å gå for hele runden.\n\nEr dere på firmatur, sjekk hva bedriften kan dekke, og hold premiene like for alle nivåer. Er dere en vennegjeng, er potten gjerne en runde i klubbhuset eller at taperen spanderer. Poenget er det samme: noe å strekke seg etter.\n\nBestem også hvordan lik score skiller seg. Vanlig praksis er å telle siste ni hull, så siste seks, så siste tre. Tørny bruker den samme trappa automatisk, så du slipper å avgjøre det med mynt og krone foran hele feltet."
+        "body": "Premien trenger ikke være stor. Den trenger å være bestemt på forhånd. Si hva som deles ut og hvordan det betales før første utslag, så slipper du diskusjonen på 18. green.\n\nTre premier holder for de fleste turneringer: nettovinner, bruttovinner og nærmest pinnen. Legg gjerne til lengste drive på et åpent hull. Sideturneringer koster ingenting å arrangere og gir spillerne som er ute av tetstriden noe å gå for hele runden.\n\nEr dere på firmatur, sjekk hva bedriften kan dekke, og hold premiene like for alle nivåer. Er dere en vennegjeng, er potten gjerne en runde i klubbhuset eller at taperen spanderer. Poenget er det samme: noe å strekke seg etter.\n\nBestem også hvordan lik score skiller seg. Vanlig praksis er å telle siste ni hull, så siste seks, så siste tre. Tørny bruker den samme trappa automatisk, så du slipper å avgjøre det med mynt og krone foran hele feltet."
       },
       {
         "id": "turneringsdagen",
