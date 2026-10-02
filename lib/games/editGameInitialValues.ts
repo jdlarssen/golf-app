@@ -211,12 +211,23 @@ export function buildEditInitialValues(
       game.mode_config.kind === 'florida_scramble'
         ? String(game.mode_config.team_handicap_pct)
         : undefined,
-    // Round Robin (#337): allowance lever i mode_config.allowance_pct. Uten
-    // pre-fill resetter edit-lagring den silent til WHS-default (85).
+    // Round Robin (#337) and the matchplay formats (#2444): the allowance
+    // lives in mode_config.allowance_pct. Without pre-fill, an edit save
+    // silently resets it to the form's default.
     round_robin_allowance_pct:
       game.mode_config.kind === 'round_robin'
         ? game.mode_config.allowance_pct
         : undefined,
+    fourball_allowance_pct:
+      game.mode_config.kind === 'fourball_matchplay' ? game.mode_config.allowance_pct : undefined,
+    foursomes_allowance_pct:
+      game.mode_config.kind === 'foursomes_matchplay' ? game.mode_config.allowance_pct : undefined,
+    greensome_allowance_pct:
+      game.mode_config.kind === 'greensome_matchplay' ? game.mode_config.allowance_pct : undefined,
+    chapman_allowance_pct:
+      game.mode_config.kind === 'chapman_matchplay' ? game.mode_config.allowance_pct : undefined,
+    gruesome_allowance_pct:
+      game.mode_config.kind === 'gruesome_matchplay' ? game.mode_config.allowance_pct : undefined,
     registration_mode: game.registration_mode,
     registration_type: game.registration_type,
     // #2258: pre-fills «Shotgun-start» so a save keeps it.
