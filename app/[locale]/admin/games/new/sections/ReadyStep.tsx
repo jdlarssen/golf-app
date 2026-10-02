@@ -3,61 +3,77 @@
 /**
  * ReadyStep — wizard-only steg 5 «Klar?».
  *
- * Ansvar: viser et summary-kort av valgene (format + lagstørrelse,
- * bane + tee + tee-off, antall spillere + lag-fordeling), spillnavn med
- * inline-rediger, «Hvem kan melde seg på?»-valget i klartekst (#1065,
- * #367-mandatet), en sammenleggbar «Vis avanserte innstillinger»-disclosure
- * som mounter allowance-feltene (#1065, flyttet fra steg 2) + resten av
- * RegistrationSection (type påmelding + startkontingent) +
- * AdvancedSettingsSection med score-visibility + sideturnering, og
- * publish/draft-knappene.
+ * #2282: arrangøren ser invitasjonen slik gjengen får den — et lite
+ * invitasjonskort med spillnavnet som felt midt i kortet — og en sjekkliste
+ * med fire rader (Bane, Format, Tee-off, Spillere), hver med status og
+ * «Endre». Under lista: «Hvem kan melde seg på?» i klartekst (#367-mandatet)
+ * og «Vis avanserte innstillinger» med allowance-feltene, type påmelding,
+ * startkontingent, peer-godkjenning, synlighet, sideturnering og premiebord.
+ * Publiser og utkast står i et brett som følger bunnen av skjermen.
+ *
+ * Sjekklista er en projeksjon av publiser-gaten i useGameFormState
+ * (`readyChecklist`); knappen styres fortsatt bare av `canPublish`.
  *
  * Filen lever som komponent, men er IKKE wired i GameForm. GameWizard
  * mounter den i wizard-stegtreet.
  */
 
-import { startTransition, useActionState, useRef, useState } from 'react';
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
-import { formatTeeOffLineLocale } from '@/lib/i18n/format';
 import type { GameFormMode } from '../GameForm';
 import type { CreateGameResult } from '../actions';
 import type { GameFormState } from '../useGameFormState';
 import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { ToggleCard } from '@/components/ui/ToggleCard';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { RegistrationSection } from './RegistrationSection';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
-import type { TeamSize } from '../TeamSizeSelector';
+import { invitationWhen } from '@/lib/games/invitationCard';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { TeamHandicapField } from './TeamHandicapField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
+import { InvitationPreviewCard } from './InvitationPreviewCard';
+import { ReadyChecklist, type ReadyChecklistItem } from './ReadyChecklist';
+import {
+  formatRowParts,
+  playersSummary,
+  readyChecklist,
+  teeOffIso,
+  type ReadyRowTarget,
+} from './readyChecklistRules';
 
 /** «Ingen feil»-formen; delt så useActionState-initen er referanse-stabil. */
 const NO_ERROR: CreateGameResult = { error: '' };
 
 /**
- * Server-svaret pluss en stempel-teller. Publiser og «Lagre utkast» har hver
- * sin useActionState, og uten en felles teller vet ikke banneret hvilket av de
- * to svarene som er det ferskeste.
+ * Server-svaret pluss en stempel-teller. Publiser og «Lagre som utkast» har
+ * hver sin useActionState, og uten en felles teller vet ikke banneret hvilket
+ * av de to svarene som er det ferskeste.
  */
 type SubmitState = CreateGameResult & { seq: number };
 const NO_SUBMIT: SubmitState = { error: '', seq: 0 };
+
+const ADVANCED_ID = 'ready-advanced';
 
 type Props = {
   state: GameFormState;
   mode: GameFormMode;
   /**
-   * #1065: hopper tilbake til steg 4 (Spillere). Brukt av «Gå tilbake»-lenken
-   * under publish-knappen når `missingForPublish` har et spiller-relatert
-   * mangel-punkt — steg-4-gaten er nå permissiv (tomt roster er alltid
-   * gyldig for å komme videre), så admin trenger en eksplisitt vei tilbake
-   * hvis registreringsvalget de tar her på steg 5 (invite_only) likevel
-   * krever en spillerliste de ikke fylte ut.
+   * #2282: «Endre» i sjekklista hopper til steget valget bor på (Format → 2,
+   * Bane/Tee-off → 3, Spillere → 4). GameWizard sender `goToStep`, som pusher
+   * URL-en, så Tilbake i nettleseren gir steg 5 igjen.
    */
-  onGoToPlayersStep?: () => void;
+  onGoToStep?: (step: 2 | 3 | 4) => void;
   /**
    * #1400: kalles idet et publiser-/utkast-forsøk sendes manuelt (se
    * `dispatchManually`), så veiviseren får samme «submit startet»-hook som
@@ -66,12 +82,7 @@ type Props = {
   onSubmitStart?: () => void;
 };
 
-export function ReadyStep({
-  state,
-  mode,
-  onGoToPlayersStep,
-  onSubmitStart,
-}: Props) {
+export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
   const t = useTranslations('wizard.ready');
   const tWizard = useTranslations('wizard');
   const tAllowance = useTranslations('allowance');
@@ -82,6 +93,10 @@ export function ReadyStep({
     canPublish,
     missingForPublish,
     missingForPublishCodes,
+    teeOffInPast,
+    intent,
+    expectedPlayerCount,
+    lockGameMode,
     gameMode,
     teamSize,
     selectedCourse,
@@ -90,6 +105,7 @@ export function ReadyStep({
     scheduledTeeOffAt,
     selectedPlayerIds,
     playersByTeam,
+    requiresTeams,
     isBestBall,
     isParStableford,
     isMatchplay,
@@ -122,57 +138,15 @@ export function ReadyStep({
     setRoundRobinAllowancePct,
   } = state;
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedRef = useRef<HTMLDivElement>(null);
 
   const selectedTeeBox = availableTees.find((tee) => tee.id === teeBoxId) ?? null;
+  const when = invitationWhen(teeOffIso(scheduledTeeOffAt), locale);
 
-  function teamSizeLabel(size: TeamSize): string {
-    if (size === 1) return t('teamSizeSolo');
-    if (size === 2) return t('teamSize2');
-    if (size === 3) return t('teamSize3');
-    return t('teamSize4');
-  }
-
-  // Lag-fordeling-summary per modus. Spec-en ber om kort prosa:
-  //   «4 lag à 2 spillere» / «2 lag à 4 spillere» / «1 v 1» / «N spillere».
-  function teamsSummary(): string {
-    const count = selectedPlayerIds.length;
-    const playerWord = count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
-    if (isSolo) {
-      return playerWord;
-    }
-    if (isMatchplay) {
-      const side1 = selectedPlayerIds.filter(
-        (pid) => state.teamByPlayer[pid] === 1,
-      ).length;
-      const side2 = selectedPlayerIds.filter(
-        (pid) => state.teamByPlayer[pid] === 2,
-      ).length;
-      return side1 === 1 && side2 === 1 ? t('players1v1') : t('playersUnassignedMatchplay');
-    }
-    const teamsCount = Object.values(playersByTeam).filter(
-      (members) => members.length > 0,
-    ).length;
-    if (teamsCount === 0) {
-      const base = count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
-      return t('playersUnassigned', { playerWord: base });
-    }
-    if (isBestBall) {
-      return t('teamsBestBall', { teams: teamsCount });
-    }
-    if (isParStableford) {
-      return t('teamsParStableford', { teams: teamsCount });
-    }
-    if (isTexas || isAmbrose || isShamble) {
-      return t('teamsScramble', { teams: teamsCount, size: teamSize });
-    }
-    return count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
-  }
-
-  // Locale-aware tee-off display. Returns the 'Ikke satt' fallback when null.
-  function teeOffDisplay(): string {
-    const result = formatTeeOffLineLocale(scheduledTeeOffAt, locale);
-    if (result === null) return t('notSet');
-    return result;
+  // MODE_SUMMARY_LABELS — deliberately different wording from lib's MODE_LABELS.
+  // Look up via catalog key so values are locale-aware.
+  function modeSummaryLabel(gm: GameMode): string {
+    return t(`modeSummary.${gm}` as Parameters<typeof t>[0]);
   }
 
   // Resolve publish + draft-server-actions per mode-kind. Speiler logikken
@@ -203,7 +177,7 @@ export function ReadyStep({
   // så guarden ligger inne i closuren.
   // Stempel-teller delt av begge hookene: hvert svar som kommer i mål får et
   // høyere tall enn det forrige, så banneret kan vise det ferskeste. Uten den
-  // låste en publiser-feil banneret for godt — et påfølgende «Lagre utkast»
+  // låste en publiser-feil banneret for godt — et påfølgende utkast-forsøk
   // som feilet med en ANNEN kode viste fortsatt publiser-teksten.
   // #1398: `isPending` er tredje element fra useActionState. Uten den sto
   // knappen helt uendret mens forsøket kjørte — arrangøren på steg 5 fikk
@@ -275,259 +249,323 @@ export function ReadyStep({
       : tWizard('errors.unexpected', { code: submitErrorCode });
   })();
 
-  // MODE_SUMMARY_LABELS — deliberately different wording from lib's MODE_LABELS.
-  // Look up via catalog key so values are locale-aware.
-  function modeSummaryLabel(gm: GameMode): string {
-    return t(`modeSummary.${gm}` as Parameters<typeof t>[0]);
+  // ── Sjekklista ──────────────────────────────────────────────────────
+  // En passert tee-off står bevisst utenfor missingForPublish (den er ugyldig,
+  // ikke manglende). Den får egen melding her og i linja under knappen, så den
+  // grå knappen aldri står uten forklaring.
+  const teeOffPastMessage = teeOffInPast
+    ? tWizard('sections.basics.teeOffPastError')
+    : null;
+  const rows = readyChecklist({
+    codes: missingForPublishCodes,
+    messages: missingForPublish,
+    teeOffPastMessage,
+    intent,
+    expectedPlayerCount,
+    selectedCount: selectedPlayerIds.length,
+    lockGameMode,
+  });
+
+  function playersValue(): string {
+    const summary = playersSummary({
+      count: selectedPlayerIds.length,
+      isSolo,
+      isMatchplay,
+      requiresTeams,
+      side1: selectedPlayerIds.filter((pid) => state.teamByPlayer[pid] === 1).length,
+      side2: selectedPlayerIds.filter((pid) => state.teamByPlayer[pid] === 2).length,
+      teamsCount: Object.values(playersByTeam).filter((members) => members.length > 0).length,
+      isBestBall,
+      isParStableford,
+      isScramble: isTexas || isAmbrose || isShamble,
+      teamSize,
+    });
+    return t(summary.key, summary.values);
   }
 
-  // #1065: klassifiser via de locale-uavhengige kodene (parallell liste til
-  // missingForPublish, samme lengde/rekkefølge), aldri via oversatt display-
-  // tekst — tekst-matching brakk i engelsk locale. 'course'/'tee_box'/
-  // 'tee_off' hører til steg 3 (egen gate der), 'allowance' hører til steg 5
-  // (feltene bor i disclosuren rett over denne knappen), kun 'players' peker
-  // tilbake til steg 4.
-  const hasPlayerRelatedMiss = missingForPublishCodes.includes('players');
+  function formatValue(): string {
+    const parts = formatRowParts({ gameMode, teamSize, hcpAllowance });
+    const out = [modeSummaryLabel(gameMode)];
+    if (parts.teamSize === 2) out.push(t('teamSize2'));
+    else if (parts.teamSize === 3) out.push(t('teamSize3'));
+    else if (parts.teamSize !== null) out.push(t('teamSize4'));
+    if (parts.allowance?.kind === 'pct') {
+      out.push(t('checklist.allowancePct', { pct: parts.allowance.pct }));
+    } else if (parts.allowance?.kind === 'gross') {
+      out.push(t('checklist.gross'));
+    }
+    return out.join(', ');
+  }
 
-  // #1171: verdi-preview på publiser-knappen — «Publiser — N spillere ·
-  // <format> · <bane>». Vises kun når nok er valgt (roster ≥ 1 OG bane),
-  // ellers faller den pent tilbake til den nøytrale labelen. All data finnes
-  // allerede i steg-5-scope; ingen ny komponent. `modeSummaryLabel` er samme
-  // locale-aware format-tekst summary-kortet over bruker.
-  // #1384: «Lagre utkast» krever et navn — brukt både til disabled-gaten og
-  // til hint-linja som forklarer hvorfor knappen er grå.
+  function okValue(key: ReadyChecklistItem['key']): string {
+    if (key === 'course') {
+      return [
+        selectedCourse?.name,
+        selectedTeeBox && t('card.tee', { name: selectedTeeBox.name }),
+      ]
+        .filter(Boolean)
+        .join(', ');
+    }
+    if (key === 'format') return formatValue();
+    if (key === 'teeOff') return when ? t('checklist.teeOff', when) : '';
+    return playersValue();
+  }
+
+  const LABEL: Record<ReadyChecklistItem['key'], string> = {
+    course: t('courseLabel'),
+    format: t('formatLabel'),
+    teeOff: t('teeOffLabel'),
+    players: t('playersLabel'),
+  };
+
+  const checklistItems: ReadyChecklistItem[] = rows.map((row) => {
+    let value: string;
+    if (row.status === 'block') {
+      // «Mangler: …» for det som mangler; den passerte tee-offen står med sin
+      // egen setning.
+      const missing = row.messages.filter((m) => m !== teeOffPastMessage);
+      value = [
+        missing.length > 0 ? t('missingPrefix', { items: missing.join(', ') }) : null,
+        row.messages.includes(teeOffPastMessage ?? '') ? teeOffPastMessage : null,
+      ]
+        .filter(Boolean)
+        .join(' ');
+    } else if (row.status === 'warn') {
+      value = t('checklist.playersWarn', {
+        selected: selectedPlayerIds.length,
+        expected: expectedPlayerCount ?? 0,
+      });
+    } else {
+      value = okValue(row.key);
+    }
+    return { ...row, label: LABEL[row.key], value };
+  });
+
+  // «Endre» på Format med en ugyldig prosent åpner de avanserte innstillingene
+  // og setter fokus i prosentfeltet. Feltet finnes først når panelet er åpent,
+  // så fokuset tas etter neste render.
+  const focusAllowanceOnOpen = useRef(false);
+  function focusAllowanceField() {
+    advancedRef.current
+      ?.querySelector<HTMLInputElement>('input[id$="__input"]')
+      ?.focus();
+  }
+  useEffect(() => {
+    if (!advancedOpen || !focusAllowanceOnOpen.current) return;
+    focusAllowanceOnOpen.current = false;
+    focusAllowanceField();
+  }, [advancedOpen]);
+
+  function handleEdit(target: Exclude<ReadyRowTarget, null>) {
+    if (target !== 'advanced') {
+      onGoToStep?.(target);
+      return;
+    }
+    if (advancedOpen) {
+      focusAllowanceField();
+      return;
+    }
+    focusAllowanceOnOpen.current = true;
+    setAdvancedOpen(true);
+  }
+
+  // Enter i et tekstfelt sender skjemaet via første submit-knapp, og det er
+  // publiser. Arrangøren som trykker Enter i navnet, beløpet eller en premie
+  // skal ikke publisere spillet. Knapper og tekstområder beholder Enter.
+  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+    if (e.target instanceof HTMLInputElement) e.preventDefault();
+  }
+
+  // #1384: «Lagre som utkast» krever et navn — brukt både til disabled-gaten
+  // og til hint-linja som forklarer hvorfor knappen er grå.
   const nameMissing = name.trim() === '';
-
-  const publishLabel =
-    selectedPlayerIds.length >= 1 && selectedCourse
-      ? t('publishButtonWithSummary', {
-          count: selectedPlayerIds.length,
-          mode: modeSummaryLabel(gameMode),
-          course: selectedCourse.name,
-        })
-      : t('publishButton');
+  const showPublishMissing = !canPublish && (missingForPublish.length > 0 || teeOffInPast);
 
   return (
-    <section className="space-y-4">
-      {/* Summary-kort — viser alle valg i rad-format. Hver rad har muted
-          label til venstre og verdi til høyre. Verdien faller tilbake til
-          «Ikke valgt»/«Ikke satt» når feltet er tomt. */}
-      <div className="space-y-1.5 rounded-lg border border-border bg-surface-2 p-3">
-        <SummaryRow
-          label={t('formatLabel')}
-          value={`${modeSummaryLabel(gameMode)} · ${teamSizeLabel(teamSize)}`}
+    // Flex-kolonne på minst skjermhøyden, så brettet (mt-auto) står nederst
+    // også når steget er kortere enn skjermen.
+    <section className="flex min-h-svh flex-col" onKeyDown={handleKeyDown}>
+      <div className="pb-[18px]">
+        <InvitationPreviewCard
+          name={name}
+          onNameChange={setName}
+          when={when}
+          courseName={selectedCourse?.name ?? null}
+          teeName={selectedTeeBox?.name ?? null}
+          formatName={modeSummaryLabel(gameMode)}
         />
-        <SummaryRow
-          label={t('courseLabel')}
-          value={selectedCourse?.name ?? t('notSelected')}
+
+        <ReadyChecklist items={checklistItems} onEdit={handleEdit} />
+
+        {/* #1065: «Hvem kan melde seg på?»-valget i klartekst — IKKE gjemt i
+            «Vis avanserte innstillinger» (#367-mandatet: valget skal alltid
+            være synlig). Skjules for klubb-spill (isClubScoped): medlemskap =
+            invitasjon, modus er låst og valget er irrelevant der. */}
+        {!isClubScoped && <RegistrationSection state={state} onlyModeChoice />}
+
+        <ToggleCard
+          className="mt-4"
+          label={t('advancedToggle')}
+          open={advancedOpen}
+          onToggle={() => setAdvancedOpen((v) => !v)}
+          controls={ADVANCED_ID}
         />
-        <SummaryRow
-          label={t('teeLabel')}
-          value={selectedTeeBox?.name ?? t('notSelected')}
-        />
-        <SummaryRow label={t('teeOffLabel')} value={teeOffDisplay()} />
-        <SummaryRow label={t('playersLabel')} value={teamsSummary()} />
+        <div id={ADVANCED_ID} ref={advancedRef}>
+          {advancedOpen && (
+            <>
+              {/* #1065: allowance-feltene flyttet hit fra steg 2 — gode
+                  defaults (85/50/100 % osv.) gjør at kompis-caset aldri
+                  trenger å røre dem. `hideHiddenInput`: FormDataInputs (montert
+                  på alle steg) speiler verdien uansett om panelet er åpent. */}
+              {gameMode === 'fourball_matchplay' && (
+                <AllowanceField
+                  fieldName="fourball_allowance_pct"
+                  defaultPct={85}
+                  legend={tWizard('allowanceProps.fourball.legend')}
+                  description={tWizard('allowanceProps.fourball.description')}
+                  nettoHelperText={tWizard('allowanceProps.fourball.nettoHelper')}
+                  bruttoHelperText={tWizard('allowanceProps.fourball.bruttoHelper')}
+                  value={fourballAllowancePct}
+                  onChange={setFourballAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {gameMode === 'foursomes_matchplay' && (
+                <AllowanceField
+                  fieldName="foursomes_allowance_pct"
+                  defaultPct={50}
+                  legend={tWizard('allowanceProps.foursomes.legend')}
+                  description={tWizard('allowanceProps.foursomes.description')}
+                  nettoHelperText={tWizard('allowanceProps.foursomes.nettoHelper')}
+                  bruttoHelperText={tWizard('allowanceProps.foursomes.bruttoHelper')}
+                  value={foursomesAllowancePct}
+                  onChange={setFoursomesAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {gameMode === 'greensome_matchplay' && (
+                <AllowanceField
+                  fieldName="greensome_allowance_pct"
+                  defaultPct={100}
+                  legend={tWizard('allowanceProps.greensome.legend')}
+                  description={tWizard('allowanceProps.greensome.description')}
+                  nettoHelperText={tWizard('allowanceProps.greensome.nettoHelper')}
+                  bruttoHelperText={tWizard('allowanceProps.greensome.bruttoHelper')}
+                  value={greensomeAllowancePct}
+                  onChange={setGreensomeAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {gameMode === 'chapman_matchplay' && (
+                <AllowanceField
+                  fieldName="chapman_allowance_pct"
+                  defaultPct={100}
+                  legend={tWizard('allowanceProps.chapman.legend')}
+                  description={tWizard('allowanceProps.chapman.description')}
+                  nettoHelperText={tWizard('allowanceProps.chapman.nettoHelper')}
+                  bruttoHelperText={tWizard('allowanceProps.chapman.bruttoHelper')}
+                  value={chapmanAllowancePct}
+                  onChange={setChapmanAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {gameMode === 'gruesome_matchplay' && (
+                <AllowanceField
+                  fieldName="gruesome_allowance_pct"
+                  defaultPct={50}
+                  legend={tWizard('allowanceProps.gruesome.legend')}
+                  description={tWizard('allowanceProps.gruesome.description')}
+                  nettoHelperText={tWizard('allowanceProps.gruesome.nettoHelper')}
+                  bruttoHelperText={tWizard('allowanceProps.gruesome.bruttoHelper')}
+                  value={gruesomeAllowancePct}
+                  onChange={setGruesomeAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {isRoundRobin && (
+                <AllowanceField
+                  fieldName="round_robin_allowance_pct"
+                  defaultPct={85}
+                  legend={tWizard('allowanceProps.roundRobin.legend')}
+                  description={tWizard('allowanceProps.roundRobin.description')}
+                  nettoHelperText={tWizard('allowanceProps.roundRobin.nettoHelper')}
+                  bruttoHelperText={tWizard('allowanceProps.roundRobin.bruttoHelper')}
+                  value={roundRobinAllowancePct}
+                  onChange={setRoundRobinAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {usesGameHcpAllowance(gameMode) && (
+                <AllowanceField
+                  fieldName="hcp_allowance_pct"
+                  defaultPct={100}
+                  legend={tWizard('allowanceProps.scoring.legend')}
+                  description={tWizard('allowanceProps.scoring.description')}
+                  nettoHelperText={tWizard('allowanceProps.scoring.nettoHelper')}
+                  bruttoHelperText={tAllowance(bruttoHelperKeyFor(gameMode))}
+                  value={hcpAllowance}
+                  onChange={setHcpAllowance}
+                  hideHiddenInput
+                />
+              )}
+              {/* Scramble-familien (#2009): arrangøren setter lag-handicapet
+                  som prosent av lagets snitt; feltet oversetter til og fra den
+                  lagrede sum-prosenten. `key={teamSize}` forser remount ved
+                  lagstørrelse-bytte så netto/brutto-minnet følger re-seedingen. */}
+              {isTexas && (
+                <TeamHandicapField
+                  key={teamSize}
+                  mode="texas_scramble"
+                  teamSize={teamSize}
+                  sumPct={texasHandicapPct}
+                  onSumPctChange={setTexasHandicapPct}
+                />
+              )}
+              {isAmbrose && (
+                <TeamHandicapField
+                  key={teamSize}
+                  mode="ambrose"
+                  teamSize={teamSize}
+                  sumPct={ambroseHandicapPct}
+                  onSumPctChange={setAmbroseHandicapPct}
+                />
+              )}
+              {isFlorida && (
+                <TeamHandicapField
+                  key={teamSize}
+                  mode="florida_scramble"
+                  teamSize={teamSize}
+                  sumPct={floridaHandicapPct}
+                  onSumPctChange={setFloridaHandicapPct}
+                />
+              )}
+
+              {/* #1065: type påmelding (solo/lag) + startkontingent. «Hvem kan
+                  melde seg på?» står i klartekst over (onlyModeChoice), så her
+                  vises resten via hideModeChoice. */}
+              <RegistrationSection state={state} hideHeading hideModeChoice />
+
+              <AdvancedSettingsSection
+                state={state}
+                includeVisibility
+                hideHeading
+                serializedExternally
+              />
+            </>
+          )}
+        </div>
       </div>
 
-      {/* #1999: spillnavnet er et helt vanlig felt — synlig uten at noe må
-          trykkes på. Den gamle klikk-for-å-redigere-teksten så ut som en
-          overskrift, og en arrangør som aldri fant fram til at den var et felt
-          satt igjen med forslaget. Samme `name`-felt som GameForm serialiserer,
-          og `setName` markerer navnet som rørt av seg selv (#1999 del A), så
-          verken bane- eller tee-off-bytte kan overskrive det etterpå. */}
-      <div className="space-y-1.5">
-        <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {t('gameNameLegend')}
-        </span>
-        <Input
-          id="name"
-          name="name"
-          type="text"
-          label={t('gameNameLabel')}
-          labelHidden
-          placeholder={t('gameNamePlaceholder')}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </div>
-
-      {/* #1065: «Hvem kan melde seg på?»-valget i klartekst — IKKE gjemt i
-          «Vis avanserte innstillinger»-disclosuren (#367-mandatet: valget
-          skal alltid være synlig). Skjules for klubb-spill (isClubScoped):
-          medlemskap = invitasjon, modus er låst og valget er irrelevant der
-          — speiler samme `hideModeChoice`-gate RegistrationSection alltid
-          har hatt. Type påmelding (solo/lag) + startkontingent ligger i
-          disclosuren under, siden de er sjeldnere overstyrt. */}
-      {!isClubScoped && (
-        <RegistrationSection state={state} onlyModeChoice />
-      )}
-
-      {/* «Vis avanserte innstillinger»-disclosure. Wizard-løftet inkluderer
-          score-visibility-radios + sideturnering-fieldset via
-          AdvancedSettingsSection-propet `includeVisibility`. `hideHeading`
-          unngår dobbel-merking siden disclosure-knappen allerede har sin
-          egen «Vis avanserte innstillinger»-label. */}
-      <div className="rounded-lg border border-border">
-        <button
-          type="button"
-          onClick={() => setAdvancedOpen((v) => !v)}
-          aria-expanded={advancedOpen}
-          className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-text"
-        >
-          <span>{t('advancedToggle')}</span>
-          <span aria-hidden="true" className="text-muted">
-            {advancedOpen ? '–' : '+'}
-          </span>
-        </button>
-        {advancedOpen && (
-          <div className="border-t border-border px-3 py-3 space-y-4">
-            {/* #1065: allowance-feltene flyttet hit fra steg 2 — gode
-                defaults (85/50/100 % osv.) gjør at kompis-caset aldri
-                trenger å røre dem. `hideHiddenInput`: FormDataInputs (montert
-                på alle steg) speiler verdien uansett disclosure-tilstand. */}
-            {gameMode === 'fourball_matchplay' && (
-              <AllowanceField
-                fieldName="fourball_allowance_pct"
-                defaultPct={85}
-                legend={tWizard('allowanceProps.fourball.legend')}
-                description={tWizard('allowanceProps.fourball.description')}
-                nettoHelperText={tWizard('allowanceProps.fourball.nettoHelper')}
-                bruttoHelperText={tWizard('allowanceProps.fourball.bruttoHelper')}
-                value={fourballAllowancePct}
-                onChange={setFourballAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {gameMode === 'foursomes_matchplay' && (
-              <AllowanceField
-                fieldName="foursomes_allowance_pct"
-                defaultPct={50}
-                legend={tWizard('allowanceProps.foursomes.legend')}
-                description={tWizard('allowanceProps.foursomes.description')}
-                nettoHelperText={tWizard('allowanceProps.foursomes.nettoHelper')}
-                bruttoHelperText={tWizard('allowanceProps.foursomes.bruttoHelper')}
-                value={foursomesAllowancePct}
-                onChange={setFoursomesAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {gameMode === 'greensome_matchplay' && (
-              <AllowanceField
-                fieldName="greensome_allowance_pct"
-                defaultPct={100}
-                legend={tWizard('allowanceProps.greensome.legend')}
-                description={tWizard('allowanceProps.greensome.description')}
-                nettoHelperText={tWizard('allowanceProps.greensome.nettoHelper')}
-                bruttoHelperText={tWizard('allowanceProps.greensome.bruttoHelper')}
-                value={greensomeAllowancePct}
-                onChange={setGreensomeAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {gameMode === 'chapman_matchplay' && (
-              <AllowanceField
-                fieldName="chapman_allowance_pct"
-                defaultPct={100}
-                legend={tWizard('allowanceProps.chapman.legend')}
-                description={tWizard('allowanceProps.chapman.description')}
-                nettoHelperText={tWizard('allowanceProps.chapman.nettoHelper')}
-                bruttoHelperText={tWizard('allowanceProps.chapman.bruttoHelper')}
-                value={chapmanAllowancePct}
-                onChange={setChapmanAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {gameMode === 'gruesome_matchplay' && (
-              <AllowanceField
-                fieldName="gruesome_allowance_pct"
-                defaultPct={50}
-                legend={tWizard('allowanceProps.gruesome.legend')}
-                description={tWizard('allowanceProps.gruesome.description')}
-                nettoHelperText={tWizard('allowanceProps.gruesome.nettoHelper')}
-                bruttoHelperText={tWizard('allowanceProps.gruesome.bruttoHelper')}
-                value={gruesomeAllowancePct}
-                onChange={setGruesomeAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {isRoundRobin && (
-              <AllowanceField
-                fieldName="round_robin_allowance_pct"
-                defaultPct={85}
-                legend={tWizard('allowanceProps.roundRobin.legend')}
-                description={tWizard('allowanceProps.roundRobin.description')}
-                nettoHelperText={tWizard('allowanceProps.roundRobin.nettoHelper')}
-                bruttoHelperText={tWizard('allowanceProps.roundRobin.bruttoHelper')}
-                value={roundRobinAllowancePct}
-                onChange={setRoundRobinAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {usesGameHcpAllowance(gameMode) && (
-              <AllowanceField
-                fieldName="hcp_allowance_pct"
-                defaultPct={100}
-                legend={tWizard('allowanceProps.scoring.legend')}
-                description={tWizard('allowanceProps.scoring.description')}
-                nettoHelperText={tWizard('allowanceProps.scoring.nettoHelper')}
-                bruttoHelperText={tAllowance(bruttoHelperKeyFor(gameMode))}
-                value={hcpAllowance}
-                onChange={setHcpAllowance}
-                hideHiddenInput
-              />
-            )}
-            {/* Scramble-familien (#2009): arrangøren setter lag-handicapet som
-                prosent av lagets snitt; feltet oversetter til og fra den
-                lagrede sum-prosenten. `key={teamSize}` forser remount ved
-                lagstørrelse-bytte så netto/brutto-minnet følger re-seedingen. */}
-            {isTexas && (
-              <TeamHandicapField
-                key={teamSize}
-                mode="texas_scramble"
-                teamSize={teamSize}
-                sumPct={texasHandicapPct}
-                onSumPctChange={setTexasHandicapPct}
-              />
-            )}
-            {isAmbrose && (
-              <TeamHandicapField
-                key={teamSize}
-                mode="ambrose"
-                teamSize={teamSize}
-                sumPct={ambroseHandicapPct}
-                onSumPctChange={setAmbroseHandicapPct}
-              />
-            )}
-            {isFlorida && (
-              <TeamHandicapField
-                key={teamSize}
-                mode="florida_scramble"
-                teamSize={teamSize}
-                sumPct={floridaHandicapPct}
-                onSumPctChange={setFloridaHandicapPct}
-              />
-            )}
-
-            {/* #1065: type påmelding (solo/lag/begge) + startkontingent —
-                flyttet hit fra steg 2. «Hvem kan melde seg på?» rendres i
-                klartekst over disclosuren (onlyModeChoice), så her vises
-                resten via hideModeChoice. */}
-            <RegistrationSection state={state} hideHeading hideModeChoice />
-
-            <AdvancedSettingsSection
-              state={state}
-              includeVisibility
-              hideHeading
-              serializedExternally
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Publish + draft knapper — speiler GameForm submit-seksjonen. */}
+      {/* Publiser + utkast i et brett som følger bunnen av skjermen. `sticky`,
+          ikke `fixed`: høyden varierer med linja «Mangler: …», utkast-hintet og
+          feilbanneret, og en sticky rad står i flyten, så ingenting havner bak
+          den. `-mx-4` når skjermkantene (kolonnen har alt tatt 4 px av
+          AppShells 20), og den negative bunnmarginen opphever AppShells
+          bunn-padding, så brettet står mot kanten også rullet helt ned.
+          Bunnmenyen er skjult på veiviser-rutene. */}
       {actions && (
-        <div className="space-y-3 pt-1">
+        <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-[calc(5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1.5 border-t border-border bg-bg px-4 pt-3 pb-[calc(20px+env(safe-area-inset-bottom,0px))]">
           {/* #1379: serverfeilen står rett over knappen som utløste den —
               veiviseren er fortsatt montert, så alt arrangøren fylte ut er
               der. testId så e2e slipper å låse norsk copy. */}
@@ -542,6 +580,7 @@ export function ReadyStep({
               når `pending`. */}
           <Button
             type="submit"
+            size="xl"
             data-testid="wizard-publish"
             formAction={publishAction}
             onClick={(e) => dispatchManually(e, publishAction, true)}
@@ -549,49 +588,31 @@ export function ReadyStep({
             pending={publishPending}
             pendingLabel={t('publishPending')}
             disabled={!canPublish || draftPending}
-            aria-describedby={
-              !canPublish && missingForPublish.length > 0
-                ? 'publish-missing'
-                : undefined
-            }
+            aria-describedby={showPublishMissing ? 'publish-missing' : undefined}
           >
-            {publishLabel}
+            {t('publishButton')}
           </Button>
-          {!canPublish && missingForPublish.length > 0 && (
+          {showPublishMissing && (
             <p
               id="publish-missing"
-              className="text-xs text-muted text-center"
+              className="text-center font-sans text-[13px] leading-[normal] font-semibold text-warning-text"
             >
-              {t('missingPrefix', { items: missingForPublish.join(', ') })}
-              {/* #1065: steg-4-gaten er nå permissiv (tomt roster kommer
-                  alltid videre) — hvis admin senere velger invite_only her
-                  på steg 5 og mangler en gyldig spillerliste, gir vi en
-                  eksplisitt vei tilbake i stedet for å la admin lete etter
-                  «Forrige»-knappen selv. `hasPlayerRelatedMiss` leser den
-                  locale-uavhengige kode-listen (kun 'players'-koden peker
-                  til steg 4 — course/tee/tee-off hører til steg 3 og
-                  allowance til disclosuren her på steg 5). */}
-              {onGoToPlayersStep && hasPlayerRelatedMiss && (
-                <>
-                  {' '}
-                  <button
-                    type="button"
-                    onClick={onGoToPlayersStep}
-                    className="underline underline-offset-2 hover:text-text"
-                  >
-                    {t('missingGoToPlayers')}
-                  </button>
-                </>
-              )}
+              {[
+                missingForPublish.length > 0
+                  ? t('missingPrefix', { items: missingForPublish.join(', ') })
+                  : null,
+                teeOffPastMessage,
+              ]
+                .filter(Boolean)
+                .join(' ')}
             </p>
           )}
-          {/* #1384: utkast-knappen krever et spillnavn, og navnet auto-
-              genereres først når bane er valgt (steg 3). Uten hint-linja så
-              knappen bare død ut for arrangøren som ville lagre tidlig —
-              publiser-knappen over har hatt sin «Mangler: …» hele tiden. */}
+          {/* #1384: utkast-knappen krever et spillnavn. Uten hint-linja så
+              knappen bare død ut for arrangøren som ville lagre tidlig. */}
           <Button
             type="submit"
-            variant="secondary"
+            size="chip"
+            variant="quiet"
             formAction={draftAction}
             onClick={(e) => dispatchManually(e, draftAction, false)}
             formNoValidate
@@ -606,7 +627,7 @@ export function ReadyStep({
           {nameMissing && (
             <p
               id="draft-missing-name"
-              className="text-xs text-muted text-center"
+              className="text-center font-sans text-xs leading-[normal] text-muted"
             >
               {t('draftMissingName')}
             </p>
@@ -614,16 +635,5 @@ export function ReadyStep({
         </div>
       )}
     </section>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 text-sm">
-      <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted shrink-0">
-        {label}
-      </span>
-      <span className="text-text text-right tabular-nums">{value}</span>
-    </div>
   );
 }

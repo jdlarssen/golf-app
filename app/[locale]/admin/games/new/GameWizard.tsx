@@ -590,9 +590,10 @@ function WizardBody({
   }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.nameTouched]);
 
   // Instruksen under tittelen på steg 4. Mode-aware siden lag/sider/flighter
-  // varierer per modus. #2260: de andre stegene har bare tittelen (steg 2 har
-  // telleren på samme plass).
+  // varierer per modus. #2260: stegene 1–3 har bare tittelen (steg 2 har
+  // telleren på samme plass). #2282: steg 5 sier hva kortet under viser.
   const subText = useMemo<string | null>(() => {
+    if (step === 5) return t('stepSubText.step5');
     if (step === 4) {
       if (state.isSolo) return null;
       if (state.isBestBall) return t('stepSubText.step4BestBall');
@@ -893,8 +894,9 @@ function WizardBody({
   return (
     <form onSubmit={handleSubmitStart}>
       {top}
+      {/* Steg 4 og 5: 13 px, 4 px under tittelen, som Nyttspill-4-lag. */}
       {subText && (
-        <p className="pt-2.5 font-sans text-sm leading-[normal] text-muted">{subText}</p>
+        <p className="pt-1 font-sans text-[13px] leading-[normal] text-muted">{subText}</p>
       )}
 
       {step === 1 && (
@@ -1109,12 +1111,14 @@ function WizardBody({
         </div>
       )}
 
+      {/* #2282: steg 5 står i samme -mx-1-kolonne som steg 2 og 3, så kortene
+          står 16 px fra skjermkanten. */}
       {step === 5 && (
-        <div className="pt-6">
+        <div className="-mx-1">
           <ReadyStep
             state={state}
             mode={mode}
-            onGoToPlayersStep={() => goToStep(4)}
+            onGoToStep={goToStep}
             onSubmitStart={handleSubmitStart}
           />
         </div>
