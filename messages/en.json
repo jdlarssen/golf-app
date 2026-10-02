@@ -1131,7 +1131,7 @@
       "fourball": {
         "legend": "Scoring for four-ball matches",
         "description": "Controls handicaps for four-ball matches. Net uses a share of each player's handicap; gross counts the lowest gross score per hole per side.",
-        "nettoHelper": "The share of each player's handicap that counts. The WHS standard for four-ball match play is 85.",
+        "nettoHelper": "The share of each player's handicap that counts. Tørny suggests 85, while WHS recommends 90 for four-ball match play. You choose.",
         "bruttoHelper": "No handicaps — the lowest gross score per hole per side wins. The usual format in the real Ryder Cup."
       },
       "foursomes": {
@@ -1155,7 +1155,7 @@
       "gruesome": {
         "legend": "Scoring for Gruesome matches",
         "description": "Controls handicaps for Gruesome matches (both tee off, opponents pick the ball + alternate). Net gives the higher-handicap team a share of the difference between the teams' combined handicaps; gross counts only the team's gross strokes.",
-        "nettoHelper": "The share of the difference between the teams' combined handicaps. The WHS standard for Gruesome match play is 50 (same as foursomes).",
+        "nettoHelper": "The share of the difference between the teams' combined handicaps. Tørny suggests 50, same as foursomes.",
         "bruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes."
       },
       "scoring": {
@@ -1178,7 +1178,7 @@
       "roundRobin": {
         "legend": "Scoring for Round Robin",
         "description": "Controls handicaps for Round Robin match play. Net uses a share of each player's handicap per hole; gross counts the lowest gross per side.",
-        "nettoHelper": "The share of each player's handicap that counts. The WHS standard for four-ball match play is 85.",
+        "nettoHelper": "The share of each player's handicap that counts. Tørny suggests 85, while WHS recommends 90 for four-ball match play. You choose.",
         "bruttoHelper": "No handicaps — lowest gross score per hole per side decides. Pure gross round."
       },
       "missing": {
@@ -1293,7 +1293,7 @@
       "fourball": {
         "legend": "Scoring for four-ball matches",
         "description": "Controls handicap for four-ball matches. Net uses a share of each player's handicap; gross counts the lowest gross score per hole per side.",
-        "nettoHelper": "Share of each player's handicap that counts. WHS standard for four-ball matchplay is 85.",
+        "nettoHelper": "Share of each player's handicap that counts. Tørny suggests 85, while WHS recommends 90 for four-ball match play. You choose.",
         "bruttoHelper": "No handicap — lowest gross score per hole per side wins. Common format in real Ryder Cup events."
       },
       "foursomes": {
@@ -1317,13 +1317,13 @@
       "gruesome": {
         "legend": "Scoring for gruesome matches",
         "description": "Controls handicap for gruesome matches (both tee off, opposing team chooses the ball + alternate). Net gives the higher-handicap side a share of the difference in combined team handicaps; gross counts only the team's gross strokes.",
-        "nettoHelper": "Share of the difference in combined team handicaps. WHS standard for gruesome matchplay is 50 (identical to foursomes).",
+        "nettoHelper": "Share of the difference in combined team handicaps. Tørny suggests 50, same as foursomes.",
         "bruttoHelper": "No handicap — team gross score per hole decides, no extra strokes."
       },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
         "description": "Controls handicap for Round Robin matchplay. Net uses a share of each player's handicap per hole; gross counts the lowest gross score per side.",
-        "nettoHelper": "Share of each player's handicap that counts. WHS standard for four-ball matchplay is 85.",
+        "nettoHelper": "Share of each player's handicap that counts. Tørny suggests 85, while WHS recommends 90 for four-ball match play. You choose.",
         "bruttoHelper": "No handicap — lowest gross score per hole per side decides. Pure scratch round."
       },
       "scoring": {
