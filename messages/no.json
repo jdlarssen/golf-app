@@ -1021,8 +1021,8 @@
       },
       "advanced": {
         "heading": "6. Innstillinger",
-        "peerApprovalTitle": "Krev peer-godkjenning",
-        "peerApprovalDesc": "Hvis på, må en annen i flighten godkjenne scorekortet før innsending."
+        "peerApprovalTitle": "Krev godkjenning fra flighten",
+        "peerApprovalDesc": "En annen i flighten må godkjenne scorekortet etter at det er levert."
       },
       "prizes": {
         "legend": "Premiebord (valgfritt)",
@@ -3759,7 +3759,7 @@
         "teamCountDefault": "Antall lag",
         "gameMode": "Spillform",
         "hcpAllowance": "Handicap-justering",
-        "peerApproval": "Peer-godkjenning",
+        "peerApproval": "Godkjenning fra flighten",
         "peerApprovalOn": "På",
         "peerApprovalOff": "Av",
         "teeOff": "Tee-off",

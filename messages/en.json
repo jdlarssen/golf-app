@@ -1022,7 +1022,7 @@
       "advanced": {
         "heading": "6. Settings",
         "peerApprovalTitle": "Require peer approval",
-        "peerApprovalDesc": "If on, another player in the flight must approve the scorecard before submission."
+        "peerApprovalDesc": "Another player in the flight must approve the scorecard after it is submitted."
       },
       "prizes": {
         "legend": "Prize table (optional)",
