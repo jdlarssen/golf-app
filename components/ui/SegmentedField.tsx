@@ -76,7 +76,8 @@ export function SegmentedField({
                 aria-checked={selected}
                 disabled={disabled}
                 onClick={() => onChange(opt.value)}
-                className={chipButtonClasses(selected ? 'primary' : 'secondary')}
+                // Line-height normal, as the artboards set the pill labels.
+                className={`${chipButtonClasses(selected ? 'primary' : 'secondary')} leading-[normal]`}
               >
                 {opt.label}
               </button>

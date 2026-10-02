@@ -175,7 +175,7 @@ export function GuestPlayerAdd({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-[52px] w-full items-center justify-between rounded-2xl border border-border bg-surface px-3.5 text-left font-sans text-[15px] font-semibold text-text"
+        className="flex min-h-[54px] w-full items-center justify-between rounded-2xl border border-border bg-surface px-3.5 text-left font-sans text-[15px] font-semibold leading-[normal] text-text"
       >
         <span>{t('guestForm.sectionHeading')}</span>
         <span aria-hidden="true" className="text-xl leading-none text-muted">
