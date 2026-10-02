@@ -29,13 +29,21 @@ function languageLabel(locale: string): string {
  *
  * Used on the login page (pre-auth) and the Profil SettingList (post-auth).
  * Tap targets are min 44 px per design guidelines.
+ *
+ * `variant="onStrong"` is the small NO / EN pill on the front page's green top
+ * (#2261): the code as the label, the autonym as the accessible name.
  */
-export function LocaleSwitcher() {
+export function LocaleSwitcher({
+  variant = 'default',
+}: {
+  variant?: 'default' | 'onStrong';
+} = {}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentLocale = useLocale();
 
   const search = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  const onStrong = variant === 'onStrong';
 
   return (
     <form action={setLocale} data-testid="locale-switcher">
@@ -45,7 +53,11 @@ export function LocaleSwitcher() {
           offset helt bort, så fokusringen tegnes på innsiden (#1386). */}
       <div
         data-focus-inset
-        className="inline-flex overflow-hidden rounded-full border border-border bg-surface shadow-sm"
+        className={
+          onStrong
+            ? 'inline-flex h-[46px] overflow-hidden rounded-full border border-on-strong/40'
+            : 'inline-flex overflow-hidden rounded-full border border-border bg-surface shadow-sm'
+        }
       >
         {routing.locales.map((locale) => {
           const isActive = locale === currentLocale;
@@ -57,13 +69,23 @@ export function LocaleSwitcher() {
               value={locale}
               data-testid={`locale-option-${locale}`}
               aria-pressed={isActive}
-              className={`flex min-h-[44px] min-w-[72px] items-center justify-center px-4 font-sans text-sm font-medium transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
-                isActive
-                  ? 'bg-primary text-bg'
-                  : 'text-muted hover:bg-primary-soft/60 hover:text-text'
-              }`}
+              aria-label={onStrong ? languageLabel(locale) : undefined}
+              lang={onStrong ? locale : undefined}
+              className={
+                onStrong
+                  ? `flex min-h-[44px] min-w-[44px] items-center justify-center px-2.5 font-sans text-[13px] font-semibold transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
+                      isActive
+                        ? 'bg-on-strong text-surface-strong'
+                        : 'text-on-strong/80 hover:bg-on-strong/10'
+                    }`
+                  : `flex min-h-[44px] min-w-[72px] items-center justify-center px-4 font-sans text-sm font-medium transition-colors duration-150 first:rounded-l-full last:rounded-r-full ${
+                      isActive
+                        ? 'bg-primary text-bg'
+                        : 'text-muted hover:bg-primary-soft/60 hover:text-text'
+                    }`
+              }
             >
-              {languageLabel(locale)}
+              {onStrong ? locale.toUpperCase() : languageLabel(locale)}
             </button>
           );
         })}

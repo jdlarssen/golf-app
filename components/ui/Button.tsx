@@ -3,7 +3,14 @@ import { type LinkProps } from 'next/link';
 import { SmartLink } from './SmartLink';
 import { Spinner } from './Spinner';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+type Variant =
+  | 'primary'
+  | 'secondary'
+  | 'danger'
+  | 'ghost'
+  | 'outline'
+  | 'onStrongGold'
+  | 'onStrongOutline';
 
 /**
  * `default` is the pill every screen has used. `compact` is the terminliste's
@@ -15,20 +22,29 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
 type Size = 'default' | 'compact' | 'large';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
-// hover-lift stay synchronised. Variant-specific colors live in VARIANTS.
+// hover-lift stay synchronised. Variant-specific colors live in VARIANTS, and
+// so do weight and tracking: the front page's green top (#2261) draws its
+// buttons at 600 with normal tracking.
 // Keyboard focus is NOT declared here — the global `:focus-visible` rule in
 // app/globals.css owns it for every interactive element (#1386).
 const BASE_CLASSES =
-  'inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full font-medium tracking-tight transition-[background-color,transform,opacity] duration-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0';
+  'inline-flex items-center justify-center min-h-[44px] px-[18px] py-2.5 rounded-full transition-[background-color,transform,opacity] duration-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-primary hover:bg-primary-hover text-white dark:text-bg shadow-sm hover:-translate-y-px',
+    'font-medium tracking-tight bg-primary hover:bg-primary-hover text-white dark:text-bg shadow-sm hover:-translate-y-px',
   secondary:
-    'bg-transparent border border-border hover:bg-primary-soft text-text',
-  danger: 'bg-danger hover:opacity-90 text-white dark:text-bg',
-  ghost: 'bg-transparent hover:bg-primary-soft text-text',
-  outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft',
+    'font-medium tracking-tight bg-transparent border border-border hover:bg-primary-soft text-text',
+  danger: 'font-medium tracking-tight bg-danger hover:opacity-90 text-white dark:text-bg',
+  ghost: 'font-medium tracking-tight bg-transparent hover:bg-primary-soft text-text',
+  outline:
+    'font-medium tracking-tight border border-primary bg-surface text-primary hover:bg-primary-soft',
+  // On --surface-strong (the front page's green top, #2261): a flat gold pill
+  // and a linen outline, as the artboard draws them — no shadow, no lift.
+  onStrongGold:
+    'bg-accent text-text dark:text-bg font-semibold tracking-normal hover:bg-accent/90',
+  onStrongOutline:
+    'bg-transparent border border-on-strong/50 text-on-strong font-semibold tracking-normal hover:bg-on-strong/10',
 };
 
 // `compact` replaces the size classes instead of adding to them: no py-2.5,
@@ -42,6 +58,9 @@ const COMPACT_VARIANTS: Record<Variant, string> = {
   danger: 'px-[14px] bg-danger hover:opacity-90 text-white dark:text-bg',
   ghost: 'px-[14px] bg-transparent hover:bg-primary-soft text-text',
   outline: 'px-3 border border-primary bg-surface text-primary hover:bg-primary-soft',
+  onStrongGold: 'px-[14px] bg-accent text-text dark:text-bg hover:bg-accent/90',
+  onStrongOutline:
+    'px-[14px] bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
 };
 
 const LARGE_BASE =

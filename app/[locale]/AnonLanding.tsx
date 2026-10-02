@@ -12,6 +12,9 @@ import { FEATURED_FORMAT_KEYS } from '@/lib/formats/featuredFormats';
 import { getPublicDiscoverableGames } from '@/lib/games/getPublicDiscoverableGames';
 import { getRegistrationSeats } from '@/lib/games/getRegistrationSeats';
 import { AnonDiscoverySection } from './finn-turneringer/AnonDiscoverySection';
+import { LandingLiveBoard } from './LandingLiveBoard';
+import { FRAMES } from './landingLiveBoardFrames';
+import type { ArrangeAudience } from '@/lib/seo/arrangeAudiences';
 import type { AppLocale } from '@/i18n/routing';
 
 /**
@@ -31,7 +34,6 @@ import type { AppLocale } from '@/i18n/routing';
 const ORIGIN = 'https://tornygolf.no';
 
 type FaqEntry = { q: string; a: string };
-type BoardRow = { name: string; points: string };
 
 export async function AnonLanding({ locale }: { locale: AppLocale }) {
   const t = await getTranslations('landing');
@@ -44,7 +46,14 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
   // ETT array mater både synlig FAQ og FAQPage-JSON-LD (Googles krav om
   // identisk tekst — oppfylt per konstruksjon).
   const faq = t.raw('faq') as FaqEntry[];
-  const boardRows = t.raw('board.rows') as BoardRow[];
+
+  // Snarveiene under knappene går til undersidene av «Arranger golfturnering»,
+  // med titlene fra «For hvem»-kortene lenger ned.
+  const audienceChips: { audience: ArrangeAudience; label: string }[] = [
+    { audience: 'vennegjeng', label: t('audience.friendsTitle') },
+    { audience: 'firmagolf', label: t('audience.companyTitle') },
+    { audience: 'klubbkveld', label: t('audience.clubTitle') },
+  ];
 
   const inLanguage = locale === 'no' ? 'nb' : 'en';
   const jsonLd = {
@@ -98,41 +107,96 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
       />
 
       <div data-testid="anon-landing" className="space-y-14">
-        {/* 1 · Topprad ─────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-3">
-          <BrandMark />
-          <div className="flex items-center gap-3">
-            <LocaleSwitcher />
-            <SmartLink
-              href="/login"
-              data-testid="anon-login-cta"
-              className="inline-flex min-h-[44px] items-center font-sans text-sm font-medium text-text hover:text-primary"
-            >
-              {t('loginCta')}
-            </SmartLink>
+        {/* 1 · Grønn topp (#2261): topprad, hero, tavlekort, knapper og
+            snarveier, som artboardet «Forslag: levende tavle på forsiden».
+            På telefon går flaten kant i kant og fyller første skjerm (lvh, så
+            den holder seg grønn også med Safaris verktøylinjer skjult); before-
+            flaten farger overskrollet over den. Fra 28rem (AppShells max-w-md)
+            blir den et kort inne i kolonnen. */}
+        <section
+          data-focus-surface="strong"
+          className="relative -mx-5 -mt-8 min-h-[100lvh] bg-surface-strong px-5 pb-10 before:absolute before:inset-x-0 before:bottom-full before:h-[100lvh] before:bg-surface-strong dark:ring-1 dark:ring-border min-[28rem]:mx-0 min-[28rem]:mt-0 min-[28rem]:min-h-0 min-[28rem]:rounded-[28px] min-[28rem]:before:hidden"
+        >
+          <div className="-mr-2 flex items-center justify-between pt-[10px]">
+            <BrandMark tone="onStrong" size="hero" />
+            <div className="flex items-center gap-2">
+              <LocaleSwitcher variant="onStrong" />
+              <SmartLink
+                href="/login"
+                data-testid="anon-login-cta"
+                className="inline-flex h-[46px] items-center rounded-full border border-on-strong/40 px-4 text-sm font-semibold text-on-strong"
+              >
+                {t('loginCta')}
+              </SmartLink>
+            </div>
           </div>
-        </div>
 
-        {/* 2 · Hero ────────────────────────────────────────────────── */}
-        <section className="text-center">
-          <h1 className="font-serif text-[34px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-            {t('hero.h1')}
-          </h1>
-          <p className="mx-auto mt-4 max-w-[340px] font-sans text-[15px] leading-relaxed text-muted">
-            {t('hero.sub')}
-          </p>
-          <div className="mt-7 flex flex-col gap-3">
-            <LinkButton href="/demo" full data-testid="anon-demo-cta">
+          <div className="pt-7">
+            {/* `wrap`, ikke den globale `pretty`: Safari veier hele avsnittet
+                og kan flytte «et» ned på linje 3. */}
+            <h1
+              className="font-serif text-[38px] leading-[1.08] font-medium text-on-strong"
+              style={{ textWrap: 'wrap' }}
+            >
+              {t('hero.h1Pre')}
+              <em className="text-accent-on-strong">{t('hero.h1Gold')}</em>
+              {t('hero.h1Post')}
+            </h1>
+            <p className="mt-3 text-[15px] leading-normal text-on-strong/85">
+              {t('hero.sub')}
+            </p>
+          </div>
+
+          <LandingLiveBoard
+            className="mt-[22px]"
+            kickers={FRAMES.map((frame) =>
+              t('liveBoard.kicker', { hole: frame.hole }),
+            )}
+            live={t('liveBoard.live')}
+            pointsSuffix={t('liveBoard.points')}
+            caption={t('liveBoard.caption')}
+          />
+
+          <div className="flex flex-col gap-2.5 pt-6">
+            <LinkButton
+              href="/demo"
+              full
+              variant="onStrongGold"
+              data-testid="anon-demo-cta"
+              className="h-[54px] text-base"
+            >
               {t('hero.primaryCta')}
             </LinkButton>
-            <LinkButton href="/login" full variant="secondary">
+            <LinkButton
+              href="/login"
+              full
+              variant="onStrongOutline"
+              className="h-14 text-base"
+            >
               {t('hero.secondaryCta')}
             </LinkButton>
           </div>
-          <p className="mt-4 font-sans text-xs text-muted">{t('hero.trust')}</p>
+          <p className="pt-3 text-center text-xs leading-[15px] text-on-strong/80">
+            {t('hero.trust')}
+          </p>
+
+          <nav
+            aria-label={t('hero.audienceNav')}
+            className="-mx-1 flex flex-wrap justify-center gap-2 pt-5"
+          >
+            {audienceChips.map(({ audience, label }) => (
+              <SmartLink
+                key={audience}
+                href={`/arranger-golfturnering/${audience}`}
+                className="inline-flex h-11 items-center rounded-full bg-on-strong/10 px-3.5 text-[13px] font-medium text-on-strong"
+              >
+                {label}
+              </SmartLink>
+            ))}
+          </nav>
         </section>
 
-        {/* 3 · Slik funker det ─────────────────────────────────────── */}
+        {/* 2 · Slik funker det ─────────────────────────────────────── */}
         <section>
           <SectionHeading>{t('how.heading')}</SectionHeading>
           <ol className="mt-5 list-none space-y-4 p-0">
@@ -158,60 +222,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </ol>
         </section>
 
-        {/* 4 · Tavle-smakebit ──────────────────────────────────────── */}
-        <section>
-          <SectionHeading>{t('board.heading')}</SectionHeading>
-          <Card className="mt-5 p-5">
-            <table className="w-full font-sans text-sm">
-              <thead>
-                <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-                  <th className="pb-2 text-left font-semibold">
-                    {t('board.colPlayer')}
-                  </th>
-                  <th className="pb-2 text-right font-semibold">
-                    {t('board.colPoints')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {boardRows.map((row, index) => {
-                  const isLeader = index === 0;
-                  return (
-                    <tr
-                      key={row.name}
-                      className="border-t border-border first:border-t-0"
-                    >
-                      <td
-                        className={`py-2 font-serif text-[17px] ${
-                          isLeader ? 'text-accent-text' : 'text-text'
-                        }`}
-                      >
-                        {isLeader && (
-                          <span aria-hidden className="mr-1.5">
-                            🏆
-                          </span>
-                        )}
-                        {row.name}
-                      </td>
-                      <td
-                        className={`py-2 text-right font-serif text-[17px] tabular-nums ${
-                          isLeader ? 'text-accent-text' : 'text-text'
-                        }`}
-                      >
-                        {row.points}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </Card>
-          <div className="mt-4">
-            <TextLink href="/demo">{t('board.linkLabel')}</TextLink>
-          </div>
-        </section>
-
-        {/* 5 · Spillformer ─────────────────────────────────────────── */}
+        {/* 3 · Spillformer ─────────────────────────────────────────── */}
         <section>
           <SectionHeading>{t('formats.heading')}</SectionHeading>
           <div className="mt-5 grid grid-cols-2 gap-3">
@@ -236,7 +247,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </div>
         </section>
 
-        {/* 6 · For hvem ────────────────────────────────────────────── */}
+        {/* 4 · For hvem ────────────────────────────────────────────── */}
         <section>
           <SectionHeading>{t('audience.heading')}</SectionHeading>
           <p className="mt-3 font-sans text-[15px] leading-relaxed text-muted">
@@ -258,7 +269,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </div>
         </section>
 
-        {/* 7 · Norske baner ────────────────────────────────────────── */}
+        {/* 5 · Norske baner ────────────────────────────────────────── */}
         <section>
           <SectionHeading>{t('courses.heading')}</SectionHeading>
           <p className="mt-3 font-sans text-[15px] leading-relaxed text-muted">
@@ -269,7 +280,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </div>
         </section>
 
-        {/* 8 · Åpne turneringer (valgfri, eneste DB-seksjon) ────────── */}
+        {/* 6 · Åpne turneringer (valgfri, eneste DB-seksjon) ────────── */}
         <Suspense fallback={null}>
           <AnonOpenGames
             heading={t('openGames.heading')}
@@ -277,7 +288,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           />
         </Suspense>
 
-        {/* 9 · Spørsmål og svar ────────────────────────────────────── */}
+        {/* 7 · Spørsmål og svar ────────────────────────────────────── */}
         <section>
           <SectionHeading>{t('faqHeading')}</SectionHeading>
           <dl className="mt-5 space-y-5">
@@ -294,7 +305,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </dl>
         </section>
 
-        {/* 10 · Slutt-CTA (rekkefølgen snus: login primær) ─────────── */}
+        {/* 8 · Slutt-CTA (rekkefølgen snus: login primær) ─────────── */}
         <section className="text-center">
           <h2 className="font-serif text-[26px] font-medium leading-tight tracking-[-0.015em] text-text">
             {t('endCta.headingPre')}
@@ -318,7 +329,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
           </div>
         </section>
 
-        {/* 11 · Bunnlenker ─────────────────────────────────────────── */}
+        {/* 9 · Bunnlenker ─────────────────────────────────────────── */}
         <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-border pt-8 font-sans text-[13px] text-muted">
           <FooterLink href="/hvorfor-torny">{t('footer.whyTorny')}</FooterLink>
           <FooterLink href="/arranger-golfturnering">
