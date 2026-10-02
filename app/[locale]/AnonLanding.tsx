@@ -124,7 +124,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
               <SmartLink
                 href="/login"
                 data-testid="anon-login-cta"
-                className="inline-flex h-[46px] items-center rounded-full border border-on-strong/40 px-4 text-sm font-semibold text-on-strong"
+                className="inline-flex h-[46px] items-center rounded-full border border-on-strong/40 px-4 text-sm leading-[normal] font-semibold text-on-strong"
               >
                 {t('loginCta')}
               </SmartLink>
@@ -188,7 +188,7 @@ export async function AnonLanding({ locale }: { locale: AppLocale }) {
               <SmartLink
                 key={audience}
                 href={`/arranger-golfturnering/${audience}`}
-                className="inline-flex h-11 items-center rounded-full bg-on-strong/10 px-3.5 text-[13px] font-medium text-on-strong"
+                className="inline-flex h-11 items-center rounded-full bg-on-strong/10 px-3.5 text-[13px] leading-[normal] font-medium text-on-strong"
               >
                 {label}
               </SmartLink>
