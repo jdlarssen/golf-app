@@ -563,9 +563,11 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
           den. `-mx-4` når skjermkantene (kolonnen har alt tatt 4 px av
           AppShells 20), og den negative bunnmarginen opphever AppShells
           bunn-padding, så brettet står mot kanten også rullet helt ned.
-          Bunnmenyen er skjult på veiviser-rutene. */}
+          Bunnmenyen er skjult på veiviser-rutene. `data-sticky-tray` gir
+          siden bunn-padding for fokus-rulling (app/globals.css), så et felt
+          tastaturet hopper til aldri havner bak brettet. */}
       {actions && (
-        <div className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-[calc(5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1.5 border-t border-border bg-bg px-4 pt-3 pb-[calc(20px+env(safe-area-inset-bottom,0px))]">
+        <div data-sticky-tray className="sticky bottom-0 z-20 -mx-4 mt-auto -mb-[calc(5rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-1.5 border-t border-border bg-bg px-4 pt-3 pb-[calc(20px+env(safe-area-inset-bottom,0px))]">
           {/* #1379: serverfeilen står rett over knappen som utløste den —
               veiviseren er fortsatt montert, så alt arrangøren fylte ut er
               der. testId så e2e slipper å låse norsk copy. */}

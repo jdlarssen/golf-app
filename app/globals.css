@@ -608,6 +608,15 @@ body {
   outline-offset: 2px;
 }
 
+/* A sticky tray along the bottom edge (the publish tray on step 5, #2282)
+ * covers the lowest ~140 px of the screen. Scroll padding makes the browser
+ * stop short of it when it scrolls a focused field into view, so a field the
+ * keyboard lands on is never hidden behind the tray. 12rem covers the tray
+ * with its «Mangler: …» line and the draft hint. */
+html:has([data-sticky-tray]) {
+  scroll-padding-bottom: calc(12rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* The same label ring inside a `data-focus-inset` card (#2282): the switch rows
  * in the peer and side-tournament cards run edge to edge, and the card's
  * `overflow: hidden` would clip the positive offset away. Same specificity as
