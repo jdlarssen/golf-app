@@ -85,10 +85,12 @@ export function InboxRow({
           )}
         </button>
         {view.cta && (
+          // Inside the row's data-focus-inset: the ring lands on the pill's
+          // own forest fill, so the pill sets one in the opposite tone (#2261).
           <Link
             href={view.cta.href}
             onClick={onActivate}
-            className="mt-2.5 ml-[42px] inline-flex h-11 items-center rounded-full border-0 bg-primary px-[18px] text-[14px] font-semibold leading-[normal] text-white no-underline dark:text-bg"
+            className="mt-2.5 ml-[42px] inline-flex h-11 items-center rounded-full border-0 bg-primary px-[18px] text-[14px] font-semibold leading-[normal] text-white no-underline dark:text-bg [--focus-ring:var(--bg)]"
           >
             {view.cta.label}
           </Link>
