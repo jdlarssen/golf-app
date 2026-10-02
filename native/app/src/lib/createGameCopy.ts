@@ -42,9 +42,9 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
     case 'bad_registration_mode':
       return 'Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».';
     case 'bad_registration_type':
-      return 'Typen påmelding er ugyldig. Velg solo, lag eller begge deler.';
+      return 'Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».';
     case 'team_registration_unsupported_mode':
-      return 'Lag-påmelding funker ikke med dette formatet. Velg solo-påmelding, eller bytt til et format som spilles i lag.';
+      return 'Lag-påmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.';
     case 'tee_off_required':
       return 'Tee-off-tidspunkt er påkrevd.';
     case 'tee_off_in_past':
