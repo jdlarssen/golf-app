@@ -145,6 +145,7 @@ export function IntentSelector({
             <button
               key={tile.intent}
               type="button"
+              data-testid={`intent-tile-${tile.intent}`}
               aria-current={selected ? 'true' : undefined}
               aria-label={t(`${tile.intent}.label`)}
               disabled={disabled}
