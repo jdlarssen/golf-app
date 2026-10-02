@@ -14,6 +14,7 @@ import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked } from '@/lib/games/status';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
+import { isPlausibleInviteEmail, normalizeInviteEmail } from '@/lib/games/inviteEmail';
 
 // E-post-invitasjons-kjernen (#1919): ett hjem for «arrangøren inviterer en
 // e-post inn i en runde».
@@ -109,16 +110,9 @@ type GameSnapshot = {
   mode_config: { team_size?: number } | null;
 };
 
-/**
- * Adressen slik resten av flyten ser den: trimmet og små bokstaver.
- *
- * Eksportert fordi skall-action-en bygger redirect-URL-en med den samme
- * adressen som kjernen skrev til databasen — normaliseringen skal ikke skje to
- * steder med to resultater.
- */
-export function normalizeInviteEmail(raw: string): string {
-  return raw.trim().toLowerCase();
-}
+// #2321: the address rule moved to `lib/games/inviteEmail.ts` so the wizard
+// reads the same one. Re-exported for the web action's redirect URL.
+export { normalizeInviteEmail };
 
 /**
  * Inviter en e-post inn i en runde.
@@ -149,7 +143,7 @@ export async function inviteEmailToGameCore(params: {
   const { client, viewer, gameId, inviterUserId, inviterName, isAdmin } = params;
 
   const email = normalizeInviteEmail(params.rawEmail);
-  if (!email || !email.includes('@')) {
+  if (!isPlausibleInviteEmail(email)) {
     return { ok: false, reason: 'invalid_email' };
   }
 
