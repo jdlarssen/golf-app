@@ -59,7 +59,7 @@ export function Switch({
  *
  * The whole row is the input's `<label>` (at least 68 px), so the tap target is
  * the row, not the 26 px track. The input is visually hidden; the track and
- * knob beside it follow its state (`peer-checked:` and `checked`), and the row
+ * knob beside it are drawn from its state with `peer-checked:`, and the row
  * draws the focus ring (app/globals.css). The row's title names the switch and
  * the description describes it.
  *
@@ -110,16 +110,13 @@ export function SwitchRow({
         aria-describedby={description ? descriptionId : undefined}
         className="peer sr-only"
       />
+      {/* Track and knob (the ::after) both read the input's own state, so they
+          stay in step with it even when a form reset changes `checked` behind
+          React's back. */}
       <span
         aria-hidden="true"
-        className="relative h-[26px] w-11 shrink-0 rounded-full bg-border transition-colors duration-150 peer-checked:bg-primary peer-disabled:opacity-50"
-      >
-        <span
-          className={`absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-surface transition-transform duration-150 motion-reduce:transition-none ${
-            checked ? 'translate-x-[18px]' : ''
-          }`}
-        />
-      </span>
+        className="relative h-[26px] w-11 shrink-0 rounded-full bg-border transition-colors duration-150 peer-checked:bg-primary peer-disabled:opacity-50 after:absolute after:top-[3px] after:left-[3px] after:h-5 after:w-5 after:rounded-full after:bg-surface after:transition-transform after:duration-150 motion-reduce:after:transition-none peer-checked:after:translate-x-[18px]"
+      />
     </label>
   );
 }

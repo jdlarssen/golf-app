@@ -11,7 +11,8 @@ type Variant =
   | 'outline'
   | 'onStrongGold'
   | 'onStrongOutline'
-  | 'quiet';
+  | 'quiet'
+  | 'dashed';
 
 /**
  * `default` is the pill every screen has used. `compact` is the terminliste's
@@ -26,7 +27,8 @@ type Variant =
  * #2282, the tray on step 5: `xl` is «Publiser og del invitasjonen», 54 px at
  * 16 px / 600 with `large`'s colours (a disabled primary turns hairline-beige
  * with muted text). «Lagre som utkast» under it is `quiet` at `chip` size: no
- * frame, no fill, forest text.
+ * frame, no fill, forest text. `dashed` is the transparent pill with a dashed
+ * field outline and forest text: «Last opp sponsorlogo» in the prize table.
  */
 type Size = 'default' | 'compact' | 'large' | 'chip' | 'xl';
 
@@ -55,6 +57,8 @@ const VARIANTS: Record<Variant, string> = {
   onStrongOutline:
     'bg-transparent border border-on-strong/50 text-on-strong font-semibold tracking-normal hover:bg-on-strong/10',
   quiet: 'font-medium tracking-tight bg-transparent hover:bg-primary-soft text-primary',
+  dashed:
+    'font-medium tracking-tight bg-transparent border border-dashed border-field-border hover:bg-primary-soft text-primary',
 };
 
 // `compact` replaces the size classes instead of adding to them: no py-2.5,
@@ -72,6 +76,7 @@ const COMPACT_VARIANTS: Record<Variant, string> = {
   onStrongOutline:
     'px-[14px] bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
   quiet: 'px-[14px] bg-transparent hover:bg-primary-soft text-primary',
+  dashed: 'px-[14px] bg-transparent border border-dashed border-field-border hover:bg-primary-soft text-primary',
 };
 
 const LARGE_BASE =
@@ -88,6 +93,8 @@ const LARGE_VARIANTS: Record<Variant, string> = {
   onStrongOutline:
     'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10 disabled:opacity-50',
   quiet: 'bg-transparent hover:bg-primary-soft text-primary disabled:opacity-50',
+  dashed:
+    'bg-transparent border border-dashed border-field-border hover:bg-primary-soft text-primary disabled:opacity-50',
 };
 
 const CHIP_BASE =
@@ -102,6 +109,7 @@ const CHIP_VARIANTS: Record<Variant, string> = {
   onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90',
   onStrongOutline: 'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
   quiet: 'bg-transparent hover:bg-primary-soft text-primary',
+  dashed: 'border border-dashed border-field-border bg-transparent hover:bg-primary-soft text-primary',
 };
 
 /** `large` at 54 px; the colours, disabled look included, are `large`'s. */
