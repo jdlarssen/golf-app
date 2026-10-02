@@ -69,9 +69,12 @@ eller en sluttdato, redigerbar i `/admin/klubber/[id]`). Klubbene dine bor under
 dele en bli-med-lenke (`/klubber/bli-med/[shortId]` → forespørsel → eier godkjenner), og har en «Sett
 opp en runde for klubben»-dør. **Eieren delegerer** (#50): via `/klubber/[id]/rolle/[userId]` gjør
 eieren medlemmer til admin eller eier (flere likestilte), eller setter dem ned (`set_club_member_role`
-— siste eier kan ikke degraderes; den berørte varsles). Når et spill opprettes for en klubb (valgfritt
-steg i veiviseren, `games.group_id`), ser **alle klubbens medlemmer** runden i «Finn turneringer» og
-melder seg på direkte, uansett påmeldingsmåte, også `invite_only`. Medlemskap ER invitasjonen.
+— siste eier kan ikke degraderes; den berørte varsles). Når et spill opprettes for en klubb
+(«Klubb-turnering» i veiviseren, `games.group_id`), ser **alle klubbens medlemmer** runden i «Finn
+turneringer» og melder seg på direkte, uansett påmeldingsmåte, også `invite_only`. Medlemskap ER
+invitasjonen. **Klubben velges først** (#2439): «Klubb-turnering» spør om klubben øverst på steg 2,
+over formatlista. Har du bare én gyldig klubb, er den valgt fra start, og «Neste» og «Publiser» krever
+en klubb. Kortet «Klubb-turnering» vises bare for den som er med i en klubb som ikke er utløpt.
 **Medlemstak + utløp håndheves** (#50): en full klubb tar ikke imot flere medlemmer; når `valid_until`
 passeres fryses klubben (borte fra discovery, ingen nye medlemmer/spill, «utløpt»-banner), men pågående
 runder spilles ferdig og en eier kan fornye via admin. Klubb ≠ venner: venner er en egen, flat relasjon.
@@ -195,8 +198,8 @@ flowchart LR
 
 | Steg | Komponent | Teknisk |
 |---|---|---|
-| 1 Arrangement | `IntentSelector` | Intent styrer format-katalog (`getFormatsForIntent`). |
-| 2 Format | `FormatGrid` (eller `CupSetup`) | **DB-drevet** fra `formats` + `format_intent_mapping`, anbefalt format først: med antall (Kompis) er det første formatet som passer, et stort kort, og tre til står under (#2260). Cup → `createTournamentDraft` → `tournaments`-rad → `/admin/cup/[id]`. |
+| 1 Arrangement | `IntentSelector` | Intent styrer format-katalog (`getFormatsForIntent`). «Klubb»-kortet vises bare for den som er med i en gyldig klubb (#2439). |
+| 2 Format | `FormatGrid` (eller `CupSetup`) | **DB-drevet** fra `formats` + `format_intent_mapping`, anbefalt format først: med antall (Kompis) er det første formatet som passer, et stort kort, og tre til står under (#2260). Cup → `createTournamentDraft` → `tournaments`-rad → `/admin/cup/[id]`. Ved «Klubb-turnering» velges klubben (`ClubPicker`) over formatlista, og «Neste» krever en gyldig klubb (#2439). |
 | 3 Bane og tidspunkt | `BasicsSection` | Bane + tee-boks (fra `getNewGameFormData`), tee-off (Oslo-tz), auto-navn. |
 | 4 Spillere | `PlayerPickerGrid` + `PlayerTray`, så `TeamsAssignmentSection` | Vennene (eller klubbmedlemmene) som kort, du selv først og så sist spilt først (`orderPickerPlayers`, #2321). Brettet nederst teller mot målet («3 av 4 · én til»). Lagformater og singles matchplay fordeler lag, sider og flights på en egen skjerm («Neste: lagene»); solo-formatene har tee per spiller på velgeren. Gjest legges til fra «+ Gjest»; «✉ E-post» samler adresser som inviteres når spillet publiseres (`sendPublishInvites`). Steget kan stå tomt hvis selv-påmelding velges på steg 5. |
 | 5 Klar? | `ReadyStep` | Et lite invitasjonskort med spillnavnet som felt midt i kortet, og en sjekkliste (Bane, Format, Tee-off, Spillere) med status og «Endre» som hopper til steget valget bor på (#2282). Under lista: «Hvem kan melde seg på?» og «Vis avanserte innstillinger». Brettet nederst: «Publiser og del invitasjonen» (`createAndPublishGame`, status `scheduled` + invitasjoner) eller «Lagre som utkast» (`createGameDraft`, status `draft`). |
