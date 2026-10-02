@@ -52,6 +52,36 @@ describe('playFrames', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('resumes from the frame it shows: only the rest, on the same clock', () => {
+    // Next keeps a route hidden and re-runs its effects when Back shows it
+    // again; the card must go on from where it stood, never back to 11.
+    const onFrame = vi.fn();
+    playFrames({
+      delaysMs: FRAME_DELAYS_MS,
+      reducedMotion: false,
+      from: 1,
+      onFrame,
+    });
+
+    vi.advanceTimersByTime(2499);
+    expect(onFrame).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onFrame.mock.calls).toEqual([[2]]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('starts nothing from the last frame', () => {
+    const onFrame = vi.fn();
+    playFrames({
+      delaysMs: FRAME_DELAYS_MS,
+      reducedMotion: false,
+      from: FRAMES.length - 1,
+      onFrame,
+    });
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('plays one step per frame after the first', () => {
     expect(FRAME_DELAYS_MS).toHaveLength(FRAMES.length - 1);
   });
