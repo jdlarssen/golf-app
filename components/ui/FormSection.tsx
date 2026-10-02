@@ -19,6 +19,12 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
   gap?: 'sm' | 'md' | 'lg';
   /** Right-aligned in the kicker row, 12 px muted: «8 spillere valgt» (#2321). */
   aside?: ReactNode;
+  /**
+   * The aside does not make the kicker row taller: for an artboard row that
+   * has no count (SIDER on `Nyttspill-4-sider`). Without it the 12 px count
+   * grows the row, as LAG on `Nyttspill-4-lag` draws it.
+   */
+  asideFlush?: boolean;
   /** 12 px muted text under the kicker, with the kicker's inset (#2321). */
   description?: ReactNode;
   /** `tight`: 16 px above the kicker instead of 18, as the step 4 picker draws it (#2321). */
@@ -49,6 +55,7 @@ export function FormSection({
   variant = 'card',
   gap = 'md',
   aside,
+  asideFlush = false,
   description,
   legendSpacing = 'default',
   className = '',
@@ -62,7 +69,9 @@ export function FormSection({
         // anonymous item, a heading stays a direct child (no heading in a span).
         <legend className={`flex w-full items-baseline justify-between gap-3 ${legendClass}`}>
           {legend}
-          <span className="font-sans text-xs font-medium normal-case leading-[normal] tracking-normal tabular-nums text-muted">
+          <span
+            className={`font-sans text-xs font-medium normal-case tracking-normal text-muted ${asideFlush ? 'leading-[10px]' : 'leading-[normal]'}`}
+          >
             {aside}
           </span>
         </legend>

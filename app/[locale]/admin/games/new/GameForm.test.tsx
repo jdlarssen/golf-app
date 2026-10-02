@@ -388,7 +388,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
 
     // Med 0 spillere skal lag-headingen ikke vises ennå.
     expect(
-      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+      screen.queryByRole('heading', { name: /^lag$/i }),
     ).not.toBeInTheDocument();
 
     // Velg 2 spillere → lag-grid skal vises.
@@ -396,7 +396,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
 
     expect(
-      screen.getByRole('heading', { name: /^4\. lag$/i }),
+      screen.getByRole('heading', { name: /^lag$/i }),
     ).toBeInTheDocument();
     // Helper-tekst om par-à-2 + tomme lag skal være synlig.
     expect(screen.getByText(/inntil 20 lag à 2 spillere/i)).toBeInTheDocument();
@@ -608,7 +608,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     // Ingen flight-heading skal være tilstede (par-stableford auto-mapper
     // flight = team).
     expect(
-      screen.queryByRole('heading', { name: /^5\. flights$/i }),
+      screen.queryByRole('heading', { name: /^flights$/i }),
     ).not.toBeInTheDocument();
   });
 });
@@ -634,7 +634,7 @@ describe('GameForm — patsome (#633)', () => {
 
     // Med 0 spillere skal lag-headingen ikke vises ennå.
     expect(
-      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+      screen.queryByRole('heading', { name: /^lag$/i }),
     ).not.toBeInTheDocument();
 
     // Velg 2 spillere → lag-grid skal vises (lag à 2-mønsteret).
@@ -642,7 +642,7 @@ describe('GameForm — patsome (#633)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
 
     expect(
-      screen.getByRole('heading', { name: /^4\. lag$/i }),
+      screen.getByRole('heading', { name: /^lag$/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/inntil 20 lag à 2 spillere/i)).toBeInTheDocument();
   });
@@ -800,13 +800,13 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
 
     // Med 0 spillere skal Sider-headingen ikke vises ennå.
     expect(
-      screen.queryByRole('heading', { name: /^4\. sider$/i }),
+      screen.queryByRole('heading', { name: /^sider$/i }),
     ).not.toBeInTheDocument();
 
     // Velg én spiller → Sider-heading skal vises.
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     expect(
-      screen.getByRole('heading', { name: /^4\. sider$/i }),
+      screen.getByRole('heading', { name: /^sider$/i }),
     ).toBeInTheDocument();
     // Helper-tekst om 1v1 + tomme sider.
     expect(screen.getByText(/matchplay er 1v1/i)).toBeInTheDocument();
@@ -834,11 +834,11 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
 
     // 4. Lag-heading (par-stableford/best-ball) skal ikke vises.
     expect(
-      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+      screen.queryByRole('heading', { name: /^lag$/i }),
     ).not.toBeInTheDocument();
     // 5. Flights-heading skal heller ikke vises.
     expect(
-      screen.queryByRole('heading', { name: /^5\. flights$/i }),
+      screen.queryByRole('heading', { name: /^flights$/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -905,10 +905,11 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     expect(screen.getByText(/0 av 2 spillere valgt/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
-    expect(screen.getByText(/1 av 2 spillere valgt/i)).toBeInTheDocument();
+    // #2321: the count also stands in the SIDER kicker once a side shows.
+    expect(screen.getAllByText(/1 av 2 spillere valgt/i).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
-    expect(screen.getByText(/2 av 2 spillere valgt/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/2 av 2 spillere valgt/i).length).toBeGreaterThan(0);
   });
 
   it('matchplay: 2 spillere fordelt på Side 1 og Side 2 → canPublish=true', () => {
@@ -1151,7 +1152,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
 
     // Per-spiller-tee-seksjons-heading med matchplay-nummerering (5).
     expect(
-      screen.getByRole('heading', { name: /^5\. tee per spiller$/i }),
+      screen.getByRole('heading', { name: /^tee per spiller$/i }),
     ).toBeInTheDocument();
   });
 });
@@ -1252,10 +1253,10 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 3/i }));
 
     expect(
-      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+      screen.queryByRole('heading', { name: /^lag$/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: /^5\. flights$/i }),
+      screen.queryByRole('heading', { name: /^flights$/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -1315,7 +1316,7 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     expect(helperText?.textContent).toMatch(/minst én spiller/i);
   });
 
-  it('slagspill: per-spiller-tee-seksjonen vises (4. Tee per spiller) for HCP-allokering', () => {
+  it('slagspill: per-spiller-tee-seksjonen vises (Tee per spiller) for HCP-allokering', () => {
     render(
       <GameForm
         courses={COURSES}
@@ -1334,7 +1335,7 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
 
     // Solo-modus bruker nummerering 4 (ingen 4. Lag-seksjon foran).
     expect(
-      screen.getByRole('heading', { name: /^4\. tee per spiller$/i }),
+      screen.getByRole('heading', { name: /^tee per spiller$/i }),
     ).toBeInTheDocument();
   });
 
@@ -1361,8 +1362,8 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
       fireEvent.click(checkbox);
     }
 
-    // Counter skal vise «8 spillere valgt».
-    expect(screen.getByText(/8 spillere valgt/i)).toBeInTheDocument();
+    // Counter skal vise «8 spillere valgt» (#2321: also in the first kicker of the Inndeling panel).
+    expect(screen.getAllByText(/8 spillere valgt/i).length).toBeGreaterThan(0);
   });
 
   it('slagspill: hidden inputs har player_${i}_id satt + player_${i}_team/flight tomme strenger', () => {

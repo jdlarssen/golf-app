@@ -25,7 +25,9 @@ import type { PlayerOption } from '../GameForm';
 const TRAY_AVATARS = 7;
 
 const AVATAR =
-  'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full leading-[normal] shadow-[0_0_0_2px_var(--surface)]';
+  'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full leading-[normal]';
+/** The 2 px surface ring that separates overlapping initials; the empty seat has none. */
+const RING = 'shadow-[0_0_0_2px_var(--surface)]';
 
 export function PlayerTray({
   selected,
@@ -58,14 +60,14 @@ export function PlayerTray({
           {shown.map((p, i) => (
             <span
               key={p.id}
-              className={`${AVATAR} bg-surface-strong font-sans text-[10px] font-semibold text-bg-tint ${i > 0 ? '-ml-2' : ''}`}
+              className={`${AVATAR} ${RING} bg-surface-strong font-sans text-[10px] font-semibold text-bg-tint ${i > 0 ? '-ml-2' : ''}`}
             >
               {nameInitials(p.pending ? null : p.name)}
             </span>
           ))}
           {more > 0 && (
             <span
-              className={`${AVATAR} bg-hole-completed-bg font-sans text-[10px] font-semibold text-muted ${shown.length > 0 ? '-ml-2' : ''}`}
+              className={`${AVATAR} ${RING} bg-hole-completed-bg font-sans text-[10px] font-semibold text-muted ${shown.length > 0 ? '-ml-2' : ''}`}
             >
               {t('tray.more', { count: more })}
             </span>

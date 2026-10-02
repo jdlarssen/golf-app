@@ -965,7 +965,8 @@
           "email": "Email",
           "showAll": "Show all {count}",
           "hint": "Guests get a name and a handicap, no account. With an email address we send an invitation.",
-          "hintCup": "Guests get a name and a handicap, no account."
+          "hintCup": "Guests get a name and a handicap, no account.",
+          "pendingName": "Invited"
         },
         "tray": {
           "count": "{selected} of {target}",

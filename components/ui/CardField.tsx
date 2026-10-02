@@ -1,4 +1,4 @@
-import type { ReactNode, SelectHTMLAttributes } from 'react';
+import { Children, isValidElement, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 /**
  * Text fields inside a `FormSection` card (#2426): the new-game artboards'
@@ -53,9 +53,25 @@ type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | '
 const COMPACT_CONTROL =
   'w-full rounded-[10px] border bg-surface px-2.5 font-sans text-sm transition-[border-color,box-shadow] duration-150';
 
+/** The text of the `<option>` whose value is `value`, for the drawn label. */
+function optionLabel(children: ReactNode, value: SelectProps['value']): ReactNode {
+  let label: ReactNode = null;
+  Children.forEach(children, (child) => {
+    if (label !== null || !isValidElement<{ value?: unknown; children?: ReactNode }>(child)) return;
+    if (String(child.props.value ?? '') === String(value ?? '')) label = child.props.children;
+  });
+  return label;
+}
+
 /**
  * A native `<select>` drawn as the artboards' field: the chevron is ours (the
  * native arrow is hidden), and the empty option reads muted like a placeholder.
+ *
+ * #2321: in `compact` and `slot` the chosen option is drawn in a span that ends
+ * in «…» 6 px before the chevron, as the artboards' slot does; a native select
+ * cannot ellipsize, it cuts a name mid-letter. The select keeps the input,
+ * focus and its accessible name; only its own text is transparent. The flight
+ * picker (`compact`) has a text-coloured chevron, the team slots a muted one.
  */
 export function CardSelect({
   label,
@@ -70,22 +86,31 @@ export function CardSelect({
   const empty = value === '' || value === undefined;
   const hintId = hint ? `${id}-hint` : undefined;
   const compact = size !== 'default';
+  const drawnLabel = compact ? optionLabel(rest.children, value) : null;
   return (
     <div className={wrapperClassName}>
       <label htmlFor={id} className={labelHidden ? 'sr-only' : CARD_FIELD_LABEL}>
         {label}
       </label>
       <div className="relative">
+        {compact && (
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-y-0 left-[11px] right-[33px] flex items-center font-sans text-sm leading-[normal] ${empty ? 'text-muted' : 'text-text'}`}
+          >
+            <span className="min-w-0 truncate">{drawnLabel}</span>
+          </span>
+        )}
         <select
           {...rest}
           id={id}
           value={value}
           aria-describedby={hintId}
-          className={`${compact ? `${COMPACT_CONTROL} ${size === 'slot' ? 'h-[46px]' : 'h-11'} pr-8` : `${CARD_FIELD_CONTROL} pr-[38px]`} appearance-none border-field-border disabled:cursor-not-allowed [&>option]:text-text ${empty ? 'text-muted' : 'text-text'}`}
+          className={`${compact ? `${COMPACT_CONTROL} ${size === 'slot' ? 'h-[46px]' : 'h-11'} pr-8` : `${CARD_FIELD_CONTROL} pr-[38px]`} appearance-none border-field-border disabled:cursor-not-allowed [&>option]:text-text ${compact ? 'text-transparent' : empty ? 'text-muted' : 'text-text'}`}
         />
         {/* 14 px (compact: 10 px) inside the 1 px outline, as on the artboards. */}
         <span
-          className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 text-muted ${compact ? 'right-[11px]' : 'right-[15px]'}`}
+          className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 ${size === 'compact' ? 'text-text' : 'text-muted'} ${compact ? 'right-[11px]' : 'right-[15px]'}`}
         >
           <Chevron />
         </span>

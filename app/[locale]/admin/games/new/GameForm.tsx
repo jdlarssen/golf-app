@@ -959,9 +959,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           beholdes urørt. */}
       {teamsAssignmentHasContent(state) && (
         <Disclosure title={t('panelTitleTeams')}>
-          <div className="space-y-4">
-            <TeamsAssignmentSection state={state} players={state.allPlayers} />
-          </div>
+          {/* #2321 (orchestrator's decision 02.10): drawn as Nyttspill-4-lag,
+              so no «4.»/«5.» numbering and the count in the first kicker row;
+              the parts are spaced by their kickers only. */}
+          <TeamsAssignmentSection
+            state={state}
+            players={state.allPlayers}
+            hideNumbering
+            showSelectedCount
+          />
         </Disclosure>
       )}
 

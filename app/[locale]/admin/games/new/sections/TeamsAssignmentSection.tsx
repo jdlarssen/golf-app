@@ -120,7 +120,8 @@ function PlayerGenderToggle({
             disabled={unavailable}
             title={unavailable ? unavailableTitle : undefined}
             onClick={() => select(g)}
-            className={`flex h-11 w-11 items-center justify-center rounded-xl font-sans text-sm font-semibold leading-[normal] transition-colors ${
+            // pb-0.5: the letter sits 1 px higher in the 44 px tile, as the artboards draw it.
+            className={`flex h-11 w-11 items-center justify-center rounded-xl pb-0.5 font-sans text-sm font-semibold leading-[normal] transition-colors ${
               unavailable
                 ? 'cursor-not-allowed border border-dashed border-border bg-surface-2 text-muted opacity-60'
                 : selected
@@ -350,6 +351,7 @@ export function TeamsAssignmentSection({
             variant="bare"
             legend={<PartLegend>{numberPrefix('4')}{t('sidesHeading')}</PartLegend>}
             aside={asideFor('sides')}
+            asideFlush
             description={t('sidesDescription')}
           >
             <div className="grid grid-cols-2 gap-2">
@@ -501,7 +503,7 @@ export function TeamsAssignmentSection({
                         {shortName(p)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <PlayerGenderToggle
                         pid={pid}
                         teeChoiceFor={teeChoiceFor}
@@ -513,7 +515,9 @@ export function TeamsAssignmentSection({
                       <CardSelect
                         size="compact"
                         labelHidden
-                        wrapperClassName="min-w-[112px]"
+                        // 112 px at the row's end; in a narrow panel (GameForm) the
+                        // row wraps and it drops below M/D/J, right-aligned, whole.
+                        wrapperClassName="ml-auto w-[112px]"
                         id={`${idPrefix}-flight-${pid}`}
                         data-testid={`flight-select-${pid}`}
                         label={t('flightSelectAria', { name: shortName(p) })}
@@ -558,7 +562,8 @@ export function TeamsAssignmentSection({
               if (!p) return null;
               return (
                 <div key={pid} className="flex min-h-[60px] items-center gap-2.5 px-3.5 py-2">
-                  <span className="min-w-0 flex-1 truncate font-sans text-[15px] font-semibold leading-[normal] text-text">
+                  {/* 1 px up, as the artboard's row draws the name (the box stays). */}
+                  <span className="relative -top-px min-w-0 flex-1 truncate font-sans text-[15px] font-semibold leading-[normal] text-text">
                     {shortName(p)}
                   </span>
                   <PlayerGenderToggle
