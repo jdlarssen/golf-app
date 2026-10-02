@@ -170,14 +170,15 @@ describe('getNewGameFormData — e-post-scoping (#435)', () => {
 describe('getNewGameFormData — klubber (#442)', () => {
   it('hopper over tomme rader og sorterer klubbene på navn', async () => {
     clubsData = [
-      { groups: { id: 'g2', name: 'Bjørnholt GK' } },
-      { groups: { id: 'g1', name: 'Aurskog' } },
-      { groups: null }, // hoppes over
+      { role: 'member', groups: { id: 'g2', name: 'Bjørnholt GK' } },
+      { role: 'owner', groups: { id: 'g1', name: 'Aurskog' } },
+      { role: 'member', groups: null }, // hoppes over
     ];
     const { clubs } = await getNewGameFormData(false);
+    // #2439: rollen din følger med, så klubbkortet på steg 2 kan si «Eier».
     expect(clubs).toEqual([
-      { id: 'g1', name: 'Aurskog' },
-      { id: 'g2', name: 'Bjørnholt GK' },
+      { id: 'g1', name: 'Aurskog', role: 'owner' },
+      { id: 'g2', name: 'Bjørnholt GK', role: 'member' },
     ]);
   });
 
