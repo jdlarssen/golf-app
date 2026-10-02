@@ -910,7 +910,7 @@
         "visibilityLockedNote": "Cannot be changed after the game has started.",
         "sideTournamentLegend": "Side tournament",
         "sideTournamentTitle": "Add side tournament",
-        "sideTournamentDesc": "A points contest alongside the game, where each player or each team collects points. Shown after the game has finished.",
+        "sideTournamentDesc": "A side contest alongside the game, where each player or each team collects points. Shown after the game has finished.",
         "sideLdLegend": "Number of longest drive winners",
         "sideCtpLegend": "Number of closest-to-pin winners",
         "sideLockedNote": "Cannot be changed after the game has started."
