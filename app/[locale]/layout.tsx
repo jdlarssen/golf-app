@@ -118,7 +118,10 @@ export default async function RootLayout({ children, params }: Props) {
       // Tema-bootstrappen under setter `data-theme` på <html> før hydrering;
       // suppressHydrationWarning hindrer React i å klage på det ene attributtet.
       suppressHydrationWarning
-      className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
+      // No `antialiased` (#2426): forced grayscale smoothing drew every glyph
+      // 10–18 % lighter than the design artboards on macOS desktop browsers.
+      // The default smoothing matches them; iOS ignores the property either way.
+      className={`${inter.variable} ${fraunces.variable} h-full`}
     >
       <body className="min-h-full flex flex-col font-sans">
         {/* Anti-FOUC (#991): påfør lagret Lys/Mørk-valg FØR første paint, ellers
