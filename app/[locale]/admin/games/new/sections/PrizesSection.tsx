@@ -11,6 +11,9 @@
  * pathen, GameForms hidden-cluster i edit-pathen) — samme #1011-mønster som
  * sideturnering-feltene, så et lukket disclosure-panel aldri dropper verdier.
  * Tomt premie-felt = slottet lagres ikke (beskjæres server-side).
+ *
+ * #2282: kortstilen fra Nyttspill-5-avansert-b — ett kort med 10 px mellom
+ * feltene, «1. plass» og «Sponsor (valgfritt)» som synlige feltetiketter.
  */
 
 import { useRef, useState } from 'react';
@@ -28,6 +31,8 @@ import {
 } from '@/lib/storage/sponsorLogos';
 import { sponsorLogoUrl } from '@/lib/storage/sponsorLogoUrl';
 import type { GameFormState } from '../useGameFormState';
+import { FormSection } from '@/components/ui/FormSection';
+import { Input } from '@/components/ui/Input';
 
 type Props = {
   state: GameFormState;
@@ -70,16 +75,7 @@ export function PrizesSection({ state }: Props) {
   if (slots.length === 0) return null;
 
   return (
-    <fieldset
-      data-testid="prizes-section"
-      className="space-y-3 rounded-md border border-border bg-surface px-4 py-4"
-    >
-      <legend className="px-1 text-sm font-semibold text-text">
-        {t('legend')}
-      </legend>
-      <p className="text-xs text-muted">{t('hint')}</p>
-
-      <div className="space-y-4">
+    <FormSection legend={t('legend')} gap="sm" data-testid="prizes-section">
         {slots.map((slot) => {
           // #1141: vis sponsor-feltene (navn + logo) først når slotet har en
           // premie-beskrivelse. Serveren (parsePrizesFromFormData/prunePrizes)
@@ -90,12 +86,15 @@ export function PrizesSection({ state }: Props) {
           // (#1011), så verdiene overlever at beskrivelsen tømmes og refylles.
           const hasDescription =
             prizeDraft[slot.key].description.trim().length > 0;
+          // The visible label is the slot («1. plass»); the field's name says
+          // what goes in it («Premie for 1. plass»), so it still holds the
+          // visible words.
           return (
-            <div key={slot.key} className="space-y-1.5">
-              <span className="block font-serif text-base text-text">
-                {slot.label}
-              </span>
-              <input
+            <div key={slot.key} className="contents">
+              <Input
+                variant="card"
+                id={`prize-${slot.key}-description`}
+                label={slot.label}
                 type="text"
                 inputMode="text"
                 data-testid={`prize-${slot.key}-desc`}
@@ -106,11 +105,13 @@ export function PrizesSection({ state }: Props) {
                 placeholder={t('prizePlaceholder')}
                 aria-label={t('prizeAriaLabel', { slot: slot.label })}
                 maxLength={PRIZE_DESCRIPTION_MAX}
-                className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-text focus:border-primary"
               />
               {hasDescription && (
                 <>
-                  <input
+                  <Input
+                    variant="card"
+                    id={`prize-${slot.key}-sponsor-name`}
+                    label={t('sponsorLabel')}
                     type="text"
                     inputMode="text"
                     data-testid={`prize-${slot.key}-sponsor`}
@@ -118,10 +119,8 @@ export function PrizesSection({ state }: Props) {
                     onChange={(e) =>
                       setPrizeField(slot.key, 'sponsor', e.target.value)
                     }
-                    placeholder={t('sponsorPlaceholder')}
                     aria-label={t('sponsorAriaLabel', { slot: slot.label })}
                     maxLength={PRIZE_SPONSOR_MAX}
-                    className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted focus:border-primary"
                   />
                   <SponsorLogoField
                     slotKey={slot.key}
@@ -137,8 +136,7 @@ export function PrizesSection({ state }: Props) {
             </div>
           );
         })}
-      </div>
-    </fieldset>
+    </FormSection>
   );
 }
 
@@ -235,7 +233,7 @@ function SponsorLogoField({
           data-testid={`prize-${slotKey}-logo-upload`}
           disabled={uploading}
           onClick={() => fileRef.current?.click()}
-          className="min-h-11 w-full rounded-md border border-dashed border-border bg-surface-2 px-3 py-2 text-left text-sm text-muted hover:border-primary disabled:opacity-60"
+          className="h-11 w-full rounded-full border border-dashed border-field-border bg-transparent px-3.5 font-sans text-sm font-semibold text-primary hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
         >
           {uploading ? t('logoUploading') : t('logoUpload')}
         </button>

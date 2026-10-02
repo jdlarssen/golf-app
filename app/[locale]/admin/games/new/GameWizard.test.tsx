@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
 import { BasicsSection } from './sections/BasicsSection';
 import { useGameFormState } from './useGameFormState';
@@ -266,9 +266,9 @@ describe('GameWizard — happy-path solo stableford', () => {
 
     expect(await screen.findByTestId('wizard-submit-error')).toBeInTheDocument();
     expect(failingPublish).toHaveBeenCalled();
-    // Fortsatt på steg 5, med banen fra steg 3 i summary-kortet.
+    // Fortsatt på steg 5, med banen fra steg 3 i sjekklista.
     expectStep(5);
-    expect(screen.getByText('Stiklestad GK')).toBeInTheDocument();
+    expect(screen.getByTestId('ready-row-course')).toHaveTextContent('Stiklestad GK');
     expect(
       document.querySelector<HTMLInputElement>(
         'input[type="radio"][value="reveal"]',
@@ -613,19 +613,20 @@ describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', 
     goToReadyStep();
 
     const publishBtn = screen.getByRole('button', {
-      name: /lagre og publiser/i,
+      name: /publiser og del/i,
     });
     expect(publishBtn).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: /gå til spillere/i }),
-    ).toBeInTheDocument();
+    // #2282: veien tilbake er Spillere-radens «Endre» i sjekklista.
+    const playersRow = screen.getByTestId('ready-row-players');
+    expect(playersRow).toHaveAttribute('data-status', 'block');
+    expect(within(playersRow).getByRole('button')).toBeInTheDocument();
   });
 
-  it('«Gå til spillere»-lenken navigerer faktisk tilbake til steg 4', () => {
+  it('«Endre» på Spillere navigerer faktisk tilbake til steg 4', () => {
     renderWizard();
     goToReadyStep();
 
-    fireEvent.click(screen.getByRole('button', { name: /gå til spillere/i }));
+    fireEvent.click(within(screen.getByTestId('ready-row-players')).getByRole('button'));
     expectStep(4);
   });
 
@@ -636,12 +637,9 @@ describe('GameWizard — #1065 steg-4-gate: registreringsvalg ikke tatt ennå', 
     fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
 
     const publishBtn = screen.getByRole('button', {
-      name: /lagre og publiser/i,
+      name: /publiser og del/i,
     });
     expect(publishBtn).not.toBeDisabled();
-    expect(
-      screen.queryByRole('button', { name: /gå til spillere/i }),
-    ).toBeNull();
   });
 });
 
@@ -831,7 +829,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     expect(
       screen.queryByText('Vis avanserte innstillinger'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: /sideturnering/i })).toBeNull();
+    expect(screen.queryByRole('switch', { name: /sideturnering/i })).toBeNull();
 
     const form = container.querySelector('form');
     const fd = new FormData(form!);
@@ -869,7 +867,7 @@ describe('GameWizard — #1011 sideturnering overlever lukket disclosure', () =>
     // samtidig med FormDataInputs-speilingen.
     fireEvent.click(screen.getByText('Vis avanserte innstillinger'));
     expect(
-      screen.getByRole('checkbox', { name: /sideturnering/i }),
+      screen.getByRole('switch', { name: /sideturnering/i }),
     ).toBeChecked();
 
     const form = container.querySelector('form');
@@ -1053,7 +1051,7 @@ describe('GameWizard — #1380 utkast overlever reload', () => {
     clickNext(); // → steg 5
     expectStep(5);
 
-    fireEvent.click(screen.getByRole('button', { name: /lagre utkast/i }));
+    fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
 
     await waitFor(() =>
       expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
@@ -1115,7 +1113,7 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
 
   /** Navnefeltet på steg 5. Labelen er sr-only, id-en er `name`. */
   function nameField() {
-    return screen.getByLabelText(/^spillnavn$/i);
+    return screen.getByLabelText(/^navn på runden$/i);
   }
 
   it('B1: navnet står når tee-off endres etterpå', () => {
@@ -1264,7 +1262,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
 
     // Skriv navnet og last siden på nytt UMIDDELBART — uten å la de 400 ms
     // gå. `pagehide` er det siden faktisk fyrer på vei ut.
-    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
       target: { value: 'Torsdagsgolf' },
     });
     fireEvent(window, new Event('pagehide'));
@@ -1281,14 +1279,14 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     clickNext();
     clickNext();
     expectStep(5);
-    expect(screen.getByLabelText(/^spillnavn$/i)).toHaveValue('Torsdagsgolf');
+    expect(screen.getByLabelText(/^navn på runden$/i)).toHaveValue('Torsdagsgolf');
   });
 
   it('B6: pagehide innenfor debounce-vinduet skriver gjeldende navn', () => {
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
-    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
       target: { value: 'Klubbkvelden' },
     });
     fireEvent(window, new Event('pagehide'));
@@ -1300,7 +1298,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
-    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
       target: { value: 'Onsdagsrunden' },
     });
     const spy = vi
@@ -1316,10 +1314,10 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
-    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
       target: { value: 'Torsdagsgolf' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /lagre utkast/i }));
+    fireEvent.click(screen.getByRole('button', { name: /lagre som utkast/i }));
 
     await waitFor(() =>
       expect(window.sessionStorage.getItem(DRAFT_KEY)).toBeNull(),
@@ -1335,7 +1333,7 @@ describe('GameWizard — #1999 utkastet flushes før siden kan forsvinne', () =>
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
     walkToReadyStep();
 
-    fireEvent.change(screen.getByLabelText(/^spillnavn$/i), {
+    fireEvent.change(screen.getByLabelText(/^navn på runden$/i), {
       target: { value: 'Lørdagsrunden' },
     });
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
@@ -1370,5 +1368,63 @@ describe('BasicsSection — #1999 navnefeltet markerer navnet som rørt', () => 
     });
 
     expect(touched).toBe(true);
+  });
+});
+
+// #2282: steg 5 er «Klar?» med invitasjonskortet og sjekklista.
+describe('GameWizard — #2282 «Klar?»-steget', () => {
+  // jsdom sender ikke skjemaet ved Enter, så en sjekk på at publiser ikke
+  // kalles ville vært grønn også uten vakten. Spørsmålet er om tastetrykket
+  // avbrytes (fireEvent gir `false` når preventDefault ble kalt).
+  it.each([
+    ['navnefeltet', () => screen.getByLabelText(/^navn på runden$/i)],
+    ['beløpsfeltet', () => {
+      openAdvanced();
+      return screen.getByLabelText(/beløp per spiller/i);
+    }],
+  ])('Enter i %s avbrytes, så det publiserer ikke', (_label, field) => {
+    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
+    goToReadyStep();
+    expect(fireEvent.keyDown(field(), { key: 'Enter' })).toBe(false);
+  });
+
+  it('Enter på en knapp i sjekklista avbrytes ikke', () => {
+    renderWizard();
+    goToReadyStep();
+    const button = within(screen.getByTestId('ready-row-players')).getByRole('button');
+    expect(fireEvent.keyDown(button, { key: 'Enter' })).toBe(true);
+  });
+
+  it('ugyldig handicapandel gir rød Format-rad, og «Endre» åpner avanserte innstillinger med fokus i feltet', async () => {
+    renderWizard({
+      players: EIGHT_PLAYERS.slice(0, 2),
+      initialValues: { game_mode: 'stableford', hcp_allowance_pct: '150' },
+    });
+    pickKompisIntent();
+    pickStablefordFormat();
+    clickNext();
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: FUTURE_TEE_OFF },
+    });
+    clickNext();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    clickNext();
+    expectStep(5);
+
+    const formatRow = screen.getByTestId('ready-row-format');
+    expect(formatRow).toHaveAttribute('data-status', 'block');
+    expect(screen.queryByLabelText('Handicap-andel (%)')).toBeNull();
+
+    fireEvent.click(within(formatRow).getByRole('button'));
+
+    const field = await screen.findByLabelText('Handicap-andel (%)');
+    expect(field).toHaveAttribute('id', 'hcp_allowance_pct__input');
+    await waitFor(() => expect(field).toHaveFocus());
   });
 });

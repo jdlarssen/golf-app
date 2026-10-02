@@ -15,11 +15,20 @@
  * GameWizard sin FormDataInputs (montert på alle steg) speiler samme state
  * som hidden inputs, så et lukket panel ikke lenger dropper sideturnering-
  * config ved publish.
+ *
+ * #2282: kortstilen fra Nyttspill-5-avansert-b. Peer-godkjenning og
+ * sideturnering er bryterrader (native `role="switch"`-checkbokser som
+ * beholder `name`), synligheten to valgkort og vinner-antallene piller.
  */
 
+import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { PrizesSection } from './PrizesSection';
+import { FormSection, LIST_CARD_CLASS } from '@/components/ui/FormSection';
+import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
+import { PillRadio } from '@/components/ui/PillRadio';
+import { SwitchRow } from '@/components/ui/Switch';
 
 type Props = {
   state: GameFormState;
@@ -45,6 +54,8 @@ type Props = {
   serializedExternally?: boolean;
 };
 
+const WINNER_COUNTS = [0, 1, 2] as const;
+
 export function AdvancedSettingsSection({
   state,
   includeVisibility = false,
@@ -53,6 +64,8 @@ export function AdvancedSettingsSection({
 }: Props) {
   const tAdv = useTranslations('wizard.sections.advanced');
   const tBasics = useTranslations('wizard.sections.basics');
+  const ldLabelId = useId();
+  const ctpLabelId = useId();
   const {
     requirePeerApproval,
     setRequirePeerApproval,
@@ -70,190 +83,108 @@ export function AdvancedSettingsSection({
     lockSideTournament,
   } = state;
 
+  // I wizard-pathen (serializedExternally) eier FormDataInputs serialiseringen
+  // av score_visibility og side_*-feltene (#1011) — name droppes da så FormData
+  // ikke får duplikater. I GameForm-pathen finnes ingen speiling, så navnene MÅ
+  // stå: siden #909 er disse feltene eneste kilde til verdiene der.
+  const ownName = (name: string) => (serializedExternally ? undefined : name);
+
   return (
-    <section className="space-y-4">
+    <section>
       {!hideHeading && (
         <h2 className="text-sm font-medium text-text">{tAdv('heading')}</h2>
       )}
 
-      <label className="flex items-start gap-3 cursor-pointer">
-        <input
-          type="checkbox"
+      {/* Peer-godkjenning: ett kort med én bryterrad, uten kicker. Bryteren er
+          en native checkbox med `name`, så verdien går rett i FormData i begge
+          pathene. */}
+      <div data-focus-inset className={`mt-4 ${LIST_CARD_CLASS}`}>
+        <SwitchRow
           name="require_peer_approval"
           checked={requirePeerApproval}
           onChange={(e) => setRequirePeerApproval(e.target.checked)}
-          className="mt-0.5 h-5 w-5 rounded border-border text-primary accent-primary"
+          title={tAdv('peerApprovalTitle')}
+          description={tAdv('peerApprovalDesc')}
         />
-        <span>
-          <span className="block text-sm font-medium text-text">
-            {tAdv('peerApprovalTitle')}
-          </span>
-          <span className="block text-xs text-muted mt-0.5">
-            {tAdv('peerApprovalDesc')}
-          </span>
-        </span>
-      </label>
+      </div>
 
       {includeVisibility && (
         <>
-          {/* Score visibility — wizard-løftet kopi av samme fieldset som
-              GameForm rendrer i BasicsSection.
-
-              #1400: radioene er controlled (useGameFormState) i stedet for
-              defaultChecked, så valget overlever `requestFormReset` når en
-              publisering feiler. I wizard-pathen (serializedExternally) eier
-              GameWizard sin FormDataInputs serialiseringen — da droppes
-              `name` her, akkurat som for side_*-feltene under. I GameForm-
-              pathen finnes ingen speiling, så navnet MÅ bli stående: siden
-              #909 rendrer BasicsSection ikke lenger disse radioene, og disse
-              er dermed eneste kilde til score_visibility i FormData der. */}
-          <fieldset>
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {tBasics('visibilityLegend')}
-            </legend>
-            <div className="mt-2 space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  value="live"
-                  {...(serializedExternally ? {} : { name: 'score_visibility' })}
-                  checked={scoreVisibility === 'live'}
-                  onChange={() => setScoreVisibility('live')}
-                  disabled={lockScoreVisibility}
-                  className="mt-1 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {tBasics('visibilityLiveTitle')}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {tBasics('visibilityLiveDesc')}
-                  </div>
-                </div>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  value="reveal"
-                  {...(serializedExternally ? {} : { name: 'score_visibility' })}
-                  checked={scoreVisibility === 'reveal'}
-                  onChange={() => setScoreVisibility('reveal')}
-                  disabled={lockScoreVisibility}
-                  className="mt-1 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {tBasics('visibilityRevealTitle')}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {tBasics('visibilityRevealDesc')}
-                  </div>
-                </div>
-              </label>
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              {tBasics('visibilityRevealHint')}
-              {lockScoreVisibility && (
-                <span className="block mt-1">
-                  <strong>{tBasics('visibilityLockedNote')}</strong>
-                </span>
-              )}
-            </p>
-          </fieldset>
+          {/* Score visibility. #1400: radioene er controlled (useGameFormState)
+              i stedet for defaultChecked, så valget overlever
+              `requestFormReset` når en publisering feiler. */}
+          <FormSection variant="bare" legend={tBasics('visibilityLegend')}>
+            <ChoiceCardGrid columns={1} label={tBasics('visibilityLegend')}>
+              <RadioChoiceCard
+                name={ownName('score_visibility')}
+                value="live"
+                checked={scoreVisibility === 'live'}
+                onChange={() => setScoreVisibility('live')}
+                disabled={lockScoreVisibility}
+                title={tBasics('visibilityLiveTitle')}
+                hint={tBasics('visibilityLiveDesc')}
+              />
+              <RadioChoiceCard
+                name={ownName('score_visibility')}
+                value="reveal"
+                checked={scoreVisibility === 'reveal'}
+                onChange={() => setScoreVisibility('reveal')}
+                disabled={lockScoreVisibility}
+                title={tBasics('visibilityRevealTitle')}
+                hint={tBasics('visibilityRevealDesc')}
+              />
+            </ChoiceCardGrid>
+            {lockScoreVisibility && (
+              <p className="px-1 pt-2 font-sans text-xs leading-[1.4] text-muted">
+                <strong>{tBasics('visibilityLockedNote')}</strong>
+              </p>
+            )}
+          </FormSection>
 
           {/* Sideturnering — tilbys for alle formater. Matchplay viser LD/CTP
               kompakt under duell-kortet (#585). */}
           {sideTournamentSupported && (
-          <fieldset data-testid="side-tournament-section">
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {tBasics('sideTournamentLegend')}
-            </legend>
-            <div className="mt-2 space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                {/* I wizard-pathen (serializedExternally) eier FormDataInputs
-                    serialiseringen av side_tournament_enabled (#1011) — name
-                    droppes da så FormData ikke får duplikat. */}
-                <input
-                  type="checkbox"
-                  {...(serializedExternally
-                    ? {}
-                    : { name: 'side_tournament_enabled', value: 'true' })}
-                  checked={sideEnabled}
-                  onChange={(e) => setSideEnabled(e.target.checked)}
-                  disabled={lockSideTournament}
-                  className="mt-1 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {tBasics('sideTournamentTitle')}
-                  </div>
-                  <div className="text-xs text-muted">
-                    {tBasics('sideTournamentDesc')}
-                  </div>
-                </div>
-              </label>
+            <FormSection
+              variant="list"
+              legend={tBasics('sideTournamentLegend')}
+              data-testid="side-tournament-section"
+            >
+              <SwitchRow
+                name={ownName('side_tournament_enabled')}
+                value={serializedExternally ? undefined : 'true'}
+                checked={sideEnabled}
+                onChange={(e) => setSideEnabled(e.target.checked)}
+                disabled={lockSideTournament}
+                title={tBasics('sideTournamentTitle')}
+                description={tBasics('sideTournamentDesc')}
+              />
 
               {sideEnabled && (
-                <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
-                  <p className="text-xs text-muted">
-                    {tBasics('sideTournamentPointsHint')}
-                  </p>
-
-                  <fieldset>
-                    <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      {tBasics('sideLdLegend')}
-                    </legend>
-                    <div className="mt-2 flex gap-2">
-                      {[0, 1, 2].map((n) => (
-                        <label key={n} className="tap-extend flex items-center gap-1 cursor-pointer [--tap-extend:-10px_-4px]">
-                          <input
-                            type="radio"
-                            {...(serializedExternally
-                              ? {}
-                              : { name: 'side_ld_count', value: String(n) })}
-                            checked={sideLdCount === n}
-                            onChange={() => setSideLdCount(n as 0 | 1 | 2)}
-                            disabled={lockSideTournament}
-                            className="accent-primary"
-                          />
-                          <span className="font-serif text-base text-text tabular-nums">{n}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
-                  <fieldset>
-                    <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      {tBasics('sideCtpLegend')}
-                    </legend>
-                    <div className="mt-2 flex gap-2">
-                      {[0, 1, 2].map((n) => (
-                        <label key={n} className="tap-extend flex items-center gap-1 cursor-pointer [--tap-extend:-10px_-4px]">
-                          <input
-                            type="radio"
-                            {...(serializedExternally
-                              ? {}
-                              : { name: 'side_ctp_count', value: String(n) })}
-                            checked={sideCtpCount === n}
-                            onChange={() => setSideCtpCount(n as 0 | 1 | 2)}
-                            disabled={lockSideTournament}
-                            className="accent-primary"
-                          />
-                          <span className="font-serif text-base text-text tabular-nums">{n}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
+                <div className="flex flex-col gap-2.5 px-3.5 py-2.5">
+                  <WinnerCountRow
+                    labelId={ldLabelId}
+                    label={tBasics('sideLdLegend')}
+                    name={ownName('side_ld_count')}
+                    value={sideLdCount}
+                    onChange={setSideLdCount}
+                    disabled={lockSideTournament}
+                  />
+                  <WinnerCountRow
+                    labelId={ctpLabelId}
+                    label={tBasics('sideCtpLegend')}
+                    name={ownName('side_ctp_count')}
+                    value={sideCtpCount}
+                    onChange={setSideCtpCount}
+                    disabled={lockSideTournament}
+                  />
                   {lockSideTournament && (
-                    <p className="text-xs text-muted">
+                    <p className="font-sans text-xs leading-[1.4] text-muted">
                       <strong>{tBasics('sideLockedNote')}</strong>
                     </p>
                   )}
                 </div>
               )}
-            </div>
-          </fieldset>
+            </FormSection>
           )}
 
           {/* #1051: premiebord — rett etter sideturnering-konfig. Egen visnings-
@@ -263,5 +194,44 @@ export function AdvancedSettingsSection({
         </>
       )}
     </section>
+  );
+}
+
+/** «Antall longest-drive-vinnere» with the 0 / 1 / 2 pills on the right. */
+function WinnerCountRow({
+  labelId,
+  label,
+  name,
+  value,
+  onChange,
+  disabled,
+}: {
+  labelId: string;
+  label: string;
+  name: string | undefined;
+  value: number;
+  onChange: (next: 0 | 1 | 2) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span id={labelId} className="font-sans text-[13px] leading-[normal] font-semibold text-text">
+        {label}
+      </span>
+      <div role="radiogroup" aria-labelledby={labelId} className="flex shrink-0 gap-2">
+        {WINNER_COUNTS.map((n) => (
+          <PillRadio
+            key={n}
+            name={name}
+            value={String(n)}
+            checked={value === n}
+            onChange={() => onChange(n)}
+            disabled={disabled}
+          >
+            {n}
+          </PillRadio>
+        ))}
+      </div>
+    </div>
   );
 }
