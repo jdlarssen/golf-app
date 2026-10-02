@@ -6,7 +6,7 @@ import {
   readyChecklist,
   teeOffIso,
   type ReadyRow,
-} from './readyChecklist';
+} from './readyChecklistRules';
 
 // Type A (docs/test-discipline.md): the «Klar?» checklist is a projection of
 // the publish gate in useGameFormState (#2282). These tests pin which row each
