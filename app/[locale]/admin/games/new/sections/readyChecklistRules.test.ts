@@ -138,7 +138,9 @@ const PLAYERS = {
 };
 
 describe('playersSummary', () => {
-  it.each(['Wolf', 'Nassau', 'Skins'])('%s (no teams) gives only the count, never «ikke fordelt»', () => {
+  // Wolf, Nassau and Skins reach playersSummary the same way: individual
+  // formats outside the solo flag, so requiresTeams is false and no teams exist.
+  it('formats without teams (Wolf, Nassau, Skins) give only the count, never «ikke fordelt»', () => {
     expect(playersSummary(PLAYERS)).toEqual({ key: 'playersPlural', values: { count: 5 } });
     expect(playersSummary({ ...PLAYERS, count: 1 })).toEqual({
       key: 'playersSolo',
