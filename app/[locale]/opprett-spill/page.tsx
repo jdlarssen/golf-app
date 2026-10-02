@@ -23,6 +23,7 @@ import {
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { defaultTeeOffAt } from '@/lib/games/defaultTeeOff';
 import {
   buildRevansjeInitialValues,
   type RevansjeGameRow,
@@ -226,14 +227,22 @@ export default async function OpprettSpillPage({
     console.log('[opprett-spill] revansje-prefill', fraId);
   }
 
-  // #1023: `?bane=` fra de offentlige banesidene — kun course_id prefilles
-  // (tee/spillere tar wizardens egne defaults). Revansje vinner når begge
-  // paramene gir treff; en ugyldig bane-id faller stille til tom veiviser.
+  // #1023: `?bane=` from the public course pages prefills course_id only
+  // (tee box and players use the wizard's own defaults; tee-off gets the
+  // #2438 default below). Revansje wins when both params resolve; an invalid
+  // bane id falls back silently to a blank wizard.
   const baneParam = first(sp.bane);
   const baneCourseId =
     !revansje && baneParam
       ? await loadBaneCourseId(baneParam, supabase)
       : null;
+
+  // #2438: a new game gets the same tee-off suggestion as the admin route
+  // (#1171): the first upcoming Saturday 09:00 Oslo. Computed once on the
+  // server, after the request-time reads above (cookies, searchParams), so
+  // cacheComponents never prerenders a frozen date and SSR and client read
+  // the same string. Revansje keeps an empty date on purpose (#1007).
+  const teeOffDefault = defaultTeeOffAt(new Date());
 
   // #892: en eksplisitt ?intent= (f.eks. cup fra Klubbhusets «… eller en cup»)
   // vinner; ellers en ?klubb=-dyplenke gir klubb-intent; revansje-derivert
@@ -268,8 +277,10 @@ export default async function OpprettSpillPage({
           defaultGroupId={first(sp.klubb)}
           initialIntent={initialIntent}
           initialValues={
-            revansje?.initialValues ??
-            (baneCourseId ? { course_id: baneCourseId } : undefined)
+            revansje?.initialValues ?? {
+              ...(baneCourseId ? { course_id: baneCourseId } : {}),
+              scheduled_tee_off_at: teeOffDefault,
+            }
           }
           // #1007/#1023: remount når prefill-kilden endres (useGameFormState
           // leser initialValues kun ved mount — key-remount-fella).
@@ -344,8 +355,9 @@ async function GameFormBody({
 }: {
   defaultGroupId: string | undefined;
   initialIntent: Intent | undefined;
-  // #1007: prefill fra «Revansje?». Undefined for the ordinary empty-wizard path.
-  initialValues: InitialValues | undefined;
+  // #1007/#1023/#2438: the revansje prefill, or the tee-off default (plus
+  // course_id for `?bane=`). This page always sends a value.
+  initialValues: InitialValues;
   // #1007: remounts GameWizard when the `?fra=` source changes — useGameFormState
   // only reads initialValues once at mount (key-remount-fella, kjent memory-trap).
   wizardKey: string;
