@@ -2364,7 +2364,8 @@
         "guest_claim_not_guest": "This player isn't a guest in this game.",
         "guest_email_taken": "That email already has a Tørny account. The result can't be moved there.",
         "guest_claim_failed": "Something went wrong while sending. Try again.",
-        "guest_claim_mail_failed": "The account is ready, but the email didn't go out. The guest can still log in with {email}, or you can send again."
+        "guest_claim_mail_failed": "The account is ready, but the email didn't go out. The guest can still log in with {email}, or you can send again.",
+        "invites_failed": "The game is published, but not all the email invitations went out. Send them again here."
       },
       "rosterSearch": "Add from players you know",
       "rosterSearchPlaceholder": "Search co-players…",
@@ -3640,7 +3641,8 @@
         "guest_profile_update_failed": "Something went wrong while saving the guest. Try again.",
         "guest_roster_insert_failed": "The guest wasn't added to the game. Try again.",
         "game_full": "The game is full. Remove someone to add more.",
-        "cup_finished": "The cup is finished. The match can't be started or reopened."
+        "cup_finished": "The cup is finished. The match can't be started or reopened.",
+        "invites_failed": "The game is published, but not all the email invitations went out. Send them again here."
       },
       "detail": {
         "brassRibbon": "Game · log",

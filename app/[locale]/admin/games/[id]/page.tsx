@@ -338,7 +338,12 @@ export default async function GameDetailPage({
         <div className="mt-4 space-y-2">
           {statusBanner && <Banner tone="success">{statusBanner}</Banner>}
           {errorMessage && (
-            <Banner tone="error" testId="admin-game-error-banner">
+            // #2321: a published game whose e-mail invitations did not all
+            // go out is a warning under the green «publisert» banner.
+            <Banner
+              tone={errorCode === 'invites_failed' ? 'warning' : 'error'}
+              testId="admin-game-error-banner"
+            >
               {errorMessage}
             </Banner>
           )}

@@ -2364,7 +2364,8 @@
         "guest_claim_not_guest": "Denne spilleren er ikke en gjest i dette spillet.",
         "guest_email_taken": "E-posten har allerede en Tørny-konto. Resultatet kan ikke flyttes dit.",
         "guest_claim_failed": "Noe gikk galt med sendingen. Prøv igjen.",
-        "guest_claim_mail_failed": "Kontoen er klar, men mailen kom ikke ut. Gjesten kan logge inn med {email} likevel, eller du kan sende på nytt."
+        "guest_claim_mail_failed": "Kontoen er klar, men mailen kom ikke ut. Gjesten kan logge inn med {email} likevel, eller du kan sende på nytt.",
+        "invites_failed": "Spillet er publisert, men ikke alle e-postinvitasjonene gikk ut. Send dem på nytt her."
       },
       "rosterSearch": "Legg til fra spillere du kjenner",
       "rosterSearchPlaceholder": "Søk blant medspillere…",
@@ -3640,7 +3641,8 @@
         "guest_profile_update_failed": "Noe gikk galt da gjesten ble lagret. Prøv igjen.",
         "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen.",
         "game_full": "Spillet er fullt. Fjern noen for å legge til flere.",
-        "cup_finished": "Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes."
+        "cup_finished": "Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes.",
+        "invites_failed": "Spillet er publisert, men ikke alle e-postinvitasjonene gikk ut. Send dem på nytt her."
       },
       "detail": {
         "brassRibbon": "Spill · protokoll",

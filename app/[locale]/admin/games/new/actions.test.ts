@@ -80,6 +80,15 @@ vi.mock('@/lib/formats/validateGameMode', () => ({
   isValidActiveGameMode: (slug: string) => validateGameModeMock(slug),
 }));
 
+// #2321: the wizard's e-mail invitations. The sender has its own tests; here
+// only who calls it, with what, and where the organiser lands.
+const sendPublishInvitesMock = vi.fn<(...args: unknown[]) => Promise<{ failed: number }>>(
+  async () => ({ failed: 0 }),
+);
+vi.mock('@/lib/games/sendPublishInvites', () => ({
+  sendPublishInvites: (...args: unknown[]) => sendPublishInvitesMock(...args),
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
@@ -745,5 +754,53 @@ describe('createGameInternal — rollback on player-insert failure (#737)', () =
     // so the wizard can show it without losing what the organiser typed.
     expect(res).toEqual({ error: 'db_players' });
     expect(redirectMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('e-mail invitations at publish (#2321)', () => {
+  it('publish sends them once with the game id and the request client; a failure adds invites_failed; a draft sends none', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true, name: 'Ola' }, error: null }, // gate
+        { data: { id: 'game-inv' }, error: null }, // games.insert.select.single
+        { data: null, error: null }, // game_players.insert
+      ],
+      { incomplete_profile_ids: [] },
+    );
+    signIn('admin-1');
+    sendPublishInvitesMock.mockResolvedValueOnce({ failed: 1 });
+
+    const { createAndPublishGame, createGameDraft } = await import('./actions');
+    const publishData = fullPublishFormData();
+    publishData.append('invite_email', 'a@example.com');
+    publishData.append('invite_email', 'b@example.com');
+
+    await expect(createAndPublishGame(publishData)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(sendPublishInvitesMock).toHaveBeenCalledTimes(1);
+    const [call] = sendPublishInvitesMock.mock.calls[0] as [Record<string, unknown>];
+    expect(call).toMatchObject({
+      gameId: 'game-inv',
+      inviterUserId: 'admin-1',
+      inviterName: 'Ola',
+      isAdmin: true,
+      emails: ['a@example.com', 'b@example.com'],
+    });
+    expect(call.client).toBe(supabaseMock);
+    expect(call.viewer).toBe(supabaseMock);
+    expect(lastRedirect()).toBe('/admin/games/game-inv?status=scheduled&error=invites_failed');
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Ola' }, error: null },
+      { data: { id: 'draft-inv' }, error: null },
+      { data: null, error: null },
+    ]);
+    signIn('admin-1');
+    sendPublishInvitesMock.mockClear();
+    const draftData = fd({ name: 'Utkast', side_tournament_enabled: 'false' });
+    draftData.append('invite_email', 'a@example.com');
+
+    await expect(createGameDraft(draftData)).rejects.toBeInstanceOf(RedirectError);
+    expect(sendPublishInvitesMock).not.toHaveBeenCalled();
   });
 });

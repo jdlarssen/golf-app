@@ -5,6 +5,8 @@ import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendConnectionIds } from '@/lib/friends/getFriendConnectionIds';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { orderPickerPlayers, pickerStatsIds } from '@/lib/wizard/pickerOrder';
+import { getPickerOrderStats } from '@/lib/wizard/pickerOrderStats';
 
 /**
  * Alt `GameWizard` trenger for å mountes, hentet på serveren.
@@ -49,10 +51,25 @@ export async function getWizardMountData() {
         : Promise.resolve({ memberIdsByClub: {}, options: [] }),
     ]);
 
+  // #2321: the picker's order — you first, then the people you last played
+  // with. Only friends and club members are looked up: the admin roster is the
+  // whole user base, the same bounded id set `/opprett-spill` sends. Best-effort,
+  // an empty map leaves name order.
+  const stats = userId
+    ? await getPickerOrderStats(
+        userId,
+        pickerStatsIds({
+          friendPlayerIds,
+          clubMemberIdsByClub: clubMembers.memberIdsByClub,
+          selfId: userId,
+        }),
+      )
+    : new Map();
+
   return {
     userId,
     courses,
-    players,
+    players: orderPickerPlayers(players, stats, userId ?? ''),
     clubs,
     formatsByIntent: {
       kompis: kompisFormats,
