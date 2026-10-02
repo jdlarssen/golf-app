@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { FormSection, FormSectionText } from '@/components/ui/FormSection';
+import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
+import { Input } from '@/components/ui/Input';
 
 /**
  * Netto/brutto-toggle for handicap-allowance.
@@ -26,6 +29,9 @@ import { useTranslations } from 'next-intl';
  *      når admin navigerer mellom wizard-steg. Sett `hideHiddenInput=true`
  *      hvis parent rendrer en sentral hidden input — toggle-en blir da
  *      bare et UI-kontroll.
+ *
+ * #2282: kortstilen fra Nyttspill-5-avansert-a — legenden er kickeren over
+ * kortet, Netto/Brutto er to valgkort og prosenten et kortfelt med hint.
  */
 type Props = {
   /**
@@ -135,88 +141,57 @@ export function AllowanceField({
   const inputId = `${fieldName}__input`;
 
   return (
-    <fieldset className="space-y-3 rounded-lg border border-border bg-surface-2 p-4">
-      <legend className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted px-1">
-        {legend}
-      </legend>
-      {description && (
-        <p className="text-xs text-muted -mt-1">{description}</p>
-      )}
+    <FormSection legend={legend}>
+      {description && <FormSectionText>{description}</FormSectionText>}
 
-      <div className="grid grid-cols-2 gap-2">
-        <label
-          className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition ${
-            mode === 'netto'
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border bg-surface text-text hover:border-primary/40'
-          }`}
-        >
-          <input
-            type="radio"
-            name={radioGroupName}
-            value="netto"
-            checked={mode === 'netto'}
-            onChange={() => selectMode('netto')}
-            className="sr-only"
-          />
-          {t('nettoLabel')}
-        </label>
-        <label
-          className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition ${
-            mode === 'brutto'
-              ? 'border-primary bg-primary/10 text-primary'
-              : 'border-border bg-surface text-text hover:border-primary/40'
-          }`}
-        >
-          <input
-            type="radio"
-            name={radioGroupName}
-            value="brutto"
-            checked={mode === 'brutto'}
-            onChange={() => selectMode('brutto')}
-            className="sr-only"
-          />
-          {t('bruttoLabel')}
-        </label>
-      </div>
+      <ChoiceCardGrid columns={2} label={legend}>
+        <RadioChoiceCard
+          name={radioGroupName}
+          value="netto"
+          checked={mode === 'netto'}
+          onChange={() => selectMode('netto')}
+          height={52}
+          title={t('nettoLabel')}
+        />
+        <RadioChoiceCard
+          name={radioGroupName}
+          value="brutto"
+          checked={mode === 'brutto'}
+          onChange={() => selectMode('brutto')}
+          height={52}
+          title={t('bruttoLabel')}
+        />
+      </ChoiceCardGrid>
 
       {mode === 'netto' && (
-        <div className="space-y-1.5">
-          <label
-            htmlFor={inputId}
-            className="block text-xs font-medium text-text"
-          >
-            {resolvedInputLabel}
-          </label>
-          <input
-            id={inputId}
-            type="number"
-            min={0}
-            max={100}
-            step={1}
-            value={pct === 0 ? lastNettoPct : pct}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (Number.isInteger(v) && v >= 0 && v <= 100) {
-                setLastNettoPct(v);
-                commitPct(v);
-              }
-            }}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm tabular-nums focus:border-primary"
-          />
-          {nettoHelperText && (
-            <p className="text-xs text-muted">{nettoHelperText}</p>
-          )}
-        </div>
+        <Input
+          variant="card"
+          id={inputId}
+          label={resolvedInputLabel}
+          hint={nettoHelperText}
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={pct === 0 ? lastNettoPct : pct}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (Number.isInteger(v) && v >= 0 && v <= 100) {
+              setLastNettoPct(v);
+              commitPct(v);
+            }
+          }}
+          inputClassName="tabular-nums"
+        />
       )}
 
       {mode === 'brutto' && (
-        <p className="text-xs text-muted">{bruttoHelperText}</p>
+        <p className="font-sans text-xs leading-[1.4] text-muted">{bruttoHelperText}</p>
       )}
 
       {!hideHiddenInput && (
         <input type="hidden" name={fieldName} value={String(pct)} />
       )}
-    </fieldset>
+    </FormSection>
   );
 }

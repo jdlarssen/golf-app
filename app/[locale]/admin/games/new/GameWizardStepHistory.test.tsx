@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
@@ -347,7 +347,7 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
 
     // #1999: navnet på steg 5 er nå et vanlig tekstfelt, ikke en
     // klikk-for-å-redigere-tekst — verdien leses av feltet, ikke av DOM-teksten.
-    expect(screen.getByLabelText(/^spillnavn$/i)).toHaveValue('Serverutkastet');
+    expect(screen.getByLabelText(/^navn på runden$/i)).toHaveValue('Serverutkastet');
 
     // Tilbake til steg 2: utkastets eget format må stå der, og stå valgt.
     fireEvent.click(screen.getByRole('button', { name: /^tilbake$/i }));
@@ -356,5 +356,48 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
 
     const formatCard = screen.getByRole('radio', { name: /^matchplay$/i });
     expect(formatCard.getAttribute('aria-checked')).toBe('true');
+  });
+  // #2282: «Endre» i sjekklista er en steg-handler som alle andre — den pusher
+  // URL-en, så Tilbake i nettleseren lander på «Klar?» igjen.
+  it('«Endre» på Bane går til steg 3 med push, og tilbake gir steg 5', () => {
+    const props: Partial<WizardProps> = {
+      mode: {
+        kind: 'edit-draft',
+        gameId: 'game-1',
+        saveDraftAction: async () => {},
+        publishAction: async () => {},
+      },
+      initialValues: {
+        name: 'Serverutkastet',
+        game_mode: 'singles_matchplay',
+        lock_game_mode: false,
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        players: [
+          { user_id: 'u0', team_number: 1, flight_number: null },
+          { user_id: 'u1', team_number: 2, flight_number: null },
+        ],
+      },
+      initialIntent: 'kompis',
+      initialExpectedPlayerCount: 2,
+    };
+    searchString = 'step=5';
+    const { rerender } = renderWizard(props);
+    const stepIs = (n: number) =>
+      Array.from(document.querySelectorAll('span')).some(
+        (el) => el.textContent === `Steg ${n} av 5`,
+      );
+    expect(stepIs(5)).toBe(true);
+
+    fireEvent.click(within(screen.getByTestId('ready-row-course')).getByRole('button'));
+
+    expect(push).toHaveBeenCalledWith('/admin/games/new?step=3', { scroll: false });
+    expect(stepIs(3)).toBe(true);
+
+    // Nettleserens Tilbake: router-en committer forrige URL, skallet
+    // re-rendres med den.
+    searchString = 'step=5';
+    rerender(wizardElement(props));
+    expect(stepIs(5)).toBe(true);
   });
 });

@@ -18,8 +18,14 @@
  * #367-mandatet: registrerings-VALGET skal alltid være synlig), og
  * `hideModeChoice` for resten (type + kontingent) inne i disclosuren.
  * GameForm (edit-flyten) fortsetter å mounte hele seksjonen samlet ett sted.
+ *
+ * #2282: kortstilen fra Nyttspill-5-*: «Hvem kan melde seg på?» som tre
+ * valgkort med valgsirkel og synlighets-pille, «Hva melder man på?» som to
+ * valgkort og startkontingenten som kortfelt. Delt med GameForm, så «Rediger
+ * spill» får samme stil.
  */
 
+import { Fragment, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { isDiscoverableRegistrationMode } from '@/lib/games/registration';
@@ -27,13 +33,22 @@ import type {
   RegistrationMode,
   RegistrationType,
 } from '@/lib/games/registration';
+import { FormSection, FormSectionText } from '@/components/ui/FormSection';
+import {
+  ChoiceCardGrid,
+  RadioChoiceCard,
+  RadioOptionCard,
+} from '@/components/ui/ChoiceCard';
+import { CheckRow } from '@/components/ui/CheckRow';
+import { Input } from '@/components/ui/Input';
 
 type Props = {
   state: GameFormState;
   /**
-   * Skjul «N. Påmelding»-headingen. Wizard-flyten mounter seksjonen inne
-   * i steg 1 (Format) som allerede har en stepper-tittel, så dobbel-merking
-   * unngås ved å droppe headingen der.
+   * Skjul kickeren «PÅMELDING». GameForm mounter seksjonen inne i
+   * Disclosure-panelet «Påmelding», og ReadyStep mounter resten av seksjonen
+   * (`hideModeChoice`) under «Vis avanserte innstillinger» — begge steder ville
+   * kickeren gjentatt en tittel som alt står der.
    */
   hideHeading?: boolean;
   /**
@@ -44,12 +59,12 @@ type Props = {
    */
   hideModeChoice?: boolean;
   /**
-   * #1065: rendrer KUN «Hvem kan melde seg på?»-fieldsetet — ingen heading,
-   * ingen type-valg (solo/lag/begge), ingen kontingent-fieldset. Wizard-en
-   * bruker denne for den synlige registrerings-kontrollen på steg 5 (#367-
-   * mandatet: valget skal stå i klartekst, ikke gjemt i «Vis avanserte
-   * innstillinger»-disclosuren). Resten av seksjonen (type + kontingent)
-   * rendres separat inne i disclosuren via `hideModeChoice`.
+   * #1065: rendrer KUN «Hvem kan melde seg på?»-valget — ingen type-valg
+   * (solo/lag), ingen kontingent. Wizard-en bruker denne for den synlige
+   * registrerings-kontrollen på steg 5 (#367-mandatet: valget skal stå i
+   * klartekst, ikke gjemt i «Vis avanserte innstillinger»). Resten av seksjonen
+   * (type + kontingent) rendres separat under avanserte innstillinger via
+   * `hideModeChoice`.
    */
   onlyModeChoice?: boolean;
 };
@@ -75,6 +90,7 @@ export function RegistrationSection({
   onlyModeChoice = false,
 }: Props) {
   const t = useTranslations('wizard.sections.registration');
+  const whoId = useId();
   const {
     registrationMode,
     setRegistrationMode,
@@ -95,14 +111,11 @@ export function RegistrationSection({
   // til null når beløpet er 0, så en stale lenke aldri lekker.
   const hasEntryFee = Number(entryFeeKr) > 0;
 
-  // Disable team/both når modus ikke støtter lag. Lock-flagget (edit-flyt på
+  // Lag er av når modus ikke støtter lag. Lock-flagget (edit-flyt på
   // publisert spill) deaktiverer hele seksjonen — payloaden er allerede
   // persistert og kan ikke endres tilbake til en annen modell uten å rote
   // til eksisterende påmeldinger.
   const teamRadioDisabled = !registrationModeSupportsTeams || lockGameMode;
-  const teamDisabledReason = !registrationModeSupportsTeams
-    ? t('teamModeDisabledReason')
-    : null;
 
   function modeTitle(mode: RegistrationMode): string {
     if (mode === 'invite_only') return t('modeInviteTitle');
@@ -121,216 +134,157 @@ export function RegistrationSection({
     return t('typeTeamTitle');
   }
 
-  const modeChoiceFieldset = !hideModeChoice && (
-    <fieldset>
-      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+  // «Hvem kan melde seg på?»: tre valgkort, og under «Forespørsel» (når den er
+  // valgt) avkrysningen for venner, innrykket til kortets tekst.
+  const modeChoice = !hideModeChoice && (
+    <>
+      <p
+        id={whoId}
+        className="px-1 pb-2 font-sans text-sm leading-[normal] font-semibold text-text"
+      >
         {t('whoLegend')}
-      </legend>
-      <div className="mt-2 space-y-3">
+      </p>
+      <div role="radiogroup" aria-labelledby={whoId} className="flex flex-col gap-2">
         {REGISTRATION_MODES.map((mode) => {
-          const discoverable = isDiscoverableRegistrationMode(mode);
+          const checked = registrationMode === mode;
           return (
-            <div key={mode}>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="registration_mode_input"
-                  value={mode}
-                  checked={registrationMode === mode}
-                  onChange={() => setRegistrationMode(mode)}
+            <Fragment key={mode}>
+              <RadioOptionCard
+                name="registration_mode_input"
+                value={mode}
+                checked={checked}
+                onChange={() => setRegistrationMode(mode)}
+                disabled={lockGameMode}
+                title={modeTitle(mode)}
+                badge={
+                  <VisibilityBadge
+                    discoverable={isDiscoverableRegistrationMode(mode)}
+                    onSelectedCard={checked}
+                    labelDiscoverable={t('badgeDiscoverable')}
+                    labelPrivate={t('badgePrivate')}
+                  />
+                }
+                description={modeHint(mode)}
+              />
+              {mode === 'manual_approval' && checked && (
+                <CheckRow
+                  className="ml-7"
+                  title={t('friendsSkipTitle')}
+                  description={t('friendsSkipHint')}
+                  checked={letFriendsSkipGate}
+                  onChange={(e) => setLetFriendsSkipGate(e.target.checked)}
                   disabled={lockGameMode}
-                  className="mt-1 h-5 w-5 accent-primary"
                 />
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-serif text-base text-text">
-                      {modeTitle(mode)}
-                    </span>
-                    <VisibilityBadge
-                      discoverable={discoverable}
-                      labelDiscoverable={t('badgeDiscoverable')}
-                      labelPrivate={t('badgePrivate')}
-                    />
-                  </div>
-                  <div className="text-xs text-muted">{modeHint(mode)}</div>
-                </div>
-              </label>
-              {mode === 'manual_approval' &&
-                registrationMode === 'manual_approval' && (
-                  <div className="mt-2 ml-8">
-                    <label className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={letFriendsSkipGate}
-                        onChange={(e) =>
-                          setLetFriendsSkipGate(e.target.checked)
-                        }
-                        disabled={lockGameMode}
-                        className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
-                      />
-                      <div>
-                        <span className="font-sans text-sm text-text">
-                          {t('friendsSkipTitle')}
-                        </span>
-                        <p className="mt-0.5 text-xs text-muted">
-                          {t('friendsSkipHint')}
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                )}
-            </div>
+              )}
+            </Fragment>
           );
         })}
       </div>
-    </fieldset>
+    </>
   );
 
-  // #1065: wizard-en trenger kun «Hvem kan melde seg på?»-valget synlig i
-  // klartekst på steg 5 (utenfor «Vis avanserte innstillinger»-disclosuren,
-  // #367-mandatet). Resten av seksjonen (type + kontingent) rendres separat
-  // med `hideModeChoice` inne i disclosuren.
-  if (onlyModeChoice) {
-    return (
-      <section className="space-y-4">
-        {!hideHeading && (
-          <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
-        )}
-        {modeChoiceFieldset}
-      </section>
-    );
-  }
+  // Kickeren «PÅMELDING» er fieldset-legenden; med `hideHeading` rendres den
+  // ikke i det hele tatt (GameForm-panelet har alt tittelen).
+  const modeChoiceBlock = modeChoice && (
+    hideHeading ? (
+      <div>{modeChoice}</div>
+    ) : (
+      <FormSection variant="bare" legend={t('heading')}>
+        {modeChoice}
+      </FormSection>
+    )
+  );
+
+  if (onlyModeChoice) return modeChoiceBlock || null;
 
   return (
-    <section className="space-y-4">
-      {!hideHeading && (
-        <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
-      )}
+    <div>
+      {modeChoiceBlock}
 
-      {modeChoiceFieldset}
-
-      <fieldset>
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {t('whatLegend')}
-        </legend>
-        <div className="mt-2 space-y-3">
-          {REGISTRATION_TYPES.map((type) => {
-            const isTeamOption = type === 'team';
-            const disabled = isTeamOption ? teamRadioDisabled : lockGameMode;
-            return (
-              <label
-                key={type}
-                className={`flex items-start gap-3 ${
-                  disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-                }`}
-                title={
-                  isTeamOption && teamDisabledReason
-                    ? teamDisabledReason
-                    : undefined
-                }
-              >
-                <input
-                  type="radio"
-                  name="registration_type_input"
-                  value={type}
-                  checked={registrationType === type}
-                  onChange={() => setRegistrationType(type)}
-                  disabled={disabled}
-                  className="mt-1 h-5 w-5 accent-primary"
-                />
-                <div>
-                  <div className="font-serif text-base text-text">
-                    {typeTitle(type)}
-                  </div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-        {!registrationModeSupportsTeams && (
-          <p className="mt-2 text-xs text-muted">
-            {t('teamNotSupportedNote')}
-          </p>
-        )}
-      </fieldset>
-
-      {registrationMode !== 'invite_only' && (
-        <p className="text-xs text-muted">
-          {t('selfSignupNote')}
-        </p>
-      )}
+      <FormSection variant="bare" legend={t('whatLegend')}>
+        <ChoiceCardGrid columns={2} label={t('whatLegend')}>
+          {REGISTRATION_TYPES.map((type) => (
+            <RadioChoiceCard
+              key={type}
+              name="registration_type_input"
+              value={type}
+              checked={registrationType === type}
+              onChange={() => setRegistrationType(type)}
+              disabled={type === 'team' ? teamRadioDisabled : lockGameMode}
+              height={52}
+              title={typeTitle(type)}
+            />
+          ))}
+        </ChoiceCardGrid>
+      </FormSection>
 
       {/* #1049: startkontingent (valgfritt). Vises for alle formater og også for
           klubbspill — en klubbkveld kan ha avgift på toppen av medlemskap. Ikke
-          disabled ved lockGameMode: beløpet er informativt, ikke strukturelt. */}
-      <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
-        <legend className="px-1 text-sm font-semibold text-text">
-          {t('paymentLegend')}
-        </legend>
-        <p className="text-xs text-muted">{t('paymentHint')}</p>
-        <label className="block">
-          <span className="text-xs font-medium text-muted">
-            {t('entryFeeLabel')}
-          </span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={entryFeeKr}
-            onChange={(e) => setEntryFeeKr(e.target.value)}
-            placeholder={t('entryFeePlaceholder')}
-            aria-label={t('entryFeeLabel')}
-            className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm tabular-nums text-text focus:border-primary"
-          />
-        </label>
+          disabled ved lockGameMode: beløpet er informativt, ikke strukturelt.
+          Feltene har ikke `name`: GameForm og veiviserens FormDataInputs
+          sender verdiene fra state. */}
+      <FormSection legend={t('paymentLegend')}>
+        <FormSectionText>{t('paymentHint')}</FormSectionText>
+        <Input
+          variant="card"
+          id="registration-entry-fee"
+          label={t('entryFeeLabel')}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          value={entryFeeKr}
+          onChange={(e) => setEntryFeeKr(e.target.value)}
+          placeholder={t('entryFeePlaceholder')}
+          inputClassName="tabular-nums"
+        />
         {hasEntryFee && (
-          <label className="block">
-            <span className="text-xs font-medium text-muted">
-              {t('paymentLinkLabel')}
-            </span>
-            <input
-              type="text"
-              inputMode="text"
-              value={paymentLink}
-              onChange={(e) => setPaymentLink(e.target.value)}
-              placeholder={t('paymentLinkPlaceholder')}
-              aria-label={t('paymentLinkLabel')}
-              maxLength={200}
-              className="mt-1 w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-text focus:border-primary"
-            />
-            <span className="mt-1 block text-xs text-muted">
-              {t('paymentLinkHint')}
-            </span>
-          </label>
+          <Input
+            variant="card"
+            id="registration-payment-link"
+            label={t('paymentLinkLabel')}
+            type="text"
+            inputMode="text"
+            value={paymentLink}
+            onChange={(e) => setPaymentLink(e.target.value)}
+            placeholder={t('paymentLinkPlaceholder')}
+            hint={t('paymentLinkHint')}
+            maxLength={200}
+          />
         )}
-      </fieldset>
-    </section>
+      </FormSection>
+    </div>
   );
 }
 
 /**
- * Synlighets-merke (#367): viser om valgt påmeldingsmåte gjør spillet
- * oppdagbart i «Finn turneringer» eller holder det privat. Oppdagbar = soft
- * primær (positivt/synlig), privat = muted (stille). Klassifiseringen kommer
- * fra `isDiscoverableRegistrationMode` så den ikke kan drifte fra discovery.
+ * Synlighets-pillen (#367): viser om påmeldingsmåten gjør spillet oppdagbart
+ * i «Finn turneringer» eller holder det privat. Klassifiseringen kommer fra
+ * `isDiscoverableRegistrationMode`, så den ikke kan drifte fra discovery.
+ *
+ * OPPDAGBAR: lys grønn med forest-tekst, og hvit på et valgt kort (det
+ * valgte kortet er selv lys grønt). PRIVAT: --surface-2 med dempet tekst; om
+ * natta er dempet tekst 4,21:1 der, så den bruker --text (10,45:1).
  */
 function VisibilityBadge({
   discoverable,
+  onSelectedCard,
   labelDiscoverable,
   labelPrivate,
 }: {
   discoverable: boolean;
+  onSelectedCard: boolean;
   labelDiscoverable: string;
   labelPrivate: string;
 }) {
+  const tone = !discoverable
+    ? 'bg-surface-2 text-muted dark:text-text'
+    : onSelectedCard
+      ? 'bg-surface text-primary'
+      : 'bg-primary-soft text-primary';
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] ${
-        discoverable
-          ? 'bg-primary-soft text-primary'
-          : 'bg-surface-2 text-muted'
-      }`}
+      className={`inline-flex h-5 items-center rounded-full px-2 font-sans text-[10px] font-semibold tracking-[0.12em] uppercase ${tone}`}
     >
       {discoverable ? labelDiscoverable : labelPrivate}
     </span>

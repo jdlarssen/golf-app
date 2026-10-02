@@ -17,11 +17,6 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
    * 14 px for step 3's fields.
    */
   gap?: 'sm' | 'md' | 'lg';
-  /**
-   * Keep the legend for screen readers only: the peer-approval card on step 5
-   * has no kicker (#2282).
-   */
-  legendHidden?: boolean;
 };
 
 /**
@@ -47,19 +42,12 @@ export function FormSection({
   children,
   variant = 'card',
   gap = 'md',
-  legendHidden = false,
   className = '',
   ...rest
 }: Props) {
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
-      <legend
-        className={
-          legendHidden
-            ? 'sr-only'
-            : 'px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted'
-        }
-      >
+      <legend className="px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
         {legend}
       </legend>
       {variant === 'list' ? (

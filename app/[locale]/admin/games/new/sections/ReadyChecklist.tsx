@@ -53,12 +53,15 @@ export function ReadyChecklist({
             >
               {ICON[item.status].glyph}
             </span>
+            {/* The plain spaces between the parts are for the accessible name:
+                a flex container does not draw them, and without them a screen
+                reader runs «I orden:Bane» and «Gul teeEndre» together. */}
             <span className="min-w-0 flex-1 font-sans text-sm leading-[normal] text-text">
-              <span className="sr-only">{t(STATUS_WORD[item.status])} </span>
+              <span className="sr-only">{t(STATUS_WORD[item.status])}</span>{' '}
               <span className="text-muted">{item.label}</span>
               {' · '}
               <span className={item.status === 'block' ? 'text-danger' : undefined}>{item.value}</span>
-            </span>
+            </span>{' '}
             {target !== null && (
               <span className="shrink-0 font-sans text-[13px] leading-[normal] font-semibold text-primary">
                 {t('checklist.edit')}
