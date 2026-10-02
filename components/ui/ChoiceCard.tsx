@@ -154,13 +154,15 @@ export function SelectionMark({
   shape?: 'circle' | 'box';
 }) {
   const radius = shape === 'circle' ? 'rounded-full' : 'rounded-md';
+  // The empty ring is 22 px inside its 1.5 px line (content-box), as the
+  // artboard draws it; the filled disc is 22 px across.
   return (
     <span
       aria-hidden="true"
-      className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center text-xs leading-none ${radius} ${
+      className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center text-xs leading-[normal] ${radius} ${
         checked
           ? 'bg-primary text-white dark:text-bg'
-          : 'border-[1.5px] border-field-border'
+          : 'box-content border-[1.5px] border-field-border'
       }`}
     >
       {checked && '✓'}

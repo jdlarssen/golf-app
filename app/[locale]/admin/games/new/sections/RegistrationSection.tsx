@@ -263,8 +263,8 @@ export function RegistrationSection({
  * `isDiscoverableRegistrationMode`, så den ikke kan drifte fra discovery.
  *
  * OPPDAGBAR: lys grønn med forest-tekst, og hvit på et valgt kort (det
- * valgte kortet er selv lys grønt). PRIVAT: --surface-2 med dempet tekst; om
- * natta er dempet tekst 4,21:1 der, så den bruker --text (10,45:1).
+ * valgte kortet er selv lys grønt). PRIVAT: --surface-2 med dempet tekst, også
+ * om natta, som artboardet (4,21:1 der; orkestratorens avgjørelse 02.10).
  */
 function VisibilityBadge({
   discoverable,
@@ -278,7 +278,7 @@ function VisibilityBadge({
   labelPrivate: string;
 }) {
   const tone = !discoverable
-    ? 'bg-surface-2 text-muted dark:text-text'
+    ? 'bg-surface-2 text-muted'
     : onSelectedCard
       ? 'bg-surface text-primary'
       : 'bg-primary-soft text-primary';

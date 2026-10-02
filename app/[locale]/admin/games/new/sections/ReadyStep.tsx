@@ -597,7 +597,8 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
           {showPublishMissing && (
             <p
               id="publish-missing"
-              className="text-center font-sans text-[13px] leading-[normal] font-semibold text-warning-text"
+              // 8 px under the button, as -5-mangler draws it (the tray's gap is 6).
+              className="mt-0.5 text-center font-sans text-[13px] leading-[normal] font-semibold text-warning-text"
             >
               {[
                 missingForPublish.length > 0
@@ -618,7 +619,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
             formAction={draftAction}
             onClick={(e) => dispatchManually(e, draftAction, false)}
             formNoValidate
-            className="w-full"
+            className="w-full leading-[normal]"
             pending={draftPending}
             pendingLabel={t('draftPending')}
             disabled={nameMissing || publishPending}
