@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
+import type { Database } from '@/lib/database.types';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 type CourseRow = {
@@ -25,8 +26,15 @@ type CourseRow = {
   }[];
 };
 
-/** En klubb brukeren er medlem av (#442) — for veiviserens klubb-valg. */
-export type ClubOption = { id: string; name: string };
+/**
+ * En klubb brukeren er medlem av (#442) — for veiviserens klubb-valg. #2439:
+ * `role` er din rolle i klubben, så klubbkortet kan si «Eier» eller «Admin».
+ */
+export type ClubOption = {
+  id: string;
+  name: string;
+  role: Database['public']['Enums']['group_role'];
+};
 
 type UserRow = {
   id: string;
@@ -125,13 +133,13 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
     usersQuery,
-    // #442: klubbene innloggede er medlem av, så veiviseren kan tilby et
-    // valgfritt «Hvem er dette for?»-valg. RLS lar et medlem lese egne
-    // group_members-rader + sine gruppers navn. Tom liste hvis ikke medlem.
+    // #442: klubbene innloggede er medlem av, til klubbvalget i veiviseren.
+    // RLS lar et medlem lese egne group_members-rader + sine gruppers navn.
+    // Tom liste hvis ikke medlem. #2439: `role` står på din egen rad.
     user
       ? supabase
           .from('group_members')
-          .select('groups(id, name, valid_until)')
+          .select('role, groups(id, name, valid_until)')
           .eq('user_id', user.id)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -192,7 +200,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     .map((row) => {
       const g = row.groups;
       if (!g || isClubExpired(g.valid_until)) return null;
-      return { id: g.id, name: g.name };
+      return { id: g.id, name: g.name, role: row.role };
     })
     .filter((c): c is ClubOption => c !== null)
     .sort((a, b) => a.name.localeCompare(b.name, 'no'));
