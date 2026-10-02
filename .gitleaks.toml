@@ -32,6 +32,11 @@ regexes = [
   # Canonical dummy UUID used as a token fixture in unit tests
   # (lib/games/spectate.test.ts).
   '''a1b2c3d4-e5f6-7890-abcd-ef1234567890''',
+  # Fake APNs token in the mocked-phone jest fixture
+  # (native/app/src/data/pushDevice.test.ts, commit 367268478 on main, #2408).
+  # A value regex, not a fingerprint: the fingerprint taken on the PR branch
+  # died at rebase-merge and turned the full-history sweep red (#2470).
+  '''a1b2c3d4e5f6''',
   # Fake credentials in .forge/evaluations/1074-guard-suiten.md — the doc
   # DEMONSTRATES the log scrubber, so it intentionally contains fake
   # secret-shaped strings ("hemmelig" = the tell that they're fixtures).
