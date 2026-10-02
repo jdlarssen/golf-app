@@ -940,7 +940,6 @@
         "paymentLinkHint": "Add your Vipps number, or paste a payment link."
       },
       "players": {
-        "headingDefault": "2. Players",
         "pendingLabel": "Invited player",
         "waitingChip": "Waiting",
         "searchLabel": "Search players",
@@ -955,7 +954,39 @@
         "teamHintSize": "(teams of {size})",
         "counterMatchplay": "{count} of 2 players selected",
         "counterSingular": "{count} player selected",
-        "counterPlural": "{count} players selected"
+        "counterPlural": "{count} players selected",
+        "grid": {
+          "searchPlaceholder": "Search by name",
+          "kickerFriends": "Your friends · last played first",
+          "kickerClub": "Club members · last played first",
+          "kickerAll": "All players",
+          "hcp": "HCP {hcp}",
+          "guest": "Guest",
+          "guestAria": "Add a guest",
+          "email": "Email",
+          "emailAria": "Invite by email",
+          "showAll": "Show all {count}",
+          "hint": "Guests get a name and a handicap, no account. With an email address we send an invitation.",
+          "hintCup": "Guests get a name and a handicap, no account."
+        },
+        "tray": {
+          "count": "{selected} of {target}",
+          "missing": "{missing, plural, one {one more} other {# more}}",
+          "over": "{over, plural, one {one more than planned} other {# more than planned}}",
+          "more": "+{count}"
+        },
+        "email": {
+          "legend": "Invite by email",
+          "hint": "The invitation goes out when you publish the game. If you save it as a draft, the addresses are not kept.",
+          "label": "Email",
+          "add": "Add",
+          "listLegend": "Invited by email",
+          "noRoom": "No room",
+          "noRoomDescription": "The format has no room for everyone. Addresses marked “No room” are not sent.",
+          "removeAria": "Remove {email} from the invitations"
+        },
+        "selectedKicker": "Selected",
+        "listKicker": "All players"
       },
       "teams": {
         "sidesHeading": "Sides",
@@ -1209,7 +1240,7 @@
     "stepCounter": "Step {step} of {total}",
     "back": "Back",
     "stepSubText": {
-      "step4BestBall": "Select 2, 4, 6 or 8 players, then assign teams and flights.",
+      "step4BestBall": "Select an even number of players, then assign teams and flights.",
       "step4Matchplay": "Select 2 players and put one on each side",
       "step4ParStableford": "Select at least 2 players in pairs for each team",
       "step4TeamSize": "Select at least {teamSize} players, then assign teams",
@@ -1244,11 +1275,14 @@
       "hint": "Members can see and sign up for all games you set up for the club."
     },
     "footer": {
-      "next": "Next"
+      "next": "Next",
+      "nextTeams": "Next: the teams",
+      "nextSides": "Next: the sides"
     },
     "step4": {
       "emptyRosterHint": "You'll decide on the next step whether to add players here, or let them sign up themselves.",
-      "expectedCountHint": "You have {count} players. Add exactly that many for the best experience."
+      "pickerSubtitle": "{format} · {players}",
+      "pickerSubtitleLineup": "{format} · {players}, {lineup}"
     },
     "pickerSource": {
       "noClubMembers": "No other members in the club yet.",

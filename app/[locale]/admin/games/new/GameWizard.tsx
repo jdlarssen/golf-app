@@ -12,7 +12,12 @@
  *                          2-step cup-creation-flyt) + mode-spesifikk setup
  *                          (Wolf/Nassau/Skins/.../TeamSizeSelector)
  *   Steg 3 (Bane)        → BasicsSection minus spillnavn + advanced
- *   Steg 4 (Spillere)    → PlayersSection + TeamsAssignmentSection inline
+ *   Steg 4 (Spillere)    → PlayerPickerGrid + PlayerTray (#2321: vennene
+ *                          dine som kort, sist spilt først). Lagformater og
+ *                          singles matchplay fordeler lag/sider/flights på en
+ *                          egen skjerm (`?step=4&skjerm=lag`) med
+ *                          TeamsAssignmentSection; solo-formatene har tee per
+ *                          spiller rett på velgeren.
  *   Steg 5 (Klar)        → ReadyStep (summary + påmelding/allowance/
  *                          kontingent + avanserte + publish/draft)
  *
@@ -23,7 +28,8 @@
  * siden registreringsvalget (som tidligere gjorde spillerlisten valgfri) nå
  * tas EFTER steg 4, ikke før.
  *
- * URL-state: `?step=2..5`. #1380: steg-overganger som arrangøren utløser
+ * URL-state: `?step=2..5`, og `skjerm=lag` for steg 4s andre skjerm (#2321).
+ * #1380: steg-overganger som arrangøren utløser
  * (Neste/Forrige/hopp-til-steg) skriver URL-en med `router.push`, så hvert
  * steg får sin egen history-entry og browser-back fra steg N lander på N-1.
  * Back fra steg 1 går ut av wizard-en (dokumentert intensjon). URL-skriving
@@ -65,7 +71,9 @@ import { FormSection } from '@/components/ui/FormSection';
 import { CardSelect } from '@/components/ui/CardField';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { Intent } from '@/lib/wizard/intent';
-import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
+import { pickerSource, selectablePlayers } from '@/lib/wizard/selectablePlayers';
+import { inviteEmailRoom, pickerCap, playerTarget } from '@/lib/wizard/playerTarget';
+import { pickerSubtitle } from '@/lib/wizard/pickerSubtitle';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
@@ -78,8 +86,12 @@ import { CupSetup } from './CupSetup';
 import { TeamSizeSelector } from './TeamSizeSelector';
 import { useGameFormState, PLAYER_COUNT_DEFAULT } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
-import { PlayersSection } from './sections/PlayersSection';
-import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
+import { PlayerPickerGrid } from './sections/PlayerPickerGrid';
+import { PlayerTray, PlayerTraySpacer } from './sections/PlayerTray';
+import {
+  TeamsAssignmentSection,
+  teamsAssignmentHasContent,
+} from './sections/TeamsAssignmentSection';
 import { PlayerTeeChoiceInputs } from './sections/PlayerTeeChoiceInputs';
 import { ReadyStep } from './sections/ReadyStep';
 import { WolfSetup } from './sections/WolfSetup';
@@ -212,6 +224,17 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
 }
 
 /**
+ * #2321: steg 4s andre skjerm — lag, sider og flights — er `?step=4&skjerm=lag`.
+ * På alle andre steg betyr parameteren ingenting.
+ */
+const TEAMS_SCREEN_PARAM = 'skjerm';
+const TEAMS_SCREEN_VALUE = 'lag';
+
+function parseTeamsScreenFromSearch(sp: URLSearchParams): boolean {
+  return parseStepFromSearch(sp) === 4 && sp.get(TEAMS_SCREEN_PARAM) === TEAMS_SCREEN_VALUE;
+}
+
+/**
  * #1383/#1653: hvor langt inn i veiviseren rutas forvalg rettferdiggjør at en
  * `?step=N`-lenke får lande? Alt OVER taket er en foreldet lenke og sendes
  * tilbake til steg 1.
@@ -307,6 +330,14 @@ export function GameWizard(props: Props) {
   // effekten returnerer tidlig for edit-draft — og en draft-rad seeder uansett
   // hele flyten, så steg-taket (#1653) står på 5.
   const resumingServerDraft = props.mode.kind === 'edit-draft';
+  // #2321: «utkastet er hentet» — signalet `WizardBody` venter på før den
+  // retter en `?step=4&skjerm=lag` som ikke gjelder. Kroppen monteres først
+  // som 'fresh', og barnas effekter kjører før denne effekten henter utkastet;
+  // uten signalet ville en reload av lag-skjermen mistet `skjerm` før de valgte
+  // spillerne kom tilbake. Et serverutkast er hentet fra start. Ved en foreldet
+  // lenke blir det stående false: replace-en under sletter alt `step` og
+  // `skjerm`, og en ny replace ville overskrevet den.
+  const [draftSettled, setDraftSettled] = useState(resumingServerDraft);
   useEffect(() => {
     if (resumingServerDraft) return;
     const found = loadWizardDraft(storageKey, draftContext);
@@ -316,6 +347,7 @@ export function GameWizard(props: Props) {
       // advarer mot mønsteret generelt; for dette tilfellet er det korrekt.
       /* eslint-disable react-hooks/set-state-in-effect */
       setDraft(reconcileWizardDraft(found, { courses, players }));
+      setDraftSettled(true);
       /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
@@ -329,11 +361,15 @@ export function GameWizard(props: Props) {
     // `replace` (ikke push): dette er ikke en navigasjon arrangøren gjorde.
     if (didResetStep.current) return;
     const params = new URLSearchParams(searchParamsString);
-    if (parseStepFromSearch(params) <= stepCeiling) return;
+    if (parseStepFromSearch(params) <= stepCeiling) {
+      setDraftSettled(true);
+      return;
+    }
     didResetStep.current = true;
     // Øvrige params (?intent=, ?klubb=, ?bane=, ?fra=) er seedene RSC-re-
-    // renderen leser — kun `step` skal bort.
+    // renderen leser — kun `step` (og #2321s `skjerm`) skal bort.
     params.delete('step');
+    params.delete(TEAMS_SCREEN_PARAM);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     // ⚠️ `searchParamsString` skal IKKE inn i dep-arrayet, selv om effekten
@@ -353,6 +389,7 @@ export function GameWizard(props: Props) {
       key={draft ? 'restored' : 'fresh'}
       {...props}
       draft={draft}
+      draftSettled={draftSettled}
       storageKey={storageKey}
       draftContext={draftContext}
     />
@@ -362,6 +399,8 @@ export function GameWizard(props: Props) {
 type BodyProps = Props & {
   /** Gjenopprettet utkast, eller null når veiviseren starter blankt. */
   draft: WizardDraft | null;
+  /** #2321: utkastet er hentet (eller finnes ikke) — se `GameWizard`. */
+  draftSettled: boolean;
   storageKey: string;
   draftContext: string;
 };
@@ -386,6 +425,7 @@ function WizardBody({
   entryLabel,
   notice,
   draft,
+  draftSettled,
   storageKey,
   draftContext,
 }: BodyProps) {
@@ -411,6 +451,10 @@ function WizardBody({
   // reconcileres via useEffect under.
   const [step, setStep] = useState<Step>(() =>
     parseStepFromSearch(new URLSearchParams(searchParams.toString())),
+  );
+  // #2321: steg 4s andre skjerm (lag/sider/flights), fra `skjerm=lag`.
+  const [teamsScreen, setTeamsScreen] = useState<boolean>(() =>
+    parseTeamsScreenFromSearch(new URLSearchParams(searchParams.toString())),
   );
 
   // #1380: et gjenopprettet utkast legger seg OVER rutas egne pre-fyll (smart
@@ -446,6 +490,8 @@ function WizardBody({
     initialExpectedPlayerCount: draft
       ? draft.expectedPlayerCount
       : initialExpectedPlayerCount,
+    // #2321: «Inviter på e-post»-adressene overlever reload som resten.
+    initialInviteEmails: draft?.inviteEmails,
   });
 
   // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt
@@ -479,6 +525,33 @@ function WizardBody({
   }, [pickList, state.extraPlayers]);
   const pickListOthers = pickList.filter((p) => p.id !== currentUserId).length;
 
+  // #2321: velgerens regler, hver fra sitt hjem (lib/wizard/*): kilden bak
+  // kickeren, taket der resten av kortene blir grå, målet brettet teller mot
+  // og plassene e-postadressene har igjen.
+  const source = pickerSource({
+    intent: state.intent,
+    groupId: state.groupId,
+    clubMemberIdsByClub,
+  });
+  const cap = pickerCap({
+    gameMode: state.gameMode,
+    requiresTeams: state.requiresTeams,
+    isSolo: state.isSolo,
+    teamSize: state.teamSize,
+  });
+  const target = playerTarget({
+    gameMode: state.gameMode,
+    intent: state.intent,
+    expectedPlayerCount: state.expectedPlayerCount,
+  });
+  // Lagformatene og singles matchplay fordeler lag/sider på en egen skjerm.
+  // Den vises bare når den har innhold (samme vakt som GameForms Inndeling-
+  // panel), så lag-skjermen står aldri tom — heller ikke i én frame.
+  const hasTeamsScreen = state.requiresTeams || state.isMatchplay;
+  const teamsScreenHasContent = teamsAssignmentHasContent(state);
+  const showTeamsScreen =
+    step === 4 && teamsScreen && hasTeamsScreen && teamsScreenHasContent;
+
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
   // reconciler lokal state til URL — men kun når URL-strengen faktisk er
   // endret. Dependency på `searchParams.toString()` (ikke selve objektet)
@@ -489,22 +562,27 @@ function WizardBody({
   useEffect(() => {
     const sp = new URLSearchParams(searchParamsString);
     const urlStep = parseStepFromSearch(sp);
+    const urlTeams = parseTeamsScreenFromSearch(sp);
     // setState inne i en effect ER nødvendig her: vi synker EKSTERN tilstand
     // (URL fra browser-back/forward-nav) inn til React-state. React 19 sin
     // strenge linter advarer mot pattern-en generelt — for vårt URL-sync-
     // tilfelle er den korrekt, så vi disabler regelen lokalt.
     /* eslint-disable react-hooks/set-state-in-effect */
     if (urlStep !== step) setStep(urlStep);
+    if (urlTeams !== teamsScreen) setTeamsScreen(urlTeams);
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParamsString]);
 
   // URL-en for et gitt steg, bygget på dagens søke-parametre (?klubb=, ?fra=
-  // osv. skal overleve steg-navigasjonen).
-  function urlForStep(next: Step): string {
+  // osv. skal overleve steg-navigasjonen). #2321: `skjerm=lag` står bare på
+  // steg 4s andre skjerm.
+  function urlForStep(next: Step, teams = false): string {
     const params = new URLSearchParams(searchParamsString);
     if (next === 1) params.delete('step');
     else params.set('step', String(next));
+    if (next === 4 && teams) params.set(TEAMS_SCREEN_PARAM, TEAMS_SCREEN_VALUE);
+    else params.delete(TEAMS_SCREEN_PARAM);
     const qs = params.toString();
     return qs ? `${pathname}?${qs}` : pathname;
   }
@@ -521,16 +599,22 @@ function WizardBody({
   /** #1837: satt av `handleIntentSelect`, lest av fokus-effekten under. */
   const autoAdvancedRef = useRef(false);
   const stepTitleRef = useRef<HTMLHeadingElement>(null);
+  /** #2321: satt av `goToStep` ved bytte til/fra lag-skjermen. */
+  const screenSwitchRef = useRef(false);
 
-  function goToStep(next: Step) {
-    if (next === step) return;
+  function goToStep(next: Step, teams = false) {
+    if (next === step && teams === teamsScreen) return;
     // #1999: et stegbytte skal aldri kunne ligge i debounce-vinduet. Skriver
     // arrangøren navnet og går videre med én gang, er de siste 0,4 sekundene
     // ellers borte hvis siden lastes på nytt før timeren rekker å fyre.
     flushDraftWrite();
     appInitiatedStepNav.current = true;
+    // #2321: velgeren er lang og knappen står nederst i brettet. Et bytte til
+    // eller fra lag-skjermen starter derfor øverst, med fokus på tittelen.
+    if (teams || showTeamsScreen) screenSwitchRef.current = true;
     setStep(next);
-    router.push(urlForStep(next), { scroll: false });
+    setTeamsScreen(teams);
+    router.push(urlForStep(next, teams), { scroll: false });
   }
 
   // Normaliser URL-en når den ikke speiler steget OG endringen ikke kom fra en
@@ -542,14 +626,41 @@ function WizardBody({
       appInitiatedStepNav.current = false;
       return;
     }
-    const nextUrl = urlForStep(step);
+    const nextUrl = urlForStep(step, teamsScreen);
     const currentQs = searchParamsString;
     const currentUrl = currentQs ? `${pathname}?${currentQs}` : pathname;
     if (nextUrl !== currentUrl) {
       router.replace(nextUrl, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, teamsScreen]);
+
+  // #2321: `skjerm=lag` som ikke gjelder — formatet har ingen lag eller sider,
+  // eller skjermen har ikke innhold (ingen valgte, best ball med én). Under
+  // render vises velgeren (`showTeamsScreen`); her rettes URL-en med replace,
+  // men først når utkastet er hentet (se `draftSettled` i GameWizard).
+  useEffect(() => {
+    if (!draftSettled || step !== 4 || !teamsScreen) return;
+    if (hasTeamsScreen && teamsScreenHasContent) return;
+    // Normaliseringen over skal ikke skrive en gang til for samme bytte.
+    appInitiatedStepNav.current = true;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setTeamsScreen(false);
+    router.replace(urlForStep(4, false), { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftSettled, step, teamsScreen, hasTeamsScreen, teamsScreenHasContent]);
+
+  // #2321: et bytte til eller fra lag-skjermen flytter fokus til tittelen og
+  // ruller til toppen, uten animasjon.
+  useEffect(() => {
+    if (!screenSwitchRef.current) return;
+    screenSwitchRef.current = false;
+    stepTitleRef.current?.focus({ preventScroll: true });
+    // scrollTop, not scrollTo(): instant in every browser (no global
+    // scroll-behavior), and jsdom has no scrollTo.
+    const scroller = document.scrollingElement ?? document.documentElement;
+    scroller.scrollTop = 0;
+  }, [step, teamsScreen]);
 
   // #1837: auto-videre unmounter flisen arrangøren nettopp klikket, og fokus
   // faller til <body> — tastaturbrukere må tabbe fra toppen igjen, og ingen
@@ -589,10 +700,11 @@ function WizardBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.nameTouched]);
 
-  // Instruksen under tittelen på steg 4. Mode-aware siden lag/sider/flighter
-  // varierer per modus. #2260: stegene 1–3 har bare tittelen (steg 2 har
-  // telleren på samme plass). #2282: steg 5 sier hva kortet under viser.
-  const subText = useMemo<string | null>(() => {
+  // Instruksen under tittelen på steg 4s lag-skjerm (#2321). Mode-aware siden
+  // lag/sider/flighter varierer per modus. #2260: stegene 1–3 har bare
+  // tittelen (steg 2 har telleren på samme plass). #2282: steg 5 sier hva
+  // kortet under viser.
+  const teamsSubText = useMemo<string | null>(() => {
     if (step === 5) return t('stepSubText.step5');
     if (step === 4) {
       if (state.isSolo) return null;
@@ -622,6 +734,28 @@ function WizardBody({
     state.isPatsome,
     state.teamSize,
   ]);
+
+  // #2321: undertittelen på velgeren — «Best ball · 4 spillere, 2 lag à 2»,
+  // som på `Spillere-forslag` (orkestratorens avgjørelse 02.10). Uten mål står
+  // bare formatnavnet.
+  function pickerSubText(): string {
+    const format = tModes(state.gameMode as Parameters<typeof tModes>[0]);
+    const sub = pickerSubtitle({ gameMode: state.gameMode, target, teamSize: state.teamSize });
+    if (sub.kind === 'formatOnly') return format;
+    const players = t('formatGrid.lineup.players', { count: sub.players });
+    if (sub.kind === 'players') return t('step4.pickerSubtitle', { format, players });
+    const { lineup } = sub;
+    const lineupText =
+      lineup.kind === 'versus'
+        ? t('formatGrid.lineup.sides', { count: lineup.perSide })
+        : lineup.kind === 'teams'
+          ? t('formatGrid.lineup.teams', { teams: lineup.teams, size: lineup.size })
+          : t('formatGrid.lineup.wolf', { opponents: lineup.opponents });
+    return t('step4.pickerSubtitleLineup', { format, players, lineup: lineupText });
+  }
+  // Steg 4s velger har sin egen undertittel; lag-skjermen og steg 5 tar
+  // instruksen over.
+  const subText = step === 4 && !showTeamsScreen ? pickerSubText() : teamsSubText;
 
   // Cup-creation-flyt diverger fra standard wizard: bare step 1 (intent) og
   // step 2 (CupSetup-form). CupSetup eier sin egen `<form action=...>`
@@ -796,6 +930,15 @@ function WizardBody({
     // Tilbakepila (#2260, var «Forrige») pusher som «Neste» — ikke
     // router.back(). Arrangøren kan ha landet rett på `?step=3` fra en lenke,
     // og da ville back tatt dem ut av veiviseren i stedet for ett steg tilbake.
+    // #2321: lag-skjermen → velgeren, og steg 5 → lag-skjermen når den gjelder.
+    if (step === 4 && showTeamsScreen) {
+      goToStep(4);
+      return;
+    }
+    if (step === 5) {
+      goToStep(4, hasTeamsScreen && teamsScreenHasContent);
+      return;
+    }
     goToStep(Math.max(1, step - 1) as Step);
   }
 
@@ -884,7 +1027,9 @@ function WizardBody({
   // #2260: «Neste» står alene. På steg 2 kommer den først når et format er
   // valgt — før det står ingenting under lista. Steg 5 har publiser-knappene
   // i ReadyStep.
-  const showNext = step === 2 ? state.formatChosen : step < TOTAL_STEPS;
+  // #2321: velgeren på steg 4 har knappen i brettet; lag-skjermen har footeren.
+  const showNext =
+    step === 2 ? state.formatChosen : step === 4 ? showTeamsScreen : step < TOTAL_STEPS;
 
   // ────────────────────────────────────────────────────────────────────
   // Standard 5-step wizard. Wrappet i <form> så ReadyStep sine publish/
@@ -894,7 +1039,7 @@ function WizardBody({
   return (
     <form onSubmit={handleSubmitStart}>
       {top}
-      {/* Steg 4 og 5: 13 px, 4 px under tittelen, som Nyttspill-4-lag. */}
+      {/* Steg 4 og 5: 13 px muted, 4 px under tittelen, som på `Nyttspill-*`. */}
       {subText && (
         <p className="pt-1 font-sans text-[13px] leading-[normal] text-muted">{subText}</p>
       )}
@@ -1063,50 +1208,71 @@ function WizardBody({
         </div>
       )}
 
-      {step === 4 && (
-        <div className="space-y-6 pt-6">
-          {/* #1065: registreringsvalget (hvem kan melde seg på) flyttet til
-              steg 5 — vi vet derfor ikke ENNÅ om spillerlisten er valgfri når
-              admin står her. Hintet under gjelder kun et tomt utvalg (admin
-              har ikke rukket å velge noen ennå) og informerer om at det er en
-              gyldig vei videre (self-påmelding-valget kommer på steg 5), i
-              stedet for det gamle `selfSignupHint`-hintet som forutsatte at
-              valget allerede var tatt (nå død kode — modus er alltid
-              invite_only-default her på en fremover-passering). */}
+      {step === 4 && showTeamsScreen && (
+        // #2321: den andre skjermen — lag, sider og flights (`Nyttspill-4-lag`,
+        // `-4-sider`). Spillerne er valgt på velgeren; antallet står i den
+        // første kicker-raden.
+        <div className="-mx-1">
+          <TeamsAssignmentSection
+            state={state}
+            players={state.allPlayers}
+            hideNumbering
+            showSelectedCount
+          />
+        </div>
+      )}
+
+      {step === 4 && !showTeamsScreen && (
+        // #2321: velgeren (`Spillere-forslag`). Kolonnen trekkes 4 px ut som
+        // på steg 2 og 3, så kortene står 16 px fra skjermkanten.
+        <div className="-mx-1">
+          {/* #1065: registreringsvalget (hvem kan melde seg på) står på steg
+              5, så et tomt utvalg er en gyldig vei videre — hintet sier det. */}
           {state.selectedPlayerIds.length === 0 && (
-            <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-              {t('step4.emptyRosterHint')}
-            </p>
+            <p className={HINT_BOX_CLASS}>{t('step4.emptyRosterHint')}</p>
           )}
-          {/* #373: hint om antall spillere valgt i steg 2 */}
-          {state.selectedPlayerIds.length > 0 &&
-            state.intent === 'kompis' &&
-            state.expectedPlayerCount !== undefined && (
-              <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-                {t('step4.expectedCountHint', { count: state.expectedPlayerCount })}
-              </p>
-            )}
           {/* #464: tom-tilstand når picker-kilden ikke har andre enn deg selv
               (ingen venner, eller en klubb uten andre medlemmer). Solo viser
               hele rosteren, så hintet gjelder ikke der. */}
           {state.intent !== 'solo' && pickListOthers === 0 && (
             <PickerSourceEmptyHint intent={state.intent} groupId={state.groupId} />
           )}
-          <PlayersSection
+          <PlayerPickerGrid
             state={state}
-            players={state.allPlayers}
             selectableIds={pickIds}
-            // #2260: the step's title is «Hvem skal spille?»; a second
-            // heading with the same words would only repeat it.
-            hideHeading
+            source={source}
+            cap={cap}
+            allowEmail={!initialValues?.tournament_id}
           />
-          {/* TeamsAssignmentSection er self-gating per modus — den rendrer
-              kun de relevante under-blokkene (matchplay-sider / lag-grid /
-              flights / per-spiller-tee) basert på state-flags. */}
-          <TeamsAssignmentSection
-            state={state}
-            players={state.allPlayers}
-            hideNumbering
+          {/* Solo-formatene har ingen andre skjerm: tee per spiller står her. */}
+          {!hasTeamsScreen && (
+            <TeamsAssignmentSection
+              state={state}
+              players={state.allPlayers}
+              hideNumbering
+            />
+          )}
+          <PlayerTraySpacer />
+          <PlayerTray
+            selected={state.selectedPlayerIds
+              .map((pid) => state.allPlayers.find((p) => p.id === pid))
+              .filter((p): p is PlayerOption => p !== undefined)}
+            target={target}
+            {...(hasTeamsScreen && state.selectedPlayerIds.length > 0
+              ? {
+                  buttonLabel: state.requiresTeams
+                    ? t('footer.nextTeams')
+                    : t('footer.nextSides'),
+                  canAdvance: teamsScreenHasContent,
+                  disabledHint: nextDisabledHint(),
+                  onNext: () => goToStep(4, true),
+                }
+              : {
+                  buttonLabel: t('footer.next'),
+                  canAdvance: canAdvance(),
+                  disabledHint: nextDisabledHint(),
+                  onNext: goNext,
+                })}
           />
         </div>
       )}
@@ -1134,6 +1300,7 @@ function WizardBody({
         tournamentId={initialValues?.tournament_id}
         tournamentMatchLabel={initialValues?.tournament_match_label}
         rosterLoadedIds={mode.kind === 'create' ? undefined : rosterLoadedIds}
+        inviteEmailCount={inviteEmailRoom({ cap, selected: state.selectedPlayerIds.length })}
       />
 
       {showNext && (
@@ -1168,12 +1335,18 @@ function FormDataInputs({
   tournamentId,
   tournamentMatchLabel,
   rosterLoadedIds,
+  inviteEmailCount,
 }: {
   state: ReturnType<typeof useGameFormState>;
   tournamentId?: string;
   tournamentMatchLabel?: string;
   /** #2210: `roster_loaded_ids`, captured at mount. Undefined when creating. */
   rosterLoadedIds?: string;
+  /**
+   * #2321: how many of the «Inviter på e-post» addresses go along
+   * (`inviteEmailRoom`). The rest are marked «Ikke plass» and stay behind.
+   */
+  inviteEmailCount: number;
 }) {
   const {
     name,
@@ -1482,6 +1655,14 @@ function FormDataInputs({
       {rosterLoadedIds !== undefined && (
         <input type="hidden" name="roster_loaded_ids" value={rosterLoadedIds} />
       )}
+      {/* #2321: the wizard's e-mail invitations, sent once the game is
+          published (never in a cup match, where the wizard has no e-mail
+          card). Read from state on every render, so the room rule holds
+          whichever way the organiser reaches the publish. */}
+      {!tournamentId &&
+        state.inviteEmails.slice(0, inviteEmailCount).map((email) => (
+          <input key={email} type="hidden" name="invite_email" value={email} />
+        ))}
     </>
   );
 }
@@ -1494,6 +1675,13 @@ function FormDataInputs({
 // (CreateLigaForm) så det er én vei til vennegrafen.
 // ──────────────────────────────────────────────────────────────────────
 
+/**
+ * #2321: the hint box on step 4 as `Nyttspill-4-spillere` draws it: radius 12
+ * on the inset surface, no border, 13 px muted, 14 px above.
+ */
+const HINT_BOX_CLASS =
+  'mt-3.5 rounded-xl bg-surface-2 px-3 py-2.5 font-sans text-[13px] leading-[1.45] text-muted';
+
 function PickerSourceEmptyHint({
   intent,
   groupId,
@@ -1504,7 +1692,7 @@ function PickerSourceEmptyHint({
   const t = useTranslations('wizard');
   const noClubMembers = intent === 'klubb' && groupId !== '';
   return (
-    <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+    <p className={HINT_BOX_CLASS}>
       {noClubMembers ? (
         t('pickerSource.noClubMembers')
       ) : (

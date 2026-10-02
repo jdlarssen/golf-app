@@ -25,6 +25,7 @@ function makeDraft(overrides: Partial<WizardDraft> = {}): WizardDraft {
     intent: 'kompis',
     expectedPlayerCount: 4,
     nameTouched: false,
+    inviteEmails: [],
     values: {
       name: 'Lørdagsrunden',
       course_id: 'course-1',
@@ -75,6 +76,20 @@ describe('wizardStatePersistence — lagring og lesing', () => {
     saveWizardDraft(KEY, draft, CONTEXT, NOW);
 
     expect(loadWizardDraft(KEY, CONTEXT, NOW)).toEqual(draft);
+  });
+
+  it('#2321: e-postadressene overlever lagring og lesing; ugyldig eller manglende verdi blir []', () => {
+    const draft = makeDraft({ inviteEmails: ['a@example.com', 'b@example.com'] });
+    saveWizardDraft(KEY, draft, CONTEXT, NOW);
+    expect(loadWizardDraft(KEY, CONTEXT, NOW)?.inviteEmails).toEqual(['a@example.com', 'b@example.com']);
+
+    for (const bad of [undefined, 'a@example.com', [1, 2], null]) {
+      const stored = JSON.parse(window.sessionStorage.getItem(KEY)!);
+      stored.draft.inviteEmails = bad;
+      if (bad === undefined) delete stored.draft.inviteEmails;
+      window.sessionStorage.setItem(KEY, JSON.stringify(stored));
+      expect(loadWizardDraft(KEY, CONTEXT, NOW)?.inviteEmails).toEqual([]);
+    }
   });
 
   it('gir null når ingenting er lagret', () => {

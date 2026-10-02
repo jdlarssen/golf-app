@@ -291,6 +291,7 @@ export function cryptoShuffle<T>(input: T[]): T[] {
 import type { Intent } from '@/lib/wizard/intent';
 import type { StartType } from '@/lib/games/startType';
 import { fitsPlayerCount as fitsPlayerCountFn } from '@/lib/wizard/fitsPlayerCount';
+import { isPlausibleInviteEmail, normalizeInviteEmail } from '@/lib/games/inviteEmail';
 
 type UseGameFormStateInput = {
   initialValues?: InitialValues;
@@ -326,6 +327,9 @@ type UseGameFormStateInput = {
   // De to må kunne skilles fra hverandre, derfor null i stedet for bare et
   // valgfritt tall.
   initialExpectedPlayerCount?: number | null;
+  // #2321: the wizard's «Inviter på e-post» addresses, restored from a
+  // sessionStorage draft. Left out = an empty list.
+  initialInviteEmails?: string[];
 };
 
 /**
@@ -375,6 +379,19 @@ function teamAssignKey(
   return 'teamAssign4';
 }
 
+/**
+ * Does a player match the picker's search? Case-insensitive substring on name,
+ * nickname and e-mail; an empty query matches everyone. #2321: one rule for
+ * the step 4 card grid and GameForm's list (it was inline in `filteredPlayers`).
+ */
+export function playerMatchesSearch(p: PlayerOption, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (q === '') return true;
+  return [p.name ?? '', p.nickname ?? '', p.email ?? ''].some((h) =>
+    h.toLowerCase().includes(q),
+  );
+}
+
 export function useGameFormState({
   initialValues,
   initialNameTouched,
@@ -384,6 +401,7 @@ export function useGameFormState({
   defaultGroupId,
   currentUserId,
   initialExpectedPlayerCount,
+  initialInviteEmails,
 }: UseGameFormStateInput) {
   const tMissing = useTranslations('wizard.form.missing');
 
@@ -475,6 +493,10 @@ export function useGameFormState({
   // Klargjør for klubbskala (100+ spillere) der den flate listen blir
   // upraktisk å scrolle gjennom.
   const [playerSearch, setPlayerSearch] = useState<string>('');
+  // #2321: addresses to invite by e-mail once the game is published. They are
+  // not players until they say yes, so they never count towards the roster or
+  // the publish gate; FormDataInputs sends the ones the format has room for.
+  const [inviteEmails, setInviteEmails] = useState<string[]>(() => initialInviteEmails ?? []);
   // initialValues is read once at mount — D4's edit page passes a stable
   // snapshot from the DB. If the parent ever needs to push live updates,
   // reset via key prop instead.
@@ -1083,14 +1105,10 @@ export function useGameFormState({
   // unngår onødvendige recomputes på re-render av andre felter (tee, hcp,
   // sideturnering osv.) — viktig når listen kan vokse til 100+.
   const filteredPlayers = useMemo(() => {
-    const query = playerSearch.trim().toLowerCase();
     const selectedSet = new Set(selectedPlayerIds);
-    return allPlayers.filter((p) => {
-      if (selectedSet.has(p.id)) return false;
-      if (query === '') return true;
-      const haystacks = [p.name ?? '', p.nickname ?? '', p.email ?? ''];
-      return haystacks.some((h) => h.toLowerCase().includes(query));
-    });
+    return allPlayers.filter(
+      (p) => !selectedSet.has(p.id) && playerMatchesSearch(p, playerSearch),
+    );
   }, [allPlayers, playerSearch, selectedPlayerIds]);
 
   const availableTees = selectedCourse?.tee_boxes ?? [];
@@ -1199,6 +1217,19 @@ export function useGameFormState({
       }
       return [...prev, playerId];
     });
+  }
+
+  // #2321: the e-mail list. `addInviteEmail` normalises and ignores an
+  // implausible or repeated address; the form's «Legg til» also stops at the
+  // room the format has left (`inviteEmailRoom`).
+  function addInviteEmail(raw: string) {
+    const email = normalizeInviteEmail(raw);
+    if (!isPlausibleInviteEmail(email)) return;
+    setInviteEmails((prev) => (prev.includes(email) ? prev : [...prev, email]));
+  }
+
+  function removeInviteEmail(email: string) {
+    setInviteEmails((prev) => prev.filter((e) => e !== email));
   }
 
   // #1009: gjest lagt til fra spillersteget — skygge-brukeren er allerede
@@ -1925,6 +1956,9 @@ export function useGameFormState({
     setStartType,
     playerSearch,
     setPlayerSearch,
+    inviteEmails,
+    addInviteEmail,
+    removeInviteEmail,
     selectedPlayerIds,
     teamByPlayer,
     flightByPlayer,
