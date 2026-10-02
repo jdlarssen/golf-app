@@ -1,26 +1,18 @@
 # One-off historical findings accepted by fingerprint (commit:file:rule:line).
 # Recurring false-positive PATTERNS belong in .gitleaks.toml, not here.
+# Only fingerprint a commit that is ALREADY on main. The repo rebase-merges, so
+# a PR branch's commits get new SHAs at merge and a fingerprint taken on the
+# branch matches nothing afterwards: the weekly full-history sweep then goes
+# red on the same finding (#2308, #2470). A fake value that arrives through a
+# PR goes into .gitleaks.toml as a regex instead. CI enforces this with
+# scripts/check-gitleaksignore.mjs.
 # Verified false positive 2026-07-21: prose about i18n keys in a contract doc
 # ("keys, section/empty/banner extraction") — not a credential.
 252f0812631d89f711a0780383433a3f479ac763:.forge/contracts/581-i18n-fase-2f-offentlig-referanse.md:generic-api-key:323
-# Verified false positive 2026-09-26 (#2241, CI-vakt): a one-off fake token
-# fixture, not the repo's canonical dummy UUID, so the .gitleaks.toml
-# allowlist regex didn't match it. Fixed forward to the canonical value in
-# the next commit; this fingerprint just unblocks the PR's own CI on the
-# commit that already exists in its history.
-ede4f6ae9f820c6a7b6ad4019b71e92fd2484a3a:lib/auth/getInviteLoginContext.test.ts:generic-api-key:16
 # Verified false positive 2026-09-27 (#2308, CI-vakt weekly full-history
-# sweep): an earlier commit in the same #2212 PR history, same file/line,
-# same class as the #2241 entry above — a different one-off fake UUID
-# token (`3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d`) used before the fix-forward
-# commit landed the canonical dummy UUID. Confirmed via
+# sweep): a commit in the #2212 history on main where the TOKEN fixture was a
+# one-off fake UUID (`3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d`) before the
+# fix-forward commit landed the canonical dummy UUID. Confirmed via
 # `git show 36bf95e1:lib/auth/getInviteLoginContext.test.ts` — a vitest
 # fixture, not a real credential.
 36bf95e1a013e6ff198cb04a60490bbdb599155e:lib/auth/getInviteLoginContext.test.ts:generic-api-key:16
-# Verified false positive 2026-09-30 (#2256 PR 4, secret scan on #2408): the
-# fake APNs token `a1b2c3d4e5f6` in a jest fixture for the mocked phone
-# (native/app/src/data/pushDevice.test.ts), not a credential. Fixed forward to
-# the canonical dummy UUID in the next commit, same as the #2241 entry above;
-# this fingerprint unblocks the PR's own CI on the commit already in its
-# history.
-c2ea6835b2075f200b47993dd866099634784c25:native/app/src/data/pushDevice.test.ts:generic-api-key:27
