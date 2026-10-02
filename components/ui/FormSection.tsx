@@ -17,6 +17,12 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
    * 14 px for step 3's fields.
    */
   gap?: 'sm' | 'md' | 'lg';
+  /** Right-aligned in the kicker row, 12 px muted: «8 spillere valgt» (#2321). */
+  aside?: ReactNode;
+  /** 12 px muted text under the kicker, with the kicker's inset (#2321). */
+  description?: ReactNode;
+  /** `tight`: 16 px above the kicker instead of 18, as the step 4 picker draws it (#2321). */
+  legendSpacing?: 'default' | 'tight';
 };
 
 /**
@@ -42,14 +48,30 @@ export function FormSection({
   children,
   variant = 'card',
   gap = 'md',
+  aside,
+  description,
+  legendSpacing = 'default',
   className = '',
   ...rest
 }: Props) {
+  const legendClass = `px-1 pb-2 ${legendSpacing === 'tight' ? 'pt-4' : 'pt-[18px]'} font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted`;
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
-      <legend className="px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
-        {legend}
-      </legend>
+      {aside ? (
+        // The legend content is a flex item of its own: a string becomes an
+        // anonymous item, a heading stays a direct child (no heading in a span).
+        <legend className={`flex w-full items-baseline justify-between gap-3 ${legendClass}`}>
+          {legend}
+          <span className="font-sans text-xs font-medium normal-case leading-[normal] tracking-normal tabular-nums text-muted">
+            {aside}
+          </span>
+        </legend>
+      ) : (
+        <legend className={legendClass}>{legend}</legend>
+      )}
+      {description && (
+        <p className="px-1 pb-2.5 font-sans text-xs leading-[1.45] text-muted">{description}</p>
+      )}
       {variant === 'list' ? (
         <div data-focus-inset className={LIST_CARD_CLASS}>
           {children}

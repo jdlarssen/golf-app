@@ -32,23 +32,45 @@ function Chevron() {
   );
 }
 
-type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className'> & {
+type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className' | 'size'> & {
   label: ReactNode;
   /** Binds the label to the select. */
   id: string;
   hint?: ReactNode;
+  /**
+   * `default`: the 50 px field. `compact` (#2321): the 44 px slot on the team
+   * and side cards and the flight picker — radius 10, 14 px text, 10 px inset.
+   */
+  size?: 'default' | 'compact';
+  /** Keep the label for screen readers only (the slots on a team card). */
+  labelHidden?: boolean;
+  /** Classes on the outer wrapper, e.g. a min width for the flight picker. */
+  wrapperClassName?: string;
 };
+
+const COMPACT_CONTROL =
+  'h-11 w-full rounded-[10px] border bg-surface px-2.5 font-sans text-sm transition-[border-color,box-shadow] duration-150';
 
 /**
  * A native `<select>` drawn as the artboards' field: the chevron is ours (the
  * native arrow is hidden), and the empty option reads muted like a placeholder.
  */
-export function CardSelect({ label, id, hint, value, ...rest }: SelectProps) {
+export function CardSelect({
+  label,
+  id,
+  hint,
+  value,
+  size = 'default',
+  labelHidden = false,
+  wrapperClassName = '',
+  ...rest
+}: SelectProps) {
   const empty = value === '' || value === undefined;
   const hintId = hint ? `${id}-hint` : undefined;
+  const compact = size === 'compact';
   return (
-    <div>
-      <label htmlFor={id} className={CARD_FIELD_LABEL}>
+    <div className={wrapperClassName}>
+      <label htmlFor={id} className={labelHidden ? 'sr-only' : CARD_FIELD_LABEL}>
         {label}
       </label>
       <div className="relative">
@@ -57,10 +79,12 @@ export function CardSelect({ label, id, hint, value, ...rest }: SelectProps) {
           id={id}
           value={value}
           aria-describedby={hintId}
-          className={`${CARD_FIELD_CONTROL} appearance-none border-field-border pr-[38px] disabled:cursor-not-allowed [&>option]:text-text ${empty ? 'text-muted' : 'text-text'}`}
+          className={`${compact ? `${COMPACT_CONTROL} pr-8` : `${CARD_FIELD_CONTROL} pr-[38px]`} appearance-none border-field-border disabled:cursor-not-allowed [&>option]:text-text ${empty ? 'text-muted' : 'text-text'}`}
         />
-        {/* 14 px inside the 1 px outline, as on the artboards. */}
-        <span className="pointer-events-none absolute right-[15px] top-1/2 flex -translate-y-1/2 text-muted">
+        {/* 14 px (compact: 10 px) inside the 1 px outline, as on the artboards. */}
+        <span
+          className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 text-muted ${compact ? 'right-[11px]' : 'right-[15px]'}`}
+        >
           <Chevron />
         </span>
       </div>

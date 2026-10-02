@@ -22,7 +22,8 @@ type Variant =
  * primary turns hairline-beige with muted text instead of fading.
  *
  * #2321, step 4 of the wizard: `chip` is the 44 px pill sized to its label
- * («Trekk tilfeldig», «Vis alle 23», the tee pills), 14 px / 600.
+ * («Trekk tilfeldig», «Vis alle 23», the tee pills), 14 px / 600; `medium` is
+ * the 48 px pill at 15 px / 600 the artboards draw as «Legg til gjest».
  *
  * #2282, the tray on step 5: `xl` is «Publiser og del invitasjonen», 54 px at
  * 16 px / 600 with `large`'s colours (a disabled primary turns hairline-beige
@@ -30,7 +31,7 @@ type Variant =
  * frame, no fill, forest text. `dashed` is the transparent pill with a dashed
  * field outline and forest text: «Last opp sponsorlogo» in the prize table.
  */
-type Size = 'default' | 'compact' | 'large' | 'chip' | 'xl';
+type Size = 'default' | 'compact' | 'large' | 'chip' | 'xl' | 'medium';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
 // hover-lift stay synchronised. Variant-specific colors live in VARIANTS, and
@@ -112,6 +113,10 @@ const CHIP_VARIANTS: Record<Variant, string> = {
   dashed: 'border border-dashed border-field-border bg-transparent hover:bg-primary-soft text-primary',
 };
 
+/** 48 px at 15 px / 600 with the chip's colours (#2321). */
+const MEDIUM_BASE =
+  'inline-flex items-center justify-center h-12 px-[18px] rounded-full text-[15px] font-semibold leading-[normal] transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+
 /** `large` at 54 px; the colours, disabled look included, are `large`'s. */
 const XL_BASE =
   'inline-flex items-center justify-center h-[54px] px-[18px] rounded-full text-base font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed';
@@ -129,6 +134,7 @@ function buttonClasses(variant: Variant, size: Size): string {
   if (size === 'large') return `${LARGE_BASE} ${LARGE_VARIANTS[variant]}`;
   if (size === 'chip') return chipButtonClasses(variant);
   if (size === 'xl') return `${XL_BASE} ${LARGE_VARIANTS[variant]}`;
+  if (size === 'medium') return `${MEDIUM_BASE} ${CHIP_VARIANTS[variant]}`;
   return `${BASE_CLASSES} ${VARIANTS[variant]}`;
 }
 
