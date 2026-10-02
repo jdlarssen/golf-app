@@ -83,8 +83,15 @@ export function PlayerPickerGrid({
     if (guestId === null) return;
     focusAfterGuestRef.current = null;
     const button = guestButtonRef.current;
-    if (button && !button.disabled) button.focus();
-    else gridRef.current?.querySelector<HTMLInputElement>(`input[data-player-id="${guestId}"]`)?.focus();
+    if (button && !button.disabled) {
+      button.focus();
+      return;
+    }
+    // A search that does not match the guest hides their card: the search
+    // field is the nearest place left.
+    const guestCard = gridRef.current?.querySelector<HTMLInputElement>(`input[data-player-id="${guestId}"]`);
+    if (guestCard) guestCard.focus();
+    else document.getElementById('player_search')?.focus();
   });
 
   const selected = new Set(state.selectedPlayerIds);

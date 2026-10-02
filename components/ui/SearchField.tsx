@@ -7,9 +7,10 @@ import type { KeyboardEvent } from 'react';
  * a field with the search icon inside, 12 px from the edge, and the text 8 px
  * after it, as `Spillere-forslag` and `Nyttspill-4-spillere` draw it.
  *
- * Both forms are one `<form>` with no submit button on screen, so the browser
- * would submit the whole form on Enter (the wizard reloaded with every field
- * in the URL and the draft gone). Enter does nothing here. The field has no
+ * Both sit inside one big `<form>`, so the browser would submit it on Enter:
+ * on step 4 of the wizard (no submit button on screen) the page reloaded on
+ * step 1 with every field in the URL and the draft gone, and in GameForm Enter
+ * pressed the first submit button. Enter does nothing here. The field has no
  * `name`, so it never posts.
  *
  * `default` is 50 px and `large` 52 px: the artboards' 48 / 50 px boxes draw
