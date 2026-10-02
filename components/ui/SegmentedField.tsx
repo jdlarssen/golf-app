@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
+import { chipButtonClasses } from './Button';
 
 type Option = { value: string; label: string };
 
@@ -16,6 +17,14 @@ type Props = {
   hint?: ReactNode;
   /** Anker-id på fieldset-en (f.eks. «kjonn» for gender-soft-prompten). */
   id?: string;
+  /**
+   * `segments` (default): the profile page's equal-width tiles under an
+   * uppercase micro-label. `pills` (#2321): the new-game wizard's auto-width
+   * 44 px pills under a 14 px / 600 heading, as «Tee-kategori» on the guest
+   * form — the pill classes are `Button size="chip"`'s.
+   */
+  variant?: 'segments' | 'pills';
+  disabled?: boolean;
 };
 
 /**
@@ -40,6 +49,8 @@ export function SegmentedField({
   onChange,
   hint,
   id,
+  variant = 'segments',
+  disabled = false,
 }: Props) {
   // Roving tabindex + arrow keys (the shared hook): only the selected option
   // (or the first if none selected) is in the tab order.
@@ -49,8 +60,36 @@ export function SegmentedField({
     onChange,
   );
 
+  if (variant === 'pills') {
+    return (
+      <fieldset id={id} disabled={disabled}>
+        <legend className="font-sans text-sm font-semibold leading-[normal] text-text">{legend}</legend>
+        <div role="radiogroup" aria-label={legend} className="mt-3 flex flex-wrap gap-2">
+          {options.map((opt, idx) => {
+            const selected = value === opt.value;
+            return (
+              <button
+                key={opt.value}
+                {...rovingProps(idx)}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                disabled={disabled}
+                onClick={() => onChange(opt.value)}
+                className={chipButtonClasses(selected ? 'primary' : 'secondary')}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        {hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
+      </fieldset>
+    );
+  }
+
   return (
-    <fieldset id={id}>
+    <fieldset id={id} disabled={disabled}>
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         {legend}
       </legend>

@@ -8,10 +8,18 @@ type Props = Omit<FieldsetHTMLAttributes<HTMLFieldSetElement>, 'children'> & {
    * `card` (default): the children sit in a card with a 14 px inset.
    * `bare`: no card — the children sit straight on the page, as the team size
    * tiles do.
+   * `list` (#2321): a card without inset whose children are rows split by the
+   * warm divider («FLIGHTS», «TEE PER SPILLER», the player list).
    */
-  variant?: 'card' | 'bare';
+  variant?: 'card' | 'bare' | 'list';
   /** Space between the card's children: 12 px, or 14 px for step 3's fields. */
   gap?: 'md' | 'lg';
+  /** Right-aligned in the kicker row, 12 px muted: «8 spillere valgt». */
+  aside?: ReactNode;
+  /** 12 px muted text under the kicker, with the kicker's inset. */
+  description?: ReactNode;
+  /** `tight`: 16 px above the kicker instead of 18, as the step 4 picker draws it. */
+  legendSpacing?: 'default' | 'tight';
 };
 
 /**
@@ -28,15 +36,33 @@ export function FormSection({
   children,
   variant = 'card',
   gap = 'md',
+  aside,
+  description,
+  legendSpacing = 'default',
   className = '',
   ...rest
 }: Props) {
+  const legendClass = `px-1 pb-2 ${legendSpacing === 'tight' ? 'pt-4' : 'pt-[18px]'} font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted`;
   return (
     <fieldset {...rest} className={`min-w-0 ${className}`}>
-      <legend className="px-1 pb-2 pt-[18px] font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted">
-        {legend}
-      </legend>
-      {variant === 'card' ? (
+      {aside ? (
+        <legend className={`flex w-full items-baseline justify-between gap-3 ${legendClass}`}>
+          <span>{legend}</span>
+          <span className="font-sans text-xs font-medium normal-case tracking-normal tabular-nums text-muted">
+            {aside}
+          </span>
+        </legend>
+      ) : (
+        <legend className={legendClass}>{legend}</legend>
+      )}
+      {description && (
+        <p className="px-1 pb-2.5 font-sans text-xs leading-[1.45] text-muted">{description}</p>
+      )}
+      {variant === 'list' ? (
+        <div className="divide-y divide-row-divider-warm overflow-hidden rounded-2xl border border-border bg-surface">
+          {children}
+        </div>
+      ) : variant === 'card' ? (
         <div
           className={`flex flex-col rounded-2xl border border-border bg-surface p-3.5 ${
             gap === 'lg' ? 'gap-3.5' : 'gap-3'

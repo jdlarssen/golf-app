@@ -18,8 +18,12 @@ type Variant =
  * so it sits flush at the end of a list row. `large` is the new-game wizard's
  * «Neste» (#2426): 52 px high, 16 px / 600, no lift or shadow, and a disabled
  * primary turns hairline-beige with muted text instead of fading.
+ *
+ * #2321, step 4 of the wizard: `chip` is the 44 px pill sized to its label
+ * («Trekk tilfeldig», «Vis alle 23», the tee pills), 14 px / 600; `medium` is
+ * the 48 px pill at 15 px / 600 the artboards draw as «Legg til gjest».
  */
-type Size = 'default' | 'compact' | 'large';
+type Size = 'default' | 'compact' | 'large' | 'chip' | 'medium';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
 // hover-lift stay synchronised. Variant-specific colors live in VARIANTS, and
@@ -78,9 +82,37 @@ const LARGE_VARIANTS: Record<Variant, string> = {
     'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10 disabled:opacity-50',
 };
 
+const CHIP_BASE =
+  'inline-flex shrink-0 items-center justify-center h-11 px-3.5 rounded-full whitespace-nowrap text-sm font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+
+const CHIP_VARIANTS: Record<Variant, string> = {
+  primary: 'bg-primary hover:bg-primary-hover text-white dark:text-bg',
+  secondary: 'border border-border bg-surface hover:bg-primary-soft text-text',
+  danger: 'bg-danger hover:opacity-90 text-white dark:text-bg',
+  ghost: 'bg-transparent hover:bg-primary-soft text-text',
+  outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft',
+  onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90',
+  onStrongOutline: 'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
+};
+
+const MEDIUM_BASE =
+  'inline-flex items-center justify-center h-12 px-[18px] rounded-full text-[15px] font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+
+/**
+ * The classes for a 44 px pill (`chip`), for a control that is not a `Button`
+ * but must look like one: `SegmentedField variant="pills"` reads them here
+ * instead of copying them.
+ */
+export function chipButtonClasses(variant: Variant): string {
+  return `${CHIP_BASE} ${CHIP_VARIANTS[variant]}`;
+}
+
 function buttonClasses(variant: Variant, size: Size): string {
   if (size === 'compact') return `${COMPACT_BASE} ${COMPACT_VARIANTS[variant]}`;
   if (size === 'large') return `${LARGE_BASE} ${LARGE_VARIANTS[variant]}`;
+  if (size === 'chip') return chipButtonClasses(variant);
+  // The medium pill's colours are the chip's: same flat fill, no lift.
+  if (size === 'medium') return `${MEDIUM_BASE} ${CHIP_VARIANTS[variant]}`;
   return `${BASE_CLASSES} ${VARIANTS[variant]}`;
 }
 
