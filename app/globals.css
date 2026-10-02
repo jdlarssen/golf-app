@@ -131,6 +131,14 @@
    * step darker than --border so a text field reads as a field on the card. */
   --field-border:             #cfc7b3;
 
+  /* The green top of the logged-out front page (#2261), with the artboard's
+   * values: linen text and gold «par» on --surface-strong, the LIVE dot and
+   * the ▲ on the board card. Text and gold are the same in both modes. */
+  --on-strong: #ece5d2;
+  --accent-on-strong: #d4b870;
+  --live-dot: #2d8a4e;
+  --rank-up: #2d7a4a;
+
   /* Skeleton — warm linen, never neutral grey. Base sits between --border and
    * --row-divider-warm; tint is the shimmer-peak lifted one step. */
   --skel-base: #ece5d2;
@@ -281,6 +289,12 @@
     --row-divider-warm:         #2f3f34;
     --field-border:             #3d4f43;
 
+    /* Front page green top (#2261) — see :root. */
+    --on-strong: #ece5d2;
+    --accent-on-strong: #d4b870;
+    --live-dot: #7daa8a;
+    --rank-up: #7daa8a;
+
     /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
     --skel-tint: #2f4734;
@@ -388,6 +402,10 @@
   --stamp-fill:               rgba(212, 184, 112, 0.70);
   --row-divider-warm:         #2f3f34;
   --field-border:             #3d4f43;
+  --on-strong: #ece5d2;
+  --accent-on-strong: #d4b870;
+  --live-dot: #7daa8a;
+  --rank-up: #7daa8a;
 
   --skel-base: #243828;
   --skel-tint: #2f4734;
@@ -454,6 +472,10 @@
   --color-meter-track: var(--meter-track);
   --color-dashed-cta: var(--dashed-cta);
   --color-surface-strong: var(--surface-strong);
+  --color-on-strong: var(--on-strong);
+  --color-accent-on-strong: var(--accent-on-strong);
+  --color-live-dot: var(--live-dot);
+  --color-rank-up: var(--rank-up);
   --color-danger-deep: var(--danger-deep);
 
   --font-serif: var(--font-fraunces);

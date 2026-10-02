@@ -6212,11 +6212,14 @@
     "metaDescription": "Gratis turneringsapp for golf. Sett opp scramble, stableford eller matchplay med venner eller firmaet. Tørny regner handicap og holder tavla live.",
     "loginCta": "Logg inn",
     "hero": {
-      "h1": "Arranger golfturnering på et par minutter",
-      "sub": "Velg spillform, del en lenke med gjengen, og tavla regner netto handicap mens dere spiller. Du trenger verken klubb eller komité.",
+      "h1Pre": "Arranger golfturnering på et ",
+      "h1Gold": "par",
+      "h1Post": " minutter",
+      "sub": "Inviter gjengen, tast slag på mobilen og se tavla oppdatere seg mens dere spiller.",
       "primaryCta": "Prøv Tørny på 60 sekunder",
       "secondaryCta": "Lag din egen turnering",
-      "trust": "Gratis. Ingen app å laste ned."
+      "trust": "Gratis · Ingen app å laste ned · 20+ spillformer",
+      "audienceNav": "Turneringstyper"
     },
     "how": {
       "heading": "Slik arrangerer du en golfturnering",
@@ -6229,18 +6232,11 @@
       "step3Title": "Spill",
       "step3Body": "Alle taster egne slag på mobilen, og tavla oppdaterer seg mens dere går."
     },
-    "board": {
-      "heading": "Tavla lever mens dere spiller",
-      "colPlayer": "Spiller",
-      "colPoints": "Poeng",
-      "rows": [
-        { "name": "Ida", "points": "39" },
-        { "name": "Jonas", "points": "37" },
-        { "name": "Mette", "points": "35" },
-        { "name": "Ola", "points": "34" },
-        { "name": "Kari", "points": "32" }
-      ],
-      "linkLabel": "Prøv den selv i demoen"
+    "liveBoard": {
+      "kicker": "Lørdagsrunden · hull {hole}",
+      "live": "LIVE",
+      "points": " p",
+      "caption": "Eksempel på en live-tavle der plassene og poengene oppdateres hull for hull."
     },
     "formats": {
       "heading": "Over 20 spillformer: scramble, stableford, matchplay og flere til",
