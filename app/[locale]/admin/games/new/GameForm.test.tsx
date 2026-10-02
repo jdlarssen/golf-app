@@ -1660,6 +1660,31 @@ describe('GameForm — #1011 sideturnering serialiseres inline', () => {
   });
 });
 
+describe('GameForm — startkontingenten sendes med (#2282)', () => {
+  // Beløpet og Vipps-feltet har ikke `name` (veiviseren speiler dem i
+  // FormDataInputs). GameForm hadde ingen speiling, så «Lagre endringer» på et
+  // planlagt spill skrev 0 kr og tom lenke over det arrangøren hadde satt.
+  it('FormData har entry_fee_kr og payment_link fra initialValues, én gang hver', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
+        initialValues={{
+          game_mode: 'stableford',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          entry_fee_kr: 200,
+          payment_link: '12345',
+        }}
+      />,
+    );
+    const fd = new FormData(container.querySelector('form')!);
+    expect(fd.getAll('entry_fee_kr')).toEqual(['200']);
+    expect(fd.getAll('payment_link')).toEqual(['12345']);
+  });
+});
+
 describe('GameForm — «Shotgun-start» (#2258)', () => {
   // The checkbox has no name; the always-mounted `start_type` mirror is the
   // one field the save reads, so an edit keeps a shotgun round a shotgun round.

@@ -476,6 +476,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       {/* #2258: the checkbox in BasicsSection has no name; this mirror is the
           one field FormData reads, so a closed panel never loses it. */}
       <input type="hidden" name="start_type" value={state.startType} />
+      {/* #2282: the entry fee and the Vipps field have no name either (the
+          wizard mirrors them in FormDataInputs). Without these two, saving a
+          scheduled game wrote 0 kr and an empty link over the organiser's. */}
+      <input type="hidden" name="entry_fee_kr" value={state.entryFeeKr} />
+      <input type="hidden" name="payment_link" value={state.paymentLink} />
       {initialValues?.tournament_id && (
         <>
           <input
