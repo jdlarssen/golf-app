@@ -1221,8 +1221,10 @@ describe('GameWizard — #1999 et skrevet spillnavn overlever', () => {
 
     // Ingen knapp å trykke på først: feltet ER der, med forslaget i seg.
     const field = nameField();
-    expect(field.tagName).toBe('INPUT');
-    expect(field).toHaveAttribute('type', 'text');
+    // #2282: a one-row textarea (a long name wraps instead of being clipped),
+    // still a plain editable field, never text that turns into one on a tap.
+    expect(screen.getByRole('textbox', { name: /^navn på runden$/i })).toBe(field);
+    expect(field.tagName).toBe('TEXTAREA');
     expect(field).toHaveValue(`Stiklestad GK ${new Date(FUTURE_TEE_OFF).getDate()}. ${['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'][new Date(FUTURE_TEE_OFF).getMonth()]}`);
 
     fireEvent.change(field, { target: { value: 'Klubbkvelden' } });

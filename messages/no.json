@@ -1062,7 +1062,7 @@
         "statusBlock": "Ikke klar:",
         "edit": "Endre",
         "teeOff": "{weekday} {date} kl. {time}",
-        "allowancePct": "{pct} % handicap",
+        "allowancePct": "{pct} % handicap",
         "gross": "brutto",
         "playersWarn": "{selected} av {expected}. Du kan legge til flere senere."
       },
@@ -1309,7 +1309,7 @@
       },
       "chapman": {
         "legend": "Scoring for chapman-matcher",
-        "description": "Styrer handicap for chapman-matcher (dobbel tee, bytt ball, velg beste + vekselslag). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets bruttoslag.",
+        "description": "Styrer handicap for chapman-matcher (dobbel tee, bytt ball, velg beste + vekselslag). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets bruttoslag.",
         "nettoHelper": "Andel av differansen mellom lagenes 60/40-handicap. 100 gir hele differansen (WHS-standard for chapman matchplay).",
         "bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
       },
@@ -1330,30 +1330,30 @@
         "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
         "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
       },
-      "sumEquivalent": "Valget ditt tilsvarer {sumPct} % av summen av banehandicapene.",
+      "sumEquivalent": "Valget ditt tilsvarer {sumPct} % av summen av banehandicapene.",
       "texas": {
         "legend": "Lag-handicap",
         "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
-        "nettoHelper2": "NGF-standard for 2-mannslag: 50 (25 % av summen).",
-        "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
-        "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
+        "nettoHelper2": "NGF-standard for 2-mannslag: 50 (25 % av summen).",
+        "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
+        "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
         "inputLabel": "Prosent av lagets snitt-handicap"
       },
       "ambrose": {
         "legend": "Lag-handicap",
         "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
-        "nettoHelper2": "Ambrose-formelen gir alltid halve snittet: 50 (25 % av summen for 2-mannslag).",
-        "nettoHelper3": "Ambrose-formelen gir alltid halve snittet: 50 (16,7 % av summen for 3-mannslag).",
-        "nettoHelper4": "Ambrose-formelen gir alltid halve snittet: 50 (12,5 % av summen for 4-mannslag).",
+        "nettoHelper2": "Ambrose-formelen gir alltid halve snittet: 50 (25 % av summen for 2-mannslag).",
+        "nettoHelper3": "Ambrose-formelen gir alltid halve snittet: 50 (16,7 % av summen for 3-mannslag).",
+        "nettoHelper4": "Ambrose-formelen gir alltid halve snittet: 50 (12,5 % av summen for 4-mannslag).",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
         "inputLabel": "Prosent av lagets snitt-handicap"
       },
       "florida": {
         "legend": "Lag-handicap",
         "description": "Laget spiller på en andel av snittet av spillernes banehandicap. 100 = hele snittet, 50 = halve. Tørny regner det om til slag per hull.",
-        "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
-        "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
+        "nettoHelper3": "NGF-standard for 3-mannslag: 45 (15 % av summen).",
+        "nettoHelper4": "NGF-standard for 4-mannslag: 40 (10 % av summen).",
         "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
         "inputLabel": "Prosent av lagets snitt-handicap"
       }

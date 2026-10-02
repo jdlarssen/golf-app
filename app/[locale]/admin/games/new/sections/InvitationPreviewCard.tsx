@@ -1,10 +1,25 @@
 'use client';
 
-import type { KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 /** The hint under the card; the name field points at it. */
 export const GAME_NAME_HINT_ID = 'game-name-hint';
+
+/** The name's size on the artboard, and the smallest it shrinks to before it wraps. */
+const NAME_MAX_PX = 26;
+const NAME_MIN_PX = 18;
+
+/**
+ * The size that fits `textWidth` (measured at NAME_MAX_PX) into `available`:
+ * 26 px when it fits, smaller in half pixels down to 18 px, never below. At
+ * 18 px a name that is still too wide wraps to a second line instead.
+ */
+export function fitNamePx(textWidth: number, available: number): number {
+  if (textWidth <= 0 || available <= 0 || textWidth <= available) return NAME_MAX_PX;
+  const scaled = Math.floor(((NAME_MAX_PX * available) / textWidth) * 2) / 2;
+  return Math.max(NAME_MIN_PX, Math.min(NAME_MAX_PX, scaled));
+}
 
 /**
  * The small invitation card on «Klar?» (#2282), drawn as the artboard
@@ -17,7 +32,10 @@ export const GAME_NAME_HINT_ID = 'game-name-hint';
  * tokens, so night follows it.
  *
  * The name is always a field, never text that turns into one on a tap (#1999).
- * The field is the game's `name`, as before.
+ * It is a one-row textarea so a long name is never clipped: it shrinks from
+ * 26 px to 18 px to stay on one centred line, and only below that wraps to a
+ * second centred line. Line breaks cannot be typed or pasted; Enter closes the
+ * keyboard. The field is the game's `name`, as before.
  */
 export function InvitationPreviewCard({
   name,
@@ -36,6 +54,9 @@ export function InvitationPreviewCard({
   formatName: string;
 }) {
   const t = useTranslations('wizard.ready');
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [namePx, setNamePx] = useState(NAME_MAX_PX);
 
   // A missing tee drops its part, a missing course drops both.
   const details = [
@@ -43,10 +64,34 @@ export function InvitationPreviewCard({
     formatName,
   ].join(' · ');
 
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    // The step's Enter guard (ReadyStep) stops the submit; here Enter also
-    // closes the keyboard, as «done» on the key promises.
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing) e.currentTarget.blur();
+  // Fit the name: measure it at 26 px in a hidden twin, compare with the
+  // field's width, then grow the field to its content (one line, or two when
+  // even 18 px is too wide). Runs again when the webfont arrives and when the
+  // field changes width.
+  useLayoutEffect(() => {
+    const field = fieldRef.current;
+    const measure = measureRef.current;
+    if (!field || !measure) return;
+    function fit() {
+      if (!field || !measure) return;
+      const next = fitNamePx(measure.offsetWidth, field.clientWidth);
+      setNamePx(next);
+      field.style.height = 'auto';
+      field.style.height = `${Math.max(44, field.scrollHeight)}px`;
+    }
+    fit();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+    observer?.observe(field);
+    void document.fonts?.ready.then(fit);
+    return () => observer?.disconnect();
+  }, [name, namePx]);
+
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    // A name is one line. Enter would also publish through the form's first
+    // submit button; here it only closes the keyboard, as «done» promises.
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    e.currentTarget.blur();
   }
 
   return (
@@ -57,24 +102,42 @@ export function InvitationPreviewCard({
             <p className="font-sans text-[9px] leading-[normal] font-semibold tracking-[0.3em] text-muted uppercase">
               {t('card.kicker')}
             </p>
-            <label className="block w-full">
+            <div className="relative w-full">
+              {/* The hidden twin sits outside the label, so it never becomes
+                  part of the field's accessible name. */}
+              <span
+                ref={measureRef}
+                aria-hidden="true"
+                className="pointer-events-none invisible absolute top-0 left-0 font-serif text-[26px] font-medium whitespace-pre"
+              >
+                {name || t('gameNamePlaceholder')}
+              </span>
+              <label className="block w-full">
               <span className="sr-only">{t('gameNameLabel')}</span>
-              {/* 26 px marked important: on iOS globals.css lifts fields to
-                  at least 16 px, and only an important size beats it. */}
-              <input
+              {/* The size is an inline style: on iOS globals.css lifts fields
+                  to at least 16 px, and only an inline (or important) size
+                  beats it. The vertical padding keeps one line centred in
+                  the artboard's 44 px. */}
+              <textarea
+                ref={fieldRef}
                 id="name"
                 name="name"
-                type="text"
                 required
+                rows={1}
                 enterKeyHint="done"
                 value={name}
-                onChange={(e) => onNameChange(e.target.value)}
+                onChange={(e) => onNameChange(e.target.value.replace(/[\r\n]+/g, ' '))}
                 onKeyDown={handleKeyDown}
                 placeholder={t('gameNamePlaceholder')}
                 aria-describedby={GAME_NAME_HINT_ID}
-                className="h-11 w-full border-0 border-b-[1.5px] border-dashed border-slot-dashed bg-transparent text-center font-serif text-[26px]! leading-[normal] font-medium text-text placeholder:text-muted"
+                style={{
+                  fontSize: `${namePx}px`,
+                  paddingBlock: `${(44 - namePx * 1.2) / 2}px`,
+                }}
+                className="block min-h-11 w-full resize-none overflow-hidden border-0 border-b-[1.5px] border-dashed border-slot-dashed bg-transparent px-0 text-center font-serif leading-[1.2] font-medium text-text placeholder:text-muted"
               />
-            </label>
+              </label>
+            </div>
             {when && (
               <p className="font-sans text-[13px] leading-[normal] text-text tabular-nums first-letter:uppercase">
                 {t('card.when', when)}
