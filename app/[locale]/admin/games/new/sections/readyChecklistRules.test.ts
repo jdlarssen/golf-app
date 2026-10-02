@@ -42,6 +42,8 @@ describe('readyChecklist — rows and targets', () => {
     ['tee_off', 'teeOff', 3],
     ['players', 'players', 4],
     ['allowance', 'format', 'advanced'],
+    // #2439: the club is chosen on step 2, above the format list.
+    ['club', 'format', 2],
   ])('code %s blocks the %s row, «Endre» goes to %s', (code, key, target) => {
     const rows = readyChecklist({ ...BASE, codes: [code], messages: [`msg-${code}`] });
     const hit = row(rows, key);

@@ -1225,7 +1225,8 @@
         "soloMin": "minst én spiller",
         "invalidAllowance": "gyldig HCP-andel",
         "categoryMissingRating": "en eller flere spillere har en kategori tee-en ikke støtter",
-        "pendingProfiles": "{count, plural, one {1 spiller som ikke har fullført profilen sin} other {# spillere som ikke har fullført profilen sin}}"
+        "pendingProfiles": "{count, plural, one {1 spiller som ikke har fullført profilen sin} other {# spillere som ikke har fullført profilen sin}}",
+        "club": "klubb"
       }
     },
     "stepTitle": {
@@ -1256,7 +1257,8 @@
       "step3NoCourse": "Velg bane først",
       "step3NoTee": "Velg tee-boks",
       "step3TeeOffPast": "Rett tee-off-tiden. Den kan ikke være i fortiden.",
-      "step4Prefix": "Mangler: {item}"
+      "step4Prefix": "Mangler: {item}",
+      "step2NoClub": "Velg klubben først"
     },
     "playerCount": {
       "legend": "Hvor mange er dere?",
@@ -1268,10 +1270,10 @@
       "unsetAriaLabel": "Antall ikke valgt"
     },
     "club": {
-      "legend": "For hvilken klubb?",
-      "label": "Klubb",
-      "noClub": "Ingen klubb",
-      "hint": "Medlemmene kan se og melde seg på alle spill du setter opp for klubben."
+      "legend": "Hvilken klubb?",
+      "hint": "Medlemmene kan se og melde seg på alle spill du setter opp for klubben.",
+      "memberCount": "{count, plural, one {# medlem} other {# medlemmer}}",
+      "roleAndCount": "{role} · {count, plural, one {# medlem} other {# medlemmer}}"
     },
     "footer": {
       "next": "Neste",

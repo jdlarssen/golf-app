@@ -289,6 +289,7 @@ export function cryptoShuffle<T>(input: T[]): T[] {
 }
 
 import type { Intent } from '@/lib/wizard/intent';
+import { isValidClubChoice, startClubId } from '@/lib/wizard/clubChoice';
 import type { StartType } from '@/lib/games/startType';
 import { fitsPlayerCount as fitsPlayerCountFn } from '@/lib/wizard/fitsPlayerCount';
 import { isPlausibleInviteEmail, normalizeInviteEmail } from '@/lib/games/inviteEmail';
@@ -313,6 +314,11 @@ type UseGameFormStateInput = {
   // #442: forhåndsvalgt klubb-id (fra ?klubb= search-param eller
   // initialValues.group_id). Tom streng = ingen klubb valgt.
   defaultGroupId?: string;
+  // #2439: id-ene til de gyldige klubbene (medlem, ikke utløpt). En klubb-
+  // turnering krever en av dem, og med bare én er den valgt fra start. Må være
+  // en stabil referanse (setIntent har den i dep-lista). GameForm sender den
+  // ikke; der er intent alltid undefined.
+  clubIds?: readonly string[];
   // #1066: innlogget brukers id (samme prop som GameWizard sender videre til
   // selectablePlayers/#464). Brukes KUN til å forhåndsvelge arrangøren som
   // spiller når kompis-intent velges (setIntent-handleren under) — en
@@ -332,6 +338,9 @@ type UseGameFormStateInput = {
   initialInviteEmails?: string[];
 };
 
+/** #2439: stabil standard for `clubIds`, så `setIntent` ikke får ny identitet hver render. */
+const NO_CLUBS: readonly string[] = [];
+
 /**
  * #1065: locale-uavhengig kategori-kode for hvert element i
  * `missingForPublish`. Display-strengene er oversatt per locale (via
@@ -340,12 +349,14 @@ type UseGameFormStateInput = {
  * leser den parallelle `missingForPublishCodes`-listen i stedet for å matche
  * på oversatt tekst — tekst-matching brakk i engelsk locale.
  *
+ * - 'club' → hører til steg 2 (klubbvalget over formatlista, #2439)
  * - 'course' / 'tee_box' / 'tee_off' → hører til steg 3 (Bane)
  * - 'players' → spiller-/lag-relatert, hører til steg 4 (Spillere)
  * - 'allowance' → konfig-verdi, hører til steg 5 (allowance-feltene i
  *   ReadyStep sin disclosure)
  */
 export type MissingForPublishCode =
+  | 'club'
   | 'course'
   | 'tee_box'
   | 'tee_off'
@@ -399,6 +410,7 @@ export function useGameFormState({
   courses,
   initialIntent,
   defaultGroupId,
+  clubIds = NO_CLUBS,
   currentUserId,
   initialExpectedPlayerCount,
   initialInviteEmails,
@@ -802,10 +814,16 @@ export function useGameFormState({
   const [letFriendsSkipGate, setLetFriendsSkipGate] = useState<boolean>(
     initialValues?.let_friends_skip_gate ?? false,
   );
-  // #442: valgfri klubb-tilknytning. Prioritert rekkefølge: initialValues
-  // (edit-pre-fyll), deretter defaultGroupId (fra ?klubb=-param), ellers ''.
-  const [groupId, setGroupId] = useState<string>(
-    initialValues?.group_id ?? defaultGroupId ?? '',
+  // #442: klubb-tilknytning. Prioritert rekkefølge: initialValues
+  // (edit-pre-fyll), deretter defaultGroupId (fra ?klubb=-param). #2439: uten
+  // noen av dem starter en klubb-turnering med den ene gyldige klubben når du
+  // bare har én, ellers ''.
+  const [groupId, setGroupId] = useState<string>(() =>
+    startClubId({
+      intent: initialIntent,
+      seeded: initialValues?.group_id ?? defaultGroupId ?? '',
+      clubIds,
+    }),
   );
 
   // Klubb-tilknytning gir bare mening for klubb-intent. Når brukeren bytter til
@@ -829,18 +847,25 @@ export function useGameFormState({
   // seleksjonen igjen er tom — en akseptert konsekvens av den enkle regelen,
   // valgt fremfor å tracke et eksplisitt "ikke seed meg"-flagg for et edge-case
   // som er sjeldent nok til at re-seeding ikke er plagsomt.
+  // #2439: klubb-intent beholder en klubb som alt er valgt, og velger ellers
+  // den ene gyldige klubben (startClubId).
   const setIntent = useCallback(
     (next: Intent | undefined) => {
       setIntentRaw(next);
       if (next !== 'klubb') setGroupId('');
+      else setGroupId((prev) => startClubId({ intent: 'klubb', seeded: prev, clubIds }));
       if (next === 'kompis' && currentUserId) {
         setSelectedPlayerIds((prev) =>
           prev.length === 0 ? [currentUserId] : prev,
         );
       }
     },
-    [currentUserId],
+    [currentUserId, clubIds],
   );
+
+  // #2439: en klubb-turnering krever en gyldig klubb. Regelen bor i
+  // lib/wizard/clubChoice; GameWizard leser denne verdien, aldri sin egen kopi.
+  const clubChoiceValid = isValidClubChoice({ intent, groupId, clubIds });
 
   // #643: en klubb-turnering er medlemskaps-styrt — medlemmer ser og melder seg
   // på via discovery uansett registration_mode (by-design, jf. getDiscoverableGames
@@ -1715,6 +1740,7 @@ export function useGameFormState({
   ).length;
 
   const canPublish =
+    clubChoiceValid &&
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
@@ -1742,6 +1768,8 @@ export function useGameFormState({
     missingForPublish.push(message);
     missingForPublishCodes.push(code);
   };
+  // #2439: klubben velges på steg 2, så den står før bane.
+  if (!clubChoiceValid) pushMissing('club', tMissing('club'));
   if (courseId === '') pushMissing('course', tMissing('course'));
   if (teeBoxId === '') pushMissing('tee_box', tMissing('teeBox'));
   if (!hasTeeOff) pushMissing('tee_off', tMissing('teeOffTime'));
@@ -2045,6 +2073,8 @@ export function useGameFormState({
     // #442: klubb-tilknytning for create-flyten
     groupId,
     setGroupId,
+    // #2439: false for en klubb-turnering uten gyldig klubb
+    clubChoiceValid,
     // #643: true når et klubb-spill — veiviseren skjuler påmeldings-modus-valget
     isClubScoped,
     // #1400: synlighets-valget som controlled state — se kommentaren ved
