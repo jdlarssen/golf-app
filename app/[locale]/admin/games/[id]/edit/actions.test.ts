@@ -75,8 +75,11 @@ vi.mock('@/lib/games/createGuestPlayer', () => ({
 // #1009: rollback-re-insertet går via service-role (snapshotet kan inneholde
 // gjeste-rader som 0115-guarden ville avvist på request-klienten). Testene
 // deler mock-klient så insert-kallene fortsatt telles i __fromCalls.
+// #2321: a test can swap in a separate service client to prove the request
+// client is the one handed on.
+let adminClientOverride: unknown = null;
 vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => supabaseMock,
+  getAdminClient: () => adminClientOverride ?? supabaseMock,
 }));
 
 // #2321: the wizard's e-mail invitations. The sender has its own tests; here
@@ -968,6 +971,9 @@ describe('e-mail invitations when a draft is published (#2321)', () => {
     );
     signIn('admin-1');
     sendPublishInvitesMock.mockResolvedValueOnce({ failed: 2 });
+    // The service client is a different object here, so handing it on by
+    // mistake fails the client/viewer asserts below.
+    adminClientOverride = buildSupabaseMock([]);
 
     const { publishFromDraftAction, saveDraftAction } = await import('./actions');
     const publishData = fullBestBallFormData();
@@ -987,7 +993,9 @@ describe('e-mail invitations when a draft is published (#2321)', () => {
     });
     expect(call.client).toBe(supabaseMock);
     expect(call.viewer).toBe(supabaseMock);
+    expect(call.client).not.toBe(adminClientOverride);
     expect(lastRedirect()).toBe('/admin/games/game-inv?status=scheduled&error=invites_failed');
+    adminClientOverride = null;
 
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Ola' }, error: null },

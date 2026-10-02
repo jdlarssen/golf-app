@@ -18,27 +18,11 @@ import type { GameFormState } from '../useGameFormState';
 import { FormSection } from '@/components/ui/FormSection';
 import { GuestBadge } from '@/components/ui/GuestBadge';
 import { MiniChip } from '@/components/ui/MiniChip';
+import { SearchField } from '@/components/ui/SearchField';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { pickerCap } from '@/lib/wizard/playerTarget';
 import { GuestPlayerAdd } from './GuestPlayerAdd';
 import { playerOptionLabel, playerOptionShortName } from './playerLabels';
-
-function SearchIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
-    </svg>
-  );
-}
 
 export function PlayersSection({
   state,
@@ -129,25 +113,16 @@ export function PlayersSection({
       </FormSection>
 
       {/* Søkefelt — substring-match på navn/kallenavn/e-post
-          (`playerMatchesSearch`). */}
-      <div className="relative mt-3.5">
-        <span className="pointer-events-none absolute left-[13px] top-1/2 flex -translate-y-1/2 text-muted">
-          <SearchIcon />
-        </span>
-        <label htmlFor="player_search" className="sr-only">
-          {t('searchLabel')}
-        </label>
-        <input
-          id="player_search"
-          type="search"
-          value={playerSearch}
-          onChange={(e) => setPlayerSearch(e.target.value)}
-          placeholder={t('searchPlaceholder')}
-          aria-label={t('searchLabel')}
-          autoComplete="off"
-          className="h-[52px] w-full rounded-xl border border-field-border bg-surface pl-[38px] pr-3 font-sans text-base text-text placeholder:text-muted"
-        />
-      </div>
+          (`playerMatchesSearch`). Enter sender ikke skjemaet. */}
+      <SearchField
+        id="player_search"
+        className="mt-3.5"
+        size="large"
+        label={t('searchLabel')}
+        value={playerSearch}
+        onChange={setPlayerSearch}
+        placeholder={t('searchPlaceholder')}
+      />
 
       <FormSection variant={filteredPlayers.length === 0 ? 'bare' : 'list'} legend={t('listKicker')}>
         {players.length === 0 ? (

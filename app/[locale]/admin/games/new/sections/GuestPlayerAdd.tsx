@@ -22,6 +22,7 @@ import { useId, useState, useTransition, type KeyboardEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { createGuestForWizard } from '@/app/[locale]/games/guestPlayerActions';
 import { Button } from '@/components/ui/Button';
+import { FormSectionText } from '@/components/ui/FormSection';
 import { Input } from '@/components/ui/Input';
 import { SegmentedField } from '@/components/ui/SegmentedField';
 import type { GameFormState } from '../useGameFormState';
@@ -36,8 +37,8 @@ export function GuestPlayerFields({
 }: {
   state: GameFormState;
   disabled?: boolean;
-  /** Called after the guest is added and selected (the opener closes the form). */
-  onAdded?: () => void;
+  /** Called with the guest's id after the guest is added and selected (the opener closes the form). */
+  onAdded?: (guestId: string) => void;
   /** The card's id, for the opener's `aria-controls`. */
   id?: string;
 }) {
@@ -66,7 +67,7 @@ export function GuestPlayerFields({
         setName('');
         setHcp('');
         setTee('M');
-        onAdded?.();
+        onAdded?.(res.player.id);
       } else {
         setError(res.error);
       }
@@ -95,7 +96,7 @@ export function GuestPlayerFields({
       data-testid="wizard-guest-add"
       className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3.5"
     >
-      <p className="font-sans text-[13px] leading-[1.45] text-muted">{t('guestForm.hint')}</p>
+      <FormSectionText>{t('guestForm.hint')}</FormSectionText>
       <Input
         variant="card"
         id={`${fieldId}-name`}
