@@ -1389,8 +1389,8 @@
       "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.",
       "pending_players_generic": "Noen på spillerlista har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.",
       "bad_registration_mode": "Valget for hvem som kan melde seg på er ugyldig. Sett det på nytt under «Hvem kan melde seg på?».",
-      "bad_registration_type": "Typen påmelding er ugyldig. Velg solo, lag eller begge deler.",
-      "team_registration_unsupported_mode": "Lag-påmelding funker ikke med dette formatet. Velg solo-påmelding, eller bytt til et format som spilles i lag.",
+      "bad_registration_type": "Typen påmelding er ugyldig. Velg «Individuelt» eller «Lag».",
+      "team_registration_unsupported_mode": "Lag-påmelding funker ikke med dette formatet. Velg «Individuelt», eller bytt til et format som spilles i lag.",
       "unexpected": "Klarte ikke å lagre spillet ({code}). Bane, tid, format og spillere står som du satte dem, så prøv en gang til."
     },
     "page": {
@@ -5689,7 +5689,7 @@
     "goToInboxButton": "Gå til innboks",
     "inviteTeamOnlyBanner": "Dette spillet tar imot lag via invitasjon. Be arrangøren invitere laget ditt direkte.",
     "inviteNotInvitedIntro": "Du er ikke invitert ennå, men du kan be arrangøren om plass.",
-    "teamUnsupportedModeBanner": "Spillmodusen «{mode}» har ikke lag-konsept. Be arrangøren bytte til solo-påmelding.",
+    "teamUnsupportedModeBanner": "Spillmodusen «{mode}» spilles ikke i lag. Be arrangøren bytte påmeldingen til «Individuelt».",
     "badTeamSizeBanner": "Lag-størrelsen er ikke riktig satt opp. Be arrangøren sjekke innstillingene.",
     "teamInvitePointerBanner": "Du er invitert til et lag i dette spillet. Gå til laget ditt for å bli med, eller meld på et eget lag under.",
     "goToTeamButton": "Gå til laget",
@@ -5803,7 +5803,7 @@
       "side_full": "Siden ble nettopp full. Velg den andre siden.",
       "game_full": "Spillet er fullt — alle plassene er tatt.",
       "wrong_type": "Dette spillet tar ikke imot lag-påmelding.",
-      "mode_does_not_support_teams": "Spillmodusen støtter ikke lag. Velg solo-påmelding i stedet.",
+      "mode_does_not_support_teams": "Spillmodusen støtter ikke lag. Be arrangøren bytte påmeldingen til «Individuelt».",
       "team_name_invalid": "Lag-navnet må være 3–40 tegn.",
       "slots_count_wrong": "Feil antall medspillere. Fyll inn alle plassene.",
       "duplicate_emails": "Du har lagt inn samme e-post på flere plasser.",

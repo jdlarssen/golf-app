@@ -1389,8 +1389,8 @@
       "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published.",
       "pending_players_generic": "Someone on the player list has not completed registration yet. They must log in and fill in their name and handicap before the game can be published.",
       "bad_registration_mode": "The sign-up setting is invalid. Set it again under \"Who can sign up?\".",
-      "bad_registration_type": "The sign-up type is invalid. Choose solo, team or both.",
-      "team_registration_unsupported_mode": "Team sign-up doesn't work with this format. Switch to solo sign-up, or pick a format played in teams.",
+      "bad_registration_type": "The sign-up type is invalid. Choose \"Individual\" or \"Team\".",
+      "team_registration_unsupported_mode": "Team sign-up doesn't work with this format. Choose \"Individual\", or pick a format played in teams.",
       "unexpected": "Couldn't save the game ({code}). The course, time, format and players are still as you set them, so give it another go."
     },
     "page": {
@@ -5803,7 +5803,7 @@
       "side_full": "That side just filled up. Please choose the other side.",
       "game_full": "The game is full — all spots are taken.",
       "wrong_type": "This game doesn't accept team sign-ups.",
-      "mode_does_not_support_teams": "The game mode doesn't support teams. Choose individual sign-up instead.",
+      "mode_does_not_support_teams": "The game mode doesn't support teams. Ask the organiser to switch to individual sign-up.",
       "team_name_invalid": "The team name must be between 3 and 40 characters.",
       "slots_count_wrong": "Wrong number of playing partners. Please fill in all slots.",
       "duplicate_emails": "You've entered the same email address in multiple slots.",
