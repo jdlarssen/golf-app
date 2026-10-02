@@ -224,7 +224,7 @@ function parseStepFromSearch(sp: URLSearchParams): Step {
 }
 
 /**
- * #2321: steg 4s andre skjerm — lag, sider og flights — er `?step=4&skjerm=lag`.
+ * #2321: steg 4s andre skjerm (lag, sider og flights) er `?step=4&skjerm=lag`.
  * På alle andre steg betyr parameteren ingenting.
  */
 const TEAMS_SCREEN_PARAM = 'skjerm';

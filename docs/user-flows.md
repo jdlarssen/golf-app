@@ -181,7 +181,7 @@ flowchart LR
 
 ### A1 — Opprett spill (GameWizard, 5 steg)
 
-Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new`; vanlig spiller går Spill-flaten → `/opprett-spill`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg).
+Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new`; vanlig spiller går Spill-flaten → `/opprett-spill`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg). Steg 4 har en andre skjerm for lag, sider og flights (`?step=4&skjerm=lag`, #2321).
 
 ```mermaid
 flowchart LR
@@ -198,7 +198,7 @@ flowchart LR
 | 1 Arrangement | `IntentSelector` | Intent styrer format-katalog (`getFormatsForIntent`). |
 | 2 Format | `FormatGrid` (eller `CupSetup`) | **DB-drevet** fra `formats` + `format_intent_mapping`, anbefalt format først: med antall (Kompis) er det første formatet som passer, et stort kort, og tre til står under (#2260). Cup → `createTournamentDraft` → `tournaments`-rad → `/admin/cup/[id]`. |
 | 3 Bane og tidspunkt | `BasicsSection` | Bane + tee-boks (fra `getNewGameFormData`), tee-off (Oslo-tz), auto-navn. |
-| 4 Spillere | `PlayersSection` + `TeamsAssignmentSection` | Velg spillere + lag/flight/tee-kjønn. Hoppes hvis selv-påmelding er på. |
+| 4 Spillere | `PlayerPickerGrid` + `PlayerTray`, så `TeamsAssignmentSection` | Vennene (eller klubbmedlemmene) som kort, du selv først og så sist spilt først (`orderPickerPlayers`, #2321). Brettet nederst teller mot målet («3 av 4 · én til»). Lagformater og singles matchplay fordeler lag, sider og flights på en egen skjerm («Neste: lagene»); solo-formatene har tee per spiller på velgeren. Gjest legges til fra «+ Gjest»; «✉ E-post» samler adresser som inviteres når spillet publiseres (`sendPublishInvites`). Steget kan stå tomt hvis selv-påmelding velges på steg 5. |
 | 5 Klar? | `ReadyStep` | Et lite invitasjonskort med spillnavnet som felt midt i kortet, og en sjekkliste (Bane, Format, Tee-off, Spillere) med status og «Endre» som hopper til steget valget bor på (#2282). Under lista: «Hvem kan melde seg på?» og «Vis avanserte innstillinger». Brettet nederst: «Publiser og del invitasjonen» (`createAndPublishGame`, status `scheduled` + invitasjoner) eller «Lagre som utkast» (`createGameDraft`, status `draft`). |
 
 ### A2 — Administrer spill
