@@ -55,7 +55,6 @@
 import {
   Fragment,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -68,9 +67,10 @@ import { useRouter, usePathname, Link } from '@/i18n/navigation';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { FormSection } from '@/components/ui/FormSection';
-import { CardSelect } from '@/components/ui/CardField';
+import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { Intent } from '@/lib/wizard/intent';
+import { startIntent } from '@/lib/wizard/clubChoice';
 import { pickerSource, selectablePlayers } from '@/lib/wizard/selectablePlayers';
 import { inviteEmailRoom, pickerCap, playerTarget } from '@/lib/wizard/playerTarget';
 import { pickerSubtitle } from '@/lib/wizard/pickerSubtitle';
@@ -210,6 +210,9 @@ type Props = {
 };
 
 const TOTAL_STEPS = 5;
+
+/** #2439: stable default for `clubs`, so `validClubIds` is not recomputed every render. */
+const NO_CLUB_OPTIONS: ClubOption[] = [];
 
 /** Hvor lenge vi venter etter siste tastetrykk før utkastet skrives. */
 const DRAFT_WRITE_DEBOUNCE_MS = 400;
@@ -412,7 +415,7 @@ function WizardBody({
   initialValues,
   initialIntent,
   formatsByIntent,
-  clubs = [],
+  clubs = NO_CLUB_OPTIONS,
   defaultGroupId,
   friendPlayerIds = [],
   clubMemberIdsByClub = {},
@@ -468,6 +471,18 @@ function WizardBody({
     rosterLoadedIdsValue(initialValues?.players),
   );
 
+  // #2439: the clubs a club tournament may be for — the valid clubs, plus,
+  // when resuming a server draft, the draft's own club. The edit action never
+  // writes `group_id`, so an admin resuming another club's draft must not get
+  // stuck on step 2.
+  const validClubIds = useMemo(() => {
+    const ids = clubs.map((c) => c.id);
+    if (mode.kind === 'edit-draft' && defaultGroupId && !ids.includes(defaultGroupId)) {
+      ids.push(defaultGroupId);
+    }
+    return ids;
+  }, [clubs, mode.kind, defaultGroupId]);
+
   const state = useGameFormState({
     initialValues: seedValues,
     // #1999: auto-navnet slutter å overstyre navnet så snart et menneske har
@@ -479,8 +494,14 @@ function WizardBody({
     initialNameTouched: draft ? draft.nameTouched : undefined,
     players,
     courses,
-    initialIntent: draft?.intent ?? initialIntent,
+    // #2439: a club tournament without a valid club starts on step 1 with
+    // nothing chosen, since step 1 does not offer «Klubb-turnering» then.
+    initialIntent: startIntent({
+      intent: draft?.intent ?? initialIntent,
+      clubIds: validClubIds,
+    }),
     defaultGroupId,
+    clubIds: validClubIds,
     // #1066: seeder arrangøren som spiller ved kompis-intent (se setIntent i
     // useGameFormState). Samme prop #464 allerede bruker for selectablePlayers.
     currentUserId,
@@ -878,7 +899,8 @@ function WizardBody({
       if (isNewCupFlow) return false;
       // For øvrige intents må format være valgt (klikket et kort i
       // FormatGrid eller låst inn via cup-link/edit) før vi kan gå videre.
-      return state.formatChosen;
+      // #2439: en klubb-turnering krever i tillegg en gyldig klubb.
+      return state.formatChosen && state.clubChoiceValid;
     }
     if (step === 3) return state.courseId !== '' && state.teeBoxId !== '' && !state.teeOffInPast;
     // Steg 4: vanligvis krever vi en gyldig spiller-fordeling per modus.
@@ -902,6 +924,9 @@ function WizardBody({
     }
     if (step === 2 && !isNewCupFlow && !state.formatChosen) {
       return t('disabledHint.step2NoFormat');
+    }
+    if (step === 2 && !isNewCupFlow && !state.clubChoiceValid) {
+      return t('disabledHint.step2NoClub');
     }
     if (step === 3) {
       if (state.courseId === '') return t('disabledHint.step3NoCourse');
@@ -1003,6 +1028,7 @@ function WizardBody({
               disabled={state.lockGameMode}
               isAdmin={isAdmin}
               isClubAdmin={isClubAdmin}
+              hasClub={validClubIds.length > 0}
             />
           </div>
         )}
@@ -1052,6 +1078,7 @@ function WizardBody({
             disabled={state.lockGameMode}
             isAdmin={isAdmin}
             isClubAdmin={isClubAdmin}
+            hasClub={validClubIds.length > 0}
           />
         </div>
       )}
@@ -1070,6 +1097,21 @@ function WizardBody({
             </div>
           ) : state.intent === 'cup' ? null : (
             <>
+              {/* #2439: the club belongs to «Klubb-turnering», so it is chosen
+                  first, above the format list (`Nyttspill-forslag-klubb-forst`).
+                  A kompis or solo round is never scoped to a club (#50). The
+                  column is pulled out 4 px so the cards sit 16 px from the
+                  screen edge; the kicker and the hint take the 4 px back. */}
+              {state.intent === 'klubb' && clubs.length > 0 && (
+                <div className="-mx-1">
+                  <ClubPicker
+                    clubs={clubs}
+                    memberIdsByClub={clubMemberIdsByClub}
+                    value={state.groupId}
+                    onChange={state.setGroupId}
+                  />
+                </div>
+              )}
               {/* #373: teller for antall spillere — kun for Kompis-intent */}
               {state.intent === 'kompis' && (
                 <PlayerCountPicker
@@ -1184,15 +1226,6 @@ function WizardBody({
                   seksjonen (inkl. kontingent) er flyttet til steg 5/ReadyStep
                   — steg 2 er nå kun teller + format-grid + mode-spesifikk
                   setup. Se ReadyStep.tsx for hvor de nå mountes. */}
-              {/* «For hvilken klubb?» hører kun til klubb-arrangement (#50-fix):
-                  en kompis-/solo-runde scopes ikke til en klubb. */}
-              {state.intent === 'klubb' && clubs.length > 0 && (
-                <ClubPicker
-                  clubs={clubs}
-                  value={state.groupId}
-                  onChange={state.setGroupId}
-                />
-              )}
             </div>
           )}
         </section>
@@ -1936,39 +1969,66 @@ function WizardTop({
 }
 
 /**
- * ClubPicker — «Hvem er dette for?»-velger i steg 2 (#442).
+ * ClubPicker — «Hvilken klubb?» øverst på steg 2 for «Klubb-turnering»
+ * (#442, #2439).
  *
- * Vises kun når brukeren er med i ≥1 klubb. Lar admin knytte spillet til
- * en klubb — noe som gjør turneringen synlig for alle klubbens medlemmer
- * (også invite_only-turneringer). Default er «Ingen klubb» (tom streng).
+ * Vises kun når brukeren er med i ≥1 gyldig klubb. Knytter spillet til en
+ * klubb, så alle klubbens medlemmer ser turneringen (også invite_only). Det
+ * finnes ikke noe «Ingen klubb»: med én gyldig klubb er den valgt fra start
+ * (useGameFormState), ellers velger arrangøren, og «Neste» venter på det.
+ *
+ * Kortene er `Nyttspill-forslag-klubb-forst`: to i bredden, 72 px høye, med
+ * klubbnavnet og antall medlemmer, og rollen din der du styrer klubben.
+ * Radioene har sitt eget navn (`club_choice`) så piltastene virker i gruppa;
+ * den skjulte `group_id`-inputen i FormDataInputs er eneste bærer til serveren.
  */
 function ClubPicker({
   clubs,
+  memberIdsByClub,
   value,
   onChange,
 }: {
   clubs: ClubOption[];
+  /** Best-effort: a club missing here shows its role only, or no line. */
+  memberIdsByClub: Record<string, string[]>;
   value: string;
   onChange: (id: string) => void;
 }) {
   const t = useTranslations('wizard');
-  const selectId = useId();
+  const tKlubb = useTranslations('klubb');
+
+  function cardLine(club: ClubOption): string | undefined {
+    const count = memberIdsByClub[club.id]?.length;
+    const role =
+      club.role === 'owner' || club.role === 'admin'
+        ? tKlubb(`roles.${club.role}`)
+        : undefined;
+    if (count === undefined) return role;
+    return role
+      ? t('club.roleAndCount', { role, count })
+      : t('club.memberCount', { count });
+  }
+
   return (
-    <FormSection legend={t('club.legend')}>
-      <CardSelect
-        id={selectId}
-        label={t('club.label')}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        hint={t('club.hint')}
-      >
-        <option value="">{t('club.noClub')}</option>
-        {clubs.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
+    <FormSection legend={t('club.legend')} variant="bare">
+      <ChoiceCardGrid columns={2} label={t('club.legend')}>
+        {clubs.map((club) => (
+          <RadioChoiceCard
+            key={club.id}
+            name="club_choice"
+            value={club.id}
+            checked={value === club.id}
+            onChange={() => onChange(club.id)}
+            title={club.name}
+            hint={cardLine(club)}
+            height={72}
+            titleSize={16}
+          />
         ))}
-      </CardSelect>
+      </ChoiceCardGrid>
+      <p className="px-1 pt-2 font-sans text-xs leading-[1.45] text-muted">
+        {t('club.hint')}
+      </p>
     </FormSection>
   );
 }

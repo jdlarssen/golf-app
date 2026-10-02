@@ -31,6 +31,8 @@ export type ReadyRow = {
  * so the checklist can never drop a reason the button is grey.
  */
 const ROW_FOR_CODE: Record<MissingForPublishCode, ReadyRowKey> = {
+  // #2439: the club is chosen on step 2, above the format list.
+  club: 'format',
   course: 'course',
   tee_box: 'course',
   tee_off: 'teeOff',

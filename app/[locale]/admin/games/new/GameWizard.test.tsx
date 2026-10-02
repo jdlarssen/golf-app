@@ -6,6 +6,7 @@ import { useGameFormState } from './useGameFormState';
 import type { CourseOption, PlayerOption } from './GameForm';
 import type { CreateGameResult } from './actions';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
+import type { ClubOption } from '@/lib/games/newGameFormData';
 import {
   saveWizardDraft,
   wizardDraftContext,
@@ -117,6 +118,9 @@ function renderWizard({
   createDraftAction = NO_OP,
   createAndPublishAction = NO_OP,
   initialValues,
+  clubs,
+  clubMemberIdsByClub,
+  isAdmin,
 }: {
   courses?: CourseOption[];
   players?: PlayerOption[];
@@ -124,6 +128,9 @@ function renderWizard({
   createDraftAction?: (fd: FormData) => Promise<CreateGameResult>;
   createAndPublishAction?: (fd: FormData) => Promise<CreateGameResult>;
   initialValues?: Parameters<typeof GameWizard>[0]['initialValues'];
+  clubs?: ClubOption[];
+  clubMemberIdsByClub?: Record<string, string[]>;
+  isAdmin?: boolean;
 } = {}) {
   return render(
     <GameWizard
@@ -137,6 +144,9 @@ function renderWizard({
       initialValues={initialValues}
       formatsByIntent={FORMATS_BY_INTENT}
       friendPlayerIds={friendPlayerIds}
+      clubs={clubs}
+      clubMemberIdsByClub={clubMemberIdsByClub}
+      isAdmin={isAdmin}
       backHref="/"
     />,
   );
@@ -1443,5 +1453,97 @@ describe('GameWizard — #2282 «Klar?»-steget', () => {
     const field = await screen.findByLabelText('Handicap-andel (%)');
     expect(field).toHaveAttribute('id', 'hcp_allowance_pct__input');
     await waitFor(() => expect(field).toHaveFocus());
+  });
+});
+
+describe('GameWizard — klubb-turnering velger klubben først (#2439)', () => {
+  const BYNESET: ClubOption = { id: 'club-1', name: 'Byneset Golfklubb', role: 'member' };
+  const TRONDHEIM: ClubOption = { id: 'club-2', name: 'Trondheim GK', role: 'owner' };
+  const MEMBERS = {
+    'club-1': ['u0', 'u1', 'u2'],
+    'club-2': ['u0', 'u3'],
+  };
+
+  // The klubb list has no player count, so Stableford is a plain row (named
+  // «Stableford»), not the big recommended card the kompis tests click.
+  const STABLEFORD_ROW = /^stableford$/i;
+
+  function pickKlubbIntent() {
+    fireEvent.click(screen.getByRole('button', { name: /klubb-turnering/i }));
+  }
+
+  function hiddenGroupId(): string | null {
+    return (document.querySelector('input[type="hidden"][name="group_id"]') as HTMLInputElement | null)
+      ?.value ?? null;
+  }
+
+  it('én klubb: kortet står valgt fra start, over formatlista, og «Neste» slipper gjennom', () => {
+    renderWizard({ isAdmin: true, clubs: [BYNESET], clubMemberIdsByClub: MEMBERS });
+
+    pickKlubbIntent();
+    expectStep(2);
+
+    const clubGroup = screen.getByRole('group', { name: /hvilken klubb\?/i });
+    const card = within(clubGroup).getByRole('radio', { name: /byneset golfklubb/i });
+    expect(card).toBeChecked();
+    expect(within(clubGroup).getByText('3 medlemmer')).toBeInTheDocument();
+    expect(screen.queryByText(/ingen klubb/i)).not.toBeInTheDocument();
+    expect(hiddenGroupId()).toBe('club-1');
+
+    // Klubbdelen står over formatlista.
+    const formatCard = screen.getByRole('radio', { name: STABLEFORD_ROW });
+    expect(
+      clubGroup.compareDocumentPosition(formatCard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('radio', { name: STABLEFORD_ROW }));
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+    clickNext();
+    expectStep(3);
+  });
+
+  it('to klubber: ingen er valgt, og «Neste» venter på et klubbkort', () => {
+    renderWizard({
+      isAdmin: true,
+      clubs: [BYNESET, TRONDHEIM],
+      clubMemberIdsByClub: MEMBERS,
+    });
+
+    pickKlubbIntent();
+    const clubGroup = screen.getByRole('group', { name: /hvilken klubb\?/i });
+    const radios = within(clubGroup).getAllByRole('radio');
+    expect(radios).toHaveLength(2);
+    radios.forEach((r) => expect(r).not.toBeChecked());
+    // Rollen din står foran antallet der du styrer klubben.
+    expect(within(clubGroup).getByText('Eier · 2 medlemmer')).toBeInTheDocument();
+    expect(hiddenGroupId()).toBe('');
+
+    fireEvent.click(screen.getByRole('radio', { name: STABLEFORD_ROW }));
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
+    expect(screen.getByText('Velg klubben først')).toBeInTheDocument();
+
+    fireEvent.click(within(clubGroup).getByRole('radio', { name: /trondheim gk/i }));
+    expect(hiddenGroupId()).toBe('club-2');
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+    expect(screen.queryByText('Velg klubben først')).not.toBeInTheDocument();
+  });
+
+  it('uten gyldig klubb vises ikke «Klubb-turnering» på steg 1, heller ikke for admin', () => {
+    renderWizard({ isAdmin: true, clubs: [] });
+
+    expectStep(1);
+    expect(
+      screen.queryByRole('button', { name: /klubb-turnering/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /kompis-runde/i })).toBeInTheDocument();
+  });
+
+  it('kompis-runden har ingen klubbdel på steg 2', () => {
+    renderWizard({ isAdmin: true, clubs: [BYNESET], clubMemberIdsByClub: MEMBERS });
+
+    pickKompisIntent();
+    expectStep(2);
+    expect(screen.queryByRole('group', { name: /hvilken klubb\?/i })).not.toBeInTheDocument();
+    expect(hiddenGroupId()).toBe('');
   });
 });

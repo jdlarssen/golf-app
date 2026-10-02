@@ -5,12 +5,12 @@ import { IntentSelector } from './IntentSelector';
 // Type C render-tester per docs/test-discipline.md — verifiserer intent-kortene,
 // knappe-semantikken (#1794: radio → button, valgt flis via aria-current),
 // onChange-flyten, #477-gatingen av «Solo / Test», og #525-gatingen av
-// «Klubb-turnering» (admin + klubb-admin).
+// «Klubb-turnering» (admin + klubb-admin, og #2439: bare med en gyldig klubb).
 
 describe('IntentSelector', () => {
   it('admin ser alle fire intent-kort med korrekt aria-current + onChange', () => {
     const onChange = vi.fn();
-    render(<IntentSelector value="klubb" onChange={onChange} isAdmin />);
+    render(<IntentSelector value="klubb" onChange={onChange} isAdmin hasClub />);
 
     // #1794: gruppen kommer fra fieldset + legend, ikke fra en radiogroup —
     // flisene utfører en handling (velg + gå videre), de setter ikke en
@@ -39,7 +39,7 @@ describe('IntentSelector', () => {
   });
 
   it('#477: ikke-admin ser ikke «Solo / Test»', () => {
-    render(<IntentSelector value="kompis" onChange={vi.fn()} />);
+    render(<IntentSelector value="kompis" onChange={vi.fn()} hasClub={false} />);
 
     expect(screen.getByRole('button', { name: /kompis-runde/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^cup$/i })).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe('IntentSelector', () => {
   it('#477: et eksisterende solo-spill viser fortsatt kortet i edit-flyten', () => {
     // Selv uten admin må kortet vises når intent-en allerede ER solo, ellers
     // forsvinner det valgte arrangementet fra UI-en ved redigering.
-    render(<IntentSelector value="solo" onChange={vi.fn()} disabled />);
+    render(<IntentSelector value="solo" onChange={vi.fn()} disabled hasClub={false} />);
 
     expect(
       screen.getByRole('button', { name: /solo \/ test/i }),
@@ -59,7 +59,7 @@ describe('IntentSelector', () => {
   });
 
   it('#525: vanlig bruker (verken admin eller klubb-admin) ser bare Kompis + Cup', () => {
-    render(<IntentSelector value="kompis" onChange={vi.fn()} />);
+    render(<IntentSelector value="kompis" onChange={vi.fn()} hasClub={false} />);
 
     expect(
       screen.getByRole('button', { name: /kompis-runde/i }),
@@ -74,7 +74,7 @@ describe('IntentSelector', () => {
   });
 
   it('#525: klubb-admin ser «Klubb-turnering» uten å være global admin', () => {
-    render(<IntentSelector value="kompis" onChange={vi.fn()} isClubAdmin />);
+    render(<IntentSelector value="kompis" onChange={vi.fn()} isClubAdmin hasClub />);
 
     expect(
       screen.getByRole('button', { name: /klubb-turnering/i }),
@@ -88,10 +88,30 @@ describe('IntentSelector', () => {
   it('#525: et eksisterende klubb-spill viser fortsatt kortet i edit-flyten', () => {
     // Selv uten admin/klubb-admin må kortet vises når intent-en allerede ER
     // klubb, ellers forsvinner det valgte arrangementet ved redigering.
-    render(<IntentSelector value="klubb" onChange={vi.fn()} disabled />);
+    render(<IntentSelector value="klubb" onChange={vi.fn()} disabled hasClub={false} />);
 
     expect(
       screen.getByRole('button', { name: /klubb-turnering/i }),
     ).toBeInTheDocument();
+  });
+
+  it('#2439: global admin uten gyldig klubb ser ikke «Klubb-turnering»', () => {
+    // Eierens valg 02.10: kortet vises ikke hvis du ikke er med i en klubb.
+    // Et klubbspill uten klubb ble bare et vanlig privat spill.
+    render(<IntentSelector value={undefined} onChange={vi.fn()} isAdmin hasClub={false} />);
+
+    expect(
+      screen.queryByRole('button', { name: /klubb-turnering/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /kompis-runde/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /solo \/ test/i })).toBeInTheDocument();
+  });
+
+  it('#2439: klubb-admin uten gyldig klubb (alle utløpt) ser ikke «Klubb-turnering»', () => {
+    render(<IntentSelector value="kompis" onChange={vi.fn()} isClubAdmin hasClub={false} />);
+
+    expect(
+      screen.queryByRole('button', { name: /klubb-turnering/i }),
+    ).not.toBeInTheDocument();
   });
 });

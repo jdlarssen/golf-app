@@ -771,6 +771,123 @@ describe('useGameFormState — klubb-turnering låser registreringsmodus (#643)'
   });
 });
 
+describe('useGameFormState — klubb-turnering krever en gyldig klubb (#2439)', () => {
+  /** A stableford club tournament that is publishable apart from the club. */
+  function setupClubForm(input: {
+    clubIds: readonly string[];
+    defaultGroupId?: string;
+  }) {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: 'klubb',
+        ...input,
+      }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.togglePlayer('p-mann');
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+    });
+    return { result };
+  }
+
+  it('uten valgt klubb kan spillet ikke publiseres, og «club» står i mangel-lista', () => {
+    const { result } = setupClubForm({ clubIds: ['club-1', 'club-2'] });
+
+    // To klubber: ingen er valgt fra start.
+    expect(result.current.groupId).toBe('');
+    expect(result.current.clubChoiceValid).toBe(false);
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toEqual(['club']);
+
+    act(() => {
+      result.current.setGroupId('club-2');
+    });
+    expect(result.current.clubChoiceValid).toBe(true);
+    expect(result.current.canPublish).toBe(true);
+    expect(result.current.missingForPublishCodes).not.toContain('club');
+  });
+
+  it('en klubb som ikke står i lista (utløpt, ikke medlem) er ikke gyldig', () => {
+    // ?klubb= med en id som ikke er gyldig: den står valgt, men slipper ikke gjennom.
+    const { result } = setupClubForm({ clubIds: ['club-1'], defaultGroupId: 'gone' });
+    expect(result.current.groupId).toBe('gone');
+    expect(result.current.clubChoiceValid).toBe(false);
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toContain('club');
+  });
+
+  it('én gyldig klubb er valgt fra start', () => {
+    const { result } = setupClubForm({ clubIds: ['club-1'] });
+    expect(result.current.groupId).toBe('club-1');
+    expect(result.current.clubChoiceValid).toBe(true);
+    expect(result.current.canPublish).toBe(true);
+  });
+
+  it('?klubb= vinner over én-klubb-standarden', () => {
+    const { result } = setupClubForm({
+      clubIds: ['club-1', 'club-2'],
+      defaultGroupId: 'club-2',
+    });
+    expect(result.current.groupId).toBe('club-2');
+    expect(result.current.clubChoiceValid).toBe(true);
+  });
+
+  it('setIntent("klubb") med én gyldig klubb velger den; et annet arrangement nullstiller', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES, clubIds: ['club-1'] }),
+    );
+    expect(result.current.groupId).toBe('');
+
+    act(() => {
+      result.current.setIntent('klubb');
+    });
+    expect(result.current.groupId).toBe('club-1');
+    expect(result.current.clubChoiceValid).toBe(true);
+
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+    expect(result.current.groupId).toBe('');
+    // Kompis-runden trenger ingen klubb.
+    expect(result.current.clubChoiceValid).toBe(true);
+  });
+
+  it('setIntent("klubb") beholder en klubb som alt er valgt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: 'klubb',
+        clubIds: ['club-1', 'club-2'],
+      }),
+    );
+    act(() => {
+      result.current.setGroupId('club-2');
+    });
+    act(() => {
+      result.current.setIntent('klubb');
+    });
+    expect(result.current.groupId).toBe('club-2');
+  });
+
+  it('andre arrangementer trenger ingen klubb, heller ikke uten klubber', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES, initialIntent: 'kompis' }),
+    );
+    expect(result.current.clubChoiceValid).toBe(true);
+    expect(result.current.missingForPublishCodes).not.toContain('club');
+  });
+});
+
 describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-intent (#1066)', () => {
   it('setIntent("kompis") preselecter currentUserId når selection er tom', () => {
     const { result } = renderHook(() =>

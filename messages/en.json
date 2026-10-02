@@ -1225,7 +1225,8 @@
         "soloMin": "at least one player",
         "invalidAllowance": "valid HCP allowance",
         "categoryMissingRating": "one or more players have a category the tee does not rate",
-        "pendingProfiles": "{count, plural, one {1 player who hasn't finished their profile} other {# players who haven't finished their profiles}}"
+        "pendingProfiles": "{count, plural, one {1 player who hasn't finished their profile} other {# players who haven't finished their profiles}}",
+        "club": "club"
       }
     },
     "stepTitle": {
@@ -1256,7 +1257,8 @@
       "step3NoCourse": "Choose a course first",
       "step3NoTee": "Choose a tee box",
       "step3TeeOffPast": "Fix the tee-off time. It can't be in the past.",
-      "step4Prefix": "Missing: {item}"
+      "step4Prefix": "Missing: {item}",
+      "step2NoClub": "Choose the club first"
     },
     "playerCount": {
       "legend": "How many players?",
@@ -1268,10 +1270,10 @@
       "unsetAriaLabel": "Number not chosen"
     },
     "club": {
-      "legend": "For which club?",
-      "label": "Club",
-      "noClub": "No club",
-      "hint": "Members can see and sign up for all games you set up for the club."
+      "legend": "Which club?",
+      "hint": "Members can see and sign up for all games you set up for the club.",
+      "memberCount": "{count, plural, one {# member} other {# members}}",
+      "roleAndCount": "{role} · {count, plural, one {# member} other {# members}}"
     },
     "footer": {
       "next": "Next",
