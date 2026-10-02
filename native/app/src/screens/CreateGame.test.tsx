@@ -186,7 +186,7 @@ describe('CreateGame', () => {
       'Jørgen Arrangør, Ada Aas, Ola Olsen',
     );
     expect(screen.getByTestId('create-summary-side').props.children).toBe(
-      '1 longest drive · 1 closest to pin',
+      '1 lengste drive · 1 nærmest pinnen',
     );
 
     await fireEvent.press(screen.getByTestId('create-publish'));

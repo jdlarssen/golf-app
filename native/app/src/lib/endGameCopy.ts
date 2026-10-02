@@ -15,10 +15,9 @@
 //
 // **Ordforrådet er webbens der webben har et.** «Ingen kvalifiserte» og
 // «Klarte ikke å lagre vinnerne. Prøv igjen.» er `admin.game.sideWinners.*`
-// tegn for tegn; nett-linja deles med `rosterCopy.ts`. Slot-etikettene er
-// derimot norske («Lengste drive #1»), som i appens egen matchplay-seksjon —
-// webbens admin-skjema sier «Longest drive #1», og appen skal ikke bytte språk
-// midt i en flyt.
+// tegn for tegn; nett-linja deles med `rosterCopy.ts`. Slot-etikettene
+// («Lengste drive #1», «Nærmest pinnen #1») er de samme i appen og i webbens
+// admin-skjema, og som i appens egen matchplay-seksjon.
 import type { EndRoundFailure } from '../data/endGame';
 // Kun typen: `data/remind.ts` drar med seg supabase-klienten og sync-triggerne,
 // og en copy-modul skal ikke koble på noe av det. `import type` forsvinner i

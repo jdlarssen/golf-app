@@ -50,9 +50,9 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
     case 'tee_off_in_past':
       return 'Tee-off kan ikke være i fortiden. Velg et tidspunkt fra nå av.';
     case 'bad_side_ld_count':
-      return 'Antall longest-drive-vinnere må være 0, 1 eller 2.';
+      return 'Lengste drive kan spilles på 0, 1 eller 2 hull.';
     case 'bad_side_ctp_count':
-      return 'Antall closest-to-pin-vinnere må være 0, 1 eller 2.';
+      return 'Nærmest pinnen kan spilles på 0, 1 eller 2 hull.';
     case 'db_roster':
       return 'Klarte ikke å lese spillerlisten fra databasen.';
     case 'db_game':

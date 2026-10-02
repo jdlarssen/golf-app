@@ -197,7 +197,7 @@ export function AdvancedSettingsSection({
   );
 }
 
-/** «Antall longest-drive-vinnere» with the 0 / 1 / 2 pills on the right. */
+/** «Lengste drive: antall hull» with the 0 / 1 / 2 pills on the right. */
 function WinnerCountRow({
   labelId,
   label,
