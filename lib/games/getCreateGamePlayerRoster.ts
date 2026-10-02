@@ -4,6 +4,8 @@ import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { mergeCreateGameRoster } from '@/lib/games/createGameRoster';
+import { orderPickerPlayers, pickerStatsIds } from '@/lib/wizard/pickerOrder';
+import { getPickerOrderStats } from '@/lib/wizard/pickerOrderStats';
 
 /**
  * Everything `/opprett-spill` needs to know about who the organiser can play
@@ -25,6 +27,11 @@ import { mergeCreateGameRoster } from '@/lib/games/createGameRoster';
  * in both boundaries, taking down the banner and the whole wizard for one
  * optional lookup. `getNewGameFormData` still throws on a failed users query:
  * that is the page's error boundary, as before.
+ *
+ * #2321: the players come back in the picker's order — you first, then the
+ * people you last played with. «Last played» needs the friend and club ids, so
+ * it is one more round-trip after the others (the banner waits for it too).
+ * `getPickerOrderStats` is best-effort and never rejects.
  */
 export const getCreateGamePlayerRoster = cache(async (userId: string) => {
   const [{ courses, players: coPlayers, clubs }, friends, clubMembers] =
@@ -41,15 +48,29 @@ export const getCreateGamePlayerRoster = cache(async (userId: string) => {
       })),
     ]);
 
+  const friendPlayerIds = friends.map((f) => f.id);
+  const stats = await getPickerOrderStats(
+    userId,
+    pickerStatsIds({
+      friendPlayerIds,
+      clubMemberIdsByClub: clubMembers.memberIdsByClub,
+      selfId: userId,
+    }),
+  );
+
   return {
     courses,
     clubs,
-    players: mergeCreateGameRoster({
-      coPlayers,
-      friends,
-      clubMembers: clubMembers.options,
-    }),
-    friendPlayerIds: friends.map((f) => f.id),
+    players: orderPickerPlayers(
+      mergeCreateGameRoster({
+        coPlayers,
+        friends,
+        clubMembers: clubMembers.options,
+      }),
+      stats,
+      userId,
+    ),
+    friendPlayerIds,
     clubMemberIdsByClub: clubMembers.memberIdsByClub,
   };
 });

@@ -81,6 +81,9 @@ const ERROR_KEYS = new Set([
   'guest_email_taken',
   'guest_claim_failed',
   'guest_claim_mail_failed',
+  // #2321: the game was published, but an e-mail invitation from the wizard
+  // did not go out.
+  'invites_failed',
 ]);
 
 function playerName(p: Pick<PlayerForHole, 'users'>): string {
@@ -239,7 +242,9 @@ export default async function CreatorSpillerePage({
   ) : errorParam && ERROR_KEYS.has(errorParam) ? (
     <Banner
       tone={
-        errorParam === 'mail_failed' || errorParam === 'guest_claim_mail_failed'
+        errorParam === 'mail_failed' ||
+        errorParam === 'guest_claim_mail_failed' ||
+        errorParam === 'invites_failed'
           ? 'warning'
           : errorParam === 'game_full'
             ? 'info'

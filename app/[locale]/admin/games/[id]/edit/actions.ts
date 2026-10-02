@@ -28,6 +28,8 @@ import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import { parseInviteEmailList } from '@/lib/games/inviteEmail';
+import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
 import type { Tables } from '@/lib/database.types';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
@@ -395,7 +397,35 @@ async function updateGameInternal(
     );
   }
 
+  // #2321: a resumed draft's «Inviter på e-post» addresses go out on publish,
+  // through the same core as the game page's form, gated by
+  // `requireAdminOrCreator` above. A failed address only adds the warning.
+  let invitesFailed = false;
+  if (mode === 'publish' && existing.tournament_id == null) {
+    const emails = parseInviteEmailList(formData.getAll('invite_email'));
+    if (emails.length > 0) {
+      const { failed } = await sendPublishInvites({
+        client: supabase,
+        viewer: supabase,
+        gameId,
+        inviterUserId: userId,
+        inviterName: ctx.name,
+        isAdmin: ctx.isAdmin,
+        emails,
+      });
+      invitesFailed = failed > 0;
+    }
+  }
+
   expireGameCache(gameId);
+  if (invitesFailed) {
+    redirect({
+      href: ctx.isAdmin
+        ? `${detailBase}?status=scheduled&error=invites_failed`
+        : `/games/${gameId}/spillere?error=invites_failed`,
+      locale,
+    });
+  }
   redirect({ href: `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`, locale });
 }
 
