@@ -42,6 +42,7 @@ type SearchParams = Promise<{ status?: string; error?: string; email?: string }>
 const STATUS_KEYS = new Set([
   'invite_added',
   'invite_sent',
+  'invite_held',
   'player_removed',
   'player_withdrawn',
   'player_reinstated',
