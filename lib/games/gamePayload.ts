@@ -2188,6 +2188,17 @@ const modeValidators: Record<
 };
 
 /**
+ * The mode the format validator runs in (#2433): 'draft' for a publish whose
+ * roster is optional (rosterOptionalAtPublish), else the caller's mode.
+ */
+function validatorMode(
+  mode: PayloadMode,
+  registration: Parameters<typeof rosterOptionalAtPublish>[0],
+): PayloadMode {
+  return mode === 'publish' && rosterOptionalAtPublish(registration) ? 'draft' : mode;
+}
+
+/**
  * Parse a "create/edit game" admin form payload.
  *
  * Mode determines how strictly the payload is validated:
@@ -2285,15 +2296,11 @@ export function buildGameInsertPayload(
   // spillere på best-ball, balansert lag-fordeling osv.) hoppes over.
   // Duplikat-sjekk og bad-team/bad-flight håndheves fortsatt siden de
   // gjelder enhver innsendt rad.
-  const effectiveMode: PayloadMode =
-    mode === 'publish' &&
-    rosterOptionalAtPublish({
-      registrationMode,
-      registrationType,
-      clubScoped: opts.clubScoped === true,
-    })
-      ? 'draft'
-      : mode;
+  const effectiveMode = validatorMode(mode, {
+    registrationMode,
+    registrationType,
+    clubScoped: opts.clubScoped === true,
+  });
   const modeResult = modeValidators[gameMode](formData, effectiveMode);
   if (!modeResult.ok) {
     return errorPayload(modeResult.errorCode);
