@@ -3,7 +3,8 @@
     "appName": "Tørny",
     "metaDescription": "Free golf tournament app. Set up scramble, stableford or match play in minutes, with a live leaderboard and WHS handicaps. 20+ game formats.",
     "guestBadge": "Guest",
-    "appVersionLabel": "App version"
+    "appVersionLabel": "App version",
+    "brandTagline": "Fire up your golf tournament in a <par>couple</par> of minutes"
   },
   "notFound": {
     "heading": "This page doesn't exist",

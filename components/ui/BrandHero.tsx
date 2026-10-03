@@ -1,9 +1,11 @@
+import { useTranslations } from 'next-intl';
 import { BrandMark } from './BrandMark';
 
 /**
  * Brand-mark hero: the «Tørny» wordmark (ball on the T, #1985) + the tagline
- * below. Used on /login as the page heading, standing on the linen background
- * above the form card.
+ * below. Used on /login, /finn-turneringer (logged out) and the public sign-up
+ * page as the page heading, standing on the linen background. The tagline
+ * comes from `common.brandTagline`, so it follows the page language (#2351).
  *
  * Faithful to `brand-mark.svg` in
  * `docs/design/realized/brand-foundations/assets/`. The wordmark itself is
@@ -14,6 +16,7 @@ import { BrandMark } from './BrandMark';
  * `as` prop at that time.
  */
 export function BrandHero({ className = '' }: { className?: string }) {
+  const t = useTranslations('common');
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
       <h1 className="m-0">
@@ -21,8 +24,9 @@ export function BrandHero({ className = '' }: { className?: string }) {
       </h1>
 
       <p className="mt-4 font-sans text-sm leading-relaxed text-muted max-w-[260px]">
-        Fyr opp golfturneringen på et{' '}
-        <span className="text-accent font-semibold">par</span> minutter
+        {t.rich('brandTagline', {
+          par: (chunks) => <span className="text-accent font-semibold">{chunks}</span>,
+        })}
       </p>
     </div>
   );
