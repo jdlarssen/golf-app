@@ -24,6 +24,10 @@ import {
 import { sendGuestClaimNotification } from '@/lib/mail/guestClaimNotification';
 import { firstName } from '@/lib/firstName';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
+import { TEE_EMBED } from '@/lib/games/joinTeeGenders';
+import { teeAvailabilityOf } from '@/lib/games/teeChoice';
+import type { TeeBoxRatings } from '@/lib/games/teeRating';
 
 /**
  * «Legg til gjest» på roster-cockpitene (#1009): creator-flaten
@@ -48,13 +52,14 @@ export async function addGuestToGame(
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, status, game_mode, mode_config')
+    .select(`id, status, game_mode, mode_config, ${TEE_EMBED}`)
     .eq('id', gameId)
     .single<{
       id: string;
       status: string;
       game_mode: string;
       mode_config: { team_size?: number } | null;
+      tee_boxes: TeeBoxRatings | null;
     }>();
   if (!game) {
     redirect({ href: `${detailPath}?error=not_found`, locale });
@@ -87,10 +92,14 @@ export async function addGuestToGame(
     redirect({ href: `${detailPath}?error=${parsed.error}`, locale });
   }
 
-  const created = await createGuestPlayer(
-    gameId,
-    parsed.profile,
+  // #2437: clamp the guest's category to the game's tee — the same rule as
+  // every other join path (#2209, `joinTeeGenders`), so a guest never stops
+  // the start with a category the tee has no rating for. No tee = no clamp.
+  const tee = clampGenderToTee(
+    parsed.profile.tee,
+    teeAvailabilityOf(game.tee_boxes ?? null),
   );
+  const created = await createGuestPlayer(gameId, { ...parsed.profile, tee });
   if (!created.ok) {
     redirect({ href: `${detailPath}?error=${created.error}`, locale });
   }
