@@ -1435,6 +1435,31 @@ describe('useGameFormState — addGuestPlayer klemmer gjestens kategori til tee-
     expect(result.current.playerGenders['g-gjest']).toBe(expected);
     expect(result.current.teeChoiceFor('g-gjest')).toBe(expected);
   });
+
+  it('teen byttes mens gjesten opprettes: klemmen bruker den nye teen', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('skins');
+      result.current.setCourseId('course-d');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-d1'); // herre + dame
+    });
+    // The guest form holds this render's callback while createGuestForWizard runs.
+    const addFromPendingRequest = result.current.addGuestPlayer;
+    act(() => {
+      result.current.setCourseId('course-c');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-c1'); // bare herre
+    });
+    act(() => {
+      addFromPendingRequest(makePlayer('g-gjest', { isGuest: true }), 'D');
+    });
+    expect(result.current.playerGenders['g-gjest']).toBe('M');
+  });
 });
 
 describe('useGameFormState — en venn uten fullført profil stopper ikke publisering (#2441)', () => {

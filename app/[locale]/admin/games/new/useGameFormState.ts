@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '@/lib/scoring/settlement';
@@ -1186,6 +1193,13 @@ export function useGameFormState({
     () => teeGenderAvailabilityOf(selectedTeeBox),
     [selectedTeeBox],
   );
+  // #2437: the latest availability, for `addGuestPlayer`. The guest form calls
+  // it after `createGuestForWizard` resolves, with the callback from the render
+  // that started the request; the tee may have changed since.
+  const teeGenderAvailabilityRef = useRef(teeGenderAvailability);
+  useEffect(() => {
+    teeGenderAvailabilityRef.current = teeGenderAvailability;
+  }, [teeGenderAvailability]);
 
   // #2209: the category a selected player is sent with. A stored value wins
   // (the profile default from mount, the saved value when editing, the
@@ -1289,14 +1303,16 @@ export function useGameFormState({
   // opprettet server-side (createGuestForWizard), så her registreres bare
   // PlayerOption-en, tee-valget og auto-seleksjonen. Idempotent på id.
   // #2437: the guest form only offers categories the tee rates; the clamp here
-  // is the backstop so nothing stores a category the tee lacks.
+  // is the backstop so nothing stores a category the tee lacks. It reads the
+  // latest tee through the ref, inside the updater, so a tee changed while the
+  // guest was being created still wins.
   function addGuestPlayer(player: PlayerOption, tee: 'M' | 'D' | 'J') {
     setExtraPlayers((prev) =>
       prev.some((p) => p.id === player.id) ? prev : [...prev, player],
     );
     setPlayerGenders((prev) => ({
       ...prev,
-      [player.id]: clampGenderToTee(tee, teeGenderAvailability),
+      [player.id]: clampGenderToTee(tee, teeGenderAvailabilityRef.current),
     }));
     setSelectedPlayerIds((prev) =>
       prev.includes(player.id) ? prev : [...prev, player.id],
