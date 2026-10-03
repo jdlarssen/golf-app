@@ -216,57 +216,8 @@ export async function togglePrimary(formData: FormData): Promise<void> {
 }
 
 /**
- * Toggle `formats.is_cup_eligible`. Per-format global flag — ikke per-intent.
- */
-export async function toggleCupEligible(formData: FormData): Promise<void> {
-  const locale = await getLocale();
-  const slug = String(formData.get('format_slug') ?? '');
-  const next = parseNext(String(formData.get('next') ?? ''));
-
-  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
-
-  const supabase = await getServerClient();
-  const admin = await requireAdmin(supabase);
-  const adminClient = getAdminClient();
-
-  const { data: existing } = await adminClient
-    .from('formats')
-    .select('is_cup_eligible')
-    .eq('slug', slug)
-    .maybeSingle<{ is_cup_eligible: boolean }>();
-
-  if (!existing) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
-  if (existing.is_cup_eligible === next) {
-    redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
-  }
-
-  const { error } = await adminClient
-    .from('formats')
-    .update({ is_cup_eligible: next })
-    .eq('slug', slug);
-  if (error) {
-    console.error('[toggleCupEligible] update failed', { slug, error });
-    redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
-  }
-
-  await recordFormatMappingChange({
-    actorId: admin.userId,
-    actorName: admin.name ?? 'Ukjent admin',
-    formatSlug: slug,
-    intent: null,
-    changeType: 'cup_eligible',
-    before: { is_cup_eligible: existing.is_cup_eligible },
-    after: { is_cup_eligible: next },
-  });
-
-  expireFormatMappingCache();
-  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
-}
-
-/**
- * Toggle `formats.is_active`. Global flag — påvirker både wizard-flyt og
- * cup-eligibility (inaktive formats skjules selv om is_cup_eligible=true).
- * Historiske games er upåvirket (ingen FK).
+ * Toggle `formats.is_active`. Global flag: an inactive format is hidden from
+ * the wizard. Historical games are unaffected (no FK).
  */
 export async function toggleActive(formData: FormData): Promise<void> {
   const locale = await getLocale();

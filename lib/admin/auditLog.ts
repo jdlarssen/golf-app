@@ -13,7 +13,8 @@ export type AdminAuditEventType =
   | 'game.reopened'
   | 'scorecard.approved'
   | 'scorecard.reopened'
-  // F3 (#273): admin endrer format-mapping eller aktivitet/cup-eligibility.
+  // F3 (#273): an admin changes a format mapping or the active flag.
+  // Cup-eligibility changes exist only in older rows (#2337).
   // Payload bærer `format_slug`, `intent` (eller null), `change_type`,
   // `before`/`after` (delvis state).
   | 'format_mapping_change'

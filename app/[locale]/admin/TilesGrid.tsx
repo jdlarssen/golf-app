@@ -179,8 +179,8 @@ export async function TilesGrid() {
       meta: t('metaKlubber'),
       icon: 'laurbaer',
     },
-    // F3 (#273): admin format-mapping. Mappings + cup-eligibility +
-    // active-flagg styres herfra. Meta er statisk (vi har ingen tellbar
+    // F3 (#273): admin format mapping. Mappings and the active flag are
+    // set here (#2337). Meta er statisk (vi har ingen tellbar
     // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
     {
       label: t('tilesFormats'),

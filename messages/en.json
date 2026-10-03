@@ -4300,11 +4300,8 @@
       "showInactive": "Show inactive",
       "visibleLabel": "Visible",
       "primaryLabel": "Primary",
-      "cupEligibleHeading": "Cup-eligible formats",
       "visibleAria": "{format} visible for {intent}",
       "primaryAria": "{format} primary for {intent}",
-      "cupEligibleAria": "{format} cup-eligible",
-      "cupEligibleEmpty": "No cup-eligible formats.",
       "matrixEmpty": "No formats to show.",
       "togglesHint": "Toggles update immediately. Visible changes take effect the next time the wizard is loaded.",
       "rowStatus": {
