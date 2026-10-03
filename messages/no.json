@@ -4585,6 +4585,7 @@
       "pageTitle": "Ligaer",
       "pageSubtitle": "Individuelle sesong-serier med netto slagspill.",
       "deletedBanner": "Ligaen er slettet.",
+      "deletedBannerNamed": "Ligaen «{name}» er slettet.",
       "emptyState": "Ingen ligaer ennå.",
       "emptyStateLink": "Opprett en liga",
       "emptyStateSuffix": "for å komme i gang.",

@@ -667,21 +667,39 @@ export async function deleteLeague(formData: FormData): Promise<LeagueActionErro
   if (!leagueId) return { error: 'missing' };
   await requireAdminOrClubAdminOfLeague(supabase, leagueId);
   // Capture the club before deleting so a club-admin lands back on the club
-  // page (they can't reach /admin/liga), not on a global-admin-only route.
+  // page (they can't reach /admin/liga), not on a global-admin-only route. The
+  // name goes into the club page's receipt (#2329).
   const { data: league } = await supabase
     .from('leagues')
-    .select('group_id')
+    .select('group_id, name')
     .eq('id', leagueId)
     .maybeSingle();
   const groupId = (league?.group_id as string | null | undefined) ?? null;
   // Flight games keep their history (league_round_id → SET NULL via cascade of
   // league_rounds delete). Cascade removes rounds + players.
-  const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
+  // #2329: 0 rows is a failure, not «slettet» (bug-prevention #2, same as
+  // deleteTournament): the receipt below must never sit over a live league.
+  const { data: deleted, error } = await supabase
+    .from('leagues')
+    .delete()
+    .eq('id', leagueId)
+    .select('id');
   if (error) {
     console.error('[league] deleteLeague failed', { leagueId, error });
     return { error: 'delete_failed' };
   }
-  redirect(groupId ? `/klubber/${groupId}` : '/admin/liga?status=deleted');
+  if ((deleted ?? []).length === 0) {
+    console.error('[league] deleteLeague touched no row', { leagueId });
+    return { error: 'delete_failed' };
+  }
+  if (groupId) {
+    const qs = new URLSearchParams({
+      status: 'league_deleted',
+      name: league?.name ?? '',
+    });
+    redirect(`/klubber/${groupId}?${qs.toString()}`);
+  }
+  redirect('/admin/liga?status=deleted');
 }
 
 /**
