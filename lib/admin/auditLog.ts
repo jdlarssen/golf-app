@@ -15,8 +15,8 @@ export type AdminAuditEventType =
   | 'scorecard.reopened'
   // F3 (#273): an admin changes a format mapping or the active flag.
   // Cup-eligibility changes exist only in older rows (#2337).
-  // Payload bærer `format_slug`, `intent` (eller null), `change_type`,
-  // `before`/`after` (delvis state).
+  // The payload carries format_slug, intent (or null), change_type,
+  // before/after (partial state).
   | 'format_mapping_change'
   // #386: admin trekker eller gjeninnsetter en spiller (WD / angre-WD).
   | 'game.player_withdrawn'
