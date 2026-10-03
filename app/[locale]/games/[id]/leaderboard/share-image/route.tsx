@@ -126,9 +126,12 @@ function computeCardHeight(
   } else if (model.band === 'matchplay') {
     h += 8 + 200; // result band
   } else {
-    // One winner block per tied first place (#2318), 16px apart.
+    // One winner block per tied first place (#2318), 16px apart. A block
+    // renders ~233px; the first keeps its historic 196 (the footer slack
+    // absorbs the rest, so a single-winner card is unchanged), but every extra
+    // block must be counted at full height or 3 winners clip the footer.
     const winnerCount = model.winners.length;
-    h += 8 + winnerCount * 196 + Math.max(0, winnerCount - 1) * 16; // winner blocks
+    h += 8 + 196 + Math.max(0, winnerCount - 1) * (16 + 236); // winner blocks
     h += Math.max(0, model.podium.length - winnerCount) * 116; // runner rows
     if (model.sharerStrip) {
       h += 16 + 116; // sharer row
