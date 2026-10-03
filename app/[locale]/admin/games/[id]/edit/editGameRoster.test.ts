@@ -20,6 +20,7 @@ describe('admin edit-game player list (#2323)', () => {
     const end = src.indexOf("'edit game users'", start);
     expect(end).toBeGreaterThan(start);
 
-    expect(src.slice(start, end)).toContain(".is('deleted_at', null)");
+    // Anchored at the line start, so a commented-out filter does not pass.
+    expect(src.slice(start, end)).toMatch(/^\s*\.is\('deleted_at', null\)/m);
   });
 });
