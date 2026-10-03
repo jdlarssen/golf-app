@@ -214,6 +214,13 @@ export interface HoleClientProps {
    */
   wolfPointsByUser?: Record<string, number>;
   /**
+   * Wolf-mode-spesifikt: innsatsen på dette hullet (1 som grunn, 2 etter ett
+   * delt hull, 3 etter to), server-computert via `computeLeaderboard()`.
+   * Wolf-valget og kontekstlinja ganger gevinsten med den (#2313). Mangler i
+   * et reveal-spill som pågår, fordi innsatsen røper at et hull ble delt.
+   */
+  wolfStake?: number;
+  /**
    * Skins-modus: antall skins på spill på dette hullet (`atStake` fra
    * `skins.compute(ctx).holes[holeNumber]`). Server-computert ved render.
    * Vises som informasjons-banner over score-input. Undefined for andre modi.

@@ -250,9 +250,12 @@ export default async function HolePage({ params }: { params: Params }) {
     revealState(game.score_visibility, game.status),
   );
 
+  // #2313/#2314: `wolf.stake` tells the flight a hole was tied, so a running
+  // reveal game never sends it to the client (see `wolfStake` below).
   const wolf = computeWolfContext({
     isWolf,
     gameId: id,
+    holeNumber,
     game,
     allPlayers,
     unknownPlayer,
@@ -348,6 +351,7 @@ export default async function HolePage({ params }: { params: Params }) {
         wolfPlayers={wolf.players}
         wolfChoices={wolf.choices}
         wolfPointsByUser={wolf.pointsByUser}
+        wolfStake={hideNetto ? undefined : wolf.stake}
         skinsAtStake={skinsStake.atStake}
         skinsCarriedIn={skinsStake.carriedIn}
         bingoBangoBongoHoles={isBBB ? data.bbbHolesData : undefined}

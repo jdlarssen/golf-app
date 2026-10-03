@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { wolfPayout } from '@/lib/wolf/wolfPayout';
 import { WolfChoiceModal } from './WolfChoiceModal';
 
 // Mock server-action — vi tester at modalen kaller den med riktige args og
@@ -23,6 +24,8 @@ function defaultProps(overrides: Partial<Parameters<typeof WolfChoiceModal>[0]> 
     holeNumber: 3,
     wolfUserId: 'u1',
     otherPlayers: OTHER_PLAYERS,
+    payout: wolfPayout(4, 1),
+    stake: 1,
     onClose: vi.fn(),
     onChoiceSaved: vi.fn(),
     ...overrides,
@@ -123,6 +126,20 @@ describe('WolfChoiceModal', () => {
 
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(closeButton).toHaveFocus();
+  });
+
+  it('i et reveal-spill som pågår (uten payout) viser valget ingen tall og ingen innsats', () => {
+    // #2313/#2314: tallene røper delte hull, og dermed slag, før runden er over.
+    // Fiksturnavnene har ingen sifre, så ethvert siffer i dialogen er en lekkasje.
+    render(<WolfChoiceModal {...defaultProps({ payout: null, stake: 2 })} />);
+    expect(screen.getByTestId('wolf-choice-modal').textContent).not.toMatch(/\d/);
+    expect(screen.getByTestId('wolf-lone-button').textContent).toContain(
+      'Alene mot resten',
+    );
+    expect(screen.getByTestId('wolf-blind-button').textContent).toContain(
+      'Meldt før utslag',
+    );
+    expect(screen.queryByTestId('wolf-stake-line')).toBeNull();
   });
 
   it('viser feilmelding ved rls_denied uten å lukke modalen', async () => {
