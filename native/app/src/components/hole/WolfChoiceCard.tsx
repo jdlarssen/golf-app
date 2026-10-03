@@ -8,7 +8,9 @@
 // garantert feiler er verre enn ingen knapp.
 //
 // Innholdet er webbens `WolfChoiceModal`, ikke pikslene: samme tre valg, samme
-// undertekster, samme tall (lone = n, blind = n + 2). Formen er en inline-
+// undertekster, samme tall (gevinsten ganger innsatsen, #2313). Tekstene er
+// ferdig regnet i `wolfHoleState`, og i en blind runde som pågår står det ingen
+// tall i dem (#2314). Formen er en inline-
 // seksjon og ikke en modal — hull-skjermen er én rullende kolonne, og appen har
 // ikke noe modal-mønster å låne fra ennå.
 //
@@ -38,10 +40,6 @@ export function WolfChoiceCard({
   const { ui } = useTheme();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // #465: n = alle i rotasjonen. Lone-gevinsten er n, blind n + 2 — samme
-  // regnestykke som webbens modal viser i underteksten.
-  const n = state.partnerOptions.length + 1;
 
   // Ingenting å si? Da sier vi ingenting. Et tomt kort med ramme rundt ser ut
   // som noe som ikke lastet ferdig, og det er en dårligere beskjed enn null.
@@ -88,13 +86,18 @@ export function WolfChoiceCard({
       {state.showChoiceUi ? (
         <View style={styles.choices} testID="wolf-choices">
           <Text style={ui.sectionTitle}>Velg før utslag</Text>
+          {state.choiceTexts.stakeLine ? (
+            <Text style={ui.muted} testID="wolf-stake-line">
+              {state.choiceTexts.stakeLine}
+            </Text>
+          ) : null}
 
           {state.partnerOptions.map((option) => (
             <ChoiceButton
               key={option.userId}
               testID={`wolf-partner-${option.userId}`}
               title={`Partner: ${option.name}`}
-              subtitle="Vinner-siden får 2 hver"
+              subtitle={state.choiceTexts.partnerSubtitle}
               disabled={saving}
               onPress={() => void submit('partner', option.userId)}
             />
@@ -103,7 +106,7 @@ export function WolfChoiceCard({
           <ChoiceButton
             testID="wolf-lone"
             title="Lone Wolf"
-            subtitle={`Alene mot resten. Vinner du, får du ${n}.`}
+            subtitle={state.choiceTexts.loneSubtitle}
             accent
             disabled={saving}
             onPress={() => void submit('lone', null)}
@@ -111,7 +114,7 @@ export function WolfChoiceCard({
           <ChoiceButton
             testID="wolf-blind"
             title="Blind Wolf"
-            subtitle={`Meldt før utslag. Vinner du, får du ${n + 2}.`}
+            subtitle={state.choiceTexts.blindSubtitle}
             accent
             disabled={saving}
             onPress={() => void submit('blind', null)}
@@ -138,7 +141,7 @@ function ChoiceButton({
 }: {
   testID: string;
   title: string;
-  subtitle: string;
+  subtitle?: string | null;
   accent?: boolean;
   disabled: boolean;
   onPress: () => void;
@@ -161,7 +164,7 @@ function ChoiceButton({
       testID={testID}
     >
       <Text style={ui.body}>{title}</Text>
-      <Text style={ui.muted}>{subtitle}</Text>
+      {subtitle ? <Text style={ui.muted}>{subtitle}</Text> : null}
     </Pressable>
   );
 }

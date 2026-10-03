@@ -34,6 +34,14 @@ const IM_WOLF: WolfHoleState = {
     { userId: 'p4', name: 'Ola Olsen' },
   ],
   showChoiceUi: true,
+  stake: 1,
+  payout: { partnerEach: 2, lone: 4, blind: 6 },
+  choiceTexts: {
+    partnerSubtitle: 'Vinner-siden får 2 hver',
+    loneSubtitle: 'Alene mot resten. Vinner du, får du 4.',
+    blindSubtitle: 'Meldt før utslag. Vinner du, får du 6.',
+    stakeLine: null,
+  },
 };
 
 describe('WolfChoiceCard', () => {
