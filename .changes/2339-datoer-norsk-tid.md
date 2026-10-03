@@ -2,4 +2,4 @@
 type: fix
 issue: 2339
 ---
-Datoene i spill-lista, på rundekortene og i spillerregisteret følger nå norsk tid, så en runde som slutter like etter midnatt får riktig dag.
+Avslutter du en runde like etter midnatt, får den nå riktig dag på rundekortet og i spill-arkivet, og spill-lista og spillerregisteret følger også norsk tid.
