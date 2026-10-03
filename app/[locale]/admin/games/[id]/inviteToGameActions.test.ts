@@ -13,7 +13,8 @@ import {
  *    Admin redirects land on /admin/games/[id]; creator on /games/[id]/spillere.
  *  - Disposable-domener blokkeres for ikke-admin-arrangør, ikke for admin (#422).
  *  - Status gate: only draft/scheduled allow add/invite.
- *  - Capacity gate: best_ball refuses at 8 players.
+ *  - Capacity gate: best_ball refuses at `TEAM_FORMAT_PLAYER_CAP` (40)
+ *    players (#2148).
  *  - Idempotency: duplicate (game_id, user_id) swallow-es; en allerede-pending
  *    invitasjon for samme spill oppretter ingen ny rad, men re-sender mailen
  *    best-effort så en tapt første-sending når fram ved retry (#686).

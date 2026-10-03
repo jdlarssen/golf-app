@@ -687,7 +687,7 @@ describe('buildGameInsertPayload — stableford solo', () => {
 
   it('publishes stableford with a single solo player (min 1)', () => {
     // Stableford-modusen er solo — én spiller er nok så lenge admin har
-    // valgt modusen eksplisitt. Best-ball-regelen om eksakt 8 gjelder ikke.
+    // valgt modusen eksplisitt. Best-ball-regelen om lag à 2 gjelder ikke.
     const result = buildGameInsertPayload(
       stablefordFd({}, ['u1']),
       'publish',

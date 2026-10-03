@@ -42,8 +42,9 @@ type Props = {
  *
  * Par-stableford (4BBB) ble aktivert i epic #43 fase 2 — scoring-motoren
  * og payload-validatoren landet i fase 1 (PR #151), og lag-fordelings-
- * UI-en utvides i fase 2 til å støtte 1-4 lag à 2 spillere (2/4/6/8
- * spillere totalt, ingen 8-krav som best-ball-netto).
+ * UI-en utvides i fase 2 til å støtte lag à 2 spillere. I dag tar både
+ * par-stableford og best ball et partall opp til `MAX_TEAM_FORMAT_PLAYERS`
+ * (40, #2148).
  *
  * Singles matchplay (epic #45) krever team_size=1 (én spiller per side,
  * nøyaktig 2 sider). Scoring-motoren og payload-validatoren landet i

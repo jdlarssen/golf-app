@@ -403,6 +403,22 @@ describe('teamsDesc-tekstene lover like mange lag som rutenettet (#2075, #2148)'
   });
 });
 
+// #2324: the player cap lives in `TEAM_FORMAT_PLAYER_CAP`. A number written
+// into a text drifts the next time the cap moves (AGENTS.md trap 4).
+describe('spillertallet i tekstene har ett hjem (#2324)', () => {
+  const catalogs = [
+    ['no', no],
+    ['en', en],
+  ] as const;
+
+  it.each(catalogs)('%s', (_locale, messages) => {
+    expect(messages.wizard.form.missing.bestBallOdd).not.toMatch(/\b(4|6|8)\b/);
+    const kompis = messages.wizard.intent.kompis.description;
+    expect(kompis).toContain('{max}');
+    expect(kompis).not.toMatch(/\b\d+\b/);
+  });
+});
+
 /** Every assigned, selected player has a slot the grid draws (#2079). */
 function everyAssignedPlayerVisible(
   teamByPlayer: Record<string, number>,

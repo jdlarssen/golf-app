@@ -314,8 +314,8 @@ const getOptions = cache(async () => {
 
 async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
   // Stableford trenger bare 1 spiller — banner-en (som nudge om total
-  // klubb-størrelse) er ikke relevant her, og «Du trenger 8 spillere»-copy-en
-  // ville vært direkte misvisende for et solo-format.
+  // klubb-størrelse) er ikke relevant her, og «partall registrerte
+  // spillere»-teksten ville vært direkte misvisende for et solo-format.
   if (isStablefordFamily(gameMode)) return null;
   const { playerOptions } = await getOptions();
   // #1838: samme terskel som `/opprett-spill` (#1794) og `/admin/games/new`.
