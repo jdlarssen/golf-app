@@ -181,6 +181,24 @@ export function teamSizesThatFit(mode: GameMode, n: number): number[] {
 }
 
 /**
+ * The team size a kompis round starts on once the format is picked (#2435):
+ * the one the format card drew. `preferred` (the format's default, or the
+ * size already chosen) stands when it fits `count`; otherwise the fitting size
+ * closest to it, the larger one on a tie. No count, or nothing that fits,
+ * keeps `preferred`. The rule lives here and reads only `teamSizesThatFit`.
+ */
+export function startTeamSize(mode: GameMode, count: number | null, preferred: number): number {
+  if (count === null) return preferred;
+  const fits = teamSizesThatFit(mode, count);
+  if (fits.length === 0 || fits.includes(preferred)) return preferred;
+  return fits.reduce((best, size) => {
+    const d = Math.abs(size - preferred);
+    const bestD = Math.abs(best - preferred);
+    return d < bestD || (d === bestD && size > best) ? size : best;
+  });
+}
+
+/**
  * Kan `n` spillere fordeles på hele lag i dette formatet? Sant når minst én
  * støttet lagstørrelse går opp (`teamSizesThatFit`, så regelen bor ett sted).
  *
