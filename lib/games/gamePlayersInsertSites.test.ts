@@ -53,7 +53,8 @@ const INSERT_SITES: Record<string, { count: number; reason: string }> = {
   },
   'lib/games/createGuestPlayer.ts': {
     count: 1,
-    reason: "the guest's own M/D/J pick (guestTeeToTeeGender)",
+    reason:
+      "the guest's M/D/J pick, clamped to the game's tee by the caller (addGuestToGame; the wizard's guest form)",
   },
   'lib/league/actions.ts': {
     count: 1,

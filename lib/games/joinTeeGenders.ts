@@ -4,7 +4,7 @@ import { profileTeeGender, type TeeProfile } from '@/lib/games/teeChoice';
 import type { TeeBoxRatings, TeeGender } from '@/lib/games/teeRating';
 
 // Same embed as startScheduledGameCore — the ratings the start freezes from.
-const TEE_EMBED =
+export const TEE_EMBED =
   'tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 /**

@@ -56,20 +56,37 @@ function authedAsAdmin(): void {
   });
 }
 
-function gameRow(game_mode: string, mode_config: Record<string, unknown>) {
+function gameRow(
+  game_mode: string,
+  mode_config: Record<string, unknown>,
+  tee_boxes?: Record<string, number | null>,
+) {
   return {
-    data: { id: GAME_ID, status: 'draft', game_mode, mode_config },
+    data: { id: GAME_ID, status: 'draft', game_mode, mode_config, tee_boxes },
     error: null,
   };
 }
 
-function guestForm(): FormData {
+function guestForm(tee = 'M'): FormData {
   const fd = new FormData();
   fd.set('guest_name', 'Gjest Gjestesen');
   fd.set('guest_hcp', '18');
-  fd.set('guest_tee', 'M');
+  fd.set('guest_tee', tee);
   return fd;
 }
+
+// Men and ladies rated, juniors not.
+const TEE_WITHOUT_JUNIORS = {
+  slope_mens: 125,
+  course_rating_mens: 71.2,
+  par_total_mens: 72,
+  slope_ladies: 128,
+  course_rating_ladies: 73.1,
+  par_total_ladies: 72,
+  slope_juniors: null,
+  course_rating_juniors: null,
+  par_total_juniors: null,
+};
 
 function lastRedirect(): string | undefined {
   const arg = redirectMock.mock.calls.at(-1)?.[0];
@@ -117,6 +134,25 @@ describe('addGuestToGame — format-taket (#2059)', () => {
     );
 
     expect(createGuestPlayerMock).toHaveBeenCalledTimes(1);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=guest_added`);
+  });
+});
+
+describe('addGuestToGame — kategorien klemmes til teen (#2437)', () => {
+  it('Skins på en tee uten juniorrating: gjest med «Junior» lagres som herre', async () => {
+    supabaseMock = buildSupabaseMock([
+      ADMIN_ROLE_READ,
+      gameRow('skins', {}, TEE_WITHOUT_JUNIORS),
+    ]);
+    authedAsAdmin();
+
+    const { addGuestToGame } = await import('./guestPlayerActions');
+    await expect(addGuestToGame(GAME_ID, guestForm('J'))).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(createGuestPlayerMock).toHaveBeenCalledTimes(1);
+    expect(createGuestPlayerMock.mock.calls[0]?.[1]).toMatchObject({ tee: 'M' });
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=guest_added`);
   });
 });
