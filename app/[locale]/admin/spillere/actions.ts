@@ -12,7 +12,7 @@ import {
   inviteExpiresAtFromNow,
 } from '@/lib/auth/inviteExpiry';
 import { isRosterLocked } from '@/lib/games/status';
-import { expectAffected } from '@/lib/supabase/affectedRows';
+import { extendAndMailInvitation } from '@/lib/games/extendAndMailInvitation';
 import {
   consumeAdminInviteRateLimit,
   getClientIp,
@@ -166,6 +166,14 @@ export async function resendInvitation(formData: FormData) {
     if (!game || isRosterLocked(game.status)) {
       redirect({ href: '/admin/spillere?error=resend_game_locked', locale });
     }
+    // #2445 (orchestrator's decision 03.10): a draft holds its e-mail
+    // invitations. Nothing is extended and nothing is mailed here:
+    // sendHeldGameInvites gives the invitation a new deadline and mails it
+    // when the game is published, also when it has expired meanwhile.
+    if (game.status === 'draft') {
+      const qs = new URLSearchParams({ status: 'resend_held', email: inv.email });
+      redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
+    }
 
     const { data: inviter, error: inviterError } = await supabase
       .from('users')
@@ -181,41 +189,30 @@ export async function resendInvitation(formData: FormData) {
   }
 
   // «Send på nytt» means «give this person a fresh chance» (#1381), so the
-  // deadline is pushed out a full TTL instead of staying at the old one. An
-  // expired-but-unaccepted row otherwise got a mail the login gate would still
-  // refuse — email_is_invited requires expires_at > now() (migration 0100).
+  // deadline is pushed out a full TTL instead of staying at the old one, and
+  // before the mail (extendAndMailInvitation, the one home for this, #2445).
+  // An expired-but-unaccepted row otherwise got a mail the login gate would
+  // still refuse — email_is_invited requires expires_at > now() (migration
+  // 0100). The admin's own client writes, as before.
   const expiresAt = gameMail
     ? gameInviteExpiresAtFromNow()
     : inviteExpiresAtFromNow();
-  try {
-    expectAffected(
-      await supabase
-        .from('invitations')
-        .update({ expires_at: expiresAt })
-        .eq('id', id)
-        .is('accepted_at', null)
-        .select('id'),
-      'resendInvitation.extendExpiry',
-    );
-  } catch (extendError) {
-    // expectAffected throws — plain Error on a DB refusal, NoRowsAffectedError
-    // when the write silently matched nothing (row deleted, or accepted between
-    // the read and the write; AGENTS.md trap 2). Both become this file's
-    // redirect so the admin sees a banner, never error.tsx.
-    console.error('[admin/spillere] expiry extend failed', extendError);
-    redirect({ href: '/admin/spillere?error=resend_failed', locale });
-  }
-
-  try {
-    await sendInviteNotification({
+  const outcome = await extendAndMailInvitation({
+    client: supabase,
+    invitationId: id,
+    expiresAt,
+    mail: {
       to: inv.email,
       invitedByName: senderName,
       inviteToken: inv.token,
-      expiresAt,
       ...gameMail,
-    });
-  } catch (err) {
-    console.error('[admin/spillere] resend mail failed', err);
+    },
+    label: 'resendInvitation.extendExpiry',
+  });
+  if (outcome === 'extend_failed') {
+    redirect({ href: '/admin/spillere?error=resend_failed', locale });
+  }
+  if (outcome === 'mail_failed') {
     const qs = new URLSearchParams({ error: 'mail_failed', email: inv.email });
     redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
