@@ -124,20 +124,45 @@ describe('veiviserens lenkeknapper (#1891)', () => {
     expect(screen.getByTestId('create-error')).toBeTruthy();
     expect(screen.queryByTestId('create-error-link')).toBeNull();
 
-    // #1979 og #2441: din egen ufullførte profil får sin EGEN knapp, til
-    // skjemaet og ikke til nettsiden. Den står under merknaden, for profilen
-    // stopper ikke publiseringen lenger, bare starten. De to knappene skal
-    // aldri stå samtidig.
+    // #1979 og #2441: profilknappen hører til merknaden om din egen profil, og
+    // nettlenken til feilen. De er uavhengige: hver vises av sin egen grunn, og
+    // den ene tar ikke plassen til den andre.
+    const pendingSelf = [
+      {
+        key: 'pending-self',
+        text: 'Profilen din mangler navn eller handicap.',
+        action: 'profile' as const,
+      },
+    ];
     await rerender(
       <SummaryStep
         {...props}
-        warnings={[
-          {
-            key: 'pending-self',
-            text: 'Profilen din mangler navn eller handicap.',
-            action: 'profile',
-          },
-        ]}
+        warnings={pendingSelf}
+        error="Dette formatet opprettes på nettsiden ennå."
+        errorAction="web"
+        onEditProfile={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId('create-warning-profile')).toBeTruthy();
+    expect(screen.getByTestId('create-error-link')).toBeTruthy();
+
+    // Uten merknaden står bare nettlenken.
+    await rerender(
+      <SummaryStep
+        {...props}
+        error="Dette formatet opprettes på nettsiden ennå."
+        errorAction="web"
+        onEditProfile={jest.fn()}
+      />,
+    );
+    expect(screen.queryByTestId('create-warning-profile')).toBeNull();
+    expect(screen.getByTestId('create-error-link')).toBeTruthy();
+
+    // Uten feilen står bare profilknappen.
+    await rerender(
+      <SummaryStep
+        {...props}
+        warnings={pendingSelf}
         error={null}
         onEditProfile={jest.fn()}
       />,

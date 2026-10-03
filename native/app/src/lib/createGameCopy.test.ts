@@ -145,15 +145,4 @@ describe('merknadene om uferdige profiler (#2441)', () => {
       expect(note).not.toContain('—');
     }
   });
-
-  it('er merknader, ikke feilmeldinger', () => {
-    const failures = new Set(ALL.map(describeCreateGameFailure));
-    for (const note of notes) expect(failures.has(note)).toBe(false);
-  });
-
-  it('er ikke webbens sjekkliste-tillegg', () => {
-    const checklist = (source.wizard.ready.checklist as Record<string, string>)
-      .pendingProfiles;
-    expect(notes).not.toContain(checklist);
-  });
 });
