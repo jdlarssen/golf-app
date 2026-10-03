@@ -3,7 +3,8 @@
     "appName": "Tørny",
     "metaDescription": "Gratis turneringsapp for golf. Sett opp scramble, stableford eller matchplay på et par minutter, med live leaderboard og WHS-handicap. Over 20 spillformer.",
     "guestBadge": "Gjest",
-    "appVersionLabel": "App-versjon"
+    "appVersionLabel": "App-versjon",
+    "brandTagline": "Fyr opp golfturneringen på et <par>par</par> minutter"
   },
   "notFound": {
     "heading": "Denne siden finnes ikke",
