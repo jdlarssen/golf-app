@@ -5,6 +5,7 @@ import {
   type QueryOp,
   type QueryResponse,
 } from '@/lib/supabase/testing/adminClientMock';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 /**
  * Type A (#2333): «Eksporter mine data» feiler lukket.
@@ -37,15 +38,18 @@ let state: {
   adminThrows: boolean;
 };
 
-const hasEq = (op: QueryOp, column: string, value: unknown) =>
-  op.filters.some((f) => f.op === 'eq' && f.column === column && f.value === value);
+const hasFilter = (op: QueryOp, kind: string, column: string, value: unknown) =>
+  op.filters.some((f) => f.op === kind && f.column === column && f.value === value);
+const hasEq = (op: QueryOp, column: string, value: unknown) => hasFilter(op, 'eq', column, value);
+const isEmailRead = (op: QueryOp) =>
+  op.table === 'invitations' && hasFilter(op, 'imatch', 'email', emailMatchPattern(EMAIL));
 
 function classify(op: QueryOp): Read {
   if (op.kind !== 'select') throw new Error(`uventet ${op.kind} ${op.table}`);
   if (op.table === 'users' && hasEq(op, 'id', USER)) return 'users';
   if (op.table === 'game_players' && hasEq(op, 'user_id', USER)) return 'game_players';
   if (op.table === 'scores') return 'scores';
-  if (op.table === 'invitations' && hasEq(op, 'email', EMAIL)) return 'invitations_email';
+  if (isEmailRead(op)) return 'invitations_email';
   if (op.table === 'invitations' && hasEq(op, 'invited_by', USER)) return 'invitations_inviter';
   if (op.table === 'friendships') return 'friendships';
   if (op.table === 'group_members' && hasEq(op, 'user_id', USER)) return 'group_members';
@@ -93,6 +97,7 @@ beforeEach(() => {
     failing: null,
     adminThrows: false,
   };
+  vi.restoreAllMocks();
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -127,11 +132,12 @@ describe('GET /profile/export', () => {
     await expectFailedClosed(await GET());
   });
 
-  it('brukerraden mangler → 500, ikke en invitasjonslesing på tom e-post', async () => {
+  it('brukerraden mangler → 500 fra vakta, uten noen invitasjonslesing', async () => {
     state.userRow = null;
 
     await expectFailedClosed(await GET());
-    expect(fake.ops.some((op) => hasEq(op, 'email', ''))).toBe(false);
+    expect(fake.ops.some((op) => op.table === 'invitations')).toBe(false);
+    expect(console.error).toHaveBeenCalledWith('[profile/export] users failed', expect.anything());
   });
 
   it('admin-klienten kaster → 500, ikke et ufanget kast', async () => {
@@ -151,7 +157,12 @@ describe('GET /profile/export', () => {
 
     const clubOp = fake.ops.find((op) => op.table === 'group_members');
     expect(clubOp?.filters).toContainEqual({ op: 'eq', column: 'user_id', value: USER });
-    const emailOp = fake.ops.find((op) => op.table === 'invitations' && hasEq(op, 'email', EMAIL));
-    expect(emailOp).toBeDefined();
+    const friendOp = fake.ops.find((op) => op.table === 'friendships');
+    expect(friendOp?.filters).toContainEqual({
+      op: 'or',
+      column: '',
+      value: `requester_id.eq.${USER},addressee_id.eq.${USER}`,
+    });
+    expect(fake.ops.some(isEmailRead)).toBe(true);
   });
 });

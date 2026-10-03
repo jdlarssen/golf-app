@@ -3,6 +3,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 // One fixed text for every failed read (#2333): the export either carries
 // all of the user's data or nothing, and never leaks error.message.
@@ -58,11 +59,12 @@ export async function GET() {
     );
     if (scoresError) return exportFailed('scores', scoresError);
 
-    // 4. public.invitations — rows where email matches OR invited_by matches
+    // 4. public.invitations — rows where email matches OR invited_by matches.
+    //    Case-insensitive like every other invitation lookup (#2207).
     const { data: invitationsByEmail, error: invitationsByEmailError } = await supabase
       .from('invitations')
       .select('*')
-      .eq('email', user.email);
+      .filter('email', 'imatch', emailMatchPattern(user.email));
     if (invitationsByEmailError) {
       return exportFailed('invitations by email', invitationsByEmailError);
     }
