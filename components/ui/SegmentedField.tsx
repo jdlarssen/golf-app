@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { chipButtonClasses } from './Button';
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; disabled?: boolean; title?: string };
 
 type Props = {
   /** Uppercase micro-label over segmentene. */
@@ -33,6 +33,9 @@ type Props = {
  * `button role="radio"`, aktiv = primær ramme + primary-soft fyll + inset-ring.
  * Kompakt (én linje per knapp) — for kjønn/spillerklasse på profil-siden.
  *
+ * #2437: an option with `disabled: true` is greyed out, can't be picked and is
+ * skipped by the arrow keys; its `title` says why on hover.
+ *
  * Kontrollert: hold valgt verdi i parent og send en skjult input ved siden av
  * for å få den med i FormData ved server-action-submit.
  *
@@ -58,6 +61,7 @@ export function SegmentedField({
     options.map((o) => o.value),
     value,
     onChange,
+    (v) => options.some((o) => o.value === v && o.disabled === true),
   );
 
   if (variant === 'pills') {
@@ -74,7 +78,8 @@ export function SegmentedField({
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                disabled={disabled}
+                disabled={disabled || opt.disabled === true}
+                title={opt.disabled ? opt.title : undefined}
                 onClick={() => onChange(opt.value)}
                 // Line-height normal, as the artboards set the pill labels.
                 className={`${chipButtonClasses(selected ? 'primary' : 'secondary')} leading-[normal]`}
@@ -108,8 +113,10 @@ export function SegmentedField({
               type="button"
               role="radio"
               aria-checked={selected}
+              disabled={opt.disabled === true}
+              title={opt.disabled ? opt.title : undefined}
               onClick={() => onChange(opt.value)}
-              className={`flex min-h-[44px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 ${
+              className={`flex min-h-[44px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected
                   ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
                   : 'border-border bg-surface text-muted hover:bg-primary-soft/60 hover:text-text'
