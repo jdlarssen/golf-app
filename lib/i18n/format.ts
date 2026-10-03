@@ -230,9 +230,10 @@ export function formatWeekdayDayMonthOsloLocale(
  * English ('en'):   "14 May 2026" — day numeric, month short, year numeric (en-GB).
  *
  * Note: reads the host timezone (Date#getDate etc.), which is UTC on Vercel.
- * Only for plain dates: `date` columns, `YYYY-MM-DD`, or a date set to 12:00
- * (as the liga pages do). A timestamp goes through
- * `formatShortOsloDateWithYearLocale` instead (#2339).
+ * Only for plain dates: a `date` column rendered on the server, or a local
+ * date set to 12:00 (as the liga pages do). A bare `YYYY-MM-DD` parses as UTC
+ * midnight, so west of UTC it reads as the day before. A timestamp goes
+ * through `formatShortOsloDateWithYearLocale` instead (#2339).
  */
 export function formatShortDateWithYearLocale(
   input: Date | string,
@@ -254,8 +255,10 @@ export function formatShortDateWithYearLocale(
  * English ('en'):   "14 May" — day numeric, month short (en-GB, no year).
  *
  * Note: reads the host timezone (Date#getDate etc.), which is UTC on Vercel.
- * Only for plain dates: `date` columns, `YYYY-MM-DD`, or a date set to 12:00.
- * A timestamp goes through `formatShortOsloDayMonthLocale` instead (#2339).
+ * Only for plain dates: a `date` column rendered on the server, or a local
+ * date set to 12:00. A bare `YYYY-MM-DD` parses as UTC midnight, so west of
+ * UTC it reads as the day before. A timestamp goes through
+ * `formatShortOsloDayMonthLocale` instead (#2339).
  */
 export function formatShortDateLocale(
   input: Date | string,
