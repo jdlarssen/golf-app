@@ -27,7 +27,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(30);
 
 -- ── Part 1: locked search_path on the 6 flagged SECURITY INVOKER helpers ──────
 select ok((select proconfig::text like '%search_path%' from pg_proc where oid = 'public.generate_friend_code()'::regprocedure),
@@ -71,6 +71,22 @@ select ok(not has_function_privilege('anon', 'public.guard_users_self_update()',
 select ok(not has_function_privilege('anon', 'public.handle_new_auth_user()', 'EXECUTE')
       and not has_function_privilege('authenticated', 'public.handle_new_auth_user()', 'EXECUTE'),
   '#1121: handle_new_auth_user not client-executable');
+select ok(not has_function_privilege('anon', 'public.guard_game_players_insert()', 'EXECUTE')
+      and not has_function_privilege('authenticated', 'public.guard_game_players_insert()', 'EXECUTE'),
+  '#2304: guard_game_players_insert not client-executable');
+-- The pattern, not just the sites above: a new SECURITY DEFINER trigger
+-- function that ships without its revoke (0191 did) fails here even if nobody
+-- remembers to add a line for it.
+select is((select count(*)::int
+             from pg_proc p
+             join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public'
+              and p.prosecdef
+              and p.prorettype = 'trigger'::regtype
+              and (has_function_privilege('anon', p.oid, 'EXECUTE')
+                   or has_function_privilege('authenticated', p.oid, 'EXECUTE'))),
+  0,
+  '#2304: ingen SECURITY DEFINER-trigger-funksjon i public kan kjøres av anon eller authenticated');
 
 -- ── Part 2b: consume_admin_rate_limit — anon + authenticated revoked; service_role kept ─
 -- All three limiters (login, self-reg, admin-invite) now call it via
