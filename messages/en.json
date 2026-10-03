@@ -4083,6 +4083,7 @@
       "success": {
         "sent": "✓ Invitation sent to {email}.",
         "resent": "✓ Invitation resent to {email}.",
+        "resend_held": "The game is still a draft, so the invitation to {email} goes out when it is published.",
         "withdrawn": "The invitation to {email} has been withdrawn. The email address is free again.",
         "deleted": "{name} has been deleted."
       },
