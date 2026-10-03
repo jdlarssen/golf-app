@@ -12,6 +12,7 @@ import {
   organizerPlayerCap,
   randomDrawTeamCount,
   registrationSeatTeamSize,
+  startTeamSize,
   teamFormatPlayerCap,
   teamModePlayerCap,
   teamGridShape,
@@ -179,6 +180,46 @@ describe('teamSizesThatFit — lagstørrelsene som går opp (#2260)', () => {
     for (const mode of modes) {
       for (let n = 0; n <= 44; n++) {
         expect(fitsTeamFormat(mode, n)).toBe(teamSizesThatFit(mode, n).length > 0);
+      }
+    }
+  });
+});
+
+describe('startTeamSize: lagstørrelsen kompis-runden starter på (#2435)', () => {
+  it.each([
+    ['texas_scramble', 4, 4, 2], // bare par går opp
+    ['ambrose', 4, 4, 2], // samme
+    ['texas_scramble', 6, 4, 3], // eiervalget
+    ['ambrose', 6, 4, 3], // eiervalget
+    ['texas_scramble', 8, 4, 4], // standarden går opp
+    ['texas_scramble', 12, 4, 4], // standarden går opp
+    ['texas_scramble', 18, 4, 3], // nærmest standarden
+    ['texas_scramble', 30, 4, 3], // nærmest standarden
+    ['texas_scramble', 8, 3, 4], // lik avstand, den største
+    ['texas_scramble', 6, 2, 2], // valgt størrelse går opp, står
+    ['florida_scramble', 8, 3, 4], // bare 4 går opp
+    ['florida_scramble', 12, 3, 3], // standarden går opp
+    ['shamble', 6, 4, 3], // bare 3 går opp
+    ['shamble', 12, 4, 4], // standarden går opp
+    ['texas_scramble', 5, 4, 4], // ingenting går opp
+    ['texas_scramble', 42, 4, 4], // over taket
+    ['best_ball', 4, 2, 2], // utenfor scramble-familien
+    ['wolf', 4, 1, 1], // utenfor scramble-familien
+    ['texas_scramble', null, 4, 4], // uten antall
+  ] as const)('%s, n=%s, standard %i → %i', (mode, n, preferred, expected) => {
+    expect(startTeamSize(mode, n, preferred)).toBe(expected);
+  });
+
+  it('svaret går opp når noe går opp, ellers står standarden', () => {
+    const modes = ['texas_scramble', 'ambrose', 'florida_scramble', 'shamble'] as const;
+    for (const mode of modes) {
+      for (let n = 0; n <= 44; n++) {
+        const fits = teamSizesThatFit(mode, n);
+        for (const preferred of teamSizesForMode(mode)) {
+          const size = startTeamSize(mode, n, preferred);
+          if (fits.length > 0) expect(fits).toContain(size);
+          else expect(size).toBe(preferred);
+        }
       }
     }
   });
