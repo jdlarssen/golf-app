@@ -14,6 +14,7 @@ import { teamHolesPlayed } from '@/lib/leaderboard/holesColumn';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { getResultReadClient } from '../leaderboardContext';
 import { formatVsPar } from '@/lib/scoring/scoreTone';
+import { osloDateKey } from '@/lib/format/osloCalendar';
 
 type CourseHoleRow = {
   hole_number: number;
@@ -75,6 +76,9 @@ export async function GET(
   ctx: { params: Promise<{ locale: string; id: string }> },
 ) {
   const { locale: rawLocale, id } = await ctx.params;
+  // Today's Oslo date, read once so the «Eksportert» row and the filename
+  // can't straddle midnight (#2339).
+  const exportDate = osloDateKey(new Date());
   const locale = hasLocale(routing.locales, rawLocale)
     ? rawLocale
     : routing.defaultLocale;
@@ -202,7 +206,7 @@ export async function GET(
   // separerer seksjoner så CSV-en leser ryddig i Numbers/Excel.
   rows.push(csvRow([t('title')]));
   rows.push(csvRow([t('gameLabel'), game.name]));
-  rows.push(csvRow([t('exportedLabel'), new Date().toISOString().slice(0, 10)]));
+  rows.push(csvRow([t('exportedLabel'), exportDate]));
   rows.push(csvRow([t('courseParLabel'), coursePar]));
   rows.push(csvRow([]));
 
@@ -248,7 +252,6 @@ export async function GET(
   const bom = '﻿';
   const body = bom + rows.join('\r\n') + '\r\n';
 
-  const exportDate = new Date().toISOString().slice(0, 10);
   // ASCII-safe filnavn — game-id (UUID) + dato. Spillnavnet kan inneholde
   // æøå/mellomrom/symboler som kan tråkle nedlastingen i enkelte nettlesere.
   const filename = `torny-${id}-${exportDate}.csv`;

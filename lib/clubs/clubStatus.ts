@@ -1,5 +1,5 @@
 import type { AppLocale } from '@/i18n/routing';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortUTCDayMonthLocale } from '@/lib/i18n/format';
 
 /**
  * A club is frozen/expired when it has a `valid_until` that is in the past (#50).
@@ -57,7 +57,9 @@ export function getClubStatusBadge(
   }
   return {
     tone: 'expiresOn',
-    date: formatShortDateLocale(expires, locale),
+    // UTC, not Oslo: `updateClubTerms` stores the end date as `<date>T23:59:59Z`,
+    // which Oslo would read as the next day (#2339).
+    date: formatShortUTCDayMonthLocale(validUntil, locale),
     className: 'border-warning/40 text-warning-text bg-warning/[0.10]',
   };
 }

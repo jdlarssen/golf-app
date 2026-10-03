@@ -1,4 +1,5 @@
 import { formatMonthLongLocale } from '@/lib/i18n/format';
+import { osloParts } from '@/lib/format/teeOff';
 import type { AppLocale } from '@/i18n/routing';
 
 export type FinishedMonthGroup<T> = {
@@ -20,8 +21,9 @@ export type FinishedMonthGroup<T> = {
  *   keep their incoming order.
  * - `ended_at: null` items collect in a trailing «Uten dato»-bucket (they sort
  *   last via `byEndedAtDesc`, so first-seen order puts the bucket at the end).
- * - Month key/label use LOCAL date getters to match `formatMonthLongLocale` and
- *   the card's `formatShortDateLocale` (same local-TZ convention).
+ * - Month key and heading follow the Oslo month, like the card's
+ *   `formatShortOsloDayMonthLocale`: a round that ends just after midnight Oslo
+ *   lands in the new month, also on a UTC server (#2339).
  * - Labels are locale-aware (#60): the month heading via `formatMonthLongLocale`
  *   and the dateless bucket via the caller-supplied `noDateLabel` (translated at
  *   the call-site, so this stays pure).
@@ -38,9 +40,11 @@ export function groupFinishedByMonth<T extends { ended_at: string | null }>(
     let key: string;
     let label: string;
     if (item.ended_at) {
-      const d = new Date(item.ended_at);
-      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      label = formatMonthLongLocale(d, locale);
+      const { year, month } = osloParts(new Date(item.ended_at));
+      key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      // Mid-month at noon UTC is the same month in every timezone, so the
+      // host-TZ heading helper can't drift to the neighbouring month.
+      label = formatMonthLongLocale(new Date(Date.UTC(year, month, 15, 12)), locale);
     } else {
       key = 'no-date';
       label = noDateLabel;

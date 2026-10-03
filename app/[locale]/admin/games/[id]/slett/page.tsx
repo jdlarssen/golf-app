@@ -12,7 +12,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
-import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import { formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
 import { deleteGame } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -83,7 +83,7 @@ export default async function DeleteGamePage({
 
   function shortDate(iso: string | null | undefined): string | null {
     if (!iso) return null;
-    return formatShortDateWithYearLocale(iso, locale);
+    return formatShortOsloDateWithYearLocale(iso, locale);
   }
 
   // Best available date line for the summary.

@@ -4,7 +4,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { MailEnvelope } from '@/components/icons';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { isInviteExpired } from '@/lib/auth/inviteExpiry';
 import type { AppLocale } from '@/i18n/routing';
 import { resendInvitation } from '../actions';
@@ -40,7 +40,7 @@ function makeTimeAgo(t: PlayersT, locale: AppLocale) {
     if (days === 1) return t('timeAgo.yesterday');
     if (days < 7) return t('timeAgo.daysAgo', { count: days });
     // Fall back to short date for older stamps
-    return formatShortDateLocale(iso, locale);
+    return formatShortOsloDayMonthLocale(iso, locale);
   };
 }
 
@@ -91,7 +91,7 @@ export async function PendingInvitations() {
           // Judged against server time inside the helper (same reason timeAgo
           // reads the clock there) — no client clock skew decides the badge.
           expiredLabel={isInviteExpired(inv.expires_at) ? t('expiredBadge') : null}
-          sentDate={t('sentDate', { date: formatShortDateLocale(inv.created_at, locale) })}
+          sentDate={t('sentDate', { date: formatShortOsloDayMonthLocale(inv.created_at, locale) })}
           openedAtLabel={
             inv.opened_at ? t('openedAt', { relative: timeAgo(inv.opened_at) }) : null
           }
