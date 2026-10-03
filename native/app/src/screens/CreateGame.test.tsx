@@ -169,6 +169,9 @@ describe('CreateGame', () => {
       mockCandidates[0]!,
       { ...mockCandidates[1]!, pending: true },
     ]);
+    // Arrangøren er dame. Teen din følger din egen profil, ikke kandidatlista
+    // (der står du aldri).
+    fetchOwnProfileMock.mockResolvedValueOnce({ ...mockProfile, gender: 'ladies' });
 
     const { navigation } = await renderWizard();
 
@@ -235,10 +238,10 @@ describe('CreateGame', () => {
     // Andelen går til `hcp_allowance_pct`, ikke til greensome-kolonnen.
     expect(draft.setup?.greensomeAllowancePct).toBeUndefined();
     expect(draft.teeOffAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-    // Tee-kjønnet leses fra profilen: Ada står som `ladies` og skal spille fra
-    // dametee uten at veiviseren spør.
+    // Tee-kjønnet leses fra profilen: Ada og du står som `ladies` og skal
+    // spille fra dametee uten at veiviseren spør.
     expect(draft.players).toEqual([
-      { userId: 'me', teeGender: 'M', teamNumber: null },
+      { userId: 'me', teeGender: 'D', teamNumber: null },
       { userId: 'p2', teeGender: 'D', teamNumber: null },
       { userId: 'p3', teeGender: 'M', teamNumber: null },
     ]);
