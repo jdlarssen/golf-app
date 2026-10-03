@@ -1917,6 +1917,9 @@ describe('useGameFormState — kompis-lagstørrelsen følger antallet (#2435)', 
   it('kompis med 4 + Texas → par, 25 %, og trekningen gir to lag à to', () => {
     const result = setup('kompis');
     act(() => {
+      result.current.setExpectedPlayerCount(4);
+    });
+    act(() => {
       result.current.handleModeChange('texas_scramble');
     });
     expect(result.current.teamSize).toBe(2);
@@ -1971,6 +1974,9 @@ describe('useGameFormState — kompis-lagstørrelsen følger antallet (#2435)', 
   it('klubb + Texas (4), så kompis med 4 → par', () => {
     const result = setup('klubb');
     act(() => {
+      result.current.setExpectedPlayerCount(4);
+    });
+    act(() => {
       result.current.handleModeChange('texas_scramble');
     });
     expect(result.current.teamSize).toBe(4);
@@ -1978,5 +1984,30 @@ describe('useGameFormState — kompis-lagstørrelsen følger antallet (#2435)', 
       result.current.setIntent('kompis');
     });
     expect(result.current.teamSize).toBe(2);
+  });
+
+  // The size the organiser picked is `preferred`, not the format's default: it
+  // stays as long as it fits. (With the ±1 stepper a size ≥ 2 never fits two
+  // neighbouring counts, so the intent switch is the path where this shows.)
+  it('kompis 8, klubb + Texas, velg par, så kompis igjen → par står', () => {
+    const result = setup('kompis');
+    act(() => {
+      result.current.setExpectedPlayerCount(8);
+    });
+    act(() => {
+      result.current.setIntent('klubb');
+    });
+    act(() => {
+      result.current.handleModeChange('texas_scramble');
+    });
+    expect(result.current.teamSize).toBe(4);
+    act(() => {
+      result.current.handleTeamSizeChange(2);
+    });
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+    expect(result.current.teamSize).toBe(2);
+    expect(result.current.texasHandicapPct).toBe(25);
   });
 });

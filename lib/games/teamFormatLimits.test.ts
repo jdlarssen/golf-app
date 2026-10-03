@@ -197,6 +197,9 @@ describe('startTeamSize: lagstørrelsen kompis-runden starter på (#2435)', () =
     ['texas_scramble', 30, 4, 3], // nærmest standarden
     ['texas_scramble', 8, 3, 4], // lik avstand, den største
     ['texas_scramble', 6, 2, 2], // valgt størrelse går opp, står
+    ['texas_scramble', 12, 2, 2], // 2, 3 og 4 går opp: valgt 2 står, ikke den største
+    ['texas_scramble', 12, 3, 3], // 2, 3 og 4 går opp: valgt 3 står
+    ['ambrose', 8, 3, 4], // lik avstand til 2 og 4, den største
     ['florida_scramble', 8, 3, 4], // bare 4 går opp
     ['florida_scramble', 12, 3, 3], // standarden går opp
     ['shamble', 6, 4, 3], // bare 3 går opp
