@@ -412,7 +412,8 @@ describe('spillertallet i tekstene har ett hjem (#2324)', () => {
   ] as const;
 
   it.each(catalogs)('%s', (_locale, messages) => {
-    expect(messages.wizard.form.missing.bestBallOdd).not.toMatch(/\b(4|6|8)\b/);
+    // Only the team size (2) may appear; any other number is a cap or a list.
+    expect(messages.wizard.form.missing.bestBallOdd).not.toMatch(/\b(?!2\b)\d+\b/);
     const kompis = messages.wizard.intent.kompis.description;
     expect(kompis).toContain('{max}');
     expect(kompis).not.toMatch(/\b\d+\b/);
