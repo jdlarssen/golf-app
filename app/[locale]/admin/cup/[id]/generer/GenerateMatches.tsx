@@ -152,7 +152,7 @@ function GenerateMatchesEmptyStateCards({
           </p>
           <SmartLink
             href={`${cupBase}/oppsett`}
-            className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-12px_-8px]"
+            className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-14px_-8px]"
           >
             {t('generate.emptyStateNoPlanLink')}
           </SmartLink>
@@ -165,7 +165,7 @@ function GenerateMatchesEmptyStateCards({
           </p>
           <SmartLink
             href={`${cupBase}/spillere`}
-            className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-12px_-8px]"
+            className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-14px_-8px]"
           >
             {t('generate.emptyStateNoParticipantsLink')}
           </SmartLink>
