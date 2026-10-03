@@ -1431,7 +1431,6 @@ describe('useGameFormState — en venn uten fullført profil stopper ikke publis
 
     expect(result.current.canPublish).toBe(true);
     expect(result.current.missingForPublish).toEqual([]);
-    expect(result.current.missingForPublish.join(' ')).not.toMatch(/fullført profilen/);
     expect(result.current.pendingProfileCount).toBe(1);
   });
 });

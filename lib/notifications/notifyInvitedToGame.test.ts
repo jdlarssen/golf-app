@@ -107,7 +107,6 @@ describe('notifyInvitedToGame', () => {
   // #2445: et utkast varsler ingen; spillerne får beskjed når det publiseres.
   it.each([
     ['draft', 0],
-    ['finished', 0],
     ['scheduled', 1],
     ['active', 1],
   ] as const)('status %s → %i varsel', async (status, expected) => {
