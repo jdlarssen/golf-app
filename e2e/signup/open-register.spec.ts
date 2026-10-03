@@ -65,7 +65,10 @@ test.describe('Påmelding · open-modus (full flow) @gate', () => {
 
     await test.step('navigerer til /signup/[shortId] og logger inn', async () => {
       await page.goto(`/signup/${game!.shortId}`);
-      // Proxy bouncer til /login med next-param.
+      // Et publisert åpent spill har en offentlig landingsside (#2445).
+      // «Bli med» sender til /login med next-param.
+      await expect(page.getByTestId('public-landing')).toBeVisible();
+      await page.getByTestId('public-landing-join').click();
       await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
       await signInViaOtp(page, PLAYER_EMAIL!);
       // Etter login skal vi være tilbake på påmeldings-siden.

@@ -47,6 +47,9 @@ test.describe('Påmelding · self-withdraw (full flow) @gate', () => {
 
     await test.step('melder seg på via open-flyten', async () => {
       await page.goto(`/signup/${game!.shortId}`);
+      // Et publisert åpent spill har en offentlig landingsside (#2445).
+      await expect(page.getByTestId('public-landing')).toBeVisible();
+      await page.getByTestId('public-landing-join').click();
       await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
       await signInViaOtp(page, PLAYER_EMAIL!);
       await expect(page).toHaveURL(

@@ -278,7 +278,9 @@ export type CreateTestGameOpts = {
  * scoring, så banen er bare en avhengighets-tilfredsstillelse for FK-ene.
  *
  * Bruker e-posten i `ADMIN_EMAIL` til å sette `created_by`. Spillet får
- * status `draft` (påmelding skal være åpen pre-active per RLS-policy).
+ * status `scheduled`: påmelding krever et publisert spill, for et utkast er
+ * skjult for alle andre enn arrangøren (#2445). Ingen `scheduled_tee_off_at`,
+ * så spill-hjem starter ikke runden selv.
  *
  * Returnerer `id`, `shortId` og `name`. Caller MÅ kalle
  * `cleanupTestGame(id)` i `afterEach`/`afterAll` selv om testen feiler — vi
@@ -339,7 +341,7 @@ export async function createTestGame(
       mode_config: {},
       registration_mode: opts.registrationMode,
       registration_type: opts.registrationType ?? 'solo',
-      status: 'draft',
+      status: 'scheduled',
       created_by: adminUser.id,
     })
     .select('id, short_id, name, created_by')
