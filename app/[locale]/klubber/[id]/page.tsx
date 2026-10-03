@@ -34,6 +34,8 @@ type SearchParams = Promise<{
   decided?: string | string[];
   role_changed?: string | string[];
   kilde?: string | string[];
+  status?: string | string[];
+  name?: string | string[];
 }>;
 
 /**
@@ -128,12 +130,26 @@ export default async function KlubbDetailPage({
   const errorEmail = first(sp.email);
   const decidedCode = first(sp.decided);
   const roleChanged = first(sp.role_changed);
+  const statusCode = first(sp.status);
+  const deletedName = first(sp.name);
 
-  const [t, tRoles, tNav] = await Promise.all([
+  const [t, tRoles, tNav, tCup, tLiga] = await Promise.all([
     getTranslations('klubb.room'),
     getTranslations('klubb.roles'),
     getTranslations('nav'),
+    getTranslations('cup.manage'),
+    getTranslations('liga.ledger'),
   ]);
+
+  // #2329: receipt after a club cup or club league was deleted. The delete
+  // actions redirect here with the name, and only after a row was removed.
+  const deletedMessage = !deletedName
+    ? null
+    : statusCode === 'cup_deleted'
+      ? tCup('deletedMessage', { name: deletedName })
+      : statusCode === 'league_deleted'
+        ? tLiga('deletedBannerNamed', { name: deletedName })
+        : null;
 
   // Fra Klubbhuset (?kilde=klubbhuset) går tilbake dit, ikke til lista du
   // aldri gikk gjennom (#2487).
@@ -192,6 +208,14 @@ export default async function KlubbDetailPage({
         kicker={club.name}
       />
       <PageHeader title={club.name} />
+
+      {deletedMessage && (
+        <div className="mb-6">
+          <Banner tone="success" testId="club-deleted-banner">
+            {deletedMessage}
+          </Banner>
+        </div>
+      )}
 
       {addedEmail && (
         <div className="mb-6">

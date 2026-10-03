@@ -4584,6 +4584,7 @@
       "pageTitle": "Leagues",
       "pageSubtitle": "Individual season series with net stroke play.",
       "deletedBanner": "League deleted.",
+      "deletedBannerNamed": "The league «{name}» has been deleted.",
       "emptyState": "No leagues yet.",
       "emptyStateLink": "Create a league",
       "emptyStateSuffix": "to get started.",
