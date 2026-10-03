@@ -349,18 +349,18 @@ export async function startScheduledGameCore(
   }
   const rotationRange = rotationSlotRange(game.game_mode);
 
-  // Refuse to start while any roster player is still pending profile
+  // Refuse to start while any active player is still pending profile
   // completion: the handicap is needed from here on. #2441: this is the only
   // gate. A game may be published with a pending friend, and the round waits
-  // here until the profile is done. The game pages mark who is waiting with
-  // the same RPC. #2207: a SECURITY DEFINER RPC, one home for the rule. It
-  // sees the whole roster whatever RLS lets the caller read (an organiser who
-  // does not play used to see none of it: the #366 trap), and it answers with
-  // ids only.
-  const rosterIds = roster.map((r) => r.user_id);
+  // here until the profile is done. Only active rows count: a friend who
+  // withdrew before finishing the profile does not play, and would otherwise
+  // hold the round forever. The game pages mark who is waiting with the same
+  // RPC. #2207: a SECURITY DEFINER RPC, one home for the rule. It sees the
+  // whole roster whatever RLS lets the caller read (an organiser who does not
+  // play used to see none of it: the #366 trap), and it answers with ids only.
   const { data: pendingRows, error: pendingError } = await supabase.rpc(
     'incomplete_profile_ids',
-    { p_user_ids: rosterIds },
+    { p_user_ids: activeIds },
   );
   // Best-effort by design (#1445): 'db_players' er riktig for begge ben her.
   // `!pendingRows` uten feil forekommer ikke i praksis (PostgREST gir [] ved
