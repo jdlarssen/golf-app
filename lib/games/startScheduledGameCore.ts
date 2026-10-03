@@ -327,7 +327,8 @@ export async function startScheduledGameCore(
   // #969 / #2071: guard the active (non-withdrawn) roster size for every
   // fixed-count format first (fail fast, before the profile check), with the
   // limits from `START_COUNT_RANGES` (#2222: publishing, the wizard and the
-  // signup cap read the same numbers). An open signup game is saved as a draft
+  // signup cap read the same numbers). A game with an optional roster at
+  // publish (open signup, or a club tournament, #2433) is validated as a draft
   // and the signup cap only prevents "too many", so this really catches "too
   // few". Wolf / Round Robin also draw their
   // rotation slot at start, not at publish — that draw happens after all

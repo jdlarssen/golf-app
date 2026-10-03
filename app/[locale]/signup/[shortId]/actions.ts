@@ -244,10 +244,12 @@ export async function registerForOpenGame(
   //
   // For a self-registration game the signup caps (this one and the team cap in
   // submitTeamRegistration) are the only player-count gate before the game
-  // starts. Saving does not back them up: for an open or manual_approval game
-  // buildGameInsertPayload hands the mode validator effectiveMode 'draft', and
-  // every too_many_players_for_mode check sits behind mode === 'publish' — so
-  // no format's save catches a roster past the cap.
+  // starts. Saving does not back them up: for an open or manual_approval game,
+  // and a club tournament with individual signup (#2433, both through
+  // rosterOptionalAtPublish), buildGameInsertPayload hands the mode validator
+  // effectiveMode 'draft', and every too_many_players_for_mode check sits
+  // behind mode === 'publish' — so no format's save catches a roster past the
+  // cap.
   //
   // #2060/#2062: the count and the INSERT are one call. claim_open_registration_seat
   // locks the game, counts seats — a team holds its full size, so solo players

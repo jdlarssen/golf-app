@@ -1580,8 +1580,10 @@ function validateGruesomeMatchplay(
 
 /**
  * How many player slots the fixed-count formats read (#2222). This is the
- * form's ceiling, not the format's rule: an open-signup or manual-approval save
- * runs the validators as 'draft' and skips the count check, so a smaller
+ * form's ceiling, not the format's rule: a save with an optional roster
+ * (open signup, manual approval, or a club tournament, #2433 —
+ * `rosterOptionalAtPublish`) runs the validators as 'draft' and skips the
+ * count check, so a smaller
  * ceiling would drop the players above it without a word. The same ceiling as
  * `solo_strokeplay` and solo stableford. Publishing still refuses anything
  * over the format's max, and the start guard does it for everyone.
@@ -1607,14 +1609,16 @@ function startCountError(
  * Wolf-validator (issue #274; #465 — rotating partner-format).
  *
  * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
- *  - spillertallet i `START_COUNT_RANGES.wolf` ved invite-only publish
- *    (n = antall spillere)
+ *  - spillertallet i `START_COUNT_RANGES.wolf` ved publish når lista er
+ *    påkrevd (n = antall spillere)
  *  - team_number/flight_number = null på alle rader (rotation-slotten trekkes
  *    ved spillstart av assignRotationSlots; begge null tilfredsstiller DB-CHECK
  *    game_players_team_flight_consistency)
- *  - draft / open-signup publish sjekker ikke antallet; startvakta gjør det
+ *  - draft, og publish med valgfri liste (selv-påmelding, klubb-turnering,
+ *    #2433), sjekker ikke antallet; startvakta gjør det
  *
- * Feilkoder ved publish (kun invite-only — open signup kjører som draft):
+ * Feilkoder ved publish (bare når lista er påkrevd — valgfri liste kjører som
+ * draft, se `rosterOptionalAtPublish`):
  *  - under grensen → `min_players_for_mode`
  *  - over grensen → `too_many_players_for_mode`
  *
@@ -1634,7 +1638,8 @@ function validateWolf(
   // drawn at game start over the final active roster (see assignRotationSlots /
   // startScheduledGame). Every row is emitted with team_number/flight_number
   // null (both null satisfies the game_players_team_flight_consistency CHECK),
-  // so an open-signup Wolf can be published before enough have joined.
+  // so a Wolf whose players sign up themselves (open signup, club tournament)
+  // can be published before enough have joined.
   const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
@@ -1642,9 +1647,10 @@ function validateWolf(
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    // Invite-only only: open-signup publishes run through here with
-    // effectiveMode 'draft' (set in buildGameInsertPayload) and skip the count
-    // gate — the roster fills via the link, and the range is enforced at
+    // Required roster only: a publish with an optional roster (open signup,
+    // club tournament — rosterOptionalAtPublish) runs through here with
+    // effectiveMode 'draft' (set in buildGameInsertPayload) and skips the
+    // count gate — the roster fills by signup, and the range is enforced at
     // start. The start-time guard is the real enforcement for everyone.
     const countError = startCountError('wolf', players.length);
     if (countError) return { ok: false, errorCode: countError };
@@ -1898,11 +1904,12 @@ function validateNines(
  * (0..100), default 85 i draft.
  *
  * Regler (#969 — rotasjon tildeles ved start, ikke ved publish):
- *  - invite-only publish: under grensen → `min_players_for_mode`, over →
+ *  - publish med påkrevd liste: under grensen → `min_players_for_mode`, over →
  *    `too_many_players_for_mode`
  *  - team_number/flight_number = null på alle rader (slotten trekkes ved
  *    spillstart av assignRotationSlots; begge null tilfredsstiller DB-CHECK)
- *  - draft / open-signup publish sjekker ikke antallet; startvakta gjør det
+ *  - draft, og publish med valgfri liste (selv-påmelding, klubb-turnering,
+ *    #2433), sjekker ikke antallet; startvakta gjør det
  *
  * Mode_config-output: `{kind, team_size: 1, teams_count: <grensen>, allowance_pct}`.
  */
@@ -1917,7 +1924,8 @@ function validateRoundRobin(
 
   // #969: the rotation slot (team_number) is drawn at game start, not at
   // publish — see validateWolf. Rows are emitted with team_number/flight_number
-  // null so an open-signup Round Robin can be published before all have joined.
+  // null so a Round Robin whose players sign up themselves (open signup, club
+  // tournament) can be published before all have joined.
   const playersResult = parseSoloPlayers(formData, FIXED_COUNT_SLOTS);
   if (!playersResult.ok) {
     return playersResult;
@@ -1925,8 +1933,9 @@ function validateRoundRobin(
   const players = playersResult.players;
 
   if (mode === 'publish') {
-    // Invite-only only: open-signup publishes arrive with effectiveMode 'draft'
-    // and skip this gate. The count is enforced at start for everyone.
+    // Required roster only: a publish with an optional roster (open signup,
+    // club tournament — rosterOptionalAtPublish) arrives with effectiveMode
+    // 'draft' and skips this gate. The count is enforced at start for everyone.
     const countError = startCountError('round_robin', players.length);
     if (countError) return { ok: false, errorCode: countError };
   }
@@ -2305,8 +2314,9 @@ export function buildGameInsertPayload(
     if (slottedIds.has(id)) return errorPayload('duplicate_player');
     unassignedIds.add(id);
   }
-  // Backstop: an invite-only publish needs every player on a team. The client
-  // already blocks it (`playersValidForMode`).
+  // Backstop: a publish with a required roster needs every player on a team.
+  // The client already blocks it (`playersValidForMode`). An optional roster
+  // (open signup, club tournament) runs as 'draft' and keeps them unassigned.
   if (effectiveMode === 'publish' && unassignedIds.size > 0) {
     return errorPayload('bad_team');
   }
