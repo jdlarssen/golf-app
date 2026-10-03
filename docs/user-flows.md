@@ -72,8 +72,8 @@ eieren medlemmer til admin eller eier (flere likestilte), eller setter dem ned (
 — siste eier kan ikke degraderes; den berørte varsles). Når et spill opprettes for en klubb
 («Klubb-turnering» i veiviseren, `games.group_id`), ser **alle klubbens medlemmer** runden i «Finn
 turneringer» og melder seg på direkte, uansett påmeldingsmåte, også `invite_only`. Medlemskap ER
-invitasjonen. Derfor kan en klubb-turnering publiseres uten spillere (#2433): steg 4 kan stå tomt, og
-«Rediger spill» lagrer den med tom liste. Unntaket er påmeldingstype «Lag», der må lista fylles.
+invitasjonen. Derfor kan en klubb-turnering publiseres uten spillere, med tomt steg 4 og tom liste også i
+«Rediger spill», unntatt med påmeldingstype «Lag» (#2433).
 **Klubben velges først** (#2439): «Klubb-turnering» spør om klubben øverst på steg 2,
 over formatlista. Har du bare én gyldig klubb, er den valgt fra start, og «Neste» og «Publiser» krever
 en klubb. Kortet «Klubb-turnering» vises bare for den som er med i en klubb som ikke er utløpt.

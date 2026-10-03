@@ -1580,13 +1580,13 @@ function validateGruesomeMatchplay(
 
 /**
  * How many player slots the fixed-count formats read (#2222). This is the
- * form's ceiling, not the format's rule: a save with an optional roster
- * (open signup, manual approval, or a club tournament, #2433 —
+ * form's ceiling, not the format's rule: a save with an optional roster (open
+ * signup, manual approval, or a club tournament, #2433 —
  * `rosterOptionalAtPublish`) runs the validators as 'draft' and skips the
- * count check, so a smaller
- * ceiling would drop the players above it without a word. The same ceiling as
- * `solo_strokeplay` and solo stableford. Publishing still refuses anything
- * over the format's max, and the start guard does it for everyone.
+ * count check, so a smaller ceiling would drop the players above it without a
+ * word. The same ceiling as `solo_strokeplay` and solo stableford. Publishing
+ * still refuses anything over the format's max, and the start guard does it
+ * for everyone.
  */
 const FIXED_COUNT_SLOTS = MAX_TEAM_FORMAT_PLAYERS + 1;
 
