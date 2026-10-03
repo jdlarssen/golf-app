@@ -53,6 +53,9 @@ test.describe('Påmelding · manual_approval-modus (full flow) @gate', () => {
 
     await test.step('spiller åpner påmeldings-siden og logger inn', async () => {
       await playerPage.goto(`/signup/${game!.shortId}`);
+      // Et publisert spill med godkjenning har en offentlig landingsside (#2445).
+      await expect(playerPage.getByTestId('public-landing')).toBeVisible();
+      await playerPage.getByTestId('public-landing-join').click();
       await expect(playerPage).toHaveURL(/\/login/, { timeout: 10_000 });
       await signInViaOtp(playerPage, PLAYER_EMAIL!);
       await expect(playerPage).toHaveURL(
