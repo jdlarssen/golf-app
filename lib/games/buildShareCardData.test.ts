@@ -332,6 +332,36 @@ describe('skins — band and score labels', () => {
     expect(card.sharerStrip!.name).toBe('Dave');
     expect(card.sharerStrip!.score).toEqual({ kind: 'skins', value: 0 });
   });
+
+  it('the skins leader is the winner (#2318)', () => {
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+    expect(card.winners.map((r) => r.name)).toEqual(['Alice']);
+  });
+});
+
+describe('skins — nobody won a skin (#2318)', () => {
+  const result: SkinsResult = {
+    kind: 'skins',
+    scoring: 'net',
+    carriedPot: 6,
+    holes: [],
+    players: [
+      { userId: 'u1', totalSkins: 0, holesWon: 0, rank: 1, tiedWith: ['u2', 'u3'] },
+      { userId: 'u2', totalSkins: 0, holesWon: 0, rank: 1, tiedWith: ['u1', 'u3'] },
+      { userId: 'u3', totalSkins: 0, holesWon: 0, rank: 1, tiedWith: ['u1', 'u2'] },
+    ],
+  };
+
+  const nameMap = names(['u1', 'Alice'], ['u2', 'Bob'], ['u3', 'Charlie']);
+  const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: null, parByHole: PAR_72, sideWinners: [] });
+
+  it('has no winners', () => {
+    expect(card.winners).toEqual([]);
+  });
+
+  it('still lists the field on the podium', () => {
+    expect(card.podium.map((r) => r.name)).toEqual(['Alice', 'Bob', 'Charlie']);
+  });
 });
 
 // ---------------------------------------------------------------------------

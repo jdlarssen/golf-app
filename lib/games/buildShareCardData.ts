@@ -67,7 +67,7 @@ export type ShareCardModel = {
   /**
    * Every podium row sharing podium[0]'s rank — each gets the champagne hero
    * block, so a tied first place names all its winners (#2318). Empty for the
-   * matchplay band and an empty field.
+   * matchplay band, an empty field and a skins round where nobody won a skin.
    */
   winners: ShareCardRow[];
   /** Present ONLY when the sharer is a participant AND finished outside the top 3. */
@@ -359,7 +359,11 @@ function buildPlacementModel(
   }));
 
   const podium = allRows.slice(0, 3);
-  const winners = podium.filter((r) => r.rank === podium[0].rank);
+  // A skins round where nobody took a skin has no winner, even though the
+  // whole field shares rank 1: plain rows, no «VINNER» on «0 skins».
+  const nobodyWon =
+    band === 'skins' && podium[0]?.score.kind === 'skins' && podium[0].score.value === 0;
+  const winners = nobodyWon ? [] : podium.filter((r) => r.rank === podium[0].rank);
 
   // sharerStrip: null if sharerId null, null if sharer in top 3, otherwise their row
   let sharerStrip: ShareCardRow | null = null;
