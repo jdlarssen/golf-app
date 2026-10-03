@@ -5,6 +5,7 @@ import {
   wolfStakeForHole,
   type WolfPayout,
 } from '../../wolf/wolfPayout';
+import { fourPlayers, holeScores, par4Holes } from '../__fixtures__/wolf';
 import type {
   ScoringContext,
   ScoringHole,
@@ -21,33 +22,15 @@ import type {
 // Wolf krever EKSAKT 4 spillere med team_number 1-4. Vi bygger 18-hulls
 // ScoringContexts med par 4, SI = hull-nummer som default. Scores og
 // wolfChoices populeres per-test slik at hver test kun setter det
-// minimum-strenge feltet den verifiserer.
+// minimum-strenge feltet den verifiserer. `par4Holes`, `fourPlayers` og
+// `holeScores` bor i `../__fixtures__/wolf.ts`, fordi hull-sidens
+// innsats-test bruker de samme scenarioene (#2313).
 // -----------------------------------------------------------------------------
-
-function par4Holes(count: number): ScoringHole[] {
-  return Array.from({ length: count }, (_, i) => ({
-    number: i + 1,
-    par: 4,
-    strokeIndex: i + 1,
-  }));
-}
-
-function fourPlayers(opts?: {
-  handicaps?: [number, number, number, number];
-}): ScoringPlayer[] {
-  const hcps = opts?.handicaps ?? [0, 0, 0, 0];
-  return [
-    { userId: 'p1', teamNumber: 1, flightNumber: 1, courseHandicap: hcps[0] },
-    { userId: 'p2', teamNumber: 2, flightNumber: 2, courseHandicap: hcps[1] },
-    { userId: 'p3', teamNumber: 3, flightNumber: 3, courseHandicap: hcps[2] },
-    { userId: 'p4', teamNumber: 4, flightNumber: 4, courseHandicap: hcps[3] },
-  ];
-}
 
 /**
  * Generisk felt-bygger for n spillere (#465 — Wolf støtter 3–5). Tildeler
  * team_number 1..n i rekkefølge. Brukes av n=3/n=5-testene; n=4-fikstur-en
- * over (`fourPlayers`) er bevisst urørt som refaktor-bevis.
+ * (`fourPlayers`) er bevisst urørt som refaktor-bevis.
  */
 function playersN(n: number, handicaps?: number[]): ScoringPlayer[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -82,21 +65,6 @@ function makeCtx(opts: {
     scores: opts.scores ?? [],
     wolfChoices: opts.wolfChoices ?? [],
   };
-}
-
-/**
- * Helper: bygg gross-scores for ett hull der vi spesifiserer hver spillers
- * gross. `null` = ikke spilt.
- */
-function holeScores(
-  holeNumber: number,
-  grosses: Record<string, number | null>,
-): ScoringHoleScore[] {
-  return Object.entries(grosses).map(([userId, gross]) => ({
-    userId,
-    holeNumber,
-    gross,
-  }));
 }
 
 /**
