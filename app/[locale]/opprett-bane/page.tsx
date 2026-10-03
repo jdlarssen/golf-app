@@ -1,5 +1,6 @@
 import { first } from '@/lib/url/searchParams';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
+import { klubbhusBackHref, withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
@@ -19,13 +20,16 @@ import { getServerClient } from '@/lib/supabase/server';
 //
 // Den frittstående inngangen til denne ruta er midlertidig på hjem-siden;
 // permanent hjem blir Klubbhuset (#392). Ruta kan òg nås via «Finner du ikke
-// banen?»-lenken i spill-velgeren (?next= tar deg tilbake dit).
+// banen?»-lenken i spill-velgeren (?next= tar deg tilbake dit). Fra
+// Klubbhuset kommer ?kilde=klubbhuset: tilbake og kvitteringen går da dit
+// (#2487). ?next= vinner alltid.
 
 type SearchParams = Promise<{
   error?: string | string[];
   status?: string | string[];
   name?: string | string[];
   next?: string | string[];
+  kilde?: string | string[];
 }>;
 
 export default async function OpprettBanePage({
@@ -43,13 +47,27 @@ export default async function OpprettBanePage({
     redirect({ href: '/login', locale });
   }
 
-  const t = await getTranslations({ locale, namespace: 'courseForm' });
+  const [t, tNav] = await Promise.all([
+    getTranslations({ locale, namespace: 'courseForm' }),
+    getTranslations({ locale, namespace: 'nav' }),
+  ]);
 
   const sp = await searchParams;
   // Bare interne stier slipper gjennom (samme regel som createCourse).
   const next = safeInternalPath(first(sp.next)) ?? undefined;
   const status = first(sp.status);
   const errorCode = first(sp.error);
+
+  // Åpnet fra Klubbhuset (#2487): tilbake går dit, og merket følger med
+  // gjennom skjemaet (feil-retur, kvittering, «Opprett en bane til»).
+  const klubbhusBack = klubbhusBackHref(sp.kilde, '/');
+  const fromKlubbhus = klubbhusBack === '/admin';
+  const backHref = next ?? klubbhusBack;
+  const keepOrigin = (href: string) =>
+    fromKlubbhus ? withKlubbhusOrigin(href) : href;
+  const createAnotherHref = keepOrigin(
+    next ? `/opprett-bane?next=${encodeURIComponent(next)}` : '/opprett-bane',
+  );
 
   // Resolve error message from catalog; unknown codes render no banner.
   const errorKey = errorCode
@@ -63,7 +81,7 @@ export default async function OpprettBanePage({
     const createdName = first(sp.name);
     return (
       <AppShell>
-        <TopBar backHref={next ?? '/'} kicker={t('door.kicker')} />
+        <TopBar backHref={backHref} kicker={t('door.kicker')} />
         <div className="mt-5">
           <Card>
             <div className="space-y-5 text-center">
@@ -80,6 +98,10 @@ export default async function OpprettBanePage({
                   <LinkButton href={next} full>
                     {t('door.backToGame')}
                   </LinkButton>
+                ) : fromKlubbhus ? (
+                  <LinkButton href="/admin" full>
+                    {tNav('backToClubhouse')}
+                  </LinkButton>
                 ) : (
                   <LinkButton href="/" full>
                     {t('door.toFrontPage')}
@@ -87,11 +109,7 @@ export default async function OpprettBanePage({
                 )}
                 <div>
                   <SmartLink
-                    href={
-                      next
-                        ? `/opprett-bane?next=${encodeURIComponent(next)}`
-                        : '/opprett-bane'
-                    }
+                    href={createAnotherHref}
                     className="inline-flex min-h-[44px] items-center justify-center text-sm text-muted underline underline-offset-4 transition-colors hover:text-text"
                   >
                     {t('door.createAnother')}
@@ -106,16 +124,16 @@ export default async function OpprettBanePage({
   }
 
   // Bevar ?next= gjennom feil/suksess slik at bruker kan returnere til spillet.
-  const redirectBase = next
-    ? `/opprett-bane?next=${encodeURIComponent(next)}`
-    : '/opprett-bane';
-  const successRedirect = next
-    ? `/opprett-bane?status=created&next=${encodeURIComponent(next)}`
-    : '/opprett-bane?status=created';
+  const redirectBase = createAnotherHref;
+  const successRedirect = keepOrigin(
+    next
+      ? `/opprett-bane?status=created&next=${encodeURIComponent(next)}`
+      : '/opprett-bane?status=created',
+  );
 
   return (
     <AppShell>
-      <TopBar backHref={next ?? '/'} kicker={t('door.kicker')} />
+      <TopBar backHref={backHref} kicker={t('door.kicker')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">

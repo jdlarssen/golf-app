@@ -55,14 +55,14 @@ describe('PlayerKlubbhus adaptive room (#892)', () => {
     expect(screen.getByTestId('player-no-club')).toHaveAttribute('href', '/klubber');
     expect(screen.queryByTestId('player-club-row')).toBeNull();
 
-    // Tools always present.
+    // Tools always present, carrying the Klubbhuset origin (#2487).
     expect(screen.getByRole('link', { name: /baner/i })).toHaveAttribute(
       'href',
-      '/opprett-bane',
+      '/opprett-bane?kilde=klubbhuset',
     );
     expect(screen.getByRole('link', { name: /spillformater/i })).toHaveAttribute(
       'href',
-      '/spillformater',
+      '/spillformater?kilde=klubbhuset',
     );
   });
 
@@ -71,8 +71,8 @@ describe('PlayerKlubbhus adaptive room (#892)', () => {
 
     const rows = screen.getAllByTestId('player-club-row');
     expect(rows).toHaveLength(CLUBS.length);
-    expect(rows[0]).toHaveAttribute('href', '/klubber/club-1');
-    expect(rows[1]).toHaveAttribute('href', '/klubber/club-2');
+    expect(rows[0]).toHaveAttribute('href', '/klubber/club-1?kilde=klubbhuset');
+    expect(rows[1]).toHaveAttribute('href', '/klubber/club-2?kilde=klubbhuset');
 
     // The «no club» fallback is gone once you belong to a club.
     expect(screen.queryByTestId('player-no-club')).toBeNull();

@@ -33,6 +33,11 @@ import { HistoryBackLink } from './HistoryBackLink';
  * pages that have no other visible title, so screen readers get a heading
  * without reading the title twice. Off by default: most pages carry their
  * own h1 (PageHeader) and the kicker is just a label there.
+ *
+ * Without `backHref` there is no back arrow (#2487): a bottom-nav tab's front
+ * page (Klubbhuset, Profil) is a root, not a step. An `aria-hidden` box the
+ * size of `BackLink` keeps its place, so the kicker and the content below sit
+ * exactly where they do on pages with an arrow.
  */
 export function TopBar({
   backHref,
@@ -42,7 +47,7 @@ export function TopBar({
   back = 'link',
   action,
 }: {
-  backHref: string;
+  backHref?: string;
   backLabel?: string;
   kicker?: string;
   kickerIsPageTitle?: boolean;
@@ -52,7 +57,9 @@ export function TopBar({
   const Kicker = kickerIsPageTitle ? 'h1' : 'p';
   return (
     <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 backdrop-blur-sm -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
-      {back === 'history' ? (
+      {backHref === undefined ? (
+        <span aria-hidden className="-ml-2 h-8 w-8" />
+      ) : back === 'history' ? (
         <HistoryBackLink fallbackHref={backHref} ariaLabel={backLabel} />
       ) : (
         <BackLink href={backHref}>{backLabel}</BackLink>

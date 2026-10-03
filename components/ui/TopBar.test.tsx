@@ -8,8 +8,9 @@ describe('TopBar', () => {
     expect(screen.getByRole('link', { name: /tilbake/i })).toBeInTheDocument();
   });
 
-  it('viser kicker når oppgitt', () => {
-    render(<TopBar backHref="/" kicker="SEKRETARIATET" />);
+  it('viser kicker uten tilbake-pil når backHref mangler (fanens forside, #2487)', () => {
+    render(<TopBar kicker="SEKRETARIATET" />);
     expect(screen.getByText('SEKRETARIATET')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
   });
 });

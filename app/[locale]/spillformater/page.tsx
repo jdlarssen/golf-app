@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
@@ -8,10 +9,12 @@ import { FormatGuideList } from '@/components/FormatGuideList';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { canonicalPath } from '@/lib/seo/canonical';
+import { klubbhusBackHref } from '@/lib/url/klubbhusOrigin';
 // Content comes from the message catalog via getFormatGuideEntries (i18n Fase
 // D, #592) — no DB read, fully bilingual.
 
 type Params = Promise<{ locale: string }>;
+type SearchParams = Promise<{ kilde?: string | string[] }>;
 
 export async function generateMetadata({
   params,
@@ -36,14 +39,24 @@ export async function generateMetadata({
 // getFormatGuideEntries (i18n Fase D, #592) og rendres med den delte
 // FormatGuideList-komponenten (#498), samme liste som «?»-arket i veiviseren
 // bruker.
-export default async function SpillformaterPage() {
+//
+// Siden er offentlig og ferdigbygd (PPR). Bare tilbake-pila venter på
+// searchParams, bak sin egen Suspense: fra Klubbhuset (?kilde=klubbhuset)
+// går den dit, ellers til forsiden (#2487).
+export default async function SpillformaterPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const t = await getTranslations('formatGuide');
   const entries = await getFormatGuideEntries();
 
   return (
     <AppShell>
       <header className="mb-2 flex items-center justify-between gap-4">
-        <BackLink href="/">{t('listBackLabel')}</BackLink>
+        <Suspense fallback={<BackLink href="/">{t('listBackLabel')}</BackLink>}>
+          <ListBackLink searchParams={searchParams} />
+        </Suspense>
         <Kicker tone="accent">{t('listKicker')}</Kicker>
         <span className="w-12" aria-hidden />
       </header>
@@ -64,4 +77,15 @@ export default async function SpillformaterPage() {
       />
     </AppShell>
   );
+}
+
+async function ListBackLink({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const href = klubbhusBackHref(sp.kilde, '/');
+  if (href === '/') {
+    const t = await getTranslations('formatGuide');
+    return <BackLink href="/">{t('listBackLabel')}</BackLink>;
+  }
+  const tNav = await getTranslations('nav');
+  return <BackLink href={href}>{tNav('backToClubhouse')}</BackLink>;
 }

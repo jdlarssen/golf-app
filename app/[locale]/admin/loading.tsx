@@ -12,7 +12,7 @@ export default async function AdminLoading() {
   const tNav = await getTranslations('admin.nav');
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker={tNav('klubbhus')} />
+      <TopBar kicker={tNav('klubbhus')} />
 
       <Skeleton className="mb-4 h-[88px] rounded-2xl" />
 

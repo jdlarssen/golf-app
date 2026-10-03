@@ -55,7 +55,8 @@
     "inbox": "Innboks",
     "inboxUnread": "Innboks, {count, plural, one {# ulest} other {# uleste}}",
     "clubhouse": "Klubbhuset",
-    "profile": "Profil"
+    "profile": "Profil",
+    "backToClubhouse": "Tilbake til Klubbhuset"
   },
   "inbox": {
     "kicker": "Innboks",
@@ -285,7 +286,6 @@
   "profile": {
     "languageRowLabel": "Språk",
     "kicker": "Profil",
-    "backLabel": "Tilbake til hjem",
     "displayNameFallback": "Profil",
     "updatedBanner": "✓ Profilen din er oppdatert.",
     "sectionPersonal": "Aktivitet",
