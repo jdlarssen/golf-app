@@ -69,11 +69,14 @@ export function mergeCupIds(
  * themselves — a club-cup participant who isn't a club member can't read the
  * row under RLS but CAN open `/cup/[id]`, so that fetch goes through the admin
  * client on exactly these ids (same authz shape as `getCupSnapshot`).
+ *
+ * If any of the three reads fails the answer is `{ ok: false }`: a partial
+ * union would undercount, and an empty one would hide the cups (#2490).
  */
 export async function getMyCupIds(
   supabase: ServerSupabase,
   userId: string,
-): Promise<string[]> {
+): Promise<{ ok: true; ids: string[] } | { ok: false }> {
   const [createdRes, rosterRes, playedRes] = await Promise.all([
     supabase.from('tournaments').select('id').eq('created_by', userId),
     supabase
@@ -88,11 +91,20 @@ export async function getMyCupIds(
       .returns<Array<{ games: { tournament_id: string | null } | null }>>(),
   ]);
 
-  return mergeCupIds([
-    (createdRes.data ?? []).map((r) => r.id),
-    (rosterRes.data ?? []).map((r) => r.tournament_id),
-    (playedRes.data ?? []).map((r) => r.games?.tournament_id),
-  ]);
+  const error = createdRes.error ?? rosterRes.error ?? playedRes.error;
+  if (error) {
+    console.error('[getMyCupIds]', error);
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    ids: mergeCupIds([
+      (createdRes.data ?? []).map((r) => r.id),
+      (rosterRes.data ?? []).map((r) => r.tournament_id),
+      (playedRes.data ?? []).map((r) => r.games?.tournament_id),
+    ]),
+  };
 }
 
 /**

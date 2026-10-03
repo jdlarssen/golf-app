@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SectionError } from '@/components/ui/SectionError';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 
 type SearchParams = Promise<{
@@ -36,13 +37,22 @@ const CUP_SELECT =
 
 type ServerSupabase = Awaited<ReturnType<typeof getServerClient>>;
 
-/** Admin-lista: alle cuper, nyest først — uendret siden #526. */
-async function fetchAllCups(supabase: ServerSupabase): Promise<CupLedgerRow[]> {
-  const { data } = await supabase
+/**
+ * Admin-lista: alle cuper, nyest først — uendret siden #526. `null` betyr at
+ * lesingen feilet: det er ikke det samme som ingen cuper (#2490).
+ */
+async function fetchAllCups(
+  supabase: ServerSupabase,
+): Promise<CupLedgerRow[] | null> {
+  const { data, error } = await supabase
     .from('tournaments')
     .select(CUP_SELECT)
     .order('created_at', { ascending: false })
     .limit(50);
+  if (error) {
+    console.error('[admin/cup] all cups', error);
+    return null;
+  }
   // status/winner_team er text/smallint i DB, låst av CHECK — samme cast som
   // getCupSnapshot gjør på de samme kolonnene.
   return (data ?? []) as CupLedgerRow[];
@@ -53,20 +63,26 @@ async function fetchAllCups(supabase: ServerSupabase): Promise<CupLedgerRow[]> {
  * brukerens egne rader (RLS-scopet, `getMyCupIds`), mens selve radene hentes
  * med admin-klient: en deltaker i en klubb-cup uten klubbmedlemskap får ikke
  * lest tournament-raden under RLS, men kan åpne `/cup/[id]`. Retten følger av
- * spillerens egne rader — samme authz-form som `getCupSnapshot`.
+ * spillerens egne rader — samme authz-form som `getCupSnapshot`. `null` når
+ * en av lesingene feilet (#2490).
  */
 async function fetchMyCups(
   supabase: ServerSupabase,
   userId: string,
-): Promise<CupLedgerRow[]> {
-  const ids = await getMyCupIds(supabase, userId);
-  if (ids.length === 0) return [];
-  const { data } = await getAdminClient()
+): Promise<CupLedgerRow[] | null> {
+  const idsRes = await getMyCupIds(supabase, userId);
+  if (!idsRes.ok) return null;
+  if (idsRes.ids.length === 0) return [];
+  const { data, error } = await getAdminClient()
     .from('tournaments')
     .select(CUP_SELECT)
-    .in('id', ids)
+    .in('id', idsRes.ids)
     .order('created_at', { ascending: false })
     .limit(50);
+  if (error) {
+    console.error('[admin/cup] my cups', error);
+    return null;
+  }
   return (data ?? []) as CupLedgerRow[];
 }
 
@@ -119,7 +135,9 @@ export default async function CupListPage({
         </div>
       )}
 
-      {rows.length === 0 ? (
+      {rows === null ? (
+        <SectionError />
+      ) : rows.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
             {t.rich('ledger.emptyBody', {

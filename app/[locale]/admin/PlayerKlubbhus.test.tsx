@@ -103,4 +103,26 @@ describe('PlayerKlubbhus adaptive room (#892)', () => {
     expect(screen.getByTestId('player-invite-primary')).toBeInTheDocument();
     expect(screen.getByTestId('player-cup-row')).toHaveAttribute('href', '/admin/cup');
   });
+
+  // #2490: a failed read shows its own error box, never the empty state, and
+  // never hides what the other read fetched.
+  it('a failed read shows an error box instead of the empty state', () => {
+    const games = render(<ArrangementView games={null} hasMore={false} cupCount={2} />);
+    expect(screen.getByTestId('klubbhus-arrangement-error')).toBeInTheDocument();
+    expect(screen.getByTestId('player-cup-row')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-invite-primary')).toBeNull();
+    games.unmount();
+
+    const cups = render(
+      <ArrangementView games={GAMES.slice(0, 1)} hasMore={false} cupCount={null} />,
+    );
+    expect(screen.getByTestId('player-arranged-game')).toBeInTheDocument();
+    expect(screen.getByTestId('klubbhus-cups-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-cup-row')).toBeNull();
+    cups.unmount();
+
+    render(<ClubsView clubs={null} />);
+    expect(screen.getByTestId('klubbhus-clubs-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-no-club')).toBeNull();
+  });
 });
