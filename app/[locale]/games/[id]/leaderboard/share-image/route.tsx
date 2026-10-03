@@ -17,6 +17,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { computeSharerSideAwards } from '@/lib/games/computeSharerSideAwards';
 import { routing, type AppLocale } from '@/i18n/routing';
 import { loadFonts } from '@/lib/og/fonts';
+import { computeCardHeight } from '@/lib/og/shareCardHeight';
 import { OgWordmark } from '@/lib/og/wordmark';
 import {
   FOREST,
@@ -66,6 +67,11 @@ function renderMatchHeadline(
   }
 }
 
+/** The matchplay band's headline as rendered (also sizes the card). */
+function matchHeadlineText(model: ShareCardModel | null, t: ShareT): string {
+  return model?.match ? renderMatchHeadline(model.match.headline, t) : t('matchplay');
+}
+
 /**
  * Shareable result-card PNG for a finished game (#942). Rendered server-side
  * with next/og's `ImageResponse` (Satori → PNG, flexbox-only CSS), with fonts
@@ -105,43 +111,6 @@ function osloDate(iso: string | null, locale: AppLocale): string | null {
 
 function notFound(): Response {
   return new Response('Not found', { status: 404 });
-}
-
-/**
- * Content-fit card height: a thin result (matchplay, 2-player) becomes a snug
- * card instead of a tall photo with a blank lower half once shared into a chat.
- * Estimates are deliberately generous so the card never clips; the footer's
- * marginTop:auto absorbs any small slack at the bottom.
- */
-function computeCardHeight(
-  model: ShareCardModel | null,
-  nameLines: number,
-  hasMeta: boolean,
-): number {
-  let h = 72 /* top pad */ + 76 /* header */;
-  h += 36 + nameLines * 80 + (hasMeta ? 16 + 42 : 0); // name + meta
-  h += 42; // divider
-  if (model === null) {
-    h += 160;
-  } else if (model.band === 'matchplay') {
-    h += 8 + 200; // result band
-  } else {
-    // One winner block per tied first place (#2318), 16px apart. A block
-    // renders ~233px; the first keeps its historic 196 (the footer slack
-    // absorbs the rest, so a single-winner card is unchanged), but every extra
-    // block must be counted at full height or 3 winners clip the footer.
-    const winnerCount = model.winners.length;
-    h += 8 + 196 + Math.max(0, winnerCount - 1) * (16 + 236); // winner blocks
-    h += Math.max(0, model.podium.length - winnerCount) * 116; // runner rows
-    if (model.sharerStrip) {
-      h += 16 + 116; // sharer row
-      if (model.sharerStrip.rank > model.podium.length + 1) h += 52; // gap marker
-    }
-  }
-  if (model && model.sideTournaments.length > 0) h += 28 + 96; // chips
-  h += 24 + 2 + 104; // footer (divider + two lines)
-  h += 72; // bottom pad
-  return h;
 }
 
 export async function GET(
@@ -245,7 +214,11 @@ export async function GET(
     holeCount ? t('holes', { n: holeCount }) : null,
   ].filter(Boolean);
 
-  const cardHeight = computeCardHeight(model, gameName.length > 16 ? 2 : 1, metaParts.length > 0);
+  const cardHeight = computeCardHeight(model, {
+    nameLines: gameName.length > 16 ? 2 : 1,
+    hasMeta: metaParts.length > 0,
+    headline: matchHeadlineText(model, t),
+  });
 
   return new ImageResponse(
     (
@@ -541,9 +514,7 @@ function MatchplayBody({
   serif: string;
   t: ShareT;
 }) {
-  const headline = model.match
-    ? renderMatchHeadline(model.match.headline, t)
-    : t('matchplay');
+  const headline = matchHeadlineText(model, t);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
       <div
