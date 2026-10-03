@@ -35,6 +35,15 @@ rls_enabled_no_policy_public_cup_lineup_slots
 # hvis passord-auth noen gang innføres.
 auth_leaked_password_protection
 #
+# #2304 — pg:28P01 (invalid_password): ekte innloggingsforsøk mot brukeren
+# `postgres` med tomt application_name, fra to eksterne vertsleverandører,
+# ikke fra Vercel/GitHub Actions/Supabase. Appen autentiserer aldri direkte
+# mot Postgres (OTP-only, all klienttilgang via supabase-js/PostgREST) — dette
+# er automatisk ekstern skanning mot den eksponerte Postgres-porten, vanlig
+# bakgrunnsstøy for offentlige Supabase-prosjekter. Diagnostisert read-only
+# via Supabase MCP logs explorer 2026-10-03 (ingen rå logglinjer her).
+pg:28P01
+#
 # anon-EXECUTE beholdt: SECURITY DEFINER-helpere referert av {public}-policies.
 # anon har fulle tabell-grants (RLS er porten); revoke ville gitt «permission
 # denied for function» på anon-spørringer FØR RLS rekker å nekte.

@@ -281,6 +281,29 @@ run_case j
 check "(j) exit 1" 1 "$EXIT"
 lacks "(j) handled er ikke satt når issuet ikke ble filet" "$GHOUT" "handled=true"
 
+# (k) kun mgmt-api-feil (interaktive spørringer, ikke apptrafikk): alt stille,
+# ingen issue, men nevnt i loggen — selv en ukjent/ubaselinet kode (#2304)
+reset_env
+PG_BODY='{"result":[{"code":"42703","app":"mgmt-api","n":2}]}'
+run_case k
+check "(k) exit 0 (ingen alarm alene)" 0 "$EXIT"
+check "(k) ingen issue" "" "$TITLE"
+contains "(k) loggen sier alt stille" "$OUT" "alt stille"
+contains "(k) loggen nevner mgmt-api-kilden" "$OUT" "pg:42703: 2"
+contains "(k) totalen inkluderer mgmt-api-feilen" "$OUT" "2 postgres-feil"
+
+# (l) samme kode fra BÅDE mgmt-api og ekte apptrafikk: mgmt-api-andelen
+# varsler ikke alene, men apptrafikk-andelen gjør — og de telles separat
+reset_env
+PG_BODY='{"result":[{"code":"42703","app":"mgmt-api","n":2},{"code":"42703","app":"","n":5}]}'
+run_case l
+check "(l) exit 0 (signal filet)" 0 "$EXIT"
+check "(l) signal-issue" "$SIGNAL" "$TITLE"
+contains "(l) apptrafikk-andelen varsler som ny" "$ISSUE" "pg:42703: 5"
+contains "(l) mgmt-api-andelen vises separat" "$ISSUE" "pg:42703: 2"
+contains "(l) mgmt-api-seksjonen nevner Management API" "$ISSUE" "Management API"
+contains "(l) totalen summerer begge andelene" "$ISSUE" "7"
+
 echo
 printf '%s bestått, %s feilet\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
