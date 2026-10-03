@@ -102,7 +102,7 @@ NEW_ADV=$(printf '%s' "$ADV" | jq -r '.lints[].cache_key' | grep -vxF -f "$TMP/b
 # iso_timestamp_start/end, så vinduet sendes eksplisitt: nøyaktig 24 t (API-ets
 # maks), kuttet til helt minutt og regnet ut fra ÉN now-verdi. jq, ikke
 # `date -d` (finnes ikke på macOS).
-SQL="select log_attributes['parsed.sql_state_code'] as code, count() as n from logs where source = 'postgres_logs' and log_attributes['parsed.error_severity'] in ('ERROR','FATAL','PANIC') group by code order by n desc limit 50"
+SQL="select log_attributes['parsed.sql_state_code'] as code, log_attributes['parsed.application_name'] as app, count() as n from logs where source = 'postgres_logs' and log_attributes['parsed.error_severity'] in ('ERROR','FATAL','PANIC') group by code, app order by n desc limit 50"
 WINDOW=$(jq -rn 'now | floor | . - (. % 60) | "\(. - 86400 | todate) \(todate)"')
 START="${WINDOW% *}"
 END="${WINDOW#* }"
@@ -122,10 +122,19 @@ printf '%s' "$PG" | jq -e '
 ' >/dev/null 2>&1 \
   || fail_closed "uventet svarform fra logs-endepunktet (ikke en liste med tellinger). Svar: $(head -c 200 "$TMP/logs.json" | tr '\n' ' ')"
 
-# «pg:<kode><TAB><antall>», summert per nøkkel (tom kode → pg:-), størst først.
+# «pg:<kode><TAB><app><TAB><antall>» per rad (tom kode → pg:-, tom app → -).
 printf '%s' "$PG" \
-  | jq -r '.result[] | "pg:\(if (.code // "") == "" then "-" else .code end)\t\(.n | tonumber)"' \
-  | awk -F'\t' '{ n[$1] += $2 } END { for (k in n) print n[k] "\t" k }' \
+  | jq -r '.result[] | "pg:\(if (.code // "") == "" then "-" else .code end)\t\(if (.app // "") == "" then "-" else .app end)\t\(.n | tonumber)"' \
+  > "$TMP/pg_rows"
+# Supabase Management API (MCP execute_sql, SQL-editoren) — interaktive
+# spørringer, ikke apptrafikk. Telles og vises for seg, varsler ALDRI alene
+# uansett SQLSTATE-kode (#2304: en feilskrevet manuell spørring er ikke et
+# apphull). En ekte feil fra appen på samme kode (annen application_name)
+# varsler fortsatt normalt — se awk-filteret under.
+awk -F'\t' '$2 == "mgmt-api" { n[$1] += $3 } END { for (k in n) print k "\t" n[k] }' "$TMP/pg_rows" \
+  | sort -k1,1 > "$TMP/pg_mgmt"
+# Resten (apptrafikk), summert per nøkkel, størst først.
+awk -F'\t' '$2 != "mgmt-api" { n[$1] += $3 } END { for (k in n) print n[k] "\t" k }' "$TMP/pg_rows" \
   | sort -k1,1nr -k2,2 \
   | awk -F'\t' '{ print $2 "\t" $1 }' > "$TMP/pg_codes"
 # Kjente koder (pg:<kode> i baseline) telles og vises, men varsler ikke alene.
@@ -134,14 +143,20 @@ awk -F'\t' -v kf="$TMP/pg_known" -v nf="$TMP/pg_new" \
   'FILENAME == ARGV[1] { known[$0] = 1; next } { print > (($1 in known) ? kf : nf) }' \
   "$TMP/baseline" "$TMP/pg_codes"
 PG_TOTAL=$(awk -F'\t' '{ s += $2 } END { print s + 0 }' "$TMP/pg_codes")
+MGMT_TOTAL=$(awk -F'\t' '{ s += $2 } END { print s + 0 }' "$TMP/pg_mgmt")
+PG_TOTAL=$((PG_TOTAL + MGMT_TOTAL))
 KNOWN_LINE=$(awk -F'\t' '{ printf "%s%s: %s", (NR > 1 ? " · " : ""), $1, $2 }' "$TMP/pg_known")
+MGMT_LINE=$(awk -F'\t' '{ printf "%s%s: %s", (NR > 1 ? " · " : ""), $1, $2 }' "$TMP/pg_mgmt")
 
 # ── Vurdér signal ──
 if [ -z "$NEW_ADV" ] && [ ! -s "$TMP/pg_new" ]; then
   if [ "$PG_TOTAL" -eq 0 ]; then
     echo "Prod-vakt: alt stille — 0 postgres-feil siste døgn, ingen advisories utenfor baseline."
   else
-    echo "Prod-vakt: alt stille — ${PG_TOTAL} postgres-feil siste døgn, alle av kjente typer (${KNOWN_LINE}), ingen advisories utenfor baseline."
+    MSG="Prod-vakt: alt stille — ${PG_TOTAL} postgres-feil siste døgn"
+    [ -s "$TMP/pg_known" ] && MSG="${MSG}, kjente typer (${KNOWN_LINE})"
+    [ -s "$TMP/pg_mgmt" ] && MSG="${MSG}, fra Supabase Management API (${MGMT_LINE})"
+    echo "${MSG}, ingen advisories utenfor baseline."
   fi
   exit 0
 fi
@@ -165,6 +180,10 @@ $(awk -F'\t' '{ print $1 ": " $2 }' "$TMP/pg_new")
 fi
 if [ -s "$TMP/pg_known" ]; then
   PG_SECTION="${PG_SECTION}Kjente typer (i baseline, varsler ikke alene): ${KNOWN_LINE}
+"
+fi
+if [ -s "$TMP/pg_mgmt" ]; then
+  PG_SECTION="${PG_SECTION}Fra Supabase Management API / interaktive spørringer (ikke apptrafikk, varsler ikke alene): ${MGMT_LINE}
 "
 fi
 if [ "$PG_TOTAL" -gt 0 ]; then
