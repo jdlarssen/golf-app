@@ -920,6 +920,7 @@
         "whoLegend": "Hvem kan melde seg på?",
         "whatLegend": "Hva melder man på?",
         "modeInviteTitle": "Bare de jeg inviterer",
+        "modeClubTitle": "Medlemmene i klubben",
         "modeInviteHint": "Privat. Vises ikke i Finn turneringer. Du sender invitasjoner selv fra Spillere-fanen.",
         "modeApprovalTitle": "Forespørsel — jeg godkjenner",
         "modeApprovalHint": "Dukker opp i Finn turneringer. Folk ber om plass, og du godkjenner hver enkelt.",
@@ -1283,6 +1284,7 @@
     },
     "step4": {
       "emptyRosterHint": "Du bestemmer på neste steg om du vil legge til spillere her, eller la dem melde seg på selv.",
+      "emptyRosterHintClub": "Du kan også la lista stå tom. Medlemmene i klubben kan melde seg på selv.",
       "pickerSubtitle": "{format} · {players}",
       "pickerSubtitleLineup": "{format} · {players}, {lineup}",
       "pickerSubtitleInstruction": "{format} · {instruction}"

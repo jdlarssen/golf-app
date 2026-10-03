@@ -1547,3 +1547,60 @@ describe('GameWizard — klubb-turnering velger klubben først (#2439)', () => {
     expect(hiddenGroupId()).toBe('');
   });
 });
+
+describe('GameWizard — klubb-turnering uten spillere (#2433)', () => {
+  const BYNESET: ClubOption = { id: 'club-1', name: 'Byneset Golfklubb', role: 'member' };
+  const MEMBERS = { 'club-1': ['u0', 'u1', 'u2'] };
+  const CLUB_HINT = /du kan også la lista stå tom\. medlemmene i klubben kan melde seg på selv\./i;
+  const OLD_HINT = /du bestemmer på neste steg/i;
+
+  /** Klubb-turnering in the one club, `format` picked, course/tee/tee-off set, on step 4. */
+  function goToClubStep4(format: RegExp) {
+    renderWizard({ isAdmin: true, clubs: [BYNESET], clubMemberIdsByClub: MEMBERS });
+    fireEvent.click(screen.getByRole('button', { name: /klubb-turnering/i }));
+    fireEvent.click(screen.getByRole('radio', { name: format }));
+    clickNext(); // → steg 3
+    fireEvent.change(screen.getByLabelText(/^bane$/i), { target: { value: 'course-1' } });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), { target: { value: 'tee-1' } });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), { target: { value: FUTURE_TEE_OFF } });
+    clickNext(); // → steg 4
+    expectStep(4);
+  }
+
+  it('tom liste: klubb-hintet står, og «Neste» er aktiv', () => {
+    goToClubStep4(/^stableford$/i);
+
+    expect(screen.getByText(CLUB_HINT)).toBeInTheDocument();
+    expect(screen.queryByText(OLD_HINT)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+  });
+
+  it('Texas med én spiller: «Neste» på lag-skjermen er aktiv', () => {
+    goToClubStep4(/^texas scramble$/i);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^neste: lagene$/i }));
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+  });
+
+  it('best ball med én spiller: foten sier «Neste», og den er aktiv', () => {
+    goToClubStep4(/^best ball$/i);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    expect(screen.queryByRole('button', { name: /^neste: lagene$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^neste$/i })).toBeEnabled();
+  });
+
+  it('påmeldingstype «Lag» og tom liste: ingen hint over velgeren', () => {
+    goToClubStep4(/^texas scramble$/i);
+    clickNext(); // → steg 5
+    expectStep(5);
+    openAdvanced();
+    fireEvent.click(screen.getByRole('radio', { name: /^lag$/i }));
+    fireEvent.click(within(screen.getByTestId('ready-row-players')).getByRole('button'));
+    expectStep(4);
+
+    expect(screen.queryByText(CLUB_HINT)).not.toBeInTheDocument();
+    expect(screen.queryByText(OLD_HINT)).not.toBeInTheDocument();
+  });
+});

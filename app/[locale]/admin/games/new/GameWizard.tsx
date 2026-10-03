@@ -26,7 +26,9 @@
  * format-grid + mode-spesifikk setup (~1 skjermhøyde). Steg 4 sin
  * «Neste»-gate slipper samtidig på tomt roster (se `canAdvance()` under)
  * siden registreringsvalget (som tidligere gjorde spillerlisten valgfri) nå
- * tas EFTER steg 4, ikke før.
+ * tas EFTER steg 4, ikke før. Den slipper også når lista alt er valgfri
+ * (`playersStepOptional`: en klubb-turnering, #2433, eller åpen påmelding
+ * valgt på steg 5 før arrangøren gikk tilbake).
  *
  * URL-state: `?step=2..5`, og `skjerm=lag` for steg 4s andre skjerm (#2321).
  * #1380: steg-overganger som arrangøren utløser
@@ -909,16 +911,25 @@ function WizardBody({
     if (step === 3) return state.courseId !== '' && state.teeBoxId !== '' && !state.teeOffInPast;
     // Steg 4: vanligvis krever vi en gyldig spiller-fordeling per modus.
     // #1065: registreringsvalget (hvem kan melde seg på) er flyttet til
-    // steg 5 — vi kan derfor IKKE lenger gate på `playersStepOptional`
-    // (valget er ikke tatt ennå når admin står på steg 4 på en fremover-
-    // passering; den flagget ville nesten alltid vært 'invite_only'-default
-    // og dermed false, altså ingen reell bypass). I stedet slipper vi gaten
-    // når rosteret er tomt/urørt — det dekker admin som har tenkt å bruke
-    // selv-påmelding (velges på steg 5) uten å late som steg 4 er ferdig
-    // utfylt, samtidig som en PÅBEGYNT men ugyldig seleksjon (feil antall,
-    // manglende lag-fordeling) fortsatt blokkerer — samme guardrail som før
-    // for admin som faktisk plukker spillere her.
-    if (step === 4) return state.selectedPlayerIds.length === 0 || state.playersValidForMode;
+    // steg 5 — på en fremover-passering i kompis er det ikke tatt ennå, så
+    // `playersStepOptional` er false ('invite_only'-default). Derfor slipper
+    // vi også gaten når rosteret er tomt/urørt — det dekker admin som har
+    // tenkt å bruke selv-påmelding (velges på steg 5) uten å late som steg 4
+    // er ferdig utfylt, samtidig som en PÅBEGYNT men ugyldig seleksjon (feil
+    // antall, manglende lag-fordeling) fortsatt blokkerer — samme guardrail
+    // som før for admin som faktisk plukker spillere her.
+    // #2433: når lista alt er valgfri (klubb-turnering med individuell
+    // påmelding, eller åpen påmelding valgt på steg 5 før arrangøren gikk
+    // tilbake), slipper også en halvfull liste gjennom. Ellers ville «Neste»
+    // stått grå uten forklaring: nextDisabledHint() henter bare spiller-
+    // kodene, og de hoppes over når lista er valgfri.
+    if (step === 4) {
+      return (
+        state.playersStepOptional ||
+        state.selectedPlayerIds.length === 0 ||
+        state.playersValidForMode
+      );
+    }
     return false; // steg 5 har ikke neste-knapp
   }
 
@@ -1264,10 +1275,18 @@ function WizardBody({
         // på steg 2 og 3, så kortene står 16 px fra skjermkanten.
         <div className="-mx-1">
           {/* #1065: registreringsvalget (hvem kan melde seg på) står på steg
-              5, så et tomt utvalg er en gyldig vei videre — hintet sier det. */}
-          {state.selectedPlayerIds.length === 0 && (
-            <p className={HINT_BOX_CLASS}>{t('step4.emptyRosterHint')}</p>
-          )}
+              5, så et tomt utvalg er en gyldig vei videre — hintet sier det.
+              #2433: en klubb-turnering har ikke det valget på steg 5. Med
+              individuell påmelding melder medlemmene seg på selv, og
+              klubb-hintet sier at lista kan stå tom. Med «Lag» må lista
+              fylles, og da står ingen hint (det gamle ville lovet et valg
+              som ikke finnes); «Velg …»-linja sier hva som trengs. */}
+          {state.selectedPlayerIds.length === 0 &&
+            (!state.isClubScoped || state.playersStepOptional) && (
+              <p className={HINT_BOX_CLASS}>
+                {t(state.isClubScoped ? 'step4.emptyRosterHintClub' : 'step4.emptyRosterHint')}
+              </p>
+            )}
           {/* #464: tom-tilstand når picker-kilden ikke har andre enn deg selv
               (ingen venner, eller en klubb uten andre medlemmer). Solo viser
               hele rosteren, så hintet gjelder ikke der. */}
@@ -1295,7 +1314,13 @@ function WizardBody({
               .map((pid) => state.allPlayers.find((p) => p.id === pid))
               .filter((p): p is PlayerOption => p !== undefined)}
             target={target}
-            {...(hasTeamsScreen && state.selectedPlayerIds.length > 0
+            // #2433: the teams-screen foot only when that screen has content
+            // or the roster is required (then its «Mangler» says why it is
+            // grey). With an optional roster and no content (best ball with
+            // one player), plain «Neste» goes on to step 5.
+            {...(hasTeamsScreen &&
+            state.selectedPlayerIds.length > 0 &&
+            (teamsScreenHasContent || !state.playersStepOptional)
               ? {
                   buttonLabel: state.requiresTeams
                     ? t('footer.nextTeams')

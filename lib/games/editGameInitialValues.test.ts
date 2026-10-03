@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import { EDIT_FORM_COLUMNS, buildEditInitialValues, type EditGameRow } from './editGameInitialValues';
+import {
+  EDIT_FORM_COLUMNS,
+  buildEditFormInitialValues,
+  buildEditInitialValues,
+  type EditGameRow,
+} from './editGameInitialValues';
 
 /**
  * Type A (#2258). Both edit pages render GameForm from a row they select, and
@@ -37,28 +42,33 @@ describe('EDIT_FORM_COLUMNS', () => {
  * Without pre-filling it, «Rediger spill» starts the field on the form default
  * and a save silently writes the default back over what the organiser chose.
  */
+const row = (
+  mode_config: GameModeConfig,
+  overrides: Partial<EditGameRow> = {},
+): EditGameRow => ({
+  id: 'g1',
+  name: 'Test',
+  courses: null,
+  status: 'scheduled',
+  course_id: null,
+  tee_box_id: null,
+  scheduled_tee_off_at: null,
+  hcp_allowance_pct: 100,
+  require_peer_approval: false,
+  score_visibility: 'live',
+  side_tournament_enabled: false,
+  side_ld_count: 0,
+  side_ctp_count: 0,
+  side_disabled_categories: [],
+  game_mode: mode_config.kind as GameMode,
+  mode_config,
+  registration_mode: 'invite_only',
+  registration_type: 'solo',
+  let_friends_skip_gate: false,
+  ...overrides,
+});
+
 describe('buildEditInitialValues', () => {
-  const row = (mode_config: GameModeConfig): EditGameRow => ({
-    id: 'g1',
-    name: 'Test',
-    courses: null,
-    status: 'scheduled',
-    course_id: null,
-    tee_box_id: null,
-    scheduled_tee_off_at: null,
-    hcp_allowance_pct: 100,
-    require_peer_approval: false,
-    score_visibility: 'live',
-    side_tournament_enabled: false,
-    side_ld_count: 0,
-    side_ctp_count: 0,
-    side_disabled_categories: [],
-    game_mode: mode_config.kind as GameMode,
-    mode_config,
-    registration_mode: 'invite_only',
-    registration_type: 'solo',
-    let_friends_skip_gate: false,
-  });
   const pair = { team_size: 2, teams_count: 2 } as const;
 
   it.each([
@@ -72,5 +82,32 @@ describe('buildEditInitialValues', () => {
   ] as const)('pre-fills %s from mode_config (%#)', (field, config, expected) => {
     const values = buildEditInitialValues(row(config as GameModeConfig), []);
     expect(values[field]).toBe(expected);
+  });
+});
+
+/**
+ * Type A (#2433). «Rediger spill» must know a club tournament, or «Lagre
+ * endringer» demands a full roster for a game the members sign up to. Only a
+ * club tournament (no cup) that is already invite_only gets `group_id`: with
+ * an older club game on «Åpen»/«Godkjenning», the #643 lock would force
+ * invite_only and a team game could no longer be saved.
+ */
+describe('buildEditFormInitialValues', () => {
+  const stableford: GameModeConfig = { kind: 'stableford', team_size: 1, points_table: 'standard' };
+
+  it.each<[string, Partial<EditGameRow>, string | undefined]>([
+    ['klubb, invite_only, ingen cup', { group_id: 'club-1' }, 'club-1'],
+    ['ingen klubb', { group_id: null }, undefined],
+    ['klubb-cup-match', { group_id: 'club-1', tournament_id: 'cup-1' }, undefined],
+    ['eldre klubbspill med open', { group_id: 'club-1', registration_mode: 'open' }, undefined],
+  ])('%s → group_id %s', (_label, overrides, expected) => {
+    const values = buildEditFormInitialValues(row(stableford, overrides), []);
+    expect(values.group_id).toBe(expected);
+    expect(values.registration_mode).toBe(overrides.registration_mode ?? 'invite_only');
+  });
+
+  it('buildEditInitialValues gir fortsatt aldri group_id (revansjen arver ikke klubben)', () => {
+    const values = buildEditInitialValues(row(stableford, { group_id: 'club-1' }), []);
+    expect(values.group_id).toBeUndefined();
   });
 });

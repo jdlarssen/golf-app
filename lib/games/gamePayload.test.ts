@@ -550,6 +550,77 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
   });
 });
 
+describe('buildGameInsertPayload — klubb-turnering uten spillere (#2433)', () => {
+  // A club tournament (`clubScoped`) with individual signup is invite_only in
+  // the DB, but members sign up themselves, so the roster is optional at
+  // publish — the same rule as open signup (rosterOptionalAtPublish).
+  function clubFd(extras: Record<string, string>): FormData {
+    return fd({
+      name: 'Klubbmesterskap',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      registration_mode: 'invite_only',
+      ...extras,
+    });
+  }
+
+  it('stableford, 0 spillere, clubScoped → ingen feil, tom liste, lagret som invite_only', () => {
+    const result = buildGameInsertPayload(
+      clubFd({ game_mode: 'stableford' }),
+      'publish',
+      { clubScoped: true },
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+    expect(result.registration_mode).toBe('invite_only');
+  });
+
+  it('best_ball, 0 spillere, clubScoped → ingen feil', () => {
+    const result = buildGameInsertPayload(
+      clubFd({ game_mode: 'best_ball' }),
+      'publish',
+      { clubScoped: true },
+    );
+    expect(result.errorCode).toBeUndefined();
+  });
+
+  it.each([
+    ['clubScoped false', { clubScoped: false }],
+    ['uten tredje argument', undefined],
+  ] as const)('stableford, 0 spillere, %s → min_players_for_mode', (_label, opts) => {
+    const result = buildGameInsertPayload(
+      clubFd({ game_mode: 'stableford' }),
+      'publish',
+      opts,
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('texas med lag-påmelding, 0 spillere, clubScoped → samme feil som uten klubb', () => {
+    const texas = {
+      game_mode: 'texas_scramble',
+      texas_team_size: '4',
+      texas_team_handicap_pct: '10',
+      registration_type: 'team',
+    };
+    const withoutClub = buildGameInsertPayload(clubFd(texas), 'publish');
+    const withClub = buildGameInsertPayload(clubFd(texas), 'publish', {
+      clubScoped: true,
+    });
+    expect(withoutClub.errorCode).toBeDefined();
+    expect(withClub.errorCode).toBe(withoutClub.errorCode);
+  });
+
+  it('clubScoped med to like spillere → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      clubFd({ game_mode: 'stableford', player_0_id: 'dup', player_1_id: 'dup' }),
+      'publish',
+      { clubScoped: true },
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+});
+
 describe('buildGameInsertPayload — mode discriminator (epic #41)', () => {
   it('defaults to best_ball when game_mode is missing (back-compat)', () => {
     // Form-feltet game_mode innføres først i fase 4 (GameForm UI). Inntil

@@ -7,6 +7,7 @@ import {
 } from '@/lib/scoring/sideTournamentConfig';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { safeParsePrizes } from '@/lib/games/prizes';
+import { isClubTournament } from './registration';
 import type { StartType } from './startType';
 
 /**
@@ -73,14 +74,17 @@ export type EditGameRow = {
   // den (pre-fyller), revansje-flyten utelater den (samme prinsipp som
   // entry_fee — en rematch skal ikke dra premiebordet med automatisk).
   prizes?: unknown;
-  // #1385 — koblings-kolonnene. Kun admin-edit-ruta selekterer dem i dag
-  // (den avleder veiviser-intent og fail-closer på cup/liga, se
-  // `lib/wizard/draftResumePlan.ts`), så de er VALGFRIE: revansje-flyten og
-  // `/games/[id]/rediger` bygger samme radtype fra sine egne, smalere selects.
+  // #1385 — koblings-kolonnene. Begge redigeringsrutene selekterer
+  // `group_id` og `tournament_id` (admin-edit-ruta også `league_round_id`,
+  // for veiviser-intent og fail-closed på cup/liga, se
+  // `lib/wizard/draftResumePlan.ts`). Revansje-flyten gjør det ikke, så de er
+  // fortsatt VALGFRIE.
   //
   // `buildEditInitialValues` leser dem bevisst IKKE. Outputen deles med
-  // revansje-prefillen, og en `group_id` emittert her ville stille latt en
-  // revansje arve klubb-scopet fra spillet den ble startet fra.
+  // revansje-prefillen, og en `group_id` emittert der ville stille latt en
+  // revansje arve klubb-scopet fra spillet den ble startet fra. Bare
+  // `buildEditFormInitialValues` leser `group_id`/`tournament_id`, og bare for
+  // redigeringsskjemaene (#2433).
   group_id?: string | null;
   tournament_id?: string | null;
   league_round_id?: string | null;
@@ -242,4 +246,35 @@ export function buildEditInitialValues(
     // så draften starter tom. Revansje utelater game.prizes → tom draft.
     prizes: safeParsePrizes(game.prizes),
   };
+}
+
+/**
+ * The edit forms' initial values (#2433): `buildEditInitialValues` plus
+ * `group_id` for a club tournament, so «Rediger spill» knows the members sign
+ * up themselves and saves a club tournament with an empty roster. Only the two
+ * edit pages call this, never the rematch prefill (a rematch must not inherit
+ * the club).
+ *
+ * `group_id` is added only when both hold:
+ * - `isClubTournament`: a cup match in a club cup also has `group_id`, but it
+ *   is a cup match with a fixed roster, not a club tournament.
+ * - `registration_mode === 'invite_only'`: with `group_id` the #643 lock in
+ *   `useGameFormState` forces `invite_only`, and GameForm posts that. An older
+ *   club game on «Åpen»/«Godkjenning» would have its mode changed, and with
+ *   «Lag» it could no longer be saved (roster required, mode choice hidden,
+ *   format locked). Without `group_id` it is edited and saved exactly as before.
+ */
+export function buildEditFormInitialValues(
+  game: EditGameRow,
+  playerRows: EditGamePlayerRow[],
+): InitialValues {
+  const values = buildEditInitialValues(game, playerRows);
+  if (
+    isClubTournament({ groupId: game.group_id, tournamentId: game.tournament_id }) &&
+    game.registration_mode === 'invite_only'
+  ) {
+    // isClubTournament guarantees a non-empty id.
+    return { ...values, group_id: game.group_id ?? undefined };
+  }
+  return values;
 }

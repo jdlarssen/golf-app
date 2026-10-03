@@ -19,6 +19,7 @@ import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
+import { isClubTournament } from '@/lib/games/registration';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
@@ -85,7 +86,41 @@ async function createGameInternal(
     .single();
   const isAdmin = gateProfile?.is_admin === true;
 
-  const payload = buildGameInsertPayload(formData, mode);
+  // #442: valgfri klubb-tilknytning. Authz: spillet kan kun scopes til en klubb
+  // brukeren selv er medlem av (en manipulert URL/form-verdi droppes til null,
+  // ikke en feil). Klubb-medlemmer ser + kan melde seg på klubb-spill uansett
+  // registration_mode (medlemskap ER invitasjonen).
+  const rawGroupId = String(formData.get('group_id') ?? '').trim();
+  let groupId: string | null = null;
+  if (rawGroupId) {
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('group_id, groups(valid_until)')
+      .eq('group_id', rawGroupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    // #50: en utløpt klubb (frossen avtale) kan ikke ta imot nye spill —
+    // dropp scopingen til null (samme «ugyldig verdi → null»-mønster).
+    if (membership) {
+      // RLS client: the embed reads null-safe, a hidden groups row is possible.
+      const g = membership.groups;
+      if (!isClubExpired(g?.valid_until ?? null)) groupId = rawGroupId;
+    }
+  }
+
+  // #2433: read here so the payload knows whether this is a club tournament.
+  // The membership check and can_manage_tournament (below) are what decide
+  // the stored links; the raw cup id is used on purpose for the roster rule:
+  // a cup id in the form keeps the roster required even if it is invalid, so
+  // it can only make the server stricter.
+  const rawTournamentId = String(formData.get('tournament_id') ?? '').trim();
+
+  // #2433: a club tournament publishes without players (members sign up
+  // themselves). The club signal is the DB-checked groupId, never the raw
+  // form value, so a forged group_id never unlocks an empty roster.
+  const payload = buildGameInsertPayload(formData, mode, {
+    clubScoped: isClubTournament({ groupId, tournamentId: rawTournamentId }),
+  });
 
   if (payload.errorCode) {
     return { error: payload.errorCode };
@@ -167,12 +202,11 @@ async function createGameInternal(
   // spill til den — samme regel som databasen håndhever
   // (guard_games_competition_links, 0185). En manipulert verdi, en cup
   // kalleren ikke styrer eller en feil i sjekken gir et vanlig spill uten
-  // kobling (samme «ugyldig verdi → null»-mønster som group_id under).
+  // kobling (samme «ugyldig verdi → null»-mønster som group_id over).
   let tournamentId: string | null = null;
   const tournamentMatchLabelRaw = String(
     formData.get('tournament_match_label') ?? '',
   ).trim();
-  const rawTournamentId = String(formData.get('tournament_id') ?? '').trim();
   if (rawTournamentId) {
     const { data: canManage, error: cupErr } = await supabase.rpc(
       'can_manage_tournament',
@@ -187,28 +221,6 @@ async function createGameInternal(
     tournamentId && tournamentMatchLabelRaw
       ? tournamentMatchLabelRaw.slice(0, 80)
       : null;
-
-  // #442: valgfri klubb-tilknytning. Authz: spillet kan kun scopes til en klubb
-  // brukeren selv er medlem av (en manipulert URL/form-verdi droppes til null,
-  // ikke en feil). Klubb-medlemmer ser + kan melde seg på klubb-spill uansett
-  // registration_mode (medlemskap ER invitasjonen).
-  const rawGroupId = String(formData.get('group_id') ?? '').trim();
-  let groupId: string | null = null;
-  if (rawGroupId) {
-    const { data: membership } = await supabase
-      .from('group_members')
-      .select('group_id, groups(valid_until)')
-      .eq('group_id', rawGroupId)
-      .eq('user_id', userId)
-      .maybeSingle();
-    // #50: en utløpt klubb (frossen avtale) kan ikke ta imot nye spill —
-    // dropp scopingen til null (samme «ugyldig verdi → null»-mønster).
-    if (membership) {
-      // RLS client: the embed reads null-safe, a hidden groups row is possible.
-      const g = membership.groups;
-      if (!isClubExpired(g?.valid_until ?? null)) groupId = rawGroupId;
-    }
-  }
 
   const { data: game, error: gameError } = await supabase
     .from('games')
