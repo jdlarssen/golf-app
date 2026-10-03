@@ -8,11 +8,15 @@
  *  - teams → «4 lag à 2»; a choice of team sizes is settled by the chosen size
  *    when it divides the count, else only the count is shown
  *  - Wolf → «1 mot 3»; solo and pot formats → only the count
- * A target the format does not fit shows only the count. No target → only the
- * format name.
+ * A target the format does not fit shows only the count. No target (klubb) →
+ * the format's «Velg …» line from `stepFourInstruction` (#2436), or only the
+ * format name when it has none (the solo formats).
+ *
+ * `stepFourInstruction` is the one home for which «Velg …» line a format gets;
+ * both the picker and the teams screen read it.
  */
 
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
 import { formatLineup } from '@/lib/wizard/formatLineup';
@@ -22,8 +26,41 @@ export type PickerLineup =
   | { kind: 'teams'; teams: number; size: number }
   | { kind: 'wolf'; opponents: number };
 
+/** The «Velg …» line on step 4, before translation (#2436). */
+export type StepFourInstruction =
+  | { kind: 'bestBall' }
+  | { kind: 'singles' }
+  | { kind: 'teamMatchplay' }
+  | { kind: 'parStableford' }
+  | { kind: 'teamSize'; teamSize: number }
+  | { kind: 'patsome' };
+
+export function stepFourInstruction({
+  gameMode,
+  teamSize,
+}: {
+  gameMode: GameMode;
+  teamSize: number;
+}): StepFourInstruction | null {
+  if (gameMode === 'best_ball') return teamSize === 2 ? { kind: 'bestBall' } : null;
+  if (gameMode === 'singles_matchplay') return { kind: 'singles' };
+  if (isMatchplayMode(gameMode)) return { kind: 'teamMatchplay' };
+  if (isStablefordFamily(gameMode)) return teamSize === 2 ? { kind: 'parStableford' } : null;
+  if (
+    gameMode === 'texas_scramble' ||
+    gameMode === 'ambrose' ||
+    gameMode === 'florida_scramble' ||
+    gameMode === 'shamble'
+  ) {
+    return { kind: 'teamSize', teamSize };
+  }
+  if (gameMode === 'patsome') return { kind: 'patsome' };
+  return null;
+}
+
 export type PickerSubtitle =
   | { kind: 'formatOnly' }
+  | { kind: 'instruction'; instruction: StepFourInstruction }
   | { kind: 'players'; players: number }
   | { kind: 'lineup'; players: number; lineup: PickerLineup };
 
@@ -36,7 +73,10 @@ export function pickerSubtitle({
   target: number | null;
   teamSize: number;
 }): PickerSubtitle {
-  if (target === null) return { kind: 'formatOnly' };
+  if (target === null) {
+    const instruction = stepFourInstruction({ gameMode, teamSize });
+    return instruction ? { kind: 'instruction', instruction } : { kind: 'formatOnly' };
+  }
   const players = target;
   if (!fitsPlayerCount(gameMode, target)) return { kind: 'players', players };
 

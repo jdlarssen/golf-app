@@ -1240,8 +1240,9 @@
     "stepCounter": "Steg {step} av {total}",
     "back": "Tilbake",
     "stepSubText": {
-      "step4BestBall": "Velg et partall spillere, så fordeler du lag og flights.",
+      "step4BestBall": "Velg et partall spillere, så fordeler du lag og flights",
       "step4Matchplay": "Velg 2 spillere og sett én på hver side",
+      "step4TeamMatchplay": "Velg 4 spillere og sett to på hver side",
       "step4ParStableford": "Velg minst 2 spillere fordelt to og to på lag",
       "step4TeamSize": "Velg minst {teamSize} spillere, så fordeler du lag",
       "step4Patsome": "Velg minst 4 spillere, fordelt to og to på lag",
@@ -1283,7 +1284,8 @@
     "step4": {
       "emptyRosterHint": "Du bestemmer på neste steg om du vil legge til spillere her, eller la dem melde seg på selv.",
       "pickerSubtitle": "{format} · {players}",
-      "pickerSubtitleLineup": "{format} · {players}, {lineup}"
+      "pickerSubtitleLineup": "{format} · {players}, {lineup}",
+      "pickerSubtitleInstruction": "{format} · {instruction}"
     },
     "pickerSource": {
       "noClubMembers": "Ingen andre medlemmer i klubben ennå.",
