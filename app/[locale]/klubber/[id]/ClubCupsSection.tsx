@@ -63,9 +63,9 @@ export function ClubCupsSection({
               <div className="flex items-center justify-between gap-3">
                 <SmartLink
                   href={`/cup/${cup.id}`}
-                  className="truncate font-sans text-[15px] font-medium text-text hover:underline"
+                  className="flex min-h-[44px] min-w-0 items-center font-sans text-[15px] font-medium text-text hover:underline"
                 >
-                  {cup.name}
+                  <span className="truncate">{cup.name}</span>
                 </SmartLink>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">

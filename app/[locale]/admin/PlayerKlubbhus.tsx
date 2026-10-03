@@ -7,6 +7,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { onlyStandaloneGames } from '@/lib/games/arrangedGames';
 import type { AppLocale } from '@/i18n/routing';
 import type { GameStatus } from '@/lib/games/status';
 import { type AdminRoleContext } from '@/lib/admin/auth';
@@ -45,7 +46,7 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   const tNav = await getTranslations('admin.nav');
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker={tNav('klubbhus')} />
+      <TopBar kicker={tNav('klubbhus')} />
 
       <GreetingView name={firstName(role.name)} />
 
@@ -69,34 +70,51 @@ async function ArrangementSection({ userId }: { userId: string }) {
   // Created games (RLS 0071 «games select own created») + the cups the player
   // is part of — created, on a draft roster, or played (#1463; the count and
   // the `/admin/cup` list read the same union). Games fetch limit+1 to detect
-  // the «Se alle →» overflow without a second count query.
-  const [gamesRes, cupIds] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, status, courses(name)')
-      .eq('created_by', userId)
+  // the «Se alle →» overflow without a second count query. Cup matches and
+  // league flights are left out: they live on the cup row below and on the
+  // league page (#2489).
+  const [gamesRes, cupIdsRes] = await Promise.all([
+    onlyStandaloneGames(
+      supabase
+        .from('games')
+        .select('id, name, status, courses(name)')
+        .eq('created_by', userId),
+    )
       .order('created_at', { ascending: false })
       .limit(MAX_ARRANGED + 1)
       .returns<ArrangedGameRow[]>(),
     getMyCupIds(supabase, userId),
   ]);
 
-  const rows = gamesRes.data ?? [];
-  const hasMore = rows.length > MAX_ARRANGED;
-  const games: ArrangedGame[] = rows.slice(0, MAX_ARRANGED).map((g) => ({
-    id: g.id,
-    name: localizeGameName(g.name, g.courses?.name ?? null, locale),
-    courseName: g.courses?.name ?? null,
-    status: g.status,
-  }));
+  // A failed read is `null`, not an empty list (#2490): the view shows an
+  // error box for that read alone.
+  if (gamesRes.error) console.error('[klubbhus] arranged games', gamesRes.error);
+  if (!cupIdsRes.ok) console.error('[klubbhus] cup ids failed');
+
+  const rows = gamesRes.error ? null : (gamesRes.data ?? []);
+  const hasMore = rows !== null && rows.length > MAX_ARRANGED;
+  const games: ArrangedGame[] | null =
+    rows === null
+      ? null
+      : rows.slice(0, MAX_ARRANGED).map((g) => ({
+          id: g.id,
+          name: localizeGameName(g.name, g.courses?.name ?? null, locale),
+          courseName: g.courses?.name ?? null,
+          status: g.status,
+        }));
 
   return (
-    <ArrangementView games={games} hasMore={hasMore} cupCount={cupIds.length} />
+    <ArrangementView
+      games={games}
+      hasMore={hasMore}
+      cupCount={cupIdsRes.ok ? cupIdsRes.ids.length : null}
+    />
   );
 }
 
 async function ClubsSection({ userId }: { userId: string }) {
   const supabase = await getServerClient();
-  const { clubs } = await getMyClubs(supabase, userId);
-  return <ClubsView clubs={clubs} />;
+  const result = await getMyClubs(supabase, userId);
+  if (!result.ok) console.error('[klubbhus] clubs failed');
+  return <ClubsView clubs={result.ok ? result.clubs : null} />;
 }

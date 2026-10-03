@@ -111,7 +111,7 @@ export async function CupActionsSection({
 
       <SmartLink
         href={deleteHref}
-        className="tap-extend block text-center text-xs text-danger underline-offset-2 hover:underline pt-2 [--tap-extend:-10px_0]"
+        className="tap-extend block text-center text-xs text-danger underline-offset-2 hover:underline pt-2 [--tap-extend:-12px_0]"
       >
         {t('manage.deleteLink')}
       </SmartLink>

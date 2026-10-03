@@ -49,7 +49,7 @@ export default async function KlubbhusetPage() {
     <AdminShell>
       {/* Bell dropped: the persistent bottom-nav «Innboks»-tab now covers
           notifications inside the room (#392). */}
-      <TopBar backHref="/" kicker={tNav('klubbhus')} />
+      <TopBar kicker={tNav('klubbhus')} />
 
       <Suspense
         fallback={

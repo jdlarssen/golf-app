@@ -55,14 +55,14 @@ describe('PlayerKlubbhus adaptive room (#892)', () => {
     expect(screen.getByTestId('player-no-club')).toHaveAttribute('href', '/klubber');
     expect(screen.queryByTestId('player-club-row')).toBeNull();
 
-    // Tools always present.
+    // Tools always present, carrying the Klubbhuset origin (#2487).
     expect(screen.getByRole('link', { name: /baner/i })).toHaveAttribute(
       'href',
-      '/opprett-bane',
+      '/opprett-bane?kilde=klubbhuset',
     );
     expect(screen.getByRole('link', { name: /spillformater/i })).toHaveAttribute(
       'href',
-      '/spillformater',
+      '/spillformater?kilde=klubbhuset',
     );
   });
 
@@ -71,8 +71,8 @@ describe('PlayerKlubbhus adaptive room (#892)', () => {
 
     const rows = screen.getAllByTestId('player-club-row');
     expect(rows).toHaveLength(CLUBS.length);
-    expect(rows[0]).toHaveAttribute('href', '/klubber/club-1');
-    expect(rows[1]).toHaveAttribute('href', '/klubber/club-2');
+    expect(rows[0]).toHaveAttribute('href', '/klubber/club-1?kilde=klubbhuset');
+    expect(rows[1]).toHaveAttribute('href', '/klubber/club-2?kilde=klubbhuset');
 
     // The «no club» fallback is gone once you belong to a club.
     expect(screen.queryByTestId('player-no-club')).toBeNull();
@@ -102,5 +102,27 @@ describe('PlayerKlubbhus adaptive room (#892)', () => {
     render(<ArrangementView games={[]} hasMore={false} cupCount={1} />);
     expect(screen.getByTestId('player-invite-primary')).toBeInTheDocument();
     expect(screen.getByTestId('player-cup-row')).toHaveAttribute('href', '/admin/cup');
+  });
+
+  // #2490: a failed read shows its own error box, never the empty state, and
+  // never hides what the other read fetched.
+  it('a failed read shows an error box instead of the empty state', () => {
+    const games = render(<ArrangementView games={null} hasMore={false} cupCount={2} />);
+    expect(screen.getByTestId('klubbhus-arrangement-error')).toBeInTheDocument();
+    expect(screen.getByTestId('player-cup-row')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-invite-primary')).toBeNull();
+    games.unmount();
+
+    const cups = render(
+      <ArrangementView games={GAMES.slice(0, 1)} hasMore={false} cupCount={null} />,
+    );
+    expect(screen.getByTestId('player-arranged-game')).toBeInTheDocument();
+    expect(screen.getByTestId('klubbhus-cups-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-cup-row')).toBeNull();
+    cups.unmount();
+
+    render(<ClubsView clubs={null} />);
+    expect(screen.getByTestId('klubbhus-clubs-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('player-no-club')).toBeNull();
   });
 });

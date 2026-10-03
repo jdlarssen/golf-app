@@ -734,3 +734,45 @@ describe('removeLeaguePlayer — redirect contract (#2244)', () => {
     expect(deleteCall(), 'no delete for a non-manager').toBeUndefined();
   });
 });
+
+/**
+ * #2329: deleting a club league lands on the club page with a named receipt,
+ * and a delete that touches no row is a failure, never a «slettet» banner over
+ * a league that still stands (bug-prevention #2, same as deleteTournament).
+ * Admin-client sequence: 1. gate group_id. Request-client sequence:
+ * 1. loadRole · 2. leagues group_id + name · 3. leagues delete…select.
+ */
+describe('deleteLeague — club receipt and 0-row guard (#2329)', () => {
+  const adminRole = { data: { is_admin: true }, error: null };
+  const clubLeague = { data: { group_id: 'club-1', name: 'Onsdagsligaen' }, error: null };
+
+  function deleteForm(): FormData {
+    const fd = new FormData();
+    fd.set('league_id', 'l1');
+    return fd;
+  }
+
+  it('club league: lands on the club page with status and name', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: 'club-1' } }]);
+    supabaseMock = buildSupabaseMock([adminRole, clubLeague, { data: [{ id: 'l1' }], error: null }]);
+    setUser('admin-1');
+
+    const { deleteLeague } = await import('./actions');
+    const err = await deleteLeague(deleteForm()).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(RedirectError);
+    expect((err as RedirectError).url).toBe(
+      '/klubber/club-1?status=league_deleted&name=Onsdagsligaen',
+    );
+  });
+
+  it('a delete that removes no row returns delete_failed and does not redirect', async () => {
+    adminMock = buildSupabaseMock([{ data: { group_id: 'club-1' } }]);
+    supabaseMock = buildSupabaseMock([adminRole, clubLeague, { data: [], error: null }]);
+    setUser('admin-1');
+
+    const { deleteLeague } = await import('./actions');
+    expect(await deleteLeague(deleteForm())).toEqual({ error: 'delete_failed' });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+});

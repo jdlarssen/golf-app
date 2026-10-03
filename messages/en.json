@@ -14,6 +14,7 @@
     "heading": "Something went wrong",
     "body": "We couldn't load this right now. It's usually just a brief network hiccup. Try again in a moment.",
     "retry": "Try again",
+    "sectionBody": "We couldn't load this right now.",
     "toGame": "To the game",
     "toHome": "Go home",
     "toProfile": "Back to profile",
@@ -55,7 +56,8 @@
     "inbox": "Inbox",
     "inboxUnread": "Inbox, {count, plural, one {# unread} other {# unread}}",
     "clubhouse": "Clubhouse",
-    "profile": "Profile"
+    "profile": "Profile",
+    "backToClubhouse": "Back to the Clubhouse"
   },
   "inbox": {
     "kicker": "Inbox",
@@ -285,7 +287,6 @@
   "profile": {
     "languageRowLabel": "Language",
     "kicker": "Profile",
-    "backLabel": "Back to home",
     "displayNameFallback": "Profile",
     "updatedBanner": "✓ Your profile has been updated.",
     "sectionPersonal": "Activity",
@@ -4583,6 +4584,7 @@
       "pageTitle": "Leagues",
       "pageSubtitle": "Individual season series with net stroke play.",
       "deletedBanner": "League deleted.",
+      "deletedBannerNamed": "The league «{name}» has been deleted.",
       "emptyState": "No leagues yet.",
       "emptyStateLink": "Create a league",
       "emptyStateSuffix": "to get started.",

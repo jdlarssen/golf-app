@@ -8,10 +8,12 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SectionError } from '@/components/ui/SectionError';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { formatTeeOffDateLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import type { GameStatus } from '@/lib/games/status';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { onlyStandaloneGames } from '@/lib/games/arrangedGames';
 
 type CreatedGame = {
   id: string;
@@ -50,13 +52,18 @@ export default async function KlubbhusetPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
 
-  const { data: games } = await supabase
-    .from('games')
-    .select('id, name, status, scheduled_tee_off_at, courses(name)')
-    .eq('created_by', user.id)
+  // Cup matches and league flights belong to their cup or league (#2489).
+  const { data: games, error } = await onlyStandaloneGames(
+    supabase
+      .from('games')
+      .select('id, name, status, scheduled_tee_off_at, courses(name)')
+      .eq('created_by', user.id),
+  )
     .order('created_at', { ascending: false })
     .returns<CreatedGame[]>();
 
+  // A failed read is not «nothing arranged yet» (#2490).
+  if (error) console.error('[klubbhuset]', error);
   const created = games ?? [];
 
   return (
@@ -67,7 +74,9 @@ export default async function KlubbhusetPage() {
         subtitle={t('pageSubtitle')}
       />
 
-      {created.length === 0 ? (
+      {error ? (
+        <SectionError />
+      ) : created.length === 0 ? (
         <div className="space-y-5 text-center">
           <p className="text-sm text-muted">
             {t('emptyState')}

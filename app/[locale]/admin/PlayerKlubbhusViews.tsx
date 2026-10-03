@@ -3,10 +3,12 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { SectionError } from '@/components/ui/SectionError';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { DenseTileList, type Tile } from './TilesView';
 import type { GameStatus } from '@/lib/games/status';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
+import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
 
 // Presentational views for the adaptive player Klubbhuset room (#892). Pure
 // (data injected as props, sync `useTranslations`) so the data-fetching shell
@@ -73,22 +75,28 @@ export function GreetingView({ name }: { name: string | null }) {
  * (#1463) — independent of games (#10 discoverability). It is the same dense
  * row the organiser's core doors use (#1557, #1559); the count sits in the
  * meta line in words, not as a bare champagne number.
+ *
+ * `null` means that read failed (#2490): `games` and `cupCount` come from two
+ * independent reads, so each failure gets its own error box and never hides
+ * what the other read did fetch.
  */
 export function ArrangementView({
   games,
   hasMore,
   cupCount,
 }: {
-  games: ArrangedGame[];
+  games: ArrangedGame[] | null;
   hasMore: boolean;
-  cupCount: number;
+  cupCount: number | null;
 }) {
   const t = useTranslations('admin.dashboard');
-  const hasGames = games.length > 0;
+  const hasGames = games !== null && games.length > 0;
 
   return (
     <section className="mb-6">
-      {hasGames ? (
+      {games === null ? (
+        <SectionError testId="klubbhus-arrangement-error" />
+      ) : hasGames ? (
         <>
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
             <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -167,7 +175,11 @@ export function ArrangementView({
         </div>
       )}
 
-      {cupCount > 0 && (
+      {cupCount === null ? (
+        <div className="mt-2">
+          <SectionError testId="klubbhus-cups-error" />
+        </div>
+      ) : cupCount > 0 && (
         <div className="mt-2">
           <DenseTileList
             tiles={[
@@ -198,11 +210,20 @@ export function ArrangementSkeleton() {
 /**
  * Dine klubber — inline list of the player's clubs (the club page owns the
  * depth). With no clubs the section collapses to a discreet «ikke med i en
- * klubb ennå»-line that keeps the door open to /klubber.
+ * klubb ennå»-line that keeps the door open to /klubber. `null` means the read
+ * failed (#2490): an error box, not the «no club» line.
  */
-export function ClubsView({ clubs }: { clubs: MyClub[] }) {
+export function ClubsView({ clubs }: { clubs: MyClub[] | null }) {
   const t = useTranslations('admin.dashboard');
   const tRoles = useTranslations('klubb.roles');
+
+  if (clubs === null) {
+    return (
+      <section className="mb-6">
+        <SectionError testId="klubbhus-clubs-error" />
+      </section>
+    );
+  }
 
   if (clubs.length === 0) {
     return (
@@ -225,7 +246,7 @@ export function ClubsView({ clubs }: { clubs: MyClub[] }) {
         {clubs.map((club) => (
           <SmartLink
             key={club.id}
-            href={`/klubber/${club.id}`}
+            href={withKlubbhusOrigin(`/klubber/${club.id}`)}
             data-testid="player-club-row"
             className={ROW_LINK}
           >
@@ -264,20 +285,22 @@ export function ClubsSkeleton() {
  * Verktøy — always shown, de-emphasised tools at the bottom of the room:
  * adding a course and browsing the format reference. Same `DenseTileList` row
  * as the cup entry above and the organiser's core doors (#1559), so the whole
- * room speaks one shape and the helper lines survive.
+ * room speaks one shape and the helper lines survive. Baner and Spillformater
+ * carry the Klubbhuset origin so their back link returns here (#2487);
+ * /foreslaa-ide already goes back to /admin.
  */
 export function ToolsView() {
   const t = useTranslations('admin.dashboard');
   const tiles: Tile[] = [
     {
       label: t('playerBaner'),
-      href: '/opprett-bane',
+      href: withKlubbhusOrigin('/opprett-bane'),
       meta: t('playerBanerMeta'),
       icon: 'bane',
     },
     {
       label: t('playerSpillformater'),
-      href: '/spillformater',
+      href: withKlubbhusOrigin('/spillformater'),
       meta: t('playerSpillformaterMeta'),
       icon: 'spillformater',
     },

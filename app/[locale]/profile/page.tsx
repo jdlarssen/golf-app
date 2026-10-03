@@ -86,7 +86,7 @@ export default async function ProfilePage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel={t('backLabel')} kicker={t('kicker')} />
+      <TopBar kicker={t('kicker')} />
 
       {profileUpdated && (
         <div className="mb-4">
