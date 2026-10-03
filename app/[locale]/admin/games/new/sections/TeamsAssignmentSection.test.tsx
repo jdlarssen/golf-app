@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { useEffect } from 'react';
-import { act, render, screen, within } from '@testing-library/react';
-import { TeamsAssignmentSection } from './TeamsAssignmentSection';
+import { act, render, renderHook, screen, within } from '@testing-library/react';
+import { TeamsAssignmentSection, teamsAssignmentParts } from './TeamsAssignmentSection';
 import { useGameFormState, type GameFormState } from '../useGameFormState';
 import type { CourseOption, PlayerOption } from '../GameForm';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -108,5 +108,43 @@ describe('TeamsAssignmentSection — rutenettet vokser med valgte spillere (#214
     act(() => latest.handleTeamSizeChange(4));
     expect(screen.getByTestId('team-card-13')).toBeInTheDocument();
     expect(screen.queryByTestId('team-card-14')).toBeNull();
+  });
+});
+
+// Type A (#2437): the publish guard checks every selected player's category in
+// every format, so the M/D/J list must render wherever players are picked.
+// Best ball carries the toggle in its flights part instead.
+describe('teamsAssignmentParts — tee per spiller (#2437)', () => {
+  function partsFor(mode: GameMode, pick: number) {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => result.current.handleModeChange(mode));
+    act(() => {
+      for (let i = 0; i < pick; i++) result.current.togglePlayer(`p${i + 1}`);
+    });
+    return teamsAssignmentParts(result.current);
+  }
+
+  it.each([
+    'wolf',
+    'nassau',
+    'skins',
+    'bingo_bango_bongo',
+    'nines',
+    'round_robin',
+    'acey_deucey',
+    'stableford',
+    'solo_strokeplay',
+  ] as const)('%s med én valgt spiller viser tee per spiller', (mode) => {
+    expect(partsFor(mode, 1).tee).toBe(true);
+  });
+
+  it('best ball har velgeren i flights-delen, ikke i tee-lista', () => {
+    expect(partsFor('best_ball', 1).tee).toBe(false);
+  });
+
+  it('ingen valgte spillere gir ingen tee-liste', () => {
+    expect(partsFor('skins', 0).tee).toBe(false);
   });
 });

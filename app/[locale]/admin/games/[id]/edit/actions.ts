@@ -37,8 +37,7 @@ type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
 /**
  * #2210: the tee category the form sent for a player, or `null` when it sent
- * none. Several formats render no category toggle (#2209) — `null` keeps the
- * stored category instead of overwriting it with 'mens'.
+ * none. `null` keeps the stored category instead of overwriting it with 'mens'.
  */
 function formTeeGender(
   formData: FormData,

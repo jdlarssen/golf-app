@@ -10,7 +10,11 @@ import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
 import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
-import { resolveTeeGender } from '@/lib/games/teeChoice';
+import {
+  ALL_TEE_GENDERS,
+  resolveTeeGender,
+  type TeeGenderAvailability,
+} from '@/lib/games/teeChoice';
 import {
   gameModeSupportsTeams,
   type RegistrationMode,
@@ -272,6 +276,14 @@ export function deriveDefaultGenders(
     out[p.id] = playerGenderDefault(p.gender, p.level);
   }
   return out;
+}
+
+/** #2437: the categories a wizard tee rates. No tee = no restriction yet. */
+function teeGenderAvailabilityOf(
+  tee: CourseOption['tee_boxes'][number] | null | undefined,
+): TeeGenderAvailability {
+  if (!tee) return ALL_TEE_GENDERS;
+  return { M: tee.has_mens, D: tee.has_ladies, J: tee.has_juniors };
 }
 
 // Fisher–Yates shuffle backed by crypto.getRandomValues for fair, unbiased
@@ -940,11 +952,7 @@ export function useGameFormState({
       .flatMap((c) => c.tee_boxes)
       .find((t) => t.id === nextTeeId);
     if (!newTee) return;
-    const avail = {
-      M: newTee.has_mens,
-      D: newTee.has_ladies,
-      J: newTee.has_juniors,
-    };
+    const avail = teeGenderAvailabilityOf(newTee);
     setPlayerGenders((prev) => {
       const clamped: Record<string, 'M' | 'D' | 'J'> = {};
       for (const [pid, g] of Object.entries(prev)) {
@@ -1175,11 +1183,7 @@ export function useGameFormState({
   // utilgjengelige kategori-knapper i TeamsAssignmentSection og til den
   // defensive publish-guarden (AC1).
   const teeGenderAvailability = useMemo(
-    () => ({
-      M: selectedTeeBox?.has_mens ?? true,
-      D: selectedTeeBox?.has_ladies ?? true,
-      J: selectedTeeBox?.has_juniors ?? true,
-    }),
+    () => teeGenderAvailabilityOf(selectedTeeBox),
     [selectedTeeBox],
   );
 
@@ -1284,11 +1288,16 @@ export function useGameFormState({
   // #1009: gjest lagt til fra spillersteget — skygge-brukeren er allerede
   // opprettet server-side (createGuestForWizard), så her registreres bare
   // PlayerOption-en, tee-valget og auto-seleksjonen. Idempotent på id.
+  // #2437: the guest form only offers categories the tee rates; the clamp here
+  // is the backstop so nothing stores a category the tee lacks.
   function addGuestPlayer(player: PlayerOption, tee: 'M' | 'D' | 'J') {
     setExtraPlayers((prev) =>
       prev.some((p) => p.id === player.id) ? prev : [...prev, player],
     );
-    setPlayerGenders((prev) => ({ ...prev, [player.id]: tee }));
+    setPlayerGenders((prev) => ({
+      ...prev,
+      [player.id]: clampGenderToTee(tee, teeGenderAvailability),
+    }));
     setSelectedPlayerIds((prev) =>
       prev.includes(player.id) ? prev : [...prev, player.id],
     );

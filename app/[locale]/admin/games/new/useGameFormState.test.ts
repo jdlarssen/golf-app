@@ -1411,6 +1411,32 @@ describe('useGameFormState — defensiv publish-guard (AC5)', () => {
   });
 });
 
+describe('useGameFormState — addGuestPlayer klemmer gjestens kategori til tee-en (#2437)', () => {
+  it.each([
+    ['course-c', 'tee-c1', 'J', 'M'],
+    ['course-c', 'tee-c1', 'D', 'M'],
+    ['course-d', 'tee-d1', 'D', 'D'],
+    ['course-d', 'tee-d1', 'J', 'M'],
+  ] as const)('%s/%s: gjest med %s lagres som %s', (course, tee, picked, expected) => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('skins');
+      result.current.setCourseId(course);
+    });
+    act(() => {
+      result.current.setTeeBoxId(tee);
+    });
+    const guest = makePlayer('g-gjest', { isGuest: true });
+    act(() => {
+      result.current.addGuestPlayer(guest, picked);
+    });
+    expect(result.current.playerGenders['g-gjest']).toBe(expected);
+    expect(result.current.teeChoiceFor('g-gjest')).toBe(expected);
+  });
+});
+
 describe('useGameFormState — en venn uten fullført profil stopper ikke publisering (#2441)', () => {
   it('canPublish er true, ingen mangel-tekst, og pendingProfileCount teller vennen', () => {
     const players = [makePlayer('p-venter', { name: null, pending: true })];
