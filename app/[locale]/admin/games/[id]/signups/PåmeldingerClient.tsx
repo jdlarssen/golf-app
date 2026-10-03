@@ -37,6 +37,7 @@ function formatTimestamp(iso: string, locale: AppLocale): string {
   // Lokalisert kort dato + klokkeslett — tabular-nums sikrer at radhøyden
   // ikke hopper mellom rader.
   return formatDateTime(iso, locale, {
+    timeZone: 'Europe/Oslo',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',

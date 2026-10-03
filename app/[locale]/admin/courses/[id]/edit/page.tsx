@@ -17,7 +17,7 @@ import {
   ArchivedTeesSection,
   type ArchivedTeeRow,
 } from './ArchivedTeesSection';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
 import { requireAdmin } from '@/lib/admin/auth';
 import type { AppLocale } from '@/i18n/routing';
@@ -50,13 +50,13 @@ function buildAuditKicker(
 
   if (wasUpdated) {
     const who = displayName(course.updated_by_user);
-    const when = formatShortDateLocale(course.updated_at, locale);
+    const when = formatShortOsloDayMonthLocale(course.updated_at, locale);
     return who
       ? t('kickerLastUpdatedBy', { date: when, who })
       : t('kickerLastUpdated', { date: when });
   }
   const who = displayName(course.created_by_user);
-  const when = formatShortDateLocale(course.created_at, locale);
+  const when = formatShortOsloDayMonthLocale(course.created_at, locale);
   return who
     ? t('kickerAddedBy', { date: when, who })
     : t('kickerAdded', { date: when });

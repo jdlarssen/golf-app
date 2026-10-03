@@ -1,7 +1,7 @@
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { cupDayFinishedBadge, type FinishedEntry } from '@/lib/games/finishedEntries';
 
 type CupDayEntry = Extract<FinishedEntry, { kind: 'cupDay' }>;
@@ -37,7 +37,7 @@ export function FinishedCupDayCard({ entry }: { entry: CupDayEntry }) {
           </GameRowMetaLine>
           {entry.ended_at && (
             <GameRowMetaLine tabular>
-              {formatShortDateLocale(entry.ended_at, locale)}
+              {formatShortOsloDayMonthLocale(entry.ended_at, locale)}
             </GameRowMetaLine>
           )}
         </>

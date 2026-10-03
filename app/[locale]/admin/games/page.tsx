@@ -17,7 +17,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -269,7 +269,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
         {games.map((g, i) => {
           const courseName = g.courses?.name ?? t('unknownCourse');
           const shortDate = (iso: string | null) =>
-            iso ? formatShortDateLocale(iso, locale as AppLocale) : null;
+            iso ? formatShortOsloDayMonthLocale(iso, locale as AppLocale) : null;
           const dateLine =
             g.status === 'draft'
               ? t('draftWord')

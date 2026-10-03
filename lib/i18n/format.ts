@@ -229,10 +229,10 @@ export function formatWeekdayDayMonthOsloLocale(
  * Norwegian ('no'): delegates to legacy helper → "14. mai 2026" (byte-identical).
  * English ('en'):   "14 May 2026" — day numeric, month short, year numeric (en-GB).
  *
- * Note: the legacy helper reads local (server/browser) TZ via Date#getDate etc.
- * For values that must be TZ-stable (tee-off times), use formatTeeOffDateLocale.
- * This helper is used for admin/slett-page dates where local-TZ behaviour is
- * acceptable (matches the legacy helper's existing behaviour for 'no').
+ * Note: reads the host timezone (Date#getDate etc.), which is UTC on Vercel.
+ * Only for plain dates: `date` columns, `YYYY-MM-DD`, or a date set to 12:00
+ * (as the liga pages do). A timestamp goes through
+ * `formatShortOsloDateWithYearLocale` instead (#2339).
  */
 export function formatShortDateWithYearLocale(
   input: Date | string,
@@ -253,8 +253,9 @@ export function formatShortDateWithYearLocale(
  * Norwegian ('no'): delegates to legacy helper → "14. mai" (byte-identical).
  * English ('en'):   "14 May" — day numeric, month short (en-GB, no year).
  *
- * Note: the legacy helper reads local (server/browser) TZ via Date#getDate etc.
- * This helper preserves that behaviour for 'no' and mirrors it for 'en'.
+ * Note: reads the host timezone (Date#getDate etc.), which is UTC on Vercel.
+ * Only for plain dates: `date` columns, `YYYY-MM-DD`, or a date set to 12:00.
+ * A timestamp goes through `formatShortOsloDayMonthLocale` instead (#2339).
  */
 export function formatShortDateLocale(
   input: Date | string,
@@ -401,8 +402,10 @@ export function shortMonthLocale(monthIndex: number, locale: AppLocale): string 
  *
  * Norwegian ('no'): delegates to `formatMonthLongNb` (byte-identical lowercase
  *   month + year, local date-getters).
- * English ('en'):   en-GB Intl `month: 'long'` + year, local TZ to match the
- *   local-getter month bucketing in `groupFinishedByMonth`.
+ * English ('en'):   en-GB Intl `month: 'long'` + year.
+ *
+ * Reads the host timezone, so the caller passes a date in the middle of the
+ * month; `groupFinishedByMonth` finds the Oslo month first (#2339).
  */
 export function formatMonthLongLocale(
   iso: string | Date,

@@ -1,7 +1,7 @@
 import { useTranslations, useLocale } from 'next-intl';
 import type { AppLocale } from '@/i18n/routing';
 import { GameRowCard, GameRowMetaLine } from '@/components/games/GameRowCard';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
@@ -19,7 +19,7 @@ import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
  * før #572). Teksten kommer fra next-intl så den oversettes med #60.
  *
  * Ren server-trygg modul (ingen 'use client') — tappet leder til leaderboardet.
- * Dato og spillform-etikett rendres locale-bevisst (#60): `formatShortDateLocale`
+ * Dato og spillform-etikett rendres locale-bevisst (#60): `formatShortOsloDayMonthLocale`
  * + rute-locale, og spillform via `modes.*`-katalogen (ikke den norsk-only
  * `formatDisplayLabel`-konstanten).
  */
@@ -52,7 +52,7 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
           </GameRowMetaLine>
           {game.ended_at && (
             <GameRowMetaLine tabular>
-              {formatShortDateLocale(game.ended_at, locale)}
+              {formatShortOsloDayMonthLocale(game.ended_at, locale)}
             </GameRowMetaLine>
           )}
         </>

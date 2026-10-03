@@ -1,5 +1,5 @@
 import { restoreTee } from './actions';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -62,7 +62,7 @@ export function ArchivedTeesSection({
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">{tee.name}</div>
               <div className="text-xs text-muted">
-                {strings.archivedDate(formatShortDateLocale(tee.archived_at, locale))}
+                {strings.archivedDate(formatShortOsloDayMonthLocale(tee.archived_at, locale))}
                 {tee.length_meters != null && ` · ${tee.length_meters} m`}
               </div>
               {tee.has_active_name_conflict && (

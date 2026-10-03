@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
-import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import { formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { HCP_MAX, HCP_MIN } from '@/lib/users/profileInput';
 import { updateUser } from './actions';
@@ -139,7 +139,7 @@ export default async function PlayerDetailPage({
           </p>
         )}
         <p className="mt-1 font-sans text-[11.5px] tabular-nums text-muted">
-          {target.email} · {tProfile('registeredAt', { date: formatShortDateWithYearLocale(target.created_at, locale) })}
+          {target.email} · {tProfile('registeredAt', { date: formatShortOsloDateWithYearLocale(target.created_at, locale) })}
           {target.is_admin && ` · ${tProfile('superAdmin')}`}
         </p>
       </div>

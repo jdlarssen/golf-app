@@ -24,6 +24,7 @@ import {
 import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import { formatVsPar } from '@/lib/scoring/scoreTone';
+import { osloDateKey } from '@/lib/format/osloCalendar';
 
 const STORAGE_PREFIX = 'torny-leaderboard-confetti-seen-';
 
@@ -237,7 +238,7 @@ export function State4View({
  * en rå `<a>` med `download` for at nettleseren skal trigge nedlasting.
  */
 function ExportLink({ gameId, t }: { gameId: string; t: ReturnType<typeof useTranslations<'leaderboard.common'>> }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = osloDateKey(new Date());
   return (
     <div className="flex justify-center px-6 pb-5">
       <a
