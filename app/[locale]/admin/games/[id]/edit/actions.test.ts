@@ -24,6 +24,8 @@ import {
  *      // so every test queues it, also the ones that return early (payload
  *      // error, tee_off_required, tee_off_in_past, side-tournament errors).
  *      // Then mode-lock + cup lock.
+ *   4b. group_members.select               // ONLY when the wizard posts a NEW group_id
+ *      // (resolveGameClubId, #2433); an unchanged, empty or absent field reads nothing.
  *   5. game_players.select('*')            // prior roster, read BEFORE games.update (#2210)
  *   6. games.update                        // optimistic-lock på status
  *   7. game_players.update × n             // plan.updates, each .select('user_id')
@@ -1242,5 +1244,132 @@ describe('klubb-turnering uten spillere (#2433)', () => {
 
     expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=min_players_for_mode');
     expect(gamesUpdate()).toBeUndefined();
+  });
+});
+
+describe('klubbvalget på et gjenopptatt utkast lagres (#2433, søsken-funn fra #2439)', () => {
+  // Only the wizard renders <input name="group_id">, always (also empty), so
+  // the field's presence is the signal. A new club is checked like at create;
+  // an unchanged one is kept without a new check (a global admin may resume
+  // another club's draft); an empty field clears it. GameForm never posts the
+  // field and keeps the stored club.
+  function draftForm(fields: Record<string, string> = {}): FormData {
+    return fd({
+      name: 'Utkast',
+      side_tournament_enabled: 'false',
+      game_mode: 'stableford',
+      registration_mode: 'invite_only',
+      registration_type: 'solo',
+      ...fields,
+    });
+  }
+  function existingDraft(group_id: string | null) {
+    return {
+      data: {
+        status: 'draft',
+        game_mode: 'stableford',
+        mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        tournament_id: null,
+        group_id,
+      },
+      error: null,
+    };
+  }
+  function updateArgs() {
+    const call = supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'update');
+    return call?.args[0] as { group_id?: string | null; status?: string } | undefined;
+  }
+  const groupMemberCalls = () => supabaseMock.__fromCalls.filter((c) => c.table === 'group_members');
+
+  it('veiviseren, ny klubb du er medlem av → lagres', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingDraft(null),
+      { data: { group_id: 'club-2', groups: { valid_until: null } }, error: null }, // group_members
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(saveDraftAction('game-1', draftForm({ group_id: 'club-2' }))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updateArgs()?.group_id).toBe('club-2');
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
+  });
+
+  it('veiviseren, ny klubb du ikke er medlem av → group_id null', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingDraft(null),
+      { data: null, error: null }, // group_members: no row
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(saveDraftAction('game-1', draftForm({ group_id: 'someone-elses-club' }))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(updateArgs()?.group_id).toBeNull();
+  });
+
+  it('veiviseren, uendret klubb uten medlemskap (global admin) og 0 spillere → publiseres med samme klubb', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingDraft('club-1'),
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction(
+        'game-1',
+        draftForm({
+          group_id: 'club-1',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          hcp_allowance_pct: '100',
+          scheduled_tee_off_at: FUTURE_TEE_OFF,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(groupMemberCalls()).toHaveLength(0);
+    expect(updateArgs()).toMatchObject({ group_id: 'club-1', status: 'scheduled' });
+  });
+
+  it('veiviseren, tomt felt (byttet bort fra Klubb-turnering) → group_id null', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingDraft('club-1'),
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(saveDraftAction('game-1', draftForm({ group_id: '' }))).rejects.toBeInstanceOf(RedirectError);
+
+    expect(groupMemberCalls()).toHaveLength(0);
+    expect(updateArgs()?.group_id).toBeNull();
+  });
+
+  it('GameForm (uten feltet) beholder lagret klubb uten nytt medlemskapsoppslag', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingDraft('club-1'),
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(saveDraftAction('game-1', draftForm())).rejects.toBeInstanceOf(RedirectError);
+
+    expect(groupMemberCalls()).toHaveLength(0);
+    expect(updateArgs()?.group_id).toBe('club-1');
   });
 });

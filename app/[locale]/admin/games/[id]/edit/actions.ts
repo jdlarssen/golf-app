@@ -30,6 +30,7 @@ import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isClubTournament } from '@/lib/games/registration';
+import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
 import type { Tables } from '@/lib/database.types';
@@ -121,9 +122,25 @@ async function updateGameInternal(
   if (!existing) {
     redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
-  // The club the save keeps in games.group_id. GameForm never posts the
-  // field, so it is the stored value, read in this call.
-  const savedGroupId = existing.group_id;
+  // The club this save writes to games.group_id (#2433, søsken-funn fra
+  // #2439). Only the wizard's FormDataInputs renders <input name="group_id">,
+  // always (also empty), so the field's presence is the signal — never mode,
+  // isAdmin or status: GameForm posts drafts to these actions too, and must
+  // not clear their club.
+  let savedGroupId: string | null = existing.group_id;
+  if (formData.has('group_id')) {
+    const rawGroupId = String(formData.get('group_id') ?? '').trim();
+    if (rawGroupId === '') {
+      // Switched away from Klubb-turnering.
+      savedGroupId = null;
+    } else if (rawGroupId !== (existing.group_id ?? '')) {
+      // A new club is checked like at create: member and not expired.
+      savedGroupId = await resolveGameClubId(supabase, userId, rawGroupId);
+    }
+    // Unchanged: kept without a new check. #2439 lets a global admin who is
+    // not a member resume another club's draft, and the club may have
+    // expired since; the DB trigger only checks a group_id that changes.
+  }
 
   const payloadMode = mode === 'save_draft' ? 'draft' : 'publish';
   // #2433: a club tournament publishes without players (members sign up
@@ -319,6 +336,9 @@ async function updateGameInternal(
       // bare når status fortsatt er draft/scheduled (optimistic-lock under).
       // Parseren garanterer tomt array når sideEnabled er false.
       side_disabled_categories: sideDisabledCategories,
+      // #2433: set by the action itself (above), from the DB row or the
+      // wizard's checked field, never from GameForm state.
+      group_id: savedGroupId,
       status: nextStatus,
       // started_at is intentionally not touched — only D5's "Start runden nå"
       // flow transitions out of 'scheduled'.

@@ -478,9 +478,9 @@ function WizardBody({
   );
 
   // #2439: the clubs a club tournament may be for — the valid clubs, plus,
-  // when resuming a server draft, the draft's own club. The edit action never
-  // writes `group_id`, so an admin resuming another club's draft must not get
-  // stuck on step 2.
+  // when resuming a server draft, the draft's own club. The edit action keeps
+  // an unchanged `group_id` without checking it again (#2433), so an admin
+  // resuming another club's draft must not get stuck on step 2.
   const validClubIds = useMemo(() => {
     const ids = clubs.map((c) => c.id);
     if (mode.kind === 'edit-draft' && defaultGroupId && !ids.includes(defaultGroupId)) {

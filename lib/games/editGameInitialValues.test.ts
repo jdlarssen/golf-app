@@ -32,7 +32,8 @@ describe('EDIT_FORM_COLUMNS', () => {
 
   it('selects every column the edit save writes back from the form', () => {
     // status is set by the action itself, never from the form.
-    const fromForm = written.filter((c) => c !== 'status');
+    // group_id too (#2433): from the DB row or the wizard's checked field, never GameForm state.
+    const fromForm = written.filter((c) => c !== 'status' && c !== 'group_id');
     expect(fromForm.filter((c) => !selected.has(c))).toEqual([]);
   });
 });
