@@ -22,12 +22,15 @@ const PER = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const GUEST = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const WITHDRAWN = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const ALREADY = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+const ADMIN = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 
 type Notification = { user_id: string; kind: string; game_id: string };
 
 let db: {
   /** `null` = spillet finnes ikke. */
   status: string | null;
+  /** `games.created_by`, the organiser. */
+  createdBy: string;
   roster: { user_id: string; withdrawn_at: string | null }[];
   guests: Set<string>;
   notifications: Notification[];
@@ -40,7 +43,10 @@ function respond(op: QueryOp): QueryResponse {
 
   if (op.table === 'games') {
     return {
-      data: db.status !== null && value('id') === GAME_ID ? { status: db.status } : null,
+      data:
+        db.status !== null && value('id') === GAME_ID
+          ? { status: db.status, created_by: db.createdBy }
+          : null,
     };
   }
   if (op.table === 'game_players') {
@@ -104,6 +110,7 @@ beforeEach(() => {
   fake.reset();
   db = {
     status: 'scheduled',
+    createdBy: ORGANISER,
     roster: [
       { user_id: ORGANISER, withdrawn_at: null },
       { user_id: OLA, withdrawn_at: null },
@@ -133,6 +140,20 @@ describe('notifyRosterInvites', () => {
       expect(opts).toMatchObject({ gameId: GAME_ID, inviterUserId: ORGANISER });
     }
     expect(revalidateTag).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  // #2441: the web publishes through here too, and an admin may publish
+  // another organiser's draft. The organiser never gets «<admin> inviterte
+  // deg» to their own game.
+  it('en admin som publiserer: arrangøren varsles ikke, de andre gjør', async () => {
+    const result = await notifyRosterInvites({ gameId: GAME_ID, inviterUserId: ADMIN });
+
+    expect(result).toEqual({ ok: true, invited: 2 });
+    expect(recipients().sort()).toEqual([OLA, PER].sort());
+    expect(recipients()).not.toContain(ORGANISER);
+    for (const [opts] of notifyInvitedMock.mock.calls) {
+      expect(opts).toMatchObject({ gameId: GAME_ID, inviterUserId: ADMIN });
+    }
   });
 
   it('et andre kall gir 0 nye varsler — dedupen leser radene det første skrev', async () => {

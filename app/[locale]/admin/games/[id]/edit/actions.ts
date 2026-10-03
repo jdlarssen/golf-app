@@ -28,6 +28,7 @@ import { expectAffected, expectOne } from '@/lib/supabase/affectedRows';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
 import type { Tables } from '@/lib/database.types';
@@ -374,17 +375,43 @@ async function updateGameInternal(
     guestIds,
     priorRosterRows,
   );
+  // #2445: a draft notified nobody, so publishing sends the roster its
+  // `invite` notice, the draft's players included. Who gets one lives in
+  // notifyRosterInvites. It runs even when the roster write failed:
+  // games.update has already made the game `scheduled`, and the next save runs
+  // as update_scheduled, which notifies only its own inserts. It reads the
+  // roster as the compensation left it and skips anyone already invited.
+  // Best-effort: neither a throw nor a refusal stops the save.
+  if (mode === 'publish') {
+    try {
+      const notified = await notifyRosterInvites({ gameId, inviterUserId: userId });
+      if (!notified.ok) {
+        console.error('[updateGameInternal] roster invites failed', {
+          gameId,
+          reason: notified.reason,
+        });
+      }
+    } catch (error) {
+      console.error('[updateGameInternal] roster invites failed', { gameId, error });
+    }
+  }
+
   if (!rosterWrite.ok) {
     redirect({ href: editHref({ error: 'db_players' }), locale });
   }
 
-  // Best-effort notify for players who are NEW on the roster (inserted by this
-  // save). The organiser is skipped; players who stayed got their notice when
-  // they were first added. Promise.allSettled keeps one failed notify from
+  // A scheduled game: best-effort notify for players who are NEW on the roster
+  // (inserted by this save). The organiser is skipped; players who stayed got
+  // their notice when they were first added or when the game was published.
+  // Not notifyRosterInvites: it would also notify players who signed up
+  // through the link. Promise.allSettled keeps one failed notify from
   // affecting the redirect. #1009: guests are not notified (no inbox).
-  const newPlayerIds = plan.inserts
-    .map((r) => r.user_id)
-    .filter((id) => id !== userId && !guestIds.has(id));
+  const newPlayerIds =
+    mode === 'update_scheduled'
+      ? plan.inserts
+          .map((r) => r.user_id)
+          .filter((id) => id !== userId && !guestIds.has(id))
+      : [];
   if (newPlayerIds.length > 0) {
     await Promise.allSettled(
       newPlayerIds.map((recipientUserId) =>
