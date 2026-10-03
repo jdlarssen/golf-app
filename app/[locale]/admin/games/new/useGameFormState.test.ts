@@ -1902,3 +1902,81 @@ describe('useGameFormState — unassignedPlayerIds (#2210)', () => {
     expect(result.current.unassignedPlayerIds).toEqual([]);
   });
 });
+
+describe('useGameFormState — kompis-lagstørrelsen følger antallet (#2435)', () => {
+  const KOMPIS_PLAYERS: PlayerOption[] = Array.from({ length: 12 }, (_, i) =>
+    makePlayer(`k${i + 1}`),
+  );
+
+  function setup(initialIntent?: 'kompis' | 'klubb') {
+    return renderHook(() =>
+      useGameFormState({ players: KOMPIS_PLAYERS, courses: COURSES, initialIntent }),
+    ).result;
+  }
+
+  it('kompis med 4 + Texas → par, 25 %, og trekningen gir to lag à to', () => {
+    const result = setup('kompis');
+    act(() => {
+      result.current.handleModeChange('texas_scramble');
+    });
+    expect(result.current.teamSize).toBe(2);
+    expect(result.current.texasHandicapPct).toBe(25);
+
+    act(() => {
+      for (let i = 0; i < 4; i++) result.current.togglePlayer(`k${i + 1}`);
+    });
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    expect(result.current.playersByTeam[1]).toHaveLength(2);
+    expect(result.current.playersByTeam[2]).toHaveLength(2);
+  });
+
+  it('kompis med 6 + Shamble → lag à tre', () => {
+    const result = setup('kompis');
+    act(() => {
+      result.current.setExpectedPlayerCount(6);
+    });
+    act(() => {
+      result.current.handleModeChange('shamble');
+    });
+    expect(result.current.teamSize).toBe(3);
+  });
+
+  it('kompis med 8 + Texas (4), så + til 9 → lag à tre, formatet står, 15 %', () => {
+    const result = setup('kompis');
+    act(() => {
+      result.current.setExpectedPlayerCount(8);
+    });
+    act(() => {
+      result.current.handleModeChange('texas_scramble');
+    });
+    expect(result.current.teamSize).toBe(4);
+    act(() => {
+      result.current.setExpectedPlayerCount(9);
+    });
+    expect(result.current.teamSize).toBe(3);
+    expect(result.current.formatChosen).toBe(true);
+    expect(result.current.texasHandicapPct).toBe(15);
+  });
+
+  it('uten intent (GameForm) → Texas står på standarden 4', () => {
+    const result = setup();
+    act(() => {
+      result.current.handleModeChange('texas_scramble');
+    });
+    expect(result.current.teamSize).toBe(4);
+  });
+
+  it('klubb + Texas (4), så kompis med 4 → par', () => {
+    const result = setup('klubb');
+    act(() => {
+      result.current.handleModeChange('texas_scramble');
+    });
+    expect(result.current.teamSize).toBe(4);
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+    expect(result.current.teamSize).toBe(2);
+  });
+});

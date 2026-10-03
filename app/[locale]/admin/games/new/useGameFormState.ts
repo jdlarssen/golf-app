@@ -22,9 +22,11 @@ import {
   defaultFlightForTeam,
   fitAssignmentsToGrid,
   randomDrawTeamCount,
+  startTeamSize,
   teamGridShape,
   teamNumberRange,
 } from '@/lib/games/teamFormatLimits';
+import { playerTarget } from '@/lib/wizard/playerTarget';
 import { isDatetimeLocalInPast } from '@/lib/games/gamePayload';
 import { START_COUNT_RANGES, fitsStartCount } from '@/lib/games/startPlayerCount';
 import {
@@ -315,9 +317,8 @@ type UseGameFormStateInput = {
   // initialValues.group_id). Tom streng = ingen klubb valgt.
   defaultGroupId?: string;
   // #2439: id-ene til de gyldige klubbene (medlem, ikke utløpt). En klubb-
-  // turnering krever en av dem, og med bare én er den valgt fra start. Må være
-  // en stabil referanse (setIntent har den i dep-lista). GameForm sender den
-  // ikke; der er intent alltid undefined.
+  // turnering krever en av dem, og med bare én er den valgt fra start.
+  // GameForm sender den ikke; der er intent alltid undefined.
   clubIds?: readonly string[];
   // #1066: innlogget brukers id (samme prop som GameWizard sender videre til
   // selectablePlayers/#464). Brukes KUN til å forhåndsvelge arrangøren som
@@ -338,7 +339,7 @@ type UseGameFormStateInput = {
   initialInviteEmails?: string[];
 };
 
-/** #2439: stabil standard for `clubIds`, så `setIntent` ikke får ny identitet hver render. */
+/** #2439: stabil standard for `clubIds`. */
 const NO_CLUBS: readonly string[] = [];
 
 /**
@@ -849,19 +850,21 @@ export function useGameFormState({
   // som er sjeldent nok til at re-seeding ikke er plagsomt.
   // #2439: klubb-intent beholder en klubb som alt er valgt, og velger ellers
   // den ene gyldige klubben (startClubId).
-  const setIntent = useCallback(
-    (next: Intent | undefined) => {
-      setIntentRaw(next);
-      if (next !== 'klubb') setGroupId('');
-      else setGroupId((prev) => startClubId({ intent: 'klubb', seeded: prev, clubIds }));
-      if (next === 'kompis' && currentUserId) {
-        setSelectedPlayerIds((prev) =>
-          prev.length === 0 ? [currentUserId] : prev,
-        );
-      }
-    },
-    [currentUserId, clubIds],
-  );
+  // #2435: kompis-antallet kan gjøre lagstørrelsen ugyldig (klubb, Texas à 4,
+  // så kompis med 4), så lagstørrelsen følger med. Vanlig funksjon, ikke
+  // useCallback: den leser state via matchTeamSizeToCount, og bare
+  // handleIntentSelect i GameWizard kaller den.
+  function setIntent(next: Intent | undefined) {
+    setIntentRaw(next);
+    if (next !== 'klubb') setGroupId('');
+    else setGroupId((prev) => startClubId({ intent: 'klubb', seeded: prev, clubIds }));
+    if (next === 'kompis' && currentUserId) {
+      setSelectedPlayerIds((prev) =>
+        prev.length === 0 ? [currentUserId] : prev,
+      );
+    }
+    matchTeamSizeToCount(next, expectedPlayerCount);
+  }
 
   // #2439: en klubb-turnering krever en gyldig klubb. Regelen bor i
   // lib/wizard/clubChoice; GameWizard leser denne verdien, aldri sin egen kopi.
@@ -956,22 +959,43 @@ export function useGameFormState({
   // (formatChosen=false) så brukeren må velge et format som passer — ingen
   // mismatch kan nå publisering. gameMode settes tilbake til default; verdien
   // er uansett maskert av formatChosen=false i FormatGrid til et nytt valg.
+  // #2435: passer formatet fortsatt, følger lagstørrelsen antallet (Texas à 4
+  // med 8, + til 9 → lag à 3).
   function setExpectedPlayerCount(next: number | undefined) {
     setExpectedPlayerCountRaw(next);
     if (next !== undefined && formatChosen && !fitsPlayerCountFn(gameMode, next)) {
       setGameMode('best_ball');
       setFormatChosen(false);
+    } else {
+      matchTeamSizeToCount(intent, next);
     }
+  }
+
+  // #2435: holder et valgt format sin lagstørrelse i takt med kompis-antallet.
+  // Valget som står, er `preferred`, så det blir stående så lenge det går opp.
+  // Låst format (cup-lenke, publisert spill) og et format som ikke er valgt
+  // ennå røres ikke.
+  function matchTeamSizeToCount(nextIntent: Intent | undefined, nextCount: number | undefined) {
+    if (lockGameMode || !formatChosen) return;
+    const target = playerTarget({ gameMode, intent: nextIntent, expectedPlayerCount: nextCount });
+    // `as TeamSize`: the result is `teamSize` itself or one of TEAM_FORMAT_TEAM_SIZES (2, 3, 4).
+    const size = startTeamSize(gameMode, target, teamSize) as TeamSize;
+    if (size !== teamSize) handleTeamSizeChange(size);
   }
 
   function handleModeChange(next: GameMode) {
     setGameMode(next);
     setFormatChosen(true);
-    // Auto-velg eneste aktive lagstørrelse per modus så form-state alltid
-    // matcher en gyldig kombinasjon. Når flere kombinasjoner aktiveres
-    // (par-stableford, 4-mann-stableford), erstattes dette med en mer
-    // fleksibel default-policy — for v1 holder vi det enkelt.
-    const nextSize = defaultTeamSizeForMode(next);
+    // Start på standarden for formatet (defaultTeamSizeForMode). I en
+    // kompis-runde velges i stedet en størrelse som går opp med antallet,
+    // den samme oppstillingen som formatkortet viste (#2435, startTeamSize).
+    // Uten antall (klubb, solo, GameForm) står standarden.
+    // `as TeamSize`: the result is the default or one of TEAM_FORMAT_TEAM_SIZES (2, 3, 4).
+    const nextSize = startTeamSize(
+      next,
+      playerTarget({ gameMode: next, intent, expectedPlayerCount }),
+      defaultTeamSizeForMode(next),
+    ) as TeamSize;
     setTeamSize(nextSize);
     releasePlayersOutsideGrid(next, nextSize);
     // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
