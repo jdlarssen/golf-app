@@ -180,8 +180,8 @@ export async function TilesGrid() {
       icon: 'laurbaer',
     },
     // F3 (#273): admin format mapping. Mappings and the active flag are
-    // set here (#2337). Meta er statisk (vi har ingen tellbar
-    // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
+    // set here (#2337). The meta line is static: there is no countable KPI
+    // yet (it could show the number of active formats later).
     {
       label: t('tilesFormats'),
       href: '/admin/formats',
