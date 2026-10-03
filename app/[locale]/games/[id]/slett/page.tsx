@@ -10,7 +10,7 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
-import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import { formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
 import { getLocale } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { deleteGame } from '@/app/[locale]/admin/games/[id]/slett/actions';
@@ -33,7 +33,7 @@ type SearchParams = Promise<{ error?: string | string[] }>;
 
 function shortLocale(iso: string | null | undefined, locale: AppLocale): string | null {
   if (!iso) return null;
-  return formatShortDateWithYearLocale(iso, locale);
+  return formatShortOsloDateWithYearLocale(iso, locale);
 }
 
 type GameRow = {

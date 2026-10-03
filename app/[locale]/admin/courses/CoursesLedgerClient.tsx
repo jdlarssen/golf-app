@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LedgerHeader } from '@/components/admin/LedgerHeader';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
@@ -88,14 +88,14 @@ export function rowKicker(
   locale: AppLocale,
 ): string {
   if (item.last_played_at !== null) {
-    return t('kickerLastPlayed', { date: formatShortDateLocale(item.last_played_at, locale) });
+    return t('kickerLastPlayed', { date: formatShortOsloDayMonthLocale(item.last_played_at, locale) });
   }
   const created = new Date(item.created_at).getTime();
   const updated = new Date(item.updated_at).getTime();
   const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
   return wasUpdated
-    ? t('kickerUpdated', { date: formatShortDateLocale(item.updated_at, locale) })
-    : t('kickerAdded', { date: formatShortDateLocale(item.created_at, locale) });
+    ? t('kickerUpdated', { date: formatShortOsloDayMonthLocale(item.updated_at, locale) })
+    : t('kickerAdded', { date: formatShortOsloDayMonthLocale(item.created_at, locale) });
 }
 
 // Pure sort+filter — eksportert for testing uavhengig av React.

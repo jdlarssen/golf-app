@@ -129,6 +129,7 @@ export function ProfileFormBody({
   const oppdatertDato =
     handicapUpdatedAt && !stale
       ? formatDate(handicapUpdatedAt, locale, {
+          timeZone: 'Europe/Oslo',
           day: 'numeric',
           month: 'long',
         })

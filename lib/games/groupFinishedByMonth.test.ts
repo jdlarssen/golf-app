@@ -1,3 +1,7 @@
+// Force UTC as host timezone, as on Vercel, so the Oslo-midnight cases below
+// would fall in the wrong month with local date getters (#2339).
+process.env.TZ = 'UTC';
+
 import { describe, it, expect } from 'vitest';
 import { groupFinishedByMonth } from './groupFinishedByMonth';
 import type { FinishedGame } from './getFinishedGamesForUser';
@@ -63,5 +67,17 @@ describe('groupFinishedByMonth', () => {
 
   it('returns an empty array when there are no games', () => {
     expect(groupFinishedByMonth([], 'no', 'Uten dato')).toEqual([]);
+  });
+
+  // #2339: a round that ends just after midnight Oslo belongs to the Oslo
+  // month, also on a UTC server.
+  it.each([
+    ['2026-06-30T22:30:00Z', 'no', '2026-07', 'juli 2026'],
+    ['2026-06-30T22:30:00Z', 'en', '2026-07', 'July 2026'],
+    ['2026-12-31T23:30:00Z', 'no', '2027-01', 'januar 2027'],
+  ] as const)('puts %s (%s) in the Oslo month %s', (endedAt, locale, key, label) => {
+    const [group] = groupFinishedByMonth([fg('a', endedAt)], locale, 'Uten dato');
+    expect(group.key).toBe(key);
+    expect(group.label).toBe(label);
   });
 });

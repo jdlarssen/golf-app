@@ -13,7 +13,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import { formatShortOsloDateWithYearLocale } from '@/lib/i18n/format';
 import { publishProductUpdateAction } from './actions';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -191,7 +191,7 @@ async function PreviousUpdatesList() {
                 dateTime={u.created_at}
                 className="shrink-0 font-sans text-[11px] tabular-nums text-muted"
               >
-                {formatShortDateWithYearLocale(u.created_at, locale)}
+                {formatShortOsloDateWithYearLocale(u.created_at, locale)}
               </time>
             </div>
             <p className="mt-1.5 font-sans text-sm text-muted">{u.body}</p>

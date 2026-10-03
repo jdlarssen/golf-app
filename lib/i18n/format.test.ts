@@ -733,6 +733,10 @@ describe('formatShortOsloDateWithYearLocale (#2265)', () => {
     expect(formatShortOsloDateWithYearLocale('2026-06-01T10:00:00Z', 'en')).toBe('1 Jun 2026');
     expect(formatShortOsloDateWithYearLocale('2026-06-30T21:59:00Z', 'no')).toBe('30. jun 2026');
   });
+
+  it('reads the Oslo date, not UTC: 22:30Z is the next day (#2339)', () => {
+    expect(formatShortOsloDateWithYearLocale('2026-05-12T22:30:00Z', 'no')).toBe('13. mai 2026');
+  });
 });
 
 // ---------------------------------------------------------------------------
