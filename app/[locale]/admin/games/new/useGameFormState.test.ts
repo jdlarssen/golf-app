@@ -879,6 +879,27 @@ describe('useGameFormState — klubb-turnering krever en gyldig klubb (#2439)', 
     expect(result.current.groupId).toBe('club-2');
   });
 
+  it('trykk på flisen som alt er valgt beholder klubben på et gjenopptatt utkast (#2433)', () => {
+    // A club draft whose format is outside the klubb catalog resumes as kompis
+    // with its club kept (draftResumePlan). Tapping the selected tile again
+    // must not clear it: the edit action now writes the wizard's group_id.
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: 'kompis',
+        defaultGroupId: 'club-1',
+        clubIds: ['club-1'],
+      }),
+    );
+    expect(result.current.groupId).toBe('club-1');
+
+    act(() => {
+      result.current.setIntent('kompis');
+    });
+    expect(result.current.groupId).toBe('club-1');
+  });
+
   it('andre arrangementer trenger ingen klubb, heller ikke uten klubber', () => {
     const { result } = renderHook(() =>
       useGameFormState({ players: PLAYERS, courses: COURSES, initialIntent: 'kompis' }),
