@@ -7,6 +7,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { firstName } from '@/lib/firstName';
 import { localizeGameName } from '@/lib/games/autoGameName';
+import { onlyStandaloneGames } from '@/lib/games/arrangedGames';
 import type { AppLocale } from '@/i18n/routing';
 import type { GameStatus } from '@/lib/games/status';
 import { type AdminRoleContext } from '@/lib/admin/auth';
@@ -69,12 +70,16 @@ async function ArrangementSection({ userId }: { userId: string }) {
   // Created games (RLS 0071 «games select own created») + the cups the player
   // is part of — created, on a draft roster, or played (#1463; the count and
   // the `/admin/cup` list read the same union). Games fetch limit+1 to detect
-  // the «Se alle →» overflow without a second count query.
+  // the «Se alle →» overflow without a second count query. Cup matches and
+  // league flights are left out: they live on the cup row below and on the
+  // league page (#2489).
   const [gamesRes, cupIds] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, status, courses(name)')
-      .eq('created_by', userId)
+    onlyStandaloneGames(
+      supabase
+        .from('games')
+        .select('id, name, status, courses(name)')
+        .eq('created_by', userId),
+    )
       .order('created_at', { ascending: false })
       .limit(MAX_ARRANGED + 1)
       .returns<ArrangedGameRow[]>(),
