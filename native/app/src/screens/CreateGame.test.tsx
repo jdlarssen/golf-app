@@ -18,9 +18,10 @@
 //     `navigate` ville «tilbake» fra den nye runden ført rett inn i en ferdig
 //     veiviser.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { fetchRosterCandidates, publishGame } from '../data/createGame';
 import { fetchOwnProfile } from '../data/profile';
+import { describePendingOthers } from '../lib/createGameCopy';
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { CreateGame } from './CreateGame';
@@ -165,9 +166,19 @@ describe('CreateGame', () => {
       .mockResolvedValueOnce({ ok: false, error: 'db_game' })
       .mockResolvedValueOnce({ ok: true, gameId: 'new-game-1' });
     // #2441: Ola har ikke fullført profilen. Det stopper ikke publiseringen.
+    // Per venter også, men er ikke valgt, og skal ikke telles med.
     fetchRosterCandidatesMock.mockResolvedValueOnce([
       mockCandidates[0]!,
       { ...mockCandidates[1]!, pending: true },
+      {
+        id: 'p4',
+        name: 'Per Putter',
+        nickname: null,
+        hcpIndex: 30.2,
+        gender: 'mens',
+        level: 'normal',
+        pending: true,
+      },
     ]);
     // Arrangøren er dame. Teen din følger din egen profil, ikke kandidatlista
     // (der står du aldri).
@@ -212,7 +223,10 @@ describe('CreateGame', () => {
       'Deg, Ada Aas, Ola Olsen',
     );
     // En merknad, ikke en sperre: Ola venter, og publiseringen går likevel.
-    expect(screen.getByTestId('create-warning-pending-others')).toBeTruthy();
+    // Bare de valgte teller: Ola, ikke Per.
+    expect(screen.getByTestId('create-warning-pending-others').props.children).toBe(
+      describePendingOthers(1),
+    );
     expect(screen.queryByTestId('create-warning-pending-self')).toBeNull();
     expect(screen.getByTestId('create-summary-side').props.children).toBe(
       '1 lengste drive · 1 nærmest pinnen',
@@ -329,6 +343,14 @@ describe('CreateGame', () => {
     await fireEvent.press(await screen.findByTestId('create-course-course-1'));
     await fireEvent.press(screen.getByTestId('create-tee-tee-2'));
     await fireEvent.press(screen.getByTestId('create-next'));
+
+    // #2441: din egen rad sier at profilen din ikke er fullført. Leses fra din
+    // egen profil, for kandidatlista har deg aldri.
+    expect(
+      within(screen.getByTestId('create-player-me')).queryByText(
+        /ikke fullført profilen din/,
+      ),
+    ).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('create-player-p2'));
     // Ada står som `ladies`, men Hvit har ingen dame-rating: klemmen setter
