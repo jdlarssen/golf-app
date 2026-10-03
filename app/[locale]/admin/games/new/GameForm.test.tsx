@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
+import { buildEditFormInitialValues, type EditGameRow } from '@/lib/games/editGameInitialValues';
 
 // Pre-refactor regresjons-net for GameForm. Disse testene fanger dagens
 // players-first-flow + best-ball-grid-default slik at vi vet om
@@ -1835,5 +1836,78 @@ describe('GameForm — #2209 tee-kategorien sendes for alle valgte spillere', ()
     const fd = new FormData(container.querySelector('form')!);
     expect(fd.getAll('player_u1_gender')).toEqual(['D']);
     expect(fd.getAll('player_u0_gender')).toEqual(['M']);
+  });
+});
+
+describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => {
+  // Built the way both edit pages build it (buildEditFormInitialValues). A club
+  // tournament saves with an empty roster, since the members sign up
+  // themselves; an older club game on «Åpen» keeps its mode choice and saves
+  // exactly as before.
+  const NO_OP_UPDATE = async () => {};
+  const TEE_OFF_ISO = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  function editRow(overrides: Partial<EditGameRow>): EditGameRow {
+    return {
+      id: 'game-1',
+      name: 'Klubbmesterskap',
+      courses: null,
+      status: 'scheduled',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      scheduled_tee_off_at: TEE_OFF_ISO,
+      hcp_allowance_pct: 100,
+      require_peer_approval: false,
+      score_visibility: 'live',
+      side_tournament_enabled: false,
+      side_ld_count: 0,
+      side_ctp_count: 0,
+      side_disabled_categories: [],
+      game_mode: 'stableford',
+      mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+      registration_mode: 'invite_only',
+      registration_type: 'solo',
+      let_friends_skip_gate: false,
+      group_id: 'club-1',
+      tournament_id: null,
+      ...overrides,
+    };
+  }
+
+  function renderEdit(row: EditGameRow, players: PlayerOption[], playerRows: Parameters<typeof buildEditFormInitialValues>[1]) {
+    return render(
+      <GameForm
+        courses={COURSES}
+        players={players}
+        initialValues={buildEditFormInitialValues(row, playerRows)}
+        mode={{ kind: 'edit-scheduled', gameId: 'game-1', updateAction: NO_OP_UPDATE }}
+      />,
+    );
+  }
+
+  it('klubb, invite_only, individuelt, tom liste: «Lagre endringer» er aktiv, og modusvalget er skjult', () => {
+    const { container } = renderEdit(editRow({}), [], []);
+
+    expect(screen.getByTestId('save-changes')).toBeEnabled();
+    expect(container.querySelector('input[name=registration_mode_input]')).toBeNull();
+  });
+
+  it('eldre klubbspill med «Åpen» og «Lag» lagres som før: modusvalget står, og lagret modus sendes', () => {
+    const row = editRow({
+      game_mode: 'texas_scramble',
+      mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 1, team_handicap_pct: 10 },
+      registration_mode: 'open',
+      registration_type: 'team',
+    });
+    const { container } = renderEdit(row, EIGHT_PLAYERS.slice(0, 2), [
+      { user_id: 'u0', team_number: 1, flight_number: 1, tee_gender: 'mens' },
+      { user_id: 'u1', team_number: 1, flight_number: 1, tee_gender: 'mens' },
+    ]);
+
+    expect(screen.getByTestId('save-changes')).toBeEnabled();
+    expect(container.querySelector('input[name=registration_mode_input]')).not.toBeNull();
+    expect(
+      (container.querySelector('input[type=hidden][name=registration_mode]') as HTMLInputElement).value,
+    ).toBe('open');
   });
 });

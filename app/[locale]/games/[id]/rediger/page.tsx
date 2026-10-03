@@ -20,7 +20,7 @@ import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import {
-  buildEditInitialValues,
+  buildEditFormInitialValues,
   EDIT_FORM_COLUMNS,
   type EditGameRow,
   type EditGamePlayerRow,
@@ -50,7 +50,9 @@ type SearchParams = Promise<{
 
 // Every column the form writes back must be read here, or a save resets it
 // (#2258) — the shared list is checked against the update in a test.
-const GAME_SELECT = EDIT_FORM_COLUMNS;
+// #2433: group_id + tournament_id only tell buildEditFormInitialValues whether
+// this is a club tournament; neither comes back through the form.
+const GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id`;
 
 export default async function CreatorEditGamePage({
   params,
@@ -155,7 +157,8 @@ async function EditGameFormBody({
   if (playersResult.error) throw playersResult.error;
 
   const playerRows = playersResult.data ?? [];
-  const initialValues = buildEditInitialValues(game, playerRows);
+  // #2433: a club tournament saves with an empty roster here too.
+  const initialValues = buildEditFormInitialValues(game, playerRows);
 
   // #2210: every rostered player must be in the options, or the form hides
   // them (and best ball with finished teams crashed). Co-players the creator

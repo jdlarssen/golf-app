@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   gameModeSupportsTeams,
+  isClubTournament,
   isDiscoverableRegistrationMode,
   isRegistrationMode,
   isRegistrationType,
   REGISTRATION_MODES,
+  rosterOptionalAtPublish,
+  type RegistrationMode,
+  type RegistrationType,
 } from './registration';
 
 describe('gameModeSupportsTeams', () => {
@@ -105,5 +109,44 @@ describe('isDiscoverableRegistrationMode', () => {
       (m) => !isDiscoverableRegistrationMode(m),
     );
     expect(privat).toEqual(['invite_only']);
+  });
+});
+
+describe('rosterOptionalAtPublish (#2433)', () => {
+  // A club tournament with individual signup publishes without a roster: the
+  // signup page lets club members straight in only when the type is 'solo'.
+  // Every other invite_only game still needs its players.
+  it.each([
+    ['invite_only', 'solo', true, true],
+    ['invite_only', 'solo', false, false],
+    ['invite_only', 'team', true, false],
+    ['open', 'solo', false, true],
+    ['manual_approval', 'team', false, true],
+    ['open', 'team', true, true],
+  ] as const)(
+    '%s + %s, clubScoped %s → %s',
+    (registrationMode, registrationType, clubScoped, expected) => {
+      expect(
+        rosterOptionalAtPublish({
+          registrationMode: registrationMode as RegistrationMode,
+          registrationType: registrationType as RegistrationType,
+          clubScoped,
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
+describe('isClubTournament (#2433)', () => {
+  // A cup match in a club cup carries group_id too (insertCupMatches), so a
+  // tournament id makes it a cup match, never a club tournament.
+  it.each([
+    ['club-1', null, true],
+    ['club-1', '', true],
+    ['club-1', 'cup-1', false],
+    [null, null, false],
+    ['', '', false],
+  ] as const)('groupId %s, tournamentId %s → %s', (groupId, tournamentId, expected) => {
+    expect(isClubTournament({ groupId, tournamentId })).toBe(expected);
   });
 });

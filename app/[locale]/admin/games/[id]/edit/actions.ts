@@ -29,6 +29,7 @@ import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPaylo
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
+import { isClubTournament } from '@/lib/games/registration';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
 import type { Tables } from '@/lib/database.types';
@@ -96,8 +97,43 @@ async function updateGameInternal(
     return `${editBase}?${qs.toString()}`;
   }
 
+  // The stored row, read before the payload (#2433): its club decides whether
+  // the roster is optional. Mode-lock: spillmodusen kan ikke endres etter at
+  // spillet har forlatt 'draft' — game_mode sammenlignes under, etter
+  // payloaden. mode_config leses med: den lagrede JSONB-en kan bære nøkler
+  // skjemaet ikke eier (cup-generatorens `team_strokes_override`), og de skal
+  // overleve lagringen — se carryPreservedModeConfigKeys under (#1677).
+  const { data: existing, error: existingError } = await supabase
+    .from('games')
+    .select('status, game_mode, mode_config, tournament_id, group_id')
+    .eq('id', gameId)
+    .maybeSingle();
+  // Error ≠ absence (#1445): a transient query failure throws to the route's
+  // error boundary (retryable) instead of telling the admin the game is not
+  // editable. Only a genuine 0-row result keeps the not_editable redirect.
+  if (existingError) {
+    console.error('[updateGame] existing-game fetch failed', {
+      gameId,
+      error: existingError,
+    });
+    throw existingError;
+  }
+  if (!existing) {
+    redirect({ href: `${detailBase}?error=not_editable`, locale });
+  }
+  // The club the save keeps in games.group_id. GameForm never posts the
+  // field, so it is the stored value, read in this call.
+  const savedGroupId = existing.group_id;
+
   const payloadMode = mode === 'save_draft' ? 'draft' : 'publish';
-  const payload = buildGameInsertPayload(formData, payloadMode);
+  // #2433: a club tournament publishes without players (members sign up
+  // themselves). The club signal is the DB row, never a form field.
+  const payload = buildGameInsertPayload(formData, payloadMode, {
+    clubScoped: isClubTournament({
+      groupId: savedGroupId,
+      tournamentId: existing.tournament_id,
+    }),
+  });
 
   if (payload.errorCode) {
     redirect({ href: editHref({ error: payload.errorCode }), locale });
@@ -155,32 +191,9 @@ async function updateGameInternal(
     ctpCount: sideCtpCount,
   });
 
-  // Mode-lock: spillmodusen kan ikke endres etter at spillet har forlatt
-  // 'draft'. Vi leser eksisterende rad og sammenligner game_mode før vi
-  // går i gang med oppdateringen — en publisert/scheduled rad har allerede
-  // game_players-tildelinger som matcher modusen, og admin-brukeren skal
-  // se en eksplisitt feilmelding (ikke det generelle not_editable-flowet).
-  // mode_config leses med: den lagrede JSONB-en kan bære nøkler skjemaet ikke
-  // eier (cup-generatorens `team_strokes_override`), og de skal overleve
-  // lagringen — se carryPreservedModeConfigKeys under (#1677).
-  const { data: existing, error: existingError } = await supabase
-    .from('games')
-    .select('status, game_mode, mode_config, tournament_id')
-    .eq('id', gameId)
-    .maybeSingle();
-  // Error ≠ absence (#1445): a transient query failure throws to the route's
-  // error boundary (retryable) instead of telling the admin the game is not
-  // editable. Only a genuine 0-row result keeps the not_editable redirect.
-  if (existingError) {
-    console.error('[updateGame] existing-game fetch failed', {
-      gameId,
-      error: existingError,
-    });
-    throw existingError;
-  }
-  if (!existing) {
-    redirect({ href: `${detailBase}?error=not_editable`, locale });
-  }
+  // Mode-lock (existing read above): a published/scheduled row already has
+  // game_players matching its mode, and the admin should see an explicit
+  // error, not the general not_editable flow.
   if (
     existing.status !== 'draft' &&
     existing.game_mode !== payload.game_mode

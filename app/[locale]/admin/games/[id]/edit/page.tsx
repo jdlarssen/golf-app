@@ -32,6 +32,7 @@ import {
   updateScheduledAction,
 } from './actions';
 import {
+  buildEditFormInitialValues,
   buildEditInitialValues,
   EDIT_FORM_COLUMNS,
   type EditGameRow,
@@ -382,7 +383,9 @@ async function EditGameFormBody({
   if (playersResult.error) throw playersResult.error;
 
   const playerRows = playersResult.data ?? [];
-  const initialValues = buildEditInitialValues(game, playerRows);
+  // #2433: the edit form knows a club tournament (group_id), the wizard
+  // branch above does not need it (it has defaultGroupId).
+  const initialValues = buildEditFormInitialValues(game, playerRows);
 
   if (game.status === 'draft') {
     return (

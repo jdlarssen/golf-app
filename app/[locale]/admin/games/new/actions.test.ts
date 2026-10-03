@@ -31,14 +31,18 @@ import {
  * Sequence for the publish-mode happy path:
  *   1. auth.getUser  → redirect /login if absent
  *   2. users.is_admin lookup (the gate)
- *   3. buildGameInsertPayload (pure)
- *   4. isValidActiveGameMode
- *   5. parseOsloDateTimeLocal — required for publish
- *   6. parseSideTournamentFromFormData (pure)
- *   7. games.insert(...).select('id').single
- *   8. game_players.insert(rows)
- *   9. (publish only) notifyRosterInvites
- *  10. redirect (admin → /admin/games/[id], else → /games/[id])
+ *   3. (only with a `group_id` in the form) group_members membership lookup —
+ *      #2433: before the payload, since a valid club makes the roster optional.
+ *      Every test that posts a `group_id` queues this row right after the
+ *      gate, also the ones that return early.
+ *   4. buildGameInsertPayload (pure)
+ *   5. isValidActiveGameMode
+ *   6. parseOsloDateTimeLocal — required for publish
+ *   7. parseSideTournamentFromFormData (pure)
+ *   8. games.insert(...).select('id').single
+ *   9. game_players.insert(rows)
+ *  10. (publish only) notifyRosterInvites
+ *  11. redirect (admin → /admin/games/[id], else → /games/[id])
  */
 
 const redirectMock = makeRedirectMock();
@@ -825,5 +829,80 @@ describe('e-mail invitations at publish (#2321)', () => {
 
     await expect(createGameDraft(draftData)).rejects.toBeInstanceOf(RedirectError);
     expect(sendPublishInvitesMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('klubb-turnering uten spillere (#2433)', () => {
+  // Members sign up to a club tournament themselves, so with a club the caller
+  // is a member of (and no cup) the roster is optional at publish. The club
+  // signal is the DB-checked membership, never the raw form value.
+  function clubPublishFormData(overrides: Record<string, string> = {}): FormData {
+    return fd({
+      name: 'Klubbmesterskap',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      hcp_allowance_pct: '100',
+      scheduled_tee_off_at: FUTURE_TEE_OFF,
+      side_tournament_enabled: 'false',
+      game_mode: 'stableford',
+      registration_mode: 'invite_only',
+      registration_type: 'solo',
+      group_id: 'club-1',
+      ...overrides,
+    });
+  }
+  const membership = { data: { group_id: 'club-1', groups: { valid_until: null } }, error: null };
+
+  it('a valid club and 0 players: the game is published with the club and no roster', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // gate
+      membership, // group_members
+      { data: { id: 'club-game' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert (empty)
+    ]);
+    signIn('admin-1');
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(createAndPublishGame(clubPublishFormData())).rejects.toBeInstanceOf(RedirectError);
+
+    const insert = supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'insert');
+    expect(insert!.args[0]).toMatchObject({
+      group_id: 'club-1',
+      status: 'scheduled',
+      registration_mode: 'invite_only',
+    });
+    expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
+    expect(lastRedirect()).toBe('/admin/games/club-game?status=scheduled');
+  });
+
+  it('a group_id the caller is not a member of never unlocks an empty roster', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // gate
+      { data: null, error: null }, // group_members: no row
+    ]);
+    signIn('reg-1');
+
+    const { createAndPublishGame } = await import('./actions');
+    const res = await createAndPublishGame(clubPublishFormData({ group_id: 'someone-elses-club' }));
+
+    expect(res).toEqual({ error: 'min_players_for_mode' });
+    expect(supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert')).toBe(false);
+  });
+
+  it('a valid club with a cup id in the form still needs the roster', async () => {
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // gate
+        membership, // group_members
+      ],
+      { can_manage_tournament: true },
+    );
+    signIn('admin-1');
+
+    const { createAndPublishGame } = await import('./actions');
+    const res = await createAndPublishGame(clubPublishFormData({ tournament_id: 'cup-1' }));
+
+    expect(res).toEqual({ error: 'min_players_for_mode' });
+    expect(supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert')).toBe(false);
   });
 });

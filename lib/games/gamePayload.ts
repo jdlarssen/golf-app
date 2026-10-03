@@ -20,6 +20,7 @@ import {
   gameModeSupportsTeams,
   isRegistrationMode,
   isRegistrationType,
+  rosterOptionalAtPublish,
   type RegistrationMode,
   type RegistrationType,
 } from './registration';
@@ -2192,12 +2193,20 @@ const modeValidators: Record<
  *  - best_ball: partall 2–40 spillere, lag à 2, opptil 20 par (publish)
  *  - stableford: ≥1 solo spiller, team/flight null (publish)
  *
+ * `opts.clubScoped` (#2433): the caller's verdict that the game is a club
+ * tournament (`isClubTournament`), from DB-checked data, never raw form input.
+ * With individual signup the roster is then optional at publish, like open
+ * signup (`rosterOptionalAtPublish`). Without it everything is as before, and
+ * the stored `registration_mode` never changes: a club tournament stays
+ * `invite_only`.
+ *
  * Returns the parsed payload with `errorCode` set on the first failure;
  * callers should redirect with that code as a query param.
  */
 export function buildGameInsertPayload(
   formData: FormData,
   mode: PayloadMode,
+  opts: { clubScoped?: boolean } = {},
 ): ParsedPayload {
   const base = parseBase(formData);
 
@@ -2259,14 +2268,23 @@ export function buildGameInsertPayload(
     return errorPayload('team_registration_unsupported_mode');
   }
 
-  // For self-påmeldings-modi (open / manual_approval) er spiller-listen
-  // valgfri ved publish — spillerne kan komme via lenken etterpå. Vi
-  // sender derfor 'draft' inn til mode-validatoren slik at completeness-
-  // sjekkene (eksakt 8 spillere på best-ball, balansert lag-fordeling osv.)
-  // hoppes over. Duplikat-sjekk og bad-team/bad-flight håndheves fortsatt
-  // siden de gjelder enhver innsendt rad.
+  // For self-påmeldings-modi (open / manual_approval), og for en klubb-
+  // turnering med individuell påmelding (#2433, medlemmene melder seg på
+  // selv), er spiller-listen valgfri ved publish — spillerne kan komme
+  // etterpå. Regelen bor i rosterOptionalAtPublish. Vi sender derfor 'draft'
+  // inn til mode-validatoren slik at completeness-sjekkene (eksakt 8
+  // spillere på best-ball, balansert lag-fordeling osv.) hoppes over.
+  // Duplikat-sjekk og bad-team/bad-flight håndheves fortsatt siden de
+  // gjelder enhver innsendt rad.
   const effectiveMode: PayloadMode =
-    mode === 'publish' && registrationMode !== 'invite_only' ? 'draft' : mode;
+    mode === 'publish' &&
+    rosterOptionalAtPublish({
+      registrationMode,
+      registrationType,
+      clubScoped: opts.clubScoped === true,
+    })
+      ? 'draft'
+      : mode;
   const modeResult = modeValidators[gameMode](formData, effectiveMode);
   if (!modeResult.ok) {
     return errorPayload(modeResult.errorCode);

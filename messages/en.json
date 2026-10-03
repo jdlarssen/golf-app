@@ -920,6 +920,7 @@
         "whoLegend": "Who can sign up?",
         "whatLegend": "What can they sign up as?",
         "modeInviteTitle": "Only players I invite",
+        "modeClubTitle": "Club members",
         "modeInviteHint": "Private. Not shown in Find tournaments. You send invitations yourself from the Players tab.",
         "modeApprovalTitle": "Request — I approve",
         "modeApprovalHint": "Appears in Find tournaments. Players request a spot and you approve each one.",
@@ -1283,6 +1284,7 @@
     },
     "step4": {
       "emptyRosterHint": "You'll decide on the next step whether to add players here, or let them sign up themselves.",
+      "emptyRosterHintClub": "You can also leave the list empty. Club members can sign up themselves.",
       "pickerSubtitle": "{format} · {players}",
       "pickerSubtitleLineup": "{format} · {players}, {lineup}",
       "pickerSubtitleInstruction": "{format} · {instruction}"

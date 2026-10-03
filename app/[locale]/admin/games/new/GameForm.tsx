@@ -286,8 +286,11 @@ export type InitialValues = {
    */
   let_friends_skip_gate?: boolean;
   /**
-   * Klubb-tilknytning (#442). Valgfritt — kun satt i create-flyten når
-   * admin velger en klubb i veiviseren. Edit-flyten berøres ikke.
+   * Klubb-tilknytning (#442). Valgfritt — satt i create-flyten når admin
+   * velger en klubb i veiviseren. «Rediger spill» (GameForm) får den bare for
+   * en klubb-turnering som alt er `invite_only` og ikke er en cup-match
+   * (#2433, `buildEditFormInitialValues`), så medlemmene kan melde seg på og
+   * lista kan stå tom. Revansjen får den aldri.
    */
   group_id?: string;
 };
@@ -436,12 +439,16 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const formatSummary = lockGameMode
     ? `${tModes(gameMode)} · ${t('lockedTag')}`
     : tModes(gameMode);
+  // #2433: a club tournament is invite_only in the DB, but the members sign
+  // up themselves; «Bare de jeg inviterer» would say the opposite.
   const registrationSummary = tReg(
-    state.registrationMode === 'invite_only'
-      ? 'modeInviteTitle'
-      : state.registrationMode === 'manual_approval'
-        ? 'modeApprovalTitle'
-        : 'modeOpenTitle',
+    state.isClubScoped
+      ? 'modeClubTitle'
+      : state.registrationMode === 'invite_only'
+        ? 'modeInviteTitle'
+        : state.registrationMode === 'manual_approval'
+          ? 'modeApprovalTitle'
+          : 'modeOpenTitle',
   );
   const settingsSummary = t(state.sideEnabled ? 'panelSideOn' : 'panelSideOff');
 
@@ -949,7 +956,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         title={t('panelTitleRegistration')}
         summary={registrationSummary}
       >
-        <RegistrationSection state={state} hideHeading />
+        {/* #2433: like ReadyStep, a club tournament has no mode choice —
+            membership is the invitation (#643). */}
+        <RegistrationSection state={state} hideHeading hideModeChoice={state.isClubScoped} />
       </Disclosure>
 
       {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee.

@@ -24,6 +24,8 @@ import {
 } from '@/lib/games/teeChoice';
 import {
   gameModeSupportsTeams,
+  isClubTournament,
+  rosterOptionalAtPublish,
   type RegistrationMode,
   type RegistrationType,
 } from '@/lib/games/registration';
@@ -894,8 +896,10 @@ export function useGameFormState({
   // #442). Påmeldings-modus-valget skjules derfor i veiviseren for klubb-spill, og
   // spillet låses til 'invite_only' (medlemmer slipper inn via medlemskapet, ikke-
   // medlemmer ikke). Vi tvinger verdien så payloaden er korrekt selv om mode-felt-
-  // gruppa ikke rendres — dekker både ferskt klubb-valg, ?klubb=-deep-link og edit
-  // av et eldre klubb-spill med annen modus.
+  // gruppa ikke rendres — dekker både ferskt klubb-valg, ?klubb=-deep-link og et
+  // utkast som gjenopptas i veiviseren. GameForm («Rediger spill») får `group_id`
+  // bare når lagret modus alt er 'invite_only' (#2433, buildEditFormInitialValues),
+  // så låsen endrer aldri en lagret modus der.
   const isClubScoped = groupId !== '';
   // #715: deriver den effektive modusen i stedet for å synke state i en effekt.
   // React-regelen `set-state-in-effect` flagget den gamle effekten som en
@@ -912,11 +916,19 @@ export function useGameFormState({
   //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
   //   støtter lag. Eksponert separat så seksjonen ikke trenger å vite om
   //   GameMode-detaljer.
-  // - playersStepOptional: true når påmelding ikke er invite_only. Wizard-en
-  //   bruker det til å slå av required-gating i steg 3 (admin kan publisere
-  //   et tomt spill når andre kan melde seg på).
+  // - playersStepOptional: true når andre kan melde seg på selv — åpen
+  //   påmelding, godkjenning, eller en klubb-turnering med individuell
+  //   påmelding (#2433). Regelen bor i rosterOptionalAtPublish, som
+  //   buildGameInsertPayload også leser, så klient og server er enige. Wizard-
+  //   en bruker den til å slå av required-gating (admin kan publisere et tomt
+  //   spill). Cup-id-en fra initialValues teller med, så en håndlaget
+  //   `?tournament_id=…&klubb=…`-URL krever full liste her som på serveren.
   const registrationModeSupportsTeams = gameModeSupportsTeams(gameMode);
-  const playersStepOptional = registrationMode !== 'invite_only';
+  const playersStepOptional = rosterOptionalAtPublish({
+    registrationMode,
+    registrationType,
+    clubScoped: isClubTournament({ groupId, tournamentId: initialValues?.tournament_id }),
+  });
   // Sideturnering tilbys for alle formater. #576 skjulte den for matchplay
   // (duell-kortet manglet en flate), men #585 ga matchplay-duellkortet en
   // kompakt LD/CTP-seksjon, så bryteren vises nå overalt. Flagget beholdes som
@@ -1466,15 +1478,16 @@ export function useGameFormState({
   //
   // Wolf og Round Robin (#969): rotation-slots trekkes ved spillstart, ikke
   // ved publisering. Alle valgte spillere emitteres med team_number = null
-  // og flight_number = null. Validator-en sjekker kun antall spillere ved
-  // invite-only publish; start-guarden trekker og skriver slots over den
-  // aktive rosteren.
+  // og flight_number = null. Validator-en sjekker kun antall spillere når
+  // lista er påkrevd ved publish (rosterOptionalAtPublish); start-guarden
+  // trekker og skriver slots over den aktive rosteren.
   const orderedPayload = useMemo(() => {
     if (isWolf) {
       // Wolf (#969): emit slot-frie rader for alle valgte spillere.
       // Rotasjonen trekkes ved spillstart via assignRotationSlots.
       // Validator-en (`validateWolf`) håndhever 3-5-spillers-regelen
-      // ved invite-only publish; open-signup publish hopper over sjekken.
+      // når lista er påkrevd ved publish; valgfri liste (selv-påmelding,
+      // klubb-turnering) hopper over sjekken.
       return selectedPlayerIds.map((pid) => ({
         user_id: pid,
         team_number: null as number | null,
@@ -1485,7 +1498,8 @@ export function useGameFormState({
       // Round Robin (#969): emit slot-frie rader for alle valgte spillere.
       // Lagene trekkes ved spillstart via assignRotationSlots.
       // Validator-en (`validateRoundRobin`) håndhever 4-spillers-regelen
-      // ved invite-only publish; open-signup publish hopper over sjekken.
+      // når lista er påkrevd ved publish; valgfri liste (selv-påmelding,
+      // klubb-turnering) hopper over sjekken.
       return selectedPlayerIds.map((pid) => ({
         user_id: pid,
         team_number: null as number | null,
@@ -1766,10 +1780,11 @@ export function useGameFormState({
   // i `mode_config.team_handicap_pct` istedenfor games.hcp_allowance_pct.
   // Round Robin har sitt eget `roundRobinAllowancePctValid`-felt og bruker
   // ikke games.hcp_allowance_pct; hopper over generisk allowanceValid-sjekk.
-  // Når selv-påmelding er på (open / manual_approval) blir spillerlisten
-  // valgfri ved publish — speiler effective-mode-flippen i
-  // `buildGameInsertPayload`. Admin kan publisere et tomt spill og la
-  // spillerne melde seg på via lenken.
+  // Når selv-påmelding er på (open / manual_approval), og i en klubb-
+  // turnering med individuell påmelding (#2433), blir spillerlisten valgfri
+  // ved publish — `playersStepOptional` speiler effective-mode-flippen i
+  // `buildGameInsertPayload` (begge leser rosterOptionalAtPublish). Admin kan
+  // publisere et tomt spill og la spillerne melde seg på selv.
   // Defensiv publish-backstop (#721): spillere med kategori tee-en ikke rater
   // bør aldri nå publisering takket være klem-ved-tee-bytte, men om pre-
   // eksisterende data eller en edge-case omgår UI-klemmet, stopper vi her.
@@ -1826,7 +1841,8 @@ export function useGameFormState({
   // klem-ved-tee-bytte, men pre-eksisterende edit-data kan ha ugyldig tilstand.
   if (playersWithUnratedCategory.length > 0)
     pushMissing('players', tMissing('categoryMissingRating'));
-  // Når selv-påmelding er på er spillerlisten valgfri ved publish; vi
+  // Når selv-påmelding er på, eller i en klubb-turnering med individuell
+  // påmelding (#2433), er spillerlisten valgfri ved publish; vi
   // hopper over per-modus completeness-meldingene helt. hcp_allowance-
   // sjekken nederst gjelder fortsatt fordi den er en konfig-verdi, ikke
   // en spiller-liste-validering.

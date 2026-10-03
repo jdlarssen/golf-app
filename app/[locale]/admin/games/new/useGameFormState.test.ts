@@ -888,6 +888,61 @@ describe('useGameFormState — klubb-turnering krever en gyldig klubb (#2439)', 
   });
 });
 
+describe('useGameFormState — klubb-turnering uten spillere (#2433)', () => {
+  // The #2439 setup without a player: course, tee and tee-off are set, the
+  // roster is empty. Members sign up to a club tournament themselves.
+  function setupEmptyForm(input: {
+    intent: 'klubb' | 'kompis';
+    mode: GameMode;
+  }) {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: input.intent,
+        clubIds: ['club-1'],
+      }),
+    );
+    act(() => {
+      result.current.handleModeChange(input.mode);
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+    });
+    return { result };
+  }
+
+  it('klubb med gyldig klubb og 0 spillere kan publiseres', () => {
+    const { result } = setupEmptyForm({ intent: 'klubb', mode: 'stableford' });
+    expect(result.current.groupId).toBe('club-1');
+    expect(result.current.selectedPlayerIds).toEqual([]);
+    expect(result.current.playersStepOptional).toBe(true);
+    expect(result.current.missingForPublishCodes).not.toContain('players');
+    expect(result.current.canPublish).toBe(true);
+  });
+
+  it('klubb med lag-påmelding krever fortsatt spillere', () => {
+    const { result } = setupEmptyForm({ intent: 'klubb', mode: 'texas_scramble' });
+    act(() => {
+      result.current.setRegistrationType('team');
+    });
+    expect(result.current.playersStepOptional).toBe(false);
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toContain('players');
+  });
+
+  it('kompis med 0 spillere krever fortsatt spillere', () => {
+    const { result } = setupEmptyForm({ intent: 'kompis', mode: 'stableford' });
+    expect(result.current.playersStepOptional).toBe(false);
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toContain('players');
+  });
+});
+
 describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-intent (#1066)', () => {
   it('setIntent("kompis") preselecter currentUserId når selection er tom', () => {
     const { result } = renderHook(() =>

@@ -19,7 +19,11 @@ import {
  *   1. auth.getUser                        // loadRole
  *   2. users.select(is_admin,name)         // loadRole
  *   3. games.select(created_by)            // requireAdminOrCreator — ONLY when not admin
- *   4. games.select(status, game_mode, mode_config, tournament_id) // mode-lock + cup lock
+ *   4. games.select(status, game_mode, mode_config, tournament_id, group_id)
+ *      // #2433: read BEFORE the payload (its club makes the roster optional),
+ *      // so every test queues it, also the ones that return early (payload
+ *      // error, tee_off_required, tee_off_in_past, side-tournament errors).
+ *      // Then mode-lock + cup lock.
  *   5. game_players.select('*')            // prior roster, read BEFORE games.update (#2210)
  *   6. games.update                        // optimistic-lock på status
  *   7. game_players.update × n             // plan.updates, each .select('user_id')
@@ -355,10 +359,11 @@ describe('updateScheduledAction — mode-lock', () => {
   });
 
   it('update_scheduled med tee-off i fortid: redirects med ?error=tee_off_in_past (#902)', async () => {
-    // Guarden fyrer etter tee-off-parsingen, før pending-gate-RPC-en, mode-lock-
-    // fetchen og enhver skriving — kun loadRole-users.select konsumeres.
+    // Guarden fyrer etter tee-off-parsingen, før prior roster og enhver
+    // skriving. #2433: existing-raden leses før payloaden, så den står i køen.
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // loadRole: users.select
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // existing
     ]);
     signIn('admin-1');
 
@@ -1131,5 +1136,111 @@ describe('e-mail invitations when a draft is published (#2321)', () => {
 
     await expect(saveDraftAction('draft-inv', draftData)).rejects.toBeInstanceOf(RedirectError);
     expect(sendPublishInvitesMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('klubb-turnering uten spillere (#2433)', () => {
+  // A club tournament (group_id, no cup) with individual signup saves with an
+  // empty roster: the members sign up themselves. The club signal is the
+  // stored group_id read in the same call, never a form field.
+  function clubFormData(overrides: Record<string, string> = {}): FormData {
+    return fd({
+      name: 'Klubbmesterskap',
+      course_id: 'course-1',
+      tee_box_id: 'tee-1',
+      hcp_allowance_pct: '100',
+      scheduled_tee_off_at: FUTURE_TEE_OFF,
+      side_tournament_enabled: 'false',
+      game_mode: 'stableford',
+      registration_mode: 'invite_only',
+      registration_type: 'solo',
+      ...overrides,
+    });
+  }
+  function existingRow(status: 'draft' | 'scheduled', extra: Record<string, unknown> = {}) {
+    return {
+      data: {
+        status,
+        game_mode: 'stableford',
+        mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+        tournament_id: null,
+        group_id: 'club-1',
+        ...extra,
+      },
+      error: null,
+    };
+  }
+  function gamesUpdate() {
+    return supabaseMock.__fromCalls.find((c) => c.table === 'games' && c.method === 'update');
+  }
+
+  it('updateScheduledAction med klubb og 0 spillere lagrer', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingRow('scheduled'),
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', clubFormData())).rejects.toBeInstanceOf(RedirectError);
+
+    expect(gamesUpdate()).toBeDefined();
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
+  });
+
+  it('publishFromDraftAction med klubb og 0 spillere publiserer og varsler lista én gang', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingRow('draft'),
+      { data: [], error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+    ]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(publishFromDraftAction('game-1', clubFormData())).rejects.toBeInstanceOf(RedirectError);
+
+    expect((gamesUpdate()!.args[0] as { status: string }).status).toBe('scheduled');
+    expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+  });
+
+  it('uten klubb krever invite_only fortsatt spillere', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingRow('scheduled', { group_id: null }),
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(updateScheduledAction('game-1', clubFormData())).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=min_players_for_mode');
+    expect(gamesUpdate()).toBeUndefined();
+  });
+
+  it('en match i en klubb-cup (group_id og tournament_id) krever full liste, også for admin', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      existingRow('scheduled', {
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2, allowance_pct: 100 },
+        tournament_id: 'cup-1',
+      }),
+    ]);
+    signIn('admin-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction(
+        'game-1',
+        clubFormData({ game_mode: 'singles_matchplay', player_0_id: 'u0', player_0_team: '1' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=min_players_for_mode');
+    expect(gamesUpdate()).toBeUndefined();
   });
 });

@@ -67,6 +67,54 @@ export function isDiscoverableRegistrationMode(mode: RegistrationMode): boolean 
   return mode === 'open' || mode === 'manual_approval';
 }
 
+/**
+ * Whether the roster may be empty when a game is published (#2433). This is
+ * the rule's one home: `useGameFormState` (`playersStepOptional`, which gates
+ * «Publiser» and the «Mangler» list) and `buildGameInsertPayload` (which runs
+ * the mode validator as 'draft' when it is true) both read it, so the wizard
+ * and the server cannot disagree.
+ *
+ * - `open` / `manual_approval`: players sign up through the link (#199).
+ * - A club tournament (`clubScoped`, see `isClubTournament`) with individual
+ *   signup: it is stored as `invite_only` (#643), but membership is the
+ *   invitation. The signup page lets a club member straight in only when
+ *   `registration_type === 'solo'` (the `isClubMember` branch in
+ *   `app/[locale]/signup/[shortId]/page.tsx`), so with «Lag» nobody can sign up
+ *   and the roster is still required.
+ */
+export function rosterOptionalAtPublish({
+  registrationMode,
+  registrationType,
+  clubScoped,
+}: {
+  registrationMode: RegistrationMode;
+  registrationType: RegistrationType;
+  clubScoped: boolean;
+}): boolean {
+  if (registrationMode !== 'invite_only') return true;
+  return clubScoped && registrationType === 'solo';
+}
+
+/**
+ * Whether a game is a club tournament when its roster is judged (#2433): it
+ * belongs to a club and is not a cup match. A cup match in a club cup carries
+ * `group_id` too (`insertCupMatches` writes it on every match) and stays on
+ * the DB default `invite_only` + `solo`, so without the cup check a singles
+ * match there would skip its player count. This is the one home for the
+ * question; `createGameInternal`, `updateGameInternal`, `useGameFormState` and
+ * `buildEditFormInitialValues` read it and none writes its own
+ * `tournament_id` check.
+ */
+export function isClubTournament({
+  groupId,
+  tournamentId,
+}: {
+  groupId: string | null | undefined;
+  tournamentId: string | null | undefined;
+}): boolean {
+  return !!groupId && !tournamentId;
+}
+
 export function isRegistrationType(v: unknown): v is RegistrationType {
   return v === 'solo' || v === 'team' || v === 'both';
 }
