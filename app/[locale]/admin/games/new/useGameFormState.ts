@@ -987,9 +987,9 @@ export function useGameFormState({
     setGameMode(next);
     setFormatChosen(true);
     // Start på standarden for formatet (defaultTeamSizeForMode). I en
-    // kompis-runde velges i stedet en størrelse som går opp med antallet,
-    // den samme oppstillingen som formatkortet viste (#2435, startTeamSize).
-    // Uten antall (klubb, solo, GameForm) står standarden.
+    // kompis-runde står standarden når den går opp med antallet; ellers
+    // velges størrelsen som går opp og ligger nærmest den (#2435,
+    // startTeamSize). Uten antall (klubb, solo, GameForm) står standarden.
     // `as TeamSize`: the result is the default or one of TEAM_FORMAT_TEAM_SIZES (2, 3, 4).
     const nextSize = startTeamSize(
       next,

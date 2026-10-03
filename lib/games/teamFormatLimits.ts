@@ -181,8 +181,8 @@ export function teamSizesThatFit(mode: GameMode, n: number): number[] {
 }
 
 /**
- * The team size a kompis round starts on once the format is picked (#2435):
- * the one the format card drew. `preferred` (the format's default, or the
+ * The team size a kompis round starts on once the format is picked, and keeps
+ * when the count changes (#2435). `preferred` (the format's default, or the
  * size already chosen) stands when it fits `count`; otherwise the fitting size
  * closest to it, the larger one on a tie. No count, or nothing that fits,
  * keeps `preferred`. The rule lives here and reads only `teamSizesThatFit`.
