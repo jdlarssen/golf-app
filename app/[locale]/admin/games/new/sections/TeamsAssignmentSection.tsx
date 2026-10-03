@@ -398,7 +398,14 @@ export function TeamsAssignmentSection({
         <section>
           <FormSection
             variant="bare"
-            legend={<PartLegend>{numberPrefix('4')}{t('teamsHeading')}</PartLegend>}
+            // Team matchplay's cards are «Side 1/2», so the heading says sides
+            // too, as on `Nyttspill-4-sider` (#2436).
+            legend={
+              <PartLegend>
+                {numberPrefix('4')}
+                {t(isTeamMatchplay ? 'sidesHeading' : 'teamsHeading')}
+              </PartLegend>
+            }
             aside={asideFor('teams')}
             description={teamsDescription()}
           >

@@ -114,6 +114,14 @@ describe('TeamsAssignmentSection — rutenettet vokser med valgte spillere (#214
 // Type A (#2437): the publish guard checks every selected player's category in
 // every format, so the M/D/J list must render wherever players are picked.
 // Best ball carries the toggle in its flights part instead.
+describe('TeamsAssignmentSection — lag-matchplay har sider (#2436)', () => {
+  it('fourball med fire valgte har overskriften Sider, ikke Lag', () => {
+    setup('fourball_matchplay', 2, 4);
+    expect(screen.getByRole('heading', { name: 'Sider' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Lag' })).not.toBeInTheDocument();
+  });
+});
+
 describe('teamsAssignmentParts — tee per spiller (#2437)', () => {
   function partsFor(mode: GameMode, pick: number) {
     const { result } = renderHook(() =>
