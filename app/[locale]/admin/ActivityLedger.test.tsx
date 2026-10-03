@@ -45,16 +45,17 @@ function fakeClient(tables: Record<string, Row[]>) {
 const DAY = 24 * 60 * 60 * 1000;
 const now = Date.now();
 
-// 13 games that ended 2–13 days ago, then, as the last row, one that started
-// an hour ago. Without an order on the query, `limit(12)` keeps the first
-// twelve rows and today's start never reaches the ledger.
+// 13 games that ended 2–13 days ago, oldest first, then, as the last row, one
+// that started an hour ago. Without an order on the query, `limit(12)` keeps
+// the first twelve rows: today's start never reaches the ledger, and the ends
+// that do are the oldest ones.
 const games: Row[] = [
   ...Array.from({ length: 13 }, (_, i) => ({
     id: `ended-${i}`,
     name: `Avsluttet ${i}`,
     started_at: null,
     ended_at: new Date(now - (2 + Math.min(i, 11)) * DAY).toISOString(),
-  })),
+  })).reverse(),
   {
     id: 'started-today',
     name: 'Startet i dag',
@@ -84,11 +85,19 @@ vi.mock('@/components/ui/SmartLink', () => ({
 import { ActivityLedger } from './ActivityLedger';
 
 describe('ActivityLedger (#2340)', () => {
-  it('shows the newest game start even when many older games ended', async () => {
+  it('shows the newest game start, then the newest ends, newest first', async () => {
     const { container } = render(await ActivityLedger());
 
     expect(
       container.querySelector('a[href="/admin/games/started-today"]'),
     ).not.toBeNull();
+    // The other seven rows are the seven newest ends, newest first.
+    const hrefs = [...container.querySelectorAll('a')].map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(hrefs).toEqual([
+      '/admin/games/started-today',
+      ...Array.from({ length: 7 }, (_, i) => `/admin/games/ended-${i}`),
+    ]);
   });
 });

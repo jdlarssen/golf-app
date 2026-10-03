@@ -58,7 +58,7 @@ const FORMATS: FormatWithMappings[] = [
 
 describe('FormatsManager', () => {
   it('rendrer matrix + tab-layout og caller riktig action ved toggle', () => {
-    render(<FormatsManager initialFormats={FORMATS} />);
+    const { container } = render(<FormatsManager initialFormats={FORMATS} />);
 
     // Desktop matrix er i DOM-en (selv om hidden via CSS i tester) —
     // verifiserer at format-radene rendres (én rad per format, men også
@@ -73,7 +73,8 @@ describe('FormatsManager', () => {
 
     // #2337: the cup toggle changed nothing and is gone, on desktop and mobile.
     expect(screen.queryByRole('columnheader', { name: 'Cup' })).toBeNull();
-    expect(screen.queryAllByLabelText(/cup-kvalifisert/i)).toHaveLength(0);
+    // The mobile cup list was the page's only <details> section.
+    expect(container.querySelector('details')).toBeNull();
 
     // Klikk på primary-stjernen for best_ball/solo (i matrix). best_ball
     // har mapping=null for solo → primary er false. Klikk skal sende
