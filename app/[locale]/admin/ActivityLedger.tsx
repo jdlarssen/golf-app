@@ -41,12 +41,8 @@ export async function ActivityLedger() {
     users: { name: string | null } | null;
     games: { id: string; name: string } | null;
   };
-  type GameLifecycleRow = {
-    id: string;
-    name: string;
-    started_at: string | null;
-    ended_at: string | null;
-  };
+  type GameStartRow = { id: string; name: string; started_at: string };
+  type GameEndRow = { id: string; name: string; ended_at: string };
   type CourseRow = {
     name: string;
     created_at: string;
@@ -58,7 +54,7 @@ export async function ActivityLedger() {
     games: { id: string; name: string } | null;
   };
 
-  const [subsRes, apprsRes, gamesRes, coursesEvRes, invitesRes] =
+  const [subsRes, apprsRes, startsRes, endsRes, coursesEvRes, invitesRes] =
     await Promise.all([
       supabase
         .from('game_players')
@@ -80,12 +76,22 @@ export async function ActivityLedger() {
         .order('approved_at', { ascending: false })
         .limit(8)
         .returns<ApprovalRow[]>(),
+      // #2340: starts and ends are read apart, each newest first, so the
+      // database never picks which games make the ledger.
       supabase
         .from('games')
-        .select('id, name, started_at, ended_at')
-        .or(`started_at.gte.${sinceIso},ended_at.gte.${sinceIso}`)
-        .limit(12)
-        .returns<GameLifecycleRow[]>(),
+        .select('id, name, started_at')
+        .gte('started_at', sinceIso)
+        .order('started_at', { ascending: false })
+        .limit(8)
+        .returns<GameStartRow[]>(),
+      supabase
+        .from('games')
+        .select('id, name, ended_at')
+        .gte('ended_at', sinceIso)
+        .order('ended_at', { ascending: false })
+        .limit(8)
+        .returns<GameEndRow[]>(),
       supabase
         .from('courses')
         .select(
@@ -124,25 +130,23 @@ export async function ActivityLedger() {
       href: r.games ? `/admin/games/${r.games.id}/status` : undefined,
     });
   }
-  for (const g of gamesRes.data ?? []) {
-    if (g.started_at && g.started_at >= sinceIso) {
-      activity.push({
-        ts: g.started_at,
-        who: t('actionsSecretary'),
-        action: t('actionsStarted'),
-        ref: g.name,
-        href: `/admin/games/${g.id}`,
-      });
-    }
-    if (g.ended_at && g.ended_at >= sinceIso) {
-      activity.push({
-        ts: g.ended_at,
-        who: t('actionsSecretary'),
-        action: t('actionsSigned'),
-        ref: g.name,
-        href: `/admin/games/${g.id}`,
-      });
-    }
+  for (const g of startsRes.data ?? []) {
+    activity.push({
+      ts: g.started_at,
+      who: t('actionsSecretary'),
+      action: t('actionsStarted'),
+      ref: g.name,
+      href: `/admin/games/${g.id}`,
+    });
+  }
+  for (const g of endsRes.data ?? []) {
+    activity.push({
+      ts: g.ended_at,
+      who: t('actionsSecretary'),
+      action: t('actionsSigned'),
+      ref: g.name,
+      href: `/admin/games/${g.id}`,
+    });
   }
   for (const c of coursesEvRes.data ?? []) {
     activity.push({
