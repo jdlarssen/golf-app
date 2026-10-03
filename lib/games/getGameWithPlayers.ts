@@ -205,8 +205,9 @@ export type PlayerForHole = {
    */
   paid_at: string | null;
   // Hole entry only renders when status is 'active' or 'finished'; pending
-  // invitees can't reach those states per Task 7's publish-gate. Typed
-  // nullable to match the DB column.
+  // invitees can't reach those states: the start gate waits for every
+  // profile (#2441). Typed nullable to match the DB column, and a scheduled
+  // game may hold a pending invitee.
   // #1009: is_guest driver «Gjest»-chipen på arrangør-flatene og gater
   // claim-seksjonen på spillere-siden. E-post holdes bevisst UTE av denne
   // delte payloaden (#435-disiplinen) — claim-UI-et gjør sin egen målrettede

@@ -334,6 +334,9 @@ export default async function GameHomePage({
   let autoStartBlockedByUnassignedFlights = false;
   // #1669: same, for a team format where somebody signed up without a team.
   let autoStartBlockedByUnassignedTeams = false;
+  // #2441: a game may be published with a friend who has not finished their
+  // profile; the start waits for it. How many, for the waiting-room banner.
+  let autoStartPendingProfileCount = 0;
 
   // E1: server-side auto-start fallback. When the admin scheduled a tee-off
   // time but didn't manually click "Start runden nå", any player loading
@@ -364,6 +367,9 @@ export default async function GameHomePage({
       }
       if (result.reason === 'unassigned_teams') {
         autoStartBlockedByUnassignedTeams = true;
+      }
+      if (result.reason === 'pending_players') {
+        autoStartPendingProfileCount = result.pendingUserIds?.length ?? 0;
       }
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
@@ -944,6 +950,16 @@ export default async function GameHomePage({
           <div className="mx-4 mt-3">
             <Banner tone="warning">
               {t('unassignedTeamBanner', { count: unassignedTeamCount })}
+            </Banner>
+          </div>
+        )}
+
+        {/* #2441: venter-banner etter tee-tid når noen ikke har fullført
+            profilen. Ingen navn: den det gjelder, ser ProfileGateStripe. */}
+        {autoStartPendingProfileCount > 0 && (
+          <div className="mx-4 mt-3">
+            <Banner tone="warning" testId="pending-profiles-banner">
+              {t('pendingProfilesBanner', { count: autoStartPendingProfileCount })}
             </Banner>
           </div>
         )}

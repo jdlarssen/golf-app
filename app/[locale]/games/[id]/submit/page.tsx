@@ -351,8 +351,8 @@ async function ReviewBody({
       .select('id, name, nickname')
       .in('id', enteredByIds)
       .returns<{ id: string; name: string | null; nickname: string | null }[]>();
-    // Active-game invariant: publish-gate guarantees no pending players in roster,
-    // so name is non-null in practice. Coalesce defensively.
+    // Active-game invariant: the start gate guarantees no pending players in
+    // the roster, so name is non-null in practice. Coalesce defensively.
     for (const u of nameRows ?? []) {
       const name = u.name ?? t('unknownPlayer');
       namesById.set(u.id, u.nickname ? `${name} «${u.nickname}»` : name);

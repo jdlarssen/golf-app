@@ -349,13 +349,14 @@ export async function startScheduledGameCore(
   }
   const rotationRange = rotationSlotRange(game.game_mode);
 
-  // Defence-in-depth: refuse to start if any roster player is still pending
-  // profile completion. Task 6's publish-gate blocks this normally, but this
-  // catches direct DB edits or future code paths that bypass that gate.
-  // #2207: the same SECURITY DEFINER RPC as the publish gate — one home for
-  // the rule. It sees the whole roster whatever RLS lets the caller read (an
-  // organiser who does not play used to see none of it: the #366 trap), and it
-  // answers with ids only.
+  // Refuse to start while any roster player is still pending profile
+  // completion: the handicap is needed from here on. #2441: this is the only
+  // gate. A game may be published with a pending friend, and the round waits
+  // here until the profile is done. The game pages mark who is waiting with
+  // the same RPC. #2207: a SECURITY DEFINER RPC, one home for the rule. It
+  // sees the whole roster whatever RLS lets the caller read (an organiser who
+  // does not play used to see none of it: the #366 trap), and it answers with
+  // ids only.
   const rosterIds = roster.map((r) => r.user_id);
   const { data: pendingRows, error: pendingError } = await supabase.rpc(
     'incomplete_profile_ids',

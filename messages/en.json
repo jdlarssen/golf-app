@@ -1065,7 +1065,8 @@
         "teeOff": "{weekday} {date} at {time}",
         "allowancePct": "{pct}% handicap",
         "gross": "gross",
-        "playersWarn": "{selected} of {expected}. You can add more later."
+        "playersWarn": "{selected} of {expected}. You can add more later.",
+        "pendingProfiles": "{count, plural, one {1 awaiting profile} other {# awaiting profile}}"
       },
       "advancedToggle": "Show advanced settings",
       "publishButton": "Publish and share the invitation",
@@ -1225,7 +1226,6 @@
         "soloMin": "at least one player",
         "invalidAllowance": "valid HCP allowance",
         "categoryMissingRating": "one or more players have a category the tee does not rate",
-        "pendingProfiles": "{count, plural, one {1 player who hasn't finished their profile} other {# players who haven't finished their profiles}}",
         "club": "club"
       }
     },
@@ -2120,7 +2120,10 @@
       "incompleteSidesAnd": " and ",
       "unassignedFlightBanner": "{count, plural, one {1 player hasn't been assigned to a flight yet.} other {# players haven't been assigned to flights yet.}} The organiser will assign flights before the start.",
       "unassignedTeamBanner": "{count, plural, one {1 player doesn't have a team yet.} other {# players don't have a team yet.}} The organiser will set up the teams before the start.",
-      "unknownPlayer": "(unknown)"
+      "unknownPlayer": "(unknown)",
+      "pendingPlayerName": "Invited player",
+      "pendingProfileBadge": "Awaiting profile",
+      "pendingProfilesBanner": "{count, plural, one {1 player hasn't finished their profile yet. The round starts once it's done.} other {# players haven't finished their profiles yet. The round starts once they're done.}}"
     },
     "teeOffCalendar": {
       "summary": "Golf: {game}",
@@ -2442,7 +2445,9 @@
         "sendButton": "Send the result",
         "resendButton": "Send again",
         "sendPending": "Sending …"
-      }
+      },
+      "pendingPlayerName": "Invited player",
+      "statePendingProfile": "Awaiting profile"
     }
   },
   "scorecard": {

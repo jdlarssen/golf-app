@@ -1065,7 +1065,8 @@
         "teeOff": "{weekday} {date} kl. {time}",
         "allowancePct": "{pct} % handicap",
         "gross": "brutto",
-        "playersWarn": "{selected} av {expected}. Du kan legge til flere senere."
+        "playersWarn": "{selected} av {expected}. Du kan legge til flere senere.",
+        "pendingProfiles": "{count, plural, one {1 venter på profil} other {# venter på profil}}"
       },
       "advancedToggle": "Vis avanserte innstillinger",
       "publishButton": "Publiser og del invitasjonen",
@@ -1225,7 +1226,6 @@
         "soloMin": "minst én spiller",
         "invalidAllowance": "gyldig HCP-andel",
         "categoryMissingRating": "en eller flere spillere har en kategori tee-en ikke støtter",
-        "pendingProfiles": "{count, plural, one {1 spiller som ikke har fullført profilen sin} other {# spillere som ikke har fullført profilen sin}}",
         "club": "klubb"
       }
     },
@@ -2120,7 +2120,10 @@
       "incompleteSidesAnd": " og ",
       "unassignedFlightBanner": "{count, plural, one {1 spiller er ikke fordelt i flight ennå.} other {# spillere er ikke fordelt i flighter ennå.}} Arrangøren fordeler flightene før start.",
       "unassignedTeamBanner": "{count, plural, one {1 spiller står uten lag ennå.} other {# spillere står uten lag ennå.}} Arrangøren setter opp lagene før start.",
-      "unknownPlayer": "(ukjent)"
+      "unknownPlayer": "(ukjent)",
+      "pendingPlayerName": "Invitert spiller",
+      "pendingProfileBadge": "Venter på profil",
+      "pendingProfilesBanner": "{count, plural, one {1 spiller har ikke fullført profilen sin ennå. Runden starter når den er på plass.} other {# spillere har ikke fullført profilen sin ennå. Runden starter når profilene er på plass.}}"
     },
     "teeOffCalendar": {
       "summary": "Golf: {game}",
@@ -2442,7 +2445,9 @@
         "sendButton": "Send resultatet",
         "resendButton": "Send på nytt",
         "sendPending": "Sender …"
-      }
+      },
+      "pendingPlayerName": "Invitert spiller",
+      "statePendingProfile": "Venter på profil"
     }
   },
   "scorecard": {

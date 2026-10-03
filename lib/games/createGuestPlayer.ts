@@ -142,9 +142,10 @@ const PROFILE_UPDATE_ATTEMPTS = 5;
  * `on_auth_user_created` lager `public.users`-raden i samme transaksjon) →
  * oppdater profil-feltene + `is_guest` + `profile_completed_at`.
  *
- * `profile_completed_at` MÅ settes: både publish-gaten og start-gaten
- * (`incomplete_profile_ids`, begge) nekter spill med ukomplette profiler, og
- * invitasjons-orphan-sweeperen i admin/spillere sletter auth-brukere uten den.
+ * `profile_completed_at` MÅ settes: start-gaten (`incomplete_profile_ids`)
+ * nekter å starte et spill med ukomplette profiler, spillsidene merker raden
+ * «Venter på profil» (#2441), og invitasjons-orphan-sweeperen i admin/spillere
+ * sletter auth-brukere uten den.
  *
  * Kompensasjon: feiler profil-oppdateringen slettes auth-brukeren
  * (FK-cascade rydder public.users) så ingen halvferdig skygge-rad blir igjen.

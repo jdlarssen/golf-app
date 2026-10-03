@@ -68,11 +68,7 @@ export default async function CreatorEditGamePage({
   const errorCode = first(sp.error);
   function buildErrorMessage(): string | undefined {
     if (!errorCode) return undefined;
-    // #2207: the organiser's missing-profile banner names nobody — the same
-    // general text the app shows.
-    const key = (
-      errorCode === 'pending_players' ? 'pending_players_generic' : errorCode
-    ) as Parameters<typeof tErrors>[0];
+    const key = errorCode as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
     return tErrors(key, { list: '' });
   }

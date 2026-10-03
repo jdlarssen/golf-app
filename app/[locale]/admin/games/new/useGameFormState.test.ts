@@ -1411,6 +1411,31 @@ describe('useGameFormState — defensiv publish-guard (AC5)', () => {
   });
 });
 
+describe('useGameFormState — en venn uten fullført profil stopper ikke publisering (#2441)', () => {
+  it('canPublish er true, ingen mangel-tekst, og pendingProfileCount teller vennen', () => {
+    const players = [makePlayer('p-venter', { name: null, pending: true })];
+    const { result } = renderHook(() =>
+      useGameFormState({ players, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('stableford');
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.togglePlayer('p-venter');
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+    });
+
+    expect(result.current.canPublish).toBe(true);
+    expect(result.current.missingForPublish).toEqual([]);
+    expect(result.current.missingForPublish.join(' ')).not.toMatch(/fullført profilen/);
+    expect(result.current.pendingProfileCount).toBe(1);
+  });
+});
+
 // ─── #928 — teeOffInPast / canPublish ────────────────────────────────────────
 
 /** Format a Date as 'YYYY-MM-DDTHH:mm' (browser-local, no timezone suffix). */

@@ -7,7 +7,6 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
 import { requireAdmin } from '@/lib/admin/auth';
-import { pendingPlayerList } from '@/lib/admin/pendingPlayerEmails';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { AppShell } from '@/components/ui/AppShell';
@@ -98,15 +97,13 @@ export default async function EditGamePage({
   const t = await getTranslations('admin.game.edit');
   const tNav = await getTranslations('admin.nav');
   const errorCode = first(sp.error);
-  // #2207: the gate sends ids (`pending=`), never addresses; they are turned
-  // back into addresses only after requireAdmin below.
-  async function buildErrorMessage(): Promise<string | undefined> {
+  // #2441: no save here waits for a profile any more (the start gate does),
+  // so no error names players; `{list}` stays empty.
+  function buildErrorMessage(): string | undefined {
     if (!errorCode) return undefined;
     const key = `${errorCode}` as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
-    const list =
-      errorCode === 'pending_players' ? await pendingPlayerList(first(sp.pending)) : '';
-    return tErrors(key, { list });
+    return tErrors(key, { list: '' });
   }
 
   const locale = await getLocale();
@@ -118,7 +115,7 @@ export default async function EditGamePage({
   // runs sequentially after the gate so trusted-non-admin callers don't
   // even trigger the games-select.
   await requireAdmin(supabase);
-  const errorMessage = await buildErrorMessage();
+  const errorMessage = buildErrorMessage();
 
   const { data: game, error: gameError } = await supabase
     .from('games')

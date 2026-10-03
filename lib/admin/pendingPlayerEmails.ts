@@ -9,11 +9,11 @@ const MAX_IDS = 50;
  * The `{list}` text for the admin missing-profile banner (#2207): `: a, b`,
  * or '' when there is nothing to name.
  *
- * The publish and start gates redirect an admin with `pending=<id>,<id>`
- * instead of the addresses themselves, so no e-post ever sits in a URL. The
- * admin game page and the admin edit page turn the ids back into addresses
- * here, with the admin client (users.email is not readable through a user
- * session).
+ * The start gate redirects an admin with `pending=<id>,<id>` instead of the
+ * addresses themselves, so no e-post ever sits in a URL. The admin game page
+ * turns the ids back into addresses here, with the admin client (users.email
+ * is not readable through a user session). Publishing no longer waits for a
+ * profile (#2441), so nothing else sends `pending=`.
  *
  * Call it only AFTER `requireAdmin`: the query string is user input, and the
  * gate in the route is what makes this an admin surface. Anything that is not
