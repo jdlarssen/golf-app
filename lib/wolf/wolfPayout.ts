@@ -8,8 +8,8 @@
 // og motoren leser ikke denne fila. At de to gir samme tall, låses i
 // `lib/scoring/modes/wolf.test.ts` («gevinsten er enig med wolfPayout»).
 //
-// Ingen `@/`-importer og ingen runtime-avhengigheter: appen (`native/app`)
-// leser fila med relativ sti, akkurat som `wolfRotation.ts`.
+// Ingen importer med sti-alias og ingen runtime-avhengigheter: appen
+// (`native/app`) leser fila med relativ sti, akkurat som `wolfRotation.ts`.
 
 /** Gevinsten til vinnersiden for hvert av de tre valgene. */
 export type WolfPayout = {
