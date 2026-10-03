@@ -11,21 +11,21 @@ import {
  * Mode-lock (#41): updateGameInternal must reject game_mode changes once the
  * game has left 'draft'. #428: the actions are now gated on
  * requireAdminOrCreator — admins keep their Sekretariat redirects, a game's
- * creator gets /games/[id]/rediger + /games/[id]; the pending-profile gate
- * runs through the incomplete_profile_ids RPC (not a direct users-read)
- * so it bites for a non-admin creator under request-scoped RLS.
+ * creator gets /games/[id]/rediger + /games/[id]. #2441: a player who has
+ * not finished their profile no longer stops publish or update_scheduled;
+ * the start gate (startScheduledGameCore) is the one place that waits.
  *
  * Query-sekvens (publish/update_scheduled):
  *   1. auth.getUser                        // loadRole
  *   2. users.select(is_admin,name)         // loadRole
  *   3. games.select(created_by)            // requireAdminOrCreator — ONLY when not admin
- *   4. rpc(incomplete_profile_ids)    // pending gate (keyed, not in FIFO queue)
- *   5. games.select(status, game_mode, mode_config, tournament_id) // mode-lock + cup lock
- *   6. game_players.select('*')            // prior roster, read BEFORE games.update (#2210)
- *   7. games.update                        // optimistic-lock på status
- *   8. game_players.update × n             // plan.updates, each .select('user_id')
- *   9. game_players.insert                 // plan.inserts, .select('user_id')
- *  10. game_players.delete                 // plan.deletes, .select('user_id')
+ *   4. games.select(status, game_mode, mode_config, tournament_id) // mode-lock + cup lock
+ *   5. game_players.select('*')            // prior roster, read BEFORE games.update (#2210)
+ *   6. games.update                        // optimistic-lock på status
+ *   7. game_players.update × n             // plan.updates, each .select('user_id')
+ *   8. game_players.insert                 // plan.inserts, .select('user_id')
+ *   9. game_players.delete                 // plan.deletes, .select('user_id')
+ *  10. (publish) notifyRosterInvites; (update_scheduled) notify new rows
  *  11. revalidateTag + redirect
  *
  * On a failed roster write the compensation runs via the (mocked) admin
@@ -216,7 +216,6 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
         { data: { is_admin: true }, error: null }, // loadRole
         { data: null, error: DB_ERR }, // mode-lock fetch
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -241,7 +240,7 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
         { data: { is_admin: true }, error: null },
         { data: null, error: null }, // mode-lock fetch: spillet finnes ikke
       ],
-      { incomplete_profile_ids: [] },
+      {},
       { strictSingle: true },
     );
     signIn('admin-1');
@@ -261,7 +260,6 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
         { data: [], error: null }, // prior roster
         { data: null, error: DB_ERR }, // games.update
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -290,7 +288,7 @@ describe('updateGameInternal — feil vs. fravær (#1445)', () => {
         // games.update traff ingen rad: status flippet i en annen fane.
         { data: null, error: null },
       ],
-      { incomplete_profile_ids: [] },
+      {},
       { strictSingle: true },
     );
     signIn('admin-1');
@@ -322,7 +320,6 @@ describe('updateScheduledAction — mode-lock', () => {
           error: null,
         },
       ],
-      { incomplete_profile_ids: [] }, // pending gate clears
     );
     signIn('admin-1');
 
@@ -397,7 +394,6 @@ describe('updateScheduledAction — mode-lock', () => {
         { data: { id: 'game-1' }, error: null }, // games.update
         { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // game_players.insert (all 8 new)
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -427,7 +423,6 @@ describe('updateScheduledAction — start_type (#2258)', () => {
         { data: { id: 'game-1' }, error: null }, // games.update
         { data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })), error: null }, // game_players.insert
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
     const form = fullBestBallFormData();
@@ -472,7 +467,6 @@ describe('updateScheduledAction — mode_config-nøkler skjemaet ikke eier (#167
           error: null,
         }, // insert (all 4 new)
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -518,7 +512,6 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
           error: null,
         }, // insert (u4..u7)
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -551,7 +544,6 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
         },
         { data: { id: 'game-same' }, error: null }, // games.update
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -579,7 +571,6 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
         { data: { id: 'game-self' }, error: null }, // games.update
         { data: [{ user_id: 'admin-1' }], error: null }, // insert (admin-1)
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1', 'admin@tornygolf.no');
 
@@ -743,7 +734,6 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
           error: null,
         }, // insert (all 8 new)
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('creator-1');
 
@@ -756,19 +746,22 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
-  it('oppretter publish med pending-spiller bouncer til /games/[id]/rediger (ikke /admin/*)', async () => {
-    // RPC-en returnerer en ufullstendig profil → gaten må bite for oppretteren,
-    // og bouncen går til den ikke-admin rediger-flaten.
+  it('oppretter publiserer med en spiller uten fullført profil (#2441)', async () => {
+    // The fixture would answer u1 as pending if anything asked: publish must
+    // not ask. The start gate is where a missing profile stops the round.
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: false }, error: null }, // loadRole
         { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
+        { data: { status: 'draft', game_mode: 'best_ball' }, error: null }, // mode-lock
+        { data: [], error: null }, // prior roster
+        { data: { id: 'game-1' }, error: null }, // games.update
+        {
+          data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
+          error: null,
+        }, // insert (all 8 new)
       ],
-      {
-        incomplete_profile_ids: [
-          { id: 'u1' },
-        ],
-      },
+      { incomplete_profile_ids: [{ id: 'u1' }] },
     );
     signIn('creator-1');
 
@@ -777,21 +770,22 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
       publishFromDraftAction('game-1', fullBestBallFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toContain(
-      '/games/game-1/rediger?error=pending_players',
-    );
-    // #2207: an organiser who is not admin gets neither addresses nor ids.
-    expect(lastRedirect()).not.toMatch(/@|emails=|pending=/);
-    // Ingen skriv skjedde (blokkert før mode-lock + update).
-    const writeMethods = supabaseMock.__fromCalls.filter((c) =>
-      ['update', 'insert', 'delete'].includes(c.method),
-    );
-    expect(writeMethods).toHaveLength(0);
+    expect(lastRedirect()).toBe('/games/game-1?status=scheduled');
+    expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
   });
 
-  it('admin publish med pending-spiller: id-ene i URL-en, aldri adressene (#2207)', async () => {
+  it('admin publiserer med spillere uten fullført profil: ingen pending= eller error= (#2441)', async () => {
     supabaseMock = buildSupabaseMock(
-      [{ data: { is_admin: true }, error: null }], // loadRole
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        { data: { status: 'draft', game_mode: 'best_ball' }, error: null }, // mode-lock
+        { data: [], error: null }, // prior roster
+        { data: { id: 'game-1' }, error: null }, // games.update
+        {
+          data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
+          error: null,
+        }, // insert (all 8 new)
+      ],
       { incomplete_profile_ids: [{ id: 'u1' }, { id: 'u2' }] },
     );
     signIn('admin-1');
@@ -801,11 +795,36 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
       publishFromDraftAction('game-1', fullBestBallFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    const url = new URL(lastRedirect()!, 'http://x');
-    expect(url.pathname).toBe('/admin/games/game-1/edit');
-    expect(url.searchParams.get('error')).toBe('pending_players');
-    expect(url.searchParams.get('pending')).toBe('u1,u2');
-    expect(lastRedirect()).not.toMatch(/@|emails=/);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    expect(lastRedirect()).not.toMatch(/pending=|error=/);
+    expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
+  });
+
+  it('update_scheduled med en spiller uten fullført profil lagres (#2441)', async () => {
+    // A game published with a pending friend must stay editable: moving the
+    // tee-off cannot wait for the friend's profile.
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
+        { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null }, // mode-lock
+        { data: Array.from({ length: 8 }, (_, i) => storedBestBallRow(i)), error: null }, // prior roster
+        { data: { id: 'game-1' }, error: null }, // games.update
+      ],
+      { incomplete_profile_ids: [{ id: 'u1' }] },
+    );
+    signIn('creator-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?status=updated');
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'update'),
+    ).toBe(true);
+    expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
   });
 
   it('ikke-eier ikke-admin → redirect /', async () => {
@@ -859,7 +878,6 @@ describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () =>
         { data: null, error: null }, // compensation delete (ok)
         { data: null, error: null }, // compensation re-insert (ok)
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -904,7 +922,6 @@ describe('updateScheduledAction — roster-kompensasjon (#907 → #2210)', () =>
         { data: null, error: null }, // compensation delete (ok)
         { data: null, error: { message: 'rollback boom' } }, // re-insert FAILS too
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -949,7 +966,6 @@ describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () 
         { data: BEST_BALL_IDS.map((_, i) => storedBestBallRow(i)), error: null }, // prior roster
         { data: { id: 'game-1' }, error: null }, // games.update
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -981,7 +997,6 @@ describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () 
         }, // existing
         { data: BEST_BALL_IDS.map((_, i) => storedBestBallRow(i)), error: null }, // prior roster
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('creator-1');
 
@@ -1029,7 +1044,6 @@ describe('updateGameInternal — lagrer bare endringene i rosteret (#2210)', () 
         { data: priorRows, error: null }, // prior roster
         { data: { id: 'game-1' }, error: null }, // games.update
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('creator-1');
 
@@ -1075,7 +1089,6 @@ describe('e-mail invitations when a draft is published (#2321)', () => {
         { data: Array.from({ length: 8 }, (_, i) => storedBestBallRow(i)), error: null },
         { data: { id: 'game-inv' }, error: null }, // games.update
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
     sendPublishInvitesMock.mockResolvedValueOnce({ failed: 2 });

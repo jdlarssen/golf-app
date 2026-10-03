@@ -16,9 +16,11 @@ import {
  * #427: creation is open to ANY logged-in user. The action authenticates
  * FIRST (so it knows `isAdmin`, which decides where success lands), then
  * validates. There is no service-role bypass anymore — creator-owned RLS
- * (migration 0071) covers a non-admin's writes on the request-scoped client,
- * and the publish pending-gate uses a SECURITY DEFINER RPC
- * (`incomplete_profile_ids`) instead of a service-role roster read.
+ * (migration 0071) covers a non-admin's writes on the request-scoped client.
+ *
+ * #2441: a player who has not finished their profile no longer stops the
+ * publish. The rule lives at the start (startScheduledGameCore), so publish
+ * never calls `incomplete_profile_ids`.
  *
  * #1379: validation and DB failures are RETURNED as `{ error: <code> }`, never
  * redirected. The wizard keeps its whole state client-side, so a redirect back
@@ -33,9 +35,9 @@ import {
  *   4. isValidActiveGameMode
  *   5. parseOsloDateTimeLocal — required for publish
  *   6. parseSideTournamentFromFormData (pure)
- *   7. (publish only) rpc('incomplete_profile_ids', {ids}) — pending gate
- *   8. games.insert(...).select('id').single
- *   9. game_players.insert(rows)
+ *   7. games.insert(...).select('id').single
+ *   8. game_players.insert(rows)
+ *   9. (publish only) notifyRosterInvites
  *  10. redirect (admin → /admin/games/[id], else → /games/[id])
  */
 
@@ -264,18 +266,29 @@ describe('createGameInternal — open to any logged-in user (#427)', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('regular non-admin publish: pending player returns { error: pending_players }', async () => {
+  it('regular non-admin publish: a pending player does not stop the publish (#2441)', async () => {
+    // The fixture would answer u1 as pending if anything asked: publish must
+    // not ask. The start gate is where a missing profile stops the round.
     supabaseMock = buildSupabaseMock(
-      [{ data: { is_admin: false }, error: null }], // gate only — RPC blocks before insert
+      [
+        { data: { is_admin: false }, error: null }, // gate
+        { data: { id: 'reg-game-pending' }, error: null }, // games.insert
+        { data: null, error: null }, // game_players.insert
+      ],
       { incomplete_profile_ids: [{ id: 'u1' }] },
     );
     signIn('reg-1', 'random@example.com');
 
     const { createAndPublishGame } = await import('./actions');
 
-    const res = await createAndPublishGame(fullPublishFormData());
-    expect(res).toEqual({ error: 'pending_players' });
-    expect(redirectMock).not.toHaveBeenCalled();
+    await expect(
+      createAndPublishGame(fullPublishFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(
+      supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert'),
+    ).toBe(true);
+    expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
+    expect(lastRedirect()).toBe('/games/reg-game-pending');
   });
 });
 
@@ -385,25 +398,30 @@ describe('createAndPublishGame', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
-  it('edge case (publish guard): returns { error: pending_players } when a roster player has no completed profile', async () => {
-    // The publish path calls the incomplete_profile_ids RPC, which returns
-    // ONLY the rows that still lack a completed profile. A non-empty result
-    // blocks the publish — the action returns before the games.insert call.
+  it('a roster player without a completed profile does not stop the publish (#2441)', async () => {
+    // The fixture would answer u1 as pending if anything asked. Publishing
+    // goes through; the round starts once the profile is done.
     supabaseMock = buildSupabaseMock(
-      [{ data: { is_admin: true }, error: null }], // gate
-      {
-        incomplete_profile_ids: [
-          { id: 'u1' }, // one pending is enough
-        ],
-      },
+      [
+        { data: { is_admin: true }, error: null }, // gate
+        { data: { id: 'game-pending' }, error: null }, // games.insert.select.single
+        { data: null, error: null }, // game_players.insert
+      ],
+      { incomplete_profile_ids: [{ id: 'u1' }] },
     );
     signIn('admin-1');
 
     const { createAndPublishGame } = await import('./actions');
 
-    const res = await createAndPublishGame(fullPublishFormData());
-    expect(res).toEqual({ error: 'pending_players' });
-    expect(redirectMock).not.toHaveBeenCalled();
+    await expect(
+      createAndPublishGame(fullPublishFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+    const insert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect((insert!.args[0] as { status: string }).status).toBe('scheduled');
+    expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
+    expect(lastRedirect()).toBe('/admin/games/game-pending?status=scheduled');
   });
 
   it('happy path (publish): inserts scheduled game, redirects with ?status=scheduled', async () => {
@@ -413,7 +431,6 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-2' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profile_ids: [] }, // no pending players → gate clears
     );
     signIn('admin-1');
 
@@ -432,7 +449,6 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-4ball' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -547,7 +563,6 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-stbl' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -598,7 +613,6 @@ describe('createAndPublishGame', () => {
         { data: { id: 'new-game-sp' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -641,7 +655,6 @@ describe('invite-notify ved publisering (#182 → #2445)', () => {
         { data: { id: 'game-with-notify' }, error: null },
         { data: null, error: null },
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -690,7 +703,6 @@ describe('invite-notify ved publisering (#182 → #2445)', () => {
         { data: { id: 'game-notify-rejected' }, error: null },
         { data: null, error: null },
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
 
@@ -777,7 +789,6 @@ describe('e-mail invitations at publish (#2321)', () => {
         { data: { id: 'game-inv' }, error: null }, // games.insert.select.single
         { data: null, error: null }, // game_players.insert
       ],
-      { incomplete_profile_ids: [] },
     );
     signIn('admin-1');
     sendPublishInvitesMock.mockResolvedValueOnce({ failed: 1 });

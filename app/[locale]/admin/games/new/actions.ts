@@ -38,8 +38,6 @@ export type CreateGameErrorCode =
   | 'tee_off_in_past'
   | 'bad_side_ld_count'
   | 'bad_side_ctp_count'
-  | 'db_roster'
-  | 'pending_players'
   | 'db_game'
   | 'db_players';
 
@@ -163,32 +161,6 @@ async function createGameInternal(
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
   });
-
-  if (mode === 'publish') {
-    // Block publishing a game whose roster still has not-yet-onboarded players
-    // (profile_completed_at IS NULL). Under request-scoped RLS a non-admin
-    // creator can't read OTHER users' rows, so a direct read would silently
-    // return nothing and skip the gate (#366 pending-read trap). The
-    // SECURITY DEFINER RPC (0185, #2207) returns only the incomplete ids among
-    // those we pass, so the gate bites for admin and creator alike.
-    const { data: incomplete, error: rosterErr } = await supabase.rpc(
-      'incomplete_profile_ids',
-      { p_user_ids: payload.players.map((p) => p.user_id) },
-    );
-
-    if (rosterErr) {
-      console.error('[createGameInternal] roster check failed', rosterErr);
-      return { error: 'db_roster' };
-    }
-
-    // Personvern (#435): ingen e-postliste i returverdien — opprett-ruta er
-    // åpen for alle innloggede (#427), og medspilleres adresser skal ikke
-    // lekke til en ikke-admin arrangør. Klient-gaten i useGameFormState
-    // fanger tilfellet på steg 5 uansett; denne er backstop.
-    if ((incomplete ?? []).length > 0) {
-      return { error: 'pending_players' };
-    }
-  }
 
   // Cup-link (#47): hvis arrangøren lander via cup-detalj-side, kobles spillet
   // til parent tournament-en. #2207: bare den som styrer cupen kan koble et

@@ -1716,29 +1716,27 @@ describe('GameForm — «Shotgun-start» (#2258)', () => {
 describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
   // Regresjon: `canPublish` deaktiverer også «Lagre endringer», men «Mangler:
   // …»-teksten lå inne i publiser/utkast-grenen. Et scheduled spill med en
-  // spiller som ikke har fullført profilen sin ga da en død knapp uten ett
-  // eneste hint om hvorfor — arrangøren kunne ikke engang flytte tee-off.
+  // mangel ga da en død knapp uten ett eneste hint om hvorfor. #2441: en
+  // spiller uten fullført profil stopper ikke lenger knappen, så mangelen her
+  // er en tom tee.
   const NO_OP_UPDATE = async () => {};
 
   it('lenker den deaktiverte lagre-knappen til mangel-teksten', () => {
-    const pendingPlayer: PlayerOption = {
-      ...makePlayer('u-pending', 'Ny Spiller'),
-      pending: true,
-    };
+    const firstPlayer = makePlayer('u-first', 'Første Spiller');
 
     const { container, rerender } = render(
       <GameForm
         courses={COURSES}
-        players={[pendingPlayer]}
+        players={[firstPlayer]}
         initialValues={{
           name: 'Torsdagsrunden',
           course_id: 'course-1',
-          tee_box_id: 'tee-1',
+          tee_box_id: '',
           scheduled_tee_off_at: FUTURE_TEE_OFF,
           game_mode: 'stableford',
           team_size: 1,
           players: [
-            { user_id: 'u-pending', team_number: null, flight_number: null },
+            { user_id: 'u-first', team_number: null, flight_number: null },
           ],
         }}
         mode={{
@@ -1760,7 +1758,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
           'input[name="roster_loaded_ids"]',
         ) as HTMLInputElement | null
       )?.value,
-    ).toBe('u-pending');
+    ).toBe('u-first');
 
     // A save that bounces back (?error=…) re-renders the same form with the
     // server's newer roster while the form keeps the selection it mounted
@@ -1770,7 +1768,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
     rerender(
       <GameForm
         courses={COURSES}
-        players={[pendingPlayer, latePlayer]}
+        players={[firstPlayer, latePlayer]}
         initialValues={{
           name: 'Torsdagsrunden',
           course_id: 'course-1',
@@ -1779,7 +1777,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
           game_mode: 'stableford',
           team_size: 1,
           players: [
-            { user_id: 'u-pending', team_number: null, flight_number: null },
+            { user_id: 'u-first', team_number: null, flight_number: null },
             { user_id: 'u-late', team_number: null, flight_number: null },
           ],
         }}
@@ -1796,7 +1794,7 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
           'input[name="roster_loaded_ids"]',
         ) as HTMLInputElement | null
       )?.value,
-    ).toBe('u-pending');
+    ).toBe('u-first');
   });
 });
 

@@ -213,9 +213,24 @@ export default async function CreatorSpillerePage({
   // #2207: the creator's network with masked addresses only (getTeamCandidates);
   // adding someone goes by id (recipient_user_id).
   let candidates: TeamCandidate[] = [];
+  // #2441: who on the roster has not finished their profile. The rule is the
+  // start gate's RPC, fed the whole roster like the gate is. Display only: a
+  // failed read marks nobody, and the gate still stops the start.
+  let pendingProfileIds = new Set<string>();
+  const readPendingProfiles = async (): Promise<Set<string>> => {
+    if (players.length === 0) return new Set();
+    const { data, error } = await supabase.rpc('incomplete_profile_ids', {
+      p_user_ids: players.map((p) => p.user_id),
+    });
+    if (error) {
+      console.error('[spillere] pending-profile read failed', { gameId, error });
+      return new Set();
+    }
+    return new Set((data ?? []).map((r) => r.id));
+  };
   if (isPreStart) {
     const rosterIds = new Set(players.map((p) => p.user_id));
-    const [invitesRes, network] = await Promise.all([
+    const [invitesRes, network, pendingIds] = await Promise.all([
       supabase
         .from('invitations')
         .select('id, email')
@@ -224,7 +239,9 @@ export default async function CreatorSpillerePage({
         .order('created_at', { ascending: true })
         .returns<{ id: string; email: string }[]>(),
       getTeamCandidates(role.userId),
+      readPendingProfiles(),
     ]);
+    pendingProfileIds = pendingIds;
     pendingInvites = invitesRes.data ?? [];
     candidates = network.filter((c) => !rosterIds.has(c.id));
   }
@@ -357,6 +374,7 @@ export default async function CreatorSpillerePage({
                   p.submitted_by_user_id != null && p.submitted_by_user_id !== p.user_id
                     ? players.find((q) => q.user_id === p.submitted_by_user_id)
                     : undefined;
+                const pendingProfile = pendingProfileIds.has(p.user_id);
                 const stateLabel = wd
                   ? t('stateWithdrawn')
                   : approved
@@ -365,9 +383,11 @@ export default async function CreatorSpillerePage({
                       ? deliverer
                         ? t('stateSubmittedBy', { name: playerName(deliverer) })
                         : t('stateSubmitted')
-                      : isActive
-                        ? t('stateNotSubmitted')
-                        : null;
+                      : pendingProfile
+                        ? t('statePendingProfile')
+                        : isActive
+                          ? t('stateNotSubmitted')
+                          : null;
                 return (
                   <li
                     key={p.user_id}
@@ -376,7 +396,9 @@ export default async function CreatorSpillerePage({
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-2">
                         <p className={`truncate text-sm font-medium ${wd ? 'text-muted line-through' : 'text-text'}`}>
-                          {playerName(p)}
+                          {pendingProfile && !p.users?.name?.trim()
+                            ? t('pendingPlayerName')
+                            : playerName(p)}
                         </p>
                         {p.users?.is_guest && <GuestBadge className="shrink-0" />}
                       </div>

@@ -11,11 +11,11 @@ type FlightRosterRow = {
   flight_number: number | null;
   accepted_at: string | null;
   users: {
-    // `name` is null for pending invitees per migration 0014. The flight
-    // roster only renders for active games, and the publish-gate (Task 7)
-    // prevents a game from leaving 'draft' with pending players on the
-    // roster — so in practice this is always set here. Kept nullable to
-    // match the DB column and stay safe against future flows.
+    // `name` is null for pending invitees per migration 0014. The roster also
+    // renders in the waiting room of a scheduled game, which may hold a
+    // player who has not finished their profile (#2441): that row shows
+    // «Invitert spiller». An active game has none; the start gate waits for
+    // every profile.
     name: string | null;
     nickname: string | null;
     hcp_index: number | string | null;
@@ -48,16 +48,44 @@ export async function FlightRoster({
     flightNumber != null ? query.eq('flight_number', flightNumber) : query
   ).returns<FlightRosterRow[]>();
 
+  // #2441: who has not finished their profile. The rule is the start gate's
+  // RPC, fed every row we read. In an active game it answers empty (the gate
+  // let nobody through). Display only: a failed read marks nobody.
+  const rosterIds = (flightRows ?? []).map((row) => row.user_id);
+  let pendingProfileIds = new Set<string>();
+  if (rosterIds.length > 0) {
+    const { data: pendingRows, error: pendingError } = await supabase.rpc(
+      'incomplete_profile_ids',
+      { p_user_ids: rosterIds },
+    );
+    if (pendingError) {
+      console.error('[FlightRoster] pending-profile read failed', {
+        gameId,
+        error: pendingError,
+      });
+    } else {
+      pendingProfileIds = new Set((pendingRows ?? []).map((r) => r.id));
+    }
+  }
+
   const tHome = await getTranslations('game.home');
   const locale = await getLocale();
-  const flight = (flightRows ?? []).map((row) => ({
-    userId: row.user_id,
-    isCurrentUser: row.user_id === currentUserId,
-    name: row.users?.name ?? tHome('unknownPlayer'),
-    hcpIndex:
-      row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
-    acceptedAt: row.accepted_at,
-  }));
+  const flight = (flightRows ?? []).map((row) => {
+    const pendingProfile = pendingProfileIds.has(row.user_id);
+    const name = row.users?.name?.trim() ? row.users.name : null;
+    return {
+      userId: row.user_id,
+      isCurrentUser: row.user_id === currentUserId,
+      name: name ?? (pendingProfile ? tHome('pendingPlayerName') : tHome('unknownPlayer')),
+      // A pending row without a name shows the whole placeholder, never a
+      // first name cut from it.
+      showFullName: pendingProfile && name == null,
+      pendingProfile,
+      hcpIndex:
+        row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
+      acceptedAt: row.accepted_at,
+    };
+  });
 
   return (
     <ul className="mt-2 flex flex-col gap-2" data-testid={testId}>
@@ -85,15 +113,23 @@ export async function FlightRoster({
           <span
             className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
           >
-            {firstName(p.name) ?? p.name}
+            {p.showFullName ? p.name : (firstName(p.name) ?? p.name)}
             {p.isCurrentUser && (
               <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-text ml-2">
                 {tHome('youLabel')}
               </span>
             )}
           </span>
-          {p.acceptedAt == null && !p.isCurrentUser && (
-            <UnconfirmedBadge className="shrink-0" />
+          {p.pendingProfile ? (
+            <span
+              className="shrink-0 text-xs text-muted"
+              data-testid="pending-profile-badge"
+            >
+              {tHome('pendingProfileBadge')}
+            </span>
+          ) : (
+            p.acceptedAt == null &&
+            !p.isCurrentUser && <UnconfirmedBadge className="shrink-0" />
           )}
           <span className="shrink-0 text-xs text-muted tabular-nums">
             HCP {p.hcpIndex != null ? formatHcpDisplay(p.hcpIndex, locale) : '—'}

@@ -91,6 +91,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     name,
     setName,
     canPublish,
+    pendingProfileCount,
     missingForPublish,
     missingForPublishCodes,
     teeOffInPast,
@@ -235,15 +236,7 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     draftResult.seq > publishResult.seq ? draftResult.error : publishResult.error;
   const submitErrorMessage = (() => {
     if (!submitErrorCode) return null;
-    // `pending_players`-teksten peker på en liste med e-poster som bare
-    // edit-flyten har («Disse spillerne …{list}»). Opprett-actionen sender
-    // ingen liste — den ville uansett lekket e-poster til ikke-admins (#435)
-    // — så her brukes varianten som står på egne ben uten liste.
-    const key = (
-      submitErrorCode === 'pending_players'
-        ? 'errors.pending_players_generic'
-        : `errors.${submitErrorCode}`
-    ) as Parameters<typeof tWizard>[0];
+    const key = `errors.${submitErrorCode}` as Parameters<typeof tWizard>[0];
     return tWizard.has(key)
       ? tWizard(key)
       : tWizard('errors.unexpected', { code: submitErrorCode });
@@ -318,6 +311,15 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
     players: t('playersLabel'),
   };
 
+  // #2441: a friend who has not finished their profile does not stop the
+  // publish (the round waits at the start), but the players row says so. A
+  // `warn` value is already a whole sentence, so the note goes first there.
+  const pendingNote =
+    pendingProfileCount > 0
+      ? t('checklist.pendingProfiles', { count: pendingProfileCount })
+      : null;
+  const PART_SEPARATOR = ' · ';
+
   const checklistItems: ReadyChecklistItem[] = rows.map((row) => {
     let value: string;
     if (row.status === 'block') {
@@ -335,8 +337,14 @@ export function ReadyStep({ state, mode, onGoToStep, onSubmitStart }: Props) {
         selected: selectedPlayerIds.length,
         expected: expectedPlayerCount ?? 0,
       });
+      if (row.key === 'players' && pendingNote) {
+        value = [pendingNote, value].join(PART_SEPARATOR);
+      }
     } else {
       value = okValue(row.key);
+      if (row.key === 'players' && pendingNote) {
+        value = [value, pendingNote].join(PART_SEPARATOR);
+      }
     }
     return { ...row, label: LABEL[row.key], value };
   });
