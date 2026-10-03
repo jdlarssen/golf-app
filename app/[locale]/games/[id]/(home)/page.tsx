@@ -133,6 +133,27 @@ function formatCourseRating(n: number, locale: AppLocale): string {
   return formatNumber(n, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+/**
+ * #2441: which of `userIds` have not finished their profile, by the start
+ * gate's RPC. No ids, no call; a failed read logs and marks nobody (display
+ * only, the gate itself stays the authority).
+ */
+async function pendingProfileIdsAmong(
+  supabase: Awaited<ReturnType<typeof getGameContext>>['supabase'],
+  userIds: string[],
+  gameId: string,
+): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set();
+  const { data, error } = await supabase.rpc('incomplete_profile_ids', {
+    p_user_ids: userIds,
+  });
+  if (error) {
+    console.error('[game-home] flight picker pending-profile read failed', { gameId, error });
+    return new Set();
+  }
+  return new Set((data ?? []).map((r) => r.id));
+}
+
 export default async function GameHomePage({
   params,
   searchParams,
@@ -624,12 +645,23 @@ export default async function GameHomePage({
       const activePlayers2 = gwp.players.filter((p) => !p.withdrawn_at);
       const byFlight = flightBuckets(gwp.players).assigned;
       const maxFlight = Math.ceil(activePlayers2.length / MAX_FLIGHT_SIZE);
+      // #2441: a published game may hold a friend who has not finished the
+      // profile. A nameless member is «Invitert spiller» when the start gate's
+      // RPC says so, as in the participant list. Asked only when someone lacks
+      // a name; a failed read falls back to «(ukjent)».
+      const memberLabel = (p: (typeof gwp.players)[number]) =>
+        p.users?.nickname?.trim() || p.users?.name?.trim() || null;
+      const pendingNameless = await pendingProfileIdsAmong(
+        supabase,
+        activePlayers2.filter((p) => memberLabel(p) === null).map((p) => p.user_id),
+        id,
+      );
       flightOptions = Array.from({ length: maxFlight + 1 }, (_, i) => {
         const flightNum = i + 1;
-        const members = (byFlight.get(flightNum) ?? []).map((p) =>
-          p.users
-            ? (p.users.nickname ?? p.users.name ?? t('unknownPlayer'))
-            : t('unknownPlayer'),
+        const members = (byFlight.get(flightNum) ?? []).map(
+          (p) =>
+            memberLabel(p) ??
+            (pendingNameless.has(p.user_id) ? t('pendingPlayerName') : t('unknownPlayer')),
         );
         return {
           flightNumber: flightNum,
