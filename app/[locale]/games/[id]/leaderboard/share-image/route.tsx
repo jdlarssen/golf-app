@@ -73,14 +73,15 @@ function renderMatchHeadline(
  * player fires into a group chat via the Web Share API — self-contained so
  * recipients never hit the auth wall a shared *link* would.
  *
- * `?p=<userId>` personalizes the card: a participant outside the top 3 gets a
+ * The card is personalized for the signed-in user, read from the session —
+ * there is no `?p=` override (#2312): a participant outside the top 3 gets a
  * «Din runde»-strip; a participant in the top 3 is highlighted in the podium;
- * a non-participant (or missing/invalid `p`) gets the neutral card.
+ * a signed-in non-participant gets the neutral card.
  *
  * Only `status='finished'` games render — never leak in-progress scores via an
- * image. Uses the admin client (RLS-bypass, like `getGameWithPlayers`); `p`
- * only selects which row to highlight on an already world-readable finished
- * leaderboard, so it exposes no new data.
+ * image. A finished game is NOT world-readable in RLS (#1542); the data is read
+ * with the admin client (RLS-bypass, like `getGameWithPlayers`), so the gate in
+ * `GET` is the enforcement.
  *
  * No `export const runtime` — the project's `cacheComponents` config forbids
  * route-segment runtime config; the handler runs on the default Node runtime,
@@ -141,7 +142,7 @@ function computeCardHeight(
 }
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ locale: string; id: string }> },
 ): Promise<Response> {
   const { locale, id } = await params;
@@ -153,11 +154,14 @@ export async function GET(
     namespace: 'leaderboard.shareCard',
   });
   const playerFallback = t('playerFallback');
-  // The sharer is whoever requests the card — read from the session cookie so
-  // the button needs no viewer-id prop. `?p=` is an optional override (testing /
-  // explicit links). A non-participant (or no session) yields the neutral card.
-  const sharerId =
-    new URL(request.url).searchParams.get('p') ?? (await getProxyVerifiedUserId());
+  // Gate: signed in + finished game, on purpose — owner choice B in #1632, the
+  // same gate as `leaderboard/page.tsx` and `leaderboard/export/route.ts`. The
+  // data below is read with the service role, so this check IS the access
+  // control. Tighten or loosen it here and change those two in the same commit.
+  // The sharer is the session user only (#2312); a non-participant gets the
+  // neutral card.
+  const sharerId = await getProxyVerifiedUserId();
+  if (!sharerId) return notFound();
 
   const gwp = await getGameWithPlayers(id);
   if (!gwp || gwp.game.status !== 'finished') return notFound();
