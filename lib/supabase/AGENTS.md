@@ -106,8 +106,10 @@ Strengt håndhevet i Postgres. Spillere ser:
 fortsatt deltakelse i DET spillet. Et ferdig spill er altså ikke world-read (#1542).
 Flater som med vilje viser resultater til et bredere publikum — cup-sidene
 (`getCupSnapshot`), `/spectate/[token]`, og kamp-leaderboardet OG hull-drilldownen
-via `getResultReadClient` (#1632, eiervalg B: begge svarer likt) — leser derfor
-med service-role og holder autorisasjonen på call-site. Legger du til en slik
+via `getResultReadClient` (#1632, eiervalg B: begge svarer likt), og
+resultatbildet (`leaderboard/share-image`) og CSV-eksporten (`leaderboard/export`)
+med samme gate som tavla (innlogget + ferdig; delern fra sesjonen, aldri fra URL-en,
+#2312) — leser derfor med service-role og holder autorisasjonen på call-site. Legger du til en slik
 flate: gaten i ruta ER håndhevelsen, det finnes ingen RLS bak den.
 
 Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.

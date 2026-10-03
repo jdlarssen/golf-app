@@ -42,8 +42,8 @@ import {
  *     koste et modellkall eller skrive en rad. Før 24. desember finnes ingen
  *     rad, så kortene er utilgjengelige da uten en egen datosjekk her.
  *  2. **Bare ditt eget kort.** Spilleren leses fra sesjonen
- *     (`getProxyVerifiedUserId`), aldri fra URL-en. Det finnes ingen `?p=`
- *     her, i motsetning til resultatkortet: en ferdig kavalkade er ikke
+ *     (`getProxyVerifiedUserId`), aldri fra URL-en — som på resultatkortet
+ *     (#2312): ingen av kortene har noen `?p=`. En ferdig kavalkade er ikke
  *     world-read (#1542), og `facts` inneholder medspillernes tall.
  *  3. **Ingen `export const runtime`.** `cacheComponents` forbyr
  *     rute-segment-konfigurasjon; standard Node-runtime er det `ImageResponse`
