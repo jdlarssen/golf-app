@@ -242,20 +242,7 @@ export function TilesSkeleton() {
   // common empty-queue shape; a one-row shift on load is accepted cosmetics.
   return (
     <>
-      <div className="mb-2 grid grid-cols-1 gap-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex min-h-[60px] items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-2.5"
-          >
-            <Skeleton className="h-9 w-9 shrink-0 rounded-[9px]" delay={i * 90} />
-            <div className="flex-1">
-              <Skeleton className="h-4 w-20" delay={i * 90 + 30} />
-              <Skeleton className="mt-1.5 h-3 w-28" delay={i * 90 + 60} />
-            </div>
-          </div>
-        ))}
-      </div>
+      <DenseTileListSkeleton rows={4} />
       <Skeleton className="mt-6 mb-1.5 ml-1 h-3 w-32" delay={360} />
       <div className="mb-2 grid grid-cols-2 gap-2.5">
         {Array.from({ length: 7 }).map((_, i) => (
@@ -269,5 +256,30 @@ export function TilesSkeleton() {
         ))}
       </div>
     </>
+  );
+}
+
+/**
+ * `DenseTileList`'s row shape (full-width row, 36 × 36 icon, two lines) as a
+ * skeleton. Shared by `TilesSkeleton` and the role-neutral `/admin` loading
+ * skeleton (#2488), since both the admin doors and the player room's rows
+ * use `DenseTileList`.
+ */
+export function DenseTileListSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="mb-2 grid grid-cols-1 gap-2">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div
+          key={i}
+          className="flex min-h-[60px] items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-2.5"
+        >
+          <Skeleton className="h-9 w-9 shrink-0 rounded-[9px]" delay={i * 90} />
+          <div className="flex-1">
+            <Skeleton className="h-4 w-20" delay={i * 90 + 30} />
+            <Skeleton className="mt-1.5 h-3 w-28" delay={i * 90 + 60} />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
