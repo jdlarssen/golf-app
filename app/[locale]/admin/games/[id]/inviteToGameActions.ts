@@ -8,6 +8,7 @@ import {
   addExistingPlayerToGameCore,
   inviteEmailToGameCore,
   normalizeInviteEmail,
+  type InviteOutcome,
   type InviteRefusal,
 } from '@/lib/games/inviteToGame';
 
@@ -89,6 +90,16 @@ const REFUSAL_ERROR: Record<InviteRefusal, string> = {
   mail_failed: 'mail_failed',
 };
 
+/**
+ * Banneret per utfall. Uttømmende, så en ny `kind` feller tsc. `invite_held`:
+ * spillet er et utkast, og e-posten går ut når det publiseres (#2445).
+ */
+const OUTCOME_STATUS: Record<Extract<InviteOutcome, { ok: true }>['kind'], string> = {
+  added: 'invite_added',
+  sent: 'invite_sent',
+  held: 'invite_held',
+};
+
 export async function inviteEmailToGame(
   gameId: string,
   formData: FormData,
@@ -123,9 +134,8 @@ export async function inviteEmailToGame(
     redirect({ href: `${detailPath}?${query}`, locale });
   }
 
-  const status = result.kind === 'added' ? 'invite_added' : 'invite_sent';
   redirect({
-    href: `${detailPath}?status=${status}&email=${encodeURIComponent(result.email)}`,
+    href: `${detailPath}?status=${OUTCOME_STATUS[result.kind]}&email=${encodeURIComponent(result.email)}`,
     locale,
   });
 }

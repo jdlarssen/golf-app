@@ -41,12 +41,17 @@ import {
 //
 // WIRE (frosset — appen speiler den):
 //   POST { email: string }
-//     200 { status: 'added' | 'sent' }
+//     200 { status: 'added' | 'sent', held?: true }
 //     400 { error: 'invalid_email' | 'disposable_email' }
 //     401 { error: 'unauthorized' }   403 { error: 'forbidden' }
 //     404 { error: 'not_found' }
 //     409 { error: 'game_locked' | 'game_full' | 'invite_not_allowed' }
 //     429 { error: 'rate_limited' }   500 { error: 'invite_failed' }
+//
+// `held: true` (#2445): spillet er et utkast. Raden er lagret, men e-posten går
+// ut først når spillet publiseres. Feltet er nytt, og dagens app svarer
+// `invite_failed` på en ukjent `status`, så et utkast sendes som `sent` med
+// feltet ved siden av. En app som ikke leser det, viser «sendt»-kvitteringen.
 //
 // 400 og 409 bærer hver flere koder, så appen MÅ lese `error` fra kroppen her —
 // i motsetning til purringen og selv-frafallet, der én status = én kode.
@@ -206,7 +211,9 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
       );
     }
 
-    return NextResponse.json({ status: result.kind });
+    return NextResponse.json(
+      result.kind === 'held' ? { status: 'sent', held: true } : { status: result.kind },
+    );
   } catch (err) {
     console.error(`[${LOG_PREFIX}] invite threw`, err);
     return NextResponse.json({ error: 'invite_failed' }, { status: 500 });

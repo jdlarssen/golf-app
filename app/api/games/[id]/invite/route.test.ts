@@ -288,6 +288,21 @@ describe('invitasjonen', () => {
     expect(sendInviteNotificationMock).toHaveBeenCalledTimes(1);
   });
 
+  it('ukjent adresse på et utkast: 200 { status: sent, held: true }, rad uten mail (#2445)', async () => {
+    // WIRE er frosset: dagens app kjenner bare `added | sent` og svarer
+    // invite_failed på en ukjent status. `held` er et nytt felt den ignorerer.
+    db.status = 'draft';
+
+    const res = await POST(request({ token: `Bearer ${ORGANISER_TOKEN}` }), ctx());
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ status: 'sent', held: true });
+    expect(db.inserted).toEqual([
+      expect.objectContaining({ table: 'invitations' }),
+    ]);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('en registrert konto arrangøren ikke ser: e-postinvitasjon, som på nettsiden (#2358)', async () => {
     // Før #2358 sjekket ruta synligheten med tjenesteklienten, som ser alle
     // kontoer: appen svarte 409 invite_not_allowed der nettsiden sendte en

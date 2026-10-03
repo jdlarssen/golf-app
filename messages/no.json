@@ -2371,6 +2371,7 @@
       "statusMessages": {
         "invite_added": "Spilleren er lagt til.",
         "invite_sent": "Invitasjonen er sendt.",
+        "invite_held": "Invitasjonen er lagret. E-posten går ut når du publiserer spillet.",
         "player_removed": "Spilleren er fjernet.",
         "player_withdrawn": "Spilleren er trukket fra spillet.",
         "player_reinstated": "Spilleren er med igjen.",
@@ -3741,6 +3742,7 @@
         "game_reopened": "✓ Spillet er aktivt igjen. Åpne kortene som skal rettes under «Leverte scorekort».",
         "invite_added": "✓ Spilleren er lagt til i spillerlisten.",
         "invite_sent": "✓ Invitasjon sendt.",
+        "invite_held": "✓ Invitasjon lagret. E-posten går ut når spillet publiseres.",
         "player_withdrawn": "✓ Spilleren er trukket fra rangeringen.",
         "player_reinstated": "✓ Spilleren er gjeninnsatt i rangeringen.",
         "flight_suggested": "✓ Inndeling er foreslått og lagret.",
