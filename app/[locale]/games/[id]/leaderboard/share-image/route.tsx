@@ -125,8 +125,10 @@ function computeCardHeight(
   } else if (model.band === 'matchplay') {
     h += 8 + 200; // result band
   } else {
-    h += 8 + 196; // winner block
-    h += Math.max(0, model.podium.length - 1) * 116; // runner rows
+    // One winner block per tied first place (#2318), 16px apart.
+    const winnerCount = model.winners.length;
+    h += 8 + winnerCount * 196 + Math.max(0, winnerCount - 1) * 16; // winner blocks
+    h += Math.max(0, model.podium.length - winnerCount) * 116; // runner rows
     if (model.sharerStrip) {
       h += 16 + 116; // sharer row
       if (model.sharerStrip.rank > model.podium.length + 1) h += 52; // gap marker
@@ -384,13 +386,14 @@ function PlacementBody({
   serif: string;
   t: ShareT;
 }) {
-  const winner = model.winner;
-  const rest = model.podium.slice(1); // ranks 2..3
+  // A tied first place gets one hero block per winner (#2318).
+  const rest = model.podium.slice(model.winners.length);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
-      {/* Winner block */}
-      {winner && (
+      {/* Winner blocks */}
+      {model.winners.map((winner, i) => (
         <div
+          key={`winner-${i}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -398,6 +401,7 @@ function PlacementBody({
             border: `2px solid ${HAIRLINE}`,
             borderRadius: 32,
             padding: 36,
+            marginTop: i === 0 ? 0 : 16,
           }}
         >
           <div
@@ -423,7 +427,7 @@ function PlacementBody({
             </span>
           </div>
         </div>
-      )}
+      ))}
 
       {/* Runner-up rows */}
       {rest.map((row) => (

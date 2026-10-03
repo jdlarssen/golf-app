@@ -165,7 +165,7 @@ export function buildRoundReportFacts(
     endedAt,
     formatLabel: MODE_LABELS[gameMode],
     band: card.band,
-    winnerName: card.winner?.name ?? matchplayWinnerNameFallback(card),
+    winnerName: card.winners[0]?.name ?? matchplayWinnerNameFallback(card),
     standings,
     scoredHoles: computeScoredHoles(result),
   };
@@ -204,7 +204,7 @@ function formatScoreLabel(score: { kind: 'points'; value: number } | { kind: 'sk
   }
 }
 
-/** buildShareCardData returns `winner: null` for the matchplay band (no podium). */
+/** buildShareCardData returns `winners: []` for the matchplay band (no podium). */
 function matchplayWinnerNameFallback(card: ReturnType<typeof buildShareCardData>): string | null {
   if (card.band !== 'matchplay' || card.match === null) return null;
   return card.match.headline.kind === 'winner' ? card.match.headline.winnerName : null;

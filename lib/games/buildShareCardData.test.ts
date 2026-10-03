@@ -69,9 +69,14 @@ describe('solo_strokeplay — sharer in top 3', () => {
 
   it('winner is rank-1 row', () => {
     const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
-    expect(card.winner).not.toBeNull();
-    expect(card.winner!.rank).toBe(1);
-    expect(card.winner!.name).toBe('Alice');
+    expect(card.winners[0].rank).toBe(1);
+    expect(card.winners[0].name).toBe('Alice');
+  });
+
+  it('a single rank-1 row is the only winner (#2318)', () => {
+    const card = buildShareCardData({ result, nameByUserId: nameMap, sharerId: 'u2', parByHole: PAR_72, sideWinners: [] });
+    expect(card.winners).toHaveLength(1);
+    expect(card.winners[0].name).toBe('Alice');
   });
 
   it('sharer row has isSharer=true', () => {
@@ -219,7 +224,7 @@ describe('solo_strokeplay — fewer than 3 players', () => {
   });
 
   it('winner is rank-1', () => {
-    expect(card.winner!.rank).toBe(1);
+    expect(card.winners[0].rank).toBe(1);
   });
 });
 
@@ -254,6 +259,12 @@ describe('solo_strokeplay — tied rank-1', () => {
     // Alice < Bob alphabetically → Alice first
     expect(card.podium[0].name).toBe('Alice');
     expect(card.podium[1].name).toBe('Bob');
+  });
+
+  it('both rank-1 rows are winners (#2318)', () => {
+    expect(card.winners).toHaveLength(2);
+    expect(card.winners.map((r) => r.rank)).toEqual([1, 1]);
+    expect(card.winners.map((r) => r.name)).toEqual(['Alice', 'Bob']);
   });
 });
 
@@ -357,8 +368,8 @@ describe('singles_matchplay — sharer wins', () => {
     expect(card.podium).toHaveLength(0);
   });
 
-  it('winner is null', () => {
-    expect(card.winner).toBeNull();
+  it('winners is empty', () => {
+    expect(card.winners).toEqual([]);
   });
 
   it('sharerStrip is null', () => {
