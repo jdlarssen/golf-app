@@ -2,4 +2,4 @@
 type: fix
 issue: 2318
 ---
-Deler dere førsteplassen, får alle vinnerne gullskiva og «Vinner» på resultatbildet du deler.
+Deler du førsteplassen med noen, får alle vinnerne gullskiva og «VINNER» på resultatbildet.
