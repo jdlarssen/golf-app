@@ -51,9 +51,10 @@ export function GuestPlayerFields({
   const [tee, setTee] = useState<Tee>('M');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  // #2437: clamp on read, not in state, so the card always shows and sends a
-  // category the tee rates — also when the tee has no men's rating, and when
-  // the tee is changed while the card is open (GameForm has both on one page).
+  // #2437: clamp on read, not in state, so the card shows and sends a category
+  // the current tee rates, also when the tee has no men's rating or is changed
+  // while the card is open (GameForm has both on one page). A tee changed
+  // while the request runs is caught by the clamp in `addGuestPlayer`.
   const avail = state.teeGenderAvailability;
   const teeShown = clampGenderToTee(tee, avail);
 
