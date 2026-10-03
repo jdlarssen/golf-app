@@ -3,13 +3,13 @@ import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { expectAffected } from '@/lib/supabase/affectedRows';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
+import { extendAndMailInvitation } from '@/lib/games/extendAndMailInvitation';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked } from '@/lib/games/status';
@@ -82,10 +82,21 @@ export type InviteRefusal =
  * (ingen mail — de er i appen, og `notifyInvitedToGame` fyrte). Er spillet et
  * utkast, kommer varselet først når det publiseres (#2445).
  * `sent` = `invitations`-raden finnes og Resend-mailen gikk ut.
+ * `held` = `invitations`-raden finnes (ny, eller med forlenget frist), men
+ * spillet er et utkast: e-posten går ut når det publiseres
+ * (`sendHeldGameInvites`, #2445).
  */
 export type InviteOutcome =
-  | { ok: true; kind: 'added' | 'sent'; email: string }
+  | { ok: true; kind: 'added' | 'sent' | 'held'; email: string }
   | { ok: false; reason: InviteRefusal };
+
+/**
+ * Avsendernavnet i en spill-invitasjon: arrangørens navn, ellers rollen.
+ * Ett hjem for kjernen og `sendHeldGameInvites` (#2445).
+ */
+export function inviteMailSenderName(name: string | null, isAdmin: boolean): string {
+  return name?.trim() || (isAdmin ? 'Admin' : 'En arrangør');
+}
 
 /**
  * Hvorfor «legg til en eksisterende spiller» ble avvist. Et delsett av
@@ -125,6 +136,9 @@ export { normalizeInviteEmail };
  * Idempotent begge veier: en duplikat `game_players`-rad svelges uten ny
  * notify, og en åpen invitasjon for samme (adresse, spill) får fristen forlenget
  * og mailen sendt på nytt i stedet for en ny rad.
+ *
+ * Er spillet et utkast, går ingen mail ut (#2445): raden lagres som før, og
+ * `sendHeldGameInvites` sender den når spillet publiseres (`kind: 'held'`).
  */
 export async function inviteEmailToGameCore(params: {
   client: SupabaseClient<Database>;
@@ -389,7 +403,13 @@ async function inviteUnknownEmail(args: {
   game: GameSnapshot;
 }): Promise<InviteOutcome> {
   const { client, gameId, inviterUserId, inviterName, isAdmin, email, game } = args;
-  const invitedByName = inviterName?.trim() || (isAdmin ? 'Admin' : 'En arrangør');
+  const invitedByName = inviteMailSenderName(inviterName, isAdmin);
+  // #2445 (orchestrator's decision 03.10): a draft holds the e-mail, as it
+  // holds the notices. The row is written, or its deadline extended, as on a
+  // published game, but no mail goes out until the game is published
+  // (sendHeldGameInvites). The invitee would otherwise get the game's name for
+  // a game they cannot open.
+  const held = game.status === 'draft';
 
   // #2358: en ikke-admin gjenbruker bare invitasjoner hen selv har sendt —
   // det RLS gir webben («invitations creator game-invite select», 0092). Ruta
@@ -411,52 +431,35 @@ async function inviteUnknownEmail(args: {
 
   if (existingInvite) {
     // «Send på nytt» means «give this person a fresh chance» (#1381/#1613):
-    // push the deadline out a full TTL BEFORE mailing, so an expired-but-
-    // unaccepted invitation never produces a mail the login gate refuses
-    // (email_is_invited requires expires_at > now(), migration 0100). The
-    // write goes through the admin client: the only invitations UPDATE
-    // policy is «self mark accepted», so a non-admin organiser's user-client
-    // write would silently match 0 rows (AGENTS.md trap 2/3); authz for this
-    // path is the caller's gate.
-    const freshExpiresAt = gameInviteExpiresAtFromNow();
-    try {
-      expectAffected(
-        await getAdminClient()
-          .from('invitations')
-          .update({ expires_at: freshExpiresAt })
-          .eq('id', existingInvite.id)
-          .is('accepted_at', null)
-          .select('id'),
-        'inviteEmailToGameCore.extendExpiry',
-      );
-    } catch (extendError) {
-      // Plain Error on a DB refusal, NoRowsAffectedError when the row was
-      // accepted or deleted between the read and the write. Either way: no
-      // mail without a valid deadline — the organiser gets the error banner.
-      console.error('[inviteToGameCore] expiry extend failed', extendError);
-      return { ok: false, reason: 'invite_failed' };
-    }
-
-    // Re-send the notification mail best-effort so a retry by the organiser
-    // always delivers — covers the case where the original send silently
-    // dropped (Resend error, spam filter, etc.) without the row being rolled
-    // back. Errors here are swallowed: the invitation row already exists and
-    // we don't want to confuse the organiser with a spurious error state.
-    try {
-      await sendInviteNotification({
-        to: email,
-        invitedByName,
-        gameName: game.name,
-        gameMode: game.game_mode,
-        inviteToken: existingInvite.token,
-        expiresAt: freshExpiresAt,
-      });
-    } catch (retryErr) {
-      console.error('[inviteToGameCore] retry mail failed (best-effort)', retryErr);
-    }
+    // the helper pushes the deadline out a full TTL BEFORE mailing, so an
+    // expired-but-unaccepted invitation never produces a mail the login gate
+    // refuses. The write goes through the admin client: the only invitations
+    // UPDATE policy is «self mark accepted», so a non-admin organiser's
+    // user-client write would silently match 0 rows (AGENTS.md trap 2/3);
+    // authz for this path is the caller's gate.
+    //
+    // A failed extension means no mail and the error banner. A failed mail is
+    // best-effort here: the row exists, and a spurious error would only
+    // confuse the organiser. On a draft only the deadline moves (#2445).
+    const outcome = await extendAndMailInvitation({
+      client: getAdminClient(),
+      invitationId: existingInvite.id,
+      expiresAt: gameInviteExpiresAtFromNow(),
+      mail: held
+        ? null
+        : {
+            to: email,
+            invitedByName,
+            gameName: game.name,
+            gameMode: game.game_mode,
+            inviteToken: existingInvite.token,
+          },
+      label: 'inviteEmailToGameCore.extendExpiry',
+    });
+    if (outcome === 'extend_failed') return { ok: false, reason: 'invite_failed' };
 
     expireGameCache(gameId);
-    return { ok: true, kind: 'sent', email };
+    return { ok: true, kind: outcome === 'extended' ? 'held' : 'sent', email };
   }
 
   const expiresAt = gameInviteExpiresAtFromNow();
@@ -475,6 +478,13 @@ async function inviteUnknownEmail(args: {
   if (insertError) {
     console.error('[inviteToGameCore] invitations insert failed', insertError);
     return { ok: false, reason: 'invite_failed' };
+  }
+
+  // #2445: the row is the held invitation; publishing mails it. No mail, so
+  // no rollback either.
+  if (held) {
+    expireGameCache(gameId);
+    return { ok: true, kind: 'held', email };
   }
 
   try {
