@@ -91,6 +91,45 @@ function playerName(p: Pick<PlayerForHole, 'users'>): string {
 }
 
 /**
+ * #2441: a pending player without a name shows the placeholder instead of an
+ * empty line; one with a name keeps it.
+ */
+function rosterRowName(
+  p: Pick<PlayerForHole, 'users'>,
+  pendingProfile: boolean,
+  pendingName: string,
+): string {
+  return pendingProfile && !p.users?.name?.trim() ? pendingName : playerName(p);
+}
+
+type RowState =
+  | { key: 'stateWithdrawn' | 'stateApproved' | 'stateSubmitted' | 'statePendingProfile' | 'stateNotSubmitted' }
+  | { key: 'stateSubmittedBy'; name: string }
+  | null;
+
+/** The roster row's state line, first match wins; «Trukket» goes first. */
+function rowState(row: {
+  withdrawn: boolean;
+  approved: boolean;
+  submitted: boolean;
+  delivererName: string | null;
+  pendingProfile: boolean;
+  isActive: boolean;
+}): RowState {
+  if (row.withdrawn) return { key: 'stateWithdrawn' };
+  if (row.approved) return { key: 'stateApproved' };
+  if (row.submitted) {
+    return row.delivererName != null
+      ? { key: 'stateSubmittedBy', name: row.delivererName }
+      : { key: 'stateSubmitted' };
+  }
+  // #2441: a published game may wait for a player's profile.
+  if (row.pendingProfile) return { key: 'statePendingProfile' };
+  if (row.isActive) return { key: 'stateNotSubmitted' };
+  return null;
+}
+
+/**
  * Creator/admin roster + approval cockpit for a single game (#429). Gated on
  * requireAdminOrCreator — a game's creator (or an admin) manages their own
  * game; everyone else bounces to `/`.
@@ -375,19 +414,20 @@ export default async function CreatorSpillerePage({
                     ? players.find((q) => q.user_id === p.submitted_by_user_id)
                     : undefined;
                 const pendingProfile = pendingProfileIds.has(p.user_id);
-                const stateLabel = wd
-                  ? t('stateWithdrawn')
-                  : approved
-                    ? t('stateApproved')
-                    : submitted
-                      ? deliverer
-                        ? t('stateSubmittedBy', { name: playerName(deliverer) })
-                        : t('stateSubmitted')
-                      : pendingProfile
-                        ? t('statePendingProfile')
-                        : isActive
-                          ? t('stateNotSubmitted')
-                          : null;
+                const state = rowState({
+                  withdrawn: wd,
+                  approved,
+                  submitted,
+                  delivererName: deliverer ? playerName(deliverer) : null,
+                  pendingProfile,
+                  isActive,
+                });
+                const stateLabel =
+                  state === null
+                    ? null
+                    : state.key === 'stateSubmittedBy'
+                      ? t('stateSubmittedBy', { name: state.name })
+                      : t(state.key);
                 return (
                   <li
                     key={p.user_id}
@@ -396,9 +436,7 @@ export default async function CreatorSpillerePage({
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-2">
                         <p className={`truncate text-sm font-medium ${wd ? 'text-muted line-through' : 'text-text'}`}>
-                          {pendingProfile && !p.users?.name?.trim()
-                            ? t('pendingPlayerName')
-                            : playerName(p)}
+                          {rosterRowName(p, pendingProfile, t('pendingPlayerName'))}
                         </p>
                         {p.users?.is_guest && <GuestBadge className="shrink-0" />}
                       </div>

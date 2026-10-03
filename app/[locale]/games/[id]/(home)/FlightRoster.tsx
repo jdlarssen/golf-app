@@ -108,7 +108,8 @@ export async function FlightRoster({
                 : 'bg-surface text-text border border-border'
             }`}
           >
-            {nameInitials(p.name)}
+            {/* A nameless pending row gets «?», like the wizard's picker. */}
+            {nameInitials(p.showFullName ? null : p.name)}
           </span>
           <span
             className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}

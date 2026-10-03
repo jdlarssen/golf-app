@@ -38,8 +38,9 @@ export type NotifyRosterInvitesResult =
  * er arrangøren, ikke er gjest og ikke alt har fått et `invite`-varsel for
  * runden.
  *
- * Gjestene (#1009) finnes med `findGuestIds`, den samme som webbens
- * opprett-løkke bruker, så regelen «gjester varsles ikke» har ett hjem. Ikke en
+ * Gjestene (#1009) finnes med `findGuestIds`, den samme som opprett- og
+ * edit-actionene bruker til rosteret, så regelen «gjester varsles ikke» har
+ * ett hjem. Ikke en
  * innebygd `users(is_guest)`-select: `game_players` har tre FK-er til `users`,
  * og da er den tvetydig.
  *

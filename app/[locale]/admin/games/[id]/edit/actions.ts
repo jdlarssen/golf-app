@@ -368,7 +368,7 @@ async function updateGameInternal(
   }
 
   // A scheduled game: best-effort notify for players who are NEW on the roster
-  // (inserted by this save). The organiser is skipped; players who stayed got
+  // (inserted by this save). The caller is skipped; players who stayed got
   // their notice when they were first added or when the game was published.
   // Not notifyRosterInvites: it would also notify players who signed up
   // through the link. Promise.allSettled keeps one failed notify from
