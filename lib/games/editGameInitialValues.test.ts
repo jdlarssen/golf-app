@@ -98,16 +98,16 @@ describe('buildEditFormInitialValues', () => {
 
   it.each<[string, Partial<EditGameRow>, string | undefined]>([
     ['klubb, invite_only, ingen cup', { group_id: 'club-1' }, 'club-1'],
-    ['ingen klubb', { group_id: null }, undefined],
-    ['klubb-cup-match', { group_id: 'club-1', tournament_id: 'cup-1' }, undefined],
-    ['eldre klubbspill med open', { group_id: 'club-1', registration_mode: 'open' }, undefined],
+    ['(vakt) ingen klubb', { group_id: null }, undefined],
+    ['(vakt) klubb-cup-match', { group_id: 'club-1', tournament_id: 'cup-1' }, undefined],
+    ['(vakt) eldre klubbspill med open', { group_id: 'club-1', registration_mode: 'open' }, undefined],
   ])('%s → group_id %s', (_label, overrides, expected) => {
     const values = buildEditFormInitialValues(row(stableford, overrides), []);
     expect(values.group_id).toBe(expected);
     expect(values.registration_mode).toBe(overrides.registration_mode ?? 'invite_only');
   });
 
-  it('buildEditInitialValues gir fortsatt aldri group_id (revansjen arver ikke klubben)', () => {
+  it('(vakt) buildEditInitialValues gir fortsatt aldri group_id (revansjen arver ikke klubben)', () => {
     const values = buildEditInitialValues(row(stableford, { group_id: 'club-1' }), []);
     expect(values.group_id).toBeUndefined();
   });

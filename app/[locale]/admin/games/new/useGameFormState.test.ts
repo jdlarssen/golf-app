@@ -946,7 +946,7 @@ describe('useGameFormState — klubb-turnering uten spillere (#2433)', () => {
     expect(result.current.canPublish).toBe(true);
   });
 
-  it('klubb med lag-påmelding krever fortsatt spillere', () => {
+  it('(vakt) klubb med lag-påmelding krever fortsatt spillere', () => {
     const { result } = setupEmptyForm({ intent: 'klubb', mode: 'texas_scramble' });
     act(() => {
       result.current.setRegistrationType('team');
@@ -956,7 +956,7 @@ describe('useGameFormState — klubb-turnering uten spillere (#2433)', () => {
     expect(result.current.missingForPublishCodes).toContain('players');
   });
 
-  it('kompis med 0 spillere krever fortsatt spillere', () => {
+  it('(vakt) kompis med 0 spillere krever fortsatt spillere', () => {
     const { result } = setupEmptyForm({ intent: 'kompis', mode: 'stableford' });
     expect(result.current.playersStepOptional).toBe(false);
     expect(result.current.canPublish).toBe(false);
