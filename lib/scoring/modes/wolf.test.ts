@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { compute } from './wolf';
+import {
+  wolfPayout,
+  wolfStakeForHole,
+  type WolfPayout,
+} from '../../wolf/wolfPayout';
 import type {
   ScoringContext,
   ScoringHole,
   ScoringPlayer,
   ScoringHoleScore,
+  WolfChoice,
   WolfHoleChoice,
   GameModeConfig,
 } from './types';
@@ -1035,5 +1041,92 @@ describe('wolf — 5 spillere (#465)', () => {
     );
     // wolf-side wins → +2 til p1, p2. Motstandere uendret.
     expect(totalsByPlayer(result)).toEqual({ p1: 2, p2: 2, p3: 0, p4: 0, p5: 0 });
+  });
+});
+
+// -----------------------------------------------------------------------------
+// #2313: Wolf-valget viser tallene fra `lib/wolf/wolfPayout.ts`, mens motoren
+// regner sine egne i `buildHoleRow`. Regelen har altså to hjem (felle 4), og
+// denne blokken holder dem like: etter delte hull skal valget love nøyaktig
+// det tavla gir.
+// -----------------------------------------------------------------------------
+
+describe('wolf — gevinsten er enig med wolfPayout (#2313)', () => {
+  const TIED_HOLE_1 = holeScores(1, { p1: 4, p2: 4, p3: 4, p4: 4 });
+  const HOLE_1_CHOICE: WolfHoleChoice = {
+    holeNumber: 1,
+    wolfUserId: 'p1',
+    choice: 'lone',
+    partnerUserId: null,
+  };
+
+  it.each<[WolfChoice, string | null, keyof WolfPayout, string[]]>([
+    ['partner', 'p3', 'partnerEach', ['p2', 'p3']],
+    ['lone', null, 'lone', ['p2']],
+    ['blind', null, 'blind', ['p2']],
+  ])(
+    '%s etter ett delt hull: innsats 2, og vinnerne får wolfPayout(4, 2)',
+    (choice, partnerUserId, field, winners) => {
+      const result = compute(
+        makeCtx({
+          scoring: 'gross',
+          scores: [
+            ...TIED_HOLE_1,
+            ...holeScores(2, { p1: 5, p2: 3, p3: 4, p4: 5 }),
+          ],
+          wolfChoices: [
+            HOLE_1_CHOICE,
+            { holeNumber: 2, wolfUserId: 'p2', choice, partnerUserId },
+          ],
+        }),
+      );
+      const hole2 = result.holes[1];
+      expect(hole2.outcome).toBe('wolf_side_wins');
+      expect(hole2.stake).toBe(2);
+      expect(wolfStakeForHole(result.holes, 2)).toBe(2);
+      const promised = wolfPayout(4, wolfStakeForHole(result.holes, 2))[field];
+      expect(hole2.pointsByPlayer).toEqual(
+        Object.fromEntries(winners.map((id) => [id, promised])),
+      );
+    },
+  );
+
+  it('to delte hull på rad: innsats 3, og lone gir wolfPayout(4, 3).lone', () => {
+    const result = compute(
+      makeCtx({
+        scoring: 'gross',
+        scores: [
+          ...TIED_HOLE_1,
+          ...holeScores(2, { p1: 4, p2: 4, p3: 4, p4: 4 }),
+          ...holeScores(3, { p1: 5, p2: 5, p3: 3, p4: 5 }),
+        ],
+        wolfChoices: [
+          HOLE_1_CHOICE,
+          { holeNumber: 2, wolfUserId: 'p2', choice: 'partner', partnerUserId: 'p1' },
+          { holeNumber: 3, wolfUserId: 'p3', choice: 'lone', partnerUserId: null },
+        ],
+      }),
+    );
+    expect(wolfStakeForHole(result.holes, 3)).toBe(3);
+    expect(result.holes[2].pointsByPlayer).toEqual({ p3: wolfPayout(4, 3).lone });
+  });
+
+  it('n=5 etter ett delt hull: blind gir wolfPayout(5, 2).blind', () => {
+    const result = compute(
+      makeCtx({
+        players: playersN(5),
+        scoring: 'gross',
+        scores: [
+          ...holeScores(1, { p1: 4, p2: 4, p3: 4, p4: 4, p5: 4 }),
+          ...holeScores(2, { p1: 5, p2: 3, p3: 4, p4: 5, p5: 5 }),
+        ],
+        wolfChoices: [
+          HOLE_1_CHOICE,
+          { holeNumber: 2, wolfUserId: 'p2', choice: 'blind', partnerUserId: null },
+        ],
+      }),
+    );
+    expect(wolfStakeForHole(result.holes, 2)).toBe(2);
+    expect(result.holes[1].pointsByPlayer).toEqual({ p2: wolfPayout(5, 2).blind });
   });
 });
