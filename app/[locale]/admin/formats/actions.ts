@@ -1,12 +1,12 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
 import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { recordFormatMappingChange } from '@/lib/formats/audit';
+import { expireFormatMappingCache } from '@/lib/formats/expireFormatMappingCache';
 import type { MappingIntent } from '@/lib/formats/getAllFormatsWithMappings';
 
 const REDIRECT_BASE = '/admin/formats';
@@ -108,7 +108,7 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
     });
   }
 
-  revalidateTag('format-mapping', 'max');
+  expireFormatMappingCache();
   redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
@@ -211,7 +211,7 @@ export async function togglePrimary(formData: FormData): Promise<void> {
     });
   }
 
-  revalidateTag('format-mapping', 'max');
+  expireFormatMappingCache();
   redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
@@ -259,7 +259,7 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
     after: { is_cup_eligible: next },
   });
 
-  revalidateTag('format-mapping', 'max');
+  expireFormatMappingCache();
   redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
@@ -309,6 +309,6 @@ export async function toggleActive(formData: FormData): Promise<void> {
     after: { is_active: next },
   });
 
-  revalidateTag('format-mapping', 'max');
+  expireFormatMappingCache();
   redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
