@@ -97,7 +97,7 @@ export default async function KlubbListePage() {
               email: (chunks) => (
                 <a
                   href="mailto:klubb@tornygolf.no"
-                  className="font-medium text-primary underline underline-offset-2"
+                  className="tap-extend font-medium text-primary underline underline-offset-2 [--tap-extend:-14px_0]"
                 >
                   {chunks}
                 </a>
@@ -111,7 +111,7 @@ export default async function KlubbListePage() {
             email: (chunks) => (
               <a
                 href="mailto:klubb@tornygolf.no"
-                className="font-medium text-primary underline underline-offset-2"
+                className="tap-extend font-medium text-primary underline underline-offset-2 [--tap-extend:-14px_0]"
               >
                 {chunks}
               </a>

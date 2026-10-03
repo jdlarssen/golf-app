@@ -148,7 +148,7 @@ export default async function CupListPage({
                       ? '/admin/games/new?intent=cup'
                       : '/opprett-spill?intent=cup'
                   }
-                  className="text-text underline hover:no-underline"
+                  className="tap-extend text-text underline hover:no-underline [--tap-extend:-14px_0]"
                 >
                   {chunks}
                 </SmartLink>

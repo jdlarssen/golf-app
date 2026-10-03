@@ -187,7 +187,7 @@ export function CupParticipantsList({
             <p className="text-sm text-muted mb-2">{t('emptyCandidates')}</p>
             <SmartLink
               href={emptyCandidatesHref}
-              className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-12px_-8px]"
+              className="tap-extend text-sm text-text underline hover:no-underline [--tap-extend:-14px_-8px]"
             >
               {t(emptyCandidatesLinkKey)}
             </SmartLink>
