@@ -60,6 +60,15 @@ vi.mock('@/lib/notifications/notifyInvitedToGame', () => ({
     notifyInvitedToGameMock(...args),
 }));
 
+// #2445: publishing a draft notifies the roster through notifyRosterInvites
+// (who gets the notice is tested there); here only when the action calls it.
+const notifyRosterInvitesMock = vi.fn<
+  (...args: unknown[]) => Promise<{ ok: true; invited: number } | { ok: false; reason: string }>
+>(async () => ({ ok: true, invited: 0 }));
+vi.mock('@/lib/games/notifyRosterInvites', () => ({
+  notifyRosterInvites: (...args: unknown[]) => notifyRosterInvitesMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -523,6 +532,8 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
       (c) => (c[0] as { recipientUserId: string }).recipientUserId,
     );
     expect(calledIds.sort()).toEqual(['u4', 'u5', 'u6', 'u7']);
+    // #2445: a scheduled game notifies only the new rows, never the roster.
+    expect(notifyRosterInvitesMock).not.toHaveBeenCalled();
   });
 
   it('roster uendret: ingen notify fyres', async () => {
@@ -581,6 +592,103 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('invite-notify når et utkast publiseres (#2445)', () => {
+  // A draft notified nobody when it was saved, so publishing sends the whole
+  // roster its notice once — including the players who stood on the draft.
+  function draftFixture(extra: { data: unknown; error: unknown }[] = []) {
+    return buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // loadRole
+      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
+      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      ...extra,
+    ]);
+  }
+  const insertU4toU7 = {
+    data: [4, 5, 6, 7].map((i) => ({ user_id: `u${i}` })),
+    error: null,
+  };
+
+  it('publish kaller notifyRosterInvites én gang, og notifyInvitedToGame aldri', async () => {
+    supabaseMock = draftFixture([insertU4toU7]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
+    expect(notifyRosterInvitesMock).toHaveBeenCalledWith({
+      gameId: 'game-1',
+      inviterUserId: 'admin-1',
+    });
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+  });
+
+  it('save_draft med nye spillere varsler ingen', async () => {
+    supabaseMock = draftFixture([insertU4toU7]);
+    signIn('admin-1');
+
+    const { saveDraftAction } = await import('./actions');
+    await expect(
+      saveDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'game_players' && c.method === 'insert',
+      ),
+    ).toBe(true);
+    expect(notifyRosterInvitesMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=updated');
+  });
+
+  it('publish der rosterskrivingen feiler: varslene går likevel, så db_players', async () => {
+    // games.update (draft → scheduled) has committed. The next save runs as
+    // update_scheduled and notifies only its own inserts, so this is the
+    // last chance for the draft's players to hear about the game.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = draftFixture([
+      { data: null, error: { message: 'insert boom' } }, // insert u4..u7 FAILS
+      { data: null, error: null }, // compensation delete
+    ]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players&step=5');
+    consoleError.mockRestore();
+  });
+
+  it('notifyRosterInvites som kaster stopper ikke publiseringen', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyRosterInvitesMock.mockRejectedValueOnce(new Error('boom'));
+    supabaseMock = draftFixture([insertU4toU7]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyRosterInvitesMock).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith(
+      '[updateGameInternal] roster invites failed',
+      expect.objectContaining({ gameId: 'game-1' }),
+    );
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    consoleError.mockRestore();
   });
 });
 

@@ -80,7 +80,7 @@ describe('notifyInvitedToGame', () => {
 
   it('inviter mangler navn: bruker maskert e-post i invited_by_name (#2271)', async () => {
     gameMock.mockResolvedValueOnce({
-      data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft' },
+      data: { id: GAME_ID, name: 'Vinter-cup', status: 'scheduled' },
       error: null,
     });
     userMock.mockResolvedValueOnce({
@@ -102,6 +102,32 @@ describe('notifyInvitedToGame', () => {
         }),
       }),
     );
+  });
+
+  // #2445: et utkast varsler ingen; spillerne får beskjed når det publiseres.
+  it.each([
+    ['draft', 0],
+    ['finished', 0],
+    ['scheduled', 1],
+    ['active', 1],
+  ] as const)('status %s → %i varsel', async (status, expected) => {
+    gameMock.mockResolvedValueOnce({
+      data: { id: GAME_ID, name: 'Vinter-cup', status },
+      error: null,
+    });
+    userMock.mockResolvedValueOnce({
+      data: { id: INVITER_ID, name: 'Jørgen', email: 'j@example.com' },
+      error: null,
+    });
+
+    const { notifyInvitedToGame } = await import('./notifyInvitedToGame');
+    await notifyInvitedToGame({
+      recipientUserId: RECIPIENT_ID,
+      gameId: GAME_ID,
+      inviterUserId: INVITER_ID,
+    });
+
+    expect(notifyMock).toHaveBeenCalledTimes(expected);
   });
 
   it('finished-spill: hopper over notify (varsel er meningsløst)', async () => {

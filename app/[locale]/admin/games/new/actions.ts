@@ -16,7 +16,7 @@ import type { GameValidationErrorCode } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { isMatchplayFamily } from '@/lib/scoring/modes/types';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
-import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import { notifyRosterInvites } from '@/lib/games/notifyRosterInvites';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { stampNewGameModeConfig } from '@/lib/games/modeConfigEdit';
@@ -354,26 +354,23 @@ async function createGameInternal(
     return { error: 'db_players' };
   }
 
-  // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter
-  // selv — de vet allerede de opprettet spillet). Promise.allSettled så én
-  // feilet notify ikke ruller back game-creation. notifyInvitedToGame
-  // swallow-er sine egne feil, men vi wrapper inn allSettled for defence-
-  // in-depth ved eventuelle endringer i helperen.
-  // #1009: gjester varsles ikke — de har ingen innboks å lese varselet i, og
-  // plassholder-adressen skal aldri få mail.
-  const newPlayerIds = rows
-    .map((r) => r.user_id)
-    .filter((id) => id !== userId && !guestIds.has(id));
-  if (newPlayerIds.length > 0) {
-    await Promise.allSettled(
-      newPlayerIds.map((recipientUserId) =>
-        notifyInvitedToGame({
-          recipientUserId,
+  // #2445: a draft notifies nobody; publishing sends the roster its `invite`
+  // notice. Who gets one (not the caller, not the organiser, no guests, no
+  // withdrawn players, nobody already invited) lives in notifyRosterInvites.
+  // Best-effort: it throws on a DB error, and neither that nor a refusal ever
+  // stops the publish.
+  if (mode === 'publish') {
+    try {
+      const notified = await notifyRosterInvites({ gameId: game.id, inviterUserId: userId });
+      if (!notified.ok) {
+        console.error('[createGameInternal] roster invites failed', {
           gameId: game.id,
-          inviterUserId: userId,
-        }),
-      ),
-    );
+          reason: notified.reason,
+        });
+      }
+    } catch (error) {
+      console.error('[createGameInternal] roster invites failed', { gameId: game.id, error });
+    }
   }
 
   // #2321: the addresses from the wizard's «Inviter på e-post» go out now

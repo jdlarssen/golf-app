@@ -9,14 +9,16 @@ import { displayNameForOthers } from '@/lib/users/displayName';
  * Brukes blant annet fra:
  *  1. Picker-add (`addExistingPlayerToGameCore`): webbens «Inviter spillere»
  *     og appens «Legg til spiller» (umiddelbar add).
- *  2. Backfill i `/admin/games/new` og edit-flyten (for hver ny spiller).
+ *  2. Edit-flyten for et planlagt spill (for hver ny spiller).
  *  3. Deferred etter OTP-verify når en ukjent e-post aksepterer en
  *     game-scoped invitasjon.
- *  4. `notifyRosterInvites`, etter at appen har publisert en runde (#2215).
+ *  4. `notifyRosterInvites`, når et spill publiseres: fra appen (#2215) og fra
+ *     webbens opprett- og edit-flyt (#2445).
  *
  * Henter game-navn + inviter-navn via admin-client (server-only context,
  * post-auth verifisert hos caller). Hopper over varselet hvis spillet er
- * `finished` — å varsle om et avsluttet spill ville bare være forvirrende.
+ * `draft` (#2445: varselet kommer ved publisering) eller `finished` — å
+ * varsle om et avsluttet spill ville bare være forvirrende.
  *
  * Feiler stille: all DB-feil eller notify-rejection blir loggført med
  * `[notifyInvitedToGame]`-prefix og swallow-et. Caller skal alltid kunne
@@ -41,12 +43,13 @@ export async function notifyInvitedToGame(opts: {
     return;
   }
 
-  // A finished round never notifies: the notification would land in an inbox
-  // with no next step for the player. Defensive: every caller only notifies
-  // before the round starts. verifyCode skips active and finished rounds since
-  // #2212. The guard stays so a new caller cannot send a notification the
-  // player cannot act on.
-  if (game.status === 'finished') {
+  // A draft never notifies (#2445): the players hear about the game once, when
+  // it is published (`notifyRosterInvites`). A finished round never notifies
+  // either: the notification would land in an inbox with no next step for the
+  // player. Every caller only notifies before the round starts, and
+  // verifyCode skips active and finished rounds since #2212. The guard stays
+  // so a new caller cannot send a notification the player cannot act on.
+  if (game.status === 'draft' || game.status === 'finished') {
     return;
   }
 

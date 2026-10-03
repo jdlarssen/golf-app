@@ -79,7 +79,8 @@ export type InviteRefusal =
 
 /**
  * `added` = e-posten tilhørte en registrert bruker, som nå står på rosteret
- * (ingen mail — de er i appen, og `notifyInvitedToGame` fyrte).
+ * (ingen mail — de er i appen, og `notifyInvitedToGame` fyrte). Er spillet et
+ * utkast, kommer varselet først når det publiseres (#2445).
  * `sent` = `invitations`-raden finnes og Resend-mailen gikk ut.
  */
 export type InviteOutcome =

@@ -5,13 +5,15 @@ import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked, type GameStatus } from '@/lib/games/status';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 
-// `invite`-varsel til rosteret etter at appen har publisert en runde (#2215).
+// `invite`-varsel til rosteret når en runde publiseres (#2215, #2445).
 //
 // Appen oppretter runden selv under RLS, med kompensering (#737), og den
 // flyttes ikke. Det appen ikke kan, er å varsle: `notify()` skriver med
-// service-role. Webbens opprett-løkke (`admin/games/new/actions.ts`) varsler
-// hver ny spiller i samme server-action; appen spør i stedet
-// `POST /api/games/[id]/invite-roster` når innsettingen er ferdig.
+// service-role. Appen spør derfor `POST /api/games/[id]/invite-roster` når
+// innsettingen er ferdig. Webben kaller modulen direkte når et spill
+// publiseres, fra opprett-actionen og fra edit-actionen (et utkast som
+// publiseres). Et utkast varsler ingen (`notifyInvitedToGame`), så det er her
+// spillerne fra utkastet får sitt ene varsel.
 //
 // **Idempotent på varselet, ikke på kallet.** En spiller som alt har et
 // `invite`-varsel for runden, hoppes over. Et nytt forsøk etter et nettbrudd gir
@@ -22,7 +24,10 @@ import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 // **Authz ligger hos kalleren.** Modulen leser og varsler med admin-klienten og
 // spør aldri hvem som ringer. Ruta gater med `authenticatedUserId` +
 // `gameOrganiserAccess` før den kaller hit, og `inviterUserId` må være den ekte
-// kalleren: det er navnet i varselet og den som aldri varsles selv.
+// kalleren: det er navnet i varselet og den som aldri varsles selv. Heller
+// ikke arrangøren (`games.created_by`) varsles: en admin som publiserer en
+// annens utkast, skal ikke sende arrangøren «<admin> inviterte deg» til sitt
+// eget spill (#2441).
 
 export type NotifyRosterInvitesResult =
   | { ok: true; invited: number }
@@ -30,7 +35,8 @@ export type NotifyRosterInvitesResult =
 
 /**
  * Send `invite` til hver aktive spiller på rosteret som ikke er kalleren, ikke
- * er gjest og ikke alt har fått et `invite`-varsel for runden.
+ * er arrangøren, ikke er gjest og ikke alt har fått et `invite`-varsel for
+ * runden.
  *
  * Gjestene (#1009) finnes med `findGuestIds`, den samme som webbens
  * opprett-løkke bruker, så regelen «gjester varsles ikke» har ett hjem. Ikke en
@@ -49,9 +55,9 @@ export async function notifyRosterInvites(params: {
 
   const { data: game, error: gameError } = await admin
     .from('games')
-    .select('status')
+    .select('status, created_by')
     .eq('id', gameId)
-    .maybeSingle<{ status: GameStatus }>();
+    .maybeSingle<{ status: GameStatus; created_by: string | null }>();
   if (gameError) throw gameError;
   if (!game) return { ok: false, reason: 'not_found' };
   // Samme lås som «Inviter»: et invite-varsel etter start peker på en runde
@@ -68,7 +74,7 @@ export async function notifyRosterInvites(params: {
 
   const others = (roster ?? [])
     .map((r) => r.user_id)
-    .filter((id) => id !== inviterUserId);
+    .filter((id) => id !== inviterUserId && id !== game.created_by);
   if (others.length === 0) return finish(gameId, 0);
 
   const guestIds = await findGuestIds(others);
