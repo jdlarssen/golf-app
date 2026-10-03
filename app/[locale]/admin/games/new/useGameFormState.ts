@@ -876,6 +876,10 @@ export function useGameFormState({
   // useCallback: den leser state via matchTeamSizeToCount, og bare
   // handleIntentSelect i GameWizard kaller den.
   function setIntent(next: Intent | undefined) {
+    // #2433: a tap on the tile that is already chosen changes nothing. A
+    // resumed club draft can sit on kompis (draftResumePlan's catalog guard),
+    // and clearing its club here would now be saved by the edit action.
+    if (next === intent) return;
     setIntentRaw(next);
     if (next !== 'klubb') setGroupId('');
     else setGroupId((prev) => startClubId({ intent: 'klubb', seeded: prev, clubIds }));
