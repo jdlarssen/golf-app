@@ -587,7 +587,7 @@ describe('buildGameInsertPayload — klubb-turnering uten spillere (#2433)', () 
   it.each([
     ['clubScoped false', { clubScoped: false }],
     ['uten tredje argument', undefined],
-  ] as const)('stableford, 0 spillere, %s → min_players_for_mode', (_label, opts) => {
+  ] as const)('(vakt) stableford, 0 spillere, %s → min_players_for_mode', (_label, opts) => {
     const result = buildGameInsertPayload(
       clubFd({ game_mode: 'stableford' }),
       'publish',
@@ -596,7 +596,7 @@ describe('buildGameInsertPayload — klubb-turnering uten spillere (#2433)', () 
     expect(result.errorCode).toBe('min_players_for_mode');
   });
 
-  it('texas med lag-påmelding, 0 spillere, clubScoped → samme feil som uten klubb', () => {
+  it('(vakt) texas med lag-påmelding, 0 spillere, clubScoped → samme feil som uten klubb', () => {
     const texas = {
       game_mode: 'texas_scramble',
       texas_team_size: '4',
@@ -607,11 +607,11 @@ describe('buildGameInsertPayload — klubb-turnering uten spillere (#2433)', () 
     const withClub = buildGameInsertPayload(clubFd(texas), 'publish', {
       clubScoped: true,
     });
-    expect(withoutClub.errorCode).toBeDefined();
-    expect(withClub.errorCode).toBe(withoutClub.errorCode);
+    expect(withoutClub.errorCode).toBe('min_players_for_mode');
+    expect(withClub.errorCode).toBe('min_players_for_mode');
   });
 
-  it('clubScoped med to like spillere → duplicate_player', () => {
+  it('(vakt) clubScoped med to like spillere → duplicate_player', () => {
     const result = buildGameInsertPayload(
       clubFd({ game_mode: 'stableford', player_0_id: 'dup', player_1_id: 'dup' }),
       'publish',

@@ -116,16 +116,17 @@ describe('rosterOptionalAtPublish (#2433)', () => {
   // A club tournament with individual signup publishes without a roster: the
   // signup page lets club members straight in only when the type is 'solo'.
   // Every other invite_only game still needs its players.
+  // (vakt) locks today's behaviour; the unmarked case proves the fix.
   it.each([
-    ['invite_only', 'solo', true, true],
-    ['invite_only', 'solo', false, false],
-    ['invite_only', 'team', true, false],
-    ['open', 'solo', false, true],
-    ['manual_approval', 'team', false, true],
-    ['open', 'team', true, true],
+    ['invite_only + solo i klubb → valgfri', 'invite_only', 'solo', true, true],
+    ['(vakt) invite_only + solo uten klubb → påkrevd', 'invite_only', 'solo', false, false],
+    ['(vakt) invite_only + lag i klubb → påkrevd', 'invite_only', 'team', true, false],
+    ['(vakt) open + solo uten klubb → valgfri', 'open', 'solo', false, true],
+    ['(vakt) manual_approval + lag uten klubb → valgfri', 'manual_approval', 'team', false, true],
+    ['(vakt) open + lag i klubb → valgfri', 'open', 'team', true, true],
   ] as const)(
-    '%s + %s, clubScoped %s → %s',
-    (registrationMode, registrationType, clubScoped, expected) => {
+    '%s',
+    (_label, registrationMode, registrationType, clubScoped, expected) => {
       expect(
         rosterOptionalAtPublish({
           registrationMode: registrationMode as RegistrationMode,
@@ -141,12 +142,12 @@ describe('isClubTournament (#2433)', () => {
   // A cup match in a club cup carries group_id too (insertCupMatches), so a
   // tournament id makes it a cup match, never a club tournament.
   it.each([
-    ['club-1', null, true],
-    ['club-1', '', true],
-    ['club-1', 'cup-1', false],
-    [null, null, false],
-    ['', '', false],
-  ] as const)('groupId %s, tournamentId %s → %s', (groupId, tournamentId, expected) => {
+    ['klubb uten cup → klubb-turnering', 'club-1', null, true],
+    ['klubb, tom cup-id → klubb-turnering', 'club-1', '', true],
+    ['(vakt) klubb-cup-match → ikke klubb-turnering', 'club-1', 'cup-1', false],
+    ['(vakt) ingen klubb → ikke klubb-turnering', null, null, false],
+    ['(vakt) tomme strenger → ikke klubb-turnering', '', '', false],
+  ] as const)('%s', (_label, groupId, tournamentId, expected) => {
     expect(isClubTournament({ groupId, tournamentId })).toBe(expected);
   });
 });

@@ -875,7 +875,7 @@ describe('klubb-turnering uten spillere (#2433)', () => {
     expect(lastRedirect()).toBe('/admin/games/club-game?status=scheduled');
   });
 
-  it('a group_id the caller is not a member of never unlocks an empty roster', async () => {
+  it('(vakt) a group_id the caller is not a member of never unlocks an empty roster', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: false }, error: null }, // gate
       { data: null, error: null }, // group_members: no row
@@ -889,7 +889,7 @@ describe('klubb-turnering uten spillere (#2433)', () => {
     expect(supabaseMock.__fromCalls.some((c) => c.table === 'games' && c.method === 'insert')).toBe(false);
   });
 
-  it('a valid club with a cup id in the form still needs the roster', async () => {
+  it('(vakt) a valid club with a cup id in the form still needs the roster', async () => {
     supabaseMock = buildSupabaseMock(
       [
         { data: { is_admin: true }, error: null }, // gate

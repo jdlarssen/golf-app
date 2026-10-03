@@ -1892,7 +1892,7 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
     expect(container.querySelector('input[name=registration_mode_input]')).toBeNull();
   });
 
-  it('eldre klubbspill med «Åpen» og «Lag» lagres som før: modusvalget står, og lagret modus sendes', () => {
+  it('(vakt) eldre klubbspill med «Åpen» og «Lag» lagres som før: modusvalget står, og lagret modus sendes', () => {
     const row = editRow({
       game_mode: 'texas_scramble',
       mode_config: { kind: 'texas_scramble', team_size: 4, teams_count: 1, team_handicap_pct: 10 },
