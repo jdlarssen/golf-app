@@ -120,6 +120,7 @@ export function PlayersStep({
   candidates,
   failed,
   meId,
+  selfPending,
   mode,
   players,
   teamLayout,
@@ -133,6 +134,12 @@ export function PlayersStep({
   candidates: RosterCandidate[] | null;
   failed: boolean;
   meId: string;
+  /**
+   * Din egen profil mangler navn eller handicap. Leses fra din egen profil:
+   * `roster_candidates` gir aldri kalleren tilbake, så kandidatlista vet det
+   * ikke.
+   */
+  selfPending: boolean;
   mode: AppGameMode;
   players: DraftPlayer[];
   teamLayout: TeamLayout | null;
@@ -152,7 +159,6 @@ export function PlayersStep({
   const atCap = players.length >= cap;
   const fits = rosterFitsMode(mode, players.length);
 
-  const me = (candidates ?? []).find((c) => c.id === meId) ?? null;
   const needle = search.trim().toLowerCase();
   const others = (candidates ?? [])
     .filter((c) => c.id !== meId)
@@ -198,13 +204,12 @@ export function PlayersStep({
 
       <SelectRow
         testID={`create-player-${meId}`}
-        title={me ? displayName(me) : 'Deg'}
+        title="Deg"
         // #1979: din egen rad sa «Du er alltid med» selv når profilen din
-        // manglet navn og handicap — mens hver ANNEN ufullført spiller ble
-        // merket to linjer lenger ned. Publiseringen stoppet så på deg, med en
-        // melding om noen andre. Merkingen står nå på begge.
+        // manglet navn og handicap, mens hver ANNEN ufullført spiller ble
+        // merket to linjer lenger ned. Merkingen står nå på begge.
         subtitle={
-          me?.pending
+          selfPending
             ? 'Du er alltid med. Men du har ikke fullført profilen din ennå.'
             : 'Du er alltid med'
         }

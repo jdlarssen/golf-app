@@ -15,7 +15,11 @@
 // til noen har tatt stilling til om appen skal vise den.
 import source from '../../../../messages/no.json';
 import type { CreateGameFailure } from '../data/createGame';
-import { describeCreateGameFailure, describePendingPlayers } from './createGameCopy';
+import {
+  describeCreateGameFailure,
+  describePendingOthers,
+  PENDING_SELF_NOTE,
+} from './createGameCopy';
 
 const wizardErrors = source.wizard.errors as Record<string, string>;
 
@@ -41,7 +45,6 @@ const FAILURE_MAP = {
   tee_off_in_past: 'tee_off_in_past',
   bad_side_ld_count: 'bad_side_ld_count',
   bad_side_ctp_count: 'bad_side_ctp_count',
-  db_roster: 'db_roster',
   db_game: 'db_game',
   db_players: 'db_players',
   // #1858 og #1882: webbens tekster for disse fem navnga ett format under en
@@ -52,9 +55,6 @@ const FAILURE_MAP = {
   too_many_players_for_mode: 'too_many_players_for_mode',
   bad_flight: 'bad_flight',
   min_players_for_mode: 'min_players_for_mode',
-  // Webben interpolerer en e-postliste i `pending_players`; appen bruker den
-  // generiske varianten (#435). Egen test under.
-  pending_players: 'pending_players_generic',
   not_authenticated: null,
   unsupported_mode: null,
   db_format: null,
@@ -72,7 +72,6 @@ const MIRRORED = (
 
 /** Nøkler under `wizard.errors` appen med vilje IKKE viser. */
 const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
-  pending_players: 'webbens variant med e-postliste; appen viser `pending_players_generic` (#435)',
   tee_missing_rating: 'ingen opprett-kode sender den; start-avslaget med samme navn speiles i rosterCopy',
   db_users: 'ingen kode på web sender den i dag',
   db_tee: 'ingen kode på web sender den i dag',
@@ -84,15 +83,6 @@ const WEB_ONLY: Partial<Record<WizardErrorKey, string>> = {
 describe('paritet med wizard.errors i messages/no.json', () => {
   it.each(MIRRORED)('%s er identisk med kilden («%s»)', (code, webKey) => {
     expect(describeCreateGameFailure(code)).toBe(wizardErrors[webKey]);
-  });
-
-  // Webben interpolerer en e-postliste i `pending_players`; appen bruker den
-  // generiske varianten fordi arrangøren ikke nødvendigvis er admin og
-  // medspilleres adresser ikke skal lekke (#435).
-  it('pending_players bruker den generiske varianten', () => {
-    expect(describeCreateGameFailure('pending_players')).toBe(
-      wizardErrors.pending_players_generic,
-    );
   });
 
   it('hver nøkkel under wizard.errors vises av en kode eller står på WEB_ONLY (#1904)', () => {
@@ -131,36 +121,39 @@ describe('describeCreateGameFailure', () => {
   });
 });
 
-// #1979: RPC-en `incomplete_profile_ids` ekskluderer ikke kalleren, så en
-// arrangør med ufullført profil kom tilbake i sin egen liste — og leste en
-// melding om «noen på spillerlista … De må logge inn». Om seg selv.
-describe('describePendingPlayers', () => {
-  it('snakker til deg når det bare er deg', () => {
-    const text = describePendingPlayers({ selfPending: true, othersPending: false });
-    expect(text).toContain('Profilen din');
-    // Ikke tredjeperson om deg selv.
-    expect(text).not.toContain('De må');
-    expect(text).not.toContain('Noen på spillerlista');
+// #2441 (eierens valg B): en uferdig profil stopper ikke publiseringen, bare
+// starten. Siste steg sier det som merknader. Tekstene er app-egne: webbens
+// `wizard.ready.checklist.pendingProfiles` er et tillegg til spillerraden, ikke
+// en merknad, og sier ikke at runden venter.
+describe('merknadene om uferdige profiler (#2441)', () => {
+  const notes = [PENDING_SELF_NOTE, describePendingOthers(1), describePendingOthers(3)];
+
+  it('snakker til deg om din egen profil', () => {
+    expect(PENDING_SELF_NOTE).toContain('Profilen din');
+    expect(PENDING_SELF_NOTE).toContain('navn eller handicap');
   });
 
-  it('nevner begge når både du og andre mangler', () => {
-    const text = describePendingPlayers({ selfPending: true, othersPending: true });
-    expect(text).toContain('du');
-    expect(text).toContain('andre');
+  it('teller de andre i entall og flertall', () => {
+    expect(describePendingOthers(1)).toMatch(/^1 spiller har /);
+    expect(describePendingOthers(3)).toMatch(/^3 spillere har /);
   });
 
-  it('beholder den gamle setningen når det bare er andre', () => {
-    expect(describePendingPlayers({ selfPending: false, othersPending: true })).toBe(
-      describeCreateGameFailure('pending_players'),
-    );
+  it('sier at runden ikke starter, og ingenting om publisering', () => {
+    for (const note of notes) {
+      expect(note).toMatch(/runden/i);
+      expect(note).not.toMatch(/publiser/i);
+      expect(note).not.toContain('—');
+    }
   });
 
-  it('gir tre ulike setninger — ingen av tilfellene lyder likt', () => {
-    const texts = [
-      describePendingPlayers({ selfPending: true, othersPending: false }),
-      describePendingPlayers({ selfPending: true, othersPending: true }),
-      describePendingPlayers({ selfPending: false, othersPending: true }),
-    ];
-    expect(new Set(texts).size).toBe(3);
+  it('er merknader, ikke feilmeldinger', () => {
+    const failures = new Set(ALL.map(describeCreateGameFailure));
+    for (const note of notes) expect(failures.has(note)).toBe(false);
+  });
+
+  it('er ikke webbens sjekkliste-tillegg', () => {
+    const checklist = (source.wizard.ready.checklist as Record<string, string>)
+      .pendingProfiles;
+    expect(notes).not.toContain(checklist);
   });
 });

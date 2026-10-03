@@ -43,7 +43,8 @@ import { APP_MODE_LABELS, type AppGameMode } from '../lib/appFormats';
 import {
   createFailureBelongsOnWeb,
   describeCreateGameFailure,
-  describePendingPlayers,
+  describePendingOthers,
+  PENDING_SELF_NOTE,
 } from '../lib/createGameCopy';
 import { displayName, formatTeeOff } from '../lib/display';
 import {
@@ -170,7 +171,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   ]);
   const [busy, setBusy] = useState(false);
   /**
-   * Feilen etter et publiseringsforsøk, og hvor veien videre går (#1891, #1979).
+   * Feilen etter et publiseringsforsøk, og hvor veien videre går (#1891).
    *
    * Ett felt og ikke to `useState`: teksten og knappen beskriver SAMME feil, og
    * to tilstander som må settes i takt på fire steder er nettopp der de går ut
@@ -182,7 +183,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
    */
   const [failure, setFailure] = useState<{
     text: string;
-    action: 'web' | 'profile' | null;
+    action: 'web' | null;
   } | null>(null);
 
   const formats = useRemote(fetchFormatCatalog);
@@ -195,6 +196,20 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   const profile = useRemote(
     useCallback(() => fetchOwnProfile(userId), [userId]),
   );
+  // Tilbake fra «Rediger profil» (#2441): `EditProfile` går tilbake med
+  // `goBack()`, så veiviseren står montert og henter ikke av seg selv. Uten ny
+  // henting ville merknaden om din profil stått igjen etter at du fylte den ut.
+  // `addListener` gir avmeldingen tilbake.
+  useEffect(
+    () => navigation.addListener('focus', profile.reload),
+    [navigation, profile.reload],
+  );
+
+  // Din egen profil er ikke fullført (#2441). Leses fra din egen rad:
+  // `roster_candidates` gir aldri kalleren tilbake. Mens profilen hentes, eller
+  // når lesingen feiler, sier vi ikke at noe mangler.
+  const selfPending =
+    profile.data !== null && profile.data.profileCompletedAt === null;
 
   // Den valgte teen, slått opp i den valgte banen. Tee-id-ene er unike, men
   // oppslaget går gjennom banen fordi `courses` bærer dem nøstet.
@@ -338,28 +353,10 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         navigation.replace('GameHome', { gameId: result.gameId });
         return;
       }
-      if (result.error === 'pending_players') {
-        // #1979: serveren sier bare AT noen mangler, ikke hvem. Kandidatlista
-        // vet det — den bærer `pending` for alle, deg selv inkludert — så vi
-        // avgjør her hvem meldingen skal handle om, og om det finnes en knapp.
-        const roster = candidates.data ?? [];
-        const inRound = new Set(picked.map((p) => p.userId));
-        const selfPending = roster.some((c) => c.id === userId && c.pending);
-        const othersPending = roster.some(
-          (c) => c.id !== userId && c.pending && inRound.has(c.id),
-        );
-        setFailure({
-          text: describePendingPlayers({ selfPending, othersPending }),
-          // Knappen bare når det er DIN profil som stopper det. Andres kan du
-          // ikke fylle ut for dem, og en knapp dit ville vært en blindvei til.
-          action: selfPending ? 'profile' : null,
-        });
-      } else {
-        setFailure({
-          text: describeCreateGameFailure(result.error),
-          action: createFailureBelongsOnWeb(result.error) ? 'web' : null,
-        });
-      }
+      setFailure({
+        text: describeCreateGameFailure(result.error),
+        action: createFailureBelongsOnWeb(result.error) ? 'web' : null,
+      });
     } catch {
       setFailure({
         text: 'Fikk ikke opprettet spillet. Sjekk nettet og prøv igjen.',
@@ -369,7 +366,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
     // Bevisst utenfor `finally`: på suksess er skjermen borte, og knappen skal
     // ikke låses opp igjen på vei ut.
     setBusy(false);
-  }, [busy, candidates.data, draft, navigation, picked, userId]);
+  }, [busy, draft, navigation]);
 
   const stepIndex = STEPS.indexOf(step);
   const blocker = stepBlocker(step, gameMode, common.name, courseId, teeBoxId);
@@ -440,6 +437,7 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
           candidates={candidates.data}
           failed={candidates.failed}
           meId={userId}
+          selfPending={selfPending}
           mode={gameMode}
           players={players}
           teamLayout={teamLayout}
@@ -454,13 +452,17 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
       {step === 'summary' && draft && gameMode ? (
         <SummaryStep
           lines={summaryLines(draft, gameMode, courses.data, candidates.data, teeOff)}
-          warnings={summaryWarnings(draft, gameMode)}
+          warnings={summaryWarnings(draft, gameMode, {
+            selfPending,
+            othersPending: othersPendingCount(draft, candidates.data, userId),
+          })}
           error={failure?.text ?? null}
           errorAction={failure?.action ?? null}
-          // #1979: veien ut av «profilen din mangler noe». `EditProfile` ligger
-          // i samme stack, og `returnTo` gjør at Lagre kommer TILBAKE hit i
-          // stedet for å legge profil-rommet oppå veiviseren. Veiviseren står
-          // montert under, så alt du har valgt er der når du er tilbake.
+          // #1979: veien ut av «profilen din mangler noe», nå under merknaden
+          // (#2441). `EditProfile` ligger i samme stack, og `returnTo` gjør at
+          // Lagre kommer TILBAKE hit i stedet for å legge profil-rommet oppå
+          // veiviseren. Veiviseren står montert under, så alt du har valgt er
+          // der når du er tilbake, og fokus-lytteren henter profilen på nytt.
           onEditProfile={() => navigation.navigate('EditProfile', { returnTo: 'CreateGame' })}
           busy={busy}
           canPublish={courseId !== null && teeBoxId !== null && everyoneOnRatedTee}
@@ -613,7 +615,27 @@ function summaryLines(
   ];
 }
 
-function summaryWarnings(draft: GameDraft, mode: AppGameMode): SummaryWarning[] {
+/**
+ * Hvor mange av de andre du har valgt som ikke har fullført profilen (#2441).
+ * Deg selv teller ikke her: din egen profil har sin egen merknad.
+ */
+function othersPendingCount(
+  draft: GameDraft,
+  candidates: RosterCandidate[] | null,
+  userId: string,
+): number {
+  const pending = new Set(
+    (candidates ?? []).filter((c) => c.pending).map((c) => c.id),
+  );
+  return draft.players.filter((p) => p.userId !== userId && pending.has(p.userId))
+    .length;
+}
+
+function summaryWarnings(
+  draft: GameDraft,
+  mode: AppGameMode,
+  profiles: { selfPending: boolean; othersPending: number },
+): SummaryWarning[] {
   const warnings: SummaryWarning[] = [];
 
   if (!rosterFitsMode(mode, draft.players.length)) {
@@ -634,6 +656,18 @@ function summaryWarnings(draft: GameDraft, mode: AppGameMode): SummaryWarning[] 
         text: `${missing} spillere mangler lag og blir ikke med i runden. Gå tilbake og gi dem et lag hvis alle skal spille.`,
       });
     }
+  }
+
+  // #2441 (eierens valg B): uferdige profiler stopper ikke publiseringen, bare
+  // starten. Derfor merknader, og ingen av dem rører `canPublish`.
+  if (profiles.selfPending) {
+    warnings.push({ key: 'pending-self', text: PENDING_SELF_NOTE, action: 'profile' });
+  }
+  if (profiles.othersPending > 0) {
+    warnings.push({
+      key: 'pending-others',
+      text: describePendingOthers(profiles.othersPending),
+    });
   }
 
   return warnings;

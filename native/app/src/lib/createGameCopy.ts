@@ -53,17 +53,10 @@ export function describeCreateGameFailure(error: CreateGameFailure): string {
       return 'Lengste drive kan spilles på 0, 1 eller 2 hull.';
     case 'bad_side_ctp_count':
       return 'Nærmest pinnen kan spilles på 0, 1 eller 2 hull.';
-    case 'db_roster':
-      return 'Klarte ikke å lese spillerlisten fra databasen.';
     case 'db_game':
       return 'Klarte ikke å lagre spillet. Prøv igjen om litt.';
     case 'db_players':
       return 'Klarte ikke å lagre spillerne. Prøv igjen om litt.';
-    // Webbens `pending_players` interpolerer en e-postliste. Appen bruker
-    // `pending_players_generic` — arrangøren er ikke nødvendigvis admin, og
-    // medspilleres adresser skal ikke lekke (#435).
-    case 'pending_players':
-      return 'Noen på spillerlista har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.';
 
     // #1858 og #1882: speilet igjen — webben sluttet å navngi ett format i
     // disse fem.
@@ -130,28 +123,20 @@ export function createFailureBelongsOnWeb(error: CreateGameFailure): boolean {
 export const EDIT_PROFILE_LABEL = PROFILE_TEXT.editRow;
 
 /**
- * Hvem det er som mangler en fullført profil (#1979).
+ * Merknadene om uferdige profiler på siste steg (#2441, eierens valg B).
  *
- * RPC-en `incomplete_profile_ids` ekskluderer ikke kalleren, så arrangøren
- * kommer tilbake i sin egen liste. Meldingen sa likevel alltid «Noen på
- * spillerlista … De må logge inn» — tredjeperson, om deg selv, uten noe å
- * gjøre med det. Tre tilfeller, tre setninger:
- *
- *  - bare deg → si det rett ut; knappen «Rediger profil» hører til her;
- *  - bare andre → som før;
- *  - begge → nevn begge. En setning som bare snakker om deg selv ville flyttet
- *    blindveien ett publiseringsforsøk fram i tid, ikke fjernet den.
+ * En venn uten fullført profil stopper ikke publiseringen. Sperren står ved
+ * start (`startScheduledGameCore`), så dette er merknader, ikke feil. Tekstene
+ * er app-egne: webbens `wizard.ready.checklist.pendingProfiles` er et tillegg
+ * til spillerraden i sjekklista, og den sier ikke at runden venter.
  */
-export function describePendingPlayers(opts: {
-  selfPending: boolean;
-  othersPending: boolean;
-}): string {
-  const { selfPending, othersPending } = opts;
-  if (selfPending && othersPending) {
-    return 'Både du og noen andre på lista mangler navn eller handicap. Fyll ut din, og be de andre gjøre det samme.';
+export const PENDING_SELF_NOTE =
+  'Profilen din mangler navn eller handicap. Fyll det ut før runden starter.';
+
+/** Merknaden for de andre du har valgt, når minst én av dem venter. */
+export function describePendingOthers(count: number): string {
+  if (count === 1) {
+    return '1 spiller har ikke fullført profilen sin ennå. Runden kan ikke starte før det er gjort.';
   }
-  if (selfPending) {
-    return 'Profilen din mangler navn eller handicap. Fyll det ut, så kan du publisere runden.';
-  }
-  return describeCreateGameFailure('pending_players');
+  return `${count} spillere har ikke fullført profilen sin ennå. Runden kan ikke starte før alle har fylt inn navn og handicap.`;
 }

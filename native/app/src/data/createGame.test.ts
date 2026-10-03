@@ -77,8 +77,6 @@ describe('publishGame', () => {
 
   beforeEach(() => {
     mocks().currentDeviceUserId.mockResolvedValue(ME);
-    // Ingen på lista mangler profil.
-    mocks().supabase.rpc.mockResolvedValue({ data: [], error: null });
     // Invitasjonsvarslene etter en vellykket publisering (#2215).
     respondWith(200, { invited: 1 });
   });
@@ -215,6 +213,8 @@ describe('publishGame', () => {
       expect(typeof row.scheduled_tee_off_at).toBe('string');
       // Uten `.select()` finnes det ikke noe radantall å sjekke (trap 2).
       expect(stepArgs(gameInsert, 'select')).toEqual([['id']]);
+      // Profilsperren står ved start (#2441), ikke her.
+      expect(mocks().supabase.rpc).not.toHaveBeenCalled();
     });
 
     // #463: din egen rad er bekreftet, de andres er «Ikke bekreftet» til de
@@ -422,29 +422,31 @@ describe('publishGame', () => {
       ).toEqual({ ok: false, error: 'bad_side_ld_count' });
     });
 
-    it('blokkerer publisering når noen mangler profil', async () => {
-      const { queryStub, routeFrom, supabase } = mocks();
+    // #2441 (eierens valg B): en venn uten fullført profil stopper ikke
+    // publiseringen. Sperren står ved start (`startScheduledGameCore`).
+    it('publiserer med en venn som mangler profil, sperren er ved start (#2441)', async () => {
+      const { queryStub, routeFrom, stepArgs, supabase } = mocks();
+      // Svarte noen på profil-RPC-en, ville den sagt at vennen venter.
       supabase.rpc.mockResolvedValue({ data: [{ id: MATE }], error: null });
-      routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
+      const gameInsert = queryStub(GAME_ROW);
+      const playersInsert = queryStub(PLAYER_ROWS);
+      routeFrom({
+        formats: [queryStub(ACTIVE_FORMAT)],
+        games: [gameInsert],
+        game_players: [playersInsert],
+      });
 
       expect(await createGame().publishGame(draft())).toEqual({
-        ok: false,
-        error: 'pending_players',
+        ok: true,
+        gameId: GAME_ID,
       });
-      expect(supabase.rpc).toHaveBeenCalledWith('incomplete_profile_ids', {
-        p_user_ids: [ME, MATE],
-      });
-    });
-
-    it('skiller en feilet roster-sjekk fra en uferdig profil', async () => {
-      const { queryStub, routeFrom, supabase } = mocks();
-      supabase.rpc.mockResolvedValue({ data: null, error: { message: 'nede' } });
-      routeFrom({ formats: [queryStub(ACTIVE_FORMAT)] });
-
-      expect(await createGame().publishGame(draft())).toEqual({
-        ok: false,
-        error: 'db_roster',
-      });
+      const row = stepArgs(gameInsert, 'insert')[0]![0] as Record<string, unknown>;
+      expect(row.status).toBe('scheduled');
+      const players = stepArgs(playersInsert, 'insert')[0]![0] as Array<{
+        user_id: string;
+      }>;
+      expect(players.map((p) => p.user_id)).toContain(MATE);
+      expect(supabase.rpc).not.toHaveBeenCalled();
     });
   });
 

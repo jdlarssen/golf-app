@@ -103,8 +103,8 @@ function readCoreReason(value: unknown): CoreReason | undefined {
  * En 409 som avslag, med rotasjons-feltene når de er der og er lesbare.
  *
  * `pending_players` bærer ingen liste (#2207): kjernen svarer med id-er, og de
- * som mangler profil har uansett ikke navn ennå. Teksten er den generelle, som
- * ved publisering.
+ * som mangler profil har uansett ikke navn ennå. Teksten er appens egen
+ * (`describeStartRefusal`); publiseringen har ingen profilsperre (#2441).
  */
 function refusalFromConflict(body: Record<string, unknown>): StartRoundRefusal {
   const { rotationMode, rotationActiveCount } = body;

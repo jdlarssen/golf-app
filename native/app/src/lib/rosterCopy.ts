@@ -307,8 +307,9 @@ export function describeRosterFailure(
  * To av dem avviker fra webbens `admin.game.errors.*`:
  *  - `pending_players` navngir ingen (#2207). Webbens admin-banner lister
  *    adressene; appens arrangør er ikke nødvendigvis admin, og de som mangler
- *    profil har uansett ikke navn ennå. Setningen er publiserings-teksten
- *    (`wizard.errors.pending_players_generic`) med «startes».
+ *    profil har uansett ikke navn ennå. Setningen er appens egen: publiseringen
+ *    har ingen profilsperre lenger (#2441), og webbens spillside-banner trenger
+ *    et antall som 409-svaret ikke har.
  *  - `rotation_player_count` (#969) har én setning per format, med det faktiske
  *    antallet påmeldte. Uten `rotationMode` finnes ingen riktig setning, og da
  *    står den generelle igjen — bedre enn å gjette på wolf.
@@ -333,8 +334,8 @@ export function describeStartRefusal(refusal: StartRoundRefusal): string {
       return 'Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.';
     case 'no_players':
       return 'Ingen spillere på dette spillet.';
-    // #2207: ingen navneliste — samme generelle tekst som ved publisering
-    // (`createGameCopy.ts`), bare med «startes».
+    // #2207: ingen navneliste. Appens egen setning; profilsperren står bare
+    // her ved start (#2441).
     case 'pending_players':
       return 'Noen på spillerlista har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan startes.';
     case 'incomplete_sides':

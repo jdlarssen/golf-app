@@ -32,6 +32,12 @@ export interface SummaryLine {
 export interface SummaryWarning {
   key: string;
   text: string;
+  /**
+   * `'profile'`: din egen profil mangler navn eller handicap (#1979, #2441).
+   * «Rediger profil» står rett under merknaden. Profilen stopper ikke
+   * publiseringen, bare starten, så knappen hører til merknaden og ikke feilen.
+   */
+  action?: 'profile';
 }
 
 export function SummaryStep({
@@ -51,16 +57,13 @@ export function SummaryStep({
    * Hvor veien videre går, hvis den finnes.
    *
    *  - `'web'`     — formatet finnes, men appen har ikke flaten (#1891).
-   *  - `'profile'` — din egen profil mangler navn eller handicap (#1979).
    *  - `null`      — feilen løses her, eller ikke i det hele tatt.
    *
-   * Skjermen avgjør hvilken (`createFailureBelongsOnWeb`, `pending_players`);
-   * her rendres bare knappen, så to steder ikke kan bli uenige om hvilke koder
-   * det gjelder. Én diskriminant, ikke to flagg: to boolske felt som må være
-   * usanne sammen er der de går ut av takt.
+   * Skjermen avgjør hvilken (`createFailureBelongsOnWeb`); her rendres bare
+   * knappen, så to steder ikke kan bli uenige om hvilke koder det gjelder.
    */
-  errorAction?: 'web' | 'profile' | null;
-  /** Kalles av `'profile'`-knappen. Skjermen eier navigasjonen. */
+  errorAction?: 'web' | null;
+  /** Kalles av merknadens `'profile'`-knapp. Skjermen eier navigasjonen. */
   onEditProfile?: () => void;
   busy: boolean;
   /** Falsk når et påkrevd valg mangler — knappen står, men gjør ingenting. */
@@ -85,9 +88,19 @@ export function SummaryStep({
       </View>
 
       {warnings.map((warning) => (
-        <Note key={warning.key} testID={`create-warning-${warning.key}`}>
-          {warning.text}
-        </Note>
+        <View key={warning.key}>
+          <Note testID={`create-warning-${warning.key}`}>{warning.text}</Note>
+          {warning.action === 'profile' && onEditProfile ? (
+            <Pressable
+              testID="create-warning-profile"
+              accessibilityRole="button"
+              style={ui.buttonSecondary}
+              onPress={onEditProfile}
+            >
+              <Text style={ui.buttonSecondaryText}>{EDIT_PROFILE_LABEL}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ))}
 
       <Pressable
@@ -112,17 +125,6 @@ export function SummaryStep({
           path={CREATE_ON_WEB_PATH}
           testID="create-error-link"
         />
-      ) : null}
-
-      {error && errorAction === 'profile' && onEditProfile ? (
-        <Pressable
-          testID="create-error-profile"
-          accessibilityRole="button"
-          style={ui.buttonSecondary}
-          onPress={onEditProfile}
-        >
-          <Text style={ui.buttonSecondaryText}>{EDIT_PROFILE_LABEL}</Text>
-        </Pressable>
       ) : null}
     </View>
   );

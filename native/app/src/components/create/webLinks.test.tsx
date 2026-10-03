@@ -56,6 +56,7 @@ describe('veiviserens lenkeknapper (#1891)', () => {
         candidates={[]}
         failed={false}
         meId="me"
+        selfPending={false}
         mode="stableford"
         players={[]}
         teamLayout={null}
@@ -123,17 +124,25 @@ describe('veiviserens lenkeknapper (#1891)', () => {
     expect(screen.getByTestId('create-error')).toBeTruthy();
     expect(screen.queryByTestId('create-error-link')).toBeNull();
 
-    // #1979: din egen ufullførte profil får sin EGEN knapp — til skjemaet, ikke
-    // til nettsiden. De to skal aldri stå samtidig.
+    // #1979 og #2441: din egen ufullførte profil får sin EGEN knapp, til
+    // skjemaet og ikke til nettsiden. Den står under merknaden, for profilen
+    // stopper ikke publiseringen lenger, bare starten. De to knappene skal
+    // aldri stå samtidig.
     await rerender(
       <SummaryStep
         {...props}
-        error="Du mangler navn eller handicap i profilen din."
-        errorAction="profile"
+        warnings={[
+          {
+            key: 'pending-self',
+            text: 'Profilen din mangler navn eller handicap.',
+            action: 'profile',
+          },
+        ]}
+        error={null}
         onEditProfile={jest.fn()}
       />,
     );
-    expect(screen.getByTestId('create-error-profile')).toBeTruthy();
+    expect(screen.getByTestId('create-warning-profile')).toBeTruthy();
     expect(screen.queryByTestId('create-error-link')).toBeNull();
   });
 });
