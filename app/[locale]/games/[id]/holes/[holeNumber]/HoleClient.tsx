@@ -181,6 +181,7 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     wolfPlayers,
     wolfChoices: wolfChoicesInitial,
     wolfPointsByUser,
+    wolfStake,
     skinsAtStake,
     skinsCarriedIn,
     bingoBangoBongoHoles: bingoBangoBongoHolesInitial,
@@ -297,6 +298,8 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
     wolfPlayers,
     wolfChoicesInitial,
     wolfPointsByUser,
+    wolfStake,
+    hideNetto,
   });
   const bingoBangoBongo = useBingoBangoBongoHoles({
     gameId,
@@ -695,6 +698,8 @@ export function HoleClient(rawProps: HoleClientProps): JSX.Element {
           holeNumber={currentHole}
           wolfUserId={wolf.modal.wolfUserId}
           otherPlayers={wolf.modal.otherPlayers}
+          payout={wolf.modal.payout}
+          stake={wolf.modal.stake}
           onClose={wolf.modal.onClose}
           onChoiceSaved={wolf.modal.onChoiceSaved}
         />

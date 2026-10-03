@@ -22,6 +22,7 @@ import {
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import type { WolfChoice, WolfHoleChoice } from '@/lib/scoring/modes/types';
 import { determineWolfForHole } from '@/lib/wolf/wolfRotation';
+import { wolfPayout, type WolfPayout } from '@/lib/wolf/wolfPayout';
 
 /**
  * Collapses a burst of events (an INSERT and its UPDATE, or a quick change of
@@ -44,6 +45,10 @@ export type WolfModalProps = {
   isOpen: boolean;
   wolfUserId: string;
   otherPlayers: Array<{ userId: string; name: string }>;
+  /** Gevinsten ganger innsatsen på hullet. Null i et reveal-spill som pågår. */
+  payout: WolfPayout | null;
+  /** Innsatsen på hullet (1 = vanlig). Alltid 1 i et reveal-spill som pågår. */
+  stake: number;
   onClose: () => void;
   onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => void;
 };
@@ -64,6 +69,9 @@ export function useWolfHole(args: {
   wolfPlayers: WolfPlayer[] | undefined;
   wolfChoicesInitial: WolfHoleChoice[] | undefined;
   wolfPointsByUser: Record<string, number> | undefined;
+  /** Innsatsen på hullet fra serveren. Mangler i et reveal-spill som pågår. */
+  wolfStake: number | undefined;
+  hideNetto: boolean;
 }): WolfHoleState {
   const {
     gameId,
@@ -74,6 +82,8 @@ export function useWolfHole(args: {
     wolfPlayers,
     wolfChoicesInitial,
     wolfPointsByUser,
+    wolfStake,
+    hideNetto,
   } = args;
   const t = useTranslations('holes');
 
@@ -193,9 +203,17 @@ export function useWolfHole(args: {
       ? wolfPlayerName(wolfPlayers, currentHoleWolfChoice.partnerUserId)
       : null;
 
-  // #465: Lone-gevinst = n, blind = n+2. Vis faktiske poeng i badgen i stedet
-  // for den nå-unøyaktige «2x/3x»-rammingen (gjaldt bare 4 spillere).
+  // #465: Lone-gevinst = n, blind = n+2, og #2313: begge ganger innsatsen på
+  // hullet (2 etter ett delt hull). Vis faktiske poeng i badgen i stedet for
+  // den nå-unøyaktige «2x/3x»-rammingen (gjaldt bare 4 spillere). I et
+  // reveal-spill som pågår vises ingen tall (#2314): innsatsen røper at et
+  // hull ble delt. Reveal hviler på `hideNetto`, ikke på at innsatsen mangler,
+  // så grunntallene aldri dukker opp i stedet.
   const wolfPlayerCount = wolfPlayers?.length ?? 0;
+  const payout: WolfPayout | null = hideNetto
+    ? null
+    : wolfPayout(wolfPlayerCount, wolfStake ?? 1);
+  const stake = hideNetto ? 1 : (wolfStake ?? 1);
   function resolveBadgeText(): string | null {
     if (!isWolf || !wolfBadgePlayerName) return null;
     if (!currentHoleWolfChoice) {
@@ -210,16 +228,14 @@ export function useWolfHole(args: {
       });
     }
     if (currentHoleWolfChoice.choice === 'lone') {
-      return t('wolf.wolfLone', {
-        name: wolfBadgePlayerName,
-        points: wolfPlayerCount,
-      });
+      return payout
+        ? t('wolf.wolfLone', { name: wolfBadgePlayerName, points: payout.lone })
+        : t('wolf.wolfLoneNoPoints', { name: wolfBadgePlayerName });
     }
     if (currentHoleWolfChoice.choice === 'blind') {
-      return t('wolf.wolfBlind', {
-        name: wolfBadgePlayerName,
-        points: wolfPlayerCount + 2,
-      });
+      return payout
+        ? t('wolf.wolfBlind', { name: wolfBadgePlayerName, points: payout.blind })
+        : t('wolf.wolfBlindNoPoints', { name: wolfBadgePlayerName });
     }
     return null;
   }
@@ -235,6 +251,8 @@ export function useWolfHole(args: {
           isOpen: modalOpen,
           wolfUserId: wolfUserIdForHole,
           otherPlayers: otherWolfPlayers,
+          payout,
+          stake,
           onClose: () => setModalDismissed(true),
           onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => {
             // The modal calls this after the save committed: show it at once,

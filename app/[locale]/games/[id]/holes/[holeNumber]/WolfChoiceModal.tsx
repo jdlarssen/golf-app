@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useModalFocus } from '@/hooks/useModalFocus';
 import { setWolfChoice } from '@/lib/wolf/setWolfChoice';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
+import type { WolfPayout } from '@/lib/wolf/wolfPayout';
 
 export interface WolfChoiceModalOtherPlayer {
   userId: string;
@@ -18,6 +19,13 @@ export interface WolfChoiceModalProps {
   wolfUserId: string;
   /** De andre spillerne i flighten (alle bortsett fra Wolf — n-1 stk). */
   otherPlayers: WolfChoiceModalOtherPlayer[];
+  /**
+   * Gevinsten ganger innsatsen på hullet (#2313), fra `useWolfHole`. Null i et
+   * reveal-spill som pågår: da viser valget verken poeng eller innsats (#2314).
+   */
+  payout: WolfPayout | null;
+  /** Innsatsen på hullet. Over 1 etter delte hull, og da sier valget fra. */
+  stake: number;
   onClose: () => void;
   /**
    * Trigges etter at server-action har lagret valget. Lar parent mutere lokal
@@ -152,6 +160,8 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
     holeNumber,
     wolfUserId,
     otherPlayers,
+    payout,
+    stake,
     onClose,
     onChoiceSaved,
   } = props;
@@ -186,9 +196,6 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
   }, [isOpen, submitting, onClose]);
 
   if (!isOpen) return null;
-
-  // #465: n = antall spillere. Lone-gevinst = n, blind = n+2 (vises i copy).
-  const n = otherPlayers.length + 1;
 
   async function submitChoice(
     choice: WolfChoice,
@@ -240,6 +247,11 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
         <p style={subHeaderStyle}>
           {t('modalSubtitle')}
         </p>
+        {payout && stake > 1 && (
+          <p data-testid="wolf-stake-line" style={subHeaderStyle}>
+            {t('stakeLine', { stake })}
+          </p>
+        )}
 
         {otherPlayers.map((p) => (
           <button
@@ -251,7 +263,11 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
             onClick={() => void submitChoice('partner', p.userId)}
           >
             <span>{t('partnerButton', { name: p.name })}</span>
-            <span style={subtitleStyle}>{t('partnerButtonSubtitle')}</span>
+            {payout && (
+              <span style={subtitleStyle}>
+                {t('partnerButtonSubtitle', { points: payout.partnerEach })}
+              </span>
+            )}
           </button>
         ))}
 
@@ -265,7 +281,11 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
           onClick={() => void submitChoice('lone', null)}
         >
           <span>{t('loneWolfButton')}</span>
-          <span style={subtitleStyle}>{t('loneWolfSubtitle', { n })}</span>
+          <span style={subtitleStyle}>
+            {payout
+              ? t('loneWolfSubtitle', { points: payout.lone })
+              : t('loneWolfSubtitleReveal')}
+          </span>
         </button>
 
         <button
@@ -277,7 +297,9 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
         >
           <span>{t('blindWolfButton')}</span>
           <span style={subtitleStyle}>
-            {t('blindWolfSubtitle', { n: n + 2 })}
+            {payout
+              ? t('blindWolfSubtitle', { points: payout.blind })
+              : t('blindWolfSubtitleReveal')}
           </span>
         </button>
 

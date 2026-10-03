@@ -8,6 +8,7 @@ import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedSta
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { computeLeaderboard } from '@/lib/scoring';
 import * as skins from '@/lib/scoring/modes/skins';
+import { wolfStakeForHole } from '@/lib/wolf/wolfPayout';
 import type {
   ScoringContext,
   ScoringHole,
@@ -120,6 +121,12 @@ export type WolfContext = {
     | Array<{ userId: string; teamNumber: number; name: string }>
     | undefined;
   pointsByUser: Record<string, number> | undefined;
+  /**
+   * Innsatsen på hullet slik motoren regnet den (2 etter ett delt hull, 3
+   * etter to). Wolf-valget ganger gevinsten med den (#2313). Undefined når
+   * spillet ikke er Wolf eller motoren ikke kunne kjøre.
+   */
+  stake: number | undefined;
 };
 
 /**
@@ -127,11 +134,13 @@ export type WolfContext = {
  * Klient-laget bruker dette til trailing-wolf-regelen (hull 17-18). Vi
  * kjører `computeLeaderboard()` med full ScoringContext slik at vi får
  * konsistent answer med leaderboard-rendringen. wolfPlayers er server-
- * valgt subset av game_players med team_number 1-4 og navn.
+ * valgt subset av game_players med team_number 1-4 og navn. Fra samme
+ * kjøring kommer innsatsen på `holeNumber` (#2313).
  */
 export function computeWolfContext(args: {
   isWolf: boolean;
   gameId: string;
+  holeNumber: number;
   game: GameForHole;
   allPlayers: PlayerForHole[];
   unknownPlayer: string;
@@ -142,6 +151,7 @@ export function computeWolfContext(args: {
   const {
     isWolf,
     gameId,
+    holeNumber,
     game,
     allPlayers,
     unknownPlayer,
@@ -150,7 +160,12 @@ export function computeWolfContext(args: {
     wolfAllScoresRes,
   } = args;
   if (!isWolf) {
-    return { choices: [], players: undefined, pointsByUser: undefined };
+    return {
+      choices: [],
+      players: undefined,
+      pointsByUser: undefined,
+      stake: undefined,
+    };
   }
 
   const choices = wolfChoicesData as WolfHoleChoice[];
@@ -172,7 +187,7 @@ export function computeWolfContext(args: {
     wolfAllScoresRes.error ||
     game.mode_config.kind !== 'wolf'
   ) {
-    return { choices, players, pointsByUser: undefined };
+    return { choices, players, pointsByUser: undefined, stake: undefined };
   }
   const ctx: ScoringContext = {
     game: {
@@ -187,13 +202,18 @@ export function computeWolfContext(args: {
   };
   const result = computeLeaderboard(ctx);
   if (result.kind !== 'wolf') {
-    return { choices, players, pointsByUser: undefined };
+    return { choices, players, pointsByUser: undefined, stake: undefined };
   }
   const map: Record<string, number> = {};
   for (const p of result.players) {
     map[p.userId] = p.totalPoints;
   }
-  return { choices, players, pointsByUser: map };
+  return {
+    choices,
+    players,
+    pointsByUser: map,
+    stake: wolfStakeForHole(result.holes, holeNumber),
+  };
 }
 
 /**
