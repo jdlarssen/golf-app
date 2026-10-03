@@ -64,8 +64,12 @@ export type ShareCardModel = {
   band: ShareCardBand;
   /** Top 3 (or fewer) by rank. Empty for the matchplay band. */
   podium: ShareCardRow[];
-  /** Convenience: podium[0] for the champagne hero, or null. */
-  winner: ShareCardRow | null;
+  /**
+   * Every podium row sharing podium[0]'s rank — each gets the champagne hero
+   * block, so a tied first place names all its winners (#2318). Empty for the
+   * matchplay band and an empty field.
+   */
+  winners: ShareCardRow[];
   /** Present ONLY when the sharer is a participant AND finished outside the top 3. */
   sharerStrip: ShareCardRow | null;
   /** Matchplay band only; null otherwise. */
@@ -125,21 +129,21 @@ export function buildShareCardData(opts: {
       const side1Ids = [result.sides[0].userId];
       const side2Ids = [result.sides[1].userId];
       const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId, playerFallback);
-      return { band: 'matchplay', podium: [], winner: null, sharerStrip: null, match, sideTournaments };
+      return { band: 'matchplay', podium: [], winners: [], sharerStrip: null, match, sideTournaments };
     }
 
     case 'fourball_matchplay': {
       const side1Ids = result.sides[0].players.map((p) => p.userId);
       const side2Ids = result.sides[1].players.map((p) => p.userId);
       const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId, playerFallback);
-      return { band: 'matchplay', podium: [], winner: null, sharerStrip: null, match, sideTournaments };
+      return { band: 'matchplay', podium: [], winners: [], sharerStrip: null, match, sideTournaments };
     }
 
     case 'foursomes_matchplay': {
       const side1Ids = result.sides[0].players.map((p) => p.userId);
       const side2Ids = result.sides[1].players.map((p) => p.userId);
       const match = buildMatchplayMatch(result.result, side1Ids, side2Ids, sharerId, nameByUserId, playerFallback);
-      return { band: 'matchplay', podium: [], winner: null, sharerStrip: null, match, sideTournaments };
+      return { band: 'matchplay', podium: [], winners: [], sharerStrip: null, match, sideTournaments };
     }
 
     // -----------------------------------------------------------------------
@@ -355,7 +359,7 @@ function buildPlacementModel(
   }));
 
   const podium = allRows.slice(0, 3);
-  const winner = podium[0] ?? null;
+  const winners = podium.filter((r) => r.rank === podium[0].rank);
 
   // sharerStrip: null if sharerId null, null if sharer in top 3, otherwise their row
   let sharerStrip: ShareCardRow | null = null;
@@ -367,7 +371,7 @@ function buildPlacementModel(
     }
   }
 
-  return { band, podium, winner, sharerStrip, match: null, sideTournaments };
+  return { band, podium, winners, sharerStrip, match: null, sideTournaments };
 }
 
 /**
