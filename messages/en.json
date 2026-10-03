@@ -1240,8 +1240,9 @@
     "stepCounter": "Step {step} of {total}",
     "back": "Back",
     "stepSubText": {
-      "step4BestBall": "Select an even number of players, then assign teams and flights.",
+      "step4BestBall": "Select an even number of players, then assign teams and flights",
       "step4Matchplay": "Select 2 players and put one on each side",
+      "step4TeamMatchplay": "Select 4 players and put two on each side",
       "step4ParStableford": "Select at least 2 players in pairs for each team",
       "step4TeamSize": "Select at least {teamSize} players, then assign teams",
       "step4Patsome": "Select at least 4 players in pairs for each team",
@@ -1283,7 +1284,8 @@
     "step4": {
       "emptyRosterHint": "You'll decide on the next step whether to add players here, or let them sign up themselves.",
       "pickerSubtitle": "{format} · {players}",
-      "pickerSubtitleLineup": "{format} · {players}, {lineup}"
+      "pickerSubtitleLineup": "{format} · {players}, {lineup}",
+      "pickerSubtitleInstruction": "{format} · {instruction}"
     },
     "pickerSource": {
       "noClubMembers": "No other members in the club yet.",

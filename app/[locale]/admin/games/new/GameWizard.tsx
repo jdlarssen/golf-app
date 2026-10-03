@@ -73,7 +73,11 @@ import type { Intent } from '@/lib/wizard/intent';
 import { startIntent } from '@/lib/wizard/clubChoice';
 import { pickerSource, selectablePlayers } from '@/lib/wizard/selectablePlayers';
 import { inviteEmailRoom, pickerCap, playerTarget } from '@/lib/wizard/playerTarget';
-import { pickerSubtitle } from '@/lib/wizard/pickerSubtitle';
+import {
+  pickerSubtitle,
+  stepFourInstruction,
+  type StepFourInstruction,
+} from '@/lib/wizard/pickerSubtitle';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
@@ -721,48 +725,48 @@ function WizardBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.selectedCourse?.name, state.scheduledTeeOffAt, state.nameTouched]);
 
-  // Instruksen under tittelen på steg 4s lag-skjerm (#2321). Mode-aware siden
-  // lag/sider/flighter varierer per modus. #2260: stegene 1–3 har bare
-  // tittelen (steg 2 har telleren på samme plass). #2282: steg 5 sier hva
-  // kortet under viser.
-  const teamsSubText = useMemo<string | null>(() => {
-    if (step === 5) return t('stepSubText.step5');
-    if (step === 4) {
-      if (state.isSolo) return null;
-      if (state.isBestBall) return t('stepSubText.step4BestBall');
-      if (state.isMatchplay) return t('stepSubText.step4Matchplay');
-      if (state.isParStableford) return t('stepSubText.step4ParStableford');
-      if (state.isTexas)
-        return t('stepSubText.step4TeamSize', { teamSize: state.teamSize });
-      if (state.isAmbrose)
-        return t('stepSubText.step4TeamSize', { teamSize: state.teamSize });
-      if (state.isShamble)
-        return t('stepSubText.step4TeamSize', { teamSize: state.teamSize });
-      if (state.isPatsome) return t('stepSubText.step4Patsome');
-      return null;
+  // The «Velg …» line, translated. Which line a format gets lives in
+  // `stepFourInstruction` (#2436); this only picks the message.
+  function instructionText(instruction: StepFourInstruction): string {
+    switch (instruction.kind) {
+      case 'bestBall':
+        return t('stepSubText.step4BestBall');
+      case 'singles':
+        return t('stepSubText.step4Matchplay');
+      case 'teamMatchplay':
+        return t('stepSubText.step4TeamMatchplay');
+      case 'parStableford':
+        return t('stepSubText.step4ParStableford');
+      case 'teamSize':
+        return t('stepSubText.step4TeamSize', { teamSize: instruction.teamSize });
+      case 'patsome':
+        return t('stepSubText.step4Patsome');
     }
-    return null;
-  }, [
-    t,
-    step,
-    state.isSolo,
-    state.isBestBall,
-    state.isMatchplay,
-    state.isParStableford,
-    state.isTexas,
-    state.isAmbrose,
-    state.isShamble,
-    state.isPatsome,
-    state.teamSize,
-  ]);
+  }
 
-  // #2321: undertittelen på velgeren — «Best ball · 4 spillere, 2 lag à 2»,
-  // som på `Spillere-forslag` (orkestratorens avgjørelse 02.10). Uten mål står
-  // bare formatnavnet.
+  // Under the title on step 4's teams screen: the «Velg …» line (#2321,
+  // #2436). Step 5 says what the card below shows (#2282). Steps 1 to 3 have
+  // only the title (#2260).
+  function teamsSubText(): string | null {
+    if (step === 5) return t('stepSubText.step5');
+    if (step !== 4) return null;
+    const instruction = stepFourInstruction({ gameMode: state.gameMode, teamSize: state.teamSize });
+    return instruction ? instructionText(instruction) : null;
+  }
+
+  // #2321: the picker's subtitle, «Best ball · 4 spillere, 2 lag à 2», as on
+  // `Spillere-forslag`. #2436: with no target (klubb) it gives the format
+  // name and the «Velg …» line; a format without one shows only the name.
   function pickerSubText(): string {
     const format = tModes(state.gameMode as Parameters<typeof tModes>[0]);
     const sub = pickerSubtitle({ gameMode: state.gameMode, target, teamSize: state.teamSize });
     if (sub.kind === 'formatOnly') return format;
+    if (sub.kind === 'instruction') {
+      return t('step4.pickerSubtitleInstruction', {
+        format,
+        instruction: instructionText(sub.instruction),
+      });
+    }
     const players = t('formatGrid.lineup.players', { count: sub.players });
     if (sub.kind === 'players') return t('step4.pickerSubtitle', { format, players });
     const { lineup } = sub;
@@ -774,9 +778,9 @@ function WizardBody({
           : t('formatGrid.lineup.wolf', { opponents: lineup.opponents });
     return t('step4.pickerSubtitleLineup', { format, players, lineup: lineupText });
   }
-  // Steg 4s velger har sin egen undertittel; lag-skjermen og steg 5 tar
-  // instruksen over.
-  const subText = step === 4 && !showTeamsScreen ? pickerSubText() : teamsSubText;
+  // Step 4's picker has its own subtitle; the teams screen and step 5 use
+  // `teamsSubText`.
+  const subText = step === 4 && !showTeamsScreen ? pickerSubText() : teamsSubText();
 
   // Cup-creation-flyt diverger fra standard wizard: bare step 1 (intent) og
   // step 2 (CupSetup-form). CupSetup eier sin egen `<form action=...>`
