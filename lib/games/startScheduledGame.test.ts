@@ -382,6 +382,44 @@ describe('startScheduledGame — profil-porten (#2207)', () => {
     expect(statusFlipWrites(supabase)).toEqual([]);
   });
 
+  // #2441: a game can be published with a pending friend, so a friend who
+  // withdrew before finishing the profile must not hold the round forever.
+  it('trukket spiller uten profil stopper ikke starten: sperren spør bare om de aktive', async () => {
+    const SOLO = {
+      ...makeGameRow('stableford', 1),
+      mode_config: { kind: 'stableford', team_size: 1 },
+    };
+    const rosterRows = [
+      { ...PLAYER('user-1', null) },
+      { ...PLAYER('gone-pending', null), withdrawn_at: '2026-10-01T10:00:00Z' },
+    ];
+    const supabase = buildSupabaseMock([
+      { data: SOLO, error: null },
+      { data: rosterRows, error: null },
+      WROTE_ROW, // course_handicap user-1
+      WROTE_ROW, // course_handicap gone-pending
+      { data: [], error: null }, // status flip: another caller won
+    ]);
+    // The RPC answers like the real one: the pending ids among those passed.
+    const asked: string[][] = [];
+    (supabase.rpc as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (name: string, params?: { p_user_ids?: string[] }) => {
+        if (name !== 'incomplete_profile_ids') return Promise.resolve({ data: null, error: null });
+        const ids = params?.p_user_ids ?? [];
+        asked.push(ids);
+        return Promise.resolve({
+          data: ids.filter((id) => id === 'gone-pending').map((id) => ({ id })),
+          error: null,
+        });
+      },
+    );
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+
+    expect(asked).toEqual([['user-1']]);
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
   it('feil fra profil-porten → db_players, ingen start', async () => {
     const rosterRows = [PLAYER('user-1', 1), PLAYER('user-2', 2)];
     const supabase = buildSupabaseMock(
