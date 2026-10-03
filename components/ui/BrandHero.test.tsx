@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createTranslator } from 'next-intl';
 import en from '@/messages/en.json';
+import no from '@/messages/no.json';
 import { BrandHero } from './BrandHero';
 
 // The global stub in vitest.setup.ts renders Norwegian, which matches the old
@@ -25,5 +26,15 @@ describe('BrandHero', () => {
     const paragraph = screen.getByText((_, el) => el?.tagName === 'P');
     expect(paragraph).toHaveTextContent(fullText);
     expect(paragraph.querySelector('.text-accent')).toHaveTextContent(goldWord!);
+  });
+
+  // One rule, one home: the share card prints the same tagline.
+  it.each([
+    ['no', no],
+    ['en', en],
+  ] as const)('%s: the tagline matches the share card', (_locale, messages) => {
+    expect(messages.common.brandTagline.replace(/<\/?par>/g, '')).toBe(
+      messages.leaderboard.shareCard.tagline,
+    );
   });
 });

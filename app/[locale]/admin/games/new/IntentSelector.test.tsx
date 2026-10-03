@@ -3,6 +3,14 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 import { IntentSelector } from './IntentSelector';
 
+// #2324: a cap other than the real one proves the kompis tile reads it from
+// `TEAM_FORMAT_PLAYER_CAP`; with the catalog's old «40» the tile would not
+// follow it.
+vi.mock('@/lib/games/teamFormatLimits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/games/teamFormatLimits')>()),
+  TEAM_FORMAT_PLAYER_CAP: 37,
+}));
+
 // Type C render-tester per docs/test-discipline.md — verifiserer intent-kortene,
 // knappe-semantikken (#1794: radio → button, valgt flis via aria-current),
 // onChange-flyten, #477-gatingen av «Solo / Test», og #525-gatingen av
@@ -29,6 +37,7 @@ describe('IntentSelector', () => {
     expect(kompis.getAttribute('aria-current')).toBeNull();
     expect(cup.getAttribute('aria-current')).toBeNull();
     expect(solo.getAttribute('aria-current')).toBeNull();
+    expect(TEAM_FORMAT_PLAYER_CAP).toBe(37);
     expect(kompis).toHaveTextContent(String(TEAM_FORMAT_PLAYER_CAP));
     // Ingen radio-rester: assistive tech skal ikke love et valg som ikke
     // bytter kontekst (WCAG 3.2.2).
