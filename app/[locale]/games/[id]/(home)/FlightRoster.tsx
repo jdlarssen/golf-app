@@ -111,26 +111,31 @@ export async function FlightRoster({
             {/* A nameless pending row gets «?», like the wizard's picker. */}
             {nameInitials(p.showFullName ? null : p.name)}
           </span>
-          <span
-            className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
-          >
-            {p.showFullName ? p.name : (firstName(p.name) ?? p.name)}
-            {p.isCurrentUser && (
-              <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-text ml-2">
-                {tHome('youLabel')}
+          {/* #2441: the pending note sits under the name. Beside it, the
+              note and HCP left «Invitert spiller» cut to «Invitert s…» at
+              phone width. */}
+          <span className="min-w-0 flex-1">
+            <span
+              className={`block truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
+            >
+              {p.showFullName ? p.name : (firstName(p.name) ?? p.name)}
+              {p.isCurrentUser && (
+                <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent-text ml-2">
+                  {tHome('youLabel')}
+                </span>
+              )}
+            </span>
+            {p.pendingProfile && (
+              <span
+                className="block truncate text-xs text-muted"
+                data-testid="pending-profile-badge"
+              >
+                {tHome('pendingProfileBadge')}
               </span>
             )}
           </span>
-          {p.pendingProfile ? (
-            <span
-              className="shrink-0 text-xs text-muted"
-              data-testid="pending-profile-badge"
-            >
-              {tHome('pendingProfileBadge')}
-            </span>
-          ) : (
-            p.acceptedAt == null &&
-            !p.isCurrentUser && <UnconfirmedBadge className="shrink-0" />
+          {!p.pendingProfile && p.acceptedAt == null && !p.isCurrentUser && (
+            <UnconfirmedBadge className="shrink-0" />
           )}
           <span className="shrink-0 text-xs text-muted tabular-nums">
             HCP {p.hcpIndex != null ? formatHcpDisplay(p.hcpIndex, locale) : '—'}
