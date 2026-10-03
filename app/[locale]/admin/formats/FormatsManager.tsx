@@ -68,7 +68,7 @@ function deriveStatus(f: FormatWithMappings): RowStatus {
 }
 
 /**
- * FormatsManager — eier optimistic state for matrisen og fanene.
+ * FormatsManager — owns the optimistic state for the matrix and the tabs.
  * Render-er BÅDE desktop matrix (md+) og mobile tabs (< md) via Tailwind
  * responsive klasser så vi unngår dupliserte state-mountings.
  *
