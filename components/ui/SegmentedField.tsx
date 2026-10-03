@@ -2,9 +2,18 @@
 
 import type { ReactNode } from 'react';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
-import { chipButtonClasses } from './Button';
+import { CHIP_SHAPE, chipButtonClasses } from './Button';
 
 type Option = { value: string; label: string; disabled?: boolean; title?: string };
+
+/**
+ * #2437: the look of an option that can't be picked, such as a tee category
+ * the tee has no rating for: a dashed, faded tile on the inset surface, as the
+ * step 4 artboards draw it. The M/D/J toggle in TeamsAssignmentSection uses it
+ * too, so an unrated category looks the same everywhere.
+ */
+export const UNAVAILABLE_OPTION_CLASSES =
+  'cursor-not-allowed border border-dashed border-border bg-surface-2 text-muted opacity-60';
 
 type Props = {
   /** Uppercase micro-label over segmentene. */
@@ -33,8 +42,9 @@ type Props = {
  * `button role="radio"`, aktiv = primær ramme + primary-soft fyll + inset-ring.
  * Kompakt (én linje per knapp) — for kjønn/spillerklasse på profil-siden.
  *
- * #2437: an option with `disabled: true` is greyed out, can't be picked and is
- * skipped by the arrow keys; its `title` says why on hover.
+ * #2437: an option with `disabled: true` gets `UNAVAILABLE_OPTION_CLASSES`,
+ * can't be picked and is skipped by the arrow keys; its `title` says why on
+ * hover.
  *
  * Kontrollert: hold valgt verdi i parent og send en skjult input ved siden av
  * for å få den med i FormData ved server-action-submit.
@@ -82,7 +92,11 @@ export function SegmentedField({
                 title={opt.disabled ? opt.title : undefined}
                 onClick={() => onChange(opt.value)}
                 // Line-height normal, as the artboards set the pill labels.
-                className={`${chipButtonClasses(selected ? 'primary' : 'secondary')} leading-[normal]`}
+                className={`${
+                  opt.disabled
+                    ? `${CHIP_SHAPE} ${UNAVAILABLE_OPTION_CLASSES}`
+                    : chipButtonClasses(selected ? 'primary' : 'secondary')
+                } leading-[normal]`}
               >
                 {opt.label}
               </button>
@@ -116,10 +130,12 @@ export function SegmentedField({
               disabled={opt.disabled === true}
               title={opt.disabled ? opt.title : undefined}
               onClick={() => onChange(opt.value)}
-              className={`flex min-h-[44px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50 ${
-                selected
-                  ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
-                  : 'border-border bg-surface text-muted hover:bg-primary-soft/60 hover:text-text'
+              className={`flex min-h-[44px] items-center justify-center rounded-xl border px-3 font-sans text-sm transition-colors duration-150 ${
+                opt.disabled
+                  ? UNAVAILABLE_OPTION_CLASSES
+                  : selected
+                    ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
+                    : 'border-border bg-surface text-muted hover:bg-primary-soft/60 hover:text-text'
               }`}
             >
               {opt.label}

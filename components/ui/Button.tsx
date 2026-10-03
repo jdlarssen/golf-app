@@ -98,8 +98,11 @@ const LARGE_VARIANTS: Record<Variant, string> = {
     'bg-transparent border border-dashed border-field-border hover:bg-primary-soft text-primary disabled:opacity-50',
 };
 
-const CHIP_BASE =
-  'inline-flex shrink-0 items-center justify-center h-11 px-3.5 rounded-full whitespace-nowrap text-sm font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+/** The chip's shape and type, without colours or a disabled look. */
+export const CHIP_SHAPE =
+  'inline-flex shrink-0 items-center justify-center h-11 px-3.5 rounded-full whitespace-nowrap text-sm font-semibold';
+
+const CHIP_BASE = `${CHIP_SHAPE} transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50`;
 
 const CHIP_VARIANTS: Record<Variant, string> = {
   primary: 'bg-primary hover:bg-primary-hover text-white dark:text-bg',

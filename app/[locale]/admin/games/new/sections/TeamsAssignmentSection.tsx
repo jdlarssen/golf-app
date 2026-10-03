@@ -41,6 +41,7 @@ import { Button } from '@/components/ui/Button';
 import { CardSelect } from '@/components/ui/CardField';
 import { FormSection } from '@/components/ui/FormSection';
 import { MiniChip } from '@/components/ui/MiniChip';
+import { UNAVAILABLE_OPTION_CLASSES } from '@/components/ui/SegmentedField';
 import { SlotCard } from '@/components/ui/SlotCard';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import {
@@ -82,7 +83,8 @@ const GENDER_CATEGORIES = ['M', 'D', 'J'] as const;
  * the dark theme.
  *
  * #2321: 44 × 44 px tiles as the step 4 artboards draw them, so the hit area
- * needs no tap-extend. An unavailable category is a dashed, faded tile.
+ * needs no tap-extend. An unavailable category is a dashed, faded tile
+ * (`UNAVAILABLE_OPTION_CLASSES`, shared with the guest form's pills, #2437).
  */
 function PlayerGenderToggle({
   pid,
@@ -128,7 +130,7 @@ function PlayerGenderToggle({
             // pb-0.5: the letter sits 1 px higher in the 44 px tile, as the artboards draw it.
             className={`flex h-11 w-11 items-center justify-center rounded-xl pb-0.5 font-sans text-sm font-semibold leading-[normal] transition-colors ${
               unavailable
-                ? 'cursor-not-allowed border border-dashed border-border bg-surface-2 text-muted opacity-60'
+                ? UNAVAILABLE_OPTION_CLASSES
                 : selected
                   ? 'bg-primary text-white dark:text-bg'
                   : 'border border-border bg-surface text-text hover:bg-primary-soft'
