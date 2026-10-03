@@ -7,9 +7,11 @@
  *  - the wizard: validity flags and missing-player messages in
  *    `useGameFormState.ts`, and the format filter `fitsPlayerCount`
  *  - the signup cap: `soloPlayerCap`
- *  - the start guard: `startScheduledGameCore` (an open-signup or
- *    manual-approval game is saved as a draft, so its count is first checked
- *    at start), and `rotationSlotRange` for Wolf / Round Robin
+ *  - the start guard: `startScheduledGameCore` (a game with an optional
+ *    roster at publish, `rosterOptionalAtPublish`: open signup, manual
+ *    approval, or a club tournament with individual signup (#2433), is
+ *    validated as a draft, so its count is first checked at start), and
+ *    `rotationSlotRange` for Wolf / Round Robin
  *  - the app: `MAX_PLAYERS_BY_MODE` in `native/app/src/lib/rosterLimits.ts`
  *
  * `startPlayerCount.test.ts` runs the publish validator at each bound and locks

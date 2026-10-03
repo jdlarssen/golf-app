@@ -103,9 +103,10 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
  * `registrationPlayerCap`, which adds the team formats' grid cap — #2011) to
  * turn away player N+1 BEFORE INSERT. For a self-registration game the signup
  * cap is the only player-count gate before the game starts: for an open or
- * manual_approval game `buildGameInsertPayload` runs the mode validator with
- * effectiveMode 'draft', so none of its `too_many_players_for_mode` checks run
- * when the organiser saves, in any format.
+ * manual_approval game, and a club tournament with individual signup (#2433,
+ * `rosterOptionalAtPublish`), `buildGameInsertPayload` runs the mode validator
+ * with effectiveMode 'draft', so none of its `too_many_players_for_mode`
+ * checks run when the organiser saves, in any format.
  *
  * Returnerer:
  *  - øvre grense fra `START_COUNT_RANGES` for formatene med fast spillertall
