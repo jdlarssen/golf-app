@@ -122,7 +122,7 @@ import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData
 import { usePuttsTracking, type PuttsTracking } from '../lib/usePuttsTracking';
 import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
 import { setSunlight, useSunlight } from '../lib/sunlight';
-import { wolfHoleState, wolfPointsByUser } from '../lib/wolfHole';
+import { wolfHoleState, wolfPointsByUser, wolfStake } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
@@ -455,6 +455,12 @@ function HoleView({
         pointsByUser: wolfPointsByUser(
           wolfOutcome?.ok ? wolfOutcome.result : null,
         ),
+        // #2313/#2314: valget ganger gevinsten med innsatsen, men i en blind
+        // runde som pågår røper innsatsen et delt hull, så der står ingen tall.
+        hideNumbers: hideNetto,
+        stake: hideNetto
+          ? 1
+          : wolfStake(wolfOutcome?.ok ? wolfOutcome.result : null, holeNumber),
       })
     : null;
 

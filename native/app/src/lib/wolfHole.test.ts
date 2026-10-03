@@ -15,6 +15,7 @@ import {
   wolfHoleState,
   wolfPointsByUser,
   wolfRotationPlayers,
+  wolfStake,
 } from './wolfHole';
 
 function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePlayer {
@@ -57,6 +58,8 @@ function stateFor(
     players: FOUR,
     choices: [],
     pointsByUser: NO_POINTS,
+    stake: 1,
+    hideNumbers: false,
     ...overrides,
   });
 }
@@ -108,6 +111,28 @@ describe('wolfPointsByUser', () => {
   });
 });
 
+describe('wolfStake', () => {
+  it('gir motorens innsats på hullet, og grunninnsatsen 1 for alt annet', () => {
+    // #2313: innsatsen kommer fra motorens hull-rad, aldri en egen telling av
+    // delte hull her.
+    const wolfResult = {
+      kind: 'wolf',
+      players: [],
+      holes: [
+        { holeNumber: 1, stake: 1 },
+        { holeNumber: 2, stake: 2 },
+      ],
+    } as unknown as ModeResult;
+
+    expect(wolfStake(wolfResult, 2)).toBe(2);
+    expect(wolfStake(wolfResult, 1)).toBe(1);
+    expect(wolfStake(null, 2)).toBe(1);
+    expect(
+      wolfStake({ kind: 'stableford', players: [] } as unknown as ModeResult, 2),
+    ).toBe(1);
+  });
+});
+
 describe('wolfHoleState — hvem er Wolf', () => {
   // n = 4 → R = 16 rotasjonshull, deretter trailing på 17 og 18.
   it.each<[number, string]>([
@@ -155,7 +180,15 @@ describe('wolfHoleState — hvem er Wolf', () => {
 });
 
 describe('wolfHoleState — badge og valg-knapper', () => {
-  it.each<[string, Parameters<typeof wolfHoleState>[0]['choices'], string, string | null]>([
+  it.each<
+    [
+      string,
+      Parameters<typeof wolfHoleState>[0]['choices'],
+      string,
+      string | null,
+      Partial<Parameters<typeof wolfHoleState>[0]>?,
+    ]
+  >([
     ['ingen har valgt, og jeg er ikke Wolf', [], 'p2', 'Wolf: Per Persen — venter på valg'],
     ['ingen har valgt, og det er meg', [], 'p1', 'Du er Wolf på dette hullet'],
     [
@@ -176,8 +209,88 @@ describe('wolfHoleState — badge og valg-knapper', () => {
       'p2',
       'Wolf: Per Persen (Blind Wolf — 6 poeng)',
     ],
-  ])('%s', (_label, choices, myUserId, expected) => {
-    expect(stateFor({ choices, myUserId }).badgeText).toBe(expected);
+    [
+      'lone wolf etter et delt hull — potten er n ganger innsatsen',
+      [{ holeNumber: 1, wolfUserId: 'p1', choice: 'lone', partnerUserId: null }],
+      'p2',
+      'Wolf: Per Persen (Lone Wolf — 8 poeng)',
+      { stake: 2 },
+    ],
+    [
+      'blind wolf etter et delt hull — potten er (n + 2) ganger innsatsen',
+      [{ holeNumber: 1, wolfUserId: 'p1', choice: 'blind', partnerUserId: null }],
+      'p2',
+      'Wolf: Per Persen (Blind Wolf — 12 poeng)',
+      { stake: 2 },
+    ],
+    [
+      'lone wolf i en blind runde som pågår — ingen tall',
+      [{ holeNumber: 1, wolfUserId: 'p1', choice: 'lone', partnerUserId: null }],
+      'p2',
+      'Wolf: Per Persen (Lone Wolf)',
+      { stake: 2, hideNumbers: true },
+    ],
+    [
+      'blind wolf i en blind runde som pågår — ingen tall',
+      [{ holeNumber: 1, wolfUserId: 'p1', choice: 'blind', partnerUserId: null }],
+      'p2',
+      'Wolf: Per Persen (Blind Wolf)',
+      { stake: 2, hideNumbers: true },
+    ],
+  ])('%s', (_label, choices, myUserId, expected, extra = {}) => {
+    expect(stateFor({ choices, myUserId, ...extra }).badgeText).toBe(expected);
+  });
+
+  it.each<
+    [
+      string,
+      Partial<Parameters<typeof wolfHoleState>[0]>,
+      {
+        partnerSubtitle: string | null;
+        loneSubtitle: string;
+        blindSubtitle: string;
+        stakeLine: string | null;
+      },
+      boolean,
+    ]
+  >([
+    [
+      'etter et delt hull lover valget innsatsen ganger gevinsten',
+      { stake: 2 },
+      {
+        partnerSubtitle: 'Vinner-siden får 4 hver',
+        loneSubtitle: 'Alene mot resten. Vinner du, får du 8.',
+        blindSubtitle: 'Meldt før utslag. Vinner du, får du 12.',
+        stakeLine: 'Innsatsen er 2 ganger etter delte hull.',
+      },
+      true,
+    ],
+    [
+      'vanlig innsats gir grunntallene og ingen innsatslinje',
+      { stake: 1 },
+      {
+        partnerSubtitle: 'Vinner-siden får 2 hver',
+        loneSubtitle: 'Alene mot resten. Vinner du, får du 4.',
+        blindSubtitle: 'Meldt før utslag. Vinner du, får du 6.',
+        stakeLine: null,
+      },
+      true,
+    ],
+    [
+      'i en blind runde som pågår står det verken poeng eller innsats',
+      { stake: 2, hideNumbers: true },
+      {
+        partnerSubtitle: null,
+        loneSubtitle: 'Alene mot resten',
+        blindSubtitle: 'Meldt før utslag',
+        stakeLine: null,
+      },
+      false,
+    ],
+  ])('valgtekstene: %s', (_label, extra, expected, hasPayout) => {
+    const state = stateFor({ myUserId: 'p1', ...extra });
+    expect(state.choiceTexts).toEqual(expected);
+    expect(state.payout !== null).toBe(hasPayout);
   });
 
   it('åpner valg-knappene kun for Wolf selv, i en aktiv runde uten valg', () => {
