@@ -13,7 +13,12 @@
  *    antall lagkort vokser med valgte spillere, jf. `teamGridShape`, #2148, #2079)
  *    + «Trekk tilfeldig»/«Tøm lag» + per-spiller-tee (#2012)
  *  - patsome / lag-matchplay → lag-grid + «Tøm lag», ingen trekning
- *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
+ *  - every other format (stableford, solo strokeplay, Wolf, Nassau, Skins,
+ *    Bingo Bango Bongo, Nines, Round Robin, Acey Deucey) → only tee per player
+ *
+ * Tee per player shows in every format but best ball, which carries the M/D/J
+ * toggle in its flights part (#2437). Which parts show is
+ * `teamsAssignmentParts`.
  *
  * Nummerering speiler GameForm-stacked-layouten («4. Lag», «5. Flights»,
  * «5. Tee per spiller»). Wizard-en kan be om å droppe det nummeriske
@@ -137,51 +142,64 @@ function PlayerGenderToggle({
   );
 }
 
+type PartsState = Pick<
+  GameFormState,
+  | 'selectedPlayerIds'
+  | 'isMatchplay'
+  | 'requiresTeams'
+  | 'isBestBall'
+  | 'isParStableford'
+  | 'isPatsome'
+  | 'isTeamMatchplay'
+  | 'isTexas'
+  | 'isAmbrose'
+  | 'isFlorida'
+  | 'isShamble'
+  | 'teamSize'
+  | 'teamsComplete'
+>;
+
+/**
+ * Which of the four parts (sides / team grid / flights / tee per player) the
+ * section renders for the current state. The component and
+ * `teamsAssignmentHasContent` both read it, so the guards live in one place.
+ */
+export function teamsAssignmentParts(state: PartsState): {
+  sides: boolean;
+  teams: boolean;
+  flights: boolean;
+  tee: boolean;
+} {
+  const n = state.selectedPlayerIds.length;
+  return {
+    sides: state.isMatchplay && n > 0,
+    teams:
+      state.requiresTeams &&
+      ((state.isBestBall && n >= 2) ||
+        (state.isParStableford && n >= 2) ||
+        (state.isTexas && n >= state.teamSize) ||
+        (state.isAmbrose && n >= state.teamSize) ||
+        (state.isFlorida && n >= state.teamSize) ||
+        (state.isShamble && n >= state.teamSize) ||
+        (state.isPatsome && n >= 2) ||
+        (state.isTeamMatchplay && n >= 2)),
+    flights: state.isBestBall && state.teamsComplete,
+    // #2437: the publish guard (`playersWithUnratedCategory`) checks every
+    // selected player in every format, so the M/D/J toggle must exist wherever
+    // players are picked. Best ball carries it in the flights part.
+    tee: n > 0 && !state.isBestBall,
+  };
+}
+
 /**
  * #909: forteller om TeamsAssignmentSection vil rendre noe innhold for
  * gjeldende state. GameForm bruker den til å bestemme om «Inndeling»-
  * Disclosure-panelet skal vises i det hele tatt (et tomt panel ville vært
- * forvirrende). MÅ speile de fire render-guardene i komponenten under (sider /
- * lag-grid / flights / tee-per-spiller) — endrer du en guard, oppdater begge.
+ * forvirrende). Both this and the component read `teamsAssignmentParts`.
  */
 export function teamsAssignmentHasContent(state: GameFormState): boolean {
-  const n = state.selectedPlayerIds.length;
-  // Sider (matchplay)
-  if (state.isMatchplay && n > 0) return true;
-  // Lag-grid
-  if (
-    state.requiresTeams &&
-    (((state.isBestBall ||
-      state.isParStableford ||
-      state.isPatsome ||
-      state.isTeamMatchplay) &&
-      n >= 2) ||
-      ((state.isTexas ||
-        state.isAmbrose ||
-        state.isFlorida ||
-        state.isShamble) &&
-        n >= state.teamSize))
-  ) {
-    return true;
-  }
-  // Flights (best-ball, fullt fordelt)
-  if (state.isBestBall && state.teamsComplete) return true;
-  // Tee-per-spiller
-  if (
-    (state.isSolo ||
-      state.isParStableford ||
-      state.isMatchplay ||
-      state.isTexas ||
-      state.isAmbrose ||
-      state.isFlorida ||
-      state.isShamble ||
-      state.isPatsome ||
-      state.isTeamMatchplay) &&
-    n > 0
-  ) {
-    return true;
-  }
-  return false;
+  const { sides, teams, flights, tee } = teamsAssignmentParts(state);
+  return sides || teams || flights || tee;
 }
 
 /** A part's kicker: the `<h2>` sits inside the legend so it stays a heading. */
@@ -210,8 +228,6 @@ export function TeamsAssignmentSection({
     setPlayerGenders,
     teeGenderAvailability,
     playersByTeam,
-    teamsComplete,
-    isSolo,
     isBestBall,
     isParStableford,
     isMatchplay,
@@ -221,7 +237,6 @@ export function TeamsAssignmentSection({
     isShamble,
     isPatsome,
     isTeamMatchplay,
-    requiresTeams,
     teamSize,
     canDrawRandomTeams,
     drawRandomTeams,
@@ -250,31 +265,12 @@ export function TeamsAssignmentSection({
       ? '5. '
       : '4. ';
 
-  // The four render guards, in render order. `teamsAssignmentHasContent`
-  // above mirrors them — change one, change both.
-  const showSides = isMatchplay && n > 0;
-  const showTeams =
-    requiresTeams &&
-    ((isBestBall && n >= 2) ||
-      (isParStableford && n >= 2) ||
-      (isTexas && n >= teamSize) ||
-      (isAmbrose && n >= teamSize) ||
-      (isFlorida && n >= teamSize) ||
-      (isShamble && n >= teamSize) ||
-      (isPatsome && n >= 2) ||
-      (isTeamMatchplay && n >= 2));
-  const showFlights = isBestBall && teamsComplete;
-  const showTee =
-    (isSolo ||
-      isParStableford ||
-      isMatchplay ||
-      isTexas ||
-      isAmbrose ||
-      isFlorida ||
-      isShamble ||
-      isPatsome ||
-      isTeamMatchplay) &&
-    n > 0;
+  const {
+    sides: showSides,
+    teams: showTeams,
+    flights: showFlights,
+    tee: showTee,
+  } = teamsAssignmentParts(state);
   const firstPart = showSides ? 'sides' : showTeams ? 'teams' : showFlights ? 'flights' : 'tee';
   const countText = isMatchplay
     ? tPlayers('counterMatchplay', { count: n })
@@ -539,11 +535,12 @@ export function TeamsAssignmentSection({
         </section>
       )}
 
-      {/* Per-spiller-tee for solo-, par-stableford-, matchplay- og Texas-modus —
-          flights-seksjonen rendrer ikke for disse. Matchplay krever individuell
-          tee for korrekt slope/CR → course handicap → stroke-allokering. Texas
-          trenger det også for CH per medlem før lag-HCP-formelen. Best-ball
-          håndterer tee inne i flights-seksjonen ovenfor. */}
+      {/* Tee per player in every format without flights (#2437) — solo, the
+          side games (Wolf, Nassau, Skins, Bingo Bango Bongo, Nines, Round
+          Robin, Acey Deucey), matchplay and the team formats. Every format
+          plays off course handicap per player (slope/CR per category), and the
+          publish guard checks every player's category. Best ball handles the
+          tee inside the flights part above. */}
       {showTee && (
         <section>
           <FormSection

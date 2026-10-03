@@ -1799,10 +1799,11 @@ describe('GameForm — #1379 mangel-tekst på edit-scheduled', () => {
 });
 
 describe('GameForm — #2209 tee-kategorien sendes for alle valgte spillere', () => {
-  // Skins (like Wolf, Nassau, BBB, Nines, Round Robin and Acey Deucey) renders
-  // no M/D/J toggle, so the only field carrying the category — the hidden input
-  // inside the toggle — was never mounted and the edit sent none. Every
-  // selected player now gets exactly one field from an always-mounted block.
+  // Before #2437, Skins (like Wolf, Nassau, BBB, Nines, Round Robin and Acey
+  // Deucey) rendered no M/D/J toggle, so the only field carrying the category —
+  // the hidden input inside the toggle — was never mounted and the edit sent
+  // none. Every selected player now gets exactly one field from an
+  // always-mounted block.
   const NO_OP_UPDATE = async () => {};
 
   it('#2209: Skins i redigering sender lagret kategori for hver spiller', () => {

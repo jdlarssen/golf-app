@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/Button';
 import { FormSectionText } from '@/components/ui/FormSection';
 import { Input } from '@/components/ui/Input';
 import { SegmentedField } from '@/components/ui/SegmentedField';
+import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
 import type { GameFormState } from '../useGameFormState';
 
 type Tee = 'M' | 'D' | 'J';
@@ -43,12 +44,18 @@ export function GuestPlayerFields({
   id?: string;
 }) {
   const t = useTranslations('game.players');
+  const tTeams = useTranslations('wizard.sections.teams');
   const fieldId = useId();
   const [name, setName] = useState('');
   const [hcp, setHcp] = useState('');
   const [tee, setTee] = useState<Tee>('M');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // #2437: clamp on read, not in state, so the card always shows and sends a
+  // category the tee rates — also when the tee has no men's rating, and when
+  // the tee is changed while the card is open (GameForm has both on one page).
+  const avail = state.teeGenderAvailability;
+  const teeShown = clampGenderToTee(tee, avail);
 
   const blocked = disabled || isPending;
   const canAdd = !blocked && name.trim() !== '' && hcp.trim() !== '';
@@ -59,7 +66,7 @@ export function GuestPlayerFields({
     const fd = new FormData();
     fd.set('guest_name', name);
     fd.set('guest_hcp', hcp);
-    fd.set('guest_tee', tee);
+    fd.set('guest_tee', teeShown);
     startTransition(async () => {
       const res = await createGuestForWizard(fd);
       if (res.ok) {
@@ -126,12 +133,19 @@ export function GuestPlayerFields({
       <SegmentedField
         variant="pills"
         legend={t('guestForm.teeLabel')}
-        options={[
-          { value: 'M', label: t('guestForm.teeMens') },
-          { value: 'D', label: t('guestForm.teeLadies') },
-          { value: 'J', label: t('guestForm.teeJuniors') },
-        ]}
-        value={tee}
+        options={(
+          [
+            ['M', t('guestForm.teeMens')],
+            ['D', t('guestForm.teeLadies')],
+            ['J', t('guestForm.teeJuniors')],
+          ] as const
+        ).map(([g, label]) => ({
+          value: g,
+          label,
+          disabled: !avail[g],
+          title: avail[g] ? undefined : tTeams('categoryNotRated'),
+        }))}
+        value={teeShown}
         onChange={(v) => setTee(v as Tee)}
         disabled={blocked}
       />
