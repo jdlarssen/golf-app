@@ -56,7 +56,8 @@
     "inbox": "Inbox",
     "inboxUnread": "Inbox, {count, plural, one {# unread} other {# unread}}",
     "clubhouse": "Clubhouse",
-    "profile": "Profile"
+    "profile": "Profile",
+    "backToClubhouse": "Back to the Clubhouse"
   },
   "inbox": {
     "kicker": "Inbox",
@@ -286,7 +287,6 @@
   "profile": {
     "languageRowLabel": "Language",
     "kicker": "Profile",
-    "backLabel": "Back to home",
     "displayNameFallback": "Profile",
     "updatedBanner": "✓ Your profile has been updated.",
     "sectionPersonal": "Activity",

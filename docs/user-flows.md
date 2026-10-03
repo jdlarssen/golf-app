@@ -49,7 +49,12 @@ flowchart TD
 
 **Vedvarende bunn-nav** (#355, #392): fire faste faner — Hjem, Innboks, Klubbhuset, Profil —
 rendret globalt i `app/[locale]/layout.tsx`, synlig for alle innloggede på alle flater (også i Klubbhus-
-rommet `/admin`). Skjult kun på hull-skjerm, login og onboarding. «Klubbhuset» er universell:
+rommet `/admin`). Skjult når du er utlogget, på `/login` og `/complete-profile`, i veiviseren
+(`/opprett-spill`, `/admin/games/new`) og på hullskjermen (`BottomNav`, `hidden`). I tillegg skjules den
+i redigeringsveiviseren på `/admin/games/[id]/edit`, der av CSS-regelen for `data-hides-bottom-nav` i
+`app/globals.css`. Fanenes forsider (Klubbhuset, Innboks, Profil) har ingen tilbakepil. Sider du åpner
+fra Klubbhuset (Baner, Spillformater, en klubb), går tilbake dit: lenkene bærer `?kilde=klubbhuset`
+(#2487), og kvitteringen for ny bane sier «Tilbake til Klubbhuset». «Klubbhuset» er universell:
 fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, mens spilleren
 møter et **adaptivt rom** (#892): en invitasjon til å arrangere (aldri en blindvei), klubbene sine,
 spillene/cupene de selv har satt opp, og Verktøy (Baner + Spillformater) nederst. **Opprett
@@ -228,7 +233,7 @@ flowchart LR
 
 ### A4 — Klubbhuset / Sekretariatet (dashboard)
 
-`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). For admin: hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats) + aktivitets-logg (siste 14 dager). For vanlig spiller: et **adaptivt rom** (#892, `PlayerKlubbhus.tsx`) som varierer på to fakta — har du klubber, og har du opprettet noe spill/cup. Seksjoner i rekkefølge: hilsen (umiddelbar) → arrangement-blokk (invitasjon «Sett opp en runde» / «… eller en cup» når 0 opprettet, ellers «+ Ny runde» + capped liste + «Cupene dine (n) →»-rad) → Dine klubber (inline `getMyClubs`-liste, ellers «Ikke med i en klubb ennå →») → Verktøy (Baner + Spillformater). Arrangement + klubber strømmer bak hver sin Suspense; ingen admin-tellinger eller aktivitets-logg.
+`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). Fanens forside har ingen tilbakepil (#2487). For admin: hilsen + fire rader i full bredde (`DenseTileList`: Spill / Spillere / Baner / Resultatprotokoll, og «Innsendte ideer» som femte når det ligger usette ideer) + «Mer i Sekretariatet» som et tokolonners rutenett av kompakte kort (`CompactTileGrid`: Cuper / Ligaer / Lanseringer / Klubber / Formats / Spillformater, og «Innsendte ideer» som sjuende når køen er tom) + aktivitets-logg (siste 14 dager). For vanlig spiller: et **adaptivt rom** (#892, `PlayerKlubbhus.tsx`) som varierer på to fakta — har du klubber, og har du opprettet noe spill/cup. Seksjoner i rekkefølge: hilsen (umiddelbar) → arrangement-blokk (invitasjon «Sett opp en runde» / «… eller en cup» når 0 opprettet, ellers «Det du arrangerer» med «+ Ny runde» + capped liste) og raden «Cuper» med «Du er med i n» når du er med i minst én cup → Dine klubber (inline `getMyClubs`-liste, ellers «Ikke med i en klubb ennå →») → Verktøy (Baner, Spillformater og «Har du en idé?»). Baner, Spillformater og klubbradene bærer `?kilde=klubbhuset`, så tilbake fra dem går til `/admin`. Arrangement + klubber strømmer bak hver sin Suspense; ingen admin-tellinger eller aktivitets-logg.
 
 ---
 

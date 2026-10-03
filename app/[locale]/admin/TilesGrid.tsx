@@ -5,6 +5,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getAdminContext } from './_dashboardContext';
 import { DenseTileList, CompactTileGrid, type Tile } from './TilesView';
 import { GettingStartedChecklist } from './GettingStartedChecklist';
+import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
 
 // ─── Admin dashboard tile grid (data-fetching) ─────────────────────────────
 
@@ -189,10 +190,11 @@ export async function TilesGrid() {
       icon: 'formats',
     },
     // #500: oppslagsverket — et rolig sted å lese om formatene (flyttet hit fra
-    // Hjem; den raske «slik funker det» bor bak «?» i veiviseren).
+    // Hjem; den raske «slik funker det» bor bak «?» i veiviseren). Merket
+    // sender tilbake-pila dit igjen (#2487).
     {
       label: t('tilesSpillformater'),
-      href: '/spillformater',
+      href: withKlubbhusOrigin('/spillformater'),
       meta: t('metaSpillformater'),
       icon: 'spillformater',
     },

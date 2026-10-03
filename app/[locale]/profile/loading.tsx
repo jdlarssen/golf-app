@@ -1,4 +1,6 @@
+import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 
@@ -12,14 +14,13 @@ import { Skeleton } from '@/components/ui/Skeleton';
  * Stagger-offset: 30 → 60 → 120 → 180 → 240ms, samme trinnlengde som
  * ProfileFormSkeleton i page.tsx.
  */
-export default function ProfileLoading() {
+export default async function ProfileLoading() {
+  const t = await getTranslations('profile');
   return (
     <AppShell>
-      {/* TopBar-silhuett: tilbake-pil + kicker-tekst */}
-      <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 -mt-8 pt-5 pb-2 mb-4 flex items-center gap-3">
-        <Skeleton className="h-4 w-16" />
-        <div className="flex-1" />
-      </div>
+      {/* Ekte TopBar uten tilbake-pil, som siden selv: Profil er en fane i
+          bunnmenyen, ikke et steg (#2487). */}
+      <TopBar kicker={t('kicker')} />
 
       {/* Profil-kort: avatar + navn + skjemafelt */}
       <Card>

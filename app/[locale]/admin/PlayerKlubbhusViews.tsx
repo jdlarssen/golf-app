@@ -7,6 +7,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { DenseTileList, type Tile } from './TilesView';
 import type { GameStatus } from '@/lib/games/status';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
+import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
 
 // Presentational views for the adaptive player Klubbhuset room (#892). Pure
 // (data injected as props, sync `useTranslations`) so the data-fetching shell
@@ -225,7 +226,7 @@ export function ClubsView({ clubs }: { clubs: MyClub[] }) {
         {clubs.map((club) => (
           <SmartLink
             key={club.id}
-            href={`/klubber/${club.id}`}
+            href={withKlubbhusOrigin(`/klubber/${club.id}`)}
             data-testid="player-club-row"
             className={ROW_LINK}
           >
@@ -264,20 +265,22 @@ export function ClubsSkeleton() {
  * Verktøy — always shown, de-emphasised tools at the bottom of the room:
  * adding a course and browsing the format reference. Same `DenseTileList` row
  * as the cup entry above and the organiser's core doors (#1559), so the whole
- * room speaks one shape and the helper lines survive.
+ * room speaks one shape and the helper lines survive. Baner and Spillformater
+ * carry the Klubbhuset origin so their back link returns here (#2487);
+ * /foreslaa-ide already goes back to /admin.
  */
 export function ToolsView() {
   const t = useTranslations('admin.dashboard');
   const tiles: Tile[] = [
     {
       label: t('playerBaner'),
-      href: '/opprett-bane',
+      href: withKlubbhusOrigin('/opprett-bane'),
       meta: t('playerBanerMeta'),
       icon: 'bane',
     },
     {
       label: t('playerSpillformater'),
-      href: '/spillformater',
+      href: withKlubbhusOrigin('/spillformater'),
       meta: t('playerSpillformaterMeta'),
       icon: 'spillformater',
     },

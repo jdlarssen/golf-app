@@ -1,4 +1,5 @@
 import { first } from '@/lib/url/searchParams';
+import { klubbhusBackHref } from '@/lib/url/klubbhusOrigin';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
@@ -31,6 +32,7 @@ type SearchParams = Promise<{
   email?: string | string[];
   decided?: string | string[];
   role_changed?: string | string[];
+  kilde?: string | string[];
 }>;
 
 /**
@@ -120,10 +122,15 @@ export default async function KlubbDetailPage({
   const decidedCode = first(sp.decided);
   const roleChanged = first(sp.role_changed);
 
-  const [t, tRoles] = await Promise.all([
+  const [t, tRoles, tNav] = await Promise.all([
     getTranslations('klubb.room'),
     getTranslations('klubb.roles'),
+    getTranslations('nav'),
   ]);
+
+  // Fra Klubbhuset (?kilde=klubbhuset) går tilbake dit, ikke til lista du
+  // aldri gikk gjennom (#2487).
+  const backHref = klubbhusBackHref(sp.kilde, '/klubber');
 
   // Build error message for the add-member form.
   function getErrorMessage(): string {
@@ -172,7 +179,11 @@ export default async function KlubbDetailPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/klubber" kicker={club.name} />
+      <TopBar
+        backHref={backHref}
+        backLabel={backHref === '/admin' ? tNav('backToClubhouse') : undefined}
+        kicker={club.name}
+      />
       <PageHeader title={club.name} />
 
       {addedEmail && (

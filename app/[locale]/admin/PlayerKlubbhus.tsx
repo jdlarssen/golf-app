@@ -45,7 +45,7 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   const tNav = await getTranslations('admin.nav');
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker={tNav('klubbhus')} />
+      <TopBar kicker={tNav('klubbhus')} />
 
       <GreetingView name={firstName(role.name)} />
 
