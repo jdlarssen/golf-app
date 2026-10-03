@@ -31,7 +31,8 @@ import {
  *   7. game_players.update × n             // plan.updates, each .select('user_id')
  *   8. game_players.insert                 // plan.inserts, .select('user_id')
  *   9. game_players.delete                 // plan.deletes, .select('user_id')
- *  10. (publish) notifyRosterInvites; (update_scheduled) notify new rows
+ *  10. (publish) notifyRosterInvites + sendHeldGameInvites (#2445);
+ *      (update_scheduled) notify new rows
  *  11. revalidateTag + redirect
  *
  * On a failed roster write the compensation runs via the (mocked) admin
@@ -104,6 +105,16 @@ const sendPublishInvitesMock = vi.fn<(...args: unknown[]) => Promise<{ failed: n
 );
 vi.mock('@/lib/games/sendPublishInvites', () => ({
   sendPublishInvites: (...args: unknown[]) => sendPublishInvitesMock(...args),
+}));
+
+// #2445: the e-mail invitations a draft held go out on publish. The sender has
+// its own tests; here only who calls it, with what, and that it never stops
+// the publish.
+const sendHeldGameInvitesMock = vi.fn<
+  (...args: unknown[]) => Promise<{ sent: number; failed: number }>
+>(async () => ({ sent: 0, failed: 0 }));
+vi.mock('@/lib/games/sendHeldGameInvites', () => ({
+  sendHeldGameInvites: (...args: unknown[]) => sendHeldGameInvitesMock(...args),
 }));
 
 function lastRedirect(): string | undefined {
@@ -1346,5 +1357,106 @@ describe('klubbvalget på et gjenopptatt utkast lagres (#2433, søsken-funn fra 
 
     expect(groupMemberCalls()).toHaveLength(0);
     expect(gamesUpdateArgs()?.group_id).toBe('club-1');
+  });
+});
+
+describe('held e-mail invitations when a draft is published (#2445)', () => {
+  // Orchestrator's decision 03.10: a draft holds the e-mail invitations made
+  // on it, and publishing sends them once.
+  function draftFixture(extra: { data: unknown; error: unknown }[] = []) {
+    return buildSupabaseMock([
+      { data: { is_admin: true, name: 'Ola' }, error: null }, // loadRole
+      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
+      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      ...extra,
+    ]);
+  }
+  const insertU4toU7 = {
+    data: [4, 5, 6, 7].map((i) => ({ user_id: `u${i}` })),
+    error: null,
+  };
+
+  it("publish calls it once, skipping the wizard's own addresses", async () => {
+    supabaseMock = draftFixture([insertU4toU7]);
+    signIn('admin-1');
+    const publishData = fullBestBallFormData();
+    publishData.append('invite_email', ' A@Example.com ');
+    publishData.append('invite_email', 'b@example.com');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(publishFromDraftAction('game-1', publishData)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(sendHeldGameInvitesMock).toHaveBeenCalledTimes(1);
+    expect(sendHeldGameInvitesMock).toHaveBeenCalledWith({
+      gameId: 'game-1',
+      skipEmails: ['a@example.com', 'b@example.com'],
+    });
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+  });
+
+  it('save_draft and update_scheduled never call it', async () => {
+    supabaseMock = draftFixture([insertU4toU7]);
+    signIn('admin-1');
+    const { saveDraftAction, updateScheduledAction } = await import('./actions');
+    await expect(saveDraftAction('game-1', fullBestBallFormData())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { status: 'scheduled', game_mode: 'best_ball' }, error: null },
+      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null },
+      { data: { id: 'game-1' }, error: null },
+      insertU4toU7,
+    ]);
+    signIn('admin-1');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(sendHeldGameInvitesMock).not.toHaveBeenCalled();
+  });
+
+  it('a throw does not stop the publish: same redirect as before', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    sendHeldGameInvitesMock.mockRejectedValueOnce(new Error('boom'));
+    supabaseMock = draftFixture([insertU4toU7]);
+    signIn('admin-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(sendHeldGameInvitesMock).toHaveBeenCalledTimes(1);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=scheduled');
+    consoleError.mockRestore();
+  });
+
+  it('a failed roster write still sends them, with no skip list', async () => {
+    // games.update has made the game scheduled, and the next save runs as
+    // update_scheduled, which never sends them. sendPublishInvites does not
+    // run after db_players, so nothing is mailed twice.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = draftFixture([
+      { data: null, error: { message: 'insert boom' } }, // insert u4..u7 FAILS
+      { data: null, error: null }, // compensation delete
+    ]);
+    signIn('admin-1');
+    const publishData = fullBestBallFormData();
+    publishData.append('invite_email', 'a@example.com');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(publishFromDraftAction('game-1', publishData)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(sendHeldGameInvitesMock).toHaveBeenCalledWith({ gameId: 'game-1', skipEmails: [] });
+    expect(sendPublishInvitesMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe('/admin/games/game-1/edit?error=db_players&step=5');
+    consoleError.mockRestore();
   });
 });

@@ -33,6 +33,7 @@ import { isClubTournament } from '@/lib/games/registration';
 import { resolveGameClubId } from '@/lib/clubs/gameClubId';
 import { parseInviteEmailList } from '@/lib/games/inviteEmail';
 import { sendPublishInvites } from '@/lib/games/sendPublishInvites';
+import { sendHeldGameInvites } from '@/lib/games/sendHeldGameInvites';
 import type { Tables } from '@/lib/database.types';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
@@ -392,6 +393,29 @@ async function updateGameInternal(
       }
     } catch (error) {
       console.error('[updateGameInternal] roster invites failed', { gameId, error });
+    }
+
+    // #2445 (orchestrator's decision 03.10): the e-mail invitations made while
+    // the game was a draft were held, and go out now, once. Same placement and
+    // same reason as the notices above: the game is already `scheduled` even
+    // when the roster write failed, and update_scheduled never sends them.
+    // The wizard's own addresses are skipped: sendPublishInvites below mails
+    // those itself, and it only runs when the roster write went through.
+    // Best-effort: neither a throw nor a failed mail stops the publish.
+    const skipEmails =
+      rosterWrite.ok && existing.tournament_id == null
+        ? parseInviteEmailList(formData.getAll('invite_email'))
+        : [];
+    try {
+      const held = await sendHeldGameInvites({ gameId, skipEmails });
+      if (held.failed > 0) {
+        console.error('[updateGameInternal] held invites failed', {
+          gameId,
+          failed: held.failed,
+        });
+      }
+    } catch (error) {
+      console.error('[updateGameInternal] held invites failed', { gameId, error });
     }
   }
 
