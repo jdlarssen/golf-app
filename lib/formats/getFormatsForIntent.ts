@@ -16,8 +16,8 @@ export type FormatForIntent = {
 // (is_primary desc, sort_order asc). UI partisjonerer selv på is_primary
 // for å rendre 4 primary-kort + sekundære.
 //
-// Tag: `format-mapping`. Mutasjons-server-actions i F3 må kalle
-// `revalidateTag('format-mapping', 'max')` etter endring.
+// Tag: `format-mapping`. Mutations call `expireFormatMappingCache()` from
+// `lib/formats/expireFormatMappingCache.ts`, which expires it at once (#2336).
 //
 // Bruker getAdminClient() fordi cookies() ikke kan kalles inne i
 // unstable_cache. RLS er allerede strengere på write-siden (admin only).
