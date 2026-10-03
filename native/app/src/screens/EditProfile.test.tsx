@@ -132,8 +132,8 @@ describe('EditProfile', () => {
     });
   });
 
-  // #1979: skjemaet nås nå også fra veiviserens siste steg, når din egen
-  // ufullførte profil er det som stopper publiseringen. Uten `returnTo` ville
+  // #1979: skjemaet nås nå også fra veiviserens siste steg, under merknaden om
+  // at din egen profil ikke er fullført (#2441). Uten `returnTo` ville
   // Lagre lagt profil-rommet OPPÅ veiviseren, og arrangøren måtte trykke seg
   // bakover to ganger for å komme til knappen hen var på vei til.
   it('går tilbake til veiviseren i stedet for profil-rommet når den kom derfra', async () => {

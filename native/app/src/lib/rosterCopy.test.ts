@@ -194,10 +194,16 @@ describe('describeStartRefusal', () => {
     expect(describeStartRefusal({ ok: false, reason })).toBe(web[webKey]);
   });
 
-  it('navngir ingen i pending-setningen: publiserings-teksten med «startes» (#2207)', () => {
-    expect(describeStartRefusal({ ok: false, reason: 'pending_players' })).toBe(
-      source.wizard.errors.pending_players_generic.replace('publiseres', 'startes'),
-    );
+  // #2207: ingen navneliste, for 409-svaret bærer ingen. #2441: publiseringen
+  // har ingen profilsperre lenger, så setningen er appens egen og handler bare
+  // om starten.
+  it('navngir ingen i pending-setningen, og snakker bare om starten (#2207, #2441)', () => {
+    const text = describeStartRefusal({ ok: false, reason: 'pending_players' });
+    expect(isFinishedSentence(text)).toBe(true);
+    expect(text).not.toContain('{');
+    expect(text).not.toContain('@');
+    expect(text).not.toContain('publiseres');
+    expect(text.endsWith('startes.')).toBe(true);
   });
 
   it.each([

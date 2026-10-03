@@ -22,6 +22,7 @@ function renderStep(players: DraftPlayer[], candidates: RosterCandidate[]) {
       candidates={candidates}
       failed={false}
       meId="me"
+      selfPending={false}
       mode="best_ball"
       players={players}
       teamLayout={teamLayoutFor('best_ball', false)}

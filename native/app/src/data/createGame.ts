@@ -84,7 +84,7 @@ export interface RosterCandidate {
    * herretee i appen og juniortee på nettsiden — samme spiller, to sett.
    */
   level: string | null;
-  /** Profilen er ikke fullført. Blokkerer publisering (delt RPC-gate). */
+  /** Profilen er ikke fullført. Stopper starten, ikke publiseringen (#2441). */
   pending: boolean;
 }
 
@@ -259,8 +259,6 @@ export type CreateGameFailure =
   | 'tee_off_in_past'
   | 'bad_side_ld_count'
   | 'bad_side_ctp_count'
-  | 'db_roster'
-  | 'pending_players'
   | 'rls_denied'
   | 'no_rows'
   | 'db_game'
@@ -340,11 +338,13 @@ async function refuseUnlessModeIsActive(
  *  3. formatet er støttet i appen, og aktivt i DB
  *  4. tee-off finnes, er lesbar og ikke i fortiden
  *  5. sideturneringens tellere er 0–2
- *  6. ingen på lista mangler profil (`incomplete_profile_ids`)
- *  7. INSERT `games` (status `'scheduled'`, `created_by` = deg)
- *  8. INSERT `game_players`
- *  9. feiler 8 → slett games-raden igjen
- * 10. lyktes 8 → be ruta sende `invite`-varslene (best-effort, #2215)
+ *  6. INSERT `games` (status `'scheduled'`, `created_by` = deg)
+ *  7. INSERT `game_players`
+ *  8. feiler 7 → slett games-raden igjen
+ *  9. lyktes 7 → be ruta sende `invite`-varslene (best-effort, #2215)
+ *
+ * En venn uten fullført profil stopper ikke publiseringen (#2441). Sperren står
+ * ved start: `startScheduledGameCore`, bak ruta `POST /api/games/{id}/start`.
  *
  * Knappen låses av skjermen mens dette står på; funksjonen er ikke idempotent
  * og et dobbelttrykk ville laget to runder.
@@ -395,17 +395,6 @@ export async function publishGame(draft: GameDraft): Promise<CreateGameResult> {
     ldCount: side.ldCount,
     ctpCount: side.ctpCount,
   });
-
-  // Uferdige profiler blokkerer publisering. Et direkte SELECT ville stille
-  // returnert ingenting for en ikke-admin arrangør (#366 pending-read-fella);
-  // SECURITY DEFINER-RPC-en (0185, #2207) svarer med id-er — aldri e-post —
-  // for de eksakte id-ene vi sender. Vi leser bare antallet.
-  const { data: incomplete, error: rosterError } = await supabase.rpc(
-    'incomplete_profile_ids',
-    { p_user_ids: payload.players.map((p) => p.user_id) },
-  );
-  if (rosterError) return failed('db_roster');
-  if ((incomplete ?? []).length > 0) return failed('pending_players');
 
   const insertedGame = readWriteResult<{ id: string }>(
     await supabase

@@ -18,8 +18,9 @@
 //     `navigate` ville «tilbake» fra den nye runden ført rett inn i en ferdig
 //     veiviser.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
-import { publishGame } from '../data/createGame';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fetchRosterCandidates, publishGame } from '../data/createGame';
+import { fetchOwnProfile } from '../data/profile';
 import type { ScreenProps } from '../navigation';
 import { SessionProvider } from '../session';
 import { CreateGame } from './CreateGame';
@@ -53,20 +54,48 @@ jest.mock('../data/formatCatalog', () => ({
   ]),
 }));
 
-// #1934: veiviseren leser egen profilrad for admin-flagget. Stubbet som de
-// andre hentingene, så lesingen faktisk lykkes i riggen i stedet for å ende i
-// en avvist promise som `useRemote` svelger stille.
+// #1934: veiviseren leser egen profilrad for admin-flagget, og (#2441) for om
+// din egen profil er fullført. Stubbet som de andre hentingene, så lesingen
+// faktisk lykkes i riggen i stedet for å ende i en avvist promise som
+// `useRemote` svelger stille.
+const mockProfile = {
+  name: 'Jørgen Arrangør',
+  nickname: null,
+  hcpIndex: 12.4,
+  handicapUpdatedAt: null,
+  gender: 'mens',
+  level: null,
+  isAdmin: false,
+  profileCompletedAt: '2026-01-01T10:00:00.000Z',
+  createdAt: '2026-01-01T09:00:00.000Z',
+};
+
 jest.mock('../data/profile', () => ({
-  fetchOwnProfile: jest.fn(async () => ({
-    name: 'Jørgen Arrangør',
-    nickname: null,
-    hcpIndex: 12.4,
-    handicapUpdatedAt: null,
-    gender: 'mens',
-    level: null,
-    isAdmin: false,
-  })),
+  fetchOwnProfile: jest.fn(async () => mockProfile),
 }));
+
+// `roster_candidates` gir aldri kalleren tilbake (`u.id <> ctx.uid`), så lista
+// har bare de andre. Du er «Deg» i veiviseren.
+const mockCandidates = [
+  {
+    id: 'p2',
+    name: 'Ada Aas',
+    nickname: null,
+    hcpIndex: 8.1,
+    gender: 'ladies',
+    level: 'normal',
+    pending: false,
+  },
+  {
+    id: 'p3',
+    name: 'Ola Olsen',
+    nickname: null,
+    hcpIndex: 21.7,
+    gender: 'mens',
+    level: 'normal',
+    pending: false,
+  },
+];
 
 jest.mock('../data/createGame', () => ({
   fetchCourses: jest.fn(async () => [
@@ -84,45 +113,23 @@ jest.mock('../data/createGame', () => ({
       ],
     },
   ]),
-  fetchRosterCandidates: jest.fn(async () => [
-    {
-      id: 'me',
-      name: 'Jørgen Arrangør',
-      nickname: null,
-      hcpIndex: 12.4,
-      gender: 'mens',
-      level: 'normal',
-      pending: false,
-    },
-    {
-      id: 'p2',
-      name: 'Ada Aas',
-      nickname: null,
-      hcpIndex: 8.1,
-      gender: 'ladies',
-      level: 'normal',
-      pending: false,
-    },
-    {
-      id: 'p3',
-      name: 'Ola Olsen',
-      nickname: null,
-      hcpIndex: 21.7,
-      gender: 'mens',
-      level: 'normal',
-      pending: false,
-    },
-  ]),
+  fetchRosterCandidates: jest.fn(async () => mockCandidates),
   publishGame: jest.fn(),
 }));
 
 const publishGameMock = publishGame as jest.MockedFunction<typeof publishGame>;
+const fetchOwnProfileMock = fetchOwnProfile as jest.MockedFunction<typeof fetchOwnProfile>;
+const fetchRosterCandidatesMock = fetchRosterCandidates as jest.MockedFunction<
+  typeof fetchRosterCandidates
+>;
 
 async function renderWizard() {
   const navigation = {
     replace: jest.fn(),
     goBack: jest.fn(),
     navigate: jest.fn(),
+    // Veiviseren henter profilen på nytt når den får fokus igjen (#2441).
+    addListener: jest.fn(() => jest.fn()),
   } as unknown as ScreenProps<'CreateGame'>['navigation'];
 
   const view = await render(
@@ -134,7 +141,18 @@ async function renderWizard() {
     </SessionProvider>,
   );
 
-  return { ...view, navigation };
+  /** Fokus-lytteren skjermen meldte på, som om arrangøren kom tilbake hit. */
+  const focusListener = () => {
+    const calls = (navigation.addListener as unknown as jest.Mock).mock.calls as [
+      string,
+      () => void,
+    ][];
+    const call = calls.find(([event]) => event === 'focus');
+    if (!call) throw new Error('skjermen meldte ikke på noen fokus-lytter');
+    return call[1];
+  };
+
+  return { ...view, navigation, focusListener };
 }
 
 describe('CreateGame', () => {
@@ -146,6 +164,11 @@ describe('CreateGame', () => {
       // være den norske setningen for koden — ikke en rå PostgREST-streng.
       .mockResolvedValueOnce({ ok: false, error: 'db_game' })
       .mockResolvedValueOnce({ ok: true, gameId: 'new-game-1' });
+    // #2441: Ola har ikke fullført profilen. Det stopper ikke publiseringen.
+    fetchRosterCandidatesMock.mockResolvedValueOnce([
+      mockCandidates[0]!,
+      { ...mockCandidates[1]!, pending: true },
+    ]);
 
     const { navigation } = await renderWizard();
 
@@ -183,8 +206,11 @@ describe('CreateGame', () => {
 
     // ── Steg 5: oppsummering ──────────────────────────────────────────────
     expect(screen.getByTestId('create-summary-players').props.children).toBe(
-      'Jørgen Arrangør, Ada Aas, Ola Olsen',
+      'Deg, Ada Aas, Ola Olsen',
     );
+    // En merknad, ikke en sperre: Ola venter, og publiseringen går likevel.
+    expect(screen.getByTestId('create-warning-pending-others')).toBeTruthy();
+    expect(screen.queryByTestId('create-warning-pending-self')).toBeNull();
     expect(screen.getByTestId('create-summary-side').props.children).toBe(
       '1 lengste drive · 1 nærmest pinnen',
     );
@@ -289,7 +315,8 @@ describe('CreateGame', () => {
   // KOBLINGEN: at chipen faktisk skriver til utkastet, og at et sett teen ikke
   // rater er avslått i stedet for å bli et stille feil banehandicap.
   it('lar arrangøren velge tee-sett per spiller, og slår av settene teen ikke rater', async () => {
-    await renderWizard();
+    fetchOwnProfileMock.mockResolvedValueOnce({ ...mockProfile, profileCompletedAt: null });
+    const { focusListener } = await renderWizard();
 
     await fireEvent.press(await screen.findByTestId('create-format-stableford'));
     await fireEvent.press(screen.getByTestId('create-next'));
@@ -324,5 +351,21 @@ describe('CreateGame', () => {
     expect(screen.getByTestId('create-summary-tees').props.children).toBe(
       'Ada Aas: junior',
     );
+
+    // #2441: din egen profil er ikke fullført. Merknaden og «Rediger profil»
+    // står, og publiseringen er åpen.
+    expect(screen.getByTestId('create-warning-pending-self')).toBeTruthy();
+    expect(screen.getByTestId('create-warning-profile')).toBeTruthy();
+    expect(screen.getByTestId('create-publish').props.accessibilityState?.disabled).toBeFalsy();
+
+    // Tilbake fra profilskjemaet: skjermen får fokus, henter profilen på nytt
+    // (nå fullført), og merknaden er borte.
+    await act(async () => {
+      focusListener()();
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('create-warning-pending-self')).toBeNull();
+    });
+    expect(screen.queryByTestId('create-warning-profile')).toBeNull();
   });
 });

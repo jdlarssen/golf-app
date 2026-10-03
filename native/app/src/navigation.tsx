@@ -86,8 +86,8 @@ export type RootStackParamList = {
    * `returnTo` sier hvor Lagre skal legge deg av (#1979).
    *
    * Uten den navigerer skjermen alltid til `Profile`. Åpner du skjemaet fra
-   * veiviserens siste steg — der «Rediger profil»-knappen står når din egen
-   * profil stopper publiseringen — ville du havnet i profil-rommet med
+   * veiviserens siste steg (knappen står under merknaden om at din egen
+   * profil mangler navn eller handicap, #2441), ville du havnet i profil-rommet med
    * veiviseren begravd i stacken. `'CreateGame'` gir `goBack()` i stedet, og
    * veiviseren står montert under med alt du har valgt.
    */
