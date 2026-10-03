@@ -136,7 +136,7 @@ export const PENDING_SELF_NOTE =
 /** Merknaden for de andre du har valgt, når minst én av dem venter. */
 export function describePendingOthers(count: number): string {
   if (count === 1) {
-    return '1 spiller har ikke fullført profilen sin ennå. Runden kan ikke starte før det er gjort.';
+    return '1 spiller har ikke fullført profilen sin ennå. Runden kan ikke starte før profilen er fullført.';
   }
   return `${count} spillere har ikke fullført profilen sin ennå. Runden kan ikke starte før alle har fylt inn navn og handicap.`;
 }
