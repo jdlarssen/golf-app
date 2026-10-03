@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { useState } from 'react';
-import { SegmentedField } from './SegmentedField';
+import { SegmentedField, UNAVAILABLE_OPTION_CLASSES } from './SegmentedField';
 
 beforeEach(() => {
   cleanup();
@@ -117,6 +117,9 @@ describe('SegmentedField', () => {
       const dame = screen.getByRole('radio', { name: 'Dame' });
       expect(dame).toBeDisabled();
       expect(dame).toHaveAttribute('title', 'Mangler rating');
+      // One look for an option that can't be picked, in both variants and in
+      // the M/D/J toggle (#2437).
+      expect(dame.className).toContain(UNAVAILABLE_OPTION_CLASSES);
       expect(herre).not.toBeDisabled();
 
       fireEvent.click(dame);
