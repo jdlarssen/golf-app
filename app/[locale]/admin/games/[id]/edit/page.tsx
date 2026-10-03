@@ -262,6 +262,8 @@ const getOptions = cache(async () => {
         getAdminClient()
           .from('users')
           .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
+          // #1012/#2323: anonymised accounts must not be selectable.
+          .is('deleted_at', null)
           .order('profile_completed_at', { ascending: true, nullsFirst: false })
           .order('name', { ascending: true, nullsFirst: true })
           .order('id')

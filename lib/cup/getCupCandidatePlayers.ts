@@ -84,6 +84,8 @@ export async function getCupCandidatePlayers(
         supabase
           .from('users')
           .select('id, name, nickname, hcp_index, profile_completed_at, gender')
+          // #1012/#2323: anonymised accounts must not be selectable.
+          .is('deleted_at', null)
           .order('name', { ascending: true, nullsFirst: true })
           .order('id')
           .range(from, to)
