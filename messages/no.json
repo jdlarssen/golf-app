@@ -555,7 +555,7 @@
       "legend": "Hva slags arrangement?",
       "kompis": {
         "label": "Kompis-runde",
-        "description": "Gjør runden mer spennende, opp til 40 spillere"
+        "description": "Gjør runden mer spennende, opp til {max} spillere"
       },
       "klubb": {
         "label": "Klubb-turnering",
@@ -1192,7 +1192,7 @@
         "tooManyMatchplay": "for mange spillere — matchplay krever nøyaktig 2",
         "onePerSide": "én spiller på hver side",
         "bestBallMin": "minst 2 spillere (partall, fordelt 2 per lag)",
-        "bestBallOdd": "partall antall spillere (2, 4, 6 eller 8)",
+        "bestBallOdd": "partall antall spillere (lag à 2)",
         "bestBallAssign": "lag-fordeling (2 per lag)",
         "flightAssign": "flight-fordeling",
         "min2players": "minst 2 spillere",

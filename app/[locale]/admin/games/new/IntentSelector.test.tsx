@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 import { IntentSelector } from './IntentSelector';
 
 // Type C render-tester per docs/test-discipline.md — verifiserer intent-kortene,
@@ -28,6 +29,7 @@ describe('IntentSelector', () => {
     expect(kompis.getAttribute('aria-current')).toBeNull();
     expect(cup.getAttribute('aria-current')).toBeNull();
     expect(solo.getAttribute('aria-current')).toBeNull();
+    expect(kompis).toHaveTextContent(String(TEAM_FORMAT_PLAYER_CAP));
     // Ingen radio-rester: assistive tech skal ikke love et valg som ikke
     // bytter kontekst (WCAG 3.2.2).
     expect(screen.queryAllByRole('radio')).toHaveLength(0);

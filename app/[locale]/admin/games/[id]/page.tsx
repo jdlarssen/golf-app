@@ -508,8 +508,9 @@ async function PlayersSections({
   //  - isMatchplay: singles matchplay (1v1). Bruker «Side» i stedet for «Lag»
   //    i alle labels — 2 sider à 1 spiller. Flight = side mekanisk, så
   //    Flight-kolonnen skjules.
-  //  - isBestBall: 4 lag à 2 spillere; flight kan avvike fra team. Full
-  //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
+  //  - isBestBall: lag à 2 spillere, opptil `MAX_TEAM_NUMBER` lag; flight kan
+  //    avvike fra team. Full Lag-grid 1..teamsMax (se `teamSlots`) +
+  //    Lag+Flight-kolonner.
   // Solo = individuelt format uten lag-/flight-konstruksjon. Kanonisk helper
   // (lib/scoring/modes/types) dekker stableford solo + solo slagspill + alle
   // pott-formatene (Wolf/Nassau/Skins/BBB/Nines/Round Robin/Acey Deucey) — den

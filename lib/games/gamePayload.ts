@@ -151,8 +151,8 @@ export type GamePlayerInput = {
   user_id: string;
   /**
    * Nullable since 0030_game_modes: solo-modus (stableford) lar lag-tilordning
-   * stå tom. Best-ball-modus krever fortsatt 1..4 og håndheves av
-   * best-ball-validatoren før payloaden persisteres.
+   * stå tom. Best-ball-modus krever 1..`MAX_TEAM_NUMBER` (20 par, #2148) og
+   * håndheves av best-ball-validatoren før payloaden persisteres.
    */
   team_number: number | null;
   /**
@@ -179,7 +179,8 @@ export type GameValidationErrorCode =
   // - unsupported_mode_size_combo: mode + team_size matcher ikke en aktiv
   //   kombinasjon (f.eks. par-stableford som ikke er implementert ennå).
   // - min_players_for_mode: publish krever flere spillere enn payloaden har
-  //   for den valgte modusen (stableford: min 1, best-ball: eksakt 8).
+  //   for den valgte modusen (stableford: min 1, best-ball: minst én
+  //   spiller; et lag med én spiller gir `team_balance`).
   // - mode_locked_after_publish: edit-flow forsøker å endre game_mode etter
   //   at spillet har forlatt 'draft'-state (scheduled/active/finished).
   | 'mode_required'
@@ -528,9 +529,11 @@ function validateTeamBalance(
 
 /**
  * Best-ball-netto-validator. Fleksibel lagstørrelse (#374):
- *  - publish krever ≥1 lag à 2 spillere (2, 4, 6 eller 8 spillere),
- *    hvert ikke-tomt lag har EKSAKT 2 spillere — speiler validateStablefordTeam
- *  - draft tillater partial state (0..8 spillere), men team/flight rangen
+ *  - publish krever ≥1 lag à 2 spillere, altså et partall fra 2 til
+ *    `MAX_TEAM_FORMAT_PLAYERS` (40), hvert ikke-tomt lag har EKSAKT 2
+ *    spillere — speiler validateStablefordTeam
+ *  - draft sjekker ikke antallet (slot-løkka leser opptil
+ *    `MAX_TEAM_FORMAT_PLAYERS` + 1 plasser), men team/flight rangen
  *    blir likevel validert per ikke-tom rad
  *  - duplikat-sjekk gjelder begge moduser
  *  - team_number og flight_number i 1..`MAX_TEAM_NUMBER` (20 par, #2148);
@@ -2292,7 +2295,7 @@ export function buildGameInsertPayload(
   // turnering med individuell påmelding (#2433, medlemmene melder seg på
   // selv), er spiller-listen valgfri ved publish — spillerne kan komme
   // etterpå. Regelen bor i rosterOptionalAtPublish. Vi sender derfor 'draft'
-  // inn til mode-validatoren slik at completeness-sjekkene (eksakt 8
+  // inn til mode-validatoren slik at completeness-sjekkene (partall
   // spillere på best-ball, balansert lag-fordeling osv.) hoppes over.
   // Duplikat-sjekk og bad-team/bad-flight håndheves fortsatt siden de
   // gjelder enhver innsendt rad.

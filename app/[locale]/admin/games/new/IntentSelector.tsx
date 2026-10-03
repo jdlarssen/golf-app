@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { TEAM_FORMAT_PLAYER_CAP } from '@/lib/games/teamFormatLimits';
 import type { Intent } from '@/lib/wizard/intent';
 import { choiceStateClass } from '@/components/ui/ChoiceCard';
 
@@ -159,7 +160,7 @@ export function IntentSelector({
                 {t(`${tile.intent}.label`)}
               </span>
               <span className="font-sans text-xs leading-[1.4] text-muted">
-                {t(`${tile.intent}.description`)}
+                {t(`${tile.intent}.description`, { max: TEAM_FORMAT_PLAYER_CAP })}
               </span>
             </button>
           );

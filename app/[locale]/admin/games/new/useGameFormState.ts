@@ -1818,7 +1818,7 @@ export function useGameFormState({
     playersWithUnratedCategory.length === 0;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
-  // best-ball-stien teller opp til 8 spillere + lag-/flight-fordeling,
+  // best-ball-stien krever et partall spillere + lag-/flight-fordeling,
   // par-stableford-stien forventer partall-spillere balansert på lag à 2,
   // matchplay-stien krever nøyaktig 2 spillere fordelt 1+1 på sidene,
   // og solo-stien melder bare manglende spiller(e). Rekkefølgen speiler
