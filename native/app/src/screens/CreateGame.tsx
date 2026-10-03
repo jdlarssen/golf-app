@@ -229,6 +229,10 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
   // spillersteget, så en spiller som legges til ETTER at teen er valgt ville
   // aldri passert en klem-ved-tee-bytte. Hen ville stått med et sett teen ikke
   // rater, med chipen grå og publiseringen sperret — uten vei ut.
+  //
+  // Din egen tee følger DIN profil. `roster_candidates` gir aldri kalleren
+  // tilbake, så et oppslag i kandidatlista ga alltid `null` for deg, og en dame
+  // eller junior som arrangerte startet på herretee.
   const players = useMemo<DraftPlayer[]>(
     () =>
       picked.map((p) => ({
@@ -236,11 +240,13 @@ export function CreateGame({ navigation }: ScreenProps<'CreateGame'>) {
         teamNumber: p.teamNumber,
         teeGender: resolveTeeGender(
           p.teeGender,
-          candidates.data?.find((c) => c.id === p.userId) ?? null,
+          p.userId === userId
+            ? profile.data
+            : (candidates.data?.find((c) => c.id === p.userId) ?? null),
           teeAvail,
         ),
       })),
-    [candidates.data, picked, teeAvail],
+    [candidates.data, picked, profile.data, teeAvail, userId],
   );
 
   const selectMode = useCallback(
