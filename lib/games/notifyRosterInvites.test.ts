@@ -145,12 +145,16 @@ describe('notifyRosterInvites', () => {
   // #2441: the web publishes through here too, and an admin may publish
   // another organiser's draft. The organiser never gets «<admin> inviterte
   // deg» to their own game.
-  it('en admin som publiserer: arrangøren varsles ikke, de andre gjør', async () => {
+  it('en admin som publiserer: verken adminen eller arrangøren varsles, de andre gjør', async () => {
+    // The admin plays too, so each skip rule has a row of its own to catch.
+    db.roster.push({ user_id: ADMIN, withdrawn_at: null });
+
     const result = await notifyRosterInvites({ gameId: GAME_ID, inviterUserId: ADMIN });
 
     expect(result).toEqual({ ok: true, invited: 2 });
     expect(recipients().sort()).toEqual([OLA, PER].sort());
     expect(recipients()).not.toContain(ORGANISER);
+    expect(recipients()).not.toContain(ADMIN);
     for (const [opts] of notifyInvitedMock.mock.calls) {
       expect(opts).toMatchObject({ gameId: GAME_ID, inviterUserId: ADMIN });
     }
