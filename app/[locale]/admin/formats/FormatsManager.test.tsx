@@ -11,9 +11,6 @@ const toggleVisibilityMock = vi.fn<(fd: FormData) => Promise<void>>(
 const togglePrimaryMock = vi.fn<(fd: FormData) => Promise<void>>(
   async () => undefined,
 );
-const toggleCupEligibleMock = vi.fn<(fd: FormData) => Promise<void>>(
-  async () => undefined,
-);
 const toggleActiveMock = vi.fn<(fd: FormData) => Promise<void>>(
   async () => undefined,
 );
@@ -21,7 +18,6 @@ const toggleActiveMock = vi.fn<(fd: FormData) => Promise<void>>(
 vi.mock('./actions', () => ({
   toggleVisibility: (fd: FormData) => toggleVisibilityMock(fd),
   togglePrimary: (fd: FormData) => togglePrimaryMock(fd),
-  toggleCupEligible: (fd: FormData) => toggleCupEligibleMock(fd),
   toggleActive: (fd: FormData) => toggleActiveMock(fd),
 }));
 
@@ -32,7 +28,6 @@ const FORMATS: FormatWithMappings[] = [
     slug: 'stableford',
     icon_key: 'stableford',
     is_active: true,
-    is_cup_eligible: false,
     mappings: {
       kompis: { is_visible: true, is_primary: true, sort_order: 10 },
       klubb: { is_visible: true, is_primary: true, sort_order: 10 },
@@ -43,7 +38,6 @@ const FORMATS: FormatWithMappings[] = [
     slug: 'best_ball',
     icon_key: 'best_ball',
     is_active: true,
-    is_cup_eligible: false,
     mappings: {
       kompis: { is_visible: true, is_primary: true, sort_order: 20 },
       klubb: { is_visible: true, is_primary: true, sort_order: 20 },
@@ -54,7 +48,6 @@ const FORMATS: FormatWithMappings[] = [
     slug: 'singles_matchplay',
     icon_key: 'singles_matchplay',
     is_active: true,
-    is_cup_eligible: true,
     mappings: {
       kompis: { is_visible: true, is_primary: false, sort_order: 40 },
       klubb: null,
@@ -78,16 +71,9 @@ describe('FormatsManager', () => {
     const statusChips = screen.getAllByLabelText(/Status: Aktiv/i);
     expect(statusChips.length).toBeGreaterThan(0);
 
-    // Klikk på «Cup-eligible»-checkbox for stableford (matrix-versjon).
-    // Bruker eksplisitt aria-label for å unngå at /matchplay/-regex matcher
-    // singles_matchplay sin Cup-checkbox.
-    const cupCheckboxes = screen.getAllByLabelText(/Stableford cup-kvalifisert/i);
-    expect(cupCheckboxes[0]).not.toBeChecked();
-    fireEvent.click(cupCheckboxes[0]);
-    expect(toggleCupEligibleMock).toHaveBeenCalled();
-    const cupFd = toggleCupEligibleMock.mock.calls[0]![0] as FormData;
-    expect(cupFd.get('format_slug')).toBe('stableford');
-    expect(cupFd.get('next')).toBe('on');
+    // #2337: the cup toggle changed nothing and is gone, on desktop and mobile.
+    expect(screen.queryByRole('columnheader', { name: 'Cup' })).toBeNull();
+    expect(screen.queryAllByLabelText(/cup-kvalifisert/i)).toHaveLength(0);
 
     // Klikk på primary-stjernen for best_ball/solo (i matrix). best_ball
     // har mapping=null for solo → primary er false. Klikk skal sende

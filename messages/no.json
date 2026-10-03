@@ -4300,11 +4300,8 @@
       "showInactive": "Vis inaktive",
       "visibleLabel": "Synlig",
       "primaryLabel": "Primær",
-      "cupEligibleHeading": "Cup-kvalifiserte formater",
       "visibleAria": "{format} synlig for {intent}",
       "primaryAria": "{format} primær for {intent}",
-      "cupEligibleAria": "{format} cup-kvalifisert",
-      "cupEligibleEmpty": "Ingen cup-kvalifiserte formater.",
       "matrixEmpty": "Ingen formater å vise.",
       "togglesHint": "Bryterne oppdateres umiddelbart. Synlige endringer treffer veiviseren neste gang den lastes inn.",
       "rowStatus": {

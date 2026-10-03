@@ -26,7 +26,6 @@ export type FormatWithMappings = {
   slug: string;
   icon_key: string;
   is_active: boolean;
-  is_cup_eligible: boolean;
   /** Mapping-rad per intent, eller null hvis ingen rad finnes (= "Ny"). */
   mappings: Record<MappingIntent, MappingEntry | null>;
 };

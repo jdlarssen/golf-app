@@ -13,7 +13,6 @@ import { RowStatusChip, type RowStatus } from './RowStatusChip';
 import {
   toggleVisibility,
   togglePrimary,
-  toggleCupEligible,
   toggleActive,
 } from './actions';
 
@@ -24,7 +23,6 @@ type Props = {
 type Action =
   | { type: 'visibility'; slug: string; intent: MappingIntent; value: boolean }
   | { type: 'primary'; slug: string; intent: MappingIntent; value: boolean }
-  | { type: 'cup_eligible'; slug: string; value: boolean }
   | { type: 'active'; slug: string; value: boolean };
 
 function applyAction(
@@ -33,9 +31,6 @@ function applyAction(
 ): FormatWithMappings[] {
   return current.map((f) => {
     if (f.slug !== action.slug) return f;
-    if (action.type === 'cup_eligible') {
-      return { ...f, is_cup_eligible: action.value };
-    }
     if (action.type === 'active') {
       return { ...f, is_active: action.value };
     }
@@ -68,12 +63,12 @@ function deriveStatus(f: FormatWithMappings): RowStatus {
   const hasAnyMapping = MAPPING_INTENTS.some(
     (intent) => f.mappings[intent] !== null,
   );
-  if (!hasAnyMapping && !f.is_cup_eligible) return 'ny';
+  if (!hasAnyMapping) return 'ny';
   return 'aktiv';
 }
 
 /**
- * FormatsManager — eier optimistic state for hele matrix + cup-section.
+ * FormatsManager — eier optimistic state for matrisen og fanene.
  * Render-er BÅDE desktop matrix (md+) og mobile tabs (< md) via Tailwind
  * responsive klasser så vi unngår dupliserte state-mountings.
  *
@@ -127,10 +122,6 @@ export function FormatsManager({ initialFormats }: Props) {
     submit({ type: 'primary', slug, intent, value: nextValue }, togglePrimary);
   }
 
-  function handleCupEligibleToggle(slug: string, nextValue: boolean) {
-    submit({ type: 'cup_eligible', slug, value: nextValue }, toggleCupEligible);
-  }
-
   function handleActiveToggle(slug: string, nextValue: boolean) {
     submit({ type: 'active', slug, value: nextValue }, toggleActive);
   }
@@ -138,8 +129,6 @@ export function FormatsManager({ initialFormats }: Props) {
   const visibleFormats = showInactive
     ? optimisticFormats
     : optimisticFormats.filter((f) => f.is_active);
-
-  const cupFormats = optimisticFormats.filter((f) => f.is_cup_eligible || !f.is_active);
 
   return (
     <div className="space-y-6">
@@ -165,7 +154,6 @@ export function FormatsManager({ initialFormats }: Props) {
           onVisibility={handleVisibilityToggle}
           onPrimary={handlePrimaryToggle}
           onActive={handleActiveToggle}
-          onCupEligible={handleCupEligibleToggle}
         />
       </div>
 
@@ -252,47 +240,6 @@ export function FormatsManager({ initialFormats }: Props) {
             })}
           </ul>
         </div>
-
-        <details className="rounded-lg border border-border bg-surface" open>
-          <summary className="tap-extend cursor-pointer px-3 py-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted [--tap-extend:-6px_0]">
-            {t('cupEligibleHeading')}
-          </summary>
-          <ul className="border-t border-border">
-            {cupFormats.map((f) => {
-              const name = tModes(f.slug as Parameters<typeof tModes>[0]);
-              return (
-                <li
-                  key={f.slug}
-                  className={`flex items-center justify-between gap-3 px-3 py-2 ${
-                    f.is_active ? '' : 'opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted">{formatIconFor(f.icon_key, 20)}</span>
-                    <span className="font-serif text-sm text-text">{name}</span>
-                  </div>
-                  <label className="tap-extend inline-flex cursor-pointer items-center gap-2 [--tap-extend:-10px_-12px]">
-                    <input
-                      type="checkbox"
-                      aria-label={t('cupEligibleAria', { format: name })}
-                      checked={f.is_cup_eligible}
-                      disabled={!f.is_active}
-                      onChange={(e) =>
-                        handleCupEligibleToggle(f.slug, e.target.checked)
-                      }
-                      className="h-4 w-4 accent-primary"
-                    />
-                  </label>
-                </li>
-              );
-            })}
-            {cupFormats.length === 0 && (
-              <li className="px-3 py-3 text-xs text-muted">
-                {t('cupEligibleEmpty')}
-              </li>
-            )}
-          </ul>
-        </details>
       </div>
     </div>
   );
@@ -307,13 +254,11 @@ function DesktopMatrix({
   onVisibility,
   onPrimary,
   onActive,
-  onCupEligible,
 }: {
   formats: FormatWithMappings[];
   onVisibility: (slug: string, intent: MappingIntent, next: boolean) => void;
   onPrimary: (slug: string, intent: MappingIntent, next: boolean) => void;
   onActive: (slug: string, next: boolean) => void;
-  onCupEligible: (slug: string, next: boolean) => void;
 }) {
   const t = useTranslations('admin.formats');
   const tModes = useTranslations('modes');
@@ -336,9 +281,6 @@ function DesktopMatrix({
                 {t(`intentLabels.${intent}` as Parameters<typeof t>[0])}
               </th>
             ))}
-            <th className="px-3 py-2 text-center font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Cup
-            </th>
           </tr>
         </thead>
         <tbody>
@@ -404,22 +346,12 @@ function DesktopMatrix({
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    aria-label={t('cupEligibleAria', { format: name })}
-                    checked={f.is_cup_eligible}
-                    disabled={inactive}
-                    onChange={(e) => onCupEligible(f.slug, e.target.checked)}
-                    className="h-4 w-4 accent-primary"
-                  />
-                </td>
               </tr>
             );
           })}
           {formats.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-3 py-4 text-center text-xs text-muted">
+              <td colSpan={5} className="px-3 py-4 text-center text-xs text-muted">
                 {t('matrixEmpty')}
               </td>
             </tr>

@@ -36,7 +36,7 @@ export async function getAllFormatsWithMappings(): Promise<
   const [formatsRes, mappingsRes] = await Promise.all([
     supabase
       .from('formats')
-      .select('slug, icon_key, is_active, is_cup_eligible')
+      .select('slug, icon_key, is_active')
       .order('slug', { ascending: true }),
     supabase
       .from('format_intent_mapping')
@@ -77,7 +77,6 @@ export async function getAllFormatsWithMappings(): Promise<
       slug: f.slug as string,
       icon_key: f.icon_key as string,
       is_active: f.is_active as boolean,
-      is_cup_eligible: f.is_cup_eligible as boolean,
       mappings: {
         kompis: mappings.kompis ?? null,
         klubb: mappings.klubb ?? null,

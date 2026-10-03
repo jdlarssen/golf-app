@@ -6,6 +6,7 @@ import type { MappingIntent } from './getAllFormatsWithMappings';
 export type FormatChangeType =
   | 'visibility'
   | 'primary'
+  // #2337: no longer written; kept so older log rows still render.
   | 'cup_eligible'
   | 'active';
 
