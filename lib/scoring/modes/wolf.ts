@@ -13,8 +13,10 @@
 //
 // Stake-mekanikk: base = 1. Tied hull bærer stake +1 til neste hull. Avgjort
 // hull resetter stake til 1 for neste. Pending hull (ikke spilt/ikke valgt)
-// bevarer stake uendret. Gevinsten (n for lone, n+2 for blind) ER stake-
-// uavhengig — selve choice-en på det aktuelle hullet bestemmer beløpet.
+// bevarer stake uendret. Gevinsten ganges med innsatsen på hullet: 2 × stake
+// (partner), n × stake (lone), (n+2) × stake (blind). Visningen (Wolf-valget
+// og kontekstlinja) leser regelen fra `lib/wolf/wolfPayout.ts`; enighetstesten
+// i `wolf.test.ts` holder den og `buildHoleRow` like (#2313).
 //
 // Rotasjon (rotation: 'random_with_trailing'). La R = floor(18/n)*n:
 //   - Hull 1..R: Wolf = player.find(p => p.teamNumber === ((hole-1) % n) + 1).
