@@ -7,8 +7,9 @@
  *
  * Assignment happens at game start (see `startScheduledGame`), over the final
  * active roster, so a game whose players sign up themselves (open signup, or a
- * club tournament, #2433) can be published before anyone has joined. The order is drawn randomly (crypto-backed) and is fair: for Wolf the
- * order decides who is wolf on which hole; for Round Robin every permutation
+ * club tournament, #2433) can be published before anyone has joined. The
+ * order is drawn randomly (crypto-backed) and is fair: for Wolf the order
+ * decides who is wolf on which hole; for Round Robin every permutation
  * yields identical totals, so the draw is purely cosmetic there.
  *
  * Pure and deterministic under an injected `shuffle`, so callers/tests can pin
