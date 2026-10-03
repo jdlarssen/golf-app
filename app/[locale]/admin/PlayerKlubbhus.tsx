@@ -73,7 +73,7 @@ async function ArrangementSection({ userId }: { userId: string }) {
   // the «Se alle →» overflow without a second count query. Cup matches and
   // league flights are left out: they live on the cup row below and on the
   // league page (#2489).
-  const [gamesRes, cupIds] = await Promise.all([
+  const [gamesRes, cupIdsRes] = await Promise.all([
     onlyStandaloneGames(
       supabase
         .from('games')
@@ -86,22 +86,35 @@ async function ArrangementSection({ userId }: { userId: string }) {
     getMyCupIds(supabase, userId),
   ]);
 
-  const rows = gamesRes.data ?? [];
-  const hasMore = rows.length > MAX_ARRANGED;
-  const games: ArrangedGame[] = rows.slice(0, MAX_ARRANGED).map((g) => ({
-    id: g.id,
-    name: localizeGameName(g.name, g.courses?.name ?? null, locale),
-    courseName: g.courses?.name ?? null,
-    status: g.status,
-  }));
+  // A failed read is `null`, not an empty list (#2490): the view shows an
+  // error box for that read alone.
+  if (gamesRes.error) console.error('[klubbhus] arranged games', gamesRes.error);
+  if (!cupIdsRes.ok) console.error('[klubbhus] cup ids failed');
+
+  const rows = gamesRes.error ? null : (gamesRes.data ?? []);
+  const hasMore = rows !== null && rows.length > MAX_ARRANGED;
+  const games: ArrangedGame[] | null =
+    rows === null
+      ? null
+      : rows.slice(0, MAX_ARRANGED).map((g) => ({
+          id: g.id,
+          name: localizeGameName(g.name, g.courses?.name ?? null, locale),
+          courseName: g.courses?.name ?? null,
+          status: g.status,
+        }));
 
   return (
-    <ArrangementView games={games} hasMore={hasMore} cupCount={cupIds.length} />
+    <ArrangementView
+      games={games}
+      hasMore={hasMore}
+      cupCount={cupIdsRes.ok ? cupIdsRes.ids.length : null}
+    />
   );
 }
 
 async function ClubsSection({ userId }: { userId: string }) {
   const supabase = await getServerClient();
-  const { clubs } = await getMyClubs(supabase, userId);
-  return <ClubsView clubs={clubs} />;
+  const result = await getMyClubs(supabase, userId);
+  if (!result.ok) console.error('[klubbhus] clubs failed');
+  return <ClubsView clubs={result.ok ? result.clubs : null} />;
 }

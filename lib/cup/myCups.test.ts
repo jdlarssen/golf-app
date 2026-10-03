@@ -32,9 +32,13 @@ const row = (over: Partial<CupLedgerRow> = {}): CupLedgerRow => ({
 /**
  * Table-keyed Supabase stub: `getMyCupIds` fires its three reads through
  * `Promise.all`, so a FIFO queue would make the test depend on scheduling
- * order. Keyed by table name it stays order-independent.
+ * order. Keyed by table name it stays order-independent. `errors` makes a
+ * table's read fail the way PostgREST does (data null, error set).
  */
-function buildTableMock(byTable: Record<string, unknown[]>) {
+function buildTableMock(
+  byTable: Record<string, unknown[]>,
+  errors: Record<string, unknown> = {},
+) {
   const calls: Array<{ table: string; method: string; args: unknown[] }> = [];
   return {
     calls,
@@ -52,8 +56,14 @@ function buildTableMock(byTable: Record<string, unknown[]>) {
             return builder;
           },
           returns: () => builder,
-          then: (resolve: (v: { data: unknown[]; error: null }) => unknown) =>
-            resolve({ data: byTable[table] ?? [], error: null }),
+          then: (
+            resolve: (v: { data: unknown[] | null; error: unknown }) => unknown,
+          ) =>
+            resolve(
+              table in errors
+                ? { data: null, error: errors[table] }
+                : { data: byTable[table] ?? [], error: null },
+            ),
         };
         return builder;
       },
@@ -103,12 +113,15 @@ describe('getMyCupIds', () => {
       ],
     });
 
-    const ids = await getMyCupIds(
+    const result = await getMyCupIds(
       client as unknown as Parameters<typeof getMyCupIds>[0],
       'me',
     );
 
-    expect(ids).toEqual(['created-1', 'roster-1', 'both-1', 'played-1']);
+    expect(result).toEqual({
+      ok: true,
+      ids: ['created-1', 'roster-1', 'both-1', 'played-1'],
+    });
     expect(calls.filter((c) => c.method === 'eq')).toEqual([
       { table: 'tournaments', method: 'eq', args: ['created_by', 'me'] },
       { table: 'tournament_participants', method: 'eq', args: ['user_id', 'me'] },
@@ -128,14 +141,26 @@ describe('getMyCupIds', () => {
 
     await expect(
       getMyCupIds(client as unknown as Parameters<typeof getMyCupIds>[0], 'me'),
-    ).resolves.toEqual(['cup-1']);
+    ).resolves.toEqual({ ok: true, ids: ['cup-1'] });
   });
 
   it('returns an empty list for a player with no cup relation', async () => {
     const { client } = buildTableMock({});
     await expect(
       getMyCupIds(client as unknown as Parameters<typeof getMyCupIds>[0], 'me'),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ ok: true, ids: [] });
+  });
+
+  // #2490: a failed read is not «no cups» — the room must not hide the cup
+  // row as if the player had none.
+  it('reports a failure when one of the three reads errors', async () => {
+    const { client } = buildTableMock(
+      { tournaments: [{ id: 'created-1' }] },
+      { tournament_participants: { message: 'boom' } },
+    );
+    await expect(
+      getMyCupIds(client as unknown as Parameters<typeof getMyCupIds>[0], 'me'),
+    ).resolves.toEqual({ ok: false });
   });
 });
 

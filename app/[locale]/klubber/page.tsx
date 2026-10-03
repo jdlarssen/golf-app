@@ -7,6 +7,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SectionError } from '@/components/ui/SectionError';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
 
 /**
@@ -30,11 +31,25 @@ export default async function KlubbListePage() {
   const locale = await getLocale();
   if (!user) redirect({ href: '/login', locale });
 
-  const [{ clubs }, t, tRoles] = await Promise.all([
+  const [clubsRes, t, tRoles] = await Promise.all([
     getMyClubs(supabase, user.id),
     getTranslations('klubb.list'),
     getTranslations('klubb.roles'),
   ]);
+
+  // A failed read is not «no clubs» (#2490): an error box, and no contact
+  // card, which would tell a member that they have no club.
+  if (!clubsRes.ok) {
+    console.error('[klubber] clubs failed');
+    return (
+      <AppShell>
+        <TopBar backHref="/admin" kicker={t('kicker')} />
+        <PageHeader title={t('pageTitle')} />
+        <SectionError />
+      </AppShell>
+    );
+  }
+  const { clubs } = clubsRes;
 
   return (
     <AppShell>

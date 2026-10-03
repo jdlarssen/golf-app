@@ -16,6 +16,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SectionError } from '@/components/ui/SectionError';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
 import { ClubLeaguesSection } from './ClubLeaguesSection';
 import { ClubCupsSection } from './ClubCupsSection';
@@ -78,7 +79,7 @@ export default async function KlubbDetailPage({
   // (policyen `tournament_participants_select_authenticated`, 0155, er
   // `using (true)`) — ingen service-role på denne siden. Alle tre kjører
   // parallelt: roster-raden trenger ikke cup-id-ene, bare mitt bruker-id.
-  const [{ data: clubLeagues }, { data: clubCups }, { data: myCupRoster }] =
+  const [leaguesRes, cupsRes, rosterRes] =
     await Promise.all([
       supabase
         .from('leagues')
@@ -96,10 +97,16 @@ export default async function KlubbDetailPage({
         .eq('user_id', user.id),
     ]);
 
+  // #2490: a failed read is not «no leagues» / «no cups». Each section gets
+  // its own error box; the cup list needs both the cups and my roster rows.
+  if (leaguesRes.error) console.error('[klubb] leagues', leaguesRes.error);
+  const cupsError = cupsRes.error ?? rosterRes.error;
+  if (cupsError) console.error('[klubb] cups', cupsError);
+
   const joinedCupIds = new Set(
-    (myCupRoster ?? []).map((row) => row.tournament_id),
+    (rosterRes.data ?? []).map((row) => row.tournament_id),
   );
-  const cupRows = (clubCups ?? []).map((cup) => ({
+  const cupRows = (cupsRes.data ?? []).map((cup) => ({
     ...cup,
     joined: joinedCupIds.has(cup.id),
   }));
@@ -379,21 +386,33 @@ export default async function KlubbDetailPage({
       </section>
 
       {/* Klubbens ligaer (#480) — alle medlemmer ser lista; owner/admin oppretter. */}
-      <ClubLeaguesSection
-        leagues={clubLeagues ?? []}
-        clubId={club.id}
-        canCreate={isAdmin && !frozen}
-        canManage={isAdmin}
-      />
+      {leaguesRes.error ? (
+        <div className="mb-8">
+          <SectionError testId="club-leagues-error" />
+        </div>
+      ) : (
+        <ClubLeaguesSection
+          leagues={leaguesRes.data ?? []}
+          clubId={club.id}
+          canCreate={isAdmin && !frozen}
+          canManage={isAdmin}
+        />
+      )}
 
       {/* Klubbens cuper (#524) — alle medlemmer ser lista; owner/admin oppretter.
           Kladd-rader har påmeldings-døra (#1491). */}
-      <ClubCupsSection
-        cups={cupRows}
-        clubId={club.id}
-        canCreate={isAdmin && !frozen}
-        canManage={isAdmin}
-      />
+      {cupsError ? (
+        <div className="mb-8">
+          <SectionError testId="club-cups-error" />
+        </div>
+      ) : (
+        <ClubCupsSection
+          cups={cupRows}
+          clubId={club.id}
+          canCreate={isAdmin && !frozen}
+          canManage={isAdmin}
+        />
+      )}
 
       {/* Create a game scoped to this club (any member) — frozen when expired. */}
       {!frozen && (
