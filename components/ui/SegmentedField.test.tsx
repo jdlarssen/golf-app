@@ -95,4 +95,39 @@ describe('SegmentedField', () => {
     expect(dame).toBeChecked();
     expect(dame).toHaveFocus();
   });
+
+  it.each(['segments', 'pills'] as const)(
+    '%s: et valg som er av kan ikke velges, og piltastene hopper over det (#2437)',
+    (variant) => {
+      const onChange = vi.fn();
+      render(
+        <SegmentedField
+          legend="Tee-kategori"
+          variant={variant}
+          options={[
+            { value: 'M', label: 'Herre' },
+            { value: 'D', label: 'Dame', disabled: true, title: 'Mangler rating' },
+            { value: 'J', label: 'Junior' },
+          ]}
+          value="M"
+          onChange={onChange}
+        />,
+      );
+      const herre = screen.getByRole('radio', { name: 'Herre' });
+      const dame = screen.getByRole('radio', { name: 'Dame' });
+      expect(dame).toBeDisabled();
+      expect(dame).toHaveAttribute('title', 'Mangler rating');
+      expect(herre).not.toBeDisabled();
+
+      fireEvent.click(dame);
+      expect(onChange).not.toHaveBeenCalled();
+
+      act(() => {
+        herre.focus();
+      });
+      fireEvent.keyDown(herre, { key: 'ArrowRight' });
+      expect(onChange).toHaveBeenCalledWith('J');
+      expect(onChange).not.toHaveBeenCalledWith('D');
+    },
+  );
 });
