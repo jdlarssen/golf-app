@@ -26,13 +26,16 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(15);
 
 \ir fixtures/rls_helpers.psql
 
 -- Fast id for klubb-runden kalleren selv eier (rigget under, ryddet av reset()).
 create or replace function torny_rls.own_club_game_id() returns uuid
   language sql immutable as $$ select '00000000-0000-4000-a000-0000000000a1'::uuid $$;
+-- Fast id for utkastet en annen har laget (13–15, #2445).
+create or replace function torny_rls.others_draft_id() returns uuid
+  language sql immutable as $$ select '00000000-0000-4000-a000-244500000011'::uuid $$;
 
 select torny_rls.as_service();
 select torny_rls.seed_active_game();
@@ -156,6 +159,43 @@ select unalike(
     where n.nspname = 'public' and p.proname = 'roster_candidates'),
   '%email%'::text,
   'returtypen bærer ingen e-postkolonne'::text
+);
+
+-- ── 13–15: et utkast andre har laget gir ingen medspillere (#2445) ──────────
+-- flightmate_id lager et utkast uten klubb, med active_id og outsider_id på
+-- lista. Et utkast er bare arrangørens til det publiseres (0202): det gjør
+-- outsider_id til medspiller for arrangøren, men ikke for active_id. Ingen
+-- vennskap står igjen (fjernet i 7–9), og uten spill-id er klubb-grenen av,
+-- så utkastet er den eneste koblingen. Ingen tidligere prøve kjøres etter dette.
+select torny_rls.as_service();
+insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by)
+  values (torny_rls.others_draft_id(), 'RLS Others Draft', torny_rls.course_id(),
+          torny_rls.tee_box_id(), 'draft', 'solo_strokeplay', torny_rls.flightmate_id());
+insert into public.game_players (game_id, user_id, accepted_at) values
+  (torny_rls.others_draft_id(), torny_rls.flightmate_id(), null),
+  (torny_rls.others_draft_id(), torny_rls.active_id(),     null),
+  (torny_rls.others_draft_id(), torny_rls.outsider_id(),   null);
+select torny_rls.as_user(torny_rls.active_id());
+
+select ok(
+  not exists (select 1 from public.roster_candidates() r where r.id = torny_rls.outsider_id()),
+  '#2445: et utkast en annen har laget, gjør deg ikke til medspiller'
+);
+
+select torny_rls.as_user(torny_rls.flightmate_id());
+
+select ok(
+  exists (select 1 from public.roster_candidates() r where r.id = torny_rls.outsider_id()),
+  '#2445: arrangørens eget utkast teller som felles spill for arrangøren'
+);
+
+select torny_rls.as_service();
+update public.games set status = 'scheduled' where id = torny_rls.others_draft_id();
+select torny_rls.as_user(torny_rls.active_id());
+
+select ok(
+  exists (select 1 from public.roster_candidates() r where r.id = torny_rls.outsider_id()),
+  '#2445: publisert gjør spillet deg til medspiller'
 );
 
 select * from finish();
