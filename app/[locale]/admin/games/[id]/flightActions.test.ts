@@ -199,7 +199,12 @@ describe('suggestFlightAssignment', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
-  it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {
+  // Writes before the failing one are already saved, so the cache must be
+  // expired before the error redirect, or the pages keep the old split.
+  it.each([
+    { failingWrite: 1, cacheExpired: false },
+    { failingWrite: 2, cacheExpired: true },
+  ])('0-rad-skriving nr. $failingWrite rapporteres som feil, cache tømt: $cacheExpired (#2293)', async ({ failingWrite, cacheExpired }) => {
     authedAdmin();
 
     const players = Array.from({ length: 5 }, (_, i) => ({
@@ -212,13 +217,14 @@ describe('suggestFlightAssignment', () => {
     adminMock = buildSupabaseMock([
       { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null },
       { data: players, error: null },
-      { data: [], error: null }, // update u1 traff 0 rader
+      ...(failingWrite === 2 ? [{ data: [{ user_id: 'u1' }], error: null }] : []),
+      { data: [], error: null }, // this update hits 0 rows
     ]);
 
     const { suggestFlightAssignment } = await import('./flightActions');
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
-    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock.mock.calls.length > 0).toBe(cacheExpired);
   });
 
   it('Texas med tre lag à fire → ingen ny inndeling, redirect til detaljsiden (#2290)', async () => {
@@ -422,21 +428,29 @@ describe('suggestTeamAssignment', () => {
     ]);
   });
 
-  it('0-rad-skriving rapporteres som feil, ikke suksess', async () => {
+  it.each([
+    { failingWrite: 1, cacheExpired: false },
+    { failingWrite: 2, cacheExpired: true },
+  ])('0-rad-skriving nr. $failingWrite rapporteres som feil, cache tømt: $cacheExpired', async ({ failingWrite, cacheExpired }) => {
     authedAdmin();
 
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
       {
-        data: [{ user_id: 'u1', team_number: null, flight_number: null, withdrawn_at: null }],
+        data: [
+          { user_id: 'u1', team_number: null, flight_number: null, withdrawn_at: null },
+          { user_id: 'u2', team_number: null, flight_number: null, withdrawn_at: null },
+        ],
         error: null,
       },
-      { data: [], error: null }, // update traff 0 rader
+      ...(failingWrite === 2 ? [{ data: [{ user_id: 'u1' }], error: null }] : []),
+      { data: [], error: null }, // this update hits 0 rows
     ]);
 
     const { suggestTeamAssignment } = await import('./flightActions');
     await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
+    expect(revalidateTagMock.mock.calls.length > 0).toBe(cacheExpired);
   });
 
   it('solo-format → no-op-redirect uten skriving', async () => {
