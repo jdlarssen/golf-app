@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { createTranslator } from 'next-intl';
 import en from '@/messages/en.json';
 import { formatRelativeLocale } from '@/lib/i18n/format';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { HandicapConfirmCard } from './HandicapConfirmCard';
 
 // The global stub in vitest.setup.ts renders Norwegian, so this file renders
@@ -38,8 +39,10 @@ describe('HandicapConfirmCard', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(card.title);
     expect(screen.getByRole('button', { name: card.confirm })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: card.update })).toBeInTheDocument();
-    expect(screen.getByText((_, el) => el?.tagName === 'P')).toHaveTextContent(
-      formatRelativeLocale(updatedAt, 'en', now.getTime()),
-    );
+    const body = screen.getByText(formatRelativeLocale(updatedAt, 'en', now.getTime()), {
+      exact: false,
+    });
+    // The handicap keeps tabular figures through t.rich.
+    expect(body.querySelector('.tabular-nums')).toHaveTextContent(formatHcpDisplay(12.4, 'en'));
   });
 });
