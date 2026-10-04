@@ -15,6 +15,7 @@ import {
   formatShortDateLocale,
   formatRelativeLocale,
   formatRelativeDayLocale,
+  formatListLocale,
   countdownParts,
   formatTeeOffLongParts,
   shortMonthLocale,
@@ -769,5 +770,19 @@ describe('formatWeekdayDayMonthOsloLocale (#2258)', () => {
   it('compares the years in Oslo: 23:30 UTC on 31 Dec is next year', () => {
     const d = new Date('2026-12-31T23:30:00Z'); // Friday 1 Jan 2027 00:30 Oslo
     expect(formatWeekdayDayMonthOsloLocale(d, 'no', NOW)).toBe('Fredag 1. januar 2027');
+  });
+});
+
+describe('formatListLocale (#2280)', () => {
+  it.each<[readonly string[], AppLocale, string]>([
+    [['Front 9', 'Back 9'], 'no', 'Front 9 og Back 9'],
+    [['Front 9', 'Back 9'], 'en', 'Front 9 and Back 9'],
+    [['A', 'B', 'C'], 'no', 'A, B og C'],
+    // en-GB: no Oxford comma.
+    [['A', 'B', 'C'], 'en', 'A, B and C'],
+    [['Front 9'], 'no', 'Front 9'],
+    [['Front 9'], 'en', 'Front 9'],
+  ])('%j in %s → %s', (items, locale, expected) => {
+    expect(formatListLocale(items, locale)).toBe(expected);
   });
 });

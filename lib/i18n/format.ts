@@ -325,6 +325,14 @@ export function formatRelativeLocale(
   return rtf.format(-Math.round(diff / MONTH_MS), 'month');
 }
 
+/**
+ * Locale-aware "A, B and C" list (#2280). Use instead of joining with a
+ * hard-coded word such as `' og '`, which leaks Norwegian into English pages.
+ */
+export function formatListLocale(items: readonly string[], locale: AppLocale): string {
+  return new Intl.ListFormat(intlLocaleTag(locale), { type: 'conjunction' }).format(items);
+}
+
 /** Days since the epoch for the Oslo calendar date of an instant. */
 function osloDayNumber(ms: number): number {
   const p = osloParts(new Date(ms));
