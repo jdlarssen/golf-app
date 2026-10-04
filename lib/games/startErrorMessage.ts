@@ -52,3 +52,39 @@ export function startErrorMessageArgs({
   }
   return { key: code, values: {} };
 }
+
+/**
+ * The slice of next-intl's `admin.game.errors` translator this file needs. The
+ * parameters are `never` so the catalog-typed translator fits without a cast
+ * at every call site; the key comes from `startErrorMessageArgs` and is
+ * checked with `has` before use, as on the two pages.
+ */
+export type StartErrorTranslator = {
+  (key: never, values: never): string;
+  has(key: never): boolean;
+};
+
+/**
+ * The `admin.game.errors` sentence for a start block read without starting
+ * (#2204): the Sekretariat's start card and the organiser's notice on the game
+ * page say exactly what a refused «Start runden nå» would say. Same rule as
+ * the `?error=` banners, via `startErrorMessageArgs`.
+ *
+ * Synchronous, and `list` comes resolved: the e-post list for `pending_players`
+ * is only built behind `requireAdmin` (`pendingPlayerList`), and the game page
+ * passes ''. `undefined` when the catalog has no sentence for the key.
+ */
+export function startBlockMessage(
+  block: { reason: string; rotationMode?: string; rotationActiveCount?: number },
+  list: string,
+  tErrors: StartErrorTranslator,
+): string | undefined {
+  const args = startErrorMessageArgs({
+    code: block.reason,
+    mode: block.rotationMode,
+    count: String(block.rotationActiveCount ?? 0),
+  });
+  const key = args.key as never;
+  if (!tErrors.has(key)) return undefined;
+  return tErrors(key, { ...args.values, list } as never);
+}

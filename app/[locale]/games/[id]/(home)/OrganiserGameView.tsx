@@ -38,6 +38,7 @@ export async function OrganiserGameView({
   spectateToken,
   errorBanner,
   statusBanner,
+  startBlockNotice = null,
 }: {
   id: string;
   game: GameRow;
@@ -45,6 +46,8 @@ export async function OrganiserGameView({
   spectateToken: string | null;
   errorBanner: ReactNode;
   statusBanner: ReactNode;
+  /** #2204: why a scheduled round would not start, shown over the controls. */
+  startBlockNotice?: ReactNode;
 }) {
   const t = await getTranslations('game.home');
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale);
@@ -135,6 +138,7 @@ export async function OrganiserGameView({
 
           {/* Self-gates on status: draft and scheduled get edit/delete,
               scheduled and active «Styr spillere», scheduled the start. */}
+          {startBlockNotice}
           <CreatorControls gameId={id} status={game.status} />
 
           <Suspense fallback={null}>

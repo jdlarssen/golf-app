@@ -2054,6 +2054,10 @@
       "registered": "DU ER PÅMELDT",
       "scorecardOpensAtTeeOff": "Scorekortet åpner ved tee-off.",
       "scorecardOpensWhenOrganizerStarts": "Scorekortet åpner når arrangøren starter kampen.",
+      "startBlockedBanner": "Runden har ikke startet: {reason}. Arrangøren må ordne det først.",
+      "startBlockedCupFinished": "Cupen ble avsluttet før kampen var spilt.",
+      "matchWillNotBePlayed": "Denne kampen blir ikke spilt.",
+      "scorecardOpensWhenFixed": "Scorekortet åpner når oppsettet er i orden.",
       "courseLabel": "BANE",
       "unknownCourse": "(ukjent bane)",
       "holeCount": "{count} hull",
@@ -2164,6 +2168,10 @@
         "days": "Starter om {n, plural, one {# dag} other {# dager}}"
       },
       "countdownBody": "Vi gir deg beskjed når kortet åpner.",
+      "blocked": {
+        "title": "Venter på arrangøren",
+        "body": "Runden starter av seg selv når det som mangler, er på plass."
+      },
       "joinFlightLabel": "Velg din flight",
       "flightLabel": "Flight {number}",
       "flightYours": "Din",
@@ -3826,6 +3834,7 @@
         "scheduledStartBodyAutoStart": "Når du starter runden låses banehandicap for hver spiller, redigering stenges, og spillerne kan begynne å taste slag. Runden starter automatisk ved tee-off ({time}) hvis du ikke har startet den før.",
         "scheduledEditBody": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes.",
         "scheduledEditBodyAutoStart": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes, enten automatisk ved tee-off eller manuelt av deg.",
+        "scheduledStartBlockedLead": "Runden starter ikke før dette er ordnet:",
         "scheduledEditButton": "Rediger spillet",
         "allReadyBody": "Alle spillere har levert{andApproved} scorekort. Spillet kan avsluttes — leaderboard blir åpen for alle deltakere.",
         "allReadyAndApproved": " og godkjent",

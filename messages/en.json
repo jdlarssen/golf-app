@@ -2054,6 +2054,10 @@
       "registered": "YOU'RE IN",
       "scorecardOpensAtTeeOff": "Your scorecard opens at tee-off.",
       "scorecardOpensWhenOrganizerStarts": "Your scorecard opens when the organiser starts the match.",
+      "startBlockedBanner": "The round hasn't started: {reason}. The organiser has to sort it out first.",
+      "startBlockedCupFinished": "The cup ended before this match was played.",
+      "matchWillNotBePlayed": "This match won't be played.",
+      "scorecardOpensWhenFixed": "Your scorecard opens once the setup is sorted.",
       "courseLabel": "COURSE",
       "unknownCourse": "(unknown course)",
       "holeCount": "{count} holes",
@@ -2164,6 +2168,10 @@
         "days": "Starting in {n, plural, one {# day} other {# days}}"
       },
       "countdownBody": "We'll notify you when the scorecard opens.",
+      "blocked": {
+        "title": "Waiting for the organiser",
+        "body": "The round starts on its own once what's missing is in place."
+      },
       "joinFlightLabel": "Choose your flight",
       "flightLabel": "Flight {number}",
       "flightYours": "Yours",
@@ -3826,6 +3834,7 @@
         "scheduledStartBodyAutoStart": "Starting the round locks the course handicap for each player, closes editing, and lets players begin entering strokes. The round starts automatically at tee-off ({time}) if you have not started it before then.",
         "scheduledEditBody": "The game is in the planned stage. You can still change the course, tee-off time, players, teams, and settings until the round starts.",
         "scheduledEditBodyAutoStart": "The game is in the planned stage. You can still change the course, tee-off time, players, teams, and settings until the round starts, either automatically at tee-off or manually by you.",
+        "scheduledStartBlockedLead": "The round won't start until this is sorted:",
         "scheduledEditButton": "Edit game",
         "allReadyBody": "All players have submitted{andApproved} their scorecards. The game can be ended — the leaderboard will be open to all participants.",
         "allReadyAndApproved": " and approved",
