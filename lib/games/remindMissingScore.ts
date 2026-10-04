@@ -55,9 +55,10 @@ export type MissingScoreReminderResult =
  * rendered (the hole got a score, the card was delivered) sends nothing and
  * returns `no_gap`.
  *
- * `reminded` is the number of targets the database holds a reminder row for
- * afterwards, counted back from `notifications` (a write that silently stored
- * nothing must not read as success); a shortfall is logged.
+ * `reminded` is the number of targets that got a NEW reminder row from this
+ * send, counted back from `notifications` against a snapshot taken before it
+ * (a write that silently stored nothing must not read as success). A failed
+ * count reads as 0; a shortfall is logged.
  */
 export async function sendMissingScoreReminders(
   gameId: string,
@@ -115,9 +116,21 @@ export async function sendMissingScoreReminders(
   // no button then; this guards a stale page).
   if (target.userIds.length === 0) return { ok: false, reason: 'only_guests' };
 
-  // A margin for clock skew between this server and the database; counting
-  // distinct recipients keeps a press a moment earlier from counting twice.
-  const since = new Date(Date.now() - 30_000).toISOString();
+  // Snapshot this game's hole reminders for the targets before sending, so
+  // the count afterwards sees only the rows THIS press stored (an earlier
+  // press's rows never make a failed one look sent).
+  const reminderRows = () =>
+    admin
+      .from('notifications')
+      .select('id, user_id')
+      .eq('kind', 'missing_score_reminder')
+      .eq('payload->>game_id', game.id)
+      .in('user_id', target.userIds)
+      .returns<{ id: string; user_id: string }[]>();
+  const before = await reminderRows();
+  if (before.error) throw before.error;
+  const earlier = new Set((before.data ?? []).map((r) => r.id));
+
   const byId = new Map(players.map((p) => [p.user_id, p]));
   // Best-effort per player, as the delivery reminder: one dead address must
   // not stop the rest. `sendMissingScoreReminder` never throws.
@@ -140,14 +153,11 @@ export async function sendMissingScoreReminders(
 
   // Count the rows back: `notify` only logs an insert that failed (the CHECK
   // refusing an unknown kind, say), so a 0 here is the failure made visible.
-  const { data: stored, error: countError } = await admin
-    .from('notifications')
-    .select('user_id')
-    .eq('kind', 'missing_score_reminder')
-    .eq('payload->>game_id', game.id)
-    .in('user_id', target.userIds)
-    .gte('created_at', since);
-  const reminded = countError ? 0 : new Set((stored ?? []).map((r) => r.user_id)).size;
+  const after = await reminderRows();
+  const reminded = after.error
+    ? 0
+    : new Set((after.data ?? []).filter((r) => !earlier.has(r.id)).map((r) => r.user_id)).size;
+  const countError = after.error;
   if (countError || reminded < target.userIds.length) {
     console.error(
       `[${LOG_PREFIX}] stored ${reminded}/${target.userIds.length} missing_score_reminder rows`,
