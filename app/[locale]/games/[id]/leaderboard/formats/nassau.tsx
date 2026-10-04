@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { HeadToHeadResult, type StripCell } from '../HeadToHeadResult';
 import { NassauView, type NassauPlayerInfo } from '../NassauView';
@@ -13,6 +13,8 @@ import { SettlementTable } from '../SettlementTable';
 import { settlementForResult } from '@/lib/scoring/settlement';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
+import type { AppLocale } from '@/i18n/routing';
+import { formatListLocale } from '@/lib/i18n/format';
 
 /**
  * Nassau-grenen (issue #276) — bygger ScoringContext fra rå-rad-ene, kjører
@@ -48,6 +50,7 @@ export async function renderNassau(opts: {
 }) {
   const tc = await getTranslations('leaderboard.common');
   const tn = await getTranslations('leaderboard.nassau');
+  const locale = (await getLocale()) as AppLocale;
   const tSettle = await getTranslations('leaderboard.common.settlement');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, prizeAwardsNode } = opts;
 
@@ -152,7 +155,9 @@ export async function renderNassau(opts: {
       if (!s.total18.isPending && s.total18.winnerUserIds.length > 1)
         pushed.push(tn('totalLabel'));
       const hangingNote =
-        pushed.length > 0 ? tn('pushedNote', { sections: pushed.join(' og ') }) : null;
+        pushed.length > 0
+          ? tn('pushedNote', { sections: formatListLocale(pushed, locale) })
+          : null;
       // Ved 2 spillere sier duellkortet alt — den fulle NassauView under
       // ville gjenta samme resultat (#600). Vis kun kortet.
       mainContent = (chromeless, footerSlot) => (
