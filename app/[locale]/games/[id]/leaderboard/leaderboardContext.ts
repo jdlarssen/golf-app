@@ -57,14 +57,24 @@ export const getLeaderboardContext = cache(async () => {
  * En deltaker ser alle slag i et live- eller reveal-spill (policyen), så
  * arrangøren ser det samme som en spiller.
  *
- * `fallback` er klienten kallstedet allerede holder. Den brukes uendret så lenge
- * spillet IKKE er ferdig og seeren ikke er arrangøren — kritisk for `/spectate`,
- * som sender inn sin egen admin-klient for å følge en PÅGÅENDE runde anonymt.
- * Med `fallback` må kallstedet sende `viewerId` selv; uten den leses både
- * seeren og den cookie-baserte klienten fra `getLeaderboardContext`.
+ * To former, så seeren aldri kommer fra feil sted:
+ * - `getResultReadClient(game)`: seeren og den cookie-baserte klienten leses
+ *   fra `getLeaderboardContext` (den verifiserte sesjonen).
+ * - `getResultReadClient(game, fallback, viewerId)`: kallstedet holder alt en
+ *   klient og må da sende seeren selv (`viewerId` er påkrevd; `null` eller tom
+ *   streng = ingen seer). `fallback` brukes uendret så lenge spillet IKKE er
+ *   ferdig og seeren ikke er arrangøren — kritisk for `/spectate`, som sender
+ *   inn sin egen admin-klient og tom seer for å følge en PÅGÅENDE runde anonymt.
  */
+type ResultReadGame = { status: GameStatus; created_by: string | null };
+export async function getResultReadClient(game: ResultReadGame): Promise<SupabaseClient<Database>>;
 export async function getResultReadClient(
-  game: { status: GameStatus; created_by: string | null },
+  game: ResultReadGame,
+  fallback: SupabaseClient<Database>,
+  viewerId: string | null,
+): Promise<SupabaseClient<Database>>;
+export async function getResultReadClient(
+  game: ResultReadGame,
   fallback?: SupabaseClient<Database>,
   viewerId?: string | null,
 ): Promise<SupabaseClient<Database>> {

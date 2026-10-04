@@ -115,7 +115,11 @@ export type LeaderboardContentOpts = {
  *     `viewerUserId`. På et FERDIG spill, og for arrangøren av et AKTIVT spill
  *     (#2202, eierens valg C), byttes den ut med service-role-klienten (#1542,
  *     `getResultReadClient`); ellers brukes den som-den-er, så spectate og
- *     embed (tom seer) beholder sin egen admin-klient for live-følging.
+ *     embed (tom seer) beholder sin egen admin-klient for live-følging. Det
+ *     gjelder hovedlesingen her (slag, hull, bane). Format-delene som henter
+ *     egne data (fourball, foursomes, sideturneringen) kaller
+ *     `getResultReadClient(game)` og tar seeren og klienten fra sesjonen,
+ *     også på spectate og embed.
  *   - Fetches course_holes, scores, courses, and (when enabled) side-winners
  *     via the passed `supabase` client.
  *   - When `includeReactions` is true: fetches reactions and wraps the
@@ -164,8 +168,9 @@ export async function renderLeaderboardContent({
   // klienten kallstedet sendte inn (uendret for spectate/live). Uten dette gir
   // RLS 0 rader til alle som ikke selv spilte kampen, og cup-publikummet som
   // matchkortene lenker hit møter et tomt kort.
-  // #2202: the viewer decides the organiser's live read (spectate and embed
-  // pass an empty viewer and keep their own admin client).
+  // #2202: the viewer decides the organiser's live read for the main fetch
+  // (spectate and embed pass an empty viewer and keep their own admin client).
+  // The format parts with their own reads take the viewer from the session.
   const readClient = await getResultReadClient(gameRow, supabase, viewerUserId);
 
   const [gwp, rawHolesRes, rawScoresRes, courseRes, reactionSummary] = await Promise.all([
