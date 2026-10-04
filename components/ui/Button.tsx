@@ -132,7 +132,12 @@ export function chipButtonClasses(variant: Variant): string {
   return `${CHIP_BASE} ${CHIP_VARIANTS[variant]}`;
 }
 
-function buttonClasses(variant: Variant, size: Size): string {
+/**
+ * The classes `Button` and `LinkButton` draw with, for an element that must
+ * look like one but can't be: the global 404's plain `<a>`, which forces a
+ * full page load (app/global-not-found.tsx).
+ */
+export function buttonClasses(variant: Variant, size: Size): string {
   if (size === 'compact') return `${COMPACT_BASE} ${COMPACT_VARIANTS[variant]}`;
   if (size === 'large') return `${LARGE_BASE} ${LARGE_VARIANTS[variant]}`;
   if (size === 'chip') return chipButtonClasses(variant);
