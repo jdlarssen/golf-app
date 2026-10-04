@@ -122,8 +122,15 @@ export async function sendCode(formData: FormData) {
     // field — regardless of whether the request came from step 1 or from
     // «Send ny kode». The copy («be om ny kode om ett minutt») is only true
     // there. `email` is non-empty here; the guard above redirects otherwise.
+    // #2349: it also starts the countdown there. Supabase only says this when
+    // a code went out less than 60 s ago, so a fresh `sent` (when the request
+    // came from step 1) never makes «Send ny kode» wait too short.
     if (result.code === 'rate_limited_minute') {
-      loginErrorRedirect(result.code, { ...errorCtx, step: 'verify' });
+      loginErrorRedirect(result.code, {
+        ...errorCtx,
+        step: 'verify',
+        sent: errorCtx.sent || sentNow(),
+      });
     }
     loginErrorRedirect(result.code, errorCtx);
   }
