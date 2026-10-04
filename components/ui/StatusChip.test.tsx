@@ -1,13 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatusChip } from './StatusChip';
 import type { GameStatus } from '@/lib/games/status';
-import noMessages from '@/messages/no.json';
+
+// Echo the namespace and key instead of the catalog text, so the test fails if
+// the chip ever shows a word from anywhere but `gameStatus` (#2491).
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace: string) => (key: string) => `${namespace}.${key}`,
+}));
 
 const STATUSES: GameStatus[] = ['draft', 'scheduled', 'active', 'finished'];
 
 describe('StatusChip', () => {
-  it('shows the gameStatus catalog text for every status, never its own', () => {
+  it('reads every status word from the gameStatus namespace', () => {
     render(
       <>
         {STATUSES.map((s) => (
@@ -16,7 +21,7 @@ describe('StatusChip', () => {
       </>,
     );
     for (const s of STATUSES) {
-      expect(screen.getByText(noMessages.gameStatus[s])).toBeInTheDocument();
+      expect(screen.getByText(`gameStatus.${s}`)).toBeInTheDocument();
     }
   });
 });

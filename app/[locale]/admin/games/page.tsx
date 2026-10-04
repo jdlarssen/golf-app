@@ -24,7 +24,8 @@ import type { AppLocale } from '@/i18n/routing';
 // Status-kolonnen rommer StatusChip. Målt på staging, 360px (#2491): engelsk
 // «IN PROGRESS» er lengst med 106,6px; «SCHEDULED» 96,8, «FINISHED» 79,
 // «DRAFT» 59,7. Norsk: «AVSLUTTET» 95, «PLANLAGT» 86,7, «UTKAST» 69,9,
-// «PÅGÅR» 59,7. 111px (107 + 4) gir det lengste merket plass på én linje.
+// «PÅGÅR» 59,7. 111px (107 + 4) gir det lengste merket plass på én linje,
+// og 1fr-kolonnen har da 145px til navnet på 360px viewport (målt samme sted).
 const GAMES_LEDGER_GRID = '1fr 111px 14px';
 
 type SearchParams = Promise<{
