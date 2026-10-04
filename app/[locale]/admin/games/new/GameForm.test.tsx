@@ -156,8 +156,8 @@ describe('GameForm — baseline (pre-fase-4)', () => {
 });
 
 describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
-  it('default mode = best_ball: best-ball-tile er checked, par-tile er valgt', () => {
-    render(
+  it('default mode = best_ball: best-ball-tile er checked, lagstørrelsen står som en linje', () => {
+    const { container } = render(
       <GameForm
         courses={COURSES}
         players={EIGHT_PLAYERS}
@@ -171,8 +171,12 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
 
     const bbnTile = screen.getByRole('radio', { name: /best ball/i });
     expect(bbnTile.getAttribute('aria-checked')).toBe('true');
-    const parTile = screen.getByRole('radio', { name: /par/i });
-    expect(parTile.getAttribute('aria-checked')).toBe('true');
+    // #2453: best ball har én lagstørrelse — en linje, ikke et kort å velge.
+    expect(screen.getByTestId('team-size-line')).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^par$/i })).not.toBeInTheDocument();
+    expect(
+      container.querySelector<HTMLInputElement>('input[type="hidden"][name="team_size"]')?.value,
+    ).toBe('2');
   });
 
   it('bytte til stableford: solo auto-velges og lag-grid skjules', () => {
@@ -294,9 +298,7 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     expect(
       screen.queryByRole('radio', { name: /best ball/i }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('group', { name: /velg lagstørrelse/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('team-size-line')).not.toBeInTheDocument();
 
     // Kortet viser format-navnet + låst-notisen.
     expect(screen.getByText('Best ball')).toBeInTheDocument();
@@ -737,17 +739,14 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
       />,
     );
 
-    // Default mode = best_ball → TeamSizeSelector synlig.
-    expect(
-      screen.getByRole('group', { name: /velg lagstørrelse/i }),
-    ).toBeInTheDocument();
+    // Default mode = best_ball → TeamSizeSelector synlig, som linja for én
+    // lagstørrelse (#2453).
+    expect(screen.getByTestId('team-size-line')).toBeInTheDocument();
 
     selectMatchplay();
 
-    // Etter matchplay-valg skal TeamSizeSelector-fieldset være borte.
-    expect(
-      screen.queryByRole('group', { name: /velg lagstørrelse/i }),
-    ).not.toBeInTheDocument();
+    // Etter matchplay-valg skal TeamSizeSelector være borte.
+    expect(screen.queryByTestId('team-size-line')).not.toBeInTheDocument();
   });
 
   it('matchplay: hidden inputs sender game_mode=singles_matchplay og team_size=1', () => {
@@ -1169,7 +1168,7 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     fireEvent.click(screen.getByRole('radio', { name: /slagspill/i }));
   }
 
-  it('slagspill: TeamSizeSelector viser kun Solo (ingen Par/4-mann-fliser)', () => {
+  it('slagspill: lagstørrelsen står som en linje (ingen Solo/Par/4-mann-fliser)', () => {
     render(
       <GameForm
         courses={COURSES}
@@ -1185,19 +1184,15 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     selectSoloStrokeplay();
 
     // TeamSizeSelector skal være synlig (i motsetning til matchplay som
-    // skjuler den helt), men #478 lister bare gyldige størrelser — solo
-    // slagspill har kun Solo, ingen grå Par/4-mann-«kommer snart»-fliser.
+    // skjuler den helt). Slagspill har bare Solo, så den står som en linje
+    // uten noe valg (#2453).
+    expect(screen.getByTestId('team-size-line')).toBeInTheDocument();
     expect(
-      screen.getByRole('group', { name: /velg lagstørrelse/i }),
-    ).toBeInTheDocument();
-    const solo = screen.getByRole('radio', { name: /solo/i });
-    expect(solo.getAttribute('aria-checked')).toBe('true');
-    expect(
-      screen.queryByRole('radio', { name: /par/i }),
+      screen.queryByRole('group', { name: /velg lagstørrelse/i }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('radio', { name: /4-mann/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^solo$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^par$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /4-mann/i })).not.toBeInTheDocument();
   });
 
   it('slagspill: hidden inputs sender game_mode=solo_strokeplay og team_size=1, ingen stableford_team_size', () => {

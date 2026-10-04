@@ -187,3 +187,33 @@ export function FormatLineup({
     </svg>
   );
 }
+
+/**
+ * The line-up as text: «2 mot 2», «3 lag à 2», «2 eller 4 per lag». The
+ * format cards' line (#2260) and the line for a format with one team size
+ * (#2453) read it, so the two always say the same.
+ */
+export function useLineupText(): (lineup: Lineup) => string {
+  const t = useTranslations('wizard.formatGrid.lineup');
+  return (lineup) => {
+    switch (lineup.kind) {
+      case 'sides':
+        return t('sides', { count: lineup.perSide });
+      case 'teams':
+        return t('teams', { teams: lineup.teams, size: lineup.size });
+      case 'teamSizes':
+        if (lineup.sizes.length === 2) {
+          return t('teamSizesTwo', { first: lineup.sizes[0], second: lineup.sizes[1] });
+        }
+        return t('teamSizesRange', {
+          min: Math.min(...lineup.sizes),
+          max: Math.max(...lineup.sizes),
+        });
+      case 'wolf':
+        return t('wolf', { opponents: lineup.opponents });
+      case 'pot':
+      case 'solo':
+        return t('players', { count: lineup.players });
+    }
+  };
+}

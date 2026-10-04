@@ -1,10 +1,14 @@
 'use client';
 
+import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { selectableTeamSizes, teamSizeFit } from '@/lib/games/teamFormatLimits';
+import { formatLineup } from '@/lib/wizard/formatLineup';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 import { FormSection } from '@/components/ui/FormSection';
 import { choiceCardClass, ChoiceCardText, type ChoiceCardHeight } from '@/components/ui/ChoiceCard';
+import { useLineupText } from './FormatLineup';
 
 /**
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi
@@ -29,22 +33,25 @@ type Props = {
    * antallsvelgeren) og 64 px for klubb og solo (#2426).
    */
   tileHeight?: ChoiceCardHeight;
+  /**
+   * #2453: kompis-antallet. Satt → størrelsene som ikke går opp, står grå og
+   * sier hvorfor (`teamSizeFit`), og linja for ett format med én størrelse
+   * får oppstillingen. Utelatt (klubb, solo, utkast uten antall, GameForm) →
+   * alle størrelsene kan velges som før.
+   */
+  playerCount?: number;
 };
 
 /**
- * Mapping fra modus til hvilke lagstørrelser formatet faktisk støtter.
+ * Mapping fra modus til hvilke lagstørrelser formatet faktisk støtter, for
+ * formatene utenfor scramble- og Stableford-familien. De to familiene leser
+ * størrelsene fra `selectableTeamSizes` i `lib/games/teamFormatLimits.ts`
+ * (#2453), der regelen for hvilke som går opp med antallet også bor.
  * `tilesForMode` viser kun disse — kombinasjoner som ikke gir mening (f.eks.
  * solo scramble) listes ikke i det hele tatt (#478, var tidligere grayed-out
- * «kommer snart»). Historikk per epic #41 + #43-planen:
+ * «kommer snart»).
  *
- *  - Modus = Stableford → Solo + 4BBB (par)
  *  - Modus = Best ball → kun Par
- *
- * Par-stableford (4BBB) ble aktivert i epic #43 fase 2 — scoring-motoren
- * og payload-validatoren landet i fase 1 (PR #151), og lag-fordelings-
- * UI-en utvides i fase 2 til å støtte lag à 2 spillere. I dag tar både
- * par-stableford og best ball et partall opp til `MAX_TEAM_FORMAT_PLAYERS`
- * (40, #2148).
  *
  * Singles matchplay (epic #45) krever team_size=1 (én spiller per side,
  * nøyaktig 2 sider). Scoring-motoren og payload-validatoren landet i
@@ -54,27 +61,13 @@ type Props = {
  * Scoring-motoren og payload-validatoren landet i fase 1; ModeSelector
  * wires inn modusen i fase 2 — inntil da har modusen ingen UI-eksponering.
  *
- * Texas scramble (issue #44, utvidet i #2009) tillater team_size 2, 3 eller 4.
- * NGF-konvensjon: 25 % team-handicap for 2-mannslag, 15 % for 3-mannslag, 10 %
- * for 4-mannslag — settes som default i GameForm når lagstørrelse endres.
- *
  * Ved fremtidige moduser utvider vi denne mappen — ingen DB-migrasjon eller
  * payload-endring nødvendig før en konkret kombinasjon er implementert.
  */
-const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
-  stableford: new Set<TeamSize>([1, 2]),
-  // Modified stableford (#281): samme solo/par-valg som standard Stableford.
-  modified_stableford: new Set<TeamSize>([1, 2]),
+const ENABLED_COMBOS: Partial<Record<GameMode, ReadonlySet<TeamSize>>> = {
   best_ball: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay: new Set<TeamSize>([1]),
-  // Texas scramble: 2, 3 eller 4 per lag. 3-mannslag kom i #2009 (eier-pull:
-  // 4 lag à 3 lot seg ikke sette opp) — default-handicapet er 15 %.
-  texas_scramble: new Set<TeamSize>([2, 3, 4]),
-  // Ambrose (#284): samme lagstørrelser som Texas scramble (2, 3 eller 4).
-  ambrose: new Set<TeamSize>([2, 3, 4]),
-  // Florida Scramble (#283): lagstørrelser 3 eller 4 (2-mannslag ikke støttet).
-  florida_scramble: new Set<TeamSize>([3, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
   foursomes_matchplay: new Set<TeamSize>([2]),
   // Greensome matchplay (#289): alltid 2-mannslag (2 spillere per side).
@@ -117,11 +110,6 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // dedikert setup-steg tar over (speiler Wolf/Skins/Nassau), så
   // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
   acey_deucey: new Set<TeamSize>([1]),
-  // Shamble / Champagne Scramble: lag-format à 3 eller 4. ShambleSetup tar
-  // over med sin egen 3/4-velger, så TeamSizeSelector vises ikke for shamble —
-  // men type-system krever en entry. Begge støttede størrelser listet for
-  // dokumentasjonsformål (generisk selector kan ikke vise 3 uansett).
-  shamble: new Set<TeamSize>([3, 4]),
   // Patsome er alltid lag à 2. PatsomeSetup vises i step 2.
   patsome: new Set<TeamSize>([2]),
 };
@@ -135,36 +123,28 @@ type TileDef = {
 };
 
 /**
- * Tiles for en gitt modus. Size-2-tilen er mode-bevisst: for stableford-
- * familien ER team_size 2 nettopp 4BBB (beste poeng per hull teller), så den
- * vises som «4BBB» med forklarende hint i stedet for et kryptisk «Par» (#282).
- * Andre lag-moduser (best ball, texas, fourball, foursomes) er IKKE 4BBB-
- * stableford og beholder «Par».
- *
- * Scramble-familien viser aldri Solo-tilen: Florida (#283) har 3- og 4-mannslag,
- * Texas/Ambrose har 2, 3 og 4 etter #2009.
+ * Tile key for a size. Size 2 is mode-aware: in the Stableford family
+ * team_size 2 IS 4BBB (best points per hole count), so it shows as «4BBB»
+ * with an explaining hint instead of a cryptic «Par» (#282). Other team modes
+ * (best ball, texas, fourball, foursomes) are not 4BBB and keep «Par».
+ */
+function tileKey(mode: GameMode, size: TeamSize): TeamSizeTileKey {
+  if (size === 1) return 'solo';
+  if (size === 2) return isStablefordFamily(mode) ? 'fourBBB' : 'par';
+  return size === 3 ? 'tremannslag' : 'firemann';
+}
+
+/**
+ * Tiles for a mode. The scramble and Stableford families read their sizes
+ * from `selectableTeamSizes` (#2453): Texas/Ambrose 2, 3 and 4, Florida and
+ * shamble 3 and 4 (no solo tile in the scramble family), Stableford solo and
+ * 4BBB. Every other mode reads `ENABLED_COMBOS`.
  */
 function tilesForMode(mode: GameMode): TileDef[] {
-  const enabled = ENABLED_COMBOS[mode];
-  // Scramble-familien har ingen solo-variant — lagstørrelsene er 2/3/4 (Texas,
-  // Ambrose) eller 3/4 (Florida). Filteret på `enabled` avgjør hvilke som vises.
-  if (mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble') {
-    const scrambleTiles: TileDef[] = [
-      { size: 2, key: 'par' },
-      { size: 3, key: 'tremannslag' },
-      { size: 4, key: 'firemann' },
-    ];
-    return scrambleTiles.filter((t) => enabled.has(t.size));
-  }
-  const teamTile: TileDef = isStablefordFamily(mode)
-    ? { size: 2, key: 'fourBBB' }
-    : { size: 2, key: 'par' };
-  const candidates: TileDef[] = [
-    { size: 1, key: 'solo' },
-    teamTile,
-    { size: 4, key: 'firemann' },
-  ];
-  return candidates.filter((t) => enabled.has(t.size));
+  const { sizes } = selectableTeamSizes(mode);
+  const enabled: readonly number[] =
+    sizes.length > 0 ? sizes : [...(ENABLED_COMBOS[mode] ?? [])].sort((a, b) => a - b);
+  return enabled.map((size) => ({ size: size as TeamSize, key: tileKey(mode, size as TeamSize) }));
 }
 
 /**
@@ -174,8 +154,14 @@ function tilesForMode(mode: GameMode): TileDef[] {
  * «kommer snart»-fliser for varianter som ikke gir mening (#478).
  *
  * #2426: kickeren «VELG LAGSTØRRELSE» over valgkortene, rett på siden uten
- * kort rundt, som på artboardene. To fliser står to i bredden; én flis (Solo)
- * tar en halv rad; tre fliser (scramble) står tre i bredden med mindre tittel.
+ * kort rundt, som på artboardene. To fliser står to i bredden; tre fliser
+ * (scramble) står tre i bredden med mindre tittel.
+ *
+ * #2453: med et kompis-antall følger velgeren antallet. Størrelsene som ikke
+ * går opp, står grå, kan ikke velges og sier «trenger 6» eller «går ikke opp
+ * med 10» (`teamSizeFit`). Det valgte kortet er aldri grått. Har formatet bare
+ * én størrelse, er det ikke noe å velge: formatnavnet står over én linje,
+ * «Lag à 2 · 2 mot 2».
  */
 export function TeamSizeSelector({
   mode,
@@ -183,17 +169,50 @@ export function TeamSizeSelector({
   onChange,
   disabled = false,
   tileHeight = 64,
+  playerCount,
 }: Props) {
   const t = useTranslations('wizard.teamSize');
+  const tModes = useTranslations('modes');
+  const lineupText = useLineupText();
+  const reasonIdPrefix = useId();
   const tiles = tilesForMode(mode);
-  // Radiogroup keyboard pattern: one tab stop, arrow keys move the choice.
+  const count = playerCount ?? null;
+  const cards = tiles.map((tile) => {
+    const selected = value === tile.size;
+    const fit = teamSizeFit(mode, tile.size, count);
+    const reason =
+      selected || fit.kind === 'fits'
+        ? null
+        : fit.kind === 'needs'
+          ? t('needs', { count: fit.players })
+          : t('notWith', { count: fit.count });
+    return { ...tile, selected, reason };
+  });
+  // Radiogroup keyboard pattern: one tab stop, arrow keys move the choice and
+  // pass over the sizes the count rules out.
   const rovingProps = useRovingFocus(
-    tiles.map((tile) => tile.size),
+    cards.map((card) => card.size),
     value,
     (size) => {
       if (!disabled) onChange(size);
     },
+    (size) => cards.some((card) => card.size === size && card.reason !== null),
   );
+
+  if (tiles.length === 1) {
+    const [only] = tiles;
+    const size = t('line', { size: only.size });
+    return (
+      <FormSection legend={tModes(mode as Parameters<typeof tModes>[0])}>
+        <p data-testid="team-size-line" className="font-sans text-sm leading-[normal] text-text">
+          {playerCount === undefined
+            ? size
+            : `${size} · ${lineupText(formatLineup(mode, playerCount))}`}
+        </p>
+      </FormSection>
+    );
+  }
+
   const layout = tiles.length >= 3 ? 'dense' : 'start';
 
   return (
@@ -202,27 +221,39 @@ export function TeamSizeSelector({
         role="radiogroup"
         className={`grid gap-2 ${tiles.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}
       >
-        {tiles.map((tile, idx) => {
-          const selected = value === tile.size;
-          const tileTitle = t(`${tile.key}.title` as Parameters<typeof t>[0]);
+        {cards.map((card, idx) => {
+          const tileTitle = t(`${card.key}.title` as Parameters<typeof t>[0]);
+          const unavailable = card.reason !== null;
+          const reasonId = `${reasonIdPrefix}-${card.size}`;
+          // The fade is the lock's (ChoiceCard): an unavailable card is
+          // disabled, but only `disabled` fades it.
+          const fade = unavailable && !disabled ? '' : 'disabled:opacity-50';
           return (
             <button
-              key={tile.size}
+              key={card.size}
               {...rovingProps(idx)}
               type="button"
               role="radio"
-              aria-checked={selected}
+              aria-checked={card.selected}
               aria-label={tileTitle}
-              disabled={disabled}
+              aria-describedby={unavailable ? reasonId : undefined}
+              disabled={disabled || unavailable}
               onClick={() => {
-                if (!disabled) onChange(tile.size);
+                if (!disabled && !unavailable) onChange(card.size);
               }}
-              className={`${choiceCardClass(selected, { height: tileHeight, layout })} disabled:cursor-not-allowed disabled:opacity-50`}
+              className={`${choiceCardClass(card.selected, { height: tileHeight, layout, unavailable })} disabled:cursor-not-allowed ${fade}`}
             >
               <ChoiceCardText
                 title={tileTitle}
-                hint={t(`${tile.key}.hint` as Parameters<typeof t>[0])}
+                hint={
+                  unavailable ? (
+                    <span id={reasonId}>{card.reason}</span>
+                  ) : (
+                    t(`${card.key}.hint` as Parameters<typeof t>[0])
+                  )
+                }
                 layout={layout}
+                unavailable={unavailable}
               />
             </button>
           );
