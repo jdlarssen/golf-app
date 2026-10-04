@@ -230,8 +230,21 @@ export function arrangedRoundHref(
   return `/games/${gameId}`;
 }
 
-/** Where «{n} utkast» (more than one) and «Ferdige runder» lead, by the same role rule. */
-export function arrangedListHref(kind: ArrangedListKind, isAdmin: boolean): string {
-  if (isAdmin) return kind === 'drafts' ? '/admin/games?status=draft' : '/admin/games?status=finished';
+/**
+ * Which games the counts run over: the viewer's own (`/klubbhuset`, the room)
+ * or every organiser's (admin's `/admin/games`).
+ */
+export type ArrangedSource = 'own' | 'all';
+
+/**
+ * Where «{n} utkast» (more than one) and «Ferdige runder» lead. The list
+ * follows where the number came from, not the role, so a number and the list
+ * it opens are always the same games (#2269 O6): an admin on `/klubbhuset`
+ * counts their own rounds and gets their own lists.
+ */
+export function arrangedListHref(kind: ArrangedListKind, source: ArrangedSource): string {
+  if (source === 'all') {
+    return kind === 'drafts' ? '/admin/games?status=draft' : '/admin/games?status=finished';
+  }
   return kind === 'drafts' ? '/klubbhuset?vis=utkast' : '/klubbhuset?vis=ferdige';
 }

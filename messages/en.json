@@ -3572,7 +3572,7 @@
       "colGames": "Game",
       "colStatus": "Status",
       "subtitleFinished": "{n, plural, one {# signed round} other {# signed rounds}}",
-      "subtitleOngoing": "{n} games · sorted newest first",
+      "subtitleOngoing": "{n} games · sorted by what happens next",
       "emptyFinishedHeading": "No signed rounds yet.",
       "emptyFinishedBody": "Results from finished games will appear here as rounds are completed.",
       "emptyOngoingHeading": "No games yet.",

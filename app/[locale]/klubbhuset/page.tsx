@@ -55,8 +55,8 @@ export default async function KlubbhusetPage({
   const { userId, isAdmin } = await getRoleContext(supabase);
   const list = LIST_BY_PARAM[first(sp.vis) ?? ''] ?? null;
 
-  // A list shows no «Neste» rows, so it reads no start blocks.
-  const read = await getArrangedRounds(supabase, userId, list ? { upcomingLimit: 0 } : {});
+  // A list shows no counts, so it reads no roster and no start blocks.
+  const read = await getArrangedRounds(supabase, userId, { listOnly: list != null });
   // A failed read is not «nothing arranged yet» (#2490).
   if (!read.ok) console.error('[klubbhuset]', read.error);
 

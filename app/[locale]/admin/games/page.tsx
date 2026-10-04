@@ -16,7 +16,7 @@ import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { TopBar } from '@/components/ui/TopBar';
-import { ArrangedRoundsView } from '@/components/games/ArrangedRoundsView';
+import { ArrangedRoundsSkeleton, ArrangedRoundsView } from '@/components/games/ArrangedRoundsView';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
@@ -172,7 +172,7 @@ export default async function GamesPage({
         </div>
       )}
 
-      <Suspense fallback={<GamesLedgerSkeleton />}>
+      <Suspense fallback={view === 'default' ? <ArrangedRoundsSkeleton /> : <GamesLedgerSkeleton />}>
         {view === 'default' ? <DefaultRounds /> : <GamesLedger view={view} />}
       </Suspense>
 
@@ -204,9 +204,11 @@ const fetchLedgerGames = cache(async (view: LedgerView) => {
 });
 
 /**
- * The default view: the 40 newest games that are not finished, without cup
+ * The default view: the 40 newest games in progress or scheduled, without cup
  * matches and league flights (#2489, they belong to the cup's and the league's
- * page). Finished runs live under ?status=finished.
+ * page). Drafts are counted on their own (`DefaultRounds`) and never listed
+ * here, so they take no place among the 40. Finished runs live under
+ * ?status=finished.
  */
 const fetchDefaultGames = cache(async () => {
   const { supabase } = await getAdminGamesContext();
@@ -214,7 +216,7 @@ const fetchDefaultGames = cache(async () => {
     supabase
       .from('games')
       .select(DEFAULT_SELECT)
-      .in('status', ['draft', 'scheduled', 'active']),
+      .in('status', ['scheduled', 'active']),
   )
     .order('created_at', { ascending: false })
     .limit(40)
@@ -325,7 +327,7 @@ async function DefaultRounds() {
           icon="flag"
         />
       )}
-      <ArrangedRoundsView rounds={rounds} isAdmin locale={locale} showMode />
+      <ArrangedRoundsView rounds={rounds} isAdmin source="all" locale={locale} showMode />
     </>
   );
 }

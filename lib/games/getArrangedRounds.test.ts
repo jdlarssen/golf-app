@@ -130,6 +130,15 @@ describe('getArrangedRounds', () => {
     ]);
   });
 
+  it('reads no roster and no start block for a plain list', async () => {
+    const games = [game('a', 'active'), game('s', 'scheduled', '2026-10-08T15:30:00Z')];
+    const { client, calls } = fakeClient(games, rosterOf('a', 3));
+    const read = await getArrangedRounds(client, 'u1', { listOnly: true });
+    expect(read.ok && read.games).toHaveLength(2);
+    expect(calls.rosterIn).toEqual([]);
+    expect(readCreatorStartBlock).not.toHaveBeenCalled();
+  });
+
   it('gives { ok: false } when the games read fails, not an empty list (#2490)', async () => {
     const failing = {
       from: () => ({

@@ -46,7 +46,11 @@ export type ArrangedRoundsRead =
 export async function getArrangedRounds(
   supabase: SupabaseClient<Database>,
   userId: string,
-  opts: { upcomingLimit?: number } = {},
+  opts: {
+    upcomingLimit?: number;
+    /** A plain list (`?vis=`): no roster and no start blocks, which it never shows. */
+    listOnly?: boolean;
+  } = {},
 ): Promise<ArrangedRoundsRead> {
   const { data: games, error } = await onlyStandaloneGames(
     supabase.from('games').select(ARRANGED_GAME_SELECT).eq('created_by', userId),
@@ -56,9 +60,10 @@ export async function getArrangedRounds(
   if (error) return { ok: false, error };
 
   const rows = games ?? [];
-  const rosterIds = rows
-    .filter((g) => g.status === 'active' || g.status === 'scheduled')
-    .map((g) => g.id);
+  const rosterIds = opts.listOnly
+    ? []
+    : rows.filter((g) => g.status === 'active' || g.status === 'scheduled').map((g) => g.id);
+  const blockIds = opts.listOnly ? [] : upcomingBlockIds(rows, opts.upcomingLimit);
 
   const [roster, blocks] = await Promise.all([
     rosterIds.length === 0
@@ -77,11 +82,7 @@ export async function getArrangedRounds(
         ),
     // Service role (see `readCreatorStartBlock`). The authorisation is here:
     // every id comes from the `created_by = userId` read above.
-    Promise.all(
-      upcomingBlockIds(rows, opts.upcomingLimit).map(
-        async (id) => [id, await readCreatorStartBlock(id)] as const,
-      ),
-    ),
+    Promise.all(blockIds.map(async (id) => [id, await readCreatorStartBlock(id)] as const)),
   ]);
   if (roster.error) return { ok: false, error: roster.error };
 
