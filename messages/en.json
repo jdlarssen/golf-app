@@ -4010,7 +4010,8 @@
           "deliveredBy": "Submitted by {name}",
           "withdrawn": "Withdrawn"
         },
-        "sendingBusy": "Sending …"
+        "sendingBusy": "Sending …",
+        "remindRowButton": "Remind"
       },
       "signups": {
         "topBarKicker": "Signups",
@@ -4081,6 +4082,37 @@
         "submittingBusy": "Withdrawing …",
         "cancel": "Cancel",
         "dangerVariant": "danger"
+      },
+      "pult": {
+        "kicker": "Organiser's desk",
+        "back": "Back",
+        "elapsedNone": "In progress",
+        "elapsedMinutes": "In progress · {minutes} min",
+        "elapsedHours": "In progress · {hours} h {minutes} min",
+        "deliveredLabel": "Scorecards handed in",
+        "deliveredOf": "of {total}",
+        "tabsLabel": "Choose view",
+        "tabLive": "Live",
+        "tabPlayers": "Players",
+        "tabSetup": "Setup",
+        "needsYouHeading": "Needs you",
+        "needsYouEmpty": "Nothing needs you right now.",
+        "pendingApproval": "{count, plural, one {# scorecard is waiting for approval} other {# scorecards are waiting for approval}}",
+        "reviewButton": "Review",
+        "finishedNotSubmitted": "{count, plural, one {# has finished but not handed in} other {# have finished but not handed in}}",
+        "gapRow": "{names} {people, plural, one {has} other {have}} no score on {holeCount, plural, one {hole} other {holes}} {holes}",
+        "gapGroupAt": "{group} is on hole {hole}",
+        "gapEnteredTo": "Scored up to hole {hole}",
+        "flightsHeading": "Flights",
+        "allPlayers": "All players",
+        "noFlight": "No flight",
+        "holeOf": "<num>hole {hole}</num> of {count}",
+        "holeOfSegment": "<num>hole {hole}</num> · {position} of {count}",
+        "holesPlayed": "<num>{played}</num> of {count} holes",
+        "allSubmitted": "All handed in ✓",
+        "viewStatus": "View player status →",
+        "endHint": "Opens when all {total} have handed in",
+        "endHintApproved": "Opens when all {total} have handed in and the cards are approved"
       }
     },
     "players": {
