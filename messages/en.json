@@ -28,27 +28,25 @@
       "unknown": "Something went wrong. Please try again."
     },
     "kicker": "Welcome to Tørny",
-    "heading": "Complete your profile",
-    "subheading": "Tell us a bit about yourself and you're ready to play.",
+    "heading": "Two things and you're in",
     "inviteNoticeGameStarted": "The round you were invited to had already started when you logged in, so you're not on the list. Let the person who invited you know.",
-    "nameLabel": "Name",
+    "nameLabel": "What's your name?",
+    "nameHint": "First and last name, the way your group knows you.",
     "submitButton": "Let's go",
     "submitPending": "Saving …",
-    "hcpLabel": "Handicap index",
+    "footnote": "You can change both later in your profile.",
+    "hcpLabel": "Your handicap",
     "hcpPlusLabel": "Plus handicap",
-    "hcpGolfboxHelper": "The number you have in Golfbox right now",
-    "hcpSavedAs": "Saved as",
-    "hcpPlusshandicap": "plus handicap",
-    "progress": {
-      "summary": "1 of 3 done",
-      "step1": "Account created",
-      "step2": "Complete your profile",
-      "step3": "Play your first round",
-      "status": {
-        "done": "done",
-        "active": "current step",
-        "upcoming": "up next"
-      }
+    "hcpGolfboxHelper": "The number you have in Golfbox now. No handicap yet? Enter {max}.",
+    "preview": {
+      "kicker": "How others see you",
+      "namePlaceholder": "Your name",
+      "hcp": "HCP {value}",
+      "hcpMissing": "HCP –"
+    },
+    "game": {
+      "title": "{name} is waiting for you",
+      "teeOffAt": "at {time}"
     }
   },
   "nav": {

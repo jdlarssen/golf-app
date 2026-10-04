@@ -114,7 +114,7 @@ flowchart LR
   E --> F[verifyOtp]
   F --> G[Marker invitations.accepted_at<br/>+ auto-insert game_players hvis<br/>runden ikke har startet<br/>+ vennskap med den som inviterte]
   G --> H{profil fullført?}
-  H -- nei --> CP["/complete-profile<br/>navn, hcp, kjønn, klasse"]
+  H -- nei --> CP["/complete-profile<br/>navn, handicap"]
   H -- ja --> Home["/"]
   CP --> Home
 ```
@@ -124,7 +124,7 @@ flowchart LR
 | Be om kode | `app/[locale]/(auth)/login/page.tsx`, `actions.ts` → `sendCode` | `email_is_invited` RPC gater `shouldCreateUser`; `signInWithOtp`. Kode-mail via **Supabase Auth**. Honeypot-felt `website`. Med gyldig `?invite=` står invitasjonskortet (`components/games/InvitationCard.tsx`, #2266) over skjemaet «Bli med på runden», uten demo-lenke og passkey-knapp. |
 | Verifiser | `verifyCode` | `verifyOtp({type:'email'})`. Marker `invitations.accepted_at` (RLS 0012). Spill-invitasjon gir plass bare før start (`isRosterLocked`, #2212): planlagt runde → auto-insert i `game_players` + `notifyInvitedToGame` (er spillet et utkast, gir invitasjonen plass på lista, men varselet kommer først når spillet publiseres, #2445); startet eller ferdig runde → ingen plass, invitéen lander på `/complete-profile?invite_notice=game_started` med en beskjed (gjest som allerede står på lista, #1009, lander på runden). Alle invitasjoner, også de uten spill, gir vennskap med den som inviterte (`befriend_inviter`, #481/#2212). |
 | Endre adresse | `_components/VerifyCodeForm.tsx` → `changeEmailHref` | Retur-kant til steg 1 (#1346): GET til `/login` med `email`, `next` og `invite` beholdt, så feltet prefylles og invitasjonskortet (#1169, #2266) overlever. Utveien når adressen er feiltastet — «Send ny kode» treffer bare samme feil adresse. |
-| Fullfør profil | `app/[locale]/complete-profile/page.tsx`, `actions.ts` | Setter `users.profile_completed_at` + navn/nickname/`hcp_index`/gender/level. |
+| Fullfør profil | `app/[locale]/complete-profile/page.tsx`, `actions.ts` | Setter `users.profile_completed_at` + navn og `hcp_index` (ikke nickname, gender eller level, #1064). Kommer spilleren med `next=/games/<id>` (profilporten), står runden på et kort øverst når hen står på lista og den er planlagt eller i gang (`getOnboardingGame`, regelen i `lib/games/onboardingGame.ts`, #2350). «Slik ser de andre deg» viser navnet og handicapen mens du skriver. |
 
 **To mailer per invitasjon:** Resend-notifikasjon (`lib/mail/inviteNotification.ts`) når noen inviterer, så kode-mail når invitéen ber om kode på `/login`.
 

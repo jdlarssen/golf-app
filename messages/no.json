@@ -28,27 +28,25 @@
       "unknown": "Noe gikk galt. Prøv igjen."
     },
     "kicker": "Velkommen til Tørny",
-    "heading": "Fullfør profilen din",
-    "subheading": "Fortell oss litt om deg, så er du klar til å spille.",
+    "heading": "To ting, så er du med",
     "inviteNoticeGameStarted": "Runden du ble invitert til, hadde allerede startet da du logget inn, så du står ikke på lista. Si fra til den som inviterte deg.",
-    "nameLabel": "Navn",
+    "nameLabel": "Hva heter du?",
+    "nameHint": "Fornavn og etternavn, slik gjengen kjenner deg.",
     "submitButton": "Sett i gang",
     "submitPending": "Lagrer …",
-    "hcpLabel": "Handicap-index",
+    "footnote": "Du kan endre begge deler senere i profilen.",
+    "hcpLabel": "Handicapen din",
     "hcpPlusLabel": "Plusshandicap",
-    "hcpGolfboxHelper": "Tallet du har i Golfbox akkurat nå",
-    "hcpSavedAs": "Lagres som",
-    "hcpPlusshandicap": "plusshandicap",
-    "progress": {
-      "summary": "1 av 3 fullført",
-      "step1": "Konto opprettet",
-      "step2": "Fullfør profilen",
-      "step3": "Spill din første runde",
-      "status": {
-        "done": "fullført",
-        "active": "aktivt steg",
-        "upcoming": "gjenstår"
-      }
+    "hcpGolfboxHelper": "Tallet du har i Golfbox nå. Har du ikke handicap ennå, skriv {max}.",
+    "preview": {
+      "kicker": "Slik ser de andre deg",
+      "namePlaceholder": "Navnet ditt",
+      "hcp": "HCP {value}",
+      "hcpMissing": "HCP –"
+    },
+    "game": {
+      "title": "{name} venter på deg",
+      "teeOffAt": "kl. {time}"
     }
   },
   "nav": {

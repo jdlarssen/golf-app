@@ -11,6 +11,10 @@
 // er best-effort: kortet er pynt på et steg som skal virke uten det, så en
 // feil gir «ingen kort» og en linje i loggen.
 import { supabase } from '../supabase';
+import {
+  ONBOARDING_GAME_STATUSES,
+  isOnboardingGameOpen,
+} from '../../../../lib/games/onboardingGame';
 
 /** Det kortet viser. */
 export interface OnboardingGame {
@@ -34,18 +38,20 @@ export interface OnboardingGameRow {
   };
 }
 
-/** Statusene kortet kan gjelde. Et ferdig spill venter ikke på noen. */
-const OPEN_STATUSES = ['scheduled', 'active'] as const;
-
 /**
  * Spillet kortet skal vise, eller `null`. Ren funksjon: regelen står her og
  * testes her, spørringen under bare henter radene.
  */
 export function pickOnboardingGame(rows: readonly OnboardingGameRow[]): OnboardingGame | null {
-  const open = rows.filter(
-    (row) =>
-      row.withdrawn_at === null &&
-      (OPEN_STATUSES as readonly string[]).includes(row.games.status),
+  // Regelen har ett hjem på nettsiden (`lib/games/onboardingGame.ts`, #2350).
+  // Raden har ingen `source_game_id`: `fetchOnboardingGame` filtrerer alt
+  // `.is('games.source_game_id', null)` på serveren, så `null` er sant her.
+  const open = rows.filter((row) =>
+    isOnboardingGameOpen({
+      withdrawn_at: row.withdrawn_at,
+      status: row.games.status,
+      source_game_id: null,
+    }),
   );
   if (open.length === 0) return null;
 
@@ -81,7 +87,7 @@ export async function fetchOnboardingGame(userId: string): Promise<OnboardingGam
       .select(SELECT)
       .eq('user_id', userId)
       .is('withdrawn_at', null)
-      .in('games.status', OPEN_STATUSES)
+      .in('games.status', ONBOARDING_GAME_STATUSES)
       .is('games.source_game_id', null)
       .returns<OnboardingGameRow[]>();
     if (error) {
