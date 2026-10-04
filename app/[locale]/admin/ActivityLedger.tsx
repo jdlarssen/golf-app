@@ -114,9 +114,14 @@ export async function ActivityLedger() {
 
   // #2490: half an event log looks complete, and an empty one says «nothing
   // happened». Any failed read replaces the whole list with an error box.
-  const failed = [subsRes, apprsRes, gamesRes, coursesEvRes, invitesRes].find(
-    (res) => res.error,
-  );
+  const failed = [
+    subsRes,
+    apprsRes,
+    startsRes,
+    endsRes,
+    coursesEvRes,
+    invitesRes,
+  ].find((res) => res.error);
   if (failed) {
     console.error('[admin/ledger]', failed.error);
     return <SectionError testId="admin-ledger-error" />;
