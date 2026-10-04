@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   buildSupabaseMock,
   makeRedirectMock,
@@ -290,7 +290,14 @@ beforeEach(() => {
 });
 
 describe('sendCode — honeypot', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('silent-rejects when the website field is populated: no signInWithOtp call, redirects to verify step', async () => {
+    // #2349: the verify step gets `sent` (unix seconds) for its countdown.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-04T10:00:00Z'));
     const { sendCode } = await import('./actions');
 
     await expect(
@@ -304,7 +311,7 @@ describe('sendCode — honeypot', () => {
 
     // Bot sees a "success" response — verify step, no error code.
     expect(lastRedirect()).toBe(
-      '/login?step=verify&email=bot%40example.com',
+      '/login?step=verify&email=bot%40example.com&sent=1791108000',
     );
 
     // Critical: no Supabase work happened.
@@ -314,6 +321,8 @@ describe('sendCode — honeypot', () => {
   });
 
   it('proceeds normally when website is empty (happy path reaches Supabase)', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-04T10:00:00Z'));
     rpcMock.mockResolvedValue({ data: false, error: null });
     signInWithOtpMock.mockResolvedValue({ error: null });
 
@@ -334,7 +343,7 @@ describe('sendCode — honeypot', () => {
     });
     expect(signInWithOtpMock).toHaveBeenCalledTimes(1);
     expect(lastRedirect()).toBe(
-      '/login?step=verify&email=real%40example.com',
+      '/login?step=verify&email=real%40example.com&sent=1791108000',
     );
   });
 
@@ -1419,4 +1428,63 @@ describe('verifyCode — #2212 startet eller ferdig runde', () => {
       expect(lastRedirect()).toBe('/');
     },
   );
+});
+
+// #2349: `sent` (unix seconds, stamped by sendCode) drives «Ny kode om 0:42»
+// on the verify step. A mistyped code or a rejected «Send ny kode» must not
+// restart the countdown, so the error redirects carry it back — last, so the
+// URLs without it above stay exact.
+describe('sent keeps the countdown (#2349)', () => {
+  const INVITE = '11111111-2222-3333-4444-555555555555';
+  const SENT = '1791108000';
+
+  it('verifyCode: a wrong code keeps sent', async () => {
+    verifyOtpMock.mockResolvedValue({ error: { message: 'Invalid token' } });
+    const { verifyCode } = await import('./actions');
+
+    await expect(
+      verifyCode(
+        fd({ email: 'kompis@example.com', token: '00000000', invite: INVITE, sent: SENT }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      `/login?step=verify&email=kompis%40example.com&error=code_invalid&invite=${INVITE}&sent=${SENT}`,
+    );
+  });
+
+  it('verifyCode: a sent that is not digits is dropped', async () => {
+    verifyOtpMock.mockResolvedValue({ error: { message: 'Invalid token' } });
+    const { verifyCode } = await import('./actions');
+
+    await expect(
+      verifyCode(fd({ email: 'kompis@example.com', token: '00000000', sent: '12ab' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?step=verify&email=kompis%40example.com&error=code_invalid');
+  });
+
+  it('sendCode from the verify step: a rejected resend keeps sent', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'kompis@example.com', from: 'verify', sent: SENT })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      `/login?step=verify&email=kompis%40example.com&error=rate_limited&sent=${SENT}`,
+    );
+  });
+
+  it('sendCode from step 1: an error carries no sent', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'kompis@example.com', sent: SENT })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?email=kompis%40example.com&error=rate_limited');
+  });
 });

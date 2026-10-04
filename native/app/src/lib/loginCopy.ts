@@ -45,48 +45,18 @@ export const REVEAL_PASSWORD_LOGIN_MS = 1_500;
 export const APP_NAME_FALLBACK = 'Tørny';
 
 /**
- * Sifrene i koden fra mailen (#2216, åtte ruter). Speiler Supabase-innstillingen
- * og webbens `OTP_LENGTH` i `VerifyCodeForm.tsx`: endres koden i Supabase, må
- * begge følge med. Brukes bare til visningen og til å sende koden av seg selv.
+ * Kode-steget (#2216, åtte ruter og «Ny kode om 0:42») har ett hjem sammen med
+ * nettsiden: `lib/auth/otpResend.ts` (#2349). Tallene speiler
+ * Supabase-innstillingen (kodelengden og minuttet før samme adresse får ny
+ * kode) og styrer bare visningen. Re-eksportert under appens gamle navn, så
+ * `Login.tsx` står urørt.
  */
-export const OTP_LENGTH = 8;
-
-/**
- * Supabase gir samme adresse ny kode tidligst etter ett minutt. Speiler
- * innstillingen og styrer bare nedtellingen; avgjørelsen er Supabases.
- */
-export const RESEND_SECONDS = 60;
-
-/** Sekunder til «Send ny kode» kan trykkes, mellom 0 og {@link RESEND_SECONDS}. */
-export function resendWaitSeconds(sentAtMs: number, nowMs: number): number {
-  const elapsed = Math.floor((nowMs - sentAtMs) / 1000);
-  return Math.min(RESEND_SECONDS, Math.max(0, RESEND_SECONDS - elapsed));
-}
-
-/**
- * Adressen i «Vi sendte den til …» på kode-steget: første tegn, én prikk per
- * resten av lokaldelen, og hele domenet — «k••••@firma.no», som i designet
- * (Innlogging-forslag). Uten `@` (eller tom) står den som den er.
- *
- * Ikke webbens `maskEmail` (`lib/users/maskEmail.ts`): den viser to tegn og
- * tre faste prikker («ka•••@firma.no»), en annen form enn designets.
- */
-export function maskSentToEmail(email: string): string {
-  const at = email.lastIndexOf('@');
-  if (at <= 0) return email;
-  const local = email.slice(0, at);
-  return `${local.slice(0, 1)}${'•'.repeat(local.length - 1)}${email.slice(at)}`;
-}
-
-/** Nedtellingen som «0:42». */
-export function formatCountdown(seconds: number): string {
-  const whole = Math.max(0, Math.floor(seconds));
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
-}
+export { OTP_LENGTH, OTP_RESEND_SECONDS as RESEND_SECONDS, resendWaitSeconds, formatResendCountdown as formatCountdown, maskSentToEmail } from '../../../../lib/auth/otpResend';
 
 export const LOGIN_TEXT = {
   // --- Innloggingen etter designet (#2216, «Innlogging»-forslaget, #2349) ---
-  // Ordlyden er designets. Nettsiden får den samme i #2349.
+  // Ordlyden er designets, og nettsiden har den samme (`loginCopy.test.ts`
+  // låser dem mot hverandre).
   /** Taglinen i båndet på steg 1, med «par» i gull. */
   taglinePre: 'Fyr opp golfturneringen på et ',
   taglineGold: 'par',
@@ -158,9 +128,10 @@ export function classifyVerifyError(error: LoginErrorLike): LoginErrorCode {
   if (NETWORK_HINTS.some((hint) => msg.includes(hint))) return 'network';
 
   // GoTrue svarer likt på en feiltastet og en utløpt kode («Token has
-  // expired or is invalid», `otp_expired`). Webben lander derfor på «gått
-  // ut» også for en ren tastefeil. Vi speiler det bevisst: å være smartere
-  // enn webben her ville vært et avvik, ikke en forbedring.
+  // expired or is invalid», `otp_expired`). Webben lander derfor på
+  // `code_expired` også for en ren tastefeil, og teksten dekker begge
+  // tilfellene (#2349). Vi speiler det bevisst: å være smartere enn webben
+  // her ville vært et avvik, ikke en forbedring.
   return code === 'otp_expired' || msg.includes('expired') ? 'code_expired' : 'code_invalid';
 }
 
@@ -190,7 +161,7 @@ export function describeLoginError(code: LoginErrorCode): string {
     case 'code_invalid':
       return 'Feil kode. Sjekk mailen og prøv igjen.';
     case 'code_expired':
-      return 'Koden er gått ut. Be om ny kode.';
+      return 'Koden stemmer ikke, eller den er gått ut. Sjekk at du skrev den riktig. Du kan også be om en ny kode.';
     case 'network':
       return OFFLINE_NOTE;
     case 'unknown':

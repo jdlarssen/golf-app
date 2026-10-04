@@ -144,6 +144,42 @@ describe('LOGIN_TEXT', () => {
   });
 });
 
+// #2349: nettsidens innlogging har samme design og samme ord. Hver designtekst
+// låses mot webbens nøkkel tegn for tegn. Setningene appen deler opp for å
+// sette inn adressen, tiden eller gullet, settes sammen igjen til webbens
+// ICU-streng. (Webben bruker `<strong>` rundt adressen: next-intl tåler ikke
+// en tag og en plassholder med samme navn.)
+describe('LOGIN_TEXT mot nettsiden (#2349)', () => {
+  const webAuth = source.auth;
+  const SHARED: ReadonlyArray<readonly [string, string, string]> = [
+    ['stepOneKicker', LOGIN_TEXT.stepOneKicker, webAuth.sendCode.kicker],
+    ['stepTwoKicker', LOGIN_TEXT.stepTwoKicker, webAuth.verifyCode.kicker],
+    ['codeHeading', LOGIN_TEXT.codeHeading, webAuth.verifyCode.heading],
+    ['changeEmail', LOGIN_TEXT.changeEmail, webAuth.verifyCode.changeEmailShort],
+    ['codeLabel', LOGIN_TEXT.codeLabel, webAuth.verifyCode.codeLabel],
+    ['codeHint', LOGIN_TEXT.codeHint, webAuth.verifyCode.codeHint],
+    ['verifyButton', LOGIN_TEXT.verifyButton, webAuth.verifyCode.submitButton],
+    ['noMailTitle', LOGIN_TEXT.noMailTitle, webAuth.verifyCode.noMailTitle],
+    ['spamHint', LOGIN_TEXT.spamHint, webAuth.verifyCode.spamHint],
+    ['resendButton', LOGIN_TEXT.resendButton, webAuth.verifyCode.resendLink],
+    [
+      'sentTo',
+      `${LOGIN_TEXT.sentToPrefix}<strong>{email}</strong>${LOGIN_TEXT.sentToSuffix}`,
+      webAuth.verifyCode.sentTo,
+    ],
+    ['resendIn', `${LOGIN_TEXT.resendInPrefix}{time}`, webAuth.verifyCode.resendIn],
+    [
+      'tagline',
+      `${LOGIN_TEXT.taglinePre}<par>${LOGIN_TEXT.taglineGold}</par>${LOGIN_TEXT.taglinePost}`,
+      source.common.brandTagline,
+    ],
+  ];
+
+  it.each(SHARED)('«%s» er webbens streng tegn for tegn', (_key, appText, webText) => {
+    expect(appText).toBe(webText);
+  });
+});
+
 // #2216: «Ny kode om 0:42» på kode-steget.
 describe('nedtellingen til ny kode', () => {
   const SENT = Date.UTC(2026, 9, 1, 12, 0, 0);

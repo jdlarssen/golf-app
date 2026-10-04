@@ -150,6 +150,12 @@
   --disabled-bg: #d9d2c0;
   --disabled-fg: #9a8f7c;
 
+  /* The login code step (#2349, artboard «Innlogging-forslag»): the stroke
+   * between the two groups of four code boxes, and the text of «Send ny kode»
+   * while the minute runs. Night: the field border and the disabled text. */
+  --otp-divider: #c7bea9;
+  --resend-disabled-fg: #8a8171;
+
   /* Ghost score number — the par-baseline digit shown before a score is set.
    * Same taupe as --disabled-fg but exposed as its own token so future score-
    * tone tweaks don't drag the disabled-button color along. */
@@ -310,6 +316,8 @@
      * so "off" reads correctly. */
     --disabled-bg: #2a3a30;
     --disabled-fg: #5c6358;
+    --otp-divider: #3d4f43;
+    --resend-disabled-fg: #5c6358;
 
     /* Ghost score number — matches --text-muted in dark mode (warm taupe)
      * so unset digits fade out without going to neutral grey. */
@@ -422,6 +430,8 @@
 
   --disabled-bg: #2a3a30;
   --disabled-fg: #5c6358;
+  --otp-divider: #3d4f43;
+  --resend-disabled-fg: #5c6358;
   --score-unset-fg: #9a9180;
   --lineup-solo: #9a9180;
   --hole-completed-bg: #243429;
@@ -478,6 +488,8 @@
   --color-field-border: var(--field-border);
   --color-disabled-bg: var(--disabled-bg);
   --color-disabled-fg: var(--disabled-fg);
+  --color-otp-divider: var(--otp-divider);
+  --color-resend-disabled-fg: var(--resend-disabled-fg);
   --color-score-unset-fg: var(--score-unset-fg);
   --color-lineup-solo: var(--lineup-solo);
   --color-hole-completed-bg: var(--hole-completed-bg);

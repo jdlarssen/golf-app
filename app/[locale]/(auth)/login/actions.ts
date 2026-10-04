@@ -20,11 +20,15 @@ import { safeInternalPath } from '@/lib/url/safeInternalPath';
  * verify-steget en blindvei (kodefelt uten adresse).
  *
  * Param-rekkefølgen er bevisst deterministisk (step, email, error, next,
- * invite) — unit-testene låser eksakte URL-strenger.
+ * invite, sent) — unit-testene låser eksakte URL-strenger.
+ *
+ * #2349: `sent` (unix-sekunder) driver nedtellingen «Ny kode om 0:42» på
+ * verify-steget. En feiltastet kode eller en avvist «Send ny kode» skal ikke
+ * starte den på nytt, så den følger med — sist, og bare sifre.
  */
 function loginErrorRedirect(
   code: string,
-  ctx: { email?: string; next?: string; invite?: string; step?: 'verify' },
+  ctx: { email?: string; next?: string; invite?: string; step?: 'verify'; sent?: string },
 ): never {
   const qs = new URLSearchParams();
   if (ctx.step && ctx.email) qs.set('step', ctx.step);
@@ -32,12 +36,26 @@ function loginErrorRedirect(
   qs.set('error', code);
   if (ctx.next) qs.set('next', ctx.next);
   if (ctx.invite) qs.set('invite', ctx.invite);
+  if (ctx.step && ctx.email && ctx.sent && /^\d+$/.test(ctx.sent)) qs.set('sent', ctx.sent);
   redirect(`/login?${qs.toString()}`);
 }
 
+/**
+ * #2349: when the code went out, in whole unix seconds — the verify step counts
+ * down from it. Supabase does not tell us when it sent a code, so we stamp it.
+ */
+function sentNow(): string {
+  return String(Math.floor(Date.now() / 1000));
+}
+
+/** The `sent` a verify-step form carries on (checked in `loginErrorRedirect`). */
+function formSent(formData: FormData): string {
+  return String(formData.get('sent') ?? '').trim();
+}
+
 // Step 1 of two-step OTP login. Verifies the email is either registered
-// (existing user) or has an open invitation, then asks Supabase to send a
-// 6-digit code. Existing users are detected implicitly: shouldCreateUser
+// (existing user) or has an open invitation, then asks Supabase to send an
+// 8-digit code. Existing users are detected implicitly: shouldCreateUser
 // is gated on whether the email has an open invitation row, and Supabase
 // reports an error for unknown emails when shouldCreateUser=false — we
 // map that to user_not_found.
@@ -62,6 +80,9 @@ export async function sendCode(formData: FormData) {
     next,
     invite,
     step: fromVerify ? ('verify' as const) : undefined,
+    // #2349: the countdown of the code already on its way survives a rejected
+    // «Send ny kode». From step 1 there is no code yet, so no `sent`.
+    sent: fromVerify ? formSent(formData) : undefined,
   };
 
   // Honeypot — the `website` field is hidden via CSS/tabindex/aria so real
@@ -76,6 +97,7 @@ export async function sendCode(formData: FormData) {
     const qs = new URLSearchParams({ step: 'verify', email });
     if (next) qs.set('next', next);
     if (invite) qs.set('invite', invite);
+    qs.set('sent', sentNow());
     redirect(`/login?${qs.toString()}`);
   }
 
@@ -109,10 +131,11 @@ export async function sendCode(formData: FormData) {
   const qs = new URLSearchParams({ step: 'verify', email });
   if (next) qs.set('next', next);
   if (invite) qs.set('invite', invite);
+  qs.set('sent', sentNow());
   redirect(`/login?${qs.toString()}`);
 }
 
-// Step 2: verify the 6-digit code, set the session cookie, mark any
+// Step 2: verify the 8-digit code, set the session cookie, mark any
 // pending invitation rows for this email as accepted (replaces the
 // side-effect that lived in /auth/callback), and redirect to next
 // destination.
@@ -136,6 +159,8 @@ export async function verifyCode(formData: FormData) {
     next: explicitNext ?? '',
     invite,
     step: 'verify' as const,
+    // #2349: a mistyped code does not restart «Ny kode om 0:42».
+    sent: formSent(formData),
   };
 
   if (!email || !token) {
