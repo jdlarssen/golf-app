@@ -2098,6 +2098,12 @@
       "finishGame": "Avslutt spillet",
       "finishGameHint": "Du arrangerer spillet. Lås det og åpne leaderboardet for alle.",
       "gameNotStarted": "Spillet er ikke startet ennå.",
+      "handicapCard": {
+        "title": "Sjekk handicapet ditt",
+        "body": "Handicapet ditt er <num>{hcp}</num>, sist oppdatert {relative}. Stemmer det?",
+        "confirm": "Ja, stemmer",
+        "update": "Oppdater"
+      },
       "cupStandings": "Se cupen",
       "playersComingSoon": "Spillere kommer.",
       "teamLabel2": "Lag {number}",
@@ -5638,6 +5644,7 @@
   },
   "home": {
     "streakChipAria": "{count} uker på rad. Trykk for å se serien.",
+    "handicapChipAria": "Handicap {hcp}. Trykk for å oppdatere.",
     "profileUpdatedBanner": "✓ Profilen din er oppdatert.",
     "gameDeletedBanner": "✓ «{name}» er slettet.",
     "emptyKicker": "KLAR FOR FØRSTE RUNDE",

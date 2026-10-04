@@ -2098,6 +2098,12 @@
       "finishGame": "Finish game",
       "finishGameHint": "You organised this game. Lock it and open the leaderboard for everyone.",
       "gameNotStarted": "The game hasn't started yet.",
+      "handicapCard": {
+        "title": "Check your handicap",
+        "body": "Your handicap is <num>{hcp}</num>, last updated {relative}. Is that right?",
+        "confirm": "Yes, that's right",
+        "update": "Update"
+      },
       "cupStandings": "View the cup",
       "playersComingSoon": "Players will appear here.",
       "teamLabel2": "Team {number}",
@@ -5638,6 +5644,7 @@
   },
   "home": {
     "streakChipAria": "{count} weeks in a row. Tap to see your streak.",
+    "handicapChipAria": "Handicap {hcp}. Tap to update.",
     "profileUpdatedBanner": "✓ Your profile has been updated.",
     "gameDeletedBanner": "✓ \"{name}\" has been deleted.",
     "emptyKicker": "READY FOR YOUR FIRST ROUND",
