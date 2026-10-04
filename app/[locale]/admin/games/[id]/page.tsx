@@ -71,7 +71,9 @@ import {
   teamBuckets,
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { startErrorMessageArgs } from '@/lib/games/startErrorMessage';
+import { startBlockMessage, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
+import { readStartBlock } from '@/lib/games/startScheduledGameCore';
+import { isStructuralBlockReason } from '@/lib/notifications/autoStartBlocked';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import type { StartType } from '@/lib/games/startType';
 import {
@@ -206,6 +208,14 @@ const getSakNumber = cache(
   },
 );
 
+// #2204: why a scheduled round would not start right now, read without
+// starting it. Read only, as the global admin `requireAdmin` let in. Shared by
+// the start card and the ?error= banner, so a request reads it once.
+const getStartBlock = cache(async (gameId: string) => {
+  const { supabase } = await getAdminGameContext();
+  return readStartBlock(supabase, gameId);
+});
+
 export default async function GameDetailPage({
   params,
   searchParams,
@@ -279,6 +289,15 @@ export default async function GameDetailPage({
   if (!game) {
     notFound();
   }
+
+  // #2204: the start card already gives the reason a scheduled round would not
+  // start; a refused «Start runden nå» with the same reason would say it twice.
+  // Read only when there is an ?error=, so the top never waits otherwise.
+  const errorBlock = errorCode && game.status === 'scheduled' ? await getStartBlock(id) : null;
+  const shownErrorMessage =
+    errorBlock && isStructuralBlockReason(errorBlock.reason) && errorCode === errorBlock.reason
+      ? undefined
+      : errorMessage;
 
   // Start the sak-number count now (cache()d per request), so the title
   // block and the footer, which both await it behind Suspense, do not wait
@@ -374,7 +393,7 @@ export default async function GameDetailPage({
 
       <StatusBanners
         statusBanner={statusBanner}
-        errorMessage={errorMessage}
+        errorMessage={shownErrorMessage}
         errorCode={errorCode}
       />
 
@@ -593,6 +612,7 @@ async function buildSections({
   const tRegistration = await getTranslations('admin.game.registration');
   const tApprove = await getTranslations('game.approve');
   const tButtons = await getTranslations('admin.game.buttons');
+  const tErrors = await getTranslations('admin.game.errors');
 
   // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
   // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
@@ -1196,15 +1216,37 @@ async function buildSections({
     </SectionCard>
   );
 
+  // #2204: why the round would not start, read without starting it. A
+  // structural reason replaces the start card's text with the sentence a
+  // refused start would give; a silent one (a cup match that is never played)
+  // only stops both cards from promising the auto-start.
+  const startBlock = game.status === 'scheduled' ? await getStartBlock(gameId) : null;
+  const startBlockedMessage =
+    startBlock && isStructuralBlockReason(startBlock.reason)
+      ? startBlockMessage(
+          startBlock,
+          await pendingPlayerList(startBlock.pendingUserIds?.join(',')),
+          tErrors,
+        )
+      : undefined;
+
   const scheduledCta = game.status === 'scheduled' && (
     <>
       <SectionCard ribbon={tSections('startRound')}>
         <div className="px-3.5 pb-3.5 pt-3">
-          <p className="mb-3 text-sm text-muted">
-            {teeOffLabel
-              ? tCta('scheduledStartBodyAutoStart', { time: teeOffLabel })
-              : tCta('scheduledStartBody')}
-          </p>
+          {startBlockedMessage ? (
+            <div className="mb-3">
+              <Banner tone="warning" testId="scheduled-start-blocked">
+                {tCta('scheduledStartBlockedLead')} {startBlockedMessage}
+              </Banner>
+            </div>
+          ) : (
+            <p className="mb-3 text-sm text-muted">
+              {teeOffLabel && !startBlock
+                ? tCta('scheduledStartBodyAutoStart', { time: teeOffLabel })
+                : tCta('scheduledStartBody')}
+            </p>
+          )}
           <StartScheduledGameButton
             startAction={startScheduledAction}
             label={tButtons('startRoundNow')}
@@ -1216,7 +1258,7 @@ async function buildSections({
       <SectionCard ribbon={tSections('editGame')}>
         <div className="px-3.5 pb-3.5 pt-3">
           <p className="mb-3 text-sm text-muted">
-            {teeOffLabel
+            {teeOffLabel && !startBlock
               ? tCta('scheduledEditBodyAutoStart')
               : tCta('scheduledEditBody')}
           </p>

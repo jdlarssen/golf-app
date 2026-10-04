@@ -21,6 +21,11 @@ type WaitingRoomProps = {
   flightOptions?: FlightOption[] | null;
   /** Nåværende flight for denne spilleren (null = ikke tildelt). */
   currentFlightNumber?: number | null;
+  /**
+   * #2204: the start is held by something the organiser has to fix. The card
+   * then says so instead of «Starter snart» and the promise to notify.
+   */
+  blocked?: boolean;
 };
 
 
@@ -32,12 +37,16 @@ type WaitingRoomProps = {
  *
  * #543: hvis spillet er eligible for flight-inndeling, vises en selvbetjenings-
  * velger der spillerne kan plassere seg selv i en flight.
+ *
+ * #2204: `blocked` swaps the countdown for «Venter på arrangøren». The flight
+ * picker stays: placing yourself in a flight can be the very thing missing.
  */
 export function ScheduledWaitingRoom({
   gameId,
   teeOffAt,
   flightOptions = null,
   currentFlightNumber = null,
+  blocked = false,
 }: WaitingRoomProps) {
   const router = useRouter();
   const t = useTranslations('game.waitingRoom');
@@ -97,16 +106,28 @@ export function ScheduledWaitingRoom({
     <div className="space-y-3">
       {/* Nedtelling */}
       <div className="bg-primary text-white dark:text-bg rounded-2xl px-4 py-3.5 flex items-center gap-3">
-        <span
-          className="inline-block w-2 h-2 rounded-full bg-accent animate-soft-pulse"
-          aria-hidden
-        />
-        <div className="flex-1">
-          <p className="font-serif text-[15px] font-medium">{text}</p>
-          <p className="text-[11.5px] opacity-75 mt-0.5">
-            {t('countdownBody')}
-          </p>
-        </div>
+        {blocked ? (
+          <div className="flex-1" data-testid="waiting-room-blocked">
+            <p className="font-serif text-[15px] font-medium">{t('blocked.title')}</p>
+            <p className="text-[11.5px] opacity-75 mt-0.5">{t('blocked.body')}</p>
+          </div>
+        ) : (
+          <>
+            <span
+              className="inline-block w-2 h-2 rounded-full bg-accent animate-soft-pulse"
+              aria-hidden
+            />
+            <div className="flex-1">
+              <p className="font-serif text-[15px] font-medium">{text}</p>
+              <p
+                className="text-[11.5px] opacity-75 mt-0.5"
+                data-testid="waiting-room-countdown-body"
+              >
+                {t('countdownBody')}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* #543: flight-velger — kun når spillet trenger inndeling */}

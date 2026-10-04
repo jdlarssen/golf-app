@@ -9,7 +9,10 @@ import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { isSilentBlockReason } from '@/lib/notifications/autoStartBlocked';
+import {
+  isSilentBlockReason,
+  isStructuralBlockReason,
+} from '@/lib/notifications/autoStartBlocked';
 import { AppShell } from '@/components/ui/AppShell';
 import { PaymentInfo } from '@/components/PaymentInfo';
 import { PremiebordCard } from '@/components/PremiebordCard';
@@ -28,6 +31,9 @@ import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { readStartBlock } from '@/lib/games/startScheduledGameCore';
+import type { StartBlock } from '@/lib/games/startBlockReason';
+import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
@@ -76,6 +82,7 @@ import { CupStandingsLink } from './CupStandingsLink';
 import { ProfileGateStripe } from './ProfileGateStripe';
 import { CreatorControls } from './CreatorControls';
 import { OrganiserGameView } from './OrganiserGameView';
+import { CreatorStartBlockNotice } from './CreatorStartBlockNotice';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
@@ -154,6 +161,18 @@ async function pendingProfileIdsAmong(
     return new Set();
   }
   return new Set((data ?? []).map((r) => r.id));
+}
+
+/**
+ * #2204: why the organiser's scheduled round would not start right now, read
+ * without starting it. Only what the organiser can fix counts (a structural
+ * reason). Service role, like E1 and the spectate-token read: the caller has
+ * settled that the viewer is the creator, and the roster under RLS is not
+ * guaranteed whole for an organiser (the #366 trap).
+ */
+async function readCreatorStartBlock(gameId: string): Promise<StartBlock | null> {
+  const block = await readStartBlock(getAdminClient(), gameId);
+  return block && isStructuralBlockReason(block.reason) ? block : null;
 }
 
 export default async function GameHomePage({
@@ -295,14 +314,24 @@ export default async function GameHomePage({
     });
     if (door.kind === 'redirect') redirect({ href: door.href, locale });
     if (door.kind === 'not_found') notFound();
+    // #2204: this view runs no E1, so the block is read before and after
+    // tee-off alike. A refused «Start runden nå» with the same reason would
+    // say the notice's sentence twice, so its ?error= banner gives way.
+    const organiserStartBlock =
+      game.status === 'scheduled' ? await readCreatorStartBlock(id) : null;
     return (
       <OrganiserGameView
         id={id}
         game={game}
         locale={locale}
         spectateToken={spectateToken}
-        errorBanner={errorBanner}
+        errorBanner={
+          organiserStartBlock && organiserStartBlock.reason === errorCode ? null : errorBanner
+        }
         statusBanner={statusBannerNode}
+        startBlockNotice={
+          organiserStartBlock && <CreatorStartBlockNotice block={organiserStartBlock} />
+        }
       />
     );
   }
@@ -401,16 +430,14 @@ export default async function GameHomePage({
   // The draft branch in the default return below is reached only by the
   // organiser and global admins: players get 404 at `joinsRes` above (#2445).
 
-  // #544: track whether the auto-start was blocked by incomplete matchplay sides.
-  // Used below to render a waiting banner in the scheduled fallback view.
-  let autoStartBlockedByIncompleteSides = false;
-  // #543: track whether auto-start was blocked by unassigned flights.
-  let autoStartBlockedByUnassignedFlights = false;
-  // #1669: same, for a team format where somebody signed up without a team.
-  let autoStartBlockedByUnassignedTeams = false;
-  // #2441: a game may be published with a friend who has not finished their
-  // profile; the start waits for it. How many, for the waiting-room banner.
-  let autoStartPendingProfileCount = 0;
+  // #2204: why E1 could not start the round, when it is something the
+  // organiser has to fix (a structural reason). Drives the waiting-room
+  // banners below; silent reasons (a cup match that will never be played) and
+  // transient DB errors leave it null.
+  let startBlock: StartBlock | null = null;
+  // «After tee-off» for the organiser's notice: E1 ran, so its answer is used
+  // instead of a second read.
+  let e1Ran = false;
 
   // E1: server-side auto-start fallback. When the admin scheduled a tee-off
   // time but didn't manually click "Start runden nå", any player loading
@@ -432,18 +459,15 @@ export default async function GameHomePage({
     // idempotent and optimistic-locked; authorization is already settled by the
     // fact that this player could load the game at all.
     const result = await startScheduledGame(getAdminClient(), id);
+    e1Ran = true;
     if (!result.ok) {
-      if (result.reason === 'incomplete_sides') {
-        autoStartBlockedByIncompleteSides = true;
-      }
-      if (result.reason === 'unassigned_flights') {
-        autoStartBlockedByUnassignedFlights = true;
-      }
-      if (result.reason === 'unassigned_teams') {
-        autoStartBlockedByUnassignedTeams = true;
-      }
-      if (result.reason === 'pending_players') {
-        autoStartPendingProfileCount = result.pendingUserIds?.length ?? 0;
+      if (isStructuralBlockReason(result.reason)) {
+        startBlock = {
+          reason: result.reason,
+          rotationMode: result.rotationMode,
+          rotationActiveCount: result.rotationActiveCount,
+          pendingUserIds: result.pendingUserIds,
+        };
       }
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
@@ -512,6 +536,28 @@ export default async function GameHomePage({
       game = refreshed;
     }
   }
+
+  // #544 / #543 / #1669 / #2441: the four waiting-room banners that name what
+  // is missing, read from E1's block (#2204: one variable, one source).
+  const autoStartBlockedByIncompleteSides = startBlock?.reason === 'incomplete_sides';
+  const autoStartBlockedByUnassignedFlights = startBlock?.reason === 'unassigned_flights';
+  const autoStartBlockedByUnassignedTeams = startBlock?.reason === 'unassigned_teams';
+  const autoStartPendingProfileCount =
+    startBlock?.reason === 'pending_players' ? (startBlock.pendingUserIds?.length ?? 0) : 0;
+
+  // #2204: the creator sees why the round would not start, before tee-off too.
+  // After tee-off E1's answer is used; before it (also a game without a
+  // tee-off, which the organiser's own start stops on the same block) one read.
+  const creatorStartBlock =
+    isCreator && game.status === 'scheduled'
+      ? e1Ran
+        ? startBlock
+        : await readCreatorStartBlock(id)
+      : null;
+  // The notice already says what a refused «Start runden nå» with the same
+  // reason would say in the ?error= banner.
+  const shownErrorBanner =
+    creatorStartBlock && creatorStartBlock.reason === errorCode ? null : errorBanner;
 
   // #2200: the delivery reminder no longer fires from a visit to this page.
   // A sweep (app/api/cron/delivery-reminder) sends it to whoever keeps the
@@ -741,6 +787,27 @@ export default async function GameHomePage({
         ).length
       : 0;
 
+    // #2204: a match in a finished cup is never played (#2214). Said before
+    // and after tee-off, in place of the countdown, like a match decided by a
+    // withdrawal (#1814). `cupRow` is already read for every unstarted cup match.
+    const cupFinished = game.tournament_id != null && finishedCupBlocksPlay(cupRow?.status);
+    // #2204: what the organiser has to fix. Players learn it after tee-off
+    // (E1), the creator also before.
+    const structuralBlock = startBlock ?? creatorStartBlock;
+    // The four reasons without a banner of their own get one shared banner,
+    // in the inbox card's words. Not for the creator: their notice below
+    // says it precisely, and «the organiser has to fix it» is about them.
+    const tInbox = await getTranslations('inbox');
+    const sharedBlockReason =
+      startBlock &&
+      !isCreator &&
+      (startBlock.reason === 'rotation_player_count' ||
+        startBlock.reason === 'tee_missing_rating' ||
+        startBlock.reason === 'tee_missing' ||
+        startBlock.reason === 'no_players')
+        ? tInbox(`blockReasons.${startBlock.reason}`)
+        : null;
+
     return (
       <AppShell>
         <header className="mb-6 flex items-center justify-between gap-4">
@@ -751,7 +818,7 @@ export default async function GameHomePage({
           <span className="w-12" aria-hidden />
         </header>
 
-        {errorBanner}
+        {shownErrorBanner}
 
         {/* #2219: catches the start for every scheduled game, with or without
             a tee-off. The countdown below only mounts with one. */}
@@ -776,9 +843,15 @@ export default async function GameHomePage({
             {t('registered')}
           </Kicker>
           <h1 className="mt-1.5 font-serif text-[26px] font-medium tracking-[-0.015em] leading-tight text-text">
-            {teeOffDate
-              ? t('scorecardOpensAtTeeOff')
-              : t('scorecardOpensWhenOrganizerStarts')}
+            {/* #2204: never promise a start that will not come. A pending
+                play-on choice can still get the match played (#1967). */}
+            {cupFinished || (cupWithdrawalDecision && !cupPlayOnPendingPartner)
+              ? t('matchWillNotBePlayed')
+              : structuralBlock || cupPlayOnPendingPartner
+                ? t('scorecardOpensWhenFixed')
+                : teeOffDate
+                  ? t('scorecardOpensAtTeeOff')
+                  : t('scorecardOpensWhenOrganizerStarts')}
           </h1>
         </section>
 
@@ -969,7 +1042,14 @@ export default async function GameHomePage({
         {/* #1814: kampen er avgjort uten spill. Banneret ERSTATTER nedtellingen
             — spillerne åpner appen den morgenen og skal se med én gang at det
             ikke blir noe av, ikke en klokke som teller ned til ingenting. */}
-        {cupPlayOnPendingPartner ? (
+        {cupFinished ? (
+          /* #2204: the cup is finished, so the match is never played. */
+          <div className="mx-4 mt-4">
+            <Banner tone="warning" testId="cup-finished-banner">
+              {t('startBlockedCupFinished')}
+            </Banner>
+          </div>
+        ) : cupPlayOnPendingPartner ? (
           /* #1967: the organiser has not decided yet. No countdown here
              either: the match cannot start while the choice is open. */
           <div className="mx-4 mt-4">
@@ -1000,6 +1080,7 @@ export default async function GameHomePage({
                 teeOffAt={game.scheduled_tee_off_at!}
                 flightOptions={flightOptions}
                 currentFlightNumber={me.flight_number}
+                blocked={structuralBlock != null}
               />
             </div>
           )
@@ -1049,10 +1130,27 @@ export default async function GameHomePage({
           </div>
         )}
 
+        {/* #2204: the four reasons without a banner of their own, after tee-off */}
+        {sharedBlockReason && (
+          <div className="mx-4 mt-3">
+            <Banner tone="warning" testId="start-blocked-banner">
+              {t('startBlockedBanner', { reason: sharedBlockReason })}
+            </Banner>
+          </div>
+        )}
+
         {/* Footer caption */}
         <p className="mt-2 px-6 pt-4 pb-2 text-center font-serif italic text-[11.5px] text-muted">
           {t('teeArriveEarly')}
         </p>
+
+        {/* #2204: why the round would not start, for the creator, before and
+            after tee-off. */}
+        {creatorStartBlock && (
+          <div className="mx-4 mt-4">
+            <CreatorStartBlockNotice block={creatorStartBlock} />
+          </div>
+        )}
 
         {/* #428: rediger/slett for oppretter, også i venterommet (scheduled). */}
         {isCreator && (
