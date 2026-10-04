@@ -817,7 +817,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               nettoHelperText={
                 teamSize === 2
                   ? t('teamHandicap.texasNetto2')
-                  : t('teamHandicap.texasNetto4')
+                  : teamSize === 3
+                    ? t('teamHandicap.texasNetto3')
+                    : t('teamHandicap.texasNetto4')
               }
               bruttoHelperText={t('teamHandicap.bruttoHelper')}
               inputLabel={t('teamHandicap.inputLabel')}
@@ -828,7 +830,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           </>
         )}
         {/* Ambrose (#284): lag-handicap per standard Ambrose-formel (25 % for
-            2-mannslag, 12,5 % for 4-mannslag). `key={teamSize}` forser remount
+            2-mannslag, 16,7 % for 3-mannslag, 12,5 % for 4-mannslag). `key={teamSize}` forser remount
             ved lagstørrelse-bytte. `hcp_allowance_pct=100` er no-op for DB
             NOT NULL (reell prosent ligger i mode_config). */}
         {isAmbrose && (
@@ -842,7 +844,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               nettoHelperText={
                 teamSize === 2
                   ? t('teamHandicap.ambroseNetto2')
-                  : t('teamHandicap.ambroseNetto4')
+                  : teamSize === 3
+                    ? t('teamHandicap.ambroseNetto3')
+                    : t('teamHandicap.ambroseNetto4')
               }
               bruttoHelperText={t('teamHandicap.bruttoHelper')}
               inputLabel={t('teamHandicap.inputLabel')}
