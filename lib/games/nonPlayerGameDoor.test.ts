@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   adminCupMatchHref,
   nonPlayerGameDoor,
+  organiserFollowsLiveBoard,
   type NonPlayerDoor,
 } from '@/lib/games/nonPlayerGameDoor';
+import type { GameStatus } from '@/lib/games/status';
 
 describe('nonPlayerGameDoor (#2202)', () => {
   it.each<[surface: 'home' | 'player_page', isAdmin: boolean, isCreator: boolean, NonPlayerDoor]>([
@@ -18,6 +20,47 @@ describe('nonPlayerGameDoor (#2202)', () => {
   ])('%s · admin=%s · creator=%s', (surface, isAdmin, isCreator, expected) => {
     expect(nonPlayerGameDoor({ gameId: 'g1', isAdmin, isCreator, surface })).toEqual(expected);
   });
+});
+
+describe('nonPlayerGameDoor, board surface (#2202, owner choice C)', () => {
+  it.each<[status: GameStatus, isAdmin: boolean, isCreator: boolean, NonPlayerDoor]>([
+    ['active', false, true, { kind: 'board' }],
+    ['active', true, false, { kind: 'board' }],
+    ['active', true, true, { kind: 'board' }],
+    ['active', false, false, { kind: 'not_found' }],
+    ['scheduled', false, true, { kind: 'redirect', href: '/games/g1' }],
+    ['draft', false, true, { kind: 'redirect', href: '/games/g1' }],
+    ['scheduled', false, false, { kind: 'not_found' }],
+  ])('%s · admin=%s · creator=%s', (status, isAdmin, isCreator, expected) => {
+    expect(
+      nonPlayerGameDoor({ gameId: 'g1', isAdmin, isCreator, surface: 'board', status }),
+    ).toEqual(expected);
+  });
+});
+
+describe('organiserFollowsLiveBoard (#2202, owner choice C)', () => {
+  it.each<[status: GameStatus, createdBy: string | null, viewerId: string | null, boolean]>([
+    ['active', 'u1', 'u1', true],
+    ['active', 'u2', 'u1', false], // the organiser of ANOTHER game
+    ['active', null, 'u1', false],
+    ['active', 'u1', null, false],
+    ['active', '', '', false], // spectate and embed pass an empty viewer
+    ['scheduled', 'u1', 'u1', false],
+    ['finished', 'u1', 'u1', false], // finished boards have their own rule
+  ])('%s · created_by=%s · viewer=%s → %s', (status, createdBy, viewerId, expected) => {
+    expect(organiserFollowsLiveBoard({ status, createdBy, viewerId })).toBe(expected);
+  });
+
+  // Trap 4: the board door admits exactly the organisers the read rule serves.
+  it.each<GameStatus>(['draft', 'scheduled', 'active'])(
+    'door and read rule agree for a non-admin creator on a %s game',
+    (status) => {
+      const door = nonPlayerGameDoor({ gameId: 'g1', isAdmin: false, isCreator: true, surface: 'board', status });
+      expect(door.kind === 'board').toBe(
+        organiserFollowsLiveBoard({ status, createdBy: 'u1', viewerId: 'u1' }),
+      );
+    },
+  );
 });
 
 describe('adminCupMatchHref (#2202)', () => {
