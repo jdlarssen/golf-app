@@ -1818,7 +1818,7 @@
           },
           {
             "q": "Kan tre eller flere spille nassau?",
-            "a": "Ja, opptil 16. Da rangeres hver seksjon på laveste sum, og den som vinner en seksjon alene tar enheten. Deles den, står den."
+            "a": "Ja, opptil seksten. Da rangeres hver seksjon på laveste sum, og den som vinner en seksjon alene tar enheten. Deles den, står den."
           }
         ]
       },
@@ -1855,7 +1855,7 @@
           },
           {
             "q": "Hvor mange kan spille skins?",
-            "a": "Fra 2 til 16. Tre til fem fungerer best, for med flere blir det sjeldnere at noen står alene på laveste score, og pottene vokser fort."
+            "a": "Fra to til seksten. Tre til fem fungerer best, for med flere blir det sjeldnere at noen står alene på laveste score, og pottene vokser fort."
           },
           {
             "q": "Skal skins spilles brutto eller netto?",
@@ -1889,7 +1889,7 @@
           },
           {
             "heading": "Innsats og gruppestørrelse",
-            "body": "Dere kan være fra 2 til 16 spillere. Fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
+            "body": "Dere kan være fra to til seksten spillere. Fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
           }
         ],
         "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff, og D er i bunkeren, så ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte: bongo til C.",
@@ -1908,7 +1908,7 @@
           },
           {
             "q": "Hvor mange bør spille?",
-            "a": "Fire er best. Da blir kampen om bango skarpest, og runden går fortsatt raskt. Dere kan likevel være alt fra 2 til 16."
+            "a": "Fire er best. Da blir kampen om bango skarpest, og runden går fortsatt raskt. Dere kan likevel være alt fra to til seksten."
           }
         ]
       },
