@@ -17,6 +17,11 @@ const nextConfig: NextConfig = {
   // for next-intl to coexist with cacheComponents (PPR shells per locale).
   experimental: {
     rootParams: true,
+    // #2292: `app/global-not-found.tsx` serves addresses no route matches.
+    // The root layout sits under the dynamic `[locale]` segment, which is the
+    // case the docs name for it (node_modules/next/dist/docs/01-app/
+    // 03-api-reference/03-file-conventions/not-found.md, «global-not-found.js»).
+    globalNotFound: true,
   },
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
