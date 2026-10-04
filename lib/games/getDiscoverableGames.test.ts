@@ -11,6 +11,8 @@ const myClubsRows = vi.fn<() => { data: Row[] | null }>();
 const notInArg = vi.fn();
 const inArg = vi.fn();
 const eqArg = vi.fn();
+const isArg = vi.fn();
+const orArg = vi.fn();
 
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
@@ -58,6 +60,16 @@ vi.mock('@/lib/supabase/admin', () => ({
           return b;
         },
         neq: () => b,
+        // #2276: the signups_closed_at mirror and the open list's
+        // organiser mirror.
+        is: (...args: unknown[]) => {
+          isArg(...args);
+          return b;
+        },
+        or: (...args: unknown[]) => {
+          orArg(...args);
+          return b;
+        },
         order: () => b,
         limit: () => b,
         overrideTypes: () => b,
@@ -88,6 +100,18 @@ vi.mock('@/lib/friends/getFriendIds', () => ({
   getFriendIds: (userId: string) => mockGetFriendIds(userId),
 }));
 
+// #2276: a games row passes the per-row gate only when its signup window is
+// open and the viewer did not organise it. Rows a test expects to see go
+// through this helper; the gate fields are never mapped out (AK8).
+function visibleRow(row: Row): Row {
+  return {
+    status: 'scheduled',
+    signups_closed_at: null,
+    created_by: 'someone-else',
+    ...row,
+  };
+}
+
 beforeEach(() => {
   playerRows.mockReset();
   requestRows.mockReset();
@@ -98,6 +122,8 @@ beforeEach(() => {
   notInArg.mockReset();
   inArg.mockReset();
   eqArg.mockReset();
+  isArg.mockReset();
+  orArg.mockReset();
   mockGetFriendIds.mockReset();
   // Defaults: no clubs, no club games, no friends — so #357 tests behave
   // exactly as before.
@@ -127,7 +153,7 @@ describe('getDiscoverableGames', () => {
     requestRows.mockReturnValue({ data: [] });
     openGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'g1',
           name: 'Sommercup',
           short_id: 'k7m3p9qx',
@@ -138,7 +164,7 @@ describe('getDiscoverableGames', () => {
           hole_segment: 'full',
           start_type: 'shotgun',
           courses: { name: 'Hauger' },
-        },
+        }),
       ],
     });
 
@@ -181,22 +207,22 @@ describe('getDiscoverableGames', () => {
     requestRows.mockReturnValue({ data: [] });
     openGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'g1',
           name: 'Åpen runde',
           short_id: 'open0001',
           scheduled_tee_off_at: null,
           registration_mode: 'open',
           courses: null,
-        },
-        {
+        }),
+        visibleRow({
           id: 'g2',
           name: 'Klubbmesterskap',
           short_id: 'appr0002',
           scheduled_tee_off_at: null,
           registration_mode: 'manual_approval',
           courses: null,
-        },
+        }),
       ],
     });
 
@@ -345,7 +371,7 @@ describe('getDiscoverableGames', () => {
     myClubsRows.mockReturnValue({ data: [{ group_id: 'c1' }] });
     clubGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'cg1',
           name: 'Klubbrunde',
           short_id: 'club0001',
@@ -356,7 +382,7 @@ describe('getDiscoverableGames', () => {
           hole_segment: 'full',
           courses: { name: 'Bane' },
           groups: { name: 'Min Klubb' },
-        },
+        }),
       ],
     });
 
@@ -419,7 +445,7 @@ describe('getDiscoverableGames', () => {
     myClubsRows.mockReturnValue({ data: [{ group_id: 'c1' }] });
     clubGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'dup1',
           name: 'Åpen klubbrunde',
           short_id: 'dup00001',
@@ -427,7 +453,7 @@ describe('getDiscoverableGames', () => {
           registration_mode: 'open',
           courses: null,
           groups: { name: 'Min Klubb' },
-        },
+        }),
       ],
     });
 
@@ -451,7 +477,7 @@ describe('getDiscoverableGames', () => {
     mockGetFriendIds.mockResolvedValue(['friend1']);
     friendGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'fg1',
           name: 'Kompis-runde',
           short_id: 'frnd0001',
@@ -462,7 +488,7 @@ describe('getDiscoverableGames', () => {
           mode_config: { kind: 'fourball_matchplay', team_size: 2, teams_count: 2 },
           hole_segment: 'front9',
           courses: { name: 'Bogstad' },
-        },
+        }),
       ],
     });
 
@@ -492,7 +518,7 @@ describe('getDiscoverableGames', () => {
     mockGetFriendIds.mockResolvedValue(['friend1']);
     friendGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'fg2',
           name: 'VIP-runde',
           short_id: 'frnd0002',
@@ -500,7 +526,7 @@ describe('getDiscoverableGames', () => {
           registration_mode: 'manual_approval',
           let_friends_skip_gate: true,
           courses: null,
-        },
+        }),
       ],
     });
 
@@ -537,7 +563,7 @@ describe('getDiscoverableGames', () => {
     mockGetFriendIds.mockResolvedValue(['friend1']);
     friendGamesRows.mockReturnValue({
       data: [
-        {
+        visibleRow({
           id: 'fg3',
           name: 'Open venn-runde',
           short_id: 'frnd0003',
@@ -545,7 +571,7 @@ describe('getDiscoverableGames', () => {
           registration_mode: 'open',
           let_friends_skip_gate: false,
           courses: null,
-        },
+        }),
       ],
     });
 
@@ -617,5 +643,167 @@ describe('getDiscoverableGames', () => {
     const result = await getDiscoverableGames('u1');
 
     expect(result.pendingRequests.map((r) => r.id)).toEqual(['on-scheduled']);
+  });
+
+  // ── Stengt påmelding og egne spill (#2276) ──────────────────────────────
+
+  it('#2276: et spill med stengt påmelding er ikke i openGames', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({
+      data: [
+        visibleRow({
+          id: 'closed1',
+          name: 'Stengt runde',
+          short_id: 'clsd0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          signups_closed_at: '2026-07-01T10:00:00Z',
+          courses: null,
+        }),
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.openGames).toEqual([]);
+  });
+
+  it('#2276: arrangøren ser ikke sitt eget åpne spill i openGames', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({
+      data: [
+        visibleRow({
+          id: 'own1',
+          name: 'Min egen runde',
+          short_id: 'own00001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          created_by: 'u1',
+          courses: null,
+        }),
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.openGames).toEqual([]);
+  });
+
+  it('#2276: et åpent spill uten arrangør (created_by null) står fortsatt i openGames', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({
+      data: [
+        visibleRow({
+          id: 'orphan1',
+          name: 'Runde uten arrangør',
+          short_id: 'orph0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          created_by: null,
+          courses: null,
+        }),
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.openGames.map((g) => g.id)).toEqual(['orphan1']);
+  });
+
+  it('#2276: et venne-spill med stengt påmelding er ikke i friendGames', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+    friendGamesRows.mockReturnValue({
+      data: [
+        visibleRow({
+          id: 'fclosed1',
+          name: 'Stengt venne-runde',
+          short_id: 'fcls0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          let_friends_skip_gate: false,
+          created_by: 'friend1',
+          signups_closed_at: '2026-07-01T10:00:00Z',
+          courses: null,
+        }),
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.friendGames).toEqual([]);
+  });
+
+  it('#2276: et klubbspill med stengt påmelding er ikke i clubGames, invite_only med åpen påmelding står', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    myClubsRows.mockReturnValue({ data: [{ group_id: 'c1' }] });
+    clubGamesRows.mockReturnValue({
+      data: [
+        visibleRow({
+          id: 'cclosed1',
+          name: 'Stengt klubbrunde',
+          short_id: 'ccls0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'invite_only',
+          signups_closed_at: '2026-07-01T10:00:00Z',
+          courses: null,
+          groups: { name: 'Min Klubb' },
+        }),
+        visibleRow({
+          id: 'copen1',
+          name: 'Åpen klubbrunde',
+          short_id: 'copn0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'invite_only',
+          courses: null,
+          groups: { name: 'Min Klubb' },
+        }),
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.clubGames.map((g) => g.id)).toEqual(['copen1']);
+  });
+
+  it('#2276: klubb-, venne- og åpen-spørringen speiler stengt påmelding i SQL', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    // A club and a friend, so all three games queries run.
+    myClubsRows.mockReturnValue({ data: [{ group_id: 'c1' }] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await getDiscoverableGames('u1');
+
+    expect(isArg.mock.calls.filter((c) => c[0] === 'signups_closed_at')).toEqual([
+      ['signups_closed_at', null],
+      ['signups_closed_at', null],
+      ['signups_closed_at', null],
+    ]);
+  });
+
+  it('#2276: åpen-spørringen speiler arrangørregelen uten å miste spill uten arrangør', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await getDiscoverableGames('u1');
+
+    expect(orArg.mock.calls).toEqual([['created_by.is.null,created_by.neq.u1']]);
   });
 });
