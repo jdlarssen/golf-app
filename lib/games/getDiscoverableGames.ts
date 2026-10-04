@@ -3,7 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import type { RegistrationMode } from './registration';
-import { isPubliclyViewable, isSignupWindowOpen } from './publicSignupVisibility';
+import { isOrganisedBy, isPubliclyViewable, isSignupWindowOpen } from './publicSignupVisibility';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import type { StartType } from './startType';
@@ -18,10 +18,12 @@ import type { StartType } from './startType';
  * Returnerer kun base-info som er trygt å eksponere offentlig.
  *
  * #2276: which games the lists may show has one home,
- * `publicSignupVisibility.ts` — the same signup-window rule as the logged-out
- * list. Each query mirrors it in SQL (`signups_closed_at is null`) so the
- * `.limit(50)` window isn't spent on rows the per-row gate drops, and no list
- * ever shows the viewer a game they organised.
+ * `publicSignupVisibility.ts` — the signup-window rule shared with the
+ * logged-out list, and the organiser rule (`isOrganisedBy`). The per-row
+ * filters are the authoritative gate. The SQL filters only mirror them so the
+ * `.limit(50)` window isn't spent on rows the gate drops: `signups_closed_at
+ * is null` everywhere, and `.neq('created_by')` on the club and friend queries
+ * but a null-preserving `.or` on the open query (see there).
  */
 
 /**
@@ -171,7 +173,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
     // #2276: membership replaces the invitation, not the signup window — a
     // closed club game is closed for members too.
     clubGames = (clubRes.data ?? [])
-      .filter((row) => isSignupWindowOpen(row) && row.created_by !== userId)
+      .filter((row) => isSignupWindowOpen(row) && !isOrganisedBy(row, userId))
       .map((row) => {
         const course = row.courses;
         const group = row.groups;
@@ -227,7 +229,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
     const friendRes = await friendQuery.overrideTypes<Array<DiscoverableFormat>>();
     friendGames = (friendRes.data ?? [])
-      .filter((row) => isPubliclyViewable(row) && row.created_by !== userId)
+      .filter((row) => isPubliclyViewable(row) && !isOrganisedBy(row, userId))
       .map((row) => {
         const course = row.courses;
         const regMode = row.registration_mode as 'open' | 'manual_approval';
@@ -284,7 +286,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
   const openGamesRes = await openQuery.overrideTypes<Array<DiscoverableFormat>>();
 
   const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? [])
-    .filter((row) => isPubliclyViewable(row) && row.created_by !== userId)
+    .filter((row) => isPubliclyViewable(row) && !isOrganisedBy(row, userId))
     .map((row) => {
       const course = row.courses;
       return {
