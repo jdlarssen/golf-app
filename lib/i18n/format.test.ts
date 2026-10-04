@@ -26,6 +26,7 @@ import {
   formatMonthLongLocale,
   formatHHMMOslo,
   formatWeekdayDayMonthOsloLocale,
+  formatDateBlockOsloLocale,
 } from './format';
 import type { AppLocale } from '@/i18n/routing';
 import {
@@ -770,6 +771,22 @@ describe('formatWeekdayDayMonthOsloLocale (#2258)', () => {
   it('compares the years in Oslo: 23:30 UTC on 31 Dec is next year', () => {
     const d = new Date('2026-12-31T23:30:00Z'); // Friday 1 Jan 2027 00:30 Oslo
     expect(formatWeekdayDayMonthOsloLocale(d, 'no', NOW)).toBe('Fredag 1. januar 2027');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatDateBlockOsloLocale (#2269)
+// ---------------------------------------------------------------------------
+// The date block on a «Neste» row: «ONS» over «8.10». Oslo-pinned, so a late
+// UTC evening is the next day.
+// ---------------------------------------------------------------------------
+
+describe('formatDateBlockOsloLocale (#2269)', () => {
+  it.each<[AppLocale, { weekday: string; dayMonth: string }]>([
+    ['no', { weekday: 'TOR', dayMonth: '8.10' }],
+    ['en', { weekday: 'THU', dayMonth: '8/10' }],
+  ])('reads the day in Oslo: 23:30 UTC on Wednesday 7 Oct is Thursday 8 Oct (%s)', (locale, expected) => {
+    expect(formatDateBlockOsloLocale(new Date('2026-10-07T23:30:00Z'), locale)).toEqual(expected);
   });
 });
 

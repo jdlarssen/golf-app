@@ -224,6 +224,27 @@ export function formatWeekdayDayMonthOsloLocale(
 }
 
 /**
+ * The date block on a «Neste» row (#2269): `{ weekday: 'ONS', dayMonth: '8.10' }`
+ * (nb) / `{ weekday: 'WED', dayMonth: '8/10' }` (en). Oslo-pinned: the weekday
+ * comes from Intl with the Oslo zone, day and month from `osloParts`, so 23:30
+ * UTC is the next day in summer. Uppercased without Intl's trailing dot
+ * («ons.»). The clock goes beside it with `formatTeeOffTimeLocale`.
+ */
+export function formatDateBlockOsloLocale(
+  date: Date,
+  locale: AppLocale,
+): { weekday: string; dayMonth: string } {
+  const tag = intlLocaleTag(locale);
+  const weekday = new Intl.DateTimeFormat(tag, { timeZone: OSLO, weekday: 'short' })
+    .format(date)
+    .replace(/\.$/, '')
+    .toLocaleUpperCase(tag);
+  const { day, month } = osloParts(date);
+  const separator = locale === 'no' ? '.' : '/';
+  return { weekday, dayMonth: `${day}${separator}${month + 1}` };
+}
+
+/**
  * Locale-aware short date with year.
  *
  * Norwegian ('no'): delegates to legacy helper → "14. mai 2026" (byte-identical).
