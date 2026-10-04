@@ -1,4 +1,4 @@
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatHcpDisplay } from '@/lib/handicap/signFormat';
 import { isHandicapStale } from '@/lib/handicap/staleness';
@@ -23,6 +23,7 @@ export function HandicapChip({
   handicapUpdatedAt: string;
   nextPath: string;
 }) {
+  const t = useTranslations('home');
   const locale = useLocale();
   const stale = isHandicapStale(handicapUpdatedAt);
   const hcpDisplay = formatHcpDisplay(hcpIndex, locale);
@@ -36,7 +37,7 @@ export function HandicapChip({
   return (
     <SmartLink
       href={`/profile?next=${encodeURIComponent(nextPath)}`}
-      aria-label={`Handicap ${hcpDisplay}. Trykk for å oppdatere.`}
+      aria-label={t('handicapChipAria', { hcp: hcpDisplay })}
       className={`inline-flex items-center gap-2 rounded-full border min-h-[44px] px-3.5 transition-colors hover:bg-primary-soft ${containerClasses}`}
     >
       <span className="font-sans text-[10px] uppercase tracking-[0.16em] text-muted">
