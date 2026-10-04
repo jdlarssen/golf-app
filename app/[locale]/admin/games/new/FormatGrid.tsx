@@ -8,7 +8,7 @@ import { useRovingFocus, type RovingProps } from '@/hooks/useRovingFocus';
 import { splitFormatsForCount } from '@/lib/wizard/formatRecommendation';
 import { formatLineup, type FormatLineup as Lineup } from '@/lib/wizard/formatLineup';
 import { Kicker } from '@/components/ui/Kicker';
-import { FormatLineup } from './FormatLineup';
+import { FormatLineup, useLineupText } from './FormatLineup';
 
 type Props = {
   formats: FormatForIntent[];
@@ -52,6 +52,7 @@ export function FormatGrid({
   const t = useTranslations('wizard.formatGrid');
   const tCards = useTranslations('wizard.formatCards');
   const tModes = useTranslations('modes');
+  const lineupText = useLineupText();
   const legendId = useId();
   const idPrefix = useId();
 
@@ -97,28 +98,6 @@ export function FormatGrid({
   const name = (slug: string) => tModes(slug as Parameters<typeof tModes>[0]);
   const card = (slug: string, field: 'line' | 'pitch' | 'choose') =>
     tCards(`${slug}.${field}` as Parameters<typeof tCards>[0]);
-
-  function lineupText(lineup: Lineup): string {
-    switch (lineup.kind) {
-      case 'sides':
-        return t('lineup.sides', { count: lineup.perSide });
-      case 'teams':
-        return t('lineup.teams', { teams: lineup.teams, size: lineup.size });
-      case 'teamSizes':
-        if (lineup.sizes.length === 2) {
-          return t('lineup.teamSizesTwo', { first: lineup.sizes[0], second: lineup.sizes[1] });
-        }
-        return t('lineup.teamSizesRange', {
-          min: Math.min(...lineup.sizes),
-          max: Math.max(...lineup.sizes),
-        });
-      case 'wolf':
-        return t('lineup.wolf', { opponents: lineup.opponents });
-      case 'pot':
-      case 'solo':
-        return t('lineup.players', { count: lineup.players });
-    }
-  }
 
   function metaLine(slug: string, lineup: Lineup): string {
     const style = formatPlayStyle(slug as GameMode);

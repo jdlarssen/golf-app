@@ -757,7 +757,10 @@
       "firemann": {
         "title": "4-mann",
         "hint": "4 spillere"
-      }
+      },
+      "needs": "trenger {count}",
+      "notWith": "går ikke opp med {count}",
+      "line": "{size, plural, =1 {Solo} other {Lag à #}}"
     },
     "cupSetup": {
       "clubBanner": "Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i klubben kan være med.",
