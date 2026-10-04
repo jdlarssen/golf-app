@@ -16,6 +16,7 @@ import { CreatorControls } from './CreatorControls';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { CupStandingsLink } from './CupStandingsLink';
+import { GameStartListener } from '../GameStartListener';
 
 /**
  * `/games/[id]` for the organiser who is not on the roster (#2202). Every
@@ -35,12 +36,14 @@ export async function OrganiserGameView({
   locale,
   spectateToken,
   errorBanner,
+  statusBanner,
 }: {
   id: string;
   game: GameRow;
   locale: AppLocale;
   spectateToken: string | null;
   errorBanner: ReactNode;
+  statusBanner: ReactNode;
 }) {
   const t = await getTranslations('game.home');
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale);
@@ -60,6 +63,12 @@ export async function OrganiserGameView({
         </div>
 
         {errorBanner}
+        {statusBanner}
+
+        {/* A start by the cron sweep, another tab or the app flips the page
+            without a reload, so «Start runden nå» never answers not_scheduled
+            on a round that is already running (#2219's listener). */}
+        {game.status === 'scheduled' && <GameStartListener gameId={id} />}
 
         <p className="mb-4 text-sm text-muted" data-testid="organiser-view-hint">
           {t('organiserViewHint')}

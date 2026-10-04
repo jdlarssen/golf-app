@@ -98,6 +98,12 @@ const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted_partial: 'bannerSubmittedPartial',
 };
 
+// #2202: the organiser's «Start runden nå» and finish land here with
+// ?status=started / ?status=finished. The receipt is the Sekretariat's own
+// sentence in admin.game.banners: one string, one home, as with the error
+// banner below.
+const SHARED_STATUS_BANNER_CODES = new Set(['started', 'finished']);
+
 // #1361: every ?error code a creator-facing redirect lands on /games/[id]
 // with (the endGame family, delete, edit, and /avslutt's not_active bounce),
 // plus not_found defensively. Texts live in admin.game.errors — same string,
@@ -166,12 +172,25 @@ export default async function GameHomePage({
   // #1361: cross-namespace read from a server component — same precedent as
   // the Sekretariat page. The strings have one home; a reword hits both.
   const tGameErrors = await getTranslations('admin.game.errors');
+  const tGameBanners = await getTranslations('admin.game.banners');
   const errorCode = resolveErrorCode(first(sp.error), ERROR_BANNER_CODES, 'unknown');
+  const statusCode = first(sp.status) ?? '';
   // Error outranks status — a failure must never be masked by a receipt.
   const statusBannerKey = errorCode
     ? undefined
-    : (STATUS_BANNER_KEYS[first(sp.status) ?? ''] ?? undefined);
-  const statusBanner = statusBannerKey ? t(statusBannerKey as Parameters<typeof t>[0]) : undefined;
+    : (STATUS_BANNER_KEYS[statusCode] ??
+      (SHARED_STATUS_BANNER_CODES.has(statusCode) ? statusCode : undefined));
+  const statusBanner = !statusBannerKey
+    ? undefined
+    : STATUS_BANNER_KEYS[statusCode]
+      ? t(statusBannerKey as Parameters<typeof t>[0])
+      : tGameBanners(statusBannerKey as Parameters<typeof tGameBanners>[0]);
+  // Rendered in the default return and in the organiser view.
+  const statusBannerNode = statusBanner ? (
+    <div className="mb-4" data-testid={`game-status-${statusBannerKey}`}>
+      <Banner tone="success">{statusBanner}</Banner>
+    </div>
+  ) : null;
   // Rendered in BOTH returns below and in the organiser view: the scheduled
   // early return has no other banner slot, and ?error=not_active is reachable
   // on a scheduled game.
@@ -283,6 +302,7 @@ export default async function GameHomePage({
         locale={locale}
         spectateToken={spectateToken}
         errorBanner={errorBanner}
+        statusBanner={statusBannerNode}
       />
     );
   }
@@ -1156,11 +1176,7 @@ export default async function GameHomePage({
 
       {errorBanner}
 
-      {statusBanner && (
-        <div className="mb-4" data-testid={`game-status-${statusBannerKey}`}>
-          <Banner tone="success">{statusBanner}</Banner>
-        </div>
-      )}
+      {statusBannerNode}
 
       {me.rejection_reason && (
         <div className="mb-4">
