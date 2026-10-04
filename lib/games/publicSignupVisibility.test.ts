@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isPubliclyViewable,
+  isOpenForSignups,
   isOrganisedBy,
   isSignupWindowOpen,
   signupSourceFromParam,
@@ -66,6 +67,18 @@ describe('isSignupWindowOpen', () => {
     ['finished is not open for signups', { status: 'finished', signups_closed_at: null }, false],
   ])('%s → %s', (_label, input, expected) => {
     expect(isSignupWindowOpen(input)).toBe(expected);
+  });
+});
+
+describe('isOpenForSignups (#2269)', () => {
+  const T = '2026-07-01T10:00:00Z';
+  it.each<[string, PublicSignupVisibilityInput & { group_id: string | null }, boolean]>([
+    ['club round, invite only: members sign up', { status: 'scheduled', registration_mode: 'invite_only', signups_closed_at: null, group_id: 'c1' }, true],
+    ['club round, closed', { status: 'scheduled', registration_mode: 'open', signups_closed_at: T, group_id: 'c1' }, false],
+    ['no club, invite only', { status: 'scheduled', registration_mode: 'invite_only', signups_closed_at: null, group_id: null }, false],
+    ['no club, open', { status: 'scheduled', registration_mode: 'open', signups_closed_at: null, group_id: null }, true],
+  ])('%s → %s', (_label, input, expected) => {
+    expect(isOpenForSignups(input)).toBe(expected);
   });
 });
 

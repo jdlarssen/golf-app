@@ -9,10 +9,10 @@ import {
   scheduledRowNote,
   sortedUpcomingGames,
   upcomingBlockIds,
-  type ArrangedGame,
   type ArrangedRosterRow,
 } from './arrangedGames';
 import type { StartBlock } from './startBlockReason';
+import { arrangedGame as game, arrangedRosterRow as player } from './__fixtures__/arrangedGame';
 
 // A fake PostgREST builder that records `is()` calls — the filter is pure
 // query composition, so no Supabase mock is needed.
@@ -38,28 +38,6 @@ describe('onlyStandaloneGames', () => {
     ]);
   });
 });
-
-function game(over: Partial<ArrangedGame> & Pick<ArrangedGame, 'id' | 'status'>): ArrangedGame {
-  return {
-    name: `Runde ${over.id}`,
-    created_at: '2026-09-01T10:00:00Z',
-    started_at: null,
-    ended_at: null,
-    scheduled_tee_off_at: null,
-    require_peer_approval: false,
-    registration_mode: 'invite_only',
-    signups_closed_at: null,
-    courses: null,
-    ...over,
-  };
-}
-
-function player(
-  gameId: string,
-  over: Partial<Omit<ArrangedRosterRow, 'game_id'>> = {},
-): ArrangedRosterRow {
-  return { game_id: gameId, submitted_at: null, approved_at: null, withdrawn_at: null, ...over };
-}
 
 const T = '2026-10-03T12:00:00Z';
 const NO_ROSTER = new Map<string, ArrangedRosterRow[]>();
@@ -174,6 +152,10 @@ describe('groupArrangedRounds', () => {
     ['closed by the organiser', { registration_mode: 'open' as const, signups_closed_at: T }, 'closed'],
     ['invite only', { registration_mode: 'invite_only' as const }, null],
     ['invite only, closed', { registration_mode: 'invite_only' as const, signups_closed_at: T }, 'closed'],
+    // A club round is open to its members on «invite only» too: the Terminliste
+    // lists it on the signup window alone (#2276, `isSignupWindowOpen`).
+    ['club round, invite only', { registration_mode: 'invite_only' as const, group_id: 'club-1' }, 'open'],
+    ['club round, closed', { registration_mode: 'invite_only' as const, group_id: 'club-1', signups_closed_at: T }, 'closed'],
   ])('signup state: %s', (_label, over, expected) => {
     const games = [game({ id: 's', status: 'scheduled', scheduled_tee_off_at: T, ...over })];
     expect(groupArrangedRounds(games, NO_ROSTER).upcoming[0].signups).toBe(expected);

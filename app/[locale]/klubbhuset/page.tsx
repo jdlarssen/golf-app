@@ -24,11 +24,6 @@ import { getArrangedRounds } from '@/lib/games/getArrangedRounds';
 
 type SearchParams = Promise<{ vis?: string | string[] }>;
 
-const LIST_BY_PARAM: Record<string, ArrangedListKind> = {
-  utkast: 'drafts',
-  ferdige: 'finished',
-};
-
 /**
  * Klubbhuset (#429) — «Rundene dine» (#2269): the games a player *arranges*
  * (created), as opposed to the games they play in (which live on the home
@@ -53,7 +48,10 @@ export default async function KlubbhusetPage({
   ]);
   const supabase = await getServerClient();
   const { userId, isAdmin } = await getRoleContext(supabase);
-  const list = LIST_BY_PARAM[first(sp.vis) ?? ''] ?? null;
+  // An explicit check, not an object lookup: «?vis=constructor» is no list.
+  const vis = first(sp.vis);
+  const list: ArrangedListKind | null =
+    vis === 'utkast' ? 'drafts' : vis === 'ferdige' ? 'finished' : null;
 
   // A list shows no counts, so it reads no roster and no start blocks.
   const read = await getArrangedRounds(supabase, userId, { listOnly: list != null });
