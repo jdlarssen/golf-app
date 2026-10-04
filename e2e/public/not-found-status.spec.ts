@@ -47,6 +47,16 @@ test.describe('ukjent adresse: merket 404 (public, no login)', () => {
       const visibleVariant = page.locator('[data-locale-variant]:visible');
       await expect(visibleVariant).toHaveCount(1);
       await expect(visibleVariant).toHaveAttribute('data-locale-variant', lang);
+
+      // The home button must leave the 404 for real. A client-side navigation
+      // out of this page changed the URL but kept the 404 on screen, because
+      // the page owns <html>/<body> outside the [locale] layout.
+      const home = lang === 'en' ? '/en' : '/';
+      await visibleVariant.getByRole('link').click();
+      await expect
+        .poll(() => new URL(page.url()).pathname)
+        .toBe(home);
+      await expect(page.getByTestId('not-found')).toHaveCount(0);
     });
   }
 });
