@@ -64,6 +64,8 @@ type Props = {
  * Ved fremtidige moduser utvider vi denne mappen — ingen DB-migrasjon eller
  * payload-endring nødvendig før en konkret kombinasjon er implementert.
  */
+// Typen er Partial fordi de to familiene bor i teamFormatLimits, men hver
+// annen GameMode står her: et format uten oppføring ville fått en tom velger.
 const ENABLED_COMBOS: Partial<Record<GameMode, ReadonlySet<TeamSize>>> = {
   best_ball: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
@@ -71,44 +73,41 @@ const ENABLED_COMBOS: Partial<Record<GameMode, ReadonlySet<TeamSize>>> = {
   fourball_matchplay: new Set<TeamSize>([2]),
   foursomes_matchplay: new Set<TeamSize>([2]),
   // Greensome matchplay (#289): alltid 2-mannslag (2 spillere per side).
-  // TeamSizeSelector vises ikke for greensome i praksis (cup-only-format),
-  // men type-system krever en entry.
+  // TeamSizeSelector vises ikke for greensome i praksis (cup-only-format).
   greensome_matchplay: new Set<TeamSize>([2]),
   // Chapman (#290): 2v2 som foursomes. Cup-only — TeamSizeSelector vises ikke
-  // i cup-match-wizarden, så denne er for type-completeness.
+  // i cup-match-wizarden.
   chapman_matchplay: new Set<TeamSize>([2]),
-  // Gruesome (#291): 2v2 som foursomes. Type-completeness (TeamSizeSelector
-  // vises ikke for cup-only; standalone-path rendrer 2v2-grid direkte).
+  // Gruesome (#291): 2v2 som foursomes. TeamSizeSelector vises ikke for
+  // cup-only; standalone-path rendrer 2v2-grid direkte.
   gruesome_matchplay: new Set<TeamSize>([2]),
   // Wolf: hver av de 4 spillerne er sin egen «row» (team_size=1). Selve
   // team_number-feltet brukes som rotation-slot 1-4, ikke som lag-tildeling.
-  // TeamSizeSelector vises ikke for wolf (WolfSetup tar over), så denne
-  // entry-en er kun for type-completeness på ENABLED_COMBOS-mappen.
+  // Veiviseren viser ikke TeamSizeSelector for wolf (WolfSetup tar over);
+  // GameForm gjør, som linja «Solo».
   wolf: new Set<TeamSize>([1]),
   // Nassau: solo-format, 2-16 spillere (#460). TeamSizeSelector vises ikke for
-  // nassau (NassauSetup tar over), så denne brukes ikke i praksis — men
-  // type-system krever en entry.
+  // nassau i veiviseren (NassauSetup tar over); GameForm viser linja «Solo».
   nassau: new Set<TeamSize>([1]),
   // Skins: solo-format, 2-16 spillere (#460). TeamSizeSelector vises ikke for skins
-  // (SkinsSetup tar over), så denne brukes ikke i praksis — men type-system
-  // krever en entry.
+  // i veiviseren (SkinsSetup tar over); GameForm viser linja «Solo».
   skins: new Set<TeamSize>([1]),
   // Bingo Bango Bongo: individuelt format, 2–16 spillere (#460), team_size=1. En
   // dedikert BBB-setup-steg vil ta over som for Wolf/Nassau/Skins, så
-  // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
+  // TeamSizeSelector vises ikke i veiviseren; GameForm viser linja «Solo».
   bingo_bango_bongo: new Set<TeamSize>([1]),
   // Nines / Split Sixes: individuelt format, nøyaktig 3 spillere, team_size=1.
   // NinesSetup tar over som for Wolf/Nassau/Skins, så TeamSizeSelector vises
-  // ikke i praksis — men type-system krever en entry.
+  // ikke i veiviseren; GameForm viser linja «Solo».
   nines: new Set<TeamSize>([1]),
   // Round Robin: 4-spiller roterende-partner, team_size=1 (hver spiller er
   // sin egen row, team_number=rotation-slot trukket ved spillstart, #969).
-  // Ingen lag-grid, så TeamSizeSelector vises ikke i praksis — men
-  // type-system krever en entry.
+  // Ingen lag-grid, så TeamSizeSelector vises ikke i veiviseren; GameForm
+  // viser linja «Solo».
   round_robin: new Set<TeamSize>([1]),
   // Acey Deucey: individuelt format, eksakt 4 spillere, team_size=1. En
   // dedikert setup-steg tar over (speiler Wolf/Skins/Nassau), så
-  // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
+  // TeamSizeSelector vises ikke i veiviseren; GameForm viser linja «Solo».
   acey_deucey: new Set<TeamSize>([1]),
   // Patsome er alltid lag à 2. PatsomeSetup vises i step 2.
   patsome: new Set<TeamSize>([2]),

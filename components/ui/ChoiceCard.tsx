@@ -86,7 +86,7 @@ export function ChoiceCardText({
   title: ReactNode;
   hint?: ReactNode;
   layout?: ChoiceCardLayout;
-  /** The card is unavailable: three a row, the title drops to 14 px. */
+  /** The card is unavailable: in three-a-row (dense) tiles the title drops to 14 px. */
   unavailable?: boolean;
   titleSize?: ChoiceCardTitleSize;
 }) {
