@@ -13,6 +13,11 @@ import type { ShortIdGame } from './getGameByShortId';
  * Alt annet beholder dagens oppførsel for uinnloggede: redirect til /login
  * med next-param (#559 — aldri 404 på en lenke som kan være gyldig etter
  * innlogging).
+ *
+ * #2276: the same rule also gates the logged-in discovery list
+ * (`getDiscoverableGames`): its open and friend lists go through
+ * `isPubliclyViewable`, its club list through `isSignupWindowOpen`, and all
+ * three drop the viewer's own games with `isOrganisedBy`.
  */
 export type PublicSignupVisibilityInput = Pick<
   ShortIdGame,
@@ -30,6 +35,18 @@ export function isSignupWindowOpen(
   game: Pick<PublicSignupVisibilityInput, 'status' | 'signups_closed_at'>,
 ): boolean {
   return game.status === 'scheduled' && game.signups_closed_at == null;
+}
+
+/**
+ * The organiser rule (#2276): a discovery list never shows the viewer a game
+ * they organised. A game without an organiser (`created_by` null, admin-made)
+ * is nobody's own game.
+ */
+export function isOrganisedBy(
+  game: { created_by: string | null },
+  userId: string,
+): boolean {
+  return game.created_by === userId;
 }
 
 export function isPubliclyViewable(game: PublicSignupVisibilityInput): boolean {

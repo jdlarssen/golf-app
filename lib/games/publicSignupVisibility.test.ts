@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isPubliclyViewable,
+  isOrganisedBy,
   isSignupWindowOpen,
   signupSourceFromParam,
   type PublicSignupVisibilityInput,
@@ -65,6 +66,16 @@ describe('isSignupWindowOpen', () => {
     ['finished is not open for signups', { status: 'finished', signups_closed_at: null }, false],
   ])('%s → %s', (_label, input, expected) => {
     expect(isSignupWindowOpen(input)).toBe(expected);
+  });
+});
+
+describe('isOrganisedBy', () => {
+  it.each<[string, string | null, boolean]>([
+    ['the viewer organised it', 'u1', true],
+    ['someone else organised it', 'u2', false],
+    ['no organiser (admin-made)', null, false],
+  ])('%s → %s', (_label, createdBy, expected) => {
+    expect(isOrganisedBy({ created_by: createdBy }, 'u1')).toBe(expected);
   });
 });
 
