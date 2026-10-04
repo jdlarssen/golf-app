@@ -323,10 +323,10 @@ export function ArrangedRoundsSkeleton() {
             className={`flex min-h-[68px] items-center gap-3 px-3.5 py-2.5 ${i > 0 ? 'border-t border-row-divider-warm' : ''}`}
           >
             <Skeleton className="h-[50px] w-[46px] shrink-0 rounded-[10px]" delay={i * 90} />
-            <span className="min-w-0 grow">
+            <div className="min-w-0 grow">
               <Skeleton className="h-4 w-3/5" delay={i * 90 + 30} />
               <Skeleton className="mt-1.5 h-3 w-2/5" delay={i * 90 + 60} />
-            </span>
+            </div>
           </div>
         ))}
       </div>
