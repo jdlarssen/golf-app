@@ -76,6 +76,11 @@ export type CupMatchInput = {
   team1UserIds?: string[];
   team2UserIds?: string[];
   /**
+   * #2202: the match's `games.created_by`. Optional for call sites that do not
+   * read it; `getCupSnapshot` always sets it.
+   */
+  createdBy?: string | null;
+  /**
    * Avgjort ved trekk (#1814): kampen ble aldri spilt fordi noen trakk seg, og
    * konvoluttregelen har fordelt poengene — halvert (`tie_points` til begge)
    * eller walkover (`win_points` til motstanderlaget). Utledet av

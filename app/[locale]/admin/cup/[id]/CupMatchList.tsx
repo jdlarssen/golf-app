@@ -67,7 +67,7 @@ export async function CupMatchList({
   team1Name,
   team2Name,
   cupActive,
-  viewerIsAdmin = false,
+  viewer,
 }: {
   tournamentId: string;
   isClub: boolean;
@@ -84,10 +84,11 @@ export async function CupMatchList({
    */
   cupActive: boolean;
   /**
-   * #2202: only a global admin drills into `/admin/games/[id]`. A personal
-   * cup's creator or a club admin on the admin route gets `adminCupMatchHref`.
+   * #2202: the signed-in viewer from the admin route's cup gate. Only a global
+   * admin drills into `/admin/games/[id]`; anyone else gets `adminCupMatchHref`.
+   * Unset in the club variant, which keeps its own rule.
    */
-  viewerIsAdmin?: boolean;
+  viewer?: { id: string; isAdmin: boolean };
 }) {
   const t = await getTranslations('cup');
   const unknownLabel = t('manage.unknownPlayer');
@@ -226,8 +227,10 @@ export async function CupMatchList({
                   gameId: m.gameId,
                   status: m.status,
                   tournamentId,
-                  groupId,
-                  viewerIsAdmin,
+                  viewerId: viewer?.id ?? '',
+                  viewerIsAdmin: viewer?.isAdmin === true,
+                  createdBy: m.createdBy ?? null,
+                  playerIds: [...(m.team1UserIds ?? []), ...(m.team2UserIds ?? [])],
                 });
             // #1473: bytte-panelet ligger UTENFOR kort-lenken — en knapp inne
             // i en <a> ville navigert i stedet for å åpne panelet.

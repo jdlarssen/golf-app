@@ -21,30 +21,44 @@ describe('nonPlayerGameDoor (#2202)', () => {
 });
 
 describe('adminCupMatchHref (#2202)', () => {
-  const base = { gameId: 'g1', tournamentId: 't1' };
+  const base = { gameId: 'g1', tournamentId: 't1', viewerId: 'u1' };
 
-  it('admin drills into the Sekretariat, whatever the match status', () => {
+  it('admin drills into the Sekretariat, whatever the match', () => {
     expect(
-      adminCupMatchHref({ ...base, status: 'scheduled', groupId: 'c1', viewerIsAdmin: true }),
+      adminCupMatchHref({ ...base, status: 'scheduled', viewerIsAdmin: true, createdBy: 'someone', playerIds: [] }),
     ).toBe('/admin/games/g1');
   });
 
   it.each(['scheduled', 'active', 'finished'] as const)(
-    'non-admin on a personal cup (%s) goes to the game page',
+    'the match creator who does not play (%s) goes to the game page',
     (status) => {
       expect(
-        adminCupMatchHref({ ...base, status, groupId: null, viewerIsAdmin: false }),
+        adminCupMatchHref({ ...base, status, viewerIsAdmin: false, createdBy: 'u1', playerIds: ['p1', 'p2'] }),
       ).toBe('/games/g1');
     },
   );
 
+  it('a player in the match goes to the game page, whoever generated it', () => {
+    expect(
+      adminCupMatchHref({ ...base, status: 'scheduled', viewerIsAdmin: false, createdBy: 'admin-1', playerIds: ['u1', 'p2'] }),
+    ).toBe('/games/g1');
+  });
+
+  // A global admin generated the matches of a personal cup: created_by is the
+  // admin, so the cup's creator has no door on /games/[id] (it would 404).
   it.each([
     ['finished', '/games/g1/leaderboard?from=/admin/cup/t1'],
     ['active', null],
     ['scheduled', null],
-  ] as const)('non-admin on a club cup (%s) → %s', (status, expected) => {
+  ] as const)('neither creator nor player, admin-generated match (%s) → %s', (status, expected) => {
     expect(
-      adminCupMatchHref({ ...base, status, groupId: 'c1', viewerIsAdmin: false }),
+      adminCupMatchHref({ ...base, status, viewerIsAdmin: false, createdBy: 'admin-1', playerIds: ['p1', 'p2'] }),
     ).toBe(expected);
+  });
+
+  it('an unknown creator counts as not the viewer', () => {
+    expect(
+      adminCupMatchHref({ ...base, status: 'active', viewerIsAdmin: false, createdBy: null, playerIds: [] }),
+    ).toBe(null);
   });
 });
