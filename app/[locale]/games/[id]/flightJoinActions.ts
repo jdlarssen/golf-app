@@ -5,6 +5,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { MAX_FLIGHT_SIZE, flightIsFreeGrouping } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
+import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 export type FlightJoinResult =
@@ -18,6 +19,36 @@ export type FlightJoinError =
   | 'game_not_scheduled'
   | 'flight_full'
   | 'db_error';
+
+/**
+ * Puts the player back in their previous flight (or none) after a write whose
+ * capacity could not be confirmed. We just wrote the row, so an error or 0
+ * rows leaves the flight possibly overfull: log it (#2223). The caller's
+ * answer stands either way.
+ */
+async function revertFlight(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+  userId: string,
+  targetFlight: number,
+  previousFlight: number | null,
+): Promise<void> {
+  const { data: reverted, error: revertError } = await admin
+    .from('game_players')
+    .update({ flight_number: previousFlight })
+    .eq('game_id', gameId)
+    .eq('user_id', userId)
+    .select('user_id');
+  if (revertError || (reverted ?? []).length === 0) {
+    console.error('[joinFlight] revert failed', {
+      gameId,
+      userId,
+      targetFlight,
+      previousFlight,
+      error: revertError,
+    });
+  }
+}
 
 /**
  * Spiller velger eller bytter flight selv i venterommet (#543).
@@ -43,7 +74,7 @@ export async function joinFlight(
   const admin = getAdminClient();
 
   // Verifiser at spilleren er aktiv deltaker i dette scheduled-spillet.
-  const { data: membership } = await admin
+  const { data: membership, error: membershipError } = await admin
     .from('game_players')
     .select('user_id, withdrawn_at, flight_number, team_number')
     .eq('game_id', gameId)
@@ -55,6 +86,12 @@ export async function joinFlight(
       team_number: number | null;
     }>();
 
+  // Error ≠ absence (#1441, #2293): a failed read is db_error, never «du er
+  // ikke deltaker».
+  if (membershipError) {
+    console.error('[joinFlight] membership read failed', membershipError);
+    return { ok: false, error: 'db_error' };
+  }
   if (!membership || membership.withdrawn_at != null) {
     return { ok: false, error: 'not_member' };
   }
@@ -71,7 +108,7 @@ export async function joinFlight(
     return { ok: false, error: 'flight_bound_to_team' };
   }
 
-  const { data: game } = await admin
+  const { data: game, error: gameError } = await admin
     .from('games')
     .select('status, game_mode, mode_config')
     .eq('id', gameId)
@@ -81,6 +118,10 @@ export async function joinFlight(
       mode_config: { team_size?: number } | null;
     }>();
 
+  if (gameError) {
+    console.error('[joinFlight] game read failed', gameError);
+    return { ok: false, error: 'db_error' };
+  }
   if (!game || game.status !== 'scheduled') {
     return { ok: false, error: 'game_not_scheduled' };
   }
@@ -108,14 +149,22 @@ export async function joinFlight(
     return { ok: false, error: 'flight_full' };
   }
 
-  // Skriv vår nye flight.
-  const { error: updateError } = await admin
-    .from('game_players')
-    .update({ flight_number: targetFlight })
-    .eq('game_id', gameId)
-    .eq('user_id', userId);
-
-  if (updateError) {
+  // Skriv vår nye flight. 0 rows means the row is gone (the player was
+  // removed since the membership read): not_member, never ok (#2293).
+  try {
+    expectAffected(
+      await admin
+        .from('game_players')
+        .update({ flight_number: targetFlight })
+        .eq('game_id', gameId)
+        .eq('user_id', userId)
+        .select('user_id'),
+      'joinFlight',
+    );
+  } catch (updateError) {
+    if (updateError instanceof NoRowsAffectedError) {
+      return { ok: false, error: 'not_member' };
+    }
     console.error('[joinFlight] update failed', {
       gameId,
       userId,
@@ -127,32 +176,23 @@ export async function joinFlight(
 
   // Race-guard: re-tell etter skriv. Hvis flighten nå har > MAX_FLIGHT_SIZE
   // aktive spillere, er vi taperen — angre vår egen rad.
-  const { count: afterCount } = await admin
+  const { count: afterCount, error: afterCountError } = await admin
     .from('game_players')
     .select('user_id', { count: 'exact', head: true })
     .eq('game_id', gameId)
     .eq('flight_number', targetFlight)
     .is('withdrawn_at', null);
 
+  // A failed re-count cannot confirm the flight has room: undo our row the
+  // same way as a lost race (#2293).
+  if (afterCountError) {
+    console.error('[joinFlight] after-count read failed', afterCountError);
+    await revertFlight(admin, gameId, userId, targetFlight, previousFlight);
+    return { ok: false, error: 'db_error' };
+  }
   if ((afterCount ?? 0) > MAX_FLIGHT_SIZE) {
-    // Revert til forrige flight (eller null hvis vi ikke hadde flight). We
-    // just wrote the row, so an error or 0 rows leaves the flight overfull:
-    // log it (#2223). The answer stays flight_full.
-    const { data: reverted, error: revertError } = await admin
-      .from('game_players')
-      .update({ flight_number: previousFlight })
-      .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .select('user_id');
-    if (revertError || (reverted ?? []).length === 0) {
-      console.error('[joinFlight] revert failed', {
-        gameId,
-        userId,
-        targetFlight,
-        previousFlight,
-        error: revertError,
-      });
-    }
+    // Revert til forrige flight (eller null hvis vi ikke hadde flight).
+    await revertFlight(admin, gameId, userId, targetFlight, previousFlight);
     return { ok: false, error: 'flight_full' };
   }
 

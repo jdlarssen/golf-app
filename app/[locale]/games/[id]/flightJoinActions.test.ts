@@ -14,7 +14,7 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  *   adminMock[0]: game_players.select(user_id, withdrawn_at, flight_number, team_number).eq.eq.maybeSingle
  *   adminMock[1]: games.select(status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is    (before-count)
- *   adminMock[3]: game_players.update({flight_number}).eq.eq
+ *   adminMock[3]: game_players.update({flight_number}).eq.eq.select
  *   adminMock[4]: game_players.select({count}).eq.eq.is        (after-count, race-guard)
  */
 
@@ -153,7 +153,7 @@ describe('joinFlight', () => {
       }, // membership
       { data: SOLO_GAME, error: null },   // games
       { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // before-count = 2
-      { data: null, error: null }, // update
+      { data: [{ user_id: USER_ID }], error: null }, // update
       { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // after-count = 3 (≤ 4)
     ]);
 
@@ -172,9 +172,9 @@ describe('joinFlight', () => {
       }, // membership
       { data: SOLO_GAME, error: null },   // games
       { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // before-count = 3
-      { data: null, error: null }, // update (skriv vår flight)
+      { data: [{ user_id: USER_ID }], error: null }, // update (skriv vår flight)
       { data: null, error: null, count: 5 } as { data: null; error: null; count: number }, // after-count = 5 (over 4 — vi tapte racen)
-      { data: null, error: null }, // revert-update
+      { data: [{ user_id: USER_ID }], error: null }, // revert-update
     ]);
 
     const { joinFlight } = await import('./flightJoinActions');
