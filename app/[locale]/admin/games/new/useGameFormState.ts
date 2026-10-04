@@ -209,12 +209,14 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
 }
 
 /**
- * Velger default-lagstørrelse for en gitt modus. Speilar de aktive
- * kombinasjonene i `TeamSizeSelector.ENABLED_COMBOS` — Stableford → 1,
- * Best ball → 2, Singles matchplay → 1 (én spiller per side, men
- * TeamSizeSelector er skjult for matchplay siden det ikke finnes noen
- * reell lagstørrelse å velge mellom), Solo strokeplay → 1 (én
- * spiller = én rad). Holdt synk separat fordi GameForm trenger en ren
+ * Velger default-lagstørrelse for en gitt modus, alltid en av størrelsene
+ * velgeren viser. Scramble- og Stableford-familien leser størrelsene fra
+ * `selectableTeamSizes` (`lib/games/teamFormatLimits.ts`, #2453): Stableford
+ * → 1 (solo), Texas/Ambrose → 4, Florida → 3, Shamble → 4. Resten leser
+ * `TeamSizeSelector.ENABLED_COMBOS`: Best ball → 2, Singles matchplay → 1
+ * (én spiller per side, men TeamSizeSelector er skjult for matchplay siden
+ * det ikke finnes noen reell lagstørrelse å velge mellom), Solo strokeplay →
+ * 1 (én spiller = én rad). Holdt synk separat fordi GameForm trenger en ren
  * funksjon for state-initialisering uten å eksponere selector-internt.
  */
 export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
