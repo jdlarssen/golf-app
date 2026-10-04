@@ -319,7 +319,10 @@ export function ResendCountdown({
       <input type="hidden" name="from" value="verify" />
       <h2 className="text-[14px] leading-[normal] font-semibold text-text">{t('noMailTitle')}</h2>
       <p className="text-[13px] leading-[1.45] text-muted">{t('spamHint')}</p>
-      <ResendRow initialWaitSeconds={resendWaitSeconds} />
+      {/* Keyed by the server's wait: after a redirect (a wrong code, a refused
+          resend) the server has worked out a new wait, and the row starts
+          from it instead of keeping a count that may be stuck at 0:0X. */}
+      <ResendRow key={resendWaitSeconds} initialWaitSeconds={resendWaitSeconds} />
     </form>
   );
 }

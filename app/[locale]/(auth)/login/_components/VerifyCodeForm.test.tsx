@@ -75,4 +75,22 @@ describe('ResendCountdown (#2349)', () => {
       vi.useRealTimers();
     }
   });
+
+  it('starts from the server again when a redirect brings a new wait (42 → 0 while counting)', () => {
+    vi.useFakeTimers();
+    try {
+      const props = { email: 'kompis@example.com', next: '', invite: '', sent: '1791108000' };
+      const { rerender } = render(<ResendCountdown {...props} resendWaitSeconds={42} />);
+      act(() => {
+        vi.advanceTimersByTime(5_000);
+      });
+      expect(screen.getByTestId('resend-code-button')).toBeDisabled();
+
+      rerender(<ResendCountdown {...props} resendWaitSeconds={0} />);
+      expect(screen.getByTestId('resend-code-button')).toBeEnabled();
+      expect(screen.queryByText(/Ny kode om/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
