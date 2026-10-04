@@ -11,10 +11,11 @@
 --   While D is a draft:
 --     player (active_id): D, its list and outsider_id's profile are invisible,
 --       is_in_game(D) is false, the active game is still visible (control).
+--       Invite trigger (0115 + 0202): active_id cannot add outsider_id to own
+--       game E, because D alone does not make them co-players. Runs before the
+--       hostile writes, so it stands on its own without 0202.
 --       Hostile writes: accepting or deleting the own row on D hits 0 rows,
 --       and the row survives untouched.
---       Invite trigger (0115 + 0202): active_id cannot add outsider_id to own
---       game E, because D alone does not make them co-players.
 --     organiser (flightmate_id) and global admin: D and its whole list (3).
 --     stranger (submitted_id): nothing.
 --   After publishing D (status = 'scheduled'):
@@ -107,6 +108,15 @@ select is((select count(*)::int from public.users where id = torny_rls.outsider_
 select is((select count(*)::int from public.games where id = torny_rls.game_id()), 1,
   'control: the player still sees the published game they are in');
 
+-- Invite trigger: D alone does not make outsider_id a co-player of active_id.
+-- Before the hostile writes below, so it does not depend on whether they
+-- removed active_id from D (without 0202 the DELETE succeeds).
+select throws_like(
+  $$insert into public.game_players (game_id, user_id) values (torny_rls.dh_own(), torny_rls.outsider_id())$$,
+  '%not invite-eligible%',
+  '#2445: a draft someone else organises makes no co-players (invite trigger)'
+);
+
 -- Hostile writes on the hidden row.
 select is(torny_rls.dh_try_accept(torny_rls.dh_draft(), torny_rls.active_id()), 0,
   '#2445: accepting the own row on a draft hits 0 rows (direct PATCH)');
@@ -114,13 +124,6 @@ select is(torny_rls.dh_try_delete(torny_rls.dh_draft(), torny_rls.active_id()), 
   '#2445: deleting the own row on a draft hits 0 rows (direct DELETE)');
 select is(torny_rls.dh_row_state(torny_rls.dh_draft(), torny_rls.active_id()), 'pending',
   '#2445: the player''s row on the draft survives, still not accepted');
-
--- Invite trigger: D alone does not make outsider_id a co-player of active_id.
-select throws_like(
-  $$insert into public.game_players (game_id, user_id) values (torny_rls.dh_own(), torny_rls.outsider_id())$$,
-  '%not invite-eligible%',
-  '#2445: a draft someone else organises makes no co-players (invite trigger)'
-);
 
 select torny_rls.as_user(torny_rls.flightmate_id());
 
