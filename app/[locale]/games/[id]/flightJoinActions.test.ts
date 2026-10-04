@@ -183,4 +183,68 @@ describe('joinFlight', () => {
     expect(result).toEqual({ ok: false, error: 'flight_full' });
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
+
+  it('skriving som treffer 0 rader (spilleren ble fjernet) → not_member (#2293)', async () => {
+    adminMock = buildSupabaseMock([
+      {
+        data: { user_id: USER_ID, withdrawn_at: null, flight_number: null },
+        error: null,
+      }, // membership
+      { data: SOLO_GAME, error: null }, // games
+      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // before-count
+      { data: [], error: null }, // update traff 0 rader
+    ]);
+
+    const { joinFlight } = await import('./flightJoinActions');
+    const result = await joinFlight(GAME_ID, 2);
+
+    expect(result).toEqual({ ok: false, error: 'not_member' });
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('after-count feiler → angrer raden og svarer db_error (#2293)', async () => {
+    // Capacity cannot be confirmed: the flight may be overfull, so the write is
+    // undone exactly as when the race is lost.
+    adminMock = buildSupabaseMock([
+      {
+        data: { user_id: USER_ID, withdrawn_at: null, flight_number: 1 },
+        error: null,
+      }, // membership (flight 1 fra før)
+      { data: SOLO_GAME, error: null }, // games
+      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // before-count
+      { data: [{ user_id: USER_ID }], error: null }, // update
+      { data: null, error: { message: 'boom' }, count: null }, // after-count feiler
+      { data: [{ user_id: USER_ID }], error: null }, // revert-update
+    ]);
+
+    const { joinFlight } = await import('./flightJoinActions');
+    const result = await joinFlight(GAME_ID, 2);
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates.map((c) => c.args[0])).toEqual([{ flight_number: 2 }, { flight_number: 1 }]);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      read: 'medlemskap',
+      queue: [{ data: null, error: { message: 'boom' } }],
+    },
+    {
+      read: 'spill',
+      queue: [
+        { data: { user_id: USER_ID, withdrawn_at: null, flight_number: null }, error: null },
+        { data: null, error: { message: 'boom' } },
+      ],
+    },
+  ])('lesefeil på $read → db_error, ikke not_member/game_not_scheduled (#2293)', async ({ queue }) => {
+    adminMock = buildSupabaseMock(queue);
+
+    const { joinFlight } = await import('./flightJoinActions');
+    const result = await joinFlight(GAME_ID, 1);
+
+    expect(result).toEqual({ ok: false, error: 'db_error' });
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+  });
 });

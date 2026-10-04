@@ -1185,6 +1185,30 @@ describe('reopenGame', () => {
     }).toEqual({ redirect: '/admin/games/game-1?error=cup_finished', updates: 0 });
   });
 
+  it('#2293: a status flip that hits 0 rows is db_game — no derived sync, audit or varsel', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: { id: 'game-1', name: 'Vinter-cup', status: 'finished' },
+        error: null,
+      }, // games.select
+      { data: [], error: null }, // games.update(...) → 0 rows
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { reopenGame } = await import('./actions');
+
+    await expect(reopenGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=db_game');
+    // syncDerivedGamesStatus would read games again; nothing runs after the write.
+    expect(supabaseMock.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(1);
+    expect(supabaseMock.from).toHaveBeenCalledTimes(3);
+    expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
   it('#2214: a match in an active cup is reopened as before', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
