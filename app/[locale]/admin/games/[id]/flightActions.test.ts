@@ -23,21 +23,21 @@ import {
  *   serverMock[0]: auth.getUser
  *   serverMock[1]: users.select(is_admin, email, name).eq.single        (loadRole)
  *   serverMock[2]: games.select(created_by).eq.maybeSingle              (creator-sjekk)
- *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]:  game_players.select(...).eq.order.order.returns
- *   adminMock[2…]: game_players.update({flight_number}).eq.eq (én per aktiv spiller)
+ *   adminMock[2…]: game_players.update({flight_number}).eq.eq.select (én per aktiv spiller)
  *
  * setPlayerFlight:
  *   serverMock[0..2]: samme som over
- *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]: game_players.select(...).eq.order.order.returns  (vakta, #2290)
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is    (kapasitetssjekk)
- *   adminMock[3]: game_players.update({flight_number}).eq.eq
+ *   adminMock[3]: game_players.update({flight_number}).eq.eq.select
  *
  * toggleSignupsClosed (admin):
  *   serverMock[0..1]: auth.getUser + users (isAdmin=true → ingen creator-sjekk)
- *   adminMock[0]: games.select(id, status, registration_mode).eq.single
- *   adminMock[1]: games.update({signups_closed_at}).eq
+ *   adminMock[0]: games.select(id, status, registration_mode).eq.maybeSingle
+ *   adminMock[1]: games.update({signups_closed_at}).eq.select
  */
 
 const redirectMock = makeLocaleRedirectMock();
@@ -186,11 +186,11 @@ describe('suggestFlightAssignment', () => {
     adminMock = buildSupabaseMock([
       { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null }, // games
       { data: players, error: null }, // game_players
-      { data: null, error: null }, // update u1
-      { data: null, error: null }, // update u2
-      { data: null, error: null }, // update u3
-      { data: null, error: null }, // update u4
-      { data: null, error: null }, // update u5
+      { data: [{ user_id: 'u1' }], error: null }, // update u1
+      { data: [{ user_id: 'u2' }], error: null }, // update u2
+      { data: [{ user_id: 'u3' }], error: null }, // update u3
+      { data: [{ user_id: 'u4' }], error: null }, // update u4
+      { data: [{ user_id: 'u5' }], error: null }, // update u5
     ]);
 
     const { suggestFlightAssignment } = await import('./flightActions');
@@ -299,7 +299,7 @@ describe('setPlayerFlight', () => {
       { data: SOLO_STABLEFORD_GAME, error: null }, // games
       { data: soloRoster(), error: null }, // game_players (vakta)
       { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // count = 2 (har plass)
-      { data: null, error: null }, // update
+      { data: [{ user_id: 'target-user' }], error: null }, // update
     ]);
 
     const { setPlayerFlight } = await import('./flightActions');
@@ -349,12 +349,12 @@ describe('setPlayerFlight', () => {
  * Kø-rekkefølge for lag-actionene:
  *
  * suggestTeamAssignment:
- *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]:  game_players.select(...).eq.order.order.returns
  *   adminMock[2…]: game_players.update({team_number, flight_number}).eq.eq.select
  *
  * setPlayerTeam:
- *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.single
+ *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]: game_players.select(...).eq.order.order.returns  (hele rosteret, #2290)
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is  (kapasitetssjekk)
  *   adminMock[3]: game_players.update({...}).eq.eq.select
@@ -597,7 +597,7 @@ describe('toggleSignupsClosed', () => {
         data: { id: GAME_ID, status: 'scheduled', registration_mode: 'open' },
         error: null,
       },
-      { data: null, error: null }, // games.update
+      { data: [{ id: GAME_ID }], error: null }, // games.update
     ]);
 
     const { toggleSignupsClosed } = await import('./flightActions');
@@ -618,7 +618,7 @@ describe('toggleSignupsClosed', () => {
         },
         error: null,
       },
-      { data: null, error: null }, // games.update
+      { data: [{ id: GAME_ID }], error: null }, // games.update
     ]);
 
     const { toggleSignupsClosed } = await import('./flightActions');

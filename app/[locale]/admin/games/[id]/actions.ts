@@ -549,32 +549,44 @@ export async function reopenGame(gameId: string) {
     redirect({ href: `${detailPath}?error=cup_finished`, locale });
   }
 
-  const { error } = await supabase
-    .from('games')
-    // #1008: nuller AI-rundereferatet — en re-finish kan skippe regenerering
-    // (manglende ANTHROPIC_API_KEY, tynn data), så et gammelt referat med
-    // tall fra FØR reopen må ikke overleve og villede spillerne.
-    //
-    // #1856: `finish_pipeline_at` MUST be cleared alongside it. The marker is
-    // the finish tail's at-most-once claim (see `runFinishPipeline`): leave it
-    // set and the re-finish finds 0 rows to claim, so the ENTIRE tail is
-    // skipped — no fresh result_summary, no score_differential, no
-    // derived-game finish, no achievement varsler, no audit row, no mail. And
-    // since the line above just nulled `round_report`, the referat the comment
-    // promises can be regenerated would be gone for good. Reopening is exactly
-    // the case where the tail SHOULD run again: the numbers changed.
-    // This write is admin-only (`loadAdminContext` → `requireAdmin`), so
-    // 0169's `guard_games_finish_pipeline_at` passes it on the `is_admin()`
-    // escape hatch; a creator-facing reopen would have to use the admin client.
-    .update({
-      status: 'active',
-      ended_at: null,
-      round_report: null,
-      finish_pipeline_at: null,
-    })
-    .eq('id', gameId);
-  if (error) {
-    console.error('[reopenGame] status flip to active failed', error);
+  let failure: unknown = null;
+  try {
+    expectAffected(
+      await supabase
+        .from('games')
+        // #1008: nuller AI-rundereferatet — en re-finish kan skippe regenerering
+        // (manglende ANTHROPIC_API_KEY, tynn data), så et gammelt referat med
+        // tall fra FØR reopen må ikke overleve og villede spillerne.
+        //
+        // #1856: `finish_pipeline_at` MUST be cleared alongside it. The marker is
+        // the finish tail's at-most-once claim (see `runFinishPipeline`): leave it
+        // set and the re-finish finds 0 rows to claim, so the ENTIRE tail is
+        // skipped — no fresh result_summary, no score_differential, no
+        // derived-game finish, no achievement varsler, no audit row, no mail. And
+        // since the line above just nulled `round_report`, the referat the comment
+        // promises can be regenerated would be gone for good. Reopening is exactly
+        // the case where the tail SHOULD run again: the numbers changed.
+        // This write is admin-only (`loadAdminContext` → `requireAdmin`), so
+        // 0169's `guard_games_finish_pipeline_at` passes it on the `is_admin()`
+        // escape hatch; a creator-facing reopen would have to use the admin client.
+        .update({
+          status: 'active',
+          ended_at: null,
+          round_report: null,
+          finish_pipeline_at: null,
+        })
+        .eq('id', gameId)
+        .select('id'),
+      'reopenGame',
+    );
+  } catch (e) {
+    failure = e;
+  }
+  // #2293: 0 rows is a failure too — never «gjenåpnet» with an audit row and
+  // varsler for a game the write never touched. redirect() stays outside the
+  // try: it throws NEXT_REDIRECT.
+  if (failure) {
+    console.error('[reopenGame] status flip to active failed', failure);
     redirect({ href: `${detailPath}?error=db_game`, locale });
   }
 

@@ -88,6 +88,33 @@ type FlightGameRow = {
 };
 
 /**
+ * Reads the game for a flight/team/signup action. Error ≠ absence (#1441,
+ * #2293): a failed read is `db_game`, and only a read that found no row is
+ * `not_found`. `.maybeSingle()` because `.single()` turns 0 rows into a
+ * PGRST116 error, and then the two could not be told apart.
+ */
+async function readActionGame<T>(
+  admin: ReturnType<typeof getAdminClient>,
+  gameId: string,
+  columns: string,
+  context: string,
+  detailPath: string,
+  locale: Awaited<ReturnType<typeof getLocale>>,
+): Promise<T> {
+  const { data: game, error } = await admin
+    .from('games')
+    .select(columns)
+    .eq('id', gameId)
+    .maybeSingle<T>();
+  if (error) {
+    console.error(`[${context}] game read failed`, error);
+    redirect({ href: `${detailPath}?error=db_game`, locale });
+  }
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  return game;
+}
+
+/**
  * Admin/creator: foreslår og skriver flight-inndeling for alle aktive
  * spillere i grupper av MAX_FLIGHT_SIZE (påmeldingsrekkefølge).
  *
@@ -99,12 +126,14 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
   const { admin, detailPath } = await loadFlightContext(gameId);
 
   // Verifiser at spillet er scheduled/active og trenger inndeling.
-  const { data: game } = await admin
-    .from('games')
-    .select('id, status, game_mode, mode_config')
-    .eq('id', gameId)
-    .single<FlightGameRow>();
-  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  const game = await readActionGame<FlightGameRow>(
+    admin,
+    gameId,
+    'id, status, game_mode, mode_config',
+    'suggestFlightAssignment',
+    detailPath,
+    locale,
+  );
   if (game.status !== 'scheduled' && game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
@@ -129,13 +158,25 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
   const assignments = suggestFlightSplit(players);
 
   for (const { user_id, flight_number } of assignments) {
-    const { error } = await admin
-      .from('game_players')
-      .update({ flight_number })
-      .eq('game_id', gameId)
-      .eq('user_id', user_id);
-    if (error) {
-      console.error('[suggestFlightAssignment] flight update failed', error);
+    let failure: unknown = null;
+    try {
+      // 0 rows (the player was removed in another tab) is a failure, never
+      // «flight_suggested» (bug-prevention §2, #2293). redirect() stays
+      // outside the try: it throws NEXT_REDIRECT.
+      expectAffected(
+        await admin
+          .from('game_players')
+          .update({ flight_number })
+          .eq('game_id', gameId)
+          .eq('user_id', user_id)
+          .select('user_id'),
+        'suggestFlightAssignment',
+      );
+    } catch (e) {
+      failure = e;
+    }
+    if (failure) {
+      console.error('[suggestFlightAssignment] flight update failed', failure);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }
@@ -166,12 +207,14 @@ export async function setPlayerFlight(
     redirect({ href: `${detailPath}?error=bad_flight`, locale });
   }
 
-  const { data: game } = await admin
-    .from('games')
-    .select('id, status, game_mode, mode_config')
-    .eq('id', gameId)
-    .single<FlightGameRow>();
-  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  const game = await readActionGame<FlightGameRow>(
+    admin,
+    gameId,
+    'id, status, game_mode, mode_config',
+    'setPlayerFlight',
+    detailPath,
+    locale,
+  );
   if (game.status !== 'scheduled' && game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
@@ -205,13 +248,23 @@ export async function setPlayerFlight(
     redirect({ href: `${detailPath}?error=flight_full`, locale });
   }
 
-  const { error } = await admin
-    .from('game_players')
-    .update({ flight_number: targetFlight })
-    .eq('game_id', gameId)
-    .eq('user_id', targetUserId);
-  if (error) {
-    console.error('[setPlayerFlight] flight update failed', error);
+  let failure: unknown = null;
+  try {
+    // Same rule as suggestFlightAssignment: 0 rows is a failure (#2293).
+    expectAffected(
+      await admin
+        .from('game_players')
+        .update({ flight_number: targetFlight })
+        .eq('game_id', gameId)
+        .eq('user_id', targetUserId)
+        .select('user_id'),
+      'setPlayerFlight',
+    );
+  } catch (e) {
+    failure = e;
+  }
+  if (failure) {
+    console.error('[setPlayerFlight] flight update failed', failure);
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
@@ -259,12 +312,14 @@ async function loadTeamGame(
   detailPath: string,
   locale: Awaited<ReturnType<typeof getLocale>>,
 ): Promise<{ mode: GameMode; teamSize: number }> {
-  const { data: game } = await admin
-    .from('games')
-    .select('id, status, game_mode, mode_config')
-    .eq('id', gameId)
-    .single<FlightGameRow>();
-  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  const game = await readActionGame<FlightGameRow>(
+    admin,
+    gameId,
+    'id, status, game_mode, mode_config',
+    'loadTeamGame',
+    detailPath,
+    locale,
+  );
   if (game.status !== 'scheduled' && game.status !== 'active') {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
@@ -416,16 +471,11 @@ export async function toggleSignupsClosed(
   const locale = await getLocale();
   const { admin, detailPath } = await loadFlightContext(gameId);
 
-  const { data: game } = await admin
-    .from('games')
-    .select('id, status, registration_mode')
-    .eq('id', gameId)
-    .single<{
-      id: string;
-      status: string;
-      registration_mode: 'invite_only' | 'manual_approval' | 'open';
-    }>();
-  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  const game = await readActionGame<{
+    id: string;
+    status: string;
+    registration_mode: 'invite_only' | 'manual_approval' | 'open';
+  }>(admin, gameId, 'id, status, registration_mode', 'toggleSignupsClosed', detailPath, locale);
   if (game.status !== 'scheduled') redirect({ href: `${detailPath}?error=signups_not_scheduled`, locale });
   if (
     game.registration_mode !== 'open' &&
@@ -436,12 +486,23 @@ export async function toggleSignupsClosed(
   }
 
   const signups_closed_at = closedNow ? new Date().toISOString() : null;
-  const { error } = await admin
-    .from('games')
-    .update({ signups_closed_at })
-    .eq('id', gameId);
-  if (error) {
-    console.error('[toggleSignupsClosed] signups-closed update failed', error);
+  let failure: unknown = null;
+  try {
+    // 0 rows would otherwise answer «påmeldingen er stengt» for a game the
+    // write never touched (#2293).
+    expectAffected(
+      await admin
+        .from('games')
+        .update({ signups_closed_at })
+        .eq('id', gameId)
+        .select('id'),
+      'toggleSignupsClosed',
+    );
+  } catch (e) {
+    failure = e;
+  }
+  if (failure) {
+    console.error('[toggleSignupsClosed] signups-closed update failed', failure);
     redirect({ href: `${detailPath}?error=db_game`, locale });
   }
 
