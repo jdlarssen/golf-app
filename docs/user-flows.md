@@ -242,6 +242,8 @@ flowchart LR
   F -.->|reopenGame| A
 ```
 
+Et utkast ser bare arrangøren (og admin). Spillerne på lista ser det, og får varsel, først når det publiseres (#2445).
+
 ---
 
 ## 4. Brukervennlighets-vurdering

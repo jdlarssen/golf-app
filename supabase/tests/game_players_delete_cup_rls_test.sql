@@ -9,7 +9,9 @@
 --
 --   BLOCKED (0 rows, row survives):
 --     1. player deletes own row, cup match 'scheduled'   ("self withdraw pre active")
---     2. player deletes own row, cup match 'draft'
+--     2. player deletes own row, cup match 'draft'. Since #2445 (0202) this
+--        gives 0 rows for two reasons: the cup rule, and a draft's list is
+--        hidden from its players. Case 1 ('scheduled') carries the #1937 proof.
 --     3. organizer (games.created_by) deletes a player's row in a cup match
 --                                                         ("creator delete")
 --   UNCHANGED (row deleted):
