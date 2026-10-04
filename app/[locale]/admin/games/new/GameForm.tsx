@@ -707,7 +707,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               onChange={handleModeChange}
               disabled={lockGameMode}
             />
-            {!isMatchplay && (
+            {/* #2453: ShambleSetup has its own 3/4 picker, as in GameWizard. */}
+            {!isMatchplay && !state.isShamble && (
               <TeamSizeSelector
                 mode={gameMode}
                 value={teamSize}

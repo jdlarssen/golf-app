@@ -1522,6 +1522,13 @@ describe('GameForm — setup-step-seksjoner (fix #322)', () => {
     ) as HTMLInputElement | null;
     expect(champagneRadio).not.toBeNull();
     expect(champagneRadio?.checked).toBe(true);
+
+    // #2453: ShambleSetup har lagvelgeren sin, så «Velg lagstørrelse» vises
+    // ikke ved siden av, verken som valg eller som linje.
+    expect(screen.queryByTestId('team-size-line')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: /velg lagstørrelse/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('nassau: NassauSetup vises med net-radio checked (default)', () => {
