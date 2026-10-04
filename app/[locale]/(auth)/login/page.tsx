@@ -206,20 +206,23 @@ export default async function LoginPage({
 
     const bandInvite = inviteCtx ? await verifyStepInvite(inviteCtx) : null;
 
-    // The artboard ends with the «Kom ikke mailen?» card; the version footer
-    // would land above the fold on 390 × 844, so the step has none.
+    // The artboard ends with the «Kom ikke mailen?» card. The column fills the
+    // screen, so the version footer, and with it the only link to the privacy
+    // page on /login, lands just below the fold instead of on the artboard.
     return (
-      <AppShell flush showVersion={false}>
-        <LoginBand wordmarkAs="p" invite={bandInvite} />
-        <VerifyCodeForm
-          email={email}
-          next={next}
-          invite={invite}
-          changeEmailHref={changeEmailHref}
-          notice={errorBanner}
-          resendWaitSeconds={resendWaitSeconds(sentAtMs, nowMs)}
-          sent={sent}
-        />
+      <AppShell flush>
+        <div className="flex min-h-dvh flex-col">
+          <LoginBand wordmarkAs="p" invite={bandInvite} />
+          <VerifyCodeForm
+            email={email}
+            next={next}
+            invite={invite}
+            changeEmailHref={changeEmailHref}
+            notice={errorBanner}
+            resendWaitSeconds={resendWaitSeconds(sentAtMs, nowMs)}
+            sent={sent}
+          />
+        </div>
       </AppShell>
     );
   }
@@ -264,47 +267,50 @@ export default async function LoginPage({
 
   // #2349: step 1 without an invitation has no artboard of its own. It gets
   // the band (wordmark, tagline, language switch) and «Steg 1 av 2» at the top
-  // of the card, as the app does (PR #2421); the rest stands as before. The
-  // version footer would land above the fold, so the step has none.
+  // of the card, as the app does (PR #2421); the rest stands as before. As on
+  // the code step, the column fills the screen and the version footer (the
+  // privacy link) follows below the fold.
   const tCommon = await getTranslations('common');
   return (
-    <AppShell flush showVersion={false}>
-      <LoginBand
-        wordmarkAs="h1"
-        aside={<LocaleSwitcher variant="onStrong" />}
-        tagline={tCommon.rich('brandTagline', {
-          par: (chunks) => (
-            <span className="font-semibold text-accent-on-strong">{chunks}</span>
-          ),
-        })}
-      />
-      <div className="mx-4 mt-5">
-        <Card>
-          <Kicker className="mb-3 leading-[normal]">{t('sendCode.kicker')}</Kicker>
-          {errorBanner && <div className="mb-4">{errorBanner}</div>}
-          {resolvePasskeyAccess(process.env.NEXT_PUBLIC_PASSKEYS, false)
-            .showLoginButton && <PasskeyLoginButton next={next} />}
-          <SendCodeForm
-            defaultEmail={email}
-            next={next}
-            invite={invite}
-            allowSelfRegistration={selfRegistrationOpen()}
-          />
-          <div className="mt-6 flex items-center gap-3" aria-hidden="true">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
-              {t('tryDemoDivider')}
-            </span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-          <SmartLink
-            href="/demo"
-            data-testid="try-demo-link"
-            className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
-          >
-            {t('tryDemo')} <span aria-hidden="true">→</span>
-          </SmartLink>
-        </Card>
+    <AppShell flush>
+      <div className="flex min-h-dvh flex-col">
+        <LoginBand
+          wordmarkAs="h1"
+          aside={<LocaleSwitcher variant="onStrong" />}
+          tagline={tCommon.rich('brandTagline', {
+            par: (chunks) => (
+              <span className="font-semibold text-accent-on-strong">{chunks}</span>
+            ),
+          })}
+        />
+        <div className="mx-4 mt-5">
+          <Card>
+            <Kicker className="mb-3 leading-[normal]">{t('sendCode.kicker')}</Kicker>
+            {errorBanner && <div className="mb-4">{errorBanner}</div>}
+            {resolvePasskeyAccess(process.env.NEXT_PUBLIC_PASSKEYS, false)
+              .showLoginButton && <PasskeyLoginButton next={next} />}
+            <SendCodeForm
+              defaultEmail={email}
+              next={next}
+              invite={invite}
+              allowSelfRegistration={selfRegistrationOpen()}
+            />
+            <div className="mt-6 flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-border" />
+              <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
+                {t('tryDemoDivider')}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+            <SmartLink
+              href="/demo"
+              data-testid="try-demo-link"
+              className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
+            >
+              {t('tryDemo')} <span aria-hidden="true">→</span>
+            </SmartLink>
+          </Card>
+        </div>
       </div>
     </AppShell>
   );
