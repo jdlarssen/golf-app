@@ -42,6 +42,11 @@ export type CupMatchGameRow = {
   score_visibility: string;
   /** #1814: 30-minutters-fristen konvoluttregelen måler trekket mot. */
   scheduled_tee_off_at: string | null;
+  /**
+   * #2202: who generated the match. The cup page links a non-admin to
+   * `/games/[id]` only when they own or play the match.
+   */
+  created_by?: string | null;
 };
 
 export type CupMatchEntryInput = {
@@ -207,6 +212,7 @@ export function buildCupMatchEntry(input: CupMatchEntryInput): CupMatchEntry {
       status: game.status,
       result,
       sourceGameId: game.source_game_id,
+      createdBy: game.created_by ?? null,
       // #1502/#1488 (K4/K5): «Scorekort levert» + helt-trukket-flagget.
       allScorecardsSubmitted: input.submission.allScorecardsSubmitted,
       allPlayersWithdrawn: input.submission.allPlayersWithdrawn,

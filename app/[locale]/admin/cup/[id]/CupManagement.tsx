@@ -171,17 +171,17 @@ export async function CupManagement({
   variant,
   errorCode,
   statusCode,
-  viewerIsAdmin,
+  viewer,
 }: {
   tournamentId: string;
   variant: CupManagementVariant;
   errorCode?: string;
   statusCode?: string;
   /**
-   * #2202: read by the admin route's cup gate. Only a global admin may drill
-   * into `/admin/games/[id]`; the club variant never does.
+   * #2202: read by the admin route's cup gate. Only a global admin drills
+   * into `/admin/games/[id]`; the club variant never passes it.
    */
-  viewerIsAdmin?: boolean;
+  viewer?: { id: string; isAdmin: boolean };
 }) {
   // Oversettelsene først: navne-fallbacken (#1527) er input til snapshot-en.
   const [t, tStatus, locale] = await Promise.all([
@@ -482,7 +482,7 @@ export async function CupManagement({
         team1Name={tournament.team_1_name}
         team2Name={tournament.team_2_name}
         cupActive={cupActive}
-        viewerIsAdmin={viewerIsAdmin}
+        viewer={viewer}
       />
 
       <CupActionsSection

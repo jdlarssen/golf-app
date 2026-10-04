@@ -23,7 +23,7 @@ export default async function CupDetailPage({
       variant="admin"
       errorCode={first(sp.error)}
       statusCode={first(sp.status)}
-      viewerIsAdmin={ctx.isAdmin}
+      viewer={{ id: ctx.userId, isAdmin: ctx.isAdmin }}
     />
   );
 }
