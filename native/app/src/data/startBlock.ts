@@ -14,7 +14,9 @@
 //   FK-en garanterer brukerraden, og serveren leser med service-rolle, der
 //   embeden aldri mangler. Da gir begge samme `tee_missing_rating`.
 //
-// Kaster aldri: feil eller offline gir `null`, og venterommet teller ned som før.
+// Kaster aldri. Feil eller offline gir `undefined` («ukjent»), ikke `null`
+// («ingen sperre»): venterommet beholder da forrige svar i stedet for å vippe
+// tilbake til «Starter snart» fordi ett kall feilet.
 import { startBlockReason, type StartBlockInput } from '../../../../lib/games/startBlockReason';
 import { STRUCTURAL_BLOCK_REASONS } from '../../../../lib/games/startBlockReasons';
 import {
@@ -86,8 +88,13 @@ function playOnChoicePending(bundle: GameBundle): boolean {
   return isPlayOnChoicePending(input, game.modeConfig);
 }
 
-/** Hva venterommet skal si om sperren. `null` = ingen sperre, eller ukjent. */
-export async function fetchStartBlock(bundle: GameBundle): Promise<WaitingRoomBlock> {
+/**
+ * Hva venterommet skal si om sperren. `null` = ingen sperre. `undefined` =
+ * ukjent (feil eller offline), og da står forrige svar.
+ */
+export async function fetchStartBlock(
+  bundle: GameBundle,
+): Promise<WaitingRoomBlock | undefined> {
   try {
     const activeIds = bundle.players.filter((p) => p.withdrawnAt == null).map((p) => p.userId);
     let pendingUserIds: string[] = [];
@@ -95,7 +102,7 @@ export async function fetchStartBlock(bundle: GameBundle): Promise<WaitingRoomBl
       const { data, error } = await supabase.rpc('incomplete_profile_ids', {
         p_user_ids: activeIds,
       });
-      if (error || !data) return null;
+      if (error || !data) return undefined;
       pendingUserIds = (data as { id: string }[]).map((row) => row.id);
     }
     const block = startBlockReason(startBlockInput(bundle, pendingUserIds));
@@ -106,6 +113,6 @@ export async function fetchStartBlock(bundle: GameBundle): Promise<WaitingRoomBl
     }
     return null;
   } catch {
-    return null;
+    return undefined;
   }
 }
