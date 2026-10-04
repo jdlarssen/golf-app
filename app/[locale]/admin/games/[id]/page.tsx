@@ -78,6 +78,7 @@ import {
   endGameReadiness,
   findScoreGaps,
   flightProgress,
+  gapLocation,
   pultInitialTab,
   type ProgressLabel,
 } from '@/lib/games/organizerDesk';
@@ -276,6 +277,12 @@ export default async function GameDetailPage({
   if (!game) {
     notFound();
   }
+
+  // Start the sak-number count now (cache()d per request), so the title
+  // block and the footer, which both await it behind Suspense, do not wait
+  // for it after the rest of the page. The catch only marks the promise as
+  // handled; whoever awaits it still sees the error.
+  void getSakNumber(game.created_at).catch(() => {});
 
   const locale = await getLocale();
 
@@ -1320,28 +1327,43 @@ async function PultBody({
   errorCode: string | undefined;
   statusCode: string;
 }) {
-  const [playersRes, progressRes, preview] = await Promise.all([
-    fetchRoster(game.id),
+  const { supabase } = await getAdminGameContext();
+  const rosterP = fetchRoster(game.id);
+  // #1586: leverte kort skal kunne åpnes og leses før godkjenning/gjenåpning.
+  // The review fetch needs the roster, so it chains on the roster's promise
+  // and runs alongside the progress and reminder reads instead of after all
+  // of them. Admin-sesjonens klient dekker score-lesingen via is_admin()-
+  // grenen i RLS-en. Fremdrifts-queryen (uten slag) består — spoiler-vernet
+  // i fremdriftsvisningen røres ikke.
+  // #2213: the card follows the row owner, so a teammate in the one-ball
+  // formats shows the team's strokes (whole roster, withdrawn included).
+  const reviewP = rosterP.then((res) =>
+    res.error
+      ? null
+      : fetchScorecardReviewData(supabase, supabase, game.id, game.course_id, {
+          mode: game.game_mode,
+          roster: res.data ?? [],
+          holderIds: (res.data ?? [])
+            .filter((p) => p.submitted_at != null)
+            .map((p) => p.user_id),
+        }),
+  );
+  const [playersRes, progressRes, preview, reviewData] = await Promise.all([
+    rosterP,
     fetchProgress(game.id),
-    previewReminder(game.id),
+    // The reminder row is a convenience: if its read fails, the desk (and
+    // «Avslutt spillet») still renders, just without «Påminn».
+    previewReminder(game.id).catch((e: unknown) => {
+      console.error('[AdminGameDetailPage] previewReminder', e);
+      return null;
+    }),
+    reviewP,
   ]);
   if (playersRes.error) throw playersRes.error;
   if (progressRes.error) throw progressRes.error;
   const players = playersRes.data ?? [];
   const progress = progressRes.data ?? [];
-
-  // #1586: leverte kort skal kunne åpnes og leses før godkjenning/gjenåpning.
-  // Egen sekvensiell henting (trenger players først); admin-sesjonens klient
-  // dekker score-lesingen via is_admin()-grenen i RLS-en. Fremdrifts-queryen
-  // over (uten slag) består — spoiler-vernet i fremdriftsvisningen røres ikke.
-  // #2213: the card follows the row owner, so a teammate in the one-ball
-  // formats shows the team's strokes (whole roster, withdrawn included).
-  const { supabase } = await getAdminGameContext();
-  const review = await fetchScorecardReviewData(supabase, supabase, game.id, game.course_id, {
-    mode: game.game_mode,
-    roster: players,
-    holderIds: players.filter((p) => p.submitted_at != null).map((p) => p.user_id),
-  });
+  const review = reviewData ?? { holes: [], scoresByHolder: new Map() };
 
   const s = await buildSections({ gameId: game.id, game, locale, players, review });
   const t = await getTranslations('admin.game.pult');
@@ -1384,19 +1406,19 @@ async function PultBody({
   // The reminder's own preview (#2017): the row counts exactly whom «Påminn»
   // reaches. A game that stopped being active between the two reads gives no
   // row, as on the status page.
-  const reminderTargets = preview.ok && preview.targets > 0 ? preview : null;
+  const reminderTargets = preview?.ok && preview.targets > 0 ? preview : null;
   const gaps: NeedsYouGap[] = findScoreGaps(deskInput).map((gap) => {
-    const group = groups.find((g) => g.userIds.includes(gap.userIds[0]));
-    const numbered = group && (group.label.kind === 'flight' || group.label.kind === 'side');
+    const { label, hole } = gapLocation(gap, groups);
     return {
       key: `${gap.userIds.join('-')}:${gap.holes.join('-')}`,
       names: names(gap.userIds),
       people: gap.userIds.length,
       holes: formatListLocale(gap.holes.map(String), appLocale),
       holeCount: gap.holes.length,
-      where: numbered
-        ? { kind: 'group', group: group.name, hole: group.maxHole ?? gap.lastHole }
-        : { kind: 'entered', hole: gap.lastHole },
+      where:
+        label.kind === 'flight' || label.kind === 'side'
+          ? { kind: 'group', group: labelText(label), hole }
+          : { kind: 'entered', hole },
     };
   });
 
