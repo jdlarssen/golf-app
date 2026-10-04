@@ -100,10 +100,12 @@ describe('sendHeldGameInvites', () => {
       expect(mail.expiresAt).toBe(stamped);
       expect(Date.parse(stamped)).toBeGreaterThan(before);
     }
-    // Each deadline write lands before the first mail goes out.
-    expect(adminMock.from.mock.invocationCallOrder.at(-1)).toBeLessThan(
-      sendInviteNotificationMock.mock.invocationCallOrder[0]!,
-    );
+    // Per invitation: its deadline write starts before its own mail.
+    const writeOrder = adminMock.from.mock.invocationCallOrder.slice(-2);
+    const mailOrder = sendInviteNotificationMock.mock.invocationCallOrder;
+    for (const i of [0, 1]) {
+      expect(writeOrder[i]).toBeLessThan(mailOrder[i]!);
+    }
   });
 
   it('reads the unaccepted invitations on the game with NO deadline filter, so an expired held one is sent', async () => {
@@ -155,6 +157,27 @@ describe('sendHeldGameInvites', () => {
     expect(sendInviteNotificationMock).toHaveBeenCalledWith(
       expect.objectContaining({ invitedByName: 'Jørgen' }),
     );
+  });
+
+  it("mails one address once, from the organiser's row, when two held rows share it", async () => {
+    // An admin and the organiser can each hold a row for the same address on
+    // one draft. Both rows mailed would give two mails with two tokens.
+    const result = await run([
+      game(),
+      {
+        data: [
+          invitation('admin-row', 'Ny@Example.com', ADMIN),
+          invitation('organiser-row', 'ny@example.com', ORGANISER),
+        ],
+        error: null,
+      },
+      INVITERS,
+      EXTENDED,
+    ]);
+
+    expect(result).toEqual({ sent: 1, failed: 0 });
+    expect(mailedTokens()).toEqual(['token-organiser-row']);
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(1);
   });
 
   it('skips an address the caller mails itself, whatever its case', async () => {
@@ -214,6 +237,14 @@ describe('sendHeldGameInvites', () => {
   it.each([
     ['the game read', [{ data: null, error: { message: 'boom' } }]],
     ['the invitations read', [game(), { data: null, error: { message: 'boom' } }]],
+    [
+      'the inviters read',
+      [
+        game(),
+        { data: [invitation('a', 'a@example.com')], error: null },
+        { data: null, error: { message: 'boom' } },
+      ],
+    ],
   ])('an error in %s throws instead of sending nothing (#1445)', async (_label, queue) => {
     await expect(run(queue as QueryResult[])).rejects.toMatchObject({ message: 'boom' });
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
