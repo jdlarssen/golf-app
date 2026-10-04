@@ -148,6 +148,10 @@
         "titleKept": "Submit the cards you kept",
         "detailKept": "You kept cards in {gameName} that aren't submitted yet. Submit them so the organizer can finish the round."
       },
+      "missingScoreReminder": {
+        "title": "{extra, plural, =0 {You have no score on hole {hole}} one {You have no score on hole {hole} and one more} other {You have no score on hole {hole} and # more}}",
+        "detail": "A reminder from the organiser of {gameName}."
+      },
       "paymentReminder": {
         "title": "Pay the entry fee",
         "detail": "You owe {amount} for {gameName}"
@@ -243,6 +247,7 @@
       "approve": "Accept",
       "reject": "Decline",
       "deliver": "Deliver",
+      "enterScore": "Enter score",
       "fixCard": "Fix the card",
       "reply": "Reply",
       "inviteNew": "Invite someone",
@@ -270,6 +275,7 @@
     "readTitles": {
       "deliverReminder": "Reminder about your scorecard",
       "deliverReminderKept": "Reminder about the cards you kept",
+      "missingScoreReminder": "Reminder about a missing score",
       "scorecardRejected": "Your scorecard was sent back",
       "friendRequest": "{actorName} sent you a friend request",
       "teamInvite": "{invitedByName} invited you to {teamName}",
@@ -3717,7 +3723,9 @@
         "guest_roster_insert_failed": "The guest wasn't added to the game. Try again.",
         "game_full": "The game is full. Remove someone to add more.",
         "cup_finished": "The cup is finished. The match can't be started or reopened.",
-        "invites_failed": "The game is published, but not all the email invitations went out. Send them again here."
+        "invites_failed": "The game is published, but not all the email invitations went out. Send them again here.",
+        "hole_reminder_stale": "What was missing has been entered in the meantime, so there was no one to remind.",
+        "hole_reminder_not_active": "The round is no longer in progress, so the reminder wasn't sent."
       },
       "detail": {
         "brassRibbon": "Game · log",
@@ -3774,7 +3782,8 @@
         "team_updated": "✓ Player's team updated.",
         "signups_closed": "✓ Signups closed. New requests will be declined.",
         "signups_reopened": "✓ Signups reopened.",
-        "guest_added": "The guest has been added to the game."
+        "guest_added": "The guest has been added to the game.",
+        "hole_reminded": "✓ Reminder sent."
       },
       "sections": {
         "overview": "Overview",
@@ -4012,7 +4021,8 @@
           "withdrawn": "Withdrawn"
         },
         "sendingBusy": "Sending …",
-        "remindRowButton": "Remind"
+        "remindRowButton": "Remind",
+        "remindHoleConfirm": "Send {names} a reminder about {holeCount, plural, one {hole} other {holes}} {holes}?"
       },
       "signups": {
         "topBarKicker": "Signups",
@@ -6014,6 +6024,17 @@
       "submitButtonKept": "Submit the cards",
       "submitButtonTextKept": "Submit the cards: {url}",
       "footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
+    },
+    "missingScoreReminder": {
+      "subject": "You have no score on {holeCount, plural, one {hole} other {holes}} {holes} in {gameName}",
+      "heading": "You have no score on {holeCount, plural, one {hole} other {holes}} {holes}",
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "body": "The organiser can see you have scored later holes in <strong>{gameName}</strong>, but not {holeCount, plural, one {hole} other {holes}} {holes}. Enter the score so your card is right when you submit it.",
+      "bodyText": "The organiser can see you have scored later holes in {gameName}, but not {holeCount, plural, one {hole} other {holes}} {holes}. Enter the score so your card is right when you submit it.",
+      "button": "Open hole {hole}",
+      "buttonText": "Open hole {hole}: {url}",
+      "footer": "You're receiving this because the organiser sent you a reminder. Log in at <link>tornygolf.no</link> to enter the score."
     },
     "paymentReminder": {
       "subject": "Entry fee — {gameName}",

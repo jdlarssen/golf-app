@@ -148,6 +148,10 @@
         "titleKept": "Lever kortene du har ført",
         "detailKept": "Du har ført kort i {gameName} som ikke er levert. Lever dem, så kan arrangøren avslutte runden."
       },
+      "missingScoreReminder": {
+        "title": "{extra, plural, =0 {Du mangler slag på hull {hole}} one {Du mangler slag på hull {hole} og ett hull til} other {Du mangler slag på hull {hole} og # hull til}}",
+        "detail": "Påminnelse fra arrangøren av {gameName}."
+      },
       "paymentReminder": {
         "title": "Betal startkontingenten",
         "detail": "Du mangler {amount} i {gameName}"
@@ -243,6 +247,7 @@
       "approve": "Godta",
       "reject": "Avslå",
       "deliver": "Lever",
+      "enterScore": "Før slaget",
       "fixCard": "Rett kortet",
       "reply": "Svar",
       "inviteNew": "Inviter ny",
@@ -270,6 +275,7 @@
     "readTitles": {
       "deliverReminder": "Påminnelse om scorekortet",
       "deliverReminderKept": "Påminnelse om kortene du har ført",
+      "missingScoreReminder": "Påminnelse om hull uten slag",
       "scorecardRejected": "Scorekortet ble sendt tilbake",
       "friendRequest": "{actorName} sendte deg en venneforespørsel",
       "teamInvite": "{invitedByName} inviterte deg til {teamName}",
@@ -3717,7 +3723,9 @@
         "guest_roster_insert_failed": "Gjesten ble ikke lagt til i spillet. Prøv igjen.",
         "game_full": "Spillet er fullt. Fjern noen for å legge til flere.",
         "cup_finished": "Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes.",
-        "invites_failed": "Spillet er publisert, men ikke alle e-postinvitasjonene gikk ut. Send dem på nytt her."
+        "invites_failed": "Spillet er publisert, men ikke alle e-postinvitasjonene gikk ut. Send dem på nytt her.",
+        "hole_reminder_stale": "Det som manglet, er ført i mellomtiden, så det var ingen å minne på.",
+        "hole_reminder_not_active": "Runden er ikke i gang lenger, så påminnelsen ble ikke sendt."
       },
       "detail": {
         "brassRibbon": "Spill · protokoll",
@@ -3774,7 +3782,8 @@
         "team_updated": "✓ Spillerens lag er oppdatert.",
         "signups_closed": "✓ Påmeldingen er stengt. Nye søknader avvises.",
         "signups_reopened": "✓ Påmeldingen er gjenåpnet.",
-        "guest_added": "Gjesten er lagt til i spillet."
+        "guest_added": "Gjesten er lagt til i spillet.",
+        "hole_reminded": "✓ Påminnelsen er sendt."
       },
       "sections": {
         "overview": "Oversikt",
@@ -4012,7 +4021,8 @@
           "withdrawn": "Trukket"
         },
         "sendingBusy": "Sender …",
-        "remindRowButton": "Påminn"
+        "remindRowButton": "Påminn",
+        "remindHoleConfirm": "Sende påminnelse til {names} om hull {holes}?"
       },
       "signups": {
         "topBarKicker": "Påmeldinger",
@@ -6014,6 +6024,17 @@
       "submitButtonKept": "Lever kortene",
       "submitButtonTextKept": "Lever kortene: {url}",
       "footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."
+    },
+    "missingScoreReminder": {
+      "subject": "Du mangler slag på hull {holes} i {gameName}",
+      "heading": "Du mangler slag på hull {holes}",
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "body": "Arrangøren ser at du har ført senere hull i <strong>{gameName}</strong>, men ikke hull {holes}. {holeCount, plural, one {Før slaget nå} other {Før slagene nå}}, så stemmer kortet når du leverer.",
+      "bodyText": "Arrangøren ser at du har ført senere hull i {gameName}, men ikke hull {holes}. {holeCount, plural, one {Før slaget nå} other {Før slagene nå}}, så stemmer kortet når du leverer.",
+      "button": "Åpne hull {hole}",
+      "buttonText": "Åpne hull {hole}: {url}",
+      "footer": "Du får denne meldingen fordi arrangøren sendte deg en påminnelse. Logg inn på <link>tornygolf.no</link> for å føre slag."
     },
     "paymentReminder": {
       "subject": "Startkontingent — {gameName}",

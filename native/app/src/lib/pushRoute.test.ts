@@ -30,6 +30,22 @@ describe('pushTarget', () => {
     expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
   });
 
+  // #2268: påminnelsen om et hull uten slag peker på hullet.
+  it.each([
+    [`/games/${GAME}/holes/10`, 10],
+    [`/en/games/${GAME}/holes/1`, 1],
+    [`/games/${GAME}/holes/18?from=push`, 18],
+  ])('%s åpner hull %d', (url, holeNumber) => {
+    expect(pushTarget(url)).toEqual({ name: 'Hole', params: { gameId: GAME, holeNumber } });
+  });
+
+  it.each([[`/games/${GAME}/holes/0`], [`/games/${GAME}/holes/19`], [`/games/${GAME}/holes/x`]])(
+    '%s er ikke et hull og åpner spillets side',
+    (url) => {
+      expect(pushTarget(url)).toEqual({ name: 'GameHome', params: { gameId: GAME } });
+    },
+  );
+
   // `/games/%E0%A4%A` er en ødelagt `%`-sekvens: `decodeURIComponent` kaster.
   it.each([['/'], [`/admin/games/${GAME}`], ['/profile/venner'], ['/games/'], ['/games/%E0%A4%A'], [null]])(
     '%p åpner Hjem',

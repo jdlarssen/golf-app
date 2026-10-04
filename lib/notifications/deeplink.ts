@@ -83,6 +83,11 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       const p = n.payload as NotificationPayload<'deliver_reminder'>;
       return `/games/${p.game_id}/submit`;
     }
+    case 'missing_score_reminder': {
+      // #2268: straight to the first hole without a score.
+      const p = n.payload as NotificationPayload<'missing_score_reminder'>;
+      return `/games/${p.game_id}/holes/${p.holes[0]}`;
+    }
     case 'cup_finished': {
       // #1499: resultatet bor på resultatsiden (#1468) — cup-siden viser
       // kampene uten fasit, så «resultatet er klart»-varselet må lande der

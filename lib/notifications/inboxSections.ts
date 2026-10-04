@@ -45,6 +45,7 @@ export type ActionKey =
   | 'review'
   | 'decide'
   | 'deliver'
+  | 'enterScore'
   | 'fixCard'
   | 'reply'
   | 'inviteNew'
@@ -100,6 +101,8 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
     }
     case 'deliver_reminder':
       return 'deliver';
+    case 'missing_score_reminder':
+      return 'enterScore';
     case 'scorecard_rejected':
     case 'scorecard_reopened':
       return 'fixCard';
@@ -446,6 +449,12 @@ export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): s
         }
         break;
       }
+      // #2268: a delivered card has every hole, so the nudge is done.
+      case 'missing_score_reminder': {
+        const p = row.payload as NotificationPayload<'missing_score_reminder'>;
+        if (inputs.own.get(p.game_id)?.submitted_at != null) settled.push(row.id);
+        break;
+      }
       default:
         break;
     }
@@ -547,6 +556,8 @@ function readTitle(row: InboxRow, t: NotificationTranslator): string {
       const p = row.payload as NotificationPayload<'deliver_reminder'>;
       return t(p.others_count ? 'readTitles.deliverReminderKept' : 'readTitles.deliverReminder');
     }
+    case 'missing_score_reminder':
+      return t('readTitles.missingScoreReminder');
     case 'scorecard_rejected':
       return t('readTitles.scorecardRejected');
     case 'friend_request':

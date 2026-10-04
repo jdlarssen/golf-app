@@ -4,7 +4,9 @@
 // `notificationDestination` i lib/notifications/deeplink.ts): `/games/{id}`,
 // `/games/{id}/approve`, `/games/{id}/leaderboard` og andre. Alt som gjelder et
 // spill åpner spillets side (`GameHome`). Resten åpner Hjem, også
-// arrangørsidene under `/admin/…`, som appen ikke har.
+// arrangørsidene under `/admin/…`, som appen ikke har. Unntaket er
+// `/games/{id}/holes/{n}` (#2268, påminnelsen om et hull uten slag): den åpner
+// hullet (`Hole`).
 //
 // **Hvor `url` ligger.** For et fjernvarsel på iOS legger expo-notifications
 // bare `userInfo["body"]` i `content.data` (Expos egen push-konvensjon).
@@ -14,7 +16,10 @@
 //
 // Ren og I/O-fri (Type A).
 
-export type PushTarget = { name: 'GameHome'; params: { gameId: string } } | { name: 'Home' };
+export type PushTarget =
+  | { name: 'GameHome'; params: { gameId: string } }
+  | { name: 'Hole'; params: { gameId: string; holeNumber: number } }
+  | { name: 'Home' };
 
 /** Den delen av et varsel funksjonen leser, løst typet: payloaden kan være hva som helst. */
 export type PushRequestLike = {
@@ -23,6 +28,7 @@ export type PushRequestLike = {
 };
 
 const GAME_PATH = /^\/(?:[a-z]{2}\/)?games\/([^/?#]+)/;
+const HOLE_SUFFIX = /^\/holes\/(\d{1,2})(?:[/?#]|$)/;
 
 /** Stien et varsel peker på, eller `null` når det ikke har noen. */
 export function pushUrl(request: PushRequestLike | null | undefined): string | null {
@@ -46,7 +52,14 @@ export function pushTarget(url: string | null): PushTarget {
   const match = url ? GAME_PATH.exec(url) : null;
   if (match) {
     const gameId = decodedOrNull(match[1]);
-    if (gameId) return { name: 'GameHome', params: { gameId } };
+    if (gameId) {
+      const hole = HOLE_SUFFIX.exec(url!.slice(match[0].length));
+      const holeNumber = hole ? Number(hole[1]) : NaN;
+      if (holeNumber >= 1 && holeNumber <= 18) {
+        return { name: 'Hole', params: { gameId, holeNumber } };
+      }
+      return { name: 'GameHome', params: { gameId } };
+    }
   }
   return { name: 'Home' };
 }

@@ -167,7 +167,11 @@ const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 function openPushTarget(target: PushTarget) {
   if (target.name === 'GameHome') navigationRef.navigate('GameHome', target.params);
-  else navigationRef.navigate('Home');
+  else if (target.name === 'Hole') {
+    // #2268: the game's page under the hole, so «back» lands on the game.
+    navigationRef.navigate('GameHome', { gameId: target.params.gameId });
+    navigationRef.navigate('Hole', target.params);
+  } else navigationRef.navigate('Home');
 }
 
 export function RootNavigator() {

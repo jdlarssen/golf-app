@@ -28,6 +28,8 @@ export const NOTIFICATION_EMOJI: Record<NotificationKind, string> = {
   registration_expired: '⏱️',
   team_member_withdrew: '👋',
   deliver_reminder: '📤',
+  // #2268: a hole without a score. ✏️, not 📤: nothing is delivered yet.
+  missing_score_reminder: '✏️',
   cup_finished: '🏁',
   cup_started: '🏌️',
   cup_signup: '📝',
