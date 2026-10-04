@@ -43,13 +43,15 @@ async function importCatalog(locale: AppLocale): Promise<AnyRecord> {
  * (`i18n/request.ts`, mail, `app/global-not-found.tsx`). Other locales are
  * loaded by dynamic import, so a new `messages/<code>.json` is picked up with
  * no edit here (the N-locale rule in `i18n/routing.ts`). A locale whose catalog
- * file is missing gets the default catalog, never a raw key.
+ * file is missing gets the default catalog, never a raw key, and the failed
+ * import is logged so it doesn't pass unnoticed.
  */
 export async function loadMessages(locale: AppLocale): Promise<Catalog> {
   if (locale === routing.defaultLocale) return defaultCatalog;
   try {
     return mergeMessages(defaultCatalog, await importCatalog(locale)) as Catalog;
-  } catch {
+  } catch (err) {
+    console.error('[loadMessages]', locale, err);
     return defaultCatalog;
   }
 }
