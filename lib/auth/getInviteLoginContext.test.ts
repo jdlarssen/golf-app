@@ -47,6 +47,8 @@ describe('getInviteLoginContext — roster lock (#2212)', () => {
     ['scheduled', true],
     ['active', false],
     ['finished', false],
+    // #2445: a draft is hidden, so the card reads as an unknown token.
+    ['draft', false],
   ])('%s round → card shown: %s', async (status, shown) => {
     adminMock = buildSupabaseMock([inviteRow(status)]);
     const { getInviteLoginContext } = await import('./getInviteLoginContext');

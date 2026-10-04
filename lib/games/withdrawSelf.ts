@@ -94,6 +94,8 @@ type GameSnapshot = {
    * kampen stille: siden blir ufullstendig og auto-start blokkerer for alltid.
    */
   tournament_id: string | null;
+  /** #2445: a draft is the organiser's; nobody else can withdraw from it. */
+  created_by: string | null;
 };
 
 type PlayerSnapshot = {
@@ -149,7 +151,7 @@ export async function withdrawSelf(
   const [gameRes, playerRes] = await Promise.all([
     admin
       .from('games')
-      .select('id, name, short_id, status, game_mode, tournament_id')
+      .select('id, name, short_id, status, game_mode, tournament_id, created_by')
       .eq('id', gameId)
       .maybeSingle<GameSnapshot>(),
     admin
@@ -164,6 +166,13 @@ export async function withdrawSelf(
     return { ok: false, error: 'game_not_found' };
   }
   const game = gameRes.data;
+
+  // #2445: someone else's draft answers like a game that does not exist, with
+  // no write and no notification (the RLS rule: a draft is its organiser's).
+  // The organiser keeps the flow below on their own draft.
+  if (game.status === 'draft' && game.created_by !== userId) {
+    return { ok: false, error: 'game_not_found' };
+  }
 
   // #1814: en cup-kamp som ennå ikke har startet trekker man seg fra via
   // `/cup/[id]/trekk`, aldri her. Pre-start-grenen under SLETTER

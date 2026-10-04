@@ -141,6 +141,9 @@ export async function afterLogin(
             isTeamScoped,
             shortId: gameRow?.short_id ?? null,
             isLocked: gameRow != null && isRosterLocked(gameRow.status),
+            // #2445: a draft is hidden from the invitee, so it is never the
+            // landing. The roster spot and the consume are unchanged.
+            isDraft: gameRow?.status === 'draft',
           };
         }),
       )
@@ -318,16 +321,23 @@ export async function afterLogin(
       //   started or finished round: → /complete-profile with a notice that
       //   the round had already started.
       // - Anything else (mixed or multiple): fall back to `next` (ambiguous).
+      // - #2445: a draft is never joinable or team-scoped here. The invitee
+      //   keeps the roster spot, but the draft 404s for them, so they fall
+      //   back to `next` (the app lands on Home).
       // The website skips all of these when an explicit `next` is set.
       const soloInvites = resolvedGameScoped.filter((r) => !r.isTeamScoped);
-      const joinable = soloInvites.filter((r) =>
-        r.isLocked ? onRosterGameIds.has(r.inv.game_id!) : landedInvIds.has(r.inv.id),
+      const joinable = soloInvites.filter(
+        (r) =>
+          !r.isDraft &&
+          (r.isLocked
+            ? onRosterGameIds.has(r.inv.game_id!)
+            : landedInvIds.has(r.inv.id)),
       );
       const lockedOut = soloInvites.filter(
         (r) => r.isLocked && !onRosterGameIds.has(r.inv.game_id!),
       );
       const teamScopedInvites = resolvedGameScoped.filter(
-        (r) => r.isTeamScoped && r.shortId != null,
+        (r) => r.isTeamScoped && r.shortId != null && !r.isDraft,
       );
       if (joinable.length === 1 && teamScopedInvites.length === 0) {
         landing = `/games/${joinable[0].inv.game_id}`;
