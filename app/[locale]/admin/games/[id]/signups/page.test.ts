@@ -67,6 +67,6 @@ describe('PåmeldingerPage', () => {
         params: Promise.resolve({ id: 'game-1' }),
         searchParams: Promise.resolve({}),
       }),
-    ).rejects.toBeTruthy();
+    ).rejects.toBe(BOOM);
   });
 });
