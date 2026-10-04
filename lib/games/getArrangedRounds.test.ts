@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { PAGE_SIZE } from '@/lib/supabase/selectAllRows';
 import type { ArrangedGame, ArrangedRosterRow } from './arrangedGames';
+import { arrangedGame, arrangedRosterRow } from './__fixtures__/arrangedGame';
 
 const readCreatorStartBlock = vi.fn();
 vi.mock('./readCreatorStartBlock', () => ({
@@ -11,27 +12,18 @@ vi.mock('./readCreatorStartBlock', () => ({
 
 const { getArrangedRounds } = await import('./getArrangedRounds');
 
-function game(id: string, status: ArrangedGame['status'], tee: string | null = null): ArrangedGame {
-  return {
-    id,
-    name: id,
-    status,
-    created_at: '2026-09-01T10:00:00Z',
-    started_at: null,
-    ended_at: null,
-    scheduled_tee_off_at: tee,
-    require_peer_approval: false,
-    registration_mode: 'invite_only',
-    signups_closed_at: null,
-    courses: null,
-  };
-}
+const game = (id: string, status: ArrangedGame['status'], tee: string | null = null) =>
+  arrangedGame({ id, status, scheduled_tee_off_at: tee });
 
 /**
  * A fake PostgREST client: `games` answers in one go, `game_players` serves
  * `.range()` slices capped at the server's max rows, like the real one.
  */
-function fakeClient(games: ArrangedGame[], roster: ArrangedRosterRow[]) {
+function fakeClient(
+  games: ArrangedGame[],
+  roster: ArrangedRosterRow[],
+  rosterError: { message: string } | null = null,
+) {
   const calls = { gamesFilters: [] as unknown[][], rosterIn: [] as unknown[], ranges: [] as number[][] };
   const gamesQuery = {
     select: () => gamesQuery,
@@ -50,7 +42,10 @@ function fakeClient(games: ArrangedGame[], roster: ArrangedRosterRow[]) {
         calls.ranges.push([from, to]);
         const rows = roster.filter((r) => ids.includes(r.game_id));
         const data = rows.slice(from, Math.min(to + 1, from + PAGE_SIZE));
-        return { returns: () => Promise.resolve({ data, error: null }) };
+        return {
+          returns: () =>
+            Promise.resolve(rosterError ? { data: null, error: rosterError } : { data, error: null }),
+        };
       },
     };
     return q;
@@ -61,14 +56,8 @@ function fakeClient(games: ArrangedGame[], roster: ArrangedRosterRow[]) {
   return { client, calls };
 }
 
-function rosterOf(gameId: string, n: number): ArrangedRosterRow[] {
-  return Array.from({ length: n }, () => ({
-    game_id: gameId,
-    submitted_at: null,
-    approved_at: null,
-    withdrawn_at: null,
-  }));
-}
+const rosterOf = (gameId: string, n: number) =>
+  Array.from({ length: n }, () => arrangedRosterRow(gameId));
 
 beforeEach(() => {
   readCreatorStartBlock.mockReset();
@@ -137,6 +126,12 @@ describe('getArrangedRounds', () => {
     expect(read.ok && read.games).toHaveLength(2);
     expect(calls.rosterIn).toEqual([]);
     expect(readCreatorStartBlock).not.toHaveBeenCalled();
+  });
+
+  it('gives { ok: false } when the roster read fails, not zero deliveries (#2490)', async () => {
+    const { client } = fakeClient([game('a', 'active')], [], { message: 'roster down' });
+    const read = await getArrangedRounds(client, 'u1');
+    expect(read.ok).toBe(false);
   });
 
   it('gives { ok: false } when the games read fails, not an empty list (#2490)', async () => {

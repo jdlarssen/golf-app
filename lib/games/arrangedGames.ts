@@ -1,6 +1,6 @@
 import type { Database } from '@/lib/database.types';
 import { deliveryCounts, type DeliveryCounts } from './organizerDesk';
-import { isPubliclyViewable } from './publicSignupVisibility';
+import { isOpenForSignups } from './publicSignupVisibility';
 import type { StartBlock } from './startBlockReason';
 import { STRUCTURAL_BLOCK_REASONS, type StructuralBlockReason } from './startBlockReasons';
 import type { GameStatus } from './status';
@@ -34,6 +34,8 @@ export type ArrangedGame = {
   require_peer_approval: boolean;
   registration_mode: Database['public']['Enums']['registration_mode'];
   signups_closed_at: string | null;
+  /** The club the round belongs to; its members sign up without an invitation. */
+  group_id: string | null;
   courses: { name: string } | null;
 };
 
@@ -146,7 +148,7 @@ export function scheduledRowNote(
 }
 
 function signupState(game: ArrangedGame): SignupState {
-  if (isPubliclyViewable(game)) return 'open';
+  if (isOpenForSignups(game)) return 'open';
   if (game.signups_closed_at != null) return 'closed';
   return null;
 }

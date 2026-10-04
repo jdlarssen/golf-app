@@ -80,7 +80,7 @@ const LEDGER_SELECT =
 /** The default view's rows: the grouping's columns plus the format, for `ModeChip`. */
 type DefaultGameRow = ArrangedGame & { game_mode: GameMode; mode_config: GameModeConfig };
 
-const DEFAULT_SELECT = `${LEDGER_SELECT}, require_peer_approval, registration_mode, signups_closed_at`;
+const DEFAULT_SELECT = `${LEDGER_SELECT}, require_peer_approval, registration_mode, signups_closed_at, group_id`;
 
 const getAdminGamesContext = cache(async () => {
   const supabase = await getServerClient();
@@ -204,6 +204,21 @@ const fetchLedgerGames = cache(async (view: LedgerView) => {
 });
 
 /**
+ * How many games a ledger view holds, counted rather than the 40 it lists, so
+ * the subtitle says the same number as the link that opened it («Ferdige runder
+ * · 89» → «89 signerte runder», #2269 O6).
+ */
+const countLedgerGames = cache(async (view: LedgerView) => {
+  const { supabase } = await getAdminGamesContext();
+  const { count, error } = await supabase
+    .from('games')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', view);
+  if (error) throw error;
+  return count ?? 0;
+});
+
+/**
  * The default view: the 40 newest games in progress or scheduled, without cup
  * matches and league flights (#2489, they belong to the cup's and the league's
  * page). Drafts are counted on their own (`DefaultRounds`) and never listed
@@ -227,8 +242,7 @@ const fetchDefaultGames = cache(async () => {
 
 async function Subtitle({ view }: { view: GamesView }) {
   const t = await getTranslations('admin.games');
-  const n =
-    view === 'default' ? (await fetchDefaultGames()).length : (await fetchLedgerGames(view)).length;
+  const n = view === 'default' ? (await fetchDefaultGames()).length : await countLedgerGames(view);
   const subtitle = {
     default: t('subtitleOngoing', { n }),
     draft: t('subtitleDrafts', { n }),

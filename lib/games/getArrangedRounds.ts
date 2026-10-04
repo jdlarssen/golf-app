@@ -14,7 +14,7 @@ import type { StartBlock } from './startBlockReason';
 
 /** The `games` columns «Rundene dine» reads (`ArrangedGame`). */
 export const ARRANGED_GAME_SELECT =
-  'id, name, status, created_at, started_at, ended_at, scheduled_tee_off_at, require_peer_approval, registration_mode, signups_closed_at, courses(name)';
+  'id, name, status, created_at, started_at, ended_at, scheduled_tee_off_at, require_peer_approval, registration_mode, signups_closed_at, group_id, courses(name)';
 
 /** The `game_players` columns the counts read (`ArrangedRosterRow`). */
 export const ARRANGED_ROSTER_SELECT = 'game_id, submitted_at, approved_at, withdrawn_at';

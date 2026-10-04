@@ -57,6 +57,19 @@ export function isPubliclyViewable(game: PublicSignupVisibilityInput): boolean {
 }
 
 /**
+ * Can someone who was not invited sign up from a list right now (#2269)? The
+ * split `getDiscoverableGames` makes between its lists: a club round is open
+ * to the club's members on the signup window alone, since membership stands
+ * in for the invitation on `invite_only`; any other round needs
+ * `isPubliclyViewable`. «Rundene dine» says «påmeldingen er åpen» by it.
+ */
+export function isOpenForSignups(
+  game: PublicSignupVisibilityInput & { group_id: string | null },
+): boolean {
+  return game.group_id != null ? isSignupWindowOpen(game) : isPubliclyViewable(game);
+}
+
+/**
  * Mapper `?src=`-query-parameteren til `game_players.signup_source`-verdien.
  * Allowlist-basert: ukjente verdier (og gjentatte params, som Next leverer
  * som array) droppes stille til null — attribusjon er best-effort og skal

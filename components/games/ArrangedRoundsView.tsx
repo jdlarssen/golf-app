@@ -268,6 +268,7 @@ function UpcomingRow({
       data-testid="arranged-next-row"
       data-note={note ? (note.kind === 'blocked' ? note.reason : note.kind) : undefined}
       data-signed-up={round.signedUp}
+      data-signups={round.signups ?? undefined}
       className="flex min-h-[68px] items-center gap-3 px-3.5 py-2.5 text-text"
     >
       <span
