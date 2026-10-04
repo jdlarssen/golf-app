@@ -16,8 +16,10 @@
 export type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 /**
- * Norwegian display labels for each game status, suitable for UI badges
- * and status chips throughout the app.
+ * Norwegian display labels for each game status — the native app's mirror of
+ * the i18n `gameStatus` namespace (the app has no i18n). The web reads
+ * `gameStatus` through next-intl; `status.i18n.test.ts` locks this constant to
+ * `messages/no.json` so the two never drift.
  */
 export const STATUS_LABELS: Record<GameStatus, string> = {
   draft: 'Utkast',

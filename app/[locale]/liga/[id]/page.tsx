@@ -82,8 +82,9 @@ export default async function LigaPublicPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const [t, locale] = await Promise.all([
+  const [t, tStatus, locale] = await Promise.all([
     getTranslations('liga.player'),
+    getTranslations('gameStatus'),
     getLocale() as Promise<AppLocale>,
   ]);
 
@@ -179,9 +180,9 @@ export default async function LigaPublicPage({
           <h1 className="font-serif text-2xl text-text leading-tight tracking-[-0.015em]">
             {league.name}
           </h1>
-          {/* Status chip — player-facing 'Aktiv' (not the admin 'Pågående') */}
+          {/* Status chip — the same word as everywhere, from gameStatus (#2491) */}
           <span
-            className="inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
+            className="inline-block shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
             style={{
               letterSpacing: '0.14em',
               ...(league.status === 'active'
@@ -191,8 +192,8 @@ export default async function LigaPublicPage({
                   : { background: 'var(--score-over1-bg)', color: 'var(--score-over1-fg)' }),
             }}
           >
-            {t.has(`statusLabel.${league.status}` as Parameters<typeof t>[0])
-              ? t(`statusLabel.${league.status}` as Parameters<typeof t>[0])
+            {tStatus.has(league.status as Parameters<typeof tStatus>[0])
+              ? tStatus(league.status as Parameters<typeof tStatus>[0])
               : league.status}
           </span>
         </div>

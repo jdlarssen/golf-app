@@ -19,7 +19,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
 import {
   isStablefordFamily,
@@ -83,13 +83,6 @@ type SearchParams = Promise<{
   mode?: string | string[];
   count?: string | string[];
 }>;
-
-const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
-  draft: 'utkast',
-  scheduled: 'påmelding',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 type GameRow = {
   id: string;
@@ -319,8 +312,8 @@ export default async function GameDetailPage({
 
       {/* Title block */}
       <div className="px-1">
-        <div className="mb-1.5 flex items-center gap-2">
-          <StatusChip tone={STATUS_TO_TONE[game.status]} />
+        <div className="mb-1.5 flex flex-wrap items-center gap-2 gap-y-1">
+          <StatusChip status={game.status} />
           <ModeChip mode={game.game_mode} modeConfig={game.mode_config} />
           <Suspense fallback={<Skeleton className="h-3 w-20" />}>
             <SakNumber createdAt={game.created_at} />

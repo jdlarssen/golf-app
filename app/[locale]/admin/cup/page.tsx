@@ -18,19 +18,13 @@ import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SectionError } from '@/components/ui/SectionError';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 
 type SearchParams = Promise<{
   error?: string | string[];
   status?: string | string[];
   name?: string | string[];
 }>;
-
-const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
-  draft: 'utkast',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 const CUP_SELECT =
   'id, name, status, team_1_name, team_2_name, points_to_win, created_at, created_by, group_id, winner_team';
@@ -195,10 +189,7 @@ export default async function CupListPage({
                         </p>
                       )}
                     </div>
-                    <StatusChip
-                      tone={STATUS_TO_CHIP[cup.status]}
-                      label={t(`status.${cup.status}`)}
-                    />
+                    <StatusChip status={cup.status} />
                   </div>
                 </Card>
               </SmartLink>

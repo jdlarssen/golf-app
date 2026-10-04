@@ -22,7 +22,8 @@ export type ClubCupRow = {
  * klubb-eier/-admin og kun når klubben ikke er frossen; «Styr» fører til den
  * dedikerte klubb-flaten (ingen admin-chrome).
  *
- * Cup status labels reuse cup.status.* (byte-identical with the old local map).
+ * Cup status labels come from gameStatus.* — the same words as every other
+ * game, cup and league status chip (#2491).
  *
  * #1491: for a cup still in `draft` the row also carries the signup affordance —
  * membership IS the invitation, so no member should have to be handed the share
@@ -44,7 +45,7 @@ export function ClubCupsSection({
   canManage: boolean;
 }) {
   const t = useTranslations('klubb.cups');
-  const tCup = useTranslations('cup.status');
+  const tCup = useTranslations('gameStatus');
 
   // #1135: samme som ClubLeaguesSection — skjul den døde overskriften for
   // vanlige medlemmer i en klubb uten cuper. Admin (ikke frossen) beholder

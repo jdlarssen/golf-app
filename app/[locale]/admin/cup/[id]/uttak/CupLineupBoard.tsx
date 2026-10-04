@@ -34,8 +34,8 @@ import { formatPoints } from '@/lib/cup/formatPoints';
 const INITIAL: CupLineupActionError = { error: '' };
 
 /**
- * Status-merkelapp. Bevisst ikke `StatusChip` fra components/ui: den er låst
- * til cup-/spill-statusene (utkast/aktiv/signert) og skriver sin egen tekst.
+ * Status-merkelapp. Bevisst ikke `StatusChip` fra components/ui: den viser
+ * bare en spill-, cup- eller ligastatus fra `gameStatus`.
  */
 function Pill({ on, children }: { on: boolean; children: React.ReactNode }) {
   return (

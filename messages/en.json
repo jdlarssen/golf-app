@@ -3523,7 +3523,6 @@
       "headingProtocol": "Result log",
       "headingOngoing": "Ongoing and upcoming",
       "createLabel": "Create game",
-      "draftWord": "Draft",
       "colGames": "Game",
       "colStatus": "Status",
       "subtitleFinished": "{n, plural, one {# signed round} other {# signed rounds}}",
@@ -4496,12 +4495,7 @@
       "heading": "Club leagues",
       "empty": "No leagues in this club yet.",
       "newButton": "New league",
-      "manageLink": "Manage",
-      "status": {
-        "draft": "Draft",
-        "active": "Active",
-        "finished": "Finished"
-      }
+      "manageLink": "Manage"
     },
     "cups": {
       "heading": "Club cups",
@@ -4571,11 +4565,6 @@
     }
   },
   "liga": {
-    "status": {
-      "draft": "Draft",
-      "active": "In progress",
-      "finished": "Finished"
-    },
     "ledger": {
       "kicker": "Clubhouse",
       "createButton": "+ New league",
@@ -4840,11 +4829,6 @@
       }
     },
     "player": {
-      "statusLabel": {
-        "draft": "Draft",
-        "active": "Active",
-        "finished": "Finished"
-      },
       "kicker": "League",
       "seasonTableHeading": "Season standings",
       "seasonFinishedBanner": "The season is over. Here's how the table finished.",
@@ -5217,11 +5201,6 @@
         "rollback_failed": "Some matches were set up before something went wrong, and they weren't removed again. Contact an administrator to get the session cleaned up.",
         "reveal_undo_failed": "The matches weren't set up, but the session still shows as revealed. Contact an administrator to get it cleaned up."
       }
-    },
-    "status": {
-      "draft": "Draft",
-      "active": "In progress",
-      "finished": "Finished"
     },
     "presets": {
       "klassisk": {

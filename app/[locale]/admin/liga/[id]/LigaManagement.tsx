@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
@@ -40,12 +40,6 @@ import { LigaStatusActions } from './LigaStatusActions';
  * the club routes import it cross-route, mirroring how `/klubber/[id]/liga/ny`
  * imports `CreateLigaForm` from `@/app/admin/liga/new`.
  */
-
-const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
-  draft: 'utkast',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 function preferredName(
   p: { name: string | null; nickname: string | null },
@@ -115,10 +109,11 @@ export async function LigaManagement({
   /** `?status=` from the route — the receipt after a confirmed removal (#2244). */
   statusCode?: string;
 }) {
-  const [snapshot, { courses }, t, locale] = await Promise.all([
+  const [snapshot, { courses }, t, tStatus, locale] = await Promise.all([
     getLigaSnapshot(leagueId),
     getNewGameFormData(),
     getTranslations('liga'),
+    getTranslations('gameStatus'),
     getLocale(),
   ]);
 
@@ -147,8 +142,7 @@ export async function LigaManagement({
   }
 
   const status = league.status as 'draft' | 'active' | 'finished';
-  const chipTone = STATUS_TO_CHIP[status];
-  const statusLabel = t(`status.${status}`);
+  const statusLabel = tStatus(status);
 
   // Mirror the server guard in startLeague: ≥1 round + ≥2 participants
   // (the marker rule needs two players to ever produce a counted result).
@@ -197,7 +191,7 @@ export async function LigaManagement({
       <PageHeader
         title={league.name}
         subtitle={`${formatShortDateLocale(league.season_start, locale as AppLocale)} – ${formatShortDateLocale(league.season_end, locale as AppLocale)}`}
-        action={<StatusChip tone={chipTone} label={statusLabel} />}
+        action={<StatusChip status={status} />}
       />
 
       {receiptBanner(statusCode, t)}

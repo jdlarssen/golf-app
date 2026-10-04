@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
-import { StatusChip } from '@/components/ui/StatusChip';
+import { MiniChip } from '@/components/ui/MiniChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { addCupParticipant, type CupPlanActionError } from '@/lib/cup/planActions';
 import { setCupParticipantRole } from '@/lib/cup/lineupActions';
@@ -216,11 +216,7 @@ export function CupParticipantsList({
                         {t('pendingHelper')}
                       </p>
                     </div>
-                    <StatusChip
-                      tone="påmelding"
-                      label={t('pendingBadge')}
-                      className="shrink-0"
-                    />
+                    <MiniChip tone="waiting">{t('pendingBadge')}</MiniChip>
                   </div>
                 </Card>
               ) : (

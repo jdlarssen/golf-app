@@ -14,7 +14,7 @@ describe('ClubCupsSection (#524)', () => {
     );
     expect(screen.getByText('Klubbmesterskap')).toBeInTheDocument();
     expect(screen.getByText('Høst-cup')).toBeInTheDocument();
-    expect(screen.getByText('Pågående')).toBeInTheDocument();
+    expect(screen.getByText('Pågår')).toBeInTheDocument();
     expect(screen.getByText('Utkast')).toBeInTheDocument();
     const cupLink = screen.getByText('Klubbmesterskap').closest('a');
     expect(cupLink).toHaveAttribute('href', '/cup/c1');

@@ -6,7 +6,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
-import { StatusChip } from '@/components/ui/StatusChip';
+import { MiniChip } from '@/components/ui/MiniChip';
 import {
   CUP_PRESETS,
   buildSessionCountRows,
@@ -268,11 +268,7 @@ function Step1Roster({
                       {t('generate.pendingHelper')}
                     </p>
                   </div>
-                  <StatusChip
-                    tone="påmelding"
-                    label={t('generate.pendingBadge')}
-                    className="shrink-0"
-                  />
+                  <MiniChip tone="waiting">{t('generate.pendingBadge')}</MiniChip>
                 </div>
               </Card>
             );

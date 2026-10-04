@@ -15,7 +15,7 @@ describe('ClubLeaguesSection (#480)', () => {
     expect(screen.getByText('Vårserien')).toBeInTheDocument();
     expect(screen.getByText('Høstserien')).toBeInTheDocument();
     // Status badge uses the human label, not the raw enum value.
-    expect(screen.getByText('Aktiv')).toBeInTheDocument();
+    expect(screen.getByText('Pågår')).toBeInTheDocument();
     expect(screen.getByText('Utkast')).toBeInTheDocument();
     const ligaLink = screen.getByText('Vårserien').closest('a');
     expect(ligaLink).toHaveAttribute('href', '/liga/l1');
