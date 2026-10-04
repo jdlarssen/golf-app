@@ -131,6 +131,9 @@ describe('sendHeldGameInvites', () => {
       adminMock.__fromCalls.some((c) => c.args.some((a) => a === 'expires_at')),
     ).toBe(false);
     expect(mailedTokens()).toEqual(['token-old']);
+    // …with a new deadline in the future, not the one that ran out.
+    const mail = sendInviteNotificationMock.mock.calls[0]![0] as { expiresAt: string };
+    expect(Date.parse(mail.expiresAt)).toBeGreaterThan(Date.now());
   });
 
   it("skips a team captain's invitation, and sends a global admin's on someone else's game", async () => {
