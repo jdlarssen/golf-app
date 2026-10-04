@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 
@@ -18,12 +18,6 @@ import type { AppLocale } from '@/i18n/routing';
 type SearchParams = Promise<{
   status?: string | string[];
 }>;
-
-const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
-  draft: 'utkast',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 export default async function LigaListPage({
   searchParams,
@@ -128,10 +122,7 @@ export default async function LigaListPage({
                           {t('ledger.roundCount', { count: rounds })}
                         </p>
                       </div>
-                      <StatusChip
-                        tone={STATUS_TO_CHIP[league.status]}
-                        label={t(`status.${league.status}`)}
-                      />
+                      <StatusChip status={league.status} />
                     </div>
                   </Card>
                 </SmartLink>

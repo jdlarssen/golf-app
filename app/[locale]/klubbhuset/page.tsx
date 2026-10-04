@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SectionError } from '@/components/ui/SectionError';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { formatTeeOffDateLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import type { GameStatus } from '@/lib/games/status';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -21,13 +21,6 @@ type CreatedGame = {
   status: GameStatus;
   scheduled_tee_off_at: string | null;
   courses: { name: string } | null;
-};
-
-const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
-  draft: 'utkast',
-  scheduled: 'påmelding',
-  active: 'aktiv',
-  finished: 'signert',
 };
 
 /**
@@ -111,7 +104,7 @@ export default async function KlubbhusetPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                      <StatusChip tone={STATUS_TO_TONE[g.status]} />
+                      <StatusChip status={g.status} />
                       <span aria-hidden className="text-muted">
                         →
                       </span>

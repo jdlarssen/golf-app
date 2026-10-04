@@ -22,8 +22,7 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { type GameStatus } from '@/lib/games/status';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { NO_REJECTION_REASON } from '@/lib/games/rejectionReason';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
@@ -85,19 +84,6 @@ type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
 }>;
-
-// Map player-facing game lifecycle onto StatusChip's admin tone palette —
-// each tone's hue happens to fit the player meaning too:
-//  · aktiv (sage)      → Pågår
-//  · påmelding (amber) → Planlagt (waiting for tee-off)
-//  · signert (muted)   → Avsluttet (round closed)
-//  · utkast (brick)    → Utkast (admin only — players never see this state)
-const STATUS_TONES: Record<GameStatus, StatusChipTone> = {
-  draft: 'utkast',
-  scheduled: 'påmelding',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
@@ -166,7 +152,6 @@ export default async function GameHomePage({
   const sp = await searchParams;
   const t = await getTranslations('game.home');
   const tModes = await getTranslations('modes');
-  const tGameStatus = await getTranslations('gameStatus');
   const tScorecard = await getTranslations('scorecard');
   // #1361: cross-namespace read from a server component — same precedent as
   // the Sekretariat page. The strings have one home; a reword hits both.
@@ -1073,10 +1058,7 @@ export default async function GameHomePage({
       <PageHeader title={localizeGameName(game.name, game.courses?.name ?? null, locale)} />
 
       <div className="mb-4">
-        <StatusChip
-          tone={STATUS_TONES[game.status]}
-          label={tGameStatus(game.status)}
-        />
+        <StatusChip status={game.status} />
       </div>
 
       {profileIncomplete && !meIsGuest && !isFinished && (

@@ -9,7 +9,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import type { CupMatchSummary } from '@/lib/cup/computeCupLeaderboard';
@@ -25,12 +25,6 @@ import { CupDoorsSection } from './CupDoorsSection';
 import { CupLineupDoor } from './CupLineupDoor';
 
 export type CupManagementVariant = 'admin' | 'club';
-
-const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
-  draft: 'utkast',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 type CupTournamentForCopy = {
   points_to_win: number | null;
@@ -184,7 +178,11 @@ export async function CupManagement({
   statusCode?: string;
 }) {
   // Oversettelsene først: navne-fallbacken (#1527) er input til snapshot-en.
-  const [t, locale] = await Promise.all([getTranslations('cup'), getLocale()]);
+  const [t, tStatus, locale] = await Promise.all([
+    getTranslations('cup'),
+    getTranslations('gameStatus'),
+    getLocale(),
+  ]);
   const unknownLabel = t('manage.unknownPlayer');
 
   const snapshot = await getCupSnapshot(tournamentId, unknownLabel);
@@ -232,8 +230,7 @@ export async function CupManagement({
   const errorMessage = errorCode ? errorMessageMap[errorCode] : undefined;
   const statusMessage = statusCode ? statusMessageMap[statusCode] : undefined;
 
-  const chipTone = STATUS_TO_CHIP[tournament.status];
-  const statusLabel = t(`status.${tournament.status}`);
+  const statusLabel = tStatus(tournament.status);
 
   const canStart = tournament.status === 'draft' && leaderboard.matches.length >= 2;
   const showStartHint =
@@ -358,7 +355,7 @@ export async function CupManagement({
       <PageHeader
         title={tournament.name}
         subtitle={cupHeaderSubtitle(tournament, t, locale)}
-        action={<StatusChip tone={chipTone} label={statusLabel} />}
+        action={<StatusChip status={tournament.status} />}
       />
 
       {errorMessage && (

@@ -4,7 +4,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SectionError } from '@/components/ui/SectionError';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { DenseTileList, type Tile } from './TilesView';
 import type { GameStatus } from '@/lib/games/status';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
@@ -30,13 +30,6 @@ export type ArrangedGame = {
   name: string;
   courseName: string | null;
   status: GameStatus;
-};
-
-const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
-  draft: 'utkast',
-  scheduled: 'påmelding',
-  active: 'aktiv',
-  finished: 'signert',
 };
 
 /**
@@ -131,7 +124,7 @@ export function ArrangementView({
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                      <StatusChip tone={STATUS_TO_TONE[g.status]} />
+                      <StatusChip status={g.status} />
                       <span aria-hidden className="text-muted">
                         →
                       </span>

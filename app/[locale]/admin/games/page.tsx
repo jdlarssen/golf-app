@@ -13,7 +13,7 @@ import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { PinFlag, Laurel } from '@/components/icons';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
@@ -21,23 +21,17 @@ import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 
-// Status-kolonnen rommer StatusChip. Etter 11px-løftet (#1390) måler den
-// lengste labelen — «Påmelding» — ~96px, mot ~84px på 9,5px. 100px gir chipen
-// plass uten å klippe, og 1fr-kolonnen har fortsatt ~198px på 360px viewport.
-const GAMES_LEDGER_GRID = '1fr 100px 14px';
+// Status-kolonnen rommer StatusChip. Målt på staging, 360px (#2491): engelsk
+// «IN PROGRESS» er lengst med 106,6px; «SCHEDULED» 96,8, «FINISHED» 79,
+// «DRAFT» 59,7. Norsk: «AVSLUTTET» 95, «PLANLAGT» 86,7, «UTKAST» 69,9,
+// «PÅGÅR» 59,7. 111px (107 + 4) gir det lengste merket plass på én linje.
+const GAMES_LEDGER_GRID = '1fr 111px 14px';
 
 type SearchParams = Promise<{
   status?: string | string[];
   name?: string | string[];
   error?: string | string[];
 }>;
-
-const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
-  draft: 'utkast',
-  scheduled: 'påmelding',
-  active: 'aktiv',
-  finished: 'signert',
-};
 
 type GameRow = {
   id: string;
@@ -220,6 +214,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
   const games = await fetchGames(filterFinished);
   const gameIds = games.map((g) => g.id);
   const t = await getTranslations('admin.games');
+  const tStatus = await getTranslations('gameStatus');
   const locale = await getLocale();
   const playerCounts = await countPlayersByGame(gameIds);
 
@@ -272,7 +267,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
             iso ? formatShortOsloDayMonthLocale(iso, locale as AppLocale) : null;
           const dateLine =
             g.status === 'draft'
-              ? t('draftWord')
+              ? tStatus('draft')
               : g.status === 'finished'
                 ? shortDate(g.ended_at)
                 : g.status === 'scheduled'
@@ -318,7 +313,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
                 </div>
               </div>
               <div className="text-right">
-                <StatusChip tone={STATUS_TO_TONE[g.status]} />
+                <StatusChip status={g.status} />
               </div>
               <span aria-hidden className="text-[14px] text-muted">
                 ›

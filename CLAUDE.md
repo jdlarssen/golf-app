@@ -114,7 +114,7 @@ Discoverable kataloger (`ls components/ui/`, `ls lib/`, etc.) er ikke listet her
 - `lib/games/getGameWithPlayers.ts` — `unstable_cache` med tag `game-${id}`; se «Server-actions og caching»
 - `lib/mail/inviteNotification.ts` + `gameFinishedNotification.ts` + `scorecardSubmittedNotification.ts` — tre Resend-helpers, alle best-effort med `Promise.allSettled`
 - `app/[locale]/admin/games/[id]/slett/` + `app/[locale]/admin/spillere/[id]/slett/` + `app/[locale]/profile/slett-konto/` — destruktive flyter har dedikerte konfirmasjons-sider; aldri inline-toggle eller `<details>`-popout
-- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (single source of truth for status-tekster)
+- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (appens norske speil; nettets status-tekster kommer fra i18n `gameStatus`, låst av `status.i18n.test.ts`)
 
 ## Kart — hvor resten bor
 

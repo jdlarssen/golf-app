@@ -31,6 +31,7 @@ export function ClubLeaguesSection({
   canManage: boolean;
 }) {
   const t = useTranslations('klubb.leagues');
+  const tStatus = useTranslations('gameStatus');
 
   // #1135: skjul den døde overskriften for vanlige medlemmer i en klubb uten
   // ligaer. En som verken kan opprette (canCreate) eller se noen liste har
@@ -55,7 +56,7 @@ export function ClubLeaguesSection({
                 </SmartLink>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {t(`status.${liga.status}` as Parameters<typeof t>[0])}
+                    {tStatus(liga.status as Parameters<typeof tStatus>[0])}
                   </span>
                   {canManage && (
                     <SmartLink
