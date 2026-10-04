@@ -174,6 +174,10 @@ export async function registerForOpenGame(
   if (!game) {
     return { ok: false, error: 'game_not_found' };
   }
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'game_not_found' };
+  }
   // open lar alle melde seg på direkte. For et klubb-spill (#442) kan også et
   // klubb-medlem melde seg på direkte uansett registration_mode — medlemskap ER
   // invitasjonen. Verifiseres server-side (klienten kan ikke lyve om medlemskap).
@@ -202,7 +206,7 @@ export async function registerForOpenGame(
   if (!canDirectJoin) {
     return { ok: false, error: 'wrong_mode' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
   // #543: arrangøren kan stenge påmeldingen manuelt. Stengt slår inn etter
@@ -483,6 +487,10 @@ export async function requestApproval(
   if (!game) {
     return { ok: false, error: 'game_not_found' };
   }
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'game_not_found' };
+  }
   // manual_approval OG invite_only tar imot «be om å bli med»-forespørsler
   // (#368). For invite_only er det en fallback for noen som har lenken men
   // ikke er invitert — spillet forblir uoppdagbart i «Finn turneringer».
@@ -493,7 +501,7 @@ export async function requestApproval(
   ) {
     return { ok: false, error: 'wrong_mode' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
   // #543: steng-påmelding-guard — speilar registerForOpenGame.
