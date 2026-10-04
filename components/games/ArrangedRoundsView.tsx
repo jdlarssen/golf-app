@@ -85,6 +85,9 @@ export function ArrangedRoundsView({
                     href={arrangedRoundHref('live', game.id, isAdmin)}
                     aria-label={[name, t('liveStatus'), delivered, pending].filter(Boolean).join(', ')}
                     data-testid="arranged-live-row"
+                    data-submitted={counts.submitted}
+                    data-total={counts.total}
+                    data-pending={counts.pendingApproval}
                     className="flex min-h-16 items-center gap-3 px-3.5 py-2.5 text-text"
                   >
                     <span className="min-w-0 grow">
@@ -142,6 +145,7 @@ export function ArrangedRoundsView({
               : arrangedListHref('drafts', isAdmin)
           }
           data-testid="arranged-drafts"
+          data-count={rounds.drafts.count}
           className="-mx-1 mt-2.5 flex min-h-[51px] items-center justify-between gap-3 rounded-[14px] border-[1.5px] border-dashed border-border px-3.5 text-sm leading-[normal] text-text"
         >
           <span>
@@ -158,6 +162,7 @@ export function ArrangedRoundsView({
           <SmartLink
             href={arrangedListHref('finished', isAdmin)}
             data-testid="arranged-finished"
+            data-count={rounds.finished.count}
             className="inline-flex min-h-11 items-center text-sm font-semibold leading-[normal] text-primary"
           >
             {t('finishedLink', { n: rounds.finished.count })}
@@ -213,7 +218,9 @@ function UpcomingRow({
   let labelParts: (string | null)[];
   if (note?.kind === 'missingTeeOff') {
     lineParts = [t('missingTeeOff'), t('notStartingBySelf')];
-    labelParts = lineParts;
+    // Mid-sentence in the link's name: «…, mangler tee-tid, …».
+    const missing = t('missingTeeOff');
+    labelParts = [missing.charAt(0).toLocaleLowerCase(intlLocaleTag(locale)) + missing.slice(1), t('notStartingBySelf')];
   } else if (note?.kind === 'blocked') {
     const reason = reasonText(note.reason);
     const capitalised = reason.charAt(0).toLocaleUpperCase(intlLocaleTag(locale)) + reason.slice(1);
@@ -238,6 +245,8 @@ function UpcomingRow({
       href={arrangedRoundHref('upcoming', game.id, isAdmin)}
       aria-label={[name, ...labelParts].filter(Boolean).join(', ')}
       data-testid="arranged-next-row"
+      data-note={note ? (note.kind === 'blocked' ? note.reason : note.kind) : undefined}
+      data-signed-up={round.signedUp}
       className="flex min-h-[68px] items-center gap-3 px-3.5 py-2.5 text-text"
     >
       <span
