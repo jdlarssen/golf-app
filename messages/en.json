@@ -4289,7 +4289,7 @@
         "heading": "Delete «{name}»?",
         "permanentLabel": "Will be permanently deleted",
         "hullCount": "{count, plural, one {# hole} other {# holes}}",
-        "courseItem": "The course “{name}”",
+        "courseItem": "The course «{name}»",
         "teeCount": "{count, plural, one {# tee box} other {# tee boxes}}",
         "cannotUndo": "This action cannot be undone.",
         "submitButton": "Delete course permanently",
