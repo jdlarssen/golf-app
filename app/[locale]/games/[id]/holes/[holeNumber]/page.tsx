@@ -9,6 +9,7 @@ import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { holeNumbersForSegment } from '@/lib/games/holeScope';
 import { HoleClient } from './HoleClient';
@@ -118,7 +119,23 @@ export default async function HolePage({ params }: { params: Params }) {
   }
 
   const me = allPlayers.find((p) => p.user_id === userId);
-  if (!me) notFound();
+  if (!me) {
+    // #2202: the organiser (or an admin) without a roster row goes to the
+    // game page, which has a view for them; anyone else still gets a 404.
+    const { data: viewer } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .maybeSingle<{ is_admin: boolean | null }>();
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: viewer?.is_admin === true,
+      isCreator: game.created_by === userId,
+      surface: 'player_page',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
+    notFound();
+  }
 
   // Once the player has submitted their scorecard, the hole pages are
   // read-only and confusing to land on. Bounce them home.

@@ -29,6 +29,7 @@ import {
   type RevealState,
 } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { getRatingForGender } from '@/lib/games/teeRating';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import {
@@ -125,7 +126,23 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   }
 
   const me = players.find((p) => p.user_id === userId);
-  if (!me) notFound();
+  if (!me) {
+    // #2202: the organiser (or an admin) without a roster row goes to the
+    // game page, which has a view for them; anyone else still gets a 404.
+    const { data: viewer } = await (await getScorecardContext()).supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .maybeSingle<{ is_admin: boolean | null }>();
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: viewer?.is_admin === true,
+      isCreator: game.created_by === userId,
+      surface: 'player_page',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
+    notFound();
+  }
 
   // #1176: hard profil-gate — en profil-løs spiller kan se spillet, men å
   // levere eller redigere scorekortet krever navn + handicap. userId er non-null

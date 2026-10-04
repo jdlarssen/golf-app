@@ -10,6 +10,7 @@ import { parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import {
   getGameWithPlayers,
 } from '@/lib/games/getGameWithPlayers';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import {
   getLeaderboardContext,
@@ -102,6 +103,7 @@ export default async function LeaderboardPage({
 
   const isAdmin = profileRes.data?.is_admin === true;
   const isParticipant = gwp.players.some((p) => p.user_id === userId);
+  const isCreator = game.created_by === userId;
   // Non-admin, non-participants may open FINISHED games — cup-matchkortene
   // lenker hele cup-publikummet hit (#1456/#1468). Under spill er leaderboardet
   // fortsatt kun for deltakere.
@@ -112,14 +114,25 @@ export default async function LeaderboardPage({
   // `getResultReadClient`. Slakkes betingelsen under, utvides samtidig hvem som
   // ser ferdige scorekort — det finnes ingen andre lås bak denne.
   if (!isAdmin && !isParticipant && game.status !== 'finished') {
+    // #2202: the organiser who does not play goes to the game page's organiser
+    // view instead of a 404; the live board stays closed to them (this gate is
+    // the lock). Anyone else still gets a 404.
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: false,
+      isCreator,
+      surface: 'player_page',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
     notFound();
   }
 
   // Ikke-deltakere har ingen adgang til game-home — default-returen går Hjem
   // i stedet, så tilbake-pilen aldri er en død flate (#752). Eksplisitt
-  // `?from=` (cup-flatene sender den) vinner uansett.
+  // `?from=` (cup-flatene sender den) vinner uansett. #2202: oppretteren har
+  // arrangørvisningen der, så tilbake-pilen går til spillet.
   const backHref =
-    navContext.from ?? (isParticipant || isAdmin ? defaultBackHref : '/');
+    navContext.from ?? (isParticipant || isAdmin || isCreator ? defaultBackHref : '/');
 
   // Mark `game_finished`-varsler for dette spillet som lest når brukeren
   // åpner leaderboardet. Wrap i `after()` så DB-mutasjon + revalidateTag

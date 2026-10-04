@@ -12,6 +12,7 @@ import { leaderboardHref, parseLeaderboardNavContext } from '@/lib/leaderboard/n
 import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { LeaderboardRealtime } from '../LeaderboardRealtime';
 import { RevealHiddenView } from '../RevealHiddenView';
 import { getDrilldownContext } from './holesData';
@@ -91,6 +92,15 @@ export default async function LeaderboardHolesPage({
     game.status !== 'finished' &&
     !gwp.players.some((p) => p.user_id === userId)
   ) {
+    // #2202: the organiser who does not play goes to the game page's
+    // organiser view instead of a 404; this gate stays the lock.
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: false,
+      isCreator: game.created_by === userId,
+      surface: 'player_page',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
     notFound();
   }
 
