@@ -89,6 +89,14 @@ vi.mock('@/lib/games/startScheduledGame', () => ({
   startScheduledGame: (...args: unknown[]) => startScheduledGameMock(...args),
 }));
 
+// #2202: the button's winner announces the start; covered in its own module.
+const announceStartedGameMock = vi.fn<(...args: unknown[]) => Promise<void>>(
+  async () => undefined,
+);
+vi.mock('@/lib/games/announceStartedGame', () => ({
+  announceStartedGame: (...args: unknown[]) => announceStartedGameMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -1259,5 +1267,74 @@ describe('startScheduledGameAction (#2207)', () => {
     expect(url.searchParams.get('error')).toBe('pending_players');
     expect(url.searchParams.get('pending')).toBe('u1,u2');
     expect(lastRedirect()).not.toMatch(/@|emails=/);
+  });
+
+  // #2202: the game's organiser starts from the game page, on the service-role
+  // client after the requireAdminOrCreator gate, like the app's start route.
+  function organiserSession(createdBy: string) {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Ola' }, error: null }, // users (loadRole)
+      { data: { created_by: createdBy }, error: null }, // games.created_by
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'creator-1' } },
+    });
+  }
+
+  it('a non-admin organiser starts the round and lands on the game page', async () => {
+    organiserSession('creator-1');
+    startScheduledGameMock.mockResolvedValueOnce({ ok: true, started: true });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?status=started');
+    expect(startScheduledGameMock).toHaveBeenCalledWith(adminSupabaseMock, 'game-1');
+    expect(announceStartedGameMock).toHaveBeenCalledWith(
+      adminSupabaseMock,
+      'game-1',
+      'creator-1',
+      'startScheduledGameAction',
+    );
+  });
+
+  it('a stranger is sent home and nothing starts', async () => {
+    organiserSession('someone-else');
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/');
+    expect(startScheduledGameMock).not.toHaveBeenCalled();
+    expect(announceStartedGameMock).not.toHaveBeenCalled();
+  });
+
+  it('pending_players for the organiser carries no ids', async () => {
+    organiserSession('creator-1');
+    startScheduledGameMock.mockResolvedValueOnce({
+      ok: false,
+      reason: 'pending_players',
+      pendingUserIds: ['u1', 'u2'],
+    });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?error=pending_players');
+  });
+
+  it('rotation_player_count for the organiser carries format and count', async () => {
+    organiserSession('creator-1');
+    startScheduledGameMock.mockResolvedValueOnce({
+      ok: false,
+      reason: 'rotation_player_count',
+      rotationMode: 'wolf',
+      rotationActiveCount: 2,
+    });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?error=rotation_player_count&mode=wolf&count=2');
   });
 });

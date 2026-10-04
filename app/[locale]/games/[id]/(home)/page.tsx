@@ -75,6 +75,7 @@ import { PendingApprovalsBanner } from './PendingApprovalsBanner';
 import { CupStandingsLink } from './CupStandingsLink';
 import { ProfileGateStripe } from './ProfileGateStripe';
 import { CreatorControls } from './CreatorControls';
+import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
@@ -1493,23 +1494,7 @@ export default async function GameHomePage({
         {/* #427: arrangør-kontroll — kun synlig for den som opprettet spillet.
             Understated (under score-CTA + leaderboard), egen forklaring så det
             er tydelig hvorfor nettopp du ser den. */}
-        {isActive && isCreator && (
-          <SmartLink href={`/games/${id}/avslutt`} className="block">
-            <Card className="min-h-[44px] transition-colors hover:border-primary/30">
-              <div className="flex items-center justify-between">
-                <span className="text-base font-medium text-text">
-                  {t('finishGame')}
-                </span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted">
-                {t('finishGameHint')}
-              </p>
-            </Card>
-          </SmartLink>
-        )}
+        {isActive && isCreator && <FinishGameCard gameId={id} />}
 
         {/* #938: live-følg — kun for oppretter på aktive spill. Lar oppretteren
             dele en offentlig live-lenke uten at tilskuere trenger konto. */}
