@@ -314,4 +314,65 @@ describe('resendInvitation — a game invitation keeps the game terms (#2212)', 
     ).toHaveLength(0);
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
+
+  it('a draft: resend_held, with no write and no mail (#2445)', async () => {
+    // The invitation is held until the game is published; sendHeldGameInvites
+    // gives it a new deadline and mails it then.
+    supabaseMock = buildSupabaseMock([
+      gameInviteRow,
+      {
+        data: {
+          name: 'E2E Fredagsrunden',
+          game_mode: 'stableford',
+          status: 'draft',
+        },
+        error: null,
+      },
+      { data: { name: 'Kari' }, error: null },
+      { data: [{ id: 'inv-g' }], error: null },
+    ]);
+    const { resendInvitation } = await import('./actions');
+
+    await expect(
+      resendInvitation(fd({ id: 'inv-g' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/admin/spillere?status=resend_held&email=spiller%40example.com',
+    );
+    expect(
+      supabaseMock.__fromCalls.filter((c) => c.method === 'update'),
+    ).toHaveLength(0);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('the mail throws after the extension: mail_failed with the address', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    sendInviteNotificationMock.mockRejectedValueOnce(new Error('Resend 500'));
+    supabaseMock = buildSupabaseMock([
+      gameInviteRow,
+      {
+        data: {
+          name: 'E2E Fredagsrunden',
+          game_mode: 'stableford',
+          status: 'scheduled',
+        },
+        error: null,
+      },
+      { data: { name: 'Kari' }, error: null },
+      { data: [{ id: 'inv-g' }], error: null },
+    ]);
+    const { resendInvitation } = await import('./actions');
+
+    await expect(
+      resendInvitation(fd({ id: 'inv-g' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/admin/spillere?error=mail_failed&email=spiller%40example.com',
+    );
+    consoleError.mockRestore();
+  });
 });

@@ -520,6 +520,34 @@ describe('inviteEmailToGame', () => {
     expect(lastRedirect()).toContain('email=nykompis');
   });
 
+  it('ukjent e-post på et utkast: raden lagres, ingen mail, og banneret er invite_held (#2445)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
+      {
+        data: { id: GAME_ID, name: 'Stiklestad', status: 'draft', game_mode: 'stableford' },
+        error: null,
+      },
+      { data: null, error: null }, // ingen pending
+      { data: { id: 'invitation-1' }, error: null }, // invitations insert
+    ]);
+    authedAsAdmin();
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'NyKompis@Example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'invitations' && c.method === 'insert',
+      ),
+    ).toBe(true);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(
+      `/admin/games/${GAME_ID}?status=invite_held&email=nykompis%40example.com`,
+    );
+  });
+
   it('idempotent: pending invitation re-sender mail best-effort (ingen ny rad)', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },

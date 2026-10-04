@@ -2371,6 +2371,7 @@
       "statusMessages": {
         "invite_added": "Player added.",
         "invite_sent": "Invitation sent.",
+        "invite_held": "Invitation saved. The email goes out when you publish the game.",
         "player_removed": "Player removed.",
         "player_withdrawn": "Player withdrawn from game.",
         "player_reinstated": "Player is back in the game.",
@@ -3741,6 +3742,7 @@
         "game_reopened": "✓ Game is active again. Open the cards that need fixing under «Submitted scorecards».",
         "invite_added": "✓ Player added to the roster.",
         "invite_sent": "✓ Invitation sent.",
+        "invite_held": "✓ Invitation saved. The email goes out when the game is published.",
         "player_withdrawn": "✓ Player withdrawn from the ranking.",
         "player_reinstated": "✓ Player reinstated in the ranking.",
         "flight_suggested": "✓ Flight assignment proposed and saved.",
@@ -4083,6 +4085,7 @@
       "success": {
         "sent": "✓ Invitation sent to {email}.",
         "resent": "✓ Invitation resent to {email}.",
+        "resend_held": "The game is still a draft, so the invitation to {email} goes out when it is published.",
         "withdrawn": "The invitation to {email} has been withdrawn. The email address is free again.",
         "deleted": "{name} has been deleted."
       },

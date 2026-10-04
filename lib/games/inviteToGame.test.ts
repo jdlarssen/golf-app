@@ -479,6 +479,69 @@ describe('åpen invitasjon for samme adresse og runde', () => {
 });
 
 /**
+ * #2445 (orkestratorens avgjørelse 03.10): et utkast holder e-posten. Raden
+ * lages eller får ny frist som før, men mailen går ut først når spillet
+ * publiseres (`sendHeldGameInvites`). Et publisert spill sender med en gang.
+ */
+describe('et utkast holder e-posten (#2445)', () => {
+  const openInvite = {
+    data: { id: 'invitation-1', token: 'token-1', expires_at: '2020-01-01T00:00:00.000Z' },
+    error: null,
+  } satisfies QueryResult;
+
+  it.each([
+    { branch: 'ny adresse', status: 'draft', kind: 'held', mails: 0 },
+    { branch: 'ny adresse', status: 'scheduled', kind: 'sent', mails: 1 },
+    { branch: 'åpen invitasjon', status: 'draft', kind: 'held', mails: 0 },
+    { branch: 'åpen invitasjon', status: 'scheduled', kind: 'sent', mails: 1 },
+  ])('$branch på $status → $kind, $mails mail', async ({ branch, status, kind, mails }) => {
+    let client: ReturnType<typeof buildSupabaseMock>;
+    let result: Awaited<ReturnType<typeof inviteEmailToGameCore>>;
+    if (branch === 'ny adresse') {
+      ({ result, client } = await invite([
+        gameRow({ status }),
+        { data: null, error: null }, // ingen åpen invitasjon
+        { data: { id: 'invitation-1' }, error: null },
+      ]));
+      // Raden lages uansett: den er køen publiseringen sender fra.
+      expect(
+        client.__fromCalls.some((c) => c.table === 'invitations' && c.method === 'insert'),
+      ).toBe(true);
+    } else {
+      adminSupabaseMock = buildSupabaseMock([
+        { data: null, error: null }, // adresse-oppslaget: ingen konto
+        { data: [{ id: 'invitation-1' }], error: null },
+      ]);
+      ({ result, client } = await invite([gameRow({ status }), openInvite]));
+      // Fristen forlenges uansett, slik «inviter igjen» alltid har gjort.
+      expect(
+        adminSupabaseMock.__fromCalls.some(
+          (c) => c.table === 'invitations' && c.method === 'update',
+        ),
+      ).toBe(true);
+    }
+
+    expect(result).toEqual({ ok: true, kind, email: 'ny@example.com' });
+    expect(sendInviteNotificationMock).toHaveBeenCalledTimes(mails);
+    // Ingen rollback: raden står.
+    expect(client.__fromCalls.some((c) => c.method === 'delete')).toBe(false);
+    expect(revalidateTag).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+  });
+
+  it('åpen invitasjon på et utkast der forlengelsen treffer 0 rader → invite_failed, ingen mail', async () => {
+    adminSupabaseMock = buildSupabaseMock([
+      { data: null, error: null },
+      { data: [], error: null },
+    ]);
+
+    const { result } = await invite([gameRow({ status: 'draft' }), openInvite]);
+
+    expect(result).toEqual({ ok: false, reason: 'invite_failed' });
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * #2215: picker-add som kjerne. Webbens `addExistingPlayerToGame` og appens
  * `POST /api/games/[id]/players/[userId]` kaller begge hit, så grenene bevises
  * her én gang. `inviteToGameActions.test.ts` beviser webbens query-koder, og
