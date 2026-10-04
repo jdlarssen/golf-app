@@ -110,7 +110,11 @@ Flater som med vilje viser resultater til et bredere publikum — cup-sidene
 via `getResultReadClient` (#1632, eiervalg B: begge svarer likt), og
 resultatbildet (`leaderboard/share-image`) og CSV-eksporten (`leaderboard/export`)
 med samme gate som tavla (innlogget + ferdig; delern fra sesjonen, aldri fra URL-en,
-#2312) — leser derfor med service-role og holder autorisasjonen på call-site. Legger du til en slik
+#2312) — leser derfor med service-role og holder autorisasjonen på call-site. Det
+samme gjør arrangøren som ikke spiller: mens runden pågår, ser hen tavla og
+hull-drilldownen via `getResultReadClient` (#2202, eierens valg C). Døra er
+`nonPlayerGameDoor` (flaten `board`), og vilkåret er `organiserFollowsLiveBoard`
+(`games.created_by` = seeren og `status = 'active'`). Legger du til en slik
 flate: gaten i ruta ER håndhevelsen, det finnes ingen RLS bak den.
 
 Et utkast (`games.status = 'draft'`) ser bare arrangøren og global admin, også om du
