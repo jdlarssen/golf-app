@@ -3725,7 +3725,9 @@
         "cup_finished": "The cup is finished. The match can't be started or reopened.",
         "invites_failed": "The game is published, but not all the email invitations went out. Send them again here.",
         "hole_reminder_stale": "What was missing has been entered in the meantime, so there was no one to remind.",
-        "hole_reminder_not_active": "The round is no longer in progress, so the reminder wasn't sent."
+        "hole_reminder_not_active": "The round is no longer in progress, so the reminder wasn't sent.",
+        "hole_reminder_guests": "That row only has guests, and guests don't get reminders. Whoever keeps their card enters the hole.",
+        "hole_reminder_failed": "The reminder wasn't stored. Try again in a moment."
       },
       "detail": {
         "brassRibbon": "Game · log",

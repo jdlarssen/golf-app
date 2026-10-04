@@ -21,7 +21,7 @@ it('gives each row its one control: «Se over» a link, «Påminn» a button', (
           holes: '10',
           holeCount: 1,
           where: { kind: 'group', group: 'Flight 2', hole: 12 },
-          remindAction: async () => {},
+          remind: { action: async () => {}, names: 'D', people: 1 },
         },
         {
           key: 'e',
@@ -30,14 +30,24 @@ it('gives each row its one control: «Se over» a link, «Påminn» a button', (
           holes: '4',
           holeCount: 1,
           where: { kind: 'entered', hole: 6 },
-          remindAction: async () => {},
+          remind: { action: async () => {}, names: 'E', people: 1 },
+        },
+        {
+          // Guests only: the row stands, with no control.
+          key: 'g',
+          names: 'G',
+          people: 1,
+          holes: '7',
+          holeCount: 1,
+          where: { kind: 'entered', hole: 9 },
+          remind: null,
         },
       ]}
     />,
   );
 
   const list = screen.getByRole('list');
-  expect(within(list).getAllByRole('listitem')).toHaveLength(4);
+  expect(within(list).getAllByRole('listitem')).toHaveLength(5);
 
   const pending = screen.getByTestId('pult-row-pending');
   expect(within(pending).getAllByRole('link')).toHaveLength(1);
@@ -49,10 +59,13 @@ it('gives each row its one control: «Se over» a link, «Påminn» a button', (
   expect(within(finished).queryByRole('link')).toBeNull();
 
   const gaps = screen.getAllByTestId('pult-row-gap');
-  expect(gaps).toHaveLength(2);
-  // #2268, the owner's choice B: a skipped-hole row has «Påminn» too.
-  for (const gap of gaps) {
+  expect(gaps).toHaveLength(3);
+  // #2268, the owner's choice B: a skipped-hole row has «Påminn» too…
+  for (const gap of gaps.slice(0, 2)) {
     expect(within(gap).getAllByRole('button')).toHaveLength(1);
     expect(within(gap).queryByRole('link')).toBeNull();
   }
+  // …except a row of guests only, which no one can be reminded about.
+  expect(within(gaps[2]).queryByRole('button')).toBeNull();
+  expect(within(gaps[2]).queryByRole('link')).toBeNull();
 });

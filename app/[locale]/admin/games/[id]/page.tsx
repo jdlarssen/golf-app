@@ -80,6 +80,7 @@ import {
   findScoreGaps,
   flightProgress,
   gapLocation,
+  missingScoreTargets,
   pultInitialTab,
   type ProgressLabel,
 } from '@/lib/games/organizerDesk';
@@ -169,6 +170,8 @@ type GamePlayerRow = {
     nickname: string | null;
     hcp_index: number | string;
     email: string;
+    // #2268: guests get no hole reminder, so a guest-only gap row has no button.
+    is_guest: boolean;
   } | null;
 };
 
@@ -532,7 +535,7 @@ function fetchRoster(gameId: string) {
   return getAdminClient()
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, hcp_index, email, is_guest)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -1411,15 +1414,28 @@ async function PultBody({
   // reaches. A game that stopped being active between the two reads gives no
   // row, as on the status page.
   const reminderTargets = preview?.ok && preview.targets > 0 ? preview : null;
+  const guestFlags = players.map((p) => ({
+    user_id: p.user_id,
+    is_guest: p.users?.is_guest ?? false,
+  }));
   const gaps: NeedsYouGap[] = findScoreGaps(deskInput).map((gap) => {
     const { label, hole } = gapLocation(gap, groups);
+    // Who «Påminn» would reach: the same rule the server applies when pressed.
+    const remindable = missingScoreTargets([gap], guestFlags, gap.userIds)?.userIds ?? [];
     return {
       key: `${gap.userIds.join('-')}:${gap.holes.join('-')}`,
       names: names(gap.userIds),
       people: gap.userIds.length,
       holes: formatListLocale(gap.holes.map(String), appLocale),
       holeCount: gap.holes.length,
-      remindAction: remindMissingScore.bind(null, game.id, gap.userIds),
+      remind:
+        remindable.length > 0
+          ? {
+              action: remindMissingScore.bind(null, game.id, remindable),
+              names: names(remindable),
+              people: remindable.length,
+            }
+          : null,
       where:
         label.kind === 'flight' || label.kind === 'side'
           ? { kind: 'group', group: labelText(label), hole }

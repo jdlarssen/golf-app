@@ -47,7 +47,7 @@ type PlayerRow = {
 
 export type MissingScoreReminderResult =
   | { ok: true; reminded: number }
-  | { ok: false; reason: 'not_found' | 'not_active' | 'no_gap' };
+  | { ok: false; reason: 'not_found' | 'not_active' | 'no_gap' | 'only_guests' };
 
 /**
  * Send the reminder for the row holding `pressedUserIds`. The gaps are
@@ -111,6 +111,9 @@ export async function sendMissingScoreReminders(
     pressedUserIds,
   );
   if (!target) return { ok: false, reason: 'no_gap' };
+  // The row is still there, but every player in it is a guest (the desk shows
+  // no button then; this guards a stale page).
+  if (target.userIds.length === 0) return { ok: false, reason: 'only_guests' };
 
   // A margin for clock skew between this server and the database; counting
   // distinct recipients keeps a press a moment earlier from counting twice.
