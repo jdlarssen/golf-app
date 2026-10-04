@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchHolesAndScores } from './holesData';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: vi.fn(),
@@ -77,9 +78,9 @@ function makeSupabase() {
   return { client, captured };
 }
 
-function mockGwp(sourceGameId: string | null, status = 'active') {
+function mockGwp(sourceGameId: string | null, status = 'active', createdBy: string | null = null) {
   vi.mocked(getGameWithPlayers).mockResolvedValue({
-    game: { id: 'game-1', source_game_id: sourceGameId, status },
+    game: { id: 'game-1', source_game_id: sourceGameId, status, created_by: createdBy },
     players: [],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any);
@@ -88,6 +89,7 @@ function mockGwp(sourceGameId: string | null, status = 'active') {
 describe('fetchHolesAndScores', () => {
   beforeEach(() => {
     vi.mocked(getGameWithPlayers).mockReset();
+    vi.mocked(getProxyVerifiedUserId).mockReset();
     getAdminClientMock.mockReset();
   });
 
@@ -131,5 +133,17 @@ describe('fetchHolesAndScores', () => {
     expect(cookie.captured.scoresGameId).toBe('game-1');
     expect(admin.captured.scoresGameId).toBeNull();
     expect(getAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it('the organiser of an active game reads scores through the result-read client (#2202 C)', async () => {
+    // The viewer comes from the drilldown's own session context, never from a prop.
+    mockGwp(null, 'active', 'organiser-1');
+    vi.mocked(getProxyVerifiedUserId).mockResolvedValue('organiser-1');
+    const cookie = makeSupabase();
+    const admin = makeSupabase();
+    getAdminClientMock.mockReturnValue(admin.client);
+    await fetchHolesAndScores(cookie.client, 'game-1', 'course-1');
+    expect(admin.captured.scoresGameId).toBe('game-1');
+    expect(cookie.captured.scoresGameId).toBeNull();
   });
 });

@@ -366,6 +366,33 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
     }
     // Otherwise we were redirected to /login (or another page) — that's fine.
   });
+
+  // #2202 (owner's choice C): the board opens to the game's organiser during
+  // play, never to a signed-in outsider. PLAYER_EMAIL neither plays nor
+  // organised this game (the admin did). Content-based: notFound() streams
+  // after a 200 (cacheComponents), so the status is no oracle here.
+  // Own sign-in in a fresh context: the REST tests above end with
+  // `signOut()`, whose default global scope also ends the browser session, so
+  // the shared `page` would only ever see /login.
+  test('non-participant, non-organiser: live leaderboard and hole drilldown answer not-found', async ({
+    browser,
+  }) => {
+    test.slow();
+    expect(game).not.toBeNull();
+    const fresh = await browser.newContext();
+    try {
+      const outsider = await fresh.newPage();
+      await outsider.goto('/login?next=/');
+      await signInViaOtp(outsider, PLAYER_EMAIL!);
+      for (const sub of ['leaderboard', 'leaderboard/holes']) {
+        await outsider.goto(`/games/${game!.id}/${sub}`, { waitUntil: 'domcontentloaded' });
+        await expect(outsider).not.toHaveURL(/\/login\b/);
+        await expect(outsider.locator('[data-testid="not-found"]')).toBeVisible({ timeout: 20_000 });
+      }
+    } finally {
+      await fresh.close();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
