@@ -32,10 +32,12 @@ type OnboardingGameRow = {
  * The round from `next=/games/<id>` for the card on «Fullfør profilen»
  * (#2350), or `null`.
  *
- * Read with the request client, never the admin client: RLS lets only the
- * player's own `game_players` row through, so a crafted `next` for someone
- * else's round finds nothing. The card is decoration on a step that must work
- * without it, so an error is `null` and a log line, never a thrown page.
+ * The `.eq('user_id', userId)` filter is what guards this read: only the
+ * player's own `game_players` row can match, so a crafted `next` for a round
+ * they are not on finds nothing. RLS is not what stands behind it — it lets
+ * co-players' rows in a shared game through too. Read with the request
+ * client, never the admin client. The card is decoration on a step that must
+ * work without it, so an error is `null` and a log line, never a thrown page.
  */
 export async function getOnboardingGame(
   supabase: ServerClient,
