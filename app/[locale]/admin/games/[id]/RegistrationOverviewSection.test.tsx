@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { buildSupabaseMock, type QueryResult } from '@/tests/serverActionMocks';
 
 /**
@@ -25,6 +25,10 @@ const PROPS = {
   selfRegisteredCount: 0,
 };
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('RegistrationOverviewSection', () => {
   it.each<{ name: string; count: QueryResult; shown: string | null }>([
     { name: 'tellingen feiler', count: { data: null, error: { message: 'boom' }, count: null }, shown: null },
@@ -37,11 +41,13 @@ describe('RegistrationOverviewSection', () => {
     render(await RegistrationOverviewSection(PROPS));
 
     if (shown === null) {
+      // The whole «Venter» block is gone, not just the number.
+      expect(screen.queryByTestId('pending-block')).toBeNull();
       expect(screen.queryByTestId('pending-count')).toBeNull();
       expect(screen.queryByText('0')).toBeNull();
     } else {
+      expect(screen.getByTestId('pending-block')).toBeTruthy();
       expect(screen.getByTestId('pending-count').textContent).toBe(shown);
     }
-    cleanup();
   });
 });
