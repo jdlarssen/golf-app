@@ -14,6 +14,8 @@ import { useSpectatePolling, SPECTATE_POLL_INTERVAL_MS } from './useSpectatePoll
  * Consumers: the two embed pages (`/embed/spill`, `/embed/liga`). They keep
  * their existing markup; since #1376 they inherit the connectivity behavior
  * (pause offline, immediate refresh on reconnect) without any UI change.
+ * Also the leaderboard and its hole drilldown, for the organiser who does not
+ * play (#2202): realtime on `scores` follows RLS, so they get no events.
  */
 export function SpectatePoller({
   live,

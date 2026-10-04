@@ -91,7 +91,7 @@ export default async function LeaderboardHolesPage({
   // hit for ferdige cup-matcher. Under spill fortsatt kun for deltakere,
   // og (#2202, eierens valg C) for arrangøren som ikke spiller: samme dør og
   // samme lese-regel som tavla. Denne gaten er låsen.
-  if (!isAdmin && game.status !== 'finished' && !isParticipant) {
+  if (!isAdmin && !isParticipant) {
     const door = nonPlayerGameDoor({
       gameId: id,
       isAdmin: false,

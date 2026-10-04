@@ -10,11 +10,12 @@ import type { GameStatus } from '@/lib/games/status';
  * - `player_page` (scorecard, holes, approve, submit, putter): admin or
  *   creator is sent to `/games/[id]`, which then resolves the `home` door;
  *   anyone else a 404.
- * - `board` (the leaderboard and its hole drilldown before the game is
- *   finished; a finished board is open to everyone signed in): admin may
- *   look; the creator follows a running round like a player does (owner's
- *   choice C, see `organiserFollowsLiveBoard`) and is sent to `/games/[id]`
- *   before the start; anyone else a 404.
+ * - `board` (the leaderboard and its hole drilldown): a finished board is
+ *   open to everyone signed in (#1456/#1468) and admin may always look; the
+ *   creator follows a running round like a player does (owner's choice C,
+ *   see `organiserFollowsLiveBoard`) and is sent to `/games/[id]` before the
+ *   start; anyone else a 404. `resultReadUsesServiceRole` serves exactly the
+ *   viewers this surface admits.
  *
  * Call it only when the viewer has no `game_players` row. Pure, no DB access:
  * the caller reads `is_admin` and `games.created_by`.
@@ -33,7 +34,7 @@ type DoorInput = { gameId: string; isAdmin: boolean; isCreator: boolean } & (
 export function nonPlayerGameDoor(input: DoorInput): NonPlayerDoor {
   const { gameId, isAdmin, isCreator } = input;
   if (input.surface === 'board') {
-    if (isAdmin) return { kind: 'board' };
+    if (isAdmin || input.status === 'finished') return { kind: 'board' };
     if (isCreator && input.status === 'active') return { kind: 'board' };
     return isCreator ? { kind: 'redirect', href: `/games/${gameId}` } : { kind: 'not_found' };
   }
@@ -66,6 +67,20 @@ export function organiserFollowsLiveBoard({
   viewerId: string | null;
 }): boolean {
   return status === 'active' && !!viewerId && createdBy === viewerId;
+}
+
+/**
+ * Whether a game's results are read with the service role (#1542, #2202):
+ * a finished game for everyone the board lets in, and a running one for its
+ * organiser. `getResultReadClient` applies it; the `board` door admits the
+ * same viewers, and a test locks that the two agree.
+ */
+export function resultReadUsesServiceRole(input: {
+  status: GameStatus;
+  createdBy: string | null;
+  viewerId: string | null;
+}): boolean {
+  return input.status === 'finished' || organiserFollowsLiveBoard(input);
 }
 
 /**

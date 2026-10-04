@@ -111,10 +111,11 @@ export type LeaderboardContentOpts = {
  * `/leaderboard` route (page.tsx) and the public `/spectate/[token]` route.
  *
  * Contract:
- *   - Does NOT resolve the viewer itself — caller provides `supabase`. På et
- *     FERDIG spill byttes den ut med service-role-klienten (#1542,
- *     `getResultReadClient`); på alt annet brukes den som-den-er, så spectate
- *     beholder sin egen admin-klient for live-følging.
+ *   - Does NOT resolve the viewer itself — caller provides `supabase` and
+ *     `viewerUserId`. På et FERDIG spill, og for arrangøren av et AKTIVT spill
+ *     (#2202, eierens valg C), byttes den ut med service-role-klienten (#1542,
+ *     `getResultReadClient`); ellers brukes den som-den-er, så spectate og
+ *     embed (tom seer) beholder sin egen admin-klient for live-følging.
  *   - Fetches course_holes, scores, courses, and (when enabled) side-winners
  *     via the passed `supabase` client.
  *   - When `includeReactions` is true: fetches reactions and wraps the

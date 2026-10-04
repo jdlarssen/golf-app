@@ -48,11 +48,10 @@ export async function OrganiserGameView({
 }) {
   const t = await getTranslations('game.home');
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale);
-  // The board is open to everyone signed in once the game is finished; while
-  // it runs, the board door decides (#2202, owner's choice C). The organiser
-  // still has «Følg live» to share the round with others.
+  // The board door decides when the organiser gets the link: once the round
+  // runs (#2202, owner's choice C) and after it. «Følg live» stays for sharing
+  // the round with others.
   const boardOpen =
-    game.status === 'finished' ||
     nonPlayerGameDoor({ gameId: id, isAdmin: false, isCreator: true, surface: 'board', status: game.status })
       .kind === 'board';
   const teeOffDate =
