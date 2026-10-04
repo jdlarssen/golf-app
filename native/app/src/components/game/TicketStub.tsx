@@ -7,6 +7,7 @@
 // samme som før, så skjermtestene beviser de samme grenene.
 import { useCallback, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { GameBundle } from '../../data/gameBundle';
 import { undoSelfWithdraw } from '../../data/withdrawSelf';
 import { GATE_LINK_LABEL, gameWebPath, gateMessage } from '../../lib/formatGate';
 import { addToCalendar } from '../../lib/addToCalendar';
@@ -36,6 +37,7 @@ export function TicketStub({
   flightCta,
   onChanged,
   onNavigate,
+  bundle,
 }: {
   stub: TicketStubModel;
   gameId: string;
@@ -57,6 +59,8 @@ export function TicketStub({
   /** Hent bundelen på nytt: etter «Angre trekk», og fra venterommet (#2219). */
   onChanged: () => void | Promise<void>;
   onNavigate: Navigate;
+  /** #2204: venterommet sier hvorfor runden står fast etter tee-off. */
+  bundle?: GameBundle;
 }) {
   const { colors, ui } = useTheme();
 
@@ -89,7 +93,12 @@ export function TicketStub({
           <Text style={[styles.registered, { color: colors.text }]} testID="ticket-registered">
             {TICKET_TEXT.registered}
           </Text>
-          <WaitingRoom gameId={gameId} teeOffAt={teeOffAt} onChanged={onChanged} />
+          <WaitingRoom
+            gameId={gameId}
+            teeOffAt={teeOffAt}
+            onChanged={onChanged}
+            bundle={bundle}
+          />
           <ScheduledActions calendarEvent={calendarEvent} courseName={courseName} />
         </View>
       );
