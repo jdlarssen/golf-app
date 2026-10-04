@@ -79,9 +79,16 @@ async function loadAdminOrCreatorContext(gameId: string) {
 }
 
 /**
- * Admin server action: flip a scheduled game to active. Delegates to the
+ * «Start runden nå»: flip a scheduled game to active. Delegates to the
  * shared `startScheduledGame` helper (in `lib/games/`) which is also used
  * by the E1 server-side auto-start fallback on `/games/[id]`.
+ *
+ * #2202: the game's organiser may start it too, from the game page. The gate
+ * is `requireAdminOrCreator`; after it the start runs on the service-role
+ * client, like the app's start route (#2215), so a cup match or a derived
+ * game is never half-started because the organiser's RLS client cannot see
+ * the cup. Admin lands in the Sekretariat, the organiser on `/games/[id]`,
+ * where the error banners live.
  *
  * The publish path (D2 createAndStartAction) deliberately leaves
  * `course_handicap = null` because the round hasn't started yet and the
@@ -90,14 +97,19 @@ async function loadAdminOrCreatorContext(gameId: string) {
  */
 export async function startScheduledGameAction(gameId: string) {
   const locale = await getLocale();
-  const { supabase, user } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  const { userId, isAdmin } = await requireAdminOrCreator(
+    await getServerClient(),
+    gameId,
+  );
+  const detailPath = isAdmin ? `/admin/games/${gameId}` : `/games/${gameId}`;
+  const admin = getAdminClient();
 
-  const result = await startScheduledGame(supabase, gameId);
+  const result = await startScheduledGame(admin, gameId);
   if (!result.ok) {
-    if (result.reason === 'pending_players' && result.pendingUserIds) {
+    if (result.reason === 'pending_players' && result.pendingUserIds && isAdmin) {
       // #2207: ids, never addresses, in the URL — the detail page looks the
-      // addresses up after its requireAdmin gate.
+      // addresses up after its requireAdmin gate. The organiser's game page
+      // shows no names (#2202), so its URL carries no ids either.
       const qs = new URLSearchParams({
         error: 'pending_players',
         pending: result.pendingUserIds.join(','),
@@ -118,12 +130,12 @@ export async function startScheduledGameAction(gameId: string) {
   }
 
   // #1441 (D3) + #502: the button won the flip → start the derived games and
-  // send game_started to every active player except the admin who clicked.
+  // send game_started to every active player except whoever clicked.
   // started=false means a concurrent cron sweep or page visit won and owns the
   // fan-out. Shared with the app's start route (#2215); best-effort, never
   // throws.
   if (result.started) {
-    await announceStartedGame(supabase, gameId, user.id, 'startScheduledGameAction');
+    await announceStartedGame(admin, gameId, userId, 'startScheduledGameAction');
   }
 
   expireGameCache(gameId);

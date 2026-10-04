@@ -588,6 +588,7 @@ async function buildSections({
   const tModes = await getTranslations('modes');
   const tRegistration = await getTranslations('admin.game.registration');
   const tApprove = await getTranslations('game.approve');
+  const tButtons = await getTranslations('admin.game.buttons');
 
   // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
   // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
@@ -1200,7 +1201,11 @@ async function buildSections({
               ? tCta('scheduledStartBodyAutoStart', { time: teeOffLabel })
               : tCta('scheduledStartBody')}
           </p>
-          <StartScheduledGameButton startAction={startScheduledAction} />
+          <StartScheduledGameButton
+            startAction={startScheduledAction}
+            label={tButtons('startRoundNow')}
+            confirmText={tButtons('startRoundConfirm')}
+          />
         </div>
       </SectionCard>
 
