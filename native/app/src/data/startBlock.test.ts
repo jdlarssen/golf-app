@@ -101,7 +101,11 @@ describe('fetchStartBlock', () => {
       players: [homePlayer({ userId: 'u1' }), homePlayer({ userId: 'u2', teeGender: 'ladies' })],
     });
 
-    expect(await subject().fetchStartBlock(bundle)).toBe('structural');
+    const { startBlockReason } = require('../../../../lib/games/startBlockReason') as typeof import('../../../../lib/games/startBlockReason');
+    expect({
+      reason: startBlockReason(subject().startBlockInput(bundle, []))?.reason,
+      view: await subject().fetchStartBlock(bundle),
+    }).toEqual({ reason: 'tee_missing_rating', view: 'structural' });
     expect(mocks().supabase.rpc).toHaveBeenCalledWith('incomplete_profile_ids', {
       p_user_ids: ['u1', 'u2'],
     });
@@ -121,11 +125,11 @@ describe('fetchStartBlock', () => {
     expect(await subject().fetchStartBlock(bundle)).toBeNull();
   });
 
-  it('feil fra RPC-en gir ingen sperre', async () => {
+  it('feil fra RPC-en gir «ukjent», ikke «ingen sperre», så venterommet beholder forrige svar', async () => {
     mocks().supabase.rpc.mockResolvedValue({ data: null, error: { message: 'nede' } });
     const bundle = scheduled({ players: [homePlayer({ userId: 'u1' }), homePlayer({ userId: 'u2' })] });
 
-    expect(await subject().fetchStartBlock(bundle)).toBeNull();
+    expect(await subject().fetchStartBlock(bundle)).toBeUndefined();
   });
 
   it('en cup-kamp avgjort ved trekk blir ikke spilt', async () => {

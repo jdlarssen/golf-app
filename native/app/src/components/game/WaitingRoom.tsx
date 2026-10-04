@@ -21,7 +21,8 @@
 // #2204: er tee-off passert og runden står fast, sier venterommet hvorfor i
 // stedet for «Starter snart». Sperren hentes bare etter tee-off, én gang per ny
 // bundel (altså høyst én gang per tikk), og et svar som kommer etter at
-// bundelen er byttet ut, kastes.
+// bundelen er byttet ut, kastes. Et kall som feiler, endrer ingenting: forrige
+// svar står.
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { GameBundle } from '../../data/gameBundle';
@@ -55,7 +56,7 @@ export function WaitingRoom({
     if (!teeOffPassed || !bundle) return;
     let cancelled = false;
     void fetchStartBlock(bundle).then((next) => {
-      if (!cancelled) setBlock(next);
+      if (!cancelled && next !== undefined) setBlock(next);
     });
     return () => {
       cancelled = true;
