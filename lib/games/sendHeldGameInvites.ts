@@ -56,6 +56,8 @@ type InviterRow = { id: string; name: string | null; is_admin: boolean | null };
  * - `skipEmails`: addresses the caller mails itself in the same publish
  *   (the wizard's e-mail card through `sendPublishInvites`), so nobody gets
  *   two mails.
+ * - One mail per address, not per row: the organiser and an admin can each
+ *   hold a row for the same address. The organiser's row wins.
  *
  * Errors reading the game or the invitations throw (error ≠ absence, #1445).
  * The mails are best-effort: one failure never stops the others, and a
@@ -95,12 +97,25 @@ export async function sendHeldGameInvites(params: {
   const inviterById = new Map((inviters ?? []).map((u) => [u.id, u]));
 
   const skip = new Set(params.skipEmails.map(normalizeInviteEmail));
-  const held = invitations.filter((inv) => {
-    if (skip.has(normalizeInviteEmail(inv.email))) return false;
-    return (
-      inv.invited_by === game.created_by ||
-      inviterById.get(inv.invited_by)?.is_admin === true
+  const eligible = invitations
+    .filter((inv) => {
+      if (skip.has(normalizeInviteEmail(inv.email))) return false;
+      return (
+        inv.invited_by === game.created_by ||
+        inviterById.get(inv.invited_by)?.is_admin === true
+      );
+    })
+    // The organiser's rows first, so they win the per-address pick below.
+    .sort(
+      (a, b) =>
+        Number(b.invited_by === game.created_by) - Number(a.invited_by === game.created_by),
     );
+  const seen = new Set<string>();
+  const held = eligible.filter((inv) => {
+    const address = normalizeInviteEmail(inv.email);
+    if (seen.has(address)) return false;
+    seen.add(address);
+    return true;
   });
 
   const results = await Promise.allSettled(
