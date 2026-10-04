@@ -107,7 +107,8 @@ export default async function LeaderboardPage({
   const isCreator = game.created_by === userId;
   // Non-admin, non-participants may open FINISHED games — cup-matchkortene
   // lenker hele cup-publikummet hit (#1456/#1468). Under spill er leaderboardet
-  // fortsatt kun for deltakere.
+  // for deltakere og (#2202, eierens valg C) arrangøren som ikke spiller.
+  // `nonPlayerGameDoor` (flaten `board`) er regelens hjem.
   //
   // ⚠️ DENNE GATEN ER HÅNDHEVELSEN (#1542). RLS er den IKKE: policyen
   // `scores select gating per mode` krever deltakelse i det enkelte spillet også
@@ -118,7 +119,7 @@ export default async function LeaderboardPage({
   // runden pågår (`nonPlayerGameDoor`, flaten `board`) og leser slagene med
   // service-role på samme vilkår (`organiserFollowsLiveBoard`). Før start går
   // hen til arrangørvisningen. Alle andre får fortsatt 404.
-  if (!isAdmin && !isParticipant && game.status !== 'finished') {
+  if (!isAdmin && !isParticipant) {
     const door = nonPlayerGameDoor({
       gameId: id,
       isAdmin: false,

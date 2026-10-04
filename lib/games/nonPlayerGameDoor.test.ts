@@ -3,6 +3,7 @@ import {
   adminCupMatchHref,
   nonPlayerGameDoor,
   organiserFollowsLiveBoard,
+  resultReadUsesServiceRole,
   type NonPlayerDoor,
 } from '@/lib/games/nonPlayerGameDoor';
 import type { GameStatus } from '@/lib/games/status';
@@ -31,6 +32,9 @@ describe('nonPlayerGameDoor, board surface (#2202, owner choice C)', () => {
     ['scheduled', false, true, { kind: 'redirect', href: '/games/g1' }],
     ['draft', false, true, { kind: 'redirect', href: '/games/g1' }],
     ['scheduled', false, false, { kind: 'not_found' }],
+    // A finished board is open to everyone signed in (#1456/#1468).
+    ['finished', false, false, { kind: 'board' }],
+    ['finished', false, true, { kind: 'board' }],
   ])('%s · admin=%s · creator=%s', (status, isAdmin, isCreator, expected) => {
     expect(
       nonPlayerGameDoor({ gameId: 'g1', isAdmin, isCreator, surface: 'board', status }),
@@ -51,14 +55,36 @@ describe('organiserFollowsLiveBoard (#2202, owner choice C)', () => {
     expect(organiserFollowsLiveBoard({ status, createdBy, viewerId })).toBe(expected);
   });
 
-  // Trap 4: the board door admits exactly the organisers the read rule serves.
-  it.each<GameStatus>(['draft', 'scheduled', 'active'])(
-    'door and read rule agree for a non-admin creator on a %s game',
+});
+
+describe('resultReadUsesServiceRole (#2202)', () => {
+  it.each<[status: GameStatus, createdBy: string, boolean]>([
+    ['finished', 'u2', true],
+    ['active', 'u1', true],
+    ['active', 'u2', false],
+    ['scheduled', 'u1', false],
+  ])('%s · created_by=%s · viewer u1 → %s', (status, createdBy, expected) => {
+    expect(resultReadUsesServiceRole({ status, createdBy, viewerId: 'u1' })).toBe(expected);
+  });
+
+  // Trap 4: for a viewer without a roster row and without admin, the board
+  // door admits exactly the viewers whose results are read with the service
+  // role, on every status: the creator, and the organiser of another game.
+  it.each<GameStatus>(['draft', 'scheduled', 'active', 'finished'])(
+    'door and read rule agree on a %s game',
     (status) => {
-      const door = nonPlayerGameDoor({ gameId: 'g1', isAdmin: false, isCreator: true, surface: 'board', status });
-      expect(door.kind === 'board').toBe(
-        organiserFollowsLiveBoard({ status, createdBy: 'u1', viewerId: 'u1' }),
-      );
+      for (const createdBy of ['u1', 'u2']) {
+        const door = nonPlayerGameDoor({
+          gameId: 'g1',
+          isAdmin: false,
+          isCreator: createdBy === 'u1',
+          surface: 'board',
+          status,
+        });
+        expect(door.kind === 'board').toBe(
+          resultReadUsesServiceRole({ status, createdBy, viewerId: 'u1' }),
+        );
+      }
     },
   );
 });

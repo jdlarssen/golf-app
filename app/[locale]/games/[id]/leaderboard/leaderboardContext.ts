@@ -5,7 +5,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import type { GameStatus } from '@/lib/games/status';
-import { organiserFollowsLiveBoard } from '@/lib/games/nonPlayerGameDoor';
+import { resultReadUsesServiceRole } from '@/lib/games/nonPlayerGameDoor';
 import type { SideWinnerRow } from './leaderboardTypes';
 import { safeParsePrizes } from '@/lib/games/prizes';
 import {
@@ -51,7 +51,7 @@ export const getLeaderboardContext = cache(async () => {
  * Ingen policy-endring, ingen migrasjon.
  *
  * #2202 (eierens valg C): arrangøren av et AKTIVT spill følger tavla og
- * hull-drilldownen som en spiller (`organiserFollowsLiveBoard`). RLS slipper
+ * hull-drilldownen som en spiller (`resultReadUsesServiceRole`). RLS slipper
  * bare deltakere til slagene under spill, så de leses med service-role også
  * her, og gaten i ruta (`nonPlayerGameDoor`, flaten `board`) er håndhevelsen.
  * En deltaker ser alle slag i et live- eller reveal-spill (policyen), så
@@ -71,7 +71,7 @@ export async function getResultReadClient(
   if (game.status === 'finished') return getAdminClient();
   const ctx = fallback ? null : await getLeaderboardContext();
   const viewer = ctx ? ctx.userId : (viewerId ?? null);
-  if (organiserFollowsLiveBoard({ status: game.status, createdBy: game.created_by, viewerId: viewer })) {
+  if (resultReadUsesServiceRole({ status: game.status, createdBy: game.created_by, viewerId: viewer })) {
     return getAdminClient();
   }
   return fallback ?? ctx!.supabase;
