@@ -31,7 +31,7 @@ import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
-import { readStartBlock } from '@/lib/games/startScheduledGameCore';
+import { readCreatorStartBlock } from '@/lib/games/readCreatorStartBlock';
 import type { StartBlock } from '@/lib/games/startBlockReason';
 import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
 import { startDerivedGames } from '@/lib/games/syncDerivedGamesStatus';
@@ -161,18 +161,6 @@ async function pendingProfileIdsAmong(
     return new Set();
   }
   return new Set((data ?? []).map((r) => r.id));
-}
-
-/**
- * #2204: why the organiser's scheduled round would not start right now, read
- * without starting it. Only what the organiser can fix counts (a structural
- * reason). Service role, like E1 and the spectate-token read: the caller has
- * settled that the viewer is the creator, and the roster under RLS is not
- * guaranteed whole for an organiser (the #366 trap).
- */
-async function readCreatorStartBlock(gameId: string): Promise<StartBlock | null> {
-  const block = await readStartBlock(getAdminClient(), gameId);
-  return block && isStructuralBlockReason(block.reason) ? block : null;
 }
 
 export default async function GameHomePage({
