@@ -99,7 +99,7 @@ Stop and query the live DB before building. The typed client catches column-name
 
 Strengt håndhevet i Postgres. Spillere ser:
 - Sine egne scores
-- Samme-flight scores under aktivt spill
+- Alle scores i et aktivt spill de selv er med i: policyen har en gren for både `live` (0121) og `reveal`, og reveal skjuler netto-stillingen i visningen, ikke i RLS (lest fra `pg_policies` på staging 2026-10-04)
 - Ingenting av et utkast (`games.status = 'draft'`) de står på: det ser bare arrangøren og global admin (#2445, 0202)
 - Alle scores i spill **de selv er med i**, etter `games.status = 'finished'`
 
