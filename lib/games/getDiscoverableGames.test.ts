@@ -734,6 +734,17 @@ describe('getDiscoverableGames', () => {
           signups_closed_at: '2026-07-01T10:00:00Z',
           courses: null,
         }),
+        // The viewer's own game, signups open: dropped by the organiser rule.
+        visibleRow({
+          id: 'fown1',
+          name: 'Min egen venne-runde',
+          short_id: 'fown0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          let_friends_skip_gate: false,
+          created_by: 'u1',
+          courses: null,
+        }),
       ],
     });
 
@@ -766,6 +777,17 @@ describe('getDiscoverableGames', () => {
           short_id: 'copn0001',
           scheduled_tee_off_at: null,
           registration_mode: 'invite_only',
+          courses: null,
+          groups: { name: 'Min Klubb' },
+        }),
+        // The viewer's own club game, signups open: dropped by the organiser rule.
+        visibleRow({
+          id: 'cown1',
+          name: 'Min egen klubbrunde',
+          short_id: 'cown0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'invite_only',
+          created_by: 'u1',
           courses: null,
           groups: { name: 'Min Klubb' },
         }),
