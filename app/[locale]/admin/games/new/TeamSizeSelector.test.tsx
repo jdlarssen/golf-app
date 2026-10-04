@@ -83,7 +83,7 @@ describe('TeamSizeSelector', () => {
   // de sier for hvert antall, eier teamSizeFit (Type A); her bare at kortene
   // leser det.
   it('Texas med 4 spillere: Par er valgt, de andre er grå og sier hvorfor', () => {
-    render(
+    const { rerender } = render(
       <TeamSizeSelector
         mode="texas_scramble"
         value={2}
@@ -101,5 +101,20 @@ describe('TeamSizeSelector', () => {
     expect(
       screen.getByRole('radio', { name: /4-mann/i, description: /trenger 8/i }),
     ).toBeDisabled();
+
+    // Beslutning 3: det valgte kortet er aldri grått, heller ikke når
+    // størrelsen ikke går opp (et gammelt utkast med 4-mann og fire spillere).
+    rerender(
+      <TeamSizeSelector
+        mode="texas_scramble"
+        value={4}
+        onChange={() => {}}
+        playerCount={4}
+      />,
+    );
+    const chosen = screen.getByRole('radio', { name: /4-mann/i });
+    expect(chosen.getAttribute('aria-checked')).toBe('true');
+    expect(chosen).not.toBeDisabled();
+    expect(chosen).toHaveAccessibleDescription('');
   });
 });
