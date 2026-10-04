@@ -7,7 +7,10 @@ import { EndGameButton } from '../EndGameButton';
  * «Avslutt spillet», fixed at the bottom of the desk in all three tabs
  * (#2268). It sticks just above the bottom nav: the same `5rem + safe area`
  * reserve `AdminShell` keeps under its content. Opaque, so content scrolling
- * under it never shows through.
+ * under it never shows through. The nav is shorter than that reserve (about
+ * 60 px at 390), so a 24 px strip of the page colour hangs under the bar and
+ * closes the gap; at the end of the page it only covers the version footer's
+ * 40 px top margin.
  *
  *  - `ready`: today's finish button (confirm and side-tournament wizard as
  *    before), with the «all handed in» line over it.
@@ -42,7 +45,7 @@ export async function EndGameBar({
     <div
       data-testid="pult-end-bar"
       data-readiness={readiness}
-      className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] z-20 -mx-5 mt-6 flex flex-col gap-1.5 border-t border-border bg-admin-bg px-4 pt-3 pb-5 leading-[normal]"
+      className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] z-20 -mx-5 mt-6 flex flex-col gap-1.5 border-t border-border bg-admin-bg px-4 pt-3 pb-5 leading-[normal] after:absolute after:inset-x-0 after:top-full after:h-6 after:bg-admin-bg"
     >
       {readiness === 'ready' ? (
         <>
