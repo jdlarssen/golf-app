@@ -19,11 +19,23 @@ export type PublicSignupVisibilityInput = Pick<
   'status' | 'registration_mode' | 'signups_closed_at'
 >;
 
+/**
+ * The signup window (#2276): published and not closed by the organiser. The
+ * rule both discovery lists read — logged out (`getPublicDiscoverableGames`)
+ * and logged in (`getDiscoverableGames`). Club games use this alone, since
+ * membership stands in for the invitation on `invite_only`; every other list
+ * goes through `isPubliclyViewable`, which adds the registration mode.
+ */
+export function isSignupWindowOpen(
+  game: Pick<PublicSignupVisibilityInput, 'status' | 'signups_closed_at'>,
+): boolean {
+  return game.status === 'scheduled' && game.signups_closed_at == null;
+}
+
 export function isPubliclyViewable(game: PublicSignupVisibilityInput): boolean {
   return (
-    game.status === 'scheduled' &&
-    (game.registration_mode === 'open' || game.registration_mode === 'manual_approval') &&
-    game.signups_closed_at == null
+    isSignupWindowOpen(game) &&
+    (game.registration_mode === 'open' || game.registration_mode === 'manual_approval')
   );
 }
 
