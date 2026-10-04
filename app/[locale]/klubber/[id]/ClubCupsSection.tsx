@@ -45,7 +45,7 @@ export function ClubCupsSection({
   canManage: boolean;
 }) {
   const t = useTranslations('klubb.cups');
-  const tCup = useTranslations('gameStatus');
+  const tStatus = useTranslations('gameStatus');
 
   // #1135: samme som ClubLeaguesSection — skjul den døde overskriften for
   // vanlige medlemmer i en klubb uten cuper. Admin (ikke frossen) beholder
@@ -70,7 +70,7 @@ export function ClubCupsSection({
                 </SmartLink>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {tCup(`${cup.status}` as Parameters<typeof tCup>[0])}
+                    {tStatus(cup.status as Parameters<typeof tStatus>[0])}
                   </span>
                   {cup.status === 'draft' && (
                     <SmartLink
