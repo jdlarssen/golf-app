@@ -1,8 +1,12 @@
 import { routing, type AppLocale } from '@/i18n/routing';
-import type noCatalog from '../../messages/no.json';
+// The default catalog is imported statically, and only here: a dynamic
+// import() never settles inside Vitest's fake clock, which hung the mail
+// tempo tests (lib/mail/__tests__/resend-contract.test.ts). Change this import
+// if `routing.defaultLocale` changes — messages.test.ts fails until you do.
+import defaultCatalog from '../../messages/no.json';
 
 /** The catalog shape — the default-locale catalog is the canonical structure. */
-export type Catalog = typeof noCatalog;
+export type Catalog = typeof defaultCatalog;
 type AnyRecord = Record<string, unknown>;
 
 /**
@@ -36,17 +40,16 @@ async function importCatalog(locale: AppLocale): Promise<AnyRecord> {
 
 /**
  * The merged catalog for a locale — the one home for loading messages
- * (`i18n/request.ts`, mail, `app/global-not-found.tsx`). Catalogs are loaded by
- * dynamic import, so a new `messages/<code>.json` is picked up with no edit
- * here (the N-locale rule in `i18n/routing.ts`). A locale whose catalog file is
- * missing gets the default catalog, never a raw key.
+ * (`i18n/request.ts`, mail, `app/global-not-found.tsx`). Other locales are
+ * loaded by dynamic import, so a new `messages/<code>.json` is picked up with
+ * no edit here (the N-locale rule in `i18n/routing.ts`). A locale whose catalog
+ * file is missing gets the default catalog, never a raw key.
  */
 export async function loadMessages(locale: AppLocale): Promise<Catalog> {
-  const base = await importCatalog(routing.defaultLocale);
-  if (locale === routing.defaultLocale) return base as Catalog;
+  if (locale === routing.defaultLocale) return defaultCatalog;
   try {
-    return mergeMessages(base, await importCatalog(locale)) as Catalog;
+    return mergeMessages(defaultCatalog, await importCatalog(locale)) as Catalog;
   } catch {
-    return base as Catalog;
+    return defaultCatalog;
   }
 }
