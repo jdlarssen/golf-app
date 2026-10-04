@@ -371,7 +371,7 @@ const MOMENT_KEY: Record<'hole_in_one' | 'eagle' | 'turkey' | 'snowman', string>
  * can act on. Generic fallback for unknown/future reasons — the payload schema
  * is intentionally loosely typed (see types.ts).
  */
-function blockReasonText(reason: string, t: NotificationTranslator): string {
+export function blockReasonText(reason: string, t: NotificationTranslator): string {
   // Every structural reason has a named line; the set's home is
   // `lib/games/startBlockReasons.ts` (#2204), never the guards themselves.
   if (STRUCTURAL_BLOCK_REASONS.has(reason)) {
