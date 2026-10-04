@@ -1112,6 +1112,33 @@ describe('startScheduledGame — rotation slot at start (#969)', () => {
     });
   });
 
+  // #2204: the rating check now runs with the other guards, before the
+  // rotation slots are written. It used to write all four slots first.
+  it('wolf med 4 aktive og en spiller uten rating for sitt tee-kjønn → tee_missing_rating og ingen rotasjonsskriving', async () => {
+    const roster = [rot('u1'), rot('u2'), rot('u3'), { ...rot('u4'), tee_gender: 'ladies' as const }];
+    const supabase = buildSupabaseMock([
+      {
+        data: {
+          ...makeRotationGameRow('wolf'),
+          tee_boxes: {
+            ...VALID_TEE,
+            slope_ladies: null,
+            course_rating_ladies: null,
+            par_total_ladies: null,
+          },
+        },
+        error: null,
+      },
+      { data: roster, error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect({ result, slotWrites: teamNumberWrites(supabase).length }).toEqual({
+      result: { ok: false, reason: 'tee_missing_rating' },
+      slotWrites: 0,
+    });
+  });
+
   it('wolf med 3 aktive → tildeler 3 sammenhengende slots og starter', async () => {
     const roster = [rot('u1'), rot('u2'), rot('u3')];
     const supabase = buildSupabaseMock([

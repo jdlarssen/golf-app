@@ -1,30 +1,20 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from './notify';
+import {
+  SILENT_BLOCK_REASONS,
+  STRUCTURAL_BLOCK_REASONS,
+  type StructuralBlockReason,
+} from '@/lib/games/startBlockReasons';
 
 /**
  * Strukturelle blokkeringsårsaker fra `startScheduledGame`: tilstander som
  * ikke løser seg selv ved retry (i motsetning til transiente db-feil), og
  * som oppretteren faktisk kan gjøre noe med. Kun disse skal utløse
  * auto_start_blocked-varselet (#502) — transiente feil retries stille av
- * neste cron-sweep.
+ * neste cron-sweep. Mengden bor i `lib/games/startBlockReasons.ts` (#2204).
  */
-const STRUCTURAL_BLOCK_REASONS: ReadonlySet<string> = new Set([
-  'incomplete_sides',
-  'pending_players',
-  'no_players',
-  'tee_missing',
-  'tee_missing_rating',
-  // #969: Wolf/Round Robin couldn't draw a rotation — too few/many signed up.
-  'rotation_player_count',
-  // #1669: a team format has players without a team. `unassigned_flights`
-  // (#543) was structural from day one but never listed here — same shape,
-  // same fix: the creator has to split the field before the round can start.
-  'unassigned_teams',
-  'unassigned_flights',
-]);
-
-export function isStructuralBlockReason(reason: string): boolean {
+export function isStructuralBlockReason(reason: string): reason is StructuralBlockReason {
   return STRUCTURAL_BLOCK_REASONS.has(reason);
 }
 
@@ -43,15 +33,10 @@ export function isStructuralBlockReason(reason: string): boolean {
  * å rette. pg_cron-porten fyrer sveipet hvert minutt i opptil sju dager for en
  * slik kamp, så et varsel ville kommet hver gang.
  *
- * Bevisst en egen liste, ikke en utvidelse av `STRUCTURAL_BLOCK_REASONS`:
- * strukturelle grunner ER varselverdige (det er hele poenget med den lista) —
- * disse er det motsatte.
+ * Bevisst en egen mengde, ikke en utvidelse av de strukturelle:
+ * strukturelle grunner ER varselverdige (det er hele poenget med den mengden) —
+ * disse er det motsatte. Mengden bor i `lib/games/startBlockReasons.ts`.
  */
-const SILENT_BLOCK_REASONS: ReadonlySet<string> = new Set([
-  'decided_by_withdrawal',
-  'cup_finished',
-]);
-
 export function isSilentBlockReason(reason: string): boolean {
   return SILENT_BLOCK_REASONS.has(reason);
 }
