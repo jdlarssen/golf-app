@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { elapsedParts } from '@/lib/games/organizerDesk';
+import { elapsedParts } from '@/lib/games/elapsed';
 
 /**
  * «I gang · 2 t 14 min» in the desk's green header (#2268). The first render
  * uses the server's clock (`renderedAt`), so server and client print the same
- * text; after that the pill ticks once a minute. Without `startedAt` it reads
+ * text; after that the pill ticks once a minute. It also reads the clock when
+ * the effect starts and when the page becomes visible again: Next 16's
+ * Activity re-runs effects on «Tilbake», and a PWA resumed from the background
+ * would otherwise show a time up to a minute old. Without `startedAt` it reads
  * «I gang» and never ticks.
  */
 export function ElapsedPill({
@@ -22,8 +25,17 @@ export function ElapsedPill({
 
   useEffect(() => {
     if (startedAt == null) return;
-    const id = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(id);
+    const tick = () => setNow(new Date());
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    tick();
+    const id = window.setInterval(tick, 60_000);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [startedAt]);
 
   const parts = elapsedParts(startedAt, now);

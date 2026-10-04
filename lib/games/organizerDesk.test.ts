@@ -4,6 +4,7 @@ import {
   endGameReadiness,
   findScoreGaps,
   flightProgress,
+  gapLocation,
   pultInitialTab,
   elapsedParts,
   type DeskPlayer,
@@ -58,7 +59,9 @@ describe('deliveryCounts', () => {
     expect(deliveryCounts(roster, peer)).toEqual(expected);
   });
 
-  it.each([false, true])('gir samme tall som splitFinishRoster (peer=%s)', (peer) => {
+  // Contract test (#2269 reads these counts): they are the finish gate's own
+  // lists, so a rewrite of deliveryCounts cannot drift from what endGame blocks on.
+  it.each([false, true])('kontrakt: samme tall som sperrens lister (peer=%s)', (peer) => {
     const lists = splitFinishRoster(roster, stampsFromRow, peer);
     const counts = deliveryCounts(roster, peer);
     expect(counts.total).toBe(lists.active.length);
@@ -359,6 +362,76 @@ describe('flightProgress', () => {
     c.expected.forEach((expected, i) => {
       expect(result[i]).toMatchObject(expected);
     });
+  });
+});
+
+describe('gapLocation', () => {
+  type Case = {
+    name: string;
+    mode?: GameMode;
+    segment?: HoleSegment;
+    players: Row[];
+    scores: { user_id: string; hole_number: number }[];
+    expected: ReturnType<typeof gapLocation>;
+  };
+
+  const cases: Case[] = [
+    {
+      name: 'flight: gruppas hull, ikke spillerens',
+      players: [
+        player('kari', { flight_number: 1 }),
+        player('tore', { flight_number: 2 }),
+        player('ola', { flight_number: 2 }),
+      ],
+      scores: [...holes('kari', 1, 2), ...holes('tore', ...range(1, 9), 11), ...holes('ola', ...range(1, 12))],
+      expected: { label: { kind: 'flight', n: 2 }, hole: 12 },
+    },
+    {
+      name: 'side: singles matchplay med flight = lag',
+      mode: 'singles_matchplay',
+      players: [
+        player('a', { team_number: 1, flight_number: 1 }),
+        player('b', { team_number: 2, flight_number: 2 }),
+      ],
+      scores: [...holes('a', 1, 2, 4, 5, 6), ...holes('b', 1, 2, 3)],
+      expected: { label: { kind: 'side', n: 1 }, hole: 6 },
+    },
+    {
+      name: 'alle spillere: spillerens eget siste hull',
+      mode: 'solo_strokeplay',
+      players: [player('sigrid'), player('berit')],
+      scores: [...holes('sigrid', 1, 2, 3, 4, 6, 7, 8), ...holes('berit', ...range(1, 10))],
+      expected: { label: { kind: 'all' }, hole: 8 },
+    },
+    {
+      name: 'uten flight: spillerens eget siste hull',
+      players: [player('a', { flight_number: 1 }), player('x')],
+      scores: [...holes('a', ...range(1, 15)), ...holes('x', 1, 3)],
+      expected: { label: { kind: 'none' }, hole: 3 },
+    },
+    {
+      name: 'bakre ni: ekte hullnummer 12',
+      mode: 'best_ball',
+      segment: 'back9',
+      players: [
+        player('lars', { team_number: 1, flight_number: 1 }),
+        player('ola', { team_number: 1, flight_number: 1 }),
+      ],
+      scores: [...holes('lars', 10, 12), ...holes('ola', 10, 11, 12)],
+      expected: { label: { kind: 'flight', n: 1 }, hole: 12 },
+    },
+  ];
+
+  it.each(cases)('$name', (c) => {
+    const input = {
+      players: c.players,
+      scores: c.scores,
+      mode: c.mode ?? 'stableford',
+      holeSegment: c.segment ?? 'full',
+      startType: 'first_tee' as const,
+    };
+    const [gap] = findScoreGaps(input);
+    expect(gapLocation(gap, flightProgress(input))).toEqual(c.expected);
   });
 });
 

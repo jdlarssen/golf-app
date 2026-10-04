@@ -9,6 +9,8 @@ import {
 } from './holeScope';
 import type { StartType } from './startType';
 
+export { elapsedParts } from './elapsed';
+
 // The organiser's desk (arrangørpulten, #2268): what the admin page shows while
 // a round is in progress. Pure rules, no rendering; #2269 (Klubbhuset) reuses
 // `deliveryCounts`.
@@ -267,6 +269,24 @@ export function flightProgress(input: DeskInput): FlightProgress[] {
   });
 }
 
+/**
+ * Where a skipped-hole row says its player is: the group's label from
+ * `flightProgress`, so «Trenger deg» and «Flightene» never name a group
+ * differently. A numbered group (flight or side) gives the group's furthest
+ * hole («Flight 2 er på hull 12»); «Alle spillere» and «Uten flight» give the
+ * player's own last entered hole («Har ført til hull 8»), since another player
+ * in that group can be far ahead. Real hole numbers throughout.
+ */
+export function gapLocation(
+  gap: ScoreGap,
+  groups: readonly FlightProgress[],
+): { label: ProgressLabel; hole: number } {
+  const group = groups.find((g) => g.userIds.includes(gap.userIds[0]));
+  if (!group) return { label: { kind: 'none' }, hole: gap.lastHole };
+  const numbered = group.label.kind === 'flight' || group.label.kind === 'side';
+  return { label: group.label, hole: numbered ? (group.maxHole ?? gap.lastHole) : gap.lastHole };
+}
+
 export type PultTab = 'live' | 'players' | 'setup';
 
 // Redirect codes from the roster actions (`actions.ts`): withdraw and reinstate.
@@ -301,20 +321,4 @@ export function pultInitialTab(sp: { status?: string; error?: string }): PultTab
   if (codes.some((c) => c != null && PLAYERS_CODES.has(c))) return 'players';
   if (codes.some((c) => c != null && SETUP_CODES.has(c))) return 'setup';
   return 'live';
-}
-
-/**
- * Time since the round started, in whole minutes split into hours and
- * minutes. Null when it has not started (or the stamp does not parse); never
- * negative, so a clock that runs a little behind the server shows 0 min.
- */
-export function elapsedParts(
-  startedAt: string | null,
-  now: Date,
-): { hours: number; minutes: number } | null {
-  if (startedAt == null) return null;
-  const start = Date.parse(startedAt);
-  if (Number.isNaN(start)) return null;
-  const totalMinutes = Math.floor(Math.max(0, now.getTime() - start) / 60_000);
-  return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
 }
