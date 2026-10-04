@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { createTranslator } from 'next-intl';
 import './globals.css';
-import { fraunces, inter, rootViewport } from './rootShell';
+import { fraunces, inter, rootIcons, rootViewport } from './rootShell';
 import { AppShell } from '@/components/ui/AppShell';
 import { NotFoundView } from '@/components/NotFoundView';
 import { routing, type AppLocale } from '@/i18n/routing';
@@ -47,7 +47,7 @@ async function notFoundTranslator(locale: AppLocale) {
 // Next adds `<meta name="robots" content="noindex">` to 404 responses itself.
 export async function generateMetadata(): Promise<Metadata> {
   const t = await notFoundTranslator(routing.defaultLocale);
-  return { title: `${t('heading')} – Tørny` };
+  return { title: `${t('heading')} – Tørny`, icons: rootIcons };
 }
 
 export default async function GlobalNotFound() {

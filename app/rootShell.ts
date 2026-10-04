@@ -1,10 +1,10 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 
 // The document shell both root documents share (#2292): the `[locale]` layout
 // and `app/global-not-found.tsx`, which renders outside that layout and so
-// inherits nothing from it. One font definitions file, per the next/font docs,
-// so each font is hosted once.
+// inherits nothing from it: fonts, viewport and app icons. One font
+// definitions file, per the next/font docs, so each font is hosted once.
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
 export const inter = Inter({
@@ -33,4 +33,12 @@ export const rootViewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+};
+
+// #1985: statiske PNG-er fra native/assets/generate-icons.mjs, servert på
+// de gamle URL-ene via rewrites i next.config.ts. app/favicon.ico legges
+// fortsatt først av Next selv.
+export const rootIcons: Metadata["icons"] = {
+  icon: [{ url: "/icon", type: "image/png", sizes: "192x192" }],
+  apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
 };

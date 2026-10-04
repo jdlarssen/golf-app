@@ -7,7 +7,7 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { ROOT_CLIENT_NAMESPACES, pickMessages } from "@/i18n/clientNamespaces";
 import "../globals.css";
-import { fraunces, inter, rootViewport } from "../rootShell";
+import { fraunces, inter, rootIcons, rootViewport } from "../rootShell";
 import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
@@ -57,13 +57,7 @@ export async function generateMetadata({
     formatDetection: {
       telephone: false,
     },
-    // #1985: statiske PNG-er fra native/assets/generate-icons.mjs, servert på
-    // de gamle URL-ene via rewrites i next.config.ts. app/favicon.ico legges
-    // fortsatt først av Next selv.
-    icons: {
-      icon: [{ url: "/icon", type: "image/png", sizes: "192x192" }],
-      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
-    },
+    icons: rootIcons,
     openGraph: {
       siteName: "Tørny",
       type: "website",
