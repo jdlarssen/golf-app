@@ -214,6 +214,7 @@ flowchart LR
 ### A2 — Administrer spill
 
 `/admin/games` (liste, filtrer status) → `/admin/games/[id]` (detalj). Inline handlinger etter status:
+- **Arrangørpulten** (aktivt spill, #2268): grønt hode med tid og «Levert scorekort X av Y», fanene «Live», «Spillere» og «Oppsett», «Trenger deg» (kort som venter, spillere som er ferdige uten å levere, hull uten slag) og «Avslutt spillet» fast nederst. Utkast, planlagte og avsluttede spill har protokollsiden som før.
 - **Start** (`startGame` / `startScheduledGameAction`): fryser course-handicap, `→ active`. Starten venter til alle på lista har fullført profilen. «Styr spillere» og spillsiden viser hvem som venter (#2441).
 - **Inviter** (`InviteToGameSection`): legg til eksisterende spiller eller inviter på e-post (Resend, spill-scoped).
 - **Påmeldinger** (`/admin/games/[id]/signups`): godkjenn/avvis manuelle forespørsler. Arrangøren av spillet slipper også inn, fra varselet eller fra «Påmeldinger» på `/games/[id]/spillere` (#2440).
