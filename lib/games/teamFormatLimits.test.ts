@@ -12,12 +12,14 @@ import {
   organizerPlayerCap,
   randomDrawTeamCount,
   registrationSeatTeamSize,
+  selectableTeamSizes,
   startTeamSize,
   teamFormatPlayerCap,
   teamModePlayerCap,
   teamGridShape,
   teamGridSize,
   teamNumberRange,
+  teamSizeFit,
   teamSizesForMode,
   teamSizesThatFit,
 } from './teamFormatLimits';
@@ -171,6 +173,12 @@ describe('teamSizesThatFit — lagstørrelsene som går opp (#2260)', () => {
     ['shamble', 4, []],
     ['best_ball', 4, []],
     ['wolf', 4, []],
+    // #2453: Stableford-familien er med — solo, eller 4BBB med minst ett par.
+    ['stableford', 1, [1]],
+    ['stableford', 4, [1, 2]],
+    ['stableford', 5, [1]],
+    ['stableford', 41, []], // over taket
+    ['modified_stableford', 2, [1, 2]],
   ] as const)('%s, n=%i → %j', (mode, n, sizes) => {
     expect(teamSizesThatFit(mode, n)).toEqual(sizes);
   });
@@ -209,6 +217,9 @@ describe('startTeamSize: lagstørrelsen kompis-runden starter på (#2435)', () =
     ['best_ball', 4, 2, 2], // utenfor scramble-familien
     ['wolf', 4, 1, 1], // utenfor scramble-familien
     ['texas_scramble', null, 4, 4], // uten antall
+    ['stableford', 5, 2, 1], // #2453: 4BBB går ikke opp med 5, solo gjør
+    ['stableford', 4, 2, 2], // 4BBB går opp
+    ['stableford', 1, 2, 1], // ett par trenger to
   ] as const)('%s, n=%s, standard %i → %i', (mode, n, preferred, expected) => {
     expect(startTeamSize(mode, n, preferred)).toBe(expected);
   });
@@ -222,6 +233,101 @@ describe('startTeamSize: lagstørrelsen kompis-runden starter på (#2435)', () =
           const size = startTeamSize(mode, n, preferred);
           if (fits.length > 0) expect(fits).toContain(size);
           else expect(size).toBe(preferred);
+        }
+      }
+    }
+  });
+});
+
+// #2453: «Velg lagstørrelse» follows the kompis count. Every card asks
+// `teamSizeFit`: it fits, it needs more players, or it does not fit the count.
+// The picker reads its sizes from `selectableTeamSizes`, so no number lives in
+// the UI (AGENTS.md trap 4).
+describe('teamSizeFit: hva hvert lagstørrelse-kort sier (#2453)', () => {
+  const fits = { kind: 'fits' } as const;
+  const needs = (players: number) => ({ kind: 'needs', players }) as const;
+  const notWith = (count: number) => ({ kind: 'notWith', count }) as const;
+
+  it.each([
+    ['texas_scramble', [2, 3, 4]],
+    ['ambrose', [2, 3, 4]],
+    ['florida_scramble', [3, 4]],
+    ['shamble', [3, 4]],
+    ['stableford', [1, 2]],
+    ['modified_stableford', [1, 2]],
+    ['best_ball', []],
+    ['wolf', []],
+  ] as const)('%s viser størrelsene %j', (mode, sizes) => {
+    expect(selectableTeamSizes(mode).sizes).toEqual(sizes);
+  });
+
+  it.each([
+    ['texas_scramble', 4, 2, fits],
+    ['texas_scramble', 4, 3, needs(6)],
+    ['texas_scramble', 4, 4, needs(8)],
+    ['texas_scramble', 6, 2, fits],
+    ['texas_scramble', 6, 3, fits],
+    ['texas_scramble', 6, 4, needs(8)],
+    ['texas_scramble', 8, 2, fits],
+    ['texas_scramble', 8, 3, notWith(8)],
+    ['texas_scramble', 8, 4, fits],
+    ['texas_scramble', 10, 2, fits],
+    ['texas_scramble', 10, 3, notWith(10)],
+    ['texas_scramble', 10, 4, notWith(10)],
+    ['texas_scramble', 39, 2, notWith(39)],
+    ['texas_scramble', 39, 3, fits],
+    ['texas_scramble', 39, 4, notWith(39)],
+    ['texas_scramble', 40, 2, fits],
+    ['texas_scramble', 40, 3, notWith(40)], // 40 går ikke opp i 3
+    ['texas_scramble', 40, 4, fits],
+    ['ambrose', 4, 2, fits],
+    ['ambrose', 4, 3, needs(6)],
+    ['ambrose', 4, 4, needs(8)],
+    ['florida_scramble', 6, 3, fits],
+    ['florida_scramble', 6, 4, needs(8)],
+    ['florida_scramble', 8, 3, notWith(8)],
+    ['florida_scramble', 8, 4, fits],
+    ['shamble', 6, 3, fits],
+    ['shamble', 6, 4, needs(8)],
+    ['shamble', 9, 3, fits],
+    ['shamble', 9, 4, notWith(9)],
+    ['shamble', 12, 3, fits],
+    ['shamble', 12, 4, fits],
+    ['stableford', 1, 1, fits],
+    ['stableford', 1, 2, needs(2)], // 4BBB trenger ett par
+    ['stableford', 4, 1, fits],
+    ['stableford', 4, 2, fits],
+    ['stableford', 5, 1, fits],
+    ['stableford', 5, 2, notWith(5)],
+    ['modified_stableford', 3, 1, fits],
+    ['modified_stableford', 3, 2, notWith(3)],
+    // Uten antall, og når ingenting går opp, vises alt som før.
+    ['texas_scramble', null, 2, fits],
+    ['texas_scramble', null, 3, fits],
+    ['texas_scramble', null, 4, fits],
+    ['texas_scramble', 5, 2, fits],
+    ['texas_scramble', 5, 3, fits],
+    ['texas_scramble', 5, 4, fits],
+  ] as const)('%s, n=%s, lag à %i → %j', (mode, n, size, expected) => {
+    expect(teamSizeFit(mode, size, n)).toEqual(expected);
+  });
+
+  it('går opp akkurat for størrelsene teamSizesThatFit gir, og alt går opp når ingenting gjør det', () => {
+    const modes = [
+      'texas_scramble',
+      'ambrose',
+      'florida_scramble',
+      'shamble',
+      'stableford',
+      'modified_stableford',
+    ] as const;
+    for (const mode of modes) {
+      for (let n = 0; n <= 44; n++) {
+        const fitting = teamSizesThatFit(mode, n);
+        for (const size of selectableTeamSizes(mode).sizes) {
+          expect(teamSizeFit(mode, size, n).kind === 'fits', `${mode} à ${size}, n=${n}`).toBe(
+            fitting.length === 0 || fitting.includes(size),
+          );
         }
       }
     }

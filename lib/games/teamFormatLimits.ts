@@ -25,7 +25,7 @@
 // number; the wizard's grid, the validators, open registration and the native
 // app all read it from here.
 
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { isMatchplayMode } from '@/lib/games/matchplaySides';
 
 /** Spillertaket for lag-formatene (#2148). Heves ved å endre dette tallet. */
@@ -167,17 +167,70 @@ export function teamSizesForMode(mode: GameMode): readonly number[] {
 }
 
 /**
- * The supported team sizes that split `n` players into whole teams: the size
- * goes into `n`, and gives between `MIN_TEAMS` and `maxTeamsForSize(size)`
- * teams. Ascending; empty outside the scramble family. The format cards read
- * it for their line-up (#2260): «2 eller 4 per lag» for Texas with 8.
+ * Stableford in the team size picker (#2453): solo, or 4BBB in pairs. One
+ * player or one pair is already a game, so the minimum is one team. Kept out
+ * of `TEAM_FORMAT_TEAM_SIZES` on purpose: that table also drives the grid,
+ * the seat size and the registration cap, and Stableford has no cap there.
+ */
+const STABLEFORD_TEAM_SIZES: readonly number[] = [1, 2];
+
+/** The sizes «Velg lagstørrelse» offers for a format, and how few teams make a game. */
+export interface SelectableTeamSizes {
+  sizes: readonly number[];
+  minTeams: number;
+}
+
+/**
+ * The team sizes the picker shows for a format (#2453): the scramble family's
+ * `teamSizesForMode` with at least `MIN_TEAMS` teams, and Stableford's solo or
+ * 4BBB with at least one. Empty for every other format. `TeamSizeSelector`
+ * and `ShambleSetup` read their cards from here, so no size is written twice.
+ */
+export function selectableTeamSizes(mode: GameMode): SelectableTeamSizes {
+  if (isStablefordFamily(mode)) return { sizes: STABLEFORD_TEAM_SIZES, minTeams: 1 };
+  return { sizes: teamSizesForMode(mode), minTeams: MIN_TEAMS };
+}
+
+/**
+ * The selectable team sizes that split `n` players into whole teams: the
+ * size goes into `n`, and gives between the format's minimum
+ * (`selectableTeamSizes`) and `maxTeamsForSize(size)` teams. Ascending. Empty
+ * outside the scramble and Stableford families, for `n = 0`, and above the cap
+ * (Stableford solo with more than 40: the picker stops at 40, so the UI never
+ * gets there). The format cards read it for their line-up (#2260): «2 eller 4
+ * per lag» for Texas with 8.
  */
 export function teamSizesThatFit(mode: GameMode, n: number): number[] {
-  return teamSizesForMode(mode).filter((size) => {
+  const { sizes, minTeams } = selectableTeamSizes(mode);
+  return sizes.filter((size) => {
     if (n % size !== 0) return false;
     const teams = n / size;
-    return teams >= MIN_TEAMS && teams <= maxTeamsForSize(size);
+    return teams >= minTeams && teams <= maxTeamsForSize(size);
   });
+}
+
+/** What one team size card says for the count (#2453). */
+export type TeamSizeFit =
+  | { kind: 'fits' }
+  /** Too few players: «trenger 6». */
+  | { kind: 'needs'; players: number }
+  /** Enough players, but the size does not split them: «går ikke opp med 10». */
+  | { kind: 'notWith'; count: number };
+
+/**
+ * Whether one team size card can be picked at `count` players (#2453). It
+ * fits when it is one of `teamSizesThatFit`. Otherwise it needs the format's
+ * minimum teams × the size (Texas à 3 → 6, à 4 → 8, 4BBB → 2) when the count
+ * is below that, and does not fit the count when it is at or above it. No
+ * count, or no size that fits, makes every card fit, so the picker shows
+ * everything as before.
+ */
+export function teamSizeFit(mode: GameMode, size: number, count: number | null): TeamSizeFit {
+  if (count === null) return { kind: 'fits' };
+  const fitting = teamSizesThatFit(mode, count);
+  if (fitting.length === 0 || fitting.includes(size)) return { kind: 'fits' };
+  const needed = selectableTeamSizes(mode).minTeams * size;
+  return count < needed ? { kind: 'needs', players: needed } : { kind: 'notWith', count };
 }
 
 /**
@@ -185,7 +238,8 @@ export function teamSizesThatFit(mode: GameMode, n: number): number[] {
  * when the count changes (#2435). `preferred` (the format's default, or the
  * size already chosen) stands when it fits `count`; otherwise the fitting size
  * closest to it, the larger one on a tie. No count, or nothing that fits,
- * keeps `preferred`. The rule lives here and reads only `teamSizesThatFit`.
+ * keeps `preferred`. The rule lives here and reads only `teamSizesThatFit`,
+ * so it covers Stableford too (#2453): 4BBB with 4, the count to 5 → solo.
  */
 export function startTeamSize(mode: GameMode, count: number | null, preferred: number): number {
   if (count === null) return preferred;
@@ -201,6 +255,8 @@ export function startTeamSize(mode: GameMode, count: number | null, preferred: n
 /**
  * Kan `n` spillere fordeles på hele lag i dette formatet? Sant når minst én
  * støttet lagstørrelse går opp (`teamSizesThatFit`, så regelen bor ett sted).
+ * Kalles bare for scramble-familien. Stableford svarer også sant her for
+ * 1–40 (#2453), men `fitsPlayerCount` har sin egen regel for Stableford.
  *
  * Eksempler for Texas (2/3/4 per lag): 4 ✓ (2 lag à 2), 10 ✓ (5 lag à 2),
  * 39 ✓ (13 lag à 3), 40 ✓ (20 par / 10 lag à 4), 41 ✗ (går ikke opp),
@@ -304,9 +360,10 @@ export function organizerPlayerCap(
  *
  * `fitsTeamFormat` cannot answer this. It asks whether ANY supported size
  * fits, so 12 players pass through size 3 even when the organiser has
- * switched to pairs and a draw would deal six teams. It also knows neither
- * best ball nor par-stableford, and it demands two teams, while best ball
- * has always let a single pair be drawn.
+ * switched to pairs and a draw would deal six teams. It also does not know
+ * best ball, says yes to Stableford whenever solo fits (#2453), even for an
+ * odd count no pair draw can deal, and it demands two teams in the scramble
+ * family, while best ball has always let a single pair be drawn.
  */
 export function randomDrawTeamCount(teamSize: number, n: number): number | null {
   if (!Number.isInteger(teamSize) || teamSize < 2) return null;
