@@ -3,6 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { FormSection, FormSectionHeading } from '@/components/ui/FormSection';
 import { ChoiceCardGrid, RadioChoiceCard } from '@/components/ui/ChoiceCard';
+import { selectableTeamSizes } from '@/lib/games/teamFormatLimits';
+import { useTeamSizeReason } from '../TeamSizeSelector';
 
 export type ShambleVariant = 'shamble' | 'champagne';
 export type ShambleCount = 1 | 2 | 3;
@@ -19,6 +21,11 @@ interface ShambleSetupProps {
   teamSize: 3 | 4;
   onTeamSizeChange: (next: 3 | 4) => void;
   disabled?: boolean;
+  /**
+   * #2453: kompis-antallet. Satt → lagstørrelsen som ikke går opp, står grå og
+   * sier hvorfor, som i «Velg lagstørrelse». Utelatt → begge kan velges.
+   */
+  playerCount?: number;
 }
 
 /**
@@ -45,32 +52,34 @@ export function ShambleSetup({
   teamSize,
   onTeamSizeChange,
   disabled = false,
+  playerCount,
 }: ShambleSetupProps) {
   const t = useTranslations('wizard.sections.shamble');
+  const reasonFor = useTeamSizeReason();
+  // The sizes and which of them fit the count live in teamFormatLimits (#2453).
+  const sizes = selectableTeamSizes('shamble').sizes as readonly (3 | 4)[];
   return (
     <FormSection legend={t('legend')}>
       <FormSectionHeading title={t('teamSizeLabel')} />
       <ChoiceCardGrid columns={2} label={t('teamSizeAriaLabel')}>
-        <RadioChoiceCard
-          name="shamble_team_size"
-          value="3"
-          checked={teamSize === 3}
-          onChange={() => onTeamSizeChange(3)}
-          disabled={disabled}
-          title={t('teamSize3Title')}
-          hint={t('teamSize3Desc')}
-          height={64}
-        />
-        <RadioChoiceCard
-          name="shamble_team_size"
-          value="4"
-          checked={teamSize === 4}
-          onChange={() => onTeamSizeChange(4)}
-          disabled={disabled}
-          title={t('teamSize4Title')}
-          hint={t('teamSize4Desc')}
-          height={64}
-        />
+        {sizes.map((size) => {
+          const checked = teamSize === size;
+          const reason = reasonFor('shamble', size, playerCount ?? null, checked);
+          return (
+            <RadioChoiceCard
+              key={size}
+              name="shamble_team_size"
+              value={String(size)}
+              checked={checked}
+              onChange={() => onTeamSizeChange(size)}
+              disabled={disabled}
+              unavailable={reason !== null}
+              title={t(`teamSize${size}Title`)}
+              hint={reason ?? t(`teamSize${size}Desc`)}
+              height={64}
+            />
+          );
+        })}
       </ChoiceCardGrid>
       <FormSectionHeading title={t('variantLabel')} />
       <ChoiceCardGrid columns={2} label={t('variantAriaLabel')}>

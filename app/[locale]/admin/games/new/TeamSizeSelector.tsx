@@ -148,6 +148,29 @@ function tilesForMode(mode: GameMode): TileDef[] {
 }
 
 /**
+ * Why a team size card is grey (#2453): «trenger 6» or «går ikke opp med
+ * 10», read from `teamSizeFit`. `null` when the card can be picked; the
+ * chosen card never is grey. `ShambleSetup` reads it too, so both pickers
+ * say the same.
+ */
+export function useTeamSizeReason(): (
+  mode: GameMode,
+  size: number,
+  count: number | null,
+  selected: boolean,
+) => string | null {
+  const t = useTranslations('wizard.teamSize');
+  return (mode, size, count, selected) => {
+    if (selected) return null;
+    const fit = teamSizeFit(mode, size, count);
+    if (fit.kind === 'fits') return null;
+    return fit.kind === 'needs'
+      ? t('needs', { count: fit.players })
+      : t('notWith', { count: fit.count });
+  };
+}
+
+/**
  * Lagstørrelse-velger — viser kun lagstørrelsene som faktisk gjelder valgt
  * modus (Solo / Par / 4BBB / 4-mann etter format). Formater som ikke kan
  * spilles i en gitt størrelse listes ikke, så velgeren viser aldri tomme
@@ -174,19 +197,12 @@ export function TeamSizeSelector({
   const t = useTranslations('wizard.teamSize');
   const tModes = useTranslations('modes');
   const lineupText = useLineupText();
+  const reasonFor = useTeamSizeReason();
   const reasonIdPrefix = useId();
   const tiles = tilesForMode(mode);
-  const count = playerCount ?? null;
   const cards = tiles.map((tile) => {
     const selected = value === tile.size;
-    const fit = teamSizeFit(mode, tile.size, count);
-    const reason =
-      selected || fit.kind === 'fits'
-        ? null
-        : fit.kind === 'needs'
-          ? t('needs', { count: fit.players })
-          : t('notWith', { count: fit.count });
-    return { ...tile, selected, reason };
+    return { ...tile, selected, reason: reasonFor(mode, tile.size, playerCount ?? null, selected) };
   });
   // Radiogroup keyboard pattern: one tab stop, arrow keys move the choice and
   // pass over the sizes the count rules out.

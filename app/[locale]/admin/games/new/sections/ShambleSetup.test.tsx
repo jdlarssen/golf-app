@@ -41,5 +41,11 @@ describe('ShambleSetup', () => {
       name: /antall score som teller/i,
     });
     expect(countGroup.querySelectorAll('input[type="radio"]')).toHaveLength(3);
+
+    // #2453: med et kompis-antall står lagstørrelsen som ikke går opp, grå
+    // og sier hvorfor. Hva den sier per antall, eier teamSizeFit (Type A).
+    rerender(<ShambleSetup variant="shamble" {...props} teamSize={3} playerCount={6} />);
+    expect(screen.getByRole('radio', { name: /3-mannslag/i })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /4-mannslag.*trenger 8/i })).toBeDisabled();
   });
 });
