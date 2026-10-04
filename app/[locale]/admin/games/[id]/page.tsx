@@ -54,6 +54,7 @@ import {
   adminUndoWithdraw,
 } from './actions';
 import { remindUnsubmittedPlayers } from './status/actions';
+import { remindMissingScore } from './pultActions';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -1418,6 +1419,7 @@ async function PultBody({
       people: gap.userIds.length,
       holes: formatListLocale(gap.holes.map(String), appLocale),
       holeCount: gap.holes.length,
+      remindAction: remindMissingScore.bind(null, game.id, gap.userIds),
       where:
         label.kind === 'flight' || label.kind === 'side'
           ? { kind: 'group', group: labelText(label), hole }

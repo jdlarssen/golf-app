@@ -9,7 +9,9 @@ type Props = {
   /** i18n key under admin.game.status for the button label (ICU plural). */
   labelKey: 'remindButton' | 'purreUnconfirmedButton' | 'remindRowButton';
   /** i18n key under admin.game.status for the window.confirm text (ICU plural). */
-  confirmKey: 'remindConfirm' | 'purreUnconfirmedConfirm';
+  confirmKey: 'remindConfirm' | 'purreUnconfirmedConfirm' | 'remindHoleConfirm';
+  /** Extra values for the confirm text (#2268: names and holes on a gap row). */
+  confirmValues?: Record<string, string | number>;
   /** Stable E2E hook on the button; the page renders two of these, so it is per usage. */
   testId: string;
   /**
@@ -33,10 +35,11 @@ export function RemindButton({
   confirmKey,
   testId,
   variant = 'block',
+  confirmValues,
 }: Props) {
   const t = useTranslations('admin.game.status');
   const buttonLabel = t(labelKey, { count });
-  const confirmMessage = t(confirmKey, { count });
+  const confirmMessage = t(confirmKey, { count, ...confirmValues });
 
   return (
     <form

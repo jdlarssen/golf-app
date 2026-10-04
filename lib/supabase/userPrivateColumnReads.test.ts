@@ -175,6 +175,10 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['admin'],
     reason: '(c) serverside utsending av leveringspåminnelse',
   },
+  'lib/games/remindMissingScore.ts': {
+    receivers: ['admin'],
+    reason: '(c) serverside utsending av påminnelse om hull uten slag (#2268)',
+  },
   'lib/games/withdrawSelf.ts': {
     receivers: ['admin'],
     reason: '(c) serverside utsending: egen rad som avsender av avmeldingen',

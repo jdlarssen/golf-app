@@ -287,6 +287,30 @@ export function gapLocation(
   return { label: group.label, hole: numbered ? (group.maxHole ?? gap.lastHole) : gap.lastHole };
 }
 
+/**
+ * Who a «Påminn» on a skipped-hole row reaches (#2268, the owner's choice B),
+ * and about which holes. The server recomputes the gaps when the button is
+ * pressed, so the reminder goes out only if the row still exists: the hole
+ * gets a score or the card is delivered in between, and there is nobody to
+ * remind. The row is the gap that holds a pressed player; teammates on one
+ * shared card are one row and are reminded together.
+ *
+ * Guests are left out, as from the delivery reminder: their placeholder
+ * address cannot receive anything, and the one who keeps their card enters
+ * the hole. Null when no one is left to remind.
+ */
+export function missingScoreTargets<P extends { user_id: string; is_guest?: boolean | null }>(
+  gaps: readonly ScoreGap[],
+  players: readonly P[],
+  pressedUserIds: readonly string[],
+): { userIds: string[]; holes: number[] } | null {
+  const gap = gaps.find((g) => g.userIds.some((id) => pressedUserIds.includes(id)));
+  if (!gap) return null;
+  const guests = new Set(players.filter((p) => p.is_guest).map((p) => p.user_id));
+  const userIds = gap.userIds.filter((id) => !guests.has(id));
+  return userIds.length > 0 ? { userIds, holes: gap.holes } : null;
+}
+
 export type PultTab = 'live' | 'players' | 'setup';
 
 // Redirect codes from the roster actions (`actions.ts`): withdraw and reinstate.
