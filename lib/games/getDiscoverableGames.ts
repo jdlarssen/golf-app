@@ -3,6 +3,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import type { RegistrationMode } from './registration';
+import { isPubliclyViewable, isSignupWindowOpen } from './publicSignupVisibility';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import type { StartType } from './startType';
@@ -15,6 +16,12 @@ import type { StartType } from './startType';
  * finnes — det er hele poenget med selv-påmeldings-flyten.
  *
  * Returnerer kun base-info som er trygt å eksponere offentlig.
+ *
+ * #2276: which games the lists may show has one home,
+ * `publicSignupVisibility.ts` — the same signup-window rule as the logged-out
+ * list. Each query mirrors it in SQL (`signups_closed_at is null`) so the
+ * `.limit(50)` window isn't spent on rows the per-row gate drops, and no list
+ * ever shows the viewer a game they organised.
  */
 
 /**
@@ -145,11 +152,12 @@ export async function getDiscoverableGames(userId: string): Promise<{
     let clubQuery = admin
       .from('games')
       .select(
-        'id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)',
+        'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)',
       )
       .in('group_id', myClubIds)
       // #2445: a draft is hidden from everyone but its organiser.
       .eq('status', 'scheduled')
+      .is('signups_closed_at', null)
       .neq('created_by', userId)
       .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
       .limit(50);
@@ -160,23 +168,27 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
     const clubRes = await clubQuery.overrideTypes<Array<DiscoverableFormat>>();
 
-    clubGames = (clubRes.data ?? []).map((row) => {
-      const course = row.courses;
-      const group = row.groups;
-      return {
-        id: row.id as string,
-        name: row.name as string,
-        short_id: row.short_id as string,
-        scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
-        course_name: course?.name ?? null,
-        registration_mode: row.registration_mode as RegistrationMode,
-        group_name: group?.name ?? '',
-        game_mode: row.game_mode,
-        mode_config: row.mode_config,
-        hole_segment: row.hole_segment,
-        start_type: row.start_type,
-      };
-    });
+    // #2276: membership replaces the invitation, not the signup window — a
+    // closed club game is closed for members too.
+    clubGames = (clubRes.data ?? [])
+      .filter((row) => isSignupWindowOpen(row) && row.created_by !== userId)
+      .map((row) => {
+        const course = row.courses;
+        const group = row.groups;
+        return {
+          id: row.id as string,
+          name: row.name as string,
+          short_id: row.short_id as string,
+          scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
+          course_name: course?.name ?? null,
+          registration_mode: row.registration_mode as RegistrationMode,
+          group_name: group?.name ?? '',
+          game_mode: row.game_mode,
+          mode_config: row.mode_config,
+          hole_segment: row.hole_segment,
+          start_type: row.start_type,
+        };
+      });
   }
 
   // Dedup: et klubb-spill som også er open/manual_approval skal ikke dukke opp
@@ -193,11 +205,12 @@ export async function getDiscoverableGames(userId: string): Promise<{
   if (friendIds.length > 0) {
     let friendQuery = admin
       .from('games')
-      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, game_mode, mode_config, hole_segment, start_type, courses(name)')
+      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, let_friends_skip_gate, game_mode, mode_config, hole_segment, start_type, courses(name)')
       .in('created_by', friendIds)
       .in('registration_mode', ['open', 'manual_approval'])
       // #2445: a draft is hidden from everyone but its organiser.
       .eq('status', 'scheduled')
+      .is('signups_closed_at', null)
       .neq('created_by', userId)
       .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
       .limit(50);
@@ -213,28 +226,30 @@ export async function getDiscoverableGames(userId: string): Promise<{
     }
 
     const friendRes = await friendQuery.overrideTypes<Array<DiscoverableFormat>>();
-    friendGames = (friendRes.data ?? []).map((row) => {
-      const course = row.courses;
-      const regMode = row.registration_mode as 'open' | 'manual_approval';
-      const joinMode: 'direct' | 'request' =
-        regMode === 'open' ||
-        (regMode === 'manual_approval' && row.let_friends_skip_gate === true)
-          ? 'direct'
-          : 'request';
-      return {
-        id: row.id as string,
-        name: row.name as string,
-        short_id: row.short_id as string,
-        scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
-        course_name: course?.name ?? null,
-        registration_mode: regMode,
-        joinMode,
-        game_mode: row.game_mode,
-        mode_config: row.mode_config,
-        hole_segment: row.hole_segment,
-        start_type: row.start_type,
-      };
-    });
+    friendGames = (friendRes.data ?? [])
+      .filter((row) => isPubliclyViewable(row) && row.created_by !== userId)
+      .map((row) => {
+        const course = row.courses;
+        const regMode = row.registration_mode as 'open' | 'manual_approval';
+        const joinMode: 'direct' | 'request' =
+          regMode === 'open' ||
+          (regMode === 'manual_approval' && row.let_friends_skip_gate === true)
+            ? 'direct'
+            : 'request';
+        return {
+          id: row.id as string,
+          name: row.name as string,
+          short_id: row.short_id as string,
+          scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
+          course_name: course?.name ?? null,
+          registration_mode: regMode,
+          joinMode,
+          game_mode: row.game_mode,
+          mode_config: row.mode_config,
+          hole_segment: row.hole_segment,
+          start_type: row.start_type,
+        };
+      });
   }
 
   // Dedup: et venn-spill skal ikke også dukke opp i den globale open-lista.
@@ -247,12 +262,18 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   let openQuery = admin
     .from('games')
-    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, start_type, courses(name)')
+    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, game_mode, mode_config, hole_segment, start_type, courses(name)')
     // Påmeldingsmåten ER synligheten: open + manual_approval er oppdagbare,
     // invite_only er privat (#357). Ingen egen synlighets-bryter.
     .in('registration_mode', ['open', 'manual_approval'])
-    // #2445: same rule as getPublicDiscoverableGames, drafts are hidden.
+    // #2445 + #2276: SQL mirror of isPubliclyViewable (publicSignupVisibility.ts),
+    // same as getPublicDiscoverableGames — drafts and closed signups are hidden.
     .eq('status', 'scheduled')
+    .is('signups_closed_at', null)
+    // #2276: SQL mirror of the organiser rule. Not `.neq`: `created_by <> $1`
+    // is NULL for a game without an organiser, which would drop it. The
+    // per-row filter below is the authoritative gate.
+    .or(`created_by.is.null,created_by.neq.${userId}`)
     .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
     .limit(50);
 
@@ -262,8 +283,9 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   const openGamesRes = await openQuery.overrideTypes<Array<DiscoverableFormat>>();
 
-  const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? []).map(
-    (row) => {
+  const openGames: DiscoverableOpenGame[] = (openGamesRes.data ?? [])
+    .filter((row) => isPubliclyViewable(row) && row.created_by !== userId)
+    .map((row) => {
       const course = row.courses;
       return {
         id: row.id as string,
@@ -277,8 +299,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
         hole_segment: row.hole_segment,
         start_type: row.start_type,
       };
-    },
-  );
+    });
 
   // #2061: a teammate who said yes before the organiser approved the captain
   // has an approved row but no game_players row — they are still waiting, so
