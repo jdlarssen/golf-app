@@ -64,9 +64,18 @@ type Props = {
  * Ved fremtidige moduser utvider vi denne mappen — ingen DB-migrasjon eller
  * payload-endring nødvendig før en konkret kombinasjon er implementert.
  */
-// Typen er Partial fordi de to familiene bor i teamFormatLimits, men hver
-// annen GameMode står her: et format uten oppføring ville fått en tom velger.
-const ENABLED_COMBOS: Partial<Record<GameMode, ReadonlySet<TeamSize>>> = {
+/** The two families whose sizes live in `selectableTeamSizes` (#2453). */
+type FamilyMode =
+  | 'texas_scramble'
+  | 'ambrose'
+  | 'florida_scramble'
+  | 'shamble'
+  | 'stableford'
+  | 'modified_stableford';
+
+// Every other GameMode must be listed, so a new format without sizes fails in
+// tsc instead of rendering an empty picker.
+const ENABLED_COMBOS: Record<Exclude<GameMode, FamilyMode>, ReadonlySet<TeamSize>> = {
   best_ball: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay: new Set<TeamSize>([1]),
@@ -141,8 +150,11 @@ function tileKey(mode: GameMode, size: TeamSize): TeamSizeTileKey {
  */
 function tilesForMode(mode: GameMode): TileDef[] {
   const { sizes } = selectableTeamSizes(mode);
+  // Empty outside the two families, and then the mode is one ENABLED_COMBOS lists.
   const enabled: readonly number[] =
-    sizes.length > 0 ? sizes : [...(ENABLED_COMBOS[mode] ?? [])].sort((a, b) => a - b);
+    sizes.length > 0
+      ? sizes
+      : [...(ENABLED_COMBOS[mode as Exclude<GameMode, FamilyMode>] ?? [])].sort((a, b) => a - b);
   return enabled.map((size) => ({ size: size as TeamSize, key: tileKey(mode, size as TeamSize) }));
 }
 
