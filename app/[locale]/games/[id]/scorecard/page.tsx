@@ -817,7 +817,7 @@ function LayoutBTable({
                       {isStableford ? teamTotalPoints : teamTotalNetto}
                     </span>
                     <span className="text-muted ml-2">
-                      ({playedTeamHoles}/{holes.length} hull)
+                      {t('teamHolesPlayed', { played: playedTeamHoles, total: holes.length })}
                     </span>
                   </div>
                 )}

@@ -92,7 +92,7 @@ export function ProductUpdateBannerClient({
         </div>
         <button
           type="button"
-          aria-label="Lukk varselet"
+          aria-label={t('productUpdateDismissAria')}
           onClick={handleDismiss}
           className="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-bg hover:text-text"
         >

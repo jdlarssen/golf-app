@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 /**
  * Liten, dempet pille som vises ved siden av et spillernavn når
  * `accepted_at === null` (spilleren er lagt til av en arrangør, men
@@ -12,6 +14,7 @@
  * #463 — «Ikke bekreftet»-merkelapp.
  */
 export function UnconfirmedBadge({ className }: { className?: string }) {
+  const t = useTranslations('common');
   return (
     <span
       data-testid="unconfirmed-badge"
@@ -22,7 +25,7 @@ export function UnconfirmedBadge({ className }: { className?: string }) {
         color: 'var(--text-muted)',
       }}
     >
-      Ikke bekreftet
+      {t('unconfirmed')}
     </span>
   );
 }
