@@ -199,6 +199,28 @@ describe('suggestFlightAssignment', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
+  it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {
+    authedAdmin();
+
+    const players = Array.from({ length: 5 }, (_, i) => ({
+      user_id: `u${i + 1}`,
+      flight_number: null,
+      withdrawn_at: null,
+      accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
+    }));
+
+    adminMock = buildSupabaseMock([
+      { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null },
+      { data: players, error: null },
+      { data: [], error: null }, // update u1 traff 0 rader
+    ]);
+
+    const { suggestFlightAssignment } = await import('./flightActions');
+    await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
   it('Texas med tre lag à fire → ingen ny inndeling, redirect til detaljsiden (#2290)', async () => {
     authedAdmin();
 
@@ -286,6 +308,24 @@ describe('setPlayerFlight', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     const update = adminMock.__fromCalls.find((c) => c.method === 'update');
     expect(update?.args[0]).toEqual({ flight_number: 2 });
+  });
+
+  it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {
+    // The player was removed in another tab: the row is gone and the UPDATE
+    // matches nothing. PostgREST answers that with error null.
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null }, // games
+      { data: soloRoster(), error: null }, // game_players (vakta)
+      { data: null, error: null, count: 2 } as { data: null; error: null; count: number },
+      { data: [], error: null }, // update traff 0 rader
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('Texas med tre lag à fire → ingen skriving, redirect til detaljsiden (#2290)', async () => {
@@ -586,6 +626,23 @@ describe('toggleSignupsClosed', () => {
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=signups_reopened`);
   });
 
+  it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      {
+        data: { id: GAME_ID, status: 'scheduled', registration_mode: 'open' },
+        error: null,
+      },
+      { data: [], error: null }, // games.update traff 0 rader
+    ]);
+
+    const { toggleSignupsClosed } = await import('./flightActions');
+    await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_game`);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
   it('ikke-scheduled spill → redirect til ?error=signups_not_scheduled', async () => {
     authedAdmin();
 
@@ -599,5 +656,39 @@ describe('toggleSignupsClosed', () => {
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=signups_not_scheduled`);
+  });
+});
+
+// ─── spill-lesingen: feil ≠ fravær (#2293) ───────────────────────────────────
+
+/**
+ * A failed game read is a DB error, not «the game was not found» (#1441). The
+ * mock runs with `strictSingle`, so a rollback from `.maybeSingle()` to
+ * `.single()` turns the no-row case into PGRST116 → `db_game`, and goes red.
+ */
+describe('spill-lesingen i flight- og lag-handlingene', () => {
+  const ACTIONS = {
+    suggestFlightAssignment: (m: typeof import('./flightActions')) =>
+      m.suggestFlightAssignment(GAME_ID),
+    setPlayerFlight: (m: typeof import('./flightActions')) =>
+      m.setPlayerFlight(GAME_ID, 'target-user', 2),
+    toggleSignupsClosed: (m: typeof import('./flightActions')) =>
+      m.toggleSignupsClosed(GAME_ID, true),
+    // Reads the game through loadTeamGame (shared with setPlayerTeam).
+    suggestTeamAssignment: (m: typeof import('./flightActions')) =>
+      m.suggestTeamAssignment(GAME_ID),
+  };
+  const CASES = (Object.keys(ACTIONS) as (keyof typeof ACTIONS)[]).flatMap((action) => [
+    { action, read: { data: null, error: { message: 'boom' } }, expected: 'db_game' },
+    { action, read: { data: null, error: null }, expected: 'not_found' },
+  ]);
+
+  it.each(CASES)('$action: lesing $read.error → ?error=$expected', async ({ action, read, expected }) => {
+    authedAdmin();
+    adminMock = buildSupabaseMock([read], {}, { strictSingle: true });
+
+    const mod = await import('./flightActions');
+    await expect(ACTIONS[action](mod)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=${expected}`);
   });
 });
