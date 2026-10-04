@@ -16,8 +16,12 @@ import { mailWordmarkHtml } from './wordmark';
 export type RegistrationRequestMailParams = {
   to: string;
   gameName: string;
-  /** 8-char short_id — brukes til å bygge deeplink til admin-godkjenningssiden. */
-  gameShortId: string;
+  /**
+   * Spillets id — bygger deeplinken til godkjenningssiden
+   * `/admin/games/[id]/signups`, som slipper inn både admin og arrangøren
+   * (#2440). #2202: lenken gikk før til den offentlige påmeldingssiden.
+   */
+  gameId: string;
   /** Null når søkerens bruker-rad mangler — locale-riktig fallback fylles her (#583). */
   requesterName: string | null;
   /**
@@ -32,14 +36,14 @@ export type RegistrationRequestMailParams = {
 export async function sendRegistrationRequestMail(
   params: RegistrationRequestMailParams,
 ): Promise<void> {
-  const { to, gameName, gameShortId, requesterName, message, locale } = params;
+  const { to, gameName, gameId, requesterName, message, locale } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
   // Locale-riktig fallback når navnet mangler — payloaden holdes språk-nøytral (#583).
   const name = requesterName ?? t('common.somePlayerFallback');
   const subject = t('registrationRequest.subject', { gameName });
-  const approvalUrl = mailUrl(locale, `/signup/${gameShortId}`);
+  const approvalUrl = mailUrl(locale, `/admin/games/${gameId}/signups`);
 
   const bodyHtml = t.markup('registrationRequest.body', {
     requesterName: escapeHtml(name),

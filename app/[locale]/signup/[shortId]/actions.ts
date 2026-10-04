@@ -577,7 +577,7 @@ export async function requestApproval(
         await sendRegistrationRequestMail({
           to: adminRow.email,
           gameName: game.name,
-          gameShortId: game.short_id,
+          gameId: game.id,
           requesterName,
           ...(message ? { message } : {}),
           locale: adminRow.locale,

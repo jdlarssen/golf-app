@@ -5985,7 +5985,7 @@
       "messageQuote": "«{message}»",
       "goToSignups": "Gå til påmeldinger",
       "goToSignupsText": "Gå til påmeldinger: {url}",
-      "footer": "Du får denne meldingen fordi du er arrangør for spillet. Du kan godkjenne eller avslå forespørselen fra Sekretariatet."
+      "footer": "Du får denne e-posten fordi du arrangerer spillet. Trykk på knappen for å godkjenne eller avslå forespørselen."
     },
     "scorecardSubmitted": {
       "subject": "Scorekort levert: {playerName} i {gameName}",
