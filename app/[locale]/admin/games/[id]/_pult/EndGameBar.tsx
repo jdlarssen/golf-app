@@ -79,7 +79,7 @@ export async function EndGameBar({
               <SmartLink
                 href={forceEndHref}
                 data-testid="pult-force-end"
-                className="flex min-h-11 shrink-0 items-center font-semibold text-primary"
+                className="flex min-h-11 shrink-0 items-center font-semibold text-primary underline"
               >
                 {tCta('forceEndButton')}
               </SmartLink>
