@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import {
   envReady,
   skipReason,
@@ -193,11 +193,8 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
   test.describe.configure({ mode: 'serial' });
 
   let game: ActiveGame | null = null;
-  // Browser session signed in as the non-participant player
-  let ctx: BrowserContext;
-  let page: Page;
 
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async () => {
     // The non-participant is PLAYER_EMAIL — a real test user who can receive an
     // OTP (so we can drive both a browser session and a signed-in REST client),
     // but who is NOT a member of the game we seed here. We seed a minimal active
@@ -260,17 +257,10 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
       adminUserId: adminUser.id,
       playerUserId: '', // PLAYER_EMAIL is NOT in this game
     };
-
-    // Open browser session signed in as PLAYER_EMAIL (who is NOT in the game)
-    ctx = await browser.newContext();
-    page = await ctx.newPage();
-    await page.goto('/login?next=/');
-    await signInViaOtp(page, PLAYER_EMAIL!);
   });
 
   test.afterAll(async () => {
     if (game) await cleanupTestGame(game.id);
-    await ctx?.close();
   });
 
   test('non-participant cannot read active game scores via RLS', async () => {
@@ -342,38 +332,34 @@ test.describe('Role B – non-participant blocked from active game @lifecycle', 
     }
   });
 
-  test('non-participant page request: game home redirects or shows 404', async () => {
+  // Each page check signs in in its own context: the REST tests above end
+  // with `signOut()`, whose default global scope ends every session of the
+  // player, so a session opened in beforeAll only ever reached /login. That
+  // let this check pass on the login redirect alone; it now asserts the real
+  // door. PLAYER_EMAIL neither plays nor organised this game (the admin did),
+  // so `nonPlayerGameDoor` answers not_found on game home (#2202).
+  test('non-participant, non-organiser: game home answers not-found', async ({ browser }) => {
     test.slow();
     expect(game).not.toBeNull();
-    // Non-participant (PLAYER_EMAIL not in game) navigates to the game home.
-    // Expected: redirect to /login (RLS 401), notFound() (404 rendered), or
-    // some redirect away from the game. It must NOT show the game content.
-    const response = await page.goto(`/games/${game!.id}`, { waitUntil: 'commit' });
-    // Either redirected to /login, or the server returned 404, or the page is
-    // not at the game URL (notFound() causes a different URL/content).
-    const currentUrl = page.url();
-    const isOnGamePage =
-      currentUrl.includes(`/games/${game!.id}`) &&
-      !currentUrl.includes('/login');
-    if (isOnGamePage) {
-      // If we landed on the game page, assert there's no game content (it should
-      // be a 404 page). We check status or a 404 indicator.
-      const status = response?.status() ?? 0;
-      expect(
-        status,
-        `non-participant accessed game page (status ${status}) — should be 404 or redirect`,
-      ).toBeGreaterThanOrEqual(400);
+    const fresh = await browser.newContext();
+    try {
+      const outsider = await fresh.newPage();
+      await outsider.goto('/login?next=/');
+      await signInViaOtp(outsider, PLAYER_EMAIL!);
+      await outsider.goto(`/games/${game!.id}`, { waitUntil: 'domcontentloaded' });
+      await expect(outsider).not.toHaveURL(/\/login\b/);
+      await expect(outsider.locator('[data-testid="not-found"]')).toBeVisible({ timeout: 20_000 });
+      await expect(outsider.locator('[data-testid="organiser-view"]')).toHaveCount(0);
+    } finally {
+      await fresh.close();
     }
-    // Otherwise we were redirected to /login (or another page) — that's fine.
   });
 
   // #2202 (owner's choice C): the board opens to the game's organiser during
   // play, never to a signed-in outsider. PLAYER_EMAIL neither plays nor
   // organised this game (the admin did). Content-based: notFound() streams
   // after a 200 (cacheComponents), so the status is no oracle here.
-  // Own sign-in in a fresh context: the REST tests above end with
-  // `signOut()`, whose default global scope also ends the browser session, so
-  // the shared `page` would only ever see /login.
+  // Own sign-in in a fresh context, for the reason given above.
   test('non-participant, non-organiser: live leaderboard and hole drilldown answer not-found', async ({
     browser,
   }) => {
