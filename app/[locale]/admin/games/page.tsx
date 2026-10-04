@@ -184,19 +184,21 @@ export default async function GamesPage({
 }
 
 /**
- * A ledger view: the 40 newest games with that status, cup matches and league
- * flights included. Cached per request, so the subtitle and the list share one
- * read.
+ * A ledger view: the games with that status, newest first, cup matches and
+ * league flights included. Drafts and the protocol show the 40 newest. «I gang
+ * nå» shows every active game: it is where `ActionItemsStripe` sends its «n
+ * spill» rows, and the stripe counts every active game, so a capped list could
+ * leave out the very game it counted. Cached per request, so the subtitle and
+ * the list share one read.
  */
 const fetchLedgerGames = cache(async (view: LedgerView) => {
   const { supabase } = await getAdminGamesContext();
-  const { data, error } = await supabase
+  const query = supabase
     .from('games')
     .select(LEDGER_SELECT)
     .eq('status', view)
-    .order('created_at', { ascending: false })
-    .limit(40)
-    .returns<GameRow[]>();
+    .order('created_at', { ascending: false });
+  const { data, error } = await (view === 'active' ? query : query.limit(40)).returns<GameRow[]>();
   if (error) throw error;
   return data ?? [];
 });
