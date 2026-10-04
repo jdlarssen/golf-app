@@ -1269,6 +1269,28 @@ describe('startScheduledGameAction (#2207)', () => {
     expect(lastRedirect()).not.toMatch(/@|emails=/);
   });
 
+  it('admin starts the round and lands in the Sekretariat (#2202: service role)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdminOrCreator
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    startScheduledGameMock.mockResolvedValueOnce({ ok: true, started: true });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=started');
+    expect(startScheduledGameMock).toHaveBeenCalledWith(adminSupabaseMock, 'game-1');
+    expect(announceStartedGameMock).toHaveBeenCalledWith(
+      adminSupabaseMock,
+      'game-1',
+      'admin-1',
+      'startScheduledGameAction',
+    );
+  });
+
   // #2202: the game's organiser starts from the game page, on the service-role
   // client after the requireAdminOrCreator gate, like the app's start route.
   function organiserSession(createdBy: string) {
