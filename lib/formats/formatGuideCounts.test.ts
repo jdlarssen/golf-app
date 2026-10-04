@@ -27,6 +27,34 @@ function mentions(text: string, n: number, locale: Locale): boolean {
   return word !== undefined && new RegExp(`(?<![\\p{L}-])${word}(?![\\p{L}-])`, 'iu').test(text);
 }
 
+/** `n` as a regex alternative: its digits or its number word. */
+function numberPattern(n: number, locale: Locale): string {
+  const word = NUMBER_WORDS[locale][n];
+  return word === undefined ? String(n) : `(?:${n}|${word})`;
+}
+
+const LIMIT_WORDS: Record<Locale, { range: string; upTo: string; players: string }> = {
+  no: { range: 'til', upTo: 'opptil', players: 'spillere' },
+  en: { range: 'to', upTo: 'up\\s+to', players: 'players' },
+};
+
+/**
+ * The phrase that states a limit: «2 til 16» / «three to five» for a range,
+ * «opptil 16» / «up to 16» for a cap, «fire spillere» / «four players» for a
+ * fixed count. Matching the phrase, not each number on its own, keeps a
+ * recommendation in the same text («Fire er best») from passing for a limit.
+ */
+function limitPattern(kind: 'span' | 'max', min: number, max: number, locale: Locale): RegExp {
+  const w = LIMIT_WORDS[locale];
+  const body =
+    kind === 'max'
+      ? `${w.upTo}\\s+${numberPattern(max, locale)}`
+      : min === max
+        ? `${numberPattern(min, locale)}\\s+${w.players}`
+        : `${numberPattern(min, locale)}\\s+${w.range}\\s+${numberPattern(max, locale)}`;
+  return new RegExp(`(?<![\\p{L}\\d])${body}(?![\\p{L}\\d])`, 'iu');
+}
+
 function lookup(messages: unknown, path: string): string {
   const value = path
     .split('.')
@@ -40,8 +68,8 @@ const guide = (mode: string, path: string) => `formatGuide.content.${mode}.${pat
 const locales = Object.keys(LOCALES) as Locale[];
 
 describe('format guide player counts follow START_COUNT_RANGES (#2274)', () => {
-  // 'span' names both min and max (one number when they are equal);
-  // 'max' answers «can more play?» and only has to name the cap.
+  // 'span' states the range (a fixed count when min equals max);
+  // 'max' answers «can more play?» and states the cap.
   const rows: [StartCountMode, string, 'span' | 'max'][] = [
     ['wolf', 'summary', 'span'],
     ['wolf', 'sections.0.body', 'span'],
@@ -58,18 +86,15 @@ describe('format guide player counts follow START_COUNT_RANGES (#2274)', () => {
     rows.map(([mode, path, kind]) => [locale, mode, path, kind] as const),
   );
 
-  it.each(cases)('%s %s.%s names the %s', (locale, mode, path, kind) => {
+  it.each(cases)('%s %s.%s states the %s', (locale, mode, path, kind) => {
     const text = lookup(LOCALES[locale], guide(mode, path));
     const { min, max } = START_COUNT_RANGES[mode];
-    const required = kind === 'max' ? [max] : [...new Set([min, max])];
-    for (const n of required) {
-      expect(mentions(text, n, locale), `${n} missing in «${text}»`).toBe(true);
-    }
+    expect(text).toMatch(limitPattern(kind, min, max, locale));
   });
 
   it.each(locales)('%s best_ball.sections.0.body names the pair cap', (locale) => {
     const text = lookup(LOCALES[locale], guide('best_ball', 'sections.0.body'));
-    expect(text).toMatch(wholeNumber(maxTeamsForSize(2)));
+    expect(text).toMatch(limitPattern('max', 0, maxTeamsForSize(2), locale));
   });
 });
 
@@ -94,7 +119,9 @@ describe('format guide team sizes follow teamSizesForMode (#2274)', () => {
 });
 
 describe('game form team handicap help has a text per team size (#2274)', () => {
-  // GameForm picks `wizard.form.teamHandicap.<prefix>Netto<size>` by team size.
+  // GameForm builds the key `wizard.form.teamHandicap.<prefix>Netto<size>`
+  // from the team size, so tsc fails if a key it can build is missing. This
+  // table adds the other half: every size the format offers has its text.
   const modes: [GameMode, string][] = [
     ['texas_scramble', 'texas'],
     ['ambrose', 'ambrose'],
