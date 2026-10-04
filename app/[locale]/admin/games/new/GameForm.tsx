@@ -330,6 +330,15 @@ type Props = {
 };
 
 /**
+ * Team size for the Texas/Ambrose handicap help key (`texasNetto<n>`,
+ * `ambroseNetto<n>`). The key is built from this union, so tsc fails if
+ * one of the three texts is missing (#2274).
+ */
+function scrambleHelperSize(teamSize: TeamSize): 2 | 3 | 4 {
+  return teamSize === 2 || teamSize === 3 ? teamSize : 4;
+}
+
+/**
  * GameForm — stacked presentation av alle seksjoner for opprett- og edit-
  * flytene. Selve form-state og validerings-logikken lever i `useGameFormState`-
  * hooken; denne komponenten orkestrerer kun rendering + submit-knapper.
@@ -814,13 +823,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               defaultPct={texasHandicapPct}
               legend={t('teamHandicap.legend')}
               description={t('teamHandicap.description')}
-              nettoHelperText={
-                teamSize === 2
-                  ? t('teamHandicap.texasNetto2')
-                  : teamSize === 3
-                    ? t('teamHandicap.texasNetto3')
-                    : t('teamHandicap.texasNetto4')
-              }
+              nettoHelperText={t(`teamHandicap.texasNetto${scrambleHelperSize(teamSize)}`)}
               bruttoHelperText={t('teamHandicap.bruttoHelper')}
               inputLabel={t('teamHandicap.inputLabel')}
               value={texasHandicapPct}
@@ -841,13 +844,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               defaultPct={ambroseHandicapPct}
               legend={t('teamHandicap.legend')}
               description={t('teamHandicap.description')}
-              nettoHelperText={
-                teamSize === 2
-                  ? t('teamHandicap.ambroseNetto2')
-                  : teamSize === 3
-                    ? t('teamHandicap.ambroseNetto3')
-                    : t('teamHandicap.ambroseNetto4')
-              }
+              nettoHelperText={t(`teamHandicap.ambroseNetto${scrambleHelperSize(teamSize)}`)}
               bruttoHelperText={t('teamHandicap.bruttoHelper')}
               inputLabel={t('teamHandicap.inputLabel')}
               value={ambroseHandicapPct}
