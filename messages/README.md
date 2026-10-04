@@ -2,8 +2,8 @@
 
 One JSON file per locale, registered in `i18n/routing.ts`. `no.json` is the
 source of truth; other locales fall back to it per key (merged in
-`i18n/request.ts` — a missing key renders the Norwegian string, never the raw
-key).
+`lib/i18n/messages.ts` — a missing key renders the Norwegian string, never the
+raw key).
 
 ## Namespacing
 
