@@ -893,3 +893,33 @@ describe('registerForOpenGame — signup_closed guard (#543)', () => {
     expect(result).toEqual({ ok: false, error: 'already_registered' });
   });
 });
+
+// ─── #2445: et utkast svarer som et spill som ikke finnes ─────────────────────
+
+describe('#2445: utkast → game_not_found, uten skriving', () => {
+  it.each([
+    ['registerForOpenGame', 'open'],
+    ['requestApproval', 'manual_approval'],
+  ] as const)('%s på et utkast → game_not_found', async (action, mode) => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ status: 'draft', registration_mode: mode }),
+    );
+    // What the INSERT would answer if the draft got through, so a missing
+    // check shows up as already_* instead of a redirect.
+    adminMock = buildSupabaseMock([
+      { data: null, error: { code: '23505', message: 'duplicate key' } },
+    ]);
+
+    const actions = await import('./actions');
+    const result = await actions[action](fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'game_not_found' });
+    expect(getGameByShortIdMock).toHaveBeenCalledWith(SHORT_ID);
+    expect(adminMock.from).not.toHaveBeenCalled();
+    expect(adminMock.rpc).not.toHaveBeenCalled();
+    expect(consumeRateLimitMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendRegistrationRequestMailMock).not.toHaveBeenCalled();
+  });
+});

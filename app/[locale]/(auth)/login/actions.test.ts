@@ -1365,4 +1365,36 @@ describe('verifyCode — #2212 startet eller ferdig runde', () => {
     expect(invitationUpdateCalls()).toHaveLength(0);
     expect(lastRedirect()).toBe('/signup/abc12345/team');
   });
+
+  it('#2445: solo-invitasjon til et utkast: plass på lista og forbruk som før, men ingen landing på utkastet', async () => {
+    const G_DRAFT = '00000000-0000-0000-0000-00000000d001';
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-draft',
+        game_id: G_DRAFT,
+        invited_by: INVITER,
+        expires_at: FUTURE_EXPIRY,
+      },
+    ];
+    adminUserLookup = { id: 'draft-user' };
+    adminGamesById = {
+      [G_DRAFT]: { registration_type: 'solo', status: 'draft' },
+    };
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'inv-draft' }], error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'utkast@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledTimes(1);
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ game_id: G_DRAFT, user_id: 'draft-user' }),
+    );
+    expect(consumedInviteIds()).toEqual(['id', ['inv-draft']]);
+    // The draft is hidden from the invitee, so the login falls back to `next`.
+    expect(lastRedirect()).not.toBe(`/games/${G_DRAFT}`);
+    expect(lastRedirect()).toBe('/');
+  });
 });

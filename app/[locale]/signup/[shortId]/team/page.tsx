@@ -80,6 +80,10 @@ export default async function TeamDashboardPage({
   if (!game) {
     notFound();
   }
+  // #2445: a draft answers like a game that does not exist, for everyone.
+  if (game.status === 'draft') {
+    notFound();
+  }
 
   // Hva «bli med» fører til: open → rett inn i spillet, ellers venter laget
   // på at arrangøren godkjenner. Styrer neste-steg-copy (#362).

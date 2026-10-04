@@ -3,6 +3,7 @@ import {
   buildSupabaseMock,
   makeLocaleRedirectMock,
   RedirectError,
+  type QueryResult,
 } from '@/tests/serverActionMocks';
 
 /**
@@ -2021,5 +2022,150 @@ describe('#2358: declineTeamInvite gjelder bare en invitasjon, ikke en kapteinsr
     expect(
       adminMock.__fromCalls.filter((c) => c.method === 'update' || c.method === 'delete'),
     ).toHaveLength(0);
+  });
+});
+
+/**
+ * #2445: a draft is hidden from everyone but its organiser, and these actions
+ * read the game with the service client, so each one answers a draft like a
+ * game that does not exist. The reads before getGameByShortId are seeded with
+ * rows that pass (this game, the caller as owner or captain, a live status),
+ * and so are the steps after it: without the draft check every row reaches a
+ * different answer, so the not-found here comes from the draft check.
+ */
+describe('#2445: et utkast svarer som et spill som ikke finnes', () => {
+  const OWN_REQUEST_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  const CHILD_REQUEST_ID = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  const OTHER_CAPTAIN_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  const NEW_CAPTAIN_REQUEST_ID = '66666666-6666-6666-6666-666666666666';
+  const CALLER_EMAIL = 'kaptein@example.com';
+
+  // The caller's own invitation onto another captain's team (accept/decline).
+  const ownInvite = () => ({
+    data: {
+      id: OWN_REQUEST_ID,
+      game_id: GAME_ID,
+      user_id: CAPTAIN_ID,
+      status: 'pending',
+      team_request_id: CAPTAIN_REQUEST_ID,
+      team_name: 'Lag A',
+      is_team_captain: false,
+    },
+    error: null,
+  });
+  // A teammate on the caller's team, and the caller's own captain row (remove/resend).
+  const childOnCallersTeam = () => ({
+    data: {
+      id: CHILD_REQUEST_ID,
+      game_id: GAME_ID,
+      user_id: KNOWN_USER_ID,
+      team_request_id: CAPTAIN_REQUEST_ID,
+      team_name: 'Lag A',
+      status: 'pending',
+    },
+    error: null,
+  });
+  const callerAsCaptain = () => ({
+    data: { user_id: CAPTAIN_ID, team_name: 'Lag A', status: 'approved' },
+    error: null,
+  });
+
+  const rows: Array<{
+    name: string;
+    error: 'game_not_found' | 'not_found';
+    queue: () => QueryResult[];
+    rpc?: Record<string, unknown>;
+    run: (m: typeof import('./teamActions')) => Promise<{ ok: boolean }>;
+  }> = [
+    {
+      name: 'submitTeamRegistration',
+      error: 'game_not_found',
+      // What the captain INSERT would answer if the draft got through.
+      queue: () => [{ data: null, error: { code: '23505', message: 'duplicate' } }],
+      run: (m) =>
+        m.submitTeamRegistration({
+          shortId: SHORT_ID,
+          teamName: 'Lag A',
+          slots: [
+            { mode: 'email', value: 'a@x' },
+            { mode: 'email', value: 'b@x' },
+            { mode: 'email', value: 'c@x' },
+          ],
+        }),
+    },
+    {
+      name: 'acceptTeamInvite',
+      error: 'not_found',
+      queue: () => [
+        ownInvite(),
+        { data: { user_id: OTHER_CAPTAIN_ID }, error: null }, // the captain's request, in this game
+        { data: null, error: null }, // the captain has no roster row yet
+        { data: [{ id: OWN_REQUEST_ID }], error: null }, // the status update
+      ],
+      run: (m) => m.acceptTeamInvite(OWN_REQUEST_ID, SHORT_ID),
+    },
+    {
+      name: 'declineTeamInvite',
+      error: 'not_found',
+      queue: () => [ownInvite()],
+      run: (m) => m.declineTeamInvite(OWN_REQUEST_ID, SHORT_ID),
+    },
+    {
+      name: 'removeTeamMember',
+      error: 'not_found',
+      queue: () => [childOnCallersTeam(), callerAsCaptain()],
+      run: (m) => m.removeTeamMember(CHILD_REQUEST_ID, SHORT_ID),
+    },
+    {
+      name: 'attachToCaptainTeam',
+      error: 'not_found',
+      queue: () => [
+        {
+          data: { id: 'inv-1', email: CALLER_EMAIL, game_id: GAME_ID, invited_by: OTHER_CAPTAIN_ID },
+          error: null,
+        },
+        { data: { email: CALLER_EMAIL }, error: null }, // e-mail ownership
+        {
+          data: [{ id: CAPTAIN_REQUEST_ID, user_id: OTHER_CAPTAIN_ID, team_name: 'Lag A', status: 'pending' }],
+          error: null,
+        },
+        { data: { id: 'child-1' }, error: null }, // child insert
+      ],
+      run: (m) => m.attachToCaptainTeam('inv-1', SHORT_ID),
+    },
+    {
+      name: 'resendTeamInvite',
+      error: 'not_found',
+      queue: () => [childOnCallersTeam(), callerAsCaptain()],
+      run: (m) => m.resendTeamInvite(CHILD_REQUEST_ID, SHORT_ID),
+    },
+    {
+      name: 'transferCaptaincy',
+      error: 'not_found',
+      queue: () => [],
+      rpc: { transfer_team_captaincy: { outcome: 'ok' } },
+      run: (m) => m.transferCaptaincy(NEW_CAPTAIN_REQUEST_ID, SHORT_ID),
+    },
+  ];
+
+  it.each(rows)('$name på et utkast → $error, uten skriving, e-post eller RPC', async (row) => {
+    authedAsCaptain();
+    getGameByShortIdMock.mockResolvedValue(makeGame({ status: 'draft' }));
+    adminMock = buildSupabaseMock(row.queue(), row.rpc ?? {});
+
+    const actions = await import('./teamActions');
+    const result = await row.run(actions);
+
+    expect(result).toEqual({ ok: false, error: row.error });
+    expect(getGameByShortIdMock).toHaveBeenCalledWith(SHORT_ID);
+    expect(
+      adminMock.__fromCalls.filter((c) => ['insert', 'update', 'upsert', 'delete'].includes(c.method)),
+    ).toEqual([]);
+    expect(adminMock.__rpcCalls).toEqual([]);
+    expect(serverMock.__rpcCalls).toEqual([]);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
+    expect(sendTeamInvitationMailMock).not.toHaveBeenCalled();
+    expect(consumeRateLimitMock).not.toHaveBeenCalled();
   });
 });

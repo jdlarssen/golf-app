@@ -37,6 +37,11 @@ import type { ScoreVisibility } from './visibility';
  * (`me = allPlayers.find(...)`) — no behavior change, just a different
  * place where authz is enforced.
  *
+ * `me = players.find(...)` alone lets a player into a draft (#2445): a draft
+ * is hidden from everyone but its organiser and global admins. The caller
+ * also needs the draft gate, an RLS read of the game with the user's client
+ * (game home's `joinsRes`) or an explicit `status === 'draft'` check.
+ *
  * ## Cache invalidation
  *
  * Tag convention: `game-${id}`. The 15-minute `revalidate` is a safety net
