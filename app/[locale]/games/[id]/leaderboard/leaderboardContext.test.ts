@@ -55,7 +55,7 @@ describe('getResultReadClient', () => {
   });
 
   it('ignorerer fallback-klienten når spillet er ferdig', async () => {
-    await expect(getResultReadClient(game('finished'), passedClient)).resolves.toBe(
+    await expect(getResultReadClient(game('finished'), passedClient, null)).resolves.toBe(
       adminClient,
     );
   });
@@ -65,7 +65,7 @@ describe('getResultReadClient', () => {
     async (status) => {
       // Spectate-ruta sender inn sin egen admin-klient for live-følging;
       // den må overleve uendret, ellers mister anonyme tilskuere tavla.
-      await expect(getResultReadClient(game(status), passedClient)).resolves.toBe(
+      await expect(getResultReadClient(game(status), passedClient, null)).resolves.toBe(
         passedClient,
       );
       expect(getAdminClientMock).not.toHaveBeenCalled();
@@ -90,6 +90,16 @@ describe('getResultReadClient', () => {
 
   it('arrangøren av et aktivt spill leser med service-role (seer fra konteksten)', async () => {
     await expect(getResultReadClient(game('active', 'viewer-1'))).resolves.toBe(adminClient);
+  });
+
+  it('en sendt klient uten seer bruker aldri sesjonens seer', async () => {
+    // Sesjonens seer (viewer-1) ER arrangøren her, men kallstedet sendte egen
+    // klient og ingen seer (spectate/embed): da gjelder bare den sendte seeren.
+    await expect(
+      getResultReadClient(game('active', 'viewer-1'), passedClient, null),
+    ).resolves.toBe(passedClient);
+    expect(getServerClientMock).not.toHaveBeenCalled();
+    expect(getAdminClientMock).not.toHaveBeenCalled();
   });
 
   it('arrangøren av et ANNET spill får ikke service-role', async () => {

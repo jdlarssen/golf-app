@@ -15,7 +15,9 @@ import type { GameStatus } from '@/lib/games/status';
  *   creator follows a running round like a player does (owner's choice C,
  *   see `organiserFollowsLiveBoard`) and is sent to `/games/[id]` before the
  *   start; anyone else a 404. `resultReadUsesServiceRole` serves exactly the
- *   viewers this surface admits.
+ *   non-admin viewers this surface admits (a test locks it). Admin is the
+ *   exception: the door lets them in, and they read through `is_admin()` in
+ *   RLS with their own client, not the service role.
  *
  * Call it only when the viewer has no `game_players` row. Pure, no DB access:
  * the caller reads `is_admin` and `games.created_by`.
