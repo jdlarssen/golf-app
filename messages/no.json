@@ -4111,8 +4111,8 @@
         "holesPlayed": "<num>{played}</num> av {count} hull",
         "allSubmitted": "Alle har levert ✓",
         "viewStatus": "Se spillerstatus →",
-        "endHint": "Åpner når alle {total} har levert",
-        "endHintApproved": "Åpner når alle {total} har levert og kortene er godkjent"
+        "endHint": "{total, plural, one {Åpner når spilleren har levert} other {Åpner når alle # har levert}}",
+        "endHintApproved": "{total, plural, one {Åpner når spilleren har levert og kortet er godkjent} other {Åpner når alle # har levert og kortene er godkjent}}"
       }
     },
     "players": {
