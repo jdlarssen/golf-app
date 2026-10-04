@@ -179,9 +179,7 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
       // I praksis kan vi se enten /complete-profile direkte eller / som
       // bouncer videre. Vente på at URL-en lander der.
       await inviteePage.waitForURL(/\/complete-profile\b/, { timeout: 15_000 });
-      await expect(
-        inviteePage.getByRole('heading', { name: 'Fullfør profilen din' }),
-      ).toBeVisible();
+      await expect(inviteePage.getByRole('heading', { level: 1 })).toBeVisible();
     });
 
     await test.step('Phase 6: Invitee fyller ut profil-skjema', async () => {
@@ -189,8 +187,8 @@ test.describe('Full invitation flow (admin → OTP → profile → first round) 
       // kjønn og spillerklasse er fjernet fra dette skjemaet (kjønn forblir
       // NULL til soft-prompten på /profile, spillerklasse faller til
       // DB-default 'normal').
-      await inviteePage.getByLabel('Navn', { exact: true }).fill('E2E Test Spiller');
-      await inviteePage.getByLabel('Handicap-index', { exact: true }).fill('18.5');
+      await inviteePage.locator('input[name="name"]').fill('E2E Test Spiller');
+      await inviteePage.locator('input[name="hcp_index"]').fill('18.5');
 
       // Norwegian submit button is 'Sett i gang' (onboarding.submitButton in no.json).
       await inviteePage

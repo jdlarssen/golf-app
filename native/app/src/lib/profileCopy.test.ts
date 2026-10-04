@@ -28,6 +28,7 @@
 import source from '../../../../messages/no.json';
 import { formatHcpDisplay } from '../../../../lib/handicap/signFormat';
 import { HANDICAP_STALENESS_MS } from '../../../../lib/handicap/staleness';
+import { HCP_MAX } from '../../../../lib/users/profileInput';
 import type { ProfileSaveFailure } from '../data/profile';
 import { isFinishedSentence } from '../test/copy';
 import {
@@ -322,30 +323,26 @@ describe('handicap-kurven på bag-taggen', () => {
   });
 });
 
-// #2216: «Fullfør profilen» i appen er bygget etter det nye designet (#2350,
-// Profilstart-forslag). Nettsiden har ennå de gamle tekstene, så bare det som
-// er likt i dag sammenlignes tegn for tegn. Resten står på `AHEAD_OF_WEB`:
-// når #2350 gir nettsiden de nye tekstene, flyttes radene til `SHARED` og
-// pariteten er tilbake.
+// #2216/#2350: «Fullfør profilen» i appen og på nettsiden er bygget etter
+// samme design (Profilstart-forslag), så hver tekst sammenlignes tegn for tegn
+// med webbens nøkkel. Webbens Golfbox-hint har handicap-taket som
+// plassholder; appen skriver tallet rett inn.
 describe('ONBOARDING_TEXT', () => {
   const webOnboarding = source.onboarding;
 
-  const SHARED: Partial<Record<keyof typeof ONBOARDING_TEXT, string>> = {
+  const SHARED: Record<keyof typeof ONBOARDING_TEXT, string> = {
     kicker: webOnboarding.kicker,
+    heading: webOnboarding.heading,
+    nameLabel: webOnboarding.nameLabel,
+    nameHint: webOnboarding.nameHint,
+    hcpLabel: webOnboarding.hcpLabel,
     plusHandicapLabel: webOnboarding.hcpPlusLabel,
+    hcpHint: webOnboarding.hcpGolfboxHelper.replace('{max}', String(HCP_MAX)),
+    previewKicker: webOnboarding.preview.kicker,
+    previewNamePlaceholder: webOnboarding.preview.namePlaceholder,
     submitButton: webOnboarding.submitButton,
     submitPending: webOnboarding.submitPending,
-  };
-
-  const AHEAD_OF_WEB: Partial<Record<keyof typeof ONBOARDING_TEXT, string>> = {
-    heading: '#2350',
-    nameLabel: '#2350',
-    nameHint: '#2350',
-    hcpLabel: '#2350',
-    hcpHint: '#2350',
-    previewKicker: '#2350',
-    previewNamePlaceholder: '#2350',
-    footnote: '#2350',
+    footnote: webOnboarding.footnote,
   };
 
   it('hver tekst er ferdig', () => {
@@ -354,19 +351,16 @@ describe('ONBOARDING_TEXT', () => {
     }
   });
 
-  it('det som er likt på nettsiden i dag, er webbens streng tegn for tegn', () => {
+  it('hver tekst er webbens streng tegn for tegn', () => {
     for (const [key, webText] of Object.entries(SHARED)) {
       expect([key, ONBOARDING_TEXT[key as keyof typeof ONBOARDING_TEXT]]).toEqual([key, webText]);
     }
   });
 
-  it('hver nøkkel er delt med webben eller venter på #2350', () => {
-    const accounted = [...Object.keys(SHARED), ...Object.keys(AHEAD_OF_WEB)].sort();
-    expect(Object.keys(ONBOARDING_TEXT).sort()).toEqual(accounted);
-  });
-
-  it('setter spillets navn inn i kortets tittel', () => {
-    expect(onboardingGameTitle('Lørdagsrunden')).toBe('Lørdagsrunden venter på deg');
+  it('setter spillets navn inn i kortets tittel, som webben', () => {
+    expect(onboardingGameTitle('Lørdagsrunden')).toBe(
+      webOnboarding.game.title.replace('{name}', 'Lørdagsrunden'),
+    );
   });
 });
 

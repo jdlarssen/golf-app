@@ -3,14 +3,14 @@ import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
-import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Kicker } from '@/components/ui/Kicker';
+import { gameIdFromNext } from '@/lib/games/onboardingGame';
 import { completeProfile } from './actions';
-import { OnboardingHcpField } from './OnboardingHcpField';
-import { OnboardingNameField } from './OnboardingNameField';
-import { OnboardingProgress } from './OnboardingProgress';
+import { getOnboardingGame } from './getOnboardingGame';
+import { OnboardingFields } from './OnboardingFields';
+import { OnboardingGameCard } from './OnboardingGameCard';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
@@ -67,6 +67,12 @@ export default async function CompleteProfile({
     redirect(next);
   }
 
+  // #2350: the round the player came from (`next=/games/<id>`, via the
+  // profile gate) waits for them on a card. Anything else — signup and cup
+  // links, `/` — gives no query and no card.
+  const gameId = gameIdFromNext(next);
+  const game = gameId ? await getOnboardingGame(supabase, userId, gameId) : null;
+
   const errorCode = resolveErrorCode(first(params.error), KNOWN_ERROR_CODES, 'unknown');
   const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 
@@ -75,48 +81,58 @@ export default async function CompleteProfile({
   // name — so nobody can craft a link that renders arbitrary text.
   const showGameStartedNotice = first(params.invite_notice) === 'game_started';
 
+  // Artboard «Profilstart-forslag»: the page lays out its own edges (text 20 px
+  // from the side, the game card 16 px), and the column fills the screen so
+  // «Sett i gang» stands at the bottom. The version footer follows below the
+  // fold.
   return (
-    <AppShell>
-      <header className="mb-8">
-        <Kicker tone="accent" className="mb-2">
-          {t('kicker')}
-        </Kicker>
-        <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-tight">
-          {t('heading')}
-        </h1>
-        <p className="font-sans text-sm leading-relaxed text-muted mt-2">
-          {t('subheading')}
-        </p>
-      </header>
+    <AppShell flush>
+      <div className="flex min-h-dvh flex-col">
+        <header className="px-5 pt-[22px]">
+          <Kicker tone="accent" className="leading-[normal]">
+            {t('kicker')}
+          </Kicker>
+          <h1 className="mt-1.5 font-serif text-[28px] leading-[1.15] font-medium text-text">
+            {t('heading')}
+          </h1>
+        </header>
 
-      <OnboardingProgress />
+        {game && <OnboardingGameCard game={game} />}
 
-      <Card>
-        {showGameStartedNotice && (
-          <div className="mb-4">
-            <Banner tone="info" testId="invite-notice-game-started">
-              {t('inviteNoticeGameStarted')}
-            </Banner>
+        {(showGameStartedNotice || errorMessage) && (
+          <div className="flex flex-col gap-3 px-5 pt-5">
+            {showGameStartedNotice && (
+              <Banner tone="info" testId="invite-notice-game-started">
+                {t('inviteNoticeGameStarted')}
+              </Banner>
+            )}
+            {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
           </div>
         )}
 
-        {errorMessage && (
-          <div className="mb-4">
-            <Banner tone="error">{errorMessage}</Banner>
-          </div>
-        )}
-
-        <form action={completeProfile} className="space-y-5">
+        <form action={completeProfile} className="flex flex-1 flex-col">
           <input type="hidden" name="next" value={next} />
-          <OnboardingNameField initialName={echoName} />
+          <OnboardingFields
+            initialName={echoName}
+            initialMagnitude={echoHcpIndex}
+            initialPlus={echoHcpPlus}
+          />
 
-          <OnboardingHcpField initialMagnitude={echoHcpIndex} initialPlus={echoHcpPlus} />
-
-          <SubmitButton className="w-full mt-2" pendingLabel={t('submitPending')}>
-            {t('submitButton')}
-          </SubmitButton>
+          <div className="mt-auto px-5 pt-4 pb-5">
+            {/* `!`: the Button base writes font-medium, tracking-tight and a
+                shadow; the artboard's pill is 600, normal tracking, flat. */}
+            <SubmitButton
+              className="h-[52px] w-full text-[15px] leading-[normal] font-semibold! tracking-normal! [box-shadow:none]!"
+              pendingLabel={t('submitPending')}
+            >
+              {t('submitButton')}
+            </SubmitButton>
+            <p className="mt-2 text-center text-xs leading-[normal] text-muted">
+              {t('footnote')}
+            </p>
+          </div>
         </form>
-      </Card>
+      </div>
     </AppShell>
   );
 }
