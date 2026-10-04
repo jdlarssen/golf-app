@@ -20,6 +20,8 @@ export type NeedsYouGap = {
    * when the group has no number.
    */
   where: { kind: 'group'; group: string; hole: number } | { kind: 'entered'; hole: number };
+  /** «Påminn» for this row (#2268, the owner's choice B): «du mangler slag på hull H». */
+  remindAction: () => void | Promise<void>;
 };
 
 type Props = {
@@ -37,9 +39,9 @@ type Props = {
 /**
  * «Trenger deg» on the desk's «Live» tab (#2268): what waits on the organiser,
  * with the one action in the row. Every row is an `<li>` with at most one
- * control: «Se over» is a link to «Leverte scorekort», «Påminn» is the
- * existing reminder button, and a skipped hole has no action (the reminder
- * only reaches players who have entered every hole, #376).
+ * control: «Se over» is a link to «Leverte scorekort», and «Påminn» is a
+ * button, both on the finished-not-delivered row (today's delivery reminder)
+ * and on a skipped-hole row (the hole reminder, the owner's choice B).
  */
 export function NeedsYouList({ pendingApproval, finished, gaps }: Props) {
   const t = useTranslations('admin.game.pult');
@@ -107,6 +109,17 @@ export function NeedsYouList({ pendingApproval, finished, gaps }: Props) {
                   gap.where.kind === 'group'
                     ? t('gapGroupAt', { group: gap.where.group, hole: gap.where.hole })
                     : t('gapEnteredTo', { hole: gap.where.hole })
+                }
+                action={
+                  <RemindButton
+                    remindAction={gap.remindAction}
+                    count={gap.people}
+                    labelKey="remindRowButton"
+                    confirmKey="remindHoleConfirm"
+                    confirmValues={{ names: gap.names, holes: gap.holes, holeCount: gap.holeCount }}
+                    testId="pult-remind-hole-button"
+                    variant="row"
+                  />
                 }
               />
             ))}

@@ -5,6 +5,7 @@ import {
   findScoreGaps,
   flightProgress,
   gapLocation,
+  missingScoreTargets,
   pultInitialTab,
   elapsedParts,
   type DeskPlayer,
@@ -432,6 +433,89 @@ describe('gapLocation', () => {
     };
     const [gap] = findScoreGaps(input);
     expect(gapLocation(gap, flightProgress(input))).toEqual(c.expected);
+  });
+});
+
+describe('missingScoreTargets', () => {
+  type Guest = Row & { is_guest?: boolean };
+  type Case = {
+    name: string;
+    mode?: GameMode;
+    players: Guest[];
+    scores: { user_id: string; hole_number: number }[];
+    pressed: string[];
+    expected: ReturnType<typeof missingScoreTargets>;
+  };
+
+  const cases: Case[] = [
+    {
+      name: 'én spiller: hans egne hull',
+      players: [player('tore', { flight_number: 2 }), player('ola', { flight_number: 2 })],
+      scores: [...holes('tore', ...range(1, 9), 11, 12), ...holes('ola', ...range(1, 12))],
+      pressed: ['tore'],
+      expected: { userIds: ['tore'], holes: [10] },
+    },
+    {
+      name: 'felles kort: begge lagkameratene',
+      mode: 'texas_scramble',
+      players: [
+        player('kari', { team_number: 1, flight_number: 1 }),
+        player('per', { team_number: 1, flight_number: 1 }),
+      ],
+      scores: holes('kari', 1, 2, 4, 5),
+      pressed: ['kari', 'per'],
+      expected: { userIds: ['kari', 'per'], holes: [3] },
+    },
+    {
+      name: 'gjest i raden purres ikke',
+      mode: 'texas_scramble',
+      players: [
+        player('kari', { team_number: 1, flight_number: 1 }),
+        { ...player('gjest', { team_number: 1, flight_number: 1 }), is_guest: true },
+      ],
+      scores: holes('gjest', 1, 3),
+      pressed: ['gjest', 'kari'],
+      expected: { userIds: ['kari'], holes: [2] },
+    },
+    {
+      name: 'hullet er ført siden: ingen rad, ingen mål',
+      players: [player('tore')],
+      scores: holes('tore', ...range(1, 12)),
+      pressed: ['tore'],
+      expected: null,
+    },
+    {
+      name: 'levert siden: ingen mål',
+      players: [player('tore', { submitted_at: SUBMITTED })],
+      scores: holes('tore', 1, 3),
+      pressed: ['tore'],
+      expected: null,
+    },
+    {
+      name: 'en spiller som ikke er i raden, sendes ikke med',
+      players: [player('tore'), player('ola')],
+      scores: [...holes('tore', 1, 3), ...holes('ola', 1, 4)],
+      pressed: ['tore', 'ola'],
+      expected: { userIds: ['tore'], holes: [2] },
+    },
+    {
+      name: 'bare gjester i raden: ingen mål',
+      players: [{ ...player('gjest'), is_guest: true }],
+      scores: holes('gjest', 1, 3),
+      pressed: ['gjest'],
+      expected: null,
+    },
+  ];
+
+  it.each(cases)('$name', (c) => {
+    const input = {
+      players: c.players,
+      scores: c.scores,
+      mode: c.mode ?? 'stableford',
+      holeSegment: 'full' as const,
+      startType: 'first_tee' as const,
+    };
+    expect(missingScoreTargets(findScoreGaps(input), c.players, c.pressed)).toEqual(c.expected);
   });
 });
 

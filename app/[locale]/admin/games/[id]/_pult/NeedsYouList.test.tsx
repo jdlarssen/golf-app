@@ -4,11 +4,11 @@ import '@testing-library/jest-dom/vitest';
 import { NeedsYouList } from './NeedsYouList';
 
 /**
- * #2268, Type C: «Trenger deg» is a list where each row has at most one
+ * #2268, Type C: «Trenger deg» is a list where each row has exactly one
  * control. Structure only; the counts and names come from
  * `lib/games/organizerDesk.ts`, tested there.
  */
-it('gives each row its one control: a link, a button, or none', () => {
+it('gives each row its one control: «Se over» a link, «Påminn» a button', () => {
   render(
     <NeedsYouList
       pendingApproval={{ count: 2, names: 'A og B' }}
@@ -21,6 +21,7 @@ it('gives each row its one control: a link, a button, or none', () => {
           holes: '10',
           holeCount: 1,
           where: { kind: 'group', group: 'Flight 2', hole: 12 },
+          remindAction: async () => {},
         },
         {
           key: 'e',
@@ -29,6 +30,7 @@ it('gives each row its one control: a link, a button, or none', () => {
           holes: '4',
           holeCount: 1,
           where: { kind: 'entered', hole: 6 },
+          remindAction: async () => {},
         },
       ]}
     />,
@@ -48,8 +50,9 @@ it('gives each row its one control: a link, a button, or none', () => {
 
   const gaps = screen.getAllByTestId('pult-row-gap');
   expect(gaps).toHaveLength(2);
+  // #2268, the owner's choice B: a skipped-hole row has «Påminn» too.
   for (const gap of gaps) {
+    expect(within(gap).getAllByRole('button')).toHaveLength(1);
     expect(within(gap).queryByRole('link')).toBeNull();
-    expect(within(gap).queryByRole('button')).toBeNull();
   }
 });
