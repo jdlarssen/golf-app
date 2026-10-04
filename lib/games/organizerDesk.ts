@@ -297,7 +297,9 @@ export function gapLocation(
  *
  * Guests are left out, as from the delivery reminder: their placeholder
  * address cannot receive anything, and the one who keeps their card enters
- * the hole. Null when no one is left to remind.
+ * the hole. A row of guests only comes back with no `userIds`: it still exists,
+ * there is just no one in it to remind (the desk shows no button for it).
+ * Null only when the row is gone.
  */
 export function missingScoreTargets<P extends { user_id: string; is_guest?: boolean | null }>(
   gaps: readonly ScoreGap[],
@@ -307,8 +309,7 @@ export function missingScoreTargets<P extends { user_id: string; is_guest?: bool
   const gap = gaps.find((g) => g.userIds.some((id) => pressedUserIds.includes(id)));
   if (!gap) return null;
   const guests = new Set(players.filter((p) => p.is_guest).map((p) => p.user_id));
-  const userIds = gap.userIds.filter((id) => !guests.has(id));
-  return userIds.length > 0 ? { userIds, holes: gap.holes } : null;
+  return { userIds: gap.userIds.filter((id) => !guests.has(id)), holes: gap.holes };
 }
 
 export type PultTab = 'live' | 'players' | 'setup';
