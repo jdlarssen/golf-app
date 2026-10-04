@@ -100,7 +100,7 @@ export async function RegistrationOverviewSection({
             </div>
             {registrationMode !== 'open' ? (
               pendingCount !== null && (
-                <div className="text-right">
+                <div className="text-right" data-testid="pending-block">
                   <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                     {t('waitingLabel')}
                   </p>
