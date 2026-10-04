@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { countdownParts } from '@/lib/i18n/format';
 import { joinFlight } from './flightJoinActions';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
+import type { StartBlockReason } from '@/lib/games/startBlockReasons';
 
 /** En flight som velgeren viser. */
 export type FlightOption = {
@@ -22,11 +23,21 @@ type WaitingRoomProps = {
   /** Nåværende flight for denne spilleren (null = ikke tildelt). */
   currentFlightNumber?: number | null;
   /**
-   * #2204: the start is held by something the organiser has to fix. The card
-   * then says so instead of «Starter snart» and the promise to notify.
+   * #2204: why the start is held, when the page knows. The card then says so
+   * instead of «Starter snart» and the promise to notify.
    */
-  blocked?: boolean;
+  blockedReason?: StartBlockReason | null;
 };
+
+/**
+ * #2204: blocks the player may be the one to clear (picking a flight in the
+ * picker below, finishing their own profile). The card does not say it waits
+ * on the organiser for these.
+ */
+const NOT_READY_REASONS: ReadonlySet<StartBlockReason> = new Set([
+  'unassigned_flights',
+  'pending_players',
+]);
 
 
 /**
@@ -38,16 +49,19 @@ type WaitingRoomProps = {
  * #543: hvis spillet er eligible for flight-inndeling, vises en selvbetjenings-
  * velger der spillerne kan plassere seg selv i en flight.
  *
- * #2204: `blocked` swaps the countdown for «Venter på arrangøren». The flight
- * picker stays: placing yourself in a flight can be the very thing missing.
+ * #2204: `blockedReason` swaps the countdown for the block. The flight picker
+ * stays: placing yourself in a flight can be the very thing missing. The page
+ * learns the block when it renders (E1), so a card left open over tee-off asks
+ * the page again on each tick until the round starts or is blocked.
  */
 export function ScheduledWaitingRoom({
   gameId,
   teeOffAt,
   flightOptions = null,
   currentFlightNumber = null,
-  blocked = false,
+  blockedReason = null,
 }: WaitingRoomProps) {
+  const blocked = blockedReason != null;
   const router = useRouter();
   const t = useTranslations('game.waitingRoom');
   const [now, setNow] = useState(() => Date.now());
@@ -77,6 +91,21 @@ export function ScheduledWaitingRoom({
   }, []);
 
   const msUntil = new Date(teeOffAt).getTime() - now;
+  const teeOffPassed = msUntil <= 0;
+
+  // #2204: past tee-off and not blocked, the round is either starting or the
+  // page has not looked yet. Ask the page again on each tick; a refresh runs
+  // E1, which starts the round or hands this card the block. The ref holds the
+  // tick already asked for, so the mount's own render, a re-render after the
+  // refresh, and Next 16's Activity re-running effects on «Tilbake» never ask
+  // twice for the same tick.
+  const askedForTick = useRef(now);
+  useEffect(() => {
+    if (blocked || !teeOffPassed || askedForTick.current === now) return;
+    askedForTick.current = now;
+    router.refresh();
+  }, [now, blocked, teeOffPassed, router]);
+
   const parts = countdownParts(msUntil);
   const text =
     parts.kind === 'soon'
@@ -108,7 +137,11 @@ export function ScheduledWaitingRoom({
       <div className="bg-primary text-white dark:text-bg rounded-2xl px-4 py-3.5 flex items-center gap-3">
         {blocked ? (
           <div className="flex-1" data-testid="waiting-room-blocked">
-            <p className="font-serif text-[15px] font-medium">{t('blocked.title')}</p>
+            <p className="font-serif text-[15px] font-medium">
+              {blockedReason && NOT_READY_REASONS.has(blockedReason)
+                ? t('blocked.titleNotReady')
+                : t('blocked.title')}
+            </p>
             <p className="text-[11.5px] opacity-75 mt-0.5">{t('blocked.body')}</p>
           </div>
         ) : (

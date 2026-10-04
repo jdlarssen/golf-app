@@ -1080,7 +1080,7 @@ export default async function GameHomePage({
                 teeOffAt={game.scheduled_tee_off_at!}
                 flightOptions={flightOptions}
                 currentFlightNumber={me.flight_number}
-                blocked={structuralBlock != null}
+                blockedReason={structuralBlock?.reason ?? null}
               />
             </div>
           )

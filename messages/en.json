@@ -2170,6 +2170,7 @@
       "countdownBody": "We'll notify you when the scorecard opens.",
       "blocked": {
         "title": "Waiting for the organiser",
+        "titleNotReady": "Not ready to start yet",
         "body": "The round starts on its own once what's missing is in place."
       },
       "joinFlightLabel": "Choose your flight",

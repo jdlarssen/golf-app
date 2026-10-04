@@ -2170,6 +2170,7 @@
       "countdownBody": "Vi gir deg beskjed når kortet åpner.",
       "blocked": {
         "title": "Venter på arrangøren",
+        "titleNotReady": "Ikke klar til start ennå",
         "body": "Runden starter av seg selv når det som mangler, er på plass."
       },
       "joinFlightLabel": "Velg din flight",
