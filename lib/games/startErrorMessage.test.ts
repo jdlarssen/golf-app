@@ -52,6 +52,13 @@ describe('START_REFUSAL_CODES (#2202, trap 4)', () => {
     },
   );
 
+  it.each(START_COUNT_MODES)(
+    'rotation_player_count for %s has its format sentence',
+    (mode) => {
+      expect(errors[`rotation_player_count_${mode}`]).toEqual(expect.any(String));
+    },
+  );
+
   it('the game page fallback «unknown» has a text', () => {
     expect(errors.unknown).toEqual(expect.any(String));
   });
