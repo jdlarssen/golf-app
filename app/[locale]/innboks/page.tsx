@@ -120,7 +120,7 @@ export default async function InboxPage() {
   // The viewer's own player row: the result, and whether a reminder is settled.
   const ownGameIds = gameIdsOf(
     visible,
-    new Set(['game_finished', 'payment_reminder', 'deliver_reminder']),
+    new Set(['game_finished', 'payment_reminder', 'deliver_reminder', 'missing_score_reminder']),
   );
   const peerGameIds = gameIdsOf(visible, new Set(['peer_approval_request']), true);
   const requestIds = visible.flatMap((row) => {

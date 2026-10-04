@@ -201,6 +201,18 @@ export function buildNotificationText(
         detail: t('kinds.deliverReminder.detail', { gameName: p.game_name }),
       };
     }
+    case 'missing_score_reminder': {
+      const p = payload as NotificationPayload<'missing_score_reminder'>;
+      // #2268: the first skipped hole by number; `extra` counts the rest, so
+      // the title reads the same without a locale-aware list.
+      return {
+        title: t('kinds.missingScoreReminder.title', {
+          hole: p.holes[0],
+          extra: p.holes.length - 1,
+        }),
+        detail: t('kinds.missingScoreReminder.detail', { gameName: p.game_name }),
+      };
+    }
     case 'cup_finished': {
       const p = payload as NotificationPayload<'cup_finished'>;
       return {

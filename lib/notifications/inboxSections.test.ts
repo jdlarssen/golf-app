@@ -88,6 +88,7 @@ describe('inboxActionKey', () => {
   it.each([
     ['peer_approval_request', 'review'],
     ['deliver_reminder', 'deliver'],
+    ['missing_score_reminder', 'enterScore'],
     ['scorecard_rejected', 'fixCard'],
     ['scorecard_reopened', 'fixCard'],
     ['friend_request', 'reply'],
@@ -601,11 +602,13 @@ describe('findSettledActionIds', () => {
     const pay = row('payment_reminder', { game_id: GAME, game_name: 'X', entry_fee_kr: 200 });
     const deliver = row('deliver_reminder', { game_id: GAME, game_name: 'X' });
     const kept = row('deliver_reminder', { game_id: GAME, game_name: 'X', others_count: 2 });
-    const ids = findSettledActionIds([pay, deliver, kept], {
+    // #2268: a delivered card has every hole, so the hole reminder is done too.
+    const hole = row('missing_score_reminder', { game_id: GAME, game_name: 'X', holes: [10] });
+    const ids = findSettledActionIds([pay, deliver, kept, hole], {
       ...base,
       own: new Map([[GAME, { paid_at: 'x', submitted_at: 'y' }]]),
     });
-    expect(ids).toEqual([pay.id, deliver.id]);
+    expect(ids).toEqual([pay.id, deliver.id, hole.id]);
   });
 
   it('a request still pending in a game that has started is settled (#2263 follow-up)', () => {

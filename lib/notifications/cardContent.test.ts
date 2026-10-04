@@ -116,6 +116,23 @@ describe('buildNotificationText', () => {
     });
   });
 
+  it('missing_score_reminder gir første hull og antallet hull til (#2268)', () => {
+    const textFor = (holes: number[]) =>
+      buildNotificationText(
+        'missing_score_reminder',
+        { game_id: 'g', game_name: 'Vinter-cup', holes } as NotificationPayload,
+        t,
+      );
+
+    expect(textFor([10])).toEqual({
+      title: `kinds.missingScoreReminder.title|${JSON.stringify({ hole: 10, extra: 0 })}`,
+      detail: `kinds.missingScoreReminder.detail|${JSON.stringify({ gameName: 'Vinter-cup' })}`,
+    });
+    expect(textFor([10, 11, 13]).title).toBe(
+      `kinds.missingScoreReminder.title|${JSON.stringify({ hole: 10, extra: 2 })}`,
+    );
+  });
+
   it('cup_signup velger tittel på retningen, med locale-fallback for navnet (#1490)', () => {
     const titleFor = (payload: Record<string, unknown>) =>
       buildNotificationText(
