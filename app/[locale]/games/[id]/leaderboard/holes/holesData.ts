@@ -98,7 +98,9 @@ export async function fetchHolesAndScores(
   // fikk sanksjonert cup-publikum (klubbmedlemmer, tilskuere i aktiv cup)
   // navnene fra den admin-cachede getGameWithPlayers men «—» på alle slag,
   // fordi RLS (0161) krever deltakelse eller ferdig cup.
-  const scoresClient = await getResultReadClient(gwp.game.status, supabase);
+  // #2202 (eierens valg C): arrangøren av et aktivt spill leser som tavla.
+  const { userId } = await getDrilldownContext();
+  const scoresClient = await getResultReadClient(gwp.game, supabase, userId);
 
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase

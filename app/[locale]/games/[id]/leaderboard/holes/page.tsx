@@ -12,7 +12,8 @@ import { leaderboardHref, parseLeaderboardNavContext } from '@/lib/leaderboard/n
 import { hasHoleByHoleView } from '@/lib/leaderboard/holeByHoleView';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
-import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
+import { nonPlayerGameDoor, organiserFollowsLiveBoard } from '@/lib/games/nonPlayerGameDoor';
+import { SpectatePoller } from '@/app/[locale]/spectate/[token]/SpectatePoller';
 import { LeaderboardRealtime } from '../LeaderboardRealtime';
 import { RevealHiddenView } from '../RevealHiddenView';
 import { getDrilldownContext } from './holesData';
@@ -84,25 +85,28 @@ export default async function LeaderboardHolesPage({
   const mode: LeaderboardMode = forceBrutto ? 'brutto' : requestedMode;
 
   const isAdmin = profileRes.data?.is_admin === true;
+  const isParticipant = gwp.players.some((p) => p.user_id === userId);
   // Non-admin, non-participants may open FINISHED games — samme finished-
   // unntak som leaderboard-siden (#1456/#1468): State4Views lagrader lenker
-  // hit for ferdige cup-matcher. Under spill fortsatt kun for deltakere.
-  if (
-    !isAdmin &&
-    game.status !== 'finished' &&
-    !gwp.players.some((p) => p.user_id === userId)
-  ) {
-    // #2202: the organiser who does not play goes to the game page's
-    // organiser view instead of a 404; this gate stays the lock.
+  // hit for ferdige cup-matcher. Under spill fortsatt kun for deltakere,
+  // og (#2202, eierens valg C) for arrangøren som ikke spiller: samme dør og
+  // samme lese-regel som tavla. Denne gaten er låsen.
+  if (!isAdmin && game.status !== 'finished' && !isParticipant) {
     const door = nonPlayerGameDoor({
       gameId: id,
       isAdmin: false,
       isCreator: game.created_by === userId,
-      surface: 'player_page',
+      surface: 'board',
+      status: game.status,
     });
     if (door.kind === 'redirect') redirect({ href: door.href, locale });
-    notFound();
+    if (door.kind !== 'board') notFound();
   }
+  // Realtime on `scores` follows RLS, so a non-playing organiser gets no
+  // events; the drilldown refreshes on a timer for them (#2202).
+  const organiserPolls =
+    !isParticipant &&
+    organiserFollowsLiveBoard({ status: game.status, createdBy: game.created_by, viewerId: userId });
 
   // Live auto-refresh (#679). Per-hull-siden rendrer ikke gjennom
   // `LeaderboardShell`, så den får sin egen montering. Gatet på aktivt spill:
@@ -111,6 +115,7 @@ export default async function LeaderboardHolesPage({
   const withRealtime = (body: ReactNode) => (
     <>
       <LeaderboardRealtime gameId={id} active={isActive} />
+      {organiserPolls && <SpectatePoller live />}
       {body}
     </>
   );

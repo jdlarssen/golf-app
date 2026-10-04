@@ -17,6 +17,7 @@ import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { CupStandingsLink } from './CupStandingsLink';
 import { GameStartListener } from '../GameStartListener';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 
 /**
  * `/games/[id]` for the organiser who is not on the roster (#2202). Every
@@ -26,9 +27,9 @@ import { GameStartListener } from '../GameStartListener';
  *
  * Nothing here assumes the viewer plays: no score entry, no payment box, no
  * waiting room, and no auto-start (the organiser has «Start runden nå», and
- * the cron sweep starts the round anyway). The live leaderboard stays closed
- * during play, as RLS keeps scores to participants (#1542); the organiser
- * follows the round through «Følg live».
+ * the cron sweep starts the round anyway). While the round runs the
+ * organiser follows it on the leaderboard (owner's choice C), and «Følg live»
+ * stays for sharing it with others.
  */
 export async function OrganiserGameView({
   id,
@@ -47,6 +48,13 @@ export async function OrganiserGameView({
 }) {
   const t = await getTranslations('game.home');
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale);
+  // The board is open to everyone signed in once the game is finished; while
+  // it runs, the board door decides (#2202, owner's choice C). The organiser
+  // still has «Følg live» to share the round with others.
+  const boardOpen =
+    game.status === 'finished' ||
+    nonPlayerGameDoor({ gameId: id, isAdmin: false, isCreator: true, surface: 'board', status: game.status })
+      .kind === 'board';
   const teeOffDate =
     game.status === 'scheduled' && game.scheduled_tee_off_at
       ? new Date(game.scheduled_tee_off_at)
@@ -103,6 +111,17 @@ export async function OrganiserGameView({
             </div>
           </Card>
 
+          {boardOpen && (
+            <SmartLink href={`/games/${id}/leaderboard`} className="block">
+              <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+                <span className="text-base font-medium text-text">{t('leaderboard')}</span>
+                <span aria-hidden className="text-muted">
+                  →
+                </span>
+              </Card>
+            </SmartLink>
+          )}
+
           {game.status === 'active' && (
             <>
               <FinishGameCard gameId={id} />
@@ -113,17 +132,6 @@ export async function OrganiserGameView({
                 gameName={gameName}
               />
             </>
-          )}
-
-          {game.status === 'finished' && (
-            <SmartLink href={`/games/${id}/leaderboard`} className="block">
-              <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-                <span className="text-base font-medium text-text">{t('leaderboard')}</span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </SmartLink>
           )}
 
           {/* Self-gates on status: draft and scheduled get edit/delete,

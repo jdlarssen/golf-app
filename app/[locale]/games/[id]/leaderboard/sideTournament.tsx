@@ -47,7 +47,7 @@ export async function computeSideTournament(opts: {
   // lese-regel, ellers forsvant sideturneringen for alle utenfor kampen.
   const [tc, supabase] = await Promise.all([
     getTranslations('leaderboard.common'),
-    getResultReadClient(game.status),
+    getResultReadClient(game),
   ]);
 
   const sideWinnerRows: SideWinnerRow[] = await fetchSideWinners(supabase, gameId);
