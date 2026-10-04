@@ -17,10 +17,17 @@
 //
 // #2255: venterommet står i stubben på startbilletten og har stubbens drakt,
 // ikke et eget banner. Oppførselen er den samme.
+//
+// #2204: er tee-off passert og runden står fast, sier venterommet hvorfor i
+// stedet for «Starter snart». Sperren hentes bare etter tee-off, én gang per ny
+// bundel (altså høyst én gang per tikk), og et svar som kommer etter at
+// bundelen er byttet ut, kastes.
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { GameBundle } from '../../data/gameBundle';
 import { subscribeGameStatus } from '../../data/realtime';
-import { waitingRoomView } from '../../lib/waitingRoom';
+import { fetchStartBlock } from '../../data/startBlock';
+import { waitingRoomView, type WaitingRoomBlock } from '../../lib/waitingRoom';
 import { FONTS, useTheme } from '../../theme';
 
 /** Samme takt som webbens `ScheduledWaitingRoom`. */
@@ -30,14 +37,30 @@ export function WaitingRoom({
   gameId,
   teeOffAt,
   onChanged,
+  bundle,
 }: {
   gameId: string;
   teeOffAt: string | null;
   /** Hent bundelen på nytt. Spill-hjem tegner deretter den nye statusen. */
   onChanged: () => void | Promise<void>;
+  /** #2204: til sperren etter tee-off. Uten bundel teller venterommet ned som før. */
+  bundle?: GameBundle;
 }) {
   const { colors, ui } = useTheme();
   const [now, setNow] = useState(() => Date.now());
+  const [block, setBlock] = useState<WaitingRoomBlock>(null);
+  const teeOffPassed = waitingRoomView(teeOffAt, now).teeOffPassed;
+
+  useEffect(() => {
+    if (!teeOffPassed || !bundle) return;
+    let cancelled = false;
+    void fetchStartBlock(bundle).then((next) => {
+      if (!cancelled) setBlock(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [teeOffPassed, bundle]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,7 +84,7 @@ export function WaitingRoom({
     [gameId, onChanged],
   );
 
-  const view = waitingRoomView(teeOffAt, now);
+  const view = waitingRoomView(teeOffAt, now, block);
 
   return (
     <View style={styles.room} testID="waiting-room">

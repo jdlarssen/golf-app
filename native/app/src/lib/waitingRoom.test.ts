@@ -71,12 +71,40 @@ describe('waitingRoomView', () => {
     expect(waitingRoomView(teeOffAt, NOW)).toEqual(expected);
   });
 
+  // #2204: står runden fast, lover ikke venterommet «Starter snart».
+  it.each<[string, string, 'structural' | 'will_not_play', ReturnType<typeof waitingRoomView>]>([
+    [
+      'sperre etter tee-off',
+      new Date(NOW - 5 * MINUTE).toISOString(),
+      'structural',
+      { headline: WAITING_ROOM_TEXT.opensWhenFixed, countdown: null, teeOffPassed: true },
+    ],
+    [
+      'kamp som ikke blir spilt',
+      new Date(NOW - 5 * MINUTE).toISOString(),
+      'will_not_play',
+      { headline: WAITING_ROOM_TEXT.willNotBePlayed, countdown: null, teeOffPassed: true },
+    ],
+    [
+      'sperre før tee-off teller fortsatt ned',
+      new Date(NOW + 12 * MINUTE).toISOString(),
+      'structural',
+      {
+        headline: WAITING_ROOM_TEXT.opensAtTeeOff,
+        countdown: 'Starter om 12 min',
+        teeOffPassed: false,
+      },
+    ],
+  ])('%s', (_label, teeOffAt, block, expected) => {
+    expect(waitingRoomView(teeOffAt, NOW, block)).toEqual(expected);
+  });
+
   it('sier nøyaktig det samme som webben', () => {
-    expect(WAITING_ROOM_TEXT.opensAtTeeOff).toBe(
-      source.game.home.scorecardOpensAtTeeOff,
-    );
-    expect(WAITING_ROOM_TEXT.opensWhenOrganizerStarts).toBe(
-      source.game.home.scorecardOpensWhenOrganizerStarts,
-    );
+    expect(WAITING_ROOM_TEXT).toEqual({
+      opensAtTeeOff: source.game.home.scorecardOpensAtTeeOff,
+      opensWhenOrganizerStarts: source.game.home.scorecardOpensWhenOrganizerStarts,
+      opensWhenFixed: source.game.home.scorecardOpensWhenFixed,
+      willNotBePlayed: source.game.home.matchWillNotBePlayed,
+    });
   });
 });

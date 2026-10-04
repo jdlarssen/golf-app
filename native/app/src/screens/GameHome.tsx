@@ -298,6 +298,7 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
           flightCta={flightCtaLabel(flightDeliveryFor(bundle, localScores, userId).length)}
           onChanged={refresh}
           onNavigate={navigation.navigate}
+          bundle={bundle}
         />
       </GameTicket>
 
