@@ -1,9 +1,11 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { gameInviteExpiresAtFromNow } from '@/lib/auth/inviteExpiry';
-import { extendAndMailInvitation } from '@/lib/games/extendAndMailInvitation';
+import {
+  extendAndMailInvitation,
+  inviteMailSenderName,
+} from '@/lib/games/extendAndMailInvitation';
 import { normalizeInviteEmail } from '@/lib/games/inviteEmail';
-import { inviteMailSenderName } from '@/lib/games/inviteToGame';
 import type { GameStatus } from '@/lib/games/status';
 
 // The e-mail invitations a draft held, sent when it is published (#2445,
