@@ -75,15 +75,21 @@ import { PendingApprovalsBanner } from './PendingApprovalsBanner';
 import { CupStandingsLink } from './CupStandingsLink';
 import { ProfileGateStripe } from './ProfileGateStripe';
 import { CreatorControls } from './CreatorControls';
+import { OrganiserGameView } from './OrganiserGameView';
 import { FinishGameCard } from './FinishGameCard';
 import { LiveFollowControl } from './LiveFollowControl';
 import { PrimaryCtaSection, PrimaryCtaSkeleton } from './PrimaryCta';
 import { effectiveHcpAllowancePct } from '@/lib/games/hcpAllowance';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
+import { START_REFUSAL_CODES, startErrorMessageArgs } from '@/lib/games/startErrorMessage';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
+  // #2202: a refused start carries the rotation format and count.
+  mode?: string | string[];
+  count?: string | string[];
 }>;
 
 const STATUS_BANNER_KEYS: Record<string, string> = {
@@ -97,7 +103,9 @@ const STATUS_BANNER_KEYS: Record<string, string> = {
 // plus not_found defensively. Texts live in admin.game.errors — same string,
 // one home, shared with the Sekretariat. An unrecognised value collapses to
 // 'unknown' instead of being dropped silently (the silent drop was this bug).
-const ERROR_BANNER_CODES = new Set([
+// #2202: plus every refusal of the organiser's «Start runden nå», read from
+// the start's own list so it cannot fall behind (trap 4).
+const ERROR_BANNER_CODES = new Set<string>([
   'not_active',
   'no_players',
   'not_all_submitted',
@@ -108,7 +116,8 @@ const ERROR_BANNER_CODES = new Set([
   'not_editable',
   'not_found',
   'unknown',
-] as const);
+  ...START_REFUSAL_CODES,
+]);
 
 /** Locale-aware thousands-separator. 6124 → "6 124" (no) / "6,124" (en). */
 function formatLengthMeters(n: number, locale: AppLocale): string {
@@ -163,12 +172,23 @@ export default async function GameHomePage({
     ? undefined
     : (STATUS_BANNER_KEYS[first(sp.status) ?? ''] ?? undefined);
   const statusBanner = statusBannerKey ? t(statusBannerKey as Parameters<typeof t>[0]) : undefined;
-  // Rendered in BOTH returns below: the scheduled early return has no other
-  // banner slot, and ?error=not_active is reachable on a scheduled game.
-  const errorBanner = errorCode ? (
+  // Rendered in BOTH returns below and in the organiser view: the scheduled
+  // early return has no other banner slot, and ?error=not_active is reachable
+  // on a scheduled game.
+  // #2202: the key comes from startErrorMessageArgs (a refused start's
+  // rotation sentence needs format and count). A key the catalog lacks, like a
+  // bare rotation_player_count without a valid format, shows 'unknown' — never
+  // a silent drop (#1361). This page never names the players (#2207).
+  const errorArgs = errorCode
+    ? startErrorMessageArgs({ code: errorCode, mode: first(sp.mode), count: first(sp.count) })
+    : null;
+  const errorKey = errorArgs?.key as Parameters<typeof tGameErrors>[0] | undefined;
+  const errorBanner = errorArgs ? (
     <div data-testid={`game-error-${errorCode}`} className="mb-4">
       <Banner tone="error">
-        {tGameErrors(errorCode as Parameters<typeof tGameErrors>[0])}
+        {errorKey && tGameErrors.has(errorKey)
+          ? tGameErrors(errorKey, { ...errorArgs.values, list: '' })
+          : tGameErrors('unknown')}
       </Banner>
     </div>
   ) : null;
@@ -189,7 +209,7 @@ export default async function GameHomePage({
   // The `courses(...)` / `tee_boxes(...)` joins are NOT cached (would
   // require cross-game fan-out on course-edits), so they ride a slim
   // direct fetch in parallel. Authorization stays at the call-site via
-  // `me = players.find(...)` notFound() below.
+  // `me = players.find(...)` and, without a roster row, nonPlayerGameDoor below.
   const [gwp, joinsRes, spectateRes, ownProfileRes] = await Promise.all([
     getGameWithPlayers(id),
     supabase
@@ -207,12 +227,12 @@ export default async function GameHomePage({
       .maybeSingle(),
     // #1176: slim egen-profil-sjekk for den myke profil-stripa. Ligger utenfor
     // getGameWithPlayers (som bevisst dropper profile_completed_at) — egen rad,
-    // RLS tillater lesing.
+    // RLS tillater lesing. #2202: is_admin rides along for the door below.
     supabase
       .from('users')
-      .select('profile_completed_at')
+      .select('profile_completed_at, is_admin')
       .eq('id', userId)
-      .maybeSingle<{ profile_completed_at: string | null }>(),
+      .maybeSingle<{ profile_completed_at: string | null; is_admin: boolean | null }>(),
   ]);
 
   if (!gwp) notFound();
@@ -225,8 +245,47 @@ export default async function GameHomePage({
   // someone else's draft gets 404 here. Moving it to the service client would
   // open the draft to its players (getGameWithPlayers bypasses RLS).
   if (!joinsRes.data) notFound();
+
+  let game: GameRow = {
+    ...gwp.game,
+    courses: joinsRes.data.courses,
+    tee_boxes: joinsRes.data.tee_boxes,
+  };
+
+  // #427: the game's creator gets an «Avslutt spill»-affordance on game-home
+  // (admins finish from Sekretariatet). Read from the immutable created_by on
+  // the cached game row: the auto-start refetch below only selects the
+  // `GameRow` columns (GAME_HOME_SELECT), and created_by isn't one of them.
+  const isCreator = gwp.game.created_by === userId;
+
+  // #938: current spectate_token (null = live-follow disabled).
+  const spectateToken: string | null =
+    spectateRes.data?.spectate_token ?? null;
+
   const me = gwp.players.find((p) => p.user_id === userId);
-  if (!me) notFound();
+  if (!me) {
+    // #2202: not on the roster. The organiser gets their own view (every
+    // organiser flow lands here), an admin goes to the Sekretariat, anyone
+    // else a 404. Returns before the visit's side effects below (mark read,
+    // auto-confirm, streak, auto-start): none of them concern a non-player.
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: ownProfileRes.data?.is_admin === true,
+      isCreator,
+      surface: 'home',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
+    if (door.kind === 'not_found') notFound();
+    return (
+      <OrganiserGameView
+        id={id}
+        game={game}
+        locale={locale}
+        spectateToken={spectateToken}
+        errorBanner={errorBanner}
+      />
+    );
+  }
 
   // #1194 — etter-runde-feiring: sjekk om NETTOPP denne runden fikk den ukentlige
   // streaken til å vokse. Hentes KUN på finished-visningen (finished auto-starter
@@ -247,16 +306,6 @@ export default async function GameHomePage({
   // unntaket gjøres per render-gren (da er det ingen slag å taste).
   const profileIncomplete = !ownProfileRes.data?.profile_completed_at;
   const meIsGuest = me.users?.is_guest === true;
-
-  // #938: current spectate_token (null = live-follow disabled).
-  const spectateToken: string | null =
-    spectateRes.data?.spectate_token ?? null;
-
-  // #427: the game's creator gets an «Avslutt spill»-affordance on game-home
-  // (admins finish from Sekretariatet). Read from the immutable created_by on
-  // the cached game row: the auto-start refetch below only selects the
-  // `GameRow` columns (GAME_HOME_SELECT), and created_by isn't one of them.
-  const isCreator = gwp.game.created_by === userId;
 
   // #1051: premiebordet (self-hider når tomt). Vises før (venterom) og under
   // (aktiv) runden. safeParse så en malformert blob aldri krasjer spill-hjem.
@@ -313,12 +362,6 @@ export default async function GameHomePage({
         : []),
     ]);
   });
-
-  let game: GameRow = {
-    ...gwp.game,
-    courses: joinsRes.data.courses,
-    tee_boxes: joinsRes.data.tee_boxes,
-  };
 
   // #1814: en cup-kamp trekker man seg fra på cup-nivå — `/games/[id]/trekk-fra`
   // sletter `game_players`-raden, som på en cup-kamp etterlot en ufullstendig

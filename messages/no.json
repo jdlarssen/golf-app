@@ -2112,6 +2112,7 @@
       "teamLabel2": "Lag {number}",
       "youLabel": "DEG",
       "arrangerSection": "ARRANGØR",
+      "organiserViewHint": "Du arrangerer dette spillet, men står ikke på spillerlista.",
       "managePlayersLink": "Styr spillere",
       "editGameLink": "Rediger spill",
       "deleteGameLink": "Slett spill",

@@ -2112,6 +2112,7 @@
       "teamLabel2": "Team {number}",
       "youLabel": "YOU",
       "arrangerSection": "ORGANISER",
+      "organiserViewHint": "You're organising this game but you're not on the player list.",
       "managePlayersLink": "Manage players",
       "editGameLink": "Edit game",
       "deleteGameLink": "Delete game",
