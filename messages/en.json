@@ -3357,7 +3357,7 @@
       "invite_expired": "Your invitation has expired. Ask the organizer to send a new one.",
       "disposable_email": "Disposable emails don't work here. Use a regular address and you're good to go.",
       "code_invalid": "Wrong code. Check your email and try again.",
-      "code_expired": "That code has expired. Request a new one.",
+      "code_expired": "The code is wrong or has expired. Check that you typed it correctly. You can also ask for a new code.",
       "link_expired": "That link has expired. Request a new code.",
       "unknown": "Something went wrong. Please try again."
     },
@@ -3367,19 +3367,28 @@
       "selfRegHelper": "Enter your email. New here? We'll create an account for you.",
       "submitButton": "Send me a code",
       "inviteHint": "You'll get a code by email. No app to download, and it takes under a minute.",
-      "emailPlaceholder": "name@example.com"
+      "emailPlaceholder": "name@example.com",
+      "kicker": "Step 1 of 2"
     },
     "verifyCode": {
       "pending": "Logging in …",
-      "instructionPrefix": "Enter the code we sent to",
-      "instructionSuffix": ".",
+      "kicker": "Step 2 of 2",
+      "heading": "Enter the code from the email",
+      "sentTo": "We sent it to <strong>{email}</strong>.",
+      "changeEmailShort": "Wrong address?",
       "codeLabel": "Code",
+      "codeHint": "The code has eight digits. On iPhone you can tap the code above the keyboard.",
       "submitButton": "Log in",
-      "resendPrompt": "Didn't get the code?",
+      "noMailTitle": "Didn't get the email?",
+      "resendIn": "New code in {time}",
       "resendLink": "Send a new code",
-      "changeEmail": "Wrong address? Change email",
-      "spamHint": "Not showing up? Check your spam folder. The code can take a couple of minutes.",
+      "spamHint": "Check your spam folder. It comes from Tørny and can take a couple of minutes.",
       "spinnerLabel": "Loading"
+    },
+    "band": {
+      "invitedBy": "{name} invited you",
+      "invitedFallback": "You're invited",
+      "gameLine": "{game} · {date} at {time}"
     },
     "reviewLogin": {
       "metaTitle": "Sign in with password",

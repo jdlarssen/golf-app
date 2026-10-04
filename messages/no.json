@@ -3357,7 +3357,7 @@
       "invite_expired": "Invitasjonen din er utløpt. Be arrangøren om å sende en ny.",
       "disposable_email": "Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.",
       "code_invalid": "Feil kode. Sjekk mailen og prøv igjen.",
-      "code_expired": "Koden er gått ut. Be om ny kode.",
+      "code_expired": "Koden stemmer ikke, eller den er gått ut. Sjekk at du skrev den riktig. Du kan også be om en ny kode.",
       "link_expired": "Lenken er gått ut. Be om ny kode.",
       "unknown": "Noe gikk galt. Prøv igjen."
     },
@@ -3367,19 +3367,28 @@
       "selfRegHelper": "Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.",
       "submitButton": "Send meg kode",
       "inviteHint": "Du får en kode på e-post. Ingen app å laste ned, og det tar under et minutt.",
-      "emailPlaceholder": "navn@eksempel.no"
+      "emailPlaceholder": "navn@eksempel.no",
+      "kicker": "Steg 1 av 2"
     },
     "verifyCode": {
       "pending": "Logger inn …",
-      "instructionPrefix": "Skriv inn koden vi sendte til",
-      "instructionSuffix": ".",
+      "kicker": "Steg 2 av 2",
+      "heading": "Skriv inn koden fra mailen",
+      "sentTo": "Vi sendte den til <strong>{email}</strong>.",
+      "changeEmailShort": "Feil adresse?",
       "codeLabel": "Kode",
+      "codeHint": "Koden har åtte siffer. På iPhone kan du trykke på koden over tastaturet.",
       "submitButton": "Logg inn",
-      "resendPrompt": "Fikk du ikke koden?",
+      "noMailTitle": "Kom ikke mailen?",
+      "resendIn": "Ny kode om {time}",
       "resendLink": "Send ny kode",
-      "changeEmail": "Feil adresse? Endre e-post",
-      "spamHint": "Kommer den ikke? Sjekk søppelposten. Koden kan ta et par minutter.",
+      "spamHint": "Se i søppelposten. Den kommer fra Tørny og kan ta et par minutter.",
       "spinnerLabel": "Laster"
+    },
+    "band": {
+      "invitedBy": "{name} har invitert deg",
+      "invitedFallback": "Du er invitert",
+      "gameLine": "{game} · {date} kl. {time}"
     },
     "reviewLogin": {
       "metaTitle": "Logg inn med passord",

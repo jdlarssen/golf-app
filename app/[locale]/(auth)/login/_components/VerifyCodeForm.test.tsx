@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { VerifyCodeForm } from './VerifyCodeForm';
+import { act, render, screen } from '@testing-library/react';
+import { ResendCountdown, VerifyCodeForm } from './VerifyCodeForm';
 
 // `sendCode` / `verifyCode` are server actions — a no-op reference is enough,
 // the render path is what's under test here.
@@ -22,6 +22,8 @@ describe('VerifyCodeForm — change-email link (#1346)', () => {
         next="/spill/42"
         invite="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         changeEmailHref={`/login?${qs.toString()}`}
+        resendWaitSeconds={0}
+        sent=""
       />,
     );
 
@@ -38,5 +40,39 @@ describe('VerifyCodeForm — change-email link (#1346)', () => {
     expect(url.searchParams.get('invite')).toBe(
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     );
+
+    // #2349 regression lock: the eight boxes are drawn over ONE real field,
+    // which keeps the name «Kode» (e2e `signInViaOtpWith`) and iOS's
+    // one-time-code autofill.
+    const field = screen.getByLabelText('Kode');
+    expect(field).toHaveAttribute('autocomplete', 'one-time-code');
+  });
+});
+
+describe('ResendCountdown (#2349)', () => {
+  it('keeps «Send ny kode» off until the wait is over', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ResendCountdown
+          email="kompis@example.com"
+          next=""
+          invite=""
+          sent="1791108000"
+          resendWaitSeconds={42}
+        />,
+      );
+      const button = screen.getByTestId('resend-code-button');
+      expect(button).toBeDisabled();
+      expect(screen.getByText('Ny kode om 0:42')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(42_000);
+      });
+      expect(button).toBeEnabled();
+      expect(screen.queryByText(/Ny kode om/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

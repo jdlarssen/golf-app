@@ -6,11 +6,12 @@ import { canonicalPath } from '@/lib/seo/canonical';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { BrandHero } from '@/components/ui/BrandHero';
+import { Kicker } from '@/components/ui/Kicker';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
+import { LoginBand, type LoginBandInvite } from './_components/LoginBand';
 import { InvitationCard } from '@/components/games/InvitationCard';
 import { PasskeyLoginButton } from '@/components/passkey/PasskeyLoginButton';
 import { resolvePasskeyAccess } from '@/lib/auth/passkeyFlag';
@@ -18,6 +19,7 @@ import { selfRegistrationOpen } from '@/lib/auth/sendLoginCode';
 import {
   getInviteLoginContext,
   isInviteToken,
+  type InviteLoginContext,
 } from '@/lib/auth/getInviteLoginContext';
 import { getGameSocialProof } from '@/lib/games/getGameSocialProof';
 import {
@@ -26,6 +28,10 @@ import {
 } from '@/lib/auth/inviteExpiry';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import { parseSentAt, resendWaitSeconds } from '@/lib/auth/otpResend';
+import { formatTeeOffParts } from '@/lib/i18n/format';
+import { firstName } from '@/lib/firstName';
+import { nameInitials } from '@/lib/names/initials';
 import { first, resolveErrorCode } from '@/lib/url/searchParams';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
 
@@ -35,6 +41,8 @@ type SearchParams = Promise<{
   error?: string | string[];
   next?: string | string[];
   invite?: string | string[];
+  /** #2349: when `sendCode` sent the code, in unix seconds — drives the countdown. */
+  sent?: string | string[];
 }>;
 
 // The set of valid error codes that map to a catalog key.
@@ -57,6 +65,27 @@ const KNOWN_ERROR_CODES = new Set([
 ] as const);
 
 type Params = Promise<{ locale: string }>;
+
+/**
+ * #2349: the invitation on the code step, as one line in the band: who invited
+ * you (first name), and the round with its Oslo date and tee-off — «Marte har
+ * invitert deg», «Lørdagsrunden · lør. 4. okt kl. 09:20». Without a name, the
+ * fallback and no initials; without a tee-off, just the round.
+ */
+async function verifyStepInvite(ctx: InviteLoginContext): Promise<LoginBandInvite> {
+  const locale = (await getLocale()) as AppLocale;
+  const tBand = await getTranslations('auth.band');
+  const inviter = firstName(ctx.inviterName);
+  const game = localizeGameName(ctx.gameName, ctx.courseName, locale);
+  const teeOff = ctx.teeOffAt ? new Date(ctx.teeOffAt) : null;
+  const when =
+    teeOff && !Number.isNaN(teeOff.getTime()) ? formatTeeOffParts(teeOff, locale) : null;
+  return {
+    initials: inviter ? nameInitials(ctx.inviterName) : null,
+    title: inviter ? tBand('invitedBy', { name: inviter }) : tBand('invitedFallback'),
+    line: when ? tBand('gameLine', { game, date: when.date, time: when.time }) : game,
+  };
+}
 
 // #1264: noindex — the soft-404 fix. Every `/login?next=…`/`?invite=…`
 // variant is otherwise indexable under its own querystring, which is pure
@@ -101,8 +130,10 @@ export default async function LoginPage({
   const invite = isInviteToken(inviteRaw) ? inviteRaw : '';
   const inviteCtx = invite ? await getInviteLoginContext(invite) : null;
 
+  // #2349: the paper card is step 1's. On the code step the invitation is a
+  // line in the band instead, and the social proof is not fetched.
   let inviteCard: ReactNode = null;
-  if (inviteCtx) {
+  if (inviteCtx && step === 'email') {
     const locale = (await getLocale()) as AppLocale;
     const tCard = await getTranslations('invitationCard');
     // #1179: vennlig, forward-pekende frist. Kortet rendres per request, så en
@@ -160,6 +191,39 @@ export default async function LoginPage({
     </div>
   ) : null;
 
+  // #2349: the code step (with or without an invitation), artboard
+  // «Innlogging-forslag». The server works out how long «Send ny kode» still
+  // waits from `sent`, so a reload after the minute gives an active button even
+  // without JS. One `nowMs` per request.
+  if (step === 'verify') {
+    // The react-hooks/purity lint rule flags Date.now() as impure regardless
+    // of context, but this IS a server component that runs once per request —
+    // the snapshot is semantically equivalent to a server-side "now()" call.
+    // eslint-disable-next-line react-hooks/purity
+    const nowMs = Date.now();
+    const sentAtMs = parseSentAt(first(params.sent), nowMs);
+    const sent = sentAtMs === null ? '' : String(sentAtMs / 1000);
+
+    const bandInvite = inviteCtx ? await verifyStepInvite(inviteCtx) : null;
+
+    // The artboard ends with the «Kom ikke mailen?» card; the version footer
+    // would land above the fold on 390 × 844, so the step has none.
+    return (
+      <AppShell flush showVersion={false}>
+        <LoginBand wordmarkAs="p" invite={bandInvite} />
+        <VerifyCodeForm
+          email={email}
+          next={next}
+          invite={invite}
+          changeEmailHref={changeEmailHref}
+          notice={errorBanner}
+          resendWaitSeconds={resendWaitSeconds(sentAtMs, nowMs)}
+          sent={sent}
+        />
+      </AppShell>
+    );
+  }
+
   // #2266: fra en invitasjon står siden på lin, med ordmerket uten slagord,
   // papirkortet og «Bli med på runden» som på artboardet. Demo-lenka og
   // passkey-knappen hører til den vanlige innloggingen.
@@ -174,91 +238,72 @@ export default async function LoginPage({
             <LocaleSwitcher />
           </div>
           {inviteCard}
-          {step === 'email' ? (
-            <section
-              aria-labelledby="join-card-title"
-              className="-mx-1 mt-4 flex flex-col gap-2.5 rounded-[18px] border border-border bg-surface p-4"
+          <section
+            aria-labelledby="join-card-title"
+            className="-mx-1 mt-4 flex flex-col gap-2.5 rounded-[18px] border border-border bg-surface p-4"
+          >
+            {errorBanner}
+            <h2
+              id="join-card-title"
+              className="font-serif text-[20px] leading-[normal] font-medium"
             >
-              {errorBanner}
-              <h2
-                id="join-card-title"
-                className="font-serif text-[20px] leading-[normal] font-medium"
-              >
-                {t('joinCard.title')}
-              </h2>
-              <SendCodeForm
-                defaultEmail={email}
-                next={next}
-                invite={invite}
-                variant="invite"
-                hint={t('sendCode.inviteHint')}
-              />
-            </section>
-          ) : (
-            <div className="mt-4">
-              <Card>
-                {errorBanner && <div className="mb-4">{errorBanner}</div>}
-                <VerifyCodeForm
-                  email={email}
-                  next={next}
-                  invite={invite}
-                  changeEmailHref={changeEmailHref}
-                />
-              </Card>
-            </div>
-          )}
+              {t('joinCard.title')}
+            </h2>
+            <SendCodeForm
+              defaultEmail={email}
+              next={next}
+              invite={invite}
+              variant="invite"
+              hint={t('sendCode.inviteHint')}
+            />
+          </section>
         </div>
       </AppShell>
     );
   }
 
+  // #2349: step 1 without an invitation has no artboard of its own. It gets
+  // the band (wordmark, tagline, language switch) and «Steg 1 av 2» at the top
+  // of the card, as the app does (PR #2421); the rest stands as before. The
+  // version footer would land above the fold, so the step has none.
+  const tCommon = await getTranslations('common');
   return (
-    <AppShell>
-      <div className="mt-10">
-        <BrandHero className="mb-10" />
-        <div className="flex justify-center mb-4">
-          <LocaleSwitcher />
-        </div>
+    <AppShell flush showVersion={false}>
+      <LoginBand
+        wordmarkAs="h1"
+        aside={<LocaleSwitcher variant="onStrong" />}
+        tagline={tCommon.rich('brandTagline', {
+          par: (chunks) => (
+            <span className="font-semibold text-accent-on-strong">{chunks}</span>
+          ),
+        })}
+      />
+      <div className="mx-4 mt-5">
         <Card>
-          {errorMessage && (
-            <div data-testid={`login-error-${errorCode}`} className="mb-4">
-              <Banner tone="error">{errorMessage}</Banner>
-            </div>
-          )}
-
-          {step === 'email' ? (
-            <>
-              {resolvePasskeyAccess(process.env.NEXT_PUBLIC_PASSKEYS, false)
-                .showLoginButton && <PasskeyLoginButton next={next} />}
-              <SendCodeForm
-                defaultEmail={email}
-                next={next}
-                invite={invite}
-                allowSelfRegistration={selfRegistrationOpen()}
-              />
-              <div className="mt-6 flex items-center gap-3" aria-hidden="true">
-                <span className="h-px flex-1 bg-border" />
-                <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
-                  {t('tryDemoDivider')}
-                </span>
-                <span className="h-px flex-1 bg-border" />
-              </div>
-              <SmartLink
-                href="/demo"
-                data-testid="try-demo-link"
-                className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
-              >
-                {t('tryDemo')} <span aria-hidden="true">→</span>
-              </SmartLink>
-            </>
-          ) : (
-            <VerifyCodeForm
-              email={email}
-              next={next}
-              invite={invite}
-              changeEmailHref={changeEmailHref}
-            />
-          )}
+          <Kicker className="mb-3 leading-[normal]">{t('sendCode.kicker')}</Kicker>
+          {errorBanner && <div className="mb-4">{errorBanner}</div>}
+          {resolvePasskeyAccess(process.env.NEXT_PUBLIC_PASSKEYS, false)
+            .showLoginButton && <PasskeyLoginButton next={next} />}
+          <SendCodeForm
+            defaultEmail={email}
+            next={next}
+            invite={invite}
+            allowSelfRegistration={selfRegistrationOpen()}
+          />
+          <div className="mt-6 flex items-center gap-3" aria-hidden="true">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
+              {t('tryDemoDivider')}
+            </span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <SmartLink
+            href="/demo"
+            data-testid="try-demo-link"
+            className="mt-4 flex items-center justify-center gap-1.5 text-sm font-medium text-primary"
+          >
+            {t('tryDemo')} <span aria-hidden="true">→</span>
+          </SmartLink>
         </Card>
       </div>
     </AppShell>
