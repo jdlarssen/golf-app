@@ -14,14 +14,14 @@ Supabase Auth bruker konfigurerbare HTML-maler for alle auth-mailer. Her er Tør
 
 | Mal | Brukes av Tørny? | Beskrivelse |
 |---|---|---|
-| **Magic Link** | ✅ Ja, **OTP-kode** | Sendes ved login til **eksisterende** auth-brukere. **Språknøytral kode-mal (Fase M):** viser en 6-sifret kode (`{{ .Token }}`), ingen lenke, ingen prosa. |
+| **Magic Link** | ✅ Ja, **OTP-kode** | Sendes ved login til **eksisterende** auth-brukere. **Språknøytral kode-mal (Fase M):** viser en 8-sifret kode (`{{ .Token }}`), ingen lenke, ingen prosa. |
 | **Confirm Signup** | ✅ Ja, **OTP-kode** | Sendes ved `signInWithOtp(shouldCreateUser:true)` til **nye** brukere — selvregistrering, admin-invitasjoner og venneinvitasjoner via `/invite`. Samme **språknøytrale kode-mal** som Magic Link. |
 | **Invite user** | ⚠️ Reserve | Vi bruker `signInWithOtp` i stedet, men hvis vi senere bytter til `auth.admin.inviteUserByEmail()` trigges denne |
 | **Change Email Address** | ⚠️ Hvis brukt | Trigges hvis bruker bytter mail via Auth (ikke i UI per nå, men kan skje via dashboard) |
 | **Reset Password** | ❌ Ikke i bruk | Vi har magic link only. Branded likevel. |
 
 > ⚠️ **Begge login-malene MÅ vise OTP-kode (`{{ .Token }}`), ikke lenke (`{{ .ConfirmationURL }}`).**
-> Appen ber alltid om en 6-sifret kode på `/login` og verifiserer med `verifyOtp({ type: 'email' })`. En lenke-basert mal gir mismatch (brukeren har ingen kode å taste) og gjeninnfører iOS-PWA-bruddet + mail-scanner-konsumeringen som var hele grunnen til OTP-migreringen 2026-05-13.
+> Appen ber alltid om en 8-sifret kode på `/login` og verifiserer med `verifyOtp({ type: 'email' })`. En lenke-basert mal gir mismatch (brukeren har ingen kode å taste) og gjeninnfører iOS-PWA-bruddet + mail-scanner-konsumeringen som var hele grunnen til OTP-migreringen 2026-05-13.
 >
 > **Magic Link** ble migrert til kode 2026-05-13. **Confirm Signup** ble migrert 2026-06-04 — den ble aldri trigget før åpen selvregistrering (#364) ble skrudd på, så den lå igjen som lenke-mal og sendte en «Bekreft kontoen»-lenke til den første nye brukeren. Symptom: e-post med lenke, app som ber om kode.
 

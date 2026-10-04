@@ -35,7 +35,7 @@
   <rect x="120" y="462" width="600" height="72" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
   <circle cx="156" cy="498" r="16" fill="#2D6A4F"/><text x="156" y="503" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
   <text x="190" y="494" font-size="16" fill="#213029">Skriv engangskoden du får på mail</text>
-  <text x="190" y="516" font-size="12.5" fill="#6B7770">6–8 sifre, ingen passord å huske ⚠ #318</text>
+  <text x="190" y="516" font-size="12.5" fill="#6B7770">8 sifre, ingen passord å huske ⚠ #318</text>
   <line x1="420" y1="534" x2="420" y2="564" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- 4 -->

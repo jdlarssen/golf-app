@@ -3,8 +3,9 @@ import { BrandMark } from './BrandMark';
 
 /**
  * Brand-mark hero: the «Tørny» wordmark (ball on the T, #1985) + the tagline
- * below. Used on /login, /finn-turneringer (logged out) and the public sign-up
- * page as the page heading, standing on the linen background. The tagline
+ * below. Used on /finn-turneringer (logged out) and the public sign-up page as
+ * the page heading, standing on the linen background. (/login has its own
+ * forest band since #2349.) The tagline
  * comes from `common.brandTagline`, so it follows the page language (#2351).
  *
  * Faithful to `brand-mark.svg` in
