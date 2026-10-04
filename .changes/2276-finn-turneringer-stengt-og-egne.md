@@ -2,4 +2,4 @@
 type: fix
 issue: 2276
 ---
-Under Finn turneringer ser du nå bare turneringer du kan melde deg på. De med stengt påmelding og de du arrangerer selv, vises ikke lenger.
+Finn turneringer og Hjem viser ikke lenger turneringer der påmeldingen er stengt. Turneringene du arrangerer selv, står heller ikke der.
