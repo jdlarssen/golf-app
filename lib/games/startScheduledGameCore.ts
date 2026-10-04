@@ -208,9 +208,10 @@ export async function startScheduledGameCore(
   // silent reason, not the structural 'tee_missing' that sends the organiser
   // «auto-start blokkert». It also runs before the withdrawal rule (#1814).
   // No write happens. A null embed means «unknown» and the start goes on as
-  // before. Every caller can read the cup: the cron sweep, E1 and the app's
-  // start route pass the service-role client, the admin button runs as a
-  // global admin, the derived-games sync follows its host (which cannot start
+  // before. Every caller can read the cup: the cron sweep, E1, the app's
+  // start route and the web's «Start runden nå» (after its
+  // requireAdminOrCreator gate, #2202) pass the service-role client, the
+  // derived-games sync follows its host (which cannot start
   // here), and a league flight is never in a cup. An app build from before
   // #2215 bundles its own copy of this core without the check.
   if (game.tournament_id && finishedCupBlocksPlay(game.tournament?.status)) {
