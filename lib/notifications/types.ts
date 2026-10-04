@@ -23,6 +23,7 @@ export type NotificationKind =
   | 'registration_expired'
   | 'team_member_withdrew'
   | 'deliver_reminder'
+  | 'missing_score_reminder'
   | 'cup_finished'
   | 'cup_started'
   | 'cup_signup'
@@ -230,6 +231,16 @@ const deliverReminderSchema = z.object({
   others_count: z.number().int().positive().optional(),
 });
 
+// missing_score_reminder (#2268): arrangøren trykket «Påminn» på en hull-rad i
+// arrangørpulten. Spilleren har ført senere hull, men mangler slag på `holes`
+// (ekte hullnumre, i rekkefølge). Deeplinker til det første hullet. Egen kind,
+// ikke deliver_reminder: mark-read, push-taggen og «avgjort»-regelen leser kind.
+const missingScoreReminderSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  holes: z.array(z.number().int().min(1).max(18)).min(1),
+});
+
 // cup_finished: en cup (tournament av matcher) er avsluttet. Fyres til alle
 // cup-deltakere fra `finishTournament` — in-app først, mail kun til off-app
 // (samme prinsipp som game_finished). Slank payload speiler game_finished:
@@ -409,6 +420,7 @@ const schemas = {
   registration_expired: registrationExpiredSchema,
   team_member_withdrew: teamMemberWithdrewSchema,
   deliver_reminder: deliverReminderSchema,
+  missing_score_reminder: missingScoreReminderSchema,
   cup_finished: cupFinishedSchema,
   cup_started: cupStartedSchema,
   cup_signup: cupSignupSchema,
@@ -424,6 +436,13 @@ const schemas = {
   idea_built: ideaBuiltSchema,
   payment_reminder: paymentReminderSchema,
 } as const;
+
+/**
+ * Every kind, from the schema map (which the compiler keeps complete). The
+ * CHECK constraint in the newest migration must list exactly these
+ * (`kindCheckParity.test.ts`).
+ */
+export const NOTIFICATION_KINDS = Object.keys(schemas) as NotificationKind[];
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =
   z.infer<(typeof schemas)[K]>;

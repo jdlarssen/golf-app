@@ -11,6 +11,14 @@ const TOURNAMENT = '22222222-2222-2222-2222-222222222222';
 const GROUP = '33333333-3333-3333-3333-333333333333';
 
 describe('notificationDestination', () => {
+  it('#2268: the missing-score reminder lands on the first hole without a score', () => {
+    expect(
+      notificationDestination(
+        n('missing_score_reminder', { game_id: GAME, game_name: 'X', holes: [10, 11] }),
+      ),
+    ).toBe(`/games/${GAME}/holes/10`);
+  });
+
   it('maps game-anchored kinds to their game route', () => {
     expect(
       notificationDestination(
