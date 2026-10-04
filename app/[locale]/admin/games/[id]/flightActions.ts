@@ -43,6 +43,12 @@ async function loadFlightContext(gameId: string) {
   };
 }
 
+/** Expires the game cache and the admin page after a saved flight/team write. */
+function expireFlightCaches(gameId: string): void {
+  expireGameCache(gameId);
+  revalidatePath(`/admin/games/${gameId}`);
+}
+
 /**
  * Henter aktive spillere for flight-inndeling, sortert på accepted_at ASC
  * (påmeldingsrekkefølge). `game_players` har ingen created_at-kolonne — #1669
@@ -157,6 +163,7 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
 
   const assignments = suggestFlightSplit(players);
 
+  let written = 0;
   for (const { user_id, flight_number } of assignments) {
     let failure: unknown = null;
     try {
@@ -172,17 +179,20 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
           .select('user_id'),
         'suggestFlightAssignment',
       );
+      written += 1;
     } catch (e) {
       failure = e;
     }
     if (failure) {
       console.error('[suggestFlightAssignment] flight update failed', failure);
+      // The rows before this one are saved: expire the cache so the pages
+      // show them, not the old split.
+      if (written > 0) expireFlightCaches(gameId);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }
 
-  expireGameCache(gameId);
-  revalidatePath(`/admin/games/${gameId}`);
+  expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=flight_suggested`, locale });
 }
 
@@ -268,8 +278,7 @@ export async function setPlayerFlight(
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
-  expireGameCache(gameId);
-  revalidatePath(`/admin/games/${gameId}`);
+  expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=flight_updated`, locale });
 }
 
@@ -355,6 +364,7 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
     redirect({ href: detailPath, locale });
   }
 
+  let written = 0;
   for (const { user_id, team_number, flight_number } of assignments) {
     let failure: unknown = null;
     try {
@@ -370,17 +380,19 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
           .select('user_id'),
         'suggestTeamAssignment',
       );
+      written += 1;
     } catch (e) {
       failure = e;
     }
     if (failure) {
       console.error('[suggestTeamAssignment] team update failed', failure);
+      // Same as suggestFlightAssignment: earlier rows are saved (#2293).
+      if (written > 0) expireFlightCaches(gameId);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }
 
-  expireGameCache(gameId);
-  revalidatePath(`/admin/games/${gameId}`);
+  expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=team_suggested`, locale });
 }
 
@@ -453,8 +465,7 @@ export async function setPlayerTeam(
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
-  expireGameCache(gameId);
-  revalidatePath(`/admin/games/${gameId}`);
+  expireFlightCaches(gameId);
   redirect({ href: `${detailPath}?status=team_updated`, locale });
 }
 
@@ -506,8 +517,7 @@ export async function toggleSignupsClosed(
     redirect({ href: `${detailPath}?error=db_game`, locale });
   }
 
-  expireGameCache(gameId);
-  revalidatePath(`/admin/games/${gameId}`);
+  expireFlightCaches(gameId);
   revalidatePath(`/signup`);
   redirect({
     href: `${detailPath}?status=${closedNow ? 'signups_closed' : 'signups_reopened'}`,
