@@ -176,6 +176,10 @@ export default async function PåmeldingPage({
   if (!game) {
     notFound();
   }
+  // #2445: a draft answers like a game that does not exist, for everyone.
+  if (game.status === 'draft') {
+    notFound();
+  }
 
   // Bruk admin-client for profil/membership-sjekker. Vi er allerede authed
   // og verifisert via auth.getUser() — admin-bypass er bare for å unngå at
