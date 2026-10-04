@@ -136,8 +136,11 @@ export default async function PåmeldingerPage({
     .order('created_at', { ascending: true })
     .returns<RawRequestRow[]>();
 
+  // #2293: a failed read goes to the error boundary. Rendering the empty tab
+  // here would tell the organiser nobody is waiting (same rule as #1441).
   if (requestsError) {
     console.error('[påmeldinger] requests fetch failed', requestsError);
+    throw requestsError;
   }
 
   const unknownPlayer = tDetail('unknownPlayer');
@@ -147,11 +150,16 @@ export default async function PåmeldingerPage({
 
   // Tab-tellere så fanene viser counts. Én SELECT med count=exact per status
   // ville vært 4 round-trips; vi velger heller en lett aggregert query.
-  const { data: countRows } = await supabase
+  const { data: countRows, error: countError } = await supabase
     .from('game_registration_requests')
     .select('status')
     .eq('game_id', id)
     .returns<{ status: RequestStatus }[]>();
+  // Same as above: zeros on every tab would be a claim, not an absence (#2293).
+  if (countError) {
+    console.error('[påmeldinger] count fetch failed', countError);
+    throw countError;
+  }
 
   const counts: Record<RequestStatus, number> = {
     pending: 0,

@@ -43,7 +43,9 @@ export async function RegistrationOverviewSection({
   // Pending-telleren gjelder request-modiene (manual_approval + invite_only).
   // For open viser vi i stedet "antall selv-påmeldte spillere" som caller
   // har regnet ut.
-  let pendingCount = 0;
+  // #2293: null = the count failed. «Venter» is then hidden rather than
+  // claiming 0 are waiting (same rule as the «Styr spillere» link, #2440).
+  let pendingCount: number | null = 0;
   if (
     registrationMode === 'manual_approval' ||
     registrationMode === 'invite_only'
@@ -55,8 +57,10 @@ export async function RegistrationOverviewSection({
       .eq('status', 'pending');
     if (error) {
       console.error('[RegistrationOverviewSection] count failed', error);
+      pendingCount = null;
+    } else {
+      pendingCount = count ?? 0;
     }
-    pendingCount = count ?? 0;
   }
 
   // #543-gaten, flyttet inn i kortet (#1795). `draft` har ingen påmelding å
@@ -95,14 +99,19 @@ export async function RegistrationOverviewSection({
               </p>
             </div>
             {registrationMode !== 'open' ? (
-              <div className="text-right">
-                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  {t('waitingLabel')}
-                </p>
-                <p className="mt-0.5 font-serif text-[20px] font-medium tabular-nums text-text">
-                  {pendingCount}
-                </p>
-              </div>
+              pendingCount !== null && (
+                <div className="text-right">
+                  <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                    {t('waitingLabel')}
+                  </p>
+                  <p
+                    className="mt-0.5 font-serif text-[20px] font-medium tabular-nums text-text"
+                    data-testid="pending-count"
+                  >
+                    {pendingCount}
+                  </p>
+                </div>
+              )
             ) : (
               <div className="text-right">
                 <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
