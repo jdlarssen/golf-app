@@ -1075,7 +1075,7 @@ describe('reopenGame', () => {
         data: { id: 'game-1', name: 'Vinter-cup', status: 'finished' },
         error: null,
       }, // games.select(id, name, status)
-      { data: null, error: null }, // games.update(status='active') → ok
+      { data: [{ id: 'game-1' }], error: null }, // games.update(status='active') → ok
       { data: [], error: null }, // syncDerivedGamesStatus lookup → no derived games
       {
         data: [{ user_id: 'admin-1' }, { user_id: 'user-a' }],
@@ -1120,7 +1120,7 @@ describe('reopenGame', () => {
         data: { id: 'game-1', name: 'Vinter-cup', status: 'finished' },
         error: null,
       }, // games.select(id, name, status)
-      { data: null, error: null }, // games.update(...) on the host → ok
+      { data: [{ id: 'game-1' }], error: null }, // games.update(...) on the host → ok
       { data: [{ id: 'derived-1' }], error: null }, // findDerivedGameIds
       { data: [{ id: 'derived-1' }], error: null }, // the derived batch UPDATE
       { data: [{ user_id: 'admin-1' }], error: null }, // roster (actor only)
@@ -1222,7 +1222,7 @@ describe('reopenGame', () => {
         },
         error: null,
       }, // games.select
-      { data: null, error: null }, // games.update(...) on the host → ok
+      { data: [{ id: 'game-1' }], error: null }, // games.update(...) on the host → ok
       { data: [], error: null }, // syncDerivedGamesStatus lookup → none
       { data: [{ user_id: 'admin-1' }], error: null }, // roster (actor only)
     ]);
