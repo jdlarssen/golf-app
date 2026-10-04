@@ -70,7 +70,7 @@ import {
   teamBuckets,
 } from '@/lib/games/teamScope';
 import { localizeGameName } from '@/lib/games/autoGameName';
-import { isStartCountMode } from '@/lib/games/startPlayerCount';
+import { startErrorMessageArgs } from '@/lib/games/startErrorMessage';
 import { splitFinishRoster, stampsFromRow } from '@/lib/games/finishGate';
 import type { StartType } from '@/lib/games/startType';
 import {
@@ -233,20 +233,18 @@ export default async function GameDetailPage({
   async function buildErrorMessage(): Promise<string | undefined> {
     if (!errorCode) return undefined;
     // #969 / #2071: rotation_player_count picks a format-specific message and
-    // passes the live active count.
-    if (
-      errorCode === 'rotation_player_count' &&
-      errorMode !== undefined &&
-      isStartCountMode(errorMode)
-    ) {
-      const count = Number(first(sp.count) ?? '0');
-      return tErrors(`rotation_player_count_${errorMode}`, { count });
-    }
-    const key = `${errorCode}` as Parameters<typeof tErrors>[0];
+    // passes the live active count. The rule's home is startErrorMessageArgs
+    // (#2202), shared with the game page.
+    const args = startErrorMessageArgs({
+      code: errorCode,
+      mode: errorMode,
+      count: first(sp.count),
+    });
+    const key = args.key as Parameters<typeof tErrors>[0];
     if (!tErrors.has(key)) return undefined;
     const list =
       errorCode === 'pending_players' ? await pendingPlayerList(first(sp.pending)) : '';
-    return tErrors(key, { list });
+    return tErrors(key, { ...args.values, list });
   }
 
   const { supabase } = await getAdminGameContext();
