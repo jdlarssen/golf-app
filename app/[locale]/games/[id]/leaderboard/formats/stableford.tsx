@@ -70,6 +70,7 @@ export async function renderStableford(opts: {
   publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
+  const tModes = await getTranslations('modes');
   const th2h = await getTranslations('leaderboard.h2h');
   const {
     gameId,
@@ -318,12 +319,8 @@ export async function renderStableford(opts: {
         <HeadToHeadResult
           gameId={gameId}
           gameName={game.name}
-          formatLabel={
-            stablefordMode === 'modified_stableford'
-              ? 'Modifisert Stableford'
-              : 'Stableford'
-          }
-          unitLabel="poeng"
+          formatLabel={tModes(stablefordMode)}
+          unitLabel={tc('poengLabel')}
           sideA={sideFor(a)}
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}

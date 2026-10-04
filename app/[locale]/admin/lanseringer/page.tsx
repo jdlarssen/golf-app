@@ -197,7 +197,7 @@ async function PreviousUpdatesList() {
             <p className="mt-1.5 font-sans text-sm text-muted">{u.body}</p>
             {u.link && (
               <p className="mt-2 font-sans text-[11px] text-muted">
-                Lenke: <code className="text-text">{u.link}</code>
+                {t('linkPrefix')} <code className="text-text">{u.link}</code>
                 {u.cta_label ? ` · «${u.cta_label}»` : ''}
               </p>
             )}

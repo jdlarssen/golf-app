@@ -84,7 +84,7 @@ export default async function CoursesPage({
             href="/admin/courses/new"
             className="tap-extend rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text [--tap-extend:-11px_0]"
           >
-            + Ny
+            {t('newButton')}
           </SmartLink>
         }
       />

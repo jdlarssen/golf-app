@@ -293,7 +293,7 @@ export function ProfileFormBody({
       </div>
 
       <p className="border-t border-border/60 pt-3 text-xs text-muted dark:border-border/80">
-        E-post: <span className="text-text">{email}</span> · {t('emailLine')}
+        {t('emailPrefix')} <span className="text-text">{email}</span> · {t('emailLine')}
       </p>
 
       <div className="pt-2">

@@ -153,7 +153,7 @@ export async function renderBingoBangoBongo(opts: {
           gameId={gameId}
           gameName={game.name}
           formatLabel="Bingo Bango Bongo"
-          unitLabel="poeng"
+          unitLabel={tc('poengLabel')}
           sideA={sideFor(a)}
           sideB={sideFor(b)}
           winnerUserId={winnerUserId}

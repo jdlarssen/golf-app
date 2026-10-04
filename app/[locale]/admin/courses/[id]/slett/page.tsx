@@ -113,7 +113,7 @@ export default async function SlettBanePage({
               {t('permanentLabel')}
             </p>
             <ul className="space-y-1 font-sans text-[13px] text-text">
-              <li>Banen «{course.name}»</li>
+              <li>{t('courseItem', { name: course.name })}</li>
               {holeCount > 0 && <li>{t('hullCount', { count: holeCount })}</li>}
               {teeCount > 0 && (
                 <li>{t('teeCount', { count: teeCount })}</li>

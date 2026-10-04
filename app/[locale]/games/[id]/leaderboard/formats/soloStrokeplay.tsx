@@ -70,6 +70,7 @@ export async function renderSoloStrokeplay(opts: {
   publicView?: boolean;
 }) {
   const tc = await getTranslations('leaderboard.common');
+  const tModes = await getTranslations('modes');
   const th2h = await getTranslations('leaderboard.h2h');
   const {
     gameId,
@@ -241,8 +242,8 @@ export async function renderSoloStrokeplay(opts: {
         <HeadToHeadResult
           gameId={gameId}
           gameName={game.name}
-          formatLabel={`Slagspill · ${tc('netto')}`}
-          unitLabel={toPar ? tc('vsParLabel') : 'slag'}
+          formatLabel={`${tModes('solo_strokeplay')} · ${tc('netto')}`}
+          unitLabel={toPar ? tc('vsParLabel') : tc('slagLabel')}
           lowerWins
           sideA={sideFor(a)}
           sideB={sideFor(b)}

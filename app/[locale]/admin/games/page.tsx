@@ -1,5 +1,6 @@
 import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
+import { useTranslations } from 'next-intl';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
@@ -328,11 +329,12 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
 }
 
 function GamesLedgerSkeleton() {
+  const t = useTranslations('admin.games');
   return (
     <>
       <LedgerHeader
-        leftLabel="Spill"
-        rightLabel="Status"
+        leftLabel={t('colGames')}
+        rightLabel={t('colStatus')}
         gridTemplateColumns={GAMES_LEDGER_GRID}
       />
       <div
