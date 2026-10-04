@@ -8,6 +8,14 @@ import {
 } from '@/lib/mail/inviteNotification';
 
 /**
+ * The sender name in a game invitation: the inviter's name, otherwise the role.
+ * One home for the e-mail core, `sendHeldGameInvites` and «Send på nytt» (#2445).
+ */
+export function inviteMailSenderName(name: string | null, isAdmin: boolean): string {
+  return name?.trim() || (isAdmin ? 'Admin' : 'En arrangør');
+}
+
+/**
  * What happened to an open invitation (#2445).
  *
  * - `sent`: the deadline was pushed out and the mail went out.

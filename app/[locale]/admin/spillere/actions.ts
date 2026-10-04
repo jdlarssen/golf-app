@@ -12,7 +12,10 @@ import {
   inviteExpiresAtFromNow,
 } from '@/lib/auth/inviteExpiry';
 import { isRosterLocked } from '@/lib/games/status';
-import { extendAndMailInvitation } from '@/lib/games/extendAndMailInvitation';
+import {
+  extendAndMailInvitation,
+  inviteMailSenderName,
+} from '@/lib/games/extendAndMailInvitation';
 import {
   consumeAdminInviteRateLimit,
   getClientIp,
@@ -177,14 +180,16 @@ export async function resendInvitation(formData: FormData) {
 
     const { data: inviter, error: inviterError } = await supabase
       .from('users')
-      .select('name')
+      .select('name, is_admin')
       .eq('id', inv.invited_by)
       .maybeSingle();
     if (inviterError) {
       // Best-effort: the fallback sender name is honest enough for a mail.
       console.error('[resendInvitation] inviter lookup failed', inviterError);
     }
-    senderName = inviter?.name?.trim() || 'En arrangør';
+    // One home for the sender name (#2445): the same as the e-mail core and
+    // the held invitations a publish sends.
+    senderName = inviteMailSenderName(inviter?.name ?? null, inviter?.is_admin === true);
     gameMail = { gameName: game.name, gameMode: game.game_mode };
   }
 

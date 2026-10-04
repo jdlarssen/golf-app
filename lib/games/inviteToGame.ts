@@ -9,7 +9,10 @@ import { getInviteEligibleIds } from '@/lib/games/inviteEligibility';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
-import { extendAndMailInvitation } from '@/lib/games/extendAndMailInvitation';
+import {
+  extendAndMailInvitation,
+  inviteMailSenderName,
+} from '@/lib/games/extendAndMailInvitation';
 import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked } from '@/lib/games/status';
@@ -89,14 +92,6 @@ export type InviteRefusal =
 export type InviteOutcome =
   | { ok: true; kind: 'added' | 'sent' | 'held'; email: string }
   | { ok: false; reason: InviteRefusal };
-
-/**
- * Avsendernavnet i en spill-invitasjon: arrangørens navn, ellers rollen.
- * Ett hjem for kjernen og `sendHeldGameInvites` (#2445).
- */
-export function inviteMailSenderName(name: string | null, isAdmin: boolean): string {
-  return name?.trim() || (isAdmin ? 'Admin' : 'En arrangør');
-}
 
 /**
  * Hvorfor «legg til en eksisterende spiller» ble avvist. Et delsett av
