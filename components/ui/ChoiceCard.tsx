@@ -15,6 +15,11 @@ import type { ReactNode } from 'react';
  * `RadioOptionCard` is the larger sibling on step 5 (#2282): a selection
  * circle, a title with a pill beside it, and a description under it — the
  * «Hvem kan melde seg på?» cards.
+ *
+ * Unavailable (#2453): a card the player count rules out, such as
+ * «Tremannslag · trenger 6» with four players. A dashed hairline, no fill,
+ * muted text, no hover. It cannot be picked, but it does not fade: the 50 %
+ * fade belongs to the lock (a published game, a cup link).
  */
 
 /** `centered`: the shamble count's 1/2/3. `dense`: three tiles a row (Texas team size). */
@@ -44,18 +49,27 @@ export function choiceStateClass(selected: boolean): string {
 
 export function choiceCardClass(
   selected: boolean,
-  { height = 60, layout = 'start' }: { height?: ChoiceCardHeight; layout?: ChoiceCardLayout } = {},
+  {
+    height = 60,
+    layout = 'start',
+    unavailable = false,
+  }: { height?: ChoiceCardHeight; layout?: ChoiceCardLayout; unavailable?: boolean } = {},
 ): string {
   const align =
     layout === 'centered' ? 'items-center text-center px-3' : layout === 'dense' ? 'items-start text-left px-2.5' : 'items-start text-left px-3';
-  return `relative flex ${MIN_HEIGHT[height]} cursor-pointer flex-col justify-center rounded-[14px] py-2.5 text-text transition-colors duration-150 ${align} ${choiceStateClass(selected)}`;
+  const state = unavailable
+    ? 'border border-dashed border-border bg-transparent text-muted'
+    : `cursor-pointer text-text ${choiceStateClass(selected)}`;
+  return `relative flex ${MIN_HEIGHT[height]} flex-col justify-center rounded-[14px] py-2.5 transition-colors duration-150 ${align} ${state}`;
 }
 
 /**
  * Title sizes the artboards draw: 17 px by default, 15 px in three-a-row
- * tiles, 16 px on the club cards (#2439). Spelled out so Tailwind sees them.
+ * tiles (14 px when unavailable, #2453), 16 px on the club cards (#2439).
+ * Spelled out so Tailwind sees them.
  */
 const TITLE_SIZE = {
+  14: 'text-[14px]',
   15: 'text-[15px]',
   16: 'text-[16px]',
   17: 'text-[17px]',
@@ -66,11 +80,14 @@ export function ChoiceCardText({
   title,
   hint,
   layout = 'start',
-  titleSize = layout === 'dense' ? 15 : 17,
+  unavailable = false,
+  titleSize = layout === 'dense' ? (unavailable ? 14 : 15) : 17,
 }: {
   title: ReactNode;
   hint?: ReactNode;
   layout?: ChoiceCardLayout;
+  /** The card is unavailable: three a row, the title drops to 14 px. */
+  unavailable?: boolean;
   titleSize?: ChoiceCardTitleSize;
 }) {
   return (
@@ -120,6 +137,7 @@ export function RadioChoiceCard({
   height,
   layout,
   titleSize,
+  unavailable = false,
 }: {
   /**
    * Left out when the form gets the value from a hidden mirror instead
@@ -135,10 +153,18 @@ export function RadioChoiceCard({
   height?: ChoiceCardHeight;
   layout?: ChoiceCardLayout;
   titleSize?: ChoiceCardTitleSize;
+  /**
+   * The count rules this card out (#2453): it cannot be picked and is drawn
+   * dashed, without the lock's fade. `hint` says why.
+   */
+  unavailable?: boolean;
 }) {
+  // The fade is the lock's. An unavailable card's radio is disabled too, so
+  // `has-[:disabled]` would fade it as well; only `disabled` may.
+  const fade = unavailable && !disabled ? '' : 'has-[:disabled]:opacity-50';
   return (
     <label
-      className={`${choiceCardClass(checked, { height, layout })} has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50`}
+      className={`${choiceCardClass(checked, { height, layout, unavailable })} has-[:disabled]:cursor-not-allowed ${fade}`}
     >
       <input
         type="radio"
@@ -146,10 +172,16 @@ export function RadioChoiceCard({
         value={value}
         checked={checked}
         onChange={onChange}
-        disabled={disabled}
+        disabled={disabled || unavailable}
         className="sr-only"
       />
-      <ChoiceCardText title={title} hint={hint} layout={layout} titleSize={titleSize} />
+      <ChoiceCardText
+        title={title}
+        hint={hint}
+        layout={layout}
+        unavailable={unavailable}
+        titleSize={titleSize}
+      />
     </label>
   );
 }
