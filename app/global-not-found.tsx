@@ -27,7 +27,8 @@ import { themeBootstrapScript } from '@/lib/theme/themePreference';
  * from the address prefix before first paint (`lib/i18n/pathLocale.ts`).
  *
  * No bottom nav and no version footer: both need the NextIntl provider that
- * lives in the `[locale]` layout. The button takes a signed-in player home.
+ * lives in the `[locale]` layout. The button takes a signed-in player home,
+ * with a full page load (`hardNavigation`).
  */
 
 export const viewport: Viewport = rootViewport;
@@ -82,6 +83,7 @@ export default async function GlobalNotFound() {
                   body={t('body')}
                   buttonLabel={t('button')}
                   homeHref={canonicalPath(locale, '/')}
+                  hardNavigation
                 />
               </div>
             ))}
