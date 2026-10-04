@@ -29,6 +29,7 @@ export async function SoloStablefordHolesBody({
 }) {
   const { supabase } = await getDrilldownContext();
   const tCommon = await getTranslations('leaderboard.common');
+  const tModes = await getTranslations('modes');
 
   const { gwp, rawHoles, rawScores } = await fetchHolesAndScores(
     supabase,
@@ -77,11 +78,7 @@ export async function SoloStablefordHolesBody({
       gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
-      formatLabel={
-        stablefordMode === 'modified_stableford'
-          ? 'Modifisert Stableford'
-          : 'Stableford'
-      }
+      formatLabel={tModes(stablefordMode)}
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
       navContext={navContext}
