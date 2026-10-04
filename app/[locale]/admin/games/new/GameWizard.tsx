@@ -1162,6 +1162,9 @@ function WizardBody({
                   onChange={state.handleTeamSizeChange}
                   disabled={state.lockGameMode}
                   tileHeight={state.intent === 'kompis' ? 72 : 64}
+                  playerCount={
+                    state.intent === 'kompis' ? state.expectedPlayerCount : undefined
+                  }
                 />
               )}
               {state.isWolf && (
@@ -1227,6 +1230,9 @@ function WizardBody({
                   teamSize={state.teamSize as 3 | 4}
                   onTeamSizeChange={state.handleTeamSizeChange as (next: 3 | 4) => void}
                   disabled={state.lockGameMode}
+                  playerCount={
+                    state.intent === 'kompis' ? state.expectedPlayerCount : undefined
+                  }
                 />
               )}
               {state.isPatsome && (

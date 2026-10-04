@@ -1009,7 +1009,7 @@ export function useGameFormState({
   function matchTeamSizeToCount(nextIntent: Intent | undefined, nextCount: number | undefined) {
     if (lockGameMode || !formatChosen) return;
     const target = playerTarget({ gameMode, intent: nextIntent, expectedPlayerCount: nextCount });
-    // `as TeamSize`: the result is `teamSize` itself or one of TEAM_FORMAT_TEAM_SIZES (2, 3, 4).
+    // `as TeamSize`: the result is `teamSize` itself or one of selectableTeamSizes (1–4, #2453).
     const size = startTeamSize(gameMode, target, teamSize) as TeamSize;
     if (size !== teamSize) handleTeamSizeChange(size);
   }
@@ -1021,7 +1021,7 @@ export function useGameFormState({
     // kompis-runde står standarden når den går opp med antallet; ellers
     // velges størrelsen som går opp og ligger nærmest den (#2435,
     // startTeamSize). Uten antall (klubb, solo, GameForm) står standarden.
-    // `as TeamSize`: the result is the default or one of TEAM_FORMAT_TEAM_SIZES (2, 3, 4).
+    // `as TeamSize`: the result is the default or one of selectableTeamSizes (1–4, #2453).
     const nextSize = startTeamSize(
       next,
       playerTarget({ gameMode: next, intent, expectedPlayerCount }),
