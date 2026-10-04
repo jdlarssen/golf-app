@@ -1580,7 +1580,7 @@
         "sections": [
           {
             "heading": "Reglene i texas scramble",
-            "body": "Texas scramble spilles med lag på to eller fire. Alle slår ut fra tee, dere går fram sammen og blir enige om hvilket slag som ligger best. Der markerer dere stedet, og alle spiller sitt neste slag derfra, innenfor én køllelengde og ikke nærmere hullet. Slik jobber dere dere innover: velg beste slag, alle slår på nytt, velg igjen. Ligger den valgte ballen i bunker, legger dere ned i bunkeren, og på green plasserer dere ballen nøyaktig der den valgte putten lå. Laget fører én score per hull, og det er den scoren som havner på scorekortet. Ingen teller sine egne slag, og ingen kan ødelegge et hull alene."
+            "body": "Texas scramble spilles med lag på to, tre eller fire. Alle slår ut fra tee, dere går fram sammen og blir enige om hvilket slag som ligger best. Der markerer dere stedet, og alle spiller sitt neste slag derfra, innenfor én køllelengde og ikke nærmere hullet. Slik jobber dere dere innover: velg beste slag, alle slår på nytt, velg igjen. Ligger den valgte ballen i bunker, legger dere ned i bunkeren, og på green plasserer dere ballen nøyaktig der den valgte putten lå. Laget fører én score per hull, og det er den scoren som havner på scorekortet. Ingen teller sine egne slag, og ingen kan ødelegge et hull alene."
           },
           {
             "heading": "Slik velger dere det beste slaget",
@@ -1588,7 +1588,7 @@
           },
           {
             "heading": "Handicap i texas scramble",
-            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter legges banehandicapet til alle på laget sammen, og laget får en prosent av summen. Tørny foreslår NGF-satsene når du lager runden: 25 prosent for lag på to og 10 prosent for lag på fire, og arrangøren kan justere tallet før start. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Lag-handicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
+            "body": "Scramble er et lagformat, så handicapet regnes for laget, ikke for hver enkelt. Tørny finner først banehandicapet ditt ut fra hcp-indeksen din, slope og course rating på teen du spiller fra. Deretter legges banehandicapet til alle på laget sammen, og laget får en prosent av summen. Tørny foreslår NGF-satsene når du lager runden: 25 prosent for lag på to, 15 for lag på tre og 10 for lag på fire. Arrangøren kan justere tallet før start. Grunnen til at andelen er så lav, er enkel: fire spillere som plukker beste ball scorer langt bedre enn hver av dem gjør alene, så fullt handicap ville gitt vill overkompensasjon. Lag-handicapet fordeles på hullene etter stroke index og trekkes fra lagets bruttototal."
           },
           {
             "heading": "Vanlige husregler",
@@ -1816,7 +1816,7 @@
           },
           {
             "q": "Kan tre eller flere spille nassau?",
-            "a": "Ja. Da rangeres hver seksjon på laveste sum, og den som vinner en seksjon alene tar enheten. Deles den, står den."
+            "a": "Ja, opptil 16. Da rangeres hver seksjon på laveste sum, og den som vinner en seksjon alene tar enheten. Deles den, står den."
           }
         ]
       },
@@ -1853,7 +1853,7 @@
           },
           {
             "q": "Hvor mange kan spille skins?",
-            "a": "Tre til fem fungerer best. Med flere spillere blir det sjeldnere at noen står alene på laveste score, og pottene vokser fort."
+            "a": "Fra 2 til 16. Tre til fem fungerer best, for med flere blir det sjeldnere at noen står alene på laveste score, og pottene vokser fort."
           },
           {
             "q": "Skal skins spilles brutto eller netto?",
@@ -1887,7 +1887,7 @@
           },
           {
             "heading": "Innsats og gruppestørrelse",
-            "body": "To til fire spillere fungerer, og fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
+            "body": "Dere kan være fra 2 til 16 spillere. Fire er best, for da er det nok folk til at kampen om bango faktisk står. Vanlig oppgjør er en fast sum per poeng, eller at den med flest poeng tar potten. Noen legger til en fjerde kategori for lengste drive på fairway. Runden går raskt, for ingen står og venter på at noen skal telle slag på et hull de alt har mistet. Kombiner det gjerne med en vanlig stableford-runde, så har dere to konkurranser i gang samtidig uten ekstra jobb."
           }
         ],
         "example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff, og D er i bunkeren, så ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte: bongo til C.",
@@ -1906,7 +1906,7 @@
           },
           {
             "q": "Hvor mange bør spille?",
-            "a": "To til fire. Med fire blir kampen om bango skarpest, og runden går fortsatt raskt."
+            "a": "Fire er best. Da blir kampen om bango skarpest, og runden går fortsatt raskt. Dere kan likevel være alt fra 2 til 16."
           }
         ]
       },
