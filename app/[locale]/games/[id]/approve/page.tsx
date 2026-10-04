@@ -19,6 +19,7 @@ import {
   getGameWithPlayers,
   type PlayerForHole,
 } from '@/lib/games/getGameWithPlayers';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { pendingApprovalsFor } from '@/lib/games/flightScope';
 import {
   reviewScoreUserIds,
@@ -85,7 +86,23 @@ export default async function ApprovePage({
   }
 
   const me = players.find((p) => p.user_id === userId);
-  if (!me) notFound();
+  if (!me) {
+    // #2202: the organiser (or an admin) without a roster row goes to the
+    // game page, which has a view for them; anyone else still gets a 404.
+    const { data: viewer } = await (await getApproveContext()).supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .maybeSingle<{ is_admin: boolean | null }>();
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: viewer?.is_admin === true,
+      isCreator: game.created_by === userId,
+      surface: 'player_page',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
+    notFound();
+  }
 
   const { supabase: approveSupabase } = await getApproveContext();
   const courseRes = game.course_id

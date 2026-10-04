@@ -22,6 +22,7 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { ownedScoreRows, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
@@ -122,7 +123,23 @@ export default async function SubmitPage({
   }
 
   const me = players.find((p) => p.user_id === userId);
-  if (!me) notFound();
+  if (!me) {
+    // #2202: the organiser (or an admin) without a roster row goes to the
+    // game page, which has a view for them; anyone else still gets a 404.
+    const { data: viewer } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .maybeSingle<{ is_admin: boolean | null }>();
+    const door = nonPlayerGameDoor({
+      gameId: id,
+      isAdmin: viewer?.is_admin === true,
+      isCreator: game.created_by === userId,
+      surface: 'player_page',
+    });
+    if (door.kind === 'redirect') redirect({ href: door.href, locale });
+    notFound();
+  }
   // Plus course handicap is stored negative → «+2» (#2240).
   const courseHandicapText =
     me.course_handicap != null ? formatWholeHcpDisplay(me.course_handicap, locale) : '—';
