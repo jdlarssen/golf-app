@@ -1,5 +1,9 @@
 import type { NotificationKind, NotificationPayload } from './types';
 import { formatKr } from '@/lib/format/formatKr';
+import {
+  STRUCTURAL_BLOCK_REASONS,
+  type StructuralBlockReason,
+} from '@/lib/games/startBlockReasons';
 
 /**
  * Minimal translator shape shared by client `useTranslations('inbox')` and the
@@ -362,39 +366,16 @@ const MOMENT_KEY: Record<'hole_in_one' | 'eagle' | 'turkey' | 'snowman', string>
   snowman: 'snowman',
 };
 
-type BlockReasonKey =
-  | 'incomplete_sides'
-  | 'pending_players'
-  | 'no_players'
-  | 'tee_missing'
-  | 'tee_missing_rating'
-  | 'rotation_player_count'
-  | 'unassigned_teams'
-  | 'unassigned_flights';
-
-const KNOWN_BLOCK_REASONS: ReadonlySet<string> = new Set<BlockReasonKey>([
-  'incomplete_sides',
-  'pending_players',
-  'no_players',
-  'tee_missing',
-  'tee_missing_rating',
-  // #969: Wolf/Round Robin couldn't draw a rotation — too few/many signed up.
-  'rotation_player_count',
-  // #1669: a team format has players without a team. `unassigned_flights`
-  // (#543) fell through to the generic fallback text for the same reason —
-  // both get a named line now.
-  'unassigned_teams',
-  'unassigned_flights',
-]);
-
 /**
  * Translates the block reason from startScheduledGame to something the creator
  * can act on. Generic fallback for unknown/future reasons — the payload schema
  * is intentionally loosely typed (see types.ts).
  */
 function blockReasonText(reason: string, t: NotificationTranslator): string {
-  if (KNOWN_BLOCK_REASONS.has(reason)) {
-    return t(`blockReasons.${reason as BlockReasonKey}`);
+  // Every structural reason has a named line; the set's home is
+  // `lib/games/startBlockReasons.ts` (#2204), never the guards themselves.
+  if (STRUCTURAL_BLOCK_REASONS.has(reason)) {
+    return t(`blockReasons.${reason as StructuralBlockReason}`);
   }
   return t('blockReasons.default');
 }

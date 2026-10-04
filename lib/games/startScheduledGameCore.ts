@@ -11,25 +11,24 @@ import {
   type TeeBoxRatings,
   type TeeGender,
 } from './teeRating';
-import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
-import {
-  readWithdrawalPlayOn,
-  resolveCupMatchWithdrawal,
-} from '@/lib/cup/cupWithdrawalOutcome';
 import {
   planGreensomeStartOverride,
   type GreensomeStartPlayer,
 } from './greensomeOverridePlan';
-import { needsFlightAssignment } from './flightScope';
-import { expectedTeamSize, needsTeamAssignment } from './teamScope';
 import { assignRotationSlots, rotationSlotRange } from './assignRotationSlots';
-import { startPlayerCountRange, type StartCountMode } from './startPlayerCount';
+import type { StartCountMode } from './startPlayerCount';
 import { effectiveHcpAllowancePct } from './hcpAllowance';
-import { finishedCupBlocksPlay } from '@/lib/cup/finishedCup';
+import {
+  startBlockReason,
+  type StartBlock,
+  type StartBlockInput,
+} from './startBlockReason';
+import type { StartBlockReason } from './startBlockReasons';
 
 /**
- * Import-pure core of the scheduled→active start (#1855). Every guard, every
- * write and the optimistic-lock flip live here; the file deliberately imports
+ * Import-pure core of the scheduled→active start (#1855). Every write and the
+ * optimistic-lock flip live here; the guards live in `startBlockReason.ts`
+ * (#2204), which runs before anything is written. The file deliberately imports
  * nothing that only exists on a Next.js server. #1855 made it shared code so the
  * React Native app could run the exact same orchestration against its own
  * RLS-scoped Supabase client instead of forking a second, drifting copy of the
@@ -62,27 +61,11 @@ export type ExpiredSignup = { requestId: string; userId: string };
  */
 export type StartScheduledGameFailure = {
   ok: false;
-  reason:
-    | 'not_found'
-    | 'not_scheduled'
-    | 'tee_missing'
-    | 'tee_missing_rating'
-    | 'no_players'
-    | 'pending_players'
-    | 'incomplete_sides'
-    // #1814: en cup-kamp der noen har trukket seg og konvoluttregelen alt har
-    // avgjort utfallet (halvert / walkover). Ikke en oppsettsfeil — arrangøren
-    // tok valget selv — så den varsles ALDRI som «auto-start blokkert».
-    | 'decided_by_withdrawal'
-    // #2214: kampen hører til en cup som er avsluttet. En avsluttet cup står
-    // fast, så kampen starter aldri. Heller ikke et oppsettsavvik: avslaget er
-    // stille (SILENT_BLOCK_REASONS) og varsles aldri som «auto-start blokkert».
-    | 'cup_finished'
-    | 'unassigned_teams'
-    | 'unassigned_flights'
-    | 'rotation_player_count'
-    | 'db_players'
-    | 'db_game';
+  // The guard reasons live in `startBlockReasons.ts` (#2204), with the
+  // silent ones (`decided_by_withdrawal`, `cup_finished`) explained there.
+  // The rest are the read's own: the game is gone, not scheduled, or a DB
+  // read or write failed.
+  reason: StartBlockReason | 'not_found' | 'not_scheduled' | 'db_players' | 'db_game';
   /** #2207: the unfinished profiles as ids — never e-post. */
   pendingUserIds?: string[];
   // #969 / #2071: set only for reason 'rotation_player_count' so the caller
@@ -108,6 +91,187 @@ export type StartScheduledGameCoreResult =
       expiredSignups: ExpiredSignup[];
     }
   | StartScheduledGameFailure;
+
+/** The game row the start reads. */
+type StartGameRow = {
+  id: string;
+  name: string;
+  status: GameStatus;
+  hcp_allowance_pct: number;
+  tee_box_id: string | null;
+  game_mode: string;
+  // #1814: cup-kamper avgjøres av konvoluttregelen når noen har trukket
+  // seg; begge feltene er input til den (`tournament_id` avgrenser regelen
+  // til cup, `scheduled_tee_off_at` er 30-minutters-fristen).
+  tournament_id: string | null;
+  scheduled_tee_off_at: string | null;
+  // #1628: greensomens lag-slag-felter leses også herfra (rå JSON, lest
+  // defensivt av `planGreensomeStartOverride`), og hele objektet skrives
+  // tilbake ved en re-derivering — derfor en åpen form, ikke bare team_size.
+  mode_config: ({ team_size?: number } & Record<string, unknown>) | null;
+  tee_boxes: TeeBoxRatings | null;
+  // #2214: the cup's status. null when the game is not in a cup, or when
+  // the caller's client cannot read the cup. Every caller can read it: the
+  // cron sweep, E1, the app's start route and the web's «Start runden nå»
+  // (after its requireAdminOrCreator gate, #2202) pass the service-role
+  // client, the derived-games sync follows its host (which cannot start
+  // here), and a league flight is never in a cup. An app build from before
+  // #2215 bundles its own copy of this core without the check.
+  tournament: { status: string } | null;
+};
+
+/** One roster row the start reads. */
+type StartRosterRow = {
+  user_id: string;
+  tee_gender: TeeGender;
+  team_number: number | null;
+  flight_number: number | null;
+  withdrawn_at: string | null;
+  users: { hcp_index: number | string } | null;
+};
+
+export type ReadStartInputsResult =
+  | {
+      ok: true;
+      status: 'scheduled';
+      game: StartGameRow;
+      roster: StartRosterRow[];
+      input: StartBlockInput;
+    }
+  // Already started (or finished) by someone else.
+  | { ok: true; status: 'active' | 'finished'; gameName: string }
+  | StartScheduledGameFailure;
+
+/**
+ * Everything the start's guards read, and nothing written (#2204): the game,
+ * the roster and the unfinished profiles. `startScheduledGameCore` runs the
+ * guards on it and then writes; `readStartBlock` only runs the guards.
+ *
+ * It never answers a guard reason itself, `no_players` included: an empty
+ * roster goes on as `[]`, and `startBlockReason` decides, after
+ * `cup_finished` and `tee_missing`.
+ */
+export async function readStartInputs(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+): Promise<ReadStartInputsResult> {
+  // The game's tee carries up to three independent rating-sets
+  // (mens/ladies/juniors); each player picks one via tee_gender.
+  const { data: game, error: gameError } = await supabase
+    .from('games')
+    .select(
+      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), tournament:tournaments(status)',
+    )
+    .eq('id', gameId)
+    .maybeSingle<StartGameRow>();
+  // Error ≠ absence (#1445): a transient query failure must report as a
+  // transient DB reason, not 'not_found'. The distinction is load-bearing for
+  // the cron sweep — 'db_game' is not a structural block reason, so the game is
+  // retried next minute instead of firing an «auto-start blokkert»-varsel to the
+  // organiser about a game that is perfectly fine. Only a genuine 0-row result
+  // (maybeSingle: data null, error null) means the game is gone.
+  if (gameError) {
+    console.error('[startScheduledGame] game fetch failed', {
+      gameId,
+      error: gameError,
+    });
+    return { ok: false, reason: 'db_game' };
+  }
+  if (!game) return { ok: false, reason: 'not_found' };
+  if (game.status !== 'scheduled') {
+    // Already started (or finished) by someone else — desired end state
+    // reached for the auto-start caller; admin button caller can still
+    // surface the reason if it wants to.
+    if (game.status === 'active' || game.status === 'finished') {
+      return { ok: true, status: game.status, gameName: game.name };
+    }
+    return { ok: false, reason: 'not_scheduled' };
+  }
+
+  // All players + their hcp_index + tee_gender, and team_number,
+  // flight_number + withdrawn_at for the side, team and flight guards.
+  const { data: rosterData, error: rosterError } = await supabase
+    .from('game_players')
+    .select(
+      'user_id, tee_gender, team_number, flight_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
+    )
+    .eq('game_id', gameId)
+    .returns<StartRosterRow[]>();
+  if (rosterError) return { ok: false, reason: 'db_players' };
+  const roster = rosterData ?? [];
+
+  // The unfinished profiles among the active players: the handicap is needed
+  // from the freeze on. #2441: the start is the only gate. A game may be
+  // published with a pending friend, and the round waits until the profile is
+  // done. Only active rows count: a friend who withdrew before finishing the
+  // profile does not play, and would otherwise hold the round forever. The
+  // game pages mark who is waiting with the same RPC. #2207: a SECURITY
+  // DEFINER RPC, one home for the rule. It sees the whole roster whatever RLS
+  // lets the caller read (an organiser who does not play used to see none of
+  // it: the #366 trap), and it answers with ids only.
+  const activeIds = roster.filter((r) => r.withdrawn_at == null).map((r) => r.user_id);
+  let pendingUserIds: string[] = [];
+  if (activeIds.length > 0) {
+    const { data: pendingRows, error: pendingError } = await supabase.rpc(
+      'incomplete_profile_ids',
+      { p_user_ids: activeIds },
+    );
+    // Best-effort by design (#1445): 'db_players' er riktig for begge ben her.
+    // `!pendingRows` uten feil forekommer ikke i praksis (PostgREST gir [] ved
+    // 0 treff), så et tomt svar ville uansett vært en DB-anomali.
+    if (pendingError || !pendingRows) {
+      if (pendingError) {
+        console.error('[startScheduledGame] profile gate failed', {
+          gameId,
+          error: pendingError,
+        });
+      }
+      return { ok: false, reason: 'db_players' };
+    }
+    pendingUserIds = pendingRows.map((p) => p.id);
+  }
+
+  return {
+    ok: true,
+    status: 'scheduled',
+    game,
+    roster,
+    input: {
+      gameMode: game.game_mode,
+      modeConfig: game.mode_config,
+      teeBoxId: game.tee_box_id,
+      tee: game.tee_boxes,
+      tournamentId: game.tournament_id,
+      tournamentStatus: game.tournament?.status ?? null,
+      scheduledTeeOffAt: game.scheduled_tee_off_at,
+      roster: roster.map((r) => ({
+        userId: r.user_id,
+        teeGender: r.tee_gender,
+        teamNumber: r.team_number,
+        flightNumber: r.flight_number,
+        withdrawnAt: r.withdrawn_at,
+        // defensive — FK constraint should prevent a missing users row
+        hasUser: r.users != null,
+      })),
+      pendingUserIds,
+    },
+  };
+}
+
+/**
+ * Why the scheduled game would not start right now, without starting it
+ * (#2204). Read-only: the game pages call it to explain a stuck round. A read
+ * error, a missing game or a game that is no longer scheduled gives `null` —
+ * a transient error must not look like a block.
+ */
+export async function readStartBlock(
+  supabase: SupabaseClient<Database>,
+  gameId: string,
+): Promise<StartBlock | null> {
+  const read = await readStartInputs(supabase, gameId);
+  if (!read.ok || read.status !== 'scheduled') return null;
+  return startBlockReason(read.input);
+}
 
 /**
  * Idempotent, retry-safe start: freezes course_handicap per player, then
@@ -144,245 +308,23 @@ export async function startScheduledGameCore(
 ): Promise<StartScheduledGameCoreResult> {
   // Starting is "begin now" — a planned tee-off that has since passed is irrelevant
   // once the game goes active. No guard against past scheduled_tee_off_at (#928 decision).
-  // 1. Verify status is still 'scheduled' and load tee-box + allowance.
-  //    The game's tee carries up to three independent rating-sets
-  //    (mens/ladies/juniors); each player picks one via tee_gender.
-  //    game_mode + mode_config are loaded for the incomplete_sides guard.
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select(
-      'id, name, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tournament_id, scheduled_tee_off_at, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors), tournament:tournaments(status)',
-    )
-    .eq('id', gameId)
-    .maybeSingle<{
-      id: string;
-      name: string;
-      status: GameStatus;
-      hcp_allowance_pct: number;
-      tee_box_id: string | null;
-      game_mode: string;
-      // #1814: cup-kamper avgjøres av konvoluttregelen når noen har trukket
-      // seg; begge feltene er input til den (`tournament_id` avgrenser regelen
-      // til cup, `scheduled_tee_off_at` er 30-minutters-fristen).
-      tournament_id: string | null;
-      scheduled_tee_off_at: string | null;
-      // #1628: greensomens lag-slag-felter leses også herfra (rå JSON, lest
-      // defensivt av `planGreensomeStartOverride`), og hele objektet skrives
-      // tilbake ved en re-derivering — derfor en åpen form, ikke bare team_size.
-      mode_config: ({ team_size?: number } & Record<string, unknown>) | null;
-      tee_boxes: TeeBoxRatings | null;
-      // #2214: the cup's status. null when the game is not in a cup, or when
-      // the caller's client cannot read the cup (see the check below).
-      tournament: { status: string } | null;
-    }>();
-  // Error ≠ absence (#1445): a transient query failure must report as a
-  // transient DB reason, not 'not_found'. The distinction is load-bearing for
-  // the cron sweep — 'db_game' is not a structural block reason, so the game is
-  // retried next minute instead of firing an «auto-start blokkert»-varsel to the
-  // organiser about a game that is perfectly fine. Only a genuine 0-row result
-  // (maybeSingle: data null, error null) means the game is gone.
-  if (gameError) {
-    console.error('[startScheduledGame] game fetch failed', {
-      gameId,
-      error: gameError,
-    });
-    return { ok: false, reason: 'db_game' };
+  // 1. Read the game, the roster and the unfinished profiles.
+  const read = await readStartInputs(supabase, gameId);
+  if (!read.ok) return read;
+  if (read.status !== 'scheduled') {
+    return { ok: true, started: false, gameName: read.gameName, expiredSignups: [] };
   }
-  if (!game) return { ok: false, reason: 'not_found' };
-  if (game.status !== 'scheduled') {
-    // Already started (or finished) by someone else — desired end state
-    // reached for the auto-start caller; admin button caller can still
-    // surface the reason if it wants to.
-    if (game.status === 'active' || game.status === 'finished') {
-      return {
-        ok: true,
-        started: false,
-        gameName: game.name,
-        expiredSignups: [],
-      };
-    }
-    return { ok: false, reason: 'not_scheduled' };
-  }
-  // #2214: a finished cup stands, so no match in it starts. Before the tee
-  // check on purpose: a match without a tee in a finished cup must give this
-  // silent reason, not the structural 'tee_missing' that sends the organiser
-  // «auto-start blokkert». It also runs before the withdrawal rule (#1814).
-  // No write happens. A null embed means «unknown» and the start goes on as
-  // before. Every caller can read the cup: the cron sweep, E1, the app's
-  // start route and the web's «Start runden nå» (after its
-  // requireAdminOrCreator gate, #2202) pass the service-role client, the
-  // derived-games sync follows its host (which cannot start
-  // here), and a league flight is never in a cup. An app build from before
-  // #2215 bundles its own copy of this core without the check.
-  if (game.tournament_id && finishedCupBlocksPlay(game.tournament?.status)) {
-    return { ok: false, reason: 'cup_finished' };
-  }
-  const tee = game.tee_boxes;
-  if (!tee || !game.tee_box_id) return { ok: false, reason: 'tee_missing' };
+  const { game, roster } = read;
 
-  // 2. Load all players + their hcp_index + tee_gender.
-  //    team_number + withdrawn_at are also fetched for the incomplete_sides guard.
-  const { data: roster, error: rosterError } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, tee_gender, team_number, flight_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
-    )
-    .eq('game_id', gameId)
-    .returns<
-      {
-        user_id: string;
-        tee_gender: TeeGender;
-        team_number: number | null;
-        flight_number: number | null;
-        withdrawn_at: string | null;
-        users: { hcp_index: number | string } | null;
-      }[]
-    >();
-  if (rosterError) return { ok: false, reason: 'db_players' };
-  if (!roster || roster.length === 0) {
-    return { ok: false, reason: 'no_players' };
-  }
+  // 2. Every guard, in one place (#2204): the pages that explain a stuck round
+  //    ask the same function. Nothing is written before it passes.
+  const block = startBlockReason(read.input);
+  if (block) return { ok: false, ...block };
 
-  // Lagstørrelsen begge lag-vaktene under klassifiserer på — samme helper og
-  // samme fallback (1 = solo) som Lag-seksjonen og team-actionene, så «trenger
-  // dette spillet lag?» har ett hjem (#1669).
-  const teamSize = expectedTeamSize(game.mode_config);
-
-  // #1814: en cup-kamp der noen har trukket seg kan alt være avgjort av
-  // konvoluttregelen (halvert / walkover). Da skal den ALDRI starte — poengene
-  // utledes av `withdrawn_at` mot tee-off, og kampen står `scheduled` for godt.
-  // Sjekken kommer FØR side-vakta under, ellers ville den samme kampen meldt
-  // 'incomplete_sides' og utløst «auto-start blokkert»-varselet til arrangøren
-  // for noe hen selv bestemte.
-  const playOn = readWithdrawalPlayOn(game.mode_config);
-  if (game.tournament_id) {
-    const decided = resolveCupMatchWithdrawal({
-      status: 'scheduled',
-      gameMode: game.game_mode,
-      scheduledTeeOffAt: game.scheduled_tee_off_at,
-      playOn,
-      players: roster
-        .filter((r) => r.team_number === 1 || r.team_number === 2)
-        .map((r) => ({
-          userId: r.user_id,
-          side: r.team_number as 1 | 2,
-          withdrawnAt: r.withdrawn_at,
-        })),
-    });
-    if (decided) return { ok: false, reason: 'decided_by_withdrawal' };
-  }
-
-  // Guard: matchplay-familien krever eksakt team_size aktive spillere per side
-  // (team_number ∈ {1, 2}). Spillere med null team_number eller trukkede
-  // spillere blokkerer start. Alle seks matchplay-modi dekkes i ett.
-  //
-  // #1814: unntaket er en cup-fourball der arrangøren valgte at makkeren
-  // spiller alene — da er én aktiv spiller på siden nok. Kom vi hit med det
-  // flagget, sa regelen over nettopp at kampen SKAL spilles.
-  if (isMatchplayMode(game.game_mode as Parameters<typeof isMatchplayMode>[0])) {
-    const activeRoster = roster.filter((r) => r.withdrawn_at == null);
-    const allowSoloSide = playOn && game.game_mode === 'fourball_matchplay';
-    if (!isSideRosterComplete(activeRoster, teamSize, { allowSoloSide })) {
-      return { ok: false, reason: 'incomplete_sides' };
-    }
-  }
-
-  // Guard: lag-formater (best ball, scramble-familien, shamble, patsome,
-  // par-stableford) må ha alle aktive spillere fordelt på lag før start.
-  // Solo-selvpåmelding setter team_number = null, og scoring-computene hopper
-  // stille over slike rader — uten denne vakta starter spillet og tavla er tom
-  // (#1669). Matchplay dekkes av incomplete_sides over, solo-formater har
-  // ingen lag: `needsTeamAssignment` returnerer false for begge.
-  if (
-    needsTeamAssignment(
-      game.game_mode as Parameters<typeof needsTeamAssignment>[0],
-      teamSize,
-      roster.map((r) => ({
-        user_id: r.user_id,
-        team_number: r.team_number,
-        flight_number: r.flight_number,
-        withdrawn_at: r.withdrawn_at,
-      })),
-    )
-  ) {
-    return { ok: false, reason: 'unassigned_teams' };
-  }
-
-  // Guard: store solo-formater (>4 aktive, ikke wolf) må ha alle spillere
-  // fordelt i flighter før start. Matchplay og lag-formater er aldri rammet
-  // (≤4 aktive, eller flight = side/lag satt av validatorene).
-  // roster er allerede lastet over — vi mappar ned til FlightPlayer-formen.
-  if (
-    needsFlightAssignment(
-      game.game_mode as Parameters<typeof needsFlightAssignment>[0],
-      roster.map((r) => ({
-        user_id: r.user_id,
-        flight_number: r.flight_number,
-        withdrawn_at: r.withdrawn_at,
-      })),
-    )
-  ) {
-    return { ok: false, reason: 'unassigned_flights' };
-  }
-
-  // #969 / #2071: guard the active (non-withdrawn) roster size for every
-  // fixed-count format first (fail fast, before the profile check), with the
-  // limits from `START_COUNT_RANGES` (#2222: publishing, the wizard and the
-  // signup cap read the same numbers). A game with an optional roster at
-  // publish (open signup, or a club tournament, #2433) is validated as a draft
-  // and the signup cap only prevents "too many", so this really catches "too
-  // few". Wolf / Round Robin also draw their
-  // rotation slot at start, not at publish — that draw happens after all
-  // guards pass (below), and only when `rotationRange` is non-null.
   const activeIds = roster
     .filter((r) => r.withdrawn_at == null)
     .map((r) => r.user_id);
-  const countRange = startPlayerCountRange(game.game_mode);
-  if (countRange) {
-    const n = activeIds.length;
-    if (n < countRange.min || n > countRange.max) {
-      return {
-        ok: false,
-        reason: 'rotation_player_count',
-        rotationMode: game.game_mode as StartCountMode,
-        rotationActiveCount: n,
-      };
-    }
-  }
   const rotationRange = rotationSlotRange(game.game_mode);
-
-  // Refuse to start while any active player is still pending profile
-  // completion: the handicap is needed from here on. #2441: this is the only
-  // gate. A game may be published with a pending friend, and the round waits
-  // here until the profile is done. Only active rows count: a friend who
-  // withdrew before finishing the profile does not play, and would otherwise
-  // hold the round forever. The game pages mark who is waiting with the same
-  // RPC. #2207: a SECURITY DEFINER RPC, one home for the rule. It sees the
-  // whole roster whatever RLS lets the caller read (an organiser who does not
-  // play used to see none of it: the #366 trap), and it answers with ids only.
-  const { data: pendingRows, error: pendingError } = await supabase.rpc(
-    'incomplete_profile_ids',
-    { p_user_ids: activeIds },
-  );
-  // Best-effort by design (#1445): 'db_players' er riktig for begge ben her.
-  // `!pendingRows` uten feil forekommer ikke i praksis (PostgREST gir [] ved
-  // 0 treff), så et tomt svar ville uansett vært en DB-anomali.
-  if (pendingError || !pendingRows) {
-    if (pendingError) {
-      console.error('[startScheduledGame] profile gate failed', {
-        gameId,
-        error: pendingError,
-      });
-    }
-    return { ok: false, reason: 'db_players' };
-  }
-  if (pendingRows.length > 0) {
-    return {
-      ok: false,
-      reason: 'pending_players',
-      pendingUserIds: pendingRows.map((p) => p.id),
-    };
-  }
 
   // #969: all guards passed — draw the Wolf/Round Robin rotation slot now,
   // over the final active roster. Reassign all active players a fresh
@@ -435,7 +377,8 @@ export async function startScheduledGameCore(
   const frozenPlayers: GreensomeStartPlayer[] = [];
   for (const row of roster) {
     if (!row.users) continue; // defensive — FK constraint should prevent this
-    const rating = getRatingForGender(tee, row.tee_gender);
+    // Defensive: `startBlockReason` already refused a missing tee or rating.
+    const rating = game.tee_boxes && getRatingForGender(game.tee_boxes, row.tee_gender);
     if (!rating) return { ok: false, reason: 'tee_missing_rating' };
     const raw = calculateCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
