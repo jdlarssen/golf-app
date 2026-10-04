@@ -55,8 +55,9 @@ describe('ArrangedRoundsView', () => {
     expect(order).toEqual(['arranged-live', 'arranged-next', 'arranged-drafts', 'arranged-finished']);
 
     const live = screen.getByTestId('arranged-live-row');
+    // The name holds every word the row shows, the pill included (WCAG 2.5.3).
     expect(live.getAttribute('aria-label')).toBe(
-      'Runde live, i gang, 5 av 8 har levert, 1 venter på godkjenning',
+      `Runde live, i gang, 5 av 8 har levert, 1 venter på godkjenning, ${no.game.home.managePlayersLink}`,
     );
     expect(screen.getAllByTestId('arranged-next-row')).toHaveLength(4);
     expect(screen.getByRole('region', { name: no.klubbhuset.groupNext })).toBeTruthy();
@@ -89,6 +90,13 @@ describe('ArrangedRoundsView', () => {
     render(<ArrangedRoundsView rounds={rounds()} isAdmin={false} locale="no" upcomingLimit={3} />);
     const next = screen.getByTestId('arranged-next');
     expect(within(next).getAllByTestId('arranged-next-row')).toHaveLength(3);
+  });
+
+  it('sends an admin counting their own rounds to their own lists (#2269 O6)', () => {
+    render(<ArrangedRoundsView rounds={rounds()} isAdmin locale="no" />);
+    expect(screen.getByTestId('arranged-drafts').getAttribute('href')).toBe('/klubbhuset?vis=utkast');
+    expect(screen.getByTestId('arranged-finished').getAttribute('href')).toBe('/klubbhuset?vis=ferdige');
+    expect(screen.getByTestId('arranged-live-row').getAttribute('href')).toBe('/admin/games/live');
   });
 
   it('opens a lone draft in the wizard, several in the list', () => {

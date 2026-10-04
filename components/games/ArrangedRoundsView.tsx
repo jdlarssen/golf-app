@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { ModeChip } from '@/components/ui/ModeChip';
+import { ModeChip, modeChipLabel } from '@/components/ui/ModeChip';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { AppLocale } from '@/i18n/routing';
 import {
   arrangedListHref,
   arrangedRoundHref,
   type ArrangedGame,
   type ArrangedRounds,
+  type ArrangedSource,
   type UpcomingRound,
 } from '@/lib/games/arrangedGames';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -45,9 +47,13 @@ export function ArrangedRoundsView({
   locale,
   upcomingLimit,
   showMode = false,
+  source = 'own',
 }: {
   rounds: ArrangedRounds<ViewGame>;
+  /** Where a single row leads (admin: the Sekretariat). */
   isAdmin: boolean;
+  /** Which games the counts ran over; the lists follow it. */
+  source?: ArrangedSource;
   locale: AppLocale;
   /** The room shows the first three (#2493). */
   upcomingLimit?: number;
@@ -59,6 +65,10 @@ export function ArrangedRoundsView({
   const tHome = useTranslations('game.home');
   const upcoming = rounds.upcoming.slice(0, upcomingLimit);
   const nameOf = (g: ViewGame) => localizeGameName(g.name, g.courses?.name ?? null, locale);
+  // The link's name holds every word the row shows (WCAG 2.5.3): the pill
+  // and, on admin rows, the format.
+  const modeLabel = (g: ViewGame) =>
+    showMode && g.game_mode ? modeChipLabel(g.game_mode, g.mode_config) : null;
   const modeChip = (g: ViewGame) =>
     showMode && g.game_mode ? (
       <span className="mt-1 inline-flex">
@@ -79,11 +89,14 @@ export function ArrangedRoundsView({
                 counts.pendingApproval > 0
                   ? t('pendingApproval', { n: counts.pendingApproval })
                   : null;
+              const pill = isAdmin ? t('deskPill') : tHome('managePlayersLink');
               return (
                 <li key={game.id} className={i > 0 ? 'border-t border-row-divider-warm' : undefined}>
                   <SmartLink
                     href={arrangedRoundHref('live', game.id, isAdmin)}
-                    aria-label={[name, t('liveStatus'), delivered, pending].filter(Boolean).join(', ')}
+                    aria-label={[name, t('liveStatus'), delivered, pending, modeLabel(game), pill]
+                      .filter(Boolean)
+                      .join(', ')}
                     data-testid="arranged-live-row"
                     data-submitted={counts.submitted}
                     data-total={counts.total}
@@ -101,7 +114,7 @@ export function ArrangedRoundsView({
                       data-testid="arranged-live-pill"
                       className="flex h-11 shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-surface px-3 text-[13px] font-semibold leading-[normal] text-primary"
                     >
-                      {isAdmin ? t('deskPill') : tHome('managePlayersLink')}
+                      {pill}
                     </span>
                   </SmartLink>
                 </li>
@@ -126,6 +139,7 @@ export function ArrangedRoundsView({
                   isAdmin={isAdmin}
                   locale={locale}
                   modeChip={modeChip(round.game)}
+                  modeLabel={modeLabel(round.game)}
                   t={t}
                   reasonText={(reason) =>
                     blockReasonText(reason, tInbox as unknown as NotificationTranslator)
@@ -142,7 +156,7 @@ export function ArrangedRoundsView({
           href={
             rounds.drafts.onlyId
               ? arrangedRoundHref('draft', rounds.drafts.onlyId, isAdmin)
-              : arrangedListHref('drafts', isAdmin)
+              : arrangedListHref('drafts', source)
           }
           data-testid="arranged-drafts"
           data-count={rounds.drafts.count}
@@ -159,7 +173,7 @@ export function ArrangedRoundsView({
       {rounds.finished.count > 0 && (
         <div className="pt-1">
           <SmartLink
-            href={arrangedListHref('finished', isAdmin)}
+            href={arrangedListHref('finished', source)}
             aria-label={t('finishedLink', { n: rounds.finished.count })}
             data-testid="arranged-finished"
             data-count={rounds.finished.count}
@@ -198,6 +212,7 @@ function UpcomingRow({
   isAdmin,
   locale,
   modeChip,
+  modeLabel,
   t,
   reasonText,
 }: {
@@ -206,6 +221,7 @@ function UpcomingRow({
   isAdmin: boolean;
   locale: AppLocale;
   modeChip: ReactNode;
+  modeLabel: string | null;
   t: KlubbhusetT;
   reasonText: (reason: string) => string;
 }) {
@@ -248,7 +264,7 @@ function UpcomingRow({
   return (
     <SmartLink
       href={arrangedRoundHref('upcoming', game.id, isAdmin)}
-      aria-label={[name, ...labelParts].filter(Boolean).join(', ')}
+      aria-label={[name, ...labelParts, modeLabel].filter(Boolean).join(', ')}
       data-testid="arranged-next-row"
       data-note={note ? (note.kind === 'blocked' ? note.reason : note.kind) : undefined}
       data-signed-up={round.signedUp}
@@ -287,5 +303,33 @@ function UpcomingRow({
         ›
       </span>
     </SmartLink>
+  );
+}
+
+/**
+ * The grouped view while it loads: a group label over a card of two rows, in
+ * the view's own measures, so nothing jumps when the rounds arrive.
+ */
+export function ArrangedRoundsSkeleton() {
+  return (
+    <div aria-hidden data-testid="arranged-rounds-skeleton">
+      <div className="pt-[18px] pb-2">
+        <Skeleton className="h-3 w-20" />
+      </div>
+      <div className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface">
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            className={`flex min-h-[68px] items-center gap-3 px-3.5 py-2.5 ${i > 0 ? 'border-t border-row-divider-warm' : ''}`}
+          >
+            <Skeleton className="h-[50px] w-[46px] shrink-0 rounded-[10px]" delay={i * 90} />
+            <span className="min-w-0 grow">
+              <Skeleton className="h-4 w-3/5" delay={i * 90 + 30} />
+              <Skeleton className="mt-1.5 h-3 w-2/5" delay={i * 90 + 60} />
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -3575,7 +3575,7 @@
       "colGames": "Spill",
       "colStatus": "Status",
       "subtitleFinished": "{n, plural, one {# signert runde} other {# signerte runder}}",
-      "subtitleOngoing": "{n} spill · sortert nyeste først",
+      "subtitleOngoing": "{n} spill · sortert etter hva som skjer",
       "emptyFinishedHeading": "Ingen signerte runder ennå.",
       "emptyFinishedBody": "Resultatene fra avsluttede spill samles her etterhvert som rundene fullføres.",
       "emptyOngoingHeading": "Ingen spill ennå.",

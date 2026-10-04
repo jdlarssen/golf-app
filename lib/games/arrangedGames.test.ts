@@ -272,12 +272,14 @@ describe('arrangedRoundHref', () => {
 });
 
 describe('arrangedListHref', () => {
+  // The list follows where the count came from, not the role: an admin on
+  // /klubbhuset counts their own games, so the list must be their own too.
   it.each([
-    ['drafts', true, '/admin/games?status=draft'],
-    ['finished', true, '/admin/games?status=finished'],
-    ['drafts', false, '/klubbhuset?vis=utkast'],
-    ['finished', false, '/klubbhuset?vis=ferdige'],
-  ] as const)('%s, admin=%s → %s', (kind, isAdmin, expected) => {
-    expect(arrangedListHref(kind, isAdmin)).toBe(expected);
+    ['drafts', 'all', '/admin/games?status=draft'],
+    ['finished', 'all', '/admin/games?status=finished'],
+    ['drafts', 'own', '/klubbhuset?vis=utkast'],
+    ['finished', 'own', '/klubbhuset?vis=ferdige'],
+  ] as const)('%s, counted over %s games → %s', (kind, source, expected) => {
+    expect(arrangedListHref(kind, source)).toBe(expected);
   });
 });

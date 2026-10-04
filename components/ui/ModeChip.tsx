@@ -1,6 +1,11 @@
 import { MODE_LABELS, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 
+/** The chip's text, also for a link name that has to say what the chip shows. */
+export function modeChipLabel(mode: GameMode, modeConfig?: GameModeConfig): string {
+  return modeConfig ? formatDisplayLabel(mode, modeConfig) : MODE_LABELS[mode];
+}
+
 /**
  * Subtil chip som indikerer spillmodus (Best ball / Stableford) per spill-rad
  * i admin-flater. Bevisst lavmælt sammenlignet med `StatusChip` — modus er
@@ -30,7 +35,7 @@ export function ModeChip({
   modeConfig?: GameModeConfig;
   className?: string;
 }) {
-  const label = modeConfig ? formatDisplayLabel(mode, modeConfig) : MODE_LABELS[mode];
+  const label = modeChipLabel(mode, modeConfig);
   return (
     <span
       className={`inline-block rounded-full border px-[7px] py-[2px] font-sans text-[9.5px] font-medium ${className ?? ''}`}
