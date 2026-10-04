@@ -146,11 +146,10 @@ export function ArrangedRoundsView({
           }
           data-testid="arranged-drafts"
           data-count={rounds.drafts.count}
-          className="-mx-1 mt-2.5 flex min-h-[51px] items-center justify-between gap-3 rounded-[14px] border-[1.5px] border-dashed border-border px-3.5 text-sm leading-[normal] text-text"
+          className="-mx-1 mt-2.5 flex min-h-[50px] items-center justify-between gap-3 rounded-[14px] border-[1.5px] border-dashed border-border px-3.5 text-sm leading-[normal] text-text"
         >
-          <span>
-            {t('drafts', { n: rounds.drafts.count })} · {t('draftsHint')}
-          </span>
+          {/* One string, one text run: split text nodes shape a hair differently. */}
+          <span>{`${t('drafts', { n: rounds.drafts.count })} · ${t('draftsHint')}`}</span>
           <span aria-hidden className="text-[18px] leading-[normal] text-muted">
             ›
           </span>
@@ -161,12 +160,18 @@ export function ArrangedRoundsView({
         <div className="pt-1">
           <SmartLink
             href={arrangedListHref('finished', isAdmin)}
+            aria-label={t('finishedLink', { n: rounds.finished.count })}
             data-testid="arranged-finished"
             data-count={rounds.finished.count}
-            className="inline-flex min-h-11 items-center text-sm font-semibold leading-[normal] text-primary"
+            className="inline-flex min-h-11 items-center text-sm font-semibold leading-[normal] text-primary underline"
           >
-            {t('finishedLink', { n: rounds.finished.count })}
-            <span aria-hidden>&nbsp;→</span>
+            {/* One flex item, so the space before the arrow stays. Inter has no
+                «→»: the artboard draws it with system-ui, while our stack would
+                fall back to Arial («Inter Fallback»). */}
+            <span>
+              {`${t('finishedLink', { n: rounds.finished.count })} `}
+              <span className="font-[system-ui]">→</span>
+            </span>
           </SmartLink>
         </div>
       )}
@@ -270,7 +275,7 @@ function UpcomingRow({
       <span className="min-w-0 grow">
         <span className="block text-[15px] font-semibold leading-[normal]">{name}</span>
         <span
-          className={`mt-0.5 block text-xs leading-[normal] tabular-nums ${
+          className={`mt-0.5 block text-xs leading-[normal] ${
             note ? 'font-semibold text-warning-text' : 'text-muted'
           }`}
         >
