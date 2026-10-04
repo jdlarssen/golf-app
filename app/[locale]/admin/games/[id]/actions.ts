@@ -87,7 +87,8 @@ async function loadAdminOrCreatorContext(gameId: string) {
  * is `requireAdminOrCreator`; after it the start runs on the service-role
  * client, like the app's start route (#2215), so a cup match or a derived
  * game is never half-started because the organiser's RLS client cannot see
- * the cup. Admin lands in the Sekretariat, the organiser on `/games/[id]`,
+ * the cup. Admin lands in the Sekretariat; the organiser, and an admin who
+ * pressed the button on the game page (`returnTo: 'game'`), on `/games/[id]`,
  * where the error banners live.
  *
  * The publish path (D2 createAndStartAction) deliberately leaves
@@ -95,18 +96,21 @@ async function loadAdminOrCreatorContext(gameId: string) {
  * roster can still be edited. The helper freezes handicaps just before
  * flipping to 'active' so they reflect each player's hcp_index at tee-off.
  */
-export async function startScheduledGameAction(gameId: string) {
+export async function startScheduledGameAction(gameId: string, returnTo?: 'game') {
   const locale = await getLocale();
   const { userId, isAdmin } = await requireAdminOrCreator(
     await getServerClient(),
     gameId,
   );
-  const detailPath = isAdmin ? `/admin/games/${gameId}` : `/games/${gameId}`;
+  // The button on the game page binds 'game', so an admin who also plays and
+  // starts from the waiting room comes back to the game, not the Sekretariat.
+  const toSekretariat = isAdmin && returnTo !== 'game';
+  const detailPath = toSekretariat ? `/admin/games/${gameId}` : `/games/${gameId}`;
   const admin = getAdminClient();
 
   const result = await startScheduledGame(admin, gameId);
   if (!result.ok) {
-    if (result.reason === 'pending_players' && result.pendingUserIds && isAdmin) {
+    if (result.reason === 'pending_players' && result.pendingUserIds && toSekretariat) {
       // #2207: ids, never addresses, in the URL — the detail page looks the
       // addresses up after its requireAdmin gate. The organiser's game page
       // shows no names (#2202), so its URL carries no ids either.

@@ -1291,6 +1291,40 @@ describe('startScheduledGameAction (#2207)', () => {
     );
   });
 
+  it('admin who starts from the game page lands back on the game page, without ids', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdminOrCreator
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    startScheduledGameMock.mockResolvedValueOnce({
+      ok: false,
+      reason: 'pending_players',
+      pendingUserIds: ['u1'],
+    });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1', 'game')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?error=pending_players');
+  });
+
+  it('admin who starts from the game page lands on /games/[id]?status=started', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdminOrCreator
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+    startScheduledGameMock.mockResolvedValueOnce({ ok: true, started: true });
+
+    const { startScheduledGameAction } = await import('./actions');
+    await expect(startScheduledGameAction('game-1', 'game')).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?status=started');
+  });
+
   // #2202: the game's organiser starts from the game page, on the service-role
   // client after the requireAdminOrCreator gate, like the app's start route.
   function organiserSession(createdBy: string) {

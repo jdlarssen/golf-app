@@ -53,7 +53,7 @@ export function CreatorControls({
         )}
         {status === 'scheduled' && (
           <StartScheduledGameButton
-            startAction={startScheduledGameAction.bind(null, gameId)}
+            startAction={startScheduledGameAction.bind(null, gameId, 'game')}
             label={tButtons('startRoundNow')}
             confirmText={tButtons('startRoundConfirm')}
           />
