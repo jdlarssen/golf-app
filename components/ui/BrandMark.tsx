@@ -14,7 +14,7 @@ const SIZES = {
   xs: { className: 'text-sm', px: 14 }, // spectate banner
   sm: { className: 'text-xl', px: 20 }, // top of a page
   md: { className: 'text-3xl', px: 30 }, // signup poster
-  lg: { className: 'text-5xl', px: 48 }, // BrandHero, /login
+  lg: { className: 'text-5xl', px: 48 }, // BrandHero
   hero: { className: 'text-2xl', px: 24 }, // the front page's green top (#2261)
 } as const;
 
