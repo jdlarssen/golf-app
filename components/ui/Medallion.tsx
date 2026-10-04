@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 
 type Place = 1 | 2 | 3;
 
@@ -44,6 +45,8 @@ export function Medallion({
   size?: number;
   title?: string;
 }): JSX.Element {
+  const t = useTranslations('leaderboard.board');
+  const label = title ?? t('srPlace', { rank: place });
   const g = GRADIENTS[place];
   // Unique gradient id per render so multiple medallions on one page don't
   // share a gradient definition (React's reconciler would otherwise reuse the
@@ -57,9 +60,9 @@ export function Medallion({
       viewBox="0 0 56 56"
       fill="none"
       role="img"
-      aria-label={title ?? `${place}. plass`}
+      aria-label={label}
     >
-      <title>{title ?? `${place}. plass`}</title>
+      <title>{label}</title>
       <defs>
         <radialGradient id={gradId} cx="35%" cy="30%" r="65%">
           <stop offset="0" stopColor={g.stops[0]} />
