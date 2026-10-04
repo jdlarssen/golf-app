@@ -1,37 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
-import { Fraunces, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { ROOT_CLIENT_NAMESPACES, pickMessages } from "@/i18n/clientNamespaces";
 import "../globals.css";
+import { fraunces, inter, rootViewport } from "../rootShell";
 import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
 import { BottomNavGate } from "@/components/ui/BottomNavGate";
 import { GlobalSyncBannerGate } from "@/components/sync/GlobalSyncBannerGate";
 import { themeBootstrapScript } from "@/lib/theme/themePreference";
-
-// Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
-});
-
-// Fraunces — display serif for h1/h2, brand mark, and big numbers on the
-// leaderboard. Includes the Norwegian glyphs we need (ø, å, æ, Ø, Å, Æ).
-// `opsz` is the only extra axis we want — SOFT/WONK introduce the very
-// ornament the brand foundations reject ("restraint over ornament").
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
-  axes: ["opsz"],
-});
 
 // Prerender a static shell per locale (PPR under cacheComponents — the
 // [locale] param is part of the cache key via next/root-params, see
@@ -90,15 +72,8 @@ export async function generateMetadata({
   };
 }
 
-// Next.js 16 requires themeColor / colorScheme / viewport in a separate
-// `viewport` export — they are deprecated under `metadata`.
-export const viewport: Viewport = {
-  themeColor: "#1b4332",
-  colorScheme: "light dark",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+// Shared with app/global-not-found.tsx (app/rootShell.ts).
+export const viewport: Viewport = rootViewport;
 
 export default async function RootLayout({ children, params }: Props) {
   const { locale } = await params;
