@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock as buildQueueMock, type QueryResult } from '@/tests/serverActionMocks';
 import { startScheduledGame } from './startScheduledGame';
+import { readStartBlock } from './startScheduledGameCore';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
@@ -1711,5 +1712,52 @@ describe('startScheduledGame — handicapprosenten følger formatet (#2210)', ()
       )
       .map((c) => (c.args[0] as { course_handicap: number }).course_handicap);
     expect(frozen).toEqual([14, 14, 14, 14]);
+  });
+});
+
+// ─── #2204: readStartBlock reads the reason without starting ─────────────────
+
+/**
+ * The game pages ask `readStartBlock` why a round would not start. It must
+ * never write, and a read that fails or a game that is no longer scheduled
+ * gives `null`: a transient error must not show up as a block.
+ */
+describe('readStartBlock (#2204)', () => {
+  const writes = (supabase: unknown) =>
+    (supabase as { __fromCalls: Array<{ method: string }> }).__fromCalls.filter((c) =>
+      ['update', 'insert', 'upsert', 'delete'].includes(c.method),
+    );
+
+  it('gives the block and writes nothing', async () => {
+    const supabase = buildSupabaseMock([
+      { data: { ...makeGameRow('wolf', 1), mode_config: { kind: 'wolf', team_size: 1 } }, error: null },
+      { data: [PLAYER('u1', null), PLAYER('u2', null)], error: null },
+    ]);
+
+    const block = await readStartBlock(supabase as never, 'game-id');
+    expect({ block, writes: writes(supabase).length }).toEqual({
+      block: { reason: 'rotation_player_count', rotationMode: 'wolf', rotationActiveCount: 2 },
+      writes: 0,
+    });
+  });
+
+  it.each<[string, QueryResult[], Parameters<typeof buildSupabaseMock>[2]]>([
+    ['the game read fails', [{ data: null, error: { message: 'timeout', code: '' } }], undefined],
+    [
+      'the profile RPC fails',
+      [
+        { data: makeGameRow('stableford', 1), error: null },
+        { data: [PLAYER('u1', null)], error: null },
+      ],
+      { rpcErrors: { incomplete_profile_ids: { message: 'boom' } } },
+    ],
+    ['the game is not scheduled', [{ data: { ...makeGameRow('stableford', 1), status: 'draft' }, error: null }], undefined],
+    ['the game is already active', [{ data: { ...makeGameRow('stableford', 1), status: 'active' }, error: null }], undefined],
+  ])('gives null when %s, and writes nothing', async (_label, queue, opts) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const supabase = buildSupabaseMock(queue, {}, opts);
+
+    const block = await readStartBlock(supabase as never, 'game-id');
+    expect({ block, writes: writes(supabase).length }).toEqual({ block: null, writes: 0 });
   });
 });
