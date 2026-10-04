@@ -312,22 +312,36 @@ describe('teamSizeFit: hva hvert lagstørrelse-kort sier (#2453)', () => {
     expect(teamSizeFit(mode, size, n)).toEqual(expected);
   });
 
-  it('går opp akkurat for størrelsene teamSizesThatFit gir, og alt går opp når ingenting gjør det', () => {
-    const modes = [
-      'texas_scramble',
-      'ambrose',
-      'florida_scramble',
-      'shamble',
-      'stableford',
-      'modified_stableford',
-    ] as const;
-    for (const mode of modes) {
+  it('stemmer med en uavhengig opptelling for n fra 0 til 44', () => {
+    // Brute force: a size fits when some whole number of teams, at least the
+    // format's minimum and within the player cap, makes exactly n players.
+    // The minimums are written out here, not read from the module.
+    const minTeams = {
+      texas_scramble: 2,
+      ambrose: 2,
+      florida_scramble: 2,
+      shamble: 2,
+      stableford: 1,
+      modified_stableford: 1,
+    } as const;
+    for (const [mode, min] of Object.entries(minTeams) as [keyof typeof minTeams, number][]) {
+      const sizes = selectableTeamSizes(mode).sizes;
       for (let n = 0; n <= 44; n++) {
-        const fitting = teamSizesThatFit(mode, n);
-        for (const size of selectableTeamSizes(mode).sizes) {
-          expect(teamSizeFit(mode, size, n).kind === 'fits', `${mode} à ${size}, n=${n}`).toBe(
-            fitting.length === 0 || fitting.includes(size),
-          );
+        const fits = (size: number) => {
+          for (let teams = min; teams * size <= TEAM_FORMAT_PLAYER_CAP; teams++) {
+            if (teams * size === n) return true;
+          }
+          return false;
+        };
+        const anyFits = sizes.some(fits);
+        for (const size of sizes) {
+          const expected =
+            !anyFits || fits(size)
+              ? { kind: 'fits' }
+              : n < min * size
+                ? { kind: 'needs', players: min * size }
+                : { kind: 'notWith', count: n };
+          expect(teamSizeFit(mode, size, n), `${mode} à ${size}, n=${n}`).toEqual(expected);
         }
       }
     }
