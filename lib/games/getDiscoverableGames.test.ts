@@ -10,6 +10,7 @@ const friendGamesRows = vi.fn<() => { data: Row[] | null }>();
 const myClubsRows = vi.fn<() => { data: Row[] | null }>();
 const notInArg = vi.fn();
 const inArg = vi.fn();
+const eqArg = vi.fn();
 
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
@@ -48,6 +49,12 @@ vi.mock('@/lib/supabase/admin', () => ({
         in: (...args: unknown[]) => {
           if (firstInCol === null) firstInCol = args[0] as string;
           inArg(...args);
+          return b;
+        },
+        // #2445: the status filter is an `.eq`, so it never sets the routing
+        // column above.
+        eq: (...args: unknown[]) => {
+          eqArg(...args);
           return b;
         },
         neq: () => b,
@@ -90,6 +97,7 @@ beforeEach(() => {
   myClubsRows.mockReset();
   notInArg.mockReset();
   inArg.mockReset();
+  eqArg.mockReset();
   mockGetFriendIds.mockReset();
   // Defaults: no clubs, no club games, no friends — so #357 tests behave
   // exactly as before.
@@ -564,5 +572,50 @@ describe('getDiscoverableGames', () => {
     expect(result.friendGames).toEqual([]);
     // created_by-spørringen skal ikke ha blitt kalt
     expect(inArg).not.toHaveBeenCalledWith('created_by', expect.anything());
+  });
+
+  // ── Utkast er skjult (#2445) ─────────────────────────────────────────────
+
+  it('#2445: klubb-, venne- og åpen-spørringen henter bare scheduled, aldri draft', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    // A club and a friend, so all three games queries run.
+    myClubsRows.mockReturnValue({ data: [{ group_id: 'c1' }] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await getDiscoverableGames('u1');
+
+    expect(inArg).toHaveBeenCalledWith('group_id', ['c1']);
+    expect(inArg).toHaveBeenCalledWith('created_by', ['friend1']);
+    expect(eqArg.mock.calls.filter((c) => c[0] === 'status')).toEqual([
+      ['status', 'scheduled'],
+      ['status', 'scheduled'],
+      ['status', 'scheduled'],
+    ]);
+    expect(inArg.mock.calls.filter((c) => c[0] === 'status')).toEqual([]);
+  });
+
+  it('#2445: en ventende forespørsel på et utkast er ikke i pendingRequests', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    const base = {
+      status: 'pending',
+      team_name: null,
+      is_team_captain: false,
+      created_at: '2026-05-26T12:00:00Z',
+    };
+    requestRows.mockReturnValue({
+      data: [
+        { ...base, id: 'on-draft', game_id: 'g1', games: { name: 'Utkast', short_id: 'drft0001', status: 'draft' } },
+        { ...base, id: 'on-scheduled', game_id: 'g2', games: { name: 'Planlagt', short_id: 'schd0002', status: 'scheduled' } },
+      ],
+    });
+    openGamesRows.mockReturnValue({ data: [] });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.pendingRequests.map((r) => r.id)).toEqual(['on-scheduled']);
   });
 });

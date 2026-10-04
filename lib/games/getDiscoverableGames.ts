@@ -107,7 +107,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
       admin
         .from('game_registration_requests')
         .select(
-          'id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id), captain:team_request_id(status)',
+          'id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id, status), captain:team_request_id(status)',
         )
         .eq('user_id', userId)
         .in('status', ['pending', 'approved']),
@@ -148,7 +148,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
         'id, name, short_id, scheduled_tee_off_at, registration_mode, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)',
       )
       .in('group_id', myClubIds)
-      .in('status', ['draft', 'scheduled'])
+      // #2445: a draft is hidden from everyone but its organiser.
+      .eq('status', 'scheduled')
       .neq('created_by', userId)
       .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
       .limit(50);
@@ -195,7 +196,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
       .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, game_mode, mode_config, hole_segment, start_type, courses(name)')
       .in('created_by', friendIds)
       .in('registration_mode', ['open', 'manual_approval'])
-      .in('status', ['draft', 'scheduled'])
+      // #2445: a draft is hidden from everyone but its organiser.
+      .eq('status', 'scheduled')
       .neq('created_by', userId)
       .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
       .limit(50);
@@ -249,7 +251,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
     // Påmeldingsmåten ER synligheten: open + manual_approval er oppdagbare,
     // invite_only er privat (#357). Ingen egen synlighets-bryter.
     .in('registration_mode', ['open', 'manual_approval'])
-    .in('status', ['draft', 'scheduled'])
+    // #2445: same rule as getPublicDiscoverableGames, drafts are hidden.
+    .eq('status', 'scheduled')
     .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
     .limit(50);
 
@@ -288,6 +291,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
   // staging, PostgREST's many-to-one convention).
   const pendingRequests: PendingRequest[] = (requestRowsRes.data ?? [])
     .filter((r) => {
+      // #2445: a request on a draft would link to a page that 404s.
+      if (r.games?.status === 'draft') return false;
       if (r.status === 'pending') return true;
       const captain = r.captain;
       return (

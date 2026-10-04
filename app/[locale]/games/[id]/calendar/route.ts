@@ -69,7 +69,12 @@ export async function GET(
     return NextResponse.json({ error: t('errors.unavailable') }, { status: 404 });
   }
 
-  if (game.status === 'finished' || !game.scheduled_tee_off_at) {
+  // #2445: a draft answers like a game that does not exist.
+  if (
+    game.status === 'draft' ||
+    game.status === 'finished' ||
+    !game.scheduled_tee_off_at
+  ) {
     return NextResponse.json({ error: t('errors.unavailable') }, { status: 404 });
   }
 

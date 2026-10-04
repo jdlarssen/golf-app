@@ -116,8 +116,10 @@ export async function RegistrationOverviewSection({
           </div>
 
           {/* invite_only er privat — ikke nudge arrangøren til å kringkaste
-              lenken. Forespørsel-veien (#368) tjener folk som alt har den. */}
-          {registrationMode !== 'invite_only' && (
+              lenken. Forespørsel-veien (#368) tjener folk som alt har den.
+              #2445: only on a scheduled game; on a draft both links 404 for
+              everyone else. */}
+          {gameStatus === 'scheduled' && registrationMode !== 'invite_only' && (
             <>
               <CopyShareLinkButton shareUrl={shareUrl} />
               <SmartLink
