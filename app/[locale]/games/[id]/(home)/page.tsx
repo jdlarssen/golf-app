@@ -234,6 +234,10 @@ export default async function GameHomePage({
   // error boundary, not masquerade as a 404. Only a genuine 0-row result
   // (game gone) falls through to notFound().
   if (joinsRes.error) throw joinsRes.error;
+  // #2445: this read IS the draft gate. It uses the user's client, so RLS hides
+  // a draft from everyone but its organiser and global admins, and a player on
+  // someone else's draft gets 404 here. Moving it to the service client would
+  // open the draft to its players (getGameWithPlayers bypasses RLS).
   if (!joinsRes.data) notFound();
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
@@ -345,8 +349,8 @@ export default async function GameHomePage({
       ? `/cup/${game.tournament_id}/trekk`
       : `/games/${id}/trekk-fra`;
 
-  // Drafts are visible to invited players as a venterom — see the draft
-  // branch in the default return below for progressive disclosure.
+  // The draft branch in the default return below is reached only by the
+  // organiser and global admins: players get 404 at `joinsRes` above (#2445).
 
   // #544: track whether the auto-start was blocked by incomplete matchplay sides.
   // Used below to render a waiting banner in the scheduled fallback view.

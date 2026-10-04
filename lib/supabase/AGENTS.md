@@ -100,6 +100,7 @@ Stop and query the live DB before building. The typed client catches column-name
 Strengt håndhevet i Postgres. Spillere ser:
 - Sine egne scores
 - Samme-flight scores under aktivt spill
+- Ingenting av et utkast (`games.status = 'draft'`) de står på: det ser bare arrangøren og global admin (#2445, 0202)
 - Alle scores i spill **de selv er med i**, etter `games.status = 'finished'`
 
 ⚠️ Merk siste punkt: finished-grenen i `scores select gating per mode` krever
@@ -111,5 +112,14 @@ resultatbildet (`leaderboard/share-image`) og CSV-eksporten (`leaderboard/export
 med samme gate som tavla (innlogget + ferdig; delern fra sesjonen, aldri fra URL-en,
 #2312) — leser derfor med service-role og holder autorisasjonen på call-site. Legger du til en slik
 flate: gaten i ruta ER håndhevelsen, det finnes ingen RLS bak den.
+
+Et utkast (`games.status = 'draft'`) ser bare arrangøren og global admin, også om du
+står på lista (#2445, migrasjon 0202). RLS-laget er lesereglen for `games` og
+`is_in_game` (som bærer «game_players select shared game»). Tjenesteklient-dører
+spillere når (påmelding, «Finn turneringer», invitasjonskortet ved innlogging,
+landingen etter innlogging, kalenderfila, trekk deg) sjekker `status === 'draft'` selv.
+Medspiller-avledningen har to hjem som må endres sammen: `is_invite_eligible` i
+databasen og `lib/users/getCoPlayerIds.ts` i app-koden. Et utkast gjør bare
+arrangøren til medspiller.
 
 Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.

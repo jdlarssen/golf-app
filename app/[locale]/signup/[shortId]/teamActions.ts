@@ -242,13 +242,17 @@ export async function submitTeamRegistration(
   if (!game) {
     return { ok: false, error: 'game_not_found' };
   }
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'game_not_found' };
+  }
   if (game.registration_type !== 'team' && game.registration_type !== 'both') {
     return { ok: false, error: 'wrong_type' };
   }
   if (game.registration_mode === 'invite_only') {
     return { ok: false, error: 'wrong_mode' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
   // #543: steng-påmelding-guard — speilar solo-flyten i actions.ts.
@@ -757,7 +761,11 @@ export async function acceptTeamInvite(
   if (!game || game.id !== req.game_id) {
     return { ok: false, error: 'not_found' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'not_found' };
+  }
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
   // #543: stengt påmelding fryser også medspiller-aksept — arrangøren skal
@@ -909,7 +917,11 @@ export async function declineTeamInvite(
   if (!game || game.id !== req.game_id) {
     return { ok: false, error: 'not_found' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'not_found' };
+  }
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
 
@@ -1039,7 +1051,11 @@ export async function removeTeamMember(
   if (!game || game.id !== child.game_id) {
     return { ok: false, error: 'not_found' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'not_found' };
+  }
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
 
@@ -1119,7 +1135,11 @@ export async function attachToCaptainTeam(
   if (!game) {
     return { ok: false, error: 'not_found' };
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'not_found' };
+  }
+  if (game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
   }
   // #543: stengt påmelding gjelder også e-post-inviterte medspillere.
@@ -1425,6 +1445,11 @@ export async function resendTeamInvite(
   if (!game || game.id !== child.game_id) {
     return { ok: false, error: 'not_found' };
   }
+  // #2445: a draft answers like a game that does not exist — the mail below
+  // would carry its name.
+  if (game.status === 'draft') {
+    return { ok: false, error: 'not_found' };
+  }
 
   const captainName = await getCaptainDisplayName(user.id);
   await notifyInvitedToTeam({
@@ -1470,6 +1495,10 @@ export async function transferCaptaincy(
 
   const game = await getGameByShortId(shortId);
   if (!game) {
+    return { ok: false, error: 'not_found' };
+  }
+  // #2445: a draft answers like a game that does not exist.
+  if (game.status === 'draft') {
     return { ok: false, error: 'not_found' };
   }
 

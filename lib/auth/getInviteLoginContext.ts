@@ -17,8 +17,9 @@ import type { GameModeConfig } from '@/lib/scoring/modes/types';
  *
  * Fail-closed: ugyldig/utløpt/akseptert token, token uten game_id, en runde
  * som har startet eller er ferdig (#2212 — innloggingen gir ikke lenger plass,
- * så kortet ville lovet noe som ikke stemmer), eller DB-feil → null. Siden
- * rendres da nøyaktig som uten `?invite=` — aldri 500.
+ * så kortet ville lovet noe som ikke stemmer), et utkast (#2445 — skjult for
+ * alle utenom arrangøren, så det svarer som et spill som ikke finnes), eller
+ * DB-feil → null. Siden rendres da nøyaktig som uten `?invite=` — aldri 500.
  */
 
 export type InviteLoginContext = {
@@ -88,6 +89,8 @@ export async function getInviteLoginContext(
     }
     if (!data?.games) return null;
     if (isRosterLocked(data.games.status)) return null;
+    // #2445: a draft answers like a game that does not exist.
+    if (data.games.status === 'draft') return null;
 
     const inviterName =
       data.inviter?.name?.trim() || data.inviter?.nickname?.trim() || null;

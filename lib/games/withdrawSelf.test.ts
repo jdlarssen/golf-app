@@ -181,6 +181,8 @@ describe('withdrawSelf', () => {
           short_id: 'abc12345',
           status: 'draft',
           game_mode: 'best_ball',
+          // #2445: the caller's own draft, the organiser's path.
+          created_by: USER_ID,
         },
         error: null,
       },
@@ -200,6 +202,56 @@ describe('withdrawSelf', () => {
     expect(result).toEqual({ ok: true, kept: false });
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('#2445: spiller på andres utkast → game_not_found, ingen DELETE og ingen notify', async () => {
+    const ORGANISER_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    // The team-member queue from the case below: without the draft gate the
+    // row is deleted and the captain is told the hidden game's name.
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: GAME_ID,
+          name: 'Hemmelig utkast',
+          short_id: 'abc12345',
+          status: 'draft',
+          game_mode: 'best_ball',
+          created_by: ORGANISER_ID,
+        },
+        error: null,
+      },
+      { data: { user_id: USER_ID, team_number: 1 }, error: null },
+      {
+        data: {
+          id: MY_REQ_ID,
+          status: 'approved',
+          team_name: 'Bjørka',
+          team_request_id: CAPTAIN_REQ_ID,
+          is_team_captain: false,
+        },
+        error: null,
+      },
+      { data: [{ user_id: TEAMMATE_ID }], error: null },
+      { data: { user_id: CAPTAIN_ID }, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      {
+        data: { name: 'Per Spiller', nickname: null, email: 'per@example.test' },
+        error: null,
+      },
+    ]);
+    const { withdrawSelf } = await import('./withdrawSelf');
+
+    const result = await withdrawSelf(GAME_ID, USER_ID);
+
+    expect(result).toEqual({ ok: false, error: 'game_not_found' });
+    expect(
+      adminMock.__fromCalls.filter(
+        (c) => c.method === 'delete' || c.method === 'update',
+      ),
+    ).toHaveLength(0);
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
   it('suksess team-medlem → DELETE + notify kaptein med team_member_withdrew', async () => {
@@ -429,6 +481,8 @@ describe('withdrawSelf — cup-kamper er låst før start (#1814)', () => {
         status,
         game_mode: gameMode,
         tournament_id: TOURNAMENT_ID,
+        // #2445: the caller's own game, so a draft still reaches the cup gate.
+        created_by: USER_ID,
       },
       error: null,
     };

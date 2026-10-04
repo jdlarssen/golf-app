@@ -2,8 +2,11 @@
  * Canonical game-lifecycle status types for Tørny.
  *
  * Status semantics:
- *  - 'draft'     Admin has created the game but not yet published it.
- *                Players cannot see or join a draft game.
+ *  - 'draft'     The organiser has created the game but not yet published it.
+ *                Only the organiser and global admins see it, also when other
+ *                players are on its list (#2445): RLS for the logged-in client
+ *                (migration 0202_hidden_drafts), and a `status === 'draft'`
+ *                check on every service-client door players reach.
  *  - 'scheduled' Game is published and visible to invited players,
  *                but the round has not started yet (tee-off is in the future).
  *  - 'active'    The round is in progress. Players can enter scores.

@@ -36,8 +36,12 @@ export async function GET() {
     if (userError) return exportFailed('users', userError);
     if (!user) return exportFailed('users', 'no users row for verified id');
 
-    // 2. public.game_players — all rows where this user was a player
-    const { data: gamePlayers, error: gamePlayersError } = await supabase
+    // 2. public.game_players — all rows where this user was a player. Admin
+    //    client, filtered on the proxy-verified id (#2445): a draft is hidden
+    //    from its players under RLS, so the user's own row on someone else's
+    //    draft is invisible to their session, yet it is still their data
+    //    (art. 15/20). Same pattern as the users row above (#2207).
+    const { data: gamePlayers, error: gamePlayersError } = await getAdminClient()
       .from('game_players')
       .select('*')
       .eq('user_id', userId);
