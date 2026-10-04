@@ -16,13 +16,14 @@ export default async function CupDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const supabase = await getServerClient();
-  await requireAdminOrClubAdminOfCup(supabase, id);
+  const ctx = await requireAdminOrClubAdminOfCup(supabase, id);
   return (
     <CupManagement
       tournamentId={id}
       variant="admin"
       errorCode={first(sp.error)}
       statusCode={first(sp.status)}
+      viewerIsAdmin={ctx.isAdmin}
     />
   );
 }

@@ -37,3 +37,36 @@ export function nonPlayerGameDoor({
   if (isCreator) return { kind: 'organiser_view' };
   return { kind: 'not_found' };
 }
+
+/**
+ * Where a match card on `/admin/cup/[id]` leads (#2202). That page also lets
+ * in a personal cup's creator and a club cup's club admin, but
+ * `/admin/games/[id]` is admin-only and sends anyone else to `/`.
+ *
+ * - admin: the Sekretariat, as before.
+ * - non-admin, personal cup: `/games/[id]`. The matches inherit the cup
+ *   creator's `created_by`, and the cup gate just confirmed the viewer is that
+ *   creator, so the game page shows the player's view or the organiser view.
+ * - non-admin, club cup: the club admin need not be the match's creator, so
+ *   only a finished match links (to its leaderboard, open to everyone signed
+ *   in, with the back arrow to this page); an unfinished one is a plain card.
+ */
+export function adminCupMatchHref({
+  gameId,
+  status,
+  tournamentId,
+  groupId,
+  viewerIsAdmin,
+}: {
+  gameId: string;
+  status: 'draft' | 'scheduled' | 'active' | 'finished';
+  tournamentId: string;
+  groupId: string | null;
+  viewerIsAdmin: boolean;
+}): string | null {
+  if (viewerIsAdmin) return `/admin/games/${gameId}`;
+  if (groupId === null) return `/games/${gameId}`;
+  return status === 'finished'
+    ? `/games/${gameId}/leaderboard?from=/admin/cup/${tournamentId}`
+    : null;
+}

@@ -12,6 +12,7 @@ import {
   CUP_MATCH_STATUS_MESSAGE_KEY,
 } from '@/lib/cup/cupMatchStatusLabel';
 import { remainingPartnerName } from '@/lib/cup/cupSoloPartner';
+import { adminCupMatchHref } from '@/lib/games/nonPlayerGameDoor';
 import { SwapMatchPlayer, type SwapPlayerOption } from './SwapMatchPlayer';
 import { FourballPlayOnPanel } from './FourballPlayOnPanel';
 
@@ -66,6 +67,7 @@ export async function CupMatchList({
   team1Name,
   team2Name,
   cupActive,
+  viewerIsAdmin = false,
 }: {
   tournamentId: string;
   isClub: boolean;
@@ -81,6 +83,11 @@ export async function CupMatchList({
    * igjen på en signert cup og svarte med en melding om å starte cupen.
    */
   cupActive: boolean;
+  /**
+   * #2202: only a global admin drills into `/admin/games/[id]`. A personal
+   * cup's creator or a club admin on the admin route gets `adminCupMatchHref`.
+   */
+  viewerIsAdmin?: boolean;
 }) {
   const t = await getTranslations('cup');
   const unknownLabel = t('manage.unknownPlayer');
@@ -209,12 +216,19 @@ export async function CupMatchList({
             // FERDIGE matcher til kampens leaderboard (#1456) — ruta er åpen
             // for alle innloggede først etter finish, så uferdige matcher
             // forblir rene info-kort (ellers 404 for klubb-styrere utenfor
-            // kampen).
+            // kampen). #2202: på admin-ruta får en ikke-admin
+            // (cup-oppretter, klubb-admin) regelen i adminCupMatchHref.
             const href = isClub
               ? m.status === 'finished'
                 ? `/games/${m.gameId}/leaderboard?from=/klubber/${groupId}/cup/${tournamentId}`
                 : null
-              : `/admin/games/${m.gameId}`;
+              : adminCupMatchHref({
+                  gameId: m.gameId,
+                  status: m.status,
+                  tournamentId,
+                  groupId,
+                  viewerIsAdmin,
+                });
             // #1473: bytte-panelet ligger UTENFOR kort-lenken — en knapp inne
             // i en <a> ville navigert i stedet for å åpne panelet.
             // #1814 (E6): et trekk frigjør ingen plass, så en kamp med et
