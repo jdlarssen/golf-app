@@ -229,12 +229,13 @@ export function TeamSizeSelector({
   if (tiles.length === 1) {
     const [only] = tiles;
     const size = t('line', { size: only.size });
+    // One team (best ball with one pair) would only repeat the size: «Lag à 2».
+    const lineup = playerCount === undefined ? null : formatLineup(mode, playerCount);
+    const showLineup = lineup !== null && !(lineup.kind === 'teams' && lineup.teams === 1);
     return (
       <FormSection legend={tModes(mode as Parameters<typeof tModes>[0])}>
         <p data-testid="team-size-line" className="font-sans text-sm leading-[normal] text-text">
-          {playerCount === undefined
-            ? size
-            : `${size} · ${lineupText(formatLineup(mode, playerCount))}`}
+          {showLineup ? `${size} · ${lineupText(lineup)}` : size}
         </p>
       </FormSection>
     );

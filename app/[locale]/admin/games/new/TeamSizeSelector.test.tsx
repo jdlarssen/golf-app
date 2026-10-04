@@ -23,11 +23,19 @@ describe('TeamSizeSelector', () => {
 
   // #2453: én lagstørrelse er ikke et valg — den står som en linje.
   it('Best ball: én linje, ingen radiogruppe og ingen radio', () => {
-    render(<TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />);
+    const { rerender } = render(
+      <TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />,
+    );
 
     expect(screen.getByTestId('team-size-line')).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+
+    // Ett par er ett lag: oppstillingen ville bare gjentatt størrelsen, så
+    // linja står som uten antall.
+    const withoutCount = screen.getByTestId('team-size-line').textContent;
+    rerender(<TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} playerCount={2} />);
+    expect(screen.getByTestId('team-size-line').textContent).toBe(withoutCount);
   });
 
   it('Texas scramble: viser Par + 4-mann, men ikke Solo (scramble er lag-spill)', () => {
