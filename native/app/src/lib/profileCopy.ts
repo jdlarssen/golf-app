@@ -233,7 +233,7 @@ export const ONBOARDING_TEXT = {
   heading: 'To ting, så er du med',
   nameLabel: 'Hva heter du?',
   nameHint: 'Fornavn og etternavn, slik gjengen kjenner deg.',
-  hcpLabel: 'Handicapen din',
+  hcpLabel: 'Handicapet ditt',
   /** Skjermleser-etiketten på «+»-knappen, som webbens `hcpPlusLabel`. */
   plusHandicapLabel: 'Plusshandicap',
   hcpHint: 'Tallet du har i Golfbox nå. Har du ikke handicap ennå, skriv 54.',
