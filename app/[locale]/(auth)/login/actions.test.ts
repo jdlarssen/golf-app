@@ -504,6 +504,9 @@ describe('sendCode — rate-limit', () => {
   });
 
   it('maps the Supabase 60-second throttle to rate_limited_minute and keeps the user on the verify step (#1347)', async () => {
+    // #2349: the verify step also gets `sent`, so its countdown starts.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-04T10:00:00Z'));
     rpcMock.mockResolvedValue({ data: true, error: null });
     signInWithOtpMock.mockResolvedValue({
       error: {
@@ -521,8 +524,9 @@ describe('sendCode — rate-limit', () => {
     // Distinct from the own-bucket `rate_limited` (15 minutes), and the code
     // field stays visible — a valid code is already in the inbox.
     expect(lastRedirect()).toBe(
-      '/login?step=verify&email=kompis%40example.com&error=rate_limited_minute',
+      '/login?step=verify&email=kompis%40example.com&error=rate_limited_minute&sent=1791108000',
     );
+    vi.useRealTimers();
   });
 
   it('maps the project-wide mail quota to rate_limited_quota WITHOUT verify-parking (#1434)', async () => {
@@ -1453,6 +1457,8 @@ describe('sent keeps the countdown (#2349)', () => {
     );
   });
 
+  // Regression lock (green on main too, where no redirect carries `sent`): a
+  // `sent` that is not digits never reaches the URL.
   it('verifyCode: a sent that is not digits is dropped', async () => {
     verifyOtpMock.mockResolvedValue({ error: { message: 'Invalid token' } });
     const { verifyCode } = await import('./actions');
@@ -1477,6 +1483,8 @@ describe('sent keeps the countdown (#2349)', () => {
     );
   });
 
+  // Regression lock (green on main too): from step 1 there is no code on its
+  // way yet, so an ordinary error carries no `sent`.
   it('sendCode from step 1: an error carries no sent', async () => {
     consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
     const { sendCode } = await import('./actions');
@@ -1486,5 +1494,45 @@ describe('sent keeps the countdown (#2349)', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe('/login?email=kompis%40example.com&error=rate_limited');
+  });
+
+  it('sendCode from step 1: the 60-second throttle lands on the verify step with a fresh sent', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-04T10:00:00Z'));
+    try {
+      rpcMock.mockResolvedValue({ data: true, error: null });
+      signInWithOtpMock.mockResolvedValue({
+        error: { message: 'For security purposes, you can only request this after 60 seconds.' },
+      });
+      const { sendCode } = await import('./actions');
+
+      await expect(sendCode(fd({ email: 'kompis@example.com' }))).rejects.toBeInstanceOf(
+        RedirectError,
+      );
+
+      // Without `sent`, «Send ny kode» would be active at once under «Du kan be
+      // om ny kode om ett minutt».
+      expect(lastRedirect()).toBe(
+        '/login?step=verify&email=kompis%40example.com&error=rate_limited_minute&sent=1791108000',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sendCode from the verify step: the 60-second throttle keeps the sent it came with', async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    signInWithOtpMock.mockResolvedValue({
+      error: { message: 'For security purposes, you can only request this after 60 seconds.' },
+    });
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'kompis@example.com', from: 'verify', sent: SENT })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      `/login?step=verify&email=kompis%40example.com&error=rate_limited_minute&sent=${SENT}`,
+    );
   });
 });
