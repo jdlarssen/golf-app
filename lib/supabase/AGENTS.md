@@ -100,6 +100,7 @@ Stop and query the live DB before building. The typed client catches column-name
 Strengt håndhevet i Postgres. Spillere ser:
 - Sine egne scores
 - Samme-flight scores under aktivt spill
+- Ingenting av et utkast (`games.status = 'draft'`) de står på: det ser bare arrangøren og global admin (#2445, 0202)
 - Alle scores i spill **de selv er med i**, etter `games.status = 'finished'`
 
 ⚠️ Merk siste punkt: finished-grenen i `scores select gating per mode` krever
