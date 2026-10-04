@@ -4,6 +4,7 @@ import { getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
+import { expectOne } from '@/lib/supabase/affectedRows';
 
 /**
  * Player-confirmed: "yes, my handicap is still right." Bumps
@@ -27,12 +28,18 @@ export async function confirmHandicap(gameId: string) {
     redirect({ href: '/login', locale });
   }
 
-  const { error } = await supabase
-    .from('users')
-    .update({ handicap_updated_at: new Date().toISOString() })
-    .eq('id', user.id);
-
-  if (error) {
+  // A 0-row write is logged, not thrown (#2280): the card staying put is the
+  // player's signal, and an error page would be worse for a one-tap confirm.
+  try {
+    expectOne(
+      await supabase
+        .from('users')
+        .update({ handicap_updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .select('id'),
+      '[confirmHandicap]',
+    );
+  } catch (error) {
     console.error('[confirmHandicap] update failed', error);
   }
 
