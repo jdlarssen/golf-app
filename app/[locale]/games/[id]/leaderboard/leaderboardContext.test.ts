@@ -36,6 +36,11 @@ vi.mock('@/lib/auth/userId', () => ({
 
 const { getResultReadClient } = await import('./leaderboardContext');
 
+const game = (status: 'draft' | 'scheduled' | 'active' | 'finished', created_by: string | null = 'organiser-1') => ({
+  status,
+  created_by,
+});
+
 describe('getResultReadClient', () => {
   beforeEach(() => {
     getAdminClientMock.mockClear();
@@ -45,22 +50,22 @@ describe('getResultReadClient', () => {
   it('leser et FERDIG spill med service-role-klienten', async () => {
     // Uten denne ville RLS gitt 0 rader til alle som ikke selv spilte kampen
     // — nøyaktig feilen i #1542.
-    await expect(getResultReadClient('finished')).resolves.toBe(adminClient);
+    await expect(getResultReadClient(game('finished'))).resolves.toBe(adminClient);
     expect(getServerClientMock).not.toHaveBeenCalled();
   });
 
   it('ignorerer fallback-klienten når spillet er ferdig', async () => {
-    await expect(getResultReadClient('finished', passedClient)).resolves.toBe(
+    await expect(getResultReadClient(game('finished'), passedClient)).resolves.toBe(
       adminClient,
     );
   });
 
   it.each(['draft', 'scheduled', 'active'] as const)(
-    'beholder innsenderens klient på et %s spill',
+    'beholder innsenderens klient på et %s spill uten seer',
     async (status) => {
       // Spectate-ruta sender inn sin egen admin-klient for live-følging;
       // den må overleve uendret, ellers mister anonyme tilskuere tavla.
-      await expect(getResultReadClient(status, passedClient)).resolves.toBe(
+      await expect(getResultReadClient(game(status), passedClient)).resolves.toBe(
         passedClient,
       );
       expect(getAdminClientMock).not.toHaveBeenCalled();
@@ -68,7 +73,38 @@ describe('getResultReadClient', () => {
   );
 
   it('faller tilbake til cookie-klienten når ingen sendes inn og spillet går', async () => {
-    await expect(getResultReadClient('active')).resolves.toBe(cookieClient);
+    await expect(getResultReadClient(game('active', 'someone-else'))).resolves.toBe(
+      cookieClient,
+    );
     expect(getAdminClientMock).not.toHaveBeenCalled();
   });
+
+  // #2202, eierens valg C: arrangøren følger tavla under runden. RLS slipper
+  // bare deltakere til, så slagene leses med service-role — gaten i ruta er
+  // håndhevelsen (nonPlayerGameDoor, flaten 'board').
+  it('arrangøren av et aktivt spill leser med service-role (sendt seer)', async () => {
+    await expect(
+      getResultReadClient(game('active', 'organiser-1'), passedClient, 'organiser-1'),
+    ).resolves.toBe(adminClient);
+  });
+
+  it('arrangøren av et aktivt spill leser med service-role (seer fra konteksten)', async () => {
+    await expect(getResultReadClient(game('active', 'viewer-1'))).resolves.toBe(adminClient);
+  });
+
+  it('arrangøren av et ANNET spill får ikke service-role', async () => {
+    await expect(
+      getResultReadClient(game('active', 'organiser-1'), passedClient, 'organiser-2'),
+    ).resolves.toBe(passedClient);
+    expect(getAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['draft', 'scheduled'] as const)(
+    'arrangøren av et %s spill beholder sin egen klient',
+    async (status) => {
+      await expect(
+        getResultReadClient(game(status, 'organiser-1'), passedClient, 'organiser-1'),
+      ).resolves.toBe(passedClient);
+    },
+  );
 });

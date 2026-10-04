@@ -118,7 +118,7 @@ export async function GET(
   const scoresGameId = game.source_game_id ?? id;
   // Service-role for a finished game, like the board (#1542/#1632): the
   // viewer's own client gets 0 rows unless they played this match.
-  const scoresClient = await getResultReadClient(game.status, supabase);
+  const scoresClient = await getResultReadClient(game, supabase, userId);
 
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase

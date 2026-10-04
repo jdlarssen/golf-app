@@ -10,7 +10,8 @@ import { parseLeaderboardNavContext } from '@/lib/leaderboard/navContext';
 import {
   getGameWithPlayers,
 } from '@/lib/games/getGameWithPlayers';
-import { nonPlayerGameDoor } from '@/lib/games/nonPlayerGameDoor';
+import { nonPlayerGameDoor, organiserFollowsLiveBoard } from '@/lib/games/nonPlayerGameDoor';
+import { SpectatePoller } from '@/app/[locale]/spectate/[token]/SpectatePoller';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import {
   getLeaderboardContext,
@@ -113,19 +114,26 @@ export default async function LeaderboardPage({
   // etter finish, så resultat-dataene leses med service-role via
   // `getResultReadClient`. Slakkes betingelsen under, utvides samtidig hvem som
   // ser ferdige scorekort — det finnes ingen andre lås bak denne.
+  // #2202 (eierens valg C): arrangøren som ikke spiller, slipper inn mens
+  // runden pågår (`nonPlayerGameDoor`, flaten `board`) og leser slagene med
+  // service-role på samme vilkår (`organiserFollowsLiveBoard`). Før start går
+  // hen til arrangørvisningen. Alle andre får fortsatt 404.
   if (!isAdmin && !isParticipant && game.status !== 'finished') {
-    // #2202: the organiser who does not play goes to the game page's organiser
-    // view instead of a 404; the live board stays closed to them (this gate is
-    // the lock). Anyone else still gets a 404.
     const door = nonPlayerGameDoor({
       gameId: id,
       isAdmin: false,
       isCreator,
-      surface: 'player_page',
+      surface: 'board',
+      status: game.status,
     });
     if (door.kind === 'redirect') redirect({ href: door.href, locale });
-    notFound();
+    if (door.kind !== 'board') notFound();
   }
+  // Realtime on `scores` follows RLS, so a non-playing organiser gets no
+  // events; the board refreshes on a timer for them, like an embed (#2202).
+  const organiserPolls =
+    !isParticipant &&
+    organiserFollowsLiveBoard({ status: game.status, createdBy: game.created_by, viewerId: userId });
 
   // Ikke-deltakere har ingen adgang til game-home — default-returen går Hjem
   // i stedet, så tilbake-pilen aldri er en død flate (#752). Eksplisitt
@@ -211,6 +219,7 @@ export default async function LeaderboardPage({
   // #1051: sponsorstripe på live-tavla (self-hider uten sponsor).
   const withSponsors = (
     <>
+      {organiserPolls && <SpectatePoller live />}
       <SponsorStrip prizes={safeParsePrizes(game.prizes)} />
       {content}
     </>

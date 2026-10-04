@@ -91,7 +91,7 @@ export async function renderFourballMatchplay(opts: {
   let side1Label = tc('teamLabel', { number: 1 });
   let side2Label = tc('teamLabel', { number: 2 });
   // #1542: se foursomesMatchplay — samme lese-regel, samme lagnavn-felle.
-  const supabase = await getResultReadClient(game.status);
+  const supabase = await getResultReadClient(game);
   const { data: tournamentLink } = await supabase
     .from('games')
     .select('tournament_id')

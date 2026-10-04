@@ -5,6 +5,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import type { GameStatus } from '@/lib/games/status';
+import { organiserFollowsLiveBoard } from '@/lib/games/nonPlayerGameDoor';
 import type { SideWinnerRow } from './leaderboardTypes';
 import { safeParsePrizes } from '@/lib/games/prizes';
 import {
@@ -49,17 +50,31 @@ export const getLeaderboardContext = cache(async () => {
  * håndhevelsen der.
  * Ingen policy-endring, ingen migrasjon.
  *
+ * #2202 (eierens valg C): arrangøren av et AKTIVT spill følger tavla og
+ * hull-drilldownen som en spiller (`organiserFollowsLiveBoard`). RLS slipper
+ * bare deltakere til slagene under spill, så de leses med service-role også
+ * her, og gaten i ruta (`nonPlayerGameDoor`, flaten `board`) er håndhevelsen.
+ * En deltaker ser alle slag i et live- eller reveal-spill (policyen), så
+ * arrangøren ser det samme som en spiller.
+ *
  * `fallback` er klienten kallstedet allerede holder. Den brukes uendret så lenge
- * spillet IKKE er ferdig — kritisk for `/spectate`, som sender inn sin egen
- * admin-klient for å følge en PÅGÅENDE runde anonymt. Utelates den, faller vi
- * tilbake til den cookie-baserte klienten.
+ * spillet IKKE er ferdig og seeren ikke er arrangøren — kritisk for `/spectate`,
+ * som sender inn sin egen admin-klient for å følge en PÅGÅENDE runde anonymt.
+ * Med `fallback` må kallstedet sende `viewerId` selv; uten den leses både
+ * seeren og den cookie-baserte klienten fra `getLeaderboardContext`.
  */
 export async function getResultReadClient(
-  status: GameStatus,
+  game: { status: GameStatus; created_by: string | null },
   fallback?: SupabaseClient<Database>,
+  viewerId?: string | null,
 ): Promise<SupabaseClient<Database>> {
-  if (status === 'finished') return getAdminClient();
-  return fallback ?? (await getLeaderboardContext()).supabase;
+  if (game.status === 'finished') return getAdminClient();
+  const ctx = fallback ? null : await getLeaderboardContext();
+  const viewer = ctx ? ctx.userId : (viewerId ?? null);
+  if (organiserFollowsLiveBoard({ status: game.status, createdBy: game.created_by, viewerId: viewer })) {
+    return getAdminClient();
+  }
+  return fallback ?? ctx!.supabase;
 }
 
 /**

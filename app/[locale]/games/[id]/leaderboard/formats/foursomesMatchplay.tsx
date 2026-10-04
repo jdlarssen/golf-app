@@ -93,7 +93,7 @@ export async function renderFoursomesMatchplay(opts: {
   // #1542: samme lese-regel som resten av resultat-dataene. Uten den ble
   // `games`-raden sperret av RLS for alle utenfor kampen, og lagnavnene falt
   // tilbake til «Lag 1»/«Lag 2» midt i en cup med ekte lagnavn.
-  const supabase = await getResultReadClient(game.status);
+  const supabase = await getResultReadClient(game);
   const { data: tournamentLink } = await supabase
     .from('games')
     .select('tournament_id')

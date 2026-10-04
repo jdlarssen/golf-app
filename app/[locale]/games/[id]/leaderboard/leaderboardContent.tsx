@@ -163,7 +163,9 @@ export async function renderLeaderboardContent({
   // klienten kallstedet sendte inn (uendret for spectate/live). Uten dette gir
   // RLS 0 rader til alle som ikke selv spilte kampen, og cup-publikummet som
   // matchkortene lenker hit møter et tomt kort.
-  const readClient = await getResultReadClient(gameRow.status, supabase);
+  // #2202: the viewer decides the organiser's live read (spectate and embed
+  // pass an empty viewer and keep their own admin client).
+  const readClient = await getResultReadClient(gameRow, supabase, viewerUserId);
 
   const [gwp, rawHolesRes, rawScoresRes, courseRes, reactionSummary] = await Promise.all([
     getGameWithPlayers(gameId),
