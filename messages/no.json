@@ -4010,7 +4010,8 @@
           "deliveredBy": "Levert av {name}",
           "withdrawn": "Trukket"
         },
-        "sendingBusy": "Sender …"
+        "sendingBusy": "Sender …",
+        "remindRowButton": "Påminn"
       },
       "signups": {
         "topBarKicker": "Påmeldinger",
@@ -4081,6 +4082,37 @@
         "submittingBusy": "Trekker tilbake …",
         "cancel": "Avbryt",
         "dangerVariant": "danger"
+      },
+      "pult": {
+        "kicker": "Arrangørpulten",
+        "back": "Tilbake",
+        "elapsedNone": "I gang",
+        "elapsedMinutes": "I gang · {minutes} min",
+        "elapsedHours": "I gang · {hours} t {minutes} min",
+        "deliveredLabel": "Levert scorekort",
+        "deliveredOf": "av {total}",
+        "tabsLabel": "Velg visning",
+        "tabLive": "Live",
+        "tabPlayers": "Spillere",
+        "tabSetup": "Oppsett",
+        "needsYouHeading": "Trenger deg",
+        "needsYouEmpty": "Ingenting venter på deg nå.",
+        "pendingApproval": "{count} scorekort venter på godkjenning",
+        "reviewButton": "Se over",
+        "finishedNotSubmitted": "{count, plural, one {# er ferdig, men har ikke levert} other {# er ferdige, men har ikke levert}}",
+        "gapRow": "{names} mangler slag på hull {holes}",
+        "gapGroupAt": "{group} er på hull {hole}",
+        "gapEnteredTo": "Har ført til hull {hole}",
+        "flightsHeading": "Flightene",
+        "allPlayers": "Alle spillere",
+        "noFlight": "Uten flight",
+        "holeOf": "<num>hull {hole}</num> av {count}",
+        "holeOfSegment": "<num>hull {hole}</num> · {position} av {count}",
+        "holesPlayed": "<num>{played}</num> av {count} hull",
+        "allSubmitted": "Alle har levert ✓",
+        "viewStatus": "Se spillerstatus →",
+        "endHint": "Åpner når alle {total} har levert",
+        "endHintApproved": "Åpner når alle {total} har levert og kortene er godkjent"
       }
     },
     "players": {

@@ -3,6 +3,7 @@
 import { Link } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { buttonClasses } from '@/components/ui/Button';
 
 type SideTournamentConfig = {
   enabled: boolean;
@@ -20,6 +21,10 @@ type Props = {
   // must first record winners in the dedicated /avslutt wizard. The
   // button then becomes a navigation link instead of a direct action.
   sideTournament?: SideTournamentConfig;
+  // `bar` is the organiser desk's fixed finish bar (#2268): Button's `large`
+  // size, 52 px at 16 px / 600. The default keeps the pill every other
+  // surface draws.
+  size?: 'default' | 'bar';
 };
 
 // Pill-shape + min-height match the primary <Button> styling so the Link
@@ -34,6 +39,7 @@ export function EndGameButton({
   gameId,
   disabled = false,
   sideTournament,
+  size = 'default',
 }: Props) {
   const t = useTranslations('admin.game.buttons');
   const needsWizard =
@@ -46,7 +52,7 @@ export function EndGameButton({
         href={`/admin/games/${gameId}/avslutt`}
         aria-disabled={disabled}
         tabIndex={disabled ? -1 : undefined}
-        className={`${LINK_CLASSES} ${disabled ? LINK_DISABLED_CLASSES : ''}`}
+        className={`${size === 'bar' ? `${buttonClasses('primary', 'large')} w-full` : LINK_CLASSES} ${disabled ? LINK_DISABLED_CLASSES : ''}`}
       >
         {t('endGame')}
       </Link>
@@ -63,7 +69,12 @@ export function EndGameButton({
         }
       }}
     >
-      <SubmitButton className="w-full" disabled={disabled} pendingLabel={t('endingGame')}>
+      <SubmitButton
+        className="w-full"
+        size={size === 'bar' ? 'large' : 'default'}
+        disabled={disabled}
+        pendingLabel={t('endingGame')}
+      >
         {t('endGame')}
       </SubmitButton>
     </form>
