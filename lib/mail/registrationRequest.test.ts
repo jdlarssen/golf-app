@@ -53,7 +53,7 @@ function mainBodyHtml(html: string): string {
 const baseParams = {
   to: 'admin@example.com',
   gameName: 'Sommercup 2026',
-  gameShortId: 'abc12345',
+  gameId: 'game-1',
   requesterName: 'Per Spiller',
 } satisfies RegistrationRequestMailParams;
 
@@ -66,7 +66,7 @@ describe('sendRegistrationRequestMail', () => {
 
       Per Spiller vil bli med i Sommercup 2026.
 
-      Gå til påmeldinger: https://tornygolf.no/signup/abc12345
+      Gå til påmeldinger: https://tornygolf.no/admin/games/game-1/signups
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -91,7 +91,7 @@ describe('sendRegistrationRequestMail', () => {
 
       «Slipp meg inn, takk»
 
-      Gå til påmeldinger: https://tornygolf.no/signup/abc12345
+      Gå til påmeldinger: https://tornygolf.no/admin/games/game-1/signups
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -121,7 +121,7 @@ describe('sendRegistrationRequestMail', () => {
 
       Per & Pål vil bli med i <script>alert(1)</script>.
 
-      Gå til påmeldinger: https://tornygolf.no/signup/abc12345
+      Gå til påmeldinger: https://tornygolf.no/admin/games/game-1/signups
 
       Tørny — fyr opp golfturneringen på et par minutter.
       "
@@ -161,12 +161,12 @@ describe('sendRegistrationRequestMail', () => {
                   </p>
                   
                   <div style="margin:32px 0;">
-                    <a href="https://tornygolf.no/signup/abc12345" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                    <a href="https://tornygolf.no/admin/games/game-1/signups" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                       Gå til påmeldinger
                     </a>
                   </div>
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-                    Du får denne meldingen fordi du er arrangør for spillet. Du kan godkjenne eller avslå forespørselen fra Sekretariatet.
+                    Du får denne e-posten fordi du arrangerer spillet. Trykk på knappen for å godkjenne eller avslå forespørselen.
                   </p>
                 </td></tr>
               </table>
@@ -190,7 +190,7 @@ describe('sendRegistrationRequestMail', () => {
 
       Per Spiller wants to join Sommercup 2026.
 
-      Go to sign-ups: https://tornygolf.no/en/signup/abc12345
+      Go to sign-ups: https://tornygolf.no/en/admin/games/game-1/signups
 
       Tørny — fire up your golf tournament in a couple of minutes.
       "

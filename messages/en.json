@@ -5985,7 +5985,7 @@
       "messageQuote": "\"{message}\"",
       "goToSignups": "Go to sign-ups",
       "goToSignupsText": "Go to sign-ups: {url}",
-      "footer": "You're receiving this because you're the organiser for this game. You can approve or decline the request from Secretariat."
+      "footer": "You're receiving this because you're organising this game. Tap the button to approve or decline the request."
     },
     "scorecardSubmitted": {
       "subject": "Scorecard submitted: {playerName} in {gameName}",

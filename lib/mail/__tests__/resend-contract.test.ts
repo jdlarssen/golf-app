@@ -109,7 +109,7 @@ const senders = [
       return sendRegistrationRequestMail({
         to: 'admin@example.com',
         gameName: 'Sommercup 2026',
-        gameShortId: 'abc12345',
+        gameId: 'game-1',
         requesterName: 'Per Spiller',
       });
     },
