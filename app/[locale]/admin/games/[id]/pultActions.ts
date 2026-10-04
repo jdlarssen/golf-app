@@ -14,8 +14,10 @@ import { sendMissingScoreReminders } from '@/lib/games/remindMissingScore';
  * as the desk page itself) and the redirect, nothing else.
  *
  * It lands back on the desk, not on the status page: the Live tab opens and the
- * banner says the reminder went out. A row that is gone by the time the button
- * is pressed (the hole got a score, the card was delivered) gets its own error.
+ * banner says the reminder went out, only when the core counted at least one
+ * stored reminder back. A row that is gone by the time the button is pressed
+ * (the hole got a score, the card was delivered), a row of guests only, and a
+ * reminder that was not stored each get their own error.
  */
 export async function remindMissingScore(gameId: string, userIds: string[]) {
   const locale = await getLocale();
@@ -26,8 +28,18 @@ export async function remindMissingScore(gameId: string, userIds: string[]) {
   const result = await sendMissingScoreReminders(gameId, userIds);
 
   if (!result.ok) {
-    const error = result.reason === 'no_gap' ? 'hole_reminder_stale' : 'hole_reminder_not_active';
+    const error =
+      result.reason === 'no_gap'
+        ? 'hole_reminder_stale'
+        : result.reason === 'only_guests'
+          ? 'hole_reminder_guests'
+          : 'hole_reminder_not_active';
     redirect({ href: `${detailPath}?error=${error}`, locale });
+  }
+  // A send that stored nothing (an insert the database refused) must not read
+  // as success.
+  if (result.reminded === 0) {
+    redirect({ href: `${detailPath}?error=hole_reminder_failed`, locale });
   }
 
   revalidatePath(detailPath);

@@ -499,11 +499,13 @@ describe('missingScoreTargets', () => {
       expected: { userIds: ['tore'], holes: [2] },
     },
     {
-      name: 'bare gjester i raden: ingen mål',
+      // The row is still there, but no one in it can be reminded: the desk
+      // shows no button, and the server says why instead of «already entered».
+      name: 'bare gjester i raden: raden står, ingen mottakere',
       players: [{ ...player('gjest'), is_guest: true }],
       scores: holes('gjest', 1, 3),
       pressed: ['gjest'],
-      expected: null,
+      expected: { userIds: [], holes: [2] },
     },
   ];
 

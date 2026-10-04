@@ -3724,7 +3724,9 @@
         "cup_finished": "Cupen er avsluttet. Kampen kan ikke startes eller gjenåpnes.",
         "invites_failed": "Spillet er publisert, men ikke alle e-postinvitasjonene gikk ut. Send dem på nytt her.",
         "hole_reminder_stale": "Det som manglet, er ført i mellomtiden, så det var ingen å minne på.",
-        "hole_reminder_not_active": "Runden er ikke i gang lenger, så påminnelsen ble ikke sendt."
+        "hole_reminder_not_active": "Runden er ikke i gang lenger, så påminnelsen ble ikke sendt.",
+        "hole_reminder_guests": "Raden gjelder bare gjester, og de får ikke påminnelser. Den som fører kortet deres, fører hullet.",
+        "hole_reminder_failed": "Påminnelsen ble ikke lagret. Prøv igjen om litt."
       },
       "detail": {
         "brassRibbon": "Spill · protokoll",

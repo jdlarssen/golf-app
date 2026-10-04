@@ -20,8 +20,16 @@ export type NeedsYouGap = {
    * when the group has no number.
    */
   where: { kind: 'group'; group: string; hole: number } | { kind: 'entered'; hole: number };
-  /** «Påminn» for this row (#2268, the owner's choice B): «du mangler slag på hull H». */
-  remindAction: () => void | Promise<void>;
+  /**
+   * «Påminn» for this row (#2268, the owner's choice B): «du mangler slag på
+   * hull H». Null when everyone in the row is a guest (they get no reminder);
+   * `names`/`people` are the ones it reaches, for the confirm text.
+   */
+  remind: {
+    action: () => void | Promise<void>;
+    names: string;
+    people: number;
+  } | null;
 };
 
 type Props = {
@@ -41,7 +49,8 @@ type Props = {
  * with the one action in the row. Every row is an `<li>` with at most one
  * control: «Se over» is a link to «Leverte scorekort», and «Påminn» is a
  * button, both on the finished-not-delivered row (today's delivery reminder)
- * and on a skipped-hole row (the hole reminder, the owner's choice B).
+ * and on a skipped-hole row (the hole reminder, the owner's choice B). A
+ * skipped-hole row of guests only has no button: no one in it can be reminded.
  */
 export function NeedsYouList({ pendingApproval, finished, gaps }: Props) {
   const t = useTranslations('admin.game.pult');
@@ -111,15 +120,21 @@ export function NeedsYouList({ pendingApproval, finished, gaps }: Props) {
                     : t('gapEnteredTo', { hole: gap.where.hole })
                 }
                 action={
-                  <RemindButton
-                    remindAction={gap.remindAction}
-                    count={gap.people}
-                    labelKey="remindRowButton"
-                    confirmKey="remindHoleConfirm"
-                    confirmValues={{ names: gap.names, holes: gap.holes, holeCount: gap.holeCount }}
-                    testId="pult-remind-hole-button"
-                    variant="row"
-                  />
+                  gap.remind && (
+                    <RemindButton
+                      remindAction={gap.remind.action}
+                      count={gap.remind.people}
+                      labelKey="remindRowButton"
+                      confirmKey="remindHoleConfirm"
+                      confirmValues={{
+                        names: gap.remind.names,
+                        holes: gap.holes,
+                        holeCount: gap.holeCount,
+                      }}
+                      testId="pult-remind-hole-button"
+                      variant="row"
+                    />
+                  )
                 }
               />
             ))}
