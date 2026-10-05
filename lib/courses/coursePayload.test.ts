@@ -8,6 +8,7 @@ import {
   isValidStrokeIndex,
   allStrokeIndicesUnique,
   findStrokeIndexGaps,
+  strokeIndexCellState,
   teeRatingProblem,
 } from './coursePayload';
 import { REAL_SI_STRINGS as REAL_SI } from './__fixtures__/courseForm';
@@ -119,6 +120,24 @@ describe('findStrokeIndexGaps', () => {
     ['" 7 " counts as 7', REAL_SI.map((v) => (v === '7' ? ' 7 ' : v)), { missing: [], duplicates: [], invalid: [] }],
   ])('%s', (_label, values, expected) => {
     expect(findStrokeIndexGaps(values)).toEqual(expected);
+  });
+});
+
+describe('strokeIndexCellState', () => {
+  type CellState = ReturnType<typeof strokeIndexCellState>;
+  it.each<[string, string, number[], CellState]>([
+    ['empty', '', [], 'empty'],
+    ['blank', '  ', [], 'empty'],
+    ['a valid index', '7', [], 'filled'],
+    ['padded with spaces', ' 7 ', [], 'filled'],
+    ['a duplicated index', '7', [7], 'duplicate'],
+    ['another index is the duplicate', '7', [3], 'filled'],
+    ['0', '0', [], 'invalid'],
+    ['19', '19', [], 'invalid'],
+    ['4.5', '4.5', [], 'invalid'],
+    ['text', 'abc', [], 'invalid'],
+  ])('%s → %s', (_label, value, duplicates, expected) => {
+    expect(strokeIndexCellState(value, duplicates)).toBe(expected);
   });
 });
 

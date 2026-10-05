@@ -131,6 +131,23 @@ export function findStrokeIndexGaps(values: string[]): {
 }
 
 /**
+ * How one index field on the course card looks (#2278), from the same rule as
+ * `findStrokeIndexGaps`: trimmed and read with `Number()`. Empty is `'empty'`,
+ * a value outside 1–18 or not an integer is `'invalid'`, a valid number that
+ * `duplicates` lists is `'duplicate'`, anything else is `'filled'`.
+ */
+export function strokeIndexCellState(
+  value: string,
+  duplicates: readonly number[],
+): 'filled' | 'empty' | 'invalid' | 'duplicate' {
+  const s = value.trim();
+  if (s === '') return 'empty';
+  const n = Number(s);
+  if (!isValidStrokeIndex(n)) return 'invalid';
+  return duplicates.includes(n) ? 'duplicate' : 'filled';
+}
+
+/**
  * Client-side mirror of the server's tee-rating rule (#2279), in the server's
  * order: `'partial'` when a gender has only one of slope/CR, otherwise
  * `'missing'` when no gender has a complete, in-range set, otherwise `null`.
