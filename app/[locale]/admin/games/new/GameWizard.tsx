@@ -47,8 +47,10 @@
  * dekker alt GameForm dekket ved opprettelse.
  *
  * #1385: og et lagret utkast gjenopptas nå i veiviseren, ikke i GameForm.
- * Admin sin rediger-rute (`app/[locale]/admin/games/[id]/edit`) mounter denne
- * komponenten med `mode.kind === 'edit-draft'`. GameForm står igjen som
+ * Begge rediger-rutene, admin sin (`app/[locale]/admin/games/[id]/edit`) og
+ * arrangørens (`app/[locale]/games/[id]/rediger`, #2269), mounter denne
+ * komponenten med `mode.kind === 'edit-draft'` etter samme regel
+ * (`lib/wizard/loadDraftResume.ts`). GameForm står igjen som
  * flate for planlagte spill — og for de utkastene veiviseren ikke kan
  * representere (cup-/liga-koblede, eller et format utenfor katalogene; se
  * `lib/wizard/draftResumePlan.ts`).
