@@ -33,9 +33,12 @@ import { useDiaryPoints, useRoundHistory } from '../lib/useRoundHistory';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 export function RoundDiary({ navigation }: ScreenProps<'RoundDiary'>) {
   const { userId } = useSession();
+  // #2201: historikken er webbens /profile/historikk; «Nye merker» er lest her.
+  useMarkVisitRead('history');
   const { colors, ui } = useTheme();
   const { load, retry } = useRoundHistory(userId);
   const rounds = load.state === 'ready' ? load.rounds : null;

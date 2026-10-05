@@ -11,6 +11,8 @@ import { historyRound, localIso } from '../test/historyFixtures';
 import { RoundStats } from './RoundStats';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
+jest.mock('../lib/useMarkVisitRead');
 jest.mock('../session', () => ({ useSession: () => ({ userId: 'me' }) }));
 jest.mock('../data/roundHistory', () => ({ fetchRoundHistory: jest.fn() }));
 

@@ -69,6 +69,10 @@ const CALLERS: Record<string, { surface: VisitSurface; entity: string | null }> 
   'Friends.tsx': { surface: 'friends', entity: null },
   // Appens lever-port, webbens /games/[id]/submit: leveringspåminnelsen.
   'Scorecard.tsx': { surface: 'gameSubmit', entity: 'gameId' },
+  // Webbens /profile/historikk er én side med dagbok og statistikk (der
+  // merkene står). Appen deler den i to skjermer; begge er historikken.
+  'RoundDiary.tsx': { surface: 'history', entity: null },
+  'RoundStats.tsx': { surface: 'history', entity: null },
 };
 
 describe('skjermene som merker', () => {
