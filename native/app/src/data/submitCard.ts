@@ -4,8 +4,9 @@
 // **Hvorfor en rute og ikke en skriving.** I formatene som kollapser til ett
 // lagkort markerer leveringen HELE lagets aktive, uleverte rader, og det krever
 // service-role: RLS lar appen bare skrive sin egen `game_players`-rad. Varslene
-// som følger med (`peer_approval_request`, `scorecard_submitted`, admin-mailen)
-// er `server-only` (`notify()` + Resend) i begge formene. Fram til #2215 skrev
+// som følger med (`peer_approval_request` til attestantene, `scorecard_submitted`
+// til arrangøren, «Alle har levert» når siste kort er inne, #2203) er
+// `server-only` (`notify()` + Resend) i begge formene. Fram til #2215 skrev
 // solo-greina rett i basen og hoppet dermed over varslene. Nå går begge hit.
 // Regelen om hva en levering ER (WD-porten, idempotensen, lag-deteksjonen,
 // søsken-kaskaden) bor i `lib/games/submitScorecardCore.ts` og speiles ALDRI her

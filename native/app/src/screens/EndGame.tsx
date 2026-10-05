@@ -89,6 +89,7 @@ import {
   WITHDRAW_SELF,
 } from '../lib/rosterCopy';
 import { useGameBundle } from '../lib/useGameData';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { TAP, useTheme } from '../theme';
@@ -96,6 +97,9 @@ import { TAP, useTheme } from '../theme';
 export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
+  // #2203: «Alle har levert» og påminnelsen om et spill som står stille lenker
+  // til avslutt-siden; her i appen er det denne skjermen, så de er lest.
+  useMarkVisitRead('gameFinish', gameId);
   const { userId } = useSession();
   const { bundle, loading, refresh } = useGameBundle(gameId);
 
