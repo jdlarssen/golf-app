@@ -107,7 +107,7 @@ function RoomRow({
   href,
   name,
   line,
-  first,
+  last,
   minHeight,
   testId,
   data,
@@ -115,18 +115,21 @@ function RoomRow({
   href: string;
   name: string;
   line: string;
-  first: boolean;
+  last: boolean;
   minHeight: 'min-h-16' | 'min-h-[60px]';
   testId: string;
   data?: Record<`data-${string}`, string | number>;
 }) {
   return (
-    <li className={first ? undefined : 'border-t border-row-divider-warm'}>
+    <li>
+      {/* The divider closes every row but the last and sits on the link,
+          inside its min-height, as the artboard's border-box rows draw it:
+          a row is 64 (60) px with it, and its text centres above it. */}
       <SmartLink
         href={href}
         data-testid={testId}
         {...data}
-        className={`flex ${minHeight} items-center gap-3 px-3.5 py-2.5 text-text`}
+        className={`flex ${minHeight} items-center gap-3 px-3.5 py-2.5 text-text ${last ? '' : 'border-b border-row-divider-warm'}`}
       >
         <span className="min-w-0 grow">
           <span className="block text-[15px] font-semibold leading-[normal]">{name}</span>
@@ -198,7 +201,7 @@ export function ClubsView({ clubs }: { clubs: RoomClub[] | null }) {
                   })
                 : t('playerClubNoRounds'),
             ].join(' · ')}
-            first={i === 0}
+            last={i === clubs.length - 1}
             minHeight="min-h-16"
             testId="player-club-row"
             data={{
@@ -247,8 +250,9 @@ export function CupsView({
 
   if (cups.length === 0) {
     if (finishedCount === 0) return null;
+    // -mx-1: the same 16 px edges as the room's cards around it.
     return (
-      <section className="pt-[18px]">
+      <section className="-mx-1 pt-[18px]">
         <DenseTileList
           tiles={[
             {
@@ -278,7 +282,7 @@ export function CupsView({
                 ? t('playerCupNoMatches')
                 : t('playerCupProgress', { played: cup.played, total: cup.total })
             }
-            first={i === 0}
+            last={i === cups.length - 1}
             minHeight="min-h-16"
             testId="player-cup-row"
             data={{ 'data-played': cup.played, 'data-total': cup.total }}
@@ -336,7 +340,7 @@ export function ToolsView() {
           <RoomRow
             key={row.href}
             {...row}
-            first={i === 0}
+            last={i === rows.length - 1}
             minHeight="min-h-[60px]"
             testId="player-tool-row"
           />
