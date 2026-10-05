@@ -47,7 +47,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 // det `can_score_for`-policyen som håndhever regelen i basen.
 
 // Logg-prefikset følger med fra server-action-en med vilje: det er
-// søkestrengen for leverings-feil i Vercel-loggen (CLAUDE.md «Mail-debug»), og
+// søkestrengen for leverings-feil i Vercel-loggen (docs/auth-flow.md «Mail-debug»), og
 // et navnebytte hadde gjort eksisterende feilsøkings-oppskrifter ugyldige.
 const LOG_PREFIX = 'submitScorecard';
 
@@ -115,7 +115,7 @@ export async function submitScorecardCore(
 ): Promise<SubmitScorecardResult> {
   // Refuse to submit if the game isn't active. Draft games shouldn't have
   // scores yet and finished games are read-only. `name` is fetched here so
-  // we can use it as the mail subject + body without a re-fetch.
+  // the varsler can carry it without a re-fetch.
   // `require_peer_approval` brukes nedenfor til å gate peer-varsel-loopen.
   // `game_mode` trengs for peersForApproval (#543). `created_by` er arrangøren,
   // som får leveringsvarselet (#2203).
@@ -258,8 +258,8 @@ export async function submitScorecardCore(
     return { ok: false, reason: 'db' };
   }
 
-  // Zero rows = already submitted (re-click or race). Skip notify + mail
-  // but keep the revalidate so UX matches a fresh submit.
+  // Zero rows = already submitted (re-click or race). Skip the varsler and
+  // «alle har levert», but keep the revalidate so UX matches a fresh submit.
   const submitted = writtenIds.length;
   if (submitted === 0) {
     expireGameCache(gameId);
