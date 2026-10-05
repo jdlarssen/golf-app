@@ -48,6 +48,7 @@ export function ArrangedRoundsView({
   upcomingLimit,
   showMode = false,
   source = 'own',
+  upcomingAllHref,
 }: {
   rounds: ArrangedRounds<ViewGame>;
   /** Where a single row leads (admin: the Sekretariat). */
@@ -57,6 +58,8 @@ export function ArrangedRoundsView({
   locale: AppLocale;
   /** The room shows the first three (#2493). */
   upcomingLimit?: number;
+  /** With more planned rounds than `upcomingLimit`: «Alle {n} →» in «Neste» leads here. */
+  upcomingAllHref?: string;
   /** `ModeChip` under each live and upcoming row (`/admin/games`). */
   showMode?: boolean;
 }) {
@@ -80,7 +83,7 @@ export function ArrangedRoundsView({
     <div data-testid="arranged-rounds">
       {rounds.live.length > 0 && (
         <section aria-labelledby="arranged-live-heading" data-testid="arranged-live">
-          <GroupHeading id="arranged-live-heading">{t('groupLive')}</GroupHeading>
+          <RoomGroupHeading id="arranged-live-heading">{t('groupLive')}</RoomGroupHeading>
           {/* Owner's answer 05.10 (PR #2537, choice 1): each round in progress
               stands in its own card with a primary border and a LIVE badge,
               both as the 27.09 artboard draws them; the rest is the room's. */}
@@ -137,7 +140,25 @@ export function ArrangedRoundsView({
 
       {upcoming.length > 0 && (
         <section aria-labelledby="arranged-next-heading" data-testid="arranged-next">
-          <GroupHeading id="arranged-next-heading">{t('groupNext')}</GroupHeading>
+          <RoomGroupHeading
+            id="arranged-next-heading"
+            action={
+              upcomingAllHref &&
+              upcomingLimit !== undefined &&
+              rounds.upcoming.length > upcomingLimit ? (
+                <SmartLink
+                  href={upcomingAllHref}
+                  data-testid="arranged-next-all"
+                  className="tap-extend text-xs font-semibold leading-[normal] text-primary [--tap-extend:-15px_-8px]"
+                >
+                  {`${t('upcomingAll', { n: rounds.upcoming.length })} `}
+                  <span className="font-[system-ui]">→</span>
+                </SmartLink>
+              ) : null
+            }
+          >
+            {t('groupNext')}
+          </RoomGroupHeading>
           <ul className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface">
             {upcoming.map((round, i) => (
               <li
@@ -204,14 +225,31 @@ export function ArrangedRoundsView({
   );
 }
 
-function GroupHeading({ id, children }: { id: string; children: string }) {
+/**
+ * A group label as the room artboards draw it: muted caps over the card, with
+ * room for one quiet action on the right (`action`). The Klubbhus room's own
+ * groups (Klubbene dine, Cuper, Verktøy) use it too, so every label in the
+ * room is the same (#2493).
+ */
+export function RoomGroupHeading({
+  id,
+  children,
+  action,
+}: {
+  id: string;
+  children: string;
+  action?: ReactNode;
+}) {
   return (
-    <h2
-      id={id}
-      className="pt-[18px] pb-2 text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
-    >
-      {children}
-    </h2>
+    <div className="flex items-baseline justify-between pt-[18px] pb-2">
+      <h2
+        id={id}
+        className="text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-muted"
+      >
+        {children}
+      </h2>
+      {action}
+    </div>
   );
 }
 
