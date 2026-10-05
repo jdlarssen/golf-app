@@ -21,11 +21,40 @@ type IndexedHole = HoleData & { index: number };
 // field's own text and placeholder are transparent; with focus, the field
 // shows its own.
 const INDEX_FRAME =
-  'box-content h-[30px] w-[26px] rounded-lg border-[1.5px] transition-colors motion-reduce:transition-none';
-// The field's own corners follow the box (10.67 × 0.75 = 8 px), so the focus
-// ring is round too; no colour transition, or the text would fade in on focus.
+  'box-content border-[1.5px] transition-colors motion-reduce:transition-none';
+// The field's own corners and size follow the box (× 0.75), so the focus ring
+// sits on it; no colour transition, or the text would fade in on focus.
 const INDEX_FIELD =
-  'absolute left-1/2 top-1/2 h-11 w-[38.67px] -translate-x-1/2 -translate-y-1/2 scale-75 rounded-[10.67px] border-0 bg-transparent p-0 text-center font-sans text-[16px] leading-[normal]';
+  'absolute left-1/2 top-1/2 w-[38.67px] -translate-x-1/2 -translate-y-1/2 scale-75 border-0 bg-transparent p-0 text-center font-sans text-[16px] leading-[normal]';
+
+// Two drawings of the card while the owner chooses (05.10): `standard` is the
+// artboard (54 px label column, 40 px rows); `compact` takes less room, with
+// a 30 px column of small labels, 34 px rows and wider cells.
+const LAYOUT = {
+  standard: {
+    gap: 'gap-2',
+    labelCol: 'w-[54px]',
+    holeRow: 'text-[10px] uppercase tracking-[0.1em] text-muted',
+    holeLabel: 'font-normal',
+    rowLabel: 'text-[10px] font-semibold uppercase tracking-[0.1em]',
+    row: 'h-10',
+    pill: 'h-[34px] w-[26px] rounded-lg text-[16px]',
+    frame: 'h-[30px] w-[26px] rounded-lg',
+    field: 'h-11 rounded-[10.67px]',
+  },
+  compact: {
+    gap: 'gap-1.5',
+    labelCol: 'w-[30px]',
+    holeRow: 'text-[10px] text-muted',
+    holeLabel: 'text-[9px] font-semibold',
+    rowLabel: 'text-[9px] font-semibold',
+    row: 'h-[34px]',
+    pill: 'h-7 w-[26px] rounded-md text-[15px]',
+    frame: 'h-6 w-[26px] rounded-md',
+    field: 'h-9 rounded-[8px]',
+  },
+} as const;
+export type HoleGridLayout = keyof typeof LAYOUT;
 
 const INDEX_VALUE =
   'pointer-events-none absolute inset-0 flex items-center justify-center text-[12px] peer-focus:invisible';
@@ -61,8 +90,7 @@ function systemArrows(text: string) {
   );
 }
 
-const ROW_LABEL =
-  'py-0 pr-0 pl-1 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted';
+const ROW_LABEL = 'py-0 pr-0 pl-1 text-left text-muted';
 
 /**
  * «Fyll ut banekortet» (issue 2278): the 18 holes as the club's scorecard, out and
@@ -78,6 +106,7 @@ export function HoleGridEditor({
   onPar,
   onSi,
   gaps,
+  layout = 'standard',
 }: {
   holes: HoleData[];
   showLadies: boolean;
@@ -86,8 +115,10 @@ export function HoleGridEditor({
   onPar: (index: number, gender: Gender, par: 3 | 4 | 5) => void;
   onSi: (index: number, value: string) => void;
   gaps: { missing: number[]; duplicates: number[]; invalid: number[] };
+  layout?: HoleGridLayout;
 }) {
   const t = useTranslations('courseForm.form');
+  const L = LAYOUT[layout];
   const locale = useLocale() as AppLocale;
   // The par cell tapped last keeps the dark look until another par cell is
   // tapped or an index field takes focus.
@@ -140,8 +171,8 @@ export function HoleGridEditor({
       <table className="w-full table-fixed border-collapse text-[12px]">
         <caption className="sr-only">{t('gridCaption', { from, to })}</caption>
         <thead>
-          <tr className="text-[10px] uppercase tracking-[0.1em] text-muted">
-            <th scope="col" className="w-[54px] py-0 pr-0 pl-1 text-left font-normal">
+          <tr className={L.holeRow}>
+            <th scope="col" className={`${L.labelCol} ${L.holeLabel} py-0 pr-0 pl-1 text-left`}>
               {t('gridHole')}
             </th>
             {nine.map((h) => (
@@ -153,8 +184,8 @@ export function HoleGridEditor({
         </thead>
         <tbody>
           {parRows.map((gender) => (
-            <tr key={gender} className="h-10">
-              <th scope="row" className={ROW_LABEL}>
+            <tr key={gender} className={L.row}>
+              <th scope="row" className={`${ROW_LABEL} ${L.rowLabel}`}>
                 {gender === 'mens'
                   ? t('gridPar')
                   : gender === 'ladies'
@@ -178,10 +209,10 @@ export function HoleGridEditor({
                             })
                       }
                       onClick={() => tapPar(h, gender)}
-                      className="group flex h-10 w-full items-center justify-center focus-visible:outline-none"
+                      className={`group flex ${L.row} w-full items-center justify-center focus-visible:outline-none`}
                     >
                       <span
-                        className={`inline-flex h-[34px] w-[26px] items-center justify-center rounded-lg font-serif text-[16px] font-semibold tabular-nums transition-colors motion-reduce:transition-none group-focus-visible:bg-primary group-focus-visible:text-white group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface dark:group-focus-visible:text-bg ${
+                        className={`inline-flex ${L.pill} items-center justify-center font-serif font-semibold tabular-nums transition-colors motion-reduce:transition-none group-focus-visible:bg-primary group-focus-visible:text-white group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface dark:group-focus-visible:text-bg ${
                           last
                             ? 'bg-primary text-white ring-2 ring-primary ring-offset-2 ring-offset-surface dark:text-bg'
                             : 'bg-par-cell text-text'
@@ -196,17 +227,20 @@ export function HoleGridEditor({
               })}
             </tr>
           ))}
-          <tr className="h-10">
-            <th scope="row" className={ROW_LABEL}>
+          <tr className={L.row}>
+            <th scope="row" className={`${ROW_LABEL} ${L.rowLabel}`}>
               {t('gridIndex')}
             </th>
             {nine.map((h) => {
               const state = strokeIndexCellState(h.stroke_index, gaps.duplicates);
               return (
                 <td key={h.hole_number} className="p-0">
-                  <label className="relative flex h-10 items-center justify-center">
+                  <label className={`relative flex ${L.row} items-center justify-center`}>
                     <span className="sr-only">{t('indexCellLabel', { number: h.hole_number })}</span>
-                    <span aria-hidden className={`${INDEX_FRAME} ${INDEX_STATE[state].frame}`} />
+                    <span
+                      aria-hidden
+                      className={`${INDEX_FRAME} ${L.frame} ${INDEX_STATE[state].frame}`}
+                    />
                     <input
                       name={`hole_${h.hole_number}_si`}
                       type="text"
@@ -222,7 +256,7 @@ export function HoleGridEditor({
                       // `pattern` would not, so the two read alike.
                       onChange={(e) => onSi(h.index, e.target.value.replace(/\s/g, ''))}
                       onFocus={() => setLastTapped(null)}
-                      className={`peer ${INDEX_FIELD} ${INDEX_STATE[state].text} not-focus:text-transparent not-focus:placeholder:text-transparent`}
+                      className={`peer ${INDEX_FIELD} ${L.field} ${INDEX_STATE[state].text} not-focus:text-transparent not-focus:placeholder:text-transparent`}
                     />
                     <span aria-hidden className={`${INDEX_VALUE} ${INDEX_STATE[state].text}`}>
                       {h.stroke_index === '' ? '?' : h.stroke_index}
@@ -238,7 +272,9 @@ export function HoleGridEditor({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-[14px] border border-border bg-surface px-2 py-2.5 leading-[normal]">
+    <div
+      className={`flex flex-col ${L.gap} rounded-[14px] border border-border bg-surface px-2 py-2.5 leading-[normal]`}
+    >
       <div className="flex justify-between px-1 text-[12px] text-muted">
         <span>{systemArrows(t('parTapHint'))}</span>
         <span className="font-semibold text-text">{t('parTotalShort', { total: parTotal })}</span>

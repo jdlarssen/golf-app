@@ -10,7 +10,7 @@ import { findStrokeIndexGaps, teeRatingProblem } from '@/lib/courses/coursePaylo
 import { formatListLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { MAX_TEE_BOXES } from './constants';
-import { HoleGridEditor } from './HoleGridEditor';
+import { HoleGridEditor, type HoleGridLayout } from './HoleGridEditor';
 
 export { MAX_TEE_BOXES };
 
@@ -132,6 +132,10 @@ function hasGenderData(
 ): boolean {
   return tee[`slope_${gender}`] !== '' || tee[`course_rating_${gender}`] !== '';
 }
+
+// Variant C (owner 05.10: the card should take less room). `standard` is the
+// artboard; the owner picks one, and the other goes.
+const HOLE_GRID_LAYOUT: HoleGridLayout = 'compact';
 
 const SAVE_BAR_TONE = {
   app: 'bg-bg after:bg-bg',
@@ -393,6 +397,7 @@ export function CourseForm({
               : updateHole(index, { [`par_${gender}`]: String(par) })
           }
           onSi={(index, value) => updateHole(index, { stroke_index: value })}
+          layout={HOLE_GRID_LAYOUT}
         />
       </div>
 
