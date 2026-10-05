@@ -6,6 +6,7 @@ import { getAdminContext } from './_dashboardContext';
 import { DenseTileList, CompactTileGrid, type Tile } from './TilesView';
 import { GettingStartedChecklist } from './GettingStartedChecklist';
 import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
+import { onlyStandaloneGames } from '@/lib/games/arrangedGames';
 
 // ─── Admin dashboard tile grid (data-fetching) ─────────────────────────────
 
@@ -29,14 +30,18 @@ export async function TilesGrid() {
     activeLeaguesRes,
     unbuiltIdeasRes,
   ] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active'),
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['draft', 'scheduled']),
+    // The «Spill» and «Resultatprotokoll» tiles say what the pages they open
+    // show (#2269): /admin/games and the protocol hold standalone games only;
+    // cup matches and league flights stand on their cup's and league's pages.
+    onlyStandaloneGames(
+      supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+    ),
+    onlyStandaloneGames(
+      supabase
+        .from('games')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['draft', 'scheduled']),
+    ),
     // «Ventende invitasjoner» = alle uaksepterte, utløpte inkludert: det er
     // nøyaktig det ventelista på /admin/spillere viser (utløpte får «Utløpt»-
     // merke, #1381). Samme kjede i spillere/page.tsx (getCounts) og
@@ -56,10 +61,7 @@ export async function TilesGrid() {
       .not('profile_completed_at', 'is', null)
       .is('deleted_at', null),
     supabase.from('courses').select('id', { count: 'exact', head: true }),
-    supabase
-      .from('games')
-      .select('ended_at')
-      .eq('status', 'finished')
+    onlyStandaloneGames(supabase.from('games').select('ended_at').eq('status', 'finished'))
       .order('ended_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
