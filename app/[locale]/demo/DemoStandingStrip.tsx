@@ -113,7 +113,7 @@ export function DemoStandingStrip(props: DemoStandingStripProps): JSX.Element {
         aria-controls={BOARD_ID}
         aria-label={srText}
         onClick={onToggle}
-        // The strip is drawn 40 px high; the hit area reaches 44 px (#2240).
+        // The strip is drawn 41 px high; the hit area reaches 45 px (#2240).
         className="tap-extend bg-surface-strong text-on-strong [--tap-extend:-2px_0px]"
         style={stripStyle}
       >
@@ -152,11 +152,11 @@ export function DemoStandingStrip(props: DemoStandingStripProps): JSX.Element {
           ? t(standing.tied ? 'liveTied' : 'live', { rank: standing.rank })
           : ''}
       </p>
-      {open && (
-        <div id={BOARD_ID} data-testid="demo-board" style={{ margin: '12px 16px 0 16px' }}>
-          {board}
-        </div>
-      )}
+      {/* Always rendered, so aria-controls always points at it; the board
+          itself mounts only while the strip is open. */}
+      <div id={BOARD_ID} data-testid="demo-board" hidden={!open} style={{ margin: '12px 16px 0 16px' }}>
+        {open ? board : null}
+      </div>
     </>
   );
 }

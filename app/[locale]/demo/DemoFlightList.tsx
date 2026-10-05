@@ -179,7 +179,9 @@ export function DemoFlightList(props: DemoFlightListProps): JSX.Element {
         >
           <span
             aria-hidden="true"
-            className="bg-hole-completed-bg text-muted"
+            // dark:text-text: --text-muted on --hole-completed-bg is 4.21:1 at
+            // night; the house pair for this ground (InitialsStack).
+            className="bg-hole-completed-bg text-muted dark:text-text"
             style={avatarStyle}
           >
             {row.name.charAt(0)}

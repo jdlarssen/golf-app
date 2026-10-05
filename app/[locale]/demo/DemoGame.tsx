@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties, type JSX } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 import {
@@ -40,6 +40,13 @@ function pointsFor(score: number | null, extraStrokes: number, par: number): num
 }
 
 const YOU = DEMO_PLAYERS.find((p) => p.isYou)!;
+
+// Where focus goes after a tap (see `focusNext` in DemoGame).
+const FOCUS_NEXT_HOLE = '[data-testid="demo-next-hole"]';
+const FOCUS_SEE_BOARD = '[data-testid="demo-see-board"]';
+const FOCUS_HOLE = '[data-testid="demo-hole"]';
+const FOCUS_YOU = '[data-testid="flight-row"]';
+const FOCUS_FINAL_BOARD = '[data-testid="demo-final-board"]';
 
 const topRowStyle: CSSProperties = {
   display: 'flex',
@@ -107,6 +114,18 @@ export function DemoGame(): JSX.Element {
   const [finished, setFinished] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [youName, setYouName] = useState('');
+
+  // A tap often removes the control that had focus (the grid after a score,
+  // «Neste hull» on the next hole, the final card on «Spill på nytt»). Focus
+  // then moves to what comes next instead of falling to <body>.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    const selector = focusNext.current;
+    if (!selector) return;
+    focusNext.current = null;
+    rootRef.current?.querySelector<HTMLElement>(selector)?.focus();
+  });
 
   // The play screen always says «Deg», as the artboard does; the board takes
   // the name from the field on the final card (#1173, #2281 O8).
@@ -178,6 +197,7 @@ export function DemoGame(): JSX.Element {
   function pick(strokes: number) {
     setYouScores((prev) => ({ ...prev, [hole.number]: strokes }));
     setEditing(false);
+    focusNext.current = isLastHole ? FOCUS_SEE_BOARD : FOCUS_NEXT_HOLE;
   }
   function step(delta: 1 | -1) {
     setYouScores((prev) => ({
@@ -192,15 +212,18 @@ export function DemoGame(): JSX.Element {
       return next;
     });
     setEditing(false);
+    focusNext.current = FOCUS_YOU;
   }
   function goNext() {
     setEditing(false);
     if (isLastHole) {
       setFinished(true);
       setBoardOpen(false);
+      focusNext.current = FOCUS_FINAL_BOARD;
       return;
     }
     setHoleIndex((i) => i + 1);
+    focusNext.current = FOCUS_HOLE;
   }
   function reset() {
     setYouScores({});
@@ -209,6 +232,7 @@ export function DemoGame(): JSX.Element {
     setBoardOpen(false);
     setFinished(false);
     setSheetOpen(false);
+    focusNext.current = FOCUS_HOLE;
   }
   function handleNameChange(value: string) {
     setYouName(value);
@@ -227,7 +251,7 @@ export function DemoGame(): JSX.Element {
   }
 
   return (
-    <div data-testid="demo-game">
+    <div ref={rootRef} data-testid="demo-game">
       <header style={topRowStyle}>
         <span
           style={{ fontFamily: 'var(--font-serif)', fontSize: 20, fontWeight: 600 }}
@@ -235,14 +259,27 @@ export function DemoGame(): JSX.Element {
         >
           Tørny
         </span>
-        <span data-testid="demo-pill" className="bg-hole-completed-bg text-muted" style={pillStyle}>
+        <span
+          data-testid="demo-pill"
+          // dark:text-text: 4.21:1 at night otherwise (as InitialsStack).
+          className="bg-hole-completed-bg text-muted dark:text-text"
+          style={pillStyle}
+        >
           {t('pill')}
         </span>
       </header>
 
       {finished ? (
         <>
-          <section style={{ margin: '16px 16px 0 16px' }}>{board}</section>
+          <section
+            data-testid="demo-final-board"
+            tabIndex={-1}
+            aria-label={t('standing.kicker')}
+            className="outline-none"
+            style={{ margin: '16px 16px 0 16px' }}
+          >
+            {board}
+          </section>
 
           {/* No artboard for this view (#2281, E1): the name field moved here
               from the play screen, so the name still reaches the profile. */}
@@ -293,7 +330,7 @@ export function DemoGame(): JSX.Element {
             board={board}
           />
 
-          <h1 style={holeLineStyle}>
+          <h1 data-testid="demo-hole" tabIndex={-1} className="outline-none" style={holeLineStyle}>
             <span style={{ fontFamily: 'var(--font-serif)', fontSize: 44, fontWeight: 600, lineHeight: 1 }}>
               {hole.number}
             </span>
