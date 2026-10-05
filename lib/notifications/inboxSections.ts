@@ -51,7 +51,8 @@ export type ActionKey =
   | 'inviteNew'
   | 'confirm'
   | 'seeMissing'
-  | 'seePayment';
+  | 'seePayment'
+  | 'finishGame';
 
 export const GROUPABLE_KINDS = [
   'peer_approval_request',
@@ -119,6 +120,9 @@ export function inboxActionKey(row: Pick<InboxRow, 'kind' | 'payload'>): ActionK
       return 'seeMissing';
     case 'payment_reminder':
       return 'seePayment';
+    case 'all_scorecards_delivered':
+    case 'game_stale_reminder':
+      return 'finishGame';
     case 'scorecard_submitted':
     case 'scorecard_approved':
     case 'game_finished':
@@ -394,12 +398,14 @@ export type SettledInputs = {
    * game (`game_locked`), and the start's auto-reject is best-effort.
    */
   lockedGameIds?: ReadonlySet<string>;
+  /** #2203: games whose status is `finished`. The organiser's finish rows are done there. */
+  finishedGameIds?: ReadonlySet<string>;
 };
 
 /**
  * Unread action rows whose matter is already settled — a flightmate approved
  * the card, the request was answered or ran out or its round has started, the
- * fee is paid. Not every
+ * fee is paid, the game the organiser was told to finish is finished. Not every
  * target page marks its notification read, so the inbox checks on load and
  * treats these as read (#2263).
  */
@@ -453,6 +459,13 @@ export function findSettledActionIds(rows: InboxRow[], inputs: SettledInputs): s
       case 'missing_score_reminder': {
         const p = row.payload as NotificationPayload<'missing_score_reminder'>;
         if (inputs.own.get(p.game_id)?.submitted_at != null) settled.push(row.id);
+        break;
+      }
+      // #2203: both ask the organiser to finish the game; a finished game is done.
+      case 'all_scorecards_delivered':
+      case 'game_stale_reminder': {
+        const p = row.payload as NotificationPayload<'all_scorecards_delivered'>;
+        if (inputs.finishedGameIds?.has(p.game_id)) settled.push(row.id);
         break;
       }
       default:
@@ -513,6 +526,10 @@ const DETAIL_KINDS: ReadonlySet<NotificationKind> = new Set([
   'payment_reminder',
   'achievement_unlocked',
   'scorecard_rejected',
+  // #2203: the title already names the game, so the detail says why instead.
+  // all_scorecards_delivered stays out: its title has no game name, and the
+  // default subtitle gives it.
+  'game_stale_reminder',
 ]);
 
 /** Kinds whose detail carries a person's own words. */
@@ -573,6 +590,13 @@ function readTitle(row: InboxRow, t: NotificationTranslator): string {
       return t('readTitles.clubJoinRequest', { requesterName: short ?? t('somePlayerFallback') });
     case 'payment_reminder':
       return t('readTitles.paymentReminder');
+    // #2203: no game name here; the subtitle carries it (not a detail kind).
+    case 'all_scorecards_delivered':
+      return t('readTitles.allScorecardsDelivered');
+    case 'game_stale_reminder': {
+      const p = row.payload as NotificationPayload<'game_stale_reminder'>;
+      return t('readTitles.gameStaleReminder', { gameName: p.game_name });
+    }
     default:
       return catalogText(row, t).title;
   }

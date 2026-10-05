@@ -773,6 +773,8 @@ export type Database = {
           let_friends_skip_gate: boolean
           mode_config: Json
           name: string
+          organizer_all_delivered_notified_at: string | null
+          organizer_stale_reminder_sent_at: string | null
           payment_link: string | null
           prizes: Json
           registration_mode: Database["public"]["Enums"]["registration_mode"]
@@ -816,6 +818,8 @@ export type Database = {
           let_friends_skip_gate?: boolean
           mode_config?: Json
           name: string
+          organizer_all_delivered_notified_at?: string | null
+          organizer_stale_reminder_sent_at?: string | null
           payment_link?: string | null
           prizes?: Json
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
@@ -859,6 +863,8 @@ export type Database = {
           let_friends_skip_gate?: boolean
           mode_config?: Json
           name?: string
+          organizer_all_delivered_notified_at?: string | null
+          organizer_stale_reminder_sent_at?: string | null
           payment_link?: string | null
           prizes?: Json
           registration_mode?: Database["public"]["Enums"]["registration_mode"]

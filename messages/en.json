@@ -152,6 +152,14 @@
         "title": "{extra, plural, =0 {You have no score on hole {hole}} one {You have no score on hole {hole} and one more} other {You have no score on hole {hole} and # more}}",
         "detail": "A reminder from the organiser of {gameName}."
       },
+      "allScorecardsDelivered": {
+        "title": "Everyone has delivered",
+        "detail": "Finish {gameName}."
+      },
+      "gameStaleReminder": {
+        "title": "{gameName} has stood still",
+        "detail": "No new scores have come in for a day. Finish the game when you are ready."
+      },
       "paymentReminder": {
         "title": "Pay the entry fee",
         "detail": "You owe {amount} for {gameName}"
@@ -253,7 +261,8 @@
       "inviteNew": "Invite someone",
       "confirm": "Confirm",
       "seeMissing": "See what's missing",
-      "seePayment": "See payment"
+      "seePayment": "See payment",
+      "finishGame": "Finish the game"
     },
     "board": {
       "approvalTitle": "{count, plural, one {# scorecard is waiting for you} other {# scorecards are waiting for you}}",
@@ -280,7 +289,9 @@
       "friendRequest": "{actorName} sent you a friend request",
       "teamInvite": "{invitedByName} invited you to {teamName}",
       "clubJoinRequest": "{requesterName} asked to join the club",
-      "paymentReminder": "Reminder about the entry fee"
+      "paymentReminder": "Reminder about the entry fee",
+      "allScorecardsDelivered": "Everyone delivered",
+      "gameStaleReminder": "Reminder to finish {gameName}"
     },
     "status": {
       "approved": "{name} is in {gameName}",

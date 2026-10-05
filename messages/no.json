@@ -152,6 +152,14 @@
         "title": "{extra, plural, =0 {Du mangler slag på hull {hole}} one {Du mangler slag på hull {hole} og ett hull til} other {Du mangler slag på hull {hole} og # hull til}}",
         "detail": "Påminnelse fra arrangøren av {gameName}."
       },
+      "allScorecardsDelivered": {
+        "title": "Alle har levert",
+        "detail": "Avslutt spillet i {gameName}."
+      },
+      "gameStaleReminder": {
+        "title": "{gameName} står stille",
+        "detail": "Det har ikke kommet nye slag på et døgn. Avslutt spillet når du er klar."
+      },
       "paymentReminder": {
         "title": "Betal startkontingenten",
         "detail": "Du mangler {amount} i {gameName}"
@@ -253,7 +261,8 @@
       "inviteNew": "Inviter ny",
       "confirm": "Bekreft",
       "seeMissing": "Se hva som mangler",
-      "seePayment": "Se betaling"
+      "seePayment": "Se betaling",
+      "finishGame": "Avslutt spillet"
     },
     "board": {
       "approvalTitle": "{count} scorekort venter på deg",
@@ -280,7 +289,9 @@
       "friendRequest": "{actorName} sendte deg en venneforespørsel",
       "teamInvite": "{invitedByName} inviterte deg til {teamName}",
       "clubJoinRequest": "{requesterName} ba om å bli med i klubben",
-      "paymentReminder": "Påminnelse om startkontingenten"
+      "paymentReminder": "Påminnelse om startkontingenten",
+      "allScorecardsDelivered": "Alle leverte",
+      "gameStaleReminder": "Påminnelse om å avslutte {gameName}"
     },
     "status": {
       "approved": "{name} er med i {gameName}",

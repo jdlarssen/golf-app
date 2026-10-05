@@ -196,7 +196,7 @@ describe('InboxClient', () => {
   it('en lest rad skrives ikke på nytt, men lenker fortsatt', () => {
     renderInbox([makeDelivered('b', 'Marte', true)]);
     const row = screen.getByTestId('inbox-row');
-    expect(row).toHaveAttribute('href', `/admin/games/${GAME}`);
+    expect(row).toHaveAttribute('href', `/games/${GAME}`);
     fireEvent.click(row);
     expect(markOneAsReadMock).not.toHaveBeenCalled();
   });

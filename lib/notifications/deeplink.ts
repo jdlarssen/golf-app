@@ -52,8 +52,19 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       return `/games/${p.game_id}/approve`;
     }
     case 'scorecard_submitted': {
+      // #2203: the organiser gets this, not every admin. /admin/games/[id] is
+      // admin-only and sent a plain organiser to `/`. The game page sends a
+      // non-playing organiser to the organiser view and a non-playing admin
+      // on to the desk (`nonPlayerGameDoor`, #2202), so everyone lands.
       const p = n.payload as NotificationPayload<'scorecard_submitted'>;
-      return `/admin/games/${p.game_id}`;
+      return `/games/${p.game_id}`;
+    }
+    case 'all_scorecards_delivered':
+    case 'game_stale_reminder': {
+      // #2203: straight to «Avslutt spillet», gated on admin or creator
+      // (`requireAdminOrCreator`), so the organiser can always open it.
+      const p = n.payload as NotificationPayload<'all_scorecards_delivered'>;
+      return `/games/${p.game_id}/avslutt`;
     }
     case 'game_finished': {
       const p = n.payload as NotificationPayload<'game_finished'>;

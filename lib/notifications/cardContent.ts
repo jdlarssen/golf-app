@@ -217,6 +217,20 @@ export function buildNotificationText(
         detail: t('kinds.missingScoreReminder.detail', { gameName: p.game_name }),
       };
     }
+    case 'all_scorecards_delivered': {
+      const p = payload as NotificationPayload<'all_scorecards_delivered'>;
+      return {
+        title: t('kinds.allScorecardsDelivered.title'),
+        detail: t('kinds.allScorecardsDelivered.detail', { gameName: p.game_name }),
+      };
+    }
+    case 'game_stale_reminder': {
+      const p = payload as NotificationPayload<'game_stale_reminder'>;
+      return {
+        title: t('kinds.gameStaleReminder.title', { gameName: p.game_name }),
+        detail: t('kinds.gameStaleReminder.detail'),
+      };
+    }
     case 'cup_finished': {
       const p = payload as NotificationPayload<'cup_finished'>;
       return {
