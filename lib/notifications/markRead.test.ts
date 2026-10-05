@@ -72,6 +72,9 @@ describe('markNotificationsRead', () => {
     const ok = await markNotificationsRead({ userId: 'u1', notificationId: 'n-uuid' });
 
     expect(ok).toBe(false);
+    expect(consoleErr).toHaveBeenCalledWith('[notifications] markRead single-id matched 0 rows', {
+      notificationId: 'n-uuid',
+    });
     expect(revalidateTagMock).not.toHaveBeenCalled();
     // `.select('id')` er det som gjør radantallet synlig i det hele tatt.
     expect(supabaseMock.__fromCalls).toContainEqual(
@@ -159,19 +162,17 @@ describe('markReadOnVisit', () => {
 
     await markReadOnVisit({ userId: 'u1', surface, entityId: key ? ENTITY : undefined });
 
-    const calls = supabaseMock.__fromCalls;
-    expect(calls).toContainEqual(
-      expect.objectContaining({ table: 'notifications', method: 'update' }),
-    );
-    expect(calls).toContainEqual(expect.objectContaining({ method: 'eq', args: ['user_id', 'u1'] }));
-    expect(calls).toContainEqual(expect.objectContaining({ method: 'is', args: ['read_at', null] }));
-    expect(calls).toContainEqual(
-      expect.objectContaining({ method: 'in', args: ['kind', [...READ_ON_VISIT[surface].kinds]] }),
-    );
-    const eqs = calls.filter((c) => c.method === 'eq').map((c) => c.args);
-    expect(eqs).toEqual(key ? [['user_id', 'u1'], [`payload->>${key}`, ENTITY]] : [['user_id', 'u1']]);
-    // The touched ids come back, so a visit with nothing unread skips revalidate.
-    expect(calls).toContainEqual(expect.objectContaining({ method: 'select', args: ['id'] }));
+    // The whole chain, in order: the viewer's unread rows of the surface's
+    // kinds, scoped by the payload key, with the touched ids read back (so a
+    // visit with nothing unread can skip revalidate).
+    expect(supabaseMock.__fromCalls.map((c) => [c.table, c.method, c.args])).toEqual([
+      ['notifications', 'update', [{ read_at: expect.any(String) }]],
+      ['notifications', 'eq', ['user_id', 'u1']],
+      ['notifications', 'is', ['read_at', null]],
+      ['notifications', 'in', ['kind', [...READ_ON_VISIT[surface].kinds]]],
+      ...(key ? [['notifications', 'eq', [`payload->>${key}`, ENTITY]]] : []),
+      ['notifications', 'select', ['id']],
+    ]);
     expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
   });
 

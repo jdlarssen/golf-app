@@ -68,16 +68,23 @@ vi.mock('@/lib/supabase/client', () => ({
         _opts?: { count: 'exact'; head: true },
       ) => ({
         eq: (_col: string, _val: string) => ({
-          is: (_col2: string, _val2: null) => ({
-            not: (...args: unknown[]) => {
-              lastNot = args;
-              countFetches += 1;
-              return (
-                queuedCounts.shift() ??
-                Promise.resolve({ count: mockInitialCount, error: null })
-              );
-            },
-          }),
+          is: (_col2: string, _val2: null) => {
+            countFetches += 1;
+            const answer =
+              queuedCounts.shift() ??
+              Promise.resolve({ count: mockInitialCount, error: null });
+            // Awaitable as is, or after `.not(...)` (#2201).
+            return {
+              not: (...args: unknown[]) => {
+                lastNot = args;
+                return answer;
+              },
+              then: (
+                onOk: (v: CountAnswer) => unknown,
+                onErr?: (e: unknown) => unknown,
+              ) => answer.then(onOk, onErr),
+            };
+          },
         }),
       }),
     }),
