@@ -192,7 +192,7 @@ describe('buildTerminEntries — capacity and full', () => {
   });
 });
 
-describe('hasOpenRounds — the new player\'s Terminlista line (#2494)', () => {
+describe('hasOpenRounds — whether the new player\'s Terminlista row stands (#2494)', () => {
   const pending: PendingRequest = {
     id: 'r1',
     game_id: 'g1',
