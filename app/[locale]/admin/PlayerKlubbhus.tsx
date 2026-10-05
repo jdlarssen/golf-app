@@ -1,14 +1,11 @@
 import { Suspense } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
+import { getNextClubRounds } from '@/lib/clubs/getNextClubRounds';
 import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
-import { nextRoundByClub } from '@/lib/clubs/clubRoomRows';
-import { getMyCupIds, cupLedgerHref } from '@/lib/cup/myCups';
-import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
-import { cupProgress, splitCupsForRoom } from '@/lib/cup/cupRoomRows';
-import { getUpcomingClubGames } from '@/lib/games/getUpcomingClubGames';
+import { cupLedgerHref } from '@/lib/cup/myCups';
+import { getRoomCups } from '@/lib/cup/getRoomCups';
 import { getArrangedRounds } from '@/lib/games/getArrangedRounds';
 import { groupArrangedRounds } from '@/lib/games/arrangedGames';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -43,20 +40,23 @@ import {
  * Reads with the admin client, each with its gate:
  * - start blocks for your planned rounds (`readCreatorStartBlock`, inside
  *   `getArrangedRounds`): only ids from your own `created_by` read;
- * - the next round in your clubs (`getUpcomingClubGames`): only club ids from
- *   your own memberships (`getMyClubs`);
- * - your cups' names and status, and their snapshots (`getCupSnapshot`): only
- *   cup ids from your own rows (`getMyCupIds`). A club cup's participant who is
+ * - the next round in each of your clubs (`getNextClubRounds`, one query per
+ *   club): only club ids from your own memberships (`getMyClubs`);
+ * - your cups' names and status, and their snapshots (`getRoomCups`): only cup
+ *   ids from your own rows (`getMyCupIds`). A club cup's participant who is
  *   not a club member cannot read the cup under RLS, so the request client
  *   would drop it;
  * - whether you can make a club tournament (`isClubAdminAnywhere`): your own id.
  * Everything else (your games and their rosters, your clubs, member counts)
  * reads through the request client and RLS.
+ *
+ * The room sits on the app's background, as its artboards draw it (owner's
+ * answer 05.10); the rest of Klubbhuset keeps the linen.
  */
 export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   const tNav = await getTranslations('admin.nav');
   return (
-    <AdminShell>
+    <AdminShell tone="app">
       <TopBar kicker={tNav('klubbhus')} />
 
       <GreetingView name={firstName(role.name)} />
@@ -121,7 +121,7 @@ async function ClubsSection({ userId }: { userId: string }) {
   if (result.clubs.length === 0) return <ClubsView clubs={[]} />;
 
   const ids = result.clubs.map((c) => c.id);
-  const [counts, upcoming] = await Promise.all([
+  const [counts, next] = await Promise.all([
     // RLS «group_members select member or admin»: a member counts the club.
     Promise.all(
       ids.map((id) =>
@@ -131,70 +131,35 @@ async function ClubsSection({ userId }: { userId: string }) {
           .eq('group_id', id),
       ),
     ),
-    // Service role; the gate is `ids`, the viewer's own clubs (above).
-    getUpcomingClubGames(ids),
+    // Service role inside; the gate is `ids`, the viewer's own clubs (above).
+    getNextClubRounds(ids, new Date()),
   ]);
-  const failed = counts.find((c) => c.error) ?? (upcoming.error ? upcoming : null);
-  if (failed) {
-    console.error('[klubbhus] club numbers', failed.error);
+  const failedCount = counts.find((c) => c.error);
+  if (failedCount || !next.ok) {
+    console.error('[klubbhus] club numbers', failedCount?.error ?? 'next round');
     return <ClubsView clubs={null} />;
   }
 
-  const next = nextRoundByClub(upcoming.data ?? [], new Date());
   const clubs: RoomClub[] = result.clubs.map((club, i) => ({
     ...club,
     members: counts[i].count ?? 0,
-    nextRoundAt: next.get(club.id) ?? null,
+    nextRoundAt: next.next.get(club.id) ?? null,
   }));
   return <ClubsView clubs={clubs} />;
 }
 
-type RoomCupRow = {
-  id: string;
-  name: string;
-  status: 'draft' | 'active' | 'finished';
-  created_by: string;
-  group_id: string | null;
-};
-
 async function CupsSection({ userId }: { userId: string }) {
   const supabase = await getServerClient();
-  const idsRes = await getMyCupIds(supabase, userId);
-  if (!idsRes.ok) return <CupsView cups={null} finishedCount={0} />;
-  if (idsRes.ids.length === 0) return <CupsView cups={[]} finishedCount={0} />;
-
-  // Status FIRST, with the service role on exactly these ids (same authz shape
-  // as /admin/cup and `getCupSnapshot`): only cups that are not finished get
-  // a snapshot.
-  const { data, error } = await getAdminClient()
-    .from('tournaments')
-    .select('id, name, status, created_by, group_id')
-    .in('id', idsRes.ids)
-    .order('created_at', { ascending: false })
-    .returns<RoomCupRow[]>();
-  if (error) {
-    console.error('[klubbhus] cups', error);
-    return <CupsView cups={null} finishedCount={0} />;
-  }
-
-  const { live, finishedCount } = splitCupsForRoom(data ?? []);
   const t = await getTranslations('cup');
-  let cups: RoomCup[];
-  try {
-    cups = await Promise.all(
-      live.map(async (cup) => {
-        const snapshot = await getCupSnapshot(cup.id, t('manage.unknownPlayer'));
-        return {
-          id: cup.id,
-          name: cup.name,
-          href: cupLedgerHref(cup, { userId, isAdmin: false }),
-          ...cupProgress(snapshot?.leaderboard ?? null),
-        };
-      }),
-    );
-  } catch (snapshotError) {
-    console.error('[klubbhus] cup snapshots', snapshotError);
-    return <CupsView cups={null} finishedCount={0} />;
-  }
-  return <CupsView cups={cups} finishedCount={finishedCount} />;
+  const read = await getRoomCups(supabase, userId, t('manage.unknownPlayer'));
+  if (!read.ok) return <CupsView cups={null} finishedCount={0} />;
+
+  const cups: RoomCup[] = read.live.map((cup) => ({
+    id: cup.id,
+    name: cup.name,
+    href: cupLedgerHref(cup, { userId, isAdmin: false }),
+    playing: cup.playing,
+    progress: cup.progress,
+  }));
+  return <CupsView cups={cups} finishedCount={read.finishedCount} />;
 }

@@ -4,7 +4,6 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SectionError } from '@/components/ui/SectionError';
 import { RoomGroupHeading } from '@/components/games/ArrangedRoundsView';
-import { DenseTileList } from './TilesView';
 import type { AppLocale } from '@/i18n/routing';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
@@ -216,20 +215,23 @@ export function ClubsView({ clubs }: { clubs: RoomClub[] | null }) {
   );
 }
 
-/** A cup row's data: where it leads and how far it has come. */
+/** A cup row's data: where it leads, your part in it, and how far it has come. */
 export type RoomCup = {
   id: string;
   name: string;
   href: string;
-  played: number;
-  total: number;
+  /** In the roster or played a match; `false` = you only organise it. */
+  playing: boolean;
+  /** `null` = the cup's snapshot could not be read. */
+  progress: { played: number; total: number } | null;
 };
 
 /**
- * Cuper — one row per cup you are in that is not finished, with «Du er med ·
- * 3 av 8 kamper spilt» (#2493). Finished cups stand on /admin/cup; with only
- * those, the room keeps today's «Cuper · Du er med i {n}» row. `null` means a
- * read failed (#2490).
+ * Cuper — one row per cup you are part of that is not finished (#2493): «Du er
+ * med» or «Du arrangerer», then «3 av 8 kamper spilt». A cup whose snapshot
+ * failed says so on its own row; the others keep their numbers (#2490). With
+ * only finished cups, one row in the same style leads to /admin/cup (owner's
+ * answer 05.10). `null` means the cups themselves could not be read.
  */
 export function CupsView({
   cups,
@@ -248,46 +250,51 @@ export function CupsView({
     );
   }
 
-  if (cups.length === 0) {
-    if (finishedCount === 0) return null;
-    // -mx-1: the same 16 px edges as the room's cards around it.
-    return (
-      <section className="-mx-1 pt-[18px]">
-        <DenseTileList
-          tiles={[
-            {
-              label: t('tilesCuper'),
-              href: '/admin/cup',
-              meta: t('playerCupMeta', { n: finishedCount }),
-              icon: 'pokal',
-              testId: 'player-cup-row',
-            },
-          ]}
-        />
-      </section>
-    );
-  }
+  if (cups.length === 0 && finishedCount === 0) return null;
 
   return (
     <section aria-labelledby="room-cups-heading">
       <RoomGroupHeading id="room-cups-heading">{t('tilesCuper')}</RoomGroupHeading>
       <RoomCard>
-        {cups.map((cup, i) => (
+        {cups.length === 0 ? (
           <RoomRow
-            key={cup.id}
-            href={cup.href}
-            name={cup.name}
-            line={
-              cup.total === 0
-                ? t('playerCupNoMatches')
-                : t('playerCupProgress', { played: cup.played, total: cup.total })
-            }
-            last={i === cups.length - 1}
+            href="/admin/cup"
+            name={t('playerCupFinishedName')}
+            line={t('playerCupFinishedCount', { n: finishedCount })}
+            last
             minHeight="min-h-16"
             testId="player-cup-row"
-            data={{ 'data-played': cup.played, 'data-total': cup.total }}
+            data={{ 'data-finished': finishedCount }}
           />
-        ))}
+        ) : (
+          cups.map((cup, i) => (
+            <RoomRow
+              key={cup.id}
+              href={cup.href}
+              name={cup.name}
+              line={[
+                cup.playing ? t('playerCupPlaying') : t('playerCupOrganising'),
+                cup.progress === null
+                  ? t('playerCupError')
+                  : cup.progress.total === 0
+                    ? t('playerCupNoMatches')
+                    : t('playerCupProgress', cup.progress),
+              ].join(' · ')}
+              last={i === cups.length - 1}
+              minHeight="min-h-16"
+              testId="player-cup-row"
+              data={
+                cup.progress === null
+                  ? { 'data-role': cup.playing ? 'playing' : 'organising', 'data-error': 'true' }
+                  : {
+                      'data-role': cup.playing ? 'playing' : 'organising',
+                      'data-played': cup.progress.played,
+                      'data-total': cup.progress.total,
+                    }
+              }
+            />
+          ))
+        )}
       </RoomCard>
     </section>
   );
