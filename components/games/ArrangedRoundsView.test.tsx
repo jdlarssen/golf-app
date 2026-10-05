@@ -44,6 +44,7 @@ describe('ArrangedRoundsView', () => {
     expect(screen.getByTestId('arranged-live-row').getAttribute('aria-label')).toBe(
       [
         'Runde live',
+        k.liveBadge,
         k.liveStatus,
         k.delivered.replace('{submitted}', '5').replace('{total}', '8'),
         k.pendingApproval.replace('{n}', '1'),

@@ -604,17 +604,28 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
   });
 });
 
+type MockReply = { data: unknown; error: unknown };
+
+/**
+ * A best-ball draft with u0..u3 on the roster, after the gate: the stored row,
+ * the prior roster and games.update, then `extra`. Admin passes the loadRole
+ * reply; a creator (#2269) passes loadRole + the gate's owner-check.
+ */
+function draftPublishMock(gate: MockReply[], extra: MockReply[] = []) {
+  return buildSupabaseMock([
+    ...gate,
+    { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
+    { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
+    { data: { id: 'game-1' }, error: null }, // games.update
+    ...extra,
+  ]);
+}
+
 describe('invite-notify når et utkast publiseres (#2445)', () => {
   // A draft notified nobody when it was saved, so publishing sends the whole
   // roster its notice once — including the players who stood on the draft.
-  function draftFixture(extra: { data: unknown; error: unknown }[] = []) {
-    return buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // loadRole
-      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
-      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
-      { data: { id: 'game-1' }, error: null }, // games.update
-      ...extra,
-    ]);
+  function draftFixture(extra: MockReply[] = []) {
+    return draftPublishMock([{ data: { is_admin: true }, error: null }], extra); // loadRole
   }
   const insertU4toU7 = {
     data: [4, 5, 6, 7].map((i) => ({ user_id: `u${i}` })),
@@ -849,15 +860,16 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
     // The organiser's draft resumes in the wizard too (owner's answer 05.10,
     // PR #2537), so the error banner belongs on step 5 for them as well.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: false }, error: null }, // loadRole
-      { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
-      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
-      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
-      { data: { id: 'game-1' }, error: null }, // games.update
-      { data: null, error: { message: 'insert boom' } }, // insert u4..u7 FAILS
-      { data: null, error: null }, // compensation delete
-    ]);
+    supabaseMock = draftPublishMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
+      ],
+      [
+        { data: null, error: { message: 'insert boom' } }, // insert u4..u7 FAILS
+        { data: null, error: null }, // compensation delete
+      ],
+    );
     signIn('creator-1');
 
     const { publishFromDraftAction } = await import('./actions');

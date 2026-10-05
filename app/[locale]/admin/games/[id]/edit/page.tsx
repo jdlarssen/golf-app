@@ -32,7 +32,7 @@ import {
 import {
   buildEditFormInitialValues,
   buildEditInitialValues,
-  EDIT_FORM_COLUMNS,
+  EDIT_GAME_SELECT,
   type EditGameRow,
   type EditGamePlayerRow,
 } from '@/lib/games/editGameInitialValues';
@@ -118,7 +118,7 @@ export default async function EditGamePage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select(`${EDIT_FORM_COLUMNS}, group_id, tournament_id, league_round_id`)
+    .select(EDIT_GAME_SELECT)
     .eq('id', id)
     .maybeSingle<EditGameRow>();
 

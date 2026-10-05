@@ -12,15 +12,16 @@ const CATALOG = { kompis: [{ slug: 'best_ball' }], klubb: [], solo: [{ slug: 'st
 const ROSTER = [{ user_id: 'u1', team_number: 1, flight_number: 1, tee_gender: 'mens' }];
 
 function fakeClient(result: { data: unknown; error: unknown } = { data: ROSTER, error: null }) {
-  const from = vi.fn(() => {
+  const eqCalls: unknown[][] = [];
+  const from = vi.fn((_table: string) => {
     const q = {
       select: () => q,
-      eq: () => q,
+      eq: (...args: unknown[]) => (eqCalls.push(args), q),
       returns: () => Promise.resolve(result),
     };
     return q;
   });
-  return { client: { from } as unknown as SupabaseClient<Database>, from };
+  return { client: { from } as unknown as SupabaseClient<Database>, from, eqCalls };
 }
 
 const row = (over: Partial<EditGameRow>) =>
@@ -48,7 +49,7 @@ describe('loadDraftResume', () => {
   });
 
   it('resumes a draft in the wizard with its roster and the caller’s data', async () => {
-    const { client } = fakeClient();
+    const { client, from, eqCalls } = fakeClient();
     const data = { formatsByIntent: CATALOG, players: ['the caller’s own'] };
     const read = await loadDraftResume(client, 'g1', row({}), async () => data);
     expect(read).toEqual({
@@ -56,6 +57,9 @@ describe('loadDraftResume', () => {
       plan: { kind: 'wizard', intent: 'kompis', groupId: undefined },
       playerRows: ROSTER,
     });
+    // The roster read is this game's game_players, nothing wider.
+    expect(from.mock.calls).toEqual([['game_players']]);
+    expect(eqCalls).toEqual([['game_id', 'g1']]);
   });
 
   it('throws when the roster read fails, never resumes with an empty roster', async () => {
