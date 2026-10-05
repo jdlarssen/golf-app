@@ -78,20 +78,16 @@ describe('ArrangedRoundsView', () => {
     expect(screen.getByTestId('arranged-next')).toBeTruthy();
   });
 
-  it('caps «Neste» at upcomingLimit', () => {
-    render(<ArrangedRoundsView rounds={rounds()} isAdmin={false} locale="no" upcomingLimit={3} />);
-    const next = screen.getByTestId('arranged-next');
-    expect(within(next).getAllByTestId('arranged-next-row')).toHaveLength(3);
-  });
-
-  it('links «Alle n» from the «Neste» heading only when more rounds wait than it shows (#2493)', () => {
+  it('caps «Neste» at upcomingLimit and links «Alle n» from its heading only when more rounds wait (#2493)', () => {
     const more = render(
       <ArrangedRoundsView rounds={rounds()} isAdmin={false} locale="no" upcomingLimit={3} upcomingAllHref="/klubbhuset" />,
     );
-    const all = screen.getByTestId('arranged-next-all');
+    const next = screen.getByTestId('arranged-next');
+    expect(within(next).getAllByTestId('arranged-next-row')).toHaveLength(3);
+    const all = within(next).getByTestId('arranged-next-all');
     expect(all).toHaveAttribute('href', '/klubbhuset');
-    // The name is the words alone, as on «Ferdige runder»: the arrow is not read.
-    expect(all).toHaveAttribute('aria-label', k.upcomingAll.replace('{n}', '4'));
+    // Named by its words alone, as «Ferdige runder»: the arrow is not read.
+    expect(all).toHaveAttribute('aria-label', k.upcomingAll.replace('{n}', String(rounds().upcoming.length)));
     more.unmount();
 
     const fits = render(
