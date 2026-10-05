@@ -1,128 +1,95 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import {
-  ArrangementView,
+  GreetingView,
+  NewRoundCard,
   ClubsView,
+  CupsView,
   ToolsView,
-  type ArrangedGame,
+  type RoomClub,
+  type RoomCup,
 } from './PlayerKlubbhusViews';
-import type { MyClub } from '@/lib/clubs/getMyClubs';
 
-// One render test covering the three personas the adaptive player Klubbhuset
-// room (#892) varies on — joiner / club member / arranger — by injecting data
-// props into the presentational views. Asserts on data-testid/role/href only,
-// never on Norwegian copy (Type C discipline). No Supabase mock.
+// Type C render test for the player's Klubbhus room (#892, redrawn in #2493):
+// the one door for a new round, the clubs with numbers, the cups with
+// progress, the tools as plain rows, and an error box per failed read
+// (#2490). Asserts on data-testid/role/href only, never on Norwegian copy.
+// The numbers themselves are Type A (`lib/clubs/clubRoomRows.test.ts`,
+// `lib/cup/cupRoomRows.test.ts`); «Rundene dine» is `ArrangedRoundsView`'s.
 
-const CLUBS: MyClub[] = [
-  { id: 'club-1', name: 'Oslo Golfklubb', short_id: 'OGK', role: 'member' },
-  { id: 'club-2', name: 'Bærum GK', short_id: 'BGK', role: 'owner' },
+const CLUBS: RoomClub[] = [
+  { id: 'club-1', name: 'Oslo Golfklubb', short_id: 'OGK', role: 'admin', members: 142, nextRoundAt: '2026-10-10T07:00:00Z' },
+  { id: 'club-2', name: 'Bærum GK', short_id: 'BGK', role: 'member', members: 18, nextRoundAt: null },
 ];
 
-const GAMES: ArrangedGame[] = Array.from({ length: 4 }, (_, i) => ({
-  id: `game-${i + 1}`,
-  name: `Runde ${i + 1}`,
-  courseName: 'Losby',
-  status: 'active' as const,
-}));
+const CUPS: RoomCup[] = [
+  { id: 'cup-1', name: 'Klubbmesterskapet', href: '/cup/cup-1', played: 3, total: 8 },
+];
 
-describe('PlayerKlubbhus adaptive room (#892)', () => {
-  it('K1 — joiner (0 clubs / 0 created): invitation + cup link + «no club» line + tools, no list', () => {
-    render(
-      <>
-        <ArrangementView games={[]} hasMore={false} cupCount={0} />
-        <ClubsView clubs={[]} />
-        <ToolsView />
-      </>,
-    );
-
-    // Invitation hero, never an empty list.
-    expect(screen.getByTestId('player-invite-primary')).toHaveAttribute(
-      'href',
-      '/opprett-spill',
-    );
-    expect(screen.getByTestId('player-invite-cup')).toHaveAttribute(
-      'href',
-      '/opprett-spill?intent=cup',
-    );
-
-    // No arranged content, no cup row, no overflow, no «+ Ny runde».
-    expect(screen.queryByTestId('player-arranged-game')).toBeNull();
-    expect(screen.queryByTestId('player-cup-row')).toBeNull();
-    expect(screen.queryByTestId('player-see-all')).toBeNull();
-    expect(screen.queryByTestId('player-new-round')).toBeNull();
-
-    // Door to clubs stays open even with no membership.
-    expect(screen.getByTestId('player-no-club')).toHaveAttribute('href', '/klubber');
-    expect(screen.queryByTestId('player-club-row')).toBeNull();
-
-    // Tools always present, carrying the Klubbhuset origin (#2487).
-    expect(screen.getByRole('link', { name: /baner/i })).toHaveAttribute(
-      'href',
-      '/opprett-bane?kilde=klubbhuset',
-    );
-    expect(screen.getByRole('link', { name: /spillformater/i })).toHaveAttribute(
-      'href',
-      '/spillformater?kilde=klubbhuset',
-    );
+describe('PlayerKlubbhus room (#2493)', () => {
+  it('greets with one heading: no label card, no subtitle', () => {
+    const { container } = render(<GreetingView name="Kari" />);
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(container.querySelectorAll('p')).toHaveLength(0);
   });
 
-  it('K2 — club member: clubs render as inline rows linking to each club page', () => {
-    render(<ClubsView clubs={CLUBS} />);
+  it.each([
+    [true, ['new-round-friends', '/opprett-spill?intent=kompis'], ['new-round-club', '/opprett-spill?intent=klubb'], 'new-round-other'],
+    [false, ['new-round-friends', '/opprett-spill?intent=kompis'], ['new-round-other', '/opprett-spill'], 'new-round-club'],
+  ] as const)('the one door for a new round, club admin=%s', (isClubAdmin, first, second, absent) => {
+    render(<NewRoundCard isClubAdmin={isClubAdmin} />);
+    const card = screen.getByTestId('new-round-card');
+    expect(within(card).getAllByRole('link')).toHaveLength(2);
+    expect(within(card).getByTestId(first[0])).toHaveAttribute('href', first[1]);
+    expect(within(card).getByTestId(second[0])).toHaveAttribute('href', second[1]);
+    expect(within(card).queryByTestId(absent)).toBeNull();
+  });
 
-    const rows = screen.getAllByTestId('player-club-row');
-    expect(rows).toHaveLength(CLUBS.length);
-    expect(rows[0]).toHaveAttribute('href', '/klubber/club-1?kilde=klubbhuset');
-    expect(rows[1]).toHaveAttribute('href', '/klubber/club-2?kilde=klubbhuset');
-
-    // The «no club» fallback is gone once you belong to a club.
+  it('clubs: a row per club to its page; no clubs → the «no club» door; a failed read → an error box', () => {
+    const rows = render(<ClubsView clubs={CLUBS} />);
+    const links = screen.getAllByTestId('player-club-row');
+    expect(links.map((a) => a.getAttribute('href'))).toEqual([
+      '/klubber/club-1?kilde=klubbhuset',
+      '/klubber/club-2?kilde=klubbhuset',
+    ]);
     expect(screen.queryByTestId('player-no-club')).toBeNull();
-  });
+    rows.unmount();
 
-  it('K3 — arranger (≥1 created, >cap, ≥1 cup): capped list + «+ Ny runde» + «Se alle» + cup row, no hero', () => {
-    render(<ArrangementView games={GAMES} hasMore={true} cupCount={2} />);
-
-    // Capped list of created games, each linking to its game home.
-    const gameRows = screen.getAllByTestId('player-arranged-game');
-    expect(gameRows).toHaveLength(4);
-    expect(gameRows[0]).toHaveAttribute('href', '/games/game-1');
-
-    // Quiet «+ Ny runde» affordance instead of the hero invitation.
-    expect(screen.getByTestId('player-new-round')).toHaveAttribute(
-      'href',
-      '/opprett-spill',
-    );
-    expect(screen.queryByTestId('player-invite-primary')).toBeNull();
-
-    // Overflow to /klubbhuset and the cup discoverability row.
-    expect(screen.getByTestId('player-see-all')).toHaveAttribute('href', '/klubbhuset');
-    expect(screen.getByTestId('player-cup-row')).toHaveAttribute('href', '/admin/cup');
-  });
-
-  it('cup row appears with ≥1 cup even when there are no created games', () => {
-    render(<ArrangementView games={[]} hasMore={false} cupCount={1} />);
-    expect(screen.getByTestId('player-invite-primary')).toBeInTheDocument();
-    expect(screen.getByTestId('player-cup-row')).toHaveAttribute('href', '/admin/cup');
-  });
-
-  // #2490: a failed read shows its own error box, never the empty state, and
-  // never hides what the other read fetched.
-  it('a failed read shows an error box instead of the empty state', () => {
-    const games = render(<ArrangementView games={null} hasMore={false} cupCount={2} />);
-    expect(screen.getByTestId('klubbhus-arrangement-error')).toBeInTheDocument();
-    expect(screen.getByTestId('player-cup-row')).toBeInTheDocument();
-    expect(screen.queryByTestId('player-invite-primary')).toBeNull();
-    games.unmount();
-
-    const cups = render(
-      <ArrangementView games={GAMES.slice(0, 1)} hasMore={false} cupCount={null} />,
-    );
-    expect(screen.getByTestId('player-arranged-game')).toBeInTheDocument();
-    expect(screen.getByTestId('klubbhus-cups-error')).toBeInTheDocument();
-    expect(screen.queryByTestId('player-cup-row')).toBeNull();
-    cups.unmount();
+    const none = render(<ClubsView clubs={[]} />);
+    expect(screen.getByTestId('player-no-club')).toHaveAttribute('href', '/klubber');
+    none.unmount();
 
     render(<ClubsView clubs={null} />);
     expect(screen.getByTestId('klubbhus-clubs-error')).toBeInTheDocument();
     expect(screen.queryByTestId('player-no-club')).toBeNull();
+  });
+
+  it('cups: a row per running cup; only finished ones → the /admin/cup row; none → nothing; a failed read → an error box', () => {
+    const rows = render(<CupsView cups={CUPS} finishedCount={1} />);
+    expect(screen.getAllByTestId('player-cup-row').map((a) => a.getAttribute('href'))).toEqual(['/cup/cup-1']);
+    rows.unmount();
+
+    const finishedOnly = render(<CupsView cups={[]} finishedCount={2} />);
+    expect(screen.getByTestId('player-cup-row')).toHaveAttribute('href', '/admin/cup');
+    finishedOnly.unmount();
+
+    const none = render(<CupsView cups={[]} finishedCount={0} />);
+    expect(none.container).toBeEmptyDOMElement();
+    none.unmount();
+
+    render(<CupsView cups={null} finishedCount={0} />);
+    expect(screen.getByTestId('klubbhus-cups-error')).toBeInTheDocument();
+  });
+
+  it('tools: three plain rows without icons, back to the room (#2487)', () => {
+    render(<ToolsView />);
+    const tools = screen.getAllByTestId('player-tool-row');
+    expect(tools.map((a) => a.getAttribute('href'))).toEqual([
+      '/opprett-bane?kilde=klubbhuset',
+      '/spillformater?kilde=klubbhuset',
+      '/foreslaa-ide',
+    ]);
+    expect(tools.every((a) => a.querySelector('svg') === null)).toBe(true);
   });
 });

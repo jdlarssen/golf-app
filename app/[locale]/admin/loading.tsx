@@ -3,45 +3,31 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { DenseTileListSkeleton } from './TilesGrid';
+import { NewRoundCardSkeleton } from './PlayerKlubbhusViews';
 
 // Route-loading skeleton for /admin and every page under it without its own
 // loading.tsx. It renders before the role is known: `getRole()` runs in the
 // page, below this boundary, and the page then branches to the admin
-// Sekretariat or the player room. So the skeleton is role-neutral (#2488):
-// the tab's TopBar without an arrow, a greeting card with the same shell as
-// both rooms' greetings, and three `DenseTileList` rows, the shape both rooms
-// use first below the greeting. Below the greeting the real page may shift.
+// Sekretariat or the player room. It follows the player room (#2493), which
+// most people see: the tab's TopBar without an arrow, the greeting as one
+// heading line with no card, the «Lag en ny runde» card as a block, and
+// `DenseTileList` rows below. Admin rarely sees it; the Sekretariat may shift.
 export default async function AdminLoading() {
   const tNav = await getTranslations('admin.nav');
   return (
     <AdminShell>
       <TopBar kicker={tNav('klubbhus')} />
 
-      <section
-        className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"
-        style={{
-          background:
-            'linear-gradient(180deg, var(--admin-salutation-top) 0%, var(--admin-salutation-bottom) 100%)',
-          borderColor: 'var(--admin-salutation-border)',
-        }}
-      >
-        <SkeletonLine
-          className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em]"
-          barClassName="h-2 w-24"
-        />
-        <SkeletonLine
-          className="mt-1 font-serif text-[22px] font-medium leading-snug"
-          barClassName="h-5 w-3/5"
-          delay={60}
-        />
-        <SkeletonLine
-          className="mt-1.5 font-sans text-xs"
-          barClassName="h-2.5 w-2/5"
-          delay={120}
-        />
-      </section>
+      <SkeletonLine
+        className="pt-1.5 font-serif text-[28px] font-medium leading-[normal]"
+        barClassName="h-6 w-2/5"
+      />
 
-      <DenseTileListSkeleton rows={3} />
+      <NewRoundCardSkeleton />
+
+      <div className="mt-[18px]">
+        <DenseTileListSkeleton rows={3} />
+      </div>
     </AdminShell>
   );
 }

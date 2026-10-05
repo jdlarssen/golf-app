@@ -1,218 +1,159 @@
-import { useTranslations } from 'next-intl';
-import { Card } from '@/components/ui/Card';
-import { LinkButton } from '@/components/ui/Button';
+import type { ReactNode } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SectionError } from '@/components/ui/SectionError';
-import { StatusChip } from '@/components/ui/StatusChip';
-import { DenseTileList, type Tile } from './TilesView';
-import type { GameStatus } from '@/lib/games/status';
+import { RoomGroupHeading } from '@/components/games/ArrangedRoundsView';
+import { DenseTileList } from './TilesView';
+import type { AppLocale } from '@/i18n/routing';
 import type { MyClub } from '@/lib/clubs/getMyClubs';
+import { formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { withKlubbhusOrigin } from '@/lib/url/klubbhusOrigin';
 
-// Presentational views for the adaptive player Klubbhuset room (#892). Pure
-// (data injected as props, sync `useTranslations`) so the data-fetching shell
-// in PlayerKlubbhus.tsx stays thin and these render in unit tests without a
-// Supabase mock.
-
-const SECTION_LABEL =
-  'mb-2 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted';
-
-const QUIET_LINK =
-  'inline-flex min-h-[44px] items-center rounded font-sans text-xs font-medium text-primary hover:underline';
-
-const ROW_LINK =
-  'block rounded-2xl';
-
-/** Game-arranged here carries its name already locale-resolved by the fetcher. */
-export type ArrangedGame = {
-  id: string;
-  name: string;
-  courseName: string | null;
-  status: GameStatus;
-};
+// Presentational views for the player's Klubbhus room (#892, redrawn in #2493
+// after the room artboards `Klubbhus-forslag-rom-topp-*` / `-rom-rullet-*`).
+// Pure (data injected as props, sync `useTranslations`) so the data-fetching
+// shell in PlayerKlubbhus.tsx stays thin and these render in unit tests
+// without a Supabase mock.
 
 /**
- * Greeting — always shown, paints immediately (no await). ClubStamp and the
- * pull-quote are dropped on the player view per #892 (Sekretariat flourish,
- * not the player room).
+ * Greeting — always shown, paints immediately. «Hei, Kari.» as the page's
+ * heading, with no card, no second «Klubbhuset» label and no subtitle: the
+ * TopBar above already names the room.
  */
 export function GreetingView({ name }: { name: string | null }) {
   const t = useTranslations('admin.dashboard');
   return (
-    <section
-      className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"
-      style={{
-        background:
-          'linear-gradient(180deg, var(--admin-salutation-top) 0%, var(--admin-salutation-bottom) 100%)',
-        borderColor: 'var(--admin-salutation-border)',
-      }}
-    >
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {t('klubbhusLabel')}
-      </p>
-      <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-        {name ? t('playerGreeting', { name }) : t('playerGreetingNoName')}
-      </h1>
-      <p className="mt-1.5 font-sans text-xs text-muted">{t('playerSubtitle')}</p>
-    </section>
+    <h1 className="pt-1.5 font-serif text-[28px] font-medium leading-[normal] text-text">
+      {name ? t('playerGreeting', { name }) : t('playerGreetingNoName')}
+    </h1>
   );
 }
 
 /**
- * Arrangement block — the invitation ⇄ arranged switch plus the optional cup
- * row. With no created games it leads with the «Sett opp en runde» invitation
- * (never an empty list); with ≥1 it shrinks the invitation to a quiet
- * «+ Ny runde» affordance above the capped list. The cup tile appears whenever
- * the player is part of ≥1 cup — created, on a draft roster, or played
- * (#1463) — independent of games (#10 discoverability). It is the same dense
- * row the organiser's core doors use (#1557, #1559); the count sits in the
- * meta line in words, not as a bare champagne number.
- *
- * `null` means that read failed (#2490): `games` and `cupCount` come from two
- * independent reads, so each failure gets its own error box and never hides
- * what the other read did fetch.
+ * «Lag en ny runde» — the room's one door for a new round (#2493; owner's
+ * answer 2026-10-03: it stands here only). «Med kompiser» and «For klubben»
+ * open the wizard with the tile chosen; someone who cannot make a club
+ * tournament (`isClubAdminAnywhere`, the same guard as `IntentSelector`) gets
+ * «Annen runde», the wizard without a preset.
  */
-export function ArrangementView({
-  games,
-  hasMore,
-  cupCount,
-}: {
-  games: ArrangedGame[] | null;
-  hasMore: boolean;
-  cupCount: number | null;
-}) {
+export function NewRoundCard({ isClubAdmin }: { isClubAdmin: boolean }) {
   const t = useTranslations('admin.dashboard');
-  const hasGames = games !== null && games.length > 0;
-
   return (
-    <section className="mb-6">
-      {games === null ? (
-        <SectionError testId="klubbhus-arrangement-error" />
-      ) : hasGames ? (
-        <>
-          <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {t('playerArrangedLabel')}
-            </p>
-            <SmartLink
-              href="/opprett-spill"
-              data-testid="player-new-round"
-              className={QUIET_LINK}
-            >
-              + {t('playerNewRound')}
-            </SmartLink>
-          </div>
-          <nav className="space-y-2">
-            {games.map((g) => (
-              <SmartLink
-                key={g.id}
-                href={`/games/${g.id}`}
-                data-testid="player-arranged-game"
-                className={ROW_LINK}
-              >
-                <Card className="min-h-[44px] p-4 transition-colors hover:border-primary/30">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="block truncate font-serif text-[15px] font-medium tracking-tight text-text">
-                        {g.name}
-                      </span>
-                      {g.courseName && (
-                        <span className="mt-0.5 block truncate text-xs text-muted">
-                          {g.courseName}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <StatusChip status={g.status} />
-                      <span aria-hidden className="text-muted">
-                        →
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </SmartLink>
-            ))}
-          </nav>
-          {hasMore && (
-            <div className="mt-2 text-right">
-              <SmartLink
-                href="/klubbhuset"
-                data-testid="player-see-all"
-                className={QUIET_LINK}
-              >
-                {t('playerSeeAll')} →
-              </SmartLink>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="space-y-3">
-          <LinkButton
-            href="/opprett-spill"
-            full
-            className="bg-primary text-white dark:text-bg"
-            data-testid="player-invite-primary"
+    <section
+      data-testid="new-round-card"
+      data-focus-surface="strong"
+      className="-mx-1 mt-3.5 flex flex-col gap-2.5 rounded-[18px] bg-surface-strong px-4 py-3.5 text-bg-tint"
+    >
+      <h2 className="font-serif text-xl font-semibold leading-[normal]">{t('newRoundTitle')}</h2>
+      <div className="grid grid-cols-2 gap-2">
+        <SmartLink
+          href="/opprett-spill?intent=kompis"
+          data-testid="new-round-friends"
+          className="flex h-12 items-center justify-center rounded-full bg-bg-tint text-[15px] font-semibold leading-[normal] text-surface-strong"
+        >
+          {t('newRoundFriends')}
+        </SmartLink>
+        {isClubAdmin ? (
+          <SmartLink
+            href="/opprett-spill?intent=klubb"
+            data-testid="new-round-club"
+            className="flex h-12 items-center justify-center rounded-full border border-bg-tint/45 text-[15px] font-semibold leading-[normal] text-bg-tint"
           >
-            {t('playerInviteHeading')}
-          </LinkButton>
-          <div className="text-center">
-            <SmartLink
-              href="/opprett-spill?intent=cup"
-              data-testid="player-invite-cup"
-              className="inline-flex min-h-[44px] items-center rounded font-sans text-sm text-muted underline underline-offset-2 hover:text-text"
-            >
-              {t('playerInviteOrCup')}
-            </SmartLink>
-          </div>
-        </div>
-      )}
-
-      {cupCount === null ? (
-        <div className="mt-2">
-          <SectionError testId="klubbhus-cups-error" />
-        </div>
-      ) : cupCount > 0 && (
-        <div className="mt-2">
-          <DenseTileList
-            tiles={[
-              {
-                label: t('tilesCuper'),
-                href: '/admin/cup',
-                meta: t('playerCupMeta', { n: cupCount }),
-                icon: 'pokal',
-                testId: 'player-cup-row',
-              },
-            ]}
-          />
-        </div>
-      )}
+            {t('newRoundClub')}
+          </SmartLink>
+        ) : (
+          <SmartLink
+            href="/opprett-spill"
+            data-testid="new-round-other"
+            className="flex h-12 items-center justify-center rounded-full border border-bg-tint/45 text-[15px] font-semibold leading-[normal] text-bg-tint"
+          >
+            {t('newRoundOther')}
+          </SmartLink>
+        )}
+      </div>
     </section>
   );
 }
 
-export function ArrangementSkeleton() {
+export function NewRoundCardSkeleton() {
   return (
-    <section className="mb-6 space-y-3">
-      <Skeleton className="h-12 w-full rounded-full" />
-      <Skeleton className="mx-auto h-4 w-28" delay={60} />
-    </section>
+    <div
+      aria-hidden
+      className="-mx-1 mt-3.5 flex flex-col gap-2.5 rounded-[18px] bg-surface-strong px-4 py-3.5"
+    >
+      <Skeleton className="h-6 w-40" />
+      <div className="grid grid-cols-2 gap-2">
+        <Skeleton className="h-12 rounded-full" delay={60} />
+        <Skeleton className="h-12 rounded-full" delay={120} />
+      </div>
+    </div>
   );
 }
+
+/** A white card of rows, as every group in the room artboards draws it. */
+function RoomCard({ children }: { children: ReactNode }) {
+  return (
+    <ul className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface">{children}</ul>
+  );
+}
+
+/** One row: name over a muted line, ending in «›». The whole row is the link. */
+function RoomRow({
+  href,
+  name,
+  line,
+  first,
+  minHeight,
+  testId,
+}: {
+  href: string;
+  name: string;
+  line: string;
+  first: boolean;
+  minHeight: 'min-h-16' | 'min-h-[60px]';
+  testId: string;
+}) {
+  return (
+    <li className={first ? undefined : 'border-t border-row-divider-warm'}>
+      <SmartLink
+        href={href}
+        data-testid={testId}
+        className={`flex ${minHeight} items-center gap-3 px-3.5 py-2.5 text-text`}
+      >
+        <span className="min-w-0 grow">
+          <span className="block text-[15px] font-semibold leading-[normal]">{name}</span>
+          <span className="mt-0.5 block text-xs leading-[normal] text-muted">{line}</span>
+        </span>
+        <span aria-hidden className="text-[18px] leading-[normal] text-muted">
+          ›
+        </span>
+      </SmartLink>
+    </li>
+  );
+}
+
+/** A club row's data: the club, your role, the member count and its next round. */
+export type RoomClub = MyClub & {
+  members: number;
+  /** ISO tee-off of the next scheduled round with a time, or null. */
+  nextRoundAt: string | null;
+};
 
 /**
- * Dine klubber — inline list of the player's clubs (the club page owns the
- * depth). With no clubs the section collapses to a discreet «ikke med i en
- * klubb ennå»-line that keeps the door open to /klubber. `null` means the read
- * failed (#2490): an error box, not the «no club» line.
+ * Klubbene dine — role, member count and the next round per club (#2493). With
+ * no clubs the section collapses to the discreet «ikke med i en klubb ennå»
+ * line that keeps the door open to /klubber. `null` means a read failed
+ * (#2490): an error box, not the «no club» line.
  */
-export function ClubsView({ clubs }: { clubs: MyClub[] | null }) {
+export function ClubsView({ clubs }: { clubs: RoomClub[] | null }) {
   const t = useTranslations('admin.dashboard');
   const tRoles = useTranslations('klubb.roles');
+  const locale = useLocale() as AppLocale;
 
   if (clubs === null) {
     return (
-      <section className="mb-6">
+      <section className="pt-[18px]">
         <SectionError testId="klubbhus-clubs-error" />
       </section>
     );
@@ -220,7 +161,7 @@ export function ClubsView({ clubs }: { clubs: MyClub[] | null }) {
 
   if (clubs.length === 0) {
     return (
-      <section className="mb-6">
+      <section className="pt-[18px]">
         <SmartLink
           href="/klubber"
           data-testid="player-no-club"
@@ -233,81 +174,161 @@ export function ClubsView({ clubs }: { clubs: MyClub[] | null }) {
   }
 
   return (
-    <section className="mb-6">
-      <p className={SECTION_LABEL}>{t('playerClubsLabel')}</p>
-      <nav className="space-y-2">
-        {clubs.map((club) => (
-          <SmartLink
+    <section aria-labelledby="room-clubs-heading">
+      <RoomGroupHeading id="room-clubs-heading">{t('playerClubsLabel')}</RoomGroupHeading>
+      <RoomCard>
+        {clubs.map((club, i) => (
+          <RoomRow
             key={club.id}
             href={withKlubbhusOrigin(`/klubber/${club.id}`)}
-            data-testid="player-club-row"
-            className={ROW_LINK}
-          >
-            <Card className="min-h-[44px] p-4 transition-colors hover:border-primary/30">
-              <div className="flex items-center justify-between gap-3">
-                <span className="block truncate font-serif text-[15px] font-medium tracking-tight text-text">
-                  {club.name}
-                </span>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {tRoles(club.role)}
-                  </span>
-                  <span aria-hidden className="text-muted">
-                    →
-                  </span>
-                </div>
-              </div>
-            </Card>
-          </SmartLink>
+            name={club.name}
+            line={[
+              tRoles(club.role),
+              t('playerClubMembers', { n: club.members }),
+              club.nextRoundAt
+                ? t('playerClubNextRound', {
+                    date: formatTeeOffDateLocale(new Date(club.nextRoundAt), locale),
+                  })
+                : t('playerClubNoRounds'),
+            ].join(' · ')}
+            first={i === 0}
+            minHeight="min-h-16"
+            testId="player-club-row"
+          />
         ))}
-      </nav>
+      </RoomCard>
     </section>
   );
 }
 
-export function ClubsSkeleton() {
+/** A cup row's data: where it leads and how far it has come. */
+export type RoomCup = {
+  id: string;
+  name: string;
+  href: string;
+  played: number;
+  total: number;
+};
+
+/**
+ * Cuper — one row per cup you are in that is not finished, with «Du er med ·
+ * 3 av 8 kamper spilt» (#2493). Finished cups stand on /admin/cup; with only
+ * those, the room keeps today's «Cuper · Du er med i {n}» row. `null` means a
+ * read failed (#2490).
+ */
+export function CupsView({
+  cups,
+  finishedCount,
+}: {
+  cups: RoomCup[] | null;
+  finishedCount: number;
+}) {
+  const t = useTranslations('admin.dashboard');
+
+  if (cups === null) {
+    return (
+      <section className="pt-[18px]">
+        <SectionError testId="klubbhus-cups-error" />
+      </section>
+    );
+  }
+
+  if (cups.length === 0) {
+    if (finishedCount === 0) return null;
+    return (
+      <section className="pt-[18px]">
+        <DenseTileList
+          tiles={[
+            {
+              label: t('tilesCuper'),
+              href: '/admin/cup',
+              meta: t('playerCupMeta', { n: finishedCount }),
+              icon: 'pokal',
+              testId: 'player-cup-row',
+            },
+          ]}
+        />
+      </section>
+    );
+  }
+
   return (
-    <section className="mb-6 space-y-2">
-      <Skeleton className="ml-1 h-3 w-24" />
-      <Skeleton className="h-14 w-full rounded-2xl" delay={60} />
+    <section aria-labelledby="room-cups-heading">
+      <RoomGroupHeading id="room-cups-heading">{t('tilesCuper')}</RoomGroupHeading>
+      <RoomCard>
+        {cups.map((cup, i) => (
+          <RoomRow
+            key={cup.id}
+            href={cup.href}
+            name={cup.name}
+            line={
+              cup.total === 0
+                ? t('playerCupNoMatches')
+                : t('playerCupProgress', { played: cup.played, total: cup.total })
+            }
+            first={i === 0}
+            minHeight="min-h-16"
+            testId="player-cup-row"
+          />
+        ))}
+      </RoomCard>
     </section>
+  );
+}
+
+/** Clubs and cups while they load: a label over a card of rows. */
+export function RoomSectionSkeleton({ rows }: { rows: number }) {
+  return (
+    <div aria-hidden>
+      <div className="pt-[18px] pb-2">
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <div className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface">
+        {Array.from({ length: rows }, (_, i) => (
+          <div
+            key={i}
+            className={`flex min-h-16 flex-col justify-center gap-1.5 px-3.5 py-2.5 ${i > 0 ? 'border-t border-row-divider-warm' : ''}`}
+          >
+            <Skeleton className="h-4 w-1/2" delay={i * 90} />
+            <Skeleton className="h-3 w-2/3" delay={i * 90 + 40} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 /**
- * Verktøy — always shown, de-emphasised tools at the bottom of the room:
- * adding a course and browsing the format reference. Same `DenseTileList` row
- * as the cup entry above and the organiser's core doors (#1559), so the whole
- * room speaks one shape and the helper lines survive. Baner and Spillformater
- * carry the Klubbhuset origin so their back link returns here (#2487);
- * /foreslaa-ide already goes back to /admin.
+ * Verktøy — Baner, Spillformater and «Har du en idé?» as plain rows without
+ * icons, as both room artboards draw them. Baner and Spillformater carry the
+ * Klubbhuset origin so their back link returns here (#2487); /foreslaa-ide
+ * already goes back to /admin.
  */
 export function ToolsView() {
   const t = useTranslations('admin.dashboard');
-  const tiles: Tile[] = [
+  const rows = [
+    { href: withKlubbhusOrigin('/opprett-bane'), name: t('playerBaner'), line: t('playerBanerMeta') },
     {
-      label: t('playerBaner'),
-      href: withKlubbhusOrigin('/opprett-bane'),
-      meta: t('playerBanerMeta'),
-      icon: 'bane',
-    },
-    {
-      label: t('playerSpillformater'),
       href: withKlubbhusOrigin('/spillformater'),
-      meta: t('playerSpillformaterMeta'),
-      icon: 'spillformater',
+      name: t('playerSpillformater'),
+      line: t('playerSpillformaterMeta'),
     },
-    {
-      label: t('playerForeslaaIde'),
-      href: '/foreslaa-ide',
-      meta: t('playerForeslaaIdeMeta'),
-      icon: 'sparkle',
-    },
+    { href: '/foreslaa-ide', name: t('playerForeslaaIde'), line: t('playerForeslaaIdeMeta') },
   ];
   return (
-    <section>
-      <p className={SECTION_LABEL}>{t('playerToolsLabel')}</p>
-      <DenseTileList tiles={tiles} />
+    <section aria-labelledby="room-tools-heading">
+      <RoomGroupHeading id="room-tools-heading">{t('playerToolsLabel')}</RoomGroupHeading>
+      <RoomCard>
+        {rows.map((row, i) => (
+          <RoomRow
+            key={row.href}
+            {...row}
+            first={i === 0}
+            minHeight="min-h-[60px]"
+            testId="player-tool-row"
+          />
+        ))}
+      </RoomCard>
     </section>
   );
 }
