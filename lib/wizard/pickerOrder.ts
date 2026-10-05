@@ -10,9 +10,6 @@
 
 import { sortByLastPlayed, type FriendStats } from '@/lib/friends/friendStats';
 
-/** Stats chunk size: keeps each `.in('user_id', …)` well under the URL limit. */
-export const PICKER_STATS_CHUNK = 100;
-
 export function orderPickerPlayers<T extends { id: string; name: string | null }>(
   players: readonly T[],
   stats: ReadonlyMap<string, Pick<FriendStats, 'lastPlayedAt'>>,
@@ -42,10 +39,4 @@ export function pickerStatsIds({
   }
   ids.delete(selfId);
   return [...ids];
-}
-
-export function chunkIds<T>(ids: readonly T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
-  return chunks;
 }

@@ -9,6 +9,7 @@ type Variant =
   | 'danger'
   | 'ghost'
   | 'outline'
+  | 'onStrong'
   | 'onStrongGold'
   | 'onStrongOutline'
   | 'quiet'
@@ -53,6 +54,9 @@ const VARIANTS: Record<Variant, string> = {
     'font-medium tracking-tight border border-primary bg-surface text-primary hover:bg-primary-soft',
   // On --surface-strong (the front page's green top, #2261): a flat gold pill
   // and a linen outline, as the artboard draws them — no shadow, no lift.
+  // `onStrong` is the filled linen pill («Del lenken din», #2267).
+  onStrong:
+    'bg-on-strong text-surface-strong font-semibold tracking-normal hover:bg-on-strong/90',
   onStrongGold:
     'bg-accent text-text dark:text-bg font-semibold tracking-normal hover:bg-accent/90',
   onStrongOutline:
@@ -73,6 +77,7 @@ const COMPACT_VARIANTS: Record<Variant, string> = {
   danger: 'px-[14px] bg-danger hover:opacity-90 text-white dark:text-bg',
   ghost: 'px-[14px] bg-transparent hover:bg-primary-soft text-text',
   outline: 'px-3 border border-primary bg-surface text-primary hover:bg-primary-soft',
+  onStrong: 'px-[14px] bg-on-strong text-surface-strong hover:bg-on-strong/90',
   onStrongGold: 'px-[14px] bg-accent text-text dark:text-bg hover:bg-accent/90',
   onStrongOutline:
     'px-[14px] bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
@@ -90,6 +95,7 @@ const LARGE_VARIANTS: Record<Variant, string> = {
   danger: 'bg-danger hover:opacity-90 text-white dark:text-bg disabled:opacity-50',
   ghost: 'bg-transparent hover:bg-primary-soft text-text disabled:opacity-50',
   outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft disabled:opacity-50',
+  onStrong: 'bg-on-strong text-surface-strong hover:bg-on-strong/90 disabled:opacity-50',
   onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90 disabled:opacity-50',
   onStrongOutline:
     'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10 disabled:opacity-50',
@@ -110,6 +116,7 @@ const CHIP_VARIANTS: Record<Variant, string> = {
   danger: 'bg-danger hover:opacity-90 text-white dark:text-bg',
   ghost: 'bg-transparent hover:bg-primary-soft text-text',
   outline: 'border border-primary bg-surface text-primary hover:bg-primary-soft',
+  onStrong: 'bg-on-strong text-surface-strong hover:bg-on-strong/90',
   onStrongGold: 'bg-accent text-text dark:text-bg hover:bg-accent/90',
   onStrongOutline: 'bg-transparent border border-on-strong/50 text-on-strong hover:bg-on-strong/10',
   quiet: 'bg-transparent hover:bg-primary-soft text-primary',

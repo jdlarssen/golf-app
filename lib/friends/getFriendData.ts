@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getCoPlayerIds } from '@/lib/users/getCoPlayerIds';
+import { readInChunks } from '@/lib/notifications/inboxReads';
 import {
   partitionFriendships,
   suggestionIds,
@@ -56,13 +57,20 @@ export async function getFriendData(userId: string): Promise<FriendData> {
   const allIds = [...new Set([...relatedIds, ...suggestion])];
   const byId = new Map<string, FriendUser>();
   if (allIds.length > 0) {
-    const { data: users, error: usersError } = await admin
-      .from('users')
-      .select('id, name, nickname, email')
-      .in('id', allIds)
-      .returns<FriendUser[]>();
-    if (usersError) console.error('[getFriendData] user lookup failed', usersError);
-    for (const u of users ?? []) byId.set(u.id, u);
+    // #2267: in slices, since a club-scale list passes the `.in()` URL limit.
+    // A failed slice leaves no names, as a failed single lookup did.
+    try {
+      const users = await readInChunks<FriendUser>(allIds, (slice) =>
+        admin
+          .from('users')
+          .select('id, name, nickname, email')
+          .in('id', slice)
+          .returns<FriendUser[]>(),
+      );
+      for (const u of users) byId.set(u.id, u);
+    } catch (e) {
+      console.error('[getFriendData] user lookup failed', e);
+    }
   }
 
   const sortByName = (a: FriendUser, b: FriendUser) =>

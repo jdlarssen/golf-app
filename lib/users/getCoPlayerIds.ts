@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRowsResult } from '@/lib/supabase/selectAllRows';
+import { chunkIds } from '@/lib/notifications/inboxReads';
 import type { GameStatus } from '@/lib/games/status';
 
 /**
@@ -40,24 +41,32 @@ export async function getCoPlayerIds(userId: string): Promise<string[]> {
   ];
   if (gameIds.length === 0) return [];
 
-  const { data: coRows, error: coError } = await selectAllRowsResult(
-    (from, to) =>
-      admin
-        .from('game_players')
-        .select('user_id')
-        .in('game_id', gameIds)
-        .neq('user_id', userId)
-        .order('game_id')
-        .order('user_id')
-        .range(from, to)
-        .returns<{ user_id: string }[]>(),
-    'getCoPlayerIds co-players',
+  // #2267: the games in slices, since a club-scale player passes the `.in()`
+  // URL limit. A failed slice gives an empty list, as a failed read did.
+  const results = await Promise.all(
+    chunkIds(gameIds).map((slice) =>
+      selectAllRowsResult(
+        (from, to) =>
+          admin
+            .from('game_players')
+            .select('user_id')
+            .in('game_id', slice)
+            .neq('user_id', userId)
+            .order('game_id')
+            .order('user_id')
+            .range(from, to)
+            .returns<{ user_id: string }[]>(),
+        'getCoPlayerIds co-players',
+      ),
+    ),
   );
-  if (coError || !coRows) {
-    if (coError) {
-      console.error('[getCoPlayerIds] co-player lookup failed', coError);
+  const ids = new Set<string>();
+  for (const { data, error } of results) {
+    if (error || !data) {
+      if (error) console.error('[getCoPlayerIds] co-player lookup failed', error);
+      return [];
     }
-    return [];
+    for (const r of data) ids.add(r.user_id);
   }
-  return [...new Set(coRows.map((r) => r.user_id))];
+  return [...ids];
 }

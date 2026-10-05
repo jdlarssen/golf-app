@@ -133,15 +133,46 @@ describe('GET /api/friends', () => {
         {
           id: KARI,
           name: 'Kari Nordmann «Kaka»',
+          initials: 'KN',
           hcp: 9.4,
           stats: { roundsTogether: 8, lastPlayedAt: '2026-09-26T09:00:00Z', lastGameName: 'Onsdagsgolfen' },
         },
       ],
-      incoming: [{ requestId: 'req-inn', id: 'uten-navn', name: expect.any(String), stats: NONE }],
-      outgoing: [{ requestId: 'req-ut', id: 'ola', name: 'Ola', stats: NONE }],
-      suggestions: [{ id: 'per', name: 'Per', stats: NONE }],
+      incoming: [{ requestId: 'req-inn', id: 'uten-navn', name: expect.any(String), initials: 'N', stats: NONE }],
+      outgoing: [{ requestId: 'req-ut', id: 'ola', name: 'Ola', initials: 'O', stats: NONE }],
+      suggestions: [{ id: 'per', name: 'Per', initials: 'P', stats: NONE }],
       friendCode: 'KODE123',
     });
+  });
+
+  it('hides the handicap of a friend you have no finished round with (#2267)', async () => {
+    statsMock.mockResolvedValue(new Map());
+    const body = await (await GET(req('', { token: TOKEN }))).json();
+    expect(handicapsMock).toHaveBeenCalledWith([KARI]);
+    expect(body.friends).toEqual([
+      { id: KARI, name: 'Kari Nordmann «Kaka»', initials: 'KN', hcp: null, stats: NONE },
+    ]);
+  });
+
+  it('puts the suggestion you played most with first (#2267)', async () => {
+    getFriendDataMock.mockResolvedValue({
+      friends: [],
+      incoming: [],
+      outgoing: [],
+      suggestions: [
+        { id: 'anne', name: 'Anne', nickname: null, email: 'anne@example.com' },
+        { id: 'bjorn', name: 'Bjørn', nickname: null, email: 'bjorn@example.com' },
+        { id: 'cato', name: 'Cato', nickname: null, email: 'cato@example.com' },
+      ],
+    });
+    statsMock.mockResolvedValue(
+      new Map([
+        ['cato', { roundsTogether: 4, lastPlayedAt: '2026-06-01T09:00:00Z', lastGameName: 'Vår' }],
+        ['bjorn', { roundsTogether: 1, lastPlayedAt: '2026-09-01T09:00:00Z', lastGameName: 'Høst' }],
+      ]),
+    );
+    const body = await (await GET(req('', { token: TOKEN }))).json();
+    expect(body.suggestions.map((s: { id: string }) => s.id)).toEqual(['cato', 'bjorn', 'anne']);
   });
 
   it('setter vennen dere spilte med sist først, og resten etter navn', async () => {
@@ -168,12 +199,11 @@ describe('GET /api/friends', () => {
   it('gir listene uten tallene når de ikke kan leses', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     statsMock.mockRejectedValue(new Error('nede'));
-    handicapsMock.mockRejectedValue(new Error('nede'));
     const res = await GET(req('', { token: TOKEN }));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.friends).toEqual([{ id: KARI, name: 'Kari Nordmann «Kaka»', hcp: null, stats: null }]);
-    expect(body.suggestions).toEqual([{ id: 'per', name: 'Per', stats: null }]);
+    expect(body.friends).toEqual([{ id: KARI, name: 'Kari Nordmann «Kaka»', initials: 'KN', hcp: null, stats: null }]);
+    expect(body.suggestions).toEqual([{ id: 'per', name: 'Per', initials: 'P', stats: null }]);
   });
 
   it('sender ingen e-postadresse til andre ut av serveren', async () => {
