@@ -48,7 +48,7 @@ type SearchParams = Promise<{
   // param som peker på en ugyldig kilde (ikke deltaker, ikke finished,
   // cup/liga) ignoreres stille og gir en helt vanlig tom veiviser.
   fra?: string | string[];
-  // #1023: «Arranger runde her» på de offentlige banesidene dyplenker hit
+  // #1023: «Arranger en runde på …» på de offentlige banesidene dyplenker hit
   // med banens id. Serverside-validert i loadBaneCourseId; ugyldig/ukjent id
   // ignoreres stille. `?fra=` vinner når begge er satt (revansje er rikere).
   bane?: string | string[];
