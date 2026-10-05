@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import {
   buildSupabaseMock,
   makeLocaleRedirectMock,
@@ -84,11 +85,9 @@ vi.mock('@/lib/notifications/notify', () => ({
 
 // #2203: an approval or a withdrawal can make the round ready to finish. The
 // message has its own suite (organizerNotices.test.ts); here only who asks.
-const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
-vi.mock('@/lib/notifications/organizerNotices', () => ({
-  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
-    notifyOrganizerIfAllDeliveredMock(...args),
-}));
+// The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
+vi.mock('@/lib/notifications/organizerNotices');
+const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
 // #2207: startScheduledGameAction only translates the core's answer into a
 // redirect; the core itself is covered in lib/games/startScheduledGame.test.ts.

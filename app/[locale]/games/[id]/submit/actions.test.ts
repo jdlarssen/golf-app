@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import {
   buildSupabaseMock,
   makeLocaleRedirectMock,
@@ -35,11 +36,9 @@ vi.mock('next/cache', () => ({
 
 // #2203: «alle har levert» has its own suite (organizerNotices.test.ts); here
 // it is the boundary, so its reads never touch the admin client's FIFO queue.
-const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
-vi.mock('@/lib/notifications/organizerNotices', () => ({
-  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
-    notifyOrganizerIfAllDeliveredMock(...args),
-}));
+// The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
+vi.mock('@/lib/notifications/organizerNotices');
+const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
 // notify() svarer «utenfor appen» som standard (shouldAlsoSendMail: true). En
 // levering sender likevel aldri e-post (#2203, eierens svar 2026-10-05).

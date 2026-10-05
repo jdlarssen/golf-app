@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
 
 /**
@@ -51,11 +52,9 @@ vi.mock('@/lib/notifications/notify', () => ({
 
 // #2203: the last missing player withdrawing can make the round ready; that
 // has its own suite, here only that the withdrawal asks.
-const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
-vi.mock('@/lib/notifications/organizerNotices', () => ({
-  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
-    notifyOrganizerIfAllDeliveredMock(...args),
-}));
+// The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
+vi.mock('@/lib/notifications/organizerNotices');
+const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
 let adminMock: ReturnType<typeof buildSupabaseMock>;
 

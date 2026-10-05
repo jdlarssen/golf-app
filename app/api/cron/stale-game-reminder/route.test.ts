@@ -5,6 +5,7 @@ import {
   type QueryOp,
   type QueryResponse,
 } from '@/lib/supabase/testing/adminClientMock';
+import { recordingClient } from '@/tests/queryBuilderMock';
 
 /**
  * Type A (#2203): the stale sweep's orchestration — the candidate filter it
@@ -26,13 +27,16 @@ function respond(op: QueryOp): QueryResponse {
 }
 
 const fake = createAdminClientMock({ respond: (op) => respond(op) });
+// The admin-client double records filters but not `.order()`. The one test
+// that proves the order swaps in a recorder that logs every chained call.
+const recorder = recordingClient(() => ({ data: [], error: null }));
+let useRecorder = false;
 
 vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => fake.client,
+  getAdminClient: () => (useRecorder ? recorder.client : fake.client),
 }));
-vi.mock('@/lib/notifications/organizerNotices', () => ({
-  runStaleGameReminderForGame: vi.fn(),
-}));
+// The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
+vi.mock('@/lib/notifications/organizerNotices');
 
 import { NextRequest } from 'next/server';
 import { runStaleGameReminderForGame } from '@/lib/notifications/organizerNotices';
@@ -54,6 +58,8 @@ function game(id: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   fake.reset();
+  recorder.reset();
+  useRecorder = false;
   process.env.CRON_SECRET = 'test-secret';
   pending = { data: [] };
   runMock.mockResolvedValue({ reminded: true });
@@ -106,6 +112,19 @@ describe('POST /api/cron/stale-game-reminder — the candidates', () => {
       { op: 'lt', column: 'started_at', value: '2026-10-04T12:00:00.000Z' },
     ]);
     expect(read.range).toEqual([0, 24]);
+  });
+
+  it('takes the oldest rounds first, 25 per run: the cap leans on that order', async () => {
+    // A round that is still being played stays a candidate. Oldest first means
+    // the rounds that have waited longest are checked first, and a newer
+    // round waits at most for the older ones to be finished or reminded.
+    useRecorder = true;
+    await POST(cronRequest());
+
+    const calls = recorder.calls();
+    expect(calls).toContainEqual(['from', 'games']);
+    expect(calls).toContainEqual(['order', 'started_at', { ascending: true }]);
+    expect(calls).toContainEqual(['range', 0, 24]);
   });
 
   it('runs exactly the games the database gave, and counts the reminders', async () => {

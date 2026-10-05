@@ -185,20 +185,19 @@ describe('notifyOrganizerIfAllDelivered', () => {
     expect(mailMock.mock.calls[0]?.[0]).toMatchObject({ recipientFirstName: null, locale: null });
   });
 
-  it('never throws: a failed read, a failed claim, a failed notify and a failed mail are logged', async () => {
+  it.each([
+    ['the game read fails', 'read failed', () => { db.gameError = true; }],
+    ['the claim fails', 'claim failed', () => { db.claimError = true; }],
+    ['notify throws', 'notify failed', () => { notifyMock.mockRejectedValueOnce(new Error('insert failed')); }],
+    ['the mail throws', 'mail failed', () => {
+      notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true });
+      mailMock.mockRejectedValueOnce(new Error('resend down'));
+    }],
+  ])('never throws when %s: it logs «… all_scorecards_delivered %s»', async (_label, line, arrange) => {
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    db.gameError = true;
+    arrange();
     await expect(notifyOrganizerIfAllDelivered(GAME_ID, PER, 'test')).resolves.toBeUndefined();
-    db.gameError = false;
-    db.claimError = true;
-    await expect(notifyOrganizerIfAllDelivered(GAME_ID, PER, 'test')).resolves.toBeUndefined();
-    db.claimError = false;
-    notifyMock.mockRejectedValueOnce(new Error('insert failed'));
-    await expect(notifyOrganizerIfAllDelivered(GAME_ID, PER, 'test')).resolves.toBeUndefined();
-    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true });
-    mailMock.mockRejectedValueOnce(new Error('resend down'));
-    await expect(notifyOrganizerIfAllDelivered(GAME_ID, PER, 'test')).resolves.toBeUndefined();
-    expect(err).toHaveBeenCalled();
+    expect(err).toHaveBeenCalledWith(`[test] all_scorecards_delivered ${line}`, expect.anything());
     err.mockRestore();
   });
 });
