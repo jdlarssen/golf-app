@@ -159,6 +159,8 @@ const mockState: { bundle: unknown; scores: unknown[] } = {
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #2201: merk-lest har sin egen test (lib/useMarkVisitRead.test.tsx); her er den støy.
+jest.mock('../lib/useMarkVisitRead', () => ({ useMarkVisitRead: jest.fn() }));
 // Telefonens lys/mørk, satt per test. Sollys (#2252) skal slå den på hullsiden.
 const mockScheme: { value: 'light' | 'dark' } = { value: 'light' };
 const mockFocus = { value: true };

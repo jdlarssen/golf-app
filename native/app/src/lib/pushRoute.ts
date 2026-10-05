@@ -14,7 +14,13 @@
 // `request.trigger.payload`, som er hele `userInfo`. `content.data` leses som
 // reserve.
 //
+// **Hvilket varsel** (#2201): serveren legger `?varsel=<id>` på lenka, så et
+// trykk kan merke akkurat det varselet som lest. Markøren endrer ikke hvor
+// trykket går; `pushNotificationId` leser den med webbens egen
+// `readMarkerFrom`, så regelen for hva som er en gyldig id har ett hjem.
+//
 // Ren og I/O-fri (Type A).
+import { readMarkerFrom } from '../../../../lib/notifications/readMarker';
 
 export type PushTarget =
   | { name: 'GameHome'; params: { gameId: string } }
@@ -62,4 +68,13 @@ export function pushTarget(url: string | null): PushTarget {
     }
   }
   return { name: 'Home' };
+}
+
+/** Id-en til varselet lenka gjelder (`?varsel=<id>`), eller `null`. */
+export function pushNotificationId(url: string | null): string | null {
+  if (!url) return null;
+  const query = url.indexOf('?');
+  if (query === -1) return null;
+  const hash = url.indexOf('#', query);
+  return readMarkerFrom(url.slice(query, hash === -1 ? undefined : hash));
 }

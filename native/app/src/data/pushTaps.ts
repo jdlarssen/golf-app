@@ -11,9 +11,20 @@
 // **Mens appen er åpen** vises ikke varselet som banner eller i varsellista:
 // spilleren ser alt allerede i appen.
 //
+// **Lest** (#2201): lenka bærer `?varsel=<id>`, og trykket merker akkurat det
+// varselet som lest, også når skjermen det åpner ikke er den webben ville
+// åpnet (godkjenning og resultat åpner spillets side her).
+//
 // Gjør ingenting i et bygg uten den native delen, eller på Android
 // (`canUsePush`).
-import { pushTarget, pushUrl, type PushRequestLike, type PushTarget } from '../lib/pushRoute';
+import {
+  pushNotificationId,
+  pushTarget,
+  pushUrl,
+  type PushRequestLike,
+  type PushTarget,
+} from '../lib/pushRoute';
+import { markNotificationRead } from './markRead';
 import { canUsePush, notificationsModule } from './pushDevice';
 
 type ResponseLike = { actionIdentifier: string; notification: { request: unknown } };
@@ -41,7 +52,10 @@ export function listenForPushTaps(open: (target: PushTarget) => void): () => voi
       notifications.clearLastNotificationResponse();
       if (id != null && id === lastHandled) return;
       lastHandled = id;
-      open(pushTarget(pushUrl(request)));
+      const url = pushUrl(request);
+      const notificationId = pushNotificationId(url);
+      if (notificationId) void markNotificationRead(notificationId);
+      open(pushTarget(url));
     };
 
     const coldStart = notifications.getLastNotificationResponse();

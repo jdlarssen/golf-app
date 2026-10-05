@@ -126,6 +126,7 @@ import { wolfHoleState, wolfPointsByUser, wolfStake } from '../lib/wolfHole';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, interLine, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 const HOLE_COUNT = 18;
 /**
@@ -173,6 +174,8 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   const { colors, ui } = useTheme();
   const { gameId, holeNumber } = route.params;
   const { userId } = useSession();
+  // #2201: påminnelsen om et hull uten slag er lest når du står på et hull.
+  useMarkVisitRead('gameHole', gameId);
   const { bundle, loading, refresh: refreshBundle } = useGameBundle(gameId);
   const { scores: localScores, reload, loaded: scoresLoaded } = useLocalScores(gameId, POLL_MS);
   // #2067: lagets rader fra før en kontosletting ligger på den trukne

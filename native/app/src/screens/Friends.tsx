@@ -80,6 +80,7 @@ import { PageTitle } from '../components/PageTitle';
 import { withSystemArrows } from '../components/SystemArrow';
 import type { ScreenProps } from '../navigation';
 import { FONTS, fraunces, interLine, TAP, useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 type LoadState =
   | { state: 'loading' }
@@ -93,6 +94,8 @@ function toLoadState(result: Awaited<ReturnType<typeof fetchFriends>>): LoadStat
 export function Friends({ route }: ScreenProps<'Friends'>) {
   const { ui, colors } = useTheme();
   const selfInitials = route.params?.selfInitials ?? null;
+  // #2201: venneforespørsler er lest når du har åpnet vennelista.
+  useMarkVisitRead('friends');
   const [load, setLoad] = useState<LoadState>({ state: 'loading' });
   const [line, setLine] = useState<StatusLine | null>(null);
   const [inviteEmail, setInviteEmail] = useState<string | null>(null);

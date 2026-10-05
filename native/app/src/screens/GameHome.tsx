@@ -93,6 +93,7 @@ import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 /** Appen fører bare hele runder — segment-spill gates bort i `formatGate`. */
 const HOLE_COUNT = 18;
@@ -101,6 +102,8 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
+  // #2201: det du åpner, er lest.
+  useMarkVisitRead('gameHome', gameId);
   const { bundle, errorText, loading, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før

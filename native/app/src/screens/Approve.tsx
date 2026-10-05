@@ -43,11 +43,14 @@ import { scoresByHoleFor, useGameBundle, useLocalScores } from '../lib/useGameDa
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 export function Approve({ route }: ScreenProps<'Approve'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
+  // #2201: godkjenningsvarslene for spillet er lest når du har åpnet siden.
+  useMarkVisitRead('gameApprove', gameId);
   const { bundle, refresh } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);

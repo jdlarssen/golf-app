@@ -59,6 +59,7 @@ import { useGameBundle, useLocalScores } from '../lib/useGameData';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 /** Samme takt som hull-siden — en drain eller en merge skjer utenfor React. */
 const POLL_MS = 1500;
@@ -131,6 +132,8 @@ const PROBLEM_TEST_IDS: Record<ScoringContextProblem, string> = {
 export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   const { colors, ui } = useTheme();
   const { gameId } = route.params;
+  // #2201: «resultatet er klart» er lest når du har sett tavla.
+  useMarkVisitRead('gameLeaderboard', gameId);
   const { bundle, loading } = useGameBundle(gameId);
   const { scores, reload } = useLocalScores(gameId, POLL_MS);
   // Wolf og BBB henter halve regnestykket fra serveren. Alle andre formater

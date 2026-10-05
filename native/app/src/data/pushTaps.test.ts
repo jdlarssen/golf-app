@@ -23,6 +23,11 @@ jest.mock('expo', () => ({
   requireOptionalNativeModule: (name: string) => mockOptionalNativeModule(name),
 }));
 jest.mock('../supabase', () => ({ supabase: {}, currentDeviceUserId: jest.fn() }));
+// #2201 PR 2: et trykk merker akkurat sitt varsel som lest.
+const mockMarkNotificationRead = jest.fn(async (_id: string) => undefined);
+jest.mock('./markRead', () => ({
+  markNotificationRead: (id: string) => mockMarkNotificationRead(id),
+}));
 
 const GAME = 'game-1';
 
@@ -95,6 +100,32 @@ describe('listenForPushTaps', () => {
     listenForPushTaps(open);
     responseListener?.(tap(`/games/${GAME}`, 'expo.modules.notifications.actions.DISMISS'));
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it('#2201: et trykk med ?varsel=<id> merker akkurat det varselet, og åpner samme skjerm', () => {
+    const NOTE = '5f0c1b2a-3d4e-4f60-8a71-92b3c4d5e6f7';
+    const open = jest.fn();
+    listenForPushTaps(open);
+    responseListener?.(tap(`/games/${GAME}/approve?varsel=${NOTE}`));
+    expect(mockMarkNotificationRead).toHaveBeenCalledTimes(1);
+    expect(mockMarkNotificationRead).toHaveBeenCalledWith(NOTE);
+    expect(open).toHaveBeenCalledWith({ name: 'GameHome', params: { gameId: GAME } });
+  });
+
+  it('#2201: et trykk uten gyldig ?varsel= merker ingenting', () => {
+    listenForPushTaps(jest.fn());
+    responseListener?.(tap(`/games/${GAME}`));
+    responseListener?.(tap(`/games/${GAME}?varsel=ikke-en-id`));
+    expect(mockMarkNotificationRead).not.toHaveBeenCalled();
+  });
+
+  it('#2201: samme trykk som kaldstart og i lytteren merkes én gang', () => {
+    const NOTE = '5f0c1b2a-3d4e-4f60-8a71-92b3c4d5e6f7';
+    const same = tap(`/?varsel=${NOTE}`);
+    mockNotifications.getLastNotificationResponse.mockReturnValue(same);
+    listenForPushTaps(jest.fn());
+    responseListener?.(same);
+    expect(mockMarkNotificationRead).toHaveBeenCalledTimes(1);
   });
 
   it('gjør ingenting uten den native delen', () => {
