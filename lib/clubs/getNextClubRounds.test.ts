@@ -64,6 +64,17 @@ describe('getNextClubRounds', () => {
     });
   });
 
+  it('finds the quiet club its round when a busy club has 50 coming rounds before it', async () => {
+    ROWS = [
+      ...Array.from({ length: 50 }, (_, i) =>
+        round(`soon-${i}`, 'busy', `2026-10-${String(6 + (i % 17)).padStart(2, '0')}T${String(8 + Math.floor(i / 17)).padStart(2, '0')}:00:00.000Z`),
+      ),
+      round('quiet-next', 'quiet', '2026-10-24T08:00:00.000Z'),
+    ];
+    const res = await getNextClubRounds(['busy', 'quiet'], NOW);
+    expect(res.ok && res.next.get('quiet')).toBe('2026-10-24T08:00:00.000Z');
+  });
+
   it('counts a round teeing off right now, skips passed ones and rounds without a time; none left → null', async () => {
     ROWS = [
       round('passed', 'a', '2026-10-05T09:59:59.000Z'),

@@ -14,8 +14,9 @@ import {
 // the one door for a new round, the clubs with numbers, the cups with
 // progress, the tools as plain rows, and an error box per failed read
 // (#2490). Asserts on data-testid/role/href only, never on Norwegian copy.
-// The numbers themselves are Type A (`lib/clubs/clubRoomRows.test.ts`,
-// `lib/cup/cupRoomRows.test.ts`); «Rundene dine» is `ArrangedRoundsView`'s.
+// The numbers themselves are Type A (`lib/clubs/getNextClubRounds.test.ts`,
+// `lib/cup/getRoomCups.test.ts`, `lib/cup/cupRoomRows.test.ts`); «Rundene
+// dine» is `ArrangedRoundsView`'s.
 
 const CLUBS: RoomClub[] = [
   { id: 'club-1', name: 'Oslo Golfklubb', short_id: 'OGK', role: 'admin', members: 142, nextRoundAt: '2026-10-10T07:00:00Z' },
