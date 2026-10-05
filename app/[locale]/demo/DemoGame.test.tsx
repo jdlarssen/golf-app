@@ -24,21 +24,40 @@ describe('DemoGame', () => {
     expect(screen.getByTestId('demo-hint')).toBeInTheDocument();
     expect(screen.getByTestId('demo-skip')).toHaveAttribute('href', '/login?next=%2F');
 
-    // Stripa folder ut tavla og lukker den igjen.
+    // Stripa folder ut tavla og lukker den igjen. aria-controls peker alltid på
+    // et element; tavla monteres bare mens stripa er åpen.
+    const boardBox = screen.getByTestId('demo-board');
+    expect(strip).toHaveAttribute('aria-controls', boardBox.id);
+    expect(boardBox).not.toBeVisible();
     fireEvent.click(strip);
     expect(strip).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByTestId('demo-board')).toBeInTheDocument();
+    expect(within(boardBox).getByTestId('stableford-leaderboard')).toBeVisible();
     fireEvent.click(strip);
-    expect(screen.queryByTestId('demo-board')).not.toBeInTheDocument();
+    expect(boardBox).not.toBeVisible();
+    expect(within(boardBox).queryByTestId('stableford-leaderboard')).not.toBeInTheDocument();
 
-    // Ett trykk: stripa endrer seg i samme render, boblen går, skinna krymper.
+    // Ett trykk: stripa endrer seg i samme render, boblen går, skinna krymper, og
+    // fokus går til «Neste hull» i stedet for å falle til <body>.
     for (let hole = 1; hole <= 3; hole++) {
       const before = strip.getAttribute('aria-label');
       fireEvent.click(screen.getAllByTestId('rail-option')[1]);
       if (hole === 1) expect(strip.getAttribute('aria-label')).not.toBe(before);
       expect(screen.queryByTestId('demo-hint')).not.toBeInTheDocument();
       expect(screen.queryAllByTestId('rail-option')).toHaveLength(0);
+      const next = screen.getByTestId(hole < 3 ? 'demo-next-hole' : 'demo-see-board');
+      expect(next).toHaveFocus();
+
+      if (hole === 1) {
+        // «Angre» fjerner slaget, og fokus går til Deg-raden.
+        fireEvent.click(screen.getByTestId('flight-row'));
+        fireEvent.click(screen.getByTestId('rail-undo'));
+        expect(screen.getByTestId('flight-row')).toHaveFocus();
+        fireEvent.click(screen.getAllByTestId('rail-option')[1]);
+      }
+
       fireEvent.click(screen.getByTestId(hole < 3 ? 'demo-next-hole' : 'demo-see-board'));
+      // Neste hull: fokus på hull-linja. Etter hull 3: på tavla.
+      expect(screen.getByTestId(hole < 3 ? 'demo-hole' : 'demo-final-board')).toHaveFocus();
     }
 
     // Sluttvisningen: hele tavla, CTA inn i login, og navnet fra feltet på tavla.
@@ -52,6 +71,7 @@ describe('DemoGame', () => {
 
     // «Spill på nytt» starter på hull 1 og beholder navnet.
     fireEvent.click(screen.getByTestId('demo-reset'));
+    expect(screen.getByTestId('demo-hole')).toHaveFocus();
     expect(screen.getByTestId('demo-hint')).toBeInTheDocument();
     expect(screen.getAllByTestId('rail-option')).toHaveLength(5);
     expect(window.localStorage.getItem('torny-demo-name')).toBe('Jørgen');

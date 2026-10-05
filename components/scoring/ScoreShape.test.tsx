@@ -83,6 +83,26 @@ describe('ScoreShape', () => {
     expect(Number(lgSize)).toBeGreaterThan(Number(smSize));
   });
 
+  it('row (#2281): a shaped score is 32 px with a 1 px ring on its edge, a plain one 30 px', () => {
+    // The demo's artboard draws a CSS ring outside a 30 px box (content-box),
+    // which renders 32 px with a 1 px stroke; a birdie uses --score-under-ring.
+    const { container, rerender } = render(
+      <ScoreShape shape="circle" tone="under" size="row">2</ScoreShape>,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('width')).toBe('32');
+    const circle = svg?.querySelector('circle');
+    expect(circle?.getAttribute('r')).toBe('15.5');
+    expect(circle?.getAttribute('stroke-width')).toBe('1');
+    expect(circle?.getAttribute('stroke')).toBe('var(--score-under-ring)');
+
+    rerender(
+      <ScoreShape shape="none" tone="par" size="row">3</ScoreShape>,
+    );
+    const plain = container.firstElementChild as HTMLElement;
+    expect(plain.style.width).toBe('30px');
+  });
+
   it('centers the number using lineHeight equal to shape height', () => {
     const { container } = render(
       <ScoreShape shape="circle" tone="under" size="lg">3</ScoreShape>,
