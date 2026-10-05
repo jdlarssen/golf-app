@@ -17,7 +17,7 @@ import {
   updateScheduledAction,
 } from '@/app/[locale]/admin/games/[id]/edit/actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
-import { getRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
+import { withRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   buildEditFormInitialValues,
@@ -163,15 +163,10 @@ async function EditGameFormBody({
   // #2210: every rostered player must be in the options, or the form hides
   // them (and best ball with finished teams crashed). Co-players the creator
   // can already see come first; the rest of the roster is added after them.
-  const knownIds = new Set(players.map((p) => p.id));
-  const missingIds = playerRows
-    .map((r) => r.user_id)
-    .filter((id) => !knownIds.has(id));
-  const rosterOptions = await getRosterPlayerOptions(missingIds);
-  const allPlayers = [
-    ...players,
-    ...rosterOptions.filter((p) => !knownIds.has(p.id)),
-  ];
+  const allPlayers = await withRosterPlayerOptions(
+    players,
+    playerRows.map((r) => r.user_id),
+  );
 
   if (game.status === 'draft') {
     return (
