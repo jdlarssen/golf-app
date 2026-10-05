@@ -185,6 +185,10 @@
   /* «Legg til bane» (#2278): the par pill on the course card. Dark mode uses
    * the --surface-2 value. */
   --par-cell: #f3efe4;
+  /* The disabled «Lagre bane» on the course form (#2278): the artboard's
+   * text colour, 4.68:1 on --border (owner 05.10: «Som tegningen»). Dark keeps
+   * the same contrast on the dark --border. */
+  --save-disabled-fg: #6b604e;
 
   /* Invitation card (#2266): the linen page behind it, the paper, the
    * e-mail field's border and the three joined-avatar dots — values from the
@@ -351,6 +355,7 @@
     --slot-dashed: #8a8170;
     --warning-soft: #2e2a1c;
     --par-cell: #243429;
+    --save-disabled-fg: #b0a796;
 
     /* Invitation card (#2266) — see :root. The artboard is light only;
      * the dots run dark to light here too. */
@@ -454,6 +459,7 @@
   --slot-dashed: #8a8170;
   --warning-soft: #2e2a1c;
   --par-cell: #243429;
+  --save-disabled-fg: #b0a796;
   --invitation-page-bg: var(--bg);
   --invitation-paper: var(--surface);
   --invitation-field-border: #4b5e51;
@@ -513,6 +519,7 @@
   --color-slot-dashed: var(--slot-dashed);
   --color-warning-soft: var(--warning-soft);
   --color-par-cell: var(--par-cell);
+  --color-save-disabled-fg: var(--save-disabled-fg);
   --color-surface-strong: var(--surface-strong);
   --color-on-strong: var(--on-strong);
   --color-accent-on-strong: var(--accent-on-strong);
