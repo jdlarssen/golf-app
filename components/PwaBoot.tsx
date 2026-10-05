@@ -27,10 +27,19 @@ export function PwaBoot() {
     // Above the service-worker guards for the same reason as the push bridge:
     // the iOS shell and dev do not pass them. Best-effort, the answer is not
     // needed; the parameter leaves the address bar either way.
+    //
+    // `null` is deliberate: Next's patched replaceState copies its own history
+    // state into the entry and moves the router's URL along. Passing
+    // `history.state` (which carries `__NA`) would skip that sync, and the
+    // router would write `?varsel=` back on its next update. The patch is
+    // installed in the App Router's own effect, so the call waits one task to
+    // run after this commit's effects, whatever order they fire in.
     const tappedId = readMarkerFrom(window.location.search);
     if (tappedId) {
       void markLinkedAsRead(tappedId).catch(() => {});
-      window.history.replaceState(null, '', withoutReadMarker(window.location.href));
+      setTimeout(() => {
+        window.history.replaceState(null, '', withoutReadMarker(window.location.href));
+      }, 0);
     }
 
     // No-op in every browser; runs only inside the Capacitor shell. Must sit
