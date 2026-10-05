@@ -27,6 +27,7 @@ describe('markVisitRead', () => {
     { surface: 'gameHole', key: 'game_id' },
     { surface: 'gameApprove', key: 'game_id' },
     { surface: 'gameLeaderboard', key: 'game_id' },
+    { surface: 'gameSubmit', key: 'game_id' },
     { surface: 'friends', key: null },
   ])('$surface: samme UPDATE som webben, nøkkel $key', async ({ surface, key }) => {
     const { queryStub, routeFrom } = mocks();
