@@ -4,13 +4,13 @@
 // har ferdigfylte scorer, «Deg» starter tomt og fylles inn av besøkeren, og
 // `computeLeaderboard` regner tavla live fra den sammensatte konteksten.
 
-import type {
-  ScoringContext,
-  ScoringGender,
-  ScoringHole,
-  ScoringHoleScore,
-  ScoringPlayer,
-} from '@/lib/scoring/modes/types';
+import {
+  buildStablefordContext,
+  type StablefordContextHoleRow,
+  type StablefordContextPlayerRow,
+  type StablefordContextScoreRow,
+} from '@/lib/scoring/context/buildStablefordContext';
+import type { GameModeConfig, ScoringContext, ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
 
 /** Syntetisk spill-id — kolliderer aldri med en ekte UUID. */
 export const DEMO_GAME_ID = 'demo';
@@ -33,76 +33,94 @@ export interface DemoPlayer {
  */
 export const DEMO_HOLES: ScoringHole[] = [
   { number: 1, par: 4, strokeIndex: 5 },
-  { number: 2, par: 3, strokeIndex: 15 },
+  { number: 2, par: 3, strokeIndex: 13 },
   { number: 3, par: 5, strokeIndex: 1 },
 ];
 
 /**
- * De fire deltakerne. «Deg» først (highlightet i tavla), så tre motstandere
- * med realistiske banehandicap. Rekkefølgen her styrer ikke ranking —
- * `computeLeaderboard` sorterer på stableford-poeng.
+ * De tre deltakerne fra tegningen (#2281): «Deg» først (highlightet i tavla),
+ * så to motspillere som har tastet før deg, så tavla har noe å vise.
+ * Rekkefølgen her styrer ikke ranking — `computeLeaderboard` sorterer på
+ * stableford-poeng.
  */
 export const DEMO_PLAYERS: DemoPlayer[] = [
   { userId: DEMO_YOU_ID, name: 'Deg', nickname: null, courseHandicap: 16, teeGender: 'mens', isYou: true },
-  { userId: 'ida', name: 'Ida', nickname: null, courseHandicap: 10, teeGender: 'mens', isYou: false },
-  { userId: 'ola', name: 'Ola', nickname: null, courseHandicap: 22, teeGender: 'mens', isYou: false },
-  { userId: 'kari', name: 'Kari', nickname: null, courseHandicap: 8, teeGender: 'mens', isYou: false },
+  { userId: 'marte', name: 'Marte', nickname: null, courseHandicap: 8, teeGender: 'mens', isYou: false },
+  { userId: 'jonas', name: 'Jonas', nickname: null, courseHandicap: 10, teeGender: 'mens', isYou: false },
 ];
 
 /**
- * Motstandernes ferdigfylte gross per hull. Gir en tett, troverdig tavle
- * (Kari leder, Ida i midten, Ola bak) som «Deg» kan klatre forbi ved godt
- * spill — hele poenget med «se tavla flytte seg».
+ * Motspillernes faste gross per hull. Taster du 5 på hull 1, står du på 2.
+ * plass, 1 poeng bak Marte; en netto eagle (2) på hull 2 tar deg opp til delt
+ * ledelse — hele poenget med «se tavla flytte seg».
  */
 const OPPONENT_GROSS: Record<string, Record<number, number>> = {
-  ida: { 1: 5, 2: 4, 3: 6 },
-  ola: { 1: 6, 2: 5, 3: 8 },
-  kari: { 1: 4, 2: 4, 3: 6 },
+  marte: { 1: 4, 2: 2, 3: 6 },
+  jonas: { 1: 6, 2: 3, 3: 7 },
 };
 
 /** Besøkerens innmatede gross per hull-nummer (uspilt = udefinert). */
 export type DemoYouScores = Partial<Record<number, number>>;
 
+export const DEMO_MODE_CONFIG: GameModeConfig = {
+  kind: 'stableford',
+  team_size: 1,
+  points_table: 'standard',
+};
+
+/** Motspillerens faste slag på hullet, eller `null` (deg, eller ukjent hull). */
+export function demoGrossFor(userId: string, holeNumber: number): number | null {
+  return OPPONENT_GROSS[userId]?.[holeNumber] ?? null;
+}
+
 /**
- * Bygger en `ScoringContext` fra motstandernes faste scorer + besøkerens
- * innmatede scorer. Uspilte «Deg»-hull utelates (ikke `gross: null`) slik at
- * `holesPlayed` reflekterer faktisk antall tastede hull. Solo stableford,
- * standard poengtabell.
+ * Demoen som rå rader, i samme form som et ekte spill leser fra databasen, så
+ * tavla (`buildDemoContext`) og stripa (`demoStanding`) leser de samme radene.
+ * Motspillernes slag tas med bare for hull du har tastet (#2281): da har alle
+ * spilt like mange hull, og «poeng bak» er sammenlignbart. Uspilte «Deg»-hull
+ * utelates, så `holesPlayed` er antall tastede hull.
  */
-export function buildDemoContext(youScores: DemoYouScores): ScoringContext {
-  const scores: ScoringHoleScore[] = [];
-
-  for (const player of DEMO_PLAYERS) {
-    if (player.isYou) continue;
-    const byHole = OPPONENT_GROSS[player.userId];
-    for (const hole of DEMO_HOLES) {
-      scores.push({ userId: player.userId, holeNumber: hole.number, gross: byHole[hole.number] });
-    }
-  }
-
+export function demoRows(youScores: DemoYouScores): {
+  players: StablefordContextPlayerRow[];
+  holesRows: StablefordContextHoleRow[];
+  scoresRows: StablefordContextScoreRow[];
+} {
+  const scoresRows: StablefordContextScoreRow[] = [];
   for (const hole of DEMO_HOLES) {
-    const gross = youScores[hole.number];
-    if (gross != null) {
-      scores.push({ userId: DEMO_YOU_ID, holeNumber: hole.number, gross });
+    const yours = youScores[hole.number];
+    if (yours == null) continue;
+    for (const player of DEMO_PLAYERS) {
+      const strokes = player.isYou ? yours : demoGrossFor(player.userId, hole.number);
+      scoresRows.push({ user_id: player.userId, hole_number: hole.number, strokes });
     }
   }
 
   return {
-    game: {
-      id: DEMO_GAME_ID,
-      game_mode: 'stableford',
-      mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
-    },
-    players: DEMO_PLAYERS.map(
-      (p): ScoringPlayer => ({
-        userId: p.userId,
-        teamNumber: null,
-        flightNumber: null,
-        courseHandicap: p.courseHandicap,
-        teeGender: p.teeGender,
-      }),
-    ),
-    holes: DEMO_HOLES,
-    scores,
+    players: DEMO_PLAYERS.map((p) => ({
+      user_id: p.userId,
+      team_number: 0,
+      course_handicap: p.courseHandicap,
+      tee_gender: p.teeGender,
+      withdrawn_at: null,
+      users: { name: p.name, nickname: p.nickname },
+    })),
+    holesRows: DEMO_HOLES.map((h) => ({
+      hole_number: h.number,
+      par_mens: h.par,
+      par_ladies: h.par,
+      par_juniors: h.par,
+      stroke_index: h.strokeIndex,
+    })),
+    scoresRows,
   };
+}
+
+/** Solo stableford-konteksten tavla regnes fra, bygd over `demoRows`. */
+export function buildDemoContext(youScores: DemoYouScores): ScoringContext {
+  return buildStablefordContext({
+    gameId: DEMO_GAME_ID,
+    gameMode: 'stableford',
+    modeConfig: DEMO_MODE_CONFIG,
+    ...demoRows(youScores),
+  });
 }

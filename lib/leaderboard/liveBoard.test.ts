@@ -118,6 +118,23 @@ describe('computeLiveBoard — movement since the previous hole', () => {
       two: -1,
     });
   });
+
+  it('minHolesForMovement 1 shows movement from the first hole (the demo, #2281)', () => {
+    // Before hole 1 both have 0 points and share 1st. Hole 1: lead a birdie (3
+    // points), second a par (2) → lead stays 1st (0), second falls to 2nd (−1).
+    const result = computeLiveBoard({
+      gameId: 'g1',
+      game: game(),
+      players: [player('lead'), player('second')],
+      holesRows: HOLES,
+      scoresRows: [...card('lead', { 1: 3 }), ...card('second', { 1: 4 })],
+      minHolesForMovement: 1,
+    });
+    expect(Object.fromEntries(result!.rows.map((r) => [r.userId, r.movement]))).toEqual({
+      lead: 0,
+      second: -1,
+    });
+  });
 });
 
 describe('computeLiveBoard — the last five holes', () => {

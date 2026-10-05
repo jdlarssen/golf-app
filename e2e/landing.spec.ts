@@ -20,6 +20,6 @@ test.describe('Offentlig forside (public, no login)', () => {
     // Hero-CTA «Prøv Tørny …» → inn i den spillbare demoen.
     await page.getByTestId('anon-demo-cta').click();
     await expect(page).toHaveURL(/\/demo$/);
-    await expect(page.getByTestId('demo-banner')).toBeVisible();
+    await expect(page.getByTestId('demo-standing')).toBeVisible();
   });
 });

@@ -34,7 +34,7 @@ export async function generateMetadata({
 
 export default function DemoPage() {
   return (
-    <AppShell showVersion={false}>
+    <AppShell showVersion={false} flush>
       <DemoGame />
     </AppShell>
   );

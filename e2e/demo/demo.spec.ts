@@ -1,29 +1,27 @@
 import { test, expect } from '@playwright/test';
+import { tapParOnRail } from '../_helpers/scoreRail';
 
 /**
- * Prøvespill-demoen (#1042) — golden path. Helt offentlig og klient-side, så
- * denne speccen krever verken innlogging, service-role-env eller Supabase-
- * tilgang: den navigerer inn uinnlogget, taster ett slag, ser at tavla
- * re-ranker, og følger «Klar for ekte runde?» inn i registreringen. Driver på
- * data-testid/role/aria — aldri norsk copy (test-disiplin Type D).
+ * Prøvespill-demoen (#1042, ny hullside #2281) — golden path. Helt offentlig og
+ * klient-side, så denne speccen krever verken innlogging, service-role-env
+ * eller Supabase-tilgang: den navigerer inn uinnlogget, taster par på skinna,
+ * ser at stripa med tavla endrer seg, og følger «Hopp over demoen» inn i
+ * innloggingen. Driver på data-testid/role/aria — aldri norsk copy (test-
+ * disiplin Type D).
  */
 test.describe('Prøvespill demo (public, no login)', () => {
-  test('uinnlogget besøker kan spille og nå registreringen', async ({ page }) => {
+  test('uinnlogget besøker kan taste på skinna og nå innloggingen', async ({ page }) => {
     await page.goto('/demo');
 
     // Offentlig: ingen bounce til /login.
     await expect(page).toHaveURL(/\/demo$/);
-    await expect(page.getByTestId('demo-banner')).toBeVisible();
+    const strip = page.getByTestId('demo-standing');
+    await expect(strip).toBeVisible();
 
-    const board = page.getByTestId('stableford-leaderboard');
-    await expect(board).toBeVisible();
-
-    // Tast et slag for «Deg» via +1-stepperen → tavla skal endre seg.
-    const before = await board.innerText();
-    await page.getByRole('button', { name: '+1' }).first().click();
-    await expect(async () => {
-      expect(await board.innerText()).not.toBe(before);
-    }).toPass();
+    // Par på skinna for «Deg» → stripa skal endre seg.
+    const before = await strip.getAttribute('aria-label');
+    await tapParOnRail(page);
+    await expect(strip).not.toHaveAttribute('aria-label', before ?? '');
 
     // #1391: det globale sync-banneret gates på proxy-verifisert innlogging, og
     // /demo er en offentlig rute der proxyen stripper den headeren. Ingenting
@@ -34,9 +32,9 @@ test.describe('Prøvespill demo (public, no login)', () => {
     );
     expect(dbNames).not.toContain('golf-app');
 
-    // «Klar for ekte runde?» → inn i registreringen.
-    await page.getByTestId('demo-cta').getByRole('link').click();
-    await expect(page).toHaveURL(/\/login/);
+    // «Hopp over demoen …» → inn i innloggingen.
+    await page.getByTestId('demo-skip').click();
+    await expect(page).toHaveURL(/\/login\?next=%2F$/);
   });
 
   test('demoen er lenket fra login-siden', async ({ page }) => {
