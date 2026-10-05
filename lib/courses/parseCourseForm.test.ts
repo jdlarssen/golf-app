@@ -1,30 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { parseCourseHolesAndTees } from './parseCourseForm';
 import { findStrokeIndexGaps, teeRatingProblem } from './coursePayload';
-
-const REAL_SI = ['7', '15', '3', '11', '1', '17', '5', '13', '9', '8', '16', '4', '12', '2', '18', '6', '14', '10'];
-
-type Rating = { slope: string; cr: string };
-const EMPTY: Rating = { slope: '', cr: '' };
-const GENDERS = ['mens', 'ladies', 'juniors'] as const;
-
-function buildFormData(
-  si: string[] = REAL_SI,
-  ratings: Rating[] = [{ slope: '120', cr: '70.1' }, EMPTY, EMPTY],
-): FormData {
-  const fd = new FormData();
-  fd.set('name', 'Testbane');
-  for (let i = 1; i <= 18; i++) {
-    fd.set(`hole_${i}_par_mens`, '4');
-    fd.set(`hole_${i}_si`, si[i - 1]);
-  }
-  fd.set('tee_0_name', 'Gul');
-  GENDERS.forEach((g, idx) => {
-    fd.set(`tee_0_slope_${g}`, ratings[idx].slope);
-    fd.set(`tee_0_cr_${g}`, ratings[idx].cr);
-  });
-  return fd;
-}
+import {
+  REAL_SI_STRINGS as REAL_SI,
+  EMPTY_RATING as EMPTY,
+  buildCourseFormData as buildFormData,
+  type RatingInput as Rating,
+} from './__fixtures__/courseForm';
 
 /** Returns the failure code, or null when the form parses. */
 function parseError(fd: FormData): string | null {
