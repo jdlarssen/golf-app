@@ -5621,6 +5621,7 @@
     "groupLive": "I gang nå",
     "groupNext": "Neste",
     "liveStatus": "i gang",
+    "liveBadge": "LIVE",
     "delivered": "{submitted} av {total} har levert",
     "pendingApproval": "{n} venter på godkjenning",
     "deskPill": "Pulten",
