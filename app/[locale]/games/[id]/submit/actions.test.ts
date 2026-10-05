@@ -33,17 +33,16 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
-const sendScorecardSubmittedNotificationMock =
-  vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({ ok: true }));
-vi.mock('@/lib/mail/scorecardSubmittedNotification', () => ({
-  sendScorecardSubmittedNotification: (...args: unknown[]) =>
-    sendScorecardSubmittedNotificationMock(...args),
+// #2203: «alle har levert» has its own suite (organizerNotices.test.ts); here
+// it is the boundary, so its reads never touch the admin client's FIFO queue.
+const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock('@/lib/notifications/organizerNotices', () => ({
+  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
+    notifyOrganizerIfAllDeliveredMock(...args),
 }));
 
-// Phase 4 mail-gating: notify() returnerer shouldAlsoSendMail som styrer om
-// admin-mailen sendes. Default = true så happy-path-testen får sin historiske
-// 1-mail-til-Jørgen-oppførsel. Per-test override via mockResolvedValueOnce
-// dekker off-app vs aktive scenarier hvis vi vil teste gating eksplisitt.
+// notify() svarer «utenfor appen» som standard (shouldAlsoSendMail: true). En
+// levering sender likevel aldri e-post (#2203, eierens svar 2026-10-05).
 const notifyMock = vi.fn<
   (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
 >(async () => ({ shouldAlsoSendMail: true }));
@@ -136,7 +135,7 @@ describe('submitScorecard', () => {
 
     expect(lastRedirect()).toBe('/games/game-1');
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
   it('#1918: en som ikke er med i spillet leverer ingenting (not_player)', async () => {
@@ -165,30 +164,20 @@ describe('submitScorecard', () => {
     );
     expect(adminSupabaseMock.__fromCalls).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
-  it('happy path: marks submitted_at, notifies admins (filters self), redirects with ?status=submitted', async () => {
+  it('happy path: marks submitted_at, notifies the organiser (no mail), redirects with ?status=submitted', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: { name: 'Vinter-cup', status: 'active', created_by: 'org-1' }, error: null },
       { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
       // UPDATE returns the matched row via .select('user_id') — non-empty
-      // means this was a fresh submit, so notify + mail must fire.
+      // means this was a fresh submit, so the varsler must fire.
       { data: [{ user_id: 'user-1' }], error: null },
       { data: { name: 'Ola Nordmann' }, error: null }, // submitter name
-      {
-        // admins list
-        data: [
-          { id: 'admin-1', name: 'Jørgen' },
-          { id: 'user-1', name: 'Ola Nordmann' },
-        ],
-        error: null,
-      },
     ]);
-    // #2207: the admins' addresses come from the admin client.
-    adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'admin-1', email: 'jorgen@example.test', friend_code: 'k0de' }], error: null },
-    ]);
+    // #2203: no admin list and no address lookup — the admin client stays untouched.
+    adminSupabaseMock = buildSupabaseMock([]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },
     });
@@ -202,88 +191,15 @@ describe('submitScorecard', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
 
-    // Submitter (user-1) is filtered out — only Jørgen receives mail.
-    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(1);
-    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: 'jorgen@example.test',
-        playerName: 'Ola Nordmann',
-        gameName: 'Vinter-cup',
-        gameId: 'game-1',
-      }),
+    // The organiser gets the one varsel; no admin, and no mail.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'org-1', kind: 'scorecard_submitted' }),
     );
+    expect(adminSupabaseMock.__fromCalls).toEqual([]);
+    expect(notifyOrganizerIfAllDeliveredMock).toHaveBeenCalledWith('game-1', 'user-1', 'submitScorecard');
 
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
-  });
-
-  it('off-app gating: filtrerer admin-mail når shouldAlsoSendMail=false', async () => {
-    // Phase 4-kontrakt: aktive admin-er (last_seen_at < 5 min) får KUN in-app
-    // varsel, ingen mail. Simulert ved at notify-mock returnerer false for
-    // Jørgen — verifiserer at mail-loopen filtrerer ham bort.
-    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: false });
-
-    supabaseMock = buildSupabaseMock([
-      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
-      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
-      { data: [{ user_id: 'user-1' }], error: null }, // UPDATE game_players (fresh)
-      { data: { name: 'Ola Nordmann' }, error: null },
-      {
-        data: [
-          { id: 'admin-1', name: 'Jørgen' },
-          { id: 'user-1', name: 'Ola Nordmann' },
-        ],
-        error: null,
-      },
-    ]);
-    // #2207: the admins' addresses come from the admin client.
-    adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'admin-1', email: 'jorgen@example.test', friend_code: 'k0de' }], error: null },
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'user-1' } },
-    });
-
-    const { submitScorecard } = await import('./actions');
-
-    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
-      RedirectError,
-    );
-
-    // Notify ble kalt (in-app fyres alltid), men mail ble IKKE sendt fordi
-    // Jørgen er aktiv. Submitteren (user-1) er fortsatt filtrert ut uansett.
-    expect(notifyMock).toHaveBeenCalledTimes(1);
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
-  });
-
-  it('off-app gating: notify-feil → ingen mail (fail-closed)', async () => {
-    // Hvis notify-rejection skjer (DB/network-error), defaultes sendMail til
-    // false — vi vil aldri ha en situasjon der mail sendes uten in-app-rad.
-    notifyMock.mockRejectedValueOnce(new Error('insert failed'));
-
-    supabaseMock = buildSupabaseMock([
-      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
-      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
-      { data: [{ user_id: 'user-1' }], error: null }, // UPDATE (fresh)
-      { data: { name: 'Ola Nordmann' }, error: null },
-      {
-        data: [{ id: 'admin-1', name: 'Jørgen' }],
-        error: null,
-      },
-    ]);
-    adminSupabaseMock = buildSupabaseMock([
-      { data: [{ id: 'admin-1', email: 'jorgen@example.test', friend_code: 'k0de' }], error: null },
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'user-1' } },
-    });
-
-    const { submitScorecard } = await import('./actions');
-
-    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
-      RedirectError,
-    );
-
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
   });
 
   it('edge case: redirects with ?error=db when the update returns an error', async () => {
@@ -302,8 +218,8 @@ describe('submitScorecard', () => {
       RedirectError,
     );
     expect(lastRedirect()).toBe('/games/game-1/submit?error=db');
-    // Mail must NOT fire on a DB error — pre-redirect short-circuit.
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    // No side effects on a DB error — pre-redirect short-circuit.
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
   it('#543: singles matchplay (singleFlight) — motstander varsles som peer', async () => {
@@ -322,7 +238,7 @@ describe('submitScorecard', () => {
       { data: { withdrawn_at: null }, error: null }, // WD gate
       { data: [{ user_id: 'side1' }], error: null }, // UPDATE (fresh)
       // game_players for peersForApproval — peersQuery-konstanten bygges (og
-      // dequeuer sin mock) FØR Promise.all-en med name/admins:
+      // dequeuer sin mock) FØR Promise.all-en med navnet:
       {
         data: [
           { user_id: 'side1', flight_number: 1, withdrawn_at: null },
@@ -331,7 +247,6 @@ describe('submitScorecard', () => {
         error: null,
       },
       { data: { name: 'Side 1-spiller' }, error: null }, // submitter name
-      { data: [], error: null }, // admins (ingen her)
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'side1' } },
@@ -349,7 +264,7 @@ describe('submitScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
 
-  it('re-submit: 0 rader oppdatert → ingen notify, ingen mail, men redirect OK', async () => {
+  it('re-submit: 0 rader oppdatert → ingen varsler, men redirect OK', async () => {
     // Phase 4-regresjon: tidligere fyrte vi notify + mail på nytt hver gang
     // submitScorecard ble kalt fordi `.is('submitted_at', null)` returnerer
     // `error == null` selv ved 0 rader endret. Nå sjekker vi
@@ -371,7 +286,7 @@ describe('submitScorecard', () => {
     );
 
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
@@ -397,7 +312,6 @@ describe('submitScorecard — lag-levering (#1453)', () => {
         error: null,
       },
       { data: { name: 'Anders Berg' }, error: null }, // submitter name
-      { data: [], error: null }, // admins-liste (tom — ingen mail/varsel)
     ]);
     adminSupabaseMock = buildSupabaseMock([
       // Team-oppdateringen matcher begge lagets rader.
@@ -467,7 +381,7 @@ describe('submitScorecard — lag-levering (#1453)', () => {
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
     expect(adminSupabaseMock.__fromCalls.length).toBe(0);
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 });
 
@@ -512,7 +426,6 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
       { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9, egen-rad)
       { data: { name: 'Ola Nordmann' }, error: null }, // submitter name
-      { data: [], error: null }, // admins (tom)
     ]);
     adminSupabaseMock = buildSupabaseMock([
       { data: hostRows('best_ball'), error: null }, // findSegmentSibling host-halvdeler (kilde + kandidat)
@@ -548,7 +461,6 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
       { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9)
       { data: { name: 'Ola Nordmann' }, error: null },
-      { data: [], error: null },
     ]);
     adminSupabaseMock = buildSupabaseMock([
       { data: hostRows('greensome_matchplay'), error: null }, // host-halvdeler (kilde + kandidat)
@@ -616,7 +528,7 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
     // Fail loudly — ingen side-effekter, redirect til submit-feil.
     expect(lastRedirect()).toBe('/games/game-1/submit?error=db');
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
   it('idempotent: front9-søskenet er alt levert (mySubmittedAt satt) → ingen søsken-oppdatering', async () => {
@@ -625,7 +537,6 @@ describe('submitScorecard — én levering på tvers av segmentet (#1466)', () =
       { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
       { data: [{ user_id: 'user-1' }], error: null }, // primær UPDATE (back9)
       { data: { name: 'Ola Nordmann' }, error: null },
-      { data: [], error: null },
     ]);
     adminSupabaseMock = buildSupabaseMock([
       { data: hostRows('best_ball'), error: null }, // host-halvdeler (kilde + kandidat)
@@ -666,7 +577,6 @@ describe('submitScorecard — levering for flighten (#2200)', () => {
       { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
       { data: [{ user_id: 'user-1' }, { user_id: 'ola' }], error: null },
       { data: { name: 'Kari' }, error: null },
-      { data: [], error: null },
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -706,7 +616,6 @@ describe('submitScorecard — levering for flighten (#2200)', () => {
       { data: { withdrawn_at: null, submitted_at: null, team_number: null }, error: null },
       { data: [{ user_id: 'user-1' }, { user_id: 'ola' }], error: null },
       { data: { name: 'Kari' }, error: null },
-      { data: [], error: null },
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },

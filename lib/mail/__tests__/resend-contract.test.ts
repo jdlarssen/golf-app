@@ -141,21 +141,6 @@ const senders = [
     },
   },
   {
-    name: 'sendScorecardSubmittedNotification',
-    invoke: async () => {
-      const { sendScorecardSubmittedNotification } = await import(
-        '../scorecardSubmittedNotification'
-      );
-      return sendScorecardSubmittedNotification({
-        to: 'admin@example.com',
-        adminFirstName: 'Jørgen',
-        playerName: 'Per Spiller',
-        gameName: 'Sommercup 2026',
-        gameId: '11111111-1111-1111-1111-111111111111',
-      });
-    },
-  },
-  {
     name: 'sendCupStartedNotification',
     invoke: async () => {
       const { sendCupStartedNotification } = await import(
@@ -197,6 +182,19 @@ const senders = [
         playerFirstName: 'Per',
         gameName: 'Sommercup 2026',
         gameId: '11111111-1111-1111-1111-111111111111',
+      });
+    },
+  },
+  {
+    name: 'sendOrganizerGameNotice',
+    invoke: async () => {
+      const { sendOrganizerGameNotice } = await import('../organizerGameNotice');
+      return sendOrganizerGameNotice({
+        to: 'arrangor@example.com',
+        recipientFirstName: 'Kari',
+        gameName: 'Sommercup 2026',
+        gameId: '11111111-1111-1111-1111-111111111111',
+        variant: 'all_delivered',
       });
     },
   },

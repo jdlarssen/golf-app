@@ -59,6 +59,10 @@ const BOUNDED: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "layout.scoreUserIds: the viewer's own flight or team columns",
   },
+  'lib/notifications/organizerNotices.ts': {
+    count: 1,
+    reason: 'one row: the newest score of one game, order desc + limit(1) (#2203 stale sweep)',
+  },
   'lib/sync/syncWorker.ts': {
     count: 1,
     reason: 'one row: eq game_id + user_id + hole_number, maybeSingle (#2211 locked-refusal settle)',

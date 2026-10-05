@@ -20,6 +20,7 @@ import {
 } from '@/lib/scoring/modes/types';
 import { reopenScorecardCore } from '@/lib/games/reviewScorecardCore';
 import { notify } from '@/lib/notifications/notify';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { notifyPlayersGameReopened } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
@@ -275,6 +276,10 @@ export async function adminApproveScorecard(
     );
   }
 
+  // #2203: the last approval can make the round ready to finish. Best-effort,
+  // never throws; when the organiser approved it themselves, nothing is sent.
+  await notifyOrganizerIfAllDelivered(gameId, user.id, 'adminApproveScorecard');
+
   expireGameCache(gameId);
   // #1067: the `#leverte-scorekort` hash is a best-effort UX nicety — Next.js
   // strips URL fragments when replaying a server-action redirect on the
@@ -463,6 +468,11 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
   // an unrelated one (e.g. scorecard_approved) would mislead the player. A
   // dedicated WD notification is deferred — the audit-log entry above is the
   // record for now.
+
+  // #2203: withdrawing the last missing player can make the round ready to
+  // finish. Best-effort, never throws; nothing is sent when the organiser
+  // did it themselves.
+  await notifyOrganizerIfAllDelivered(gameId, user.id, 'adminWithdrawPlayer');
 
   expireGameCache(gameId);
   redirect({ href: `${detailPath}?status=player_withdrawn`, locale });

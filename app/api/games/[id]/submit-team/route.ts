@@ -61,8 +61,10 @@ import {
 // Feil-bodyene er faste, ugjennomsiktige koder. Endepunktet er offentlig
 // eksponert, så `err.message` (Postgres-detaljer, env-navn) skal aldri ut.
 
-// Leveringen er varsler + N admin-mail i én rundtur; et lag i en klubb-runde
-// med treg SMTP sprenger standard-taket. Eneste segment-eksporten repoet
+// Leveringen er varsler (med push til dem som er utenfor appen) per levert kort
+// og per attestant, pluss høyst én e-post (arrangørens «Alle har levert», #2203)
+// i én rundtur. En flight med kortgodkjenning og treg push eller SMTP sprenger
+// standard-taket. Eneste segment-eksporten repoet
 // bruker — `dynamic`/`revalidate`/`runtime` er inkompatible med
 // `cacheComponents` (next.config.ts).
 export const maxDuration = 60;

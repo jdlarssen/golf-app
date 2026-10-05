@@ -82,6 +82,14 @@ vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));
 
+// #2203: an approval or a withdrawal can make the round ready to finish. The
+// message has its own suite (organizerNotices.test.ts); here only who asks.
+const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock('@/lib/notifications/organizerNotices', () => ({
+  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
+    notifyOrganizerIfAllDeliveredMock(...args),
+}));
+
 // #2207: startScheduledGameAction only translates the core's answer into a
 // redirect; the core itself is covered in lib/games/startScheduledGame.test.ts.
 const startScheduledGameMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
@@ -178,6 +186,10 @@ describe('adminWithdrawPlayer', () => {
     expect(logAdminEventMock).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'game.player_withdrawn', targetId: 'game-1' }),
     );
+    // The organiser withdrew the last missing player: asked, and O10 decides there.
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([
+      ['game-1', 'creator-1', 'adminWithdrawPlayer'],
+    ]);
   });
 
   it('sets withdrawn_at and redirects to ?status=player_withdrawn for active in-scope game', async () => {
@@ -209,6 +221,9 @@ describe('adminWithdrawPlayer', () => {
       }),
     );
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([
+      ['game-1', 'admin-1', 'adminWithdrawPlayer'],
+    ]);
   });
 
   it('redirects with ?error=not_active for non-active game', async () => {
@@ -256,6 +271,7 @@ describe('adminWithdrawPlayer', () => {
     await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/games/game-1/spillere?error=withdraw_stale');
     expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     const writeFilters = supabaseMock.__fromCalls
       .filter((c) => c.table === 'game_players')
@@ -408,6 +424,10 @@ describe('adminApproveScorecard', () => {
         approver_role: 'organizer',
       },
     });
+    // #2203: the last approval can make the round ready to finish.
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([
+      ['game-1', 'admin-1', 'adminApproveScorecard'],
+    ]);
   });
 
   it('creator: approves on own game, lands on /games/[id]/spillere', async () => {
@@ -455,6 +475,7 @@ describe('adminApproveScorecard', () => {
     expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved#leverte-scorekort');
     expect(notifyMock).not.toHaveBeenCalled();
     expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
   it('#1595: 0-row update while the scorecard is still pending → ?error=db_players, not a false success', async () => {
@@ -480,6 +501,7 @@ describe('adminApproveScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1/spillere?error=db_players');
     expect(notifyMock).not.toHaveBeenCalled();
     expect(logAdminEventMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
   it('redirects with ?error=not_active for a non-active game', async () => {

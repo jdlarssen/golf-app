@@ -6,6 +6,7 @@ import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
 import { notify } from '@/lib/notifications/notify';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import { NO_REJECTION_REASON } from './rejectionReason';
 import { sharedCardUserIds, type SharedCardRosterRow } from './scoreOwner';
 import {
@@ -183,6 +184,10 @@ export async function approveScorecardCore(opts: {
   } catch (err) {
     console.error('[approveScorecard] scorecard_approved notify failed', err);
   }
+
+  // #2203: the last approval can make the round ready to finish. Best-effort,
+  // never throws; when the organiser approved it themselves, nothing is sent.
+  await notifyOrganizerIfAllDelivered(gameId, approverUserId, 'approveScorecard');
 
   expireReviewedGame(gameId);
   return { ok: true, alreadyDone: false };
