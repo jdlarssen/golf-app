@@ -152,8 +152,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
   // forespurt.
   let clubGames: DiscoverableClubGame[] = [];
   if (myClubIds.length > 0) {
-    // #2493: the club query has one home, shared with the Klubbhus room and
-    // the club page. All three options keep this list as it was.
+    // #2493: the club query has one home, shared with the Klubbhus room. All
+    // three options keep this list as it was.
     const clubRes = await getUpcomingClubGames(myClubIds, {
       openSignupsOnly: true,
       excludeCreatedBy: userId,
