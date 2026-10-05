@@ -6,6 +6,8 @@ import {
   ClubsView,
   CupsView,
   ToolsView,
+  NewPlayerSubtitle,
+  JoinView,
   type RoomClub,
   type RoomCup,
 } from './PlayerKlubbhusViews';
@@ -98,6 +100,25 @@ describe('PlayerKlubbhus room (#2493)', () => {
 
     render(<CupsView cups={null} finishedCount={0} />);
     expect(screen.getByTestId('klubbhus-cups-error')).toBeInTheDocument();
+  });
+
+  it('a new player (#2494): one subtitle under the greeting; «Bli med» with Terminlista and an empty-list line, and «Klubben din» as plain text', () => {
+    const sub = render(<NewPlayerSubtitle />);
+    expect(screen.getByTestId('new-player-subtitle').tagName).toBe('P');
+    sub.unmount();
+
+    const open = render(<JoinView terminEmpty={false} />);
+    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
+    const termin = screen.getByTestId('player-termin-row');
+    expect(termin).toHaveAttribute('href', '/finn-turneringer');
+    expect(termin.dataset.empty).toBe('false');
+    const invite = screen.getByTestId('player-club-invite');
+    expect(invite.closest('a')).toBeNull();
+    expect(invite.querySelector('a, [aria-hidden]')).toBeNull();
+    open.unmount();
+
+    render(<JoinView terminEmpty />);
+    expect(screen.getByTestId('player-termin-row').dataset.empty).toBe('true');
   });
 
   it('tools: three plain rows without icons, back to the room (#2487)', () => {

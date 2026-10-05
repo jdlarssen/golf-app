@@ -1,13 +1,16 @@
-import { Suspense } from 'react';
+import { Suspense, cache } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
 import { getNextClubRounds } from '@/lib/clubs/getNextClubRounds';
 import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
-import { cupLedgerHref } from '@/lib/cup/myCups';
+import { cupLedgerHref, getMyCupIds } from '@/lib/cup/myCups';
 import { getRoomCups } from '@/lib/cup/getRoomCups';
 import { getArrangedRounds } from '@/lib/games/getArrangedRounds';
 import { groupArrangedRounds } from '@/lib/games/arrangedGames';
+import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
+import { buildTerminEntries } from '@/lib/games/terminliste';
+import { isNewPlayer } from '@/lib/games/isNewPlayer';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { SectionError } from '@/components/ui/SectionError';
@@ -23,6 +26,8 @@ import {
   CupsView,
   RoomSectionSkeleton,
   ToolsView,
+  NewPlayerSubtitle,
+  JoinView,
   type RoomClub,
   type RoomCup,
 } from './PlayerKlubbhusViews';
@@ -33,9 +38,13 @@ import {
  * for a new round, «Rundene dine» (the same view and read as /klubbhuset,
  * #2269), your clubs with numbers, your cups with progress, and tools.
  *
- * The greeting and tools paint at once; every other section streams behind
- * its own Suspense boundary, and a failed read gives an error box in that
- * section alone (#2490).
+ * A player with no round, no club and no cup gets the new player's version
+ * instead (#2494, `isNewPlayer`): a subtitle, the same card, «Bli med»
+ * (Terminlista and «Klubben din») and the tools. Your rounds, your clubs and
+ * your cup ids are read once, in parallel, to choose; the sections reuse the
+ * answers. The greeting paints at once; the rest streams, the clubs' and cups'
+ * numbers each behind their own Suspense, and a failed read gives an error box
+ * in that section alone (#2490), never the new player's version.
  *
  * Reads with the admin client, each with its gate:
  * - start blocks for your planned rounds (`readCreatorStartBlock`, inside
@@ -46,7 +55,11 @@ import {
  *   ids from your own rows (`getMyCupIds`). A club cup's participant who is
  *   not a club member cannot read the cup under RLS, so the request client
  *   would drop it;
- * - whether you can make a club tournament (`isClubAdminAnywhere`): your own id.
+ * - whether you can make a club tournament (`isClubAdminAnywhere`): your own id;
+ * - the open rounds for a new player's Terminlista line (`getDiscoverableGames`):
+ *   the gate is inside the function — club rounds only in your own clubs,
+ *   friends' and open rounds only with a registration mode you can sign up
+ *   for, and only base info that is safe to show (see its top comment).
  * Everything else (your games and their rosters, your clubs, member counts)
  * reads through the request client and RLS.
  *
@@ -61,29 +74,75 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
 
       <GreetingView name={firstName(role.name)} />
 
-      <Suspense fallback={<NewRoundCardSkeleton />}>
-        <NewRoundSection userId={role.userId} />
+      <Suspense
+        fallback={
+          <>
+            <NewRoundCardSkeleton />
+            <ArrangedRoundsSkeleton />
+          </>
+        }
+      >
+        <RoomBody userId={role.userId} />
       </Suspense>
-
-      <Suspense fallback={<ArrangedRoundsSkeleton />}>
-        <RoundsSection userId={role.userId} />
-      </Suspense>
-
-      <Suspense fallback={<RoomSectionSkeleton rows={2} />}>
-        <ClubsSection userId={role.userId} />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <CupsSection userId={role.userId} />
-      </Suspense>
-
-      <ToolsView />
     </AdminShell>
   );
 }
 
-async function NewRoundSection({ userId }: { userId: string }) {
-  return <NewRoundCard isClubAdmin={await isClubAdminAnywhere(userId)} />;
+// The three reads that choose the room's version, cached for the request so
+// the sections reuse them instead of reading again.
+const readRounds = cache(async (userId: string) =>
+  getArrangedRounds(await getServerClient(), userId, { upcomingLimit: 3 }),
+);
+const readClubs = cache(async (userId: string) => getMyClubs(await getServerClient(), userId));
+const readCupIds = cache(async (userId: string) => getMyCupIds(await getServerClient(), userId));
+
+async function RoomBody({ userId }: { userId: string }) {
+  const [rounds, clubs, cups, isClubAdmin] = await Promise.all([
+    readRounds(userId),
+    readClubs(userId),
+    readCupIds(userId),
+    isClubAdminAnywhere(userId),
+  ]);
+
+  if (isNewPlayer({ rounds, clubs, cups })) {
+    return (
+      <>
+        <NewPlayerSubtitle />
+        <NewRoundCard isClubAdmin={isClubAdmin} />
+        <Suspense fallback={<RoomSectionSkeleton rows={2} />}>
+          <JoinSection userId={userId} />
+        </Suspense>
+        <ToolsView rowHeight="min-h-14" />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <NewRoundCard isClubAdmin={isClubAdmin} />
+      <RoundsSection userId={userId} />
+      <Suspense fallback={<RoomSectionSkeleton rows={2} />}>
+        <ClubsSection userId={userId} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CupsSection userId={userId} />
+      </Suspense>
+      <ToolsView />
+    </>
+  );
+}
+
+/**
+ * Bli med for a new player (#2494): Terminlista says whether there are open
+ * rounds to sign up for. «Empty» counts open rounds only, as the list shows
+ * them (`buildTerminEntries`), not pending requests: a request is no open
+ * round. `getDiscoverableGames` swallows its read errors, so a failed read
+ * also says «Ingen åpne runder akkurat nå»; the row and its link stand either
+ * way, and /finn-turneringer reads the same function.
+ */
+async function JoinSection({ userId }: { userId: string }) {
+  const terminEmpty = buildTerminEntries(await getDiscoverableGames(userId), new Map()).length === 0;
+  return <JoinView terminEmpty={terminEmpty} />;
 }
 
 /**
@@ -92,9 +151,8 @@ async function NewRoundSection({ userId }: { userId: string }) {
  * never show different things.
  */
 async function RoundsSection({ userId }: { userId: string }) {
-  const supabase = await getServerClient();
   const locale = (await getLocale()) as AppLocale;
-  const read = await getArrangedRounds(supabase, userId, { upcomingLimit: 3 });
+  const read = await readRounds(userId);
   if (!read.ok) {
     console.error('[klubbhus] arranged rounds', read.error);
     return (
@@ -116,7 +174,7 @@ async function RoundsSection({ userId }: { userId: string }) {
 
 async function ClubsSection({ userId }: { userId: string }) {
   const supabase = await getServerClient();
-  const result = await getMyClubs(supabase, userId);
+  const result = await readClubs(userId);
   if (!result.ok) return <ClubsView clubs={null} />;
   if (result.clubs.length === 0) return <ClubsView clubs={[]} />;
 
@@ -149,9 +207,8 @@ async function ClubsSection({ userId }: { userId: string }) {
 }
 
 async function CupsSection({ userId }: { userId: string }) {
-  const supabase = await getServerClient();
   const t = await getTranslations('cup');
-  const read = await getRoomCups(supabase, userId, t('manage.unknownPlayer'));
+  const read = await getRoomCups(await readCupIds(userId), t('manage.unknownPlayer'));
   if (!read.ok) return <CupsView cups={null} finishedCount={0} />;
 
   const cups: RoomCup[] = read.live.map((cup) => ({
