@@ -15,6 +15,7 @@ import type {
   DiscoverableClubGame,
   DiscoverableFriendGame,
   DiscoverableOpenGame,
+  PendingRequest,
 } from './getDiscoverableGames';
 
 /**
@@ -258,4 +259,20 @@ export function terminTimeNote(
     return null;
   }
   return entry.start_type === 'shotgun' ? 'shotgun' : 'first_tee';
+}
+
+/**
+ * Whether the list has a round you can sign up for: the new player's
+ * Terminlista line in the Klubbhus room (#2494, O1). Rounds only, as the list
+ * shows them; a pending request is no open round, unlike the empty state of
+ * `Terminliste.tsx`, which also waits for your requests.
+ */
+export function hasOpenRounds(data: {
+  clubGames?: readonly DiscoverableClubGame[];
+  friendGames?: readonly DiscoverableFriendGame[];
+  openGames?: readonly DiscoverableOpenGame[];
+  /** Taken and ignored on purpose: a request is no open round. */
+  pendingRequests?: readonly PendingRequest[];
+}): boolean {
+  return buildTerminEntries(data, new Map()).length > 0;
 }

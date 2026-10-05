@@ -8,6 +8,7 @@ import {
   capacityState,
   filterTermin,
   groupTerminByDate,
+  hasOpenRounds,
   parseTerminFilter,
   terminTimeNote,
   type GameSeats,
@@ -17,6 +18,7 @@ import type {
   DiscoverableClubGame,
   DiscoverableFriendGame,
   DiscoverableOpenGame,
+  PendingRequest,
 } from './getDiscoverableGames';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 
@@ -187,6 +189,28 @@ describe('buildTerminEntries — capacity and full', () => {
       ['m1', null, true],
       ['m2', null, false],
     ]);
+  });
+});
+
+describe('hasOpenRounds — the new player\'s Terminlista line (#2494)', () => {
+  const pending: PendingRequest = {
+    id: 'r1',
+    game_id: 'g1',
+    short_id: 'reqs0001',
+    game_name: 'Søknadsrunden',
+    team_name: null,
+    is_team_captain: false,
+    created_at: '2026-10-01T08:00:00Z',
+  };
+
+  it.each([
+    ['nothing at all', {}, false],
+    ['a pending request alone is no open round', { pendingRequests: [pending] }, false],
+    ['an open round', { openGames: [open()] }, true],
+    ['a club round', { clubGames: [club()] }, true],
+    ['a friend\'s round', { friendGames: [friend()] }, true],
+  ] as const)('%s', (_label, data, expected) => {
+    expect(hasOpenRounds(data)).toBe(expected);
   });
 });
 
