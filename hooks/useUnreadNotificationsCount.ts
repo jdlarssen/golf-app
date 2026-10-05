@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getBrowserClient } from '@/lib/supabase/client';
+import { QUIET_KINDS } from '@/lib/notifications/readOnVisit';
 import {
   onPostgresChange,
   subscribeRealtimeChannel,
@@ -72,6 +73,8 @@ export function useUnreadNotificationsCount(userId: string | null): {
 
     // RLS gir oss kun egne rader, så vi trenger strengt tatt ikke user_id-
     // filteret, men det setter vi eksplisitt for å bruke partial-indexen.
+    // #2201: quiet kinds (news about Tørny) never light the dot; they still
+    // show in the inbox and on Hjem.
     const fetchCount = () => {
       timer = null;
       const mySeq = ++seq;
@@ -80,6 +83,7 @@ export function useUnreadNotificationsCount(userId: string | null): {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .is('read_at', null)
+        .not('kind', 'in', `(${QUIET_KINDS.join(',')})`)
         .then(({ count: next, error }: { count: number | null; error: unknown }) => {
           if (!mounted || mySeq <= appliedSeq) return;
           if (error) {

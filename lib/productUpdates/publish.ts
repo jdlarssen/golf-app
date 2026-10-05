@@ -7,9 +7,12 @@ import { notify } from '@/lib/notifications/notify';
  * Publish a product update (issue #202).
  *
  * Inserts authoritative row in product_updates, then fan-outs an in-app
- * notification (kind 'product_update') to every user. Fan-out is best-effort
- * per recipient via Promise.allSettled — a single failed notify never blocks
- * the rest, and never undoes the product_updates insert.
+ * notification (kind 'product_update') to every signed-up, non-deleted user:
+ * a guest or an anonymised account could never read it (#2201). The
+ * notification is quiet: no push, no dot on Innboks (`QUIET_KINDS`).
+ * Fan-out is best-effort per recipient via Promise.allSettled — a single
+ * failed notify never blocks the rest, and never undoes the product_updates
+ * insert.
  *
  * Returns the new product_updates.id + fan-out stats so the admin UI can
  * surface "Lanseringen er ute hos N brukere"-toasts.
@@ -63,9 +66,17 @@ export async function publishProductUpdate(
   // Paged (#2227): every user gets the in-app notice, and the table outgrows
   // PostgREST's 1 000-row cap. A failed read keeps the soft behaviour — the
   // update is already saved, nobody is notified — but is logged, not swallowed.
+  // #2201: no guests and no anonymised accounts; neither can read the row.
   const { data: users, error: usersError } = await selectAllRowsResult(
     (from, to) =>
-      admin.from('users').select('id').order('id').range(from, to).returns<{ id: string }[]>(),
+      admin
+        .from('users')
+        .select('id')
+        .eq('is_guest', false)
+        .is('deleted_at', null)
+        .order('id')
+        .range(from, to)
+        .returns<{ id: string }[]>(),
     'publishProductUpdate users',
   );
   if (usersError) {
