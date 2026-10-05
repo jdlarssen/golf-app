@@ -118,9 +118,12 @@ describe('getMyCupIds', () => {
       'me',
     );
 
+    // `playing` leaves out a cup you only created (#2493): the room says «Du
+    // er med» for those you play in and «Du arrangerer» for the rest.
     expect(result).toEqual({
       ok: true,
       ids: ['created-1', 'roster-1', 'both-1', 'played-1'],
+      playing: ['roster-1', 'both-1', 'played-1'],
     });
     expect(calls.filter((c) => c.method === 'eq')).toEqual([
       { table: 'tournaments', method: 'eq', args: ['created_by', 'me'] },
@@ -141,14 +144,14 @@ describe('getMyCupIds', () => {
 
     await expect(
       getMyCupIds(client as unknown as Parameters<typeof getMyCupIds>[0], 'me'),
-    ).resolves.toEqual({ ok: true, ids: ['cup-1'] });
+    ).resolves.toEqual({ ok: true, ids: ['cup-1'], playing: ['cup-1'] });
   });
 
   it('returns an empty list for a player with no cup relation', async () => {
     const { client } = buildTableMock({});
     await expect(
       getMyCupIds(client as unknown as Parameters<typeof getMyCupIds>[0], 'me'),
-    ).resolves.toEqual({ ok: true, ids: [] });
+    ).resolves.toEqual({ ok: true, ids: [], playing: [] });
   });
 
   // #2490: a failed read is not «no cups» — the room must not hide the cup
