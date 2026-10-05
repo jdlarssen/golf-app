@@ -19,6 +19,23 @@ function makeHoles(pars: number[]): HoleData[] {
 
 const NO_OP = async () => {};
 
+// A real club order — a new course starts with empty indices (#2279).
+const REAL_SI = [7, 15, 3, 11, 1, 17, 5, 13, 9, 8, 16, 4, 12, 2, 18, 6, 14, 10];
+
+function setField(container: HTMLElement, name: string, value: string) {
+  const input = container.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+  fireEvent.change(input!, { target: { value } });
+}
+
+function fillStrokeIndices(container: HTMLElement, order: number[] = REAL_SI) {
+  order.forEach((si, i) => setField(container, `hole_${i + 1}_si`, String(si)));
+}
+
+function fillMensRating(container: HTMLElement, tee = 0, slope = '113', cr = '70.0') {
+  setField(container, `tee_${tee}_slope_mens`, slope);
+  setField(container, `tee_${tee}_cr_mens`, cr);
+}
+
 describe('hasHoleChanges', () => {
   const baseline = makeHoles(Array(18).fill(4));
 
@@ -128,14 +145,15 @@ describe('CourseForm — auto-beregnet par-total', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 
-  it('viser par-total = 72 når slope/CR er fylt ut for herrer (default-state)', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
-    // Default-tee har slope 113 + CR 70.0 forhåndsfylt for herrer.
+  it('viser par-total = 72 når slope/CR er fylt ut for herrer (ny bane)', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    fillMensRating(container);
     expect(screen.getByText('72')).toBeTruthy();
   });
 
   it('oppdaterer par-total fra 72 til 73 når et hull endres fra par 4 til par 5', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    fillMensRating(container);
 
     expect(screen.getByText('72')).toBeTruthy();
 
@@ -217,15 +235,14 @@ describe('CourseForm — progressive disclosure for kjønn-rating', () => {
 });
 
 describe('CourseForm — Tøm dette kjønnet', () => {
-  it('viser IKKE Tøm-knappen på herrer-blokken på new-flyten når defaults er intakte', () => {
+  it('viser IKKE Tøm-knappen på herrer-blokken på new-flyten når feltene er tomme', () => {
     render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
-    // Default herrer-state er slope 113 + CR 70.0 — Tøm skal være skjult for
-    // å hindre at admin utilsiktet tømmer defaults før de har lagt til noe.
+    // En ny bane starter med tomme herrer-felt (#2279) — ingenting å tømme.
     expect(screen.queryByRole('button', { name: /tøm dette kjønnet/i })).toBeNull();
   });
 
-  it('viser Tøm-knappen på herrer-blokken så snart admin endrer slope vekk fra default', () => {
+  it('viser Tøm-knappen på herrer-blokken så snart admin fyller inn slope', () => {
     const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
     expect(screen.queryByRole('button', { name: /tøm dette kjønnet/i })).toBeNull();
@@ -590,6 +607,7 @@ describe('CourseForm — dupliser-tee', () => {
 
     expect(screen.queryByText('Tee-boks 2')).toBeNull();
 
+    fillMensRating(container);
     // Fyll inn navn på første tee så vi kan verifisere at duplikatet er blankt.
     const tee0Name = container.querySelector<HTMLInputElement>('input[name="tee_0_name"]');
     fireEvent.change(tee0Name!, { target: { value: 'Gul' } });
@@ -751,8 +769,8 @@ describe('CourseForm — kopier til alle kjønn', () => {
   });
 
   it('viser kopier-knappen når herrer er fullt utfylt og dame/junior er tomme', () => {
-    // Default-tee i CourseForm har herrer prefylt 113/70.0 og dame/junior tomme.
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    fillMensRating(container);
 
     expect(
       screen.getByRole('button', { name: /kopier til alle kjønn/i }),
@@ -788,8 +806,9 @@ describe('CourseForm — kopier til alle kjønn', () => {
 
   it('ekspanderer kollapsede dame/junior-blokker og fyller med herrer-verdier ved klikk', () => {
     const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    fillMensRating(container);
 
-    // Default-state: herrer 113/70.0, dame+junior kollapset.
+    // Herrer 113/70.0, dame+junior kollapset.
     expect(screen.queryByText('Damer')).toBeNull();
     expect(screen.queryByText('Junior')).toBeNull();
 
@@ -971,7 +990,13 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
   it('viser IKKE confirm-dialog på /new-flyten (ingen initialData)', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    render(<CourseForm action={async () => {}} submitLabel="Lagre" />);
+    const { container } = render(
+      <CourseForm action={async () => {}} submitLabel="Lagre" />,
+    );
+    // Uten 18 indekser og slope/CR er «Lagre» grå, og klikket beviser ingenting.
+    fillStrokeIndices(container);
+    fillMensRating(container);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Lagre' }).disabled).toBe(false);
 
     const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
     fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
@@ -998,5 +1023,93 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(confirmSpy.mock.calls[0][0]).toMatch(/ett spill/);
+  });
+});
+
+describe('CourseForm: tomme felt på ny bane (#2279)', () => {
+  it('starter tom, holder «Lagre» grå og sier hva som mangler til alt er fylt ut', () => {
+    const action = vi.fn();
+    const { container } = render(<CourseForm action={action} submitLabel="Lagre" />);
+    const value = (name: string) =>
+      container.querySelector<HTMLInputElement>(`input[name="${name}"]`)!.value;
+    const save = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Lagre' });
+    const status = () => container.querySelector('#course-save-status');
+
+    for (let n = 1; n <= 18; n++) expect(value(`hole_${n}_si`)).toBe('');
+    expect(value('tee_0_slope_mens')).toBe('');
+    expect(value('tee_0_cr_mens')).toBe('');
+    expect(container.querySelector('input[name="tee_0_slope_mens"]')!.getAttribute('placeholder')).toBeNull();
+    expect(container.querySelector('input[name="tee_0_cr_mens"]')!.getAttribute('placeholder')).toBeNull();
+    expect(save().disabled).toBe(true);
+    expect(save().getAttribute('aria-describedby')).toBe('course-save-status');
+    expect(status()?.textContent).toContain('Mangler 18 indekser');
+    expect(status()?.textContent).toContain('Tee-boks 1 mangler slope og CR');
+    fireEvent.click(save());
+    expect(action).not.toHaveBeenCalled();
+
+    // 17 indekser: én mangler.
+    fillStrokeIndices(container, REAL_SI.slice(0, 17));
+    expect(status()?.textContent).toContain('Mangler én indeks');
+    // 7 på to hull: duplikatet nevnes.
+    setField(container, 'hole_18_si', '7');
+    expect(status()?.textContent).toContain('Indeks 7 er brukt mer enn én gang');
+    // 14 på hull 14 i tillegg til hull 17: to duplikater gir flertall.
+    setField(container, 'hole_14_si', '14');
+    expect(status()?.textContent).toContain('Indeksene 7 og 14 er brukt mer enn én gang');
+    setField(container, 'hole_14_si', '2');
+    // Bare slope: begge trengs.
+    setField(container, 'tee_0_slope_mens', '120');
+    expect(status()?.textContent).toContain('Tee-boks 1 trenger både slope og CR');
+    expect(save().disabled).toBe(true);
+
+    setField(container, 'hole_18_si', '10');
+    setField(container, 'tee_0_cr_mens', '70.1');
+    expect(save().disabled).toBe(false);
+    expect(save().getAttribute('aria-describedby')).toBeNull();
+    expect(status()).toBeNull();
+  });
+
+  it('redigering: knappen er aktiv fra start, og en ny tee-boks må fylles ut', () => {
+    const { container } = render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes: makeHoles(Array(18).fill(4)).map((h, i) => ({
+            ...h,
+            stroke_index: String(REAL_SI[i]),
+          })),
+          teeBoxes: [
+            {
+              id: 'tee-1',
+              name: 'Gul',
+              length_meters: '',
+              slope_mens: '124',
+              course_rating_mens: '71.2',
+              slope_ladies: '',
+              course_rating_ladies: '',
+              slope_juniors: '',
+              course_rating_juniors: '',
+            },
+          ],
+        }}
+      />,
+    );
+    const save = () => screen.getByRole<HTMLButtonElement>('button', { name: 'Lagre' });
+
+    expect(save().disabled).toBe(false);
+    expect(container.querySelector('#course-save-status')).toBeNull();
+    expect(screen.queryByRole('button', { name: /overskriv si/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /legg til tee-boks/i }));
+    expect(container.querySelector<HTMLInputElement>('input[name="tee_1_slope_mens"]')!.value).toBe('');
+    expect(save().disabled).toBe(true);
+    expect(container.querySelector('#course-save-status')?.textContent).toContain(
+      'Tee-boks 2 mangler slope og CR',
+    );
+
+    fillMensRating(container, 1);
+    expect(save().disabled).toBe(false);
   });
 });
