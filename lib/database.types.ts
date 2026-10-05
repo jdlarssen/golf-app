@@ -1825,6 +1825,7 @@ export type Database = {
       tee_boxes: {
         Row: {
           archived_at: string | null
+          color: string | null
           course_id: string
           course_rating_juniors: number | null
           course_rating_ladies: number | null
@@ -1841,6 +1842,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          color?: string | null
           course_id: string
           course_rating_juniors?: number | null
           course_rating_ladies?: number | null
@@ -1857,6 +1859,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          color?: string | null
           course_id?: string
           course_rating_juniors?: number | null
           course_rating_ladies?: number | null
