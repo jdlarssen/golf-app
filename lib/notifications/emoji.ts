@@ -30,6 +30,11 @@ export const NOTIFICATION_EMOJI: Record<NotificationKind, string> = {
   deliver_reminder: '📤',
   // #2268: a hole without a score. ✏️, not 📤: nothing is delivered yet.
   missing_score_reminder: '✏️',
+  // #2203: every card is in. 📥, not 🏁: cup_finished owns the finish flag.
+  all_scorecards_delivered: '📥',
+  // #2203: the round has stood still for a day. ⏰, not ⏳ (auto_start_blocked)
+  // or ⏱️ (registration_expired).
+  game_stale_reminder: '⏰',
   cup_finished: '🏁',
   cup_started: '🏌️',
   cup_signup: '📝',

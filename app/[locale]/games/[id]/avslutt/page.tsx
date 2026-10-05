@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import { Link, redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -105,6 +107,10 @@ export default async function CreatorAvsluttPage({
   // Authz gate (redirects to '/' unless admin or creator). `role.userId` hides
   // the signed-in organiser's own withdraw checkbox in the list below (#1932).
   const role = await requireAdminOrCreator(supabase, gameId);
+  // #2203: «Alle har levert» and the stale reminder link here, so opening the
+  // page reads them. Registered before the game read: after() also runs when
+  // a finished game redirects to the game page.
+  after(() => markReadOnVisit({ userId: role.userId, surface: 'gameFinish', entityId: gameId }));
 
   const { data: game } = await supabase
     .from('games')

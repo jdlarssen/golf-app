@@ -99,6 +99,8 @@ describe('inboxActionKey', () => {
     ['invite', 'confirm'],
     ['auto_start_blocked', 'seeMissing'],
     ['payment_reminder', 'seePayment'],
+    ['all_scorecards_delivered', 'finishGame'],
+    ['game_stale_reminder', 'finishGame'],
     ['scorecard_submitted', null],
     ['scorecard_approved', null],
     ['game_finished', null],
@@ -396,7 +398,7 @@ describe('buildInboxEntryView', () => {
     expect(v.title).toBe('4 scorekort levert');
     expect(v.subtitle).toBe('Lørdagsrunden · sist for 2 min siden');
     expect(v.avatar).toEqual({ kind: 'people', initials: ['ML', 'JB'], more: 2 });
-    expect(v.destination).toBe(`/admin/games/${GAME}`);
+    expect(v.destination).toBe(`/games/${GAME}`);
   });
 
   it('read approval requests: «N scorekort levert» or «Marte leverte scorekortet», never «venter»', () => {
@@ -500,6 +502,51 @@ describe('buildInboxEntryView', () => {
     ['player_added', { game_id: GAME, game_name: 'X', added_by_name: 'Ola Nordmann' }, 'Ola la deg til i X'],
   ] as const)('read %s says it in the past: «%s»', (kind, payload, title) => {
     expect(view([row(kind, payload, { read: true })], 'today').title).toBe(title);
+  });
+
+  describe('#2203: the organiser’s two finish rows', () => {
+    const at = new Date(NOW - 120_000).toISOString();
+    const allIn = (opts: Parameters<typeof row>[2] = {}) =>
+      row('all_scorecards_delivered', { game_id: GAME, game_name: 'Lørdagsrunden' }, { at, ...opts });
+    const stale = (opts: Parameters<typeof row>[2] = {}) =>
+      row('game_stale_reminder', { game_id: GAME, game_name: 'Lørdagsrunden' }, { at, ...opts });
+
+    it('«Alle har levert» waits under KREVER HANDLING with «Avslutt spillet»', () => {
+      const v = view([allIn()], 'action');
+      expect(v.title).toBe('Alle har levert');
+      expect(v.subtitle).toBe('Lørdagsrunden · for 2 min siden');
+      expect(v.actionKey).toBe('finishGame');
+      expect(v.destination).toBe(`/games/${GAME}/avslutt`);
+      expect(tFor('no', 'inbox')(`buttons.${v.actionKey}`)).toBe('Avslutt spillet');
+    });
+
+    it('the stale reminder names the game in the title and says why below it', () => {
+      const v = view([stale()], 'action');
+      expect(v.title).toBe('Lørdagsrunden står stille');
+      expect(v.subtitle).toBe(
+        'Det har ikke kommet nye slag på et døgn. Avslutt spillet når du er klar. · for 2 min siden',
+      );
+      expect(v.actionKey).toBe('finishGame');
+      expect(v.destination).toBe(`/games/${GAME}/avslutt`);
+    });
+
+    it('read, both say it in the past; the game name shows once in each row', () => {
+      const done = view([allIn({ read: true })], 'today');
+      expect(done.title).toBe('Alle leverte');
+      expect(`${done.title} ${done.subtitle}`.match(/Lørdagsrunden/g)).toHaveLength(1);
+      const reminded = view([stale({ read: true })], 'today');
+      expect(reminded.title).toBe('Påminnelse om å avslutte Lørdagsrunden');
+      expect(reminded.subtitle).toMatch(/^Det har ikke kommet nye slag på et døgn/);
+    });
+
+    it('en: both rows and the button read in English', () => {
+      const v = view([allIn()], 'action', ctx('en'));
+      expect(v.title).toBe('Everyone has delivered');
+      expect(tFor('en', 'inbox')(`buttons.${v.actionKey}`)).toBe('Finish the game');
+      expect(view([stale({ read: true })], 'today', ctx('en')).title).toBe(
+        'Reminder to finish Lørdagsrunden',
+      );
+    });
   });
 
   it('detail kinds keep the detail before the time; a rejection reason is free text', () => {
@@ -619,6 +666,16 @@ describe('findSettledActionIds', () => {
       lockedGameIds: new Set([GAME_2]),
     });
     expect(ids).toEqual([inStarted.id]);
+  });
+
+  it('#2203: both finish rows are settled once the game is finished, not before', () => {
+    const allIn = row('all_scorecards_delivered', { game_id: GAME, game_name: 'X' });
+    const stale = row('game_stale_reminder', { game_id: GAME, game_name: 'X' });
+    const other = row('game_stale_reminder', { game_id: GAME_2, game_name: 'Y' });
+    expect(
+      findSettledActionIds([allIn, stale, other], { ...base, finishedGameIds: new Set([GAME]) }),
+    ).toEqual([allIn.id, stale.id]);
+    expect(findSettledActionIds([allIn, stale], base)).toEqual([]);
   });
 
   it('read rows are never touched', () => {

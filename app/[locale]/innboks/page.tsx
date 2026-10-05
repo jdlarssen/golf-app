@@ -87,11 +87,15 @@ export default async function InboxPage() {
     ...trimToWholeDays(readRes.data ?? [], READ_LIMIT),
   ];
 
-  // Games behind signup rows (do they still exist? when do they start?) and
-  // result rows (finished, or reopened?). Admin client: an id check on games
-  // the user was told about (#613).
+  // Games behind signup rows (do they still exist? when do they start?),
+  // result rows (finished, or reopened?) and the organiser's finish rows
+  // (#2203: finished yet?). Admin client: an id check on games the user was
+  // told about (#613).
   const signupGameIds = collectSignupGameIds(notifications);
-  const finishedGameIds = gameIdsOf(notifications, new Set(['game_finished']));
+  const finishedGameIds = gameIdsOf(
+    notifications,
+    new Set(['game_finished', 'all_scorecards_delivered', 'game_stale_reminder']),
+  );
   const lookupGameIds = [...new Set([...signupGameIds, ...finishedGameIds])];
   // Every `.in()` below goes in slices of 100: the inbox reads up to 600
   // rows, and a list of a few hundred ids overflows the request URL (#2263).
@@ -159,6 +163,7 @@ export default async function InboxPage() {
     lockedGameIds: new Set(
       games.filter((g) => g.status === 'active' || g.status === 'finished').map((g) => g.id),
     ),
+    finishedGameIds: new Set(games.filter((g) => g.status === 'finished').map((g) => g.id)),
   });
 
   // One "now" per request, sent to the client so server and browser write the

@@ -10,6 +10,7 @@ export type VisitSurface =
   | 'gameLeaderboard'
   | 'gameSubmit'
   | 'gameHole'
+  | 'gameFinish'
   | 'adminGame'
   | 'adminSignups'
   | 'teamSignup'
@@ -34,7 +35,9 @@ export type VisitRule = {
  * «what is cleared where» (#2201): every page calls `markReadOnVisit` with its
  * surface, and the app (`native/app`) reads the same map. A kind may sit on
  * more than one surface: an `invite` or `auto_start_blocked` reaches an admin
- * on the Sekretariat as well as on the game page.
+ * on the Sekretariat as well as on the game page, and since #2203 a
+ * `scorecard_submitted` goes to the organiser on the game page (older rows and
+ * a non-playing admin end up on the desk).
  *
  * Pure module with type-only imports, so the app can import it without
  * pulling in the zod schemas.
@@ -52,6 +55,7 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
       'game_started',
       'payment_reminder',
       'auto_start_blocked',
+      'scorecard_submitted',
     ],
     key: 'game_id',
   },
@@ -59,6 +63,8 @@ export const READ_ON_VISIT: Record<VisitSurface, VisitRule> = {
   gameLeaderboard: { kinds: ['game_finished'], key: 'game_id' },
   gameSubmit: { kinds: ['deliver_reminder'], key: 'game_id' },
   gameHole: { kinds: ['missing_score_reminder'], key: 'game_id' },
+  // #2203: the organiser's «Avslutt spillet» page.
+  gameFinish: { kinds: ['all_scorecards_delivered', 'game_stale_reminder'], key: 'game_id' },
   adminGame: {
     kinds: ['scorecard_submitted', 'invite', 'auto_start_blocked'],
     key: 'game_id',

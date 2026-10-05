@@ -19,6 +19,20 @@ describe('notificationDestination', () => {
     ).toBe(`/games/${GAME}/holes/10`);
   });
 
+  it('#2203: the organiser lands on pages every organiser can open, not the admin desk', () => {
+    expect(
+      notificationDestination(
+        n('scorecard_submitted', { game_id: GAME, game_name: 'X', player_name: 'Per' }),
+      ),
+    ).toBe(`/games/${GAME}`);
+    expect(
+      notificationDestination(n('all_scorecards_delivered', { game_id: GAME, game_name: 'X' })),
+    ).toBe(`/games/${GAME}/avslutt`);
+    expect(
+      notificationDestination(n('game_stale_reminder', { game_id: GAME, game_name: 'X' })),
+    ).toBe(`/games/${GAME}/avslutt`);
+  });
+
   it('maps game-anchored kinds to their game route', () => {
     expect(
       notificationDestination(

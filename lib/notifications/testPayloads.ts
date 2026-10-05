@@ -41,6 +41,8 @@ export const testPayloads: { [K in NotificationKind]: NotificationPayload<K> } =
   },
   deliver_reminder: { game_id: TEST_GAME_ID, game_name: 'X' },
   missing_score_reminder: { game_id: TEST_GAME_ID, game_name: 'X', holes: [10, 11] },
+  all_scorecards_delivered: { game_id: TEST_GAME_ID, game_name: 'X' },
+  game_stale_reminder: { game_id: TEST_GAME_ID, game_name: 'X' },
   cup_finished: { tournament_id: TEST_TOURNAMENT_ID, tournament_name: 'Cup' },
   cup_started: { tournament_id: TEST_TOURNAMENT_ID, tournament_name: 'Cup' },
   cup_signup: {

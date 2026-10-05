@@ -24,6 +24,8 @@ export type NotificationKind =
   | 'team_member_withdrew'
   | 'deliver_reminder'
   | 'missing_score_reminder'
+  | 'all_scorecards_delivered'
+  | 'game_stale_reminder'
   | 'cup_finished'
   | 'cup_started'
   | 'cup_signup'
@@ -241,6 +243,26 @@ const missingScoreReminderSchema = z.object({
   holes: z.array(z.number().int().min(1).max(18)).min(1),
 });
 
+// all_scorecards_delivered (#2203): alle aktive kort i spillet er levert (og
+// godkjent, med kortgodkjenning), så arrangøren kan avslutte. Til
+// `games.created_by`, én gang per spill (kravet på
+// `games.organizer_all_delivered_notified_at`). Deeplinker til
+// /games/[game_id]/avslutt. Samme slanke payload som game_finished.
+const allScorecardsDeliveredSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+});
+
+// game_stale_reminder (#2203): et aktivt spill har stått et døgn uten nye
+// slag, leveringer, godkjenninger eller tilbaketrekkinger. Til arrangøren, én
+// gang per spill (kravet på `games.organizer_stale_reminder_sent_at`, sendt av
+// timessveipen). Deeplinker til /games/[game_id]/avslutt. Spillet avslutter
+// seg aldri selv (eierens valg 2026-09-25).
+const gameStaleReminderSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+});
+
 // cup_finished: en cup (tournament av matcher) er avsluttet. Fyres til alle
 // cup-deltakere fra `finishTournament` — in-app først, mail kun til off-app
 // (samme prinsipp som game_finished). Slank payload speiler game_finished:
@@ -421,6 +443,8 @@ const schemas = {
   team_member_withdrew: teamMemberWithdrewSchema,
   deliver_reminder: deliverReminderSchema,
   missing_score_reminder: missingScoreReminderSchema,
+  all_scorecards_delivered: allScorecardsDeliveredSchema,
+  game_stale_reminder: gameStaleReminderSchema,
   cup_finished: cupFinishedSchema,
   cup_started: cupStartedSchema,
   cup_signup: cupSignupSchema,
