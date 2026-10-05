@@ -98,7 +98,11 @@ function RoomCard({ children }: { children: ReactNode }) {
   );
 }
 
-/** One row: name over a muted line, ending in «›». The whole row is the link. */
+/**
+ * One row: name over a muted line, ending in «›». The whole row is the link.
+ * `data` puts the row's numbers on the link as data attributes, so the
+ * staging oracle checks them without reading Norwegian copy.
+ */
 function RoomRow({
   href,
   name,
@@ -106,6 +110,7 @@ function RoomRow({
   first,
   minHeight,
   testId,
+  data,
 }: {
   href: string;
   name: string;
@@ -113,12 +118,14 @@ function RoomRow({
   first: boolean;
   minHeight: 'min-h-16' | 'min-h-[60px]';
   testId: string;
+  data?: Record<`data-${string}`, string | number>;
 }) {
   return (
     <li className={first ? undefined : 'border-t border-row-divider-warm'}>
       <SmartLink
         href={href}
         data-testid={testId}
+        {...data}
         className={`flex ${minHeight} items-center gap-3 px-3.5 py-2.5 text-text`}
       >
         <span className="min-w-0 grow">
@@ -194,6 +201,11 @@ export function ClubsView({ clubs }: { clubs: RoomClub[] | null }) {
             first={i === 0}
             minHeight="min-h-16"
             testId="player-club-row"
+            data={{
+              'data-role': club.role,
+              'data-members': club.members,
+              'data-next-round': club.nextRoundAt ?? '',
+            }}
           />
         ))}
       </RoomCard>
@@ -269,6 +281,7 @@ export function CupsView({
             first={i === 0}
             minHeight="min-h-16"
             testId="player-cup-row"
+            data={{ 'data-played': cup.played, 'data-total': cup.total }}
           />
         ))}
       </RoomCard>
