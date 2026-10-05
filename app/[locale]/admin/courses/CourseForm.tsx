@@ -654,7 +654,9 @@ export function CourseForm({
       >
         <SubmitButton
           size="large"
-          className="w-full"
+          // The artboard's grey text on the disabled button, here only
+          // (owner 05.10); `!` beats the large button's own disabled colour.
+          className="w-full disabled:text-save-disabled-fg!"
           pendingLabel={t('pendingLabel')}
           disabled={blocked}
           aria-describedby={blocked ? 'course-save-status' : undefined}
