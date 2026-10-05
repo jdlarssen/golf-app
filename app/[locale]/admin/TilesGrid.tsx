@@ -62,7 +62,9 @@ export async function TilesGrid() {
       .is('deleted_at', null),
     supabase.from('courses').select('id', { count: 'exact', head: true }),
     onlyStandaloneGames(supabase.from('games').select('ended_at').eq('status', 'finished'))
-      .order('ended_at', { ascending: false })
+      // NULLS LAST: Postgres puts NULL first in DESC, and a finished game
+      // without ended_at read as «Ingen signerte runder» (#2269, staging).
+      .order('ended_at', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),
     supabase
