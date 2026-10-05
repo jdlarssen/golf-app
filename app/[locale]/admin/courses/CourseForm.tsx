@@ -1,11 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
+import { findStrokeIndexGaps, teeRatingProblem } from '@/lib/courses/coursePayload';
+import { formatListLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import { MAX_TEE_BOXES } from './constants';
 import { useRovingFocus } from '@/hooks/useRovingFocus';
 
@@ -67,14 +70,14 @@ const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
   par_mens: '4',
   par_ladies: '4',
   par_juniors: '4',
-  stroke_index: String(i + 1),
+  stroke_index: '',
 }));
 
 const DEFAULT_TEE: TeeBoxData = {
   name: '',
   length_meters: '',
-  slope_mens: '113',
-  course_rating_mens: '70.0',
+  slope_mens: '',
+  course_rating_mens: '',
   slope_ladies: '',
   course_rating_ladies: '',
   slope_juniors: '',
@@ -137,17 +140,6 @@ function hasGenderData(
   return tee[`slope_${gender}`] !== '' || tee[`course_rating_${gender}`] !== '';
 }
 
-// Brukes til å avgjøre om Tøm-knappen skal vises på herrer-blokken på
-// new-flyten: så lenge herrer er identisk med default (113/70.0), holder
-// vi knappen skjult for å hindre at admin utilsiktet tømmer prefylte
-// defaults før de har lagt til noe eget.
-function isMensAtDefault(tee: TeeBoxData): boolean {
-  return (
-    tee.slope_mens === DEFAULT_TEE.slope_mens &&
-    tee.course_rating_mens === DEFAULT_TEE.course_rating_mens
-  );
-}
-
 // Sjekker om hullene har avvikende par for et gitt kjønn — brukes for å
 // avgjøre om per-kjønn-par-seksjonen skal stå åpen ved mount på edit-flyten.
 function hasGenderParOverride(
@@ -169,11 +161,6 @@ export function CourseForm({
 }: Props) {
   const t = useTranslations('courseForm.form');
 
-  // Skiller new-flyten (defaults i herrer-blokken) fra edit-flyten (lagrede
-  // tall): Tøm-knappen på herrer-blokken skjules på new-flyten så lenge
-  // verdiene er identiske med default, men vises alltid på edit-flyten når
-  // minst ett felt har innhold.
-  const loadedFromInitialData = initialData !== undefined;
   const [holes, setHoles] = useState<HoleData[]>(
     initialData?.holes ?? DEFAULT_HOLES,
   );
@@ -213,17 +200,31 @@ export function CourseForm({
     [holes],
   );
 
+  // "Lagre bane" stays disabled until the indices and tee ratings would pass
+  // the server (#2279) — a server bounce reloads an empty form, so 18 typed
+  // indices would be lost. A duplicate always leaves a number missing, so
+  // `missing` alone gates the indices.
+  const siGaps = useMemo(
+    () => findStrokeIndexGaps(holes.map((h) => h.stroke_index)),
+    [holes],
+  );
+  const teeProblems = useMemo(
+    () =>
+      teeBoxes.map((tee) =>
+        teeRatingProblem([
+          { slope: tee.slope_mens, cr: tee.course_rating_mens },
+          { slope: tee.slope_ladies, cr: tee.course_rating_ladies },
+          { slope: tee.slope_juniors, cr: tee.course_rating_juniors },
+        ]),
+      ),
+    [teeBoxes],
+  );
+  const firstTeeProblem = teeProblems.findIndex((p) => p !== null);
+  const blocked = siGaps.missing.length > 0 || firstTeeProblem !== -1;
+
   function updateHole(index: number, patch: Partial<HoleData>) {
     setHoles((prev) =>
       prev.map((h, i) => (i === index ? { ...h, ...patch } : h)),
-    );
-  }
-
-  // Fills stroke_index for all 18 holes with 1..18 in order. Saves 18
-  // keyboard-popup taps for the common case (admin only adjusts exceptions).
-  function fillSiAscending() {
-    setHoles((prev) =>
-      prev.map((h, i) => ({ ...h, stroke_index: String(i + 1) })),
     );
   }
 
@@ -380,13 +381,6 @@ export function CourseForm({
       <section>
         <h2 className="text-sm font-medium text-text mb-1">{t('holesHeading')}</h2>
         <p className="text-xs text-muted mb-3">{t('holesHint')}</p>
-        <button
-          type="button"
-          onClick={fillSiAscending}
-          className="mb-3 block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
-        >
-          {initialData ? t('setSiAscButtonEdit') : t('setSiAscButton')}
-        </button>
         <div className="space-y-3">
           {holes.map((hole, index) => (
             <div
@@ -604,8 +598,7 @@ export function CourseForm({
                     tee.slope_mens !== '' && tee.course_rating_mens !== ''
                   }
                   showClear={
-                    (loadedFromInitialData || !isMensAtDefault(tee)) &&
-                    (tee.slope_mens !== '' || tee.course_rating_mens !== '')
+                    tee.slope_mens !== '' || tee.course_rating_mens !== ''
                   }
                   onClear={() => clearGender(index, 'mens')}
                   onChange={(patch) => updateTee(index, patch)}
@@ -713,15 +706,63 @@ export function CourseForm({
         )}
       </section>
 
+      {blocked && (
+        <SaveStatus
+          siGaps={siGaps}
+          teeIndex={firstTeeProblem}
+          teeProblem={teeProblems[firstTeeProblem] ?? null}
+        />
+      )}
+
       <SubmitButton
         className="w-full"
         pendingLabel={t('pendingLabel')}
+        disabled={blocked}
+        aria-describedby={blocked ? 'course-save-status' : undefined}
       >
         {submitLabel}
       </SubmitButton>
 
       {footer}
     </form>
+  );
+}
+
+// What still blocks "Lagre bane" (#2279): one line for the indices, one for
+// the first tee box with a rating problem. Wired to the button through
+// aria-describedby; no aria-live, since it changes on every keystroke.
+function SaveStatus({
+  siGaps,
+  teeIndex,
+  teeProblem,
+}: {
+  siGaps: { missing: number[]; duplicates: number[] };
+  teeIndex: number;
+  teeProblem: 'partial' | 'missing' | null;
+}) {
+  const t = useTranslations('courseForm.form');
+  const locale = useLocale() as AppLocale;
+  const { missing, duplicates } = siGaps;
+  return (
+    <div id="course-save-status" className="space-y-1 text-sm text-warning-text">
+      {missing.length > 0 && (
+        <p>
+          {duplicates.length > 0
+            ? t('siDuplicates', {
+                count: duplicates.length,
+                numbers: formatListLocale(duplicates.map(String), locale),
+              })
+            : t('siMissingCount', { count: missing.length })}
+        </p>
+      )}
+      {teeProblem !== null && (
+        <p>
+          {teeProblem === 'partial'
+            ? t('teeRatingPartial', { number: teeIndex + 1 })
+            : t('teeRatingMissing', { number: teeIndex + 1 })}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -896,8 +937,6 @@ function GenderRatingBlock({
   onClear: () => void;
   onChange: (patch: Partial<TeeBoxData>) => void;
 }) {
-  const slopePlaceholder = gender === 'mens' ? '113' : '';
-  const crPlaceholder = gender === 'mens' ? '70.0' : '';
   return (
     <fieldset className="border border-border/60 rounded-lg p-3 space-y-3">
       {/* Legend first, floated — see GenderParBlock (#2240). */}
@@ -923,7 +962,6 @@ function GenderRatingBlock({
           max={165}
           step={1}
           label={slopeLabel}
-          placeholder={slopePlaceholder}
           hint={slopeHint}
           value={slope}
           onChange={(e) =>
@@ -939,7 +977,6 @@ function GenderRatingBlock({
           max={90}
           step={0.1}
           label={crLabel}
-          placeholder={crPlaceholder}
           hint={crHint}
           value={cr}
           onChange={(e) =>
