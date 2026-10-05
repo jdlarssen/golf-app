@@ -138,6 +138,10 @@
   --accent-on-strong: #d4b870;
   --live-dot: #2d8a4e;
   --rank-up: #2d7a4a;
+  /* The demo (#2281): the strip's ▲/▼ on --surface-strong, and the birdie
+   * ring in the flight rows (ScoreShape size `row`). Artboard values. */
+  --on-strong-arrow: #b9d8c1;
+  --score-under-ring: #1f6b3a;
 
   /* Skeleton — warm linen, never neutral grey. Base sits between --border and
    * --row-divider-warm; tint is the shimmer-peak lifted one step. */
@@ -316,6 +320,10 @@
     --accent-on-strong: #d4b870;
     --live-dot: #7daa8a;
     --rank-up: #7daa8a;
+    /* Demo (#2281) — see :root. The arrow keeps its pale green on the lifted
+     * --surface-strong; the ring takes the night birdie green on --surface. */
+    --on-strong-arrow: #b9d8c1;
+    --score-under-ring: #7daa8a;
 
     /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
@@ -434,6 +442,8 @@
   --accent-on-strong: #d4b870;
   --live-dot: #7daa8a;
   --rank-up: #7daa8a;
+  --on-strong-arrow: #b9d8c1;
+  --score-under-ring: #7daa8a;
 
   --skel-base: #243828;
   --skel-tint: #2f4734;

@@ -47,7 +47,10 @@ export type LiveBoardRow = {
    */
   total: number | null;
   holesPlayed: number;
-  /** Rank before each player's latest hole − rank now (positive = up). `null` under 2 holes. */
+  /**
+   * Rank before each player's latest hole − rank now (positive = up). `null`
+   * under `minHolesForMovement` played holes (default 2).
+   */
   movement: number | null;
   /** Gross colour of up to the last five played holes, oldest first. */
   recent: ScoreTone[];
@@ -101,8 +104,13 @@ export function computeLiveBoard(opts: {
   players: LiveBoardPlayerRow[];
   holesRows: StablefordContextHoleRow[];
   scoresRows: StablefordContextScoreRow[];
+  /**
+   * Played holes before a row gets movement. The demo (#2281) passes 1 so the
+   * arrow shows from the first hole; every real board keeps the default 2.
+   */
+  minHolesForMovement?: number;
 }): LiveBoard | null {
-  const { gameId, game, players, holesRows, scoresRows } = opts;
+  const { gameId, game, players, holesRows, scoresRows, minHolesForMovement = 2 } = opts;
   if (game.status === 'finished') return null;
   if (shouldHideNetto(revealState(game.score_visibility, game.status))) return null;
 
@@ -167,7 +175,7 @@ export function computeLiveBoard(opts: {
       tied: (rankCount.get(l.rank) ?? 0) > 1,
       total: l.holesPlayed > 0 ? l.total : null,
       holesPlayed: l.holesPlayed,
-      movement: l.holesPlayed < 2 || before === undefined ? null : before - l.rank,
+      movement: l.holesPlayed < minHolesForMovement || before === undefined ? null : before - l.rank,
       recent: recentTones(result.holes, l.userId),
     };
   });

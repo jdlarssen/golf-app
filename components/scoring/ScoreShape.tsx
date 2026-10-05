@@ -2,7 +2,12 @@ import type { CSSProperties, JSX, ReactNode } from 'react';
 import type { ScoreShape as ShapeKind } from '@/lib/scoring/scoreShape';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
 
-export type ScoreShapeSize = 'sm' | 'md' | 'lg';
+/**
+ * `row`: the demo's flight rows (#2281). Drawn as the artboard draws it: a
+ * 30 px box, and a shaped score gets a 1 px ring outside that box (the
+ * artboard's content-box border), so a birdie is 32 px and a par 30 px.
+ */
+export type ScoreShapeSize = 'sm' | 'md' | 'lg' | 'row';
 
 export interface ScoreShapeProps {
   shape: ShapeKind;
@@ -15,13 +20,18 @@ const SIZE_PX: Record<ScoreShapeSize, number> = {
   sm: 28,
   md: 36,
   lg: 52,
+  row: 30,
 };
 
 const STROKE_BY_SIZE: Record<ScoreShapeSize, number> = {
   sm: 1.0,
   md: 1.25,
   lg: 1.5,
+  row: 1,
 };
+
+/** `row`'s shaped box: the 30 px box plus its 1 px ring on each side. */
+const ROW_RING_PX = 32;
 
 // Stroke colors mirror the existing scoreTone palette used elsewhere.
 const STROKE_COLOR: Record<ScoreTone, string> = {
@@ -34,7 +44,7 @@ const STROKE_COLOR: Record<ScoreTone, string> = {
 
 export function ScoreShape(props: ScoreShapeProps): JSX.Element {
   const { shape, tone, size = 'lg', children } = props;
-  const px = SIZE_PX[size];
+  const px = size === 'row' && shape !== 'none' ? ROW_RING_PX : SIZE_PX[size];
 
   if (shape === 'none') {
     // Reserve the same width/height as shaped variants so par numbers align
@@ -57,9 +67,12 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
 
 
   const stroke = STROKE_BY_SIZE[size];
-  const color = STROKE_COLOR[tone];
+  // The demo's birdie ring has its own token (the artboard's #1f6b3a).
+  const color = size === 'row' && tone === 'under' ? 'var(--score-under-ring)' : STROKE_COLOR[tone];
   const half = px / 2;
-  const inner = half - stroke;
+  // `row` puts the ring's outer edge on the box edge, as a CSS border would;
+  // the other sizes keep their inset ring.
+  const inner = size === 'row' ? half - stroke / 2 : half - stroke;
   const innerSquareOffset = stroke / 2;
   const gap = Math.max(2, stroke + 0.5);
 

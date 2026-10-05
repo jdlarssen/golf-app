@@ -32,7 +32,7 @@ test.describe('Pilarside: arranger golfturnering (public, no login)', () => {
     // Slutt-CTA → inn i den spillbare demoen.
     await page.getByTestId('arrange-guide-demo-cta').click();
     await expect(page).toHaveURL(/\/demo$/);
-    await expect(page.getByTestId('demo-banner')).toBeVisible();
+    await expect(page.getByTestId('demo-standing')).toBeVisible();
   });
 
   test('målgruppe-kortet fører fra hub til underside @gate', async ({
