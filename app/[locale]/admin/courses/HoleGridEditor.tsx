@@ -25,8 +25,10 @@ const MAX_LISTED_MISSING = 6;
 // shows its own.
 const INDEX_FRAME =
   'box-content h-[30px] w-[26px] rounded-lg border-[1.5px] transition-colors motion-reduce:transition-none';
+// The field's own corners follow the box (10.67 × 0.75 = 8 px), so the focus
+// ring is round too; no colour transition, or the text would fade in on focus.
 const INDEX_FIELD =
-  'absolute left-1/2 top-1/2 h-11 w-[38.67px] -translate-x-1/2 -translate-y-1/2 scale-75 border-0 bg-transparent p-0 text-center font-sans text-[16px] leading-[normal] transition-colors motion-reduce:transition-none';
+  'absolute left-1/2 top-1/2 h-11 w-[38.67px] -translate-x-1/2 -translate-y-1/2 scale-75 rounded-[10.67px] border-0 bg-transparent p-0 text-center font-sans text-[16px] leading-[normal]';
 
 const INDEX_VALUE =
   'pointer-events-none absolute inset-0 flex items-center justify-center text-[12px] peer-focus:invisible';
