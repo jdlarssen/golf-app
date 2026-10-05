@@ -263,8 +263,12 @@ export function terminTimeNote(
 
 /**
  * Whether the list has a round you can sign up for: the new player's
- * Terminlista line in the Klubbhus room (#2494, O1). Rounds only, as the list
- * shows them; a pending request is no open round, unlike the empty state of
+ * Terminlista row in the Klubbhus room shows only then (#2494, owner's answer
+ * 05.10, O1 B). The list's own rows (`buildTerminEntries` with the same seats
+ * /finn-turneringer reads) that are not full: a full round stands on the list
+ * as «Fullt», without a button. A round dated before today still has its
+ * button while the organiser keeps signups open, so it counts, as on the
+ * list. A pending request is no open round, unlike the empty state of
  * `Terminliste.tsx`, which also waits for your requests.
  */
 export function hasOpenRounds(data: {
@@ -273,6 +277,6 @@ export function hasOpenRounds(data: {
   openGames?: readonly DiscoverableOpenGame[];
   /** Taken and ignored on purpose: a request is no open round. */
   pendingRequests?: readonly PendingRequest[];
-}): boolean {
-  return buildTerminEntries(data, new Map()).length > 0;
+}, seats: ReadonlyMap<string, GameSeats>): boolean {
+  return buildTerminEntries(data, seats).some((entry) => !entry.full);
 }

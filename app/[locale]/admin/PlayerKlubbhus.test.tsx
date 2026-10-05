@@ -102,23 +102,27 @@ describe('PlayerKlubbhus room (#2493)', () => {
     expect(screen.getByTestId('klubbhus-cups-error')).toBeInTheDocument();
   });
 
-  it('a new player (#2494): one subtitle under the greeting; «Bli med» with Terminlista and an empty-list line, and «Klubben din» as plain text', () => {
+  it('a new player (#2494): one subtitle under the greeting; «Bli med» with Terminlista only when there is a round to sign up for, and «Klubben din» as plain text', () => {
     const sub = render(<NewPlayerSubtitle />);
     expect(screen.getByTestId('new-player-subtitle').tagName).toBe('P');
     sub.unmount();
 
-    const open = render(<JoinView terminEmpty={false} />);
+    // With a round to sign up for: the Terminlista row, to /finn-turneringer.
+    const open = render(<JoinView hasOpenRounds />);
     expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
-    const termin = screen.getByTestId('player-termin-row');
-    expect(termin).toHaveAttribute('href', '/finn-turneringer');
-    expect(termin.dataset.empty).toBe('false');
+    expect(screen.getByTestId('player-termin-row')).toHaveAttribute('href', '/finn-turneringer');
     const invite = screen.getByTestId('player-club-invite');
     expect(invite.closest('a')).toBeNull();
     expect(invite.querySelector('a, [aria-hidden]')).toBeNull();
     open.unmount();
 
-    render(<JoinView terminEmpty />);
-    expect(screen.getByTestId('player-termin-row').dataset.empty).toBe('true');
+    // None (owner's answer 05.10, O1 B): no Terminlista row and no link to the
+    // list; the section stays, since «Klubben din» is in it too.
+    render(<JoinView hasOpenRounds={false} />);
+    expect(screen.queryByTestId('player-termin-row')).toBeNull();
+    expect(document.querySelector('a[href="/finn-turneringer"]')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
+    expect(screen.getByTestId('player-club-invite')).toBeInTheDocument();
   });
 
   it('tools: three plain rows without icons, back to the room (#2487)', () => {

@@ -209,8 +209,17 @@ describe('hasOpenRounds — the new player\'s Terminlista line (#2494)', () => {
     ['an open round', { openGames: [open()] }, true],
     ['a club round', { clubGames: [club()] }, true],
     ['a friend\'s round', { friendGames: [friend()] }, true],
+    // The list still shows a round whose date has passed, with its button,
+    // while the organiser keeps signups open; so does the row.
+    ['a round dated before today', { openGames: [open({ scheduled_tee_off_at: '2026-09-01T07:20:00Z' })] }, true],
   ] as const)('%s', (_label, data, expected) => {
-    expect(hasOpenRounds(data)).toBe(expected);
+    expect(hasOpenRounds(data, NO_SEATS)).toBe(expected);
+  });
+
+  it('a full round is no round you can sign up for; the list shows it as «Fullt», without a button', () => {
+    const full = new Map<string, GameSeats>([['o1', { kind: 'capped', cap: 8, held: 8 }]]);
+    expect(hasOpenRounds({ openGames: [open()] }, full)).toBe(false);
+    expect(hasOpenRounds({ openGames: [open(), open({ id: 'o2', short_id: 'open0002' })] }, full)).toBe(true);
   });
 });
 

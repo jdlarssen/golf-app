@@ -31,6 +31,7 @@ const snapshot = (finishedMatches: number, remainingMatches: number) => ({
 
 beforeEach(() => {
   getCupSnapshot.mockReset();
+  ids = { ok: true, ids: [], playing: [] };
   db.reset();
   tournaments = { data: [], error: null };
 });
