@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
+import { getUpcomingClubGames } from './getUpcomingClubGames';
 import type { RegistrationMode } from './registration';
 import { isOrganisedBy, isPubliclyViewable, isSignupWindowOpen } from './publicSignupVisibility';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
@@ -151,24 +152,13 @@ export async function getDiscoverableGames(userId: string): Promise<{
   // forespurt.
   let clubGames: DiscoverableClubGame[] = [];
   if (myClubIds.length > 0) {
-    let clubQuery = admin
-      .from('games')
-      .select(
-        'id, name, short_id, scheduled_tee_off_at, registration_mode, status, signups_closed_at, created_by, game_mode, mode_config, hole_segment, start_type, courses(name), groups(name)',
-      )
-      .in('group_id', myClubIds)
-      // #2445: a draft is hidden from everyone but its organiser.
-      .eq('status', 'scheduled')
-      .is('signups_closed_at', null)
-      .neq('created_by', userId)
-      .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
-      .limit(50);
-
-    if (excludedIds.size > 0) {
-      clubQuery = clubQuery.not('id', 'in', `(${[...excludedIds].join(',')})`);
-    }
-
-    const clubRes = await clubQuery.overrideTypes<Array<DiscoverableFormat>>();
+    // #2493: the club query has one home, shared with the Klubbhus room and
+    // the club page. All three options keep this list as it was.
+    const clubRes = await getUpcomingClubGames(myClubIds, {
+      openSignupsOnly: true,
+      excludeCreatedBy: userId,
+      excludeIds: [...excludedIds],
+    });
 
     // #2276: membership replaces the invitation, not the signup window — a
     // closed club game is closed for members too.
