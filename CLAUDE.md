@@ -112,7 +112,7 @@ Discoverable kataloger (`ls components/ui/`, `ls lib/`, etc.) er ikke listet her
 - `proxy.ts` (ikke `middleware.ts`) — Next.js 16-konvensjonen for middleware
 - `app/[locale]/legal/privacy/page.tsx` — offentlig side; auth-gaten hoppes over i kode via `PUBLIC_PATH_PATTERN` i `proxy.ts` (matcher-eksklusjonen er borte — matcheren må treffe ruta for locale-redirect og OG-bilde)
 - `lib/games/getGameWithPlayers.ts` — `unstable_cache` med tag `game-${id}`; se «Server-actions og caching»
-- `lib/mail/inviteNotification.ts` + `gameFinishedNotification.ts` + `scorecardSubmittedNotification.ts` — tre Resend-helpers, alle best-effort med `Promise.allSettled`
+- `lib/mail/inviteNotification.ts` + `gameFinishedNotification.ts` + `organizerGameNotice.ts` — tre av Resend-helperne, alle best-effort (`Promise.allSettled` eller try/catch); en mailfeil stopper aldri flyten
 - `app/[locale]/admin/games/[id]/slett/` + `app/[locale]/admin/spillere/[id]/slett/` + `app/[locale]/profile/slett-konto/` — destruktive flyter har dedikerte konfirmasjons-sider; aldri inline-toggle eller `<details>`-popout
 - `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (appens norske speil; nettets status-tekster kommer fra i18n `gameStatus`, låst av `status.i18n.test.ts`)
 
