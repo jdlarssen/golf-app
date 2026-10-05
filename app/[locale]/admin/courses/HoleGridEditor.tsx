@@ -14,19 +14,53 @@ type IndexedHole = HoleData & { index: number };
 // The card lists the missing numbers up to this many; past it, only the count.
 const MAX_LISTED_MISSING = 6;
 
-// The visible index box is 29 × 33 px with a 1.5 px dashed border, as the
-// artboard draws it. The field itself is 16 px text (iOS zooms into anything
-// smaller), so it is drawn at 4/3 size and scaled by 0.75. It sits absolutely
-// in the middle of the cell: its layout box is wider than the narrowest column.
+// The index box is the artboard's own CSS (26 × 30 content box, 1.5 px
+// border), so every browser rounds the border the way it rounds the
+// artboard's. The field on top has no border: it is 16 px text (iOS zooms into
+// anything smaller) drawn at 4/3 size and scaled by 0.75, absolutely in the
+// middle of the cell, since its layout box is wider than the narrowest column.
+// Scaled text lands half a pixel off the artboard's 12 px text, so without
+// focus the value (or «?») shows as plain 12 px text (INDEX_VALUE) and the
+// field's own text and placeholder are transparent; with focus, the field
+// shows its own.
+const INDEX_FRAME =
+  'box-content h-[30px] w-[26px] rounded-lg border-[1.5px] transition-colors motion-reduce:transition-none';
 const INDEX_FIELD =
-  'absolute left-1/2 top-1/2 h-11 w-[38.67px] -translate-x-1/2 -translate-y-1/2 scale-75 rounded-[10.67px] border-2 bg-transparent p-0 text-center font-sans text-[16px] leading-[normal] transition-colors motion-reduce:transition-none';
+  'absolute left-1/2 top-1/2 h-11 w-[38.67px] -translate-x-1/2 -translate-y-1/2 scale-75 border-0 bg-transparent p-0 text-center font-sans text-[16px] leading-[normal] transition-colors motion-reduce:transition-none';
+
+const INDEX_VALUE =
+  'pointer-events-none absolute inset-0 flex items-center justify-center text-[12px] peer-focus:invisible';
 
 const INDEX_STATE = {
-  filled: 'border-transparent font-normal text-text',
-  empty: 'border-dashed border-warning font-semibold text-warning-text placeholder:text-warning-text',
-  invalid: 'border-dashed border-warning font-semibold text-warning-text placeholder:text-warning-text',
-  duplicate: 'border-danger font-semibold text-danger placeholder:text-danger',
+  filled: { frame: 'border-transparent', text: 'font-normal text-text' },
+  empty: {
+    frame: 'border-dashed border-warning',
+    text: 'font-semibold text-warning-text placeholder:text-warning-text',
+  },
+  invalid: {
+    frame: 'border-dashed border-warning',
+    text: 'font-semibold text-warning-text placeholder:text-warning-text',
+  },
+  duplicate: {
+    frame: 'border-solid border-danger',
+    text: 'font-semibold text-danger placeholder:text-danger',
+  },
 } as const;
+
+// Inter has no «→»: the artboard draws it from the system font, and so does
+// this (the rest of the line stays Inter).
+function systemArrows(text: string) {
+  return text.split('→').flatMap((part, i) =>
+    i === 0
+      ? [part]
+      : [
+          <span key={i} className="font-[system-ui]">
+            →
+          </span>,
+          part,
+        ],
+  );
+}
 
 const ROW_LABEL =
   'py-0 pr-0 pl-1 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted';
@@ -166,8 +200,9 @@ export function HoleGridEditor({
               const state = strokeIndexCellState(h.stroke_index, gaps.duplicates);
               return (
                 <td key={h.hole_number} className="p-0">
-                  <label className="relative block h-10">
+                  <label className="relative flex h-10 items-center justify-center">
                     <span className="sr-only">{t('indexCellLabel', { number: h.hole_number })}</span>
+                    <span aria-hidden className={`${INDEX_FRAME} ${INDEX_STATE[state].frame}`} />
                     <input
                       name={`hole_${h.hole_number}_si`}
                       type="text"
@@ -181,8 +216,11 @@ export function HoleGridEditor({
                       aria-invalid={state === 'duplicate' || undefined}
                       onChange={(e) => onSi(h.index, e.target.value)}
                       onFocus={() => setLastTapped(null)}
-                      className={`${INDEX_FIELD} ${INDEX_STATE[state]}`}
+                      className={`peer ${INDEX_FIELD} ${INDEX_STATE[state].text} not-focus:text-transparent not-focus:placeholder:text-transparent`}
                     />
+                    <span aria-hidden className={`${INDEX_VALUE} ${INDEX_STATE[state].text}`}>
+                      {h.stroke_index === '' ? '?' : h.stroke_index}
+                    </span>
                   </label>
                 </td>
               );
@@ -196,7 +234,7 @@ export function HoleGridEditor({
   return (
     <div className="flex flex-col gap-2 rounded-[14px] border border-border bg-surface px-2 py-2.5 leading-[normal]">
       <div className="flex justify-between px-1 text-[12px] text-muted">
-        <span>{t('parTapHint')}</span>
+        <span>{systemArrows(t('parTapHint'))}</span>
         <span className="font-semibold text-text">{t('parTotalShort', { total: parTotal })}</span>
       </div>
       {half(out)}

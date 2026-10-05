@@ -133,7 +133,10 @@ function hasGenderData(
   return tee[`slope_${gender}`] !== '' || tee[`course_rating_${gender}`] !== '';
 }
 
-const SAVE_BAR_TONE = { app: 'bg-bg', admin: 'bg-admin-bg' } as const;
+const SAVE_BAR_TONE = {
+  app: 'bg-bg after:bg-bg',
+  admin: 'bg-admin-bg after:bg-admin-bg',
+} as const;
 
 // Sjekker om hullene har avvikende par for et gitt kjønn — brukes for å
 // avgjøre om per-kjønn-par-seksjonen skal stå åpen ved mount på edit-flyten.
@@ -639,9 +642,12 @@ export function CourseForm({
       </section>
 
       {/* Always in view, just above the bottom nav (59.5 px at 390: 58.5 px
-          link plus its 1 px top border; the nav pads the safe area itself). */}
+          link plus its 1 px top border; the nav pads the safe area itself).
+          Chromium paints the stuck bar half a pixel above its box, so a strip
+          of the page colour hangs under it (as in EndGameBar) and nothing
+          shows through between the bar and the nav. */}
       <div
-        className={`sticky bottom-[calc(59.5px+env(safe-area-inset-bottom,0px))] z-20 -mx-5 mt-6 flex flex-col gap-1 border-t border-border px-4 pt-3 pb-5 leading-[normal] ${SAVE_BAR_TONE[tone]}`}
+        className={`sticky bottom-[calc(59.5px+env(safe-area-inset-bottom,0px))] z-20 -mx-5 mt-6 flex flex-col gap-1 border-t border-border px-4 pt-3 pb-5 leading-[normal] after:absolute after:inset-x-0 after:top-full after:h-1 ${SAVE_BAR_TONE[tone]}`}
       >
         <SubmitButton
           size="large"
