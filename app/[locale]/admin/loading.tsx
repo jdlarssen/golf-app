@@ -2,33 +2,41 @@ import { getTranslations } from 'next-intl/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { getRole } from './_dashboardContext';
+import { LoadingTone } from './LoadingTone';
 import { DenseTileListSkeleton } from './TilesGrid';
 import { NewRoundCardSkeleton } from './PlayerKlubbhusViews';
 
 // Route-loading skeleton for /admin and every page under it without its own
-// loading.tsx. It renders before the role is known: `getRole()` runs in the
-// page, below this boundary, and the page then branches to the admin
-// Sekretariat or the player room. It follows the player room (#2493), which
-// most people see: the tab's TopBar without an arrow, the greeting as one
-// heading line with no card, the «Lag en ny runde» card as a block, and
-// `DenseTileList` rows below. Admin rarely sees it; the Sekretariat may shift.
+// loading.tsx. Its layout follows the player room (#2493), which most people
+// see: the tab's TopBar without an arrow, the greeting as one heading line
+// with no card, the «Lag en ny runde» card as a block, and `DenseTileList`
+// rows below.
+//
+// Its page colour is the one the page will have (owner's answer 05.10): the
+// player's room on the app's background, everything else on Klubbhuset's
+// linen. The role is already known here (the admin layout above awaits it),
+// and `getRole()` is request-cached, so the page reuses this lookup instead
+// of making its own.
 export default async function AdminLoading() {
-  const tNav = await getTranslations('admin.nav');
+  const [tNav, role] = await Promise.all([getTranslations('admin.nav'), getRole()]);
   return (
-    <AdminShell>
-      <TopBar kicker={tNav('klubbhus')} />
+    <LoadingTone isPlayer={!role.isAdmin}>
+      <AdminShell tone="none">
+        <TopBar kicker={tNav('klubbhus')} />
 
-      <SkeletonLine
-        className="pt-1.5 font-serif text-[28px] font-medium leading-[normal]"
-        barClassName="h-6 w-2/5"
-      />
+        <SkeletonLine
+          className="pt-1.5 font-serif text-[28px] font-medium leading-[normal]"
+          barClassName="h-6 w-2/5"
+        />
 
-      <NewRoundCardSkeleton />
+        <NewRoundCardSkeleton />
 
-      <div className="mt-[18px]">
-        <DenseTileListSkeleton rows={3} />
-      </div>
-    </AdminShell>
+        <div className="mt-[18px]">
+          <DenseTileListSkeleton rows={3} />
+        </div>
+      </AdminShell>
+    </LoadingTone>
   );
 }
 

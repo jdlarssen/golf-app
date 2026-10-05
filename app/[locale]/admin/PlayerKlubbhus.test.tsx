@@ -23,7 +23,8 @@ const CLUBS: RoomClub[] = [
 ];
 
 const CUPS: RoomCup[] = [
-  { id: 'cup-1', name: 'Klubbmesterskapet', href: '/cup/cup-1', played: 3, total: 8 },
+  { id: 'cup-1', name: 'Klubbmesterskapet', href: '/cup/cup-1', playing: true, progress: { played: 3, total: 8 } },
+  { id: 'cup-2', name: 'Ryder på hjemmebane', href: '/admin/cup/cup-2', playing: false, progress: null },
 ];
 
 describe('PlayerKlubbhus room (#2493)', () => {
@@ -70,15 +71,24 @@ describe('PlayerKlubbhus room (#2493)', () => {
     expect(screen.queryByTestId('player-no-club')).toBeNull();
   });
 
-  it('cups: a row per running cup; only finished ones → the /admin/cup row; none → nothing; a failed read → an error box', () => {
+  it('cups: a row per running cup, playing or organising, a failed snapshot on its own row; only finished ones → one row to /admin/cup in the same style; none → nothing; a failed read → an error box', () => {
     const rows = render(<CupsView cups={CUPS} finishedCount={1} />);
     const cupRows = screen.getAllByTestId('player-cup-row');
-    expect(cupRows.map((a) => a.getAttribute('href'))).toEqual(['/cup/cup-1']);
-    expect([cupRows[0].dataset.played, cupRows[0].dataset.total]).toEqual(['3', '8']);
+    expect(cupRows.map((a) => a.getAttribute('href'))).toEqual(['/cup/cup-1', '/admin/cup/cup-2']);
+    expect(cupRows.map((a) => [a.dataset.role, a.dataset.played, a.dataset.total, a.dataset.error])).toEqual([
+      ['playing', '3', '8', undefined],
+      ['organising', undefined, undefined, 'true'],
+    ]);
+    expect(screen.queryByTestId('klubbhus-cups-error')).toBeNull();
     rows.unmount();
 
+    // Owner's answer 05.10 (choice 2, B): the room's row style, no trophy icon.
     const finishedOnly = render(<CupsView cups={[]} finishedCount={2} />);
-    expect(screen.getByTestId('player-cup-row')).toHaveAttribute('href', '/admin/cup');
+    const finishedRow = screen.getByTestId('player-cup-row');
+    expect(finishedRow).toHaveAttribute('href', '/admin/cup');
+    expect(finishedRow.dataset.finished).toBe('2');
+    expect(finishedRow.querySelector('svg')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument();
     finishedOnly.unmount();
 
     const none = render(<CupsView cups={[]} finishedCount={0} />);
