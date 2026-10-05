@@ -24,6 +24,16 @@ export function splitNines<T extends HoleNumber>(holes: T[]): { out: T[]; in: T[
 }
 
 /**
+ * The par a tap on the course card's par cell moves to (#2278): 3 → 4 → 5 → 3.
+ * Anything else, such as a stored 6 the server accepts, goes to 3.
+ */
+export function nextPar(value: string): 3 | 4 | 5 {
+  if (value === '3') return 4;
+  if (value === '4') return 5;
+  return 3;
+}
+
+/**
  * The sum of the men's par. The column is NOT NULL in the DB; the type is
  * nullable, so a null counts 0.
  */

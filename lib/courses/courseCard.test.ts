@@ -3,6 +3,7 @@ import {
   coursePar,
   genderParRows,
   hardestAndEasiest,
+  nextPar,
   sortTeesForCard,
   splitNines,
 } from './courseCard';
@@ -48,6 +49,18 @@ describe('splitNines', () => {
     const { out, in: back } = splitNines(shuffled);
     expect(out.map((h) => h.hole_number)).toEqual([1, 2, 3]);
     expect(back.map((h) => h.hole_number)).toEqual([10, 12]);
+  });
+});
+
+describe('nextPar', () => {
+  it.each([
+    ['3', 4],
+    ['4', 5],
+    ['5', 3],
+    ['6', 3],
+    ['', 3],
+  ])('%j → %i', (value, expected) => {
+    expect(nextPar(value)).toBe(expected);
   });
 });
 
