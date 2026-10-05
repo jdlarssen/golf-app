@@ -5,6 +5,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { type GameStatus } from '@/lib/games/status';
 import { startScheduledGameAction } from '@/app/[locale]/admin/games/[id]/actions';
 import { StartScheduledGameButton } from '@/app/[locale]/admin/games/[id]/StartScheduledGameButton';
+import { arrangedRoundHref } from '@/lib/games/arrangedGames';
 
 /**
  * Arrangør-kontroll for spillets oppretter: Styr spillere, Start runden nå,
@@ -59,7 +60,18 @@ export function CreatorControls({
           />
         )}
         {preStart && (
-          <SmartLink href={`/games/${gameId}/rediger`} className="block">
+          // #2269: a draft resumes the wizard; `?step=5` lands on «Klar?»
+          // instead of step 1 with choices already made, as admin's draft
+          // button does (#1385). A scheduled game opens the form, no steps.
+          <SmartLink
+            href={
+              status === 'draft'
+                ? arrangedRoundHref('draft', gameId, false)
+                : `/games/${gameId}/rediger`
+            }
+            data-testid="creator-edit-link"
+            className="block"
+          >
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
                 {t('editGameLink')}

@@ -42,13 +42,13 @@ import {
  * SAME `GameForm`. Both post to the SAME `saveDraftAction` /
  * `publishFromDraftAction` / `updateScheduledAction` server actions the admin
  * uses — those branch their redirects to `/games/*` for a non-admin caller
- * (#428). Options load through
- * `getNewGameFormData(false)` — the e-post-fri roster variant (#435). RLS on
- * `users` scopes that picker to the creator + the co-players they share a game
- * with AS A PLAYER, so an organiser who does not play in this game sees none
- * of its roster. #2210: the roster's own users are therefore added via
- * `getRosterPlayerOptions` (service-role, exactly these ids, no e-mail).
- * `includeEmail=false` keeps co-players' e-postadresser out of the payload.
+ * (#428). The wizard's options are `/opprett-spill`'s
+ * (`getOrganiserWizardMountData`); the form's load through
+ * `getNewGameFormData(false)`. Both are the e-post-fri variants (#435). RLS on
+ * `users` scopes those pickers to people the creator can see, so an organiser
+ * who does not play in this game sees none of its roster. #2210: the
+ * roster's own users are therefore added in both branches via
+ * `withRosterPlayerOptions` (service-role, exactly these ids, no e-mail).
  */
 
 type Params = Promise<{ id: string }>;

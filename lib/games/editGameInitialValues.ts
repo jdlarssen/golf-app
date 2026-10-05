@@ -19,8 +19,8 @@ import type { StartType } from './startType';
  */
 
 /**
- * The columns both edit pages select (`/admin/games/[id]/edit` adds the
- * club/cup/league links; `/games/[id]/rediger` uses it as is). GameForm posts
+ * The columns both edit pages select (both add the club/cup/league links:
+ * `group_id`, `tournament_id`, `league_round_id`). GameForm posts
  * every field back from state, and state starts from this row, so a column
  * the save writes but the page did not read is reset on every save — that is
  * how `rediger` turned «Slipp venner direkte inn» off (#2258).
