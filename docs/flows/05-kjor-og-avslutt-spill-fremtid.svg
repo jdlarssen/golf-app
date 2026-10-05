@@ -95,6 +95,15 @@
   <text x="782" y="740" font-size="13" fill="#46604F">  «Avslutt spillet» avslører</text>
   <text x="782" y="759" font-size="13" fill="#46604F">  vektede poeng + sidepoeng</text>
 
+  <!-- the organiser hears about the round (NY #2203) -->
+  <rect x="760" y="795" width="320" height="132" rx="16" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="782" y="809" width="60" height="20" rx="10" fill="#C9A961"/><text x="812" y="823" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#2203</text>
+  <text x="852" y="825" font-size="14.5" font-weight="700" fill="#7A5E13">Arrangøren får beskjed</text>
+  <text x="782" y="851" font-size="13" fill="#6B5526">NY: hver levering i innboksen + push</text>
+  <text x="782" y="870" font-size="13" fill="#6B5526">  (arrangøren, ikke admin; ingen mail)</text>
+  <text x="782" y="889" font-size="13" fill="#6B5526">NY: «Alle har levert. Avslutt spillet.»</text>
+  <text x="782" y="908" font-size="13" fill="#6B5526">NY: påminnelse etter et døgn stille</text>
+
   <!-- player parallel -->
   <text x="120" y="952" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
   <text x="120" y="978" font-size="13" fill="#46524B">Planlagt → «Du er påmeldt» · Pågående → taster slag, auto-purr når ferdig · Avsluttet → varsel + endelig leaderboard + «Revansje?».</text>
