@@ -20,8 +20,7 @@ import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
   getFormatsForIntent,
 } from '@/lib/formats/getFormatsForIntent';
-import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
-import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
+import { getOrganiserWizardMountData } from '@/lib/wizard/getWizardMountData';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { defaultTeeOffAt } from '@/lib/games/defaultTeeOff';
 import {
@@ -365,28 +364,16 @@ async function GameFormBody({
   isAdmin: boolean;
   notice: ReactNode;
 }) {
-  // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
-  const [
-    kompisFormats,
-    klubbFormats,
-    soloFormats,
-    formatGuide,
-  ] = await Promise.all([
-    getFormatsForIntent('kompis'),
-    getFormatsForIntent('klubb'),
-    getFormatsForIntent('solo'),
-    getFormatGuideEntries(),
-  ]);
-  const [
-    { courses, players, clubs, friendPlayerIds, clubMemberIdsByClub },
+  const {
+    courses,
+    players,
+    clubs,
+    friendPlayerIds,
+    clubMemberIdsByClub,
     isClubAdmin,
-  ] = await Promise.all([
-    // #464/#2018: medspillere ∪ venner ∪ klubbmedlemmer, samme cachede liste som
-    // PlayerShortageBanner teller — så banneret og velgeren aldri er uenige.
-    getCreateGamePlayerRoster(userId),
-    // #525: er brukeren klubb-admin? Styrer om «Klubb-turnering»-flisen vises.
-    isClubAdminAnywhere(userId),
-  ]);
+    formatsByIntent,
+    formatGuide,
+  } = await getOrganiserWizardMountData(userId);
   return (
     <GameWizard
       key={wizardKey}
@@ -398,11 +385,7 @@ async function GameFormBody({
         createAndPublishAction: createAndPublishGame,
       }}
       initialValues={initialValues}
-      formatsByIntent={{
-        kompis: kompisFormats,
-        klubb: klubbFormats,
-        solo: soloFormats,
-      }}
+      formatsByIntent={formatsByIntent}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
       // #892/#1007: eksplisitt intent (cup) vinner; en ?klubb=-dyplenke eller

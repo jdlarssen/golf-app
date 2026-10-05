@@ -7,6 +7,8 @@ import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptio
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { orderPickerPlayers, pickerStatsIds } from '@/lib/wizard/pickerOrder';
 import { getPickerOrderStats } from '@/lib/wizard/pickerOrderStats';
+import { getCreateGamePlayerRoster } from '@/lib/games/getCreateGamePlayerRoster';
+import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
 
 /**
  * Alt `GameWizard` trenger for å mountes, hentet på serveren.
@@ -79,5 +81,45 @@ export async function getWizardMountData() {
     formatGuide,
     friendPlayerIds,
     clubMemberIdsByClub: clubMembers.memberIdsByClub,
+  };
+}
+
+/**
+ * The same for an organiser who is not admin: `/opprett-spill`, and resuming a
+ * draft on `/games/[id]/rediger` (#2269). The picker is co-players ∪ friends ∪
+ * club members without e-mail (`getCreateGamePlayerRoster`, #464/#2018), and
+ * `isClubAdmin` decides whether the «Klubb-turnering» tile shows (#525). One
+ * home, so the two organiser surfaces cannot drift apart.
+ */
+export async function getOrganiserWizardMountData(userId: string) {
+  // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
+  const [kompisFormats, klubbFormats, soloFormats, formatGuide] = await Promise.all([
+    getFormatsForIntent('kompis'),
+    getFormatsForIntent('klubb'),
+    getFormatsForIntent('solo'),
+    getFormatGuideEntries(),
+  ]);
+  const [{ courses, players, clubs, friendPlayerIds, clubMemberIdsByClub }, isClubAdmin] =
+    await Promise.all([
+      // #464/#2018: medspillere ∪ venner ∪ klubbmedlemmer, samme cachede liste som
+      // PlayerShortageBanner på /opprett-spill teller — så banneret og velgeren
+      // aldri er uenige.
+      getCreateGamePlayerRoster(userId),
+      isClubAdminAnywhere(userId),
+    ]);
+  return {
+    userId,
+    courses,
+    players,
+    clubs,
+    friendPlayerIds,
+    clubMemberIdsByClub,
+    isClubAdmin,
+    formatsByIntent: {
+      kompis: kompisFormats,
+      klubb: klubbFormats,
+      solo: soloFormats,
+    },
+    formatGuide,
   };
 }
