@@ -10,6 +10,7 @@ import {
   findStrokeIndexGaps,
   teeRatingProblem,
 } from './coursePayload';
+import { REAL_SI_STRINGS as REAL_SI } from './__fixtures__/courseForm';
 
 describe('parseGenderRating', () => {
   it.each<[string, string, number | null, number | null]>([
@@ -102,21 +103,20 @@ describe('allStrokeIndicesUnique', () => {
   });
 });
 
-// A real club order (no course has SI equal to the hole number on all 18).
-const REAL_SI = ['7', '15', '3', '11', '1', '17', '5', '13', '9', '8', '16', '4', '12', '2', '18', '6', '14', '10'];
 const ALL_SI = Array.from({ length: 18 }, (_, i) => i + 1);
 
 describe('findStrokeIndexGaps', () => {
-  it.each<[string, string[], { missing: number[]; duplicates: number[] }]>([
-    ['a real order', REAL_SI, { missing: [], duplicates: [] }],
-    ['18 empty fields', Array(18).fill(''), { missing: ALL_SI, duplicates: [] }],
-    ['one empty field', REAL_SI.map((v, i) => (i === 4 ? '' : v)), { missing: [1], duplicates: [] }],
-    ['7 in place of 14', REAL_SI.map((v) => (v === '14' ? '7' : v)), { missing: [14], duplicates: [7] }],
-    ['0 counts as absent', REAL_SI.map((v) => (v === '1' ? '0' : v)), { missing: [1], duplicates: [] }],
-    ['19 counts as absent', REAL_SI.map((v) => (v === '18' ? '19' : v)), { missing: [18], duplicates: [] }],
-    ['4.5 counts as absent', REAL_SI.map((v) => (v === '4' ? '4.5' : v)), { missing: [4], duplicates: [] }],
-    ['abc counts as absent', REAL_SI.map((v) => (v === '9' ? 'abc' : v)), { missing: [9], duplicates: [] }],
-    ['" 7 " counts as 7', REAL_SI.map((v) => (v === '7' ? ' 7 ' : v)), { missing: [], duplicates: [] }],
+  type Gaps = { missing: number[]; duplicates: number[]; invalid: number[] };
+  it.each<[string, string[], Gaps]>([
+    ['a real order', REAL_SI, { missing: [], duplicates: [], invalid: [] }],
+    ['18 empty fields', Array(18).fill(''), { missing: ALL_SI, duplicates: [], invalid: [] }],
+    ['one empty field', REAL_SI.map((v, i) => (i === 4 ? '' : v)), { missing: [1], duplicates: [], invalid: [] }],
+    ['7 in place of 14', REAL_SI.map((v) => (v === '14' ? '7' : v)), { missing: [14], duplicates: [7], invalid: [] }],
+    ['0 on hole 5 counts as absent', REAL_SI.map((v) => (v === '1' ? '0' : v)), { missing: [1], duplicates: [], invalid: [5] }],
+    ['19 on hole 15 counts as absent', REAL_SI.map((v) => (v === '18' ? '19' : v)), { missing: [18], duplicates: [], invalid: [15] }],
+    ['4.5 on hole 12 counts as absent', REAL_SI.map((v) => (v === '4' ? '4.5' : v)), { missing: [4], duplicates: [], invalid: [12] }],
+    ['abc on hole 9 counts as absent', REAL_SI.map((v) => (v === '9' ? 'abc' : v)), { missing: [9], duplicates: [], invalid: [9] }],
+    ['" 7 " counts as 7', REAL_SI.map((v) => (v === '7' ? ' 7 ' : v)), { missing: [], duplicates: [], invalid: [] }],
   ])('%s', (_label, values, expected) => {
     expect(findStrokeIndexGaps(values)).toEqual(expected);
   });

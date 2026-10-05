@@ -3503,6 +3503,7 @@
       "holesHint": "Velg par 3, 4 eller 5 per hull. Skriv av indeksen (SI) fra scorekortet til klubben. Hvert tall fra 1 til 18 brukes én gang.",
       "siMissingCount": "{count, plural, one {Mangler én indeks} other {Mangler # indekser}}",
       "siDuplicates": "{count, plural, one {Indeks {numbers} er brukt mer enn én gang} other {Indeksene {numbers} er brukt mer enn én gang}}",
+      "siInvalid": "{count, plural, one {Indeksen på hull {holes} må være et helt tall fra 1 til 18} other {Indeksene på hull {holes} må være hele tall fra 1 til 18}}",
       "teeRatingMissing": "Tee-boks {number} mangler slope og CR",
       "teeRatingPartial": "Tee-boks {number} trenger både slope og CR",
       "holeLabel": "Hull {number}",

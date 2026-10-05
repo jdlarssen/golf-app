@@ -97,23 +97,29 @@ export function allStrokeIndicesUnique(sis: number[]): boolean {
 
 /**
  * Client-side mirror of the server's SI rule (#2279): which numbers in 1–18 no
- * valid field covers, and which valid numbers appear more than once. Each value
- * goes through `Number()` after trimming, as `parseCourseHolesAndTees` does, so
+ * valid field covers, which valid numbers appear more than once, and which
+ * holes (1-based) hold a typed value that is not a valid index. Each value goes
+ * through `Number()` after trimming, as `parseCourseHolesAndTees` does, so
  * empty, non-integer and out-of-range fields count as absent. `missing` is empty
  * exactly when the server accepts the indices (locked in parseCourseForm.test).
  */
 export function findStrokeIndexGaps(values: string[]): {
   missing: number[];
   duplicates: number[];
+  invalid: number[];
 } {
   const counts = new Map<number, number>();
-  for (const raw of values) {
+  const invalid: number[] = [];
+  values.forEach((raw, i) => {
     const s = raw.trim();
-    if (s === '') continue;
+    if (s === '') return;
     const n = Number(s);
-    if (!isValidStrokeIndex(n)) continue;
+    if (!isValidStrokeIndex(n)) {
+      invalid.push(i + 1);
+      return;
+    }
     counts.set(n, (counts.get(n) ?? 0) + 1);
-  }
+  });
   const missing: number[] = [];
   const duplicates: number[] = [];
   for (let si = SI_MIN; si <= SI_MAX; si++) {
@@ -121,7 +127,7 @@ export function findStrokeIndexGaps(values: string[]): {
     if (c === 0) missing.push(si);
     if (c > 1) duplicates.push(si);
   }
-  return { missing, duplicates };
+  return { missing, duplicates, invalid };
 }
 
 /**
