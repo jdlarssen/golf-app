@@ -10,7 +10,7 @@ import { findStrokeIndexGaps, teeRatingProblem } from '@/lib/courses/coursePaylo
 import { formatListLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { MAX_TEE_BOXES } from './constants';
-import { useRovingFocus } from '@/hooks/useRovingFocus';
+import { HoleGridEditor } from './HoleGridEditor';
 
 export { MAX_TEE_BOXES };
 
@@ -63,6 +63,9 @@ type Props = {
   // (de har ikke tilgang til /admin/courses). Se createCourse-action.
   redirectBase?: string;
   successRedirect?: string;
+  // The page colour under the sticky save bar: `admin` on the AdminShell
+  // doors, `app` (default) on /opprett-bane.
+  tone?: 'app' | 'admin';
 };
 
 const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
@@ -83,16 +86,6 @@ const DEFAULT_TEE: TeeBoxData = {
   slope_juniors: '',
   course_rating_juniors: '',
 };
-
-// Par-valg per hull er begrenset til 3/4/5 — tre tap-knapper i stedet for
-// number-input fjerner 18 tastatur-popups på telefon. Par 6 finnes på
-// enkelte par-6-hull i verden, men ikke på norske baner Tørny støtter i dag.
-const PAR_OPTIONS = [3, 4, 5] as const;
-type ParOption = (typeof PAR_OPTIONS)[number];
-
-function isParOption(v: number): v is ParOption {
-  return v === 3 || v === 4 || v === 5;
-}
 
 // Sum av hull-par per kjønn. Brukes både i UI (read-only par-total per tee) og
 // er kilde-til-sannhet på server-siden — par_total_<gender> regnes ut fra
@@ -140,6 +133,8 @@ function hasGenderData(
   return tee[`slope_${gender}`] !== '' || tee[`course_rating_${gender}`] !== '';
 }
 
+const SAVE_BAR_TONE = { app: 'bg-bg', admin: 'bg-admin-bg' } as const;
+
 // Sjekker om hullene har avvikende par for et gitt kjønn — brukes for å
 // avgjøre om per-kjønn-par-seksjonen skal stå åpen ved mount på edit-flyten.
 function hasGenderParOverride(
@@ -158,6 +153,7 @@ export function CourseForm({
   footer,
   redirectBase,
   successRedirect,
+  tone = 'app',
 }: Props) {
   const t = useTranslations('courseForm.form');
 
@@ -310,8 +306,8 @@ export function CourseForm({
   }
 
   // Fjern per-kjønn-par-overstyring: tilbakestill alle 18 hull til par_mens
-  // og kollaps seksjonen. Brukes når admin trykker «Fjern dame/junior-
-  // overstyring» i avvikende-par-seksjonen.
+  // og skjul raden i kortet. Brukes når admin trykker «Fjern dame/junior-
+  // overstyring» under kortet.
   function removeGenderParOverride(gender: 'ladies' | 'juniors') {
     const key = `par_${gender}` as 'par_ladies' | 'par_juniors';
     setHoles((prev) => prev.map((h) => ({ ...h, [key]: h.par_mens })));
@@ -327,7 +323,7 @@ export function CourseForm({
   // hidden-inputene som server-action leser holder seg synkrone med
   // hovedraden. Når seksjonen er åpen lar vi admin styre per-kjønn-verdien
   // direkte.
-  function updateMensPar(index: number, par: ParOption) {
+  function updateMensPar(index: number, par: 3 | 4 | 5) {
     const next = String(par);
     setHoles((prev) =>
       prev.map((h, i) => {
@@ -360,7 +356,6 @@ export function CourseForm({
           if (!ok) event.preventDefault();
         }
       }}
-      className="space-y-6"
     >
       {redirectBase !== undefined && (
         <input type="hidden" name="redirect_base" value={redirectBase} />
@@ -368,122 +363,59 @@ export function CourseForm({
       {successRedirect !== undefined && (
         <input type="hidden" name="success_redirect" value={successRedirect} />
       )}
-      <Input
-        id="name"
-        name="name"
-        type="text"
-        label={t('nameLabel')}
-        placeholder={t('namePlaceholder')}
-        defaultValue={initialData?.name ?? ''}
-        required
-      />
+      <div className="-mx-1">
+        <Input
+          id="name"
+          name="name"
+          type="text"
+          variant="card"
+          inputClassName="h-[52px]!"
+          label={t('nameLabel')}
+          placeholder={t('namePlaceholder')}
+          defaultValue={initialData?.name ?? ''}
+          required
+        />
+      </div>
 
-      <section>
-        <h2 className="text-sm font-medium text-text mb-1">{t('holesHeading')}</h2>
-        <p className="text-xs text-muted mb-3">{t('holesHint')}</p>
-        <div className="space-y-3">
-          {holes.map((hole, index) => (
-            <div
-              key={hole.hole_number}
-              className="grid grid-cols-[3.5rem_1fr_5.5rem] gap-3 items-end"
-            >
-              <div className="text-sm font-medium text-text pb-2">
-                {t('holeLabel', { number: hole.hole_number })}
-              </div>
-              <ParTapButtons
-                holeNumber={hole.hole_number}
-                name={`hole_${hole.hole_number}_par_mens`}
-                value={hole.par_mens}
-                ariaLabel={t('parGroupAriaLabel', { number: hole.hole_number })}
-                onChange={(next) => updateMensPar(index, next)}
-              />
-              <Input
-                id={`hole_${hole.hole_number}_si`}
-                name={`hole_${hole.hole_number}_si`}
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={18}
-                step={1}
-                label={t('siLabel')}
-                value={hole.stroke_index}
-                onChange={(e) =>
-                  updateHole(index, { stroke_index: e.target.value })
-                }
-                required
-              />
-            </div>
-          ))}
-        </div>
+      <div className="-mx-2 mt-3.5">
+        <HoleGridEditor
+          holes={holes}
+          showLadies={expandedLadiesPar}
+          showJuniors={expandedJuniorsPar}
+          parTotal={parTotalMens}
+          gaps={siGaps}
+          onPar={(index, gender, par) =>
+            gender === 'mens'
+              ? updateMensPar(index, par)
+              : updateHole(index, { [`par_${gender}`]: String(par) })
+          }
+          onSi={(index, value) => updateHole(index, { stroke_index: value })}
+        />
+      </div>
+
+      {/* A deviating par for ladies or juniors adds its own row to the card. */}
+      <section className="mt-6 space-y-3">
+        <GenderParToggle
+          shown={expandedLadiesPar}
+          addLabel={t('addLadiesParButton')}
+          removeLabel={t('ladiesParRemoveLabel')}
+          onAdd={() => setExpandedLadiesPar(true)}
+          onRemove={() => removeGenderParOverride('ladies')}
+        />
+        <GenderParToggle
+          shown={expandedJuniorsPar}
+          addLabel={t('addJuniorsParButton')}
+          removeLabel={t('juniorsParRemoveLabel')}
+          onAdd={() => setExpandedJuniorsPar(true)}
+          onRemove={() => removeGenderParOverride('juniors')}
+        />
       </section>
 
-      <section className="space-y-3">
-        {expandedLadiesPar ? (
-          <GenderParOverrideSection
-            gender="ladies"
-            label={t('ladiesParLabel')}
-            removeLabel={t('ladiesParRemoveLabel')}
-            genderParLabel={t('genderParLadies')}
-            holes={holes}
-            parTotal={parTotalLadies}
-            parTotalGenderLabel={t('parTotalGenderLabel', { gender: t('genderParLadies') })}
-            parTotalSuffix={t('parTotalSuffix')}
-            genderParHint={t('genderParHint')}
-            holeLabel={(n) => t('holeLabel', { number: n })}
-            parAriaLabel={(n) =>
-              t('parAriaLabelWithGender', { number: n, genderLabel: t('ladiesParLabel').toLowerCase() })
-            }
-            onChange={(holeIndex, par) =>
-              updateHole(holeIndex, { par_ladies: String(par) })
-            }
-            onRemove={() => removeGenderParOverride('ladies')}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setExpandedLadiesPar(true)}
-            className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
-          >
-            {t('addLadiesParButton')}
-          </button>
-        )}
-
-        {expandedJuniorsPar ? (
-          <GenderParOverrideSection
-            gender="juniors"
-            label={t('juniorsParLabel')}
-            removeLabel={t('juniorsParRemoveLabel')}
-            genderParLabel={t('genderParJuniors')}
-            holes={holes}
-            parTotal={parTotalJuniors}
-            parTotalGenderLabel={t('parTotalGenderLabel', { gender: t('genderParJuniors') })}
-            parTotalSuffix={t('parTotalSuffix')}
-            genderParHint={t('genderParHint')}
-            holeLabel={(n) => t('holeLabel', { number: n })}
-            parAriaLabel={(n) =>
-              t('parAriaLabelWithGender', { number: n, genderLabel: t('juniorsParLabel').toLowerCase() })
-            }
-            onChange={(holeIndex, par) =>
-              updateHole(holeIndex, { par_juniors: String(par) })
-            }
-            onRemove={() => removeGenderParOverride('juniors')}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setExpandedJuniorsPar(true)}
-            className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
-          >
-            {t('addJuniorsParButton')}
-          </button>
-        )}
-      </section>
-
-      {/* Hidden mirror-inputs for kjønn som ikke har egen seksjon åpen.
+      {/* Hidden mirror-inputs for kjønn som ikke har egen rad i kortet.
           Server-action leser hole_${i}_par_ladies / _juniors fra FormData;
-          når seksjonen er kollapset må vi fortsatt sende verdien (= par_mens)
-          slik at INSERT setter alle tre kolonner. Når seksjonen er åpen
-          rendres ParTapButtons med samme name og tar over. */}
+          når raden er skjult må vi fortsatt sende verdien (= par_mens)
+          slik at INSERT setter alle tre kolonner. Når raden vises, bærer
+          HoleGridEditor samme name og tar over. */}
       {!expandedLadiesPar &&
         holes.map((h) => (
           <input
@@ -503,7 +435,7 @@ export function CourseForm({
           />
         ))}
 
-      <section>
+      <section className="-mx-1 mt-6">
         <h2 className="text-sm font-medium text-text mb-3">
           {t('teeBoxesHeading', { count: teeBoxes.length, max: MAX_TEE_BOXES })}
         </h2>
@@ -511,7 +443,7 @@ export function CourseForm({
           {teeBoxes.map((tee, index) => (
             <div
               key={index}
-              className="border border-border rounded-xl p-4 space-y-4"
+              className="border border-border rounded-xl bg-surface p-4 space-y-4"
             >
               {tee.id && (
                 <input type="hidden" name={`tee_${index}_id`} value={tee.id} />
@@ -706,22 +638,29 @@ export function CourseForm({
         )}
       </section>
 
-      {blocked && (
-        <SaveStatus
-          siGaps={siGaps}
-          teeIndex={firstTeeProblem}
-          teeProblem={teeProblems[firstTeeProblem] ?? null}
-        />
-      )}
-
-      <SubmitButton
-        className="w-full"
-        pendingLabel={t('pendingLabel')}
-        disabled={blocked}
-        aria-describedby={blocked ? 'course-save-status' : undefined}
+      {/* Always in view, just above the bottom nav (59.5 px at 390: 58.5 px
+          link plus its 1 px top border; the nav pads the safe area itself). */}
+      <div
+        className={`sticky bottom-[calc(59.5px+env(safe-area-inset-bottom,0px))] z-20 -mx-5 mt-6 flex flex-col gap-1 border-t border-border px-4 pt-3 pb-5 leading-[normal] ${SAVE_BAR_TONE[tone]}`}
       >
-        {submitLabel}
-      </SubmitButton>
+        <SubmitButton
+          size="large"
+          className="w-full"
+          pendingLabel={t('pendingLabel')}
+          disabled={blocked}
+          aria-describedby={blocked ? 'course-save-status' : undefined}
+        >
+          {submitLabel}
+        </SubmitButton>
+
+        {blocked && (
+          <SaveStatus
+            siGaps={siGaps}
+            teeIndex={firstTeeProblem}
+            teeProblem={teeProblems[firstTeeProblem] ?? null}
+          />
+        )}
+      </div>
 
       {footer}
     </form>
@@ -746,7 +685,7 @@ function SaveStatus({
   const { missing, duplicates, invalid } = siGaps;
   const list = (numbers: number[]) => formatListLocale(numbers.map(String), locale);
   return (
-    <div id="course-save-status" className="space-y-1 text-sm text-warning-text">
+    <div id="course-save-status" className="space-y-1 text-center text-xs leading-[normal] text-muted">
       {missing.length > 0 && (
         <p>
           {invalid.length > 0
@@ -767,137 +706,29 @@ function SaveStatus({
   );
 }
 
-// Tre-knapps tap-radio for par-valg. Eksponert som radio-group til
-// screen-readers via role+aria-checked. Hidden-input bærer verdien videre
-// til FormData under name-et som consumeren oppgir (varierer per kjønn:
-// hole_${n}_par_mens / _ladies / _juniors).
-function ParTapButtons({
-  holeNumber,
-  name,
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  holeNumber: number;
-  name: string;
-  value: string;
-  onChange: (par: ParOption) => void;
-  ariaLabel?: string;
-}) {
-  const t = useTranslations('courseForm.form');
-  const current = Number(value);
-  // Radiogroup keyboard pattern: one tab stop per hole, arrow keys move the par.
-  const rovingProps = useRovingFocus(
-    PAR_OPTIONS,
-    isParOption(current) ? current : null,
-    onChange,
-  );
-  return (
-    <div>
-      <div className="block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-1.5">
-        Par
-      </div>
-      <div
-        role="radiogroup"
-        aria-label={ariaLabel ?? t('parGroupAriaLabel', { number: holeNumber })}
-        className="flex gap-1.5"
-      >
-        {PAR_OPTIONS.map((p, idx) => {
-          const selected = isParOption(current) && current === p;
-          return (
-            <button
-              key={p}
-              {...rovingProps(idx)}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(p)}
-              className={`flex-1 min-h-[44px] rounded-lg border text-base font-medium tabular-nums transition-colors ${
-                selected
-                  ? 'border-primary bg-primary text-bg'
-                  : 'border-border bg-surface text-text hover:border-text/40'
-              }`}
-            >
-              {p}
-            </button>
-          );
-        })}
-      </div>
-      <input type="hidden" name={name} value={value} />
-    </div>
-  );
-}
-
-function GenderParOverrideSection({
-  gender,
-  label,
+// «+ Legg til avvikende par for damer» while the card has no ladies' row,
+// «Fjern dame-overstyring» once it has one (the same for juniors).
+function GenderParToggle({
+  shown,
+  addLabel,
   removeLabel,
-  holes,
-  parTotal,
-  parTotalGenderLabel,
-  parTotalSuffix,
-  genderParHint,
-  holeLabel,
-  parAriaLabel,
-  onChange,
+  onAdd,
   onRemove,
 }: {
-  gender: 'ladies' | 'juniors';
-  label: string;
+  shown: boolean;
+  addLabel: string;
   removeLabel: string;
-  genderParLabel: string;
-  holes: HoleData[];
-  parTotal: number;
-  parTotalGenderLabel: string;
-  parTotalSuffix: string;
-  genderParHint: string;
-  holeLabel: (n: number) => string;
-  parAriaLabel: (n: number) => string;
-  onChange: (holeIndex: number, par: ParOption) => void;
+  onAdd: () => void;
   onRemove: () => void;
 }) {
-  const key = `par_${gender}` as 'par_ladies' | 'par_juniors';
   return (
-    <fieldset className="border border-border/60 rounded-lg p-3 space-y-3">
-      {/* The legend must be the fieldset's first child to name the group
-          (#2240). Floated, it sits in the flow instead of on the border, so
-          the header row looks as before; the next block clears it. */}
-      <legend className="float-left px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {label}
-      </legend>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="tap-extend float-right text-[11px] font-medium text-muted hover:text-danger transition-colors [--tap-extend:-16px_0_-12px]"
-      >
-        {removeLabel}
-      </button>
-      <p className="clear-both text-xs text-muted">{genderParHint}</p>
-      <div className="space-y-3">
-        {holes.map((hole, index) => (
-          <div
-            key={hole.hole_number}
-            className="grid grid-cols-[3.5rem_1fr] gap-3 items-end"
-          >
-            <div className="text-sm font-medium text-text pb-2">
-              {holeLabel(hole.hole_number)}
-            </div>
-            <ParTapButtons
-              holeNumber={hole.hole_number}
-              name={`hole_${hole.hole_number}_par_${gender}`}
-              value={hole[key]}
-              ariaLabel={parAriaLabel(hole.hole_number)}
-              onChange={(next) => onChange(index, next)}
-            />
-          </div>
-        ))}
-      </div>
-      <p className="font-sans text-[11.5px] tabular-nums text-muted">
-        {parTotalGenderLabel}{' '}
-        <span className="text-text font-medium">{parTotal}</span>{' '}
-        <span className="text-muted">{parTotalSuffix}</span>
-      </p>
-    </fieldset>
+    <button
+      type="button"
+      onClick={shown ? onRemove : onAdd}
+      className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
+    >
+      {shown ? removeLabel : addLabel}
+    </button>
   );
 }
 

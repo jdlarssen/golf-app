@@ -182,6 +182,9 @@
   --slot-dashed: #9a8f7c;
   /* Step 4 (#2321): the pale amber behind «Venter» (artboard --warningsoft). */
   --warning-soft: #fbeed6;
+  /* «Legg til bane» (#2278): the par pill on the course card. Dark mode uses
+   * the --surface-2 value. */
+  --par-cell: #f3efe4;
 
   /* Invitation card (#2266): the linen page behind it, the paper, the
    * e-mail field's border and the three joined-avatar dots — values from the
@@ -347,6 +350,7 @@
     /* New-game wizard (#2282) — see :root. */
     --slot-dashed: #8a8170;
     --warning-soft: #2e2a1c;
+    --par-cell: #243429;
 
     /* Invitation card (#2266) — see :root. The artboard is light only;
      * the dots run dark to light here too. */
@@ -449,6 +453,7 @@
   --dashed-cta: #5c6358;
   --slot-dashed: #8a8170;
   --warning-soft: #2e2a1c;
+  --par-cell: #243429;
   --invitation-page-bg: var(--bg);
   --invitation-paper: var(--surface);
   --invitation-field-border: #4b5e51;
@@ -507,6 +512,7 @@
   --color-dashed-cta: var(--dashed-cta);
   --color-slot-dashed: var(--slot-dashed);
   --color-warning-soft: var(--warning-soft);
+  --color-par-cell: var(--par-cell);
   --color-surface-strong: var(--surface-strong);
   --color-on-strong: var(--on-strong);
   --color-accent-on-strong: var(--accent-on-strong);

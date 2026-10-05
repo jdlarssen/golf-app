@@ -29,6 +29,11 @@ function fillStrokeIndices(container: HTMLElement, order: readonly number[] = RE
   order.forEach((si, i) => setField(container, `hole_${i + 1}_si`, String(si)));
 }
 
+/** The par cell for a hole on the course card, found by its current par. */
+function parCell(hole: number, par: number) {
+  return screen.getByRole('button', { name: `Par for hull ${hole}: ${par}. Trykk for å endre` });
+}
+
 function fillMensRating(container: HTMLElement, tee = 0, slope = '113', cr = '70.0') {
   setField(container, `tee_${tee}_slope_mens`, slope);
   setField(container, `tee_${tee}_cr_mens`, cr);
@@ -81,33 +86,32 @@ describe('sumHolePars', () => {
   });
 });
 
-describe('CourseForm — par tap-knapper', () => {
-  it('rendrer [3] [4] [5] som radio-group per hull, ikke number-input for par', () => {
-    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+describe('CourseForm — par-celler', () => {
+  it('rendrer én par-knapp per hull, ikke number-input for par', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    expect(hole1Group).toBeTruthy();
-
-    const buttons = within(hole1Group).getAllByRole('radio');
-    expect(buttons.map((b) => b.textContent)).toEqual(['3', '4', '5']);
+    expect(parCell(1, 4).textContent).toBe('4');
+    expect(
+      container.querySelector('input[type="hidden"][name="hole_1_par_mens"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('input[type="number"][name="hole_1_par_mens"]'),
+    ).toBeNull();
   });
 
-  it('markerer default par 4 som aria-checked på mount', () => {
+  it('viser default par 4 i knappens navn på mount', () => {
     render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    const four = within(hole1Group).getByRole('radio', { name: '4' });
-    expect(four.getAttribute('aria-checked')).toBe('true');
+    const hole1 = screen.getByRole('button', { name: /^Par for hull 1:/ });
+    expect(hole1.getAttribute('aria-label')).toContain(': 4.');
   });
 
   it('endrer par til 5 ved klikk og oppdaterer hidden-input', () => {
     const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    const five = within(hole1Group).getByRole('radio', { name: '5' });
-    fireEvent.click(five);
+    fireEvent.click(parCell(1, 4));
 
-    expect(five.getAttribute('aria-checked')).toBe('true');
+    expect(parCell(1, 5)).toBeTruthy();
     const hidden = container.querySelector<HTMLInputElement>(
       'input[type="hidden"][name="hole_1_par_mens"]',
     );
@@ -155,8 +159,7 @@ describe('CourseForm — auto-beregnet par-total', () => {
 
     expect(screen.getByText('72')).toBeTruthy();
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
 
     expect(screen.getByText('73')).toBeTruthy();
   });
@@ -405,11 +408,9 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
     expect(
       screen.getByRole('button', { name: /legg til avvikende par for junior/i }),
     ).toBeTruthy();
-    // Når kollapset: ingen ekstra radio-group for dame/junior-par på hull 1.
+    // Når kollapset: ingen ekstra par-rad for damer i kortet.
     expect(
-      screen.queryByRole('radiogroup', {
-        name: /par for hull 1 \(avvikende par for damer\)/i,
-      }),
+      screen.queryByRole('button', { name: /^Par for hull 1 \(damer\)/ }),
     ).toBeNull();
   });
 
@@ -420,11 +421,11 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
       screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
     );
 
-    // Avvikende-seksjon viser 18 radiogrupper med matching aria-label.
-    const dameGroups = screen.getAllByRole('radiogroup', {
-      name: /\(avvikende par for damer\)/i,
+    // Dame-raden står i begge tabellene: 18 par-knapper.
+    const dameCells = screen.getAllByRole('button', {
+      name: /^Par for hull \d+ \(damer\)/,
     });
-    expect(dameGroups).toHaveLength(18);
+    expect(dameCells).toHaveLength(18);
   });
 
   it('rendrer hidden-inputs hole_${n}_par_ladies når dame-par-seksjonen er utvidet', () => {
@@ -455,8 +456,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
   it('hovedrad-endring speiles til par_ladies/par_juniors så lenge seksjonene er kollapset', () => {
     const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
 
     const ladies1 = container.querySelector<HTMLInputElement>(
       'input[type="hidden"][name="hole_1_par_ladies"]',
@@ -477,8 +477,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
     );
 
     // Sett hovedraden hull 1 til par 5.
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
 
     // Dame-par-hull-1 skal fremdeles være 4 (frosset på sin egen verdi).
     const ladies1 = container.querySelector<HTMLInputElement>(
@@ -500,10 +499,9 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
     fireEvent.click(
       screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
     );
-    const dameHull1 = screen.getByRole('radiogroup', {
-      name: /par for hull 1 \(avvikende par for damer\)/i,
-    });
-    fireEvent.click(within(dameHull1).getByRole('radio', { name: '5' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Par for hull 1 (damer): 4. Trykk for å endre' }),
+    );
 
     let ladies1 = container.querySelector<HTMLInputElement>(
       'input[type="hidden"][name="hole_1_par_ladies"]',
@@ -515,11 +513,9 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
       screen.getByRole('button', { name: /fjern dame-overstyring/i }),
     );
 
-    // Seksjonen er kollapset.
+    // Dame-raden er borte fra kortet.
     expect(
-      screen.queryByRole('radiogroup', {
-        name: /par for hull 1 \(avvikende par for damer\)/i,
-      }),
+      screen.queryByRole('button', { name: /^Par for hull 1 \(damer\)/ }),
     ).toBeNull();
 
     // Mirror-input har resatt par_ladies til par_mens (= 4).
@@ -555,11 +551,11 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
       />,
     );
 
-    // 18 dame-par-radiogrupper rendret.
-    const dameGroups = screen.getAllByRole('radiogroup', {
-      name: /\(avvikende par for damer\)/i,
+    // Dame-raden står i kortet: 18 par-knapper.
+    const dameCells = screen.getAllByRole('button', {
+      name: /^Par for hull \d+ \(damer\)/,
     });
-    expect(dameGroups).toHaveLength(18);
+    expect(dameCells).toHaveLength(18);
 
     // Junior-seksjonen forblir kollapset (ingen junior-avvik i initialData).
     expect(
@@ -567,7 +563,7 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
     ).toBeTruthy();
   });
 
-  it('rendrer per-kjønn-par-total i avvikende-seksjon basert på dame-pars', () => {
+  it('rendrer dame-par-total i dame-blokken under tee-en basert på dame-pars', () => {
     const holes = makeHoles(Array(18).fill(4));
     holes[0].par_ladies = '5'; // hull 1: dame-par 5
     render(
@@ -583,8 +579,8 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
               length_meters: '',
               slope_mens: '113',
               course_rating_mens: '70.0',
-              slope_ladies: '',
-              course_rating_ladies: '',
+              slope_ladies: '134',
+              course_rating_ladies: '73.6',
               slope_juniors: '',
               course_rating_juniors: '',
             },
@@ -593,9 +589,10 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
       />,
     );
 
-    // Avvikende-seksjon: «Par-total damer: 73»
-    expect(screen.getByText(/par-total damer/i)).toBeTruthy();
-    expect(screen.getByText('73')).toBeTruthy();
+    // Dame-blokken: «Par-total: 73»
+    const ladies = within(screen.getByRole('group', { name: 'Damer' }));
+    expect(ladies.getByText(/par-total:/i)).toBeTruthy();
+    expect(ladies.getByText('73')).toBeTruthy();
   });
 });
 
@@ -938,8 +935,7 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
       />,
     );
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
 
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
@@ -978,8 +974,7 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
       />,
     );
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -996,8 +991,7 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
     fillMensRating(container);
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Lagre' }).disabled).toBe(false);
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -1015,8 +1009,7 @@ describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => 
       />,
     );
 
-    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
-    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(parCell(1, 4));
     fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
 
     expect(confirmSpy).toHaveBeenCalledTimes(1);
@@ -1119,5 +1112,56 @@ describe('CourseForm: tomme felt på ny bane (#2279)', () => {
 
     fillMensRating(container, 1);
     expect(save().disabled).toBe(false);
+  });
+});
+
+describe('CourseForm: banekortet (#2278)', () => {
+  it('viser hullene i to tabeller, og par går 4 → 5 → 3 → 4 med beskjed til skjermleseren', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const hidden = () =>
+      container.querySelector<HTMLInputElement>('input[type="hidden"][name="hole_1_par_mens"]')!
+        .value;
+    const live = () => container.querySelector('[aria-live="polite"]')!.textContent;
+
+    expect(screen.getByRole('table', { name: 'Hull 1–9' })).toBeTruthy();
+    expect(screen.getByRole('table', { name: 'Hull 10–18' })).toBeTruthy();
+
+    fireEvent.click(parCell(1, 4));
+    expect(hidden()).toBe('5');
+    expect(live()).toBe('Hull 1: par 5');
+    fireEvent.click(parCell(1, 5));
+    expect(hidden()).toBe('3');
+    fireEvent.click(parCell(1, 3));
+    expect(hidden()).toBe('4');
+  });
+
+  it('ny bane: tomme indekser viser «?», kortet lister de som mangler, og et tall to ganger er ugyldig', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const si = (n: number) =>
+      container.querySelector<HTMLInputElement>(`input[name="hole_${n}_si"]`)!;
+
+    for (let n = 1; n <= 18; n++) expect(si(n).getAttribute('placeholder')).toBe('?');
+
+    // Hull 1 har indeks 7 og hull 17 indeks 14 i REAL_SI.
+    fillStrokeIndices(container);
+    setField(container, 'hole_1_si', '');
+    setField(container, 'hole_17_si', '');
+    expect(
+      screen.getByText('Mangler indeks 7 og 14. Hvert tall fra 1 til 18 brukes én gang.'),
+    ).toBeTruthy();
+
+    // 3 står alt på hull 3.
+    setField(container, 'hole_1_si', '3');
+    expect(si(1).getAttribute('aria-invalid')).toBe('true');
+    expect(si(3).getAttribute('aria-invalid')).toBe('true');
+    expect(si(2).getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('lagrelinja: det som mangler står under «Lagre»', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    const save = screen.getByRole('button', { name: 'Lagre' });
+    const status = container.querySelector('#course-save-status')!;
+
+    expect(save.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
