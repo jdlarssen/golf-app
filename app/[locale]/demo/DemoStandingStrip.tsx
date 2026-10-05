@@ -127,7 +127,12 @@ export function DemoStandingStrip(props: DemoStandingStripProps): JSX.Element {
               {detail ? `${separator}${detail}` : null}
             </>
           ) : (
-            detail
+            <>
+              {/* A zero-width strut in the place's type, so the strip keeps
+                  its height when the first score turns the line into «2. plass». */}
+              <span style={placeStyle}>{'\u200b'}</span>
+              {detail}
+            </>
           )}
         </span>
         {movement !== 0 && (

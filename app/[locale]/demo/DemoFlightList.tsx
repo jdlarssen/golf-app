@@ -76,7 +76,6 @@ const pointsStyle: CSSProperties = {
   textAlign: 'right',
   fontSize: 13,
   color: 'var(--text-muted)',
-  fontVariantNumeric: 'tabular-nums',
 };
 
 // Nested shapes eat into the 30 px box; two digits need more room still.
@@ -156,7 +155,8 @@ export function DemoFlightList(props: DemoFlightListProps): JSX.Element {
         {you.score == null ? (
           <span
             data-testid="score-number"
-            style={{ fontFamily: 'var(--font-serif)', fontSize: 22, color: 'var(--score-unset-fg)' }}
+            // 500: the artboard loads Fraunces 500/600 only, so its «—» is drawn at 500.
+            style={{ fontFamily: 'var(--font-serif)', fontSize: 22, fontWeight: 500, color: 'var(--score-unset-fg)' }}
           >
             —
           </span>

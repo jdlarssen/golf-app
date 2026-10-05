@@ -76,7 +76,6 @@ const numberStyle: CSSProperties = {
   fontFamily: 'var(--font-serif)',
   fontSize: 22,
   fontWeight: 600,
-  fontVariantNumeric: 'tabular-nums',
 };
 
 const detailStyle: CSSProperties = {
