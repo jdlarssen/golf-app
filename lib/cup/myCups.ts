@@ -72,11 +72,14 @@ export function mergeCupIds(
  *
  * If any of the three reads fails the answer is `{ ok: false }`: a partial
  * union would undercount, and an empty one would hide the cups (#2490).
+ *
+ * `playing` is the roster ∪ played part alone: the cups you are in, as opposed
+ * to one you only created (#2493).
  */
 export async function getMyCupIds(
   supabase: ServerSupabase,
   userId: string,
-): Promise<{ ok: true; ids: string[] } | { ok: false }> {
+): Promise<{ ok: true; ids: string[]; playing: string[] } | { ok: false }> {
   const [createdRes, rosterRes, playedRes] = await Promise.all([
     supabase.from('tournaments').select('id').eq('created_by', userId),
     supabase
@@ -97,13 +100,12 @@ export async function getMyCupIds(
     return { ok: false };
   }
 
+  const roster = (rosterRes.data ?? []).map((r) => r.tournament_id);
+  const played = (playedRes.data ?? []).map((r) => r.games?.tournament_id);
   return {
     ok: true,
-    ids: mergeCupIds([
-      (createdRes.data ?? []).map((r) => r.id),
-      (rosterRes.data ?? []).map((r) => r.tournament_id),
-      (playedRes.data ?? []).map((r) => r.games?.tournament_id),
-    ]),
+    ids: mergeCupIds([(createdRes.data ?? []).map((r) => r.id), roster, played]),
+    playing: mergeCupIds([roster, played]),
   };
 }
 
