@@ -1,7 +1,8 @@
 // #2256 PR 4: et trykk på et spillvarsel åpner spillet, alt annet åpner Hjem.
-import { pushTarget, pushUrl } from './pushRoute';
+import { pushNotificationId, pushTarget, pushUrl } from './pushRoute';
 
 const GAME = '0f8e6c1a-2b3d-4e5f-8a9b-0c1d2e3f4a5b';
+const NOTE = '5f0c1b2a-3d4e-4f60-8a71-92b3c4d5e6f7';
 
 describe('pushUrl', () => {
   it('leser url fra APNs-payloaden, der vår server legger den', () => {
@@ -53,4 +54,27 @@ describe('pushTarget', () => {
       expect(pushTarget(url)).toEqual({ name: 'Home' });
     },
   );
+});
+
+// #2201 PR 2: serveren legger `?varsel=<id>` på lenka, så trykket kan merke
+// akkurat det varselet som lest. Markøren skal ikke endre hvor trykket går.
+describe('?varsel= på lenka', () => {
+  it.each([
+    [`/games/${GAME}?varsel=${NOTE}`, { name: 'GameHome', params: { gameId: GAME } }],
+    [`/games/${GAME}/holes/3?varsel=${NOTE}`, { name: 'Hole', params: { gameId: GAME, holeNumber: 3 } }],
+    [`/?varsel=${NOTE}`, { name: 'Home' }],
+  ])('%s åpner samme skjerm som uten markør', (url, target) => {
+    expect(pushTarget(url)).toEqual(target);
+  });
+
+  it.each<[string | null, string | null]>([
+    [`/games/${GAME}?varsel=${NOTE}`, NOTE],
+    [`/games/${GAME}/approve?from=x&varsel=${NOTE}`, NOTE],
+    [`/?varsel=${NOTE}`, NOTE],
+    [`/games/${GAME}`, null],
+    [`/games/${GAME}?varsel=ikke-en-id`, null],
+    [null, null],
+  ])('pushNotificationId(%s) → %s', (url, id) => {
+    expect(pushNotificationId(url)).toBe(id);
+  });
 });

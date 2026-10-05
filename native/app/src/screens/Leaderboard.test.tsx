@@ -99,6 +99,8 @@ const mockLocalScores = [
 }));
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #2201: merk-lest har sin egen test (lib/useMarkVisitRead.test.tsx); her er den støy.
+jest.mock('../lib/useMarkVisitRead', () => ({ useMarkVisitRead: jest.fn() }));
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockBundleOverride.current ?? mockBundle),
   refreshGameBundle: jest.fn(async () => mockBundleOverride.current ?? mockBundle),
