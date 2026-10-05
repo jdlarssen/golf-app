@@ -135,11 +135,11 @@ export default async function OpprettBanePage({
     <AppShell>
       <TopBar backHref={backHref} kicker={t('door.kicker')} />
 
-      <div className="px-1">
-        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+      <div>
+        <h1 className="font-serif text-[28px] font-medium leading-[normal]">
           {t('door.heading')}
         </h1>
-        <p className="font-sans text-[11.5px] text-muted">
+        <p className="mt-0.5 font-sans text-[13px] leading-[normal] text-muted">
           {t('door.subtitle')}
         </p>
       </div>
@@ -150,15 +150,13 @@ export default async function OpprettBanePage({
         </div>
       )}
 
-      <div className="mt-5">
-        <Card>
-          <CourseForm
-            action={createCourse}
-            submitLabel={t('door.submitLabel')}
-            redirectBase={redirectBase}
-            successRedirect={successRedirect}
-          />
-        </Card>
+      <div className="mt-3.5">
+        <CourseForm
+          action={createCourse}
+          submitLabel={t('door.submitLabel')}
+          redirectBase={redirectBase}
+          successRedirect={successRedirect}
+        />
       </div>
     </AppShell>
   );

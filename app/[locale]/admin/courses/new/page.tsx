@@ -2,7 +2,6 @@ import { first } from '@/lib/url/searchParams';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
-import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { CourseForm } from '../CourseForm';
@@ -65,9 +64,11 @@ export default async function NewCoursePage({
       )}
 
       <div className="mt-5">
-        <Card>
-          <CourseForm action={createCourse} submitLabel={t('adminDoor.submitLabel')} />
-        </Card>
+        <CourseForm
+          action={createCourse}
+          submitLabel={t('adminDoor.submitLabel')}
+          tone="admin"
+        />
       </div>
     </AdminShell>
   );

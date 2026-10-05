@@ -150,11 +150,15 @@ export default async function EditCoursePage({
       )}
 
       <div className="mt-5">
-        <Card>
-          <Suspense fallback={<CourseFormSkeleton />}>
-            <EditCourseFormBody courseId={id} courseName={course.name} submitLabel={tEdit('submitLabel')} />
-          </Suspense>
-        </Card>
+        <Suspense
+          fallback={
+            <Card>
+              <CourseFormSkeleton />
+            </Card>
+          }
+        >
+          <EditCourseFormBody courseId={id} courseName={course.name} submitLabel={tEdit('submitLabel')} />
+        </Suspense>
       </div>
 
       {archivedTees.length > 0 && (
@@ -315,6 +319,7 @@ async function EditCourseFormBody({
       action={updateAction}
       submitLabel={submitLabel}
       affectedGamesCount={affectedGamesCount}
+      tone="admin"
       initialData={{
         name: courseName,
         holes: initialHoles,
