@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PICKER_STATS_CHUNK,
-  chunkIds,
   orderPickerPlayers,
   pickerStatsIds,
 } from './pickerOrder';
@@ -64,20 +62,5 @@ describe('pickerStatsIds', () => {
 
   it('is empty without friends or clubs', () => {
     expect(pickerStatsIds({ friendPlayerIds: [], clubMemberIdsByClub: {}, selfId: 'self' })).toEqual([]);
-  });
-});
-
-describe('chunkIds', () => {
-  it('never makes a chunk over 100', () => {
-    const many = Array.from({ length: 250 }, (_, i) => `u${i}`);
-    const chunks = chunkIds(many, PICKER_STATS_CHUNK);
-    expect(PICKER_STATS_CHUNK).toBe(100);
-    expect(chunks.map((c) => c.length)).toEqual([100, 100, 50]);
-    expect(chunks.flat()).toEqual(many);
-  });
-
-  it('gives no chunks for no ids, and one for a few', () => {
-    expect(chunkIds([], 100)).toEqual([]);
-    expect(chunkIds(['a', 'b'], 100)).toEqual([['a', 'b']]);
   });
 });

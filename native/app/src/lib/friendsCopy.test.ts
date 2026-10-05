@@ -53,7 +53,6 @@ const MIRRORED: Partial<Record<keyof typeof FRIENDS_TEXT, keyof typeof web>> = {
   acceptPending: 'acceptPending',
   withdrawLabel: 'withdrawLabel',
   withdrawPending: 'withdrawPending',
-  removeIdleLabel: 'removeIdleLabel',
   removeConfirmLabel: 'removeConfirmLabel',
   removePending: 'removePending',
   cancelLabel: 'cancelLabel',
@@ -62,6 +61,11 @@ const MIRRORED: Partial<Record<keyof typeof FRIENDS_TEXT, keyof typeof web>> = {
   addEmailButton: 'addEmailButton',
   invitePending: 'invitePending',
   someoneFallback: 'someoneFallback',
+  noFriendsYet: 'noFriendsYet',
+  heroTitle: 'heroTitle',
+  heroShareButton: 'heroShareButton',
+  heroEmailButton: 'heroEmailButton',
+  sortedByLastPlayed: 'sortedByLastPlayed',
 };
 
 describe('FRIENDS_TEXT', () => {

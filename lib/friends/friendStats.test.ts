@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   friendStatsFromRows,
   sortByLastPlayed,
+  sortByRoundsTogether,
+  visibleFriendHcp,
+  type FriendStats,
   type SharedGame,
 } from './friendStats';
 
@@ -81,5 +84,67 @@ describe('sortByLastPlayed', () => {
     ];
     expect(sortByLastPlayed(people, (p) => p.lastPlayedAt).map((p) => p.name)).toEqual(['Kari', 'Per']);
     expect(people[0].name).toBe('Per');
+  });
+});
+
+const played = (roundsTogether: number, lastPlayedAt: string | null = null): FriendStats => ({
+  roundsTogether,
+  lastPlayedAt,
+  lastGameName: roundsTogether > 0 ? 'Onsdagsgolfen' : null,
+});
+
+describe('sortByRoundsTogether (#2267)', () => {
+  it.each([
+    {
+      label: 'most rounds first',
+      people: [
+        { name: 'Erik', stats: played(2) },
+        { name: 'Ingrid', stats: played(5) },
+      ],
+      order: ['Ingrid', 'Erik'],
+    },
+    {
+      label: 'the same count puts the latest round first',
+      people: [
+        { name: 'Anne', stats: played(2, '2026-08-01T10:00:00Z') },
+        { name: 'Bjørn', stats: played(2, '2026-09-20T10:00:00Z') },
+      ],
+      order: ['Bjørn', 'Anne'],
+    },
+    {
+      label: 'the same count and day goes by name, Norwegian order',
+      people: [
+        { name: 'Åse', stats: played(1, '2026-09-20T10:00:00Z') },
+        { name: 'Øystein', stats: played(1, '2026-09-20T10:00:00Z') },
+        { name: 'Zara', stats: played(1, '2026-09-20T10:00:00Z') },
+      ],
+      order: ['Zara', 'Øystein', 'Åse'],
+    },
+    {
+      label: 'without numbers last, then by name',
+      people: [
+        { name: 'Per', stats: null },
+        { name: 'Kari', stats: played(0) },
+        { name: 'Ola', stats: played(1) },
+      ],
+      order: ['Ola', 'Kari', 'Per'],
+    },
+    { label: 'nobody gives nobody', people: [], order: [] },
+  ])('$label', ({ people, order }) => {
+    const before = people.map((p) => p.name);
+    expect(sortByRoundsTogether(people, (p) => p.stats).map((p) => p.name)).toEqual(order);
+    expect(people.map((p) => p.name)).toEqual(before);
+  });
+});
+
+describe('visibleFriendHcp (#2267)', () => {
+  it.each([
+    { label: 'no shared finished round hides it', hcp: 9.4, stats: played(0), expected: null },
+    { label: 'unread numbers hide it', hcp: 9.4, stats: null, expected: null },
+    { label: 'one shared round shows it', hcp: 9.4, stats: played(1), expected: 9.4 },
+    { label: 'a plus handicap shows as stored', hcp: -1.2, stats: played(3), expected: -1.2 },
+    { label: 'no handicap stays none', hcp: null, stats: played(3), expected: null },
+  ])('$label', ({ hcp, stats, expected }) => {
+    expect(visibleFriendHcp(hcp, stats)).toBe(expected);
   });
 });

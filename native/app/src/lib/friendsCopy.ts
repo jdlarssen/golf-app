@@ -6,13 +6,15 @@
 // leser den fila og sammenligner. Rettes en setning på webben uten at appen
 // følger etter, blir testen rød.
 //
-// App-egent er merket under: delingen (webben kopierer lenka, appen åpner
-// delearket), spørsmålet før «Fjern» (webben har en to-trinns knapp, appen en
+// App-egent er merket under: spørsmålet før «Fjern» (webben har en egen
+// bekreftelsesside med «Fjern som venn», appen et ark med «Fjern venn» og så en
 // dialog), linjene for nett og lasting (webben kan ikke være offline), og
 // feilene fra invitasjonen, som webben i dag ikke viser noe sted
-// (`?invite_error=` på `/profile` leses ikke, se PR-en). Det samme gjelder det
-// designet (#2256) la til: heltekortet «Få med gjengen», underlinjene med
-// tallene fra `/api/friends` og arket som åpnes fra en venn.
+// (`?invite_error=` på `/profile` leses ikke, se PR-en). Det samme gjelder
+// arket som åpnes fra en venn (#2256). Heltekortet «Få med gjengen» og
+// underlinjene med tallene har webben også fått (#2267): de faste tekstene
+// speiles under, og funksjonene med tall har samme ordlyd som webbens
+// ICU-meldinger (`friends.roundsTogether`, `friends.lastPlayed*` …).
 //
 // **Datoene er enhetens lokaltid**, som runde-lista (`roundHistory.ts`):
 // Hermes mangler tidssonene, og for en spiller i Norge gir det samme dag.
@@ -43,7 +45,6 @@ export const FRIENDS_TEXT = {
   acceptPending: 'Godtar …',
   withdrawLabel: 'Trekk tilbake',
   withdrawPending: 'Trekker …',
-  removeIdleLabel: 'Fjern',
   removeConfirmLabel: 'Fjern venn',
   removePending: 'Fjerner …',
   cancelLabel: 'Avbryt',
@@ -52,12 +53,6 @@ export const FRIENDS_TEXT = {
   addEmailButton: 'Legg til',
   invitePending: 'Inviterer …',
   someoneFallback: 'En venn',
-
-  // --- App-egent ----------------------------------------------------------
-  /**
-   * Webben sier «Legg til noen under», men i appen står «Få med gjengen»
-   * øverst, over lista.
-   */
   noFriendsYet: 'Du har ingen venner på Tørny ennå. Del lenken din øverst eller legg til noen du har spilt med.',
   /** Heltekortet øverst (designet). Linja under tittelen er `shareLinkSubtitle`. */
   heroTitle: 'Få med gjengen',
@@ -67,6 +62,8 @@ export const FRIENDS_TEXT = {
   heroEmailButton: 'På e-post',
   /** Til høyre for «Vennene dine» når lista står etter siste runde. */
   sortedByLastPlayed: 'Sist spilt først',
+
+  // --- App-egent ----------------------------------------------------------
   /** Arket som åpnes fra en venn. */
   sheetHcp: 'Handicap',
   sheetRounds: 'Runder sammen',
@@ -170,7 +167,11 @@ export function friendsFailureLine(reason: WebApiFailure): string {
   }
 }
 
-/** Spørsmålet før en venn fjernes. App-egent: webben har en to-trinns knapp. */
+/**
+ * Spørsmålet før en venn fjernes. App-egent: webben har en egen
+ * bekreftelsesside med knappen «Fjern som venn» (#2267), appen et ark med
+ * «Fjern venn» og så denne dialogen.
+ */
 export function removeConfirmMessage(name: string): string {
   return `Vil du fjerne ${name || FRIENDS_TEXT.someoneFallback} som venn?`;
 }

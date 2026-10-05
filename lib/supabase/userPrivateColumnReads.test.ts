@@ -100,6 +100,11 @@ const ALLOWED: Record<string, Allowed> = {
     receivers: ['getAdminClient()'],
     reason: '(a) egen rad, id-en er verifisert av proxy',
   },
+  'app/[locale]/profile/venner/fjern/[userId]/page.tsx': {
+    receivers: ['getAdminClient()'],
+    reason:
+      '(D6) vennens navn på bekreftelsessiden, lest først etter vennesjekken og maskert på serveren som navne-fallback (#2267)',
+  },
   'app/[locale]/signup/[shortId]/actions.ts': {
     receivers: ['admin', 'admin'],
     reason: '(c) serverside utsending: egen rad som avsender, arrangørens adresse som mottaker',

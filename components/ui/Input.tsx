@@ -25,8 +25,12 @@ export function Input({
   inputClassName?: string;
   /** Forwarded to the underlying `<input>` (React 19 ref-as-prop). */
   ref?: Ref<HTMLInputElement>;
-  /** `card`: the new-game wizard's field inside a `FormSection` card (#2426). */
-  variant?: 'default' | 'card';
+  /**
+   * `card`: the new-game wizard's field inside a `FormSection` card (#2426).
+   * `onStrong`: a linen-outlined pill on --surface-strong, the e-mail field in
+   * the friends page's green card (#2267).
+   */
+  variant?: 'default' | 'card' | 'onStrong';
 }) {
   // Only one message shows at a time (error > warning > hint); the input points
   // at it so screen readers read it along with the label.
@@ -57,7 +61,9 @@ export function Input({
         // Fokusringen kommer fra den globale `:focus-visible`-regelen (#1386);
         // `focus:border-accent` blir stående som supplerende fargeskift.
         className={
-          card
+          variant === 'onStrong'
+            ? `w-full h-12 rounded-full border border-on-strong/50 bg-transparent px-4 text-on-strong placeholder:text-on-strong/70 ${inputClassName ?? ''}`
+            : card
             ? `${CARD_FIELD_CONTROL} text-text ${error ? 'border-danger' : 'border-field-border'} ${inputClassName ?? ''}`
             : `w-full rounded-xl border px-3.5 py-3 bg-surface text-text placeholder-muted/70 focus:border-accent transition-[border-color,box-shadow] duration-150 ${error ? 'border-danger' : 'border-border'} ${inputClassName ?? ''}`
         }

@@ -97,6 +97,11 @@ Marte er med»).
 **Åpen for venner:** på et `manual_approval`-spill kan arrangøren huke av «Slipp venner direkte inn»
 (`games.let_friends_skip_gate`), og da melder venner seg på direkte forbi godkjennings-gaten mens
 ikke-venner fortsatt ber om plass.
+**Vennesiden** (#2267): øverst står «Få med gjengen» (del lenken, eller e-postfeltet som folder seg ut i
+kortet), så forespørsler, «Folk du har spilt med» (flest runder sammen først), vennene (sist spilt først,
+med «HCP · N runder sammen · sist …») og sendte forespørsler. En runde sammen er et ferdig spill dere
+begge sto i uten å trekke dere; handicapet vises bare for venner du har fullført minst én slik runde med.
+Et trykk på en venn åpner bekreftelsessiden `/profile/venner/fjern/[userId]` («Fjerne … som venn?»).
 
 ---
 
@@ -179,7 +184,7 @@ flowchart LR
 |---|---|---|
 | Rediger profil | `app/[locale]/profile/page.tsx` + `actions.ts` | navn, nickname, `hcp_index`, gender, level. `handicap_updated_at` stemples ved lagring. |
 | Inviter venn | inline på `/profile` (`app/[locale]/invite/actions.ts`) | `sendFriendInvite` — kvote + rate-limit, `invitations` (game_id null) + Resend. |
-| Venner | `/profile/venner` + `actions.ts` (#369) | Legg til (forslag/e-post/lenke), godta/avslå, fjern. RPCer `send_friend_request`/`*_by_email`/`respond_friend_request`/`remove_friend`/`connect_via_friend_code`; `getFriendData` for siden. Delt lenke landes på `/venner/legg-til/[code]`. |
+| Venner | `/profile/venner` + `actions.ts` (#369, #2267) | Legg til (forslag/e-post/lenke), godta/avslå, fjern via bekreftelsessiden `/profile/venner/fjern/[userId]`. RPCer `send_friend_request`/`*_by_email`/`respond_friend_request`/`remove_friend`/`connect_via_friend_code`; `getFriendsView` for siden og `GET /api/friends` (runder sammen og sist spilt fra `friendStats`, handicap bare etter en ferdig runde sammen). Delt lenke landes på `/venner/legg-til/[code]`. |
 | Historikk / statistikk | `/profile/historikk`, `/profile/statistikk` | |
 | GDPR-eksport | `app/[locale]/profile/export/route.ts` | Last ned egne data. |
 | Slett konto | `app/[locale]/profile/slett-konto/page.tsx` + `actions.ts` | **Dedikert bekreftelses-side**. Blokkeres hvis eneste arrangør av noe uavsluttet (spill, cup, liga) — deltakere slipper alltid gjennom og trekkes automatisk (`anonymize_user`, 0174). `admin.deleteUser`. |

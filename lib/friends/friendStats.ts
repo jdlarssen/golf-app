@@ -89,3 +89,28 @@ export function sortByLastPlayed<T extends { name: string }>(
     return a.name.localeCompare(b.name, 'nb');
   });
 }
+
+/**
+ * The «Folk du har spilt med» order on the web's friends page (#2267): most
+ * shared rounds first, then the latest round, then by name. Without numbers
+ * (none shared, or unread) last. Returns a copy.
+ */
+export function sortByRoundsTogether<T extends { name: string }>(
+  people: readonly T[],
+  stats: (person: T) => FriendStats | null,
+): T[] {
+  const rounds = (p: T) => stats(p)?.roundsTogether ?? 0;
+  const byLastPlayed = sortByLastPlayed(people, (p) => stats(p)?.lastPlayedAt ?? null);
+  const rank = new Map(byLastPlayed.map((p, i) => [p, i]));
+  return [...people].sort((a, b) => rounds(b) - rounds(a) || rank.get(a)! - rank.get(b)!);
+}
+
+/**
+ * A friend's handicap only for someone you finished a round with (#2267): the
+ * same shared finished game, neither of you withdrawn, that the numbers count.
+ * Unread numbers hide it too. Stricter than the `users` read policy, which
+ * also opens planned and draft games.
+ */
+export function visibleFriendHcp(hcp: number | null, stats: FriendStats | null): number | null {
+  return stats !== null && stats.roundsTogether >= 1 ? hcp : null;
+}
