@@ -7,6 +7,7 @@ import {
   type NotificationPayload,
 } from './types';
 import { OFF_APP_THRESHOLD_MS } from './thresholds';
+import { QUIET_KINDS } from './readOnVisit';
 import { sendPushToUser } from './push/sendPush';
 
 // Re-export så eksisterende imports fra notify.ts ikke brekker.
@@ -93,7 +94,9 @@ export async function notify<K extends NotificationKind>(opts: {
   // Additive Web Push: when the user is off-app, also push to their devices.
   // Best-effort — sendPushToUser never throws. Email is unchanged (offApp), so a
   // blocked/failed push never leaves the user dark. (#24, spec §4)
-  if (offApp) {
+  // #2201: news about Tørny is never pushed (the owner's choice); the row
+  // above still feeds the inbox and the banner on Hjem.
+  if (offApp && !QUIET_KINDS.includes(kind)) {
     await sendPushToUser({
       userId,
       kind,

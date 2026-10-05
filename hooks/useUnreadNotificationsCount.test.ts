@@ -19,6 +19,8 @@ type CountAnswer =
   | { count: number; error: null }
   | { count: null; error: { message: string } };
 let queuedCounts: Promise<CountAnswer>[] = [];
+/** The `.not(...)` filter of the last count query (#2201). */
+let lastNot: unknown[] | null = null;
 
 // Spies vi inspiserer på tvers av tester.
 const setAuthSpy = vi.fn();
@@ -66,13 +68,16 @@ vi.mock('@/lib/supabase/client', () => ({
         _opts?: { count: 'exact'; head: true },
       ) => ({
         eq: (_col: string, _val: string) => ({
-          is: (_col2: string, _val2: null) => {
-            countFetches += 1;
-            return (
-              queuedCounts.shift() ??
-              Promise.resolve({ count: mockInitialCount, error: null })
-            );
-          },
+          is: (_col2: string, _val2: null) => ({
+            not: (...args: unknown[]) => {
+              lastNot = args;
+              countFetches += 1;
+              return (
+                queuedCounts.shift() ??
+                Promise.resolve({ count: mockInitialCount, error: null })
+              );
+            },
+          }),
         }),
       }),
     }),
@@ -89,6 +94,7 @@ beforeEach(() => {
   channelStatus = null;
   countFetches = 0;
   queuedCounts = [];
+  lastNot = null;
   setAuthSpy.mockClear();
   removeChannelSpy.mockClear();
 });
@@ -116,6 +122,8 @@ describe('useUnreadNotificationsCount', () => {
       expect(result.current.loading).toBe(false);
     });
     expect(result.current.count).toBe(3);
+    // #2201: news about Tørny never lights the dot.
+    expect(lastNot).toEqual(['kind', 'in', '(product_update)']);
   });
 
   // #2093: an event is a signal to count again, never a +1/-1. Realtime can

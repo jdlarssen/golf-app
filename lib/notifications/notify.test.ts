@@ -181,6 +181,25 @@ describe('notify (validation-rekkefølge)', () => {
     );
   });
 
+  it('#2201: news about Tørny is never pushed, even off-app', async () => {
+    userSelectMock.mockResolvedValueOnce({ data: { last_seen_at: null, locale: 'no' } });
+    const { notify } = await import('./notify');
+
+    await notify({
+      userId: '00000000-0000-0000-0000-000000000001',
+      kind: 'product_update',
+      payload: {
+        source_id: '00000000-0000-0000-0000-000000000003',
+        title: 'Nytt',
+        body: 'Tekst',
+      },
+    });
+
+    // The row is still stored: the inbox and the banner on Hjem show it.
+    expect(insertMock).toHaveBeenCalledTimes(1);
+    expect(sendPushMock).not.toHaveBeenCalled();
+  });
+
   it('on-app user → no push', async () => {
     // default mock = fresh last_seen_at (active)
     const { notify } = await import('./notify');
