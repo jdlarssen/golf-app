@@ -11,6 +11,10 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GameForm } from '@/app/[locale]/admin/games/new/GameForm';
+import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
+import { getOrganiserWizardMountData } from '@/lib/wizard/getWizardMountData';
+import { loadDraftResume } from '@/lib/wizard/loadDraftResume';
+import { resumeExpectedPlayerCount } from '@/lib/wizard/draftResumePlan';
 import {
   saveDraftAction,
   publishFromDraftAction,
@@ -21,6 +25,7 @@ import { withRosterPlayerOptions } from '@/lib/games/getRosterPlayerOptions';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   buildEditFormInitialValues,
+  buildEditInitialValues,
   EDIT_FORM_COLUMNS,
   type EditGameRow,
   type EditGamePlayerRow,
@@ -32,9 +37,12 @@ import {
  * Sekretariat shell. Gated on `requireAdminOrCreator`, so a game's creator (or
  * an admin) can edit their own game; everyone else bounces to `/`.
  *
- * Reuses the SAME `GameForm` + the SAME `saveDraftAction` / `publishFromDraftAction`
- * / `updateScheduledAction` server actions the admin uses — those branch their
- * redirects to `/games/*` for a non-admin caller (#428). Options load through
+ * A draft resumes in the SAME `GameWizard` the admin's edit route uses (#2269,
+ * `loadDraftResume`); a scheduled game, and a cup-/league-linked draft, get the
+ * SAME `GameForm`. Both post to the SAME `saveDraftAction` /
+ * `publishFromDraftAction` / `updateScheduledAction` server actions the admin
+ * uses — those branch their redirects to `/games/*` for a non-admin caller
+ * (#428). Options load through
  * `getNewGameFormData(false)` — the e-post-fri roster variant (#435). RLS on
  * `users` scopes that picker to the creator + the co-players they share a game
  * with AS A PLAYER, so an organiser who does not play in this game sees none
@@ -52,7 +60,8 @@ type SearchParams = Promise<{
 // (#2258) — the shared list is checked against the update in a test.
 // #2433: group_id + tournament_id only tell buildEditFormInitialValues whether
 // this is a club tournament; neither comes back through the form.
-const GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id`;
+// league_round_id: a league-linked draft keeps GameForm (`loadDraftResume`).
+const GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id, league_round_id`;
 
 export default async function CreatorEditGamePage({
   params,
@@ -77,9 +86,9 @@ export default async function CreatorEditGamePage({
   const errorMessage = buildErrorMessage();
 
   const supabase = await getServerClient();
-  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter); returverdien
-  // ble tidligere kun brukt til TopBar-bjella (#1133), så bindingen droppes.
-  await requireAdminOrCreator(supabase, id);
+  // Authz-gate (redirecter til '/' hvis ikke admin/oppretter), før noe av
+  // spillet eller rosteren leses.
+  const ctx = await requireAdminOrCreator(supabase, id);
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -103,6 +112,67 @@ export default async function CreatorEditGamePage({
   // roster and tee-off effectively immutable (same gate as the admin flow).
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     redirect({ href: `/games/${id}?error=not_editable`, locale });
+  }
+
+  // #2269 (eierens svar 05.10, PR #2537): an organiser's draft resumes in the
+  // wizard like admin's does, so «fortsett der du slapp» lands on «Klar?».
+  // Same rule (`loadDraftResume`), same actions and publish path; the data are
+  // the organiser's own (`/opprett-spill`'s), plus the draft's roster (#2210).
+  // Scheduled games and cup-/league-linked drafts keep GameForm below.
+  const resume = await loadDraftResume(supabase, id, game, () =>
+    getOrganiserWizardMountData(ctx.userId),
+  );
+  if (resume) {
+    const { wizardData, plan, playerRows } = resume;
+    const players = await withRosterPlayerOptions(
+      wizardData.players,
+      playerRows.map((r) => r.user_id),
+    );
+    return (
+      // `data-hides-bottom-nav`: the wizard owns its chrome, as on admin's edit
+      // route (#2260).
+      <div data-hides-bottom-nav>
+        <AppShell showVersion={false}>
+          <GameWizard
+            courses={wizardData.courses}
+            players={players}
+            initialValues={buildEditInitialValues(game, playerRows)}
+            mode={{
+              kind: 'edit-draft',
+              gameId: id,
+              saveDraftAction,
+              publishAction: publishFromDraftAction,
+            }}
+            initialIntent={plan.intent}
+            defaultGroupId={plan.groupId}
+            formatsByIntent={wizardData.formatsByIntent}
+            clubs={wizardData.clubs}
+            friendPlayerIds={wizardData.friendPlayerIds}
+            clubMemberIdsByClub={wizardData.clubMemberIdsByClub}
+            currentUserId={ctx.userId}
+            initialExpectedPlayerCount={resumeExpectedPlayerCount(
+              game.game_mode,
+              playerRows.length,
+            )}
+            isAdmin={ctx.isAdmin}
+            isClubAdmin={wizardData.isClubAdmin}
+            formatGuide={wizardData.formatGuide}
+            backHref={`/games/${id}`}
+            entryLabel={t('kicker')}
+            notice={
+              <div className="mt-4 space-y-2">
+                {errorMessage && (
+                  <Banner tone="error" testId="edit-error-banner">
+                    {errorMessage}
+                  </Banner>
+                )}
+                <Banner tone="info">{t('draftBanner')}</Banner>
+              </div>
+            }
+          />
+        </AppShell>
+      </div>
+    );
   }
 
   return (

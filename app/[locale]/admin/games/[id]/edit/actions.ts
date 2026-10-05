@@ -87,12 +87,13 @@ async function updateGameInternal(
     ? `/admin/games/${gameId}`
     : `/games/${gameId}`;
 
-  // #1385: admin sin utkast-gren gjenopptas i veiviseren, og feilbanneret hører
-  // hjemme på steg 5 — der «Publiser»/«Lagre utkast» står. Uten `step` i
-  // redirecten ville arrangøren landet på steg 1 og måttet klikke seg fram til
-  // banneret. Planlagte spill (GameForm) og skaper-flyten på `/games/[id]/
-  // rediger` har ingen steg, og skal ikke ha parameteren.
-  const editStep = ctx.isAdmin && mode !== 'update_scheduled' ? '5' : null;
+  // #1385: et utkast gjenopptas i veiviseren, og feilbanneret hører hjemme på
+  // steg 5 — der «Publiser»/«Lagre utkast» står. Uten `step` i redirecten ville
+  // arrangøren landet på steg 1 og måttet klikke seg fram til banneret. Det
+  // gjelder begge redigeringsrutene: også arrangørens `/games/[id]/rediger`
+  // gjenopptar utkast i veiviseren (#2269, eierens svar 05.10). Planlagte spill
+  // (GameForm) har ingen steg; et cup-koblet utkast på GameForm overser den.
+  const editStep = mode !== 'update_scheduled' ? '5' : null;
   function editHref(params: Record<string, string>): string {
     const qs = new URLSearchParams(params);
     if (editStep) qs.set('step', editStep);

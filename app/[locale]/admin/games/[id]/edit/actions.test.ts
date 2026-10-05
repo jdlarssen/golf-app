@@ -845,6 +845,30 @@ describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
     expect(supabaseMock.__rpcCalls.map((c) => c.name)).not.toContain('incomplete_profile_ids');
   });
 
+  it('oppretters utkast-feil lander på «Klar?» (step=5), som admin sin (#2269)', async () => {
+    // The organiser's draft resumes in the wizard too (owner's answer 05.10,
+    // PR #2537), so the error banner belongs on step 5 for them as well.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // loadRole
+      { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
+      { data: { status: 'draft', game_mode: 'best_ball', tournament_id: null }, error: null },
+      { data: [0, 1, 2, 3].map((i) => storedBestBallRow(i)), error: null }, // prior roster
+      { data: { id: 'game-1' }, error: null }, // games.update
+      { data: null, error: { message: 'insert boom' } }, // insert u4..u7 FAILS
+      { data: null, error: null }, // compensation delete
+    ]);
+    signIn('creator-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1/rediger?error=db_players&step=5');
+    consoleError.mockRestore();
+  });
+
   it('ikke-eier ikke-admin → redirect /', async () => {
     // requireAdminOrCreator: loadRole gir is_admin:false, og games.created_by
     // matcher ikke userId → redirect('/'). Ingen skriv.
