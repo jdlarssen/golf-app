@@ -33,6 +33,7 @@ import { approveScorecard } from '../data/playerActions';
 import { fetchReminderPreview, sendReminder } from '../data/remind';
 import type { ReminderFailure } from '../data/remind';
 import { describeReminderFailure, unremindableNotes } from '../lib/endGameCopy';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 import type { ScreenProps } from '../navigation';
 import { EndGame } from './EndGame';
 
@@ -132,6 +133,7 @@ jest.mock('../data/withdrawSelf', () => ({
   withdrawSelf: jest.fn(async () => ({ ok: true })),
 }));
 jest.mock('../session', () => ({ useSession: () => ({ userId: mockMe }) }));
+jest.mock('../lib/useMarkVisitRead');
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) =>
     require('react').useEffect(callback, [callback]),
@@ -240,6 +242,12 @@ describe('EndGame', () => {
     // Resultatskjermen ERSTATTER avslutt-flaten: «tilbake» skal ikke lande på
     // en avslutt-side for en runde som nettopp ble lukket.
     expect(replace).toHaveBeenCalledWith('Leaderboard', { gameId: GAME_ID });
+  });
+
+  it('#2203: åpner du skjermen, er «Alle har levert» og påminnelsen for spillet lest', async () => {
+    setBundle([player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' })]);
+    await renderScreen();
+    expect(useMarkVisitRead).toHaveBeenCalledWith('gameFinish', GAME_ID);
   });
 
   it('tilbyr ingen vei rundt manglende godkjenning', async () => {
