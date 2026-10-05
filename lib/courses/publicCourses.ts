@@ -64,7 +64,7 @@ export function isPubliclyEligible(course: EligibilityCourseRow): boolean {
 }
 
 const TEE_COLUMNS =
-  'id, name, length_meters, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors';
+  'id, name, color, length_meters, archived_at, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors';
 
 type RawCourseRow = {
   id: string;
@@ -72,7 +72,12 @@ type RawCourseRow = {
   slug: string;
   created_by: string | null;
   course_holes: { hole_number: number }[];
-  tee_boxes: (PublicTeeRow & { id: string; name: string; length_meters: number | null })[];
+  tee_boxes: (PublicTeeRow & {
+    id: string;
+    name: string;
+    color: string | null;
+    length_meters: number | null;
+  })[];
 };
 
 /**
@@ -155,6 +160,8 @@ export type PublicCourseHole = {
 export type PublicCourseTee = {
   id: string;
   name: string;
+  /** The stored colour key (#2277); the page narrows it with `isTeeColor`. */
+  color: string | null;
   length_meters: number | null;
   slope_mens: number | null;
   course_rating_mens: number | null;
@@ -226,6 +233,7 @@ export async function getPublicCourseBySlug(
       .map((t) => ({
         id: t.id,
         name: t.name,
+        color: t.color,
         length_meters: t.length_meters,
         slope_mens: t.slope_mens,
         course_rating_mens: t.course_rating_mens,

@@ -220,6 +220,16 @@
    * is sage, which would invert the contrast and break light foregrounds. */
   --surface-strong: #1b4332;
 
+  /* Tee colours (#2277): the dot in front of a tee's name on the course card.
+   * One per key in lib/courses/teeColors.ts, with the artboards' hex. A tee
+   * colour is a physical colour, so it is the same at night and has no value
+   * in the dark blocks below. */
+  --tee-white: #ffffff;
+  --tee-yellow: #e3c24a;
+  --tee-red: #c8423b;
+  --tee-blue: #3a6fb5;
+  --tee-orange: #e88a3a;
+
   /* Leaderboard-backdrop opacity — fairway-vinje på state #4. Lys modus
    * holder seg svært diskret; mørk modus får litt mer luft for å lese
    * mot den varmere klubbhus-natt-paletten. */
@@ -503,6 +513,11 @@
   --color-live-dot: var(--live-dot);
   --color-rank-up: var(--rank-up);
   --color-danger-deep: var(--danger-deep);
+  --color-tee-white: var(--tee-white);
+  --color-tee-yellow: var(--tee-yellow);
+  --color-tee-red: var(--tee-red);
+  --color-tee-blue: var(--tee-blue);
+  --color-tee-orange: var(--tee-orange);
 
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-inter);
