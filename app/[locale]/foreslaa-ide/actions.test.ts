@@ -95,6 +95,44 @@ describe('submitIdea', () => {
     expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 
+  // #2277: «Si fra» on a course page opens the box with «Om banen X: » in the
+  // field. Sending that untouched is an empty idea, and the error keeps ?bane.
+  it('treats the untouched course prefill as empty and keeps bane on the error redirect', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    setAuth({ id: userId });
+    const fd = form('Om banen Stiklestad Golfbane: ');
+    fd.set('prefill', 'Om banen Stiklestad Golfbane: ');
+    fd.set('bane', 'stiklestad-golfbane');
+
+    await run(fd);
+
+    expect(lastRedirect()).toBe('/foreslaa-ide?bane=stiklestad-golfbane&error=empty');
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+  });
+
+  it('sends the prefill once the golfer has written after it', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: [{ id: 'idea-1' }], error: null },
+      { data: { name: 'Per' }, error: null },
+      { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
+    ]);
+    setAuth({ id: userId });
+    const fd = form('Om banen Stiklestad Golfbane: hull 7 er par 4');
+    fd.set('prefill', 'Om banen Stiklestad Golfbane: ');
+    fd.set('bane', 'stiklestad-golfbane');
+
+    await run(fd);
+
+    const insert = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'idea_submissions' && c.method === 'insert',
+    );
+    expect(insert?.args[0]).toEqual({
+      user_id: userId,
+      text: 'Om banen Stiklestad Golfbane: hull 7 er par 4',
+    });
+    expect(lastRedirect()).toBe('/foreslaa-ide?sent=1');
+  });
+
   it('redirects unauthenticated users to /login', async () => {
     supabaseMock = buildSupabaseMock([]);
     setAuth(null);

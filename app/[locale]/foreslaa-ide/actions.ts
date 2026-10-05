@@ -10,6 +10,7 @@ import {
 } from '@/lib/users/privateUserFields';
 import { sendIdeaSubmittedNotification } from '@/lib/mail/ideaSubmittedNotification';
 import { firstName } from '@/lib/firstName';
+import { courseReportHref } from '@/lib/courses/courseReportHref';
 
 const MAX_TEXT = 2000;
 
@@ -22,9 +23,19 @@ export async function submitIdea(formData: FormData) {
   const locale = await getLocale();
 
   const text = String(formData.get('text') ?? '').trim();
+  // #2277: from a course page the field starts as «Om banen X: ». Sent
+  // untouched, that is an empty idea, and the error keeps ?bane so the field
+  // is filled in again.
+  const prefill = String(formData.get('prefill') ?? '').trim();
+  const courseSlug = String(formData.get('bane') ?? '').trim();
 
-  if (!text || text.length > MAX_TEXT) {
-    redirect({ href: '/foreslaa-ide?error=empty', locale });
+  if (!text || text === prefill || text.length > MAX_TEXT) {
+    redirect({
+      href: courseSlug
+        ? `${courseReportHref(courseSlug)}&error=empty`
+        : '/foreslaa-ide?error=empty',
+      locale,
+    });
   }
 
   const supabase = await getServerClient();

@@ -74,6 +74,10 @@ export default async function ForeslaaIdePage({
       {!sent && (
         <Card>
           <form action={submitIdea}>
+            {/* #2277: lets submitIdea tell an untouched prefill from an idea
+                and keep ?bane on its error redirect. */}
+            {courseSlug && <input type="hidden" name="bane" value={courseSlug} />}
+            {prefill && <input type="hidden" name="prefill" value={prefill} />}
             <div className="space-y-4">
               <div>
                 <label
