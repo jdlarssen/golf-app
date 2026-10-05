@@ -655,6 +655,14 @@ html:has([data-sticky-tray]) {
   scroll-padding-bottom: calc(12rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* «Lagre bane» on the course form (#2278) sticks just above the bottom nav:
+ * the bar is 85 px, plus about 18.5 px per status line (up to three when a
+ * line wraps), and the nav adds 59.5 px. 14rem keeps a field the keyboard
+ * lands on clear of both. */
+html:has([data-course-save-bar]) {
+  scroll-padding-bottom: calc(14rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* The same label ring inside a `data-focus-inset` card (#2282): the switch rows
  * in the peer and side-tournament cards run edge to edge, and the card's
  * `overflow: hidden` would clip the positive offset away. Same specificity as

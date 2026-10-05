@@ -3525,7 +3525,7 @@
       "parAnnounce": "Hole {number}: par {par}",
       "parAnnounceWithGender": "Hole {number} ({genderLabel}): par {par}",
       "indexCellLabel": "Stroke index for hole {number}",
-      "siMissingList": "Missing index {numbers}. Each number from 1 to 18 is used once.",
+      "siMissingList": "{count, plural, one {Missing index {numbers}.} other {Missing indices {numbers}.}} Each number from 1 to 18 is used once.",
       "siMissingCountRule": "{count} indices missing. Each number from 1 to 18 is used once.",
       "siMissingCount": "{count, plural, one {One stroke index missing} other {# stroke indices missing}}",
       "siDuplicates": "{count, plural, one {Stroke index {numbers} is used more than once} other {Stroke indices {numbers} are used more than once}}",
