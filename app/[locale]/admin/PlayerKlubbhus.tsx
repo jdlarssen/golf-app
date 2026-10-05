@@ -7,9 +7,9 @@ import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
 import { cupLedgerHref, getMyCupIds } from '@/lib/cup/myCups';
 import { getRoomCups } from '@/lib/cup/getRoomCups';
 import { getArrangedRounds } from '@/lib/games/getArrangedRounds';
-import { groupArrangedRounds } from '@/lib/games/arrangedGames';
+import { groupArrangedRounds, onlyStandaloneGames } from '@/lib/games/arrangedGames';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
-import { buildTerminEntries } from '@/lib/games/terminliste';
+import { hasOpenRounds } from '@/lib/games/terminliste';
 import { isNewPlayer } from '@/lib/games/isNewPlayer';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -40,11 +40,12 @@ import {
  *
  * A player with no round, no club and no cup gets the new player's version
  * instead (#2494, `isNewPlayer`): a subtitle, the same card, «Bli med»
- * (Terminlista and «Klubben din») and the tools. Your rounds, your clubs and
- * your cup ids are read once, in parallel, to choose; the sections reuse the
- * answers. The greeting paints at once; the rest streams, the clubs' and cups'
- * numbers each behind their own Suspense, and a failed read gives an error box
- * in that section alone (#2490), never the new player's version.
+ * (Terminlista and «Klubben din») and the tools. Three quick reads choose the
+ * version (one own round, your clubs, your cup ids); the card comes with that
+ * choice, and «Rundene dine», the clubs and the cups each stream behind their
+ * own Suspense, from reads started at once and shared through a request cache.
+ * The greeting paints at once. A failed read gives an error box in that section
+ * alone (#2490), never the new player's version.
  *
  * Reads with the admin client, each with its gate:
  * - start blocks for your planned rounds (`readCreatorStartBlock`, inside
@@ -68,37 +69,69 @@ import {
  */
 export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   const tNav = await getTranslations('admin.nav');
+  const { userId } = role;
+  // Start every section's read now, before anything waits on the choice of
+  // version; the sections await the same cached promises. The catch only
+  // marks them handled here: a section that awaits one still sees its error.
+  readRounds(userId).catch(() => {});
+  readClubNumbers(userId).catch(() => {});
+  readRoomCups(userId).catch(() => {});
   return (
     <AdminShell tone="app">
       <TopBar kicker={tNav('klubbhus')} />
 
       <GreetingView name={firstName(role.name)} />
 
-      <Suspense
-        fallback={
-          <>
-            <NewRoundCardSkeleton />
-            <ArrangedRoundsSkeleton />
-          </>
-        }
-      >
-        <RoomBody userId={role.userId} />
+      <Suspense fallback={<NewRoundCardSkeleton />}>
+        <TopSection userId={userId} />
+      </Suspense>
+
+      <Suspense fallback={<ArrangedRoundsSkeleton />}>
+        <RoomBody userId={userId} />
       </Suspense>
     </AdminShell>
   );
 }
 
-// The three reads that choose the room's version, cached for the request so
-// the sections reuse them instead of reading again.
+// Reads cached for the request, so the choice of version and the sections
+// share them instead of reading again.
 const readRounds = cache(async (userId: string) =>
   getArrangedRounds(await getServerClient(), userId, { upcomingLimit: 3 }),
 );
 const readClubs = cache(async (userId: string) => getMyClubs(await getServerClient(), userId));
 const readCupIds = cache(async (userId: string) => getMyCupIds(await getServerClient(), userId));
 
-// What the clubs and cups sections read after those: started as soon as their
-// own first read is in, not after the choice, so choosing the version does not
-// hold them up. For a new player they find nothing and read nothing more.
+// Whether you made any standalone round: one row is enough to know, so the
+// choice of version does not wait for «Rundene dine» (rosters, start blocks).
+const readAnyOwnRound = cache(async (userId: string) => {
+  const supabase = await getServerClient();
+  const { data, error } = await onlyStandaloneGames(
+    supabase.from('games').select('id').eq('created_by', userId),
+  ).limit(1);
+  if (error) {
+    console.error('[klubbhus] own rounds', error);
+    return { ok: false as const };
+  }
+  return { ok: true as const, games: data ?? [] };
+});
+
+/**
+ * The new player's version or the room from #2493 (`isNewPlayer`): three
+ * quick reads (one own round, your clubs, your cup ids), each one round trip,
+ * in parallel. A failed read is never «new».
+ */
+const readIsNewPlayer = cache(async (userId: string) => {
+  const [rounds, clubs, cups] = await Promise.all([
+    readAnyOwnRound(userId),
+    readClubs(userId),
+    readCupIds(userId),
+  ]);
+  return isNewPlayer({ rounds, clubs, cups });
+});
+
+// What the clubs and cups sections read after their first read: started at
+// once (above), not after the choice of version. For a new player they find
+// nothing and read nothing more.
 const readClubNumbers = cache(async (userId: string) => {
   const result = await readClubs(userId);
   if (!result.ok || result.clubs.length === 0) return null;
@@ -124,24 +157,25 @@ const readRoomCups = cache(async (userId: string) => {
   return getRoomCups(await readCupIds(userId), t('manage.unknownPlayer'));
 });
 
-async function RoomBody({ userId }: { userId: string }) {
-  // Start the follow-up reads now; the sections await the same promises. The
-  // catch only marks them handled here: a section that awaits one still sees
-  // its error.
-  readClubNumbers(userId).catch(() => {});
-  readRoomCups(userId).catch(() => {});
-  const [rounds, clubs, cups, isClubAdmin] = await Promise.all([
-    readRounds(userId),
-    readClubs(userId),
-    readCupIds(userId),
-    isClubAdminAnywhere(userId),
-  ]);
+/**
+ * The new player's subtitle and the «Lag en ny runde» card, together: the
+ * card waits only for the quick choice and the club-admin check, both one
+ * round trip, in parallel, so the subtitle never pushes it down afterwards.
+ */
+async function TopSection({ userId }: { userId: string }) {
+  const [isNew, isClubAdmin] = await Promise.all([readIsNewPlayer(userId), isClubAdminAnywhere(userId)]);
+  return (
+    <>
+      {isNew && <NewPlayerSubtitle />}
+      <NewRoundCard isClubAdmin={isClubAdmin} />
+    </>
+  );
+}
 
-  if (isNewPlayer({ rounds, clubs, cups })) {
+async function RoomBody({ userId }: { userId: string }) {
+  if (await readIsNewPlayer(userId)) {
     return (
       <>
-        <NewPlayerSubtitle />
-        <NewRoundCard isClubAdmin={isClubAdmin} />
         <Suspense fallback={<RoomSectionSkeleton rows={2} />}>
           <JoinSection userId={userId} />
         </Suspense>
@@ -152,8 +186,9 @@ async function RoomBody({ userId }: { userId: string }) {
 
   return (
     <>
-      <NewRoundCard isClubAdmin={isClubAdmin} />
-      <RoundsSection userId={userId} />
+      <Suspense fallback={<ArrangedRoundsSkeleton />}>
+        <RoundsSection userId={userId} />
+      </Suspense>
       <Suspense fallback={<RoomSectionSkeleton rows={2} />}>
         <ClubsSection userId={userId} />
       </Suspense>
@@ -168,14 +203,13 @@ async function RoomBody({ userId }: { userId: string }) {
 /**
  * Bli med for a new player (#2494): Terminlista says whether there are open
  * rounds to sign up for. «Empty» counts open rounds only, as the list shows
- * them (`buildTerminEntries`), not pending requests: a request is no open
- * round. `getDiscoverableGames` swallows its read errors, so a failed read
+ * them (`hasOpenRounds`, over `buildTerminEntries`), not pending requests: a
+ * request is no open round. `getDiscoverableGames` swallows its read errors, so a failed read
  * also says «Ingen åpne runder akkurat nå»; the row and its link stand either
  * way, and /finn-turneringer reads the same function.
  */
 async function JoinSection({ userId }: { userId: string }) {
-  const terminEmpty = buildTerminEntries(await getDiscoverableGames(userId), new Map()).length === 0;
-  return <JoinView terminEmpty={terminEmpty} />;
+  return <JoinView terminEmpty={!hasOpenRounds(await getDiscoverableGames(userId))} />;
 }
 
 /**
