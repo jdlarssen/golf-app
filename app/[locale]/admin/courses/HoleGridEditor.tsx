@@ -29,7 +29,7 @@ const INDEX_FIELD =
 
 // Two drawings of the card while the owner chooses (05.10): `standard` is the
 // artboard (54 px label column, 40 px rows); `compact` takes less room, with
-// a 30 px column of small labels, 34 px rows and wider cells.
+// a 34 px column of small labels, 34 px rows and wider cells.
 const LAYOUT = {
   standard: {
     gap: 'gap-2',
@@ -44,7 +44,7 @@ const LAYOUT = {
   },
   compact: {
     gap: 'gap-1.5',
-    labelCol: 'w-[30px]',
+    labelCol: 'w-[34px]',
     holeRow: 'text-[10px] text-muted',
     holeLabel: 'text-[9px] font-semibold',
     rowLabel: 'text-[9px] font-semibold',
