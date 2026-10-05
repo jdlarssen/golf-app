@@ -90,6 +90,9 @@ export function NewRoundCardSkeleton() {
   );
 }
 
+/** Row heights the artboards draw: clubs and cups 64, tools 60 in the room and 56 for a new player. */
+type RowHeight = 'min-h-16' | 'min-h-[60px]' | 'min-h-14';
+
 /** A white card of rows, as every group in the room artboards draws it. */
 function RoomCard({ children }: { children: ReactNode }) {
   return (
@@ -115,7 +118,7 @@ function RoomRow({
   name: string;
   line: string;
   last: boolean;
-  minHeight: 'min-h-16' | 'min-h-[60px]';
+  minHeight: RowHeight;
   testId: string;
   data?: Record<`data-${string}`, string | number>;
 }) {
@@ -324,11 +327,12 @@ export function RoomSectionSkeleton({ rows }: { rows: number }) {
 
 /**
  * Verktøy — Baner, Spillformater and «Har du en idé?» as plain rows without
- * icons, as both room artboards draw them. Baner and Spillformater carry the
+ * icons, as the room artboards draw them: 60 px rows in the room
+ * (`rom-rullet`), 56 px for a new player (`ny-spiller`). Baner and Spillformater carry the
  * Klubbhuset origin so their back link returns here (#2487); /foreslaa-ide
  * already goes back to /admin.
  */
-export function ToolsView() {
+export function ToolsView({ rowHeight = 'min-h-[60px]' }: { rowHeight?: RowHeight } = {}) {
   const t = useTranslations('admin.dashboard');
   const rows = [
     { href: withKlubbhusOrigin('/opprett-bane'), name: t('playerBaner'), line: t('playerBanerMeta') },
@@ -348,10 +352,65 @@ export function ToolsView() {
             key={row.href}
             {...row}
             last={i === rows.length - 1}
-            minHeight="min-h-[60px]"
+            minHeight={rowHeight}
             testId="player-tool-row"
           />
         ))}
+      </RoomCard>
+    </section>
+  );
+}
+
+/**
+ * The new player's subtitle under «Hei, Kari.» (#2494, artboard
+ * `Klubbhus-forslag-ny-spiller-*`). The room from #2493 has none.
+ */
+export function NewPlayerSubtitle() {
+  const t = useTranslations('admin.dashboard');
+  return (
+    <p data-testid="new-player-subtitle" className="mt-1 text-sm leading-[1.45] text-muted">
+      {t('newPlayerSubtitle')}
+    </p>
+  );
+}
+
+/**
+ * Bli med — the new player's two ways in besides making a round (#2494):
+ * Terminlista (/finn-turneringer) with the open rounds you can sign up for,
+ * or «Ingen åpne runder akkurat nå» when there are none (O1), and «Klubben
+ * din» as plain text: a club comes in through its invite link, so the row
+ * leads nowhere.
+ */
+export function JoinView({ terminEmpty }: { terminEmpty: boolean }) {
+  const t = useTranslations('admin.dashboard');
+  return (
+    <section aria-labelledby="room-join-heading">
+      <RoomGroupHeading id="room-join-heading">{t('playerJoinLabel')}</RoomGroupHeading>
+      <RoomCard>
+        <RoomRow
+          href="/finn-turneringer"
+          name={t('playerTerminName')}
+          line={terminEmpty ? t('playerTerminEmpty') : t('playerTerminLine')}
+          last={false}
+          minHeight="min-h-16"
+          testId="player-termin-row"
+          data={{ 'data-empty': String(terminEmpty) }}
+        />
+        <li>
+          <div
+            data-testid="player-club-invite"
+            className="flex min-h-[72px] items-center gap-3 px-3.5 py-2.5 text-text"
+          >
+            <span className="min-w-0 grow">
+              <span className="block text-[15px] font-semibold leading-[normal]">
+                {t('playerClubInviteName')}
+              </span>
+              <span className="mt-0.5 block text-xs leading-[normal] text-muted">
+                {t('playerClubInviteLine')}
+              </span>
+            </span>
+          </div>
+        </li>
       </RoomCard>
     </section>
   );

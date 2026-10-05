@@ -1,6 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { getMyCupIds } from './myCups';
+import type { getMyCupIds } from './myCups';
 import { getCupSnapshot } from './getCupSnapshot';
 import { cupProgress, splitCupsForRoom } from './cupRoomRows';
 
@@ -29,7 +29,9 @@ type CupStatusRow = {
 
 /**
  * The Klubbhus room's cups (#2493): every cup you are part of that is not
- * finished, with its progress, and how many are finished.
+ * finished, with its progress, and how many are finished. Takes the answer of
+ * `getMyCupIds`, which the room reads once (#2494 also needs it to tell a new
+ * player).
  *
  * Status is read FIRST, so a finished cup never builds a snapshot. Each
  * snapshot is read on its own (`allSettled`): one that fails marks that cup's
@@ -39,11 +41,9 @@ type CupStatusRow = {
  * or the status fails the section.
  */
 export async function getRoomCups(
-  supabase: Parameters<typeof getMyCupIds>[0],
-  userId: string,
+  idsRes: Awaited<ReturnType<typeof getMyCupIds>>,
   unknownLabel: string,
 ): Promise<{ ok: true; live: RoomCupRead[]; finishedCount: number } | { ok: false }> {
-  const idsRes = await getMyCupIds(supabase, userId);
   if (!idsRes.ok) return { ok: false };
   if (idsRes.ids.length === 0) return { ok: true, live: [], finishedCount: 0 };
 
