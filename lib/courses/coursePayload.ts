@@ -96,6 +96,19 @@ export function allStrokeIndicesUnique(sis: number[]): boolean {
 }
 
 /**
+ * One index field read the way `parseCourseHolesAndTees` reads it: trimmed,
+ * then `Number()`. `'empty'` for a blank field, `'invalid'` for anything that
+ * is not an integer in 1–18. The client's SI rule (`findStrokeIndexGaps`,
+ * `strokeIndexCellState`) reads every field through this.
+ */
+function readStrokeIndex(raw: string): number | 'empty' | 'invalid' {
+  const s = raw.trim();
+  if (s === '') return 'empty';
+  const n = Number(s);
+  return isValidStrokeIndex(n) ? n : 'invalid';
+}
+
+/**
  * Client-side mirror of the server's SI rule (#2279): which numbers in 1–18 no
  * valid field covers, which valid numbers appear more than once, and which
  * holes (1-based) hold a typed value that is not a valid index. Each value goes
@@ -111,14 +124,13 @@ export function findStrokeIndexGaps(values: string[]): {
   const counts = new Map<number, number>();
   const invalid: number[] = [];
   values.forEach((raw, i) => {
-    const s = raw.trim();
-    if (s === '') return;
-    const n = Number(s);
-    if (!isValidStrokeIndex(n)) {
+    const si = readStrokeIndex(raw);
+    if (si === 'empty') return;
+    if (si === 'invalid') {
       invalid.push(i + 1);
       return;
     }
-    counts.set(n, (counts.get(n) ?? 0) + 1);
+    counts.set(si, (counts.get(si) ?? 0) + 1);
   });
   const missing: number[] = [];
   const duplicates: number[] = [];
@@ -131,20 +143,17 @@ export function findStrokeIndexGaps(values: string[]): {
 }
 
 /**
- * How one index field on the course card looks (#2278), from the same rule as
- * `findStrokeIndexGaps`: trimmed and read with `Number()`. Empty is `'empty'`,
- * a value outside 1–18 or not an integer is `'invalid'`, a valid number that
- * `duplicates` lists is `'duplicate'`, anything else is `'filled'`.
+ * How one index field on the course card looks (#2278), read like every field
+ * in `findStrokeIndexGaps`: `'empty'`, `'invalid'` (not an integer in 1–18),
+ * `'duplicate'` (a valid number that `duplicates` lists) or `'filled'`.
  */
 export function strokeIndexCellState(
   value: string,
   duplicates: readonly number[],
 ): 'filled' | 'empty' | 'invalid' | 'duplicate' {
-  const s = value.trim();
-  if (s === '') return 'empty';
-  const n = Number(s);
-  if (!isValidStrokeIndex(n)) return 'invalid';
-  return duplicates.includes(n) ? 'duplicate' : 'filled';
+  const si = readStrokeIndex(value);
+  if (si === 'empty' || si === 'invalid') return si;
+  return duplicates.includes(si) ? 'duplicate' : 'filled';
 }
 
 /**

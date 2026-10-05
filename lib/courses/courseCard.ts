@@ -33,6 +33,25 @@ export function nextPar(value: string): 3 | 4 | 5 {
   return 3;
 }
 
+/** The card lists the missing indices up to this many; past it, only the count. */
+export const MAX_LISTED_MISSING = 6;
+
+/**
+ * The line at the foot of «Legg til bane»'s card (#2278): the hint while no
+ * index is typed, the missing numbers while one to six are missing, the count
+ * from seven, and nothing once all 18 are there. `missing` comes from
+ * `findStrokeIndexGaps`.
+ */
+export function indexStatusLine(
+  values: readonly string[],
+  missing: readonly number[],
+): { kind: 'hint' } | { kind: 'list'; numbers: number[] } | { kind: 'count'; count: number } | null {
+  if (values.every((v) => v.trim() === '')) return { kind: 'hint' };
+  if (missing.length > MAX_LISTED_MISSING) return { kind: 'count', count: missing.length };
+  if (missing.length > 0) return { kind: 'list', numbers: [...missing] };
+  return null;
+}
+
 /**
  * The sum of the men's par. The column is NOT NULL in the DB; the type is
  * nullable, so a null counts 0.

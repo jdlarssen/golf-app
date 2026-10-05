@@ -3,6 +3,7 @@ import {
   coursePar,
   genderParRows,
   hardestAndEasiest,
+  indexStatusLine,
   nextPar,
   sortTeesForCard,
   splitNines,
@@ -61,6 +62,23 @@ describe('nextPar', () => {
     ['', 3],
   ])('%j → %i', (value, expected) => {
     expect(nextPar(value)).toBe(expected);
+  });
+});
+
+describe('indexStatusLine', () => {
+  const EMPTY = Array<string>(18).fill('');
+  const missingOf = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+  type Line = ReturnType<typeof indexStatusLine>;
+  it.each<[string, string[], number[], Line]>([
+    ['nothing typed', EMPTY, missingOf(18), { kind: 'hint' }],
+    ['only blanks typed', Array<string>(18).fill('  '), missingOf(18), { kind: 'hint' }],
+    ['one missing', ['7', ...EMPTY.slice(1)], [3], { kind: 'list', numbers: [3] }],
+    ['two missing', ['7', ...EMPTY.slice(1)], [7, 14], { kind: 'list', numbers: [7, 14] }],
+    ['six missing', ['7', ...EMPTY.slice(1)], missingOf(6), { kind: 'list', numbers: missingOf(6) }],
+    ['seven missing', ['7', ...EMPTY.slice(1)], missingOf(7), { kind: 'count', count: 7 }],
+    ['all there', ['7', ...EMPTY.slice(1)], [], null],
+  ])('%s', (_label, values, missing, expected) => {
+    expect(indexStatusLine(values, missing)).toEqual(expected);
   });
 });
 
