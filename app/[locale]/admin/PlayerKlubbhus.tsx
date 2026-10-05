@@ -96,7 +96,40 @@ const readRounds = cache(async (userId: string) =>
 const readClubs = cache(async (userId: string) => getMyClubs(await getServerClient(), userId));
 const readCupIds = cache(async (userId: string) => getMyCupIds(await getServerClient(), userId));
 
+// What the clubs and cups sections read after those: started as soon as their
+// own first read is in, not after the choice, so choosing the version does not
+// hold them up. For a new player they find nothing and read nothing more.
+const readClubNumbers = cache(async (userId: string) => {
+  const result = await readClubs(userId);
+  if (!result.ok || result.clubs.length === 0) return null;
+  const supabase = await getServerClient();
+  const ids = result.clubs.map((c) => c.id);
+  const [counts, next] = await Promise.all([
+    // RLS «group_members select member or admin»: a member counts the club.
+    Promise.all(
+      ids.map((id) =>
+        supabase
+          .from('group_members')
+          .select('user_id', { count: 'exact', head: true })
+          .eq('group_id', id),
+      ),
+    ),
+    // Service role inside; the gate is `ids`, the viewer's own clubs (above).
+    getNextClubRounds(ids, new Date()),
+  ]);
+  return { counts, next };
+});
+const readRoomCups = cache(async (userId: string) => {
+  const t = await getTranslations('cup');
+  return getRoomCups(await readCupIds(userId), t('manage.unknownPlayer'));
+});
+
 async function RoomBody({ userId }: { userId: string }) {
+  // Start the follow-up reads now; the sections await the same promises. The
+  // catch only marks them handled here: a section that awaits one still sees
+  // its error.
+  readClubNumbers(userId).catch(() => {});
+  readRoomCups(userId).catch(() => {});
   const [rounds, clubs, cups, isClubAdmin] = await Promise.all([
     readRounds(userId),
     readClubs(userId),
@@ -173,30 +206,17 @@ async function RoundsSection({ userId }: { userId: string }) {
 }
 
 async function ClubsSection({ userId }: { userId: string }) {
-  const supabase = await getServerClient();
   const result = await readClubs(userId);
   if (!result.ok) return <ClubsView clubs={null} />;
   if (result.clubs.length === 0) return <ClubsView clubs={[]} />;
 
-  const ids = result.clubs.map((c) => c.id);
-  const [counts, next] = await Promise.all([
-    // RLS «group_members select member or admin»: a member counts the club.
-    Promise.all(
-      ids.map((id) =>
-        supabase
-          .from('group_members')
-          .select('user_id', { count: 'exact', head: true })
-          .eq('group_id', id),
-      ),
-    ),
-    // Service role inside; the gate is `ids`, the viewer's own clubs (above).
-    getNextClubRounds(ids, new Date()),
-  ]);
-  const failedCount = counts.find((c) => c.error);
-  if (failedCount || !next.ok) {
+  const numbers = await readClubNumbers(userId);
+  const failedCount = numbers?.counts.find((c) => c.error);
+  if (!numbers || failedCount || !numbers.next.ok) {
     console.error('[klubbhus] club numbers', failedCount?.error ?? 'next round');
     return <ClubsView clubs={null} />;
   }
+  const { counts, next } = numbers;
 
   const clubs: RoomClub[] = result.clubs.map((club, i) => ({
     ...club,
@@ -207,8 +227,7 @@ async function ClubsSection({ userId }: { userId: string }) {
 }
 
 async function CupsSection({ userId }: { userId: string }) {
-  const t = await getTranslations('cup');
-  const read = await getRoomCups(await readCupIds(userId), t('manage.unknownPlayer'));
+  const read = await readRoomCups(userId);
   if (!read.ok) return <CupsView cups={null} finishedCount={0} />;
 
   const cups: RoomCup[] = read.live.map((cup) => ({
