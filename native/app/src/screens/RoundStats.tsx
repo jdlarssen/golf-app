@@ -26,9 +26,12 @@ import { useRoundHistory } from '../lib/useRoundHistory';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 export function RoundStats(_props: ScreenProps<'RoundStats'>) {
   const { userId } = useSession();
+  // #2201: merkeveggen står her, så «Nye merker» er lest også her.
+  useMarkVisitRead('history');
   const { colors, ui } = useTheme();
   const { load, retry } = useRoundHistory(userId);
   const now = useMemo(() => new Date(), []);
