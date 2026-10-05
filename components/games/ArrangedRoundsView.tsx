@@ -81,8 +81,11 @@ export function ArrangedRoundsView({
       {rounds.live.length > 0 && (
         <section aria-labelledby="arranged-live-heading" data-testid="arranged-live">
           <GroupHeading id="arranged-live-heading">{t('groupLive')}</GroupHeading>
-          <ul className="-mx-1 overflow-hidden rounded-2xl border border-border bg-surface">
-            {rounds.live.map(({ game, counts }, i) => {
+          {/* Owner's answer 05.10 (PR #2537, choice 1): each round in progress
+              stands in its own card with a primary border and a LIVE badge,
+              both as the 27.09 artboard draws them; the rest is the room's. */}
+          <ul className="space-y-2">
+            {rounds.live.map(({ game, counts }) => {
               const name = nameOf(game);
               const delivered = t('delivered', { submitted: counts.submitted, total: counts.total });
               const pending =
@@ -91,7 +94,7 @@ export function ArrangedRoundsView({
                   : null;
               const pill = isAdmin ? t('deskPill') : tHome('managePlayersLink');
               return (
-                <li key={game.id} className={i > 0 ? 'border-t border-row-divider-warm' : undefined}>
+                <li key={game.id}>
                   <SmartLink
                     href={arrangedRoundHref('live', game.id, isAdmin)}
                     aria-label={[name, t('liveStatus'), delivered, pending, modeLabel(game), pill]
@@ -101,10 +104,18 @@ export function ArrangedRoundsView({
                     data-submitted={counts.submitted}
                     data-total={counts.total}
                     data-pending={counts.pendingApproval}
-                    className="flex min-h-16 items-center gap-3 px-3.5 py-2.5 text-text"
+                    className="-mx-1 flex items-center gap-3 rounded-2xl border border-primary bg-surface px-3.5 py-3 text-text"
                   >
                     <span className="min-w-0 grow">
-                      <span className="block text-[15px] font-semibold leading-[normal]">{name}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="min-w-0 text-[15px] font-semibold leading-[normal]">{name}</span>
+                        <span
+                          data-testid="arranged-live-badge"
+                          className="flex h-5 shrink-0 items-center rounded-full bg-primary-soft px-[7px] text-[10px] font-semibold leading-[normal] tracking-[0.12em] text-primary"
+                        >
+                          {t('liveBadge')}
+                        </span>
+                      </span>
                       <span className="mt-0.5 block text-xs leading-[normal] text-muted">
                         {[delivered, pending].filter(Boolean).join(' · ')}
                       </span>

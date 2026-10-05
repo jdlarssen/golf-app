@@ -5618,6 +5618,7 @@
     "groupLive": "In progress",
     "groupNext": "Next",
     "liveStatus": "in progress",
+    "liveBadge": "LIVE",
     "delivered": "{submitted} of {total} have handed in",
     "pendingApproval": "{n} awaiting approval",
     "deskPill": "Desk",

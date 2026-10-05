@@ -51,6 +51,8 @@ describe('ArrangedRoundsView', () => {
       ].join(', '),
     );
     expect(screen.getByRole('region', { name: k.groupNext })).toBeTruthy();
+    // Owner's answer 05.10: the round in progress carries the LIVE badge.
+    expect(screen.getByTestId('arranged-live-badge').textContent).toBe(k.liveBadge);
   });
 
   it.each([
