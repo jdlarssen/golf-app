@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import {
   createAdminClientMock,
   type QueryOp,
@@ -38,11 +39,9 @@ vi.mock('@/lib/notifications/notify', () => ({
 }));
 
 // #2203: «alle har levert» has its own suite; here only that an approval asks.
-const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
-vi.mock('@/lib/notifications/organizerNotices', () => ({
-  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
-    notifyOrganizerIfAllDeliveredMock(...args),
-}));
+// The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
+vi.mock('@/lib/notifications/organizerNotices');
+const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
 const GAME_ID = 'spill-1';
 const PLAYER = 'spilleren';

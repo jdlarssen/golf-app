@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
 
 /**
@@ -31,13 +32,9 @@ vi.mock('next/cache', () => ({
 
 // #2203: «alle har levert» has its own suite (organizerNotices.test.ts); here
 // only that a delivery asks for it.
-const notifyOrganizerIfAllDeliveredMock = vi.fn<(...args: unknown[]) => Promise<void>>(
-  async () => {},
-);
-vi.mock('@/lib/notifications/organizerNotices', () => ({
-  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
-    notifyOrganizerIfAllDeliveredMock(...args),
-}));
+// The shared double lives in lib/notifications/__mocks__/organizerNotices.ts.
+vi.mock('@/lib/notifications/organizerNotices');
+const notifyOrganizerIfAllDeliveredMock = vi.mocked(notifyOrganizerIfAllDelivered);
 
 // A delivery reads no address for anyone (#2203: no mail per delivery).
 const getPrivateUserFieldsMock = vi.fn();
