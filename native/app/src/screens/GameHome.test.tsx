@@ -23,8 +23,8 @@ import { GameHome, RosterRow } from './GameHome';
 // Skjermen drar inn arrangør-seksjonen, som drar inn klienten. Raden selv rører
 // ingenting av det — mocken er der bare for at modulgrafen skal kunne lastes.
 jest.mock('../supabase', () => require('../test/supabaseMock'));
-// #2201: merk-lest har sin egen test (lib/useMarkVisitRead.test.tsx); her er den støy.
-jest.mock('../lib/useMarkVisitRead', () => ({ useMarkVisitRead: jest.fn() }));
+// #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
+jest.mock('../lib/useMarkVisitRead');
 // Skjerm-testen (#2067) under: bundel og slag fra enheten, ingen nett.
 jest.mock('../data/gameBundle', () => ({
   loadGameBundle: jest.fn(async () => mockState.bundle),

@@ -71,6 +71,7 @@ describe('?varsel= på lenka', () => {
     [`/games/${GAME}?varsel=${NOTE}`, NOTE],
     [`/games/${GAME}/approve?from=x&varsel=${NOTE}`, NOTE],
     [`/?varsel=${NOTE}`, NOTE],
+    [`/games/${GAME}?varsel=${NOTE}#top`, NOTE],
     [`/games/${GAME}`, null],
     [`/games/${GAME}?varsel=ikke-en-id`, null],
     [null, null],
