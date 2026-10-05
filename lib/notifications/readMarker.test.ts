@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  READ_MARKER_PARAM,
-  readMarkerFrom,
-  withReadMarker,
-  withoutReadMarker,
-} from './readMarker';
+import { readMarkerFrom, withReadMarker, withoutReadMarker } from './readMarker';
 
 const ID = '5f0c1b2a-3d4e-4f60-8a71-92b3c4d5e6f7';
 
@@ -19,8 +14,10 @@ describe('withReadMarker', () => {
     expect(withReadMarker(path, ID)).toBe(expected);
   });
 
-  it('uses the param name the page reads', () => {
-    expect(READ_MARKER_PARAM).toBe('varsel');
+  it('the page reads back the id the push put on, and strips it again', () => {
+    const marked = withReadMarker('/games/abc?from=cup#top', ID);
+    expect(readMarkerFrom(new URL(marked, 'http://local').search)).toBe(ID);
+    expect(withoutReadMarker(marked)).toBe('/games/abc?from=cup#top');
   });
 });
 
