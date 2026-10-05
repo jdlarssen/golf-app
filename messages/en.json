@@ -6054,17 +6054,6 @@
       "goToSignupsText": "Go to sign-ups: {url}",
       "footer": "You're receiving this because you're organising this game. Tap the button to approve or decline the request."
     },
-    "scorecardSubmitted": {
-      "subject": "Scorecard submitted: {playerName} in {gameName}",
-      "heading": "Scorecard submitted",
-      "salutationNamed": "Hi {name}!",
-      "salutationGeneric": "Hi!",
-      "body": "<strong>{playerName}</strong> has submitted their scorecard for <strong>{gameName}</strong>. You can approve it in the admin panel.",
-      "bodyText": "{playerName} has submitted their scorecard for {gameName}. You can approve it in the admin panel.",
-      "openAdmin": "Open admin",
-      "openAdminText": "Open admin: {url}",
-      "footer": "You're receiving this because you're the admin for this game. Log in at <link>tornygolf.no</link> for the full overview."
-    },
     "deliverReminder": {
       "subject": "Submit your scorecard for {gameName}",
       "heading": "Submit your scorecard",
@@ -6092,6 +6081,21 @@
       "button": "Open hole {hole}",
       "buttonText": "Open hole {hole}: {url}",
       "footer": "You're receiving this because the organiser sent you a reminder. Log in at <link>tornygolf.no</link> to enter the score."
+    },
+    "organizerGameNotice": {
+      "salutationNamed": "Hi {name}!",
+      "salutationGeneric": "Hi!",
+      "subjectAllDelivered": "Everyone has delivered in {gameName}",
+      "headingAllDelivered": "Everyone has delivered",
+      "bodyAllDelivered": "Every scorecard in <strong>{gameName}</strong> is in. Finish the game, and the players get the results.",
+      "bodyTextAllDelivered": "Every scorecard in {gameName} is in. Finish the game, and the players get the results.",
+      "subjectStale": "{gameName} has stood still",
+      "headingStale": "The game has stood still",
+      "bodyStale": "There have been no new scores in <strong>{gameName}</strong> for a day. Finish the game when you are ready, and the players get the results.",
+      "bodyTextStale": "There have been no new scores in {gameName} for a day. Finish the game when you are ready, and the players get the results.",
+      "button": "Finish the game",
+      "buttonText": "Finish the game: {url}",
+      "footer": "You are getting this because you organise the game. Log in at <link>tornygolf.no</link> to finish it."
     },
     "paymentReminder": {
       "subject": "Entry fee — {gameName}",

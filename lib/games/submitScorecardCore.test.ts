@@ -8,6 +8,10 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
  * gjennom `app/api/games/[id]/submit-team` uten å kopiere regelen. Her testes
  * utfallene den svarer med — portene, idempotensen og hvem som varsles.
  *
+ * #2203: leveringsvarselet går til arrangøren (`games.created_by`), ikke til
+ * admin-ene, og uten e-post. Hvem som er mottaker per kort, bor i
+ * `lib/games/organizerNoticeRules.test.ts`; her bevises koblingen.
+ *
  * Det fila bevisst IKKE re-asserterer: søsken-kaskaden (#1466), som har sin
  * egen dekning gjennom action-en i
  * `app/[locale]/games/[id]/submit/actions.test.ts`, og hvem som er attestant
@@ -25,11 +29,20 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
-const sendScorecardSubmittedNotificationMock =
-  vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({ ok: true }));
-vi.mock('@/lib/mail/scorecardSubmittedNotification', () => ({
-  sendScorecardSubmittedNotification: (...args: unknown[]) =>
-    sendScorecardSubmittedNotificationMock(...args),
+// #2203: «alle har levert» has its own suite (organizerNotices.test.ts); here
+// only that a delivery asks for it.
+const notifyOrganizerIfAllDeliveredMock = vi.fn<(...args: unknown[]) => Promise<void>>(
+  async () => {},
+);
+vi.mock('@/lib/notifications/organizerNotices', () => ({
+  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
+    notifyOrganizerIfAllDeliveredMock(...args),
+}));
+
+// A delivery reads no address for anyone (#2203: no mail per delivery).
+const getPrivateUserFieldsMock = vi.fn();
+vi.mock('@/lib/users/privateUserFields', () => ({
+  getPrivateUserFields: (...args: unknown[]) => getPrivateUserFieldsMock(...args),
 }));
 
 const notifyMock = vi.fn<
@@ -61,6 +74,7 @@ const asClient = (mock: ReturnType<typeof buildSupabaseMock>) =>
 
 const GAME_ID = 'game-1';
 const USER_ID = 'user-1';
+const ORG_ID = 'org-1';
 
 function activeGame(overrides: Record<string, unknown> = {}) {
   return {
@@ -71,8 +85,16 @@ function activeGame(overrides: Record<string, unknown> = {}) {
     hole_segment: 'full',
     tournament_id: null,
     source_game_id: null,
+    created_by: ORG_ID,
     ...overrides,
   };
+}
+
+/** Every `notify` call of one kind, as `{ userId, payload }`. */
+function notified(kind: string) {
+  return notifyMock.mock.calls
+    .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
+    .filter((c) => c.kind === kind);
 }
 
 function membership(overrides: Record<string, unknown> = {}) {
@@ -138,7 +160,7 @@ describe('submitScorecardCore — portene', () => {
     expect(updateCalls(supabase)).toEqual([]);
     expect(adminMock.__fromCalls).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
@@ -169,27 +191,16 @@ describe('submitScorecardCore — portene', () => {
 });
 
 describe('submitScorecardCore — levering', () => {
-  it('solo: markerer egen rad, varsler admin-ene (filtrerer seg selv bort)', async () => {
+  it('solo: markerer egen rad og varsler arrangøren, uten e-post og uten å lese hen', async () => {
     const supabase = buildSupabaseMock([
       { data: activeGame(), error: null },
       { data: membership(), error: null },
       // UPDATE returnerer den treffede raden via .select('user_id').
       { data: [{ user_id: USER_ID }], error: null },
       { data: { name: 'Ola Nordmann' }, error: null }, // innsenderens navn
-      {
-        // #2207: the admin set the caller's client sees — no e-post column.
-        data: [
-          { id: 'admin-1', name: 'Jørgen', locale: 'no' },
-          { id: USER_ID, name: 'Ola Nordmann', locale: 'no' },
-        ],
-        error: null,
-      },
     ]);
-    // The addresses for that set come from the admin client
-    // (getPrivateUserFields); the submitter is already filtered out.
-    adminMock = buildSupabaseMock([
-      { data: [{ id: 'admin-1', email: 'arrangoren@example.test', friend_code: 'k0de' }], error: null },
-    ]);
+    // notify svarer «utenfor appen» (standard i mocken): leveringen sender likevel
+    // ingen e-post (eierens svar 2026-10-05).
 
     const result = await submitScorecardCore(
       asClient(supabase),
@@ -199,38 +210,88 @@ describe('submitScorecardCore — levering', () => {
 
     expect(result).toEqual({ ok: true, alreadySubmitted: false, submitted: 1, alsoDelivered: 0 });
 
-    // Egen-rads-formen: kallerens klient skriver; admin-klienten leser bare
-    // admin-enes adresser (#2207) og skriver ingenting.
+    // Egen-rads-formen: kallerens klient skriver; admin-klienten røres ikke.
     expect(updateCalls(supabase)).toHaveLength(1);
-    expect(adminMock.__fromCalls.map((c) => `${c.table}.${c.method}`)).toEqual([
-      'users.select',
-      'users.in',
-      'users.returns',
-    ]);
-    expect(adminMock.__fromCalls.find((c) => c.method === 'in')?.args).toEqual(['id', ['admin-1']]);
+    expect(adminMock.__fromCalls).toEqual([]);
     expect(
       supabase.__fromCalls.some(
         (c) => c.method === 'is' && c.args[0] === 'submitted_at' && c.args[1] === null,
       ),
     ).toBe(true);
+    // Arrangøren står i spill-lesingen …
+    expect(
+      String(supabase.__fromCalls.find((c) => c.table === 'games' && c.method === 'select')?.args[0]),
+    ).toContain('created_by');
+    // … og den eneste users-lesingen er innsenderens eget navn. Ingen admin-liste,
+    // ingen arrangør-rad (RLS skjuler en arrangør som ikke spiller), ingen adresse.
+    const userReads = supabase.__fromCalls.filter((c) => c.table === 'users' && c.method === 'eq');
+    expect(userReads.map((c) => c.args)).toEqual([['id', USER_ID]]);
+    expect(supabase.__fromCalls.some((c) => c.method === 'eq' && c.args[0] === 'is_admin')).toBe(false);
+    expect(getPrivateUserFieldsMock).not.toHaveBeenCalled();
 
-    // Innsenderen (user-1) er filtrert bort — kun Jørgen varsles og mailes.
     expect(notifyMock).toHaveBeenCalledTimes(1);
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'admin-1', kind: 'scorecard_submitted' }),
-    );
-    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(1);
-    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: 'arrangoren@example.test',
-        playerName: 'Ola Nordmann',
-        gameName: 'Vinter-cup',
-        gameId: GAME_ID,
-      }),
-    );
+    expect(notified('scorecard_submitted')).toEqual([
+      {
+        userId: ORG_ID,
+        kind: 'scorecard_submitted',
+        payload: { game_id: GAME_ID, game_name: 'Vinter-cup', player_name: 'Ola Nordmann', player_id: USER_ID },
+      },
+    ]);
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([[GAME_ID, USER_ID, 'submitScorecard']]);
 
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
+  });
+
+  it('arrangøren leverer sitt eget kort: ingen leveringsvarsel', async () => {
+    const supabase = buildSupabaseMock([
+      { data: activeGame(), error: null },
+      { data: membership(), error: null },
+      { data: [{ user_id: ORG_ID }], error: null },
+      { data: { name: 'Kari Arrangør' }, error: null },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, ORG_ID);
+
+    expect(result).toMatchObject({ ok: true, submitted: 1 });
+    expect(notified('scorecard_submitted')).toEqual([]);
+    // «Alle har levert» spørres likevel; O10 avgjøres der.
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([[GAME_ID, ORG_ID, 'submitScorecard']]);
+  });
+
+  it('spill uten arrangør (created_by null): ingen leveringsvarsel til noen', async () => {
+    const supabase = buildSupabaseMock([
+      { data: activeGame({ created_by: null }), error: null },
+      { data: membership(), error: null },
+      { data: [{ user_id: USER_ID }], error: null },
+      { data: { name: 'Ola Nordmann' }, error: null },
+    ]);
+
+    await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(notified('scorecard_submitted')).toEqual([]);
+  });
+
+  it('kortgodkjenning, arrangøren i samme flight: bare peer_approval_request, ingen scorecard_submitted', async () => {
+    const supabase = buildSupabaseMock([
+      { data: activeGame({ require_peer_approval: true }), error: null },
+      { data: membership(), error: null },
+      { data: [{ user_id: USER_ID }], error: null },
+      // The peers query is built before the Promise.all, so it resolves first.
+      {
+        data: [
+          { user_id: USER_ID, flight_number: 1, withdrawn_at: null },
+          { user_id: ORG_ID, flight_number: 1, withdrawn_at: null },
+        ],
+        error: null,
+      },
+      { data: { name: 'Ola Nordmann' }, error: null },
+    ]);
+
+    await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(notified('peer_approval_request').map((c) => c.userId)).toEqual([ORG_ID]);
+    expect(notified('scorecard_submitted')).toEqual([]);
   });
 
   it('lag (#1453): greensome markerer hele lagets aktive, uleverte rader via admin-klienten', async () => {
@@ -238,7 +299,6 @@ describe('submitScorecardCore — levering', () => {
       { data: activeGame({ game_mode: 'greensome_matchplay' }), error: null },
       { data: membership({ team_number: 1 }), error: null },
       { data: { name: 'Anders Berg' }, error: null }, // innsenderens navn
-      { data: [], error: null }, // admin-liste (tom — ingen varsler)
     ]);
     adminMock = buildSupabaseMock([
       { data: [{ user_id: USER_ID }, { user_id: 'mate-2' }], error: null },
@@ -287,6 +347,22 @@ describe('submitScorecardCore — levering', () => {
     ).toBe(true);
   });
 
+  it('lag (#2203): en lagkamerat leverer lagkortet arrangøren står på → ingen leveringsvarsel', async () => {
+    const supabase = buildSupabaseMock([
+      { data: activeGame({ game_mode: 'greensome_matchplay' }), error: null },
+      { data: membership({ team_number: 1 }), error: null },
+      { data: { name: 'Anders Berg' }, error: null },
+    ]);
+    adminMock = buildSupabaseMock([
+      { data: [{ user_id: USER_ID }, { user_id: ORG_ID }], error: null },
+    ]);
+
+    const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID);
+
+    expect(result).toMatchObject({ ok: true, submitted: 2 });
+    expect(notified('scorecard_submitted')).toEqual([]);
+  });
+
   it('idempotens (#1453): innsenderen står alt som levert → ingen skriving, ingen varsler', async () => {
     const supabase = buildSupabaseMock([
       { data: activeGame({ game_mode: 'greensome_matchplay' }), error: null },
@@ -306,7 +382,7 @@ describe('submitScorecardCore — levering', () => {
     expect(updateCalls(supabase)).toEqual([]);
     expect(adminMock.__fromCalls).toEqual([]);
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     // Cachen bustes likevel, så kortet ikke står stale hos kalleren.
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
     expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
@@ -329,7 +405,7 @@ describe('submitScorecardCore — levering', () => {
 
     expect(result).toEqual({ ok: true, alreadySubmitted: true, submitted: 0, alsoDelivered: 0 });
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', { expire: 0 });
   });
 
@@ -348,7 +424,7 @@ describe('submitScorecardCore — levering', () => {
 
     expect(result).toEqual({ ok: false, reason: 'db' });
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 });
@@ -361,14 +437,13 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
     { userId: PER, name: 'Per Gjest', isGuest: true },
   ];
 
-  /** Caller's client for a flight delivery with no admins to notify. */
+  /** Caller's client for a flight delivery. */
   function flightClient(updated: { user_id: string }[], meOverrides = {}) {
     return buildSupabaseMock([
       { data: activeGame(), error: null },
       { data: membership(meOverrides), error: null },
       { data: updated, error: null }, // the one flight UPDATE
       { data: { name: 'Kari Fører' }, error: null }, // caller's name
-      { data: [], error: null }, // admins (none)
     ]);
   }
 
@@ -599,10 +674,6 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
         error: null,
       },
       { data: { name: 'Kari Fører' }, error: null },
-      { data: [{ id: 'admin-1', name: 'Jørgen', locale: 'no' }], error: null },
-    ]);
-    adminMock = buildSupabaseMock([
-      { data: [{ id: 'admin-1', email: 'arrangoren@example.test', friend_code: 'k0de' }], error: null },
     ]);
 
     const result = await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, {
@@ -618,61 +689,34 @@ describe('submitScorecardCore — levering for flighten (#2200)', () => {
     expect(peerCalls.filter((c) => c.payload.submitter_name === 'Kari Fører').map((c) => c.userId).sort()).toEqual(['lise', OLA]);
     expect(peerCalls.filter((c) => c.payload.submitter_name === 'Ola Nordmann').map((c) => c.userId)).toEqual(['lise']);
 
-    const adminCalls = notifyMock.mock.calls
-      .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
-      .filter((c) => c.kind === 'scorecard_submitted');
-    expect(adminCalls.map((c) => c.payload.player_name)).toEqual(['Kari Fører', 'Ola Nordmann']);
+    const organiserCalls = notified('scorecard_submitted');
+    expect(organiserCalls.map((c) => c.userId)).toEqual([ORG_ID, ORG_ID]);
+    expect(organiserCalls.map((c) => c.payload.player_name)).toEqual(['Kari Fører', 'Ola Nordmann']);
     // #2263: both varsler point at the CARD OWNER, never at the one who
     // delivered it — the inbox checks and groups each card by this id.
     expect(peerCalls.filter((c) => c.payload.submitter_name === 'Ola Nordmann').map((c) => c.payload.submitter_id)).toEqual([OLA]);
     expect(peerCalls.filter((c) => c.payload.submitter_name === 'Kari Fører').map((c) => c.payload.submitter_id)).toEqual([USER_ID, USER_ID]);
-    expect(adminCalls.map((c) => c.payload.player_id)).toEqual([USER_ID, OLA]);
-    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(2);
-    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
-      expect.objectContaining({ playerName: 'Ola Nordmann' }),
-    );
+    expect(organiserCalls.map((c) => c.payload.player_id)).toEqual([USER_ID, OLA]);
+    // One delivery, two cards: «alle har levert» is asked once.
+    expect(notifyOrganizerIfAllDeliveredMock).toHaveBeenCalledTimes(1);
   });
 
-  it('en admin som er makker, får ikke admin-varsel eller -mail om sitt eget kort', async () => {
-    // Each card is announced as if its owner delivered it, and an owner who
-    // delivers is never told about their own card. Ola is a global admin here.
+  it('arrangøren som er makker, får ikke varsel om sitt eget kort', async () => {
+    // Each card is announced as if its owner delivered it, and an owner is never
+    // told about their own card. Ola organises the game here.
     loadCardsMock.mockResolvedValueOnce([cards[0]]);
     const supabase = buildSupabaseMock([
-      { data: activeGame(), error: null },
+      { data: activeGame({ created_by: OLA }), error: null },
       { data: membership(), error: null },
       { data: [{ user_id: USER_ID }, { user_id: OLA }], error: null },
       { data: { name: 'Kari Fører' }, error: null },
-      {
-        data: [
-          { id: 'admin-1', name: 'Jørgen', locale: 'no' },
-          { id: OLA, name: 'Ola Nordmann', locale: 'no' },
-        ],
-        error: null,
-      },
-    ]);
-    adminMock = buildSupabaseMock([
-      {
-        data: [
-          { id: 'admin-1', email: 'arrangoren@example.test', friend_code: 'k0de' },
-          { id: OLA, email: 'ola@example.test', friend_code: 'k0d2' },
-        ],
-        error: null,
-      },
     ]);
 
     await submitScorecardCore(asClient(supabase), GAME_ID, USER_ID, { alsoFor: [OLA] });
 
-    const adminCalls = notifyMock.mock.calls
-      .map((c) => c[0] as { userId: string; kind: string; payload: Record<string, unknown> })
-      .filter((c) => c.kind === 'scorecard_submitted');
-    // Kari's card: both admins. Ola's card: only the other admin.
-    expect(adminCalls.filter((c) => c.payload.player_name === 'Kari Fører').map((c) => c.userId).sort()).toEqual(['admin-1', OLA]);
-    expect(adminCalls.filter((c) => c.payload.player_name === 'Ola Nordmann').map((c) => c.userId)).toEqual(['admin-1']);
-    const mails = sendScorecardSubmittedNotificationMock.mock.calls.map(
-      (c) => c[0] as { to: string; playerName: string },
-    );
-    expect(mails.filter((m) => m.playerName === 'Ola Nordmann').map((m) => m.to)).toEqual([
-      'arrangoren@example.test',
+    // Kari's card: Ola hears about it. Ola's own card: nobody does.
+    expect(notified('scorecard_submitted').map((c) => [c.userId, c.payload.player_name])).toEqual([
+      [OLA, 'Kari Fører'],
     ]);
   });
 });

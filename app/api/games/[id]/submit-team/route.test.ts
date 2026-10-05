@@ -149,9 +149,6 @@ vi.mock('next/cache', () => ({
 vi.mock('@/lib/notifications/notify', () => ({
   notify: vi.fn(async () => ({ shouldAlsoSendMail: false })),
 }));
-vi.mock('@/lib/mail/scorecardSubmittedNotification', () => ({
-  sendScorecardSubmittedNotification: vi.fn(),
-}));
 
 import { NextRequest } from 'next/server';
 import { notify } from '@/lib/notifications/notify';

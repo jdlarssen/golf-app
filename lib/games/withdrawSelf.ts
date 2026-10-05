@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { expectAffected } from '@/lib/supabase/affectedRows';
@@ -225,6 +226,10 @@ export async function withdrawSelf(
       console.error('[withdrawSelf] active update failed', updateErr);
       return { ok: false, error: 'db_error' };
     }
+
+    // #2203: the last missing player withdrawing can make the round ready to
+    // finish. Best-effort, never throws.
+    await notifyOrganizerIfAllDelivered(game.id, userId, 'withdrawSelf');
 
     expireGameCache(game.id);
     return { ok: true, kept: true };

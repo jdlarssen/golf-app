@@ -37,6 +37,13 @@ vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));
 
+// #2203: «alle har levert» has its own suite; here only that an approval asks.
+const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock('@/lib/notifications/organizerNotices', () => ({
+  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
+    notifyOrganizerIfAllDeliveredMock(...args),
+}));
+
 const GAME_ID = 'spill-1';
 const PLAYER = 'spilleren';
 const REVIEWER = 'attestanten';
@@ -150,6 +157,10 @@ describe('approveScorecardCore', () => {
       expectCacheExpired();
       expect(revalidatePathMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
       expect(revalidatePathMock).toHaveBeenCalledWith(`/games/${GAME_ID}/approve`);
+      // #2203: the last approval can make the round ready to finish.
+      expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([
+        [GAME_ID, REVIEWER, 'approveScorecard'],
+      ]);
     },
   );
 
@@ -201,6 +212,7 @@ describe('approveScorecardCore', () => {
 
     await expect(approve()).resolves.toEqual({ ok: true, alreadyDone: true });
     expect(notifyMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expectCacheExpired();
   });
 
@@ -213,6 +225,7 @@ describe('approveScorecardCore', () => {
 
     await expect(approve()).resolves.toEqual({ ok: false, reason: 'not_pending' });
     expect(notifyMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
@@ -223,6 +236,7 @@ describe('approveScorecardCore', () => {
     await expect(approve()).resolves.toEqual({ ok: false, reason: 'db' });
     expect(caller.ops.map((op) => op.kind)).toEqual(['update']);
     expect(notifyMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
     expect(revalidateTagMock).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });

@@ -49,6 +49,14 @@ vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));
 
+// #2203: the last missing player withdrawing can make the round ready; that
+// has its own suite, here only that the withdrawal asks.
+const notifyOrganizerIfAllDeliveredMock = vi.fn(async (..._args: unknown[]) => {});
+vi.mock('@/lib/notifications/organizerNotices', () => ({
+  notifyOrganizerIfAllDelivered: (...args: unknown[]) =>
+    notifyOrganizerIfAllDeliveredMock(...args),
+}));
+
 let adminMock: ReturnType<typeof buildSupabaseMock>;
 
 vi.mock('@/lib/supabase/admin', () => ({
@@ -115,6 +123,9 @@ describe('withdrawSelf', () => {
     const result = await withdrawSelf(GAME_ID, USER_ID);
     expect(result).toEqual({ ok: true, kept: true });
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    expect(notifyOrganizerIfAllDeliveredMock.mock.calls).toEqual([
+      [GAME_ID, USER_ID, 'withdrawSelf'],
+    ]);
     // Skal ikke slette raden
     const deleteCalls = adminMock.__fromCalls.filter(
       (c) => c.method === 'delete',
@@ -370,6 +381,7 @@ describe('withdrawSelf', () => {
       error: 'db_error',
     });
     expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 });
 
@@ -616,6 +628,7 @@ describe('withdrawSelf — mykt trekk skriver ikke over et trekk som finnes (#23
     expect(
       adminMock.__fromCalls.filter((c) => c.method === 'update' || c.method === 'delete'),
     ).toHaveLength(0);
+    expect(notifyOrganizerIfAllDeliveredMock).not.toHaveBeenCalled();
   });
 
   it('skrivingen krever at raden fortsatt ikke er trukket', async () => {

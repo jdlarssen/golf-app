@@ -4,13 +4,9 @@ import type { Database } from '@/lib/database.types';
 import { expireGameCache } from './expireGameCache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getAdminClient } from '@/lib/supabase/admin';
-import {
-  getPrivateUserFields,
-  type PrivateUserFields,
-} from '@/lib/users/privateUserFields';
-import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
-import { firstName } from '@/lib/firstName';
 import { notify } from '@/lib/notifications/notify';
+import { notifyOrganizerIfAllDelivered } from '@/lib/notifications/organizerNotices';
+import { deliveryNoticeRecipient } from '@/lib/games/organizerNoticeRules';
 import { peersForApproval } from '@/lib/games/flightScope';
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
@@ -95,12 +91,15 @@ export type SubmitScorecardResult =
  *
  * Idempotent: `.is('submitted_at', null)` gjør at et andre kall etter et
  * vellykket første treffer null rader. Vi leser rad-antallet via `.select()` og
- * hopper over notify/mail når det er 0 — Supabase returnerer `error == null`
+ * hopper over varslene når det er 0 — Supabase returnerer `error == null`
  * også for 0 oppdaterte rader (AGENTS trap 2), så uten tellingen ville et
- * dobbelttrykk fyrt peer- og admin-varsler og admin-mail på nytt hver gang.
+ * dobbelttrykk fyrt peer- og arrangør-varsler på nytt hver gang.
  *
- * Side-effekt: best-effort «Scorekort levert»-mail til hver admin (unntatt
- * innsenderen selv) så godkjennings-flyten kan starte uten at admin poller.
+ * Side-effekter, best-effort (#2203): arrangøren (`games.created_by`) får
+ * `scorecard_submitted` per levert kort, i innboksen og som push, aldri på
+ * e-post. Admin-ene får ingenting. Gjør leveringen spillet klart til å
+ * avsluttes, får arrangøren én «Alle har levert» (`notifyOrganizerIfAllDelivered`,
+ * som kan sende én e-post når hen er utenfor appen).
  */
 export async function submitScorecardCore(
   supabase: SupabaseClient<Database>,
@@ -118,14 +117,15 @@ export async function submitScorecardCore(
   // scores yet and finished games are read-only. `name` is fetched here so
   // we can use it as the mail subject + body without a re-fetch.
   // `require_peer_approval` brukes nedenfor til å gate peer-varsel-loopen.
-  // `game_mode` trengs for peersForApproval (#543).
+  // `game_mode` trengs for peersForApproval (#543). `created_by` er arrangøren,
+  // som får leveringsvarselet (#2203).
   // #1466: `hole_segment` + `tournament_id` + `source_game_id` drive the
   // one-delivery cascade below — a back9 split-cup host delivers its front9
   // sibling in the same call.
   const { data: game } = await supabase
     .from('games')
     .select(
-      'name, status, require_peer_approval, game_mode, hole_segment, tournament_id, source_game_id',
+      'name, status, require_peer_approval, game_mode, hole_segment, tournament_id, source_game_id, created_by',
     )
     .eq('id', gameId)
     .single<{
@@ -136,6 +136,7 @@ export async function submitScorecardCore(
       hole_segment: 'full' | 'front9' | 'back9';
       tournament_id: string | null;
       source_game_id: string | null;
+      created_by: string | null;
     }>();
 
   if (!game) return { ok: false, reason: 'not_found' };
@@ -357,15 +358,16 @@ export async function submitScorecardCore(
     }
   }
 
-  // Best-effort admin notification + peer in-app varsel. Tre queries fyres
-  // i parallell:
-  //   1) the submitter's own name (for mail body + notify-payload)
-  //   2) every admin's email + name (mail recipients + notify-targets)
-  //   3) alle aktive spillere i spillet (for peersForApproval — #543).
-  // The submitter is filtered out of recipients so a player-admin who
-  // submits their own scorecard doesn't mail themselves a notification.
+  // Best-effort varsler: peer-attestantene og arrangøren. To lesinger i
+  // parallell:
+  //   1) innsenderens eget navn (til payloadene)
+  //   2) alle aktive spillere i spillet (for peersForApproval — #543).
   // Peers-query gates på require_peer_approval — for spill uten
   // peer-godkjenning sparer vi en DB-runde per submit (klubb-skala-perf).
+  // #2203: ingen lesing av arrangørens users-rad. Den trengs ikke (ingen e-post
+  // per levering, og notify leser mottakerens locale selv), og på webben er
+  // `supabase` spillerens RLS-klient, der en arrangør som ikke spiller og aldri
+  // har delt spill med spilleren, er usynlig.
   const peersQuery = game.require_peer_approval
     ? supabase
         .from('game_players')
@@ -376,42 +378,19 @@ export async function submitScorecardCore(
         >()
     : Promise.resolve({ data: null });
 
-  const [playerRes, adminsRes, peersRes] = await Promise.all([
+  const [playerRes, peersRes] = await Promise.all([
     supabase.from('users').select('name').eq('id', userId).maybeSingle<{
       name: string | null;
     }>(),
-    supabase
-      .from('users')
-      .select('id, name, locale')
-      .eq('is_admin', true)
-      .returns<{ id: string; name: string | null; locale: string | null }[]>(),
     peersQuery,
   ]);
 
-  // #1364: null i stedet for norsk plassholder. Navnet går til to payloads og
-  // admin-mailen — alle tre oversetter fallbacken hos mottakeren (kortet via
-  // buildNotificationText, mailen via mail.common.somePlayerFallback).
+  // #1364: null i stedet for norsk plassholder. Navnet går til to payloads,
+  // og kortet oversetter fallbacken hos mottakeren (buildNotificationText).
   const playerName = playerRes.data?.name?.trim() || null;
-  const adminRows = (adminsRes.data ?? []).filter((a) => a.id !== userId);
-  // #2207: users.email is not readable through the caller's session. The
-  // admin set stays the one the passed-in client returned; the addresses come
-  // from the server-side helper and never leave the server. An admin without
-  // an address is dropped, as the old `email is not null` filter did. A failed
-  // lookup notifies no admin, like a failed admin read always has.
-  const adminEmails = await getPrivateUserFields(adminRows.map((a) => a.id)).catch(
-    (err) => {
-      console.error(`[${LOG_PREFIX}] admin e-post lookup failed`, err);
-      return new Map<string, PrivateUserFields>();
-    },
-  );
-  const admins = adminRows.flatMap((a) => {
-    const email = adminEmails.get(a.id)?.email;
-    return email ? [{ ...a, email }] : [];
-  });
 
   // #2200: one round of varsler per delivered card, as if its owner had
-  // delivered it — the mail volume is the same as when everyone delivers
-  // themselves. The deliverer never counts as a peer on a flightmate's card
+  // delivered it. The deliverer never counts as a peer on a flightmate's card
   // (owner's decision 2026-09-27: someone else approves it).
   const gameName = game.name;
   const requirePeerApproval = game.require_peer_approval;
@@ -419,93 +398,61 @@ export async function submitScorecardCore(
     // Peer-varsler hvis peer-godkjenning er på.
     // #543: peersForApproval() håndterer én-flight-regelen: alle andre aktive
     // spillere i ≤4-spill (eller wolf) er attestanter, ellers kun samme flight.
-    if (requirePeerApproval) {
-      const peerIds = peersForApproval(peersRes.data ?? [], mode, cardUserId, userId);
-      if (peerIds.length > 0) {
-        const peerResults = await Promise.allSettled(
-          peerIds.map((peerId) =>
-            notify({
-              userId: peerId,
-              kind: 'peer_approval_request',
-              payload: {
-                game_id: gameId,
-                game_name: gameName,
-                submitter_name: cardName,
-                // #2263: the card owner, never the deliverer — the inbox checks
-                // whether THIS card still waits for approval.
-                submitter_id: cardUserId,
-              },
-            }),
-          ),
-        );
-        for (const r of peerResults) {
-          if (r.status === 'rejected') {
-            console.error(
-              `[${LOG_PREFIX}] peer_approval_request notify failed`,
-              r.reason,
-            );
-          }
-        }
-      }
-    }
-    // An owner who delivers is never told about their own card (`adminRows`
-    // drops the caller), so a card delivered for a flightmate who is an admin
-    // skips that admin too.
-    const cardAdmins = admins.filter((a) => a.id !== cardUserId);
-    if (cardAdmins.length === 0) return;
-
-    // In-app varsel til admin-ene + mail-gating på shouldAlsoSendMail.
-    // Aktive admin-er (last_seen_at < 5 min) får kun in-app; off-app-admin-er
-    // får mail som backup. Hvis notify feiler for en admin, defaultes
-    // sendMail til false (samme rasjonale som inni notify() ved insert-error
-    // — vil ikke maile uten in-app-varsel).
-    const adminNotifyResults = await Promise.allSettled(
-      cardAdmins.map((a) =>
-        notify({
-          userId: a.id,
-          kind: 'scorecard_submitted',
-          payload: {
-            game_id: gameId,
-            game_name: gameName,
-            player_name: cardName,
-            player_id: cardUserId,
-          },
-        }).then((r) => ({ userId: a.id, sendMail: r.shouldAlsoSendMail })),
-      ),
-    );
-    const sendMailByAdminId = new Map<string, boolean>();
-    for (const r of adminNotifyResults) {
-      if (r.status === 'fulfilled') {
-        sendMailByAdminId.set(r.value.userId, r.value.sendMail);
-      } else {
-        console.error(
-          `[${LOG_PREFIX}] scorecard_submitted notify failed`,
-          r.reason,
-        );
-      }
-    }
-
-    const mailRecipients = cardAdmins.filter(
-      (a) => sendMailByAdminId.get(a.id) === true,
-    );
-    if (mailRecipients.length > 0) {
-      const results = await Promise.allSettled(
-        mailRecipients.map((a) =>
-          sendScorecardSubmittedNotification({
-            to: a.email,
-            adminFirstName: firstName(a.name),
-            playerName: cardName,
-            gameName,
-            gameId,
-            locale: a.locale,
+    const peerIds = requirePeerApproval
+      ? peersForApproval(peersRes.data ?? [], mode, cardUserId, userId)
+      : [];
+    if (peerIds.length > 0) {
+      const peerResults = await Promise.allSettled(
+        peerIds.map((peerId) =>
+          notify({
+            userId: peerId,
+            kind: 'peer_approval_request',
+            payload: {
+              game_id: gameId,
+              game_name: gameName,
+              submitter_name: cardName,
+              // #2263: the card owner, never the deliverer — the inbox checks
+              // whether THIS card still waits for approval.
+              submitter_id: cardUserId,
+            },
           }),
         ),
       );
-      for (const r of results) {
+      for (const r of peerResults) {
         if (r.status === 'rejected') {
-          console.error(`[${LOG_PREFIX}] admin notification mail failed`, r.reason);
+          console.error(
+            `[${LOG_PREFIX}] peer_approval_request notify failed`,
+            r.reason,
+          );
         }
       }
+    }
+
+    // #2203: the organiser, not every admin, hears about the card — unless
+    // they delivered it, are on it (a one-ball team card covers the whole
+    // team), or approve it (`peer_approval_request` above already asks them).
+    // In-app and push only: `shouldAlsoSendMail` is not used here, there is no
+    // mail per delivery (the owner's answer 2026-10-05).
+    const recipient = deliveryNoticeRecipient({
+      createdBy: game.created_by,
+      delivererId: userId,
+      cardMemberIds: teamSubmit ? writtenIds : [cardUserId],
+      peerIds,
+    });
+    if (recipient == null) return;
+    try {
+      await notify({
+        userId: recipient,
+        kind: 'scorecard_submitted',
+        payload: {
+          game_id: gameId,
+          game_name: gameName,
+          player_name: cardName,
+          player_id: cardUserId,
+        },
+      });
+    } catch (err) {
+      console.error(`[${LOG_PREFIX}] scorecard_submitted notify failed`, err);
     }
   };
 
@@ -516,6 +463,10 @@ export async function submitScorecardCore(
       cardUserId === userId ? playerName : (mateNames.get(cardUserId) ?? null),
     );
   }
+
+  // #2203: did this delivery make the round ready to finish? Best-effort, never
+  // throws; it claims a stamp so «Alle har levert» goes once per game.
+  await notifyOrganizerIfAllDelivered(gameId, userId, LOG_PREFIX);
 
   expireGameCache(gameId);
   revalidatePath(`/games/${gameId}`);

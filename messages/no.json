@@ -6054,17 +6054,6 @@
       "goToSignupsText": "Gå til påmeldinger: {url}",
       "footer": "Du får denne e-posten fordi du arrangerer spillet. Trykk på knappen for å godkjenne eller avslå forespørselen."
     },
-    "scorecardSubmitted": {
-      "subject": "Scorekort levert: {playerName} i {gameName}",
-      "heading": "Scorekort levert",
-      "salutationNamed": "Hei {name}!",
-      "salutationGeneric": "Hei!",
-      "body": "<strong>{playerName}</strong> har levert scorekortet sitt i <strong>{gameName}</strong>. Du kan godkjenne det i admin-flaten.",
-      "bodyText": "{playerName} har levert scorekortet sitt i {gameName}. Du kan godkjenne det i admin-flaten.",
-      "openAdmin": "Åpne admin",
-      "openAdminText": "Åpne admin: {url}",
-      "footer": "Du får denne meldingen fordi du er admin for spillet. Logg inn på <link>tornygolf.no</link> for full oversikt."
-    },
     "deliverReminder": {
       "subject": "Lever scorekortet i {gameName}",
       "heading": "Lever scorekortet",
@@ -6092,6 +6081,21 @@
       "button": "Åpne hull {hole}",
       "buttonText": "Åpne hull {hole}: {url}",
       "footer": "Du får denne meldingen fordi arrangøren sendte deg en påminnelse. Logg inn på <link>tornygolf.no</link> for å føre slag."
+    },
+    "organizerGameNotice": {
+      "salutationNamed": "Hei {name}!",
+      "salutationGeneric": "Hei!",
+      "subjectAllDelivered": "Alle har levert i {gameName}",
+      "headingAllDelivered": "Alle har levert",
+      "bodyAllDelivered": "Alle scorekortene i <strong>{gameName}</strong> er levert. Avslutt spillet, så får spillerne resultatlista.",
+      "bodyTextAllDelivered": "Alle scorekortene i {gameName} er levert. Avslutt spillet, så får spillerne resultatlista.",
+      "subjectStale": "{gameName} står stille",
+      "headingStale": "Spillet står stille",
+      "bodyStale": "Det har ikke kommet nye slag i <strong>{gameName}</strong> på et døgn. Avslutt spillet når du er klar, så får spillerne resultatlista.",
+      "bodyTextStale": "Det har ikke kommet nye slag i {gameName} på et døgn. Avslutt spillet når du er klar, så får spillerne resultatlista.",
+      "button": "Avslutt spillet",
+      "buttonText": "Avslutt spillet: {url}",
+      "footer": "Du får denne meldingen fordi du arrangerer spillet. Logg inn på <link>tornygolf.no</link> for å avslutte det."
     },
     "paymentReminder": {
       "subject": "Startkontingent — {gameName}",

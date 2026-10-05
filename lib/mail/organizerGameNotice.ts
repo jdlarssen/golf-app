@@ -1,10 +1,13 @@
-// Sends a "Scorekort levert" mail to admin(s) when a player submits.
+// Sends the organiser one of two mails about their round (#2203):
+//  - `all_delivered`: every card is in, «Alle har levert. Avslutt spillet.»
+//  - `stale`: the round has stood still for a day. It goes whether or not
+//    anyone is still missing, so the text says neither.
 //
-// Triggered from the submitScorecard server action after the DB update
-// succeeds. Best-effort: callers should wrap a Promise.allSettled() around
-// per-admin sends so one failure doesn't block the rest, and the action
-// itself never aborts on mail errors — the submitted state lives in the DB
-// and admin can still see new submissions by opening the app.
+// Sent from lib/notifications/organizerNotices.ts, and ONLY when the organiser
+// is off-app (notify() returns shouldAlsoSendMail); an organiser in the app
+// gets the in-app varsel and push alone. Never for a single delivery (the
+// owner's answer 2026-10-05). Best-effort: the caller catches and logs, and a
+// mail error never reaches the delivery, approval or sweep that set it off.
 //
 // Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
 // catalog for the recipient's locale.
@@ -13,53 +16,50 @@ import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 import { sendMail } from './send';
 import { mailWordmarkHtml } from './wordmark';
 
-export type ScorecardSubmittedNotificationParams = {
+export type OrganizerGameNoticeParams = {
   to: string;
-  /** First name of the admin recipient, for "Hei <name>!" salutation. Null if unknown. */
-  adminFirstName: string | null;
-  /**
-   * Display name of the player who submitted the scorecard. Null when unknown —
-   * the recipient's catalog fills «En spiller»/«A player» at send time (#1364).
-   */
-  playerName: string | null;
+  /** First name of the organiser, for "Hei <name>!" salutation. Null if unknown. */
+  recipientFirstName: string | null;
   /** The game's display name, used in subject + body. */
   gameName: string;
-  /** Game id — used to build the admin detail URL. */
+  /** Game id, for the link to /games/[id]/avslutt. */
   gameId: string;
-  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  /** The recipient's locale (#594). Usually undefined → Norwegian. */
   locale?: string | null;
+  variant: 'all_delivered' | 'stale';
 };
 
-export async function sendScorecardSubmittedNotification(
-  params: ScorecardSubmittedNotificationParams,
-): Promise<void> {
-  const { to, adminFirstName, playerName, gameName, gameId, locale } = params;
+export async function sendOrganizerGameNotice(params: OrganizerGameNoticeParams): Promise<void> {
+  const { to, recipientFirstName, gameName, gameId, locale, variant } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
+  const allDelivered = variant === 'all_delivered';
 
-  // #1364: ukjent navn oversettes her, i mottakerens locale, i stedet for at
-  // avsender-siden legger norsk prosa i parameteren.
-  const name = playerName ?? t('common.somePlayerFallback');
-
-  const subject = t('scorecardSubmitted.subject', { playerName: name, gameName });
-  const adminUrl = mailUrl(locale, `/admin/games/${gameId}`);
+  const subject = allDelivered
+    ? t('organizerGameNotice.subjectAllDelivered', { gameName })
+    : t('organizerGameNotice.subjectStale', { gameName });
+  const finishUrl = mailUrl(locale, `/games/${gameId}/avslutt`);
   const homeUrl = mailUrl(locale, '');
 
-  const salutation = adminFirstName
-    ? t('scorecardSubmitted.salutationNamed', { name: adminFirstName })
-    : t('scorecardSubmitted.salutationGeneric');
+  const salutation = recipientFirstName
+    ? t('organizerGameNotice.salutationNamed', { name: recipientFirstName })
+    : t('organizerGameNotice.salutationGeneric');
 
-  const bodyHtml = t.markup('scorecardSubmitted.body', {
-    playerName: escapeHtml(name),
-    gameName: escapeHtml(gameName),
-    strong: (c) => `<strong>${c}</strong>`,
-  });
-  const bodyText = t('scorecardSubmitted.bodyText', {
-    playerName: name,
-    gameName,
-  });
+  const bodyHtml = t.markup(
+    allDelivered ? 'organizerGameNotice.bodyAllDelivered' : 'organizerGameNotice.bodyStale',
+    {
+      gameName: escapeHtml(gameName),
+      strong: (c) => `<strong>${c}</strong>`,
+    },
+  );
+  const bodyText = allDelivered
+    ? t('organizerGameNotice.bodyTextAllDelivered', { gameName })
+    : t('organizerGameNotice.bodyTextStale', { gameName });
+  const heading = allDelivered
+    ? t('organizerGameNotice.headingAllDelivered')
+    : t('organizerGameNotice.headingStale');
 
-  const footerHtml = t.markup('scorecardSubmitted.footer', {
+  const footerHtml = t.markup('organizerGameNotice.footer', {
     link: (c) =>
       `<a href="${homeUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,
   });
@@ -83,7 +83,7 @@ export async function sendScorecardSubmittedNotification(
               ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              ${t('scorecardSubmitted.heading')}
+              ${heading}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${escapeHtml(salutation)}
@@ -92,8 +92,8 @@ export async function sendScorecardSubmittedNotification(
               ${bodyHtml}
             </p>
             <div style="margin:32px 0;">
-              <a href="${adminUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                ${t('scorecardSubmitted.openAdmin')}
+              <a href="${finishUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                ${t('organizerGameNotice.button')}
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
@@ -111,7 +111,7 @@ export async function sendScorecardSubmittedNotification(
     `${subject}\n\n` +
     `${salutation}\n\n` +
     `${bodyText}\n\n` +
-    `${t('scorecardSubmitted.openAdminText', { url: adminUrl })}\n\n` +
+    `${t('organizerGameNotice.buttonText', { url: finishUrl })}\n\n` +
     `${t('common.footerTagline')}\n`;
 
   await sendMail({
