@@ -728,31 +728,32 @@ export function CourseForm({
   );
 }
 
-// What still blocks "Lagre bane" (#2279): one line for the indices, one for
-// the first tee box with a rating problem. Wired to the button through
+// What still blocks "Lagre bane" (#2279): one line for the indices (a typed
+// value outside 1–18 first, then duplicates, then the count still missing), one
+// for the first tee box with a rating problem. Wired to the button through
 // aria-describedby; no aria-live, since it changes on every keystroke.
 function SaveStatus({
   siGaps,
   teeIndex,
   teeProblem,
 }: {
-  siGaps: { missing: number[]; duplicates: number[] };
+  siGaps: { missing: number[]; duplicates: number[]; invalid: number[] };
   teeIndex: number;
   teeProblem: 'partial' | 'missing' | null;
 }) {
   const t = useTranslations('courseForm.form');
   const locale = useLocale() as AppLocale;
-  const { missing, duplicates } = siGaps;
+  const { missing, duplicates, invalid } = siGaps;
+  const list = (numbers: number[]) => formatListLocale(numbers.map(String), locale);
   return (
     <div id="course-save-status" className="space-y-1 text-sm text-warning-text">
       {missing.length > 0 && (
         <p>
-          {duplicates.length > 0
-            ? t('siDuplicates', {
-                count: duplicates.length,
-                numbers: formatListLocale(duplicates.map(String), locale),
-              })
-            : t('siMissingCount', { count: missing.length })}
+          {invalid.length > 0
+            ? t('siInvalid', { count: invalid.length, holes: list(invalid) })
+            : duplicates.length > 0
+              ? t('siDuplicates', { count: duplicates.length, numbers: list(duplicates) })
+              : t('siMissingCount', { count: missing.length })}
         </p>
       )}
       {teeProblem !== null && (
