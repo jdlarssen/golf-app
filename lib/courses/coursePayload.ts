@@ -94,3 +94,45 @@ export function isValidStrokeIndex(si: number): boolean {
 export function allStrokeIndicesUnique(sis: number[]): boolean {
   return new Set(sis).size === sis.length;
 }
+
+/**
+ * Client-side mirror of the server's SI rule (#2279): which numbers in 1–18 no
+ * valid field covers, and which valid numbers appear more than once. Each value
+ * goes through `Number()` after trimming, as `parseCourseHolesAndTees` does, so
+ * empty, non-integer and out-of-range fields count as absent. `missing` is empty
+ * exactly when the server accepts the indices (locked in parseCourseForm.test).
+ */
+export function findStrokeIndexGaps(values: string[]): {
+  missing: number[];
+  duplicates: number[];
+} {
+  const counts = new Map<number, number>();
+  for (const raw of values) {
+    const s = raw.trim();
+    if (s === '') continue;
+    const n = Number(s);
+    if (!isValidStrokeIndex(n)) continue;
+    counts.set(n, (counts.get(n) ?? 0) + 1);
+  }
+  const missing: number[] = [];
+  const duplicates: number[] = [];
+  for (let si = SI_MIN; si <= SI_MAX; si++) {
+    const c = counts.get(si) ?? 0;
+    if (c === 0) missing.push(si);
+    if (c > 1) duplicates.push(si);
+  }
+  return { missing, duplicates };
+}
+
+/**
+ * Client-side mirror of the server's tee-rating rule (#2279), in the server's
+ * order: `'partial'` when a gender has only one of slope/CR, otherwise
+ * `'missing'` when no gender has a complete, in-range set, otherwise `null`.
+ */
+export function teeRatingProblem(
+  ratings: ReadonlyArray<{ slope: string; cr: string }>,
+): 'partial' | 'missing' | null {
+  if (ratings.some((r) => isPartiallyFilledRating(r.slope, r.cr))) return 'partial';
+  if (!ratings.some((r) => isCompleteRating(parseGenderRating(r.slope, r.cr)))) return 'missing';
+  return null;
+}

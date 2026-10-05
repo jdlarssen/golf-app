@@ -7,6 +7,8 @@ import {
   isValidPar,
   isValidStrokeIndex,
   allStrokeIndicesUnique,
+  findStrokeIndexGaps,
+  teeRatingProblem,
 } from './coursePayload';
 
 describe('parseGenderRating', () => {
@@ -97,5 +99,40 @@ describe('allStrokeIndicesUnique', () => {
     const dup = Array.from({ length: 18 }, (_, i) => i + 1);
     dup[17] = 1; // 1 appears twice, 18 missing
     expect(allStrokeIndicesUnique(dup)).toBe(false);
+  });
+});
+
+// A real club order (no course has SI equal to the hole number on all 18).
+const REAL_SI = ['7', '15', '3', '11', '1', '17', '5', '13', '9', '8', '16', '4', '12', '2', '18', '6', '14', '10'];
+const ALL_SI = Array.from({ length: 18 }, (_, i) => i + 1);
+
+describe('findStrokeIndexGaps', () => {
+  it.each<[string, string[], { missing: number[]; duplicates: number[] }]>([
+    ['a real order', REAL_SI, { missing: [], duplicates: [] }],
+    ['18 empty fields', Array(18).fill(''), { missing: ALL_SI, duplicates: [] }],
+    ['one empty field', REAL_SI.map((v, i) => (i === 4 ? '' : v)), { missing: [1], duplicates: [] }],
+    ['7 in place of 14', REAL_SI.map((v) => (v === '14' ? '7' : v)), { missing: [14], duplicates: [7] }],
+    ['0 counts as absent', REAL_SI.map((v) => (v === '1' ? '0' : v)), { missing: [1], duplicates: [] }],
+    ['19 counts as absent', REAL_SI.map((v) => (v === '18' ? '19' : v)), { missing: [18], duplicates: [] }],
+    ['4.5 counts as absent', REAL_SI.map((v) => (v === '4' ? '4.5' : v)), { missing: [4], duplicates: [] }],
+    ['abc counts as absent', REAL_SI.map((v) => (v === '9' ? 'abc' : v)), { missing: [9], duplicates: [] }],
+    ['" 7 " counts as 7', REAL_SI.map((v) => (v === '7' ? ' 7 ' : v)), { missing: [], duplicates: [] }],
+  ])('%s', (_label, values, expected) => {
+    expect(findStrokeIndexGaps(values)).toEqual(expected);
+  });
+});
+
+describe('teeRatingProblem', () => {
+  const empty = { slope: '', cr: '' };
+  it.each<[string, { slope: string; cr: string }[], 'partial' | 'missing' | null]>([
+    ['all empty', [empty, empty, empty], 'missing'],
+    ['only slope for men', [{ slope: '120', cr: '' }, empty, empty], 'partial'],
+    ['only CR for juniors', [empty, empty, { slope: '', cr: '68' }], 'partial'],
+    ['full set for men', [{ slope: '120', cr: '70.1' }, empty, empty], null],
+    ['full set for ladies only', [empty, { slope: '125', cr: '72.4' }, empty], null],
+    ['slope out of range', [{ slope: '200', cr: '70' }, empty, empty], 'missing'],
+    ['partial wins over a full set', [{ slope: '120', cr: '70' }, { slope: '125', cr: '' }, empty], 'partial'],
+  ])('%s → %j', (_label, ratings, expected) => {
+    expect(teeRatingProblem(ratings)).toBe(expected);
   });
 });
