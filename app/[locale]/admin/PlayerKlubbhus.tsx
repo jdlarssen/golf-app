@@ -7,7 +7,9 @@ import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
 import { cupLedgerHref, getMyCupIds } from '@/lib/cup/myCups';
 import { getRoomCups } from '@/lib/cup/getRoomCups';
 import { getArrangedRounds } from '@/lib/games/getArrangedRounds';
-import { groupArrangedRounds, onlyStandaloneGames } from '@/lib/games/arrangedGames';
+import { groupArrangedRounds } from '@/lib/games/arrangedGames';
+import { readAnyOwnStandaloneRound } from '@/lib/games/readAnyOwnStandaloneRound';
+import { getRegistrationSeats } from '@/lib/games/getRegistrationSeats';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import { hasOpenRounds } from '@/lib/games/terminliste';
 import { isNewPlayer } from '@/lib/games/isNewPlayer';
@@ -57,10 +59,12 @@ import {
  *   not a club member cannot read the cup under RLS, so the request client
  *   would drop it;
  * - whether you can make a club tournament (`isClubAdminAnywhere`): your own id;
- * - the open rounds for a new player's Terminlista line (`getDiscoverableGames`):
+ * - the open rounds for a new player's Terminlista row (`getDiscoverableGames`):
  *   the gate is inside the function — club rounds only in your own clubs,
  *   friends' and open rounds only with a registration mode you can sign up
- *   for, and only base info that is safe to show (see its top comment).
+ *   for, and only base info that is safe to show (see its top comment);
+ * - whether those rounds are full (`getRegistrationSeats`): only the games that
+ *   list just returned, and only counts leave it.
  * Everything else (your games and their rosters, your clubs, member counts)
  * reads through the request client and RLS.
  *
@@ -86,7 +90,9 @@ export async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
         <TopSection userId={userId} />
       </Suspense>
 
-      <Suspense fallback={<ArrangedRoundsSkeleton />}>
+      {/* Before the choice, a plain label and card of rows: it fits both the
+          new player's «Bli med» and the room's first section. */}
+      <Suspense fallback={<RoomSectionSkeleton rows={2} />}>
         <RoomBody userId={userId} />
       </Suspense>
     </AdminShell>
@@ -103,17 +109,9 @@ const readCupIds = cache(async (userId: string) => getMyCupIds(await getServerCl
 
 // Whether you made any standalone round: one row is enough to know, so the
 // choice of version does not wait for «Rundene dine» (rosters, start blocks).
-const readAnyOwnRound = cache(async (userId: string) => {
-  const supabase = await getServerClient();
-  const { data, error } = await onlyStandaloneGames(
-    supabase.from('games').select('id').eq('created_by', userId),
-  ).limit(1);
-  if (error) {
-    console.error('[klubbhus] own rounds', error);
-    return { ok: false as const };
-  }
-  return { ok: true as const, games: data ?? [] };
-});
+const readAnyOwnRound = cache(async (userId: string) =>
+  readAnyOwnStandaloneRound(await getServerClient(), userId),
+);
 
 /**
  * The new player's version or the room from #2493 (`isNewPlayer`): three
@@ -201,15 +199,17 @@ async function RoomBody({ userId }: { userId: string }) {
 }
 
 /**
- * Bli med for a new player (#2494): Terminlista says whether there are open
- * rounds to sign up for. «Empty» counts open rounds only, as the list shows
- * them (`hasOpenRounds`, over `buildTerminEntries`), not pending requests: a
- * request is no open round. `getDiscoverableGames` swallows its read errors, so a failed read
- * also says «Ingen åpne runder akkurat nå»; the row and its link stand either
- * way, and /finn-turneringer reads the same function.
+ * Bli med for a new player (#2494): the Terminlista row stands only when the
+ * list has a round you can sign up for (owner's answer 05.10, O1 B):
+ * `hasOpenRounds` over the list's own rows and seats, read the way
+ * /finn-turneringer reads them; a pending request is no open round.
+ * `getDiscoverableGames` swallows its read errors, so a failed read hides the
+ * row too; /finn-turneringer reads the same function and would show nothing.
  */
 async function JoinSection({ userId }: { userId: string }) {
-  return <JoinView terminEmpty={!hasOpenRounds(await getDiscoverableGames(userId))} />;
+  const data = await getDiscoverableGames(userId);
+  const seats = await getRegistrationSeats([...data.clubGames, ...data.friendGames, ...data.openGames]);
+  return <JoinView hasOpenRounds={hasOpenRounds(data, seats)} />;
 }
 
 /**

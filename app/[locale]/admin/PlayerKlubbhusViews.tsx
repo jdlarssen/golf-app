@@ -375,27 +375,28 @@ export function NewPlayerSubtitle() {
 }
 
 /**
- * Bli med — the new player's two ways in besides making a round (#2494):
- * Terminlista (/finn-turneringer) with the open rounds you can sign up for,
- * or «Ingen åpne runder akkurat nå» when there are none (O1), and «Klubben
- * din» as plain text: a club comes in through its invite link, so the row
- * leads nowhere.
+ * Bli med — the new player's ways in besides making a round (#2494):
+ * Terminlista (/finn-turneringer) when there is a round you can sign up for,
+ * hidden when there is none (owner's answer 05.10, O1 B), and «Klubben din»
+ * as plain text: a club comes in through its invite link, so the row leads
+ * nowhere. That row always stands, so the section never goes empty.
  */
-export function JoinView({ terminEmpty }: { terminEmpty: boolean }) {
+export function JoinView({ hasOpenRounds }: { hasOpenRounds: boolean }) {
   const t = useTranslations('admin.dashboard');
   return (
     <section aria-labelledby="room-join-heading">
       <RoomGroupHeading id="room-join-heading">{t('playerJoinLabel')}</RoomGroupHeading>
       <RoomCard>
-        <RoomRow
-          href="/finn-turneringer"
-          name={t('playerTerminName')}
-          line={terminEmpty ? t('playerTerminEmpty') : t('playerTerminLine')}
-          last={false}
-          minHeight="min-h-16"
-          testId="player-termin-row"
-          data={{ 'data-empty': String(terminEmpty) }}
-        />
+        {hasOpenRounds && (
+          <RoomRow
+            href="/finn-turneringer"
+            name={t('playerTerminName')}
+            line={t('playerTerminLine')}
+            last={false}
+            minHeight="min-h-16"
+            testId="player-termin-row"
+          />
+        )}
         <li>
           <div
             data-testid="player-club-invite"
