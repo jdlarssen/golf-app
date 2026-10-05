@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
+import { after } from 'next/server';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { isStablefordFamily, modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import { foldTeamScoreRows } from '@/lib/scoring/context/foldTeamRows';
@@ -58,6 +60,11 @@ export default async function HolePage({ params }: { params: Params }) {
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) redirect({ href: '/login', locale });
+
+  // #2201: opening a hole marks the game's `missing_score_reminder` read.
+  // Registered before the profile and status gates: a reminder for a round
+  // that has ended is read even though the page sends you on.
+  after(() => markReadOnVisit({ userId, surface: 'gameHole', entityId: id }));
 
   // #1176: hard profil-gate ved scoring. Den myke stripa på spill-hjem lar en
   // fersk invitert spiller SE spillet uten profil, men å taste slag krever navn

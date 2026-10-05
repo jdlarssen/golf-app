@@ -25,6 +25,15 @@ vi.mock('@/lib/supabase/admin', () => ({
 vi.mock('@/lib/admin/auth', () => ({
   requireAdminOrCreator: async () => ({ userId: 'admin-1', isAdmin: true }),
 }));
+// #2201: the page marks its varsler read in after(), which has no request
+// scope here. Both are boundaries for this test, not what it checks.
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('next/server')>()),
+  after: () => {},
+}));
+vi.mock('@/lib/notifications/markRead', () => ({
+  markReadOnVisit: async () => {},
+}));
 
 const GAME = {
   id: 'game-1',

@@ -48,7 +48,7 @@ import { getRatingForGender } from '@/lib/games/teeRating';
 import { holeCountForSegment } from '@/lib/games/holeScope';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import { displayCourseHandicap } from '@/lib/scoring/courseHandicap';
-import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { formatWholeHcpDisplay } from '@/lib/handicap/signFormat';
@@ -230,6 +230,12 @@ export default async function GameHomePage({
   // Proxy redirects unauthenticated users, but be defensive.
   if (!userId) redirect({ href: '/login', locale });
 
+  // #2201: opening the game marks the notifications that link here as read.
+  // Registered before the game read, the door and the draft gate: after()
+  // also runs when they redirect or 404, so the organiser's view and an admin
+  // sent on to the Sekretariat are covered too.
+  after(() => markReadOnVisit({ userId, surface: 'gameHome', entityId: id }));
+
   // Initial gating data — game + game_players come from the tag-cached
   // helper (per-hole-bytte cache hit; see lib/games/getGameWithPlayers.ts).
   // The `courses(...)` / `tee_boxes(...)` joins are NOT cached (would
@@ -292,8 +298,9 @@ export default async function GameHomePage({
   if (!me) {
     // #2202: not on the roster. The organiser gets their own view (every
     // organiser flow lands here), an admin goes to the Sekretariat, anyone
-    // else a 404. Returns before the visit's side effects below (mark read,
-    // auto-confirm, streak, auto-start): none of them concern a non-player.
+    // else a 404. Mark-read is already registered above (#2201); the visit's
+    // other side effects below (auto-confirm, streak, auto-start) return
+    // before here: none of them concern a non-player.
     const door = nonPlayerGameDoor({
       gameId: id,
       isAdmin: ownProfileRes.data?.is_admin === true,
@@ -355,49 +362,12 @@ export default async function GameHomePage({
   // runden holdes ren.
   const potKr = computePaidPotKr(gwp.players, gwp.game.entry_fee_kr);
 
-  // Mark related inbox notifications as read on visit. Best-effort: helperen
-  // svelger feil internt, så vi blokkerer aldri sida på dette. Vi markerer
-  // `invite`-, `scorecard_approved`- og `scorecard_rejected`-varsler for dette
-  // spillet siden alle tre kindene deeplinker hit. (Phase 3 — wires Task 3.1 +
-  // 3.4; scorecard_rejected lagt til i #1358 så bjelle-badgen ikke blir
-  // hengende etter at spilleren har lest rejection-banneret her.)
-  //
-  // Wrap i `after()` så DB-mutasjon + revalidateTag deferes til etter render.
-  // Direkte-call inni render-fasen ville kastet på `revalidateTag` (Next.js 16
-  // sperrer det). Samme mønster som auto-start-fallbacken lenger ned i fila.
-  // Best-effort: feil i markRead skal aldri blokkere sida.
+  // #463: å åpne spillet er en aktivitet = implisitt bekreftelse. Rydder
+  // «Ikke bekreftet»-badgen for aktive spillere uten et eksplisitt trykk.
+  // Wrap i `after()` så DB-mutasjonen deferes til etter render. Mark-read
+  // er registrert øverst (#2201).
   after(async () => {
-    await Promise.allSettled([
-      markNotificationsRead({ userId, kind: 'invite', entityId: id }),
-      markNotificationsRead({
-        userId,
-        kind: 'scorecard_approved',
-        entityId: id,
-      }),
-      markNotificationsRead({
-        userId,
-        kind: 'scorecard_rejected',
-        entityId: id,
-      }),
-      // #1363: begge gjenåpnings-varslene deeplinker hit, så de må ryddes her
-      // — ellers henger bjelle-badgen igjen etter at spilleren har sett siden
-      // (samme regresjon scorecard_rejected ble lagt inn for å unngå, #1358).
-      markNotificationsRead({
-        userId,
-        kind: 'scorecard_reopened',
-        entityId: id,
-      }),
-      markNotificationsRead({
-        userId,
-        kind: 'game_reopened',
-        entityId: id,
-      }),
-      // #463: å åpne spillet er en aktivitet = implisitt bekreftelse. Rydder
-      // «Ikke bekreftet»-badgen for aktive spillere uten et eksplisitt trykk.
-      ...(me.accepted_at == null
-        ? [maybeAutoConfirmParticipation({ gameId: id, userId })]
-        : []),
-    ]);
+    if (me.accepted_at == null) await maybeAutoConfirmParticipation({ gameId: id, userId });
   });
 
   // #1814: en cup-kamp trekker man seg fra på cup-nivå — `/games/[id]/trekk-fra`

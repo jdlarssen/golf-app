@@ -38,13 +38,18 @@ export async function notify<K extends NotificationKind>(opts: {
   const admin = getAdminClient();
 
   // Insert + lookup last_seen_at i parallell. Insert er den autoritative
-  // operasjonen; mail-gaten er informativ.
+  // operasjonen; mail-gaten er informativ. The new row's id rides on the push
+  // link, so a tap marks exactly this notification read (#2201).
   const [insertRes, userRes] = await Promise.all([
-    admin.from('notifications').insert({
-      user_id: userId,
-      kind,
-      payload,
-    }),
+    admin
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        kind,
+        payload,
+      })
+      .select('id')
+      .single<{ id: string }>(),
     admin
       .from('users')
       .select('last_seen_at, locale, is_guest, deleted_at')
@@ -94,6 +99,7 @@ export async function notify<K extends NotificationKind>(opts: {
       kind,
       payload,
       locale: userRes.data?.locale ?? null,
+      notificationId: insertRes.data?.id,
     });
   }
 

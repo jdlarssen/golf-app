@@ -4,9 +4,11 @@ import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
+import { after } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { COURSE_HOLES_SELECT } from '@/lib/supabase/queryFragments';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { isProfileIncomplete } from '@/lib/auth/profileGate';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -91,6 +93,11 @@ export default async function SubmitPage({
 
   const { supabase, userId } = await getSubmitContext();
   if (!userId) redirect({ href: '/login', locale });
+
+  // #2201: opening the submit page marks the game's `deliver_reminder` read.
+  // Registered before the gates below: a reminder for a card already
+  // delivered is read even though the page sends you home.
+  after(() => markReadOnVisit({ userId, surface: 'gameSubmit', entityId: id }));
 
   // games + game_players from the tag-cached helper, course/tee_box joins
   // direct (kept out of the cache since invalidating on course edits would

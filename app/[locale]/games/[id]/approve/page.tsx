@@ -25,7 +25,7 @@ import {
   reviewScoreUserIds,
   reviewScoresByHolder,
 } from '@/lib/games/scorecardReviewData';
-import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { isHoleInSegment } from '@/lib/games/holeScope';
 import type { HoleSegment } from '@/lib/scoring';
 import { localizeGameName } from '@/lib/games/autoGameName';
@@ -75,6 +75,11 @@ export default async function ApprovePage({
   const { userId } = await getApproveContext();
   if (!userId) redirect({ href: '/login', locale });
 
+  // Opening /approve counts every pending approval varsel for the game as
+  // seen, whether or not each row gets a tap. Registered before the status
+  // and door gates (#2201): after() also runs when they redirect.
+  after(() => markReadOnVisit({ userId, surface: 'gameApprove', entityId: id }));
+
   // games + game_players from the tag-cached helper. See
   // lib/games/getGameWithPlayers.ts for cache + authz rationale.
   const result = await getGameWithPlayers(id);
@@ -109,19 +114,6 @@ export default async function ApprovePage({
     ? await approveSupabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
     : { data: null as { name: string } | null };
   const courseName = courseRes.data?.name ?? null;
-
-  // Mark `peer_approval_request`-varsler for dette spillet som lest. Når
-  // brukeren først åpner /approve, regnes alle ventende godkjennings-
-  // varsler for spillet som «sett», uavhengig av om hen rekker å klikke
-  // gjennom alle radene. Wrap i `after()` så DB-mutasjon + revalidateTag
-  // deferes til etter render (Next.js 16 sperrer revalidateTag i render-fase).
-  after(() =>
-    markNotificationsRead({
-      userId,
-      kind: 'peer_approval_request',
-      entityId: id,
-    }),
-  );
 
   const tScorecard = await getTranslations('scorecard');
   return (

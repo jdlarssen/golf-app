@@ -2,6 +2,7 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -126,6 +127,10 @@ export default async function HistorikkPage() {
   const tHome = await getTranslations('home');
   const userId = await getProxyVerifiedUserId();
   if (!userId) redirect({ href: '/login', locale });
+
+  // #2201: the badge wall lives here, so opening it marks
+  // `achievement_unlocked` read.
+  after(() => markReadOnVisit({ userId, surface: 'history' }));
 
   const supabase = await getServerClient();
 

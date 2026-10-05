@@ -35,7 +35,6 @@ import {
 } from '@/lib/scoring';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
 import { ScorecardTable } from '@/app/[locale]/games/[id]/_components/ScorecardTable';
@@ -55,7 +54,7 @@ import {
 } from './actions';
 import { remindUnsubmittedPlayers } from './status/actions';
 import { remindMissingScore } from './pultActions';
-import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import { FlighterSeksjon } from './FlighterSeksjon';
@@ -265,7 +264,14 @@ export default async function GameDetailPage({
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Runs before the
   // game-row fetch so trusted-non-admin (and unauthenticated) callers never
   // see the row even if RLS would have allowed the select.
-  await requireAdmin(supabase);
+  const { userId } = await requireAdmin(supabase);
+
+  // Opening the protocol marks this game's `scorecard_submitted`, `invite`
+  // and `auto_start_blocked` varsler read (#2201): the start card shows the
+  // same block reason (#2204). Registered before the game read, so a 404
+  // still counts. Deferred with after(): Next 16 bars revalidateTag in render.
+  after(() => markReadOnVisit({ userId, surface: 'adminGame', entityId: id }));
+
   const errorMessage = await buildErrorMessage();
 
   // Gating: fetch the game row first so we can render the title bar
@@ -322,28 +328,6 @@ export default async function GameDetailPage({
     shortDate(game.created_at);
   const subtitle = [game.courses?.name, subtitleDate].filter(Boolean).join(' · ');
   const gameName = localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale);
-
-  const userId = await getProxyVerifiedUserId();
-
-  // Mark notifikasjoner for dette spillet som lest når admin åpner
-  // protokoll-sida. Dekker både `scorecard_submitted` og `invite` slik at
-  // bell-prikken forsvinner så snart admin (eller invitee) lander her.
-  // Wrap i `after()` så DB-mutasjon + revalidateTag deferes til etter render
-  // (Next.js 16 sperrer revalidateTag i render-fase).
-  if (userId) {
-    after(() => {
-      void markNotificationsRead({
-        userId,
-        kind: 'scorecard_submitted',
-        entityId: id,
-      });
-      void markNotificationsRead({
-        userId,
-        kind: 'invite',
-        entityId: id,
-      });
-    });
-  }
 
   // #1067: server-action redirects drop URL hash fragments, so this fallback
   // scrolls to «Leverte scorekort» client-side whenever the admin_approved

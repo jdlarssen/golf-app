@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import { isTeamMatchGameMode } from '@/lib/cup/computeCupLeaderboard';
@@ -39,6 +41,11 @@ export default async function CupResultsPage({ params }: { params: Params }) {
     getTranslations('cup'),
     getLocale(),
   ]);
+  // #2201: opening the page marks the cup's `cup_finished` varsler read.
+  // Only signed in; registered before the club gate, so a 404 still counts.
+  if (userId) {
+    after(() => markReadOnVisit({ userId, surface: 'cupResults', entityId: id }));
+  }
   // Navne-fallbacken (#1527) mates inn i alt som bygger visnings-navn her:
   // snapshot-en, poengregnskapet og «dro ned mest»-kåringen.
   const unknownLabel = t('manage.unknownPlayer');

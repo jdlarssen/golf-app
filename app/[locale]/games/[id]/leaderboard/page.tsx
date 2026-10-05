@@ -12,7 +12,7 @@ import {
 } from '@/lib/games/getGameWithPlayers';
 import { nonPlayerGameDoor, organiserFollowsLiveBoard } from '@/lib/games/nonPlayerGameDoor';
 import { SpectatePoller } from '@/app/[locale]/spectate/[token]/SpectatePoller';
-import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import {
   getLeaderboardContext,
 } from './leaderboardContext';
@@ -83,6 +83,11 @@ export default async function LeaderboardPage({
   const { supabase, userId } = await getLeaderboardContext();
   if (!userId) redirect({ href: '/login', locale });
 
+  // Opening the board marks the game's `game_finished` varsel read. Harmless
+  // on an active game (none exists before the finish). Registered before the
+  // draft and door gates (#2201): after() also runs when they redirect.
+  after(() => markReadOnVisit({ userId, surface: 'gameLeaderboard', entityId: id }));
+
   // Game + players come from the tag-cached helper. Profile lookup
   // (is_admin) stays direct since it isn't game-scoped.
   const [gwp, profileRes] = await Promise.all([
@@ -142,19 +147,6 @@ export default async function LeaderboardPage({
   // arrangørvisningen der, så tilbake-pilen går til spillet.
   const backHref =
     navContext.from ?? (isParticipant || isAdmin || isCreator ? defaultBackHref : '/');
-
-  // Mark `game_finished`-varsler for dette spillet som lest når brukeren
-  // åpner leaderboardet. Wrap i `after()` så DB-mutasjon + revalidateTag
-  // deferes til etter render (Next.js 16 sperrer revalidateTag i render-fase).
-  // Harmless å kalle selv på aktivt spill — ingen game_finished-rader eksisterer
-  // før admin avslutter.
-  after(() =>
-    markNotificationsRead({
-      userId,
-      kind: 'game_finished',
-      entityId: id,
-    }),
-  );
 
   // No inner Suspense boundary here: the route-level loading.tsx
   // (LeaderboardSkeleton) covers the whole wait. An inner boundary would

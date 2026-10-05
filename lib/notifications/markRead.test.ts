@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import { READ_ON_VISIT, type VisitSurface } from './readOnVisit';
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 // #726: markRead bruker admin-client (cookies-fri) fordi flere call-sites
@@ -22,9 +23,8 @@ beforeEach(() => {
 /**
  * Integrasjons-test for `markNotificationsRead`. Verifiserer at den faktiske
  * Supabase-query-en bruker riktig kolonne-syntaks (`user_id`, `read_at`,
- * `kind`, `payload->>game_id`, `id`). Tidligere test (#171) testet kun en
- * tautologisk `buildMarkReadQuery`-shape-mapping som ikke fanget at noen
- * byttet `payload->>game_id` til `payload->>gameId` i den ekte impl.
+ * `id`). Side-besøkene (kind + payload-nøkkel) testes i `markReadOnVisit`
+ * under (#2201).
  */
 describe('markNotificationsRead', () => {
   it('userId-only → UPDATE notifications SET read_at WHERE user_id=$1 AND read_at IS NULL', async () => {
@@ -44,40 +44,6 @@ describe('markNotificationsRead', () => {
     // Ingen ekstra .eq utover user_id.
     const eqCalls = calls.filter((c) => c.method === 'eq');
     expect(eqCalls).toHaveLength(1);
-  });
-
-  it('kind-filter → .eq("kind", "invite") legges til', async () => {
-    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
-    const { markNotificationsRead } = await import('./markRead');
-
-    await markNotificationsRead({ userId: 'u1', kind: 'invite' });
-
-    const eqCalls = supabaseMock.__fromCalls.filter((c) => c.method === 'eq');
-    expect(eqCalls).toContainEqual(
-      expect.objectContaining({ args: ['user_id', 'u1'] }),
-    );
-    expect(eqCalls).toContainEqual(
-      expect.objectContaining({ args: ['kind', 'invite'] }),
-    );
-  });
-
-  it('entityId-filter → .eq("payload->>game_id", "game-uuid") (load-bearing kolonne-navn)', async () => {
-    // Denne testen er hele poenget med #171: hvis noen bytter
-    // `payload->>game_id` til `payload->>gameId` i markRead.ts, skal denne
-    // assertion-en feile mekanisk.
-    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
-    const { markNotificationsRead } = await import('./markRead');
-
-    await markNotificationsRead({
-      userId: 'u1',
-      kind: 'game_finished',
-      entityId: 'game-uuid',
-    });
-
-    const eqCalls = supabaseMock.__fromCalls.filter((c) => c.method === 'eq');
-    expect(eqCalls).toContainEqual(
-      expect.objectContaining({ args: ['payload->>game_id', 'game-uuid'] }),
-    );
   });
 
   it('notificationId-filter → .eq("id", "n-uuid") (per-tap fra innboks)', async () => {
@@ -110,6 +76,28 @@ describe('markNotificationsRead', () => {
     // `.select('id')` er det som gjør radantallet synlig i det hele tatt.
     expect(supabaseMock.__fromCalls).toContainEqual(
       expect.objectContaining({ method: 'select', args: ['id'] }),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('#2201: push tap (zeroRowsOk) on a row the page already marked → true, silent', async () => {
+    // The target page's own after() nearly always marks the row before
+    // PwaBoot does, so 0 rows here is the normal case, not an error.
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { markNotificationsRead } = await import('./markRead');
+
+    const ok = await markNotificationsRead({
+      userId: 'u1',
+      notificationId: 'n-uuid',
+      zeroRowsOk: true,
+    });
+
+    expect(ok).toBe(true);
+    expect(consoleErr).not.toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(supabaseMock.__fromCalls).toContainEqual(
+      expect.objectContaining({ method: 'eq', args: ['id', 'n-uuid'] }),
     );
     consoleErr.mockRestore();
   });
@@ -147,6 +135,78 @@ describe('markNotificationsRead', () => {
       '[notifications] markRead failed',
       expect.objectContaining({ message: 'permission denied' }),
     );
+    consoleErr.mockRestore();
+  });
+});
+
+/**
+ * #2201: opening a page marks the viewer's unread notifications that link to
+ * it. One UPDATE per visit: the surface's kinds, scoped to the page's entity
+ * through the payload field the map names (`payload->>game_id` etc. — the
+ * column syntax is load-bearing, #171).
+ */
+describe('markReadOnVisit', () => {
+  const ENTITY = 'entity-uuid';
+
+  it.each<{ surface: VisitSurface; key: string | null }>([
+    { surface: 'gameHome', key: 'game_id' },
+    { surface: 'cup', key: 'tournament_id' },
+    { surface: 'club', key: 'group_id' },
+    { surface: 'friends', key: null },
+  ])('$surface → kinds from the map, payload key $key', async ({ surface, key }) => {
+    supabaseMock = buildSupabaseMock([{ data: [{ id: 'n1' }], error: null }]);
+    const { markReadOnVisit } = await import('./markRead');
+
+    await markReadOnVisit({ userId: 'u1', surface, entityId: key ? ENTITY : undefined });
+
+    const calls = supabaseMock.__fromCalls;
+    expect(calls).toContainEqual(
+      expect.objectContaining({ table: 'notifications', method: 'update' }),
+    );
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'eq', args: ['user_id', 'u1'] }));
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'is', args: ['read_at', null] }));
+    expect(calls).toContainEqual(
+      expect.objectContaining({ method: 'in', args: ['kind', [...READ_ON_VISIT[surface].kinds]] }),
+    );
+    const eqs = calls.filter((c) => c.method === 'eq').map((c) => c.args);
+    expect(eqs).toEqual(key ? [['user_id', 'u1'], [`payload->>${key}`, ENTITY]] : [['user_id', 'u1']]);
+    // The touched ids come back, so a visit with nothing unread skips revalidate.
+    expect(calls).toContainEqual(expect.objectContaining({ method: 'select', args: ['id'] }));
+    expect(revalidateTagMock).toHaveBeenCalledWith('notifications-u1', 'max');
+  });
+
+  it('a keyed surface without an entity id writes nothing and logs', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([]);
+    const { markReadOnVisit } = await import('./markRead');
+
+    await markReadOnVisit({ userId: 'u1', surface: 'gameHole' });
+
+    expect(supabaseMock.__fromCalls).toHaveLength(0);
+    expect(consoleErr).toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+    consoleErr.mockRestore();
+  });
+
+  it('nothing unread to touch → no revalidate (the hole page renders often)', async () => {
+    supabaseMock = buildSupabaseMock([{ data: [], error: null }]);
+    const { markReadOnVisit } = await import('./markRead');
+
+    await markReadOnVisit({ userId: 'u1', surface: 'gameHole', entityId: ENTITY });
+
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it('a DB error is logged, never thrown, and revalidates nothing', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    supabaseMock = buildSupabaseMock([{ data: null, error: { message: 'nede' } }]);
+    const { markReadOnVisit } = await import('./markRead');
+
+    await expect(
+      markReadOnVisit({ userId: 'u1', surface: 'gameHome', entityId: ENTITY }),
+    ).resolves.toBeUndefined();
+    expect(consoleErr).toHaveBeenCalled();
+    expect(revalidateTagMock).not.toHaveBeenCalled();
     consoleErr.mockRestore();
   });
 });

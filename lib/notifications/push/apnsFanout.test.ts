@@ -127,6 +127,22 @@ afterEach(() => {
 });
 
 describe('sendPushToUser — APNs channel', () => {
+  it('#2201: the link carries ?varsel=<id>, the same as web push', async () => {
+    apnsRows.push({ id: '1', token: TOKEN, environment: 'production' });
+    sendApnsMock.mockResolvedValueOnce(OK);
+    const id = '5f0c1b2a-3d4e-4f60-8a71-92b3c4d5e6f7';
+
+    await sendPushToUser({
+      userId: 'u',
+      kind: 'game_finished',
+      payload: {} as never,
+      locale: 'no',
+      notificationId: id,
+    });
+
+    expect(sendApnsMock.mock.calls[0][1]).toMatchObject({ url: `/games/abc?varsel=${id}` });
+  });
+
   it('sends to the stored environment when the token already has one', async () => {
     apnsRows.push({ id: '1', token: TOKEN, environment: 'sandbox' });
     sendApnsMock.mockResolvedValueOnce(OK);

@@ -2,16 +2,18 @@ import 'server-only';
 import { revalidateTag } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { chunkIds } from './inboxReads';
-import type { NotificationKind } from './types';
+import { READ_ON_VISIT, type VisitSurface } from './readOnVisit';
 
 export type MarkReadOpts = {
   userId: string;
   /** Hvis satt, kun varselet med denne id-en markeres (brukes fra /innboks-tap). */
   notificationId?: string;
-  /** Hvis satt, kun varsler med denne kind markeres. */
-  kind?: NotificationKind;
-  /** Hvis satt, kun varsler hvor payload.game_id matcher. */
-  entityId?: string;
+  /**
+   * Push tap (#2201, `?varsel=`): the target page's own `markReadOnVisit`
+   * usually marks the row first, so 0 rows is the normal case. Gives `true`
+   * without logging. Only meaningful with `notificationId`.
+   */
+  zeroRowsOk?: boolean;
 };
 
 /**
@@ -29,9 +31,11 @@ export type MarkReadOpts = {
  *    filtrert bort (RLS, feil id, rad allerede lest) → `false`, så UI-et
  *    ruller tilbake i stedet for å påstå at varselet ble lest. Derfor
  *    `.select('id')` på den grenen — uten den finnes det ikke noe radantall.
- *  - uten id (marker-alle, side-besøk) → 0 rader er helt legitimt (ingenting
- *    ulest å røre) og gir fortsatt `true`. Den grenen henter ingen rader
- *    tilbake; et marker-alle kan treffe hundrevis.
+ *    Unntak: `zeroRowsOk` (push-trykket, #2201), der siden alt har merket
+ *    raden → `true`, uten logg.
+ *  - uten id (marker-alle) → 0 rader er helt legitimt (ingenting ulest å
+ *    røre) og gir fortsatt `true`. Den grenen henter ingen rader tilbake; et
+ *    marker-alle kan treffe hundrevis.
  *
  * Bruker getAdminClient() (service-role, cookies-fri) framfor cookies-
  * klienten fordi flere call-sites kjører inni `after()` (leaderboard,
@@ -44,10 +48,8 @@ export type MarkReadOpts = {
  * RLS-policyen notifications_update_own blir stående og garderer fortsatt
  * den offentlige PostgREST-flaten.
  *
- * Brukes både ved tap-i-innboks og fra server-side helper på målsider
- * (f.eks. /games/[id]/leaderboard markerer game_finished-varsler for det
- * spillet). Mail-deeplink-klikk havner også her, siden mailen lenker til
- * samme target-rute.
+ * Brukes fra innboksen og ved push-trykk. Målsidene bruker
+ * `markReadOnVisit` under.
  */
 export async function markNotificationsRead(
   opts: MarkReadOpts,
@@ -61,8 +63,6 @@ export async function markNotificationsRead(
     .is('read_at', null);
 
   if (opts.notificationId) q = q.eq('id', opts.notificationId);
-  if (opts.kind) q = q.eq('kind', opts.kind);
-  if (opts.entityId) q = q.eq('payload->>game_id', opts.entityId);
 
   // Single-id: ask for the touched ids back so 0 rows is visible. Bulk: no
   // rows needed — see the two 0-row regimes in the doc comment above.
@@ -72,6 +72,7 @@ export async function markNotificationsRead(
     return false;
   }
   if (opts.notificationId && (data?.length ?? 0) === 0) {
+    if (opts.zeroRowsOk) return true;
     console.error('[notifications] markRead single-id matched 0 rows', {
       notificationId: opts.notificationId,
     });
@@ -81,6 +82,58 @@ export async function markNotificationsRead(
   // Next.js 16 krever to-arg-form for revalidateTag.
   revalidateTag(`notifications-${opts.userId}`, 'max');
   return true;
+}
+
+export type MarkReadOnVisitOpts = {
+  userId: string;
+  surface: VisitSurface;
+  /** The page's entity (game, cup or club id). Required when the surface has a key. */
+  entityId?: string;
+};
+
+/**
+ * Opening a page marks the viewer's unread notifications that link to it as
+ * read (#2201): the surface's kinds from `READ_ON_VISIT`, for this page's
+ * entity. One UPDATE per visit.
+ *
+ * Callers register it in `after()` as soon as the user id (and the entity id)
+ * is known, BEFORE the page's status, door, profile or `notFound()` gates:
+ * `after()` also runs when `redirect()` or `notFound()` is thrown, so a
+ * reminder for a card already delivered is read even though the page sends
+ * you on. The write needs no page authz: it touches only the viewer's own
+ * rows, `.eq('user_id', userId)` with a server-derived id (same reasoning and
+ * admin client as `markNotificationsRead`).
+ *
+ * Best-effort, never throws. 0 rows is normal (nothing unread), so the cache
+ * tag is revalidated only when a row was touched: the hole page renders often.
+ */
+export async function markReadOnVisit(opts: MarkReadOnVisitOpts): Promise<void> {
+  const { kinds, key } = READ_ON_VISIT[opts.surface];
+  if (key && !opts.entityId) {
+    console.error('[notifications] markReadOnVisit without entity id', { surface: opts.surface });
+    return;
+  }
+
+  try {
+    let q = getAdminClient()
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', opts.userId)
+      .is('read_at', null)
+      .in('kind', [...kinds]);
+    if (key && opts.entityId) q = q.eq(`payload->>${key}`, opts.entityId);
+
+    const { data, error } = await q.select('id');
+    if (error) {
+      console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, error });
+      return;
+    }
+    if ((data?.length ?? 0) > 0) {
+      revalidateTag(`notifications-${opts.userId}`, 'max');
+    }
+  } catch (err) {
+    console.error('[notifications] markReadOnVisit failed', { surface: opts.surface, err });
+  }
 }
 
 export type MarkIdsReadOpts = {

@@ -86,6 +86,39 @@ describe('markGroupAsRead', () => {
   });
 });
 
+/**
+ * #2201: a push tap lands on a page with `?varsel=<id>`; PwaBoot hands the id
+ * here. It comes from the address bar, so it is checked, and the write is the
+ * proxy user's own rows only: someone else's id simply matches nothing.
+ */
+describe('markLinkedAsRead', () => {
+  it('marks that one id for the proxy’s user, 0 rows allowed', async () => {
+    const { markLinkedAsRead } = await import('./actions');
+    expect(await markLinkedAsRead(NOTE)).toEqual({ ok: true });
+    expect(markReadMock).toHaveBeenCalledWith({
+      userId: 'user-1',
+      notificationId: NOTE,
+      zeroRowsOk: true,
+    });
+  });
+
+  it.each(['', 'abc', "1' or 1=1", 42 as unknown as string])(
+    'rejects %j without a write',
+    async (id) => {
+      const { markLinkedAsRead } = await import('./actions');
+      expect(await markLinkedAsRead(id)).toEqual({ ok: false });
+      expect(markReadMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('not logged in → ok:false without a write', async () => {
+    proxyUserId = null;
+    const { markLinkedAsRead } = await import('./actions');
+    expect(await markLinkedAsRead(NOTE)).toEqual({ ok: false });
+    expect(markReadMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('decideRegistration', () => {
   it('approve → archives the varsel and reports game + team', async () => {
     loadMock.mockResolvedValueOnce({ ok: true, ctx: CTX });

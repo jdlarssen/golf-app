@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { initNativePush } from '@/lib/pwa/push';
 import { registerApnsToken } from '@/app/[locale]/profile/apnsActions';
+import { markLinkedAsRead } from '@/app/[locale]/innboks/actions';
+import { readMarkerFrom, withoutReadMarker } from '@/lib/notifications/readMarker';
 
 /**
  * Registers the service worker in production and wires up the Background Sync
@@ -14,10 +16,22 @@ import { registerApnsToken } from '@/app/[locale]/profile/apnsActions';
  * Also boots the iOS shell's push bridge (#1282). It lives here rather than in
  * PushToggle because a tapped notification must reach a listener on any page,
  * including a cold start, and this component is mounted in the root layout.
+ *
+ * And it marks a tapped push read (#2201): the push link carries
+ * `?varsel=<id>`, every tap loads the page, and this runs on any page.
  */
 export function PwaBoot() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Above the service-worker guards for the same reason as the push bridge:
+    // the iOS shell and dev do not pass them. Best-effort, the answer is not
+    // needed; the parameter leaves the address bar either way.
+    const tappedId = readMarkerFrom(window.location.search);
+    if (tappedId) {
+      void markLinkedAsRead(tappedId).catch(() => {});
+      window.history.replaceState(null, '', withoutReadMarker(window.location.href));
+    }
 
     // No-op in every browser; runs only inside the Capacitor shell. Must sit
     // above the service-worker guards below, which the shell does not pass.
