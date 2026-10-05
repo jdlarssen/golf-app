@@ -148,6 +148,7 @@ export function ArrangedRoundsView({
               rounds.upcoming.length > upcomingLimit ? (
                 <SmartLink
                   href={upcomingAllHref}
+                  aria-label={t('upcomingAll', { n: rounds.upcoming.length })}
                   data-testid="arranged-next-all"
                   className="tap-extend text-xs font-semibold leading-[normal] text-primary [--tap-extend:-15px_-8px]"
                 >

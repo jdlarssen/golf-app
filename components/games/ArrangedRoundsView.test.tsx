@@ -83,4 +83,30 @@ describe('ArrangedRoundsView', () => {
     const next = screen.getByTestId('arranged-next');
     expect(within(next).getAllByTestId('arranged-next-row')).toHaveLength(3);
   });
+
+  it('links «Alle n» from the «Neste» heading only when more rounds wait than it shows (#2493)', () => {
+    const more = render(
+      <ArrangedRoundsView rounds={rounds()} isAdmin={false} locale="no" upcomingLimit={3} upcomingAllHref="/klubbhuset" />,
+    );
+    const all = screen.getByTestId('arranged-next-all');
+    expect(all).toHaveAttribute('href', '/klubbhuset');
+    // The name is the words alone, as on «Ferdige runder»: the arrow is not read.
+    expect(all).toHaveAttribute('aria-label', k.upcomingAll.replace('{n}', '4'));
+    more.unmount();
+
+    const fits = render(
+      <ArrangedRoundsView
+        rounds={rounds({ upcoming: rounds().upcoming.slice(0, 3) })}
+        isAdmin={false}
+        locale="no"
+        upcomingLimit={3}
+        upcomingAllHref="/klubbhuset"
+      />,
+    );
+    expect(screen.queryByTestId('arranged-next-all')).toBeNull();
+    fits.unmount();
+
+    render(<ArrangedRoundsView rounds={rounds()} isAdmin={false} locale="no" upcomingLimit={3} />);
+    expect(screen.queryByTestId('arranged-next-all')).toBeNull();
+  });
 });
