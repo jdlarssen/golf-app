@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
+import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -97,6 +99,11 @@ export default async function TeamDashboardPage({
   if (!user) {
     redirect({ href: `/login?next=/signup/${shortId}/team`, locale });
   }
+
+  // #2201: opening the team page marks the game's `team_invite` and
+  // `team_member_withdrew` varsler read. Keyed on the game id, which both
+  // payloads carry (the link itself uses the short id).
+  after(() => markReadOnVisit({ userId: user.id, surface: 'teamSignup', entityId: game.id }));
 
   const admin = getAdminClient();
 

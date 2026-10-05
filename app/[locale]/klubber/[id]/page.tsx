@@ -2,11 +2,13 @@ import { first } from '@/lib/url/searchParams';
 import { klubbhusBackHref } from '@/lib/url/klubbhusOrigin';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
+import { after } from 'next/server';
 import { getLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
 import { formatDate } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -66,6 +68,10 @@ export default async function KlubbDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect({ href: '/login', locale });
+
+  // #2201: opening the club marks its `club_join_request` and
+  // `club_role_changed` varsler read. Before the membership gate.
+  after(() => markReadOnVisit({ userId: user.id, surface: 'club', entityId: id }));
 
   const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();

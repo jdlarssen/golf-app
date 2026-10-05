@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { first } from '@/lib/url/searchParams';
@@ -8,6 +9,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { canViewCupPage } from '@/lib/cup/cupPageAccess';
 import {
@@ -53,6 +55,12 @@ export default async function PublicCupPage({
     getTranslations('cup'),
     getLocale(),
   ]);
+  // #2201: opening the page marks the cup's `cup_started` and
+  // `cup_lineup_revealed` varsler read. Only signed in; registered before the
+  // club gate, so a 404 still counts.
+  if (userId) {
+    after(() => markReadOnVisit({ userId, surface: 'cup', entityId: id }));
+  }
   const snapshot = await getCupSnapshot(id, t('manage.unknownPlayer'));
   if (!snapshot) notFound();
 

@@ -25,9 +25,9 @@ export type InboxActionResult = { ok: boolean };
 
 /**
  * Marker ett spesifikt varsel som lest. Caller (InboxClient) sender alltid
- * notification-id-en til den raden brukeren tappet — vi rør IKKE entityId
- * eller kind her, så et tap på «invite for Hauger Open» markerer bare det
- * ene varselet (ikke alle invite-varsler for det spillet).
+ * notification-id-en til den raden brukeren tappet, og actionen merker bare
+ * den ene id-en: et tap på «invite for Hauger Open» markerer bare det ene
+ * varselet (ikke alle invite-varsler for det spillet).
  *
  * UserId hentes via proxy-header, ikke fra klienten — sikkerhetshygiene
  * (klienten kan ikke be om å markere noen andres varsler).
@@ -38,6 +38,26 @@ export async function markOneAsRead(
   const userId = await getProxyVerifiedUserId();
   if (!userId) return { ok: false };
   return { ok: await markNotificationsRead({ userId, notificationId }) };
+}
+
+/**
+ * A push tap marks exactly the tapped notification read (#2201). The push
+ * link carries `?varsel=<id>`; `PwaBoot` reads it on page load and calls this.
+ * The id comes from the address bar, so it must be a uuid; the user id comes
+ * from the proxy, as in `markOneAsRead`, so the write only ever touches the
+ * caller's own rows (someone else's id matches nothing). The page's own
+ * mark-read usually got there first, so 0 rows is fine and stays silent.
+ */
+export async function markLinkedAsRead(
+  notificationId: string,
+): Promise<InboxActionResult> {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId || typeof notificationId !== 'string' || !isUuid(notificationId)) {
+    return { ok: false };
+  }
+  return {
+    ok: await markNotificationsRead({ userId, notificationId, zeroRowsOk: true }),
+  };
 }
 
 /**

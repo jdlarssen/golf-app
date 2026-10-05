@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Admin-client mock — kontrolleres per test via insertMock/userSelectMock.
-const insertMock = vi.fn<(...args: unknown[]) => Promise<{ error: unknown }>>();
+// insertMock gets the inserted row and answers `.select('id').single()`.
+const insertMock =
+  vi.fn<(...args: unknown[]) => Promise<{ data: { id: string } | null; error: unknown }>>();
+const NOTE_ID = '00000000-0000-0000-0000-0000000000aa';
 const userSelectMock = vi.fn<
   (...args: unknown[]) => Promise<{ data: { last_seen_at: string | null; locale: string | null } | null }>
 >();
@@ -10,7 +13,11 @@ vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
       if (table === 'notifications') {
-        return { insert: insertMock };
+        return {
+          insert: (...args: unknown[]) => ({
+            select: () => ({ single: () => insertMock(...args) }),
+          }),
+        };
       }
       if (table === 'users') {
         return {
@@ -42,7 +49,7 @@ beforeEach(() => {
   revalidateTagMock.mockReset();
   sendPushMock.mockClear();
   // Default: fungerende admin-insert + aktiv bruker (fresh last_seen_at).
-  insertMock.mockResolvedValue({ error: null });
+  insertMock.mockResolvedValue({ data: { id: NOTE_ID }, error: null });
   userSelectMock.mockResolvedValue({
     data: { last_seen_at: new Date().toISOString(), locale: 'no' },
   });
@@ -119,7 +126,7 @@ describe('notify (validation-rekkefølge)', () => {
 
   it('insert-error → returnerer shouldAlsoSendMail: false (fail-closed)', async () => {
     const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
-    insertMock.mockResolvedValueOnce({ error: { message: 'permission denied' } });
+    insertMock.mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } });
 
     const { notify } = await import('./notify');
 
@@ -156,6 +163,22 @@ describe('notify (validation-rekkefølge)', () => {
 
     expect(sendPushMock).toHaveBeenCalledTimes(1);
     expect(result.shouldAlsoSendMail).toBe(true);
+  });
+
+  it('#2201: the push carries the id of the row just inserted', async () => {
+    // The tap marks exactly this notification read (`?varsel=<id>`).
+    userSelectMock.mockResolvedValueOnce({ data: { last_seen_at: null, locale: 'no' } });
+    const { notify } = await import('./notify');
+
+    await notify({
+      userId: '00000000-0000-0000-0000-000000000001',
+      kind: 'game_started',
+      payload: { game_id: '00000000-0000-0000-0000-000000000002', game_name: 'Cup' },
+    });
+
+    expect(sendPushMock).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'game_started', notificationId: NOTE_ID }),
+    );
   });
 
   it('on-app user → no push', async () => {

@@ -62,4 +62,19 @@ describe('sendPushToUser', () => {
     expect(updateEqMock).toHaveBeenCalledWith('endpoint', 'https://push/x');
     expect(deleteEqMock).not.toHaveBeenCalled();
   });
+
+  it('#2201: the link carries ?varsel=<id>, so the tap marks that notification read', async () => {
+    subsRows.push({ id: '1', endpoint: 'https://push/x', p256dh: 'k', auth: 'a' });
+    sendNotificationMock.mockResolvedValueOnce({ statusCode: 201 });
+    const id = '5f0c1b2a-3d4e-4f60-8a71-92b3c4d5e6f7';
+    await sendPushToUser({
+      userId: 'u',
+      kind: 'game_finished',
+      payload: {} as never,
+      locale: 'no',
+      notificationId: id,
+    });
+    const body = JSON.parse(sendNotificationMock.mock.calls[0][1] as string);
+    expect(body.url).toBe(`/games/abc?varsel=${id}`);
+  });
 });

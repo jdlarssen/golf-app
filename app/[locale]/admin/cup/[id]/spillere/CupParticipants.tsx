@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
+import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -11,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getRoleContext } from '@/lib/admin/auth';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { getCupCandidatePlayers } from '@/lib/cup/getCupCandidatePlayers';
 import { MAX_PERSONAL_CUP_PLAYERS } from '@/lib/cup/limits';
 import {
@@ -62,6 +64,10 @@ export async function CupParticipants({
     getRoleContext(supabase),
     getCupSnapshot(tournamentId, unknownLabel),
   ]);
+  // #2201: opening the list marks the cup's `cup_signup` varsler read, in the
+  // club room and the admin room alike. Before the draft redirect: a signup
+  // to a cup that has since started is read even though the page sends you on.
+  after(() => markReadOnVisit({ userId, surface: 'cupParticipants', entityId: tournamentId }));
   if (!snapshot) notFound();
 
   const { tournament } = snapshot;

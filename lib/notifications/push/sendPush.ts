@@ -11,6 +11,7 @@ import {
 } from './apns';
 import { buildNotificationText } from '@/lib/notifications/cardContent';
 import { notificationDestination } from '@/lib/notifications/deeplink';
+import { withReadMarker } from '@/lib/notifications/readMarker';
 import { getInboxTranslator } from '@/lib/notifications/inboxTranslator';
 import type { NotificationKind, NotificationPayload } from '@/lib/notifications/types';
 
@@ -29,6 +30,8 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
   kind: K;
   payload: NotificationPayload<K>;
   locale: string | null;
+  /** The stored row. Rides on the link as `?varsel=<id>`, so the tap marks it read (#2201). */
+  notificationId?: string;
 }): Promise<void> {
   try {
     const webpush = isPushConfigured() ? ensureVapid() : null;
@@ -59,7 +62,12 @@ export async function sendPushToUser<K extends NotificationKind>(opts: {
 
     const t = await getInboxTranslator(opts.locale);
     const { title, detail } = buildNotificationText(opts.kind, opts.payload, t);
-    const url = notificationDestination({ kind: opts.kind, payload: opts.payload }) ?? '/';
+    const destination =
+      notificationDestination({ kind: opts.kind, payload: opts.payload }) ?? '/';
+    // Same url for web push and APNs: the page the tap opens reads the marker.
+    const url = opts.notificationId
+      ? withReadMarker(destination, opts.notificationId)
+      : destination;
     // Cap lengths so admin-authored content (product_update has no max length)
     // can't overflow the push service's ~4 KB payload limit and silently fail.
     const body = JSON.stringify({

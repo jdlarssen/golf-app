@@ -1,8 +1,10 @@
 import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -92,6 +94,10 @@ export default async function PåmeldingerPage({
   // the `registration_request` varsel links to this page. Anyone else → `/`.
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, id);
+
+  // #2201: opening the page marks the game's `registration_request` varsler
+  // read. Before the game read, so a 404 still counts.
+  after(() => markReadOnVisit({ userId: role.userId, surface: 'adminSignups', entityId: id }));
 
   const { data: game, error: gameError } = await supabase
     .from('games')

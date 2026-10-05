@@ -1,11 +1,13 @@
 import { first } from '@/lib/url/searchParams';
 import { redirect } from '@/i18n/navigation';
+import { after } from 'next/server';
 import { getLocale, getTranslations } from 'next-intl/server';
 import {
   getPrivateUserFields,
   type PrivateUserFields,
 } from '@/lib/users/privateUserFields';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { markReadOnVisit } from '@/lib/notifications/markRead';
 import { displayNameForOthers } from '@/lib/users/displayName';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -67,6 +69,10 @@ export default async function VennerPage({
   if (!userId) {
     redirect({ href: '/login?next=/profile/venner', locale });
   }
+
+  // #2201: opening the friends page marks friend requests and accepted
+  // requests read.
+  after(() => markReadOnVisit({ userId, surface: 'friends' }));
 
   const sp = await searchParams;
   const statusCode = first(sp.status);
