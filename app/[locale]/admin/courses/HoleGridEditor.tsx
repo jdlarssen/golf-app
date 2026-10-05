@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { nextPar, splitNines } from '@/lib/courses/courseCard';
+import { indexStatusLine, nextPar, splitNines } from '@/lib/courses/courseCard';
 import { strokeIndexCellState } from '@/lib/courses/coursePayload';
 import { formatListLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
@@ -10,9 +10,6 @@ import type { HoleData } from './CourseForm';
 
 type Gender = 'mens' | 'ladies' | 'juniors';
 type IndexedHole = HoleData & { index: number };
-
-// The card lists the missing numbers up to this many; past it, only the count.
-const MAX_LISTED_MISSING = 6;
 
 // The index box is the artboard's own CSS (26 × 30 content box, 1.5 px
 // border), so every browser rounds the border the way it rounds the
@@ -116,19 +113,24 @@ export function HoleGridEditor({
     );
   }
 
-  const noneTyped = holes.every((h) => h.stroke_index.trim() === '');
-  const { missing } = gaps;
-  let status: { text: string; tone: 'hint' | 'warning' } | null = null;
-  if (noneTyped) {
-    status = { text: t('holesHint'), tone: 'hint' };
-  } else if (missing.length > MAX_LISTED_MISSING) {
-    status = { text: t('siMissingCountRule', { count: missing.length }), tone: 'warning' };
-  } else if (missing.length > 0) {
-    status = {
-      text: t('siMissingList', { numbers: formatListLocale(missing.map(String), locale) }),
-      tone: 'warning',
-    };
-  }
+  const line = indexStatusLine(
+    holes.map((h) => h.stroke_index),
+    gaps.missing,
+  );
+  const status =
+    line === null
+      ? null
+      : line.kind === 'hint'
+        ? { text: t('holesHint'), tone: 'hint' as const }
+        : line.kind === 'count'
+          ? { text: t('siMissingCountRule', { count: line.count }), tone: 'warning' as const }
+          : {
+              text: t('siMissingList', {
+                count: line.numbers.length,
+                numbers: formatListLocale(line.numbers.map(String), locale),
+              }),
+              tone: 'warning' as const,
+            };
 
   function half(nine: IndexedHole[]) {
     if (nine.length === 0) return null;
@@ -179,7 +181,7 @@ export function HoleGridEditor({
                       className="group flex h-10 w-full items-center justify-center focus-visible:outline-none"
                     >
                       <span
-                        className={`inline-flex h-[34px] w-[26px] items-center justify-center rounded-lg font-serif text-[16px] font-semibold transition-colors motion-reduce:transition-none group-focus-visible:bg-primary group-focus-visible:text-white group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface dark:group-focus-visible:text-bg ${
+                        className={`inline-flex h-[34px] w-[26px] items-center justify-center rounded-lg font-serif text-[16px] font-semibold tabular-nums transition-colors motion-reduce:transition-none group-focus-visible:bg-primary group-focus-visible:text-white group-focus-visible:ring-2 group-focus-visible:ring-primary group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-surface dark:group-focus-visible:text-bg ${
                           last
                             ? 'bg-primary text-white ring-2 ring-primary ring-offset-2 ring-offset-surface dark:text-bg'
                             : 'bg-par-cell text-text'
@@ -215,8 +217,10 @@ export function HoleGridEditor({
                       placeholder="?"
                       required
                       value={h.stroke_index}
-                      aria-invalid={state === 'duplicate' || undefined}
-                      onChange={(e) => onSi(h.index, e.target.value)}
+                      aria-invalid={state === 'duplicate' || state === 'invalid' || undefined}
+                      // Spaces never reach the field: the rule trims them, and
+                      // `pattern` would not, so the two read alike.
+                      onChange={(e) => onSi(h.index, e.target.value.replace(/\s/g, ''))}
                       onFocus={() => setLastTapped(null)}
                       className={`peer ${INDEX_FIELD} ${INDEX_STATE[state].text} not-focus:text-transparent not-focus:placeholder:text-transparent`}
                     />

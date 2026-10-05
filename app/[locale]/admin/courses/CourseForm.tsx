@@ -645,8 +645,11 @@ export function CourseForm({
           link plus its 1 px top border; the nav pads the safe area itself).
           Chromium paints the stuck bar half a pixel above its box, so a strip
           of the page colour hangs under it (as in EndGameBar) and nothing
-          shows through between the bar and the nav. */}
+          shows through between the bar and the nav. `data-course-save-bar`
+          gives the page scroll padding (globals.css), so a tabbed-to field
+          never ends up behind the bar. */}
       <div
+        data-course-save-bar
         className={`sticky bottom-[calc(59.5px+env(safe-area-inset-bottom,0px))] z-20 -mx-5 mt-6 flex flex-col gap-1 border-t border-border px-4 pt-3 pb-5 leading-[normal] after:absolute after:inset-x-0 after:top-full after:h-1 ${SAVE_BAR_TONE[tone]}`}
       >
         <SubmitButton

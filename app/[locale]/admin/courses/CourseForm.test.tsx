@@ -563,9 +563,8 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
     ).toBeTruthy();
   });
 
-  it('rendrer dame-par-total i dame-blokken under tee-en basert på dame-pars', () => {
+  it('dame-raden i kortet styrer dame-par-totalen i dame-blokken under tee-en', () => {
     const holes = makeHoles(Array(18).fill(4));
-    holes[0].par_ladies = '5'; // hull 1: dame-par 5
     render(
       <CourseForm
         action={NO_OP}
@@ -589,9 +588,16 @@ describe('CourseForm — per-kjønn-par-overstyring', () => {
       />,
     );
 
-    // Dame-blokken: «Par-total: 73»
+    // Dame-blokken: «Par-total: 72», så 73 når hull 1 i kortets dame-rad blir 5.
     const ladies = within(screen.getByRole('group', { name: 'Damer' }));
     expect(ladies.getByText(/par-total:/i)).toBeTruthy();
+    expect(ladies.getByText('72')).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Par for hull 1 (damer): 4. Trykk for å endre' }),
+    );
     expect(ladies.getByText('73')).toBeTruthy();
   });
 });
@@ -1155,6 +1161,16 @@ describe('CourseForm: banekortet (#2278)', () => {
     expect(si(1).getAttribute('aria-invalid')).toBe('true');
     expect(si(3).getAttribute('aria-invalid')).toBe('true');
     expect(si(2).getAttribute('aria-invalid')).toBeNull();
+
+    // Utenfor 1–18 er også ugyldig.
+    setField(container, 'hole_1_si', '19');
+    expect(si(1).getAttribute('aria-invalid')).toBe('true');
+    expect(si(3).getAttribute('aria-invalid')).toBeNull();
+
+    // Mellomrom tas bort mens du skriver, så feltet og regelen leser likt.
+    setField(container, 'hole_1_si', ' 7 ');
+    expect(si(1).value).toBe('7');
+    expect(si(1).getAttribute('aria-invalid')).toBeNull();
   });
 
   it('lagrelinja: det som mangler står under «Lagre»', () => {
