@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { recordingClient } from '@/tests/queryBuilderMock';
 
 // Type A for the Klubbhus room's cup rows (#2493): which cups get a snapshot,
 // what a failed snapshot does, and whether you play or only organise. The
@@ -10,18 +11,9 @@ vi.mock('./myCups', () => ({ getMyCupIds }));
 const getCupSnapshot = vi.fn();
 vi.mock('./getCupSnapshot', () => ({ getCupSnapshot }));
 
-const adminCalls: unknown[][] = [];
 let tournaments: { data: unknown[] | null; error: unknown } = { data: [], error: null };
-vi.mock('@/lib/supabase/admin', () => ({
-  getAdminClient: () => {
-    const b: Record<string, unknown> = {};
-    for (const m of ['from', 'select', 'in', 'order', 'returns']) {
-      b[m] = (...args: unknown[]) => (adminCalls.push([m, ...args]), b);
-    }
-    b.then = (resolve: (v: unknown) => unknown) => resolve(tournaments);
-    return b;
-  },
-}));
+const db = recordingClient(() => tournaments);
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => db.client }));
 
 const { getRoomCups } = await import('./getRoomCups');
 
@@ -40,7 +32,7 @@ const snapshot = (finishedMatches: number, remainingMatches: number) => ({
 beforeEach(() => {
   getMyCupIds.mockReset();
   getCupSnapshot.mockReset();
-  adminCalls.length = 0;
+  db.reset();
   tournaments = { data: [], error: null };
 });
 
@@ -52,7 +44,7 @@ describe('getRoomCups', () => {
 
     const res = await getRoomCups(supabase, 'me', 'Ukjent');
 
-    expect(adminCalls).toContainEqual(['in', 'id', ['a', 'f']]);
+    expect(db.calls()).toContainEqual(['in', 'id', ['a', 'f']]);
     expect(getCupSnapshot).toHaveBeenCalledTimes(1);
     expect(getCupSnapshot).toHaveBeenCalledWith('a', 'Ukjent');
     expect(res).toEqual({
@@ -78,6 +70,16 @@ describe('getRoomCups', () => {
     ]);
   });
 
+  it('a cup gone between the status read and its snapshot is marked too, not shown as «no matches»', async () => {
+    getMyCupIds.mockResolvedValue({ ok: true, ids: ['gone'], playing: ['gone'] });
+    tournaments = { data: [cup('gone', 'active')], error: null };
+    getCupSnapshot.mockResolvedValue(null);
+
+    const res = await getRoomCups(supabase, 'me', 'Ukjent');
+
+    expect(res.ok && res.live.map((c) => [c.id, c.progress])).toEqual([['gone', null]]);
+  });
+
   it('tells a cup you play in from one you only organise', async () => {
     getMyCupIds.mockResolvedValue({ ok: true, ids: ['mine', 'theirs'], playing: ['theirs'] });
     tournaments = { data: [cup('mine', 'active'), cup('theirs', 'active')], error: null };
@@ -94,7 +96,7 @@ describe('getRoomCups', () => {
   it('no cups: no status read, no snapshots', async () => {
     getMyCupIds.mockResolvedValue({ ok: true, ids: [], playing: [] });
     await expect(getRoomCups(supabase, 'me', 'Ukjent')).resolves.toEqual({ ok: true, live: [], finishedCount: 0 });
-    expect(adminCalls).toEqual([]);
+    expect(db.queries).toEqual([]);
     expect(getCupSnapshot).not.toHaveBeenCalled();
   });
 
