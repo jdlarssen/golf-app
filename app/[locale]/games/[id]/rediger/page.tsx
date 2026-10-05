@@ -56,10 +56,6 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-// Every column the form writes back must be read here, or a save resets it
-// (#2258) — `EDIT_GAME_SELECT` is checked against the update in a test, and
-// carries the club/cup/league links the resume rule reads.
-
 export default async function CreatorEditGamePage({
   params,
   searchParams,
@@ -89,6 +85,9 @@ export default async function CreatorEditGamePage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
+    // Every column the form writes back must be read here, or a save resets it
+    // (#2258): `EDIT_GAME_SELECT` is checked against the update in a test, and
+    // carries the club/cup/league links the resume rule reads.
     .select(EDIT_GAME_SELECT)
     .eq('id', id)
     .maybeSingle<EditGameRow>();

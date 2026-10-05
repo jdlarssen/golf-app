@@ -67,9 +67,11 @@ type GameRow = {
 
 /**
  * Which list the page shows (#2269). The default is «Rundene dine» grouped by
- * what happens next; the other three are the ledger, filtered on status alone:
- * drafts, the games in progress (where `ActionItemsStripe` sends its «n spill»
- * rows, cup matches included) and the Resultatprotokoll.
+ * what happens next; the other three are the ledger, scoped by
+ * `adminLedgerScope`: drafts and the Resultatprotokoll hold standalone games
+ * only (owner's answer 05.10, O6), and the games in progress (where
+ * `ActionItemsStripe` sends its «n spill» rows) include cup matches and league
+ * flights (O5).
  */
 type GamesView = 'default' | 'draft' | 'active' | 'finished';
 type LedgerView = Exclude<GamesView, 'default'>;
@@ -205,9 +207,9 @@ const fetchLedgerGames = cache(async (view: LedgerView) => {
 });
 
 /**
- * How many games a ledger view holds, counted rather than the 40 it lists, so
- * the subtitle says the same number as the link that opened it («Ferdige runder
- * · 89» → «89 signerte runder», #2269 O6).
+ * How many games a ledger view holds, counted rather than the 40 it lists and
+ * in the same scope, so the subtitle says the same number as the link that
+ * opened it («Ferdige runder · 62» → «62 signerte runder» on staging, #2269 O6).
  */
 const countLedgerGames = cache(async (view: LedgerView) => {
   const { supabase } = await getAdminGamesContext();
