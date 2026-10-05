@@ -294,10 +294,7 @@ export function DemoGame(): JSX.Element {
           />
 
           <h1 style={holeLineStyle}>
-            <span
-              className="tabular-nums"
-              style={{ fontFamily: 'var(--font-serif)', fontSize: 44, fontWeight: 600, lineHeight: 1 }}
-            >
+            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 44, fontWeight: 600, lineHeight: 1 }}>
               {hole.number}
             </span>
             <span className="text-muted" style={{ fontSize: 13 }}>

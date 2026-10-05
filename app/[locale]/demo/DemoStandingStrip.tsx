@@ -39,7 +39,6 @@ const arrowStyle: CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
   color: 'var(--on-strong-arrow)',
-  fontVariantNumeric: 'tabular-nums',
   whiteSpace: 'nowrap',
 };
 

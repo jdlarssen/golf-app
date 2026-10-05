@@ -288,7 +288,9 @@ export function DemoRail(props: DemoRailProps): JSX.Element {
               fall back to Arial («Inter Fallback»). */}
           <span>
             {`${t('skip')} `}
-            <span className="font-[system-ui]">→</span>
+            <span aria-hidden="true" className="font-[system-ui]">
+              →
+            </span>
           </span>
         </Link>
       </section>
