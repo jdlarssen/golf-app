@@ -61,3 +61,20 @@ export async function getRosterPlayerOptions(
     isGuest: u.is_guest,
   }));
 }
+
+/**
+ * #2210: the picker's options with every rostered player in them. The options
+ * the caller already has come first; roster users missing from them (people
+ * an organiser who does not play cannot see under RLS) are added after, read
+ * by `getRosterPlayerOptions`. Same gate rule as above: the ids come from the
+ * game's own `game_players`.
+ */
+export async function withRosterPlayerOptions<P extends { id: string }>(
+  players: P[],
+  rosterUserIds: string[],
+): Promise<(P | PlayerOption)[]> {
+  const knownIds = new Set(players.map((p) => p.id));
+  const missingIds = rosterUserIds.filter((id) => !knownIds.has(id));
+  const rosterOptions = await getRosterPlayerOptions(missingIds);
+  return [...players, ...rosterOptions.filter((p) => !knownIds.has(p.id))];
+}

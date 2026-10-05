@@ -22,10 +22,8 @@ import {
 } from '@/app/[locale]/admin/games/new/GameForm';
 import { GameWizard } from '@/app/[locale]/admin/games/new/GameWizard';
 import { getWizardMountData } from '@/lib/wizard/getWizardMountData';
-import {
-  planDraftResume,
-  resumeExpectedPlayerCount,
-} from '@/lib/wizard/draftResumePlan';
+import { resumeExpectedPlayerCount } from '@/lib/wizard/draftResumePlan';
+import { loadDraftResume } from '@/lib/wizard/loadDraftResume';
 import {
   saveDraftAction,
   publishFromDraftAction,
@@ -146,7 +144,7 @@ export default async function EditGamePage({
   // linen background, no bottom nav), so the choice between wizard and
   // GameForm is made here, before any chrome renders. The cost: resuming a
   // draft shows no skeleton while the wizard data loads.
-  const resume = await loadWizardResume(id, game);
+  const resume = await loadDraftResume(supabase, id, game, getWizardMountData);
   if (resume) {
     const { wizardData, plan, playerRows } = resume;
     return (
@@ -332,36 +330,6 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
       })}
     </Banner>
   );
-}
-
-/**
- * #1385: et utkast gjenopptas i veiviseren det ble laget i. Cup-/liga-koblede
- * utkast er unntaket (veiviserens cup-gren er en opprettelses-kortslutning,
- * ikke en redigeringsflate) — de trenger ikke veiviser-oppsettet i det hele
- * tatt, og heller ikke planlagte spill. Null → GameForm.
- */
-async function loadWizardResume(gameId: string, game: EditGameRow) {
-  const mayResumeInWizard =
-    game.status === 'draft' && !game.tournament_id && !game.league_round_id;
-  if (!mayResumeInWizard) return null;
-
-  const { supabase } = await getEditContext();
-  const [playersResult, wizardData] = await Promise.all([
-    supabase
-      .from('game_players')
-      .select('user_id, team_number, flight_number, tee_gender')
-      .eq('game_id', gameId)
-      .returns<EditGamePlayerRow[]>(),
-    getWizardMountData(),
-  ]);
-  if (playersResult.error) throw playersResult.error;
-
-  // Katalog-vakten kan fortsatt sende utkastet til GameForm: finnes ikke
-  // formatet i noen av veiviserens kataloger, ville steg 2 vist et grid uten
-  // spillets eget format.
-  const plan = planDraftResume(game, wizardData.formatsByIntent);
-  if (plan.kind !== 'wizard') return null;
-  return { wizardData, plan, playerRows: playersResult.data ?? [] };
 }
 
 async function EditGameFormBody({
