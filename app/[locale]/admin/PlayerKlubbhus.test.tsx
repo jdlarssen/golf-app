@@ -53,6 +53,11 @@ describe('PlayerKlubbhus room (#2493)', () => {
       '/klubber/club-1?kilde=klubbhuset',
       '/klubber/club-2?kilde=klubbhuset',
     ]);
+    // The numbers ride on the row for the staging oracle (#2493 point 13).
+    expect(links.map((a) => [a.dataset.role, a.dataset.members, a.dataset.nextRound])).toEqual([
+      ['admin', '142', '2026-10-10T07:00:00Z'],
+      ['member', '18', ''],
+    ]);
     expect(screen.queryByTestId('player-no-club')).toBeNull();
     rows.unmount();
 
@@ -67,7 +72,9 @@ describe('PlayerKlubbhus room (#2493)', () => {
 
   it('cups: a row per running cup; only finished ones → the /admin/cup row; none → nothing; a failed read → an error box', () => {
     const rows = render(<CupsView cups={CUPS} finishedCount={1} />);
-    expect(screen.getAllByTestId('player-cup-row').map((a) => a.getAttribute('href'))).toEqual(['/cup/cup-1']);
+    const cupRows = screen.getAllByTestId('player-cup-row');
+    expect(cupRows.map((a) => a.getAttribute('href'))).toEqual(['/cup/cup-1']);
+    expect([cupRows[0].dataset.played, cupRows[0].dataset.total]).toEqual(['3', '8']);
     rows.unmount();
 
     const finishedOnly = render(<CupsView cups={[]} finishedCount={2} />);
