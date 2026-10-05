@@ -12,7 +12,10 @@ export type RoomCupRead = {
   group_id: string | null;
   /** In the roster or played a match; `false` = you only created it. */
   playing: boolean;
-  /** «X av N kamper spilt» from the cup snapshot; `null` = that read failed. */
+  /**
+   * «X av N kamper spilt» from the cup snapshot; `null` = no snapshot: the
+   * read failed, or the cup was gone by the time it ran.
+   */
   progress: { played: number; total: number } | null;
 };
 
@@ -30,8 +33,10 @@ type CupStatusRow = {
  *
  * Status is read FIRST, so a finished cup never builds a snapshot. Each
  * snapshot is read on its own (`allSettled`): one that fails marks that cup's
- * row, not the whole section (#2490). A failed read of the ids or the status
- * fails the section.
+ * row, not the whole section (#2490). So does a snapshot that comes back
+ * empty (the cup was deleted between the two reads): the row must not say
+ * «ingen kamper ennå» about a cup it could not read. A failed read of the ids
+ * or the status fails the section.
  */
 export async function getRoomCups(
   supabase: Parameters<typeof getMyCupIds>[0],
@@ -68,13 +73,14 @@ export async function getRoomCups(
     live: live.map((cup, i) => {
       const snap = snapshots[i];
       if (snap.status === 'rejected') console.error('[getRoomCups] snapshot', cup.id, snap.reason);
+      const snapshot = snap.status === 'fulfilled' ? snap.value : null;
       return {
         id: cup.id,
         name: cup.name,
         created_by: cup.created_by,
         group_id: cup.group_id,
         playing: playing.has(cup.id),
-        progress: snap.status === 'fulfilled' ? cupProgress(snap.value?.leaderboard ?? null) : null,
+        progress: snapshot ? cupProgress(snapshot.leaderboard) : null,
       };
     }),
   };
