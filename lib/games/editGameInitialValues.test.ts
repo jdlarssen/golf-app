@@ -37,6 +37,11 @@ describe('EDIT_FORM_COLUMNS', () => {
     const page = new Set(EDIT_GAME_SELECT.split(',').map((c) => c.trim()));
     expect(['group_id', 'tournament_id', 'league_round_id'].filter((c) => !page.has(c))).toEqual([]);
     expect([...selected].filter((c) => !page.has(c))).toEqual([]);
+    // …and both pages read through it, not a list of their own.
+    for (const route of ['../../app/[locale]/admin/games/[id]/edit/page.tsx', '../../app/[locale]/games/[id]/rediger/page.tsx']) {
+      const source = readFileSync(path.resolve(__dirname, route), 'utf8');
+      expect(source, route).toMatch(/\.select\(EDIT_GAME_SELECT\)/);
+    }
   });
 
   it('selects every column the edit save writes back from the form', () => {
