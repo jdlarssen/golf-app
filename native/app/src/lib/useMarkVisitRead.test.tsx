@@ -67,6 +67,8 @@ const CALLERS: Record<string, { surface: VisitSurface; entity: string | null }> 
   'Approve.tsx': { surface: 'gameApprove', entity: 'gameId' },
   'Leaderboard.tsx': { surface: 'gameLeaderboard', entity: 'gameId' },
   'Friends.tsx': { surface: 'friends', entity: null },
+  // Appens lever-port, webbens /games/[id]/submit: leveringspåminnelsen.
+  'Scorecard.tsx': { surface: 'gameSubmit', entity: 'gameId' },
 };
 
 describe('skjermene som merker', () => {

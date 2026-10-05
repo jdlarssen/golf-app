@@ -113,6 +113,7 @@ import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
+import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
@@ -136,6 +137,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const { ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
+  // #2201: lever-påminnelsen er lest når du har åpnet scorekortet (webbens
+  // /games/[id]/submit).
+  useMarkVisitRead('gameSubmit', gameId);
   const { bundle, refresh } = useGameBundle(gameId);
   const { scores: localScores, reload } = useLocalScores(gameId);
   // #2067: hullene en trukket kaptein førte, teller for laget. Foldes inn før
