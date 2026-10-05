@@ -1,33 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { recordingClient, type QueryCall } from '@/tests/queryBuilderMock';
 
-// Type A: which date each club row gets as «neste runde» (#2493). The club
-// query is the boundary, faked in memory with the same filters, order and
-// window as the real one (`getUpcomingClubGames`), so the test sees what the
-// database would hand back.
+// Type A: which date each club row gets as «neste runde» (#2493). The real
+// `getUpcomingClubGames` runs; the boundary is the service-role client
+// (shared `recordingClient`), and each query is answered from `ROWS` by the
+// filters it actually sent: group ids, status, earliest tee-off, order and
+// window.
 type Row = { id: string; group_id: string; status: string; scheduled_tee_off_at: string | null };
 let ROWS: Row[] = [];
 let failFor: string | null = null;
-const upcoming = vi.fn(
-  async (clubIds: string[], opts: { teeOffFrom?: string; limit?: number } = {}) => {
-    if (failFor && clubIds.includes(failFor)) return { data: null, error: { message: 'boom' } };
-    const data = ROWS.filter((r) => clubIds.includes(r.group_id) && r.status === 'scheduled')
-      .filter((r) => !opts.teeOffFrom || (r.scheduled_tee_off_at !== null && r.scheduled_tee_off_at >= opts.teeOffFrom))
-      .sort((a, b) =>
-        a.scheduled_tee_off_at === b.scheduled_tee_off_at
-          ? 0
-          : a.scheduled_tee_off_at === null
-            ? 1
-            : b.scheduled_tee_off_at === null
-              ? -1
-              : a.scheduled_tee_off_at < b.scheduled_tee_off_at
-                ? -1
-                : 1,
-      )
-      .slice(0, opts.limit ?? 50);
-    return { data, error: null };
-  },
-);
-vi.mock('@/lib/games/getUpcomingClubGames', () => ({ getUpcomingClubGames: upcoming }));
+
+const arg = (calls: QueryCall[], method: string, column: string) =>
+  calls.find((c) => c[0] === method && c[1] === column)?.[2];
+
+function answer(calls: QueryCall[]) {
+  const clubIds = arg(calls, 'in', 'group_id') as string[];
+  if (failFor && clubIds.includes(failFor)) return { data: null, error: { message: 'boom' } };
+  const status = arg(calls, 'eq', 'status');
+  const from = arg(calls, 'gte', 'scheduled_tee_off_at') as string | undefined;
+  const limit = (calls.find((c) => c[0] === 'limit')?.[1] as number | undefined) ?? Infinity;
+  const tee = (r: Row) => r.scheduled_tee_off_at;
+  const data = ROWS.filter((r) => clubIds.includes(r.group_id) && r.status === status)
+    .filter((r) => from === undefined || (tee(r) !== null && tee(r)! >= from))
+    // ascending, rows without a tee-off last (nullsFirst: false)
+    .sort((a, b) => (tee(a) === tee(b) ? 0 : tee(a) === null ? 1 : tee(b) === null ? -1 : tee(a)! < tee(b)! ? -1 : 1))
+    .slice(0, limit);
+  return { data, error: null };
+}
+
+const db = recordingClient(answer);
+vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => db.client }));
 
 const { getNextClubRounds } = await import('./getNextClubRounds');
 
@@ -42,7 +44,7 @@ const round = (id: string, club: string, tee: string | null, status = 'scheduled
 beforeEach(() => {
   ROWS = [];
   failFor = null;
-  upcoming.mockClear();
+  db.reset();
 });
 
 describe('getNextClubRounds', () => {
@@ -62,6 +64,13 @@ describe('getNextClubRounds', () => {
         ['quiet', '2026-10-24T08:00:00.000Z'],
       ]),
     });
+    // One query per club, each one row from now on.
+    expect(
+      db.queries.map((q) => [arg(q, 'in', 'group_id'), arg(q, 'gte', 'scheduled_tee_off_at'), q.find((c) => c[0] === 'limit')?.[1]]),
+    ).toEqual([
+      [['busy'], NOW.toISOString(), 1],
+      [['quiet'], NOW.toISOString(), 1],
+    ]);
   });
 
   it('finds the quiet club its round when a busy club has 50 coming rounds before it', async () => {
@@ -102,6 +111,6 @@ describe('getNextClubRounds', () => {
 
   it('no clubs, no reads', async () => {
     await expect(getNextClubRounds([], NOW)).resolves.toEqual({ ok: true, next: new Map() });
-    expect(upcoming).not.toHaveBeenCalled();
+    expect(db.queries).toEqual([]);
   });
 });
