@@ -40,7 +40,7 @@ flowchart TD
   Nav --> Klub["Klubbhuset → /admin"]
   Klub --> KP{is_admin?}
   KP -- ja --> Sek["Hele Sekretariatet<br/>(Spill, Spillere, Baner, Cup, Formater, …)"]
-  KP -- nei --> PlayerKlub["Adaptivt spiller-rom (#892):<br/>invitasjon til å arrangere<br/>+ Dine klubber + Det du arrangerer<br/>+ Verktøy (Baner, Spillformater)"]
+  KP -- nei --> PlayerKlub["Spiller-rommet (#892, #2493):<br/>«Lag en ny runde» + Rundene dine<br/>+ Klubbene dine + Cuper<br/>+ Verktøy (Baner, Spillformater, idé)"]
 ```
 
 **Persistente nav-elementer** (verifisert i `app/[locale]/layout.tsx` + sidene):
@@ -56,8 +56,8 @@ i redigeringsveiviseren på `/admin/games/[id]/edit` og `/games/[id]/rediger` (e
 fra Klubbhuset (Baner, Spillformater, en klubb), går tilbake dit: lenkene bærer `?kilde=klubbhuset`
 (#2487), og kvitteringen for ny bane sier «Tilbake til Klubbhuset». «Klubbhuset» er universell:
 fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, mens spilleren
-møter et **adaptivt rom** (#892): en invitasjon til å arrangere (aldri en blindvei), klubbene sine,
-spillene/cupene de selv har satt opp, og Verktøy (Baner + Spillformater) nederst. **Opprett
+møter et **rom** (#892, tegnet om i #2493): kortet «Lag en ny runde» (den eneste døra til en ny
+runde), rundene de selv har satt opp, klubbene og cupene sine, og Verktøy (Baner + Spillformater) nederst. **Opprett
 spill/bane bor inne i Klubbhuset, ikke på Hjem.** Hjem er play + discover-navet: dine spill +
 «Finn turneringer». **Finn turneringer er terminlista** (#2258): én liste sortert på starttid og delt i
 dager («Lørdag 4. oktober · om 3 dager»), med filterbrikkene «Alle», «Denne helga» og «Klubben min»
@@ -191,7 +191,7 @@ flowchart LR
 
 ### A1 — Opprett spill (GameWizard, 5 steg)
 
-Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new`; vanlig spiller går Spill-flaten → `/opprett-spill`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg). Steg 4 har en andre skjerm for lag, sider og flights (`?step=4&skjerm=lag`, #2321).
+Inngang: to dører (#2493). En spiller trykker «Lag en ny runde»-kortet i Klubbhus-rommet: «Med kompiser» åpner `/opprett-spill?intent=kompis`, «For klubben» (bare for klubbadmin, `isClubAdminAnywhere`) åpner `?intent=klubb`, og ellers står «Annen runde» → `/opprett-spill` uten forvalg. Admin trykker «Opprett spill» på `/admin/games` → `/admin/games/new`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg). Steg 4 har en andre skjerm for lag, sider og flights (`?step=4&skjerm=lag`, #2321).
 
 ```mermaid
 flowchart LR
@@ -237,7 +237,7 @@ Publiserer en arrangør som ikke er admin uten å stå på lista selv, lander he
 
 ### A4 — Klubbhuset / Sekretariatet (dashboard)
 
-`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). Fanens forside har ingen tilbakepil (#2487). For admin: hilsen + fire rader i full bredde (`DenseTileList`: Spill / Spillere / Baner / Resultatprotokoll, og «Innsendte ideer» som femte når det ligger usette ideer) + «Mer i Sekretariatet» som et tokolonners rutenett av kompakte kort (`CompactTileGrid`: Cuper / Ligaer / Lanseringer / Klubber / Formats / Spillformater, og «Innsendte ideer» som sjuende når køen er tom) + aktivitets-logg (siste 14 dager). For vanlig spiller: et **adaptivt rom** (#892, `PlayerKlubbhus.tsx`) som varierer på to fakta — har du klubber, og har du opprettet noe spill/cup. Seksjoner i rekkefølge: hilsen (umiddelbar) → arrangement-blokk (invitasjon «Sett opp en runde» / «… eller en cup» når 0 opprettet, ellers «Det du arrangerer» med «+ Ny runde» + capped liste) og raden «Cuper» med «Du er med i n» når du er med i minst én cup → Dine klubber (inline `getMyClubs`-liste, ellers «Ikke med i en klubb ennå →») → Verktøy (Baner, Spillformater og «Har du en idé?»). Lista i «Det du arrangerer» (og «Se alle» på `/klubbhuset`) tar ikke med cupkamper og ligaflighter; de hører til cupens og ligaens side (`onlyStandaloneGames`, #2489). `/klubbhuset` heter «Rundene dine» og grupperer rundene etter hva som skjer (#2269): «I gang nå» (hvor mange som har levert, ventende godkjenninger og «Styr spillere»), «Neste» (dato, tid, påmeldte og påmeldingen, eller hvorfor runden ikke starter av seg selv), «n utkast · fortsett der du slapp» (ett utkast åpner «Klar?» i veiviseren, for admin på `/admin/games/[id]/edit` og for andre arrangører på `/games/[id]/rediger`; flere åpner `?vis=utkast`) og «Ferdige runder · n» (`?vis=ferdige`). Tomme grupper skjules, og siden har ingen dør for ny runde. Baner, Spillformater og klubbradene bærer `?kilde=klubbhuset`, så tilbake fra dem går til `/admin`. Arrangement + klubber strømmer bak hver sin Suspense; ingen admin-tellinger eller aktivitets-logg.
+`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). Fanens forside har ingen tilbakepil (#2487). For admin: hilsen + fire rader i full bredde (`DenseTileList`: Spill / Spillere / Baner / Resultatprotokoll, og «Innsendte ideer» som femte når det ligger usette ideer) + «Mer i Sekretariatet» som et tokolonners rutenett av kompakte kort (`CompactTileGrid`: Cuper / Ligaer / Lanseringer / Klubber / Formats / Spillformater, og «Innsendte ideer» som sjuende når køen er tom) + aktivitets-logg (siste 14 dager). For vanlig spiller: et **rom** (#892, `PlayerKlubbhus.tsx`), tegnet om etter rom-artboardene i #2493. Toppen sier bare «Klubbhuset» (uten pil), og under står hilsenen «Hei, Kari.» som sidens overskrift. Seksjoner i rekkefølge: kortet «Lag en ny runde» (eneste dør til ny runde: «Med kompiser» + «For klubben» for klubbadmin, ellers «Annen runde») → rundene du har satt opp (`ArrangedRoundsView` fra `getArrangedRounds`, maks tre i «Neste» og «Alle n →» til `/klubbhuset` når det er flere) → Klubbene dine (rolle, antall medlemmer og neste runde, ellers «ingen runder satt opp»; uten klubb står «Ikke med i en klubb ennå →») → Cuper (én rad per cup som ikke er ferdig, «Du er med · 3 av 8 kamper spilt»; bare ferdige cuper gir raden «Cuper · Du er med i n») → Verktøy (Baner, Spillformater og «Har du en idé?» som rader uten ikoner). Hver seksjon strømmer bak sin egen Suspense og viser en feilboks der hvis lesingen feiler (#2490). Lista over rundene tar ikke med cupkamper og ligaflighter; de hører til cupens og ligaens side (`onlyStandaloneGames`, #2489). `/klubbhuset` heter «Rundene dine» og grupperer rundene etter hva som skjer (#2269): «I gang nå» (hvor mange som har levert, ventende godkjenninger og «Styr spillere»), «Neste» (dato, tid, påmeldte og påmeldingen, eller hvorfor runden ikke starter av seg selv), «n utkast · fortsett der du slapp» (ett utkast åpner «Klar?» i veiviseren, for admin på `/admin/games/[id]/edit` og for andre arrangører på `/games/[id]/rediger`; flere åpner `?vis=utkast`) og «Ferdige runder · n» (`?vis=ferdige`). Tomme grupper skjules, og siden har ingen dør for ny runde. Baner, Spillformater og klubbradene bærer `?kilde=klubbhuset`, så tilbake fra dem går til `/admin`. Rommet har ingen admin-tellinger eller aktivitets-logg.
 
 ---
 
