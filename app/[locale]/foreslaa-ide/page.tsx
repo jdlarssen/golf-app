@@ -12,10 +12,13 @@ import { submitIdea } from './actions';
 
 // #984: Foreslå en idé — lean feedback-boks. Gated på innlogget (ikke admin).
 // Admin-only versjon av håndtaket er /admin/ideer.
+// #2277: «Stemmer ikke noe? Si fra» på en baneside lenker hit med ?bane=<slug>
+// (courseReportHref), og feltet fylles med banens navn — en melding til admin.
 
 type SearchParams = Promise<{
   sent?: string | string[];
   error?: string | string[];
+  bane?: string | string[];
 }>;
 
 export default async function ForeslaaIdePage({
@@ -37,6 +40,19 @@ export default async function ForeslaaIdePage({
 
   const sent = first(sp.sent) === '1';
   const errorCode = first(sp.error);
+
+  // Banens navn fra sluggen. Ingen treff eller en feil gir tomt felt, som før.
+  const courseSlug = first(sp.bane);
+  let prefill: string | undefined;
+  if (courseSlug && !sent) {
+    const { data: course, error } = await supabase
+      .from('courses')
+      .select('name')
+      .eq('slug', courseSlug)
+      .maybeSingle();
+    if (error) console.error('[foreslaa-ide] course prefill failed', error);
+    if (course) prefill = t('coursePrefill', { name: course.name });
+  }
 
   return (
     <AdminShell>
@@ -72,6 +88,7 @@ export default async function ForeslaaIdePage({
                   rows={5}
                   maxLength={2000}
                   placeholder={t('fieldPlaceholder')}
+                  defaultValue={prefill}
                   className="w-full resize-none rounded-xl border border-border bg-bg px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:ring-2 focus:ring-primary/30 leading-relaxed"
                   aria-describedby="idea-helper"
                 />

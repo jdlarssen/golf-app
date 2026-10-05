@@ -3456,7 +3456,8 @@
     "submitPending": "Sender …",
     "successMessage": "Takk! Vi har fått idéen din.",
     "sentFollowUp": "Vi ser på alle forslag. Bygger vi ditt, får du beskjed.",
-    "errorEmpty": "Du må skrive noe før du sender inn."
+    "errorEmpty": "Du må skrive noe før du sender inn.",
+    "coursePrefill": "Om banen {name}: "
   },
   "adminIdeer": {
     "pageTitle": "Innsendte ideer",
@@ -6348,22 +6349,30 @@
     "detail": {
       "metaTitle": "{name} – slope, rating og baneinfo",
       "metaDescription": "Slope, course rating, par og hulloversikt for {name}.",
-      "kicker": "Golfbane",
+      "kicker": "Banekortet",
       "backLabel": "Alle baner",
-      "holesHeading": "Hull for hull",
+      "status": "{holes} hull · Par {par}",
+      "statusWithLength": "{holes} hull · Par {par} · {meters} m fra {tee}",
+      "teeLegend": "Tee",
+      "ratingMens": "Herre",
+      "ratingLadies": "Dame",
+      "ratingJuniors": "Junior",
+      "ratingValue": "<num>{slope}</num> slope · <num>{rating}</num> CR",
+      "ratingPar": "Par {par}",
       "colHole": "Hull",
       "colPar": "Par",
       "colIndex": "Indeks",
-      "genderMens": "Herrer",
-      "genderLadies": "Damer",
-      "genderJuniors": "Junior",
-      "teesHeading": "Tee-er",
-      "lengthLabel": "{meters} meter",
-      "slopeLabel": "Slope {value}",
-      "ratingLabel": "CR {value}",
-      "parLabel": "Par {value}",
-      "ctaHeading": "Klar for en runde?",
-      "ctaButton": "Arranger runde her"
+      "rowParLadies": "Par dame",
+      "rowParJuniors": "Par junior",
+      "out": "Ut",
+      "in": "Inn",
+      "captionOut": "Hull 1–9",
+      "captionIn": "Hull 10–18",
+      "hardest": "Vanskeligst",
+      "easiest": "Lettest",
+      "factLine": "<num>Hull {hole}</num> · par {par} · indeks {index}",
+      "ctaButton": "Arranger en runde på {name}",
+      "reportLink": "Stemmer ikke noe? Si fra"
     }
   },
   "demo": {

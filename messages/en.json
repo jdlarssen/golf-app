@@ -3456,7 +3456,8 @@
     "submitPending": "Sending …",
     "successMessage": "Thanks! We've received your idea.",
     "sentFollowUp": "We look at every suggestion. If we build yours, you'll hear from us.",
-    "errorEmpty": "Please write something before submitting."
+    "errorEmpty": "Please write something before submitting.",
+    "coursePrefill": "About the course {name}: "
   },
   "adminIdeer": {
     "pageTitle": "Submitted ideas",
@@ -6348,22 +6349,30 @@
     "detail": {
       "metaTitle": "{name} – slope, rating and course info",
       "metaDescription": "Slope, course rating, par and hole-by-hole info for {name}.",
-      "kicker": "Golf course",
+      "kicker": "Course card",
       "backLabel": "All courses",
-      "holesHeading": "Hole by hole",
+      "status": "{holes} holes · Par {par}",
+      "statusWithLength": "{holes} holes · Par {par} · {meters} m from {tee}",
+      "teeLegend": "Tee",
+      "ratingMens": "Men",
+      "ratingLadies": "Ladies",
+      "ratingJuniors": "Junior",
+      "ratingValue": "<num>{slope}</num> slope · <num>{rating}</num> CR",
+      "ratingPar": "Par {par}",
       "colHole": "Hole",
       "colPar": "Par",
       "colIndex": "Index",
-      "genderMens": "Men's",
-      "genderLadies": "Ladies'",
-      "genderJuniors": "Junior",
-      "teesHeading": "Tees",
-      "lengthLabel": "{meters} meters",
-      "slopeLabel": "Slope {value}",
-      "ratingLabel": "CR {value}",
-      "parLabel": "Par {value}",
-      "ctaHeading": "Ready for a round?",
-      "ctaButton": "Set up a round here"
+      "rowParLadies": "Par ladies",
+      "rowParJuniors": "Par junior",
+      "out": "Out",
+      "in": "In",
+      "captionOut": "Holes 1–9",
+      "captionIn": "Holes 10–18",
+      "hardest": "Hardest",
+      "easiest": "Easiest",
+      "factLine": "<num>Hole {hole}</num> · par {par} · index {index}",
+      "ctaButton": "Set up a round at {name}",
+      "reportLink": "Something wrong? Let us know"
     }
   },
   "demo": {
