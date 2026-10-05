@@ -26,7 +26,7 @@ import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   buildEditFormInitialValues,
   buildEditInitialValues,
-  EDIT_FORM_COLUMNS,
+  EDIT_GAME_SELECT,
   type EditGameRow,
   type EditGamePlayerRow,
 } from '@/lib/games/editGameInitialValues';
@@ -57,11 +57,8 @@ type SearchParams = Promise<{
 }>;
 
 // Every column the form writes back must be read here, or a save resets it
-// (#2258) — the shared list is checked against the update in a test.
-// #2433: group_id + tournament_id only tell buildEditFormInitialValues whether
-// this is a club tournament; neither comes back through the form.
-// league_round_id: a league-linked draft keeps GameForm (`loadDraftResume`).
-const GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id, league_round_id`;
+// (#2258) — `EDIT_GAME_SELECT` is checked against the update in a test, and
+// carries the club/cup/league links the resume rule reads.
 
 export default async function CreatorEditGamePage({
   params,
@@ -92,7 +89,7 @@ export default async function CreatorEditGamePage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select(GAME_SELECT)
+    .select(EDIT_GAME_SELECT)
     .eq('id', id)
     .maybeSingle<EditGameRow>();
 

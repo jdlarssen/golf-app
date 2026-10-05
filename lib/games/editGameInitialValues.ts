@@ -29,6 +29,15 @@ import type { StartType } from './startType';
 export const EDIT_FORM_COLUMNS =
   'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, start_type, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate, entry_fee_kr, payment_link, prizes';
 
+/**
+ * What both edit pages select: the form's columns plus the club, cup and league
+ * links. `buildEditFormInitialValues` reads the club and cup links, and the
+ * wizard's resume rule (`lib/wizard/loadDraftResume.ts`, #2269) reads all
+ * three: a missing `league_round_id` would open a league-linked draft in the
+ * wizard. One home for both routes.
+ */
+export const EDIT_GAME_SELECT = `${EDIT_FORM_COLUMNS}, group_id, tournament_id, league_round_id`;
+
 export type EditGameRow = {
   id: string;
   name: string;

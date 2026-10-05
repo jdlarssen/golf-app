@@ -97,7 +97,7 @@ export function ArrangedRoundsView({
                 <li key={game.id}>
                   <SmartLink
                     href={arrangedRoundHref('live', game.id, isAdmin)}
-                    aria-label={[name, t('liveStatus'), delivered, pending, modeLabel(game), pill]
+                    aria-label={[name, t('liveBadge'), t('liveStatus'), delivered, pending, modeLabel(game), pill]
                       .filter(Boolean)
                       .join(', ')}
                     data-testid="arranged-live-row"

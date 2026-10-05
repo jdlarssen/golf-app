@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import {
   EDIT_FORM_COLUMNS,
+  EDIT_GAME_SELECT,
   buildEditFormInitialValues,
   buildEditInitialValues,
   type EditGameRow,
@@ -28,6 +29,14 @@ describe('EDIT_FORM_COLUMNS', () => {
   it('finds the update in the edit actions (the guard is not reading an empty list)', () => {
     expect(written).toEqual(expect.arrayContaining(['start_type', 'let_friends_skip_gate', 'prizes']));
     expect(written.length).toBeGreaterThan(15);
+  });
+
+  it('both edit pages select the links the wizard resume rule reads (#2269)', () => {
+    // Without league_round_id a league-linked draft would open the wizard and
+    // nothing would say so (`loadDraftResume` reads it as «no link»).
+    const page = new Set(EDIT_GAME_SELECT.split(',').map((c) => c.trim()));
+    expect(['group_id', 'tournament_id', 'league_round_id'].filter((c) => !page.has(c))).toEqual([]);
+    expect([...selected].filter((c) => !page.has(c))).toEqual([]);
   });
 
   it('selects every column the edit save writes back from the form', () => {
