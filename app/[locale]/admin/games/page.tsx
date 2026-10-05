@@ -22,6 +22,7 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import { localizeGameName } from '@/lib/games/autoGameName';
 import {
+  adminLedgerScope,
   groupArrangedRounds,
   groupRosterByGame,
   onlyStandaloneGames,
@@ -184,20 +185,20 @@ export default async function GamesPage({
 }
 
 /**
- * A ledger view: the games with that status, newest first, cup matches and
- * league flights included. Drafts and the protocol show the 40 newest. «I gang
- * nå» shows every active game: it is where `ActionItemsStripe` sends its «n
- * spill» rows, and the stripe counts every active game, so a capped list could
- * leave out the very game it counted. Cached per request, so the subtitle and
- * the list share one read.
+ * A ledger view: the games with that status, newest first, scoped by
+ * `adminLedgerScope` (drafts and the protocol without cup matches and league
+ * flights; «I gang nå» with them). Drafts and the protocol show the 40 newest.
+ * «I gang nå» shows every active game: it is where `ActionItemsStripe` sends
+ * its «n spill» rows, and the stripe counts every active game, so a capped
+ * list could leave out the very game it counted. Cached per request, so the
+ * subtitle and the list share one read.
  */
 const fetchLedgerGames = cache(async (view: LedgerView) => {
   const { supabase } = await getAdminGamesContext();
-  const query = supabase
-    .from('games')
-    .select(LEDGER_SELECT)
-    .eq('status', view)
-    .order('created_at', { ascending: false });
+  const query = adminLedgerScope(
+    supabase.from('games').select(LEDGER_SELECT).eq('status', view),
+    view,
+  ).order('created_at', { ascending: false });
   const { data, error } = await (view === 'active' ? query : query.limit(40)).returns<GameRow[]>();
   if (error) throw error;
   return data ?? [];
@@ -210,10 +211,10 @@ const fetchLedgerGames = cache(async (view: LedgerView) => {
  */
 const countLedgerGames = cache(async (view: LedgerView) => {
   const { supabase } = await getAdminGamesContext();
-  const { count, error } = await supabase
-    .from('games')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', view);
+  const { count, error } = await adminLedgerScope(
+    supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', view),
+    view,
+  );
   if (error) throw error;
   return count ?? 0;
 });
@@ -286,9 +287,9 @@ async function readRosterRows(gameIds: string[]) {
 
 /**
  * The default view (#2269): the same grouping as «Rundene dine», over every
- * organiser's standalone games. The drafts and finished counts are counted on
- * status alone, like the lists they open (`?status=draft`, `?status=finished`),
- * so a number and its list always agree, cup matches included.
+ * organiser's standalone games. The drafts and finished counts are scoped like
+ * the lists they open (`adminLedgerScope`: standalone only, owner's answer
+ * 05.10), so a number and its list always agree.
  */
 async function DefaultRounds() {
   const { supabase } = await getAdminGamesContext();
@@ -302,13 +303,16 @@ async function DefaultRounds() {
   const [roster, drafts, finished, blocks] = await Promise.all([
     readRosterRows(rosterIds),
     // `count` plus up to two ids: one draft opens the wizard, more the list.
-    supabase
-      .from('games')
-      .select('id', { count: 'exact' })
-      .eq('status', 'draft')
+    adminLedgerScope(
+      supabase.from('games').select('id', { count: 'exact' }).eq('status', 'draft'),
+      'draft',
+    )
       .order('created_at', { ascending: false })
       .limit(2),
-    supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'finished'),
+    adminLedgerScope(
+      supabase.from('games').select('id', { count: 'exact', head: true }).eq('status', 'finished'),
+      'finished',
+    ),
     // Service role (see `readCreatorStartBlock`); the page is admin-gated.
     Promise.all(
       upcomingBlockIds(games).map(async (id) => [id, await readCreatorStartBlock(id)] as const),

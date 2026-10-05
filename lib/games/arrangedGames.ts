@@ -17,6 +17,20 @@ export function onlyStandaloneGames<
   return query.is('tournament_id', null).is('league_round_id', null);
 }
 
+/**
+ * Which games an admin list on `/admin/games` holds, for the list and for the
+ * count on the link that opens it (#2269). Owner's answer 05.10 (O6, PR
+ * #2537): drafts and the Resultatprotokoll show standalone games only. Cup
+ * matches and league flights stand on their cup's and league's pages. «I gang
+ * nå» (`active`) keeps every game: `ActionItemsStripe` counts them all and
+ * links there (O5).
+ */
+export function adminLedgerScope<
+  Q extends { is(column: string, value: boolean | null): Q },
+>(query: Q, view: 'draft' | 'active' | 'finished'): Q {
+  return view === 'active' ? query : onlyStandaloneGames(query);
+}
+
 // «Rundene dine» (#2269): the arranged rounds, grouped by what happens next.
 // Pure rules, no reads and no rendering. The reads live in
 // `./getArrangedRounds.ts` (and, for admin, `/admin/games`); the view is

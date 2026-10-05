@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  adminLedgerScope,
   arrangedList,
   arrangedListHref,
   arrangedRoundHref,
@@ -36,6 +37,21 @@ describe('onlyStandaloneGames', () => {
       ['tournament_id', null],
       ['league_round_id', null],
     ]);
+  });
+});
+
+describe('adminLedgerScope', () => {
+  // Owner's answer 05.10 (O6, PR #2537): cup matches and league flights leave
+  // the drafts list and the Resultatprotokoll, and the counts that open them.
+  // «I gang nå» keeps every game: the action-item stripe counts them all (O5).
+  it.each([
+    ['draft', [['tournament_id', null], ['league_round_id', null]]],
+    ['finished', [['tournament_id', null], ['league_round_id', null]]],
+    ['active', []],
+  ] as const)('%s → %j', (view, expected) => {
+    const builder = fakeBuilder();
+    expect(adminLedgerScope(builder, view)).toBe(builder);
+    expect(builder.calls).toEqual(expected);
   });
 });
 
