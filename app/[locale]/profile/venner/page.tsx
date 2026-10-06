@@ -331,7 +331,8 @@ export default async function VennerPage({
               <span className="text-[12px] text-muted">{t('sortedByLastPlayed')}</span>
             )}
           </div>
-          <div className="mx-4 overflow-hidden rounded-2xl border border-border bg-surface">
+          {/* The rows run edge to edge in a clipping card: draw focus inside. */}
+          <div data-focus-inset className="mx-4 overflow-hidden rounded-2xl border border-border bg-surface">
             {friends.length === 0 ? (
               <p className="px-3.5 py-3 text-[14px] text-muted">{t('noFriendsYet')}</p>
             ) : (
