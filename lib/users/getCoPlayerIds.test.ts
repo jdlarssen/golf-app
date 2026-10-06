@@ -61,4 +61,39 @@ describe('getCoPlayerIds', () => {
 
     expect(await getCoPlayerIds(ME)).toEqual([]);
   });
+
+  it('reads the co-players in slices of at most 100 games (#2267)', async () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({
+      game_id: `g${i}`,
+      games: { status: 'finished', created_by: ORGANISER },
+    }));
+    adminMock = buildSupabaseMock([
+      { data: many, error: null },
+      { data: [{ user_id: 'p1' }, { user_id: 'p2' }], error: null },
+      { data: [{ user_id: 'p2' }, { user_id: 'p3' }], error: null },
+    ]);
+
+    const result = await getCoPlayerIds(ME);
+
+    const slices = adminMock.__fromCalls
+      .filter((c) => c.method === 'in' && c.args[0] === 'game_id')
+      .map((c) => c.args[1] as string[]);
+    expect(slices.map((s) => s.length)).toEqual([100, 50]);
+    expect(slices.flat()).toEqual(many.map((g) => g.game_id));
+    expect(result.sort()).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('a failed slice gives an empty list', async () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({
+      game_id: `g${i}`,
+      games: { status: 'finished', created_by: ORGANISER },
+    }));
+    adminMock = buildSupabaseMock([
+      { data: many, error: null },
+      { data: [{ user_id: 'p1' }], error: null },
+      { data: null, error: { message: 'boom' } },
+    ]);
+
+    expect(await getCoPlayerIds(ME)).toEqual([]);
+  });
 });

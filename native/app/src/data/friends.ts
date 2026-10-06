@@ -38,7 +38,10 @@ export interface FriendPerson {
 }
 
 export interface FriendItem extends FriendPerson {
-  /** Handicap når profilen er ferdig, ellers `null`. */
+  /**
+   * Handicap når profilen er ferdig OG dere har minst én ferdig runde sammen
+   * (ingen av dere trakk dere), ellers `null` (#2267).
+   */
   hcp: number | null;
 }
 

@@ -1,11 +1,10 @@
 import 'server-only';
 import { getFriendStats } from '@/lib/friends/getFriendStats';
 import type { FriendStats } from '@/lib/friends/friendStats';
-import { PICKER_STATS_CHUNK, chunkIds } from '@/lib/wizard/pickerOrder';
 
 /**
- * «Last played» for the step 4 picker (#2321): `getFriendStats` per chunk of
- * at most 100 ids, in parallel, merged into one map.
+ * «Last played» for the step 4 picker (#2321): one `getFriendStats` call,
+ * which splits its own `.in()` lists (#2267).
  *
  * Best-effort: a failed lookup logs `[pickerOrderStats]` and returns an empty
  * map, so the picker falls back to name order instead of taking the wizard
@@ -18,10 +17,7 @@ export async function getPickerOrderStats(
 ): Promise<Map<string, FriendStats>> {
   if (ids.length === 0) return new Map();
   try {
-    const maps = await Promise.all(
-      chunkIds(ids, PICKER_STATS_CHUNK).map((chunk) => getFriendStats(userId, chunk)),
-    );
-    return new Map(maps.flatMap((m) => [...m]));
+    return await getFriendStats(userId, ids);
   } catch (error) {
     console.error('[pickerOrderStats] lookup failed', error);
     return new Map();
