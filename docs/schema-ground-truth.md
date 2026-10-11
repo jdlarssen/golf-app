@@ -187,9 +187,9 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 
 ## Generert snapshot — RLS / CHECK / triggere / SECURITY DEFINER
 
-**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-10-04.** Staging matcher prod på alt under.
+**Kilde: prod (`glofubopddkjhymcbaph`), målt 2026-10-11.** Staging matcher prod på alt under.
 
-**Totaler:** 42 tabeller · 110 CHECK-constraints · 25 triggere · 60 SECURITY DEFINER-funksjoner.
+**Totaler:** 42 tabeller · 111 CHECK-constraints · 25 triggere · 60 SECURITY DEFINER-funksjoner.
 
 ### RLS og policy-antall per tabell (alle 42 har RLS på)
 
@@ -242,9 +242,9 @@ Cross-links: [docs/bug-prevention.md](bug-prevention.md) · [docs/audits/2026-06
 når tabellen (bevisst lockdown for admin-/agent-tabeller). ⚠️ RLS AV = RLS ikke
 aktivert (skal aldri skje på public-tabeller — undersøkes umiddelbart).
 
-### CHECK-constraints per tabell (110 totalt)
+### CHECK-constraints per tabell (111 totalt)
 
-apns_tokens 1 · bingo_bango_bongo_holes 1 · course_holes 5 · cup_lineup_sessions 2 · cup_lineup_slots 2 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 13 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · kavalkade_shares 2 · kavalkades 2 · league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · tee_boxes 11 · tournament_participants 2 · tournament_plans 1 · tournament_side_awards 6 · tournaments 15 · users 2 · wolf_hole_choices 3
+apns_tokens 1 · bingo_bango_bongo_holes 1 · course_holes 5 · cup_lineup_sessions 2 · cup_lineup_slots 2 · format_intent_mapping 2 · friendships 2 · game_players 4 · game_registration_requests 3 · game_side_winners 2 · games 13 · green_pins 4 · group_join_requests 1 · groups 2 · idea_submissions 2 · kavalkade_shares 2 · kavalkades 2 · league_rounds 1 · leagues 13 · notifications 1 · patsome_tee_starters 1 · reactions 1 · scores 3 · tee_boxes 12 · tournament_participants 2 · tournament_plans 1 · tournament_side_awards 6 · tournaments 15 · users 2 · wolf_hole_choices 3
 
 Fulle definisjoner: kjør den kanoniske spørringen (docs/loops/dok-avstemmeren.md).
 
