@@ -21,9 +21,13 @@ const TEXT = {
   emailAdd: 'add',
 };
 
+// jsdom's own clipboard (if any), put back after each test.
+const realClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+
 afterEach(() => {
-  vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, 'share');
+  if (realClipboard) Object.defineProperty(navigator, 'clipboard', realClipboard);
+  else Reflect.deleteProperty(navigator, 'clipboard');
 });
 
 describe('GetTheGangCard', () => {
@@ -69,7 +73,7 @@ describe('ShareLinkButton', () => {
     const share = vi.fn(async (_data: ShareData) => undefined);
     const writeText = vi.fn(async (_text: string) => undefined);
     if (hasShare) Object.defineProperty(navigator, 'share', { value: share, configurable: true });
-    vi.stubGlobal('navigator', Object.assign(navigator, { clipboard: { writeText } }));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
     render(<ShareLinkButton path="/venner/legg-til/KODE" label="share" copiedLabel="copied" promptFallback="prompt" />);
     fireEvent.click(screen.getByTestId('friends-share-link'));

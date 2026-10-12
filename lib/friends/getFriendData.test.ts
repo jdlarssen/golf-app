@@ -11,15 +11,16 @@ import { createAdminClientMock, type QueryOp } from '@/lib/supabase/testing/admi
 const ME = 'meg';
 const coPlayers = Array.from({ length: 150 }, (_, i) => `u${i}`);
 
-let failUsers = false;
+/** The lookup of the slice that starts at the 101st person fails. */
+let failSecondSlice = false;
 const fake = createAdminClientMock({
   respond: (op: QueryOp) => {
     if (op.table === 'friendships') {
       return { data: [{ id: 'f1', requester_id: ME, addressee_id: 'u0', status: 'accepted' }] };
     }
     if (op.table === 'users') {
-      if (failUsers) return { data: null, error: { message: 'nede' } };
       const ids = op.filters.find((f) => f.op === 'in')?.value as string[];
+      if (failSecondSlice && ids[0] === 'u100') return { data: null, error: { message: 'nede' } };
       return { data: ids.map((id) => ({ id, name: `Navn ${id}`, nickname: null, email: `${id}@example.test` })) };
     }
     throw new Error(`uventet tabell ${op.table}`);
@@ -32,7 +33,7 @@ import { getFriendData } from './getFriendData';
 
 beforeEach(() => {
   fake.reset();
-  failUsers = false;
+  failSecondSlice = false;
 });
 
 describe('getFriendData', () => {
@@ -48,11 +49,12 @@ describe('getFriendData', () => {
     expect(data.suggestions).toHaveLength(149);
   });
 
-  it('a failed lookup gives empty lists, as before', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    failUsers = true;
+  it('one failed slice leaves no names, not half a list', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    failSecondSlice = true;
     const data = await getFriendData(ME);
     expect(data.friends).toEqual([]);
     expect(data.suggestions).toEqual([]);
+    expect(log).toHaveBeenCalledWith('[getFriendData] user lookup failed', expect.anything());
   });
 });
