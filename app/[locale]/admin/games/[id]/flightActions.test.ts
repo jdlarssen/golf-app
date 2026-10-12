@@ -15,7 +15,8 @@ import {
  * Dekker tre actions:
  *   - suggestFlightAssignment: authz-reject, happy-path (foreslår og skriver)
  *   - setPlayerFlight: kapasitets-reject (flight_full), happy-path
- *   - toggleSignupsClosed: happy-path (steng + gjenåpne)
+ *   - toggleSignupsClosed: happy-path (steng + gjenåpne), lands on the signups
+ *     page (#2288)
  *
  * Spørsmålsrekkefølge per action (serverMock → adminMock FIFO):
  *
@@ -36,7 +37,7 @@ import {
  *
  * toggleSignupsClosed (admin):
  *   serverMock[0..1]: auth.getUser + users (isAdmin=true → ingen creator-sjekk)
- *   adminMock[0]: games.select(id, status, registration_mode).eq.maybeSingle
+ *   adminMock[0]: games.select(id, status, registration_mode, group_id).eq.maybeSingle
  *   adminMock[1]: games.update({signups_closed_at}).eq.select
  */
 
@@ -616,7 +617,7 @@ describe('toggleSignupsClosed', () => {
 
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=signups_closed`);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=signups_closed`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
@@ -637,7 +638,7 @@ describe('toggleSignupsClosed', () => {
 
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, false)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=signups_reopened`);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=signups_reopened`);
   });
 
   it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {
@@ -653,7 +654,7 @@ describe('toggleSignupsClosed', () => {
 
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_game`);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?error=db_game`);
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
@@ -669,7 +670,47 @@ describe('toggleSignupsClosed', () => {
 
     const { toggleSignupsClosed } = await import('./flightActions');
     await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=signups_not_scheduled`);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?error=signups_not_scheduled`);
+  });
+
+  // Owner's answer 2026-10-12: a club round on «bare inviterte» is open to
+  // its members, so the organiser can close it too.
+  it('klubbrunde med bare inviterte → stenges, redirect til ?status=signups_closed', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: GAME_ID,
+          status: 'scheduled',
+          registration_mode: 'invite_only',
+          group_id: 'group-1',
+        },
+        error: null,
+      },
+      { data: [{ id: GAME_ID }], error: null }, // games.update
+    ]);
+
+    const { toggleSignupsClosed } = await import('./flightActions');
+    await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
+    expect(adminMock.from).toHaveBeenCalledTimes(2);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups?status=signups_closed`);
+  });
+
+  it('bare inviterte uten klubb → ingen skriving, tilbake til påmeldingssiden', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      {
+        data: { id: GAME_ID, status: 'scheduled', registration_mode: 'invite_only', group_id: null },
+        error: null,
+      },
+    ]);
+
+    const { toggleSignupsClosed } = await import('./flightActions');
+    await expect(toggleSignupsClosed(GAME_ID, true)).rejects.toBeInstanceOf(RedirectError);
+    expect(adminMock.from).toHaveBeenCalledTimes(1);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}/signups`);
   });
 });
 
@@ -681,16 +722,26 @@ describe('toggleSignupsClosed', () => {
  * `.single()` turns the no-row case into PGRST116 → `db_game`, and goes red.
  */
 describe('spill-lesingen i flight- og lag-handlingene', () => {
+  // Each action with the page it sends errors to: the signups page for
+  // toggleSignupsClosed (#2288), the game page for the others.
   const ACTIONS = {
-    suggestFlightAssignment: (m: typeof import('./flightActions')) =>
-      m.suggestFlightAssignment(GAME_ID),
-    setPlayerFlight: (m: typeof import('./flightActions')) =>
-      m.setPlayerFlight(GAME_ID, 'target-user', 2),
-    toggleSignupsClosed: (m: typeof import('./flightActions')) =>
-      m.toggleSignupsClosed(GAME_ID, true),
+    suggestFlightAssignment: {
+      run: (m: typeof import('./flightActions')) => m.suggestFlightAssignment(GAME_ID),
+      path: `/admin/games/${GAME_ID}`,
+    },
+    setPlayerFlight: {
+      run: (m: typeof import('./flightActions')) => m.setPlayerFlight(GAME_ID, 'target-user', 2),
+      path: `/admin/games/${GAME_ID}`,
+    },
+    toggleSignupsClosed: {
+      run: (m: typeof import('./flightActions')) => m.toggleSignupsClosed(GAME_ID, true),
+      path: `/admin/games/${GAME_ID}/signups`,
+    },
     // Reads the game through loadTeamGame (shared with setPlayerTeam).
-    suggestTeamAssignment: (m: typeof import('./flightActions')) =>
-      m.suggestTeamAssignment(GAME_ID),
+    suggestTeamAssignment: {
+      run: (m: typeof import('./flightActions')) => m.suggestTeamAssignment(GAME_ID),
+      path: `/admin/games/${GAME_ID}`,
+    },
   };
   const CASES = (Object.keys(ACTIONS) as (keyof typeof ACTIONS)[]).flatMap((action) => [
     { action, read: { data: null, error: { message: 'boom' } }, expected: 'db_game' },
@@ -702,7 +753,7 @@ describe('spill-lesingen i flight- og lag-handlingene', () => {
     adminMock = buildSupabaseMock([read], {}, { strictSingle: true });
 
     const mod = await import('./flightActions');
-    await expect(ACTIONS[action](mod)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=${expected}`);
+    await expect(ACTIONS[action].run(mod)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${ACTIONS[action].path}?error=${expected}`);
   });
 });

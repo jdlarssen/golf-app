@@ -31,6 +31,7 @@ import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
 import { ScorecardTable } from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { canToggleSignups } from '@/lib/games/signupInbox';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
@@ -177,16 +178,22 @@ export default async function CreatorSpillerePage({
     : { data: null as { name: string } | null };
   const courseName = courseRes.data?.name ?? null;
 
-  // #2440: the way back to the signup requests once their varsel is gone, on
-  // games where the organiser answers requests («Forespørsel — jeg godkjenner»).
-  // RLS lets the creator read both (0071, is_game_creator_or_admin). A failed
-  // read hides the link rather than claiming «0 venter».
+  // #2440: the way back to the signup requests once their varsel is gone.
+  // #2288: also the organiser's door to «Steng påmeldingen», which lives on
+  // the signups page only — so the link shows on every game that takes
+  // requests (manual approval, and invite-only, #368) and on every game whose
+  // signups can be closed. RLS lets the creator read both (0071,
+  // is_game_creator_or_admin). A failed read hides the link, and a failed
+  // count hides «N venter» rather than claiming 0.
   const [modeRes, pendingRes] = await Promise.all([
     supabase
       .from('games')
-      .select('registration_mode')
+      .select('registration_mode, group_id')
       .eq('id', gameId)
-      .maybeSingle<{ registration_mode: 'invite_only' | 'manual_approval' | 'open' }>(),
+      .maybeSingle<{
+        registration_mode: 'invite_only' | 'manual_approval' | 'open';
+        group_id: string | null;
+      }>(),
     supabase
       .from('game_registration_requests')
       .select('id', { count: 'exact', head: true })
@@ -200,10 +207,13 @@ export default async function CreatorSpillerePage({
       pendingError: pendingRes.error,
     });
   }
-  const pendingSignups =
-    !modeRes.error && !pendingRes.error && modeRes.data?.registration_mode === 'manual_approval'
-      ? (pendingRes.count ?? 0)
-      : null;
+  const modeRow = modeRes.error ? null : modeRes.data;
+  const takesRequests =
+    modeRow?.registration_mode === 'manual_approval' || modeRow?.registration_mode === 'invite_only';
+  const pendingSignups = takesRequests && !pendingRes.error ? (pendingRes.count ?? 0) : null;
+  const showSignupsLink =
+    modeRow != null &&
+    (takesRequests || canToggleSignups(game.status, modeRow.registration_mode, modeRow.group_id));
   const status = game.status;
   const isPreStart = status === 'draft' || status === 'scheduled';
   // #1937: a cup match's roster is changed by swapping players on the cup,
@@ -371,16 +381,18 @@ export default async function CreatorSpillerePage({
       <div className="space-y-6">
         {banner}
 
-        {pendingSignups !== null && (
+        {showSignupsLink && (
           <SmartLink
             href={`/admin/games/${gameId}/signups`}
             data-testid="signups-link"
             className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
           >
             <span>{t('signupsLink')}</span>
-            <span className="tabular-nums text-muted">
-              {t('signupsWaiting', { count: pendingSignups })}
-            </span>
+            {pendingSignups !== null && (
+              <span className="tabular-nums text-muted">
+                {t('signupsWaiting', { count: pendingSignups })}
+              </span>
+            )}
           </SmartLink>
         )}
 

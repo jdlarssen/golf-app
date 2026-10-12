@@ -21,6 +21,7 @@ import {
   type TeamPlayer,
 } from '@/lib/games/teamScope';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { canToggleSignups } from '@/lib/games/signupInbox';
 import {
   FLIGHT_PLAYER_SELECT,
   FLIGHT_TEAM_SELECT,
@@ -473,27 +474,28 @@ export async function setPlayerTeam(
  * Admin/creator: stenger eller gjenåpner påmeldingen til et scheduled-spill
  * (toggle på games.signups_closed_at).
  *
- * Bare relevant for spill med registration_mode open eller manual_approval.
+ * #2288: the button lives on the signups page only, so every redirect lands
+ * there — an organiser without the admin role would meet `requireAdmin` on
+ * the game page. `canToggleSignups` is the one rule for which games qualify.
  */
 export async function toggleSignupsClosed(
   gameId: string,
   closedNow: boolean,
 ): Promise<void> {
   const locale = await getLocale();
-  const { admin, detailPath } = await loadFlightContext(gameId);
+  const { admin } = await loadFlightContext(gameId);
+  const signupsPath = `/admin/games/${gameId}/signups`;
 
   const game = await readActionGame<{
     id: string;
     status: string;
     registration_mode: 'invite_only' | 'manual_approval' | 'open';
-  }>(admin, gameId, 'id, status, registration_mode', 'toggleSignupsClosed', detailPath, locale);
-  if (game.status !== 'scheduled') redirect({ href: `${detailPath}?error=signups_not_scheduled`, locale });
-  if (
-    game.registration_mode !== 'open' &&
-    game.registration_mode !== 'manual_approval'
-  ) {
-    // invite_only har ingen registreringsliste å stenge
-    redirect({ href: detailPath, locale });
+    group_id: string | null;
+  }>(admin, gameId, 'id, status, registration_mode, group_id', 'toggleSignupsClosed', signupsPath, locale);
+  if (game.status !== 'scheduled') redirect({ href: `${signupsPath}?error=signups_not_scheduled`, locale });
+  if (!canToggleSignups(game.status, game.registration_mode, game.group_id)) {
+    // Nobody can sign up to an invite-only game outside a club: nothing to close.
+    redirect({ href: signupsPath, locale });
   }
 
   const signups_closed_at = closedNow ? new Date().toISOString() : null;
@@ -514,13 +516,13 @@ export async function toggleSignupsClosed(
   }
   if (failure) {
     console.error('[toggleSignupsClosed] signups-closed update failed', failure);
-    redirect({ href: `${detailPath}?error=db_game`, locale });
+    redirect({ href: `${signupsPath}?error=db_game`, locale });
   }
 
   expireFlightCaches(gameId);
   revalidatePath(`/signup`);
   redirect({
-    href: `${detailPath}?status=${closedNow ? 'signups_closed' : 'signups_reopened'}`,
+    href: `${signupsPath}?status=${closedNow ? 'signups_closed' : 'signups_reopened'}`,
     locale,
   });
 }
