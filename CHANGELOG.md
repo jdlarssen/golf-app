@@ -16,6 +16,63 @@ Ett **ukeslipp** per mandag med innhold: nyeste øverst, funksjonene som rader d
 
 ## Ukeslipp
 
+### 1.241.0 · mandag 12. oktober 2026
+
+<details>
+<summary><strong>Beskjed til arrangøren når runden kan avsluttes</strong></summary>
+
+[#2203](https://github.com/jdlarssen/golf-app/issues/2203) — Du som arrangerer, får nå beskjed når noen leverer og når alle har levert. Står spillet stille i et døgn, minner Tørny deg på å avslutte det.
+
+↳ /innboks · «Åpne innboksen»
+</details>
+
+<details>
+<summary><strong>Banesiden ser ut som scorekortet i bagen</strong></summary>
+
+[#2277](https://github.com/jdlarssen/golf-app/issues/2277) — Banesiden viser nå slope og CR øverst. Du bytter tee med ett trykk, og under står par og indeks for ut og inn, som på scorekortet. Ser du en feil, trykker du «Stemmer ikke noe? Si fra».
+
+↳ /baner · «Se banene»
+</details>
+
+<details>
+<summary><strong>Skriv av scorekortet når du legger inn en bane</strong></summary>
+
+[#2278](https://github.com/jdlarssen/golf-app/issues/2278) — Ny bane skriver du av rett fra scorekortet, ni og ni hull. Trykk på par for å bytte, og kortet sier fra om indekser som mangler.
+
+↳ /opprett-bane · «Legg inn en bane»
+</details>
+
+<details>
+<summary><strong>Demoen med tavla øverst</strong></summary>
+
+[#2281](https://github.com/jdlarssen/golf-app/issues/2281) — Demoen er tegnet om. Tavla står øverst, du taster slaget med ett trykk og ser plassen din flytte seg med en gang.
+
+↳ /demo · «Prøv demoen»
+</details>
+
+<details>
+<summary><strong>Klubbhuset er tegnet om</strong></summary>
+
+[#2493](https://github.com/jdlarssen/golf-app/issues/2493) — I Klubbhuset lager du nå en ny runde fra ett kort, med kompisene eller for klubben. Under ser du rundene dine, hvor mange medlemmer klubbene har og når neste runde er, og hvor langt cupene dine har kommet.
+
+↳ /admin · «Åpne Klubbhuset»
+</details>
+
+<details>
+<summary><strong>Klubbhuset for nye spillere</strong></summary>
+
+[#2494](https://github.com/jdlarssen/golf-app/issues/2494) — Er du ny i Tørny, viser Klubbhuset deg tre veier inn: lag en runde, finn en åpen runde på terminlista når det finnes en, eller få klubben din inn med en invitasjonslenke.
+
+↳ /admin · «Åpne Klubbhuset»
+</details>
+
+<details>
+<summary>2 rettinger</summary>
+
+- [#2201](https://github.com/jdlarssen/golf-app/issues/2201) — Åpner du et spill, et hull, scorekortet, godkjenningen, tavla, vennelista eller historikken i appen, er varslene der lest. Trykker du på et pushvarsel, blir akkurat det varselet lest.
+- [#2203](https://github.com/jdlarssen/golf-app/issues/2203) — Åpner du avslutt-skjermen i appen, er «Alle har levert» og påminnelsen om spillet lest.
+</details>
+
 ### 1.240.0 · mandag 5. oktober 2026
 
 <details>
