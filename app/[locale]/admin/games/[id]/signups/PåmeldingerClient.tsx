@@ -197,6 +197,9 @@ export function PåmeldingerClient({
             return (
               <li
                 key={lead.id}
+                data-testid="signup-card"
+                data-team={isTeam ? 'true' : 'false'}
+                data-flag={flag?.kind ?? ''}
                 className="flex flex-col gap-[10px] rounded-2xl border border-border bg-surface px-3.5 py-3 leading-[normal]"
               >
                 <div className="flex items-center gap-3">
