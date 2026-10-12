@@ -123,3 +123,16 @@ export function osloWeekendDateKeys(now: Date): string[] {
   const toSaturday = 6 - weekday;
   return [keyAt(toSaturday), keyAt(toSaturday + 1)];
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Days since the epoch for the Oslo calendar date of an instant. Two instants
+ * on the same Oslo day give the same number, and the day before gives one
+ * less, also across the 23- and 25-hour DST days. Moved from
+ * `lib/i18n/format.ts` (#2288) so «i går» means the same everywhere.
+ */
+export function osloDayNumber(ms: number): number {
+  const p = osloParts(new Date(ms));
+  return Math.round(Date.UTC(p.year, p.month, p.day) / DAY_MS);
+}

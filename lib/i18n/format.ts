@@ -11,6 +11,7 @@ import {
   formatMonthLongNb,
 } from '@/lib/format/date';
 import { formatRelativeNb as formatRelativeNbLegacy } from '@/lib/format/relativeTimeNb';
+import { osloDayNumber } from '@/lib/format/osloCalendar';
 
 /**
  * Locale-aware date/number formatting (#475).
@@ -352,12 +353,6 @@ export function formatRelativeLocale(
  */
 export function formatListLocale(items: readonly string[], locale: AppLocale): string {
   return new Intl.ListFormat(intlLocaleTag(locale), { type: 'conjunction' }).format(items);
-}
-
-/** Days since the epoch for the Oslo calendar date of an instant. */
-function osloDayNumber(ms: number): number {
-  const p = osloParts(new Date(ms));
-  return Math.round(Date.UTC(p.year, p.month, p.day) / DAY_MS);
 }
 
 /**
