@@ -5,8 +5,8 @@
  * `native/assets/wordmark-master.svg` draws at font-size 100 (the mail header's
  * PNG). `wordmarkBall.test.ts` holds the SVG to these values.
  *
- * Plain constants on purpose: no `server-only`, so client components
- * (ErrorScreen, DemoGame) can render BrandMark.
+ * Plain constants on purpose: no `server-only`, so a client component can
+ * render BrandMark.
  */
 
 /** Ball diameter. */
