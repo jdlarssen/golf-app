@@ -24,7 +24,7 @@ const NOW = new Date('2026-07-15T08:00:00Z');
 describe('lastPlayedLabel', () => {
   it.each([
     { label: 'same Oslo day', iso: '2026-07-15T05:00:00Z', no: 'i dag', en: 'today' },
-    { label: '23:30 UTC the night before is today in Oslo', iso: '2026-07-14T22:30:00Z', no: 'i dag', en: 'today' },
+    { label: '22:30 UTC the night before is 00:30 today in Oslo', iso: '2026-07-14T22:30:00Z', no: 'i dag', en: 'today' },
     { label: 'the day before', iso: '2026-07-14T12:00:00Z', no: 'i går', en: 'yesterday' },
     { label: 'two days back', iso: '2026-07-13T12:00:00Z', no: 'sist mandag', en: 'last Monday' },
     { label: 'six days back', iso: '2026-07-09T12:00:00Z', no: 'sist torsdag', en: 'last Thursday' },

@@ -199,11 +199,20 @@ describe('GET /api/friends', () => {
   it('gir listene uten tallene når de ikke kan leses', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     statsMock.mockRejectedValue(new Error('nede'));
+    handicapsMock.mockRejectedValue(new Error('nede'));
     const res = await GET(req('', { token: TOKEN }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.friends).toEqual([{ id: KARI, name: 'Kari Nordmann «Kaka»', initials: 'KN', hcp: null, stats: null }]);
     expect(body.suggestions).toEqual([{ id: 'per', name: 'Per', initials: 'P', stats: null }]);
+  });
+
+  it('skjuler handicapet når bare tallene ikke kan leses (#2267)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    statsMock.mockRejectedValue(new Error('nede'));
+    const body = await (await GET(req('', { token: TOKEN }))).json();
+    expect(handicapsMock).toHaveBeenCalledWith([KARI]);
+    expect(body.friends).toEqual([{ id: KARI, name: 'Kari Nordmann «Kaka»', initials: 'KN', hcp: null, stats: null }]);
   });
 
   it('sender ingen e-postadresse til andre ut av serveren', async () => {
