@@ -20,7 +20,6 @@ const PROPS = {
   gameId: 'game-1',
   registrationMode: 'manual_approval' as const,
   gameStatus: 'scheduled' as const,
-  signupsClosedAt: null,
   shortId: 'abc123',
   selfRegisteredCount: 0,
 };
