@@ -42,7 +42,7 @@ export function SignupRoster({
             aria-expanded={open}
             aria-controls={listId}
             onClick={() => setOpen((o) => !o)}
-            className="flex min-h-11 items-center text-[13px] font-semibold leading-[normal] text-primary"
+            className="flex min-h-11 items-center text-[13px] font-semibold leading-[normal] text-primary underline"
           >
             {t('showAll')}
           </button>
