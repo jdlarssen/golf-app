@@ -80,6 +80,9 @@
   --success-text: #2f5a3c;
   --danger: #b8463e;       /* muted brick */
   --warning: #d89b3a;      /* amber — DEKOR: kanter, pill-fyll, ikoner */
+  /* The light stripe between the amber ones in the signups queue bar (#2288,
+   * artboard «Forslag: påmeldingene»). */
+  --warning-stripe: #f3d9a8;
   /* Meningsbærende advarsels-TEKST på lyse flater (#1388), samme grep som
    * --accent-text (#1374). --warning måler bare 2,24:1 mot --bg og 2,42:1 mot
    * --surface — under WCAG AA, og i praksis uleselig i sollys. Denne tonen er
@@ -292,6 +295,9 @@
     --success-text: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
+    /* The light stripe in the signups queue bar (#2288): 40 % --warning over
+     * --surface, the share the light value has over white. Derived, not drawn. */
+    --warning-stripe: #6c6041;
     /* Mørk modus har alt en løftet amber som holder 8,73:1 mot --bg — tekst og
      * dekor kan dele tone her (#1388). */
     --warning-text: #e5b26f;
@@ -440,6 +446,7 @@
   --success-text: #7daa8a; /* se media-blokken over */
   --danger: #d67268;
   --warning: #e5b26f;
+  --warning-stripe: #6c6041; /* se media-blokken over */
   --warning-text: #e5b26f; /* se media-blokken over */
   --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
   --player-b: #db8a66;     /* lifted terracotta for dark bg */

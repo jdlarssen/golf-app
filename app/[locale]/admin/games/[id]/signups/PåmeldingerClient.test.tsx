@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { PåmeldingerClient } from './PåmeldingerClient';
 import type { RequestRow } from './types';
 
@@ -11,6 +11,8 @@ vi.mock('./actions', () => ({
 }));
 
 const GAME_ID = '11111111-1111-1111-1111-111111111111';
+const RENDERED_AT = '2026-05-26T12:00:00Z';
+const REJECT = /^Avvis/;
 
 function makeRequest(overrides: Partial<RequestRow> = {}): RequestRow {
   return {
@@ -18,6 +20,8 @@ function makeRequest(overrides: Partial<RequestRow> = {}): RequestRow {
     userId: 'user-' + Math.random().toString(36).slice(2),
     status: 'pending',
     displayName: 'Anna Hansen',
+    userName: 'Anna Hansen',
+    hcpIndex: null,
     teamName: null,
     isTeamCaptain: false,
     teamRequestId: null,
@@ -29,50 +33,43 @@ function makeRequest(overrides: Partial<RequestRow> = {}): RequestRow {
   };
 }
 
+type View = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+function renderClient(requests: RequestRow[], view: View = 'pending', locked = false) {
+  return render(
+    <PåmeldingerClient
+      gameId={GAME_ID}
+      requests={requests}
+      view={view}
+      locked={locked}
+      capacity={null}
+      activeRosterUserIds={[]}
+      headingCount={requests.length}
+      renderedAt={RENDERED_AT}
+    />,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('PåmeldingerClient — pending tab', () => {
-  it('viser approve + avvis-knapper for pending solo-request', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest({ displayName: 'Anna Hansen' })]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
-    expect(screen.getByText('Anna Hansen')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Godkjenn' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Avvis' })).toBeInTheDocument();
+describe('PåmeldingerClient — innkurven', () => {
+  it('viser kortet med Godkjenn og Avvis …, og Godkjenn peker på søkeren', () => {
+    renderClient([makeRequest({ displayName: 'Anna Hansen' })]);
+    const card = screen.getByRole('listitem');
+    expect(within(card).getByText('Anna Hansen')).toBeInTheDocument();
+    const approve = screen.getByRole('button', { name: 'Godkjenn' });
+    expect(approve).toHaveAccessibleDescription('Anna Hansen');
+    expect(screen.getByRole('button', { name: REJECT })).toBeInTheDocument();
   });
 
-  it('rendrer message-quote når søker har lagt ved hilsen', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[
-          makeRequest({
-            message: 'Spennende å være med på første runden!',
-          }),
-        ]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
-    expect(
-      screen.getByText(/Spennende å være med/),
-    ).toBeInTheDocument();
+  it('rendrer hilsenen når søkeren har lagt ved en', () => {
+    renderClient([makeRequest({ message: 'Spennende å være med på første runden!' })]);
+    expect(screen.getByText(/Spennende å være med/)).toBeInTheDocument();
   });
 
-  it('grupperer kaptein-rad med team-medlem under', () => {
+  it('et lag er ett kort med lagnavnet og «Godkjenn laget»', () => {
     const captain = makeRequest({
       id: 'cap-1',
       displayName: 'Kaptein Per',
@@ -84,55 +81,35 @@ describe('PåmeldingerClient — pending tab', () => {
       displayName: 'Medspiller Kari',
       teamRequestId: 'cap-1',
     });
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[captain, mate]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
-    expect(screen.getByText(/Albatross/)).toBeInTheDocument();
-    expect(screen.getByText('Kaptein Per')).toBeInTheDocument();
-    expect(screen.getByText('Medspiller Kari')).toBeInTheDocument();
-    // Kaptein-badgen vises kun på kapteins-raden.
-    expect(screen.getByText('Kaptein')).toBeInTheDocument();
+    renderClient([captain, mate]);
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText('Lag: Albatross')).toBeInTheDocument();
+    const approve = screen.getByRole('button', { name: 'Godkjenn laget' });
+    expect(approve).toHaveAccessibleDescription('Lag: Albatross Kaptein Per og Medspiller Kari');
   });
 
-  it('åpner reject-modal når Avvis-knappen klikkes', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest({ displayName: 'Anna Hansen' })]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Avvis' }));
-    expect(
-      screen.getByText(/Avvis påmelding fra Anna Hansen/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText(/Valgfri begrunnelse/i),
-    ).toBeInTheDocument();
+  it('åpner avvis-dialogen når Avvis … trykkes', () => {
+    renderClient([makeRequest({ displayName: 'Anna Hansen' })]);
+    fireEvent.click(screen.getByRole('button', { name: REJECT }));
+    expect(screen.getByText(/Avvis påmelding fra Anna Hansen/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Valgfri begrunnelse/i)).toBeInTheDocument();
   });
 
-  it('reject-modalen tar fokus og lukkes med Escape (#1590)', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest({ displayName: 'Anna Hansen' })]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
-    const trigger = screen.getByRole('button', { name: 'Avvis' });
+  it('avvis-dialogen for et lag nevner lagnavnet', () => {
+    const captain = makeRequest({
+      id: 'cap-1',
+      displayName: 'Kaptein Per',
+      isTeamCaptain: true,
+      teamName: 'Albatross',
+    });
+    renderClient([captain, makeRequest({ teamRequestId: 'cap-1' })]);
+    fireEvent.click(screen.getByRole('button', { name: REJECT }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Hele laget «Albatross» blir avvist samtidig.');
+  });
+
+  it('avvis-dialogen tar fokus og lukkes med Escape (#1590)', () => {
+    renderClient([makeRequest({ displayName: 'Anna Hansen' })]);
+    const trigger = screen.getByRole('button', { name: REJECT });
     act(() => trigger.focus());
     fireEvent.click(trigger);
 
@@ -147,179 +124,43 @@ describe('PåmeldingerClient — pending tab', () => {
     expect(trigger).toHaveFocus();
   });
 
-  it('tom-tilstand når listen er tom', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
-    expect(
-      screen.getByText('Ingen påmeldinger venter på godkjenning.'),
-    ).toBeInTheDocument();
+  it('tom kø', () => {
+    renderClient([]);
+    expect(screen.getByText('Ingen påmeldinger venter på godkjenning.')).toBeInTheDocument();
   });
 });
 
-describe('PåmeldingerClient — approved tab (read-only)', () => {
-  it('skjuler approve/avvis-knapper for approved-rader', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[
-          makeRequest({
-            status: 'approved',
-            displayName: 'Anna Hansen',
-            decidedAt: '2026-05-26T11:00:00Z',
-          }),
-        ]}
-        tab="approved"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
+describe('PåmeldingerClient — historikken', () => {
+  it('godkjente kort har verken Godkjenn eller Avvis …', () => {
+    renderClient(
+      [makeRequest({ status: 'approved', displayName: 'Anna Hansen', decidedAt: '2026-05-26T11:00:00Z' })],
+      'approved',
     );
     expect(screen.getByText('Anna Hansen')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Godkjenn' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Avvis' })).toBeNull();
-    expect(screen.getByText('Godkjent')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: REJECT })).toBeNull();
   });
 
-  it('viser rejection-reason på avviste rader', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[
-          makeRequest({
-            status: 'rejected',
-            rejectionReason: 'Fullt allerede',
-            decidedAt: '2026-05-26T11:00:00Z',
-          }),
-        ]}
-        tab="rejected"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={0}
-      />,
+  it('viser begrunnelsen på avviste kort', () => {
+    renderClient(
+      [makeRequest({ status: 'rejected', rejectionReason: 'Fullt allerede', decidedAt: '2026-05-26T11:00:00Z' })],
+      'rejected',
     );
     expect(screen.getByText(/Begrunnelse: Fullt allerede/)).toBeInTheDocument();
   });
 });
 
-describe('PåmeldingerClient — locked', () => {
-  it('skjuler approve/avvis-knapper når spillet er låst', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest({ status: 'pending' })]}
-        tab="pending"
-        locked
-        gameMode="stableford"
-        approvedCount={0}
-      />,
-    );
+describe('PåmeldingerClient — låst', () => {
+  it('skjuler Godkjenn og Avvis … når spillet er låst', () => {
+    renderClient([makeRequest({ status: 'pending' })], 'pending', true);
+    expect(screen.getByText('Anna Hansen')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Godkjenn' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Avvis' })).toBeNull();
-  });
-});
-
-describe('PåmeldingerClient — kapasitets-advarsel (#805)', () => {
-  it('viser cap-advarsel i pending-fanen når approvedCount er på grensen', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest()]}
-        tab="pending"
-        locked={false}
-        gameMode="nines"
-        approvedCount={3}
-      />,
-    );
-    expect(screen.getByTestId('cap-warning')).toBeInTheDocument();
-  });
-
-  it('viser ingen cap-advarsel når approvedCount er under grensen', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest()]}
-        tab="pending"
-        locked={false}
-        gameMode="nines"
-        approvedCount={2}
-      />,
-    );
-    expect(screen.queryByTestId('cap-warning')).toBeNull();
-  });
-
-  it('viser ingen cap-advarsel for formater uten streng øvre grense (stableford)', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest()]}
-        tab="pending"
-        locked={false}
-        gameMode="stableford"
-        approvedCount={100}
-      />,
-    );
-    expect(screen.queryByTestId('cap-warning')).toBeNull();
-  });
-
-  it('viser ingen cap-advarsel i godkjent-fanen selv om over cap', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest({ status: 'approved', decidedAt: '2026-05-26T11:00:00Z' })]}
-        tab="approved"
-        locked={false}
-        gameMode="nines"
-        approvedCount={4}
-      />,
-    );
-    expect(screen.queryByTestId('cap-warning')).toBeNull();
-  });
-});
-
-// #2069: the warning reads the same cap as the signup link
-// (`registrationPlayerCap`), so team formats warn too.
-describe('PåmeldingerClient — kapasitets-advarsel i lag-format (#2069)', () => {
-  it('best ball med 40 godkjente viser advarselen', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest()]}
-        tab="pending"
-        locked={false}
-        gameMode="best_ball"
-        modeConfig={{ team_size: 2 }}
-        approvedCount={40}
-      />,
-    );
-    expect(screen.getByTestId('cap-warning')).toBeInTheDocument();
-  });
-
-  it('texas scramble à 3 med 38 godkjente viser ingen advarsel (taket er 39)', () => {
-    render(
-      <PåmeldingerClient
-        gameId={GAME_ID}
-        requests={[makeRequest()]}
-        tab="pending"
-        locked={false}
-        gameMode="texas_scramble"
-        modeConfig={{ team_size: 3 }}
-        approvedCount={38}
-      />,
-    );
-    expect(screen.queryByTestId('cap-warning')).toBeNull();
+    expect(screen.queryByRole('button', { name: REJECT })).toBeNull();
   });
 });
 
 // #2358: arrangøren utpeker ny kaptein blant dem som står på laget. Knappen
-// står bare på lagmedlemmer i godkjent-fanen, og ingenting skjer før
+// står bare på lagmedlemmer i godkjent-visningen, og ingenting skjer før
 // bekreftelsen.
 describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
   it('bekreft på samme skjerm, så overføring til akkurat det lagmedlemmet', async () => {
@@ -341,10 +182,12 @@ describe('PåmeldingerClient — gjør til kaptein (#2358)', () => {
       <PåmeldingerClient
         gameId={GAME_ID}
         requests={requests}
-        tab="approved"
+        view="approved"
         locked={false}
-        gameMode="texas_scramble"
-        approvedCount={2}
+        capacity={null}
+        activeRosterUserIds={[]}
+        headingCount={2}
+        renderedAt={RENDERED_AT}
       />
     );
     const { rerender } = render(view([captain, mate]));

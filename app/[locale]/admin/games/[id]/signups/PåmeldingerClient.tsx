@@ -4,89 +4,68 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useModalFocus } from '@/hooks/useModalFocus';
 import type { AppLocale } from '@/i18n/routing';
-import { formatDateTime } from '@/lib/i18n/format';
+import {
+  formatListLocale,
+  formatShortDayMonthLocale,
+  formatTeeOffTimeLocale,
+} from '@/lib/i18n/format';
+import { formatHcpDisplay } from '@/lib/handicap/signFormat';
+import { nameInitials } from '@/lib/names/initials';
+import {
+  historyGroups,
+  inboxGroups,
+  signupAgo,
+  signupFlag,
+  type HistoryStatus,
+  type SignupCapacity,
+  type SignupFlag,
+} from '@/lib/games/signupInbox';
 import { approveRequest, rejectRequest, transferTeamCaptaincy } from './actions';
 import { Button } from '@/components/ui/Button';
+import { Kicker } from '@/components/ui/Kicker';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import type { RequestRow, TabKey } from './types';
-import { registrationPlayerCap } from '@/lib/wizard/fitsPlayerCount';
+import type { RequestRow } from './types';
 import { REJECTION_REASON_MAX } from '@/lib/games/registration';
-import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Props = {
   gameId: string;
+  /** Every request on the game; the view picks its own rows (#2288). */
   requests: RequestRow[];
-  tab: TabKey;
+  /** The inbox, or one of the history views (`?tab=`). */
+  view: 'pending' | HistoryStatus;
   locked: boolean;
-  /** Format-modus for kapasitets-advarselen (#805). */
-  gameMode: GameMode;
-  /** `games.mode_config` — the team size sets the team formats' cap (#2069). */
-  modeConfig?: { team_size?: number } | null;
-  /** Antall allerede godkjente spillere på tvers av alle faner (#805). */
-  approvedCount: number;
+  /** `signupCapacity`, or null when the format has no cap. */
+  capacity: SignupCapacity | null;
+  /** `inboxCounts().activeRosterUserIds` — who already has a seat. */
+  activeRosterUserIds: string[];
+  /** The number in the heading: people waiting, or rows in the history view. */
+  headingCount: number;
+  /** The server's clock, so «i går» reads the same on server and client. */
+  renderedAt: string;
 };
 
-const STATUS_TONE: Record<RequestRow['status'], string> = {
-  pending: 'border-warning/40 bg-warning/10 text-warning-text',
-  approved: 'border-success/40 bg-success/10 text-success-text',
-  rejected: 'border-danger/40 bg-danger/10 text-danger',
-  withdrawn: 'border-border bg-surface text-muted',
-};
-
-function formatTimestamp(iso: string, locale: AppLocale): string {
-  // Lokalisert kort dato + klokkeslett — tabular-nums sikrer at radhøyden
-  // ikke hopper mellom rader.
-  return formatDateTime(iso, locale, {
-    timeZone: 'Europe/Oslo',
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+const AVATAR =
+  'flex size-[38px] shrink-0 items-center justify-center rounded-full text-[12px] font-semibold leading-[normal]';
+const RING = 'shadow-[0_0_0_2px_var(--surface)]';
 
 /**
- * Group rows by team-formation. Captains come first, with their team-children
- * directly underneath. Solo rows fall through as standalone entries. Children
- * without a matching captain in the current tab become standalone too — that
- * happens when fanene splitter en pending kaptein fra en allerede approved
- * team-medlem-rad, og er sjelden men håndteres uten å feile.
+ * The signups cards (#2288, artboard «Forslag: påmeldingene»): one card per
+ * request, a team as one card. The inbox has «Godkjenn» and «Avvis …» in the
+ * card; the history views show the same cards without them, and «Gjør til
+ * kaptein» on approved team members (#2358). Which rows go in, the seats and
+ * the flags all come from `lib/games/signupInbox` — no rules here.
  */
-function groupByTeam(rows: RequestRow[]): RequestRow[][] {
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  const consumed = new Set<string>();
-  const groups: RequestRow[][] = [];
-
-  for (const row of rows) {
-    if (consumed.has(row.id)) continue;
-    if (row.isTeamCaptain) {
-      const children = rows.filter(
-        (r) => r.teamRequestId === row.id && !consumed.has(r.id),
-      );
-      groups.push([row, ...children]);
-      consumed.add(row.id);
-      for (const c of children) consumed.add(c.id);
-    } else if (row.teamRequestId && byId.has(row.teamRequestId)) {
-      // Will be picked up by the captain iteration above.
-      continue;
-    } else {
-      groups.push([row]);
-      consumed.add(row.id);
-    }
-  }
-  return groups;
-}
-
 export function PåmeldingerClient({
   gameId,
   requests,
-  tab,
+  view,
   locked,
-  gameMode,
-  modeConfig,
-  approvedCount,
+  capacity,
+  activeRosterUserIds,
+  headingCount,
+  renderedAt,
 }: Props) {
-  const locale = useLocale();
+  const locale = useLocale() as AppLocale;
   const t = useTranslations('admin.game.signups');
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [rejectingFor, setRejectingFor] = useState<RequestRow | null>(null);
@@ -106,27 +85,22 @@ export function PåmeldingerClient({
   const [reason, setReason] = useState('');
   const [, startTransition] = useTransition();
 
-  // #805: vis kapasitets-advarsel når approved-antallet er på eller over
-  // format-taket. #2069: samme tak som påmeldingslenka håndhever
-  // (`registrationPlayerCap`) — solo-formatenes faste tak og lag-formatenes
-  // rutenett-tak. null for formater uten øvre grense (f.eks. stableford).
-  const cap = registrationPlayerCap(gameMode, modeConfig);
-  const atOrOverCap = cap !== null && approvedCount >= cap;
-
   const visibleRequests = useMemo(
     () => requests.filter((r) => !pendingIds.has(r.id)),
     [requests, pendingIds],
   );
 
-  const groups = useMemo(() => groupByTeam(visibleRequests), [visibleRequests]);
+  const groups = useMemo(
+    () => (view === 'pending' ? inboxGroups(visibleRequests) : historyGroups(visibleRequests, view)),
+    [visibleRequests, view],
+  );
 
-  function handleApprove(row: RequestRow) {
-    if (locked) return;
+  // Optimistic hide: the captain's children go with the captain — the
+  // action's cascade decides them on the server at the same time.
+  function hideWithTeam(row: RequestRow) {
     setPendingIds((s) => {
       const next = new Set(s);
       next.add(row.id);
-      // Pre-hide team-children optimistically — cascade i actionen sørger for
-      // at de blir approved samtidig på serveren.
       if (row.isTeamCaptain) {
         for (const r of requests) {
           if (r.teamRequestId === row.id) next.add(r.id);
@@ -134,6 +108,11 @@ export function PåmeldingerClient({
       }
       return next;
     });
+  }
+
+  function handleApprove(row: RequestRow) {
+    if (locked) return;
+    hideWithTeam(row);
     startTransition(() => {
       void approveRequest(row.id);
     });
@@ -148,16 +127,7 @@ export function PåmeldingerClient({
   function submitReject(formData: FormData) {
     if (!rejectingFor) return;
     const row = rejectingFor;
-    setPendingIds((s) => {
-      const next = new Set(s);
-      next.add(row.id);
-      if (row.isTeamCaptain) {
-        for (const r of requests) {
-          if (r.teamRequestId === row.id) next.add(r.id);
-        }
-      }
-      return next;
-    });
+    hideWithTeam(row);
     setRejectingFor(null);
     startTransition(() => {
       void rejectRequest(row.id, formData);
@@ -172,162 +142,212 @@ export function PåmeldingerClient({
     });
   }
 
-  if (groups.length === 0) {
-    return (
-      <>
-        {tab === 'pending' && atOrOverCap && cap !== null && (
-          <div
-            data-testid="cap-warning"
-            role="alert"
-            className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning-text"
-          >
-            {t('capWarning', { cap, count: approvedCount })}
-          </div>
-        )}
-        <div className="px-3.5 py-6 text-center text-sm text-muted">
-          {t(`emptyMessages.${tab}` as Parameters<typeof t>[0])}
-        </div>
-      </>
-    );
+  function signedUpText(iso: string): string {
+    const ago = signupAgo(iso, Date.parse(renderedAt));
+    const time = formatTeeOffTimeLocale(ago.date, locale);
+    return ago.kind === 'date'
+      ? t('signedUp.date', { date: formatShortDayMonthLocale(ago.date, locale), time })
+      : t(`signedUp.${ago.kind}`, { time });
   }
 
-  return (
-    <>
-      {tab === 'pending' && atOrOverCap && cap !== null && (
-        <div
-          data-testid="cap-warning"
-          role="alert"
-          className="border-b border-warning/30 bg-warning/10 px-3.5 py-3 text-sm font-medium text-warning-text"
-        >
-          {t('capWarning', { cap, count: approvedCount })}
-        </div>
-      )}
-      <ul className="divide-y divide-border">
-        {groups.map((group) => (
-          <li key={group[0].id} className="px-3.5 py-3.5">
-            {group[0].isTeamCaptain && group[0].teamName ? (
-              <div className="mb-2 flex items-baseline justify-between gap-2">
-                <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  {t('teamLabel', { name: group[0].teamName })}
-                </p>
-                <p className="font-sans text-[11px] text-muted">
-                  {t('playerCount', { count: group.length })}
-                </p>
-              </div>
-            ) : null}
+  function soloLine(row: RequestRow): string {
+    const signedUp = signedUpText(row.createdAt);
+    return row.hcpIndex != null
+      ? t('cardLine', { hcp: t('hcp', { hcp: formatHcpDisplay(row.hcpIndex, locale) }), signedUp })
+      : signedUp;
+  }
 
-            {group.map((row, idx) => (
-              <div
-                key={row.id}
-                className={`flex flex-col gap-2 ${idx > 0 ? 'mt-3 border-t border-border pt-3' : ''} sm:flex-row sm:items-start sm:justify-between`}
+  function flagText(flag: NonNullable<SignupFlag>): string {
+    if (flag.kind === 'teamShort') return t('flags.teamShort', { needed: flag.needed, free: flag.free });
+    if (flag.kind === 'teamNone') return t('flags.teamNone', { needed: flag.needed });
+    return t('flags.soloFull');
+  }
+
+  const headingId = `signups-${view}-heading`;
+  const inInbox = view === 'pending';
+
+  return (
+    <section aria-labelledby={headingId}>
+      {inInbox ? (
+        <h2
+          id={headingId}
+          className="pt-[18px] pb-2 font-sans text-[10px] font-semibold uppercase leading-[normal] tracking-[0.2em] text-warning-text"
+        >
+          {t('waitingHeading', { count: headingCount })}
+        </h2>
+      ) : (
+        <Kicker as="h2" id={headingId} className="pt-[18px] pb-2 leading-[normal]">
+          {t(`historyHeadings.${view}`, { count: headingCount })}
+        </Kicker>
+      )}
+
+      {groups.length === 0 ? (
+        <p className="text-[13px] leading-[normal] text-muted">
+          {t(`emptyMessages.${view}`)}
+        </p>
+      ) : (
+        <ul aria-labelledby={headingId} className="-mx-1 flex flex-col gap-[10px]">
+          {groups.map((group) => {
+            const lead = group[0];
+            const isTeam = lead.isTeamCaptain;
+            const titleId = `req-${lead.id}-title`;
+            const membersId = `req-${lead.id}-members`;
+            const flag = inInbox && !locked ? signupFlag(group, capacity, activeRosterUserIds) : null;
+            const describedBy = isTeam ? `${titleId} ${membersId}` : titleId;
+            return (
+              <li
+                key={lead.id}
+                className="flex flex-col gap-[10px] rounded-2xl border border-border bg-surface px-3.5 py-3 leading-[normal]"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <p className="text-sm font-medium text-text">
-                      {row.displayName}
-                    </p>
-                    {row.isTeamCaptain && (
-                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-text">
-                        {t('captainBadge')}
+                <div className="flex items-center gap-3">
+                  {isTeam ? (
+                    <span aria-hidden className="flex shrink-0">
+                      {group.map((row, idx) => (
+                        <span
+                          key={row.id}
+                          className={`${AVATAR} ${RING} ${idx > 0 ? '-ml-2.5' : ''} ${
+                            idx > 0 && row.status === 'approved'
+                              ? 'bg-primary-soft text-primary'
+                              : 'bg-meter-track text-muted'
+                          }`}
+                        >
+                          {nameInitials(row.userName)}
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span aria-hidden className={`${AVATAR} bg-meter-track text-muted`}>
+                      {nameInitials(lead.userName)}
+                    </span>
+                  )}
+                  <span className="min-w-0 grow">
+                    <span id={titleId} className="block text-[15px] font-semibold text-text">
+                      {isTeam ? t('teamLabel', { name: lead.teamName ?? '' }) : lead.displayName}
+                    </span>
+                    {isTeam && (
+                      <span id={membersId} className="sr-only">
+                        {formatListLocale(
+                          group.map((r) => r.displayName),
+                          locale,
+                        )}
                       </span>
                     )}
-                    <span
-                      className={`rounded-full border px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] ${STATUS_TONE[row.status]}`}
-                    >
-                      {t(`tabs.${row.status}` as Parameters<typeof t>[0])}
-                    </span>
-                  </div>
-                  <p className="mt-1 font-sans text-[11px] tabular-nums text-muted">
-                    {t('registeredAt', { date: formatTimestamp(row.createdAt, locale as AppLocale) })}
-                    {row.decidedAt
-                      ? ` · ${t('decidedAt', { date: formatTimestamp(row.decidedAt, locale as AppLocale) })}`
-                      : ''}
-                  </p>
-                  {row.message && (
-                    <blockquote className="mt-2 border-l-2 border-border pl-3 font-serif text-[13px] italic text-muted">
-                      «{row.message}»
-                    </blockquote>
-                  )}
-                  {row.rejectionReason && (
-                    <p className="mt-1.5 text-xs text-muted">
-                      {t('rejectionReasonDisplay', { reason: row.rejectionReason })}
-                    </p>
-                  )}
+                    {isTeam && flag ? (
+                      <span className="block text-[12px] font-semibold text-warning-text">
+                        {flagText(flag)}
+                      </span>
+                    ) : (
+                      <span className="block text-[12px] text-muted">
+                        {isTeam ? signedUpText(lead.createdAt) : soloLine(lead)}
+                      </span>
+                    )}
+                    {!isTeam && flag && (
+                      <span className="block text-[12px] font-semibold text-warning-text">
+                        {flagText(flag)}
+                      </span>
+                    )}
+                  </span>
                 </div>
 
-                {/* #2358: arrangøren utpeker ny kaptein blant dem som står
-                    på laget — bare godkjente lagmedlemmer, bare før start. */}
-                {tab === 'approved' &&
-                  row.status === 'approved' &&
-                  !locked &&
-                  idx > 0 &&
-                  group[0].isTeamCaptain &&
-                  (captainFor === row.id ? (
-                    <div className="space-y-2" data-testid="make-captain-confirm">
-                      <p className="text-sm text-text">
-                        {t('makeCaptainConfirm', {
-                          name: row.displayName,
-                          teamName: group[0].teamName ?? '',
-                        })}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          data-testid="make-captain-confirm-button"
-                          onClick={() => confirmCaptain(row)}
-                          pending={transferring === row.id}
-                          pendingLabel={t('makeCaptainPending')}
-                        >
-                          {t('makeCaptainConfirmButton')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => setCaptainFor(null)}
-                          disabled={transferring === row.id}
-                        >
-                          {t('makeCaptainCancel')}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      data-testid="make-captain"
-                      onClick={() => setCaptainFor(row.id)}
-                    >
-                      {t('makeCaptainButton')}
-                    </Button>
-                  ))}
-                {row.status === 'pending' && !locked && idx === 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
+                {lead.message && (
+                  <blockquote className="border-l-2 border-border pl-3 font-serif text-[13px] italic text-muted">
+                    «{lead.message}»
+                  </blockquote>
+                )}
+                {lead.rejectionReason && (
+                  <p className="text-[12px] text-muted">
+                    {t('rejectionReasonDisplay', { reason: lead.rejectionReason })}
+                  </p>
+                )}
+
+                {!inInbox && isTeam && (
+                  <ul className="flex flex-col gap-2 border-t border-border pt-2.5">
+                    {group.map((row, idx) => (
+                      <li key={row.id} className="flex flex-col gap-2">
+                        <span className="flex flex-wrap items-center gap-2 text-[14px] text-text">
+                          {row.displayName}
+                          {idx === 0 && (
+                            <span className="rounded-full border border-border px-2 py-[2px] font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                              {t('captainBadge')}
+                            </span>
+                          )}
+                        </span>
+                        {/* #2358: arrangøren utpeker ny kaptein blant dem som står
+                            på laget — bare godkjente lagmedlemmer, bare før start. */}
+                        {view === 'approved' &&
+                          row.status === 'approved' &&
+                          !locked &&
+                          idx > 0 &&
+                          (captainFor === row.id ? (
+                            <div className="space-y-2" data-testid="make-captain-confirm">
+                              <p className="text-sm text-text">
+                                {t('makeCaptainConfirm', {
+                                  name: row.displayName,
+                                  teamName: lead.teamName ?? '',
+                                })}
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  data-testid="make-captain-confirm-button"
+                                  onClick={() => confirmCaptain(row)}
+                                  pending={transferring === row.id}
+                                  pendingLabel={t('makeCaptainPending')}
+                                >
+                                  {t('makeCaptainConfirmButton')}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  onClick={() => setCaptainFor(null)}
+                                  disabled={transferring === row.id}
+                                >
+                                  {t('makeCaptainCancel')}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              data-testid="make-captain"
+                              onClick={() => setCaptainFor(row.id)}
+                            >
+                              {t('makeCaptainButton')}
+                            </Button>
+                          ))}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {inInbox && !locked && (
+                  <div className="flex gap-2">
+                    <button
                       type="button"
                       data-testid="approve-request"
-                      data-request-id={row.id}
-                      onClick={() => handleApprove(row)}
-                      pending={pendingIds.has(row.id)}
-                      pendingLabel={t('approvingBusy')}
+                      data-request-id={lead.id}
+                      aria-describedby={describedBy}
+                      onClick={() => handleApprove(lead)}
+                      className="h-11 grow rounded-full bg-primary text-[14px] font-semibold leading-[normal] text-white transition-colors hover:bg-primary-hover dark:text-bg"
                     >
-                      {t('approveButton')}
-                    </Button>
-                    <Button
+                      {isTeam ? t('approveTeamButton') : t('approveButton')}
+                    </button>
+                    <button
                       type="button"
-                      variant="secondary"
-                      onClick={() => openReject(row)}
-                      pending={pendingIds.has(row.id)}
-                      pendingLabel={t('rejectingBusy')}
+                      aria-describedby={describedBy}
+                      onClick={() => openReject(lead)}
+                      className="h-11 grow rounded-full border border-border bg-surface text-[14px] font-semibold leading-[normal] text-text transition-colors hover:bg-primary-soft"
                     >
                       {t('rejectButton')}
-                    </Button>
+                    </button>
                   </div>
                 )}
-              </div>
-            ))}
-          </li>
-        ))}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {rejectingFor && (
         <RejectModal
@@ -339,7 +359,7 @@ export function PåmeldingerClient({
           t={t}
         />
       )}
-    </>
+    </section>
   );
 }
 
@@ -400,7 +420,7 @@ function RejectModal({
         </h2>
         {row.isTeamCaptain && (
           <p className="mt-2 text-sm text-muted">
-            {t('rejectModalTeamCascade', { teamName: row.teamName ?? '' })}
+            {t('rejectModalTeamCascade', { name: row.teamName ?? '' })}
           </p>
         )}
 

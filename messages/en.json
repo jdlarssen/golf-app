@@ -3906,9 +3906,7 @@
         "viewStatusLink": "View player status",
         "viewStatusWithReminderLink": "View player status and send reminder →",
         "leaderboardButton": "🏆 View leaderboard →",
-        "signupsClosedBody": "Signups are closed. Players will see a message that the organiser is making final adjustments.",
         "reopenSignupsButton": "Reopen signups",
-        "closeSignupsBody": "Close signups while you make final adjustments. Players who try to sign up will be told to wait.",
         "closeSignupsButton": "Close signups",
         "gameFullBanner": "The game is full ({current} of {max}). Remove some players to invite more."
       },
@@ -4095,8 +4093,6 @@
         "remindHoleConfirm": "Send {names} a reminder about {holeCount, plural, one {hole} other {holes}} {holes}?"
       },
       "signups": {
-        "topBarKicker": "Signups",
-        "brassRibbon": "Self-signup",
         "heading": "Signups",
         "inviteOnlyBanner": "This game is invite-only and does not appear in Find tournaments. Anyone with the link can still request to join. Requests will appear here for you to approve or decline.",
         "statusBanners": {
@@ -4129,20 +4125,15 @@
           "rejected": "No declined signups yet.",
           "withdrawn": "No players have withdrawn."
         },
-        "teamLabel": "Team · {name}",
-        "playerCount": "{count, plural, one {# player} other {# players}}",
+        "teamLabel": "Team: {name}",
         "captainBadge": "Captain",
         "makeCaptainButton": "Make captain",
         "makeCaptainConfirm": "Make {name} captain of {teamName}?",
         "makeCaptainConfirmButton": "Yes, make captain",
         "makeCaptainCancel": "Cancel",
         "makeCaptainPending": "Saving …",
-        "registeredAt": "Signed up {date}",
-        "decidedAt": "Decided {date}",
         "approveButton": "Approve",
-        "approvingBusy": "Approving …",
-        "rejectButton": "Decline",
-        "rejectingBusy": "Declining …",
+        "rejectButton": "Decline …",
         "rejectModalTitle": "Decline signup from {name}?",
         "rejectModalTeamCascade": "The entire team «{name}» will be declined at the same time.",
         "rejectReasonLabel": "Optional reason",
@@ -4151,7 +4142,44 @@
         "rejectSubmittingBusy": "Declining …",
         "rejectCancelButton": "Cancel",
         "rejectionReasonDisplay": "Reason: {reason}",
-        "capWarning": "This format supports up to {cap} {cap, plural, one {player} other {players}}, and {count} {count, plural, one {is} other {are}} already approved. Approving more may prevent the game from being published."
+        "backToGame": "Back to the game",
+        "backToInbox": "Back to signups",
+        "state": {
+          "open": "Signups are open",
+          "closed": "Signups are closed",
+          "inviteOnly": "Invite only"
+        },
+        "statusLine": "{state} · {when}",
+        "when": "{weekday} {dayMonth} {time}",
+        "capacityOf": "of {cap}",
+        "legendWith": "{count} playing",
+        "legendWaiting": "{count} waiting for you",
+        "legendFree": "{count, plural, one {# spot free} other {# spots free}}",
+        "legendOver": "{count} over the cap",
+        "waitingHeading": "Waiting for you · {count}",
+        "withHeading": "Playing · {count}",
+        "historyHeadings": {
+          "approved": "Approved · {count}",
+          "rejected": "Declined · {count}",
+          "withdrawn": "Withdrawn · {count}"
+        },
+        "historyLink": "{label} {count}",
+        "signedUp": {
+          "today": "signed up today at {time}",
+          "yesterday": "signed up yesterday at {time}",
+          "date": "signed up {date} at {time}"
+        },
+        "hcp": "HCP {hcp}",
+        "cardLine": "{hcp} · {signedUp}",
+        "flags": {
+          "teamShort": "Needs {needed, plural, one {# spot} other {# spots}}, only {free} free",
+          "teamNone": "Needs {needed, plural, one {# spot} other {# spots}}, none free",
+          "soloFull": "No spots free"
+        },
+        "approveTeamButton": "Approve team",
+        "showAll": "Show all",
+        "more": "{count} more",
+        "rosterEmpty": "Nobody is in yet."
       },
       "withdraw": {
         "topBarKicker": "Withdraw player",
