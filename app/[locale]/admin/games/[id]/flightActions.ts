@@ -494,7 +494,9 @@ export async function toggleSignupsClosed(
   }>(admin, gameId, 'id, status, registration_mode, group_id', 'toggleSignupsClosed', signupsPath, locale);
   if (game.status !== 'scheduled') redirect({ href: `${signupsPath}?error=signups_not_scheduled`, locale });
   if (!canToggleSignups(game.status, game.registration_mode, game.group_id)) {
-    // Nobody can sign up to an invite-only game outside a club: nothing to close.
+    // Only open, manual approval and club rounds can be closed. An invite-only
+    // round outside a club takes requests from anyone with the link (#368),
+    // one at a time, and has no signup window to close.
     redirect({ href: signupsPath, locale });
   }
 
