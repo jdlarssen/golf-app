@@ -202,7 +202,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
         )}
       </section>
 
-      {others.length > 1 ? (
+      {others.length > 1 && (
         <>
           <div className="relative">
             <Kicker className="leading-[normal] px-5 pt-4 pb-2">{tf('othersKicker')}</Kicker>
@@ -231,11 +231,14 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
             })}
           </nav>
         </>
-      ) : (
-        <div className="mx-4 mt-2 flex justify-end">{seeBoard('inline-flex min-h-11 items-center')}</div>
       )}
 
-      <Kicker className="leading-[normal] px-5 pt-4 pb-2">{tf('boardKicker')}</Kicker>
+      <div data-testid="follow-board-heading" className="relative">
+        <Kicker className="leading-[normal] px-5 pt-4 pb-2">{tf('boardKicker')}</Kicker>
+        {/* Alone in the flight there is no «Følg en annen» row; the link
+            moves to this heading, in the same place. */}
+        {others.length <= 1 && seeBoard('absolute right-5 bottom-2 inline-flex h-11 items-end')}
+      </div>
       <ol
         data-testid="follow-board"
         className="mx-4 overflow-hidden rounded-2xl border border-border bg-surface"
@@ -306,7 +309,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
         </button>
       )}
 
-      {footerSlot}
+      {footerSlot && <div className="mx-4">{footerSlot}</div>}
       <div className="mx-4 mt-3.5">{cta}</div>
     </div>
   );
