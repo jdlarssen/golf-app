@@ -6395,6 +6395,28 @@
       "followName": "Følg {name}",
       "seeWholeBoard": "Se hele tavla",
       "cta": "Lag din egen turnering på et par minutter →"
+    },
+    "tv": {
+      "metaTitle": "Storskjerm",
+      "openLabel": "Vis på storskjerm",
+      "paging": "Side {page} av {pages} · bytter hvert {seconds}. sekund · {players}",
+      "feedTitle": "Siste nytt",
+      "feedEmpty": "Birdies, ny leder og leverte flighter dukker opp her.",
+      "feedLead": "<b>{name}</b> tok ledelsen på hull {hole}",
+      "feedBirdie": "<b>{name}</b> med birdie på hull {hole}",
+      "feedAlbatross": "<b>{name}</b> med albatross på hull {hole}",
+      "feedEagle": "<b>{name}</b> med eagle på hull {hole}",
+      "feedHoleInOne": "<b>{name}</b> med hole-in-one på hull {hole}",
+      "feedFlightDone": "<b>Flight {flight}</b> har levert",
+      "qrTitle": "Følg på mobilen",
+      "qrBody": "Skann koden og se tavla live",
+      "qrAria": "QR-kode til live-lenken",
+      "finished": "Ferdig spilt",
+      "finishedBody": "Spillet er ferdig. Skann koden og se resultatet.",
+      "finishedQrTitle": "Resultatet på mobilen",
+      "finishedQrBody": "Skann koden og se hvem som vant",
+      "hiddenBody": "Tavla vises når spillet er ferdig.",
+      "unsupportedBody": "Storskjermen viser bare slagspill og stableford foreløpig."
     }
   },
   "installBanner": {

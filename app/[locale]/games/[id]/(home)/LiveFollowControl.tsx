@@ -9,6 +9,13 @@ import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { Switch } from '@/components/ui/Switch';
 
+/** The outline buttons under the switch: share, embed code and the big screen. */
+const OUTLINE_BUTTON = [
+  'mt-2 flex w-full min-h-[44px] items-center justify-center gap-2',
+  'rounded-2xl border border-border bg-transparent px-4',
+  'text-sm font-medium text-text transition-colors hover:bg-primary-soft',
+].join(' ');
+
 /**
  * Arrangør-only kontroll for live-følg (#938).
  *
@@ -122,11 +129,7 @@ export function LiveFollowControl({
         <button
           type="button"
           onClick={handleShare}
-          className={[
-            'mt-2 flex w-full min-h-[44px] items-center justify-center gap-2',
-            'rounded-2xl border border-border bg-transparent px-4',
-            'text-sm font-medium text-text transition-colors hover:bg-primary-soft',
-          ].join(' ')}
+          className={OUTLINE_BUTTON}
         >
           <svg
             width="16"
@@ -164,14 +167,24 @@ export function LiveFollowControl({
               // Clipboard write failed — silently ignore (same as share above).
             }
           }}
-          className={[
-            'mt-2 flex w-full min-h-[44px] items-center justify-center gap-2',
-            'rounded-2xl border border-border bg-transparent px-4',
-            'text-sm font-medium text-text transition-colors hover:bg-primary-soft',
-          ].join(' ')}
+          className={OUTLINE_BUTTON}
         >
           {embedCopied ? t('copiedLabel') : t('copyEmbedLabel')}
         </button>
+      )}
+
+      {/* #2275: the big screen for the clubhouse TV, in a new tab on the PC
+          that drives it. Unprefixed for the default locale, like the embed. */}
+      {enabled && (
+        <a
+          href={`${embedPrefix}/spectate/${token}/tv`}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="live-follow-tv"
+          className={OUTLINE_BUTTON}
+        >
+          {t('tv.openLabel')}
+        </a>
       )}
 
       {/* The label swaps alone are silent to screen readers; this announces
