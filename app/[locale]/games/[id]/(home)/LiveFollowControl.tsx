@@ -45,18 +45,14 @@ export function LiveFollowControl({
 
   const enabled = token !== null;
 
-  const spectateUrl =
-    typeof window !== 'undefined' && token
-      ? `${window.location.origin}/${locale}/spectate/${token}`
-      : null;
-
   // #1024: default-locale er uprefikset (localePrefix: 'as-needed') — og
   // header-regelen som tillater framing matcher /embed/..., ikke /no/embed/...
   const embedPrefix = locale === routing.defaultLocale ? '' : `/${locale}`;
-  const embedUrl =
-    typeof window !== 'undefined' && token
-      ? `${window.location.origin}${embedPrefix}/embed/spill/${token}`
-      : null;
+  // Built when clicked, not while rendering: the server has no `window`, so a
+  // render-time origin left the share and embed buttons out of the server HTML
+  // and React had to redraw the card on hydration (#418, found on #2275).
+  const spectateUrl = (live: string) => `${window.location.origin}/${locale}/spectate/${live}`;
+  const embedUrl = (live: string) => `${window.location.origin}${embedPrefix}/embed/spill/${live}`;
 
   function handleToggle() {
     startTransition(async () => {
@@ -70,7 +66,8 @@ export function LiveFollowControl({
   }
 
   async function handleShare() {
-    if (!spectateUrl) return;
+    if (!token) return;
+    const url = spectateUrl(token);
     const shareText = t('shareText');
 
     const canShare =
@@ -79,7 +76,7 @@ export function LiveFollowControl({
 
     if (canShare) {
       try {
-        await navigator.share({ url: spectateUrl, text: shareText });
+        await navigator.share({ url, text: shareText });
         return;
       } catch (err) {
         // User dismissed the share sheet — not an error.
@@ -90,7 +87,7 @@ export function LiveFollowControl({
 
     // Clipboard fallback (desktop / browsers without Web Share).
     try {
-      await navigator.clipboard.writeText(spectateUrl);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -125,7 +122,7 @@ export function LiveFollowControl({
       </Card>
 
       {/* Share button — only when enabled */}
-      {enabled && spectateUrl && (
+      {token && (
         <button
           type="button"
           onClick={handleShare}
@@ -151,11 +148,11 @@ export function LiveFollowControl({
       )}
 
       {/* #1024: kopier-lim-klar iframe-snutt for klubbside/infoskjerm */}
-      {enabled && embedUrl && (
+      {token && (
         <button
           type="button"
           onClick={async () => {
-            const snippet = buildEmbedSnippet(embedUrl, {
+            const snippet = buildEmbedSnippet(embedUrl(token), {
               height: 700,
               title: `Tørny – ${gameName}`,
             });

@@ -36,10 +36,10 @@ export function LigaEmbedControl({
   // Default-locale er uprefikset (localePrefix: 'as-needed') — og header-
   // regelen som tillater framing matcher /embed/..., ikke /no/embed/...
   const prefix = locale === routing.defaultLocale ? '' : `/${locale}`;
-  const embedUrl =
-    typeof window !== 'undefined' && token
-      ? `${window.location.origin}${prefix}/embed/liga/${token}`
-      : null;
+  // Built when clicked, not while rendering: the server has no `window`, so a
+  // render-time origin left the copy button out of the server HTML and React
+  // had to redraw the card on hydration (#418, found on #2275).
+  const embedUrl = (live: string) => `${window.location.origin}${prefix}/embed/liga/${live}`;
 
   function handleToggle() {
     startTransition(async () => {
@@ -53,8 +53,8 @@ export function LigaEmbedControl({
   }
 
   async function handleCopySnippet() {
-    if (!embedUrl) return;
-    const snippet = buildEmbedSnippet(embedUrl, {
+    if (!token) return;
+    const snippet = buildEmbedSnippet(embedUrl(token), {
       height: 600,
       title: `Tørny – ${leagueName}`,
     });
@@ -107,7 +107,7 @@ export function LigaEmbedControl({
       <span role="status" className="sr-only">
         {copied ? t('copied') : ''}
       </span>
-      {enabled && embedUrl && (
+      {token && (
         <button
           type="button"
           onClick={handleCopySnippet}
