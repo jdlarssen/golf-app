@@ -1228,9 +1228,17 @@ body:has([data-page-bg='invitation']) {
  * Next 16 holder forrige side igjen i DOM-en etter en klient-navigasjon,
  * skjult med `style="display: none !important"` på toppnoden. En markør der
  * inne skal ikke telle, ellers mangler baren på Hjem etter «Til Hjem» fra
- * feilskjermen (#2287).
+ * feilskjermen (#2287). Begge skrivemåtene, med og uten mellomrom, teller
+ * som skjult.
  * ---------------------------------------------------------------------------*/
-body:has([data-hides-bottom-nav]:not([style*='display: none'], [style*='display: none'] *))
+body:has(
+    [data-hides-bottom-nav]:not(
+        [style*='display: none'],
+        [style*='display:none'],
+        [style*='display: none'] *,
+        [style*='display:none'] *
+      )
+  )
   [data-bottom-nav] {
   display: none;
 }
