@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readVar, ROOT, DARK_MEDIA, DARK_ATTR } from './cssTokens';
+import { contrast, readVar, ROOT, DARK_MEDIA, DARK_ATTR } from './cssTokens';
 
 /**
  * Type A (#2287) — the 404 page's hole scene draws with seven `--ob-*` tokens.
@@ -27,5 +27,18 @@ describe('--ob-* tokens for the hole scene (#2287)', () => {
     expect(readVar(ROOT, token)).toBe(day);
     expect(readVar(DARK_MEDIA, token)).toBe(night);
     expect(readVar(DARK_ATTR, token)).toBe(night);
+  });
+
+  // The pin tops, the trunk and the crown's edge (--ob-ink) stand against the
+  // sky (--bg) and border the white pin (--ob-white). WCAG 1.4.11 asks 3:1 for
+  // graphics; the day ink at night (#1a2e1f on #14201a) gives 1,16:1.
+  it.each([
+    ['lys', ROOT],
+    ['mørk (media)', DARK_MEDIA],
+    ['mørk (attributt)', DARK_ATTR],
+  ])('--ob-ink holds 3:1 against the sky and the white pin, %s', (_mode, scope) => {
+    const ink = readVar(scope, 'ob-ink') as string;
+    expect(contrast(ink, readVar(scope, 'bg') as string)).toBeGreaterThanOrEqual(3);
+    expect(contrast(ink, readVar(scope, 'ob-white') as string)).toBeGreaterThanOrEqual(3);
   });
 });

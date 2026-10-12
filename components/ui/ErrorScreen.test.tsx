@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import noMessages from '@/messages/no.json';
 import { ErrorScreen } from './ErrorScreen';
 
 // next-intl er globalt mocket mot ekte no.json i vitest.setup.ts, så
@@ -18,10 +19,11 @@ describe('ErrorScreen', () => {
 
     const screenRoot = screen.getByTestId('error-screen');
     expect(screenRoot.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(
+      screen.getByRole('heading', { level: 1, name: noMessages.error.heading }),
+    ).toBeInTheDocument();
 
-    // «Prøv igjen» er ekte tekst fra katalogen, så i18n-wiringen er bevist.
-
-    fireEvent.click(screen.getByRole('button', { name: 'Prøv igjen' }));
+    fireEvent.click(screen.getByRole('button', { name: noMessages.error.retry }));
     expect(retry).toHaveBeenCalledOnce();
   });
 });
