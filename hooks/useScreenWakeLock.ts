@@ -6,8 +6,8 @@ import { useEffect } from 'react';
  * Keeps the screen awake while the component is mounted (#2275: the big
  * screen in the clubhouse must not go to sleep). The browser drops the lock
  * when the tab is hidden, so it is asked for again when the page shows. Every
- * failure — no Wake Lock API, the request refused — is ignored: the page works
- * the same, the screen may just dim.
+ * failure (no Wake Lock API, a refused request) is ignored: the page works the
+ * same, the screen may just dim.
  */
 export function useScreenWakeLock(): void {
   useEffect(() => {
