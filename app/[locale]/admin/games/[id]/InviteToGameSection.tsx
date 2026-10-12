@@ -3,7 +3,7 @@ import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Banner } from '@/components/ui/Banner';
 import { InviteToGameClient } from './InviteToGameClient';
 import type { GameStatus } from '@/lib/games/status';
-import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { getAdminClient } from '@/lib/supabase/admin';
 
 type CandidateRow = {
@@ -72,7 +72,7 @@ export async function InviteToGameSection({
 
   // Same cap as the signup link and the add actions (#2059).
   const cap = organizerPlayerCap(gameMode, modeConfig);
-  const isFull = cap !== null && activePlayerCount >= cap;
+  const isFull = isRosterFull(cap, activePlayerCount);
 
   return (
     <section className="mt-1.5">

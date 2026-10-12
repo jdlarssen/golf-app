@@ -30,7 +30,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
 import { ScorecardTable } from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
@@ -214,8 +214,7 @@ export default async function CreatorSpillerePage({
   const canWithdraw = supportsWithdrawal(game.game_mode);
   // Same cap as the signup link and the add actions, over active players (#2059).
   const playerCap = organizerPlayerCap(game.game_mode, game.mode_config);
-  const isFull =
-    playerCap !== null && players.filter((p) => !p.withdrawn_at).length >= playerCap;
+  const isFull = isRosterFull(playerCap, players.filter((p) => !p.withdrawn_at).length);
 
   // Pre-start the page needs two independent reads: the pending game-scoped
   // invitations and the creator's co-player network for the add-picker. They

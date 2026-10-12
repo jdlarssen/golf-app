@@ -23,7 +23,7 @@ import {
 } from '@/lib/games/claimGuestResult';
 import { sendGuestClaimNotification } from '@/lib/mail/guestClaimNotification';
 import { firstName } from '@/lib/firstName';
-import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { clampGenderToTee } from '@/lib/games/clampGenderToTee';
 import { TEE_EMBED } from '@/lib/games/joinTeeGenders';
 import { teeAvailabilityOf } from '@/lib/games/teeChoice';
@@ -78,7 +78,7 @@ export async function addGuestToGame(
       .select('user_id', { count: 'exact', head: true })
       .eq('game_id', gameId)
       .is('withdrawn_at', null);
-    if ((count ?? 0) >= cap) {
+    if (isRosterFull(cap, count ?? 0)) {
       redirect({ href: `${detailPath}?error=game_full`, locale });
     }
   }
