@@ -3,8 +3,9 @@
 // live board (`computeLiveBoard`) and the rows the leaderboard already
 // fetched; nothing here reads the database.
 
-import { firstName } from '@/lib/firstName';
+import { sharesFirstName } from '@/lib/firstName';
 import { nextUnfilledHole } from '@/lib/games/nextHole';
+import type { StartType } from '@/lib/games/startType';
 import type { HoleSegment } from '@/lib/scoring/holeSegment';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
 import { parForGender, underParMoment, type UnderParMoment } from '@/lib/stats/achievements';
@@ -80,8 +81,10 @@ export function buildFollowView(opts: {
   holesRows: ReadonlyArray<CourseHoleRow>;
   scoresRows: ReadonlyArray<{ user_id: string; hole_number: number; strokes: number | null }>;
   segment: HoleSegment;
+  /** A shotgun group plays on from its own start (`playOrder`, #2286). */
+  startType?: StartType;
 }): FollowViewData | null {
-  const { board, userId, players, holesRows, scoresRows, segment } = opts;
+  const { board, userId, players, holesRows, scoresRows, segment, startType = 'first_tee' } = opts;
   const row = board.rows.find((r) => r.userId === userId);
   const standing = row ? viewerStanding(board, userId) : null;
   if (!row || !standing) return null;
@@ -93,7 +96,7 @@ export function buildFollowView(opts: {
     row,
     standing,
     lead: leadOverSecond(board, row),
-    next: nextFor(player, userId, holesRows, scoresRows, segment),
+    next: nextFor(player, userId, holesRows, scoresRows, segment, startType),
     moment: newest ? underParMoment(newest.gross, newest.par) : null,
     others: othersFor(board, row, players),
   };
@@ -118,6 +121,7 @@ function nextFor(
   holesRows: ReadonlyArray<CourseHoleRow>,
   scoresRows: ReadonlyArray<{ user_id: string; hole_number: number; strokes: number | null }>,
   segment: HoleSegment,
+  startType: StartType,
 ): FollowNext | null {
   if (player?.submitted_at) return { kind: 'submitted' };
   // Same rule as the strip (`liveBoardStripAction`): only rows with strokes are
@@ -126,7 +130,7 @@ function nextFor(
     scoresRows.filter((s) => s.user_id === userId && s.strokes != null).map((s) => s.hole_number),
   );
   if (filled.size === 0) return { kind: 'notStarted' };
-  const holeNumber = nextUnfilledHole(segment, filled);
+  const holeNumber = nextUnfilledHole(segment, filled, startType);
   if (holeNumber === null) return { kind: 'allPlayed' };
   const hole = holesRows.find((h) => h.hole_number === holeNumber);
   if (!hole) return null;
@@ -146,10 +150,12 @@ function othersFor(
     flight === null ? board.rows : board.rows.filter((r) => flightOf.get(r.userId) === flight);
   const ordered = [row, ...pool.filter((r) => r.userId !== row.userId)];
 
-  const firstNames = ordered.map((r) => firstName(r.name));
   return ordered.map((r, i) => ({
     row: r,
-    fullName: firstNames[i] !== null && firstNames.some((n, j) => j !== i && n === firstNames[i]),
+    fullName: sharesFirstName(
+      r.name,
+      ordered.filter((_, j) => j !== i).map((o) => o.name),
+    ),
   }));
 }
 
@@ -157,6 +163,16 @@ function othersFor(
 export function followSubtitle(gameName: string, courseName: string | null): string {
   if (!courseName || gameName.startsWith(courseName)) return gameName;
   return `${gameName} · ${courseName}`;
+}
+
+/** The live link's board, unprefixed: next-intl adds the locale once (`/en/…`). */
+export function spectatePath(token: string): string {
+  return `/spectate/${token}`;
+}
+
+/** The live link following one player — the one place the address is built. */
+export function followHref(token: string, userId: string): string {
+  return `${spectatePath(token)}?folg=${encodeURIComponent(userId)}`;
 }
 
 /** Where the phone remembers who is followed on one live link. */

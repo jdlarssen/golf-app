@@ -6,6 +6,7 @@ import { LeaderboardShell } from '../LeaderboardChrome';
 import { LiveBoard } from '../LiveBoard';
 import { FollowMemory } from '../../../../spectate/[token]/FollowMemory';
 import { buildFollowView, followSubtitle } from '@/lib/leaderboard/followPlayer';
+import { parseStartType } from '@/lib/games/startType';
 import {
   liveBoardStripAction,
   type LiveBoard as LiveBoardData,
@@ -73,6 +74,7 @@ export async function renderLiveBoard(opts: {
   follow?: LiveBoardFollowOpts;
 }) {
   const { gameId, game, players, board, holesRows, scoresRows, backHref, footerSlot, testId, follow } = opts;
+  const startType = parseStartType(game.start_type);
 
   const followView =
     follow?.userId
@@ -83,6 +85,7 @@ export async function renderLiveBoard(opts: {
           holesRows,
           scoresRows,
           segment: game.hole_segment,
+          startType,
         })
       : null;
   if (follow && followView) {
@@ -120,6 +123,7 @@ export async function renderLiveBoard(opts: {
         gameId,
         status: game.status,
         holeSegment: game.hole_segment,
+        startType,
         requirePeerApproval: game.require_peer_approval,
         viewer: viewer && {
           submitted_at: viewer.submitted_at ?? null,
@@ -145,7 +149,7 @@ export async function renderLiveBoard(opts: {
         strip={strip}
         backHref={backHref}
         testId={testId}
-        followPath={follow ? `/spectate/${follow.token}` : undefined}
+        followToken={follow?.token}
       />
       {follow && <FollowMemory token={follow.token} userId={null} hadFolg={follow.hadFolg} />}
     </LeaderboardShell>

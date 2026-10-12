@@ -50,7 +50,7 @@ export function SpectateCta({
     return (
       <SmartLink
         href={href}
-        data-testid="spectate-cta"
+        data-testid="spectate-follow-cta"
         className="flex min-h-12 items-center justify-center text-[14px] font-semibold leading-[normal] text-primary underline hover:text-primary-hover"
       >
         {label}

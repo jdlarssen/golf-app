@@ -96,14 +96,14 @@ describe('LiveBoard', () => {
   });
 
   it('on the live link (#2286) the plates follow the player and the pick card shows', () => {
-    const { rerender } = render(<LiveBoard {...props({ viewerUserId: '', followPath: '/spectate/tok' })} />);
+    const { rerender } = render(<LiveBoard {...props({ viewerUserId: '', followToken: 'tok' })} />);
 
     expect(screen.getByTestId('follow-pick')).toBeInTheDocument();
     const links = screen.getAllByTestId('board-follow-link');
     expect(links).toHaveLength(5);
     expect(links[0]).toHaveAttribute('href', '/spectate/tok?folg=u1');
 
-    // Without followPath (the signed-in board, the embed): no card, no links.
+    // Without followToken (the signed-in board, the embed): no card, no links.
     rerender(<LiveBoard {...props({ viewerUserId: '' })} />);
     expect(screen.queryByTestId('follow-pick')).not.toBeInTheDocument();
     expect(screen.queryByTestId('board-follow-link')).not.toBeInTheDocument();
