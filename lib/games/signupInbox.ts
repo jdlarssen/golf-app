@@ -3,13 +3,15 @@
 // the page, the client cards and later the native app (#1954) read the same
 // answers. The capacity counts the roster, not approved requests (#2291).
 
-import type { RequestStatus } from '@/app/[locale]/admin/games/[id]/signups/types';
 import type { RegistrationMode } from '@/lib/games/registration';
 import { isRosterLocked, type GameStatus } from '@/lib/games/status';
 import { isOpenForSignups } from '@/lib/games/publicSignupVisibility';
 import { isRosterFull } from '@/lib/games/teamFormatLimits';
 import { osloDayNumber } from '@/lib/format/osloCalendar';
 import { firstName } from '@/lib/firstName';
+
+/** A signup request's status (`registration_request_status` in the DB). */
+export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
 
 /**
  * #2061: a teammate who accepts the team invitation before the organiser has
@@ -68,12 +70,17 @@ export function groupSignupRequests<T extends SignupRequestLike>(rows: T[]): T[]
  * The cards waiting for the organiser: groups that start with a pending row.
  * A pending captain brings pending children and children who already said
  * yes (#2061), never rejected or withdrawn ones. An approved child whose
- * captain is gone does not wait for anything, so it is not here.
+ * captain is gone does not wait for anything, so it is not here. A teammate
+ * still pending under an already approved captain waits on their own, so
+ * they get their own card, as under «Venter» before (#2288 review).
  */
 export function inboxGroups<T extends SignupRequestLike>(rows: T[]): T[][] {
-  return groupSignupRequests(rows.filter((r) => isCascadeStatus(r.status))).filter(
-    (group) => group[0].status === 'pending',
-  );
+  const out: T[][] = [];
+  for (const group of groupSignupRequests(rows.filter((r) => isCascadeStatus(r.status)))) {
+    if (group[0].status === 'pending') out.push(group);
+    else for (const r of group) if (r.status === 'pending') out.push([r]);
+  }
+  return out;
 }
 
 export type HistoryStatus = Exclude<RequestStatus, 'pending'>;
@@ -220,6 +227,31 @@ export function canToggleSignups(
   if (status !== 'scheduled') return false;
   if (registrationMode === 'open' || registrationMode === 'manual_approval') return true;
   return registrationMode === 'invite_only' && groupId != null;
+}
+
+/**
+ * Does «Styr spillere» show the «Påmeldinger» link (#2288)? Never on a cup
+ * match, whose roster the cup owns. Otherwise before the start, on rounds
+ * that take requests (manual approval, or invite-only, #368) or whose signups
+ * can be closed; and after the start only while requests are still pending
+ * (#1060), since the signups page is then the only way to them.
+ * `pendingCount` is null when the count failed.
+ */
+export function showsSignupsLink(round: {
+  status: GameStatus | string;
+  registrationMode: RegistrationMode;
+  groupId: string | null;
+  tournamentId: string | null;
+  pendingCount: number | null;
+}): boolean {
+  if (round.tournamentId != null) return false;
+  if (round.pendingCount != null && round.pendingCount > 0) return true;
+  if (round.status !== 'draft' && round.status !== 'scheduled') return false;
+  return (
+    round.registrationMode === 'manual_approval' ||
+    round.registrationMode === 'invite_only' ||
+    canToggleSignups(round.status, round.registrationMode, round.groupId)
+  );
 }
 
 /**

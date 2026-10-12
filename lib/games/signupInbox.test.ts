@@ -12,6 +12,7 @@ import {
   signupInboxState,
   canToggleSignups,
   signupAgo,
+  showsSignupsLink,
   firstNamesLine,
   sortRoster,
   type SignupRequestLike,
@@ -108,6 +109,18 @@ describe('inboxGroups', () => {
       name: 'ingen forespørsler → ingen kort',
       rows: [],
       expected: [],
+    },
+    {
+      // A teammate still waiting after the captain was approved stood under
+      // «Venter» on main; it must not vanish from the inbox.
+      name: 'ventende lagkamerat med godkjent kaptein → eget kort',
+      rows: [captain('c', 'approved'), child('a', 'c')],
+      expected: [['a']],
+    },
+    {
+      name: 'godkjent kaptein: bare de ventende lagkameratene får kort',
+      rows: [captain('c', 'approved'), child('a', 'c', 'approved'), child('b', 'c')],
+      expected: [['b']],
     },
   ])('$name', ({ rows, expected }) => {
     expect(ids(inboxGroups(rows))).toEqual(expected);
@@ -230,6 +243,16 @@ describe('inboxCounts (#2291)', () => {
     expect(counts.queued).toBe(2);
   });
 
+  // «VENTER PÅ DEG · N» is `queued`: the people in the inbox who still need a
+  // seat (O3). An applicant already on the roster keeps their card until the
+  // organiser decides, but takes no seat, so N can be lower than the cards.
+  it('en søker som alt står på lista, har kort, men telles ikke i køen', () => {
+    const rows = [solo('s', 'pending', 'u-on'), solo('t')];
+    const counts = inboxCounts({ roster: [active('u-on')], requests: rows });
+    expect(ids(inboxGroups(rows))).toEqual([['s'], ['t']]);
+    expect(counts.queued).toBe(1);
+  });
+
   it('køen teller personer, ikke kort, og ser bare på innkurven', () => {
     const waiting = [captain('c'), child('a', 'c', 'approved'), solo('s')];
     expect(inboxCounts({ roster: [], requests: waiting }).queued).toBe(3);
@@ -284,6 +307,31 @@ describe('canToggleSignups', () => {
     ['finished', 'invite_only', 'group-1', false],
   ] as const)('%s / %s / gruppe %s → %s', (status, mode, groupId, expected) => {
     expect(canToggleSignups(status, mode, groupId)).toBe(expected);
+  });
+});
+
+describe('showsSignupsLink («Påmeldinger» på «Styr spillere»)', () => {
+  const round = {
+    status: 'scheduled' as const,
+    registrationMode: 'invite_only' as const,
+    groupId: null as string | null,
+    tournamentId: null as string | null,
+    pendingCount: 0 as number | null,
+  };
+
+  it.each([
+    { name: 'planlagt, bare inviterte', round, expected: true },
+    { name: 'utkast, manuell godkjenning', round: { ...round, status: 'draft' as const, registrationMode: 'manual_approval' as const }, expected: true },
+    { name: 'planlagt, åpen påmelding', round: { ...round, registrationMode: 'open' as const }, expected: true },
+    { name: 'utkast, åpen påmelding (kan ikke stenges ennå)', round: { ...round, status: 'draft' as const, registrationMode: 'open' as const }, expected: false },
+    { name: 'pågår, ingen ventende', round: { ...round, status: 'active' as const }, expected: false },
+    { name: 'ferdig, ingen ventende', round: { ...round, status: 'finished' as const }, expected: false },
+    { name: 'ferdig med ventende forespørsel (#1060)', round: { ...round, status: 'finished' as const, pendingCount: 1 }, expected: true },
+    { name: 'pågår, tellingen feilet', round: { ...round, status: 'active' as const, pendingCount: null }, expected: false },
+    { name: 'cupkamp før start', round: { ...round, tournamentId: 'cup-1' }, expected: false },
+    { name: 'cupkamp med ventende', round: { ...round, tournamentId: 'cup-1', pendingCount: 2 }, expected: false },
+  ])('$name → $expected', ({ round: r, expected }) => {
+    expect(showsSignupsLink(r)).toBe(expected);
   });
 });
 
