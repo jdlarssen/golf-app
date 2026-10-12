@@ -744,8 +744,7 @@ async function buildSections({
   // påmeldingssiden viser «stengt». Kortet erstattes da av en liten
   // tekstlenke til historikken, som fortsatt er eneste vei til frosne
   // pending-forespørsler på finished.
-  // #1795: «Steng påmelding» (#543) bor nå som sekundær rad inne i kortet —
-  // status + modus sendes med slik at kortet eier gaten selv.
+  // #2288: «Steng påmeldingen» bor på påmeldingssiden; kortet lenker dit.
   const signups = !isPlayPhase ? (
     <RegistrationOverviewSection
       gameId={gameId}
