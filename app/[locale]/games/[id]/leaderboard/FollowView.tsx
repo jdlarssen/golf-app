@@ -7,7 +7,13 @@ import { Kicker } from '@/components/ui/Kicker';
 import { useOnline } from '@/hooks/useOnline';
 import { Link } from '@/i18n/navigation';
 import { firstName } from '@/lib/firstName';
-import { forgetFollow, type FollowNext, type FollowViewData } from '@/lib/leaderboard/followPlayer';
+import {
+  followHref,
+  forgetFollow,
+  spectatePath,
+  type FollowNext,
+  type FollowViewData,
+} from '@/lib/leaderboard/followPlayer';
 import type {
   LiveBoard as LiveBoardData,
   LiveBoardRecentHole,
@@ -78,8 +84,6 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
   const leader = isBoardLeader(row);
   const displayName = (r: LiveBoardRow) => boardDisplayName(r, tc);
   const name = displayName(row);
-  const boardPath = `/spectate/${token}`;
-  const followHref = (userId: string) => `${boardPath}?folg=${userId}`;
 
   const pill = !online
     ? ts('offlineStatus')
@@ -109,7 +113,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
 
   const seeBoard = (placement: string) => (
     <Link
-      href={boardPath}
+      href={spectatePath(token)}
       replace
       data-testid="follow-see-board"
       onClick={() => forgetFollow(token)}
@@ -214,7 +218,7 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
               return (
                 <Link
                   key={other.userId}
-                  href={followHref(other.userId)}
+                  href={followHref(token, other.userId)}
                   replace
                   data-testid="follow-other"
                   aria-current={selected ? 'true' : undefined}
@@ -269,13 +273,13 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
               {followed ? (
                 <div
                   aria-hidden
-                  className={`${ROW} ${divider} bg-primary-soft dark:ring-1 dark:ring-inset dark:ring-primary/60`}
+                  className={`${ROW} ${divider} bg-primary-soft dark:ring-1 dark:ring-inset dark:ring-primary/70`}
                 >
                   {cells}
                 </div>
               ) : (
                 <Link
-                  href={followHref(item.userId)}
+                  href={followHref(token, item.userId)}
                   replace
                   aria-label={tf('followName', { name: rowName })}
                   className={`${ROW} ${divider}`}

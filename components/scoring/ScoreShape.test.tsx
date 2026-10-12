@@ -117,3 +117,35 @@ describe('ScoreShape', () => {
     expect(numberSpan?.style.textAlign).toBe('center');
   });
 });
+
+describe('ScoreShape size="follow" (#2286) — the artboard\'s CSS borders', () => {
+  it.each([
+    ['none', 'par', 0, false, null],
+    ['circle', 'under', 1, true, 'border-score-under-ring'],
+    ['double-circle', 'under', 2, true, 'border-score-under-ring'],
+    ['triple-circle', 'under', 3, true, 'border-score-under-ring'],
+    ['square', 'over1', 1, false, 'border-score-over1-ring'],
+    ['double-square', 'over2', 2, false, 'border-score-over2-fg'],
+    ['triple-square', 'over2', 3, false, 'border-score-over2-fg'],
+    ['quadruple-square', 'over2', 4, false, 'border-score-over2-fg'],
+  ] as const)('%s: %s borders', (shape, tone, borders, round, colour) => {
+    const { container } = render(
+      <ScoreShape shape={shape} tone={tone} size="follow">4</ScoreShape>,
+    );
+    const box = container.firstElementChild as HTMLElement;
+    expect(container.querySelector('svg')).toBeNull();
+    expect(box).toHaveClass('box-border', 'h-[34px]', 'w-[34px]', 'leading-[normal]');
+    expect(box).not.toHaveClass('tabular-nums');
+    const bordered = [box, ...box.querySelectorAll('span')].filter((el) => el.className.includes('border-[1.5px]'));
+    expect(bordered).toHaveLength(borders);
+    for (const el of bordered) {
+      expect(el.classList.contains('rounded-full')).toBe(round);
+      if (colour) expect(el).toHaveClass(colour);
+    }
+    // Each border after the first sits 3 px further in.
+    const insets = ['inset-[1.5px]', 'inset-[4.5px]', 'inset-[7.5px]'].slice(0, Math.max(0, borders - 1));
+    insets.forEach((inset, i) => expect(bordered[i + 1]).toHaveClass('absolute', inset));
+    expect(screen.getByText('4')).toBeInTheDocument();
+  });
+});
+

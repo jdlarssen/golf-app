@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { followStorageKey, forgetFollow } from '@/lib/leaderboard/followPlayer';
+import { followHref, followStorageKey, forgetFollow } from '@/lib/leaderboard/followPlayer';
 
 /**
  * Heiagjengen (#2286): the phone remembers who is followed on one live link.
@@ -55,7 +55,7 @@ export function FollowMemory({
     }
     if (!stored) return;
     redirected.current = true;
-    router.replace(`/spectate/${token}?folg=${encodeURIComponent(stored)}`);
+    router.replace(followHref(token, stored));
   }, [token, userId, hadFolg, router]);
 
   return null;

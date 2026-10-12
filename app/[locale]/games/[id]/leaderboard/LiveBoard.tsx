@@ -13,6 +13,7 @@ import {
   type ViewerStanding,
 } from '@/lib/leaderboard/liveBoard';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
+import { followHref } from '@/lib/leaderboard/followPlayer';
 import { BoardPlayerPlate } from './BoardRowReactions';
 import {
   behindLeaderText,
@@ -67,11 +68,11 @@ export interface LiveBoardProps {
   /** The `<ol>`'s test id — the e2e golden path reads the stableford board by it. */
   testId: 'stableford-leaderboard' | 'strokeplay-leaderboard';
   /**
-   * Heiagjengen (#2286), the live link only: the unprefixed `/spectate/<token>`.
-   * Set, the name plates link to `?folg=<userId>` and the card «Hvem heier du
-   * på?» stands above the board.
+   * Heiagjengen (#2286), the live link only: its token. Set, the name plates
+   * link to the follow page (`followHref`) and the card «Hvem heier du på?»
+   * stands above the board.
    */
-  followPath?: string;
+  followToken?: string;
 }
 
 /**
@@ -95,7 +96,7 @@ export function LiveBoard({
   strip,
   backHref,
   testId,
-  followPath,
+  followToken,
 }: LiveBoardProps): JSX.Element {
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
@@ -124,7 +125,7 @@ export function LiveBoard({
 
   return (
     <div>
-      {followPath && (
+      {followToken && (
         <div
           data-testid="follow-pick"
           className="mb-3 rounded-2xl border border-border bg-surface px-3.5 py-3"
@@ -198,7 +199,7 @@ export function LiveBoard({
                     name={displayName(item)}
                     isYou={item.userId === viewerUserId}
                     showRank={!nobodyHasPlayed}
-                    followHref={followPath ? `${followPath}?folg=${item.userId}` : undefined}
+                    followHref={followToken ? followHref(followToken, item.userId) : undefined}
                     open={openUserId === item.userId}
                     onToggle={() =>
                       setOpenUserId((cur) => (cur === item.userId ? null : item.userId))

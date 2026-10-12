@@ -67,6 +67,7 @@ function view(opts: {
   scoresRows?: ReturnType<typeof scores>;
   segment?: 'full' | 'front9' | 'back9';
   unit?: LiveBoardUnit;
+  startType?: 'first_tee' | 'shotgun';
 }) {
   return buildFollowView({
     board: board(opts.rows, opts.unit),
@@ -75,6 +76,7 @@ function view(opts: {
     holesRows: HOLES,
     scoresRows: opts.scoresRows ?? [],
     segment: opts.segment ?? 'full',
+    startType: opts.startType,
   });
 }
 
@@ -240,6 +242,19 @@ describe('buildFollowView — the next hole', () => {
       scoresRows: scores('a', range(1, 5)),
     });
     expect(v?.next).toEqual({ kind: 'submitted' });
+  });
+
+  it('a shotgun group (#2286) plays on from its own start', () => {
+    expect(view({ rows, userId: 'a', startType: 'shotgun', scoresRows: scores('a', [10, 11]) })?.next).toEqual({
+      kind: 'hole',
+      holeNumber: 12,
+      par: 4,
+    });
+    expect(view({ rows, userId: 'a', startType: 'shotgun', scoresRows: scores('a', range(10, 18)) })?.next).toEqual({
+      kind: 'hole',
+      holeNumber: 1,
+      par: 4,
+    });
   });
 
   it('no holes played yet', () => {

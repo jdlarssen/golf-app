@@ -5,7 +5,7 @@
 // own translators in.
 
 import type { useTranslations } from 'next-intl';
-import { firstName } from '@/lib/firstName';
+import { firstName, sharesFirstName } from '@/lib/firstName';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type {
   LiveBoardRow,
@@ -114,7 +114,8 @@ export function boardRowSr(
 
 /**
  * «2 poeng bak Marte», or «2 poeng bak ledelsen» on a shared lead; `null` when
- * the player leads or the numbers cannot be compared.
+ * the player leads or the numbers cannot be compared. The leader is named by
+ * first name, or in full when another player on the board shares it.
  */
 export function behindLeaderText(
   t: BoardT,
@@ -131,7 +132,15 @@ export function behindLeaderText(
       : t('behindStrokesLead', { gap: standing.gap });
   }
   const leaderRow = rows.find((r) => r.userId === standing.leaderUserIds[0]);
-  const leader = leaderRow ? (firstName(leaderRow.name) ?? displayName(leaderRow)) : '';
+  // The first name, unless another player on the board shares it (#2286).
+  const leader = !leaderRow
+    ? ''
+    : sharesFirstName(
+          leaderRow.name,
+          rows.filter((r) => r.userId !== leaderRow.userId).map((r) => r.name),
+        )
+      ? displayName(leaderRow)
+      : (firstName(leaderRow.name) ?? displayName(leaderRow));
   return inPoints
     ? t('behindPoints', { gap: standing.gap, name: leader })
     : t('behindStrokes', { gap: standing.gap, name: leader });
