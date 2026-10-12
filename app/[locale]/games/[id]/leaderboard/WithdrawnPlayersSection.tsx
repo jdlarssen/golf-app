@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
+import { Kicker } from '@/components/ui/Kicker';
 
 export type WithdrawnPlayer = {
   user_id: string;
@@ -15,6 +16,10 @@ type Props = {
  * in-scope game mode (best_ball, stableford, modified_stableford,
  * solo_strokeplay — #386). Shows withdrawn players with a muted badge and
  * no position. Renders nothing when the list is empty.
+ *
+ * The page sets the side gutter: the card spans the content width, and the
+ * kicker sits 4 px in, like the board's own labels. `p-0!` because `Card`'s
+ * own `p-6` otherwise wins over a plain `p-0` (#2286).
  */
 export function WithdrawnPlayersSection({ players }: Props) {
   const t = useTranslations('leaderboard.withdrawn');
@@ -22,11 +27,9 @@ export function WithdrawnPlayersSection({ players }: Props) {
   if (players.length === 0) return null;
 
   return (
-    <div className="mt-4 px-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted mb-2">
-        {t('sectionTitle')}
-      </p>
-      <Card className="p-0 overflow-hidden">
+    <div className="mt-4">
+      <Kicker className="mb-2 px-1">{t('sectionTitle')}</Kicker>
+      <Card className="p-0! overflow-hidden">
         <ul className="divide-y divide-border">
           {players.map((p) => (
             <li
