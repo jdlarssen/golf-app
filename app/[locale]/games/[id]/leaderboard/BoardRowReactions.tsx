@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Link } from '@/i18n/navigation';
 import type { ReactionEmoji } from '@/lib/games/reactions/palette';
 import { useReactionsContext } from './ReactionsProvider';
 
@@ -25,11 +26,12 @@ function topReactions(
  * given here. Without a `ReactionsProvider` (spectate, embed) or with an inert
  * one (`disabled`: an organizer who does not play, a non-participant) the plate
  * is a plain `div` that still shows the counts, never a button that does
- * nothing.
+ * nothing — or, on the live link (#2286), a link that follows the player.
  */
 export function BoardPlayerPlate({
   userId,
   label,
+  follow,
   expanded,
   onToggle,
   controls,
@@ -40,6 +42,8 @@ export function BoardPlayerPlate({
   userId: string;
   /** Accessible name of the button: «Reaksjoner til {navn}». */
   label: string;
+  /** The live link (#2286): without reactions, the plate follows the player. */
+  follow?: { href: string; label: string };
   expanded: boolean;
   onToggle: () => void;
   /** Id of the reaction row the button opens. */
@@ -73,6 +77,19 @@ export function BoardPlayerPlate({
   );
 
   if (!ctx || ctx.disabled) {
+    if (follow) {
+      return (
+        <Link
+          href={follow.href}
+          replace
+          aria-label={follow.label}
+          data-testid="board-follow-link"
+          className={`flex min-h-11 flex-col justify-center ${className}`}
+        >
+          {content}
+        </Link>
+      );
+    }
     return <div className={`flex min-h-11 flex-col justify-center ${className}`}>{content}</div>;
   }
   return (

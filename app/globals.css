@@ -145,6 +145,14 @@
    * ring in the flight rows (ScoreShape size `row`). Artboard values. */
   --on-strong-arrow: #b9d8c1;
   --score-under-ring: #1f6b3a;
+  /* The follow page (#2286), artboard values. The LIVE dot on the green head
+   * and the number on the leader's gold disc sit on --surface-strong and
+   * --accent in both modes, so they keep one value at night: the dot its pale
+   * green, the number dark where --text turns light. The bogey square is the
+   * artboard's amber. */
+  --live-dot-on-strong: #7daa8a;
+  --on-accent: #1a2e1f;
+  --score-over1-ring: #b5651d;
 
   /* Skeleton — warm linen, never neutral grey. Base sits between --border and
    * --row-divider-warm; tint is the shimmer-peak lifted one step. */
@@ -348,6 +356,10 @@
      * --surface-strong; the ring takes the night birdie green on --surface. */
     --on-strong-arrow: #b9d8c1;
     --score-under-ring: #7daa8a;
+    /* Follow page (#2286) — see :root. */
+    --live-dot-on-strong: #7daa8a;
+    --on-accent: #1a2e1f;
+    --score-over1-ring: #e5b26f;
 
     /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
@@ -483,6 +495,9 @@
   --rank-up: #7daa8a;
   --on-strong-arrow: #b9d8c1;
   --score-under-ring: #7daa8a;
+  --live-dot-on-strong: #7daa8a;
+  --on-accent: #1a2e1f;
+  --score-over1-ring: #e5b26f;
 
   --skel-base: #243828;
   --skel-tint: #2f4734;
@@ -572,6 +587,10 @@
   --color-on-strong: var(--on-strong);
   --color-accent-on-strong: var(--accent-on-strong);
   --color-live-dot: var(--live-dot);
+  --color-live-dot-on-strong: var(--live-dot-on-strong);
+  --color-on-accent: var(--on-accent);
+  --color-score-under-ring: var(--score-under-ring);
+  --color-score-over1-ring: var(--score-over1-ring);
   --color-rank-up: var(--rank-up);
   --color-danger-deep: var(--danger-deep);
   --color-tee-white: var(--tee-white);
@@ -773,6 +792,21 @@ h1, h2, h3, h4, h5, h6 {
  * and Safari's toolbar tint — they paint from <body>, not from AppShell. */
 body:has([data-page-bg='invitation']) {
   background: var(--invitation-page-bg);
+}
+
+/* Heiagjengen (#2286): the follow page draws its own green head and its own
+ * link to make a tournament, so the spectate banner and the default «Lag din
+ * egen turnering» button step aside while it is shown. Only `renderLiveBoard`
+ * knows whether there is a board to follow, so the page swaps them in CSS,
+ * from the marker in the server HTML. With cacheComponents, Next keeps the
+ * previous page in the DOM under `display: none !important`; the guard skips
+ * a follow page hidden that way (the node itself or anything inside it), so
+ * «Se hele tavla» lands on a board with its banner back (#2553's guard). */
+body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'], [style*='display: none'] *, [style*='display:none'] *)) [data-spectate-banner] {
+  display: none;
+}
+body:has([data-follow-view]:not([style*='display: none'], [style*='display:none'], [style*='display: none'] *, [style*='display:none'] *)) [data-spectate-default-cta] {
+  display: none;
 }
 
 .pullquote {

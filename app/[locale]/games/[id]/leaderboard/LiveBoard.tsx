@@ -66,6 +66,12 @@ export interface LiveBoardProps {
   backHref: string;
   /** The `<ol>`'s test id — the e2e golden path reads the stableford board by it. */
   testId: 'stableford-leaderboard' | 'strokeplay-leaderboard';
+  /**
+   * Heiagjengen (#2286), the live link only: the unprefixed `/spectate/<token>`.
+   * Set, the name plates link to `?folg=<userId>` and the card «Hvem heier du
+   * på?» stands above the board.
+   */
+  followPath?: string;
 }
 
 /**
@@ -89,9 +95,11 @@ export function LiveBoard({
   strip,
   backHref,
   testId,
+  followPath,
 }: LiveBoardProps): JSX.Element {
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
+  const tf = useTranslations('spectate.follow');
   const [showAll, setShowAll] = useState(false);
   const [openUserId, setOpenUserId] = useState<string | null>(null);
 
@@ -116,6 +124,15 @@ export function LiveBoard({
 
   return (
     <div>
+      {followPath && (
+        <div
+          data-testid="follow-pick"
+          className="mb-3 rounded-2xl border border-border bg-surface px-3.5 py-3"
+        >
+          <p className="font-serif text-[18px] font-medium text-text">{tf('pickTitle')}</p>
+          <p className="mt-0.5 text-[13px] text-muted">{tf('pickBody')}</p>
+        </div>
+      )}
       <header
         data-focus-surface="strong"
         className="rounded-2xl bg-surface-strong px-2 pt-2 pb-5 text-bg-tint"
@@ -181,6 +198,7 @@ export function LiveBoard({
                     name={displayName(item)}
                     isYou={item.userId === viewerUserId}
                     showRank={!nobodyHasPlayed}
+                    followHref={followPath ? `${followPath}?folg=${item.userId}` : undefined}
                     open={openUserId === item.userId}
                     onToggle={() =>
                       setOpenUserId((cur) => (cur === item.userId ? null : item.userId))
@@ -230,6 +248,7 @@ function BoardRow({
   name,
   isYou,
   showRank,
+  followHref,
   open,
   onToggle,
 }: {
@@ -238,11 +257,14 @@ function BoardRow({
   name: string;
   isYou: boolean;
   showRank: boolean;
+  /** The live link's `?folg=` for this row (#2286). */
+  followHref?: string;
   open: boolean;
   onToggle: () => void;
 }) {
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
+  const tf = useTranslations('spectate.follow');
   const leader = isBoardLeader(row);
   // Klubbhus-natt: primary-soft sits one step from the surface, so the
   // viewer's row also gets a sage hairline there.
@@ -277,6 +299,7 @@ function BoardRow({
         <BoardPlayerPlate
           userId={row.userId}
           label={t('reactionsTo', { name })}
+          follow={followHref ? { href: followHref, label: tf('followName', { name }) } : undefined}
           expanded={open}
           onToggle={onToggle}
           controls={panelId}

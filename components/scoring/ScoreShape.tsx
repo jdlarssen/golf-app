@@ -6,8 +6,12 @@ import type { ScoreTone } from '@/lib/scoring/scoreTone';
  * `row`: the demo's flight rows (#2281). Drawn as the artboard draws it: a
  * 30 px box, and a shaped score gets a 1 px ring outside that box (the
  * artboard's content-box border), so a birdie is 32 px and a par 30 px.
+ *
+ * `follow`: the follow page's last holes (#2286). Drawn with the artboard's own
+ * CSS — a 34 px border-box with a 1.5 px border — so each browser engine rounds
+ * the border as the artboard does. No tabular figures, as on the artboard.
  */
-export type ScoreShapeSize = 'sm' | 'md' | 'lg' | 'row';
+export type ScoreShapeSize = 'sm' | 'md' | 'lg' | 'row' | 'follow';
 
 export interface ScoreShapeProps {
   shape: ShapeKind;
@@ -21,6 +25,7 @@ const SIZE_PX: Record<ScoreShapeSize, number> = {
   md: 36,
   lg: 52,
   row: 30,
+  follow: 34,
 };
 
 const STROKE_BY_SIZE: Record<ScoreShapeSize, number> = {
@@ -28,6 +33,7 @@ const STROKE_BY_SIZE: Record<ScoreShapeSize, number> = {
   md: 1.25,
   lg: 1.5,
   row: 1,
+  follow: 1.5,
 };
 
 /** `row`'s shaped box: the 30 px box plus its 1 px ring on each side. */
@@ -42,8 +48,61 @@ const STROKE_COLOR: Record<ScoreTone, string> = {
   over2: 'var(--score-over2-fg)',
 };
 
+/** Borders per shape, as `scoreShape` names them. */
+const BORDERS: Record<ShapeKind, number> = {
+  none: 0,
+  circle: 1,
+  'double-circle': 2,
+  'triple-circle': 3,
+  square: 1,
+  'double-square': 2,
+  'triple-square': 3,
+  'quadruple-square': 4,
+};
+
+/** `follow`'s border colour: the artboard's birdie ring and bogey square. */
+const FOLLOW_BORDER: Record<ScoreTone, string> = {
+  unset: 'border-score-over2-fg',
+  under: 'border-score-under-ring',
+  par: 'border-score-under-ring',
+  over1: 'border-score-over1-ring',
+  over2: 'border-score-over2-fg',
+};
+
+/** Each border after the first sits 3 px further in, measured from the outer edge. */
+const FOLLOW_INSETS = ['inset-[1.5px]', 'inset-[4.5px]', 'inset-[7.5px]'];
+
+function FollowShape({ shape, tone, children }: { shape: ShapeKind; tone: ScoreTone; children: ReactNode }) {
+  const borders = BORDERS[shape];
+  if (borders === 0) {
+    return (
+      <span className="box-border flex h-[34px] w-[34px] items-center justify-center leading-[normal]">
+        {children}
+      </span>
+    );
+  }
+  const edge = `border-[1.5px] border-solid ${shape.endsWith('circle') ? 'rounded-full' : ''} ${FOLLOW_BORDER[tone]}`;
+  return (
+    <span
+      className={`relative box-border flex h-[34px] w-[34px] items-center justify-center leading-[normal] ${edge}`}
+    >
+      {FOLLOW_INSETS.slice(0, borders - 1).map((inset) => (
+        <span key={inset} aria-hidden className={`absolute ${inset} box-border ${edge}`} />
+      ))}
+      {children}
+    </span>
+  );
+}
+
 export function ScoreShape(props: ScoreShapeProps): JSX.Element {
   const { shape, tone, size = 'lg', children } = props;
+  if (size === 'follow') {
+    return (
+      <FollowShape shape={shape} tone={tone}>
+        {children}
+      </FollowShape>
+    );
+  }
   const px = size === 'row' && shape !== 'none' ? ROW_RING_PX : SIZE_PX[size];
 
   if (shape === 'none') {

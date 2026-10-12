@@ -49,6 +49,7 @@ import { PrizeAwardsCard } from '@/components/PrizeAwardsCard';
 import { ReactionsProvider } from './ReactionsProvider';
 import { fetchGameReactions } from '@/lib/games/reactions/fetch';
 import { renderStableford } from './formats/stableford';
+import type { LiveBoardFollowOpts } from './formats/liveBoard';
 import { renderMatchplay } from './formats/matchplay';
 import { renderFourballMatchplay } from './formats/fourballMatchplay';
 import { renderFoursomesMatchplay } from './formats/foursomesMatchplay';
@@ -104,6 +105,12 @@ export type LeaderboardContentOpts = {
    * `?mode=` itself. Defaults to false: the authed leaderboard is unchanged.
    */
   publicView?: boolean;
+  /**
+   * Heiagjengen (#2286), `/spectate/[token]` only: follow one player on the
+   * live board of solo stableford and solo strokeplay. Every other format and
+   * every other route ignores it.
+   */
+  follow?: LiveBoardFollowOpts;
 };
 
 /**
@@ -141,6 +148,7 @@ export async function renderLeaderboardContent({
   viewerUserId,
   reactionsDisabled = false,
   publicView = false,
+  follow,
 }: LeaderboardContentOpts): Promise<ReactNode> {
   const [tc, locale] = await Promise.all([
     getTranslations('leaderboard.common'),
@@ -223,13 +231,10 @@ export async function renderLeaderboardContent({
   if (rawScoresRes.error) throw rawScoresRes.error;
 
   // #624 — lokaliser det frosne spillnavnet én gang ved kilden.
+  const courseName = courseRes.data?.name ?? null;
   const game: GameForHole = {
     ...gameRow,
-    name: localizeGameName(
-      gameRow.name,
-      courseRes.data?.name ?? null,
-      locale as AppLocale,
-    ),
+    name: localizeGameName(gameRow.name, courseName, locale as AppLocale),
   };
 
   // #1441 (D1/D2): filter the shared course-holes + scores rows down to the
@@ -272,6 +277,8 @@ export async function renderLeaderboardContent({
       prizeAwardsNode,
       viewerUserId,
       publicView,
+      courseName,
+      follow,
     }));
   }
 
@@ -323,6 +330,8 @@ export async function renderLeaderboardContent({
       prizeAwardsNode,
       viewerUserId,
       publicView,
+      courseName,
+      follow,
     }));
   }
 

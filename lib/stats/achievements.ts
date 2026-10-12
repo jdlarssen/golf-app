@@ -9,6 +9,7 @@
  */
 import type { CourseHoleRow } from '@/lib/supabase/queryFragments';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
+import { strokeTerm } from '@/lib/scorecard/scoreRail';
 
 /** Ett hull i en runde. `strokes === null` ⇒ uspilt hull. `par` er allerede
  *  kjønns-valgt ved kallstedet (via `parForGender`). */
@@ -81,6 +82,33 @@ export function parForGender(
   }
 }
 
+/**
+ * The counting rule for an under-par hole: `'eagle'` for two or more under
+ * (an albatross counts as an eagle — the brags have no albatross counter),
+ * `'birdie'` for one under. Built on the hole page's `strokeTerm`, so the
+ * thresholds have one home. `par <= 0` is invalid data and counts nothing.
+ */
+export function underParKind(strokes: number, par: number): 'eagle' | 'birdie' | null {
+  if (par <= 0) return null;
+  const term = strokeTerm(strokes, par);
+  if (term === 'albatross' || term === 'eagle') return 'eagle';
+  return term === 'birdie' ? 'birdie' : null;
+}
+
+export type UnderParMoment = 'hole_in_one' | 'albatross' | 'eagle' | 'birdie';
+
+/**
+ * The word for one under-par hole as the follow page (#2286) shows it: one
+ * answer per hole, and a hole-in-one wins. Unlike `underParKind`, an albatross
+ * keeps its own name, as on the hole page.
+ */
+export function underParMoment(strokes: number, par: number): UnderParMoment | null {
+  if (par <= 0) return null;
+  if (strokes === 1) return 'hole_in_one';
+  const term = strokeTerm(strokes, par);
+  return term === 'albatross' || term === 'eagle' || term === 'birdie' ? term : null;
+}
+
 /** En spilt score: ikke-null slag. */
 function isPlayed(h: HoleScore): h is HoleScore & { strokes: number } {
   return h.strokes != null;
@@ -93,7 +121,7 @@ function isPlayed(h: HoleScore): h is HoleScore & { strokes: number } {
  */
 function countTurkeys(holes: HoleScore[]): number {
   const qualifying = holes
-    .filter((h) => isPlayed(h) && h.par > 0 && h.par - h.strokes! >= 1)
+    .filter((h) => isPlayed(h) && underParKind(h.strokes!, h.par) !== null)
     .map((h) => h.holeNumber)
     .sort((a, b) => a - b);
 
@@ -127,11 +155,9 @@ export function countRoundAchievements(holes: HoleScore[]): Achievements {
     const strokes = h.strokes;
     if (strokes === 1) out.holeInOne += 1;
     if (strokes === 8) out.snowman += 1;
-    if (h.par > 0) {
-      const underPar = h.par - strokes;
-      if (underPar >= 2) out.eagle += 1;
-      else if (underPar === 1) out.birdie += 1;
-    }
+    const kind = underParKind(strokes, h.par);
+    if (kind === 'eagle') out.eagle += 1;
+    else if (kind === 'birdie') out.birdie += 1;
   }
   out.turkey = countTurkeys(holes);
   return out;

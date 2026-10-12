@@ -17,6 +17,7 @@ import type { ScoreTone } from '@/lib/scoring/scoreTone';
 
 export type BoardT = ReturnType<typeof useTranslations<'leaderboard.board'>>;
 export type BoardCommonT = ReturnType<typeof useTranslations<'leaderboard.common'>>;
+export type FollowT = ReturnType<typeof useTranslations<'spectate.follow'>>;
 
 /** Rows shown before «Vis alle»; a field of up to `SHOW_ALL_UP_TO` shows everyone. */
 export const COLLAPSED_ROWS = 5;
@@ -62,6 +63,14 @@ export function placeLabel(t: BoardT, row: LiveBoardRow, showRank: boolean): str
 export function totalLabel(unit: LiveBoardUnit, total: number | null): string {
   if (total === null) return '—';
   return unit === 'toPar' ? formatVsPar(total) : String(total);
+}
+
+/** The follow page's big total (#2286): «26 p», «−2» or «74 netto». */
+export function followTotalLabel(tf: FollowT, unit: LiveBoardUnit, total: number | null): string {
+  if (total === null) return '—';
+  if (unit === 'points') return tf('totalPoints', { total });
+  if (unit === 'toPar') return formatVsPar(total);
+  return tf('totalNet', { total });
 }
 
 export function totalSr(t: BoardT, unit: LiveBoardUnit, total: number | null): string {
