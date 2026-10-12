@@ -128,7 +128,7 @@ test.describe('Multiplayer finish-and-validate (#848)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     const list = page.getByTestId('nines-leaderboard');
     await expect(list).toBeVisible();
@@ -164,7 +164,7 @@ test.describe('Multiplayer finish-and-validate (#848)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     const list = page.getByTestId('acey-deucey-leaderboard');
     await expect(list).toBeVisible();
@@ -209,7 +209,7 @@ test.describe('Multiplayer finish-and-validate (#848)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     const list = page.getByTestId('round-robin-leaderboard');
     await expect(list).toBeVisible();
@@ -255,7 +255,7 @@ test.describe('Multiplayer finish-and-validate (#848)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     const list = page.getByTestId('wolf-leaderboard');
     await expect(list).toBeVisible();
@@ -309,7 +309,7 @@ test.describe('Multiplayer finish-and-validate (#848)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     const list = page.getByTestId('bbb-leaderboard');
     await expect(list).toBeVisible();

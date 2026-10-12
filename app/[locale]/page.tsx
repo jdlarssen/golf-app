@@ -247,7 +247,8 @@ async function HomeBody() {
   // #877: must throw BEFORE deriving activeGames/isEmptyState — otherwise a
   // failed fetch falls through to `[]`, computes as `isEmptyState`, and renders
   // the «start here» welcome over a real in-progress round. error.tsx catches
-  // this and shows a «Noe gikk galt»-retry instead (mirrors profileError above).
+  // this and shows the error screen with «Prøv igjen» instead (mirrors
+  // profileError above).
   if (rawActiveRes.error) {
     throw rawActiveRes.error;
   }

@@ -52,7 +52,7 @@ rendret globalt i `app/[locale]/layout.tsx`, synlig for alle innloggede på alle
 rommet `/admin`). Skjult når du er utlogget, på `/login` og `/complete-profile`, i veiviseren
 (`/opprett-spill`, `/admin/games/new`) og på hullskjermen (`BottomNav`, `hidden`). I tillegg skjules den
 i redigeringsveiviseren på `/admin/games/[id]/edit` og `/games/[id]/rediger` (et utkast gjenopptas der,
-#2269), der av CSS-regelen for `data-hides-bottom-nav` i `app/globals.css`. Fanenes forsider (Klubbhuset, Innboks, Profil) har ingen tilbakepil. Sider du åpner
+#2269) og på 404-siden og feilskjermen (#2287), der av CSS-regelen for `data-hides-bottom-nav` i `app/globals.css`. Fanenes forsider (Klubbhuset, Innboks, Profil) har ingen tilbakepil. Sider du åpner
 fra Klubbhuset (Baner, Spillformater, en klubb), går tilbake dit: lenkene bærer `?kilde=klubbhuset`
 (#2487), og kvitteringen for ny bane sier «Tilbake til Klubbhuset». «Klubbhuset» er universell:
 fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, mens spilleren
@@ -211,7 +211,7 @@ flowchart LR
 | 4 Spillere | `PlayerPickerGrid` + `PlayerTray`, så `TeamsAssignmentSection` | Vennene (eller klubbmedlemmene) som kort, du selv først og så sist spilt først (`orderPickerPlayers`, #2321). Brettet nederst teller mot målet («3 av 4 · én til»). Lagformater og singles matchplay fordeler lag, sider og flights på en egen skjerm («Neste: lagene»); solo-formatene har tee per spiller på velgeren. Gjest legges til fra «+ Gjest»; «✉ E-post» samler adresser som inviteres når spillet publiseres (`sendPublishInvites`). Steget kan stå tomt hvis selv-påmelding velges på steg 5, og i en klubb-turnering med individuell påmelding (#2433). |
 | 5 Klar? | `ReadyStep` | Et lite invitasjonskort med spillnavnet som felt midt i kortet, og en sjekkliste (Bane, Format, Tee-off, Spillere) med status og «Endre» som hopper til steget valget bor på (#2282). Under lista: «Hvem kan melde seg på?» (ikke i en klubb-turnering, der medlemskapet er invitasjonen) og «Vis avanserte innstillinger». Brettet nederst: «Publiser og del invitasjonen» (`createAndPublishGame`, status `scheduled` + invitasjoner) eller «Lagre som utkast» (`createGameDraft`, status `draft`). Publisering varsler alle på lista én gang (`notifyRosterInvites`); en tom klubb-turnering varsler ingen. «Lagre som utkast» varsler ingen (#2445). En venn uten fullført profil stopper ikke publiseringen. Runden starter når profilen er på plass, og spillerraden på steg 5 sier «N venter på profil» (#2441). |
 
-Publiserer en arrangør som ikke er admin uten å stå på lista selv, lander hen på arrangørvisningen på `/games/[id]` i stedet for «Denne siden finnes ikke» (#2202).
+Publiserer en arrangør som ikke er admin uten å stå på lista selv, lander hen på arrangørvisningen på `/games/[id]` i stedet for ikke-funnet-siden (#2202).
 
 ### A2 — Administrer spill
 

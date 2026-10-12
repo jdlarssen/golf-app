@@ -8,12 +8,14 @@
     "brandTagline": "Fyr opp golfturneringen på et <par>par</par> minutter"
   },
   "notFound": {
-    "heading": "Denne siden finnes ikke",
-    "body": "Lenken peker på noe som er flyttet eller borte. Gå til Hjem, så finner du fram igjen.",
-    "button": "Til Hjem"
+    "kicker": "404 · Out of bounds",
+    "heading": "Denne havnet utenfor banen",
+    "body": "Lenken peker på noe som er flyttet eller borte. Ingen straffeslag – ta et nytt slag fra Hjem.",
+    "button": "Til Hjem",
+    "findTournaments": "Finn turneringer"
   },
   "error": {
-    "heading": "Noe gikk galt",
+    "heading": "Ballen traff et tre",
     "body": "Vi fikk ikke lastet dette akkurat nå. Som regel er det bare en kort hikke på nettet. Prøv igjen om et øyeblikk.",
     "retry": "Prøv igjen",
     "sectionBody": "Vi fikk ikke hentet dette akkurat nå.",

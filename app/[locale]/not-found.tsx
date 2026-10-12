@@ -5,8 +5,9 @@ import { NotFoundView } from '@/components/NotFoundView';
 /**
  * #612: the branded 404 for `notFound()` thrown by a page under `[locale]` —
  * e.g. a signup notification that points to a deleted game (#613). It renders
- * inside the `[locale]` layout, so it inherits `<html lang>`, the NextIntl
- * provider and the global bottom nav without extra plumbing.
+ * inside the `[locale]` layout, so it inherits `<html lang>` and the NextIntl
+ * provider without extra plumbing. The bottom nav is hidden: the out of bounds
+ * page (#2287) draws none, and both its buttons work signed in and out.
  *
  * Addresses no route matches never get here: they go to
  * `app/global-not-found.tsx` (#2292), which renders outside this layout.
@@ -18,13 +19,16 @@ import { NotFoundView } from '@/components/NotFoundView';
 export default async function NotFound() {
   const t = await getTranslations('notFound');
   return (
-    <AppShell>
+    <AppShell flush>
       <div data-testid="not-found">
         <NotFoundView
+          kicker={t('kicker')}
           heading={t('heading')}
           body={t('body')}
-          buttonLabel={t('button')}
+          homeLabel={t('button')}
           homeHref="/"
+          findLabel={t('findTournaments')}
+          findHref="/finn-turneringer"
         />
       </div>
     </AppShell>
