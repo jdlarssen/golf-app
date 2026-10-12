@@ -28,8 +28,10 @@ import {
   behindLeaderText,
   boardDisplayName,
   boardRowSr,
+  boardShowsRank,
   followTotalLabel,
   isBoardLeader,
+  pillText,
   placeLabel,
   totalLabel,
   totalSr,
@@ -80,16 +82,12 @@ export function FollowView({ token, board, view, subtitle, cta, footerSlot }: Fo
 
   const { row, standing, lead, next, moment, others } = view;
   const { unit } = board;
-  const showRank = board.holesPlayed !== 0;
+  const showRank = boardShowsRank(board.holesPlayed);
   const leader = isBoardLeader(row);
   const displayName = (r: LiveBoardRow) => boardDisplayName(r, tc);
   const name = displayName(row);
 
-  const pill = !online
-    ? ts('offlineStatus')
-    : board.holesPlayed === 0
-      ? t('pillLive')
-      : t('pillLiveAfter', { holes: board.holesPlayed });
+  const pill = !online ? ts('offlineStatus') : pillText(t, board.holesPlayed);
 
   const line =
     row.total === null

@@ -44,6 +44,18 @@ export function visibleBoardRows(
   return { visible, canCollapse };
 }
 
+/** Places show once anyone has played a hole; before that every row says «–». */
+export function boardShowsRank(holesPlayed: number): boolean {
+  return holesPlayed !== 0;
+}
+
+/** The live pill: «Live», or «Live · etter 7 hull» once anyone has played. */
+export function pillText(t: BoardT, holesPlayed: number | null): string {
+  return holesPlayed === null || holesPlayed === 0
+    ? t('pillLive')
+    : t('pillLiveAfter', { holes: holesPlayed });
+}
+
 /** The leader's row: first place, and at least one hole played. */
 export function isBoardLeader(row: LiveBoardRow): boolean {
   return row.rank === 1 && row.holesPlayed > 0;

@@ -19,7 +19,9 @@ import {
   behindLeaderText,
   boardDisplayName,
   boardRowSr,
+  boardShowsRank,
   isBoardLeader,
+  pillText,
   placeLabel,
   totalLabel,
   visibleBoardRows,
@@ -105,15 +107,9 @@ export function LiveBoard({
   const [openUserId, setOpenUserId] = useState<string | null>(null);
 
   const { rows, unit } = board;
-  const nobodyHasPlayed = board.holesPlayed === 0;
   const { visible, canCollapse } = visibleBoardRows(rows, viewerUserId, showAll);
 
-  const pill =
-    status === 'scheduled'
-      ? statusLabel
-      : nobodyHasPlayed
-        ? t('pillLive')
-        : t('pillLiveAfter', { holes: board.holesPlayed });
+  const pill = status === 'scheduled' ? statusLabel : pillText(t, board.holesPlayed);
   const formatLine = [
     formatLabel,
     t('players', { count: rows.length }),
@@ -198,7 +194,7 @@ export function LiveBoard({
                     unit={unit}
                     name={displayName(item)}
                     isYou={item.userId === viewerUserId}
-                    showRank={!nobodyHasPlayed}
+                    showRank={boardShowsRank(board.holesPlayed)}
                     followHref={followToken ? followHref(followToken, item.userId) : undefined}
                     open={openUserId === item.userId}
                     onToggle={() =>
