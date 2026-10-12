@@ -4,8 +4,6 @@ import { useState, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
 import { LeaderboardBackLink } from '@/components/ui/LeaderboardBackLink';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { firstName } from '@/lib/firstName';
-import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
   viewerStanding,
   type LiveBoard as LiveBoardData,
@@ -14,14 +12,18 @@ import {
   type LiveBoardUnit,
   type ViewerStanding,
 } from '@/lib/leaderboard/liveBoard';
-import { formatVsPar } from '@/lib/leaderboard/vsPar';
 import type { ScoreTone } from '@/lib/scoring/scoreTone';
 import { BoardPlayerPlate } from './BoardRowReactions';
+import {
+  behindLeaderText,
+  boardDisplayName,
+  boardRowSr,
+  isBoardLeader,
+  placeLabel,
+  totalLabel,
+  visibleBoardRows,
+} from './boardText';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
-
-/** Rows shown before «Vis alle»; a field of up to `SHOW_ALL_UP_TO` shows everyone. */
-const COLLAPSED_ROWS = 5;
-const SHOW_ALL_UP_TO = 6;
 
 /** PLASS · SPILLER · HULL · POENG — one grid for the headings and every row. */
 const COLUMNS = 'grid grid-cols-[44px_minmax(0,1fr)_46px_58px] gap-1.5';
@@ -95,15 +97,7 @@ export function LiveBoard({
 
   const { rows, unit } = board;
   const nobodyHasPlayed = board.holesPlayed === 0;
-  const canCollapse = rows.length > SHOW_ALL_UP_TO;
-  const viewerIndex = viewerUserId ? rows.findIndex((r) => r.userId === viewerUserId) : -1;
-
-  const visible: (LiveBoardRow | 'gap')[] =
-    !canCollapse || showAll
-      ? rows
-      : viewerIndex >= COLLAPSED_ROWS
-        ? [...rows.slice(0, COLLAPSED_ROWS), 'gap', rows[viewerIndex]]
-        : rows.slice(0, COLLAPSED_ROWS);
+  const { visible, canCollapse } = visibleBoardRows(rows, viewerUserId, showAll);
 
   const pill =
     status === 'scheduled'
@@ -118,8 +112,7 @@ export function LiveBoard({
   ].join(' · ');
 
   const standing = viewerUserId ? viewerStanding(board, viewerUserId) : null;
-  const displayName = (row: LiveBoardRow) =>
-    row.name ? formatRevealName(row.name, row.nickname) : tc('unknownPlayerFull');
+  const displayName = (row: LiveBoardRow) => boardDisplayName(row, tc);
 
   return (
     <div>
@@ -250,30 +243,13 @@ function BoardRow({
 }) {
   const t = useTranslations('leaderboard.board');
   const tc = useTranslations('leaderboard.common');
-  const leader = row.rank === 1 && row.holesPlayed > 0;
+  const leader = isBoardLeader(row);
   // Klubbhus-natt: primary-soft sits one step from the surface, so the
   // viewer's row also gets a sage hairline there.
   const fill = isYou ? 'bg-primary-soft dark:ring-1 dark:ring-inset dark:ring-primary/60' : 'bg-surface';
   const plate = `${fill} rounded-md text-text`;
-  const rankLabel = !showRank ? '–' : row.tied ? t('tiedRank', { rank: row.rank }) : String(row.rank);
+  const rankLabel = placeLabel(t, row, showRank);
   const panelId = `board-reactions-${row.userId}`;
-
-  const srParts = [
-    !showRank ? null : row.tied ? t('srTiedPlace', { rank: row.rank }) : t('srPlace', { rank: row.rank }),
-    totalSr(t, unit, row.total),
-    row.movement === null
-      ? null
-      : row.movement > 0
-        ? t('srUp', { count: row.movement })
-        : row.movement < 0
-          ? t('srDown', { count: -row.movement })
-          : t('srSame'),
-    row.recent.length > 0
-      ? t('srRecent', { tones: row.recent.map((tone) => t(`tone.${toneKey(tone)}`)).join(', ') })
-      : null,
-    tc('holesPlayedCount', { count: row.holesPlayed }),
-    isYou ? t('srYou') : null,
-  ].filter(Boolean);
 
   return (
     <li
@@ -346,7 +322,7 @@ function BoardRow({
           {totalLabel(unit, row.total)}
         </span>
       </div>
-      <span className="sr-only">{srParts.join('. ')}</span>
+      <span className="sr-only">{boardRowSr(t, tc, { row, unit, showRank, isYou })}</span>
       {open && (
         <div id={panelId} className="mt-1.5 rounded-md bg-surface px-2 py-1">
           <RowReactionsForPlayer targetUserId={row.userId} />
@@ -412,21 +388,7 @@ function Strip({
     ? t('stripTiedPlace', { rank: standing.rank })
     : t('stripPlace', { rank: standing.rank });
 
-  let behind: string | null = null;
-  if (standing.gap !== null && standing.gap > 0) {
-    const inPoints = unit === 'points';
-    if (standing.leaderUserIds.length > 1) {
-      behind = inPoints
-        ? t('behindPointsLead', { gap: standing.gap })
-        : t('behindStrokesLead', { gap: standing.gap });
-    } else {
-      const leaderRow = rows.find((r) => r.userId === standing.leaderUserIds[0]);
-      const leader = leaderRow ? (firstName(leaderRow.name) ?? displayName(leaderRow)) : '';
-      behind = inPoints
-        ? t('behindPoints', { gap: standing.gap, name: leader })
-        : t('behindStrokes', { gap: standing.gap, name: leader });
-    }
-  }
+  const behind = behindLeaderText(t, standing, unit, rows, displayName);
 
   return (
     <div
@@ -459,23 +421,4 @@ function Strip({
       </div>
     </div>
   );
-}
-
-function totalLabel(unit: LiveBoardUnit, total: number | null): string {
-  if (total === null) return '—';
-  return unit === 'toPar' ? formatVsPar(total) : String(total);
-}
-
-type BoardT = ReturnType<typeof useTranslations<'leaderboard.board'>>;
-
-function totalSr(t: BoardT, unit: LiveBoardUnit, total: number | null): string {
-  if (total === null) return t('srNoTotal');
-  if (unit === 'points') return t('srPoints', { total });
-  if (unit === 'net') return t('srNet', { total });
-  if (total === 0) return t('srEven');
-  return total > 0 ? t('srOverPar', { count: total }) : t('srUnderPar', { count: -total });
-}
-
-function toneKey(tone: ScoreTone): 'under' | 'par' | 'over1' | 'over2' {
-  return tone === 'unset' ? 'par' : tone;
 }
