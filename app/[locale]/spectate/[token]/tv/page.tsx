@@ -110,11 +110,14 @@ export default async function SpectateTvPage({ params }: { params: Params }) {
                 opts.feed ? '' : 'mt-auto'
               }`}
             >
+              {/* As drawn, the 84 px code gives a little to the text beside it
+                  (82.5 px in the artboard); never more, so a longer title such
+                  as the finished screen's does not shrink it further. */}
               <div
                 role="img"
                 aria-label={t('qrAria')}
                 data-testid="tv-qr"
-                className="size-[84px] [&>svg]:size-full"
+                className="size-[84px] min-w-[82.5px] [&>svg]:size-full"
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
               />
               <div>
