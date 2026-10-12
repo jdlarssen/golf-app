@@ -12,7 +12,8 @@ import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { getFriendsView, type Friend, type Person } from '@/lib/friends/getFriendsView';
+import { getFriendsView, type Person } from '@/lib/friends/getFriendsView';
+import { friendSubline, type FriendSublineText } from '@/lib/friends/friendSubline';
 import type { FriendStats } from '@/lib/friends/friendStats';
 import { lastPlayedLabel } from '@/lib/friends/lastPlayedLabel';
 import { nameInitials } from '@/lib/names/initials';
@@ -146,14 +147,11 @@ export default async function VennerPage({
     });
   const rounds = (stats: FriendStats | null) =>
     stats && stats.roundsTogether > 0 ? t('roundsTogether', { count: stats.roundsTogether }) : null;
-  const friendSubline = (f: Friend): string | null => {
-    if (f.stats === null) return null;
-    if (f.stats.roundsTogether === 0) return t('noRoundsYet');
-    const parts: string[] = [];
-    if (f.hcp !== null) parts.push(t('hcpLine', { hcp: formatHcpDisplay(f.hcp, locale) }));
-    parts.push(t('roundsTogether', { count: f.stats.roundsTogether }));
-    if (f.stats.lastPlayedAt) parts.push(lastPlayed(f.stats.lastPlayedAt));
-    return parts.join(' · ');
+  const sublineText: FriendSublineText = {
+    noRounds: t('noRoundsYet'),
+    hcp: (hcp) => t('hcpLine', { hcp: formatHcpDisplay(hcp, locale) }),
+    rounds: (count) => t('roundsTogether', { count }),
+    lastPlayed,
   };
   const displayName = (p: Person) => p.name || t('someoneFallback');
   const sortedByLastPlayed = friends.some((f) => f.stats?.lastPlayedAt);
@@ -348,7 +346,7 @@ export default async function VennerPage({
                       }`}
                     >
                       <Avatar initials={f.initials} className="bg-surface-strong text-bg-tint" />
-                      <NameBlock name={displayName(f)} sub={friendSubline(f)} />
+                      <NameBlock name={displayName(f)} sub={friendSubline(f, sublineText)} />
                       {/* Inter has no arrow; the artboard falls back to the system font. */}
                       <span aria-hidden className="font-[system-ui] text-primary">
                         →
