@@ -108,9 +108,9 @@ function TvRow({
   const leader = isBoardLeader(row) && showRank;
   const arrow =
     row.movement !== null && row.movement > 0
-      ? { text: `▲ ${row.movement}`, className: 'text-tv-arrow-up' }
+      ? { glyph: '▲', count: row.movement, className: 'text-tv-arrow-up' }
       : row.movement !== null && row.movement < 0
-        ? { text: `▼ ${-row.movement}`, className: 'text-tv-arrow-down' }
+        ? { glyph: '▼', count: -row.movement, className: 'text-tv-arrow-down' }
         : null;
 
   return (
@@ -137,13 +137,16 @@ function TvRow({
       )}
       <span className="flex min-w-0 items-baseline font-serif text-[30px] font-medium">
         {/* The space before the arrow is the name's own, in the name's font. */}
-        <span className="truncate">{arrow ? `${name} ` : name}</span>
+        <span className="truncate">{arrow ? `${name}\u00a0` : name}</span>
         {arrow && (
           <span
             aria-hidden
             className={`shrink-0 font-sans text-[16px] font-semibold ${arrow.className}`}
           >
-            {arrow.text}
+            {/* Inter has no ▲/▼: drawn by the system font, as on the artboard,
+                not by the Arial-based Inter fallback. */}
+            <span className="font-[system-ui]">{arrow.glyph}</span>
+            {` ${arrow.count}`}
           </span>
         )}
       </span>
