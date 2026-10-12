@@ -5,6 +5,7 @@ import { modeCollapsesToTeamCard } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { lastHoleForSegment } from './holeScope';
 import { nextUnfilledHole } from './nextHole';
+import type { StartType } from './startType';
 import { pendingApprovalsFor } from './flightScope';
 import { formerTeamRowOwnerIds, teamScoreOwnerId } from './teamCaptain';
 import { scoredHoleNumbers } from './scoreOwner';
@@ -24,6 +25,8 @@ export type ActiveGameForCard = {
    * /submit instead of an out-of-scope hole.
    */
   hole_segment: HoleSegment;
+  /** #2286: a shotgun group goes on from its own start (`playOrder`). Left out, a first-tee start. */
+  start_type?: StartType;
 };
 
 export type ActiveCardExtras = {
@@ -235,7 +238,7 @@ export async function getActiveGameCardData(
     let nextHole: number | null = null;
     if (state === 'continue') {
       const filled = filledByGame.get(g.id) ?? new Set<number>();
-      const next = nextUnfilledHole(g.hole_segment, filled);
+      const next = nextUnfilledHole(g.hole_segment, filled, g.start_type);
       if (next === null) {
         href = `/games/${g.id}/submit`;
       } else {

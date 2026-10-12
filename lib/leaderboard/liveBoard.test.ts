@@ -148,6 +148,16 @@ describe('computeLiveBoard — the last five holes', () => {
     expect(b.rows[0].recent).toEqual(['par', 'over1', 'over2', 'par', 'under']);
   });
 
+  it('a shotgun group (#2286): the last five in the order played, not by hole number', () => {
+    const b = board({
+      game: game({ start_type: 'shotgun', hole_segment: 'full' }),
+      players: [player('p')],
+      scores: card('p', { 14: 4, 15: 4, 16: 5, 17: 3, 18: 4, 1: 6 }),
+    });
+    expect(b.rows[0].recentHoles.map((h) => h.holeNumber)).toEqual([15, 16, 17, 18, 1]);
+    expect(b.rows[0].recent).toEqual(['par', 'over1', 'under', 'par', 'over2']);
+  });
+
   it('shows fewer dots when fewer than five holes are played', () => {
     const b = board({ players: [player('p')], scores: card('p', { 1: 4, 2: 5 }) });
     expect(b.rows[0].recent).toEqual(['par', 'over1']);
@@ -390,6 +400,13 @@ describe('comparableGap (#2286) — the one rule for comparing two rows', () => 
 });
 
 describe('withoutLatestHolePerPlayer', () => {
+  it('in a shotgun (#2286) the latest hole is the last one in the order played', () => {
+    const rows = card('p', { 17: 4, 18: 4, 1: 4 });
+    expect(withoutLatestHolePerPlayer(rows, 'full', 'shotgun').map((r) => r.hole_number)).toEqual([17, 18]);
+    // First tee: the highest hole number is the latest (`card` lists holes in number order).
+    expect(withoutLatestHolePerPlayer(rows).map((r) => r.hole_number)).toEqual([1, 17]);
+  });
+
   it('drops each player’s highest played hole and keeps empty rows', () => {
     const rows = [
       { user_id: 'a', hole_number: 1, strokes: 4 },
@@ -444,5 +461,21 @@ describe('liveBoardStripAction — the strip’s button', () => {
     ['a scheduled game', { status: 'scheduled' as const }],
   ])('no strip for %s', (_label, overrides) => {
     expect(liveBoardStripAction({ ...base, ...overrides })).toBeNull();
+  });
+});
+
+describe('liveBoardStripAction — a shotgun group (#2286)', () => {
+  it('points on from the hole the group started on', () => {
+    expect(
+      liveBoardStripAction({
+        gameId: 'g1',
+        status: 'active',
+        holeSegment: 'full',
+        startType: 'shotgun',
+        requirePeerApproval: false,
+        viewer: { submitted_at: null, approved_at: null, withdrawn_at: null },
+        viewerScores: card('me', { 10: 4, 11: 5 }),
+      }),
+    ).toEqual({ kind: 'hole', holeNumber: 12, href: '/games/g1/holes/12' });
   });
 });

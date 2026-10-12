@@ -26,7 +26,8 @@ import type {
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import type { HoleSegment } from '@/lib/scoring/holeSegment';
 import { resolveActiveCardState } from '@/lib/games/activeCardState';
-import { nextUnfilledHole } from '@/lib/games/nextHole';
+import { nextUnfilledHole, playOrder } from '@/lib/games/nextHole';
+import type { StartType } from '@/lib/games/startType';
 import type { GameStatus } from '@/lib/games/status';
 import { revealState, shouldHideNetto, type ScoreVisibility } from '@/lib/games/visibility';
 
@@ -84,24 +85,46 @@ export type LiveBoardGame = {
   mode_config: GameModeConfig;
   status: GameStatus;
   score_visibility: ScoreVisibility;
+  /**
+   * #2286: the order the holes are played in (`playOrder`) — the last five
+   * holes and the movement read it. Left out, a full round from the first tee.
+   */
+  hole_segment?: HoleSegment;
+  start_type?: StartType;
 };
 
 type SoloResult = StablefordSoloResult | SoloStrokeplayResult;
 
 const RECENT_HOLES = 5;
 
+/** Each player's holes with strokes. */
+function filledByPlayer(
+  rows: ReadonlyArray<{ user_id: string; hole_number: number; strokes: number | null }>,
+): Map<string, Set<number>> {
+  const filled = new Map<string, Set<number>>();
+  for (const r of rows) {
+    if (r.strokes == null) continue;
+    const holes = filled.get(r.user_id);
+    if (holes) holes.add(r.hole_number);
+    else filled.set(r.user_id, new Set([r.hole_number]));
+  }
+  return filled;
+}
+
 /**
- * Removes each player's latest played hole (highest hole number with strokes).
- * A game has no start-hole concept, so the highest hole number is the last one
- * played. Rows without strokes stay; they count for nothing either way.
+ * Removes each player's latest played hole: the last hole with strokes in the
+ * order the player plays them (`playOrder` — hole order from the first tee,
+ * the group's own start in a shotgun, #2286). Rows without strokes stay; they
+ * count for nothing either way.
  */
 export function withoutLatestHolePerPlayer<
   T extends { user_id: string; hole_number: number; strokes: number | null },
->(rows: T[]): T[] {
+>(rows: T[], segment: HoleSegment = 'full', startType: StartType = 'first_tee'): T[] {
   const latest = new Map<string, number>();
-  for (const r of rows) {
-    if (r.strokes == null) continue;
-    latest.set(r.user_id, Math.max(latest.get(r.user_id) ?? 0, r.hole_number));
+  for (const [userId, holes] of filledByPlayer(rows)) {
+    const order = playOrder(segment, startType, holes);
+    const last = [...order].reverse().find((h) => holes.has(h));
+    if (last !== undefined) latest.set(userId, last);
   }
   return rows.filter((r) => r.strokes == null || latest.get(r.user_id) !== r.hole_number);
 }
@@ -158,7 +181,10 @@ export function computeLiveBoard(opts: {
 
   const result = resultFor(scoresRows);
   if (!result) return null;
-  const previous = resultFor(withoutLatestHolePerPlayer(scoresRows));
+  const segment = game.hole_segment ?? 'full';
+  const startType = game.start_type ?? 'first_tee';
+  const filled = filledByPlayer(scoresRows);
+  const previous = resultFor(withoutLatestHolePerPlayer(scoresRows, segment, startType));
   const previousRank = new Map(previous?.players.map((p) => [p.userId, p.rank]) ?? []);
 
   // The engine says which rule it ranked on; the board shows that number.
@@ -180,7 +206,11 @@ export function computeLiveBoard(opts: {
   const rows = lines.map((l): LiveBoardRow => {
     const user = userById.get(l.userId) ?? null;
     const before = previousRank.get(l.userId);
-    const recentHoles = lastPlayedHoles(result.holes, l.userId);
+    const recentHoles = lastPlayedHoles(
+      result.holes,
+      l.userId,
+      playOrder(segment, startType, filled.get(l.userId) ?? new Set()),
+    );
     return {
       userId: l.userId,
       name: user?.name ?? null,
@@ -203,7 +233,10 @@ export function computeLiveBoard(opts: {
   };
 }
 
-/** Up to the last five played holes, oldest first — the one source of `recent` and `recentHoles`. */
+/**
+ * Up to the last five played holes in the order played (`order`, from
+ * `playOrder`), oldest first — the one source of `recent` and `recentHoles`.
+ */
 function lastPlayedHoles(
   holes: ReadonlyArray<{
     holeNumber: number;
@@ -216,6 +249,7 @@ function lastPlayedHoles(
     }>;
   }>,
   userId: string,
+  order: readonly number[],
 ): LiveBoardRecentHole[] {
   const played: LiveBoardRecentHole[] = [];
   for (const hole of holes) {
@@ -230,6 +264,11 @@ function lastPlayedHoles(
       });
     }
   }
+  const position = (hole: number) => {
+    const i = order.indexOf(hole);
+    return i === -1 ? order.length + hole : i;
+  };
+  played.sort((a, b) => position(a.holeNumber) - position(b.holeNumber));
   return played.slice(-RECENT_HOLES);
 }
 
@@ -309,13 +348,15 @@ export function liveBoardStripAction(opts: {
   gameId: string;
   status: GameStatus;
   holeSegment: HoleSegment;
+  /** #2286: a shotgun group plays on from its own start (`playOrder`). */
+  startType?: StartType;
   requirePeerApproval: boolean;
   viewer:
     | { submitted_at: string | null; approved_at: string | null; withdrawn_at: string | null }
     | undefined;
   viewerScores: ReadonlyArray<{ hole_number: number; strokes: number | null }>;
 }): LiveBoardStripAction | null {
-  const { gameId, status, holeSegment, requirePeerApproval, viewer, viewerScores } = opts;
+  const { gameId, status, holeSegment, startType, requirePeerApproval, viewer, viewerScores } = opts;
   if (status !== 'active' || !viewer) return null;
   const state = resolveActiveCardState({
     ...viewer,
@@ -326,7 +367,7 @@ export function liveBoardStripAction(opts: {
   const filled = new Set(
     viewerScores.filter((s) => s.strokes != null).map((s) => s.hole_number),
   );
-  const next = nextUnfilledHole(holeSegment, filled);
+  const next = nextUnfilledHole(holeSegment, filled, startType);
   return next === null
     ? { kind: 'submit', href: `/games/${gameId}/submit` }
     : { kind: 'hole', holeNumber: next, href: `/games/${gameId}/holes/${next}` };

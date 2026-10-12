@@ -7,6 +7,7 @@ import type { HoleSegment } from '@/lib/scoring';
 import type { GameStatus } from './status';
 import type { TeeBoxRatings, TeeGender } from './teeRating';
 import type { ScoreVisibility } from './visibility';
+import type { StartType } from './startType';
 
 /**
  * Tag-cached fetch for the `games` + `game_players` rows the hull-page needs
@@ -167,6 +168,13 @@ export type GameForHole = {
    */
   hole_segment: HoleSegment;
   /**
+   * #2258/#2286: how the round starts. DB-CHECK `games_start_type_valid`
+   * constrains the column to `StartType`, so the cast is trusted on input like
+   * `hole_segment`. Optional so literal constructors need not set it; a
+   * shotgun group's hole order comes from `playOrder`.
+   */
+  start_type?: StartType;
+  /**
    * #1441: non-null when this game is DERIVED from another game in the same
    * cup bundle (e.g. a back9 singles match derived from the back9 best-ball
    * host). A derived game has its own `game_players` but NO own scores —
@@ -232,7 +240,7 @@ export type GameWithPlayers = {
  * `getGameWithPlayers`, so any change to them gives a fresh cache entry.
  */
 export const GAME_SELECT =
-  'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, created_by, tournament_id, league_round_id, group_id, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, round_report, entry_fee_kr, payment_link, prizes, hole_segment, start_type, source_game_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 export const PLAYERS_SELECT =
   'user_id, team_number, flight_number, course_handicap, submitted_at, submitted_by_user_id, approved_at, rejection_reason, withdrawn_at, withdrawn_by_user_id, accepted_at, paid_at, tee_gender, users!game_players_user_id_fkey(name, nickname, is_guest)';

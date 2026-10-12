@@ -98,6 +98,15 @@ describe('getActiveGameCardData — hole-segment scope (#1441)', () => {
     expect(result.get('g1')?.href).toBe('/games/g1/holes/1');
   });
 
+  it('shotgun (#2286): a group that started on 10 and played 10–11 goes on to 12', async () => {
+    const result = await getActiveGameCardData(
+      fakeSupabase(holes('g1', [10, 11])),
+      'u1',
+      [baseGame({ hole_segment: 'full', start_type: 'shotgun' })],
+    );
+    expect(result.get('g1')?.href).toBe('/games/g1/holes/12');
+  });
+
   it('back9 game with no scores yet → next hole is 10, not 1 (regression: the naive 1..N loop used to land out of scope)', async () => {
     const result = await getActiveGameCardData(
       fakeSupabase([]),

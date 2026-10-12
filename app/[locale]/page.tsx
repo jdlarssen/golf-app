@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { first } from '@/lib/url/searchParams';
+import { parseStartType } from '@/lib/games/startType';
 import { Suspense, cache, Children, isValidElement } from 'react';
 import {
   type QueryData,
@@ -174,7 +175,7 @@ const activeGamesQuery = (
       // render as cards); `tournament_id`/`created_at` + the cup name embed let
       // us pair the two host halves of a split cup day into one merged card.
       // #2214: the cup's status drops matches in a finished cup (see below).
-      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, created_at, tournament_id, require_peer_approval, game_mode, hole_segment, courses(name), tournament:tournaments(name, status))',
+      'game_id, team_number, flight_number, submitted_at, withdrawn_at, approved_at, games!inner(id, name, status, ended_at, scheduled_tee_off_at, created_at, tournament_id, require_peer_approval, game_mode, hole_segment, start_type, courses(name), tournament:tournaments(name, status))',
     )
     .eq('user_id', userId)
     .in('games.status', ['draft', 'scheduled', 'active'])
@@ -441,6 +442,7 @@ async function HomeBody() {
             withdrawn_at: g.withdrawn_at,
             approved_at: g.approved_at,
             hole_segment: g.hole_segment,
+            start_type: parseStartType(g.start_type),
           })),
         )
       : new Map();
