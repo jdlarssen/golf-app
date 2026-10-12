@@ -143,9 +143,10 @@ function TvRow({
             aria-hidden
             className={`shrink-0 font-sans text-[16px] font-semibold ${arrow.className}`}
           >
-            {/* Inter has no ▲/▼: drawn by the system font, as on the artboard,
-                not by the Arial-based Inter fallback. */}
-            <span className="font-[system-ui]">{arrow.glyph}</span>
+            {/* Inter has no ▲/▼. The artboard sets `Inter, sans-serif`, so the
+                glyph falls through to the platform's sans-serif fallback; the
+                app's Inter fallback (Arial) would draw it wider. */}
+            <span className="font-[sans-serif]">{arrow.glyph}</span>
             {` ${arrow.count}`}
           </span>
         )}
