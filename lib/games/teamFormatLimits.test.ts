@@ -8,6 +8,7 @@ import {
   defaultFlightForTeam,
   fitAssignmentsToGrid,
   fitsTeamFormat,
+  isRosterFull,
   maxTeamsForSize,
   organizerPlayerCap,
   randomDrawTeamCount,
@@ -642,5 +643,20 @@ describe('fitAssignmentsToGrid — ingen fordelt spiller blir usynlig (#2079)', 
   it('tomt kart → samme tomme kart', () => {
     const empty: Record<string, number> = {};
     expect(fitAssignmentsToGrid(empty, ['p1', 'p2'], teamGridShape('texas_scramble', 2, 2))).toBe(empty);
+  });
+});
+
+// #2291: «is the roster full?» has one home. The organiser's pages count active
+// `game_players` rows against the cap; a game without a cap is never full.
+describe('isRosterFull (#2291)', () => {
+  it.each([
+    { cap: null, count: 0, full: false },
+    { cap: null, count: 100, full: false },
+    { cap: 5, count: 0, full: false },
+    { cap: 5, count: 4, full: false },
+    { cap: 5, count: 5, full: true },
+    { cap: 5, count: 6, full: true },
+  ])('tak $cap med $count aktive → $full', ({ cap, count, full }) => {
+    expect(isRosterFull(cap, count)).toBe(full);
   });
 });

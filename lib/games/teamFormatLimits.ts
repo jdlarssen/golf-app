@@ -354,6 +354,16 @@ export function organizerPlayerCap(
 }
 
 /**
+ * Is the roster full (#2291)? The one home for «full» on the organiser's
+ * surfaces: adding a player or a guest, the invite section, «Styr spillere»
+ * and the signups page all compare active `game_players` rows to the cap
+ * here. A game without a cap is never full.
+ */
+export function isRosterFull(cap: number | null, activeRosterCount: number): boolean {
+  return cap !== null && activeRosterCount >= cap;
+}
+
+/**
  * How many teams «Trekk tilfeldig» deals `n` selected players into at the
  * chosen `teamSize`, or `null` when the draw must refuse (#2012): every team
  * full, no leftover, and no more teams than the cap allows at that size.

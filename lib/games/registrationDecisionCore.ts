@@ -3,6 +3,8 @@ import { getRoleContext } from '@/lib/admin/auth';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { joinTeeGenders } from '@/lib/games/joinTeeGenders';
 import { REJECTION_REASON_MAX } from '@/lib/games/registration';
+// #2061: the cascades read both statuses; the inbox groups by the same pair.
+import { CASCADE_STATUSES } from '@/lib/games/signupInbox';
 import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
 import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
 import { notify } from '@/lib/notifications/notify';
@@ -54,13 +56,6 @@ type CascadeRow = {
   user_id: string;
   status: 'pending' | 'approved';
 };
-
-/**
- * #2061: a teammate who accepts the team invitation before the organiser has
- * approved the captain gets status 'approved' but no game_players row — they
- * wait for the team. The cascades therefore read both statuses.
- */
-const CASCADE_STATUSES = ['pending', 'approved'] as const;
 
 export type RegistrationDecisionContext = {
   request: RequestSnapshot;
