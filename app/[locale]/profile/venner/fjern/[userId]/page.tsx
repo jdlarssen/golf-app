@@ -30,11 +30,12 @@ export default async function FjernVennPage({ params }: { params: Params }) {
   const { userId: friendId } = await params;
   const locale = await getLocale();
 
+  // The id goes into the login `next`, so it must be a uuid first.
+  if (!isUuid(friendId)) notFound();
   const me = await getProxyVerifiedUserId();
   if (!me) {
     redirect({ href: `/login?next=${VENNER}/fjern/${friendId}`, locale });
   }
-  if (!isUuid(friendId)) notFound();
 
   const friendIds = await getFriendIds(me);
   if (!friendIds.includes(friendId)) {
