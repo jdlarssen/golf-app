@@ -5,7 +5,10 @@
  * accidentally drag in server-only deps via the page.
  */
 
-export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+import type { RequestStatus } from '@/lib/games/signupInbox';
+
+// The status type lives with the inbox rules in lib (#2288 review).
+export type { RequestStatus };
 
 export type TabKey = RequestStatus;
 

@@ -31,7 +31,7 @@ import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
 import { ScorecardTable } from '../_components/ScorecardTable';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
-import { canToggleSignups } from '@/lib/games/signupInbox';
+import { showsSignupsLink } from '@/lib/games/signupInbox';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
@@ -180,11 +180,10 @@ export default async function CreatorSpillerePage({
 
   // #2440: the way back to the signup requests once their varsel is gone.
   // #2288: also the organiser's door to «Steng påmeldingen», which lives on
-  // the signups page only — so the link shows on every game that takes
-  // requests (manual approval, and invite-only, #368) and on every game whose
-  // signups can be closed. RLS lets the creator read both (0071,
-  // is_game_creator_or_admin). A failed read hides the link, and a failed
-  // count hides «N venter» rather than claiming 0.
+  // the signups page only. When the link shows is `showsSignupsLink`. RLS
+  // lets the creator read both (0071, is_game_creator_or_admin). A failed
+  // read hides the link, and a failed count hides «N venter» rather than
+  // claiming 0.
   const [modeRes, pendingRes] = await Promise.all([
     supabase
       .from('games')
@@ -210,10 +209,17 @@ export default async function CreatorSpillerePage({
   const modeRow = modeRes.error ? null : modeRes.data;
   const takesRequests =
     modeRow?.registration_mode === 'manual_approval' || modeRow?.registration_mode === 'invite_only';
-  const pendingSignups = takesRequests && !pendingRes.error ? (pendingRes.count ?? 0) : null;
+  const pendingCount = pendingRes.error ? null : (pendingRes.count ?? 0);
+  const pendingSignups = takesRequests ? pendingCount : null;
   const showSignupsLink =
     modeRow != null &&
-    (takesRequests || canToggleSignups(game.status, modeRow.registration_mode, modeRow.group_id));
+    showsSignupsLink({
+      status: game.status,
+      registrationMode: modeRow.registration_mode,
+      groupId: modeRow.group_id,
+      tournamentId: game.tournament_id,
+      pendingCount,
+    });
   const status = game.status;
   const isPreStart = status === 'draft' || status === 'scheduled';
   // #1937: a cup match's roster is changed by swapping players on the cup,
