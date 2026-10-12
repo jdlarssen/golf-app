@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import type { SignupCapacity as Capacity } from '@/lib/games/signupInbox';
+import type { SignupCapacity as Capacity, SignupInboxState } from '@/lib/games/signupInbox';
 
 const QUEUE_STRIPES =
   'repeating-linear-gradient(45deg, var(--warning) 0 4px, var(--warning-stripe) 4px 8px)';
@@ -13,12 +13,15 @@ const QUEUE_STRIPES =
  */
 export async function SignupCapacity({
   statusLine,
+  state,
   capacity,
   cap,
   rosterCount,
   queued,
 }: {
   statusLine: string;
+  /** `signupInboxState`, for e2e and the staging check. */
+  state: SignupInboxState;
   capacity: Capacity | null;
   cap: number | null;
   rosterCount: number;
@@ -29,7 +32,15 @@ export async function SignupCapacity({
   const queuePct = capacity && cap ? Math.min((capacity.queued / cap) * 100, 100 - withPct) : 0;
 
   return (
-    <div className="leading-[normal]">
+    <div
+      data-testid="signup-capacity"
+      data-state={state}
+      data-taken={rosterCount}
+      data-queued={queued}
+      data-cap={cap ?? ''}
+      data-free={capacity?.free ?? ''}
+      className="leading-[normal]"
+    >
       <div className="mt-[10px] flex items-baseline justify-between gap-3">
         <span className="text-[13px] text-muted">{statusLine}</span>
         <span className="shrink-0 text-[13px] text-text">
@@ -39,7 +50,11 @@ export async function SignupCapacity({
       </div>
 
       {capacity && (
-        <div aria-hidden className="mt-1.5 flex h-2 overflow-hidden rounded-full bg-meter-track">
+        <div
+          aria-hidden
+          data-testid="signup-capacity-bar"
+          className="mt-1.5 flex h-2 overflow-hidden rounded-full bg-meter-track"
+        >
           <span className="bg-primary" style={{ width: `${withPct}%` }} />
           <span style={{ width: `${queuePct}%`, background: QUEUE_STRIPES }} />
         </div>

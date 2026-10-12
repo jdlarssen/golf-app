@@ -31,7 +31,7 @@ export function SignupRoster({
   const listId = 'signups-roster-list';
 
   return (
-    <section aria-labelledby={headingId}>
+    <section aria-labelledby={headingId} data-testid="signup-roster" data-count={count}>
       <div className="flex items-baseline justify-between pt-[18px] pb-2">
         <Kicker as="h2" id={headingId} className="leading-[normal]">
           {t('withHeading', { count })}

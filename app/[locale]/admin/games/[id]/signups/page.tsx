@@ -277,6 +277,7 @@ export default async function PåmeldingerPage({
       {inInbox && (
         <SignupCapacity
           statusLine={statusLine}
+          state={state}
           capacity={capacity}
           cap={cap}
           rosterCount={counts.rosterCount}
@@ -399,7 +400,10 @@ type HistoryLink = { key: TabKey; count: number; href: string };
 async function HistoryLine({ links, current }: { links: HistoryLink[]; current: TabKey }) {
   const t = await getTranslations('admin.game.signups');
   return (
-    <p className="mt-2 flex flex-wrap justify-center text-[12px] leading-[normal] text-muted">
+    <p
+      data-testid="signup-history-line"
+      className="mt-2 flex flex-wrap justify-center text-[12px] leading-[normal] text-muted"
+    >
       {links.map((link, i) => {
         const label = t('historyLink', { label: t(`tabs.${link.key}`), count: link.count });
         return (
