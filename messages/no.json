@@ -546,7 +546,7 @@
     "suggestionAddA11y": "Legg til {name} som venn",
     "removeRowA11y": "Fjern {name} som venn",
     "removeHeading": "Fjerne {name} som venn?",
-    "removeBody": "{name} får ikke beskjed. Dere dukker ikke lenger opp som venner når dere fyller lag, men dere kan bli venner igjen når som helst.",
+    "removeBody": "{name} får ikke beskjed. Dere dukker ikke lenger opp som venner når dere fyller lag eller melder dere på hverandres runder, men dere kan bli venner igjen når som helst.",
     "removeAsFriendLabel": "Fjern som venn",
     "leggTil": {
       "kicker": "Legg til venn",

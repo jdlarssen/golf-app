@@ -546,7 +546,7 @@
     "suggestionAddA11y": "Add {name} as a friend",
     "removeRowA11y": "Remove {name} as a friend",
     "removeHeading": "Remove {name} as a friend?",
-    "removeBody": "{name} won''t be told. You''ll no longer show up as friends when you fill teams, but you can become friends again at any time.",
+    "removeBody": "{name} won''t be told. You''ll no longer show up as friends when you fill teams or sign up for each other''s rounds, but you can become friends again at any time.",
     "removeAsFriendLabel": "Remove as friend",
     "leggTil": {
       "kicker": "Add friend",
