@@ -19,6 +19,7 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 
 - More than twenty tournament formats, all on WHS net handicap.
 - A leaderboard that updates live while your flight taps scores.
+- A big screen for the clubhouse. With live-follow on, the organizer opens the board on the TV in the bar: five players a page, turning every ten seconds, the latest birdies and lead changes, and a QR code so anyone can follow on their phone.
 - Flights that match the course. Four or fewer players walk as one group where anyone can keep score for anyone, and whoever kept every hole of a flightmate's card submits it together with their own in one tap; bigger fields are split into flights — the organizer can auto-split and adjust them, players can pick their own group in the waiting room, and signup can be closed while the final adjustments are made. Team formats get the same treatment: when players sign up individually for best ball or a scramble, the organizer suggests and adjusts the teams from the secretariat, and the game won't start until everyone has one.
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
 - Distance to the green, crowdsourced. Tap in your score by the green and save the spot with one more tap; from then on the hole screen shows "~X m to the green" from your phone's GPS to the middle of everyone's saved points. No course mapping needed — the data builds itself round by round.
