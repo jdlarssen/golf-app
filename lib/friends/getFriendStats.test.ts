@@ -25,6 +25,12 @@ const inList = (op: QueryOp, column: string) =>
 
 const fake = createAdminClientMock({
   respond: (op) => {
+    if (op.table === 'users') {
+      // Every other id has a finished profile.
+      return { data: inList(op, 'id').map((id) => ({
+        id, hcp_index: '12.4', profile_completed_at: Number(id.slice(1)) % 2 === 0 ? '2026-01-01T00:00:00Z' : null,
+      })) };
+    }
     if (op.table !== 'game_players') throw new Error(`uventet tabell ${op.table}`);
     if (op.columns?.includes('games!inner')) return { data: games };
     // Every other player was in every game: each co-player row the slice asks for.
@@ -37,7 +43,7 @@ const fake = createAdminClientMock({
 });
 vi.mock('@/lib/supabase/admin', () => ({ getAdminClient: () => fake.client }));
 
-import { getFriendStats } from './getFriendStats';
+import { getFriendHandicaps, getFriendStats } from './getFriendStats';
 
 beforeEach(() => fake.reset());
 
@@ -77,5 +83,16 @@ describe('getFriendStats', () => {
     expect(coReads()).toHaveLength(3); // 150 games in slices of 50, one slice of others
     expect(coReads().every((op) => inList(op, 'user_id').length === 2)).toBe(true);
     expect([...stats.keys()].sort()).toEqual(['u1', 'u2']);
+  });
+});
+
+describe('getFriendHandicaps', () => {
+  it('looks 150 friends up in slices of at most 100 and keeps finished profiles', async () => {
+    const hcp = await getFriendHandicaps(others);
+    const reads = fake.ops.filter((op) => op.table === 'users');
+    expect(reads.map((op) => inList(op, 'id').length)).toEqual([100, 50]);
+    expect(hcp.size).toBe(75);
+    expect(hcp.get('u0')).toBe(12.4);
+    expect(hcp.has('u1')).toBe(false);
   });
 });

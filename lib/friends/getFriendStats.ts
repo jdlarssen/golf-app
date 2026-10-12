@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { selectAllRows } from '@/lib/supabase/selectAllRows';
-import { chunkIds } from '@/lib/notifications/inboxReads';
+import { chunkIds, readInChunks } from '@/lib/notifications/inboxReads';
 import { friendStatsFromRows, type FriendStats, type SharedGame } from './friendStats';
 
 /**
@@ -92,21 +92,25 @@ export async function getFriendStats(
 /**
  * Handicap index of each friend with a finished profile (#2256). An
  * unfinished profile still holds the sign-up default, which is no handicap
- * to show. Throws on a query error.
+ * to show. The ids go in slices (#2267), since a long friend list passes the
+ * `.in()` URL limit. Throws on a query error, the first failed slice included.
  */
 export async function getFriendHandicaps(
   friendIds: readonly string[],
 ): Promise<Map<string, number>> {
-  const ids = [...new Set(friendIds)];
-  if (ids.length === 0) return new Map();
-  const { data, error } = await getAdminClient()
-    .from('users')
-    .select('id, hcp_index, profile_completed_at')
-    .in('id', ids)
-    .returns<{ id: string; hcp_index: number | string; profile_completed_at: string | null }[]>();
-  if (error) throw error;
+  if (friendIds.length === 0) return new Map();
+  const admin = getAdminClient();
+  const rows = await readInChunks<{ id: string; hcp_index: number | string; profile_completed_at: string | null }>(
+    friendIds,
+    (slice) =>
+      admin
+        .from('users')
+        .select('id, hcp_index, profile_completed_at')
+        .in('id', slice)
+        .returns<{ id: string; hcp_index: number | string; profile_completed_at: string | null }[]>(),
+  );
   return new Map(
-    (data ?? [])
+    rows
       .filter((u) => u.profile_completed_at !== null)
       .map((u) => [u.id, Number(u.hcp_index)]),
   );
