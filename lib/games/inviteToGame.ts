@@ -13,7 +13,7 @@ import {
   extendAndMailInvitation,
   inviteMailSenderName,
 } from '@/lib/games/extendAndMailInvitation';
-import { organizerPlayerCap } from '@/lib/games/teamFormatLimits';
+import { isRosterFull, organizerPlayerCap } from '@/lib/games/teamFormatLimits';
 import { expireGameCache } from '@/lib/games/expireGameCache';
 import { isRosterLocked } from '@/lib/games/status';
 import { emailMatchPattern } from '@/lib/supabase/emailMatch';
@@ -559,5 +559,5 @@ async function isFull(
     .select('user_id', { count: 'exact', head: true })
     .eq('game_id', game.id)
     .is('withdrawn_at', null);
-  return (count ?? 0) >= cap;
+  return isRosterFull(cap, count ?? 0);
 }
