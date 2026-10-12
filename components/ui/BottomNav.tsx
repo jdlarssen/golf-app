@@ -28,7 +28,8 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * pre-profil-onboarding og Nytt spill-veiviseren (#2260), som har egen chrome.
  * Veiviseren på `/admin/games/[id]/edit` deler rute med GameForm, så der
  * skjules baren av CSS-regelen for `data-hides-bottom-nav` i globals.css,
- * som bare veiviser-grenen setter.
+ * som bare veiviser-grenen setter. 404-siden og feilskjermen (`MishapView`,
+ * #2287) setter samme markør.
  *
  * `usePathname` MÅ komme fra `@/i18n/navigation`, ikke `next/navigation`:
  * `as-needed`-routingen rewriter `/games/x` → `/no/games/x` internt, og

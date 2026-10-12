@@ -27,8 +27,8 @@ import { themeBootstrapScript } from '@/lib/theme/themePreference';
  * from the address prefix before first paint (`lib/i18n/pathLocale.ts`).
  *
  * No bottom nav and no version footer: both need the NextIntl provider that
- * lives in the `[locale]` layout. The button takes a signed-in player home,
- * with a full page load (`hardNavigation`).
+ * lives in the `[locale]` layout. The buttons take a player home or to the
+ * open tournament list, with a full page load (`hardNavigation`).
  */
 
 export const viewport: Viewport = rootViewport;
@@ -74,15 +74,18 @@ export default async function GlobalNotFound() {
           dangerouslySetInnerHTML={{ __html: pathLocaleBootstrapScript() }}
         />
         <style dangerouslySetInnerHTML={{ __html: pathLocaleVariantCss() }} />
-        <AppShell showVersion={false}>
+        <AppShell showVersion={false} flush>
           <div data-testid="not-found">
             {variants.map(({ locale, t }) => (
               <div key={locale} data-locale-variant={locale} lang={locale}>
                 <NotFoundView
+                  kicker={t('kicker')}
                   heading={t('heading')}
                   body={t('body')}
-                  buttonLabel={t('button')}
+                  homeLabel={t('button')}
                   homeHref={canonicalPath(locale, '/')}
+                  findLabel={t('findTournaments')}
+                  findHref={canonicalPath(locale, '/finn-turneringer')}
                   hardNavigation
                 />
               </div>

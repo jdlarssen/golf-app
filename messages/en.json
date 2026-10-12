@@ -8,12 +8,14 @@
     "brandTagline": "Fire up your golf tournament in a <par>couple</par> of minutes"
   },
   "notFound": {
-    "heading": "This page doesn't exist",
-    "body": "The link points to something that has moved or been removed. Head to Home to find your way from there.",
-    "button": "Go home"
+    "kicker": "404 · Out of bounds",
+    "heading": "This one went out of bounds",
+    "body": "The link points to something that has moved or been removed. No penalty stroke – take a new shot from Home.",
+    "button": "Go home",
+    "findTournaments": "Find tournaments"
   },
   "error": {
-    "heading": "Something went wrong",
+    "heading": "The ball hit a tree",
     "body": "We couldn't load this right now. It's usually just a brief network hiccup. Try again in a moment.",
     "retry": "Try again",
     "sectionBody": "We couldn't load this right now.",

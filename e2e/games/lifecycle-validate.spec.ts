@@ -99,7 +99,7 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     // 2-player strokeplay → head-to-head duel view (the 2-player leaderboard).
     const duel = page.getByTestId('head-to-head');
@@ -131,7 +131,7 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     const banner = page.getByTestId('matchplay-status-banner');
     await expect(banner).toBeVisible();
@@ -165,7 +165,7 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     // 2-player skins → head-to-head duel. Oracle: A 6 skins, B 0 → verdict "6–0",
     // asserted as one token with word boundaries so 16–0 or 6–10 can't pass.
@@ -193,7 +193,7 @@ test.describe('Per-mode finish-and-validate (#736)', () => {
     gameIds.push(id);
 
     await page.goto(`/games/${id}/leaderboard`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     // 2-player nassau → head-to-head duel. Oracle: A wins all 3 segments
     // (front + back + total), so units = 3 (a sweep) and B = 0 → verdict "3–0".

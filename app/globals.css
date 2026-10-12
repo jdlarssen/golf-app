@@ -245,6 +245,17 @@
    * holder seg svært diskret; mørk modus får litt mer luft for å lese
    * mot den varmere klubbhus-natt-paletten. */
   --leaderboard-backdrop-opacity: 0.07;
+
+  /* Out of bounds (#2287): the hole scene on the 404 page and the error
+   * screen (components/illustrations/HoleScene.tsx). By day the artboard's
+   * hex values; the sky above the ground is the page's own --bg. */
+  --ob-rough: #dfe8df;
+  --ob-rough-edge: #cfdccf;
+  --ob-fairway: #b9ccb9;
+  --ob-white: #ffffff;
+  --ob-ink: #1a2e1f;
+  --ob-ball-line: #9a8f7c;
+  --ob-dimple: #cfc7b3;
 }
 
 /* Klubbhus-natt — dark mode. Not cold-grey, not pure black. Warm
@@ -387,6 +398,18 @@
     /* Leaderboard-backdrop — løftet litt i dark mode for å lese mot
      * klubbhus-natt-paletten uten å bli påtrengende. */
     --leaderboard-backdrop-opacity: 0.10;
+
+    /* Out of bounds (#2287): the canvas has no night drawing, so the night
+     * palette's steps. --ob-ink is taupe, not day ink: the pin tops, the
+     * trunk and the crown's edge stand against the sky (--bg), where #1a2e1f
+     * would measure 1,16:1 and disappear. */
+    --ob-rough: #1c2a22;
+    --ob-rough-edge: #243429;
+    --ob-fairway: #2f4734;
+    --ob-white: #ffffff;
+    --ob-ink: #9a9180;
+    --ob-ball-line: #9a9180;
+    --ob-dimple: #cfc7b3;
   }
 }
 
@@ -480,6 +503,14 @@
   --danger-deep: #c46868;
   --surface-strong: #1f3b2c;
   --leaderboard-backdrop-opacity: 0.10;
+  /* Out of bounds (#2287): same night values as the media block above. */
+  --ob-rough: #1c2a22;
+  --ob-rough-edge: #243429;
+  --ob-fairway: #2f4734;
+  --ob-white: #ffffff;
+  --ob-ink: #9a9180;
+  --ob-ball-line: #9a9180;
+  --ob-dimple: #cfc7b3;
 }
 
 /* Tailwind v4 theme bindings — these expose the design tokens as utility
@@ -1192,7 +1223,14 @@ body:has([data-page-bg='invitation']) {
  * stien. `/admin/games/[id]/edit` deler sti med GameForm, så der setter bare
  * veiviser-grenen markøren `data-hides-bottom-nav`, og baren skjules her.
  * Ren CSS fordi markøren står i server-HTML-en: baren blinker aldri inn.
+ * 404-siden og feilskjermen setter samme markør (#2287).
+ *
+ * Next 16 holder forrige side igjen i DOM-en etter en klient-navigasjon,
+ * skjult med `style="display: none !important"` på toppnoden. En markør der
+ * inne skal ikke telle, ellers mangler baren på Hjem etter «Til Hjem» fra
+ * feilskjermen (#2287).
  * ---------------------------------------------------------------------------*/
-body:has([data-hides-bottom-nav]) [data-bottom-nav] {
+body:has([data-hides-bottom-nav]:not([style*='display: none'], [style*='display: none'] *))
+  [data-bottom-nav] {
   display: none;
 }

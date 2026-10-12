@@ -31,8 +31,11 @@ type Variant =
  * with muted text). «Lagre som utkast» under it is `quiet` at `chip` size: no
  * frame, no fill, forest text. `dashed` is the transparent pill with a dashed
  * field outline and forest text: «Last opp sponsorlogo» in the prize table.
+ *
+ * #2287: `tall` is the 50 px pill at 14 px / 600 under a `large` one on the
+ * 404 page and the error screen («Finn turneringer»), with the chip's colours.
  */
-type Size = 'default' | 'compact' | 'large' | 'chip' | 'xl' | 'medium';
+type Size = 'default' | 'compact' | 'large' | 'chip' | 'xl' | 'medium' | 'tall';
 
 // Shared between Button and LinkButton so the pill shape, tap target, and
 // hover-lift stay synchronised. Variant-specific colors live in VARIANTS, and
@@ -127,6 +130,13 @@ const CHIP_VARIANTS: Record<Variant, string> = {
 const MEDIUM_BASE =
   'inline-flex items-center justify-center h-12 px-[18px] rounded-full text-[15px] font-semibold leading-[normal] transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
 
+/**
+ * 50 px at 14 px / 600 with the chip's colours (#2287). The artboard draws it
+ * 48 px high with a 1 px border outside, so it renders 50.
+ */
+const TALL_BASE =
+  'inline-flex items-center justify-center h-[50px] px-[18px] rounded-full text-sm font-semibold leading-[normal] transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed disabled:opacity-50';
+
 /** `large` at 54 px; the colours, disabled look included, are `large`'s. */
 const XL_BASE =
   'inline-flex items-center justify-center h-[54px] px-[18px] rounded-full text-base font-semibold transition-[background-color,opacity] duration-100 disabled:cursor-not-allowed';
@@ -150,6 +160,7 @@ export function buttonClasses(variant: Variant, size: Size): string {
   if (size === 'chip') return chipButtonClasses(variant);
   if (size === 'xl') return `${XL_BASE} ${LARGE_VARIANTS[variant]}`;
   if (size === 'medium') return `${MEDIUM_BASE} ${CHIP_VARIANTS[variant]}`;
+  if (size === 'tall') return `${TALL_BASE} ${CHIP_VARIANTS[variant]}`;
   return `${BASE_CLASSES} ${VARIANTS[variant]}`;
 }
 

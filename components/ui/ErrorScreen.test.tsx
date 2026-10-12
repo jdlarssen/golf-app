@@ -5,7 +5,7 @@ import { ErrorScreen } from './ErrorScreen';
 // next-intl er globalt mocket mot ekte no.json i vitest.setup.ts, så
 // `useTranslations('error')` resolver mot katalogen — ingen provider trengs.
 describe('ErrorScreen', () => {
-  it('rendrer lokalisert overskrift og kaller retry når «Prøv igjen» trykkes', () => {
+  it('rendrer feilskjermen med skjult tre-scene og kaller retry når «Prøv igjen» trykkes', () => {
     const retry = vi.fn();
     render(
       <ErrorScreen
@@ -16,8 +16,10 @@ describe('ErrorScreen', () => {
       />,
     );
 
-    // Bevis at i18n-wiringen rendrer ekte tekst, ikke en rå nøkkel.
-    expect(screen.getByText('Noe gikk galt')).toBeInTheDocument();
+    const screenRoot = screen.getByTestId('error-screen');
+    expect(screenRoot.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+    // «Prøv igjen» er ekte tekst fra katalogen, så i18n-wiringen er bevist.
 
     fireEvent.click(screen.getByRole('button', { name: 'Prøv igjen' }));
     expect(retry).toHaveBeenCalledOnce();

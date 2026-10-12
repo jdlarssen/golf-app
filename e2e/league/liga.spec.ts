@@ -292,7 +292,7 @@ test.describe('Liga — finished-flight standings (#647 read-path)', () => {
     await page.goto('/login?next=/');
     await signInViaOtp(page, ADMIN_EMAIL!);
     await page.goto(`/liga/${leagueId}`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
     await expect(page.getByTestId('liga-standings')).toBeVisible();
     await expect(
       page.getByTestId('liga-standings-row').first(),
@@ -498,7 +498,7 @@ test.describe('Liga — real flight generator via UI (#736)', () => {
 
     // Standings table renders numbers, not the empty-state and not a 500.
     await page.goto(`/liga/${leagueId}`);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
     await expect(page.getByTestId('liga-standings')).toBeVisible();
     await expect(
       page.getByTestId('liga-standings-row').first(),

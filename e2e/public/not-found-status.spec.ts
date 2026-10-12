@@ -20,7 +20,8 @@ import {
  *
  * The page is static and picks its language in the browser from the address
  * prefix, so the checks are on `lang` and the visible `[data-locale-variant]`,
- * never on Norwegian copy.
+ * never on Norwegian copy. Since #2287 the page has two buttons, home and the
+ * open tournament list, so the clicks name them by test id.
  *
  * @gate on the anonymous cases: fast and stateless.
  */
@@ -52,13 +53,32 @@ test.describe('ukjent adresse: merket 404 (public, no login)', () => {
       // out of this page changed the URL but kept the 404 on screen, because
       // the page owns <html>/<body> outside the [locale] layout.
       const home = lang === 'en' ? '/en' : '/';
-      await visibleVariant.getByRole('link').click();
+      await visibleVariant.getByTestId('not-found-home').click();
       await expect
         .poll(() => new URL(page.url()).pathname)
         .toBe(home);
       await expect(page.getByTestId('not-found')).toHaveCount(0);
     });
   }
+});
+
+test.describe('ukjent adresse: veien videre til turneringene (public, no login)', () => {
+  // #2287: the second button leaves the 404 for the open tournament list, also
+  // with a full page load. The page renders one variant per locale, so the
+  // click is scoped to the visible one (strict mode).
+  test('/legal/finnes-ikke-xyz → «Finn turneringer» åpner lista @gate', async ({
+    page,
+  }) => {
+    await page.goto('/legal/finnes-ikke-xyz');
+    await page
+      .locator('[data-locale-variant]:visible')
+      .getByTestId('not-found-find')
+      .click();
+    await expect
+      .poll(() => new URL(page.url()).pathname)
+      .toBe('/finn-turneringer');
+    await expect(page.getByTestId('not-found')).toHaveCount(0);
+  });
 });
 
 test.describe('ukjent adresse: merket 404 (innlogget)', () => {

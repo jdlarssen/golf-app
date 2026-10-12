@@ -20,8 +20,8 @@ import {
  * NØYAKTIG produksjons-shapet `createCupMatchesFromPlan` skriver (validert mot
  * live-skjema: `game_players` har INGEN `status`-kolonne, `flight_number=1`,
  * `team_number` 1/2) + noen scores, og asserter at BÅDE admin-cup-detaljen og
- * den offentlige cup-leaderboarden rendrer cup-navnet — ikke #680-error-
- * fallbacken («Noe gikk galt») som en rå 500 nå ville utløst.
+ * den offentlige cup-leaderboarden rendrer cup-navnet — ikke #680-
+ * feilskjermen (`error-screen`) som en rå 500 nå ville utløst.
  *
  * Bevisst avvik fra issue-design: issue ba om å kalle den ekte
  * `createCupMatchesFromPlan` via UI. Den genereres av en 5-stegs wizard uten
@@ -158,14 +158,14 @@ test.describe('Cup lifecycle smoke', () => {
     await signInViaOtp(page, ADMIN_EMAIL!);
     await page.goto(`/admin/cup/${tournamentId}`);
     await expect(page.getByText(cupName).first()).toBeVisible();
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     // Offentlig cup-side rendrer kampene (#642-reproduser: per-kjønn-par).
     await page.goto(`/cup/${tournamentId}`);
     await expect(
       page.getByRole('heading', { level: 1 }),
     ).toContainText(cupName);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     // Resultatsiden er låst mens cupen er aktiv (#1468) — ventetekst, ingen
     // resultatdata (verken totaler eller vinner-banner).
@@ -352,7 +352,7 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
 
     // Admin cup detail rendered after the redirect (no error fallback).
     await expect(page.getByText(cupName).first()).toBeVisible();
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
 
     // Close the lifecycle: activate the cup → public leaderboard renders.
     await admin
@@ -361,7 +361,7 @@ test.describe('Cup lifecycle — real generator via wizard (#736)', () => {
       .eq('id', tournamentId);
     await page.goto(`/cup/${tournamentId}`);
     await expect(page.getByRole('heading', { level: 1 })).toContainText(cupName);
-    await expect(page.getByText('Noe gikk galt')).toHaveCount(0);
+    await expect(page.getByTestId('error-screen')).toHaveCount(0);
   });
 });
 

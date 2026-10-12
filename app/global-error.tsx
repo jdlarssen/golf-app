@@ -9,6 +9,8 @@ import { useEffect } from 'react';
  * (default-locale «no») og inline-stiler som tåler at CSS mangler. Fanger
  * ekstremt sjelden; de to rute-grensene (`error.tsx`) dekker alt under
  * rot-layouten. `global-error` må definere egne `<html>`/`<body>`.
+ * Overskriften følger `error.heading` (#2287), men siden får ikke tre-scenen:
+ * `--ob-*`-tokenene kan mangle her, og da ville scenen blitt svart.
  */
 export default function GlobalError({
   error,
@@ -37,9 +39,12 @@ export default function GlobalError({
           padding: 24,
         }}
       >
-        <main style={{ maxWidth: 320, textAlign: 'center' }}>
+        <main
+          data-testid="error-screen"
+          style={{ maxWidth: 320, textAlign: 'center' }}
+        >
           <h1 style={{ fontSize: 28, fontWeight: 600, margin: '0 0 12px' }}>
-            Noe gikk galt
+            Ballen traff et tre
           </h1>
           <p
             style={{
