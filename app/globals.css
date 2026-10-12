@@ -153,6 +153,23 @@
   --live-dot-on-strong: #7daa8a;
   --on-accent: #1a2e1f;
   --score-over1-ring: #b5651d;
+  /* Storskjermen (#2275): the board on the clubhouse TV. Dark mode is the
+   * artboard (Storskjerm-forslag) as drawn; light mode is not drawn and takes
+   * the app's light tokens, the same layout in day colours (owner's answer
+   * 2026-10-12: light when the PC is light, dark when it is dark). Gold only
+   * on the leader's disc and line, as on the phone board. */
+  --tv-bg: var(--bg);
+  --tv-board: var(--surface);
+  --tv-text: var(--text);
+  --tv-gold: var(--accent);
+  --tv-lead-total: var(--primary);
+  --tv-ink: #1a2e1f;
+  --tv-arrow-up: var(--success-text);
+  --tv-arrow-down: var(--score-over2-fg);
+  --tv-dot-under: var(--score-under-fg);
+  --tv-dot-par: var(--score-par-fg);
+  --tv-dot-bogey: var(--score-over1-fg);
+  --tv-dot-double: var(--score-over2-fg);
 
   /* Skeleton — warm linen, never neutral grey. Base sits between --border and
    * --row-divider-warm; tint is the shimmer-peak lifted one step. */
@@ -360,6 +377,19 @@
     --live-dot-on-strong: #7daa8a;
     --on-accent: #1a2e1f;
     --score-over1-ring: #e5b26f;
+    /* Storskjermen (#2275) — see :root. The artboard's values. */
+    --tv-bg: #12281c;
+    --tv-board: #1b4332;
+    --tv-text: #ece5d2;
+    --tv-gold: #c9a961;
+    --tv-lead-total: #d4b870;
+    --tv-ink: #1a2e1f;
+    --tv-arrow-up: #b9d8c1;
+    --tv-arrow-down: #e7a79a;
+    --tv-dot-under: #7daa8a;
+    --tv-dot-par: #ece5d2;
+    --tv-dot-bogey: #d89b3a;
+    --tv-dot-double: #c8423b;
 
     /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
@@ -498,6 +528,18 @@
   --live-dot-on-strong: #7daa8a;
   --on-accent: #1a2e1f;
   --score-over1-ring: #e5b26f;
+  --tv-bg: #12281c;
+  --tv-board: #1b4332;
+  --tv-text: #ece5d2;
+  --tv-gold: #c9a961;
+  --tv-lead-total: #d4b870;
+  --tv-ink: #1a2e1f;
+  --tv-arrow-up: #b9d8c1;
+  --tv-arrow-down: #e7a79a;
+  --tv-dot-under: #7daa8a;
+  --tv-dot-par: #ece5d2;
+  --tv-dot-bogey: #d89b3a;
+  --tv-dot-double: #c8423b;
 
   --skel-base: #243828;
   --skel-tint: #2f4734;
@@ -586,6 +628,18 @@
   --color-surface-strong: var(--surface-strong);
   --color-on-strong: var(--on-strong);
   --color-accent-on-strong: var(--accent-on-strong);
+  --color-tv-bg: var(--tv-bg);
+  --color-tv-board: var(--tv-board);
+  --color-tv-text: var(--tv-text);
+  --color-tv-gold: var(--tv-gold);
+  --color-tv-lead-total: var(--tv-lead-total);
+  --color-tv-ink: var(--tv-ink);
+  --color-tv-arrow-up: var(--tv-arrow-up);
+  --color-tv-arrow-down: var(--tv-arrow-down);
+  --color-tv-dot-under: var(--tv-dot-under);
+  --color-tv-dot-par: var(--tv-dot-par);
+  --color-tv-dot-bogey: var(--tv-dot-bogey);
+  --color-tv-dot-double: var(--tv-dot-double);
   --color-live-dot: var(--live-dot);
   --color-live-dot-on-strong: var(--live-dot-on-strong);
   --color-on-accent: var(--on-accent);

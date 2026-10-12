@@ -6395,6 +6395,28 @@
       "followName": "Follow {name}",
       "seeWholeBoard": "See the whole board",
       "cta": "Create your own tournament in a couple of minutes →"
+    },
+    "tv": {
+      "metaTitle": "Big screen",
+      "openLabel": "Show on big screen",
+      "paging": "Page {page} of {pages} · turns every {seconds} seconds · {players}",
+      "feedTitle": "Latest",
+      "feedEmpty": "Birdies, a new leader and flights that have handed in show up here.",
+      "feedLead": "<b>{name}</b> took the lead on hole {hole}",
+      "feedBirdie": "<b>{name}</b> with a birdie on hole {hole}",
+      "feedAlbatross": "<b>{name}</b> with an albatross on hole {hole}",
+      "feedEagle": "<b>{name}</b> with an eagle on hole {hole}",
+      "feedHoleInOne": "<b>{name}</b> with a hole-in-one on hole {hole}",
+      "feedFlightDone": "<b>Flight {flight}</b> has handed in",
+      "qrTitle": "Follow on your phone",
+      "qrBody": "Scan the code to see the board live",
+      "qrAria": "QR code to the live link",
+      "finished": "Finished",
+      "finishedBody": "The game is over. Scan the code to see the result.",
+      "finishedQrTitle": "The result on your phone",
+      "finishedQrBody": "Scan the code to see who won",
+      "hiddenBody": "The board shows when the game is finished.",
+      "unsupportedBody": "The big screen only shows stroke play and stableford for now."
     }
   },
   "installBanner": {

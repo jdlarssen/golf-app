@@ -38,6 +38,7 @@ import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
 import { ScorecardTable } from '@/app/[locale]/games/[id]/_components/ScorecardTable';
+import { LiveFollowControl } from '@/app/[locale]/games/[id]/(home)/LiveFollowControl';
 import { fetchScorecardReviewData } from '@/lib/games/scorecardReviewData';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
@@ -140,6 +141,8 @@ type GameRow = {
   short_id: string;
   // #1049: startkontingent — driver betaling-telle-kortet (vises kun når > 0).
   entry_fee_kr: number;
+  // #2275: live-follow on the desk's Live tab (null while it is off).
+  spectate_token: string | null;
   courses: { name: string } | null;
   // #1795: kun navnet leses her. Rating-radene (slope/CR/par per kjønn) er ute
   // av protokoll-kortet, så selecten henter ikke lenger de ni rating-kolonnene.
@@ -278,7 +281,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, entry_fee_kr, courses(name), tee_boxes(name)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, hole_segment, start_type, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, entry_fee_kr, spectate_token, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .maybeSingle<GameRow>();
@@ -1509,6 +1512,14 @@ async function PultBody({
           {t('viewStatus')}
         </SmartLink>
       </div>
+      {/* #2275: live-follow, its links and «Vis på storskjerm» for an organiser
+          who does not play and so never sees the game's own page. */}
+      <LiveFollowControl
+        gameId={game.id}
+        spectateToken={game.spectate_token}
+        locale={locale}
+        gameName={gameName}
+      />
     </>
   );
 
