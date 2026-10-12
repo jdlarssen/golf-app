@@ -3904,9 +3904,7 @@
         "viewStatusLink": "Se spillerstatus",
         "viewStatusWithReminderLink": "Se spillerstatus og send påminnelse →",
         "leaderboardButton": "🏆 Se leaderboard →",
-        "signupsClosedBody": "Påmeldingen er stengt. Spillerne ser en melding om at arrangøren gjør siste justeringer.",
         "reopenSignupsButton": "Gjenåpne påmeldingen",
-        "closeSignupsBody": "Steng påmeldingen mens du gjør de siste justeringene. Spillere som prøver å melde seg på, får beskjed om å vente.",
         "closeSignupsButton": "Steng påmeldingen",
         "gameFullBanner": "Spillet er fullt ({current} av {max}). Fjern noen for å invitere flere."
       },
@@ -4093,8 +4091,6 @@
         "remindHoleConfirm": "Sende påminnelse til {names} om hull {holes}?"
       },
       "signups": {
-        "topBarKicker": "Påmeldinger",
-        "brassRibbon": "Selv-påmelding",
         "heading": "Påmeldinger",
         "inviteOnlyBanner": "Dette spillet er invitasjonsbasert og dukker ikke opp i Finn turneringer. Folk som har lenken kan likevel be om å bli med. Forespørslene havner her, så du kan godkjenne eller avslå.",
         "statusBanners": {
@@ -4127,20 +4123,15 @@
           "rejected": "Ingen avviste påmeldinger ennå.",
           "withdrawn": "Ingen spillere har trukket seg."
         },
-        "teamLabel": "Lag · {name}",
-        "playerCount": "{count, plural, one {# spiller} other {# spillere}}",
+        "teamLabel": "Lag: {name}",
         "captainBadge": "Kaptein",
         "makeCaptainButton": "Gjør til kaptein",
         "makeCaptainConfirm": "Gjøre {name} til kaptein for {teamName}?",
         "makeCaptainConfirmButton": "Ja, gjør til kaptein",
         "makeCaptainCancel": "Avbryt",
         "makeCaptainPending": "Lagrer …",
-        "registeredAt": "Påmeldt {date}",
-        "decidedAt": "Avgjort {date}",
         "approveButton": "Godkjenn",
-        "approvingBusy": "Godkjenner …",
-        "rejectButton": "Avvis",
-        "rejectingBusy": "Avviser …",
+        "rejectButton": "Avvis …",
         "rejectModalTitle": "Avvis påmelding fra {name}?",
         "rejectModalTeamCascade": "Hele laget «{name}» blir avvist samtidig.",
         "rejectReasonLabel": "Valgfri begrunnelse",
@@ -4149,7 +4140,44 @@
         "rejectSubmittingBusy": "Avviser …",
         "rejectCancelButton": "Avbryt",
         "rejectionReasonDisplay": "Begrunnelse: {reason}",
-        "capWarning": "Formatet har plass til {cap} {cap, plural, one {spiller} other {spillere}}, og {count} er allerede godkjent. Godkjenner du flere, risikerer du at spillet ikke kan publiseres."
+        "backToGame": "Tilbake til spillet",
+        "backToInbox": "Tilbake til påmeldingene",
+        "state": {
+          "open": "Påmeldingen er åpen",
+          "closed": "Påmeldingen er stengt",
+          "inviteOnly": "Bare inviterte"
+        },
+        "statusLine": "{state} · {when}",
+        "when": "{weekday} {dayMonth} {time}",
+        "capacityOf": "av {cap}",
+        "legendWith": "{count} med",
+        "legendWaiting": "{count} venter på deg",
+        "legendFree": "{count, plural, one {# plass ledig} other {# plasser ledig}}",
+        "legendOver": "{count} over taket",
+        "waitingHeading": "Venter på deg · {count}",
+        "withHeading": "Med · {count}",
+        "historyHeadings": {
+          "approved": "Godkjent · {count}",
+          "rejected": "Avvist · {count}",
+          "withdrawn": "Trukket · {count}"
+        },
+        "historyLink": "{label} {count}",
+        "signedUp": {
+          "today": "meldte seg på i dag kl. {time}",
+          "yesterday": "meldte seg på i går kl. {time}",
+          "date": "meldte seg på {date} kl. {time}"
+        },
+        "hcp": "HCP {hcp}",
+        "cardLine": "{hcp} · {signedUp}",
+        "flags": {
+          "teamShort": "Trenger {needed, plural, one {# plass} other {# plasser}}, bare {free, plural, one {# ledig} other {# ledige}}",
+          "teamNone": "Trenger {needed, plural, one {# plass} other {# plasser}}, ingen ledige",
+          "soloFull": "Ingen ledige plasser"
+        },
+        "approveTeamButton": "Godkjenn laget",
+        "showAll": "Vis alle",
+        "more": "{count} til",
+        "rosterEmpty": "Ingen er med ennå."
       },
       "withdraw": {
         "topBarKicker": "Trekk spiller",
