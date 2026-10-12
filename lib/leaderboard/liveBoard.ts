@@ -54,6 +54,19 @@ export type LiveBoardRow = {
   movement: number | null;
   /** Gross colour of up to the last five played holes, oldest first. */
   recent: ScoreTone[];
+  /**
+   * The same holes as `recent` (#2286): strokes, the player's own par, and the
+   * hole's stableford points or net strokes (`null` in the other unit).
+   */
+  recentHoles: LiveBoardRecentHole[];
+};
+
+export type LiveBoardRecentHole = {
+  holeNumber: number;
+  gross: number;
+  par: number;
+  points: number | null;
+  net: number | null;
 };
 
 export type LiveBoard = {
@@ -167,6 +180,7 @@ export function computeLiveBoard(opts: {
   const rows = lines.map((l): LiveBoardRow => {
     const user = userById.get(l.userId) ?? null;
     const before = previousRank.get(l.userId);
+    const recentHoles = lastPlayedHoles(result.holes, l.userId);
     return {
       userId: l.userId,
       name: user?.name ?? null,
@@ -176,7 +190,8 @@ export function computeLiveBoard(opts: {
       total: l.holesPlayed > 0 ? l.total : null,
       holesPlayed: l.holesPlayed,
       movement: l.holesPlayed < minHolesForMovement || before === undefined ? null : before - l.rank,
-      recent: recentTones(result.holes, l.userId),
+      recent: recentHoles.map((h) => scoreTone(h.gross, h.par)),
+      recentHoles,
     };
   });
 
@@ -188,14 +203,32 @@ export function computeLiveBoard(opts: {
   };
 }
 
-function recentTones(
-  holes: ReadonlyArray<{ perPlayer: ReadonlyArray<{ userId: string; gross: number | null; par: number }> }>,
+/** Up to the last five played holes, oldest first — the one source of `recent` and `recentHoles`. */
+function lastPlayedHoles(
+  holes: ReadonlyArray<{
+    holeNumber: number;
+    perPlayer: ReadonlyArray<{
+      userId: string;
+      gross: number | null;
+      par: number;
+      points?: number;
+      net?: number | null;
+    }>;
+  }>,
   userId: string,
-): ScoreTone[] {
-  const played: ScoreTone[] = [];
+): LiveBoardRecentHole[] {
+  const played: LiveBoardRecentHole[] = [];
   for (const hole of holes) {
     const cell = hole.perPlayer.find((c) => c.userId === userId);
-    if (cell && cell.gross != null) played.push(scoreTone(cell.gross, cell.par));
+    if (cell && cell.gross != null) {
+      played.push({
+        holeNumber: hole.holeNumber,
+        gross: cell.gross,
+        par: cell.par,
+        points: cell.points ?? null,
+        net: cell.net ?? null,
+      });
+    }
   }
   return played.slice(-RECENT_HOLES);
 }
@@ -235,10 +268,25 @@ export function viewerStanding(board: LiveBoard, userId: string): ViewerStanding
 
 function gapToLead(unit: LiveBoardUnit, me: LiveBoardRow, leaders: LiveBoardRow[]): number | null {
   if (me.rank === 1 || me.total === null || leaders.length === 0) return null;
-  const lead = leaders[0].total;
-  if (lead === null) return null;
-  if (unit !== 'toPar' && leaders.some((l) => l.holesPlayed !== me.holesPlayed)) return null;
-  return Math.abs(me.total - lead);
+  const gaps = leaders.map((l) => comparableGap(unit, me, l));
+  return gaps.some((g) => g === null) ? null : gaps[0];
+}
+
+/**
+ * The distance between two rows' numbers, or `null` when they cannot be
+ * compared: a row without a total, or — in points and net strokes — a
+ * different number of holes played. Net to par compares across holes
+ * («thru»). The one rule behind the gap to the lead and the follow page's
+ * lead over number two (#2286).
+ */
+export function comparableGap(
+  unit: LiveBoardUnit,
+  a: Pick<LiveBoardRow, 'total' | 'holesPlayed'>,
+  b: Pick<LiveBoardRow, 'total' | 'holesPlayed'>,
+): number | null {
+  if (a.total === null || b.total === null) return null;
+  if (unit !== 'toPar' && a.holesPlayed !== b.holesPlayed) return null;
+  return Math.abs(a.total - b.total);
 }
 
 /** What the strip's button does: the next hole, «Lever scorekort», or nothing after delivery. */

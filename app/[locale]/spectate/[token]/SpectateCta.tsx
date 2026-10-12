@@ -25,13 +25,18 @@ const getServerSnapshot = () => false;
  * verste fall se CTA-en kort — rent kosmetisk (ASSUMPTION, jf. kontrakt #1268).
  * Cookie-sjekken kjører i en effekt, så SSR + første render viser CTA-en
  * (bra for utloggede); innloggede får den fjernet straks JS kjører.
+ *
+ * `variant="link"` er følg-sidens tekstlenke (#2286, artboardet «Forslag:
+ * heiagjengen»); `pill` er dagens knapp under tavla.
  */
 export function SpectateCta({
   href,
   label,
+  variant = 'pill',
 }: {
   href: string;
   label: string;
+  variant?: 'pill' | 'link';
 }) {
   const hasSession = useSyncExternalStore(
     subscribe,
@@ -40,6 +45,18 @@ export function SpectateCta({
   );
 
   if (hasSession) return null;
+
+  if (variant === 'link') {
+    return (
+      <SmartLink
+        href={href}
+        data-testid="spectate-cta"
+        className="flex min-h-12 items-center justify-center text-[14px] font-semibold leading-[normal] text-primary underline hover:text-primary-hover"
+      >
+        {label}
+      </SmartLink>
+    );
+  }
 
   return (
     <div className="flex justify-center px-4 py-8">

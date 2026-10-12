@@ -18,6 +18,7 @@ function rows(count: number): LiveBoardRow[] {
     holesPlayed: 7,
     movement: 0,
     recent: ['par', 'under', 'over1'],
+    recentHoles: [],
   }));
 }
 
@@ -92,6 +93,20 @@ describe('LiveBoard', () => {
     expect(screen.getByText('Netto')).toBeInTheDocument();
     expect(within(boardItems()[0]).getByText('−2')).toBeInTheDocument();
     expect(within(boardItems()[1]).getByText('E')).toBeInTheDocument();
+  });
+
+  it('on the live link (#2286) the plates follow the player and the pick card shows', () => {
+    const { rerender } = render(<LiveBoard {...props({ viewerUserId: '', followPath: '/spectate/tok' })} />);
+
+    expect(screen.getByTestId('follow-pick')).toBeInTheDocument();
+    const links = screen.getAllByTestId('board-follow-link');
+    expect(links).toHaveLength(5);
+    expect(links[0]).toHaveAttribute('href', '/spectate/tok?folg=u1');
+
+    // Without followPath (the signed-in board, the embed): no card, no links.
+    rerender(<LiveBoard {...props({ viewerUserId: '' })} />);
+    expect(screen.queryByTestId('follow-pick')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('board-follow-link')).not.toBeInTheDocument();
   });
 
   it('without a reactions provider the plate is not a button', () => {

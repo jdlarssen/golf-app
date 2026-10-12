@@ -3,6 +3,8 @@ import {
   countRoundAchievements,
   parForGender,
   selectNotableMoments,
+  underParKind,
+  underParMoment,
   EMPTY_ACHIEVEMENTS,
   type Achievements,
   type HoleScore,
@@ -155,5 +157,32 @@ describe('selectNotableMoments — unlock-notification eligibility (#947)', () =
       { kind: 'eagle', count: 2 }, // 3 eagles − 1 ace
       { kind: 'turkey', count: 1 },
     ]);
+  });
+});
+
+describe('underParMoment — the newest hole\'s word on the follow page (#2286)', () => {
+  it.each([
+    ['hole-in-one on a par 3', 1, 3, 'hole_in_one'],
+    ['hole-in-one on a par 4 wins over albatross', 1, 4, 'hole_in_one'],
+    ['albatross (par 5, 2 strokes)', 2, 5, 'albatross'],
+    ['eagle (par 5, 3 strokes)', 3, 5, 'eagle'],
+    ['birdie (par 4, 3 strokes)', 3, 4, 'birdie'],
+    ['par', 4, 4, null],
+    ['bogey', 5, 4, null],
+    ['invalid par 0', 1, 0, null],
+  ] as const)('%s', (_label, strokes, par, expected) => {
+    expect(underParMoment(strokes, par)).toBe(expected);
+  });
+});
+
+describe('underParKind — the counting rule behind the brags', () => {
+  it.each([
+    ['albatross counts as an eagle', 2, 5, 'eagle'],
+    ['eagle', 3, 5, 'eagle'],
+    ['birdie', 3, 4, 'birdie'],
+    ['par', 4, 4, null],
+    ['invalid par 0', 3, 0, null],
+  ] as const)('%s', (_label, strokes, par, expected) => {
+    expect(underParKind(strokes, par)).toBe(expected);
   });
 });

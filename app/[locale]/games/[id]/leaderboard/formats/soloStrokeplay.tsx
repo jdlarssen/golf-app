@@ -18,7 +18,7 @@ import { computeLeaderboard } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { computeLiveBoard } from '@/lib/leaderboard/liveBoard';
 import { formatVsPar } from '@/lib/leaderboard/vsPar';
-import { renderLiveBoard } from './liveBoard';
+import { renderLiveBoard, type LiveBoardFollowOpts } from './liveBoard';
 import type { GameForHole } from '@/lib/games/getGameWithPlayers';
 import type { TeeGender } from '@/lib/games/teeRating';
 
@@ -68,6 +68,10 @@ export async function renderSoloStrokeplay(opts: {
   viewerUserId?: string;
   /** #2253: spectate/embed — no strip, no «DU». */
   publicView?: boolean;
+  /** #2286: the course's name, for the follow page's head. */
+  courseName?: string | null;
+  /** #2286: the live link's follow choice; only spectate sends it. */
+  follow?: LiveBoardFollowOpts;
 }) {
   const tc = await getTranslations('leaderboard.common');
   const tModes = await getTranslations('modes');
@@ -82,6 +86,8 @@ export async function renderSoloStrokeplay(opts: {
     prizeAwardsNode,
     viewerUserId,
     publicView,
+    courseName,
+    follow,
   } = opts;
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
@@ -312,11 +318,14 @@ export async function renderSoloStrokeplay(opts: {
     game,
     players: gwp.players,
     board,
+    holesRows: rawHolesRows,
     scoresRows: rawScoresRows,
     backHref,
     footerSlot: wdSection,
     viewerUserId,
     publicView,
     testId: 'strokeplay-leaderboard',
+    courseName,
+    follow,
   });
 }

@@ -3,6 +3,7 @@ import { computeLeaderboard } from '@/lib/scoring';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import {
+  comparableGap,
   computeLiveBoard,
   liveBoardStripAction,
   viewerStanding,
@@ -10,6 +11,7 @@ import {
   type LiveBoard,
   type LiveBoardGame,
   type LiveBoardPlayerRow,
+  type LiveBoardRow,
 } from './liveBoard';
 
 // Type A (#2253): the live board's own logic — movement since the previous
@@ -149,6 +151,45 @@ describe('computeLiveBoard — the last five holes', () => {
   it('shows fewer dots when fewer than five holes are played', () => {
     const b = board({ players: [player('p')], scores: card('p', { 1: 4, 2: 5 }) });
     expect(b.rows[0].recent).toEqual(['par', 'over1']);
+  });
+
+  it('recentHoles (#2286): the same five holes with strokes, the player’s own par and points or net', () => {
+    // Hole 7 is a par 5 from the ladies' tee; everything else is par 4.
+    const holes = HOLES.map((h) => (h.hole_number === 7 ? { ...h, par_ladies: 5 } : h));
+    const lady: LiveBoardPlayerRow = { ...player('p'), tee_gender: 'ladies' };
+    const scores = card('p', { 1: 3, 2: 4, 3: 5, 5: 6, 6: 4, 7: 4 });
+
+    const stableford = computeLiveBoard({
+      gameId: 'g1',
+      game: game(),
+      players: [lady],
+      holesRows: holes,
+      scoresRows: scores,
+    })!;
+    expect(stableford.rows[0].recentHoles).toEqual([
+      { holeNumber: 2, gross: 4, par: 4, points: 2, net: null },
+      { holeNumber: 3, gross: 5, par: 4, points: 1, net: null },
+      { holeNumber: 5, gross: 6, par: 4, points: 0, net: null },
+      { holeNumber: 6, gross: 4, par: 4, points: 2, net: null },
+      { holeNumber: 7, gross: 4, par: 5, points: 3, net: null },
+    ]);
+    // The dots are the colour of the same holes: the ladies' birdie on 7 is under par.
+    expect(stableford.rows[0].recent).toEqual(['par', 'over1', 'over2', 'par', 'under']);
+
+    const strokeplay = computeLiveBoard({
+      gameId: 'g1',
+      game: game({ game_mode: 'solo_strokeplay', mode_config: STROKEPLAY }),
+      players: [{ ...lady, course_handicap: 18 }],
+      holesRows: holes,
+      scoresRows: scores,
+    })!;
+    expect(strokeplay.rows[0].recentHoles.map((h) => [h.holeNumber, h.gross, h.net, h.points])).toEqual([
+      [2, 4, 3, null],
+      [3, 5, 4, null],
+      [5, 6, 5, null],
+      [6, 4, 3, null],
+      [7, 4, 3, null],
+    ]);
   });
 });
 
@@ -318,6 +359,33 @@ describe('viewerStanding — the gap to the lead', () => {
       scores: [...card('x', { 1: 4, 2: 4, 3: 4 }), ...card('y', { 1: 5, 2: 6 })],
     });
     expect(viewerStanding(uneven, 'y')?.gap).toBeNull();
+  });
+});
+
+describe('comparableGap (#2286) — the one rule for comparing two rows', () => {
+  const row = (total: number | null, holesPlayed: number): LiveBoardRow => ({
+    userId: 'x',
+    name: null,
+    nickname: null,
+    rank: 1,
+    tied: false,
+    total,
+    holesPlayed,
+    movement: null,
+    recent: [],
+    recentHoles: [],
+  });
+
+  it.each([
+    ['points on the same holes', 'points', row(26, 11), row(25, 11), 1],
+    ['points on different holes', 'points', row(26, 11), row(23, 10), null],
+    ['net strokes on the same holes', 'net', row(72, 18), row(74, 18), 2],
+    ['net strokes on different holes', 'net', row(40, 10), row(36, 9), null],
+    ['net to par across holes («thru»)', 'toPar', row(-1, 9), row(1, 14), 2],
+    ['a row without a total', 'points', row(null, 0), row(25, 11), null],
+  ] as const)('%s', (_label, unit, a, b, expected) => {
+    expect(comparableGap(unit, a, b)).toBe(expected);
+    expect(comparableGap(unit, b, a)).toBe(expected);
   });
 });
 

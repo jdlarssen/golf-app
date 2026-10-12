@@ -13,9 +13,11 @@ import { SpectateCta } from './SpectateCta';
 import { SponsorStrip } from '@/components/SponsorStrip';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { safeParsePrizes } from '@/lib/games/prizes';
+import { resolveFollowUserId } from '@/lib/leaderboard/followPlayer';
 
 type Params = Promise<{ token: string }>;
-type SearchParams = Promise<{ mode?: string | string[] }>;
+/** `folg` (#2286): the player the spectator follows on the live board. */
+type SearchParams = Promise<{ mode?: string | string[]; folg?: string | string[] }>;
 
 // #1268: OG-metadata for delte spectate-lenker. Grensen (eier-besluttet
 // 19.07): turneringsNAVNET er OK i tittel/OG (en delt lenke skal se ut som
@@ -143,6 +145,18 @@ export default async function SpectatePage({
     // (denne siden), som selv leser ?mode=.
     publicView: true,
     viewerUserId: '',
+    // #2286 Heiagjengen: follow one player while the game is live. Only the
+    // live board (solo stableford / solo strokeplay) reads it; the follow
+    // links are built from the token as unprefixed paths, so next-intl adds
+    // the locale once.
+    follow: live
+      ? {
+          token,
+          userId: resolveFollowUserId(sp.folg),
+          hadFolg: sp.folg !== undefined,
+          cta: <SpectateCta variant="link" href={`/${locale}/login`} label={t('follow.cta')} />,
+        }
+      : undefined,
   });
 
   return (
@@ -151,8 +165,12 @@ export default async function SpectatePage({
           Deliberately minimal: game name + status (live / resultat).
           The format views already render the game name in their own chrome;
           this badge just communicates the public/spectate context clearly. */}
+      {/* data-spectate-banner / data-spectate-default-cta: the follow page
+          (#2286) draws its own head and link, and app/globals.css hides
+          these two while it is shown. */}
       <div
         role="banner"
+        data-spectate-banner
         aria-label={t('bannerAriaLabel')}
         className={[
           'sticky top-0 z-40 flex items-center justify-between gap-2',
@@ -181,7 +199,9 @@ export default async function SpectatePage({
       {/* #1268: «Lag din egen turnering»-CTA for uinnloggede besøkende.
           Statisk, utenfor poller-treet, så 20s-refreshen ikke remounter den.
           Kun spectate (ikke embed — tredjeparts klubbsider har EmbedFooter). */}
-      <SpectateCta href={`/${locale}/login`} label={t('ctaLabel')} />
+      <div data-spectate-default-cta>
+        <SpectateCta href={`/${locale}/login`} label={t('ctaLabel')} />
+      </div>
     </>
   );
 }
