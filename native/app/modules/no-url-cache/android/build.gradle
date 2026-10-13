@@ -1,0 +1,24 @@
+// native/app/modules/no-url-cache/android/build.gradle
+// #2560: Android-delen av #1973. Se NoUrlCachePackage.kt for hvorfor.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'no.tornygolf'
+version = '1.0.0'
+
+android {
+  namespace "no.tornygolf.nourlcache"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // OkHttpClientProvider og okhttp3 kommer fra react-android. Pluginen legger
+  // bare til expo-modules-core (compileOnly), og den tar react-android som
+  // `implementation`, ikke `api`, så uten denne linja løses ingen av dem.
+  implementation 'com.facebook.react:react-android'
+}
