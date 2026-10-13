@@ -9,7 +9,7 @@
 // Mønsteret alle flatene følger: layout i et statisk `StyleSheet.create`-ark,
 // farger inline fra `colors`/`ui`. Aldri hardkodede farger eller fonter.
 import { createContext, createElement, useContext, type ReactNode } from 'react';
-import { PixelRatio, StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
+import { PixelRatio, Platform, StyleSheet, useColorScheme, type ColorSchemeName } from 'react-native';
 import FRAUNCES_SIZES from '../assets/fonts/fraunces-sizes.json';
 
 /** Minste tappbare flate (≥44px, Apple HIG). Brukt av alle steppere. */
@@ -212,8 +212,19 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
  */
 export const FRAUNCES_LINE = 1.233;
 
-/** `multiline`: teksten kan brekke og trenger designets linjeavstand. */
-type LineOptions = { multiline?: boolean; pixelRatio?: number };
+/**
+ * `multiline`: teksten kan brekke og trenger designets linjeavstand.
+ * `platform` er telefonens (`Platform.OS`) hvis den ikke er gitt.
+ */
+type LineOptions = { multiline?: boolean; pixelRatio?: number; platform?: 'ios' | 'android' };
+
+/**
+ * Android legger til luft over og under teksten (skriftens win-mål, 1,47 for
+ * Fraunces) så lenge `includeFontPadding` står på (#2560). Hver tekst i
+ * Fraunces eller Inter slår den av, også de delte `ui`-stilene.
+ */
+const NO_FONT_PADDING: { includeFontPadding?: false } =
+  Platform.OS === 'android' ? { includeFontPadding: false } : {};
 
 /** Fraunces sin ascent og descent i skriftstørrelser (`hhea`: 1956 og 510 av 2000). */
 const FRAUNCES_METRICS = { ascent: 0.978, descent: 0.255, natural: FRAUNCES_LINE };
@@ -241,8 +252,24 @@ const FRAUNCES_METRICS = { ascent: 0.978, descent: 0.255, natural: FRAUNCES_LINE
  * under (treffer innenfor to piksler). Linjer lavere enn skriftstørrelsen får
  * alltid marger, for der krymper iOS glyfen. Boksen blir `lineHeight` høy.
  *
- * Regnet og målt for iOS. Android legger til `includeFontPadding` og bruker
- * skriftens win-mål (1,47), så en Android-versjon må måles for seg.
+ * **Android** (#2560) er målt for seg, på emulatoren (Pixel 7) med Androids
+ * egne linjemål fra `onTextLayout` i 103 tilfeller (Fraunces 11–96 og Inter
+ * 10–24, med og uten `lineHeight`, over og under skriftstørrelsen, og med
+ * flere linjer):
+ *
+ *  - `includeFontPadding` slås av. Ellers legger Android skriftens win-mål
+ *    (1,47 for Fraunces) rundt teksten, ikke ascent og descent.
+ *  - **Med `lineHeight`** er linja ceil(`lineHeight` × pikseltetthet) piksler,
+ *    og grunnlinja står a + ceil((linja − a − d) / 2) piksler under toppen
+ *    (`CustomLineHeightSpan`), der a og d er skriftens ascent og descent i hele
+ *    piksler. Glyfen krymper ikke når linja er lavere enn skriftstørrelsen.
+ *  - a og d er ascent og descent ganger størrelsen, rundet til hel piksel. Det
+ *    treffer innenfor én piksel: Android runder noen størrelser motsatt vei,
+ *    uten et mønster målingene viser.
+ *
+ * Android får derfor alltid `lineHeight`, også for én linje: høyden på linja
+ * er kjent på pikselen, og bare grunnlinja kan bomme med én. Margene flytter
+ * grunnlinja dit Chromium har den, og gjør boksen `lineHeight` høy.
  */
 export function frauncesLine(size: number, lineHeight: number, options: LineOptions = {}) {
   return browserLine(FRAUNCES_METRICS, size, lineHeight, options);
@@ -288,9 +315,34 @@ function browserLine(
   metrics: { ascent: number; descent: number; natural: number },
   size: number,
   lineHeight: number,
-  { multiline = false, pixelRatio = PixelRatio.get() }: LineOptions,
-): { fontSize: number; lineHeight?: number; marginTop: number; marginBottom: number } {
+  {
+    multiline = false,
+    pixelRatio = PixelRatio.get(),
+    platform = Platform.OS === 'android' ? 'android' : 'ios',
+  }: LineOptions,
+): {
+  fontSize: number;
+  lineHeight?: number;
+  marginTop: number;
+  marginBottom: number;
+  includeFontPadding?: false;
+} {
   const baseline = chromiumBaseline(metrics, size, lineHeight);
+  if (platform === 'android') {
+    const ascentPx = Math.round(size * metrics.ascent * pixelRatio);
+    const descentPx = Math.round(size * metrics.descent * pixelRatio);
+    const linePx = Math.ceil(lineHeight * pixelRatio);
+    const androidBaseline =
+      (ascentPx + Math.ceil((linePx - ascentPx - descentPx) / 2)) / pixelRatio;
+    const shift = baseline - androidBaseline;
+    return {
+      fontSize: size,
+      lineHeight,
+      marginTop: shift,
+      marginBottom: lineHeight - linePx / pixelRatio - shift,
+      includeFontPadding: false,
+    };
+  }
   if (multiline && lineHeight >= size) {
     const natural = size * metrics.natural;
     const raise = lineHeight >= natural ? (lineHeight - natural) / 2 : 0;
@@ -514,6 +566,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
     },
     sectionTitle: {
       fontSize: 13,
+      ...NO_FONT_PADDING,
       fontFamily: FONTS.sansSemiBold,
       letterSpacing: 1.2,
       textTransform: 'uppercase',
@@ -526,13 +579,14 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
      */
     kicker: {
       fontSize: 10,
+      ...NO_FONT_PADDING,
       fontFamily: FONTS.sansSemiBold,
       letterSpacing: 2,
       textTransform: 'uppercase',
       color: c.muted,
     },
-    body: { fontSize: 16, fontFamily: FONTS.sans, color: c.text },
-    muted: { fontSize: 14, fontFamily: FONTS.sans, color: c.muted },
+    body: { ...NO_FONT_PADDING, fontSize: 16, fontFamily: FONTS.sans, color: c.text },
+    muted: { ...NO_FONT_PADDING, fontSize: 14, fontFamily: FONTS.sans, color: c.muted },
     value: { ...fraunces(600, 22), color: c.text },
     /** Tall i tabeller og totaler — samme regel som på web. */
     num: { fontVariant: ['tabular-nums'] },
@@ -555,7 +609,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       justifyContent: 'center',
       marginTop: 8,
     },
-    buttonText: { color: c.onPrimary, fontSize: 16, fontFamily: FONTS.sansSemiBold },
+    buttonText: { ...NO_FONT_PADDING, color: c.onPrimary, fontSize: 16, fontFamily: FONTS.sansSemiBold },
     buttonSecondary: {
       borderRadius: 999,
       borderWidth: borderW,
@@ -566,7 +620,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       justifyContent: 'center',
       marginTop: 8,
     },
-    buttonSecondaryText: { color: c.primary, fontSize: 16, fontFamily: FONTS.sansSemiBold },
+    buttonSecondaryText: { ...NO_FONT_PADDING, color: c.primary, fontSize: 16, fontFamily: FONTS.sansSemiBold },
     link: {
       minHeight: TAP,
       justifyContent: 'center',
@@ -575,6 +629,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
     linkText: {
       color: c.primary,
       fontSize: 15,
+      ...NO_FONT_PADDING,
       fontFamily: FONTS.sansMedium,
       textDecorationLine: 'underline',
     },
@@ -585,6 +640,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
      */
     label: {
       fontSize: 14,
+      ...NO_FONT_PADDING,
       fontFamily: FONTS.sansMedium,
       color: c.muted,
       marginTop: 8,
@@ -601,6 +657,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       backgroundColor: c.surface,
       color: c.text,
       fontSize: 16,
+      ...NO_FONT_PADDING,
       fontFamily: FONTS.sans,
       minHeight: TAP,
       paddingHorizontal: 14,
@@ -614,7 +671,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       padding: 14,
       marginTop: 8,
     },
-    error: { color: c.danger, fontSize: 15, fontFamily: FONTS.sans },
+    error: { ...NO_FONT_PADDING, color: c.danger, fontSize: 15, fontFamily: FONTS.sans },
     badge: {
       alignSelf: 'flex-start',
       borderRadius: 999,
@@ -623,7 +680,7 @@ const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
       paddingHorizontal: 10,
       paddingVertical: 4,
     },
-    badgeText: { fontSize: 12, fontFamily: FONTS.sansSemiBold, color: c.text },
+    badgeText: { ...NO_FONT_PADDING, fontSize: 12, fontFamily: FONTS.sansSemiBold, color: c.text },
   });
 
 /** De delte stilene for én palett — det `useTheme().ui` gir deg. */

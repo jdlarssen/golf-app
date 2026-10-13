@@ -218,6 +218,94 @@ describe('frauncesLine', () => {
   });
 });
 
+describe('frauncesLine og interLine på Android', () => {
+  // #2560: målt på emulatoren (Pixel 7, 2,625 px per dp) med Androids egne
+  // linjemål fra `onTextLayout` (linjas y, ascender og høyde) og `onLayout`, i
+  // 103 tilfeller: Fraunces 11–96 og Inter 10–24, med og uten `lineHeight`,
+  // over og under skriftstørrelsen, og med flere linjer. Med `lineHeight` er
+  // linja ceil(lineHeight × 2,625) px høy, og grunnlinja står
+  // a + ceil((linje − a − d) / 2) px under toppen, der a og d er skriftens
+  // ascent og descent i hele piksler. Tallene under er de målte, regnet om
+  // til marger mot Chromiums grunnlinje (samme som iOS-testene over).
+  const pixel7 = { platform: 'android' as const, pixelRatio: 2.625 };
+
+  it('slår av fontpaddingen og gir margene fra målingene', () => {
+    // 30 på 30: linja 79 px, grunnlinja 68 px (25,905); Chromium 25.
+    const box = frauncesLine(30, 30, pixel7);
+    expect(box).toMatchObject({ fontSize: 30, lineHeight: 30, includeFontPadding: false });
+    expect(box.marginTop).toBeCloseTo(-0.905, 3);
+    expect(box.marginBottom).toBeCloseTo(0.81, 3);
+    // 18 på 23: linja 61 px, grunnlinja 48 px (18,286); Chromium 18.
+    const small = frauncesLine(18, 23, pixel7);
+    expect(small.marginTop).toBeCloseTo(-0.286, 3);
+    expect(small.marginBottom).toBeCloseTo(0.048, 3);
+    // Hullnummeret, 96 på 86,4: linja 227 px, grunnlinja 205 px (78,095);
+    // Chromium 78. Android krymper ikke glyfen under skriftstørrelsen.
+    const hole = frauncesLine(96, 86.4, pixel7);
+    expect(hole.marginTop).toBeCloseTo(-0.095, 3);
+    expect(hole.marginBottom).toBeCloseTo(0.019, 3);
+  });
+
+  it('gir samme linjeboks for tekst som kan brekke', () => {
+    // 30 på 30 over fem linjer: 79 px per linje, grunnlinja 68 px i første.
+    const box = frauncesLine(30, 30, { ...pixel7, multiline: true });
+    expect(box).toMatchObject({ fontSize: 30, lineHeight: 30, includeFontPadding: false });
+    expect(box.marginTop).toBeCloseTo(-0.905, 3);
+  });
+
+  it('gjør det samme for Inter', () => {
+    // «HULL», 10 på 12: linja 32 px, grunnlinja 26 px (9,905); Chromium 10.
+    const hull = interLine(10, 12, pixel7);
+    expect(hull).toMatchObject({ lineHeight: 12, includeFontPadding: false });
+    expect(hull.marginTop).toBeCloseTo(0.095, 3);
+    expect(hull.marginBottom).toBeCloseTo(-0.286, 3);
+    // 14 på 22,75 over tre linjer: 60 px per linje, grunnlinja 44 px
+    // (16,762); Chromium 16.
+    const relaxed = interLine(14, 22.75, { ...pixel7, multiline: true });
+    expect(relaxed.marginTop).toBeCloseTo(-0.762, 3);
+    expect(relaxed.marginBottom).toBeCloseTo(0.655, 3);
+  });
+
+  it('gir ikke iOS feltet', () => {
+    expect(frauncesLine(30, 30, { platform: 'ios', pixelRatio: 3 })).not.toHaveProperty(
+      'includeFontPadding',
+    );
+  });
+
+  it('slår av fontpaddingen i de delte tekststilene på Android, ikke på iOS', () => {
+    // `uiVariants` og `SUNLIGHT_THEME` bygges når modulen lastes, så plattformen
+    // må byttes før `require`, i et eget modulregister.
+    const textStyles = (ui: Record<string, object>) =>
+      Object.entries(ui).filter(([, style]) => {
+        const family = (style as { fontFamily?: string }).fontFamily ?? '';
+        return family.startsWith('Fraunces') || family.startsWith('Inter');
+      });
+    let android: Array<[string, object]> = [];
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { Platform } = require('react-native');
+      jest.replaceProperty(Platform, 'OS', 'android');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fresh = require('./theme') as typeof theme;
+      android = [
+        ...textStyles(fresh.themeFor('light').ui),
+        ...textStyles(fresh.themeFor('dark').ui),
+        ...textStyles(fresh.SUNLIGHT_THEME.ui),
+      ];
+    });
+    expect(android.length).toBeGreaterThan(30);
+    for (const [name, style] of android) {
+      expect([name, (style as { includeFontPadding?: boolean }).includeFontPadding]).toEqual([
+        name,
+        false,
+      ]);
+    }
+    for (const [, style] of textStyles(themeFor('light').ui)) {
+      expect(style).not.toHaveProperty('includeFontPadding');
+    }
+  });
+});
+
 // #2385: målt i Chromium. En sentrert linje tegnes på hel piksel, og en halv
 // rundes opp: 23 i 52 står som 23 i 53, og 17 i 42 som 17 i 43.
 describe('centeredLineTop', () => {
