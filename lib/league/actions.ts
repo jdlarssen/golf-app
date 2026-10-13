@@ -862,6 +862,9 @@ export async function startLeagueRoundFlight(
   const gameId = (game as { id: string }).id;
 
   const flightNow = new Date().toISOString();
+  // #2567: this insert goes through the player's own client on purpose, so RLS
+  // and the triggers check every row. The trigger's league branch (0208) lets
+  // the league's own members into a flight. Do not switch it to the admin client.
   const { error: gpErr } = await supabase.from('game_players').insert(
     flightIds.map((uid) => ({
       game_id: gameId,
