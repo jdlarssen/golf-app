@@ -55,7 +55,7 @@ import { SETTLEMENT_TEXT } from '../lib/settlementCopy';
 import { buildSideTournament } from '../lib/sideTournament';
 import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
-import { useGameBundle, useLocalScores } from '../lib/useGameData';
+import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
@@ -135,7 +135,10 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // #2201: «resultatet er klart» er lest når du har sett tavla.
   useMarkVisitRead('gameLeaderboard', gameId);
   const { bundle, loading } = useGameBundle(gameId);
-  const { scores, reload } = useLocalScores(gameId, POLL_MS);
+  const { scores: localScores, reload } = useLocalScores(gameId, POLL_MS);
+  // #2067/#2228: lagets rader følger laget. Uten foldingen mister sideturneringen
+  // og den blinde bruttotabellen hullene en trukket kaptein førte.
+  const scores = useTeamScores(localScores, bundle);
   // Wolf og BBB henter halve regnestykket fra serveren. Alle andre formater
   // svarer `null` på kilde-spørsmålet og koster ikke et eneste kall — og før
   // bundelen har landet vet vi ikke formatet, så vi spør ikke da heller.
