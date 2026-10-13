@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 import {
   buildSupabaseMock,
   makeLocaleRedirectMock,
@@ -128,6 +128,40 @@ beforeEach(() => {
   adminMock = buildSupabaseMock([]);
 });
 
+/** Console spies a test silenced; restored after every test, also a failing one. */
+const consoleSpies: MockInstance[] = [];
+function silence(method: 'error' | 'warn'): MockInstance {
+  const spy = vi.spyOn(console, method).mockImplementation(() => {});
+  consoleSpies.push(spy);
+  return spy;
+}
+afterEach(() => {
+  for (const spy of consoleSpies.splice(0)) spy.mockRestore();
+});
+
+/** A count-only read (`select('user_id', { count: 'exact', head: true })`). */
+function countResult(count: number | null, error: { message: string } | null = null) {
+  return { data: null, error, count } as { data: null; error: null; count: number };
+}
+
+/** Five active solo players in signup order; `flights[i]` is player i's flight. */
+function fivePlayers(flights: (number | null)[] = []) {
+  return Array.from({ length: 5 }, (_, i) => ({
+    user_id: `u${i + 1}`,
+    flight_number: flights[i] ?? null,
+    withdrawn_at: null,
+    accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
+  }));
+}
+
+/** The filters on the last UPDATE: the write-back only lands on our own value (#2289). */
+function lastUpdateFilters(mock: ReturnType<typeof buildSupabaseMock>): unknown[][] {
+  const calls = mock.__fromCalls;
+  const at = calls.map((c) => c.method).lastIndexOf('update');
+  const end = calls.findIndex((c, i) => i > at && c.method === 'select');
+  return calls.slice(at + 1, end).map((c) => [c.method, ...c.args]);
+}
+
 /** Planlagt Texas scramble med fire per lag (#2290). */
 const TEXAS_GAME = {
   id: GAME_ID,
@@ -188,12 +222,7 @@ describe('suggestFlightAssignment', () => {
     authedAdmin();
 
     // 5 aktive spillere: 4 → flight 1, 1 → flight 2
-    const players = Array.from({ length: 5 }, (_, i) => ({
-      user_id: `u${i + 1}`,
-      flight_number: null,
-      withdrawn_at: null,
-      accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
-    }));
+    const players = fivePlayers();
 
     adminMock = buildSupabaseMock([
       { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null }, // games
@@ -221,12 +250,7 @@ describe('suggestFlightAssignment', () => {
   ])('0-rad-skriving nr. $failingWrite rapporteres som feil, cache tømt: $cacheExpired (#2293)', async ({ failingWrite, cacheExpired }) => {
     authedAdmin();
 
-    const players = Array.from({ length: 5 }, (_, i) => ({
-      user_id: `u${i + 1}`,
-      flight_number: i === 0 ? 3 : null,
-      withdrawn_at: null,
-      accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
-    }));
+    const players = fivePlayers([3]);
 
     adminMock = buildSupabaseMock([
       { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null },
@@ -253,13 +277,8 @@ describe('suggestFlightAssignment', () => {
   it('tilbakeskrivingen feiler også → svaret er fortsatt db_players, og cachen er tømt (#2289)', async () => {
     authedAdmin();
 
-    const players = Array.from({ length: 5 }, (_, i) => ({
-      user_id: `u${i + 1}`,
-      flight_number: null,
-      withdrawn_at: null,
-      accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
-    }));
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const players = fivePlayers();
+    const errorSpy = silence('error');
 
     adminMock = buildSupabaseMock([
       { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null },
@@ -274,7 +293,6 @@ describe('suggestFlightAssignment', () => {
     expect(lastRedirect()).toBe(`${STARTLISTA}?error=db_players`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     expect(errorSpy).toHaveBeenCalledWith('[suggestFlightAssignment] revert failed', expect.anything());
-    errorSpy.mockRestore();
   });
 
   it('Texas med tre lag à fire → ingen ny inndeling, redirect til detaljsiden (#2290)', async () => {
@@ -341,7 +359,7 @@ describe('setPlayerFlight', () => {
     adminMock = buildSupabaseMock([
       { data: SOLO_STABLEFORD_GAME, error: null }, // games
       { data: soloRoster(), error: null }, // game_players (vakta)
-      { data: null, error: null, count: 4 } as { data: null; error: null; count: number }, // count = 4 (full)
+      countResult(4), // count = 4 (full)
     ]);
 
     const { setPlayerFlight } = await import('./flightActions');
@@ -355,9 +373,9 @@ describe('setPlayerFlight', () => {
     adminMock = buildSupabaseMock([
       { data: SOLO_STABLEFORD_GAME, error: null }, // games
       { data: soloRoster(), error: null }, // game_players (vakta)
-      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // count = 2 (har plass)
+      countResult(2), // count = 2 (har plass)
       { data: [{ user_id: 'target-user' }], error: null }, // update
-      { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // after-count = 3
+      countResult(3), // after-count = 3
     ]);
 
     const { setPlayerFlight } = await import('./flightActions');
@@ -372,19 +390,19 @@ describe('setPlayerFlight', () => {
   // Two organisers moving into a flight of three at the same time both pass
   // the count before the write. The count after it catches the loser (#2289).
   it.each([
-    { name: 'flighten ble overfull', afterCount: { data: null, error: null, count: 5 }, error: 'flight_full' },
-    { name: 'etter-tellingen feilet', afterCount: { data: null, error: { message: 'boom' }, count: null }, error: 'db_roster' },
+    { name: 'flighten ble overfull', afterCount: countResult(5), error: 'flight_full' },
+    { name: 'etter-tellingen feilet', afterCount: countResult(null, { message: 'boom' }), error: 'db_roster' },
   ])('$name → forrige flight skrives tilbake, cachen er tømt, ?error=$error', async ({ afterCount, error }) => {
     authedAdmin();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    silence('error');
     const roster = soloRoster().map((p) => (p.user_id === 'target-user' ? { ...p, flight_number: 1 } : p));
 
     adminMock = buildSupabaseMock([
       { data: SOLO_STABLEFORD_GAME, error: null }, // games
       { data: roster, error: null }, // game_players (vakta)
-      { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // before-count = 3
+      countResult(3), // before-count = 3
       { data: [{ user_id: 'target-user' }], error: null }, // update
-      afterCount as { data: null; error: null; count: number },
+      afterCount,
       { data: [{ user_id: 'target-user' }], error: null }, // revert
     ]);
 
@@ -394,10 +412,74 @@ describe('setPlayerFlight', () => {
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
     const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
     expect(updates.map((c) => c.args[0])).toEqual([{ flight_number: 2 }, { flight_number: 1 }]);
-    errorSpy.mockRestore();
+    // Only while the row still holds our flight: a newer move is never undone.
+    expect(lastUpdateFilters(adminMock)).toContainEqual(['eq', 'flight_number', 2]);
   });
 
-  it('spilleren er ikke i spillet → ?error=player_missing, ingen skriving', async () => {
+  it('etter-tellingen gir nøyaktig fire → flyttet, én skriving, ingen tilbakeskriving', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null }, // games
+      { data: soloRoster(), error: null }, // game_players (vakta)
+      countResult(3), // before-count = 3
+      { data: [{ user_id: 'target-user' }], error: null }, // update
+      countResult(4), // after-count = 4: full, not over
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?status=flight_updated&flight=2`);
+    expect(adminMock.__fromCalls.filter((c) => c.method === 'update')).toHaveLength(1);
+  });
+
+  it('tilbakeskrivingen treffer 0 rader (allerede flyttet) → logges, svaret står', async () => {
+    authedAdmin();
+    const warnSpy = silence('warn');
+
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null },
+      { data: soloRoster(), error: null },
+      countResult(3),
+      { data: [{ user_id: 'target-user' }], error: null },
+      countResult(5),
+      { data: [], error: null }, // the row no longer holds flight 2
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=flight_full`);
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[setPlayerFlight] revert skipped: the row was already moved',
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    { name: 'spilleren er ikke i spillet', roster: soloRoster(), userId: 'finnes-ikke' },
+    {
+      name: 'spilleren er trukket',
+      roster: soloRoster().map((p) =>
+        p.user_id === 'target-user' ? { ...p, withdrawn_at: '2026-01-10T00:00:00Z' } : p,
+      ),
+      userId: 'target-user',
+    },
+  ])('$name → ?error=player_missing, ingen skriving', async ({ roster, userId }) => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null },
+      { data: roster, error: null },
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, userId, 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=player_missing`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
+  });
+
+  // Eight active players: the Startlista offers flights 1–3 (offeredFlightNumbers).
+  it.each([4, 40])('flight %i, som Startlista ikke tilbyr → ?error=bad_flight, ingen skriving', async (flight) => {
     authedAdmin();
 
     adminMock = buildSupabaseMock([
@@ -406,8 +488,8 @@ describe('setPlayerFlight', () => {
     ]);
 
     const { setPlayerFlight } = await import('./flightActions');
-    await expect(setPlayerFlight(GAME_ID, 'finnes-ikke', 2)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`${STARTLISTA}?error=player_missing`);
+    await expect(setPlayerFlight(GAME_ID, 'target-user', flight)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=bad_flight`);
     expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 
@@ -419,7 +501,7 @@ describe('setPlayerFlight', () => {
     adminMock = buildSupabaseMock([
       { data: SOLO_STABLEFORD_GAME, error: null }, // games
       { data: soloRoster(), error: null }, // game_players (vakta)
-      { data: null, error: null, count: 2 } as { data: null; error: null; count: number },
+      countResult(2),
       { data: [], error: null }, // update traff 0 rader
     ]);
 
@@ -535,8 +617,10 @@ describe('suggestTeamAssignment', () => {
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
       {
+        // u1 has a flight from before (no team: «Foreslå lag» only places
+        // players without one), so the write-back has real values to restore.
         data: [
-          { user_id: 'u1', team_number: null, flight_number: null, withdrawn_at: null },
+          { user_id: 'u1', team_number: null, flight_number: 2, withdrawn_at: null },
           { user_id: 'u2', team_number: null, flight_number: null, withdrawn_at: null },
         ],
         error: null,
@@ -550,16 +634,17 @@ describe('suggestTeamAssignment', () => {
     await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
     expect(revalidateTagMock.mock.calls.length > 0).toBe(cacheExpired);
-    // u1 gets its team and flight back (#2289): both, so the CHECK holds.
+    // u1 gets back exactly the team and flight it had (#2289): no team, flight
+    // 2. Both columns, so the CHECK holds. The split kept u1's flight 2.
     const updates = adminMock.__fromCalls.filter((c) => c.method === 'update').map((c) => c.args[0]);
     expect(updates).toEqual(
       failingWrite === 2
         ? [
-            { team_number: 1, flight_number: 1 },
-            { team_number: 1, flight_number: 1 },
-            { team_number: null, flight_number: null },
+            { team_number: 1, flight_number: 2 },
+            { team_number: 1, flight_number: 2 },
+            { team_number: null, flight_number: 2 },
           ]
-        : [{ team_number: 1, flight_number: 1 }],
+        : [{ team_number: 1, flight_number: 2 }],
     );
   });
 
@@ -616,7 +701,7 @@ describe('setPlayerTeam', () => {
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
       { data: [teamRow('target-user', null, null)], error: null },
-      { data: null, error: null, count: 2 } as { data: null; error: null; count: number },
+      countResult(2),
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -632,9 +717,9 @@ describe('setPlayerTeam', () => {
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
       { data: [teamRow('target-user', null, null)], error: null },
-      { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
+      countResult(1),
       { data: [{ user_id: 'target-user' }], error: null },
-      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // after-count
+      countResult(2), // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -654,9 +739,9 @@ describe('setPlayerTeam', () => {
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
       { data: [teamRow('target-user', null, 7)], error: null },
-      { data: null, error: null, count: 0 } as { data: null; error: null; count: number },
+      countResult(0),
       { data: [{ user_id: 'target-user' }], error: null },
-      { data: null, error: null, count: 1 } as { data: null; error: null; count: number }, // after-count
+      countResult(1), // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -674,9 +759,9 @@ describe('setPlayerTeam', () => {
     adminMock = buildSupabaseMock([
       { data: TEXAS_GAME, error: null },
       { data: texasRoster().filter((p) => p.user_id !== 'u8'), error: null },
-      { data: null, error: null, count: 3 } as { data: null; error: null; count: number },
+      countResult(3),
       { data: [{ user_id: 'u1' }], error: null },
-      { data: null, error: null, count: 4 } as { data: null; error: null; count: number }, // after-count
+      countResult(4), // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -700,9 +785,9 @@ describe('setPlayerTeam', () => {
         ],
         error: null,
       },
-      { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
+      countResult(1),
       { data: [{ user_id: 'target-user' }], error: null },
-      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // after-count
+      countResult(2), // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -716,18 +801,18 @@ describe('setPlayerTeam', () => {
   // Same race as setPlayerFlight (#2289): the count after the write catches
   // the loser, who gets the team and the flight they had back.
   it.each([
-    { name: 'laget ble overfullt', afterCount: { data: null, error: null, count: 3 }, error: 'team_full' },
-    { name: 'etter-tellingen feilet', afterCount: { data: null, error: { message: 'boom' }, count: null }, error: 'db_roster' },
+    { name: 'laget ble overfullt', afterCount: countResult(3), error: 'team_full' },
+    { name: 'etter-tellingen feilet', afterCount: countResult(null, { message: 'boom' }), error: 'db_roster' },
   ])('$name → lag og flight skrives tilbake, cachen er tømt, ?error=$error', async ({ afterCount, error }) => {
     authedAdmin();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    silence('error');
 
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
       { data: [teamRow('target-user', 3, 3), teamRow('partner', 2, 2)], error: null },
-      { data: null, error: null, count: 1 } as { data: null; error: null; count: number }, // before-count
+      countResult(1), // before-count
       { data: [{ user_id: 'target-user' }], error: null }, // update
-      afterCount as { data: null; error: null; count: number },
+      afterCount,
       { data: [{ user_id: 'target-user' }], error: null }, // revert
     ]);
 
@@ -740,15 +825,27 @@ describe('setPlayerTeam', () => {
       { team_number: 2, flight_number: 2 },
       { team_number: 3, flight_number: 3 },
     ]);
-    errorSpy.mockRestore();
+    expect(lastUpdateFilters(adminMock)).toEqual(
+      expect.arrayContaining([
+        ['eq', 'team_number', 2],
+        ['eq', 'flight_number', 2],
+      ]),
+    );
   });
 
-  it('spilleren er ikke i spillet → ?error=player_missing, ingen skriving', async () => {
+  // Same predicate as setPlayerFlight: a withdrawn player is gone too.
+  it.each([
+    { name: 'spilleren er ikke i spillet', roster: [teamRow('partner', 2, 2)] },
+    {
+      name: 'spilleren er trukket',
+      roster: [{ ...teamRow('target-user', 3, 3), withdrawn_at: '2026-01-10T00:00:00Z' }, teamRow('partner', 2, 2)],
+    },
+  ])('$name → ?error=player_missing, ingen skriving', async ({ roster }) => {
     authedAdmin();
 
     adminMock = buildSupabaseMock([
       { data: BEST_BALL_GAME, error: null },
-      { data: [teamRow('partner', 2, 2)], error: null },
+      { data: roster, error: null },
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');

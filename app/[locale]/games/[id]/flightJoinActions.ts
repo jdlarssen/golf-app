@@ -154,7 +154,7 @@ export async function joinFlight(
     await revertRows(
       admin,
       gameId,
-      [{ userId, previous: { flight_number: previousFlight } }],
+      [{ userId, written: { flight_number: targetFlight }, previous: { flight_number: previousFlight } }],
       'joinFlight',
       { targetFlight },
     );
