@@ -56,8 +56,16 @@ export const STORE_VERSION = '1.1.0';
  */
 export const STORE_IOS_BUILD_NUMBER = '3';
 
-/** Android-motstykket. Settes nå, brukes først av Android-oppfølgeren. */
+/** Android-motstykket. **Bump før hver opplasting** — Play Console avviser en versionCode den har sett. */
 export const STORE_ANDROID_VERSION_CODE = 3;
+
+/**
+ * Config-pluginen som signerer release-AAB-en med opplastingsnøkkelen (#2560).
+ * Bare i butikk-varianten: dev-bygget signeres med debug-nøkkelen som før.
+ * `/android` er gitignorert og lages på nytt ved hver prebuild, så signeringen
+ * må legges inn av prebuild selv.
+ */
+export const STORE_SIGNING_PLUGIN = './scripts/withUploadSigning.js';
 
 /**
  * De tre `EXPO_PUBLIC_*`-verdiene butikkbygget skal bake inn (#2208). Hver
@@ -200,6 +208,7 @@ export function resolveConfig(base: Partial<ExpoConfig>, env: VariantEnv): ExpoC
       package: STORE_BUNDLE_ID,
       versionCode: STORE_ANDROID_VERSION_CODE,
     },
+    plugins: [...(base.plugins ?? []), STORE_SIGNING_PLUGIN],
   };
 }
 

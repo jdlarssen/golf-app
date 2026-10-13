@@ -8,13 +8,14 @@ bump-regelen, TestFlight → App Review → slipp, og hva du gjør når noe går
 Kontrakten (spec, eiervalg, paritetsmatrise) ligger som kommentar på
 [#1954](https://github.com/jdlarssen/golf-app/issues/1954). Review-kontoen og notatet til
 Apple: `app-store-review-konto.md`. Dev-appen og alt under utvikling: `app-spike.md`.
+Android-bygget (signert AAB, bevis og spike-funn): `play-store-release.md`.
 
 ## To varianter, én `app.json`
 
 | | dev (ingen `APP_VARIANT`) | `APP_VARIANT=store` |
 |---|---|---|
 | Navn | Tørny Dev | Tørny |
-| Bundle-id / Android-pakke | `no.tornygolf.dev` / (ikke satt) | `no.tornygolf.app` / `no.tornygolf.app` |
+| Bundle-id / Android-pakke | `no.tornygolf.dev` / `no.tornygolf.dev` | `no.tornygolf.app` / `no.tornygolf.app` |
 | Versjon (build) | 1.0.0 | 1.1.0 (2) — se bump-regelen |
 | Supabase | staging, fra `native/app/.env.local` | prod, fra repo-rotas `.env.local` — kun via skriptet |
 | Web | `http://localhost:<port>` under staging-verify | `https://tornygolf.no`, nøyaktig |
@@ -157,7 +158,7 @@ stopper opplastingen.
 Lista over kjente bibliotek-strenger ble seedet fra `expo export` av begge varianter
 (2026-09-05, P2) og bekreftes mot det ekte arkivet i P3. Får du «UKJENT» på en `http://`-
 eller `localhost`-streng: les konteksten. Er det en ny bibliotek-streng, legg den på lista
-i `store-build-proof.sh` med kommentar om hvor den kommer fra. En UKJENT på formen
+i `bundle-proof.sh` (bundel-reglene iOS- og Android-beviset deler, #2560) med kommentar om hvor den kommer fra. En UKJENT på formen
 `http://<ord uten punktum, kolon eller skråstrek>` er phoenix-literalen med en ny nabo, ikke
 en lekkasje. Er det en adresse vi eier, er bygget feil — ikke lista.
 

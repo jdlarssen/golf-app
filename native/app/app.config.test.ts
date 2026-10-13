@@ -31,6 +31,7 @@ import {
   STORE_BUNDLE_ID,
   STORE_IOS_BUILD_NUMBER,
   STORE_PUBLIC_ENV_KEYS,
+  STORE_SIGNING_PLUGIN,
   STORE_WEB_BASE_URL,
   parseVariant,
   resolveConfig,
@@ -71,6 +72,16 @@ describe('resolveConfig — dev-varianten (ingen APP_VARIANT)', () => {
 
   it('snapshot', () => {
     expect(resolveConfig(base, DEV_ENV)).toMatchSnapshot();
+  });
+
+  // #2560: `expo prebuild --platform android` stopper uten pakkenavn. Dev-appen
+  // speiler iOS-ens bundle-id, så den står ved siden av butikk-appen.
+  it('har Android-pakken no.tornygolf.dev, som iOS-ens bundle-id', () => {
+    expect(resolveConfig(base, DEV_ENV).android?.package).toBe('no.tornygolf.dev');
+  });
+
+  it('har ikke signeringspluginen — dev-bygget signeres med debug-nøkkelen som før', () => {
+    expect(resolveConfig(base, DEV_ENV).plugins).not.toContain(STORE_SIGNING_PLUGIN);
   });
 
   it.each([
@@ -125,10 +136,15 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
     expect(resolveConfig(base, STORE_ENV).ios?.associatedDomains).toBeUndefined();
   });
 
+  // #2560: signeringspluginen er det eneste tillegget i butikk-varianten.
+  it('har signeringspluginen for opplastingsnøkkelen', () => {
+    expect(resolveConfig(base, STORE_ENV).plugins).toContain(STORE_SIGNING_PLUGIN);
+  });
+
   it('lar resten av app.json stå: ikon, splash, plugins, tablet-valget', () => {
     const cfg = resolveConfig(base, STORE_ENV);
     expect(cfg.icon).toBe(base.icon);
-    expect(cfg.plugins).toEqual(base.plugins);
+    expect(cfg.plugins).toEqual([...(base.plugins ?? []), STORE_SIGNING_PLUGIN]);
     expect(cfg.ios?.supportsTablet).toBe(base.ios?.supportsTablet);
     expect(cfg.android?.adaptiveIcon).toEqual(base.android?.adaptiveIcon);
   });
