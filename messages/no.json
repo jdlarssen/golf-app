@@ -3486,7 +3486,18 @@
     "unknownSubmitter": "Ukjent spiller",
     "markAsBuilt": "Marker som bygd",
     "markingBuilt": "Markerer …",
-    "statusBuilt": "Bygd"
+    "statusBuilt": "Bygd",
+      "summaryLabel": "Hva ble bygd?",
+      "summaryHint": "Spilleren ser denne linja i varselet og e-posten.",
+      "linkLabel": "Lenke (valgfri)",
+      "linkHint": "Skriv stien i Tørny uten språk, for eksempel /spillformater.",
+      "errors": {
+        "summary_required": "Skriv en linje om hva som ble bygd.",
+        "summary_too_long": "Linja kan ha maks {summaryMax} tegn.",
+        "link_must_be_internal": "Lenka må være en sti i Tørny. Den starter med «/» og har ingen mellomrom.",
+        "link_too_long": "Lenka kan ha maks {linkMax} tegn.",
+        "link_has_locale": "Skriv lenka uten språk: /spillformater, ikke /en/spillformater."
+      }
   },
   "courseForm": {
     "errors": {
