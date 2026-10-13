@@ -2,10 +2,9 @@
 
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { firstName } from '@/lib/firstName';
 import type { LiveBoardRow } from '@/lib/leaderboard/liveBoard';
 import type { TvFeedEvent } from '@/lib/leaderboard/tvBoard';
-import { boardDisplayName } from '@/app/[locale]/games/[id]/leaderboard/boardText';
+import { boardDisplayName, sentenceName } from '@/app/[locale]/games/[id]/leaderboard/boardText';
 
 const KEY = {
   lead: 'feedLead',
@@ -23,7 +22,7 @@ export function TvFeed({ events, rows }: { events: TvFeedEvent[]; rows: LiveBoar
   const tc = useTranslations('leaderboard.common');
   const nameOf = (userId: string) => {
     const row = rows.find((r) => r.userId === userId);
-    return row ? (firstName(row.name) ?? boardDisplayName(row, tc)) : '';
+    return row ? sentenceName(row, rows, (r) => boardDisplayName(r, tc)) : '';
   };
 
   return (

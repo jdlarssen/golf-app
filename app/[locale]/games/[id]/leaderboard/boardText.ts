@@ -125,6 +125,21 @@ export function boardRowSr(
 }
 
 /**
+ * A player's name inside a sentence («2 poeng bak Marte», «Marte tok
+ * ledelsen»): the first name, or the full name when another player on the
+ * board shares it (#2286). One rule for the strip and the big screen's
+ * «Siste nytt» (#2275).
+ */
+export function sentenceName(
+  row: LiveBoardRow,
+  rows: readonly LiveBoardRow[],
+  displayName: (row: LiveBoardRow) => string,
+): string {
+  const others = rows.filter((r) => r.userId !== row.userId).map((r) => r.name);
+  return sharesFirstName(row.name, others) ? displayName(row) : (firstName(row.name) ?? displayName(row));
+}
+
+/**
  * «2 poeng bak Marte», or «2 poeng bak ledelsen» on a shared lead; `null` when
  * the player leads or the numbers cannot be compared. The leader is named by
  * first name, or in full when another player on the board shares it.
@@ -144,15 +159,7 @@ export function behindLeaderText(
       : t('behindStrokesLead', { gap: standing.gap });
   }
   const leaderRow = rows.find((r) => r.userId === standing.leaderUserIds[0]);
-  // The first name, unless another player on the board shares it (#2286).
-  const leader = !leaderRow
-    ? ''
-    : sharesFirstName(
-          leaderRow.name,
-          rows.filter((r) => r.userId !== leaderRow.userId).map((r) => r.name),
-        )
-      ? displayName(leaderRow)
-      : (firstName(leaderRow.name) ?? displayName(leaderRow));
+  const leader = leaderRow ? sentenceName(leaderRow, rows, displayName) : '';
   return inPoints
     ? t('behindPoints', { gap: standing.gap, name: leader })
     : t('behindStrokes', { gap: standing.gap, name: leader });
