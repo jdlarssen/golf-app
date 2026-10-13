@@ -19,6 +19,12 @@ import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
 /**
+ * Hull-siden fikk ikke lagret et trykk i den lokale basen (#2228). Linja står
+ * til neste skriving som går gjennom.
+ */
+export const LOCAL_SAVE_FAILED = 'Fikk ikke lagret scoren på telefonen. Prøv igjen.';
+
+/**
  * Godkjenning og avvisning (#2215: via ruta). Ingen `default`-gren: legger
  * noen en kode til i `ActionFailure`, faller `tsc` på den manglende
  * returverdien.

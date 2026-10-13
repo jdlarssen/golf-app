@@ -100,6 +100,7 @@ import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
+import { LOCAL_SAVE_FAILED } from '../lib/actionFeedback';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
@@ -369,6 +370,9 @@ function HoleView({
   const { extras, refresh: refreshChoices } = choices;
   // Setet «Annet»-arket er åpent for, eller `null`.
   const [sheetSeatId, setSheetSeatId] = useState<string | null>(null);
+  // Siste skriving til den lokale basen feilet (#2228). Neste som går
+  // gjennom, fjerner linja.
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const roster = toRoster(bundle.players);
   const mode = bundle.game.gameMode as GameMode;
@@ -497,18 +501,33 @@ function HoleView({
       });
   const seatOf = (seatId: string) => seats.find((seat) => seat.id === seatId);
 
+  // Én vei inn i den lokale basen for alle trykkene på hullet (#2228). Feiler
+  // skrivingen, sier en linje fra i stedet for at trykket forsvinner stille.
+  // Lesingen og drainen kjøres bare når scoren faktisk ble lagret, og kallet
+  // avviser aldri, så `void` fra skinna er trygt.
+  const saveLocally = async (input: Parameters<typeof writeScore>[0]) => {
+    try {
+      await writeScore(input);
+    } catch (err: unknown) {
+      console.error('[Hole] lagring feilet', err);
+      setSaveFailed(true);
+      return;
+    }
+    setSaveFailed(false);
+    await reload();
+    void drainQueue('tasting');
+  };
+
   // Alle slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
   // writeScore beholder dem), så les tilbake og drain køen.
   const writeStrokes = async (playerUserId: string, strokes: number | null) => {
-    await writeScore({
+    await saveLocally({
       gameId,
       userId: playerUserId,
       holeNumber,
       strokes,
       enteredBy: userId,
     });
-    await reload();
-    void drainQueue('tasting');
   };
 
   // Skinna skriver via setet. Et låst sete avvises også her, ikke bare i
@@ -533,15 +552,13 @@ function HoleView({
   const setSeatPutts = async (seatId: string, next: number) => {
     const seat = seatOf(seatId);
     if (!seat || seat.locked) return;
-    await writeScore({
+    await saveLocally({
       gameId,
       userId: seat.owner,
       holeNumber,
       putts: next,
       enteredBy: userId,
     });
-    await reload();
-    void drainQueue('tasting');
   };
 
   const rail = useScoreRail({
@@ -676,6 +693,12 @@ function HoleView({
               : collapsed
                 ? `Lagkortet er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`
                 : `Kortet ditt er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`}
+          </Text>
+        ) : null}
+
+        {saveFailed ? (
+          <Text style={ui.error} testID="hole-save-error">
+            {LOCAL_SAVE_FAILED}
           </Text>
         ) : null}
 

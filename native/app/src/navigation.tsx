@@ -21,6 +21,7 @@ import {
 } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { settlePushOwner } from './data/pushDevice';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
@@ -197,9 +198,13 @@ export function RootNavigator() {
     pendingPush.current = null;
     if (target) openPushTarget(target);
   }, []);
-  return (
+  // #2228: hver skjerm har sin egen feilgrense (`screenLayout`), så headerens
+  // tilbakeknapp virker når en skjerm kaster. Den ytre fanger det som kaster
+  // utenfor skjermene.
+  const navigator = (
     <NavigationContainer ref={navigationRef} onReady={onReady} theme={navigationThemeFor(theme)}>
       <Stack.Navigator
+        screenLayout={({ children }) => <ErrorBoundary>{children}</ErrorBoundary>}
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,
@@ -342,5 +347,6 @@ export function RootNavigator() {
       </Stack.Navigator>
     </NavigationContainer>
   );
+  return <ErrorBoundary>{navigator}</ErrorBoundary>;
 }
 
