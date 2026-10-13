@@ -15,7 +15,12 @@ import { GuestBadge } from '@/components/ui/GuestBadge';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { ApprovePlayerButton } from '@/app/[locale]/admin/games/[id]/ApprovePlayerButton';
-import { organizerApprovalRow } from '@/lib/games/flightScope';
+import {
+  eligibleForFlightAssignment,
+  flightBuckets,
+  organizerApprovalRow,
+} from '@/lib/games/flightScope';
+import { expectedTeamSize } from '@/lib/games/teamScope';
 import { ReopenScorecardButton } from '@/app/[locale]/admin/games/[id]/ReopenScorecardButton';
 import {
   adminWithdrawPlayer,
@@ -221,6 +226,13 @@ export default async function CreatorSpillerePage({
       pendingCount,
     });
   const status = game.status;
+  // #2289: the organiser's way to the Startlista, where they split the players
+  // into flights. Same guard as the page itself and the game page's row.
+  const showStartlistaLink =
+    (status === 'scheduled' || status === 'active') &&
+    eligibleForFlightAssignment(game.game_mode, expectedTeamSize(game.mode_config), players);
+  const unassignedFlightCount = showStartlistaLink ? flightBuckets(players).unassigned.length : 0;
+  const tFlights = await getTranslations('admin.game.flights');
   const isPreStart = status === 'draft' || status === 'scheduled';
   // #1937: a cup match's roster is changed by swapping players on the cup,
   // never by removing a row here (RLS 0178 refuses it for non-admins).
@@ -397,6 +409,21 @@ export default async function CreatorSpillerePage({
             {pendingSignups !== null && (
               <span className="tabular-nums text-muted">
                 {t('signupsWaiting', { count: pendingSignups })}
+              </span>
+            )}
+          </SmartLink>
+        )}
+
+        {showStartlistaLink && (
+          <SmartLink
+            href={`/admin/games/${gameId}/startlista`}
+            data-testid="startlista-link"
+            className="flex min-h-[44px] items-center justify-between gap-3 rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+          >
+            <span>{tFlights('sectionLabel')}</span>
+            {unassignedFlightCount > 0 && (
+              <span className="tabular-nums text-warning-text">
+                {tFlights('unassignedShort', { count: unassignedFlightCount })}
               </span>
             )}
           </SmartLink>

@@ -3895,6 +3895,7 @@
         "scheduledEditBody": "The game is in the planned stage. You can still change the course, tee-off time, players, teams, and settings until the round starts.",
         "scheduledEditBodyAutoStart": "The game is in the planned stage. You can still change the course, tee-off time, players, teams, and settings until the round starts, either automatically at tee-off or manually by you.",
         "scheduledStartBlockedLead": "The round won't start until this is sorted:",
+        "unassignedFlightsLinked": "Players have not been assigned to flights yet. Assign them on the <link>start list</link>.",
         "scheduledEditButton": "Edit game",
         "allReadyBody": "All players have submitted{andApproved} their scorecards. The game can be ended — the leaderboard will be open to all participants.",
         "allReadyAndApproved": " and approved",
@@ -3979,14 +3980,23 @@
         "remindDone": "Reminded {count, plural, one {# player} other {# players}}."
       },
       "flights": {
-        "sectionLabel": "Flights",
-        "unassignedLabel": "Without flight ({n})",
+        "sectionLabel": "Start list",
+        "backToGame": "Back to the game",
+        "summary": "{players, plural, one {# player} other {# players}} · {flights, plural, one {# flight} other {# flights}}",
         "suggestButton": "Suggest assignment",
         "suggestingBusy": "Assigning…",
-        "movePlayerLabel": "Move player",
-        "moveButton": "Move",
-        "flightAriaLabel": "Flight for {name}",
-        "flightOptionN": "Flight {n}"
+        "flightOptionN": "Flight {n}",
+        "flightMeta": "{count, plural, one {# player} other {# players}} · avg HCP {avg}",
+        "emptyFlight": "No players yet",
+        "unassignedHeading": "No flight",
+        "playerCount": "{count, plural, one {# player} other {# players}}",
+        "selectedStrip": "<b>{name} is selected.</b> Tap the flight {name} should join.",
+        "cancel": "Cancel",
+        "offline": "Moving players needs a connection",
+        "moveHere": "Move {name} here →",
+        "moveHereLabel": "Move {name} to flight {n}",
+        "chipLabel": "{name}, HCP {hcp}",
+        "unassignedShort": "{count} without a flight"
       },
       "teams": {
         "sectionLabel": "Teams",

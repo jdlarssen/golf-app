@@ -3895,6 +3895,7 @@
         "scheduledEditBody": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes.",
         "scheduledEditBodyAutoStart": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes, enten automatisk ved tee-off eller manuelt av deg.",
         "scheduledStartBlockedLead": "Runden starter ikke før dette er ordnet:",
+        "unassignedFlightsLinked": "Spillerne er ikke fordelt i flighter ennå. Del dem inn på <link>Startlista</link>.",
         "scheduledEditButton": "Rediger spillet",
         "allReadyBody": "Alle spillere har levert{andApproved} scorekort. Spillet kan avsluttes — leaderboard blir åpen for alle deltakere.",
         "allReadyAndApproved": " og godkjent",
@@ -3979,14 +3980,23 @@
         "remindDone": "Purret {count, plural, one {# spiller} other {# spillere}}."
       },
       "flights": {
-        "sectionLabel": "Flighter",
-        "unassignedLabel": "Uten flight ({n})",
+        "sectionLabel": "Startlista",
+        "backToGame": "Tilbake til spillet",
+        "summary": "{players, plural, one {# spiller} other {# spillere}} · {flights, plural, one {# flight} other {# flighter}}",
         "suggestButton": "Foreslå inndeling",
         "suggestingBusy": "Deler inn…",
-        "movePlayerLabel": "Flytt spiller",
-        "moveButton": "Flytt",
-        "flightAriaLabel": "Flight for {name}",
-        "flightOptionN": "Flight {n}"
+        "flightOptionN": "Flight {n}",
+        "flightMeta": "{count, plural, one {# spiller} other {# spillere}} · snitt HCP {avg}",
+        "emptyFlight": "Ingen spillere ennå",
+        "unassignedHeading": "Uten flight",
+        "playerCount": "{count, plural, one {# spiller} other {# spillere}}",
+        "selectedStrip": "<b>{name} er valgt.</b> Trykk på flighten {name} skal til.",
+        "cancel": "Avbryt",
+        "offline": "Flytting krever nett",
+        "moveHere": "Flytt {name} hit →",
+        "moveHereLabel": "Flytt {name} til flight {n}",
+        "chipLabel": "{name}, HCP {hcp}",
+        "unassignedShort": "{count} uten flight"
       },
       "teams": {
         "sectionLabel": "Lag",

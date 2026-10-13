@@ -912,7 +912,8 @@ async function buildSections({
   // #543: Flighter-seksjon for solo-spill >4 aktive — scheduled og active.
   // eligibleForFlightAssignment er den delte sannhetskilden for om seksjonen
   // vises, slik at admin-UI og start-vakten holder seg i sync. I lag-formater
-  // er flighten laget, og seksjonen finnes ikke (#2290).
+  // er flighten laget, og seksjonen finnes ikke (#2290). Since #2289 it is a
+  // row that opens the Startlista, where the flights are moved.
   const flighterSeksjon = (() => {
     if (game.status !== 'scheduled' && game.status !== 'active') return null;
     const flightPlayers: FlightPlayer[] = players.map((p) => ({
@@ -929,20 +930,7 @@ async function buildSections({
     ) {
       return null;
     }
-    const activePlayers = flightPlayers.filter((p) => !p.withdrawn_at);
-    return (
-      <FlighterSeksjon
-        gameId={gameId}
-        players={activePlayers.map((p) => ({
-          user_id: p.user_id,
-          displayName: displayName(
-            players.find((r) => r.user_id === p.user_id)!,
-          ),
-          flight_number: p.flight_number,
-          withdrawn_at: p.withdrawn_at,
-        }))}
-      />
-    );
+    return <FlighterSeksjon gameId={gameId} players={flightPlayers} />;
   })();
 
   const playersTable = players.length > 0 && (
