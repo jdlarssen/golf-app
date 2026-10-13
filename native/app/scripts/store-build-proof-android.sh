@@ -20,8 +20,11 @@
 #     claimer ikke lenker). En vert som er en ressursreferanse (`@string/…`)
 #     kan ikke leses her, og regnes som tornygolf.no. Fail-closed: en
 #     debuggable-verdi leseren ikke kjenner, er FAIL.
-#  3. Tillatelsene: hele `uses-permission`-lista skrives ut som informasjon,
-#     uten PASS eller FAIL (kontrakten #2560, O5).
+#  3. Tillatelsene: hele `uses-permission`-lista skrives ut som informasjon.
+#     Regelen: ingen tillatelse fra `expo.android.blockedPermissions` i
+#     `native/app/app.json` står i manifestet. Lista har ett hjem, app.json, og
+#     kopieres aldri inn her. Fail-closed: en app.json uten lista, eller et
+#     manifest som ikke ble lest, er FAIL, aldri «ingen blokkert tillatelse».
 #  4. 16 KB-sider: hver `.so` under `base/lib/arm64-v8a/` og `base/lib/x86_64/`
 #     har LOAD-justering ≥ 16384. En av de to mappene uten `.so` er FAIL, ikke
 #     en stille PASS. 32-bit-filene (`armeabi-v7a`, `x86`) skrives ut som
@@ -66,6 +69,7 @@ STORE_PACKAGE='no.tornygolf.app'
 MIN_TARGET_SDK=36
 PAGE_16K=16384
 ASSETLINKS_ROUTE="$REPO_ROOT/app/.well-known/assetlinks.json/route.ts"
+APP_JSON="$REPO_ROOT/native/app/app.json"
 
 usage() {
   printf 'Bruk: %s <sti.aab> [bevis-fil]\n' "$(basename "$0")" >&2
@@ -207,13 +211,26 @@ else
 fi
 say ""
 
-# ── 3. Tillatelsene (informasjon) ────────────────────────────────────────────
-say "## Tillatelser (uses-permission, bare informasjon uten PASS/FAIL, #2560 O5)"
+# ── 3. Tillatelsene ──────────────────────────────────────────────────────────
+say "## Tillatelser (uses-permission)"
 permissions=$(facts permission)
 if [ -z "$permissions" ]; then
   say "      (ingen uses-permission i manifestet)"
 else
   printf '%s\n' "$permissions" | sed 's/^/      /' | tee -a "$OUT"
+fi
+# Ble manifestet aldri dumpet, får leseren tom stdin og svarer exit 1.
+[ -f "$WORK/manifest.xmltree" ] || : > "$WORK/manifest.xmltree"
+if blocked_out=$("$PYTHON3" "$ANDROID_PROOF_PY" blocked "$APP_JSON" < "$WORK/manifest.xmltree" 2> "$WORK/blocked.err"); then
+  blocked_count=$( (printf '%s\n' "$blocked_out" | "$GREP" -m1 '^blocked-count=' || true) | cut -d= -f2-)
+  blocked_present=$( (printf '%s\n' "$blocked_out" | "$GREP" '^blocked-present=' || true) | cut -d= -f2- | tr '\n' ' ' | sed 's/ $//')
+  if [ -z "$blocked_present" ]; then
+    pass "ingen blokkert tillatelse i manifestet ($blocked_count blokkert i app.json)"
+  else
+    fail "blokkert i app.json, men står i manifestet: $blocked_present"
+  fi
+else
+  fail "kunne ikke sjekke de blokkerte tillatelsene: $(head -c 300 "$WORK/blocked.err" | tr '\n' ' ')"
 fi
 say ""
 
