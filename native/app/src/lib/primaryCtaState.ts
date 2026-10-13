@@ -1,43 +1,7 @@
-// Native N3 (#1825): speil av webbens `computeState` i
-// `app/[locale]/games/[id]/(home)/PrimaryCta.tsx`.
+// Native N3 (#1825): hullet «Fortsett runden» peker på.
 //
-// Funksjonen kunne ikke deles: den bor inne i en server-komponent i
-// app-router-katalogen, som drar med seg `next-intl` og resten av web-grafen.
-// Kopien er derfor tynn med vilje — fem grener, ingen egen tolkning — og
-// testet gren for gren, slik at et avvik fra webben dukker opp som en rød test
-// og ikke som to flater som sier ulike ting om samme kort.
-//
-// Rekkefølgen på grenene ER regelen: levert slår alt annet, så en spiller som
-// har levert med hull igjen aldri får «Fortsett»-knappen tilbake.
-
-export type PrimaryCtaState =
-  | 'not_started'
-  | 'in_progress'
-  | 'ready_to_submit'
-  | 'submitted_pending_approval'
-  | 'submitted_approved';
-
-export function computePrimaryCtaState(opts: {
-  /** Antall hull spilleren har slag på. */
-  strokesCount: number;
-  /** Hull i spillets scope — 18 i appen (segment-spill gates bort). */
-  totalHoles: number;
-  submittedAt: string | null;
-  approvedAt: string | null;
-  requirePeerApproval: boolean;
-}): PrimaryCtaState {
-  const { strokesCount, totalHoles, submittedAt, approvedAt, requirePeerApproval } =
-    opts;
-  if (submittedAt) {
-    if (requirePeerApproval && !approvedAt) {
-      return 'submitted_pending_approval';
-    }
-    return 'submitted_approved';
-  }
-  if (strokesCount === 0) return 'not_started';
-  if (strokesCount >= totalHoles) return 'ready_to_submit';
-  return 'in_progress';
-}
+// Selve CTA-tilstanden (`computePrimaryCtaState`) bor i
+// `lib/games/primaryCtaState.ts`, delt med webbens PrimaryCta (#2228).
 
 /**
  * Hullet «Fortsett runden» skal peke på: det første uten slag (#164).

@@ -1,7 +1,7 @@
 // Native N3 (#1825): spill-hjem — det ene stedet som avgjør hva spilleren skal
 // gjøre nå.
 //
-// CTA-en kommer fra `computePrimaryCtaState`, speilet av webbens PrimaryCta, og
+// CTA-en kommer fra `computePrimaryCtaState`, delt med webbens PrimaryCta, og
 // telles på LOKALE slag: står det tre hull i SQLite som ikke har rukket opp til
 // serveren ennå, teller de likevel. Alt annet på skjermen er bundelen.
 //

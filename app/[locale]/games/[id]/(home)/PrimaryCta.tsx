@@ -5,35 +5,10 @@ import { firstHoleForSegment, holeNumbersForSegment } from '@/lib/games/holeScop
 import { findSegmentSibling } from '@/lib/games/segmentSibling';
 import { scoredHoleNumbers, scoreOwnerUserIds } from '@/lib/games/scoreOwner';
 import { loadFlightDeliveryCards } from '@/lib/games/loadFlightDelivery';
+import { computePrimaryCtaState, type PrimaryCtaState } from '@/lib/games/primaryCtaState';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { HoleSegment } from '@/lib/scoring';
 import { getGameContext } from './gameContext';
-
-type UiState =
-  | 'not_started'
-  | 'in_progress'
-  | 'ready_to_submit'
-  | 'submitted_pending_approval'
-  | 'submitted_approved';
-
-function computeState(opts: {
-  strokesCount: number;
-  totalHoles: number;
-  submittedAt: string | null;
-  approvedAt: string | null;
-  requirePeerApproval: boolean;
-}): UiState {
-  const { strokesCount, totalHoles, submittedAt, approvedAt, requirePeerApproval } = opts;
-  if (submittedAt) {
-    if (requirePeerApproval && !approvedAt) {
-      return 'submitted_pending_approval';
-    }
-    return 'submitted_approved';
-  }
-  if (strokesCount === 0) return 'not_started';
-  if (strokesCount >= totalHoles) return 'ready_to_submit';
-  return 'in_progress';
-}
 
 export async function PrimaryCtaSection({
   gameId,
@@ -124,7 +99,7 @@ export async function PrimaryCtaSection({
     }
   }
 
-  const state = computeState({
+  const state = computePrimaryCtaState({
     strokesCount,
     totalHoles: segmentHoles.length,
     submittedAt,
@@ -222,7 +197,7 @@ function PrimaryCta({
   flightCardCount,
 }: {
   gameId: string;
-  state: UiState;
+  state: PrimaryCtaState;
   strokesCount: number;
   /** #1441: holes in the game's scope — 9 for front9/back9, 18 for 'full'. */
   totalHoles: number;
