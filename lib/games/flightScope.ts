@@ -58,6 +58,27 @@ export function isSingleFlightGame(
 }
 
 /**
+ * Hvem som vises som kort på hull-siden (#543), delt av webbens
+ * `holePagePlayers.ts` og appens `roster.ts` (#2228).
+ *
+ * Én flight (`isSingleFlightGame`) → alle aktive. Ellers aktive i samme
+ * flight som meg, bortsett fra når jeg selv ikke har flight: da hele det
+ * aktive rosteret (arven fra flight-løse spill). Trukkede spillere står aldri
+ * på banen (#386/#387-presedensen).
+ */
+export function resolveFlight<T extends FlightPlayer>(
+  gameMode: GameMode,
+  players: readonly T[],
+  me: FlightPlayer,
+): T[] {
+  const active = activePlayers(players);
+  if (isSingleFlightGame(gameMode, [...players]) || me.flight_number == null) {
+    return active;
+  }
+  return active.filter((p) => p.flight_number === me.flight_number);
+}
+
+/**
  * True når spillet trenger flight-inndeling — dvs. at det IKKE er én-flight
  * og minst én aktiv spiller mangler flight_number.
  *

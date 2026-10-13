@@ -18,9 +18,9 @@ import {
   type DeliveryPlayer,
 } from '../../../../lib/games/flightDelivery';
 import {
-  isSingleFlightGame,
   organizerApprovalRow,
   pendingApprovalsFor,
+  resolveFlight as resolveFlightFor,
   type FlightPlayer,
 } from '../../../../lib/games/flightScope';
 import { isMatchplayMode } from '../../../../lib/games/matchplaySides';
@@ -61,25 +61,19 @@ export function findInRoster(
 }
 
 /**
- * Hvem som vises som kort på hull-siden — speil av webbens `resolveFlight`
- * (`holes/[holeNumber]/holePagePlayers.ts`).
- *
- * Regelen selv er delt (`isSingleFlightGame`): ≤4 aktive spillere eller wolf
- * betyr én fysisk gruppe, og da ser alle alle. Ellers er det spillere med
- * samme `flight_number` — bortsett fra når jeg selv ikke har en flight, der
- * webben viser hele rosteret (arven fra flight-løse spill). Trukkede spillere
- * er aldri med: de står ikke på banen.
+ * Hvem som vises som kort på hull-siden. Regelen bor i den delte
+ * `resolveFlight` (`lib/games/flightScope.ts`), samme som webbens hull-side
+ * bruker (#2228): ≤4 aktive spillere eller wolf betyr én fysisk gruppe, og da
+ * ser alle alle. Ellers er det spillere med samme `flight_number`, bortsett
+ * fra når jeg selv ikke har en flight, der hele rosteret vises (arven fra
+ * flight-løse spill). Trukkede spillere er aldri med: de står ikke på banen.
  */
 export function resolveFlight(
   roster: readonly RosterEntry[],
   gameMode: GameMode,
   me: RosterEntry,
 ): RosterEntry[] {
-  const active = roster.filter((entry) => entry.withdrawn_at == null);
-  if (isSingleFlightGame(gameMode, [...roster]) || me.flight_number == null) {
-    return active;
-  }
-  return active.filter((entry) => entry.flight_number === me.flight_number);
+  return resolveFlightFor(gameMode, roster, me);
 }
 
 /**
