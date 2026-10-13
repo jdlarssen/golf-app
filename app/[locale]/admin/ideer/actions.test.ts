@@ -156,7 +156,9 @@ describe('markIdeaBuilt', () => {
 
   it.each([
     [{ summary: '   ' }, 'summary_required'],
+    [{ summary: 'x'.repeat(121) }, 'summary_too_long'],
     [{ link: '//x.no' }, 'link_must_be_internal'],
+    [{ link: `/${'a'.repeat(200)}` }, 'link_too_long'],
     [{ link: '/en/cup' }, 'link_has_locale'],
   ] as const)('bad input %j → ?error=%s, the row is left alone', async (fields, code) => {
     supabaseMock = buildSupabaseMock([]);
