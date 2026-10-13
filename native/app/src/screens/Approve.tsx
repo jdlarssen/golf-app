@@ -16,7 +16,7 @@
 // #2262: hvert kort vises som det klassiske scorekortet — UT og INN med PAR og
 // SLAG — og BRUTTO under, samme kort som spilleren selv ser. Uten NETTO: den
 // som godkjenner, attesterer slagene, ikke handicapen.
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Platform,
@@ -26,7 +26,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
 import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
 import type { ScoringGender } from '../../../../lib/scoring/modes/types';
@@ -35,11 +34,11 @@ import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import type { LocalScore } from '../data/db';
 import type { BundleHole } from '../data/gameBundle';
 import { approveScorecard, rejectScorecard } from '../data/playerActions';
-import { seedGameScores } from '../data/seedScores';
 import { describeFailure } from '../lib/actionFeedback';
 import { displayName } from '../lib/display';
 import { findInRoster, pendingApprovals, toRoster, type RosterEntry } from '../lib/roster';
 import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -59,13 +58,8 @@ export function Approve({ route }: ScreenProps<'Approve'>) {
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      void seedGameScores(gameId)
-        .catch(() => undefined)
-        .then(() => reload());
-    }, [gameId, reload]),
-  );
+  // Slagene hentes ved fokus, i forgrunnen og med nett igjen (#2228).
+  useScoreCatchUp(gameId, reload);
 
   const run = async (
     playerUserId: string,

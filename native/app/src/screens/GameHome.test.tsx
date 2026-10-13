@@ -18,6 +18,7 @@ import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { TICKET_TEXT } from '../lib/ticketCopy';
 import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
+import { fireForeground } from '../test/syncTriggersMock';
 import { GameHome, RosterRow } from './GameHome';
 
 // Skjermen drar inn arrangør-seksjonen, som drar inn klienten. Raden selv rører
@@ -31,6 +32,7 @@ jest.mock('../data/gameBundle', () => ({
   refreshGameBundle: jest.fn(async () => mockState.bundle),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 // Venterommet (#2219) lytter på spillets status. Testen fyrer oppdateringen selv.
 jest.mock('../data/realtime', () => ({
   subscribeGameStatus: jest.fn(() => () => undefined),
@@ -237,6 +239,19 @@ describe('GameHome', () => {
       expect(navigation.navigate).toHaveBeenLastCalledWith('Scorecard', { gameId: 'game-1' });
     });
     expect(screen.getByTestId('submitted-banner')).toBeTruthy();
+
+    // #2228: appen kom i forgrunnen. Slagene hentes på nytt, ikke bare spillet.
+    const { seedGameScores } = require('../data/seedScores') as { seedGameScores: jest.Mock };
+    const { refreshGameBundle } = require('../data/gameBundle') as {
+      refreshGameBundle: jest.Mock;
+    };
+    const seeds = seedGameScores.mock.calls.length;
+    const bundles = refreshGameBundle.mock.calls.length;
+    await act(async () => {
+      fireForeground();
+    });
+    expect(seedGameScores).toHaveBeenCalledTimes(seeds + 1);
+    expect(refreshGameBundle).toHaveBeenCalledTimes(bundles + 1);
   });
 
   it('venterommet teller ned og åpner seg når runden starter (#2219); kapteinen har slettet kontoen: 9 hull på kapteinen og 9 på makkeren gir lever-knappen (#2067)', async () => {

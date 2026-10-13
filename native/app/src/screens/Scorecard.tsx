@@ -79,7 +79,6 @@ import {
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import type { BundlePlayer } from '../data/gameBundle';
 import { getDb, listQueue } from '../data/db';
-import { seedGameScores } from '../data/seedScores';
 import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
@@ -110,6 +109,7 @@ import {
   teamHandicapFor,
 } from '../lib/teamPlay';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -163,11 +163,16 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     }
   }, [gameId]);
 
-  // Drain først (port 1), les så både køen og serververdiene. Rekkefølgen er
+  // Drain først (port 1), les så køen og den lokale basen. Rekkefølgen er
   // hele poenget: slagene skal ut FØR kortet kan fryses. Kjeden kjører hver
   // gang skjermen får fokus (#2220): «Rediger hullene» legger hullene oppå et
   // scorekort som står montert, og kommer spilleren tilbake etter å ha rettet
   // et hull, skal kortet vise det nye tallet før det leveres.
+  //
+  // Serververdiene hentes av `useScoreCatchUp` (#2228), ved fokus, i
+  // forgrunnen og med nett igjen. At den seeden går samtidig med drainen, er
+  // trygt: `mergeServerScores` slipper bare inn rader som er strengt nyere enn
+  // den lokale (`data/seedScores.ts`), så en ventende lokal rad blir stående.
   //
   // #2219: køen leses også med én gang, parallelt med drainen. Uten det sto
   // knappen åpen til drainen var ferdig eller intervallet slo inn, og et
@@ -178,10 +183,10 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       void drainQueue('lever')
         .catch(() => undefined)
         .then(() => refreshQueue())
-        .then(() => seedGameScores(gameId).catch(() => undefined))
         .then(() => reload());
-    }, [gameId, refreshQueue, reload]),
+    }, [refreshQueue, reload]),
   );
+  useScoreCatchUp(gameId, reload);
 
   useEffect(() => {
     const interval = setInterval(() => {

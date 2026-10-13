@@ -38,7 +38,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { NO_REJECTION_REASON } from '../../../../lib/games/rejectionReason';
 import { STATUS_LABELS, type GameStatus } from '../../../../lib/games/status';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
@@ -53,7 +52,6 @@ import { SyncBanner } from '../components/sync/SyncBanner';
 import type { BundlePlayer } from '../data/gameBundle';
 import { fetchOwnProfile } from '../data/profile';
 import { confirmParticipation } from '../data/rosterActions';
-import { seedGameScores } from '../data/seedScores';
 import { displayName } from '../lib/display';
 import { gateReason } from '../lib/formatGate';
 import {
@@ -90,6 +88,7 @@ import {
 import { canShareLiveFollow, shareLiveFollow } from '../lib/shareLive';
 import { TICKET_TEXT, approveButton, fieldA11y, stubTotal } from '../lib/ticketCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { FONTS, useTheme } from '../theme';
@@ -114,15 +113,10 @@ export function GameHome({ route, navigation }: ScreenProps<'GameHome'>) {
   const rulesY = useRef<number | null>(null);
   const [profileHcpIndex, setProfileHcpIndex] = useState<number | null>(null);
 
-  // Hent ned det serveren har hver gang skjermen åpnes, og les lokalt etterpå.
-  // Feiler seeden (offline), står de lokale radene som de var.
-  useFocusEffect(
-    useCallback(() => {
-      void seedGameScores(gameId)
-        .catch(() => undefined)
-        .then(() => reload());
-    }, [gameId, reload]),
-  );
+  // Hent ned det serveren har hver gang skjermen åpnes, når appen kommer i
+  // forgrunnen og når nettet er tilbake, og les lokalt etterpå (#2228). Feiler
+  // seeden (offline), står de lokale radene som de var.
+  useScoreCatchUp(gameId, reload);
 
   // Bekreft plassen min ved å ÅPNE spillet (#463) — samme modell som webben,
   // og bevisst uten UI: arrangøren ser bare at merket dukker opp i rosteret.
