@@ -118,10 +118,11 @@ describe('format guide team sizes follow teamSizesForMode (#2274)', () => {
   });
 });
 
-describe('game form team handicap help has a text per team size (#2274)', () => {
-  // GameForm builds the key `wizard.form.teamHandicap.<prefix>Netto<size>`
-  // from the team size, so tsc fails if a key it can build is missing. This
-  // table adds the other half: every size the format offers has its text.
+describe('team handicap help has a text per team size (#2274)', () => {
+  // TeamHandicapField (the wizard's «Klar?» step and GameForm, #2566) builds
+  // the key `wizard.allowanceProps.<prefix>.nettoHelper<size>` from the team
+  // size. This table checks every size the format offers has its text and
+  // names that size.
   const modes: [GameMode, string][] = [
     ['texas_scramble', 'texas'],
     ['ambrose', 'ambrose'],
@@ -138,7 +139,7 @@ describe('game form team handicap help has a text per team size (#2274)', () => 
   );
 
   it.each(cases)('%s %s, team size %i', (locale, _mode, size, prefix) => {
-    const text = lookup(LOCALES[locale], `wizard.form.teamHandicap.${prefix}Netto${size}`);
+    const text = lookup(LOCALES[locale], `wizard.allowanceProps.${prefix}.nettoHelper${size}`);
     expect(text).toContain(sizeLabel[locale](size));
   });
 });

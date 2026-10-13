@@ -1207,20 +1207,6 @@
         "description": "Controls what share of handicap is counted. Gross = no handicap, gross scores only.",
         "nettoHelper": "The share of the player's handicap that counts. 100 = full course handicap (standard)."
       },
-      "teamHandicap": {
-        "legend": "Team handicap",
-        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "texasNetto2": "NGF standard: 25% of the sum of players' playing handicaps for 2-player teams.",
-        "texasNetto3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
-        "texasNetto4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
-        "ambroseNetto2": "Standard Ambrose: 25% of the sum of players' playing handicaps for 2-player teams.",
-        "ambroseNetto3": "Standard Ambrose: 16.7% of the sum of players' playing handicaps for 3-player teams.",
-        "ambroseNetto4": "Standard Ambrose: 12.5% of the sum of players' playing handicaps for 4-player teams.",
-        "floridaNetto3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
-        "floridaNetto4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
-        "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
-        "inputLabel": "Team handicap (%)"
-      },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
         "description": "Controls handicaps for Round Robin match play. Net uses a share of each player's handicap per hole; gross counts the lowest gross per side.",
@@ -1249,7 +1235,7 @@
         "teamAssign2": "team assignment (teams of 2)",
         "teamAssign4": "team assignment (teams of 4)",
         "teamAssign3": "team assignment (teams of 3)",
-        "teamHandicapPct": "team handicap percentage (0–100)",
+        "teamHandicapPct": "team handicap as % of the team average (0–100)",
         "wolfUnderMin": "{remaining} {remaining, plural, one {more player} other {more players}} needed (minimum 3)",
         "wolfTooMany": "too many players — Wolf takes 3 to 5",
         "nassauMin": "{remaining, plural, one {at least 1 more player} other {at least 2 players}}",
