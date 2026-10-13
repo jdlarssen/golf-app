@@ -34,6 +34,13 @@ export function flightSectionId(n: number): string {
 type Move = { userId: string; flight: number };
 
 /**
+ * «Foreslå inndeling» sits in the page's top, outside this component. Its
+ * form fires this event so the answer (the h1 gets focus) also comes when the
+ * URL is the same as last time (`?status=flight_suggested` twice).
+ */
+const FOCUS_REQUEST = 'startlista:focus-request';
+
+/**
  * The Startlista (#2289, artboard «Forslag: startlista»): the flights as cards
  * side by side, a player moved with two taps. Tap a chip, then the flight; tap
  * the chip again, «Avbryt» or Esc to let go. The rules (targets, order,
@@ -84,6 +91,14 @@ export function StartlistaClient({
     el.focus({ preventScroll: true });
     el.scrollIntoView({ block: focus.kind === 'flight' ? 'center' : 'start' });
   }, [players, focus, headingId]);
+
+  useEffect(() => {
+    const request = () => {
+      focusPending.current = true;
+    };
+    window.addEventListener(FOCUS_REQUEST, request);
+    return () => window.removeEventListener(FOCUS_REQUEST, request);
+  }, []);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -169,6 +184,7 @@ export function StartlistaClient({
               >
                 <button
                   type="button"
+                  data-target-flight={number}
                   disabled={!online}
                   onClick={() => moveTo(number)}
                   aria-label={t('moveHereLabel', { name: selected.fullName, n: number })}
@@ -269,6 +285,7 @@ function PlayerChip({
   return (
     <button
       type="button"
+      data-user-id={player.user_id}
       aria-pressed={pressed}
       aria-label={ariaLabel}
       onClick={onPress}
@@ -293,7 +310,11 @@ export function SuggestFlightsForm({ gameId }: { gameId: string }) {
   const t = useTranslations('admin.game.flights');
   const online = useOnline();
   return (
-    <form action={suggestFlightAssignment.bind(null, gameId)} className="shrink-0">
+    <form
+      action={suggestFlightAssignment.bind(null, gameId)}
+      onSubmit={() => window.dispatchEvent(new Event(FOCUS_REQUEST))}
+      className="shrink-0"
+    >
       <SuggestButton disabled={!online} label={t('suggestButton')} busyLabel={t('suggestingBusy')} />
     </form>
   );
