@@ -694,7 +694,9 @@ function HoleView({
         </HoleSwipe>
         {/* #2228 (designlerretet): telefonen fikk ikke lagret et trykk. Rett
             under hull-hodet, over flighten. */}
-        {saveFailed ? <SaveErrorBanner text={LOCAL_SAVE_FAILED[saveFailed]} /> : null}
+        {saveFailed ? (
+          <SaveErrorBanner key={saveFailed} text={LOCAL_SAVE_FAILED[saveFailed]} />
+        ) : null}
         <View style={styles.pad}>
 
         {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
