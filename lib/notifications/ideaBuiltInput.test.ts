@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   IDEA_BUILT_LINK_MAX,
   IDEA_BUILT_SUMMARY_MAX,
+  suggestIdeaBuiltSummary,
   validateIdeaBuiltInput,
   type IdeaBuiltInputError,
 } from './ideaBuiltInput';
@@ -105,5 +106,48 @@ describe('validator ↔ ideaBuiltSchema parity', () => {
         ...(link ? { link } : {}),
       }),
     ).toThrow();
+  });
+});
+
+// Owner's choice 13.10: the line is prefilled from the idea's own text — its
+// first sentence, cut at a word within the limit. No AI.
+describe('suggestIdeaBuiltSummary', () => {
+  it('empty or blank text → no suggestion', () => {
+    expect(suggestIdeaBuiltSummary('')).toBe('');
+    expect(suggestIdeaBuiltSummary('  \n  ')).toBe('');
+  });
+
+  it('takes the first of several sentences', () => {
+    expect(suggestIdeaBuiltSummary('Vis vind på hvert hull. Gjerne med pil! Og styrke?')).toBe(
+      'Vis vind på hvert hull.',
+    );
+    expect(suggestIdeaBuiltSummary('Kan dere lage Ryder Cup? Vi er 16 stk.')).toBe(
+      'Kan dere lage Ryder Cup?',
+    );
+  });
+
+  it('text without a full stop is used whole, whitespace collapsed', () => {
+    expect(suggestIdeaBuiltSummary('  Ryder Cup-oppsett\nfor klubben  ')).toBe(
+      'Ryder Cup-oppsett for klubben',
+    );
+  });
+
+  it('a dot inside a number or path does not end the sentence', () => {
+    expect(suggestIdeaBuiltSummary('Vis 2.5 slag i snitt per hull. Takk')).toBe(
+      'Vis 2.5 slag i snitt per hull.',
+    );
+  });
+
+  it('long text is cut at a word, never inside one, within the limit', () => {
+    const words = Array.from({ length: 40 }, (_, i) => `ord${i}`).join(' ');
+    const out = suggestIdeaBuiltSummary(words);
+    expect(out.length).toBeLessThanOrEqual(IDEA_BUILT_SUMMARY_MAX);
+    expect(words.startsWith(out)).toBe(true);
+    expect(words[out.length]).toBe(' ');
+    expect(validateIdeaBuiltInput({ summary: out, link: '' }).ok).toBe(true);
+  });
+
+  it('one word longer than the limit → no suggestion rather than half a word', () => {
+    expect(suggestIdeaBuiltSummary('x'.repeat(IDEA_BUILT_SUMMARY_MAX + 5))).toBe('');
   });
 });
