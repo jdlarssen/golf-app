@@ -3746,6 +3746,7 @@
     "game": {
       "errors": {
         "not_found": "Spillet ble ikke funnet.",
+        "player_missing": "Spilleren er ikke med i spillet lenger.",
         "not_draft": "Bare utkast kan startes.",
         "not_scheduled": "Spillet kan ikke startes (det er ikke planlagt).",
         "not_active": "Spillet er ikke aktivt og kan ikke avsluttes.",

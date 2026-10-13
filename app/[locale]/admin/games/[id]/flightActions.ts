@@ -21,6 +21,7 @@ import {
   type TeamPlayer,
 } from '@/lib/games/teamScope';
 import { expectAffected } from '@/lib/supabase/affectedRows';
+import { recountGroup, revertRows, type RevertRow } from '@/lib/games/flightMoveGuard';
 import { canToggleSignups } from '@/lib/games/signupInbox';
 import {
   FLIGHT_PLAYER_SELECT,
@@ -31,6 +32,11 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Admin/creator: action-kontekst med authz og admin-client for flight-actions.
+ *
+ * `detailPath` is the game page, where the team actions answer.
+ * `startlistaPath` is where the flight actions answer (#2289): the organiser
+ * moved the player there, and an organiser without the admin role cannot open
+ * the game page.
  */
 async function loadFlightContext(gameId: string) {
   const supabase = await getServerClient();
@@ -41,13 +47,19 @@ async function loadFlightContext(gameId: string) {
     admin,
     userId: ctx.userId,
     detailPath: `/admin/games/${gameId}`,
+    startlistaPath: `/admin/games/${gameId}/startlista`,
   };
 }
 
-/** Expires the game cache and the admin page after a saved flight/team write. */
+/**
+ * Expires the game cache and the pages that show flights and teams after a
+ * saved flight/team write: the game page, the Startlista and «Styr spillere».
+ */
 function expireFlightCaches(gameId: string): void {
   expireGameCache(gameId);
   revalidatePath(`/admin/games/${gameId}`);
+  revalidatePath(`/admin/games/${gameId}/startlista`);
+  revalidatePath(`/games/${gameId}/spillere`);
 }
 
 /**
@@ -125,12 +137,14 @@ async function readActionGame<T>(
  * Admin/creator: foreslår og skriver flight-inndeling for alle aktive
  * spillere i grupper av MAX_FLIGHT_SIZE (påmeldingsrekkefølge).
  *
- * Redirecter tilbake til admin-siden med ?status=flight_suggested ved suksess,
- * eller ?error=... ved feil.
+ * Redirecter tilbake til Startlista med ?status=flight_suggested ved suksess,
+ * eller ?error=... ved feil. A write that fails midway puts the rows already
+ * written back to the flights they had (#2289), so the split never stands
+ * half done.
  */
 export async function suggestFlightAssignment(gameId: string): Promise<void> {
   const locale = await getLocale();
-  const { admin, detailPath } = await loadFlightContext(gameId);
+  const { admin, startlistaPath: detailPath } = await loadFlightContext(gameId);
 
   // Verifiser at spillet er scheduled/active og trenger inndeling.
   const game = await readActionGame<FlightGameRow>(
@@ -163,8 +177,9 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
   }
 
   const assignments = suggestFlightSplit(players);
+  const previousFlight = new Map(players.map((p) => [p.user_id, p.flight_number]));
 
-  let written = 0;
+  const written: RevertRow[] = [];
   for (const { user_id, flight_number } of assignments) {
     let failure: unknown = null;
     try {
@@ -180,15 +195,23 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
           .select('user_id'),
         'suggestFlightAssignment',
       );
-      written += 1;
+      written.push({
+        userId: user_id,
+        previous: { flight_number: previousFlight.get(user_id) ?? null },
+      });
     } catch (e) {
       failure = e;
     }
     if (failure) {
       console.error('[suggestFlightAssignment] flight update failed', failure);
-      // The rows before this one are saved: expire the cache so the pages
-      // show them, not the old split.
-      if (written > 0) expireFlightCaches(gameId);
+      // Put the rows before this one back (AGENTS trap 5). Best-effort: a
+      // failed write-back is logged, and the answer stands.
+      await revertRows(admin, gameId, written, 'suggestFlightAssignment');
+      // Expire the cache whenever a row was written, written back or not: a
+      // page view between the partial write and the write-back may have
+      // filled `unstable_cache` with the half-done split, and if the
+      // write-back failed the pages must show the rows that stand.
+      if (written.length > 0) expireFlightCaches(gameId);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }
@@ -198,12 +221,14 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
 }
 
 /**
- * Admin/creator: setter flight_number for én spiller (per-spiller-justering).
+ * Admin/creator: flytter én spiller til en flight (Startlista, #2289).
  *
- * Samme vakt som Flighter-seksjonen (`eligibleForFlightAssignment`): i et
+ * Samme vakt som Startlista-siden (`eligibleForFlightAssignment`): i et
  * lag-format er flighten laget, og én lagspiller flyttes aldri alene (#2290).
- * Validerer at target-flight ikke overstiger MAX_FLIGHT_SIZE aktive spillere
- * (kapasitetsgrense).
+ * Plassen sjekkes før skrivingen (MAX_FLIGHT_SIZE aktive spillere) og telles
+ * på nytt etter den, som `joinFlight`: no rule in the database limits the
+ * size, so two organisers moving into a flight of three at the same time
+ * would both pass the first check. The loser's row goes back.
  */
 export async function setPlayerFlight(
   gameId: string,
@@ -211,7 +236,7 @@ export async function setPlayerFlight(
   targetFlight: number,
 ): Promise<void> {
   const locale = await getLocale();
-  const { admin, detailPath } = await loadFlightContext(gameId);
+  const { admin, startlistaPath: detailPath } = await loadFlightContext(gameId);
 
   // Grunnleggende validering
   if (!Number.isInteger(targetFlight) || targetFlight < 1) {
@@ -239,9 +264,13 @@ export async function setPlayerFlight(
       players,
     )
   ) {
-    // Same answer as page.tsx: no Flighter section, nothing to move.
+    // No Startlista for this game: the page sends the organiser on.
     redirect({ href: detailPath, locale });
   }
+
+  // The player left, or was withdrawn, since the page was rendered.
+  const player = players.find((p) => p.user_id === targetUserId && p.withdrawn_at == null);
+  if (!player) redirect({ href: `${detailPath}?error=player_missing`, locale });
 
   // Kapasitetssjekk: tell aktive spillere i target-flight eksklusive denne spilleren
   const { count: existingCount, error: countError } = await admin
@@ -279,8 +308,28 @@ export async function setPlayerFlight(
     redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
+  // Count again: over MAX_FLIGHT_SIZE we lost a race, and a failed count
+  // cannot confirm the flight has room. Either way our row goes back.
+  const afterCount = await recountGroup(admin, gameId, 'flight_number', targetFlight, 'setPlayerFlight');
+  if (afterCount === null || afterCount > MAX_FLIGHT_SIZE) {
+    await revertRows(
+      admin,
+      gameId,
+      [{ userId: targetUserId, previous: { flight_number: player.flight_number } }],
+      'setPlayerFlight',
+      { targetFlight },
+    );
+    // The write landed: a page view in between may have cached it.
+    expireFlightCaches(gameId);
+    redirect({
+      href: `${detailPath}?error=${afterCount === null ? 'db_roster' : 'flight_full'}`,
+      locale,
+    });
+  }
+
   expireFlightCaches(gameId);
-  redirect({ href: `${detailPath}?status=flight_updated`, locale });
+  // `flight` lets the page put focus on the flight the player went to.
+  redirect({ href: `${detailPath}?status=flight_updated&flight=${targetFlight}`, locale });
 }
 
 /**
@@ -365,7 +414,11 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
     redirect({ href: detailPath, locale });
   }
 
-  let written = 0;
+  const previousRow = new Map(
+    players.map((p) => [p.user_id, { team_number: p.team_number, flight_number: p.flight_number }]),
+  );
+
+  const written: RevertRow[] = [];
   for (const { user_id, team_number, flight_number } of assignments) {
     let failure: unknown = null;
     try {
@@ -381,14 +434,20 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
           .select('user_id'),
         'suggestTeamAssignment',
       );
-      written += 1;
+      written.push({
+        userId: user_id,
+        previous: previousRow.get(user_id) ?? { team_number: null, flight_number: null },
+      });
     } catch (e) {
       failure = e;
     }
     if (failure) {
       console.error('[suggestTeamAssignment] team update failed', failure);
-      // Same as suggestFlightAssignment: earlier rows are saved (#2293).
-      if (written > 0) expireFlightCaches(gameId);
+      // Same as suggestFlightAssignment (#2289): earlier rows go back to
+      // their team and flight, both so the CHECK holds, and the cache is
+      // expired whenever a row was written.
+      await revertRows(admin, gameId, written, 'suggestTeamAssignment');
+      if (written.length > 0) expireFlightCaches(gameId);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }
@@ -404,6 +463,8 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
  * setter flighten etter laget med `flightForTeam` (#2290): i lag-formatene er
  * flighten laget, og en spiller som bytter lag tar aldri med seg den gamle
  * flighten. CHECK `game_players_team_flight_consistency` krever at den er satt.
+ * Like `setPlayerFlight`, the team is counted again after the write (#2289):
+ * no rule in the database limits the team size either.
  */
 export async function setPlayerTeam(
   gameId: string,
@@ -422,9 +483,9 @@ export async function setPlayerTeam(
   // The whole roster: the flight depends on who is already in the target team.
   const players = await fetchTeamPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
-  if (!players.some((p) => p.user_id === targetUserId)) {
-    redirect({ href: `${detailPath}?error=not_found`, locale });
-  }
+  const player = players.find((p) => p.user_id === targetUserId);
+  // `not_found` would say «Spillet ble ikke funnet»; it is the player that is gone.
+  if (!player) redirect({ href: `${detailPath}?error=player_missing`, locale });
 
   // Kapasitetssjekk: tell aktive spillere i target-laget eksklusive denne.
   const { count: existingCount, error: countError } = await admin
@@ -464,6 +525,29 @@ export async function setPlayerTeam(
   if (failure) {
     console.error('[setPlayerTeam] team update failed', failure);
     redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
+
+  // Same guard as setPlayerFlight: the loser of a race, or a failed count,
+  // gets the team and the flight they had back.
+  const afterCount = await recountGroup(admin, gameId, 'team_number', targetTeam, 'setPlayerTeam');
+  if (afterCount === null || afterCount > teamSize) {
+    await revertRows(
+      admin,
+      gameId,
+      [
+        {
+          userId: targetUserId,
+          previous: { team_number: player.team_number, flight_number: player.flight_number },
+        },
+      ],
+      'setPlayerTeam',
+      { targetTeam },
+    );
+    expireFlightCaches(gameId);
+    redirect({
+      href: `${detailPath}?error=${afterCount === null ? 'db_roster' : 'team_full'}`,
+      locale,
+    });
   }
 
   expireFlightCaches(gameId);

@@ -3746,6 +3746,7 @@
     "game": {
       "errors": {
         "not_found": "Game not found.",
+        "player_missing": "The player is no longer in the game.",
         "not_draft": "Only draft games can be started.",
         "not_scheduled": "The game cannot be started (it is not scheduled).",
         "not_active": "The game is not active and cannot be ended.",
