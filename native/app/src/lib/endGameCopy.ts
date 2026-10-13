@@ -23,13 +23,10 @@ import type { EndRoundFailure } from '../data/endGame';
 // og en copy-modul skal ikke koble på noe av det. `import type` forsvinner i
 // kompileringen, så koden her er fortsatt ren tekst.
 import type { ReminderFailure } from '../data/remind';
-import { OFFLINE_NOTE } from './rosterCopy';
+import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { fillCopy } from './sideTournamentCopy';
 import { WEB_LINK_TEXT } from './webLink';
 import type { FinishSlot } from './endGamePlan';
-
-/** Fallbacken når serveren svarte med noe vi ikke har en egen setning for. */
-const GENERIC_DB = 'Noe gikk galt mot serveren.';
 
 /** «Ola, Kari og Per» — navn i en setning, ikke en punktliste. */
 function nameList(names: readonly string[]): string {
@@ -44,12 +41,10 @@ function nameList(names: readonly string[]): string {
  * @param reason koden fra `finishRound`.
  * @param names navnene bak `blockedUserIds` — skjermen slår dem opp i
  *   rosteret først, for datalaget kjenner bare id-er.
- * @param message serverens egen tekst, brukt kun som fallback ved `db`.
  */
 export function describeEndRoundFailure(
   reason: EndRoundFailure,
   names: readonly string[] = [],
-  message?: string,
 ): string {
   const who = nameList(names);
   switch (reason) {
@@ -110,7 +105,7 @@ export function describeEndRoundFailure(
     case 'no-rows':
       return 'Ingenting ble endret. Du har kanskje ikke tilgang, eller noen andre rakk det først.';
     case 'db':
-      return message ?? GENERIC_DB;
+      return GENERIC_DB;
   }
 }
 

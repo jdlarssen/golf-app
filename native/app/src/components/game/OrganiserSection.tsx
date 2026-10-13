@@ -179,7 +179,7 @@ export function OrganiserSection({
         setNotice(
           result.ok
             ? (successNotice ?? null)
-            : describeRosterFailure(result.reason, result.message),
+            : describeRosterFailure(result.reason),
         );
       } catch {
         setNotice(describeRosterFailure('db'));

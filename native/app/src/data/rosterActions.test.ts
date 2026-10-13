@@ -404,6 +404,20 @@ describe('rosterActions', () => {
   // ───────────────────────────────────────────────────────────────────────────
 
   describe('removePlayerFromGame', () => {
+    it('logger serverens tekst ved en rå DB-feil, og bærer den bare som diagnostikk (#2228)', async () => {
+      const { queryStub, routeFrom } = mocks();
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      routeFrom({ games: [queryStub({ data: null, error: { message: 'boom' } })] });
+
+      expect(await actions().removePlayerFromGame(GAME, MATE)).toEqual({
+        ok: false,
+        reason: 'db',
+        message: 'boom',
+      });
+      expect(logged).toHaveBeenCalledWith('[rosterActions] db', 'boom');
+      logged.mockRestore();
+    });
+
     it('sletter raden før start', async () => {
       const { queryStub, routeFrom, stepArgs } = mocks();
       const del = queryStub(ONE_ROW);

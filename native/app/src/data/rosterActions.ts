@@ -124,14 +124,21 @@ const done = (alreadyDone: boolean): RosterActionResult => ({
   alreadyDone,
 });
 
+/**
+ * `message` er serverens rå tekst. Den logges her, der den oppstår, og bæres
+ * videre bare som diagnostikk: copyen viser den aldri (#2228).
+ */
 const failed = (
   reason: RosterActionFailure,
   message?: string,
-): RosterActionResult => ({
-  ok: false,
-  reason,
-  ...(message === undefined ? {} : { message }),
-});
+): RosterActionResult => {
+  if (message !== undefined) console.error(`[rosterActions] ${reason}`, message);
+  return {
+    ok: false,
+    reason,
+    ...(message === undefined ? {} : { message }),
+  };
+};
 
 // -----------------------------------------------------------------------------
 // Felles porter

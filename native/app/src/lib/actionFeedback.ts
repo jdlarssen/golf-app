@@ -15,7 +15,7 @@ import type {
 // fortsatt ren tekst.
 import type { ActionResult } from '../data/playerActions';
 import type { SubmitCardFailure } from '../data/submitCard';
-import { OFFLINE_NOTE } from './rosterCopy';
+import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
 /**
@@ -39,7 +39,7 @@ export function describeFailure(result: ActionResult): string | null {
     case 'no-rows':
       return 'Ingenting ble endret. Du har kanskje ikke tilgang, eller noen andre rakk det først.';
     case 'db':
-      return 'Noe gikk galt mot serveren.';
+      return GENERIC_DB;
   }
 }
 

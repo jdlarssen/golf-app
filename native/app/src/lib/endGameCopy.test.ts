@@ -125,9 +125,16 @@ describe('describeEndRoundFailure', () => {
     );
   });
 
-  it('viser serverens egen melding ved en rå DB-feil, og en rolig linje uten', () => {
-    expect(describeEndRoundFailure('db', [], 'connection reset')).toBe(
-      'connection reset',
+  it('viser aldri serverens tekst ved en rå DB-feil (#2228)', () => {
+    // Den brede signaturen etterligner et kallsted som prøver å sende rå tekst
+    // inn igjen. Den logges der den oppstår, og vises aldri.
+    const wide = describeEndRoundFailure as (
+      r: EndRoundFailure,
+      n?: readonly string[],
+      m?: string,
+    ) => string;
+    expect(wide('db', [], 'TypeError: Network request failed')).toBe(
+      'Noe gikk galt mot serveren.',
     );
     expect(describeEndRoundFailure('db')).toBe('Noe gikk galt mot serveren.');
   });

@@ -165,16 +165,23 @@ const done = (alreadyFinished: boolean): EndRoundResult => ({
   alreadyFinished,
 });
 
+/**
+ * `message` er serverens rå tekst. Den logges her, der den oppstår, og bæres
+ * videre bare som diagnostikk: copyen viser den aldri (#2228).
+ */
 const failed = (
   reason: EndRoundFailure,
   message?: string,
   blockedUserIds?: string[],
-): EndRoundResult => ({
-  ok: false,
-  reason,
-  ...(blockedUserIds === undefined ? {} : { blockedUserIds }),
-  ...(message === undefined ? {} : { message }),
-});
+): EndRoundResult => {
+  if (message !== undefined) console.error(`[endGame] ${reason}`, message);
+  return {
+    ok: false,
+    reason,
+    ...(blockedUserIds === undefined ? {} : { blockedUserIds }),
+    ...(message === undefined ? {} : { message }),
+  };
+};
 
 // -----------------------------------------------------------------------------
 // Lesing
