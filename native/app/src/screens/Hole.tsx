@@ -503,56 +503,56 @@ function HoleView({
 
   // Én vei inn i den lokale basen for alle trykkene på hullet (#2228). Feiler
   // skrivingen, sier en linje fra i stedet for at trykket forsvinner stille.
-  // Lesingen og drainen kjøres bare når scoren faktisk ble lagret, og kallet
-  // avviser aldri, så `void` fra skinna er trygt.
-  const saveLocally = async (input: Parameters<typeof writeScore>[0]) => {
+  // Lesingen og drainen kjøres bare når scoren faktisk ble lagret. Kallet
+  // avviser aldri og svarer om det lagret, så skinna kan rulle tilbake.
+  const saveLocally = async (input: Parameters<typeof writeScore>[0]): Promise<boolean> => {
     try {
       await writeScore(input);
     } catch (err: unknown) {
       console.error('[Hole] lagring feilet', err);
       setSaveFailed(true);
-      return;
+      return false;
     }
     setSaveFailed(false);
     await reload();
     void drainQueue('tasting');
+    return true;
   };
 
   // Alle slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
   // writeScore beholder dem), så les tilbake og drain køen.
-  const writeStrokes = async (playerUserId: string, strokes: number | null) => {
-    await saveLocally({
+  const writeStrokes = (playerUserId: string, strokes: number | null): Promise<boolean> =>
+    saveLocally({
       gameId,
       userId: playerUserId,
       holeNumber,
       strokes,
       enteredBy: userId,
     });
-  };
 
   // Skinna skriver via setet. Et låst sete avvises også her, ikke bare i
   // knappene: et ark som sto åpent, eller et sent trykk, skal ikke nå fram.
-  const setSeatScore = async (seatId: string, strokes: number) => {
+  const setSeatScore = async (seatId: string, strokes: number): Promise<boolean> => {
     const seat = seatOf(seatId);
-    if (!seat || seat.locked) return;
-    await writeStrokes(seat.owner, strokes);
+    if (!seat || seat.locked) return false;
+    return writeStrokes(seat.owner, strokes);
   };
 
   // «Angre» og X i arket: eksplisitt `null`, IKKE et utelatt felt. Utelatt
   // betyr «behold» i writeScore-mergen, og da ville et feiltastet slag blitt
   // stående.
-  const clearSeatScore = async (seatId: string) => {
+  const clearSeatScore = async (seatId: string): Promise<boolean> => {
     const seat = seatOf(seatId);
-    if (!seat || seat.locked) return;
-    await writeStrokes(seat.owner, null);
+    if (!seat || seat.locked) return false;
+    return writeStrokes(seat.owner, null);
   };
 
   // Putter skrives alene. Å sende `strokes` med ville vasket ut slaget som
   // står der, fordi `writeScore` merger (#939).
-  const setSeatPutts = async (seatId: string, next: number) => {
+  const setSeatPutts = async (seatId: string, next: number): Promise<boolean> => {
     const seat = seatOf(seatId);
-    if (!seat || seat.locked) return;
-    await saveLocally({
+    if (!seat || seat.locked) return false;
+    return saveLocally({
       gameId,
       userId: seat.owner,
       holeNumber,
