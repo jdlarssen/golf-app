@@ -6,8 +6,9 @@
 -- pending row as long as the result is their own accepted row. It never pinned
 -- league_id, so a pending invite could be moved into any league and accepted
 -- in one PATCH. 0208's league branch on the game_players guard would widen
--- that, so 0208 also adds guard_league_players_self_update: only the service
--- role and global admins may change league_id or user_id.
+-- that, so 0208 also adds guard_league_players_self_update: only the server
+-- (no JWT, auth.uid() is null) and global admins may change league_id or
+-- user_id.
 --
 --   1  a player moves their own pending row into another league     → 42501
 --   1b …and the row is still in its league and still pending
@@ -15,7 +16,7 @@
 --   2b …also when the payload repeats the unchanged league_id/user_id → 1 row
 --   3  a club admin moves a row between two leagues of their club   → 42501
 --   4  a global admin moves a row                                   → 1 row
---   5  the service role moves a row                                 → 1 row
+--   5  no JWT at all (the server: auth.uid() is null) moves a row   → 1 row
 --   6  the guard is not client-executable
 --
 -- Red without the guard: 1, 1b and 3 (RLS lets both moves through).
@@ -148,7 +149,7 @@ select throws_like(
 rollback to savepoint case_3;
 
 -- ═════════════════════════════════════════════════════════════════════════════
--- A global admin and the service role can
+-- A global admin and the server (no JWT) can
 -- ═════════════════════════════════════════════════════════════════════════════
 
 -- 4
@@ -161,14 +162,15 @@ select is(
   'case 4: a global admin CAN move a row');
 rollback to savepoint case_4;
 
--- 5
+-- 5 ─ as_service() clears the JWT claims, so auth.uid() is null: the path
+--     the service-role client takes.
 savepoint case_5;
 select torny_rls.as_service();
 select is(
   torny_rls.lp_rows($$ update public.league_players set league_id = torny_rls.lp_league_p2()
                         where league_id = torny_rls.lp_league_p1() and user_id = torny_rls.lp_pending() $$),
   1,
-  'case 5: the service role CAN move a row');
+  'case 5: a caller with no JWT (the server) CAN move a row');
 rollback to savepoint case_5;
 
 -- 6

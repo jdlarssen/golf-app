@@ -25,8 +25,11 @@
 --     11 flight created by a non-member, member B                 → 42501
 --     12 the league is not active (finished), member B            → 42501
 --     13 member A's own game without a league round, member B     → 42501
+--     14 member A's flight, a member who has not accepted yet       → ok
+--        (locks today's rule: a pending row counts as membership, as the
+--        not_member check in startLeagueRoundFlight does)
 --
--- Red without 0208: cases 1, 5 and 8 raise 42501, because the old trigger
+-- Red without 0208: cases 1, 5, 8 and 14 raise 42501, because the old trigger
 -- only asks is_invite_eligible and none of those pairs is eligible. The rest
 -- pass before and after 0208; they keep the new branches from growing. The
 -- negative cases match the trigger's own message («not invite-eligible»), so
@@ -48,7 +51,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(29);
 
 \ir fixtures/rls_helpers.psql
 
@@ -65,6 +68,7 @@ create or replace function torny_rls.le_b()           returns uuid language sql 
 create or replace function torny_rls.le_out()         returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-256700000013'::uuid $$;
 create or replace function torny_rls.le_other()       returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-256700000014'::uuid $$;
 create or replace function torny_rls.le_x()           returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-256700000015'::uuid $$;
+create or replace function torny_rls.le_pending()     returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-256700000016'::uuid $$;
 
 create or replace function torny_rls.ce_club()        returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-256700000021'::uuid $$;
 create or replace function torny_rls.ce_cup_a()       returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-256700000022'::uuid $$;
@@ -97,7 +101,7 @@ select uid, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'auth
   from unnest(array[
     torny_rls.ce_org(), torny_rls.ce_part(), torny_rls.ce_nonpart(), torny_rls.ce_part_b(),
     torny_rls.ce_club_admin(), torny_rls.ce_club_member(), torny_rls.ce_friend(),
-    torny_rls.le_a(), torny_rls.le_b(), torny_rls.le_out(), torny_rls.le_other(), torny_rls.le_x()
+    torny_rls.le_a(), torny_rls.le_b(), torny_rls.le_out(), torny_rls.le_other(), torny_rls.le_x(), torny_rls.le_pending()
   ]) as uid;
 
 -- The on_auth_user_created trigger has made the public.users rows; stamp the
@@ -114,7 +118,8 @@ insert into public.users (id, email, name, is_admin) values
   (torny_rls.le_b(),           'rls-le-b@example.test',           'LE Member B',    false),
   (torny_rls.le_out(),         'rls-le-out@example.test',         'LE Outsider',    false),
   (torny_rls.le_other(),       'rls-le-other@example.test',       'LE League B',    false),
-  (torny_rls.le_x(),           'rls-le-x@example.test',           'LE Non-member',  false)
+  (torny_rls.le_x(),           'rls-le-x@example.test',           'LE Non-member',  false),
+  (torny_rls.le_pending(),     'rls-le-pending@example.test',     'LE Pending',     false)
 on conflict (id) do update
   set email = excluded.email, name = excluded.name, is_admin = excluded.is_admin;
 
@@ -157,6 +162,7 @@ insert into public.league_rounds (id, league_id, sequence, label, opens_at, clos
 insert into public.league_players (league_id, user_id, accepted_at) values
   (torny_rls.le_league_a(), torny_rls.le_a(),     now()),
   (torny_rls.le_league_a(), torny_rls.le_b(),     now()),
+  (torny_rls.le_league_a(), torny_rls.le_pending(), null),
   (torny_rls.le_league_b(), torny_rls.le_other(), now());
 
 -- Flights as startLeagueRoundFlight makes them: inserted by the server
@@ -328,6 +334,18 @@ select throws_like(
   '%not invite-eligible%',
   'case 13: the league rule does not reach a member''s games outside the league');
 rollback to savepoint case_13;
+
+-- 14 ─ member A's flight, a member whose row is still pending (accepted_at
+--      null, as addLeaguePlayers writes it). Locks today's rule.
+select ok(not public.is_invite_eligible(torny_rls.le_a(), torny_rls.le_pending(), null),
+  'case 14 precondition: the pending member is not invite-eligible for member A');
+savepoint case_14;
+select torny_rls.as_user(torny_rls.le_a());
+select lives_ok(
+  $$ insert into public.game_players (game_id, user_id, accepted_at)
+     values (torny_rls.le_flight_a(), torny_rls.le_pending(), null) $$,
+  'case 14: a league member CAN put a member who has not accepted yet in a flight they started');
+rollback to savepoint case_14;
 
 -- The guard stays out of reach for clients (0137, #1121).
 select ok(not has_function_privilege('anon', 'public.guard_game_players_invite_eligibility()', 'EXECUTE')
