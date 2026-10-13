@@ -3486,7 +3486,18 @@
     "unknownSubmitter": "Unknown player",
     "markAsBuilt": "Mark as built",
     "markingBuilt": "Marking …",
-    "statusBuilt": "Built"
+    "statusBuilt": "Built",
+      "summaryLabel": "What was built?",
+      "summaryHint": "The player sees this line in the notification and the email.",
+      "linkLabel": "Link (optional)",
+      "linkHint": "Write the path in Tørny without a language, e.g. /spillformater.",
+      "errors": {
+        "summary_required": "Write a line about what was built.",
+        "summary_too_long": "The line can be at most {summaryMax} characters.",
+        "link_must_be_internal": "The link must be a path in Tørny. It starts with «/» and has no spaces.",
+        "link_too_long": "The link can be at most {linkMax} characters.",
+        "link_has_locale": "Leave the language out of the link: /spillformater, not /en/spillformater."
+      }
   },
   "courseForm": {
     "errors": {

@@ -7,12 +7,23 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import { Input } from '@/components/ui/Input';
+import { Banner } from '@/components/ui/Banner';
+import { first } from '@/lib/url/searchParams';
+import {
+  IDEA_BUILT_ERROR_CODES,
+  IDEA_BUILT_LINK_MAX,
+  IDEA_BUILT_SUMMARY_MAX,
+} from '@/lib/notifications/ideaBuiltInput';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { markIdeaBuilt } from './actions';
 
 // #984: Admin-only liste over innsendte ideer. «Marker som bygd» for å lukke
-// sløyfen og sende in-app-varsel til innsenderen.
+// sløyfen og sende in-app-varsel til innsenderen. #2568: admin skriver en linje
+// om hva som ble bygd og kan legge til en lenke; begge følger varselet.
+
+type SearchParams = Promise<{ error?: string | string[] }>;
 
 type IdeaRow = {
   id: string;
@@ -23,7 +34,11 @@ type IdeaRow = {
   users: { name: string | null } | null;
 };
 
-export default async function AdminIdeerPage() {
+export default async function AdminIdeerPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const supabase = await getServerClient();
   const { isAdmin, userId } = await getRoleContext(supabase);
 
@@ -31,6 +46,16 @@ export default async function AdminIdeerPage() {
 
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('adminIdeer');
+
+  // Only known codes show; anything else in ?error= never reaches t().
+  const rawError = first((await searchParams).error);
+  const errorMessage =
+    rawError && IDEA_BUILT_ERROR_CODES.has(rawError)
+      ? t(`errors.${rawError}` as Parameters<typeof t>[0], {
+          summaryMax: IDEA_BUILT_SUMMARY_MAX,
+          linkMax: IDEA_BUILT_LINK_MAX,
+        })
+      : null;
 
   // Admin sees all rows (RLS SELECT policy: user_id = auth.uid() OR is_admin()).
   const { data } = await supabase
@@ -47,6 +72,12 @@ export default async function AdminIdeerPage() {
     <AdminShell>
       <TopBar backHref="/admin" backLabel={t('backLabel')} />
       <PageHeader title={t('pageTitle')} subtitle={t('pageSubtitle')} />
+
+      {errorMessage && (
+        <div className="mb-4">
+          <Banner tone="error">{errorMessage}</Banner>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <Card>
@@ -77,24 +108,44 @@ export default async function AdminIdeerPage() {
                         {submitterName} · {date}
                       </p>
 
-                      {built ? (
+                      {built && (
                         <span className="inline-flex items-center rounded-full border border-success/40 bg-primary-soft px-2.5 py-0.5 font-sans text-[11px] font-medium text-success-text">
                           {t('statusBuilt')}
                           {builtDate ? ` · ${builtDate}` : ''}
                         </span>
-                      ) : (
-                        <form action={markIdeaBuilt}>
-                          <input type="hidden" name="id" value={row.id} />
-                          <SubmitButton
-                            variant="secondary"
-                            className="min-h-[36px] px-3 py-1 text-sm"
-                            pendingLabel={t('markingBuilt')}
-                          >
-                            {t('markAsBuilt')}
-                          </SubmitButton>
-                        </form>
                       )}
                     </div>
+
+                    {!built && (
+                      <form action={markIdeaBuilt} className="space-y-3 border-t border-border pt-3">
+                        <input type="hidden" name="id" value={row.id} />
+                        <Input
+                          id={`summary-${row.id}`}
+                          name="summary"
+                          type="text"
+                          label={t('summaryLabel')}
+                          hint={t('summaryHint')}
+                          required
+                          maxLength={IDEA_BUILT_SUMMARY_MAX}
+                        />
+                        <Input
+                          id={`link-${row.id}`}
+                          name="link"
+                          type="text"
+                          label={t('linkLabel')}
+                          hint={t('linkHint')}
+                          pattern="^/\S*$"
+                          maxLength={IDEA_BUILT_LINK_MAX}
+                        />
+                        <SubmitButton
+                          variant="secondary"
+                          className="text-sm"
+                          pendingLabel={t('markingBuilt')}
+                        >
+                          {t('markAsBuilt')}
+                        </SubmitButton>
+                      </form>
+                    )}
                   </div>
                 </Card>
               </li>
