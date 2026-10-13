@@ -814,19 +814,14 @@ export function buildInboxEntryView(
         destination,
       };
     }
-    case 'idea_built': {
-      // #2568: the admin's line about what was built, clipped like other free
-      // text. Rows from before #2568 have none and show just the time.
-      const { summary } = row.payload as NotificationPayload<'idea_built'>;
+    case 'idea_built':
       return {
         ...base,
         title: readTitle(row, t),
-        subtitle: summary ? [summary, time].join(SEP) : time,
-        subtitleIsFreeText: Boolean(summary),
+        ...ideaBuiltSubtitle(row, time),
         avatar: singleAvatar(row),
         destination,
       };
-    }
     default:
       return {
         ...base,
@@ -835,6 +830,20 @@ export function buildInboxEntryView(
         destination,
       };
   }
+}
+
+/**
+ * #2568: the admin's line about what was built, clipped like other free text.
+ * Rows from before #2568 have none and show just the time.
+ */
+function ideaBuiltSubtitle(
+  row: InboxRow,
+  time: string,
+): Pick<InboxEntryView, 'subtitle' | 'subtitleIsFreeText'> {
+  const { summary } = row.payload as NotificationPayload<'idea_built'>;
+  return summary
+    ? { subtitle: [summary, time].join(SEP), subtitleIsFreeText: true }
+    : { subtitle: time, subtitleIsFreeText: false };
 }
 
 /** Title + `{kontekst} · {tid}` (or `{detalj} · {tid}` for the detail kinds). */
