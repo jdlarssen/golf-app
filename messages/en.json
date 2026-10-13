@@ -3494,7 +3494,7 @@
     "errors": {
       "summary_required": "Write a line about what was built.",
       "summary_too_long": "The line can be at most {summaryMax} characters.",
-      "link_must_be_internal": "The link must be a path in Tørny. It starts with «/» and has no spaces.",
+      "link_must_be_internal": "The link must be a path in Tørny. It starts with \"/\" and has no spaces.",
       "link_too_long": "The link can be at most {linkMax} characters.",
       "link_has_locale": "Leave the language out of the link: /spillformater, not /en/spillformater."
     }
