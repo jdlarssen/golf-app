@@ -1,7 +1,7 @@
 // native/app/scripts/android-proof.test.js
 // #2560: leserne Android-beviset bygger på (`android-proof.py`).
 //
-// Beviset eier reglene, men det kan bare stole på det leserne gir det. Tre
+// Beviset eier reglene, men det kan bare stole på det leserne gir det. Fire
 // ting må stå:
 //
 //  1. **Manifest-leseren gir de riktige fakta** fra ekte `aapt2 dump xmltree`-
@@ -14,6 +14,10 @@
 //  3. **ELF-leseren gir minste `p_align` blant LOAD-segmentene** for 32- og
 //     64-bit, begge endianer, og exit 1 når fila ikke er ELF, mangler LOAD
 //     eller er avkortet.
+//  4. **`blocked` melder hver tillatelse fra `blockedPermissions` som står i
+//     manifestet**, og er fail-closed på begge sider: en app.json uten lista
+//     (eller med den tom) og et manifest som ikke ble lest, gir exit 1, aldri
+//     «ingen treff».
 //
 // Python kjøres som i beviset; `python3` fra PATH, som finnes på Mac-en og i
 // CI (ubuntu-latest).
@@ -131,6 +135,75 @@ describe('android-proof.py manifest', () => {
 
   it('stopper med exit 1 når det ikke finnes noe manifest', () => {
     expect(run(['manifest'], 'Error: noe annet enn xmltree\n').status).toBe(1);
+  });
+});
+
+describe('android-proof.py blocked', () => {
+  // Ekte form fra butikk-manifestet, med navnet byttet.
+  const POST_NOTIFICATIONS_LINE = [
+    '      E: uses-permission (line=18)',
+    '        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.POST_NOTIFICATIONS" (Raw: "android.permission.POST_NOTIFICATIONS")',
+  ].join('\n');
+  const withPostNotifications = STORE.replace(APP_LINE, `${POST_NOTIFICATIONS_LINE}\n${APP_LINE}`);
+
+  /** En midlertidig app.json; `android` blir `expo.android` som den står. */
+  function appJson(android) {
+    const dir = mkdtempSync(join(tmpdir(), 'android-proof-blocked-'));
+    const path = join(dir, 'app.json');
+    writeFileSync(path, JSON.stringify({ expo: { name: 'Tørny', android } }));
+    return path;
+  }
+
+  function blocked(xmltree, path) {
+    const { status, stdout, stderr } = run(['blocked', path], xmltree);
+    const lines = stdout.split('\n').filter(Boolean);
+    return {
+      status,
+      stderr,
+      count: lines.filter((l) => l.startsWith('blocked-count=')).map((l) => l.slice('blocked-count='.length)),
+      present: lines.filter((l) => l.startsWith('blocked-present=')).map((l) => l.slice('blocked-present='.length)),
+    };
+  }
+
+  const LIST = [
+    'android.permission.READ_CALENDAR',
+    'android.permission.POST_NOTIFICATIONS',
+    'android.permission.WRITE_CALENDAR',
+  ];
+
+  it('melder en blokkert tillatelse som står i manifestet, og antallet i lista', () => {
+    const r = blocked(withPostNotifications, appJson({ blockedPermissions: LIST }));
+    expect(r.status).toBe(0);
+    expect(r.count).toEqual(['3']);
+    expect(r.present).toEqual(['android.permission.POST_NOTIFICATIONS']);
+  });
+
+  it('gir ingen treff og exit 0 når ingen blokkert tillatelse står i manifestet', () => {
+    const r = blocked(STORE, appJson({ blockedPermissions: LIST }));
+    expect(r.status).toBe(0);
+    expect(r.count).toEqual(['3']);
+    expect(r.present).toEqual([]);
+  });
+
+  it.each([
+    ['uten blockedPermissions', () => appJson({ package: 'no.tornygolf.app' })],
+    ['med tom blockedPermissions', () => appJson({ blockedPermissions: [] })],
+    ['som ikke kan leses', () => join(tmpdir(), 'finnes-ikke', 'app.json')],
+  ])('stopper med exit 1 på en app.json %s', (_name, path) => {
+    const r = blocked(withPostNotifications, path());
+    expect(r.status).toBe(1);
+    expect(r.present).toEqual([]);
+  });
+
+  it.each([
+    ['tom stdin', ''],
+    ['stdin uten <manifest>', 'N: android=http://schemas.android.com/apk/res/android\n'],
+    ['stdin uten pakkenavn', withPostNotifications.replace(/^\s*A: package=.*$/m, '')],
+  ])('stopper med exit 1 og ingen treff på %s', (_name, xmltree) => {
+    const r = blocked(xmltree, appJson({ blockedPermissions: LIST }));
+    expect(r.status).toBe(1);
+    expect(r.present).toEqual([]);
+    expect(r.stderr).not.toBe('');
   });
 });
 

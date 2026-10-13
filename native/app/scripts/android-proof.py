@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # native/app/scripts/android-proof.py
-# #2560: to lesere for Android-beviset (`store-build-proof-android.sh`). Skriptet
+# #2560: lesere for Android-beviset (`store-build-proof-android.sh`). Skriptet
 # eier reglene (PASS/FAIL); denne fila leser bare fakta ut av AAB-en.
 #
 #   android-proof.py manifest < xmltree.txt
@@ -16,6 +16,15 @@
 #       tolkes, og en verdi leseren ikke kjenner, regnes aldri som usann. Mangler
 #       manifestet eller pakkenavnet, er formatet ukjent: exit 1, ingen fakta.
 #
+#   android-proof.py blocked <app.json> < xmltree.txt
+#       Samme manifest-dump som `manifest`. Leser `expo.android.blockedPermissions`
+#       fra app.json (lista har ett hjem, den kopieres aldri inn i beviset) og
+#       skriver først `blocked-count=<N>` (antall navn i lista), så én
+#       `blocked-present=<navn>` per blokkert tillatelse som likevel står i
+#       manifestet. Fail-closed på begge sider: en app.json som ikke kan leses,
+#       mangler lista eller har den tom, og et manifest uten `<manifest>` eller
+#       `package`, gir exit 1 og ingen `blocked-present=`-linje.
+#
 #   android-proof.py elf-align <fil.so>
 #       Minste `p_align` blant PT_LOAD-segmentene i en ELF-fil (32 eller 64 bit,
 #       begge endianer). Exit 1 når fila ikke er ELF, har ukjent klasse eller
@@ -23,6 +32,7 @@
 #
 # Bare standardbiblioteket: beviset skal kjøre med /usr/bin/python3 uten noe
 # installert.
+import json
 import re
 import struct
 import sys
@@ -84,16 +94,32 @@ def walk(element):
         yield from walk(child)
 
 
-def manifest_facts(text):
+def read_manifest(text):
+    """`<manifest>`-elementet, eller None (med feilen på stderr) når formatet er ukjent."""
     root = parse_xmltree(text)
     manifest = next((e for e in root['children'] if e['name'] == 'manifest'), None)
     if manifest is None:
         print('fant ikke <manifest> i aapt2-utdataene', file=sys.stderr)
+        return None
+    if not manifest['attrs'].get('package'):
+        print('fant ikke pakkenavnet i <manifest>: ukjent format fra aapt2', file=sys.stderr)
+        return None
+    return manifest
+
+
+def permissions(manifest):
+    return [
+        child['attrs'].get('name', '')
+        for child in manifest['children']
+        if child['name'] in ('uses-permission', 'uses-permission-sdk-23')
+    ]
+
+
+def manifest_facts(text):
+    manifest = read_manifest(text)
+    if manifest is None:
         return 1
     attrs = manifest['attrs']
-    if not attrs.get('package'):
-        print('fant ikke pakkenavnet i <manifest>: ukjent format fra aapt2', file=sys.stderr)
-        return 1
     print(f"package={attrs['package']}")
     print(f"versionCode={attrs.get('versionCode', '')}")
     print(f"versionName={attrs.get('versionName', '')}")
@@ -103,15 +129,38 @@ def manifest_facts(text):
     application = next((e for e in manifest['children'] if e['name'] == 'application'), {'attrs': {}})
     debuggable = application['attrs'].get('debuggable')
     print(f"debuggable={'ikke-satt' if debuggable is None else bool_state(debuggable)}")
-    for child in manifest['children']:
-        if child['name'] in ('uses-permission', 'uses-permission-sdk-23'):
-            print(f"permission={child['attrs'].get('name', '')}")
+    for name in permissions(manifest):
+        print(f"permission={name}")
     for element in walk(manifest):
         auto_verify = element['attrs'].get('autoVerify')
         if element['name'] == 'intent-filter' and auto_verify is not None and bool_state(auto_verify) != 'false':
             for data in walk(element):
                 if data['name'] == 'data' and 'host' in data['attrs']:
                     print(f"autoverify-host={data['attrs']['host']}")
+    return 0
+
+
+def blocked_permissions(app_json_path, text):
+    try:
+        with open(app_json_path, encoding='utf-8') as handle:
+            config = json.load(handle)
+    except (OSError, ValueError) as error:
+        print(f'kunne ikke lese {app_json_path}: {error}', file=sys.stderr)
+        return 1
+    expo = config.get('expo') if isinstance(config, dict) else None
+    android = expo.get('android') if isinstance(expo, dict) else None
+    blocked = android.get('blockedPermissions') if isinstance(android, dict) else None
+    if not isinstance(blocked, list) or not blocked:
+        print(f'{app_json_path}: expo.android.blockedPermissions mangler eller er tom', file=sys.stderr)
+        return 1
+    manifest = read_manifest(text)
+    if manifest is None:
+        return 1
+    print(f'blocked-count={len(blocked)}')
+    present = set(permissions(manifest))
+    for name in blocked:
+        if name in present:
+            print(f'blocked-present={name}')
     return 0
 
 
@@ -161,9 +210,15 @@ def _elf_min_load_align(path, data, is64, endian):
 def main(argv):
     if len(argv) == 2 and argv[1] == 'manifest':
         return manifest_facts(sys.stdin.read())
+    if len(argv) == 3 and argv[1] == 'blocked':
+        return blocked_permissions(argv[2], sys.stdin.read())
     if len(argv) == 3 and argv[1] == 'elf-align':
         return elf_align(argv[2])
-    print('Bruk: android-proof.py manifest < xmltree.txt | android-proof.py elf-align <fil.so>', file=sys.stderr)
+    print(
+        'Bruk: android-proof.py manifest < xmltree.txt | '
+        'android-proof.py blocked <app.json> < xmltree.txt | android-proof.py elf-align <fil.so>',
+        file=sys.stderr,
+    )
     return 2
 
 
