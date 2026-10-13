@@ -5,6 +5,7 @@ import enMessages from '@/messages/en.json';
 import type { AppLocale } from '@/i18n/routing';
 import type { NotificationKind, NotificationPayload } from './types';
 import type { NotificationTranslator } from './cardContent';
+import { NOTIFICATION_EMOJI } from './emoji';
 import {
   buildInboxEntryView,
   buildInboxSections,
@@ -575,6 +576,20 @@ describe('buildInboxEntryView', () => {
     expect(game.subtitle).toBe('Lørdagsrunden · for 2 min siden');
     const idea = view([row('idea_built', { submission_id: GAME }, { at: new Date(NOW - 120_000).toISOString() })], 'today');
     expect(idea.subtitle).toBe('for 2 min siden');
+  });
+
+  it('#2568: idea_built shows the admin\'s line and goes to the link', () => {
+    const at = { at: new Date(NOW - 120_000).toISOString() };
+    const plain = view([row('idea_built', { submission_id: GAME }, at)], 'today');
+    const idea = view(
+      [row('idea_built', { submission_id: GAME, summary: 'Ryder Cup-oppsettet er klart', link: '/cup' }, at)],
+      'today',
+    );
+    expect(idea.subtitle).toBe('Ryder Cup-oppsettet er klart · for 2 min siden');
+    expect(idea.subtitleIsFreeText).toBe(true);
+    expect(idea.destination).toBe('/cup');
+    expect(idea.title).toBe(plain.title);
+    expect(idea.avatar).toEqual({ kind: 'emoji', emoji: NOTIFICATION_EMOJI.idea_built });
   });
 });
 

@@ -156,9 +156,9 @@ export function notificationDestination(n: DeeplinkInput): string | null {
       // Lander på Statistikk-fanen i historikk der badge-veggen bor (#947).
       return '/profile/historikk';
     case 'idea_built':
-      // «Vi bygde det du foreslo» har ingen egen side — beskjeden leses i
-      // kortet (samme mønster som registration_rejected).
-      return null;
+      // Lenka admin valgte da idéen ble markert som bygd (#2568). Uten lenke
+      // (og for rader fra før #2568) har beskjeden ingen egen side.
+      return (n.payload as NotificationPayload<'idea_built'>).link ?? null;
     case 'payment_reminder': {
       // Spill-hjem der PaymentInfo viser beløp + betalingsmåte (#1049).
       // `remindUnpaidPlayers` er ikke status-gatet — purringen kan sendes
