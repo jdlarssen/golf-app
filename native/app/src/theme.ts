@@ -35,6 +35,12 @@ export type ThemeColors = {
    */
   onAccent: string;
   danger: string;
+  /**
+   * Fyllet og rammen bak en feillinje (#2228, banneret når et slag ikke ble
+   * lagret). Designlerretet har dem uten webb-token; verdiene er lerretets.
+   */
+  dangerSoft: string;
+  dangerBorder: string;
   /** Aktiv rad i flighten på hullsiden (#2252), webbens `--primary-soft`. */
   primarySoft: string;
   /**
@@ -136,6 +142,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accent: '#C9A961',
     onAccent: '#1B4332',
     danger: '#B8463E',
+    dangerSoft: '#FBF4F3',
+    dangerBorder: 'rgba(184, 70, 62, 0.28)',
     primarySoft: '#E8EFE8',
     scoreUnderFg: '#2F5A3C',
     scoreParFg: '#5C5347',
@@ -170,6 +178,8 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     accent: '#D4B870',
     onAccent: '#14201A',
     danger: '#D67268',
+    dangerSoft: '#242720',
+    dangerBorder: 'rgba(214, 114, 104, 0.32)',
     primarySoft: '#1F2C24',
     scoreUnderFg: '#7DAA8A',
     scoreParFg: '#9A9180',
@@ -400,6 +410,10 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   accent: '#000000',
   onAccent: '#FFFFFF',
   danger: '#B8463E',
+  // Lagringsbanneret (#2228). Sollys har ingen tonede flater: hvitt fyll og
+  // hel rød ramme, så banneret står med full kontrast.
+  dangerSoft: '#FFFFFF',
+  dangerBorder: '#B8463E',
   primarySoft: '#FFFFFF',
   scoreUnderFg: '#2F5A3C',
   scoreParFg: '#5C5347',
