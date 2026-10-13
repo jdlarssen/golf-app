@@ -106,6 +106,10 @@ let adminExistingPlayersError: unknown = null;
 // på `eq` og radene bærer stempelet.
 let adminPendingLineupRows: { slot_count: number; revealed_at: string | null }[] = [];
 let adminPendingLineupError: unknown = null;
+// #2567: the matches must be written through the request client, so RLS and
+// the triggers check every row. Any insert through the admin client lands
+// here, and the #2567 test asserts it never happens.
+const adminInsertSpy = vi.fn();
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: (table: string) => {
@@ -117,6 +121,14 @@ vi.mock('@/lib/supabase/admin', () => ({
               error: adminExistingGamesError,
             }),
           }),
+          insert: (rows: unknown) => {
+            adminInsertSpy(table, rows);
+            return {
+              select: () => ({
+                single: async () => ({ data: { id: 'admin-game' }, error: null }),
+              }),
+            };
+          },
         };
       }
       if (table === 'cup_lineup_sessions') {
@@ -137,6 +149,10 @@ vi.mock('@/lib/supabase/admin', () => ({
               error: adminExistingPlayersError,
             }),
           }),
+          insert: async (rows: unknown) => {
+            adminInsertSpy(table, rows);
+            return { data: null, error: null };
+          },
         };
       }
       if (table === 'users') {
@@ -260,6 +276,7 @@ beforeEach(() => {
   adminExistingGamesError = null;
   adminExistingPlayerRows = [];
   adminExistingPlayersError = null;
+  adminInsertSpy.mockReset();
 });
 
 describe('createCupMatchesFromPlan — authz', () => {
@@ -521,6 +538,45 @@ describe('createCupMatchesFromPlan — happy path', () => {
       .filter((c) => c.table === 'game_players' && c.method === 'insert')
       .flatMap((c) => c.args[0] as Array<Record<string, unknown>>);
     expect(allPlayers.find((r) => r.user_id === 'A3')?.tee_gender).toBe('ladies');
+  });
+});
+
+describe('createCupMatchesFromPlan — writes on the organiser\'s own client (#2567)', () => {
+  // A guard, not the red proof: the bug lived in the database trigger and is
+  // shown red/green in supabase/tests/game_players_cup_league_eligibility_test.sql.
+  // This locks the choice that the fix keeps every write on the request
+  // client, so a later "fix" that switches to the admin client goes red here.
+  it('personlig cup, ikke-admin arrangør: games og game_players går via request-klienten, ikke admin-klienten (#2567)', async () => {
+    adminCupCreatedBy = 'user-1'; // ikke-admin passerer som cupens egen skaper
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null },
+      { data: draftCup, error: null },
+      planResult(),
+      teeResult(),
+      { data: { id: 'game-1' }, error: null },
+      { data: null, error: null },
+      { data: { id: 'game-2' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('user-1');
+
+    const { createCupMatchesFromPlan } = await import('./actions');
+    await expect(createCupMatchesFromPlan(baseInput())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/admin/cup/cup-1?status=matches_generated');
+
+    expect(
+      supabaseMock.__fromCalls.filter(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toHaveLength(2);
+    expect(
+      supabaseMock.__fromCalls.filter(
+        (c) => c.table === 'game_players' && c.method === 'insert',
+      ),
+    ).toHaveLength(2);
+    expect(adminInsertSpy).not.toHaveBeenCalled();
   });
 });
 
