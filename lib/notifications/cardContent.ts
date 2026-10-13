@@ -352,13 +352,15 @@ export function buildNotificationText(
         }),
       };
     }
-    case 'idea_built':
-      // Generisk delight-kort: «Vi bygde det du foreslo». Payload har bare
-      // submission_id (sporbarhet), ikke noe tekst å vise.
+    case 'idea_built': {
+      // «Vi bygde det du foreslo», med admins linje om hva som ble bygget
+      // (#2568). Rader fra før #2568 har ingen linje og får den faste teksten.
+      const p = payload as NotificationPayload<'idea_built'>;
       return {
         title: t('kinds.ideaBuilt.title'),
-        detail: t('kinds.ideaBuilt.detail'),
+        detail: p.summary ?? t('kinds.ideaBuilt.detail'),
       };
+    }
     case 'payment_reminder': {
       const p = payload as NotificationPayload<'payment_reminder'>;
       return {

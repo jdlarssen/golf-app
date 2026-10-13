@@ -173,6 +173,17 @@ describe('notificationDestination', () => {
     ).toBeNull();
   });
 
+  it('#2568: idea_built goes to the link the admin chose, nowhere without one', () => {
+    expect(
+      notificationDestination(
+        n('idea_built', { submission_id: GAME, summary: 'Ryder Cup', link: '/cup' }),
+      ),
+    ).toBe('/cup');
+    expect(
+      notificationDestination(n('idea_built', { submission_id: GAME, summary: 'Ryder Cup' })),
+    ).toBeNull();
+  });
+
   it('returns null for notifications with no real destination (would self-link to /innboks)', () => {
     // product_update without a link used to fall back to /innboks (self).
     expect(

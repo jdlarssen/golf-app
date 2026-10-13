@@ -814,6 +814,19 @@ export function buildInboxEntryView(
         destination,
       };
     }
+    case 'idea_built': {
+      // #2568: the admin's line about what was built, clipped like other free
+      // text. Rows from before #2568 have none and show just the time.
+      const { summary } = row.payload as NotificationPayload<'idea_built'>;
+      return {
+        ...base,
+        title: readTitle(row, t),
+        subtitle: summary ? [summary, time].join(SEP) : time,
+        subtitleIsFreeText: Boolean(summary),
+        avatar: singleAvatar(row),
+        destination,
+      };
+    }
     default:
       return {
         ...base,

@@ -41,6 +41,19 @@ describe('buildNotificationText', () => {
     expect(out).toEqual({ title: 'Nyhet', detail: 'Tekst' });
   });
 
+  it('#2568: idea_built shows what was built, the stock line for old rows', () => {
+    expect(
+      buildNotificationText(
+        'idea_built',
+        { submission_id: 's', summary: 'Ryder Cup-oppsettet er klart' } as NotificationPayload,
+        t,
+      ),
+    ).toEqual({ title: 'kinds.ideaBuilt.title', detail: 'Ryder Cup-oppsettet er klart' });
+    expect(
+      buildNotificationText('idea_built', { submission_id: 's' } as NotificationPayload, t).detail,
+    ).toBe('kinds.ideaBuilt.detail');
+  });
+
   it('scorecard_approved uten navn velger fallback etter rolle (#1598)', () => {
     const detailFor = (payload: Record<string, unknown>) =>
       buildNotificationText(
