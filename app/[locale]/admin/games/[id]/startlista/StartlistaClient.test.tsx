@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { StartlistaClient, type StartlistaPlayer } from './StartlistaClient';
 
+const { setPlayerFlightMock } = vi.hoisted(() => ({ setPlayerFlightMock: vi.fn() }));
 vi.mock('../flightActions', () => ({
-  setPlayerFlight: vi.fn(),
+  setPlayerFlight: (...args: unknown[]) => setPlayerFlightMock(...args),
   suggestFlightAssignment: vi.fn(),
 }));
 
@@ -19,35 +20,46 @@ function player(id: string, name: string, flight: number | null): StartlistaPlay
   };
 }
 
-// Flight 1 is full and holds Marte, flight 2 has room, Kristian has no flight.
+// Flight 1 is full and holds Marte, flight 2 has only Per, Kristian has no flight.
 const PLAYERS = [
   player('m', 'Marte Lie', 1),
   player('j', 'Jonas Berg', 1),
   player('a', 'Anders Moe', 1),
   player('s', 'Sigrid Aas', 1),
-  player('p', 'Per Dahl', 2),
+  player('p', 'Per Holm', 2),
   player('k', 'Kristian Holm', null),
 ];
 
-/** Type C (#2289): selecting gives the right targets, and Esc lets go. */
+const chip = (c: HTMLElement, id: string) =>
+  c.querySelector<HTMLButtonElement>(`button[data-user-id="${id}"]`)!;
+const targets = (c: HTMLElement) =>
+  [...c.querySelectorAll<HTMLButtonElement>('button[data-target-flight]')].map((b) =>
+    Number(b.dataset.targetFlight),
+  );
+
+/** Type C (#2289): a selection gives the right targets, Esc lets go, a target moves. */
 describe('StartlistaClient', () => {
-  it('trykk på en brikke velger den og viser bare flighter med plass som mål; Esc slipper', () => {
-    render(<StartlistaClient gameId="g" players={PLAYERS} focus={null} headingId="h" />);
+  it('velg, se målene, slipp med Esc, og flytt med et trykk på et mål', async () => {
+    const { container } = render(
+      <StartlistaClient gameId="g" players={PLAYERS} focus={null} headingId="h" />,
+    );
 
-    const chip = screen.getByRole('button', { name: 'Marte Lie, HCP 10,0' });
-    expect(chip).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(chip);
-    expect(chip).toHaveAttribute('aria-pressed', 'true');
-
-    // Own (and full) flight 1 is no target; flight 2 and the empty extra flight are.
-    const targets = screen
-      .getAllByRole('button', { name: /^Flytt Marte Lie til flight/ })
-      .map((b) => b.getAttribute('aria-label'));
-    expect(targets).toEqual(['Flytt Marte Lie til flight 2', 'Flytt Marte Lie til flight 3']);
-    expect(within(screen.getByRole('status')).getByText(/Marte er valgt/)).toBeInTheDocument();
+    // Per (flight 2, not full): his own flight and the full flight 1 are no targets.
+    fireEvent.click(chip(container, 'p'));
+    expect(chip(container, 'p')).toHaveAttribute('aria-pressed', 'true');
+    expect(targets(container)).toEqual([3]);
+    expect(screen.getByRole('status').textContent).not.toBe('');
 
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(chip).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.queryAllByRole('button', { name: /^Flytt Marte Lie til flight/ })).toHaveLength(0);
+    expect(chip(container, 'p')).toHaveAttribute('aria-pressed', 'false');
+    expect(targets(container)).toEqual([]);
+
+    // Marte (full flight 1): flight 2 and the empty extra flight 3 are targets.
+    fireEvent.click(chip(container, 'm'));
+    expect(targets(container)).toEqual([2, 3]);
+    await act(async () => {
+      fireEvent.click(container.querySelector('button[data-target-flight="2"]')!);
+    });
+    expect(setPlayerFlightMock).toHaveBeenCalledWith('g', 'm', 2);
   });
 });
