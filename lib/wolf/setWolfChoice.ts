@@ -3,6 +3,7 @@
 import { updateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
+import { validateWolfChoice, type WolfChoiceValidationError } from '@/lib/wolf/validateWolfChoice';
 
 export type SetWolfChoiceResult =
   | { ok: true }
@@ -10,11 +11,7 @@ export type SetWolfChoiceResult =
 
 export type SetWolfChoiceError =
   | 'not_authenticated'
-  | 'invalid_choice'
-  | 'partner_required'
-  | 'partner_must_be_null'
-  | 'partner_cannot_be_wolf'
-  | 'invalid_hole'
+  | WolfChoiceValidationError
   | 'rls_denied';
 
 export interface SetWolfChoiceInput {
@@ -32,11 +29,9 @@ export interface SetWolfChoiceInput {
  * matcher `auth.uid()` (eller admin override). Vi sjekker også klient-side
  * her for å gi en tydelig feilkode istedenfor en cryptic Postgres-RLS-feil.
  *
- * Forretningsregler:
- *  - choice 'partner' krever partner_user_id
- *  - choice 'lone' eller 'blind' krever partner_user_id = null
- *  - partner_user_id !== wolf_user_id (selv-velgelse forbudt)
- *  - hole_number 1..18
+ * Forretningsreglene (hull 1..18, gyldig valg, partner bare ved 'partner',
+ * ikke seg selv) bor i `validateWolfChoice`, delt med appen (#2228). De
+ * sjekkes før `getUser`, som før.
  *
  * Etter upsert: `updateTag` utløper `game-${gameId}`-tagen med én gang, så alle
  * cache-konsumenter (getWolfChoices, getGameWithPlayers, ev. scoring) venter på
@@ -49,25 +44,8 @@ export async function setWolfChoice(
 ): Promise<SetWolfChoiceResult> {
   const { gameId, holeNumber, wolfUserId, choice, partnerUserId } = input;
 
-  if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
-    return { ok: false, error: 'invalid_hole' };
-  }
-
-  if (choice !== 'partner' && choice !== 'lone' && choice !== 'blind') {
-    return { ok: false, error: 'invalid_choice' };
-  }
-
-  if (choice === 'partner' && !partnerUserId) {
-    return { ok: false, error: 'partner_required' };
-  }
-
-  if (choice !== 'partner' && partnerUserId !== null) {
-    return { ok: false, error: 'partner_must_be_null' };
-  }
-
-  if (partnerUserId && partnerUserId === wolfUserId) {
-    return { ok: false, error: 'partner_cannot_be_wolf' };
-  }
+  const invalid = validateWolfChoice(input);
+  if (invalid) return { ok: false, error: invalid };
 
   const supabase = await getServerClient();
   const {
