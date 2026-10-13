@@ -96,4 +96,16 @@ describe('AllowanceField — toggle state machine', () => {
     expect(container.querySelector('input[name="texas_team_handicap_pct"]')).toBeTruthy();
     expect(container.querySelector('input[name="hcp_allowance_pct"]')).toBeNull();
   });
+
+  it('maxPct styrer både feltets max og hva onChange godtar (#2566)', () => {
+    const { container } = render(<AllowanceField {...baseProps} initialPct={40} maxPct={50} />);
+    const input = screen.getByLabelText('Handicap-andel (%)') as HTMLInputElement;
+    const hidden = () => (container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement).value;
+    expect(input.max).toBe('50');
+
+    fireEvent.change(input, { target: { value: '60' } });
+    expect(hidden()).toBe('40');
+    fireEvent.change(input, { target: { value: '50' } });
+    expect(hidden()).toBe('50');
+  });
 });
