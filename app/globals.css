@@ -51,6 +51,13 @@
   --primary: #1b4332;      /* deep forest green */
   --primary-hover: #2d5a40;
   --primary-soft: #e8efe8; /* very pale green tint */
+  /* Startlista (#2289). The strip under a selected player is dark in both
+   * modes, so it cannot be --text (#1a2e1f by day, linen at night). The move
+   * target's fill and the «Uten flight» initials disc get their own tokens:
+   * the existing tokens with the same day value turn the wrong way at night. */
+  --select-strip: #1a2e1f;
+  --move-target: #f3f7f3;
+  --chip-unassigned-disc: #efe9da;
   --accent: #c9a961;       /* champagne gold — DEKOR: borders, hairlines, medaljer */
   --accent-deep: #b89446;  /* brand-lockup/tagline (bevisst bevart, jf. §Brand) */
   /* Meningsbærende gull-TEKST på lyse flater (#1374). Appen brukes i sollys, og
@@ -301,6 +308,12 @@
     --primary: #7eaa80;      /* sage — softer than daytime forest */
     --primary-hover: #94bf96;
     --primary-soft: #1f2c24;
+    /* Startlista (#2289): the strip is night --surface-strong (linen text
+     * 9,7:1), the target a faint green over --surface (sage text 5,35:1, the
+     * muted count 4,53:1), the disc carries linen initials (10,4:1). */
+    --select-strip: #1f3b2c;
+    --move-target: #1d2f25;
+    --chip-unassigned-disc: #243429;
     --accent: #d4b870;       /* dimmed champagne — keeps the glow */
     --accent-deep: #c9a961;
     /* Mørk modus er allerede lesbar (8,7:1) — tokenen peker på dagens accent
@@ -472,6 +485,9 @@
   --primary: #7eaa80;
   --primary-hover: #94bf96;
   --primary-soft: #1f2c24;
+  --select-strip: #1f3b2c; /* se media-blokken over */
+  --move-target: #1d2f25;
+  --chip-unassigned-disc: #243429;
   --accent: #d4b870;
   --accent-deep: #c9a961;
   /* Se media-query-blokka: samme verdi som --accent, mørk modus er uendret. */
@@ -590,6 +606,9 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
+  --color-select-strip: var(--select-strip);
+  --color-move-target: var(--move-target);
+  --color-chip-unassigned-disc: var(--chip-unassigned-disc);
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-accent-text: var(--accent-text);

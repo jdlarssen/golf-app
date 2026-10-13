@@ -325,7 +325,9 @@ export default async function GameHomePage({
         }
         statusBanner={statusBannerNode}
         startBlockNotice={
-          organiserStartBlock && <CreatorStartBlockNotice block={organiserStartBlock} />
+          organiserStartBlock && (
+            <CreatorStartBlockNotice block={organiserStartBlock} gameId={id} />
+          )
         }
       />
     );
@@ -1106,7 +1108,7 @@ export default async function GameHomePage({
             after tee-off. */}
         {creatorStartBlock && (
           <div className="mx-4 mt-4">
-            <CreatorStartBlockNotice block={creatorStartBlock} />
+            <CreatorStartBlockNotice block={creatorStartBlock} gameId={id} />
           </div>
         )}
 
