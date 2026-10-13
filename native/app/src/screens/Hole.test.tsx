@@ -392,7 +392,7 @@ describe('Hole', () => {
     expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · netto 3');
 
     // #2228: telefonen fikk ikke lagret det første trykket. En linje sier fra,
-    // og neste vellykkede skriving (putten under) fjerner den.
+    // og skinna står fast på meg, så neste trykk på tallet treffer riktig.
     const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
     (writeScore as jest.Mock).mockRejectedValueOnce(new Error('SQLITE_FULL'));
     await fireEvent.press(screen.getByTestId('rail-option-4'));
@@ -407,6 +407,15 @@ describe('Hole', () => {
       holeNumber: 1,
       strokes: 4,
       enteredBy: 'me',
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
+    });
+
+    // Andre trykk blir lagret: linja er borte.
+    await fireEvent.press(screen.getByTestId('rail-option-4'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('hole-save-error')).toBeNull();
     });
     // Videre til makkeren. Den leverte hoppes over.
     await waitFor(() => {
@@ -432,9 +441,6 @@ describe('Hole', () => {
       holeNumber: 1,
       putts: 2,
       enteredBy: 'me',
-    });
-    await waitFor(() => {
-      expect(screen.queryByTestId('hole-save-error')).toBeNull();
     });
   });
 

@@ -13,9 +13,10 @@ function seat(id: string, over: Partial<ScoreRailSeat> = {}): ScoreRailSeat {
 type Props = { seats: ScoreRailSeat[]; puttsTracking?: boolean; mySeatId?: string | null };
 
 async function setup(initial: Props) {
-  const onSetScore = jest.fn(async () => undefined);
-  const onSetPutts = jest.fn(async () => undefined);
-  const clearScoreFor = jest.fn(async () => undefined);
+  // Hver skriving svarer om den ble lagret (#2228). Standard: ja.
+  const onSetScore = jest.fn(async () => true);
+  const onSetPutts = jest.fn(async () => true);
+  const clearScoreFor = jest.fn(async () => true);
   const hook = await renderHook(
     (props: Props) =>
       useScoreRail({
@@ -113,6 +114,29 @@ describe('useScoreRail', () => {
     await act(async () => result.current.pick(5));
     await act(async () => result.current.pickPutts(5));
     expect(result.current.activeSeatId).toBe('b');
+  });
+
+  // #2228: telefonen fikk ikke lagret trykket. Da skal skinna ikke late som
+  // scoren står der: tallet forsvinner, og skinna står fast på setet, så et nytt
+  // trykk på tallet treffer riktig spiller.
+  it('rolls back to the seat whose save failed, after a pick, a step and putts', async () => {
+    const { result, onSetScore } = await setup({ seats: [seat('me'), seat('b')] });
+    onSetScore.mockResolvedValueOnce(false);
+    await act(async () => result.current.pick(4));
+    expect(result.current.activeSeatId).toBe('me');
+    expect(result.current.activeScore).toBeNull();
+
+    onSetScore.mockResolvedValueOnce(false);
+    await act(async () => result.current.step(1));
+    expect(onSetScore).toHaveBeenLastCalledWith('me', 5);
+    expect(result.current.activeSeatId).toBe('me');
+    expect(result.current.activeScore).toBeNull();
+
+    const withPutts = await setup({ seats: [seat('me'), seat('b')], puttsTracking: true });
+    await act(async () => withPutts.result.current.pick(4));
+    withPutts.onSetPutts.mockResolvedValueOnce(false);
+    await act(async () => withPutts.result.current.pickPutts(2));
+    expect(withPutts.result.current.activeSeatId).toBe('me');
   });
 
   it('starts on the first seat when I have none on the hole', async () => {

@@ -62,9 +62,13 @@ export function useScoreRail({
   par: number;
   /** Formatet fanger putter, og bryteren er på. */
   puttsTracking: boolean;
-  onSetScore: (seatId: string, strokes: number) => Promise<void>;
-  onSetPutts: (seatId: string, putts: number) => Promise<void>;
-  clearScoreFor: (seatId: string) => Promise<void>;
+  /**
+   * Skrivingene svarer `true` når telefonen lagret, `false` ellers (#2228).
+   * Et `false` ruller skinna tilbake, se {@link rollBack}.
+   */
+  onSetScore: (seatId: string, strokes: number) => Promise<boolean>;
+  onSetPutts: (seatId: string, putts: number) => Promise<boolean>;
+  clearScoreFor: (seatId: string) => Promise<boolean>;
 }): ScoreRailState {
   const [sel, setSel] = useState<RailSelection>(null);
   // Våre egne skrivinger regnes som ført med en gang, så skinna ikke hopper
@@ -111,6 +115,27 @@ export function useScoreRail({
   const activeSeat = activeIndex == null ? undefined : seats[activeIndex];
   const activeScore = activeSeat ? scoreOf(activeSeat) : null;
 
+  /**
+   * Telefonen fikk ikke lagret (#2228): tallet vi regnet som ført, faller
+   * bort, og skinna står fast på setet, så neste trykk på tallet treffer
+   * samme spiller. Svaret kommer etter at skinna kan ha gått videre, så
+   * setet hentes tilbake.
+   */
+  function rollBack(seatId: string) {
+    setWritten((prev) => {
+      const rest = { ...prev };
+      delete rest[seatId];
+      return rest;
+    });
+    setSel({ seatId, mode: 'pinned' });
+  }
+
+  function rollBackIfUnsaved(seatId: string, saved: Promise<boolean>) {
+    void saved.then((ok) => {
+      if (!ok) rollBack(seatId);
+    });
+  }
+
   /** Skinna går videre: søk fra setet etter `seatId`. */
   function moveOnFrom(seatId: string) {
     const i = indexOf(seatId);
@@ -120,7 +145,7 @@ export function useScoreRail({
 
   function pickFor(seatId: string, strokes: number) {
     if (isLocked(seatId)) return;
-    void onSetScore(seatId, strokes);
+    rollBackIfUnsaved(seatId, onSetScore(seatId, strokes));
     setWritten((prev) => ({ ...prev, [seatId]: strokes }));
     const seat = seats.find((s) => s.id === seatId);
     if (puttsTracking && seat?.putts == null) {
@@ -137,7 +162,7 @@ export function useScoreRail({
   function step(delta: 1 | -1) {
     if (activeSeatId == null) return;
     const strokes = nextStrokes({ current: activeScore, par, delta });
-    void onSetScore(activeSeatId, strokes);
+    rollBackIfUnsaved(activeSeatId, onSetScore(activeSeatId, strokes));
     setWritten((prev) => ({ ...prev, [activeSeatId]: strokes }));
     setSel({
       seatId: activeSeatId,
@@ -167,7 +192,7 @@ export function useScoreRail({
 
   function pickPutts(putts: number) {
     if (activeSeatId == null) return;
-    void onSetPutts(activeSeatId, putts);
+    rollBackIfUnsaved(activeSeatId, onSetPutts(activeSeatId, putts));
     if (putts <= MAX_CHIP_PUTTS && activeScore != null) {
       moveOnFrom(activeSeatId);
     } else {
