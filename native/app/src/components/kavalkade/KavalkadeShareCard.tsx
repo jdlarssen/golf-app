@@ -60,6 +60,8 @@ function satoriLine(size: number, lineHeight: number, multiline = false) {
     marginTop: px(line.marginTop),
     marginBottom: px(line.marginBottom),
     ...(line.lineHeight !== undefined ? { lineHeight: px(line.lineHeight) } : {}),
+    // Android (#2560): uten den legger Android win-målene rundt teksten.
+    ...(line.includeFontPadding === false ? { includeFontPadding: false } : {}),
   };
 }
 
