@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { safeInternalPath } from '@/lib/url/safeInternalPath';
+import { IDEA_BUILT_LINK_MAX, IDEA_BUILT_SUMMARY_MAX, isIdeaBuiltLink } from './ideaBuiltInput';
 
 /**
  * In-app notification-kindene som støttes. Polymorf `notifications`-tabell
@@ -402,11 +403,16 @@ const achievementUnlockedSchema = z.object({
 });
 
 // idea_built: innsenderen av en idé (#984) fikk idéen sin bygd. Fyres når admin
-// markerer en `idea_submissions`-rad som bygd. Generisk «Vi bygde det du
-// foreslo»-kort uten payload-avhengig tekst; `submission_id` lagres for
-// sporbarhet (deeplinker ikke — beskjeden ER belønningen).
+// markerer en `idea_submissions`-rad som bygd. `submission_id` lagres for
+// sporbarhet. `summary` er admins linje om hva som ble bygget, og `link` en
+// intern sti dit (#2568, regelen bor i `./ideaBuiltInput`). Begge er valgfrie
+// så rader skrevet før #2568 fortsatt parses; da er kortet den faste «Vi bygde
+// det du foreslo»-teksten uten dyplenke. Tom lenke godtas ikke: action-en
+// utelater `link` når admin ikke fylte den ut.
 const ideaBuiltSchema = z.object({
   submission_id: uuid,
+  summary: z.string().trim().min(1).max(IDEA_BUILT_SUMMARY_MAX).optional(),
+  link: z.string().max(IDEA_BUILT_LINK_MAX).refine(isIdeaBuiltLink).optional(),
 });
 
 // payment_reminder: arrangøren purrer en spiller som mangler å betale
