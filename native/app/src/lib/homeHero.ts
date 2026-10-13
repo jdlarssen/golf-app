@@ -17,6 +17,7 @@
 // Ren funksjon: ingen nett, ingen SQLite, ingen React. Kalleren har lest
 // bundelen og slagene fra enheten.
 import type { ActiveCardState } from '../../../../lib/games/activeCardState';
+import { computePrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameStatus } from '../../../../lib/games/status';
 import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import {
@@ -31,7 +32,7 @@ import type { GameBundle } from '../data/gameBundle';
 import type { HomeCard } from '../data/homeList';
 import { gateReason, type GateReason } from './formatGate';
 import { nameLookup } from './leaderboardModel';
-import { computePrimaryCtaState, nextUnfilledHole } from './primaryCtaState';
+import { nextUnfilledHole } from './primaryCtaState';
 import { findInRoster, pendingApprovals, toRoster } from './roster';
 import { asModeConfig, toHoleRows, toPlayerRows, toScoreRows } from './scoringContext';
 import {

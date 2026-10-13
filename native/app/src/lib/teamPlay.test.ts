@@ -10,12 +10,13 @@
 //     leser feltet den selv fylte ut; her må tallet komme hele veien fra
 //     `mode_config` gjennom `computeLeaderboard`. Det er hele poenget med at
 //     appen ikke har sin egen handicap-formel.
+import { computePrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { nameLookup } from './leaderboardModel';
-import { computePrimaryCtaState, nextUnfilledHole } from './primaryCtaState';
+import { nextUnfilledHole } from './primaryCtaState';
 import { toRoster } from './roster';
 import { computeGameLeaderboard } from './scoringContext';
 import {

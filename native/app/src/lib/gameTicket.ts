@@ -17,6 +17,7 @@
 // Ren fil: ingen React, ingen nett, ingen `Intl` (Hermes mangler dataene).
 import { usesGameHcpAllowance, effectiveHcpAllowancePct } from '../../../../lib/games/hcpAllowance';
 import { finishedResultBadge } from '../../../../lib/games/finishedResultBadge';
+import { computePrimaryCtaState, type PrimaryCtaState } from '../../../../lib/games/primaryCtaState';
 import type { GameStatus } from '../../../../lib/games/status';
 import { expectedTeamSize, modeRequiresTeamNumber } from '../../../../lib/games/teamScope';
 import { getRatingForGender, type Rating, type TeeGender } from '../../../../lib/games/teeRating';
@@ -30,7 +31,7 @@ import type { GateReason } from './formatGate';
 import { HOME_TEXT, finishedResultText } from './homeCopy';
 import { formatClock } from './display';
 import { formatStubDate, formatWeekdayDayMonth, teeOffProximityLocal } from './homeDates';
-import { computePrimaryCtaState, nextUnfilledHole, type PrimaryCtaState } from './primaryCtaState';
+import { nextUnfilledHole } from './primaryCtaState';
 import { scorecardHandicapPart } from './scorecardHeader';
 import { TICKET_TEXT, allowancePart, fieldA11y, flightOf, teePart } from './ticketCopy';
 
