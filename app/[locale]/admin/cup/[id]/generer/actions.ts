@@ -264,6 +264,10 @@ export async function createCupMatchesFromPlan(
   // `lib/cup/insertCupMatches` — kaptein-uttakets avdekking setter inn
   // nøyaktig samme slags matcher og deler kjernen. Gating, tak-vakter,
   // plan-lesing og redirect blir værende her, hos veiviserens egne regler.
+  // #2567: the writes go through the organiser's own client on purpose, so RLS
+  // and the triggers check every row. The trigger's cup branch (0208) lets the
+  // cup's own participants in for whoever manages the cup. Do not switch this
+  // to the admin client.
   const outcome = await insertCupMatches(
     {
       client: supabase,
