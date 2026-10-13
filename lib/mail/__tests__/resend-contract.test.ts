@@ -243,8 +243,9 @@ const senders = [
       });
     },
   },
-  // De to idé-senderne har ingen per-modul-test; fiksturene følger kallstedene
-  // (app/[locale]/foreslaa-ide/actions.ts og app/[locale]/admin/ideer/actions.ts).
+  // Fiksturene følger kallstedene (app/[locale]/foreslaa-ide/actions.ts og
+  // app/[locale]/admin/ideer/actions.ts). sendIdeaBuiltNotification har også
+  // egen modultest (#2568); sendIdeaSubmittedNotification har ingen.
   {
     name: 'sendIdeaSubmittedNotification',
     invoke: async () => {
@@ -270,6 +271,8 @@ const senders = [
         to: 'spiller@example.com',
         name: 'Per',
         locale: null,
+        summary: 'Ryder Cup-oppsettet er klart',
+        link: '/spillformater',
       });
     },
   },

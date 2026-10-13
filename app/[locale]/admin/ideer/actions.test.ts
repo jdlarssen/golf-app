@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildSupabaseMock } from '@/tests/serverActionMocks';
+import {
+  buildSupabaseMock,
+  makeLocaleRedirectMock,
+  RedirectError,
+} from '@/tests/serverActionMocks';
 
 /**
  * Co-located test for markIdeaBuilt — #984 closed loop.
@@ -36,13 +40,33 @@ vi.mock('@/lib/mail/ideaBuiltNotification', () => ({
 
 vi.mock('@/lib/i18n/revalidateLocalePath', () => ({ revalidatePath: vi.fn() }));
 
-const submitterId = '252e1a6f-660c-41a7-a289-5a16aaa4e4a1';
+// #2568: the action redirects back to the list, with ?error= on bad input.
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) => redirectMock(arg),
+}));
+vi.mock('next-intl/server', () => ({ getLocale: async () => 'no' }));
 
-async function run(id: string) {
+const submitterId = '252e1a6f-660c-41a7-a289-5a16aaa4e4a1';
+const SUMMARY = 'Ryder Cup-oppsettet er klart';
+
+/** Runs the action; returns the redirect target, or undefined without one. */
+async function run(
+  id: string,
+  fields: { summary?: string; link?: string } = {},
+): Promise<string | undefined> {
   const { markIdeaBuilt } = await import('./actions');
   const fd = new FormData();
   if (id) fd.set('id', id);
-  await markIdeaBuilt(fd);
+  fd.set('summary', fields.summary ?? SUMMARY);
+  fd.set('link', fields.link ?? '');
+  try {
+    await markIdeaBuilt(fd);
+    return undefined;
+  } catch (err) {
+    if (err instanceof RedirectError) return err.url;
+    throw err;
+  }
 }
 
 beforeEach(() => {
@@ -57,7 +81,7 @@ describe('markIdeaBuilt', () => {
       { data: [{ user_id: submitterId }], error: null }, // update .select('user_id')
     ]);
 
-    await run('idea-9');
+    expect(await run('idea-9')).toBe('/admin/ideer');
 
     const update = supabaseMock.__fromCalls.find(
       (c) => c.table === 'idea_submissions' && c.method === 'update',
@@ -66,7 +90,7 @@ describe('markIdeaBuilt', () => {
     expect(notifyMock).toHaveBeenCalledWith({
       userId: submitterId,
       kind: 'idea_built',
-      payload: { submission_id: 'idea-9' },
+      payload: { submission_id: 'idea-9', summary: SUMMARY },
     });
     expect(builtMailMock).not.toHaveBeenCalled();
   });
@@ -80,10 +104,16 @@ describe('markIdeaBuilt', () => {
       { data: { email: 'spiller@example.test', name: 'Per', locale: 'no' }, error: null }, // user lookup
     ]);
 
-    await run('idea-9');
+    expect(await run('idea-9')).toBe('/admin/ideer');
 
     expect(builtMailMock).toHaveBeenCalledTimes(1);
-    expect((builtMailMock.mock.calls[0][0] as { to: string }).to).toBe('spiller@example.test');
+    expect(builtMailMock).toHaveBeenCalledWith({
+      to: 'spiller@example.test',
+      name: 'Per',
+      locale: 'no',
+      summary: SUMMARY,
+      link: null,
+    });
     expect(supabaseMock.__fromCalls.some((c) => c.table === 'users')).toBe(false);
   });
 
@@ -94,5 +124,47 @@ describe('markIdeaBuilt', () => {
 
     expect(supabaseMock.from).not.toHaveBeenCalled();
     expect(notifyMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  // #2568: the line and link reach the card and the mail.
+  it('passes the line and link on to the notification and the mail', async () => {
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: true });
+    supabaseMock = buildSupabaseMock([
+      { data: [{ user_id: submitterId }], error: null }, // update
+    ]);
+    adminMock = buildSupabaseMock([
+      { data: { email: 'spiller@example.test', name: 'Per', locale: 'no' }, error: null },
+    ]);
+
+    const target = await run('idea-9', { summary: `  ${SUMMARY}  `, link: ' /spillformater ' });
+
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: submitterId,
+      kind: 'idea_built',
+      payload: { submission_id: 'idea-9', summary: SUMMARY, link: '/spillformater' },
+    });
+    expect(builtMailMock).toHaveBeenCalledWith({
+      to: 'spiller@example.test',
+      name: 'Per',
+      locale: 'no',
+      summary: SUMMARY,
+      link: '/spillformater',
+    });
+    expect(target).toBe('/admin/ideer');
+  });
+
+  it.each([
+    [{ summary: '   ' }, 'summary_required'],
+    [{ link: '//x.no' }, 'link_must_be_internal'],
+    [{ link: '/en/cup' }, 'link_has_locale'],
+  ] as const)('bad input %j → ?error=%s, the row is left alone', async (fields, code) => {
+    supabaseMock = buildSupabaseMock([]);
+
+    expect(await run('idea-9', fields)).toBe(`/admin/ideer?error=${code}`);
+
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(builtMailMock).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,7 @@
 // Sends a "Vi bygde det du foreslo" mail to the idea submitter when an admin
-// marks their idea as built.
+// marks their idea as built. It carries the admin's line about what was built,
+// and the button goes to the link the admin chose, or the front page without
+// one (#2568).
 //
 // Only sent when notify() returns shouldAlsoSendMail = true (user is off-app).
 // Best-effort: callers should wrap in try/catch or Promise.allSettled so a
@@ -20,22 +22,27 @@ export type IdeaBuiltNotificationParams = {
   name: string | null;
   /** Recipient's locale. Defaults to Norwegian. */
   locale?: string | null;
+  /** The admin's line about what was built, shown as written. */
+  summary: string;
+  /** Internal path to what was built (no locale segment), or null. */
+  link: string | null;
 };
 
 export async function sendIdeaBuiltNotification(
   params: IdeaBuiltNotificationParams,
 ): Promise<void> {
-  const { to, name, locale } = params;
+  const { to, name, locale, summary, link } = params;
   const loc = resolveMailLocale(locale);
   const t = await getMailTranslator(locale);
 
   const subject = t('ideaBuilt.subject');
-  const homeUrl = mailUrl(locale, '/foreslaa-ide');
+  const openUrl = mailUrl(locale, link ?? '');
 
   const salutation = name
     ? t('ideaBuilt.salutationNamed', { name })
     : t('ideaBuilt.salutationGeneric');
 
+  const summaryLine = t('ideaBuilt.summary', { summary });
   const bodyHtml = t('ideaBuilt.body');
 
   const footerHtml = t.markup('ideaBuilt.footer', {
@@ -67,11 +74,14 @@ export async function sendIdeaBuiltNotification(
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${escapeHtml(salutation)}
             </p>
+            <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+              ${escapeHtml(summaryLine)}
+            </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
               ${escapeHtml(bodyHtml)}
             </p>
             <div style="margin:32px 0;">
-              <a href="${homeUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+              <a href="${escapeHtml(openUrl)}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
                 ${t('ideaBuilt.openButton')}
               </a>
             </div>
@@ -89,8 +99,9 @@ export async function sendIdeaBuiltNotification(
   const textBody =
     `${subject}\n\n` +
     `${salutation}\n\n` +
+    `${summaryLine}\n\n` +
     `${bodyHtml}\n\n` +
-    `${t('ideaBuilt.openButtonText', { url: homeUrl })}\n\n` +
+    `${t('ideaBuilt.openButtonText', { url: openUrl })}\n\n` +
     `${t('common.footerTagline')}\n`;
 
   await sendMail({

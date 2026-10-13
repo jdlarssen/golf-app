@@ -6267,6 +6267,7 @@
       "body": "Your idea is now part of Tørny. Thanks for taking the time to tell us. That's exactly how the app gets better.",
       "openButton": "See what's new",
       "openButtonText": "See what's new: {url}",
+      "summary": "Here's what's new: {summary}",
       "footer": "You receive this because you submitted an idea. Log in at <link>tornygolf.no</link> to see what's happening."
     },
     "guestClaim": {
