@@ -16,6 +16,7 @@ import {
   type CalendarEvent,
   type TicketStub as TicketStubModel,
 } from '../../lib/gameTicket';
+import { holeHeaderParams } from '../../lib/holeHeader';
 import { HOME_TEXT, continueOnHole } from '../../lib/homeCopy';
 import { WITHDRAW_SELF, describeSelfWithdrawFailure } from '../../lib/rosterCopy';
 import { TICKET_TEXT, playedLine } from '../../lib/ticketCopy';
@@ -135,6 +136,7 @@ export function TicketStub({
           runningTotal={runningTotal}
           flightCta={flightCta}
           onNavigate={onNavigate}
+          holeHeader={bundle ? holeHeaderParams(bundle.game, bundle.courseName) : undefined}
         />
       );
     case 'none':
@@ -148,12 +150,15 @@ function ActiveStub({
   runningTotal,
   flightCta,
   onNavigate,
+  holeHeader,
 }: {
   stub: Extract<TicketStubModel, { kind: 'active' }>;
   gameId: string;
   runningTotal: string | null;
   flightCta: string | null;
   onNavigate: Navigate;
+  /** Toppen på hullsiden (#2228), sendt med så den står også om siden kaster. */
+  holeHeader?: { gameName: string; topLine: string };
 }) {
   const { colors, ui } = useTheme();
   const flightButton = flightCta ? (
@@ -187,7 +192,12 @@ function ActiveStub({
       ? [TICKET_TEXT.reviewAndSubmit, () => onNavigate('Scorecard', { gameId })]
       : [
           stub.state === 'not_started' ? TICKET_TEXT.startRound : continueOnHole(stub.nextHole),
-          () => onNavigate('Hole', { gameId, holeNumber: stub.nextHole }),
+          () =>
+            onNavigate('Hole', {
+              gameId,
+              holeNumber: stub.nextHole,
+              ...holeHeader,
+            }),
         ];
   const share = stub.total > 0 ? Math.min(1, stub.played / stub.total) : 0;
 

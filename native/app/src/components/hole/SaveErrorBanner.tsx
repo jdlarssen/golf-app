@@ -5,7 +5,7 @@
 // Skjermleseren får teksten to veier: hullsiden kunngjør den når feilen
 // oppstår, og `accessibilityLiveRegion` leser en ny tekst opp på Android.
 import { StyleSheet, Text, View } from 'react-native';
-import { FONTS, useTheme } from '../../theme';
+import { FONTS, interLine, useTheme } from '../../theme';
 import { VarselIcon } from '../icons/Icons';
 
 export function SaveErrorBanner({ text }: { text: string }) {
@@ -36,5 +36,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  text: { flex: 1, fontSize: 13, lineHeight: 18, fontFamily: FONTS.sansMedium },
+  // Lerretet: 13 pt med 18 pt linje, vekt 500.
+  text: { flex: 1, ...interLine(13, 18, { multiline: true }), fontFamily: FONTS.sansMedium },
 });

@@ -22,6 +22,7 @@ import {
 import Constants from 'expo-constants';
 import { useCallback, useEffect, useRef } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
@@ -60,7 +61,13 @@ export type RootStackParamList = {
   Home: undefined;
   CreateGame: undefined;
   GameHome: { gameId: string };
-  Hole: { gameId: string; holeNumber: number };
+  /**
+   * `gameName` og `topLine` (#2228): toppen hullsiden setter selv når bundelen
+   * er lest. De sendes også med når siden åpnes, så toppen står også når
+   * skjermens feilgrense har avmontert siden. Uten dem (fra et varsel) står
+   * midten tom.
+   */
+  Hole: { gameId: string; holeNumber: number; gameName?: string; topLine?: string };
   Scorecard: { gameId: string };
   Leaderboard: { gameId: string };
   /** «Hull for hull» (#2255) — flisa på spillets side når runden er avsluttet. */
@@ -199,12 +206,14 @@ export function RootNavigator() {
     if (target) openPushTarget(target);
   }, []);
   // #2228: hver skjerm har sin egen feilgrense (`screenLayout`), så headerens
-  // tilbakeknapp virker når en skjerm kaster. Den ytre fanger det som kaster
-  // utenfor skjermene.
+  // tilbakeknapp virker når en skjerm kaster. Varianten følger skjermen. Den
+  // ytre fanger det som kaster utenfor skjermene, og har ingen tilbakeknapp.
   const navigator = (
     <NavigationContainer ref={navigationRef} onReady={onReady} theme={navigationThemeFor(theme)}>
       <Stack.Navigator
-        screenLayout={({ children }) => <ErrorBoundary>{children}</ErrorBoundary>}
+        screenLayout={({ children, route }) => (
+          <ErrorBoundary variant={errorBoundaryVariantFor(route.name)}>{children}</ErrorBoundary>
+        )}
         screenOptions={{
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.text,
@@ -246,8 +255,15 @@ export function RootNavigator() {
           name="Hole"
           component={Hole}
           // Designet (#2385): ingen «Hull N»-tittel. Hullsiden setter selv
-          // spillnavnet i toppen og Sollys og pokalen til høyre.
-          options={({ route }) => kickerHeader('', `Hull ${route.params.holeNumber}`)}
+          // spillnavnet i toppen og Sollys og pokalen til høyre. Fra
+          // parametrene står spillnavnet og «format · bane» også når siden
+          // har kastet (#2228); pokalen er bevisst ikke med der.
+          options={({ route }) =>
+            kickerHeader(route.params.gameName ?? '', `Hull ${route.params.holeNumber}`, {
+              subtitle: route.params.topLine || undefined,
+              tone: 'gold',
+            })
+          }
         />
         <Stack.Screen
           name="Scorecard"
@@ -347,6 +363,6 @@ export function RootNavigator() {
       </Stack.Navigator>
     </NavigationContainer>
   );
-  return <ErrorBoundary>{navigator}</ErrorBoundary>;
+  return <ErrorBoundary variant="noBack">{navigator}</ErrorBoundary>;
 }
 
