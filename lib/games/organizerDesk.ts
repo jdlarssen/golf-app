@@ -322,18 +322,17 @@ const PLAYERS_CODES = new Set([
   'reinstate_stale',
 ]);
 
-// Redirect codes from the team and flight actions (`flightActions.ts`); teams and
-// flights live behind «Oppsett». `db_roster` only comes from those actions.
+// Redirect codes from the team actions (`flightActions.ts`); teams live behind
+// «Oppsett». `db_roster` and `player_missing` only come from those actions.
+// The flight actions answer on the Startlista page (#2289), so their codes
+// never reach the desk.
 const SETUP_CODES = new Set([
-  'flight_suggested',
-  'flight_updated',
   'team_suggested',
   'team_updated',
-  'bad_flight',
-  'flight_full',
   'bad_team',
   'team_full',
   'db_roster',
+  'player_missing',
 ]);
 
 /**

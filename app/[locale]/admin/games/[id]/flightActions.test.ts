@@ -13,10 +13,15 @@ import {
  * Unit-tester for flightActions (#543).
  *
  * Dekker tre actions:
- *   - suggestFlightAssignment: authz-reject, happy-path (foreslår og skriver)
- *   - setPlayerFlight: kapasitets-reject (flight_full), happy-path
+ *   - suggestFlightAssignment: authz-reject, happy-path (foreslår og skriver),
+ *     compensation when a write fails midway (#2289)
+ *   - setPlayerFlight: kapasitets-reject (flight_full), happy-path, the
+ *     after-count guard (#2289)
  *   - toggleSignupsClosed: happy-path (steng + gjenåpne), lands on the signups
  *     page (#2288)
+ *
+ * The two flight actions answer on the Startlista page (#2289); the team
+ * actions still answer on the game page.
  *
  * Spørsmålsrekkefølge per action (serverMock → adminMock FIFO):
  *
@@ -27,6 +32,8 @@ import {
  *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]:  game_players.select(...).eq.order.order.returns
  *   adminMock[2…]: game_players.update({flight_number}).eq.eq.select (én per aktiv spiller)
+ *   then, if a write failed: game_players.update(previous).eq.eq.select per
+ *   row already written (compensation, #2289)
  *
  * setPlayerFlight:
  *   serverMock[0..2]: samme som over
@@ -34,6 +41,8 @@ import {
  *   adminMock[1]: game_players.select(...).eq.order.order.returns  (vakta, #2290)
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is    (kapasitetssjekk)
  *   adminMock[3]: game_players.update({flight_number}).eq.eq.select
+ *   adminMock[4]: game_players.select({count}).eq.eq.is        (after-count, #2289)
+ *   adminMock[5]: game_players.update({flight_number: previous}).eq.eq.select (revert)
  *
  * toggleSignupsClosed (admin):
  *   serverMock[0..1]: auth.getUser + users (isAdmin=true → ingen creator-sjekk)
@@ -75,6 +84,8 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 const GAME_ID = 'game-1111-1111-1111-111111111111';
 const USER_ID = 'user-2222-2222-2222-222222222222';
+/** Where the flight actions answer (#2289). */
+const STARTLISTA = `/admin/games/${GAME_ID}/startlista`;
 
 /** Sett opp serverMock: autentisert admin-bruker (ingen creator-sjekk). */
 function authedAdmin(): void {
@@ -196,12 +207,14 @@ describe('suggestFlightAssignment', () => {
 
     const { suggestFlightAssignment } = await import('./flightActions');
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_suggested`);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?status=flight_suggested`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
   });
 
-  // Writes before the failing one are already saved, so the cache must be
-  // expired before the error redirect, or the pages keep the old split.
+  // Writes before the failing one are already saved, so they are written
+  // back (#2289), and the cache is expired before the error redirect: a page
+  // view between the partial write and the write-back may have cached the
+  // half-done split.
   it.each([
     { failingWrite: 1, cacheExpired: false },
     { failingWrite: 2, cacheExpired: true },
@@ -210,7 +223,7 @@ describe('suggestFlightAssignment', () => {
 
     const players = Array.from({ length: 5 }, (_, i) => ({
       user_id: `u${i + 1}`,
-      flight_number: null,
+      flight_number: i === 0 ? 3 : null,
       withdrawn_at: null,
       accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
     }));
@@ -220,12 +233,48 @@ describe('suggestFlightAssignment', () => {
       { data: players, error: null },
       ...(failingWrite === 2 ? [{ data: [{ user_id: 'u1' }], error: null }] : []),
       { data: [], error: null }, // this update hits 0 rows
+      ...(failingWrite === 2 ? [{ data: [{ user_id: 'u1' }], error: null }] : []), // write-back of u1
     ]);
 
     const { suggestFlightAssignment } = await import('./flightActions');
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=db_players`);
     expect(revalidateTagMock.mock.calls.length > 0).toBe(cacheExpired);
+    // u1 goes back to the flight it had before the split; nothing to undo
+    // when the first write failed.
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update').map((c) => c.args[0]);
+    expect(updates).toEqual(
+      failingWrite === 2
+        ? [{ flight_number: 1 }, { flight_number: 1 }, { flight_number: 3 }]
+        : [{ flight_number: 1 }],
+    );
+  });
+
+  it('tilbakeskrivingen feiler også → svaret er fortsatt db_players, og cachen er tømt (#2289)', async () => {
+    authedAdmin();
+
+    const players = Array.from({ length: 5 }, (_, i) => ({
+      user_id: `u${i + 1}`,
+      flight_number: null,
+      withdrawn_at: null,
+      accepted_at: `2026-01-0${i + 1}T00:00:00Z`,
+    }));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    adminMock = buildSupabaseMock([
+      { data: { id: GAME_ID, status: 'scheduled', game_mode: 'skins' }, error: null },
+      { data: players, error: null },
+      { data: [{ user_id: 'u1' }], error: null },
+      { data: [], error: null }, // u2 hits 0 rows
+      { data: null, error: { message: 'boom' } }, // write-back of u1 fails
+    ]);
+
+    const { suggestFlightAssignment } = await import('./flightActions');
+    await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=db_players`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    expect(errorSpy).toHaveBeenCalledWith('[suggestFlightAssignment] revert failed', expect.anything());
+    errorSpy.mockRestore();
   });
 
   it('Texas med tre lag à fire → ingen ny inndeling, redirect til detaljsiden (#2290)', async () => {
@@ -238,7 +287,8 @@ describe('suggestFlightAssignment', () => {
 
     const { suggestFlightAssignment } = await import('./flightActions');
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}`);
+    // The Startlista page sends a game without a Startlista on to the game.
+    expect(lastRedirect()).toBe(STARTLISTA);
     expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 });
@@ -296,10 +346,10 @@ describe('setPlayerFlight', () => {
 
     const { setPlayerFlight } = await import('./flightActions');
     await expect(setPlayerFlight(GAME_ID, 'target-user', 1)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=flight_full`);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=flight_full`);
   });
 
-  it('happy path: admin setter spiller til ny flight → redirect til ?status=flight_updated', async () => {
+  it('happy path: admin setter spiller til ny flight → redirect til ?status=flight_updated&flight=2', async () => {
     authedAdmin();
 
     adminMock = buildSupabaseMock([
@@ -307,14 +357,58 @@ describe('setPlayerFlight', () => {
       { data: soloRoster(), error: null }, // game_players (vakta)
       { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // count = 2 (har plass)
       { data: [{ user_id: 'target-user' }], error: null }, // update
+      { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // after-count = 3
     ]);
 
     const { setPlayerFlight } = await import('./flightActions');
     await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?status=flight_updated`);
+    // The flight in the URL lets the page put focus on it (#2289).
+    expect(lastRedirect()).toBe(`${STARTLISTA}?status=flight_updated&flight=2`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
-    const update = adminMock.__fromCalls.find((c) => c.method === 'update');
-    expect(update?.args[0]).toEqual({ flight_number: 2 });
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates.map((c) => c.args[0])).toEqual([{ flight_number: 2 }]);
+  });
+
+  // Two organisers moving into a flight of three at the same time both pass
+  // the count before the write. The count after it catches the loser (#2289).
+  it.each([
+    { name: 'flighten ble overfull', afterCount: { data: null, error: null, count: 5 }, error: 'flight_full' },
+    { name: 'etter-tellingen feilet', afterCount: { data: null, error: { message: 'boom' }, count: null }, error: 'db_roster' },
+  ])('$name → forrige flight skrives tilbake, cachen er tømt, ?error=$error', async ({ afterCount, error }) => {
+    authedAdmin();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const roster = soloRoster().map((p) => (p.user_id === 'target-user' ? { ...p, flight_number: 1 } : p));
+
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null }, // games
+      { data: roster, error: null }, // game_players (vakta)
+      { data: null, error: null, count: 3 } as { data: null; error: null; count: number }, // before-count = 3
+      { data: [{ user_id: 'target-user' }], error: null }, // update
+      afterCount as { data: null; error: null; count: number },
+      { data: [{ user_id: 'target-user' }], error: null }, // revert
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=${error}`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates.map((c) => c.args[0])).toEqual([{ flight_number: 2 }, { flight_number: 1 }]);
+    errorSpy.mockRestore();
+  });
+
+  it('spilleren er ikke i spillet → ?error=player_missing, ingen skriving', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: SOLO_STABLEFORD_GAME, error: null },
+      { data: soloRoster(), error: null },
+    ]);
+
+    const { setPlayerFlight } = await import('./flightActions');
+    await expect(setPlayerFlight(GAME_ID, 'finnes-ikke', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=player_missing`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 
   it('0-rad-skriving rapporteres som feil, ikke suksess (#2293)', async () => {
@@ -331,7 +425,7 @@ describe('setPlayerFlight', () => {
 
     const { setPlayerFlight } = await import('./flightActions');
     await expect(setPlayerFlight(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
+    expect(lastRedirect()).toBe(`${STARTLISTA}?error=db_players`);
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
@@ -345,7 +439,7 @@ describe('setPlayerFlight', () => {
 
     const { setPlayerFlight } = await import('./flightActions');
     await expect(setPlayerFlight(GAME_ID, 'u1', 2)).rejects.toBeInstanceOf(RedirectError);
-    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}`);
+    expect(lastRedirect()).toBe(STARTLISTA);
     expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 });
@@ -359,12 +453,15 @@ describe('setPlayerFlight', () => {
  *   adminMock[0]:  games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]:  game_players.select(...).eq.order.order.returns
  *   adminMock[2…]: game_players.update({team_number, flight_number}).eq.eq.select
+ *   then, if a write failed: the write-back per row already written (#2289)
  *
  * setPlayerTeam:
  *   adminMock[0]: games.select(id, status, game_mode, mode_config).eq.maybeSingle
  *   adminMock[1]: game_players.select(...).eq.order.order.returns  (hele rosteret, #2290)
  *   adminMock[2]: game_players.select({count}).eq.eq.neq.is  (kapasitetssjekk)
  *   adminMock[3]: game_players.update({...}).eq.eq.select
+ *   adminMock[4]: game_players.select({count}).eq.eq.is      (after-count, #2289)
+ *   adminMock[5]: game_players.update(previous).eq.eq.select (revert)
  */
 const BEST_BALL_GAME = {
   id: GAME_ID,
@@ -446,12 +543,24 @@ describe('suggestTeamAssignment', () => {
       },
       ...(failingWrite === 2 ? [{ data: [{ user_id: 'u1' }], error: null }] : []),
       { data: [], error: null }, // this update hits 0 rows
+      ...(failingWrite === 2 ? [{ data: [{ user_id: 'u1' }], error: null }] : []), // write-back of u1
     ]);
 
     const { suggestTeamAssignment } = await import('./flightActions');
     await expect(suggestTeamAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=db_players`);
     expect(revalidateTagMock.mock.calls.length > 0).toBe(cacheExpired);
+    // u1 gets its team and flight back (#2289): both, so the CHECK holds.
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update').map((c) => c.args[0]);
+    expect(updates).toEqual(
+      failingWrite === 2
+        ? [
+            { team_number: 1, flight_number: 1 },
+            { team_number: 1, flight_number: 1 },
+            { team_number: null, flight_number: null },
+          ]
+        : [{ team_number: 1, flight_number: 1 }],
+    );
   });
 
   it('solo-format → no-op-redirect uten skriving', async () => {
@@ -525,6 +634,7 @@ describe('setPlayerTeam', () => {
       { data: [teamRow('target-user', null, null)], error: null },
       { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
       { data: [{ user_id: 'target-user' }], error: null },
+      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -546,6 +656,7 @@ describe('setPlayerTeam', () => {
       { data: [teamRow('target-user', null, 7)], error: null },
       { data: null, error: null, count: 0 } as { data: null; error: null; count: number },
       { data: [{ user_id: 'target-user' }], error: null },
+      { data: null, error: null, count: 1 } as { data: null; error: null; count: number }, // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -565,6 +676,7 @@ describe('setPlayerTeam', () => {
       { data: texasRoster().filter((p) => p.user_id !== 'u8'), error: null },
       { data: null, error: null, count: 3 } as { data: null; error: null; count: number },
       { data: [{ user_id: 'u1' }], error: null },
+      { data: null, error: null, count: 4 } as { data: null; error: null; count: number }, // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -590,6 +702,7 @@ describe('setPlayerTeam', () => {
       },
       { data: null, error: null, count: 1 } as { data: null; error: null; count: number },
       { data: [{ user_id: 'target-user' }], error: null },
+      { data: null, error: null, count: 2 } as { data: null; error: null; count: number }, // after-count
     ]);
 
     const { setPlayerTeam } = await import('./flightActions');
@@ -598,6 +711,50 @@ describe('setPlayerTeam', () => {
     );
     const update = adminMock.__fromCalls.find((c) => c.method === 'update');
     expect(update?.args[0]).toEqual({ team_number: 2, flight_number: 1 });
+  });
+
+  // Same race as setPlayerFlight (#2289): the count after the write catches
+  // the loser, who gets the team and the flight they had back.
+  it.each([
+    { name: 'laget ble overfullt', afterCount: { data: null, error: null, count: 3 }, error: 'team_full' },
+    { name: 'etter-tellingen feilet', afterCount: { data: null, error: { message: 'boom' }, count: null }, error: 'db_roster' },
+  ])('$name → lag og flight skrives tilbake, cachen er tømt, ?error=$error', async ({ afterCount, error }) => {
+    authedAdmin();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      { data: [teamRow('target-user', 3, 3), teamRow('partner', 2, 2)], error: null },
+      { data: null, error: null, count: 1 } as { data: null; error: null; count: number }, // before-count
+      { data: [{ user_id: 'target-user' }], error: null }, // update
+      afterCount as { data: null; error: null; count: number },
+      { data: [{ user_id: 'target-user' }], error: null }, // revert
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=${error}`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, { expire: 0 });
+    const updates = adminMock.__fromCalls.filter((c) => c.method === 'update');
+    expect(updates.map((c) => c.args[0])).toEqual([
+      { team_number: 2, flight_number: 2 },
+      { team_number: 3, flight_number: 3 },
+    ]);
+    errorSpy.mockRestore();
+  });
+
+  it('spilleren er ikke i spillet → ?error=player_missing, ingen skriving', async () => {
+    authedAdmin();
+
+    adminMock = buildSupabaseMock([
+      { data: BEST_BALL_GAME, error: null },
+      { data: [teamRow('partner', 2, 2)], error: null },
+    ]);
+
+    const { setPlayerTeam } = await import('./flightActions');
+    await expect(setPlayerTeam(GAME_ID, 'target-user', 2)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=player_missing`);
+    expect(adminMock.__fromCalls.some((c) => c.method === 'update')).toBe(false);
   });
 });
 
@@ -723,15 +880,16 @@ describe('toggleSignupsClosed', () => {
  */
 describe('spill-lesingen i flight- og lag-handlingene', () => {
   // Each action with the page it sends errors to: the signups page for
-  // toggleSignupsClosed (#2288), the game page for the others.
+  // toggleSignupsClosed (#2288), the Startlista for the flight actions
+  // (#2289), the game page for the team actions.
   const ACTIONS = {
     suggestFlightAssignment: {
       run: (m: typeof import('./flightActions')) => m.suggestFlightAssignment(GAME_ID),
-      path: `/admin/games/${GAME_ID}`,
+      path: STARTLISTA,
     },
     setPlayerFlight: {
       run: (m: typeof import('./flightActions')) => m.setPlayerFlight(GAME_ID, 'target-user', 2),
-      path: `/admin/games/${GAME_ID}`,
+      path: STARTLISTA,
     },
     toggleSignupsClosed: {
       run: (m: typeof import('./flightActions')) => m.toggleSignupsClosed(GAME_ID, true),
