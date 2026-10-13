@@ -69,9 +69,9 @@ import {
   unassignedActivePlayers,
   eligibleForFlightAssignment,
   flightBuckets,
-  MAX_FLIGHT_SIZE,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
+import { offeredFlightNumbers } from '@/lib/games/startlist';
 import { expectedTeamSize, unassignedTeamPlayers } from '@/lib/games/teamScope';
 import type { FlightOption } from '../ScheduledWaitingRoom';
 import { getGameContext } from './gameContext';
@@ -698,12 +698,13 @@ export default async function GameHomePage({
       ) && me.team_number == null;
 
     // Bygg flight-alternativ-listen for velgeren. Grupper aktive spillere på
-    // flight_number; én ekstra tom flight så spillere kan omfordele 3+3.
+    // flight_number. The numbers are the Startlista's (`offeredFlightNumbers`,
+    // #2289): one empty flight more so players can split 3+3, plus any used
+    // flight above that.
     let flightOptions: FlightOption[] | null = null;
     if (showFlightPicker) {
       const activePlayers2 = gwp.players.filter((p) => !p.withdrawn_at);
       const byFlight = flightBuckets(gwp.players).assigned;
-      const maxFlight = Math.ceil(activePlayers2.length / MAX_FLIGHT_SIZE);
       // #2441: a published game may hold a friend who has not finished the
       // profile. A nameless member is «Invitert spiller» when the start gate's
       // RPC says so, as in the participant list. Asked only when someone lacks
@@ -715,8 +716,7 @@ export default async function GameHomePage({
         activePlayers2.filter((p) => memberLabel(p) === null).map((p) => p.user_id),
         id,
       );
-      flightOptions = Array.from({ length: maxFlight + 1 }, (_, i) => {
-        const flightNum = i + 1;
+      flightOptions = offeredFlightNumbers(activePlayers2.length, byFlight.keys()).map((flightNum) => {
         const members = (byFlight.get(flightNum) ?? []).map(
           (p) =>
             memberLabel(p) ??
