@@ -43,17 +43,24 @@ export async function recountGroup(
   return count ?? 0;
 }
 
-/** A row to put back, with the values it had before our write. */
+/**
+ * A row to put back: what our write set (`written`) and what the row held
+ * before it (`previous`).
+ */
 export type RevertRow = {
   userId: string;
+  written: { flight_number: number | null; team_number?: number | null };
   previous: { flight_number: number | null; team_number?: number | null };
 };
 
 /**
- * Writes each row back to its previous values. Best-effort: we just wrote
- * these rows, so an error or 0 rows leaves the group possibly overfull or the
- * split half done. That is logged under `logPrefix` (#2223), and the caller's
- * answer stands either way.
+ * Writes each row back to its previous values, but only while it still holds
+ * the values we wrote: a newer move (another organiser, or the player in the
+ * waiting room) must not be overwritten by our undo. Best-effort: we just
+ * wrote these rows, so an error leaves the group possibly overfull or the
+ * split half done. That is logged under `logPrefix` (#2223); a row that no
+ * longer holds our values was already moved and is logged as such. The
+ * caller's answer stands either way.
  */
 export async function revertRows(
   admin: AdminClient,
@@ -63,20 +70,30 @@ export async function revertRows(
   /** Extra fields for the log line, e.g. the group the move went to. */
   detail: Record<string, unknown> = {},
 ): Promise<void> {
-  for (const { userId, previous } of rows) {
-    const { data: reverted, error: revertError } = await admin
+  for (const { userId, written, previous } of rows) {
+    let query = admin
       .from('game_players')
       .update(previous)
       .eq('game_id', gameId)
-      .eq('user_id', userId)
-      .select('user_id');
-    if (revertError || (reverted ?? []).length === 0) {
+      .eq('user_id', userId);
+    for (const [column, value] of Object.entries(written) as [GroupColumn, number | null][]) {
+      query = value === null ? query.is(column, null) : query.eq(column, value);
+    }
+    const { data: reverted, error: revertError } = await query.select('user_id');
+    if (revertError) {
       console.error(`[${logPrefix}] revert failed`, {
         gameId,
         userId,
         previous,
         ...detail,
         error: revertError,
+      });
+    } else if ((reverted ?? []).length === 0) {
+      console.warn(`[${logPrefix}] revert skipped: the row was already moved`, {
+        gameId,
+        userId,
+        written,
+        ...detail,
       });
     }
   }

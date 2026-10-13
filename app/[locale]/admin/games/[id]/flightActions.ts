@@ -22,6 +22,7 @@ import {
 } from '@/lib/games/teamScope';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { recountGroup, revertRows, type RevertRow } from '@/lib/games/flightMoveGuard';
+import { offeredFlightNumbers } from '@/lib/games/startlist';
 import { canToggleSignups } from '@/lib/games/signupInbox';
 import {
   FLIGHT_PLAYER_SELECT,
@@ -197,6 +198,7 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
       );
       written.push({
         userId: user_id,
+        written: { flight_number },
         previous: { flight_number: previousFlight.get(user_id) ?? null },
       });
     } catch (e) {
@@ -272,6 +274,17 @@ export async function setPlayerFlight(
   const player = players.find((p) => p.user_id === targetUserId && p.withdrawn_at == null);
   if (!player) redirect({ href: `${detailPath}?error=player_missing`, locale });
 
+  // Only a flight the Startlista offers (`offeredFlightNumbers`, the rule's
+  // one home): a crafted request cannot open flight 40 in a game of twelve.
+  const active = players.filter((p) => p.withdrawn_at == null);
+  const offered = offeredFlightNumbers(
+    active.length,
+    active.flatMap((p) => (p.flight_number == null ? [] : [p.flight_number])),
+  );
+  if (!offered.includes(targetFlight)) {
+    redirect({ href: `${detailPath}?error=bad_flight`, locale });
+  }
+
   // Kapasitetssjekk: tell aktive spillere i target-flight eksklusive denne spilleren
   const { count: existingCount, error: countError } = await admin
     .from('game_players')
@@ -315,7 +328,13 @@ export async function setPlayerFlight(
     await revertRows(
       admin,
       gameId,
-      [{ userId: targetUserId, previous: { flight_number: player.flight_number } }],
+      [
+        {
+          userId: targetUserId,
+          written: { flight_number: targetFlight },
+          previous: { flight_number: player.flight_number },
+        },
+      ],
       'setPlayerFlight',
       { targetFlight },
     );
@@ -436,6 +455,7 @@ export async function suggestTeamAssignment(gameId: string): Promise<void> {
       );
       written.push({
         userId: user_id,
+        written: { team_number, flight_number },
         previous: previousRow.get(user_id) ?? { team_number: null, flight_number: null },
       });
     } catch (e) {
@@ -483,8 +503,9 @@ export async function setPlayerTeam(
   // The whole roster: the flight depends on who is already in the target team.
   const players = await fetchTeamPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
-  const player = players.find((p) => p.user_id === targetUserId);
-  // `not_found` would say «Spillet ble ikke funnet»; it is the player that is gone.
+  // Same rule as setPlayerFlight: a player who left or was withdrawn is gone.
+  // (`not_found` would say «Spillet ble ikke funnet».)
+  const player = players.find((p) => p.user_id === targetUserId && p.withdrawn_at == null);
   if (!player) redirect({ href: `${detailPath}?error=player_missing`, locale });
 
   // Kapasitetssjekk: tell aktive spillere i target-laget eksklusive denne.
@@ -503,17 +524,15 @@ export async function setPlayerTeam(
     redirect({ href: `${detailPath}?error=team_full`, locale });
   }
 
+  // The CHECK (0030/0095) needs a flight once there is a team, and the
+  // flight follows the team (#2290).
+  const targetFlight = flightForTeam(mode, players, targetUserId, targetTeam);
   let failure: unknown = null;
   try {
     expectAffected(
       await admin
         .from('game_players')
-        .update({
-          team_number: targetTeam,
-          // The CHECK (0030/0095) needs a flight once there is a team, and the
-          // flight follows the team (#2290).
-          flight_number: flightForTeam(mode, players, targetUserId, targetTeam),
-        })
+        .update({ team_number: targetTeam, flight_number: targetFlight })
         .eq('game_id', gameId)
         .eq('user_id', targetUserId)
         .select('user_id'),
@@ -537,6 +556,7 @@ export async function setPlayerTeam(
       [
         {
           userId: targetUserId,
+          written: { team_number: targetTeam, flight_number: targetFlight },
           previous: { team_number: player.team_number, flight_number: player.flight_number },
         },
       ],
