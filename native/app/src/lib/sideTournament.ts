@@ -19,7 +19,7 @@
 // `calculateSideTournament`, `buildCourseArrays`, `mapSideWinners` og
 // `strokesForHole` — de delte funksjonene webben selv kaller.
 //
-// Fire valg bærer fila:
+// Fem valg bærer fila:
 //
 //  1. **`teamGrouping` UTLEDES, den slås ikke opp i en håndskrevet liste.**
 //     Se `resolveTeamGrouping`. En ny spillmodus i den delte unionen skal få
