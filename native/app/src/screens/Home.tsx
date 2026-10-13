@@ -74,6 +74,7 @@ import { fetchOwnProfile, type OwnProfile } from '../data/profile';
 import { startSyncTriggers } from '../data/syncTriggers';
 import { PinFlagHero } from '../components/icons/Icons';
 import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
+import { holeHeaderParams } from '../lib/holeHeader';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
@@ -294,7 +295,11 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
           model={model}
           onOpenGame={() => openGame(hero.gameId)}
           onHole={(holeNumber) =>
-            navigation.navigate('Hole', { gameId: hero.gameId, holeNumber })
+            navigation.navigate('Hole', {
+              gameId: hero.gameId,
+              holeNumber,
+              ...holeHeaderParams(hero, hero.courseName),
+            })
           }
           onSubmit={() => navigation.navigate('Scorecard', { gameId: hero.gameId })}
           onApprove={() => navigation.navigate('Approve', { gameId: hero.gameId })}

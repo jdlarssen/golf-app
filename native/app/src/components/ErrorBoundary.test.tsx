@@ -27,7 +27,7 @@ describe('ErrorBoundary', () => {
     getDb.mockRejectedValueOnce(new Error('SQLITE_CANTOPEN'));
 
     await render(
-      <ErrorBoundary>
+      <ErrorBoundary variant="game">
         <Scores />
       </ErrorBoundary>,
     );
@@ -35,6 +35,8 @@ describe('ErrorBoundary', () => {
     await waitFor(() => {
       expect(screen.getByTestId('error-boundary')).toBeTruthy();
     });
+    // Spillskjermene (#2228, designlerretet) får linja om at slagene er trygge.
+    expect(screen.getByTestId('error-boundary-game-note')).toBeTruthy();
     expect(logged).toHaveBeenCalledWith(
       '[ErrorBoundary]',
       expect.any(Error),

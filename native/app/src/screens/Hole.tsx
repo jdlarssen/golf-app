@@ -77,7 +77,6 @@ import {
 } from '../../../../lib/scorecard/strokeEntry';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import {
-  MODE_LABELS,
   formatCapturesPutts,
   isStablefordFamily,
   modeCollapsesToTeamCard,
@@ -103,6 +102,7 @@ import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/g
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
+import { holeTopLine } from '../lib/holeHeader';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
@@ -223,11 +223,7 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   // `Hull-sollys`. Et langt navn kuttes på skjermen, men leses helt.
   const sunlight = useSunlight();
   const gameName = bundle?.game.name ?? '';
-  const topLine = bundle
-    ? [MODE_LABELS[bundle.game.gameMode as GameMode] ?? null, bundle.courseName]
-        .filter((part): part is string => !!part)
-        .join(' · ')
-    : '';
+  const topLine = bundle ? holeTopLine(bundle.game.gameMode, bundle.courseName) : '';
   useLayoutEffect(() => {
     navigation.setOptions({
       ...kickerHeader(sunlight ? '' : gameName, `Hull ${holeNumber}`, {

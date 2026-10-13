@@ -83,6 +83,7 @@ import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
 import { describeSubmitFailure } from '../lib/actionFeedback';
 import { isScoringSupported } from '../lib/formatGate';
+import { holeHeaderParams } from '../lib/holeHeader';
 import { nameLookup } from '../lib/leaderboardModel';
 import {
   deliverForButton,
@@ -445,7 +446,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
               minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
           <Pressable
             style={[ui.buttonSecondary, styles.editButton]}
-            onPress={() => navigation.navigate('Hole', { gameId, holeNumber: 1 })}
+            onPress={() =>
+              navigation.navigate('Hole', {
+                gameId,
+                holeNumber: 1,
+                ...holeHeaderParams(bundle.game, bundle.courseName),
+              })
+            }
             testID="scorecard-edit"
           >
             <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>

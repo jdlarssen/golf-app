@@ -237,7 +237,13 @@ describe('Scorecard', () => {
     // #2220: kortet kan rettes før det leveres. Knappen går til hull 1, og
     // hull-stripen tar spilleren videre derfra.
     await fireEvent.press(screen.getByTestId('scorecard-edit'));
-    expect(navigate).toHaveBeenCalledWith('Hole', { gameId: GAME_ID, holeNumber: 1 });
+    // #2228: toppen sendes med, så den står også om hullsiden kaster.
+    expect(navigate).toHaveBeenCalledWith('Hole', {
+      gameId: GAME_ID,
+      holeNumber: 1,
+      gameName: 'Torsdagsrunden',
+      topLine: 'Greensome · Testbanen',
+    });
 
     // #2385: stableford i en åpen runde. NETTO står ved siden av BRUTTO og
     // POENG til høyre, som i designet.

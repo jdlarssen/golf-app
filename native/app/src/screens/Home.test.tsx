@@ -201,7 +201,13 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   expect(screen.queryByTestId('home-last-round-older')).toBeNull();
 
   await fireEvent.press(screen.getByText('Fortsett på hull 8 →'));
-  expect(navigate).toHaveBeenCalledWith('Hole', { gameId: 'new', holeNumber: 8 });
+  // #2228: toppen sendes med, så den står også om hullsiden kaster.
+  expect(navigate).toHaveBeenCalledWith('Hole', {
+    gameId: 'new',
+    holeNumber: 8,
+    gameName: 'Torsdagsrunden',
+    topLine: 'Stableford · Losby',
+  });
 
   // Veien til profil-rommet er HCP-pillen (Hjem v2, #2385), og ordet «Profil»
   // står ikke på skjermen.
