@@ -134,6 +134,11 @@ describe('PALETTES', () => {
     expect(PALETTES.light.onAccent).toBe('#1B4332');
     expect(PALETTES.dark.onPrimary).toBe('#14201A');
     expect(PALETTES.dark.onAccent).toBe('#14201A');
+    // #2228: fyllet og rammen bak lagringsbanneret, fra designlerretet.
+    expect(PALETTES.light.dangerSoft).toBe('#FBF4F3');
+    expect(PALETTES.light.dangerBorder).toBe('rgba(184, 70, 62, 0.28)');
+    expect(PALETTES.dark.dangerSoft).toBe('#242720');
+    expect(PALETTES.dark.dangerBorder).toBe('rgba(214, 114, 104, 0.32)');
   });
 
   it('gives every role a distinct klubbhus-natt value in dark mode', () => {

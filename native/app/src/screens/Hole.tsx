@@ -43,6 +43,7 @@
 // selv videre når alle i flighten har score.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   PanResponder,
   Pressable,
@@ -92,6 +93,7 @@ import {
   type RailOption,
 } from '../components/hole/ScoreRail';
 import { SpecificValueSheet } from '../components/hole/SpecificValueSheet';
+import { SaveErrorBanner } from '../components/hole/SaveErrorBanner';
 import { SunlightToggle } from '../components/hole/SunlightToggle';
 import { WolfChoiceCard } from '../components/hole/WolfChoiceCard';
 import { PokalHankerIcon } from '../components/icons/Icons';
@@ -100,7 +102,7 @@ import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/gameBundle';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
-import { LOCAL_SAVE_FAILED } from '../lib/actionFeedback';
+import { LOCAL_SAVE_FAILED, type LocalSaveAction } from '../lib/actionFeedback';
 import { displayName } from '../lib/display';
 import { nameLookup } from '../lib/leaderboardModel';
 import { findInRoster, resolveFlight, toRoster, type RosterEntry } from '../lib/roster';
@@ -370,9 +372,9 @@ function HoleView({
   const { extras, refresh: refreshChoices } = choices;
   // Setet «Annet»-arket er åpent for, eller `null`.
   const [sheetSeatId, setSheetSeatId] = useState<string | null>(null);
-  // Siste skriving til den lokale basen feilet (#2228). Neste som går
-  // gjennom, fjerner linja.
-  const [saveFailed, setSaveFailed] = useState(false);
+  // Hvilken skriving til den lokale basen som sist feilet (#2228), eller
+  // `null`. Neste som går gjennom, fjerner banneret.
+  const [saveFailed, setSaveFailed] = useState<LocalSaveAction | null>(null);
 
   const roster = toRoster(bundle.players);
   const mode = bundle.game.gameMode as GameMode;
@@ -502,18 +504,23 @@ function HoleView({
   const seatOf = (seatId: string) => seats.find((seat) => seat.id === seatId);
 
   // Én vei inn i den lokale basen for alle trykkene på hullet (#2228). Feiler
-  // skrivingen, sier en linje fra i stedet for at trykket forsvinner stille.
-  // Lesingen og drainen kjøres bare når scoren faktisk ble lagret. Kallet
-  // avviser aldri og svarer om det lagret, så skinna kan rulle tilbake.
-  const saveLocally = async (input: Parameters<typeof writeScore>[0]): Promise<boolean> => {
+  // skrivingen, sier et banner fra (og skjermleseren, som CompleteProfile) i
+  // stedet for at trykket forsvinner stille. Lesingen og drainen kjøres bare
+  // når scoren faktisk ble lagret. Kallet avviser aldri og svarer om det
+  // lagret, så skinna kan rulle tilbake.
+  const saveLocally = async (
+    input: Parameters<typeof writeScore>[0],
+    action: LocalSaveAction,
+  ): Promise<boolean> => {
     try {
       await writeScore(input);
     } catch (err: unknown) {
       console.error('[Hole] lagring feilet', err);
-      setSaveFailed(true);
+      setSaveFailed(action);
+      AccessibilityInfo.announceForAccessibility(LOCAL_SAVE_FAILED[action]);
       return false;
     }
-    setSaveFailed(false);
+    setSaveFailed(null);
     await reload();
     void drainQueue('tasting');
     return true;
@@ -521,14 +528,18 @@ function HoleView({
 
   // Alle slag-veiene skriver likt: SLAG alene (putter utelates, så mergen i
   // writeScore beholder dem), så les tilbake og drain køen.
+  // `null` er «Angre»/X, med sin egen setning hvis den feiler.
   const writeStrokes = (playerUserId: string, strokes: number | null): Promise<boolean> =>
-    saveLocally({
-      gameId,
-      userId: playerUserId,
-      holeNumber,
-      strokes,
-      enteredBy: userId,
-    });
+    saveLocally(
+      {
+        gameId,
+        userId: playerUserId,
+        holeNumber,
+        strokes,
+        enteredBy: userId,
+      },
+      strokes === null ? 'clear' : 'strokes',
+    );
 
   // Skinna skriver via setet. Et låst sete avvises også her, ikke bare i
   // knappene: et ark som sto åpent, eller et sent trykk, skal ikke nå fram.
@@ -552,13 +563,16 @@ function HoleView({
   const setSeatPutts = async (seatId: string, next: number): Promise<boolean> => {
     const seat = seatOf(seatId);
     if (!seat || seat.locked) return false;
-    return saveLocally({
-      gameId,
-      userId: seat.owner,
-      holeNumber,
-      putts: next,
-      enteredBy: userId,
-    });
+    return saveLocally(
+      {
+        gameId,
+        userId: seat.owner,
+        holeNumber,
+        putts: next,
+        enteredBy: userId,
+      },
+      'putts',
+    );
   };
 
   const rail = useScoreRail({
@@ -682,6 +696,9 @@ function HoleView({
             sunlight={sunlight}
           />
         </HoleSwipe>
+        {/* #2228 (designlerretet): telefonen fikk ikke lagret et trykk. Rett
+            under hull-hodet, over flighten. */}
+        {saveFailed ? <SaveErrorBanner text={LOCAL_SAVE_FAILED[saveFailed]} /> : null}
         <View style={styles.pad}>
 
         {/* #2220: et levert kort i en runde som pågår får vite hvem som kan åpne
@@ -693,12 +710,6 @@ function HoleView({
               : collapsed
                 ? `Lagkortet er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`
                 : `Kortet ditt er levert. Føringen er låst. ${reopenHint(bundle.game.createdBy === userId)}`}
-          </Text>
-        ) : null}
-
-        {saveFailed ? (
-          <Text style={ui.error} testID="hole-save-error">
-            {LOCAL_SAVE_FAILED}
           </Text>
         ) : null}
 

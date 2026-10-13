@@ -22,7 +22,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { useMemo, useState, type ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { AccessibilityInfo } from 'react-native';
 import { writeScore } from '../data/writeScore';
+import { LOCAL_SAVE_FAILED } from '../lib/actionFeedback';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
 import { strokesLine } from '../components/hole/FlightRow';
@@ -394,6 +396,7 @@ describe('Hole', () => {
     // #2228: telefonen fikk ikke lagret det første trykket. En linje sier fra,
     // og skinna står fast på meg, så neste trykk på tallet treffer riktig.
     const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
     (writeScore as jest.Mock).mockRejectedValueOnce(new Error('SQLITE_FULL'));
     await fireEvent.press(screen.getByTestId('rail-option-4'));
     await waitFor(() => {
@@ -401,6 +404,8 @@ describe('Hole', () => {
     });
     expect(logged).toHaveBeenCalledWith('[Hole] lagring feilet', expect.any(Error));
     logged.mockRestore();
+    // Skjermleseren får samme setning som banneret.
+    expect(announce).toHaveBeenCalledWith(LOCAL_SAVE_FAILED.strokes);
     expect(writeScore).toHaveBeenCalledWith({
       gameId: GAME_ID,
       userId: 'me',

@@ -150,6 +150,15 @@ export const InfoIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** Varsel: trekant med utropstegn (#2228, lagringsbanneret på hullsiden). */
+export const VarselIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+    <Path d="M12 9v4" />
+    <Path d="M12 17h.01" />
+  </LineIcon>
+);
+
 /** Del: pil opp ut av en skål (#2255, øverst til høyre på startbilletten). */
 export const DelIcon = (props: IconProps) => (
   <LineIcon {...props}>

@@ -18,11 +18,20 @@ import type { SubmitCardFailure } from '../data/submitCard';
 import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { WEB_LINK_TEXT } from './webLink';
 
+/** Hvilken skriving på hull-siden som feilet (#2228): slag, putter eller «Angre»/X. */
+export type LocalSaveAction = 'strokes' | 'putts' | 'clear';
+
 /**
- * Hull-siden fikk ikke lagret et trykk i den lokale basen (#2228). Linja står
- * til neste skriving som går gjennom.
+ * Banneret når hull-siden ikke fikk lagret et trykk i den lokale basen
+ * (#2228), én setning per handling. Skinna står fast på setet, så «trykk på
+ * tallet én gang til» treffer samme spiller. Banneret står til neste skriving
+ * som går gjennom.
  */
-export const LOCAL_SAVE_FAILED = 'Fikk ikke lagret scoren på telefonen. Prøv igjen.';
+export const LOCAL_SAVE_FAILED: Record<LocalSaveAction, string> = {
+  strokes: 'Fikk ikke lagret scoren. Trykk på tallet én gang til.',
+  putts: 'Fikk ikke lagret puttene. Trykk på tallet én gang til.',
+  clear: 'Fikk ikke fjernet scoren. Prøv én gang til.',
+};
 
 /**
  * Godkjenning og avvisning (#2215: via ruta). Ingen `default`-gren: legger
