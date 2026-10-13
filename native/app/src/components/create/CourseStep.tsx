@@ -14,10 +14,12 @@
 import { useState } from 'react';
 import { ActivityIndicator, Platform, Text, TextInput, View } from 'react-native';
 import DateTimePicker, {
+  DateTimePickerAndroid,
   type DateTimePickerChangeEvent,
 } from '@react-native-community/datetimepicker';
 import type { CourseOption } from '../../data/createGame';
 import { formatTeeOff } from '../../lib/display';
+import { openAndroidTeeOff } from '../../lib/teeOffPicker';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { Field, SelectRow } from './primitives';
@@ -75,14 +77,29 @@ export function CourseStep({
 
   // `onValueChange` + `onDismiss`, ikke `onChange`: den samlede callbacken er
   // deprecated i datetimepicker 9 og advarer i konsollen ved hver mount.
+  // Bare iOS rendrer komponenten. Der står den inline til arrangøren lukker
+  // den, så valget lukker ingenting.
   function handleValueChange(
     _event: DateTimePickerChangeEvent,
     date: Date,
   ): void {
-    // Android viser pickeren som en dialog som lukker seg selv etter valget;
-    // på iOS står den inline til arrangøren lukker den.
-    if (Platform.OS !== 'ios') setPickerOpen(false);
     onTeeOff(date);
+  }
+
+  // Android har ikke `mode="datetime"` (#2560): to dialoger etter hverandre,
+  // dato og så klokkeslett, i stedet for den inline pickeren.
+  const isAndroid = Platform.OS === 'android';
+  function handleTeeOffPress(): void {
+    if (isAndroid) {
+      openAndroidTeeOff({
+        value: teeOff,
+        minimumDate: new Date(),
+        onPick: onTeeOff,
+        open: DateTimePickerAndroid.open,
+      });
+      return;
+    }
+    setPickerOpen((open) => !open);
   }
 
   return (
@@ -205,7 +222,7 @@ export function CourseStep({
           title={formatTeeOff(teeOff.toISOString()) ?? 'Velg tidspunkt'}
           subtitle={pickerOpen ? 'Lukk når du er ferdig' : 'Trykk for å endre'}
           selected={pickerOpen}
-          onPress={() => setPickerOpen((open) => !open)}
+          onPress={handleTeeOffPress}
         />
         {pickerOpen ? (
           <DateTimePicker
