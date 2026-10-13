@@ -6,6 +6,7 @@ import {
   behindLeaderText,
   boardDisplayName,
   followTotalLabel,
+  pillText,
   sentenceName,
   type BoardCommonT,
   type BoardT,
@@ -82,5 +83,19 @@ describe('sentenceName — a player inside a sentence (#2275)', () => {
     expect(sentenceName(rows[0], rows, name)).toBe('Marte Lie');
     expect(sentenceName(rows[2], rows, name)).toBe('Marte Dahl');
     expect(sentenceName(rows[1], rows, name)).toBe('Jonas');
+  });
+});
+
+describe('pillText — the live pill (#2275)', () => {
+  // Echoes the key and its arguments, so the test reads the rule, not the copy.
+  const echo = ((key: string, args?: Record<string, unknown>) =>
+    args ? `${key} ${JSON.stringify(args)}` : key) as unknown as BoardT;
+
+  it.each([
+    [null, 'pillLive'],
+    [0, 'pillLive'],
+    [7, 'pillLiveAfter {"holes":7}'],
+  ] as const)('%s holes played → %s', (holes, expected) => {
+    expect(pillText(echo, holes)).toBe(expected);
   });
 });
