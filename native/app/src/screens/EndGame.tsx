@@ -160,7 +160,6 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
           describeEndRoundFailure(
             result.reason,
             namesFor(players, result.blockedUserIds),
-            result.message,
           ),
         );
         if (

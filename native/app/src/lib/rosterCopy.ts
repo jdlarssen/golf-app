@@ -23,8 +23,13 @@ import type { SelfWithdrawFailure } from '../data/withdrawSelf';
 import type { StartRoundRefusal } from '../data/startGame';
 import { WEB_LINK_TEXT } from './webLink';
 
-/** Fallbacken når serveren svarte med noe vi ikke har en egen setning for. */
-const GENERIC_DB = 'Noe gikk galt mot serveren.';
+/**
+ * Fallbacken når serveren svarte med noe vi ikke har en egen setning for. Én
+ * formulering for alle feilene: roster-, avslutt- og godkjennings-copyen
+ * (`endGameCopy.ts`, `actionFeedback.ts`) leser den herfra. Serverens egen
+ * tekst vises aldri, den logges der den oppstår (#2228).
+ */
+export const GENERIC_DB = 'Noe gikk galt mot serveren.';
 
 /**
  * Nett-linja. Én formulering for alle skrivingene, så den ikke driver fra
@@ -246,12 +251,8 @@ export function describeInviteFailure(reason: InviteFailure): string {
  * Roster-skrivingene: legg til, fjern, lag, flight, trekk og angre.
  *
  * @param reason koden fra `RosterActionResult`.
- * @param message serverens egen tekst, brukt kun som fallback ved `db`.
  */
-export function describeRosterFailure(
-  reason: RosterActionFailure,
-  message?: string,
-): string {
+export function describeRosterFailure(reason: RosterActionFailure): string {
   switch (reason) {
     case 'no-session':
       return 'Du er ikke logget inn lenger. Logg inn på nytt.';
@@ -292,7 +293,7 @@ export function describeRosterFailure(
     case 'no-rows':
       return 'Ingenting ble endret. Du har kanskje ikke tilgang, eller noen andre rakk det først.';
     case 'db':
-      return message ?? GENERIC_DB;
+      return GENERIC_DB;
   }
 }
 
