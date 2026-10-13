@@ -280,6 +280,30 @@ describe('parseNotificationPayload', () => {
     it('avviser manglende submission_id', () => {
       expect(() => parseNotificationPayload('idea_built', {})).toThrow();
     });
+
+    // #2568: what was built and where it lives — stripped by zod before.
+    it('beholder summary og link', () => {
+      const result = parseNotificationPayload('idea_built', {
+        submission_id: validUuid,
+        summary: 'Ryder Cup-oppsettet er klart',
+        link: '/spillformater',
+      });
+      expect(result.payload).toEqual({
+        submission_id: validUuid,
+        summary: 'Ryder Cup-oppsettet er klart',
+        link: '/spillformater',
+      });
+    });
+
+    it('avviser en ekstern lenke', () => {
+      expect(() =>
+        parseNotificationPayload('idea_built', {
+          submission_id: validUuid,
+          summary: 'Ryder Cup',
+          link: 'https://x.no',
+        }),
+      ).toThrow();
+    });
   });
 
   // #2263: the inbox groups and checks delivered cards per card owner, and words
