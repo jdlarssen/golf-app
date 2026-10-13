@@ -1560,6 +1560,31 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     expect(result.errorCode).toBe('bad_allowance');
   });
 
+  it('3-mannslag: 33.34 (over det avrundede taket) → bad_allowance, 33.33 → ok (#2566)', () => {
+    const players = [
+      { userId: 'a', team: 1 },
+      { userId: 'b', team: 1 },
+      { userId: 'c', team: 1 },
+    ];
+    expect(
+      buildGameInsertPayload(texasFd({ teamSize: '3', handicapPct: '33.34', players }), 'publish').errorCode,
+    ).toBe('bad_allowance');
+    expect(
+      buildGameInsertPayload(texasFd({ teamSize: '3', handicapPct: '33.33', players }), 'publish').errorCode,
+    ).toBeUndefined();
+  });
+
+  it('åpen påmelding med tom liste (draft-stien ved publish): over taket → bad_allowance, på taket → ok (#2566)', () => {
+    const open = { registration_mode: 'open' };
+    expect(
+      buildGameInsertPayload(texasFd({ teamSize: '2', handicapPct: '50.01', extras: open }), 'publish').errorCode,
+    ).toBe('bad_allowance');
+    const onCap = buildGameInsertPayload(texasFd({ teamSize: '2', handicapPct: '50', extras: open }), 'publish');
+    expect(onCap.errorCode).toBeUndefined();
+    expect(onCap.registration_mode).toBe('open');
+    expect(onCap.players).toEqual([]);
+  });
+
   it('publish med handicap_pct=50 på 3-mannslag (150 % av snittet) → bad_allowance (#2566)', () => {
     const result = buildGameInsertPayload(
       texasFd({

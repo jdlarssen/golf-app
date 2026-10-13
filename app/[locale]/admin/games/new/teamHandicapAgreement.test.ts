@@ -72,7 +72,7 @@ const cases = MODES.flatMap((mode) =>
   teamSizesForMode(mode).map((size) => [mode, size] as const),
 );
 
-describe('scramble team handicap: wizard, edit form and validator agree on the cap (#2566)', () => {
+describe('team handicap cap for Texas 2/3/4, Ambrose 2/3/4 and Florida 3/4: wizard, edit form and validator agree (#2566)', () => {
   it.each(cases)('%s, %i-player teams: every whole average 0–max is accepted by all three', (mode, size) => {
     // Array.from, not a for loop: a missing cap throws here instead of
     // running zero iterations and passing.
