@@ -1,0 +1,19 @@
+# Fikstur for android-proof.test.js (#2560). Kilde: `aapt2 dump xmltree` på TWA-AAB-en
+# ~/.torny-native/dist/torny-1.0.0.aab (lest, ikke endret). Bare intent-filteret med android:autoVerify,
+# der verten er ressursreferansen @string/hostName.
+              E: intent-filter (line=139)
+                A: http://schemas.android.com/apk/res/android:autoVerify(0x010104ee)=true (Raw: "true")
+                  T: '\n                '
+                  E: action (line=140)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.action.VIEW" (Raw: "android.intent.action.VIEW")
+                  T: '\n\n                '
+                  E: category (line=142)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.category.DEFAULT" (Raw: "android.intent.category.DEFAULT")
+                  T: '\n                '
+                  E: category (line=143)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.category.BROWSABLE" (Raw: "android.intent.category.BROWSABLE")
+                  T: '\n\n                '
+                  E: data (line=145)
+                    A: http://schemas.android.com/apk/res/android:host(0x01010028)=@string/hostName (Raw: "@string/hostName")
+                    A: http://schemas.android.com/apk/res/android:scheme(0x01010027)="https" (Raw: "https")
+                  T: '\n            '

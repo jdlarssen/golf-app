@@ -18,12 +18,13 @@
 #     `android:debuggable="true"` og et `autoVerify`-intent-filter for
 #     tornygolf.no (motstykket til iOS-regelen om associated domains: appen
 #     claimer ikke lenker). En vert som er en ressursreferanse (`@string/…`)
-#     kan ikke leses her, og regnes som tornygolf.no.
+#     kan ikke leses her, og regnes som tornygolf.no. Fail-closed: en
+#     debuggable-verdi leseren ikke kjenner, er FAIL.
 #  3. Tillatelsene: hele `uses-permission`-lista skrives ut som informasjon,
 #     uten PASS eller FAIL (kontrakten #2560, O5).
 #  4. 16 KB-sider: hver `.so` under `base/lib/arm64-v8a/` og `base/lib/x86_64/`
-#     har LOAD-justering ≥ 16384. Ingen `.so` i de to mappene er FAIL, ikke en
-#     stille PASS. 32-bit-filene (`armeabi-v7a`, `x86`) skrives ut som
+#     har LOAD-justering ≥ 16384. En av de to mappene uten `.so` er FAIL, ikke
+#     en stille PASS. 32-bit-filene (`armeabi-v7a`, `x86`) skrives ut som
 #     informasjon: 16 KB-kravet gjelder bare 64-bit (O8).
 #  5. Signaturen: AAB-en er signert, og sertifikatets SHA-256 er opplastings-
 #     nøkkelens avtrykk. Avtrykket leses fra `app/.well-known/assetlinks.json/
@@ -178,14 +179,18 @@ case "$target_sdk" in
     fi
     ;;
 esac
-if [ "$debuggable" = "true" ]; then
-  fail "android:debuggable=\"true\": et debug-bygg skal aldri til Play"
-else
-  pass "ikke debuggable (android:debuggable = ${debuggable:-<mangler>})"
-fi
+# Fail-closed: bare en tydelig usann eller manglende verdi er PASS. En verdi
+# leseren ikke kjenner (eller et manifest som ikke ble lest) er FAIL.
+case "$debuggable" in
+  false|ikke-satt) pass "ikke debuggable (android:debuggable = $debuggable)" ;;
+  true) fail "android:debuggable=\"true\": et debug-bygg skal aldri til Play" ;;
+  *) fail "android:debuggable kunne ikke leses («${debuggable:-<mangler>}»), og regnes som debuggable" ;;
+esac
 claimed=0
 while read -r host; do
   [ -n "$host" ] || continue
+  # Vertsnavn skiller ikke store og små bokstaver.
+  host=$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')
   case "$host" in
     tornygolf.no|*.tornygolf.no)
       claimed=$((claimed + 1)); say "      autoVerify-vert: $host" ;;
@@ -214,7 +219,6 @@ say ""
 
 # ── 4. 16 KB-sider ───────────────────────────────────────────────────────────
 say "## 16 KB-sider (base/lib/*/*.so, LOAD-justering)"
-so_64=0
 for abi in arm64-v8a x86_64; do
   total=0
   bad=0
@@ -229,9 +233,8 @@ for abi in arm64-v8a x86_64; do
 "
     fi
   done
-  so_64=$((so_64 + total))
   if [ "$total" = "0" ]; then
-    say "      ${abi}: ingen .so"
+    fail "${abi}: ingen .so under base/lib/${abi}/. En AAB uten 64-bit-biblioteker for ${abi} er ikke bevist, bare tom"
   elif [ "$bad" = "0" ]; then
     pass "${abi}: alle $total .so har LOAD-justering ≥ $PAGE_16K"
   else
@@ -239,9 +242,6 @@ for abi in arm64-v8a x86_64; do
     printf '%s' "$bad_list" | tee -a "$OUT"
   fi
 done
-if [ "$so_64" = "0" ]; then
-  fail "ingen .so under base/lib/arm64-v8a/ eller base/lib/x86_64/. En AAB uten 64-bit-biblioteker er ikke bevist, bare tom"
-fi
 for abi in armeabi-v7a x86; do
   found=0
   for so in "$BASE/lib/$abi"/*.so; do

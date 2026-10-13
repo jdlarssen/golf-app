@@ -16,21 +16,15 @@
 //     tekst.
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { addReleaseSigning, SIGNING_ENV_KEYS } from './withUploadSigning';
+import { addReleaseSigning, closingBrace, SIGNING_ENV_KEYS } from './withUploadSigning';
 
 const FIXTURE = readFileSync(join(__dirname, '__fixtures__', 'app-build.gradle'), 'utf8');
 
-/** Innholdet i blokken `name {` på gitt innrykk, til den lukkende krøllparentesen. */
+/** Blokken som starter med `header`, til krøllparentesen som lukker den (pluginens egen teller). */
 function block(gradle, header) {
   const start = gradle.indexOf(header);
   if (start === -1) return null;
-  let depth = 0;
-  for (let i = gradle.indexOf('{', start); i < gradle.length; i++) {
-    if (gradle[i] === '{') depth++;
-    if (gradle[i] === '}') depth--;
-    if (depth === 0) return gradle.slice(start, i + 1);
-  }
-  return null;
+  return gradle.slice(start, closingBrace(gradle, gradle.indexOf('{', start)) + 1);
 }
 
 describe('addReleaseSigning', () => {
@@ -65,18 +59,35 @@ describe('addReleaseSigning', () => {
     expect(release).not.toMatch(/keyAlias\s+['"]/);
   });
 
-  it('har en feilgren som stopper release-bygget og navngir hver variabel som mangler', () => {
+  it('genererer signeringsblokken og feilgrenen slik snapshotet låser dem', () => {
+    expect(block(block(out, 'signingConfigs {'), 'release {')).toMatchSnapshot();
+    expect(out.slice(out.indexOf('gradle.taskGraph.whenReady'))).toMatchSnapshot();
+  });
+
+  // Groovy kan ikke kjøres her. Strukturen sier hva Gradle gjør: kastet er det
+  // eneste i grenen for manglende variabler, som bare nås når oppgavegrafen har
+  // en release-oppgave i app-prosjektet. At kastet faktisk stopper bygget, er
+  // målt med `./gradlew :app:bundleRelease -m` uten variablene (#2560).
+  it('stopper bygget bare når en release-oppgave er med og en variabel mangler', () => {
+    const guard = block(out, 'gradle.taskGraph.whenReady');
+    const releaseBranch = block(guard, 'if (!tornyReleaseTasks.isEmpty())');
+    const missingBranch = block(releaseBranch, 'if (!missing.isEmpty())');
+    expect(guard).toMatch(
+      /def tornyReleaseTasks = graph\.allTasks\.findAll \{ it\.project == project && it\.name\.toLowerCase\(\)\.contains\('release'\) \}/
+    );
+    const listed = /def missing = \[(.*)\]\.findAll \{ !System\.getenv\(it\) \}/.exec(releaseBranch)[1];
+    expect(listed.split(',').map((key) => key.trim().replace(/'/g, ''))).toEqual(SIGNING_ENV_KEYS);
+    expect(missingBranch).toMatch(
+      /^if \(!missing\.isEmpty\(\)\) \{\s*throw new GradleException\("[^"]*\$\{missing\.join\(', '\)\}[^"]*"\)\s*\}$/
+    );
+  });
+
+  it('navngir de tre miljøvariablene byggeskriptet setter', () => {
     expect(SIGNING_ENV_KEYS).toEqual([
       'TORNY_ANDROID_KEYSTORE',
       'TORNY_ANDROID_KEY_ALIAS',
       'TORNY_ANDROID_KEYSTORE_PASSWORD',
     ]);
-    expect(out).toContain('gradle.taskGraph.whenReady');
-    expect(out).toContain('throw new GradleException(');
-    expect(out).toContain('${missing.join');
-    for (const key of SIGNING_ENV_KEYS) {
-      expect(out).toContain(`'${key}'`);
-    }
   });
 
   it('gir samme tekst ved to kjøringer', () => {

@@ -44,6 +44,8 @@ const base = appJson.expo as ExpoConfig;
 const PROD_URL = `https://${PROD_SUPABASE_HOST}`;
 const STAGING_URL = `https://${STAGING_SUPABASE_HOST}`;
 const DEV_LOGIN_PASSWORD = 'testpassord-i-test-2208';
+// Står i app.json, så begge variantene får den (#2560).
+const NO_SDK_DOWNLOAD_PLUGIN = './scripts/withNoSdkDownload.js';
 
 const STORE_ENV = {
   APP_VARIANT: 'store',
@@ -78,6 +80,11 @@ describe('resolveConfig — dev-varianten (ingen APP_VARIANT)', () => {
   // speiler iOS-ens bundle-id, så den står ved siden av butikk-appen.
   it('har Android-pakken no.tornygolf.dev, som iOS-ens bundle-id', () => {
     expect(resolveConfig(base, DEV_ENV).android?.package).toBe('no.tornygolf.dev');
+  });
+
+  // #2560: Gradle laster aldri ned SDK-pakker selv, heller ikke i dev-bygget.
+  it('har pluginen som slår av SDK-nedlasting i Gradle', () => {
+    expect(resolveConfig(base, DEV_ENV).plugins).toContain(NO_SDK_DOWNLOAD_PLUGIN);
   });
 
   it('har ikke signeringspluginen — dev-bygget signeres med debug-nøkkelen som før', () => {
@@ -139,6 +146,10 @@ describe('resolveConfig — butikk-varianten (APP_VARIANT=store)', () => {
   // #2560: signeringspluginen er det eneste tillegget i butikk-varianten.
   it('har signeringspluginen for opplastingsnøkkelen', () => {
     expect(resolveConfig(base, STORE_ENV).plugins).toContain(STORE_SIGNING_PLUGIN);
+  });
+
+  it('har pluginen som slår av SDK-nedlasting i Gradle', () => {
+    expect(resolveConfig(base, STORE_ENV).plugins).toContain(NO_SDK_DOWNLOAD_PLUGIN);
   });
 
   it('lar resten av app.json stå: ikon, splash, plugins, tablet-valget', () => {

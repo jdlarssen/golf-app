@@ -23,10 +23,12 @@ tabellen «To varianter, én `app.json`» gjelder også Android.
     egen versjon (AGP 8.12.0). 186 MB.
 
   Installer det som mangler med `sdkmanager`. Skriptet skriver ut hele kommandoen.
-  **Gradle laster ikke ned noe selv:** skriptet kjører `./gradlew` med
-  `-Pandroid.builder.sdkDownload=false`. Mangler en pakke, stopper bygget og loggen sier hvilken.
-  Uten flagget henter Android Gradle-pluginen den uten å spørre så lenge lisensen er godtatt.
-  Det skjedde med `build-tools;35.0.0` i første debug-bygg 13.10.
+  **Gradle laster ikke ned noe selv, verken i dev- eller butikkbygget.** Config-pluginen
+  `withNoSdkDownload.js` står i `app.json` og skriver `android.builder.sdkDownload=false` i
+  `android/gradle.properties` ved hver prebuild. Mangler en pakke, stopper bygget og loggen sier
+  hvilken. Butikkskriptet stopper før Gradle hvis linja mangler. Uten den henter Android
+  Gradle-pluginen pakken uten å spørre så lenge lisensen er godtatt. Det skjedde med
+  `build-tools;35.0.0` i første debug-bygg 13.10.
 - **JDK 17 eller 21.** React Native anbefaler 17 («You may encounter problems using higher JDK
   versions»), og Gradle 9.3 fra prebuild-malen kjører på 17–25. Skriptet tar 17 hvis den finnes,
   ellers 21, og bryr seg ikke om hvilken JDK som er standard på Mac-en (her 25). Merk at
@@ -95,9 +97,9 @@ slutten, så bevis-fila er ufullstendig.
 | Kilde | Regel |
 |---|---|
 | `base/assets/index.android.bundle` (Hermes) | Alle bundel-reglene fra iOS-beviset, fra samme fil (`bundle-proof.sh`): begge strengtabellene og æ/ø/å-vakta, prod-adressen og `https://tornygolf.no` kreves, staging-adressen, `localhost:3111`, LAN og loopback er forbudt, anon-nøkkelen fra miljøet må finnes, ingen verdi fra appens `.env`-filer, og `http://`/`localhost` må stå på lista over kjente bibliotek-strenger. Begrunnelsen står i tabellen i `app-store-release.md`. |
-| Manifestet (`base/manifest/AndroidManifest.xml`, protobuf) | `aapt2` fra build-tools leser det etter at skriptet har pakket manifestet og `resources.pb` om til en proto-APK. Ingen bundletool. **KREV** pakke `no.tornygolf.app`, en versionCode (tallet skrives ut) og `targetSdkVersion` ≥ 36. **FORBY** `android:debuggable="true"` og et `autoVerify`-intent-filter for `tornygolf.no`. Det er motstykket til iOS-regelen om associated domains: appen claimer ikke lenker. En vert som er en ressursreferanse (`@string/…`) kan ikke leses her, og regnes som `tornygolf.no`. |
+| Manifestet (`base/manifest/AndroidManifest.xml`, protobuf) | `aapt2` fra build-tools leser det etter at skriptet har pakket manifestet og `resources.pb` om til en proto-APK. Ingen bundletool. **KREV** pakke `no.tornygolf.app`, en versionCode (tallet skrives ut) og `targetSdkVersion` ≥ 36. **FORBY** `android:debuggable="true"` og et `autoVerify`-intent-filter for `tornygolf.no`. Fail-closed: bare en debuggable-verdi som er tydelig usann eller ikke satt, gir PASS, og et `autoVerify` som ikke er tydelig `false`, regnes som på. Det er motstykket til iOS-regelen om associated domains: appen claimer ikke lenker. En vert som er en ressursreferanse (`@string/…`) kan ikke leses her, og regnes som `tornygolf.no`. |
 | Tillatelsene | Hele `uses-permission`-lista skrives ut som informasjon, uten PASS eller FAIL. |
-| `.so`-filene (16 KB-sider) | Hver `.so` under `base/lib/arm64-v8a/` og `base/lib/x86_64/` må ha LOAD-justering ≥ 16384. FAIL lister filene som ikke har det. Ingen `.so` i de to mappene er FAIL. 32-bit (`armeabi-v7a`, `x86`) skrives ut som informasjon, for 16 KB-kravet gjelder bare 64-bit. |
+| `.so`-filene (16 KB-sider) | Hver `.so` under `base/lib/arm64-v8a/` og `base/lib/x86_64/` må ha LOAD-justering ≥ 16384. FAIL lister filene som ikke har det. En av de to mappene uten `.so` er FAIL. 32-bit (`armeabi-v7a`, `x86`) skrives ut som informasjon, for 16 KB-kravet gjelder bare 64-bit. |
 | Signaturen | AAB-en er signert, og `jarsigner -verify` godtar den. Nøyaktig én signerer, med samme SHA-256 som opplastingsnøkkelen. Avtrykket leses fra `app/.well-known/assetlinks.json/route.ts` (linja etter `// Upload key`), ikke kopiert inn i skriptet. Ikke nøyaktig ett avtrykk der gir FAIL. Debug-nøkkelen eller en annen nøkkel gir også FAIL. |
 
 `android-proof.py` ved siden av skriptet leser manifest-utdataene fra `aapt2` og LOAD-
@@ -115,7 +117,9 @@ npx expo run:android
 ```
 
 Dev-varianten har pakken `no.tornygolf.dev`, så den står ved siden av butikk-appen på
-telefonen, og den signeres med debug-nøkkelen som før.
+telefonen, og den signeres med debug-nøkkelen som før. Den får også
+`android.builder.sdkDownload=false`, så `expo run:android` stopper og navngir en SDK-pakke som
+mangler i stedet for å laste den ned.
 
 ## Feilsøking
 
@@ -126,6 +130,8 @@ telefonen, og den signeres med debug-nøkkelen som før.
   `android.builder.sdkDownload=false` som gjør at bygget stopper i stedet for å laste ned.
 - **«Release-bygget stoppet: TORNY_ANDROID_… mangler i miljøet»:** Gradle ble kjørt uten
   skriptet. Bygg med skriptet.
+- **«android/gradle.properties har ikke android.builder.sdkDownload=false»:** prebuild la ikke
+  inn linja. Står `./scripts/withNoSdkDownload.js` i `plugins` i `app.json`?
 - **«Signeringspluginen er ikke i android/app/build.gradle»:** `app.config.ts` la ikke til
   pluginen. Er `APP_VARIANT=store` satt? Står `./scripts/withUploadSigning.js` i `plugins` for
   butikk-varianten?
@@ -146,7 +152,7 @@ sammenligningen ligger på bevissiden i PR-en. Rettingene hører til oppfølgere
 
 | # | Punkt | Hvordan målt | Resultat | Forslag til oppfølgeren |
 |---|---|---|---|---|
-| 1 | Kant-til-kant (targetSdk 36) | Skjermbilder av Login, Home, Hole og Resultater i lys og mørk, sammenlignet med iOS. Innfelt fra `adb shell dumpsys window`: navigasjonslinja er 63 px (24 dp). | **OK.** Statuslinja er gjennomsiktig, og innholdet starter under den på alle fire skjermene. Navigasjonslinja dekker ingen knapper. To ting er felles med iOS, ikke Android-feil: på Home ruller innholdet inn under klokka, og «Opprett spill» slutter 20 dp/pt fra bunnen, inne i navigasjonslinja (Android) og hjemindikatoren (iOS). | Vurder én felles retting for begge plattformene: bunnmarg med `insets.bottom` på Home, og en bakgrunn bak statuslinja når innholdet ruller under. |
+| 1 | Kant-til-kant (targetSdk 36) | Skjermbilder av Login, Home, Hole og Resultater i lys og mørk, sammenlignet med iOS. Innfelt fra `adb shell dumpsys window`: navigasjonslinja er 63 px (24 dp). | **OK.** Statuslinja er gjennomsiktig, og innholdet starter under den på alle fire skjermene. Navigasjonslinja dekker ingen knapper. To ting er felles med iOS, ikke Android-feil: på Home ruller innholdet inn under klokka, og «Opprett spill» slutter 20 dp/pt fra bunnen, inne i navigasjonslinja (Android) og hjemindikatoren (iOS). På Login står innholdet 8–17 dp lavere enn på iOS: innfeltet øverst er høyere på Pixel 7-profilen enn på iPhone 16e, og linjeboksene i punkt 3 kommer i tillegg. Innfeltet er forventet plattformoppførsel. | Vurder én felles retting for begge plattformene: bunnmarg med `insets.bottom` på Home, og en bakgrunn bak statuslinja når innholdet ruller under. |
 | 2 | Tilbaketasten og prediktiv tilbake | `adb shell input keyevent KEYCODE_BACK` og kant-sveip, med `dumpsys activity` etter hvert steg. Manifestet har `android:enableOnBackInvokedCallback="false"`. Dialogen fra `AccountSettings.tsx`: emulatoren i flymodus, ett slag tastet på Hole, så «Logg ut». Appdataene ble tømt (`pm clear`) før nettet kom tilbake, og staging har fortsatt ingen rad for slaget. | **OK.** Resultater → Hole → Home → hjemskjermen. Arket «Annet» på Hole lukkes og blir stående på Hole. Kant-sveip fra Hole lander på Home. Dialogen «Slag som ikke er sendt» blir stående etter tilbaketasten, kant-sveip og trykk utenfor (`cancelable: false` virker). «Avbryt» lukker den, og «Logg ut» kan trykkes igjen. | Ingen. Dialogen har Androids systemstil (se under). |
 | 3 | Fraunces-snittene | Glyfbånd målt i skjermbildene, omregnet til dp/pt: «8» på Hole, «Par 4», «God kveld, Ola» og etiketten over. | **BREKKER (designavvik, 1,3–2,4 dp).** Ingen klipping, og glyfene er like store på begge plattformene («8»: 69,3 dp mot 69,3 pt). Avstanden mellom linjene er større på Android: «HULL» → «8» er 13,0 dp mot 11,7 pt, datoen → «God kveld» 9,9 mot 8,6, og «Par 4» → «Indeks» 14,1 mot 11,7. Det passer med at Android legger til `includeFontPadding` og bruker win-målet (1,47), mens `frauncesLine` er målt for iOS. | Android-gren i `frauncesLine`/`interLine` (`includeFontPadding: false` og Androids egne mål), målt mot artboardet som i #2385. |
 | 4 | Deling med view-shot | «Del bag-taggen» i profilen. Logcat viser `act=android.intent.action.CHOOSER`. | **OK for bag-taggen**: Androids delingsark åpner med bildet av taggen. **UKJENT for «Del kortet» i Kavalkaden**: Kavalkaden trenger web-adressen, og dev-miljøet har ingen `EXPO_PUBLIC_WEB_BASE_URL` (LogBox: «[kavalkade] status feilet no-web-base-url»). Begge bruker `shareImage`. | Prøv «Del kortet» med en web-adresse satt, f.eks. mot webben lokalt på staging. |
@@ -160,8 +166,8 @@ sammenligningen ligger på bevissiden i PR-en. Rettingene hører til oppfølgere
 Andre funn under spiken:
 
 - **Build-tools 35.0.0 ble lastet ned av Gradle** i første debug-bygg, uten å spørre (186 MB, fra
-  Googles SDK). Byggeskriptet sjekker nå pakkene og kjører med
-  `android.builder.sdkDownload=false` (se «Forutsetninger»).
+  Googles SDK). Byggeskriptet sjekker nå pakkene, og prebuild skriver
+  `android.builder.sdkDownload=false` for begge variantene (se «Forutsetninger»).
 - **Resultater-headeren følger plattformen.** Android viser venstrejustert tittel med «←» og
   skyggelinje, iOS sentrert tittel med rund tilbakeknapp. Det er react-native-screens sin standard.
   Skal Android se ut som iOS, trengs `headerTitleAlign: 'center'` og egen tilbakeknapp.

@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`addReleaseSigning genererer signeringsblokken og feilgrenen slik snapshotet låser dem 1`] = `
+"release {
+            def tornyKeystore = System.getenv('TORNY_ANDROID_KEYSTORE')
+            if (tornyKeystore) {
+                storeFile file(tornyKeystore)
+            }
+            storePassword System.getenv('TORNY_ANDROID_KEYSTORE_PASSWORD')
+            keyAlias System.getenv('TORNY_ANDROID_KEY_ALIAS')
+            // PKCS12: nøkkelpassordet er det samme som keystore-passordet.
+            keyPassword System.getenv('TORNY_ANDROID_KEYSTORE_PASSWORD')
+        }"
+`;
+
+exports[`addReleaseSigning genererer signeringsblokken og feilgrenen slik snapshotet låser dem 2`] = `
+"gradle.taskGraph.whenReady { graph ->
+    def tornyReleaseTasks = graph.allTasks.findAll { it.project == project && it.name.toLowerCase().contains('release') }
+    if (!tornyReleaseTasks.isEmpty()) {
+        def missing = ['TORNY_ANDROID_KEYSTORE', 'TORNY_ANDROID_KEY_ALIAS', 'TORNY_ANDROID_KEYSTORE_PASSWORD'].findAll { !System.getenv(it) }
+        if (!missing.isEmpty()) {
+            throw new GradleException("Release-bygget stoppet: \${missing.join(', ')} mangler i miljøet. Bygg med native/app/scripts/store-build-android.sh, som setter dem.")
+        }
+    }
+}
+"
+`;
