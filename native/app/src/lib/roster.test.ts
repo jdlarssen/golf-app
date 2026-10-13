@@ -9,7 +9,6 @@ import type { LocalScore } from '../data/db';
 import type { BundlePlayer } from '../data/gameBundle';
 import {
   deliverForButton,
-  findInRoster,
   flightDeliveryButton,
   flightDeliveryFor,
   flightCtaLabel,
