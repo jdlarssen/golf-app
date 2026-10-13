@@ -1954,4 +1954,48 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
     expect(hidden()).toHaveLength(1);
     expect(hidden()[0].value).toBe('30');
   });
+
+  function renderTexasEdit(modeConfig: EditGameRow['mode_config'], teamSize: number) {
+    const players = EIGHT_PLAYERS.slice(0, 2 * teamSize);
+    return renderEdit(
+      editRow({ group_id: null, game_mode: 'texas_scramble', mode_config: modeConfig }),
+      players,
+      players.map((p, i) => ({
+        user_id: p.id,
+        team_number: i < teamSize ? 1 : 2,
+        flight_number: i < teamSize ? 1 : 2,
+        tee_gender: 'mens' as const,
+      })),
+    );
+  }
+
+  it('lagret rad over taket (80 av summen på 3-mannslag): feltet viser 240, lagring er sperret (#2566)', () => {
+    const { container } = renderTexasEdit(
+      { kind: 'texas_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 80 },
+      3,
+    );
+    expect(container.querySelector<HTMLInputElement>('#texas_team_handicap_pct__input')!.value).toBe('240');
+    expect(
+      container.querySelector<HTMLInputElement>('input[type=hidden][name=texas_team_handicap_pct]')!.value,
+    ).toBe('80');
+    expect(screen.getByTestId('save-changes')).toBeDisabled();
+  });
+
+  it('lagret rad uten lag-handicap (4-mannslag): feltet får standarden, ikke «Brutto» (#2566)', () => {
+    // Old data without team_handicap_pct: the form seeds the default for the
+    // team size (10 % of the sum = 40 % of the average) and shows it in
+    // «Netto», instead of a «Brutto» field that sends NaN and blocks the save.
+    const { container } = renderTexasEdit(
+      { kind: 'texas_scramble', team_size: 4 } as unknown as EditGameRow['mode_config'],
+      4,
+    );
+    expect(
+      container.querySelector<HTMLInputElement>('input[name=texas_team_handicap_pct__scoring_mode]:checked')!.value,
+    ).toBe('netto');
+    expect(container.querySelector<HTMLInputElement>('#texas_team_handicap_pct__input')!.value).toBe('40');
+    expect(
+      container.querySelector<HTMLInputElement>('input[type=hidden][name=texas_team_handicap_pct]')!.value,
+    ).toBe('10');
+    expect(screen.getByTestId('save-changes')).toBeEnabled();
+  });
 });
