@@ -11,6 +11,7 @@
       "bundleIdentifier": "no.tornygolf.dev"
     },
     "android": {
+      "package": "no.tornygolf.dev",
       "adaptiveIcon": {
         "backgroundColor": "#1B4332",
         "foregroundImage": "./assets/android-icon-foreground.png",

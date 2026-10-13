@@ -1,6 +1,7 @@
 # native/app/scripts/env-file.sh
-# Dotenv-leseren butikkbygget og beviset deler (#2208). Sources av
-# `store-build-ios.sh` og `store-build-proof.sh`; kjøres ikke alene.
+# Dotenv-leseren butikkbyggene og bevisene deler (#2208). Sources av
+# `store-build-ios.sh`, `store-build-android.sh` og `bundle-proof.sh` (som
+# begge bevisene leser, #2560); kjøres ikke alene.
 #
 #   env_file_value <fil> <NØKKEL>    verdien fra siste linje som setter nøkkelen
 #                                    (tom streng og exit 0 når den mangler)
