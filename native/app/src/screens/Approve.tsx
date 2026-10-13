@@ -39,7 +39,7 @@ import { seedGameScores } from '../data/seedScores';
 import { describeFailure } from '../lib/actionFeedback';
 import { displayName } from '../lib/display';
 import { findInRoster, pendingApprovals, toRoster, type RosterEntry } from '../lib/roster';
-import { scoresByHoleFor, useGameBundle, useLocalScores } from '../lib/useGameData';
+import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
 import { useTheme } from '../theme';
@@ -52,7 +52,10 @@ export function Approve({ route }: ScreenProps<'Approve'>) {
   // #2201: godkjenningsvarslene for spillet er lest når du har åpnet siden.
   useMarkVisitRead('gameApprove', gameId);
   const { bundle, refresh } = useGameBundle(gameId);
-  const { scores, reload } = useLocalScores(gameId);
+  const { scores: localScores, reload } = useLocalScores(gameId);
+  // #2067/#2228: hullene en trukket kaptein førte, står på den nye kapteinens
+  // kort, slik webbens godkjenningsside viser dem.
+  const scores = useTeamScores(localScores, bundle);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
 

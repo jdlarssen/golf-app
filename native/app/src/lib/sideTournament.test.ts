@@ -252,6 +252,41 @@ describe('withdrawn players', () => {
       0,
     );
   });
+
+  it('counts the holes a withdrawn captain entered for the team (#2228)', () => {
+    // Texas scramble, one ball per team. Team 1's captain (the lex-min id)
+    // deleted their account after hole 9, so the row is withdrawn and the
+    // holes they entered stay on it. The web folds them onto the active
+    // member before the side tournament is built (#2067); so must the app.
+    const front9 = Object.fromEntries(
+      Array.from({ length: 9 }, (_, i) => [i + 1, i + 1 === 3 ? 3 : 4]),
+    );
+    const back9 = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 10, 4]));
+    const data = buildSideTournament({
+      bundle: bundle({
+        gameMode: 'texas_scramble',
+        players: [
+          player({
+            userId: 'user-a',
+            teamNumber: 1,
+            withdrawnAt: '2026-08-31T12:00:00.000Z',
+          }),
+          player({ userId: 'user-b', name: 'Bjørn Dal', teamNumber: 1 }),
+          player({ userId: 'user-c', name: 'Cato Eng', teamNumber: 2 }),
+          player({ userId: 'user-d', name: 'Dina Fos', teamNumber: 2 }),
+        ],
+      }),
+      scores: [
+        ...scoresFor('user-a', front9),
+        ...scoresFor('user-b', back9),
+        ...scoresFor('user-c', { 3: 4 }),
+      ],
+      sideWinnerRows: [],
+      result: { kind: 'texas_scramble', teams: [] },
+    });
+
+    expect(awardsFor(data, 1, 'hole_win').map((a) => a.holeNumber)).toContain(3);
+  });
 });
 
 // ---------------------------------------------------------------------------

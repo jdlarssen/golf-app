@@ -35,6 +35,12 @@
 //     sideturneringen (#386).
 //  4. **Navnløse spillere BEHOLDES.** Se `eligiblePlayers` — det er en
 //     bevisst avvik-note, ikke en forglemmelse.
+//  5. **Lagets rader følger laget (#2067).** Sletter kapteinen på et
+//     enballslag kontoen midt i runden, ligger hullene som alt er ført, igjen
+//     på den trukne raden. `buildSideTournament` folder dem over på den
+//     nåværende eieren (`foldLocalScores`) før brutto og netto bygges, slik
+//     webbens `computeSideTournament` gjør. Rader som alt er foldet, endres
+//     ikke av en ny folding.
 import { firstName } from '../../../../lib/firstName';
 import { formatRevealName } from '../../../../lib/names/formatRevealName';
 import {
@@ -61,6 +67,8 @@ import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
 import type { LocalScore } from '../data/db';
 import type { BundlePlayer, GameBundle } from '../data/gameBundle';
 import type { SideWinnerRow } from '../data/sideWinners';
+import { toRoster } from './roster';
+import { foldLocalScores } from './teamPlay';
 
 /**
  * Hvordan spillerne samles til «lag» i sideturneringen.
@@ -261,6 +269,9 @@ function groupTeams(
  * vinnerradene (`fetchSideWinners`) og hovedtabellen
  * (`computeGameLeaderboard`).
  *
+ * @param opts.scores De lokale slagene. Lagets rader foldes over på den
+ *   nåværende eieren her (punkt 5 i filhodet), så kalleren kan sende rå eller
+ *   alt foldede rader.
  * @param opts.result Motorens svar for spillets HOVEDformat. Brukes kun til å
  *   avgjøre lag-grupperingen (se {@link resolveTeamGrouping}) — sideturneringens
  *   egne tall kommer alltid fra `calculateSideTournament`.
@@ -309,8 +320,13 @@ export function buildSideTournament(opts: {
   // Sideturneringen trenger BÅDE brutto og netto per hull — en stableford-
   // eller matchplay-`ModeResult` bærer bare sitt eget format sine tall. Derfor
   // regnes de her, fra de rå slagene, som på web.
+  // #2067: lagets rader på den nåværende eieren først. Et ukjent format
+  // foldes ikke.
+  const mode = asGameMode(bundle.game.gameMode);
+  const teamScores =
+    mode === null ? scores : foldLocalScores(scores, toRoster(bundle.players), mode);
   const scoresByPlayer = new Map<string, Map<number, number>>();
-  for (const score of scores) {
+  for (const score of teamScores) {
     if (score.strokes == null) continue;
     let holes = scoresByPlayer.get(score.userId);
     if (!holes) {
