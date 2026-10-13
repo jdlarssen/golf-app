@@ -98,9 +98,6 @@ import { PokalHankerIcon } from '../components/icons/Icons';
 import { SyncBanner } from '../components/sync/SyncBanner';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundleHole, BundlePlayer, GameBundle } from '../data/gameBundle';
-import { subscribeGameScores } from '../data/realtime';
-import { seedGameScores } from '../data/seedScores';
-import { addForegroundListener, addOnlineListener } from '../data/syncTriggers';
 import { drainQueue } from '../data/syncWorker';
 import { writeScore } from '../data/writeScore';
 import { displayName } from '../lib/display';
@@ -120,6 +117,7 @@ import {
 import { useGameChoices, type GameChoices } from '../lib/useChoices';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { usePuttsTracking, type PuttsTracking } from '../lib/usePuttsTracking';
+import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useScoreRail, type ScoreRailSeat } from '../lib/useScoreRail';
 import { setSunlight, useSunlight } from '../lib/sunlight';
 import { wolfHoleState, wolfPointsByUser, wolfStake } from '../lib/wolfHole';
@@ -192,34 +190,11 @@ function HoleScreen({ route, navigation }: ScreenProps<'Hole'>) {
   const putts = usePuttsTracking(gameId);
 
   // Realtime + seed henger på SPILLET, ikke på hullet: å bytte hull skal ikke
-  // bygge kanalen på nytt (#1366-disiplinen bor i `subscribeGameScores`).
-  // Seeden kjører ved åpning og når kanalen er tilbake etter et brudd: det som
-  // ble ført mens den lå nede, kommer aldri som en hendelse (#2093). Den kjører
-  // også når appen kommer i forgrunnen og når nettet er tilbake, som webbens
-  // `catchUp` på focus og online (#1980): overlever sokkelen bakgrunnen, blir
-  // det ingen resubscribe, og makkerens hull ble stående tomme. Kanalen bygges
-  // ikke på nytt av det.
-  useEffect(() => {
-    const seed = () => {
-      void seedGameScores(gameId)
-        .catch(() => undefined)
-        .then(() => reload());
-    };
-    const unsubscribe = subscribeGameScores(gameId, {
-      onMerge: () => {
-        void reload();
-      },
-      onResubscribed: seed,
-    });
-    const removeForeground = addForegroundListener(seed);
-    const removeOnline = addOnlineListener(seed);
-    seed();
-    return () => {
-      removeForeground();
-      removeOnline();
-      unsubscribe();
-    };
-  }, [gameId, reload]);
+  // bygge kanalen på nytt (#1366). `useScoreCatchUp` seeder ved åpning, når
+  // kanalen er tilbake etter et brudd (#2093), når appen kommer i forgrunnen og
+  // når nettet er tilbake (#1980), samme hook som de andre spillskjermene
+  // (#2228).
+  useScoreCatchUp(gameId, reload, { live: true });
 
   // #2219: «Neste» bytter bare parameteren og gir ikke nytt fokus. Status
   // leses likevel på nytt ved hvert hullbytte, som på nettsiden: er runden

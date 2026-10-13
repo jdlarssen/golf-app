@@ -162,6 +162,10 @@ jest.mock('../data/submitCard', () => ({
   submitCard: jest.fn(async () => ({ ok: true, alreadySubmitted: false, alsoDelivered: 0 })),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
+// Slag-innhentingen (#2228) drar inn realtime-modulen.
+jest.mock('../data/realtime', () => ({
+  subscribeGameScores: jest.fn(() => () => undefined),
+}));
 jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),

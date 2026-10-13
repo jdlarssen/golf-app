@@ -5,6 +5,9 @@
 // scorene kommer alltid fra SQLite — aldri rett fra PostgREST. Det er derfor
 // hull-føring virker i flymodus midt i runden, og det er derfor et tapp vises
 // før RPC-en har landet.
+//
+// Slagene hentes inn igjen fra serveren av `useScoreCatchUp` (egen fil), og
+// «appen kom tilbake» bor i `useOnResume` (#2228).
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
@@ -14,9 +17,9 @@ import {
   refreshGameBundle,
   type GameBundle,
 } from '../data/gameBundle';
-import { addForegroundListener } from '../data/syncTriggers';
 import { toRoster } from './roster';
 import { foldLocalScores } from './teamPlay';
+import { useOnResume } from './useOnResume';
 
 function messageOf(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -32,13 +35,13 @@ export interface GameBundleState {
 
 /**
  * Spill-bundelen: cache med én gang, refetch i bakgrunnen og på nytt hver gang
- * skjermen får fokus eller appen kommer i forgrunnen.
+ * skjermen får fokus, appen kommer i forgrunnen eller nettet er tilbake.
  *
  * Refetchen er det som fanger status-drift: blir spillet avsluttet, lagkortet
  * levert eller spilleren trukket mens skjermen ligger bak i stacken eller
  * telefonen ligger i lomma, oppdager vi det når spilleren kommer tilbake, ikke
- * først når en skriving avvises (#2219). Bare skjermen som har fokus lytter på
- * forgrunnen, så skjermene bak i stacken henter ikke i kor.
+ * først når en skriving avvises (#2219). Bare skjermen som har fokus lytter
+ * (`useOnResume`, #2228), så skjermene bak i stacken henter ikke i kor.
  *
  * Et hullbytte gir ikke nytt fokus (`navigation.setParams`). Hullsiden kaller
  * derfor `refresh` selv når hullet byttes.
@@ -78,11 +81,9 @@ export function useGameBundle(gameId: string): GameBundleState {
   useFocusEffect(
     useCallback(() => {
       void refresh();
-      return addForegroundListener(() => {
-        void refresh();
-      });
     }, [refresh]),
   );
+  useOnResume(refresh);
 
   return { bundle, errorText, loading, refresh };
 }

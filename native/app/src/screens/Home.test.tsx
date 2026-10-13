@@ -6,13 +6,14 @@
 // seg ned når en runde pågår, og at heltekortet tegnes fra enheten når nettet
 // er borte.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { CardBundle } from '../data/homeHero';
 import { fetchKavalkadeStatus } from '../data/kavalkade';
 import type { HomeList } from '../data/homeList';
 import type { OwnProfile } from '../data/profile';
 import type { ScreenProps } from '../navigation';
 import { holeScores, homeBundle, homeCard, homePlayer } from '../test/homeFixtures';
+import { fireForeground } from '../test/syncTriggersMock';
 import { Home } from './Home';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
@@ -37,7 +38,7 @@ jest.mock('../data/profile', () => ({
     return mockState.profile;
   }),
 }));
-jest.mock('../data/syncTriggers', () => ({ startSyncTriggers: jest.fn(() => () => undefined) }));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 // #2265 PR 2: Kavalkade-banneret spør serveren; uten svar står det ikke.
 jest.mock('../data/kavalkade', () => ({ fetchKavalkadeStatus: jest.fn(async () => null) }));
 jest.mock('../session', () => ({
@@ -211,6 +212,14 @@ it('stiller opp dato, hilsen, helt, flere runder, billett, mine spill og forrige
   expect(screen.queryByText('Profil')).toBeNull();
   await fireEvent.press(pill);
   expect(navigate).toHaveBeenCalledWith('Profile');
+
+  // #2228: appen kom i forgrunnen. Lista hentes på nytt, ikke bare ved fokus.
+  const { refreshHomeCards } = require('../data/homeList') as { refreshHomeCards: jest.Mock };
+  const fetches = refreshHomeCards.mock.calls.length;
+  await act(async () => {
+    fireForeground();
+  });
+  expect(refreshHomeCards).toHaveBeenCalledTimes(fetches + 1);
 });
 
 it('tegner heltekortet fra enheten når nettet er borte', async () => {

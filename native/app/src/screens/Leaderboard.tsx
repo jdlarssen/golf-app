@@ -1,16 +1,15 @@
 // Native N4 (#1828): resultattabellen.
 //
 // Datasløyfa er hull-sidens, uendret: bundelen fra `cache_entries`, slagene fra
-// SQLite, `seedGameScores` ved åpning og PÅHENG på det realtime-abonnementet
-// appen alt har (`subscribeGameScores`). Ingen ny kanal — hver merge leser den
-// lokale basen på nytt, og tabellen regnes om fra den. Det er derfor tabellen
-// oppdaterer seg når en makker taster på andre siden av banen, og hvorfor den
-// står støtt i flymodus.
+// SQLite, og den delte `useScoreCatchUp` (#2228) som henter slagene ved åpning,
+// i forgrunnen og med nett igjen, og henger på spillets ene realtime-kanal.
+// Hver merge leser den lokale basen på nytt, og tabellen regnes om fra den. Det
+// er derfor tabellen oppdaterer seg når en makker taster på andre siden av
+// banen, og hvorfor den står støtt i flymodus.
 //
 // Regnestykket er ikke her: `computeGameLeaderboard` bygger konteksten og kaller
 // den DELTE motoren. Denne fila velger visning og passer på hva reveal-runden
 // får lov å vise.
-import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import {
   firstHalfHoleNumbersForSegment,
@@ -31,8 +30,6 @@ import { CalmNote, LeaderTable } from '../components/leaderboard/Table';
 import { WebLinkButton } from '../components/WebLinkButton';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
-import { subscribeGameScores } from '../data/realtime';
-import { seedGameScores } from '../data/seedScores';
 import {
   GATE_LINK_LABEL,
   gameWebPath,
@@ -56,6 +53,7 @@ import { buildSideTournament } from '../lib/sideTournament';
 import { choicesNotYetHere, useGameChoices } from '../lib/useChoices';
 import { CHOICES_MISSING_BOARD_TEXT, SEED_FAILED_TEXT } from '../lib/seedCopy';
 import { useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
+import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import { useSideWinners, type SideWinnersState } from '../lib/useSideWinners';
 import type { ScreenProps } from '../navigation';
 import { useTheme } from '../theme';
@@ -156,29 +154,10 @@ export function Leaderboard({ route }: ScreenProps<'Leaderboard'>) {
   // koster et nettkall for data det uansett ikke får vise.
   const sideWinners = useSideWinners(gameId, sideTournamentVisible(bundle));
 
-  // Påheng på det eksisterende abonnementet: samme kanal hull-siden bruker,
-  // og hver merge leser den lokale basen på nytt. Seeden kjører også når
-  // kanalen er tilbake etter et brudd, som på hull-siden (#2093).
-  // Feilet hentingen (uten nett), sier en linje det: et sluttresultat fra bare
-  // telefonens slag ser ellers ferdig ut (#2255 PR 3a, samme som «Hull for hull»).
-  const [seedFailed, setSeedFailed] = useState(false);
-
-  useEffect(() => {
-    const seed = () => {
-      void seedGameScores(gameId)
-        .then(() => setSeedFailed(false))
-        .catch(() => setSeedFailed(true))
-        .then(() => reload());
-    };
-    const unsubscribe = subscribeGameScores(gameId, {
-      onMerge: () => {
-        void reload();
-      },
-      onResubscribed: seed,
-    });
-    seed();
-    return unsubscribe;
-  }, [gameId, reload]);
+  // Samme kanal og samme innhenting som hull-siden (#2228). Feilet hentingen
+  // (uten nett), sier en linje det: et sluttresultat fra bare telefonens slag
+  // ser ellers ferdig ut (#2255 PR 3a, samme som «Hull for hull»).
+  const { seedFailed } = useScoreCatchUp(gameId, reload, { live: true });
 
   if (!bundle || choicesPending) {
     return (

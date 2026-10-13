@@ -26,6 +26,7 @@ import { writeScore } from '../data/writeScore';
 import { loadSunlight, setSunlight } from '../lib/sunlight';
 import type { ScreenProps } from '../navigation';
 import { strokesLine } from '../components/hole/FlightRow';
+import { fireForeground, fireOnline } from '../test/syncTriggersMock';
 import { Hole } from './Hole';
 
 const GAME_ID = 'game-1';
@@ -192,10 +193,7 @@ jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
 }));
 jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefined) }));
-jest.mock('../data/syncTriggers', () => ({
-  addForegroundListener: jest.fn(() => () => undefined),
-  addOnlineListener: jest.fn(() => () => undefined),
-}));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),
@@ -319,10 +317,6 @@ describe('Hole', () => {
     const { refreshGameBundle } = require('../data/gameBundle') as {
       refreshGameBundle: jest.Mock;
     };
-    const { addForegroundListener, addOnlineListener } = require('../data/syncTriggers') as {
-      addForegroundListener: jest.Mock;
-      addOnlineListener: jest.Mock;
-    };
     await waitFor(() => {
       expect(seedGameScores).toHaveBeenCalledTimes(1);
     });
@@ -333,7 +327,7 @@ describe('Hole', () => {
     // likevel hente det makkeren førte i mellomtiden, og spillet på nytt: ble
     // runden avsluttet mens telefonen lå i lomma, låses hullet (#2219).
     await act(async () => {
-      for (const [listener] of addForegroundListener.mock.calls) listener();
+      fireForeground();
     });
     expect(seedGameScores).toHaveBeenCalledTimes(2);
     expect(refreshGameBundle).toHaveBeenCalledTimes(2);
@@ -346,10 +340,12 @@ describe('Hole', () => {
     });
 
     await act(async () => {
-      addOnlineListener.mock.calls[0]![0]();
+      fireOnline();
     });
     expect(seedGameScores).toHaveBeenCalledTimes(3);
     expect(seedGameScores).toHaveBeenLastCalledWith(GAME_ID);
+    // #2228: spillet hentes også på nytt når nettet er tilbake.
+    expect(refreshGameBundle).toHaveBeenCalledTimes(4);
     // Ingen ny kanal (#1366).
     expect(subscribeGameScores).toHaveBeenCalledTimes(1);
   });

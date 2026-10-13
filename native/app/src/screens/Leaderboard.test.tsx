@@ -13,6 +13,7 @@ import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../lib/scoring/settlement';
 import type { ScreenProps } from '../navigation';
+import { fireForeground } from '../test/syncTriggersMock';
 import { Leaderboard, LeaderboardBody } from './Leaderboard';
 
 const GAME_ID = 'game-1';
@@ -115,6 +116,7 @@ jest.mock('../data/choices', () => ({
 jest.mock('../data/realtime', () => ({
   subscribeGameScores: jest.fn(() => () => undefined),
 }));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockLocalScores),
@@ -180,6 +182,19 @@ describe('Leaderboard', () => {
       subscribeGameScores.mock.calls[0]![1].onResubscribed();
     });
     expect(seedGameScores).toHaveBeenCalledTimes(2);
+
+    // #2228: appen kom i forgrunnen og sokkelen overlevde. Slagene og spillet
+    // hentes likevel på nytt, uten en ny kanal.
+    const { refreshGameBundle } = require('../data/gameBundle') as {
+      refreshGameBundle: jest.Mock;
+    };
+    const bundleCalls = refreshGameBundle.mock.calls.length;
+    await act(async () => {
+      fireForeground();
+    });
+    expect(seedGameScores).toHaveBeenCalledTimes(3);
+    expect(refreshGameBundle).toHaveBeenCalledTimes(bundleCalls + 1);
+    expect(subscribeGameScores).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -23,6 +23,11 @@ jest.mock('../data/gameBundle', () => ({
   refreshGameBundle: jest.fn(async () => mockState.bundle),
 }));
 jest.mock('../data/seedScores', () => ({ seedGameScores: jest.fn(async () => 0) }));
+// Slag-innhentingen (#2228) drar inn realtime og «appen kom tilbake».
+jest.mock('../data/realtime', () => ({
+  subscribeGameScores: jest.fn(() => () => undefined),
+}));
+jest.mock('../data/syncTriggers', () => require('../test/syncTriggersMock'));
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listScoresForGame: jest.fn(async () => mockState.scores),

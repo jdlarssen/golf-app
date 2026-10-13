@@ -77,6 +77,7 @@ import { ACTIVE_CARD_LABELS, formatTeeOff } from '../lib/display';
 import { HOME_TEXT, greeting, hcpA11yLabel } from '../lib/homeCopy';
 import { formatWeekdayDayMonth } from '../lib/homeDates';
 import { useKavalkadeStatus } from '../lib/useKavalkadeStatus';
+import { useOnResume } from '../lib/useOnResume';
 import { buildHeroModel, pickHeroCard } from '../lib/homeHero';
 import { countsPoints, lastRoundPoints } from '../lib/lastRound';
 import type { ScoringExtras } from '../lib/scoringContext';
@@ -166,6 +167,8 @@ export function Home({ navigation }: ScreenProps<'Home'>) {
       void refresh();
     }, [refresh]),
   );
+  // #2228: også når appen kommer i forgrunnen og når nettet er tilbake.
+  useOnResume(refresh);
 
   const split = list ? splitHomeCards(list.cards) : null;
   const { hero, rest } = pickHeroCard(split?.active ?? []);
