@@ -13,12 +13,12 @@ import { Input } from '@/components/ui/Input';
  * komponent som brukes på tvers av alle game-mode-wizards (#266).
  *
  * Kontrollerer en hidden input med konfigurerbart felt-navn:
- *  - «Netto» (default) → admin velger allowance 0..100, default per mode.
+ *  - «Netto» (default) → admin velger allowance 0..`maxPct` (100 som standard), default per mode.
  *  - «Brutto» → input skjules, hidden-felt sendes som 0 til server.
  *
  * Datamodellen er én DB-kolonne (`games.hcp_allowance_pct`,
  * `tournaments.fourball_allowance_pct`, eller `games.mode_config.team_handicap_pct`
- * for texas): 0 = brutto, 1..100 = netto med den prosenten. Validatorene
+ * for texas): 0 = brutto, 1..`maxPct` = netto med den prosenten. Validatorene
  * i `lib/games/gamePayload.ts` håndhever range; her er det kun UX.
  *
  * Brukes i to varianter:
@@ -79,6 +79,12 @@ type Props = {
   value?: number;
   onChange?: (pct: number) => void;
   /**
+   * Høyeste netto-prosent feltet godtar (`max` og onChange-grensen). 100 for
+   * vanlig allowance; scramble-familiens lag-handicap sender
+   * `TEAM_HANDICAP_AVERAGE_PCT_MAX` fra grensens hjem (#2566).
+   */
+  maxPct?: number;
+  /**
    * Når true, droppes det interne `<input type="hidden">`-feltet. Parent
    * forventes da å rendre en sentral hidden input selv — toggle-en er
    * bare et UI-kontroll og verdien lever i parent-state.
@@ -97,13 +103,14 @@ export function AllowanceField({
   initialPct,
   value,
   onChange,
+  maxPct = 100,
   hideHiddenInput = false,
 }: Props) {
   const t = useTranslations('allowance');
   const resolvedInputLabel = inputLabel ?? t('inputLabelDefault');
   const isControlled = value !== undefined && onChange !== undefined;
   const seed = initialPct ?? defaultPct;
-  // pct = aktuelt valg (0 = brutto, 1..100 = netto). Uncontrolled-varianten
+  // pct = aktuelt valg (0 = brutto, 1..maxPct = netto). Uncontrolled-varianten
   // holder rå-verdien lokalt; controlled-varianten leser fra parent.
   const [uncontrolledPct, setUncontrolledPct] = useState<number>(seed);
   const pct = isControlled ? (value as number) : uncontrolledPct;
@@ -171,12 +178,12 @@ export function AllowanceField({
           hint={nettoHelperText}
           type="number"
           min={0}
-          max={100}
+          max={maxPct}
           step={1}
           value={pct === 0 ? lastNettoPct : pct}
           onChange={(e) => {
             const v = Number(e.target.value);
-            if (Number.isInteger(v) && v >= 0 && v <= 100) {
+            if (Number.isInteger(v) && v >= 0 && v <= maxPct) {
               setLastNettoPct(v);
               commitPct(v);
             }

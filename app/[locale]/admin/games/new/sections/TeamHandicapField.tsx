@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import {
+  TEAM_HANDICAP_AVERAGE_PCT_MAX,
   averagePctToSumPct,
   sumPctToAveragePct,
 } from '@/lib/games/teamHandicapUnit';
@@ -98,6 +99,7 @@ export function TeamHandicapField({
       onChange={(nextAveragePct) =>
         onSumPctChange(averagePctToSumPct(nextAveragePct, teamSize))
       }
+      maxPct={TEAM_HANDICAP_AVERAGE_PCT_MAX}
       hideHiddenInput
     />
   );
