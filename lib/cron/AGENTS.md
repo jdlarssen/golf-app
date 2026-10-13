@@ -17,7 +17,7 @@ pg_cron (every minute) → EXISTS gate in the job body → `net.http_post` (pg_n
 
 ## Three signals — do not mix them up
 
-1. **The gate ran:** `cron.job_run_details.status = 'succeeded'` only means the job's SQL ran. `return_message` tells you what it did: `'0 rows'` = nothing was due and no request was made; `'1 row'` = a request was queued (verified on staging 2026-09-27). A healthy prod job shows `'0 rows'` nearly all the time.
+1. **The gate ran:** `cron.job_run_details.status = 'succeeded'` only means the job's SQL ran. `return_message` tells you what it did: `'0 rows'` = nothing was due and no request was made; `'1 row'` = a request was queued (verified on staging 2026-09-27). A healthy prod job shows `'0 rows'` nearly all the time. The table only goes back 7 days: the nightly `purge-cron-run-history` job deletes older rows (0207, #2558), because the unpruned log once filled 596 MB of the 500 MB Free-plan database.
 2. **The call went out and was answered:** `net._http_response` holds the real status codes, but it is not history. `pg_net.ttl` is 6 hours and old rows are purged when the worker next runs, so an empty or tiny table means "no calls lately", not "calls are failing".
 3. **The game actually started or finished:** the data-level proof. This is the one to trust.
 
