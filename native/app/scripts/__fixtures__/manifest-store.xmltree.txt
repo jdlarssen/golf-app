@@ -1,0 +1,64 @@
+# Fikstur for android-proof.test.js (#2560). Kilde: `aapt2 dump xmltree --file AndroidManifest.xml`
+# (build-tools 36.0.0) på manifestet i butikk-AAB-en TornyNative-1.1.0-3.aab (kast-nøkkel, 2026-10-13),
+# pakket om til proto-APK slik store-build-proof-android.sh gjør. Kortet ned: manifestet med uses-sdk og
+# de fem første uses-permission, og application med MainActivity til og med LAUNCHER-filteret.
+# Linjer som ikke starter med E:/A: hoppes over av leseren.
+N: android=http://schemas.android.com/apk/res/android (line=2)
+  E: manifest (line=2)
+    A: package="no.tornygolf.app" (Raw: "no.tornygolf.app")
+    A: http://schemas.android.com/apk/res/android:versionCode(0x0101021b)=3 (Raw: "3")
+    A: http://schemas.android.com/apk/res/android:versionName(0x0101021c)="1.1.0" (Raw: "1.1.0")
+    A: http://schemas.android.com/apk/res/android:compileSdkVersion(0x01010572)=36 (Raw: "36")
+    A: platformBuildVersionCode=36 (Raw: "36")
+    A: http://schemas.android.com/apk/res/android:compileSdkVersionCodename(0x01010573)="16" (Raw: "16")
+    A: platformBuildVersionName=16 (Raw: "16")
+      T: '\n\n    '
+      E: uses-sdk (line=7)
+        A: http://schemas.android.com/apk/res/android:minSdkVersion(0x0101020c)=24 (Raw: "24")
+        A: http://schemas.android.com/apk/res/android:targetSdkVersion(0x01010270)=36 (Raw: "36")
+      T: '\n\n    '
+      E: uses-permission (line=11)
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.INTERNET" (Raw: "android.permission.INTERNET")
+      T: '\n    '
+      E: uses-permission (line=12)
+        A: http://schemas.android.com/apk/res/android:maxSdkVersion(0x01010271)=32 (Raw: "32")
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.READ_EXTERNAL_STORAGE" (Raw: "android.permission.READ_EXTERNAL_STORAGE")
+      T: '\n    '
+      E: uses-permission (line=15)
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.SYSTEM_ALERT_WINDOW" (Raw: "android.permission.SYSTEM_ALERT_WINDOW")
+      T: '\n    '
+      E: uses-permission (line=16)
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.VIBRATE" (Raw: "android.permission.VIBRATE")
+      T: '\n    '
+      E: uses-permission (line=17)
+        A: http://schemas.android.com/apk/res/android:maxSdkVersion(0x01010271)=32 (Raw: "32")
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.WRITE_EXTERNAL_STORAGE" (Raw: "android.permission.WRITE_EXTERNAL_STORAGE")
+      T: '\n\n    '
+      E: application (line=84)
+        A: http://schemas.android.com/apk/res/android:allowBackup(0x01010280)=true (Raw: "true")
+        A: http://schemas.android.com/apk/res/android:appComponentFactory(0x0101057a)="androidx.core.app.CoreComponentFactory" (Raw: "androidx.core.app.CoreComponentFactory")
+        A: http://schemas.android.com/apk/res/android:enableOnBackInvokedCallback(0x0101066c)=false (Raw: "false")
+        A: http://schemas.android.com/apk/res/android:extractNativeLibs(0x010104ea)=false (Raw: "false")
+        A: http://schemas.android.com/apk/res/android:icon(0x01010002)=@mipmap/ic_launcher (Raw: "@mipmap/ic_launcher")
+        A: http://schemas.android.com/apk/res/android:label(0x01010001)=@string/app_name (Raw: "@string/app_name")
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="no.tornygolf.app.MainApplication" (Raw: "no.tornygolf.app.MainApplication")
+        A: http://schemas.android.com/apk/res/android:roundIcon(0x0101052c)=@mipmap/ic_launcher_round (Raw: "@mipmap/ic_launcher_round")
+        A: http://schemas.android.com/apk/res/android:supportsRtl(0x010103af)=true (Raw: "true")
+        A: http://schemas.android.com/apk/res/android:theme(0x01010000)=@style/AppTheme (Raw: "@style/AppTheme")
+          T: '\n        '
+          E: activity (line=108)
+            A: http://schemas.android.com/apk/res/android:configChanges(0x0101001f)=0x80000fb0 (Raw: "keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|smallestScreenSize|assetsPaths")
+            A: http://schemas.android.com/apk/res/android:exported(0x01010010)=true (Raw: "true")
+            A: http://schemas.android.com/apk/res/android:launchMode(0x0101001d)=2 (Raw: "singleTask")
+            A: http://schemas.android.com/apk/res/android:name(0x01010003)="no.tornygolf.app.MainActivity" (Raw: "no.tornygolf.app.MainActivity")
+            A: http://schemas.android.com/apk/res/android:screenOrientation(0x0101001e)=1 (Raw: "portrait")
+            A: http://schemas.android.com/apk/res/android:theme(0x01010000)=@style/Theme.App.SplashScreen (Raw: "@style/Theme.App.SplashScreen")
+            A: http://schemas.android.com/apk/res/android:windowSoftInputMode(0x0101022b)=0x00000010 (Raw: "adjustResize")
+              T: '\n            '
+              E: intent-filter (line=116)
+                  T: '\n                '
+                  E: action (line=117)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.action.MAIN" (Raw: "android.intent.action.MAIN")
+                  T: '\n\n                '
+                  E: category (line=119)
+                    A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.intent.category.LAUNCHER" (Raw: "android.intent.category.LAUNCHER")

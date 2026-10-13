@@ -8,14 +8,18 @@
 #       protobuf, og aapt2 leser det når skriptet har pakket det om til en
 #       proto-APK). Skriver én fakta-linje per verdi:
 #         package=… · versionCode=… · versionName=… · minSdk=… · targetSdk=…
-#         debuggable=true|false|ikke-satt
+#         debuggable=true|false|ikke-satt|ukjent:<rå verdi>
 #         permission=<navn>        én linje per uses-permission(-sdk-23)
 #         autoverify-host=<vert>   én linje per vert i et intent-filter med
-#                                  android:autoVerify="true"
+#                                  android:autoVerify som ikke er tydelig false
+#       Fail-closed: en boolsk verdi aapt2 skriver typet (`(type 0x12)0xffffffff`)
+#       tolkes, og en verdi leseren ikke kjenner, regnes aldri som usann. Mangler
+#       manifestet eller pakkenavnet, er formatet ukjent: exit 1, ingen fakta.
 #
 #   android-proof.py elf-align <fil.so>
 #       Minste `p_align` blant PT_LOAD-segmentene i en ELF-fil (32 eller 64 bit,
-#       begge endianer). Exit 1 når fila ikke er ELF eller mangler LOAD.
+#       begge endianer). Exit 1 når fila ikke er ELF, har ukjent klasse eller
+#       endian, mangler LOAD eller er avkortet.
 #
 # Bare standardbiblioteket: beviset skal kjøre med /usr/bin/python3 uten noe
 # installert.
@@ -25,6 +29,19 @@ import sys
 
 ATTR = re.compile(r'^A: (?:[^=]*?:)?([A-Za-z0-9_]+)(?:\(0x[0-9a-f]+\))?=(.*)$')
 RAW = re.compile(r'\(Raw: "(.*)"\)\s*$')
+TYPED = re.compile(r'^\(type 0x[0-9a-f]+\)', re.IGNORECASE)
+TRUE_VALUES = {'true', '0xffffffff', '-1', '1'}
+FALSE_VALUES = {'false', '0x0', '0x00000000', '0'}
+
+
+def bool_state(raw):
+    """`true`, `false` eller `ukjent:<rå>`. Typet heksverdi godtas; alt annet er ukjent."""
+    value = TYPED.sub('', raw.strip()).lower()
+    if value in TRUE_VALUES:
+        return 'true'
+    if value in FALSE_VALUES:
+        return 'false'
+    return f'ukjent:{raw.strip()}'
 
 
 def attr_value(rest):
@@ -74,19 +91,24 @@ def manifest_facts(text):
         print('fant ikke <manifest> i aapt2-utdataene', file=sys.stderr)
         return 1
     attrs = manifest['attrs']
-    print(f"package={attrs.get('package', '')}")
+    if not attrs.get('package'):
+        print('fant ikke pakkenavnet i <manifest>: ukjent format fra aapt2', file=sys.stderr)
+        return 1
+    print(f"package={attrs['package']}")
     print(f"versionCode={attrs.get('versionCode', '')}")
     print(f"versionName={attrs.get('versionName', '')}")
     uses_sdk = next((e for e in manifest['children'] if e['name'] == 'uses-sdk'), {'attrs': {}})
     print(f"minSdk={uses_sdk['attrs'].get('minSdkVersion', '')}")
     print(f"targetSdk={uses_sdk['attrs'].get('targetSdkVersion', '')}")
     application = next((e for e in manifest['children'] if e['name'] == 'application'), {'attrs': {}})
-    print(f"debuggable={application['attrs'].get('debuggable', 'ikke-satt')}")
+    debuggable = application['attrs'].get('debuggable')
+    print(f"debuggable={'ikke-satt' if debuggable is None else bool_state(debuggable)}")
     for child in manifest['children']:
         if child['name'] in ('uses-permission', 'uses-permission-sdk-23'):
             print(f"permission={child['attrs'].get('name', '')}")
     for element in walk(manifest):
-        if element['name'] == 'intent-filter' and element['attrs'].get('autoVerify') == 'true':
+        auto_verify = element['attrs'].get('autoVerify')
+        if element['name'] == 'intent-filter' and auto_verify is not None and bool_state(auto_verify) != 'false':
             for data in walk(element):
                 if data['name'] == 'data' and 'host' in data['attrs']:
                     print(f"autoverify-host={data['attrs']['host']}")
@@ -99,8 +121,19 @@ def elf_align(path):
     if data[:4] != b'\x7fELF':
         print(f'{path}: ikke en ELF-fil', file=sys.stderr)
         return 1
+    if len(data) < 6 or data[4] not in (1, 2) or data[5] not in (1, 2):
+        print(f'{path}: ukjent ELF-klasse eller endian', file=sys.stderr)
+        return 1
     is64 = data[4] == 2
     endian = '<' if data[5] == 1 else '>'
+    try:
+        return _elf_min_load_align(path, data, is64, endian)
+    except struct.error:
+        print(f'{path}: ELF-fila er avkortet', file=sys.stderr)
+        return 1
+
+
+def _elf_min_load_align(path, data, is64, endian):
     if is64:
         phoff, = struct.unpack_from(endian + 'Q', data, 0x20)
         phentsize, phnum = struct.unpack_from(endian + 'HH', data, 0x36)

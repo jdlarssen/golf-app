@@ -144,3 +144,4 @@ const withUploadSigning = (config) =>
 module.exports = withUploadSigning;
 module.exports.addReleaseSigning = addReleaseSigning;
 module.exports.SIGNING_ENV_KEYS = SIGNING_ENV_KEYS;
+module.exports.closingBrace = closingBrace;

@@ -23,9 +23,10 @@
 #     Console avviser en versionCode den har sett).
 #  5. **Ingen stille nedlasting av SDK-pakker.** Android Gradle-pluginen henter
 #     en manglende NDK eller build-tools uten å spørre. Skriptet sjekker
-#     pakkene før Gradle og sier hvordan de installeres, og Gradle kjøres med
-#     `android.builder.sdkDownload=false`, så alt annet som mangler stopper
-#     bygget i stedet for å lastes ned.
+#     pakkene før Gradle og sier hvordan de installeres. `withNoSdkDownload.js`
+#     (i `app.json`, begge variantene) skriver `android.builder.sdkDownload=false`
+#     i `android/gradle.properties` under prebuild, og skriptet stopper hvis
+#     linja mangler. Da stopper Gradle i stedet for å laste ned det som mangler.
 #
 # Bruk:  native/app/scripts/store-build-android.sh
 #
@@ -126,8 +127,8 @@ fi
 
 # SDK-pakkene Gradle trenger. Android Gradle-pluginen laster ned en pakke som
 # mangler uten å spørre når lisensen er godtatt, så skriptet sjekker dem før
-# Gradle, og Gradle kjøres med `android.builder.sdkDownload=false` (under):
-# mangler noe annet, stopper bygget i stedet for å laste ned.
+# Gradle. `android.builder.sdkDownload=false` (fra prebuild, sjekket under)
+# gjør at alt annet som mangler, stopper bygget i stedet for å lastes ned.
 #  - NDK og build-tools: versjonene React Native låser i versjonskatalogen.
 #  - build-tools 35.0.0: Android Gradle-pluginens standard for biblioteker som
 #    ikke setter sin egen (`ToolsRevisionUtils.DEFAULT_BUILD_TOOLS_REVISION` i
@@ -222,6 +223,8 @@ fi
 # ── 3. Nøkkelen ──────────────────────────────────────────────────────────────
 step "Opplastingsnøkkelen"
 [ -f "$KEYSTORE" ] || die "Fant ikke keystore-fila $KEYSTORE (se docs/native/android-twa.md §«Nøkler og hemmeligheter»), eller sett TORNY_ANDROID_KEYSTORE."
+# Absolutt sti: Gradle kjører fra android/ og ville lett etter en relativ sti der.
+KEYSTORE="$(cd "$(dirname "$KEYSTORE")" && pwd)/$(basename "$KEYSTORE")"
 if [ -n "${TORNY_ANDROID_KEYSTORE_PASSWORD:-}" ]; then
   KEYSTORE_PASSWORD=$TORNY_ANDROID_KEYSTORE_PASSWORD
   PASSWORD_SOURCE='TORNY_ANDROID_KEYSTORE_PASSWORD fra miljøet'
@@ -242,18 +245,19 @@ step "expo prebuild (android, regenererer android/)"
 (cd "$APP_DIR" && CI=1 npx expo prebuild --platform android --no-install)
 "$GREP" -qF "$SIGNING_MARKER" "$APP_DIR/android/app/build.gradle" \
   || die "Signeringspluginen er ikke i android/app/build.gradle etter prebuild. Release-bygget ville ikke vært signert med opplastingsnøkkelen. Står ./scripts/withUploadSigning.js i plugins for butikk-varianten?"
+"$GREP" -qxF 'android.builder.sdkDownload=false' "$APP_DIR/android/gradle.properties" \
+  || die "android/gradle.properties har ikke android.builder.sdkDownload=false etter prebuild, så Gradle kunne lastet ned SDK-pakker uten å spørre. Står ./scripts/withNoSdkDownload.js i plugins i app.json?"
 
 # ── 5. Gradle ────────────────────────────────────────────────────────────────
 require_clean_tree
 step "./gradlew :app:bundleRelease (logg: $SIDE.gradle.log)"
 # Nøkkelvariablene settes bare for Gradle-prosessen. --no-daemon: ingen Gradle-
 # prosess blir liggende igjen med passordet i miljøet sitt etter bygget.
-# sdkDownload=false: en SDK-pakke som mangler stopper bygget (se steg 0).
 if ! (cd "$APP_DIR/android" && \
     TORNY_ANDROID_KEYSTORE="$KEYSTORE" \
     TORNY_ANDROID_KEY_ALIAS="$KEY_ALIAS" \
     TORNY_ANDROID_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
-    ./gradlew :app:bundleRelease --no-daemon -Pandroid.builder.sdkDownload=false) > "$SIDE.gradle.log" 2>&1; then
+    ./gradlew :app:bundleRelease --no-daemon) > "$SIDE.gradle.log" 2>&1; then
   tail -60 "$SIDE.gradle.log" >&2
   die "Gradle bundleRelease feilet. Se $SIDE.gradle.log. Mangler en SDK-pakke, står navnet der; installer den med sdkmanager og kjør igjen."
 fi
