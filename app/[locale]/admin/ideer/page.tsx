@@ -7,23 +7,24 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { Input } from '@/components/ui/Input';
 import { Banner } from '@/components/ui/Banner';
 import { first } from '@/lib/url/searchParams';
 import {
   IDEA_BUILT_ERROR_CODES,
   IDEA_BUILT_LINK_MAX,
   IDEA_BUILT_SUMMARY_MAX,
-  suggestIdeaBuiltSummary,
+  launchToIdeaBuilt,
 } from '@/lib/notifications/ideaBuiltInput';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { markIdeaBuilt } from './actions';
+import { IdeaBuiltFields, type LaunchOption } from './IdeaBuiltFields';
 
 // #984: Admin-only liste over innsendte ideer. «Marker som bygd» for å lukke
 // sløyfen og sende in-app-varsel til innsenderen. #2568: admin skriver en linje
 // om hva som ble bygd og kan legge til en lenke; begge følger varselet. Linja
-// starter som et forslag fra idéens egen tekst (eiervalg 13.10).
+// starter tom; en velger med de siste lanseringene fyller linja og lenka
+// (eiervalg 13.10, «Velg fra siste lanseringer»). Idéteksten er ikke kilde.
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -69,6 +70,28 @@ export default async function AdminIdeerPage({
 
   const rows = data ?? [];
   void userId;
+
+  // Every row is a published launch (no draft column); RLS lets any signed-in
+  // user read them. An error leaves the picker out, the page still works.
+  const { data: launches } = await supabase
+    .from('product_updates')
+    .select('id, title, link, created_at')
+    .order('created_at', { ascending: false })
+    .limit(8);
+  const launchOptions: LaunchOption[] = (launches ?? []).map((l) => ({
+    id: l.id,
+    label: l.title,
+    ...launchToIdeaBuilt(l),
+  }));
+  const fieldLabels = {
+    launchPickerLabel: t('launchPickerLabel'),
+    launchPickerEmpty: t('launchPickerEmpty'),
+    summaryLabel: t('summaryLabel'),
+    summaryHint: t('summaryHint'),
+    summaryPlaceholder: t('summaryPlaceholder'),
+    linkLabel: t('linkLabel'),
+    linkHint: t('linkHint'),
+  };
 
   return (
     <AdminShell>
@@ -121,24 +144,10 @@ export default async function AdminIdeerPage({
                     {!built && (
                       <form action={markIdeaBuilt} className="space-y-3 border-t border-border pt-3">
                         <input type="hidden" name="id" value={row.id} />
-                        <Input
-                          id={`summary-${row.id}`}
-                          name="summary"
-                          type="text"
-                          label={t('summaryLabel')}
-                          hint={t('summaryHint')}
-                          required
-                          maxLength={IDEA_BUILT_SUMMARY_MAX}
-                          defaultValue={suggestIdeaBuiltSummary(row.text)}
-                        />
-                        <Input
-                          id={`link-${row.id}`}
-                          name="link"
-                          type="text"
-                          label={t('linkLabel')}
-                          hint={t('linkHint')}
-                          pattern="^/\S*$"
-                          maxLength={IDEA_BUILT_LINK_MAX}
+                        <IdeaBuiltFields
+                          rowId={row.id}
+                          options={launchOptions}
+                          labels={fieldLabels}
                         />
                         <SubmitButton
                           variant="secondary"

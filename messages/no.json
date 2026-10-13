@@ -3489,6 +3489,9 @@
     "statusBuilt": "Bygd",
     "summaryLabel": "Hva ble bygd?",
     "summaryHint": "Spilleren ser denne linja i varselet og e-posten.",
+    "summaryPlaceholder": "For eksempel: Ryder Cup-oppsett",
+    "launchPickerLabel": "Velg fra siste lanseringer",
+    "launchPickerEmpty": "Velg en lansering …",
     "linkLabel": "Lenke (valgfri)",
     "linkHint": "Skriv stien i Tørny uten språk, for eksempel /spillformater.",
     "errors": {

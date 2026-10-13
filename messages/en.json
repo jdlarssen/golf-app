@@ -3489,6 +3489,9 @@
     "statusBuilt": "Built",
     "summaryLabel": "What was built?",
     "summaryHint": "The player sees this line in the notification and the email.",
+    "summaryPlaceholder": "For example: Ryder Cup setup",
+    "launchPickerLabel": "Pick from the latest launches",
+    "launchPickerEmpty": "Pick a launch …",
     "linkLabel": "Link (optional)",
     "linkHint": "Write the path in Tørny without a language, e.g. /spillformater.",
     "errors": {
