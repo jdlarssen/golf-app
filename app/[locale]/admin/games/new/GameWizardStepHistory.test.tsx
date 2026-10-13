@@ -404,6 +404,66 @@ describe('GameWizard — #1385 gjenopptatt utkast', () => {
     rerender(wizardElement(props));
     expect(stepIs(5)).toBe(true);
   });
+  // #2566 (guard, green before the fix): a draft resumed in the wizard shows
+  // the stored team handicap (% of the sum) as % of the team average on «Klar?»,
+  // like the edit form does. Keeps the two surfaces from drifting apart again.
+  it('gjenopptatt Texas-utkast (3-mannslag, 26.67) viser 80 og sum-hjelpeteksten på steg 5', () => {
+    const six: PlayerOption[] = Array.from({ length: 6 }, (_, i) => ({
+      ...PLAYERS[0],
+      id: `u${i}`,
+      name: `Spiller ${i + 1}`,
+      email: `u${i}@example.com`,
+    }));
+    searchString = 'step=5';
+    renderWizard({
+      players: six,
+      friendPlayerIds: six.map((p) => p.id),
+      mode: {
+        kind: 'edit-draft',
+        gameId: 'game-1',
+        saveDraftAction: async () => {},
+        publishAction: async () => {},
+      },
+      initialValues: {
+        name: 'Lagkampen',
+        game_mode: 'texas_scramble',
+        lock_game_mode: false,
+        course_id: 'course-1',
+        tee_box_id: 'tee-1',
+        team_size: 3,
+        texas_team_handicap_pct: '26.67',
+        players: six.map((p, i) => ({
+          user_id: p.id,
+          team_number: i < 3 ? 1 : 2,
+          flight_number: i < 3 ? 1 : 2,
+        })),
+      },
+      initialIntent: 'kompis',
+      initialExpectedPlayerCount: 6,
+      formatsByIntent: {
+        ...FORMATS_BY_INTENT,
+        kompis: [...FORMATS_BY_INTENT.kompis, formatRow('texas_scramble', 30)],
+      },
+    });
+
+    const stepLabel = Array.from(document.querySelectorAll('span')).find(
+      (el) => el.textContent === 'Steg 5 av 5',
+    );
+    expect(stepLabel, 'Forventet «Steg 5 av 5» i DOM').toBeTruthy();
+
+    // The team handicap sits under «Vis avanserte innstillinger».
+    fireEvent.click(screen.getByRole('button', { name: /avanserte innstillinger/i }));
+    const input = document.getElementById('texas_team_handicap_pct__input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('80');
+    expect(input.getAttribute('aria-describedby')).toBeTruthy();
+    const hint = document.getElementById(input.getAttribute('aria-describedby')!.split(' ')[0]);
+    expect(hint?.textContent).toContain('26,7');
+    // The wizard's central hidden field still sends the stored value.
+    expect(
+      (document.querySelector('input[type=hidden][name=texas_team_handicap_pct]') as HTMLInputElement).value,
+    ).toBe('26.67');
+  });
 });
 
 describe('GameWizard — #2321 steg 4s andre skjerm (lag og sider)', () => {
