@@ -6,6 +6,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { MAX_FLIGHT_SIZE, flightIsFreeGrouping } from '@/lib/games/flightScope';
 import { expectedTeamSize } from '@/lib/games/teamScope';
 import { expectAffected, NoRowsAffectedError } from '@/lib/supabase/affectedRows';
+import { recountGroup, revertRows } from '@/lib/games/flightMoveGuard';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 export type FlightJoinResult =
@@ -21,44 +22,14 @@ export type FlightJoinError =
   | 'db_error';
 
 /**
- * Puts the player back in their previous flight (or none) after a write whose
- * capacity could not be confirmed. We just wrote the row, so an error or 0
- * rows leaves the flight possibly overfull: log it (#2223). The caller's
- * answer stands either way.
- */
-async function revertFlight(
-  admin: ReturnType<typeof getAdminClient>,
-  gameId: string,
-  userId: string,
-  targetFlight: number,
-  previousFlight: number | null,
-): Promise<void> {
-  const { data: reverted, error: revertError } = await admin
-    .from('game_players')
-    .update({ flight_number: previousFlight })
-    .eq('game_id', gameId)
-    .eq('user_id', userId)
-    .select('user_id');
-  if (revertError || (reverted ?? []).length === 0) {
-    console.error('[joinFlight] revert failed', {
-      gameId,
-      userId,
-      targetFlight,
-      previousFlight,
-      error: revertError,
-    });
-  }
-}
-
-/**
  * Spiller velger eller bytter flight selv i venterommet (#543).
  *
  * Authz: kun aktive (ikke-trukkede) spillere i det schedulede spillet.
  * Race-guard: re-tell etter skriv; hvis flighten er overfull, angrer vi
  * vår egen rad og returnerer `flight_full`-feil.
  *
- * Admin/oppretter-override: skjer via admin-sidekanalens per-spiller-velger
- * og vinner alltid siden det er siste skriv.
+ * Arrangøren flytter spillere på Startlista (`setPlayerFlight`, #2289), med
+ * den samme etter-tellingen (`lib/games/flightMoveGuard.ts`).
  */
 export async function joinFlight(
   gameId: string,
@@ -175,25 +146,19 @@ export async function joinFlight(
   }
 
   // Race-guard: re-tell etter skriv. Hvis flighten nå har > MAX_FLIGHT_SIZE
-  // aktive spillere, er vi taperen — angre vår egen rad.
-  const { count: afterCount, error: afterCountError } = await admin
-    .from('game_players')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('game_id', gameId)
-    .eq('flight_number', targetFlight)
-    .is('withdrawn_at', null);
-
-  // A failed re-count cannot confirm the flight has room: undo our row the
-  // same way as a lost race (#2293).
-  if (afterCountError) {
-    console.error('[joinFlight] after-count read failed', afterCountError);
-    await revertFlight(admin, gameId, userId, targetFlight, previousFlight);
-    return { ok: false, error: 'db_error' };
-  }
-  if ((afterCount ?? 0) > MAX_FLIGHT_SIZE) {
-    // Revert til forrige flight (eller null hvis vi ikke hadde flight).
-    await revertFlight(admin, gameId, userId, targetFlight, previousFlight);
-    return { ok: false, error: 'flight_full' };
+  // aktive spillere, er vi taperen — angre vår egen rad, til forrige flight
+  // (eller null hvis vi ikke hadde flight). A failed re-count cannot confirm
+  // the flight has room: undo our row the same way as a lost race (#2293).
+  const afterCount = await recountGroup(admin, gameId, 'flight_number', targetFlight, 'joinFlight');
+  if (afterCount === null || afterCount > MAX_FLIGHT_SIZE) {
+    await revertRows(
+      admin,
+      gameId,
+      [{ userId, previous: { flight_number: previousFlight } }],
+      'joinFlight',
+      { targetFlight },
+    );
+    return { ok: false, error: afterCount === null ? 'db_error' : 'flight_full' };
   }
 
   expireGameCache(gameId);
