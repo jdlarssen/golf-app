@@ -196,8 +196,8 @@ i profil-rommet, og bare i staging-bygg.
   avsluttede» fra RLS-spørringer (speil av webbens hjem, minus discovery).
   Lista caches i `cache_entries` (`home`) og re-hentes ved fokus.
 - **GameHome** — leser `gameBundle`-cachen øyeblikkelig, re-henter i bakgrunnen.
-  Primær-CTA-en er webbens `computeState`-maskin speilet i
-  `src/lib/primaryCtaState.ts`. Et planlagt spill viser venterommet
+  Primær-CTA-en er den delte `computePrimaryCtaState` i
+  `lib/games/primaryCtaState.ts`, samme som webbens PrimaryCta bruker (#2228). Et planlagt spill viser venterommet
   (`src/components/game/WaitingRoom.tsx`, #2219): webbens overskrift, nedtelling
   til tee-off, og en lytter på spillets rad (`subscribeGameStatus`) som henter
   bundelen når runden starter. Etter tee-off henter hvert 30-sekunders tikk

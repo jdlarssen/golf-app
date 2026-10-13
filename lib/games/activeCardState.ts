@@ -1,8 +1,9 @@
 /**
  * Resolves the display state of an *active* game on the Home «Pågår nå» card
- * (#878). Pure mirror of the spill-hjem state machine (`PrimaryCta.computeState`
- * + the withdrawn branch at `(home)/page.tsx`), kept side-effect-free so the
- * home card and its unit test can share one source of truth.
+ * (#878). Pure mirror of the spill-hjem state machine (`computePrimaryCtaState`
+ * in `lib/games/primaryCtaState.ts` + the withdrawn branch at `(home)/page.tsx`),
+ * kept side-effect-free so the home card and its unit test can share one
+ * source of truth.
  *
  * Precedence matches spill-hjem: a withdrawn player is out regardless of any
  * earlier submission, so `withdrawn` wins over `submitted`.
