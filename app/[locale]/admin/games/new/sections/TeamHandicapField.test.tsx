@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { TEAM_HANDICAP_AVERAGE_PCT_MAX } from '@/lib/games/teamHandicapUnit';
 import { TeamHandicapField } from './TeamHandicapField';
 
 // Én Type C render-test (docs/test-discipline.md) — låser oversettelsen mellom
@@ -21,6 +22,8 @@ describe('TeamHandicapField — snitt-prosent i feltet, sum-prosent i state (#20
 
     const input = screen.getByRole('spinbutton') as HTMLInputElement;
     expect(input.value).toBe('45');
+    // #2566: feltets tak er grensens hjem — 100 % av snittet.
+    expect(input.max).toBe(String(TEAM_HANDICAP_AVERAGE_PCT_MAX));
 
     fireEvent.change(input, { target: { value: '80' } });
     expect(onSumPctChange).toHaveBeenCalledWith(26.67);

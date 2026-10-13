@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { averagePctToSumPct, sumPctToAveragePct } from './teamHandicapUnit';
+import {
+  TEAM_HANDICAP_AVERAGE_PCT_MAX,
+  averagePctToSumPct,
+  isValidTeamHandicapSumPct,
+  sumPctToAveragePct,
+} from './teamHandicapUnit';
 
 describe('teamHandicapUnit — arrangørens snitt-prosent mot lagret sum-prosent', () => {
   it.each([
@@ -43,5 +48,32 @@ describe('teamHandicapUnit — arrangørens snitt-prosent mot lagret sum-prosent
     expect(averagePctToSumPct(80, 0)).toBe(0);
     expect(sumPctToAveragePct(Number.NaN, 3)).toBe(0);
     expect(sumPctToAveragePct(15, 0)).toBe(0);
+  });
+
+  describe('isValidTeamHandicapSumPct — taket er 100 % av snittet (#2566)', () => {
+    it('taket er 100', () => {
+      expect(TEAM_HANDICAP_AVERAGE_PCT_MAX).toBe(100);
+    });
+
+    it.each([
+      // [lagret sum-%, lagstørrelse, gyldig]
+      [0, 2, true],
+      [50, 2, true], // nøyaktig tak: 100 % av snittet
+      [50.01, 2, false],
+      [0, 3, true],
+      [33.33, 3, true], // nøyaktig tak, avrundet til to desimaler
+      // 33.34 × 3 = 100.02 runder til 100 i sumPctToAveragePct, men taket er
+      // det avrundede taket (33.33), ikke det avrundede snittet.
+      [33.34, 3, false],
+      [0, 4, true],
+      [25, 4, true],
+      [25.01, 4, false],
+      [-1, 3, false],
+      [Number.NaN, 3, false],
+      [Number.POSITIVE_INFINITY, 3, false],
+      [10, 0, false], // ingen lagstørrelse
+    ])('%s prosent av summen på %i-mannslag → gyldig: %s', (sumPct, size, valid) => {
+      expect(isValidTeamHandicapSumPct(sumPct, size)).toBe(valid);
+    });
   });
 });

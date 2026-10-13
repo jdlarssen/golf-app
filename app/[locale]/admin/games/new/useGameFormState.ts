@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { settlementUnitKeyFor } from '@/lib/scoring/settlement';
 import { usesGameHcpAllowance } from '@/lib/games/hcpAllowance';
+import { isValidTeamHandicapSumPct } from '@/lib/games/teamHandicapUnit';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
@@ -118,11 +119,12 @@ function teamNumbersOf(playersByTeam: Record<number, string[]>): number[] {
 // scramble-family formats (Texas, Ambrose, Shamble, Florida). Previously this
 // logic was copy-pasted verbatim in four consecutive blocks inside the hook.
 //
-// Callers supply the current team-assignment maps and a `handicapPct` value.
-// The only real behavioural difference between the formats is how the pct is
-// validated:
-//   Texas    → requireIntegerPct=true  (Number.isInteger check)
-//   Ambrose  → requireIntegerPct=false (typeof number + !isNaN)
+// Callers supply the current team-assignment maps and a `handicapPct` value
+// (% of the sum, as stored). The pct must lie within 0–100 % of the team
+// average — `isValidTeamHandicapSumPct`, the cap's one home (#2566):
+//   Texas    → requireIntegerPct=false (fractional since #2009: 80 % of the
+//                                       average on a 3-team is 26.67)
+//   Ambrose  → requireIntegerPct=false (12.5 is the 4-team default)
 //   Florida  → requireIntegerPct=false (same as Ambrose)
 //   Shamble  → handicapPct=undefined   (no pct term; handicapPctValid always true)
 //
@@ -164,9 +166,8 @@ export function validateTeamSizeFormat({
   const handicapPctValid =
     handicapPct === undefined
       ? true
-      : requireIntegerPct
-        ? Number.isInteger(handicapPct) && handicapPct >= 0 && handicapPct <= 100
-        : typeof handicapPct === 'number' && !isNaN(handicapPct) && handicapPct >= 0 && handicapPct <= 100;
+      : (!requireIntegerPct || Number.isInteger(handicapPct)) &&
+        isValidTeamHandicapSumPct(handicapPct, teamSize);
   const playersValid =
     selectedPlayerIds.length >= teamSize &&
     selectedPlayerIds.length % teamSize === 0 &&
@@ -265,7 +266,7 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
 /**
  * NGF-default for Texas-scramble-lag-handicap, prosent av summert spille-HCP.
  * Settes som default i GameForm når admin endrer lagstørrelse — admin kan
- * deretter justere fritt i 0..100-range.
+ * deretter justere fritt innenfor 0–100 % av lagets snitt (#2566).
  */
 export function defaultTexasHandicapPct(teamSize: TeamSize): number {
   if (teamSize === 2) return 25;
@@ -1609,7 +1610,8 @@ export function useGameFormState({
   // Taket eies av `lib/games/teamFormatLimits.ts` (#2009, #2148): opptil 40
   // spillere — 20 par, 13 lag à 3 eller 10 lag à 4.
   // Prosenten kan være fraksjonell (#2009): feltet tar imot prosent av snittet
-  // og lagrer prosent av summen, så 80 på et 3-mannslag blir 26,67 her.
+  // og lagrer prosent av summen, så 80 på et 3-mannslag blir 26,67 her. Taket
+  // er 100 % av snittet (`isValidTeamHandicapSumPct`, #2566).
   const {
     handicapPctValid: texasHandicapPctValid,
     playersValid: texasPlayersValid,
@@ -1622,10 +1624,9 @@ export function useGameFormState({
     requireIntegerPct: false,
   });
 
-  // Ambrose-validitet (#284): speiler Texas-validitets-reglene, men
-  // `ambroseHandicapPctValid` tillater fraksjonell prosent (12,5 % for
-  // 4-mannslag er default). `validateAmbrose` i gamePayload.ts aksepterer
-  // desimaler; UI-validiteten gjør det samme.
+  // Ambrose-validitet (#284): speiler Texas-validitets-reglene — fraksjonell
+  // prosent (12,5 % for 4-mannslag er default) innenfor 0–100 % av snittet,
+  // samme grense som `validateAmbrose` i gamePayload.ts (#2566).
   const {
     handicapPctValid: ambroseHandicapPctValid,
     playersValid: ambrosePlayersValid,
@@ -1654,7 +1655,7 @@ export function useGameFormState({
   });
 
   // Florida Scramble-validitet (#283): speiler Ambrose-validitets-reglene.
-  // Fraksjonell prosent tillatt (validator aksepterer desimaler).
+  // Fraksjonell prosent innenfor 0–100 % av snittet (#2566).
   const {
     handicapPctValid: floridaHandicapPctValid,
     playersValid: floridaPlayersValid,
@@ -1780,10 +1781,12 @@ export function useGameFormState({
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
   //
-  // For Texas scramble erstattes `allowanceValid` av `texasHandicapPctValid`
-  // (allerede speilet i `texasPlayersValid` -> `playersValidForMode`) siden
-  // hcp_allowance_pct ikke gjelder for Texas — lag-handicap-prosenten lever
-  // i `mode_config.team_handicap_pct` istedenfor games.hcp_allowance_pct.
+  // For scramble-familien (Texas, Ambrose, Florida) erstattes `allowanceValid`
+  // av `teamHandicapPctValid` siden hcp_allowance_pct ikke gjelder der —
+  // lag-handicap-prosenten lever i `mode_config.team_handicap_pct`. Den gater
+  // for seg, utenfor `(playersStepOptional || playersValidForMode)`: taket er
+  // en konfig-verdi, ikke en spillerliste-sjekk, og skal stoppe publisering
+  // også når lista er valgfri (#2566).
   // Round Robin har sitt eget `roundRobinAllowancePctValid`-felt og bruker
   // ikke games.hcp_allowance_pct; hopper over generisk allowanceValid-sjekk.
   // Når selv-påmelding er på (open / manual_approval), og i en klubb-
@@ -1807,11 +1810,20 @@ export function useGameFormState({
     (pid) => allPlayers.find((p) => p.id === pid)?.pending === true,
   ).length;
 
+  const teamHandicapPctValid = isTexas
+    ? texasHandicapPctValid
+    : isAmbrose
+      ? ambroseHandicapPctValid
+      : isFlorida
+        ? floridaHandicapPctValid
+        : true;
+
   const canPublish =
     clubChoiceValid &&
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
+    teamHandicapPctValid &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
       : !usesGameHcpAllowance(gameMode) || allowanceValid) &&
@@ -1849,9 +1861,9 @@ export function useGameFormState({
     pushMissing('players', tMissing('categoryMissingRating'));
   // Når selv-påmelding er på, eller i en klubb-turnering med individuell
   // påmelding (#2433), er spillerlisten valgfri ved publish; vi
-  // hopper over per-modus completeness-meldingene helt. hcp_allowance-
-  // sjekken nederst gjelder fortsatt fordi den er en konfig-verdi, ikke
-  // en spiller-liste-validering.
+  // hopper over per-modus completeness-meldingene helt. Lag-handicap- og
+  // hcp_allowance-sjekkene etter kjeden gjelder fortsatt fordi de er
+  // konfig-verdier, ikke spiller-liste-valideringer (#2566).
   if (playersStepOptional) {
     // intentionally skip player-list-related missing messages
   } else if (isMatchplay) {
@@ -1902,9 +1914,6 @@ export function useGameFormState({
     } else if (!texasPlayersValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
-    if (!texasHandicapPctValid) {
-      pushMissing('allowance', tMissing('teamHandicapPct'));
-    }
   } else if (isAmbrose) {
     // Ambrose (#284): lagstørrelse 2, 3 eller 4. Speiler Texas-mangler-meldingene.
     if (selectedPlayerIds.length < teamSize) {
@@ -1913,9 +1922,6 @@ export function useGameFormState({
       pushMissing('players', tMissing(teamOddKey(teamSize)));
     } else if (!ambrosePlayersValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
-    }
-    if (!ambroseHandicapPctValid) {
-      pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isShamble) {
     // Shamble: lagstørrelse 3 eller 4. Trenger minst teamSize spillere
@@ -1937,9 +1943,6 @@ export function useGameFormState({
       pushMissing('players', tMissing(teamOddKey(teamSize)));
     } else if (!floridaPlayersValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
-    }
-    if (!floridaHandicapPctValid) {
-      pushMissing('allowance', tMissing('teamHandicapPct'));
     }
   } else if (isWolf) {
     // Grensene for de sju formatene med fast spillertall leses fra
@@ -2020,6 +2023,9 @@ export function useGameFormState({
     // isSolo
     pushMissing('players', tMissing('soloMin'));
   }
+  // Lag-handicapet i scramble-familien kommer rett etter spillerne, uansett
+  // `playersStepOptional` (#2566).
+  if (!teamHandicapPctValid) pushMissing('allowance', tMissing('teamHandicapPct'));
   // hcp_allowance_pct gjelder bare formatene som bruker den generelle
   // prosenten (#2210, `usesGameHcpAllowance`). De andre har sin egen
   // scoring-konfig i mode_config, og feltet er skjult for dem — så admin ikke
