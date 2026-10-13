@@ -95,6 +95,13 @@ export function useGameBundle(gameId: string): GameBundleState {
  * eller en realtime-merge skriver i SQLite fra utsiden av React, og et intervall
  * er en ærligere måte å fange det på enn å prøve å tre en abonnent gjennom hver
  * skriving.
+ *
+ * Feil (#2228): feiler FØRSTE lesing, kaster hooken feilen under render, og
+ * skjermens feilgrense viser «Prøv igjen», som leser på nytt. Et tomt kort uten
+ * feiltekst ville sett ut som om ingen hadde ført. Feiler en senere lesing
+ * (`reload`, pollen), blir de siste radene stående og feilen logges: en dårlig
+ * lesing skal ikke tømme skjermen. `reload()` avviser derfor aldri, og alle
+ * `void reload()` er trygge.
  */
 export function useLocalScores(
   gameId: string,
@@ -111,11 +118,17 @@ export function useLocalScores(
 } {
   const [scores, setScores] = useState<LocalScore[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Pakket inn, så også en kastet verdi som er falsy blir kastet videre.
+  const [firstReadFailure, setFirstReadFailure] = useState<{ error: unknown } | null>(null);
 
   const reload = useCallback(async () => {
-    const db = await getDb();
-    setScores(await listScoresForGame(db, gameId));
-    setLoaded(true);
+    try {
+      const db = await getDb();
+      setScores(await listScoresForGame(db, gameId));
+      setLoaded(true);
+    } catch (err: unknown) {
+      console.error('[useLocalScores] lesing feilet', err);
+    }
   }, [gameId]);
 
   // Førstelesningen skrives inn her og ikke via `reload`, slik at en skjerm som
@@ -124,11 +137,15 @@ export function useLocalScores(
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const db = await getDb();
-      const rows = await listScoresForGame(db, gameId);
-      if (!cancelled) {
-        setScores(rows);
-        setLoaded(true);
+      try {
+        const db = await getDb();
+        const rows = await listScoresForGame(db, gameId);
+        if (!cancelled) {
+          setScores(rows);
+          setLoaded(true);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) setFirstReadFailure({ error: err });
       }
     })();
     return () => {
@@ -143,6 +160,8 @@ export function useLocalScores(
     }, pollMs);
     return () => clearInterval(interval);
   }, [pollMs, reload]);
+
+  if (firstReadFailure) throw firstReadFailure.error;
 
   return { scores, reload, loaded };
 }

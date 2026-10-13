@@ -391,7 +391,16 @@ describe('Hole', () => {
     expect(screen.getByTestId('score-rail-heading').props.children).toBe('Meg Selv');
     expect(screen.getByTestId('rail-option-4-detail').props.children).toBe('Par · netto 3');
 
+    // #2228: telefonen fikk ikke lagret det første trykket. En linje sier fra,
+    // og neste vellykkede skriving (putten under) fjerner den.
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+    (writeScore as jest.Mock).mockRejectedValueOnce(new Error('SQLITE_FULL'));
     await fireEvent.press(screen.getByTestId('rail-option-4'));
+    await waitFor(() => {
+      expect(screen.getByTestId('hole-save-error')).toBeTruthy();
+    });
+    expect(logged).toHaveBeenCalledWith('[Hole] lagring feilet', expect.any(Error));
+    logged.mockRestore();
     expect(writeScore).toHaveBeenCalledWith({
       gameId: GAME_ID,
       userId: 'me',
@@ -423,6 +432,9 @@ describe('Hole', () => {
       holeNumber: 1,
       putts: 2,
       enteredBy: 'me',
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('hole-save-error')).toBeNull();
     });
   });
 
