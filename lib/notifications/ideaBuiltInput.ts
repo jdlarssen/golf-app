@@ -7,6 +7,10 @@ import { safeInternalPath } from '@/lib/url/safeInternalPath';
  * `ideaBuiltSchema` in `./types` refines with `isIdeaBuiltLink`, and the form
  * fields read the limits from here.
  *
+ * The line comes from the latest launches (owner's choice 13.10, «Velg fra
+ * siste lanseringer»), not from the idea's own text: `launchToIdeaBuilt` turns a
+ * launch into a line and a link that pass this rule.
+ *
  * Mirrors `lib/productUpdates/validateUpdateInput.ts`: a discriminated union so
  * the action can redirect with the error code (an i18n key under
  * `adminIdeer.errors`).
@@ -56,19 +60,46 @@ function hasLocaleSegment(link: string): boolean {
 }
 
 /**
- * A first draft of the line, from the idea's own text (owner's choice 13.10):
- * its first sentence, cut at a word so it fits `IDEA_BUILT_SUMMARY_MAX`. The
- * admin form shows it as the field's starting value; the admin edits it. A
- * sentence ends at `.`, `!` or `?` followed by whitespace, so `2.5` stays whole.
- * Returns '' when there is nothing sensible to suggest.
+ * Why `link` (trimmed, non-empty) cannot go on an idea-built notice, or null
+ * when it can. The admin action validates with it, and `launchToIdeaBuilt`
+ * drops a launch's link that would fail here.
  */
-export function suggestIdeaBuiltSummary(ideaText: string): string {
-  const text = ideaText.replace(/\s+/g, ' ').trim();
-  const end = text.search(/[.!?](\s|$)/);
-  const sentence = end === -1 ? text : text.slice(0, end + 1);
-  if (sentence.length <= IDEA_BUILT_SUMMARY_MAX) return sentence;
-  const cut = sentence.lastIndexOf(' ', IDEA_BUILT_SUMMARY_MAX);
-  return cut <= 0 ? '' : sentence.slice(0, cut).replace(/[\s,;:]+$/, '');
+export function ideaBuiltLinkError(link: string): IdeaBuiltInputError | null {
+  if (!isIdeaBuiltLink(link)) return 'link_must_be_internal';
+  if (link.length > IDEA_BUILT_LINK_MAX) return 'link_too_long';
+  if (hasLocaleSegment(link)) return 'link_has_locale';
+  return null;
+}
+
+/**
+ * The line and link from one of the latest launches (owner's choice 13.10,
+ * «Velg fra siste lanseringer»), not from the idea's own text. The admin form
+ * fills both fields with it when a launch is picked.
+ *
+ * The title is cut at a word to fit `IDEA_BUILT_SUMMARY_MAX` (a launch title is
+ * only capped in HTML). When no word cut leaves anything, it is cut hard,
+ * counted in UTF-16 units like `.length` and `maxLength`, without splitting a
+ * surrogate pair. A link the idea-built rule rejects becomes '', so a pick never
+ * ends in an error after submit.
+ */
+export function launchToIdeaBuilt(launch: {
+  title: string;
+  link: string | null;
+}): { summary: string; link: string } {
+  const title = launch.title.replace(/\s+/g, ' ').trim();
+  let summary = title;
+  if (title.length > IDEA_BUILT_SUMMARY_MAX) {
+    const cut = title.lastIndexOf(' ', IDEA_BUILT_SUMMARY_MAX);
+    summary = cut > 0 ? title.slice(0, cut).replace(/[\s,;:]+$/, '') : '';
+    if (!summary) {
+      summary = title.slice(0, IDEA_BUILT_SUMMARY_MAX);
+      const last = summary.charCodeAt(summary.length - 1);
+      if (last >= 0xd800 && last <= 0xdbff) summary = summary.slice(0, -1);
+    }
+  }
+
+  const link = (launch.link ?? '').trim();
+  return { summary, link: link && ideaBuiltLinkError(link) === null ? link : '' };
 }
 
 export function validateIdeaBuiltInput(raw: {
@@ -81,9 +112,8 @@ export function validateIdeaBuiltInput(raw: {
   if (!summary) return { ok: false, error: 'summary_required' };
   if (summary.length > IDEA_BUILT_SUMMARY_MAX) return { ok: false, error: 'summary_too_long' };
   if (link) {
-    if (!isIdeaBuiltLink(link)) return { ok: false, error: 'link_must_be_internal' };
-    if (link.length > IDEA_BUILT_LINK_MAX) return { ok: false, error: 'link_too_long' };
-    if (hasLocaleSegment(link)) return { ok: false, error: 'link_has_locale' };
+    const error = ideaBuiltLinkError(link);
+    if (error) return { ok: false, error };
   }
 
   return { ok: true, value: { summary, link: link || null } };

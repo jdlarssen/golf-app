@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   IDEA_BUILT_LINK_MAX,
   IDEA_BUILT_SUMMARY_MAX,
-  suggestIdeaBuiltSummary,
+  launchToIdeaBuilt,
   validateIdeaBuiltInput,
   type IdeaBuiltInputError,
 } from './ideaBuiltInput';
@@ -109,45 +109,61 @@ describe('validator ↔ ideaBuiltSchema parity', () => {
   });
 });
 
-// Owner's choice 13.10: the line is prefilled from the idea's own text — its
-// first sentence, cut at a word within the limit. No AI.
-describe('suggestIdeaBuiltSummary', () => {
-  it('empty or blank text → no suggestion', () => {
-    expect(suggestIdeaBuiltSummary('')).toBe('');
-    expect(suggestIdeaBuiltSummary('  \n  ')).toBe('');
+// Owner's choice 13.10, «Velg fra siste lanseringer»: the admin picks one of the
+// latest launches and its title and link fill the two fields. The idea's own
+// text is no longer a source.
+describe('launchToIdeaBuilt', () => {
+  const GOLFER = '\u{1F3CC}'; // outside the BMP: two UTF-16 units
+
+  it('a short title and a valid link pass through, trimmed', () => {
+    expect(launchToIdeaBuilt({ title: '  Ryder Cup-oppsett  ', link: ' /spillformater ' })).toEqual({
+      summary: 'Ryder Cup-oppsett',
+      link: '/spillformater',
+    });
   });
 
-  it('takes the first of several sentences', () => {
-    expect(suggestIdeaBuiltSummary('Vis vind på hvert hull. Gjerne med pil! Og styrke?')).toBe(
-      'Vis vind på hvert hull.',
-    );
-    expect(suggestIdeaBuiltSummary('Kan dere lage Ryder Cup? Vi er 16 stk.')).toBe(
-      'Kan dere lage Ryder Cup?',
+  it('no link → empty link', () => {
+    expect(launchToIdeaBuilt({ title: 'Cup', link: null }).link).toBe('');
+    expect(launchToIdeaBuilt({ title: 'Cup', link: '   ' }).link).toBe('');
+  });
+
+  it('a link the idea-built rule rejects → empty link, never a submit error', () => {
+    for (const link of ['/en/cup', 'https://example.com', '/cup x', '/' + 'a'.repeat(IDEA_BUILT_LINK_MAX)]) {
+      expect(launchToIdeaBuilt({ title: 'Cup', link }).link).toBe('');
+    }
+  });
+
+  it('a long title is cut at the last space within the limit, no trailing comma', () => {
+    const title = 'a'.repeat(110) + ', bbbbbbbbbbbbbbbbbbbb';
+    const { summary } = launchToIdeaBuilt({ title, link: null });
+    expect(summary).toBe('a'.repeat(110));
+    expect(validateIdeaBuiltInput({ summary, link: '' }).ok).toBe(true);
+  });
+
+  it('a long title without spaces is cut hard at the limit', () => {
+    expect(launchToIdeaBuilt({ title: 'x'.repeat(130), link: null }).summary).toBe(
+      'x'.repeat(IDEA_BUILT_SUMMARY_MAX),
     );
   });
 
-  it('text without a full stop is used whole, whitespace collapsed', () => {
-    expect(suggestIdeaBuiltSummary('  Ryder Cup-oppsett\nfor klubben  ')).toBe(
+  it('a hard cut never leaves half an emoji', () => {
+    const title = 'a' + GOLFER.repeat(61); // 123 units, no space
+    const { summary } = launchToIdeaBuilt({ title, link: null });
+    expect(summary).toBe('a' + GOLFER.repeat(59));
+    expect(summary.length).toBe(119);
+    const last = summary.charCodeAt(summary.length - 1);
+    expect(last >= 0xd800 && last <= 0xdbff).toBe(false);
+  });
+
+  it('falls back to a hard cut when the word cut would leave nothing', () => {
+    const { summary } = launchToIdeaBuilt({ title: ': ' + 'x'.repeat(200), link: null });
+    expect(summary).not.toBe('');
+    expect(summary.length).toBe(IDEA_BUILT_SUMMARY_MAX);
+  });
+
+  it('collapses line breaks and double spaces', () => {
+    expect(launchToIdeaBuilt({ title: 'Ryder Cup-oppsett\n\nfor  klubben', link: null }).summary).toBe(
       'Ryder Cup-oppsett for klubben',
     );
-  });
-
-  it('a dot inside a number or path does not end the sentence', () => {
-    expect(suggestIdeaBuiltSummary('Vis 2.5 slag i snitt per hull. Takk')).toBe(
-      'Vis 2.5 slag i snitt per hull.',
-    );
-  });
-
-  it('long text is cut at a word, never inside one, within the limit', () => {
-    const words = Array.from({ length: 40 }, (_, i) => `ord${i}`).join(' ');
-    const out = suggestIdeaBuiltSummary(words);
-    expect(out.length).toBeLessThanOrEqual(IDEA_BUILT_SUMMARY_MAX);
-    expect(words.startsWith(out)).toBe(true);
-    expect(words[out.length]).toBe(' ');
-    expect(validateIdeaBuiltInput({ summary: out, link: '' }).ok).toBe(true);
-  });
-
-  it('one word longer than the limit → no suggestion rather than half a word', () => {
-    expect(suggestIdeaBuiltSummary('x'.repeat(IDEA_BUILT_SUMMARY_MAX + 5))).toBe('');
   });
 });
