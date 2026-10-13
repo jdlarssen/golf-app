@@ -559,13 +559,13 @@ export function useGameFormState({
       ? Number(initialValues.hcp_allowance_pct)
       : 100,
   );
-  // Texas scramble: lag-handicap-prosent. Initialiseres fra initialValues
-  // hvis edit-flyt, ellers default per teamSize. 0 = brutto (laveste lag-
-  // gross per hull), 1..100 = netto med den prosenten (NGF-standard 25 for
-  // 2-mann, 10 for 4-mann). Eies av AllowanceField i Section 3 (Format)
-  // via controlled-modus; `key={teamSize}` på AllowanceField sørger for
-  // remount når team-size endres så toggle-state re-initialiseres til
-  // ny default.
+  // Texas scramble: lag-handicap-prosent (prosent av summen, som lagret).
+  // Initialiseres fra initialValues hvis edit-flyt, ellers default per
+  // teamSize. 0 = brutto (laveste lag-gross per hull), ellers netto med den
+  // prosenten, opptil 100 % av lagets snitt (NGF-standard 25 for 2-mann, 10
+  // for 4-mann). Eies av TeamHandicapField i både veiviseren og GameForm
+  // (#2566), som viser snittet; `key={teamSize}` sørger for remount når
+  // team-size endres så toggle-state re-initialiseres til ny default.
   const [texasHandicapPct, setTexasHandicapPct] = useState<number>(
     initialValues?.texas_team_handicap_pct !== undefined &&
       initialValues.texas_team_handicap_pct !== ''
@@ -578,7 +578,7 @@ export function useGameFormState({
   // Ambrose (#284): lag-handicap-prosent. Standard Ambrose-formel:
   // combinedCH ÷ (2 × lagstørrelse) → 25 % for 2-mannslag, 12,5 % for
   // 4-mannslag. Kan være fraksjonell (12,5) — validator aksepterer desimaler.
-  // `key={teamSize}` på AllowanceField sørger for remount når lagstørrelse
+  // `key={teamSize}` på TeamHandicapField sørger for remount når lagstørrelse
   // endres og re-seeder default. Edit-flyt: pre-fylles fra initialValues.
   const [ambroseHandicapPct, setAmbroseHandicapPct] = useState<number>(
     initialValues?.ambrose_team_handicap_pct !== undefined &&

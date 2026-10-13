@@ -28,6 +28,7 @@ import { Disclosure } from '@/components/ui/Disclosure';
 import { LockedFormatSummary } from './LockedFormatSummary';
 import { useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
+import { TeamHandicapField } from './sections/TeamHandicapField';
 import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
@@ -138,21 +139,24 @@ export type InitialValues = {
    */
   lock_game_mode?: boolean;
   /**
-   * Texas scramble: lag-handicap-prosent (NGF-aggregat). Strengt 0..100,
-   * persisterer som heltall til mode_config. Default settes av GameForm
-   * når lagstørrelse endres (25 for 2-mannslag, 10 for 4-mannslag).
+   * Texas scramble: lag-handicap-prosent (NGF-aggregat), prosent av summen
+   * som i mode_config. 0–100 % av lagets snitt (#2566); feltet viser snittet.
+   * Default settes når lagstørrelse endres (25 for 2-mannslag, 15 for
+   * 3-mannslag, 10 for 4-mannslag).
    */
   texas_team_handicap_pct?: string;
   /**
-   * Ambrose (#284): lag-handicap-prosent (standard Ambrose-formel). 0..100,
-   * kan være fraksjonell (12,5 for 4-mannslag). Default settes av GameForm
-   * via `ambroseDefaultPct(teamSize)` når lagstørrelse endres.
+   * Ambrose (#284): lag-handicap-prosent (standard Ambrose-formel), prosent av
+   * summen. 0–100 % av lagets snitt (#2566), kan være fraksjonell (12,5 for
+   * 4-mannslag). Default settes via `ambroseDefaultPct(teamSize)` når
+   * lagstørrelse endres.
    */
   ambrose_team_handicap_pct?: string;
   /**
-   * Florida Scramble (#283): lag-handicap-prosent (NGF-fasttabell). 0..100,
-   * heltall default (15 for 3-mannslag, 10 for 4-mannslag). Default settes av
-   * GameForm via `defaultFloridaHandicapPct(teamSize)` når lagstørrelse endres.
+   * Florida Scramble (#283): lag-handicap-prosent (NGF-fasttabell), prosent av
+   * summen. 0–100 % av lagets snitt (#2566), heltall default (15 for
+   * 3-mannslag, 10 for 4-mannslag). Default settes via
+   * `defaultFloridaHandicapPct(teamSize)` når lagstørrelse endres.
    */
   florida_team_handicap_pct?: string;
   /**
@@ -328,15 +332,6 @@ type Props = {
   mode: GameFormMode;
   initialValues?: InitialValues;
 };
-
-/**
- * Team size for the Texas/Ambrose handicap help key (`texasNetto<n>`,
- * `ambroseNetto<n>`). The key is built from this union, so tsc fails if
- * one of the three texts is missing (#2274).
- */
-function scrambleHelperSize(teamSize: TeamSize): 2 | 3 | 4 {
-  return teamSize === 2 || teamSize === 3 ? teamSize : 4;
-}
 
 /**
  * GameForm — stacked presentation av alle seksjoner for opprett- og edit-
@@ -808,72 +803,45 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             onChange={setHcpAllowance}
           />
         )}
-        {/* Texas scramble (#266): toggle skriver til mode_config.team_handicap_pct
-            (via hidden input `texas_team_handicap_pct`). Default per team-size:
-            25 % for 2-mann, 10 % for 4-mann (NGF-konvensjon). `key={teamSize}`
-            forser remount når admin bytter team-size — sikrer at toggle-state
-            re-initialiseres til ny default. Tex trenger fortsatt hidden
-            hcp_allowance_pct=100 for DB NOT NULL (mode_config holder den
-            reelle prosenten). */}
+        {/* Scramble-familien (#266, #284, #283): samme felt som veiviserens
+            «Klar?»-steg (#2566). Arrangøren ser og skriver prosent av lagets
+            snitt; feltet oversetter til den lagrede sum-prosenten, som de
+            skjulte feltene øverst i skjemaet sender. `key={teamSize}` forser
+            remount ved lagstørrelse-bytte så netto/brutto-minnet følger
+            re-seedingen. `hcp_allowance_pct=100` er no-op for DB NOT NULL
+            (reell prosent ligger i mode_config). */}
         {isTexas && (
           <>
-            <AllowanceField
+            <TeamHandicapField
               key={teamSize}
-              fieldName="texas_team_handicap_pct"
-              defaultPct={texasHandicapPct}
-              legend={t('teamHandicap.legend')}
-              description={t('teamHandicap.description')}
-              nettoHelperText={t(`teamHandicap.texasNetto${scrambleHelperSize(teamSize)}`)}
-              bruttoHelperText={t('teamHandicap.bruttoHelper')}
-              inputLabel={t('teamHandicap.inputLabel')}
-              value={texasHandicapPct}
-              onChange={setTexasHandicapPct}
+              mode="texas_scramble"
+              teamSize={teamSize}
+              sumPct={texasHandicapPct}
+              onSumPctChange={setTexasHandicapPct}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
         )}
-        {/* Ambrose (#284): lag-handicap per standard Ambrose-formel (25 % for
-            2-mannslag, 16,7 % for 3-mannslag, 12,5 % for 4-mannslag). `key={teamSize}` forser remount
-            ved lagstørrelse-bytte. `hcp_allowance_pct=100` er no-op for DB
-            NOT NULL (reell prosent ligger i mode_config). */}
         {isAmbrose && (
           <>
-            <AllowanceField
+            <TeamHandicapField
               key={teamSize}
-              fieldName="ambrose_team_handicap_pct"
-              defaultPct={ambroseHandicapPct}
-              legend={t('teamHandicap.legend')}
-              description={t('teamHandicap.description')}
-              nettoHelperText={t(`teamHandicap.ambroseNetto${scrambleHelperSize(teamSize)}`)}
-              bruttoHelperText={t('teamHandicap.bruttoHelper')}
-              inputLabel={t('teamHandicap.inputLabel')}
-              value={ambroseHandicapPct}
-              onChange={setAmbroseHandicapPct}
+              mode="ambrose"
+              teamSize={teamSize}
+              sumPct={ambroseHandicapPct}
+              onSumPctChange={setAmbroseHandicapPct}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
         )}
-        {/* Florida Scramble (#283): lag-handicap per NGF-fasttabell (15 % for
-            3-mannslag, 10 % for 4-mannslag). `key={teamSize}` forser remount
-            ved lagstørrelse-bytte. `hcp_allowance_pct=100` er no-op for DB
-            NOT NULL (reell prosent ligger i mode_config). */}
         {isFlorida && (
           <>
-            <AllowanceField
+            <TeamHandicapField
               key={teamSize}
-              fieldName="florida_team_handicap_pct"
-              defaultPct={floridaHandicapPct}
-              legend={t('teamHandicap.legend')}
-              description={t('teamHandicap.description')}
-              nettoHelperText={
-                teamSize === 3
-                  ? t('teamHandicap.floridaNetto3')
-                  : t('teamHandicap.floridaNetto4')
-              }
-              bruttoHelperText={t('teamHandicap.bruttoHelper')}
-              inputLabel={t('teamHandicap.inputLabel')}
-              value={floridaHandicapPct}
-              onChange={setFloridaHandicapPct}
+              mode="florida_scramble"
+              teamSize={teamSize}
+              sumPct={floridaHandicapPct}
+              onSumPctChange={setFloridaHandicapPct}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>

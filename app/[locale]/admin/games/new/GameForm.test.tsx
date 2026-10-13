@@ -1912,4 +1912,46 @@ describe('GameForm — «Rediger spill» på en klubb-turnering (#2433)', () => 
       (container.querySelector('input[type=hidden][name=registration_mode]') as HTMLInputElement).value,
     ).toBe('open');
   });
+  // #2566: the edit form shows the team handicap in the organiser's unit, %
+  // of the team average, through the same field as the wizard (Type C, with
+  // numbers on purpose: this is the only test proving GameForm renders
+  // TeamHandicapField). The stored value stays % of the sum.
+  it('Texas 3-mannslag: lag-handicapet vises som snitt-prosent, lagres som sum-prosent (#2566)', () => {
+    const row = editRow({
+      group_id: null,
+      game_mode: 'texas_scramble',
+      mode_config: { kind: 'texas_scramble', team_size: 3, teams_count: 2, team_handicap_pct: 26.67 },
+    });
+    const players = EIGHT_PLAYERS.slice(0, 6);
+    const { container } = renderEdit(
+      row,
+      players,
+      players.map((p, i) => ({
+        user_id: p.id,
+        team_number: i < 3 ? 1 : 2,
+        flight_number: i < 3 ? 1 : 2,
+        tee_gender: 'mens' as const,
+      })),
+    );
+
+    const hidden = () =>
+      container.querySelectorAll<HTMLInputElement>('input[type=hidden][name=texas_team_handicap_pct]');
+    const input = container.querySelector<HTMLInputElement>('#texas_team_handicap_pct__input');
+    expect(input).not.toBeNull();
+
+    // (i) 26.67 % of the sum on a 3-player team is 80 % of the average.
+    expect(input!.value).toBe('80');
+    // (ii) Opening the form does not change the stored value; one field sends it.
+    expect(hidden()).toHaveLength(1);
+    expect(hidden()[0].value).toBe('26.67');
+    // (iii) A whole number on a step-1 field: the browser no longer blocks the save.
+    expect(input!.step).toBe('1');
+    expect(Number.isInteger(Number(input!.value))).toBe(true);
+    expect(input!.validity.stepMismatch).toBe(false);
+
+    // (iv) 90 % of the average is stored as 30 % of the sum.
+    fireEvent.change(input!, { target: { value: '90' } });
+    expect(hidden()).toHaveLength(1);
+    expect(hidden()[0].value).toBe('30');
+  });
 });
