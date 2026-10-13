@@ -1207,20 +1207,6 @@
         "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
         "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
       },
-      "teamHandicap": {
-        "legend": "Lag-handicap",
-        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
-        "texasNetto2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
-        "texasNetto3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
-        "texasNetto4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
-        "ambroseNetto2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
-        "ambroseNetto3": "Standard Ambrose: 16,7 % av summen av spillernes spille-HCP for 3-mannslag.",
-        "ambroseNetto4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
-        "floridaNetto3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
-        "floridaNetto4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
-        "bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
-        "inputLabel": "Lag-handicap (%)"
-      },
       "roundRobin": {
         "legend": "Scoring for Round Robin",
         "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
@@ -1249,7 +1235,7 @@
         "teamAssign2": "lag-fordeling (lag à 2)",
         "teamAssign4": "lag-fordeling (lag à 4)",
         "teamAssign3": "lag-fordeling (lag à 3)",
-        "teamHandicapPct": "lag-handicap-prosent (0-100)",
+        "teamHandicapPct": "lag-handicap i prosent av lagets snitt (0–100)",
         "wolfUnderMin": "{remaining} {remaining, plural, one {spiller} other {spillere}} til (minst 3)",
         "wolfTooMany": "for mange spillere — Wolf tar 3 til 5",
         "nassauMin": "{remaining, plural, one {minst 1 spiller til} other {minst 2 spillere}}",
