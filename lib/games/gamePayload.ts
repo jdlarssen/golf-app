@@ -15,6 +15,7 @@ import { parseStartType, type StartType } from './startType';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { effectiveHcpAllowancePct, usesGameHcpAllowance } from './hcpAllowance';
 import { MAX_TEAM_FORMAT_PLAYERS, MAX_TEAM_NUMBER } from './teamFormatLimits';
+import { isValidTeamHandicapSumPct } from './teamHandicapUnit';
 import { START_COUNT_RANGES, type StartCountMode } from './startPlayerCount';
 import {
   gameModeSupportsTeams,
@@ -899,11 +900,11 @@ function validateSoloStrokeplay(
  *
  * Form-felter:
  *  - `texas_team_size`: 2, 3 eller 4 (andre verdier → unsupported_mode_size_combo)
- *  - `texas_team_handicap_pct`: 0..100, fraksjonell tillatt (NGF-default 25
- *    for 2-mannslag, 15 for 3-mannslag, 10 for 4-mannslag — prosent av summen,
- *    settes av veiviseren når lagstørrelse endres). Utenfor range →
- *    bad_allowance (gjenbruker eksisterende kode siden semantikken er
- *    identisk: prosenttall mellom 0 og 100).
+ *  - `texas_team_handicap_pct`: 0–100 % av lagets snitt, lagret som prosent
+ *    av summen (`isValidTeamHandicapSumPct`, #2566), fraksjonell tillatt
+ *    (NGF-default 25 for 2-mannslag, 15 for 3-mannslag, 10 for 4-mannslag —
+ *    settes av veiviseren når lagstørrelse endres). Utenfor grensen →
+ *    bad_allowance.
  *  - `player_${i}_team`: positivt heltall, ingen øvre grense (par-stableford-
  *    mønsteret — admin kan kjøre stort antall lag for klubb-turnering).
  *
@@ -931,7 +932,7 @@ function validateTexasScramble(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
-  const handicapPct = parseTexasHandicapPct(formData);
+  const handicapPct = parseTexasHandicapPct(formData, teamSize);
   if (handicapPct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
@@ -998,9 +999,10 @@ function parseTexasTeamSize(formData: FormData): 2 | 3 | 4 | null {
 }
 
 /**
- * Leser `texas_team_handicap_pct` fra form-data. Returnerer et tall i range
- * 0..100 (fraksjonell tillatt) eller null hvis verdien er utenfor range / ikke
- * parseable.
+ * Leser `texas_team_handicap_pct` fra form-data. Returnerer prosent av summen
+ * når den ligger innenfor 0–100 % av lagets snitt (fraksjonell tillatt), ellers
+ * null (utenfor grensen / ikke parseable). Grensen er `isValidTeamHandicapSumPct`
+ * (#2566) — 50 for 2-mannslag, 33,33 for 3-mannslag, 25 for 4-mannslag.
  *
  * Desimaler ble tillatt i #2009: veiviseren tar imot prosent av lagets SNITT
  * og lagrer prosent av summen (`lib/games/teamHandicapUnit.ts`), så 80 % av
@@ -1010,11 +1012,14 @@ function parseTexasTeamSize(formData: FormData): 2 | 3 | 4 | null {
  * Tom string defaulter ikke — admin må eksplisitt sette prosenten via
  * GameForm når Texas-modus er valgt (default settes på lagstørrelse-endring).
  */
-function parseTexasHandicapPct(formData: FormData): number | null {
+function parseTexasHandicapPct(
+  formData: FormData,
+  teamSize: number,
+): number | null {
   const raw = formData.get('texas_team_handicap_pct');
   if (raw === null || raw === '') return null;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  if (!isValidTeamHandicapSumPct(n, teamSize)) return null;
   return n;
 }
 
@@ -1028,7 +1033,9 @@ function parseTexasHandicapPct(formData: FormData): number | null {
  *
  * Form-felter:
  *  - `ambrose_team_size`: 2, 3 eller 4 (andre verdier → unsupported_mode_size_combo)
- *  - `ambrose_team_handicap_pct`: 0..100, fraksjonell tillatt (utenfor range → bad_allowance)
+ *  - `ambrose_team_handicap_pct`: 0–100 % av lagets snitt, lagret som prosent
+ *    av summen (`isValidTeamHandicapSumPct`, #2566), fraksjonell tillatt
+ *    (utenfor grensen → bad_allowance)
  *  - `player_${i}_team`: positivt heltall, fri antall lag (klubb-turnering)
  *
  * Regler ved publish: minst 1 spiller, maks `MAX_TEAM_FORMAT_PLAYERS`
@@ -1046,7 +1053,7 @@ function validateAmbrose(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
-  const handicapPct = parseAmbroseHandicapPct(formData);
+  const handicapPct = parseAmbroseHandicapPct(formData, teamSize);
   if (handicapPct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
@@ -1113,19 +1120,23 @@ function parseAmbroseTeamSize(formData: FormData): 2 | 3 | 4 | null {
 }
 
 /**
- * Leser `ambrose_team_handicap_pct` fra form-data. Returnerer et tall i range
- * 0..100 (fraksjonell TILLATT, i motsetning til Texas' heltall-krav) eller null
- * hvis utenfor range / ikke parseable. Standard Ambrose 4-mannslag-default er
- * 12,5 %, derfor må fraksjonelle verdier passere.
+ * Leser `ambrose_team_handicap_pct` fra form-data. Returnerer prosent av summen
+ * når den ligger innenfor 0–100 % av lagets snitt (fraksjonell TILLATT), ellers
+ * null (utenfor grensen / ikke parseable). Grensen er `isValidTeamHandicapSumPct`
+ * (#2566). Standard Ambrose 4-mannslag-default er 12,5 %, derfor må
+ * fraksjonelle verdier passere.
  *
  * Tom string defaulter ikke — wizarden setter prosenten eksplisitt på
  * lagstørrelse-endring (via `ambroseDefaultPct`).
  */
-function parseAmbroseHandicapPct(formData: FormData): number | null {
+function parseAmbroseHandicapPct(
+  formData: FormData,
+  teamSize: number,
+): number | null {
   const raw = formData.get('ambrose_team_handicap_pct');
   if (raw === null || raw === '') return null;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  if (!isValidTeamHandicapSumPct(n, teamSize)) return null;
   return n;
 }
 
@@ -1139,7 +1150,8 @@ function parseAmbroseHandicapPct(formData: FormData): number | null {
  *
  * Form-felter:
  *  - `florida_team_size`: 3 eller 4
- *  - `florida_team_handicap_pct`: 0..100, fraksjonell tillatt
+ *  - `florida_team_handicap_pct`: 0–100 % av lagets snitt, lagret som prosent
+ *    av summen (`isValidTeamHandicapSumPct`, #2566), fraksjonell tillatt
  *  - `player_${i}_team`: positivt heltall, fri antall lag
  *
  * Regler ved publish: minst 1 spiller, maks `MAX_TEAM_FORMAT_PLAYERS`
@@ -1156,7 +1168,7 @@ function validateFloridaScramble(
     return { ok: false, errorCode: 'unsupported_mode_size_combo' };
   }
 
-  const handicapPct = parseFloridaHandicapPct(formData);
+  const handicapPct = parseFloridaHandicapPct(formData, teamSize);
   if (handicapPct === null) {
     return { ok: false, errorCode: 'bad_allowance' };
   }
@@ -1221,15 +1233,19 @@ function parseFloridaTeamSize(formData: FormData): 3 | 4 | null {
 }
 
 /**
- * Leser `florida_team_handicap_pct` fra form-data. Returnerer et tall i range
- * 0..100 (fraksjonell tillatt) eller null. Wizarden setter prosenten via
- * `defaultFloridaHandicapPct` (15 % for 3-mann, 10 % for 4-mann).
+ * Leser `florida_team_handicap_pct` fra form-data. Returnerer prosent av summen
+ * når den ligger innenfor 0–100 % av lagets snitt (fraksjonell tillatt), ellers
+ * null. Grensen er `isValidTeamHandicapSumPct` (#2566). Wizarden setter
+ * prosenten via `defaultFloridaHandicapPct` (15 % for 3-mann, 10 % for 4-mann).
  */
-function parseFloridaHandicapPct(formData: FormData): number | null {
+function parseFloridaHandicapPct(
+  formData: FormData,
+  teamSize: number,
+): number | null {
   const raw = formData.get('florida_team_handicap_pct');
   if (raw === null || raw === '') return null;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  if (!isValidTeamHandicapSumPct(n, teamSize)) return null;
   return n;
 }
 

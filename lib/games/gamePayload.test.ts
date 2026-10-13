@@ -1523,11 +1523,13 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     }
   });
 
-  it('publish med handicap_pct=100 (full sum) → ok', () => {
+  // #2566: taket er 100 % av lagets snitt, lagret som prosent av summen —
+  // 50 på et 2-mannslag. 100 av summen (200 % av snittet) avvises nå.
+  it('publish med handicap_pct=50 på 2-mannslag (100 % av snittet) → ok', () => {
     const result = buildGameInsertPayload(
       texasFd({
         teamSize: '2',
-        handicapPct: '100',
+        handicapPct: '50',
         players: [
           { userId: 'a', team: 1 },
           { userId: 'b', team: 1 },
@@ -1537,10 +1539,41 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     );
     expect(result.errorCode).toBeUndefined();
     if (result.mode_config.kind === 'texas_scramble') {
-      expect(result.mode_config.team_handicap_pct).toBe(100);
+      expect(result.mode_config.team_handicap_pct).toBe(50);
     } else {
       throw new Error('unexpected mode_config kind');
     }
+  });
+
+  it('publish med handicap_pct=50.01 på 2-mannslag (over snittet) → bad_allowance (#2566)', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        handicapPct: '50.01',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med handicap_pct=50 på 3-mannslag (150 % av snittet) → bad_allowance (#2566)', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '3',
+        handicapPct: '50',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
   });
 
   it('publish med ingen spillere → min_players_for_mode', () => {

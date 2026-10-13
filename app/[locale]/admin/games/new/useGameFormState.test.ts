@@ -964,6 +964,77 @@ describe('useGameFormState — klubb-turnering uten spillere (#2433)', () => {
   });
 });
 
+describe('useGameFormState — lag-handicap over taket stopper publisering uansett påmeldingsmåte (#2566)', () => {
+  // The #2433 setup (course, tee and tee-off set, empty roster) with a scramble
+  // format and a roster that is optional at publish: «Åpen påmelding»,
+  // «Forespørsel», or a club tournament with individual sign-up. The team
+  // handicap is a config value, not a roster check, so the cap still stops
+  // the publish (orchestrator's decision 7).
+  type ScrambleCase = {
+    mode: 'texas_scramble' | 'ambrose' | 'florida_scramble';
+    teamSize: TeamSize;
+    intent: 'kompis' | 'klubb';
+    registrationMode?: 'open' | 'manual_approval';
+    sumPct: number;
+  };
+
+  function setupOptionalRoster(c: ScrambleCase) {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialIntent: c.intent,
+        clubIds: ['club-1'],
+      }),
+    );
+    act(() => {
+      result.current.handleModeChange(c.mode);
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.setScheduledTeeOffAt(
+        toDatetimeLocal(new Date(Date.now() + 86_400_000)),
+      );
+      // The team size setter writes the default percentage, so it goes first.
+      result.current.handleTeamSizeChange(c.teamSize);
+    });
+    act(() => {
+      if (c.registrationMode) result.current.setRegistrationMode(c.registrationMode);
+      if (c.mode === 'texas_scramble') result.current.setTexasHandicapPct(c.sumPct);
+      if (c.mode === 'ambrose') result.current.setAmbroseHandicapPct(c.sumPct);
+      if (c.mode === 'florida_scramble') result.current.setFloridaHandicapPct(c.sumPct);
+    });
+    expect(result.current.playersStepOptional).toBe(true);
+    expect(result.current.selectedPlayerIds).toEqual([]);
+    return { result };
+  }
+
+  it.each<[string, ScrambleCase]>([
+    ['(a) Texas 2, åpen, 150', { mode: 'texas_scramble', teamSize: 2, intent: 'kompis', registrationMode: 'open', sumPct: 150 }],
+    ['(b) Texas 2, forespørsel, 150', { mode: 'texas_scramble', teamSize: 2, intent: 'kompis', registrationMode: 'manual_approval', sumPct: 150 }],
+    ['(c) Texas 2, klubb individuelt, 150', { mode: 'texas_scramble', teamSize: 2, intent: 'klubb', sumPct: 150 }],
+    ['(d) Texas 2, åpen, 50.01', { mode: 'texas_scramble', teamSize: 2, intent: 'kompis', registrationMode: 'open', sumPct: 50.01 }],
+    ['(e) Ambrose 3, åpen, 33.34', { mode: 'ambrose', teamSize: 3, intent: 'kompis', registrationMode: 'open', sumPct: 33.34 }],
+    ['(f) Florida 4, åpen, 25.01', { mode: 'florida_scramble', teamSize: 4, intent: 'kompis', registrationMode: 'open', sumPct: 25.01 }],
+  ])('%s: over taket → ikke publiserbar, mangel «allowance»', (_label, c) => {
+    const { result } = setupOptionalRoster(c);
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toContain('allowance');
+  });
+
+  it.each<[string, ScrambleCase]>([
+    ['Texas 2, åpen, 50', { mode: 'texas_scramble', teamSize: 2, intent: 'kompis', registrationMode: 'open', sumPct: 50 }],
+    ['Texas 2, klubb individuelt, 50', { mode: 'texas_scramble', teamSize: 2, intent: 'klubb', sumPct: 50 }],
+    ['Ambrose 3, åpen, 33.33', { mode: 'ambrose', teamSize: 3, intent: 'kompis', registrationMode: 'open', sumPct: 33.33 }],
+    ['Florida 4, åpen, 25', { mode: 'florida_scramble', teamSize: 4, intent: 'kompis', registrationMode: 'open', sumPct: 25 }],
+  ])('(kontroll) %s: på taket → publiserbar med tom liste (#2433 holder)', (_label, c) => {
+    const { result } = setupOptionalRoster(c);
+    expect(result.current.canPublish).toBe(true);
+    expect(result.current.missingForPublishCodes).not.toContain('allowance');
+  });
+});
+
 describe('useGameFormState — forhåndsvelg arrangøren som spiller ved kompis-intent (#1066)', () => {
   it('setIntent("kompis") preselecter currentUserId når selection er tom', () => {
     const { result } = renderHook(() =>
