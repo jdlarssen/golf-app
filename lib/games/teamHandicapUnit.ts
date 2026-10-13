@@ -22,8 +22,10 @@
 // `averagePctToSumPct(100, lagstørrelse)` — 50 for 2-mannslag, 33,33 for
 // 3-mannslag og 25 for 4-mannslag. Taket sammenlignes mot den avrundede
 // sum-verdien, ikke mot et avrundet snitt: 33,34 × 3 = 100,02 runder til 100,
-// men er over taket. Serverens validator (`gamePayload.ts`), skjemaets
-// gyldighet (`validateTeamSizeFormat`) og feltets `max` leser alle herfra.
+// men er over taket. Serverens validator (`gamePayload.ts`) og skjemaets
+// gyldighet (`validateTeamSizeFormat`) leser herfra. Feltets `max` er 100 i
+// `AllowanceField`, låst mot `TEAM_HANDICAP_AVERAGE_PCT_MAX` av
+// `TeamHandicapField.test.tsx`.
 
 /**
  * Arrangørens tall (prosent av lagets snitt-handicap) → lagret tall (prosent av

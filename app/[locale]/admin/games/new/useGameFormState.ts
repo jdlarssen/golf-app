@@ -1653,6 +1653,10 @@ export function useGameFormState({
     handicapPct: undefined,
     requireIntegerPct: false,
   });
+  // Samme sjekk er lagfordelingen alene for Texas, Ambrose og Florida. Mangel-
+  // teksten om lag-fordeling leser den, så et lag-handicap over taket ikke også
+  // melder fulle lag som ufullstendige (#2566).
+  const teamRosterValid = shamblePlayersValid;
 
   // Florida Scramble-validitet (#283): speiler Ambrose-validitets-reglene.
   // Fraksjonell prosent innenfor 0–100 % av snittet (#2566).
@@ -1911,7 +1915,7 @@ export function useGameFormState({
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
       pushMissing('players', tMissing(teamOddKey(teamSize)));
-    } else if (!texasPlayersValid) {
+    } else if (!teamRosterValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
   } else if (isAmbrose) {
@@ -1920,7 +1924,7 @@ export function useGameFormState({
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
       pushMissing('players', tMissing(teamOddKey(teamSize)));
-    } else if (!ambrosePlayersValid) {
+    } else if (!teamRosterValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
   } else if (isShamble) {
@@ -1941,7 +1945,7 @@ export function useGameFormState({
       pushMissing('players', tMissing('minCountPlayers', { count: teamSize }));
     } else if (selectedPlayerIds.length % teamSize !== 0) {
       pushMissing('players', tMissing(teamOddKey(teamSize)));
-    } else if (!floridaPlayersValid) {
+    } else if (!teamRosterValid) {
       pushMissing('players', tMissing(teamAssignKey(teamSize)));
     }
   } else if (isWolf) {

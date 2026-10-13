@@ -1025,6 +1025,7 @@ describe('useGameFormState — lag-handicap over taket stopper publisering uanse
 
   it.each<[string, ScrambleCase]>([
     ['Texas 2, åpen, 50', { mode: 'texas_scramble', teamSize: 2, intent: 'kompis', registrationMode: 'open', sumPct: 50 }],
+    ['Texas 2, forespørsel, 50', { mode: 'texas_scramble', teamSize: 2, intent: 'kompis', registrationMode: 'manual_approval', sumPct: 50 }],
     ['Texas 2, klubb individuelt, 50', { mode: 'texas_scramble', teamSize: 2, intent: 'klubb', sumPct: 50 }],
     ['Ambrose 3, åpen, 33.33', { mode: 'ambrose', teamSize: 3, intent: 'kompis', registrationMode: 'open', sumPct: 33.33 }],
     ['Florida 4, åpen, 25', { mode: 'florida_scramble', teamSize: 4, intent: 'kompis', registrationMode: 'open', sumPct: 25 }],
@@ -1032,6 +1033,38 @@ describe('useGameFormState — lag-handicap over taket stopper publisering uanse
     const { result } = setupOptionalRoster(c);
     expect(result.current.canPublish).toBe(true);
     expect(result.current.missingForPublishCodes).not.toContain('allowance');
+  });
+
+  // A full roster with a handicap over the cap is a handicap problem only: the
+  // missing list must not also claim the teams are incomplete.
+  it.each([
+    ['texas_scramble', (r: ReturnType<typeof useGameFormState>) => r.setTexasHandicapPct(80)],
+    ['ambrose', (r: ReturnType<typeof useGameFormState>) => r.setAmbroseHandicapPct(80)],
+    ['florida_scramble', (r: ReturnType<typeof useGameFormState>) => r.setFloridaHandicapPct(80)],
+  ] as const)('%s, invite_only, to fulle lag à 3, 80 av summen: bare «allowance» mangler', (mode, setPct) => {
+    const six = Array.from({ length: 6 }, (_, i) => makePlayer(`t${i + 1}`));
+    const { result } = renderHook(() => useGameFormState({ players: six, courses: COURSES }));
+    act(() => {
+      result.current.handleModeChange(mode);
+      result.current.setCourseId('course-a');
+    });
+    act(() => {
+      result.current.setTeeBoxId('tee-a1');
+      result.current.setScheduledTeeOffAt(toDatetimeLocal(new Date(Date.now() + 86_400_000)));
+      result.current.handleTeamSizeChange(3);
+    });
+    act(() => {
+      for (const p of six) result.current.togglePlayer(p.id);
+    });
+    act(() => {
+      result.current.drawRandomTeams();
+    });
+    expect(result.current.playersStepOptional).toBe(false);
+    expect(result.current.canPublish).toBe(true); // the default percentage is within the cap
+
+    act(() => setPct(result.current));
+    expect(result.current.canPublish).toBe(false);
+    expect(result.current.missingForPublishCodes).toEqual(['allowance']);
   });
 });
 
