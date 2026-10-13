@@ -28,7 +28,9 @@
 --
 -- Red without 0208: cases 1, 5 and 8 raise 42501, because the old trigger
 -- only asks is_invite_eligible and none of those pairs is eligible. The rest
--- pass before and after 0208; they keep the new branches from growing.
+-- pass before and after 0208; they keep the new branches from growing. The
+-- negative cases match the trigger's own message («not invite-eligible»), so
+-- an RLS refusal or another guard's 42501 cannot pass for it.
 --
 -- Isolation (#2567, orchestrator decision 7): a row that goes in makes the
 -- pair "co-players" for is_invite_eligible, so a later negative case could
@@ -168,7 +170,7 @@ insert into public.games (id, name, course_id, tee_box_id, status, game_mode, cr
 -- CUP
 -- ═════════════════════════════════════════════════════════════════════════════
 
--- 1 ─ organiser adds a participant to a match in her own cup.
+-- 1 ─ organiser adds a participant to a match in a cup they run.
 select torny_rls.as_service();
 select ok(not public.is_invite_eligible(torny_rls.ce_org(), torny_rls.ce_part(), null),
   'case 1 precondition: the participant is not invite-eligible for the organiser');
@@ -185,22 +187,22 @@ select ok(not public.is_invite_eligible(torny_rls.ce_org(), torny_rls.ce_nonpart
   'case 2 precondition: the non-participant is not invite-eligible for the organiser');
 savepoint case_2;
 select torny_rls.as_user(torny_rls.ce_org());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, team_number, flight_number, accepted_at)
      values (torny_rls.ce_game_a(), torny_rls.ce_nonpart(), 1, 1, now()) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 2: the organiser CANNOT add someone who is not on the cup''s participant list');
 rollback to savepoint case_2;
 
--- 3 ─ same organiser, her own game without a cup, the same participant.
+-- 3 ─ same organiser, own game without a cup, the same participant.
 select ok(not public.is_invite_eligible(torny_rls.ce_org(), torny_rls.ce_part(), null),
   'case 3 precondition: the participant is not invite-eligible for the organiser');
 savepoint case_3;
 select torny_rls.as_user(torny_rls.ce_org());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, flight_number, accepted_at)
      values (torny_rls.ce_game_plain(), torny_rls.ce_part(), 1, now()) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 3: the cup rule does not reach the organiser''s games outside the cup');
 rollback to savepoint case_3;
 
@@ -209,10 +211,10 @@ select ok(not public.is_invite_eligible(torny_rls.ce_org(), torny_rls.ce_part_b(
   'case 4 precondition: the cup B participant is not invite-eligible for the organiser');
 savepoint case_4;
 select torny_rls.as_user(torny_rls.ce_org());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, team_number, flight_number, accepted_at)
      values (torny_rls.ce_game_a(), torny_rls.ce_part_b(), 1, 1, now()) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 4: a participant of cup B CANNOT be put in a cup A match');
 rollback to savepoint case_4;
 
@@ -263,7 +265,7 @@ select lives_ok(
   $$ insert into public.game_players (game_id, user_id, accepted_at)
      values (torny_rls.le_flight_a(), torny_rls.le_a(), now()),
             (torny_rls.le_flight_a(), torny_rls.le_b(), null) $$,
-  'case 8: a league member CAN put another member of the same league in her flight');
+  'case 8: a league member CAN put another member of the same league in a flight they started');
 rollback to savepoint case_8;
 
 -- 9 ─ same flight, someone outside the league.
@@ -271,11 +273,11 @@ select ok(not public.is_invite_eligible(torny_rls.le_a(), torny_rls.le_out(), nu
   'case 9 precondition: the outsider is not invite-eligible for member A');
 savepoint case_9;
 select torny_rls.as_user(torny_rls.le_a());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, accepted_at)
      values (torny_rls.le_flight_a(), torny_rls.le_out(), null) $$,
-  '42501', null,
-  'case 9: a league member CANNOT put someone outside the league in her flight');
+  '%not invite-eligible%',
+  'case 9: a league member CANNOT put someone outside the league in a flight they started');
 rollback to savepoint case_9;
 
 -- 10 ─ same flight, a member of league B only.
@@ -283,10 +285,10 @@ select ok(not public.is_invite_eligible(torny_rls.le_a(), torny_rls.le_other(), 
   'case 10 precondition: the league B member is not invite-eligible for member A');
 savepoint case_10;
 select torny_rls.as_user(torny_rls.le_a());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, accepted_at)
      values (torny_rls.le_flight_a(), torny_rls.le_other(), null) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 10: a member of another league CANNOT be put in a league A flight');
 rollback to savepoint case_10;
 
@@ -295,10 +297,10 @@ select ok(not public.is_invite_eligible(torny_rls.le_x(), torny_rls.le_b(), null
   'case 11 precondition: member B is not invite-eligible for the non-member');
 savepoint case_11;
 select torny_rls.as_user(torny_rls.le_x());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, accepted_at)
      values (torny_rls.le_flight_x(), torny_rls.le_b(), null) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 11: a non-member CANNOT put a league member in a flight, both must be members');
 rollback to savepoint case_11;
 
@@ -308,10 +310,10 @@ select ok(not public.is_invite_eligible(torny_rls.le_a(), torny_rls.le_b(), null
 savepoint case_12;
 update public.leagues set status = 'finished' where id = torny_rls.le_league_a();
 select torny_rls.as_user(torny_rls.le_a());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, accepted_at)
      values (torny_rls.le_flight_a(), torny_rls.le_b(), null) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 12: the league rule does not apply when the league is not active');
 rollback to savepoint case_12;
 
@@ -320,10 +322,10 @@ select ok(not public.is_invite_eligible(torny_rls.le_a(), torny_rls.le_b(), null
   'case 13 precondition: member B is not invite-eligible for member A');
 savepoint case_13;
 select torny_rls.as_user(torny_rls.le_a());
-select throws_ok(
+select throws_like(
   $$ insert into public.game_players (game_id, user_id, accepted_at)
      values (torny_rls.le_plain_a(), torny_rls.le_b(), null) $$,
-  '42501', null,
+  '%not invite-eligible%',
   'case 13: the league rule does not reach a member''s games outside the league');
 rollback to savepoint case_13;
 
