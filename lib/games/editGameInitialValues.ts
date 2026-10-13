@@ -108,6 +108,17 @@ export type EditGamePlayerRow = {
 };
 
 /**
+ * The stored scramble team handicap (% of the sum) as the form's string, or
+ * undefined when the row has no finite number (old data, an older write path).
+ * Undefined lets the form seed the default for the team size, which the
+ * organiser sees before saving, instead of «undefined» turning into NaN and a
+ * blocked save (#2566).
+ */
+function storedTeamHandicapPct(value: unknown): string | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : undefined;
+}
+
+/**
  * `datetime-local` inputs want 'YYYY-MM-DDTHH:mm' in browser-local time, but
  * the DB stores `timestamptz` (UTC instant). We pre-format the value in
  * Europe/Oslo wall-clock so the input shows the same time the admin originally
@@ -214,15 +225,15 @@ export function buildEditInitialValues(
     ...buildSetupStepInitialValues(game.mode_config),
     texas_team_handicap_pct:
       game.mode_config.kind === 'texas_scramble'
-        ? String(game.mode_config.team_handicap_pct)
+        ? storedTeamHandicapPct(game.mode_config.team_handicap_pct)
         : undefined,
     ambrose_team_handicap_pct:
       game.mode_config.kind === 'ambrose'
-        ? String(game.mode_config.team_handicap_pct)
+        ? storedTeamHandicapPct(game.mode_config.team_handicap_pct)
         : undefined,
     florida_team_handicap_pct:
       game.mode_config.kind === 'florida_scramble'
-        ? String(game.mode_config.team_handicap_pct)
+        ? storedTeamHandicapPct(game.mode_config.team_handicap_pct)
         : undefined,
     // Round Robin (#337) and the matchplay formats (#2444): the allowance
     // lives in mode_config.allowance_pct. Without pre-fill, an edit save
