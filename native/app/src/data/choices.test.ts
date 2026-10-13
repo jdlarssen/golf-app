@@ -6,10 +6,10 @@
 //  1. **Mappingen** mot webbens select-lister. Bruker de to sidene ulike
 //     kolonner, får de delte context-byggerne ulik input og appen viser andre
 //     tall enn nettsiden for samme runde.
-//  2. **Valideringsreglene**, som bor ett sted til (webbens server actions) og
-//     ikke kan importeres derfra. Særlig BBB-ens finished-lås: RLS håndhever
-//     den IKKE, så uten sjekken i koden — og denne testen rundt den — kunne
-//     appen skrive prestasjoner inn i et avsluttet spill.
+//  2. **BBB-ens finished-lås.** RLS håndhever den IKKE, så uten sjekken i
+//     koden — og denne testen rundt den — kunne appen skrive prestasjoner inn
+//     i et avsluttet spill. Wolf-reglene og hull-sjekken er delt med webben og
+//     testes der de bor (`lib/wolf/validateWolfChoice.test.ts`, #2228).
 //
 // Resten er trap 2: en upsert som traff 0 rader svarer `error == null`, og skal
 // aldri leses som suksess.
@@ -194,44 +194,6 @@ describe('choices', () => {
       await expect(choices().fetchBingoBangoBongoHoles(GAME)).rejects.toThrow(
         'timeout',
       );
-    });
-  });
-
-  describe('validateWolfChoice', () => {
-    const VALID: [string, WolfOver][] = [
-      ['partner på hull 1', { holeNumber: 1 }],
-      ['partner på hull 18', { holeNumber: 18 }],
-      ['lone uten partner', { choice: 'lone', partnerUserId: null }],
-      ['blind uten partner', { choice: 'blind', partnerUserId: null }],
-    ];
-
-    const INVALID: [string, WolfOver, string][] = [
-      ['hull 0', { holeNumber: 0 }, 'invalid_hole'],
-      ['hull 19', { holeNumber: 19 }, 'invalid_hole'],
-      ['et halvt hull', { holeNumber: 7.5 }, 'invalid_hole'],
-      // Bare en manipulert/utdatert klient kan sende dette — typen tillater det
-      // ikke, men vakten skal stå der uansett.
-      ['ukjent valg', { choice: 'solo' as never }, 'invalid_choice'],
-      [
-        'partner uten partner',
-        { choice: 'partner', partnerUserId: null },
-        'partner_required',
-      ],
-      ['lone med partner', { choice: 'lone', partnerUserId: MATE }, 'partner_must_be_null'],
-      [
-        'blind med partner',
-        { choice: 'blind', partnerUserId: MATE },
-        'partner_must_be_null',
-      ],
-      ['wolfen som sin egen partner', { partnerUserId: ME }, 'partner_cannot_be_wolf'],
-    ];
-
-    it.each(VALID)('godtar %s', (_label, over) => {
-      expect(choices().validateWolfChoice(wolfWrite(over))).toBeNull();
-    });
-
-    it.each(INVALID)('avviser %s', (_label, over, error) => {
-      expect(choices().validateWolfChoice(wolfWrite(over))).toBe(error);
     });
   });
 

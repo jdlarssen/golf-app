@@ -11,7 +11,9 @@
 //     tynne valideringsskall rundt nøyaktig samme upsert; porten ER Postgres:
 //     `wolf_choices_insert/update` krever `wolf_user_id = auth.uid()` (eller
 //     admin), og `bbb_holes_write` slipper enhver deltaker til. Appen legger de
-//     samme reglene foran for UX-ens skyld — men gaten er RLS. Én ting gjør
+//     samme reglene foran for UX-ens skyld, og wolf-reglene og hull-sjekken er
+//     de samme funksjonene webbens actions kaller (`lib/wolf/validateWolfChoice.ts`,
+//     #2228). Gaten er likevel RLS. Én ting gjør
 //     webbens actions i tillegg: de tømmer spillets web-cache (`game-${id}`),
 //     som hull-siden og kamp-tavla leser valgene fra. Appen ber ruta om det
 //     samme etter en vellykket skriving (`refreshWebCache`, #2215).
@@ -46,6 +48,11 @@ import type {
   WolfChoice,
   WolfHoleChoice,
 } from '../../../../lib/scoring/modes/types';
+import {
+  isPlayableHole,
+  validateWolfChoice,
+  type WolfChoiceValidationError,
+} from '../../../../lib/wolf/validateWolfChoice';
 import { currentDeviceUserId, supabase } from '../supabase';
 import { refreshWebCache } from './refreshWebCache';
 
@@ -132,7 +139,8 @@ export async function fetchBingoBangoBongoHoles(
 }
 
 // -----------------------------------------------------------------------------
-// Validering — rene funksjoner, speiler webbens actions
+// Validering — rene funksjoner. Wolf-reglene og hull-sjekken er delt med
+// webbens actions (`lib/wolf/validateWolfChoice.ts`); BBB-ens finished-lås bor her
 // -----------------------------------------------------------------------------
 
 /**
@@ -153,13 +161,9 @@ export type ChoiceWriteFailure =
   | 'rls_denied'
   | 'db_error';
 
-/** Valideringsfeil for et wolf-valg. Speiler `lib/wolf/setWolfChoice.ts:50-68`. */
-export type WolfChoiceValidationError =
-  | 'invalid_hole'
-  | 'invalid_choice'
-  | 'partner_required'
-  | 'partner_must_be_null'
-  | 'partner_cannot_be_wolf';
+/** Valideringsfeil for et wolf-valg. Delt med webben, se `validateWolfChoice`. */
+export type { WolfChoiceValidationError };
+export { validateWolfChoice };
 
 /**
  * Valideringsfeil for en BBB-skriving. Speiler hull- og finished-sjekkene i
@@ -201,43 +205,6 @@ export interface BingoBangoBongoHoleWrite {
   key: BingoBangoBongoCategoryKey;
   /** Mottakeren, eller `null` når kategorien tømmes («Ingen»). */
   userId: string | null;
-}
-
-const VALID_CHOICES: readonly string[] = ['partner', 'lone', 'blind'];
-
-/** Sant for et heltall i 1..18. Begge skrivingene gater på det, som webben. */
-function isPlayableHole(holeNumber: number): boolean {
-  return Number.isInteger(holeNumber) && holeNumber >= 1 && holeNumber <= 18;
-}
-
-/**
- * Forretningsreglene for et wolf-valg, i webbens rekkefølge:
- *
- *  - hull 1..18 (heltall)
- *  - choice ∈ {partner, lone, blind}
- *  - 'partner' krever en partner; 'lone'/'blind' krever at den er null
- *  - wolfen kan ikke velge seg selv
- *
- * Ingen finished-lås: webben har bevisst ingen på wolf-valg, og paritet er
- * poenget her — ikke ny policy.
- *
- * Ren funksjon med vilje: reglene er det som lett driver fra hverandre mellom
- * app og web, så de skal kunne låses i jest uten å mocke et eneste kall.
- *
- * @returns feilkoden, eller `null` når valget er gyldig.
- */
-export function validateWolfChoice(
-  input: WolfChoiceWrite,
-): WolfChoiceValidationError | null {
-  const { holeNumber, wolfUserId, choice, partnerUserId } = input;
-
-  if (!isPlayableHole(holeNumber)) return 'invalid_hole';
-  if (!VALID_CHOICES.includes(choice)) return 'invalid_choice';
-  if (choice === 'partner' && !partnerUserId) return 'partner_required';
-  if (choice !== 'partner' && partnerUserId !== null) return 'partner_must_be_null';
-  if (partnerUserId && partnerUserId === wolfUserId) return 'partner_cannot_be_wolf';
-
-  return null;
 }
 
 /**

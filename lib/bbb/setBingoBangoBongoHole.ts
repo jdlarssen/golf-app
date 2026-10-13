@@ -9,6 +9,7 @@ import {
 import type { Database } from '@/lib/database.types';
 import { expectAffected } from '@/lib/supabase/affectedRows';
 import { getServerClient } from '@/lib/supabase/server';
+import { isPlayableHole } from '@/lib/wolf/validateWolfChoice';
 
 type BingoBangoBongoHoleInsert =
   Database['public']['Tables']['bingo_bango_bongo_holes']['Insert'];
@@ -79,7 +80,7 @@ export async function setBingoBangoBongoHole(
 ): Promise<SetBingoBangoBongoHoleResult> {
   const { gameId, holeNumber, key, userId } = input;
 
-  if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
+  if (!isPlayableHole(holeNumber)) {
     return { ok: false, error: 'invalid_hole' };
   }
 
