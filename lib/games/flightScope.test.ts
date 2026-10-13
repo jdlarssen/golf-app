@@ -13,6 +13,7 @@ import {
   eligibleForFlightAssignment,
   flightIsFreeGrouping,
   organizerApprovalRow,
+  resolveFlight,
   type FlightPlayer,
   type OrganizerApprovalRow,
 } from './flightScope';
@@ -848,5 +849,48 @@ describe('flightBuckets', () => {
     const result = flightBuckets(players);
     expect(result.assigned.size).toBe(0);
     expect(result.unassigned).toHaveLength(3);
+  });
+});
+
+// ─── resolveFlight ───────────────────────────────────────────────────────────
+// #2228: who shows as a card on the hole page. One home for the web's
+// holePagePlayers.ts and the native app's roster.ts. Cases moved from the
+// native roster.test.ts.
+
+describe('resolveFlight', () => {
+  const SOLO: GameMode = 'solo_strokeplay';
+  const ids = (players: FlightPlayer[]) => players.map((x) => x.user_id);
+
+  it('≤4 aktive: alle er i samme gruppe, uansett flight-nummer', () => {
+    const players = [p('a', 1), p('b', 2), p('c', 2)];
+    expect(ids(resolveFlight(SOLO, players, players[0]))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('>4 aktive: bare min egen flight', () => {
+    const players = [p('a', 1), p('b', 1), p('c', 2), p('d', 2), p('e', 2)];
+    expect(ids(resolveFlight(SOLO, players, players[0]))).toEqual(['a', 'b']);
+  });
+
+  it('>4 aktive uten egen flight: hele rosteret (arv fra flight-løse spill)', () => {
+    const players = [p('a'), p('b', 1), p('c', 1), p('d', 2), p('e', 2)];
+    expect(ids(resolveFlight(SOLO, players, players[0]))).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ]);
+  });
+
+  it('wolf er én gruppe også med fem spillere', () => {
+    const players = [p('a', 1), p('b', 2), p('c', 2), p('d', 2), p('e', 2)];
+    expect(resolveFlight('wolf', players, players[0])).toHaveLength(5);
+  });
+
+  it('trukkede spillere står aldri på banen — heller ikke som kapasitet', () => {
+    // Fem rader, men bare fire aktive: spillet ER én flight, og den trukkede
+    // vises ikke.
+    const players = [p('a', 1), p('b', 2), p('c', 2), p('d', 2), withdrawn('e', 2)];
+    expect(ids(resolveFlight(SOLO, players, players[0]))).toEqual(['a', 'b', 'c', 'd']);
   });
 });

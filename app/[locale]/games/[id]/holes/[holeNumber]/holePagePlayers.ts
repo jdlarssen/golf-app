@@ -10,7 +10,7 @@ import {
   playerStrokeHandicap,
 } from '@/lib/scoring/allocatedStrokes';
 import { nameInitials } from '@/lib/names/initials';
-import { isSingleFlightGame } from '@/lib/games/flightScope';
+import { resolveFlight as resolveFlightFor } from '@/lib/games/flightScope';
 import { teamScoreOwnerId } from '@/lib/games/teamCaptain';
 import type { RoundRobinConstellationPlayer } from '@/lib/scoring/modes/roundRobin';
 import type { GameForHole, PlayerForHole } from '@/lib/games/getGameWithPlayers';
@@ -18,33 +18,16 @@ import type { ClientPlayer } from './holeClientProps';
 import type { ScoreRow } from './holePageData';
 
 /**
- * #543: én-flight-regelen — alle aktive spillere er i samme gruppe når
- * spillet har ≤4 aktive spillere ELLER formatet er wolf.
- *
- * Når singleFlight er true vises ALLE aktive spillere uavhengig av
- * flight_number. Dette fikser bl.a. matchplay-motstanderens scorer
- * (side 1 vs side 2) og foursomes/texas (lag 1 vs lag 2) for 4-spiller-spill.
- *
- * Når singleFlight er false brukes eksisterende logikk:
- *   • flight_number == null → alle spillere (legacy ≤4 flightless)
- *   • flight_number != null → kun samme flight
- *
- * Trukkede spillere filtreres ut av roster slik at de ikke vises som
- * aktive kort på hull-siden (#386/#387-presedensen).
+ * Hvem som vises som kort på hull-siden. Regelen (#543: én flight ved ≤4
+ * aktive eller wolf, ellers min flight, trukne aldri med) bor i
+ * `resolveFlight` i `lib/games/flightScope.ts`, delt med appen (#2228).
  */
 export function resolveFlight(args: {
   game: GameForHole;
   allPlayers: PlayerForHole[];
   me: PlayerForHole;
 }): PlayerForHole[] {
-  const { game, allPlayers, me } = args;
-  const singleFlight = isSingleFlightGame(game.game_mode, allPlayers);
-  if (singleFlight || me.flight_number == null) {
-    return allPlayers.filter((p) => p.withdrawn_at == null);
-  }
-  return allPlayers.filter(
-    (p) => p.flight_number === me.flight_number && p.withdrawn_at == null,
-  );
+  return resolveFlightFor(args.game.game_mode, args.allPlayers, args.me);
 }
 
 /**
