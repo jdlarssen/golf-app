@@ -6267,6 +6267,7 @@
       "body": "Idéen din er nå en del av Tørny. Takk for at du tok deg tid til å si fra. Det er akkurat slik appen blir bedre.",
       "openButton": "Se hva som er nytt",
       "openButtonText": "Se hva som er nytt: {url}",
+      "summary": "Dette er nytt: {summary}",
       "footer": "Du får denne meldingen fordi du sendte inn en idé. Logg inn på <link>tornygolf.no</link> for å se hva som skjer."
     },
     "guestClaim": {
