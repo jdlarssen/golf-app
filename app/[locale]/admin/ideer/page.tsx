@@ -14,6 +14,7 @@ import {
   IDEA_BUILT_ERROR_CODES,
   IDEA_BUILT_LINK_MAX,
   IDEA_BUILT_SUMMARY_MAX,
+  suggestIdeaBuiltSummary,
 } from '@/lib/notifications/ideaBuiltInput';
 import { formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
@@ -21,7 +22,8 @@ import { markIdeaBuilt } from './actions';
 
 // #984: Admin-only liste over innsendte ideer. «Marker som bygd» for å lukke
 // sløyfen og sende in-app-varsel til innsenderen. #2568: admin skriver en linje
-// om hva som ble bygd og kan legge til en lenke; begge følger varselet.
+// om hva som ble bygd og kan legge til en lenke; begge følger varselet. Linja
+// starter som et forslag fra idéens egen tekst (eiervalg 13.10).
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -127,6 +129,7 @@ export default async function AdminIdeerPage({
                           hint={t('summaryHint')}
                           required
                           maxLength={IDEA_BUILT_SUMMARY_MAX}
+                          defaultValue={suggestIdeaBuiltSummary(row.text)}
                         />
                         <Input
                           id={`link-${row.id}`}

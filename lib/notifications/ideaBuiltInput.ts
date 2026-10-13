@@ -55,6 +55,22 @@ function hasLocaleSegment(link: string): boolean {
   );
 }
 
+/**
+ * A first draft of the line, from the idea's own text (owner's choice 13.10):
+ * its first sentence, cut at a word so it fits `IDEA_BUILT_SUMMARY_MAX`. The
+ * admin form shows it as the field's starting value; the admin edits it. A
+ * sentence ends at `.`, `!` or `?` followed by whitespace, so `2.5` stays whole.
+ * Returns '' when there is nothing sensible to suggest.
+ */
+export function suggestIdeaBuiltSummary(ideaText: string): string {
+  const text = ideaText.replace(/\s+/g, ' ').trim();
+  const end = text.search(/[.!?](\s|$)/);
+  const sentence = end === -1 ? text : text.slice(0, end + 1);
+  if (sentence.length <= IDEA_BUILT_SUMMARY_MAX) return sentence;
+  const cut = sentence.lastIndexOf(' ', IDEA_BUILT_SUMMARY_MAX);
+  return cut <= 0 ? '' : sentence.slice(0, cut).replace(/[\s,;:]+$/, '');
+}
+
 export function validateIdeaBuiltInput(raw: {
   summary: string;
   link: string;
