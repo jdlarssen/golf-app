@@ -11,9 +11,10 @@
 //     `teamNumber: null`, round robin vil ha slot-nummeret, stableford vil ha
 //     laget kun i par-varianten. De reglene har ETT hjem (`lib/scoring/context/`),
 //     og appen oversetter derfor camelCase → rå rad og lar hjelperen svare — samme
-//     grep som `roster.ts` bruker mot flight-reglene. Switchen under speiler
-//     `buildModeResultForGame.buildContext`; selve fila kan ikke importeres fordi
-//     den åpner med `import 'server-only'`.
+//     grep som `roster.ts` bruker mot flight-reglene. Også format-switchen er
+//     delt: `buildContextForMode` i `lib/scoring/buildModeResultFromData.ts`,
+//     den samme webbens resultat-bygger kaller (#2228). Appen legger bare
+//     `missing-choices`-sjekken foran (se `ScoringExtras`).
 //  2. **Trukne spillere filtreres av byggerne, ikke her (#1846).** Adapteren
 //     sender `withdrawn_at` videre som den står og lar hver delte hjelper
 //     avgjøre, nøyaktig som webbens resultat-bygger
@@ -37,16 +38,7 @@
 import { computeLeaderboard } from '../../../../lib/scoring';
 import { playerStrokeHandicap } from '../../../../lib/scoring/allocatedStrokes';
 import { strokesForHole } from '../../../../lib/scoring/strokeAllocation';
-import { buildAceyDeuceyContext } from '../../../../lib/scoring/context/buildAceyDeuceyContext';
-import { buildBingoBangoBongoContext } from '../../../../lib/scoring/context/buildBingoBangoBongoContext';
-import { buildNassauContext } from '../../../../lib/scoring/context/buildNassauContext';
-import { buildNinesContext } from '../../../../lib/scoring/context/buildNinesContext';
-import { buildRoundRobinContext } from '../../../../lib/scoring/context/buildRoundRobinContext';
-import { buildSkinsContext } from '../../../../lib/scoring/context/buildSkinsContext';
-import { buildSoloStrokeplayContext } from '../../../../lib/scoring/context/buildSoloStrokeplayContext';
-import { buildStablefordContext } from '../../../../lib/scoring/context/buildStablefordContext';
-import { buildUniformContext } from '../../../../lib/scoring/context/buildUniformContext';
-import { buildWolfContext } from '../../../../lib/scoring/context/buildWolfContext';
+import { buildContextForMode } from '../../../../lib/scoring/buildModeResultFromData';
 import type {
   BingoBangoBongoHoleInput,
   GameMode,
@@ -368,10 +360,21 @@ export function buildScoringContext(
   const rosterUserIds = new Set(players.map((player) => player.user_id));
   const scoresRows = toScoreRows(scores, rosterUserIds);
 
-  const outcome = buildContextForMode({
-    mode,
-    modeConfig,
+  // Halve regnestykket i wolf og BBB ligger i `wolf_hole_choices` /
+  // `bingo_bango_bongo_holes`. Har kalleren dem ikke, sier vi fra — aldri en
+  // kontekst med tom liste (se `ScoringExtras`). Den delte switchen bygger med
+  // `?? []`, så sjekken må stå her, foran kallet.
+  if (mode === 'wolf' && extras.wolfChoices === undefined) {
+    return { ok: false, problem: 'missing-choices' };
+  }
+  if (mode === 'bingo_bango_bongo' && extras.bingoBangoBongoHoles === undefined) {
+    return { ok: false, problem: 'missing-choices' };
+  }
+
+  const ctx = buildContextForMode({
     gameId: bundle.game.id,
+    gameMode: mode,
+    modeConfig,
     players,
     holesRows,
     scoresRows,
@@ -381,132 +384,8 @@ export function buildScoringContext(
   // spillere motoren faktisk får er byggerens svar, ikke vårt. Tomt roster og
   // «alle trukket i et format som filtrerer» ender begge her; et helt trukket
   // wolf-felt gjør det ikke, like lite som på web.
-  if (outcome.ok && outcome.ctx.players.length === 0) {
-    return { ok: false, problem: 'no-players' };
-  }
-  return outcome;
-}
-
-/** Switchen som speiler `buildModeResultForGame.buildContext` (punkt 1 over). */
-function buildContextForMode(args: {
-  mode: GameMode;
-  modeConfig: GameModeConfig;
-  gameId: string;
-  players: ContextPlayerRow[];
-  holesRows: ContextHoleRow[];
-  scoresRows: ContextScoreRow[];
-  extras: ScoringExtras;
-}): ScoringContextOutcome {
-  const { mode, modeConfig, gameId, players, holesRows, scoresRows, extras } = args;
-
-  switch (mode) {
-    case 'stableford':
-    case 'modified_stableford':
-      return {
-        ok: true,
-        ctx: buildStablefordContext({
-          gameId,
-          gameMode: mode,
-          modeConfig,
-          players,
-          holesRows,
-          scoresRows,
-        }),
-      };
-    case 'solo_strokeplay':
-      return {
-        ok: true,
-        ctx: buildSoloStrokeplayContext({ gameId, modeConfig, players, holesRows, scoresRows }),
-      };
-    case 'nassau':
-      return {
-        ok: true,
-        ctx: buildNassauContext({ gameId, modeConfig, players, holesRows, scoresRows }),
-      };
-    case 'skins':
-      return {
-        ok: true,
-        ctx: buildSkinsContext({ gameId, modeConfig, players, holesRows, scoresRows }),
-      };
-    case 'nines':
-      return {
-        ok: true,
-        ctx: buildNinesContext({ gameId, modeConfig, players, holesRows, scoresRows }),
-      };
-    case 'round_robin':
-      return {
-        ok: true,
-        ctx: buildRoundRobinContext({ gameId, modeConfig, players, holesRows, scoresRows }),
-      };
-    case 'acey_deucey':
-      return {
-        ok: true,
-        ctx: buildAceyDeuceyContext({ gameId, modeConfig, players, holesRows, scoresRows }),
-      };
-    // Halve regnestykket ligger i `wolf_hole_choices` /
-    // `bingo_bango_bongo_holes`. Har kalleren dem, bygger vi; har den dem
-    // ikke, sier vi fra — aldri en kontekst med tom liste (se `ScoringExtras`).
-    // Rotasjons-sloten wolf leser er `team_number`, som radene alt bærer.
-    case 'wolf':
-      if (extras.wolfChoices === undefined) {
-        return { ok: false, problem: 'missing-choices' };
-      }
-      return {
-        ok: true,
-        ctx: buildWolfContext({
-          gameId,
-          modeConfig,
-          players,
-          holesRows,
-          scoresRows,
-          wolfChoices: extras.wolfChoices,
-        }),
-      };
-    case 'bingo_bango_bongo':
-      if (extras.bingoBangoBongoHoles === undefined) {
-        return { ok: false, problem: 'missing-choices' };
-      }
-      return {
-        ok: true,
-        ctx: buildBingoBangoBongoContext({
-          gameId,
-          modeConfig,
-          players,
-          holesRows,
-          scoresRows,
-          bingoBangoBongoHoles: extras.bingoBangoBongoHoles,
-        }),
-      };
-    case 'best_ball':
-    case 'singles_matchplay':
-    case 'fourball_matchplay':
-    case 'foursomes_matchplay':
-    case 'greensome_matchplay':
-    case 'chapman_matchplay':
-    case 'gruesome_matchplay':
-    case 'texas_scramble':
-    case 'ambrose':
-    case 'florida_scramble':
-    case 'shamble':
-    case 'patsome':
-      return {
-        ok: true,
-        ctx: buildUniformContext({
-          gameId,
-          gameMode: mode,
-          modeConfig,
-          players,
-          holesRows,
-          scoresRows,
-        }),
-      };
-    default: {
-      // Et nytt format i den delte unionen skal gi KOMPILEFEIL her, ikke en
-      // stille tom tabell på telefonen.
-      const exhaustive: never = mode;
-      return exhaustive;
-    }
-  }
+  if (ctx.players.length === 0) return { ok: false, problem: 'no-players' };
+  return { ok: true, ctx };
 }
 
 /**
