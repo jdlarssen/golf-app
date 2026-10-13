@@ -4,12 +4,22 @@
 //
 // Skjermleseren får teksten to veier: hullsiden kunngjør den når feilen
 // oppstår, og `accessibilityLiveRegion` leser en ny tekst opp på Android.
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FONTS, interLine, useTheme } from '../../theme';
 import { VarselIcon } from '../icons/Icons';
 
+/**
+ * Lerretet bryter teksten med `text-wrap: balance`, som setter de to setningene
+ * på hver sin linje. iOS har ikke den regelen, så banneret gjør det samme selv:
+ * får ikke teksten plass på én linje, brytes den ved setningsskillet. Kortere
+ * tekster blir stående på én linje, som i nettleseren. Hullsiden gir banneret
+ * ny `key` for hver tekst, så målingen starter på nytt.
+ */
 export function SaveErrorBanner({ text }: { text: string }) {
   const { colors } = useTheme();
+  const [breakAtSentence, setBreakAtSentence] = useState(false);
+  const shown = breakAtSentence ? text.replace('. ', '.\n') : text;
   return (
     <View
       style={[styles.banner, { backgroundColor: colors.dangerSoft, borderColor: colors.dangerBorder }]}
@@ -17,8 +27,15 @@ export function SaveErrorBanner({ text }: { text: string }) {
       testID="hole-save-error"
     >
       <VarselIcon color={colors.danger} size={18} strokeWidth={2} />
-      <Text style={[styles.text, { color: colors.danger }]} lineBreakStrategyIOS="push-out">
-        {text}
+      <Text
+        style={[styles.text, { color: colors.danger }]}
+        onTextLayout={(event) => {
+          if (!breakAtSentence && event.nativeEvent.lines.length > 1 && text.includes('. ')) {
+            setBreakAtSentence(true);
+          }
+        }}
+      >
+        {shown}
       </Text>
     </View>
   );

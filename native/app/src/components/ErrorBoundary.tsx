@@ -62,11 +62,15 @@ function ErrorFallback({
       <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
         {ERROR_BOUNDARY_TEXT.title}
       </Text>
-      <Text style={[styles.body, { color: colors.text }]}>
+      <Text style={[styles.body, { color: colors.text }]} lineBreakStrategyIOS="push-out">
         {variant === 'noBack' ? ERROR_BOUNDARY_TEXT.bodyNoBack : ERROR_BOUNDARY_TEXT.body}
       </Text>
       {variant === 'game' ? (
-        <Text style={[styles.note, { color: colors.muted }]} testID="error-boundary-game-note">
+        <Text
+          style={[styles.note, { color: colors.muted }]}
+          lineBreakStrategyIOS="push-out"
+          testID="error-boundary-game-note"
+        >
           {ERROR_BOUNDARY_TEXT.gameNote}
         </Text>
       ) : null}
@@ -83,7 +87,9 @@ function ErrorFallback({
 }
 
 // Lerretet: tittel 26/32, brødtekst 16 med 1,45 og notis 14 med 1,45, begge
-// høyst 300 brede. All tekst er midtstilt.
+// høyst 300 brede. All tekst er midtstilt. Lerretet bryter med
+// `text-wrap: pretty` (ikke ett ord alene på siste linje); `push-out` er
+// iOS-regelen for det samme.
 const styles = StyleSheet.create({
   title: { ...fraunces(600, 26, 32, { multiline: true }), textAlign: 'center' },
   body: {
