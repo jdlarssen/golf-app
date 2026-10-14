@@ -507,6 +507,8 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
           styles.scroll,
           { paddingBottom: roundDone ? barHeight : 20 + insets.bottom },
         ]}
+        // Rullefeltet stopper over linja, ikke bak den.
+        scrollIndicatorInsets={{ bottom: roundDone ? barHeight : 0 }}
         onScroll={onScroll}
         scrollEventThrottle={16}
         onLayout={onScrollLayout}

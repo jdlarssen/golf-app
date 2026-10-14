@@ -4,8 +4,9 @@
 // trykkene videre. Tallene og tekstene er låst i `roundDone.test.ts` og
 // `lib/scorecard/roundSummary.test.ts`.
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import type { RoundDoneModel } from '../../lib/roundDone';
-import { RoundDoneBar, RoundDoneCard } from './RoundDoneCard';
+import { RoundDoneBar, RoundDoneCard, roundDoneBarHeight } from './RoundDoneCard';
 
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 jest.mock('react-native-safe-area-context', () =>
@@ -57,6 +58,19 @@ it('viser seksjonene, åpner hullet som mangler, har knappene i linja og ingen p
   expect(onReview).toHaveBeenCalledTimes(1);
   await fireEvent.press(screen.getByTestId('round-done-back'));
   expect(onBack).toHaveBeenCalledTimes(1);
+  // Skjermen gir innholdet like mye luft nederst som `roundDoneBarHeight` sier.
+  // Endres linjas stil uten konstantene, stemmer ikke summen lenger.
+  const bar = StyleSheet.flatten(screen.getByTestId('round-done-bar').props.style);
+  const review = StyleSheet.flatten(screen.getByTestId('round-done-review').props.style);
+  const back = StyleSheet.flatten(screen.getByTestId('round-done-back').props.style);
+  expect(
+    Number(bar.borderTopWidth) +
+      Number(bar.paddingTop) +
+      Number(review.height) +
+      Number(bar.gap) +
+      Number(back.height) +
+      Number(bar.paddingBottom),
+  ).toBe(roundDoneBarHeight(0));
 
   await rerender(
     <RoundDoneCard model={{ ...MODEL, standing: null, flight: null }} onOpenHole={onOpenHole} />,

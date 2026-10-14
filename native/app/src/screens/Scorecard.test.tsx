@@ -307,9 +307,15 @@ describe('Scorecard', () => {
       nativeEvent: { contentOffset: { x: 0, y: 700 } },
     });
     expect(screen.queryByTestId('round-done-bar')).toBeNull();
-    // Opp igjen: linja er tilbake.
+    // Litt opp: knappen er fortsatt i syne, så linja blir borte (den blinker
+    // ikke på grensen).
     await fireEvent.scroll(screen.getByTestId('scorecard-screen'), {
-      nativeEvent: { contentOffset: { x: 0, y: 0 } },
+      nativeEvent: { contentOffset: { x: 0, y: 600 } },
+    });
+    expect(screen.queryByTestId('round-done-bar')).toBeNull();
+    // Opp til knappen er ute av syne: linja er tilbake.
+    await fireEvent.scroll(screen.getByTestId('scorecard-screen'), {
+      nativeEvent: { contentOffset: { x: 0, y: 500 } },
     });
     expect(screen.getByTestId('round-done-bar')).toBeTruthy();
     mockState.scores = [];
