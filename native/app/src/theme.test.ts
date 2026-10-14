@@ -225,7 +225,8 @@ describe('frauncesLine og interLine på Android', () => {
   // over og under skriftstørrelsen, og med flere linjer. Med `lineHeight` er
   // linja ceil(lineHeight × 2,625) px høy, og grunnlinja står
   // a + ceil((linje − a − d) / 2) px under toppen, der a og d er skriftens
-  // ascent og descent i hele piksler. Tallene under er de målte, regnet om
+  // ascent og descent i hele piksler, regnet av skriftstørrelsen rundet opp
+  // til hel piksel. Tallene under er de målte, regnet om
   // til marger mot Chromiums grunnlinje (samme som iOS-testene over).
   const pixel7 = { platform: 'android' as const, pixelRatio: 2.625 };
 
@@ -244,6 +245,12 @@ describe('frauncesLine og interLine på Android', () => {
     const hole = frauncesLine(96, 86.4, pixel7);
     expect(hole.marginTop).toBeCloseTo(-0.095, 3);
     expect(hole.marginBottom).toBeCloseTo(0.019, 3);
+    // 13 på 16: linja 42 px, grunnlinja 34 px (12,952); Chromium 13. Her runder
+    // React Native skriftstørrelsen opp (34,125 → 35 px), så ascent blir 34 px.
+    // Regnet av 34,125 px ville den blitt 33 og grunnlinja én piksel for høyt.
+    const thirteen = frauncesLine(13, 16, pixel7);
+    expect(thirteen.marginTop).toBeCloseTo(0.048, 3);
+    expect(thirteen.marginBottom).toBeCloseTo(-0.048, 3);
   });
 
   it('gir samme linjeboks for tekst som kan brekke', () => {
@@ -251,6 +258,7 @@ describe('frauncesLine og interLine på Android', () => {
     const box = frauncesLine(30, 30, { ...pixel7, multiline: true });
     expect(box).toMatchObject({ fontSize: 30, lineHeight: 30, includeFontPadding: false });
     expect(box.marginTop).toBeCloseTo(-0.905, 3);
+    expect(box.marginBottom).toBeCloseTo(0.81, 3);
   });
 
   it('gjør det samme for Inter', () => {

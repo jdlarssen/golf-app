@@ -220,8 +220,9 @@ type LineOptions = { multiline?: boolean; pixelRatio?: number; platform?: 'ios' 
 
 /**
  * Android legger til luft over og under teksten (skriftens win-mål, 1,47 for
- * Fraunces) så lenge `includeFontPadding` står på (#2560). Hver tekst i
- * Fraunces eller Inter slår den av, også de delte `ui`-stilene.
+ * Fraunces) så lenge `includeFontPadding` står på (#2560). Hjelperne
+ * (`frauncesLine`, `interLine`, `fraunces`) og de delte `ui`-stilene slår den
+ * av. Komponent-lokale stiler som setter `fontFamily` selv, har den fortsatt på.
  */
 const NO_FONT_PADDING: { includeFontPadding?: false } =
   Platform.OS === 'android' ? { includeFontPadding: false } : {};
@@ -263,13 +264,14 @@ const FRAUNCES_METRICS = { ascent: 0.978, descent: 0.255, natural: FRAUNCES_LINE
  *    og grunnlinja står a + ceil((linja − a − d) / 2) piksler under toppen
  *    (`CustomLineHeightSpan`), der a og d er skriftens ascent og descent i hele
  *    piksler. Glyfen krymper ikke når linja er lavere enn skriftstørrelsen.
- *  - a og d er ascent og descent ganger størrelsen, rundet til hel piksel. Det
- *    treffer innenfor én piksel: Android runder noen størrelser motsatt vei,
- *    uten et mønster målingene viser.
+ *  - a og d regnes av skriftstørrelsen i piksler rundet OPP (React Native
+ *    runder den med ceil før skriften får den): a = rund(ascent × ceil(størrelse
+ *    × pikseltetthet)), og d likedan. Uten avrundingen bommet modellen med 1–2
+ *    piksler i 14 av tilfellene; med den treffer den alle eksakt.
  *
  * Android får derfor alltid `lineHeight`, også for én linje: høyden på linja
- * er kjent på pikselen, og bare grunnlinja kan bomme med én. Margene flytter
- * grunnlinja dit Chromium har den, og gjør boksen `lineHeight` høy.
+ * er kjent på pikselen. Margene flytter grunnlinja dit Chromium har den, og
+ * gjør boksen `lineHeight` høy.
  */
 export function frauncesLine(size: number, lineHeight: number, options: LineOptions = {}) {
   return browserLine(FRAUNCES_METRICS, size, lineHeight, options);
@@ -329,8 +331,9 @@ function browserLine(
 } {
   const baseline = chromiumBaseline(metrics, size, lineHeight);
   if (platform === 'android') {
-    const ascentPx = Math.round(size * metrics.ascent * pixelRatio);
-    const descentPx = Math.round(size * metrics.descent * pixelRatio);
+    const fontPx = Math.ceil(size * pixelRatio);
+    const ascentPx = Math.round(fontPx * metrics.ascent);
+    const descentPx = Math.round(fontPx * metrics.descent);
     const linePx = Math.ceil(lineHeight * pixelRatio);
     const androidBaseline =
       (ascentPx + Math.ceil((linePx - ascentPx - descentPx) / 2)) / pixelRatio;
