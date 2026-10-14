@@ -89,10 +89,13 @@ export default async function PrivacyPage() {
             <li>{t('s1Item1')}</li>
             <li>{t('s1Item2')}</li>
             <li>{t('s1Item3')}</li>
+            <li>{t('s1Item8')}</li>
             <li>{t('s1Item4')}</li>
             <li>{t('s1Item5')}</li>
             <li>{t('s1Item6')}</li>
             <li>{t('s1Item7')}</li>
+            <li>{t('s1Item9')}</li>
+            <li>{t('s1Item10')}</li>
           </ul>
         </section>
 

@@ -99,7 +99,6 @@ export default async function DeleteAccountInfoPage() {
             <li>{t('deletedItem3')}</li>
             <li>{t('deletedItem4')}</li>
             <li>{t('deletedItem5')}</li>
-            <li>{t('deletedItem6')}</li>
           </ul>
         </section>
 
@@ -112,6 +111,7 @@ export default async function DeleteAccountInfoPage() {
             <li>{t('keptItem2')}</li>
             <li>{t('keptItem3')}</li>
             <li>{t('keptItem4')}</li>
+            <li>{t('keptItem5')}</li>
           </ul>
         </section>
 
