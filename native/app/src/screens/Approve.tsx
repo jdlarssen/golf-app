@@ -16,36 +16,59 @@
 // #2262: hvert kort vises som det klassiske scorekortet — UT og INN med PAR og
 // SLAG — og BRUTTO under, samme kort som spilleren selv ser. Uten NETTO: den
 // som godkjenner, attesterer slagene, ikke handicapen.
-import { useState } from 'react';
-import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+//
+// #2577 (designlerretet, rad 68 «Godkjenningen i appen»): ett kort om gangen,
+// som det signerte scorekortet med stempel, og de andre under «Venter også».
+// «Send tilbake» åpner et ark med valgfri grunn, likt på iOS og Android. Når
+// ingenting venter, sier skjermen om alt er godkjent eller om en makker ikke
+// har levert ennå. Hvilken tavle som står, avgjør `approveScreenState`.
+import { useLayoutEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parForPlayer } from '../../../../lib/games/parDisplay';
-import { buildScorecardGrid } from '../../../../lib/scorecard/scorecardGrid';
-import type { ScoringGender } from '../../../../lib/scoring/modes/types';
+import { buildScorecardGrid, type ScorecardGrid as Grid } from '../../../../lib/scorecard/scorecardGrid';
+import { resolveScorecardStamp } from '../../../../lib/scorecard/scorecardStamp';
+import {
+  modeCollapsesToTeamCard,
+  type GameMode,
+  type ScoringGender,
+} from '../../../../lib/scoring/modes/types';
+import { RejectSheet } from '../components/approve/RejectSheet';
+import { DashedRing, HakeIcon } from '../components/icons/Icons';
+import { kickerHeader } from '../components/KickerHeader';
 import { ScorecardGrid } from '../components/scorecard/ScorecardGrid';
+import {
+  ScorecardStampMark,
+  ScorecardStatusList,
+} from '../components/scorecard/ScorecardStamp';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
 import type { LocalScore } from '../data/db';
 import type { BundleHole } from '../data/gameBundle';
 import { approveScorecard, rejectScorecard } from '../data/playerActions';
 import { describeFailure } from '../lib/actionFeedback';
-import { displayName } from '../lib/display';
-import { findInRoster, pendingApprovals, toRoster, type RosterEntry } from '../lib/roster';
+import {
+  APPROVE_TEXT,
+  approvedLine,
+  deliveredLine,
+  notifiedLine,
+  pendingHeading,
+  positionLabel,
+} from '../lib/approveCopy';
+import { approveRows, approveScreenState, type ApproveRow } from '../lib/approveState';
+import { displayName, formatClock, shortDisplayName } from '../lib/display';
+import { findInRoster, toRoster, toStampPlayers, type RosterEntry } from '../lib/roster';
 import { scoresByHoleFor, useGameBundle, useLocalScores, useTeamScores } from '../lib/useGameData';
 import { useScoreCatchUp } from '../lib/useScoreCatchUp';
 import type { ScreenProps } from '../navigation';
 import { useSession } from '../session';
-import { useTheme } from '../theme';
+import { FONTS, fraunces, interLine, useTheme } from '../theme';
 import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
-export function Approve({ route }: ScreenProps<'Approve'>) {
+type Busy = { userId: string; action: 'approve' | 'reject' };
+
+export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { userId } = useSession();
   // #2201: godkjenningsvarslene for spillet er lest når du har åpnet siden.
@@ -55,139 +78,436 @@ export function Approve({ route }: ScreenProps<'Approve'>) {
   // #2067/#2228: hullene en trukket kaptein førte, står på den nye kapteinens
   // kort, slik webbens godkjenningsside viser dem.
   const scores = useTeamScores(localScores, bundle);
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Busy | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [rejectUserId, setRejectUserId] = useState<string | null>(null);
+  // Grunnen står igjen hvis kallet feilet og arket åpnes for samme kort på nytt.
+  const [reasonDraft, setReasonDraft] = useState<{ userId: string; text: string } | null>(null);
 
   // Slagene hentes ved fokus, i forgrunnen og med nett igjen (#2228).
   useScoreCatchUp(gameId, reload);
 
+  // Spillnavnet står i toppen når bundelen er lest (navigatoren har «Godkjenn»
+  // uten ord til da).
+  const gameName = bundle?.game.name ?? null;
+  useLayoutEffect(() => {
+    if (gameName != null) navigation.setOptions(kickerHeader(gameName, APPROVE_TEXT.screenTitle));
+  }, [navigation, gameName]);
+
   const run = async (
-    playerUserId: string,
+    next: Busy,
     action: () => Promise<Awaited<ReturnType<typeof approveScorecard>>>,
   ) => {
-    setBusyUserId(playerUserId);
+    setBusy(next);
     setErrorText(null);
     const result = await action();
-    setBusyUserId(null);
+    setBusy(null);
+    if (next.action === 'reject') setRejectUserId(null);
     if (!result.ok) {
       setErrorText(describeFailure(result));
       return;
     }
+    if (next.action === 'reject') setReasonDraft(null);
     // Hent rosteret på nytt — det er det som avgjør hvem som fortsatt står i
     // lista, og skjermen skal ikke lyve om at et kort er borte før serveren
-    // sier det.
+    // sier det. Det neste kortet i lista åpnes da av seg selv.
     await refresh();
-  };
-
-  const confirmReject = (entry: RosterEntry) => {
-    const name = displayName(entry.player);
-    const doReject = (reason?: string) =>
-      void run(entry.user_id, () => rejectScorecard(gameId, entry.user_id, reason));
-
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        `Send tilbake kortet til ${name}?`,
-        'Skriv gjerne en kort grunn. Den er valgfri.',
-        [
-          { text: 'Avbryt', style: 'cancel' },
-          {
-            text: 'Send tilbake',
-            style: 'destructive',
-            onPress: (reason?: string) => doReject(reason),
-          },
-        ],
-        'plain-text',
-      );
-      return;
-    }
-    Alert.alert(`Send tilbake kortet til ${name}?`, 'Kortet blir ulevert igjen.', [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Send tilbake', style: 'destructive', onPress: () => doReject() },
-    ]);
   };
 
   if (!bundle) {
     return (
       <View style={ui.centered} testID="approve-loading">
-        <Text style={ui.muted}>Henter kortene …</Text>
+        <Text style={ui.muted}>{APPROVE_TEXT.loading}</Text>
       </View>
     );
   }
 
   const roster = toRoster(bundle.players);
-  const me = findInRoster(roster, userId);
-  const pending = me ? pendingApprovals(roster, bundle.game, userId) : [];
+  const gameMode = bundle.game.gameMode as GameMode;
+  const state = approveScreenState({ roster, game: bundle.game, userId });
+  const stampFor = (ownerUserId: string) =>
+    resolveScorecardStamp({
+      ownerUserId,
+      players: toStampPlayers(bundle.players),
+      gameMode,
+      gameStatus: bundle.game.status,
+      requirePeerApproval: bundle.game.requirePeerApproval,
+      // Designet (#2385): «Markør: Jonas Berg har godkjent», fullt navn.
+      markerName: 'full',
+    });
+  /** Brutto på kortet, eller `null` når enheten ikke ser noen slag (beslutning 3). */
+  const strokesOf = (ownerId: string): number | null => {
+    const grid = gridFor(bundle.holes, scores, findInRoster(roster, ownerId));
+    return grid.totals.played === 0 ? null : grid.totals.brutto;
+  };
 
-  return (
-    <ScrollView contentContainerStyle={ui.scroll} testID="approve-screen">
-      <Text style={ui.title}>Godkjenn</Text>
-
-      {pending.length === 0 ? (
+  if (state.kind === 'empty') {
+    return (
+      <ScrollView contentContainerStyle={ui.scroll} testID="approve-screen">
         <Text style={ui.body} testID="approve-empty">
-          Ingenting å godkjenne akkurat nå.
+          {APPROVE_TEXT.empty}
         </Text>
-      ) : null}
+      </ScrollView>
+    );
+  }
 
-      {pending.map((entry) => (
-        <View
-          style={[styles.entry, { borderTopColor: colors.border }]}
-          key={entry.user_id}
-          testID={`approve-card-${entry.user_id}`}
+  if (state.kind === 'pending') {
+    const { pending } = state;
+    const open = pending.find((entry) => entry.user_id === selectedUserId) ?? pending[0]!;
+    const others = pending.filter((entry) => entry !== open);
+    const grid = gridFor(bundle.holes, scores, open);
+    const stamp = stampFor(open.user_id);
+    const rejectEntry =
+      rejectUserId == null ? undefined : pending.find((entry) => entry.user_id === rejectUserId);
+    const locked = busy != null;
+
+    return (
+      <>
+        <ScrollView
+          style={{ backgroundColor: colors.bg }}
+          contentContainerStyle={styles.pendingScroll}
+          testID="approve-screen"
         >
-          <Text style={ui.value}>{displayName(entry.player)}</Text>
-          <ScoreSummary holes={bundle.holes} scores={scores} entry={entry} />
-          <View style={styles.actions}>
+          <View style={styles.headingBlock}>
+            <Text style={[styles.heading, { color: colors.text }]} accessibilityRole="header">
+              {pendingHeading(pending.length)}
+            </Text>
+            <Text style={[styles.intro, { color: colors.muted }]}>{APPROVE_TEXT.intro}</Text>
+          </View>
+
+          <View style={styles.nameRow}>
+            <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={1}>
+              {displayName(open.player)}
+            </Text>
+            <Text style={[styles.position, ui.num, { color: colors.muted }]}>
+              {positionLabel(pending.indexOf(open) + 1, pending.length)}
+            </Text>
+          </View>
+
+          <View style={styles.cardWrap} testID={`approve-card-${open.user_id}`}>
+            {grid.totals.played === 0 ? (
+              <Text style={ui.muted} testID={`summary-${open.user_id}`}>
+                {APPROVE_TEXT.noScores}
+              </Text>
+            ) : (
+              <View testID={`summary-${open.user_id}`}>
+                <ScorecardGrid
+                  grid={grid}
+                  rows={['strokes']}
+                  footer={
+                    <ScorecardTotals totals={grid.totals} showNet={false} showPoints={false} />
+                  }
+                  overlay={stamp ? <ScorecardStampMark stamp={stamp} /> : null}
+                />
+              </View>
+            )}
+          </View>
+
+          <View
+            style={[
+              styles.actions,
+              // Stempelet henger under kortet; uten det står knappene tettere.
+              { marginTop: stamp && grid.totals.played > 0 ? 44 : 16 },
+            ]}
+          >
             <Pressable
               style={[ui.button, styles.action]}
               onPress={() =>
-                void run(entry.user_id, () => approveScorecard(gameId, entry.user_id))
+                void run({ userId: open.user_id, action: 'approve' }, () =>
+                  approveScorecard(gameId, open.user_id),
+                )
               }
-              disabled={busyUserId != null}
-              testID={`approve-${entry.user_id}`}
+              disabled={locked}
+              accessibilityRole="button"
+              testID={`approve-${open.user_id}`}
             >
               <Text style={ui.buttonText}>
-                {busyUserId === entry.user_id ? 'Jobber …' : 'Godkjenn'}
+                {busy?.userId === open.user_id && busy.action === 'approve'
+                  ? APPROVE_TEXT.working
+                  : APPROVE_TEXT.approve}
               </Text>
             </Pressable>
             <Pressable
               style={[ui.buttonSecondary, styles.action]}
-              onPress={() => confirmReject(entry)}
-              disabled={busyUserId != null}
-              testID={`reject-${entry.user_id}`}
+              onPress={() => setRejectUserId(open.user_id)}
+              disabled={locked}
+              accessibilityRole="button"
+              testID={`reject-${open.user_id}`}
             >
-              <Text style={ui.buttonSecondaryText}>Avvis</Text>
+              <Text style={ui.buttonSecondaryText}>{APPROVE_TEXT.sendBack}</Text>
             </Pressable>
           </View>
-        </View>
-      ))}
 
-      {errorText ? (
-        <Text style={ui.error} testID="approve-error">
-          {errorText}
+          {errorText ? (
+            <Text style={[ui.error, styles.error]} testID="approve-error">
+              {errorText}
+            </Text>
+          ) : null}
+
+          {others.length > 0 ? (
+            <>
+              <Text style={[ui.kicker, styles.kicker, styles.waitingKicker]}>
+                {APPROVE_TEXT.waitingAlso}
+              </Text>
+              <View style={styles.waitingList}>
+                {others.map((entry) => (
+                  <Pressable
+                    key={entry.user_id}
+                    style={[
+                      styles.rowCard,
+                      styles.row,
+                      { backgroundColor: colors.surface, borderColor: colors.border },
+                    ]}
+                    onPress={() => {
+                      setSelectedUserId(entry.user_id);
+                      setErrorText(null);
+                    }}
+                    disabled={locked}
+                    accessibilityRole="button"
+                    testID={`approve-row-${entry.user_id}`}
+                  >
+                    <View style={styles.rowText}>
+                      <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>
+                        {displayName(entry.player)}
+                      </Text>
+                      <Text style={[styles.rowSub, ui.num, { color: colors.muted }]}>
+                        {deliveredLine(
+                          formatClock(entry.player.submittedAt),
+                          strokesOf(entry.user_id),
+                        )}
+                      </Text>
+                    </View>
+                    <Text style={[styles.rowLink, { color: colors.primary }]}>
+                      {APPROVE_TEXT.review}
+                    </Text>
+                    <Text
+                      style={[styles.chevron, { color: colors.muted }]}
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                    >
+                      ›
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : null}
+        </ScrollView>
+
+        {rejectEntry ? (
+          <RejectSheet
+            key={rejectEntry.user_id}
+            name={shortDisplayName(rejectEntry.player)}
+            teamCard={modeCollapsesToTeamCard(gameMode, 18)}
+            guest={rejectEntry.player.isGuest}
+            busy={busy?.userId === rejectEntry.user_id && busy.action === 'reject'}
+            initialReason={
+              reasonDraft?.userId === rejectEntry.user_id ? reasonDraft.text : undefined
+            }
+            onReasonChange={(text) => setReasonDraft({ userId: rejectEntry.user_id, text })}
+            onSubmit={(reason) =>
+              void run({ userId: rejectEntry.user_id, action: 'reject' }, () =>
+                rejectScorecard(gameId, rejectEntry.user_id, reason),
+              )
+            }
+            onCancel={() => {
+              setRejectUserId(null);
+              setReasonDraft(null);
+            }}
+          />
+        ) : null}
+      </>
+    );
+  }
+
+  // Tavle 3 og 4: ingenting venter på meg.
+  const me = findInRoster(roster, userId)!;
+  const myStamp = stampFor(userId);
+  const approvedRows = approveRows(state.approvedByMe, roster, gameMode);
+  const notDeliveredRows =
+    state.kind === 'notDelivered' ? approveRows(state.notDelivered, roster, gameMode) : [];
+  const line = notifiedLine(state.notifiedNames);
+
+  return (
+    <View style={[styles.fill, { backgroundColor: colors.bg }]} testID="approve-screen">
+      <ScrollView contentContainerStyle={styles.doneScroll}>
+        <View style={styles.doneHead}>
+          <View style={[styles.doneMark, { backgroundColor: colors.primarySoft }]}>
+            <HakeIcon color={colors.primary} size={28} strokeWidth={2.4} />
+          </View>
+          <Text style={[styles.doneTitle, { color: colors.text }]} accessibilityRole="header">
+            {state.kind === 'allApproved'
+              ? APPROVE_TEXT.allApprovedTitle
+              : APPROVE_TEXT.nothingWaitingTitle}
+          </Text>
+          {line ? (
+            <Text style={[styles.doneLine, { color: colors.muted }]} testID="approve-notified">
+              {line}
+            </Text>
+          ) : null}
+        </View>
+
+        {approvedRows.length > 0 ? (
+          <>
+            <Text style={[ui.kicker, styles.kicker, styles.doneKicker]}>
+              {APPROVE_TEXT.approvedByYou}
+            </Text>
+            <View
+              style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              testID="approve-approved"
+            >
+              {approvedRows.map((row, i) => (
+                <ApprovedRow
+                  key={row.key}
+                  row={row}
+                  strokes={strokesOf(row.ownerId)}
+                  last={i === approvedRows.length - 1}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {notDeliveredRows.length > 0 ? (
+          <>
+            <Text style={[ui.kicker, styles.kicker, styles.doneKicker]}>
+              {APPROVE_TEXT.notDeliveredYet}
+            </Text>
+            <View
+              style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              testID="approve-not-delivered"
+            >
+              {notDeliveredRows.map((row, i) => (
+                <View
+                  key={row.key}
+                  style={[
+                    styles.row,
+                    i < notDeliveredRows.length - 1
+                      ? { borderBottomWidth: 1, borderBottomColor: colors.divider }
+                      : null,
+                  ]}
+                >
+                  <View style={styles.rowText}>
+                    <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>
+                      {row.name}
+                    </Text>
+                    <Text style={[styles.rowSub, { color: colors.muted }]}>
+                      {APPROVE_TEXT.notDeliveredHint}
+                    </Text>
+                  </View>
+                  <DashedRing color={colors.scoreUnsetFg} />
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {myStamp ? (
+          <>
+            <Text style={[ui.kicker, styles.kicker, styles.doneKicker]}>
+              {APPROVE_TEXT.yourCard}
+            </Text>
+            <ScorecardStatusList
+              stamp={myStamp}
+              ownerFullName={me.player.name}
+              style={styles.statusList}
+            />
+          </>
+        ) : null}
+      </ScrollView>
+
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: colors.bg,
+            borderTopColor: colors.border,
+            paddingBottom: 20 + insets.bottom,
+          },
+        ]}
+      >
+        <Pressable
+          style={[ui.button, styles.boardButton]}
+          onPress={() => navigation.navigate('Leaderboard', { gameId })}
+          accessibilityRole="button"
+          testID="approve-see-board"
+        >
+          <Text style={ui.buttonText}>{APPROVE_TEXT.seeBoard}</Text>
+        </Pressable>
+        {/* Spillsiden, ikke `goBack`: kom du fra hjem-kortet, ville det vært Hjem. */}
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.navigate('GameHome', { gameId })}
+          accessibilityRole="button"
+          testID="approve-back-to-game"
+        >
+          <Text style={[styles.backText, { color: colors.primary }]}>
+            {APPROVE_TEXT.backToGame}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/** En rad under «Du har godkjent»: navn, klokkeslett, brutto og hake. */
+function ApprovedRow({
+  row,
+  strokes,
+  last,
+}: {
+  row: ApproveRow;
+  strokes: number | null;
+  last: boolean;
+}) {
+  const { colors, ui } = useTheme();
+  return (
+    <View
+      style={[
+        styles.row,
+        last ? null : { borderBottomWidth: 1, borderBottomColor: colors.divider },
+      ]}
+      testID={`approve-approved-${row.key}`}
+    >
+      <View style={styles.rowText}>
+        <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>
+          {row.name}
+        </Text>
+        <Text style={[styles.rowSub, ui.num, { color: colors.muted }]}>
+          {approvedLine(formatClock(row.clock))}
+        </Text>
+      </View>
+      {strokes != null ? (
+        <Text style={[styles.brutto, ui.num, { color: colors.text }]}>
+          {strokes}{' '}
+          <Text style={[styles.bruttoUnit, { color: colors.muted }]}>{APPROVE_TEXT.strokes}</Text>
         </Text>
       ) : null}
-    </ScrollView>
+      <View
+        style={[styles.disc, { backgroundColor: colors.primarySoft }]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <HakeIcon color={colors.primary} size={14} strokeWidth={2.4} />
+      </View>
+    </View>
   );
 }
 
 /**
- * Kortet slik spilleren selv ser det (#2262): UT og INN med PAR og SLAG, og
- * BRUTTO under. Radene kommer fra den lokale basen etter seed — RLS har alt
- * bestemt hva enheten får se, så det finnes ingen ekstra gate å gjøre her.
+ * Kortets grid: hullene, slagene til `owner` og paren for tee-kjønnet hens.
+ * Det ene stedet skjermen bygger et grid, så det åpne kortet og radene under
+ * regner brutto likt (#2577).
  */
-function ScoreSummary({
-  holes,
-  scores,
-  entry,
-}: {
-  holes: readonly BundleHole[];
-  scores: readonly LocalScore[];
-  entry: RosterEntry;
-}) {
-  const { ui } = useTheme();
-  const byHole = scoresByHoleFor(scores, entry.user_id);
-  const teeGender = entry.player.teeGender as ScoringGender;
-  const grid = buildScorecardGrid({
+function gridFor(
+  holes: readonly BundleHole[],
+  scores: readonly LocalScore[],
+  owner: RosterEntry | undefined,
+): Grid {
+  const byHole = owner ? scoresByHoleFor(scores, owner.user_id) : new Map();
+  const teeGender = (owner?.player.teeGender ?? 'mens') as ScoringGender;
+  return buildScorecardGrid({
     rows: holes.map((hole) => ({
       holeNumber: hole.holeNumber,
       par: parForPlayer(
@@ -199,30 +519,89 @@ function ScoreSummary({
     })),
     pointsFn: null,
   });
-
-  if (grid.totals.played === 0) {
-    return (
-      <Text style={ui.muted} testID={`summary-${entry.user_id}`}>
-        Ingen slag synlige på denne enheten.
-      </Text>
-    );
-  }
-
-  return (
-    <View testID={`summary-${entry.user_id}`}>
-      <ScorecardGrid
-        grid={grid}
-        rows={['strokes']}
-        footer={<ScorecardTotals totals={grid.totals} showNet={false} showPoints={false} />}
-      />
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
-  // Ikke `ui.card`: scorekortet er sitt eget kort (#2385), og en ramme rundt
-  // det ville spist bredden hullkolonnene trenger.
-  entry: { borderTopWidth: 1, paddingTop: 16, marginTop: 8, gap: 8 },
-  actions: { flexDirection: 'row', gap: 12 },
-  action: { flex: 1 },
+  fill: { flex: 1 },
+  pendingScroll: { flexGrow: 1, paddingBottom: 32 },
+  // Designet: 4 pt under toppen, 20 pt på sidene og 14 pt ned til navnet.
+  headingBlock: { paddingTop: 4, paddingHorizontal: 20, paddingBottom: 14 },
+  heading: { ...fraunces(500, 26, 31.2, { multiline: true }) },
+  intro: { ...interLine(14, 20.3, { multiline: true }), fontFamily: FONTS.sans, marginTop: 4 },
+  // Kortet har selv 4 pt over seg (`ScorecardGrid`), så raden tar 4 av designets 8.
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+  },
+  cardName: { ...fraunces(600, 22), flexShrink: 1 },
+  position: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
+  // Kortet går 8 pt ut over sidene (`ScorecardGrid`), så det står 12 pt fra kanten.
+  cardWrap: { paddingHorizontal: 20 },
+  actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20 },
+  action: { flex: 1, height: 48, marginTop: 0 },
+  error: { paddingHorizontal: 20, marginTop: 12 },
+  kicker: { ...interLine(10, 12), paddingHorizontal: 20, paddingBottom: 8 },
+  waitingKicker: { paddingTop: 22 },
+  waitingList: { gap: 8, marginHorizontal: 16 },
+  rowCard: { borderWidth: 1, borderRadius: 16 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    minHeight: 60,
+  },
+  rowText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  rowName: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
+  rowSub: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 },
+  rowLink: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
+  chevron: { fontSize: 18, fontFamily: FONTS.sans },
+  doneScroll: { flexGrow: 1, paddingBottom: 24 },
+  // Designet: 28 pt over og på sidene, 8 under, 10 mellom delene.
+  doneHead: {
+    alignItems: 'center',
+    paddingTop: 28,
+    paddingHorizontal: 28,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  doneMark: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneTitle: {
+    ...fraunces(500, 28, 33.6, { multiline: true }),
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  doneLine: {
+    ...interLine(15, 21.75, { multiline: true }),
+    fontFamily: FONTS.sans,
+    textAlign: 'center',
+  },
+  doneKicker: { paddingTop: 20 },
+  listCard: { marginHorizontal: 16, borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
+  brutto: { ...fraunces(600, 17) },
+  bruttoUnit: { fontSize: 12, fontFamily: FONTS.sansMedium },
+  disc: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusList: { marginTop: 0, marginHorizontal: 20 },
+  // Designet: 12 pt over, 16 på sidene og 20 under knappene, over hjem-streken.
+  bottomBar: { borderTopWidth: 1, paddingTop: 12, paddingHorizontal: 16, gap: 6 },
+  boardButton: { height: 52, marginTop: 0 },
+  backButton: { height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  backText: { fontSize: 15, fontFamily: FONTS.sansSemiBold },
 });

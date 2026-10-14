@@ -288,7 +288,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="Approve"
           component={Approve}
-          options={{ title: 'Godkjenn' }}
+          options={kickerHeader('', 'Godkjenn')}
         />
         <Stack.Screen
           name="EndGame"
