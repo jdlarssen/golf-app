@@ -14,7 +14,6 @@ import {
 // Team rows (keyed on their team number) go through the same rules as player
 // rows (keyed on their userId).
 
-
 type TeamRow = { teamNumber: number; name: string; rank: number; tied: boolean; holesPlayed: number };
 const team = (teamNumber: number, rank: number): TeamRow => ({
   teamNumber,

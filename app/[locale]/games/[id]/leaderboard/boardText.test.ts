@@ -21,7 +21,6 @@ const tf = createTranslator({ locale: 'no', messages, namespace: 'spectate.follo
 const t = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.board' }) as unknown as BoardT;
 const tc = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.common' }) as unknown as BoardCommonT;
 
-
 describe('followTotalLabel — the big total on the follow page', () => {
   it.each([
     ['points', 26, '26 p'],
