@@ -11,6 +11,8 @@
 //    så teksten ber ikke om å gå tilbake.
 //  - `default` for resten.
 
+import type { RootStackParamList } from '../navigation';
+
 export type ErrorBoundaryVariant = 'game' | 'noBack' | 'default';
 
 export const ERROR_BOUNDARY_TEXT = {
@@ -21,12 +23,35 @@ export const ERROR_BOUNDARY_TEXT = {
   retry: 'Prøv igjen',
 } as const;
 
-/** Skjermene der slag tastes eller vises: de får linja om at slagene er trygge. */
-const GAME_ROUTES: readonly string[] = ['GameHome', 'Hole', 'Scorecard', 'Leaderboard', 'HoleByHole'];
+/**
+ * Varianten per skjerm i stacken. Kartet dekker hver rute, så en ny skjerm
+ * feller `tsc` til noen har valgt variant for den, i stedet for å falle stille
+ * til standarden. Spillskjermene, der slag tastes eller vises, får linja om at
+ * slagene er trygge.
+ */
+const VARIANT_BY_ROUTE = {
+  Home: 'noBack',
+  CreateGame: 'default',
+  GameHome: 'game',
+  Hole: 'game',
+  Scorecard: 'game',
+  Leaderboard: 'game',
+  HoleByHole: 'game',
+  Approve: 'default',
+  EndGame: 'default',
+  Profile: 'default',
+  EditProfile: 'default',
+  DeleteAccount: 'default',
+  AccountSettings: 'default',
+  NotificationsAndTheme: 'default',
+  Friends: 'default',
+  RoundDiary: 'default',
+  RoundStats: 'default',
+  Kavalkade: 'default',
+  SyncLab: 'default',
+} as const satisfies Record<keyof RootStackParamList, ErrorBoundaryVariant>;
 
 /** Varianten for grensen rundt en skjerm, etter navnet i stacken. */
-export function errorBoundaryVariantFor(routeName: string): ErrorBoundaryVariant {
-  if (GAME_ROUTES.includes(routeName)) return 'game';
-  if (routeName === 'Home') return 'noBack';
-  return 'default';
+export function errorBoundaryVariantFor(routeName: keyof RootStackParamList): ErrorBoundaryVariant {
+  return VARIANT_BY_ROUTE[routeName];
 }
