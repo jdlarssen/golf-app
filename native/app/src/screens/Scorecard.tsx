@@ -43,7 +43,11 @@
 // spilleren til hull 1, som nettsidens «← Rediger». Uten den var et avvist,
 // fullt kort en blindvei: spill-hjem sender et fullt kort hit, og radene under
 // er ren visning.
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+//
+// #2299: når alle hullene er ført og kortet kan leveres, starter skjermen med
+// oppsummeringen (`RoundDoneCard`): hilsenen, tallene, dagens beste hull og det
+// som svidde, og hvem i flighten som mangler hull. Alt under står som før.
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -71,6 +75,7 @@ import {
   type ScorecardRowKind,
 } from '../components/scorecard/ScorecardGrid';
 import { kickerHeader } from '../components/KickerHeader';
+import { RoundDoneCard } from '../components/scorecard/RoundDoneCard';
 import { ScorecardHeader } from '../components/scorecard/ScorecardHeader';
 import {
   ScorecardStampMark,
@@ -95,6 +100,7 @@ import {
   toStampPlayers,
 } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
+import { buildRoundDoneModel } from '../lib/roundDone';
 import {
   SCORECARD_TEXT,
   scorecardHandicapPart,
@@ -136,6 +142,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const [busy, setBusy] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [noticeText, setNoticeText] = useState<string | null>(null);
+  // #2299: «Se over og lever scorekortet» ruller hit, til toppen av scorekortet.
+  const scrollRef = useRef<ScrollView>(null);
+  const scorecardTop = useRef(0);
 
   // En feil lar `queued` stå: står den på `null`, er knappen fortsatt sperret,
   // og intervallet prøver igjen.
@@ -271,6 +280,27 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     me.withdrawn_at == null &&
     isScoringSupported(bundle.game);
 
+  // #2299: oppsummeringen, eller `null` når kortet ikke kan leveres herfra
+  // eller et hull mangler slag.
+  const roundDone = buildRoundDoneModel({
+    bundle,
+    scores,
+    localScores,
+    userId,
+    rows,
+    totals: grid.totals,
+    revealActive,
+    canSubmit,
+    missing,
+    teamMode,
+  });
+  const openHole = (holeNumber: number) =>
+    navigation.navigate('Hole', {
+      gameId,
+      holeNumber,
+      ...holeHeaderParams(bundle.game, bundle.courseName),
+    });
+
   // «Ført av» (eierens svar 2026-09-29): før levering, og bare når noen andre
   // har ført minst ett av hullene på kortet. Har du ført alt selv, ville raden
   // bare vært dine egne initialer 18 ganger.
@@ -395,11 +425,33 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     ) : null;
 
   return (
-    <ScrollView contentContainerStyle={[ui.scroll, styles.scroll]} testID="scorecard-screen">
+    <ScrollView
+      ref={scrollRef}
+      contentContainerStyle={[ui.scroll, styles.scroll]}
+      testID="scorecard-screen"
+    >
       {teamMode ? (
         <HeaderKicker navigation={navigation} kicker={teamScorecardKicker(myTeamCard?.label)} />
       ) : null}
-      <ScorecardHeader title={bundle.game.name} line={headerLine} />
+      {roundDone ? (
+        <View style={styles.roundDone}>
+          <RoundDoneCard
+            model={roundDone}
+            onReview={() =>
+              scrollRef.current?.scrollTo({ y: scorecardTop.current, animated: true })
+            }
+            onBack={() => openHole(HOLE_COUNT)}
+            onOpenHole={openHole}
+          />
+        </View>
+      ) : null}
+      <View
+        onLayout={(event) => {
+          scorecardTop.current = event.nativeEvent.layout.y;
+        }}
+      >
+        <ScorecardHeader title={bundle.game.name} line={headerLine} />
+      </View>
 
       <ScorecardGrid
         grid={grid}
@@ -431,13 +483,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
               minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
           <Pressable
             style={[ui.buttonSecondary, styles.editButton]}
-            onPress={() =>
-              navigation.navigate('Hole', {
-                gameId,
-                holeNumber: 1,
-                ...holeHeaderParams(bundle.game, bundle.courseName),
-              })
-            }
+            onPress={() => openHole(1)}
             testID="scorecard-edit"
           >
             <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
@@ -534,6 +580,9 @@ function HeaderKicker({
 const styles = StyleSheet.create({
   // Designet: tittelen står rett under toppen.
   scroll: { paddingTop: 4 },
+  // #2299: båndet går kant til kant og helt opp, som i designet. Margene
+  // opphever rullas padding: 20 på sidene, og 4 over (`scroll` over).
+  roundDone: { marginHorizontal: -20, marginTop: -4 },
   buttonDisabled: { opacity: 0.5 },
   // Med skjermens `gap` (8) og lever-knappens `marginTop` (8) blir det 32 pt
   // ned til lever-knappen, over kravet på 24.

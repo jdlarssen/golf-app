@@ -131,8 +131,11 @@ export function liveBoardFor(bundle: GameBundle, scores: readonly LocalScore[]):
 /**
  * Plassen på tavla for meg. `null` når tavla ikke viser noe for spillet, og
  * når jeg ikke har spilt et hull ennå: da sier en plass ingenting.
+ *
+ * Oppsummeringen på scorekortet (#2299) spør den samme, så plassen der er den
+ * samme som her og på tavla.
  */
-function liveStanding(
+export function liveStanding(
   bundle: GameBundle,
   scores: readonly LocalScore[],
   userId: string,
