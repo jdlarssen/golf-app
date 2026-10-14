@@ -8,7 +8,7 @@
 // Alt utenfor skjermen er mocket (nett, SQLite, realtime); adapteren, motoren
 // og reveal-predikatet er ekte delt kode.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
-import { act, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../lib/scoring/settlement';
@@ -146,12 +146,14 @@ function boardOrder(): string[] {
     .map((row) => String(row.props.testID).replace('board-row-', ''));
 }
 
+const mockNavigate = jest.fn();
+
 async function renderLeaderboard() {
   await render(
     <Leaderboard
       {...({
         route: { params: { gameId: GAME_ID } },
-        navigation: { navigate: jest.fn(), setParams: jest.fn(), setOptions: jest.fn() },
+        navigation: { navigate: mockNavigate, setParams: jest.fn(), setOptions: jest.fn() },
       } as unknown as ScreenProps<'Leaderboard'>)}
     />,
   );
@@ -180,6 +182,13 @@ describe('Leaderboard', () => {
     expect(screen.getByTestId('board-row-me-place')).toHaveTextContent('2');
     expect(screen.getByTestId('board-row-me-name')).toHaveTextContent('Meg Selv', { exact: false });
     expect(screen.getByTestId('board-row-me-total')).toHaveTextContent('2');
+
+    // Stripas knapp går til neste hull, som Hjem-kortet: jeg har ført 1 og 2.
+    await fireEvent.press(screen.getByTestId('board-strip-action'));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Hole',
+      expect.objectContaining({ gameId: GAME_ID, holeNumber: 3 }),
+    );
 
     // Ingen kanal nummer to: skjermen henger på abonnementet appen alt har.
     const { subscribeGameScores } = require('../data/realtime') as {
