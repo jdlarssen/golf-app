@@ -24,12 +24,13 @@ import {
   type FlightPlayer,
 } from '../../../../lib/games/flightScope';
 import { isMatchplayMode } from '../../../../lib/games/matchplaySides';
+import type { StampPlayer } from '../../../../lib/scorecard/scorecardStamp';
 import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { wolfLinearHolesForSlot } from '../../../../lib/wolf/wolfLinearHolesForSlot';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer } from '../data/gameBundle';
-import { displayName } from './display';
+import { displayName, formatNameList } from './display';
 import { wolfRotationPlayers } from './wolfHole';
 
 /** En roster-rad i den formen de delte reglene leser, med spilleren vedlagt. */
@@ -50,6 +51,21 @@ export function toRoster(players: readonly BundlePlayer[]): RosterEntry[] {
     submitted_by_user_id: player.submittedByUserId,
     approved_at: player.approvedAt,
     player,
+  }));
+}
+
+/** Rosteret i formen den delte stempel-regelen leser. */
+export function toStampPlayers(players: readonly BundlePlayer[]): StampPlayer[] {
+  return players.map((player) => ({
+    user_id: player.userId,
+    flight_number: player.flightNumber,
+    withdrawn_at: player.withdrawnAt,
+    submitted_at: player.submittedAt,
+    submitted_by_user_id: player.submittedByUserId,
+    approved_at: player.approvedAt,
+    approved_by_user_id: player.approvedByUserId ?? null,
+    name: player.name,
+    nickname: player.nickname,
   }));
 }
 
@@ -170,7 +186,7 @@ export function flightDeliveryFor(
 
 /** «Ola», «Ola og Kari», «Ola, Kari og Per» — navnene slik rosteret viser dem. */
 function namesOf(players: readonly BundlePlayer[]): string {
-  return joinWithOg(players.map(displayName));
+  return formatNameList(players.map(displayName));
 }
 
 /**
@@ -261,12 +277,6 @@ export function shouldConfirmParticipation(
   return gameStatus !== 'draft';
 }
 
-/** «3, 7, 11 og 15» — norsk oppramsing, komma hele veien og «og» før den siste. */
-function joinWithOg(items: readonly string[]): string {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')} og ${items[items.length - 1]}`;
-}
-
 /**
  * Merkelappene som står til høyre for navnet i rosteret (#1874).
  *
@@ -329,7 +339,7 @@ export function rosterPlacementMarks(
       wolfRotationPlayers(players).length,
     );
     if (holes.length > 0) {
-      marks.push(`Wolf på hull ${joinWithOg(holes.map(String))}`);
+      marks.push(`Wolf på hull ${formatNameList(holes.map(String))}`);
     }
   }
 

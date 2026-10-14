@@ -39,6 +39,18 @@ export function shortDisplayName(player: {
   return firstName(player.name) ?? 'Ukjent spiller';
 }
 
+/**
+ * «Marte», «Marte og Jonas», «Marte, Jonas og Kristian» — norsk oppramsing,
+ * komma hele veien og «og» før den siste. Tom liste gir «».
+ *
+ * Det ene hjemmet for oppramsingen i appen (#2577). Bygget for hånd fordi
+ * Hermes ikke kan stoles på for `Intl.ListFormat`.
+ */
+export function formatNameList(names: readonly string[]): string {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} og ${names[names.length - 1]}`;
+}
+
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }

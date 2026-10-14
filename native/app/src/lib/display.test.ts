@@ -11,7 +11,13 @@
 //
 // `formatTeeOff` og `displayName` er dekket av kallstedenes egne tester og
 // gjentas ikke her.
-import { formatClock, formatSignedAt, formatStampDateLocal, shortDisplayName } from './display';
+import {
+  formatClock,
+  formatNameList,
+  formatSignedAt,
+  formatStampDateLocal,
+  shortDisplayName,
+} from './display';
 
 describe('formatClock', () => {
   it('viser enhetens veggklokke, ikke en Oslo-konvertering', () => {
@@ -86,5 +92,18 @@ describe('shortDisplayName', () => {
     ['uten navn: plassholderen', { name: null, nickname: null }, 'Ukjent spiller'],
   ])('%s', (_case, player, expected) => {
     expect(shortDisplayName(player)).toBe(expected);
+  });
+});
+
+// #2577: den ene norske oppramsingen i appen. Hermes kan ikke stoles på for
+// `Intl.ListFormat`, så den er bygget for hånd.
+describe('formatNameList', () => {
+  it.each([
+    [[], ''],
+    [['Marte'], 'Marte'],
+    [['Marte', 'Jonas'], 'Marte og Jonas'],
+    [['Marte', 'Jonas', 'Kristian'], 'Marte, Jonas og Kristian'],
+  ])('%j gir «%s»', (names, expected) => {
+    expect(formatNameList(names)).toBe(expected);
   });
 });
