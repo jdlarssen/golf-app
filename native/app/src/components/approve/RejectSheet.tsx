@@ -11,13 +11,13 @@
 // igjen hvis kallet feilet og arket åpnes for samme kort på nytt.
 //
 // Tastaturet: `KeyboardAvoidingView` rundt arket (ikke rundt hinnen), så feltet
-// og «Send tilbake» står over tastaturet. En `Modal` på Android får ikke
-// `adjustResize` av seg selv.
+// og «Send tilbake» står over tastaturet. `padding` på begge plattformer: en
+// `Modal` med edge-to-edge (Android, targetSdk 36) endrer ikke vinduets
+// størrelse, så `height` flyttet ingenting der (målt på emulatoren).
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -71,7 +71,7 @@ export function RejectSheet({
           accessible={false}
           testID="reject-backdrop"
         />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView behavior="padding">
           <View
             style={[
               styles.sheet,
@@ -147,6 +147,9 @@ export function RejectSheet({
   );
 }
 
+// Linjeboksen har egne marger (`theme.ts`); designets luft legges oppå.
+const TITLE_LINE = fraunces(500, 24, 28.8, { multiline: true });
+
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   // Designet: 8 pt over grep-streken, 20 pt på sidene og 24 pt under, med 12 pt
@@ -159,8 +162,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2 },
-  title: { ...fraunces(500, 24, 28.8, { multiline: true }), marginTop: 6 },
-  body: { ...interLine(15, 21.75, { multiline: true }), fontFamily: FONTS.sans },
+  title: { ...TITLE_LINE, marginTop: TITLE_LINE.marginTop + 6 },
+  // Designet: 15/1,45 = 21,75. iOS legger linje 2 på hel enhetspiksel (66 px), så den
+  // sto 1 pt under nettleserens; 21,5 lander den der designet har den (målt, #2577).
+  body: { ...interLine(15, 21.5, { multiline: true }), fontFamily: FONTS.sans },
   field: { gap: 6, marginTop: 4 },
   label: { ...interLine(14, 17), fontFamily: FONTS.sansMedium },
   input: {
