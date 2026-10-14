@@ -139,14 +139,20 @@ describe('PALETTES', () => {
     expect(PALETTES.light.dangerBorder).toBe('rgba(184, 70, 62, 0.28)');
     expect(PALETTES.dark.dangerSoft).toBe('#242720');
     expect(PALETTES.dark.dangerBorder).toBe('rgba(214, 114, 104, 0.32)');
+    // #2579: tavla, fra designlerretet (`Tavle-forslag`, `Tavle-ferdig-forslag-*`).
+    expect([PALETTES.light.boardSlab, PALETTES.dark.boardSlab]).toEqual(['#14201A', '#14201A']);
+    expect([PALETTES.light.boardSlabBorder, PALETTES.dark.boardSlabBorder]).toEqual(['#14201A', '#2F3F34']);
+    expect([PALETTES.light.youFill, PALETTES.dark.youFill]).toEqual(['#E8EFE8', '#243429']);
+    expect([PALETTES.light.dotOver, PALETTES.dark.dotOver]).toEqual(['#D89B3A', '#E5B26F']);
   });
 
   it('gives every role a distinct klubbhus-natt value in dark mode', () => {
     const roles = Object.keys(PALETTES.light) as (keyof typeof PALETTES.light)[];
     expect(Object.keys(PALETTES.dark).sort()).toEqual([...roles].sort());
     // `live` og `onStrongWarm` sitter på skogflaten i begge draktene og er
-    // like med vilje.
-    for (const role of roles.filter((r) => r !== 'live' && r !== 'onStrongWarm')) {
+    // like med vilje, og tavleflaten (#2579) er like mørk i begge.
+    const same = ['live', 'onStrongWarm', 'boardSlab'];
+    for (const role of roles.filter((r) => !same.includes(r))) {
       expect(PALETTES.dark[role]).not.toBe(PALETTES.light[role]);
     }
   });

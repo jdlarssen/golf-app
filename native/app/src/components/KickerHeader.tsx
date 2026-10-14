@@ -19,11 +19,24 @@
 // bunnmenyen kommer (eierens svar, #2385). Pila heter «Tilbake», eller det
 // designet kaller den der det sier noe (`backLabel`: «Tilbake til profil» i
 // rommene under profilen).
+//
+// Tavla (#2579) har sitt eget bånd på skogflaten (`boardHeader`): pila,
+// pillen, spillnavnet, «Tavla» og formatlinja. Det er også navigatorens
+// header, så pila står når skjermen kaster eller ikke har tegnet tavla.
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FONTS, SUNLIGHT_THEME, TAP, ThemeScope, useTheme } from '../theme';
+import {
+  FONTS,
+  SUNLIGHT_THEME,
+  TAP,
+  ThemeScope,
+  fraunces,
+  interLine,
+  useTheme,
+  withAlpha,
+} from '../theme';
 import { TilbakeIcon } from './icons/Icons';
 
 /** Luften over raden (under sikker-sonen) og ut til kantene, som i designet. */
@@ -75,6 +88,98 @@ export function kickerHeader(
       </ThemeScope>
     ),
   };
+}
+
+/** Pillen i tavlas bånd: «Live · etter 7 hull» med prikk, eller sluttresultatet uten. */
+export type BoardPill = { text: string; live: boolean };
+
+/**
+ * Tavlas bånd (#2579, `Tavle-forslag`): skogflaten med pila og pillen øverst,
+ * så spillnavnet, «Tavla» og formatlinja. Pillen står bare når tavla har tall;
+ * uten den er båndet det samme, så pila er der i alle tilstander.
+ */
+export function boardHeader({
+  pill,
+  kicker,
+  title,
+  subtitle,
+}: {
+  pill?: BoardPill;
+  kicker: string;
+  title: string;
+  subtitle: string;
+}): NativeStackNavigationOptions {
+  return {
+    header: ({ back, navigation }) => (
+      <BoardTopBar
+        pill={pill}
+        kicker={kicker}
+        title={title}
+        subtitle={subtitle}
+        onBack={back ? () => navigation.goBack() : undefined}
+      />
+    ),
+  };
+}
+
+/**
+ * Båndet. Bunnluften er 12 og ikke tegningens 20: tavleflaten går 8 pt opp i
+ * båndet, og skjermen tegner de 8 siste i båndfargen bak flatens øvre kant.
+ */
+function BoardTopBar({
+  pill,
+  kicker,
+  title,
+  subtitle,
+  onBack,
+}: {
+  pill?: BoardPill;
+  kicker: string;
+  title: string;
+  subtitle: string;
+  onBack?: () => void;
+}) {
+  const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[styles.board, { paddingTop: insets.top + BAR_INSET, backgroundColor: colors.surfaceStrong }]}
+      testID="board-top-bar"
+    >
+      <View style={styles.boardRow}>
+        <View style={styles.side}>
+          {onBack ? (
+            <BareBack label={BACK_LABEL} large={false} color={colors.onStrong} onPress={onBack} />
+          ) : null}
+        </View>
+        {pill ? (
+          <View
+            style={[styles.pill, { borderColor: withAlpha(colors.onStrong, 0.35) }]}
+            testID="board-pill"
+          >
+            {pill.live ? (
+              <View style={[styles.pillDot, { backgroundColor: colors.live }]} testID="board-pill-dot" />
+            ) : null}
+            <Text style={[styles.pillText, { color: colors.onStrong }, !pill.live && ui.num]}>
+              {pill.text}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+      <View
+        style={styles.boardTitle}
+        accessible
+        accessibilityRole="header"
+        accessibilityLabel={[kicker, title, subtitle].filter(Boolean).join(', ')}
+      >
+        <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.boardKicker, { color: colors.accent }]}>
+          {kicker}
+        </Text>
+        <Text style={[styles.boardHeading, { color: colors.onStrong }]}>{title}</Text>
+        <Text style={[styles.boardSubtitle, { color: withAlpha(colors.onStrong, 0.85) }]}>{subtitle}</Text>
+      </View>
+    </View>
+  );
 }
 
 /**
@@ -152,14 +257,16 @@ function KickerTopBar({
   );
 }
 
-/** Tilbake-pila uten bakgrunn, midt i 44 pt å treffe på. */
+/** Tilbake-pila uten bakgrunn, midt i 44 pt å treffe på. På skogflaten er den lys. */
 function BareBack({
   label,
   large,
+  color,
   onPress,
 }: {
   label: string;
   large: boolean;
+  color?: string;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
@@ -171,7 +278,7 @@ function BareBack({
       style={styles.back}
       testID="header-back"
     >
-      <TilbakeIcon color={colors.text} size={large ? 22 : 20} strokeWidth={large ? 2.4 : 2} />
+      <TilbakeIcon color={color ?? colors.text} size={large ? 22 : 20} strokeWidth={large ? 2.4 : 2} />
     </Pressable>
   );
 }
@@ -185,4 +292,34 @@ const styles = StyleSheet.create({
   title: { flex: 1, alignItems: 'center' },
   center: { textAlign: 'center' },
   subtitle: { fontSize: 12, fontFamily: FONTS.sans, marginTop: 2 },
+  // Tavlas bånd (`Tavle-forslag`): 8 pt luft rundt raden, 4 pt ned til
+  // tittelblokka, og tekstene med nettleserens `normal` linjehøyde.
+  board: { paddingHorizontal: BAR_INSET, paddingBottom: 12, gap: 4 },
+  boardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  pillDot: { width: 8, height: 8, borderRadius: 4 },
+  pillText: {
+    ...interLine(11, 14),
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 1.32,
+    textTransform: 'uppercase',
+  },
+  boardTitle: { paddingHorizontal: 12 },
+  boardKicker: {
+    ...interLine(10, 12),
+    fontFamily: FONTS.sansSemiBold,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  boardHeading: { ...fraunces(600, 40, 42), marginTop: 4 + fraunces(600, 40, 42).marginTop },
+  boardSubtitle: { ...interLine(13, 16), fontFamily: FONTS.sans, marginTop: 2 + interLine(13, 16).marginTop },
 });
