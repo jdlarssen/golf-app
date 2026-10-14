@@ -104,17 +104,22 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     setBusy(next);
     setError(null);
     const result = await action();
-    setBusy(null);
     if (next.action === 'reject') setRejectUserId(null);
     if (!result.ok) {
+      setBusy(null);
       setError({ userId: next.userId, text: describeFailure(result) });
       return;
     }
     if (next.action === 'reject') setReasonDraft(null);
     // Hent rosteret på nytt — det er det som avgjør hvem som fortsatt står i
     // lista, og skjermen skal ikke lyve om at et kort er borte før serveren
-    // sier det. Det neste kortet i lista åpnes da av seg selv.
-    await refresh();
+    // sier det. Det neste kortet i lista åpnes da av seg selv. Knappene står
+    // låst til da, så kortet som nettopp ble godkjent, ikke låses opp igjen.
+    try {
+      await refresh();
+    } finally {
+      setBusy(null);
+    }
   };
 
   if (!bundle) {
@@ -128,6 +133,15 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   const roster = toRoster(bundle.players);
   const gameMode = bundle.game.gameMode as GameMode;
   const state = approveScreenState({ roster, game: bundle.game, userId });
+  // Forsvinner kortet i arket fra lista mens arket er åpent (en annen godkjente
+  // det, eller det ble åpnet igjen), lukkes arket, så det ikke dukker opp av seg
+  // selv hvis kortet kommer tilbake. Justert under render, som React anbefaler.
+  if (
+    rejectUserId != null &&
+    (state.kind !== 'pending' || !state.pending.some((e) => e.user_id === rejectUserId))
+  ) {
+    setRejectUserId(null);
+  }
   const stampFor = (ownerUserId: string) =>
     resolveScorecardStamp({
       ownerUserId,
@@ -179,7 +193,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
           </View>
 
           <View style={styles.nameRow}>
-            <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[ui.value, styles.cardName]} numberOfLines={1}>
               {displayName(open.player)}
             </Text>
             <Text style={[styles.position, ui.num, { color: colors.muted }]}>
@@ -547,7 +561,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 4,
   },
-  cardName: { ...fraunces(600, 22), flexShrink: 1 },
+  cardName: { flexShrink: 1 },
   position: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
   // Kortet går 8 pt ut over sidene (`ScorecardGrid`), så det står 12 pt fra kanten.
   cardWrap: { paddingHorizontal: 20 },
