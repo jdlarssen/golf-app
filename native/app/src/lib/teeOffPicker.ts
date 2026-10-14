@@ -4,8 +4,9 @@
 // `@react-native-community/datetimepicker` har ikke `mode="datetime"` på
 // Android. Komponenten viste bare en datodialog, og etter OK kastet den
 // «Cannot read property 'dismiss' of undefined» (`pickers['datetime']` finnes
-// ikke), så hele appen ble hvit. Android får derfor to dialoger etter
-// hverandre: dato, så klokkeslett. iOS beholder den inline pickeren.
+// ikke), så hele appen ble hvit. Android får derfor to rader, «Dato» og
+// «Klokkeslett» (eierens valg 14.10: «To rader»), hver med sin dialog. Den
+// andre delen av verdien står. iOS beholder den inline pickeren.
 //
 // Klokkeslett i fortiden: Androids klokkeslett-dialog ser bort fra
 // `minimumDate`, så på dagens dato kan et klokkeslett som alt har vært, velges.
@@ -31,11 +32,11 @@ export function combineDateAndTime(datePart: Date, timePart: Date): Date {
 }
 
 /**
- * Åpner datodialogen og, etter OK, klokkeslett-dialogen. `onPick` kalles bare
- * når begge er OK. Avbryt i en av dem lar verdien stå. `open` er
- * `DateTimePickerAndroid.open`, sendt inn så testen kan gi en falsk.
+ * Åpner datodialogen. Ved OK får `onPick` valgt dato med klokkeslettet som
+ * sto. Avbryt lar verdien stå. `open` er `DateTimePickerAndroid.open`, sendt
+ * inn så testen kan gi en falsk.
  */
-export function openAndroidTeeOff({
+export function openAndroidTeeOffDate({
   value,
   minimumDate,
   onPick,
@@ -50,15 +51,27 @@ export function openAndroidTeeOff({
     mode: 'date',
     value,
     minimumDate,
-    onValueChange: (_event, pickedDate) => {
-      open({
-        mode: 'time',
-        value: combineDateAndTime(pickedDate, value),
-        is24Hour: true,
-        onValueChange: (_timeEvent, pickedTime) => {
-          onPick(combineDateAndTime(pickedDate, pickedTime));
-        },
-      });
-    },
+    onValueChange: (_event, pickedDate) => onPick(combineDateAndTime(pickedDate, value)),
+  });
+}
+
+/**
+ * Åpner klokkeslett-dialogen i 24-timers visning. Ved OK får `onPick` valgt
+ * klokkeslett på datoen som sto. Avbryt lar verdien stå.
+ */
+export function openAndroidTeeOffTime({
+  value,
+  onPick,
+  open,
+}: {
+  value: Date;
+  onPick: (date: Date) => void;
+  open: (args: AndroidNativeProps) => void;
+}): void {
+  open({
+    mode: 'time',
+    value,
+    is24Hour: true,
+    onValueChange: (_event, pickedTime) => onPick(combineDateAndTime(value, pickedTime)),
   });
 }

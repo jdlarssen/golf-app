@@ -1,7 +1,8 @@
-// #2560 steg 3a: Android har ingen `datetime`-modus, så tee-off velges i to
-// dialoger (dato, så klokkeslett) og settes sammen her.
+// #2560 steg 3a: Android har ingen `datetime`-modus. Tee-off er to rader
+// (eierens valg 14.10: «To rader»), hver med sin dialog, og den andre delen av
+// verdien står.
 import type { AndroidNativeProps } from '@react-native-community/datetimepicker';
-import { combineDateAndTime, openAndroidTeeOff } from './teeOffPicker';
+import { combineDateAndTime, openAndroidTeeOffDate, openAndroidTeeOffTime } from './teeOffPicker';
 
 // jest.config.js pinner TZ=UTC, så lokaltid og UTC gir samme tall her. At
 // verdien er i enhetens lokaltid, vises på emulatoren med Europe/Oslo.
@@ -28,11 +29,52 @@ describe('combineDateAndTime', () => {
   });
 });
 
-describe('openAndroidTeeOff', () => {
+const event = (date: Date) => ({ nativeEvent: { timestamp: date.getTime(), utcOffset: 0 } });
+
+describe('openAndroidTeeOffDate', () => {
   // Opprinnelig verdi: annen dato OG annet klokkeslett enn det som velges.
   const value = new Date(2026, 4, 10, 9, 45, 0, 0);
   const minimumDate = new Date(2026, 4, 1, 12, 0, 0, 0);
   const pickedDate = new Date(2026, 4, 22, 0, 0, 0, 0);
+
+  function setup() {
+    const calls: AndroidNativeProps[] = [];
+    const open = jest.fn((args: AndroidNativeProps) => {
+      calls.push(args);
+    });
+    const onPick = jest.fn();
+    openAndroidTeeOffDate({ value, minimumDate, onPick, open });
+    return { calls, onPick };
+  }
+
+  it('åpner bare datodialogen, med verdien og minimumDate', () => {
+    const { calls } = setup();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].mode).toBe('date');
+    expect(calls[0].value).toBe(value);
+    expect(calls[0].minimumDate).toBe(minimumDate);
+  });
+
+  it('gir valgt dato med klokkeslettet som sto', () => {
+    const { calls, onPick } = setup();
+    calls[0].onValueChange?.(event(pickedDate), pickedDate);
+
+    expect(calls).toHaveLength(1);
+    expect(onPick).toHaveBeenCalledTimes(1);
+    expect((onPick.mock.calls[0][0] as Date).getTime()).toBe(
+      new Date(2026, 4, 22, 9, 45, 0, 0).getTime(),
+    );
+  });
+
+  it('kaller ikke onPick når dialogen avbrytes', () => {
+    const { calls, onPick } = setup();
+    calls[0].onDismiss?.();
+    expect(onPick).not.toHaveBeenCalled();
+  });
+});
+
+describe('openAndroidTeeOffTime', () => {
+  const value = new Date(2026, 4, 10, 9, 45, 0, 0);
   const pickedTime = new Date(2026, 4, 22, 16, 20, 33, 999);
 
   function setup() {
@@ -41,55 +83,31 @@ describe('openAndroidTeeOff', () => {
       calls.push(args);
     });
     const onPick = jest.fn();
-    openAndroidTeeOff({ value, minimumDate, onPick, open });
-    return { calls, open, onPick };
+    openAndroidTeeOffTime({ value, onPick, open });
+    return { calls, onPick };
   }
 
-  const event = (date: Date) => ({ nativeEvent: { timestamp: date.getTime(), utcOffset: 0 } });
-
-  it('åpner datodialogen først, med verdien og minimumDate', () => {
+  it('åpner bare klokkeslett-dialogen, i 24-timers visning med verdien', () => {
     const { calls } = setup();
     expect(calls).toHaveLength(1);
-    expect(calls[0].mode).toBe('date');
+    expect(calls[0].mode).toBe('time');
+    expect(calls[0].is24Hour).toBe(true);
     expect(calls[0].value).toBe(value);
-    expect(calls[0].minimumDate).toBe(minimumDate);
   });
 
-  it('åpner klokkeslett-dialogen i 24-timers visning med valgt dato og opprinnelig klokkeslett', () => {
+  it('gir valgt klokkeslett på datoen som sto', () => {
     const { calls, onPick } = setup();
-    calls[0].onValueChange?.(event(pickedDate), pickedDate);
-
-    expect(calls).toHaveLength(2);
-    expect(calls[1].mode).toBe('time');
-    expect(calls[1].is24Hour).toBe(true);
-    expect(calls[1].value.getTime()).toBe(new Date(2026, 4, 22, 9, 45, 0, 0).getTime());
-    expect(onPick).not.toHaveBeenCalled();
-  });
-
-  it('gir valgt dato og valgt klokkeslett når begge dialogene er OK', () => {
-    const { calls, onPick } = setup();
-    calls[0].onValueChange?.(event(pickedDate), pickedDate);
-    calls[1].onValueChange?.(event(pickedTime), pickedTime);
+    calls[0].onValueChange?.(event(pickedTime), pickedTime);
 
     expect(onPick).toHaveBeenCalledTimes(1);
     expect((onPick.mock.calls[0][0] as Date).getTime()).toBe(
-      new Date(2026, 4, 22, 16, 20, 0, 0).getTime(),
+      new Date(2026, 4, 10, 16, 20, 0, 0).getTime(),
     );
   });
 
-  it('kaller ikke onPick når datodialogen avbrytes', () => {
+  it('kaller ikke onPick når dialogen avbrytes', () => {
     const { calls, onPick } = setup();
     calls[0].onDismiss?.();
-
-    expect(calls).toHaveLength(1);
-    expect(onPick).not.toHaveBeenCalled();
-  });
-
-  it('kaller ikke onPick når klokkeslett-dialogen avbrytes', () => {
-    const { calls, onPick } = setup();
-    calls[0].onValueChange?.(event(pickedDate), pickedDate);
-    calls[1].onDismiss?.();
-
     expect(onPick).not.toHaveBeenCalled();
   });
 });
