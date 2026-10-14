@@ -25,7 +25,7 @@ import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { countRoundAchievements } from '../../../../lib/stats/achievements';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
-import { formatNameList, shortDisplayName } from './display';
+import { displayName, formatNameList, shortDisplayName } from './display';
 import { liveStanding } from './homeHero';
 import { findInRoster, resolveFlight, toRoster } from './roster';
 import type { ScorecardRow } from './scorecardRows';
@@ -59,6 +59,12 @@ export const ROUND_DONE_TEXT = {
   place: 'plass nå',
   placeTied: 'delt plass nå',
   missing: 'Mangler hull',
+  hole: 'Hull',
+  onPar: 'på par',
+  holeInOne: 'hole-in-one',
+  tied: 'delt',
+  missingSpoken: 'mangler hull',
+  openHole: 'Åpne hull',
 } as const;
 
 export type RoundDoneHeadline = 'points' | 'net' | 'gross';
@@ -168,9 +174,18 @@ function flightRows(opts: {
     mode,
     holeNumbers: HOLE_NUMBERS,
   });
+  // Kortnavnet, eller hele navnet når to i flighten har samme kortnavn: to
+  // «Jonas» på samme liste sier ikke hvem som mangler hull.
+  const shortCount = new Map<string, number>();
+  for (const mate of mates) {
+    const short = shortDisplayName(mate.player);
+    shortCount.set(short, (shortCount.get(short) ?? 0) + 1);
+  }
   const nameOf = (id: string) => {
     const entry = mates.find((mate) => mate.user_id === id);
-    return entry ? shortDisplayName(entry.player) : '';
+    if (!entry) return '';
+    const short = shortDisplayName(entry.player);
+    return (shortCount.get(short) ?? 0) > 1 ? displayName(entry.player) : short;
   };
 
   const rows: RoundDoneFlightRow[] = [];
@@ -211,7 +226,8 @@ export function placeUnit(standing: { tied: boolean }): string {
 
 /** Det skjermleseren sier om plassen: «3. plass nå» eller «delt 3. plass nå». */
 export function placeSpoken(standing: { rank: number; tied: boolean }): string {
-  return `${standing.tied ? 'delt ' : ''}${placeNumber(standing)} ${ROUND_DONE_TEXT.place}`;
+  const tied = standing.tied ? `${ROUND_DONE_TEXT.tied} ` : '';
+  return `${tied}${placeNumber(standing)} ${ROUND_DONE_TEXT.place}`;
 }
 
 /** Det skjermleseren sier om et tall i båndet: «40 poeng», «2 birdier». */
@@ -225,14 +241,15 @@ export function numberSpoken(value: string, unit: string): string {
  * bare diffen, «Hull 13 · +4».
  */
 export function highlightText(hole: RoundHighlight, which: 'best' | 'worst'): string {
-  const prefix = `Hull ${hole.holeNumber} · `;
+  const prefix = `${ROUND_DONE_TEXT.hole} ${hole.holeNumber} · `;
   if (hole.term === 'over') return `${prefix}+${hole.strokes - hole.par}`;
   if (which === 'worst') {
     return prefix + (SHORT_LABELS[hole.term] ?? TERM_LABELS[hole.term]).toLowerCase();
   }
-  if (hole.holeInOne) return `${prefix}hole-in-one`;
-  if (hole.term === 'par') return `${prefix}par`;
-  return `${prefix}${TERM_LABELS[hole.term].toLowerCase()} på par ${hole.par}`;
+  if (hole.holeInOne) return `${prefix}${ROUND_DONE_TEXT.holeInOne}`;
+  const word = TERM_LABELS[hole.term].toLowerCase();
+  if (hole.term === 'par') return `${prefix}${word}`;
+  return `${prefix}${word} ${ROUND_DONE_TEXT.onPar} ${hole.par}`;
 }
 
 /** «·» leses høyt av VoiceOver; komma gir en naturlig pause. */
@@ -257,5 +274,6 @@ export function missingText(holes: readonly number[]): string {
 
 /** Knappen på raden: «Jonas mangler hull 17. Åpne hull 17.» */
 export function missingSpoken(row: { name: string; holes: readonly number[]; firstHole: number }): string {
-  return `${row.name} mangler hull ${formatNameList(row.holes.map(String))}. Åpne hull ${row.firstHole}.`;
+  const holes = formatNameList(row.holes.map(String));
+  return `${row.name} ${ROUND_DONE_TEXT.missingSpoken} ${holes}. ${ROUND_DONE_TEXT.openHole} ${row.firstHole}.`;
 }
