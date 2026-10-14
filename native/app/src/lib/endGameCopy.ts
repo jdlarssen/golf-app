@@ -26,10 +26,10 @@ import type { ReminderFailure } from '../data/remind';
 import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { fillCopy } from './sideTournamentCopy';
 import { WEB_LINK_TEXT } from './webLink';
-import type { FinishSlot } from './endGamePlan';
+import type { DeliveryCounts, FinishSlot } from './endGamePlan';
 
 /** «Ola, Kari og Per» — navn i en setning, ikke en punktliste. */
-function nameList(names: readonly string[]): string {
+export function nameList(names: readonly string[]): string {
   if (names.length === 0) return '';
   if (names.length === 1) return names[0]!;
   return `${names.slice(0, -1).join(', ')} og ${names[names.length - 1]!}`;
@@ -155,16 +155,27 @@ export function slotLabel(slot: FinishSlot): string {
 /** Tekstene skjermen viser. Samlet her, ikke strødd i JSX-en. */
 export const END_GAME_TEXT = {
   heading: 'Avslutt runden',
+  /** Pila i toppen på lista, og «Tilbake» fra bekreft-siden (#2578). */
+  backToGame: 'Tilbake til spillet',
+  backToList: 'Tilbake til avslutningen',
+  /** Etter spillnavnet i toppen. `ui.kicker` gjør den til versaler. */
+  kickerActive: 'I gang',
   loadFailed: 'Fikk ikke tak i runden. Sjekk nettet og prøv igjen.',
   notActive: 'Denne runden er ikke i gang, så det er ingenting å avslutte.',
   alreadyFinished: 'Runden er alt avsluttet.',
-  deliveryHeading: 'Leveringer',
+  /** Bak arrangørens eget navn i leveringslista. */
+  you: '(deg)',
+  deliveredHeading: 'Levert scorekort',
+  showDeliveries: 'Se alle leveringene',
+  hideDeliveries: 'Skjul leveringene',
+  allIn: 'Alt er inne',
   notSubmitted: 'Ikke levert',
-  approved: 'Godkjent',
-  awaitingApproval: 'Venter på godkjenning',
+  // Små bokstaver: de står etter «Levert ·» (#2578, beslutning 2).
+  approved: 'godkjent',
+  awaitingApproval: 'venter på godkjenning',
   allReady:
     'Alle har levert. Avslutter du nå, låses runden og resultatene åpnes for hele gjengen.',
-  missingHeading: 'Disse mangler kort',
+  missingHeading: 'Mangler kort',
   // Introen står over BEGGE radtypene, så den kan ikke si noe om hva slagene
   // gjør — de to radene svarer motsatt, og hver sin hint sier det selv.
   missingIntro: 'Huk av alle sammen, så kan du avslutte likevel.',
@@ -182,10 +193,11 @@ export const END_GAME_TEXT = {
   noCardHint: 'Spilleren blir stående som ikke levert. Slagene teller fortsatt.',
   unapprovedHeading: 'Venter på godkjenning',
   // #1891: siste setning pekte til nettsiden fordi appen ikke HADDE
-  // overstyringen. Nå har den den (godkjenn-knappen under), og henvisningen er
-  // dermed en blindvei som beskriver en app som ikke finnes lenger.
+  // overstyringen. Nå har den den (godkjenn-knappen over), og henvisningen er
+  // dermed en blindvei som beskriver en app som ikke finnes lenger. #2578:
+  // ordrett fra tegningen.
   unapprovedNote:
-    'En medspiller må godkjenne hvert kort før du kan avslutte. Be dem åpne runden og godkjenne — eller godkjenn på vegne av gruppa her.',
+    'En medspiller må godkjenne kortet. Be dem åpne runden, eller godkjenn det selv her.',
   /**
    * Egen rad i ventelista (#1891). Ingen kan godkjenne sitt eget kort — vakta i
    * basen nekter det uansett hvem du er — så her står en forklaring i stedet
@@ -203,16 +215,41 @@ export const END_GAME_TEXT = {
   /** Både knappe-etiketten og tittelen i bekreftelsen — det er samme handling. */
   approveOnBehalf: 'Godkjenn på vegne av gruppa',
   approveConfirmCta: 'Godkjenn',
+  cancel: 'Avbryt',
   awardHeading: 'Kår vinnerne',
   awardIntro:
     'Velg hvem som tok hvert hull. Ingen som kvalifiserte? Si det, så står hullet som kåret uten vinner.',
   noQualified: 'Ingen kvalifiserte',
+  chooseWinner: 'Velg vinner',
+  changeWinner: 'Endre',
+  // Arket som glir opp (#2578, eierens valg: «Liste som glir opp»).
+  sheetKicker: 'Kår vinneren',
+  sheetIntro: 'Velg hvem som tok hullet. Vinneren lagres når du avslutter runden.',
+  close: 'Lukk',
+  noQualifiedNote: 'Hullet står som kåret uten vinner.',
+  // Bare i formatene med frafall (beslutning 8): ellers er setningen usann.
+  sheetWithdrawnNote: 'Spillere du huker av som trukket, står ikke i lista.',
   submit: 'Avslutt runden',
+  submitHint: 'Du ser over alt før noe låses.',
   submitBusy: 'Avslutter …',
+  // Bekreft-siden (#2578): en egen side, ikke en liten boks.
   confirmTitle: 'Avslutt runden?',
-  confirmBody:
-    'Resultatene låses og åpnes for alle. Skal runden åpnes igjen, må du gjøre det fra nettsiden.',
-  confirmCta: 'Avslutt',
+  confirmLead: 'Se over det som lagres. Etterpå er runden ferdig for alle.',
+  savedHeading: 'Dette lagres',
+  resultLabel: 'Resultatet',
+  withdrawnLabel: 'Trekkes',
+  noCardRowLabel: 'Uten kort',
+  nextHeading: 'Så skjer dette',
+  nextLocked: 'Runden låses, og resultatene står som de er.',
+  nextBoard: 'Du kommer rett til tavla med sluttresultatet.',
+  // Sant fordi appen bare flipper status: «Resultatet er klart» og resten av
+  // halen sendes av `app/api/cron/finish-pipeline` (pg_cron hvert minutt).
+  nextNotified: 'Spillerne får beskjed om at resultatet er klart, som regel innen et minutt.',
+  // `reopenGame` på nettsiden krever admin (`requireAdmin`). Arrangøren som
+  // ikke er admin, kan ikke åpne runden igjen selv.
+  reopenAdmin: 'Du kan åpne den igjen fra nettsiden.',
+  reopenNotAdmin: 'Bare en administrator kan åpne runden igjen.',
+  confirmCta: 'Ja, avslutt runden',
 } as const;
 
 /**
@@ -258,6 +295,25 @@ const SPLIT_DAY_NOTE = '{m} av dem leverer hele runden på Bak 9 og blir purret 
 const LAST_REMINDED_NOTE = 'Sist purret kl. {clock}';
 const APPROVE_CONFIRM_BODY =
   'Godkjenn kortet til {name}? Du står som den som godkjente.';
+const APPROVE_ON_BEHALF_LABEL = 'Godkjenn kortet til {name} på vegne av gruppa';
+const SLOT_ROW_CHOSEN = '{slot}: {name}. Endre vinner';
+const SLOT_ROW_OPEN = '{slot}. Velg vinner';
+const PLAYER_ONE = '1 spiller';
+const PLAYERS = '{n} spillere';
+const ALL_DELIVERED_LINE = '{n} av {n} kort er levert';
+const OF_TOTAL = 'av {n}';
+const PROGRESS_APPROVED = '{n} godkjent';
+const PROGRESS_WAITING = '{n} venter på godkjenning';
+const PROGRESS_MISSING = '{n} mangler kort';
+const OPENS_WHEN = 'Åpner når {parts}.';
+const OPENS_APPROVED = '{who} er godkjent';
+const OPENS_ACKNOWLEDGED = '{who} er huket av';
+const OPENS_WINNER = 'vinneren er kåret';
+const OPENS_WINNERS = 'vinnerne er kåret';
+const RESULT_ALL = '{players}, alle har levert';
+const RESULT_SOME = '{players}, {m} har levert';
+/** Skillet mellom delene i toppen, under tittelen og i linjene med tall. */
+const SEP = ' · ';
 
 /**
  * Knappeteksten med antallet purringen faktisk treffer.
@@ -299,7 +355,7 @@ export function unremindableNotes(counts: {
 }
 
 /**
- * «Sist purret kl. 14.05».
+ * «Sist purret kl. 14:05».
  *
  * @param clock klokkeslettet fra `formatClock` (`lib/display.ts`) — enhetens
  *   egen tid, aldri en Oslo-konvertering (Hermes har ingen ICU-tidssoner).
@@ -309,6 +365,134 @@ export function unremindableNotes(counts: {
  */
 export function lastRemindedNote(clock: string): string {
   return fillCopy(LAST_REMINDED_NOTE, { clock });
+}
+
+/**
+ * Sammendraget under purreknappen (#2578): notatene og «Sist purret kl. …»
+ * som setninger i ett avsnitt, med punktum til slutt.
+ *
+ * Setningene og ikke én streng: skjermen setter klokka med `tabular-nums`,
+ * som tegningen. Avsnittet er `join(' ')`.
+ *
+ * @param clock fra `formatClock`, med kolon som i resten av appen
+ *   (beslutning 1; tegningen har punktum).
+ */
+export function reminderNote(notes: readonly string[], clock: string | null): string[] {
+  return clock ? [...notes, `${lastRemindedNote(clock)}.`] : [...notes];
+}
+
+/** «8 spillere», «1 spiller». */
+export function playerCount(n: number): string {
+  return n === 1 ? PLAYER_ONE : fillCopy(PLAYERS, { n });
+}
+
+/** «Lørdagsrunden · I gang». Uten `detail`: bare spillnavnet. */
+export function endGameKicker(gameName: string, detail: string | null): string {
+  return detail ? `${gameName}${SEP}${detail}` : gameName;
+}
+
+/** «Byneset North · 8 spillere» under tittelen. Uten bane: bare tallet. */
+export function titleSubtitle(courseName: string | null, players: number): string {
+  return courseName ? `${courseName}${SEP}${playerCount(players)}` : playerCount(players);
+}
+
+/** «Venter på godkjenning · 1». `ui.kicker` gjør den til versaler. */
+export function countHeading(label: string, n: number): string {
+  return `${label}${SEP}${n}`;
+}
+
+/** «av 8» etter det store tallet i fremdriftskortet. */
+export function ofTotal(total: number): string {
+  return fillCopy(OF_TOTAL, { n: total });
+}
+
+/** «8 av 8 kort er levert» i det sterke kortet. */
+export function allDeliveredLine(total: number): string {
+  return fillCopy(ALL_DELIVERED_LINE, { n: total });
+}
+
+/**
+ * «5 godkjent · 1 venter på godkjenning · 2 mangler kort».
+ *
+ * Deler som er null, står ikke (beslutning 3). Uten krav om godkjenning sier
+ * linja bare hvor mange som mangler kort: «godkjent» ville vært usant der.
+ */
+export function progressLine(counts: DeliveryCounts, requirePeerApproval: boolean): string {
+  const parts: [number, string][] = requirePeerApproval
+    ? [
+        [counts.approved, PROGRESS_APPROVED],
+        [counts.waiting, PROGRESS_WAITING],
+        [counts.missing, PROGRESS_MISSING],
+      ]
+    : [[counts.missing, PROGRESS_MISSING]];
+  return parts
+    .filter(([n]) => n > 0)
+    .map(([n, template]) => fillCopy(template, { n }))
+    .join(SEP);
+}
+
+/** Opptil tre navn står med navn, flere blir et tall (beslutning 4). */
+function whoList(names: readonly string[]): string {
+  return names.length > 3 ? playerCount(names.length) : nameList(names);
+}
+
+/**
+ * Linja under den grå knappen: «Åpner når Jonas Berg er godkjent, Sigrid Aas
+ * er huket av og vinnerne er kåret.»
+ *
+ * Bygget av det samme som sperrer knappen (`finishBlockers` i
+ * `endGamePlan.ts`), så linja nevner nøyaktig det som gjenstår.
+ *
+ * @param slotCount slotene runden har: «vinneren» ved én (beslutning 5).
+ */
+export function opensWhenNote(
+  blockers: {
+    unapproved: readonly string[];
+    unacknowledged: readonly string[];
+    winnersOpen: boolean;
+  },
+  slotCount: number,
+): string {
+  const parts: string[] = [];
+  if (blockers.unapproved.length > 0) {
+    parts.push(fillCopy(OPENS_APPROVED, { who: whoList(blockers.unapproved) }));
+  }
+  if (blockers.unacknowledged.length > 0) {
+    parts.push(fillCopy(OPENS_ACKNOWLEDGED, { who: whoList(blockers.unacknowledged) }));
+  }
+  if (blockers.winnersOpen) parts.push(slotCount === 1 ? OPENS_WINNER : OPENS_WINNERS);
+  return fillCopy(OPENS_WHEN, { parts: nameList(parts) });
+}
+
+/**
+ * «Resultatet» på bekreft-siden (beslutning 6): «8 spillere, alle har levert»
+ * eller «7 spillere, 6 har levert».
+ */
+export function resultLine(players: number, delivered: number): string {
+  return delivered === players
+    ? fillCopy(RESULT_ALL, { players: playerCount(players) })
+    : fillCopy(RESULT_SOME, { players: playerCount(players), m: delivered });
+}
+
+/**
+ * Lås-linja på bekreft-siden. Bare admin kan åpne runden igjen
+ * (`reopenGame` → `requireAdmin`), og alt annet enn et sikkert ja — også
+ * mens profilen lastes og ved feil — gir setningen som ikke lover noe.
+ */
+export function reopenNote(isAdmin: boolean): string {
+  return isAdmin ? END_GAME_TEXT.reopenAdmin : END_GAME_TEXT.reopenNotAdmin;
+}
+
+/** Skjermleserens etikett på godkjenn-knappen: hvilket kort det gjelder. */
+export function approveOnBehalfLabel(name: string): string {
+  return fillCopy(APPROVE_ON_BEHALF_LABEL, { name });
+}
+
+/** «Nærmest pinnen #1: Kristian Holm. Endre vinner» / «Nærmest pinnen #1. Velg vinner». */
+export function slotRowLabel(slot: FinishSlot, winner: string | null): string {
+  return winner === null
+    ? fillCopy(SLOT_ROW_OPEN, { slot: slotLabel(slot) })
+    : fillCopy(SLOT_ROW_CHOSEN, { slot: slotLabel(slot), name: winner });
 }
 
 /** «Godkjenn kortet til Kari? Du står som den som godkjente.» */

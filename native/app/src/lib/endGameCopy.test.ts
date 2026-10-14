@@ -14,7 +14,10 @@ import type { EndRoundFailure } from '../data/endGame';
 import type { ReminderFailure } from '../data/remind';
 import { isFinishedSentence } from '../test/copy';
 import {
+  allDeliveredLine,
   approveConfirmBody,
+  approveOnBehalfLabel,
+  countHeading,
   CUP_LINK_LABEL,
   CUP_NOTE,
   cupWebPath,
@@ -22,10 +25,18 @@ import {
   describeReminderFailure,
   describeReminderPreviewFailure,
   END_GAME_TEXT,
+  endGameKicker,
   lastRemindedNote,
+  opensWhenNote,
   ownRowHint,
+  progressLine,
   remindLabel,
+  reminderNote,
+  reopenNote,
+  resultLine,
   slotLabel,
+  slotRowLabel,
+  titleSubtitle,
   unremindableNotes,
 } from './endGameCopy';
 import { describeRosterFailure } from './rosterCopy';
@@ -172,12 +183,15 @@ describe('END_GAME_TEXT', () => {
     // fordi appen ikke hadde overstyringen. Nå har den den — og da er en
     // henvisning videre en beskrivelse av en app som ikke finnes lenger.
     expect(END_GAME_TEXT.unapprovedNote).toContain('medspiller');
-    expect(END_GAME_TEXT.unapprovedNote).toContain('på vegne av gruppa');
+    expect(END_GAME_TEXT.unapprovedNote).toContain('godkjenn det selv her');
     expect(END_GAME_TEXT.unapprovedNote).not.toContain('nettsiden');
   });
 
-  it('sier at avslutningen ikke kan angres fra appen', () => {
-    expect(END_GAME_TEXT.confirmBody).toContain('nettsiden');
+  it('sier hvem som kan åpne runden igjen — bare admin kan (#2578)', () => {
+    // `reopenGame` krever admin på nettsiden. Den gamle setningen lovet alle
+    // arrangører at de kunne åpne runden igjen derfra.
+    expect(reopenNote(true)).toBe('Du kan åpne den igjen fra nettsiden.');
+    expect(reopenNote(false)).toBe('Bare en administrator kan åpne runden igjen.');
   });
 
   it('holder trukket og «uten kort» fra hverandre — de svarer motsatt', () => {
@@ -315,5 +329,126 @@ describe('cup-lenka', () => {
     // at den var trygg.
     expect(cupWebPath('a/b')).toBe('/cup/a%2Fb');
     expect(isFinishedSentence(CUP_LINK_LABEL)).toBe(true);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// #2578: tekstene fra tegningene
+// -----------------------------------------------------------------------------
+
+describe('progressLine', () => {
+  it('utelater deler som er null (beslutning 3)', () => {
+    expect(
+      progressLine({ total: 8, delivered: 6, approved: 5, waiting: 1, missing: 2 }, true),
+    ).toBe('5 godkjent · 1 venter på godkjenning · 2 mangler kort');
+    expect(
+      progressLine({ total: 8, delivered: 8, approved: 7, waiting: 1, missing: 0 }, true),
+    ).toBe('7 godkjent · 1 venter på godkjenning');
+    expect(
+      progressLine({ total: 3, delivered: 1, approved: 0, waiting: 1, missing: 2 }, true),
+    ).toBe('1 venter på godkjenning · 2 mangler kort');
+  });
+
+  it('sier bare hvor mange som mangler kort når runden ikke krever godkjenning', () => {
+    expect(
+      progressLine({ total: 8, delivered: 6, approved: 6, waiting: 0, missing: 2 }, false),
+    ).toBe('2 mangler kort');
+  });
+});
+
+describe('opensWhenNote', () => {
+  it('sier ordrett det tegningen sier', () => {
+    expect(
+      opensWhenNote({ unapproved: ['Jonas Berg'], unacknowledged: ['Sigrid Aas'], winnersOpen: true }, 2),
+    ).toBe('Åpner når Jonas Berg er godkjent, Sigrid Aas er huket av og vinnerne er kåret.');
+  });
+
+  it('tar med bare det som gjenstår', () => {
+    expect(opensWhenNote({ unapproved: ['Jonas Berg'], unacknowledged: [], winnersOpen: false }, 0)).toBe(
+      'Åpner når Jonas Berg er godkjent.',
+    );
+    expect(
+      opensWhenNote({ unapproved: [], unacknowledged: ['Sigrid Aas', 'Tore Lunde'], winnersOpen: true }, 2),
+    ).toBe('Åpner når Sigrid Aas og Tore Lunde er huket av og vinnerne er kåret.');
+  });
+
+  it('skriver opptil tre navn, og et tall fra fire (beslutning 4)', () => {
+    expect(
+      opensWhenNote({ unapproved: ['Ola', 'Kari', 'Per'], unacknowledged: [], winnersOpen: false }, 0),
+    ).toBe('Åpner når Ola, Kari og Per er godkjent.');
+    expect(
+      opensWhenNote({ unapproved: ['Ola', 'Kari', 'Per', 'Pål'], unacknowledged: [], winnersOpen: false }, 0),
+    ).toBe('Åpner når 4 spillere er godkjent.');
+    expect(
+      opensWhenNote(
+        { unapproved: [], unacknowledged: Array.from({ length: 12 }, (_, i) => `S${i}`), winnersOpen: true },
+        2,
+      ),
+    ).toBe('Åpner når 12 spillere er huket av og vinnerne er kåret.');
+  });
+
+  it('sier «vinneren» når runden har én slot (beslutning 5)', () => {
+    expect(opensWhenNote({ unapproved: [], unacknowledged: [], winnersOpen: true }, 1)).toBe(
+      'Åpner når vinneren er kåret.',
+    );
+    expect(opensWhenNote({ unapproved: [], unacknowledged: [], winnersOpen: true }, 3)).toBe(
+      'Åpner når vinnerne er kåret.',
+    );
+  });
+});
+
+describe('resultLine', () => {
+  it('sier hvor mange som står i resultatet, og om alle har levert (beslutning 6)', () => {
+    expect(resultLine(8, 8)).toBe('8 spillere, alle har levert');
+    expect(resultLine(1, 1)).toBe('1 spiller, alle har levert');
+    expect(resultLine(7, 6)).toBe('7 spillere, 6 har levert');
+  });
+});
+
+describe('reminderNote', () => {
+  it('slår sammen notatene og «Sist purret kl. …» med punktum til slutt', () => {
+    const notes = unremindableNotes({ unfinished: 1, guests: 0, splitDay: 0 });
+    expect(reminderNote(notes, '14:05')).toEqual([
+      '1 av dem har ikke ført alle hullene ennå. Purring hjelper først da.',
+      'Sist purret kl. 14:05.',
+    ]);
+    expect(reminderNote(notes, null)).toEqual(notes);
+    expect(reminderNote([], '14:05')).toEqual(['Sist purret kl. 14:05.']);
+    expect(reminderNote([], null)).toEqual([]);
+  });
+});
+
+describe('tilgjengelighets-etikettene', () => {
+  it('navngir kortet godkjenn-knappen gjelder', () => {
+    expect(approveOnBehalfLabel('Jonas Berg')).toBe(
+      'Godkjenn kortet til Jonas Berg på vegne av gruppa',
+    );
+  });
+
+  it('leser slot-raden med vinneren, eller ber om et valg', () => {
+    const slot = { key: 'ctp-1', category: 'closest_to_pin', position: 1 } as const;
+    expect(slotRowLabel(slot, 'Kristian Holm')).toBe(
+      'Nærmest pinnen #1: Kristian Holm. Endre vinner',
+    );
+    expect(slotRowLabel(slot, null)).toBe('Nærmest pinnen #1. Velg vinner');
+  });
+});
+
+describe('toppen og tittelen', () => {
+  it('setter spillnavnet foran det som står etter', () => {
+    expect(endGameKicker('Lørdagsrunden', END_GAME_TEXT.kickerActive)).toBe(
+      'Lørdagsrunden · I gang',
+    );
+    expect(endGameKicker('Lørdagsrunden', null)).toBe('Lørdagsrunden');
+  });
+
+  it('teller spillerne under tittelen, med banen foran når den finnes', () => {
+    expect(titleSubtitle('Byneset North', 8)).toBe('Byneset North · 8 spillere');
+    expect(titleSubtitle(null, 1)).toBe('1 spiller');
+  });
+
+  it('teller i seksjonsoverskriftene og i det sterke kortet', () => {
+    expect(countHeading(END_GAME_TEXT.unapprovedHeading, 1)).toBe('Venter på godkjenning · 1');
+    expect(allDeliveredLine(8)).toBe('8 av 8 kort er levert');
   });
 });

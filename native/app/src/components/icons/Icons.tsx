@@ -219,6 +219,21 @@ export const TilbakeIcon = (props: IconProps) => (
   </LineIcon>
 );
 
+/** Lukk-krysset (#2578, arket for kåringen på designlerretet). */
+export const LukkIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Path d="M6 6l12 12M18 6L6 18" />
+  </LineIcon>
+);
+
+/** Hengelåsen (#2578, lås-linja på bekreft-siden): «noe låses». */
+export const LaasIcon = (props: IconProps) => (
+  <LineIcon {...props}>
+    <Rect x="5" y="11" width="14" height="10" rx="2" />
+    <Path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </LineIcon>
+);
+
 /**
  * Hero-flagget fra webbens tomtilstand på hjem (64×64-rutenett). Stanga i
  * `color`, vimpelen i `accent` — samme to roller som webbens

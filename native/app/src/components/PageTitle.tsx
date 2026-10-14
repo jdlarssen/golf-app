@@ -9,7 +9,8 @@
 // `size` (#2385): scorekortets artboard har en mindre tittel (26 pt) og
 // undertekst (12 pt) enn profil-rommene, i flukt med tekstkolonnen (20 pt fra
 // kanten, uten de 4 pt profilen har inn). «Varsler» har 28 pt (Profil v2).
-// Samme komponent, tre størrelser.
+// «Avslutt runden» (#2578) har 28/14 på lista og 30/15 på bekreft-siden, også
+// i flukt med tekstkolonnen. Samme komponent, fem størrelser.
 import { StyleSheet, Text, View } from 'react-native';
 import { FONTS, fraunces, interLine, useTheme } from '../theme';
 
@@ -24,13 +25,14 @@ export function PageTitle({
   subtitleTestID?: string;
   /**
    * `large`: 30/13 pt («Venner»). `settings`: 28/13 pt («Varsler»,
-   * Profil v2). `medium`: 26/12 pt (scorekortet).
+   * Profil v2). `medium`: 26/12 pt (scorekortet). `endList`: 28/14 pt og
+   * `endConfirm`: 30/15 pt («Avslutt runden» og «Avslutt runden?», #2578).
    */
-  size?: 'large' | 'settings' | 'medium';
+  size?: 'large' | 'settings' | 'medium' | 'endList' | 'endConfirm';
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.block, size === 'medium' && styles.blockMedium]}>
+    <View style={[styles.block, size !== 'large' && size !== 'settings' && styles.blockMedium]}>
       <View style={styles.row}>
         <Text
           accessibilityRole="header"
@@ -38,6 +40,8 @@ export function PageTitle({
             styles.title,
             size === 'medium' && styles.titleMedium,
             size === 'settings' && styles.titleSettings,
+            size === 'endList' && styles.titleEndList,
+            size === 'endConfirm' && styles.titleEndConfirm,
             { color: colors.text },
           ]}
         >
@@ -46,7 +50,13 @@ export function PageTitle({
       </View>
       {subtitle ? (
         <Text
-          style={[styles.subtitle, size === 'medium' && styles.subtitleMedium, { color: colors.muted }]}
+          style={[
+            styles.subtitle,
+            size === 'medium' && styles.subtitleMedium,
+            size === 'endList' && styles.subtitleEndList,
+            size === 'endConfirm' && styles.subtitleEndConfirm,
+            { color: colors.muted },
+          ]}
           testID={subtitleTestID}
         >
           {subtitle}
@@ -58,6 +68,10 @@ export function PageTitle({
 
 const SUBTITLE = interLine(13, 16, { multiline: true });
 const SUBTITLE_MEDIUM = interLine(12, 15, { multiline: true });
+// «Avslutt runden» (#2578): 14 pt med `normal` (17) og 2 pt over; bekreft-siden
+// har 15 pt med linjehøyde 1,45 og 6 pt over.
+const SUBTITLE_END_LIST = interLine(14, 17, { multiline: true });
+const SUBTITLE_END_CONFIRM = interLine(15, 21.75, { multiline: true });
 
 const styles = StyleSheet.create({
   block: { paddingHorizontal: 4 },
@@ -72,4 +86,9 @@ const styles = StyleSheet.create({
   titleMedium: { ...fraunces(500, 26, 32, { multiline: true }) },
   subtitleMedium: { ...SUBTITLE_MEDIUM, marginTop: 2 + SUBTITLE_MEDIUM.marginTop },
   titleSettings: { ...fraunces(500, 28, 34, { multiline: true }) },
+  // Tegningen har `line-height: 1.2` her: 33,6 og 36.
+  titleEndList: { ...fraunces(500, 28, 33.6, { multiline: true }) },
+  titleEndConfirm: { ...fraunces(500, 30, 36, { multiline: true }) },
+  subtitleEndList: { ...SUBTITLE_END_LIST, marginTop: 2 + SUBTITLE_END_LIST.marginTop },
+  subtitleEndConfirm: { ...SUBTITLE_END_CONFIRM, marginTop: 6 + SUBTITLE_END_CONFIRM.marginTop },
 });

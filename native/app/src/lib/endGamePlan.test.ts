@@ -4,11 +4,16 @@
 // Type A — ren logikk, ingen render, ingen nett. Skjermen har én render-test
 // (`screens/EndGame.test.tsx`) som beviser koblingen; tallene og grenene her
 // gjentas ikke der.
+import type { EndRoundFailure } from '../data/endGame';
 import type { BundleGame, BundlePlayer, GameBundle } from '../data/gameBundle';
 import {
   activeChoices,
   buildFinishPlan,
   canFinish,
+  confirmSummary,
+  deliveryCounts,
+  finishBlockers,
+  returnsToList,
   sideSlots,
   toSideWinners,
   winnerCandidates,
@@ -322,4 +327,185 @@ describe('activeChoices (#2284)', () => {
     const choices = { 'ld-1': ME };
     expect(activeChoices(choices, active)).toBe(choices);
   });
+});
+
+// -----------------------------------------------------------------------------
+// #2578: fremdriftskortet, «Åpner når …», bekreft-siden og avslagene
+// -----------------------------------------------------------------------------
+
+const FOURTH = 'user-fourth';
+
+describe('deliveryCounts', () => {
+  it('teller levert, godkjent, venter og mangler — trukne teller ikke', () => {
+    const plan = buildFinishPlan(
+      bundle(
+        [
+          player({ userId: ME, submittedAt: SUBMITTED, approvedAt: APPROVED }),
+          player({ userId: MATE, submittedAt: SUBMITTED }),
+          player({ userId: THIRD }),
+          player({ userId: FOURTH, withdrawnAt: SUBMITTED }),
+        ],
+        { requirePeerApproval: true },
+      ),
+      ME,
+    );
+    expect(deliveryCounts(plan)).toEqual({
+      total: 3,
+      delivered: 2,
+      approved: 1,
+      waiting: 1,
+      missing: 1,
+    });
+  });
+
+  it('har ingen som venter når runden ikke krever godkjenning', () => {
+    const plan = buildFinishPlan(
+      bundle([
+        player({ userId: ME, submittedAt: SUBMITTED }),
+        player({ userId: MATE, submittedAt: SUBMITTED }),
+        player({ userId: THIRD }),
+      ]),
+      ME,
+    );
+    expect(deliveryCounts(plan)).toEqual({
+      total: 3,
+      delivered: 2,
+      approved: 2,
+      waiting: 0,
+      missing: 1,
+    });
+  });
+});
+
+describe('finishBlockers', () => {
+  const sideOn = { sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 1 };
+  const waiting = buildFinishPlan(
+    bundle(
+      [
+        player({ userId: ME, submittedAt: SUBMITTED, approvedAt: APPROVED }),
+        player({ userId: MATE, submittedAt: SUBMITTED }),
+        player({ userId: THIRD }),
+        player({ userId: FOURTH }),
+      ],
+      { requirePeerApproval: true, ...sideOn },
+    ),
+    ME,
+  );
+  const clear = buildFinishPlan(
+    bundle([player({ userId: ME, submittedAt: SUBMITTED })]),
+    ME,
+  );
+
+  it('navngir hvem som venter, hvem som ikke er huket av, og om vinnerne mangler', () => {
+    const blockers = finishBlockers(waiting, new Set([FOURTH]), { 'ld-1': ME });
+    expect(blockers.unapproved.map((p) => p.userId)).toEqual([MATE]);
+    expect(blockers.unacknowledged.map((p) => p.userId)).toEqual([THIRD]);
+    expect(blockers.winnersOpen).toBe(true);
+  });
+
+  it('er tom når alt er gjort', () => {
+    expect(finishBlockers(clear, new Set(), {})).toEqual({
+      unapproved: [],
+      unacknowledged: [],
+      winnersOpen: false,
+    });
+  });
+
+  // Linja under knappen og sperren på knappen må aldri være uenige: en grå
+  // knapp uten grunn, eller en grunn under en grønn knapp, er begge en løgn.
+  it.each([
+    ['venter på godkjenning', waiting, new Set([THIRD, FOURTH]), { 'ld-1': ME, 'ctp-1': NO_WINNER }],
+    ['alt klart', clear, new Set<string>(), {}],
+    ['mangler vinner', buildFinishPlan(bundle([player({ userId: ME, submittedAt: SUBMITTED })], sideOn), ME), new Set<string>(), { 'ld-1': ME }],
+    ['vinnere valgt', buildFinishPlan(bundle([player({ userId: ME, submittedAt: SUBMITTED })], sideOn), ME), new Set<string>(), { 'ld-1': ME, 'ctp-1': NO_WINNER }],
+    ['én uten hake', buildFinishPlan(bundle([player({ userId: ME, submittedAt: SUBMITTED }), player({ userId: MATE })]), ME), new Set<string>(), {}],
+  ] as const)('er enig med canFinish: %s', (_label, plan, acknowledged, choices) => {
+    const blockers = finishBlockers(plan, acknowledged, choices);
+    const empty =
+      blockers.unapproved.length === 0 &&
+      blockers.unacknowledged.length === 0 &&
+      !blockers.winnersOpen;
+    expect(empty).toBe(canFinish(plan, acknowledged, choices));
+  });
+});
+
+describe('confirmSummary', () => {
+  const sideOn = { sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 1 };
+
+  it('regner ut hvem som trekkes, hvem som går uten kort og vinner per slot', () => {
+    // MATE kan trekkes; arrangørens egen rad kan ikke, så den går uten kort.
+    const plan = buildFinishPlan(
+      bundle(
+        [
+          player({ userId: ME }),
+          player({ userId: MATE }),
+          player({ userId: THIRD, submittedAt: SUBMITTED }),
+          player({ userId: FOURTH, submittedAt: SUBMITTED }),
+        ],
+        sideOn,
+      ),
+      ME,
+    );
+    const summary = confirmSummary(plan, new Set([ME, MATE]), {
+      'ld-1': THIRD,
+      'ctp-1': NO_WINNER,
+    });
+    expect(summary.withdrawn.map((p) => p.userId)).toEqual([MATE]);
+    expect(summary.noCard.map((p) => p.userId)).toEqual([ME]);
+    // Beslutning 6: resultatet er de aktive minus dem som trekkes.
+    expect(summary.resultCount).toBe(3);
+    expect(summary.deliveredCount).toBe(2);
+    expect(summary.winners.map((w) => [w.slot.key, w.winner?.userId ?? null])).toEqual([
+      ['ld-1', THIRD],
+      ['ctp-1', null],
+    ]);
+  });
+
+  it('har ingen trukne og ingen uten kort når alle har levert', () => {
+    const plan = buildFinishPlan(
+      bundle([
+        player({ userId: ME, submittedAt: SUBMITTED }),
+        player({ userId: MATE, submittedAt: SUBMITTED }),
+      ]),
+      ME,
+    );
+    expect(confirmSummary(plan, new Set(), {})).toEqual({
+      resultCount: 2,
+      deliveredCount: 2,
+      withdrawn: [],
+      noCard: [],
+      winners: [],
+    });
+  });
+});
+
+describe('returnsToList', () => {
+  // Kartet, ikke en liste, er porten: en ny kode i `EndRoundFailure` uten rad
+  // her gir rød `tsc`, så noen må ta stilling til om den sender tilbake.
+  const EXPECTED = {
+    'no-session': false,
+    offline: false,
+    'not-found': false,
+    'cup-game': false,
+    'not-active': false,
+    'no-players': false,
+    'not-all-submitted': false,
+    'not-all-approved': false,
+    'withdrawal-unsupported': false,
+    'withdraw-after-submit': true,
+    'withdraw-after-submit-partial': true,
+    'db-withdraw': false,
+    'db-winners': false,
+    'winner-withdrawn': true,
+    'rls-denied': false,
+    'no-rows': false,
+    db: false,
+  } satisfies Record<EndRoundFailure, boolean>;
+
+  it.each(Object.entries(EXPECTED) as [EndRoundFailure, boolean][])(
+    '«%s» → %s',
+    (reason, expected) => {
+      expect(returnsToList(reason)).toBe(expected);
+    },
+  );
 });

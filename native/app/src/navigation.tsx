@@ -26,6 +26,7 @@ import { errorBoundaryVariantFor } from './lib/errorBoundaryCopy';
 import { settlePushOwner } from './data/pushDevice';
 import { listenForPushTaps } from './data/pushTaps';
 import type { PushTarget } from './lib/pushRoute';
+import { END_GAME_TEXT } from './lib/endGameCopy';
 import { HOLES_TEXT } from './lib/holesCopy';
 import { APP_NAME_FALLBACK } from './lib/loginCopy';
 import { FRIENDS_TEXT } from './lib/friendsCopy';
@@ -292,7 +293,7 @@ export function RootNavigator() {
         <Stack.Screen
           name="EndGame"
           component={EndGame}
-          options={{ title: 'Avslutt runden' }}
+          options={kickerHeader('', END_GAME_TEXT.heading, { backLabel: END_GAME_TEXT.backToGame })}
         />
         <Stack.Screen
           name="Profile"
