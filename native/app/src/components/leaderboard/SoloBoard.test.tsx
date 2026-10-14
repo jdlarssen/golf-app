@@ -51,6 +51,8 @@ it('tegner live og ferdig tavle i modellens form, og stripas knapp virker', asyn
   expect(screen.getAllByTestId('board-dot')).toHaveLength(6 * 5);
   expect(screen.getByTestId('board-legend')).toBeTruthy();
   expect(screen.getByTestId('board-row-g-holes')).toBeTruthy();
+  // Skjermleseren får radens linje fra modellen, ikke skiltene hver for seg.
+  expect(screen.getByTestId('board-row-g')).toHaveProp('accessibilityLabel', 'g');
 
   await fireEvent.press(screen.getByTestId('board-toggle'));
   expect(screen.getAllByTestId(/^board-row-[a-z]$/)).toHaveLength(8);
