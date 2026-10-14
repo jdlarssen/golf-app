@@ -261,14 +261,16 @@ describe('tekstene', () => {
 });
 
 describe('bunnlinja', () => {
-  // Rulla er 600 pt høy; scorekortets «Lever scorekort» står 1100 pt ned i innholdet.
+  // Rulla er 600 pt høy; scorekortets «Lever scorekort» står 1100 pt ned i
+  // innholdet. Linja ligger over rulla og dekker de nederste 171 pt når den står.
   it.each([
-    { name: 'øverst: knappen er under rulla', g: { scrollY: 0, viewportHeight: 600, submitTop: 1100 }, inView: false },
-    { name: 'knappen står akkurat i underkanten', g: { scrollY: 500, viewportHeight: 600, submitTop: 1100 }, inView: false },
-    { name: 'ett punkt til: knappen er i syne', g: { scrollY: 501, viewportHeight: 600, submitTop: 1100 }, inView: true },
-    { name: 'linja har veket, rulla er høyere', g: { scrollY: 400, viewportHeight: 737, submitTop: 1100 }, inView: true },
-    { name: 'knappens plass er ikke målt ennå', g: { scrollY: 900, viewportHeight: 600, submitTop: null }, inView: false },
-    { name: 'rulla er ikke målt ennå', g: { scrollY: 0, viewportHeight: 0, submitTop: 1100 }, inView: false },
+    { name: 'øverst: knappen er under rulla', g: { scrollY: 0, viewportHeight: 600, submitTop: 1100, coveredBottom: 171 }, inView: false },
+    { name: 'knappen er i rulla, men under linja', g: { scrollY: 600, viewportHeight: 600, submitTop: 1100, coveredBottom: 171 }, inView: false },
+    { name: 'knappen står akkurat i overkanten av linja', g: { scrollY: 671, viewportHeight: 600, submitTop: 1100, coveredBottom: 171 }, inView: false },
+    { name: 'ett punkt til: knappen er over linja', g: { scrollY: 672, viewportHeight: 600, submitTop: 1100, coveredBottom: 171 }, inView: true },
+    { name: 'linja har veket: hele rulla teller', g: { scrollY: 501, viewportHeight: 600, submitTop: 1100, coveredBottom: 0 }, inView: true },
+    { name: 'knappens plass er ikke målt ennå', g: { scrollY: 900, viewportHeight: 600, submitTop: null, coveredBottom: 0 }, inView: false },
+    { name: 'rulla er ikke målt ennå', g: { scrollY: 0, viewportHeight: 0, submitTop: 1100, coveredBottom: 0 }, inView: false },
   ])('$name', ({ g, inView }) => {
     expect(submitInView(g)).toBe(inView);
   });

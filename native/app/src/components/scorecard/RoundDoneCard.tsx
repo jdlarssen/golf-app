@@ -93,6 +93,22 @@ export function RoundDoneCard({ model, onOpenHole }: RoundDoneCardProps) {
   );
 }
 
+// Linjas mål fra tegningen: strek øverst, 12 pt over pillen, pillen på 54, 6
+// mellom knappene, tilbake-knappen på 44 og 20 under, over hjem-streken.
+const BAR_RULE = 1;
+const BAR_PAD_TOP = 12;
+const BAR_REVIEW = 54;
+const BAR_GAP = 6;
+const BAR_PAD_BOTTOM = 20;
+
+/**
+ * Hvor høy linja er, hjem-streken med. Skjermen gir innholdet like mye luft
+ * nederst, så linja aldri dekker det siste i rulla.
+ */
+export function roundDoneBarHeight(insetBottom: number): number {
+  return BAR_RULE + BAR_PAD_TOP + BAR_REVIEW + BAR_GAP + TAP + BAR_PAD_BOTTOM + insetBottom;
+}
+
 export interface RoundDoneBarProps {
   /** «Se over og lever scorekortet»: ruller ned til scorekortet. */
   onReview: () => void;
@@ -103,7 +119,7 @@ export interface RoundDoneBarProps {
 /**
  * Den faste linja nederst (tegningen: krem flate, strek øverst, 12 pt over,
  * 16 på sidene og 20 under knappene, over hjem-streken), som på
- * godkjenningsskjermen.
+ * godkjenningsskjermen. Den ligger over rulla, festet til bunnen.
  */
 export function RoundDoneBar({ onReview, onBack }: RoundDoneBarProps) {
   const { colors } = useTheme();
@@ -112,7 +128,11 @@ export function RoundDoneBar({ onReview, onBack }: RoundDoneBarProps) {
     <View
       style={[
         styles.bar,
-        { backgroundColor: colors.bg, borderTopColor: colors.border, paddingBottom: 20 + insets.bottom },
+        {
+          backgroundColor: colors.bg,
+          borderTopColor: colors.border,
+          paddingBottom: BAR_PAD_BOTTOM + insets.bottom,
+        },
       ]}
       testID="round-done-bar"
     >
@@ -335,9 +355,17 @@ const styles = StyleSheet.create({
   // Luft ned til scorekortet under (med rullas gap blir det 24); tegningen har
   // ingenting der, for linja står over.
   root: { paddingBottom: 16 },
-  // Designets linje: strek øverst, 12 pt over, 16 på sidene, 6 mellom knappene.
-  bar: { borderTopWidth: 1, paddingTop: 12, paddingHorizontal: 16, gap: 6 },
-  review: { height: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  bar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopWidth: BAR_RULE,
+    paddingTop: BAR_PAD_TOP,
+    paddingHorizontal: 16,
+    gap: BAR_GAP,
+  },
+  review: { height: BAR_REVIEW, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   reviewText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
   back: { height: TAP, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   backText: { fontSize: 14, fontFamily: FONTS.sansSemiBold },
