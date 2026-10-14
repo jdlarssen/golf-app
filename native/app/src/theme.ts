@@ -539,6 +539,20 @@ export function withAlpha(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
+/**
+ * Hinnen bak et ark (#2577, designlerretet `--scrim`): skogblekket med 45 % i
+ * lys drakt, og svart med 55 % i klubbhus-natt. Ingen rolle i paletten er
+ * svart, så natt-verdien står her og ikke i `PALETTES`.
+ */
+export function sheetScrim(colors: ThemeColors, scheme: Scheme): string {
+  return scheme === 'dark' ? 'rgba(0, 0, 0, 0.55)' : withAlpha(colors.text, 0.45);
+}
+
+/** Grep-streken øverst på et ark (#2577, designlerretet `--grabber`). */
+export function sheetGrabber(scheme: Scheme): string {
+  return scheme === 'dark' ? '#3D4F43' : '#C9C1AE';
+}
+
 /** De delte stilene, bygget én gang per palett. `borderW` er kanten sollys gjør tykkere. */
 const createUi = (c: ThemeColors, { borderW = 1 }: { borderW?: number } = {}) =>
   StyleSheet.create({

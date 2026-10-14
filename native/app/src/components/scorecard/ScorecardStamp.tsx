@@ -16,7 +16,7 @@
 // Skoggrønt (`primary`), ikke gull: gull er seier i Tørny, og et levert kort er
 // ikke en seier. Hvilke linjer som vises, avgjør den delte
 // `resolveScorecardStamp`; her blir de bare tekst.
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ScorecardStamp as Stamp } from '../../../../../lib/scorecard/scorecardStamp';
 import { formatSignedAt, formatStampDateLocal } from '../../lib/display';
 import { FONTS, fraunces, useTheme, withAlpha } from '../../theme';
@@ -117,13 +117,16 @@ export function ScorecardStampMark({
 export function ScorecardStatusList({
   stamp,
   ownerFullName,
+  style,
 }: {
   stamp: Stamp;
   ownerFullName: string | null;
+  /** Plasseringen der lista står et annet sted enn under kortet (godkjenningen, #2577). */
+  style?: StyleProp<ViewStyle>;
 }) {
   const copy = stampCopy(stamp, ownerFullName);
   return (
-    <View style={styles.checklist} testID="scorecard-stamp-section">
+    <View style={[styles.checklist, style]} testID="scorecard-stamp-section">
       <StatusLine done text={copy.signedBy} testID="scorecard-signed-by" />
       {copy.approval ? (
         <StatusLine

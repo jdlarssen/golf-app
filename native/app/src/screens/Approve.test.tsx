@@ -16,6 +16,9 @@ import type { ScreenProps } from '../navigation';
 import { Approve } from './Approve';
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/gameBundle', () => ({
