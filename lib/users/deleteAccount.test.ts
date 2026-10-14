@@ -35,7 +35,7 @@ function makeBuilder(table: string) {
   const result = () =>
     Promise.resolve(state.tables[table] ?? { data: null, error: null });
   const proxy: Record<string, unknown> = {};
-  for (const m of ['select', 'eq', 'neq', 'is', 'not', 'in', 'limit']) {
+  for (const m of ['select', 'delete', 'filter', 'eq', 'neq', 'is', 'not', 'in', 'limit']) {
     proxy[m] = (...args: unknown[]) => {
       call.filters.push({ method: m, args });
       return proxy;
@@ -94,6 +94,47 @@ describe('deleteOrAnonymizeUser', () => {
     const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
     expect(result).toEqual({ ok: true, mode: 'hard' });
     expect(state.deleteUser).toHaveBeenCalledExactlyOnceWith(USER_ID);
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+
+  // #2561: invitations to the address have no FK to the user, so the
+  // cascade from the hard delete never reaches them. They go first, matched
+  // exactly and case-insensitively, the way anonymize_user matches them.
+  it('deletes the invitations to the address before a hard delete', async () => {
+    state.tables = {
+      users: { data: { deleted_at: null, email: 'Ola.N@example.test' } },
+      game_players: { count: 0 },
+    };
+    let tablesBeforeDelete: string[] = [];
+    state.deleteUser.mockImplementation(async () => {
+      tablesBeforeDelete = queriedTables();
+      return { data: null, error: null };
+    });
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: true, mode: 'hard' });
+    expect(tablesBeforeDelete).toEqual(
+      expect.arrayContaining(['invitations', 'club_invitations']),
+    );
+    for (const table of ['invitations', 'club_invitations']) {
+      expect(filtersFor(table)).toEqual(
+        expect.arrayContaining([
+          { method: 'delete', args: [] },
+          { method: 'filter', args: ['email', 'imatch', '^Ola\\.N@example\\.test$'] },
+        ]),
+      );
+    }
+  });
+
+  it('stops before the hard delete when the invitations cannot be deleted', async () => {
+    state.tables = {
+      users: { data: { deleted_at: null, email: 'ola@example.test' } },
+      game_players: { count: 0 },
+      club_invitations: { data: null, error: { message: 'boom' } },
+    };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+    expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(state.deleteUser).not.toHaveBeenCalled();
     expect(state.rpc).not.toHaveBeenCalled();
   });
 

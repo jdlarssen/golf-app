@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { expireGameCache } from '@/lib/games/expireGameCache';
+import { emailMatchPattern } from '@/lib/supabase/emailMatch';
 
 /**
  * Konto-sletting for #1012, delt mellom selv-slett (`/profile/slett-konto`) og
@@ -11,8 +12,9 @@ import { expireGameCache } from '@/lib/games/expireGameCache';
  * FK-ene fra `game_players`/`scores`/`invitations`/`games.created_by`
  * blokkerer for alle som har spilt. Regelen her:
  *
- *   0 game_players-rader  → forsøk hard delete (full sletting, kaskade rydder
- *                           alt); feiler den på en rest-FK (f.eks. sendte
+ *   0 game_players-rader  → slett invitasjonene til e-postadressen, så forsøk
+ *                           hard delete (full sletting, kaskade rydder resten);
+ *                           feiler den på en rest-FK (f.eks. sendte
  *                           invitasjoner) → fall tilbake til anonymisering.
  *   ≥1 game_players-rad   → anonymiser direkte (spillhistorikk beholdes).
  *
@@ -165,7 +167,7 @@ export async function deleteOrAnonymizeUser(
 
   const { data: target, error: targetError } = await admin
     .from('users')
-    .select('deleted_at')
+    .select('deleted_at, email')
     .eq('id', userId)
     .maybeSingle();
   if (targetError) {
@@ -195,6 +197,26 @@ export async function deleteOrAnonymizeUser(
   }
 
   if (gpCount === 0) {
+    // #2561: invitasjonene til adressen har ingen FK til brukeren, så kaskaden
+    // under når dem aldri. `anonymize_user` sletter dem på sin sti; her må de
+    // gå først, mens e-posten fortsatt er kjent. Null rader er greit (ingen
+    // invitasjoner); en feil stopper slettingen, så brukeren kan prøve igjen.
+    if (target?.email) {
+      const pattern = emailMatchPattern(target.email);
+      const [gameInvites, clubInvites] = await Promise.all([
+        admin.from('invitations').delete().filter('email', 'imatch', pattern).select('id'),
+        admin.from('club_invitations').delete().filter('email', 'imatch', pattern).select('id'),
+      ]);
+      if (gameInvites.error || clubInvites.error) {
+        console.error(`${logPrefix} invitations delete failed`, {
+          userId,
+          invitations: gameInvites.error,
+          clubInvitations: clubInvites.error,
+        });
+        return { ok: false, reason: 'failed' };
+      }
+    }
+
     // Aldri spilt → full sletting. Kaskaden rydder public.users + CASCADE-barna.
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (!error) return { ok: true, mode: 'hard' };
