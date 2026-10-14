@@ -11,6 +11,7 @@
 // resultatets (`soloResultBoard`); plass, leder, navn i en setning og enheten
 // er de delte reglene i `lib/leaderboard/`; stripas knapp er Hjem-kortets
 // (`buildHeroModel`).
+import { STATUS_LABELS } from '../../../../lib/games/status';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import {
   boardShowsRank,
@@ -274,11 +275,15 @@ function liveBoard(
     };
   }
 
+  // Som webbens tavle: et planlagt spill sier «Planlagt» (statusens navn), og
+  // prikken står bare mens runden pågår.
+  const scheduled = bundle.game.status === 'scheduled';
   return {
     variant: 'live',
     pill: {
-      text:
-        board.holesPlayed === 0
+      text: scheduled
+        ? STATUS_LABELS.scheduled
+        : board.holesPlayed === 0
           ? BOARD_TEXT.pillLive
           : formatMessage(BOARD_TEXT.pillLiveAfter, { holes: board.holesPlayed }),
       live: bundle.game.status === 'active',

@@ -88,6 +88,15 @@ describe('soloBoardFor — live', () => {
     });
   });
 
+  it('says «Planlagt» without the dot on a scheduled game, as the web board does', () => {
+    const scheduled = soloBoardFor({
+      bundle: homeBundle({ game: { status: 'scheduled' }, players }),
+      scores,
+      userId: ME,
+    })!;
+    expect(scheduled.pill).toEqual({ text: 'Planlagt', live: false });
+  });
+
   it('has only the place for the leader, and no strip for someone not on the board', () => {
     const leader = soloBoardFor({ bundle: homeBundle({ players }), scores, userId: 'marte' })!;
     expect(leader.strip?.text).toBe('1. plass');
