@@ -1391,7 +1391,15 @@ const styles = StyleSheet.create({
   strongBody: { ...interLine(14, 20.3, { multiline: true }), fontFamily: FONTS.sans },
 
   // Godkjenningskortene.
-  approveCard: { paddingTop: 10, paddingRight: 12, paddingBottom: 12, paddingLeft: 14, gap: 8 },
+  // `stack` står alt 16 inn fra kanten; kortet skal ikke legge til sine egne 16.
+  approveCard: {
+    marginHorizontal: 0,
+    paddingTop: 10,
+    paddingRight: 12,
+    paddingBottom: 12,
+    paddingLeft: 14,
+    gap: 8,
+  },
   approveHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dot: { width: 10, height: 10, borderRadius: 999, flexShrink: 0 },
   name15: { ...NAME_15, fontFamily: FONTS.sansSemiBold },
