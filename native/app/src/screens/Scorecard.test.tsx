@@ -33,6 +33,11 @@
 //  5. **Kortet og stempelet (#2262).** Før levering: UT og INN, og ikke noe
 //     stempel. Etter levering: stempel og godkjenningslinje. Tallene er
 //     `scorecardGrid`- og `scorecardStamp`-testenes; her låses bare koblingen.
+//  6. **Oppsummeringen og linja nederst (#2299).** Med alle 18 hull ført står
+//     oppsummeringen og linja med «Se over og lever scorekortet». Ruller du
+//     så langt at «Lever scorekort» kommer over linja, viker den, og ruller du
+//     opp igjen, kommer den tilbake. Uten oppsummering står ingen linje.
+//     Regelen selv er `roundDone.test.ts` sin; her låses koblingen til rulla.
 //
 // Innlesingen ved fokus testes ikke: mocken under gjør `useFocusEffect` om til
 // `useEffect`, så testen kan ikke skille fokus fra mount.
@@ -146,12 +151,16 @@ const mockDeliveredBundle = {
 const HIDDEN = { includeHiddenElements: true };
 
 // Navnet må starte med `mock`: jest.mock-factoryene heises over importene.
-const mockState: { bundle: unknown; queue: Promise<unknown[]> } = {
+const mockState: { bundle: unknown; queue: Promise<unknown[]>; scores: unknown[] } = {
   bundle: mockBundle,
   queue: Promise.resolve([]),
+  scores: [],
 };
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/gameBundle', () => ({
@@ -170,7 +179,7 @@ jest.mock('../data/syncWorker', () => ({ drainQueue: jest.fn(async () => undefin
 jest.mock('../data/db', () => ({
   getDb: jest.fn(async () => ({})),
   listQueue: jest.fn(() => mockState.queue),
-  listScoresForGame: jest.fn(async () => []),
+  listScoresForGame: jest.fn(async () => mockState.scores),
 }));
 jest.mock('../session', () => ({
   useSession: () => ({ userId: 'me', email: 'meg@example.test' }),
@@ -233,6 +242,8 @@ describe('Scorecard', () => {
     // knappen (#2200): laget med én ball leveres som ett lag.
     expect(screen.queryByTestId('submit-scorecard')).toBeNull();
     expect(screen.queryByTestId('submit-flight')).toBeNull();
+    // Ingen hull ført: ingen oppsummering, og ingen linje (#2299).
+    expect(screen.queryByTestId('round-done-bar')).toBeNull();
 
     // #2220: kortet kan rettes før det leveres. Knappen går til hull 1, og
     // hull-stripen tar spilleren videre derfra.
@@ -256,6 +267,52 @@ describe('Scorecard', () => {
       expect(screen.getByTestId('total-poeng')).toBeTruthy();
     });
     expect(screen.getByTestId('total-netto')).toBeTruthy();
+
+    // #2299: alle 18 hull ført. Oppsummeringen og linja står. Rulla er 600 pt
+    // høy og «Lever scorekort» står 1100 pt ned; linja dekker de nederste
+    // 137 pt (ingen hjem-strek i testen).
+    mockState.scores = Array.from({ length: 18 }, (_, i) => ({
+      id: `game-5:me:${i + 1}`,
+      gameId: 'game-5',
+      userId: 'me',
+      holeNumber: i + 1,
+      strokes: 4,
+      putts: null,
+      enteredBy: 'me',
+      clientUpdatedAt: '2026-09-01T10:00:00.000Z',
+      serverUpdatedAt: '2026-09-01T10:00:00.000Z',
+    }));
+    mockState.bundle = {
+      ...mockRevealBundle,
+      game: { ...mockRevealBundle.game, id: 'game-5', scoreVisibility: 'live' },
+    };
+    await rerender(scorecardElement('game-5', navigate));
+    await waitFor(() => {
+      expect(screen.getByTestId('round-done-card')).toBeTruthy();
+    });
+    expect(screen.getByTestId('round-done-bar')).toBeTruthy();
+    await fireEvent(screen.getByTestId('scorecard-screen'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 600 } },
+    });
+    await fireEvent(screen.getByTestId('submit-scorecard'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 1100, width: 350, height: 44 } },
+    });
+    // Knappen er i rulla, men fortsatt under linja: linja står.
+    await fireEvent.scroll(screen.getByTestId('scorecard-screen'), {
+      nativeEvent: { contentOffset: { x: 0, y: 600 } },
+    });
+    expect(screen.getByTestId('round-done-bar')).toBeTruthy();
+    // Knappen er over linja: linja viker.
+    await fireEvent.scroll(screen.getByTestId('scorecard-screen'), {
+      nativeEvent: { contentOffset: { x: 0, y: 700 } },
+    });
+    expect(screen.queryByTestId('round-done-bar')).toBeNull();
+    // Opp igjen: linja er tilbake.
+    await fireEvent.scroll(screen.getByTestId('scorecard-screen'), {
+      nativeEvent: { contentOffset: { x: 0, y: 0 } },
+    });
+    expect(screen.getByTestId('round-done-bar')).toBeTruthy();
+    mockState.scores = [];
 
     // #2219: en blind runde som pågår. Netto og tildelte slag er borte til
     // arrangøren avslutter, som på nettsiden. Brutto står.

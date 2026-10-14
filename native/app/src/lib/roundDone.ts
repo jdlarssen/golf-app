@@ -281,16 +281,18 @@ export function missingSpoken(row: { name: string; holes: readonly number[]; fir
 
 /**
  * Er scorekortets egen «Lever scorekort» kommet til syne i rulla? Toppen av
- * knappen (i innholdets koordinater) er over underkanten av det synlige
- * vinduet. Før knappen eller rulla er målt, er svaret nei.
+ * knappen (i innholdets koordinater) er over det som dekker rulla nederst:
+ * linja når den står (`coveredBottom`), ellers underkanten. Før knappen eller
+ * rulla er målt, er svaret nei.
  */
 export function submitInView(g: {
   scrollY: number;
   viewportHeight: number;
   submitTop: number | null;
+  coveredBottom: number;
 }): boolean {
   if (g.submitTop == null || g.viewportHeight <= 0) return false;
-  return g.submitTop < g.scrollY + g.viewportHeight;
+  return g.submitTop < g.scrollY + g.viewportHeight - g.coveredBottom;
 }
 
 /**
@@ -298,9 +300,11 @@ export function submitInView(g: {
  * og viker når scorekortets egen leverknapp er i syne: to leverknapper på
  * skjermen samtidig er ikke lov (eierens valg B, #2299).
  *
- * Linja ligger under rulla, ikke over den. Når den viker, blir rulla høyere,
- * og knappen er fortsatt i syne; når den kommer tilbake, blir rulla lavere,
- * og knappen er fortsatt ute av syne. Derfor blinker den ikke på grensen.
+ * Linja ligger over rulla, og innholdet har like mye luft nederst som linja er
+ * høy, så rulla er like stor om linja står eller ikke: ingenting hopper når
+ * den kommer eller går. Når den viker, er knappen fortsatt i syne (ingenting
+ * dekker den lenger); når den kommer tilbake, er knappen fortsatt under den.
+ * Derfor blinker den ikke på grensen.
  */
 export function roundDoneBarVisible(opts: { hasSummary: boolean; submitInView: boolean }): boolean {
   return opts.hasSummary && !opts.submitInView;
