@@ -130,6 +130,7 @@ jest.mock('../data/db', () => ({
 jest.mock('@react-navigation/native', () => ({
 
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
+  useIsFocused: () => true,
 }));
 
 /** Verdien i én celle, som tekst. */

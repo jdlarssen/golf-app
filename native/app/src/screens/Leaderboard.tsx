@@ -14,6 +14,8 @@
 // #2579: slagspill og solo stableford har tavla fra designlerretet. Båndet er
 // navigatorens header (`boardHeader`), så pila står i alle tilstander; stripa
 // nederst ligger fast utenfor rullingen.
+import { useIsFocused } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -149,6 +151,9 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   const { colors, ui } = useTheme();
   const { userId } = useSession();
   const insets = useSafeAreaInsets();
+  // Båndet er skog i begge drakter, så statuslinja over det er lys. Bare mens
+  // skjermen er i fokus, ellers blir den hengende på skjermen over (Hole.tsx).
+  const focused = useIsFocused();
   const { gameId } = route.params;
   // #2201: «resultatet er klart» er lest når du har sett tavla.
   useMarkVisitRead('gameLeaderboard', gameId);
@@ -219,6 +224,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
     const strip = soloBoard?.strip ?? null;
     return (
       <View style={[styles.screen, { backgroundColor: colors.bg }]}>
+        {focused ? <StatusBar style="light" /> : null}
         <ScrollView
           contentContainerStyle={[
             styles.boardScroll,
