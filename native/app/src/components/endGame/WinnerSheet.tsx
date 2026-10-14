@@ -118,7 +118,9 @@ export function WinnerSheet({
                     onPress={() => pick(player.userId)}
                     style={[
                       styles.row,
+                      // Tegningens rad er 48 pluss streken under (content-box).
                       index < candidates.length - 1 && {
+                        minHeight: 49,
                         borderBottomWidth: 1,
                         borderBottomColor: colors.divider,
                       },
@@ -164,7 +166,7 @@ export function WinnerSheet({
             <View style={styles.noneText}>
               <Text
                 style={[
-                  styles.name,
+                  styles.noneName,
                   value === NO_WINNER && styles.nameChecked,
                   { color: colors.text },
                 ]}
@@ -257,6 +259,8 @@ const styles = StyleSheet.create({
   },
   name: { ...interLine(16, 20), fontFamily: FONTS.sans, flexGrow: 1, flexShrink: 1 },
   nameChecked: { fontFamily: FONTS.sansSemiBold },
+  // Uten `flexGrow`: i kolonnen under ville den strukket linja i høyden.
+  noneName: { ...interLine(16, 20), fontFamily: FONTS.sans },
   radio: {
     width: 22,
     height: 22,
