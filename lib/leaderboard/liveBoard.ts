@@ -311,7 +311,14 @@ export function viewerStanding(board: LiveBoard, userId: string): ViewerStanding
   };
 }
 
-function gapToLead(unit: LiveBoardUnit, me: LiveBoardRow, leaders: LiveBoardRow[]): number | null {
+type GapRow = Pick<LiveBoardRow, 'rank' | 'total' | 'holesPlayed'>;
+
+/**
+ * Points or strokes behind the lead, or `null` when the row leads or a
+ * leader cannot be compared (`comparableGap`). The live strip and the
+ * finished board's strip (#2579) read this one rule.
+ */
+export function gapToLead(unit: LiveBoardUnit, me: GapRow, leaders: readonly GapRow[]): number | null {
   if (me.rank === 1 || me.total === null || leaders.length === 0) return null;
   const gaps = leaders.map((l) => comparableGap(unit, me, l));
   return gaps.some((g) => g === null) ? null : gaps[0];
