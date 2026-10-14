@@ -172,7 +172,7 @@ export default async function PrivacyPage() {
             <li>{t.rich('legalBasisInvitations', { term })}</li>
             <li>{t.rich('legalBasisGuests', { term })}</li>
             <li>{t.rich('legalBasisAnalytics', { term })}</li>
-            <li>{t.rich('legalBasisAfterDeletion', { term })}</li>
+            <li>{t.rich('legalBasisAfterDeletion', { term, link: deletePageLink })}</li>
           </ul>
         </section>
 
