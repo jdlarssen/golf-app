@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { LiveBoardRow } from '@/lib/leaderboard/liveBoard';
+import { boardRow as row } from '@/lib/leaderboard/__fixtures__/boardRow';
 import {
   COLLAPSED_ROWS,
   boardRowSrParts,
@@ -13,20 +14,6 @@ import {
 // Team rows (keyed on their team number) go through the same rules as player
 // rows (keyed on their userId).
 
-function row(userId: string, name: string, rank: number): LiveBoardRow {
-  return {
-    userId,
-    name,
-    nickname: null,
-    rank,
-    tied: false,
-    total: 30 - rank,
-    holesPlayed: 9,
-    movement: null,
-    recent: [],
-    recentHoles: [],
-  };
-}
 
 type TeamRow = { teamNumber: number; name: string; rank: number; tied: boolean; holesPlayed: number };
 const team = (teamNumber: number, rank: number): TeamRow => ({

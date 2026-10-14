@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createTranslator } from 'next-intl';
 import messages from '@/messages/no.json';
 import type { LiveBoardRow } from '@/lib/leaderboard/liveBoard';
+import { boardRow as row } from '@/lib/leaderboard/__fixtures__/boardRow';
 import {
   behindLeaderText,
   boardDisplayName,
@@ -20,20 +21,6 @@ const tf = createTranslator({ locale: 'no', messages, namespace: 'spectate.follo
 const t = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.board' }) as unknown as BoardT;
 const tc = createTranslator({ locale: 'no', messages, namespace: 'leaderboard.common' }) as unknown as BoardCommonT;
 
-function row(userId: string, name: string, rank: number): LiveBoardRow {
-  return {
-    userId,
-    name,
-    nickname: null,
-    rank,
-    tied: false,
-    total: 30 - rank,
-    holesPlayed: 9,
-    movement: null,
-    recent: [],
-    recentHoles: [],
-  };
-}
 
 describe('followTotalLabel — the big total on the follow page', () => {
   it.each([
