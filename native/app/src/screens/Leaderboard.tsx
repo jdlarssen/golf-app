@@ -210,6 +210,7 @@ export function Leaderboard({ route, navigation }: ScreenProps<'Leaderboard'>) {
   if (!bundle || choicesPending) {
     return (
       <View style={ui.centered} testID="leaderboard-loading">
+        {boardFormat && focused ? <StatusBar style="light" /> : null}
         {loading || bundle ? (
           <ActivityIndicator color={colors.primary} testID="leaderboard-spinner" />
         ) : (
