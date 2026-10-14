@@ -61,7 +61,7 @@ import {
 } from '../../../../lib/games/visibility';
 import { nameInitials } from '../../../../lib/names/initials';
 import { buildScorecardGrid, stablefordPointsFnFor } from '../../../../lib/scorecard/scorecardGrid';
-import { resolveScorecardStamp, type StampPlayer } from '../../../../lib/scorecard/scorecardStamp';
+import { resolveScorecardStamp } from '../../../../lib/scorecard/scorecardStamp';
 import type { GameMode, ScoringGender } from '../../../../lib/scoring/modes/types';
 import { modeCollapsesToTeamCard } from '../../../../lib/scoring/modes/types';
 import { isActiveForGame } from '../../../../lib/sync/queueScope';
@@ -77,7 +77,6 @@ import {
   ScorecardStatusList,
 } from '../components/scorecard/ScorecardStamp';
 import { ScorecardTotals } from '../components/scorecard/ScorecardTotals';
-import type { BundlePlayer } from '../data/gameBundle';
 import { getDb, listQueue } from '../data/db';
 import { submitCard } from '../data/submitCard';
 import { drainQueue } from '../data/syncWorker';
@@ -93,6 +92,7 @@ import {
   flightDeliveryLines,
   partialDeliveryNotice,
   toRoster,
+  toStampPlayers,
 } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
 import {
@@ -118,21 +118,6 @@ import { useMarkVisitRead } from '../lib/useMarkVisitRead';
 
 const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
-
-/** Rosteret i formen den delte stempel-regelen leser. */
-function toStampPlayers(players: readonly BundlePlayer[]): StampPlayer[] {
-  return players.map((player) => ({
-    user_id: player.userId,
-    flight_number: player.flightNumber,
-    withdrawn_at: player.withdrawnAt,
-    submitted_at: player.submittedAt,
-    submitted_by_user_id: player.submittedByUserId,
-    approved_at: player.approvedAt,
-    approved_by_user_id: player.approvedByUserId ?? null,
-    name: player.name,
-    nickname: player.nickname,
-  }));
-}
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const { ui } = useTheme();
