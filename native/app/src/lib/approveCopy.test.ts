@@ -1,6 +1,13 @@
 // #2577: tekstene på godkjenningen (Type A). Ordlyden er designlerretets
 // (rad 68 «Godkjenningen i appen»).
-import { notifiedLine, pendingHeading, positionLabel, rejectSheetText } from './approveCopy';
+import {
+  approvedLine,
+  deliveredLine,
+  notifiedLine,
+  pendingHeading,
+  positionLabel,
+  rejectSheetText,
+} from './approveCopy';
 
 describe('notifiedLine', () => {
   it.each([
@@ -26,6 +33,19 @@ describe('overskriften og plassen', () => {
 
   it('«2 av 3»', () => {
     expect(positionLabel(2, 3)).toBe('2 av 3');
+  });
+});
+
+describe('linjene under navnet i radene', () => {
+  // Uten synlige slag faller tallet bort (beslutning 3); uten tidspunkt står ordet alene.
+  it.each([
+    [deliveredLine('14:35', 72), 'Levert 14:35 · 72 slag'],
+    [deliveredLine('14:35', null), 'Levert 14:35'],
+    [deliveredLine(null, null), 'Levert'],
+    [approvedLine('14:41'), 'Godkjent 14:41'],
+    [approvedLine(null), 'Godkjent'],
+  ])('«%s»', (actual, expected) => {
+    expect(actual).toBe(expected);
   });
 });
 
