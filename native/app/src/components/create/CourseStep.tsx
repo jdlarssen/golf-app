@@ -18,8 +18,9 @@ import DateTimePicker, {
   type DateTimePickerChangeEvent,
 } from '@react-native-community/datetimepicker';
 import type { CourseOption } from '../../data/createGame';
-import { formatTeeOff } from '../../lib/display';
-import { openAndroidTeeOff } from '../../lib/teeOffPicker';
+import { formatClock, formatTeeOff } from '../../lib/display';
+import { formatWeekdayDayMonth } from '../../lib/homeDates';
+import { openAndroidTeeOffDate, openAndroidTeeOffTime } from '../../lib/teeOffPicker';
 import { useTheme } from '../../theme';
 import { WebLinkButton } from '../WebLinkButton';
 import { Field, SelectRow } from './primitives';
@@ -86,21 +87,10 @@ export function CourseStep({
     onTeeOff(date);
   }
 
-  // Android har ikke `mode="datetime"` (#2560): to dialoger etter hverandre,
-  // dato og så klokkeslett, i stedet for den inline pickeren.
+  // Android har ikke `mode="datetime"` (#2560): to rader, dato og klokkeslett
+  // (eierens valg 14.10: «To rader»), hver med sin dialog, i stedet for den
+  // inline pickeren.
   const isAndroid = Platform.OS === 'android';
-  function handleTeeOffPress(): void {
-    if (isAndroid) {
-      openAndroidTeeOff({
-        value: teeOff,
-        minimumDate: new Date(),
-        onPick: onTeeOff,
-        open: DateTimePickerAndroid.open,
-      });
-      return;
-    }
-    setPickerOpen((open) => !open);
-  }
 
   return (
     <View testID="create-step-course">
@@ -217,13 +207,43 @@ export function CourseStep({
       ) : null}
 
       <Field label="Tee-off">
-        <SelectRow
-          testID="create-teeoff-open"
-          title={formatTeeOff(teeOff.toISOString()) ?? 'Velg tidspunkt'}
-          subtitle={pickerOpen ? 'Lukk når du er ferdig' : 'Trykk for å endre'}
-          selected={pickerOpen}
-          onPress={handleTeeOffPress}
-        />
+        {isAndroid ? (
+          <>
+            <SelectRow
+              testID="create-teeoff-date"
+              title={formatWeekdayDayMonth(teeOff)}
+              subtitle="Dato · trykk for å endre"
+              onPress={() =>
+                openAndroidTeeOffDate({
+                  value: teeOff,
+                  minimumDate: new Date(),
+                  onPick: onTeeOff,
+                  open: DateTimePickerAndroid.open,
+                })
+              }
+            />
+            <SelectRow
+              testID="create-teeoff-time"
+              title={formatClock(teeOff.toISOString()) ?? 'Velg klokkeslett'}
+              subtitle="Klokkeslett · trykk for å endre"
+              onPress={() =>
+                openAndroidTeeOffTime({
+                  value: teeOff,
+                  onPick: onTeeOff,
+                  open: DateTimePickerAndroid.open,
+                })
+              }
+            />
+          </>
+        ) : (
+          <SelectRow
+            testID="create-teeoff-open"
+            title={formatTeeOff(teeOff.toISOString()) ?? 'Velg tidspunkt'}
+            subtitle={pickerOpen ? 'Lukk når du er ferdig' : 'Trykk for å endre'}
+            selected={pickerOpen}
+            onPress={() => setPickerOpen((open) => !open)}
+          />
+        )}
         {pickerOpen ? (
           <DateTimePicker
             testID="create-teeoff-picker"
