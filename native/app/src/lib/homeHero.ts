@@ -23,9 +23,11 @@ import type { ScoreVisibility } from '../../../../lib/games/visibility';
 import {
   computeLiveBoard,
   viewerStanding,
+  type LiveBoard,
   type LiveBoardUnit,
   type ViewerStanding,
 } from '../../../../lib/leaderboard/liveBoard';
+import type { HoleSegment } from '../../../../lib/scoring/holeSegment';
 import { modeCollapsesToTeamCard, type GameMode } from '../../../../lib/scoring/modes/types';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
@@ -95,32 +97,47 @@ export interface HeroModel {
 }
 
 /**
- * Plassen på tavla for meg. `null` når tavla ikke viser noe for spillet, når
- * `mode_config` peker på et annet format (samme «nei» som resultattabellen),
- * og når jeg ikke har spilt et hull ennå: da sier en plass ingenting.
+ * Tavla for spillet (#2253, #2579), matet med de samme radene appens
+ * resultattabell får (`scoringContext.ts`). Den ene materen: Hjem-kortet og
+ * Resultater-skjermen leser begge herfra. `null` når tavla ikke viser noe for
+ * spillet, og når `mode_config` peker på et annet format (samme «nei» som
+ * resultattabellen).
+ *
+ * `scores` er foldet (`foldLocalScores`, på tavla `useTeamScores`), aldri rå
+ * lokale rader. Bundelen kjenner ikke `start_type`, så siste fem hull og
+ * pilene følger hullrekkefølgen fra hull 1, også på en gunstart.
  */
-function liveStanding(
-  bundle: GameBundle,
-  scores: readonly LocalScore[],
-  userId: string,
-): { standing: ViewerStanding; unit: LiveBoardUnit } | null {
+export function liveBoardFor(bundle: GameBundle, scores: readonly LocalScore[]): LiveBoard | null {
   if (bundle.holes.length === 0) return null;
   const mode = bundle.game.gameMode as GameMode;
   const modeConfig = asModeConfig(mode, bundle.game.modeConfig);
   if (modeConfig === null) return null;
   const players = toPlayerRows(bundle);
-  const board = computeLiveBoard({
+  return computeLiveBoard({
     gameId: bundle.game.id,
     game: {
       game_mode: mode,
       mode_config: modeConfig,
       status: bundle.game.status as GameStatus,
       score_visibility: bundle.game.scoreVisibility as ScoreVisibility,
+      hole_segment: bundle.game.holeSegment as HoleSegment,
     },
     players,
     holesRows: toHoleRows(bundle),
     scoresRows: toScoreRows(scores, new Set(players.map((p) => p.user_id))),
   });
+}
+
+/**
+ * Plassen på tavla for meg. `null` når tavla ikke viser noe for spillet, og
+ * når jeg ikke har spilt et hull ennå: da sier en plass ingenting.
+ */
+function liveStanding(
+  bundle: GameBundle,
+  scores: readonly LocalScore[],
+  userId: string,
+): { standing: ViewerStanding; unit: LiveBoardUnit } | null {
+  const board = liveBoardFor(bundle, scores);
   if (!board) return null;
   const standing = viewerStanding(board, userId);
   if (!standing || standing.total === null) return null;
