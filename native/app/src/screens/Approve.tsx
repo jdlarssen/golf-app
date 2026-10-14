@@ -79,7 +79,9 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
   // kort, slik webbens godkjenningsside viser dem.
   const scores = useTeamScores(localScores, bundle);
   const [busy, setBusy] = useState<Busy | null>(null);
-  const [errorText, setErrorText] = useState<string | null>(null);
+  // Feilen hører til kortet den kom fra. Åpner et annet kort seg (et trykk, eller
+  // fordi kortet forsvant fra lista ved en ny henting), står den ikke der.
+  const [error, setError] = useState<{ userId: string; text: string | null } | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [rejectUserId, setRejectUserId] = useState<string | null>(null);
   // Grunnen står igjen hvis kallet feilet og arket åpnes for samme kort på nytt.
@@ -100,12 +102,12 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
     action: () => Promise<Awaited<ReturnType<typeof approveScorecard>>>,
   ) => {
     setBusy(next);
-    setErrorText(null);
+    setError(null);
     const result = await action();
     setBusy(null);
     if (next.action === 'reject') setRejectUserId(null);
     if (!result.ok) {
-      setErrorText(describeFailure(result));
+      setError({ userId: next.userId, text: describeFailure(result) });
       return;
     }
     if (next.action === 'reject') setReasonDraft(null);
@@ -245,9 +247,9 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
             </Pressable>
           </View>
 
-          {errorText ? (
+          {error?.userId === open.user_id && error.text ? (
             <Text style={[ui.error, styles.error]} testID="approve-error">
-              {errorText}
+              {error.text}
             </Text>
           ) : null}
 
@@ -267,7 +269,7 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
                     ]}
                     onPress={() => {
                       setSelectedUserId(entry.user_id);
-                      setErrorText(null);
+                      setError(null);
                     }}
                     disabled={locked}
                     accessibilityRole="button"
