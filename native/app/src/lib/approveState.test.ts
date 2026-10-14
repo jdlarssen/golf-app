@@ -6,29 +6,9 @@
 // beskjed.
 import type { GameMode } from '../../../../lib/scoring/modes/types';
 import type { BundleGame, BundlePlayer } from '../data/gameBundle';
+import { homePlayer as player } from '../test/homeFixtures';
 import { approveRows, approveScreenState } from './approveState';
 import { toRoster } from './roster';
-
-function player(overrides: Partial<BundlePlayer> & { userId: string }): BundlePlayer {
-  return {
-    name: overrides.userId,
-    nickname: null,
-    teamNumber: null,
-    flightNumber: null,
-    courseHandicap: 12,
-    teeGender: 'mens',
-    acceptedAt: null,
-    submittedAt: null,
-    submittedByUserId: null,
-    approvedAt: null,
-    approvedByUserId: null,
-    rejectionReason: null,
-    withdrawnAt: null,
-    withdrawnByUserId: null,
-    isGuest: false,
-    ...overrides,
-  };
-}
 
 const SUBMITTED = '2026-10-13T12:30:00.000Z';
 const APPROVED = '2026-10-13T12:41:00.000Z';
@@ -59,15 +39,16 @@ describe('approveScreenState', () => {
       SOLO,
       'empty',
     ],
+    // Uten porten ville rosteret under gitt «alle kortene er godkjent».
     [
       'runden er avsluttet',
-      [delivered('me'), delivered('a')],
+      [delivered('me'), approvedBy('a', 'me')],
       { ...SOLO, status: 'finished' },
       'empty',
     ],
     [
       'runden krever ikke godkjenning',
-      [delivered('me'), delivered('a')],
+      [delivered('me'), approvedBy('a', 'me')],
       { ...SOLO, requirePeerApproval: false },
       'empty',
     ],
