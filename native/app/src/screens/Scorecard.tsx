@@ -47,6 +47,9 @@
 // #2299: når alle hullene er ført og kortet kan leveres, starter skjermen med
 // oppsummeringen (`RoundDoneCard`): hilsenen, tallene, dagens beste hull og det
 // som svidde, og hvem i flighten som mangler hull. Alt under står som før.
+// Knappene «Se over og lever scorekortet» og «Tilbake til hull 18» står i en
+// fast linje under rulla (`RoundDoneBar`, eierens valg B), som viker når
+// scorekortets egen «Lever scorekort» kommer til syne: aldri to leverknapper.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -55,6 +58,9 @@ import {
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { GameStatus } from '../../../../lib/games/status';
@@ -75,7 +81,7 @@ import {
   type ScorecardRowKind,
 } from '../components/scorecard/ScorecardGrid';
 import { kickerHeader } from '../components/KickerHeader';
-import { RoundDoneCard } from '../components/scorecard/RoundDoneCard';
+import { RoundDoneBar, RoundDoneCard } from '../components/scorecard/RoundDoneCard';
 import { ScorecardHeader } from '../components/scorecard/ScorecardHeader';
 import {
   ScorecardStampMark,
@@ -100,7 +106,7 @@ import {
   toStampPlayers,
 } from '../lib/roster';
 import { reopenHint } from '../lib/rosterCopy';
-import { buildRoundDoneModel } from '../lib/roundDone';
+import { buildRoundDoneModel, roundDoneBarVisible, submitInView } from '../lib/roundDone';
 import {
   SCORECARD_TEXT,
   scorecardHandicapPart,
@@ -126,7 +132,7 @@ const HOLE_COUNT = 18;
 const QUEUE_POLL_MS = 1500;
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
-  const { ui } = useTheme();
+  const { colors, ui } = useTheme();
   const { gameId } = route.params;
   const { userId } = useSession();
   // #2201: lever-påminnelsen er lest når du har åpnet scorekortet (webbens
@@ -145,6 +151,38 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2299: «Se over og lever scorekortet» ruller hit, til toppen av scorekortet.
   const scrollRef = useRef<ScrollView>(null);
   const scorecardTop = useRef(0);
+  // Hvor rulla står og hvor leverknappen er, til bunnlinja. Bare svaret
+  // (`submitInView`) er state, så skjermen tegnes på nytt bare når det snur.
+  const barGeometry = useRef<{ scrollY: number; viewportHeight: number; submitTop: number | null }>({
+    scrollY: 0,
+    viewportHeight: 0,
+    submitTop: null,
+  });
+  const [submitShown, setSubmitShown] = useState(false);
+  const updateBar = useCallback(() => {
+    setSubmitShown(submitInView(barGeometry.current));
+  }, []);
+  const onScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      barGeometry.current.scrollY = event.nativeEvent.contentOffset.y;
+      updateBar();
+    },
+    [updateBar],
+  );
+  const onScrollLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      barGeometry.current.viewportHeight = event.nativeEvent.layout.height;
+      updateBar();
+    },
+    [updateBar],
+  );
+  const onSubmitLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      barGeometry.current.submitTop = event.nativeEvent.layout.y;
+      updateBar();
+    },
+    [updateBar],
+  );
 
   // En feil lar `queued` stå: står den på `null`, er knappen fortsatt sperret,
   // og intervallet prøver igjen.
@@ -294,6 +332,7 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     missing,
     teamMode,
   });
+  const showBar = roundDoneBarVisible({ hasSummary: roundDone != null, submitInView: submitShown });
   const openHole = (holeNumber: number) =>
     navigation.navigate('Hole', {
       gameId,
@@ -425,137 +464,143 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     ) : null;
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      contentContainerStyle={[ui.scroll, styles.scroll]}
-      testID="scorecard-screen"
-    >
-      {teamMode ? (
-        <HeaderKicker navigation={navigation} kicker={teamScorecardKicker(myTeamCard?.label)} />
-      ) : null}
-      {roundDone ? (
-        <View style={styles.roundDone}>
-          <RoundDoneCard
-            model={roundDone}
-            onReview={() =>
-              scrollRef.current?.scrollTo({ y: scorecardTop.current, animated: true })
-            }
-            onBack={() => openHole(HOLE_COUNT)}
-            onOpenHole={openHole}
-          />
-        </View>
-      ) : null}
-      <View
-        onLayout={(event) => {
-          scorecardTop.current = event.nativeEvent.layout.y;
-        }}
+    <View style={[styles.fill, { backgroundColor: colors.bg }]}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.fill}
+        contentContainerStyle={[ui.scroll, styles.scroll]}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        onLayout={onScrollLayout}
+        testID="scorecard-screen"
       >
-        <ScorecardHeader title={bundle.game.name} line={headerLine} />
-      </View>
+        {teamMode ? (
+          <HeaderKicker navigation={navigation} kicker={teamScorecardKicker(myTeamCard?.label)} />
+        ) : null}
+        {roundDone ? (
+          <View style={styles.roundDone}>
+            <RoundDoneCard model={roundDone} onOpenHole={openHole} />
+          </View>
+        ) : null}
+        <View
+          onLayout={(event) => {
+            scorecardTop.current = event.nativeEvent.layout.y;
+          }}
+        >
+          <ScorecardHeader title={bundle.game.name} line={headerLine} />
+        </View>
 
-      <ScorecardGrid
-        grid={grid}
-        rows={gridRows}
-        enteredBy={enteredBy}
-        footer={
-          <ScorecardTotals
-            totals={grid.totals}
-            // Designet har BRUTTO · NETTO også i stableford; en blind runde
-            // skjuler netto som før (#2219).
-            showNet={!revealActive}
-            showPoints={valueRows.includes('points')}
-          />
-        }
-        overlay={stamp ? <ScorecardStampMark stamp={stamp} /> : null}
-      />
-      {showEnteredBy ? (
-        <Text style={ui.muted} testID="scorecard-entered-by-note">
-          Initialene viser hvem som førte hvert hull.
-        </Text>
+        <ScorecardGrid
+          grid={grid}
+          rows={gridRows}
+          enteredBy={enteredBy}
+          footer={
+            <ScorecardTotals
+              totals={grid.totals}
+              // Designet har BRUTTO · NETTO også i stableford; en blind runde
+              // skjuler netto som før (#2219).
+              showNet={!revealActive}
+              showPoints={valueRows.includes('points')}
+            />
+          }
+          overlay={stamp ? <ScorecardStampMark stamp={stamp} /> : null}
+        />
+        {showEnteredBy ? (
+          <Text style={ui.muted} testID="scorecard-entered-by-note">
+            Initialene viser hvem som førte hvert hull.
+          </Text>
+        ) : null}
+
+        {stamp ? <ScorecardStatusList stamp={stamp} ownerFullName={me.player.name} /> : null}
+
+        {canSubmit ? (
+          <>
+            {/* Står også mens kø-vakta holder lever-knappen igjen: det er lov å
+                rette mens slagene synker. Avstanden ned til lever-knappen er
+                minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
+            <Pressable
+              style={[ui.buttonSecondary, styles.editButton]}
+              onPress={() => openHole(1)}
+              testID="scorecard-edit"
+            >
+              <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
+            </Pressable>
+            {flightBlock}
+            {queueGuard}
+            <Pressable
+              style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
+              onLayout={onSubmitLayout}
+              onPress={onSubmitPress}
+              disabled={queueBlocked || busy}
+              testID={
+                teamMode
+                  ? 'submit-team-card'
+                  : flightMates.length > 0
+                    ? 'submit-flight'
+                    : 'submit-scorecard'
+              }
+            >
+              <Text style={ui.buttonText}>
+                {busy
+                  ? 'Leverer …'
+                  : syncing
+                    ? 'Synker slag …'
+                    : teamMode
+                      ? 'Lever lagets kort'
+                      : flightMates.length > 0
+                        ? flightDeliveryButton(flightMates)
+                        : 'Lever scorekort'}
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            {readonlyText ? (
+              <Text style={ui.muted} testID="scorecard-readonly">
+                {readonlyText}
+              </Text>
+            ) : null}
+            {canDeliverForFlight ? (
+              <>
+                {flightBlock}
+                {queueGuard}
+                <Pressable
+                  style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
+                  onPress={onDeliverForPress}
+                  disabled={queueBlocked || busy}
+                  testID="deliver-for-flight"
+                >
+                  <Text style={ui.buttonText}>
+                    {busy
+                      ? 'Leverer …'
+                      : syncing
+                        ? 'Synker slag …'
+                        : deliverForButton(flightMates)}
+                  </Text>
+                </Pressable>
+              </>
+            ) : null}
+          </>
+        )}
+
+        {noticeText ? (
+          <Text style={ui.muted} testID="submit-partial">
+            {noticeText}
+          </Text>
+        ) : null}
+        {errorText ? (
+          <Text style={ui.error} testID="submit-error">
+            {errorText}
+          </Text>
+        ) : null}
+      </ScrollView>
+      {showBar ? (
+        <RoundDoneBar
+          onReview={() => scrollRef.current?.scrollTo({ y: scorecardTop.current, animated: true })}
+          onBack={() => openHole(HOLE_COUNT)}
+        />
       ) : null}
-
-      {stamp ? <ScorecardStatusList stamp={stamp} ownerFullName={me.player.name} /> : null}
-
-      {canSubmit ? (
-        <>
-          {/* Står også mens kø-vakta holder lever-knappen igjen: det er lov å
-              rette mens slagene synker. Avstanden ned til lever-knappen er
-              minst 24 pt (#1793), for de to knappene gjør det motsatte. */}
-          <Pressable
-            style={[ui.buttonSecondary, styles.editButton]}
-            onPress={() => openHole(1)}
-            testID="scorecard-edit"
-          >
-            <Text style={ui.buttonSecondaryText}>Rediger hullene</Text>
-          </Pressable>
-          {flightBlock}
-          {queueGuard}
-          <Pressable
-            style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
-            onPress={onSubmitPress}
-            disabled={queueBlocked || busy}
-            testID={
-              teamMode
-                ? 'submit-team-card'
-                : flightMates.length > 0
-                  ? 'submit-flight'
-                  : 'submit-scorecard'
-            }
-          >
-            <Text style={ui.buttonText}>
-              {busy
-                ? 'Leverer …'
-                : syncing
-                  ? 'Synker slag …'
-                  : teamMode
-                    ? 'Lever lagets kort'
-                    : flightMates.length > 0
-                      ? flightDeliveryButton(flightMates)
-                      : 'Lever scorekort'}
-            </Text>
-          </Pressable>
-        </>
-      ) : (
-        <>
-          {readonlyText ? (
-            <Text style={ui.muted} testID="scorecard-readonly">
-              {readonlyText}
-            </Text>
-          ) : null}
-          {canDeliverForFlight ? (
-            <>
-              {flightBlock}
-              {queueGuard}
-              <Pressable
-                style={[ui.button, (queueBlocked || busy) && styles.buttonDisabled]}
-                onPress={onDeliverForPress}
-                disabled={queueBlocked || busy}
-                testID="deliver-for-flight"
-              >
-                <Text style={ui.buttonText}>
-                  {busy
-                    ? 'Leverer …'
-                    : syncing
-                      ? 'Synker slag …'
-                      : deliverForButton(flightMates)}
-                </Text>
-              </Pressable>
-            </>
-          ) : null}
-        </>
-      )}
-
-      {noticeText ? (
-        <Text style={ui.muted} testID="submit-partial">
-          {noticeText}
-        </Text>
-      ) : null}
-      {errorText ? (
-        <Text style={ui.error} testID="submit-error">
-          {errorText}
-        </Text>
-      ) : null}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -579,6 +624,7 @@ function HeaderKicker({
 
 const styles = StyleSheet.create({
   // Designet: tittelen står rett under toppen.
+  fill: { flex: 1 },
   scroll: { paddingTop: 4 },
   // #2299: båndet går kant til kant og helt opp, som i designet. Margene
   // opphever rullas padding: 20 på sidene, og 4 over (`scroll` over).
