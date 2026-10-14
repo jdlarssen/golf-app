@@ -125,15 +125,34 @@ describe('deleteOrAnonymizeUser', () => {
     }
   });
 
-  it('stops before the hard delete when the invitations cannot be deleted', async () => {
+  it.each(['invitations', 'club_invitations'])(
+    'stops before the hard delete when %s cannot be deleted',
+    async (table) => {
+      state.tables = {
+        users: { data: { deleted_at: null, email: 'ola@example.test' } },
+        game_players: { count: 0 },
+        [table]: { data: null, error: { message: 'boom' } },
+      };
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
+      expect(result).toEqual({ ok: false, reason: 'failed' });
+      expect(state.deleteUser).not.toHaveBeenCalled();
+      expect(state.rpc).not.toHaveBeenCalled();
+    },
+  );
+
+  // The callers stop an admin with getDeleteBlockReason, and the database
+  // refuses both paths (#1903). This guard keeps a call that slipped past
+  // the callers from deleting the admin's invitations before that refusal.
+  it('refuses the admin account before deleting anything', async () => {
     state.tables = {
-      users: { data: { deleted_at: null, email: 'ola@example.test' } },
+      users: { data: { deleted_at: null, email: 'admin@example.test', is_admin: true } },
       game_players: { count: 0 },
-      club_invitations: { data: null, error: { message: 'boom' } },
     };
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const result = await deleteOrAnonymizeUser(USER_ID, '[test]');
     expect(result).toEqual({ ok: false, reason: 'failed' });
+    expect(queriedTables()).toEqual(['users']);
     expect(state.deleteUser).not.toHaveBeenCalled();
     expect(state.rpc).not.toHaveBeenCalled();
   });
