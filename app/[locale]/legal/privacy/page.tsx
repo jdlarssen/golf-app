@@ -137,8 +137,8 @@ export default async function PrivacyPage() {
             <li>{t.rich('processorVercel', { term })}</li>
             <li>{t.rich('processorResend', { term })}</li>
             <li>{t.rich('processorAnthropic', { term })}</li>
-            <li>{t.rich('processorPush', { term })}</li>
           </ul>
+          <p className="text-text mb-2">{t('pushRecipients')}</p>
           <p className="text-text">{t('processorsOutsideEea')}</p>
         </section>
 
