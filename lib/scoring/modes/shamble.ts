@@ -242,6 +242,7 @@ export function compute(ctx: ScoringContext): ShambleResult {
       holesCounted: totals.holesCounted,
       rank: r?.rank ?? 0,
       tiedWith: r?.tiedWith ?? [],
+      decidedBy: r?.decidedBy ?? null,
     };
   });
 

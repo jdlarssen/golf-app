@@ -3,13 +3,27 @@ export interface TeamForRanking {
   holes: number[];  // length 18 expected
 }
 
+/**
+ * The tie-break step that split a row from the row directly above it (#2579).
+ * The finished board says «avgjort på siste ni» from it.
+ */
+export type TieDecider = 'total' | 'back9' | 'back6' | 'back3' | 'hole18';
+
 export interface RankedTeam {
   id: number;
   holes: number[];
   rank: number;
   total: number;
   tiedWith: number[];
+  /**
+   * The step that split this row from the row directly above it in sorted
+   * order. `null` on the first row and on a true tie (the row above is then
+   * in `tiedWith`).
+   */
+  decidedBy: TieDecider | null;
 }
+
+const TIE_STEPS: readonly TieDecider[] = ['total', 'back9', 'back6', 'back3', 'hole18'];
 
 function sum(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0);
@@ -56,12 +70,14 @@ export function rankTeams(teams: TeamForRanking[]): RankedTeam[] {
         other.back3 === t.back3 &&
         other.hole18 === t.hole18,
     );
+    const above = i > 0 ? withTotals[i - 1] : null;
     return {
       id: t.id,
       holes: t.holes,
       total: t.total,
       rank: firstTiedIndex + 1,
       tiedWith,
+      decidedBy: above ? (TIE_STEPS.find((step) => above[step] !== t[step]) ?? null) : null,
     };
   });
 }

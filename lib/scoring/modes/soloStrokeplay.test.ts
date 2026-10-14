@@ -733,12 +733,12 @@ describe('soloStrokeplay.compute — ranking: net_to_par (#2253)', () => {
       compute(ctx).players.map(({ netToPar: _netToPar, ...rest }) => rest);
 
     expect(lines(makeCtx(kariOla))).toEqual([
-      { userId: 'ola', totalNetStrokes: 72, totalGrossStrokes: 72, holesPlayed: 18, rank: 1, tiedWith: [] },
-      { userId: 'kari', totalNetStrokes: 73, totalGrossStrokes: 73, holesPlayed: 18, rank: 2, tiedWith: [] },
+      { userId: 'ola', totalNetStrokes: 72, totalGrossStrokes: 72, holesPlayed: 18, rank: 1, tiedWith: [], decidedBy: null },
+      { userId: 'kari', totalNetStrokes: 73, totalGrossStrokes: 73, holesPlayed: 18, rank: 2, tiedWith: [], decidedBy: 'total' },
     ]);
     expect(lines(makeCtx(thru))).toEqual([
-      { userId: 'late', totalNetStrokes: 57, totalGrossStrokes: 57, holesPlayed: 14, rank: 1, tiedWith: [] },
-      { userId: 'early', totalNetStrokes: 35, totalGrossStrokes: 35, holesPlayed: 9, rank: 2, tiedWith: [] },
+      { userId: 'late', totalNetStrokes: 57, totalGrossStrokes: 57, holesPlayed: 14, rank: 1, tiedWith: [], decidedBy: null },
+      { userId: 'early', totalNetStrokes: 35, totalGrossStrokes: 35, holesPlayed: 9, rank: 2, tiedWith: [], decidedBy: 'total' },
     ]);
   });
 

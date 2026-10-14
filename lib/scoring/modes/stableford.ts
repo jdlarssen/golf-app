@@ -243,6 +243,7 @@ function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): Stablef
       holesPlayed: source.holesPlayed,
       rank: r.rank,
       tiedWith: tiedWithUserIds,
+      decidedBy: r.decidedBy,
     };
   });
 
@@ -375,6 +376,7 @@ function computeTeam(
       ...l,
       rank: r.rank,
       tiedWith: r.tiedWith,
+      decidedBy: r.decidedBy,
     };
   });
 

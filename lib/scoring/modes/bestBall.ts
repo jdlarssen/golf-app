@@ -179,6 +179,7 @@ export function compute(ctx: ScoringContext): BestBallResult {
       ...l,
       rank: r?.rank ?? 0,
       tiedWith: r?.tiedWith ?? [],
+      decidedBy: r?.decidedBy ?? null,
     };
   });
 

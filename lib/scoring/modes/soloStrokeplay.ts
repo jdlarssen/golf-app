@@ -204,6 +204,7 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
       netToPar: source.netToPar,
       rank: r.rank,
       tiedWith: tiedWithUserIds,
+      decidedBy: r.decidedBy,
     };
   });
 

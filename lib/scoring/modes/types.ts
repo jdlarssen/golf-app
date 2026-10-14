@@ -2,6 +2,8 @@
 // (lib/scoring/modes/*). Discriminated union på `kind` matcher
 // games.game_mode-discriminator i DB.
 
+import type { TieDecider } from '../tiebreaker';
+
 export type GameMode =
   | 'best_ball'
   | 'stableford'
@@ -892,6 +894,12 @@ export interface BestBallTeamLine {
   missingHoles: number[];
   rank: number;
   tiedWith: number[];
+  /**
+   * #2579: the tie-break step that split this row from the row directly
+   * above it (`rankTeams`). Optional so hand-built fixtures stay valid; the
+   * modes always set it.
+   */
+  decidedBy?: TieDecider | null;
 }
 
 export interface BestBallResult {
@@ -909,6 +917,12 @@ export interface StablefordPlayerLine {
    * (totalPoints + back9 + back6 + back3 + hole18-poeng). Tom for unike rader.
    */
   tiedWith: string[];
+  /**
+   * #2579: the tie-break step that split this row from the row directly
+   * above it (`rankTeams`). Optional so hand-built fixtures stay valid; the
+   * modes always set it.
+   */
+  decidedBy?: TieDecider | null;
 }
 
 /**
@@ -1004,6 +1018,12 @@ export interface StablefordTeamLine {
   totalPoints: number;
   rank: number;
   tiedWith: number[];
+  /**
+   * #2579: the tie-break step that split this row from the row directly
+   * above it (`rankTeams`). Optional so hand-built fixtures stay valid; the
+   * modes always set it.
+   */
+  decidedBy?: TieDecider | null;
 }
 
 /**
@@ -1194,6 +1214,12 @@ export interface SoloStrokeplayPlayerLine {
    * (totalNet + back9 + back6 + back3 + hole18-netto). Tom for unike rader.
    */
   tiedWith: string[];
+  /**
+   * #2579: the tie-break step that split this row from the row directly
+   * above it (`rankTeams`). Optional so hand-built fixtures stay valid; the
+   * modes always set it.
+   */
+  decidedBy?: TieDecider | null;
 }
 
 /**
@@ -1317,6 +1343,12 @@ export interface TexasScrambleTeamLine {
   missingHoles: number[];
   rank: number;
   tiedWith: number[];
+  /**
+   * #2579: the tie-break step that split this row from the row directly
+   * above it (`rankTeams`). Optional so hand-built fixtures stay valid; the
+   * modes always set it.
+   */
+  decidedBy?: TieDecider | null;
 }
 
 export interface TexasScrambleResult {
@@ -2047,6 +2079,12 @@ export interface ShambleTeamLine {
   rank: number;
   /** teamNumbers med eksakt samme rank etter 5-tier cascade. */
   tiedWith: number[];
+  /**
+   * #2579: the tie-break step that split this row from the row directly
+   * above it (`rankTeams`). Optional so hand-built fixtures stay valid; the
+   * modes always set it.
+   */
+  decidedBy?: TieDecider | null;
 }
 
 export interface ShambleResult {

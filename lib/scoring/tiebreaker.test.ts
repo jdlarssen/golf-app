@@ -106,6 +106,69 @@ describe('rankTeams', () => {
   });
 });
 
+// #2579: the finished board says «avgjort på siste ni» under a row that was
+// level on total. `decidedBy` names the step that split a row from the row
+// directly above it in sorted order.
+describe('rankTeams — decidedBy', () => {
+  const flat = (n: number) => Array.from({ length: 18 }, () => n);
+  // Each pair: the row that ends up first, then the one it beat on `step`.
+  it.each([
+    ['total', flat(3), flat(4)],
+    ['back9', [...flat(5).slice(0, 9), ...flat(3).slice(0, 9)], flat(4)],
+    [
+      'back6',
+      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3],
+      [4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 3, 3, 3, 4, 3, 3],
+    ],
+    [
+      'back3',
+      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 3, 3, 3],
+      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 5, 5, 5],
+    ],
+    [
+      'hole18',
+      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 3],
+      [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 4],
+    ],
+  ] as const)('%s: names the step on the lower row, null on the first', (step, winner, runnerUp) => {
+    const result = rankTeams([
+      { id: 2, holes: [...runnerUp] },
+      { id: 1, holes: [...winner] },
+    ]);
+    expect(result.map((r) => [r.id, r.decidedBy])).toEqual([
+      [1, null],
+      [2, step],
+    ]);
+  });
+
+  it('is null on a true tie (the row above is in tiedWith)', () => {
+    const result = rankTeams([
+      { id: 1, holes: flat(4) },
+      { id: 2, holes: flat(4) },
+    ]);
+    expect(result.map((r) => r.decidedBy)).toEqual([null, null]);
+    expect(result[1].tiedWith).toEqual([1]);
+  });
+
+  it('compares each row with the row directly above, not with the leader', () => {
+    // 1: 72 (back9 27) · 2: 72 (back9 36) · 3: 73.
+    const result = rankTeams([
+      { id: 3, holes: [5, ...flat(4).slice(1)] },
+      { id: 2, holes: flat(4) },
+      { id: 1, holes: [...flat(5).slice(0, 9), ...flat(3).slice(0, 9)] },
+    ]);
+    expect(result.map((r) => [r.id, r.decidedBy])).toEqual([
+      [1, null],
+      [2, 'back9'],
+      [3, 'total'],
+    ]);
+  });
+
+  it('is null for a single row', () => {
+    expect(rankTeams([{ id: 1, holes: flat(4) }])[0].decidedBy).toBeNull();
+  });
+});
+
 // #2217 (D5): the ranking array is indexed on HOLE NUMBER, not position, so the
 // back9/back6/back3/hole-18 tiers read real data for a segment game. One home
 // for the rule bestBall.ts (#1441 D11) and lib/leaderboard.ts both feed rankTeams.
