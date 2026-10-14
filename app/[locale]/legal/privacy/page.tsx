@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Link } from '@/i18n/navigation';
@@ -27,6 +27,7 @@ export async function generateMetadata({
 
 export default async function PrivacyPage() {
   const t = await getTranslations('legal.privacy');
+  const locale = await getLocale();
 
   const mailto = (chunks: React.ReactNode) => (
     <a
@@ -51,7 +52,7 @@ export default async function PrivacyPage() {
   );
   const datatilsynetLink = (chunks: React.ReactNode) => (
     <a
-      href="https://www.datatilsynet.no"
+      href={locale === 'en' ? 'https://www.datatilsynet.no/en/' : 'https://www.datatilsynet.no'}
       className="font-medium text-primary underline underline-offset-2"
     >
       {chunks}
@@ -136,6 +137,7 @@ export default async function PrivacyPage() {
             <li>{t.rich('processorVercel', { term })}</li>
             <li>{t.rich('processorResend', { term })}</li>
             <li>{t.rich('processorAnthropic', { term })}</li>
+            <li>{t.rich('processorPush', { term })}</li>
           </ul>
           <p className="text-text">{t('processorsOutsideEea')}</p>
         </section>
@@ -166,7 +168,11 @@ export default async function PrivacyPage() {
           <ul className="list-disc list-outside pl-5 space-y-1 text-text">
             <li>{t.rich('legalBasisAccount', { term })}</li>
             <li>{t.rich('legalBasisNotifications', { term })}</li>
+            <li>{t.rich('legalBasisDigest', { term })}</li>
+            <li>{t.rich('legalBasisInvitations', { term })}</li>
+            <li>{t.rich('legalBasisGuests', { term })}</li>
             <li>{t.rich('legalBasisAnalytics', { term })}</li>
+            <li>{t.rich('legalBasisAfterDeletion', { term })}</li>
           </ul>
         </section>
 
