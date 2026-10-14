@@ -16,15 +16,17 @@ import type { ScoreTone } from '@/lib/scoring/scoreTone';
 import { followHref } from '@/lib/leaderboard/followPlayer';
 import { BoardPlayerPlate } from './BoardRowReactions';
 import {
+  boardShowsRank,
+  isBoardLeader,
+  totalLabel,
+  visibleBoardRows,
+} from '@/lib/leaderboard/boardRules';
+import {
   behindLeaderText,
   boardDisplayName,
   boardRowSr,
-  boardShowsRank,
-  isBoardLeader,
   pillText,
   placeLabel,
-  totalLabel,
-  visibleBoardRows,
 } from './boardText';
 import { RowReactionsForPlayer } from './RowReactionsForPlayer';
 
@@ -107,7 +109,7 @@ export function LiveBoard({
   const [openUserId, setOpenUserId] = useState<string | null>(null);
 
   const { rows, unit } = board;
-  const { visible, canCollapse } = visibleBoardRows(rows, viewerUserId, showAll);
+  const { visible, canCollapse } = visibleBoardRows(rows, viewerUserId, showAll, (r) => r.userId);
 
   const pill = status === 'scheduled' ? statusLabel : pillText(t, board.holesPlayed);
   const formatLine = [
