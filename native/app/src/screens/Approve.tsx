@@ -198,7 +198,13 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
                   footer={
                     <ScorecardTotals totals={grid.totals} showNet={false} showPoints={false} />
                   }
-                  overlay={stamp ? <ScorecardStampMark stamp={stamp} /> : null}
+                  overlay={
+                    stamp ? (
+                      <View style={styles.stampOffset}>
+                        <ScorecardStampMark stamp={stamp} />
+                      </View>
+                    ) : null
+                  }
                 />
               </View>
             )}
@@ -374,18 +380,15 @@ export function Approve({ route, navigation }: ScreenProps<'Approve'>) {
             <Text style={[ui.kicker, styles.kicker, styles.doneKicker]}>
               {APPROVE_TEXT.notDeliveredYet}
             </Text>
-            <View
-              style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              testID="approve-not-delivered"
-            >
-              {notDeliveredRows.map((row, i) => (
+            {/* Designet tegner raden som sitt eget kort, som radene under «Venter også». */}
+            <View style={styles.waitingList} testID="approve-not-delivered">
+              {notDeliveredRows.map((row) => (
                 <View
                   key={row.key}
                   style={[
+                    styles.rowCard,
                     styles.row,
-                    i < notDeliveredRows.length - 1
-                      ? { borderBottomWidth: 1, borderBottomColor: colors.divider }
-                      : null,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
                   ]}
                 >
                   <View style={styles.rowText}>
@@ -521,13 +524,18 @@ function gridFor(
   });
 }
 
+// Linjeboksene har egne marger (`theme.ts`); designets luft legges oppå dem.
+const INTRO_LINE = interLine(14, 20.3, { multiline: true });
+const ROW_SUB_LINE = interLine(12, 15);
+const DONE_TITLE_LINE = fraunces(500, 28, 33.6, { multiline: true });
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pendingScroll: { flexGrow: 1, paddingBottom: 32 },
   // Designet: 4 pt under toppen, 20 pt på sidene og 14 pt ned til navnet.
   headingBlock: { paddingTop: 4, paddingHorizontal: 20, paddingBottom: 14 },
   heading: { ...fraunces(500, 26, 31.2, { multiline: true }) },
-  intro: { ...interLine(14, 20.3, { multiline: true }), fontFamily: FONTS.sans, marginTop: 4 },
+  intro: { ...INTRO_LINE, fontFamily: FONTS.sans, marginTop: INTRO_LINE.marginTop + 4 },
   // Kortet har selv 4 pt over seg (`ScorecardGrid`), så raden tar 4 av designets 8.
   nameRow: {
     flexDirection: 'row',
@@ -541,6 +549,8 @@ const styles = StyleSheet.create({
   position: { ...interLine(12, 15), fontFamily: FONTS.sansSemiBold },
   // Kortet går 8 pt ut over sidene (`ScorecardGrid`), så det står 12 pt fra kanten.
   cardWrap: { paddingHorizontal: 20 },
+  // Designet: stempelet henger 36 pt under kortet her, mot 34 på scorekortet.
+  stampOffset: { transform: [{ translateY: 2 }] },
   actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20 },
   action: { flex: 1, height: 48, marginTop: 0 },
   error: { paddingHorizontal: 20, marginTop: 12 },
@@ -558,7 +568,7 @@ const styles = StyleSheet.create({
   },
   rowText: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   rowName: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
-  rowSub: { ...interLine(12, 15), fontFamily: FONTS.sans, marginTop: 2 },
+  rowSub: { ...ROW_SUB_LINE, fontFamily: FONTS.sans, marginTop: ROW_SUB_LINE.marginTop + 2 },
   rowLink: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   chevron: { fontSize: 18, fontFamily: FONTS.sans },
   doneScroll: { flexGrow: 1, paddingBottom: 24 },
@@ -578,8 +588,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   doneTitle: {
-    ...fraunces(500, 28, 33.6, { multiline: true }),
-    marginTop: 4,
+    ...DONE_TITLE_LINE,
+    marginTop: DONE_TITLE_LINE.marginTop + 4,
     textAlign: 'center',
   },
   doneLine: {
