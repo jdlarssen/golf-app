@@ -12,6 +12,7 @@
 //
 // Lista ruller inne i kortet, så «Ingen kvalifiserte» står fast under den også
 // i en klubbrunde med 150 spillere.
+import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BundlePlayer } from '../../data/gameBundle';
@@ -27,7 +28,7 @@ const SHEET_TOP = 92;
 export function WinnerSheet({
   slot,
   candidates,
-  value,
+  choices,
   withdrawalSupported,
   onPick,
   onClose,
@@ -35,8 +36,8 @@ export function WinnerSheet({
   /** Sloten som kåres; `null` er lukket. */
   slot: FinishSlot | null;
   candidates: readonly BundlePlayer[];
-  /** Valget som gjelder nå (`activeChoices`), eller `null`. */
-  value: string | null;
+  /** Valgene som gjelder nå (`activeChoices`), per slot-nøkkel. */
+  choices: Readonly<Record<string, string>>;
   /** Fotnoten om trukne er bare sann i formatene med frafall (beslutning 8). */
   withdrawalSupported: boolean;
   onPick: (value: string) => void;
@@ -44,7 +45,13 @@ export function WinnerSheet({
 }) {
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
-  if (!slot) return null;
+  // Arket står montert mens det glir ned igjen: innholdet er den siste sloten,
+  // og `visible` slår av.
+  const [lastSlot, setLastSlot] = useState<FinishSlot | null>(slot);
+  if (slot && slot.key !== lastSlot?.key) setLastSlot(slot);
+  const shown = slot ?? lastSlot;
+  if (!shown) return null;
+  const value = choices[shown.key] ?? null;
 
   // Samme hinne som godkjenningsarket (#2577): skog med 45 % i lys, svart med
   // 55 % i natt. Står inline i begge til den som merges sist, samler dem.
@@ -56,7 +63,7 @@ export function WinnerSheet({
   };
 
   return (
-    <Modal transparent visible animationType="slide" onRequestClose={onClose}>
+    <Modal transparent visible={slot !== null} animationType="slide" onRequestClose={onClose}>
       <View
         style={styles.fill}
         testID="end-game-sheet"
@@ -89,7 +96,7 @@ export function WinnerSheet({
                 {END_GAME_TEXT.sheetKicker}
               </Text>
               <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
-                {slotLabel(slot)}
+                {slotLabel(shown)}
               </Text>
             </View>
             <Pressable
@@ -128,7 +135,7 @@ export function WinnerSheet({
                     ]}
                     accessibilityRole="radio"
                     accessibilityState={{ checked }}
-                    testID={`end-game-slot-${slot.key}-${player.userId}`}
+                    testID={`end-game-slot-${shown.key}-${player.userId}`}
                   >
                     <Radio checked={checked} />
                     <Text
@@ -160,7 +167,7 @@ export function WinnerSheet({
             ]}
             accessibilityRole="radio"
             accessibilityState={{ checked: value === NO_WINNER }}
-            testID={`end-game-slot-${slot.key}-${NO_WINNER}`}
+            testID={`end-game-slot-${shown.key}-${NO_WINNER}`}
           >
             <Radio checked={value === NO_WINNER} />
             <View style={styles.noneText}>
