@@ -224,6 +224,9 @@ describe('Leaderboard', () => {
 });
 
 describe('Leaderboard — ferdig tavle (#2579)', () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
   afterEach(() => {
     mockBundleOverride.current = null;
   });
