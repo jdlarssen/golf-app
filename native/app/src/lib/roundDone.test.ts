@@ -4,9 +4,18 @@
 // låses bare når appen viser kortet, hva vaktene skjuler, og hullteksten.
 import type { ScorecardGridTotals } from '../../../../lib/scorecard/scorecardGrid';
 import type { RoundHighlight } from '../../../../lib/scorecard/roundSummary';
+import type { LocalScore } from '../data/db';
 import type { BundleGame, BundlePlayer } from '../data/gameBundle';
 import { holeScores, homeBundle, homePlayer } from '../test/homeFixtures';
-import { buildRoundDoneModel, highlightText } from './roundDone';
+import {
+  birdieUnit,
+  buildRoundDoneModel,
+  highlightSpoken,
+  highlightText,
+  missingSpoken,
+  placeSpoken,
+  placeUnit,
+} from './roundDone';
 import type { ScorecardRow } from './scorecardRows';
 
 const ME = 'me';
@@ -35,9 +44,11 @@ function model(opts: {
   missing?: number;
   revealActive?: boolean;
   teamMode?: boolean;
+  /** Slagene på enheten; uten dem har alle ført alle 18 hull. */
+  scores?: LocalScore[];
 }) {
   const players = opts.players ?? [homePlayer({ userId: ME }), homePlayer({ userId: 'mate' })];
-  const scores = players.flatMap((p) => holeScores(GAME, p.userId, 18, 4));
+  const scores = opts.scores ?? players.flatMap((p) => holeScores(GAME, p.userId, 18, 4));
   return buildRoundDoneModel({
     bundle: homeBundle({ game: opts.game, players }),
     scores,
@@ -101,7 +112,48 @@ describe('buildRoundDoneModel', () => {
       name: 'med flight i et stort felt: lista har flighten',
       run: () => model({ players: bigField(1) }),
       check: (m: ReturnType<typeof model>) =>
-        expect(m?.flight).toEqual([{ kind: 'complete', names: expect.any(String) }]),
+        expect(m?.flight).toEqual([{ kind: 'complete', names: expect.stringMatching(/\S/) }]),
+    },
+    {
+      name: 'flighten: ført alt, så levert, så den som mangler hull 17',
+      run: () => {
+        const players = [
+          homePlayer({ userId: ME }),
+          homePlayer({ userId: 'jonas', name: 'Jonas Berg' }),
+          homePlayer({ userId: 'kari', name: 'Kari Nord', submittedAt: '2026-10-14T12:00:00.000Z' }),
+          homePlayer({ userId: 'marte', name: 'Marte Lie' }),
+        ];
+        return model({
+          players,
+          scores: [
+            ...holeScores(GAME, ME, 18, 4),
+            ...holeScores(GAME, 'jonas', 16, 4),
+            ...holeScores(GAME, 'jonas', 18, 4, 18),
+            ...holeScores(GAME, 'kari', 18, 4),
+            ...holeScores(GAME, 'marte', 18, 4),
+          ],
+        });
+      },
+      check: (m: ReturnType<typeof model>) =>
+        expect(m?.flight).toEqual([
+          { kind: 'complete', names: 'Marte' },
+          { kind: 'submitted', names: 'Kari' },
+          { kind: 'missing', userId: 'jonas', name: 'Jonas', holes: [17], firstHole: 17 },
+        ]),
+    },
+    {
+      name: 'to i flighten med samme kortnavn får hele navnet',
+      run: () =>
+        model({
+          players: [
+            homePlayer({ userId: ME }),
+            homePlayer({ userId: 'jb', name: 'Jonas Berg' }),
+            homePlayer({ userId: 'jr', name: 'Jonas Rud' }),
+            homePlayer({ userId: 'marte', name: 'Marte Lie' }),
+          ],
+        }),
+      check: (m: ReturnType<typeof model>) =>
+        expect(m?.flight).toEqual([{ kind: 'complete', names: 'Jonas Berg, Jonas Rud og Marte' }]),
     },
     {
       name: 'fullt kort uten netto faller til slag',
@@ -165,5 +217,29 @@ describe('highlightText', () => {
     },
   ] as const)('$name', ({ h, which, text }) => {
     expect(highlightText(h, which)).toBe(text);
+  });
+});
+
+describe('tekstene', () => {
+  const birdie: RoundHighlight = { holeNumber: 7, strokes: 2, par: 3, term: 'birdie', holeInOne: false };
+
+  it.each([
+    { name: 'én birdie i entall', text: birdieUnit(1), expected: 'birdie' },
+    { name: 'flere birdier', text: birdieUnit(2), expected: 'birdier' },
+    { name: 'delt plass under tallet', text: placeUnit({ tied: true }), expected: 'delt plass nå' },
+    { name: 'delt plass for skjermleseren', text: placeSpoken({ rank: 3, tied: true }), expected: 'delt 3. plass nå' },
+    { name: 'plass uten likhet', text: placeSpoken({ rank: 3, tied: false }), expected: '3. plass nå' },
+    {
+      name: 'høydepunktet med liten forbokstav etter kolon',
+      text: highlightSpoken(birdie, 'best'),
+      expected: 'Dagens beste hull: hull 7, birdie på par 3',
+    },
+    {
+      name: 'raden som mangler hull',
+      text: missingSpoken({ name: 'Jonas', holes: [3, 17], firstHole: 3 }),
+      expected: 'Jonas mangler hull 3 og 17. Åpne hull 3.',
+    },
+  ])('$name', ({ text, expected }) => {
+    expect(text).toBe(expected);
   });
 });
