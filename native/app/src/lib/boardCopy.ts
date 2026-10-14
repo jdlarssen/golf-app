@@ -27,7 +27,25 @@ export const BOARD_TEXT = {
   colNet: 'Netto',
   you: 'Du',
   tiedRank: 'T{rank}',
-  tone: { par: 'par' },
+  srPlace: '{rank}. plass',
+  srTiedPlace: 'Delt {rank}. plass',
+  srPoints: '{total} poeng',
+  srOverPar: '{count} over par',
+  srUnderPar: '{count} under par',
+  srEven: 'På par',
+  srNet: '{total} slag netto',
+  srNoTotal: 'Ingen hull spilt ennå',
+  srUp: 'Opp {count, plural, one {# plass} other {# plasser}} siden forrige hull',
+  srDown: 'Ned {count, plural, one {# plass} other {# plasser}} siden forrige hull',
+  srSame: 'Uendret siden forrige hull',
+  srRecent: 'Siste hull: {tones}',
+  srYou: 'Dette er deg',
+  tone: {
+    under: 'under par',
+    par: 'par',
+    over1: 'bogey',
+    over2: 'dobbel bogey eller verre',
+  },
   legendRecent: 'Siste 5 hull',
   showAll: 'Vis alle {count} spillere',
   showFewer: 'Vis færre',
@@ -40,6 +58,11 @@ export const BOARD_TEXT = {
   behindStrokesLead: '{gap} slag bak ledelsen',
   stripHole: 'Hull {hole} →',
   stripSubmit: 'Lever scorekort →',
+} as const;
+
+/** `leaderboard.common`: antall hull i radens opplesning. */
+export const BOARD_COMMON_TEXT = {
+  holesPlayedCount: '{count} hull spilt',
 } as const;
 
 /**

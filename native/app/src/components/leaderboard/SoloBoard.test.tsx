@@ -18,6 +18,7 @@ const row = (userId: string, rank: number, extra: Partial<SoloBoardRow> = {}): S
   movement: 0,
   recent: ['under', 'par', 'over1', 'over2', 'par'],
   note: null,
+  a11y: userId,
   ...extra,
 });
 

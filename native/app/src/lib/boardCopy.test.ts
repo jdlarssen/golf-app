@@ -3,7 +3,7 @@
 // (aldri bundlet) og krever tegn-for-tegn likhet for webbens strenger, og at
 // appens egne ikke er en av dem.
 import source from '../../../../messages/no.json';
-import { BOARD_APP_TEXT, BOARD_TEXT, SIDE_PANEL_TEXT } from './boardCopy';
+import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_TEXT, SIDE_PANEL_TEXT } from './boardCopy';
 
 /** Alle blader i et tre, med punktum-sti. */
 function leaves(node: unknown, prefix = ''): [string, string][] {
@@ -19,6 +19,10 @@ const sourceLeaves = new Map(leaves(board));
 describe('paritet med messages/no.json', () => {
   it.each(leaves(BOARD_TEXT))('leaderboard.board.%s er identisk med kilden', (path, value) => {
     expect(sourceLeaves.get(path)).toBe(value);
+  });
+
+  it('antall hull i opplesningen er leaderboard.common sin', () => {
+    expect(BOARD_COMMON_TEXT.holesPlayedCount).toBe(source.leaderboard.common.holesPlayedCount);
   });
 
   it('sideturneringens etiketter er panelets', () => {
