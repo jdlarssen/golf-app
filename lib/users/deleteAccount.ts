@@ -30,6 +30,9 @@ import { emailMatchPattern } from '@/lib/supabase/emailMatch';
  * `anonymize_user` nekter admin, og `guard_users_admin_delete` (BEFORE DELETE
  * på `public.users`) ruller tilbake GoTrue-slettingen via kaskaden. Hard-stien
  * er dermed ikke lenger avhengig av at blokk-sjekken foran svarte riktig.
+ * `deleteOrAnonymizeUser` nekter i tillegg admin før den skriver noe (#2561),
+ * så et kall som slapp forbi blokk-sjekken ikke rekker å slette invitasjonene
+ * til admin-adressen før DB-en sier nei.
  *
  * Alle lesninger her er fail-closed: en spørring som feiler betyr «vi vet
  * ikke → stopp», aldri «ikke blokkert» eller «aldri spilt».
@@ -167,11 +170,15 @@ export async function deleteOrAnonymizeUser(
 
   const { data: target, error: targetError } = await admin
     .from('users')
-    .select('deleted_at, email')
+    .select('deleted_at, email, is_admin')
     .eq('id', userId)
     .maybeSingle();
   if (targetError) {
     console.error(`${logPrefix} users read failed`, { userId, targetError });
+    return { ok: false, reason: 'failed' };
+  }
+  if (target?.is_admin) {
+    console.error(`${logPrefix} refused: admin account`, { userId });
     return { ok: false, reason: 'failed' };
   }
 
