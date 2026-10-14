@@ -27,6 +27,7 @@ import {
   END_GAME_TEXT,
   endGameKicker,
   lastRemindedNote,
+  ofTotal,
   opensWhenNote,
   ownRowHint,
   progressLine,
@@ -450,5 +451,6 @@ describe('toppen og tittelen', () => {
   it('teller i seksjonsoverskriftene og i det sterke kortet', () => {
     expect(countHeading(END_GAME_TEXT.unapprovedHeading, 1)).toBe('Venter på godkjenning · 1');
     expect(allDeliveredLine(8)).toBe('8 av 8 kort er levert');
+    expect(ofTotal(8)).toBe('av 8');
   });
 });

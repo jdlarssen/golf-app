@@ -155,19 +155,42 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
   const [sheetSlot, setSheetSlot] = useState<FinishSlot | null>(null);
   const isAdmin = useIsAdmin(userId);
 
+  const game = bundle?.game ?? null;
+  const gameActive = game !== null && game.tournamentId === null && game.status === 'active';
+
+  // Kan runden fortsatt avsluttes? Regnet her, før de tidlige returene, så
+  // bekreft-steget kan sjekke det på nytt når bundelen hentes på nytt mens
+  // siden står åpen (fokus, en app som kommer tilbake). Samme `canFinish` som
+  // knappen på lista.
+  const confirmable = (() => {
+    if (!bundle || !gameActive) return false;
+    const current = buildFinishPlan(bundle, userId);
+    const live = activeChoices(choices, winnerCandidates(current, acknowledged));
+    return canFinish(current, acknowledged, live);
+  })();
+
+  // Bekreft-steget viser det som skal lagres. Har noe endret seg siden
+  // arrangøren trykket (en valgt vinner har trukket seg, et kort er ikke
+  // levert lenger), går skjermen tilbake til lista, der «Åpner når …» sier
+  // hva som mangler. Ikke mens avslutningen pågår: da er det svaret som
+  // avgjør hvor skjermen havner. Satt under render (React sitt mønster for
+  // tilstand avledet av props), ikke i en effekt.
+  if (confirming && !confirmable && !busy) setConfirming(false);
+
   // Bekreft-steget: pila, sveip tilbake og Android-tilbake går til lista i
   // stedet for å forlate skjermen. `replace` til tavla er også en fjerning, så
   // suksess-stien slipper gjennom her. Sjekken MÅ stå i tilbakekallet: hooken
   // leser `confirming` fra siste render, og ingen ny render skjer mellom
   // `leavingRef.current = true` og `replace`. Core merker handlingen, så den
-  // ikke fanges igjen når den sendes på nytt.
+  // ikke fanges igjen når den sendes på nytt. Mens avslutningen pågår, gjør
+  // tilbake ingenting, så svaret (og en feilmelding) lander på bekreft-siden.
+  // Er runden ikke i gang lenger, står ingen sperre.
   const leavingRef = useRef(false);
-  usePreventRemove(confirming, ({ data }) => {
+  usePreventRemove(confirming && gameActive, ({ data }) => {
     if (leavingRef.current) navigation.dispatch(data.action);
-    else setConfirming(false);
+    else if (!busy) setConfirming(false);
   });
 
-  const game = bundle?.game ?? null;
   const kicker = !game
     ? ''
     : game.tournamentId !== null || game.status !== 'active'
@@ -410,7 +433,12 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
         isAdmin={isAdmin}
         busy={busy}
         notice={notice?.at === 'confirm' ? notice.text : null}
-        onConfirm={() => void finish(plan, bundle.players)}
+        // Samme sperre som knappen på lista: et trykk mellom en ny henting og
+        // effekten over skal ikke avslutte en runde som ikke er klar.
+        onConfirm={() => {
+          if (ready) void finish(plan, bundle.players);
+          else setConfirming(false);
+        }}
         onCancel={() => {
           setNotice(null);
           setConfirming(false);

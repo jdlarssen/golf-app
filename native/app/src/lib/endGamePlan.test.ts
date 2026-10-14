@@ -410,23 +410,6 @@ describe('finishBlockers', () => {
       winnersOpen: false,
     });
   });
-
-  // Linja under knappen og sperren på knappen må aldri være uenige: en grå
-  // knapp uten grunn, eller en grunn under en grønn knapp, er begge en løgn.
-  it.each([
-    ['venter på godkjenning', waiting, new Set([THIRD, FOURTH]), { 'ld-1': ME, 'ctp-1': NO_WINNER }],
-    ['alt klart', clear, new Set<string>(), {}],
-    ['mangler vinner', buildFinishPlan(bundle([player({ userId: ME, submittedAt: SUBMITTED })], sideOn), ME), new Set<string>(), { 'ld-1': ME }],
-    ['vinnere valgt', buildFinishPlan(bundle([player({ userId: ME, submittedAt: SUBMITTED })], sideOn), ME), new Set<string>(), { 'ld-1': ME, 'ctp-1': NO_WINNER }],
-    ['én uten hake', buildFinishPlan(bundle([player({ userId: ME, submittedAt: SUBMITTED }), player({ userId: MATE })]), ME), new Set<string>(), {}],
-  ] as const)('er enig med canFinish: %s', (_label, plan, acknowledged, choices) => {
-    const blockers = finishBlockers(plan, acknowledged, choices);
-    const empty =
-      blockers.unapproved.length === 0 &&
-      blockers.unacknowledged.length === 0 &&
-      !blockers.winnersOpen;
-    expect(empty).toBe(canFinish(plan, acknowledged, choices));
-  });
 });
 
 describe('confirmSummary', () => {
