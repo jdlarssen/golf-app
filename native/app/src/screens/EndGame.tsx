@@ -450,10 +450,16 @@ export function EndGame({ route, navigation }: ScreenProps<'EndGame'>) {
     </View>
   ) : null;
 
+  // Tegningen har 2 pt ekstra over knappen i fremdriftskortet, ikke i det sterke.
   const toggleDeliveries = (ink: string, border: string) => (
     <Pressable
       onPress={() => setExpanded((open) => !open)}
-      style={[styles.outlinePill, styles.deliveriesButton, { borderColor: border }]}
+      style={[
+        styles.outlinePill,
+        styles.deliveriesButton,
+        !allIn && styles.deliveriesButtonGap,
+        { borderColor: border },
+      ]}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
       testID="end-game-deliveries-toggle"
@@ -1020,7 +1026,9 @@ function ConfirmStep({
               key={row.key}
               style={[
                 styles.savedRow,
+                // Tegningens rad er 50 pluss streken under (content-box).
                 index < saved.length - 1 && {
+                  minHeight: 51,
                   borderBottomWidth: 1,
                   borderBottomColor: colors.divider,
                 },
@@ -1357,7 +1365,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  deliveriesButton: { alignSelf: 'flex-start', marginTop: 2 },
+  deliveriesButton: { alignSelf: 'flex-start' },
+  deliveriesButtonGap: { marginTop: 2 },
   pillText14: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
   pillText15: { ...interLine(15, 19), fontFamily: FONTS.sansSemiBold },
   deliveries: { marginTop: 4 },
