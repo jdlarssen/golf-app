@@ -226,8 +226,8 @@ function FlightRow({
         style={[rowStyle, styles.missingRow]}
         testID={`round-done-missing-${row.userId}`}
       >
-        <Text style={[styles.flightName, { color: colors.text }]}>{row.name}</Text>
-        <Text style={[styles.flightStatus, { color: colors.scoreOver1Fg }]}>
+        <Text style={[styles.flightName, styles.missingName, { color: colors.text }]}>{row.name}</Text>
+        <Text style={[styles.flightStatus, styles.missingStatus, { color: colors.scoreOver1Fg }]}>
           {missingText(row.holes)}
         </Text>
       </Pressable>
@@ -304,15 +304,13 @@ const styles = StyleSheet.create({
   },
   // Raden er 41 pt i designet; den som kan trykkes, får 44 å treffe på.
   missingRow: { minHeight: TAP },
-  // Begge kan krympe: en lang «Mangler hull …» bryter linja i stedet for å
-  // skyve navnet ut av raden.
+  // En lang navneliste bryter linja; statusen ved siden av er kort.
   flightName: { ...interLine(14, 17), fontFamily: FONTS.sans, flexShrink: 1 },
-  flightStatus: {
-    ...interLine(14, 17),
-    fontFamily: FONTS.sansSemiBold,
-    flexShrink: 1,
-    textAlign: 'right',
-  },
+  flightStatus: { ...interLine(14, 17), fontFamily: FONTS.sansSemiBold },
+  // Mangler noen mange hull, er det statusen som bryter linja. Navnet er ett
+  // fornavn og står helt.
+  missingName: { flexShrink: 0 },
+  missingStatus: { flexShrink: 1, textAlign: 'right' },
   // Designets knapper: 54 pt pille og 44 pt tekstknapp, 6 pt mellom.
   actions: { paddingTop: 16, paddingHorizontal: 16, gap: 6 },
   review: { height: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
