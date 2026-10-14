@@ -159,9 +159,14 @@ type PreventCallback = (options: { data: { action: { type: string; payload?: unk
 const mockPrevent: { current: { prevent: boolean; cb: PreventCallback } | null } = {
   current: null,
 };
+// Fokus-tilbakekallene skjermen har registrert (bundelen og `useOnResume`
+// har hver sin), så en test kan gi skjermen fokus på nytt mens den står åpen.
+const mockFocus = { all: new Set<() => void>() };
 jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: (callback: () => void) =>
-    require('react').useEffect(callback, [callback]),
+  useFocusEffect: (callback: () => void) => {
+    mockFocus.all.add(callback);
+    require('react').useEffect(callback, [callback]);
+  },
   usePreventRemove: (prevent: boolean, cb: PreventCallback) => {
     mockPrevent.current = { prevent, cb };
   },
@@ -248,6 +253,7 @@ describe('EndGame', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     landed.length = 0;
+    mockFocus.all.clear();
   });
 
   it('kvitterer ut manglende kort, kårer slotene og sender alt inn i skrivingen', async () => {
@@ -411,6 +417,9 @@ describe('EndGame', () => {
     );
     await fireEvent.press(screen.getByTestId('end-game-slot-ld-1'));
     expect(screen.queryByTestId(`end-game-slot-ld-1-${MATE}`)).toBeNull();
+    // De andre kandidatene står fortsatt i arket.
+    expect(screen.getByTestId(`end-game-slot-ld-1-${mockMe}`)).toBeTruthy();
+    expect(screen.getByTestId('end-game-slot-ld-1-none')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('end-game-sheet-close'));
     expect(landedOnBoard()).toBe(false);
 
@@ -645,7 +654,7 @@ describe('EndGame', () => {
     expect(screen.getByTestId('end-game-withdraw-self')).toBeTruthy();
   });
   it('viser bekreft-steget, går tilbake med valgene i behold, og lander på tavla (#2578)', async () => {
-    (fetchOwnProfile as jest.Mock).mockResolvedValue({ isAdmin: true });
+    (fetchOwnProfile as jest.Mock).mockResolvedValueOnce({ isAdmin: true });
     setBundle(
       [
         player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
@@ -688,5 +697,49 @@ describe('EndGame', () => {
     await waitFor(() => {
       expect(landedOnBoard()).toBe(true);
     });
+  });
+
+  it('går tilbake til lista når en ny henting gjør runden uklar mens bekreft-siden står åpen', async () => {
+    // Bekreft-siden viser det som skal lagres. Trekker den valgte vinneren seg
+    // mens siden står åpen, er sloten tom igjen, og «Ja, avslutt runden» ville
+    // ellers avsluttet runden med en sidepremie uten vinner.
+    const sideOn = { sideTournamentEnabled: true, sideLdCount: 1, sideCtpCount: 0 };
+    setBundle(
+      [
+        player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+        player({ userId: MATE, submittedAt: '2026-09-01T09:10:00.000Z' }),
+      ],
+      sideOn,
+    );
+    await renderScreen();
+    await pickWinner('ld-1', MATE);
+    await fireEvent.press(screen.getByTestId('end-game-submit'));
+    expect(screen.getByTestId('end-game-confirm')).toBeTruthy();
+
+    // Neste henting (fokus): makkeren har trukket seg.
+    setBundle(
+      [
+        player({ userId: mockMe, submittedAt: '2026-09-01T09:00:00.000Z' }),
+        player({
+          userId: MATE,
+          submittedAt: '2026-09-01T09:10:00.000Z',
+          withdrawnAt: '2026-09-01T09:20:00.000Z',
+        }),
+      ],
+      sideOn,
+    );
+    await act(async () => {
+      for (const focus of mockFocus.all) focus();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('end-game-confirm')).toBeNull();
+    });
+    // Valget som pekte på makkeren, er borte: raden ber om et nytt.
+    expect(screen.getByTestId('end-game-slot-ld-1')).toHaveTextContent(
+      new RegExp(END_GAME_TEXT.chooseWinner),
+    );
+    expect(finishRound).not.toHaveBeenCalled();
+    expect(landedOnBoard()).toBe(false);
   });
 });
