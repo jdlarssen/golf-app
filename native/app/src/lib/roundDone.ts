@@ -25,7 +25,7 @@ import type { GameMode } from '../../../../lib/scoring/modes/types';
 import { countRoundAchievements } from '../../../../lib/stats/achievements';
 import type { LocalScore } from '../data/db';
 import type { GameBundle } from '../data/gameBundle';
-import { displayName, formatNameList, shortDisplayName } from './display';
+import { formatNameList, shortDisplayName } from './display';
 import { liveStanding } from './homeHero';
 import { findInRoster, resolveFlight, toRoster } from './roster';
 import type { ScorecardRow } from './scorecardRows';
@@ -57,7 +57,6 @@ export const ROUND_DONE_TEXT = {
   birdie: 'birdie',
   birdies: 'birdier',
   place: 'plass nå',
-  placeTied: 'delt plass nå',
   missing: 'Mangler hull',
   hole: 'Hull',
   onPar: 'på par',
@@ -174,8 +173,9 @@ function flightRows(opts: {
     mode,
     holeNumbers: HOLE_NUMBERS,
   });
-  // Kortnavnet, eller hele navnet når to i flighten har samme kortnavn: to
-  // «Jonas» på samme liste sier ikke hvem som mangler hull.
+  // Kortnavnet, eller hele navnet når to i flighten har samme kortnavn (likt
+  // fornavn eller likt kallenavn): to «Jonas» på samme liste sier ikke hvem
+  // som mangler hull. Kallenavnet hjelper ikke da, så det er `name` som brukes.
   const shortCount = new Map<string, number>();
   for (const mate of mates) {
     const short = shortDisplayName(mate.player);
@@ -185,7 +185,8 @@ function flightRows(opts: {
     const entry = mates.find((mate) => mate.user_id === id);
     if (!entry) return '';
     const short = shortDisplayName(entry.player);
-    return (shortCount.get(short) ?? 0) > 1 ? displayName(entry.player) : short;
+    if ((shortCount.get(short) ?? 0) < 2) return short;
+    return entry.player.name?.trim() || short;
   };
 
   const rows: RoundDoneFlightRow[] = [];
@@ -221,7 +222,7 @@ export function placeNumber(standing: { rank: number }): string {
 }
 
 export function placeUnit(standing: { tied: boolean }): string {
-  return standing.tied ? ROUND_DONE_TEXT.placeTied : ROUND_DONE_TEXT.place;
+  return standing.tied ? `${ROUND_DONE_TEXT.tied} ${ROUND_DONE_TEXT.place}` : ROUND_DONE_TEXT.place;
 }
 
 /** Det skjermleseren sier om plassen: «3. plass nå» eller «delt 3. plass nå». */
