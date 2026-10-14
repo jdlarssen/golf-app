@@ -3,13 +3,14 @@
 // dagens beste hull og det som svidde, og hvem i flighten som mangler hull.
 //
 // Kortet tegner bare det `buildRoundDoneModel` svarer (`lib/roundDone.ts`); det
-// regner ingenting selv. Knappene står nederst i kortet og ruller med siden:
-// «Lever scorekort» står nederst på scorekortet, og en fast linje ville dekket
-// den.
+// regner ingenting selv. Knappene står i en fast linje nederst (`RoundDoneBar`),
+// som på tegningen: eierens valg B. Skjermen tar linja bort når scorekortets
+// egen «Lever scorekort» kommer til syne (`roundDoneBarVisible`).
 //
 // Formene på hullene er den delte `ScoreShape` (ringene i scoretonen), som på
 // scorekortet. Tallet i formen følger antall ringer der, ikke tegningens 16.
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   birdieUnit,
   greeting,
@@ -33,15 +34,11 @@ import { ScoreShape } from './ScoreShape';
 
 export interface RoundDoneCardProps {
   model: RoundDoneModel;
-  /** «Se over og lever scorekortet»: ruller ned til scorekortet. */
-  onReview: () => void;
-  /** «Tilbake til hull 18». */
-  onBack: () => void;
   /** En medspiller mangler hull: åpne det første. */
   onOpenHole: (holeNumber: number) => void;
 }
 
-export function RoundDoneCard({ model, onReview, onBack, onOpenHole }: RoundDoneCardProps) {
+export function RoundDoneCard({ model, onOpenHole }: RoundDoneCardProps) {
   const { colors } = useTheme();
   const highlights = [
     model.best ? { which: 'best' as const, hole: model.best } : null,
@@ -49,7 +46,7 @@ export function RoundDoneCard({ model, onReview, onBack, onOpenHole }: RoundDone
   ].filter((h): h is { which: 'best' | 'worst'; hole: RoundHighlight } => h !== null);
 
   return (
-    <View testID="round-done-card">
+    <View style={styles.root} testID="round-done-card">
       <Band model={model} />
 
       {highlights.length > 0 ? (
@@ -92,27 +89,44 @@ export function RoundDoneCard({ model, onReview, onBack, onOpenHole }: RoundDone
           </View>
         </>
       ) : null}
+    </View>
+  );
+}
 
-      <View style={styles.actions}>
-        <Pressable
-          onPress={onReview}
-          accessibilityRole="button"
-          style={[styles.review, { backgroundColor: colors.primary }]}
-          testID="round-done-review"
-        >
-          <Text style={[styles.reviewText, { color: colors.onPrimary }]}>
-            {ROUND_DONE_TEXT.review}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          style={styles.back}
-          testID="round-done-back"
-        >
-          <Text style={[styles.backText, { color: colors.primary }]}>{ROUND_DONE_TEXT.back}</Text>
-        </Pressable>
-      </View>
+export interface RoundDoneBarProps {
+  /** «Se over og lever scorekortet»: ruller ned til scorekortet. */
+  onReview: () => void;
+  /** «Tilbake til hull 18». */
+  onBack: () => void;
+}
+
+/**
+ * Den faste linja nederst (tegningen: krem flate, strek øverst, 12 pt over,
+ * 16 på sidene og 20 under knappene, over hjem-streken), som på
+ * godkjenningsskjermen.
+ */
+export function RoundDoneBar({ onReview, onBack }: RoundDoneBarProps) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={[
+        styles.bar,
+        { backgroundColor: colors.bg, borderTopColor: colors.border, paddingBottom: 20 + insets.bottom },
+      ]}
+      testID="round-done-bar"
+    >
+      <Pressable
+        onPress={onReview}
+        accessibilityRole="button"
+        style={[styles.review, { backgroundColor: colors.primary }]}
+        testID="round-done-review"
+      >
+        <Text style={[styles.reviewText, { color: colors.onPrimary }]}>{ROUND_DONE_TEXT.review}</Text>
+      </Pressable>
+      <Pressable onPress={onBack} accessibilityRole="button" style={styles.back} testID="round-done-back">
+        <Text style={[styles.backText, { color: colors.primary }]}>{ROUND_DONE_TEXT.back}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -318,8 +332,11 @@ const styles = StyleSheet.create({
   // plass.
   missingName: { flexShrink: 0, maxWidth: '50%' },
   missingStatus: { flexShrink: 1, minWidth: 120, textAlign: 'right' },
-  // Designets knapper: 54 pt pille og 44 pt tekstknapp, 6 pt mellom.
-  actions: { paddingTop: 16, paddingHorizontal: 16, gap: 6 },
+  // Luft ned til scorekortet under (med rullas gap blir det 24); tegningen har
+  // ingenting der, for linja står over.
+  root: { paddingBottom: 16 },
+  // Designets linje: strek øverst, 12 pt over, 16 på sidene, 6 mellom knappene.
+  bar: { borderTopWidth: 1, paddingTop: 12, paddingHorizontal: 16, gap: 6 },
   review: { height: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   reviewText: { fontSize: 16, fontFamily: FONTS.sansSemiBold },
   back: { height: TAP, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },

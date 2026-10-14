@@ -1,10 +1,17 @@
 // RoundDoneCard (Type C, #2299): kortet tegner modellen fra `buildRoundDoneModel`
-// og regner ingenting selv. Her låses seksjonene og at raden for den som
-// mangler et hull, åpner hullet. Tallene og tekstene er låst i
-// `roundDone.test.ts` og `lib/scorecard/roundSummary.test.ts`.
+// og regner ingenting selv. Her låses seksjonene, at raden for den som mangler
+// et hull åpner hullet, og at den faste linja (`RoundDoneBar`) sender begge
+// trykkene videre. Tallene og tekstene er låst i `roundDone.test.ts` og
+// `lib/scorecard/roundSummary.test.ts`.
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { RoundDoneModel } from '../../lib/roundDone';
-import { RoundDoneCard } from './RoundDoneCard';
+import { RoundDoneBar, RoundDoneCard } from './RoundDoneCard';
+
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 const MODEL: RoundDoneModel = {
   greetingName: 'Sigrid',
@@ -19,10 +26,15 @@ const MODEL: RoundDoneModel = {
   ],
 };
 
-it('viser seksjonene, åpner hullet som mangler, og har ingen plass uten tavle', async () => {
+it('viser seksjonene, åpner hullet som mangler, har knappene i linja og ingen plass uten tavle', async () => {
   const onOpenHole = jest.fn();
+  const onReview = jest.fn();
+  const onBack = jest.fn();
   const { rerender } = await render(
-    <RoundDoneCard model={MODEL} onReview={jest.fn()} onBack={jest.fn()} onOpenHole={onOpenHole} />,
+    <>
+      <RoundDoneCard model={MODEL} onOpenHole={onOpenHole} />
+      <RoundDoneBar onReview={onReview} onBack={onBack} />
+    </>,
   );
 
   for (const id of [
@@ -35,22 +47,21 @@ it('viser seksjonene, åpner hullet som mangler, og har ingen plass uten tavle',
     'round-done-worst',
     'round-done-flight',
     'round-done-complete',
-    'round-done-review',
-    'round-done-back',
+    'round-done-bar',
   ]) {
     expect(screen.getByTestId(id)).toBeTruthy();
   }
   await fireEvent.press(screen.getByTestId('round-done-missing-jonas'));
   expect(onOpenHole).toHaveBeenCalledWith(17);
+  await fireEvent.press(screen.getByTestId('round-done-review'));
+  expect(onReview).toHaveBeenCalledTimes(1);
+  await fireEvent.press(screen.getByTestId('round-done-back'));
+  expect(onBack).toHaveBeenCalledTimes(1);
 
   await rerender(
-    <RoundDoneCard
-      model={{ ...MODEL, standing: null, flight: null }}
-      onReview={jest.fn()}
-      onBack={jest.fn()}
-      onOpenHole={onOpenHole}
-    />,
+    <RoundDoneCard model={{ ...MODEL, standing: null, flight: null }} onOpenHole={onOpenHole} />,
   );
   expect(screen.queryByTestId('round-done-place')).toBeNull();
   expect(screen.queryByTestId('round-done-flight')).toBeNull();
+  expect(screen.queryByTestId('round-done-review')).toBeNull();
 });
