@@ -23,17 +23,11 @@ import type { EndRoundFailure } from '../data/endGame';
 // og en copy-modul skal ikke koble på noe av det. `import type` forsvinner i
 // kompileringen, så koden her er fortsatt ren tekst.
 import type { ReminderFailure } from '../data/remind';
+import { formatNameList } from './display';
 import { GENERIC_DB, OFFLINE_NOTE } from './rosterCopy';
 import { fillCopy } from './sideTournamentCopy';
 import { WEB_LINK_TEXT } from './webLink';
 import type { DeliveryCounts, FinishSlot } from './endGamePlan';
-
-/** «Ola, Kari og Per» — navn i en setning, ikke en punktliste. */
-export function nameList(names: readonly string[]): string {
-  if (names.length === 0) return '';
-  if (names.length === 1) return names[0]!;
-  return `${names.slice(0, -1).join(', ')} og ${names[names.length - 1]!}`;
-}
 
 /**
  * Hvorfor avslutningen ikke gikk gjennom.
@@ -46,7 +40,7 @@ export function describeEndRoundFailure(
   reason: EndRoundFailure,
   names: readonly string[] = [],
 ): string {
-  const who = nameList(names);
+  const who = formatNameList(names);
   switch (reason) {
     case 'no-session':
       return 'Du er ikke logget inn lenger. Logg inn på nytt.';
@@ -433,7 +427,7 @@ export function progressLine(counts: DeliveryCounts, requirePeerApproval: boolea
 
 /** Opptil tre navn står med navn, flere blir et tall (beslutning 4). */
 function whoList(names: readonly string[]): string {
-  return names.length > 3 ? playerCount(names.length) : nameList(names);
+  return names.length > 3 ? playerCount(names.length) : formatNameList(names);
 }
 
 /**
@@ -461,7 +455,7 @@ export function opensWhenNote(
     parts.push(fillCopy(OPENS_ACKNOWLEDGED, { who: whoList(blockers.unacknowledged) }));
   }
   if (blockers.winnersOpen) parts.push(slotCount === 1 ? OPENS_WINNER : OPENS_WINNERS);
-  return fillCopy(OPENS_WHEN, { parts: nameList(parts) });
+  return fillCopy(OPENS_WHEN, { parts: formatNameList(parts) });
 }
 
 /**

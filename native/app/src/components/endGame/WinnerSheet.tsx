@@ -19,7 +19,7 @@ import type { BundlePlayer } from '../../data/gameBundle';
 import { displayName } from '../../lib/display';
 import { END_GAME_TEXT, slotLabel } from '../../lib/endGameCopy';
 import { NO_WINNER, type FinishSlot } from '../../lib/endGamePlan';
-import { FONTS, fraunces, interLine, TAP, useTheme, withAlpha } from '../../theme';
+import { FONTS, fraunces, interLine, sheetScrim, TAP, useTheme } from '../../theme';
 import { HakeIcon, LukkIcon } from '../icons/Icons';
 
 /** Arket starter 92 pt under toppen av skjermen, som i tegningen. */
@@ -55,8 +55,7 @@ export function WinnerSheet({
 
   // Samme hinne som godkjenningsarket (#2577): skog med 45 % i lys, svart med
   // 55 % i natt. Står inline i begge til den som merges sist, samler dem.
-  const scrim =
-    scheme === 'dark' ? withAlpha('#000000', 0.55) : withAlpha(colors.text, 0.45);
+  const scrim = sheetScrim(colors, scheme);
   const pick = (next: string) => {
     onPick(next);
     onClose();
