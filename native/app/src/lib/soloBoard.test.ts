@@ -95,6 +95,31 @@ describe('soloBoardFor — live', () => {
   });
 });
 
+describe('soloBoardFor — names, as the web board writes them', () => {
+  // The web board and the side tournament card write a row as
+  // formatRevealName(name, nickname), with «(ukjent spiller)» for a missing
+  // name; a sentence still names the leader by first name.
+  const named = [
+    homePlayer({ userId: 'marte', name: 'Marte Lie', nickname: 'Mart' }),
+    homePlayer({ userId: ME, name: 'Sigrid Aas' }),
+    homePlayer({ userId: 'ghost', name: null }),
+  ];
+  const scores = [
+    ...holeScores('g-live', 'marte', 3, 3),
+    ...holeScores('g-live', ME, 3, 4),
+    ...holeScores('g-live', 'ghost', 3, 5),
+  ];
+  const model = soloBoardFor({ bundle: homeBundle({ players: named }), scores, userId: ME })!;
+
+  it('writes the nickname between first and last name, and the unknown-player fallback', () => {
+    expect(model.rows.map((r) => r.name)).toEqual(['Marte "Mart" Lie', 'Sigrid Aas', '(ukjent spiller)']);
+  });
+
+  it('still names the leader by first name in the strip', () => {
+    expect(model.strip?.text).toBe('2. plass · 3 poeng bak Marte');
+  });
+});
+
 describe('soloBoardFor — finished', () => {
   // Marte 54 poeng. Sigrid og Jonas har 36 hver; Jonas tok sine på siste ni.
   const scores = [

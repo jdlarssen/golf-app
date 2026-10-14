@@ -28,12 +28,12 @@ import {
   type ResultBoardRow,
 } from '../../../../lib/leaderboard/resultBoard';
 import type { ScoreTone } from '../../../../lib/scoring/scoreTone';
+import { formatRevealName } from '../../../../lib/names/formatRevealName';
 import { MODE_LABELS, type GameMode } from '../../../../lib/scoring/modes/types';
 import type { TieDecider } from '../../../../lib/scoring/tiebreaker';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
 import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_TEXT } from './boardCopy';
-import { displayName } from './display';
 import { gateReason } from './formatGate';
 import { buildHeroModel, liveBoardFor } from './homeHero';
 import { formatMessage } from './kavalkadeCopy';
@@ -145,7 +145,13 @@ const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
   hole18: BOARD_APP_TEXT.decidedHole18,
 };
 
-const rowName = (row: { name: string | null; nickname: string | null }) => displayName(row);
+/**
+ * Radens navn som webbens tavle og sidekortet skriver det (`boardDisplayName`,
+ * `lib/sideTournament.ts`): kallenavnet mellom fornavn og etternavn, eller
+ * «(ukjent spiller)». Det samme navnet går inn i `sentenceName`.
+ */
+const rowName = (row: { name: string | null; nickname: string | null }) =>
+  row.name ? formatRevealName(row.name, row.nickname) : BOARD_COMMON_TEXT.unknownPlayerFull;
 
 /** Tallet for skjermleseren: «18 poeng», «2 over par», «På par», «74 slag netto». */
 function totalSr(unit: LiveBoardUnit, total: number | null): string {
