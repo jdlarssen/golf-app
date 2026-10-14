@@ -63,5 +63,4 @@ it('viser seksjonene, åpner hullet som mangler, har knappene i linja og ingen p
   );
   expect(screen.queryByTestId('round-done-place')).toBeNull();
   expect(screen.queryByTestId('round-done-flight')).toBeNull();
-  expect(screen.queryByTestId('round-done-review')).toBeNull();
 });

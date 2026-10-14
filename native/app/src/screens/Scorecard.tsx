@@ -48,10 +48,13 @@
 // oppsummeringen (`RoundDoneCard`): hilsenen, tallene, dagens beste hull og det
 // som svidde, og hvem i flighten som mangler hull. Alt under står som før.
 // Knappene «Se over og lever scorekortet» og «Tilbake til hull 18» står i en
-// fast linje under rulla (`RoundDoneBar`, eierens valg B), som viker når
-// scorekortets egen «Lever scorekort» kommer til syne: aldri to leverknapper.
+// fast linje over bunnen av rulla (`RoundDoneBar`, eierens valg B), som viker
+// når scorekortets egen «Lever scorekort» kommer til syne: aldri to
+// leverknapper. Innholdet har like mye luft nederst som linja er høy, så rulla
+// er like stor med og uten linja, og ingenting hopper når den går.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   Alert,
   Pressable,
   ScrollView,
@@ -63,6 +66,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { GameStatus } from '../../../../lib/games/status';
 import {
   revealState,
@@ -81,7 +85,11 @@ import {
   type ScorecardRowKind,
 } from '../components/scorecard/ScorecardGrid';
 import { kickerHeader } from '../components/KickerHeader';
-import { RoundDoneBar, RoundDoneCard } from '../components/scorecard/RoundDoneCard';
+import {
+  RoundDoneBar,
+  RoundDoneCard,
+  roundDoneBarHeight,
+} from '../components/scorecard/RoundDoneCard';
 import { ScorecardHeader } from '../components/scorecard/ScorecardHeader';
 import {
   ScorecardStampMark,
@@ -133,6 +141,7 @@ const QUEUE_POLL_MS = 1500;
 
 export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   const { colors, ui } = useTheme();
+  const insets = useSafeAreaInsets();
   const { gameId } = route.params;
   const { userId } = useSession();
   // #2201: lever-påminnelsen er lest når du har åpnet scorekortet (webbens
@@ -151,38 +160,33 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
   // #2299: «Se over og lever scorekortet» ruller hit, til toppen av scorekortet.
   const scrollRef = useRef<ScrollView>(null);
   const scorecardTop = useRef(0);
-  // Hvor rulla står og hvor leverknappen er, til bunnlinja. Bare svaret
-  // (`submitInView`) er state, så skjermen tegnes på nytt bare når det snur.
+  // Hvor rulla står og hvor leverknappen er, til bunnlinja. Bare om linja
+  // står, er state, og den settes bare når svaret snur (siste svar i en ref).
   const barGeometry = useRef<{ scrollY: number; viewportHeight: number; submitTop: number | null }>({
     scrollY: 0,
     viewportHeight: 0,
     submitTop: null,
   });
-  const [submitShown, setSubmitShown] = useState(false);
-  const updateBar = useCallback(() => {
-    setSubmitShown(submitInView(barGeometry.current));
+  const barShownRef = useRef(true);
+  const [barShown, setBarShown] = useState(true);
+  // «Se over og lever scorekortet» ruller uten animasjon når telefonen ber om
+  // redusert bevegelse. Leses bare ved trykk, så en ref holder.
+  const reduceMotion = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((value) => {
+        if (alive) reduceMotion.current = value;
+      })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (value) => {
+      reduceMotion.current = value;
+    });
+    return () => {
+      alive = false;
+      sub.remove();
+    };
   }, []);
-  const onScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      barGeometry.current.scrollY = event.nativeEvent.contentOffset.y;
-      updateBar();
-    },
-    [updateBar],
-  );
-  const onScrollLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      barGeometry.current.viewportHeight = event.nativeEvent.layout.height;
-      updateBar();
-    },
-    [updateBar],
-  );
-  const onSubmitLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      barGeometry.current.submitTop = event.nativeEvent.layout.y;
-      updateBar();
-    },
-    [updateBar],
-  );
 
   // En feil lar `queued` stå: står den på `null`, er knappen fortsatt sperret,
   // og intervallet prøver igjen.
@@ -332,7 +336,35 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
     missing,
     teamMode,
   });
-  const showBar = roundDoneBarVisible({ hasSummary: roundDone != null, submitInView: submitShown });
+  const barHeight = roundDoneBarHeight(insets.bottom);
+  const showBar = roundDone != null && barShown;
+  // Leses i hendelsene, så de ser denne tegningens oppsummering. Uten
+  // oppsummering finnes ingen linje å flytte på.
+  const updateBar = () => {
+    if (roundDone == null) return;
+    const next = roundDoneBarVisible({
+      hasSummary: true,
+      submitInView: submitInView({
+        ...barGeometry.current,
+        coveredBottom: barShownRef.current ? barHeight : 0,
+      }),
+    });
+    if (next === barShownRef.current) return;
+    barShownRef.current = next;
+    setBarShown(next);
+  };
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    barGeometry.current.scrollY = event.nativeEvent.contentOffset.y;
+    updateBar();
+  };
+  const onScrollLayout = (event: LayoutChangeEvent) => {
+    barGeometry.current.viewportHeight = event.nativeEvent.layout.height;
+    updateBar();
+  };
+  const onSubmitLayout = (event: LayoutChangeEvent) => {
+    barGeometry.current.submitTop = event.nativeEvent.layout.y;
+    updateBar();
+  };
   const openHole = (holeNumber: number) =>
     navigation.navigate('Hole', {
       gameId,
@@ -468,7 +500,13 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       <ScrollView
         ref={scrollRef}
         style={styles.fill}
-        contentContainerStyle={[ui.scroll, styles.scroll]}
+        // Luft nederst: like høy som linja mens oppsummeringen står (rulla er da
+        // like stor om linja står eller ikke), ellers ut av hjem-streken.
+        contentContainerStyle={[
+          ui.scroll,
+          styles.scroll,
+          { paddingBottom: roundDone ? barHeight : 20 + insets.bottom },
+        ]}
         onScroll={onScroll}
         scrollEventThrottle={16}
         onLayout={onScrollLayout}
@@ -596,7 +634,9 @@ export function Scorecard({ route, navigation }: ScreenProps<'Scorecard'>) {
       </ScrollView>
       {showBar ? (
         <RoundDoneBar
-          onReview={() => scrollRef.current?.scrollTo({ y: scorecardTop.current, animated: true })}
+          onReview={() =>
+            scrollRef.current?.scrollTo({ y: scorecardTop.current, animated: !reduceMotion.current })
+          }
           onBack={() => openHole(HOLE_COUNT)}
         />
       ) : null}
