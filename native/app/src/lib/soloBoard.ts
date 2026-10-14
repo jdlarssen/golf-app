@@ -10,7 +10,7 @@
 // Ingen regel her er ny. Tallene er tavlas (`liveBoardFor`) eller det ferdige
 // resultatets (`soloResultBoard`); plass, leder, navn i en setning og enheten
 // er de delte reglene i `lib/leaderboard/`; stripas knapp er Hjem-kortets
-// (`buildHeroModel`).
+// (`heroAction`, samme regel som `buildHeroModel`).
 import { STATUS_LABELS } from '../../../../lib/games/status';
 import { showHolesColumn } from '../../../../lib/leaderboard/holesColumn';
 import {
@@ -36,7 +36,7 @@ import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
 import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_TEXT } from './boardCopy';
 import { gateReason } from './formatGate';
-import { buildHeroModel, liveBoardFor } from './homeHero';
+import { heroAction, liveBoardFor } from './homeHero';
 import { formatMessage } from './kavalkadeCopy';
 import { hasAnyStroke, leaderboardVisibility } from './leaderboardModel';
 import { asModeConfig, computeGameLeaderboard, toPlayerRows } from './scoringContext';
@@ -245,7 +245,7 @@ function liveBoard(
   const standing = userId ? viewerStanding(board, userId) : null;
   let strip: SoloBoardStrip | null = null;
   if (standing && userId) {
-    const action = buildHeroModel({ bundle, scores, userId }).action;
+    const action = heroAction({ bundle, scores, userId });
     const leaderRow = board.rows.find((row) => row.userId === standing.leaderUserIds[0]);
     const behind =
       standing.gap === null || standing.gap <= 0

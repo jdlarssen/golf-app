@@ -144,11 +144,18 @@ function liveStanding(
   return { standing, unit: board.unit };
 }
 
-export function buildHeroModel(opts: {
+type HeroInput = {
   bundle: GameBundle;
   scores: readonly LocalScore[];
   userId: string;
-}): HeroModel {
+};
+
+/**
+ * Alt på kortet unntatt plassen: tilstanden, hullene og hva knappen gjør.
+ * Ren og billig (ingen motor), så tavla (#2579) kan spørre etter knappen
+ * uten å regne tavla en gang til.
+ */
+function heroProgress(opts: HeroInput) {
   const { bundle, userId } = opts;
   const { game } = bundle;
   const mode = game.gameMode as GameMode;
@@ -191,6 +198,22 @@ export function buildHeroModel(opts: {
         ? { kind: 'submit' }
         : { kind: 'hole', holeNumber: nextHole };
 
+  return { gate, state, played, nextHole, action, playable, scores, roster, me };
+}
+
+/**
+ * Knappen på Hjem-kortet, alene. Tavlas stripe (#2579) bruker samme regel som
+ * kortet, uten at plassen regnes ut på nytt.
+ */
+export function heroAction(opts: HeroInput): HeroAction {
+  return heroProgress(opts).action;
+}
+
+export function buildHeroModel(opts: HeroInput): HeroModel {
+  const { bundle, userId } = opts;
+  const { gate, state, played, nextHole, action, playable, scores, roster, me } =
+    heroProgress(opts);
+
   const live = playable && state !== 'withdrawn' ? liveStanding(bundle, scores, userId) : null;
 
   return {
@@ -202,6 +225,6 @@ export function buildHeroModel(opts: {
     action,
     standing: live?.standing ?? null,
     unit: live?.unit ?? null,
-    approvals: me ? pendingApprovals(roster, game, userId).length : 0,
+    approvals: me ? pendingApprovals(roster, bundle.game, userId).length : 0,
   };
 }
