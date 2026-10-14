@@ -12,6 +12,7 @@ import { act, render, screen, waitFor } from '@testing-library/react-native';
 import { ResultView } from '../components/leaderboard/ResultView';
 import type { ModeResult } from '../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../lib/scoring/settlement';
+import { soloBoardFor } from '../lib/soloBoard';
 import type { ScreenProps } from '../navigation';
 import { fireForeground } from '../test/syncTriggersMock';
 import { Leaderboard, LeaderboardBody } from './Leaderboard';
@@ -100,6 +101,11 @@ const mockLocalScores = [
 }));
 
 jest.mock('../supabase', () => require('../test/supabaseMock'));
+// #2579: tavla vet hvem som ser den («DU», stripa), og stripa står over sikker sone.
+jest.mock('../session', () => ({ useSession: () => ({ userId: 'me', email: null }) }));
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default,
+);
 // #2201: merk-lest har sin egen test; manuell mock i lib/__mocks__/.
 jest.mock('../lib/useMarkVisitRead');
 jest.mock('../data/gameBundle', () => ({
@@ -133,12 +139,19 @@ function cell(rowKey: string, columnKey: string): string {
   );
 }
 
+/** Rekkefølgen på tavlas rader (#2579), som userId-er. */
+function boardOrder(): string[] {
+  return screen
+    .getAllByTestId(/^board-row-[a-z]+$/)
+    .map((row) => String(row.props.testID).replace('board-row-', ''));
+}
+
 async function renderLeaderboard() {
   await render(
     <Leaderboard
       {...({
         route: { params: { gameId: GAME_ID } },
-        navigation: { navigate: jest.fn(), setParams: jest.fn() },
+        navigation: { navigate: jest.fn(), setParams: jest.fn(), setOptions: jest.fn() },
       } as unknown as ScreenProps<'Leaderboard'>)}
     />,
   );
@@ -157,14 +170,16 @@ describe('Leaderboard', () => {
     });
 
     // Makkeren: 2 + 2 poeng, plass 1. Meg: 0 + 2 poeng, plass 2. Rekkefølgen
-    // og plasseringen kommer fra motoren — appen sorterer ikke om.
-    expect(cell('mate', 'rank')).toBe('1');
-    expect(cell('mate', 'name')).toBe('Makker Makkersen');
-    expect(cell('mate', 'points')).toBe('4');
+    // og plasseringen kommer fra motoren — appen sorterer ikke om. Tavla
+    // (#2579) tegner dem.
+    expect(boardOrder()).toEqual(['mate', 'me']);
+    expect(screen.getByTestId('board-row-mate-place')).toHaveTextContent('1');
+    expect(screen.getByTestId('board-row-mate-name')).toHaveTextContent('Makker Makkersen', { exact: false });
+    expect(screen.getByTestId('board-row-mate-total')).toHaveTextContent('4');
 
-    expect(cell('me', 'rank')).toBe('2');
-    expect(cell('me', 'name')).toBe('Meg Selv');
-    expect(cell('me', 'points')).toBe('2');
+    expect(screen.getByTestId('board-row-me-place')).toHaveTextContent('2');
+    expect(screen.getByTestId('board-row-me-name')).toHaveTextContent('Meg Selv', { exact: false });
+    expect(screen.getByTestId('board-row-me-total')).toHaveTextContent('2');
 
     // Ingen kanal nummer to: skjermen henger på abonnementet appen alt har.
     const { subscribeGameScores } = require('../data/realtime') as {
@@ -674,61 +689,43 @@ describe('ResultView', () => {
 
   // #1892: Hull-kolonnen er «thru»-informasjon under runden og støy på
   // sluttresultatet når alle spilte like mange. Regelen selv er Type A-dekket i
-  // `lib/leaderboard/holesColumn.test.ts` — disse to svarer bare på om tabellen
-  // faktisk får kolonnen eller ikke.
-  const stablefordResult = (holesPlayed: [number, number]) =>
-    ({
-      kind: 'stableford',
-      variant: 'solo',
-      holes: [],
-      players: [
-        {
-          userId: 'mate',
-          totalPoints: 4,
-          holesPlayed: holesPlayed[0],
-          rank: 1,
-          tiedWith: [],
-        },
-        {
-          userId: 'me',
-          totalPoints: 2,
-          holesPlayed: holesPlayed[1],
-          rank: 2,
-          tiedWith: [],
-        },
-      ],
-    }) as unknown as ModeResult;
+  // `lib/leaderboard/holesColumn.test.ts` — disse to svarer bare på om tavla
+  // (#2579) faktisk får kolonnen eller ikke.
+  const finishedBoard = (holesPlayed: Record<string, number>, overrides: Record<string, unknown> = {}) => {
+    const bundle = {
+      ...mockBundle,
+      game: { ...bundleGame, status: 'finished', ...overrides },
+    } as never;
+    const scores = Object.entries(holesPlayed).flatMap(([userId, holes]) =>
+      Array.from({ length: holes }, (_, i) => ({
+        id: `${GAME_ID}:${userId}:${i + 1}`,
+        gameId: GAME_ID,
+        userId,
+        holeNumber: i + 1,
+        strokes: userId === 'mate' ? 4 : 5,
+        putts: null,
+        enteredBy: userId,
+        clientUpdatedAt: '2026-08-30T10:00:00.000Z',
+        serverUpdatedAt: null,
+      })),
+    );
+    return { bundle, scores, soloBoard: soloBoardFor({ bundle, scores, userId: 'me' }) };
+  };
 
   it('dropper Hull-kolonnen på et ferdig spill der alle spilte like mange hull', async () => {
-    await render(
-      <ResultView
-        result={stablefordResult([18, 18])}
-        status="finished"
-        gameId={GAME_ID}
-        settlement={null}
-        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
-      />,
-    );
+    await render(<LeaderboardBody {...finishedBoard({ mate: 18, me: 18 })} />);
 
-    expect(cell('me', 'points')).toBe('2');
-    expect(screen.queryByTestId('leaderboard-table-row-me-holes')).toBeNull();
-    expect(screen.queryByTestId('leaderboard-table-row-mate-holes')).toBeNull();
+    expect(screen.getByTestId('board-row-me-total')).toBeTruthy();
+    expect(screen.queryByTestId('board-row-me-holes')).toBeNull();
+    expect(screen.queryByTestId('board-row-mate-holes')).toBeNull();
   });
 
   it('beholder Hull-kolonnen på et ferdig spill der én ga seg etter 12', async () => {
-    await render(
-      <ResultView
-        result={stablefordResult([18, 12])}
-        status="finished"
-        gameId={GAME_ID}
-        settlement={null}
-        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
-      />,
-    );
+    await render(<LeaderboardBody {...finishedBoard({ mate: 18, me: 12 })} />);
 
-    // Tabellen bytter ikke form per rad: begge radene får kolonnen.
-    expect(cell('mate', 'holes')).toBe('18');
-    expect(cell('me', 'holes')).toBe('12');
+    // Tavla bytter ikke form per rad: begge radene får kolonnen.
+    expect(screen.getByTestId('board-row-mate-holes')).toHaveTextContent('18');
+    expect(screen.getByTestId('board-row-me-holes')).toHaveTextContent('12');
   });
 
   // #1982: samme regel på lag-tabellene. Texas-grenen tegner også ambrose og
@@ -765,42 +762,18 @@ describe('ResultView', () => {
   });
 
   it('viser Hull-kolonnen i slagspill og beholder streken for den som ikke har ført noe', async () => {
-    const result = {
-      kind: 'solo_strokeplay',
-      players: [
-        {
-          userId: 'mate',
-          totalGrossStrokes: 80,
-          totalNetStrokes: 72,
-          holesPlayed: 18,
-          rank: 1,
-          tiedWith: [],
-        },
-        {
-          userId: 'me',
-          totalGrossStrokes: 0,
-          totalNetStrokes: 0,
-          holesPlayed: 0,
-          rank: 2,
-          tiedWith: [],
-        },
-      ],
-    } as unknown as ModeResult;
-
     await render(
-      <ResultView
-        result={result}
-        status="finished"
-        gameId={GAME_ID}
-        settlement={null}
-        nameOf={(userId) => (userId === 'me' ? 'Meg Selv' : 'Makker Makkersen')}
+      <LeaderboardBody
+        {...finishedBoard(
+          { mate: 18, me: 0 },
+          { gameMode: 'solo_strokeplay', modeConfig: { kind: 'solo_strokeplay', team_size: 1 } },
+        )}
       />,
     );
 
-    expect(cell('mate', 'holes')).toBe('18');
-    expect(cell('me', 'holes')).toBe('0');
-    expect(cell('me', 'gross')).toBe('—');
-    expect(cell('me', 'net')).toBe('—');
+    expect(screen.getByTestId('board-row-mate-holes')).toHaveTextContent('18');
+    expect(screen.getByTestId('board-row-me-holes')).toHaveTextContent('0');
+    expect(screen.getByTestId('board-row-me-total')).toHaveTextContent('—');
   });
 
   it('sier rolig fra i stedet for å krasje på en ukjent resultatform', async () => {

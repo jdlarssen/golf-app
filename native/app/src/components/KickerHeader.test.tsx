@@ -2,13 +2,14 @@
 // ikke iOS sin navigasjonslinje. Her låses at raden bruker det native-stack
 // gir den: pila bare når det finnes en skjerm bak, og skjermens egen
 // `headerRight` i høyre boks. Og raden med bare pil (Profil), med designets
-// etikett der den finnes.
+// etikett der den finnes. Tavlas bånd (#2579) er også en header, så pila står
+// i alle tilstander; pillen bare når den er gitt.
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock-factories heises over importene og må bruke require */
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { themeFor } from '../theme';
-import { kickerHeader } from './KickerHeader';
+import { boardHeader, kickerHeader } from './KickerHeader';
 
 jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default,
@@ -62,4 +63,26 @@ it('uten ord er raden bare pila, og pila bærer designets etikett', async () => 
   );
   expect(screen.getByLabelText('Tilbake til profil')).toBeTruthy();
   expect(screen.queryByRole('header')).toBeNull();
+});
+
+it('tavlas bånd: pila går tilbake, pillen står bare når den er gitt, og prikken bare live', async () => {
+  const goBack = jest.fn();
+  const band = (pill?: { text: string; live: boolean }) =>
+    boardHeader({ pill, kicker: 'Lørdagsrunden · Byneset', title: 'Tavla', subtitle: 'Stableford · 12 spillere' });
+  const { rerender } = await render(<>{headerElement(true, goBack, band())}</>);
+
+  await fireEvent.press(screen.getByLabelText('Tilbake'));
+  expect(goBack).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId('board-top-bar')).toHaveStyle({
+    backgroundColor: themeFor('light').colors.surfaceStrong,
+  });
+  expect(screen.queryByTestId('board-pill')).toBeNull();
+
+  await rerender(<>{headerElement(true, goBack, band({ text: 'Live · etter 7 hull', live: true }))}</>);
+  expect(screen.getByTestId('board-pill')).toBeTruthy();
+  expect(screen.getByTestId('board-pill-dot')).toBeTruthy();
+
+  await rerender(<>{headerElement(true, goBack, band({ text: 'Sluttresultat · 18 hull', live: false }))}</>);
+  expect(screen.getByTestId('board-pill')).toBeTruthy();
+  expect(screen.queryByTestId('board-pill-dot')).toBeNull();
 });

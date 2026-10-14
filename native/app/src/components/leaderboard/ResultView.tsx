@@ -13,11 +13,13 @@ import type { ModeResult } from '../../../../../lib/scoring/modes/types';
 import type { Settlement } from '../../../../../lib/scoring/settlement';
 import { GATE_LINK_LABEL, gameWebPath } from '../../lib/formatGate';
 import { nameLookup, teamLabel } from '../../lib/leaderboardModel';
+import type { SoloBoardModel } from '../../lib/soloBoard';
 import { WebLinkButton } from '../WebLinkButton';
 import { BingoBangoBongoView } from './BingoBangoBongoView';
 import { MatchView } from './MatchView';
 import { NassauView, SkinsView } from './PotViews';
 import { SettlementCard } from './SettlementCard';
+import { SoloBoard } from './SoloBoard';
 import { CalmNote, LeaderTable, type LeaderColumn } from './Table';
 import { WolfView } from './WolfView';
 
@@ -64,6 +66,7 @@ export function ResultView({
   gameId,
   settlement,
   nameOf,
+  soloBoard = null,
 }: {
   result: ModeResult;
   status: string;
@@ -76,9 +79,15 @@ export function ResultView({
    */
   settlement: Settlement | null;
   nameOf: ReturnType<typeof nameLookup>;
+  /**
+   * Tavla (#2579) for slagspill og solo stableford, fra `soloBoardFor`. Uten
+   * den står tabellen under, som før.
+   */
+  soloBoard?: SoloBoardModel | null;
 }) {
   switch (result.kind) {
     case 'solo_strokeplay': {
+      if (soloBoard) return <SoloBoard model={soloBoard} />;
       // Slagsummen gjelder bare hullene spilleren har ført (#1982): 12 hull
       // rangeres mot 18 uten at noe annet på skjermen sier det.
       const showHoles = showHolesColumn(
@@ -114,6 +123,7 @@ export function ResultView({
 
     case 'stableford': {
       if (result.variant === 'solo') {
+        if (soloBoard) return <SoloBoard model={soloBoard} />;
         const showHoles = showHolesColumn(
           status,
           result.players.map((player) => player.holesPlayed),

@@ -121,6 +121,20 @@ export type ThemeColors = {
   skeleton: string;
   /** Glansen som sveiper over skjelettet: webbens `--skel-tint`. */
   skeletonTint: string;
+  /**
+   * Tavleflaten (#2579, designlerretet `--slab`): den mørke tavla bak radene,
+   * lik i begge draktene. Ingen lys rolle har den.
+   */
+  boardSlab: string;
+  /** Kanten rundt den ferdige tavla (`--slabline`): usynlig i lys, synlig i natt. */
+  boardSlabBorder: string;
+  /**
+   * Din rad på tavla (#2579, `--you`). Ikke `primarySoft`: natt-verdien der er
+   * en annen enn tegningens.
+   */
+  youFill: string;
+  /** Prikken for et hull over par på tavla (#2579). `scoreOver1Fg` er tekstfargen, mørkere. */
+  dotOver: string;
 };
 
 /**
@@ -166,6 +180,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     formUp: '#1F6B3A',
     skeleton: '#ECE5D2',
     skeletonTint: '#F3EDDD',
+    boardSlab: '#14201A',
+    boardSlabBorder: '#14201A',
+    youFill: '#E8EFE8',
+    dotOver: '#D89B3A',
   },
   dark: {
     bg: '#14201A',
@@ -202,6 +220,10 @@ export const PALETTES: Record<Scheme, ThemeColors> = {
     formUp: '#7DAA8A',
     skeleton: '#243828',
     skeletonTint: '#2F4734',
+    boardSlab: '#14201A',
+    boardSlabBorder: '#2F3F34',
+    youFill: '#243429',
+    dotOver: '#E5B26F',
   },
 };
 
@@ -505,6 +527,11 @@ export const SUNLIGHT_COLORS: ThemeColors = {
   // Kavalkadens lasteskjelett (#2265). Hullsiden tegner det ikke; lys-verdien.
   skeleton: '#ECE5D2',
   skeletonTint: '#F3EDDD',
+  // Tavla (#2579). Hullsiden tegner den ikke; lys-verdiene.
+  boardSlab: '#14201A',
+  boardSlabBorder: '#14201A',
+  youFill: '#E8EFE8',
+  dotOver: '#D89B3A',
 };
 
 /**
@@ -527,6 +554,30 @@ export function heroShadow(scheme: Scheme): string {
   return scheme === 'dark'
     ? '0 10px 28px rgba(0, 0, 0, 0.35)'
     : '0 10px 28px rgba(26, 46, 31, 0.2)';
+}
+
+/**
+ * Skyggen under tavleflaten (#2579, designlerretet: «0 8px 24px» med 18 % skog
+ * i lys, 35 % svart i klubbhus-natt).
+ */
+export function boardSlabShadow(scheme: Scheme): string {
+  return scheme === 'dark' ? '0 8px 24px rgba(0, 0, 0, 0.35)' : '0 8px 24px rgba(26, 46, 31, 0.18)';
+}
+
+/** Skyggen under stripa nederst på tavla (#2579: «0 6px 20px», 10 % skog / 30 % svart). */
+export function boardStripShadow(scheme: Scheme): string {
+  return scheme === 'dark' ? '0 6px 20px rgba(0, 0, 0, 0.3)' : '0 6px 20px rgba(26, 46, 31, 0.1)';
+}
+
+/** Den nedsenkede kanten under hvert skilt på tavla (#2579), lik i begge draktene. */
+export const BOARD_PLAQUE_SHADOW = 'inset 0 -2px 0 rgba(0, 0, 0, 0.08)';
+
+/**
+ * Gullringen rundt lederen og vinneren på tavla (#2579, `--ring`): gullet med
+ * 90 % dekning i lys og 95 % i klubbhus-natt.
+ */
+export function boardRing(colors: ThemeColors, scheme: Scheme): string {
+  return withAlpha(colors.accent, scheme === 'dark' ? 0.95 : 0.9);
 }
 
 /**

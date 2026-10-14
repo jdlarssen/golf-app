@@ -337,6 +337,15 @@ export interface GrossLine {
 }
 
 /**
+ * Et spill uten et eneste slag gir tabeller fulle av nuller. Motoren har ikke
+ * gjort noe galt — det er bare ingenting å vise ennå, og det sier vi. Resultater-
+ * skjermen og tavla (#2579) spør her.
+ */
+export function hasAnyStroke(scores: readonly { strokes: number | null }[]): boolean {
+  return scores.some((score) => score.strokes != null);
+}
+
+/**
  * Bruttotabellen i reveal-modus, regnet rett fra de lokale slagene.
  *
  * Med vilje IKKE fra motor-resultatet: da hadde netto/poeng ligget i samme
