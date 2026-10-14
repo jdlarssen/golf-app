@@ -30,6 +30,7 @@ import type { StrokeTerm } from '../../../../../lib/scorecard/scoreRail';
 import { MAX_PUTTS, MIN_PUTTS } from '../../../../../lib/scorecard/puttEntry';
 import { scoreTone, type ScoreTone } from '../../../../../lib/scoring/scoreTone';
 import { scoreToneColor } from '../../lib/scoreToneColor';
+import { SHORT_LABELS, TERM_LABELS } from '../../lib/strokeTermText';
 import { FONTS, fraunces, TAP, useTheme, type ThemeColors } from '../../theme';
 import { withSystemArrows } from '../SystemArrow';
 
@@ -94,25 +95,6 @@ function toneBg(tone: ScoreTone, colors: ThemeColors): string {
       return colors.scoreParBg;
   }
 }
-
-const TERM_LABELS: Record<Exclude<StrokeTerm, 'over'>, string> = {
-  albatross: 'Albatross',
-  eagle: 'Eagle',
-  birdie: 'Birdie',
-  par: 'Par',
-  bogey: 'Bogey',
-  doubleBogey: 'Dobbeltbogey',
-  tripleBogey: 'Trippelbogey',
-};
-
-/**
- * Det knappene viser (designet, #2385): «Dobbel» og «Trippel» får plass i en
- * tredel av skjermen. Skjermleseren får hele ordet (`TERM_LABELS`).
- */
-const SHORT_LABELS: Partial<Record<StrokeTerm, string>> = {
-  doubleBogey: 'Dobbel',
-  tripleBogey: 'Trippel',
-};
 
 const ALL_SCORED = 'Alle har score på hullet. Trykk på et navn for å rette.';
 /** Ordrett webbens `holes.putts.fieldLabel` (låst i testen). */
