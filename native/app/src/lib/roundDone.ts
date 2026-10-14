@@ -52,6 +52,13 @@ export const ROUND_DONE_TEXT = {
   submittedSpoken: 'har levert',
   review: 'Se over og lever scorekortet',
   back: `Tilbake til hull ${LAST_HOLE}`,
+  greeting: 'Godt spilt,',
+  units: { points: 'poeng', net: 'netto', gross: 'slag' },
+  birdie: 'birdie',
+  birdies: 'birdier',
+  place: 'plass nå',
+  placeTied: 'delt plass nå',
+  missing: 'Mangler hull',
 } as const;
 
 export type RoundDoneHeadline = 'points' | 'net' | 'gross';
@@ -181,16 +188,16 @@ function flightRows(opts: {
 
 /** «Godt spilt, Sigrid». */
 export function greeting(name: string): string {
-  return `Godt spilt, ${name}`;
+  return `${ROUND_DONE_TEXT.greeting} ${name}`;
 }
 
 /** Ordet under det første tallet. */
 export function headlineUnit(kind: RoundDoneHeadline): string {
-  return kind === 'points' ? 'poeng' : kind === 'net' ? 'netto' : 'slag';
+  return ROUND_DONE_TEXT.units[kind];
 }
 
 export function birdieUnit(count: number): string {
-  return count === 1 ? 'birdie' : 'birdier';
+  return count === 1 ? ROUND_DONE_TEXT.birdie : ROUND_DONE_TEXT.birdies;
 }
 
 /** Tallet for plassen, «3.». Delt plass har samme tall og sier det i ordet under. */
@@ -199,12 +206,17 @@ export function placeNumber(standing: { rank: number }): string {
 }
 
 export function placeUnit(standing: { tied: boolean }): string {
-  return standing.tied ? 'delt plass nå' : 'plass nå';
+  return standing.tied ? ROUND_DONE_TEXT.placeTied : ROUND_DONE_TEXT.place;
 }
 
 /** Det skjermleseren sier om plassen: «3. plass nå» eller «delt 3. plass nå». */
 export function placeSpoken(standing: { rank: number; tied: boolean }): string {
-  return `${standing.tied ? 'delt ' : ''}${placeNumber(standing)} plass nå`;
+  return `${standing.tied ? 'delt ' : ''}${placeNumber(standing)} ${ROUND_DONE_TEXT.place}`;
+}
+
+/** Det skjermleseren sier om et tall i båndet: «40 poeng», «2 birdier». */
+export function numberSpoken(value: string, unit: string): string {
+  return `${value} ${unit}`;
 }
 
 /**
@@ -228,9 +240,19 @@ export function spoken(text: string): string {
   return text.split(' · ').join(', ');
 }
 
+/**
+ * Det skjermleseren sier om et høydepunkt: «Dagens beste hull: hull 7, birdie
+ * på par 3», med liten forbokstav etter kolon.
+ */
+export function highlightSpoken(hole: RoundHighlight, which: 'best' | 'worst'): string {
+  const kicker = which === 'best' ? ROUND_DONE_TEXT.bestKicker : ROUND_DONE_TEXT.worstKicker;
+  const text = spoken(highlightText(hole, which));
+  return `${kicker}: ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+}
+
 /** «Mangler hull 17», eller «Mangler hull 3 og 17». */
 export function missingText(holes: readonly number[]): string {
-  return `Mangler hull ${formatNameList(holes.map(String))}`;
+  return `${ROUND_DONE_TEXT.missing} ${formatNameList(holes.map(String))}`;
 }
 
 /** Knappen på raden: «Jonas mangler hull 17. Åpne hull 17.» */
