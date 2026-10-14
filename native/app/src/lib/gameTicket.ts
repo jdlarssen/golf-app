@@ -29,7 +29,7 @@ import type { BundlePlayer, BundleTeeRatings, GameBundle } from '../data/gameBun
 import { MAX_AVATARS } from './flightRoster';
 import type { GateReason } from './formatGate';
 import { HOME_TEXT, finishedResultText } from './homeCopy';
-import { formatClock } from './display';
+import { formatClock, formatNameList } from './display';
 import { formatStubDate, formatWeekdayDayMonth, teeOffProximityLocal } from './homeDates';
 import { nextUnfilledHole } from './primaryCtaState';
 import { scorecardHandicapPart } from './scorecardHeader';
@@ -214,8 +214,7 @@ export function rosterNames(names: readonly string[], max = MAX_AVATARS): string
   const shown = ['Du', ...names.slice(0, max)];
   const rest = names.length - Math.min(names.length, max);
   if (rest > 0) return `${shown.join(', ')} og ${rest} til`;
-  if (shown.length === 1) return shown[0]!;
-  return `${shown.slice(0, -1).join(', ')} og ${shown[shown.length - 1]}`;
+  return formatNameList(shown);
 }
 
 /**

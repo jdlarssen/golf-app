@@ -6,6 +6,7 @@
 // `syncBannerCopy.test.ts` låser det: et slag som ikke kom fram skal forklares
 // likt på begge flater. ICU-flertallet kan ikke leses i appen, så grenene står
 // hver for seg og testen sjekker at begge finnes i kilden.
+import { formatNameList } from './display';
 
 export const SYNC_BANNER_TEXT = {
   /** `quarantineHoles`, med `{holes}` byttet ut. */
@@ -34,13 +35,10 @@ export const SYNC_BANNER_TEXT = {
 
 /**
  * «3», «3 og 7», «3, 7 og 12» — det webbens `formatHoleList` får fra
- * `Intl.ListFormat('no')`. Bygget for hånd fordi Hermes ikke kan stoles på
- * for `Intl` (se `hermes-intl`-fellene i native/app).
+ * `Intl.ListFormat('no')`. Oppramsingen er appens `formatNameList`.
  */
 export function formatHoleList(holes: readonly number[]): string {
-  const parts = holes.map(String);
-  if (parts.length <= 1) return parts.join('');
-  return `${parts.slice(0, -1).join(', ')} og ${parts[parts.length - 1]}`;
+  return formatNameList(holes.map(String));
 }
 
 export function quarantineHolesText(holes: readonly number[]): string {
