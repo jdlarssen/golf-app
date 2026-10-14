@@ -3,6 +3,7 @@ import { computeLeaderboard } from '@/lib/scoring';
 import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import {
+  boardUnit,
   comparableGap,
   computeLiveBoard,
   liveBoardStripAction,
@@ -272,6 +273,17 @@ describe('computeLiveBoard — units and order', () => {
       [1, null, null, []],
       [1, null, null, []],
     ]);
+  });
+});
+
+// #2579: the unit has one home, read by the live board and the finished board.
+describe('boardUnit — what the number column counts', () => {
+  it.each([
+    [{ kind: 'stableford', variant: 'solo', players: [], holes: [] }, 'points'],
+    [{ kind: 'solo_strokeplay', ranking: 'net_to_par', players: [], holes: [] }, 'toPar'],
+    [{ kind: 'solo_strokeplay', ranking: 'net_total', players: [], holes: [] }, 'net'],
+  ] as const)('%o → %s', (result, unit) => {
+    expect(boardUnit(result)).toBe(unit);
   });
 });
 

@@ -95,6 +95,14 @@ export type LiveBoardGame = {
 
 type SoloResult = StablefordSoloResult | SoloStrokeplayResult;
 
+/**
+ * The engine says which rule it ranked on; the board shows that number. One
+ * home for the live board and the finished board (#2579).
+ */
+export function boardUnit(result: SoloResult): LiveBoardUnit {
+  return result.kind === 'stableford' ? 'points' : result.ranking === 'net_to_par' ? 'toPar' : 'net';
+}
+
 const RECENT_HOLES = 5;
 
 /** Each player's holes with strokes. */
@@ -187,9 +195,7 @@ export function computeLiveBoard(opts: {
   const previous = resultFor(withoutLatestHolePerPlayer(scoresRows, segment, startType));
   const previousRank = new Map(previous?.players.map((p) => [p.userId, p.rank]) ?? []);
 
-  // The engine says which rule it ranked on; the board shows that number.
-  const unit: LiveBoardUnit =
-    result.kind === 'stableford' ? 'points' : result.ranking === 'net_to_par' ? 'toPar' : 'net';
+  const unit = boardUnit(result);
 
   const lines: { userId: string; rank: number; holesPlayed: number; total: number | null }[] =
     result.kind === 'stableford'
