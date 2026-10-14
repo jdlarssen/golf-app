@@ -71,6 +71,15 @@ describe('soloBoardFor — live', () => {
     ]);
   });
 
+  it('reads each row aloud as one line, like the web board', () => {
+    expect(model.rows.find((r) => r.userId === ME)?.a11y).toBe(
+      'Sigrid Aas. 2. plass. 14 poeng. Uendret siden forrige hull. Siste hull: par, par, par, par, par. 7 hull spilt. Dette er deg',
+    );
+    expect(model.rows[0].a11y).toBe(
+      'Marte Lie. 1. plass. 21 poeng. Uendret siden forrige hull. Siste hull: under par, under par, under par, under par, under par. 7 hull spilt',
+    );
+  });
+
   it('gives the strip the place, the gap to the leader by first name, and the next hole', () => {
     expect(model.strip).toEqual({
       kicker: 'Din runde',
@@ -111,6 +120,14 @@ describe('soloBoardFor — finished', () => {
       ['marte', '1', true, '54', null],
       ['jonas', '2', false, '36', null],
       [ME, '3', false, '36', 'Likt med Jonas · avgjort på siste ni'],
+    ]);
+  });
+
+  it('reads the winner, the tie note and you aloud', () => {
+    expect(model.rows.map((r) => r.a11y)).toEqual([
+      'Marte Lie. 1. plass. Vinner. 54 poeng. 18 hull spilt',
+      'Jonas Berg. 2. plass. 36 poeng. 18 hull spilt',
+      'Sigrid Aas. 3. plass. 36 poeng. 18 hull spilt. Likt med Jonas · avgjort på siste ni. Dette er deg',
     ]);
   });
 

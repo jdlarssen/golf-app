@@ -17,6 +17,7 @@ import {
   isBoardLeader,
   placeKind,
   sentenceName,
+  toneKey,
   totalLabel,
   type BoardPlaceRow,
 } from '../../../../lib/leaderboard/boardRules';
@@ -31,7 +32,7 @@ import { MODE_LABELS, type GameMode } from '../../../../lib/scoring/modes/types'
 import type { TieDecider } from '../../../../lib/scoring/tiebreaker';
 import type { LocalScore } from '../data/db';
 import type { BundleGame, GameBundle } from '../data/gameBundle';
-import { BOARD_APP_TEXT, BOARD_TEXT } from './boardCopy';
+import { BOARD_APP_TEXT, BOARD_COMMON_TEXT, BOARD_TEXT } from './boardCopy';
 import { displayName } from './display';
 import { gateReason } from './formatGate';
 import { buildHeroModel, liveBoardFor } from './homeHero';
@@ -92,6 +93,8 @@ export type SoloBoardRow = {
   recent: ScoreTone[];
   /** Ferdig: «Likt med Jonas · avgjort på siste ni». */
   note: string | null;
+  /** Hele raden som én linje for skjermleseren, som webbens `boardRowSr`. */
+  a11y: string;
 };
 
 export type SoloBoardStripAction =
@@ -143,6 +146,61 @@ const DECIDED_TEXT: Record<Exclude<TieDecider, 'total'>, string> = {
 };
 
 const rowName = (row: { name: string | null; nickname: string | null }) => displayName(row);
+
+/** Tallet for skjermleseren: «18 poeng», «2 over par», «På par», «74 slag netto». */
+function totalSr(unit: LiveBoardUnit, total: number | null): string {
+  if (total === null) return BOARD_TEXT.srNoTotal;
+  if (unit === 'points') return formatMessage(BOARD_TEXT.srPoints, { total });
+  if (unit === 'net') return formatMessage(BOARD_TEXT.srNet, { total });
+  if (total === 0) return BOARD_TEXT.srEven;
+  return total > 0
+    ? formatMessage(BOARD_TEXT.srOverPar, { count: total })
+    : formatMessage(BOARD_TEXT.srUnderPar, { count: -total });
+}
+
+/**
+ * Raden lest opp i én linje, i webbens rekkefølge (`boardRowSr`) med navnet
+ * først: plass, tall, bevegelse, siste hull, hull spilt, og til slutt «Dette
+ * er deg». Ferdig tavle legger «Vinner» etter plassen og likt-linja til slutt.
+ */
+function rowSr(opts: {
+  name: string;
+  row: BoardPlaceRow & { total: number | null };
+  showRank: boolean;
+  unit: LiveBoardUnit;
+  movement: number | null;
+  recent: readonly ScoreTone[];
+  winner: boolean;
+  note: string | null;
+  you: boolean;
+}): string {
+  const { name, row, showRank, unit, movement, recent, winner, note, you } = opts;
+  return [
+    name,
+    !showRank
+      ? null
+      : formatMessage(row.tied ? BOARD_TEXT.srTiedPlace : BOARD_TEXT.srPlace, { rank: row.rank }),
+    winner ? BOARD_APP_TEXT.winner : null,
+    totalSr(unit, row.total),
+    movement === null
+      ? null
+      : movement > 0
+        ? formatMessage(BOARD_TEXT.srUp, { count: movement })
+        : movement < 0
+          ? formatMessage(BOARD_TEXT.srDown, { count: -movement })
+          : BOARD_TEXT.srSame,
+    recent.length > 0
+      ? formatMessage(BOARD_TEXT.srRecent, {
+          tones: recent.map((tone) => BOARD_TEXT.tone[toneKey(tone)]).join(', '),
+        })
+      : null,
+    formatMessage(BOARD_COMMON_TEXT.holesPlayedCount, { count: row.holesPlayed }),
+    note,
+    you ? BOARD_TEXT.srYou : null,
+  ]
+    .filter(Boolean)
+    .join('. ');
+}
 
 /**
  * Tavla for skjermen, eller `null` når Resultater-skjermen viser noe annet
@@ -232,6 +290,17 @@ function liveBoard(
       movement: row.movement,
       recent: row.recent,
       note: null,
+      a11y: rowSr({
+        name: rowName(row),
+        row,
+        showRank,
+        unit: board.unit,
+        movement: row.movement,
+        recent: row.recent,
+        winner: false,
+        note: null,
+        you: row.userId === userId,
+      }),
     })),
     viewerId: standing ? userId : null,
     strip,
@@ -300,6 +369,17 @@ function finishedBoard(
       movement: null,
       recent: [],
       note: note(row),
+      a11y: rowSr({
+        name: rowName(row),
+        row,
+        showRank,
+        unit: board.unit,
+        movement: null,
+        recent: [],
+        winner: isBoardLeader(row),
+        note: note(row),
+        you: row.userId === userId,
+      }),
     })),
     viewerId: standing ? userId : null,
     strip,

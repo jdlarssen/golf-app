@@ -120,6 +120,10 @@ function BoardRow({ row, live, showHoles }: { row: SoloBoardRow; live: boolean; 
   return (
     <View
       style={[styles.row, !live && { minHeight: winner ? 54 : 44 }]}
+      // Hele raden er ett element for skjermleseren, med plass, tall og hull
+      // i én setning; skiltene alene sier ikke hva tallene er.
+      accessible
+      accessibilityLabel={row.a11y}
       testID={`board-row-${row.userId}`}
     >
       <View style={[plaque, styles.cellCenter, { width: PLACE_W }, winnerPlaque]} testID={`board-row-${row.userId}-place`}>
